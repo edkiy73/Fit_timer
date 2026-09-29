@@ -172,7 +172,7 @@ try{
   ok('first anonymous visit opens minimal onboarding',await appears(phone.page.getByRole('heading',{name:COPY.onboarding})));
   ok('onboarding starts day 1',await finishOnboarding(phone.page));
   ok('day 1 is completed locally before sign-in',await completeTheory(phone.page));
-  ok('anonymous phone advances to day 2',await appears(phone.page.getByText('День 2',{exact:true})));
+  ok('anonymous phone advances to day 2',await appears(phone.page.getByRole('heading',{name:'День 2'})));
   ok('theme tokens are applied',(await phone.page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()))!=='');
 
   ok(
@@ -186,7 +186,7 @@ try{
   await laptop.page.goto(URL_+'#/learn/day-2');
   ok('second device can make a different local course change',await appears(laptop.page.getByText('Goodbye.')));
   ok('day 2 is completed locally before second-device sign-in',await completeTheory(laptop.page));
-  ok('second device still needs day 1 before account merge',await appears(laptop.page.getByText('День 1',{exact:true})));
+  ok('second device still needs day 1 before account merge',await appears(laptop.page.getByRole('heading',{name:'День 1'})));
 
   ok('second device signs in and pushes its local progress',await signIn(laptop.page,'person@example.com'));
   ok(
