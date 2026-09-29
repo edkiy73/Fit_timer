@@ -61,6 +61,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   await page.evaluate(() => { __native = {running: false, status: 'idle', progress: -1}; });
   await page.click('#appUpdateBanner');
+  await page.waitForFunction(() => __calls.includes('install:200'));
   await page.evaluate(() => __emit({status: 'downloading', progress: 40}));
   v = await view();
   ok('загрузка стартовала', v.calls === 'install:200', v.calls);
@@ -88,6 +89,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('отмена не оставляет «Повторить» после пересборки баннера', v.action === 'Обновить', v.action);
 
   await page.click('#appUpdateBanner');
+  await page.waitForFunction(() => __calls.filter(x => x === 'install:200').length === 2);
   await page.evaluate(() => { __emit({status: 'error', error: 'update_http_500'}); __native = {running: false, status: 'error'}; __finish({status: 'error'}); });
   await page.waitForTimeout(100);
   v = await view();
@@ -98,6 +100,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('ошибка не теряется при пересборке баннера', v.action === 'Повторить', v.action);
 
   await page.click('#appUpdateBanner');
+  await page.waitForFunction(() => __calls.filter(x => x === 'install:200').length === 3);
   v = await view();
   ok('«Повторить» запускает загрузку заново', v.calls === 'install:200,cancel,install:200,install:200', v.calls);
 
