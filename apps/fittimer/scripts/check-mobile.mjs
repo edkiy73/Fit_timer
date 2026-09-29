@@ -95,6 +95,26 @@ if(!handsfreeSource.includes("hasNative('startMediaButtonControl')") || !handsfr
 if(handsfreeSource.includes("hasNative('startHeadsetControl')") || handsfreeSource.includes("hasNative('stopHeadsetControl')")){
   throw new Error('Hands-free UI still checks obsolete headset capability names');
 }
+const backgroundHandler = handsfreeSource.match(/window\.addEventListener\('fitAppBackground',[\s\S]*?\n  \}\);/);
+if(!backgroundHandler || backgroundHandler[0].includes('stopHeadset()')){
+  throw new Error('Headset media-button control must remain active while an active workout is backgrounded');
+}
+const handsfreeEvents = await readFile('src/app/90-events.js', 'utf8');
+if(!handsfreeEvents.includes("'btnHfApply'") || !handsfreeEvents.includes("hfModalDraft = c.dataset.hf")){
+  throw new Error('Hands-free workout modal must stage a mode choice until Apply');
+}
+if(!handsfreeEvents.includes("handsfree.voiceSelectedPending")
+  || !handsfreeEvents.includes("status.installed && hfMode === 'voice'")){
+  throw new Error('Voice mode must be selectable before its pack is ready and auto-start after download');
+}
+const handsfreeHtml = await readFile('src/html/40-profiles.html', 'utf8');
+const voiceDetailAt = handsfreeHtml.indexOf('id="hfVoiceDetail"');
+const packAt = handsfreeHtml.indexOf('id="voicePackBox"');
+const commandsAt = handsfreeHtml.indexOf('data-i18n="handsfree.commandsTitle"');
+const headsetDetailAt = handsfreeHtml.indexOf('id="hfHeadsetDetail"');
+if(voiceDetailAt < 0 || packAt < voiceDetailAt || commandsAt < voiceDetailAt || headsetDetailAt < 0){
+  throw new Error('Voice pack/commands and headset explanation must live inside their mode details');
+}
 
 const fitAudioAndroid = await readFile('android/app/src/main/java/ru/fittimer/app/FitAudioPlugin.java', 'utf8');
 if(!fitAudioAndroid.includes('MediaSession') || !fitAudioAndroid.includes('startMediaButtonControl') || !fitAudioAndroid.includes('"mediaButtonAction"')){

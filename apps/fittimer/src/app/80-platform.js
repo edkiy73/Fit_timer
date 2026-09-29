@@ -151,12 +151,14 @@ export function hfHintText(mode){
 }
 
 export function syncHandsFreeUI(){
-  document.querySelectorAll('#hfSeg [data-hf], #hfModal [data-hf]').forEach(b =>
+  document.querySelectorAll('#hfSeg [data-hf]').forEach(b =>
     b.classList.toggle('act', b.dataset.hf === hfMode));
-  ['hfHint','hfModalHint'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.textContent = hfHintText(hfMode);
-  });
+  const hint = document.getElementById('hfHint');
+  if(hint) hint.textContent = hfHintText(hfMode);
+  const voice = document.getElementById('hfVoiceDetail');
+  const headset = document.getElementById('hfHeadsetDetail');
+  if(voice) voice.classList.toggle('hidden', hfMode !== 'voice');
+  if(headset) headset.classList.toggle('hidden', hfMode !== 'headset');
 }
 export function setHfMode(mode){
   hfMode = mode;
@@ -191,6 +193,7 @@ function advanceFromHeadset(){
 }
 function startHeadset(){
   if(appRuntimeCompat.hasNative('startMediaButtonControl')){
+    if(nativeHeadsetActive) return;
     appRuntimeCompat.startHeadsetControl(advanceFromHeadset).then(ok=>{
       nativeHeadsetActive = !!ok;
       if(!ok && hfMode === 'headset'){
@@ -793,8 +796,10 @@ export function initPlatform(){
     }
   });
   window.addEventListener('fitAppBackground', ()=>{
-    stopListening();
-    stopHeadset();
+    // Голосовой микрофон при сворачивании Android/iOS останавливают сами, а нативная
+    // MediaSession гарнитуры должна жить до конца активной тренировки. Иначе ровно
+    // в момент выключения экрана кнопка наушников переставала быть «Готово».
+    if(hfMode === 'voice') stopListening();
     stopSpeech();
     releaseWake();
     try{ if(audioCtx && audioCtx.state === 'running') audioCtx.suspend(); }catch(_){}

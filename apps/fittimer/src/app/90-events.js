@@ -63,7 +63,7 @@ import { afterExChange, applyProgCheck, autoGrow, backToWorkout, buildSteps, clo
   setPause, settleQuickFinish, shareResult, skipStep, startWorkout, stopSpeech, swapViaAI, tearDownWorkout,
   toggleProgCheckList
 } from './70-workout.js';
-import { SR, applyThemeFor, checkSchedules, hfMode, recognitionLang, setHfMode, setHfModeShared,
+import { SR, applyThemeFor, checkSchedules, hfHintText, hfMode, recognitionLang, setHfMode, setHfModeShared,
   setRecognitionLangShared, setVoiceWantedShared, startHandsFree, startListening, stopHandsFree,
   stopListening, syncHandsFreeUI, syncNativeNotifications, syncPrefs
 } from './80-platform.js';
@@ -230,19 +230,26 @@ async function nativeVoiceReady(){
   return !!(s && s.installed);
 }
 
-async function chooseHandsFree(mode){
+async function chooseHandsFree(mode, options = {}){
+  let voiceReady = true;
   if(mode === 'voice'){
     if(!appRuntimeCompat.offlineVoice() && !SR){
       appAlert(t('handsfree.unavailable'));
       return false;
     }
-    if(appRuntimeCompat.offlineVoice() && !(await nativeVoiceReady())){
-      await refreshVoicePackUI();
-      appAlert(t('handsfree.packFirst'));
-      return false;
-    }
+    if(appRuntimeCompat.offlineVoice()) voiceReady = await nativeVoiceReady();
   }
+
+  // Режим можно выбрать заранее. Пакет — это зависимость запуска распознавания,
+  // а не запрет на сохранение пользовательского выбора.
   setHfMode(mode);
+
+  if(mode === 'voice' && appRuntimeCompat.offlineVoice() && !voiceReady){
+    await refreshVoicePackUI();
+    if(options.warnMissing !== false) appAlert(t('handsfree.voiceSelectedPending'));
+    return true;
+  }
+
   if(mode === 'voice' && (await kvGet('voiceHint')) !== '1'){
     kvSet('voiceHint', '1');
     appAlert(t(appRuntimeCompat.offlineVoice() ? 'handsfree.readyNative' : 'handsfree.readyWeb'));
@@ -356,10 +363,12 @@ function mountWorkoutSettingsBlocks(){
     stFxField:'sndFxField', stFxVolVal:'sndFxVolVal', stFxVol:'sndFxVol'
   });
   cloneSettingsBlock('handsfreeSettingsCard','hfModalContent',{
-    hfSeg:'hfModalSeg', hfHint:'hfModalHint', voicePackBox:'hfVoicePackBox',
-    voiceRecLang:'hfVoiceRecLang', voicePackStatus:'hfVoicePackStatus',
-    voicePackProgress:'hfVoicePackProgress', voicePackProgressBar:'hfVoicePackProgressBar',
-    btnVoicePack:'btnHfVoicePack', btnHfCommands:'btnHfCommandsModal'
+    hfSeg:'hfModalSeg', hfHint:'hfModalHint',
+    hfVoiceDetail:'hfModalVoiceDetail', hfHeadsetDetail:'hfModalHeadsetDetail',
+    voicePackBox:'hfVoicePackBox', voiceRecLang:'hfVoiceRecLang',
+    voicePackStatus:'hfVoicePackStatus', voicePackProgress:'hfVoicePackProgress',
+    voicePackProgressBar:'hfVoicePackProgressBar', btnVoicePack:'btnHfVoicePack',
+    btnVoiceTest:'btnHfVoiceTest'
   });
 }
 
@@ -447,7 +456,7 @@ export async function refreshVoicePackUI(progressEvent){
     button=t('voicepack.retry');
     disabled=false;
   }
-  setShown('btnVoiceTest', !!(status && status.installed));
+  ['btnVoiceTest','btnHfVoiceTest'].forEach(id=>setShown(id, !!(status && status.installed)));
   const pct = status && status.installed ? 100 : Math.max(0,Math.min(100,(status && status.progress)||0));
   const running = !!(status && ['queued','downloading','extracting'].includes(status.status));
   for(const row of [
@@ -464,6 +473,11 @@ export async function refreshVoicePackUI(progressEvent){
   clearTimeout(voicePackPollTimer);
   if(status && ['queued','downloading','extracting'].includes(status.status)){
     voicePackPollTimer = setTimeout(()=>refreshVoicePackUI(), 800);
+  }else if(status && status.installed && hfMode === 'voice'
+    && $('scrWork').classList.contains('on')){
+    // Пользователь мог выбрать «Голос» до загрузки. Как только пакет готов,
+    // распознавание поднимается само — повторно включать режим не нужно.
+    startListening();
   }
 }
 
@@ -477,9 +491,22 @@ async function downloadSelectedVoicePack(){
   if(!ok) appAlert(t('voicepack.startError'));
 }
 
+let hfModalDraft = 'off';
+
+function renderHfModalDraft(){
+  document.querySelectorAll('#hfModalSeg [data-hf]').forEach(b =>
+    b.classList.toggle('act', b.dataset.hf === hfModalDraft));
+  if($('hfModalHint')) $('hfModalHint').textContent = hfHintText(hfModalDraft);
+  setShown('hfModalVoiceDetail', hfModalDraft === 'voice');
+  setShown('hfModalHeadsetDetail', hfModalDraft === 'headset');
+  if(hfModalDraft === 'voice') refreshVoicePackUI();
+}
+
 function openHfModal(){
+  hfModalDraft = hfMode;
   syncHandsFreeUI();
   if($('hfVoiceRecLang')) $('hfVoiceRecLang').value = recognitionLang;
+  renderHfModalDraft();
   refreshVoicePackUI();
   $('hfModal').classList.add('open');
 }
@@ -1233,7 +1260,7 @@ export function initEvents(){
       if((await kvGet('recognitionLangManual')) !== '1'){
         setRecognitionLangShared(appLocale);
         await kvSet('recognitionLang', recognitionLang);
-        if(hfMode === 'voice') setHfMode('off');
+        if(hfMode === 'voice') stopListening();
         await refreshVoicePackUI();
       }
       syncHandsFreeUI();
@@ -1263,12 +1290,21 @@ export function initEvents(){
   mountWorkoutSettingsBlocks();
   wireLiveSoundCascade('st');
   wireLiveSoundCascade('snd');
-  document.querySelectorAll('#hfModal [data-hf]').forEach(c => {
-    c.onclick = async ()=>{
-      const ok = await chooseHandsFree(c.dataset.hf);
-      if(ok) $('hfModal').classList.remove('open');
+  document.querySelectorAll('#hfModalSeg [data-hf]').forEach(c => {
+    c.onclick = ()=>{
+      hfModalDraft = c.dataset.hf;
+      renderHfModalDraft();
     };
   });
+  $('btnHfApply').onclick = async ()=>{
+    const mode = hfModalDraft;
+    const ok = await chooseHandsFree(mode, {warnMissing:false});
+    if(!ok) return;
+    $('hfModal').classList.remove('open');
+    if(mode === 'voice' && appRuntimeCompat.offlineVoice() && !(await nativeVoiceReady())){
+      appAlert(t('handsfree.voiceSelectedPending'));
+    }
+  };
   $('hfModal').onclick = e => { if(e.target === $('hfModal')) $('hfModal').classList.remove('open'); };
   for(const id of ['stVoiceChoice','sndVoiceChoice']){
     if($(id)) $(id).onchange = async e=>{
@@ -1283,7 +1319,7 @@ export function initEvents(){
       setRecognitionLangShared(e.target.value === 'en' ? 'en' : 'ru');
       kvSet('recognitionLang',recognitionLang);
       kvSet('recognitionLangManual','1');
-      if(hfMode==='voice') setHfMode('off');
+      if(hfMode==='voice') stopListening();
       await refreshVoicePackUI();
     };
   }
@@ -1293,10 +1329,13 @@ export function initEvents(){
   $('btnSoundW').onclick = ()=>{ fillLiveSoundCascade('snd'); $('soundModal').classList.add('open'); };
   $('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal').classList.remove('open'); };
   $('btnMicW').onclick = openHfModal;
-  ['btnHfCommands','btnHfCommandsModal'].forEach(id => { if($(id)) $(id).onclick = openHfCommands; });
   $('hfCommandsModal').onclick = e => { if(e.target === $('hfCommandsModal')) $('hfCommandsModal').classList.remove('open'); };
   window.addEventListener('fitVoiceHeard', onVoiceTestHeard);
   if($('btnVoiceTest')) $('btnVoiceTest').onclick = openVoiceTest;
+  if($('btnHfVoiceTest')) $('btnHfVoiceTest').onclick = ()=>{
+    $('hfModal').classList.remove('open');
+    openVoiceTest();
+  };
   $('voiceTestModal').onclick = e => { if(e.target === $('voiceTestModal')) $('voiceTestModal').classList.remove('open'); };
   // окно закрывают кнопкой, тапом мимо и системным «назад» — микрофон
   // отпускаем в любом из этих случаев, следя за самим окном

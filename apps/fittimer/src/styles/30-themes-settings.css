@@ -193,6 +193,8 @@
     cursor:pointer;
   }
   .modal-btn:active{transform:scale(.99);background:var(--card)}
+  .modal-btn.primary{background:var(--work);border-color:transparent;color:var(--on-accent);font-weight:600}
+  .modal-btn.primary:active{background:var(--accent-2)}
   .modal-btn.danger{color:var(--danger);border-color:var(--danger-soft)}
   /* воздух между текстом попапа и первой кнопкой: раньше подпись упиралась в неё */
   .modal-card .mini-label{margin-bottom:10px}
@@ -644,6 +646,14 @@
   .hf-seg{display:flex;gap:5px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px}
   .hf-seg button{flex:1;padding:10px 4px;border:none;background:none;border-radius:9px;color:var(--muted);font-family:var(--font-text);font-size:12.5px;cursor:pointer;transition:background .18s,color .18s}
   .hf-seg button.act{background:var(--work);color:var(--on-accent);font-weight:500}
+  .hf-mode-detail{margin-top:12px}
+  .hf-mode-detail .voice-pack{margin-top:0;padding-top:0;border-top:none}
+  .hf-inline-commands{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+  .hf-inline-commands .mini-label{margin-bottom:8px}
+  .hf-inline-commands .field-hint{margin:0 0 12px}
+  .hf-headset-info{padding:13px 14px;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-md)}
+  .hf-headset-info b{display:block;font-size:14px;font-weight:600;color:var(--ink);margin-bottom:5px}
+  .hf-headset-info p{margin:0;color:var(--muted);font-size:12.5px;line-height:1.5}
   .act-row{display:flex;gap:10px;align-items:stretch}
   .btn-prev{flex:0 0 52px;min-height:58px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:var(--r-md);cursor:pointer;display:flex;align-items:center;justify-content:center}
   .btn-prev svg{width:20px;height:20px}
