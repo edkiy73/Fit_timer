@@ -136,7 +136,7 @@ public final class UnMuteAudioPlugin: CAPPlugin, CAPBridgedPlugin {
                         let values = result.transcriptions
                             .map { $0.formattedString.trimmingCharacters(in: .whitespacesAndNewlines) }
                             .filter { !$0.isEmpty }
-                        let unique = Array(NSOrderedSet(array: values)) as? [String] ?? values
+                        let unique = NSOrderedSet(array: values).array.compactMap { $0 as? String }
                         let alternatives = Array(unique.prefix(3))
                         if let first = alternatives.first {
                             self.notifyListeners("speechResult", data: [
