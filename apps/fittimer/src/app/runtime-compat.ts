@@ -191,15 +191,15 @@ export const appRuntimeCompat = Object.freeze({
 
   async startHeadsetControl(onAction?: (...args: any[]) => unknown){
     const candidate = nativeBridge();
-    if(!candidate || typeof candidate.startHeadsetControl !== 'function') return false;
-    try{ return !!(await candidate.startHeadsetControl(onAction)); }
+    if(!candidate || typeof candidate.startMediaButtonControl !== 'function') return false;
+    try{ return !!(await candidate.startMediaButtonControl(onAction)); }
     catch(_){ return false; }
   },
 
   async stopHeadsetControl(){
     const candidate = nativeBridge();
-    if(!candidate || typeof candidate.stopHeadsetControl !== 'function') return false;
-    try{ return !!(await candidate.stopHeadsetControl()); }
+    if(!candidate || typeof candidate.stopMediaButtonControl !== 'function') return false;
+    try{ return !!(await candidate.stopMediaButtonControl()); }
     catch(_){ return false; }
   },
 
