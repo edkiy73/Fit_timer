@@ -1,0 +1,15 @@
+// Kept in git; "cap sync android" refreshes this generated file.
+android {
+  compileOptions {
+      sourceCompatibility JavaVersion.VERSION_21
+      targetCompatibility JavaVersion.VERSION_21
+  }
+}
+
+dependencies {
+    implementation project(':capacitor-local-notifications')
+}
+
+if (hasProperty('postBuildExtras')) {
+  postBuildExtras()
+}
