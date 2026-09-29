@@ -25,6 +25,7 @@ import { saveWordReview } from './word-progress';
 import type { WordReviewRuntimeValue } from './word-review-runtime';
 import { useWordReviewRuntime } from './word-review-runtime';
 import { resolveWordReviewSession, type ResolvedWordReviewItem } from './word-review';
+import { buildMixedDrillActivity, studiedPatternActivities, MixedDrillView } from './mixed-drill';
 
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
 type CombinedReviewItem=
@@ -85,6 +86,7 @@ export function ReviewView({
   const [busy,setBusy]=useState(false);
   const [wordShown,setWordShown]=useState(false);
   const [wordSaveError,setWordSaveError]=useState(false);
+  const [mixedActivity,setMixedActivity]=useState<Extract<Activity,{type:'pattern-drill'}>|null>(null);
 
   useEffect(()=>{
     if(runtime.status!=='ready'||!state||session)return;
@@ -116,6 +118,8 @@ export function ReviewView({
 
   const item=queue[index] ?? null;
   const total=session?.total ?? 0;
+  const mixedPatterns=state?studiedPatternActivities(state.set.activities,state.progress):[];
+  const mixedAvailable=mixedPatterns.length>=3;
 
   const distractors=useMemo(
     ()=>state?.set.activities.flatMap(activity=>
@@ -153,6 +157,39 @@ export function ReviewView({
 
   if(!state||!session)return null;
 
+  if(mixedActivity){
+    return (
+      <section className="review-shell" aria-labelledby="review-title">
+        <button className="learn-back" type="button" onClick={()=>setMixedActivity(null)}>{t('nav.back')}</button>
+        <div>
+          <div className="eyebrow">{t('review.eyebrow')}</div>
+          <h2 id="review-title">{t('mixed.title')}</h2>
+        </div>
+        <MixedDrillView
+          activity={mixedActivity}
+          onDone={()=>setMixedActivity(null)}
+        />
+      </section>
+    );
+  }
+
+  const startMixed=()=>{
+    const mixed=buildMixedDrillActivity(state.set.activities,state.progress);
+    if(mixed)setMixedActivity(mixed);
+  };
+
+  const mixedOffer=mixedAvailable ? (
+    <article className="review-mixed-offer">
+      <div>
+        <strong>{t('mixed.title')}</strong>
+        <span>{t('mixed.description')}</span>
+      </div>
+      <button className="secondary-button" type="button" onClick={startMixed}>
+        {t('mixed.start',{count:mixedPatterns.length})}
+      </button>
+    </article>
+  ) : null;
+
   if(total===0){
     return (
       <section className="review-shell" aria-labelledby="review-title">
@@ -160,26 +197,32 @@ export function ReviewView({
         <div className="eyebrow">{t('review.eyebrow')}</div>
         <h2 id="review-title">{t('review.title')}</h2>
         {session.wordUnavailable ? (
-          <div className="learn-state" role="alert">
-            <strong>{t('review.wordsLoadTitle')}</strong>
-            <span>{t('review.wordsLoadError')}</span>
-            {wordRuntime&&(
-              <button className="primary-button" type="button" onClick={()=>void wordRuntime.refresh()}>
-                {t('today.retry')}
+          <>
+            <div className="learn-state" role="alert">
+              <strong>{t('review.wordsLoadTitle')}</strong>
+              <span>{t('review.wordsLoadError')}</span>
+              {wordRuntime&&(
+                <button className="primary-button" type="button" onClick={()=>void wordRuntime.refresh()}>
+                  {t('today.retry')}
+                </button>
+              )}
+              <button className="secondary-button" type="button" onClick={onExit}>
+                {t('review.backToday')}
               </button>
-            )}
-            <button className="secondary-button" type="button" onClick={onExit}>
-              {t('review.backToday')}
-            </button>
-          </div>
+            </div>
+            {mixedOffer}
+          </>
         ) : (
-          <div className="learn-state">
-            <strong>{t('review.emptyTitle')}</strong>
-            <span>{t('review.emptyText')}</span>
-            <button className="secondary-button" type="button" onClick={onExit}>
-              {t('review.backToday')}
-            </button>
-          </div>
+          <>
+            <div className="learn-state">
+              <strong>{t('review.emptyTitle')}</strong>
+              <span>{t('review.emptyText')}</span>
+              <button className="secondary-button" type="button" onClick={onExit}>
+                {t('review.backToday')}
+              </button>
+            </div>
+            {mixedOffer}
+          </>
         )}
       </section>
     );
@@ -202,6 +245,7 @@ export function ReviewView({
             {t('review.backToday')}
           </button>
         </div>
+        {mixedOffer}
       </section>
     );
   }

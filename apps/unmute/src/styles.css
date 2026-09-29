@@ -184,3 +184,11 @@ h2{margin:0 0 8px}
 .word-review-card .drill-target{font-size:24px}
 .review-word-warning{align-items:start}
 .review-word-warning .secondary-button{justify-self:start}
+
+
+.review-mixed-offer{display:grid;gap:12px;border:1px solid var(--line);border-radius:16px;padding:16px 18px;background:var(--surface)}
+.review-mixed-offer>div{display:grid;gap:5px}
+.review-mixed-offer strong{font-size:17px}
+.review-mixed-offer span{color:var(--muted);font-size:13px;line-height:1.45}
+.review-mixed-offer .secondary-button{justify-self:start}
+@media(max-width:480px){.review-mixed-offer .secondary-button{width:100%}}

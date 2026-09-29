@@ -194,4 +194,65 @@ describe('course review screen',()=>{
     expect(await screen.findByRole('heading',{name:'Повтор завершён'})).toBeTruthy();
     expect(screen.getByText('Готово: 1')).toBeTruthy();
   });
+
+  it('offers mixed drill after three learned patterns even when nothing is due',async()=>{
+    const user=userEvent.setup();
+    const state=learnerState();
+    state.progress.cards['card.one']={box:2,due:99,at:'2026-09-29T00:00:00Z'};
+    state.set.activities=[
+      ...state.set.activities,
+      ...['a','b','c'].map((suffix,index)=>({
+        id:'pattern.'+suffix,
+        revision:1,
+        type:'pattern-drill' as const,
+        tags:[],
+        revisionProgress:'preserve' as const,
+        lexiconRefs:[],
+        pattern:{ru:'Паттерн '+suffix},
+        modes:['drill' as const],
+        items:[{
+          id:'pattern.'+suffix+'.item',
+          prompt:{ru:'Фраза '+index},
+          answer:{accepted:['Phrase '+index],nearMiss:true,caseSensitive:false}
+        }]
+      }))
+    ];
+    for(const suffix of ['a','b','c']){
+      state.progress.practice.drill['pattern.'+suffix]={
+        box:1,
+        due:99,
+        at:'2026-09-29T00:00:00Z'
+      };
+    }
+
+    const runtime:LearnerCourseRuntimeValue={
+      state,
+      status:'ready',
+      error:null,
+      refresh:async()=>{}
+    };
+
+    render(
+      <I18nProvider
+        dictionaries={dictionaries}
+        config={{locales:['ru'],default:'ru'}}
+        storageKey="review-mixed-test.locale"
+        systemLanguages={['ru']}
+      >
+        <ReviewView
+          runtime={runtime}
+          onExit={()=>{}}
+          todayDay={10}
+          saveGraded={async()=>{}}
+          savePractice={async()=>{}}
+          speak={async()=>true}
+          startRecognition={()=>null}
+        />
+      </I18nProvider>
+    );
+
+    expect(await screen.findByText('Сегодня повторять нечего')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Смешать темы: 3'}));
+    expect(await screen.findAllByRole('heading',{name:'Смешанный дрилл'})).not.toHaveLength(0);
+  });
 });
