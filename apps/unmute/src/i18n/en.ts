@@ -114,6 +114,8 @@ export const en: Record<keyof typeof ru, string> = {
   'access.activeOwned': 'This course is permanently unlocked for your account.',
   'access.activePlus': 'The full course is unlocked through UnMute Plus.',
   'access.activeGeneric': 'You already have full access to this course.',
+  'access.contentPendingTitle': 'Access is active — loading the course',
+  'access.contentPendingText': 'Your account has full access, but the full course is not downloaded on this device yet. Connect to the internet and try again.',
   'access.openCourse': 'Open course',
   'courseMap.prerequisiteHint': 'This day opens after the previous required step is complete.',
   'courseMap.open': 'Open',
