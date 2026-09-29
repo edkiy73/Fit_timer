@@ -82,7 +82,10 @@ const COPY = {
     expired:'Срок действия кода истёк. Запроси новый.',
     handleTaken:'Этот ник уже занят.',
     badHandle:'Ник должен начинаться с @ и содержать 2–29 допустимых символов.',
-    generic:'Не получилось выполнить запрос. Попробуй ещё раз.'
+    generic:'Не получилось выполнить запрос. Попробуй ещё раз.',
+    mailFailed:'Письмо с кодом не отправилось. Если код дал администратор — нажми «У меня есть код».',
+    haveCode:'У меня есть код',
+    enterCode:'Введи код для'
   },
   en: {
     account:'Account',
@@ -107,7 +110,10 @@ const COPY = {
     expired:'The code expired. Request a new one.',
     handleTaken:'That handle is already taken.',
     badHandle:'Handle must start with @ and contain 2–29 allowed characters.',
-    generic:'The request failed. Try again.'
+    generic:'The request failed. Try again.',
+    mailFailed:'The code email could not be sent. If an administrator gave you a code, tap “I have a code”.',
+    haveCode:'I have a code',
+    enterCode:'Enter the code for'
   }
 } as const;
 
@@ -119,6 +125,7 @@ function errorText(error: unknown, locale: 'ru' | 'en'): string {
   if(code === 'expired_code' || code === 'code_expired') return copy.expired;
   if(code === 'handle_taken') return copy.handleTaken;
   if(code === 'bad_handle') return copy.badHandle;
+  if(code === 'mail_failed' || code === 'no_mail') return copy.mailFailed;
   return copy.generic;
 }
 
@@ -202,6 +209,7 @@ export function SignInForm({locale = 'ru', productName, askHandle = true, varian
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [devCode, setDevCode] = useState('');
+  const [sent, setSent] = useState(false);
 
   function finish(session: AuthSession){
     auth.acceptSession(session);
@@ -217,12 +225,22 @@ export function SignInForm({locale = 'ru', productName, askHandle = true, varian
       setEmail(String(email || '').trim().toLowerCase());
       setDevCode(typeof result.devCode === 'string' ? result.devCode : '');
       if(typeof result.devCode === 'string') setCode(result.devCode);
+      setSent(true);
       setStep('code');
     }catch(e){
       setError(errorText(e, locale));
     }finally{
       setBusy(false);
     }
+  }
+
+  // A one-time code issued in the Admin (mail not configured or not delivered)
+  // is verified exactly like an email code; only the sending step is skipped.
+  function useExistingCode(){
+    setError('');
+    setEmail(String(email || '').trim().toLowerCase());
+    setSent(false);
+    setStep('code');
   }
 
   async function verify(event: FormEvent){
@@ -286,12 +304,13 @@ export function SignInForm({locale = 'ru', productName, askHandle = true, varian
           </label>
           {error && <p className="ab-auth-error" role="alert">{error}</p>}
           <button className="ab-auth-primary" type="submit" disabled={busy}>{busy ? copy.sending : copy.send}</button>
+          <button className="ab-auth-secondary" type="button" disabled={busy || !email.trim()} onClick={useExistingCode}>{copy.haveCode}</button>
         </form>
       )}
 
       {step === 'code' && (
         <form onSubmit={verify}>
-          <p className="ab-auth-lead">{copy.sent} <b>{email}</b>.</p>
+          <p className="ab-auth-lead">{sent ? copy.sent : copy.enterCode} <b>{email}</b>.</p>
           <label className="ab-auth-field">
             <span>{copy.code}</span>
             <input
