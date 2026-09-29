@@ -55,7 +55,7 @@ export function AccessOfferView({
   const state=runtime.state;
   if(!state)return null;
   const entitlement=resolveCourseEntitlement(state.set,session);
-  const full=state.access==='full'||entitlement.full;
+  const full=state.access==='full';
 
   if(full){
     const detail=entitlement.reason==='owned'
@@ -72,6 +72,23 @@ export function AccessOfferView({
           <p>{detail}</p>
           <button className="primary-button" type="button" onClick={onCourse}>
             {t('access.openCourse')}
+          </button>
+        </article>
+      </section>
+    );
+  }
+
+  if(entitlement.full){
+    return (
+      <section className="access-shell" aria-labelledby="access-title">
+        <button className="learn-back" type="button" onClick={onCourse}>{t('nav.back')}</button>
+        <article className="access-active">
+          <div className="eyebrow">{t('access.eyebrow')}</div>
+          <h2 id="access-title">{t('access.contentPendingTitle')}</h2>
+          <p>{t('access.contentPendingText')}</p>
+          {refreshError&&<p className="access-error" role="alert">{t('access.refreshError')}</p>}
+          <button className="primary-button" type="button" disabled={refreshing} onClick={onRefresh}>
+            {refreshing?t('access.refreshing'):t('today.retry')}
           </button>
         </article>
       </section>
