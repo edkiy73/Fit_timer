@@ -8,9 +8,9 @@ import {
 } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOptionalAuth } from '@appbase/ui-react/auth.js';
-import { loadSet } from './content/client';
+import { loadSet, retainLearnedActivities } from './content/client';
 import { buildLearnerCourseState, type LearnerCourseState } from './course-loader';
-import { courseProgressDoc } from './progress';
+import { courseProgressDoc, type CourseProgressDocument } from './progress';
 import { appDocs, readCourseProgress } from './sync';
 import { authEntitlementFingerprint } from './entitlements';
 
@@ -36,6 +36,21 @@ export const learnerCourseSetQueryKey=(setId:string,accessKey='anonymous')=>
 export const learnerCourseProgressQueryKey=(setId:string)=>
   [PROGRESS_KEY,normalizeSetId(setId)] as const;
 
+export function learnedActivityIdsFromProgress(progress:CourseProgressDocument):string[]{
+  const ids=new Set<string>();
+  const add=(records:Record<string,{deleted?:boolean}|undefined>)=>{
+    for(const [id,record] of Object.entries(records)){
+      if(record&&!record.deleted)ids.add(id);
+    }
+  };
+  add(progress.seen);
+  add(progress.cards);
+  add(progress.practice.drill);
+  add(progress.practice.listening);
+  add(progress.practice.speaking);
+  return [...ids].sort();
+}
+
 export function LearnerCourseProvider({
   setId,
   children
@@ -51,7 +66,7 @@ export function LearnerCourseProvider({
   const setQuery=useQuery({
     queryKey:learnerCourseSetQueryKey(requestedSetId,accessKey),
     queryFn:()=>loadSet(requestedSetId),
-    enabled:requestedSetId.length>0,
+    enabled:requestedSetId.length>0&&!auth.loading,
     staleTime:5*60_000
   });
 
@@ -79,6 +94,18 @@ export function LearnerCourseProvider({
     if(!setQuery.data||!progressQuery.data)return null;
     return buildLearnerCourseState(setQuery.data,progressQuery.data);
   },[setQuery.data,progressQuery.data]);
+
+  const learnedIds=useMemo(
+    ()=>progressQuery.data?learnedActivityIdsFromProgress(progressQuery.data):[],
+    [progressQuery.data]
+  );
+  const learnedSignature=learnedIds.join('|');
+
+  useEffect(()=>{
+    if(!auth.session||!setQuery.data||setQuery.data.access!=='full'||!learnedIds.length)return;
+    if(setQuery.data.set.access.mode!=='entitlement')return;
+    void retainLearnedActivities(setQuery.data.set.id,learnedIds).catch(()=>undefined);
+  },[auth.session,setQuery.data,learnedSignature]);
 
   const refresh=useCallback(async()=>{
     const jobs:Promise<unknown>[]=[
