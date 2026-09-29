@@ -144,4 +144,46 @@ describe('node activity runner',()=>{
 
     expect(screen.getByRole('heading',{name:'Выбери ответ'})).toBeTruthy();
   });
+
+  it('does not open a paid cached lesson by direct route after access ends',()=>{
+    const paidState:LearnerCourseState={
+      ...state,
+      set:{
+        ...state.set,
+        access:{
+          mode:'entitlement',
+          entitlement:'course.general-foundation',
+          freePreview:{kind:'first-days',days:0,learnedContentStaysAvailable:true}
+        }
+      },
+      access:'preview',
+      currentNode:null,
+      currentDayIndex:null
+    };
+    const paidRuntime:LearnerCourseRuntimeValue={
+      ...runtime,
+      state:paidState
+    };
+
+    render(
+      <I18nProvider
+        dictionaries={dictionaries}
+        config={{locales:['ru'],default:'ru'}}
+        storageKey="learn-paid-cache.locale"
+        systemLanguages={['ru']}
+      >
+        <NodeRunnerView
+          runtime={paidRuntime}
+          nodeId="day-1"
+          onExit={()=>{}}
+          saveSeen={async()=>{}}
+          saveGraded={async()=>{}}
+          savePractice={async()=>{}}
+        />
+      </I18nProvider>
+    );
+
+    expect(screen.getByText('Этот шаг сейчас недоступен')).toBeTruthy();
+    expect(screen.queryByText('Короткая теория')).toBeNull();
+  });
 });
