@@ -522,11 +522,13 @@ async function getPublished(id){
   return revision ? getRevision(key,revision) : null;
 }
 
-function previewSnapshot(set){
+function previewSnapshot(set,retainedActivityIds=[]){
   if(set.access.mode === 'free') return set;
   const preview = set.access.freePreview;
   const days = preview && preview.kind === 'first-days' ? Math.max(0,+preview.days||0) : 0;
-  const allowedIds = new Set();
+  const retained = new Set((Array.isArray(retainedActivityIds)?retainedActivityIds:[])
+    .map(cleanId).filter(Boolean));
+  const allowedIds = new Set(retained);
   const roadmaps = set.roadmaps.map(roadmap => {
     const nodes = roadmap.nodes.map(node => {
       const included = Number.isInteger(node.dayIndex) && node.dayIndex <= days;
@@ -534,8 +536,9 @@ function previewSnapshot(set){
         for(const id of (node.activityIds || [])) allowedIds.add(id);
         return node;
       }
-      // Keep safe roadmap metadata so preview users can see the full course map,
-      // but never ship paid activity ids/completion references without entitlement.
+      // Keep safe roadmap metadata so preview users can see the full course map.
+      // Paid nodes never expose their activity/completion graph. Individually retained
+      // activities are returned separately for Review after access expires.
       const skeleton={...node,activityIds:[]};
       delete skeleton.completion;
       return skeleton;

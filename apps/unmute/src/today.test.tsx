@@ -67,7 +67,7 @@ function runtime(overrides:Partial<LearnerCourseRuntimeValue>={}):LearnerCourseR
   };
 }
 
-function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn(),onReview=vi.fn(),onMap=vi.fn(),onProgress=vi.fn()){
+function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn(),onReview=vi.fn(),onMap=vi.fn(),onProgress=vi.fn(),onAccess=vi.fn()){
   render(
     <I18nProvider
       dictionaries={dictionaries}
@@ -75,10 +75,10 @@ function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn(),onReview=vi
       storageKey="today-test.locale"
       systemLanguages={['ru']}
     >
-      <TodayView runtime={value} onStart={onStart} onReview={onReview} onMap={onMap} onProgress={onProgress} />
+      <TodayView runtime={value} onStart={onStart} onReview={onReview} onMap={onMap} onProgress={onProgress} onAccess={onAccess} />
     </I18nProvider>
   );
-  return {onStart,onReview,onMap,onProgress};
+  return {onStart,onReview,onMap,onProgress,onAccess};
 }
 
 describe('Today learner shell',()=>{
@@ -194,6 +194,7 @@ describe('Today learner shell',()=>{
           onReview={()=>{}}
           onMap={()=>{}}
           onProgress={()=>{}}
+          onAccess={()=>{}}
         />
       </I18nProvider>
     );
@@ -227,7 +228,9 @@ describe('Today learner shell',()=>{
     expect(screen.queryByText('День 2')).toBeNull();
   });
 
-  it('explains when the free preview has reached the next paid day',()=>{
+  it('explains when the free preview has reached the next paid day',async()=>{
+    const user=userEvent.setup();
+    const onAccess=vi.fn();
     const lockedNode={
       id:'day-8',
       kind:'lesson' as const,
@@ -262,10 +265,12 @@ describe('Today learner shell',()=>{
           courseComplete:false
         }
       }
-    }));
+    }),vi.fn(),vi.fn(),vi.fn(),vi.fn(),onAccess);
 
     expect(screen.getByText('Бесплатная часть пройдена')).toBeTruthy();
     expect(screen.getByText(/полным доступом/)).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Открыть доступ'}));
+    expect(onAccess).toHaveBeenCalledTimes(1);
   });
 
   it('lets the learner retry after a load error',async()=>{

@@ -356,3 +356,27 @@ h2{margin:0 0 8px}
   .onboarding-card{padding:20px}
   .onboarding-card h2{font-size:28px}
 }
+
+
+.today-state-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+
+.access-shell{display:grid;gap:18px;max-width:760px;margin:0 auto;padding:4px 0 28px}
+.access-heading{display:grid;gap:8px}
+.access-heading h2,.access-active h2{margin:4px 0 0;font-size:30px;line-height:1.08}
+.access-heading p,.access-active p{margin:0;color:var(--muted);line-height:1.55}
+.access-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.access-option{display:grid;align-content:start;gap:10px;border:1px solid var(--line);border-radius:18px;padding:18px;background:var(--surface)}
+.access-option h3{margin:0;font-size:20px}
+.access-option p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+.access-tag{justify-self:start;border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900}
+.access-note,.access-dev-note,.access-active{display:grid;gap:8px;border:1px solid var(--line);border-radius:18px;padding:16px;background:var(--surface)}
+.access-note span,.access-dev-note{color:var(--muted);font-size:13px;line-height:1.5}
+.access-dev-note{background:transparent}
+.access-actions{display:flex;gap:10px;flex-wrap:wrap}
+.access-actions .primary-button,.access-actions .secondary-button{flex:1 1 220px}
+.access-active{padding:22px}
+.access-error{margin:0;color:var(--danger,#b42318);font-size:13px}
+@media(max-width:620px){
+  .access-options{grid-template-columns:1fr}
+  .access-heading h2,.access-active h2{font-size:28px}
+}

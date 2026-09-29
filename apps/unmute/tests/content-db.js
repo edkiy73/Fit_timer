@@ -76,6 +76,57 @@ const sample={
   assert.equal(full.body.access,'full');
   assert.equal(full.body.set.activities.length,3);
 
+  // Active Plus opens the same full course even without a permanent owned SKU.
+  const plusEmail='plus@example.com', plusDevice='device-plus', plusToken='plus-token';
+  await store.pipe([['SET',`a:${hash(plusEmail).slice(0,32)}`,JSON.stringify({
+    syncDevices:{[plusDevice]:{h:hash(plusToken)}},
+    sub:{until:new Date(Date.now()+24*3600*1000).toISOString()}
+  })]]);
+  const plus=await call({method:'GET',headers:{'x-fit-email':plusEmail,'x-fit-device':plusDevice,'x-fit-token':plusToken},query:{action:'set',id:'general-foundation'}});
+  assert.equal(plus.status,200);
+  assert.equal(plus.body.access,'full');
+  assert.equal(plus.body.set.activities.length,3);
+
+  // Learned paid activities are retained only while the account currently has full
+  // access. The server validates IDs against the released set and keeps a separate
+  // entitlement ledger; preview never trusts client-editable progress documents.
+  const retained=await call({
+    method:'POST',
+    headers:{'x-fit-email':email,'x-fit-device':deviceId,'x-fit-token':token},
+    body:{action:'retain_learned',id:'general-foundation',activityIds:['a8','does-not-exist']}
+  });
+  assert.equal(retained.status,200);
+  assert.equal(retained.body.retained,1);
+
+  const ownerHash=hash(email).slice(0,32);
+  await store.pipe([['SET',`a:${ownerHash}`,JSON.stringify({
+    syncDevices:{[deviceId]:{h:hash(token)}},
+    owned:{}
+  })]]);
+  const learnedPreview=await call({
+    method:'GET',
+    headers:{'x-fit-email':email,'x-fit-device':deviceId,'x-fit-token':token},
+    query:{action:'set',id:'general-foundation'}
+  });
+  assert.equal(learnedPreview.status,200);
+  assert.equal(learnedPreview.body.access,'preview');
+  assert.deepEqual(learnedPreview.body.set.activities.map(x=>x.id),['a1','a7','a8']);
+  const learnedPaidNode=learnedPreview.body.set.roadmaps[0].nodes.find(x=>x.id==='d8');
+  assert.deepEqual(learnedPaidNode.activityIds,[]);
+
+  const freeEmail='free@example.com', freeDevice='device-free', freeToken='free-token';
+  await store.pipe([['SET',`a:${hash(freeEmail).slice(0,32)}`,JSON.stringify({
+    syncDevices:{[freeDevice]:{h:hash(freeToken)}},
+    owned:{}
+  })]]);
+  const deniedRetain=await call({
+    method:'POST',
+    headers:{'x-fit-email':freeEmail,'x-fit-device':freeDevice,'x-fit-token':freeToken},
+    body:{action:'retain_learned',id:'general-foundation',activityIds:['a8']}
+  });
+  assert.equal(deniedRetain.status,403);
+  assert.equal(deniedRetain.body.error,'full_access_required');
+
   const draft=await Content.getDraft('general-foundation');
   draft.title.ru='Updated';
   await Content.putDraft(draft);

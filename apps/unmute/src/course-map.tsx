@@ -60,11 +60,13 @@ function statusKey(status:CourseMapStatus):
 export function CourseMapView({
   runtime,
   onExit,
-  onOpen
+  onOpen,
+  onUnlock
 }:{
   runtime:LearnerCourseRuntimeValue;
   onExit:()=>void;
   onOpen:(nodeId:string)=>void;
+  onUnlock:(nodeId:string)=>void;
 }){
   const {t,locale}=useI18n();
 
@@ -96,6 +98,7 @@ export function CourseMapView({
   const state=runtime.state;
   if(!state)return null;
   const items=buildCourseMapItems(state);
+  const firstPurchaseLockedId=items.find(item=>item.status==='purchase-locked')?.node.id ?? null;
   const previewDays=state.set.access.mode==='entitlement'
     ? state.set.access.freePreview?.days ?? 0
     : 0;
@@ -147,7 +150,7 @@ export function CourseMapView({
                 {localized(item.node.title,locale)!==label&&(
                   <strong><LexiconText text={localized(item.node.title,locale)} /></strong>
                 )}
-                {item.status==='purchase-locked'&&(
+                {item.status==='purchase-locked'&&item.node.id===firstPurchaseLockedId&&(
                   <span className="course-map-note">{t('courseMap.purchaseHint')}</span>
                 )}
                 {item.status==='prerequisite-locked'&&(
@@ -161,6 +164,15 @@ export function CourseMapView({
                   onClick={()=>onOpen(item.node.id)}
                 >
                   {item.status==='complete'?t('courseMap.reopen'):t('courseMap.open')}
+                </button>
+              )}
+              {item.status==='purchase-locked'&&item.node.id===firstPurchaseLockedId&&(
+                <button
+                  className="secondary-button course-map-open"
+                  type="button"
+                  onClick={()=>onUnlock(item.node.id)}
+                >
+                  {t('courseMap.unlock')}
                 </button>
               )}
             </article>
@@ -178,6 +190,7 @@ export function CourseMapScreen(){
       runtime={useLearnerCourseRuntime()}
       onExit={()=>navigate('/')}
       onOpen={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId))}
+      onUnlock={nodeId=>navigate('/access?from=course&node='+encodeURIComponent(nodeId))}
     />
   );
 }

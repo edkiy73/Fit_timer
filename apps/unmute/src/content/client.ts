@@ -1,6 +1,7 @@
 import { createStorage } from '@appbase/core/storage.js';
 import { authClient } from '../auth';
 import { validateCourseSet, type CourseSet } from './schema';
+import { resolveCourseEntitlement } from '../entitlements';
 
 export interface ContentCatalogSet {
   id: string;
@@ -75,11 +76,37 @@ export async function loadSet(id:string): Promise<{set:CourseSet; access:'full'|
     if(cached){
       try{
         const parsed=JSON.parse(cached) as {set:unknown;access?:unknown};
-        return {set:validateCourseSet(parsed.set),access:parsed.access==='full'?'full':'preview',fromCache:true};
+        const set=validateCourseSet(parsed.set);
+        let access: 'full'|'preview'=parsed.access==='full'?'full':'preview';
+        if(access==='full'&&set.access.mode==='entitlement'){
+          const session=await authClient.getSession();
+          access=resolveCourseEntitlement(set,session).full?'full':'preview';
+        }
+        return {set,access,fromCache:true};
       }catch(_){}
     }
     throw error;
   }
+}
+
+export async function retainLearnedActivities(
+  setId:string,
+  activityIds:readonly string[]
+):Promise<void>{
+  const safe=String(setId||'').trim().toLowerCase();
+  const ids=[...new Set(activityIds.map(id=>String(id||'').trim().toLowerCase()).filter(Boolean))];
+  if(!safe||!ids.length)return;
+  const headers=await authHeaders();
+  if(!Object.keys(headers).length)return;
+  await fetchJson('/api/content',{
+    method:'POST',
+    headers:{'Content-Type':'application/json',...headers},
+    body:JSON.stringify({
+      action:'retain_learned',
+      id:safe,
+      activityIds:ids
+    })
+  });
 }
 
 export async function clearContentCache(): Promise<void> {

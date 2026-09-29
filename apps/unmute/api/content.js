@@ -4,12 +4,15 @@ require('../lib/product');
 const crypto = require('crypto');
 const { store } = require('../../../packages/core/server/store');
 const { send, fail, rateOk, rateOkScoped, sameSecret, cors } = require('../../../packages/core/server/util');
-const { hasOwned } = require('../../../packages/core/server/entitlements');
+const { hasOwned, hasPremium } = require('../../../packages/core/server/entitlements');
 const Content = require('../lib/content-store');
 const Release = require('../lib/content-release');
 
 const MAX_BODY = 6 * 1024 * 1024;
+const LEARNED_TTL = 5 * 365 * 24 * 3600;
+const MAX_RETAINED = 2000;
 const sha = value => crypto.createHash('sha256').update(String(value)).digest('hex');
+const retainedKey = (accountHash,setId) => `unmute:learned:v1:${accountHash}:${setId}`;
 
 async function bodyOf(req){
   if(req.body && typeof req.body === 'object') return req.body;
@@ -27,12 +30,32 @@ async function accountFromHeaders(req){
   const deviceId = String(req.headers['x-fit-device'] || '').trim().slice(0,80);
   const token = String(req.headers['x-fit-token'] || '');
   if(!email || !deviceId || !token) return null;
-  const raw = await store.get(`a:${sha(email).slice(0,32)}`);
+  const accountHash=sha(email).slice(0,32);
+  const raw = await store.get(`a:${accountHash}`);
   let acc=null;
   try{ acc=JSON.parse(raw); }catch(_){}
   const dev = acc && acc.syncDevices && acc.syncDevices[deviceId];
   if(!dev || !sameSecret(sha(token), dev.h || '')) return null;
-  return acc;
+  return {acc,accountHash};
+}
+
+async function retainedActivityIds(accountHash,setId){
+  if(!accountHash||!setId)return [];
+  let ids=[];
+  try{ ids=JSON.parse(await store.get(retainedKey(accountHash,setId)))||[]; }catch(_){}
+  return Array.isArray(ids)?ids.map(Content.cleanId).filter(Boolean).slice(0,MAX_RETAINED):[];
+}
+
+async function retainLearnedActivities(accountHash,set,activityIds){
+  const allowed=new Set(set.activities.map(activity=>activity.id));
+  const incoming=(Array.isArray(activityIds)?activityIds:[])
+    .map(Content.cleanId)
+    .filter(id=>id&&allowed.has(id));
+  if(!incoming.length)return retainedActivityIds(accountHash,set.id);
+  const previous=await retainedActivityIds(accountHash,set.id);
+  const merged=[...new Set([...previous,...incoming])].slice(0,MAX_RETAINED);
+  await store.set(retainedKey(accountHash,set.id),JSON.stringify(merged),LEARNED_TTL);
+  return merged;
 }
 
 function adminOk(req){
@@ -62,24 +85,53 @@ module.exports = async function contentHandler(req,res){
       if(!set) return fail(res,404,'set_not_found');
 
       let full = set.access.mode === 'free';
+      let account=null;
       if(!full && set.access.mode === 'entitlement'){
-        const acc = await accountFromHeaders(req);
-        full = !!acc && hasOwned(acc,set.access.entitlement);
+        account = await accountFromHeaders(req);
+        full = !!account && (hasOwned(account.acc,set.access.entitlement)||hasPremium(account.acc));
       }
-      return send(res,200,{ok:true, access:full?'full':'preview', set:full?set:Content.previewSnapshot(set)});
+      const keepLearned=set.access.mode==='entitlement'&&set.access.freePreview?.learnedContentStaysAvailable===true;
+      const learned = !full&&account&&keepLearned ? await retainedActivityIds(account.accountHash,id) : [];
+      return send(res,200,{
+        ok:true,
+        access:full?'full':'preview',
+        set:full?set:Content.previewSnapshot(set,learned)
+      });
     }
 
     return fail(res,400,'unknown_action');
   }
 
   if(req.method !== 'POST') return fail(res,405,'method_not_allowed');
-  if(!(await rateOkScoped(req,'content-admin',120,'',3600,true))) return fail(res,429,'rate_limited');
-  if(!process.env.ADMIN_KEY) return fail(res,503,'no_admin_key');
-  if(!adminOk(req)) return fail(res,403,'bad_key');
 
   let body;
   try{ body=await bodyOf(req); }
   catch(error){ return fail(res,error && error.message === 'too_large' ? 413 : 400,'bad_body'); }
+
+  // Learner action: while the account currently owns the course or has active Plus,
+  // remember only activity IDs that the released set actually contains. This ledger is
+  // server-authenticated; preview access never trusts client-editable progress docs.
+  if(String(body.action||'')==='retain_learned'){
+    if(!(await rateOk(req,'content-retain',240))) return fail(res,429,'rate_limited');
+    const account=await accountFromHeaders(req);
+    if(!account)return fail(res,401,'auth_required');
+    const id=Content.cleanId(body.id);
+    if(!id)return fail(res,400,'bad_set_id');
+    const set=await Release.getReleasedSet(id);
+    if(!set)return fail(res,404,'set_not_found');
+    const full=set.access.mode==='free'
+      || (set.access.mode==='entitlement'
+        && (hasOwned(account.acc,set.access.entitlement)||hasPremium(account.acc)));
+    if(!full)return fail(res,403,'full_access_required');
+    const keepLearned=set.access.mode==='entitlement'&&set.access.freePreview?.learnedContentStaysAvailable===true;
+    if(!keepLearned)return send(res,200,{ok:true,retained:0});
+    const retained=await retainLearnedActivities(account.accountHash,set,body.activityIds);
+    return send(res,200,{ok:true,retained:retained.length});
+  }
+
+  if(!(await rateOkScoped(req,'content-admin',120,'',3600,true))) return fail(res,429,'rate_limited');
+  if(!process.env.ADMIN_KEY) return fail(res,503,'no_admin_key');
+  if(!adminOk(req)) return fail(res,403,'bad_key');
 
   try{
     switch(String(body.action || '')){

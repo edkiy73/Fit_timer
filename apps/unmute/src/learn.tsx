@@ -13,6 +13,7 @@ import { speakWebText, startWebRecognition } from './speech-web';
 import { PatternPracticeView } from './pattern-practice';
 import { DialogueView } from './dialogue';
 import { LexiconText } from './lexicon-ui';
+import { isNodeUnlockedByPurchase } from './content/access';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -87,6 +88,11 @@ export function NodeRunnerView({
   const state=runtime.state;
   const node=state?.roadmap.nodes.find(item=>item.id===nodeId) ?? null;
   const nodeProgress=state?.roadmapProgress.nodes.find(item=>item.node.id===nodeId) ?? null;
+  const purchaseUnlocked=Boolean(state&&node&&isNodeUnlockedByPurchase(
+    state.set,
+    node,
+    {owned:state.access==='full'}
+  ));
   const activities=useMemo(
     ()=>state&&node?activitiesForNode(state.set.activities,node):[],
     [node,state]
@@ -144,7 +150,7 @@ export function NodeRunnerView({
     );
   }
 
-  if(!state||!node||!nodeProgress?.unlocked||!activity){
+  if(!state||!node||!nodeProgress?.unlocked||!purchaseUnlocked||!activity){
     return (
       <section className="learn-shell">
         <button className="learn-back" type="button" onClick={onExit}>{t('nav.back')}</button>

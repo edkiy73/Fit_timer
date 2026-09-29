@@ -8,10 +8,22 @@ import { readCourseProgress } from './sync';
 import { LearnerCourseProvider, useLearnerCourseRuntime } from './course-runtime';
 
 const mocked=vi.hoisted(()=>({
-  listeners:[] as Array<(change:{keys:Array<{key:string;profileId:string}>;source:'local'|'remote'})=>void>
+  listeners:[] as Array<(change:{keys:Array<{key:string;profileId:string}>;source:'local'|'remote'})=>void>,
+  refreshAuth:vi.fn(async()=>{})
 }));
 
-vi.mock('./content/client',()=>({loadSet:vi.fn()}));
+vi.mock('@appbase/ui-react/auth.js',()=>({
+  useOptionalAuth:()=>({
+    session:null,
+    loading:false,
+    refresh:mocked.refreshAuth
+  })
+}));
+
+vi.mock('./content/client',()=>({
+  loadSet:vi.fn(),
+  retainLearnedActivities:vi.fn()
+}));
 vi.mock('./sync',()=>({
   readCourseProgress:vi.fn(),
   appDocs:{
