@@ -65,7 +65,8 @@
 | Фаза 5b-2 — legacy progress file import | ✅ в `main` (#246) | Account imports `english-trainer-*.json` by merge, timezone due correction, ambiguity report, signed-in sync |
 | Фаза 7a — AI talk contract | ✅ в `main` (#242) | server-built `talk.reply` prompt, strict JSON protocol, Core quota/logging, typed client |
 | Фаза 7b — text AI conversation runner | ✅ в `main` (#243) | ai-conversation activity UI, server-built opener, typed turns, corrections/notes, sign-in/Plus gates, seen-on-finish |
-| Фаза 7c-1 — talk.review contract | ✅ в этой фазе | server-built whole-conversation review, strict strengths/corrections/focus JSON, typed Plus client |
+| Фаза 7c-1 — talk.review contract | ✅ в `main` (#248) | server-built whole-conversation review, strict strengths/corrections/focus JSON, typed Plus client |
+| Фаза 7c-2 — talk.review UI | ✅ в этой фазе | finish with learner turns → strengths/corrections/focus screen; review failure never blocks activity completion |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -418,7 +419,8 @@ DictEntry { word, ru }
 - ✅ **7a. `talk.reply` contract:** `lib/unmute-ai-actions.js` собирает prompt **на сервере** из topic/focus/history/latest learner message; клиент не присылает произвольный model prompt. Ответ — строгий JSON `reply/correction/note`, повторно валидируется и сервером, и клиентом. Используется существующий Core `ai-endpoint`: Premium auth, `light` quota, provider/model из Admin, fallback и 30-дневный hashed log. `/api/ai` — rewrite в уже существующий `api/admin.js`, поэтому новой Vercel Function не добавляем.
 - ✅ **7b. Текстовый AI conversation runner:** activity `ai-conversation` теперь реально проходит внутри lesson runner. Стартовый ход генерируется сервером без фальшивого learner message; дальше отправляются только последние structured turns. UI показывает partner/learner thread, correction/note последней фразы и quota usage, если Core его вернул. Activity становится `seen` только после явного «Завершить разговор». Anonymous → вход, signed-in без Plus → экран доступа. Голос и бесплатная пробная беседа не смешиваются сюда и идут отдельными кусками.
 - ✅ **7c-1. `talk.review` contract:** отдельный Plus/light action разбирает уже завершённый structured transcript только на сервере. Строгий ответ: `strengths[]`, `corrections[{original,better,why}]`, `focus`; сервер и клиент независимо валидируют JSON, никаких произвольных model prompts с клиента. UI разбора — следующий короткий 7c-2.
-- `talk.review` UI, `answer.explain`, одна пробная беседа — последующие небольшие куски.
+- ✅ **7c-2. UI разбора разговора:** если learner успел отправить хотя бы одну реплику, «Завершить разговор» сначала вызывает `talk.review` и показывает отдельный экран внутри activity: сильные стороны, до 3 meaningful corrections (`ты сказал → лучше так → почему`) и один focus на следующую попытку. Activity становится `seen` только после кнопки «Готово». Если разбор упал/закончился quota/истёк доступ, уже проведённый разговор не теряется: можно повторить review либо завершить activity без него. Если learner не отправил ни одной реплики, сохраняется прежнее быстрое завершение без бессмысленного review.
+- `answer.explain`, одна пробная беседа — последующие небольшие куски.
 - Голосом: распознавание → ИИ → озвучка.
 
 ### Фаза 8 — Напоминания
