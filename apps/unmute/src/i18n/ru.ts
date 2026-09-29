@@ -13,7 +13,7 @@ export const ru = {
   'today.offline': 'Офлайн-копия',
   'today.day': 'День {day}',
   'today.nextStep': 'Следующий шаг',
-  'today.activities': '{count} заданий',
+  'today.activities': 'Заданий: {count}',
   'today.courseProgress': 'Прогресс курса',
   'today.completeTitle': 'Курс пройден',
   'today.completeText': 'Все обязательные шаги завершены. Повторения и изученный материал останутся доступны.',
