@@ -13,7 +13,7 @@ function localized(text:Record<string,string>,locale:string):string{
   return text[locale] || text.ru || text.en || Object.values(text)[0] || '';
 }
 
-export function TodayView({runtime,wordRuntime=null,onStart,onReview,onMap,onProgress}:{runtime:LearnerCourseRuntimeValue;wordRuntime?:WordReviewRuntimeValue|null;onStart:(nodeId:string)=>void;onReview:()=>void;onMap:()=>void;onProgress:()=>void}){
+export function TodayView({runtime,wordRuntime=null,onStart,onReview,onMap,onProgress,onAccess}:{runtime:LearnerCourseRuntimeValue;wordRuntime?:WordReviewRuntimeValue|null;onStart:(nodeId:string)=>void;onReview:()=>void;onMap:()=>void;onProgress:()=>void;onAccess:()=>void}){
   const {t,locale}=useI18n();
   const state=runtime.state;
   const todayDay=activitySaveClock().dayNumber;
@@ -161,9 +161,20 @@ export function TodayView({runtime,wordRuntime=null,onStart,onReview,onMap,onPro
               ? t('today.previewCompleteText')
               : t('today.blockedText')}
           </span>
-          <button className="secondary-button" type="button" onClick={onMap}>
-            {t('today.courseMap')}
-          </button>
+          {state.access==='preview'&&state.roadmapProgress.currentNode ? (
+            <div className="today-state-actions">
+              <button className="primary-button" type="button" onClick={onAccess}>
+                {t('today.openAccess')}
+              </button>
+              <button className="secondary-button" type="button" onClick={onMap}>
+                {t('today.courseMap')}
+              </button>
+            </div>
+          ) : (
+            <button className="secondary-button" type="button" onClick={onMap}>
+              {t('today.courseMap')}
+            </button>
+          )}
         </div>
       )}
     </section>
@@ -180,6 +191,7 @@ export function TodayScreen(){
       onReview={()=>navigate('/review')}
       onMap={()=>navigate('/course')}
       onProgress={()=>navigate('/progress')}
+      onAccess={()=>navigate('/access?from=today')}
     />
   );
 }
