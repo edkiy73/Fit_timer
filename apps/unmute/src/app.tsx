@@ -15,6 +15,7 @@ import { TodayScreen } from './today';
 import { NodeRunnerScreen } from './learn';
 import { ReviewScreen } from './review';
 import { CourseMapScreen } from './course-map';
+import { LexiconProvider } from './lexicon-ui';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
 const PRODUCT_SHORT_NAME = product.shortName || PRODUCT_NAME;
@@ -69,9 +70,11 @@ function Root(){
     <Localized>
       <AuthProvider client={authClient}>
         <SettingsSync />
-        <LearnerCourseProvider setId={DEFAULT_COURSE_SET}>
-          <Outlet />
-        </LearnerCourseProvider>
+        <LexiconProvider>
+          <LearnerCourseProvider setId={DEFAULT_COURSE_SET}>
+            <Outlet />
+          </LearnerCourseProvider>
+        </LexiconProvider>
       </AuthProvider>
     </Localized>
   );

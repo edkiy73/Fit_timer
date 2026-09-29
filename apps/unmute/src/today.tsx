@@ -7,6 +7,7 @@ import { buildCourseReviewSession } from './review-session';
 import type { WordReviewRuntimeValue } from './word-review-runtime';
 import { useWordReviewRuntime } from './word-review-runtime';
 import { resolveWordReviewSession } from './word-review';
+import { LexiconText } from './lexicon-ui';
 
 function localized(text:Record<string,string>,locale:string):string{
   return text[locale] || text.ru || text.en || Object.values(text)[0] || '';
@@ -89,7 +90,7 @@ export function TodayView({runtime,wordRuntime=null,onStart,onReview,onMap}:{run
 
       {runtime.status==='ready' && state?.roadmapProgress.courseComplete && (
         <div className="today-state today-complete">
-          <div className="today-kicker">{localized(state.set.title,locale)}</div>
+          <div className="today-kicker"><LexiconText text={localized(state.set.title,locale)} /></div>
           <h3>{t('today.completeTitle')}</h3>
           <p>{t('today.completeText')}</p>
           <div className="today-progress-label">
@@ -109,7 +110,7 @@ export function TodayView({runtime,wordRuntime=null,onStart,onReview,onMap}:{run
         <article className="today-card">
           <div className="today-card-top">
             <div>
-              <div className="today-kicker">{localized(state.set.title,locale)}</div>
+              <div className="today-kicker"><LexiconText text={localized(state.set.title,locale)} /></div>
               <div className="today-day">
                 {state.currentDayIndex
                   ? t('today.day',{day:state.currentDayIndex})
@@ -121,7 +122,7 @@ export function TodayView({runtime,wordRuntime=null,onStart,onReview,onMap}:{run
             </span>
           </div>
 
-          <h3>{localized(state.currentNode.title,locale)}</h3>
+          <h3><LexiconText text={localized(state.currentNode.title,locale)} /></h3>
 
           <div className="today-progress-label">
             <span>{t('today.courseProgress')}</span>

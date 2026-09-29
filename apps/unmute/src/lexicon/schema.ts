@@ -59,7 +59,7 @@ export const lexiconSnapshotSchema=z.object({
 export type Lexeme=z.infer<typeof lexemeSchema>;
 export type LexiconSnapshot=z.infer<typeof lexiconSnapshotSchema>;
 
-function normalizeSurface(value:string):string{
+export function normalizeSurface(value:string):string{
   return value.toLowerCase().replace(/[\u2019\u02bc]/g,"'").replace(/\s+/g,' ').trim();
 }
 

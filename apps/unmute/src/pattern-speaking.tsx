@@ -8,6 +8,7 @@ import type {
   WebRecognitionHandle
 } from './speech-web';
 import { looseSpeechMatch } from './speech-match';
+import { LexiconText } from './lexicon-ui';
 
 type PatternDrillActivity=Extract<Activity,{type:'pattern-drill'}>;
 
@@ -214,7 +215,7 @@ export function PatternSpeakingView({
     return (
       <article className="learn-card speaking-card">
         <div className="eyebrow">{t('speaking.mode')}</div>
-        <h3>{localized(activity.pattern,locale)}</h3>
+        <h3><LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} /></h3>
         <div className="drill-result">
           <strong>{t('speaking.score',{correct:hits,total:items.length})}</strong>
           <span>{passed?t('speaking.passed'):t('speaking.retryHint')}</span>
@@ -251,10 +252,10 @@ export function PatternSpeakingView({
   return (
     <article className="learn-card speaking-card">
       <div className="drill-meta">
-        <span>{localized(activity.pattern,locale)}</span>
+        <span><LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} /></span>
         <span>{t('speaking.position',{current:pos+1,total:items.length})}</span>
       </div>
-      <h3>{prompt}</h3>
+      <h3><LexiconText text={prompt} refs={activity.lexiconRefs} /></h3>
 
       {phase==='ask' ? (
         <>
@@ -281,7 +282,7 @@ export function PatternSpeakingView({
             <strong>{correct?t('speaking.match'):t('speaking.noMatch')}</strong>
             <span>{correct?t('speaking.matchHint'):t('speaking.noMatchHint')}</span>
           </div>
-          <div className="drill-target">{target}</div>
+          <div className="drill-target"><LexiconText text={target} refs={activity.lexiconRefs} /></div>
           {heard&&<div className="learn-hint">{t('speaking.heard',{heard})}</div>}
           <button className="secondary-button" type="button" onClick={()=>void speak(target,'en-US')}>
             {t('speaking.playReference')}

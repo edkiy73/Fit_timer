@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
 import type { SpeakText } from './speech-web';
+import { LexiconText } from './lexicon-ui';
 
 type PatternDrillActivity=Extract<Activity,{type:'pattern-drill'}>;
 type LocalizedText=Record<string,string>;
@@ -150,7 +151,7 @@ export function PatternListeningView({
     return (
       <article className="learn-card listening-card">
         <div className="eyebrow">{t('listening.mode')}</div>
-        <h3>{localized(activity.pattern,locale)}</h3>
+        <h3><LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} /></h3>
         <div className="drill-result">
           <strong>{t('listening.score',{correct:hits,total:items.length})}</strong>
           <span>{passed?t('listening.passed'):t('listening.retryHint')}</span>
@@ -188,7 +189,7 @@ export function PatternListeningView({
   return (
     <article className="learn-card listening-card">
       <div className="drill-meta">
-        <span>{localized(activity.pattern,locale)}</span>
+        <span><LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} /></span>
         <span>{t('listening.position',{current:pos+1,total:items.length})}</span>
       </div>
       <h3>{t('listening.prompt')}</h3>
@@ -200,7 +201,7 @@ export function PatternListeningView({
         <div className="listening-options">
           {options.map(option=>(
             <button className="listening-option" type="button" key={option} onClick={()=>choose(option)}>
-              {option}
+              <LexiconText text={option} refs={activity.lexiconRefs} />
             </button>
           ))}
         </div>
@@ -210,8 +211,8 @@ export function PatternListeningView({
             <strong>{isCorrect?t('learn.correct'):t('listening.incorrect')}</strong>
             <span>{isCorrect?t('listening.correctHint'):t('listening.incorrectHint')}</span>
           </div>
-          <div className="drill-target">{target}</div>
-          <div className="learn-hint">{correctLabel}</div>
+          <div className="drill-target"><LexiconText text={target} refs={activity.lexiconRefs} /></div>
+          <div className="learn-hint"><LexiconText text={correctLabel} refs={activity.lexiconRefs} /></div>
           <button className="primary-button" type="button" onClick={next}>
             {pos+1<items.length?t('learn.next'):t('learn.finish')}
           </button>
