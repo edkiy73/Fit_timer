@@ -22,7 +22,8 @@ import java.util.Locale;
 final class VoiceCommands {
     static final String PAUSE = "pause";
     static final String RESUME = "resume";
-    static final String NEXT = "next";
+    static final String DONE = "done";
+    static final String SKIP = "skip";
     static final String UNKNOWN = "[unk]";
 
     private static final String[] RU_PAUSE = {
@@ -31,13 +32,15 @@ final class VoiceCommands {
     private static final String[] RU_RESUME = {
         "продолжить", "продолжай", "продолжаем", "продолжи", "можно продолжать", "поехали", "дальше пошли"
     };
-    private static final String[] RU_NEXT = {
-        "дальше", "готово", "готов", "готова", "готовы", "пропустить", "пропусти",
+    private static final String[] RU_DONE = {
+        "дальше", "готово", "готов", "готова", "готовы",
         "следующее", "следующий", "сделал", "закончил", "завершить"
     };
+    private static final String[] RU_SKIP = {"пропустить", "пропусти"};
     private static final String[] EN_PAUSE = {"pause", "stop", "wait"};
     private static final String[] EN_RESUME = {"continue", "resume", "go on", "keep going"};
-    private static final String[] EN_NEXT = {"next", "done", "skip", "finished"};
+    private static final String[] EN_DONE = {"next", "done", "finished"};
+    private static final String[] EN_SKIP = {"skip"};
 
     private VoiceCommands() {}
 
@@ -47,7 +50,8 @@ final class VoiceCommands {
         boolean en = "en".equals(language);
         addAll(phrases, en ? EN_PAUSE : RU_PAUSE);
         addAll(phrases, en ? EN_RESUME : RU_RESUME);
-        addAll(phrases, en ? EN_NEXT : RU_NEXT);
+        addAll(phrases, en ? EN_DONE : RU_DONE);
+        addAll(phrases, en ? EN_SKIP : RU_SKIP);
         phrases.add(UNKNOWN);
         StringBuilder out = new StringBuilder("[");
         for (int i = 0; i < phrases.size(); i++) {
@@ -75,7 +79,8 @@ final class VoiceCommands {
         if (t.isEmpty()) return "";
         if (in(t, RU_PAUSE) || in(t, EN_PAUSE)) return PAUSE;
         if (in(t, RU_RESUME) || in(t, EN_RESUME)) return RESUME;
-        if (in(t, RU_NEXT) || in(t, EN_NEXT)) return NEXT;
+        if (in(t, RU_DONE) || in(t, EN_DONE)) return DONE;
+        if (in(t, RU_SKIP) || in(t, EN_SKIP)) return SKIP;
         return "";
     }
 
@@ -107,13 +112,15 @@ final class VoiceCommands {
         if (!exact.isEmpty()) return exact;
         if (t.length() >= 4 && (t.startsWith("пауз") || t.startsWith("останов"))) return PAUSE;
         if (t.length() >= 7 && t.startsWith("продолж")) return RESUME;
-        if (t.length() >= 5 && t.startsWith("готов")) return NEXT;
-        if (t.length() >= 6 && (t.startsWith("пропуст") || t.startsWith("следующ") || t.startsWith("закончил"))) return NEXT;
-        if (t.length() >= 7 && t.startsWith("заверш")) return NEXT;
+        if (t.length() >= 5 && t.startsWith("готов")) return DONE;
+        if (t.length() >= 6 && (t.startsWith("следующ") || t.startsWith("закончил"))) return DONE;
+        if (t.length() >= 7 && t.startsWith("заверш")) return DONE;
+        if (t.length() >= 6 && t.startsWith("пропуст")) return SKIP;
 
         if (t.length() >= 4 && ("pause".startsWith(t) || "stop".equals(t))) return PAUSE;
         if (t.length() >= 5 && ("continue".startsWith(t) || "resume".startsWith(t))) return RESUME;
-        if (t.length() >= 4 && ("next".equals(t) || "done".equals(t) || "skip".equals(t))) return NEXT;
+        if (t.length() >= 4 && ("next".equals(t) || "done".equals(t))) return DONE;
+        if ("skip".equals(t)) return SKIP;
         return "";
     }
 
@@ -197,7 +204,7 @@ final class VoiceCommands {
         return false;
     }
 
-    private static final String[][] ALL = {RU_PAUSE, RU_RESUME, RU_NEXT, EN_PAUSE, EN_RESUME, EN_NEXT};
+    private static final String[][] ALL = {RU_PAUSE, RU_RESUME, RU_DONE, RU_SKIP, EN_PAUSE, EN_RESUME, EN_DONE, EN_SKIP};
 
     private static boolean in(String t, String[] list) {
         for (String s : list) if (s.equals(t)) return true;
