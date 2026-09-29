@@ -77,7 +77,7 @@ export function PatternDrillView({
   },[item?.id,locale,phase]);
 
   useEffect(()=>{
-    if(!done||saved||saving)return;
+    if(!done||saved||saving||saveError)return;
     setSaving(true);
     setSaveError(false);
     void savePractice(setId,activity.id,'drill',passed,score)
