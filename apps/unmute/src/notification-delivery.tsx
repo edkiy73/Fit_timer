@@ -109,7 +109,7 @@ export function nextReminderPlan(input:ReminderPlanInput):ReminderPlan|null{
 
 function notificationPayload(
   plan:ReminderPlan,
-  t:(key:string,vars?:Record<string,unknown>)=>string
+  t:(key:string,vars?:Readonly<Record<string,string|number>>)=>string
 ):Record<string,unknown>{
   const title=plan.intent.kind==='review-due'
     ? t('notifications.systemReviewTitle')
