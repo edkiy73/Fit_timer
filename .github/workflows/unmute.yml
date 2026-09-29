@@ -52,7 +52,7 @@ jobs:
 
   android:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: apps/unmute
@@ -85,6 +85,22 @@ jobs:
       - name: Android debug build
         run: gradle -p android :app:assembleDebug --no-daemon
 
+      - name: Enable KVM for Android emulator
+        run: sudo chmod 666 /dev/kvm
+
+      - name: Android emulator launch smoke
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          disable-spellchecker: true
+          working-directory: apps/unmute
+          emulator-options: -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect
+          script: bash scripts/smoke-android-device.sh
+
 
   ios:
     runs-on: macos-15
@@ -107,3 +123,6 @@ jobs:
 
       - name: iOS simulator build
         run: npm run check:ios
+
+      - name: iOS simulator launch smoke
+        run: bash scripts/smoke-ios-device.sh
