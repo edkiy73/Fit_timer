@@ -19,6 +19,7 @@ import {
   type TalkReview,
   type TalkTrialUsage
 } from './ai-talk';
+import { trackTalkStarted } from './observability';
 
 type AIActivity=Extract<Activity,{type:'ai-conversation'}>;
 
@@ -46,6 +47,7 @@ export function AIConversationView({
   onAccess,
   requestReply=requestTalkReply,
   requestReview=requestTalkReview,
+  onStarted=trackTalkStarted,
   speak=speakText,
   startRecognition=startSpeechRecognition
 }:{
@@ -57,6 +59,7 @@ export function AIConversationView({
   onAccess:()=>void;
   requestReply?:typeof requestTalkReply;
   requestReview?:typeof requestTalkReview;
+  onStarted?:()=>void;
   speak?:SpeakText;
   startRecognition?:StartRecognition;
 }){
@@ -116,6 +119,7 @@ export function AIConversationView({
       setMessages([{role:'partner',text:reply.reply}]);
       applyReply(reply);
       setStarted(true);
+      onStarted();
       void speak(reply.reply,'en-US');
     }catch(err:any){
       setError(String(err?.code||'ai_failed'));
