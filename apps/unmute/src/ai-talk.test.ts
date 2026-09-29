@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { authClient } from './auth';
 import {
+  clearTalkTrialContext,
+  getTalkTrialContext,
   requestTalkReply,
   requestTalkReview,
   talkReplyProtocol,
@@ -13,6 +15,25 @@ afterEach(()=>{
 });
 
 describe('AI talk client',()=>{
+  it('keeps one trial id for the same conversation within the browser session',()=>{
+    const values=new Map<string,string>();
+    const storage={
+      getItem:(key:string)=>values.get(key)??null,
+      setItem:(key:string,value:string)=>{values.set(key,value);},
+      removeItem:(key:string)=>{values.delete(key);}
+    };
+
+    const first=getTalkTrialContext('talk.clinic',storage);
+    const resumed=getTalkTrialContext('talk.clinic',storage);
+    expect(resumed).toEqual(first);
+
+    clearTalkTrialContext('talk.clinic',storage);
+    const next=getTalkTrialContext('talk.clinic',storage);
+    expect(next.scope).toBe('talk.clinic');
+    expect(next.id).not.toBe(first.id);
+  });
+
+
   it('parses the strict reply protocol',()=>{
     expect(talkReplyProtocol.parseReplyText(JSON.stringify({
       reply:'How can I help you?',
