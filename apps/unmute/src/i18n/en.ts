@@ -148,7 +148,7 @@ export const en: Record<keyof typeof ru, string> = {
   'mixed.eyebrow': 'Extra practice',
   'mixed.title': 'Mixed drill',
   'mixed.description': '10 phrases from different learned patterns, shuffled together. No hint about which structure to use next.',
-  'mixed.start': 'Mix {count} topics',
+  'mixed.start': 'Mix topics: {count}',
   'mixed.passed': 'Switching between patterns is already fast. Mixed drill does not change spaced-repetition intervals.',
   'mixed.retryHint': 'Switching is still slow. Another short mixed pass can help.',
   'mixed.backReview': 'Back to review',
