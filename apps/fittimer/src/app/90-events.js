@@ -1046,6 +1046,9 @@ let pendingAction = null;
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initEvents(){
+  window.addEventListener('fitAppForeground', ()=>{
+    if(appRuntimeCompat.offlineVoice()) refreshVoicePackUI();
+  });
   $('startMore').innerHTML = icon('more');
   $('startMore').onclick = e => { e.stopPropagation(); toggleMenu($('startMenu')); };
   $('progDescMore').onclick = ()=>{
