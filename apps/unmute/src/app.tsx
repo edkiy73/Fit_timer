@@ -21,6 +21,7 @@ import { ProgressScreen } from './progress-screen';
 import { OnboardingGate } from './onboarding';
 import { AccessScreen } from './access';
 import { LegacyProgressImportPanel } from './legacy-import-ui';
+import { NotificationSettingsPanel } from './notification-settings';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
 const PRODUCT_SHORT_NAME = product.shortName || PRODUCT_NAME;
@@ -140,6 +141,7 @@ function Account(){
         </>
       )}
 <LegacyProgressImportPanel />
+      <NotificationSettingsPanel />
       <div className="language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')} /></div>
     </section>
   );
