@@ -1,13 +1,33 @@
 'use strict';
 
 const { store } = require('./store');
-const { fail, readBody, rateOkScoped, sameSecret, cors } = require('./util');
+const { fail, readBody, rateOkScoped, sameSecret, cors, ipHash } = require('./util');
 const { createAdminObservability } = require('./admin/observability');
 const { handleAdminAccounts } = require('./admin/accounts');
 const { handleAdminCampaigns } = require('./admin/campaigns');
 const { handleAdminAISettings } = require('./admin/ai-settings');
 const { handleAdminStorage } = require('./admin/storage');
 const { handleAdminBilling } = require('./billing');
+
+// Brute-force guard: only a wrong key costs an attempt. Charging every request made the
+// guard throttle real admin work (one content screen issues several requests at once).
+const BAD_KEY_LIMIT = 30;
+const REQUEST_LIMIT = 600;
+const WINDOW_SEC = 3600;
+
+function badKeyBucket(req){
+  return `rl:admin-bad-key:${ipHash(req)}:${Math.floor(Date.now() / (WINDOW_SEC * 1000))}`;
+}
+
+async function badKeyBlocked(req){
+  const limit = process.env.ALLOW_MEMORY_STORE === '1' ? BAD_KEY_LIMIT * 50 : BAD_KEY_LIMIT;
+  try{ return (+(await store.get(badKeyBucket(req))) || 0) >= limit; }
+  catch(_){ return true; }
+}
+
+async function chargeBadKey(req){
+  try{ await store.incr(badKeyBucket(req), WINDOW_SEC + 5); }catch(_){}
+}
 
 function createAdminHandler({analyticsStats, handlers = []} = {}){
   const handleObservability = createAdminObservability({analyticsStats});
@@ -21,14 +41,18 @@ function createAdminHandler({analyticsStats, handlers = []} = {}){
     const admin = process.env.ADMIN_KEY || '';
     if(!admin) return fail(res, 503, 'no_admin_key');
 
-    if(!(await rateOkScoped(req, 'admin-auth', 30, '', 3600, true))){
+    if(await badKeyBlocked(req)) return fail(res, 429, 'rate_limited');
+    if(!(await rateOkScoped(req, 'admin-request', REQUEST_LIMIT, '', WINDOW_SEC, true))){
       return fail(res, 429, 'rate_limited');
     }
 
     let given = String(req.headers['x-admin-key'] || '');
     try{ given = decodeURIComponent(given); }
-    catch(_){ return fail(res, 403, 'bad_key'); }
-    if(!sameSecret(given, admin)) return fail(res, 403, 'bad_key');
+    catch(_){ given = ''; }
+    if(!sameSecret(given, admin)){
+      await chargeBadKey(req);
+      return fail(res, 403, 'bad_key');
+    }
 
     let body;
     try{ body = await readBody(req); }
