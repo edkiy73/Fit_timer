@@ -63,6 +63,26 @@ export function LearnerCourseProvider({
   const requestedSetId=normalizeSetId(setId);
   const accessKey=authEntitlementFingerprint(auth.session);
 
+  useEffect(()=>{
+    if(!auth.session?.premium)return;
+    const sub=auth.session.sub;
+    if(!sub||typeof sub!=='object'||Array.isArray(sub))return;
+    const until=(sub as {until?:unknown}).until;
+    if(typeof until!=='string')return;
+    const expires=Date.parse(until)||0;
+    if(!expires)return;
+    const remaining=expires-Date.now();
+    if(remaining<=0){
+      void auth.refresh().catch(()=>undefined);
+      return;
+    }
+    const timer=window.setTimeout(
+      ()=>void auth.refresh().catch(()=>undefined),
+      Math.min(remaining+500,2_000_000_000)
+    );
+    return ()=>window.clearTimeout(timer);
+  },[auth.refresh,auth.session?.premium,auth.session?.sub]);
+
   const setQuery=useQuery({
     queryKey:learnerCourseSetQueryKey(requestedSetId,accessKey),
     queryFn:()=>loadSet(requestedSetId),
