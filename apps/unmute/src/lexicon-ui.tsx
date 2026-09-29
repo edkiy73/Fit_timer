@@ -293,9 +293,11 @@ export function LexiconText({
   refs?:readonly LexiconClickRef[];
   className?:string;
 }){
-  const runtime=useLexiconRuntime();
+  const runtime=useContext(LexiconContext);
   const {t}=useI18n();
   const parts=useMemo(()=>splitEnglishText(text),[text]);
+
+  if(!runtime)return <span className={className}>{text}</span>;
 
   return (
     <span className={className}>
