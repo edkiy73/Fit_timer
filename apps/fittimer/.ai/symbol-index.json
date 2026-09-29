@@ -854,7 +854,7 @@
     "src/app/80-platform.js": {
       "kind": "frontend-js",
       "lines": 821,
-      "chars": 35821,
+      "chars": 35829,
       "symbols": [
         "add",
         "advanceFromHeadset",
