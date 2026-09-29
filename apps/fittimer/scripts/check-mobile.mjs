@@ -88,6 +88,14 @@ if(!certs.includes('94:97:92:14:41:BD:0E:E1:05:C4:ED:D3:7A:24:A1:E8:88:99:81:E9:
   throw new Error('assetlinks.json does not contain the release certificate fingerprint');
 }
 
+const handsfreeSource = await readFile('src/app/80-platform.js', 'utf8');
+if(!handsfreeSource.includes("hasNative('startMediaButtonControl')") || !handsfreeSource.includes("hasNative('stopMediaButtonControl')")){
+  throw new Error('Hands-free UI must detect the generic native media-button bridge');
+}
+if(handsfreeSource.includes("hasNative('startHeadsetControl')") || handsfreeSource.includes("hasNative('stopHeadsetControl')")){
+  throw new Error('Hands-free UI still checks obsolete headset capability names');
+}
+
 const fitAudioAndroid = await readFile('android/app/src/main/java/ru/fittimer/app/FitAudioPlugin.java', 'utf8');
 if(!fitAudioAndroid.includes('MediaSession') || !fitAudioAndroid.includes('startMediaButtonControl') || !fitAudioAndroid.includes('"mediaButtonAction"')){
   throw new Error('Android native headset/media-button control is missing');
