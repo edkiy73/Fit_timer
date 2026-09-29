@@ -12,6 +12,7 @@ import type { SpeakText, StartRecognition } from './speech-web';
 import { speakWebText, startWebRecognition } from './speech-web';
 import { PatternPracticeView } from './pattern-practice';
 import { DialogueView } from './dialogue';
+import { LexiconText } from './lexicon-ui';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -200,8 +201,12 @@ export function NodeRunnerView({
   const feedback=(accepted?:string,explanation?:Record<string,string>)=>result===null?null:(
     <div className={result?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-wrong'} role="status">
       <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
-      {!result&&accepted&&<span>{t('learn.accepted',{answer:accepted})}</span>}
-      {explanation&&<p>{localized(explanation,locale)}</p>}
+      {!result&&accepted&&(
+        <span><LexiconText text={t('learn.accepted',{answer:accepted})} refs={activity.lexiconRefs} /></span>
+      )}
+      {explanation&&(
+        <p><LexiconText text={localized(explanation,locale)} refs={activity.lexiconRefs} /></p>
+      )}
       <button className="primary-button" type="button" onClick={advance}>
         {index+1<activities.length?t('learn.next'):t('learn.finish')}
       </button>
@@ -219,7 +224,7 @@ export function NodeRunnerView({
         <div className="eyebrow">
           {node.dayIndex?t('today.day',{day:node.dayIndex}):t('today.nextStep')}
         </div>
-        <h2 id="learn-title">{localized(node.title,locale)}</h2>
+        <h2 id="learn-title"><LexiconText text={localized(node.title,locale)} /></h2>
       </div>
 
       <progress
@@ -231,8 +236,8 @@ export function NodeRunnerView({
 
       {activity.type==='theory'&&(
         <article className="learn-card">
-          {activity.title&&<h3>{localized(activity.title,locale)}</h3>}
-          <div className="learn-theory">{plainTheory(activity,locale)}</div>
+          {activity.title&&<h3><LexiconText text={localized(activity.title,locale)} refs={activity.lexiconRefs} /></h3>}
+          <div className="learn-theory"><LexiconText text={plainTheory(activity,locale)} refs={activity.lexiconRefs} /></div>
           <button className="primary-button" type="button" disabled={busy} onClick={()=>void handleTheory()}>
             {t('learn.continue')}
           </button>
@@ -241,8 +246,8 @@ export function NodeRunnerView({
 
       {activity.type==='choice'&&(
         <article className="learn-card">
-          <h3>{localized(activity.prompt,locale)}</h3>
-          {activity.hint&&<p className="learn-hint">{localized(activity.hint,locale)}</p>}
+          <h3><LexiconText text={localized(activity.prompt,locale)} refs={activity.lexiconRefs} /></h3>
+          {activity.hint&&<p className="learn-hint"><LexiconText text={localized(activity.hint,locale)} refs={activity.lexiconRefs} /></p>}
           <fieldset className="learn-options" disabled={busy||result!==null}>
             <legend className="sr-only">{t('learn.chooseAnswer')}</legend>
             {activity.options.map((option,optionIndex)=>(
@@ -253,7 +258,7 @@ export function NodeRunnerView({
                   checked={selected===optionIndex}
                   onChange={()=>setSelected(optionIndex)}
                 />
-                <span>{localized(option,locale)}</span>
+                <span><LexiconText text={localized(option,locale)} refs={activity.lexiconRefs} /></span>
               </label>
             ))}
           </fieldset>
@@ -275,7 +280,7 @@ export function NodeRunnerView({
         <article className="learn-card">
           <h3>{localized(activity.prompt,locale)}</h3>
           {activity.type==='text-input'&&activity.source&&(
-            <p className="learn-source">{localized(activity.source,locale)}</p>
+            <p className="learn-source"><LexiconText text={localized(activity.source,locale)} refs={activity.lexiconRefs} /></p>
           )}
           <label className="learn-answer">
             <span>{t('learn.answerLabel')}</span>
@@ -333,7 +338,7 @@ export function NodeRunnerView({
 
       {!['theory','choice','text-input','translation','pattern-drill','dialogue'].includes(activity.type)&&(
         <article className="learn-card">
-          <h3>{activity.title?localized(activity.title,locale):t('learn.unsupportedTitle')}</h3>
+          <h3><LexiconText text={activity.title?localized(activity.title,locale):t('learn.unsupportedTitle')} refs={activity.lexiconRefs} /></h3>
           <p className="learn-hint">{t('learn.unsupportedText')}</p>
           <button className="secondary-button" type="button" onClick={advance}>
             {index+1<activities.length?t('learn.skipForNow'):t('learn.backToday')}
