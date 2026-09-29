@@ -50,7 +50,8 @@
 | Фаза 4c — Today learner shell | ✅ в `main` (#228) | `src/today.tsx`: loading/error/offline/current day/current node/course completion over live runtime |
 | Фаза 4d — basic activity runner | ✅ в `main` (#229) | `src/learn.tsx` + `activity-progress.ts`: node session, theory/choice/text/translation, local-first save + SRS/stats |
 | Фаза 4e-1 — pattern speed drill | ✅ в `main` (#230) | `src/pattern-drill.tsx`: legacy-style timed self-rating, 70% threshold, drill SRS + speed metric |
-| Фаза 4e-2a — pattern listening | ✅ в этой фазе | `src/pattern-listening.tsx` + browser TTS: 6 phrases, 3 meanings, 70% threshold, listening SRS |
+| Фаза 4e-2a — pattern listening | ✅ в `main` (#231) | `src/pattern-listening.tsx` + browser TTS: 6 phrases, 3 meanings, 70% threshold, listening SRS |
+| Фаза 4e-2b — pattern speaking | ✅ в этой фазе | `src/pattern-speaking.tsx` + Web Speech recognition: max 6 phrases, legacy loose matcher, manual fallback, speaking SRS |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -365,6 +366,7 @@ DictEntry { word, ru }
 - ✅ **4d. Базовый runner Activity:** «Сегодня» открывает закреплённый roadmap node; runner возобновляет первое непройденное activity, умеет theory/choice/text-input/translation, использует новый answer-check, сохраняет card SRS + learning day + per-device stats локально до sync. Сложные speaking/pattern/listening/dialogue/review/AI пока честно не помечаются выполненными.
 - ✅ **4e-1. Pattern drill без распознавания речи:** перенесён legacy speed drill: время чтения зависит от длины фразы, затем 5 секунд на произнесение, пользователь сам подтверждает «сказал так же / не так», ошибочная фраза может вернуться в конец подхода. Итог проходит при ≥70%, сохраняется в `practice.drill` через тот же legacy-parity SRS и в `metrics['speed:<activityId>']`. Listening и speech-recognition остаются в 4e-2.
 - ✅ **4e-2a. Pattern listening:** после успешного drill runner продолжает тем же pattern activity в режим «На слух»: до 6 фраз, английский эталон озвучивается Web Speech TTS (`en-US`), выбор из 3 русских значений собран из реального pattern-контента, порог успеха ≥70%. Результат сохраняется в `practice.listening` теми же legacy-parity интервалами; после перезапуска pattern возобновляется с первого ещё не начатого режима. Speaking/recognition остаётся отдельным 4e-2b.
+- ✅ **4e-2b. Pattern speaking:** Web Speech Recognition слушает `en-US` с тремя альтернативами, результат сравнивается тем же legacy `looseSame` правилом (служебные `a/an/the/to/of` игнорируются, достаточно ≥70% слов цели). Есть повторный тап для остановки, понятные ошибки permission/no-speech/network/unsupported, «Показать ответ» и ручное «Всё же засчитать». До 6 фраз, итог ≥70% сохраняется в `practice.speaking`; matcher добавлен в frozen legacy parity.
 - Дизайн с нуля: палитра, типографика, компоненты на React Aria; вся копия через `t(key)`.
 - Экраны: знакомство (уровень, где живёшь, цель, минут в день) → **Сегодня** → **Карта курса** → **Урок** → **Дрилл** (ввод/голос) → **Повторения** → **Диалоги** → **Слова** → **Прогресс** → **Аккаунт**.
 - Голос в вебе: адаптер Web Speech под интерфейс `speech.ts`; если браузер не умеет распознавание — ввод текстом.
