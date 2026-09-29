@@ -1,11 +1,12 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import { useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { AuthSession } from '@appbase/core/auth.js';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
 import { resolveCourseEntitlement } from './entitlements';
+import { trackPaywallShown } from './observability';
 
 export function AccessOfferView({
   runtime,
@@ -150,8 +151,20 @@ export function AccessScreen(){
   const runtime=useLearnerCourseRuntime();
   const auth=useOptionalAuth();
   const navigate=useNavigate();
+  const location=useLocation();
+  const trackedPlaceRef=useRef('');
   const [refreshing,setRefreshing]=useState(false);
   const [refreshError,setRefreshError]=useState(false);
+
+  useEffect(()=>{
+    if(runtime.status!=='ready'||!runtime.state)return;
+    const rawPlace=new URLSearchParams(location.search).get('from')||'other';
+    const place=rawPlace==='course'||rawPlace==='today'||rawPlace==='talk'?rawPlace:'other';
+    const isPaywall=place==='talk'||runtime.state.access==='preview';
+    if(!isPaywall||trackedPlaceRef.current===place)return;
+    trackedPlaceRef.current=place;
+    trackPaywallShown(place);
+  },[location.search,runtime.status,runtime.state?.access]);
 
   const refresh=async()=>{
     if(refreshing)return;
