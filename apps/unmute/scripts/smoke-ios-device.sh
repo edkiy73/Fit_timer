@@ -31,9 +31,45 @@ if [[ -z "$DEVICE" ]]; then
 fi
 
 xcrun simctl boot "$DEVICE" 2>/dev/null || true
-xcrun simctl bootstatus "$DEVICE" -b
+
+state=""
+for _ in $(seq 1 90); do
+  state="$(xcrun simctl list devices -j | node -e '
+    const target=process.argv[1];
+    let input="";
+    process.stdin.on("data",chunk=>input+=chunk);
+    process.stdin.on("end",()=>{
+      const data=JSON.parse(input);
+      for(const list of Object.values(data.devices)){
+        const device=(list||[]).find(item=>item.udid===target);
+        if(device){ process.stdout.write(device.state||""); return; }
+      }
+    });
+  ' "$DEVICE")"
+  [[ "$state" == "Booted" ]] && break
+  sleep 2
+done
+
+if [[ "$state" != "Booted" ]]; then
+  echo "iOS smoke: simulator did not boot within 180s" >&2
+  xcrun simctl list devices available
+  exit 1
+fi
+
 xcrun simctl uninstall "$DEVICE" "$BUNDLE_ID" >/dev/null 2>&1 || true
-xcrun simctl install "$DEVICE" "$APP"
+
+installed=false
+for _ in $(seq 1 20); do
+  if xcrun simctl install "$DEVICE" "$APP"; then
+    installed=true
+    break
+  fi
+  sleep 2
+done
+if [[ "$installed" != "true" ]]; then
+  echo "iOS smoke: app could not be installed after simulator boot" >&2
+  exit 1
+fi
 
 launch="$(xcrun simctl launch --terminate-running-process "$DEVICE" "$BUNDLE_ID")"
 printf '%s\n' "$launch"
