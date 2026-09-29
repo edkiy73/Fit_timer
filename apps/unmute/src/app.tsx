@@ -13,6 +13,7 @@ import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
 import { LearnerCourseProvider } from './course-runtime';
 import { TodayScreen } from './today';
 import { NodeRunnerScreen } from './learn';
+import { ReviewScreen } from './review';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
 const PRODUCT_SHORT_NAME = product.shortName || PRODUCT_NAME;
@@ -142,6 +143,7 @@ export const routes: RouteObject[] = [
       children:[
         {index:true, element:<Home />},
         {path:'learn/:nodeId', element:<NodeRunnerScreen />},
+        {path:'review', element:<ReviewScreen />},
         {path:'account', element:<Account />}
       ]
     }]
