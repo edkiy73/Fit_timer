@@ -1,0 +1,118 @@
+import { useMemo, useState } from 'react';
+import { useI18n } from '@appbase/ui-react/i18n.js';
+import type { Activity } from './content/schema';
+import type { CourseProgressDocument } from './progress';
+import type { PracticeSrsKind } from './engine/practice-srs';
+import type { SpeakText } from './speech-web';
+import { PatternDrillView } from './pattern-drill';
+import { PatternListeningView } from './pattern-listening';
+
+type PatternActivity=Extract<Activity,{type:'pattern-drill'}>;
+type PatternMode=PracticeSrsKind|'complete';
+
+export function firstPatternMode(
+  activity:PatternActivity,
+  progress:CourseProgressDocument
+):PatternMode{
+  for(const mode of activity.modes){
+    const state=progress.practice[mode][activity.id];
+    if(!state||state.deleted||state.box<=0)return mode;
+  }
+  return 'complete';
+}
+
+export interface PatternPracticeViewProps {
+  activity:PatternActivity;
+  courseActivities:Activity[];
+  progress:CourseProgressDocument;
+  setId:string;
+  onDone:()=>void;
+  savePractice:(
+    setId:string,
+    activityId:string,
+    mode:PracticeSrsKind,
+    correct:boolean,
+    score?:number
+  )=>Promise<void>;
+  speak:SpeakText;
+}
+
+export function PatternPracticeView({
+  activity,
+  courseActivities,
+  progress,
+  setId,
+  onDone,
+  savePractice,
+  speak
+}:PatternPracticeViewProps){
+  const {t,locale}=useI18n();
+  const [mode,setMode]=useState<PatternMode>(()=>firstPatternMode(activity,progress));
+
+  const distractors=useMemo(
+    ()=>courseActivities.flatMap(candidate=>
+      candidate.type==='pattern-drill'
+        ? candidate.items.map(item=>item.prompt)
+        : []
+    ),
+    [courseActivities]
+  );
+
+  const nextMode=(current:PracticeSrsKind)=>{
+    const index=activity.modes.indexOf(current);
+    const next=activity.modes[index+1];
+    if(next){
+      setMode(next);
+      return;
+    }
+    onDone();
+  };
+
+  if(mode==='drill'){
+    return (
+      <PatternDrillView
+        activity={activity}
+        setId={setId}
+        savePractice={savePractice}
+        onDone={()=>nextMode('drill')}
+      />
+    );
+  }
+
+  if(mode==='listening'){
+    return (
+      <PatternListeningView
+        activity={activity}
+        setId={setId}
+        distractors={distractors}
+        savePractice={savePractice}
+        speak={speak}
+        onDone={()=>nextMode('listening')}
+      />
+    );
+  }
+
+  if(mode==='speaking'){
+    return (
+      <article className="learn-card">
+        <div className="eyebrow">{t('speaking.mode')}</div>
+        <h3>{activity.pattern[locale]||activity.pattern.ru||activity.pattern.en||Object.values(activity.pattern)[0]||''}</h3>
+        <p className="learn-hint">{t('speaking.pending')}</p>
+        <button className="secondary-button" type="button" onClick={onDone}>
+          {t('learn.skipForNow')}
+        </button>
+      </article>
+    );
+  }
+
+  return (
+    <article className="learn-card">
+      <div className="eyebrow">{t('pattern.completeMode')}</div>
+      <h3>{activity.pattern[locale]||activity.pattern.ru||activity.pattern.en||Object.values(activity.pattern)[0]||''}</h3>
+      <p className="learn-hint">{t('pattern.completeText')}</p>
+      <button className="primary-button" type="button" onClick={onDone}>
+        {t('learn.next')}
+      </button>
+    </article>
+  );
+}
