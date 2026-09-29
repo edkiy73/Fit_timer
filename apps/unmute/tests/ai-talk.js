@@ -27,6 +27,18 @@ async function main(){
   assert.match(prompt,/I need medicine for headache/);
   assert.match(prompt,/Return ONLY strict JSON/);
 
+  const openerPrompt=buildTalkPrompt({
+    locale:'en',
+    topic:'At the bank',
+    promptTemplate:'Act as a bank clerk.',
+    focus:[],
+    history:[],
+    learnerText:'',
+    start:true
+  });
+  assert.match(openerPrompt,/START THE CONVERSATION/);
+  assert.doesNotMatch(openerPrompt,/LATEST LEARNER MESSAGE/);
+
   assert.deepEqual(parseReply('{"reply":"Do you have a fever?","correction":null,"note":null}'),{
     ok:true,
     text:'{"reply":"Do you have a fever?","correction":null,"note":null}'
