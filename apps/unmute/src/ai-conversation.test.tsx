@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -18,7 +19,7 @@ const activity={
   focus:['appointments']
 };
 
-function wrap(ui:React.ReactNode){
+function wrap(ui:ReactNode){
   return render(
     <I18nProvider
       dictionaries={dictionaries}
