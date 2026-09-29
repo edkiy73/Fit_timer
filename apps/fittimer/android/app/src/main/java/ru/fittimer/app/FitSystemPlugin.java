@@ -13,6 +13,13 @@ import android.view.Window;
 import androidx.core.content.FileProvider;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import androidx.work.Constraints;
+import androidx.work.Data;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkInfo;
+import androidx.work.WorkManager;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -30,6 +37,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -88,21 +96,7 @@ public class FitSystemPlugin extends Plugin {
             call.reject("update_url_must_be_https");
             return;
         }
-        synchronized (this) {
-            if (updateRunning) {
-                // Загрузка уже идёт (например, интерфейс пересобрался после сворачивания):
-                // не ошибка — прогресс продолжит приходить событиями.
-                JSObject busy = new JSObject();
-                busy.put("status", "in_progress");
-                call.resolve(busy);
-                return;
-            }
-            updateRunning = true;
-            cancelRequested = false;
-            updStatus = "downloading";
-            updProgress = -1;
-            updError = "";
-        }
+
         updateExecutor.execute(() -> {
             try {
                 File apk = updateFile();
@@ -113,56 +107,100 @@ public class FitSystemPlugin extends Plugin {
                         finishInstallRequest(call, apk, true);
                         return;
                     } catch (Exception stale) {
-                        //noinspection ResultOfMethodCallIgnored
                         apk.delete();
                     }
                 }
-                downloadApk(url, apk);
-                emitUpdate("verifying", 100, apk.length(), apk.length(), "");
-                verifyUpdateApk(apk, expectedVersionCode);
-                emitUpdate("ready", 100, apk.length(), apk.length(), "");
-                finishInstallRequest(call, apk, true);
-            } catch (Exception e) {
-                if (cancelRequested) {
-                    deletePartial();
-                    emitUpdate("cancelled", -1, 0, 0, "");
-                    resolveOnUi(call, "cancelled", "");
-                } else {
-                    // недокачанный файл оставляем: «Повторить» продолжит с того же места
-                    emitUpdate("error", -1, updReceived, updTotal, safeError(e));
-                    resolveOnUi(call, "error", safeError(e));
+
+                WorkInfo current = latestUpdateWork();
+                if (current != null && (current.getState() == WorkInfo.State.RUNNING
+                    || current.getState() == WorkInfo.State.ENQUEUED
+                    || current.getState() == WorkInfo.State.BLOCKED)) {
+                    resolveOnUi(call, "in_progress", "");
+                    return;
                 }
-                synchronized (this) { updateRunning = false; cancelRequested = false; }
+
+                Constraints constraints = new Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build();
+                OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(UpdateDownloadWorker.class)
+                    .setConstraints(constraints)
+                    .setInputData(new Data.Builder()
+                        .putString(UpdateDownloadWorker.KEY_URL, url)
+                        .build())
+                    .build();
+                WorkManager.getInstance(getContext()).enqueueUniqueWork(
+                    UpdateDownloadWorker.WORK_NAME,
+                    ExistingWorkPolicy.REPLACE,
+                    request
+                );
+                emitUpdate("downloading", -1, 0, -1, "");
+                resolveOnUi(call, "in_progress", "");
+            } catch (Exception e) {
+                emitUpdate("error", -1, 0, 0, safeError(e));
+                resolveOnUi(call, "error", safeError(e));
             }
         });
     }
 
     @PluginMethod
     public void cancelUpdate(PluginCall call) {
-        if (updateRunning) cancelRequested = true;
+        WorkManager.getInstance(getContext()).cancelUniqueWork(UpdateDownloadWorker.WORK_NAME);
+        UpdateDownloadWorker.deletePartial(getContext(), false);
+        emitUpdate("cancelled", -1, 0, 0, "");
         call.resolve();
     }
 
     @PluginMethod
     public void getUpdateState(PluginCall call) {
-        JSObject result = new JSObject();
-        result.put("running", updateRunning);
-        result.put("status", updStatus);
-        result.put("progress", updProgress);
-        result.put("received", updReceived);
-        result.put("total", updTotal);
-        if (updError != null && !updError.isEmpty()) result.put("error", updError);
-        call.resolve(result);
+        updateExecutor.execute(() -> {
+            JSObject result = new JSObject();
+            try {
+                WorkInfo info = latestUpdateWork();
+                File apk = updateFile();
+                if (info == null) {
+                    boolean ready = apk.isFile();
+                    result.put("running", false);
+                    result.put("status", ready ? "ready" : "idle");
+                    result.put("progress", ready ? 100 : -1);
+                } else {
+                    WorkInfo.State state = info.getState();
+                    boolean running = state == WorkInfo.State.RUNNING
+                        || state == WorkInfo.State.ENQUEUED
+                        || state == WorkInfo.State.BLOCKED;
+                    Data data = state == WorkInfo.State.SUCCEEDED ? info.getOutputData() : info.getProgress();
+                    String status = data.getString(UpdateDownloadWorker.KEY_STATUS);
+                    int progress = data.getInt(UpdateDownloadWorker.KEY_PROGRESS, -1);
+                    long received = data.getLong(UpdateDownloadWorker.KEY_RECEIVED, 0);
+                    long total = data.getLong(UpdateDownloadWorker.KEY_TOTAL, -1);
+                    String error = info.getOutputData().getString(UpdateDownloadWorker.KEY_ERROR);
+                    if (running && (status == null || status.isEmpty())) status = "downloading";
+                    if (state == WorkInfo.State.SUCCEEDED) status = apk.isFile() ? "ready" : "error";
+                    else if (state == WorkInfo.State.FAILED) status = "error";
+                    else if (state == WorkInfo.State.CANCELLED) status = "cancelled";
+                    result.put("running", running);
+                    result.put("status", status == null ? "idle" : status);
+                    result.put("progress", progress);
+                    result.put("received", received);
+                    result.put("total", total);
+                    if (error != null && !error.isEmpty()) result.put("error", error);
+                }
+            } catch (Exception e) {
+                result.put("running", false);
+                result.put("status", "error");
+                result.put("error", safeError(e));
+            }
+            getActivity().runOnUiThread(() -> call.resolve(result));
+        });
+    }
+
+    private WorkInfo latestUpdateWork() throws Exception {
+        List<WorkInfo> infos = WorkManager.getInstance(getContext())
+            .getWorkInfosForUniqueWork(UpdateDownloadWorker.WORK_NAME).get();
+        return infos.isEmpty() ? null : infos.get(infos.size() - 1);
     }
 
     private void deletePartial() {
-        try {
-            File apk = updateFile();
-            //noinspection ResultOfMethodCallIgnored
-            new File(apk.getParentFile(), apk.getName() + ".part").delete();
-            //noinspection ResultOfMethodCallIgnored
-            new File(apk.getParentFile(), apk.getName() + ".src").delete();
-        } catch (Exception ignored) {}
+        UpdateDownloadWorker.deletePartial(getContext(), false);
     }
 
     @PluginMethod
@@ -189,9 +227,7 @@ public class FitSystemPlugin extends Plugin {
     }
 
     private File updateFile() throws Exception {
-        File dir = new File(getContext().getCacheDir(), "updates");
-        if (!dir.exists() && !dir.mkdirs()) throw new Exception("update_cache_failed");
-        return new File(dir, "FitTimer-update.apk");
+        return UpdateDownloadWorker.updateFile(getContext());
     }
 
     private void downloadApk(String initialUrl, File target) throws Exception {
