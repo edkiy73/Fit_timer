@@ -62,7 +62,7 @@
 | Фаза 4j — minimal onboarding | ✅ в `main` (#240) | one short screen, no questionnaire/account gate, synced done flag, existing/imported learners skip, Start → Day 1 |
 | Фаза 5a — entitlements + access offer | ✅ в `main` (#241) | owned SKU or active Plus unlocks full set; day 8+ opens offer screen; learned paid activities remain reviewable after access ends |
 | Фаза 5b-1 — two-device progress e2e | ✅ в `main` (#245) | anonymous day 1 + anonymous day 2 on separate devices → same account → per-record merge → both devices converge |
-| Фаза 5b-2 — legacy progress file import | ✅ в этой фазе | Account imports `english-trainer-*.json` by merge, timezone due correction, ambiguity report, signed-in sync |
+| Фаза 5b-2 — legacy progress file import | ✅ в `main` (#246) | Account imports `english-trainer-*.json` by merge, timezone due correction, ambiguity report, signed-in sync |
 | Фаза 7a — AI talk contract | ✅ в `main` (#242) | server-built `talk.reply` prompt, strict JSON protocol, Core quota/logging, typed client |
 | Фаза 7b — text AI conversation runner | ✅ в `main` (#243) | ai-conversation activity UI, server-built opener, typed turns, corrections/notes, sign-in/Plus gates, seen-on-finish |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
