@@ -105,6 +105,40 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await run();
   ok('блок проверки не показывается, пока порог не достигнут', !(await page.isVisible('#finProgCheck')));
 
+  // ---- полностью пройденная двойная прогрессия больше не спрашивает «повышаем?» ----
+  await page.evaluate(async () => {
+    customPrograms.push({id:'pc-terminal', name:'Финальный потолок', progression:1, stats:{completions:1},
+      plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[{
+        id:'term1', name:'Финальный жим', type:'reps', value:'8-10', sets:1, rest:5,
+        progOn:true, trackWeight:true, weight:20, weightMax:20, wStep:2,
+        repsStep:1, repsMax:20, dualProg:true, ps:{n:0, cur:{kg:20, reps:'18-20'}}
+      }]}]});
+    await savePrograms();
+    openStart(customPrograms.find(x => x.id === 'pc-terminal'));
+  });
+  await page.click('#btnStart');
+  await page.waitForSelector('#startModal.open');
+  await page.click('#startFresh');
+  await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
+  await page.evaluate(() => {
+    state.stepOutcomes = {};
+    state.steps.forEach((step, i) => {
+      if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
+    });
+    state.globalStart = Date.now() - 120 * 1000; state.pausedTotal = 0;
+    finishWorkout();
+    document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
+  });
+  await page.waitForTimeout(1000);
+  const terminalState = await page.evaluate(() => {
+    const ex = normPlans(customPrograms.find(x => x.id === 'pc-terminal'))[0].exercises[0];
+    return {n:+((ex.ps || {}).n || 0), reps:progressedRepsRange('pc-terminal', ex, null), kg:getExWeight('pc-terminal', ex, null)};
+  });
+  ok('после полного потолка вопрос о повышении больше не появляется', !(await page.isVisible('#finProgCheck')));
+  ok('после полного потолка счётчик проверки не копится',
+     terminalState.n === 0 && terminalState.reps === '18-20' && terminalState.kg === 20,
+     JSON.stringify(terminalState));
+
   // ---- находки с устройства: разминка с тем же id, два чипа подряд,
   //      тренировка короче 30 секунд ----
   await page.evaluate(async () => {
