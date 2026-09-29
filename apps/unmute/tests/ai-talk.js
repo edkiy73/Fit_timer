@@ -1,7 +1,7 @@
 'use strict';
 
 const assert=require('assert');
-const {registry,buildTalkPrompt,parseReply,cleanHistory,buildTalkReviewPrompt,parseTalkReview}=require('../lib/unmute-ai-actions');
+const {registry,buildTalkPrompt,parseReply,cleanHistory,buildTalkReviewPrompt,parseTalkReview,buildAnswerExplainPrompt,parseAnswerExplain}=require('../lib/unmute-ai-actions');
 
 async function main(){
   assert.equal(typeof require('../api/admin'),'function');
@@ -81,6 +81,55 @@ async function main(){
     })
   });
   assert.equal(parseTalkReview('not json').ok,false);
+
+  const answerPrompt=buildAnswerExplainPrompt({
+    locale:'ru',
+    question:'Translate: Я живу здесь',
+    learnerAnswer:'I life here',
+    acceptedAnswers:['I live here'],
+    courseExplanation:'live is the verb; life is a noun'
+  });
+  assert.match(answerPrompt,/I life here/);
+  assert.match(answerPrompt,/I live here/);
+  assert.match(answerPrompt,/Do not invent a new grading rule/);
+
+  assert.deepEqual(parseAnswerExplain(JSON.stringify({
+    why:'Здесь нужен глагол live, а life — существительное.',
+    tip:'Проверь, что после I стоит глагол действия.'
+  })),{
+    ok:true,
+    text:JSON.stringify({
+      why:'Здесь нужен глагол live, а life — существительное.',
+      tip:'Проверь, что после I стоит глагол действия.'
+    })
+  });
+  assert.equal(parseAnswerExplain('not json').ok,false);
+  assert.equal(parseAnswerExplain('{"why":"x"}').reason,'answer_explain_missing_tip');
+
+  const explainAction=registry.get('answer.explain');
+  assert(explainAction);
+  const explainResult=await explainAction.run({
+    settings:{},
+    body:{
+      locale:'ru',
+      question:'Translate: Я живу здесь',
+      learnerAnswer:'I life here',
+      acceptedAnswers:['I live here'],
+      courseExplanation:'live is the verb'
+    },
+    async generate(type,settings,modelPrompt,options){
+      assert.equal(type,'text');
+      assert.match(modelPrompt,/LEARNER ANSWER: I life here/);
+      const out={text:JSON.stringify({
+        why:'Нужно live: это глагол.',
+        tip:'После I используй действие live.'
+      })};
+      const verdict=options.validate(out);
+      assert.equal(verdict.ok,true);
+      return {text:verdict.text,provider:'test',model:'test',fallback:false};
+    }
+  });
+  assert.equal(JSON.parse(explainResult.text).why,'Нужно live: это глагол.');
 
   const action=registry.get('talk.reply');
   assert(action);
