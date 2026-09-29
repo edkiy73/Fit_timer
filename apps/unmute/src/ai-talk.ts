@@ -12,6 +12,7 @@ export interface TalkReplyInput {
   history:TalkMessage[];
   learnerText:string;
   locale:'ru'|'en';
+  start?:boolean;
 }
 
 export interface TalkReply {
@@ -72,7 +73,8 @@ export async function requestTalkReply(input:TalkReplyInput):Promise<TalkReply>{
       focus:(input.focus||[]).slice(0,12),
       history:(input.history||[]).slice(-12),
       learnerText:String(input.learnerText||'').slice(0,600),
-      locale:input.locale
+      locale:input.locale,
+      start:Boolean(input.start)
     })
   });
 
