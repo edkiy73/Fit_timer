@@ -110,7 +110,7 @@ export function TodayView({runtime,wordRuntime=null,onStart,onReview,onMap}:{run
         <article className="today-card">
           <div className="today-card-top">
             <div>
-              <div className="today-kicker">{localized(state.set.title,locale)}</div>
+              <div className="today-kicker"><LexiconText text={localized(state.set.title,locale)} /></div>
               <div className="today-day">
                 {state.currentDayIndex
                   ? t('today.day',{day:state.currentDayIndex})
