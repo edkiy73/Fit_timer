@@ -3,8 +3,8 @@ import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
 import type { CourseProgressDocument } from './progress';
 import type { PracticeSrsKind } from './engine/practice-srs';
-import type { SpeakText, StartRecognition } from './speech-web';
-import { startWebRecognition } from './speech-web';
+import type { SpeakText, StartRecognition } from './speech-runtime';
+import { startRecognition as startSpeechRecognition } from './speech-runtime';
 import { PatternDrillView } from './pattern-drill';
 import { PatternListeningView } from './pattern-listening';
 import { PatternSpeakingView } from './pattern-speaking';
@@ -49,7 +49,7 @@ export function PatternPracticeView({
   onDone,
   savePractice,
   speak,
-  startRecognition=startWebRecognition
+  startRecognition=startSpeechRecognition
 }:PatternPracticeViewProps){
   const {t,locale}=useI18n();
   const [mode,setMode]=useState<PatternMode>(()=>firstPatternMode(activity,progress));

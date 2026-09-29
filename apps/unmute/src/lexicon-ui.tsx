@@ -19,7 +19,7 @@ import {
   type LexiconContextRef,
   type ResolvedLexiconEntry
 } from './lexicon/resolve';
-import { speakWebText } from './speech-web';
+import { speakText } from './speech-runtime';
 
 const LEXICON_QUERY_KEY=['published-lexicon'] as const;
 const WORD_RE=/[A-Za-z]+(?:['\u2019][A-Za-z]+)*/g;
@@ -175,7 +175,7 @@ function DictionarySheet({
   },[runtime.close]);
 
   useEffect(()=>{
-    void speakWebText(selection.surface,'en-US');
+    void speakText(selection.surface,'en-US');
   },[selection.surface]);
 
   return (
@@ -230,7 +230,7 @@ function DictionarySheet({
           </>
         )}
 
-        <button className="primary-button dictionary-say" type="button" onClick={()=>void speakWebText(selection.surface,'en-US')}>
+        <button className="primary-button dictionary-say" type="button" onClick={()=>void speakText(selection.surface,'en-US')}>
           {t('dictionary.say')}
         </button>
       </section>

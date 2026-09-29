@@ -16,8 +16,8 @@ import {
   type CourseReviewSession,
   type ReviewSessionItem
 } from './review-session';
-import type { SpeakText, StartRecognition } from './speech-web';
-import { speakWebText, startWebRecognition } from './speech-web';
+import type { SpeakText, StartRecognition } from './speech-runtime';
+import { speakText, startRecognition as startSpeechRecognition } from './speech-runtime';
 import { PatternDrillView } from './pattern-drill';
 import { PatternListeningView } from './pattern-listening';
 import { PatternSpeakingView } from './pattern-speaking';
@@ -77,8 +77,8 @@ export function ReviewView({
   saveWord=saveWordReview,
   onSignIn=()=>{},
   onAccess=()=>{},
-  speak=speakWebText,
-  startRecognition=startWebRecognition
+  speak=speakText,
+  startRecognition=startSpeechRecognition
 }:ReviewViewProps){
   const {t,locale}=useI18n();
   const state=runtime.state;
