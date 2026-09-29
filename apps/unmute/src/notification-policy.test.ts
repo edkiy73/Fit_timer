@@ -109,4 +109,41 @@ describe('UnMute notification policy',()=>{
       streak:0
     });
   });
+
+  it('respects the master switch and per-kind switches',()=>{
+    const progress=emptyCourseProgress();
+    progress.learningDays['2026-09-28']={at:'2026-09-28T10:00:00Z'};
+
+    const base={
+      progress,
+      todayKey:'2026-09-29',
+      dueCount:4,
+      currentLessonAvailable:true,
+      courseComplete:false
+    };
+
+    expect(chooseLearnerNotification({
+      ...base,
+      preferences:{
+        enabled:false,
+        time:'19:00',
+        daily:true,
+        review:true,
+        streak:true,
+        changedAt:'2026-09-29T10:00:00Z'
+      }
+    })).toBeNull();
+
+    expect(chooseLearnerNotification({
+      ...base,
+      preferences:{
+        enabled:true,
+        time:'19:00',
+        daily:true,
+        review:false,
+        streak:true,
+        changedAt:'2026-09-29T10:00:00Z'
+      }
+    })).toMatchObject({kind:'streak-risk'});
+  });
 });
