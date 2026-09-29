@@ -140,5 +140,7 @@ export function pronunciationForSurface(entry:Lexeme,surface:string,formId?:stri
     return form?.pronunciation || null;
   }
   if(matches.length!==1) return null;
-  return matches[0]?.pronunciation || entry.pronunciation || null;
+  if(matches[0]?.pronunciation) return matches[0].pronunciation;
+  // Lemma pronunciation belongs to the lemma only: "working" must not show /wɜːk/.
+  return normalizeSurface(surface)===normalizeSurface(entry.lemma) ? (entry.pronunciation || null) : null;
 }
