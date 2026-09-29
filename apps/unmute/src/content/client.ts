@@ -1,6 +1,7 @@
 import { createStorage } from '@appbase/core/storage.js';
 import { authClient } from '../auth';
 import { validateCourseSet, type CourseSet } from './schema';
+import { resolveCourseEntitlement } from '../entitlements';
 
 export interface ContentCatalogSet {
   id: string;
@@ -75,7 +76,13 @@ export async function loadSet(id:string): Promise<{set:CourseSet; access:'full'|
     if(cached){
       try{
         const parsed=JSON.parse(cached) as {set:unknown;access?:unknown};
-        return {set:validateCourseSet(parsed.set),access:parsed.access==='full'?'full':'preview',fromCache:true};
+        const set=validateCourseSet(parsed.set);
+        let access: 'full'|'preview'=parsed.access==='full'?'full':'preview';
+        if(access==='full'&&set.access.mode==='entitlement'){
+          const session=await authClient.getSession();
+          access=resolveCourseEntitlement(set,session).full?'full':'preview';
+        }
+        return {set,access,fromCache:true};
       }catch(_){}
     }
     throw error;
