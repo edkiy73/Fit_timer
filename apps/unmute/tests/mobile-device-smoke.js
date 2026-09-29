@@ -19,6 +19,8 @@ assert.match(ios,/simctl launch --terminate-running-process/);
 assert.match(ios,/kill -0/);
 assert.match(ios,/app\.unmute\.english/);
 assert.match(workflow,/smoke-android-device\.sh/);
+assert.match(workflow,/ReactiveCircus\/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d/);
+assert.match(workflow,/api-level: 35/);
 assert.match(workflow,/smoke-ios-device\.sh/);
 assert.match(pkg.scripts['check:ios'],/-derivedDataPath build\/ios-derived/);
 
