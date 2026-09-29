@@ -402,3 +402,14 @@ h2{margin:0 0 8px}
   .ai-talk-compose{grid-template-columns:1fr}
   .ai-talk-compose .primary-button{width:100%}
 }
+
+
+.legacy-import{display:grid;gap:12px;margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}
+.legacy-import h3{margin:4px 0 6px;font-size:18px}
+.legacy-import .muted{margin:0;line-height:1.5}
+.legacy-import .secondary-button{justify-self:start}
+.legacy-import-report{display:grid;gap:9px;border:1px solid var(--line);border-radius:14px;padding:14px;background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
+.legacy-import-stats{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+.legacy-import-report>span,.legacy-import-report>small{color:var(--muted);line-height:1.45}
+.legacy-import-error{border:1px solid var(--line);border-radius:12px;padding:12px;color:var(--danger,#b42318);font-size:13px}
+@media(max-width:520px){.legacy-import .secondary-button{width:100%}}
