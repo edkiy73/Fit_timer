@@ -438,3 +438,13 @@ h2{margin:0 0 8px}
 @media(max-width:520px){
   .answer-explain,.answer-explain .secondary-button{width:100%}
 }
+
+
+.ai-talk-voice-actions{display:flex;gap:10px;flex-wrap:wrap}
+.ai-talk-voice-actions .secondary-button{flex:1 1 180px}
+.ai-talk-mic-on{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,transparent)}
+.ai-talk-voice-error{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+@media(max-width:520px){
+  .ai-talk-voice-actions{display:grid}
+  .ai-talk-voice-actions .secondary-button{width:100%}
+}
