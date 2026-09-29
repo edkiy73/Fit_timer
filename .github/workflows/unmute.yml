@@ -85,6 +85,16 @@ jobs:
       - name: Android debug build
         run: gradle -p android :app:assembleDebug --no-daemon
 
+      - name: Android emulator
+        run: |
+          yes | sdkmanager "platform-tools" "emulator" "system-images;android-35;google_apis;x86_64" >/dev/null
+          echo no | avdmanager create avd --force --name unmute-smoke --package "system-images;android-35;google_apis;x86_64"
+          sudo chmod 666 /dev/kvm || true
+          nohup "$ANDROID_HOME/emulator/emulator"             -avd unmute-smoke             -no-window             -no-audio             -no-snapshot             -no-boot-anim             -gpu swiftshader_indirect             >/tmp/unmute-emulator.log 2>&1 &
+
+      - name: Android device launch smoke
+        run: bash scripts/smoke-android-device.sh
+
 
   ios:
     runs-on: macos-15
@@ -107,3 +117,6 @@ jobs:
 
       - name: iOS simulator build
         run: npm run check:ios
+
+      - name: iOS simulator launch smoke
+        run: bash scripts/smoke-ios-device.sh
