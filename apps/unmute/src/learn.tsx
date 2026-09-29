@@ -278,7 +278,7 @@ export function NodeRunnerView({
 
       {(activity.type==='text-input'||activity.type==='translation')&&(
         <article className="learn-card">
-          <h3>{localized(activity.prompt,locale)}</h3>
+          <h3><LexiconText text={localized(activity.prompt,locale)} refs={activity.lexiconRefs} /></h3>
           {activity.type==='text-input'&&activity.source&&(
             <p className="learn-source"><LexiconText text={localized(activity.source,locale)} refs={activity.lexiconRefs} /></p>
           )}
