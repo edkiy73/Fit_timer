@@ -325,7 +325,7 @@ export const en: Record<keyof typeof ru, string> = {
   'account.languageSystem': 'System language',
   'notifications.eyebrow': 'Reminders',
   'notifications.title': 'When to remind me',
-  'notifications.deliveryNote': 'The native app schedules one local system reminder. Web saves the preference but does not promise background delivery.'
+  'notifications.deliveryNote': 'The native app schedules one local system reminder. Web saves the preference but does not promise background delivery.',
   'notifications.enabled': 'Remind me',
   'notifications.enabledHint': 'Off by default. System permission will only be requested after you explicitly enable delivery.',
   'notifications.time': 'Time',
