@@ -45,7 +45,7 @@
 | Фаза 3.4g — learner progress + sync | ✅ в `main` (#222) | per-set course/stats docs + global personal lexicon + conflict-safe merge + review summary + synced progress actions |
 | Фаза 3.4h — legacy progress migration | ✅ в `main` (#223) | `eng-trainer-v2` → stable activities/practice/stats/words/manual days; ambiguity report; timezone due correction |
 | Фаза 3.5 — frozen legacy parity | ✅ в `main` (#225) | pinned English snapshot; real legacy functions vs new answer/SRS/queue engine in CI |
-| Фаза 4a — learner course loader | ✅ в этой фазе | `src/course-loader.ts`: published Set → cached fallback → local-first progress → current roadmap node |
+| Фаза 4a — learner course loader | ✅ в `main` (#226) | `src/course-loader.ts`: published Set → cached fallback → local-first progress → current roadmap node |\n| Фаза 4b — React/Query course runtime | ✅ в этой фазе | `src/course-runtime.tsx`: shared screen state + separate content/progress queries + live document-sync invalidation |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -354,7 +354,7 @@ DictEntry { word, ru }
 - 3.6 Конструктор контента в Admin строится поверх той же модели: редактирование Set/Roadmap/Node/Activity, drag&drop, publish revision и явный выбор preserve/reset прогресса при существенном изменении упражнения.
 
 ### Фаза 4 — Новый интерфейс
-- ✅ **4a. Loader учебного состояния:** published Course Set загружается через `content/client` (с локальным snapshot-cache для офлайна), прогресс читается из локального mirror `document-sync`, `course-loader.ts` вычисляет default roadmap и `currentNode/currentDayIndex`. UI в этом шаге не меняется.
+- ✅ **4a. Loader учебного состояния:** published Course Set загружается через `content/client` (с локальным snapshot-cache для офлайна), прогресс читается из локального mirror `document-sync`, `course-loader.ts` вычисляет default roadmap и `currentNode/currentDayIndex`. UI в этом шаге не меняется.\n- ✅ **4b. React/Query runtime:** `LearnerCourseProvider` монтируется в пользовательском приложении и даёт всем будущим экранам одно состояние курса. Published content и локальный progress — разные query, поэтому каждое сохранение ответа не дёргает `/api/content`; изменения `document-sync` (local/remote) инвалидируют только progress query и сразу пересчитывают current node.
 - Дизайн с нуля: палитра, типографика, компоненты на React Aria; вся копия через `t(key)`.
 - Экраны: знакомство (уровень, где живёшь, цель, минут в день) → **Сегодня** → **Карта курса** → **Урок** → **Дрилл** (ввод/голос) → **Повторения** → **Диалоги** → **Слова** → **Прогресс** → **Аккаунт**.
 - Голос в вебе: адаптер Web Speech под интерфейс `speech.ts`; если браузер не умеет распознавание — ввод текстом.
