@@ -59,7 +59,8 @@
 | Фаза 4g — course map | ✅ в `main` (#237) | full 40-day roadmap skeleton, completed/current/prerequisite/purchase states, preview-safe paid nodes |
 | Фаза 4h — clickable lexicon | ✅ в `main` (#238) | every English token in learner content opens one shared dictionary sheet; exact refs when available; no Add/SRS write on click |
 | Фаза 4i — learner progress | ✅ в `main` (#239) | real persisted course/learning/SRS/answer/latest-performance data only; empty state instead of decorative zeroes |
-| Фаза 4j — minimal onboarding | ✅ в этой фазе | one short screen, no questionnaire/account gate, synced done flag, existing/imported learners skip, Start → Day 1 |
+| Фаза 4j — minimal onboarding | ✅ в `main` (#240) | one short screen, no questionnaire/account gate, synced done flag, existing/imported learners skip, Start → Day 1 |
+| Фаза 5a — entitlements + access offer | ✅ в этой фазе | owned SKU or active Plus unlocks full set; day 8+ opens offer screen; learned paid activities remain reviewable after access ends |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -193,8 +194,8 @@ npm install --no-save playwright-core@1.55.0 && FIT_CHROME=/opt/pw-browsers/chro
 | 8 | Первый канал оплаты, цены, нарезка пакетов (§4) | до фазы 6 |
 | 9 | Судьба репозитория `English` | после переноса семьи — заморозить, README со ссылкой на `apps/unmute` |
 | 10 | Поведение слов в учебном контенте | ✅ все английские слова нажимаемы для мгновенного словарного popup; отдельной кнопки/действия «добавить слово» нет. Клик сам по себе не создаёт запись SRS. `progress:words` нужен для уже существующего/импортированного word-review состояния |
-| 11 | Onboarding | ✅ один короткий экран без анкеты: не спрашиваем уровень, место, цель или минуты, пока эти данные ничего не меняют. Аккаунт не обязателен; «Начать день 1» сразу открывает первый доступный node. Существующий/imported progress автоматически пропускает onboarding |
 | 11 | Первый запуск / onboarding | ✅ максимально короткий: **один экран** с тремя тезисами (говорить вслух, нажимаемые слова, интервальные повторы); без вопросов про уровень, страну, цель и минуты. Аккаунт не нужен. Уже имеющий реальный/импортированный course progress onboarding не видит |
+| 12 | Полный доступ к курсу | ✅ `course.general-foundation` навсегда **или** активный Premium/UnMute Plus открывают весь set. После окончания доступа новые платные дни снова закрыты, но серверно подтверждённые уже изученные activities продолжают приходить для Review |
 
 ---
 
@@ -393,10 +394,10 @@ DictEntry { word, ru }
 - e2e: «первый день без аккаунта», перезагрузка, работа без сети после загрузки.
 
 ### Фаза 5 — Прогресс в аккаунте и перенос семьи
+- ✅ **5a. Entitlements + access offer:** `course.general-foundation` в `acc.owned` **или** активный `acc.sub` открывают полный set на сервере; смена прав меняет query key и немедленно перезагружает content. День 8+ на карте и окончание preview ведут на отдельный `/access` с вариантами «навсегда» / Plus, но без фальшивой покупки до фазы 6; вошедший пользователь может вручную перепроверить выданное из Admin право.
+- ✅ **Изученное не закрываем:** во время полного доступа клиент сообщает серверу только реально появившиеся в course progress activity IDs; сервер принимает их только при текущем owned/Plus и только если ID есть в published set. После окончания доступа paid roadmap остаётся skeleton/locked, а retained activities возвращаются отдельно для Review. Клиентский offline-cache при истёкшем праве понижает `full → preview`, поэтому старый full snapshot не открывает новые платные дни.
 - Реестр документов §3.4 (клиент + `lib/app-sync-schema.js`) и правила слияния по элементам поверх `document-sync` из этапа 0.
 - Импорт файла `eng-trainer-v2`.
-- Права (`acc.owned`, админка «Права») — из этапа 0.7; в UnMute — только карта SKU → блоки курса.
-- Замки по `Unit.access` + правам; экраны пакета и Plus пока без оплаты.
 - Семье выдать полный доступ из админки.
 - e2e: «два устройства — один прогресс», «импорт старого файла», «вход с локальным прогрессом».
 
