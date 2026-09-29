@@ -45,6 +45,7 @@ import { createCapabilities } from '@appbase/core/capabilities.js';
   let pendingProgramLink = '';
   let pendingWorkoutResume = false;
   let updateProgressHandle = null;
+  let updatePollRunning = false;
   let headsetActionHandle = null;
 
   function programIdFromAppUrl(value){
@@ -380,6 +381,28 @@ import { createCapabilities } from '@appbase/core/capabilities.js';
     }catch(_){}
   }
 
+  function dispatchUpdateState(state){
+    try{ window.dispatchEvent(new CustomEvent('fitUpdateProgress', {detail:state || {}})); }catch(_){}
+  }
+
+  async function pollUpdateState(){
+    if(!updatePollRunning) return;
+    const state = await getUpdateState();
+    dispatchUpdateState(state);
+    const status = String((state && state.status) || '');
+    if(state && (state.running || status === 'downloading' || status === 'queued')){
+      setTimeout(pollUpdateState, 700);
+    }else{
+      updatePollRunning = false;
+    }
+  }
+
+  function startUpdatePolling(){
+    if(updatePollRunning || !native || !fitSystem || !fitSystem.getUpdateState) return;
+    updatePollRunning = true;
+    pollUpdateState();
+  }
+
   // Core owns Capacitor lifecycle timing. FitTimer still owns what background/foreground means.
   if(mobileBridgeCore){
     mobileBridgeCore.onLifecycle(event=>{
@@ -387,6 +410,7 @@ import { createCapabilities } from '@appbase/core/capabilities.js';
         try{ window.dispatchEvent(new CustomEvent('fitAppBackground')); }catch(_){}
         return;
       }
+      startUpdatePolling();
       try{ window.dispatchEvent(new CustomEvent('fitAppForeground', {detail:{awayMs:event.awayMs || 0}})); }catch(_){}
     }).catch(()=>{});
   }
@@ -402,10 +426,12 @@ import { createCapabilities } from '@appbase/core/capabilities.js';
   async function installUpdate(url, expectedVersionCode){
     if(!native || !fitSystem || !fitSystem.downloadUpdate) return {status:'unsupported'};
     try{
-      return await fitSystem.downloadUpdate({
+      const result = await fitSystem.downloadUpdate({
         url:String(url||''),
         expectedVersionCode:Math.max(0,Math.round(+expectedVersionCode||0))
       });
+      if(result && result.status === 'in_progress') startUpdatePolling();
+      return result;
     }catch(_){ return {status:'error'}; }
   }
 
