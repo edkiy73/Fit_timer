@@ -1,5 +1,6 @@
 /* End-to-end check of the production build: node tests/e2e.mjs (after npm run build).
-   Serves dist/ with the real api/* handlers on the memory store and drives Chromium. */
+   Serves dist/ with the real api/* handlers on the memory store and drives Chromium:
+   anonymous learning, first sign-in merge and progress sync between two devices. */
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
 import { existsSync, readFileSync, statSync } from 'node:fs';
@@ -32,35 +33,70 @@ await Content.putDraft({
   roadmaps:[{
     id:'main',
     title:{ru:'Путь'},
-    nodes:[{
-      id:'day-1',
-      kind:'lesson',
-      title:{ru:'День 1'},
-      dayIndex:1,
-      order:0,
-      prerequisites:[],
-      activityIds:['day-1.theory'],
-      optional:false
-    }]
+    nodes:[
+      {
+        id:'day-1',
+        kind:'lesson',
+        title:{ru:'День 1'},
+        dayIndex:1,
+        order:0,
+        prerequisites:[],
+        activityIds:['day-1.theory'],
+        optional:false
+      },
+      {
+        id:'day-2',
+        kind:'lesson',
+        title:{ru:'День 2'},
+        dayIndex:2,
+        order:1,
+        prerequisites:[],
+        activityIds:['day-2.theory'],
+        optional:false
+      }
+    ]
   }],
-  activities:[{
-    id:'day-1.theory',
-    revision:1,
-    type:'theory',
-    tags:[],
-    revisionProgress:'preserve',
-    lexiconRefs:[],
-    body:{ru:'Hello.'},
-    format:'text'
-  }],
+  activities:[
+    {
+      id:'day-1.theory',
+      revision:1,
+      type:'theory',
+      tags:[],
+      revisionProgress:'preserve',
+      lexiconRefs:[],
+      body:{ru:'Hello.'},
+      format:'text'
+    },
+    {
+      id:'day-2.theory',
+      revision:1,
+      type:'theory',
+      tags:[],
+      revisionProgress:'preserve',
+      lexiconRefs:[],
+      body:{ru:'Goodbye.'},
+      format:'text'
+    }
+  ],
   resources:[]
 });
 await Content.publish('general-foundation');
 
 // Copy of the default locale (src/i18n) and of the shared sign-in form.
 const COPY = {
-  ru: {signIn:'Войти', account:'Аккаунт', today:'Сегодня', onboarding:'Говори по-английски в реальной жизни', start:'Начать день 1', send:'Прислать код', verify:'Войти', handle:'Ник', create:'Создать аккаунт'},
-  en: {signIn:'Sign in', account:'Account', today:'Today', send:'Send code', verify:'Sign in', handle:'Handle', create:'Create account'}
+  ru: {
+    signIn:'Войти',
+    account:'Аккаунт',
+    today:'Сегодня',
+    onboarding:'Говори по-английски в реальной жизни',
+    start:'Начать день 1',
+    continue:'Продолжить',
+    complete:'Курс пройден',
+    send:'Прислать код',
+    verify:'Войти',
+    handle:'Ник',
+    create:'Создать аккаунт'
+  }
 }['ru'];
 
 const server = createServer(async (req, res) => {
@@ -87,39 +123,102 @@ await new Promise(resolve => server.listen(PORT, '127.0.0.1', resolve));
 let bad = 0;
 const ok = (name, value) => { if(!value) bad++; console.log((value ? '  ok  ' : ' FAIL ') + name); };
 const appears = (locator, timeout = 5000) => locator.waitFor({timeout}).then(() => true, () => false);
+async function openDevice(browser, errors){
+  const context=await browser.newContext({viewport:{width:390,height:800},locale:'ru-RU'});
+  const page=await context.newPage();
+  page.on('pageerror',error=>errors.push(String(error)));
+  await page.goto(URL_);
+  return {context,page};
+}
+
+async function finishOnboarding(page){
+  await page.getByRole('heading',{name:COPY.onboarding}).waitFor();
+  await page.getByRole('button',{name:COPY.start}).click();
+  return page.waitForURL(/#\/learn\/day-1/,{timeout:5000}).then(()=>true,()=>false);
+}
+
+async function completeTheory(page){
+  await page.getByRole('button',{name:COPY.continue}).click();
+  return page.waitForURL(/#\/$/,{timeout:5000}).then(()=>true,()=>false);
+}
+
+async function signIn(page,email){
+  await page.getByRole('link',{name:COPY.signIn}).click();
+  await page.getByRole('textbox',{name:'Email'}).fill(email);
+  await page.getByRole('button',{name:COPY.send}).click();
+  await page.getByText(/^DEV: \d+$/).waitFor();
+  await page.getByRole('button',{name:COPY.verify}).click();
+  if(await appears(page.getByRole('textbox',{name:COPY.handle}),1200)){
+    await page.getByRole('textbox',{name:COPY.handle}).fill('@person');
+    await page.getByRole('button',{name:COPY.create}).click();
+  }
+  return appears(page.getByRole('link',{name:COPY.account}),5000);
+}
 
 const browser = await chromium.launch(CHROME ? {executablePath:CHROME} : {});
 try{
-  const context = await browser.newContext({viewport:{width:390,height:800}});
-  const page = await context.newPage();
-  const errors = [];
-  page.on('pageerror', e => errors.push(String(e)));
-  await page.goto(URL_);
-  ok('first anonymous visit opens minimal onboarding', await appears(page.getByRole('heading', {name:COPY.onboarding})));
-  await page.getByRole('button', {name:COPY.start}).click();
-  ok('onboarding starts the first lesson', await page.waitForURL(/#\/learn\//, {timeout:5000}).then(()=>true,()=>false));
-  await page.goto(URL_ + '#/');
-  ok('completed onboarding opens Today without an account', await appears(page.getByRole('heading', {name:COPY.today})));
-  ok('theme tokens are applied', (await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim())) !== '');
+  const errors=[];
 
-  await page.getByRole('link', {name:COPY.signIn}).click();
-  await page.getByRole('textbox', {name:'Email'}).fill('person@example.com');
-  await page.getByRole('button', {name:COPY.send}).click();
-  await page.getByText(/^DEV: \d+$/).waitFor();
-  await page.getByRole('button', {name:COPY.verify}).click();
-  if(await appears(page.getByRole('textbox', {name:COPY.handle}), 2000)){
-    await page.getByRole('textbox', {name:COPY.handle}).fill('@person');
-    await page.getByRole('button', {name:COPY.create}).click();
-  }
-  ok('email sign-in works against the real auth endpoint', await appears(page.getByRole('link', {name:COPY.account})));
+  const phone=await openDevice(browser,errors);
+  ok('first anonymous visit opens minimal onboarding',await appears(phone.page.getByRole('heading',{name:COPY.onboarding})));
+  ok('onboarding starts day 1',await finishOnboarding(phone.page));
+  ok('day 1 is completed locally before sign-in',await completeTheory(phone.page));
+  ok('anonymous phone advances to day 2',await appears(phone.page.getByRole('heading',{name:'День 2'})));
+  ok('theme tokens are applied',(await phone.page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()))!=='');
 
-  const admin = await context.newPage();
-  await admin.goto(URL_ + '#/admin');
-  ok('shared Admin opens and asks for the key', await appears(admin.getByLabel('ADMIN_KEY')));
-  ok('no runtime errors', errors.length === 0);
-  if(errors.length) console.log(errors.join('\n'));
-}catch(error){ bad++; console.error(error); }
-finally{ await browser.close(); server.close(); }
+  const phoneSignedIn=await signIn(phone.page,'person@example.com');
+  await phone.page.goto(URL_+'#/');
+  ok(
+    'first sign-in keeps the phone local progress',
+    phoneSignedIn&&await appears(phone.page.getByRole('heading',{name:'День 2'}))
+  );
 
-console.log(bad ? '\nStarter e2e failures: ' + bad : '\nStarter e2e passed');
+  const laptop=await openDevice(browser,errors);
+  ok('second device starts with its own anonymous state',await finishOnboarding(laptop.page));
+  await laptop.page.goto(URL_+'#/learn/day-2');
+  ok('second device can make a different local course change',await appears(laptop.page.getByText('Goodbye.')));
+  ok('day 2 is completed locally before second-device sign-in',await completeTheory(laptop.page));
+  ok('second device still needs day 1 before account merge',await appears(laptop.page.getByRole('heading',{name:'День 1'})));
+
+  const laptopSignedIn=await signIn(laptop.page,'person@example.com');
+  await laptop.page.goto(URL_+'#/');
+  ok('second device signs into the same account',laptopSignedIn);
+  ok(
+    'second device merges phone day 1 with its own day 2',
+    await appears(laptop.page.getByRole('heading',{name:COPY.complete}),8000)
+  );
+
+  await phone.page.reload();
+  ok(
+    'first device pulls the merged progress from the second device',
+    await appears(phone.page.getByRole('heading',{name:COPY.complete}),8000)
+  );
+
+  await phone.page.reload();
+  ok(
+    'merged progress survives a production-build reload',
+    await appears(phone.page.getByRole('heading',{name:COPY.complete}),8000)
+  );
+
+  const adminContext=await browser.newContext({locale:'ru-RU'});
+  const admin=await adminContext.newPage();
+  admin.on('pageerror',error=>errors.push(String(error)));
+  await admin.goto(URL_+'#/admin');
+  ok('shared Admin opens and asks for the key',await appears(admin.getByLabel('ADMIN_KEY')));
+
+  ok('no runtime errors',errors.length===0);
+  if(errors.length)console.log(errors.join('\n'));
+
+  await adminContext.close();
+  await laptop.context.close();
+  await phone.context.close();
+}catch(error){
+  bad++;
+  console.error(error);
+}finally{
+  await browser.close();
+  server.close();
+}
+
+console.log(bad ? '\nUnMute e2e failures: '+bad : '\nUnMute e2e passed');
 process.exit(bad ? 1 : 0);
