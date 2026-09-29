@@ -8,7 +8,7 @@ import { authClient } from './auth';
 import { adminClient } from './admin';
 import { contentAdminSection } from './admin-content';
 import { courseAdminSection } from './admin-course';
-import { appDocs, SETTINGS_DOC, syncNow } from './sync';
+import { appDocs, syncNow } from './sync';
 import { patchSettings, readSettings } from './settings';
 import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
 import { LearnerCourseProvider } from './course-runtime';
