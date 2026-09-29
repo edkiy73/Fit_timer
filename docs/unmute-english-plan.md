@@ -60,7 +60,8 @@
 | Фаза 4h — clickable lexicon | ✅ в `main` (#238) | every English token in learner content opens one shared dictionary sheet; exact refs when available; no Add/SRS write on click |
 | Фаза 4i — learner progress | ✅ в `main` (#239) | real persisted course/learning/SRS/answer/latest-performance data only; empty state instead of decorative zeroes |
 | Фаза 4j — minimal onboarding | ✅ в `main` (#240) | one short screen, no questionnaire/account gate, synced done flag, existing/imported learners skip, Start → Day 1 |
-| Фаза 5a — entitlements + access offer | ✅ в этой фазе | owned SKU or active Plus unlocks full set; day 8+ opens offer screen; learned paid activities remain reviewable after access ends |
+| Фаза 5a — entitlements + access offer | ✅ в `main` (#241) | owned SKU or active Plus unlocks full set; day 8+ opens offer screen; learned paid activities remain reviewable after access ends |
+| Фаза 7a — AI conversation foundation | ✅ в этой фазе | `talk.reply` via Core AI runtime; strict JSON protocol; one signed-in free trial conversation (8 turns), then Plus; text runner inside `ai-conversation` activity |
 | Фазы 2, 3.2–10 UnMute | ждут | §5 |
 
 `apps/unmute` создан и задеплоен. Репозиторий `edkiy73/English` не трогаем — он только источник контента и алгоритмов (§1.1).
@@ -403,12 +404,13 @@ DictEntry { word, ru }
 
 **Здесь готов запуск для семьи (MVP).**
 
-### Фаза 6 — Оплата (G6)
-- Контракт `billing` — из этапа 0.8 (§0.4a); здесь — реальный адаптер первого канала (решение 8), включение провайдеров в админке; оферта, политика конфиденциальности, возвраты — до включения в проде.
+### Фаза 6 — Оплата (G6) — ⏸ отложена владельцем
+- Пока **не подключаем реальную оплату**: не делаем checkout, цены, store billing и внешнего провайдера. Остаются только entitlement-модель, Admin grant и экран доступа из 5a.
+- Когда вернёмся: контракт `billing` — из этапа 0.8 (§0.4a); затем реальный адаптер первого канала, включение провайдеров в админке, оферта, политика конфиденциальности и возвраты.
 
 ### Фаза 7 — ИИ-собеседник (Plus)
-- `lib/unmute-ai-actions.js`: `talk.reply`, `talk.review`, `answer.explain`; лимиты и журнал — Core `ai-endpoint`; доступ по `acc.sub`, одна пробная беседа.
-- Голосом: распознавание → ИИ → озвучка.
+- ✅ **7a. Text foundation:** `lib/unmute-ai-actions.js → talk.reply` работает через общий `ai-endpoint` и существующие provider/model/limit settings. Сервер сам строит разговорный prompt и принимает от модели только строгий JSON `{reply, correction?, note?}`. Для signed-in non-Plus аккаунта сервер закрепляет **один** trial `conversationId` и разрешает максимум 8 AI-turns; смена conversationId после начала trial не даёт второй бесплатный разговор. Plus проходит обычный monthly AI limit. `ai-conversation` activity теперь запускается прямо в lesson runner, прогресс сохраняется только при явном завершении разговора.
+- ⏳ **7b. Voice + review:** распознавание → ИИ → озвучка; `talk.review`/`answer.explain`, итог разговора и более аккуратная обработка ошибок/лимитов.
 
 ### Фаза 8 — Напоминания
 - Ежедневное напоминание, «есть повторения», «серия под угрозой» через Core `notifications`/`push`.
