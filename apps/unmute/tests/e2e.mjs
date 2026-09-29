@@ -20,7 +20,7 @@ const URL_ = `http://127.0.0.1:${PORT}/`;
 const CHROME = process.env.FIT_CHROME || (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 // Copy of the default locale (src/i18n) and of the shared sign-in form.
 const COPY = {
-  ru: {signIn:'Войти', account:'Аккаунт', today:'Сегодня', onboarding:'Говори для жизни', next:'Далее', start:'Начать день 1', send:'Прислать код', verify:'Войти', handle:'Ник', create:'Создать аккаунт'},
+  ru: {signIn:'Войти', account:'Аккаунт', today:'Сегодня', onboarding:'Говори по-английски в реальной жизни', start:'Начать день 1', send:'Прислать код', verify:'Войти', handle:'Ник', create:'Создать аккаунт'},
   en: {signIn:'Sign in', account:'Account', today:'Today', send:'Send code', verify:'Sign in', handle:'Handle', create:'Create account'}
 }['ru'];
 
@@ -55,8 +55,6 @@ try{
   page.on('pageerror', e => errors.push(String(e)));
   await page.goto(URL_);
   ok('first anonymous visit opens minimal onboarding', await appears(page.getByRole('heading', {name:COPY.onboarding})));
-  await page.getByRole('button', {name:COPY.next}).click();
-  await page.getByRole('button', {name:COPY.next}).click();
   await page.getByRole('button', {name:COPY.start}).click();
   ok('onboarding starts the first lesson', await page.waitForURL(/#\/learn\//, {timeout:5000}).then(()=>true,()=>false));
   await page.goto(URL_ + '#/');
