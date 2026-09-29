@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@appbase/ui-react/i18n.js';
@@ -271,5 +271,93 @@ describe('AI conversation runner',()=>{
     expect(await screen.findByText('ИИ-разговоры доступны в UnMute Plus.')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Открыть Plus'}));
     expect(onAccess).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends a recognized voice turn to AI and speaks partner replies automatically',async()=>{
+    const user=userEvent.setup();
+    const speak=vi.fn(async()=>true);
+    let handlers:any=null;
+    const startRecognition=vi.fn((next:any)=>{
+      handlers=next;
+      return {stop:vi.fn(),abort:vi.fn()};
+    });
+    const requestReply=vi.fn()
+      .mockResolvedValueOnce({
+        reply:'Hello. How can I help you?',
+        correction:null,
+        note:null
+      })
+      .mockResolvedValueOnce({
+        reply:'Sure. What day works for you?',
+        correction:null,
+        note:null
+      });
+
+    wrap(
+      <AIConversationView
+        activity={activity}
+        setId="general-foundation"
+        saveSeen={async()=>{}}
+        onDone={()=>{}}
+        onSignIn={()=>{}}
+        onAccess={()=>{}}
+        requestReply={requestReply}
+        requestReview={vi.fn()}
+        speak={speak}
+        startRecognition={startRecognition}
+      />
+    );
+
+    await user.click(screen.getByRole('button',{name:'Начать разговор'}));
+    expect(await screen.findByText('Hello. How can I help you?')).toBeTruthy();
+    expect(speak).toHaveBeenCalledWith('Hello. How can I help you?','en-US');
+
+    await user.click(screen.getByRole('button',{name:'Ответить голосом'}));
+    expect(startRecognition).toHaveBeenCalledTimes(1);
+    expect(handlers).toBeTruthy();
+
+    await act(async()=>{
+      handlers.onResult(['I need an appointment']);
+    });
+
+    expect(await screen.findByText('Sure. What day works for you?')).toBeTruthy();
+    expect(requestReply).toHaveBeenNthCalledWith(2,expect.objectContaining({
+      learnerText:'I need an appointment'
+    }));
+    expect(speak).toHaveBeenCalledWith('Sure. What day works for you?','en-US');
+  });
+
+  it('keeps text reply available when speech recognition is unsupported',async()=>{
+    const user=userEvent.setup();
+    const requestReply=vi.fn(async()=>({
+      reply:'Hello. How can I help you?',
+      correction:null,
+      note:null
+    }));
+
+    wrap(
+      <AIConversationView
+        activity={activity}
+        setId="general-foundation"
+        saveSeen={async()=>{}}
+        onDone={()=>{}}
+        onSignIn={()=>{}}
+        onAccess={()=>{}}
+        requestReply={requestReply}
+        requestReview={vi.fn()}
+        speak={async()=>true}
+        startRecognition={handlers=>{
+          handlers.onError?.('unsupported');
+          return null;
+        }}
+      />
+    );
+
+    await user.click(screen.getByRole('button',{name:'Начать разговор'}));
+    await screen.findByText('Hello. How can I help you?');
+    await user.click(screen.getByRole('button',{name:'Ответить голосом'}));
+
+    expect(await screen.findByText(/распознавание речи недоступно/)).toBeTruthy();
+    expect((screen.getByRole('textbox',{name:'Твой ответ'}) as HTMLInputElement).disabled).toBe(false);
   });
 });

@@ -1,7 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
 import { LexiconText } from './lexicon-ui';
+import type {
+  SpeakText,
+  StartRecognition,
+  WebRecognitionError,
+  WebRecognitionHandle
+} from './speech-web';
+import { speakWebText, startWebRecognition } from './speech-web';
 import {
   clearTalkTrialContext,
   getTalkTrialContext,
@@ -38,7 +45,9 @@ export function AIConversationView({
   onSignIn,
   onAccess,
   requestReply=requestTalkReply,
-  requestReview=requestTalkReview
+  requestReview=requestTalkReview,
+  speak=speakWebText,
+  startRecognition=startWebRecognition
 }:{
   activity:AIActivity;
   setId:string;
@@ -48,6 +57,8 @@ export function AIConversationView({
   onAccess:()=>void;
   requestReply?:typeof requestTalkReply;
   requestReview?:typeof requestTalkReview;
+  speak?:SpeakText;
+  startRecognition?:StartRecognition;
 }){
   const {t,locale}=useI18n();
   const [trialContext]=useState(()=>getTalkTrialContext(activity.id));
@@ -62,12 +73,29 @@ export function AIConversationView({
   const [trialUsage,setTrialUsage]=useState<TalkTrialUsage|null>(null);
   const [review,setReview]=useState<TalkReview|null>(null);
   const [reviewRequested,setReviewRequested]=useState(false);
+  const [listening,setListening]=useState(false);
+  const [recognitionError,setRecognitionError]=useState<WebRecognitionError|null>(null);
+  const recognitionRef=useRef<WebRecognitionHandle|null>(null);
+  const recognitionReceivedRef=useRef(false);
+
+  useEffect(()=>{
+    return ()=>{
+      recognitionRef.current?.abort();
+      recognitionRef.current=null;
+    };
+  },[]);
 
   const applyReply=(reply:TalkReply)=>{
     setCorrection(reply.correction||'');
     setNote(reply.note||'');
     setUsage(reply.usage);
     setTrialUsage(reply.trial??null);
+  };
+
+  const stopRecognition=()=>{
+    recognitionRef.current?.abort();
+    recognitionRef.current=null;
+    setListening(false);
   };
 
   const start=async()=>{
@@ -88,6 +116,7 @@ export function AIConversationView({
       setMessages([{role:'partner',text:reply.reply}]);
       applyReply(reply);
       setStarted(true);
+      void speak(reply.reply,'en-US');
     }catch(err:any){
       setError(String(err?.code||'ai_failed'));
     }finally{
@@ -98,6 +127,7 @@ export function AIConversationView({
   const send=async(message:string)=>{
     if(busy||reviewRequested||!message.trim())return;
     const learnerText=message.trim();
+    stopRecognition();
     setBusy(true);
     setError('');
     setCorrection('');
@@ -119,6 +149,7 @@ export function AIConversationView({
       ]);
       applyReply(reply);
       setInput('');
+      void speak(reply.reply,'en-US');
     }catch(err:any){
       setError(String(err?.code||'ai_failed'));
     }finally{
@@ -126,8 +157,64 @@ export function AIConversationView({
     }
   };
 
+  const voiceErrorText=(value:WebRecognitionError):string=>{
+    if(value==='unsupported')return t('aiTalk.voiceUnsupported');
+    if(value==='permission')return t('aiTalk.voicePermission');
+    if(value==='no-speech')return t('aiTalk.voiceNoSpeech');
+    if(value==='network')return t('aiTalk.voiceNetwork');
+    return t('aiTalk.voiceError');
+  };
+
+  const beginRecognition=()=>{
+    if(!started||busy||reviewRequested)return;
+    if(listening){
+      recognitionRef.current?.stop();
+      return;
+    }
+
+    recognitionReceivedRef.current=false;
+    setRecognitionError(null);
+    setListening(true);
+
+    const handle=startRecognition({
+      onResult:alternatives=>{
+        recognitionReceivedRef.current=true;
+        const text=alternatives[0]?.trim()||'';
+        recognitionRef.current=null;
+        setListening(false);
+        if(!text){
+          setRecognitionError('no-speech');
+          return;
+        }
+        setInput(text);
+        void send(text);
+      },
+      onError:value=>{
+        recognitionRef.current=null;
+        setListening(false);
+        if(value!=='aborted')setRecognitionError(value);
+      },
+      onEnd:()=>{
+        recognitionRef.current=null;
+        setListening(false);
+        if(!recognitionReceivedRef.current){
+          setRecognitionError(current=>current||'no-speech');
+        }
+      }
+    },'en-US');
+
+    if(recognitionReceivedRef.current){
+      handle?.abort();
+      recognitionRef.current=null;
+    }else{
+      recognitionRef.current=handle;
+    }
+    if(!handle)setListening(false);
+  };
+
   const complete=async()=>{
     if(busy)return;
+    stopRecognition();
     setBusy(true);
     try{
       await saveSeen(setId,activity.id);
@@ -140,6 +227,7 @@ export function AIConversationView({
 
   const reviewConversation=async()=>{
     if(!started||busy)return;
+    stopRecognition();
     const hasLearnerTurn=messages.some(message=>message.role==='learner');
     if(!hasLearnerTurn){
       await complete();
@@ -344,30 +432,60 @@ export function AIConversationView({
       )}
 
       {started&&!reviewRequested&&!accessError&&(
-        <form
-          className="ai-talk-compose"
-          onSubmit={event=>{
-            event.preventDefault();
-            void send(input);
-          }}
-        >
-          <label className="learn-answer">
-            <span>{t('aiTalk.answer')}</span>
-            <input
-              value={input}
-              disabled={busy}
-              onChange={event=>setInput(event.target.value)}
-              autoComplete="off"
-            />
-          </label>
-          <button
-            className="primary-button"
-            type="submit"
-            disabled={busy||!input.trim()}
+        <>
+          <form
+            className="ai-talk-compose"
+            onSubmit={event=>{
+              event.preventDefault();
+              void send(input);
+            }}
           >
-            {busy?t('aiTalk.thinking'):t('aiTalk.send')}
-          </button>
-        </form>
+            <label className="learn-answer">
+              <span>{t('aiTalk.answer')}</span>
+              <input
+                value={input}
+                disabled={busy||listening}
+                onChange={event=>setInput(event.target.value)}
+                autoComplete="off"
+              />
+            </label>
+            <button
+              className="primary-button"
+              type="submit"
+              disabled={busy||listening||!input.trim()}
+            >
+              {busy?t('aiTalk.thinking'):t('aiTalk.send')}
+            </button>
+          </form>
+          <div className="ai-talk-voice-actions">
+            <button
+              className={listening?'secondary-button ai-talk-mic ai-talk-mic-on':'secondary-button ai-talk-mic'}
+              type="button"
+              disabled={busy}
+              onClick={beginRecognition}
+            >
+              {listening?t('aiTalk.voiceListening'):t('aiTalk.voiceStart')}
+            </button>
+            {messages.some(message=>message.role==='partner')&&(
+              <button
+                className="secondary-button"
+                type="button"
+                disabled={busy||listening}
+                onClick={()=>{
+                  const latest=[...messages].reverse().find(message=>message.role==='partner');
+                  if(latest)void speak(latest.text,'en-US');
+                }}
+              >
+                {t('aiTalk.playPartner')}
+              </button>
+            )}
+          </div>
+          {recognitionError&&(
+            <div className="learn-hint ai-talk-voice-error" role="status">
+              {voiceErrorText(recognitionError)}
+            </div>
+          )}
+        </>
       )}
 
       {started&&!reviewRequested&&(
