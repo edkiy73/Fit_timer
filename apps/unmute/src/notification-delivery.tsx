@@ -149,6 +149,12 @@ export function NotificationDelivery(){
   const {t,locale}=useI18n();
   const [preferences,setPreferences]=useState<NotificationSettings>(DEFAULT_NOTIFICATION_SETTINGS);
   const [settingsReady,setSettingsReady]=useState(false);
+  const [clock,setClock]=useState(()=>Date.now());
+
+  useEffect(()=>{
+    const timer=window.setInterval(()=>setClock(Date.now()),60_000);
+    return ()=>window.clearInterval(timer);
+  },[]);
 
   useEffect(()=>{
     let live=true;
@@ -179,7 +185,7 @@ export function NotificationDelivery(){
     )return null;
 
     return nextReminderPlan({
-      now:new Date(),
+      now:new Date(clock),
       preferences,
       set:state.set,
       progress:state.progress,
@@ -197,7 +203,8 @@ export function NotificationDelivery(){
     wordRuntime.status,
     wordRuntime.words,
     wordRuntime.lexicon,
-    locale
+    locale,
+    clock
   ]);
 
   useEffect(()=>{
