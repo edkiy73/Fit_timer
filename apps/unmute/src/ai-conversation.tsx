@@ -282,6 +282,12 @@ export function AIConversationView({
         </div>
       )}
 
+      {reviewRequested&&busy&&!review&&!error&&(
+        <div className="learn-hint ai-talk-reviewing" role="status">
+          {t('aiTalk.reviewing')}
+        </div>
+      )}
+
       {error&&(
         <div className="learn-feedback learn-feedback-wrong ai-talk-error" role="alert">
           <strong>{t(errorKey(error))}</strong>
