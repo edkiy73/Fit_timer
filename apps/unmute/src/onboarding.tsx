@@ -139,6 +139,7 @@ export function OnboardingGate({children}:{children:ReactNode}){
   const runtime=useLearnerCourseRuntime();
   const navigate=useNavigate();
   const location=useLocation();
+  const {t}=useI18n();
   const [done,setDone]=useState(()=>onboardingStoredDone());
 
   // Account/sign-in remains reachable from the app header even before onboarding.
@@ -150,8 +151,8 @@ export function OnboardingGate({children}:{children:ReactNode}){
     return (
       <section className="onboarding onboarding-loading">
         <div className="learn-state" role="status">
-          <strong>{useI18n().t('today.loadingTitle')}</strong>
-          <span>{useI18n().t('today.loadingText')}</span>
+          <strong>{t('today.loadingTitle')}</strong>
+          <span>{t('today.loadingText')}</span>
         </div>
       </section>
     );
