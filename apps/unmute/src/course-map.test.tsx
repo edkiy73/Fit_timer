@@ -140,4 +140,53 @@ describe('course map',()=>{
     await user.click(screen.getByRole('button',{name:'Открыть доступ'}));
     expect(onUnlock).toHaveBeenCalledWith('day-3');
   });
+
+  it('shows the access CTA only at the first paid boundary',()=>{
+    const base=previewState();
+    const day4={
+      id:'day-4',
+      kind:'lesson' as const,
+      title:{ru:'День 4'},
+      dayIndex:4,
+      order:3,
+      prerequisites:['day-3'],
+      activityIds:[],
+      optional:false
+    };
+    const state={
+      ...base,
+      roadmap:{...base.roadmap,nodes:[...base.roadmap.nodes,day4]},
+      set:{
+        ...base.set,
+        roadmaps:[{...base.set.roadmaps[0]!,nodes:[...base.set.roadmaps[0]!.nodes,day4]}]
+      },
+      roadmapProgress:{
+        ...base.roadmapProgress,
+        nodes:[
+          ...base.roadmapProgress.nodes,
+          {node:day4,complete:false,unlocked:false}
+        ],
+        requiredCount:4
+      }
+    };
+    const runtime:LearnerCourseRuntimeValue={
+      state,
+      status:'ready',
+      error:null,
+      refresh:async()=>{}
+    };
+
+    render(
+      <I18nProvider
+        dictionaries={dictionaries}
+        config={{locales:['ru'],default:'ru'}}
+        storageKey="course-map-one-access-cta.locale"
+        systemLanguages={['ru']}
+      >
+        <CourseMapView runtime={runtime} onExit={()=>{}} onOpen={()=>{}} onUnlock={()=>{}} />
+      </I18nProvider>
+    );
+
+    expect(screen.getAllByRole('button',{name:'Открыть доступ'})).toHaveLength(1);
+  });
 });
