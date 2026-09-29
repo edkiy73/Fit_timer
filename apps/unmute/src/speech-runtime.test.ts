@@ -59,12 +59,9 @@ describe('UnMute speech runtime',()=>{
 
     const onResult=vi.fn();
     const handle=startRecognition({onResult},'en-US');
-    await Promise.resolve();
-    await Promise.resolve();
-
     expect(handle).not.toBeNull();
-    expect(startNative).toHaveBeenCalledWith({language:'en-US'});
-    expect(resultListener).not.toBeNull();
+    await vi.waitFor(()=>expect(startNative).toHaveBeenCalledWith({language:'en-US'}));
+    await vi.waitFor(()=>expect(resultListener).not.toBeNull());
     (resultListener as unknown as (event:Record<string,unknown>)=>void)({
       text:'I am home',
       alternatives:['I am home','I’m home']
