@@ -52,7 +52,7 @@ jobs:
 
   android:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: apps/unmute
@@ -85,19 +85,18 @@ jobs:
       - name: Android debug build
         run: gradle -p android :app:assembleDebug --no-daemon
 
-      - name: Android emulator
-        run: |
-          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -path '*/bin/sdkmanager' | head -n1)"
-          AVDMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -path '*/bin/avdmanager' | head -n1)"
-          test -n "$SDKMANAGER" && test -x "$SDKMANAGER"
-          test -n "$AVDMANAGER" && test -x "$AVDMANAGER"
-          yes | "$SDKMANAGER" "platform-tools" "emulator" "system-images;android-35;google_apis;x86_64" >/dev/null
-          echo no | "$AVDMANAGER" create avd --force --name unmute-smoke --package "system-images;android-35;google_apis;x86_64"
-          sudo chmod 666 /dev/kvm || true
-          nohup "$ANDROID_HOME/emulator/emulator"             -avd unmute-smoke             -no-window             -no-audio             -no-snapshot             -no-boot-anim             -gpu swiftshader_indirect             >/tmp/unmute-emulator.log 2>&1 &
-
-      - name: Android device launch smoke
-        run: bash scripts/smoke-android-device.sh
+      - name: Android emulator launch smoke
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          disable-spellchecker: true
+          working-directory: apps/unmute
+          emulator-options: -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect
+          script: bash scripts/smoke-android-device.sh
 
 
   ios:
