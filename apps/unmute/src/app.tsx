@@ -14,6 +14,7 @@ import { LearnerCourseProvider } from './course-runtime';
 import { TodayScreen } from './today';
 import { NodeRunnerScreen } from './learn';
 import { ReviewScreen } from './review';
+import { CourseMapScreen } from './course-map';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
 const PRODUCT_SHORT_NAME = product.shortName || PRODUCT_NAME;
@@ -144,6 +145,7 @@ export const routes: RouteObject[] = [
         {index:true, element:<Home />},
         {path:'learn/:nodeId', element:<NodeRunnerScreen />},
         {path:'review', element:<ReviewScreen />},
+        {path:'course', element:<CourseMapScreen />},
         {path:'account', element:<Account />}
       ]
     }]
