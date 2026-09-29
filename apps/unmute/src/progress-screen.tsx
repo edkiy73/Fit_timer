@@ -219,17 +219,6 @@ export function ProgressView({
 }){
   const {t}=useI18n();
 
-  if(runtime.status==='pending'||details.status==='pending'){
-    return (
-      <section className="progress-shell">
-        <div className="learn-state" role="status">
-          <strong>{t('progress.loadingTitle')}</strong>
-          <span>{t('progress.loadingText')}</span>
-        </div>
-      </section>
-    );
-  }
-
   if(runtime.status==='error'||details.status==='error'){
     return (
       <section className="progress-shell">
@@ -243,6 +232,17 @@ export function ProgressView({
           >
             {t('today.retry')}
           </button>
+        </div>
+      </section>
+    );
+  }
+
+  if(runtime.status==='pending'||details.status==='pending'){
+    return (
+      <section className="progress-shell">
+        <div className="learn-state" role="status">
+          <strong>{t('progress.loadingTitle')}</strong>
+          <span>{t('progress.loadingText')}</span>
         </div>
       </section>
     );
