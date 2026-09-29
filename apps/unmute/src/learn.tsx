@@ -211,15 +211,17 @@ export function NodeRunnerView({
   };
 
   const feedback=({
+    question,
     accepted,
     acceptedAnswers=[],
     learnerAnswer='',
     explanation
   }:{
-    accepted?:string;
-    acceptedAnswers?:string[];
-    learnerAnswer?:string;
-    explanation?:Record<string,string>;
+    question:string;
+    accepted?:string|undefined;
+    acceptedAnswers?:string[]|undefined;
+    learnerAnswer?:string|undefined;
+    explanation?:Record<string,string>|undefined;
   })=>result===null?null:(
     <div className={result?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-wrong'} role="status">
       <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
@@ -231,7 +233,7 @@ export function NodeRunnerView({
       )}
       {!result&&learnerAnswer&&acceptedAnswers.length>0&&(
         <AnswerExplanationView
-          question={localized(activity.prompt,locale)}
+          question={question}
           learnerAnswer={learnerAnswer}
           acceptedAnswers={acceptedAnswers}
           courseExplanation={localized(explanation,locale)}
@@ -306,6 +308,7 @@ export function NodeRunnerView({
             </button>
           )}
           {feedback({
+            question:localized(activity.prompt,locale),
             accepted:localized(activity.options[activity.correctIndex],locale),
             acceptedAnswers:[localized(activity.options[activity.correctIndex],locale)],
             learnerAnswer:selected===null?'':localized(activity.options[selected],locale),
@@ -346,6 +349,7 @@ export function NodeRunnerView({
             </button>
           )}
           {feedback({
+            question:localized(activity.prompt,locale),
             accepted:activity.answer.accepted[0],
             acceptedAnswers:activity.answer.accepted,
             learnerAnswer:answer.trim(),
