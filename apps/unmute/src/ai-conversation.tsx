@@ -203,7 +203,12 @@ export function AIConversationView({
       }
     },'en-US');
 
-    recognitionRef.current=handle;
+    if(recognitionReceivedRef.current){
+      handle?.abort();
+      recognitionRef.current=null;
+    }else{
+      recognitionRef.current=handle;
+    }
     if(!handle)setListening(false);
   };
 
