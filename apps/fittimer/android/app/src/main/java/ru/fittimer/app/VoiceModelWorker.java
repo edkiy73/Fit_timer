@@ -2,12 +2,16 @@ package ru.fittimer.app;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.os.Build;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.work.Data;
+import androidx.work.ForegroundInfo;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
@@ -64,12 +68,67 @@ public class VoiceModelWorker extends Worker {
         return "https://alphacephei.com/vosk/models/" + modelName(language) + ".zip";
     }
 
+    private int notificationId(String language) {
+        return "en".equals(cleanLanguage(language)) ? 904102 : 904101;
+    }
+
+    private void ensureChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        NotificationManager nm = (NotificationManager) getApplicationContext()
+            .getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) return;
+        NotificationChannel channel = new NotificationChannel(
+            CHANNEL_ID,
+            "Голосовые команды",
+            NotificationManager.IMPORTANCE_LOW
+        );
+        channel.setDescription("Загрузка офлайн-пакетов голосового управления Fit Timer");
+        nm.createNotificationChannel(channel);
+    }
+
+    private ForegroundInfo foregroundInfo(String language, String status, int percent) {
+        ensureChannel();
+        boolean english = "en".equals(cleanLanguage(language));
+        Intent open = new Intent(getApplicationContext(), MainActivity.class);
+        open.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pending = PendingIntent.getActivity(
+            getApplicationContext(),
+            notificationId(language),
+            open,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+        String text;
+        if ("extracting".equals(status)) text = english ? "Preparing voice pack…" : "Готовим голосовой пакет…";
+        else text = english ? "Downloading voice pack…" : "Скачиваем голосовой пакет…";
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(), CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(english ? "Fit Timer voice commands" : "Голосовые команды Fit Timer")
+            .setContentText(text)
+            .setContentIntent(pending)
+            .setOnlyAlertOnce(true)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW);
+        if (percent > 0) builder.setProgress(100, Math.min(100, percent), false);
+        else builder.setProgress(0, 0, true);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            return new ForegroundInfo(
+                notificationId(language),
+                builder.build(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            );
+        }
+        return new ForegroundInfo(notificationId(language), builder.build());
+    }
+
     private void progress(String language, String status, int percent) {
         setProgressAsync(new Data.Builder()
             .putString(KEY_LANGUAGE, cleanLanguage(language))
             .putString(KEY_STATUS, status)
             .putInt(KEY_PROGRESS, percent)
             .build());
+        if ("downloading".equals(status) || "extracting".equals(status)) {
+            setForegroundAsync(foregroundInfo(language, status, percent));
+        }
     }
 
     @NonNull
@@ -83,6 +142,7 @@ public class VoiceModelWorker extends Worker {
         }
 
         try {
+            setForegroundAsync(foregroundInfo(language, "downloading", 0));
             progress(language, "downloading", 0);
             downloadAndExtract(language);
             progress(language, "ready", 100);
@@ -178,15 +238,7 @@ public class VoiceModelWorker extends Worker {
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID,
-                "Голосовые команды",
-                NotificationManager.IMPORTANCE_DEFAULT
-            );
-            channel.setDescription("Загрузка офлайн-пакетов голосового управления Fit Timer");
-            nm.createNotificationChannel(channel);
-        }
+        ensureChannel();
 
         boolean english = "en".equals(cleanLanguage(language));
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
@@ -198,6 +250,6 @@ public class VoiceModelWorker extends Worker {
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT);
 
-        nm.notify(english ? 904102 : 904101, builder.build());
+        nm.notify(notificationId(language), builder.build());
     }
 }
