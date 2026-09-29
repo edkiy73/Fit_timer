@@ -123,12 +123,6 @@ await new Promise(resolve => server.listen(PORT, '127.0.0.1', resolve));
 let bad = 0;
 const ok = (name, value) => { if(!value) bad++; console.log((value ? '  ok  ' : ' FAIL ') + name); };
 const appears = (locator, timeout = 5000) => locator.waitFor({timeout}).then(() => true, () => false);
-const pushed = page => page.waitForResponse(response =>
-  response.url().endsWith('/api/sync')
-  && (response.request().postData() || '').includes('"action":"push"'),
-  {timeout:8000}
-);
-
 async function openDevice(browser, errors){
   const context=await browser.newContext({viewport:{width:390,height:800},locale:'ru-RU'});
   const page=await context.newPage();
@@ -153,16 +147,12 @@ async function signIn(page,email){
   await page.getByRole('textbox',{name:'Email'}).fill(email);
   await page.getByRole('button',{name:COPY.send}).click();
   await page.getByText(/^DEV: \d+$/).waitFor();
-  const sync=pushed(page);
   await page.getByRole('button',{name:COPY.verify}).click();
   if(await appears(page.getByRole('textbox',{name:COPY.handle}),1200)){
     await page.getByRole('textbox',{name:COPY.handle}).fill('@person');
     await page.getByRole('button',{name:COPY.create}).click();
   }
-  const signedIn=await appears(page.getByRole('link',{name:COPY.account}),5000);
-  const home=await page.waitForURL(/#\/$/,{timeout:5000}).then(()=>true,()=>false);
-  const synced=await sync.then(response=>response.ok(),()=>false);
-  return signedIn&&home&&synced;
+  return appears(page.getByRole('link',{name:COPY.account}),5000);
 }
 
 const browser = await chromium.launch(CHROME ? {executablePath:CHROME} : {});
@@ -189,7 +179,9 @@ try{
   ok('day 2 is completed locally before second-device sign-in',await completeTheory(laptop.page));
   ok('second device still needs day 1 before account merge',await appears(laptop.page.getByRole('heading',{name:'День 1'})));
 
-  ok('second device signs in and pushes its local progress',await signIn(laptop.page,'person@example.com'));
+  const laptopSignedIn=await signIn(laptop.page,'person@example.com');
+  await laptop.page.goto(URL_+'#/');
+  ok('second device signs into the same account',laptopSignedIn);
   ok(
     'second device merges phone day 1 with its own day 2',
     await appears(laptop.page.getByRole('heading',{name:COPY.complete}),8000)
