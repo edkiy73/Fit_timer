@@ -103,7 +103,6 @@ public class FitSystemPlugin extends Plugin {
                 if (apk.isFile()) {
                     try {
                         verifyUpdateApk(apk, expectedVersionCode);
-                        emitUpdate("ready", 100, apk.length(), apk.length(), "");
                         finishInstallRequest(call, apk, true);
                         return;
                     } catch (Exception stale) {
