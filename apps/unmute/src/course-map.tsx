@@ -141,7 +141,7 @@ export function CourseMapView({
               </div>
               <div className="course-map-node-body">
                 <div className="course-map-node-top">
-                  <span className="course-map-day">{label}</span>
+                  <span className="course-map-day">{day?label:<LexiconText text={label} />}</span>
                   <span className="course-map-status">{t(statusKey(item.status))}</span>
                 </div>
                 {localized(item.node.title,locale)!==label&&(
