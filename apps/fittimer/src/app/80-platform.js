@@ -1,5 +1,6 @@
 import { appLocale, t } from '../i18n/index.js';
 import { appNotifications, appRuntimeCompat, appUi } from './00-dependencies.js';
+import { ACTIONS, registerAction } from './05-actions.js';
 import { $, appAlert, audioCtx, beep, dismissTopModal, fxVol, icon, keepAwake, lastAppSoundT,
   loadDelta, musicMode, plural, previousWorkoutLoad, releaseWake, setLastAppSoundTShared, soundOn,
   state, syncSoundCascade, voiceVol, workoutLoadSnapshot
@@ -767,14 +768,12 @@ export async function syncNativeNotifications(){
    для кнопок, которые ничего не хранят в себе; тумблеры и поля остаются как есть.
    Обработчик получает саму кнопку и событие: этого хватает, чтобы взять данные
    из data-атрибутов рядом, не заводя элементу имя. */
-const ACTIONS = {
-  // Закрыть попап, внутри которого стоит кнопка. История навигации остаётся
-  // за существующим MutationObserver; UI Core отвечает только за DOM-механику.
-  closeModal: btn => {
-    const m = appUi.closestModal(btn);
-    appUi.closeModal(m);
-  }
-};
+// Закрыть попап, внутри которого стоит кнопка. История навигации остаётся
+// за существующим MutationObserver; UI Core отвечает только за DOM-механику.
+registerAction('closeModal', btn => {
+  const m = appUi.closestModal(btn);
+  appUi.closeModal(m);
+});
 
 /* Setters for state owned by this chunk and changed from other chunks.
    Other chunks read these bindings directly but write them only through the owner. */
