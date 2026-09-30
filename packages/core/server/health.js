@@ -2,6 +2,7 @@ const { store } = require('./store');
 const { mailInfo } = require('./mail');
 const { pushInfo } = require('./push');
 const { providerStatus, billingProviderStatus } = require('./ai');
+const { loadSecrets } = require('./secrets');
 const Supabase = require('./supabase');
 const SyncShadow = require('./sync-shadow');
 
@@ -21,6 +22,7 @@ async function timed(name, fn){
 
 /* Products add their own storage-backed probes, e.g. {name:'catalog', run: async () => detail}. */
 async function collectHealth({probes: productProbes = []} = {}){
+  await loadSecrets().catch(()=>null);
   const info = store.info();
   const mail = mailInfo();
   const push = pushInfo();
@@ -65,16 +67,16 @@ async function collectHealth({probes: productProbes = []} = {}){
 
   const criticalOk = probes.filter(x=>x.name!=='supabase').every(x=>x.ok);
   const optionalWarnings = [];
-  if(info.memory) optionalWarnings.push('Хранилище работает только в памяти процесса.');
+  if(info.memory) optionalWarnings.push('Данные хранятся только во временной памяти — при перезапуске они пропадут. Подключи хранилище (Upstash Redis).');
   if(!info.modeValid) optionalWarnings.push('APPBASE_STORE содержит неизвестный режим: '+info.mode+'.');
   if(info.mirrorMissing) optionalWarnings.push('Режим '+info.mode+' требует зеркало, но его ключи не заданы — записи не дублируются.');
-  if(!mail.ready) optionalWarnings.push('Почта не настроена — вход по email-коду недоступен.');
-  if(!ai.gemini && !ai.openai && !ai.openrouter) optionalWarnings.push('Нет настроенного AI-провайдера.');
+  if(!mail.ready) optionalWarnings.push('Почта не настроена — вход по коду из письма не работает.');
+  if(!ai.gemini && !ai.openai && !ai.openrouter) optionalWarnings.push('Не подключён ни один ИИ — разбор ошибок и разговор не работают.');
   if(supabase.configured && supabaseProbe && !supabaseProbe.ok) optionalWarnings.push('Supabase настроен, но connection health не проходит.');
   if(shadow && shadow.readiness && ['investigate','parity_issue'].includes(shadow.readiness.stage)){
     optionalWarnings.push('Supabase shadow migration требует внимания: '+shadow.readiness.reason);
   }
-  if(!push.android && !push.ios) optionalWarnings.push('Push-уведомления не настроены.');
+  if(!push.android && !push.ios) optionalWarnings.push('Уведомления на телефон не настроены.');
 
   const storageProbe = probes.find(x=>x.name==='storage') || null;
   const storageSteps = storageProbe && storageProbe.detail && Array.isArray(storageProbe.detail.steps)
@@ -116,7 +118,7 @@ async function collectHealth({probes: productProbes = []} = {}){
       mail:{configured:!!mail.ready,testDomain:!!mail.testDomain,from:mail.from || null,envSeen:mail.seen || []},
       push:{configured:!!(push.android || push.ios),android:!!push.android,ios:!!push.ios,
         firebaseEnvSeen:push.firebaseVars || [],apnsEnvSeen:push.apnsVars || []},
-      billing:{configured:!!(billing.google || billing.rustore || billing.yookassa),providers:billing}
+      billing:{configured:!!(billing.google || billing.rustore || billing.yookassa || billing.stripe),providers:billing}
     },
     warnings:optionalWarnings
   };

@@ -42,11 +42,11 @@
   "products": [
     {
       "sku": "course.general-foundation",
-      "title": "General Foundation"
+      "title": "Общий английский A1–B1/B2"
     },
     {
       "sku": "course.a1-starter",
-      "title": "A1: First steps"
+      "title": "A1: первые шаги"
     }
   ],
   "features": {

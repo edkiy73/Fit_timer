@@ -7,6 +7,7 @@
 
 const { store } = require('./store');
 const OpenRouter = require('./ai-provider-openrouter');
+const { loadSecrets, secret } = require('./secrets');
 
 const DEFAULT_PRICES = {
   RUB:{month:399,year:2990}, USD:{month:4.99,year:39.99},
@@ -145,20 +146,23 @@ function productDefaults(){
 }
 
 async function getSettings(){
+  // Every AI request reads the settings first, so admin-stored keys are fresh by then.
+  await loadSecrets();
   let saved = null;
   try{ saved = JSON.parse(await store.get('settings:ai')); }catch(e){}
   return sanitizeSettings(saved || productDefaults());
 }
 
+// Keys come from the hosting env or from the admin (server/secrets.js); env wins.
 const keyFor = provider => {
-  if(provider === 'gemini') return process.env.GEMINI_API_KEY;
-  if(provider === 'openai') return process.env.OPENAI_API_KEY;
-  if(provider === 'openrouter') return process.env.OPENROUTER_API_KEY;
+  if(provider === 'gemini') return secret('GEMINI_API_KEY');
+  if(provider === 'openai') return secret('OPENAI_API_KEY');
+  if(provider === 'openrouter') return secret('OPENROUTER_API_KEY');
   return '';
 };
 const providerStatus = () => ({
-  gemini:!!process.env.GEMINI_API_KEY,
-  openai:!!process.env.OPENAI_API_KEY,
+  gemini:!!secret('GEMINI_API_KEY'),
+  openai:!!secret('OPENAI_API_KEY'),
   openrouter:OpenRouter.configured()
 });
 
@@ -379,7 +383,8 @@ function billingProviderStatus(){
   return {
     google: !!(process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON || process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_BASE64),
     rustore: !!(process.env.RUSTORE_PAY_PRIVATE_KEY || process.env.RUSTORE_PAY_TOKEN || process.env.RUSTORE_API_TOKEN),
-    yookassa: !!(process.env.YOOKASSA_SHOP_ID && process.env.YOOKASSA_SECRET_KEY)
+    yookassa: !!(secret('YOOKASSA_SHOP_ID') && secret('YOOKASSA_SECRET_KEY')),
+    stripe: !!secret('STRIPE_SECRET_KEY')
   };
 }
 
