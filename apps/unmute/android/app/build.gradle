@@ -3,6 +3,21 @@ apply plugin: 'com.android.application'
 android {
     namespace = "app.unmute.english"
     compileSdk = rootProject.ext.compileSdkVersion
+    // direct — APK из GitHub, обновляется внутри приложения; play — для магазинов, без права ставить APK.
+    flavorDimensions += "distribution"
+    productFlavors {
+        direct {
+            dimension "distribution"
+            buildConfigField "boolean", "DIRECT_UPDATES", "true"
+        }
+        play {
+            dimension "distribution"
+            buildConfigField "boolean", "DIRECT_UPDATES", "false"
+        }
+    }
+    buildFeatures {
+        buildConfig true
+    }
 
     defaultConfig {
         applicationId "app.unmute.english"
@@ -51,6 +66,7 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    implementation 'androidx.work:work-runtime:2.10.1'
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

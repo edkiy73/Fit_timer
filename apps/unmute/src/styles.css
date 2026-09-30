@@ -807,3 +807,15 @@ h2{margin:0 0 8px;font-weight:800}
 .learn-feedback.is-sheet :is(.primary-button,.secondary-button){width:100%;justify-content:center}
 .learn-feedback.is-sheet .answer-explain-error{display:grid;gap:10px}
 .drill-explanation{margin:0;color:var(--muted);line-height:1.5}
+
+/* In-app update: quiet card on «Сегодня», full-screen gate below the minimum version. */
+.update-banner{display:grid;gap:10px;margin:0 0 12px;padding:16px;border:1px solid var(--accent);border-radius:var(--radius-tile);background:color-mix(in srgb,var(--accent) 7%,var(--card))}
+.update-banner-head{display:flex;align-items:center;gap:10px}
+.update-banner-head h3{flex:1;margin:0;font-size:17px}
+.update-banner-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--card);color:var(--accent)}
+.update-banner-close{display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:22px;background:transparent;color:var(--muted);cursor:pointer}
+.update-banner .tile-text,.update-gate .tile-text{margin:0}
+.update-banner :is(.primary-button,.secondary-button),.update-gate :is(.primary-button,.secondary-button){width:100%;justify-content:center}
+.update-gate{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:24px 16px;background:var(--bg)}
+.update-gate-card{display:grid;gap:14px;width:min(100%,420px);padding:24px;border:1px solid var(--line);border-radius:var(--radius-tile);background:var(--card)}
+.update-gate-card h2{margin:0;font-size:24px}

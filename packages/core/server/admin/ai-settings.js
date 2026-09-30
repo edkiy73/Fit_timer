@@ -4,10 +4,16 @@ const { store } = require('../store');
 const { send, fail } = require('../util');
 const { getSettings, sanitizeSettings, generate } = require('../ai');
 
-const ACTIONS = new Set(['save_settings','test_ai']);
+const ACTIONS = new Set(['settings_get','save_settings','test_ai']);
 
 async function handleAdminAISettings(action, body, res){
   if(!ACTIONS.has(action)) return false;
+
+  // The whole settings object: save_settings replaces it, so an editor reads it first.
+  if(action === 'settings_get'){
+    send(res,200,{ok:true,settings:await getSettings()});
+    return true;
+  }
 
   if(action === 'save_settings'){
     const settings = sanitizeSettings(body && body.settings);

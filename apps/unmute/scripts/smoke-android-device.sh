@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APK="${1:-android/app/build/outputs/apk/debug/app-debug.apk}"
+APK="${1:-android/app/build/outputs/apk/direct/debug/app-direct-debug.apk}"
 PACKAGE="app.unmute.english"
 ACTIVITY="$PACKAGE/.MainActivity"
 ADB="${ADB:-${ANDROID_HOME:-}/platform-tools/adb}"

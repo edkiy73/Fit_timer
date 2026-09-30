@@ -109,7 +109,7 @@ jobs:
           npm run mobile:sync
 
       - name: Android debug build
-        run: gradle -p android :app:assembleDebug --no-daemon
+        run: gradle -p android :app:assembleDirectDebug :app:assemblePlayDebug --no-daemon
 
       - name: Enable KVM for Android emulator
         run: sudo chmod 666 /dev/kvm

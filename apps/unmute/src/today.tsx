@@ -17,6 +17,7 @@ import type { RecordMap } from '@appbase/core/document-sync.js';
 import type { TimedFlag } from './progress';
 import { useAllLearningDays, withAllLearningDays } from './learning-days';
 import { useOtherCourseReviews, type OtherCourseReview } from './other-course-review';
+import { UpdateBanner } from './app-update';
 import {
   lastWeekActivity,
   localizedText,
@@ -197,6 +198,7 @@ export function TodayView({
   return (
     <section className="today" aria-labelledby="today-title">
       {heading}
+      <UpdateBanner />
       <div className="bento">
         {hero}
 
