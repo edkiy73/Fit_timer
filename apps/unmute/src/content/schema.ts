@@ -167,6 +167,11 @@ export const setAccessSchema = z.discriminatedUnion('mode', [
       days: z.number().int().nonnegative(),
       learnedContentStaysAvailable: z.literal(true),
     }).optional(),
+    /** Price of buying this course forever, per currency; missing → product default. */
+    price: z.object({
+      RUB: z.number().positive().optional(),
+      USD: z.number().positive().optional(),
+    }).optional(),
   }),
 ]);
 

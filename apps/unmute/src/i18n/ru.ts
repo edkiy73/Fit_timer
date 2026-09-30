@@ -168,6 +168,7 @@ export const ru = {
   'access.foreverText': 'Одноразовая покупка открывает все текущие дни этого курса без подписки.',
   'access.plusTag': 'Подписка',
   'access.plusTitle': 'UnMute Plus',
+  'access.plusPrice': '{monthly} в месяц или {yearly} в год',
   'access.plusText': 'Полный курс открыт, пока подписка активна. Позже сюда же войдут ИИ-функции.',
   'access.notForgettingTitle': 'Изученное не пропадёт',
   'access.notForgettingText': 'Если доступ закончится, уже изученные карточки и речевые паттерны останутся в повторениях.',

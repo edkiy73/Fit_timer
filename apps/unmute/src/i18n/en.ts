@@ -170,6 +170,7 @@ export const en: Record<keyof typeof ru, string> = {
   'access.foreverText': 'A one-time purchase unlocks every current day in this course without a subscription.',
   'access.plusTag': 'Subscription',
   'access.plusTitle': 'UnMute Plus',
+  'access.plusPrice': '{monthly} a month or {yearly} a year',
   'access.plusText': 'The full course stays open while the subscription is active. AI features will join it later.',
   'access.notForgettingTitle': 'What you learned stays with you',
   'access.notForgettingText': 'If access ends, cards and speaking patterns you already learned stay available for review.',

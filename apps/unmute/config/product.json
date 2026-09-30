@@ -33,6 +33,11 @@
   "auth": {
     "askHandle": false
   },
+  "pricing": {
+    "course": {"RUB": 1490, "USD": 15},
+    "plusMonthly": {"RUB": 399, "USD": 4},
+    "plusYearly": {"RUB": 2990, "USD": 30}
+  },
   "products": [
     {
       "sku": "course.general-foundation",

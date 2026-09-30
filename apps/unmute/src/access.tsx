@@ -7,6 +7,7 @@ import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
 import { resolveCourseEntitlement } from './entitlements';
 import { trackPaywallShown } from './observability';
+import { coursePrice, plusPrices } from './pricing';
 
 export function AccessOfferView({
   runtime,
@@ -27,7 +28,7 @@ export function AccessOfferView({
   onAccount:()=>void;
   onCourse:()=>void;
 }){
-  const {t}=useI18n();
+  const {t,locale}=useI18n();
 
   if(runtime.status==='pending'||authLoading){
     return (
@@ -96,6 +97,9 @@ export function AccessOfferView({
     );
   }
 
+  const foreverPrice=coursePrice(state.set.access,locale);
+  const plus=plusPrices(locale);
+
   return (
     <section className="access-shell" aria-labelledby="access-title">
       <button className="learn-back" type="button" onClick={onCourse}>{t('nav.back')}</button>
@@ -109,11 +113,13 @@ export function AccessOfferView({
         <article className="access-option access-option-main">
           <span className="access-tag">{t('access.foreverTag')}</span>
           <h3>{t('access.foreverTitle')}</h3>
+          {foreverPrice&&<strong className="access-price">{foreverPrice}</strong>}
           <p>{t('access.foreverText')}</p>
         </article>
         <article className="access-option">
           <span className="access-tag">{t('access.plusTag')}</span>
           <h3>{t('access.plusTitle')}</h3>
+          {plus&&<strong className="access-price">{t('access.plusPrice',plus)}</strong>}
           <p>{t('access.plusText')}</p>
         </article>
       </div>

@@ -75,6 +75,18 @@ describe('course access offer',()=>{
     expect(screen.getByRole('heading',{name:'Весь курс навсегда'})).toBeTruthy();
     expect(screen.getByRole('heading',{name:'UnMute Plus'})).toBeTruthy();
     expect(screen.getByText(/Доступ к курсу открывает администратор/)).toBeTruthy();
+    // Default list prices from config/product.json → pricing.
+    expect(screen.getByText(/1\s490\s₽/)).toBeTruthy();
+    expect(screen.getByText(/399\s₽ в месяц или 2\s990\s₽ в год/)).toBeTruthy();
+  });
+
+  it('shows a course its own price when it has one',()=>{
+    const value=runtime();
+    const set=value.state!.set;
+    value.state!.set={...set,access:{...set.access,mode:'entitlement',entitlement:'course.general-foundation',price:{RUB:990}}};
+    renderView(value,null);
+    expect(screen.getByText(/^990\s₽$/)).toBeTruthy();
+    expect(screen.queryByText(/1\s490\s₽/)).toBeNull();
   });
 
   it('sends an anonymous learner to account recovery',async()=>{

@@ -776,6 +776,8 @@ h2{margin:0 0 8px;font-weight:800}
 .access-option{border-radius:var(--radius-tile);background:var(--card);padding:20px}
 .access-option-main{border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--card))}
 .access-option-main h3{font-size:24px}
+.access-price{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.access-option-main .access-price{font-size:28px}
 .access-tag{border-color:transparent;background:var(--surface);color:var(--muted);font-weight:800}
 .access-option-main .access-tag{background:var(--accent);color:var(--on-accent)}
 .access-note,.access-active{border-radius:var(--radius-tile);background:var(--card)}
