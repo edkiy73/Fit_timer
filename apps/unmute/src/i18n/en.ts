@@ -238,6 +238,8 @@ export const en: Record<keyof typeof ru, string> = {
   'answerExplain.tipTitle': 'What to remember',
   'answerExplain.authRequired': 'Sign in to use AI answer explanations.',
   'answerExplain.plusRequired': 'AI answer explanations are available with UnMute Plus.',
+  'answerExplain.freeUsed': 'Your three free explanations are used. More AI explanations come with UnMute Plus.',
+  'answerExplain.freeLeft': 'Free explanations left: {count} of 3.',
   'answerExplain.limit': 'Your AI limit for this period is used up.',
   'answerExplain.timeout': 'The AI is taking too long. Try again.',
   'answerExplain.badResponse': 'The AI returned an invalid explanation. Try again.',

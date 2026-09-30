@@ -13,6 +13,7 @@ type LexiconRefs=Activity['lexiconRefs'];
 function errorKey(code:string):string{
   if(code==='auth_required')return 'answerExplain.authRequired';
   if(code==='premium_required')return 'answerExplain.plusRequired';
+  if(code==='free_explain_used')return 'answerExplain.freeUsed';
   if(code==='ai_limit')return 'answerExplain.limit';
   if(code==='ai_timeout')return 'answerExplain.timeout';
   if(code==='ai_bad_response')return 'answerExplain.badResponse';
@@ -80,14 +81,17 @@ export function AnswerExplanationView({
             : <LexiconText text={result.tip} />
           }</p>
         </div>
-        {result.usage&&(
-          <small>{t('aiTalk.usage',{used:result.usage.used,limit:result.usage.limit})}</small>
-        )}
+        {result.freeRemaining!==undefined
+          ? <small>{t('answerExplain.freeLeft',{count:result.freeRemaining})}</small>
+          : result.usage&&(
+            <small>{t('aiTalk.usage',{used:result.usage.used,limit:result.usage.limit})}</small>
+          )}
       </div>
     );
   }
 
-  const accessError=error==='auth_required'||error==='premium_required';
+  const needsPlus=error==='premium_required'||error==='free_explain_used';
+  const accessError=error==='auth_required'||needsPlus;
 
   return (
     <div className="answer-explain">
@@ -104,7 +108,7 @@ export function AnswerExplanationView({
               {t('aiTalk.signIn')}
             </button>
           )}
-          {error==='premium_required'&&(
+          {needsPlus&&(
             <button className="secondary-button" type="button" onClick={onAccess}>
               {t('aiTalk.openPlus')}
             </button>

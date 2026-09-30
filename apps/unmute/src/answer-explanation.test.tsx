@@ -47,6 +47,25 @@ describe('wrong-answer explanation UI',()=>{
     expect(screen.getByText(/проверь, что стоит глагол/)).toBeTruthy();
   });
 
+  it('shows how many free explanations are left, then offers Plus',async()=>{
+    const user=userEvent.setup();
+    renderView(vi.fn(async()=>({why:'Нужен глагол live.',tip:'Проверь глагол.',freeRemaining:2})));
+    await user.click(screen.getByRole('button',{name:'Почему?'}));
+    expect(await screen.findByText('Бесплатных разборов осталось: 2 из 3.')).toBeTruthy();
+  });
+
+  it('after the free explanations are used, sends to Plus',async()=>{
+    const user=userEvent.setup();
+    const error:any=new Error('free_explain_used');
+    error.code='free_explain_used';
+    const onAccess=vi.fn();
+    renderView(vi.fn(async()=>{throw error;}),vi.fn(),onAccess);
+    await user.click(screen.getByRole('button',{name:'Почему?'}));
+    expect(await screen.findByText(/Три бесплатных разбора использованы/)).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Открыть Plus'}));
+    expect(onAccess).toHaveBeenCalledTimes(1);
+  });
+
   it('routes Plus errors to the existing access screen',async()=>{
     const user=userEvent.setup();
     const error:any=new Error('premium_required');

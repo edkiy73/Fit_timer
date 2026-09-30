@@ -31,8 +31,29 @@ function denied(code='premium_required',status=402){
   return {allowed:false,code,status};
 }
 
+// «Почему?» without Plus: a few answer explanations per account, ever (owner decision).
+const FREE_EXPLAIN_CALLS=3;
+
+function explainKey(accountHash){
+  return 'unmute:ai-explain-free:'+accountHash;
+}
+
+async function authorizeFreeExplain({accountHash,store}){
+  return store.withLock('lock:unmute-ai-explain:'+accountHash,async()=>{
+    const key=explainKey(accountHash);
+    const used=Math.max(0,Math.floor(Number(await store.get(key))||0));
+    if(used>=FREE_EXPLAIN_CALLS)return denied('free_explain_used');
+    await store.set(key,String(used+1),TRIAL_RECORD_TTL);
+    return {
+      allowed:true,
+      meta:{mode:'free',remaining:FREE_EXPLAIN_CALLS-used-1,maxCalls:FREE_EXPLAIN_CALLS}
+    };
+  });
+}
+
 async function authorizeUnMuteAI({accountHash,body,store,now=Date.now()}){
   const kind=String(body&&body.kind||'');
+  if(kind==='answer.explain')return authorizeFreeExplain({accountHash,store});
   if(kind!=='talk.reply'&&kind!=='talk.review')return denied();
 
   const trial=body&&body.trial&&typeof body.trial==='object'?body.trial:null;
@@ -82,6 +103,8 @@ module.exports={
   authorizeUnMuteAI,
   TRIAL_MAX_CALLS,
   TRIAL_WINDOW_MS,
+  FREE_EXPLAIN_CALLS,
+  explainKey,
   trialKey,
   parseRecord
 };
