@@ -1,3 +1,4 @@
+import type { CSSProperties, ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
@@ -6,153 +7,235 @@ import type { WordReviewRuntimeValue } from './word-review-runtime';
 import { useWordReviewRuntime } from './word-review-runtime';
 import { reviewDueCounts } from './review-count';
 import { LexiconText } from './lexicon-ui';
+import { activitySaveClock } from './activity-progress';
+import { currentLearningStreak } from './progress-screen';
+import { stageForDay, stageNameKey } from './course-stages';
+import { Icon } from './icons';
+import {
+  lastWeekActivity,
+  localizedText,
+  nextLandmark,
+  nodeDoneCount,
+  nodeMinutes,
+  nodeSpeakTask,
+  nodeTopic
+} from './today-model';
 
-function localized(text:Record<string,string>,locale:string):string{
-  return text[locale] || text.ru || text.en || Object.values(text)[0] || '';
+const DAY_MS = 86_400_000;
+
+/** Bento tile; `--i` staggers the entrance (switched off under reduced motion). */
+function Tile({className, index, children, label}:{className:string; index:number; children:ReactNode; label?:string}){
+  return (
+    <article className={'tile ' + className} style={{'--i':index} as CSSProperties} aria-label={label}>
+      {children}
+    </article>
+  );
 }
 
-export function TodayView({runtime,wordRuntime=null,onStart,onReview,onMap,onAccess}:{runtime:LearnerCourseRuntimeValue;wordRuntime?:WordReviewRuntimeValue|null;onStart:(nodeId:string)=>void;onReview:()=>void;onMap:()=>void;onAccess:()=>void}){
+function Skeleton(){
+  const {t} = useI18n();
+  return (
+    <div className="bento" role="status">
+      <span className="sr-only">{t('today.loadingTitle')}</span>
+      <div className="tile tile-hero skeleton" aria-hidden="true" />
+      <div className="tile skeleton" aria-hidden="true" />
+      <div className="tile skeleton" aria-hidden="true" />
+      <div className="tile tile-wide tile-short skeleton" aria-hidden="true" />
+    </div>
+  );
+}
+
+export function TodayView({
+  runtime,
+  wordRuntime=null,
+  onStart,
+  onReview,
+  onMap,
+  onAccess,
+  todayDay=activitySaveClock().dayNumber
+}:{
+  runtime:LearnerCourseRuntimeValue;
+  wordRuntime?:WordReviewRuntimeValue|null;
+  onStart:(nodeId:string)=>void;
+  onReview:()=>void;
+  onMap:()=>void;
+  onAccess:()=>void;
+  todayDay?:number;
+}){
   const {t,locale}=useI18n();
   const state=runtime.state;
-  const review=reviewDueCounts(state,wordRuntime,locale);
-  const currentNode=state?.currentNode;
-  const nodeStarted=Boolean(state&&currentNode&&currentNode.activityIds.some(id=>{
-    const seen=state.progress.seen[id];
-    if(seen&&!seen.deleted)return true;
-    return (['drill','listening','speaking'] as const).some(mode=>{
-      const item=state.progress.practice[mode][id];
-      return Boolean(item&&!item.deleted);
-    });
-  }));
+  const review=reviewDueCounts(state,wordRuntime,locale,todayDay);
+  const dateLabel=new Intl.DateTimeFormat(locale,{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'})
+    .format(new Date(todayDay*DAY_MS));
+  const weekdayLabel=new Intl.DateTimeFormat(locale,{weekday:'narrow',timeZone:'UTC'});
 
-  return (
-    <section className="today" aria-labelledby="today-title">
-      <div className="today-heading">
-        <div>
-          <div className="eyebrow">{t('today.eyebrow')}</div>
-          <h2 id="today-title">{t('today.title')}</h2>
-        </div>
-        <div className="today-heading-actions">
-          {state?.fromCache && <span className="today-badge">{t('today.offline')}</span>}
-        </div>
+  const heading=(
+    <header className="screen-head">
+      <div className="screen-kicker">{dateLabel.charAt(0).toUpperCase()+dateLabel.slice(1)}</div>
+      <div className="screen-title-row">
+        <h2 id="today-title">{t('today.title')}</h2>
+        {state?.fromCache && <span className="today-badge">{t('today.offline')}</span>}
       </div>
+    </header>
+  );
 
-      {runtime.status==='pending' && (
-        <div className="today-state" role="status">
-          <strong>{t('today.loadingTitle')}</strong>
-          <span>{t('today.loadingText')}</span>
-        </div>
-      )}
+  if(runtime.status==='pending'){
+    return <section className="today" aria-labelledby="today-title">{heading}<Skeleton /></section>;
+  }
 
-      {runtime.status==='error' && (
-        <div className="today-state today-state-error" role="alert">
+  if(runtime.status==='error'||!state){
+    return (
+      <section className="today" aria-labelledby="today-title">
+        {heading}
+        <div className="tile today-state" role="alert">
           <strong>{t('today.errorTitle')}</strong>
           <span>{t('today.errorText')}</span>
           <button className="primary-button" type="button" onClick={()=>void runtime.refresh()}>
             {t('today.retry')}
           </button>
         </div>
-      )}
+      </section>
+    );
+  }
 
-      {runtime.status==='ready' && review && review.actionableCount>0 && (
-        <article className="today-review">
-          <div>
-            <div className="today-kicker">{t('review.eyebrow')}</div>
-            <strong>{t('today.reviewDue',{count:review.actionableCount})}</strong>
-            {review.waitingCount>0&&(
-              <span>{t('today.reviewWaiting',{count:review.waitingCount})}</span>
-            )}
-          </div>
-          <button className="primary-button" type="button" onClick={onReview}>
-            {t('today.reviewStart')}
-          </button>
-        </article>
-      )}
+  const node=state.currentNode;
+  const complete=state.roadmapProgress.courseComplete;
+  const streak=currentLearningStreak(state.progress,todayDay);
+  const week=lastWeekActivity(state.progress,todayDay);
+  const hasReview=Boolean(review&&review.actionableCount>0);
+  const courseProgress=(
+    <span className="today-course" aria-label={t('today.courseProgress')}>
+      {state.roadmapProgress.completedCount}/{state.roadmapProgress.requiredCount}
+    </span>
+  );
+  let index=0;
 
-      {runtime.status==='ready' && state?.roadmapProgress.courseComplete && (
-        <div className="today-state today-complete">
-          <div className="today-kicker"><LexiconText text={localized(state.set.title,locale)} /></div>
-          <h3>{t('today.completeTitle')}</h3>
-          <p>{t('today.completeText')}</p>
-          <div className="today-progress-label">
-            <span>{t('today.courseProgress')}</span>
-            <strong>{state.roadmapProgress.completedCount}/{state.roadmapProgress.requiredCount}</strong>
-          </div>
-          <progress
-            className="today-progress"
-            max={Math.max(1,state.roadmapProgress.requiredCount)}
-            value={state.roadmapProgress.completedCount}
-            aria-label={t('today.courseProgress')}
-          />
+  let hero:ReactNode;
+  if(complete){
+    hero=(
+      <Tile className="tile-hero" index={index++}>
+        <div className="tile-top">
+          <span className="chip"><LexiconText text={localizedText(state.set.title,locale)} /></span>
+          {courseProgress}
         </div>
-      )}
-
-      {runtime.status==='ready' && state && !state.roadmapProgress.courseComplete && state.currentNode && (
-        <article className="today-card">
-          <div className="today-card-top">
-            <div>
-              <div className="today-kicker"><LexiconText text={localized(state.set.title,locale)} /></div>
-              <div className="today-day">
-                {state.currentDayIndex
-                  ? t('today.day',{day:state.currentDayIndex})
-                  : t('today.nextStep')}
-              </div>
-            </div>
-            <span className="today-count">
-              {t('today.activities',{count:state.currentNode.activityIds.length})}
-            </span>
-          </div>
-
-          <h3><LexiconText text={localized(state.currentNode.title,locale)} /></h3>
-
-          <div className="today-progress-label">
-            <span>{t('today.courseProgress')}</span>
-            <strong>{state.roadmapProgress.completedCount}/{state.roadmapProgress.requiredCount}</strong>
-          </div>
-          <progress
-            className="today-progress"
-            max={Math.max(1,state.roadmapProgress.requiredCount)}
-            value={state.roadmapProgress.completedCount}
-            aria-label={t('today.courseProgress')}
-          />
-          <button
-            className="primary-button today-start"
-            type="button"
-            onClick={()=>onStart(state.currentNode!.id)}
-          >
-            {nodeStarted?t('today.continue'):t('today.start')}
-          </button>
-        </article>
-      )}
-
-      {runtime.status==='ready' && state && !state.roadmapProgress.courseComplete && !state.currentNode && (
-        <div className="today-state" role="status">
-          <strong>
-            {state.access==='preview'&&state.roadmapProgress.currentNode
-              ? t('today.previewCompleteTitle')
-              : t('today.blockedTitle')}
-          </strong>
-          <span>
-            {state.access==='preview'&&state.roadmapProgress.currentNode
-              ? t('today.previewCompleteText')
-              : t('today.blockedText')}
+        <h3>{t('today.completeTitle')}</h3>
+        <p className="tile-text">{t('today.completeText')}</p>
+      </Tile>
+    );
+  }else if(node){
+    const done=nodeDoneCount(state.progress,node);
+    const total=node.activityIds.length;
+    const stage=stageForDay(node.dayIndex);
+    hero=(
+      <Tile className="tile-hero" index={index++}>
+        <div className="tile-top">
+          <span className="chip">
+            <span>{node.dayIndex?t('today.day',{day:node.dayIndex}):t('today.nextStep')}</span>
+            {stage&&<span className="chip-soft">{t(stageNameKey(stage))}</span>}
           </span>
-          {state.access==='preview'&&state.roadmapProgress.currentNode ? (
-            <div className="today-state-actions">
-              <button className="primary-button" type="button" onClick={onAccess}>
-                {t('today.openAccess')}
-              </button>
-              <button className="secondary-button" type="button" onClick={onMap}>
-                {t('today.courseMap')}
-              </button>
-            </div>
-          ) : (
-            <button className="secondary-button" type="button" onClick={onMap}>
-              {t('today.courseMap')}
-            </button>
-          )}
+          {courseProgress}
         </div>
-      )}
+        <h3><LexiconText text={nodeTopic(state.set,node,locale)} /></h3>
+        <div
+          className="today-meter"
+          role="progressbar"
+          aria-label={t('today.dayProgress')}
+          aria-valuemin={0}
+          aria-valuemax={Math.max(1,total)}
+          aria-valuenow={done}
+        >
+          <span style={{'--p':total?done/total:0} as CSSProperties} />
+        </div>
+        <p className="tile-meta">
+          {t('today.dayMeta',{done,total,minutes:nodeMinutes(state.set,node)})}
+        </p>
+        <button className="primary-button today-start" type="button" onClick={()=>onStart(node.id)}>
+          <Icon name="play" size={18} />
+          {done>0?t('today.continue'):t('today.start')}
+        </button>
+      </Tile>
+    );
+  }else{
+    const preview=state.access==='preview'&&Boolean(state.roadmapProgress.currentNode);
+    hero=(
+      <Tile className="tile-hero" index={index++}>
+        <div className="tile-top">
+          <span className="chip"><Icon name="lock" size={16} />{t('today.locked')}</span>
+          {courseProgress}
+        </div>
+        <h3>{preview?t('today.previewCompleteTitle'):t('today.blockedTitle')}</h3>
+        <p className="tile-text">{preview?t('today.previewCompleteText'):t('today.blockedText')}</p>
+        <div className="today-state-actions">
+          {preview&&(
+            <button className="primary-button" type="button" onClick={onAccess}>{t('today.openAccess')}</button>
+          )}
+          <button className="secondary-button" type="button" onClick={onMap}>{t('today.courseMap')}</button>
+        </div>
+      </Tile>
+    );
+  }
+
+  const speakTask=node&&!complete?nodeSpeakTask(state.set,node,locale):null;
+  const landmark=node&&!complete?nextLandmark(state.set,state.roadmap,node,locale):null;
+
+  return (
+    <section className="today" aria-labelledby="today-title">
+      {heading}
+      <div className="bento">
+        {hero}
+
+        <Tile className={'tile-streak'+(hasReview?'':' tile-wide')} index={index++}>
+          <div className="tile-kicker tone-streak"><Icon name="flame" size={18} />{t('today.streak')}</div>
+          <strong className={'tile-number'+(streak?'':' tile-number-soft')}>{streak?t('today.streakDays',{count:streak}):t('today.streakStart')}</strong>
+          <div className="week" aria-label={t('today.week',{count:week.filter(Boolean).length})}>
+            {week.map((active,day)=>(
+              <span key={day} className={'week-day'+(active?' is-active':'')} aria-hidden="true">
+                <span className="week-dot" />
+                {weekdayLabel.format(new Date((todayDay-6+day)*DAY_MS))}
+              </span>
+            ))}
+          </div>
+        </Tile>
+
+        {hasReview&&review&&(
+          <Tile className="tile-review" index={index++}>
+            <div className="tile-kicker tone-listen"><Icon name="review" size={18} />{t('nav.review')}</div>
+            <strong className="tile-number">{review.actionableCount}</strong>
+            <span className="tile-caption">{t('today.reviewCaption')}</span>
+            {review.waitingCount>0&&<span className="sr-only">{t('today.reviewWaiting',{count:review.waitingCount})}</span>}
+            <button className="secondary-button tile-action" type="button" onClick={onReview}>
+              {t('today.reviewStart')}
+            </button>
+          </Tile>
+        )}
+
+        {speakTask&&(
+          <Tile className="tile-wide tile-speak" index={index++} label={t('today.speakTitle')}>
+            <span className="mic-soft" aria-hidden="true"><Icon name="mic" /></span>
+            <div>
+              <div className="tile-title">{t('today.speakTitle')}</div>
+              <p className="tile-text"><LexiconText text={speakTask} /></p>
+            </div>
+          </Tile>
+        )}
+
+        {landmark&&(
+          <button className="tile tile-wide tile-landmark pressable" style={{'--i':index++} as CSSProperties} type="button" onClick={onMap}>
+            <span className={'landmark-icon landmark-'+landmark.kind} aria-hidden="true">
+              <Icon name={landmark.kind==='dialogue'?'chat':landmark.kind==='ai'?'mic':'review'} size={20} />
+            </span>
+            <span className="landmark-body">
+              <span className="tile-title">
+                {landmark.kind==='review'
+                  ? t('today.landmarkReview')
+                  : t(landmark.kind==='dialogue'?'today.landmarkDialogue':'today.landmarkTalk',{title:landmark.title})}
+              </span>
+              <span className="tile-caption">{t('today.landmarkWhen',{day:landmark.dayIndex,count:landmark.inDays})}</span>
+            </span>
+            <Icon name="chevron" size={20} className="landmark-chevron" />
+          </button>
+        )}
+      </div>
     </section>
   );
 }
