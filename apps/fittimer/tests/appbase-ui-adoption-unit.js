@@ -189,5 +189,31 @@ ok('navigation/profile selectors have no per-element onclick wiring',
   && !events.includes("$('whoF').onclick")
   && !events.includes("$('whoM').onclick"));
 
+ok('settings/utility actions are declarative',
+  profilesHtml.includes('data-act="setHandsFreeMode" data-hf="off"')
+  && progressHtml.includes('id="btnHfApply" data-act="applyHandsFree"')
+  && profilesHtml.includes('id="btnVoicePack" data-act="downloadVoicePack"')
+  && profilesHtml.includes('id="btnVoiceTest" data-act="openVoiceTest"')
+  && shell.includes('id="storeClear" data-act="clearStoreSearch"')
+  && profilesHtml.includes('id="coachPhotoBtn" data-act="pickCoachPhoto"')
+  && onboardingHtml.includes('id="legalHeadPrivacy" data-act="toggleLegalSection" data-legal="privacy"')
+  && profilesHtml.includes('id="notifWorkouts" data-act="toggleNotificationPref" data-pref="workouts"')
+  && profilesHtml.includes('id="emailOffers" data-act="toggleNotificationPref" data-pref="emailOffers"')
+  && progressHtml.includes('id="lockGo" data-act="unlockApp"')
+  && progressHtml.includes('id="lockMail" data-act="unlockByEmail"'));
+ok('settings/utility actions have no direct onclick wiring',
+  !events.includes("document.querySelectorAll('#hfSeg button').forEach(b =>")
+  && !events.includes("$('btnResume').onclick")
+  && !events.includes("$('weightModalDone').onclick")
+  && !events.includes("$('btnHfApply').onclick")
+  && !events.includes("$('btnVoicePack').onclick")
+  && !events.includes("$('btnVoiceTest').onclick")
+  && !events.includes("$('storeClear').onclick")
+  && !events.includes("$('coachPhotoBtn').onclick")
+  && !events.includes("legalHead' + k[0].toUpperCase() + k.slice(1)).onclick")
+  && !events.includes("btn.onclick = ()=> { setNotificationPref")
+  && !events.includes("$('lockGo').onclick")
+  && !events.includes("$('lockMail').onclick"));
+
 
 process.exit(bad?1:0);
