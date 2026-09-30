@@ -7,14 +7,39 @@ import { $, appAlert, appConfirm, appDialog, icon, plural, setCoreProgressHooks,
 import { MONTH_OF, PROGRAM_DOC, curUser, currentUser, customPrograms, docMeta, kvGet, kvSet,
   loadData, loadIdentity, localISO, migrateUserAge, normPlans, pk, profileAge, recordConsent,
   isDefaultProfileName, renderStats, renderUsers, renderWeight, renderWellness, savePrograms, saveStats, saveUsers,
-  setCurrentUserShared, setUsersShared, stats, users, validAge, wellList
+  setCurrentUserShared, setDataSyncProgressMediaHooks, setUsersShared, stats, users, validAge, wellList
 } from './10-data-sync.js';
-import { GLOBAL_KEYS, PROFILE_KEYS } from './20-account.js';
-import { ageError, renderToday } from './40-programs-ai.js';
-import { renderMine } from './50-trainer-catalog.js';
-import { newExId, shrinkImage } from './60-builder.js';
-import { esc, roundRect } from './70-workout.js';
-import { applyTheme, setThemeLightShared } from './80-platform.js';
+import { GLOBAL_KEYS, PROFILE_KEYS, setAccountProgressHooks } from './20-account.js';
+
+let programsProgressHooks = { ageError: () => '', renderToday: () => {} };
+export function setProgressProgramsHooks(hooks = {}){
+  programsProgressHooks = {...programsProgressHooks, ...hooks};
+}
+let trainerProgressHooks = { renderMine: () => {} };
+export function setProgressTrainerHooks(hooks = {}){
+  trainerProgressHooks = {...trainerProgressHooks, ...hooks};
+}
+let builderProgressHooks = {
+  newExId: () => 'ex_' + Date.now().toString(36),
+  shrinkImage: (_file, _maxSide, cb) => { if(cb) cb(null); }
+};
+export function setProgressBuilderHooks(hooks = {}){
+  builderProgressHooks = {...builderProgressHooks, ...hooks};
+}
+let workoutProgressHooks = {
+  esc: v => String(v == null ? '' : v),
+  roundRect: () => {}
+};
+export function setProgressWorkoutHooks(hooks = {}){
+  workoutProgressHooks = {...workoutProgressHooks, ...hooks};
+}
+let platformProgressHooks = {
+  applyTheme: () => {},
+  setThemeLightShared: v => v
+};
+export function setProgressPlatformHooks(hooks = {}){
+  platformProgressHooks = {...platformProgressHooks, ...hooks};
+}
 
 /* ================= ПРЕДУСТАНОВЛЕННАЯ РАЗМИНКА ================= */
 const WARMUP_SPEC = [
@@ -111,7 +136,7 @@ export function renderPhotos(){
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'ph-item';
-    b.innerHTML = `<img src="${esc(p.img)}" alt=""><small>${shortD(p.d)}</small>`;
+    b.innerHTML = `<img src="${workoutProgressHooks.esc(p.img)}" alt=""><small>${shortD(p.d)}</small>`;
     b.dataset.act = 'openPhotoCompareAt';
     b.dataset.photoIdx = String(i);
     strip.appendChild(b);
@@ -145,7 +170,7 @@ export async function addPhoto(file){
     );
     if(!ok) return;
   }
-  shrinkImage(file, 480, async dataUrl => {
+  builderProgressHooks.shrinkImage(file, 480, async dataUrl => {
     const ex = photos.find(p => p.d === today);
     if(ex) ex.img = dataUrl; else photos.push({d: today, img: dataUrl});
     photos.sort((a, b) => a.d < b.d ? -1 : 1);
@@ -166,8 +191,8 @@ function fillCmpSel(sel, idx){
 }
 export function renderCmp(){
   const a = photos[+$('cmpA').value], b = photos[+$('cmpB').value];
-  $('cmpImgA').innerHTML = a ? `<img src="${esc(a.img)}" alt="">` : '';
-  $('cmpImgB').innerHTML = b ? `<img src="${esc(b.img)}" alt="">` : '';
+  $('cmpImgA').innerHTML = a ? `<img src="${workoutProgressHooks.esc(a.img)}" alt="">` : '';
+  $('cmpImgB').innerHTML = b ? `<img src="${workoutProgressHooks.esc(b.img)}" alt="">` : '';
   if(a && b){
     const days = Math.abs(Math.round((new Date(b.d) - new Date(a.d)) / 86400000));
     $('cmpDays').textContent = days
@@ -255,7 +280,7 @@ function loadImg(src){
 }
 function drawCover(x, img, dx, dy, dw, dh, r){
   x.save();
-  roundRect(x, dx, dy, dw, dh, r);
+  workoutProgressHooks.roundRect(x, dx, dy, dw, dh, r);
   x.clip();
   const s = Math.max(dw / img.width, dh / img.height);
   const sw = dw / s, sh = dh / s;
@@ -303,8 +328,8 @@ export async function shareCompare(){
   drawCover(x, ia, 34, gy, pw, ph, 26);
   drawCover(x, ib, W - 34 - pw, gy, pw, ph, 26);
   x.strokeStyle = col('--line'); x.lineWidth = 3;
-  roundRect(x, 34, gy, pw, ph, 26); x.stroke();
-  roundRect(x, W - 34 - pw, gy, pw, ph, 26); x.stroke();
+  workoutProgressHooks.roundRect(x, 34, gy, pw, ph, 26); x.stroke();
+  workoutProgressHooks.roundRect(x, W - 34 - pw, gy, pw, ph, 26); x.stroke();
   x.fillStyle = col('--muted'); x.font = '500 36px Rubik, sans-serif';
   x.fillText(fmtD(a.d), 34 + pw / 2, gy + ph + 58);
   x.fillText(fmtD(b.d), W - 34 - pw / 2, gy + ph + 58);
@@ -541,7 +566,7 @@ async function sharePng(title, lanes, fname){
     const d = Math.round((last - first) * 10) / 10;
     // подложка
     x.fillStyle = col('--card'); x.strokeStyle = col('--line'); x.lineWidth = 2;
-    roundRect(x, gx, gy, gw, laneH, 24); x.fill(); x.stroke();
+    workoutProgressHooks.roundRect(x, gx, gy, gw, laneH, 24); x.fill(); x.stroke();
     // шапка полосы: цветной кружок, название слева, изменение справа
     const headY = gy + pad + Math.round(fsHead * 0.85);
     x.fillStyle = color;
@@ -668,9 +693,9 @@ export function openWeightHist(){
     const cell = (k, lbl, v, st) => `<div class="whc"><label>${lbl}</label><input type="number" step="${st || 0.5}" inputmode="decimal" value="${v || ''}" data-k="${k}"></div>`;
     row.innerHTML =
       `<div class="wh-top"><b>${+d} ${MONTH_OF[+m - 1]} ${y}</b>` +
-      `<button type="button" class="wh-del" title="${esc(t('progress.deleteEntry'))}">${icon('trash')}</button></div>` +
+      `<button type="button" class="wh-del" title="${workoutProgressHooks.esc(t('progress.deleteEntry'))}">${icon('trash')}</button></div>` +
       `<div class="wh-cells">` +
-        `<div class="whc"><label>${esc(t('common.weight'))}</label><input type="number" step="0.1" inputmode="decimal" value="${en.w}" data-d="${en.d}" data-k="w"></div>` +
+        `<div class="whc"><label>${workoutProgressHooks.esc(t('common.weight'))}</label><input type="number" step="0.1" inputmode="decimal" value="${en.w}" data-d="${en.d}" data-k="w"></div>` +
         cell('fat', t('progress.fat'), en.fat, 0.1) + cell('musc', t('progress.muscle'), en.musc, 0.1) +
         cell('waist', t('progress.waistLabel'), en.waist) + cell('hips', t('progress.hipsLabel'), en.hips) + cell('chest', t('progress.chestLabel'), en.chest) +
       `</div>`;
@@ -817,7 +842,7 @@ export function uniqueExerciseIds(p){
   (Array.isArray(p.plans) ? p.plans : []).concat([{exercises: p.exercises}]).forEach(pl => {
     (pl && Array.isArray(pl.exercises) ? pl.exercises : []).forEach(ex => {
       if(!ex || typeof ex !== 'object') return;
-      if(!ex.id || seen.has(ex.id)){ ex.id = newExId(); changed = true; }
+      if(!ex.id || seen.has(ex.id)){ ex.id = builderProgressHooks.newExId(); changed = true; }
       seen.add(ex.id);
     });
   });
@@ -826,8 +851,8 @@ export function uniqueExerciseIds(p){
 function sanitizeExercise(ex){
   if(!ex || typeof ex !== 'object') return;
   // упражнения из старых данных (созданы до появления id) или пришедшие по
-  // сети без него — см. newExId() в 60-builder.js
-  if(!ex.id) ex.id = newExId();
+  // сети без него — см. builderProgressHooks.newExId() в 60-builder.js
+  if(!ex.id) ex.id = builderProgressHooks.newExId();
   ex.name = clampLine(ex.name, LIM.exName);
   if(ex.desc != null)     ex.desc = clampText(ex.desc, LIM.exDesc);
   if(ex.mistakes != null) ex.mistakes = clampText(ex.mistakes, LIM.exMistakes);
@@ -872,8 +897,8 @@ export function startOnboarding(){
   // тёмном телефоне знакомство начиналось с белой вспышки во весь экран. Дальше
   // человек всё равно переключит её в настройках, а первое впечатление уже испорчено.
   const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  setThemeLightShared(!dark);
-  applyTheme();
+  platformProgressHooks.setThemeLightShared(!dark);
+  platformProgressHooks.applyTheme();
   show('scrOnboard', false);
 }
 
@@ -896,8 +921,8 @@ export async function finishOnboardingCreate(){
   await loadData();
   await loadPhotos();
   await ensureWarmup();
-  renderUsers(); renderMine(); renderStats(); renderWeight(); renderWellness(); renderPhotos();
-  applyTheme();
+  renderUsers(); trainerProgressHooks.renderMine(); renderStats(); renderWeight(); renderWellness(); renderPhotos();
+  platformProgressHooks.applyTheme();
   return true;
 }
 
@@ -914,7 +939,7 @@ const needWho = u => !!u && (!profileAge(u) || !u.gender);
 export function whoSyncForm(){
   $('whoF').classList.toggle('act', whoDraft.gender === 'f');
   $('whoM').classList.toggle('act', whoDraft.gender === 'm');
-  $('whoSave').disabled = !whoDraft.gender || !!ageError($('whoAge').value || '', true);
+  $('whoSave').disabled = !whoDraft.gender || !!programsProgressHooks.ageError($('whoAge').value || '', true);
 }
 function askWho(reason){
   const u = curUser();
@@ -939,7 +964,7 @@ export async function whoFinish(save){
   if(!u){ $('whoModal').classList.remove('open'); return; }
   if(save){
     const age = $('whoAge').value || '';
-    const err = ageError(age, true);
+    const err = programsProgressHooks.ageError(age, true);
     if(err){ appAlert(err); return; }
     if(!whoDraft.gender){ appAlert(t('profile.genderNeeded')); return; }
     u.gender = whoDraft.gender;
@@ -954,6 +979,18 @@ export async function whoFinish(save){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initProgressMedia(){
+  setAccountProgressHooks({
+    getNameMax: () => NAME_MAX,
+    clampLine,
+    nextProfileName
+  });
+  setDataSyncProgressMediaHooks({
+    ensureWarmup,
+    loadPhotos,
+    renderPhotos,
+    shortD,
+    uniqueExerciseIds
+  });
   setCoreProgressHooks({
     renderPhotos
   });
@@ -980,6 +1017,6 @@ export function initProgressMedia(){
   window.addEventListener('appLocaleChanged', async ()=>{
     const p = customPrograms.find(x=>x.id==='warmup');
     if(p && localizeBuiltinWarmup(p)) await savePrograms();
-    try{ renderMine(); renderToday(); }catch(_){}
+    try{ trainerProgressHooks.renderMine(); programsProgressHooks.renderToday(); }catch(_){}
   });
 }

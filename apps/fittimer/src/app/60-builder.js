@@ -3,18 +3,46 @@ import { appLocale, canonicalDescription, canonicalLabel, t } from '../i18n/inde
 import FitAIProtocol from '../../lib/ai-protocol.js';
 import { appRuntimeCompat } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
-import { $, appAlert, appDialog, goBackTo, goTab, icon, isChanged, plural, setShown, show, state,
+import { $, appAlert, appDialog, goBackTo, goTab, icon, isChanged, plural, setCoreBuilderHooks, setShown, show, state,
   takeSnap
 } from './00-core.js';
-import { DAYS, closeAllMenus, customPrograms, normPlans, planDays, savePrograms, sortPlans,
-  toggleMenu, trackProductEvent
+import { DAYS, closeAllMenus, customPrograms, normPlans, planDays, savePrograms,
+  setDataSyncBuilderHooks, sortPlans, toggleMenu, trackProductEvent
 } from './10-data-sync.js';
-import { LIM, clampLine, clampText, cleanLink, cleanPic, requireWho, sanitizeProgram } from './30-progress-media.js';
-import { aiWaysReset, claimProgramLink, flashDone, userForAI } from './40-programs-ai.js';
-import { renderMine, storeCountText } from './50-trainer-catalog.js';
-import { autoGrow, esc } from './70-workout.js';
-import { syncNativeNotifications } from './80-platform.js';
-import { buildExMenu, delCurrentPlan, markBuilderTab, openLegal, syncImagesSum, syncSettingsSum } from './90-events.js';
+import { LIM, clampLine, clampText, cleanLink, cleanPic, requireWho, sanitizeProgram, setProgressBuilderHooks } from './30-progress-media.js';
+import { aiWaysReset, claimProgramLink, flashDone, setProgramsBuilderHooks, userForAI } from './40-programs-ai.js';
+import { renderMine, setTrainerBuilderHooks, storeCountText } from './50-trainer-catalog.js';
+
+let workoutBuilderHooks = {
+  autoGrow: () => {},
+  esc: v => String(v == null ? '' : v)
+};
+export function setBuilderWorkoutHooks(hooks = {}){
+  workoutBuilderHooks = {...workoutBuilderHooks, ...hooks};
+}
+
+let platformBuilderHooks = {
+  getSyncNativeNotifications: () => null
+};
+export function setBuilderPlatformHooks(hooks = {}){
+  platformBuilderHooks = {...platformBuilderHooks, ...hooks};
+}
+function builderSyncNativeNotifications(){
+  const fn = platformBuilderHooks.getSyncNativeNotifications();
+  return typeof fn === 'function' ? fn() : undefined;
+}
+
+let eventBuilderHooks = {
+  buildExMenu: () => {},
+  delCurrentPlan: () => {},
+  markBuilderTab: () => {},
+  openLegal: () => {},
+  syncImagesSum: () => {},
+  syncSettingsSum: () => {}
+};
+export function setBuilderEventHooks(hooks = {}){
+  eventBuilderHooks = {...eventBuilderHooks, ...hooks};
+}
 
 /* ================= ПЕРЕТАСКИВАНИЕ КАРТОЧЕК (за ручку, с задержкой) ================= */
 export function enableDrag(wrap, handle, selector, onDrop){
@@ -823,11 +851,11 @@ export function programDirty(){ return isChanged('program', programState()); }
 export function fillBuilder(title){
   $('builderTitle').textContent = title;
   setTimeout(()=> takeSnap('program', programState()), 0);
-  setTimeout(markBuilderTab, 0);
+  setTimeout(eventBuilderHooks.markBuilderTab, 0);
   $('bName').value = draft.name;
   $('bDesc').value = draft.desc || '';
   $('bDescCount').textContent = (draft.desc || '').length;
-  setTimeout(()=> autoGrow($('bDesc')), 0);
+  setTimeout(()=> workoutBuilderHooks.autoGrow($('bDesc')), 0);
   $('bTime').value = draft.time || '';
 
   // ротация вариантов доступна, когда вариантов больше одного
@@ -849,7 +877,7 @@ function renderPlanTabs(){
   // верхние вкладки нужны, только когда вариантов больше одного
   setShown('planTabsTop', draft.plans.length > 1);
   if(typeof renderExList === 'function' && $('bVariantTitle')) { /* подписи обновит renderExList */ }
-  syncSettingsSum();
+  eventBuilderHooks.syncSettingsSum();
 }
 
 function buildPlanTabs(boxId){
@@ -918,7 +946,7 @@ export function fillPlanFields(){
 export function syncCover(){
   $('bCoverBtn').classList.toggle('act', !!draft.cover);
   $('bCoverNone').classList.toggle('act', !draft.cover);
-  $('bCoverPrev').innerHTML = draft.cover ? `<img src="${esc(draft.cover)}" alt="">` : '';
+  $('bCoverPrev').innerHTML = draft.cover ? `<img src="${workoutBuilderHooks.esc(draft.cover)}" alt="">` : '';
 }
 
 // дни недели текущего варианта — множественный выбор
@@ -1009,7 +1037,7 @@ export function openExercise(i, isNew){
   // оно явное: сохранится тем же числом, даже если человек его не тронет.
   if(exDraft.restAfter == null) exDraft.restAfter = exDraft.rest;
   fillExercise();
-  buildExMenu();
+  eventBuilderHooks.buildExMenu();
   // Пока упражнение только ЗАВОДЯТ, дублировать и удалять нечего: в списке оно
   // держится самим редактором и уйдёт само, если уйти без сохранения. Меню с
   // двумя действиями над пустой строкой только путало.
@@ -1302,8 +1330,8 @@ function openRestModal(key, boxId){
 export function renderExMedia(){
   const box = $('exMediaPrev');
   const m = exDraft.media;
-  if(m && m.kind === 'img') box.innerHTML = `<img src="${esc(m.data)}" alt="">`;
-  else box.innerHTML = `<span class="mp-empty">${esc(t('builder.noImage'))}</span>`;
+  if(m && m.kind === 'img') box.innerHTML = `<img src="${workoutBuilderHooks.esc(m.data)}" alt="">`;
+  else box.innerHTML = `<span class="mp-empty">${workoutBuilderHooks.esc(t('builder.noImage'))}</span>`;
 }
 export function syncExDetailsSum(){
   const bits = [];
@@ -1383,8 +1411,8 @@ export function renderExList(){
   if(!list.length){
     box.innerHTML = '<div class="empty-state">' +
       `<span class="es-ico">${icon('dumbbell')}</span>` +
-      `<b>${esc(t('builder.noExercisesTitle'))}</b>` +
-      `<p>${esc(t('builder.noExercisesText'))}</p>` +
+      `<b>${workoutBuilderHooks.esc(t('builder.noExercisesTitle'))}</b>` +
+      `<p>${workoutBuilderHooks.esc(t('builder.noExercisesText'))}</p>` +
       '</div>';
   }
   list.forEach((ex, i)=> box.appendChild(exRow(ex, i)));
@@ -1395,7 +1423,7 @@ export function renderExList(){
   setShown('btnAddEx', !full);
   const note = list.length ? storeCountText(list.length,'exercise') : '';
   $('exCountNote').textContent = note;
-  syncImagesSum();
+  eventBuilderHooks.syncImagesSum();
   // объясняем, к чему относится список упражнений
   const plans = draft.plans || [];
   const pl = curPlan();
@@ -1448,7 +1476,7 @@ export function exSummary(ex){ return exBits(ex).join(' · '); }
 // Номер считаем только по основным упражнениям: разминка идёт один раз до кругов,
 // где бы она ни лежала в списке, и сквозная нумерация врала бы о порядке.
 function exThumb(ex, i){
-  if(ex.media && ex.media.kind === 'img') return `<img src="${esc(ex.media.data)}" alt="">`;
+  if(ex.media && ex.media.kind === 'img') return `<img src="${workoutBuilderHooks.esc(ex.media.data)}" alt="">`;
   if(ex.warmup) return icon('flame');
   const before = curPlan().exercises.slice(0, i).filter(e => !e.warmup).length;
   return String(before + 1);
@@ -1895,7 +1923,7 @@ async function pregnancyWarning(){
     t('pregnancy.warning'),
     {confirm:true,okText:t('common.ok'),cancelText:t('common.details')}
   );
-  if(!go) openLegal('health', ()=> goBackTo('scrAI'));
+  if(!go) eventBuilderHooks.openLegal('health', ()=> goBackTo('scrAI'));
 }
 
 const Q_OPTS = {
@@ -1990,7 +2018,7 @@ export function initAIForm(){
   $('qRotate').classList.toggle('on', q.rotate);
   setShown('qRotateRow', q.split);
   $('qNote').value = q.note || '';
-  autoGrow($('qContext'));
+  workoutBuilderHooks.autoGrow($('qContext'));
   if(aiWaysReset.scrAI) aiWaysReset.scrAI();
 }
 
@@ -2200,13 +2228,13 @@ export async function saveProgram(){
   // расписание задано — попросим разрешение на уведомления
   const anyTime = draft.time || (draft.plans || []).some(pl => pl.time);
   if(planDays(draft).length){
-    appRuntimeCompat.requestNotifications().then(ok => { if(ok) syncNativeNotifications(); });
+    appRuntimeCompat.requestNotifications().then(ok => { if(ok) builderSyncNativeNotifications(); });
   }
   if(anyTime && planDays(draft).length && 'Notification' in window && Notification.permission === 'default'){
     try{ Notification.requestPermission(); }catch(e){}
   }
   renderMine();
-  syncNativeNotifications();
+  builderSyncNativeNotifications();
   goTab('scrPrograms');
 }
 
@@ -2222,9 +2250,101 @@ export function setPlanIdxShared(value){ planIdx = value; return planIdx; }
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initBuilder(){
+  setProgramsBuilderHooks({
+    getMaxMain: () => MAX_MAIN,
+    getMaxWarm: () => MAX_WARM,
+    msgAiEmpty: MSG_AI_EMPTY,
+    msgAiNoEx: MSG_AI_NOEX,
+    msgAiParse: MSG_AI_PARSE,
+    advanceExerciseProgression,
+    aiCreateProgramGuard,
+    aiExerciseBlocks,
+    aiPrompt,
+    carryExerciseProgress,
+    copyPrompt,
+    curPlan,
+    getDraft: () => draft,
+    ensurePs,
+    exRestAfter,
+    exSummary,
+    fillBuilder,
+    fmtKg,
+    fullAIPrompt,
+    getExProgValue,
+    getExWeight,
+    hasWeight,
+    importFromText,
+    isDualProg,
+    migrateLegacyDualRangeExercise,
+    openBuilder,
+    openExercise,
+    parseProgramText,
+    progAxis,
+    progressedRepsRange,
+    qChips,
+    renderExList,
+    setDraftShared,
+    setPlanIdxShared,
+    shrinkImage,
+    valueText
+  });
+  setTrainerBuilderHooks({
+    enableDrag,
+    exRestAfter,
+    fmtKg,
+    getExWeight,
+    hasWeight,
+    openBuilder,
+    parseProgramText,
+    parseValue,
+    progShort,
+    progressedRepsRange,
+    sortWarmFirst,
+    valueText
+  });
+  setProgressBuilderHooks({
+    newExId,
+    shrinkImage
+  });
+  setDataSyncBuilderHooks({
+    exRestAfter,
+    getExProgValue,
+    hasWeight,
+    normValue,
+    parseValue,
+    progAtCeiling,
+    progAxis,
+    progBaseValue,
+    progStepSize,
+    progressedRepsRange
+  });
+  setCoreBuilderHooks({
+    dropFreshEx,
+    exDirty,
+    exRestAfter,
+    fmtKg,
+    getExProgValue,
+    getExWeight,
+    hasWeight,
+    normValue,
+    openBuilder,
+    parseKg,
+    parseValue,
+    progAtCeiling,
+    progAxis,
+    progBaseValue,
+    progStepSize,
+    programDirty,
+    progressedRepsRange,
+    setExDraftShared,
+    setExIdxShared,
+    setExOrigShared,
+    setExWeight,
+    weightPending
+  });
   registerAction('deleteCurrentPlan', (_btn, event) => {
     event.stopPropagation();
-    delCurrentPlan();
+    eventBuilderHooks.delCurrentPlan();
   });
   registerAction('selectPlanTab', btn => {
     const i = parseInt(btn.dataset.planIdx, 10);

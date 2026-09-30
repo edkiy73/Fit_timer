@@ -1,34 +1,143 @@
 import { appLocale, canonicalLabel, localeTag, profileLocalePreference, setAppLocale, t } from '../i18n/index.js';
 import { appInfrastructure, appRuntimeCompat, appSync, appUi } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
-import { $, appAlert, icon, plural, setShown, sideSec, state, syncDockTabs } from './00-core.js';
-import { PROFILE_KEYS, account, bumpAccountMeta, isPremium, openUserEdit, readAccountBucket,
-  renderPlan, saveAccount, writeAccountBucket
-} from './20-account.js';
-import { ensureWarmup, loadPhotos, renderPhotos, shortD, uniqueExerciseIds } from './30-progress-media.js';
-import { apiFetch, applyProgressionAll, clients, loadTrainer, openDayProgram, renderGreeting,
-  setClientsShared, setTrainerShared, trainer, weekPlanInfo
-} from './40-programs-ai.js';
-import { renderMine } from './50-trainer-catalog.js';
-import { exRestAfter, getExProgValue, hasWeight, normValue, parseValue, progAtCeiling, progAxis,
-  progBaseValue, progStepSize, progressedRepsRange
-} from './60-builder.js';
-import { BADGES, badgeDesc, badgeName, earnBadges, esc, hasBadge } from './70-workout.js';
-import { applyThemeFor, syncNativeNotifications } from './80-platform.js';
-import { NOTIFICATION_PREFS_KEY, NOTIFICATION_PREF_DEFAULTS, applyAudioFromUser,
-  getNotificationPrefs, syncNotificationSettings, syncSettingsForm
-} from './90-events.js';
+
+let coreDollarHook = id => document.getElementById(id);
+let coreAlertHook = () => {};
+let coreIconHook = () => '';
+let corePluralHook = (_n, one) => one;
+let coreSetShownHook = () => {};
+let coreSideSecHook = () => 10;
+let coreStateHook = () => ({});
+let coreSyncDockTabsHook = () => {};
+export function setDataSyncCoreHooks(hooks = {}){
+  coreDollarHook = typeof hooks.$ === 'function' ? hooks.$ : coreDollarHook;
+  coreAlertHook = typeof hooks.appAlert === 'function' ? hooks.appAlert : coreAlertHook;
+  coreIconHook = typeof hooks.icon === 'function' ? hooks.icon : coreIconHook;
+  corePluralHook = typeof hooks.plural === 'function' ? hooks.plural : corePluralHook;
+  coreSetShownHook = typeof hooks.setShown === 'function' ? hooks.setShown : coreSetShownHook;
+  coreSideSecHook = typeof hooks.getSideSec === 'function' ? hooks.getSideSec : coreSideSecHook;
+  coreStateHook = typeof hooks.getState === 'function' ? hooks.getState : coreStateHook;
+  coreSyncDockTabsHook = typeof hooks.syncDockTabs === 'function' ? hooks.syncDockTabs : coreSyncDockTabsHook;
+}
+const coreState = () => coreStateHook() || {};
+
+
+let trainerCatalogRenderMineHook = () => {};
+export function setDataSyncTrainerCatalogHooks(hooks = {}){
+  trainerCatalogRenderMineHook = typeof hooks.renderMine === 'function' ? hooks.renderMine : (() => {});
+}
+
+let platformApplyThemeForHook = () => {};
+let platformSyncNativeNotificationsHook = async () => {};
+export function setDataSyncPlatformHooks(hooks = {}){
+  platformApplyThemeForHook = typeof hooks.applyThemeFor === 'function' ? hooks.applyThemeFor : (() => {});
+  platformSyncNativeNotificationsHook = typeof hooks.getSyncNativeNotifications === 'function'
+    ? (...args) => {
+        const fn = hooks.getSyncNativeNotifications();
+        return typeof fn === 'function' ? fn(...args) : undefined;
+      }
+    : (async () => {});
+}
+
+
+let progressMediaHooks = {
+  ensureWarmup: async () => {},
+  loadPhotos: async () => {},
+  renderPhotos: () => {},
+  shortD: v => String(v == null ? '' : v),
+  uniqueExerciseIds: () => false
+};
+export function setDataSyncProgressMediaHooks(hooks = {}){
+  progressMediaHooks = {...progressMediaHooks, ...hooks};
+}
+
+let builderDataHooks = {
+  exRestAfter: () => 0,
+  getExProgValue: () => 0,
+  hasWeight: () => false,
+  normValue: v => v,
+  parseValue: v => ({min:+v || 0, max:+v || 0}),
+  progAtCeiling: () => false,
+  progAxis: () => 'none',
+  progBaseValue: () => 0,
+  progStepSize: () => 0,
+  progressedRepsRange: () => ''
+};
+export function setDataSyncBuilderHooks(hooks = {}){
+  builderDataHooks = {...builderDataHooks, ...hooks};
+}
+
+
+let workoutDataHooks = {
+  getBadges: () => [],
+  badgeDesc: () => '',
+  badgeName: () => '',
+  earnBadges: () => [],
+  esc: v => String(v == null ? '' : v),
+  hasBadge: () => false
+};
+export function setDataSyncWorkoutHooks(hooks = {}){
+  workoutDataHooks = {...workoutDataHooks, ...hooks};
+}
+
+let eventDataHooks = {
+  getNotificationPrefsKey: () => 'fitNotificationPrefs',
+  getNotificationPrefDefaults: () => ({}),
+  applyAudioFromUser: () => {},
+  getNotificationPrefs: () => ({}),
+  syncNotificationSettings: () => {},
+  syncSettingsForm: () => {}
+};
+export function setDataSyncEventHooks(hooks = {}){
+  eventDataHooks = {...eventDataHooks, ...hooks};
+}
+
+
+let accountDataHooks = {
+  getProfileKeys: () => [],
+  getAccount: () => null,
+  bumpAccountMeta: () => {},
+  isPremium: () => false,
+  openUserEdit: () => {},
+  readAccountBucket: async () => ({bucket:{}}),
+  renderPlan: () => {},
+  saveAccount: async () => {},
+  writeAccountBucket: async () => {}
+};
+export function setDataSyncAccountHooks(hooks = {}){
+  accountDataHooks = {...accountDataHooks, ...hooks};
+}
+const accountState = () => accountDataHooks.getAccount();
+
+let programsAiDataHooks = {
+  apiFetch: async () => null,
+  applyProgressionAll: () => {},
+  getClients: () => [],
+  loadTrainer: async () => {},
+  openDayProgram: () => {},
+  renderGreeting: () => {},
+  setClientsShared: () => {},
+  setTrainerShared: () => {},
+  getTrainer: () => null,
+  weekPlanInfo: () => ({days:[]})
+};
+export function setDataSyncProgramsAiHooks(hooks = {}){
+  programsAiDataHooks = {...programsAiDataHooks, ...hooks};
+}
+const clientsState = () => programsAiDataHooks.getClients() || [];
+const trainerState = () => programsAiDataHooks.getTrainer();
 
 /* ================= ПОЛЬЗОВАТЕЛИ И ХРАНИЛИЩЕ ================= */
 export let users = [];
 export let currentUser = 'f'; // id текущего пользователя; данные пользователей полностью раздельны
 const fitProductInfrastructure = appInfrastructure.create({
   externalStorage: appRuntimeCompat.externalStorage,
-  onStorageWriteFailure: () => { try{ appAlert(t('storage.full')); }catch(_){} },
+  onStorageWriteFailure: () => { try{ coreAlertHook(t('storage.full')); }catch(_){} },
   platform: appRuntimeCompat.runtimePlatform,
   locale: () => (typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
   build: appRuntimeCompat.build,
-  premium: () => (typeof isPremium === 'function') ? !!isPremium() : false,
+  premium: () => !!accountDataHooks.isPremium(),
   newId: () => newId(),
   post: async body => {
     try{
@@ -154,9 +263,9 @@ export async function loadData(ownerId = currentUser){
   dataOwner = ownerId;
   await loadProgWeights(ownerId);
   if(currentUser !== ownerId) return false;
-  await loadTrainer();
+  await programsAiDataHooks.loadTrainer();
   if(currentUser !== ownerId) return false;
-  syncDockTabs();
+  coreSyncDockTabsHook();
   discardLegacyWeightCorrections(ownerId);
   return true;
 }
@@ -197,46 +306,46 @@ async function switchUserNow(id){
   // пересохраняет встроенную разминку, и раньше это записывало программы прежнего
   // профиля в новый.
   await setAppLocale(profileLocalePreference(curUser()), {persist:false});
-  await loadPhotos();
-  await ensureWarmup();
-  applyProgressionAll();
-  applyAudioFromUser(curUser());
+  await progressMediaHooks.loadPhotos();
+  await progressMediaHooks.ensureWarmup();
+  programsAiDataHooks.applyProgressionAll();
+  eventDataHooks.applyAudioFromUser(curUser());
   const u = curUser();
-  applyThemeFor(u);
+  platformApplyThemeForHook(u);
   renderUsers();
-  renderMine();
+  trainerCatalogRenderMineHook();
   renderStats();
   renderWeight();
   renderWellness();
-  renderPhotos();
-  syncSettingsForm(); // отсчёты и ключ ИИ — у каждого профиля свои
+  progressMediaHooks.renderPhotos();
+  eventDataHooks.syncSettingsForm(); // отсчёты и ключ ИИ — у каждого профиля свои
   // Системное расписание принадлежит активному профилю. До этого переключение
   // меняло программы/историю в памяти, но Android/iOS продолжали держать пуши
   // предыдущего профиля до следующего foreground или ручного изменения программы.
-  await syncNativeNotifications();
+  await platformSyncNativeNotificationsHook();
 }
 
 // Все профили — одинаковыми строками, у каждой одна и та же кнопка-карандаш.
 // Активный отличается не формой, а меткой «сейчас» и рамкой: раньше он жил отдельной
 // карточкой сверху, и понять, какой из них выбран, было невозможно.
 export function renderUsers(){
-  const box = $('usersList'); box.innerHTML = '';
+  const box = coreDollarHook('usersList'); box.innerHTML = '';
   users.forEach(u => {
     const act = u.id === currentUser;
     const row = document.createElement('div');
     row.className = 'user-row' + (act ? ' act' : '');
     const shownName = profileDisplayName(u);
-    const ua = u.photo ? `<img src="${esc(u.photo)}" alt="">` : esc((shownName || '?')[0].toUpperCase());
+    const ua = u.photo ? `<img src="${workoutDataHooks.esc(u.photo)}" alt="">` : workoutDataHooks.esc((shownName || '?')[0].toUpperCase());
     const bits = [];
     if(u.gender) bits.push(t(u.gender === 'm' ? 'common.male' : 'common.female'));
     const a = profileAge(u);
-    if(a) bits.push(t('profile.ageYears',{count:a,years:appLocale === 'ru' ? plural(a,t('profile.yearOne'),t('profile.yearFew'),t('profile.yearMany')) : (a === 1 ? t('profile.yearOne') : t('profile.yearFew'))}));
+    if(a) bits.push(t('profile.ageYears',{count:a,years:appLocale === 'ru' ? corePluralHook(a,t('profile.yearOne'),t('profile.yearFew'),t('profile.yearMany')) : (a === 1 ? t('profile.yearOne') : t('profile.yearFew'))}));
     if(!act) bits.push(t('profile.switch'));
     // Метка «сейчас» — во второй строке, а не рядом с именем: справа она отнимала у
     // имени место, и на узком телефоне «Мой профиль» превращался в «Мой п…».
-    const now = act ? `<span class="u-now">${esc(t('profile.now'))}</span>` : '';
+    const now = act ? `<span class="u-now">${workoutDataHooks.esc(t('profile.now'))}</span>` : '';
     row.innerHTML = `<div class="ua">${ua}</div><div class="ub"><b></b><small>${now}${bits.join(' · ')}</small></div>`
-      + `<button class="ue" title="${esc(t('profile.edit'))}">${icon('pencil')}</button>`;
+      + `<button class="ue" title="${workoutDataHooks.esc(t('profile.edit'))}">${coreIconHook('pencil')}</button>`;
     row.querySelector('b').textContent = shownName;
     const edit = row.querySelector('.ue');
     edit.dataset.act = 'editProfileFromList';
@@ -246,13 +355,13 @@ export function renderUsers(){
     row.dataset.userId = u.id;
     box.appendChild(row);
   });
-  $('usersHint').textContent = users.length > 1
+  coreDollarHook('usersHint').textContent = users.length > 1
     ? t('profile.multiHint')
     : t('profile.singleHint');
   renderAccount();
 }
 
-function renderAccount(){ renderPlan(); }
+function renderAccount(){ accountDataHooks.renderPlan(); }
 
 // Метрики тела: вес всегда есть, остальное — если человек это записывает.
 // Жир и мышцы в процентах показывают умные весы, и без них вес врёт: минус два
@@ -274,58 +383,58 @@ let weightMetric = 'w';
 
 export function renderWeight(){
   const ws = stats.weights;
-  $('btnWeightHist').innerHTML = icon('pencil') + t('progress.history');
-  $('btnShareWeight').innerHTML = icon('share') + t('progress.share');
+  coreDollarHook('btnWeightHist').innerHTML = coreIconHook('pencil') + t('progress.history');
+  coreDollarHook('btnShareWeight').innerHTML = coreIconHook('share') + t('progress.share');
 
   if(!ws.length){
-    $('weightDelta').textContent = '';
-    setShown('weightNowRow', false);   // пустое состояние говорит само за себя ниже
-    setShown('weightMeta', false);
-    setShown('weightSwitch', false);
-    setShown('weightCharts', false);
-    setShown('weightActions', false);
-    setShown('weightEmpty', true);
+    coreDollarHook('weightDelta').textContent = '';
+    coreSetShownHook('weightNowRow', false);   // пустое состояние говорит само за себя ниже
+    coreSetShownHook('weightMeta', false);
+    coreSetShownHook('weightSwitch', false);
+    coreSetShownHook('weightCharts', false);
+    coreSetShownHook('weightActions', false);
+    coreSetShownHook('weightEmpty', true);
     return;
   }
-  setShown('weightEmpty', false);
-  setShown('weightActions', true);
-  setShown('weightNowRow', true);
+  coreSetShownHook('weightEmpty', false);
+  coreSetShownHook('weightActions', true);
+  coreSetShownHook('weightNowRow', true);
 
   const last = ws[ws.length - 1], prev = ws[ws.length - 2];
-  $('weightNow').textContent = fmtMeasure(last.w) + ' ' + t('progress.kg');
+  coreDollarHook('weightNow').textContent = fmtMeasure(last.w) + ' ' + t('progress.kg');
   if(prev){
     const d = Math.round((last.w - prev.w) * 10) / 10;
-    $('weightDelta').textContent = d === 0
+    coreDollarHook('weightDelta').textContent = d === 0
       ? t('progress.noChange')
       : t('progress.sinceLast',{delta:(d > 0 ? '+' : '−') + fmtMeasure(Math.abs(d)),unit:t('progress.kg')});
-    $('weightDelta').style.color = d > 0 ? 'var(--warn)' : (d < 0 ? 'var(--ok)' : 'var(--muted)');
-  } else $('weightDelta').textContent = '';
+    coreDollarHook('weightDelta').style.color = d > 0 ? 'var(--warn)' : (d < 0 ? 'var(--ok)' : 'var(--muted)');
+  } else coreDollarHook('weightDelta').textContent = '';
 
   // в чипах остались только рост и ИМТ: замеры переехали в переключатель ниже,
   // где у каждого и значение, и свой график — раньше они дублировались дважды
   const meta = [];
   if(stats.height){
-    meta.push(`<span class="chip">${esc(t('progress.height'))} <b>${fmtMeasure(stats.height)}</b> ${esc(t('progress.cm'))}</span>`);
-    meta.push(`<span class="chip">${esc(t('progress.bmi'))} <b>${fmtMeasure(Math.round(last.w / Math.pow(stats.height/100,2)*10)/10)}</b></span>`);
+    meta.push(`<span class="chip">${workoutDataHooks.esc(t('progress.height'))} <b>${fmtMeasure(stats.height)}</b> ${workoutDataHooks.esc(t('progress.cm'))}</span>`);
+    meta.push(`<span class="chip">${workoutDataHooks.esc(t('progress.bmi'))} <b>${fmtMeasure(Math.round(last.w / Math.pow(stats.height/100,2)*10)/10)}</b></span>`);
   }
-  $('weightMeta').innerHTML = meta.join('');
-  setShown('weightMeta', meta.length);
+  coreDollarHook('weightMeta').innerHTML = meta.join('');
+  coreSetShownHook('weightMeta', meta.length);
 
   // ---- переключатель метрик вместо трёх одинаковых графиков подряд ----
   const avail = weightSeries().filter(s => ws.some(p => p[s.k] != null));
   if(!avail.some(s => s.k === weightMetric)) weightMetric = avail.length ? avail[0].k : 'w';
-  $('weightSwitch').innerHTML = avail.map(s => {
+  coreDollarHook('weightSwitch').innerHTML = avail.map(s => {
     const pts = ws.filter(p => p[s.k] != null);
     const v = pts[pts.length - 1][s.k];
     return `<button type="button" class="wm-chip${s.k === weightMetric ? ' act' : ''}" data-k="${s.k}">
       <span>${s.label}</span><b>${fmtMeasure(v)}<small>${s.unit}</small></b></button>`;
   }).join('');
-  setShown('weightSwitch', avail.length > 1);
+  coreSetShownHook('weightSwitch', avail.length > 1);
 
   const cur = avail.find(s => s.k === weightMetric) || avail[0];
   const have = cur ? ws.map(p => (p[cur.k] != null) ? [p.d, p[cur.k]] : null).filter(Boolean).slice(-30) : [];
-  $('weightCharts').innerHTML = have.length ? metricGraph(cur, have) : '';
-  setShown('weightCharts', have.length);
+  coreDollarHook('weightCharts').innerHTML = have.length ? metricGraph(cur, have) : '';
+  coreSetShownHook('weightCharts', have.length);
 }
 
 // Один график метрики: сетка, плавная линия, заливка, подписи концов и дат.
@@ -390,13 +499,13 @@ function metricGraph(s, have, have2){
     labels += `<text x="${lp[0]}" y="${lyN}" text-anchor="end" font-size="12" font-weight="700" fill="var(--ink)">${capB}</text>`;
   }
   // даты по краям: без них график не отвечал, за какой срок это движение
-  let axis = `<text x="${padL}" y="${H - 6}" text-anchor="start" font-size="10.5" fill="var(--muted)">${shortD(have[0][0])}</text>`;
-  if(have.length > 1) axis += `<text x="${W - padR}" y="${H - 6}" text-anchor="end" font-size="10.5" fill="var(--muted)">${shortD(have[have.length-1][0])}</text>`;
+  let axis = `<text x="${padL}" y="${H - 6}" text-anchor="start" font-size="10.5" fill="var(--muted)">${progressMediaHooks.shortD(have[0][0])}</text>`;
+  if(have.length > 1) axis += `<text x="${W - padR}" y="${H - 6}" text-anchor="end" font-size="10.5" fill="var(--muted)">${progressMediaHooks.shortD(have[have.length-1][0])}</text>`;
 
   return `<div class="metric-graph">
     <div class="mg-head">
       <span class="mg-delta ${dCls}">${dTxt}</span>
-      <small>${s.label} · ${t('progress.records',{count:have.length,records:appLocale === 'ru' ? plural(have.length,t('progress.recordOne'),t('progress.recordFew'),t('progress.recordMany')) : (have.length === 1 ? t('progress.recordOne') : t('progress.recordFew'))})}</small>
+      <small>${s.label} · ${t('progress.records',{count:have.length,records:appLocale === 'ru' ? corePluralHook(have.length,t('progress.recordOne'),t('progress.recordFew'),t('progress.recordMany')) : (have.length === 1 ? t('progress.recordOne') : t('progress.recordFew'))})}</small>
     </div>
     <svg viewBox="0 0 ${W} ${H}">
       <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
@@ -416,7 +525,7 @@ function metricGraph(s, have, have2){
 }
 /* ================= САМОЧУВСТВИЕ =================
    Давление, пульс и сон. Живут в stats.wellness — внутри уже перечисленного
-   в PROFILE_KEYS ключа stats, отдельного ключа хранилища не заводим.
+   в accountDataHooks.getProfileKeys() ключа stats, отдельного ключа хранилища не заводим.
    Запись — одна на день, как у веса: en = {d, sys, dia, pulse, sleep}.
    Давление — не две метрики, а одно число из двух половин: верхнее ведёт график,
    нижнее идёт второй линией и подписывается вместе с ним («120/80»).
@@ -462,46 +571,46 @@ export function wellAvg(){
 
 export function renderWellness(){
   const ws = wellList();
-  $('btnWellHist').innerHTML = icon('pencil') + t('progress.history');
-  $('btnShareWell').innerHTML = icon('share') + t('progress.share');
+  coreDollarHook('btnWellHist').innerHTML = coreIconHook('pencil') + t('progress.history');
+  coreDollarHook('btnShareWell').innerHTML = coreIconHook('share') + t('progress.share');
   if(!ws.length){
-    setShown('wellNowRow', false);
-    setShown('wellSwitch', false);
-    setShown('wellCharts', false);
-    setShown('wellActions', false);
-    setShown('wellEmpty', true);
+    coreSetShownHook('wellNowRow', false);
+    coreSetShownHook('wellSwitch', false);
+    coreSetShownHook('wellCharts', false);
+    coreSetShownHook('wellActions', false);
+    coreSetShownHook('wellEmpty', true);
     return;
   }
-  setShown('wellEmpty', false);
-  setShown('wellActions', true);
-  setShown('wellNowRow', true);
+  coreSetShownHook('wellEmpty', false);
+  coreSetShownHook('wellActions', true);
+  coreSetShownHook('wellNowRow', true);
 
   // доступна метрика, которую хоть раз записали, — как у веса с обхватами
   const avail = wellSeries().filter(s => ws.some(p => p[s.k] != null));
-  if(!avail.length){ setShown('wellNowRow', false); setShown('wellSwitch', false); setShown('wellCharts', false); return; }
+  if(!avail.length){ coreSetShownHook('wellNowRow', false); coreSetShownHook('wellSwitch', false); coreSetShownHook('wellCharts', false); return; }
   if(!avail.some(s => s.k === wellMetric)) wellMetric = avail[0].k;
   const cur = avail.find(s => s.k === wellMetric);
 
-  $('wellSwitch').innerHTML = avail.map(s => {
+  coreDollarHook('wellSwitch').innerHTML = avail.map(s => {
     const pts = ws.filter(p => p[s.k] != null);
     const en = pts[pts.length - 1];
     return `<button type="button" class="wm-chip${s.k === wellMetric ? ' act' : ''}" data-k="${s.k}">
       <span>${s.label}</span><b>${wellValue(en, s)}${s.unit ? `<small>${s.unit}</small>` : ''}</b></button>`;
   }).join('');
-  setShown('wellSwitch', avail.length > 1);
+  coreSetShownHook('wellSwitch', avail.length > 1);
 
   // крупная цифра — значение выбранной метрики: та же роль, что у веса в карточке выше
   const pts = ws.filter(p => p[cur.k] != null);
   const lastEn = pts[pts.length - 1];
-  $('wellNow').textContent = (wellValue(lastEn, cur) + ' ' + (cur.unit || '')).trim();
-  $('wellWhen').textContent = t('progress.recordedOn',{date:shortD(lastEn.d)});
-  $('wellWhen').style.color = 'var(--muted)';
+  coreDollarHook('wellNow').textContent = (wellValue(lastEn, cur) + ' ' + (cur.unit || '')).trim();
+  coreDollarHook('wellWhen').textContent = t('progress.recordedOn',{date:progressMediaHooks.shortD(lastEn.d)});
+  coreDollarHook('wellWhen').style.color = 'var(--muted)';
 
   const have = pts.map(p => [p.d, p[cur.k]]).slice(-30);
   const have2 = cur.pair ? pts.map(p => [p.d, p[cur.pair]]).slice(-30) : null;
   const paired = have2 && have2.every(h => h[1] != null) ? have2 : null;
-  $('wellCharts').innerHTML = have.length ? metricGraph(cur, have, paired) : '';
-  setShown('wellCharts', have.length);
+  coreDollarHook('wellCharts').innerHTML = have.length ? metricGraph(cur, have, paired) : '';
+  coreSetShownHook('wellCharts', have.length);
 }
 
 // ---- запись самочувствия ----
@@ -511,22 +620,22 @@ export function openWellAdd(){
   const en = ws.find(e => e.d === today) || {};
   // подставляем сегодняшнюю запись, если она уже есть: иначе вторая правка за день
   // выглядела бы как новая пустая форма, а сохранение молча перетирало бы прежнюю
-  $('sysInput').value = en.sys || '';
-  $('diaInput').value = en.dia || '';
-  $('pulseInput').value = en.pulse || '';
-  $('sleepInput').value = en.sleep != null ? en.sleep : '';
-  appUi.openModal($('wellModal'));
+  coreDollarHook('sysInput').value = en.sys || '';
+  coreDollarHook('diaInput').value = en.dia || '';
+  coreDollarHook('pulseInput').value = en.pulse || '';
+  coreDollarHook('sleepInput').value = en.sleep != null ? en.sleep : '';
+  appUi.openModal(coreDollarHook('wellModal'));
 }
 export async function saveWell(){
   const num = (id, k) => {
-    const v = parseFloat(String($(id).value).replace(',', '.'));
+    const v = parseFloat(String(coreDollarHook(id).value).replace(',', '.'));
     return (!isNaN(v) && v >= WELL_LIM[k][0] && v <= WELL_LIM[k][1]) ? Math.round(v * 10) / 10 : null;
   };
   const sys = num('sysInput', 'sys'), dia = num('diaInput', 'dia');
   const pulse = num('pulseInput', 'pulse'), sleep = num('sleepInput', 'sleep');
   // половина давления бессмысленна: «верхнее 130» без нижнего не читается
-  if((sys && !dia) || (dia && !sys)){ appAlert(t('well.pressurePair')); return; }
-  if(!sys && !pulse && sleep == null){ appAlert(t('well.fillOne')); return; }
+  if((sys && !dia) || (dia && !sys)){ coreAlertHook(t('well.pressurePair')); return; }
+  if(!sys && !pulse && sleep == null){ coreAlertHook(t('well.fillOne')); return; }
   // пульс и давление — сведения о здоровье, как вес и обхваты
   if(!hasConsent('health')) recordConsent('health');
   const ws = wellList();
@@ -537,13 +646,13 @@ export async function saveWell(){
   put('sys', sys); put('dia', dia); put('pulse', pulse); put('sleep', sleep);
   ws.sort((a, b) => a.d < b.d ? -1 : 1);
   await saveStats();
-  appUi.closeModal($('wellModal'));
+  appUi.closeModal(coreDollarHook('wellModal'));
   renderWellness();
 }
 
 // ---- история самочувствия: та же правка задним числом, что и у веса ----
 export function openWellHist(){
-  const list = $('wellHistList'); list.innerHTML = '';
+  const list = coreDollarHook('wellHistList'); list.innerHTML = '';
   wellList().slice(-30).reverse().forEach(en => {
     const row = document.createElement('div');
     row.className = 'wh-row';
@@ -554,9 +663,9 @@ export function openWellHist(){
     // порознь выглядели как два разных показателя, и строка ехала в две ячейки враскоряку
     row.innerHTML =
       `<div class="wh-top"><b>${+d} ${MONTH_OF[+m - 1]} ${y}</b>` +
-      `<button type="button" class="wh-del" title="${esc(t('progress.deleteEntry'))}">${icon('trash')}</button></div>` +
+      `<button type="button" class="wh-del" title="${workoutDataHooks.esc(t('progress.deleteEntry'))}">${coreIconHook('trash')}</button></div>` +
       `<div class="wh-cells wh-well" data-d="${en.d}">` +
-        `<div class="whc"><label>${esc(t('progress.pressureShort'))}</label>` +
+        `<div class="whc"><label>${workoutDataHooks.esc(t('progress.pressureShort'))}</label>` +
           `<span class="whp">${inp('sys')}<i>/</i>${inp('dia')}</span></div>` +
         cell('pulse', t('progress.pulseShort')) + cell('sleep', t('well.sleepHours'), 0.5) +
       `</div>`;
@@ -564,11 +673,11 @@ export function openWellHist(){
     del.dataset.act = 'toggleWellHistoryDelete';
     list.appendChild(row);
   });
-  $('wellHistModal').classList.add('open');
+  coreDollarHook('wellHistModal').classList.add('open');
 }
 export async function saveWellHist(){
   const ws = wellList();
-  [...$('wellHistList').querySelectorAll('.wh-row')].forEach(row => {
+  [...coreDollarHook('wellHistList').querySelectorAll('.wh-row')].forEach(row => {
     const d = row.querySelector('.wh-cells').dataset.d;
     const i = ws.findIndex(e => e.d === d);
     if(i < 0) return;
@@ -584,7 +693,7 @@ export async function saveWellHist(){
   });
   ws.sort((a, b) => a.d < b.d ? -1 : 1);
   await saveStats();
-  $('wellHistModal').classList.remove('open');
+  coreDollarHook('wellHistModal').classList.remove('open');
   renderWellness();
 }
 
@@ -827,10 +936,10 @@ export function showSyncState(state, step, total, detailKey){
     syncTotal = 0;
     syncDetail = '';
   }
-  const el = $('accSync');
+  const el = coreDollarHook('accSync');
   if(!el) return;
-  if(!account || !account.email) el.textContent = '';
-  else if(!isPremium()) el.textContent = t('sync.premiumOnly');
+  if(!accountState() || !accountState().email) el.textContent = '';
+  else if(!accountDataHooks.isPremium()) el.textContent = t('sync.premiumOnly');
   else if(state === 'busy' && syncStep && syncTotal && syncDetail){
     el.textContent = t('sync.progress',{step:syncStep,total:syncTotal,detail:t(syncDetail)});
   } else if(state === 'busy' && syncStep && syncTotal){
@@ -845,7 +954,7 @@ async function syncApiPost(body){
   let last;
   for(let attempt = 0; attempt < 2; attempt++){
     try{
-      return await apiFetch('/api/sync', {
+      return await programsAiDataHooks.apiFetch('/api/sync', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify(body),
@@ -862,8 +971,8 @@ async function syncApiPost(body){
 }
 
 export const accountAuth = () => ({
-  email: (account && account.email) || '',
-  token: (account && account.syncToken) || '',
+  email: (accountState() && accountState().email) || '',
+  token: (accountState() && accountState().syncToken) || '',
   deviceId: (identity && identity.deviceId) || ''
 });
 const syncAuth = action => Object.assign({action}, accountAuth());
@@ -1059,7 +1168,7 @@ async function collapseEmptyLocalProfiles(active){
     || blanks.find(u => u.id === currentUser) || blanks[0];
   for(const u of blanks){
     if(u === keep) continue;
-    for(const k of PROFILE_KEYS) await kvDel(k + '_' + u.id);
+    for(const k of accountDataHooks.getProfileKeys()) await kvDel(k + '_' + u.id);
   }
   users = users.filter(u => !blanks.includes(u) || u === keep);
   if(!users.some(u => u.id === currentUser)) currentUser = keep.id;
@@ -1108,7 +1217,7 @@ async function applyRemoteSyncNow(result){
     // У непремиум-аккаунта pull может содержать только account-level настройки
     // уведомлений. Даже без profile docs системное расписание должно сразу
     // соответствовать приехавшим prefs.
-    if(notificationPrefsChanged) await syncNativeNotifications();
+    if(notificationPrefsChanged) await platformSyncNativeNotificationsHook();
     return;
   }
   let active = remote.filter(r => !r.deleted);
@@ -1122,11 +1231,11 @@ async function applyRemoteSyncNow(result){
     const keepId = emptyRemote[0].user.id;
     const drop = new Set(emptyRemote.slice(1).map(r => r.user.id));
     active = active.filter(r => !drop.has(r.user && r.user.id));
-    if(!Array.isArray(account.deletedProfiles)) account.deletedProfiles = [];
+    if(!Array.isArray(accountState().deletedProfiles)) accountState().deletedProfiles = [];
     drop.forEach(id => {
-      if(!account.deletedProfiles.some(x => x.id === id)) account.deletedProfiles.push({id, at:new Date().toISOString()});
+      if(!accountState().deletedProfiles.some(x => x.id === id)) accountState().deletedProfiles.push({id, at:new Date().toISOString()});
     });
-    await saveAccount();
+    await accountDataHooks.saveAccount();
   }
   await collapseEmptyLocalProfiles(active);
 
@@ -1170,7 +1279,7 @@ async function applyRemoteSyncNow(result){
     if(i < 0 || users.length <= 1) continue;
     if(users[i].syncAt && String(users[i].syncAt) > String(rp.userAt || '')) continue;
     const id = users[i].id;
-    for(const k of PROFILE_KEYS) await kvDel(k + '_' + id);
+    for(const k of accountDataHooks.getProfileKeys()) await kvDel(k + '_' + id);
     users.splice(i, 1);
   }
   await saveUsers();
@@ -1182,7 +1291,7 @@ async function applyRemoteSyncNow(result){
     const localId = localUser ? localUser.id : pid;
     if((await kvGet('identity_' + localId)) === null){
       await kvSet('identity_' + localId, JSON.stringify({profileId:pid, createdAt:new Date().toISOString(),
-        email:account.email, linkedAt:new Date().toISOString(), consents:{}}));
+        email:accountState().email, linkedAt:new Date().toISOString(), consents:{}}));
     }
     let meta = parsed(await kvGet('docMeta_' + localId), {});
     let queue = parsed(await kvGet('outbox_' + localId), []);
@@ -1259,19 +1368,19 @@ async function applyRemoteSyncNow(result){
   await kvSet('currentUser', currentUser);
   const activeOwner = currentUser;
   await loadIdentity(activeOwner);
-  identity.email = account.email;
+  identity.email = accountState().email;
   await saveIdentity();
   await loadData(activeOwner);
   // После loadData: иначе смена языка пересохранила бы устаревший список программ
   // из памяти поверх только что принятых с сервера.
   await setAppLocale(profileLocalePreference(curUser()), {persist:false});
-  await loadPhotos();
-  await ensureWarmup();
-  applyProgressionAll();
-  renderUsers(); renderMine(); renderStats(); renderWeight(); renderWellness(); renderPhotos();
+  await progressMediaHooks.loadPhotos();
+  await progressMediaHooks.ensureWarmup();
+  programsAiDataHooks.applyProgressionAll();
+  renderUsers(); trainerCatalogRenderMineHook(); renderStats(); renderWeight(); renderWellness(); progressMediaHooks.renderPhotos();
   // Только здесь active profile уже полностью перезагружен из принятых docs.
   // Пересборка раньше этого места могла успеть записать в ОС старое расписание.
-  await syncNativeNotifications();
+  await platformSyncNativeNotificationsHook();
 }
 
 function trainerSyncValue(value){
@@ -1300,11 +1409,11 @@ function mergeClientLists(localList, remoteList, preferRemote){
   return [...out.values()];
 }
 async function applyRemoteAccountDocs(result){
-  if(!account || !account.email) return false;
+  if(!accountState() || !accountState().email) return false;
   const docs = Array.isArray(result && result.accountDocs) ? result.accountDocs : [];
   if(!docs.length) return false;
   let notificationPrefsChanged = false;
-  const rec = await readAccountBucket();
+  const rec = await accountDataHooks.readAccountBucket();
   if(!rec.bucket.meta) rec.bucket.meta = {};
   for(const d of docs){
     if(!d || !['trainer','clients','notificationPrefs'].includes(d.key) || d.deleted) continue;
@@ -1313,7 +1422,7 @@ async function applyRemoteAccountDocs(result){
     const incoming = parsed(d.value, d.key === 'clients' ? [] : {});
     if(d.key === 'trainer'){
       if(!takeRemote) continue;
-      const keep = rec.bucket.trainer || trainer || {};
+      const keep = rec.bucket.trainer || trainerState() || {};
       rec.bucket.trainer = Object.assign({}, incoming || {});
       // Ключ управления страницей никогда не хранится в синхронизации. Ник,
       // подтверждённый входом, тоже важнее старой копии документа.
@@ -1323,7 +1432,7 @@ async function applyRemoteAccountDocs(result){
       rec.bucket.meta[d.key] = {rev:+d.rev || 1, at:d.at || '', schema:+d.schema || 1,
                                 deviceId:d.deviceId || ''};
     } else if(d.key === 'clients'){
-      rec.bucket.clients = mergeClientLists(rec.bucket.clients || clients, incoming, takeRemote);
+      rec.bucket.clients = mergeClientLists(rec.bucket.clients || clientsState(), incoming, takeRemote);
       if(takeRemote) rec.bucket.meta[d.key] = {rev:+d.rev || 1, at:d.at || '', schema:+d.schema || 1,
                                                deviceId:d.deviceId || ''};
     } else if(takeRemote){
@@ -1332,77 +1441,75 @@ async function applyRemoteAccountDocs(result){
       rec.bucket.meta[d.key] = {rev:+d.rev || 1, at:d.at || '', schema:+d.schema || 1,
                                 deviceId:d.deviceId || ''};
       try{
-        if(typeof NOTIFICATION_PREF_DEFAULTS !== 'undefined'){
-          localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(
-            Object.assign({}, NOTIFICATION_PREF_DEFAULTS, rec.bucket.notificationPrefs)
+        if(typeof eventDataHooks.getNotificationPrefDefaults() !== 'undefined'){
+          localStorage.setItem(eventDataHooks.getNotificationPrefsKey(), JSON.stringify(
+            Object.assign({}, eventDataHooks.getNotificationPrefDefaults(), rec.bucket.notificationPrefs)
           ));
         }
       }catch(_){}
     }
   }
-  await writeAccountBucket(rec);
-  setTrainerShared(rec.bucket.trainer || trainer);
-  setClientsShared(Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clients);
-  if(typeof syncNotificationSettings === 'function') syncNotificationSettings();
+  await accountDataHooks.writeAccountBucket(rec);
+  programsAiDataHooks.setTrainerShared(rec.bucket.trainer || trainerState());
+  programsAiDataHooks.setClientsShared(Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clientsState());
+  eventDataHooks.syncNotificationSettings();
   return notificationPrefsChanged;
 }
 
 async function accountDocsSnapshot(){
-  if(!account || !account.email) return [];
-  const rec = await readAccountBucket();
+  if(!accountState() || !accountState().email) return [];
+  const rec = await accountDataHooks.readAccountBucket();
   if(!rec.bucket.meta) rec.bucket.meta = {};
   const now = new Date().toISOString();
   let localNotificationPrefs = {};
   try{
-    localNotificationPrefs = (typeof getNotificationPrefs === 'function')
-      ? getNotificationPrefs()
-      : parsed(localStorage.getItem('fitNotificationPrefsV1'), {});
+    localNotificationPrefs = eventDataHooks.getNotificationPrefs();
   }catch(_){}
   if(!rec.bucket.notificationPrefs) rec.bucket.notificationPrefs = localNotificationPrefs;
   const values = {
-    trainer:trainerSyncValue(rec.bucket.trainer || trainer),
-    clients:Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clients,
+    trainer:trainerSyncValue(rec.bucket.trainer || trainerState()),
+    clients:Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clientsState(),
     notificationPrefs:Object.assign({}, rec.bucket.notificationPrefs || localNotificationPrefs)
   };
   const docs = [];
   for(const key of appSync.accountKeys){
-    if(!rec.bucket.meta[key]) rec.bucket.meta[key] = {rev:1, at:account.linkedAt || now, schema:SCHEMA_VERSION};
+    if(!rec.bucket.meta[key]) rec.bucket.meta[key] = {rev:1, at:accountState().linkedAt || now, schema:SCHEMA_VERSION};
     const m = rec.bucket.meta[key];
     docs.push({key, profileId:'__account__', rev:m.rev || 1, at:m.at || now,
                schema:m.schema || SCHEMA_VERSION, value:JSON.stringify(values[key] || (key === 'clients' ? [] : {}))});
   }
-  await writeAccountBucket(rec);
+  await accountDataHooks.writeAccountBucket(rec);
   return docs;
 }
 
 export async function syncNotificationPrefsServer(action){
-  if(!account || !account.email || !account.syncToken) return false;
+  if(!accountState() || !accountState().email || !accountState().syncToken) return false;
   let deviceId = await kvGet('deviceId');
   if(!deviceId){ deviceId = newId(); await kvSet('deviceId', deviceId); }
-  const base = {action:action || 'push', email:account.email, deviceId, token:account.syncToken};
+  const base = {action:action || 'push', email:accountState().email, deviceId, token:accountState().syncToken};
   if(base.action === 'pull'){
     const result = await syncApiPost(base);
     const changed = await applyRemoteAccountDocs(result);
-    if(changed) await syncNativeNotifications();
+    if(changed) await platformSyncNativeNotificationsHook();
     return true;
   }
-  const rec = await readAccountBucket();
+  const rec = await accountDataHooks.readAccountBucket();
   if(!rec.bucket.meta) rec.bucket.meta = {};
   const key = 'notificationPrefs';
-  if(!rec.bucket.notificationPrefs && typeof getNotificationPrefs === 'function'){
-    rec.bucket.notificationPrefs = getNotificationPrefs();
+  if(!rec.bucket.notificationPrefs){
+    rec.bucket.notificationPrefs = eventDataHooks.getNotificationPrefs();
   }
-  if(!rec.bucket.meta[key]) bumpAccountMeta(rec.bucket, key);
+  if(!rec.bucket.meta[key]) accountDataHooks.bumpAccountMeta(rec.bucket, key);
   const m = rec.bucket.meta[key];
   const doc = {key, profileId:'__account__', rev:m.rev || 1, at:m.at || new Date().toISOString(),
     schema:m.schema || SCHEMA_VERSION, value:JSON.stringify(rec.bucket.notificationPrefs || {})};
-  await writeAccountBucket(rec);
+  await accountDataHooks.writeAccountBucket(rec);
   await syncApiPost(Object.assign(base, {profiles:[], docs:[doc]}));
   return true;
 }
 
 export async function pushAccountDocs(){
-  if(!account || !account.email || !account.syncToken || !isPremium()) return;
+  if(!accountState() || !accountState().email || !accountState().syncToken || !accountDataHooks.isPremium()) return;
   const docs = await accountDocsSnapshot();
   if(!docs.length) return;
   await syncApiPost(Object.assign(syncAuth('push'), {profiles:[], docs}));
@@ -1510,12 +1617,12 @@ async function pushPendingProfiles(){
 }
 
 async function pushDeletedProfiles(){
-  const list = Array.isArray(account.deletedProfiles) ? account.deletedProfiles.slice() : [];
+  const list = Array.isArray(accountState().deletedProfiles) ? accountState().deletedProfiles.slice() : [];
   if(!list.length) return;
   const profiles = list.map(rec => ({user:{id:rec.id}, at:rec.at, deleted:true}));
   await syncApiPost(Object.assign(syncAuth('push'), {profiles, docs:[]}));
-  account.deletedProfiles = [];
-  await saveAccount();
+  accountState().deletedProfiles = [];
+  await accountDataHooks.saveAccount();
 }
 
 async function flushAccountSync(){
@@ -1546,11 +1653,11 @@ async function flushAccountSync(){
 }
 
 export async function connectAccountSync(opts){
-  if(!account || !account.email || !account.syncToken || !identity){
+  if(!accountState() || !accountState().email || !accountState().syncToken || !identity){
     showSyncState('idle');
     return false;
   }
-  if(!isPremium()){
+  if(!accountDataHooks.isPremium()){
     try{ await syncNotificationPrefsServer('pull'); }catch(_){}
     showSyncState('idle');
     return false;
@@ -1581,7 +1688,7 @@ export async function connectAccountSync(opts){
 }
 
 export function queueAccountSync(){
-  if(!account || !account.email || !account.syncToken || !isPremium()) return;
+  if(!accountState() || !accountState().email || !accountState().syncToken || !accountDataHooks.isPremium()) return;
   clearTimeout(syncTimer);
   syncTimer = setTimeout(()=>{
     if(SYNC.adapter) flushAccountSync();
@@ -1625,7 +1732,7 @@ export async function savePrograms(){
   if(dataOwner !== uid) return;   // данные нового профиля ещё не загружены
   // id упражнений уникальны в программе (см. uniqueExerciseIds) — чиним на месте,
   // чтобы копия, заведённая старым способом, не жила с чужим id до перезапуска
-  customPrograms.forEach(p => { if(p && typeof p === 'object') uniqueExerciseIds(p); });
+  customPrograms.forEach(p => { if(p && typeof p === 'object') progressMediaHooks.uniqueExerciseIds(p); });
   const programs = JSON.parse(JSON.stringify(customPrograms));
   let meta = docMeta;
   let queue = outbox.slice();
@@ -1681,10 +1788,10 @@ function fmtLong(sec){
   return sec > 0 ? t('time.lessMinute') : t('time.minutes',{minutes:0});
 }
 function renderTotal(){
-  $('totalTime').textContent = fmtLong(stats.totalSec);
+  coreDollarHook('totalTime').textContent = fmtLong(stats.totalSec);
   const n = stats.count || 0;
-  $('totalCount').textContent = n;
-  $('totalCountWord').textContent = appLocale === 'ru' ? plural(n,t('calendar.workoutOne'),t('calendar.workoutFew'),t('calendar.workoutMany')) : t(n===1?'calendar.workoutOne':'calendar.workoutFew');
+  coreDollarHook('totalCount').textContent = n;
+  coreDollarHook('totalCountWord').textContent = appLocale === 'ru' ? corePluralHook(n,t('calendar.workoutOne'),t('calendar.workoutFew'),t('calendar.workoutMany')) : t(n===1?'calendar.workoutOne':'calendar.workoutFew');
 }
 
 /* ================= НЕЗАВЕРШЁННЫЕ СЕССИИ ТРЕНИРОВОК =================
@@ -1832,31 +1939,31 @@ export async function loadSessions(){
 }
 
 export async function saveSession(){
-  const raw = state.raw, cur = state.current;
-  if(!raw || !cur || !state.steps.length) return;
-  const pausedNow = state.paused && state.pausedAt ? Math.max(0, Date.now() - state.pausedAt) : 0;
-  const elapsed = state.globalStart
-    ? Math.max(0, Date.now() - state.globalStart - state.pausedTotal - pausedNow)
+  const raw = coreState().raw, cur = coreState().current;
+  if(!raw || !cur || !coreState().steps.length) return;
+  const pausedNow = coreState().paused && coreState().pausedAt ? Math.max(0, Date.now() - coreState().pausedAt) : 0;
+  const elapsed = coreState().globalStart
+    ? Math.max(0, Date.now() - coreState().globalStart - coreState().pausedTotal - pausedNow)
     : 0;
-  let sessionId = String(state.workoutSessionId || '');
+  let sessionId = String(coreState().workoutSessionId || '');
   if(!sessionId){
     sessionId = 'ws_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 9);
-    state.workoutSessionId = sessionId;
+    coreState().workoutSessionId = sessionId;
   }
   const data = normalizeWorkoutSession({
     pid: raw.id,
     sessionId,
-    planIdx: state.planIdx || 0,
-    stepIdx: state.stepIdx || 0,
-    total: state.steps.length,
+    planIdx: coreState().planIdx || 0,
+    stepIdx: coreState().stepIdx || 0,
+    total: coreState().steps.length,
     elapsed,
-    load: Array.isArray(state.startLoad) ? state.startLoad : null,
+    load: Array.isArray(coreState().startLoad) ? coreState().startLoad : null,
     workout: normalizeWorkoutSnapshot(cur, raw.id),
     workoutSig: workoutSessionSignature(cur),
-    outcomes: state.stepOutcomes || {},
-    stepDeadline: Math.max(0, Number(state.stepDeadline) || 0),
-    remaining: Math.max(0, Number(state.remaining) || 0),
-    paused: !!state.paused,
+    outcomes: coreState().stepOutcomes || {},
+    stepDeadline: Math.max(0, Number(coreState().stepDeadline) || 0),
+    remaining: Math.max(0, Number(coreState().remaining) || 0),
+    paused: !!coreState().paused,
     at: Date.now()
   });
   const list = await readWorkoutSessions();
@@ -1876,8 +1983,8 @@ export async function loadSession(){
 // Глобальной очистки всех незаконченных тренировок здесь больше нет.
 export async function clearSession(sessionId, pid){
   try{
-    const sid = String(sessionId || state.workoutSessionId || '');
-    const programId = String(pid || (state.raw && state.raw.id) || '');
+    const sid = String(sessionId || coreState().workoutSessionId || '');
+    const programId = String(pid || (coreState().raw && coreState().raw.id) || '');
     if(!sid && !programId) return;
     const list = await readWorkoutSessions();
     const next = list.filter(x => sid ? x.sessionId !== sid : String(x.pid) !== programId);
@@ -1896,16 +2003,16 @@ export function sessionAgeText(at){
   const mins = Math.round((Date.now() - at) / 60000);
   if(mins < 1) return t('session.justNow');
   if(mins < 60){
-    const word = appLocale === 'ru' ? plural(mins,t('session.minuteOne'),t('session.minuteFew'),t('session.minuteMany')) : t(mins===1?'session.minuteOne':'session.minuteFew');
+    const word = appLocale === 'ru' ? corePluralHook(mins,t('session.minuteOne'),t('session.minuteFew'),t('session.minuteMany')) : t(mins===1?'session.minuteOne':'session.minuteFew');
     return t('session.minutesAgo',{count:mins,minutes:word});
   }
   const hours = Math.round(mins / 60);
   if(hours < 24){
-    const word = appLocale === 'ru' ? plural(hours,t('session.hourOne'),t('session.hourFew'),t('session.hourMany')) : t(hours===1?'session.hourOne':'session.hourFew');
+    const word = appLocale === 'ru' ? corePluralHook(hours,t('session.hourOne'),t('session.hourFew'),t('session.hourMany')) : t(hours===1?'session.hourOne':'session.hourFew');
     return t('session.hoursAgo',{count:hours,hours:word});
   }
   const days = Math.round(hours / 24);
-  const word = appLocale === 'ru' ? plural(days,t('session.dayOne'),t('session.dayFew'),t('session.dayMany')) : t(days===1?'session.dayOne':'session.dayFew');
+  const word = appLocale === 'ru' ? corePluralHook(days,t('session.dayOne'),t('session.dayFew'),t('session.dayMany')) : t(days===1?'session.dayOne':'session.dayFew');
   return t('session.daysAgo',{count:days,days:word});
 }
 
@@ -1914,7 +2021,7 @@ export function sessionAgeText(at){
 // всегда начинаем с его первого подхода, первой стороны и первого круга.
 export function workStepChoices(){
   const out = [];
-  (state.steps || []).forEach((s, i) => {
+  (coreState().steps || []).forEach((s, i) => {
     if(s.phase !== 'work') return;
     if((s.setNo || 1) !== 1 || (s.side || 1) !== 1 || s.round > 1) return;
     const meta = [];
@@ -2021,7 +2128,7 @@ export function calcStreakInfo(options){
     const monday = new Date(dt);
     monday.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
     const key = localISO(monday);
-    const week = weeks[key] || (weeks[key] = weekPlanInfo(dt, programId ? {programId} : undefined));
+    const week = weeks[key] || (weeks[key] = programsAiDataHooks.weekPlanInfo(dt, programId ? {programId} : undefined));
     return week.days[(dt.getDay() + 6) % 7];
   };
 
@@ -2074,7 +2181,7 @@ export function calcStreak(){ return calcStreakInfo().n; }
 export function streakWord(n, byPlan){
   return byPlan
     ? t('streak.planShort')
-    : (appLocale === 'ru' ? plural(n,t('streak.dayOne'),t('streak.dayFew'),t('streak.dayMany')) : t(n===1?'streak.dayOne':'streak.dayFew'));
+    : (appLocale === 'ru' ? corePluralHook(n,t('streak.dayOne'),t('streak.dayFew'),t('streak.dayMany')) : t(n===1?'streak.dayOne':'streak.dayFew'));
 }
 
 const MON_SHORT_NAMES = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
@@ -2090,10 +2197,10 @@ function renderStatsBlock(){
   // пока тренировок нет, показывать нули незачем: на экране остаётся одна честная
   // строка «Тренировок пока нет», а не три пустых карточки
   const empty = !stats.history.length;
-  setShown('workEmpty', empty);
-  setShown('weeksCard', !empty);
-  setShown('calCard', !empty);
-  setShown('totalCard', !empty);
+  coreSetShownHook('workEmpty', empty);
+  coreSetShownHook('weeksCard', !empty);
+  coreSetShownHook('calCard', !empty);
+  coreSetShownHook('totalCard', !empty);
 
   // ---- мини-график: сколько тренировок в каждую из 8 последних недель ----
   // Подпись справа «всего 16» убрана: это была сумма по восьми показанным
@@ -2120,7 +2227,7 @@ function renderStatsBlock(){
     const st = new Date(monday); st.setDate(monday.getDate() - w * 7);
     weekBarStarts.push(localISO(st));
   }
-  $('weekBars').innerHTML =
+  coreDollarHook('weekBars').innerHTML =
     `<line x1="2" y1="${base + .5}" x2="298" y2="${base + .5}" stroke="var(--line)" stroke-width="1"/>` +
     counts.map((c, i) => {
       const h = c ? 8 + (base - top) * (c / maxC) : 3;
@@ -2144,27 +2251,27 @@ function renderStatsBlock(){
 function renderStatBadges(){
   // достижение могло открыться и без финального экрана (например, «Неделя по плану»
   // закрывается последней тренировкой недели) — досчитываем здесь же
-  if(earnBadges().length) saveStats();
-  const earned = BADGES.filter(b => hasBadge(b.id));
-  setShown('badgeCard', !!earned.length);
+  if(workoutDataHooks.earnBadges().length) saveStats();
+  const earned = workoutDataHooks.getBadges().filter(b => workoutDataHooks.hasBadge(b.id));
+  coreSetShownHook('badgeCard', !!earned.length);
   if(!earned.length) return;
-  $('badgeNote').textContent = t('stats.badgesCount',{earned:earned.length,total:BADGES.length});
-  const box = $('statBadges');
+  coreDollarHook('badgeNote').textContent = t('stats.badgesCount',{earned:earned.length,total:workoutDataHooks.getBadges().length});
+  const box = coreDollarHook('statBadges');
   box.innerHTML = '';
   earned.forEach(b => {
     const el = document.createElement('button');
     el.type = 'button';
     el.className = 'bdg';
-    el.innerHTML = `<i>${icon(b.ico)}</i><span></span>`;
-    el.querySelector('span').textContent = badgeName(b);
+    el.innerHTML = `<i>${coreIconHook(b.ico)}</i><span></span>`;
+    el.querySelector('span').textContent = workoutDataHooks.badgeName(b);
     // за что выдано — не написано нигде, а название само по себе не объясняет
     el.dataset.act = 'showBadgeInfo';
     el.dataset.badgeId = b.id;
     box.appendChild(el);
   });
-  const next = BADGES.find(b => !hasBadge(b.id));
-  $('badgeNext').textContent = next
-    ? t('stats.nextBadge',{name:badgeName(next),desc:badgeDesc(next).toLowerCase()})
+  const next = workoutDataHooks.getBadges().find(b => !workoutDataHooks.hasBadge(b.id));
+  coreDollarHook('badgeNext').textContent = next
+    ? t('stats.nextBadge',{name:workoutDataHooks.badgeName(next),desc:workoutDataHooks.badgeDesc(next).toLowerCase()})
     : t('stats.allBadges');
 }
 
@@ -2173,7 +2280,7 @@ export function renderCalendar(){
   base.setDate(1);
   base.setMonth(base.getMonth() + calOffset);
   const y = base.getFullYear(), m = base.getMonth();
-  $('calTitle').textContent = new Intl.DateTimeFormat(localeTag(),{month:'long',year:'numeric'}).format(base);
+  coreDollarHook('calTitle').textContent = new Intl.DateTimeFormat(localeTag(),{month:'long',year:'numeric'}).format(base);
   const doneSet = new Set(stats.history.map(h => h.d));
   const todayIso = localISO(new Date());
   const firstDow = (new Date(y, m, 1).getDay() + 6) % 7;
@@ -2191,14 +2298,14 @@ export function renderCalendar(){
   const cut = isCur ? new Date().getDate() : 31;
   const pCnt = stats.history.filter(h => h.d.slice(0,7) === pKey && +h.d.slice(8) <= cut).length;
   const sub = [cnt
-    ? cnt + ' ' + (appLocale === 'ru' ? plural(cnt,t('calendar.workoutOne'),t('calendar.workoutFew'),t('calendar.workoutMany')) : t(cnt===1?'calendar.workoutOne':'calendar.workoutFew'))
+    ? cnt + ' ' + (appLocale === 'ru' ? corePluralHook(cnt,t('calendar.workoutOne'),t('calendar.workoutFew'),t('calendar.workoutMany')) : t(cnt===1?'calendar.workoutOne':'calendar.workoutFew'))
     : t('calendar.noWorkouts')];
   // не «на 2 больше», а прямо два числа: так короче и не нужно доверять моей арифметике
   if(cnt || pCnt){
     const month = new Intl.DateTimeFormat(localeTag(),{month:'long'}).format(pm);
     sub.push(t(isCur ? 'calendar.prevCurrent' : 'calendar.prev',{month,count:pCnt}));
   }
-  $('calSub').textContent = sub.join(' · ');
+  coreDollarHook('calSub').textContent = sub.join(' · ');
 
   const cells = DAYS.map(d => `<div class="cal-cell cal-dow">${canonicalLabel(d)}</div>`);
   for(let i = 0; i < firstDow; i++) cells.push('<div class="cal-cell"></div>');
@@ -2210,7 +2317,7 @@ export function renderCalendar(){
     else if(iso > todayIso) cls.push('fut');
     cells.push(`<div class="${cls.join(' ')}" data-iso="${iso}">${d}</div>`);
   }
-  $('calGrid').innerHTML = cells.join('');
+  coreDollarHook('calGrid').innerHTML = cells.join('');
 }
 
 // Одна запись истории — одна карточка: название программы и строка обычного текста
@@ -2254,15 +2361,15 @@ function sessRow(en, withDate, withStatus){
     (parts.length ? '<p class="sess-line"></p>' : '') +
     (en.note ? '<span class="sess-note"></span>' : '');
   row.querySelector('.sess-head b').textContent = name;
-  if(withDate) row.querySelector('.sess-date').textContent = shortD(en.d);
+  if(withDate) row.querySelector('.sess-date').textContent = progressMediaHooks.shortD(en.d);
   if(parts.length) row.querySelector('.sess-line').textContent = parts.join(' · ');
   if(en.note) row.querySelector('.sess-note').textContent = `«${en.note}»`;
   return row;
 }
 export function openSessions(label, title, entries, emptyText, opts){
-  $('sessLabel').textContent = label;
-  $('sessTitle').textContent = title;
-  const box = $('sessList');
+  coreDollarHook('sessLabel').textContent = label;
+  coreDollarHook('sessTitle').textContent = title;
+  const box = coreDollarHook('sessList');
   box.innerHTML = '';
   // за неделю записи из разных дней — без даты они сливаются в один список
   const multiDay = new Set(entries.map(e => e.d)).size > 1;
@@ -2274,12 +2381,12 @@ export function openSessions(label, title, entries, emptyText, opts){
     p.textContent = emptyText;
     box.appendChild(p);
   }
-  $('sessModal').classList.add('open');
+  coreDollarHook('sessModal').classList.add('open');
 }
 
 export const dayTitle = iso => new Intl.DateTimeFormat(localeTag(),{day:'numeric',month:'long',year:'numeric'}).format(new Date(iso+'T12:00:00'));
 
-export function renderStats(){ renderTotal(); renderStatsBlock(); renderGreeting(); }
+export function renderStats(){ renderTotal(); renderStatsBlock(); programsAiDataHooks.renderGreeting(); }
 
 // планы программы: новые программы хранят plans[], старые — поля верхнего уровня
 // Варианты идут по дню недели, а не по времени добавления: заведя «Пн» после «Сб»,
@@ -2341,16 +2448,16 @@ export function customToProgram(p, planIdx = 0){
   const plan = plans[planIdx] || plans[0];
 
   const mkWork = (ex, setNo, setsTotal, side)=>{
-    const axis = progAxis(ex);          // 'weight' и для формата «вес», и для «повторения и вес»
+    const axis = builderDataHooks.progAxis(ex);          // 'weight' и для формата «вес», и для «повторения и вес»
     const on = axis !== 'none';         // общий тумблер «усложнять со временем»
-    const isWeight = hasWeight(ex);     // формат включает вес — независимо от того, растёт ли он
+    const isWeight = builderDataHooks.hasWeight(ex);     // формат включает вес — независимо от того, растёт ли он
     const isTimeFmt = ex.type === 'time';
     // «повторения и вес» — особый случай: вес и повторы растут НЕЗАВИСИМО друг от друга.
     // Явный 0 в шаге означает «эта конкретная ось у этого упражнения не растёт» — так ИИ
     // или сам человек может решить «поднимаем только вес» или «поднимаем только повторы».
-    const wGrows = on && isWeight && progStepSize(ex, 'weight') > 0;
-    const rGrows = on && !isTimeFmt && progStepSize(ex, 'reps') > 0;
-    const tGrows = on && isTimeFmt && progStepSize(ex, 'time') > 0;
+    const wGrows = on && isWeight && builderDataHooks.progStepSize(ex, 'weight') > 0;
+    const rGrows = on && !isTimeFmt && builderDataHooks.progStepSize(ex, 'reps') > 0;
+    const tGrows = on && isTimeFmt && builderDataHooks.progStepSize(ex, 'time') > 0;
 
     const step = {
       phase:'work', title:ex.name, instruction:ex.desc || '', media:ex.media || null,
@@ -2360,32 +2467,32 @@ export function customToProgram(p, planIdx = 0){
       // рабочий вес: сохранённая ручная поправка + текущие шаги программы поверх базы упражнения.
       // Если формат включает вес, но конкретно вес не растёт (растут только повторы) —
       // показываем зафиксированную базу: цифра всё равно нужна, просто она не меняется сама.
-      weight: isWeight ? (wGrows ? getExProgValue(p.id, ex, p, 'weight') : progBaseValue(ex, 'weight')) : 0,
+      weight: isWeight ? (wGrows ? builderDataHooks.getExProgValue(p.id, ex, p, 'weight') : builderDataHooks.progBaseValue(ex, 'weight')) : 0,
       weightBase: +ex.weight || 0,   // база упражнения (без прогрессии) — для справки в шаге тренировки
       wStep: ex.wStep != null ? +ex.wStep : 2, // != null — иначе явный 0 (не растим вес) подменится дефолтом
       exName: ex.name,
       exId: ex.id || ''  // по id проверка прогресса узнаёт, до каких упражнений дошла тренировка
     };
     // расти дальше некуда, а более сложный вариант задан — на тренировке покажем подсказку
-    if(on && ex.swapOn && (ex.swapName || '').trim() && progAtCeiling(p.id, ex, p)){
+    if(on && ex.swapOn && (ex.swapName || '').trim() && builderDataHooks.progAtCeiling(p.id, ex, p)){
       step.swap = {name: ex.swapName.trim(), desc: (ex.swapDesc || '').trim()};
     }
     if(setsTotal > 1){ step.setNo = setNo; step.setsTotal = setsTotal; }
     if(side){ step.side = side; step.sidesTotal = 2; }
     if(isTimeFmt){
       step.kind = 'timer';
-      step.seconds = tGrows ? getExProgValue(p.id, ex, p, 'time') : parseValue(ex.value).min;
+      step.seconds = tGrows ? builderDataHooks.getExProgValue(p.id, ex, p, 'time') : builderDataHooks.parseValue(ex.value).min;
     } else {
       step.kind = 'click'; step.repsNote = t('workout.repsShort');
       // диапазон повторов сдвигается целиком (и низ, и верх), если повторы растут —
       // не зависит от того, растёт ли ОДНОВРЕМЕННО вес у этого же упражнения
-      step.reps = rGrows ? progressedRepsRange(p.id, ex, p) : normValue(ex.value, 'reps');
+      step.reps = rGrows ? builderDataHooks.progressedRepsRange(p.id, ex, p) : builderDataHooks.normValue(ex.value, 'reps');
     }
     return step;
   };
   // короткая пауза на смену стороны между половинами упражнения
   const mkSideSwitch = ()=> ({
-    kind:'timer', phase:'rest', title:t('workout.switchSide'), seconds: Math.max(3, sideSec),
+    kind:'timer', phase:'rest', title:t('workout.switchSide'), seconds: Math.max(3, coreSideSecHook()),
     instruction:t('workout.switchSideInstruction'), illo:'rest', sideSwitch:true
   });
   const mkRest = sec => ({kind:'timer', phase:'rest', title:t('workout.rest'), seconds:sec, instruction:t('workout.restInstruction'), illo:'rest'});
@@ -2401,7 +2508,7 @@ export function customToProgram(p, planIdx = 0){
   warmEx.forEach(ex =>{
     const sets = Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
     const twoSides = ex.type === 'time' && ex.perSide;
-    const restAfter = exRestAfter(ex);
+    const restAfter = builderDataHooks.exRestAfter(ex);
     for(let n = 1; n <= sets; n++){
       const add = st => { st.isWarmup = true; warmup.push(st); };
       if(twoSides){
@@ -2424,7 +2531,7 @@ export function customToProgram(p, planIdx = 0){
     const sets = Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
     const isLastEx = i === mainEx.length - 1;
     const twoSides = ex.type === 'time' && ex.perSide; // на время и на каждую сторону
-    const restAfter = exRestAfter(ex);
+    const restAfter = builderDataHooks.exRestAfter(ex);
     for(let s = 1; s <= sets; s++){
       if(twoSides){
         // каждая сторона отрабатывается полностью, между ними — пауза на смену
@@ -2516,12 +2623,12 @@ export function setWellMetricShared(value){ wellMetric = value; return wellMetri
 export function initDataSync(){
   registerAction('editProfileFromList', (btn, event) => {
     event.stopPropagation();
-    if(btn.dataset.userId) openUserEdit(btn.dataset.userId);
+    if(btn.dataset.userId) accountDataHooks.openUserEdit(btn.dataset.userId);
   });
   registerAction('openOrSwitchProfile', btn => {
     const id = btn.dataset.userId;
     if(!id) return;
-    if(id === currentUser) openUserEdit(id);
+    if(id === currentUser) accountDataHooks.openUserEdit(id);
     else switchUser(id);
   });
   registerAction('toggleWellHistoryDelete', btn => {
@@ -2529,13 +2636,13 @@ export function initDataSync(){
     if(row) row.classList.toggle('del');
   });
   registerAction('showBadgeInfo', btn => {
-    const badge = BADGES.find(x => x.id === btn.dataset.badgeId);
-    if(badge) appAlert(`«${badgeName(badge)}» — ${badgeDesc(badge).toLowerCase()}.`);
+    const badge = workoutDataHooks.getBadges().find(x => x.id === btn.dataset.badgeId);
+    if(badge) coreAlertHook(`«${workoutDataHooks.badgeName(badge)}» — ${workoutDataHooks.badgeDesc(badge).toLowerCase()}.`);
   });
   registerAction('openSessionProgram', btn => {
     const id = btn.dataset.programId;
     const plan = parseInt(btn.dataset.planIdx, 10);
-    if(id) openDayProgram(id, Number.isFinite(plan) ? plan : -1);
+    if(id) programsAiDataHooks.openDayProgram(id, Number.isFinite(plan) ? plan : -1);
   });
   window.addEventListener('error',e=>{
     reportClientError('error',e&&e.error,e&&e.message).catch(()=>{});
@@ -2545,16 +2652,16 @@ export function initDataSync(){
     reportClientError('rejection',r,r==null?'unhandled rejection':String(r)).catch(()=>{});
   });
   window.addEventListener('online', ()=>{
-    if(account && account.email && account.syncToken && isPremium()){
+    if(accountState() && accountState().email && accountState().syncToken && accountDataHooks.isPremium()){
       connectAccountSync().catch(()=> showSyncState('error'));
     }
   });
   // неделя целиком: что было пройдено с понедельника по воскресенье того столбика
-  $('weekBars').addEventListener('click', e => {
+  coreDollarHook('weekBars').addEventListener('click', e => {
     // колонку считаем по координате нажатия, а не по элементу: столбик бывает высотой
     // в три пикселя, а поверх него ещё лежат число и подпись — попасть в сам прямоугольник
     // пальцем нельзя. Кликабельна вся колонка целиком, вместе с цифрой и подписью.
-    const box = $('weekBars').getBoundingClientRect();
+    const box = coreDollarHook('weekBars').getBoundingClientRect();
     if(!box.width) return;
     const i = Math.max(0, Math.min(7, Math.floor((e.clientX - box.left) / (box.width / 8))));
     const startIso = weekBarStarts[i];
@@ -2567,7 +2674,7 @@ export function initDataSync(){
     const title = new Intl.DateTimeFormat(localeTag(),{day:'numeric',month:'short'}).format(start) + ' — ' + new Intl.DateTimeFormat(localeTag(),{day:'numeric',month:'short'}).format(end);
     openSessions(t('sessions.weekLabel'), title, entries, t('sessions.weekEmpty'));
   });
-  $('calGrid').addEventListener('click', e => {
+  coreDollarHook('calGrid').addEventListener('click', e => {
     const cell = e.target.closest('.cal-cell.done');
     if(!cell || !cell.dataset.iso) return;
     const iso = cell.dataset.iso;

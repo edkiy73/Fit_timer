@@ -18,7 +18,7 @@ import { DAYS, calOffset, clearSession, closeAllMenus, connectAccountSync, curUs
   renderUsers, renderWeight, renderWellness, savePrograms, saveSession, saveStats, saveUsers,
   saveWell, saveWellHist, sessionAgeText, sessionForProgram, sessionWorkout, setCalOffsetShared,
   setCurrentUserShared, setUsersShared, setWeightMetricShared, setWellMetricShared, showSyncState,
-  stats, syncNotificationPrefsServer, toggleMenu, trackInstallOnce, trackProductEvent, users,
+  setDataSyncEventHooks, stats, syncNotificationPrefsServer, toggleMenu, trackInstallOnce, trackProductEvent, users,
   workStepChoices
 } from './10-data-sync.js';
 import { account, bioDisable, bioEnable, bioSupported, bumpAccountMeta, completePurchase,
@@ -27,7 +27,7 @@ import { account, bioDisable, bioEnable, bioSupported, bumpAccountMeta, complete
   priceTable, readAccountBucket, refreshServerSubscription, rememberAccount, renderPlan,
   renderPremium, saveAccount, saveKnown, saveUser, setBioOKShared, setLoginDoneShared,
   setLoginFixedEmailShared, setLoginPendingShared, setPendingSubShared, signOut, syncAccountLocale,
-  syncUserForm, tryUnlock, uDraft, userCurrency, userDirty, wipeAccount, writeAccountBucket
+  setAccountEventHooks, syncUserForm, tryUnlock, uDraft, userCurrency, userDirty, wipeAccount, writeAccountBucket
 } from './20-account.js';
 import { LIM, addPhoto, clampLine, clampText, cleanLink, delCmpPhoto, deleteAllPhotos, ensureWarmup,
   exportAllData, finishOnboardingCreate, importAllData, loadPhotos, openCompare, openWeightHist,
@@ -42,13 +42,13 @@ import { AI_SOURCES, aiClientVerdict, aiSrc, aiUiText, apiPost, applyProgression
   openEditAI, openExAI, openExEdAI, openImages, openYouTube, premiumGate, programToText,
   pushProfile, refreshTrainerProfile, renderGreeting, renderSlots, renderToday, renderTray,
   saveClients, saveTrainer, setClientIdxShared, setClientsShared, setCoachPhotoDraftShared,
-  setExImg, setImgTrayShared, setTrainerShared, setupAIAnswer, shrinkAll, slotTarget, trainer,
+  setExImg, setImgTrayShared, setProgramsEventHooks, setTrainerShared, setupAIAnswer, shrinkAll, slotTarget, trainer,
   trainerAccountReady, trainerOn, trayAutoAssign, trayUsed, versionedName, wipeTrainerInfo,
   youtubePrompt, ytCheckUrl
 } from './40-programs-ai.js';
 import { addClient, curClient, doPublish, loadStoreServer, openClient, openMyCatalog, openStore,
   openStoreItem, openTrainer, pubDraft, pubFrom, renderClients, renderMine, renderStore,
-  renderStoreFilters, renderTrainerCard, sendProgramToClient, siItem, storeCountText, storeFilter,
+  renderStoreFilters, renderTrainerCard, sendProgramToClient, setTrainerEventHooks, siItem, storeCountText, storeFilter,
   storeFrom, tpFrom
 } from './50-trainer-catalog.js';
 import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExerciseAsNew,
@@ -58,12 +58,12 @@ import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExe
   renderProgControls, saveProgram, setExDraftShared, setExIdxShared, setExIsNewShared,
   setExOrigShared, setPlanIdxShared, shrinkImage, syncCover, syncExDetailsSum, syncExNowHints,
   syncExProgSum, syncExType, syncExWarm, syncRotateUI
-} from './60-builder.js';
+, setBuilderEventHooks } from './60-builder.js';
 import { afterExChange, applyProgCheck, autoGrow, backToWorkout, buildSteps, closeSwapHint, esc,
   completeStep, exFromWork, finishPartialWorkout, nextStep, openSwapHint, prevStep, refreshDetailsFade, saveExToWorkout,
   setPause, settleQuickFinish, shareResult, skipStep, startWorkout, stopSpeech, swapViaAI, tearDownWorkout,
   toggleProgCheckList
-} from './70-workout.js';
+, setWorkoutEventHooks } from './70-workout.js';
 import { SR, applyThemeFor, checkSchedules, hfHintText, hfMode, recognitionLang, setHfMode, setHfModeShared,
   setPlatformEventHooks, setRecognitionLangShared, setVoiceWantedShared, startHandsFree, startListening, stopHandsFree,
   stopListening, syncHandsFreeUI, syncNativeNotifications, syncPrefs
@@ -2008,6 +2008,53 @@ function resetSkipConfirm(){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initEvents(){
+  setBuilderEventHooks({
+    buildExMenu,
+    delCurrentPlan,
+    markBuilderTab,
+    openLegal,
+    syncImagesSum,
+    syncSettingsSum
+  });
+  setWorkoutEventHooks({
+    aiRunClose,
+    getAiRunCtl: () => aiRunCtl,
+    aiRunOpen
+  });
+  setProgramsEventHooks({
+    addExManual,
+    aiRunClose,
+    getAiRunCtl: () => aiRunCtl,
+    aiRunNote,
+    aiRunOpen,
+    buildAiMenu,
+    copyEditPrompt,
+    exaCopyPrompt,
+    exeCopyPrompt,
+    openPremium,
+    openStats,
+    syncSettingsSum,
+    ytApplyResult,
+    ytCopyPrompt,
+    ytGuard
+  });
+  setTrainerEventHooks({
+    openPremium
+  });
+  setAccountEventHooks({
+    applyAudioFromUser,
+    readTimings,
+    syncRemotePushRegistration,
+    unregisterRemotePushServer
+  });
+  setDataSyncEventHooks({
+    getNotificationPrefsKey: () => NOTIFICATION_PREFS_KEY,
+    getNotificationPrefDefaults: () => NOTIFICATION_PREF_DEFAULTS,
+    applyAudioFromUser,
+    getNotificationPrefs,
+    syncNotificationSettings,
+    syncSettingsForm
+  });
   setCoreEventHooks({
     applyAudioFromUser,
     fillLiveSoundCascade,

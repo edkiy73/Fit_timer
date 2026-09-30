@@ -523,6 +523,20 @@ Product-side conversion continues chunk by chunk:
 - ✅ 2026-09-26: the product runtime is real ES modules; the generated `app.js` is gone. Each part `src/app/NN-*.js` imports exactly the names it uses (from other parts, `src/i18n/index.js`, `src/app/options.js`, the `00-dependencies.js` adapters) and exports what others use. Its top level only declares: the load-time wiring (listeners, handlers, timers, `appRuntimeCompat.setBuild`) moved verbatim into an exported `init*()` function, and `src/app/index.js` calls the ten init functions in the original part order, so startup order is unchanged. Constant tables read at load time by several parts (`OPT_*`, `MUSCLES`) moved to the leaf module `src/app/options.js`, which makes the cyclic imports between parts safe. Conversion was a lossless TypeScript-checker codemod (every source line preserved). esbuild now rejects any cross-module reassignment, so `tests/chunk-ownership-unit.js` is replaced by `tests/app-module-graph-unit.js` (declaration-only top level, no load-time reads across parts, no forgotten imports, entry calls every init in order). The CI-only test bridge (`scripts/test-bridge.mjs`) is appended per module by an esbuild plugin;
 - next (optional): shrink the `set<Name>Shared()` setters by moving state next to the code that changes it, and move browser tests from internal-binding stubs to behavior-level assertions so the test bridge can shrink.
 
+### Product graph cleanup status (2026-10-01)
+
+The product ESM graph is now fully acyclic:
+- the former SCC spanning `00-core` through `90-events` was dismantled incrementally with explicit owner hook boundaries;
+- `tests/app-module-graph-unit.js` now checks the **entire product import graph is a DAG**, in addition to the existing direction-specific regression guards;
+- the current compatibility surface is **41 hook-boundary setters** (`set*Hooks`) and **38 shared-state setters** (`set*Shared`).
+
+Audit conclusion:
+- do **not** remove hook boundaries just to reduce their count; they are currently the dependency-inversion mechanism that keeps the graph acyclic;
+- the better cleanup target is raw `set*Shared` mutation. When a related feature is touched, prefer moving the mutation into the owning module behind a semantic operation instead of exporting a raw state setter;
+- highest-value candidates are the single-consumer setters concentrated in event/platform/account UI wiring (audio/voice settings, login draft state, theme/hands-free state), because their ownership can usually be made clearer without changing persistence or protocols;
+- builder draft/exercise setters remain intentionally shared for now: they have several real consumers across program AI, workout and event flows, so replacing them should be done only together with a focused builder-state API;
+- the browser-test bridge remains the other Phase 13 cleanup target. Convert tests from internal binding mutation/stubbing to UI/public behavior as those tests are touched, then shrink the bridge from measured usage rather than deleting it wholesale.
+
 ## Phase 14 — Dependency rules
 
 Automate:

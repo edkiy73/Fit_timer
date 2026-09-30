@@ -8,26 +8,98 @@ import { $, DUMBBELL_ICON, appAlert, appDialog, asTab, defaultPlanIdx, estimated
 } from './00-core.js';
 import { DAYS, DAY_FULL, accountAuth, calcStreakInfo, curUser, currentUser, customPrograms,
   dayTitle, identity, kvDel, kvGet, kvSet, localISO, newId, normPlans, openSessions, pk, planDays,
-  profileAge, progActive, programDaysUnion, queueAccountSync, savePrograms, stats, streakWord,
+  profileAge, progActive, programDaysUnion, queueAccountSync, savePrograms, setDataSyncProgramsAiHooks, stats, streakWord,
   trackProductEvent, users, wellAvg
 } from './10-data-sync.js';
-import { account, bumpAccountMeta, isPremium, readAccountBucket, writeAccountBucket } from './20-account.js';
+import { account, bumpAccountMeta, isPremium, readAccountBucket, setAccountProgramsAiHooks, writeAccountBucket } from './20-account.js';
+
+let trainerProgramsHooks = {
+  renderMine: () => {},
+  renderTrainerCard: () => {},
+  snapshotEx: () => null,
+  storeCountText: (n, type) => `${n} ${type}`
+};
+export function setProgramsTrainerHooks(hooks = {}){
+  trainerProgramsHooks = {...trainerProgramsHooks, ...hooks};
+}
+
+let builderProgramsHooks = {
+  getMaxMain: () => 20,
+  getMaxWarm: () => 20,
+  msgAiEmpty: () => t('ai.emptyAnswer'),
+  msgAiNoEx: () => t('ai.noExerciseResponse'),
+  msgAiParse: () => t('ai.parseProgramFailed'),
+  advanceExerciseProgression: ex => ex,
+  aiCreateProgramGuard: () => true,
+  aiExerciseBlocks: () => [],
+  aiPrompt: () => '',
+  carryExerciseProgress: (_oldEx, newEx) => newEx,
+  copyPrompt: async () => {},
+  curPlan: () => null,
+  getDraft: () => null,
+  ensurePs: ex => ex,
+  exRestAfter: () => 0,
+  exSummary: () => '',
+  fillBuilder: () => {},
+  fmtKg: v => String(v == null ? '' : v),
+  fullAIPrompt: () => '',
+  getExProgValue: () => 0,
+  getExWeight: () => 0,
+  hasWeight: () => false,
+  importFromText: () => {},
+  isDualProg: () => false,
+  migrateLegacyDualRangeExercise: () => false,
+  openBuilder: () => {},
+  openExercise: () => {},
+  parseProgramText: () => null,
+  progAxis: () => 'none',
+  progressedRepsRange: () => '',
+  qChips: () => {},
+  renderExList: () => {},
+  setDraftShared: v => v,
+  setPlanIdxShared: v => v,
+  shrinkImage: (_file, _maxSide, cb) => { if(cb) cb(null); },
+  valueText: v => String(v == null ? '' : v)
+};
+export function setProgramsBuilderHooks(hooks = {}){
+  builderProgramsHooks = {...builderProgramsHooks, ...hooks};
+}
+const builderDraft = () => builderProgramsHooks.getDraft();
+
+let workoutProgramsHooks = {
+  afterExChange: async () => {},
+  autoGrow: () => {},
+  backToWorkout: () => {},
+  esc: v => String(v == null ? '' : v),
+  getExFromWork: () => false
+};
+export function setProgramsWorkoutHooks(hooks = {}){
+  workoutProgramsHooks = {...workoutProgramsHooks, ...hooks};
+}
+
+let eventProgramsHooks = {
+  addExManual: () => {},
+  aiRunClose: () => {},
+  getAiRunCtl: () => null,
+  aiRunNote: () => {},
+  aiRunOpen: () => {},
+  buildAiMenu: () => {},
+  copyEditPrompt: async () => {},
+  exaCopyPrompt: async () => {},
+  exeCopyPrompt: async () => {},
+  openPremium: () => {},
+  openStats: () => {},
+  syncSettingsSum: () => {},
+  ytApplyResult: async () => {},
+  ytCopyPrompt: async () => {},
+  ytGuard: async () => false
+};
+export function setProgramsEventHooks(hooks = {}){
+  eventProgramsHooks = {...eventProgramsHooks, ...hooks};
+}
 import { LIM, clampLine, clampNum, clampText, cleanLink, cleanPic, photos,
-  sanitizeProgram, shareGeneratedFile, uniqueExerciseIds
+  sanitizeProgram, setProgressProgramsHooks, shareGeneratedFile, uniqueExerciseIds
 } from './30-progress-media.js';
-import { renderMine, renderTrainerCard, snapshotEx, storeCountText } from './50-trainer-catalog.js';
-import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_NOEX, MSG_AI_PARSE, advanceExerciseProgression,
-  aiCreateProgramGuard, aiExerciseBlocks, aiPrompt, carryExerciseProgress, copyPrompt, curPlan,
-  draft, ensurePs, exRestAfter, exSummary, fillBuilder, fmtKg, fullAIPrompt, getExProgValue,
-  getExWeight, hasWeight, importFromText, isDualProg, migrateLegacyDualRangeExercise, openBuilder, openExercise, parseProgramText,
-  progAxis, progressedRepsRange, qChips, renderExList, setDraftShared, setPlanIdxShared,
-  shrinkImage, valueText
-} from './60-builder.js';
-import { afterExChange, autoGrow, backToWorkout, esc, exFromWork } from './70-workout.js';
-import { addExManual, aiRunClose, aiRunCtl, aiRunNote, aiRunOpen, buildAiMenu, copyEditPrompt,
-  exaCopyPrompt, exeCopyPrompt, openPremium, openStats, syncSettingsSum, ytApplyResult,
-  ytCopyPrompt, ytGuard
-} from './90-events.js';
 
 /* ================= ПРОГРЕССИЯ НАГРУЗКИ ================= */
 // Раз в progression ТРЕНИРОВОК ЭТОГО УПРАЖНЕНИЯ рабочая нагрузка растёт на свой
@@ -75,7 +147,7 @@ export function applyProgressionAll(){
 // progression) + progStepsAdj, читался на лету) на состояние у каждого
 // упражнения (ex.ps.cur) — см. docs/ai-edit-progression-plan.md, пачка 3.
 // Работает один раз на программу (p.psMigrated): текущая нагрузка КАЖДОГО
-// упражнения прогоняется через advanceExerciseProgression() ровно столько раз,
+// упражнения прогоняется через builderProgramsHooks.advanceExerciseProgression() ровно столько раз,
 // сколько шагов у него уже фактически накопилось по СТАРОЙ формуле — так все
 // ограничения (потолок, двойная прогрессия) применяются как всегда, а не
 // переносятся смещением. ex.value/ex.weight (база) не трогаем: если человек ещё
@@ -96,10 +168,10 @@ function applyPerExerciseProgressionMigration(){
     normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
       const progFrom = Math.max(0, Math.round(+ex.progFrom || 0));
       delete ex.progFrom;
-      if(ex.warmup || progAxis(ex) === 'none') return;
-      ensurePs(ex).n = done % p.progression;
+      if(ex.warmup || builderProgramsHooks.progAxis(ex) === 'none') return;
+      builderProgramsHooks.ensurePs(ex).n = done % p.progression;
       const exSteps = Math.max(0, oldProgramSteps - progFrom);
-      for(let i = 0; i < exSteps; i++) advanceExerciseProgression(ex);
+      for(let i = 0; i < exSteps; i++) builderProgramsHooks.advanceExerciseProgression(ex);
     }));
   });
   return changed;
@@ -119,7 +191,7 @@ function applyDualRangeProgressionMigration(){
   let changed = false;
   customPrograms.forEach(p => {
     normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
-      if(migrateLegacyDualRangeExercise(ex)) changed = true;
+      if(builderProgramsHooks.migrateLegacyDualRangeExercise(ex)) changed = true;
     }));
   });
   return changed;
@@ -159,8 +231,8 @@ export function renderGreeting(){
   $('greetName').textContent = hi;
   // аватарка: фото, первая буква имени или иконка — то же правило, что в профиле
   $('greetAva').innerHTML = (u && u.photo)
-    ? `<img src="${esc(u.photo)}" alt="">`
-    : (name ? esc(name[0].toUpperCase()) : icon('user'));
+    ? `<img src="${workoutProgramsHooks.esc(u.photo)}" alt="">`
+    : (name ? workoutProgramsHooks.esc(name[0].toUpperCase()) : icon('user'));
   const box = $('greetChips');
   box.innerHTML = '';
   const chip = o => box.appendChild(makeChip(o));
@@ -593,10 +665,10 @@ export function renderToday(){
         const plansR = normPlans(p);
         bits.push(t('today.variant',{current:plansR.indexOf(plan)+1,total:plansR.length}));
       }
-      bits.push(storeCountText(plan.exercises.length,'exercise'));
+      bits.push(trainerProgramsHooks.storeCountText(plan.exercises.length,'exercise'));
       // силовая (подходы у упражнений) — показываем подходы, круговая — круги
-      if(plan.rounds > 1) bits.push(storeCountText(plan.rounds,'round'));
-      else if(setsTotal > plan.exercises.length) bits.push(storeCountText(setsTotal,'set'));
+      if(plan.rounds > 1) bits.push(trainerProgramsHooks.storeCountText(plan.rounds,'round'));
+      else if(setsTotal > plan.exercises.length) bits.push(trainerProgramsHooks.storeCountText(setsTotal,'set'));
       const planTime = plan.time || p.time;
       if(planTime) bits.push(planTime);
       list.appendChild(todayRow({
@@ -685,7 +757,7 @@ export async function duplicateProgram(p){
   copy.stats = {completions: 0};
   customPrograms.push(copy);
   await savePrograms();
-  renderMine();
+  trainerProgramsHooks.renderMine();
   return copy;
 }
 
@@ -911,7 +983,7 @@ export async function refreshTrainerProfile(){
     trainer.years = remote.years == null ? null : remote.years;
     trainer.pageErr = null;
     await saveTrainer({remote:true});
-    if(show._last === 'scrAccount') renderTrainerCard();
+    if(show._last === 'scrAccount') trainerProgramsHooks.renderTrainerCard();
     return true;
   }catch(e){
     return false;
@@ -982,7 +1054,7 @@ export async function wipeTrainerInfo(){
   }
   ['name', 'photo', 'about', 'years', 'links'].forEach(k => { delete trainer[k]; });
   await saveTrainer();
-  renderTrainerCard();
+  trainerProgramsHooks.renderTrainerCard();
   appAlert(t('trainer.removeInfoDone'));
 }
 
@@ -1081,7 +1153,7 @@ export async function importProgramFile(file){
     sanitizeProgram(prog);      // файл мог написать кто угодно и чем угодно
     customPrograms.push(prog);
     await savePrograms();
-    renderMine();
+    trainerProgramsHooks.renderMine();
     appAlert(t('share.programAdded',{name:prog.name}));
   }catch(e){
     appAlert(t('share.readFileFailed',{error:e && e.message ? e.message : t('common.unknownError')}));
@@ -1223,7 +1295,7 @@ export async function callGemini(prompt, signal){
     if(round > 0){
       // ждём перед новым кругом: 4с, потом 10с — обычно перегрузка проходит за это время
       const waitMs = round === 1 ? 4000 : 10000;
-      if(typeof aiRunNote === 'function') aiRunNote(t('ai.busyRetry',{seconds:Math.round(waitMs/1000),attempt:round+1,total:ROUNDS}));
+      eventProgramsHooks.aiRunNote(t('ai.busyRetry',{seconds:Math.round(waitMs/1000),attempt:round+1,total:ROUNDS}));
       await new Promise(res => setTimeout(res, waitMs));
       if(signal && signal.aborted) throw Object.assign(new Error('aborted'), {name: 'AbortError'});
     }
@@ -1319,7 +1391,7 @@ async function callServerAI(prompt, signal, kind){
 // нажатие либо работает, либо показывает, что даёт подписка и сколько стоит.
 export function premiumGate(){
   if(isPremium()) return true;
-  openPremium();
+  eventProgramsHooks.openPremium();
   return false;
 }
 
@@ -1410,15 +1482,15 @@ export const AI_SOURCES = {
     step2: 'Шаг 2 · Как собрать',
     self: 'Собрать за меня',
     selfTitle: 'Собираю программу',
-    guard: ()=> aiCreateProgramGuard(),
+    guard: ()=> builderProgramsHooks.aiCreateProgramGuard(),
     chatNote: ['chat', 'Приложение подготовит задание для нейросети. Передай его в чат, ответ вставь сюда. Дольше, зато бесплатно.'],
     answerHint: 'Вставь ответ нейросети целиком — программа откроется в конструкторе.',
     action: 'Собрать программу из ответа',
-    prompt: ()=> fullAIPrompt(),
-    copy:   ()=> copyPrompt(),
-    apply:  ()=> importFromText(),
+    prompt: ()=> builderProgramsHooks.fullAIPrompt(),
+    copy:   ()=> builderProgramsHooks.copyPrompt(),
+    apply:  ()=> builderProgramsHooks.importFromText(),
     dirty: ['qNote', 'qContext', 'aiResult'],
-    manual: ()=> openBuilder(),
+    manual: ()=> builderProgramsHooks.openBuilder(),
     back:  ()=> goTab('scrPrograms')
   },
   video: {
@@ -1431,15 +1503,15 @@ export const AI_SOURCES = {
     step2: 'Шаг 2 · Как разобрать',
     self: 'Разобрать за меня',
     selfTitle: 'Разбираю видео',
-    guard: ()=> ytGuard(),
+    guard: ()=> eventProgramsHooks.ytGuard(),
     chatNote: ['alert', 'Видео умеет смотреть не каждый чат — нужен тот, у кого есть доступ в интернет.'],
     answerHint: 'Вставь ответ нейросети целиком — программа откроется в конструкторе.',
     action: 'Собрать программу из ответа',
     prompt: ()=> youtubePrompt(),
-    copy:   ()=> ytCopyPrompt(),
-    apply:  ()=> ytApplyResult(),
+    copy:   ()=> eventProgramsHooks.ytCopyPrompt(),
+    apply:  ()=> eventProgramsHooks.ytApplyResult(),
     dirty: ['ytUrl', 'ytWish', 'aiResult'],
-    manual: ()=> openBuilder(),
+    manual: ()=> builderProgramsHooks.openBuilder(),
     back:  ()=> goTab('scrPrograms')
   },
   edit: {
@@ -1459,10 +1531,10 @@ export const AI_SOURCES = {
     answerHint: 'Вставь ответ нейросети целиком — получится изменённая копия. Старая программа останется.',
     action: 'Создать изменённую программу',
     prompt: ()=> editAIPrompt(),
-    copy:   ()=> copyEditPrompt(),
+    copy:   ()=> eventProgramsHooks.copyEditPrompt(),
     apply:  ()=> createEditedProgram(),
     dirty: ['eaWish', 'aiResult'],
-    manual: ()=> editAIProg ? openBuilder(editAIProg.id) : goTab('scrPrograms'),
+    manual: ()=> editAIProg ? builderProgramsHooks.openBuilder(editAIProg.id) : goTab('scrPrograms'),
     back:  ()=> goTab('scrPrograms')
   },
   exNew: {
@@ -1480,10 +1552,10 @@ export const AI_SOURCES = {
     answerHint: 'Вставь ответ нейросети целиком — упражнение добавится в конец программы.',
     action: 'Добавить в программу',
     prompt: ()=> exaPrompt(),
-    copy:   ()=> exaCopyPrompt(),
+    copy:   ()=> eventProgramsHooks.exaCopyPrompt(),
     apply:  ()=> exaAddExercise(),
     dirty: ['exaWish', 'exaContext', 'aiResult'],
-    manual: ()=> addExManual(),
+    manual: ()=> eventProgramsHooks.addExManual(),
     back:  ()=> goBackTo('scrBuilder')
   },
   exEdit: {
@@ -1501,12 +1573,12 @@ export const AI_SOURCES = {
     answerHint: 'Вставь ответ нейросети целиком — приложение возьмёт из него всё, что нашлось.',
     action: 'Применить изменения',
     prompt: ()=> exePrompt(),
-    copy:   ()=> exeCopyPrompt(),
+    copy:   ()=> eventProgramsHooks.exeCopyPrompt(),
     apply:  ()=> applyExEdit(),
     dirty: ['exeWish', 'aiResult'],
     manual: ()=> {
       const keep = exeIdx;
-      if(keep >= 0 && curPlan().exercises[keep]) openExercise(keep);
+      if(keep >= 0 && builderProgramsHooks.curPlan().exercises[keep]) builderProgramsHooks.openExercise(keep);
       else exitExAI();
     },
     back:  ()=> exitExAI()
@@ -1517,7 +1589,7 @@ export const AI_SOURCES = {
 // оттуда, иначе в конструктор. Раньше отсюда всегда уводило в конструктор — и
 // тренировка, идущая прямо сейчас, оставалась брошенной.
 function exitExAI(){
-  if(exFromWork) backToWorkout(false);
+  if(workoutProgramsHooks.getExFromWork()) workoutProgramsHooks.backToWorkout(false);
   else goBackTo('scrBuilder');
 }
 
@@ -1571,7 +1643,7 @@ export function openAI(key){
   // меню действий есть только там, где есть с чем действовать: у правки
   // существующего упражнения
   setShown('aiMenuWrap', key === 'exEdit');
-  if(key === 'exEdit') buildAiMenu();
+  if(key === 'exEdit') eventProgramsHooks.buildAiMenu();
   setShown('aiSubject', !!c.subject);
   setShown('aiCopyFull', !!c.copyFull);
 
@@ -1719,8 +1791,8 @@ function imageStaticExercise(item){
 
 function imageProgramContext(){
   const parts = [
-    draft && draft.goal, draft && draft.cat, draft && draft.category,
-    draft && draft.name, draft && draft.desc
+    builderDraft() && builderDraft().goal, builderDraft() && builderDraft().cat, builderDraft() && builderDraft().category,
+    builderDraft() && builderDraft().name, builderDraft() && builderDraft().desc
   ];
   uniqueProgramExercises().slice(0, 12).forEach(ex => {
     parts.push(ex.name);
@@ -1843,12 +1915,12 @@ function coverImagePrompt(name, genderTxt){
 function imageProgramName(){
   const field = $('bName');
   if(field && field.value != null) return String(field.value).trim();
-  return String(draft && draft.name || '').trim();
+  return String(builderDraft() && builderDraft().name || '').trim();
 }
 
 function unnamedImageExerciseCount(){
   let count = 0;
-  ((draft && draft.plans) || []).forEach(pl => (pl.exercises || []).forEach(ex => {
+  ((builderDraft() && builderDraft().plans) || []).forEach(pl => (pl.exercises || []).forEach(ex => {
     if(!String(ex && ex.name || '').trim()) count++;
   }));
   return count;
@@ -1905,12 +1977,12 @@ export async function generateAllImagesViaAI(scope){
   const exList = uniqueProgramExercises().filter(ex => {
     if(scope !== 'missing') return true;
     const key = ex.name.toLowerCase();
-    return !(draft.plans || []).some(pl => (pl.exercises || []).some(e2 =>
+    return !(builderDraft().plans || []).some(pl => (pl.exercises || []).some(e2 =>
       (e2.name || '').trim().toLowerCase() === key &&
       e2.media && e2.media.kind === 'img' && e2.media.data
     ));
   });
-  const makeCover = scope !== 'missing' || !draft.cover;
+  const makeCover = scope !== 'missing' || !builderDraft().cover;
   const total = (makeCover ? 1 : 0) + exList.length;
   if(!total){ appAlert(t('images.nothingMissing')); return; }
 
@@ -1924,7 +1996,7 @@ export async function generateAllImagesViaAI(scope){
   if(!ok) return;
 
   imgGenCancelled = false;
-  aiRunOpen(t('images.generating'), ()=>{ imgGenCancelled = true; });
+  eventProgramsHooks.aiRunOpen(t('images.generating'), ()=>{ imgGenCancelled = true; });
 
   const failed = [];
   let done = 0;
@@ -1934,7 +2006,7 @@ export async function generateAllImagesViaAI(scope){
     $('aiRunTitle').textContent = t('images.progress',{current:done+1,total});
     $('aiRunText').textContent = kind === 'cover' ? t('images.coverProgram') : item.name;
     try{
-      const raw = await callGeminiImage(singleImagePrompt(kind, item), aiRunCtl ? aiRunCtl.signal : undefined,
+      const raw = await callGeminiImage(singleImagePrompt(kind, item), eventProgramsHooks.getAiRunCtl() ? eventProgramsHooks.getAiRunCtl().signal : undefined,
         kind === 'cover' ? 'image.cover' : 'image.exercise');
       await new Promise(res => shrinkDataUrl(raw, 640, data => {
         if(data){
@@ -1954,18 +2026,18 @@ export async function generateAllImagesViaAI(scope){
   };
 
   if(makeCover){
-    if(!(await runOne('cover', null, data => { draft.cover = data; }))){ aiRunClose(); await finishImgGen(done, total, failed); return; }
+    if(!(await runOne('cover', null, data => { builderDraft().cover = data; }))){ eventProgramsHooks.aiRunClose(); await finishImgGen(done, total, failed); return; }
   }
   for(const ex of exList){
     const go = await runOne('ex', ex, data => {
       // применяем ко всем упражнениям с этим именем во всех вариантах — не платим за копию дважды
-      (draft.plans || []).forEach(pl => (pl.exercises || []).forEach(e2 => {
+      (builderDraft().plans || []).forEach(pl => (pl.exercises || []).forEach(e2 => {
         if((e2.name || '').trim().toLowerCase() === ex.name.toLowerCase()) setExImg(e2, data);
       }));
     });
     if(!go) break;
   }
-  aiRunClose();
+  eventProgramsHooks.aiRunClose();
   await finishImgGen(done, total, failed);
 }
 
@@ -1985,22 +2057,22 @@ export async function generateOneImageViaAI(kind, item, title, apply){
   if(!premiumGate()) return false;
   if(!imageGenerationGuard(kind, item)) return false;
   imgGenCancelled = false;
-  aiRunOpen(t('images.generating'), ()=>{ imgGenCancelled = true; });
+  eventProgramsHooks.aiRunOpen(t('images.generating'), ()=>{ imgGenCancelled = true; });
   $('aiRunTitle').textContent = t('images.progress',{current:1,total:1});
   $('aiRunText').textContent = title;
   try{
-    const raw = await callGeminiImage(singleImagePrompt(kind, item), aiRunCtl ? aiRunCtl.signal : undefined,
+    const raw = await callGeminiImage(singleImagePrompt(kind, item), eventProgramsHooks.getAiRunCtl() ? eventProgramsHooks.getAiRunCtl().signal : undefined,
       kind === 'cover' ? 'image.cover' : 'image.exercise');
     let applied = false;
     await new Promise(res => shrinkDataUrl(raw, 640, data => {
       if(data){ apply(data); applied = true; }
       res();
     }));
-    aiRunClose();
+    eventProgramsHooks.aiRunClose();
     if(!applied) appAlert(t('images.loadFailed'));
     return applied;
   }catch(e){
-    aiRunClose();
+    eventProgramsHooks.aiRunClose();
     if(imgGenCancelled) return false;
     const retry = await appDialog(
       t('ai.runFailed',{error:(e && e.message ? e.message : t('common.unknownError'))}) + '\n\n' + t('ai.retryQuestion'),
@@ -2016,7 +2088,7 @@ export async function generateSlotImageViaAI(){
   if(!s) return;
   let kind = 'cover', item = null;
   if(s.kind === 'ex'){
-    const pl = (draft.plans || [])[s.plan];
+    const pl = (builderDraft().plans || [])[s.plan];
     const ex = pl && pl.exercises ? pl.exercises[s.idx] : null;
     if(!ex) return;
     kind = 'ex';
@@ -2052,7 +2124,7 @@ async function finishImgGen(done, total, failed){
 // уникальные упражнения программы: без повторов между вариантами, с описанием и мышцами
 function uniqueProgramExercises(){
   const seen = new Map(); // ключ — имя в нижнем регистре
-  (draft.plans || []).forEach(pl => (pl.exercises || []).forEach(ex => {
+  (builderDraft().plans || []).forEach(pl => (pl.exercises || []).forEach(ex => {
     const name = (ex.name || '').trim();
     if(!name) return;
     const key = name.toLowerCase();
@@ -2071,7 +2143,7 @@ function uniqueProgramExercises(){
 export function imagesPromptText(){
   const u = curUser();
   const genderTxt = imageGenderText(u);
-  const name = (draft.name || '').trim() || 'Workout program';
+  const name = (builderDraft().name || '').trim() || 'Workout program';
   const exList = uniqueProgramExercises();
   const L = [
     'Generate a coherent image set for the Fit Timer fitness app.',
@@ -2098,7 +2170,7 @@ export function shrinkAll(files, maxSide, done){
   let i = 0;
   const next = ()=>{
     if(i >= files.length){ done(out); return; }
-    shrinkImage(files[i++], maxSide, data => { if(data) out.push(data); next(); });
+    builderProgramsHooks.shrinkImage(files[i++], maxSide, data => { if(data) out.push(data); next(); });
   };
   next();
 }
@@ -2124,8 +2196,8 @@ export function openImages(){
   window.scrollTo(0, 0);
 }
 export function closeImages(){
-  renderExList();
-  syncSettingsSum();
+  builderProgramsHooks.renderExList();
+  eventProgramsHooks.syncSettingsSum();
   goBackTo(imagesFrom === 'scrImages' ? 'scrBuilder' : imagesFrom);
 }
 
@@ -2154,7 +2226,7 @@ export function renderTray(){
     const el = document.createElement('div');
     const isUsed = used.has(data);
     el.className = 'tray-item' + (isUsed ? ' used' : '');
-    el.innerHTML = `<img src="${esc(data)}" alt="">` +
+    el.innerHTML = `<img src="${workoutProgramsHooks.esc(data)}" alt="">` +
       (isUsed ? '' : `<button type="button" class="ti-x">${icon('close')}</button>`);
     const x = el.querySelector('.ti-x');
     if(x){
@@ -2168,8 +2240,8 @@ export function renderTray(){
 
 // все места, куда можно подставить картинку
 export function imageSlots(){
-  const slots = [{kind:'cover',group:t('images.cover'),title:t('images.coverProgram'),get:()=>draft.cover,set:v=>draft.cover=v}];
-  const plans = draft.plans || [];
+  const slots = [{kind:'cover',group:t('images.cover'),title:t('images.coverProgram'),get:()=>builderDraft().cover,set:v=>builderDraft().cover=v}];
+  const plans = builderDraft().plans || [];
   plans.forEach((pl, pi)=>{
     (pl.exercises || []).forEach((ex, ei)=>{
       slots.push({
@@ -2200,7 +2272,7 @@ export function renderSlots(){
     const row = document.createElement('div');
     row.className = 'slot-row';
     row.innerHTML =
-      `<div class="sl-thumb">${cur ? `<img src="${esc(cur)}" alt="">` : DUMBBELL_ICON}</div>` +
+      `<div class="sl-thumb">${cur ? `<img src="${workoutProgramsHooks.esc(cur)}" alt="">` : DUMBBELL_ICON}</div>` +
       `<div class="sl-body"><b></b><small class="${cur ? 'has' : ''}">${cur ? 'картинка есть' : 'нет картинки'}</small></div>`;
     row.querySelector('b').textContent = s.title;
     row.dataset.act = 'openImageSlot';
@@ -2220,7 +2292,7 @@ function openSlotPicker(i){
   imgTray.forEach(data =>{
     const el = document.createElement('div');
     el.className = 'tray-item' + (data === cur ? ' act' : '');
-    el.innerHTML = `<img src="${esc(data)}" alt="">`;
+    el.innerHTML = `<img src="${workoutProgramsHooks.esc(data)}" alt="">`;
     el.dataset.act = 'assignTrayImageToSlot';
     el.dataset.trayIdx = String(imgTray.indexOf(data));
     box.appendChild(el);
@@ -2257,7 +2329,7 @@ export let exeIdx = -1; // индекс правимого упражнения
 // планка с блином, вис с утяжелителем).
 function exFormatLine(ex){
   const axis = ex.type === 'time' ? 'время' : 'повторения';
-  return 'ФОРМАТ: ' + (hasWeight(ex) ? axis + ' и вес' : axis);
+  return 'ФОРМАТ: ' + (builderProgramsHooks.hasWeight(ex) ? axis + ' и вес' : axis);
 }
 // ОТДЫХ — между подходами (как раньше). Вторую строку, «после упражнения»,
 // пишем только когда она реально отличается: у большинства упражнений отдых
@@ -2265,7 +2337,7 @@ function exFormatLine(ex){
 // запасного варианта (exRestAfter) — не нужно засорять текст повтором.
 function exRestLines(ex){
   const L = ['ОТДЫХ: ' + (ex.rest || 0)];
-  const after = exRestAfter(ex);
+  const after = builderProgramsHooks.exRestAfter(ex);
   if(after !== (+ex.rest || 0)) L.push('ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: ' + after);
   return L;
 }
@@ -2277,25 +2349,25 @@ function exProgToLines(ex, opts){
   // при forEdit (opts.program задан) показываем текущий прогрессированный вес,
   // а не базу — см. exCurrentValueText/programToText выше
   const p = opts && opts.program;
-  const weightNow = p ? getExWeight(p.id, ex, p) : (+ex.weight || 0);
-  const L = ['УСЛОЖНЯТЬ: ' + (progAxis(ex) === 'none' ? 'нет' : 'да')];
+  const weightNow = p ? builderProgramsHooks.getExWeight(p.id, ex, p) : (+ex.weight || 0);
+  const L = ['УСЛОЖНЯТЬ: ' + (builderProgramsHooks.progAxis(ex) === 'none' ? 'нет' : 'да')];
   // ВЕС: 0 — не «пустое место», а значимое «снаряд ещё не выбран» (см.
   // weightPending() в 60-builder.js): раньше строку пропускали при нуле, и
   // формат «повторения и вес» без выбранного снаряда терял ВЕС из протокола
   // вовсе, а прогрессия молча копилась поверх несуществующей базы.
-  if(hasWeight(ex)) L.push('ВЕС: ' + fmtKg(weightNow));
-  if(progAxis(ex) !== 'none'){
-    if(hasWeight(ex)){
+  if(builderProgramsHooks.hasWeight(ex)) L.push('ВЕС: ' + builderProgramsHooks.fmtKg(weightNow));
+  if(builderProgramsHooks.progAxis(ex) !== 'none'){
+    if(builderProgramsHooks.hasWeight(ex)){
       if(ex.type === 'time'){
         L.push('ШАГ ВРЕМЕНИ: ' + (ex.timeStep != null ? ex.timeStep : 5));
-        L.push('ШАГ ВЕСА: ' + fmtKg(ex.wStep != null ? ex.wStep : 2));
+        L.push('ШАГ ВЕСА: ' + builderProgramsHooks.fmtKg(ex.wStep != null ? ex.wStep : 2));
         if(+ex.timeMax > 0) L.push('ПОТОЛОК ВРЕМЕНИ: ' + ex.timeMax);
-        if(+ex.weightMax > 0) L.push('ПОТОЛОК ВЕСА: ' + fmtKg(ex.weightMax));
+        if(+ex.weightMax > 0) L.push('ПОТОЛОК ВЕСА: ' + builderProgramsHooks.fmtKg(ex.weightMax));
       } else {
         L.push('ШАГ ПОВТОРОВ: ' + (ex.repsStep != null ? ex.repsStep : 1));
-        L.push('ШАГ ВЕСА: ' + fmtKg(ex.wStep != null ? ex.wStep : 2));
+        L.push('ШАГ ВЕСА: ' + builderProgramsHooks.fmtKg(ex.wStep != null ? ex.wStep : 2));
         if(+ex.repsMax > 0) L.push('ПОТОЛОК ПОВТОРОВ: ' + ex.repsMax);
-        if(+ex.weightMax > 0) L.push('ПОТОЛОК ВЕСА: ' + fmtKg(ex.weightMax));
+        if(+ex.weightMax > 0) L.push('ПОТОЛОК ВЕСА: ' + builderProgramsHooks.fmtKg(ex.weightMax));
         if(ex.dualProg) L.push('ПРИ ПОТОЛКЕ: да');
       }
     } else if(ex.type === 'time'){
@@ -2321,7 +2393,7 @@ export function exerciseToText(ex){
   if(mus.length) L.push('МЫШЦЫ: ' + mus.join(', '));
   if((ex.mistakes || '').trim()) L.push('ОШИБКИ: ' + ex.mistakes.replace(/\s*\n+\s*/g, ' ').trim());
   L.push(exFormatLine(ex));
-  L.push('ЗНАЧЕНИЕ: ' + valueText(ex.value).replace('–', '-'));
+  L.push('ЗНАЧЕНИЕ: ' + builderProgramsHooks.valueText(ex.value).replace('–', '-'));
   L.push('ПОДХОДЫ: ' + (parseInt(ex.sets) || 1));
   if(ex.perSide) L.push('СТОРОНА: да');
   if(ex.warmup) L.push('РАЗМИНКА: да');
@@ -2332,13 +2404,13 @@ export function exerciseToText(ex){
 }
 
 export function openExEdAI(i){
-  const ex = curPlan().exercises[i];
+  const ex = builderProgramsHooks.curPlan().exercises[i];
   if(!ex) return;
   exeIdx = i;
   $('aiSubjName').textContent = (ex.name || '').trim() || t('common.exerciseFallback');
-  $('aiSubjSum').textContent = exSummary(ex);
+  $('aiSubjSum').textContent = builderProgramsHooks.exSummary(ex);
   $('exeWish').value = '';
-  autoGrow($('exeWish'));
+  workoutProgramsHooks.autoGrow($('exeWish'));
   openAI('exEdit');
 }
 
@@ -2348,11 +2420,11 @@ export function aiClientVerdict(kind, raw, opts){
   const verdict = FitAIProtocol.validateResponse(kind, raw);
   if(!verdict.ok){
     const miss = (verdict.missing || []).slice(0,6).join(', ');
-    appAlert(MSG_AI_PARSE() + (miss ? '\n\n' + t('ai.parseProblems') + '\n— ' + miss : ''));
+    appAlert(builderProgramsHooks.msgAiParse() + (miss ? '\n\n' + t('ai.parseProblems') + '\n— ' + miss : ''));
     return null;
   }
   if(opts && opts.expectedCount != null && verdict.count != null && verdict.count !== opts.expectedCount){
-    appAlert(MSG_AI_PARSE());
+    appAlert(builderProgramsHooks.msgAiParse());
     return null;
   }
   return verdict.text;
@@ -2368,54 +2440,54 @@ export function exAnswerFormat(locale){
 }
 
 export function exePrompt(){
-  const ex=curPlan().exercises[exeIdx];
+  const ex=builderProgramsHooks.curPlan().exercises[exeIdx];
   const wish=clampText($('exeWish').value,LIM.wish);
   return [
     'Edit exactly ONE home-workout exercise.',
     'Return exactly ONE complete exercise block and nothing else: no Markdown and no explanation.',
     FitAIProtocol.editRules(),
-    'USER: '+userForAI(draft&&draft.locale),
+    'USER: '+userForAI(builderDraft()&&builderDraft().locale),
     'REQUEST: '+wish,
     '=== CURRENT EXERCISE ===\n'+exerciseToText(ex),
-    exAnswerFormat(draft&&draft.locale)
+    exAnswerFormat(builderDraft()&&builderDraft().locale)
   ].join('\n\n');
 }
 
 async function applyExEdit(){
   const raw=($('aiResult').value||'').trim();
-  if(!raw){appAlert(MSG_AI_EMPTY());return;}
-  const list=curPlan().exercises;
+  if(!raw){appAlert(builderProgramsHooks.msgAiEmpty());return;}
+  const list=builderProgramsHooks.curPlan().exercises;
   const oldEx=list[exeIdx];
   if(!oldEx){goBackTo('scrBuilder');return;}
   // ровно один блок — правка не имеет права тихо расплодиться в два упражнения
-  const candidateBlocks=aiExerciseBlocks(raw);
-  if(candidateBlocks.length!==1){appAlert(MSG_AI_NOEX());return;}
+  const candidateBlocks=builderProgramsHooks.aiExerciseBlocks(raw);
+  if(candidateBlocks.length!==1){appAlert(builderProgramsHooks.msgAiNoEx());return;}
   // Ответ ИИ используется как есть; carryExerciseFields лишь подставляет описание/
   // мышцы/ошибки/видео из старого блока, если ИИ их не вернул — раньше здесь был
   // позиционный merge всех полей, который не давал ИИ ни убрать, ни переставить строку.
   const merged=FitAIProtocol.carryExerciseFields(exerciseToText(oldEx),candidateBlocks[0].lines.join('\n'));
   if(!aiClientVerdict('exercise.modify', merged, {expectedCount:1})) return;
   const wrapped='ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n'+merged;
-  const {program}=parseProgramText(wrapped);
+  const {program}=builderProgramsHooks.parseProgramText(wrapped);
   const got=(program.plans&&program.plans[0]&&program.plans[0].exercises)||[];
-  if(got.length!==1){appAlert(MSG_AI_NOEX());return;}
+  if(got.length!==1){appAlert(builderProgramsHooks.msgAiNoEx());return;}
   const upd=got[0];
   if(!upd.media&&oldEx.media)upd.media=oldEx.media;
   // это правка, а не замена: то же самое упражнение сохраняет свой id, а
   // прогресс — если ИИ не менял его базовые числа (см. carryExerciseProgress)
   upd.id=oldEx.id;
-  carryExerciseProgress(oldEx, upd);
+  builderProgramsHooks.carryExerciseProgress(oldEx, upd);
   list[exeIdx]=upd;
   // запрос тоже очищаем: пока в нём был текст, экран считался несохранённым,
   // и возврат назад молча не срабатывал — человек оставался на «Через ИИ»
   $('aiResult').value='';
   $('exeWish').value='';
-  if(exFromWork) await afterExChange();
+  if(workoutProgramsHooks.getExFromWork()) await workoutProgramsHooks.afterExChange();
   else{
     // показываем результат там, где его видно и можно сразу поправить руками
-    renderExList();
+    builderProgramsHooks.renderExList();
     const keep=exeIdx;
-    asTab(()=> openExercise(keep));
+    asTab(()=> builderProgramsHooks.openExercise(keep));
   }
   appAlert(t('ai.exerciseUpdated',{name:upd.name||t('common.exerciseFallback')}));
 }
@@ -2454,10 +2526,10 @@ function exaChips(){
     };
   }
   sel.value = String(exa.count || 1);
-  qChips('exaFormat', EXA_OPTS.format, false, ()=> exa.format, v => exa.format = v);
-  qChips('exaLevel', EXA_OPTS.level, false, ()=> exa.level, v => exa.level = v);
-  qChips('exaEquip', EXA_OPTS.equip, true, ()=> exa.equip, v => exa.equip = v);
-  qChips('exaMuscles', MUSCLES.map(m => m[1]), true, ()=> exa.muscles, v => exa.muscles = v);
+  builderProgramsHooks.qChips('exaFormat', EXA_OPTS.format, false, ()=> exa.format, v => exa.format = v);
+  builderProgramsHooks.qChips('exaLevel', EXA_OPTS.level, false, ()=> exa.level, v => exa.level = v);
+  builderProgramsHooks.qChips('exaEquip', EXA_OPTS.equip, true, ()=> exa.equip, v => exa.equip = v);
+  builderProgramsHooks.qChips('exaMuscles', MUSCLES.map(m => m[1]), true, ()=> exa.muscles, v => exa.muscles = v);
 }
 
 export function openExAI(){
@@ -2465,8 +2537,8 @@ export function openExAI(){
   $('exaWish').value = '';
   $('exaContext').value = '';
   exaChips();
-  autoGrow($('exaWish'));
-  autoGrow($('exaContext'));
+  workoutProgramsHooks.autoGrow($('exaWish'));
+  workoutProgramsHooks.autoGrow($('exaContext'));
   openAI('exNew');
 }
 
@@ -2505,7 +2577,7 @@ export function exaPrompt(){
   const task=many
     ? `Create exactly ${cnt} different home-workout exercises. Return exactly ${cnt} separate exercise blocks, each beginning with "УПРАЖНЕНИЕ:", separated by a blank line. Do not duplicate exercises. Return nothing else.`
     : 'Create exactly one home-workout exercise. Return exactly one exercise block and nothing else.';
-  let req='USER: '+userForAI(draft&&draft.locale)+'\nREQUEST: '+(wish||'(No specific request. Suggest a useful exercise that fits the user.)');
+  let req='USER: '+userForAI(builderDraft()&&builderDraft().locale)+'\nREQUEST: '+(wish||'(No specific request. Suggest a useful exercise that fits the user.)');
   const context=clampText(($('exaContext')&&$('exaContext').value)||'',600).trim();
   if(context){
     req+='\nUSER CAPABILITIES / LIMITATIONS CONTEXT: '+context+
@@ -2513,28 +2585,28 @@ export function exaPrompt(){
   }
   if(given.length)req+='\n'+given.join(' ');
   if(free.length)req+='\nDecide these unspecified items yourself using sensible training logic: '+free.join('; ')+'.';
-  return [task,req,exAnswerFormat(draft&&draft.locale)].join('\n\n');
+  return [task,req,exAnswerFormat(builderDraft()&&builderDraft().locale)].join('\n\n');
 }
 
 async function exaAddExercise(){
   const raw = ($('aiResult').value || '').trim();
-  if(!raw){ appAlert(MSG_AI_EMPTY()); return; }
+  if(!raw){ appAlert(builderProgramsHooks.msgAiEmpty()); return; }
   const checkedRaw = aiClientVerdict('exercise.create', raw);
   if(!checkedRaw) return;
   // оборачиваем в минимальную программу, чтобы переиспользовать основной парсер
   const wrapped = 'ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + checkedRaw;
-  const {program, errors} = parseProgramText(wrapped);
+  const {program, errors} = builderProgramsHooks.parseProgramText(wrapped);
   const list = (program.plans && program.plans[0] && program.plans[0].exercises) || [];
   if(!list.length){
-    appAlert(MSG_AI_NOEX());
+    appAlert(builderProgramsHooks.msgAiNoEx());
     return;
   }
-  const target = curPlan().exercises;
+  const target = builderProgramsHooks.curPlan().exercises;
   const nWarm = target.filter(e => e.warmup).length;
   let nMain = target.length - nWarm;
   let added = 0;
   for(const ex of list){
-    if(ex.warmup ? nWarm + added >= MAX_WARM : nMain >= MAX_MAIN) break;
+    if(ex.warmup ? nWarm + added >= builderProgramsHooks.getMaxWarm() : nMain >= builderProgramsHooks.getMaxMain()) break;
     target.push(ex);
     if(!ex.warmup) nMain++;
     added++;
@@ -2542,7 +2614,7 @@ async function exaAddExercise(){
   if(!added){ appAlert(t('exercise.addLimit')); return; }
   $('aiResult').value = '';
   if($('exaContext')) $('exaContext').value = '';
-  renderExList();
+  builderProgramsHooks.renderExList();
   // Успешное применение завершает режим ИИ. Builder уже лежит под экраном ИИ,
   // поэтому именно ВОЗВРАЩАЕМСЯ к нему и ждём popstate. Простая замена текущей
   // записи делала два Builder подряд, из-за чего следующий Back оставался в Builder.
@@ -2566,7 +2638,7 @@ export function youtubePrompt(){
   const yt = parseYouTubeUrl($('ytUrl').value);
   const wish = clampText($('ytWish').value, LIM.wish);
   const link = yt ? yt.url : ($('ytUrl').value || '').trim();
-  return aiPrompt() +
+  return builderProgramsHooks.aiPrompt() +
     '\n\n=== TASK: BUILD A PROGRAM FROM A VIDEO ===\n' +
     'Analyze the workout at the link and convert it into the protocol above.\n' +
     'VIDEO URL: ' + link + '\n' +
@@ -2586,7 +2658,7 @@ export function youtubePrompt(){
 export function openYouTube(){
   $('ytUrl').value = '';
   $('ytWish').value = '';
-  autoGrow($('ytWish'));
+  workoutProgramsHooks.autoGrow($('ytWish'));
   openAI('video');
 }
 
@@ -2608,14 +2680,14 @@ export let editAIProg = null; // программа-исходник
 // пользователя к исходным цифрам — а если отдать текущее и принять его как
 // новую базу, продолжение идёт ровно с той точки, на которой человек остановился.
 function exCurrentValueText(p, ex){
-  if(ex.type === 'time') return String(getExProgValue(p.id, ex, p, 'time'));
+  if(ex.type === 'time') return String(builderProgramsHooks.getExProgValue(p.id, ex, p, 'time'));
   // Двойная прогрессия хранит исходный диапазон как точку сброса после прибавки
   // веса. Поэтому при AI-правке отдаём исходную базу, а текущий выросший диапазон
   // переносится отдельно через ex.ps (carryExerciseProgress). Иначе безобидная
   // правка отдыха превратила бы текущие 12-14 в новый старт и после +веса уже не
   // вернула бы пользователя к исходным 8-10.
-  if(isDualProg(ex)) return valueText(ex.value).replace('–', '-');
-  return progressedRepsRange(p.id, ex, p).replace('–', '-');
+  if(builderProgramsHooks.isDualProg(ex)) return builderProgramsHooks.valueText(ex.value).replace('–', '-');
+  return builderProgramsHooks.progressedRepsRange(p.id, ex, p).replace('–', '-');
 }
 
 // программа → текст того же формата, который понимает парсер
@@ -2652,7 +2724,7 @@ export function programToText(p, opts){
       if(mus.length) L.push('МЫШЦЫ: ' + mus.join(', '));
       if((ex.mistakes || '').trim()) L.push('ОШИБКИ: ' + ex.mistakes.replace(/\s*\n+\s*/g, ' ').trim());
       L.push(exFormatLine(ex));
-      L.push('ЗНАЧЕНИЕ: ' + (forEdit ? exCurrentValueText(p, ex) : valueText(ex.value).replace('–', '-')));
+      L.push('ЗНАЧЕНИЕ: ' + (forEdit ? exCurrentValueText(p, ex) : builderProgramsHooks.valueText(ex.value).replace('–', '-')));
       // всегда, даже при 1 подходе: ИИ повторяет формат исходника, и без строки
       // возвращал программу без ПОДХОДЫ вовсе
       L.push('ПОДХОДЫ: ' + (parseInt(ex.sets) || 1));
@@ -2668,7 +2740,7 @@ export function programToText(p, opts){
 
 export function editAIPrompt(){
   const wish=clampText($('eaWish').value,LIM.wish);
-  return aiPrompt((editAIProg&&editAIProg.locale)||appLocale)+
+  return builderProgramsHooks.aiPrompt((editAIProg&&editAIProg.locale)||appLocale)+
     '\n\n=== TASK: EDIT AN EXISTING PROGRAM ===\n'+
     'Apply the requested changes and return the COMPLETE program in the same machine-readable protocol.\n'+
     FitAIProtocol.editRules()+'\n'+
@@ -2691,9 +2763,9 @@ export function openEditAI(p){
   $('aiSubjName').textContent = p.name || t('program.fallback');
   const plans = normPlans(p);
   const exN = plans.reduce((n, pl) => n + pl.exercises.length, 0);
-  $('aiSubjSum').textContent = (plans.length>1?storeCountText(plans.length,'variant')+' · ':'') + storeCountText(exN,'exercise');
+  $('aiSubjSum').textContent = (plans.length>1?trainerProgramsHooks.storeCountText(plans.length,'variant')+' · ':'') + trainerProgramsHooks.storeCountText(exN,'exercise');
   $('eaWish').value = '';
-  autoGrow($('eaWish'));
+  workoutProgramsHooks.autoGrow($('eaWish'));
   openAI('edit');
 }
 
@@ -2734,7 +2806,7 @@ function carryMedia(oldProg, newProg, diff){
 // у двойной прогрессии ИИ видит исходный диапазон, а не текущее число): тогда
 // переносится и ps.cur, иначе повторы двойной прогрессии откатывались к началу.
 function carryProgressCounters(diff){
-  diff.matches.forEach(({oldEx, newEx}) => { carryExerciseProgress(oldEx, newEx); });
+  diff.matches.forEach(({oldEx, newEx}) => { builderProgramsHooks.carryExerciseProgress(oldEx, newEx); });
 }
 
 // Описание, мышцы, ошибки и видео у сопоставленного упражнения, которые ИИ не
@@ -2784,22 +2856,22 @@ function editSummaryText(diff, oldProg, newProg){
 
 async function createEditedProgram(){
   const raw = ($('aiResult').value || '').trim();
-  if(!raw){ appAlert(MSG_AI_EMPTY()); return; }
+  if(!raw){ appAlert(builderProgramsHooks.msgAiEmpty()); return; }
   // Ответ ИИ принимается как есть — свобода добавлять/убирать/переставлять
   // упражнения теперь в промте (FitAIProtocol.editRules), а не в клиенте через
   // regex-угадайку «structural» и принудительный merge старой структуры.
   const checkedRaw = aiClientVerdict('program.modify', raw);
   if(!checkedRaw) return;
-  const {program, errors} = parseProgramText(checkedRaw);
+  const {program, errors} = builderProgramsHooks.parseProgramText(checkedRaw);
   if(errors.length){
-    appAlert(MSG_AI_PARSE() + '\n\n' + t('ai.parseProblems') + '\n— ' + errors.join('\n— '));
+    appAlert(builderProgramsHooks.msgAiParse() + '\n\n' + t('ai.parseProblems') + '\n— ' + errors.join('\n— '));
     return;
   }
   // жёсткая проверка итога: программа не развалилась на пустые варианты — иначе
   // за «улучшением» на деле нет тренировки
   const newPlans = normPlans(program);
   if(!newPlans.length || newPlans.some(pl => !(pl.exercises || []).length)){
-    appAlert(MSG_AI_PARSE());
+    appAlert(builderProgramsHooks.msgAiParse());
     return;
   }
   const diff = FitAIProtocol.diffPrograms({plans: normPlans(editAIProg)}, {plans: newPlans});
@@ -2822,7 +2894,7 @@ async function createEditedProgram(){
 
   customPrograms.push(program);
   await savePrograms();
-  renderMine();
+  trainerProgramsHooks.renderMine();
   $('aiResult').value = '';
   goTab('scrPrograms');
   appAlert(t('program.createdEdited',{name:program.name}) + editSummaryText(diff, editAIProg, program));
@@ -2893,7 +2965,7 @@ export function carryLinkedProgramState(existing, incoming){
     // без id, сохраняем уже выданный локальный id — иначе каждое обновление снова
     // делало бы упражнение «новым» для сессий, отчётов и прогрессии.
     if(!newEx.id && oldEx && oldEx.id) newEx.id = oldEx.id;
-    carryExerciseProgress(oldEx, newEx);
+    builderProgramsHooks.carryExerciseProgress(oldEx, newEx);
   });
   return incoming;
 }
@@ -2920,14 +2992,14 @@ export async function importProgramLink(id){
   if(existing) carryLinkedProgramState(existing, prog);
   sanitizeProgram(prog);        // пришло по сети — значит, могло прийти любым
   // Снимок присланного — чтобы потом было видно, что подопечный в нём поменял.
-  prog.origEx = snapshotEx(prog);
+  prog.origEx = trainerProgramsHooks.snapshotEx(prog);
   if(d.by) prog.by = d.by;
   if(d.byLink) prog.byLink = d.byLink;
-  setDraftShared(prog);
-  draft.plans = JSON.parse(JSON.stringify(normPlans(draft)));
-  delete draft.exercises; delete draft.rounds; delete draft.roundRest; delete draft.days;
-  setPlanIdxShared(0);
-  fillBuilder(t('import.reviewSave'));
+  builderProgramsHooks.setDraftShared(prog);
+  builderDraft().plans = JSON.parse(JSON.stringify(normPlans(builderDraft())));
+  delete builderDraft().exercises; delete builderDraft().rounds; delete builderDraft().roundRest; delete builderDraft().days;
+  builderProgramsHooks.setPlanIdxShared(0);
+  builderProgramsHooks.fillBuilder(t('import.reviewSave'));
   // Говорим ОДИН РАЗ и ЗАРАНЕЕ: тренер будет видеть занятия по этой программе.
   // Отчёты уходят сами, и узнавать об этом постфактум человек не должен —
   // согласие на «за мной смотрят» даётся до, а не после.
@@ -2975,12 +3047,12 @@ export function importProgramCode(code){
   prog.id = 'p' + Date.now();
   prog.stats = {completions: 0};
   sanitizeProgram(prog);        // код можно собрать руками, и собирают
-  setDraftShared(prog);
-  draft.plans = JSON.parse(JSON.stringify(normPlans(draft)));
-  delete draft.exercises; delete draft.rounds; delete draft.roundRest; delete draft.days;
-  setPlanIdxShared(0);
+  builderProgramsHooks.setDraftShared(prog);
+  builderDraft().plans = JSON.parse(JSON.stringify(normPlans(builderDraft())));
+  delete builderDraft().exercises; delete builderDraft().rounds; delete builderDraft().roundRest; delete builderDraft().days;
+  builderProgramsHooks.setPlanIdxShared(0);
   $('importModal').classList.remove('open');
-  fillBuilder(t('import.reviewSave'));
+  builderProgramsHooks.fillBuilder(t('import.reviewSave'));
 }
 
 /* ================= СЕРВЕРНАЯ ЧАСТЬ =================
@@ -3169,6 +3241,37 @@ export function setTrainerShared(value){ trainer = value; return trainer; }
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initProgramsAi(){
+  setProgressProgramsHooks({
+    ageError,
+    renderToday
+  });
+  setAccountProgramsAiHooks({
+    getApiBase: () => API_BASE,
+    ageError,
+    apiPost,
+    getClients: () => clients,
+    forgetMe,
+    loadTrainer,
+    mailErrText,
+    normHandle,
+    saveClients,
+    saveTrainer,
+    setTrainerShared,
+    syncGeminiBtns,
+    getTrainer: () => trainer
+  });
+  setDataSyncProgramsAiHooks({
+    apiFetch,
+    applyProgressionAll,
+    getClients: () => clients,
+    loadTrainer,
+    openDayProgram,
+    renderGreeting,
+    setClientsShared,
+    setTrainerShared,
+    getTrainer: () => trainer,
+    weekPlanInfo
+  });
   setCoreProgramsAiHooks({
     getActiveAiDirty: () => {
       const source = AI_SOURCES[aiSrc];
@@ -3185,7 +3288,7 @@ export function initProgramsAi(){
   registerAction('showDynamicInfo', btn => {
     if(btn.dataset.info) appAlert(btn.dataset.info);
   });
-  registerAction('openBodyStats', () => openStats('weight'));
+  registerAction('openBodyStats', () => eventProgramsHooks.openStats('weight'));
   registerAction('openProgramsTab', () => goTab('scrPrograms'));
   registerAction('openTodayProgram', btn => {
     const p = customPrograms.find(x => String(x.id) === btn.dataset.programId);

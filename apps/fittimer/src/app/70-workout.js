@@ -5,24 +5,46 @@ import { registerAction } from './05-actions.js';
 import { $, DUMBBELL_ICON, ILLO, announceExercise, announceRemaining, announceRest, appAlert,
   appDialog, beep, endSignal, exerciseGong, fanfare, goBackTo, goTab, gong, haptic, hideReadyBar,
   icon, initAudio, keepAwake, plural, prepSec, readySec, releaseWake, roundDone, runReadyBar,
-  setShown, show, soundOn, speak, state, tick, voiceIsEnglish, voiceVol, workoutLoadSnapshot
+  setCoreWorkoutHooks, setShown, show, soundOn, speak, state, tick, voiceIsEnglish, voiceVol, workoutLoadSnapshot
 } from './00-core.js';
 import { calcStreak, calcStreakInfo, clearSession, closeAllMenus, curUser, customPrograms,
   customToProgram, localISO, newId, normPlans, progActive, renderStats, savePrograms, saveSession,
-  saveStats, stats, streakWord, toggleMenu, trackProductEvent, users
+  saveStats, setDataSyncWorkoutHooks, stats, streakWord, toggleMenu, trackProductEvent, users
 } from './10-data-sync.js';
-import { LIM, clampText, photos, shareGeneratedFile } from './30-progress-media.js';
-import { aiClientVerdict, callGemini, exAnswerFormat, exerciseToText, premiumGate, userForAI,
+import { setAccountWorkoutHooks } from './20-account.js';
+import { LIM, clampText, photos, setProgressWorkoutHooks, shareGeneratedFile } from './30-progress-media.js';
+import { aiClientVerdict, callGemini, exAnswerFormat, exerciseToText, premiumGate, setProgramsWorkoutHooks, userForAI,
   weekPlanInfo
 } from './40-programs-ai.js';
-import { autoReport, renderMine, storeCountText } from './50-trainer-catalog.js';
+import { autoReport, renderMine, setTrainerWorkoutHooks, storeCountText } from './50-trainer-catalog.js';
+
+let platformWorkoutHooks = {
+  getHfMode: () => 'off',
+  startHandsFree: () => {},
+  stopHandsFree: () => {},
+  getSyncNativeNotifications: () => null
+};
+export function setWorkoutPlatformHooks(hooks = {}){
+  platformWorkoutHooks = {...platformWorkoutHooks, ...hooks};
+}
+function workoutSyncNativeNotifications(){
+  const fn = platformWorkoutHooks.getSyncNativeNotifications();
+  return typeof fn === 'function' ? fn() : undefined;
+}
+
+let eventWorkoutHooks = {
+  aiRunClose: () => {},
+  getAiRunCtl: () => null,
+  aiRunOpen: () => {}
+};
+export function setWorkoutEventHooks(hooks = {}){
+  eventWorkoutHooks = {...eventWorkoutHooks, ...hooks};
+}
 import { advanceExerciseProgression, commitExercise, curPlan, draft, ensurePs, exIdx, fmtKg,
   liveExercise, normalizeExercise, openExercise, parseProgramText, progAtCeiling, progAxis,
-  renderExList, setDraftShared, setExDraftShared, setExIdxShared, setExIsNewShared, setExOrigShared,
+  renderExList, setBuilderWorkoutHooks, setDraftShared, setExDraftShared, setExIdxShared, setExIsNewShared, setExOrigShared,
   setPlanIdxShared, valueText
 } from './60-builder.js';
-import { hfMode, startHandsFree, stopHandsFree, syncNativeNotifications } from './80-platform.js';
-import { aiRunClose, aiRunCtl, aiRunOpen } from './90-events.js';
 
 /* ================= СБОРКА ШАГОВ ================= */
 export function buildSteps(){
@@ -188,7 +210,7 @@ export function setPause(p, silent){
   // В режиме голосовых команд не озвучиваем сам факт паузы: нативный TTS
   // временно глушит микрофон, из-за чего «Продолжить» сразу после паузы терялось.
   // Экран уже явно показывает паузу; в остальных режимах старое голосовое подтверждение остаётся.
-  if(p && !silent && hfMode !== 'voice') speak(voiceIsEnglish() ? 'Paused' : 'Пауза');
+  if(p && !silent && platformWorkoutHooks.getHfMode() !== 'voice') speak(voiceIsEnglish() ? 'Paused' : 'Пауза');
   paintPause();
 }
 // Красная плашка и кнопка ВСЕГДА рисуются по state.paused и никогда — мимо него.
@@ -240,7 +262,7 @@ export function startWorkout(fromIdx, elapsed, options){
     });
   }
   show('scrWork');
-  startHandsFree();
+  platformWorkoutHooks.startHandsFree();
   // отсчёт 5..1 перед стартом
   const ov = $('prepOverlay');
   $('prepTitle').textContent = state.current.title;
@@ -817,12 +839,12 @@ export async function swapViaAI(){
   const oldId = String(src.ex.id || src.step.exId || '');
   const oldName = src.ex.name;
   closeSwapHint();
-  aiRunOpen(t('workout.swapPicking'));
+  eventWorkoutHooks.aiRunOpen(t('workout.swapPicking'));
   let text;
   try{
-    text = await callGemini(swapAIPrompt(src.ex, src.step.swap, src.p && src.p.locale), aiRunCtl ? aiRunCtl.signal : undefined, 'exercise.replace');
+    text = await callGemini(swapAIPrompt(src.ex, src.step.swap, src.p && src.p.locale), eventWorkoutHooks.getAiRunCtl() ? eventWorkoutHooks.getAiRunCtl().signal : undefined, 'exercise.replace');
   }catch(e){
-    aiRunClose();
+    eventWorkoutHooks.aiRunClose();
     if(e && (e.name === 'AbortError' || /abort/i.test(e.message || ''))) return; // отменили — молча
     const retry = await appDialog(
       t('workout.aiNoResponse',{error:(e && e.message ? e.message : t('common.unknownError'))}) + '\n\n' + t('ai.retryQuestion'),
@@ -831,7 +853,7 @@ export async function swapViaAI(){
     if(retry) return swapViaAI();
     return;
   }
-  aiRunClose();
+  eventWorkoutHooks.aiRunClose();
   const checked = aiClientVerdict('exercise.replace', text, {expectedCount:1});
   if(!checked) return;
   // разбираем ответ тем же парсером, что и обычный импорт — обёртка даёт ему минимальную программу
@@ -1081,12 +1103,12 @@ function commitFinish(ctx){
     if(reps > 0) lifted += step.weight * reps;
   });
   if(lifted) stats.totalKg = Math.round((stats.totalKg || 0) + lifted);
-  if(hfMode && hfMode !== 'off') stats.hfDone = (stats.hfDone || 0) + 1;
+  if(platformWorkoutHooks.getHfMode() && platformWorkoutHooks.getHfMode() !== 'off') stats.hfDone = (stats.hfDone || 0) + 1;
 
   trackProductEvent(partial ? 'workout_partial' : 'workout_completed').catch(()=>{});
   renderBadges();
   saveStats();
-  syncNativeNotifications();
+  workoutSyncNativeNotifications();
   renderStats();
 
   if(!partial && !activityOnly){
@@ -1235,7 +1257,7 @@ function finishWorkout(options){
   nativeSessionSaveT = 0;
   appRuntimeCompat.clearWorkoutState();
   setPause(false);
-  stopHandsFree();
+  platformWorkoutHooks.stopHandsFree();
   stopSpeech();
   clearSession(finishedSessionId, finishedProgramId);
 
@@ -1269,7 +1291,7 @@ function finishWorkout(options){
       setShown('finStreakBox', false);
     } else renderBadges();
     saveStats();
-    syncNativeNotifications();
+    workoutSyncNativeNotifications();
     renderStats();
     renderMine();
   }
@@ -1803,7 +1825,7 @@ export function tearDownWorkout(){
   nativeSessionSaveT = 0;
   appRuntimeCompat.clearWorkoutState();
   setPause(false);
-  stopHandsFree();
+  platformWorkoutHooks.stopHandsFree();
   stopSpeech();
   if(state.prepTimer){ clearInterval(state.prepTimer); state.prepTimer = null; }
   document.body.classList.remove('prep-on');
@@ -1820,6 +1842,43 @@ export function setExFromWorkShared(value){ exFromWork = value; return exFromWor
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initWorkout(){
+  setBuilderWorkoutHooks({
+    autoGrow,
+    esc
+  });
+  setProgramsWorkoutHooks({
+    afterExChange,
+    autoGrow,
+    backToWorkout,
+    esc,
+    getExFromWork: () => exFromWork
+  });
+  setTrainerWorkoutHooks({
+    esc
+  });
+  setProgressWorkoutHooks({
+    esc,
+    roundRect
+  });
+  setAccountWorkoutHooks({
+    esc
+  });
+  setDataSyncWorkoutHooks({
+    getBadges: () => BADGES,
+    badgeDesc,
+    badgeName,
+    earnBadges,
+    esc,
+    hasBadge
+  });
+  setCoreWorkoutHooks({
+    esc,
+    exitWorkout,
+    setExFromWorkShared,
+    settleQuickFinish,
+    stopFinishFx,
+    tnum
+  });
   registerAction('toggleProgressionHard', btn => {
     const chk = state.progCheck;
     const id = btn.dataset.exerciseId;

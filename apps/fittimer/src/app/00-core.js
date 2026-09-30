@@ -2,17 +2,8 @@ import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
 import { appRuntimeCompat, appUi } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
 import { DAYS, closeAllMenus, curUser, customPrograms, normPlans, progActive, renderStats,
-  renderUsers, renderWeight, renderWellness, savePrograms, setCustomProgramsShared, stats
+  renderUsers, renderWeight, renderWellness, savePrograms, setCustomProgramsShared, setDataSyncCoreHooks, stats
 } from './10-data-sync.js';
-import { openPublish, pickClientFor, refreshClientsScreen, renderMine, renderTrainerCard,
-  storeCountText
-} from './50-trainer-catalog.js';
-import { dropFreshEx, exDirty, exRestAfter, fmtKg, getExProgValue, getExWeight, hasWeight,
-  normValue, openBuilder, parseKg, parseValue, progAtCeiling, progAxis, progBaseValue, progStepSize, programDirty,
-  progressedRepsRange, setExDraftShared, setExIdxShared, setExOrigShared, setExWeight,
-  weightPending
-} from './60-builder.js';
-import { esc, exitWorkout, setExFromWorkShared, settleQuickFinish, stopFinishFx, tnum } from './70-workout.js';
 
 let accountUserDirtyHook = () => false;
 let maybeRunDeferredBiometricLockHook = () => {};
@@ -71,6 +62,59 @@ export function setCoreProgramsAiHooks(hooks = {}){
   programsRenderGreetingHook = typeof hooks.renderGreeting === 'function' ? hooks.renderGreeting : (() => {});
   programsRenderTodayHook = typeof hooks.renderToday === 'function' ? hooks.renderToday : (() => {});
   programsTrainerOnHook = typeof hooks.trainerOn === 'function' ? hooks.trainerOn : (() => false);
+}
+
+
+let trainerCatalogHooks = {
+  openPublish: async () => {},
+  pickClientFor: async () => {},
+  refreshClientsScreen: () => {},
+  renderMine: () => {},
+  renderTrainerCard: () => {},
+  storeCountText: (n, kind) => `${n} ${kind}`
+};
+export function setCoreTrainerCatalogHooks(hooks = {}){
+  trainerCatalogHooks = {...trainerCatalogHooks, ...hooks};
+}
+
+let builderHooks = {
+  dropFreshEx: () => {},
+  exDirty: () => false,
+  exRestAfter: () => 0,
+  fmtKg: v => String(v == null ? '' : v),
+  getExProgValue: () => 0,
+  getExWeight: () => 0,
+  hasWeight: () => false,
+  normValue: v => v,
+  openBuilder: async () => {},
+  parseKg: v => +v || 0,
+  parseValue: v => ({min:+v || 0, max:+v || 0}),
+  progAtCeiling: () => false,
+  progAxis: () => 'none',
+  progBaseValue: () => 0,
+  progStepSize: () => 0,
+  programDirty: () => false,
+  progressedRepsRange: () => '',
+  setExDraftShared: () => {},
+  setExIdxShared: () => {},
+  setExOrigShared: () => {},
+  setExWeight: () => {},
+  weightPending: () => false
+};
+export function setCoreBuilderHooks(hooks = {}){
+  builderHooks = {...builderHooks, ...hooks};
+}
+
+let workoutHooks = {
+  esc: v => String(v == null ? '' : v),
+  exitWorkout: () => {},
+  setExFromWorkShared: () => {},
+  settleQuickFinish: () => {},
+  stopFinishFx: () => {},
+  tnum: v => String(v == null ? '' : v)
+};
+export function setCoreWorkoutHooks(hooks = {}){
+  workoutHooks = {...workoutHooks, ...hooks};
 }
 
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
@@ -316,7 +360,7 @@ export function announceExercise(step, onDone){
     ? `, set ${step.setNo} of ${step.setsTotal}`
     : `, подход ${step.setNo} из ${step.setsTotal}`;
   if(step.kind === 'click'){
-    const r = parseValue(step.reps);
+    const r = builderHooks.parseValue(step.reps);
     if(r.min === r.max){
       text += voiceIsEnglish()
         ? `, ${r.min} ${voicePlural(r.min,'повторение','повторения','повторений','rep','reps')}`
@@ -338,7 +382,7 @@ export function announceExercise(step, onDone){
     }
   }
   if(step.weight > 0){
-    const kg = voiceIsEnglish() ? fmtKg(step.weight) : fmtKg(step.weight).replace('.', ',');
+    const kg = voiceIsEnglish() ? builderHooks.fmtKg(step.weight) : builderHooks.fmtKg(step.weight).replace('.', ',');
     text += voiceIsEnglish()
       ? `, weight ${kg} ${voicePlural(Math.round(step.weight),'килограмм','килограмма','килограммов','kilogram','kilograms')}`
       : `, вес ${kg} ${plural(Math.round(step.weight), 'килограмм', 'килограмма', 'килограммов')}`;
@@ -357,7 +401,7 @@ export function runReadyBar(sec, done){
   setShown(box, true);
   document.body.classList.add('readying'); // прячет вес рядом с таймером на время отсчёта — иначе им негде стоять вместе
   arc.style.strokeDashoffset = RR_LEN;   // пустое кольцо в начале
-  num.innerHTML = tnum(sec);
+  num.innerHTML = workoutHooks.tnum(sec);
   beep(660, .08);
   state.readyRAF = requestAnimationFrame(function tick(now){
     if(!state.readyRAF) return; // отменили
@@ -373,7 +417,7 @@ export function runReadyBar(sec, done){
       // кольцо заполняется к нулю: круг замкнулся — упражнение началось
       arc.style.strokeDashoffset = (left / totalMs * RR_LEN).toFixed(2);
       const s = Math.ceil(left / 1000);
-      if(s !== lastShown){ lastShown = s; num.innerHTML = tnum(s); beep(660, .08); }
+      if(s !== lastShown){ lastShown = s; num.innerHTML = workoutHooks.tnum(s); beep(660, .08); }
     }
     state.readyRAF = requestAnimationFrame(tick);
   });
@@ -708,8 +752,8 @@ export function asTab(fn){
 // только кнопки «назад» внутри приложения, а системная кнопка «назад» звала show()
 // напрямую — и набранная программа исчезала молча.
 const LEAVE_GUARDS = {
-  scrBuilder:  ()=> programDirty() ? {what:t('builder.programChanges'), clean:()=> clearSnap('program')} : null,
-  scrExercise: ()=> exDirty() ? {what:t('exercise.changes'), clean:()=>{ dropFreshEx(); setExDraftShared(null); setExIdxShared(-1); setExOrigShared(''); setExFromWorkShared(false); }} : null,
+  scrBuilder:  ()=> builderHooks.programDirty() ? {what:t('builder.programChanges'), clean:()=> clearSnap('program')} : null,
+  scrExercise: ()=> builderHooks.exDirty() ? {what:t('exercise.changes'), clean:()=>{ builderHooks.dropFreshEx(); builderHooks.setExDraftShared(null); builderHooks.setExIdxShared(-1); builderHooks.setExOrigShared(''); workoutHooks.setExFromWorkShared(false); }} : null,
   scrUserEdit: ()=> accountUserDirtyHook() ? {what:t('profile.changes')} : null,
   scrAI:       ()=> { const dirty = programsAiDirtyHook(); return dirty && aiScreenDirty(dirty) ? {what:t('ai.filledRequest')} : null; }
 };
@@ -833,10 +877,10 @@ export function show(id, push = true){
   // Из-за этого ломалась правка упражнения прямо с тренировки: сходил на вкладку
   // «Через ИИ» и обратно — exFromWork терялся, и «Готово» уводило в конструктор,
   // бросив тренировку на середине.
-  if(show._last === 'scrExercise' && id !== 'scrExercise' && !tabSwitch){ dropFreshEx(); setExFromWorkShared(false); }
+  if(show._last === 'scrExercise' && id !== 'scrExercise' && !tabSwitch){ builderHooks.dropFreshEx(); workoutHooks.setExFromWorkShared(false); }
   // С экрана результата ушли, не выбрав про слишком короткую тренировку (жест «назад»,
   // вкладка): засчитываем, как было всегда, — молча терять тренировку нельзя.
-  if(show._last === 'scrFinish' && id !== 'scrFinish' && state.pendingFinish) settleQuickFinish(true);
+  if(show._last === 'scrFinish' && id !== 'scrFinish' && state.pendingFinish) workoutHooks.settleQuickFinish(true);
   if(push && show._last !== id){
     if(tabSwitch){
       navStack[navStack.length - 1] = id;
@@ -860,7 +904,7 @@ export function show(id, push = true){
       }
     }
   }
-  if(show._last !== id) stopFinishFx(); // праздник остаётся на своём экране
+  if(show._last !== id) workoutHooks.stopFinishFx(); // праздник остаётся на своём экране
   show._last = id;
   screens.forEach(s => $(s).classList.toggle('on', s===id));
   // верхняя полоса нужна ровно одному экрану — тренировке
@@ -888,11 +932,11 @@ export function show(id, push = true){
 export function prepTab(id){
   try{
     if(id === 'scrStats'){ renderStats(); renderWeight(); renderWellness(); renderPhotosHook(); }
-    else if(id === 'scrPrograms'){ renderMine(); }
+    else if(id === 'scrPrograms'){ trainerCatalogHooks.renderMine(); }
     else if(id === 'scrAccount'){
       eventSwitchMoreTabHook(eventMoreTabHook());
       renderUsers();
-      renderTrainerCard();
+      trainerCatalogHooks.renderTrainerCard();
       // звук и управление без рук переехали сюда из «Настроек»
       eventSyncSettingsFormHook();
       eventFillLiveSoundCascadeHook('st');
@@ -900,7 +944,7 @@ export function prepTab(id){
       $('hfHint').textContent = platformHfHintTextHook(currentHfMode);
       document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === currentHfMode));
     }
-    else if(id === 'scrTrainer'){ refreshClientsScreen(); }
+    else if(id === 'scrTrainer'){ trainerCatalogHooks.refreshClientsScreen(); }
     else if(id === 'scrMenu'){ programsRenderGreetingHook(); programsRenderTodayHook(); }
   }catch(e){}
 }
@@ -1028,22 +1072,22 @@ export function renderPlanRow(){
 // Нагрузка одного упражнения в том же виде, в каком она появится на тренировке.
 // Отдельная функция не даёт обзору и таймеру разойтись в формулах прогрессии.
 function exerciseLoad(p, ex){
-  const on = progAxis(ex) !== 'none';
+  const on = builderHooks.progAxis(ex) !== 'none';
   const timed = ex.type === 'time';
   const load = {reps:'', sec:0, kg:0};
   if(timed){
-    load.sec = on && progStepSize(ex, 'time') > 0
-      ? getExProgValue(p.id, ex, p, 'time')
-      : progBaseValue(ex, 'time');
+    load.sec = on && builderHooks.progStepSize(ex, 'time') > 0
+      ? builderHooks.getExProgValue(p.id, ex, p, 'time')
+      : builderHooks.progBaseValue(ex, 'time');
   } else {
-    load.reps = on && progStepSize(ex, 'reps') > 0
-      ? progressedRepsRange(p.id, ex, p)
-      : normValue(ex.value, 'reps');
+    load.reps = on && builderHooks.progStepSize(ex, 'reps') > 0
+      ? builderHooks.progressedRepsRange(p.id, ex, p)
+      : builderHooks.normValue(ex.value, 'reps');
   }
-  if(hasWeight(ex)){
-    load.kg = on && progStepSize(ex, 'weight') > 0
-      ? getExProgValue(p.id, ex, p, 'weight')
-      : progBaseValue(ex, 'weight');
+  if(builderHooks.hasWeight(ex)){
+    load.kg = on && builderHooks.progStepSize(ex, 'weight') > 0
+      ? builderHooks.getExProgValue(p.id, ex, p, 'weight')
+      : builderHooks.progBaseValue(ex, 'weight');
   }
   return load;
 }
@@ -1082,7 +1126,7 @@ function loadTargetText(ex, v){
   const bits = [];
   if(ex.type === 'time') bits.push(`${v.sec} ${t('store.secShort')}`);
   else bits.push(`${v.reps} ${t('workout.repsShort')}`);
-  if(v.kg > 0) bits.push(`${fmtKg(v.kg)} ${t('progress.kg')}`);
+  if(v.kg > 0) bits.push(`${builderHooks.fmtKg(v.kg)} ${t('progress.kg')}`);
   let out = bits.join(' × ');
   if(ex.perSide) out += ' ' + t('store.perSide');
   return out;
@@ -1094,14 +1138,14 @@ export function loadDelta(a, b){
   const moves = [];
   if(String(a.reps || '') !== String(b.reps || '')){
     bits.push(t('start.deltaReps',{before:a.reps,today:b.reps}));
-    const av = parseValue(a.reps), bv = parseValue(b.reps);
+    const av = builderHooks.parseValue(a.reps), bv = builderHooks.parseValue(b.reps);
     moves.push(bv.min - av.min, bv.max - av.max);
   }
   if((+a.sec || 0) !== (+b.sec || 0)){
     bits.push(t('start.deltaTime',{before:a.sec,today:b.sec})); moves.push((+b.sec || 0) - (+a.sec || 0));
   }
   if((+a.kg || 0) !== (+b.kg || 0)){
-    bits.push(t('start.deltaWeight',{before:fmtKg(a.kg),today:fmtKg(b.kg)})); moves.push((+b.kg || 0) - (+a.kg || 0));
+    bits.push(t('start.deltaWeight',{before:builderHooks.fmtKg(a.kg),today:builderHooks.fmtKg(b.kg)})); moves.push((+b.kg || 0) - (+a.kg || 0));
   }
   const directional = moves.filter(x => x !== 0);
   // вес вырос, а повторы вернулись к началу диапазона — это шаг двойной
@@ -1130,10 +1174,10 @@ export function estimatedWorkoutMinutes(p, planIdx, rows){
     const sets = Math.max(1, parseInt(ex.sets) || 1);
     const rounds = ex.warmup ? 1 : Math.max(1, +pl.rounds || 1);
     const sides = ex.perSide ? 2 : 1;
-    const work = ex.type === 'time' ? (+v.sec || 1) * sides : Math.max(1, parseValue(v.reps).min) * 3 * sides;
+    const work = ex.type === 'time' ? (+v.sec || 1) * sides : Math.max(1, builderHooks.parseValue(v.reps).min) * 3 * sides;
     sec += work * sets * rounds;
     sec += Math.max(0, sets - 1) * (+ex.rest || 0) * rounds;
-    if(ex.warmup || i !== lastMain) sec += exRestAfter(ex) * rounds;
+    if(ex.warmup || i !== lastMain) sec += builderHooks.exRestAfter(ex) * rounds;
     if(ex.perSide && ex.type === 'time') sec += sideSec * sets * rounds;
   });
   sec += Math.max(0, (+pl.rounds || 1) - 1) * (+pl.roundRest || 0);
@@ -1159,7 +1203,7 @@ function renderStartOverview(){
   const workSets = exercises.reduce((n, ex) => n + Math.max(1, parseInt(ex.sets) || 1)
     * (ex.warmup ? 1 : Math.max(1, +pl.rounds || 1)), 0);
   const dur = estimatedWorkoutMinutes(p, state.planIdx, current);
-  $('startOverviewSummary').textContent = storeCountText(exercises.length,'exercise') + ' · ' + storeCountText(workSets,'set') + ' · ' + (dur.samples === 1 ? t('start.lastTime',{minutes:dur.n}) : dur.history ? t('start.usualTime',{minutes:dur.n}) : t('start.approxTime',{minutes:dur.n}));
+  $('startOverviewSummary').textContent = trainerCatalogHooks.storeCountText(exercises.length,'exercise') + ' · ' + trainerCatalogHooks.storeCountText(workSets,'set') + ' · ' + (dur.samples === 1 ? t('start.lastTime',{minutes:dur.n}) : dur.history ? t('start.usualTime',{minutes:dur.n}) : t('start.approxTime',{minutes:dur.n}));
 
   const change = $('startLoadChange');
   const changeText = text => { change.textContent = text; };
@@ -1171,7 +1215,7 @@ function renderStartOverview(){
   if(p.progression){
     const every = Math.max(1, +p.progression || 1);
     const ns = exercises
-      .filter(ex => !ex.warmup && progAxis(ex) !== 'none' && !progAtCeiling(p.id, ex, p))
+      .filter(ex => !ex.warmup && builderHooks.progAxis(ex) !== 'none' && !builderHooks.progAtCeiling(p.id, ex, p))
       .map(ex => Math.max(0, Math.round(+(ex.ps && ex.ps.n) || 0)));
     if(ns.length){
       const left = Math.max(1, every - Math.max(...ns));
@@ -1206,14 +1250,14 @@ function renderStartOverview(){
     if(ex.warmup) meta.push({text:t('store.warmup'), cls:'wm'});
     // вес — отдельной кнопкой-меткой с карандашом (см. ниже): так видно, что
     // нажимается именно он, а повторы и время растут сами по плану
-    meta.push({text:loadTargetText(ex, hasWeight(ex) ? Object.assign({}, current[i], {kg:0}) : current[i]), cls:''});
-    if(!ex.warmup && rounds > 1) meta.push({text:sets > 1 ? `${sets} ${t('start.setShort')} × ${rounds} ${t('start.roundShort')}` : storeCountText(rounds,'round'), cls:''});
-    else meta.push({text:storeCountText(sets,'set'), cls:''});
+    meta.push({text:loadTargetText(ex, builderHooks.hasWeight(ex) ? Object.assign({}, current[i], {kg:0}) : current[i]), cls:''});
+    if(!ex.warmup && rounds > 1) meta.push({text:sets > 1 ? `${sets} ${t('start.setShort')} × ${rounds} ${t('start.roundShort')}` : trainerCatalogHooks.storeCountText(rounds,'round'), cls:''});
+    else meta.push({text:trainerCatalogHooks.storeCountText(sets,'set'), cls:''});
     const delta = changes.find(x => x.i === i);
     const row = document.createElement('div');
     row.className = 'ex-row static' + (ex.warmup ? ' warm' : '');
     const thumb = ex.media && ex.media.kind === 'img'
-      ? `<img src="${esc(ex.media.data)}" alt="">`
+      ? `<img src="${workoutHooks.esc(ex.media.data)}" alt="">`
       : (ex.warmup ? icon('flame') : mainNo);
     row.innerHTML = `<div class="ex-thumb">${thumb}</div><div class="ex-info"><b></b><div class="ex-meta"></div></div>`;
     row.querySelector('b').textContent = ex.name || t('common.exerciseFallback');
@@ -1221,12 +1265,12 @@ function renderStartOverview(){
     const tag = (text, cls) => { const el = document.createElement('span'); if(cls) el.className = cls; el.textContent = text; tags.appendChild(el); };
     meta.forEach((x, k) => {
       tag(x.text, x.cls);
-      if(k === (ex.warmup ? 1 : 0) && hasWeight(ex)){
-        const pending = weightPending(ex) || !(+current[i].kg > 0);
+      if(k === (ex.warmup ? 1 : 0) && builderHooks.hasWeight(ex)){
+        const pending = builderHooks.weightPending(ex) || !(+current[i].kg > 0);
         const kg = document.createElement('span');
         kg.className = 'kg-edit' + (pending ? ' weight-pending' : '');
         kg.innerHTML = icon('pencil') + '<i></i>';
-        kg.querySelector('i').textContent = pending ? t('start.weightPending') : `${fmtKg(current[i].kg)} ${t('progress.kg')}`;
+        kg.querySelector('i').textContent = pending ? t('start.weightPending') : `${builderHooks.fmtKg(current[i].kg)} ${t('progress.kg')}`;
         tags.appendChild(kg);
       }
     });
@@ -1235,7 +1279,7 @@ function renderStartOverview(){
     // прямо тут, без похода в конструктор) либо просто хочется поправить вес на
     // сегодня (тот же попап; см. openWeightModal ниже). Замена бывшему общему
     // блоку «Нагрузка сегодня» с «±» — теперь правка per-упражнение.
-    if(hasWeight(ex)){
+    if(builderHooks.hasWeight(ex)){
       row.classList.add('tappable');
       row.dataset.act = 'openStartWeight';
       row.dataset.exerciseIdx = String(i);
@@ -1258,8 +1302,8 @@ function openWeightModal(i){
   if(!ex) return;
   weightModalIdx = i;
   $('weightModalTitle').textContent = ex.name || t('common.exerciseFallback');
-  const now = getExWeight(p.id, ex, p);
-  $('weightModalInput').value = now > 0 ? fmtKg(now) : '';
+  const now = builderHooks.getExWeight(p.id, ex, p);
+  $('weightModalInput').value = now > 0 ? builderHooks.fmtKg(now) : '';
   $('weightModal').classList.add('open');
   $('weightModalInput').focus();
 }
@@ -1270,14 +1314,14 @@ export async function commitWeightModal(){
   weightModalIdx = -1;
   $('weightModal').classList.remove('open');
   if(!ex) return;
-  const kg = parseKg($('weightModalInput').value);
+  const kg = builderHooks.parseKg($('weightModalInput').value);
   if(!(kg > 0)) return; // пусто/0 — не считаем заданным, оставляем как есть, спросим в другой раз
-  if(weightPending(ex)){
+  if(builderHooks.weightPending(ex)){
     ex.weight = kg;
     // первая база веса: никаких «накопленных» кг поверх неё быть не может
     if(ex.ps && ex.ps.cur) delete ex.ps.cur.kg;
   }
-  else setExWeight(ex, kg);
+  else builderHooks.setExWeight(ex, kg);
   await savePrograms();
   renderStartOverview();
 }
@@ -1344,15 +1388,15 @@ export function renderStartInfo(){
   const mainEx = (pl.exercises || []).filter(e => !e.warmup);
   const setsTotal = mainEx.reduce((n, e) => n + (parseInt(e.sets) || 1), 0);
   if(pl.rounds > 1 || setsTotal <= mainEx.length){
-    $('startVolLabel').textContent = storeCountText(pl.rounds,'round').replace(/^\d+\s+/,'');
+    $('startVolLabel').textContent = trainerCatalogHooks.storeCountText(pl.rounds,'round').replace(/^\d+\s+/,'');
     $('startRounds').textContent = pl.rounds;
   } else {
-    $('startVolLabel').textContent = storeCountText(setsTotal,'set').replace(/^\d+\s+/,'');
+    $('startVolLabel').textContent = trainerCatalogHooks.storeCountText(setsTotal,'set').replace(/^\d+\s+/,'');
     $('startRounds').textContent = setsTotal;
   }
   const nEx = pl.exercises.length;
   $('startExCount').textContent = nEx;
-  $('startExLabel').textContent = storeCountText(nEx,'exercise').replace(/^\d+\s+/,'');
+  $('startExLabel').textContent = trainerCatalogHooks.storeCountText(nEx,'exercise').replace(/^\d+\s+/,'');
   // обложка программы — если её нет, место не занимаем
   const cov = $('startCover');
   if(state.raw.cover){
@@ -1382,6 +1426,16 @@ export function setVoiceVolShared(value){ voiceVol = value; return voiceVol; }
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initCore(){
+  setDataSyncCoreHooks({
+    $,
+    appAlert,
+    icon,
+    plural,
+    setShown,
+    getSideSec: () => sideSec,
+    getState: () => state,
+    syncDockTabs
+  });
   registerAction('confirmDialog', () => finishDialog(true));
   registerAction('cancelDialog', () => finishDialog(false));
   registerAction('dialogBackdrop', (modal, event) => {
@@ -1404,29 +1458,29 @@ export function initCore(){
     const p = state.raw;
     if(p) await fn(p, btn);
   };
-  registerAction('editStartProgram', withStartProgram(async p => openBuilder(p.id)));
+  registerAction('editStartProgram', withStartProgram(async p => builderHooks.openBuilder(p.id)));
   registerAction('toggleStartProgramActive', withStartProgram(async p => {
     const wasOn = progActive(p);
     p.active = !wasOn;
     await savePrograms();
     buildStartMenu();
-    renderMine();
+    trainerCatalogHooks.renderMine();
     if(wasOn) appAlert(t('programs.disabledAlert'));
   }));
   registerAction('duplicateStartProgram', withStartProgram(async p => {
     const copy = await programsDuplicateHook(p);
-    openBuilder(copy.id);
+    builderHooks.openBuilder(copy.id);
   }));
   registerAction('shareStartProgram', withStartProgram(async p => programsExportHook(p)));
-  registerAction('sendStartProgramToClient', withStartProgram(async p => pickClientFor(p)));
-  registerAction('publishStartProgram', withStartProgram(async p => openPublish(p)));
+  registerAction('sendStartProgramToClient', withStartProgram(async p => trainerCatalogHooks.pickClientFor(p)));
+  registerAction('publishStartProgram', withStartProgram(async p => trainerCatalogHooks.openPublish(p)));
   registerAction('exportStartProgramFile', withStartProgram(async p => programsExportFileHook(p)));
   registerAction('deleteStartProgram', withStartProgram(async p => {
     if(!(await appDialog(t('programs.deleteQuestion',{name:p.name}),
       {confirm:true, okText:t('common.delete'), cancelText:t('common.keep')}))) return;
     setCustomProgramsShared(customPrograms.filter(x => x.id !== p.id));
     await savePrograms();
-    renderMine();
+    trainerCatalogHooks.renderMine();
     goTab('scrPrograms');
   }));
   // Подпись строки с переключателем тоже переключает его — как у системных
@@ -1496,7 +1550,7 @@ export function initCore(){
     if($('scrWork').classList.contains('on')){
       // назад во время тренировки — спрашиваем, а не выбрасываем
       try{ history.pushState({scr:'scrWork'}, ''); }catch(_){}
-      exitWorkout();
+      workoutHooks.exitWorkout();
       return;
     }
     let targetScreen = (e.state && e.state.scr) || 'scrMenu';

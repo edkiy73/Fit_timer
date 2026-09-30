@@ -1,9 +1,9 @@
 /* Phase 13 guard: the product runtime is a graph of ES modules (src/app/NN-*.js) that
-   import each other cyclically. That is safe only while:
+   form an acyclic product graph. Keep that invariant explicit:
    1. a part's top level only declares things — startup wiring lives in its exported
       init function, which src/app/index.js calls once, in part order;
-   2. no top-level initializer reads another part's binding at load time (in a cycle
-      it may not be initialised yet); shared constants live in leaf modules (options.js);
+   2. no top-level initializer reads another part's binding at load time; shared constants
+      live in leaf modules (options.js);
    3. every name another module exports is imported where it is used. A forgotten
       import is not a build error: it silently falls back to a global and fails only
       at run time.
@@ -23,6 +23,38 @@ const sfOf = f => program.getSourceFile(path.resolve(f));
 const hasExport = n => (ts.getCombinedModifierFlags(n) & ts.ModifierFlags.Export) !== 0;
 
 const problems = [];
+
+
+// Product modules must remain a DAG. The earlier migration removed the large SCC;
+// checking the whole graph here prevents a future feature from reintroducing a cycle
+// through a dependency path that no pair-specific guard happens to know about.
+const productGraph = new Map(parts.map(name => [name, []]));
+for(const name of parts){
+  const sf = sfOf(path.join(APP, name));
+  for(const st of sf.statements){
+    if(!ts.isImportDeclaration(st) || !ts.isStringLiteral(st.moduleSpecifier)) continue;
+    const m = /^\.\/(\d\d-[\w-]+\.js)$/.exec(st.moduleSpecifier.text);
+    if(m && productGraph.has(m[1])) productGraph.get(name).push(m[1]);
+  }
+}
+const visitState = new Map();
+const visitStack = [];
+function visitProduct(name){
+  const state = visitState.get(name) || 0;
+  if(state === 2) return;
+  if(state === 1){
+    const at = visitStack.indexOf(name);
+    const cycle = visitStack.slice(at).concat(name);
+    problems.push('product module graph must stay acyclic: ' + cycle.join(' -> '));
+    return;
+  }
+  visitState.set(name, 1);
+  visitStack.push(name);
+  for(const dep of productGraph.get(name) || []) visitProduct(dep);
+  visitStack.pop();
+  visitState.set(name, 2);
+}
+for(const name of parts) visitProduct(name);
 const exportedBy = new Map();
 for(const f of parts.map(n => path.join(APP, n)).concat(leaves)){
   for(const st of sfOf(f).statements){
@@ -106,11 +138,149 @@ for(const f of parts.map(n => path.join(APP, n)).concat(leaves, path.join(APP, '
 
 
 const coreSource = fs.readFileSync(path.join(APP, '00-core.js'), 'utf8');
+const dataSyncSource = fs.readFileSync(path.join(APP, '10-data-sync.js'), 'utf8');
 const accountSource = fs.readFileSync(path.join(APP, '20-account.js'), 'utf8');
 const progressSource = fs.readFileSync(path.join(APP, '30-progress-media.js'), 'utf8');
 const programsAiSource = fs.readFileSync(path.join(APP, '40-programs-ai.js'), 'utf8');
+const trainerCatalogSource = fs.readFileSync(path.join(APP, '50-trainer-catalog.js'), 'utf8');
+const platformDataSyncSource = fs.readFileSync(path.join(APP, '80-platform.js'), 'utf8');
+const builderSource = fs.readFileSync(path.join(APP, '60-builder.js'), 'utf8');
+const workoutSource = fs.readFileSync(path.join(APP, '70-workout.js'), 'utf8');
 const platformCoreSource = fs.readFileSync(path.join(APP, '80-platform.js'), 'utf8');
 const eventsCoreSource = fs.readFileSync(path.join(APP, '90-events.js'), 'utf8');
+if(/from ['"]\.\/00-core\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 00-core.js; inject core helpers instead');
+}
+if(!/setDataSyncCoreHooks/.test(dataSyncSource) || !/setDataSyncCoreHooks\(\{[\s\S]*appAlert[\s\S]*icon[\s\S]*plural[\s\S]*setShown[\s\S]*getSideSec[\s\S]*getState[\s\S]*syncDockTabs/.test(coreSource)){
+  problems.push('data-sync/core hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/50-trainer-catalog\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 50-trainer-catalog.js; inject trainer-catalog-facing hooks instead');
+}
+if(!/setDataSyncTrainerCatalogHooks/.test(dataSyncSource) || !/setDataSyncTrainerCatalogHooks\(\{[\s\S]*renderMine/.test(trainerCatalogSource)){
+  problems.push('data-sync/trainer-catalog hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/80-platform\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 80-platform.js; inject platform-facing hooks instead');
+}
+if(!/setDataSyncPlatformHooks/.test(dataSyncSource) || !/setDataSyncPlatformHooks\(\{[\s\S]*applyThemeFor[\s\S]*syncNativeNotifications/.test(platformDataSyncSource)){
+  problems.push('data-sync/platform hook boundary is missing or incomplete');
+}
+
+
+if(/from ['"]\.\/30-progress-media\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 30-progress-media.js; inject progress-media-facing hooks instead');
+}
+if(!/setDataSyncProgressMediaHooks/.test(dataSyncSource) || !/setDataSyncProgressMediaHooks\(\{[\s\S]*ensureWarmup[\s\S]*loadPhotos[\s\S]*renderPhotos[\s\S]*shortD[\s\S]*uniqueExerciseIds/.test(progressSource)){
+  problems.push('data-sync/progress-media hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/60-builder\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 60-builder.js; inject builder-facing hooks instead');
+}
+if(!/setDataSyncBuilderHooks/.test(dataSyncSource) || !/setDataSyncBuilderHooks\(\{[\s\S]*exRestAfter[\s\S]*getExProgValue[\s\S]*hasWeight[\s\S]*normValue[\s\S]*parseValue[\s\S]*progAtCeiling[\s\S]*progAxis[\s\S]*progBaseValue[\s\S]*progStepSize[\s\S]*progressedRepsRange/.test(builderSource)){
+  problems.push('data-sync/builder hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/70-workout\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 70-workout.js; inject workout-facing hooks instead');
+}
+if(!/setDataSyncWorkoutHooks/.test(dataSyncSource) || !/setDataSyncWorkoutHooks\(\{[\s\S]*getBadges[\s\S]*badgeDesc[\s\S]*badgeName[\s\S]*earnBadges[\s\S]*esc[\s\S]*hasBadge/.test(workoutSource)){
+  problems.push('data-sync/workout hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/90-events\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 90-events.js; inject event-facing hooks instead');
+}
+if(!/setDataSyncEventHooks/.test(dataSyncSource) || !/setDataSyncEventHooks\(\{[\s\S]*getNotificationPrefsKey[\s\S]*getNotificationPrefDefaults[\s\S]*applyAudioFromUser[\s\S]*getNotificationPrefs[\s\S]*syncNotificationSettings[\s\S]*syncSettingsForm/.test(eventsCoreSource)){
+  problems.push('data-sync/events hook boundary is missing or incomplete');
+}
+
+
+if(/from ['"]\.\/20-account\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 20-account.js; inject account-facing hooks instead');
+}
+if(!/setDataSyncAccountHooks/.test(dataSyncSource) || !/setDataSyncAccountHooks\(\{[\s\S]*getProfileKeys[\s\S]*getAccount[\s\S]*bumpAccountMeta[\s\S]*isPremium[\s\S]*openUserEdit[\s\S]*readAccountBucket[\s\S]*renderPlan[\s\S]*saveAccount[\s\S]*writeAccountBucket/.test(accountSource)){
+  problems.push('data-sync/account hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/40-programs-ai\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 40-programs-ai.js; inject programs-ai-facing hooks instead');
+}
+if(!/setDataSyncProgramsAiHooks/.test(dataSyncSource) || !/setDataSyncProgramsAiHooks\(\{[\s\S]*apiFetch[\s\S]*applyProgressionAll[\s\S]*getClients[\s\S]*loadTrainer[\s\S]*openDayProgram[\s\S]*renderGreeting[\s\S]*setClientsShared[\s\S]*setTrainerShared[\s\S]*getTrainer[\s\S]*weekPlanInfo/.test(programsAiSource)){
+  problems.push('data-sync/programs-ai hook boundary is missing or incomplete');
+}
+
+
+for(const dep of ['30-progress-media','50-trainer-catalog','70-workout','80-platform','90-events']){
+  if(new RegExp("from ['\"]\\./" + dep + "\\.js['\"]").test(accountSource)){
+    problems.push('src/app/20-account.js must not import ' + dep + '.js; inject owner hooks instead');
+  }
+}
+if(!/setAccountProgressHooks\(\{[\s\S]*getNameMax[\s\S]*clampLine[\s\S]*nextProfileName/.test(progressSource)) problems.push('account/progress hook boundary is missing or incomplete');
+if(!/setAccountTrainerCatalogHooks\(\{[\s\S]*renderTrainerCard/.test(trainerCatalogSource)) problems.push('account/trainer-catalog hook boundary is missing or incomplete');
+if(!/setAccountWorkoutHooks\(\{[\s\S]*esc/.test(workoutSource)) problems.push('account/workout hook boundary is missing or incomplete');
+if(!/setAccountPlatformHooks\(\{[\s\S]*applyThemeFor[\s\S]*themeOf/.test(platformCoreSource)) problems.push('account/platform hook boundary is missing or incomplete');
+if(!/setAccountEventHooks\(\{[\s\S]*applyAudioFromUser[\s\S]*readTimings[\s\S]*syncRemotePushRegistration[\s\S]*unregisterRemotePushServer/.test(eventsCoreSource)) problems.push('account/events hook boundary is missing or incomplete');
+
+if(/from ['"]\.\/40-programs-ai\.js['"]/.test(accountSource)){
+  problems.push('src/app/20-account.js must not import 40-programs-ai.js; inject programs-ai-facing hooks instead');
+}
+if(!/setAccountProgramsAiHooks\(\{[\s\S]*getApiBase[\s\S]*ageError[\s\S]*apiPost[\s\S]*getClients[\s\S]*forgetMe[\s\S]*loadTrainer[\s\S]*mailErrText[\s\S]*normHandle[\s\S]*saveClients[\s\S]*saveTrainer[\s\S]*setTrainerShared[\s\S]*syncGeminiBtns[\s\S]*getTrainer/.test(programsAiSource)){
+  problems.push('account/programs-ai hook boundary is missing or incomplete');
+}
+
+
+for(const dep of ['40-programs-ai','50-trainer-catalog','60-builder','70-workout','80-platform']){
+  if(new RegExp("from ['\"]\\./" + dep + "\\.js['\"]").test(progressSource)){
+    problems.push('src/app/30-progress-media.js must not import ' + dep + '.js; inject owner hooks instead');
+  }
+}
+if(!/setProgressProgramsHooks\(\{[\s\S]*ageError[\s\S]*renderToday/.test(programsAiSource)) problems.push('progress/programs hook boundary is missing or incomplete');
+if(!/setProgressTrainerHooks\(\{[\s\S]*renderMine/.test(trainerCatalogSource)) problems.push('progress/trainer hook boundary is missing or incomplete');
+if(!/setProgressBuilderHooks\(\{[\s\S]*newExId[\s\S]*shrinkImage/.test(builderSource)) problems.push('progress/builder hook boundary is missing or incomplete');
+if(!/setProgressWorkoutHooks\(\{[\s\S]*esc[\s\S]*roundRect/.test(workoutSource)) problems.push('progress/workout hook boundary is missing or incomplete');
+if(!/setProgressPlatformHooks\(\{[\s\S]*applyTheme[\s\S]*setThemeLightShared/.test(platformCoreSource)) problems.push('progress/platform hook boundary is missing or incomplete');
+
+for(const dep of ['50-trainer-catalog','60-builder','70-workout','90-events']){
+  if(new RegExp("from ['\"]\\./" + dep + "\\.js['\"]").test(programsAiSource)){
+    problems.push('src/app/40-programs-ai.js must not import ' + dep + '.js; inject owner hooks instead');
+  }
+}
+if(!/setProgramsTrainerHooks\(\{[\s\S]*renderMine[\s\S]*renderTrainerCard[\s\S]*snapshotEx[\s\S]*storeCountText/.test(trainerCatalogSource)) problems.push('programs/trainer hook boundary is missing or incomplete');
+if(!/setProgramsBuilderHooks\(\{[\s\S]*getMaxMain[\s\S]*getDraft[\s\S]*parseProgramText[\s\S]*valueText/.test(builderSource)) problems.push('programs/builder hook boundary is missing or incomplete');
+if(!/setProgramsWorkoutHooks\(\{[\s\S]*afterExChange[\s\S]*autoGrow[\s\S]*backToWorkout[\s\S]*esc[\s\S]*getExFromWork/.test(workoutSource)) problems.push('programs/workout hook boundary is missing or incomplete');
+if(!/setProgramsEventHooks\(\{[\s\S]*addExManual[\s\S]*getAiRunCtl[\s\S]*openPremium[\s\S]*ytGuard/.test(eventsCoreSource)) problems.push('programs/events hook boundary is missing or incomplete');
+
+for(const dep of ['60-builder','70-workout','90-events']){
+  if(new RegExp("from ['\"]\\./" + dep + "\\.js['\"]").test(trainerCatalogSource)){
+    problems.push('src/app/50-trainer-catalog.js must not import ' + dep + '.js; inject owner hooks instead');
+  }
+}
+if(!/setTrainerBuilderHooks\(\{[\s\S]*enableDrag[\s\S]*openBuilder[\s\S]*valueText/.test(builderSource)) problems.push('trainer/builder hook boundary is missing or incomplete');
+if(!/setTrainerWorkoutHooks\(\{[\s\S]*esc/.test(workoutSource)) problems.push('trainer/workout hook boundary is missing or incomplete');
+if(!/setTrainerEventHooks\(\{[\s\S]*openPremium/.test(eventsCoreSource)) problems.push('trainer/events hook boundary is missing or incomplete');
+
+
+for(const dep of ['70-workout','80-platform','90-events']){
+  if(new RegExp("from ['\"]\\./" + dep + "\\.js['\"]").test(builderSource)){
+    problems.push('src/app/60-builder.js must not import ' + dep + '.js; inject owner hooks instead');
+  }
+}
+if(!/setBuilderWorkoutHooks\(\{[\s\S]*autoGrow[\s\S]*esc/.test(workoutSource)) problems.push('builder/workout hook boundary is missing or incomplete');
+if(!/setBuilderPlatformHooks\(\{[\s\S]*getSyncNativeNotifications/.test(platformCoreSource)) problems.push('builder/platform hook boundary is missing or incomplete');
+if(!/setBuilderEventHooks\(\{[\s\S]*buildExMenu[\s\S]*delCurrentPlan[\s\S]*markBuilderTab[\s\S]*openLegal[\s\S]*syncImagesSum[\s\S]*syncSettingsSum/.test(eventsCoreSource)) problems.push('builder/events hook boundary is missing or incomplete');
+
+for(const dep of ['80-platform','90-events']){
+  if(new RegExp("from ['\"]\\./" + dep + "\\.js['\"]").test(workoutSource)){
+    problems.push('src/app/70-workout.js must not import ' + dep + '.js; inject owner hooks instead');
+  }
+}
+if(!/setWorkoutPlatformHooks\(\{[\s\S]*getHfMode[\s\S]*startHandsFree[\s\S]*stopHandsFree[\s\S]*getSyncNativeNotifications/.test(platformCoreSource)) problems.push('workout/platform hook boundary is missing or incomplete');
+if(!/setWorkoutEventHooks\(\{[\s\S]*aiRunClose[\s\S]*getAiRunCtl[\s\S]*aiRunOpen/.test(eventsCoreSource)) problems.push('workout/events hook boundary is missing or incomplete');
+
 if(/from ['"]\.\/20-account\.js['"]/.test(coreSource)){
   problems.push('src/app/00-core.js must not import 20-account.js; inject account-facing hooks instead');
 }
@@ -130,6 +300,28 @@ if(/from ['"]\.\/40-programs-ai\.js['"]/.test(coreSource)){
 }
 if(!/setCoreProgramsAiHooks/.test(coreSource) || !/setCoreProgramsAiHooks\(\{[\s\S]*getActiveAiDirty[\s\S]*applyProgressionAll[\s\S]*duplicateProgram[\s\S]*exportProgram[\s\S]*exportProgramFile[\s\S]*renderGreeting[\s\S]*renderToday[\s\S]*trainerOn/.test(programsAiSource)){
   problems.push('core/programs-ai hook boundary is missing or incomplete');
+}
+
+
+if(/from ['"]\.\/50-trainer-catalog\.js['"]/.test(coreSource)){
+  problems.push('src/app/00-core.js must not import 50-trainer-catalog.js; inject trainer-catalog-facing hooks instead');
+}
+if(!/setCoreTrainerCatalogHooks/.test(coreSource) || !/setCoreTrainerCatalogHooks\(\{[\s\S]*openPublish[\s\S]*pickClientFor[\s\S]*refreshClientsScreen[\s\S]*renderMine[\s\S]*renderTrainerCard[\s\S]*storeCountText/.test(trainerCatalogSource)){
+  problems.push('core/trainer-catalog hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/60-builder\.js['"]/.test(coreSource)){
+  problems.push('src/app/00-core.js must not import 60-builder.js; inject builder-facing hooks instead');
+}
+if(!/setCoreBuilderHooks/.test(coreSource) || !/setCoreBuilderHooks\(\{[\s\S]*dropFreshEx[\s\S]*exDirty[\s\S]*exRestAfter[\s\S]*fmtKg[\s\S]*getExProgValue[\s\S]*getExWeight[\s\S]*hasWeight[\s\S]*normValue[\s\S]*openBuilder[\s\S]*parseKg[\s\S]*parseValue[\s\S]*progAtCeiling[\s\S]*progAxis[\s\S]*progBaseValue[\s\S]*progStepSize[\s\S]*programDirty[\s\S]*progressedRepsRange[\s\S]*setExDraftShared[\s\S]*setExIdxShared[\s\S]*setExOrigShared[\s\S]*setExWeight[\s\S]*weightPending/.test(builderSource)){
+  problems.push('core/builder hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/70-workout\.js['"]/.test(coreSource)){
+  problems.push('src/app/00-core.js must not import 70-workout.js; inject workout-facing hooks instead');
+}
+if(!/setCoreWorkoutHooks/.test(coreSource) || !/setCoreWorkoutHooks\(\{[\s\S]*esc[\s\S]*exitWorkout[\s\S]*setExFromWorkShared[\s\S]*settleQuickFinish[\s\S]*stopFinishFx[\s\S]*tnum/.test(workoutSource)){
+  problems.push('core/workout hook boundary is missing or incomplete');
 }
 
 if(/from ['"]\.\/80-platform\.js['"]/.test(coreSource)){
@@ -162,6 +354,6 @@ const calls = [...entry.matchAll(/^(init[A-Z]\w*)\(\);$/gm)].map(m => m[1]);
 if(JSON.stringify(inits.map(i => i[0])) !== JSON.stringify(parts)) problems.push(`src/app/index.js must import the init function of every part in part order (found ${inits.map(i => i[0]).join(', ')})`);
 if(JSON.stringify(calls) !== JSON.stringify(inits.map(i => i[1]))) problems.push(`src/app/index.js must call ${inits.map(i => i[1]).join(', ')} once, in that order`);
 
-console.log((problems.length ? ' ПЛОХО' : '  ok  ') + '  product runtime modules: declaration-only top level, no load-time cycles, no missing imports'
+console.log((problems.length ? ' ПЛОХО' : '  ok  ') + '  product runtime modules: acyclic graph, declaration-only top level, no missing imports'
   + (problems.length ? '\n    ' + problems.join('\n    ') : ` (${parts.length} parts, ${exportedBy.size} exports, ${inits.length} init functions)`));
 process.exit(problems.length ? 1 : 0);
