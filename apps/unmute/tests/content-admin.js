@@ -244,6 +244,15 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.equal(blockedIncomplete.body.error,'lexical_coverage_incomplete');
   assert.ok(blockedIncomplete.body.sets['general-foundation'].missingSurfaces>=1);
 
+  // The admin sees the same verdict before pressing «Выпустить», with the words themselves.
+  const precheck=await action(handler,'content_release_check',{setIds:['general-foundation','no-such-set']});
+  assert.equal(precheck.status,200);
+  const verdict=precheck.body.sets['general-foundation'];
+  assert.equal(verdict.ready,false);
+  assert.equal(verdict.missingCount,blockedIncomplete.body.sets['general-foundation'].missingSurfaces);
+  assert.ok(verdict.missing.some(item=>item.surface==='online'));
+  assert.equal(precheck.body.sets['no-such-set'],undefined);
+
   const patchText=JSON.stringify({
     format:'unmute.lexicon.patch.v1',
     entries:[{
@@ -311,6 +320,8 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.equal(before.status,200);
   assert.equal(before.body.course.published,null);
 
+  const readyCheck=await action(handler,'content_release_check',{setIds:['general-foundation']});
+  assert.equal(readyCheck.body.sets['general-foundation'].ready,true);
   const published=await action(handler,'content_publish');
   assert.equal(published.status,200);
   assert.equal(published.body.course.revision,1);

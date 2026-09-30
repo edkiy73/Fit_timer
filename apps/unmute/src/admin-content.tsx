@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AdminSection, AdminSectionContext } from '@appbase/ui-react/admin.js';
 
 type Status = {
@@ -14,9 +14,24 @@ type ReleaseSet = {
   draftRevision:number|null;
   publishedRevision:number|null;
   publishedAt?:string|null;
+  draftUpdatedAt?:string|null;
   unreleasedChanges?:boolean;
   access?:{mode?:string;freePreview?:{days?:number};price?:{RUB?:number;USD?:number}}|null;
 };
+
+type WordCheck = {
+  ready:boolean;
+  words:number;
+  missingCount:number;
+  ambiguousCount:number;
+  missing:Array<{surface:string;count:number;context:string}>;
+  ambiguous:Array<{surface:string;count:number;context:string}>;
+};
+
+function wordList(items:WordCheck['missing'],total:number){
+  const shown=items.slice(0,12).map(item=>item.surface).join(', ');
+  return total>12 ? shown+' и ещё '+(total-12) : shown;
+}
 
 function courseState(item:ReleaseSet){
   if(!item.publishedRevision) return {tone:'new',text:'Ещё не выпущен — ученики его не видят'};
@@ -133,6 +148,36 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
 
   useEffect(()=>{void load();},[load]);
 
+  // Ticked courses are checked against the dictionary before «Выпустить»: the release
+  // refuses words a learner would tap and find nothing (or several entries) for.
+  const [checks,setChecks]=useState<Record<string,WordCheck>>({});
+  const [checking,setChecking]=useState(false);
+  const bulkPanel=useRef<HTMLElement|null>(null);
+  // Re-check when the ticked courses, their drafts or the dictionary draft change.
+  const checkKey=publishSetIds.slice().sort().map(id=>id+':'+String(sets.find(item=>item.id===id)?.draftUpdatedAt ?? '')).join(',')
+    +'|'+String(status?.lexicon?.draft?.draftUpdatedAt ?? '')+':'+String(status?.lexicon?.draft?.entries ?? '');
+  const runCheck=useCallback(async(ids:string[])=>{
+    if(!ids.length){setChecks({});return;}
+    setChecking(true);
+    try{
+      const result=await client.action(adminKey,'content_release_check',{setIds:ids});
+      setChecks((result.sets || {}) as Record<string,WordCheck>);
+    }catch(_){
+      setChecks({});
+    }finally{setChecking(false);}
+  },[client,adminKey]);
+  useEffect(()=>{void runCheck(publishSetIds);},[checkKey,runCheck]);
+  const blockedIds=publishSetIds.filter(id=>checks[id] && !checks[id]!.ready);
+
+  function fillWithAi(setId:string){
+    setBulkSetId(setId);
+    setBulkMode('missing');
+    setBulkPrompt('');
+    setBulkPreview(null);
+    setBulkCoverage(null);
+    bulkPanel.current?.scrollIntoView?.({block:'start',behavior:'smooth'});
+  }
+
   async function importLegacy(overwrite=false){
     setBusy(true);
     setMessage('');
@@ -207,7 +252,11 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       setMessage('Готово: ученики уже видят '+names+'. Выпуск №'+String(release.revision||'?')+', словарь №'+String(lexicon.revision||'?')+'.');
       await load();
     }catch(error){
-      setMessage('Не выпустилось: '+String((error as {code?:string})?.code || 'request_failed'));
+      const code=String((error as {code?:string})?.code || 'request_failed');
+      setMessage(code==='lexical_coverage_incomplete'
+        ? 'Не выпустилось: в курсе есть слова, которых нет в словаре. Список — под курсом выше.'
+        : 'Не выпустилось: '+code);
+      if(code==='lexical_coverage_incomplete') await runCheck(publishSetIds);
     }finally{
       setBusy(false);
     }
@@ -416,7 +465,8 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
         <div className="ab-release-set-list">
           {sets.map(item=>{
             const state=courseState(item);
-            return <label key={item.id} data-state={state.tone}>
+            const check=publishSetIds.includes(item.id) ? checks[item.id] : undefined;
+            return <div className="ab-release-course" key={item.id}><label data-state={state.tone}>
               <input
                 type="checkbox"
                 checked={publishSetIds.includes(item.id)}
@@ -430,16 +480,26 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
                 <small className="ab-release-state">{state.text}{item.publishedAt ? ' · выпущен '+shortDate(item.publishedAt) : ''}</small>
                 <small>{courseTerms(item)}</small>
               </span>
-            </label>;
+            </label>
+            {check && (check.ready
+              ? <p className="ab-release-check" data-ok>Все слова курса есть в словаре ({check.words}).</p>
+              : <div className="ab-release-check">
+                  {check.missingCount>0 && <p>Нет в словаре ({check.missingCount}): <b>{wordList(check.missing,check.missingCount)}</b></p>}
+                  {check.ambiguousCount>0 && <p>В словаре несколько записей, приложение не знает, какую показать ({check.ambiguousCount}): <b>{wordList(check.ambiguous,check.ambiguousCount)}</b>. Объедини их в словаре.</p>}
+                  {check.missingCount>0 && <button type="button" className="ab-admin-secondary" onClick={()=>fillWithAi(item.id)}>Дополнить словарь через ИИ</button>}
+                </div>)}
+            </div>;
           })}
           {!sets.length && <p className="ab-admin-empty">{busy ? 'Загружаю…' : 'Курсов пока нет.'}</p>}
         </div>
 
         <div className="ab-admin-action-row">
-          <button type="button" disabled={busy || !ld || !publishSetIds.length} onClick={()=>void publish()}>
+          <button type="button" disabled={busy || checking || !ld || !publishSetIds.length || blockedIds.length>0} onClick={()=>void publish()}>
             {publishSetIds.length ? 'Выпустить отмеченные ('+publishSetIds.length+')' : 'Выпустить'}
           </button>
         </div>
+        {checking && <p className="ab-admin-feedback">Проверяю слова курса…</p>}
+        {!checking && blockedIds.length>0 && <p className="ab-admin-feedback">Сначала добавь в словарь слова, которых не хватает, — иначе ученик нажмёт на слово и ничего не увидит.</p>}
         {message && <p role="status" className="ab-admin-feedback">{message}</p>}
         <p className="ab-admin-note">Цена, бесплатные дни и уроки меняются в «Редакторе уроков». Курс A1 из кода выпускается сам после каждого изменения, если в GitHub добавлен секрет ADMIN_KEY.</p>
 
@@ -487,7 +547,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
         {ipaMessage && <p className="ab-admin-feedback" role="status">{ipaMessage}</p>}
       </article>
 
-      <article className="ab-admin-panel ab-admin-bulk">
+      <article className="ab-admin-panel ab-admin-bulk ab-course-open-day" ref={bulkPanel}>
         <div className="ab-admin-section-head">
           <div>
             <h2>Дополнить словарь через ИИ</h2>
