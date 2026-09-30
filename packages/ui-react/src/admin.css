@@ -467,3 +467,15 @@
 .ab-admin-search{display:grid;gap:5px;margin-bottom:6px}
 .ab-admin-search input{box-sizing:border-box;width:100%;font:inherit}
 .ab-admin-link{border:0;padding:0;background:none;color:var(--accent-ink,var(--accent,#2f5fe0));font:inherit;font-weight:700;text-align:left;cursor:pointer;text-decoration:underline}
+
+/* Learner card in «Пользователи»: what the person has right now. */
+.ab-admin-person{display:grid;gap:6px;margin:10px 0;padding:10px 12px;border:1px solid var(--line,#e4e6eb);border-radius:12px;background:var(--surface,#eef1f6)}
+.ab-admin-person > div{display:flex;gap:10px;align-items:baseline}
+.ab-admin-person dt{flex:0 0 92px}
+.ab-admin-person dt{color:var(--muted,#6b7280);font-size:12px}
+.ab-admin-person dd{margin:0;display:flex;flex-wrap:wrap;gap:6px;font-size:13px;color:var(--ink,#111)}
+.ab-admin-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;background:var(--card,#fff);border:1px solid var(--line,#e4e6eb)}
+/* Products style every <button>; a text link must stay a text link. */
+.ab-admin button.ab-admin-link,.ab-admin-link{background:none!important;box-shadow:none!important;border:0!important;padding:0!important;margin:0!important;min-height:0!important;width:auto!important;color:var(--accent-ink,var(--accent,#2f5fe0))!important}
+.ab-admin-chip .ab-admin-link{font-size:12px}
+.ab-admin-access .ab-admin-feedback{margin:4px 0 8px;color:var(--ink,#111);font-weight:600}

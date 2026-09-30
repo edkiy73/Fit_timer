@@ -128,7 +128,7 @@ try{
   await adminPage.getByLabel('Курс или покупка').selectOption('export');
   await adminPage.getByRole('button', {name: 'Выдать', exact: true}).click();
   ok('admin grants the purchase from the shared Admin UI',
-    await appears(adminPage.getByRole('cell', {name: 'export', exact: true})));
+    await appears(adminPage.getByRole('cell', {name: 'Экспорт задач', exact: true})));
   await phone.reload();
   ok('app refreshes rights on start and opens the paid feature',
     await appears(phone.getByRole('button', {name: /Скачать задачи/}), 8000));
