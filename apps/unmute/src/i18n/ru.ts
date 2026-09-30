@@ -217,6 +217,7 @@ export const ru = {
   'learn.unavailableTitle': 'Этот шаг сейчас недоступен',
   'learn.unavailableText': 'Вернись в «Сегодня» и открой текущий доступный шаг.',
   'learn.position': 'Задание {current} из {total}',
+  'learn.close': 'Закрыть урок',
   'learn.activityProgress': 'Прогресс занятия',
   'learn.continue': 'Продолжить',
   'learn.chooseAnswer': 'Выбери ответ',

@@ -17,6 +17,8 @@ import { isNodeUnlockedByPurchase } from './content/access';
 import { AIConversationView } from './ai-conversation';
 import { AnswerExplanationView } from './answer-explanation';
 import { trackDayCompleted, trackLessonCompleted } from './observability';
+import { Icon } from './icons';
+import { stageForDay, stageNameKey } from './course-stages';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -56,6 +58,20 @@ export function firstPendingActivityIndex(
     return !seen || seen.deleted;
   });
   return index<0?0:index;
+}
+
+/** Segmented progress for short lessons; a plain bar when there are too many steps to draw. */
+function RunnerProgress({current,total,label}:{current:number;total:number;label:string}){
+  const segments=total<=30;
+  return (
+    <div className="runner-progress" role="progressbar" aria-label={label} aria-valuemin={1} aria-valuemax={Math.max(1,total)} aria-valuenow={current+1}>
+      {segments
+        ? Array.from({length:total},(_,step)=>(
+            <span key={step} className={step<current?'is-done':step===current?'is-current':''} />
+          ))
+        : <span className="runner-bar" style={{transform:`scaleX(${total?(current+1)/total:0})`}} />}
+    </div>
+  );
 }
 
 export interface NodeRunnerViewProps {
@@ -182,6 +198,7 @@ export function NodeRunnerView({
 
   const setId=state.set.id;
   const position=t('learn.position',{current:index+1,total:activities.length});
+  const stage=stageForDay(node.dayIndex);
 
   const handleTheory=async()=>{
     if(busy)return;
@@ -236,7 +253,10 @@ export function NodeRunnerView({
     explanation?:Record<string,string>|undefined;
   })=>result===null?null:(
     <div className={result?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-wrong'} role="status">
-      <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
+      <div className="learn-feedback-head">
+        <span className="learn-feedback-icon" aria-hidden="true"><Icon name={result?'check':'review'} size={22} /></span>
+        <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
+      </div>
       {!result&&accepted&&(
         <span><LexiconText text={t('learn.accepted',{answer:accepted})} refs={activity.lexiconRefs} /></span>
       )}
@@ -254,40 +274,36 @@ export function NodeRunnerView({
           onAccess={onAccess}
         />
       )}
-      <button className="primary-button" type="button" onClick={()=>advance()}>
+      <button className="primary-button learn-feedback-next" type="button" onClick={()=>advance()}>
         {index+1<activities.length?t('learn.next'):t('learn.finish')}
       </button>
     </div>
   );
 
   return (
-    <section className="learn-shell" aria-labelledby="learn-title">
-      <div className="learn-header">
-        <button className="learn-back" type="button" onClick={onExit}>{t('nav.back')}</button>
-        <span>{position}</span>
+    <section className="learn-shell runner" aria-labelledby="learn-title">
+      <div className="runner-top">
+        <button className="runner-close pressable" type="button" onClick={onExit} aria-label={t('learn.close')}>
+          <Icon name="close" size={20} />
+        </button>
+        <RunnerProgress current={index} total={activities.length} label={t('learn.activityProgress')} />
+        <span className="runner-count" aria-label={position}>{index+1}/{activities.length}</span>
       </div>
 
-      <div>
-        <div className="eyebrow">
-          {node.dayIndex?t('today.day',{day:node.dayIndex}):t('today.nextStep')}
-        </div>
+      <div className="runner-heading">
+        {stage&&<div className="screen-kicker">{t(stageNameKey(stage))}</div>}
         <h2 id="learn-title"><LexiconText text={localized(node.title,locale)} /></h2>
       </div>
 
-      <progress
-        className="today-progress"
-        max={Math.max(1,activities.length)}
-        value={index+1}
-        aria-label={t('learn.activityProgress')}
-      />
-
       {activity.type==='theory'&&(
         <article className="learn-card">
-          {activity.title&&<h3><LexiconText text={localized(activity.title,locale)} refs={activity.lexiconRefs} /></h3>}
+          {activity.title&&localized(activity.title,locale)!==localized(node.title,locale)&&<h3><LexiconText text={localized(activity.title,locale)} refs={activity.lexiconRefs} /></h3>}
           <div className="learn-theory"><LexiconText text={plainTheory(activity,locale)} refs={activity.lexiconRefs} /></div>
-          <button className="primary-button" type="button" disabled={busy} onClick={()=>void handleTheory()}>
-            {t('learn.continue')}
-          </button>
+          <div className="runner-action">
+            <button className="primary-button" type="button" disabled={busy} onClick={()=>void handleTheory()}>
+              {t('learn.continue')}
+            </button>
+          </div>
         </article>
       )}
 
@@ -298,7 +314,10 @@ export function NodeRunnerView({
           <fieldset className="learn-options" disabled={busy||result!==null}>
             <legend className="sr-only">{t('learn.chooseAnswer')}</legend>
             {activity.options.map((option,optionIndex)=>(
-              <label className="learn-option" key={optionIndex}>
+              <label
+                className={'learn-option pressable'+(result!==null&&optionIndex===activity.correctIndex?' is-correct':'')+(result===false&&optionIndex===selected?' is-wrong':'')}
+                key={optionIndex}
+              >
                 <input
                   type="radio"
                   name={activity.id}
@@ -306,18 +325,21 @@ export function NodeRunnerView({
                   onChange={()=>setSelected(optionIndex)}
                 />
                 <span><LexiconText text={localized(option,locale)} refs={activity.lexiconRefs} /></span>
+                {result!==null&&optionIndex===activity.correctIndex&&<Icon name="check" size={20} className="learn-option-mark" />}
               </label>
             ))}
           </fieldset>
           {result===null&&(
-            <button
-              className="primary-button"
-              type="button"
-              disabled={selected===null||busy}
-              onClick={()=>void handleChoice()}
-            >
-              {t('learn.check')}
-            </button>
+            <div className="runner-action">
+              <button
+                className="primary-button"
+                type="button"
+                disabled={selected===null||busy}
+                onClick={()=>void handleChoice()}
+              >
+                {t('learn.check')}
+              </button>
+            </div>
           )}
           {feedback({
             question:localized(activity.prompt,locale),
@@ -351,14 +373,16 @@ export function NodeRunnerView({
             />
           </label>
           {result===null&&(
-            <button
-              className="primary-button"
-              type="button"
-              disabled={!answer.trim()||busy}
-              onClick={()=>void handleText()}
-            >
-              {t('learn.check')}
-            </button>
+            <div className="runner-action">
+              <button
+                className="primary-button"
+                type="button"
+                disabled={!answer.trim()||busy}
+                onClick={()=>void handleText()}
+              >
+                {t('learn.check')}
+              </button>
+            </div>
           )}
           {feedback({
             question:localized(activity.prompt,locale),
