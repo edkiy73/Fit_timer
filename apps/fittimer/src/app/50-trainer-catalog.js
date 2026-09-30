@@ -1,5 +1,6 @@
 import { OPT_GOAL, OPT_LEVEL } from './options.js';
 import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
+import { registerAction } from './05-actions.js';
 import { $, DUMBBELL_ICON, ICONS, appAlert, appDialog, goBackTo, goTab, icon, openStart, plural,
   setShown, setStartFromShared, show, syncDockTabs
 } from './00-core.js';
@@ -130,7 +131,8 @@ export function renderClients(){
       : sum.progs === 1 ? (newest ? (newest.name || t('clients.programFallback')) : t('clients.programFallback'))
       : t('clients.withPrograms',{count:sum.progs,programs:storeCountText(sum.progs,'program').replace(/^\d+\s+/,'')});
     row.querySelector('.cl-state').textContent = state;
-    row.onclick = ()=> openClient(i);
+    row.dataset.act = 'openClientFromList';
+    row.dataset.clientIdx = String(i);
     box.appendChild(row);
   });
   $('clsHint').textContent = n
@@ -219,20 +221,17 @@ function progCard(c, pr){
   again.type = 'button';
   again.className = 'choice ico-row';
   again.innerHTML = icon('share') + '<b>' + esc(t('clients.resend')) + '</b>';
-  again.onclick = ()=> resendProgram(c, pr);
+  again.dataset.act = 'resendClientProgram';
+  again.dataset.clientId = c.id;
+  again.dataset.programIdx = String(clProgs(c).indexOf(pr));
   acts.appendChild(again);
   const drop = document.createElement('button');
   drop.type = 'button';
   drop.className = 'link-btn';
   drop.textContent = t('clients.remove');
-  drop.onclick = async ()=>{
-    if(!(await appDialog(t('clients.removeQuestion',{name:pr.name}),
-      {confirm: true, okText: t('clients.removeAction'), cancelText: t('common.keep')}))) return;
-    c.progs = clProgs(c).filter(x => x !== pr);
-    await saveClients();
-    fillClient();
-    renderClients();
-  };
+  drop.dataset.act = 'removeClientProgram';
+  drop.dataset.clientId = c.id;
+  drop.dataset.programIdx = String(clProgs(c).indexOf(pr));
   acts.appendChild(drop);
   el.appendChild(acts);
   return el;
@@ -502,21 +501,17 @@ export function pickClientFor(p){
     b.querySelector('small').textContent = has ? t('clients.alreadyHas')
       : !sum.progs ? t('clients.noPrograms').toLowerCase()
       : t('clients.alreadyCount',{count:sum.progs,programs:storeCountText(sum.progs,'program').replace(/^\d+\s+/,'')});
-    b.onclick = async ()=>{
-      $('pickClientModal').classList.remove('open');
-      await sendProgramToClient(c, p);
-    };
+    b.dataset.act = 'sendProgramToChosenClient';
+    b.dataset.clientId = c.id;
+    b.dataset.programId = p.id;
     box.appendChild(b);
   });
   const add = document.createElement('button');
   add.type = 'button';
   add.className = 'choice add-row';
   add.innerHTML = icon('plus') + '<b>' + esc(t('clients.new')) + '</b>';
-  add.onclick = async ()=>{
-    $('pickClientModal').classList.remove('open');
-    const c = await addClient();
-    await sendProgramToClient(c, p);
-  };
+  add.dataset.act = 'addClientAndSendProgram';
+  add.dataset.programId = p.id;
   box.appendChild(add);
   $('pickClientModal').classList.add('open');
 }
@@ -901,6 +896,7 @@ function storeCoverData(it){
 }
 
 export let storeFilter = {q: '', cat: '', level: ''};
+let optPickHandler = null;
 // уже добавлена: у программы из каталога остаётся метка storeId, поэтому
 // повторный заход предлагает открыть, а не положить второй экземпляр.
 // Имя поля storeId не трогаем — по нему узнаются библиотеки старых пользователей.
@@ -911,19 +907,22 @@ const storeOwned = id => customPrograms.find(p => p.storeId === id) || null;
 // показываем, чтобы не выглядела как ещё один вариант выбора. Сброс — отдельной
 // строкой и только когда правда есть что сбрасывать.
 function openOptPicker(title, opts, cur, onPick){
+  optPickHandler = onPick;
   $('optTitle').textContent = title;
   const box = $('optList'); box.innerHTML = '';
-  opts.forEach(([v, t]) => {
+  opts.forEach(([v, label]) => {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'opt-row'; b.classList.toggle('act', v === cur);
     b.innerHTML = `<span></span><span class="or-check">${icon('check')}</span>`;
-    b.querySelector('span').textContent = t;
-    b.onclick = ()=>{ $('optModal').classList.remove('open'); onPick(v); };
+    b.querySelector('span').textContent = label;
+    b.dataset.act = 'pickCatalogOption';
+    b.dataset.optValue = v;
     box.appendChild(b);
   });
   const reset = $('optReset');
   setShown(reset, cur !== '');
-  reset.onclick = ()=>{ $('optModal').classList.remove('open'); onPick(''); };
+  reset.dataset.act = 'pickCatalogOption';
+  reset.dataset.optValue = '';
   $('optModal').classList.add('open');
 }
 
@@ -933,7 +932,7 @@ export function renderStoreFilters(){
     $(valId).textContent = cho ? cho[1] : ph;
     $(btnId).classList.toggle('ph', !cho);
     $(chevId).innerHTML = icon('chevD');
-    $(btnId).onclick = ()=> openOptPicker(ph, opts, cur, v => { onPick(v); renderStoreFilters(); renderStore(); });
+    $(btnId).dataset.act = btnId === 'storeCatBtn' ? 'openStoreCategoryFilter' : 'openStoreLevelFilter';
   };
   // Подписи над списками убраны: первый пункт и есть подпись — «Цель», «Уровень».
   // Показываем только те цели, по которым в каталоге вообще что-то есть: пустой
@@ -1010,7 +1009,7 @@ export function renderStore(){
       </div>
     </article>`;
   }).join('');
-  box.querySelectorAll('[data-open]').forEach(b => b.onclick = ()=> openStoreItem(b.dataset.open));
+  box.querySelectorAll('[data-open]').forEach(b => { b.dataset.act = 'openStoreItemFromList'; });
 }
 
 /* ---- страница программы каталога ---- */
@@ -1409,7 +1408,8 @@ function renderMyCatalog(){
     row.querySelector('.ub small').textContent =
       storeCountText(ex, 'exercise');
     row.querySelector('.cl-state').textContent = label;
-    row.onclick = ()=> openPublish(p);
+    row.dataset.act = 'openPublishFromList';
+    row.dataset.programId = p.id;
     box.appendChild(row);
   });
   $('mcHint').textContent = list.length
@@ -1471,7 +1471,7 @@ function fillPublish(){
     $(valId).textContent = cho ? cho[1] : ph;
     $(btnId).classList.toggle('ph', !cho);
     $(chevId).innerHTML = icon('chevD');
-    $(btnId).onclick = ()=> openOptPicker(ph, opts, cur, v => { onPick(v); fillPublish(); });
+    $(btnId).dataset.act = btnId === 'pubCatBtn' ? 'openPublishCategoryPicker' : 'openPublishLevelPicker';
   };
   fill('pubCatBtn', 'pubCatVal', 'pubCatChev', t('ai.goal'),
        OPT_GOAL.map(g => [g, canonicalLabel(g)]), pubDraft.cat, v => pubDraft.cat = v);
@@ -1684,7 +1684,8 @@ export function renderMine(){
         : '') + `</div>`;
     card.querySelector('h3').textContent = p.name;
     if(schedule) card.querySelector('.sched span').textContent = schedule;
-    card.onclick = ()=> openStart(p);
+    card.dataset.act = 'openMineProgram';
+    card.dataset.programId = p.id;
 
     // контекстное меню ⋮
     const more = document.createElement('button');
@@ -1695,62 +1696,53 @@ export function renderMine(){
     menu.className = 'ctx-menu';
     const bEdit = document.createElement('button');
     bEdit.innerHTML = icon('pencil') + t('common.edit');
-    bEdit.onclick = ()=>{ closeAllMenus(); openBuilder(p.id); };
+    bEdit.dataset.act = 'editMineProgram';
+    bEdit.dataset.programId = p.id;
     // включить / отключить: рядом с «Изменить», а не рядом с «Удалить» — это
     // не уничтожение, и путать эти два действия соседством нельзя
     const bOff = document.createElement('button');
     bOff.innerHTML = icon('power') + (on ? t('programs.disable') : t('programs.enable'));
     bOff.title = on ? t('programs.disableTitle') : t('programs.enableTitle');
-    bOff.onclick = async ()=>{
-      closeAllMenus();
-      p.active = !on;
-      await savePrograms();
-      renderMine();
-      // объясняем только выключение: включение возвращает привычное поведение,
-      // а вот исчезновение программы из «Сегодня» без объяснения пугает
-      if(on) appAlert(t('programs.disabledAlert'));
-    };
+    bOff.dataset.act = 'toggleMineProgramActive';
+    bOff.dataset.programId = p.id;
+    bOff.dataset.wasOn = on ? '1' : '0';
     const bShare = document.createElement('button');
     bShare.innerHTML = icon('share') + t('programs.shareLink');
-    bShare.onclick = ()=>{ closeAllMenus(); exportProgram(p); };
+    bShare.dataset.act = 'shareMineProgram';
+    bShare.dataset.programId = p.id;
     // «Отправить подопечному» — то же действие, но с адресатом: отправка запоминается,
     // и потом видно, кому что уходило. Пункт есть только у тренера.
     const bClient = document.createElement('button');
     bClient.innerHTML = icon('users') + t('programs.sendClient');
-    bClient.onclick = ()=>{ closeAllMenus(); pickClientFor(p); };
+    bClient.dataset.act = 'sendMineProgramToClient';
+    bClient.dataset.programId = p.id;
     const bFile = document.createElement('button');
     bFile.innerHTML = icon('download') + t('programs.saveFile');
     bFile.title = t('programs.allImages');
-    bFile.onclick = ()=>{ closeAllMenus(); exportProgramFile(p); };
+    bFile.dataset.act = 'exportMineProgramFile';
+    bFile.dataset.programId = p.id;
     const bDel = document.createElement('button');
     bDel.className = 'danger';
     bDel.innerHTML = icon('trash') + t('common.delete');
-    bDel.onclick = async ()=>{
-      closeAllMenus();
-      if(!(await appDialog(t('programs.deleteQuestion',{name:p.name}), {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
-      setCustomProgramsShared(customPrograms.filter(x=>x.id!==p.id));
-      await savePrograms();
-      renderMine();
-    };
+    bDel.dataset.act = 'deleteMineProgram';
+    bDel.dataset.programId = p.id;
     // Копия и предложение в каталог — те же действия, что на экране программы.
     // Действие, доступное в одном месте и недоступное в другом, человек считает
     // сломанным, а не «не предусмотренным здесь».
     const bCopy = document.createElement('button');
     bCopy.innerHTML = icon('copy') + t('common.duplicate');
-    bCopy.onclick = async ()=>{
-      closeAllMenus();
-      const c = await duplicateProgram(p);
-      openBuilder(c.id);
-    };
+    bCopy.dataset.act = 'duplicateMineProgram';
+    bCopy.dataset.programId = p.id;
     const bPub = document.createElement('button');
     bPub.innerHTML = icon('crown') + t('programs.submitCatalog');
-    bPub.onclick = ()=>{ closeAllMenus(); openPublish(p); };
+    bPub.dataset.act = 'publishMineProgram';
+    bPub.dataset.programId = p.id;
 
     menu.append(bEdit, bOff, bCopy, bShare);
     if(trainerOn()) menu.append(bClient);
     if(trainerOn() && !p.storeId) menu.append(bPub);
     menu.append(bFile, bDel);
-    more.onclick = e=>{ e.stopPropagation(); toggleMenu(menu); };
+    more.dataset.act = 'toggleMineProgramMenu';
     const handle = document.createElement('button');
     handle.className = 'drag-handle';
     handle.innerHTML = icon('grip');
@@ -1766,8 +1758,123 @@ export function renderMine(){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initTrainerCatalog(){
-  $('siLock').onclick = openPremium;
-  $('siBy').onclick = ()=> siItem && openTrainer(siItem.by);
-  $('siBuy').onclick = ()=> siItem && addStoreItem(siItem.id);
-  $('siBackTop').onclick = ()=> goBackTo('scrStore');
+  registerAction('openClientFromList', btn => {
+    const i = parseInt(btn.dataset.clientIdx, 10);
+    if(Number.isFinite(i)) openClient(i);
+  });
+  registerAction('resendClientProgram', btn => {
+    const client = clients.find(x => String(x.id) === btn.dataset.clientId);
+    const i = parseInt(btn.dataset.programIdx, 10);
+    const pr = client && clProgs(client)[i];
+    if(client && pr) resendProgram(client, pr);
+  });
+  registerAction('removeClientProgram', async btn => {
+    const client = clients.find(x => String(x.id) === btn.dataset.clientId);
+    const i = parseInt(btn.dataset.programIdx, 10);
+    const pr = client && clProgs(client)[i];
+    if(!client || !pr) return;
+    if(!(await appDialog(t('clients.removeQuestion',{name:pr.name}),
+      {confirm:true, okText:t('clients.removeAction'), cancelText:t('common.keep')}))) return;
+    client.progs = clProgs(client).filter(x => x !== pr);
+    await saveClients();
+    fillClient();
+    renderClients();
+  });
+  registerAction('sendProgramToChosenClient', async btn => {
+    const client = clients.find(x => String(x.id) === btn.dataset.clientId);
+    const p = customPrograms.find(x => String(x.id) === btn.dataset.programId);
+    if(!client || !p) return;
+    $('pickClientModal').classList.remove('open');
+    await sendProgramToClient(client, p);
+  });
+  registerAction('addClientAndSendProgram', async btn => {
+    const p = customPrograms.find(x => String(x.id) === btn.dataset.programId);
+    if(!p) return;
+    $('pickClientModal').classList.remove('open');
+    const client = await addClient();
+    await sendProgramToClient(client, p);
+  });
+  registerAction('pickCatalogOption', btn => {
+    $('optModal').classList.remove('open');
+    const cb = optPickHandler;
+    optPickHandler = null;
+    if(cb) cb(btn.dataset.optValue || '');
+  });
+  registerAction('openStoreCategoryFilter', () => {
+    const has = id => storeAll().some(x => x.cat === id);
+    openOptPicker(t('ai.goal'), STORE_CATS.filter(c => has(c.id)).map(c => [c.id, canonicalLabel(c.name)]),
+      storeFilter.cat, v => { storeFilter.cat = v; renderStoreFilters(); renderStore(); });
+  });
+  registerAction('openStoreLevelFilter', () => {
+    openOptPicker(t('ai.level'), STORE_LEVELS.map(l => [l, canonicalLabel(l)]),
+      storeFilter.level, v => { storeFilter.level = v; renderStoreFilters(); renderStore(); });
+  });
+  registerAction('openStoreItemFromList', btn => {
+    if(btn.dataset.open) openStoreItem(btn.dataset.open);
+  });
+  registerAction('openPublishFromList', btn => {
+    const p = customPrograms.find(x => String(x.id) === btn.dataset.programId);
+    if(p) openPublish(p);
+  });
+  registerAction('openPublishCategoryPicker', () => {
+    openOptPicker(t('ai.goal'), OPT_GOAL.map(g => [g, canonicalLabel(g)]), pubDraft.cat,
+      v => { pubDraft.cat = v; fillPublish(); });
+  });
+  registerAction('openPublishLevelPicker', () => {
+    openOptPicker(t('ai.level'), OPT_LEVEL.map(l => [l, canonicalLabel(l)]), pubDraft.level,
+      v => { pubDraft.level = v; fillPublish(); });
+  });
+  const mineProgram = btn => customPrograms.find(x => String(x.id) === btn.dataset.programId);
+  registerAction('openMineProgram', btn => {
+    const p = mineProgram(btn); if(p) openStart(p);
+  });
+  registerAction('editMineProgram', btn => {
+    closeAllMenus(); const p = mineProgram(btn); if(p) openBuilder(p.id);
+  });
+  registerAction('toggleMineProgramActive', async btn => {
+    closeAllMenus();
+    const p = mineProgram(btn); if(!p) return;
+    const wasOn = btn.dataset.wasOn === '1';
+    p.active = !wasOn;
+    await savePrograms();
+    renderMine();
+    if(wasOn) appAlert(t('programs.disabledAlert'));
+  });
+  registerAction('shareMineProgram', btn => {
+    closeAllMenus(); const p = mineProgram(btn); if(p) exportProgram(p);
+  });
+  registerAction('sendMineProgramToClient', btn => {
+    closeAllMenus(); const p = mineProgram(btn); if(p) pickClientFor(p);
+  });
+  registerAction('exportMineProgramFile', btn => {
+    closeAllMenus(); const p = mineProgram(btn); if(p) exportProgramFile(p);
+  });
+  registerAction('deleteMineProgram', async btn => {
+    closeAllMenus();
+    const p = mineProgram(btn); if(!p) return;
+    if(!(await appDialog(t('programs.deleteQuestion',{name:p.name}),
+      {confirm:true, okText:t('common.delete'), cancelText:t('common.keep')}))) return;
+    setCustomProgramsShared(customPrograms.filter(x => x.id !== p.id));
+    await savePrograms();
+    renderMine();
+  });
+  registerAction('duplicateMineProgram', async btn => {
+    closeAllMenus();
+    const p = mineProgram(btn); if(!p) return;
+    const copy = await duplicateProgram(p);
+    openBuilder(copy.id);
+  });
+  registerAction('publishMineProgram', btn => {
+    closeAllMenus(); const p = mineProgram(btn); if(p) openPublish(p);
+  });
+  registerAction('toggleMineProgramMenu', (btn, event) => {
+    event.stopPropagation();
+    const wrap = btn.closest('.mine-wrap');
+    const menu = wrap && wrap.querySelector('.ctx-menu');
+    if(menu) toggleMenu(menu);
+  });
+  registerAction('openStorePremium', () => openPremium());
+  registerAction('openStoreTrainer', () => { if(siItem) openTrainer(siItem.by); });
+  registerAction('buyStoreItem', () => { if(siItem) addStoreItem(siItem.id); });
+  registerAction('backFromStoreItem', () => goBackTo('scrStore'));
 }

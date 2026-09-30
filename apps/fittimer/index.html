@@ -172,7 +172,7 @@
        названием: во всю ширину квадрат съедал пол-экрана. Состав премиум-программы
        открыт только по подписке — вместо него заглушка, ведущая в витрину подписки. -->
   <section class="screen" id="scrStoreItem">
-    <div class="screen-head"><button class="back-chip" id="siBackTop"></button><h2 data-i18n="common.program">Программа</h2></div>
+    <div class="screen-head"><button class="back-chip" id="siBackTop" data-act="backFromStoreItem"></button><h2 data-i18n="common.program">Программа</h2></div>
     <div class="card-block">
       <div class="si-hero">
         <div class="si-cover" id="siCover"></div>
@@ -184,7 +184,7 @@
       </div>
       <div class="ex-meta" id="siFacts"></div>
       <p class="st-gives" id="siGives"></p>
-      <button type="button" class="st-by" id="siBy">
+      <button type="button" class="st-by" id="siBy" data-act="openStoreTrainer">
         <span class="st-ava" data-icon="user"></span>
         <span class="st-nick" id="siNick"></span>
         <span class="st-role" data-i18n="store.roleTrainer">тренер</span>
@@ -193,14 +193,14 @@
     <div class="card-block">
       <div class="cb-head"><p class="cb-title" data-i18n="store.inside">Что внутри</p><span class="cb-count" id="siCount"></span></div>
       <div class="list-rows" id="siList"></div>
-      <button type="button" class="si-lock hidden" id="siLock">
+      <button type="button" class="si-lock hidden" id="siLock" data-act="openStorePremium">
         <span class="sl-ico" data-icon="crown"></span>
         <b data-i18n="store.locked">Состав открыт по подписке</b>
         <p id="siLockTxt"></p>
       </button>
     </div>
     <div class="builder-actions">
-      <button class="btn-primary" id="siBuy" data-i18n="common.add">Добавить</button>
+      <button class="btn-primary" id="siBuy" data-act="buyStoreItem" data-i18n="common.add">Добавить</button>
     </div>
   </section>
 
@@ -504,8 +504,8 @@
     <div class="cb-head"><p class="cb-title" data-i18n="builder.schedule">Когда тренироваться</p></div>
     <div class="sched-mode hidden" id="schedModeRow">
       <div class="hf-seg" id="schedSeg">
-        <button type="button" data-mode="days" data-i18n="builder.scheduleByDays">По дням недели</button>
-        <button type="button" data-mode="rot" data-i18n="builder.scheduleSequence">По очереди</button>
+        <button type="button" data-act="setScheduleMode" data-mode="days" data-i18n="builder.scheduleByDays">По дням недели</button>
+        <button type="button" data-act="setScheduleMode" data-mode="rot" data-i18n="builder.scheduleSequence">По очереди</button>
       </div>
       <p class="field-hint" id="schedHint"></p>
     </div>
@@ -534,7 +534,7 @@
 
     <div class="card-block">
     <div class="cb-head"><p class="cb-title" data-i18n="builder.progressionTitle">Со временем сложнее</p></div>
-    <div class="pref-row"><span><span data-i18n="builder.autoLoadTitle">Автоматически добавлять нагрузку</span><small data-i18n="builder.progressionSub">повторения и вес станут чуть больше по мере занятий</small></span><button class="switch" id="bProgOn"></button></div>
+    <div class="pref-row"><span><span data-i18n="builder.autoLoadTitle">Автоматически добавлять нагрузку</span><small data-i18n="builder.progressionSub">повторения и вес станут чуть больше по мере занятий</small></span><button class="switch" id="bProgOn" data-act="toggleBuilderProgression"></button></div>
     <div id="bProgOpts" class="stack hidden">
       <div class="field">
         <label data-i18n="builder.progressionFrequency">Как часто повышать</label>
@@ -747,8 +747,8 @@
       </div>
       <div class="field"><label data-i18n="ai.exerciseOrder">Порядок упражнений</label><div class="opt-list" id="qStyle"></div></div>
       <div class="field"><label data-i18n="ai.warmup">Разминка</label><div class="opt-list" id="qWarm"></div></div>
-      <div class="pref-row" style="border-top:none;padding-top:2px"><span><span data-i18n="ai.splitDaysTitle">Разные упражнения в разные дни</span><small data-i18n="ai.splitDaysSub">например, ноги в понедельник, спина в четверг</small></span><button class="switch" id="qSplit"></button></div>
-      <div class="pref-row hidden" id="qRotateRow"><span><span data-i18n="ai.rotateTitle">Чередовать варианты по очереди</span><small data-i18n="ai.rotateSub">сначала первый, потом второй, потом снова первый</small></span><button class="switch" id="qRotate"></button></div>
+      <div class="pref-row" style="border-top:none;padding-top:2px"><span><span data-i18n="ai.splitDaysTitle">Разные упражнения в разные дни</span><small data-i18n="ai.splitDaysSub">например, ноги в понедельник, спина в четверг</small></span><button class="switch" id="qSplit" data-act="toggleAiSplit"></button></div>
+      <div class="pref-row hidden" id="qRotateRow"><span><span data-i18n="ai.rotateTitle">Чередовать варианты по очереди</span><small data-i18n="ai.rotateSub">сначала первый, потом второй, потом снова первый</small></span><button class="switch" id="qRotate" data-act="toggleAiRotate"></button></div>
     </div>
 
     <div class="ai-pane hidden" id="aiPaneVideo">
@@ -2085,7 +2085,7 @@
       <div class="modal-card">
         <span class="mini-label" id="restModalTitle" data-i18n="rest.custom">Свой отдых</span>
         <div class="field"><input type="number" id="restModalInput" min="0" max="600" inputmode="numeric" placeholder="Например: 20" data-i18n-placeholder="rest.example"></div>
-        <button type="button" class="btn-primary" id="restModalDone" style="padding:15px;font-size:16px" data-i18n="finish.done">Готово</button>
+        <button type="button" class="btn-primary" id="restModalDone" data-act="applyCustomRest" style="padding:15px;font-size:16px" data-i18n="finish.done">Готово</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>

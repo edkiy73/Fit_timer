@@ -14,6 +14,8 @@ const accountJs=fs.readFileSync('src/app/20-account.js','utf8');
 const progressJs=fs.readFileSync('src/app/30-progress-media.js','utf8');
 const programsAi=fs.readFileSync('src/app/40-programs-ai.js','utf8');
 const workoutJs=fs.readFileSync('src/app/70-workout.js','utf8');
+const trainerCatalog=fs.readFileSync('src/app/50-trainer-catalog.js','utf8');
+const builderJs=fs.readFileSync('src/app/60-builder.js','utf8');
 const actions=fs.readFileSync('src/app/05-actions.js','utf8');
 const shell=fs.readFileSync('src/html/00-shell-home.html','utf8');
 const programsHtml=fs.readFileSync('src/html/10-programs-builder.html','utf8');
@@ -534,6 +536,32 @@ ok('workout dynamic clicks use action registry',
 ok('programs AI and workout have no direct onclick wiring',
   !programsAi.includes('.onclick')
   && !workoutJs.includes('.onclick'));
+
+ok('trainer catalog and builder actions use registry',
+  trainerCatalog.includes("registerAction('openClientFromList'")
+  && trainerCatalog.includes("registerAction('pickCatalogOption'")
+  && trainerCatalog.includes("registerAction('toggleMineProgramMenu'")
+  && trainerCatalog.includes("registerAction('openStorePremium'")
+  && builderJs.includes("registerAction('selectPlanTab'")
+  && builderJs.includes("registerAction('toggleExerciseMuscle'")
+  && builderJs.includes("registerAction('toggleAiChip'")
+  && builderJs.includes("registerAction('toggleAiCard'")
+  && builderJs.includes("registerAction('setScheduleMode'")
+  && builderJs.includes("registerAction('toggleBuilderProgression'"));
+ok('trainer catalog and builder have no direct onclick wiring',
+  !trainerCatalog.includes('.onclick')
+  && !builderJs.includes('.onclick'));
+ok('trainer catalog and builder static markup uses data-act',
+  shell.includes('id="siBackTop" data-act="backFromStoreItem"')
+  && shell.includes('id="siBy" data-act="openStoreTrainer"')
+  && shell.includes('id="siLock" data-act="openStorePremium"')
+  && shell.includes('id="siBuy" data-act="buyStoreItem"')
+  && programsHtml.includes('data-act="setScheduleMode" data-mode="days"')
+  && programsHtml.includes('data-act="setScheduleMode" data-mode="rot"')
+  && programsHtml.includes('id="bProgOn" data-act="toggleBuilderProgression"')
+  && programsHtml.includes('id="qSplit" data-act="toggleAiSplit"')
+  && programsHtml.includes('id="qRotate" data-act="toggleAiRotate"')
+  && progressHtml.includes('id="restModalDone" data-act="applyCustomRest"'));
 
 
 process.exit(bad?1:0);

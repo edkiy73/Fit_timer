@@ -579,8 +579,8 @@
     },
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
-      "lines": 1774,
-      "chars": 80953,
+      "lines": 1881,
+      "chars": 85647,
       "symbols": [
         "add",
         "addClient",
@@ -610,6 +610,7 @@
         "line",
         "loadStoreServer",
         "matchExerciseSnapshots",
+        "mineProgram",
         "openClient",
         "openClients",
         "openMyCatalog",
@@ -658,8 +659,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2283,
-      "chars": 105863,
+      "lines": 2365,
+      "chars": 108732,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -1036,7 +1037,7 @@
     "src/html/00-shell-home.html": {
       "kind": "frontend-html",
       "lines": 207,
-      "chars": 12118,
+      "chars": 12227,
       "ids": [
         "appUpdateBanner",
         "appUpdateGate",
@@ -1111,6 +1112,8 @@
       ],
       "actions": [
         "backFromStore",
+        "backFromStoreItem",
+        "buyStoreItem",
         "clearStoreSearch",
         "editCurrentProfile",
         "openAndroidUpdate",
@@ -1118,13 +1121,15 @@
         "openPremium",
         "openStatsTab",
         "openStoreFromMenu",
+        "openStorePremium",
+        "openStoreTrainer",
         "openWorkoutSound"
       ]
     },
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
       "lines": 639,
-      "chars": 44528,
+      "chars": 44669,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1426,10 +1431,14 @@
         "saveProgram",
         "saveProgramSettings",
         "setExerciseType",
+        "setScheduleMode",
         "startFreshWorkout",
         "switchBuilderMode",
         "switchExerciseMode",
         "toggleAiMenu",
+        "toggleAiRotate",
+        "toggleAiSplit",
+        "toggleBuilderProgression",
         "toggleExerciseDetails",
         "toggleExerciseDualProgression",
         "toggleExerciseMenu",
@@ -1742,7 +1751,7 @@
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
       "lines": 599,
-      "chars": 40916,
+      "chars": 40943,
       "ids": [
         "addExModal",
         "aemAI",
@@ -1936,6 +1945,7 @@
         "addClient",
         "addExerciseAI",
         "addExerciseManual",
+        "applyCustomRest",
         "applyHandsFree",
         "backClient",
         "backMyCatalog",
