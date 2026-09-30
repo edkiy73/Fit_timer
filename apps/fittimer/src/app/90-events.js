@@ -7,7 +7,7 @@ import { $, ICONS, ROOT_TABS, aiScreenDirty, appAlert, appConfirm, appDialog, as
   clearSnap, commitWeightModal, fxVol, goBackTo, goTab, guardNum, icon, initAudio, keepAwake,
   leaveGuard, masterGain, musicMode, numFieldsOk, openStart, prepTab, releaseWake, savedVoiceURI,
   setFxVolShared, setMusicModeShared, setPrepSecShared, setReadySecShared, setSavedVoiceURIShared,
-  setShown, setSideSecShared, setSoundOnShared, setVoiceLangShared, setVoiceVolShared, show,
+  setCoreEventHooks, setShown, setSideSecShared, setSoundOnShared, setVoiceLangShared, setVoiceVolShared, show,
   soundOn, speak, startFrom, state, syncSoundCascade, tick, voiceIsEnglish, voiceLang, voiceVol,
   workoutLoadSnapshot
 } from './00-core.js';
@@ -2008,6 +2008,13 @@ function resetSkipConfirm(){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initEvents(){
+  setCoreEventHooks({
+    applyAudioFromUser,
+    fillLiveSoundCascade,
+    getMoreTab: () => (typeof moreTab === 'string' ? moreTab : 'me'),
+    switchMoreTab,
+    syncSettingsForm
+  });
   setPlatformEventHooks({
     getNotificationPrefs,
     refreshVoicePackUI
