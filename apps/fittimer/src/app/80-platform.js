@@ -163,6 +163,27 @@ function applyVoiceCommand(input){
 /* ================= РЕЖИМЫ УПРАВЛЕНИЯ БЕЗ РУК ================= */
 export let hfMode = 'off'; // off | voice | headset
 
+export function restoreHandsFreeState({mode, recognitionLanguage} = {}){
+  hfMode = ['off','voice','headset'].includes(mode) ? mode : 'off';
+  voiceWanted = hfMode === 'voice';
+  recognitionLang = recognitionLanguage === 'en' ? 'en' : 'ru';
+  return {hfMode, recognitionLang};
+}
+
+export function setRecognitionLanguage(lang){
+  recognitionLang = lang === 'en' ? 'en' : 'ru';
+  return recognitionLang;
+}
+
+export function clearVoiceWanted(){
+  voiceWanted = false;
+}
+
+export function resumeVoiceListening(){
+  voiceWanted = true;
+  return startListening();
+}
+
 export function hfHintText(mode){
   if(mode === 'voice'){
     return t(appRuntimeCompat.offlineVoice() ? 'handsfree.voiceHintNative' : 'handsfree.voiceHintWeb');
@@ -790,10 +811,7 @@ function registerPlatformActions(){
 
 /* Setters for state owned by this chunk and changed from other chunks.
    Other chunks read these bindings directly but write them only through the owner. */
-export function setHfModeShared(value){ hfMode = value; return hfMode; }
-export function setRecognitionLangShared(value){ recognitionLang = value; return recognitionLang; }
 export function setThemeLightShared(value){ themeLight = value; return themeLight; }
-export function setVoiceWantedShared(value){ voiceWanted = value; return voiceWanted; }
 
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
