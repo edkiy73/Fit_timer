@@ -452,5 +452,25 @@ ok('exercise editor and builder actions have no direct onclick wiring',
   && !events.includes("$('bCoverAI').onclick")
   && !events.includes("$('btnResetTotal').onclick"));
 
+ok('final onclick migration uses declarative actions',
+  programsHtml.includes('id="bModeTabs"')
+  && programsHtml.includes('data-act="switchBuilderMode" data-m="manual"')
+  && programsHtml.includes('data-act="switchBuilderMode" data-m="text"')
+  && programsHtml.includes('data-act="switchBuilderMode" data-m="video"')
+  && programsHtml.includes('id="exModeTabs"')
+  && programsHtml.includes('data-act="switchExerciseMode" data-m="manual"')
+  && programsHtml.includes('data-act="switchExerciseMode" data-m="ai"')
+  && events.includes("$(p + 'SoundOn').dataset.act = 'toggleLiveSoundMaster'")
+  && events.includes("$(p + 'VoiceOn').dataset.act = 'toggleLiveSoundVoice'")
+  && events.includes("$(p + 'FxOn').dataset.act = 'toggleLiveSoundFx'")
+  && events.includes("$(p + 'Music').dataset.act = 'toggleLiveSoundMusic'")
+  && events.includes("b.dataset.act = action")
+  && events.includes("'duplicateAiExercise'")
+  && events.includes("'deleteAiExercise'")
+  && events.includes("'duplicateExercise'")
+  && events.includes("'deleteExercise'"));
+ok('90-events has no direct onclick wiring left',
+  !events.includes('.onclick'));
+
 
 process.exit(bad?1:0);
