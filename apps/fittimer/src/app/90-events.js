@@ -48,7 +48,7 @@ import { AI_SOURCES, aiClientVerdict, aiSrc, aiUiText, apiPost, applyProgression
 } from './40-programs-ai.js';
 import { addClient, curClient, doPublish, loadStoreServer, openClient, openMyCatalog, openStore,
   openStoreItem, openTrainer, pubDraft, pubFrom, renderClients, renderMine, renderStore,
-  renderStoreFilters, renderTrainerCard, sendProgramToClient, siItem, storeCountText, storeFilter,
+  renderStoreFilters, renderTrainerCard, sendProgramToClient, setTrainerEventHooks, siItem, storeCountText, storeFilter,
   storeFrom, tpFrom
 } from './50-trainer-catalog.js';
 import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExerciseAsNew,
@@ -2008,6 +2008,9 @@ function resetSkipConfirm(){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initEvents(){
+  setTrainerEventHooks({
+    openPremium
+  });
   setAccountEventHooks({
     applyAudioFromUser,
     readTimings,
