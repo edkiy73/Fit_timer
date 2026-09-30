@@ -1,6 +1,6 @@
 <!-- Редактор профиля -->
   <section class="screen builder" id="scrUserEdit">
-    <div class="screen-head"><button class="back-chip" id="ueBackTop">‹</button><h2 id="ueTitle" data-i18n="profile.title">Профиль</h2></div>
+    <div class="screen-head"><button class="back-chip" id="ueBackTop" data-act="profileBack">‹</button><h2 id="ueTitle" data-i18n="profile.title">Профиль</h2></div>
 
     <!-- Профиль -->
     <div class="ue-pane">
@@ -60,11 +60,11 @@
 
       <!-- редкое и необратимое действие не стоит рядом с «Сохранить»: оно живёт
            внизу страницы, а закреплённая панель осталась в одну строку -->
-      <button type="button" class="link-btn" id="btnDelUser" style="color:var(--danger)" data-i18n="profile.delete">Удалить профиль</button>
+      <button type="button" class="link-btn" id="btnDelUser" data-act="deleteUser" style="color:var(--danger)" data-i18n="profile.delete">Удалить профиль</button>
     </div>
 
     <div class="builder-actions">
-      <button class="btn-primary" id="btnSaveUser" data-i18n="common.save">Сохранить</button>
+      <button class="btn-primary" id="btnSaveUser" data-act="saveUser" data-i18n="common.save">Сохранить</button>
     </div>
   </section>
 
@@ -245,8 +245,8 @@
           <div class="seg"><button type="button" id="whoF" data-i18n="who.female">Женский</button><button type="button" id="whoM" data-i18n="who.male">Мужской</button></div>
         </div>
         <div class="field"><label data-i18n="profile.age">Возраст, полных лет</label><input type="number" id="whoAge" min="5" max="100" step="1" inputmode="numeric" placeholder="Например, 32" data-i18n-placeholder="profile.ageExample"></div>
-        <button class="btn-primary" id="whoSave" style="padding:14px;font-size:16px" data-i18n="who.save">Сохранить и продолжить</button>
-        <button class="modal-btn" id="whoSkip" data-i18n="common.cancel">Отмена</button>
+        <button class="btn-primary" id="whoSave" data-act="whoSave" style="padding:14px;font-size:16px" data-i18n="who.save">Сохранить и продолжить</button>
+        <button class="modal-btn" id="whoSkip" data-act="whoSkip" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
@@ -460,17 +460,17 @@
           <div class="cmp-col">
             <select id="cmpA" class="voice-sel" style="max-width:none;width:100%"></select>
             <div class="cmp-img" id="cmpImgA"></div>
-            <button class="link-btn" id="cmpDelA" style="padding:6px;margin:0" data-i18n="compare.deletePhoto">Удалить это фото</button>
+            <button class="link-btn" id="cmpDelA" data-act="deleteCompareA" style="padding:6px;margin:0" data-i18n="compare.deletePhoto">Удалить это фото</button>
           </div>
           <div class="cmp-col">
             <select id="cmpB" class="voice-sel" style="max-width:none;width:100%"></select>
             <div class="cmp-img" id="cmpImgB"></div>
-            <button class="link-btn" id="cmpDelB" style="padding:6px;margin:0" data-i18n="compare.deletePhoto">Удалить это фото</button>
+            <button class="link-btn" id="cmpDelB" data-act="deleteCompareB" style="padding:6px;margin:0" data-i18n="compare.deletePhoto">Удалить это фото</button>
           </div>
         </div>
         <p class="field-hint" id="cmpDays" style="text-align:center;margin:10px 0 4px"></p>
         <p class="field-hint" style="text-align:center;margin:0 0 10px" data-i18n="compare.hint">Проведи по снимку вбок — сменится дата. Нажми — во весь экран.</p>
-        <button class="btn-primary" id="btnShareCmp" style="padding:14px" data-i18n="compare.share">Поделиться сравнением</button>
+        <button class="btn-primary" id="btnShareCmp" data-act="shareCompare" style="padding:14px" data-i18n="compare.share">Поделиться сравнением</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.close">Закрыть</button>
       </div>
     </div>
@@ -520,7 +520,7 @@
       <div class="modal-card">
         <span class="mini-label" data-i18n="weight.history">История веса</span>
         <div id="whList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
-        <button class="btn-primary" id="whSave" style="padding:14px" data-i18n="common.save">Сохранить</button>
+        <button class="btn-primary" id="whSave" data-act="saveWeightHistory" style="padding:14px" data-i18n="common.save">Сохранить</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
@@ -544,7 +544,7 @@
           <div class="whc"><label data-i18n="well.pulse">Пульс</label><input type="number" id="pulseInput" min="30" max="220" inputmode="numeric"></div>
           <div class="whc"><label data-i18n="well.sleepHours">Сон, ч</label><input type="number" id="sleepInput" step="0.5" min="0" max="16" inputmode="decimal"></div>
         </div>
-        <button class="btn-primary" id="btnSaveWell" style="padding:14px;margin-top:6px" data-i18n="common.save">Сохранить</button>
+        <button class="btn-primary" id="btnSaveWell" data-act="saveWell" style="padding:14px;margin-top:6px" data-i18n="common.save">Сохранить</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
@@ -553,7 +553,7 @@
       <div class="modal-card">
         <span class="mini-label" data-i18n="well.history">История самочувствия</span>
         <div id="wellHistList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
-        <button class="btn-primary" id="wellHistSave" style="padding:14px" data-i18n="common.save">Сохранить</button>
+        <button class="btn-primary" id="wellHistSave" data-act="saveWellHistory" style="padding:14px" data-i18n="common.save">Сохранить</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
