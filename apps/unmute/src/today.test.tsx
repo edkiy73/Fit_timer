@@ -88,7 +88,8 @@ describe('Today learner shell',()=>{
     expect(screen.getByRole('heading',{name:'Сегодня'})).toBeTruthy();
     expect(screen.getByText('День 2')).toBeTruthy();
     expect(screen.getByRole('heading',{name:'Настоящее время'})).toBeTruthy();
-    expect(screen.getByText('Заданий: 2')).toBeTruthy();
+    expect(screen.getByText('0 из 2 заданий · ~1 мин')).toBeTruthy();
+    expect(screen.getByText('Старт')).toBeTruthy();
     expect(screen.getByText('1/4')).toBeTruthy();
     expect(screen.getByRole('button',{name:'Начать'})).toBeTruthy();
   });
@@ -125,7 +126,7 @@ describe('Today learner shell',()=>{
     const onReview=vi.fn();
     renderToday(runtime({state:reviewState}),vi.fn(),onReview);
 
-    expect(screen.getByText('Пора повторить: 1')).toBeTruthy();
+    expect(screen.getByText('карточек ждут').closest('article')?.textContent).toContain('1');
     await user.click(screen.getByRole('button',{name:'Начать повтор'}));
     expect(onReview).toHaveBeenCalledTimes(1);
   });
@@ -182,7 +183,7 @@ describe('Today learner shell',()=>{
       </I18nProvider>
     );
 
-    expect(screen.getByText('Пора повторить: 1')).toBeTruthy();
+    expect(screen.getByText('карточек ждут').closest('article')?.textContent).toContain('1');
   });
 
   it('shows an offline badge for a cached course snapshot',()=>{
