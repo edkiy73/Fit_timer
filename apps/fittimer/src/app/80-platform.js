@@ -9,6 +9,7 @@ import { DAYS, curUser, customPrograms, kvSet, loadSession, loadSessions, localI
   progActive, setDataSyncPlatformHooks, stats
 } from './10-data-sync.js';
 import { isPremium, setAccountPlatformHooks } from './20-account.js';
+import { setProgressPlatformHooks } from './30-progress-media.js';
 import { completeStep, nextStep, setPause, skipStep, stopSpeech } from './70-workout.js';
 
 /* ================= ТЕМА ================= */
@@ -796,6 +797,10 @@ export function setVoiceWantedShared(value){ voiceWanted = value; return voiceWa
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initPlatform(){
+  setProgressPlatformHooks({
+    applyTheme,
+    setThemeLightShared
+  });
   setAccountPlatformHooks({
     applyThemeFor,
     themeOf
