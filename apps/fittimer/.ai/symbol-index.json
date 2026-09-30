@@ -644,8 +644,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2266,
-      "chars": 105335,
+      "lines": 2283,
+      "chars": 105863,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -777,8 +777,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1869,
-      "chars": 83960,
+      "lines": 1883,
+      "chars": 84524,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
