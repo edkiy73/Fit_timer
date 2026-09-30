@@ -2,6 +2,19 @@
    чтобы строгая политика CSP (script-src 'self') запрещала любые встроенные скрипты —
    в том числе внедрённые через текст заявки в каталог. */
 const $ = id => document.getElementById(id);
+const ADMIN_ACTIONS = Object.create(null);
+function registerAdminAction(name, handler){
+  ADMIN_ACTIONS[name] = handler;
+}
+document.addEventListener('click', e => {
+  const target = e.target;
+  if(!(target instanceof Element)) return;
+  const el = target.closest('[data-admin-act]');
+  if(!(el instanceof HTMLElement)) return;
+  const fn = ADMIN_ACTIONS[el.dataset.adminAct || ''];
+  if(fn) fn(el, e);
+});
+
 const esc = v => String(v == null ? '' : v)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
@@ -331,14 +344,14 @@ function renderDashboard(b){
       +'<section class="form-card" style="margin:0"><div class="form-card-head"><h3>Система</h3><a class="b quiet" href="/api/health" target="_blank" rel="noopener">Полная диагностика</a></div>'
         +'<div class="form-card-body health-summary" id="dashboardHealth"><div class="muted">Проверяю критичные сервисы…</div></div></section>'
     +'</div>';
-  b.querySelectorAll('[data-go]').forEach(x=>x.onclick=()=>setTab(x.dataset.go));
+  b.querySelectorAll('[data-go]').forEach(x=>x.dataset.adminAct='goAdminTab');
   loadDashboardHealth();
 }
 
 function renderDrafts(b){
   const list=(data.drafts||[]).slice().reverse();
   b.innerHTML=pageHead('Черновики','Сохраняются на сервере и не видны пользователям до явной публикации.','<button class="b ok" id="draftAdd">+ Новая программа</button>');
-  $('draftAdd').onclick=()=>setTab('add');
+  $('draftAdd').dataset.adminAct='newAdminProgram';
   if(!list.length){
     b.insertAdjacentHTML('beforeend','<div class="empty">Черновиков нет. Незаконченную программу можно сохранить здесь и продолжить позже.</div>');
     return;
@@ -380,7 +393,7 @@ function renderCatalog(b){
     pending?'Сразу видно, что готово к публикации и чего не хватает.':'Опубликованные программы и доступ Premium.',
     !pending?'<button class="b ok" id="catalogAdd">+ Добавить</button>':''
   );
-  if(!pending)$('catalogAdd').onclick=()=>setTab('add');
+  if(!pending)$('catalogAdd').dataset.adminAct='newAdminProgram';
   if(!list.length){
     b.insertAdjacentHTML('beforeend',`<div class="empty">${pending?'Новых заявок нет.':'В каталоге пока ничего нет. Добавь первую программу кнопкой выше.'}</div>`);
     return;
@@ -2400,26 +2413,41 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeRowMenus();});
 window.addEventListener('resize',()=>closeRowMenus());
 window.addEventListener('scroll',()=>closeRowMenus(),true);
 
-document.querySelectorAll('[data-tab]').forEach(t => {
-  t.onclick = () => {
-    if(t.dataset.tab==='add'){
-      editing=null;editingStatus=null;localStorage.removeItem('adminEditingId');
-      form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'};editorLang='ru';
-    }
-    setTab(t.dataset.tab);
-  };
+registerAdminAction('goAdminTab', el => setTab(el.dataset.go || el.dataset.tab));
+registerAdminAction('newAdminProgram', () => {
+  editing=null; editingStatus=null; localStorage.removeItem('adminEditingId');
+  form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'}; editorLang='ru';
+  setTab('add');
 });
-$('navOpen').onclick = () => {
+registerAdminAction('switchAdminTab', el => {
+  if(el.dataset.tab==='add'){
+    editing=null;editingStatus=null;localStorage.removeItem('adminEditingId');
+    form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'};editorLang='ru';
+  }
+  setTab(el.dataset.tab);
+});
+registerAdminAction('openAdminNav', () => {
   document.body.classList.add('nav-open');
   $('adminNav').classList.add('open');
-};
-$('navShade').onclick = closeNav;
-$('out').onclick = () => { try{ sessionStorage.removeItem('adminKey'); }catch(_){} KEY = ''; closeNav(); showGate(''); };
-$('enter').onclick = () => {
+});
+registerAdminAction('closeAdminNav', () => closeNav());
+registerAdminAction('adminLogout', () => {
+  try{ sessionStorage.removeItem('adminKey'); }catch(_){}
+  KEY = '';
+  closeNav();
+  showGate('');
+});
+registerAdminAction('adminLogin', () => {
   KEY = $('key').value.trim();
   try{ sessionStorage.setItem('adminKey', KEY); }catch(_){}
   load();
-};
+});
+
+document.querySelectorAll('[data-tab]').forEach(t => t.dataset.adminAct = 'switchAdminTab');
+$('navOpen').dataset.adminAct = 'openAdminNav';
+$('navShade').dataset.adminAct = 'closeAdminNav';
+$('out').dataset.adminAct = 'adminLogout';
+$('enter').dataset.adminAct = 'adminLogin';
 $('key').onkeydown = e => { if(e.key === 'Enter') $('enter').click(); };
 
 if(KEY) load(); else showGate('');
