@@ -10,13 +10,13 @@ import { $, ICONS, ROOT_TABS, aiScreenDirty, appAlert, appConfirm, appDialog, as
   soundOn, speak, startFrom, state, syncSoundCascade, tick, voiceIsEnglish, voiceLang, voiceVol,
   workoutLoadSnapshot
 } from './00-core.js';
-import { DAYS, calOffset, clearSession, closeAllMenus, connectAccountSync, curUser, currentUser,
+import { DAYS, clearSession, closeAllMenus, connectAccountSync, curUser, currentUser,
   customPrograms, customToProgram, hasConsent, kvDel, kvGet, kvSet, loadData, loadIdentity,
   loadSession, localISO, migrateUserAge, newId, normPlans, openWellAdd, openWellHist, planDays,
   progActive, programDaysUnion, queueAccountSync, recordConsent, renderCalendar, renderStats,
   renderUsers, renderWeight, renderWellness, savePrograms, saveSession, saveStats, saveUsers,
-  saveWell, saveWellHist, sessionAgeText, sessionForProgram, sessionWorkout, setCalOffsetShared,
-  setCurrentUserShared, setUsersShared, setWeightMetricShared, setWellMetricShared, showSyncState,
+  saveWell, saveWellHist, selectWeightMetric, selectWellnessMetric, sessionAgeText, sessionForProgram,
+  sessionWorkout, setCurrentUserShared, setUsersShared, shiftCalendarMonth, showSyncState,
   setDataSyncEventHooks, stats, syncNotificationPrefsServer, toggleMenu, trackInstallOnce, trackProductEvent, users,
   workStepChoices
 } from './10-data-sync.js';
@@ -747,14 +747,8 @@ function registerEventActions(){
   registerAction('deleteCompareB', () => delCmpPhoto('cmpB'));
   registerAction('shareCompare', () => shareCompare());
   registerAction('saveWeightHistory', () => saveWeightHist());
-  registerAction('calendarPrev', () => {
-    setCalOffsetShared(calOffset - 1);
-    renderCalendar();
-  });
-  registerAction('calendarNext', () => {
-    setCalOffsetShared(calOffset + 1);
-    renderCalendar();
-  });
+  registerAction('calendarPrev', () => shiftCalendarMonth(-1));
+  registerAction('calendarNext', () => shiftCalendarMonth(1));
   registerAction('onboardingPrivacy', () => openLegal('privacy', () => asTab(() => show('scrOnboard'))));
   registerAction('onboardingStart', () => leaveOnboarding());
   registerAction('onboardingLogin', () => openLogin(() => leaveOnboarding()));
@@ -2241,15 +2235,13 @@ export function initEvents(){
   $('weightSwitch').addEventListener('click', e => {
     const b = e.target.closest('.wm-chip');
     if(!b) return;
-    setWeightMetricShared(b.dataset.k);
-    renderWeight();
+    selectWeightMetric(b.dataset.k);
   });
   // самочувствие: тот же переключатель метрик, что и у веса
   $('wellSwitch').addEventListener('click', e => {
     const b = e.target.closest('.wm-chip');
     if(!b) return;
-    setWellMetricShared(b.dataset.k);
-    renderWellness();
+    selectWellnessMetric(b.dataset.k);
   });
   $('cmpA').onchange = renderCmp;
   $('cmpB').onchange = renderCmp;
