@@ -14,7 +14,7 @@ need(events.includes("const freshProfile = await finishOnboardingCreate();"), 'o
 need(events.includes("goTab(freshProfile ? 'scrPrograms' : 'scrMenu');"), 'fresh user must land on workout choices, restored user on home');
 need(events.indexOf("if(pendingImport)") < events.indexOf("goTab(freshProfile ? 'scrPrograms' : 'scrMenu');"), 'pending import must keep priority over first-run landing');
 need(events.indexOf("if(pendingNativeLink)") < events.indexOf("goTab(freshProfile ? 'scrPrograms' : 'scrMenu');"), 'native App Link must keep priority over first-run landing');
-need(html.includes('id="obStart" data-i18n="onboarding.start"'), 'onboarding CTA must describe choosing a workout');
+need(/id="obStart"[^>]*data-i18n="onboarding\.start"/.test(html), 'onboarding CTA must describe choosing a workout');
 need(ru.includes("'onboarding.start': 'Выбрать тренировку'"), 'RU onboarding CTA is missing');
 need(en.includes("'onboarding.start': 'Choose a workout'"), 'EN onboarding CTA is missing');
 
