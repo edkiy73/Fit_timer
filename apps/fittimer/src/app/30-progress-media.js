@@ -2,6 +2,7 @@ import { appLocale, localeTag, t } from '../i18n/index.js';
 import { I18N_RU } from '../i18n/ru.js';
 import { I18N_EN } from '../i18n/en.js';
 import { appRuntimeCompat, appUi } from './00-dependencies.js';
+import { registerAction } from './05-actions.js';
 import { $, appAlert, appConfirm, appDialog, icon, plural, setShown, show } from './00-core.js';
 import { MONTH_OF, PROGRAM_DOC, curUser, currentUser, customPrograms, docMeta, kvGet, kvSet,
   loadData, loadIdentity, localISO, migrateUserAge, normPlans, pk, profileAge, recordConsent,
@@ -111,7 +112,8 @@ export function renderPhotos(){
     b.type = 'button';
     b.className = 'ph-item';
     b.innerHTML = `<img src="${esc(p.img)}" alt=""><small>${shortD(p.d)}</small>`;
-    b.onclick = ()=> openCompare(i);
+    b.dataset.act = 'openPhotoCompareAt';
+    b.dataset.photoIdx = String(i);
     strip.appendChild(b);
   });
   setShown(strip, !!n);
@@ -672,7 +674,8 @@ export function openWeightHist(){
         cell('fat', t('progress.fat'), en.fat, 0.1) + cell('musc', t('progress.muscle'), en.musc, 0.1) +
         cell('waist', t('progress.waistLabel'), en.waist) + cell('hips', t('progress.hipsLabel'), en.hips) + cell('chest', t('progress.chestLabel'), en.chest) +
       `</div>`;
-    row.querySelector('.wh-del').onclick = ()=> row.classList.toggle('del');
+    const del = row.querySelector('.wh-del');
+    del.dataset.act = 'toggleWeightHistoryDelete';
     list.appendChild(row);
   });
   $('whModal').classList.add('open');
@@ -951,12 +954,26 @@ export async function whoFinish(save){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initProgressMedia(){
+  registerAction('openPhotoCompareAt', btn => {
+    const i = parseInt(btn.dataset.photoIdx, 10);
+    if(Number.isFinite(i)) openCompare(i);
+  });
+  registerAction('toggleWeightHistoryDelete', btn => {
+    const row = btn.closest('.wh-row');
+    if(row) row.classList.toggle('del');
+  });
+  registerAction('openComparePhotoFull', btn => {
+    const side = btn.dataset.compareSide === 'B' ? 'B' : 'A';
+    const img = $(side === 'B' ? 'cmpImgB' : 'cmpImgA');
+    const select = $(side === 'B' ? 'cmpB' : 'cmpA');
+    if(img && select && !justSwiped(img)) openPhotoFull(+select.value);
+  });
+  registerAction('closePhotoFullBackdrop', (modal, event) => {
+    if(event.target === modal) appUi.closeModal(modal);
+  });
   wireSwipe($('cmpImgA'), ()=> cmpStep('A', 1), ()=> cmpStep('A', -1));
   wireSwipe($('cmpImgB'), ()=> cmpStep('B', 1), ()=> cmpStep('B', -1));
   wireSwipe($('pfImg'), ()=> pfStep(1), ()=> pfStep(-1));
-  $('cmpImgA').onclick = ()=>{ if(!justSwiped($('cmpImgA'))) openPhotoFull(+$('cmpA').value); };
-  $('cmpImgB').onclick = ()=>{ if(!justSwiped($('cmpImgB'))) openPhotoFull(+$('cmpB').value); };
-  $('photoFullModal').onclick = e => { if(e.target === $('photoFullModal')) appUi.closeModal($('photoFullModal')); };
   window.addEventListener('appLocaleChanged', async ()=>{
     const p = customPrograms.find(x=>x.id==='warmup');
     if(p && localizeBuiltinWarmup(p)) await savePrograms();

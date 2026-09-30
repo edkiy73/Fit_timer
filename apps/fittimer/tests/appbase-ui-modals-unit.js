@@ -18,7 +18,8 @@ ok('comparison modal uses appUi',
   && media.includes("appUi.closeModal($('cmpModal'))"));
 ok('photo fullscreen modal uses appUi',
   media.includes("appUi.openModal($('photoFullModal'))")
-  && media.includes("appUi.closeModal($('photoFullModal'))"));
+  && media.includes("registerAction('closePhotoFullBackdrop'")
+  && media.includes("appUi.closeModal(modal)"));
 ok('workout swap modal uses appUi',
   workout.includes("appUi.openModal($('swapModal'))")
   && workout.includes("appUi.closeModal($('swapModal'))"));

@@ -1,5 +1,6 @@
 import { appLocale, localeTag, normalizeLocale, profileLocalePreference, setAppLocale, t } from '../i18n/index.js';
 import { appIdentity, appRuntimeCompat } from './00-dependencies.js';
+import { registerAction } from './05-actions.js';
 import { $, appAlert, appConfirm, appDialog, goTab, icon, isChanged, savedVoiceURI, setShown, show,
   syncDockTabs, takeSnap
 } from './00-core.js';
@@ -552,7 +553,6 @@ async function applyAndroidUpdateConfig(raw){
   if(required){
     if($('appUpdateGateTitle')) $('appUpdateGateTitle').textContent=t('update.requiredTitle',{version:suffix});
     if($('appUpdateGateText')) $('appUpdateGateText').textContent=custom||t('update.requiredText');
-    if($('appUpdateNow')) $('appUpdateNow').onclick=()=>openAndroidUpdate();
     if(gate) gate.classList.remove('hidden');
     await restoreAndroidUpdateState();
     return;
@@ -561,7 +561,6 @@ async function applyAndroidUpdateConfig(raw){
   if($('appUpdateText')) $('appUpdateText').textContent=custom||t('update.availableText');
   androidUpdateAction(t('update.action'),false);
   if(banner){
-    banner.onclick=()=>openAndroidUpdate();
     banner.classList.remove('hidden');
   }
   await restoreAndroidUpdateState();
@@ -621,7 +620,8 @@ export function renderPremium(){
     b.querySelector('b').textContent = label;
     b.querySelector('.pp-price').textContent = money(pr[k], cur);
     b.querySelector('small').textContent = per;
-    b.onclick = ()=>{ pmPlan = k; renderPremium(); };
+    b.dataset.act = 'selectPremiumPlan';
+    b.dataset.plan = k;
     box.appendChild(b);
   });
   $('pmBuy').textContent = t('premium.buyFor',{price:money(pr[pmPlan], cur)});
@@ -1092,6 +1092,11 @@ export function setPendingSubShared(value){ pendingSub = value; return pendingSu
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initAccount(){
+  registerAction('openAndroidUpdate', () => openAndroidUpdate());
+  registerAction('selectPremiumPlan', btn => {
+    pmPlan = btn.dataset.plan === 'month' ? 'month' : 'year';
+    renderPremium();
+  });
   window.addEventListener('fitUpdateProgress',e=>renderAndroidUpdateProgress((e&&e.detail)||{}));
   window.addEventListener('fitAppForeground',()=>setTimeout(()=>{
     resumePendingAndroidUpdate();
