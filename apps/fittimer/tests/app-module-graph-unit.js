@@ -200,6 +200,37 @@ if(!/setAccountProgramsAiHooks\(\{[\s\S]*getApiBase[\s\S]*ageError[\s\S]*apiPost
   problems.push('account/programs-ai hook boundary is missing or incomplete');
 }
 
+
+for(const dep of ['40-programs-ai','50-trainer-catalog','60-builder','70-workout','80-platform']){
+  if(new RegExp("from ['\"]\\./" + dep + "\\.js['\"]").test(progressSource)){
+    problems.push('src/app/30-progress-media.js must not import ' + dep + '.js; inject owner hooks instead');
+  }
+}
+if(!/setProgressProgramsHooks\(\{[\s\S]*ageError[\s\S]*renderToday/.test(programsAiSource)) problems.push('progress/programs hook boundary is missing or incomplete');
+if(!/setProgressTrainerHooks\(\{[\s\S]*renderMine/.test(trainerCatalogSource)) problems.push('progress/trainer hook boundary is missing or incomplete');
+if(!/setProgressBuilderHooks\(\{[\s\S]*newExId[\s\S]*shrinkImage/.test(builderSource)) problems.push('progress/builder hook boundary is missing or incomplete');
+if(!/setProgressWorkoutHooks\(\{[\s\S]*esc[\s\S]*roundRect/.test(workoutSource)) problems.push('progress/workout hook boundary is missing or incomplete');
+if(!/setProgressPlatformHooks\(\{[\s\S]*applyTheme[\s\S]*setThemeLightShared/.test(platformCoreSource)) problems.push('progress/platform hook boundary is missing or incomplete');
+
+for(const dep of ['50-trainer-catalog','60-builder','70-workout','90-events']){
+  if(new RegExp("from ['\"]\\./" + dep + "\\.js['\"]").test(programsAiSource)){
+    problems.push('src/app/40-programs-ai.js must not import ' + dep + '.js; inject owner hooks instead');
+  }
+}
+if(!/setProgramsTrainerHooks\(\{[\s\S]*renderMine[\s\S]*renderTrainerCard[\s\S]*snapshotEx[\s\S]*storeCountText/.test(trainerCatalogSource)) problems.push('programs/trainer hook boundary is missing or incomplete');
+if(!/setProgramsBuilderHooks\(\{[\s\S]*getMaxMain[\s\S]*getDraft[\s\S]*parseProgramText[\s\S]*valueText/.test(builderSource)) problems.push('programs/builder hook boundary is missing or incomplete');
+if(!/setProgramsWorkoutHooks\(\{[\s\S]*afterExChange[\s\S]*autoGrow[\s\S]*backToWorkout[\s\S]*esc[\s\S]*getExFromWork/.test(workoutSource)) problems.push('programs/workout hook boundary is missing or incomplete');
+if(!/setProgramsEventHooks\(\{[\s\S]*addExManual[\s\S]*getAiRunCtl[\s\S]*openPremium[\s\S]*ytGuard/.test(eventsCoreSource)) problems.push('programs/events hook boundary is missing or incomplete');
+
+for(const dep of ['60-builder','70-workout','90-events']){
+  if(new RegExp("from ['\"]\\./" + dep + "\\.js['\"]").test(trainerCatalogSource)){
+    problems.push('src/app/50-trainer-catalog.js must not import ' + dep + '.js; inject owner hooks instead');
+  }
+}
+if(!/setTrainerBuilderHooks\(\{[\s\S]*enableDrag[\s\S]*openBuilder[\s\S]*valueText/.test(builderSource)) problems.push('trainer/builder hook boundary is missing or incomplete');
+if(!/setTrainerWorkoutHooks\(\{[\s\S]*esc/.test(workoutSource)) problems.push('trainer/workout hook boundary is missing or incomplete');
+if(!/setTrainerEventHooks\(\{[\s\S]*openPremium/.test(eventsCoreSource)) problems.push('trainer/events hook boundary is missing or incomplete');
+
 if(/from ['"]\.\/20-account\.js['"]/.test(coreSource)){
   problems.push('src/app/00-core.js must not import 20-account.js; inject account-facing hooks instead');
 }
