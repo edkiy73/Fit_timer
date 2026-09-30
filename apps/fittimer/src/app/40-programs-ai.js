@@ -18,7 +18,7 @@ import { renderMine, renderTrainerCard, snapshotEx, storeCountText } from './50-
 import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_NOEX, MSG_AI_PARSE, advanceExerciseProgression,
   aiCreateProgramGuard, aiExerciseBlocks, aiPrompt, carryExerciseProgress, copyPrompt, curPlan,
   draft, ensurePs, exRestAfter, exSummary, fillBuilder, fmtKg, fullAIPrompt, getExProgValue,
-  getExWeight, hasWeight, importFromText, isDualProg, openBuilder, openExercise, parseProgramText,
+  getExWeight, hasWeight, importFromText, isDualProg, migrateLegacyDualRangeExercise, openBuilder, openExercise, parseProgramText,
   progAxis, progressedRepsRange, qChips, renderExList, setDraftShared, setPlanIdxShared,
   shrinkImage, valueText
 } from './60-builder.js';
@@ -61,6 +61,10 @@ export function applyProgressionAll(){
       changed = true;
     }
   });
+  // Сначала переводим старую семантику двойной прогрессии, потом уже считаем
+  // накопленные шаги per-exercise. Иначе старое «8-10, потолок 20» новый движок
+  // прочитает как верхнюю границу 20 и сократит цикл на ширину диапазона.
+  if(applyDualRangeProgressionMigration()) changed = true;
   if(applyPerExerciseProgressionMigration()) changed = true;
   customPrograms.forEach(p => { if(uniqueExerciseIds(p)) changed = true; });
   if(changed) savePrograms();
@@ -95,6 +99,26 @@ function applyPerExerciseProgressionMigration(){
       ensurePs(ex).n = done % p.progression;
       const exSteps = Math.max(0, oldProgramSteps - progFrom);
       for(let i = 0; i < exSteps; i++) advanceExerciseProgression(ex);
+    }));
+  });
+  return changed;
+}
+
+// До перехода диапазон в double progression был только подписью старта: движок
+// фактически шёл одним числом min → min+1 → … → repsMax, потом добавлял вес.
+// Теперь сам диапазон — нагрузка: 8-10 → 9-11 → …, поэтому старый потолок надо
+// сдвинуть на ширину диапазона, иначе вес прибавится раньше, чем раньше.
+//
+// ex.dualRangeV=2 — маркер новой семантики. Новые упражнения получают его сразу
+// в blankExercise(). Для старых без маркера используем состояние ps как подсказку:
+// одиночное текущее число — однозначно старая модель; диапазон в ps — уже новая.
+// Если ps ещё нет, считаем конфигурацию старой: именно такие данные массово лежат
+// у существующих пользователей до этого перехода.
+function applyDualRangeProgressionMigration(){
+  let changed = false;
+  customPrograms.forEach(p => {
+    normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
+      if(migrateLegacyDualRangeExercise(ex)) changed = true;
     }));
   });
   return changed;

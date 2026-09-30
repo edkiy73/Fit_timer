@@ -29,6 +29,15 @@ global.M_LABEL = {glutes:'Ягодицы'};
 global.DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 global.plural = (n,a,b,c)=> n%10===1&&n%100!==11 ? a : (n%10>=2&&n%10<=4&&!(n%100>=12&&n%100<=14) ? b : c);
 global.clampProgEvery = n => Math.max(1, Math.min(30, n));
+global.appLocale = 'ru';
+global.t = (key, vars = {}) => {
+  if(key === 'builder.dualShort') return `+${vars.reps} повт. до ${vars.max} → +${vars.weight} кг`;
+  if(key === 'store.repShort') return 'повт.';
+  if(key === 'store.secShort') return 'сек';
+  if(key === 'progress.kg') return 'кг';
+  if(key === 'builder.progressionAuto') return 'нагрузка растёт сама';
+  return key;
+};
 const stubEl = () => ({ value:'', classList:{add(){},remove(){},contains(){return false;}}, style:{}, textContent:'', addEventListener(){}, appendChild(){}, options:[] });
 global.$ = stubEl;
 global.document = { createElement: stubEl, body:{style:{}}, querySelectorAll(){return [];}, querySelector(){return null;}, addEventListener(){} };
@@ -117,6 +126,55 @@ function runWorkout(exercises, every){
   advanceExerciseProgression(ex);
   need(getExWeight('p1', ex, p) === 22.5 && progressedRepsRange('p1', ex, p) === '18-20',
     'another progression step at the terminal ceiling does not reset reps');
+}
+
+/* ---- новая семантика double progression: валидация, миграция, подпись ---- */
+{
+  const ex = mkEx('Жим с нулевыми шагами', {value:'8-10', type:'reps', progOn:true, trackWeight:true,
+    weight:10, dualProg:true, repsStep:0, wStep:0, repsMax:9});
+  need(ex.repsStep === 1 && ex.wStep === 2,
+    'new double progression repairs zero rep/weight steps');
+  need(ex.repsMax === 11,
+    'double progression ceiling must be above the starting upper range bound: ' + ex.repsMax);
+}
+{
+  const ex = mkEx('Обычный диапазон', {value:'8-10', type:'reps', progOn:true, trackWeight:false,
+    repsStep:1, repsMax:9});
+  need(ex.repsMax === 10,
+    'ordinary rep ceiling cannot sit below the starting upper range bound');
+}
+{
+  // Старый движок хранил одно текущее число. При миграции сохраняем столько же
+  // ступеней до прибавки веса: old 8→…→20 => new 8-10→…→20-22.
+  const ex = Object.assign(blankExercise(), {name:'Старый жим', value:'8-10', type:'reps',
+    progOn:true, trackWeight:true, weight:10, dualProg:true, repsStep:0, wStep:0, repsMax:20,
+    ps:{n:1,cur:{reps:'12',kg:10}}});
+  delete ex.dualRangeV;
+  normalizeExercise(ex);
+  need(migrateLegacyDualRangeExercise(ex), 'legacy double progression is migrated once');
+  need(ex.dualRangeV === 2 && ex.repsMax === 22 && ex.ps.cur.reps === '12-14',
+    'legacy ceiling/current reps preserve their progression position: ' + JSON.stringify(ex));
+  need(ex.repsStep === 1 && ex.wStep === 2,
+    'legacy invalid zero steps become a valid double-progression cycle');
+  need(!migrateLegacyDualRangeExercise(ex), 'double-range migration is idempotent');
+}
+{
+  // Если состояние уже диапазонное, это данные нового движка из короткого окна
+  // до появления маркера: только ставим version marker, потолок не сдвигаем второй раз.
+  const ex = Object.assign(blankExercise(), {name:'Уже новый жим', value:'8-10', type:'reps',
+    progOn:true, trackWeight:true, weight:10, dualProg:true, repsStep:1, wStep:2, repsMax:20,
+    ps:{n:0,cur:{reps:'12-14',kg:10}}});
+  delete ex.dualRangeV;
+  normalizeExercise(ex);
+  migrateLegacyDualRangeExercise(ex);
+  need(ex.repsMax === 20 && ex.ps.cur.reps === '12-14',
+    'already-ranged state is not migrated twice');
+}
+{
+  const ex = mkEx('Короткая подпись', {value:'8-10', type:'reps', progOn:true, trackWeight:true,
+    weight:10, dualProg:true, repsStep:1, wStep:2, repsMax:20});
+  need(progShort(ex) === '+1 повт. до 20 → +2 кг',
+    'double progression short label explains sequential growth: ' + progShort(ex));
 }
 
 /* ---- фактический баг с чередованием A/Б: правильно исправлен ---- */

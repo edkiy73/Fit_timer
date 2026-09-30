@@ -52,8 +52,8 @@ import { addClient, curClient, doPublish, loadStoreServer, openClient, openMyCat
 } from './50-trainer-catalog.js';
 import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExerciseAsNew,
   commitExercise, commitPlanFields, curPlan, delExerciseAt, draft, dropFreshEx, dupExerciseAt,
-  exDirty, exDraft, exIdx, exIsNew, fillPlanFields, hasWeight, initAIForm, openBuilder,
-  openExercise, parseProgramText, planIdx, programDirty, renderExList, renderExMedia,
+  exDirty, exDraft, exIdx, exIsNew, fillPlanFields, hasWeight, initAIForm, normValue, openBuilder,
+  openExercise, parseProgramText, parseStepNum, parseValue, planIdx, programDirty, renderExList, renderExMedia,
   renderProgControls, saveProgram, setExDraftShared, setExIdxShared, setExIsNewShared,
   setExOrigShared, setPlanIdxShared, shrinkImage, syncCover, syncExDetailsSum, syncExNowHints,
   syncExProgSum, syncExType, syncExWarm, syncRotateUI
@@ -2056,7 +2056,37 @@ export function initEvents(){
   ['exValue','exWeight'].forEach(id => $(id).addEventListener('input', syncExNowHints));
   $('exDual').onclick = ()=>{
     exDraft.dualProg = !exDraft.dualProg;
+    if(exDraft.dualProg){
+      // Double progression без двух положительных шагов не имеет смысла:
+      // сначала должен расти диапазон, затем вес. При включении тумблера сразу
+      // приводим пустые/нулевые поля к рабочим значениям, чтобы UI и движок не
+      // расходились (раньше на экране было 0, а движок тайно использовал +1).
+      const repStep = parseStepNum($('exStepReps').value);
+      const weightStep = parseStepNum($('exStepWeight').value);
+      if(!(repStep > 0)){
+        exDraft.repsStep = 1;
+        $('exStepReps').value = '1';
+        $('exStepReps').dataset.touched = '1';
+      }
+      if(!(weightStep > 0)){
+        exDraft.wStep = 2;
+        $('exStepWeight').value = '2';
+        $('exStepWeight').dataset.touched = '1';
+      }
+      const base = parseValue(normValue($('exValue').value, 'reps'));
+      const max = parseStepNum($('exMaxReps').value);
+      const step = parseStepNum($('exStepReps').value) || 1;
+      if(!(max > base.max)){
+        const nextMax = Math.min(200, base.max + step);
+        exDraft.repsMax = nextMax;
+        $('exMaxReps').value = String(nextMax);
+        $('exMaxReps').dataset.touched = '1';
+      }
+      exDraft.dualRangeV = 2;
+    }
     $('exDual').classList.toggle('on', exDraft.dualProg);
+    syncExProgSum();
+    syncExNowHints();
     syncExDetailsSum();
   };
   $('exSwapOn').onclick = ()=>{

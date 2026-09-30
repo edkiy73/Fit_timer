@@ -403,8 +403,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 2996,
-      "chars": 140647,
+      "lines": 3020,
+      "chars": 141935,
       "symbols": [
         "add",
         "ageError",
@@ -417,6 +417,7 @@
         "apiFetch",
         "apiPost",
         "apply",
+        "applyDualRangeProgressionMigration",
         "applyExEdit",
         "applyMedia",
         "applyPerExerciseProgressionMigration",
@@ -635,8 +636,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2181,
-      "chars": 101681,
+      "lines": 2249,
+      "chars": 104616,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -692,6 +693,7 @@
         "isDualProg",
         "item",
         "liveExercise",
+        "migrateLegacyDualRangeExercise",
         "move",
         "MSG_AI_EMPTY",
         "MSG_AI_NOEX",
@@ -912,8 +914,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2436,
-      "chars": 107979,
+      "lines": 2466,
+      "chars": 109264,
       "symbols": [
         "addExManual",
         "aiRetryDialog",

@@ -115,7 +115,7 @@ export function blankExercise(){
           repsMax:0, weightMax:0, timeMax:0,
           // Двойная прогрессия: дошли до потолка повторов → +шаг веса, повторы падают в начало.
           // Так растёт вес, а не бесконечное число повторений (классическая силовая схема).
-          dualProg:false,
+          dualProg:false, dualRangeV:2,
           // Чем заменить упражнение, когда потолок достигнут и расти дальше некуда:
           // название и техника более сложного варианта того же движения.
           swapOn:false, swapName:'', swapDesc:''};
@@ -169,11 +169,30 @@ export function normalizeExercise(ex){
   ex.wStep  = stepNum(ex.wStep, 2, 100, v => Math.round(v * 2) / 2);
   ex.repsStep = stepNum(ex.repsStep, hasWeight(ex) ? 0 : 1, 20, Math.round);
   ex.timeStep = stepNum(ex.timeStep, 5, 120, Math.round);
-  // потолки: 0 = без потолка. Верхние границы отсекают явную чушь из ответа ИИ
+  // потолки: 0 = без потолка. У повторов потолок никогда не может быть ниже
+  // стартовой верхней границы диапазона — иначе «8-10, максимум 9» превращалось
+  // в искусственное 7-9 ещё до первой тренировки.
+  const baseReps = parseValue(ex.value);
   ex.repsMax = Math.max(0, Math.min(200, parseInt(ex.repsMax) || 0));
+  if(ex.type !== 'time' && ex.repsMax > 0) ex.repsMax = Math.max(baseReps.max, ex.repsMax);
   ex.weightMax = parseKg(ex.weightMax);
   ex.timeMax = Math.max(0, Math.min(3600, parseInt(ex.timeMax) || 0));
-  ex.dualProg = !!ex.dualProg && hasWeight(ex) && ex.repsMax > 0;
+
+  // Настоящая двойная прогрессия обязана двигать ОБЕ стадии цикла:
+  // сначала диапазон повторов, затем вес. Нулевой шаг здесь не «выключенная ось»,
+  // а сломанный цикл, поэтому восстанавливаем безопасные дефолты.
+  const wantsDual = !!ex.dualProg && hasWeight(ex) && ex.type !== 'time';
+  // Старые упражнения без dualRangeV сначала проходят одноразовую миграцию:
+  // не переписываем им шаги/потолок здесь, иначе потеряем исходные числа,
+  // нужные для точного пересчёта старой семантики.
+  if(wantsDual && ex.dualRangeV === 2){
+    if(!(ex.repsStep > 0)) ex.repsStep = 1;
+    if(!(ex.wStep > 0)) ex.wStep = 2;
+    // Для диапазона потолок — именно верхняя граница. Он должен быть ВЫШЕ старта,
+    // иначе цикл сразу прыгает к весу, не повышая повторения ни разу.
+    ex.repsMax = Math.min(200, Math.max(baseReps.max + ex.repsStep, ex.repsMax || 0));
+  }
+  ex.dualProg = wantsDual && ex.repsMax > 0;
   ex.swapName = clampLine(ex.swapName, LIM.exSwapName);
   ex.swapDesc = clampText(ex.swapDesc, LIM.exSwapDesc);
   ex.swapOn = !!ex.swapName;
@@ -321,6 +340,14 @@ export function progBaseValue(ex, axis){
 // второго упражнения только зашумляет список и экран тренировки.
 export function progShort(ex){
   if(!ex || ex.warmup || progAxis(ex) === 'none') return '';
+  if(isDualProg(ex)){
+    const r = progStepSize(ex, 'reps');
+    const w = progStepSize(ex, 'weight');
+    const max = progCeil(ex, 'reps');
+    if(r > 0 && w > 0 && max != null){
+      return t('builder.dualShort',{reps:fmtKg(r),max:fmtKg(max),weight:fmtKg(w)});
+    }
+  }
   const bits = [];
   if(ex.type === 'time'){
     const st = progStepSize(ex, 'time');
@@ -403,6 +430,47 @@ function progCeil(ex, axis){
 // без потолка неизвестно, когда сбрасывать повторы и добавлять вес
 export function isDualProg(ex){
   return !!ex.dualProg && hasWeight(ex) && progCeil(ex, 'reps') != null;
+}
+
+// Одно упражнение старой double-progression → новая модель диапазона.
+// Возвращает true, если объект был помечен/изменён. Вынесено сюда, рядом с самим
+// движком, чтобы миграция и unit-тесты использовали ровно одну формулу.
+export function migrateLegacyDualRangeExercise(ex){
+  if(!ex || !ex.dualProg || !hasWeight(ex) || ex.type === 'time' || ex.dualRangeV === 2) return false;
+  const base = parseValue(ex.value);
+  const width = Math.max(0, base.max - base.min);
+
+  if(width > 0){
+    const rawCur = ex.ps && ex.ps.cur ? ex.ps.cur.reps : null;
+    const cur = rawCur != null ? parseValue(rawCur) : null;
+    const alreadyRangeState = !!(cur && cur.min !== cur.max);
+
+    if(!alreadyRangeState){
+      const oldCeil = Math.max(0, Math.round(+ex.repsMax || 0));
+      if(oldCeil > 0){
+        // Старые 8→…→20 = 12 шагов. Новые 8-10→…→20-22 — те же 12.
+        ex.repsMax = Math.min(200, Math.max(base.max, oldCeil + width));
+      }
+      if(cur){
+        let min = Math.max(1, cur.min);
+        let max = min + width;
+        if(ex.repsMax > 0 && max > ex.repsMax){
+          max = ex.repsMax;
+          min = Math.max(1, max - width);
+        }
+        ex.ps.cur.reps = min === max ? String(min) : min + '-' + max;
+      }
+    }
+  }
+
+  // После перевода double progression всегда имеет две реальные стадии.
+  if(!(ex.repsStep > 0)) ex.repsStep = 1;
+  if(!(ex.wStep > 0)) ex.wStep = 2;
+  if(ex.repsMax > 0){
+    ex.repsMax = Math.min(200, Math.max(base.max + ex.repsStep, ex.repsMax));
+  }
+  ex.dualRangeV = 2;
+  return true;
 }
 
 // итоговое значение упражнения сейчас — читает фактическое состояние (ex.ps),
@@ -1519,7 +1587,7 @@ export function aiExerciseBlocks(text){
 // здесь 0 — ЗНАЧИМОЕ значение: «эту ось для этого упражнения не растим». Отличаем
 // «не указано вовсе» (возвращаем null, пусть вызывающий код подставит дефолт оси)
 // от «явно указано 0» — иначе классическая ошибка JS (0 || default) тихо портит логику.
-function parseStepNum(v){
+export function parseStepNum(v){
   if(v == null || String(v).trim() === '') return null;
   const n = parseFloat(String(v).replace(',', '.'));
   return isFinite(n) && n >= 0 ? n : null;
