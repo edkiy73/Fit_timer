@@ -70,6 +70,53 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       && r.lastNotificationRun.user === 'uB'
       && r.lastNotificationRun.programs.join(',') === 'pb',
     JSON.stringify(r.lastNotificationRun));
+
+  const aiGender = await page.evaluate(async () => {
+    const ai = await import('/src/app/40-programs-ai.js');
+    const builder = await import('/src/app/60-builder.js');
+    const u = curUser();
+    const oldGender = u.gender;
+    const oldDraft = builder.draft;
+    builder.setDraftShared({
+      name:'Gender test',
+      plans:[{days:[],rounds:1,roundRest:0,exercises:[
+        {id:'gender-ex',name:'Squat',desc:'',muscles:[],type:'reps',value:'10',sets:1,weight:0}
+      ]}]
+    });
+
+    u.gender = '';
+    const blankUser = ai.userForAI('en');
+    const blankImages = ai.imagesPromptText();
+
+    u.gender = 'm';
+    const maleUser = ai.userForAI('en');
+    const maleImages = ai.imagesPromptText();
+
+    u.gender = 'f';
+    const femaleUser = ai.userForAI('en');
+    const femaleImages = ai.imagesPromptText();
+
+    u.gender = oldGender;
+    builder.setDraftShared(oldDraft);
+
+    return {blankUser,blankImages,maleUser,maleImages,femaleUser,femaleImages};
+  });
+  ok('пустой пол в AI-контексте остаётся not specified, а не female',
+    /Sex: not specified/.test(aiGender.blankUser)
+      && !/Sex: female/.test(aiGender.blankUser)
+      && /do not infer it/i.test(aiGender.blankUser),
+    aiGender.blankUser);
+  ok('пустой пол в промтах картинок не превращается в женщину',
+    /user sex not specified/i.test(aiGender.blankImages)
+      && !/Character: woman/.test(aiGender.blankImages),
+    aiGender.blankImages.slice(0,240));
+  ok('явно выбранные male/female по-прежнему передаются точно',
+    /Sex: male/.test(aiGender.maleUser)
+      && /Character: man/.test(aiGender.maleImages)
+      && /Sex: female/.test(aiGender.femaleUser)
+      && /Character: woman/.test(aiGender.femaleImages),
+    JSON.stringify({male:aiGender.maleUser,female:aiGender.femaleUser}));
+
   // Удалённая разминка не возвращается ни при переключении, ни после перезапуска.
   await page.evaluate(async () => {
     customPrograms = customPrograms.filter(p => p.id !== 'warmup'); await savePrograms();
