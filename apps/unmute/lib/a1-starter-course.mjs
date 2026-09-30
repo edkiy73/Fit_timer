@@ -14,7 +14,7 @@ function choice(id,tags,prompt,options,correctIndex,explanation){
 
 function drill(id,tags,pattern,pairs){
   return {...base,id,type:'pattern-drill',tags,pattern,modes:['drill','listening','speaking'],
-    items:pairs.map(([prompt,itemAnswer],index)=>({id:id+'.item-'+(index+1),prompt,answer:itemAnswer}))};
+    items:pairs.map(([prompt,itemAnswer,explanation],index)=>({id:id+'.item-'+(index+1),prompt,answer:itemAnswer,...(explanation?{explanation}:{})}))};
 }
 
 function day1(){
@@ -40,9 +40,9 @@ function day1(){
       answer:answer('I am Anna','I\'m Anna'),
       explanation:{ru:'«Я» — это I am, в разговоре коротко I\'m.',en:'I am, short: I\'m.'}},
     drill('a1.pattern.hello',[tag],{ru:'I am … / My name is …',en:'I am … / My name is …'},[
-      [{ru:'Я Анна.',en:'I am Anna.'},answer('I am Anna','I\'m Anna')],
-      [{ru:'Меня зовут Анна.',en:'My name is Anna.'},answer('My name is Anna')],
-      [{ru:'Приятно познакомиться.',en:'Nice to meet you.'},answer('Nice to meet you')]
+      [{ru:'Я Анна.',en:'I am Anna.'},answer('I am Anna','I\'m Anna'),{ru:'«Я» по-английски — I am, коротко I\'m. Без am фраза не работает.',en:'Say I am (short: I\'m), not just I.'}],
+      [{ru:'Меня зовут Анна.',en:'My name is Anna.'},answer('My name is Anna'),{ru:'Дословно «моё имя есть Анна»: после My name нужен is.',en:'My name + is + your name.'}],
+      [{ru:'Приятно познакомиться.',en:'Nice to meet you.'},answer('Nice to meet you'),{ru:'Готовая фраза: говори её целиком, when you meet someone.',en:'Say it when you meet someone.'}]
     ])
   ];
 }
@@ -70,9 +70,9 @@ function day2(){
       answer:answer('I am from Russia','I\'m from Russia'),
       explanation:{ru:'«Из» — from: I am from Russia.',en:'Use «from»: I am from Russia.'}},
     drill('a1.pattern.from',[tag],{ru:'I am from … / I live in …',en:'I am from … / I live in …'},[
-      [{ru:'Я из России.',en:'I am from Russia.'},answer('I am from Russia','I\'m from Russia')],
-      [{ru:'Я живу в Дубае.',en:'I live in Dubai.'},answer('I live in Dubai')],
-      [{ru:'Откуда ты?',en:'Where are you from?'},answer('Where are you from')]
+      [{ru:'Я из России.',en:'I am from Russia.'},answer('I am from Russia','I\'m from Russia'),{ru:'«Из» — from, а перед ним снова I am.',en:'Use I am + from.'}],
+      [{ru:'Я живу в Дубае.',en:'I live in Dubai.'},answer('I live in Dubai'),{ru:'Live — это действие, поэтому am не нужен. После live идёт in.',en:'Say live in, without am.'}],
+      [{ru:'Откуда ты?',en:'Where are you from?'},answer('Where are you from'),{ru:'В вопросе are стоит перед you, а from — в конце.',en:'In a question are is before you; from is at the end.'}]
     ])
   ];
 }

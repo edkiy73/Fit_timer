@@ -196,6 +196,7 @@ export function PatternDrillView({
   if(!item)return null;
   const prompt=localized(item.prompt,locale);
   const accepted=item.answer.accepted[0] || '';
+  const explanation=item.explanation?localized(item.explanation,locale):'';
 
   return (
     <article className="learn-card drill-card">
@@ -227,6 +228,9 @@ export function PatternDrillView({
             <span>{lastFast?t('drill.fastHint'):t('drill.slowHint')}</span>
           </div>
           <div className="drill-target"><LexiconText text={accepted} refs={activity.lexiconRefs} /></div>
+          {explanation&&(
+            <p className="drill-explanation"><LexiconText text={explanation} refs={activity.lexiconRefs} /></p>
+          )}
           <button className="primary-button" type="button" onClick={()=>nextItem(true)}>
             {t('drill.same')}
           </button>

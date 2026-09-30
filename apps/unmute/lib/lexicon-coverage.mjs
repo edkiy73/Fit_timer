@@ -61,6 +61,7 @@ export function activityVisibleStrings(activity){
       push(activity.pattern);
       for(const item of activity.items || []){
         push(item.prompt);
+        push(item.explanation);
         for(const answer of item.answer?.accepted || []) push(answer);
       }
       break;

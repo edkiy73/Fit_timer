@@ -283,6 +283,9 @@ export function PatternSpeakingView({
             <span>{correct?t('speaking.matchHint'):t('speaking.noMatchHint')}</span>
           </div>
           <div className="drill-target"><LexiconText text={target} refs={activity.lexiconRefs} /></div>
+          {item?.explanation&&(
+            <p className="drill-explanation"><LexiconText text={localized(item.explanation,locale)} refs={activity.lexiconRefs} /></p>
+          )}
           {heard&&<div className="learn-hint">{t('speaking.heard',{heard})}</div>}
           <button className="secondary-button" type="button" onClick={()=>void speak(target,'en-US')}>
             {t('speaking.playReference')}
