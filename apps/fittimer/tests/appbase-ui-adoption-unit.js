@@ -242,5 +242,28 @@ ok('trainer/client/weight/premium actions have no direct onclick wiring',
   && !events.includes("$('tglBio').onclick")
   && !events.includes("$('tglRenew').onclick"));
 
+ok('workout start/exit actions are declarative',
+  programsHtml.includes('id="startMore" data-act="toggleStartMenu"')
+  && programsHtml.includes('id="progDescMore" data-act="toggleProgramDescription"')
+  && programsHtml.includes('id="btnStart" data-act="openWorkoutStart"')
+  && programsHtml.includes('id="startResume" data-act="resumeSavedWorkout"')
+  && programsHtml.includes('id="startFresh" data-act="startFreshWorkout"')
+  && programsHtml.includes('id="startPick" data-act="pickWorkoutStartStep"')
+  && programsHtml.includes('id="startBackTop" data-act="backFromWorkoutStart"')
+  && programsHtml.includes('id="exitSave" data-act="saveAndExitWorkout"')
+  && programsHtml.includes('id="exitFinishToday" data-act="finishWorkoutToday"')
+  && programsHtml.includes('id="exitDrop" data-act="discardWorkout"'));
+ok('workout start/exit actions have no direct onclick wiring',
+  !events.includes("$('startMore').onclick")
+  && !events.includes("$('progDescMore').onclick")
+  && !events.includes("$('btnStart').onclick")
+  && !events.includes("$('startResume').onclick")
+  && !events.includes("$('startFresh').onclick")
+  && !events.includes("$('startPick').onclick")
+  && !events.includes("$('startBackTop').onclick")
+  && !events.includes("$('exitSave').onclick")
+  && !events.includes("$('exitFinishToday').onclick")
+  && !events.includes("$('exitDrop').onclick"));
+
 
 process.exit(bad?1:0);
