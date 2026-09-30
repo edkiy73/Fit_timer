@@ -1,9 +1,9 @@
 import { appLocale, t } from '../i18n/index.js';
 import { appNotifications, appRuntimeCompat, appUi } from './00-dependencies.js';
 import { ACTIONS, registerAction } from './05-actions.js';
-import { $, appAlert, audioCtx, beep, dismissTopModal, fxVol, icon, keepAwake, lastAppSoundT,
-  loadDelta, musicMode, plural, previousWorkoutLoad, releaseWake, setLastAppSoundTShared, soundOn,
-  setCorePlatformHooks, state, syncSoundCascade, voiceVol, workoutLoadSnapshot
+import { $, appAlert, audioCtx, beep, blockVoiceCommandsFor, dismissTopModal, fxVol, icon, keepAwake,
+  loadDelta, musicMode, plural, previousWorkoutLoad, releaseWake, soundOn, setCorePlatformHooks,
+  state, syncSoundCascade, voiceVol, workoutLoadSnapshot
 } from './00-core.js';
 import { DAYS, curUser, customPrograms, kvSet, loadSession, loadSessions, localISO, normPlans, planDays,
   progActive, setDataSyncPlatformHooks, stats
@@ -150,7 +150,7 @@ function applyVoiceCommand(input){
 
   // Свой гонг и озвучка следующего шага не должны вернуться командой.
   // Защита нужна только действиям, которые реально проигрывают звук.
-  setLastAppSoundTShared(Math.max(lastAppSoundT, now + 700));
+  blockVoiceCommandsFor(700);
 
   // завершить / пропустить текущий рабочий шаг
   if(state.paused) setPause(false);
