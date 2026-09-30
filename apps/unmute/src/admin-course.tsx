@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AdminSection, AdminSectionContext } from '@appbase/ui-react/admin.js';
 import './admin-course.css';
 
@@ -68,12 +68,18 @@ const ACTIVITY_TYPES=[
   ['text-input','Ввод ответа'],
   ['translation','Перевод'],
   ['speaking','Говорение'],
-  ['pattern-drill','Pattern drill'],
+  ['pattern-drill','Тренажёр фраз'],
   ['dialogue','Диалог'],
   ['listening','Аудирование'],
   ['review','Повторение'],
-  ['ai-conversation','AI-разговор']
+  ['ai-conversation','Разговор с ИИ']
 ] as const;
+
+const KIND_LABELS:Record<string,string>={lesson:'Урок',practice:'Практика',review:'Повторение',dialogue:'Диалог',checkpoint:'Проверка',bonus:'Бонус'};
+
+function typeLabel(type:string){
+  return ACTIVITY_TYPES.find(([value])=>value===type)?.[1] || type;
+}
 
 function textMap(value:unknown):TextMap{
   return value && typeof value==='object' && !Array.isArray(value) ? value as TextMap : {};
@@ -196,14 +202,14 @@ function ActivityEditor({client,adminKey,setId,activity,onSaved,onClose}:{client
     try{
       const parsed=JSON.parse(raw) as EditableActivity;
       if(parsed.id!==value.id || parsed.type!==value.type){
-        setMessage('ID и type существующей activity менять нельзя.');
+        setMessage('Имя и тип задания менять нельзя.');
         return;
       }
       setValue(parsed);
       setRaw(JSON.stringify(parsed,null,2));
-      setMessage('JSON применён локально. Нажми «Сохранить draft».');
+      setMessage('JSON применён в форме. Нажми «Сохранить».');
     }catch(_){
-      setMessage('JSON невалиден.');
+      setMessage('В JSON ошибка.');
     }
   }
 
@@ -215,37 +221,37 @@ function ActivityEditor({client,adminKey,setId,activity,onSaved,onClose}:{client
       });
       const next=result.activity as EditableActivity;
       setValue(next);setRaw(JSON.stringify(next,null,2));
-      setMessage('Сохранено в draft.');
+      setMessage('Сохранено. Ученики увидят после выпуска в разделе «Курсы».');
       onSaved(next);
     }catch(error){
       const code=String((error as {code?:string})?.code || 'request_failed');
-      setMessage(code==='activity_revision_conflict'?'Activity уже изменена в другой вкладке. Открой её заново.':'Ошибка: '+code);
+      setMessage(code==='activity_revision_conflict'?'Задание уже изменено в другой вкладке. Открой его заново.':'Ошибка: '+code);
     }finally{setBusy(false);}
   }
 
   return <article className="ab-admin-panel">
     <div className="ab-admin-section-head">
-      <div><h2>{activityLabel(value)}</h2><p className="ab-admin-note"><code>{value.id}</code> · {value.type} · revision {value.revision}</p></div>
+      <div><h2>{activityLabel(value)}</h2><p className="ab-admin-note"><code>{value.id}</code> · {typeLabel(value.type)} · версия {value.revision}</p></div>
       <button type="button" className="ab-admin-secondary" onClick={onClose}>Закрыть</button>
     </div>
 
-    <label><span>Что делать с уже существующим прогрессом после публикации</span>
+    <label><span>Что делать с прогрессом учеников после выпуска</span>
       <select value={value.revisionProgress} onChange={e=>change({...value,revisionProgress:e.target.value as 'preserve'|'reset'})}>
-        <option value="preserve">Сохранить прогресс — мелкая/совместимая правка</option>
-        <option value="reset">Сбросить по этой activity — задание существенно изменилось</option>
+        <option value="preserve">Оставить — мелкая правка</option>
+        <option value="reset">Сбросить по этому заданию — оно сильно изменилось</option>
       </select>
     </label>
 
     <div className="ab-course-fields"><FriendlyFields activity={value} onChange={change} /></div>
 
     <details className="ab-admin-details">
-      <summary>Расширенный JSON</summary>
+      <summary>Для разработчика: JSON</summary>
       <textarea className="ab-course-json" value={raw} onChange={e=>setRaw(e.target.value)} />
       <button type="button" className="ab-admin-secondary" onClick={applyRaw}>Применить JSON</button>
     </details>
 
     <div className="ab-admin-action-row">
-      <button type="button" disabled={busy} onClick={()=>void save()}>Сохранить draft</button>
+      <button type="button" disabled={busy} onClick={()=>void save()}>Сохранить</button>
     </div>
     {message && <p className="ab-admin-feedback" role="status">{message}</p>}
   </article>;
@@ -269,6 +275,8 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
   const [metaTo,setMetaTo]=useState('');
   const [metaAccess,setMetaAccess]=useState<'free'|'entitlement'>('entitlement');
   const [metaFreeDays,setMetaFreeDays]=useState('0');
+  const [metaPriceRub,setMetaPriceRub]=useState('');
+  const [metaPriceUsd,setMetaPriceUsd]=useState('');
 
   const loadSets=useCallback(async()=>{
     const result=await client.action(adminKey,'content_sets_list');
@@ -292,6 +300,9 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
       setMetaAccess(access.mode==='free'?'free':'entitlement');
       const preview=access.freePreview && typeof access.freePreview==='object' ? access.freePreview as Record<string,unknown> : {};
       setMetaFreeDays(String(preview.days ?? 0));
+      const price=access.price && typeof access.price==='object' ? access.price as Record<string,unknown> : {};
+      setMetaPriceRub(price.RUB ? String(price.RUB) : '');
+      setMetaPriceUsd(price.USD ? String(price.USD) : '');
     }catch(error){
       setStructure(null);
       setMessage('Не удалось загрузить курс: '+String((error as {code?:string})?.code || 'request_failed'));
@@ -317,7 +328,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
       const result=await client.action(adminKey,'content_activity_get',{setId,activityId:id});
       setEditor(result.activity as EditableActivity);
     }catch(error){
-      setMessage('Не удалось открыть activity: '+String((error as {code?:string})?.code || 'request_failed'));
+      setMessage('Не удалось открыть задание: '+String((error as {code?:string})?.code || 'request_failed'));
     }finally{setBusy(false);}
   }
 
@@ -339,7 +350,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
 
   async function detach(id:string){
     if(!openNode)return;
-    if(!window.confirm('Убрать эту activity из текущего дня? Сама activity останется в draft-библиотеке и не потеряется.'))return;
+    if(!window.confirm('Убрать это задание из дня? Само задание не удалится, его можно вернуть.'))return;
     setBusy(true);setMessage('');
     try{
       await client.action(adminKey,'content_activity_detach',{setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityId:id});
@@ -368,7 +379,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
   async function createSet(){
     const id=createId.trim().toLowerCase();
     const title=createTitle.trim();
-    if(!id || !title){setMessage('Укажи ID и название нового сета.');return;}
+    if(!id || !title){setMessage('Укажи короткое имя и название курса.');return;}
     setBusy(true);setMessage('');
     try{
       await client.action(adminKey,'content_set_create',{
@@ -377,9 +388,9 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
       await loadSets();
       setSetId(id);
       setCreateId('');setCreateTitle('');setCreateOpen(false);
-      setMessage('Новый set создан в draft.');
+      setMessage('Курс создан. Добавь дни и задания, потом выпусти его в разделе «Курсы».');
     }catch(error){
-      setMessage('Не удалось создать set: '+String((error as {code?:string})?.code || 'request_failed'));
+      setMessage('Не удалось создать курс: '+String((error as {code?:string})?.code || 'request_failed'));
     }finally{setBusy(false);}
   }
 
@@ -396,16 +407,17 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
           levelFrom:metaFrom,
           levelTo:metaTo,
           accessMode:metaAccess,
-          freeDays:Number(metaFreeDays)||0
+          freeDays:Number(metaFreeDays)||0,
+          price:{RUB:Number(metaPriceRub)||0,USD:Number(metaPriceUsd)||0}
         }
       });
       await Promise.all([loadStructure(),loadSets()]);
-      setMessage('Настройки set сохранены в draft.');
+      setMessage('Сохранено. Ученики увидят это после выпуска в разделе «Курсы».');
     }catch(error){
       const code=String((error as {code?:string})?.code || 'request_failed');
       setMessage(code==='set_revision_conflict'
-        ? 'Set уже изменён в другой вкладке. Обнови страницу и повтори.'
-        : 'Не удалось сохранить set: '+code);
+        ? 'Курс уже изменён в другой вкладке. Обнови страницу и повтори.'
+        : 'Не сохранилось: '+code);
     }finally{setBusy(false);}
   }
 
@@ -417,9 +429,9 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
       const result=await client.action(adminKey,'content_node_create',{setId,roadmapId:roadmap.id});
       await Promise.all([loadStructure(),loadSets()]);
       await open(roadmap.id,String((result.node as {id?:unknown})?.id||''));
-      setMessage('Новый день/узел создан.');
+      setMessage('День добавлен.');
     }catch(error){
-      setMessage('Не удалось создать узел: '+String((error as {code?:string})?.code || 'request_failed'));
+      setMessage('Не удалось добавить день: '+String((error as {code?:string})?.code || 'request_failed'));
     }finally{setBusy(false);}
   }
 
@@ -443,12 +455,12 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
       const node=result.node as OpenNode['node'];
       setOpenNode(current=>current?{...current,node,version:Number(result.version||current.version)}:current);
       await loadStructure();
-      setMessage('Узел сохранён.');
+      setMessage('День сохранён.');
     }catch(error){
       const code=String((error as {code?:string})?.code || 'request_failed');
       setMessage(code==='node_revision_conflict'
-        ? 'Этот узел уже изменили в другой вкладке. Открой его заново.'
-        : 'Не удалось сохранить узел: '+code);
+        ? 'Этот день уже изменили в другой вкладке. Открой его заново.'
+        : 'Не удалось сохранить день: '+code);
     }finally{setBusy(false);}
   }
 
@@ -468,12 +480,12 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
       await client.action(adminKey,'content_node_reorder',{setId,roadmapId:roadmap.id,nodeIds:ids});
       await loadStructure();
     }catch(error){
-      setMessage('Не удалось изменить порядок узлов: '+String((error as {code?:string})?.code || 'request_failed'));
+      setMessage('Не удалось изменить порядок дней: '+String((error as {code?:string})?.code || 'request_failed'));
     }finally{setBusy(false);}
   }
 
   async function deleteNode(roadmapId:string,nodeId:string){
-    if(!window.confirm('Удалить этот узел из roadmap? Activities останутся в библиотеке draft.'))return;
+    if(!window.confirm('Удалить этот день из курса? Его задания не удалятся.'))return;
     setBusy(true);setMessage('');
     try{
       await client.action(adminKey,'content_node_delete',{setId,roadmapId,nodeId});
@@ -482,40 +494,45 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     }catch(error){
       const code=String((error as {code?:string})?.code || 'request_failed');
       setMessage(code==='node_has_dependents'
-        ? 'Сначала измени prerequisites у следующих узлов: этот узел используется как зависимость.'
-        : 'Не удалось удалить узел: '+code);
+        ? 'Сначала поменяй у следующих дней, после какого дня они открываются: на этот день они ссылаются.'
+        : 'Не удалось удалить день: '+code);
     }finally{setBusy(false);}
   }
 
   const roadmaps=structure?.roadmaps || [];
   const nodes=useMemo(()=>roadmaps.flatMap(roadmap=>roadmap.nodes.map(node=>({roadmapId:roadmap.id,roadmapTitle:textValue(roadmap.title),...node})))
     .sort((a,b)=>(a.order??0)-(b.order??0)),[roadmaps]);
+  // The day list is long: bring the opened day into view instead of leaving it below.
+  const openPanel=useRef<HTMLElement|null>(null);
+  const openId=openNode?.node.id;
+  useEffect(()=>{ if(openId) openPanel.current?.scrollIntoView?.({block:'start',behavior:'smooth'}); },[openId]);
+  const openIndex=openNode ? nodes.findIndex(node=>node.roadmapId===openNode.roadmapId&&node.id===openNode.node.id) : -1;
 
   return <div className="ab-course-constructor">
     <article className="ab-admin-panel">
       <div className="ab-admin-section-head">
         <div>
-          <h2>Сеты</h2>
-          <p className="ab-admin-note">Каждый set — независимый покупаемый курс со своим roadmap и прогрессом.</p>
+          <h2>Редактор уроков</h2>
+          <p className="ab-admin-note">Выбери курс, открой день и меняй задания. Правки видны ученикам после выпуска в разделе «Курсы».</p>
         </div>
-        <button type="button" onClick={()=>setCreateOpen(value=>!value)}>+ Set</button>
+        <button type="button" onClick={()=>setCreateOpen(value=>!value)}>+ Курс</button>
       </div>
 
       <div className="ab-course-set-picker">
         <select value={setId} onChange={e=>setSetId(e.target.value)}>
           {sets.map(item=><option key={item.id} value={item.id}>{textValue(item.title)||item.id}</option>)}
         </select>
-        <span>{sets.find(item=>item.id===setId)?.publishedRevision ? 'live r'+sets.find(item=>item.id===setId)?.publishedRevision : 'не опубликован'}</span>
+        <span>{sets.find(item=>item.id===setId)?.publishedRevision ? 'на сайте' : 'ещё не выпущен'}</span>
       </div>
 
       {createOpen && <div className="ab-course-create-set">
-        <label><span>Стабильный ID</span><input value={createId} onChange={e=>setCreateId(e.target.value)} placeholder="b1-b2" /></label>
+        <label><span>Короткое имя латиницей (нельзя поменять)</span><input value={createId} onChange={e=>setCreateId(e.target.value)} placeholder="b1-b2" /></label>
         <label><span>Название</span><input value={createTitle} onChange={e=>setCreateTitle(e.target.value)} placeholder="B1 → B2" /></label>
-        <button type="button" disabled={busy} onClick={()=>void createSet()}>Создать draft</button>
+        <button type="button" disabled={busy} onClick={()=>void createSet()}>Создать курс</button>
       </div>}
 
       {structure && <details className="ab-admin-details">
-        <summary>Настройки выбранного set</summary>
+        <summary>Название, уровень, цена и бесплатные дни</summary>
         <div className="ab-course-meta-grid">
           <label><span>Название</span><input value={metaTitle} onChange={e=>setMetaTitle(e.target.value)} /></label>
           <label><span>Описание</span><input value={metaDescription} onChange={e=>setMetaDescription(e.target.value)} /></label>
@@ -526,82 +543,85 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
             <option value="">—</option><option value="pre-a1">Pre-A1</option><option value="a1">A1</option><option value="a2">A2</option><option value="b1">B1</option><option value="b2">B2</option><option value="c1">C1</option><option value="c2">C2</option>
           </select></label>
           <label><span>Доступ</span><select value={metaAccess} onChange={e=>setMetaAccess(e.target.value as 'free'|'entitlement')}>
-            <option value="entitlement">Покупка / entitlement</option><option value="free">Полностью бесплатно</option>
+            <option value="entitlement">Платный (первые дни бесплатно)</option><option value="free">Полностью бесплатный</option>
           </select></label>
-          {metaAccess==='entitlement' && <label><span>Бесплатных учебных дней</span><input type="number" min={0} max={365} value={metaFreeDays} onChange={e=>setMetaFreeDays(e.target.value)} /></label>}
+          {metaAccess==='entitlement' && <>
+            <label><span>Бесплатных дней</span><input type="number" min={0} max={365} value={metaFreeDays} onChange={e=>setMetaFreeDays(e.target.value)} /></label>
+            <label><span>Цена, ₽ (пусто — общая)</span><input type="number" min={0} inputMode="numeric" value={metaPriceRub} onChange={e=>setMetaPriceRub(e.target.value)} /></label>
+            <label><span>Цена, $ (пусто — общая)</span><input type="number" min={0} inputMode="numeric" value={metaPriceUsd} onChange={e=>setMetaPriceUsd(e.target.value)} /></label>
+          </>}
         </div>
         <div className="ab-admin-action-row">
           <button type="button" disabled={busy} onClick={()=>void saveSetMeta()}>Сохранить настройки</button>
         </div>
       </details>}
 
-      {message && <p className="ab-admin-feedback" role="status">{message}</p>}
+      {message && !openNode && <p className="ab-admin-feedback" role="status">{message}</p>}
     </article>
 
     <article className="ab-admin-panel">
       <div className="ab-admin-section-head">
         <div>
-          <h2>{structure ? textValue(structure.set.title) : 'Roadmap'}</h2>
-          <p className="ab-admin-note">{structure ? 'Draft r'+structure.draftRevision+' · '+nodes.length+' узлов roadmap' : 'Загрузка…'}</p>
+          <h2>{structure ? textValue(structure.set.title) : 'Дни курса'}</h2>
+          <p className="ab-admin-note">{structure ? 'Дней: '+nodes.length : 'Загрузка…'}</p>
         </div>
         <div className="ab-course-head-actions">
-          <button type="button" disabled={busy||!structure} onClick={()=>void createNode()}>+ День / узел</button>
+          <button type="button" disabled={busy||!structure} onClick={()=>void createNode()}>+ День</button>
           <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void loadStructure()}>Обновить</button>
         </div>
       </div>
-      <div className="ab-admin-table-wrap">
-        <table>
-          <thead><tr><th>День</th><th>Узел</th><th>Тип</th><th>Activities</th><th></th></tr></thead>
-          <tbody>{nodes.map((node,index)=><tr key={node.roadmapId+':'+node.id}>
-            <td data-label="День">{node.dayIndex ?? '—'}</td>
-            <td data-label="Узел"><strong>{textValue(node.title)||node.id}</strong><div className="ab-admin-cell-sub">{node.id}</div></td>
-            <td data-label="Тип">{node.kind}</td>
-            <td data-label="Activities">{node.activityCount}</td>
-            <td className="ab-admin-cell-action">
-              <div className="ab-course-node-actions">
-                <button type="button" className="ab-admin-secondary" disabled={index===0||busy} onClick={()=>void moveNode(index,-1)}>↑</button>
-                <button type="button" className="ab-admin-secondary" disabled={index===nodes.length-1||busy} onClick={()=>void moveNode(index,1)}>↓</button>
-                <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void open(node.roadmapId,node.id)}>Открыть</button>
-                <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void deleteNode(node.roadmapId,node.id)}>Удалить</button>
-              </div>
-            </td>
-          </tr>)}</tbody>
-        </table>
+      <div className="ab-course-days">
+        {nodes.map(node=><button type="button" key={node.roadmapId+':'+node.id} className="ab-course-day"
+          data-open={openNode?.node.id===node.id || undefined} disabled={busy}
+          onClick={()=>void open(node.roadmapId,node.id)}>
+          <span className="ab-course-day-num">{node.dayIndex ?? '·'}</span>
+          <span className="ab-course-day-main">
+            <b>{textValue(node.title)||node.id}</b>
+            <small>{KIND_LABELS[node.kind] || node.kind} · заданий: {node.activityCount}{node.optional ? ' · необязательный' : ''}</small>
+          </span>
+        </button>)}
       </div>
     </article>
 
-    {openNode && <article className="ab-admin-panel">
+    {openNode && <article className="ab-admin-panel ab-course-open-day" ref={openPanel}>
       <div className="ab-admin-section-head">
-        <div><h2>{textValue(openNode.node.title)||openNode.node.id}</h2><p className="ab-admin-note">Day {openNode.node.dayIndex ?? '—'} · {openNode.activities.length} activities</p></div>
+        <div><h2>{textValue(openNode.node.title)||openNode.node.id}</h2><p className="ab-admin-note">День {openNode.node.dayIndex ?? '—'} · заданий: {openNode.activities.length}</p></div>
         <button type="button" className="ab-admin-secondary" onClick={()=>{setOpenNode(null);setEditor(null);}}>Закрыть</button>
       </div>
 
+      <div className="ab-course-day-actions">
+        <button type="button" className="ab-admin-secondary" disabled={openIndex<=0||busy} onClick={()=>void moveNode(openIndex,-1)}>Выше</button>
+        <button type="button" className="ab-admin-secondary" disabled={openIndex<0||openIndex===nodes.length-1||busy} onClick={()=>void moveNode(openIndex,1)}>Ниже</button>
+        <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void deleteNode(openNode.roadmapId,openNode.node.id)}>Удалить день</button>
+      </div>
+      {message && <p className="ab-admin-feedback" role="status">{message}</p>}
+
       <details className="ab-admin-details">
-        <summary>Настройки узла</summary>
+        <summary>Настройки дня</summary>
         <div className="ab-course-meta-grid">
           <label><span>Название</span><input value={textValue(openNode.node.title)} onChange={e=>patchOpenNode({title:{...openNode.node.title,ru:e.target.value}})} /></label>
           <label><span>Тип</span><select value={openNode.node.kind} onChange={e=>patchOpenNode({kind:e.target.value})}>
-            <option value="lesson">lesson</option><option value="practice">practice</option><option value="review">review</option><option value="dialogue">dialogue</option><option value="checkpoint">checkpoint</option><option value="bonus">bonus</option>
+            <option value="lesson">Урок</option><option value="practice">Практика</option><option value="review">Повторение</option><option value="dialogue">Диалог</option><option value="checkpoint">Проверка</option><option value="bonus">Бонус</option>
           </select></label>
           <label><span>Учебный день</span><input type="number" min={1} value={openNode.node.dayIndex ?? ''} onChange={e=>patchOpenNode({dayIndex:e.target.value?Number(e.target.value):undefined})} /></label>
-          <label><span>Prerequisites — ID через запятую</span><input value={openNode.node.prerequisites.join(', ')} onChange={e=>patchOpenNode({prerequisites:e.target.value.split(',').map(x=>x.trim()).filter(Boolean)})} /></label>
-          <label className="ab-course-check"><input type="checkbox" checked={openNode.node.optional} onChange={e=>patchOpenNode({optional:e.target.checked})} /><span>Необязательный узел</span></label>
+          <label><span>Открывается после дней (имена через запятую)</span><input value={openNode.node.prerequisites.join(', ')} onChange={e=>patchOpenNode({prerequisites:e.target.value.split(',').map(x=>x.trim()).filter(Boolean)})} /></label>
+          <label className="ab-course-check"><input type="checkbox" checked={openNode.node.optional} onChange={e=>patchOpenNode({optional:e.target.checked})} /><span>Необязательный день</span></label>
         </div>
-        <div className="ab-admin-action-row"><button type="button" disabled={busy} onClick={()=>void saveNodeMeta()}>Сохранить узел</button></div>
+        <div className="ab-admin-action-row"><button type="button" disabled={busy} onClick={()=>void saveNodeMeta()}>Сохранить день</button></div>
       </details>
 
       <div className="ab-course-add">
         <select value={newType} onChange={e=>setNewType(e.target.value)}>
           {ACTIVITY_TYPES.map(([value,label])=><option key={value} value={value}>{label}</option>)}
         </select>
-        <button type="button" disabled={busy} onClick={()=>void createActivity()}>+ Activity</button>
+        <button type="button" disabled={busy} onClick={()=>void createActivity()}>+ Задание</button>
       </div>
 
       <div className="ab-course-activity-list">
         {openNode.activities.map((activity,index)=><div className="ab-course-activity" key={activity.id}>
           <div className="ab-course-activity-main">
             <strong>{activity.label || activity.id}</strong>
-            <span>{activity.type} · r{activity.revision} · {activity.revisionProgress}</span>
+            <span>{typeLabel(activity.type)}</span>
           </div>
           <div className="ab-course-activity-actions">
             <button type="button" className="ab-admin-secondary" disabled={index===0||busy} onClick={()=>void move(index,-1)}>↑</button>
@@ -621,7 +641,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
 
 export const courseAdminSection:AdminSection={
   id:'course',
-  label:'Курс',
-  group:'Контент',
+  label:'Редактор уроков',
+  group:'Курсы',
   render(context){return <CourseAdmin {...context} />;}
 };

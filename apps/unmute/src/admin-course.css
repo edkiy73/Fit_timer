@@ -28,12 +28,9 @@
   .ab-course-add button{width:100%}
   .ab-course-activity{display:grid;gap:7px}
   .ab-course-activity-main strong{white-space:normal}
-  .ab-course-activity-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:100%}
+  .ab-course-activity-actions{display:grid;grid-template-columns:44px 44px minmax(0,1fr) minmax(0,1fr);width:100%;justify-self:stretch}
   .ab-course-activity-actions button{width:100%;padding:8px 6px!important}
   .ab-course-json{min-height:220px}
-}
-@media(max-width:430px){
-  .ab-course-activity-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 
 .ab-course-set-picker{display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:8px;align-items:center}
@@ -43,8 +40,6 @@
 .ab-course-create-set label>span,.ab-course-meta-grid label>span{font-size:11px;color:var(--muted,#6b7280)}
 .ab-course-meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px;margin-top:8px}
 .ab-course-head-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-.ab-course-node-actions{display:flex;gap:4px;justify-content:flex-end}
-.ab-course-node-actions button{margin:0!important;padding:6px 7px!important}
 @media(max-width:760px){
   .ab-course-set-picker{grid-template-columns:1fr}
   .ab-course-set-picker span{white-space:normal}
@@ -52,9 +47,7 @@
   .ab-course-meta-grid{grid-template-columns:1fr}
   .ab-course-head-actions{display:grid;grid-template-columns:1fr 1fr;width:100%}
   .ab-course-head-actions button{width:100%}
-  .ab-course-node-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:6px}
-  .ab-course-node-actions button{width:100%}
-}
+    }
 
 .ab-release-set-list{display:grid;gap:6px;margin:9px 0 11px}
 .ab-release-set-list label{
@@ -64,4 +57,30 @@
 .ab-release-set-list input{width:18px!important;height:18px;flex:none}
 .ab-release-set-list span{display:grid;gap:1px;min-width:0}
 .ab-release-set-list b{font-size:12.5px}
-.ab-release-set-list small{color:var(--muted,#6b7280);font-size:10.5px}
+.ab-release-set-list small{color:var(--muted,#6b7280);font-size:11px}
+.ab-release-set-list b{font-size:13.5px}
+.ab-release-set-list .ab-release-state{font-weight:600;font-size:12px}
+.ab-release-set-list label[data-state="changed"]{border-color:color-mix(in srgb,var(--accent-ink,#b45309) 45%,var(--line,#e4e6eb))}
+.ab-release-set-list label[data-state="changed"] .ab-release-state{color:var(--accent-ink,#b45309)}
+.ab-release-set-list label[data-state="new"] .ab-release-state{color:var(--ink,#111)}
+.ab-release-set-list label[data-state="live"] .ab-release-state{color:var(--success,#15803d)}
+
+.ab-admin-section-head > button{white-space:nowrap}
+.ab-course-days{display:grid;gap:6px}
+.ab-course-day{
+  display:flex!important;align-items:center;gap:10px;width:100%;margin:0!important;text-align:left;
+  padding:9px 10px!important;border:1px solid var(--line,#e4e6eb)!important;border-radius:12px!important;
+  background:var(--card,#fff)!important;color:var(--ink,#111)!important;box-shadow:none!important;font-weight:400!important
+}
+.ab-course-day[data-open]{border-color:var(--accent,#4f46e5)!important}
+.ab-course-day-num{
+  flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;
+  background:var(--surface,#f3f4f6);font-weight:700;font-size:13px;font-variant-numeric:tabular-nums
+}
+.ab-course-day-main{display:grid;gap:1px;min-width:0}
+.ab-course-day-main b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ab-course-day-main small{color:var(--muted,#6b7280);font-size:11.5px}
+/* The opened day sits under the sticky admin header when scrolled to. */
+.ab-course-open-day{scroll-margin-top:84px}
+.ab-course-day-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.ab-course-day-actions button{width:100%;margin:0!important}

@@ -166,6 +166,28 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.equal(bSaved.status,200);
   assert.equal(bSaved.body.set.title.ru,'B1 to B2');
   assert.equal(bSaved.body.set.access.freePreview.days,5);
+  assert.equal(bSaved.body.set.access.price,undefined);
+
+  // A course's own price is set, kept by a save that does not send it, and cleared by {}.
+  const priced=await action(handler,'content_set_save',{
+    setId:'b1-b2',
+    expectedDraftRevision:bSaved.body.draftRevision,
+    changes:{accessMode:'entitlement',freeDays:5,price:{RUB:1490,USD:'19',EUR:5}}
+  });
+  assert.equal(priced.status,200);
+  assert.deepEqual(priced.body.set.access.price,{RUB:1490,USD:19});
+  const kept=await action(handler,'content_set_save',{
+    setId:'b1-b2',
+    expectedDraftRevision:priced.body.draftRevision,
+    changes:{accessMode:'entitlement',freeDays:2}
+  });
+  assert.deepEqual(kept.body.set.access.price,{RUB:1490,USD:19});
+  const cleared=await action(handler,'content_set_save',{
+    setId:'b1-b2',
+    expectedDraftRevision:kept.body.draftRevision,
+    changes:{accessMode:'entitlement',freeDays:5,price:{}}
+  });
+  assert.equal(cleared.body.set.access.price,undefined);
 
   const staleSet=await action(handler,'content_set_save',{
     setId:'b1-b2',
@@ -305,6 +327,12 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.equal(publishedB.body.courses['b1-b2'].revision,1);
   assert.equal((await Release.getReleasedSet('general-foundation')).revision,1);
   assert.equal((await Release.getReleasedSet('b1-b2')).revision,1);
+
+  // The course list says which courses have edits the learners do not see yet.
+  const afterRelease=(await action(handler,'content_sets_list')).body.sets;
+  assert.equal(afterRelease.find(set=>set.id==='b1-b2').unreleasedChanges,false);
+  assert.equal(afterRelease.find(set=>set.id==='a1-starter').unreleasedChanges,true);
+  assert.ok(afterRelease.find(set=>set.id==='b1-b2').publishedAt);
 
   // A newly staged course snapshot is invisible until a new paired release pointer is committed.
   const nextDraft=await Content.getDraft('general-foundation');

@@ -55,6 +55,17 @@ function requestedSetId(body, fallback=true){
   return fallback ? 'general-foundation' : '';
 }
 
+// {RUB, USD} → only positive whole amounts; nothing left → null (the product default price).
+function cleanPrice(value){
+  if(!value || typeof value!=='object' || Array.isArray(value)) return null;
+  const out={};
+  for(const currency of ['RUB','USD']){
+    const amount=Math.round(Number(value[currency])||0);
+    if(amount>0 && amount<=1000000) out[currency]=amount;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 function newSetFromBody(body){
   const id=Content.cleanId(body && body.id);
   const title=String(body && body.title || '').trim();
@@ -258,6 +269,10 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
             access:meta.access || null,
             draftRevision:structure&&structure.draftRevision || null,
             publishedRevision:released&&released.revision || null,
+            publishedAt:released&&released.publishedAt || null,
+            draftUpdatedAt:structure&&structure.draftUpdatedAt || null,
+            // Edited after the last release: the admin offers to release it.
+            unreleasedChanges:!!(structure && (!released || String(structure.draftUpdatedAt||'')>String(released.publishedAt||''))),
             nodeCount:structure ? (structure.roadmaps||[]).reduce((sum,roadmap)=>sum+(roadmap.nodes||[]).length,0) : null
           });
         }
@@ -302,10 +317,15 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
           if(changes.accessMode==='free') next.access={mode:'free'};
           if(changes.accessMode==='entitlement'){
             const days=Math.max(0,Math.min(365,Math.round(Number(changes.freeDays)||0)));
+            // Keep the course's own price unless the form sends one; {} means «use the default».
+            const price=Object.prototype.hasOwnProperty.call(changes,'price')
+              ? cleanPrice(changes.price)
+              : (next.access&&next.access.price) || null;
             next.access={
               mode:'entitlement',
               entitlement:String(changes.entitlement || (next.access&&next.access.entitlement) || ('course.'+setId)),
-              ...(days>0?{freePreview:{kind:'first-days',days,learnedContentStaysAvailable:true}}:{})
+              ...(days>0?{freePreview:{kind:'first-days',days,learnedContentStaysAvailable:true}}:{}),
+              ...(price?{price}:{})
             };
           }
           return next;
