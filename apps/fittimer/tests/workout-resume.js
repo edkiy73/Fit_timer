@@ -85,6 +85,30 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   });
   ok('сессия сохранена на пятом упражнении', setup.savedStep >= 0, setup.savedStep);
 
+  const stableOutcomeKey = await page.evaluate(() => {
+    const step = {phase:'work',exId:'stable-ex',exName:'Стабильное',round:2,setNo:3,side:1};
+    const stableA = workoutStepKey(step, 4);
+    const stableB = workoutStepKey(step, 99);
+    const old = {'stable-ex|2|3|1|17':'done'};
+    const migrated = normalizeWorkoutOutcomes(old, [
+      {phase:'rest',kind:'timer',seconds:30},
+      step
+    ]);
+    const nameLegacy = normalizeWorkoutOutcomes({'Стабильное|2|3|1|42':'skipped'}, [step]);
+    return {stableA, stableB, migrated, nameLegacy};
+  });
+  ok('ключ результата не зависит от абсолютного индекса шага',
+    stableOutcomeKey.stableA === 'stable-ex|2|3|1'
+      && stableOutcomeKey.stableA === stableOutcomeKey.stableB,
+    JSON.stringify(stableOutcomeKey));
+  ok('старый outcome с другим index мигрирует в стабильный ключ',
+    stableOutcomeKey.migrated['stable-ex|2|3|1'] === 'done'
+      && Object.keys(stableOutcomeKey.migrated).length === 1,
+    JSON.stringify(stableOutcomeKey.migrated));
+  ok('legacy outcome по имени тоже не теряется после появления exercise.id',
+    stableOutcomeKey.nameLegacy['stable-ex|2|3|1'] === 'skipped',
+    JSON.stringify(stableOutcomeKey.nameLegacy));
+
   await page.click('#btnStart');
   await page.waitForTimeout(80);
   const before = await page.evaluate(() => ({
