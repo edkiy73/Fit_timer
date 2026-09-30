@@ -93,7 +93,7 @@ describe('pattern drill',()=>{
       await user.click(screen.getByRole('button',{name:'Совпало'}));
     }
 
-    expect(await screen.findByRole('heading',{name:'Смешанный дрилл'})).toBeTruthy();
+    expect(await screen.findByRole('heading',{name:'Фразы вперемешку'})).toBeTruthy();
     expect(savePractice).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button',{name:'К повтору'}));

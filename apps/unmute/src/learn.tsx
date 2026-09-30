@@ -389,7 +389,7 @@ export function NodeRunnerView({
                   checked={selected===optionIndex}
                   onChange={()=>setSelected(optionIndex)}
                 />
-                <span><LexiconText text={localized(option,locale)} refs={activity.lexiconRefs} /></span>
+                <span><LexiconText text={localized(option,locale)} refs={activity.lexiconRefs} interactive={result!==null} /></span>
                 {result!==null&&optionIndex===activity.correctIndex&&<Icon name="check" size={20} className="learn-option-mark" />}
               </label>
             ))}

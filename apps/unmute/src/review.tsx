@@ -435,7 +435,7 @@ export function ReviewView({
                   checked={selected===optionIndex}
                   onChange={()=>setSelected(optionIndex)}
                 />
-                <span><LexiconText text={localized(option,locale)} refs={item.activity.lexiconRefs} /></span>
+                <span><LexiconText text={localized(option,locale)} refs={item.activity.lexiconRefs} interactive={result!==null} /></span>
               </label>
             ))}
           </fieldset>

@@ -311,17 +311,21 @@ export function useLexiconRuntime():LexiconRuntimeValue{
 export function LexiconText({
   text,
   refs,
-  className
+  className,
+  interactive=true
 }:{
   text:string;
   refs?:readonly LexiconClickRef[];
   className?:string;
+  /** false: plain text. Answer options stay plain until checked, so a tap selects the
+      answer (not a word) and the dictionary cannot give the answer away. */
+  interactive?:boolean;
 }){
   const runtime=useContext(LexiconContext);
   const {t}=useI18n();
   const parts=useMemo(()=>splitEnglishText(text),[text]);
 
-  if(!runtime)return <span className={className}>{text}</span>;
+  if(!runtime||!interactive)return <span className={className}>{text}</span>;
 
   return (
     <span className={className}>
