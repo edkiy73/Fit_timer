@@ -9,9 +9,6 @@ import { SCHEMA_VERSION, SYNC, connectAccountSync, currentUser, hasMeaningfulLoc
   renderUsers, saveIdentity, saveUsers, setCurrentUserShared, setDataSyncAccountHooks, setUsersShared, showSyncState,
   switchUser, syncState, users, validAge
 } from './10-data-sync.js';
-import { API_BASE, ageError, apiPost, clients, forgetMe, loadTrainer, mailErrText, normHandle,
-  saveClients, saveTrainer, setTrainerShared, syncGeminiBtns, trainer
-} from './40-programs-ai.js';
 
 /* ================= РЕДАКТОР ПРОФИЛЯ ================= */
 export let uDraft = null;
@@ -52,6 +49,28 @@ let eventAccountHooks = {
 export function setAccountEventHooks(hooks = {}){
   eventAccountHooks = {...eventAccountHooks, ...hooks};
 }
+
+
+let programsAiAccountHooks = {
+  getApiBase: () => '',
+  ageError: () => '',
+  apiPost: async () => ({}),
+  getClients: () => [],
+  forgetMe: async () => {},
+  loadTrainer: async () => {},
+  mailErrText: e => String((e && e.message) || e || ''),
+  normHandle: v => String(v == null ? '' : v).trim(),
+  saveClients: async () => {},
+  saveTrainer: async () => {},
+  setTrainerShared: v => v,
+  syncGeminiBtns: () => {},
+  getTrainer: () => null
+};
+export function setAccountProgramsAiHooks(hooks = {}){
+  programsAiAccountHooks = {...programsAiAccountHooks, ...hooks};
+}
+const trainerState = () => programsAiAccountHooks.getTrainer();
+const clientsState = () => programsAiAccountHooks.getClients() || [];
 // текущее состояние профиля для сравнения
 function userState(){
   if(!uDraft) return null;
@@ -113,7 +132,7 @@ export async function saveUser(){
   if(!uDraft.name){ appAlert(t('profile.nameRequired')); return; }
   // Пол и возраст в самом профиле необязательны. Они становятся обязательными
   // только перед AI-генерацией, где askWho() отдельно запрашивает недостающие данные.
-  const aErr = ageError($('ueAge').value);
+  const aErr = programsAiAccountHooks.ageError($('ueAge').value);
   if(aErr){
     appAlert(aErr);
     $('ueAge').focus();
@@ -197,7 +216,7 @@ export async function wipeAccount(){
   // отдельно и на сервере. Пока этого не было, «удалить всё» оставляло висеть имя и
   // фотографию под ником, которым после удаления не мог управлять уже никто,
   // включая самого человека.
-  const coach = !!(trainer && trainer.key && (trainer.handle || '').trim());
+  const coach = !!(trainerState() && trainerState().key && (trainerState().handle || '').trim());
   const server = coach || linked;
   const ok = await appDialog(
     (linked ? t('account.deleteAccountQuestion') : t('account.deleteDataQuestion'))
@@ -207,7 +226,7 @@ export async function wipeAccount(){
   );
   if(!ok) return;
   if(server){
-    try{ await forgetMe('all'); }
+    try{ await programsAiAccountHooks.forgetMe('all'); }
     catch(e){
       // Молча стереть телефон нельзя: ключ уйдёт вместе с ним, и данные на сервере
       // не сможет удалить уже никто. Решение за человеком.
@@ -276,14 +295,14 @@ export async function refreshServerSubscription(force){
   let deviceId = await kvGet('deviceId');
   if(!deviceId) return false;
   try{
-    const r = await apiPost('/api/auth',{
+    const r = await programsAiAccountHooks.apiPost('/api/auth',{
       action:'status', email:account.email, deviceId, syncToken:account.syncToken
     });
     account.sub = r.sub || null;
     await saveAccount();
     renderPlan();
     if(typeof renderPremium === 'function') renderPremium();
-    if(typeof syncGeminiBtns === 'function') syncGeminiBtns();
+    if(true) programsAiAccountHooks.syncGeminiBtns();
     return true;
   }catch(_){
     return false;
@@ -300,7 +319,7 @@ export async function syncAccountLocale(locale){
   if(account.email && account.syncToken){
     let deviceId = await kvGet('deviceId');
     if(!deviceId){ deviceId = newId(); await kvSet('deviceId', deviceId); }
-    try{ await apiPost('/api/auth', {action:'set_locale', email:account.email, deviceId, syncToken:account.syncToken, locale:next}); }catch(_){}
+    try{ await programsAiAccountHooks.apiPost('/api/auth', {action:'set_locale', email:account.email, deviceId, syncToken:account.syncToken, locale:next}); }catch(_){}
   }
 }
 export function rememberAccount(){
@@ -599,7 +618,7 @@ async function applyAndroidUpdateConfig(raw){
 }
 export async function loadPublicConfig(){
   try{
-    const res = await fetch(API_BASE + '/api/config', {cache:'no-store'});
+    const res = await fetch(programsAiAccountHooks.getApiBase() + '/api/config', {cache:'no-store'});
     if(!res.ok) return;
     const cfg = await res.json();
     if(cfg && cfg.prices && cfg.prices.USD) REMOTE_PRICES = cfg.prices;
@@ -841,26 +860,26 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   await saveKnown();
   if(identity){ identity.email = email; await saveIdentity(); }
   eventAccountHooks.syncRemotePushRegistration(false).catch(()=>{});
-  if(switchingAccount) await loadTrainer();
+  if(switchingAccount) await programsAiAccountHooks.loadTrainer();
 
   if(r.handle){
-    if(!trainer) setTrainerShared({on: false, handle: '', links: ''});
-    trainer.handle = r.handle;
-    if(r.trainerKey) trainer.key = r.trainerKey;
+    if(!trainer) programsAiAccountHooks.setTrainerShared({on: false, handle: '', links: ''});
+    trainerState().handle = r.handle;
+    if(r.trainerKey) trainerState().key = r.trainerKey;
     const trainerRemote = r.trainer || {};
     // Сам ник ещё не делает человека тренером. Режим включён только если у
     // аккаунта действительно существует сохранённая публичная страница.
-    trainer.on = !!r.trainer;
+    trainerState().on = !!r.trainer;
     if(r.trainer){
-      ['name', 'photo', 'about', 'links'].forEach(k => { trainer[k] = trainerRemote[k] || ''; });
-      trainer.years = trainerRemote.years == null ? null : trainerRemote.years;
+      ['name', 'photo', 'about', 'links'].forEach(k => { trainerState()[k] = trainerRemote[k] || ''; });
+      trainerState().years = trainerRemote.years == null ? null : trainerRemote.years;
     }
-    trainer.pageErr = null;
-    await saveTrainer();
-    if(Array.isArray(clients) && clients.length) await saveClients();
+    trainerState().pageErr = null;
+    await programsAiAccountHooks.saveTrainer();
+    if(Array.isArray(clientsState()) && clientsState().length) await programsAiAccountHooks.saveClients();
   }
 
-  renderPlan(); renderPremium(); syncGeminiBtns();
+  renderPlan(); renderPremium(); programsAiAccountHooks.syncGeminiBtns();
   trainerCatalogAccountHooks.renderTrainerCard(); syncDockTabs();
   // Вход с экрана знакомства: профиля на телефоне ещё нет, и без него синхронизация
   // не запускалась. Потом появлялся пустой «Мой профиль», уезжал в аккаунт отдельным
@@ -902,17 +921,17 @@ export async function doLogin(){
   const back = btn.textContent;
   try{
     if(loginStep === 3){
-      const handle = normHandle($('loginHandle').value);
+      const handle = programsAiAccountHooks.normHandle($('loginHandle').value);
       if(!/^@[\wа-яё.\-]{2,29}$/i.test(handle)){
         $('loginErr').textContent = t('login.handleRule');
         return;
       }
       btn.textContent = t('login.savingHandle');
       const p = loginPending;
-      const claimed = await apiPost('/api/auth', {
+      const claimed = await programsAiAccountHooks.apiPost('/api/auth', {
         action:'set_handle', email:p.email, deviceId:p.deviceId,
         syncToken:p.r.syncToken, handle,
-        trainerKey: !p.switchingAccount && trainer ? (trainer.key || '') : ''
+        trainerKey: !p.switchingAccount && trainer ? (trainerState().key || '') : ''
       });
       p.r.handle = claimed.handle;
       p.r.needsHandle = false;
@@ -921,7 +940,7 @@ export async function doLogin(){
     }
     if(loginStep === 1){
       btn.textContent = t('login.sending');
-      const r = await apiPost('/api/auth', {action: 'send', email, locale: appLocale});
+      const r = await programsAiAccountHooks.apiPost('/api/auth', {action: 'send', email, locale: appLocale});
       loginStep = 2;
       setShown('loginStep1', false);
       setShown('loginStep2', true);
@@ -941,13 +960,13 @@ export async function doLogin(){
     const switchingAccount = !!previousEmail && previousEmail !== email;
     let loginDeviceId = await kvGet('deviceId');
     if(!loginDeviceId){ loginDeviceId = newId(); await kvSet('deviceId', loginDeviceId); }
-    const r = await apiPost('/api/auth', {
+    const r = await programsAiAccountHooks.apiPost('/api/auth', {
       action: 'verify', email, code: ($('loginCode').value || '').replace(/\D/g, ''),
       deviceId: loginDeviceId,
       // Ник и ключ отдаём вместе с кодом: если человек завёл ник до аккаунта,
       // он привяжется к нему сразу, а не потребует второго действия.
-      handle: !switchingAccount && trainer && trainer.handle ? normHandle(trainer.handle) : '',
-      trainerKey: !switchingAccount && trainer ? (trainer.key || '') : '',
+      handle: !switchingAccount && trainerState() && trainerState().handle ? programsAiAccountHooks.normHandle(trainerState().handle) : '',
+      trainerKey: !switchingAccount && trainer ? (trainerState().key || '') : '',
       // Premium — только серверное право. Локальный account.sub является кэшем
       // интерфейса и никогда не отправляется как доказательство подписки.
       locale: appLocale,
@@ -970,7 +989,7 @@ export async function doLogin(){
       ? t('login.handleTaken')
       : e && e.code === 'bad_handle'
       ? t('login.handleRule')
-      : mailErrText(e);
+      : programsAiAccountHooks.mailErrText(e);
     if(e && e.code === 'bad_code') $('loginCode').value = '';
     btn.textContent = loginStep === 1 ? t('login.sendCode') : loginStep === 3 ? t('login.createAccount') : t('login.signIn');
     return;
@@ -996,8 +1015,8 @@ export async function signOut(){
   account = blankAccount();
   await saveAccount();
   if(identity){ identity.email = null; await saveIdentity(); }
-  await loadTrainer();
-  renderPlan(); renderPremium(); syncGeminiBtns();
+  await programsAiAccountHooks.loadTrainer();
+  renderPlan(); renderPremium(); programsAiAccountHooks.syncGeminiBtns();
   trainerCatalogAccountHooks.renderTrainerCard(); syncDockTabs();
   goTab('scrAccount');
 }
