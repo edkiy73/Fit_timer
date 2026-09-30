@@ -45,6 +45,13 @@ function validateSetMeta(meta){
       if(!Number.isInteger(access.freePreview.days)||access.freePreview.days<0) throw new Error('bad_free_preview_days');
       if(access.freePreview.learnedContentStaysAvailable!==true) throw new Error('free_review_must_stay_available');
     }
+    if(access.price!==undefined){
+      const price=assertObject(access.price,'price');
+      for(const [currency,amount] of Object.entries(price)){
+        if(!['RUB','USD'].includes(currency)) throw new Error('bad_price_currency');
+        if(typeof amount!=='number'||!Number.isFinite(amount)||amount<=0) throw new Error('bad_price_amount');
+      }
+    }
   }else if(access.mode!=='free'){
     throw new Error('bad_access_mode');
   }

@@ -141,5 +141,14 @@ const sample={
   bad.roadmaps[0].nodes[1].prerequisites=['d8'];
   assert.throws(()=>Content.validateSet(bad),/roadmap_cycle/);
 
+  // A course may carry its own forever price per currency.
+  const priced=JSON.parse(JSON.stringify(sample));
+  priced.access={mode:'entitlement',entitlement:'course.sample',price:{RUB:990,USD:10}};
+  Content.validateSet(priced);
+  priced.access.price={EUR:10};
+  assert.throws(()=>Content.validateSet(priced),/bad_price_currency/);
+  priced.access.price={RUB:-1};
+  assert.throws(()=>Content.validateSet(priced),/bad_price_amount/);
+
   console.log('UnMute content DB tests passed');
 })().catch(error=>{console.error(error);process.exit(1);});
