@@ -685,7 +685,10 @@ function buildReport(p){
     sec: mine.reduce((a, h) => a + (h.sec || 0), 0),
     first: mine.length ? mine[0].d : null,
     last: mine.length ? mine[mine.length - 1].d : null,
-    streak: calcStreakInfo().n,
+    // Серия в отчёте относится только к ЭТОЙ программе тренера.
+    // Общая серия профиля может расти от разминки, другой силовой программы
+    // или каталога и ничего не говорит о соблюдении конкретного назначения.
+    streak: calcStreakInfo({programId:p.id}).n,
     log, plans: planStats, ex, diff
   };
 }
