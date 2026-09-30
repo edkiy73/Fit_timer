@@ -660,9 +660,7 @@ function limitNotificationCandidates(items){
 // вперёд при старте, изменении расписания и завершении тренировки.
 export async function syncNativeNotifications(){
   if(!appRuntimeCompat.hasNative('syncWorkoutNotifications')) return;
-  const prefs = (typeof getNotificationPrefs === 'function') ? getNotificationPrefs() : {
-    workouts:true, trainer:true, progress:true, offers:true
-  };
+  const prefs = getNotificationPrefsHook();
   const now = new Date();
   const horizon = new Date(now.getTime() + NOTIFY_HORIZON_DAYS * NOTIFY_DAY);
   const items = [];
