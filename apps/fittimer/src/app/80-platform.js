@@ -768,12 +768,14 @@ export async function syncNativeNotifications(){
    для кнопок, которые ничего не хранят в себе; тумблеры и поля остаются как есть.
    Обработчик получает саму кнопку и событие: этого хватает, чтобы взять данные
    из data-атрибутов рядом, не заводя элементу имя. */
-// Закрыть попап, внутри которого стоит кнопка. История навигации остаётся
-// за существующим MutationObserver; UI Core отвечает только за DOM-механику.
-registerAction('closeModal', btn => {
-  const m = appUi.closestModal(btn);
-  appUi.closeModal(m);
-});
+function registerPlatformActions(){
+  // Закрыть попап, внутри которого стоит кнопка. История навигации остаётся
+  // за существующим MutationObserver; UI Core отвечает только за DOM-механику.
+  registerAction('closeModal', btn => {
+    const m = appUi.closestModal(btn);
+    appUi.closeModal(m);
+  });
+}
 
 /* Setters for state owned by this chunk and changed from other chunks.
    Other chunks read these bindings directly but write them only through the owner. */
@@ -785,6 +787,7 @@ export function setVoiceWantedShared(value){ voiceWanted = value; return voiceWa
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initPlatform(){
+  registerPlatformActions();
   try{
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{
       const u = curUser();
