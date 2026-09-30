@@ -4,7 +4,7 @@ import FitAIProtocol from '../../lib/ai-protocol.js';
 import { appRuntimeCompat } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
 import { $, DUMBBELL_ICON, appAlert, appDialog, asTab, defaultPlanIdx, estimatedWorkoutMinutes,
-  goBackTo, goTab, icon, openStart, plural, renderPlanRow, renderStartInfo, setShown, show, state
+  goBackTo, goTab, icon, openStart, plural, renderPlanRow, renderStartInfo, setCoreProgramsAiHooks, setShown, show, state
 } from './00-core.js';
 import { DAYS, DAY_FULL, accountAuth, calcStreakInfo, curUser, currentUser, customPrograms,
   dayTitle, identity, kvDel, kvGet, kvSet, localISO, newId, normPlans, openSessions, pk, planDays,
@@ -3169,6 +3169,19 @@ export function setTrainerShared(value){ trainer = value; return trainer; }
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initProgramsAi(){
+  setCoreProgramsAiHooks({
+    getActiveAiDirty: () => {
+      const source = AI_SOURCES[aiSrc];
+      return source ? source.dirty : null;
+    },
+    applyProgressionAll,
+    duplicateProgram,
+    exportProgram,
+    exportProgramFile,
+    renderGreeting,
+    renderToday,
+    trainerOn
+  });
   registerAction('showDynamicInfo', btn => {
     if(btn.dataset.info) appAlert(btn.dataset.info);
   });

@@ -108,6 +108,7 @@ for(const f of parts.map(n => path.join(APP, n)).concat(leaves, path.join(APP, '
 const coreSource = fs.readFileSync(path.join(APP, '00-core.js'), 'utf8');
 const accountSource = fs.readFileSync(path.join(APP, '20-account.js'), 'utf8');
 const progressSource = fs.readFileSync(path.join(APP, '30-progress-media.js'), 'utf8');
+const programsAiSource = fs.readFileSync(path.join(APP, '40-programs-ai.js'), 'utf8');
 const platformCoreSource = fs.readFileSync(path.join(APP, '80-platform.js'), 'utf8');
 const eventsCoreSource = fs.readFileSync(path.join(APP, '90-events.js'), 'utf8');
 if(/from ['"]\.\/20-account\.js['"]/.test(coreSource)){
@@ -122,6 +123,13 @@ if(/from ['"]\.\/30-progress-media\.js['"]/.test(coreSource)){
 }
 if(!/setCoreProgressHooks/.test(coreSource) || !/setCoreProgressHooks\(\{[\s\S]*renderPhotos/.test(progressSource)){
   problems.push('core/progress hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/40-programs-ai\.js['"]/.test(coreSource)){
+  problems.push('src/app/00-core.js must not import 40-programs-ai.js; inject programs-ai-facing hooks instead');
+}
+if(!/setCoreProgramsAiHooks/.test(coreSource) || !/setCoreProgramsAiHooks\(\{[\s\S]*getActiveAiDirty[\s\S]*applyProgressionAll[\s\S]*duplicateProgram[\s\S]*exportProgram[\s\S]*exportProgramFile[\s\S]*renderGreeting[\s\S]*renderToday[\s\S]*trainerOn/.test(programsAiSource)){
+  problems.push('core/programs-ai hook boundary is missing or incomplete');
 }
 
 if(/from ['"]\.\/80-platform\.js['"]/.test(coreSource)){

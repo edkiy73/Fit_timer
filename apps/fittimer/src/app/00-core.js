@@ -4,9 +4,6 @@ import { registerAction } from './05-actions.js';
 import { DAYS, closeAllMenus, curUser, customPrograms, normPlans, progActive, renderStats,
   renderUsers, renderWeight, renderWellness, savePrograms, setCustomProgramsShared, stats
 } from './10-data-sync.js';
-import { AI_SOURCES, aiSrc, applyProgressionAll, duplicateProgram, exportProgram, exportProgramFile,
-  renderGreeting, renderToday, trainerOn
-} from './40-programs-ai.js';
 import { openPublish, pickClientFor, refreshClientsScreen, renderMine, renderTrainerCard,
   storeCountText
 } from './50-trainer-catalog.js';
@@ -55,6 +52,25 @@ export function setCoreEventHooks(hooks = {}){
   eventMoreTabHook = typeof hooks.getMoreTab === 'function' ? hooks.getMoreTab : (() => 'me');
   eventSwitchMoreTabHook = typeof hooks.switchMoreTab === 'function' ? hooks.switchMoreTab : (() => {});
   eventSyncSettingsFormHook = typeof hooks.syncSettingsForm === 'function' ? hooks.syncSettingsForm : (() => {});
+}
+
+let programsAiDirtyHook = () => null;
+let programsApplyProgressionHook = () => {};
+let programsDuplicateHook = async p => p;
+let programsExportHook = async () => {};
+let programsExportFileHook = async () => {};
+let programsRenderGreetingHook = () => {};
+let programsRenderTodayHook = () => {};
+let programsTrainerOnHook = () => false;
+export function setCoreProgramsAiHooks(hooks = {}){
+  programsAiDirtyHook = typeof hooks.getActiveAiDirty === 'function' ? hooks.getActiveAiDirty : (() => null);
+  programsApplyProgressionHook = typeof hooks.applyProgressionAll === 'function' ? hooks.applyProgressionAll : (() => {});
+  programsDuplicateHook = typeof hooks.duplicateProgram === 'function' ? hooks.duplicateProgram : (async p => p);
+  programsExportHook = typeof hooks.exportProgram === 'function' ? hooks.exportProgram : (async () => {});
+  programsExportFileHook = typeof hooks.exportProgramFile === 'function' ? hooks.exportProgramFile : (async () => {});
+  programsRenderGreetingHook = typeof hooks.renderGreeting === 'function' ? hooks.renderGreeting : (() => {});
+  programsRenderTodayHook = typeof hooks.renderToday === 'function' ? hooks.renderToday : (() => {});
+  programsTrainerOnHook = typeof hooks.trainerOn === 'function' ? hooks.trainerOn : (() => false);
 }
 
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
@@ -695,7 +711,7 @@ const LEAVE_GUARDS = {
   scrBuilder:  ()=> programDirty() ? {what:t('builder.programChanges'), clean:()=> clearSnap('program')} : null,
   scrExercise: ()=> exDirty() ? {what:t('exercise.changes'), clean:()=>{ dropFreshEx(); setExDraftShared(null); setExIdxShared(-1); setExOrigShared(''); setExFromWorkShared(false); }} : null,
   scrUserEdit: ()=> accountUserDirtyHook() ? {what:t('profile.changes')} : null,
-  scrAI:       ()=> (AI_SOURCES[aiSrc] && aiScreenDirty(AI_SOURCES[aiSrc].dirty)) ? {what:t('ai.filledRequest')} : null
+  scrAI:       ()=> { const dirty = programsAiDirtyHook(); return dirty && aiScreenDirty(dirty) ? {what:t('ai.filledRequest')} : null; }
 };
 let guardBypass = false; // второй заход после подтверждения — уже не спрашиваем
 // Жест «назад» и системная кнопка закрывают открытый попап, а не уводят с экрана.
@@ -885,7 +901,7 @@ export function prepTab(id){
       document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === currentHfMode));
     }
     else if(id === 'scrTrainer'){ refreshClientsScreen(); }
-    else if(id === 'scrMenu'){ renderGreeting(); renderToday(); }
+    else if(id === 'scrMenu'){ programsRenderGreetingHook(); programsRenderTodayHook(); }
   }catch(e){}
 }
 
@@ -903,7 +919,7 @@ function kbFocused(){
 // перезапуска.
 export function syncDockTabs(){
   const b = document.querySelector('.dock-btn[data-scr="scrTrainer"]');
-  if(b) setShown(b, trainerOn());
+  if(b) setShown(b, programsTrainerOnHook());
 }
 
 function syncDock(){
@@ -962,7 +978,7 @@ export function goTab(id){
 export let startFrom = 'scrMenu';
 export function openStart(raw){
   if(ROOT_TABS.includes(show._last)) startFrom = show._last;
-  applyProgressionAll();
+  programsApplyProgressionHook();
   eventApplyAudioFromUserHook(curUser());
   state.raw = raw;
   const plans = normPlans(raw);
@@ -1290,8 +1306,8 @@ function buildStartMenu(){
     mk(icon('power') + (on ? t('programs.disable') : t('programs.enable')), 'toggleStartProgramActive'),
     mk(icon('copy') + t('common.duplicate'), 'duplicateStartProgram'),
     mk(icon('share') + t('programs.shareLink'), 'shareStartProgram'),
-    ...(trainerOn() ? [mk(icon('users') + t('programs.sendClient'), 'sendStartProgramToClient')] : []),
-    ...(trainerOn() && !p.storeId ? [mk(icon('crown') + t('programs.submitCatalog'), 'publishStartProgram')] : []),
+    ...(programsTrainerOnHook() ? [mk(icon('users') + t('programs.sendClient'), 'sendStartProgramToClient')] : []),
+    ...(programsTrainerOnHook() && !p.storeId ? [mk(icon('crown') + t('programs.submitCatalog'), 'publishStartProgram')] : []),
     mk(icon('download') + t('programs.saveFile'), 'exportStartProgramFile'),
     mk(icon('trash') + t('common.delete'), 'deleteStartProgram', 'danger')
   );
@@ -1398,13 +1414,13 @@ export function initCore(){
     if(wasOn) appAlert(t('programs.disabledAlert'));
   }));
   registerAction('duplicateStartProgram', withStartProgram(async p => {
-    const copy = await duplicateProgram(p);
+    const copy = await programsDuplicateHook(p);
     openBuilder(copy.id);
   }));
-  registerAction('shareStartProgram', withStartProgram(async p => exportProgram(p)));
+  registerAction('shareStartProgram', withStartProgram(async p => programsExportHook(p)));
   registerAction('sendStartProgramToClient', withStartProgram(async p => pickClientFor(p)));
   registerAction('publishStartProgram', withStartProgram(async p => openPublish(p)));
-  registerAction('exportStartProgramFile', withStartProgram(async p => exportProgramFile(p)));
+  registerAction('exportStartProgramFile', withStartProgram(async p => programsExportFileHook(p)));
   registerAction('deleteStartProgram', withStartProgram(async p => {
     if(!(await appDialog(t('programs.deleteQuestion',{name:p.name}),
       {confirm:true, okText:t('common.delete'), cancelText:t('common.keep')}))) return;
