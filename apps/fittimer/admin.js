@@ -243,7 +243,7 @@ function resetEditorDirty(){
 function moderationState(item){
   const ru=localeReady(item,'ru'),en=localeReady(item,'en');
   const ex=Math.max(0,+item.exCount||0);
-  const media=item.media?Object.keys(item.media).length:0;
+  const media=catalogMediaCount(item.media);
   const problems=[];
   if(!ru)problems.push('не готов RU');
   if(!en)problems.push('не готов EN');
@@ -355,7 +355,7 @@ function renderDrafts(b){
     card.innerHTML='<div class="entity-card-head">'+cover+'<div style="min-width:0;flex:1"><div class="entity-card-title">'+esc(src.name||'Без названия')+'</div><div class="entity-card-sub">'+esc((src.gives||'').slice(0,120)||'Черновик ещё не заполнен полностью')+'</div></div></div>'
       +'<div class="td-actions"><details class="row-menu"><summary aria-label="Действия">•••</summary><div class="row-menu-pop"><button data-act="edit">Продолжить редактирование</button><button class="positive" data-act="publish">Опубликовать</button><button class="positive" data-act="publishPro">Опубликовать в Premium</button><button class="danger" data-act="delete">Удалить черновик</button></div></details></div>'
       +'<div class="entity-tags"><span class="status-chip">'+esc(goalName(item.cat))+'</span><span class="status-chip">'+esc(item.level||'—')+'</span><span class="status-chip '+(ready?'ok':'')+'">'+(ready?'Готов к публикации':'Нужно заполнить')+'</span><span class="status-chip">'+esc(localeMarks(item))+'</span></div>'
-      +'<div class="entity-meta"><div><b>'+(item.exCount||0)+'</b><span>упражнений</span></div><div><b>'+(item.media?Object.keys(item.media).length:0)+'</b><span>фото</span></div><div><b>'+esc(fmtDay(item.updatedAt||item.at))+'</b><span>обновлён</span></div></div>';
+      +'<div class="entity-meta"><div><b>'+(item.exCount||0)+'</b><span>упражнений</span></div><div><b>'+catalogMediaCount(item.media)+'</b><span>фото</span></div><div><b>'+esc(fmtDay(item.updatedAt||item.at))+'</b><span>обновлён</span></div></div>';
     card.querySelectorAll('[data-act]').forEach(btn=>btn.onclick=()=>{
       const a=btn.dataset.act;
       if(a==='edit'){setTab('add');fillForm(item);return;}
@@ -419,7 +419,7 @@ function renderCatalog(b){
       +'</div>'
       +'<div class="entity-meta">'
         +'<div><b>'+(item.exCount||0)+'</b><span>упражнений</span></div>'
-        +'<div><b>'+(item.media?Object.keys(item.media).length:0)+'</b><span>фото</span></div>'
+        +'<div><b>'+catalogMediaCount(item.media)+'</b><span>фото</span></div>'
         +'<div><b>'+(item.by?'<button class="who" data-trainer="'+esc(item.by)+'">'+esc(item.by)+'</button>':'Fit Timer')+'</b><span>автор</span></div>'
       +'</div>'
       +(pending?'<div class="moderation-readiness '+(ready?'ok':'')+'">'+(ready
@@ -1528,6 +1528,81 @@ let editing = null;
 let editingStatus = null;
 let form = {cover: null, media: {}, sourceLocale:'ru', imageGender:'f'};
 let aiEditTarget = null;
+
+function mediaV2Items(media){
+  return media && +media.v === 2 && Array.isArray(media.items) ? media.items : null;
+}
+function catalogMediaCount(media){
+  const items=mediaV2Items(media);
+  return items ? items.length : Object.keys((media&&typeof media==='object')?media:{}).length;
+}
+function cloneCatalogMedia(media){
+  try{return JSON.parse(JSON.stringify(media||{}));}catch(_){return {};}
+}
+function adminMediaId(){
+  return 'e'+Math.random().toString(36).slice(2,10);
+}
+function mediaBlockHit(media,ex){
+  const items=mediaV2Items(media);
+  if(items){
+    return items.find(x=>+x.p===+ex.p&&+x.i===+ex.i)||null;
+  }
+  return ex&&ex.name ? {data:media&&media[ex.name]} : null;
+}
+function mediaBlockData(media,ex){
+  const hit=mediaBlockHit(media,ex);
+  return hit&&hit.data||'';
+}
+function ensureFormMediaV2(blocks){
+  if(mediaV2Items(form.media))return;
+  const old=(form.media&&typeof form.media==='object')?form.media:{};
+  const counts={};
+  blocks.forEach(ex=>{if(ex.name)counts[ex.name]=(counts[ex.name]||0)+1;});
+  const items=[];
+  blocks.forEach(ex=>{
+    // Legacy «имя → фото» переносим только при однозначном имени. Дубликат уже
+    // не содержит enough identity, поэтому не приписываем его случайному блоку.
+    const data=ex.name&&counts[ex.name]===1?old[ex.name]:null;
+    if(data)items.push({id:adminMediaId(),p:ex.p,i:ex.i,n:ex.name,data});
+  });
+  form.media={v:2,items};
+}
+function setMediaBlock(ex,data){
+  const blocks=exerciseBlocks(form.sourceLocale);
+  ensureFormMediaV2(blocks);
+  const items=form.media.items;
+  let hit=items.find(x=>+x.p===+ex.p&&+x.i===+ex.i);
+  if(!data){
+    form.media.items=items.filter(x=>!(+x.p===+ex.p&&+x.i===+ex.i));
+    return;
+  }
+  if(!hit){
+    hit={id:adminMediaId(),p:ex.p,i:ex.i,n:ex.name,data};
+    items.push(hit);
+  }else{
+    hit.n=ex.name;hit.data=data;
+  }
+}
+function reconcileFormMedia(blocks){
+  const items=mediaV2Items(form.media);
+  if(!items)return;
+  const byName={};
+  blocks.forEach(ex=>{
+    const k=String(ex.name||'');
+    if(k)(byName[k]||(byName[k]=[])).push(ex);
+  });
+  const valid=new Set(blocks.map(ex=>ex.p+'|'+ex.i));
+  items.forEach(item=>{
+    // При перестановке уникальное source-name переносит stable id вместе с фото.
+    // При rename/duplicate name сохраняем позицию: угадывать между дублями нельзя.
+    const named=byName[String(item.n||'')]||[];
+    if(named.length===1){
+      item.p=named[0].p;item.i=named[0].i;item.n=named[0].name;
+    }
+  });
+  form.media.items=items.filter(x=>valid.has((+x.p||0)+'|'+(+x.i||0)));
+}
+let failedMediaJobs = [];
 let failedMediaJobs = [];
 let adminCreateMode = 'ai';   // картинки живут отдельно от полей ввода
 
@@ -1559,16 +1634,29 @@ function pickPic(fn){
   f.click();
 }
 
-// Названия упражнений — из текста программы. Другого источника нет и не нужно:
-// фото привязано к названию, и расходиться им нельзя.
+// Упражнения из текстового протокола. Для медиа важна не только подпись, но и
+// source position (plan/exercise): она переживает перевод имени и даёт мост к stable id.
 function exerciseBlocks(lang){
   const field=lang==='en' ? $('fTextEn') : $('fTextRu');
   const text=field?field.value:'';
   const lines=text.split(/\r?\n/);
   const starts=[];
-  lines.forEach((line,i)=>{if(/^УПРАЖНЕНИЕ:\s*/i.test(line))starts.push(i);});
-  return starts.map((start,idx)=>{
-    const end=idx+1<starts.length?starts[idx+1]:lines.length;
+  let plan=0,exInPlan=0,seenDay=false,hadExercise=false;
+  lines.forEach((line,lineNo)=>{
+    if(/^ДЕНЬ:\s*/i.test(line)){
+      if(seenDay||hadExercise)plan++;
+      else plan=0;
+      exInPlan=0;seenDay=true;
+      return;
+    }
+    if(/^УПРАЖНЕНИЕ:\s*/i.test(line)){
+      starts.push({line:lineNo,p:plan,i:exInPlan++});
+      hadExercise=true;
+    }
+  });
+  return starts.map((meta,idx)=>{
+    const start=meta.line;
+    const end=idx+1<starts.length?starts[idx+1].line:lines.length;
     const chunk=lines.slice(start,end);
     const value=key=>{
       const row=chunk.find(x=>new RegExp('^'+key+':\\s*','i').test(x));
@@ -1580,7 +1668,7 @@ function exerciseBlocks(lang){
       muscles:value('МЫШЦЫ').split(/[,;]/).map(x=>x.trim()).filter(Boolean),
       format:value('ФОРМАТ'),
       value:value('ЗНАЧЕНИЕ'),
-      start,end
+      p:meta.p,i:meta.i,start,end
     };
   }).filter(x=>x.name);
 }
