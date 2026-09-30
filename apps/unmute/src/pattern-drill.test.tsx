@@ -89,8 +89,8 @@ describe('pattern drill',()=>{
     );
 
     for(let i=0;i<2;i++){
-      await user.click(screen.getByRole('button',{name:'Сказал'}));
-      await user.click(screen.getByRole('button',{name:'Сказал так же'}));
+      await user.click(screen.getByRole('button',{name:'Готово'}));
+      await user.click(screen.getByRole('button',{name:'Совпало'}));
     }
 
     expect(await screen.findByRole('heading',{name:'Смешанный дрилл'})).toBeTruthy();
@@ -105,11 +105,11 @@ describe('pattern drill',()=>{
     const {savePractice,onDone}=renderDrill();
 
     for(let i=0;i<2;i++){
-      await user.click(screen.getByRole('button',{name:'Сказал'}));
+      await user.click(screen.getByRole('button',{name:'Готово'}));
       expect(screen.getByText(i===0?'I work at home.':'She works here.')).toBeTruthy();
       // The phrase's explanation shows with the answer; phrases without one show none.
       expect(Boolean(screen.queryByText('После I глагол без окончания -s.'))).toBe(i===0);
-      await user.click(screen.getByRole('button',{name:'Сказал так же'}));
+      await user.click(screen.getByRole('button',{name:'Совпало'}));
     }
 
     await waitFor(()=>expect(savePractice).toHaveBeenCalledWith(
