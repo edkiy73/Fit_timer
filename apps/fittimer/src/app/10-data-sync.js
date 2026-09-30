@@ -1684,16 +1684,83 @@ function normalizeSessionOutcomeMap(value){
   return out;
 }
 
+// Снимок именно той тренировки, которую человек уже начал. Храним не сырую
+// программу, а результат customToProgram(): здесь уже зафиксированы вариант,
+// подходы, рабочие повторы/вес/время и отдыхи. Фото намеренно не дублируем в
+// localStorage — одно изображение в base64 может весить сотни килобайт, а для
+// корректного продолжения оно не нужно.
+function normalizeWorkoutSnapshot(value, pid){
+  if(!value || typeof value !== 'object') return null;
+  let copy;
+  try{ copy = JSON.parse(JSON.stringify(value)); }catch(_){ return null; }
+  if(!Array.isArray(copy.warmup) || !Array.isArray(copy.cycle)) return null;
+  const clean = list => list.filter(x => x && typeof x === 'object').map(step => {
+    const out = {...step};
+    delete out.media;
+    return out;
+  });
+  copy.sourceId = String(pid || copy.sourceId || '');
+  copy.rounds = Math.max(1, Math.min(50, parseInt(copy.rounds) || 1));
+  copy.warmup = clean(copy.warmup);
+  copy.cycle = clean(copy.cycle);
+  return copy;
+}
+
+// Отпечаток только того, что меняет ход тренировки. Локализованные подписи отдыха,
+// картинки и описания сюда не входят: смена языка/фото не должна превращать ту же
+// тренировку в «другую». Порядок, упражнения, подходы, стороны, рабочая нагрузка,
+// таймеры и число кругов — входят.
+export function workoutSessionSignature(cur){
+  if(!cur || typeof cur !== 'object') return '';
+  const stepKey = s => {
+    if(!s || typeof s !== 'object') return ['?'];
+    if(s.phase === 'work'){
+      return ['w', String(s.exId || ''), String(s.exName || s.title || ''),
+        String(s.kind || ''), Number(s.setNo) || 1, Number(s.setsTotal) || 1,
+        Number(s.side) || 0, Number(s.sidesTotal) || 0,
+        s.reps == null ? '' : String(s.reps),
+        Number(s.seconds) || 0, Number(s.weight) || 0];
+    }
+    return ['r', String(s.kind || ''), Number(s.seconds) || 0,
+      s.sideSwitch ? 1 : 0, s.roundRest ? 1 : 0];
+  };
+  const raw = JSON.stringify([
+    Math.max(1, parseInt(cur.rounds) || 1),
+    (cur.warmup || []).map(stepKey),
+    (cur.cycle || []).map(stepKey)
+  ]);
+  let h = 2166136261;
+  for(let i=0; i<raw.length; i++) h = Math.imul(h ^ raw.charCodeAt(i), 16777619);
+  return 'ws1_' + (h >>> 0).toString(36);
+}
+
+// Для новой сессии продолжаем сохранённый снимок только если текущая программа
+// действительно изменилась. Если отпечаток тот же — строим тренировку заново из
+// программы: так подтянутся новый язык, картинки и описания без риска сменить шаги.
+// Старые сессии без snapshot работают как раньше.
+export function sessionWorkout(session, program, planIdx){
+  const current = customToProgram(program, planIdx || 0);
+  if(!session || !session.workout) return current;
+  const saved = normalizeWorkoutSnapshot(session.workout, program && program.id);
+  if(!saved) return current;
+  const savedSig = String(session.workoutSig || workoutSessionSignature(saved));
+  return savedSig && workoutSessionSignature(current) === savedSig ? current : saved;
+}
+
 function normalizeWorkoutSession(s){
   if(!s || typeof s !== 'object' || !s.pid) return null;
+  const pid = String(s.pid);
+  const workout = normalizeWorkoutSnapshot(s.workout, pid);
   return {
-    pid:String(s.pid),
+    pid,
     sessionId:String(s.sessionId || ''),
     planIdx:Math.max(0, parseInt(s.planIdx) || 0),
     stepIdx:Math.max(0, parseInt(s.stepIdx) || 0),
     total:Math.max(0, parseInt(s.total) || 0),
     elapsed:Math.max(0, Number(s.elapsed) || 0),
     load:Array.isArray(s.load) ? s.load : null,
+    workout,
+    workoutSig:workout ? String(s.workoutSig || workoutSessionSignature(workout)) : '',
     stepDeadline:Math.max(0, Number(s.stepDeadline) || 0),
     remaining:Math.max(0, Number(s.remaining) || 0),
     paused:!!s.paused,
@@ -1762,6 +1829,8 @@ export async function saveSession(){
     total: state.steps.length,
     elapsed,
     load: Array.isArray(state.startLoad) ? state.startLoad : null,
+    workout: normalizeWorkoutSnapshot(cur, raw.id),
+    workoutSig: workoutSessionSignature(cur),
     outcomes: state.stepOutcomes || {},
     stepDeadline: Math.max(0, Number(state.stepDeadline) || 0),
     remaining: Math.max(0, Number(state.remaining) || 0),
