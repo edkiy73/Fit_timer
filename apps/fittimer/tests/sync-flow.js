@@ -173,20 +173,48 @@ async function boot(browser, label, errors){
       status:'partial',meaningful:true,doneExercises:2,plannedExercises:4,
       doneSteps:4,plannedSteps:8,exercises:['Присед','Жим']
     });
+    // Заодно меняем расписание: уведомления на первом устройстве должны
+    // пересобраться уже ПОСЛЕ того, как pull применил эту версию программы.
+    const p = customPrograms.find(x=>x.id==='sync-program');
+    if(p) p.time = '21:45';
     // Частичная активность добавляет время/историю, но не полный счётчик.
     stats.count=1; stats.totalSec=1320;
+    await savePrograms();
     await saveStats();
   });
-  await two.waitForTimeout(1500);
+  await two.waitForTimeout(1700);
+  await one.evaluate(()=>{
+    globalThis.__notificationSyncRuns = [];
+    syncNativeNotifications = async () => {
+      const p = customPrograms.find(x=>x.id==='sync-program');
+      globalThis.__notificationSyncRuns.push({
+        user:currentUser,
+        time:p && p.time,
+        history:stats.history.length
+      });
+    };
+  });
   await one.evaluate(async()=>{ await accountSyncAdapter.pull(); });
   const merged = await one.evaluate(()=>{
     const h=stats.history.find(x=>x.id==='h-b')||{};
-    return {n:stats.history.length,sec:stats.totalSec,count:stats.count,status:h.status,done:h.doneExercises,all:h.plannedExercises};
+    const runs = globalThis.__notificationSyncRuns || [];
+    return {
+      n:stats.history.length,sec:stats.totalSec,count:stats.count,status:h.status,
+      done:h.doneExercises,all:h.plannedExercises,
+      programTime:(customPrograms.find(x=>x.id==='sync-program')||{}).time,
+      notificationRun:runs[runs.length-1]||null
+    };
   });
   ok('частичная тренировка со второго устройства вернулась на первое',
     merged.n === 2 && merged.sec === 1320 && merged.count === 1
     && merged.status === 'partial' && merged.done === 2 && merged.all === 4,
     JSON.stringify(merged));
+  ok('после pull уведомления пересобираются уже из принятого серверного расписания',
+    merged.programTime === '21:45'
+      && merged.notificationRun
+      && merged.notificationRun.time === '21:45'
+      && merged.notificationRun.history === 2,
+    JSON.stringify(merged.notificationRun));
 
   const denied = await one.evaluate(async email => {
     try{ await apiPost('/api/sync',{action:'pull',email,deviceId:identity.deviceId,token:'wrong'}); return false; }
