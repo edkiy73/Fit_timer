@@ -2,6 +2,7 @@ import { appLocale, canonicalLabel, loadAppLocale, localeTag, normalizeLocalePre
   profileLocalePreference, setAppLocale, t
 } from '../i18n/index.js';
 import { appNotifications, appRuntimeCompat, appUi } from './00-dependencies.js';
+import { registerAction } from './05-actions.js';
 import { $, ICONS, ROOT_TABS, aiScreenDirty, appAlert, appConfirm, appDialog, asTab, audioCtx, beep,
   clearSnap, commitWeightModal, fxVol, goBackTo, goTab, guardNum, icon, initAudio, keepAwake,
   leaveGuard, masterGain, musicMode, numFieldsOk, openStart, prepTab, releaseWake, savedVoiceURI,
@@ -69,6 +70,13 @@ import { SR, applyThemeFor, checkSchedules, hfHintText, hfMode, recognitionLang,
 } from './80-platform.js';
 
 /* ================= СОБЫТИЯ ================= */
+registerAction('openWorkoutSound', () => {
+  fillLiveSoundCascade('snd');
+  $('soundModal').classList.add('open');
+});
+registerAction('openHandsFree', () => openHfModal());
+
+
 let pendingStartSession = null;
 
 async function resumeWorkoutFromNativeNotification(){
@@ -1324,9 +1332,7 @@ export function initEvents(){
   if($('btnVoicePack')) $('btnVoicePack').onclick=downloadSelectedVoicePack;
   if($('btnHfVoicePack')) $('btnHfVoicePack').onclick=downloadSelectedVoicePack;
   window.addEventListener('fitVoiceModelStatus', e=>refreshVoicePackUI(e.detail));
-  $('btnSoundW').onclick = ()=>{ fillLiveSoundCascade('snd'); $('soundModal').classList.add('open'); };
   $('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal').classList.remove('open'); };
-  $('btnMicW').onclick = openHfModal;
   window.addEventListener('fitVoiceHeard', onVoiceTestHeard);
   if($('btnVoiceTest')) $('btnVoiceTest').onclick = openVoiceTest;
   if($('btnHfVoiceTest')) $('btnHfVoiceTest').onclick = ()=>{
