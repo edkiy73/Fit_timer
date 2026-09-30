@@ -990,8 +990,11 @@ function exerciseLoad(p, ex){
   return load;
 }
 
-// Снимок нужен следующей тренировке для честного «было → сегодня». Старые записи
-// снимка не имеют; для них ниже есть совместимый расчёт по предыдущему шагу.
+// Снимок нужен следующей тренировке для честного «было → сегодня».
+// Старые записи снимка не имеют. После перехода на per-exercise progression
+// восстанавливать их арифметикой из общего completions уже нельзя: каждое
+// упражнение могло прогрессировать в свой момент. Для legacy истории ниже
+// честно помечаем нагрузку как неизвестную, а не придумываем «предыдущую».
 export function workoutLoadSnapshot(p, planIdx){
   const pl = normPlans(p)[planIdx] || normPlans(p)[0];
   return ((pl && pl.exercises) || []).map((ex, i) => {
@@ -1003,11 +1006,18 @@ export function workoutLoadSnapshot(p, planIdx){
 export function previousWorkoutLoad(p, planIdx){
   const hist = (stats.history || []).filter(h => h.pid === p.id && (+h.plan || 0) === planIdx);
   const last = hist[hist.length - 1];
-  if(last && Array.isArray(last.load)) return {first:false, exact:true, rows:last.load};
-  const done = (p.stats && p.stats.completions) || 0;
-  if(!hist.length && done <= 0) return {first:true, exact:false, rows:[]};
-  const prev = Object.assign({}, p, {stats:Object.assign({}, p.stats || {}, {completions:Math.max(0, done - 1)})});
-  return {first:false, exact:false, rows:workoutLoadSnapshot(prev, planIdx)};
+  if(last && Array.isArray(last.load)) return {first:false, exact:true, legacy:false, rows:last.load};
+
+  const done = Math.max(0, +((p.stats && p.stats.completions) || 0));
+  if(!hist.length && done <= 0) return {first:true, exact:false, legacy:false, rows:[]};
+
+  // До появления load snapshot старый движок мог приблизительно откатить
+  // программу через completions-1. Теперь фактическая нагрузка хранится в ex.ps:
+  // два упражнения одной программы могут иметь разные cur/n, а partial вообще
+  // двигает только полностью завершённые упражнения. Поэтому общий completions
+  // не содержит достаточно информации, чтобы восстановить прошлые reps/sec/kg.
+  // Возвращаем «история есть, точной нагрузки нет» и НЕ рисуем ложное сравнение.
+  return {first:false, exact:false, legacy:true, rows:[]};
 }
 
 function loadTargetText(ex, v){
@@ -1112,6 +1122,9 @@ function renderStartOverview(){
   }
   if(previous.first){
     changeText(t('start.firstWorkout'));
+  } else if(previous.legacy){
+    const text = t('start.previousLoadUnknown');
+    changeText(nextText ? text + ' ' + nextText : text);
   } else if(changes.length){
     const direction = changes.every(x => x.dir === 'up') ? 'up'
       : changes.every(x => x.dir === 'down') ? 'down' : 'mixed';
