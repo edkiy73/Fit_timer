@@ -36,20 +36,65 @@ export function setDataSyncPlatformHooks(hooks = {}){
     ? hooks.syncNativeNotifications
     : (async () => {});
 }
+
+
+let progressMediaHooks = {
+  ensureWarmup: async () => {},
+  loadPhotos: async () => {},
+  renderPhotos: () => {},
+  shortD: v => String(v == null ? '' : v),
+  uniqueExerciseIds: () => false
+};
+export function setDataSyncProgressMediaHooks(hooks = {}){
+  progressMediaHooks = {...progressMediaHooks, ...hooks};
+}
+
+let builderDataHooks = {
+  exRestAfter: () => 0,
+  getExProgValue: () => 0,
+  hasWeight: () => false,
+  normValue: v => v,
+  parseValue: v => ({min:+v || 0, max:+v || 0}),
+  progAtCeiling: () => false,
+  progAxis: () => 'none',
+  progBaseValue: () => 0,
+  progStepSize: () => 0,
+  progressedRepsRange: () => ''
+};
+export function setDataSyncBuilderHooks(hooks = {}){
+  builderDataHooks = {...builderDataHooks, ...hooks};
+}
+
+
+let workoutDataHooks = {
+  getBadges: () => [],
+  badgeDesc: () => '',
+  badgeName: () => '',
+  earnBadges: () => [],
+  esc: v => String(v == null ? '' : v),
+  hasBadge: () => false
+};
+export function setDataSyncWorkoutHooks(hooks = {}){
+  workoutDataHooks = {...workoutDataHooks, ...hooks};
+}
+
+let eventDataHooks = {
+  getNotificationPrefsKey: () => 'fitNotificationPrefs',
+  getNotificationPrefDefaults: () => ({}),
+  applyAudioFromUser: () => {},
+  getNotificationPrefs: () => ({}),
+  syncNotificationSettings: () => {},
+  syncSettingsForm: () => {}
+};
+export function setDataSyncEventHooks(hooks = {}){
+  eventDataHooks = {...eventDataHooks, ...hooks};
+}
 import { PROFILE_KEYS, account, bumpAccountMeta, isPremium, openUserEdit, readAccountBucket,
   renderPlan, saveAccount, writeAccountBucket
 } from './20-account.js';
-import { ensureWarmup, loadPhotos, renderPhotos, shortD, uniqueExerciseIds } from './30-progress-media.js';
 import { apiFetch, applyProgressionAll, clients, loadTrainer, openDayProgram, renderGreeting,
   setClientsShared, setTrainerShared, trainer, weekPlanInfo
 } from './40-programs-ai.js';
-import { exRestAfter, getExProgValue, hasWeight, normValue, parseValue, progAtCeiling, progAxis,
-  progBaseValue, progStepSize, progressedRepsRange
-} from './60-builder.js';
-import { BADGES, badgeDesc, badgeName, earnBadges, esc, hasBadge } from './70-workout.js';
-import { NOTIFICATION_PREFS_KEY, NOTIFICATION_PREF_DEFAULTS, applyAudioFromUser,
-  getNotificationPrefs, syncNotificationSettings, syncSettingsForm
-} from './90-events.js';
 
 /* ================= ПОЛЬЗОВАТЕЛИ И ХРАНИЛИЩЕ ================= */
 export let users = [];
@@ -229,10 +274,10 @@ async function switchUserNow(id){
   // пересохраняет встроенную разминку, и раньше это записывало программы прежнего
   // профиля в новый.
   await setAppLocale(profileLocalePreference(curUser()), {persist:false});
-  await loadPhotos();
-  await ensureWarmup();
+  await progressMediaHooks.loadPhotos();
+  await progressMediaHooks.ensureWarmup();
   applyProgressionAll();
-  applyAudioFromUser(curUser());
+  eventDataHooks.applyAudioFromUser(curUser());
   const u = curUser();
   platformApplyThemeForHook(u);
   renderUsers();
@@ -240,8 +285,8 @@ async function switchUserNow(id){
   renderStats();
   renderWeight();
   renderWellness();
-  renderPhotos();
-  syncSettingsForm(); // отсчёты и ключ ИИ — у каждого профиля свои
+  progressMediaHooks.renderPhotos();
+  eventDataHooks.syncSettingsForm(); // отсчёты и ключ ИИ — у каждого профиля свои
   // Системное расписание принадлежит активному профилю. До этого переключение
   // меняло программы/историю в памяти, но Android/iOS продолжали держать пуши
   // предыдущего профиля до следующего foreground или ручного изменения программы.
@@ -258,7 +303,7 @@ export function renderUsers(){
     const row = document.createElement('div');
     row.className = 'user-row' + (act ? ' act' : '');
     const shownName = profileDisplayName(u);
-    const ua = u.photo ? `<img src="${esc(u.photo)}" alt="">` : esc((shownName || '?')[0].toUpperCase());
+    const ua = u.photo ? `<img src="${workoutDataHooks.esc(u.photo)}" alt="">` : workoutDataHooks.esc((shownName || '?')[0].toUpperCase());
     const bits = [];
     if(u.gender) bits.push(t(u.gender === 'm' ? 'common.male' : 'common.female'));
     const a = profileAge(u);
@@ -266,9 +311,9 @@ export function renderUsers(){
     if(!act) bits.push(t('profile.switch'));
     // Метка «сейчас» — во второй строке, а не рядом с именем: справа она отнимала у
     // имени место, и на узком телефоне «Мой профиль» превращался в «Мой п…».
-    const now = act ? `<span class="u-now">${esc(t('profile.now'))}</span>` : '';
+    const now = act ? `<span class="u-now">${workoutDataHooks.esc(t('profile.now'))}</span>` : '';
     row.innerHTML = `<div class="ua">${ua}</div><div class="ub"><b></b><small>${now}${bits.join(' · ')}</small></div>`
-      + `<button class="ue" title="${esc(t('profile.edit'))}">${coreIconHook('pencil')}</button>`;
+      + `<button class="ue" title="${workoutDataHooks.esc(t('profile.edit'))}">${coreIconHook('pencil')}</button>`;
     row.querySelector('b').textContent = shownName;
     const edit = row.querySelector('.ue');
     edit.dataset.act = 'editProfileFromList';
@@ -337,8 +382,8 @@ export function renderWeight(){
   // где у каждого и значение, и свой график — раньше они дублировались дважды
   const meta = [];
   if(stats.height){
-    meta.push(`<span class="chip">${esc(t('progress.height'))} <b>${fmtMeasure(stats.height)}</b> ${esc(t('progress.cm'))}</span>`);
-    meta.push(`<span class="chip">${esc(t('progress.bmi'))} <b>${fmtMeasure(Math.round(last.w / Math.pow(stats.height/100,2)*10)/10)}</b></span>`);
+    meta.push(`<span class="chip">${workoutDataHooks.esc(t('progress.height'))} <b>${fmtMeasure(stats.height)}</b> ${workoutDataHooks.esc(t('progress.cm'))}</span>`);
+    meta.push(`<span class="chip">${workoutDataHooks.esc(t('progress.bmi'))} <b>${fmtMeasure(Math.round(last.w / Math.pow(stats.height/100,2)*10)/10)}</b></span>`);
   }
   coreDollarHook('weightMeta').innerHTML = meta.join('');
   coreSetShownHook('weightMeta', meta.length);
@@ -422,8 +467,8 @@ function metricGraph(s, have, have2){
     labels += `<text x="${lp[0]}" y="${lyN}" text-anchor="end" font-size="12" font-weight="700" fill="var(--ink)">${capB}</text>`;
   }
   // даты по краям: без них график не отвечал, за какой срок это движение
-  let axis = `<text x="${padL}" y="${H - 6}" text-anchor="start" font-size="10.5" fill="var(--muted)">${shortD(have[0][0])}</text>`;
-  if(have.length > 1) axis += `<text x="${W - padR}" y="${H - 6}" text-anchor="end" font-size="10.5" fill="var(--muted)">${shortD(have[have.length-1][0])}</text>`;
+  let axis = `<text x="${padL}" y="${H - 6}" text-anchor="start" font-size="10.5" fill="var(--muted)">${progressMediaHooks.shortD(have[0][0])}</text>`;
+  if(have.length > 1) axis += `<text x="${W - padR}" y="${H - 6}" text-anchor="end" font-size="10.5" fill="var(--muted)">${progressMediaHooks.shortD(have[have.length-1][0])}</text>`;
 
   return `<div class="metric-graph">
     <div class="mg-head">
@@ -526,7 +571,7 @@ export function renderWellness(){
   const pts = ws.filter(p => p[cur.k] != null);
   const lastEn = pts[pts.length - 1];
   coreDollarHook('wellNow').textContent = (wellValue(lastEn, cur) + ' ' + (cur.unit || '')).trim();
-  coreDollarHook('wellWhen').textContent = t('progress.recordedOn',{date:shortD(lastEn.d)});
+  coreDollarHook('wellWhen').textContent = t('progress.recordedOn',{date:progressMediaHooks.shortD(lastEn.d)});
   coreDollarHook('wellWhen').style.color = 'var(--muted)';
 
   const have = pts.map(p => [p.d, p[cur.k]]).slice(-30);
@@ -586,9 +631,9 @@ export function openWellHist(){
     // порознь выглядели как два разных показателя, и строка ехала в две ячейки враскоряку
     row.innerHTML =
       `<div class="wh-top"><b>${+d} ${MONTH_OF[+m - 1]} ${y}</b>` +
-      `<button type="button" class="wh-del" title="${esc(t('progress.deleteEntry'))}">${coreIconHook('trash')}</button></div>` +
+      `<button type="button" class="wh-del" title="${workoutDataHooks.esc(t('progress.deleteEntry'))}">${coreIconHook('trash')}</button></div>` +
       `<div class="wh-cells wh-well" data-d="${en.d}">` +
-        `<div class="whc"><label>${esc(t('progress.pressureShort'))}</label>` +
+        `<div class="whc"><label>${workoutDataHooks.esc(t('progress.pressureShort'))}</label>` +
           `<span class="whp">${inp('sys')}<i>/</i>${inp('dia')}</span></div>` +
         cell('pulse', t('progress.pulseShort')) + cell('sleep', t('well.sleepHours'), 0.5) +
       `</div>`;
@@ -1297,10 +1342,10 @@ async function applyRemoteSyncNow(result){
   // После loadData: иначе смена языка пересохранила бы устаревший список программ
   // из памяти поверх только что принятых с сервера.
   await setAppLocale(profileLocalePreference(curUser()), {persist:false});
-  await loadPhotos();
-  await ensureWarmup();
+  await progressMediaHooks.loadPhotos();
+  await progressMediaHooks.ensureWarmup();
   applyProgressionAll();
-  renderUsers(); trainerCatalogRenderMineHook(); renderStats(); renderWeight(); renderWellness(); renderPhotos();
+  renderUsers(); trainerCatalogRenderMineHook(); renderStats(); renderWeight(); renderWellness(); progressMediaHooks.renderPhotos();
   // Только здесь active profile уже полностью перезагружен из принятых docs.
   // Пересборка раньше этого места могла успеть записать в ОС старое расписание.
   await platformSyncNativeNotificationsHook();
@@ -1364,9 +1409,9 @@ async function applyRemoteAccountDocs(result){
       rec.bucket.meta[d.key] = {rev:+d.rev || 1, at:d.at || '', schema:+d.schema || 1,
                                 deviceId:d.deviceId || ''};
       try{
-        if(typeof NOTIFICATION_PREF_DEFAULTS !== 'undefined'){
-          localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(
-            Object.assign({}, NOTIFICATION_PREF_DEFAULTS, rec.bucket.notificationPrefs)
+        if(typeof eventDataHooks.getNotificationPrefDefaults() !== 'undefined'){
+          localStorage.setItem(eventDataHooks.getNotificationPrefsKey(), JSON.stringify(
+            Object.assign({}, eventDataHooks.getNotificationPrefDefaults(), rec.bucket.notificationPrefs)
           ));
         }
       }catch(_){}
@@ -1375,7 +1420,7 @@ async function applyRemoteAccountDocs(result){
   await writeAccountBucket(rec);
   setTrainerShared(rec.bucket.trainer || trainer);
   setClientsShared(Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clients);
-  if(typeof syncNotificationSettings === 'function') syncNotificationSettings();
+  if(typeof syncNotificationSettings === 'function') eventDataHooks.syncNotificationSettings();
   return notificationPrefsChanged;
 }
 
@@ -1387,7 +1432,7 @@ async function accountDocsSnapshot(){
   let localNotificationPrefs = {};
   try{
     localNotificationPrefs = (typeof getNotificationPrefs === 'function')
-      ? getNotificationPrefs()
+      ? eventDataHooks.getNotificationPrefs()
       : parsed(localStorage.getItem('fitNotificationPrefsV1'), {});
   }catch(_){}
   if(!rec.bucket.notificationPrefs) rec.bucket.notificationPrefs = localNotificationPrefs;
@@ -1422,7 +1467,7 @@ export async function syncNotificationPrefsServer(action){
   if(!rec.bucket.meta) rec.bucket.meta = {};
   const key = 'notificationPrefs';
   if(!rec.bucket.notificationPrefs && typeof getNotificationPrefs === 'function'){
-    rec.bucket.notificationPrefs = getNotificationPrefs();
+    rec.bucket.notificationPrefs = eventDataHooks.getNotificationPrefs();
   }
   if(!rec.bucket.meta[key]) bumpAccountMeta(rec.bucket, key);
   const m = rec.bucket.meta[key];
@@ -1657,7 +1702,7 @@ export async function savePrograms(){
   if(dataOwner !== uid) return;   // данные нового профиля ещё не загружены
   // id упражнений уникальны в программе (см. uniqueExerciseIds) — чиним на месте,
   // чтобы копия, заведённая старым способом, не жила с чужим id до перезапуска
-  customPrograms.forEach(p => { if(p && typeof p === 'object') uniqueExerciseIds(p); });
+  customPrograms.forEach(p => { if(p && typeof p === 'object') progressMediaHooks.uniqueExerciseIds(p); });
   const programs = JSON.parse(JSON.stringify(customPrograms));
   let meta = docMeta;
   let queue = outbox.slice();
@@ -2176,11 +2221,11 @@ function renderStatsBlock(){
 function renderStatBadges(){
   // достижение могло открыться и без финального экрана (например, «Неделя по плану»
   // закрывается последней тренировкой недели) — досчитываем здесь же
-  if(earnBadges().length) saveStats();
-  const earned = BADGES.filter(b => hasBadge(b.id));
+  if(workoutDataHooks.earnBadges().length) saveStats();
+  const earned = workoutDataHooks.getBadges().filter(b => workoutDataHooks.hasBadge(b.id));
   coreSetShownHook('badgeCard', !!earned.length);
   if(!earned.length) return;
-  coreDollarHook('badgeNote').textContent = t('stats.badgesCount',{earned:earned.length,total:BADGES.length});
+  coreDollarHook('badgeNote').textContent = t('stats.badgesCount',{earned:earned.length,total:workoutDataHooks.getBadges().length});
   const box = coreDollarHook('statBadges');
   box.innerHTML = '';
   earned.forEach(b => {
@@ -2188,15 +2233,15 @@ function renderStatBadges(){
     el.type = 'button';
     el.className = 'bdg';
     el.innerHTML = `<i>${coreIconHook(b.ico)}</i><span></span>`;
-    el.querySelector('span').textContent = badgeName(b);
+    el.querySelector('span').textContent = workoutDataHooks.badgeName(b);
     // за что выдано — не написано нигде, а название само по себе не объясняет
     el.dataset.act = 'showBadgeInfo';
     el.dataset.badgeId = b.id;
     box.appendChild(el);
   });
-  const next = BADGES.find(b => !hasBadge(b.id));
+  const next = workoutDataHooks.getBadges().find(b => !workoutDataHooks.hasBadge(b.id));
   coreDollarHook('badgeNext').textContent = next
-    ? t('stats.nextBadge',{name:badgeName(next),desc:badgeDesc(next).toLowerCase()})
+    ? t('stats.nextBadge',{name:workoutDataHooks.badgeName(next),desc:workoutDataHooks.badgeDesc(next).toLowerCase()})
     : t('stats.allBadges');
 }
 
@@ -2286,7 +2331,7 @@ function sessRow(en, withDate, withStatus){
     (parts.length ? '<p class="sess-line"></p>' : '') +
     (en.note ? '<span class="sess-note"></span>' : '');
   row.querySelector('.sess-head b').textContent = name;
-  if(withDate) row.querySelector('.sess-date').textContent = shortD(en.d);
+  if(withDate) row.querySelector('.sess-date').textContent = progressMediaHooks.shortD(en.d);
   if(parts.length) row.querySelector('.sess-line').textContent = parts.join(' · ');
   if(en.note) row.querySelector('.sess-note').textContent = `«${en.note}»`;
   return row;
@@ -2373,16 +2418,16 @@ export function customToProgram(p, planIdx = 0){
   const plan = plans[planIdx] || plans[0];
 
   const mkWork = (ex, setNo, setsTotal, side)=>{
-    const axis = progAxis(ex);          // 'weight' и для формата «вес», и для «повторения и вес»
+    const axis = builderDataHooks.progAxis(ex);          // 'weight' и для формата «вес», и для «повторения и вес»
     const on = axis !== 'none';         // общий тумблер «усложнять со временем»
-    const isWeight = hasWeight(ex);     // формат включает вес — независимо от того, растёт ли он
+    const isWeight = builderDataHooks.hasWeight(ex);     // формат включает вес — независимо от того, растёт ли он
     const isTimeFmt = ex.type === 'time';
     // «повторения и вес» — особый случай: вес и повторы растут НЕЗАВИСИМО друг от друга.
     // Явный 0 в шаге означает «эта конкретная ось у этого упражнения не растёт» — так ИИ
     // или сам человек может решить «поднимаем только вес» или «поднимаем только повторы».
-    const wGrows = on && isWeight && progStepSize(ex, 'weight') > 0;
-    const rGrows = on && !isTimeFmt && progStepSize(ex, 'reps') > 0;
-    const tGrows = on && isTimeFmt && progStepSize(ex, 'time') > 0;
+    const wGrows = on && isWeight && builderDataHooks.progStepSize(ex, 'weight') > 0;
+    const rGrows = on && !isTimeFmt && builderDataHooks.progStepSize(ex, 'reps') > 0;
+    const tGrows = on && isTimeFmt && builderDataHooks.progStepSize(ex, 'time') > 0;
 
     const step = {
       phase:'work', title:ex.name, instruction:ex.desc || '', media:ex.media || null,
@@ -2392,26 +2437,26 @@ export function customToProgram(p, planIdx = 0){
       // рабочий вес: сохранённая ручная поправка + текущие шаги программы поверх базы упражнения.
       // Если формат включает вес, но конкретно вес не растёт (растут только повторы) —
       // показываем зафиксированную базу: цифра всё равно нужна, просто она не меняется сама.
-      weight: isWeight ? (wGrows ? getExProgValue(p.id, ex, p, 'weight') : progBaseValue(ex, 'weight')) : 0,
+      weight: isWeight ? (wGrows ? builderDataHooks.getExProgValue(p.id, ex, p, 'weight') : builderDataHooks.progBaseValue(ex, 'weight')) : 0,
       weightBase: +ex.weight || 0,   // база упражнения (без прогрессии) — для справки в шаге тренировки
       wStep: ex.wStep != null ? +ex.wStep : 2, // != null — иначе явный 0 (не растим вес) подменится дефолтом
       exName: ex.name,
       exId: ex.id || ''  // по id проверка прогресса узнаёт, до каких упражнений дошла тренировка
     };
     // расти дальше некуда, а более сложный вариант задан — на тренировке покажем подсказку
-    if(on && ex.swapOn && (ex.swapName || '').trim() && progAtCeiling(p.id, ex, p)){
+    if(on && ex.swapOn && (ex.swapName || '').trim() && builderDataHooks.progAtCeiling(p.id, ex, p)){
       step.swap = {name: ex.swapName.trim(), desc: (ex.swapDesc || '').trim()};
     }
     if(setsTotal > 1){ step.setNo = setNo; step.setsTotal = setsTotal; }
     if(side){ step.side = side; step.sidesTotal = 2; }
     if(isTimeFmt){
       step.kind = 'timer';
-      step.seconds = tGrows ? getExProgValue(p.id, ex, p, 'time') : parseValue(ex.value).min;
+      step.seconds = tGrows ? builderDataHooks.getExProgValue(p.id, ex, p, 'time') : builderDataHooks.parseValue(ex.value).min;
     } else {
       step.kind = 'click'; step.repsNote = t('workout.repsShort');
       // диапазон повторов сдвигается целиком (и низ, и верх), если повторы растут —
       // не зависит от того, растёт ли ОДНОВРЕМЕННО вес у этого же упражнения
-      step.reps = rGrows ? progressedRepsRange(p.id, ex, p) : normValue(ex.value, 'reps');
+      step.reps = rGrows ? builderDataHooks.progressedRepsRange(p.id, ex, p) : builderDataHooks.normValue(ex.value, 'reps');
     }
     return step;
   };
@@ -2433,7 +2478,7 @@ export function customToProgram(p, planIdx = 0){
   warmEx.forEach(ex =>{
     const sets = Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
     const twoSides = ex.type === 'time' && ex.perSide;
-    const restAfter = exRestAfter(ex);
+    const restAfter = builderDataHooks.exRestAfter(ex);
     for(let n = 1; n <= sets; n++){
       const add = st => { st.isWarmup = true; warmup.push(st); };
       if(twoSides){
@@ -2456,7 +2501,7 @@ export function customToProgram(p, planIdx = 0){
     const sets = Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
     const isLastEx = i === mainEx.length - 1;
     const twoSides = ex.type === 'time' && ex.perSide; // на время и на каждую сторону
-    const restAfter = exRestAfter(ex);
+    const restAfter = builderDataHooks.exRestAfter(ex);
     for(let s = 1; s <= sets; s++){
       if(twoSides){
         // каждая сторона отрабатывается полностью, между ними — пауза на смену
@@ -2561,8 +2606,8 @@ export function initDataSync(){
     if(row) row.classList.toggle('del');
   });
   registerAction('showBadgeInfo', btn => {
-    const badge = BADGES.find(x => x.id === btn.dataset.badgeId);
-    if(badge) coreAlertHook(`«${badgeName(badge)}» — ${badgeDesc(badge).toLowerCase()}.`);
+    const badge = workoutDataHooks.getBadges().find(x => x.id === btn.dataset.badgeId);
+    if(badge) coreAlertHook(`«${workoutDataHooks.badgeName(badge)}» — ${workoutDataHooks.badgeDesc(badge).toLowerCase()}.`);
   });
   registerAction('openSessionProgram', btn => {
     const id = btn.dataset.programId;
