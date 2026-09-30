@@ -205,7 +205,7 @@
       <div class="modal-card hf-modal-card">
         <div id="hfModalContent" class="hf-modal-scroll"></div>
         <div class="hf-modal-actions">
-          <button class="modal-btn primary" id="btnHfApply" data-i18n="common.apply">Применить</button>
+          <button class="modal-btn primary" id="btnHfApply" data-act="applyHandsFree" data-i18n="common.apply">Применить</button>
           <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
         </div>
       </div>
@@ -364,8 +364,8 @@
         <div class="pm-crown" data-icon="fingerprint"></div>
         <h3 class="pm-title" data-i18n="lock.title">Вход в Fit Timer</h3>
         <p class="pm-lead" id="lockMsg" data-i18n="lock.prompt">Приложи палец или посмотри на камеру — и продолжим.</p>
-        <button class="btn-primary" id="lockGo" style="padding:15px;font-size:16px" data-i18n="lock.unlock">Разблокировать</button>
-        <button type="button" class="link-btn" id="lockMail" data-i18n="lock.email">Войти по почте</button>
+        <button class="btn-primary" id="lockGo" data-act="unlockApp" style="padding:15px;font-size:16px" data-i18n="lock.unlock">Разблокировать</button>
+        <button type="button" class="link-btn" id="lockMail" data-act="unlockByEmail" data-i18n="lock.email">Войти по почте</button>
       </div>
     </div>
 
