@@ -103,8 +103,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2482,
-      "chars": 115750,
+      "lines": 2499,
+      "chars": 116741,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -924,8 +924,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2466,
-      "chars": 109289,
+      "lines": 2469,
+      "chars": 109537,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
