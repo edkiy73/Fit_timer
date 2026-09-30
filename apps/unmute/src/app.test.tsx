@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { missingKeys } from '@appbase/ui-react/i18n.js';
 import { routes } from './app';
+import { authClient } from './auth';
 import { dictionaries, LOCALE_KEY } from './i18n';
 import product from '../config/product.json';
 
@@ -29,6 +30,8 @@ const signIn = () => localStorage.setItem('unmute.auth.session', JSON.stringify(
   fresh:false
 }));
 
+afterEach(() => { vi.restoreAllMocks(); });
+
 beforeEach(() => {
   localStorage.clear();
   // With several locales the app follows the system language; tests pin the default one.
@@ -52,6 +55,25 @@ describe('UnMute: English for Expats starter', () => {
     expect(await screen.findByText(/demo@example\.com/)).toBeTruthy();
     await user.click(screen.getByRole('button', {name:t['account.signOut']}));
     expect(await screen.findByRole('link', {name:t['nav.signIn']})).toBeTruthy();
+  });
+
+  it('deletes the account after an explicit confirmation', async () => {
+    signIn();
+    const forget = vi.spyOn(authClient, 'forget').mockResolvedValue({ok:true});
+    const user = userEvent.setup();
+    renderApp('/account');
+    await user.click(await screen.findByRole('button', {name:t['account.delete']}));
+    expect(screen.getByText(t['account.deleteConfirm'])).toBeTruthy();
+    expect(forget).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', {name:t['account.deleteYes']}));
+    expect(await screen.findByRole('link', {name:t['nav.signIn']})).toBeTruthy();
+    expect(forget).toHaveBeenCalledWith('all');
+  });
+
+  it('links the privacy and account deletion pages', async () => {
+    renderApp('/account');
+    expect((await screen.findByRole('link', {name:t['account.privacy']})).getAttribute('href')).toBe('./privacy.html');
+    expect(screen.getByRole('link', {name:t['account.deletionInfo']}).getAttribute('href')).toBe('./delete-account.html');
   });
 
   it('keeps dictionaries in sync and offers a language switch only for several locales', async () => {

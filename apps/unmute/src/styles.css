@@ -476,3 +476,9 @@ h2{margin:0 0 8px}
 @media(max-width:520px){
   .notification-status .secondary-button{width:100%}
 }
+
+.account-delete{display:grid;gap:8px;margin-top:8px;padding:12px;border:1px solid var(--line);border-radius:12px}
+.account-delete p{margin:0}
+.account-delete-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.account-legal{display:flex;flex-wrap:wrap;gap:16px;margin-top:16px;font-size:.9em}
+.account-legal a{color:var(--muted)}
