@@ -1,0 +1,45 @@
+name: UnMute — выпуск курсов из кода
+
+# Курсы, которые живут в коде (apps/unmute/scripts/release-courses.mjs → COURSES), после
+# изменения в main сами загружаются на сайт и выпускаются. Нужен секрет репозитория
+# ADMIN_KEY (тот же ключ, что для входа в админку). Без него шаг пропускается.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/unmute/lib/a1-starter-course.mjs'
+      - 'apps/unmute/scripts/release-courses.mjs'
+      - '.github/workflows/unmute-content-release.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: unmute-content-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/unmute
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Проверить курсы
+        run: node scripts/release-courses.mjs --dry-run
+
+      - name: Выпустить на сайт
+        env:
+          ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
+        run: |
+          if [ -z "$ADMIN_KEY" ]; then
+            echo "::notice::Секрет ADMIN_KEY не задан — курсы не выпущены. Добавь его: Settings → Secrets and variables → Actions."
+            exit 0
+          fi
+          node scripts/release-courses.mjs
