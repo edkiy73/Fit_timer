@@ -67,7 +67,7 @@ function runtime(overrides:Partial<LearnerCourseRuntimeValue>={}):LearnerCourseR
   };
 }
 
-function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn(),onReview=vi.fn(),onMap=vi.fn(),onProgress=vi.fn(),onAccess=vi.fn()){
+function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn(),onReview=vi.fn(),onMap=vi.fn(),onAccess=vi.fn()){
   render(
     <I18nProvider
       dictionaries={dictionaries}
@@ -75,10 +75,10 @@ function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn(),onReview=vi
       storageKey="today-test.locale"
       systemLanguages={['ru']}
     >
-      <TodayView runtime={value} onStart={onStart} onReview={onReview} onMap={onMap} onProgress={onProgress} onAccess={onAccess} />
+      <TodayView runtime={value} onStart={onStart} onReview={onReview} onMap={onMap} onAccess={onAccess} />
     </I18nProvider>
   );
-  return {onStart,onReview,onMap,onProgress,onAccess};
+  return {onStart,onReview,onMap,onAccess};
 }
 
 describe('Today learner shell',()=>{
@@ -91,22 +91,6 @@ describe('Today learner shell',()=>{
     expect(screen.getByText('Заданий: 2')).toBeTruthy();
     expect(screen.getByText('1/4')).toBeTruthy();
     expect(screen.getByRole('button',{name:'Начать'})).toBeTruthy();
-  });
-
-  it('opens learner progress from Today',async()=>{
-    const user=userEvent.setup();
-    const {onProgress}=renderToday(runtime());
-
-    await user.click(screen.getByRole('button',{name:'Прогресс'}));
-    expect(onProgress).toHaveBeenCalledTimes(1);
-  });
-
-  it('opens the course map from Today',async()=>{
-    const user=userEvent.setup();
-    const {onMap}=renderToday(runtime());
-
-    await user.click(screen.getByRole('button',{name:'Карта курса'}));
-    expect(onMap).toHaveBeenCalledTimes(1);
   });
 
   it('opens the current node from Today',async()=>{
@@ -193,7 +177,6 @@ describe('Today learner shell',()=>{
           onStart={()=>{}}
           onReview={()=>{}}
           onMap={()=>{}}
-          onProgress={()=>{}}
           onAccess={()=>{}}
         />
       </I18nProvider>
@@ -265,7 +248,7 @@ describe('Today learner shell',()=>{
           courseComplete:false
         }
       }
-    }),vi.fn(),vi.fn(),vi.fn(),vi.fn(),onAccess);
+    }),vi.fn(),vi.fn(),vi.fn(),onAccess);
 
     expect(screen.getByText('Бесплатная часть пройдена')).toBeTruthy();
     expect(screen.getByText(/полным доступом/)).toBeTruthy();

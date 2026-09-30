@@ -101,7 +101,7 @@ describe('course map',()=>{
         storageKey="course-map-test.locale"
         systemLanguages={['ru']}
       >
-        <CourseMapView runtime={runtime} onExit={()=>{}} onOpen={onOpen} onUnlock={()=>{}} />
+        <CourseMapView runtime={runtime} onOpen={onOpen} onUnlock={()=>{}} />
       </I18nProvider>
     );
 
@@ -133,7 +133,7 @@ describe('course map',()=>{
         storageKey="course-map-access-test.locale"
         systemLanguages={['ru']}
       >
-        <CourseMapView runtime={runtime} onExit={()=>{}} onOpen={()=>{}} onUnlock={onUnlock} />
+        <CourseMapView runtime={runtime} onOpen={()=>{}} onUnlock={onUnlock} />
       </I18nProvider>
     );
 
@@ -183,7 +183,7 @@ describe('course map',()=>{
         storageKey="course-map-one-access-cta.locale"
         systemLanguages={['ru']}
       >
-        <CourseMapView runtime={runtime} onExit={()=>{}} onOpen={()=>{}} onUnlock={()=>{}} />
+        <CourseMapView runtime={runtime} onOpen={()=>{}} onUnlock={()=>{}} />
       </I18nProvider>
     );
 

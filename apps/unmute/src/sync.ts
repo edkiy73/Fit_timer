@@ -4,10 +4,7 @@ import { createStorage } from '@appbase/core/storage.js';
 import { authClient } from './auth';
 import {
   courseProgressDoc,
-  mergeCourseProgress,
-  mergeStatsProgress,
   mergeUnMuteDocument,
-  mergeWordsProgress,
   parseCourseProgress,
   parseStatsProgress,
   parseWordsProgress,
@@ -17,7 +14,6 @@ import {
   type StatsProgressDocument,
   type WordsProgressDocument
 } from './progress';
-import type { LegacyProgressImportResult } from './legacy-progress-import';
 
 /* Local-first data: documents are written on the device first and sync to the account
    after sign-in. Every synced key must be registered in lib/app-sync-schema.js; data that
@@ -72,21 +68,4 @@ export async function readWordsProgress():Promise<WordsProgressDocument>{
 
 export async function writeWordsProgress(doc:WordsProgressDocument):Promise<void>{
   await appDocs.write(WORD_PROGRESS_DOC,JSON.stringify(doc));
-}
-
-
-/** Merge an old English Trainer import into whatever the learner already has locally.
- * Legacy records use old timestamps, so newer UnMute activity always wins per record. */
-export async function applyLegacyProgressImport(
-  setId:string,
-  imported:LegacyProgressImportResult
-):Promise<void>{
-  const [currentCourse,currentStats,currentWords]=await Promise.all([
-    readCourseProgress(setId),
-    readStatsProgress(setId),
-    readWordsProgress()
-  ]);
-  await writeCourseProgress(setId,mergeCourseProgress(currentCourse,imported.course));
-  await writeStatsProgress(setId,mergeStatsProgress(currentStats,imported.stats));
-  await writeWordsProgress(mergeWordsProgress(currentWords,imported.words));
 }

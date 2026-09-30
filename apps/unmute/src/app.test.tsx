@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryRouter, RouterProvider } from 'react-router';
@@ -39,13 +39,25 @@ beforeEach(() => {
 });
 
 describe('UnMute: English for Expats starter', () => {
-  it('opens Today without an account and offers sign-in', async () => {
+  it('opens Today without an account and offers sign-in under the Me tab', async () => {
+    localStorage.setItem('unmute.onboarding.v1', '1');
     const user = userEvent.setup();
     const router = renderApp();
     expect(await screen.findByRole('heading', {name:t['today.title']})).toBeTruthy();
-    await user.click(screen.getByRole('link', {name:t['nav.signIn']}));
+    const tabs = screen.getByRole('navigation', {name:t['nav.tabs']});
+    expect(within(tabs).getByRole('link', {name:t['nav.today']}).getAttribute('aria-current')).toBe('page');
+    await user.click(within(tabs).getByRole('link', {name:t['nav.me']}));
     expect(router.state.location.pathname).toBe('/account');
     expect(await screen.findByRole('textbox', {name:'Email'})).toBeTruthy();
+    await user.click(within(tabs).getByRole('link', {name:t['nav.route']}));
+    expect(router.state.location.pathname).toBe('/course');
+  });
+
+  it('hides the bottom bar inside a lesson', async () => {
+    localStorage.setItem('unmute.onboarding.v1', '1');
+    renderApp('/learn/day-1');
+    await screen.findByRole('alert');
+    expect(screen.queryByRole('navigation', {name:t['nav.tabs']})).toBeNull();
   });
 
   it('shows the signed-in account and signs out', async () => {
@@ -54,7 +66,7 @@ describe('UnMute: English for Expats starter', () => {
     renderApp('/account');
     expect(await screen.findByText(/demo@example\.com/)).toBeTruthy();
     await user.click(screen.getByRole('button', {name:t['account.signOut']}));
-    expect(await screen.findByRole('link', {name:t['nav.signIn']})).toBeTruthy();
+    expect(await screen.findByRole('textbox', {name:'Email'})).toBeTruthy();
   });
 
   it('deletes the account after an explicit confirmation', async () => {
@@ -66,7 +78,7 @@ describe('UnMute: English for Expats starter', () => {
     expect(screen.getByText(t['account.deleteConfirm'])).toBeTruthy();
     expect(forget).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', {name:t['account.deleteYes']}));
-    expect(await screen.findByRole('link', {name:t['nav.signIn']})).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText(/demo@example\.com/)).toBeNull());
     expect(forget).toHaveBeenCalledWith('all');
   });
 
@@ -80,6 +92,6 @@ describe('UnMute: English for Expats starter', () => {
     expect(missingKeys(dictionaries)).toEqual({});
     renderApp('/account');
     await screen.findByRole('textbox', {name:'Email'});
-    expect(!!screen.queryByRole('combobox')).toBe(product.i18n.locales.length > 1);
+    expect(!!screen.queryByRole('combobox', {name:t['account.language']})).toBe(product.i18n.locales.length > 1);
   });
 });

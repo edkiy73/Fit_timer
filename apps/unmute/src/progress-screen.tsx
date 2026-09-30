@@ -390,7 +390,7 @@ export function ProgressScreen(){
       runtime={runtime}
       details={details}
       todayDay={activitySaveClock().dayNumber}
-      onExit={()=>navigate('/')}
+      onExit={()=>navigate('/account')}
     />
   );
 }

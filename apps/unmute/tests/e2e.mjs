@@ -98,8 +98,10 @@ await Release.publishDraftRelease(['general-foundation']);
 // Copy of the default locale (src/i18n) and of the shared sign-in form.
 const COPY = {
   ru: {
-    signIn:'Войти',
-    account:'Аккаунт',
+    tabs:'Разделы',
+    me:'Я',
+    route:'Маршрут',
+    signOut:'Выйти',
     today:'Сегодня',
     onboarding:'Говори по-английски в реальной жизни',
     start:'Начать день 1',
@@ -156,7 +158,7 @@ async function completeTheory(page){
 }
 
 async function signIn(page,email){
-  await page.getByRole('link',{name:COPY.signIn}).click();
+  await page.getByRole('navigation',{name:COPY.tabs}).getByRole('link',{name:COPY.me,exact:true}).click();
   await page.getByRole('textbox',{name:'Email'}).fill(email);
   await page.getByRole('button',{name:COPY.send}).click();
   await page.getByText(/^DEV: \d+$/).waitFor();
@@ -165,7 +167,9 @@ async function signIn(page,email){
     await page.getByRole('textbox',{name:COPY.handle}).fill('@person');
     await page.getByRole('button',{name:COPY.create}).click();
   }
-  return appears(page.getByRole('link',{name:COPY.account}),5000);
+  await page.waitForURL(/#\/$/,{timeout:5000}).catch(()=>{});
+  await page.getByRole('navigation',{name:COPY.tabs}).getByRole('link',{name:COPY.me,exact:true}).click();
+  return appears(page.getByRole('button',{name:COPY.signOut}),5000);
 }
 
 const browser = await chromium.launch(CHROME ? {executablePath:CHROME} : {});
@@ -213,29 +217,14 @@ try{
     await appears(phone.page.getByRole('heading',{name:COPY.complete}),8000)
   );
 
-  await phone.page.goto(URL_+'#/account');
-  const legacyFile=Buffer.from(JSON.stringify({
-    app:'english-trainer',
-    version:1,
-    saved:'2026-09-29',
-    state:{
-      srs:{'abc#0':{box:3,due:0}},
-      err:{'abc#0':{t:4,w:1}},
-      total:4,
-      right:3
-    }
-  }));
-  await phone.page.getByLabel('Файл старого прогресса').setInputFiles({
-    name:'english-trainer-2026-09-29.json',
-    mimeType:'application/json',
-    buffer:legacyFile
-  });
-  ok('legacy file import reports the mapped card',await appears(phone.page.getByText('Карточки: 1',{exact:true})));
-  ok('legacy file import reports the old answer attempts',await appears(phone.page.getByText('Ответы: 4',{exact:true})));
-
-  await phone.page.goto(URL_+'#/progress');
-  const cardsMetric=phone.page.getByText('Карточек',{exact:true}).locator('..');
-  ok('legacy imported card is persisted in learner progress',await appears(cardsMetric.getByText('1',{exact:true}),8000));
+  const tabs=phone.page.getByRole('navigation',{name:COPY.tabs});
+  await tabs.getByRole('link',{name:COPY.route}).click();
+  ok('bottom bar opens the course route',await phone.page.waitForURL(/#\/course$/,{timeout:5000}).then(()=>true,()=>false));
+  ok('bottom bar marks the open tab',await appears(tabs.locator('a[aria-current="page"]',{hasText:COPY.route})));
+  ok('Manrope is the app font',(await phone.page.evaluate(()=>getComputedStyle(document.body).fontFamily)).startsWith('Manrope'));
+  await phone.page.goto(URL_+'#/learn/day-1');
+  await phone.page.getByText('Hello.').first().waitFor({timeout:5000}).catch(()=>{});
+  ok('lessons run without the bottom bar',await tabs.count()===0);
 
   const adminContext=await browser.newContext({locale:'ru-RU'});
   const admin=await adminContext.newPage();
