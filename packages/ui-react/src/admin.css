@@ -132,7 +132,7 @@
   border-radius:9px;
   padding:8px 11px;
   background:var(--accent,#2f5fe0);
-  color:#fff;
+  color:var(--on-accent,#fff);
   font:inherit;
   font-size:13px;
   font-weight:700;
@@ -277,7 +277,7 @@
   border-radius:9px;
   padding:9px 12px;
   background:var(--accent,#2f5fe0);
-  color:#fff;
+  color:var(--on-accent,#fff);
   font:inherit;
   font-weight:700;
 }

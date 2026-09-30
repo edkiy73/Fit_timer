@@ -16,12 +16,12 @@ import { LexiconProvider } from './lexicon-ui';
 import { ProgressScreen } from './progress-screen';
 import { OnboardingGate } from './onboarding';
 import { AccessScreen } from './access';
-import { LegacyProgressImportPanel } from './legacy-import-ui';
 import { NotificationSettingsPanel } from './notification-settings';
 import { NotificationDelivery, NotificationRouteListener } from './notification-delivery';
+import { TabBar } from './tab-bar';
+import { Icon } from './icons';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
-const PRODUCT_SHORT_NAME = product.shortName || PRODUCT_NAME;
 const DEFAULT_COURSE_SET = 'general-foundation';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
 const ASK_HANDLE = product.auth?.askHandle !== false;
@@ -82,22 +82,16 @@ function Root(){
   );
 }
 
+// No global header: every screen owns its title; the bottom bar is the navigation.
+// Onboarding replaces the whole shell, bar included.
 function Shell(){
-  const auth = useOptionalAuth();
-  const {t} = useI18n();
   return (
     <main className="app">
       <NotificationRouteListener />
       <NotificationDelivery />
-      <header className="app-header">
-        <div>
-          <div className="eyebrow">{t('app.eyebrow')}</div>
-          <h1>{PRODUCT_SHORT_NAME}</h1>
-        </div>
-        {!auth.loading && <Link className="link-button" to="/account">{auth.session ? t('nav.account') : t('nav.signIn')}</Link>}
-      </header>
       <OnboardingGate>
-        <Outlet />
+        <div className="app-screen"><Outlet /></div>
+        <TabBar />
       </OnboardingGate>
     </main>
   );
@@ -137,34 +131,40 @@ function Account(){
   };
   if(auth.loading) return null;
   return (
-    <section className="card">
-      <p><Link to="/">{t('nav.back')}</Link></p>
-      {auth.session ? (
-        <>
-          <h2>{t('account.title')}</h2>
-          <p>{auth.session.email}{auth.session.handle ? ' · ' + auth.session.handle : ''}</p>
-          <p className="muted">{t('account.synced')}</p>
-          <button className="link-button" type="button" onClick={() => void signOut()}>{t('account.signOut')}</button>
-          {confirmDelete ? (
-            <div className="account-delete" role="alertdialog" aria-label={t('account.delete')}>
-              <p>{t('account.deleteConfirm')}</p>
-              <div className="account-delete-actions">
-                <button className="secondary-button" type="button" onClick={() => void deleteAccount()}>{t('account.deleteYes')}</button>
-                <button className="link-button" type="button" onClick={() => setConfirmDelete(false)}>{t('account.deleteCancel')}</button>
+    <section className="me" aria-labelledby="me-title">
+      <h2 id="me-title">{t('me.title')}</h2>
+      <Link className="me-row pressable" to="/progress">
+        <Icon name="progress" />
+        <span>{t('me.progress')}</span>
+        <Icon name="chevron" size={20} className="me-row-chevron" />
+      </Link>
+      <div className="card">
+        {auth.session ? (
+          <>
+            <h3>{t('account.title')}</h3>
+            <p>{auth.session.email}{auth.session.handle ? ' · ' + auth.session.handle : ''}</p>
+            <p className="muted">{t('account.synced')}</p>
+            <button className="link-button" type="button" onClick={() => void signOut()}>{t('account.signOut')}</button>
+            {confirmDelete ? (
+              <div className="account-delete" role="alertdialog" aria-label={t('account.delete')}>
+                <p>{t('account.deleteConfirm')}</p>
+                <div className="account-delete-actions">
+                  <button className="secondary-button" type="button" onClick={() => void deleteAccount()}>{t('account.deleteYes')}</button>
+                  <button className="link-button" type="button" onClick={() => setConfirmDelete(false)}>{t('account.deleteCancel')}</button>
+                </div>
+                {deleteError && <p className="muted" role="alert">{t('account.deleteFailed')}</p>}
               </div>
-              {deleteError && <p className="muted" role="alert">{t('account.deleteFailed')}</p>}
-            </div>
-          ) : (
-            <button className="link-button" type="button" onClick={() => setConfirmDelete(true)}>{t('account.delete')}</button>
-          )}
-        </>
-      ) : (
-        <>
-          <p className="muted">{t('account.localHint')}</p>
-          <SignInForm locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} askHandle={ASK_HANDLE} variant="inline" onSignedIn={() => navigate(returnTo)} />
-        </>
-      )}
-<LegacyProgressImportPanel />
+            ) : (
+              <button className="link-button" type="button" onClick={() => setConfirmDelete(true)}>{t('account.delete')}</button>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="muted">{t('account.localHint')}</p>
+            <SignInForm locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} askHandle={ASK_HANDLE} variant="inline" onSignedIn={() => navigate(returnTo)} />
+          </>
+        )}
+      </div>
       <NotificationSettingsPanel />
       <div className="language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')} /></div>
       <p className="account-legal">

@@ -6,6 +6,7 @@ import {
   DEFAULT_NOTIFICATION_SETTINGS,
   type NotificationSettings
 } from './settings-data';
+
 import {
   exactNotificationTimeAvailable,
   nativeNotificationsAvailable,
@@ -14,6 +15,12 @@ import {
   requestNotificationPermission,
   type NotificationPermissionState
 } from './notification-native';
+
+// 24-hour picker on every phone: the native time input follows the system 12/24 h setting.
+const pad=(value:number)=>String(value).padStart(2,'0');
+const HOURS=Array.from({length:24},(_,hour)=>pad(hour));
+const MINUTES=Array.from({length:12},(_,step)=>pad(step*5));
+const minuteOptions=(current:string)=>MINUTES.includes(current)?MINUTES:[...MINUTES,current].sort();
 
 function nextSettings(
   current:NotificationSettings,
@@ -174,18 +181,28 @@ export function NotificationSettingsPanel(){
         </div>
       )}
 
-      <label className="notification-time">
+      <div className="notification-time" role="group" aria-label={t('notifications.time')}>
         <span>{t('notifications.time')}</span>
-        <input
-          type="time"
-          value={settings.time}
-          disabled={!settings.enabled||saving}
-          onChange={event=>{
-            const value=event.target.value;
-            if(/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value))void save({time:value});
-          }}
-        />
-      </label>
+        <span className="notification-time-fields">
+          <select
+            aria-label={t('notifications.hours')}
+            value={settings.time.slice(0,2)}
+            disabled={!settings.enabled||saving}
+            onChange={event=>void save({time:event.target.value+settings.time.slice(2)})}
+          >
+            {HOURS.map(hour=><option key={hour} value={hour}>{hour}</option>)}
+          </select>
+          <span aria-hidden="true">:</span>
+          <select
+            aria-label={t('notifications.minutes')}
+            value={settings.time.slice(3,5)}
+            disabled={!settings.enabled||saving}
+            onChange={event=>void save({time:settings.time.slice(0,3)+event.target.value})}
+          >
+            {minuteOptions(settings.time.slice(3,5)).map(minute=><option key={minute} value={minute}>{minute}</option>)}
+          </select>
+        </span>
+      </div>
 
       <div className="notification-kinds">
         <label>

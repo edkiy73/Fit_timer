@@ -18,7 +18,7 @@
 .ab-auth-primary,.ab-auth-secondary{
   width:100%;border:0;border-radius:12px;padding:13px 16px;font:inherit;font-weight:700;cursor:pointer
 }
-.ab-auth-primary{background:var(--accent,#2f5fe0);color:#fff}
+.ab-auth-primary{background:var(--accent,#2f5fe0);color:var(--on-accent,#fff)}
 .ab-auth-secondary{margin-top:8px;background:transparent;color:var(--accent-ink,var(--accent,#2f5fe0))}
 .ab-auth-primary:disabled,.ab-auth-secondary:disabled{opacity:.5;cursor:default}
 .ab-auth-error{margin:0 0 12px;color:var(--danger,#c2410c);font-size:14px}

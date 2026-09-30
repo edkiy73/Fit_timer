@@ -59,12 +59,10 @@ function statusKey(status:CourseMapStatus):
 
 export function CourseMapView({
   runtime,
-  onExit,
   onOpen,
   onUnlock
 }:{
   runtime:LearnerCourseRuntimeValue;
-  onExit:()=>void;
   onOpen:(nodeId:string)=>void;
   onUnlock:(nodeId:string)=>void;
 }){
@@ -84,7 +82,6 @@ export function CourseMapView({
   if(runtime.status==='error'){
     return (
       <section className="course-map-shell">
-        <button className="learn-back" type="button" onClick={onExit}>{t('nav.back')}</button>
         <div className="learn-state" role="alert">
           <strong>{t('courseMap.errorTitle')}</strong>
           <button className="primary-button" type="button" onClick={()=>void runtime.refresh()}>
@@ -106,7 +103,6 @@ export function CourseMapView({
   return (
     <section className="course-map-shell" aria-labelledby="course-map-title">
       <div className="learn-header">
-        <button className="learn-back" type="button" onClick={onExit}>{t('nav.back')}</button>
         <span>{t('courseMap.progress',{
           complete:state.roadmapProgress.completedCount,
           total:state.roadmapProgress.requiredCount
@@ -188,7 +184,6 @@ export function CourseMapScreen(){
   return (
     <CourseMapView
       runtime={useLearnerCourseRuntime()}
-      onExit={()=>navigate('/')}
       onOpen={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId))}
       onUnlock={nodeId=>navigate('/access?from=course&node='+encodeURIComponent(nodeId))}
     />
