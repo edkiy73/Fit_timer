@@ -59,7 +59,7 @@
     <!-- Обновление Android показываем только когда сервер сообщает о более новой
          release-сборке. Это не реклама: мягкий баннер можно игнорировать, а
          обязательная минимальная версия блокируется отдельным gate ниже. -->
-    <button class="update-banner hidden" id="appUpdateBanner" type="button">
+    <button class="update-banner hidden" id="appUpdateBanner" data-act="openAndroidUpdate" type="button">
       <span class="ub-copy"><b id="appUpdateTitle"></b><small id="appUpdateText"></small></span>
       <span class="ub-action" data-i18n="update.action">Обновить</span>
     </button>
@@ -131,7 +131,7 @@
       <span class="update-gate-mark">FIT / TIMER</span>
       <h2 id="appUpdateGateTitle"></h2>
       <p id="appUpdateGateText"></p>
-      <button class="btn-primary" id="appUpdateNow" type="button" data-i18n="update.action">Обновить</button>
+      <button class="btn-primary" id="appUpdateNow" data-act="openAndroidUpdate" type="button" data-i18n="update.action">Обновить</button>
       <small data-i18n="update.requiredHint">Эта версия больше не совместима с текущим сервисом.</small>
     </div>
   </div>
