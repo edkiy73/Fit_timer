@@ -8,7 +8,7 @@ import { $, appAlert, audioCtx, beep, dismissTopModal, fxVol, icon, keepAwake, l
 import { DAYS, curUser, customPrograms, kvSet, loadSession, loadSessions, localISO, normPlans, planDays,
   progActive, setDataSyncPlatformHooks, stats
 } from './10-data-sync.js';
-import { isPremium } from './20-account.js';
+import { isPremium, setAccountPlatformHooks } from './20-account.js';
 import { completeStep, nextStep, setPause, skipStep, stopSpeech } from './70-workout.js';
 
 /* ================= ТЕМА ================= */
@@ -796,6 +796,10 @@ export function setVoiceWantedShared(value){ voiceWanted = value; return voiceWa
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initPlatform(){
+  setAccountPlatformHooks({
+    applyThemeFor,
+    themeOf
+  });
   setDataSyncPlatformHooks({
     applyThemeFor,
     syncNativeNotifications
