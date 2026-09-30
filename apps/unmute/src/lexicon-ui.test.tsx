@@ -45,7 +45,7 @@ const snapshot={
   }]
 };
 
-function renderLexicon(text='I work today.'){
+function renderLexicon(text='I work today.',interactive=true){
   const queryClient=new QueryClient({
     defaultOptions:{queries:{retry:false}}
   });
@@ -58,7 +58,7 @@ function renderLexicon(text='I work today.'){
         systemLanguages={['ru']}
       >
         <LexiconProvider>
-          <p><LexiconText text={text} /></p>
+          <p><LexiconText text={text} interactive={interactive} /></p>
         </LexiconProvider>
       </I18nProvider>
     </QueryClientProvider>
@@ -89,6 +89,12 @@ describe('learner dictionary popup',()=>{
     expect(screen.getByRole('button',{name:'Перевести: remotely'})).toBeTruthy();
     expect(screen.getByText('Я работаю удалённо.')).toBeTruthy();
     expect(speakWebText).toHaveBeenCalledWith('work','en-US');
+  });
+
+  it('keeps answer options plain until checked: a tap picks the answer, not a word',async()=>{
+    renderLexicon('I work today.',false);
+    expect(await screen.findByText('I work today.')).toBeTruthy();
+    expect(screen.queryByRole('button',{name:'Перевести: work'})).toBeNull();
   });
 
   it('saves a meaning to «Мои слова» and shows it as saved',async()=>{

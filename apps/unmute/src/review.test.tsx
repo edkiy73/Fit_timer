@@ -289,6 +289,6 @@ describe('course review screen',()=>{
 
     expect(await screen.findByText('Сегодня повторять нечего')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Смешать темы: 3'}));
-    expect(await screen.findAllByRole('heading',{name:'Смешанный дрилл'})).not.toHaveLength(0);
+    expect(await screen.findAllByRole('heading',{name:'Фразы вперемешку'})).not.toHaveLength(0);
   });
 });

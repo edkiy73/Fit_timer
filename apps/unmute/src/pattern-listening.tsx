@@ -201,7 +201,7 @@ export function PatternListeningView({
         <div className="listening-options">
           {options.map(option=>(
             <button className="listening-option" type="button" key={option} onClick={()=>choose(option)}>
-              <LexiconText text={option} refs={activity.lexiconRefs} />
+              <LexiconText text={option} refs={activity.lexiconRefs} interactive={false} />
             </button>
           ))}
         </div>

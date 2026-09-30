@@ -143,7 +143,10 @@ h2{margin:0 0 8px;font-weight:800}
 
 
 .today-badge{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;padding:6px 9px;color:var(--muted);font-size:12px;font-weight:700}
-.today-progress{display:block;width:100%;height:8px;accent-color:var(--accent)}
+.today-progress{display:block;width:100%;height:8px;accent-color:var(--accent);appearance:none;-webkit-appearance:none;border:0;border-radius:999px;background:var(--line);overflow:hidden}
+.today-progress::-webkit-progress-bar{background:var(--line);border-radius:999px}
+.today-progress::-webkit-progress-value{background:var(--accent);border-radius:999px}
+.today-progress::-moz-progress-bar{background:var(--accent);border-radius:999px}
 .primary-button{min-height:48px;border:0;border-radius:var(--radius-btn);background:var(--accent);color:var(--on-accent);font-weight:800;cursor:pointer;padding:12px 20px}
 .primary-button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
@@ -374,11 +377,12 @@ h2{margin:0 0 8px;font-weight:800}
 .progress-practice-row strong{color:var(--ink)}
 .progress-muted{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
 .progress-empty{min-height:220px;align-content:center}
+/* Phones keep three numbers in a row: a column of full-width pills wasted half the screen. */
 @media(max-width:620px){
-  .progress-overview,.progress-mini-grid{grid-template-columns:1fr}
-  .progress-metric{grid-template-columns:auto 1fr;align-items:baseline}
+  .progress-overview,.progress-mini-grid{gap:8px}
+  .progress-metric{padding:12px 10px;border-radius:18px}
   .progress-metric strong{font-size:22px}
-  .progress-metric small{grid-column:1/-1}
+  .progress-metric span{font-size:12px}
 }
 
 

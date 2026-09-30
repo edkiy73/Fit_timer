@@ -40,11 +40,11 @@ export function buildMixedDrillActivity(
     id:'mixed.review',
     revision:1,
     type:'pattern-drill',
-    title:{ru:'Смешанный дрилл',en:'Mixed drill'},
+    title:{ru:'Фразы вперемешку',en:'Phrases mixed up'},
     tags:['mixed-review'],
     revisionProgress:'preserve',
     lexiconRefs:[],
-    pattern:{ru:'Смешанный дрилл',en:'Mixed drill'},
+    pattern:{ru:'Фразы вперемешку',en:'Phrases mixed up'},
     modes:['drill'],
     items,
   };
