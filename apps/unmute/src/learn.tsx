@@ -18,6 +18,7 @@ import { AIConversationView } from './ai-conversation';
 import { AnswerExplanationView } from './answer-explanation';
 import { trackDayCompleted, trackLessonCompleted } from './observability';
 import { Icon } from './icons';
+import { Sheet } from './sheet';
 import { stageForDay, stageNameKey } from './course-stages';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
@@ -128,6 +129,7 @@ export function NodeRunnerView({
   const [answer,setAnswer]=useState('');
   const [result,setResult]=useState<boolean|null>(null);
   const [busy,setBusy]=useState(false);
+  const [theoryOpen,setTheoryOpen]=useState(false);
   const completionTrackedRef=useRef(false);
 
   useEffect(()=>{
@@ -198,6 +200,7 @@ export function NodeRunnerView({
 
   const setId=state.set.id;
   const position=t('learn.position',{current:index+1,total:activities.length});
+  const theoryCards=activities.filter((item):item is Extract<Activity,{type:'theory'}>=>item.type==='theory');
   const stage=stageForDay(node.dayIndex);
 
   const handleTheory=async()=>{
@@ -252,7 +255,7 @@ export function NodeRunnerView({
     learnerAnswer?:string|undefined;
     explanation?:Record<string,string>|undefined;
   })=>result===null?null:(
-    <div className={result?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-wrong'} role="status">
+    <div className={'learn-feedback is-sheet '+(result?'learn-feedback-ok':'learn-feedback-wrong')} role="status">
       <div className="learn-feedback-head">
         <span className="learn-feedback-icon" aria-hidden="true"><Icon name={result?'check':'review'} size={22} /></span>
         <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
@@ -291,9 +294,30 @@ export function NodeRunnerView({
       </div>
 
       <div className="runner-heading">
-        {stage&&<div className="screen-kicker">{t(stageNameKey(stage))}</div>}
-        <h2 id="learn-title"><LexiconText text={localized(node.title,locale)} /></h2>
+        <div className="runner-heading-text">
+          {stage&&<div className="screen-kicker">{t(stageNameKey(stage))}</div>}
+          <h2 id="learn-title"><LexiconText text={localized(node.title,locale)} /></h2>
+        </div>
+        {theoryCards.length>0&&activity.type!=='theory'&&(
+          <button className="chip-button pressable" type="button" onClick={()=>setTheoryOpen(true)}>
+            <Icon name="book" size={18} />
+            {t('learn.theory')}
+          </button>
+        )}
       </div>
+
+      {/* The day's theory stays one tap away without moving the lesson back. */}
+      <Sheet open={theoryOpen} onClose={()=>setTheoryOpen(false)} labelledBy="theory-sheet-title" closeLabel={t('learn.theoryClose')}>
+        <div className="theory-sheet">
+          <h3 id="theory-sheet-title">{t('learn.theory')}</h3>
+          {theoryCards.map(card=>(
+            <section key={card.id} className="theory-sheet-card">
+              {card.title&&localized(card.title,locale)!==localized(node.title,locale)&&<h4><LexiconText text={localized(card.title,locale)} refs={card.lexiconRefs} /></h4>}
+              <div className="learn-theory"><LexiconText text={plainTheory(card,locale)} refs={card.lexiconRefs} /></div>
+            </section>
+          ))}
+        </div>
+      </Sheet>
 
       {activity.type==='theory'&&(
         <article className="learn-card">

@@ -40,7 +40,8 @@ function createAIHandler(AI_ACTIONS, options = {}){
 
     const email = String(body.email || '').trim().toLowerCase().slice(0,120);
     const deviceId = String(body.deviceId || '').trim().slice(0,80);
-    const token = String(body.token || '');
+    // Older clients send `token`; React apps send `syncToken` (authClient.authFields()).
+    const token = String(body.token || body.syncToken || '');
     if(!EMAIL.test(email) || !deviceId || !token) return fail(res, 401, 'auth_required');
     const mh = sha(email).slice(0,32);
     if(!(await rateOkScoped(req, 'ai-account', 90, mh, 3600, true))){
