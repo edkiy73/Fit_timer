@@ -1,11 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { emptyCourseProgress } from './progress';
-import { CourseMapView, buildCourseMapItems } from './course-map';
+import { CourseMapView, buildCourseMapItems, stationOf } from './course-map';
 import { dictionaries } from './i18n';
 
 function previewState():LearnerCourseState{
@@ -106,14 +106,22 @@ describe('course map',()=>{
     );
 
     expect(screen.getByText('Бесплатно: первые 2 дня')).toBeTruthy();
-    expect(screen.getByText('Нужен полный курс')).toBeTruthy();
+    expect(screen.getByText('Дальше — полный курс')).toBeTruthy();
     expect(screen.getAllByRole('button',{name:'Открыть'})).toHaveLength(1);
-    expect(screen.getAllByRole('button',{name:'Пройти ещё раз'})).toHaveLength(1);
     expect(screen.getAllByRole('button',{name:'Открыть доступ'})).toHaveLength(1);
+    expect(screen.getByText('Ты здесь')).toBeTruthy();
 
     await user.click(screen.getByRole('button',{name:'Открыть'}));
     expect(onOpen).toHaveBeenCalledWith('day-2');
-    expect(onOpen).not.toHaveBeenCalledWith('day-3');
+
+    await user.click(screen.getByRole('button',{name:'День 1, Пройден'}));
+    const sheet=screen.getByRole('dialog');
+    await user.click(within(sheet).getByRole('button',{name:'Пройти ещё раз'}));
+    expect(onOpen).toHaveBeenLastCalledWith('day-1',true);
+
+    await user.click(screen.getByRole('button',{name:'День 3, Нужен полный курс'}));
+    expect(within(screen.getByRole('dialog')).queryByRole('button',{name:'Открыть'})).toBeNull();
+    expect(onOpen).not.toHaveBeenCalledWith('day-3',expect.anything());
   });
 
   it('opens the access offer from a paid roadmap node',async()=>{
@@ -188,5 +196,21 @@ describe('course map',()=>{
     );
 
     expect(screen.getAllByRole('button',{name:'Открыть доступ'})).toHaveLength(1);
+  });
+
+  it('draws review days as transfers, dialogues and AI talks as landmarks, the last day as the finish',()=>{
+    const state=previewState();
+    const base={revision:1,revisionProgress:'preserve' as const,lexiconRefs:[],tags:[]};
+    const set={...state.set,activities:[
+      ...state.set.activities,
+      {...base,id:'d',type:'dialogue' as const,scene:{ru:'Кафе и заказ'},lines:[{id:'l',partner:{ru:'Hi'},answer:{accepted:['hi'],nearMiss:true,caseSensitive:false}}]},
+      {...base,id:'ai',type:'ai-conversation' as const,topic:{ru:'Расскажи о себе'},promptTemplate:'x',focus:[]}
+    ]};
+    const node=(id:string,kind:'lesson'|'review',activityIds:string[])=>({id,kind,title:{ru:id},dayIndex:1,order:0,prerequisites:[],activityIds,optional:false});
+    expect(stationOf(set,node('a','lesson',['a1','d']),false,'ru')).toEqual({kind:'dialogue',special:'Кафе и заказ'});
+    expect(stationOf(set,node('b','review',['ai']),false,'ru')).toEqual({kind:'ai',special:'Расскажи о себе'});
+    expect(stationOf(set,node('c','review',['a1']),false,'ru').kind).toBe('review');
+    expect(stationOf(set,node('e','lesson',['a1']),true,'ru').kind).toBe('finish');
+    expect(stationOf(set,node('f','lesson',['a1']),false,'ru').kind).toBe('lesson');
   });
 });
