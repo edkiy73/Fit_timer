@@ -18,8 +18,27 @@ const ACTIONS = new Set([
 const clean=(v,n)=>String(v==null?'':v).slice(0,n);
 
 function pics(src){
-  const out={};
   let budget=800*1024;
+  const items=src&&+src.v===2&&Array.isArray(src.items)?src.items:null;
+  if(items){
+    const out=[];
+    for(const item of items){
+      if(!item||typeof item!=='object')continue;
+      const val=cleanPic(item.data,budget);
+      if(!val)continue;
+      out.push({
+        id:clampLine(item.id,80),
+        p:Math.max(0,Math.min(99,Math.round(+item.p||0))),
+        i:Math.max(0,Math.min(199,Math.round(+item.i||0))),
+        n:clampLine(item.n,60),
+        data:val
+      });
+      budget-=val.length;
+      if(out.length>=30)break;
+    }
+    return {v:2,items:out};
+  }
+  const out={};
   for(const [k,v] of Object.entries((src&&typeof src==='object')?src:{})){
     const key=clampLine(k,60);
     const val=cleanPic(v,budget);
