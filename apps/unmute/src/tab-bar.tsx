@@ -3,6 +3,7 @@ import { useI18n } from '@appbase/ui-react/i18n.js';
 import { useLearnerCourseRuntime } from './course-runtime';
 import { useWordReviewRuntime } from './word-review-runtime';
 import { reviewDueCounts } from './review-count';
+import { useOtherCourseReviews } from './other-course-review';
 import { Icon, type IconName } from './icons';
 
 const TABS: {to: string; icon: IconName; label: string; end?: boolean}[] = [
@@ -21,7 +22,8 @@ function ReviewBadge(){
   const {t, locale} = useI18n();
   const runtime = useLearnerCourseRuntime();
   const words = useWordReviewRuntime();
-  const count = reviewDueCounts(runtime.state, words, locale)?.actionableCount ?? 0;
+  const others = useOtherCourseReviews(runtime.state?.set.id ?? '');
+  const count = reviewDueCounts(runtime.state, words, locale, undefined, others.courses)?.actionableCount ?? 0;
   if(count <= 0) return null;
   return (
     <span className="tabbar-badge">

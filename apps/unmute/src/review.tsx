@@ -28,6 +28,7 @@ import { resolveWordReviewSession, type ResolvedWordReviewItem } from './word-re
 import { buildMixedDrillActivity, studiedPatternActivities, MixedDrillView } from './mixed-drill';
 import { LexiconText } from './lexicon-ui';
 import { AnswerExplanationView } from './answer-explanation';
+import { useOtherCourseReviews, type OtherCourseReviews } from './other-course-review';
 import { MyWordsView } from './my-words';
 import { Icon } from './icons';
 
@@ -67,7 +68,11 @@ export interface ReviewViewProps {
   onAccess?:()=>void;
   speak?:SpeakText;
   startRecognition?:StartRecognition;
+  /** Due items from other studied courses (switching courses keeps them in review). */
+  otherCourses?:OtherCourseReviews;
 }
+
+const NO_OTHER_COURSES:OtherCourseReviews={status:'ready',courses:[]};
 
 export function ReviewView({
   runtime,
@@ -80,7 +85,8 @@ export function ReviewView({
   onSignIn=()=>{},
   onAccess=()=>{},
   speak=speakText,
-  startRecognition=startSpeechRecognition
+  startRecognition=startSpeechRecognition,
+  otherCourses=NO_OTHER_COURSES
 }:ReviewViewProps){
   const {t,locale}=useI18n();
   const state=runtime.state;
@@ -100,21 +106,27 @@ export function ReviewView({
   useEffect(()=>{
     if(runtime.status!=='ready'||!state||session)return;
     if(wordRuntime?.status==='pending')return;
+    if(otherCourses.status==='pending')return;
 
     const course=buildCourseReviewSession(state.set,state.progress,todayDay);
+    const others=otherCourses.courses.map(other=>{
+      const built=buildCourseReviewSession(other.set,other.progress,todayDay);
+      return {...built,items:built.items.map(entry=>({...entry,setId:other.set.id}))};
+    });
+    const otherItems=others.flatMap(other=>other.items);
     const words=wordRuntime?.status==='ready'&&wordRuntime.words&&wordRuntime.lexicon
       ? resolveWordReviewSession(wordRuntime.words,wordRuntime.lexicon,todayDay,locale)
       : null;
     const wordItems=(words?.items??[]).map(word=>({kind:'word' as const,word}));
     setSession({
       course,
-      total:course.actionableCount+wordItems.length,
-      waiting:course.waitingCount+(words?.waiting??0),
+      total:course.actionableCount+otherItems.length+wordItems.length,
+      waiting:course.waitingCount+others.reduce((sum,other)=>sum+other.waitingCount,0)+(words?.waiting??0),
       unresolvedWords:words?.unresolved??0,
       wordUnavailable:Boolean(wordRuntime&&wordRuntime.status==='error'),
     });
-    setQueue([...course.items,...wordItems]);
-  },[runtime.status,state?.set.id,session,todayDay,wordRuntime?.status,wordRuntime?.words,wordRuntime?.lexicon,locale]);
+    setQueue([...course.items,...otherItems,...wordItems]);
+  },[runtime.status,state?.set.id,session,todayDay,wordRuntime?.status,wordRuntime?.words,wordRuntime?.lexicon,locale,otherCourses]);
 
   useEffect(()=>{
     setSelected(null);
@@ -283,7 +295,8 @@ export function ReviewView({
     );
   }
 
-  const setId=state.set.id;
+  // Items from another course are saved to that course's progress.
+  const setId=(item.kind!=='word'&&item.setId)||state.set.id;
   const position=t('review.position',{
     current:Math.min(completed+1,total),
     total
@@ -515,7 +528,7 @@ export function ReviewView({
 
       {item.kind==='practice'&&item.mode==='drill'&&(
         <PatternDrillView
-          key={'review-drill-'+item.activity.id}
+          key={'review-drill-'+setId+'-'+item.activity.id}
           activity={item.activity}
           setId={setId}
           savePractice={savePractice}
@@ -525,7 +538,7 @@ export function ReviewView({
 
       {item.kind==='practice'&&item.mode==='listening'&&(
         <PatternListeningView
-          key={'review-listening-'+item.activity.id}
+          key={'review-listening-'+setId+'-'+item.activity.id}
           activity={item.activity}
           setId={setId}
           distractors={distractors}
@@ -537,7 +550,7 @@ export function ReviewView({
 
       {item.kind==='practice'&&item.mode==='speaking'&&(
         <PatternSpeakingView
-          key={'review-speaking-'+item.activity.id}
+          key={'review-speaking-'+setId+'-'+item.activity.id}
           activity={item.activity}
           setId={setId}
           savePractice={savePractice}
@@ -552,9 +565,11 @@ export function ReviewView({
 
 export function ReviewScreen(){
   const navigate=useNavigate();
+  const runtime=useLearnerCourseRuntime();
+  const otherCourses=useOtherCourseReviews(runtime.state?.set.id??'');
   return (
     <ReviewView
-      runtime={useLearnerCourseRuntime()}
+      runtime={runtime}
       wordRuntime={useWordReviewRuntime()}
       onExit={()=>navigate('/')}
       onSignIn={()=>navigate('/account?return='+encodeURIComponent('/review'))}
@@ -562,6 +577,7 @@ export function ReviewScreen(){
       saveGraded={saveGradedActivity}
       savePractice={savePracticeActivity}
       saveWord={saveWordReview}
+      otherCourses={otherCourses}
     />
   );
 }

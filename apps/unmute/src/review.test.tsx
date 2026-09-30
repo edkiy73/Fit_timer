@@ -7,6 +7,7 @@ import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { emptyCourseProgress } from './progress';
 import { ReviewView } from './review';
 import { dictionaries } from './i18n';
+import type { OtherCourseReviews } from './other-course-review';
 
 const node={
   id:'day-1',
@@ -59,7 +60,8 @@ function learnerState():LearnerCourseState{
 
 function renderReview(
   saveGraded=vi.fn(async()=>{}),
-  savePractice=vi.fn(async()=>{})
+  savePractice=vi.fn(async()=>{}),
+  otherCourses:OtherCourseReviews={status:'ready',courses:[]}
 ){
   const runtime:LearnerCourseRuntimeValue={
     state:learnerState(),
@@ -83,6 +85,7 @@ function renderReview(
         savePractice={savePractice}
         speak={async()=>true}
         startRecognition={()=>null}
+        otherCourses={otherCourses}
       />
     </I18nProvider>
   );
@@ -90,6 +93,34 @@ function renderReview(
 }
 
 describe('course review screen',()=>{
+  it('keeps due cards of another studied course and saves them to that course',async()=>{
+    const user=userEvent.setup();
+    const other=learnerState();
+    other.set={...other.set,id:'a1-starter',slug:'a1-starter',activities:[{
+      id:'a1.card',revision:1,type:'text-input',tags:[],revisionProgress:'preserve',
+      lexiconRefs:[],prompt:{ru:'Напиши: Привет'},
+      answer:{accepted:['Hi'],nearMiss:true,caseSensitive:false}
+    }]};
+    other.progress.cards={'a1.card':{box:1,due:9,at:'2026-09-28T00:00:00Z'}};
+    const {saveGraded}=renderReview(undefined,undefined,{status:'ready',courses:[{set:other.set,progress:other.progress}]});
+
+    expect(await screen.findByText('К повтору сегодня: 2')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Начать повтор'}));
+    await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am home');
+    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    expect(saveGraded).toHaveBeenLastCalledWith('general-foundation','card.one',true);
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+    expect(await screen.findByText('Напиши: Привет')).toBeTruthy();
+    await user.type(screen.getByRole('textbox',{name:'Твой ответ'}),'Hi');
+    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    expect(saveGraded).toHaveBeenLastCalledWith('a1-starter','a1.card',true);
+  });
+
+  it('waits for other courses before pinning the session',async()=>{
+    renderReview(undefined,undefined,{status:'pending',courses:[]});
+    expect(screen.queryByText(/К повтору сегодня/)).toBeNull();
+  });
+
   it('requeues a wrong card until it is answered correctly',async()=>{
     const user=userEvent.setup();
     const {saveGraded,onExit}=renderReview();
