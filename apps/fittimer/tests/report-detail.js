@@ -101,10 +101,17 @@ async function boot(b, label, errs, url){
 
   const shape = await cp.evaluate(() => {
     const p = customPrograms.find(x => x.name === 'Сила дома');
-    return {plans: normPlans(p).length, orig: (p.origEx || []).length};
+    return {
+      plans: normPlans(p).length,
+      orig: (p.origEx || []).length,
+      ids: (p.origEx || []).map(x => x.id)
+    };
   });
   ok('снимок присланного снят по всем вариантам', shape.plans === 2 && shape.orig === 4,
      `${shape.plans} варианта, ${shape.orig} упражнений`);
+  ok('снимок отчёта хранит stable exercise.id для каждого упражнения',
+     shape.ids.length === 4 && shape.ids.every(Boolean) && new Set(shape.ids).size === 4,
+     JSON.stringify(shape.ids));
 
   // ---- клиент занимается по обоим вариантам и ПЕРЕДЕЛЫВАЕТ программу ----
   await cp.evaluate(async () => {
@@ -117,7 +124,10 @@ async function boot(b, label, errs, url){
 
     const plans = normPlans(p);
     plans[0].exercises = plans[0].exercises.filter(e => e.name !== 'Отжимания');  // выкинул
-    plans[0].exercises.push({name: 'Планка', type: 'time', value: '45', sets: 3, rest: 30}); // добавил своё
+    plans[0].exercises.push({id:'client-added-plank', name: 'Планка', type: 'time', value: '45', sets: 3, rest: 30}); // добавил своё
+    // Переименование не меняет identity: тот же exercise.id должен остаться одной
+    // mod-строкой, а не превратиться в ложные delete+add.
+    plans[1].exercises[0].name = 'Тяга одной рукой';
     plans[1].exercises[0].value = '15';                                            // поменял руками
     // Прогрессия — состояние у КАЖДОГО упражнения (ex.ps), не общий счётчик
     // программы: раньше один счётчик программы прибавлял шаг всем упражнениям
@@ -153,8 +163,12 @@ async function boot(b, label, errs, url){
      JSON.stringify(r.diff && r.diff.del));
   ok('видно, что ДОБАВИЛ своё', (r.diff && r.diff.add || []).includes('Планка'),
      JSON.stringify(r.diff && r.diff.add));
-  ok('видно, что ПОМЕНЯЛ числа',
-     (r.diff && r.diff.mod || []).some(m => m.n === 'Тяга в наклоне'),
+  ok('переименование того же exercise.id не считается удалением и добавлением',
+     !(r.diff && r.diff.del || []).includes('Тяга в наклоне')
+       && !(r.diff && r.diff.add || []).includes('Тяга одной рукой'),
+     JSON.stringify(r.diff));
+  ok('видно, что ПОМЕНЯЛ числа даже после переименования',
+     (r.diff && r.diff.mod || []).some(m => m.n === 'Тяга одной рукой'),
      JSON.stringify((r.diff && r.diff.mod || []).map(m => `${m.n}: ${m.a}→${m.b}`)));
   ok('рост считается по обоим вариантам, не только по первому',
      new Set((r.ex || []).map(e => e.p)).size >= 1 && (r.ex || []).length >= 1,
@@ -201,6 +215,51 @@ async function boot(b, label, errs, url){
   });
   ok('диапазон, схлопнутый прогрессией, не считается ростом', fake.length === 0,
      fake.map(x => `${x.a}→${x.b}`).join() || 'нет строки');
+
+  const identity = await cp.evaluate(() => {
+    const ex = (id, name, value) => ({
+      id, name, type:'reps', value:String(value), sets:3, rest:30,
+      progOn:false, trackWeight:false
+    });
+    const p = {
+      id:'report-id-test', name:'ID diff', progression:0,
+      plans:[{days:[],rounds:1,roundRest:0,exercises:[
+        ex('dup-a','Одинаковое',8),
+        ex('dup-b','Одинаковое',8),
+        ex('legacy-one','Уникальное legacy',10)
+      ]}]
+    };
+    p.origEx = snapshotEx(p);
+
+    // Меняем только ВТОРОЕ из двух одинаково названных упражнений.
+    p.plans[0].exercises[1].value = '12';
+    const byId = buildReport(p).diff;
+
+    // Имитируем старый origEx до появления id: уникальное имя всё ещё можно
+    // сопоставить однозначно и не ломать старые программы.
+    const legacy = JSON.parse(JSON.stringify(p));
+    legacy.origEx = snapshotEx(legacy);
+    legacy.origEx.forEach(x => { delete x.id; });
+    legacy.plans[0].exercises[2].value = '11';
+    // Вернём второй дубль к исходному значению: здесь проверяем именно legacy fallback.
+    legacy.plans[0].exercises[1].value = '8';
+    const legacyDiff = buildReport(legacy).diff;
+
+    return {byId, legacyDiff};
+  });
+  ok('одинаковые названия не склеиваются: меняется только нужный exercise.id',
+     identity.byId.mod.length === 1
+       && identity.byId.mod[0].a.startsWith('8')
+       && identity.byId.mod[0].b.startsWith('12')
+       && identity.byId.add.length === 0
+       && identity.byId.del.length === 0,
+     JSON.stringify(identity.byId));
+  ok('старый snapshot без id сохраняет однозначный fallback по варианту и имени',
+     identity.legacyDiff.mod.length === 1
+       && identity.legacyDiff.mod[0].n === 'Уникальное legacy'
+       && identity.legacyDiff.add.length === 0
+       && identity.legacyDiff.del.length === 0,
+     JSON.stringify(identity.legacyDiff));
 
   await tp.screenshot({path: __dirname + '/shot-report.png', fullPage: true});
   console.log('\npageerror:', errs.length ? errs : 'нет');
