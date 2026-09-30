@@ -39,7 +39,7 @@ export function setTrainerEventHooks(hooks = {}){
 import { FILE_HINT, PUBLIC_APP_URL, apiFetch, apiPost, applyMedia, clProgs, clientIdx, clientSum,
   clients, daysSince, duplicateProgram, exportProgram, exportProgramFile, humanDay, lastReport,
   lastSeen, linkFailNote, loadTrainer, normHandle, programLink, programMedia, programToText,
-  renderToday, saveClients, setClientIdxShared, setCoachPhotoDraftShared, trainer,
+  renderToday, saveClients, setClientIdxShared, setCoachPhotoDraftShared, setProgramsTrainerHooks, trainer,
   trainerAccountReady, trainerOn
 } from './40-programs-ai.js';
 
@@ -1779,6 +1779,12 @@ export function renderMine(){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initTrainerCatalog(){
+  setProgramsTrainerHooks({
+    renderMine,
+    renderTrainerCard,
+    snapshotEx,
+    storeCountText
+  });
   setProgressTrainerHooks({
     renderMine
   });
