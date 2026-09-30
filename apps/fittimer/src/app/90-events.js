@@ -58,12 +58,12 @@ import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExe
   renderProgControls, saveProgram, setExDraftShared, setExIdxShared, setExIsNewShared,
   setExOrigShared, setPlanIdxShared, shrinkImage, syncCover, syncExDetailsSum, syncExNowHints,
   syncExProgSum, syncExType, syncExWarm, syncRotateUI
-} from './60-builder.js';
+, setBuilderEventHooks } from './60-builder.js';
 import { afterExChange, applyProgCheck, autoGrow, backToWorkout, buildSteps, closeSwapHint, esc,
   completeStep, exFromWork, finishPartialWorkout, nextStep, openSwapHint, prevStep, refreshDetailsFade, saveExToWorkout,
   setPause, settleQuickFinish, shareResult, skipStep, startWorkout, stopSpeech, swapViaAI, tearDownWorkout,
   toggleProgCheckList
-} from './70-workout.js';
+, setWorkoutEventHooks } from './70-workout.js';
 import { SR, applyThemeFor, checkSchedules, hfHintText, hfMode, recognitionLang, setHfMode, setHfModeShared,
   setPlatformEventHooks, setRecognitionLangShared, setVoiceWantedShared, startHandsFree, startListening, stopHandsFree,
   stopListening, syncHandsFreeUI, syncNativeNotifications, syncPrefs
@@ -2008,6 +2008,19 @@ function resetSkipConfirm(){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initEvents(){
+  setBuilderEventHooks({
+    buildExMenu,
+    delCurrentPlan,
+    markBuilderTab,
+    openLegal,
+    syncImagesSum,
+    syncSettingsSum
+  });
+  setWorkoutEventHooks({
+    aiRunClose,
+    getAiRunCtl: () => aiRunCtl,
+    aiRunOpen
+  });
   setProgramsEventHooks({
     addExManual,
     aiRunClose,

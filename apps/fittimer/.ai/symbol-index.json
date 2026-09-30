@@ -734,8 +734,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2457,
-      "chars": 110553,
+      "lines": 2485,
+      "chars": 111463,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -750,6 +750,7 @@
         "axisAtCeiling",
         "blankExercise",
         "blankPlan",
+        "builderSyncNativeNotifications",
         "buildPlanTabs",
         "carryExerciseProgress",
         "clampProgEvery",
@@ -841,6 +842,9 @@
         "saveProgram",
         "scaleValue",
         "set",
+        "setBuilderEventHooks",
+        "setBuilderPlatformHooks",
+        "setBuilderWorkoutHooks",
         "setDraftShared",
         "setExDraftShared",
         "setExIdxShared",
@@ -867,8 +871,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1929,
-      "chars": 85778,
+      "lines": 1954,
+      "chars": 86593,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -935,6 +939,8 @@
         "setFinRing",
         "setPause",
         "settleQuickFinish",
+        "setWorkoutEventHooks",
+        "setWorkoutPlatformHooks",
         "shareResult",
         "skipStep",
         "startGlobal",
@@ -953,13 +959,14 @@
         "toggleProgCheckList",
         "warmupPosition",
         "workoutOutcomeSummary",
-        "workoutStepKey"
+        "workoutStepKey",
+        "workoutSyncNativeNotifications"
       ]
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 868,
-      "chars": 37815,
+      "lines": 878,
+      "chars": 38159,
       "symbols": [
         "add",
         "advanceFromHeadset",
@@ -1018,8 +1025,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2659,
-      "chars": 109912,
+      "lines": 2672,
+      "chars": 110194,
       "symbols": [
         "addExManual",
         "aiRetryDialog",

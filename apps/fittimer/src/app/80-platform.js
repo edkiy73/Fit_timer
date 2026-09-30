@@ -10,7 +10,8 @@ import { DAYS, curUser, customPrograms, kvSet, loadSession, loadSessions, localI
 } from './10-data-sync.js';
 import { isPremium, setAccountPlatformHooks } from './20-account.js';
 import { setProgressPlatformHooks } from './30-progress-media.js';
-import { completeStep, nextStep, setPause, skipStep, stopSpeech } from './70-workout.js';
+import { setBuilderPlatformHooks } from './60-builder.js';
+import { completeStep, nextStep, setPause, setWorkoutPlatformHooks, skipStep, stopSpeech } from './70-workout.js';
 
 /* ================= ТЕМА ================= */
 // Тема у каждого профиля своя и по умолчанию «как в системе»: телефон один, а вкусы
@@ -797,6 +798,15 @@ export function setVoiceWantedShared(value){ voiceWanted = value; return voiceWa
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initPlatform(){
+  setBuilderPlatformHooks({
+    getSyncNativeNotifications: () => syncNativeNotifications
+  });
+  setWorkoutPlatformHooks({
+    getHfMode: () => hfMode,
+    startHandsFree,
+    stopHandsFree,
+    getSyncNativeNotifications: () => syncNativeNotifications
+  });
   setProgressPlatformHooks({
     applyTheme,
     setThemeLightShared
