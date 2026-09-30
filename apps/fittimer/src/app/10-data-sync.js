@@ -1953,59 +1953,107 @@ export const MONTH_OF = ['января','февраля','марта','апре�
    4. РЕКОРД — сгоревшая серия остаётся лучшей (stats.bestStreak). Собранное не
       отбираем — то же правило, что у достижений. */
 export function calcStreakInfo(){
-  const streakHistory = stats.history.filter(h => h.status !== 'partial' || h.meaningful !== false);
-  const done = new Set(streakHistory.map(h => h.d));
+  const history = stats.history || [];
   const plan = new Set();
   customPrograms.forEach(p => planDays(p).forEach(d => plan.add(d)));
   const byPlan = plan.size > 0;
-  const isPlanned = dt => plan.has(DAYS[(dt.getDay() + 6) % 7]);
-  // дальше самой ранней тренировки уходить некуда — там просто нет истории
-  const earliest = streakHistory.reduce((m, h) => (!m || h.d < m) ? h.d : m, null);
-  // отработка — механика недельная, поэтому неделю считаем один раз на неделю
+
+  // Без расписания серия остаётся «дни активности подряд»: здесь meaningful partial
+  // по-прежнему считается активностью, потому что сравнивать её не с чем.
+  if(!byPlan){
+    const streakHistory = history.filter(h => h.status !== 'partial' || h.meaningful !== false);
+    const done = new Set(streakHistory.map(h => h.d));
+    const earliest = streakHistory.reduce((m, h) => (!m || h.d < m) ? h.d : m, null);
+    let n = 0, freezes = 0, sinceFreeze = 99;
+    const d = new Date();
+    if(!done.has(localISO(d))) d.setDate(d.getDate() - 1);
+    while(earliest && localISO(d) >= earliest){
+      if(done.has(localISO(d))){
+        n++;
+        sinceFreeze++;
+      }else if(n > 0 && sinceFreeze >= 7){
+        // Старое поведение без расписания сохраняем: один пропущенный календарный
+        // день можно простить после семи засчитанных дней активности.
+        freezes++;
+        sinceFreeze = 0;
+      }else break;
+      d.setDate(d.getDate() - 1);
+    }
+    return {n, freezes, byPlan:false, risk:false, best:Math.max(stats.bestStreak || 0, n)};
+  }
+
+  // С расписанием источником истины становится weekPlanInfo:
+  // - full slot = +1 к серии;
+  // - partial slot = закрыт, но НЕ +1;
+  // - extra workout вне плана = не влияет;
+  // - make-up закрывает исходный слот и считается ровно один раз.
+  // Так серия, недельная полоса и «долг/отработка» больше не спорят друг с другом.
+  const earliestHistory = history.reduce((m, h) => (h && h.d && (!m || h.d < m)) ? h.d : m, null);
+  if(!earliestHistory) return {n:0, freezes:0, byPlan:true, risk:false, best:stats.bestStreak || 0};
+
+  // Отработка может закрыть слот раньше самой первой записи истории (например,
+  // понедельник закрыт тренировкой во вторник), поэтому начинаем не раньше понедельника
+  // недели первой активности.
+  const first = new Date(earliestHistory + 'T12:00:00');
+  first.setDate(first.getDate() - ((first.getDay() + 6) % 7));
+  const earliest = localISO(first);
+
+  const now = new Date();
+  const mon = new Date(now);
+  mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
+  mon.setHours(0,0,0,0);
+  const currentWeekStart = localISO(mon);
+  const todayIso = localISO(now);
+
   const weeks = {};
-  const shut = dt => {
-    const m = new Date(dt); m.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
-    const key = localISO(m);
-    return (weeks[key] || (weeks[key] = weekPlanInfo(dt))).days[(dt.getDay() + 6) % 7].full;
+  const dayState = dt => {
+    const monday = new Date(dt);
+    monday.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+    const key = localISO(monday);
+    const week = weeks[key] || (weeks[key] = weekPlanInfo(dt));
+    return week.days[(dt.getDay() + 6) % 7];
   };
-  const mon = new Date(); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
-  const weekStart = localISO(mon);
 
   let n = 0, freezes = 0, sinceFreeze = 99, risk = false;
-  const d = new Date();
-  if(!done.has(localISO(d))) d.setDate(d.getDate() - 1); // сегодня ещё впереди — не в счёт
-  while(earliest && localISO(d) >= earliest){
+  const d = new Date(now);
+  d.setHours(12,0,0,0);
+
+  while(localISO(d) >= earliest){
     const iso = localISO(d);
-    if(done.has(iso)){
-      n++; sinceFreeze++;
-      d.setDate(d.getDate() - 1);
-      continue;
+    const day = dayState(d);
+
+    // Каждая полностью закрытая плановая тренировка — единица серии.
+    // При двух программах в один день это честно +2, как и 2/2 в недельной полосе.
+    if(day && day.done > 0){
+      n += day.done;
+      sinceFreeze += day.done;
     }
-    // день вне расписания — это законный отдых, он серию не трогает
-    if(byPlan && !isPlanned(d)){
-      d.setDate(d.getDate() - 1);
-      continue;
+
+    if(day && day.planned > 0){
+      const open = Math.max(0, day.planned - day.closed);
+      if(open > 0){
+        // Сегодня ещё не пропущено: день можно закончить до конца суток.
+        if(iso === todayIso){
+          // ничего
+        // В текущей неделе долг ещё можно отработать — серия под угрозой, но жива.
+        } else if(iso >= currentWeekStart){
+          risk = true;
+        // Старый незакрытый день может один раз проститься заморозкой.
+        } else if(n > 0 && sinceFreeze >= 7){
+          freezes++;
+          sinceFreeze = 0;
+        } else {
+          break;
+        }
+      }
+      // partial входит в day.closed, но не day.done: он нейтрален для серии,
+      // ровно как в недельном плане — долг закрыт, полной тренировки нет.
     }
-    // слот закрыт отработкой в другой день недели — пропуска не было
-    if(byPlan && shut(d)){
-      d.setDate(d.getDate() - 1);
-      continue;
-    }
-    // долг идущей недели: отработать ещё можно, поэтому серия висит, а не сгорает
-    if(byPlan && iso >= weekStart){
-      risk = true;
-      d.setDate(d.getDate() - 1);
-      continue;
-    }
-    // заморозка: пропуск прощается, но не чаще раза в 7 засчитанных тренировок
-    if(n > 0 && sinceFreeze >= 7){
-      freezes++; sinceFreeze = 0;
-      d.setDate(d.getDate() - 1);
-      continue;
-    }
-    break;
+
+    d.setDate(d.getDate() - 1);
   }
-  return {n, freezes, byPlan, risk: risk && n > 0, best: Math.max(stats.bestStreak || 0, n)};
+
+  return {n, freezes, byPlan:true, risk:risk && n > 0, best:Math.max(stats.bestStreak || 0, n)};
 }
 export function calcStreak(){ return calcStreakInfo().n; }
 // подпись под число серии: по плану считаем тренировки, без плана — дни
