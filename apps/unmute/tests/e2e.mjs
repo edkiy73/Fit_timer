@@ -221,6 +221,11 @@ try{
   await tabs.getByRole('link',{name:COPY.route}).click();
   ok('bottom bar opens the course route',await phone.page.waitForURL(/#\/course$/,{timeout:5000}).then(()=>true,()=>false));
   ok('bottom bar marks the open tab',await appears(tabs.locator('a[aria-current="page"]',{hasText:COPY.route})));
+  await phone.page.getByRole('button',{name:/^День 1/}).click();
+  ok('route station opens its sheet',await appears(phone.page.getByRole('dialog')));
+  await phone.page.goBack();
+  ok('Back closes the sheet and stays on the route',
+    await phone.page.getByRole('dialog').waitFor({state:'detached',timeout:3000}).then(()=>true,()=>false)&&/#\/course$/.test(phone.page.url()));
   ok('Manrope is the app font',(await phone.page.evaluate(()=>getComputedStyle(document.body).fontFamily)).startsWith('Manrope'));
   await phone.page.goto(URL_+'#/learn/day-1');
   await phone.page.getByText('Hello.').first().waitFor({timeout:5000}).catch(()=>{});
