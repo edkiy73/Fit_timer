@@ -10,17 +10,38 @@ import { DAYS, accountAuth, calcStreakInfo, closeAllMenus, currentUser, customPr
 } from './10-data-sync.js';
 import { account, isPremium, refreshServerSubscription, setAccountTrainerCatalogHooks } from './20-account.js';
 import { LIM, clampText, setProgressTrainerHooks } from './30-progress-media.js';
+
+let builderTrainerHooks = {
+  enableDrag: () => {},
+  exRestAfter: () => 0,
+  fmtKg: v => String(v == null ? '' : v),
+  getExWeight: () => 0,
+  hasWeight: () => false,
+  openBuilder: async () => {},
+  parseProgramText: () => null,
+  parseValue: v => ({min:+v || 0,max:+v || 0}),
+  progShort: () => '',
+  progressedRepsRange: () => '',
+  sortWarmFirst: list => list,
+  valueText: v => String(v == null ? '' : v)
+};
+export function setTrainerBuilderHooks(hooks = {}){
+  builderTrainerHooks = {...builderTrainerHooks, ...hooks};
+}
+let workoutTrainerHooks = { esc: v => String(v == null ? '' : v) };
+export function setTrainerWorkoutHooks(hooks = {}){
+  workoutTrainerHooks = {...workoutTrainerHooks, ...hooks};
+}
+let eventTrainerHooks = { openPremium: () => {} };
+export function setTrainerEventHooks(hooks = {}){
+  eventTrainerHooks = {...eventTrainerHooks, ...hooks};
+}
 import { FILE_HINT, PUBLIC_APP_URL, apiFetch, apiPost, applyMedia, clProgs, clientIdx, clientSum,
   clients, daysSince, duplicateProgram, exportProgram, exportProgramFile, humanDay, lastReport,
   lastSeen, linkFailNote, loadTrainer, normHandle, programLink, programMedia, programToText,
   renderToday, saveClients, setClientIdxShared, setCoachPhotoDraftShared, trainer,
   trainerAccountReady, trainerOn
 } from './40-programs-ai.js';
-import { enableDrag, exRestAfter, fmtKg, getExWeight, hasWeight, openBuilder, parseProgramText,
-  parseValue, progShort, progressedRepsRange, sortWarmFirst, valueText
-} from './60-builder.js';
-import { esc } from './70-workout.js';
-import { openPremium } from './90-events.js';
 
 /* ---- экран аккаунта: карточка «Тренер» ---- */
 export function renderTrainerCard(){
@@ -35,7 +56,7 @@ export function renderTrainerCard(){
   if(document.activeElement !== $('coachName'))   $('coachName').value   = (trainer && trainer.name) || '';
   const ph = trainer && trainer.photo;
   setCoachPhotoDraftShared(ph || '');
-  $('coachPhotoPrev').innerHTML = ph ? `<img src="${esc(ph)}" alt="">` : icon('camera');
+  $('coachPhotoPrev').innerHTML = ph ? `<img src="${workoutTrainerHooks.esc(ph)}" alt="">` : icon('camera');
   if(document.activeElement !== $('coachLinks')){
     $('coachLinks').value = ((trainer && trainer.links) || '').replace(/^https?:\/\//i, '');
     $('coachLinksErr').textContent = '';
@@ -123,7 +144,7 @@ export function renderClients(){
       if(sum.opens > 0) state = t('clients.openedNoSessions');
       else state = d === 0 ? t('clients.sentToday') : t('clients.waiting',{count:d,days:clientDayWord(d)});
     } else state = t('clients.notSent');
-    const av = esc(((c.name || '?').trim()[0] || '?').toUpperCase());
+    const av = workoutTrainerHooks.esc(((c.name || '?').trim()[0] || '?').toUpperCase());
     row.innerHTML = `<div class="ua">${av}</div><div class="ub"><b></b><small></small></div>`
       + `<span class="cl-state ${tone}"></span>`;
     row.querySelector('b').textContent = c.name || t('profile.noName');
@@ -170,7 +191,7 @@ function fillClient(){
   if(!list.length){
     const empty = document.createElement('div');
     empty.className = 'card-block';
-    empty.innerHTML = '<p class="field-hint">' + esc(t('clients.emptyCard')) + '</p>';
+    empty.innerHTML = '<p class="field-hint">' + workoutTrainerHooks.esc(t('clients.emptyCard')) + '</p>';
     box.appendChild(empty);
     return;
   }
@@ -220,7 +241,7 @@ function progCard(c, pr){
   const again = document.createElement('button');
   again.type = 'button';
   again.className = 'choice ico-row';
-  again.innerHTML = icon('share') + '<b>' + esc(t('clients.resend')) + '</b>';
+  again.innerHTML = icon('share') + '<b>' + workoutTrainerHooks.esc(t('clients.resend')) + '</b>';
   again.dataset.act = 'resendClientProgram';
   again.dataset.clientId = c.id;
   again.dataset.programIdx = String(clProgs(c).indexOf(pr));
@@ -509,7 +530,7 @@ export function pickClientFor(p){
   const add = document.createElement('button');
   add.type = 'button';
   add.className = 'choice add-row';
-  add.innerHTML = icon('plus') + '<b>' + esc(t('clients.new')) + '</b>';
+  add.innerHTML = icon('plus') + '<b>' + workoutTrainerHooks.esc(t('clients.new')) + '</b>';
   add.dataset.act = 'addClientAndSendProgram';
   add.dataset.programId = p.id;
   box.appendChild(add);
@@ -642,14 +663,14 @@ function buildReport(p){
   plans.forEach((pl, pi) => (pl.exercises || []).forEach(e => {
     if(ex.length >= 40) return;
     const was = String(e.value == null ? '' : e.value);
-    const now = e.warmup ? was : progressedRepsRange(p.id, e, p);
-    const kgWas = hasWeight(e) ? (+e.weight || 0) : 0;
-    const kgNow = hasWeight(e) ? getExWeight(p.id, e, p) : 0;
-    const grew = parseValue(now).min > parseValue(was).min || kgNow > kgWas;
+    const now = e.warmup ? was : builderTrainerHooks.progressedRepsRange(p.id, e, p);
+    const kgWas = builderTrainerHooks.hasWeight(e) ? (+e.weight || 0) : 0;
+    const kgNow = builderTrainerHooks.hasWeight(e) ? builderTrainerHooks.getExWeight(p.id, e, p) : 0;
+    const grew = builderTrainerHooks.parseValue(now).min > builderTrainerHooks.parseValue(was).min || kgNow > kgWas;
     if(!grew) return;
     ex.push({p: pi, w: e.warmup ? 1 : 0, n: e.name || t('common.exerciseFallback'),
-             a: was + (kgWas > 0 ? ` × ${fmtKg(kgWas)} ${t('progress.kg')}` : ''),
-             b: now + (kgNow > 0 ? ` × ${fmtKg(kgNow)} ${t('progress.kg')}` : '')});
+             a: was + (kgWas > 0 ? ` × ${builderTrainerHooks.fmtKg(kgWas)} ${t('progress.kg')}` : ''),
+             b: now + (kgNow > 0 ? ` × ${builderTrainerHooks.fmtKg(kgNow)} ${t('progress.kg')}` : '')});
   }));
 
   // 4. Правки: что подопечный убрал, добавил и поменял руками.
@@ -837,7 +858,7 @@ function storeCover(it, square){
   // Своя картинка вместо рисованной. Рисованная остаётся у всех, кто её не задал:
   // пустое место на витрине хуже, чем обложка по цели.
   if(it.cover){
-    return `<div class="st-photo"${square ? ' data-square="1"' : ''}><img src="${esc(it.cover)}" alt=""></div>`;
+    return `<div class="st-photo"${square ? ' data-square="1"' : ''}><img src="${workoutTrainerHooks.esc(it.cover)}" alt=""></div>`;
   }
   const c = storeCat(it.cat);
   const g = c.grad;
@@ -963,8 +984,8 @@ function storeMatches(it){
 function storeLabels(it, own){
   if(!it.pro && !own) return '';
   return `<div class="st-labels">` +
-    (it.pro ? `<span class="st-tag pro">${icon('crown')}${esc(t('premium.title'))}</span>` : '') +
-    (own ? `<span class="st-own">${icon('check')}${esc(t('store.alreadyOwned'))}</span>` : '') +
+    (it.pro ? `<span class="st-tag pro">${icon('crown')}${workoutTrainerHooks.esc(t('premium.title'))}</span>` : '') +
+    (own ? `<span class="st-own">${icon('check')}${workoutTrainerHooks.esc(t('store.alreadyOwned'))}</span>` : '') +
     `</div>`;
 }
 
@@ -989,8 +1010,8 @@ export function renderStore(){
   if(!list.length){
     box.innerHTML = '<div class="empty-state">' +
       `<span class="es-ico">${icon('sparkle')}</span>` +
-      `<b>${esc(t('store.emptyTitle'))}</b>` +
-      `<p>${esc(t('store.emptyText'))}</p>` +
+      `<b>${workoutTrainerHooks.esc(t('store.emptyTitle'))}</b>` +
+      `<p>${workoutTrainerHooks.esc(t('store.emptyText'))}</p>` +
       '</div>';
     return;
   }
@@ -1002,9 +1023,9 @@ export function renderStore(){
     return `<article class="store-row" data-open="${it.id}">
       <div class="sr-cover">${storeCover(it, true)}</div>
       <div class="sr-info">
-        <h3>${esc(it.name || t('store.untitled'))}</h3>
-        <div class="sr-goal">${esc(canonicalLabel(storeCat(it.cat).name))}</div>
-        <div class="sr-meta"><span>${it.min} ${esc(t('store.minuteShort'))}</span><span>${esc(canonicalLabel(it.level))}</span>${it.by ? `<span>${esc(it.by)}</span>` : ''}</div>
+        <h3>${workoutTrainerHooks.esc(it.name || t('store.untitled'))}</h3>
+        <div class="sr-goal">${workoutTrainerHooks.esc(canonicalLabel(storeCat(it.cat).name))}</div>
+        <div class="sr-meta"><span>${it.min} ${workoutTrainerHooks.esc(t('store.minuteShort'))}</span><span>${workoutTrainerHooks.esc(canonicalLabel(it.level))}</span>${it.by ? `<span>${workoutTrainerHooks.esc(it.by)}</span>` : ''}</div>
         ${storeLabels(it, own)}
       </div>
     </article>`;
@@ -1018,10 +1039,10 @@ export let siItem = null;
 // рабочий вес чужой программы — здесь нужен состав ровно такой, как в тексте.
 function siBits(ex){
   const b = [];
-  b.push(ex.type === 'time' ? `${parseValue(ex.value).min} ${t('store.secShort')}` : `${valueText(ex.value)} ${t('store.repShort')}`);
+  b.push(ex.type === 'time' ? `${builderTrainerHooks.parseValue(ex.value).min} ${t('store.secShort')}` : `${builderTrainerHooks.valueText(ex.value)} ${t('store.repShort')}`);
   const sets = Math.max(1, parseInt(ex.sets) || 1);
   if(sets > 1) b.push(storeCountText(sets, 'set'));
-  if(+ex.weight > 0) b.push(`${fmtKg(ex.weight)} ${t('progress.kg')}`);
+  if(+ex.weight > 0) b.push(`${builderTrainerHooks.fmtKg(ex.weight)} ${t('progress.kg')}`);
   if(ex.perSide) b.push(t('store.perSide'));
   return b;
 }
@@ -1031,7 +1052,7 @@ export async function openStoreItem(id){
   if(it.pro && isPremium() && !it.text){
     try{ await ensureCatalogBody(it); }
     catch(e){
-      if(e && e.code === 'premium_required'){ openPremium(); return; }
+      if(e && e.code === 'premium_required'){ eventTrainerHooks.openPremium(); return; }
     }
   }
   siItem = it;
@@ -1043,7 +1064,7 @@ export async function openStoreItem(id){
   $('siNick').textContent = it.by || '';
   setShown('siBy', !!it.by);
 
-  const {program} = parseProgramText(it.text);
+  const {program} = builderTrainerHooks.parseProgramText(it.text);
   const plans = (program && program.plans) || [];
   const exs = plans.reduce((a, pl) => a.concat(pl.exercises || []), []);
   const rounds = (plans[0] && +plans[0].rounds) || 1;
@@ -1116,7 +1137,7 @@ export async function openStoreItem(id){
     // Номера СВОИ у каждого варианта: сквозные говорили бы, что за одну
     // тренировку делают двенадцать упражнений.
     const sourceList = pl.exercises || [];
-    const list = sortWarmFirst(sourceList.slice());
+    const list = builderTrainerHooks.sortWarmFirst(sourceList.slice());
     list.forEach((ex, i) => {
       const row = document.createElement('div');
       row.className = 'ex-row static' + (ex.warmup ? ' warm' : '');
@@ -1124,14 +1145,14 @@ export async function openStoreItem(id){
       row.innerHTML =
         `<div class="ex-thumb">${ex.warmup ? icon('flame') : (before + 1)}</div>` +
         `<div class="ex-info"><b></b><div class="ex-meta">` +
-        (ex.warmup ? `<span class="wm">${esc(t('store.warmup'))}</span>` : '') +
+        (ex.warmup ? `<span class="wm">${workoutTrainerHooks.esc(t('store.warmup'))}</span>` : '') +
         siBits(ex).map(t => `<span>${t}</span>`).join('') +
-        (progShort(ex) ? `<span class="grow">${progShort(ex)}</span>` : '') +
+        (builderTrainerHooks.progShort(ex) ? `<span class="grow">${builderTrainerHooks.progShort(ex)}</span>` : '') +
         `</div></div>`;
       row.querySelector('b').textContent = (ex.name || '').trim() || t('store.untitled');
       // v2 media привязана к source plan/exercise position и stable id. Текст
       // каталога после перевода получает новые временные id, поэтому для страницы
-      // храним именно исходную позицию ДО sortWarmFirst().
+      // храним именно исходную позицию ДО builderTrainerHooks.sortWarmFirst().
       row.dataset.ex = (ex.name || '').trim();       // legacy catalog fallback
       row.dataset.plan = String(pi);
       row.dataset.index = String(Math.max(0, sourceList.indexOf(ex)));
@@ -1189,7 +1210,7 @@ async function siPaintMedia(it){
     }
     if(!pic) return;
     const thumb = row.querySelector('.ex-thumb');
-    if(thumb) thumb.innerHTML = `<img src="${esc(pic)}" alt="">`;
+    if(thumb) thumb.innerHTML = `<img src="${workoutTrainerHooks.esc(pic)}" alt="">`;
   });
 }
 
@@ -1206,13 +1227,13 @@ async function addStoreItem(id){
   }
   // Локальная проверка — только UX. Сам текст Premium-программы всё равно
   // выдаёт только сервер после проверки аккаунта и подписки.
-  if(it.pro && !isPremium()){ openPremium(); return; }
+  if(it.pro && !isPremium()){ eventTrainerHooks.openPremium(); return; }
   if(it.pro && !it.text){
     try{ await ensureCatalogBody(it); }
-    catch(e){ openPremium(); return; }
+    catch(e){ eventTrainerHooks.openPremium(); return; }
   }
 
-  const {program, errors} = parseProgramText(it.text);
+  const {program, errors} = builderTrainerHooks.parseProgramText(it.text);
   if(errors.length || !program.plans.length){
     appAlert(t('store.addFailed'));
     return;
@@ -1303,7 +1324,7 @@ function skeletonTrainer(nick){
 
 function fillTrainerPage(nick, trainerData){
   trainerData = trainerData || {};
-  $('tpPhoto').innerHTML = trainerData.photo ? `<img src="${esc(trainerData.photo)}" alt="">` : icon('user');
+  $('tpPhoto').innerHTML = trainerData.photo ? `<img src="${workoutTrainerHooks.esc(trainerData.photo)}" alt="">` : icon('user');
   $('tpName').textContent = trainerData.name || nick.replace(/^@/, '');
   $('tpNick').textContent = nick;
   const about = trainerData.about || '';
@@ -1367,9 +1388,9 @@ function estimateMinutes(p){
   const pl = plans[0] || {exercises: []};
   (pl.exercises || []).forEach(ex => {
     const sets = Math.max(1, +ex.sets || 1);
-    const one = ex.type === 'time' ? (+parseValue(ex.value).max || 30)
-                                   : (parseValue(ex.value).max || 12) * 3;
-    sec += sets * one + (sets - 1) * (+ex.rest || 30) + exRestAfter(ex);
+    const one = ex.type === 'time' ? (+builderTrainerHooks.parseValue(ex.value).max || 30)
+                                   : (builderTrainerHooks.parseValue(ex.value).max || 12) * 3;
+    sec += sets * one + (sets - 1) * (+ex.rest || 30) + builderTrainerHooks.exRestAfter(ex);
   });
   const rounds = Math.max(1, +pl.rounds || 1);
   sec = sec * rounds + (rounds - 1) * (+pl.roundRest || 60);
@@ -1638,8 +1659,8 @@ export function renderMine(){
     box.insertAdjacentHTML('beforeend',
       '<div class="empty-state">' +
       `<span class="es-ico">${icon('sparkle')}</span>` +
-      '<b>' + esc(t('programs.emptyTitle')) + '</b>' +
-      '<p>' + esc(t('programs.emptyText')) + '</p>' +
+      '<b>' + workoutTrainerHooks.esc(t('programs.emptyTitle')) + '</b>' +
+      '<p>' + workoutTrainerHooks.esc(t('programs.emptyText')) + '</p>' +
       '</div>');
     renderToday();
     return;
@@ -1660,7 +1681,7 @@ export function renderMine(){
     const schedule = [compactProgramDays(daysU), p.time].filter(Boolean).join(' · ');
     const rotates = p.rotate && plans.length > 1;
     const done = (p.stats && p.stats.completions) || 0;
-    const cover = p.cover ? `<img src="${esc(p.cover)}" alt="">` : DUMBBELL_ICON;
+    const cover = p.cover ? `<img src="${workoutTrainerHooks.esc(p.cover)}" alt="">` : DUMBBELL_ICON;
     const setsOne = (plans[0].exercises || []).reduce((n, e) => n + (e.warmup ? 0 : (parseInt(e.sets) || 1)), 0);
     const volOne = (plans[0].rounds > 1 || setsOne <= plans[0].exercises.length)
       ? storeCountText(plans[0].rounds,'round')
@@ -1674,12 +1695,12 @@ export function renderMine(){
       `<div class="mc-cover">${cover}</div>` +
       `<div class="mc-body"><h3></h3>` +
       `<p>${line1}</p>` +
-      (done ? `<p>${esc(t('programs.completed',{count:done}))}</p>` : '') +
+      (done ? `<p>${workoutTrainerHooks.esc(t('programs.completed',{count:done}))}</p>` : '') +
       ((schedule || rotates || !on)
         ? `<p class="mc-chips">` +
-          (!on ? `<span class="sched off">${icon('power')}${esc(t('programs.offShort'))}</span>` : '') +
+          (!on ? `<span class="sched off">${icon('power')}${workoutTrainerHooks.esc(t('programs.offShort'))}</span>` : '') +
           (schedule ? `<span class="sched">${icon('calendar')}<span></span></span>` : '') +
-          (rotates ? `<span class="sched">${icon('reset')}${esc(t('programs.sequence'))}</span>` : '') +
+          (rotates ? `<span class="sched">${icon('reset')}${workoutTrainerHooks.esc(t('programs.sequence'))}</span>` : '') +
           `</p>`
         : '') + `</div>`;
     card.querySelector('h3').textContent = p.name;
@@ -1749,7 +1770,7 @@ export function renderMine(){
     handle.title = t('programs.drag');
     wrap.append(card, handle, more, menu);
     wrap.dataset.pid = p.id;
-    enableDrag(wrap, handle);
+    builderTrainerHooks.enableDrag(wrap, handle);
     box.appendChild(wrap);
   });
   renderToday();
@@ -1846,7 +1867,7 @@ export function initTrainerCatalog(){
     const p = mineProgram(btn); if(p) openStart(p);
   });
   registerAction('editMineProgram', btn => {
-    closeAllMenus(); const p = mineProgram(btn); if(p) openBuilder(p.id);
+    closeAllMenus(); const p = mineProgram(btn); if(p) builderTrainerHooks.openBuilder(p.id);
   });
   registerAction('toggleMineProgramActive', async btn => {
     closeAllMenus();
@@ -1879,7 +1900,7 @@ export function initTrainerCatalog(){
     closeAllMenus();
     const p = mineProgram(btn); if(!p) return;
     const copy = await duplicateProgram(p);
-    openBuilder(copy.id);
+    builderTrainerHooks.openBuilder(copy.id);
   });
   registerAction('publishMineProgram', btn => {
     closeAllMenus(); const p = mineProgram(btn); if(p) openPublish(p);
@@ -1890,7 +1911,7 @@ export function initTrainerCatalog(){
     const menu = wrap && wrap.querySelector('.ctx-menu');
     if(menu) toggleMenu(menu);
   });
-  registerAction('openStorePremium', () => openPremium());
+  registerAction('openStorePremium', () => eventTrainerHooks.openPremium());
   registerAction('openStoreTrainer', () => { if(siItem) openTrainer(siItem.by); });
   registerAction('buyStoreItem', () => { if(siItem) addStoreItem(siItem.id); });
   registerAction('backFromStoreItem', () => goBackTo('scrStore'));
