@@ -254,7 +254,7 @@
         <div class="chip chip-off hidden" id="startOffChip"><span data-icon="power"></span> <span data-i18n="programs.disabled">Отключена</span></div>
         <!-- от кого программа. Подопечный тренера должен видеть это на самом видном месте:
              он пришёл заниматься к конкретному человеку, а не «в приложение». -->
-        <button type="button" class="chip chip-by hidden" id="startByChip"><span data-icon="user"></span> <b id="startByName"></b></button>
+        <button type="button" class="chip chip-by hidden" id="startByChip" data-act="openWorkoutTrainer"><span data-icon="user"></span> <b id="startByName"></b></button>
         <div class="chip"><b id="startExCount"></b> <span id="startExLabel" data-i18n="builder.exercisesSuffix">упражнений</span></div>
         <div class="chip"><b id="startRounds">4</b> <span id="startVolLabel" data-i18n="builder.roundsSuffix">кругов</span></div>
       </div>
@@ -1266,7 +1266,7 @@
             <span class="ts-label" data-i18n="progress.bodyTitle">Вес и объёмы</span>
             <div class="mc-now" id="weightNowRow"><b id="weightNow">—</b><span class="w-delta" id="weightDelta"></span></div>
           </div>
-          <button class="add-btn" id="btnAddWeight" title="Записать" data-i18n-title="progress.record"></button>
+          <button class="add-btn" id="btnAddWeight" data-act="openWeightEntry" title="Записать" data-i18n-title="progress.record"></button>
         </div>
         <div class="mc-meta hidden" id="weightMeta"></div>
         <div class="mc-empty empty-state" id="weightEmpty">
@@ -1442,7 +1442,7 @@
       <div class="cb-head"><p class="cb-title" data-i18n="common.trainer">Тренер</p></div>
       <div class="pref-row">
         <span><span data-i18n="settings.trainerMode">Я тренирую других</span><small data-i18n="settings.trainerModeSub">Отправлять свои программы подопечным по ссылке и видеть, кто занимается</small></span>
-        <button class="switch" id="tglTrainer"></button>
+        <button class="switch" id="tglTrainer" data-act="toggleTrainerMode"></button>
       </div>
       <button type="button" class="way-row hidden" id="coachNoAcc" data-act="openCoachAccount">
         <span class="wr-ico" data-icon="user"></span>
@@ -1490,7 +1490,7 @@
                  autocorrect="off" spellcheck="false" placeholder="t.me/lena.doma">
           <p class="field-err" id="coachLinksErr"></p>
         </div>
-        <button type="button" class="btn-primary" id="btnSaveCoach" data-i18n="common.save">Сохранить</button>
+        <button type="button" class="btn-primary" id="btnSaveCoach" data-act="saveCoachProfile" data-i18n="common.save">Сохранить</button>
         <!-- Предпросмотр открывает ровно ту же страницу, которую видит подопечный. -->
         <button type="button" class="btn-secondary btn-secondary-text" id="btnMyPage" data-act="openMyTrainerPage" data-i18n="settings.preview">Предпросмотр моего профиля</button>
         <button type="button" class="way-row coach-catalog-row hidden" id="btnMyCatalog" data-act="openMyCatalog">
@@ -1521,7 +1521,7 @@
       </button>
       <!-- Продление — про тариф, а не про аккаунт, и рядом с ним подпись не нужна:
            над строкой уже написано, какой тариф и до какого числа. -->
-      <div class="pref-row hidden" id="rowRenew"><span data-i18n="settings.autoRenew">Продлевать автоматически</span><button class="switch" id="tglRenew"></button></div>
+      <div class="pref-row hidden" id="rowRenew"><span data-i18n="settings.autoRenew">Продлевать автоматически</span><button class="switch" id="tglRenew" data-act="toggleRenewal"></button></div>
     </div>
 
     <div class="card-block">
@@ -1537,7 +1537,7 @@
       <!-- аккаунт есть -->
       <div class="pref-row hidden" id="rowEmail"><span><span data-i18n="common.email">Почта</span><small id="accEmail"></small><small id="accSync"></small></span></div>
       <div class="pref-row hidden" id="rowHandle"><span><span data-i18n="settings.accountNick">Ник аккаунта</span><small id="accHandle"></small></span></div>
-      <div class="pref-row hidden" id="rowBio"><span><span data-i18n="settings.biometry">Вход по биометрии</span><small data-i18n="settings.biometrySub">Отпечаток или лицо вместо ввода почты при входе</small></span><button class="switch" id="tglBio"></button></div>
+      <div class="pref-row hidden" id="rowBio"><span><span data-i18n="settings.biometry">Вход по биометрии</span><small data-i18n="settings.biometrySub">Отпечаток или лицо вместо ввода почты при входе</small></span><button class="switch" id="tglBio" data-act="toggleBiometry"></button></div>
       <button type="button" class="link-btn hidden" id="btnSignOut" data-act="signOut" data-i18n="settings.signOut">Выйти из аккаунта</button>
     </div>
 
@@ -1725,7 +1725,7 @@
     <div class="card-block">
       <div class="cb-head"><p class="cb-title" data-i18n="clients.list">Список</p></div>
       <div class="list-rows" id="clsList"></div>
-      <button class="choice add-row" id="btnAddClient"><span data-icon="plus"></span><b data-i18n="clients.add">Добавить подопечного</b></button>
+      <button class="choice add-row" id="btnAddClient" data-act="addClient"><span data-icon="plus"></span><b data-i18n="clients.add">Добавить подопечного</b></button>
       <p class="field-hint" id="clsHint"></p>
     </div>
 
@@ -1820,11 +1820,11 @@
          отправка молча затирала первую вместе со всеми её занятиями. -->
     <div id="clProgs"></div>
 
-    <button type="button" class="choice ico-row" id="btnClSend"><span data-icon="plus"></span><b id="btnClSendTxt" data-i18n="clients.send">Отправить программу</b></button>
+    <button type="button" class="choice ico-row" id="btnClSend" data-act="sendClientProgram"><span data-icon="plus"></span><b id="btnClSendTxt" data-i18n="clients.send">Отправить программу</b></button>
     <p class="field-hint" id="clSendHint" data-i18n="clients.sendHintFirst">Ссылку откроет любой, у кого она есть: программа уходит целиком, внутри ссылки. Это удобно для подопечного и не защищает от пересылки.</p>
 
     <div class="card-block danger-zone">
-      <button type="button" class="link-btn" id="btnDelClient" data-i18n="clients.delete">Удалить подопечного</button>
+      <button type="button" class="link-btn" id="btnDelClient" data-act="deleteClient" data-i18n="clients.delete">Удалить подопечного</button>
     </div>
   </section>
 
@@ -1921,7 +1921,7 @@
 
         <div class="pm-foot">
           <div class="pm-plans" id="pmPlans"></div>
-          <button class="btn-primary" id="pmBuy" style="padding:15px;font-size:16px" data-i18n="premium.buy">Оформить</button>
+          <button class="btn-primary" id="pmBuy" data-act="startPremiumPurchase" style="padding:15px;font-size:16px" data-i18n="premium.buy">Оформить</button>
           <p class="pm-fine" id="pmFine"></p>
           <button class="modal-btn" data-act="closeModal" data-i18n="common.close">Закрыть</button>
         </div>
@@ -1953,7 +1953,7 @@
         <div class="pm-crown" data-icon="crown"></div>
         <h3 class="pm-title" data-i18n="premium.active">Премиум активен</h3>
         <p class="pm-lead" id="pokLead"></p>
-        <button class="btn-primary" id="pokBio" style="padding:15px;font-size:16px" data-i18n="bio.enable">Включить вход по биометрии</button>
+        <button class="btn-primary" id="pokBio" data-act="enableBiometryAfterPurchase" style="padding:15px;font-size:16px" data-i18n="bio.enable">Включить вход по биометрии</button>
         <p class="pm-fine" data-i18n="bio.enableHint">Отпечаток или лицо вместо ввода почты при входе. Можно включить позже в «Аккаунте».</p>
         <button class="modal-btn" data-act="closeModal" data-i18n="finish.done">Готово</button>
       </div>
@@ -2148,7 +2148,7 @@
           <div class="wf"><label data-i18n="weight.hipsCm">Бёдра, см</label><input type="number" id="hipsInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
           <div class="wf"><label data-i18n="weight.chestCm">Грудь, см</label><input type="number" id="chestInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
         </div>
-        <button class="btn-primary" id="btnSaveWeight" style="padding:14px;margin-top:6px" data-i18n="common.save">Сохранить</button>
+        <button class="btn-primary" id="btnSaveWeight" data-act="saveWeightEntry" style="padding:14px;margin-top:6px" data-i18n="common.save">Сохранить</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
