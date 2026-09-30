@@ -71,13 +71,11 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       && r.lastNotificationRun.programs.join(',') === 'pb',
     JSON.stringify(r.lastNotificationRun));
 
-  const aiGender = await page.evaluate(async () => {
-    const ai = await import('/src/app/40-programs-ai.js');
-    const builder = await import('/src/app/60-builder.js');
+  const aiGender = await page.evaluate(() => {
     const u = curUser();
     const oldGender = u.gender;
-    const oldDraft = builder.draft;
-    builder.setDraftShared({
+    const oldDraft = draft;
+    setDraftShared({
       name:'Gender test',
       plans:[{days:[],rounds:1,roundRest:0,exercises:[
         {id:'gender-ex',name:'Squat',desc:'',muscles:[],type:'reps',value:'10',sets:1,weight:0}
@@ -85,19 +83,19 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     });
 
     u.gender = '';
-    const blankUser = ai.userForAI('en');
-    const blankImages = ai.imagesPromptText();
+    const blankUser = userForAI('en');
+    const blankImages = imagesPromptText();
 
     u.gender = 'm';
-    const maleUser = ai.userForAI('en');
-    const maleImages = ai.imagesPromptText();
+    const maleUser = userForAI('en');
+    const maleImages = imagesPromptText();
 
     u.gender = 'f';
-    const femaleUser = ai.userForAI('en');
-    const femaleImages = ai.imagesPromptText();
+    const femaleUser = userForAI('en');
+    const femaleImages = imagesPromptText();
 
     u.gender = oldGender;
-    builder.setDraftShared(oldDraft);
+    setDraftShared(oldDraft);
 
     return {blankUser,blankImages,maleUser,maleImages,femaleUser,femaleImages};
   });
