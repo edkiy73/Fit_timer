@@ -114,6 +114,8 @@ npm install --no-save playwright-core@1.55.0 && FIT_CHROME=/opt/pw-browsers/chro
 
 **Следующий шаг — редизайн интерфейса:** `docs/unmute-design-plan.md` (палитра «Signal», нижняя навигация, «Сегодня» bento, карта курса «Маршрут», этапы D0–D6). Редизайн D0–D6 выполнен (2026-09-30): нижняя панель, «Сегодня», «Маршрут», урок, «Повтор» + «Мои слова», «Я», онбординг и доступ.
 
+**Следующий шаг — подготовка к релизу:** `docs/unmute-release-audit.md` (аудит экранов и перекрёстных сценариев, P0/P1/P2, решения владельца, порядок работ). Несколько курсов и тестовый курс «A1: первые шаги» (`course.a1-starter`, публикация: `ADMIN_KEY=… node scripts/seed-a1-course.mjs --publish`) — PR #298.
+
 Справка — как запускалось (шаги выполнены, кроме почты):
 1. **Контент** (владелец или агент с доступом к `unmute99.vercel.app`): `#/admin` → раздел «Релизы и словарь» → «Импортировать legacy» (при существующем черновике — с перезаписью) → при желании «Проверить IPA» / «Добавить IPA в draft» → «Опубликовать release». Или из терминала: `ADMIN_KEY=… node scripts/import-legacy-content.mjs --publish`. Проверка — workflow «UnMute — production readiness» зелёный.
 2. **Почта** (только владелец): подтвердить свой домен в Resend и задать `MAIL_FROM` (`apps/fittimer/docs/setup-vercel.md`), redeploy. Пока домена нет, Resend доставляет письма только владельцу аккаунта Resend, остальным `/api/auth` отвечает `502 mail_failed` (так же у FitTimer: `MAIL_FROM` не задан).
