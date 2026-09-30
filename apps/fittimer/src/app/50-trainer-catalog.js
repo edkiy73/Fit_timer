@@ -9,7 +9,7 @@ import { DAYS, accountAuth, calcStreakInfo, closeAllMenus, currentUser, customPr
   setDataSyncTrainerCatalogHooks, stats, toggleMenu, trackProductEvent, users
 } from './10-data-sync.js';
 import { account, isPremium, refreshServerSubscription, setAccountTrainerCatalogHooks } from './20-account.js';
-import { LIM, clampText } from './30-progress-media.js';
+import { LIM, clampText, setProgressTrainerHooks } from './30-progress-media.js';
 import { FILE_HINT, PUBLIC_APP_URL, apiFetch, apiPost, applyMedia, clProgs, clientIdx, clientSum,
   clients, daysSince, duplicateProgram, exportProgram, exportProgramFile, humanDay, lastReport,
   lastSeen, linkFailNote, loadTrainer, normHandle, programLink, programMedia, programToText,
@@ -1758,6 +1758,9 @@ export function renderMine(){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initTrainerCatalog(){
+  setProgressTrainerHooks({
+    renderMine
+  });
   setAccountTrainerCatalogHooks({
     renderTrainerCard
   });
