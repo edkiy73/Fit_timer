@@ -161,6 +161,44 @@ registerAction('addUser', () => openUserEdit());
 registerAction('saveUser', () => saveUser());
 registerAction('deleteUser', () => deleteUser());
 
+registerAction('switchStatsTab', btn => switchStatsTab(btn.dataset.tab));
+registerAction('switchMoreTab', btn => switchMoreTab(btn.dataset.more));
+registerAction('openStatsTab', btn => openStats(btn.dataset.tab));
+registerAction('goRootTab', btn => goTab(btn.dataset.scr));
+registerAction('setProfileTheme', btn => {
+  if(!uDraft) return;
+  uDraft.theme = btn.dataset.theme;
+  syncUserForm();
+  applyThemeFor(uDraft);
+});
+registerAction('setProfileLocale', async btn => {
+  const pref = normalizeLocalePreference(btn.dataset.locale);
+  if(uDraft) uDraft.locale = pref;
+  syncUserForm();
+  // Редактирование чужого профиля не должно внезапно переводить текущий интерфейс.
+  if(!uDraft || uDraft.id !== currentUser) return;
+  await setAppLocale(pref, {persist:false});
+  await syncAccountLocale(appLocale);
+  if((await kvGet('recognitionLangManual')) !== '1'){
+    setRecognitionLangShared(appLocale);
+    await kvSet('recognitionLang', recognitionLang);
+    if(hfMode === 'voice') stopListening();
+    await refreshVoicePackUI();
+  }
+  syncHandsFreeUI();
+  syncUserForm();
+});
+registerAction('setProfileGender', btn => {
+  if(!uDraft) return;
+  uDraft.gender = btn.dataset.gender;
+  syncUserForm();
+});
+registerAction('setWhoGender', btn => {
+  whoDraft.gender = btn.dataset.gender;
+  whoSyncForm();
+});
+
+
 
 
 
@@ -1349,25 +1387,6 @@ export function initEvents(){
       }
     }
   });
-  document.querySelectorAll('#ueLocaleSeg button').forEach(b => {
-    b.onclick = async ()=>{
-      const pref = normalizeLocalePreference(b.dataset.locale);
-      if(uDraft) uDraft.locale = pref;
-      syncUserForm();
-      // Редактирование чужого профиля не должно внезапно переводить текущий интерфейс.
-      if(!uDraft || uDraft.id !== currentUser) return;
-      await setAppLocale(pref, {persist:false});
-      await syncAccountLocale(appLocale);
-      if((await kvGet('recognitionLangManual')) !== '1'){
-        setRecognitionLangShared(appLocale);
-        await kvSet('recognitionLang', recognitionLang);
-        if(hfMode === 'voice') stopListening();
-        await refreshVoicePackUI();
-      }
-      syncHandsFreeUI();
-      syncUserForm();
-    };
-  });
   window.addEventListener('appLocaleChanged', async ()=>{
     syncTtsLocaleToApp(true);
     syncHandsFreeUI();
@@ -1754,20 +1773,8 @@ export function initEvents(){
   // ещё не завёл профиль, и вкладки внизу ему пока не принадлежат
   // у человека уже может быть аккаунт — с прошлого телефона или после переустановки
   // пара уточнений
-  $('whoF').onclick = ()=>{ whoDraft.gender = 'f'; whoSyncForm(); };
-  $('whoM').onclick = ()=>{ whoDraft.gender = 'm'; whoSyncForm(); };
   $('whoAge').oninput = ()=> whoSyncForm();
   $('whoModal').onclick = e => { if(e.target === $('whoModal')) whoFinish(false); };
-  document.querySelectorAll('#statsTabs .tab').forEach(b => b.onclick = ()=> switchStatsTab(b.dataset.tab));
-  document.querySelectorAll('#moreTabs .tab').forEach(b => b.onclick = ()=> switchMoreTab(b.dataset.more));
-  document.querySelectorAll('.qs-btn').forEach(b => b.onclick = ()=> openStats(b.dataset.tab));
-  document.querySelectorAll('.dock-btn').forEach(b => b.onclick = ()=> goTab(b.dataset.scr));
-  // тему показываем сразу: выбирать её вслепую, не видя результата, бессмысленно
-  document.querySelectorAll('#ueThemeSeg button').forEach(b => {
-    b.onclick = ()=>{ uDraft.theme = b.dataset.theme; syncUserForm(); applyThemeFor(uDraft); };
-  });
-  $('ueGenderF').onclick = ()=>{ uDraft.gender = 'f'; syncUserForm(); };
-  $('ueGenderM').onclick = ()=>{ uDraft.gender = 'm'; syncUserForm(); };
   // нет фото — сразу выбор файла; есть фото — меню «заменить / удалить»
   $('uePhotoBtn').onclick = e => {
     e.stopPropagation();
