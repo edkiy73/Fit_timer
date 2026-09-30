@@ -569,8 +569,16 @@ export function syncSoundCascade(p){
 // попапа реально снята из browser history. Иначе следующий переход успевает
 // построить новую навигацию поверх ещё не завершившегося history.back().
 let modalHistoryWaiters = [];
+let dialogClickCtl = null;
 export function appDialog(msg, opts = {}){
   return new Promise(res => {
+    // Каждый вызов диалога владеет одним набором временных listeners.
+    // Новый диалог отменяет старые listeners так же, как раньше перезапись .onclick,
+    // но без императивных DOM-handler свойств и риска оставить старый resolver.
+    if(dialogClickCtl) dialogClickCtl.abort();
+    dialogClickCtl = new AbortController();
+    const signal = dialogClickCtl.signal;
+
     // текст передают и готовой строкой, и функцией от t(): на экран не должен
     // попасть исходный код вроде «()=> t('ai.emptyAnswer')»
     $('dlgMsg').textContent = typeof msg === 'function' ? msg() : msg;
@@ -596,6 +604,7 @@ export function appDialog(msg, opts = {}){
     else $('dlgCancel').textContent = t('common.cancel');
     setShown('dlgCancel', opts.confirm);
     $('dlg').classList.add('open');
+
     const done = v => {
       // Если это последний открытый попап и сверху лежит его history-запись,
       // сначала даём MutationObserver снять её. Продолжение (например goTab())
@@ -603,16 +612,22 @@ export function appDialog(msg, opts = {}){
       const waitHistory = !!(history.state && history.state.m)
         && ![...document.querySelectorAll('.modal.open')].some(m => m !== $('dlg'));
       $('dlg').classList.remove('open');
-      $('dlgOk').onclick = $('dlgCancel').onclick = $('dlg').onclick = null;
+      if(dialogClickCtl){
+        dialogClickCtl.abort();
+        dialogClickCtl = null;
+      }
       $('dlgOk').disabled = false;
       setShown('dlgTypeBox', false);
       typed.oninput = null;
       if(waitHistory) modalHistoryWaiters.push(()=> res(v));
       else res(v);
     };
-    $('dlgOk').onclick = () => done(true);
-    $('dlgCancel').onclick = () => done(false);
-    $('dlg').onclick = e => { if(e.target === $('dlg')) done(opts.confirm ? false : true); };
+
+    $('dlgOk').addEventListener('click', () => done(true), {signal});
+    $('dlgCancel').addEventListener('click', () => done(false), {signal});
+    $('dlg').addEventListener('click', e => {
+      if(e.target === $('dlg')) done(opts.confirm ? false : true);
+    }, {signal});
   });
 }
 export const appAlert = (m, o) => appDialog(m, o);
