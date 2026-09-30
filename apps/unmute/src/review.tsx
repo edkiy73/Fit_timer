@@ -31,6 +31,7 @@ import { AnswerExplanationView } from './answer-explanation';
 import { useOtherCourseReviews, type OtherCourseReviews } from './other-course-review';
 import { MyWordsView } from './my-words';
 import { Icon } from './icons';
+import { reviewDueCounts } from './review-count';
 
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
 type CombinedReviewItem=
@@ -139,6 +140,23 @@ export function ReviewView({
 
   const item=queue[index] ?? null;
   const total=session?.total ?? 0;
+
+  // A running review is a focused run, like a lesson: the bottom bar hides (styles.css).
+  const running=started&&item!==null;
+  useEffect(()=>{
+    if(!running||typeof document==='undefined')return;
+    document.documentElement.dataset.focusRun='review';
+    return ()=>{delete document.documentElement.dataset.focusRun;};
+  },[running]);
+
+  // Items answered wrong come back at once; the done screen offers them instead of «all clear».
+  const restart=()=>{
+    setSession(null);
+    setQueue([]);
+    setIndex(0);
+    setCompleted(0);
+    setStarted(true);
+  };
   const mixedPatterns=state?studiedPatternActivities(state.set.activities,state.progress):[];
   const mixedAvailable=mixedPatterns.length>=3;
 
@@ -273,6 +291,7 @@ export function ReviewView({
   }
 
   if(!item){
+    const left=reviewDueCounts(state,wordRuntime,locale,todayDay,otherCourses.courses)?.actionableCount ?? 0;
     return (
       <section className="review-shell" aria-labelledby="review-title">
         <header className="screen-head">
@@ -282,11 +301,18 @@ export function ReviewView({
         <div className="learn-state">
           <strong>{t('review.doneCount',{count:completed})}</strong>
           <span>
-            {session.waiting>0
-              ? t('review.waiting',{count:session.waiting})
-              : t('review.doneText')}
+            {left>0
+              ? t('review.moreDue',{count:left})
+              : session.waiting>0
+                ? t('review.waiting',{count:session.waiting})
+                : t('review.doneText')}
           </span>
-          <button className="primary-button" type="button" onClick={onExit}>
+          {left>0&&(
+            <button className="primary-button" type="button" onClick={restart}>
+              {t('review.again',{count:left})}
+            </button>
+          )}
+          <button className={left>0?'secondary-button':'primary-button'} type="button" onClick={onExit}>
             {t('review.backToday')}
           </button>
         </div>

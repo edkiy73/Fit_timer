@@ -147,6 +147,22 @@ describe('course review screen',()=>{
   });
 
 
+  it('hides the bottom bar while reviewing and offers the still-due cards again at the end',async()=>{
+    const user=userEvent.setup();
+    renderReview();
+    await user.click(await screen.findByRole('button',{name:'Начать повтор'}));
+    expect(document.documentElement.dataset.focusRun).toBe('review');
+    await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am home');
+    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+    expect(await screen.findByRole('heading',{name:'Повтор завершён'})).toBeTruthy();
+    expect(document.documentElement.dataset.focusRun).toBeUndefined();
+    // This runtime never refreshes, so the card still counts as due: the screen says so.
+    expect(screen.getByText('Не получилось: 1. Лучше пройти их ещё раз сейчас, пока свежо.')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Пройти ещё раз: 1'}));
+    expect(await screen.findByRole('textbox',{name:'Твой ответ'})).toBeTruthy();
+  });
+
   it('reviews a due personal word with the legacy reveal/self-grade flow',async()=>{
     const user=userEvent.setup();
     const state=learnerState();
