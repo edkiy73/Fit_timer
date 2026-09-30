@@ -1849,13 +1849,16 @@ async function generateCatalogPic(kind,name,description,set,el){
 async function generateMedia(mode){
   const source=form.sourceLocale;
   const exercises=exerciseBlocks(source);
+  reconcileFormMedia(exercises);
   let jobs=[];
   if(mode==='retry'){
     jobs=failedMediaJobs.slice();
   }else{
     if(mode==='all'||!form.cover)jobs.push({kind:'cover',name:'',description:'',set:d=>{form.cover=d;}});
     exercises.forEach(ex=>{
-      if(mode==='all'||!form.media[ex.name])jobs.push({kind:'exercise',name:ex.name,description:ex.description,set:d=>{form.media[ex.name]=d;}});
+      if(mode==='all'||!mediaBlockData(form.media,ex)){
+        jobs.push({kind:'exercise',name:ex.name,description:ex.description,set:d=>setMediaBlock(ex,d)});
+      }
     });
   }
   if(!jobs.length){
@@ -1893,10 +1896,25 @@ function renderPics(){
   cover.appendChild(picBox('Обложка',form.cover,d=>{form.cover=d;markEditorDirty();renderPics();},'cover',''));
 
   const blocks=exerciseBlocks(form.sourceLocale),names=blocks.map(x=>x.name);
+  reconcileFormMedia(blocks);
   const box=$('fPics');box.innerHTML='';
   $('fPicsHint').textContent=names.length?'Для каждой картинки отдельно: «ИИ» генерирует, «Загрузить» ставит своё фото. Клик по превью ничего не запускает.':'Добавь упражнения в протокол — здесь появятся карточки фото.';
-  blocks.forEach(ex=>box.appendChild(picBox(ex.name,form.media[ex.name],d=>{if(d)form.media[ex.name]=d;else delete form.media[ex.name];markEditorDirty();renderPics();},'exercise',ex.description)));
-  Object.keys(form.media).forEach(k=>{if(!names.includes(k))delete form.media[k];});
+  blocks.forEach(ex=>box.appendChild(picBox(
+    ex.name,
+    mediaBlockData(form.media,ex),
+    d=>{setMediaBlock(ex,d);markEditorDirty();renderPics();},
+    'exercise',
+    ex.description
+  )));
+  // Legacy media остаётся читаемой до первой правки картинки. v2 чистится через
+  // reconcileFormMedia и не теряет stable id при открытии/сохранении редактора.
+  if(!mediaV2Items(form.media)){
+    const counts={};
+    blocks.forEach(ex=>{if(ex.name)counts[ex.name]=(counts[ex.name]||0)+1;});
+    Object.keys(form.media).forEach(k=>{
+      if(!names.includes(k)||counts[k]!==1)delete form.media[k];
+    });
+  }
   updateEditorModeration();
 }
 function picBox(label,data,set,kind,description){
@@ -1991,7 +2009,8 @@ function formLocaleReady(lang){
 }
 function editorReadiness(){
   const exercises=exerciseBlocks(form.sourceLocale);
-  const mediaCount=exercises.filter(ex=>!!form.media[ex.name]).length;
+  reconcileFormMedia(exercises);
+  const mediaCount=exercises.filter(ex=>!!mediaBlockData(form.media,ex)).length;
   return {
     ru:formLocaleReady('ru'),
     en:formLocaleReady('en'),
@@ -2286,7 +2305,7 @@ function fillForm(c){
   if(reviewActions)reviewActions.hidden=editingStatus!=='pending';
   if(reviewStatus)reviewStatus.textContent=editingStatus==='pending'?'На модерации':editingStatus==='draft'?'Черновик':'Опубликовано';
   if(reviewTitle)reviewTitle.textContent=editingStatus==='pending'?'Модерация перед публикацией':'Готовность к публикации';
-  form={cover:c.cover||null,media:Object.assign({},c.media||{}),sourceLocale:sourceLocaleOf(c),imageGender:'f'};
+  form={cover:c.cover||null,media:cloneCatalogMedia(c.media),sourceLocale:sourceLocaleOf(c),imageGender:'f'};
   editorLang=form.sourceLocale;
   $('fCat').value=c.cat||'tone';
   $('fLevel').value=c.level||'Новичок';
