@@ -221,7 +221,7 @@ export function CourseMapView({
           <h2 id="course-map-title">{t('courseMap.title')}</h2>
           {state.fromCache&&<span className="today-badge">{t('today.offline')}</span>}
         </div>
-        <CoursePicker currentId={state.set.id} />
+        <CoursePicker currentId={state.set.id} variant="card" />
       </header>
 
       {groups.length>1&&(

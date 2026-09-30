@@ -22,7 +22,9 @@ export function recordAnswer(
   at:string
 ):StatsProgressDocument{
   const key=deviceId+'|'+activityId;
-  const current=doc.buckets[key];
+  // A reset leaves a deleted bucket: counting starts again from zero.
+  const stored=doc.buckets[key];
+  const current=stored&&!stored.deleted?stored:undefined;
   const attempts=(current?.attempts||0)+1;
   const correctCount=(current?.correct||0)+(correct?1:0);
   const wrong=(current?.wrong||0)+(correct?0:1);

@@ -126,8 +126,8 @@ describe('Today learner shell',()=>{
     const onReview=vi.fn();
     renderToday(runtime({state:reviewState}),vi.fn(),onReview);
 
-    expect(screen.getByText('карточек ждут').closest('article')?.textContent).toContain('1');
-    await user.click(screen.getByRole('button',{name:'Начать повтор'}));
+    expect(screen.getByText('карточек ждут').closest('.tile-review')?.textContent).toContain('1');
+    await user.click(screen.getByRole('button',{name:/Начать повтор/}));
     expect(onReview).toHaveBeenCalledTimes(1);
   });
 
@@ -183,7 +183,7 @@ describe('Today learner shell',()=>{
       </I18nProvider>
     );
 
-    expect(screen.getByText('карточек ждут').closest('article')?.textContent).toContain('1');
+    expect(screen.getByText('карточек ждут').closest('.tile-review')?.textContent).toContain('1');
   });
 
   it('shows an offline badge for a cached course snapshot',()=>{

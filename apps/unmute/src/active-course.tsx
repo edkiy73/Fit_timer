@@ -97,8 +97,9 @@ export function CourseOptionList({sets, currentId, busy = false, onPick}: {
   );
 }
 
-/** «Курс: …» chip that opens the list of published courses. */
-export function CoursePicker({currentId}: {currentId: string}){
+/** The current course and «Сменить», opening the list of published courses.
+ *  `card` (Маршрут): a full-width card that is hard to miss; `chip`: the compact form. */
+export function CoursePicker({currentId, variant = 'chip'}: {currentId: string; variant?: 'chip' | 'card'}){
   const {t, locale} = useI18n();
   const queryClient = useQueryClient();
   const catalog = useCatalog();
@@ -122,11 +123,22 @@ export function CoursePicker({currentId}: {currentId: string}){
 
   return (
     <>
-      <button className="chip-button course-chip pressable" type="button" onClick={() => setOpen(true)} aria-haspopup="dialog">
-        <Icon name="book" size={18} />
-        <span className="course-chip-text">{current ? localizedText(current.title, locale) : t('courses.choose')}</span>
-        <Icon name="chevron" size={16} className="course-chip-chevron" />
-      </button>
+      {variant === 'card' ? (
+        <button className="course-card pressable" type="button" onClick={() => setOpen(true)} aria-haspopup="dialog">
+          <span className="course-card-icon" aria-hidden="true"><Icon name="book" size={22} /></span>
+          <span className="course-card-text">
+            <small>{t('courses.current')}</small>
+            <strong>{current ? localizedText(current.title, locale) : t('courses.choose')}</strong>
+          </span>
+          <span className="course-card-action">{t('courses.change')}</span>
+        </button>
+      ) : (
+        <button className="chip-button course-chip pressable" type="button" onClick={() => setOpen(true)} aria-haspopup="dialog">
+          <Icon name="book" size={18} />
+          <span className="course-chip-text">{current ? localizedText(current.title, locale) : t('courses.choose')}</span>
+          <Icon name="chevron" size={16} className="course-chip-chevron" />
+        </button>
+      )}
       <Sheet open={open} onClose={() => setOpen(false)} labelledBy="courses-title" closeLabel={t('courses.close')}>
         <div className="courses-sheet">
           <h3 id="courses-title">{t('courses.title')}</h3>

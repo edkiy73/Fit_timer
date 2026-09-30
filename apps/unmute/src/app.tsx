@@ -17,6 +17,7 @@ import { ProgressScreen } from './progress-screen';
 import { MyWordsScreen } from './my-words';
 import { ReferenceScreen } from './reference';
 import { LegalScreen } from './legal-page';
+import { SettingsScreen } from './settings-screen';
 import { OnboardingGate } from './onboarding';
 import { AccessScreen } from './access';
 import { NotificationDelivery, NotificationRouteListener } from './notification-delivery';
@@ -134,6 +135,7 @@ export const routes: RouteObject[] = [
         {path:'words', element:<MyWordsScreen />},
         {path:'reference', element:<ReferenceScreen />},
         {path:'legal/:page', element:<LegalScreen />},
+        {path:'settings', element:<SettingsScreen />},
         {path:'access', element:<AccessScreen />},
         {path:'account', element:<MeScreen />}
       ]

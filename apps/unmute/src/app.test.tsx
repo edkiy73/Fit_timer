@@ -8,6 +8,9 @@ import { routes } from './app';
 import { authClient } from './auth';
 import { dictionaries, LOCALE_KEY } from './i18n';
 import product from '../config/product.json';
+import { resetAllProgress } from './progress-reset';
+
+vi.mock('./progress-reset', () => ({resetAllProgress:vi.fn(async () => undefined)}));
 
 const t = dictionaries[product.i18n.default as keyof typeof dictionaries];
 
@@ -73,25 +76,42 @@ describe('UnMute: English for Expats starter', () => {
     signIn();
     const forget = vi.spyOn(authClient, 'forget').mockResolvedValue({ok:true});
     const user = userEvent.setup();
-    renderApp('/account');
+    renderApp('/settings');
     await user.click(await screen.findByRole('button', {name:t['account.delete']}));
     expect(screen.getByText(t['account.deleteConfirm'])).toBeTruthy();
     expect(forget).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', {name:t['account.deleteYes']}));
-    await waitFor(() => expect(screen.queryByText(/demo@example\.com/)).toBeNull());
-    expect(forget).toHaveBeenCalledWith('all');
+    await waitFor(() => expect(forget).toHaveBeenCalledWith('all'));
+  });
+
+  it('«Я» is short: progress and settings are their own screens', async () => {
+    renderApp('/account');
+    expect(await screen.findByRole('link', {name:new RegExp(t['me.progress'])})).toBeTruthy();
+    expect(screen.getByRole('link', {name:new RegExp(t['me.settings'])})).toBeTruthy();
+    expect(screen.queryByText(t['me.theme'])).toBeNull();
+  });
+
+  it('resets all progress only after an explicit confirmation', async () => {
+    const user = userEvent.setup();
+    const router = renderApp('/settings');
+    await user.click(await screen.findByRole('button', {name:t['reset.start']}));
+    expect(screen.getByText(t['reset.confirm'])).toBeTruthy();
+    expect(resetAllProgress).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', {name:t['reset.yes']}));
+    await waitFor(() => expect(resetAllProgress).toHaveBeenCalled());
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
   });
 
   it('opens the privacy and account deletion pages inside the app, so Back returns', async () => {
-    renderApp('/account');
+    renderApp('/settings');
     expect((await screen.findByRole('link', {name:t['account.privacy']})).getAttribute('href')).toMatch(/\/legal\/privacy$/);
     expect(screen.getByRole('link', {name:t['account.deletionInfo']}).getAttribute('href')).toMatch(/\/legal\/delete-account$/);
   });
 
   it('keeps dictionaries in sync and offers a language switch only for several locales', async () => {
     expect(missingKeys(dictionaries)).toEqual({});
-    renderApp('/account');
-    await screen.findByRole('textbox', {name:'Email'});
+    renderApp('/settings');
+    await screen.findByRole('heading', {name:t['me.settings']});
     expect(!!screen.queryByRole('combobox', {name:t['account.language']})).toBe(product.i18n.locales.length > 1);
   });
 });

@@ -218,7 +218,8 @@ export function TodayView({
 
         <Tile className="tile-streak" index={index++}>
           <div className="tile-kicker tone-streak"><Icon name="flame" size={18} />{t('today.streak')}</div>
-          <strong className={'tile-number'+(streak?'':' tile-number-soft')}>{streak?t('today.streakDays',{count:streak}):t('today.streakStart')}</strong>
+          <strong className="tile-number">{t('today.streakDays',{count:streak})}</strong>
+          {!streak&&<span className="tile-caption">{t('today.streakStart')}</span>}
           <div className="week" aria-label={t('today.week',{count:week.filter(Boolean).length})}>
             {week.map((active,day)=>(
               <span key={day} className={'week-day'+(active?' is-active':'')} aria-hidden="true">
@@ -229,25 +230,24 @@ export function TodayView({
           </div>
         </Tile>
 
-        {/* Always shown: with nothing due it explains when reviews appear, so the grid keeps its shape. */}
-        <Tile className="tile-review" index={index++}>
-          <div className="tile-kicker tone-listen"><Icon name="review" size={18} />{t('nav.review')}</div>
-          {hasReview&&review ? (
-            <>
-              <strong className="tile-number">{review.actionableCount}</strong>
-              <span className="tile-caption">{t('today.reviewCaption')}</span>
-              {review.waitingCount>0&&<span className="sr-only">{t('today.reviewWaiting',{count:review.waitingCount})}</span>}
-              <button className="secondary-button tile-action" type="button" onClick={onReview}>
-                {t('today.reviewStart')}
-              </button>
-            </>
-          ) : (
-            <>
-              <strong className="tile-number tile-number-soft">0</strong>
-              <span className="tile-caption">{t('today.reviewEmpty')}</span>
-            </>
-          )}
-        </Tile>
+        {/* Always shown and as short as «Серия»: the whole tile starts the review when
+            something is due, so there is no extra button stretching the row. */}
+        {hasReview&&review ? (
+          <button className="tile tile-review is-due pressable" style={{'--i':index++} as CSSProperties} type="button" onClick={onReview}
+            aria-label={t('today.reviewStart')+': '+review.actionableCount}>
+            <span className="tile-kicker tone-listen"><Icon name="review" size={18} />{t('nav.review')}</span>
+            <strong className="tile-number">{review.actionableCount}</strong>
+            <span className="tile-caption">{t('today.reviewCaption')}</span>
+            <span className="tile-link">{t('today.reviewStart')} →</span>
+            {review.waitingCount>0&&<span className="sr-only">{t('today.reviewWaiting',{count:review.waitingCount})}</span>}
+          </button>
+        ) : (
+          <Tile className="tile-review" index={index++}>
+            <div className="tile-kicker tone-listen"><Icon name="review" size={18} />{t('nav.review')}</div>
+            <strong className="tile-number">0</strong>
+            <span className="tile-caption">{t('today.reviewEmpty')}</span>
+          </Tile>
+        )}
 
         {speakTask&&node&&(
           <button className="tile tile-wide tile-speak pressable" style={{'--i':index++} as CSSProperties} type="button" onClick={()=>setSpeakOpen(true)}>
