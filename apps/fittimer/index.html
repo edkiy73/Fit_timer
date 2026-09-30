@@ -403,7 +403,7 @@
   </section>
 
   <!-- Выбор картинки для места -->
-  <div class="modal" id="exitModal">
+  <div class="modal" id="exitModal" data-act="closeModalBackdrop">
     <div class="modal-card">
       <span class="mini-label" data-i18n="workout.interrupt">Прервать тренировку</span>
       <p class="field-hint" id="exitProgress"></p>
@@ -414,7 +414,7 @@
     </div>
   </div>
 
-  <div class="modal" id="startModal">
+  <div class="modal" id="startModal" data-act="closeModalBackdrop">
     <div class="modal-card">
       <span class="mini-label" data-i18n="workout.startFrom">С чего начать</span>
       <!-- порядок снизу вверх по вероятности: обычный ответ — «начать сначала», и он
@@ -439,7 +439,7 @@
     </div>
   </div>
 
-  <div class="modal" id="pickStepModal">
+  <div class="modal" id="pickStepModal" data-act="closeModalBackdrop">
     <div class="modal-card">
       <span class="mini-label" data-i18n="workout.startExerciseTitle">С какого упражнения начать</span>
       <div class="pick-list" id="pickList"></div>
@@ -1838,7 +1838,7 @@
       </div>
     </div>
 
-    <div class="modal" id="hfModal">
+    <div class="modal" id="hfModal" data-act="closeModalBackdrop">
       <div class="modal-card hf-modal-card">
         <div id="hfModalContent" class="hf-modal-scroll"></div>
         <div class="hf-modal-actions">
@@ -1848,7 +1848,7 @@
       </div>
     </div>
 
-    <div class="modal" id="voiceTestModal">
+    <div class="modal" id="voiceTestModal" data-act="closeModalBackdrop">
       <div class="modal-card">
         <span class="mini-label" data-i18n="voicetest.title">Проверка распознавания</span>
         <p class="field-hint" data-i18n="voicetest.hint">Скажи «готово», «пропустить», «пауза» или «продолжить» так, как на тренировке, — с привычного расстояния. Здесь видно, что услышал телефон и какое действие распознано.</p>
@@ -1858,7 +1858,7 @@
       </div>
     </div>
 
-    <div class="modal" id="soundModal">
+    <div class="modal" id="soundModal" data-act="closeModalBackdrop">
       <div class="modal-card">
         <div id="soundModalContent"></div>
         <button class="btn-primary" data-act="closeModal" style="padding:14px;margin-top:6px" data-i18n="common.done">Готово</button>
@@ -1896,7 +1896,7 @@
     <!-- Подписка. Цена показывается в валюте покупателя и до нажатия «оформить»:
          сторы этого требуют, и человек не должен узнавать сумму на последнем шаге.
          Срок выбирается здесь же, годовой подсвечен и показывает выгоду числом. -->
-    <div class="modal" id="premiumModal">
+    <div class="modal" id="premiumModal" data-act="closeModalBackdrop">
       <!-- Карточка поделена надвое: список преимуществ прокручивается, а выбор срока,
            цена и обе кнопки закреплены внизу. Иначе на маленьком экране человек видел
            витрину без цены и без кнопки — то есть рекламу вместо предложения. -->
@@ -1931,7 +1931,7 @@
     <!-- Оформление. Почта здесь не формальность: это единственное, по чему аккаунт
          и оплаченная подписка находятся на новом телефоне. Пароль не спрашиваем —
          вход по ссылке из письма и по биометрии на самом устройстве. -->
-    <div class="modal" id="payModal">
+    <div class="modal" id="payModal" data-act="closeModalBackdrop">
       <div class="modal-card">
         <span class="mini-label" data-i18n="premium.checkout">Оформление подписки</span>
         <p class="dlg-msg" id="payWhat"></p>
@@ -1948,7 +1948,7 @@
 
     <!-- Подписка оформлена. Здесь же предлагаем биометрию: это единственный момент,
          когда аккаунт только что появился и защищать стало что. -->
-    <div class="modal" id="premiumOkModal">
+    <div class="modal" id="premiumOkModal" data-act="closeModalBackdrop">
       <div class="modal-card" style="text-align:center">
         <div class="pm-crown" data-icon="crown"></div>
         <h3 class="pm-title" data-i18n="premium.active">Премиум активен</h3>
@@ -2036,7 +2036,7 @@
       </div>
     </div>
 
-    <div class="modal" id="createModal">
+    <div class="modal" id="createModal" data-act="closeModalBackdrop">
       <div class="modal-card">
         <span class="mini-label" data-i18n="create.title">Новая программа</span>
         <!-- Подписи здесь — не объяснения, а различители: человек выбирает путь за
@@ -2090,7 +2090,7 @@
       </div>
     </div>
 
-    <div class="modal" id="cmpModal">
+    <div class="modal" id="cmpModal" data-act="closeModalBackdrop">
       <div class="modal-card">
         <span class="mini-label" data-i18n="compare.title">Сравнение прогресса</span>
         <div class="cmp-row">
@@ -2135,7 +2135,7 @@
       </div>
     </div>
 
-    <div class="modal" id="waModal">
+    <div class="modal" id="waModal" data-act="closeModalBackdrop">
       <div class="modal-card">
         <span class="mini-label" data-i18n="weight.newEntry">Новая запись</span>
         <div class="w-add on">
@@ -2153,7 +2153,7 @@
       </div>
     </div>
 
-    <div class="modal" id="whModal">
+    <div class="modal" id="whModal" data-act="closeModalBackdrop">
       <div class="modal-card">
         <span class="mini-label" data-i18n="weight.history">История веса</span>
         <div id="whList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
@@ -2164,7 +2164,7 @@
 
     <!-- Запись самочувствия. Все поля необязательные — как и обхваты у веса:
          человек меряет давление не каждый день и не всегда помнит, сколько спал. -->
-    <div class="modal" id="wellModal">
+    <div class="modal" id="wellModal" data-act="closeModalBackdrop">
       <div class="modal-card">
         <span class="mini-label" data-i18n="well.today">Как ты сегодня</span>
         <!-- Те же три ячейки в ряд, что и в истории (.wh-cells.wh-well): «Давление»
@@ -2195,7 +2195,7 @@
       </div>
     </div>
 
-    <div class="modal" id="importModal">
+    <div class="modal" id="importModal" data-act="closeModalBackdrop">
       <div class="modal-card">
         <span class="mini-label" data-i18n="import.title">Импорт программы</span>
         <!-- Кода программы приложение больше не выдаёт: адрес с программой внутри
