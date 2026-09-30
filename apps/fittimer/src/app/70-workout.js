@@ -12,11 +12,11 @@ import { calcStreak, calcStreakInfo, clearSession, closeAllMenus, curUser, custo
   saveStats, setDataSyncWorkoutHooks, stats, streakWord, toggleMenu, trackProductEvent, users
 } from './10-data-sync.js';
 import { setAccountWorkoutHooks } from './20-account.js';
-import { LIM, clampText, photos, shareGeneratedFile } from './30-progress-media.js';
-import { aiClientVerdict, callGemini, exAnswerFormat, exerciseToText, premiumGate, userForAI,
+import { LIM, clampText, photos, setProgressWorkoutHooks, shareGeneratedFile } from './30-progress-media.js';
+import { aiClientVerdict, callGemini, exAnswerFormat, exerciseToText, premiumGate, setProgramsWorkoutHooks, userForAI,
   weekPlanInfo
 } from './40-programs-ai.js';
-import { autoReport, renderMine, storeCountText } from './50-trainer-catalog.js';
+import { autoReport, renderMine, setTrainerWorkoutHooks, storeCountText } from './50-trainer-catalog.js';
 import { advanceExerciseProgression, commitExercise, curPlan, draft, ensurePs, exIdx, fmtKg,
   liveExercise, normalizeExercise, openExercise, parseProgramText, progAtCeiling, progAxis,
   renderExList, setDraftShared, setExDraftShared, setExIdxShared, setExIsNewShared, setExOrigShared,
@@ -1821,6 +1821,20 @@ export function setExFromWorkShared(value){ exFromWork = value; return exFromWor
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initWorkout(){
+  setProgramsWorkoutHooks({
+    afterExChange,
+    autoGrow,
+    backToWorkout,
+    esc,
+    getExFromWork: () => exFromWork
+  });
+  setTrainerWorkoutHooks({
+    esc
+  });
+  setProgressWorkoutHooks({
+    esc,
+    roundRect
+  });
   setAccountWorkoutHooks({
     esc
   });

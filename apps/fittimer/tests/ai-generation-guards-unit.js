@@ -23,7 +23,7 @@ need(builder.includes("qChips('qDur', Q_OPTS.dur, false, ()=> q.dur, v => q.dur 
   'duration chip is required and cannot be cleared');
 need(builder.includes('function aiProgramHasUserInput()') && builder.includes('function aiCreateProgramGuard()'),
   'program creation owns one semantic input guard');
-need(programs.includes('guard: ()=> aiCreateProgramGuard()'),
+need(programs.includes('guard: ()=> builderProgramsHooks.aiCreateProgramGuard()'),
   'program AI source uses the program guard');
 need(programs.includes('function aiExerciseHasUserInput()') && programs.includes('function aiCreateExerciseGuard()'),
   'exercise creation owns one semantic input guard');

@@ -32,8 +32,11 @@ let platformApplyThemeForHook = () => {};
 let platformSyncNativeNotificationsHook = async () => {};
 export function setDataSyncPlatformHooks(hooks = {}){
   platformApplyThemeForHook = typeof hooks.applyThemeFor === 'function' ? hooks.applyThemeFor : (() => {});
-  platformSyncNativeNotificationsHook = typeof hooks.syncNativeNotifications === 'function'
-    ? hooks.syncNativeNotifications
+  platformSyncNativeNotificationsHook = typeof hooks.getSyncNativeNotifications === 'function'
+    ? (...args) => {
+        const fn = hooks.getSyncNativeNotifications();
+        return typeof fn === 'function' ? fn(...args) : undefined;
+      }
     : (async () => {});
 }
 
@@ -983,7 +986,7 @@ const syncUser = u => ({
   locale:profileLocalePreference(u),
   prepSec:syncProfileInt(u.prepSec, 5, 0, 30),
   readySec:syncProfileInt(u.readySec, 5, 0, 30),
-  coreSideSecHook():syncProfileInt(u.coreSideSecHook(), 10, 3, 60),
+  sideSec:syncProfileInt(u.sideSec, 10, 3, 60),
   voiceVol:syncProfileInt(u.voiceVol, 100, 0, 100),
   fxVol:syncProfileInt(u.fxVol, 100, 0, 100)
 });

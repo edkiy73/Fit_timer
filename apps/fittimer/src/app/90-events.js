@@ -42,13 +42,13 @@ import { AI_SOURCES, aiClientVerdict, aiSrc, aiUiText, apiPost, applyProgression
   openEditAI, openExAI, openExEdAI, openImages, openYouTube, premiumGate, programToText,
   pushProfile, refreshTrainerProfile, renderGreeting, renderSlots, renderToday, renderTray,
   saveClients, saveTrainer, setClientIdxShared, setClientsShared, setCoachPhotoDraftShared,
-  setExImg, setImgTrayShared, setTrainerShared, setupAIAnswer, shrinkAll, slotTarget, trainer,
+  setExImg, setImgTrayShared, setProgramsEventHooks, setTrainerShared, setupAIAnswer, shrinkAll, slotTarget, trainer,
   trainerAccountReady, trainerOn, trayAutoAssign, trayUsed, versionedName, wipeTrainerInfo,
   youtubePrompt, ytCheckUrl
 } from './40-programs-ai.js';
 import { addClient, curClient, doPublish, loadStoreServer, openClient, openMyCatalog, openStore,
   openStoreItem, openTrainer, pubDraft, pubFrom, renderClients, renderMine, renderStore,
-  renderStoreFilters, renderTrainerCard, sendProgramToClient, siItem, storeCountText, storeFilter,
+  renderStoreFilters, renderTrainerCard, sendProgramToClient, setTrainerEventHooks, siItem, storeCountText, storeFilter,
   storeFrom, tpFrom
 } from './50-trainer-catalog.js';
 import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExerciseAsNew,
@@ -2008,6 +2008,26 @@ function resetSkipConfirm(){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initEvents(){
+  setProgramsEventHooks({
+    addExManual,
+    aiRunClose,
+    getAiRunCtl: () => aiRunCtl,
+    aiRunNote,
+    aiRunOpen,
+    buildAiMenu,
+    copyEditPrompt,
+    exaCopyPrompt,
+    exeCopyPrompt,
+    openPremium,
+    openStats,
+    syncSettingsSum,
+    ytApplyResult,
+    ytCopyPrompt,
+    ytGuard
+  });
+  setTrainerEventHooks({
+    openPremium
+  });
   setAccountEventHooks({
     applyAudioFromUser,
     readTimings,
