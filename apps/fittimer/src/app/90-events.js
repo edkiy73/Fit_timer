@@ -52,8 +52,8 @@ import { addClient, curClient, doPublish, loadStoreServer, openClient, openMyCat
 } from './50-trainer-catalog.js';
 import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExerciseAsNew,
   commitExercise, commitPlanFields, curPlan, delExerciseAt, draft, dropFreshEx, dupExerciseAt,
-  exDirty, exDraft, exIdx, exIsNew, fillPlanFields, hasWeight, initAIForm, openBuilder,
-  openExercise, parseProgramText, planIdx, programDirty, renderExList, renderExMedia,
+  exDirty, exDraft, exIdx, exIsNew, fillPlanFields, hasWeight, initAIForm, normValue, openBuilder,
+  openExercise, parseProgramText, parseStepNum, parseValue, planIdx, programDirty, renderExList, renderExMedia,
   renderProgControls, saveProgram, setExDraftShared, setExIdxShared, setExIsNewShared,
   setExOrigShared, setPlanIdxShared, shrinkImage, syncCover, syncExDetailsSum, syncExNowHints,
   syncExProgSum, syncExType, syncExWarm, syncRotateUI
