@@ -407,8 +407,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 3120,
-      "chars": 146224,
+      "lines": 3166,
+      "chars": 147891,
       "symbols": [
         "add",
         "ageError",
@@ -504,6 +504,8 @@
         "makeChip",
         "makeUpRow",
         "markAITab",
+        "mediaForExercise",
+        "mediaItems",
         "networkFailMessage",
         "next",
         "normHandle",
