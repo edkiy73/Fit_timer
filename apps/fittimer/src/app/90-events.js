@@ -71,6 +71,97 @@ import { SR, applyThemeFor, checkSchedules, hfHintText, hfMode, recognitionLang,
 
 /* ================= СОБЫТИЯ ================= */
 function registerEventActions(){
+  registerAction('toggleStartMenu', (_btn, event) => {
+    event.stopPropagation();
+    toggleMenu($('startMenu'));
+  });
+  registerAction('toggleProgramDescription', () => {
+    const box = $('progDescBox'), open = !box.classList.contains('open');
+    box.classList.toggle('open', open);
+    $('progDescMore').textContent = open ? t('common.collapse') : t('builder.showFull');
+  });
+  registerAction('openWorkoutStart', async () => {
+    if(!progActive(state.raw)){
+      const go = await appConfirm(
+        t('programs.disabledStart'),
+        {okText: t('programs.startAnyway')}
+      );
+      if(!go) return;
+    }
+    const selectedPlanIdx = state.planIdx;
+    state.current = customToProgram(state.raw, selectedPlanIdx);
+    const sess = await sessionForProgram(state.raw.id);
+    const planCount = normPlans(state.raw).length;
+    const sessionPlanIdx = sess && planCount
+      ? Math.min(Math.max(0, parseInt(sess.planIdx) || 0), planCount - 1)
+      : selectedPlanIdx;
+    state.startLoad = sess && Array.isArray(sess.load)
+      ? sess.load
+      : workoutLoadSnapshot(state.raw, sess ? sessionPlanIdx : selectedPlanIdx);
+    const selectedCurrent = state.current;
+    if(sess) state.current = sessionWorkout(sess, state.raw, sessionPlanIdx);
+    const steps = buildSteps();
+    state.current = selectedCurrent;
+    setShown('startResume', !!sess);
+    if(sess){
+      const workDone = steps.slice(0, sess.stepIdx).filter(s => s.phase === 'work').length;
+      const workAll = steps.filter(s => s.phase === 'work').length;
+      $('startResumeSub').textContent =
+        t('workout.resumeSummary',{done:workDone,all:workAll,age:sessionAgeText(sess.at)});
+    }
+    pendingStartSession = sess ? {...sess, planIdx:sessionPlanIdx} : null;
+    $('startModal').classList.add('open');
+  });
+  registerAction('resumeSavedWorkout', () => {
+    const s = pendingStartSession;
+    $('startModal').classList.remove('open');
+    if(!s){ startWorkout(); return; }
+    state.planIdx = s.planIdx;
+    state.current = sessionWorkout(s, state.raw, state.planIdx);
+    startWorkout(s.stepIdx, s.elapsed, {sessionId:s.sessionId, outcomes:s.outcomes});
+  });
+  registerAction('startFreshWorkout', async () => {
+    $('startModal').classList.remove('open');
+    await clearSession();
+    startWorkout();
+  });
+  registerAction('pickWorkoutStartStep', () => {
+    $('startModal').classList.remove('open');
+    state.steps = buildSteps();
+    const list = $('pickList');
+    list.innerHTML = '';
+    workStepChoices().forEach(c => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pick-item';
+      b.innerHTML = '<b></b>' + (c.meta ? `<small>${c.meta}</small>` : '');
+      b.querySelector('b').textContent = c.label;
+      b.onclick = async ()=>{
+        $('pickStepModal').classList.remove('open');
+        await clearSession();
+        startWorkout(c.idx, 0);
+      };
+      list.appendChild(b);
+    });
+    $('pickStepModal').classList.add('open');
+  });
+  registerAction('backFromWorkoutStart', () => goTab(startFrom));
+  registerAction('saveAndExitWorkout', async () => {
+    $('exitModal').classList.remove('open');
+    await saveSession();
+    tearDownWorkout();
+    if(typeof syncNativeNotifications === 'function') syncNativeNotifications();
+    appAlert(t('workout.sessionSaved'));
+  });
+  registerAction('finishWorkoutToday', () => {
+    $('exitModal').classList.remove('open');
+    finishPartialWorkout();
+  });
+  registerAction('discardWorkout', async () => {
+    $('exitModal').classList.remove('open');
+    await clearSession();
+    tearDownWorkout();
+  });
   registerAction('openCreateProgram', () => $('createModal').classList.add('open'));
   registerAction('editCurrentProfile', () => {
     const u = curUser();
@@ -1427,87 +1518,8 @@ export function initEvents(){
     if(appRuntimeCompat.offlineVoice()) refreshVoicePackUI();
   });
   $('startMore').innerHTML = icon('more');
-  $('startMore').onclick = e => { e.stopPropagation(); toggleMenu($('startMenu')); };
-  $('progDescMore').onclick = ()=>{
-    const box = $('progDescBox'), open = !box.classList.contains('open');
-    box.classList.toggle('open', open);
-    $('progDescMore').textContent = open ? t('common.collapse') : t('builder.showFull');
-  };
-  $('btnStart').onclick = async ()=>{
-    // Отключённую программу можно запустить вручную. Результат сохранится как
-    // активность, но не закроет план и не двинет прогрессию — предупреждаем до старта.
-    if(!progActive(state.raw)){
-      const go = await appConfirm(
-        t('programs.disabledStart'),
-        {okText: t('programs.startAnyway')}
-      );
-      if(!go) return;
-    }
-    const selectedPlanIdx = state.planIdx;
-    state.current = customToProgram(state.raw, selectedPlanIdx);
-    const sess = await sessionForProgram(state.raw.id);
-    const planCount = normPlans(state.raw).length;
-    const sessionPlanIdx = sess && planCount
-      ? Math.min(Math.max(0, parseInt(sess.planIdx) || 0), planCount - 1)
-      : selectedPlanIdx;
-    state.startLoad = sess && Array.isArray(sess.load)
-      ? sess.load
-      : workoutLoadSnapshot(state.raw, sess ? sessionPlanIdx : selectedPlanIdx);
-    // Для сводки незавершённой тренировки шаги нужно считать из того же варианта,
-    // в котором она была сохранена. Сам экран программы при этом остаётся на варианте,
-    // выбранном сейчас (например, на сегодняшнем дне).
-    const selectedCurrent = state.current;
-    if(sess) state.current = sessionWorkout(sess, state.raw, sessionPlanIdx);
-    const steps = buildSteps();
-    state.current = selectedCurrent;
-    setShown('startResume', !!sess);
-    if(sess){
-      const workDone = steps.slice(0, sess.stepIdx).filter(s => s.phase === 'work').length;
-      const workAll = steps.filter(s => s.phase === 'work').length;
-      $('startResumeSub').textContent =
-        t('workout.resumeSummary',{done:workDone,all:workAll,age:sessionAgeText(sess.at)});
-    }
-    pendingStartSession = sess ? {...sess, planIdx:sessionPlanIdx} : null;
-    $('startModal').classList.add('open');
-  };
   $('startModal').onclick = e => { if(e.target === $('startModal')) $('startModal').classList.remove('open'); };
-  $('startResume').onclick = ()=>{
-    const s = pendingStartSession;
-    $('startModal').classList.remove('open');
-    if(!s){ startWorkout(); return; }
-    // stepIdx имеет смысл только внутри того варианта, где сессия была сохранена.
-    // Сначала восстанавливаем вариант, затем строим его шаги в startWorkout().
-    state.planIdx = s.planIdx;
-    state.current = sessionWorkout(s, state.raw, state.planIdx);
-    startWorkout(s.stepIdx, s.elapsed, {sessionId:s.sessionId, outcomes:s.outcomes});
-  };
-  $('startFresh').onclick = async ()=>{
-    $('startModal').classList.remove('open');
-    await clearSession();
-    startWorkout();
-  };
-  $('startPick').onclick = ()=>{
-    $('startModal').classList.remove('open');
-    // временно собираем шаги, чтобы показать список упражнений
-    state.steps = buildSteps();
-    const list = $('pickList');
-    list.innerHTML = '';
-    workStepChoices().forEach(c => {
-      const b = document.createElement('button');
-      b.type = 'button'; b.className = 'pick-item';
-      b.innerHTML = '<b></b>' + (c.meta ? `<small>${c.meta}</small>` : '');
-      b.querySelector('b').textContent = c.label;
-      b.onclick = async ()=>{
-        $('pickStepModal').classList.remove('open');
-        await clearSession();
-        startWorkout(c.idx, 0);
-      };
-      list.appendChild(b);
-    });
-    $('pickStepModal').classList.add('open');
-  };
   $('pickStepModal').onclick = e => { if(e.target === $('pickStepModal')) $('pickStepModal').classList.remove('open'); };
-  $('startBackTop').onclick = ()=> goTab(startFrom);
   let skipConfirmIdx = -1;
   let skipConfirmT = 0;
   const resetSkipConfirm = ()=>{
@@ -1544,22 +1556,6 @@ export function initEvents(){
   $('btnPrev').innerHTML = icon('chevL');
   $('swapBadgeIcon').innerHTML = icon('chart'); // растущая кривая — «пора поднять планку»
   $('exitModal').onclick = e => { if(e.target === $('exitModal')) $('exitModal').classList.remove('open'); };
-  $('exitSave').onclick = async ()=>{
-    $('exitModal').classList.remove('open');
-    await saveSession();
-    tearDownWorkout();
-    if(typeof syncNativeNotifications === 'function') syncNativeNotifications();
-    appAlert(t('workout.sessionSaved'));
-  };
-  $('exitFinishToday').onclick = ()=>{
-    $('exitModal').classList.remove('open');
-    finishPartialWorkout();
-  };
-  $('exitDrop').onclick = async ()=>{
-    $('exitModal').classList.remove('open');
-    await clearSession();
-    tearDownWorkout();
-  };
   window.addEventListener('fitRemotePushToken',async e=>{
     const d=(e&&e.detail)||{};if(!d.token||!account||!account.email||!account.syncToken)return;
     let deviceId=await kvGet('deviceId');if(!deviceId){deviceId=newId();await kvSet('deviceId',deviceId);}
