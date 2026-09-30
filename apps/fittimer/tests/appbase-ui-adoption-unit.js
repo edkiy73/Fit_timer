@@ -166,5 +166,28 @@ ok('progress/onboarding/profile static buttons have no direct onclick wiring',
   && !events.includes("$('btnSaveUser').onclick")
   && !events.includes("$('btnDelUser').onclick"));
 
+ok('navigation/profile selectors are declarative',
+  profilesHtml.includes('data-act="switchStatsTab" data-tab="workouts"')
+  && profilesHtml.includes('data-act="switchMoreTab" data-more="me"')
+  && shell.includes('class="qs-btn" data-act="openStatsTab" data-tab="workouts"')
+  && progressHtml.includes('class="dock-btn act" data-act="goRootTab" data-scr="scrMenu"')
+  && progressHtml.includes('data-act="setProfileTheme" data-theme="system"')
+  && progressHtml.includes('data-act="setProfileLocale" data-locale="system"')
+  && progressHtml.includes('id="ueGenderF" data-act="setProfileGender" data-gender="f"')
+  && progressHtml.includes('id="ueGenderM" data-act="setProfileGender" data-gender="m"')
+  && progressHtml.includes('id="whoF" data-act="setWhoGender" data-gender="f"')
+  && progressHtml.includes('id="whoM" data-act="setWhoGender" data-gender="m"'));
+ok('navigation/profile selectors have no per-element onclick wiring',
+  !events.includes("document.querySelectorAll('#statsTabs .tab').forEach(b => b.onclick")
+  && !events.includes("document.querySelectorAll('#moreTabs .tab').forEach(b => b.onclick")
+  && !events.includes("document.querySelectorAll('.qs-btn').forEach(b => b.onclick")
+  && !events.includes("document.querySelectorAll('.dock-btn').forEach(b => b.onclick")
+  && !events.includes("document.querySelectorAll('#ueThemeSeg button').forEach(b =>")
+  && !events.includes("document.querySelectorAll('#ueLocaleSeg button').forEach(b =>")
+  && !events.includes("$('ueGenderF').onclick")
+  && !events.includes("$('ueGenderM').onclick")
+  && !events.includes("$('whoF').onclick")
+  && !events.includes("$('whoM').onclick"));
+
 
 process.exit(bad?1:0);
