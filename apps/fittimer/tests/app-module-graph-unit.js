@@ -106,6 +106,7 @@ for(const f of parts.map(n => path.join(APP, n)).concat(leaves, path.join(APP, '
 
 
 const coreSource = fs.readFileSync(path.join(APP, '00-core.js'), 'utf8');
+const dataSyncSource = fs.readFileSync(path.join(APP, '10-data-sync.js'), 'utf8');
 const accountSource = fs.readFileSync(path.join(APP, '20-account.js'), 'utf8');
 const progressSource = fs.readFileSync(path.join(APP, '30-progress-media.js'), 'utf8');
 const programsAiSource = fs.readFileSync(path.join(APP, '40-programs-ai.js'), 'utf8');
@@ -114,6 +115,13 @@ const builderSource = fs.readFileSync(path.join(APP, '60-builder.js'), 'utf8');
 const workoutSource = fs.readFileSync(path.join(APP, '70-workout.js'), 'utf8');
 const platformCoreSource = fs.readFileSync(path.join(APP, '80-platform.js'), 'utf8');
 const eventsCoreSource = fs.readFileSync(path.join(APP, '90-events.js'), 'utf8');
+if(/from ['"]\.\/00-core\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 00-core.js; inject core helpers instead');
+}
+if(!/setDataSyncCoreHooks/.test(dataSyncSource) || !/setDataSyncCoreHooks\(\{[\s\S]*appAlert[\s\S]*icon[\s\S]*plural[\s\S]*setShown[\s\S]*getSideSec[\s\S]*getState[\s\S]*syncDockTabs/.test(coreSource)){
+  problems.push('data-sync/core hook boundary is missing or incomplete');
+}
+
 if(/from ['"]\.\/20-account\.js['"]/.test(coreSource)){
   problems.push('src/app/00-core.js must not import 20-account.js; inject account-facing hooks instead');
 }
