@@ -231,6 +231,24 @@ if(!/setTrainerBuilderHooks\(\{[\s\S]*enableDrag[\s\S]*openBuilder[\s\S]*valueTe
 if(!/setTrainerWorkoutHooks\(\{[\s\S]*esc/.test(workoutSource)) problems.push('trainer/workout hook boundary is missing or incomplete');
 if(!/setTrainerEventHooks\(\{[\s\S]*openPremium/.test(eventsCoreSource)) problems.push('trainer/events hook boundary is missing or incomplete');
 
+
+for(const dep of ['70-workout','80-platform','90-events']){
+  if(new RegExp("from ['\"]\\./" + dep + "\\.js['\"]").test(builderSource)){
+    problems.push('src/app/60-builder.js must not import ' + dep + '.js; inject owner hooks instead');
+  }
+}
+if(!/setBuilderWorkoutHooks\(\{[\s\S]*autoGrow[\s\S]*esc/.test(workoutSource)) problems.push('builder/workout hook boundary is missing or incomplete');
+if(!/setBuilderPlatformHooks\(\{[\s\S]*getSyncNativeNotifications/.test(platformCoreSource)) problems.push('builder/platform hook boundary is missing or incomplete');
+if(!/setBuilderEventHooks\(\{[\s\S]*buildExMenu[\s\S]*delCurrentPlan[\s\S]*markBuilderTab[\s\S]*openLegal[\s\S]*syncImagesSum[\s\S]*syncSettingsSum/.test(eventsCoreSource)) problems.push('builder/events hook boundary is missing or incomplete');
+
+for(const dep of ['80-platform','90-events']){
+  if(new RegExp("from ['\"]\\./" + dep + "\\.js['\"]").test(workoutSource)){
+    problems.push('src/app/70-workout.js must not import ' + dep + '.js; inject owner hooks instead');
+  }
+}
+if(!/setWorkoutPlatformHooks\(\{[\s\S]*getHfMode[\s\S]*startHandsFree[\s\S]*stopHandsFree[\s\S]*getSyncNativeNotifications/.test(platformCoreSource)) problems.push('workout/platform hook boundary is missing or incomplete');
+if(!/setWorkoutEventHooks\(\{[\s\S]*aiRunClose[\s\S]*getAiRunCtl[\s\S]*aiRunOpen/.test(eventsCoreSource)) problems.push('workout/events hook boundary is missing or incomplete');
+
 if(/from ['"]\.\/20-account\.js['"]/.test(coreSource)){
   problems.push('src/app/00-core.js must not import 20-account.js; inject account-facing hooks instead');
 }
