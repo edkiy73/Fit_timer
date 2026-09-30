@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1469,
-      "chars": 72329,
+      "lines": 1501,
+      "chars": 72925,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -35,6 +35,7 @@
         "exerciseGong",
         "exerciseLoad",
         "fanfare",
+        "finishDialog",
         "freezeSticky",
         "fxDest",
         "goBackTo",
@@ -93,6 +94,7 @@
         "voiceIsEnglish",
         "voicePlural",
         "voicesForLang",
+        "withStartProgram",
         "workoutLoadSnapshot"
       ]
     },
@@ -884,7 +886,7 @@
     "src/app/80-platform.js": {
       "kind": "frontend-js",
       "lines": 840,
-      "chars": 37153,
+      "chars": 37146,
       "symbols": [
         "add",
         "advanceFromHeadset",
@@ -1751,7 +1753,7 @@
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
       "lines": 599,
-      "chars": 40943,
+      "chars": 41018,
       "ids": [
         "addExModal",
         "aemAI",
@@ -1951,12 +1953,14 @@
         "backMyCatalog",
         "backPublish",
         "backTrainerProfile",
+        "cancelDialog",
         "closeModal",
         "closeModalBackdrop",
         "closePhotoFullBackdrop",
         "closeSwapBackdrop",
         "closeSwapHint",
         "completePurchase",
+        "confirmDialog",
         "copySwapSuggestion",
         "createProgramAI",
         "createProgramManual",
@@ -1964,6 +1968,7 @@
         "deleteCompareA",
         "deleteCompareB",
         "deleteUser",
+        "dialogBackdrop",
         "dropLoginBackdrop",
         "enableBiometryAfterPurchase",
         "goRootTab",
