@@ -757,6 +757,9 @@ export function applyMedia(p, media){
       if(hit.id) ex.id = String(hit.id);
       ex.media = {kind: 'img', data: d};
     }));
+    // Серверные данные не могут нарушать invariant программы: даже если в payload
+    // случайно/вручную пришли повторные id, прогресс и будущие правки не склеятся.
+    uniqueExerciseIds(p);
     return p;
   }
 
