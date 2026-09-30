@@ -8,7 +8,7 @@ import { DAYS, accountAuth, calcStreakInfo, closeAllMenus, currentUser, customPr
   localISO, normPlans, progActive, programDaysUnion, savePrograms, setCustomProgramsShared,
   setDataSyncTrainerCatalogHooks, stats, toggleMenu, trackProductEvent, users
 } from './10-data-sync.js';
-import { account, isPremium, refreshServerSubscription } from './20-account.js';
+import { account, isPremium, refreshServerSubscription, setAccountTrainerCatalogHooks } from './20-account.js';
 import { LIM, clampText } from './30-progress-media.js';
 import { FILE_HINT, PUBLIC_APP_URL, apiFetch, apiPost, applyMedia, clProgs, clientIdx, clientSum,
   clients, daysSince, duplicateProgram, exportProgram, exportProgramFile, humanDay, lastReport,
@@ -1758,6 +1758,9 @@ export function renderMine(){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initTrainerCatalog(){
+  setAccountTrainerCatalogHooks({
+    renderTrainerCard
+  });
   setDataSyncTrainerCatalogHooks({
     renderMine
   });

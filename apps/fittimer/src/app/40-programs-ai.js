@@ -11,7 +11,7 @@ import { DAYS, DAY_FULL, accountAuth, calcStreakInfo, curUser, currentUser, cust
   profileAge, progActive, programDaysUnion, queueAccountSync, savePrograms, setDataSyncProgramsAiHooks, stats, streakWord,
   trackProductEvent, users, wellAvg
 } from './10-data-sync.js';
-import { account, bumpAccountMeta, isPremium, readAccountBucket, writeAccountBucket } from './20-account.js';
+import { account, bumpAccountMeta, isPremium, readAccountBucket, setAccountProgramsAiHooks, writeAccountBucket } from './20-account.js';
 import { LIM, clampLine, clampNum, clampText, cleanLink, cleanPic, photos,
   sanitizeProgram, shareGeneratedFile, uniqueExerciseIds
 } from './30-progress-media.js';
@@ -3169,6 +3169,21 @@ export function setTrainerShared(value){ trainer = value; return trainer; }
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initProgramsAi(){
+  setAccountProgramsAiHooks({
+    getApiBase: () => API_BASE,
+    ageError,
+    apiPost,
+    getClients: () => clients,
+    forgetMe,
+    loadTrainer,
+    mailErrText,
+    normHandle,
+    saveClients,
+    saveTrainer,
+    setTrainerShared,
+    syncGeminiBtns,
+    getTrainer: () => trainer
+  });
   setDataSyncProgramsAiHooks({
     apiFetch,
     applyProgressionAll,

@@ -9,7 +9,7 @@ import { MONTH_OF, PROGRAM_DOC, curUser, currentUser, customPrograms, docMeta, k
   isDefaultProfileName, renderStats, renderUsers, renderWeight, renderWellness, savePrograms, saveStats, saveUsers,
   setCurrentUserShared, setDataSyncProgressMediaHooks, setUsersShared, stats, users, validAge, wellList
 } from './10-data-sync.js';
-import { GLOBAL_KEYS, PROFILE_KEYS } from './20-account.js';
+import { GLOBAL_KEYS, PROFILE_KEYS, setAccountProgressHooks } from './20-account.js';
 import { ageError, renderToday } from './40-programs-ai.js';
 import { renderMine } from './50-trainer-catalog.js';
 import { newExId, shrinkImage } from './60-builder.js';
@@ -954,6 +954,11 @@ export async function whoFinish(save){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initProgressMedia(){
+  setAccountProgressHooks({
+    getNameMax: () => NAME_MAX,
+    clampLine,
+    nextProfileName
+  });
   setDataSyncProgressMediaHooks({
     ensureWarmup,
     loadPhotos,

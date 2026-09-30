@@ -27,7 +27,7 @@ import { account, bioDisable, bioEnable, bioSupported, bumpAccountMeta, complete
   priceTable, readAccountBucket, refreshServerSubscription, rememberAccount, renderPlan,
   renderPremium, saveAccount, saveKnown, saveUser, setBioOKShared, setLoginDoneShared,
   setLoginFixedEmailShared, setLoginPendingShared, setPendingSubShared, signOut, syncAccountLocale,
-  syncUserForm, tryUnlock, uDraft, userCurrency, userDirty, wipeAccount, writeAccountBucket
+  setAccountEventHooks, syncUserForm, tryUnlock, uDraft, userCurrency, userDirty, wipeAccount, writeAccountBucket
 } from './20-account.js';
 import { LIM, addPhoto, clampLine, clampText, cleanLink, delCmpPhoto, deleteAllPhotos, ensureWarmup,
   exportAllData, finishOnboardingCreate, importAllData, loadPhotos, openCompare, openWeightHist,
@@ -2008,6 +2008,12 @@ function resetSkipConfirm(){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initEvents(){
+  setAccountEventHooks({
+    applyAudioFromUser,
+    readTimings,
+    syncRemotePushRegistration,
+    unregisterRemotePushServer
+  });
   setDataSyncEventHooks({
     getNotificationPrefsKey: () => NOTIFICATION_PREFS_KEY,
     getNotificationPrefDefaults: () => NOTIFICATION_PREF_DEFAULTS,
