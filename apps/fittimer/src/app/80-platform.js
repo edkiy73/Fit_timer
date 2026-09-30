@@ -502,7 +502,7 @@ function notifyRowsByTime(rows){
   });
   return groups;
 }
-function notifyScheduleRowsForDay(day, done, blockedKeys, prefs){
+function notifyScheduleRowsForDay(day, done, blockedKeys, blockedProgramIds, prefs){
   const iso = notifyDayKey(day);
   const dayName = DAYS[(day.getDay() + 6) % 7];
   const out = [];
@@ -510,7 +510,9 @@ function notifyScheduleRowsForDay(day, done, blockedKeys, prefs){
     const scheduled = notifyScheduledPlan(p, dayName);
     if(!scheduled) return;
     const key = iso + '|' + p.id;
-    if((done && done.has(key)) || (blockedKeys && blockedKeys.has(key))) return;
+    if((done && done.has(key))
+      || (blockedKeys && blockedKeys.has(key))
+      || (blockedProgramIds && blockedProgramIds.has(String(p.id)))) return;
     const time = notifyTimeParts(scheduled.time) ? scheduled.time : '';
     out.push({
       p,
@@ -566,12 +568,12 @@ function notifyEveningCopy(rows){
     largeBody:notifyNames(group,8)
   };
 }
-function buildWorkoutNotificationCandidates(now, prefs, blockedKeys){
+function buildWorkoutNotificationCandidates(now, prefs, blockedKeys, blockedProgramIds){
   const out = [];
   const done = new Set((stats.history || []).map(h => String(h.d || '') + '|' + String(h.pid || '')));
   for(let offset = 0; offset < NOTIFY_HORIZON_DAYS; offset++){
     const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
-    const rows = notifyScheduleRowsForDay(day, done, blockedKeys, prefs);
+    const rows = notifyScheduleRowsForDay(day, done, blockedKeys, blockedProgramIds, prefs);
     if(!rows.length) continue;
 
     const untimed = rows.filter(r => !r.time);
@@ -668,17 +670,20 @@ export async function syncNativeNotifications(){
   }catch(_){ savedSessions = []; }
 
   const blockedKeys = new Set();
+  const blockedProgramIds = new Set();
   if(state && state.live && state.raw && state.raw.id){
-    blockedKeys.add(notifyDayKey(now) + '|' + state.raw.id);
+    blockedProgramIds.add(String(state.raw.id));
   }
   savedSessions.forEach(savedSession => {
-    if(!savedSession || !savedSession.pid || !savedSession.at) return;
-    const sessionDay = new Date(+savedSession.at);
-    if(!isNaN(sessionDay)) blockedKeys.add(notifyDayKey(sessionDay) + '|' + savedSession.pid);
+    if(!savedSession || !savedSession.pid) return;
+    // Незавершённая тренировка блокирует ОБЫЧНЫЕ напоминания программы целиком,
+    // а не только дату старта. Иначе сессия, начатая вчера, снова попадала бы
+    // в digest/«через 15 минут» сегодня или на следующей неделе.
+    blockedProgramIds.add(String(savedSession.pid));
   });
 
   if(prefs.workouts !== false){
-    buildWorkoutNotificationCandidates(now, prefs, blockedKeys).forEach(add);
+    buildWorkoutNotificationCandidates(now, prefs, blockedKeys, blockedProgramIds).forEach(add);
 
     // Каждая сохранённая незавершённая тренировка получает максимум одно конкретное
     // напоминание. Все такие программы исключены из общих digest.
