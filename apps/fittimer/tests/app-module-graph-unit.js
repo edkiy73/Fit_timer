@@ -109,6 +109,7 @@ const coreSource = fs.readFileSync(path.join(APP, '00-core.js'), 'utf8');
 const accountSource = fs.readFileSync(path.join(APP, '20-account.js'), 'utf8');
 const progressSource = fs.readFileSync(path.join(APP, '30-progress-media.js'), 'utf8');
 const platformCoreSource = fs.readFileSync(path.join(APP, '80-platform.js'), 'utf8');
+const eventsCoreSource = fs.readFileSync(path.join(APP, '90-events.js'), 'utf8');
 if(/from ['"]\.\/20-account\.js['"]/.test(coreSource)){
   problems.push('src/app/00-core.js must not import 20-account.js; inject account-facing hooks instead');
 }
@@ -128,6 +129,13 @@ if(/from ['"]\.\/80-platform\.js['"]/.test(coreSource)){
 }
 if(!/setCorePlatformHooks/.test(coreSource) || !/setCorePlatformHooks\(\{[\s\S]*hasSpeechRecognition[\s\S]*getHfMode[\s\S]*hfHintText[\s\S]*syncPrefs/.test(platformCoreSource)){
   problems.push('core/platform hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/90-events\.js['"]/.test(coreSource)){
+  problems.push('src/app/00-core.js must not import 90-events.js; inject event-facing hooks instead');
+}
+if(!/setCoreEventHooks/.test(coreSource) || !/setCoreEventHooks\(\{[\s\S]*applyAudioFromUser[\s\S]*fillLiveSoundCascade[\s\S]*getMoreTab[\s\S]*switchMoreTab[\s\S]*syncSettingsForm/.test(eventsCoreSource)){
+  problems.push('core/events hook boundary is missing or incomplete');
 }
 
 const platformSource = fs.readFileSync(path.join(APP, '80-platform.js'), 'utf8');
