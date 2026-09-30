@@ -117,6 +117,23 @@ registerAction('openLegalPrivacy', () => openLegal('privacy'));
 registerAction('openLegalTerms', () => openLegal('terms'));
 registerAction('openLegalHealth', () => openLegal('health'));
 
+registerAction('openPremium', () => openPremium());
+registerAction('completePurchase', () => completePurchase());
+registerAction('login', () => doLogin());
+registerAction('loginUseCode', () => loginUseExistingCode());
+registerAction('loginCancel', () => dropLogin());
+registerAction('openLogin', () => openLogin());
+registerAction('signOut', () => signOut());
+registerAction('pickProgramImportFile', () => $('importProgFile').click());
+registerAction('exportAllData', () => exportAllData());
+registerAction('pickAllDataImportFile', () => $('importAllFile').click());
+registerAction('wipeAccount', () => wipeAccount());
+registerAction('openWeightHistory', () => openWeightHist());
+registerAction('shareWeightChart', () => shareWeightChart());
+registerAction('pickProgressPhoto', () => $('photoFile').click());
+registerAction('openPhotoCompare', () => openCompare());
+
+
 
 
 registerAction('openWorkoutSound', () => {
@@ -1612,8 +1629,6 @@ export function initEvents(){
     $('waModal').classList.remove('open');
     renderWeight();
   };
-  $('btnPremium').onclick = openPremium;
-  $('btnPlanCard').onclick = openPremium;
   $('premiumModal').onclick = e => { if(e.target === $('premiumModal')) $('premiumModal').classList.remove('open'); };
   $('pmBuy').onclick = ()=>{
     trackProductEvent('purchase_started').catch(()=>{});
@@ -1626,7 +1641,6 @@ export function initEvents(){
     $('payModal').classList.add('open');
   };
   $('payModal').onclick = e => { if(e.target === $('payModal')) $('payModal').classList.remove('open'); };
-  $('payGo').onclick = completePurchase;
   $('payEmail').addEventListener('keydown', e => { if(e.key === 'Enter') completePurchase(); });
   $('premiumOkModal').onclick = e => { if(e.target === $('premiumOkModal')) $('premiumOkModal').classList.remove('open'); };
   $('pokBio').onclick = async ()=>{ if(await bioEnable()) $('premiumOkModal').classList.remove('open'); };
@@ -1648,9 +1662,6 @@ export function initEvents(){
     await saveAccount();
     renderPlan(); renderPremium();
   };
-  $('loginGo').onclick = doLogin;
-  $('loginHaveCode').onclick = loginUseExistingCode;
-  $('loginCancel').onclick = dropLogin;
   $('loginModal').onclick = e => { if(e.target === $('loginModal')) dropLogin(); };
   $('loginEmail').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
   $('loginCode').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
@@ -1660,8 +1671,6 @@ export function initEvents(){
     e.target.value = (at || body) ? '@' + body : '';
   });
   $('loginHandle').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
-  $('btnLoginRow').onclick = ()=> openLogin();
-  $('btnSignOut').onclick = signOut;
   // «Позже» — не отмена: дни, отмеченные до нажатия, уже лежат в программе, поэтому
   // сохраняем и их, иначе выбор молча пропадёт
   $('lockGo').onclick = ()=> tryUnlock();
@@ -1679,7 +1688,6 @@ export function initEvents(){
   window.addEventListener('fitAppForeground', e=>{
     maybeBiometricRelock(+((e && e.detail && e.detail.awayMs) || 0));
   });
-  $('btnImportProgFile').onclick = ()=> $('importProgFile').click();
   $('importProgFile').onchange = async e => {
     const f = e.target.files && e.target.files[0];
     e.target.value = '';
@@ -1687,19 +1695,12 @@ export function initEvents(){
     $('importModal').classList.remove('open');
     await importProgramFile(f);
   };
-  $('btnExportAll').onclick = exportAllData;
-  $('btnImportAll').onclick = ()=> $('importAllFile').click();
-  $('btnWipeAccount').onclick = wipeAccount;
   $('importAllFile').onchange = e => { const f = e.target.files && e.target.files[0]; if(f) importAllData(f); e.target.value=''; };
-  $('btnWeightHist').onclick = openWeightHist;
-  $('btnShareWeight').onclick = shareWeightChart;
-  $('btnAddPhoto').onclick = ()=> $('photoFile').click();
   $('photoFile').onchange = e => {
     const f = e.target.files && e.target.files[0];
     if(f) addPhoto(f);
     e.target.value = '';
   };
-  $('btnCompare').onclick = ()=> openCompare();
   // переключатель метрик на вкладке «Тело»: график один, метрика выбирается здесь
   $('weightSwitch').addEventListener('click', e => {
     const b = e.target.closest('.wm-chip');
