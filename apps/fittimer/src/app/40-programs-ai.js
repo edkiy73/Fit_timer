@@ -8,7 +8,7 @@ import { $, DUMBBELL_ICON, appAlert, appDialog, asTab, defaultPlanIdx, estimated
 } from './00-core.js';
 import { DAYS, DAY_FULL, accountAuth, calcStreakInfo, curUser, currentUser, customPrograms,
   dayTitle, identity, kvDel, kvGet, kvSet, localISO, newId, normPlans, openSessions, pk, planDays,
-  profileAge, progActive, programDaysUnion, queueAccountSync, savePrograms, stats, streakWord,
+  profileAge, progActive, programDaysUnion, queueAccountSync, savePrograms, setDataSyncProgramsAiHooks, stats, streakWord,
   trackProductEvent, users, wellAvg
 } from './10-data-sync.js';
 import { account, bumpAccountMeta, isPremium, readAccountBucket, writeAccountBucket } from './20-account.js';
@@ -3169,6 +3169,18 @@ export function setTrainerShared(value){ trainer = value; return trainer; }
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initProgramsAi(){
+  setDataSyncProgramsAiHooks({
+    apiFetch,
+    applyProgressionAll,
+    getClients: () => clients,
+    loadTrainer,
+    openDayProgram,
+    renderGreeting,
+    setClientsShared,
+    setTrainerShared,
+    getTrainer: () => trainer,
+    weekPlanInfo
+  });
   setCoreProgramsAiHooks({
     getActiveAiDirty: () => {
       const source = AI_SOURCES[aiSrc];

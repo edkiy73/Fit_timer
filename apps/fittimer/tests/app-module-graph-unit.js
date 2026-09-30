@@ -166,6 +166,21 @@ if(!/setDataSyncEventHooks/.test(dataSyncSource) || !/setDataSyncEventHooks\(\{[
   problems.push('data-sync/events hook boundary is missing or incomplete');
 }
 
+
+if(/from ['"]\.\/20-account\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 20-account.js; inject account-facing hooks instead');
+}
+if(!/setDataSyncAccountHooks/.test(dataSyncSource) || !/setDataSyncAccountHooks\(\{[\s\S]*getProfileKeys[\s\S]*getAccount[\s\S]*bumpAccountMeta[\s\S]*isPremium[\s\S]*openUserEdit[\s\S]*readAccountBucket[\s\S]*renderPlan[\s\S]*saveAccount[\s\S]*writeAccountBucket/.test(accountSource)){
+  problems.push('data-sync/account hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/40-programs-ai\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 40-programs-ai.js; inject programs-ai-facing hooks instead');
+}
+if(!/setDataSyncProgramsAiHooks/.test(dataSyncSource) || !/setDataSyncProgramsAiHooks\(\{[\s\S]*apiFetch[\s\S]*applyProgressionAll[\s\S]*getClients[\s\S]*loadTrainer[\s\S]*openDayProgram[\s\S]*renderGreeting[\s\S]*setClientsShared[\s\S]*setTrainerShared[\s\S]*getTrainer[\s\S]*weekPlanInfo/.test(programsAiSource)){
+  problems.push('data-sync/programs-ai hook boundary is missing or incomplete');
+}
+
 if(/from ['"]\.\/20-account\.js['"]/.test(coreSource)){
   problems.push('src/app/00-core.js must not import 20-account.js; inject account-facing hooks instead');
 }

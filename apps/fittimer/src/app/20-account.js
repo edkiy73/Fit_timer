@@ -6,7 +6,7 @@ import { $, appAlert, appConfirm, appDialog, goTab, icon, isChanged, savedVoiceU
 } from './00-core.js';
 import { SCHEMA_VERSION, SYNC, connectAccountSync, currentUser, hasMeaningfulLocalData, identity,
   kvClearAll, kvDel, kvGet, kvSet, newId, parsed, profileAge, profileDisplayName, pushAccountDocs, recordConsent,
-  renderUsers, saveIdentity, saveUsers, setCurrentUserShared, setUsersShared, showSyncState,
+  renderUsers, saveIdentity, saveUsers, setCurrentUserShared, setDataSyncAccountHooks, setUsersShared, showSyncState,
   switchUser, syncState, users, validAge
 } from './10-data-sync.js';
 import { NAME_MAX, clampLine, nextProfileName } from './30-progress-media.js';
@@ -1092,6 +1092,17 @@ export function setPendingSubShared(value){ pendingSub = value; return pendingSu
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initAccount(){
+  setDataSyncAccountHooks({
+    getProfileKeys: () => PROFILE_KEYS,
+    getAccount: () => account,
+    bumpAccountMeta,
+    isPremium,
+    openUserEdit,
+    readAccountBucket,
+    renderPlan,
+    saveAccount,
+    writeAccountBucket
+  });
   setCoreAccountHooks({
     userDirty,
     maybeRunDeferredBiometricLock

@@ -89,12 +89,41 @@ let eventDataHooks = {
 export function setDataSyncEventHooks(hooks = {}){
   eventDataHooks = {...eventDataHooks, ...hooks};
 }
-import { PROFILE_KEYS, account, bumpAccountMeta, isPremium, openUserEdit, readAccountBucket,
-  renderPlan, saveAccount, writeAccountBucket
-} from './20-account.js';
-import { apiFetch, applyProgressionAll, clients, loadTrainer, openDayProgram, renderGreeting,
-  setClientsShared, setTrainerShared, trainer, weekPlanInfo
-} from './40-programs-ai.js';
+
+
+let accountDataHooks = {
+  getProfileKeys: () => [],
+  getAccount: () => null,
+  bumpAccountMeta: () => {},
+  isPremium: () => false,
+  openUserEdit: () => {},
+  readAccountBucket: async () => ({bucket:{}}),
+  renderPlan: () => {},
+  saveAccount: async () => {},
+  writeAccountBucket: async () => {}
+};
+export function setDataSyncAccountHooks(hooks = {}){
+  accountDataHooks = {...accountDataHooks, ...hooks};
+}
+const accountState = () => accountDataHooks.getAccount();
+
+let programsAiDataHooks = {
+  apiFetch: async () => null,
+  applyProgressionAll: () => {},
+  getClients: () => [],
+  loadTrainer: async () => {},
+  openDayProgram: () => {},
+  renderGreeting: () => {},
+  setClientsShared: () => {},
+  setTrainerShared: () => {},
+  getTrainer: () => null,
+  weekPlanInfo: () => ({days:[]})
+};
+export function setDataSyncProgramsAiHooks(hooks = {}){
+  programsAiDataHooks = {...programsAiDataHooks, ...hooks};
+}
+const clientsState = () => programsAiDataHooks.getClients() || [];
+const trainerState = () => programsAiDataHooks.getTrainer();
 
 /* ================= ПОЛЬЗОВАТЕЛИ И ХРАНИЛИЩЕ ================= */
 export let users = [];
@@ -105,7 +134,7 @@ const fitProductInfrastructure = appInfrastructure.create({
   platform: appRuntimeCompat.runtimePlatform,
   locale: () => (typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
   build: appRuntimeCompat.build,
-  premium: () => (typeof isPremium === 'function') ? !!isPremium() : false,
+  premium: () => !!accountDataHooks.isPremium(),
   newId: () => newId(),
   post: async body => {
     try{
@@ -231,7 +260,7 @@ export async function loadData(ownerId = currentUser){
   dataOwner = ownerId;
   await loadProgWeights(ownerId);
   if(currentUser !== ownerId) return false;
-  await loadTrainer();
+  await programsAiDataHooks.loadTrainer();
   if(currentUser !== ownerId) return false;
   coreSyncDockTabsHook();
   discardLegacyWeightCorrections(ownerId);
@@ -276,7 +305,7 @@ async function switchUserNow(id){
   await setAppLocale(profileLocalePreference(curUser()), {persist:false});
   await progressMediaHooks.loadPhotos();
   await progressMediaHooks.ensureWarmup();
-  applyProgressionAll();
+  programsAiDataHooks.applyProgressionAll();
   eventDataHooks.applyAudioFromUser(curUser());
   const u = curUser();
   platformApplyThemeForHook(u);
@@ -329,7 +358,7 @@ export function renderUsers(){
   renderAccount();
 }
 
-function renderAccount(){ renderPlan(); }
+function renderAccount(){ accountDataHooks.renderPlan(); }
 
 // Метрики тела: вес всегда есть, остальное — если человек это записывает.
 // Жир и мышцы в процентах показывают умные весы, и без них вес врёт: минус два
@@ -493,7 +522,7 @@ function metricGraph(s, have, have2){
 }
 /* ================= САМОЧУВСТВИЕ =================
    Давление, пульс и сон. Живут в stats.wellness — внутри уже перечисленного
-   в PROFILE_KEYS ключа stats, отдельного ключа хранилища не заводим.
+   в accountDataHooks.getProfileKeys() ключа stats, отдельного ключа хранилища не заводим.
    Запись — одна на день, как у веса: en = {d, sys, dia, pulse, sleep}.
    Давление — не две метрики, а одно число из двух половин: верхнее ведёт график,
    нижнее идёт второй линией и подписывается вместе с ним («120/80»).
@@ -906,8 +935,8 @@ export function showSyncState(state, step, total, detailKey){
   }
   const el = coreDollarHook('accSync');
   if(!el) return;
-  if(!account || !account.email) el.textContent = '';
-  else if(!isPremium()) el.textContent = t('sync.premiumOnly');
+  if(!accountState() || !accountState().email) el.textContent = '';
+  else if(!accountDataHooks.isPremium()) el.textContent = t('sync.premiumOnly');
   else if(state === 'busy' && syncStep && syncTotal && syncDetail){
     el.textContent = t('sync.progress',{step:syncStep,total:syncTotal,detail:t(syncDetail)});
   } else if(state === 'busy' && syncStep && syncTotal){
@@ -922,7 +951,7 @@ async function syncApiPost(body){
   let last;
   for(let attempt = 0; attempt < 2; attempt++){
     try{
-      return await apiFetch('/api/sync', {
+      return await programsAiDataHooks.apiFetch('/api/sync', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify(body),
@@ -939,8 +968,8 @@ async function syncApiPost(body){
 }
 
 export const accountAuth = () => ({
-  email: (account && account.email) || '',
-  token: (account && account.syncToken) || '',
+  email: (accountState() && accountState().email) || '',
+  token: (accountState() && accountState().syncToken) || '',
   deviceId: (identity && identity.deviceId) || ''
 });
 const syncAuth = action => Object.assign({action}, accountAuth());
@@ -1136,7 +1165,7 @@ async function collapseEmptyLocalProfiles(active){
     || blanks.find(u => u.id === currentUser) || blanks[0];
   for(const u of blanks){
     if(u === keep) continue;
-    for(const k of PROFILE_KEYS) await kvDel(k + '_' + u.id);
+    for(const k of accountDataHooks.getProfileKeys()) await kvDel(k + '_' + u.id);
   }
   users = users.filter(u => !blanks.includes(u) || u === keep);
   if(!users.some(u => u.id === currentUser)) currentUser = keep.id;
@@ -1199,11 +1228,11 @@ async function applyRemoteSyncNow(result){
     const keepId = emptyRemote[0].user.id;
     const drop = new Set(emptyRemote.slice(1).map(r => r.user.id));
     active = active.filter(r => !drop.has(r.user && r.user.id));
-    if(!Array.isArray(account.deletedProfiles)) account.deletedProfiles = [];
+    if(!Array.isArray(accountState().deletedProfiles)) accountState().deletedProfiles = [];
     drop.forEach(id => {
-      if(!account.deletedProfiles.some(x => x.id === id)) account.deletedProfiles.push({id, at:new Date().toISOString()});
+      if(!accountState().deletedProfiles.some(x => x.id === id)) accountState().deletedProfiles.push({id, at:new Date().toISOString()});
     });
-    await saveAccount();
+    await accountDataHooks.saveAccount();
   }
   await collapseEmptyLocalProfiles(active);
 
@@ -1247,7 +1276,7 @@ async function applyRemoteSyncNow(result){
     if(i < 0 || users.length <= 1) continue;
     if(users[i].syncAt && String(users[i].syncAt) > String(rp.userAt || '')) continue;
     const id = users[i].id;
-    for(const k of PROFILE_KEYS) await kvDel(k + '_' + id);
+    for(const k of accountDataHooks.getProfileKeys()) await kvDel(k + '_' + id);
     users.splice(i, 1);
   }
   await saveUsers();
@@ -1259,7 +1288,7 @@ async function applyRemoteSyncNow(result){
     const localId = localUser ? localUser.id : pid;
     if((await kvGet('identity_' + localId)) === null){
       await kvSet('identity_' + localId, JSON.stringify({profileId:pid, createdAt:new Date().toISOString(),
-        email:account.email, linkedAt:new Date().toISOString(), consents:{}}));
+        email:accountState().email, linkedAt:new Date().toISOString(), consents:{}}));
     }
     let meta = parsed(await kvGet('docMeta_' + localId), {});
     let queue = parsed(await kvGet('outbox_' + localId), []);
@@ -1336,7 +1365,7 @@ async function applyRemoteSyncNow(result){
   await kvSet('currentUser', currentUser);
   const activeOwner = currentUser;
   await loadIdentity(activeOwner);
-  identity.email = account.email;
+  identity.email = accountState().email;
   await saveIdentity();
   await loadData(activeOwner);
   // После loadData: иначе смена языка пересохранила бы устаревший список программ
@@ -1344,7 +1373,7 @@ async function applyRemoteSyncNow(result){
   await setAppLocale(profileLocalePreference(curUser()), {persist:false});
   await progressMediaHooks.loadPhotos();
   await progressMediaHooks.ensureWarmup();
-  applyProgressionAll();
+  programsAiDataHooks.applyProgressionAll();
   renderUsers(); trainerCatalogRenderMineHook(); renderStats(); renderWeight(); renderWellness(); progressMediaHooks.renderPhotos();
   // Только здесь active profile уже полностью перезагружен из принятых docs.
   // Пересборка раньше этого места могла успеть записать в ОС старое расписание.
@@ -1377,11 +1406,11 @@ function mergeClientLists(localList, remoteList, preferRemote){
   return [...out.values()];
 }
 async function applyRemoteAccountDocs(result){
-  if(!account || !account.email) return false;
+  if(!accountState() || !accountState().email) return false;
   const docs = Array.isArray(result && result.accountDocs) ? result.accountDocs : [];
   if(!docs.length) return false;
   let notificationPrefsChanged = false;
-  const rec = await readAccountBucket();
+  const rec = await accountDataHooks.readAccountBucket();
   if(!rec.bucket.meta) rec.bucket.meta = {};
   for(const d of docs){
     if(!d || !['trainer','clients','notificationPrefs'].includes(d.key) || d.deleted) continue;
@@ -1390,7 +1419,7 @@ async function applyRemoteAccountDocs(result){
     const incoming = parsed(d.value, d.key === 'clients' ? [] : {});
     if(d.key === 'trainer'){
       if(!takeRemote) continue;
-      const keep = rec.bucket.trainer || trainer || {};
+      const keep = rec.bucket.trainer || trainerState() || {};
       rec.bucket.trainer = Object.assign({}, incoming || {});
       // Ключ управления страницей никогда не хранится в синхронизации. Ник,
       // подтверждённый входом, тоже важнее старой копии документа.
@@ -1400,7 +1429,7 @@ async function applyRemoteAccountDocs(result){
       rec.bucket.meta[d.key] = {rev:+d.rev || 1, at:d.at || '', schema:+d.schema || 1,
                                 deviceId:d.deviceId || ''};
     } else if(d.key === 'clients'){
-      rec.bucket.clients = mergeClientLists(rec.bucket.clients || clients, incoming, takeRemote);
+      rec.bucket.clients = mergeClientLists(rec.bucket.clients || clientsState(), incoming, takeRemote);
       if(takeRemote) rec.bucket.meta[d.key] = {rev:+d.rev || 1, at:d.at || '', schema:+d.schema || 1,
                                                deviceId:d.deviceId || ''};
     } else if(takeRemote){
@@ -1417,69 +1446,67 @@ async function applyRemoteAccountDocs(result){
       }catch(_){}
     }
   }
-  await writeAccountBucket(rec);
-  setTrainerShared(rec.bucket.trainer || trainer);
-  setClientsShared(Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clients);
+  await accountDataHooks.writeAccountBucket(rec);
+  programsAiDataHooks.setTrainerShared(rec.bucket.trainer || trainerState());
+  programsAiDataHooks.setClientsShared(Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clientsState());
   eventDataHooks.syncNotificationSettings();
   return notificationPrefsChanged;
 }
 
 async function accountDocsSnapshot(){
-  if(!account || !account.email) return [];
-  const rec = await readAccountBucket();
+  if(!accountState() || !accountState().email) return [];
+  const rec = await accountDataHooks.readAccountBucket();
   if(!rec.bucket.meta) rec.bucket.meta = {};
   const now = new Date().toISOString();
   let localNotificationPrefs = {};
   try{
-    localNotificationPrefs = (typeof getNotificationPrefs === 'function')
-      ? eventDataHooks.getNotificationPrefs()
-      : parsed(localStorage.getItem('fitNotificationPrefsV1'), {});
+    localNotificationPrefs = eventDataHooks.getNotificationPrefs();
   }catch(_){}
   if(!rec.bucket.notificationPrefs) rec.bucket.notificationPrefs = localNotificationPrefs;
   const values = {
-    trainer:trainerSyncValue(rec.bucket.trainer || trainer),
-    clients:Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clients,
+    trainer:trainerSyncValue(rec.bucket.trainer || trainerState()),
+    clients:Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clientsState(),
     notificationPrefs:Object.assign({}, rec.bucket.notificationPrefs || localNotificationPrefs)
   };
   const docs = [];
   for(const key of appSync.accountKeys){
-    if(!rec.bucket.meta[key]) rec.bucket.meta[key] = {rev:1, at:account.linkedAt || now, schema:SCHEMA_VERSION};
+    if(!rec.bucket.meta[key]) rec.bucket.meta[key] = {rev:1, at:accountState().linkedAt || now, schema:SCHEMA_VERSION};
     const m = rec.bucket.meta[key];
     docs.push({key, profileId:'__account__', rev:m.rev || 1, at:m.at || now,
                schema:m.schema || SCHEMA_VERSION, value:JSON.stringify(values[key] || (key === 'clients' ? [] : {}))});
   }
-  await writeAccountBucket(rec);
+  await accountDataHooks.writeAccountBucket(rec);
   return docs;
 }
 
 export async function syncNotificationPrefsServer(action){
-  if(!account || !account.email || !account.syncToken) return false;
+  if(!accountState() || !accountState().email || !accountState().syncToken) return false;
   let deviceId = await kvGet('deviceId');
   if(!deviceId){ deviceId = newId(); await kvSet('deviceId', deviceId); }
-  const base = {action:action || 'push', email:account.email, deviceId, token:account.syncToken};
+  const base = {action:action || 'push', email:accountState().email, deviceId, token:accountState().syncToken};
   if(base.action === 'pull'){
     const result = await syncApiPost(base);
     const changed = await applyRemoteAccountDocs(result);
     if(changed) await platformSyncNativeNotificationsHook();
     return true;
   }
-  const rec = await readAccountBucket();
+  const rec = await accountDataHooks.readAccountBucket();
   if(!rec.bucket.meta) rec.bucket.meta = {};
   const key = 'notificationPrefs';
   if(!rec.bucket.notificationPrefs){
     rec.bucket.notificationPrefs = eventDataHooks.getNotificationPrefs();
   }
-  if(!rec.bucket.meta[key]) bumpAccountMeta(rec.bucket, key);
+  if(!rec.bucket.meta[key]) accountDataHooks.bumpAccountMeta(rec.bucket, key);
   const m = rec.bucket.meta[key];
   const doc = {key, profileId:'__account__', rev:m.rev || 1, at:m.at || new Date().toISOString(),
     schema:m.schema || SCHEMA_VERSION, value:JSON.stringify(rec.bucket.notificationPrefs || {})};
-  await writeAccountBucket(rec);
+  await accountDataHooks.writeAccountBucket(rec);
   await syncApiPost(Object.assign(base, {profiles:[], docs:[doc]}));
   return true;
 }
 
 export async function pushAccountDocs(){
-  if(!account || !account.email || !account.syncToken || !isPremium()) return;
+  if(!accountState() || !accountState().email || !accountState().syncToken || !accountDataHooks.isPremium()) return;
   const docs = await accountDocsSnapshot();
   if(!docs.length) return;
   await syncApiPost(Object.assign(syncAuth('push'), {profiles:[], docs}));
@@ -1587,12 +1614,12 @@ async function pushPendingProfiles(){
 }
 
 async function pushDeletedProfiles(){
-  const list = Array.isArray(account.deletedProfiles) ? account.deletedProfiles.slice() : [];
+  const list = Array.isArray(accountState().deletedProfiles) ? accountState().deletedProfiles.slice() : [];
   if(!list.length) return;
   const profiles = list.map(rec => ({user:{id:rec.id}, at:rec.at, deleted:true}));
   await syncApiPost(Object.assign(syncAuth('push'), {profiles, docs:[]}));
-  account.deletedProfiles = [];
-  await saveAccount();
+  accountState().deletedProfiles = [];
+  await accountDataHooks.saveAccount();
 }
 
 async function flushAccountSync(){
@@ -1623,11 +1650,11 @@ async function flushAccountSync(){
 }
 
 export async function connectAccountSync(opts){
-  if(!account || !account.email || !account.syncToken || !identity){
+  if(!accountState() || !accountState().email || !accountState().syncToken || !identity){
     showSyncState('idle');
     return false;
   }
-  if(!isPremium()){
+  if(!accountDataHooks.isPremium()){
     try{ await syncNotificationPrefsServer('pull'); }catch(_){}
     showSyncState('idle');
     return false;
@@ -1658,7 +1685,7 @@ export async function connectAccountSync(opts){
 }
 
 export function queueAccountSync(){
-  if(!account || !account.email || !account.syncToken || !isPremium()) return;
+  if(!accountState() || !accountState().email || !accountState().syncToken || !accountDataHooks.isPremium()) return;
   clearTimeout(syncTimer);
   syncTimer = setTimeout(()=>{
     if(SYNC.adapter) flushAccountSync();
@@ -2098,7 +2125,7 @@ export function calcStreakInfo(options){
     const monday = new Date(dt);
     monday.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
     const key = localISO(monday);
-    const week = weeks[key] || (weeks[key] = weekPlanInfo(dt, programId ? {programId} : undefined));
+    const week = weeks[key] || (weeks[key] = programsAiDataHooks.weekPlanInfo(dt, programId ? {programId} : undefined));
     return week.days[(dt.getDay() + 6) % 7];
   };
 
@@ -2356,7 +2383,7 @@ export function openSessions(label, title, entries, emptyText, opts){
 
 export const dayTitle = iso => new Intl.DateTimeFormat(localeTag(),{day:'numeric',month:'long',year:'numeric'}).format(new Date(iso+'T12:00:00'));
 
-export function renderStats(){ renderTotal(); renderStatsBlock(); renderGreeting(); }
+export function renderStats(){ renderTotal(); renderStatsBlock(); programsAiDataHooks.renderGreeting(); }
 
 // планы программы: новые программы хранят plans[], старые — поля верхнего уровня
 // Варианты идут по дню недели, а не по времени добавления: заведя «Пн» после «Сб»,
@@ -2593,12 +2620,12 @@ export function setWellMetricShared(value){ wellMetric = value; return wellMetri
 export function initDataSync(){
   registerAction('editProfileFromList', (btn, event) => {
     event.stopPropagation();
-    if(btn.dataset.userId) openUserEdit(btn.dataset.userId);
+    if(btn.dataset.userId) accountDataHooks.openUserEdit(btn.dataset.userId);
   });
   registerAction('openOrSwitchProfile', btn => {
     const id = btn.dataset.userId;
     if(!id) return;
-    if(id === currentUser) openUserEdit(id);
+    if(id === currentUser) accountDataHooks.openUserEdit(id);
     else switchUser(id);
   });
   registerAction('toggleWellHistoryDelete', btn => {
@@ -2612,7 +2639,7 @@ export function initDataSync(){
   registerAction('openSessionProgram', btn => {
     const id = btn.dataset.programId;
     const plan = parseInt(btn.dataset.planIdx, 10);
-    if(id) openDayProgram(id, Number.isFinite(plan) ? plan : -1);
+    if(id) programsAiDataHooks.openDayProgram(id, Number.isFinite(plan) ? plan : -1);
   });
   window.addEventListener('error',e=>{
     reportClientError('error',e&&e.error,e&&e.message).catch(()=>{});
@@ -2622,7 +2649,7 @@ export function initDataSync(){
     reportClientError('rejection',r,r==null?'unhandled rejection':String(r)).catch(()=>{});
   });
   window.addEventListener('online', ()=>{
-    if(account && account.email && account.syncToken && isPremium()){
+    if(accountState() && accountState().email && accountState().syncToken && accountDataHooks.isPremium()){
       connectAccountSync().catch(()=> showSyncState('error'));
     }
   });
