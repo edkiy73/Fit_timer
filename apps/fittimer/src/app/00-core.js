@@ -570,6 +570,7 @@ export function syncSoundCascade(p){
 // попапа реально снята из browser history. Иначе следующий переход успевает
 // построить новую навигацию поверх ещё не завершившегося history.back().
 let modalHistoryWaiters = [];
+let dialogClickCtl = null;
 let dialogResolve = null;
 let dialogConfirm = false;
 let dialogTypedInput = null;

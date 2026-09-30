@@ -9,6 +9,7 @@ const ok=(name,cond)=>{
 const core=fs.readFileSync('src/app/00-core.js','utf8');
 const platform=fs.readFileSync('src/app/80-platform.js','utf8');
 const events=fs.readFileSync('src/app/90-events.js','utf8');
+const coreJs=fs.readFileSync('src/app/00-core.js','utf8');
 const dataSync=fs.readFileSync('src/app/10-data-sync.js','utf8');
 const accountJs=fs.readFileSync('src/app/20-account.js','utf8');
 const progressJs=fs.readFileSync('src/app/30-progress-media.js','utf8');
@@ -580,6 +581,20 @@ ok('core start-screen dynamic actions use registry',
 ok('FitTimer app modules have no direct onclick wiring',
   [core,actions,dataSync,accountJs,progressJs,programsAi,trainerCatalog,builderJs,workoutJs,platform,events]
     .every(src => !src.includes('.onclick')));
+
+ok('core dynamic actions use action registry',
+  coreJs.includes("registerAction('selectStartPlan'")
+  && coreJs.includes("registerAction('openStartWeight'")
+  && coreJs.includes("registerAction('editStartProgram'")
+  && coreJs.includes("registerAction('toggleStartProgramActive'")
+  && coreJs.includes("registerAction('duplicateStartProgram'")
+  && coreJs.includes("registerAction('deleteStartProgram'")
+  && coreJs.includes("b.dataset.act = 'selectStartPlan'")
+  && coreJs.includes("row.dataset.act = 'openStartWeight'")
+  && coreJs.includes("b.dataset.act = action"));
+const appJsFiles=fs.readdirSync('src/app').filter(name => name.endsWith('.js'));
+const directOnclickFiles=appJsFiles.filter(name => fs.readFileSync('src/app/' + name,'utf8').includes('.onclick'));
+ok('FitTimer product app has no direct .onclick handlers', directOnclickFiles.length === 0);
 
 
 process.exit(bad?1:0);
