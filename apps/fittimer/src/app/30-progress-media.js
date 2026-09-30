@@ -3,7 +3,7 @@ import { I18N_RU } from '../i18n/ru.js';
 import { I18N_EN } from '../i18n/en.js';
 import { appRuntimeCompat, appUi } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
-import { $, appAlert, appConfirm, appDialog, icon, plural, setShown, show } from './00-core.js';
+import { $, appAlert, appConfirm, appDialog, icon, plural, setCoreProgressHooks, setShown, show } from './00-core.js';
 import { MONTH_OF, PROGRAM_DOC, curUser, currentUser, customPrograms, docMeta, kvGet, kvSet,
   loadData, loadIdentity, localISO, migrateUserAge, normPlans, pk, profileAge, recordConsent,
   isDefaultProfileName, renderStats, renderUsers, renderWeight, renderWellness, savePrograms, saveStats, saveUsers,
@@ -954,6 +954,9 @@ export async function whoFinish(save){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initProgressMedia(){
+  setCoreProgressHooks({
+    renderPhotos
+  });
   registerAction('openPhotoCompareAt', btn => {
     const i = parseInt(btn.dataset.photoIdx, 10);
     if(Number.isFinite(i)) openCompare(i);
