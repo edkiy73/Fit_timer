@@ -939,8 +939,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2516,
-      "chars": 109221,
+      "lines": 2523,
+      "chars": 109268,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -1399,7 +1399,7 @@
     "src/html/20-workout-finish.html": {
       "kind": "frontend-html",
       "lines": 143,
-      "chars": 8926,
+      "chars": 9015,
       "ids": [
         "badgeRow",
         "btnAgain",
@@ -1465,7 +1465,10 @@
         "videoLink"
       ],
       "actions": [
-        "resumeWorkout"
+        "completeWorkoutStep",
+        "previousWorkoutStep",
+        "resumeWorkout",
+        "skipWorkoutStep"
       ]
     },
     "src/html/30-onboarding-account.html": {

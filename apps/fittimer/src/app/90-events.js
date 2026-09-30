@@ -71,6 +71,34 @@ import { SR, applyThemeFor, checkSchedules, hfHintText, hfMode, recognitionLang,
 
 /* ================= СОБЫТИЯ ================= */
 function registerEventActions(){
+  registerAction('completeWorkoutStep', () => {
+    resetSkipConfirm();
+    initAudio();
+    beep(990,.1);
+    completeStep();
+  });
+  registerAction('skipWorkoutStep', () => {
+    const step = state.steps && state.steps[state.stepIdx];
+    if(step && step.phase === 'rest'){
+      resetSkipConfirm();
+      skipStep();
+      return;
+    }
+    if(skipConfirmIdx !== state.stepIdx){
+      clearTimeout(skipConfirmT);
+      skipConfirmIdx = state.stepIdx;
+      $('btnSkip').textContent = t('workout.areYouSure');
+      $('btnSkip').classList.add('confirm');
+      skipConfirmT = setTimeout(resetSkipConfirm, 3000);
+      return;
+    }
+    resetSkipConfirm();
+    skipStep();
+  });
+  registerAction('previousWorkoutStep', () => {
+    resetSkipConfirm();
+    prevStep();
+  });
   registerAction('toggleStartMenu', (_btn, event) => {
     event.stopPropagation();
     toggleMenu($('startMenu'));
@@ -1509,6 +1537,18 @@ let pendingNativeWorkoutResume = false;
 let workoutResumeReady = false;
 let programLinksReady = false;
 let pendingAction = null;
+let skipConfirmIdx = -1;
+let skipConfirmT = 0;
+
+function resetSkipConfirm(){
+  clearTimeout(skipConfirmT);
+  skipConfirmT = 0;
+  skipConfirmIdx = -1;
+  const step = state.steps && state.steps[state.stepIdx];
+  $('btnSkip').textContent = t(step && step.phase === 'rest' ? 'workout.next' : 'workout.skip');
+  $('btnSkip').classList.remove('confirm');
+}
+
 
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
@@ -1520,39 +1560,6 @@ export function initEvents(){
   $('startMore').innerHTML = icon('more');
   $('startModal').onclick = e => { if(e.target === $('startModal')) $('startModal').classList.remove('open'); };
   $('pickStepModal').onclick = e => { if(e.target === $('pickStepModal')) $('pickStepModal').classList.remove('open'); };
-  let skipConfirmIdx = -1;
-  let skipConfirmT = 0;
-  const resetSkipConfirm = ()=>{
-    clearTimeout(skipConfirmT);
-    skipConfirmT = 0;
-    skipConfirmIdx = -1;
-    const step = state.steps && state.steps[state.stepIdx];
-    $('btnSkip').textContent = t(step && step.phase === 'rest' ? 'workout.next' : 'workout.skip');
-    $('btnSkip').classList.remove('confirm');
-  };
-  $('btnDone').onclick = ()=>{
-    resetSkipConfirm();
-    initAudio(); beep(990,.1); completeStep();
-  };
-  $('btnSkip').onclick = ()=>{
-    const step = state.steps && state.steps[state.stepIdx];
-    if(step && step.phase === 'rest'){
-      resetSkipConfirm();
-      skipStep();
-      return;
-    }
-    if(skipConfirmIdx !== state.stepIdx){
-      clearTimeout(skipConfirmT);
-      skipConfirmIdx = state.stepIdx;
-      $('btnSkip').textContent = t('workout.areYouSure');
-      $('btnSkip').classList.add('confirm');
-      skipConfirmT = setTimeout(resetSkipConfirm, 3000);
-      return;
-    }
-    resetSkipConfirm();
-    skipStep();
-  };
-  $('btnPrev').onclick = ()=>{ resetSkipConfirm(); prevStep(); };
   $('btnPrev').innerHTML = icon('chevL');
   $('swapBadgeIcon').innerHTML = icon('chart'); // растущая кривая — «пора поднять планку»
   $('exitModal').onclick = e => { if(e.target === $('exitModal')) $('exitModal').classList.remove('open'); };
