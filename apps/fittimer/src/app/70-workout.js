@@ -12,7 +12,7 @@ import { calcStreak, calcStreakInfo, clearSession, closeAllMenus, curUser, custo
   saveStats, setDataSyncWorkoutHooks, stats, streakWord, toggleMenu, trackProductEvent, users
 } from './10-data-sync.js';
 import { setAccountWorkoutHooks } from './20-account.js';
-import { LIM, clampText, photos, shareGeneratedFile } from './30-progress-media.js';
+import { LIM, clampText, photos, setProgressWorkoutHooks, shareGeneratedFile } from './30-progress-media.js';
 import { aiClientVerdict, callGemini, exAnswerFormat, exerciseToText, premiumGate, userForAI,
   weekPlanInfo
 } from './40-programs-ai.js';
@@ -1821,6 +1821,10 @@ export function setExFromWorkShared(value){ exFromWork = value; return exFromWor
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initWorkout(){
+  setProgressWorkoutHooks({
+    esc,
+    roundRect
+  });
   setAccountWorkoutHooks({
     esc
   });
