@@ -107,7 +107,7 @@
   <!-- ОТПРАВЛЕННОЕ В КАТАЛОГ. Тренер должен видеть, что с его программами: без
        этого он не знает, дошло ли вообще, и отправляет повторно. -->
   <section class="screen builder" id="scrMyCatalog">
-    <div class="screen-head"><button class="back-chip" id="mcBackTop">‹</button><h2 data-i18n="publish.catalogTitle">В каталоге</h2></div>
+    <div class="screen-head"><button class="back-chip" id="mcBackTop" data-act="backMyCatalog">‹</button><h2 data-i18n="publish.catalogTitle">В каталоге</h2></div>
     <div class="card-block">
       <div class="list-rows" id="mcList"></div>
       <p class="field-hint" id="mcHint"></p>
@@ -115,7 +115,7 @@
   </section>
 
   <section class="screen builder" id="scrPublish">
-    <div class="screen-head"><button class="back-chip" id="pubBackTop">‹</button><h2 data-i18n="publish.toCatalog">В каталог</h2></div>
+    <div class="screen-head"><button class="back-chip" id="pubBackTop" data-act="backPublish">‹</button><h2 data-i18n="publish.toCatalog">В каталог</h2></div>
 
     <div class="card-block">
       <div class="pref-row"><span><span id="pubName"></span><small id="pubSub"></small></span></div>
@@ -140,12 +140,12 @@
     </div>
 
     <div class="builder-actions">
-      <button class="btn-primary" id="btnPublish" data-i18n="publish.submit">Отправить на проверку</button>
+      <button class="btn-primary" id="btnPublish" data-act="publishProgram" data-i18n="publish.submit">Отправить на проверку</button>
     </div>
   </section>
 
   <section class="screen builder" id="scrTrainerPage">
-    <div class="screen-head"><button class="back-chip" id="tpBackTop">‹</button><h2 data-i18n="trainer.title">Тренер</h2></div>
+    <div class="screen-head"><button class="back-chip" id="tpBackTop" data-act="backTrainerProfile">‹</button><h2 data-i18n="trainer.title">Тренер</h2></div>
 
     <div class="card-block">
       <div class="tp-head">
@@ -169,7 +169,7 @@
   </section>
 
   <section class="screen builder" id="scrClient">
-    <div class="screen-head"><button class="back-chip" id="clBackTop">‹</button><h2 id="clTitle" data-i18n="clients.default">Подопечный</h2></div>
+    <div class="screen-head"><button class="back-chip" id="clBackTop" data-act="backClient">‹</button><h2 id="clTitle" data-i18n="clients.default">Подопечный</h2></div>
 
     <div class="card-block">
       <div class="field"><label data-i18n="common.name">Имя</label><input type="text" id="clName" maxlength="40" placeholder="Как записать" data-i18n-placeholder="clients.namePlaceholder"></div>
