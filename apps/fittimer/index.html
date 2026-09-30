@@ -289,7 +289,7 @@
 
   <!-- Конструктор программ -->
   <section class="screen builder" id="scrBuilder">
-    <div class="screen-head"><button class="back-chip" id="builderBackTop"></button><h2 id="builderTitle" data-i18n="programs.newProgram">Новая программа</h2></div>
+    <div class="screen-head"><button class="back-chip" id="builderBackTop" data-act="backFromBuilder"></button><h2 id="builderTitle" data-i18n="programs.newProgram">Новая программа</h2></div>
     <div class="tabs" id="bModeTabs">
       <button class="tab act" data-m="manual" data-i18n="common.manual">Вручную</button>
       <button class="tab" data-m="text" data-i18n="common.viaAI">Через ИИ</button>
@@ -298,7 +298,7 @@
 
     <div class="card-block">
       <div class="field"><label data-i18n="programs.programName">Название программы</label><input type="text" id="bName" maxlength="60" placeholder="Например: Утренний блиц" data-i18n-placeholder="builder.programNameExample"></div>
-      <button type="button" class="nav-row nr-flat" id="bSettingsToggle">
+      <button type="button" class="nav-row nr-flat" id="bSettingsToggle" data-act="openProgramSettings">
         <span class="nr-ico" data-icon="calendar"></span>
         <div class="nr-body">
           <b data-i18n="programs.settings">Настройки программы</b>
@@ -317,7 +317,7 @@
       <div class="plan-tabs" id="planTabsTop"></div>
       <!-- Картинки — про упражнения, поэтому лежат в их блоке и НАД списком: внизу,
            после кнопок добавления, строка терялась совсем. -->
-      <button type="button" class="nav-row nr-flat" id="bImagesRow">
+      <button type="button" class="nav-row nr-flat" id="bImagesRow" data-act="openProgramImages">
         <span class="nr-ico" data-icon="image"></span>
         <div class="nr-body">
           <b data-i18n="programs.exerciseImages">Картинки упражнений</b>
@@ -331,7 +331,7 @@
       <button class="btn-ghost" id="btnAddEx" data-act="openAddExerciseModal"><span data-icon="plus"></span><span data-i18n="programs.addExercise">Добавить упражнение</span></button>
     </div>
     <div class="builder-actions">
-      <button class="btn-primary" id="btnSaveProgram" data-i18n="programs.saveProgram">Сохранить программу</button>
+      <button class="btn-primary" id="btnSaveProgram" data-act="saveProgram" data-i18n="programs.saveProgram">Сохранить программу</button>
     </div>
   </section>
 
@@ -493,7 +493,7 @@
 
   <!-- Настройки программы -->
   <section class="screen builder" id="scrProgSettings">
-    <div class="screen-head"><button class="back-chip" id="psBackTop"></button><h2 data-i18n="programs.settings">Настройки программы</h2></div>
+    <div class="screen-head"><button class="back-chip" id="psBackTop" data-act="backFromProgramSettings"></button><h2 data-i18n="programs.settings">Настройки программы</h2></div>
     <!-- Порядок карточек — по важности: расписание, потом круги и отдых, потом рост
          нагрузки, и только в конце оформление. Раньше первой стояла обложка с описанием,
          а дни приходилось искать третьей карточкой — притом что карточка «Когда
@@ -557,9 +557,9 @@
     </div>
     <div class="field"><label data-i18n="builder.coverOptional">Обложка (необязательно)</label>
       <div class="media-row">
-        <button type="button" id="bCoverBtn" data-i18n="builder.choosePhoto">Выбрать фото</button>
-        <button type="button" id="bCoverAI" data-i18n="builder.imageAI">Через ИИ</button>
-        <button type="button" id="bCoverNone" data-i18n="builder.noCover">Без обложки</button>
+        <button type="button" id="bCoverBtn" data-act="pickProgramCover" data-i18n="builder.choosePhoto">Выбрать фото</button>
+        <button type="button" id="bCoverAI" data-act="generateProgramCover" data-i18n="builder.imageAI">Через ИИ</button>
+        <button type="button" id="bCoverNone" data-act="removeProgramCover" data-i18n="builder.noCover">Без обложки</button>
       </div>
       <input type="file" id="bCoverFile" accept="image/*" class="hidden">
       <div class="media-preview" id="bCoverPrev"></div>
@@ -567,17 +567,17 @@
     </div>
 
     <div class="builder-actions">
-      <button class="btn-primary" id="btnPsDone" data-i18n="common.done">Готово</button>
+      <button class="btn-primary" id="btnPsDone" data-act="saveProgramSettings" data-i18n="common.done">Готово</button>
     </div>
   </section>
 
   <!-- Редактор одного упражнения -->
   <section class="screen builder" id="scrExercise">
     <div class="screen-head">
-      <button class="back-chip" id="exBackTop"></button>
+      <button class="back-chip" id="exBackTop" data-act="backFromExercise"></button>
       <h2 data-i18n="builder.exercise">Упражнение</h2>
       <div class="prog-menu-wrap" id="exMoreWrap">
-        <button class="more-btn" id="exMore" title="Действия" data-i18n-title="common.actions"></button>
+        <button class="more-btn" id="exMore" data-act="toggleExerciseMenu" title="Действия" data-i18n-title="common.actions"></button>
         <div class="ctx-menu" id="exMenu"></div>
       </div>
     </div>
@@ -591,8 +591,8 @@
       <div class="field"><label data-i18n="builder.name">Название</label><input type="text" id="exName" maxlength="60" placeholder="Например: Приседания" data-i18n-placeholder="builder.exerciseNameExample"></div>
       <div class="field"><label data-i18n="builder.countMode">Как считать</label>
         <div class="seg">
-          <button type="button" id="exTypeReps" data-i18n="builder.reps">Повторения</button>
-          <button type="button" id="exTypeTime" data-i18n="builder.time">Время</button>
+          <button type="button" id="exTypeReps" data-act="setExerciseType" data-ex-type="reps" data-i18n="builder.reps">Повторения</button>
+          <button type="button" id="exTypeTime" data-act="setExerciseType" data-ex-type="time" data-i18n="builder.time">Время</button>
         </div>
         <p class="field-hint" id="exTypeHint"></p>
       </div>
@@ -600,7 +600,7 @@
            и с повторениями (снаряд), и со временем (удержание или перенос с грузом —
            планка с блином, фермерская прогулка). Раньше «С весом» был третьей кнопкой
            в этом же ряду, и добраться до «время и вес» было нечем. -->
-      <div class="pref-row"><span><span data-i18n="builder.weightedTitle">Упражнение с доп. весом</span><small data-i18n="builder.weightedSub">снаряды, утяжелители и тп</small></span><button type="button" class="switch" id="exWeightOn"></button></div>
+      <div class="pref-row"><span><span data-i18n="builder.weightedTitle">Упражнение с доп. весом</span><small data-i18n="builder.weightedSub">снаряды, утяжелители и тп</small></span><button type="button" class="switch" id="exWeightOn" data-act="toggleExerciseWeight"></button></div>
       <div class="row2">
         <div class="field"><label id="exValLabel" data-i18n="builder.repsCount">Повторений</label><input type="text" id="exValue" maxlength="16" inputmode="numeric" placeholder="Например: 12-15" data-i18n-placeholder="builder.repsExample"></div>
         <div class="field" id="exSetsField"><label data-i18n="builder.sets">Подходов подряд</label><input type="number" id="exSets" min="1" max="10" inputmode="numeric" placeholder="Например: 3" data-i18n-placeholder="builder.setsExample"></div>
@@ -619,8 +619,8 @@
         <div class="load-row" id="exRestAfterChips"></div>
         <p class="field-hint" data-i18n="builder.restAfterHint">После всего упражнения, перед следующим.</p>
       </div>
-      <div class="pref-row"><span><span data-i18n="builder.warmupTitle">Разминка</span><small data-i18n="builder.warmupSub">делается один раз в начале, до кругов</small></span><button type="button" class="switch" id="exWarm"></button></div>
-      <div class="pref-row"><span><span data-i18n="builder.eachSideTitle">На каждую сторону</span><small data-i18n="builder.eachSideSub">выпады, боковая планка — считаем и левую, и правую как один подход</small></span><button type="button" class="switch" id="exSide"></button></div>
+      <div class="pref-row"><span><span data-i18n="builder.warmupTitle">Разминка</span><small data-i18n="builder.warmupSub">делается один раз в начале, до кругов</small></span><button type="button" class="switch" id="exWarm" data-act="toggleExerciseWarmup"></button></div>
+      <div class="pref-row"><span><span data-i18n="builder.eachSideTitle">На каждую сторону</span><small data-i18n="builder.eachSideSub">выпады, боковая планка — считаем и левую, и правую как один подход</small></span><button type="button" class="switch" id="exSide" data-act="toggleExercisePerSide"></button></div>
     </div>
 
     <!-- Рост нагрузки свёрнут так же, как «Детали»: у упражнения, которое просто
@@ -630,14 +630,14 @@
          лишние пары просто скрыты. Раньше это были три почти одинаковых блока,
          которые приходилось держать в синхроне руками. -->
     <div class="card-block">
-      <button type="button" class="collapse-head" id="exProgToggle">
+      <button type="button" class="collapse-head" id="exProgToggle" data-act="toggleExerciseProgressionBox">
         <span data-i18n="builder.progressionTitle">Со временем сложнее</span>
         <span class="st-sum" id="exProgSum"></span>
         <span class="st-chev" id="exProgChev"></span>
       </button>
 
       <div id="exProgBox" class="stack hidden">
-        <div class="pref-row"><span><span data-i18n="builder.progressOverTime">Усложнять со временем</span><small id="exProgOnHint"></small></span><button type="button" class="switch" id="exProgOn"></button></div>
+        <div class="pref-row"><span><span data-i18n="builder.progressOverTime">Усложнять со временем</span><small id="exProgOnHint"></small></span><button type="button" class="switch" id="exProgOn" data-act="toggleExerciseProgression"></button></div>
         <div class="step-grid hidden" id="exStepRow">
           <!-- Порядок пар в разметке = порядок на экране. Вес идёт ПОСЛЕДНИМ:
                он сочетается и с повторениями, и со временем, и в обоих случаях
@@ -652,8 +652,8 @@
           <div class="field hidden" id="exStepMaxWeightRow"><label data-i18n="builder.maxWeight">Максимум, кг</label><input type="text" id="exMaxWeight" maxlength="6" inputmode="decimal" placeholder="Например: 24" data-i18n-placeholder="builder.maxWeightExample"></div>
         </div>
         <p class="field-hint hidden" id="exStepBothHint" data-i18n="builder.stepHint">Для диапазона «прибавка» сдвигает обе границы, а «максимум» задаёт потолок верхней границы.</p>
-        <div class="pref-row hidden" id="exDualRow"><span><span data-i18n="builder.resetRepsAddWeightTitle">Дошли до максимума — добавить вес</span><small data-i18n="builder.resetRepsAddWeight">диапазон повторений вернётся к стартовому, вес вырастет на прибавку</small></span><button type="button" class="switch" id="exDual"></button></div>
-        <div class="pref-row hidden" id="exSwapRow"><span><span data-i18n="builder.swapTitle">Есть упражнение посложнее</span><small data-i18n="builder.swapSub">подскажем на тренировке, когда дорастёшь до максимума</small></span><button type="button" class="switch" id="exSwapOn"></button></div>
+        <div class="pref-row hidden" id="exDualRow"><span><span data-i18n="builder.resetRepsAddWeightTitle">Дошли до максимума — добавить вес</span><small data-i18n="builder.resetRepsAddWeight">диапазон повторений вернётся к стартовому, вес вырастет на прибавку</small></span><button type="button" class="switch" id="exDual" data-act="toggleExerciseDualProgression"></button></div>
+        <div class="pref-row hidden" id="exSwapRow"><span><span data-i18n="builder.swapTitle">Есть упражнение посложнее</span><small data-i18n="builder.swapSub">подскажем на тренировке, когда дорастёшь до максимума</small></span><button type="button" class="switch" id="exSwapOn" data-act="toggleExerciseSwap"></button></div>
         <div class="stack hidden" id="exSwapBox">
           <div class="field"><label data-i18n="builder.swapWith">Чем заменить</label><input type="text" id="exSwapName" maxlength="60" placeholder="Например: отжимания с ногами на возвышении" data-i18n-placeholder="builder.swapNameExample"></div>
           <div class="field"><label data-i18n="builder.swapHow">Как выполнять замену</label><textarea id="exSwapDesc" class="auto-grow" maxlength="600" placeholder="Техника более сложного варианта: исходное положение, движение, на что следить" data-i18n-placeholder="builder.swapDescExample"></textarea></div>
@@ -663,7 +663,7 @@
     </div>
 
     <div class="card-block">
-    <button type="button" class="collapse-head" id="exDetailsToggle">
+    <button type="button" class="collapse-head" id="exDetailsToggle" data-act="toggleExerciseDetails">
       <span data-i18n="builder.details">Детали</span>
       <span class="st-sum" id="exDetailsSum"></span>
       <span class="st-chev" id="exDetailsChev"></span>
@@ -676,9 +676,9 @@
       <div class="field"><label data-i18n="builder.videoOptional">Ссылка на видео (необязательно)</label><input type="url" id="exVideo" maxlength="300" placeholder="https://youtube.com/..."></div>
       <div class="field"><label data-i18n="builder.image">Картинка</label>
         <div class="media-row">
-          <button type="button" id="exMediaBtn" data-i18n="builder.choosePhoto">Выбрать фото</button>
-          <button type="button" id="exMediaAI" data-i18n="builder.imageAI">Через ИИ</button>
-          <button type="button" id="exMediaNone" data-i18n="builder.remove">Убрать</button>
+          <button type="button" id="exMediaBtn" data-act="pickExerciseMedia" data-i18n="builder.choosePhoto">Выбрать фото</button>
+          <button type="button" id="exMediaAI" data-act="generateExerciseMedia" data-i18n="builder.imageAI">Через ИИ</button>
+          <button type="button" id="exMediaNone" data-act="removeExerciseMedia" data-i18n="builder.remove">Убрать</button>
         </div>
         <input type="file" id="exMediaFile" accept="image/*" class="hidden">
         <div class="media-preview" id="exMediaPrev"></div>
@@ -687,7 +687,7 @@
     </div>
 
     <div class="builder-actions">
-      <button class="btn-primary" id="btnSaveEx" data-i18n="common.done">Готово</button>
+      <button class="btn-primary" id="btnSaveEx" data-act="saveExercise" data-i18n="common.done">Готово</button>
     </div>
   </section>
 
@@ -1246,7 +1246,7 @@
         <div class="tot-row tot-plain">
           <div class="tot"><b id="totalTime">0</b><span data-i18n="progress.totalTime">общее время</span></div>
           <div class="tot"><b id="totalCount">0</b><span id="totalCountWord" data-i18n="calendar.workoutMany">тренировок</span></div>
-          <button class="icon-btn tot-reset" id="btnResetTotal" title="Очистить всю статистику" data-i18n-title="progress.clearStatsTitle"></button>
+          <button class="icon-btn tot-reset" id="btnResetTotal" data-act="resetWorkoutStats" title="Очистить всю статистику" data-i18n-title="progress.clearStatsTitle"></button>
         </div>
       </div>
 

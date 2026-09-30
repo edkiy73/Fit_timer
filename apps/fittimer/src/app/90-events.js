@@ -71,6 +71,167 @@ import { SR, applyThemeFor, checkSchedules, hfHintText, hfMode, recognitionLang,
 
 /* ================= СОБЫТИЯ ================= */
 function registerEventActions(){
+  registerAction('toggleExerciseMenu', (_btn, event) => {
+    event.stopPropagation();
+    toggleMenu($('exMenu'));
+  });
+  registerAction('backFromExercise', () => leaveExercise());
+  registerAction('saveExercise', () => {
+    if(numFieldsOk('scrExercise') && exNameOk()) saveExAndBack();
+  });
+  registerAction('setExerciseType', btn => {
+    exDraft.type = btn.dataset.exType === 'time' ? 'time' : 'reps';
+    syncExType();
+  });
+  registerAction('toggleExerciseWeight', () => {
+    exDraft.trackWeight = !exDraft.trackWeight;
+    if(exDraft.trackWeight && exDraft.wStep == null) exDraft.wStep = 2;
+    syncExType();
+  });
+  registerAction('toggleExerciseProgressionBox', () => {
+    const box = $('exProgBox'), open = box.classList.contains('hidden');
+    setShown(box, open);
+    $('exProgToggle').classList.toggle('open', open);
+  });
+  registerAction('toggleExerciseProgression', () => {
+    const on = !$('exProgOn').classList.contains('on');
+    exDraft.progOn = on;
+    if(on){
+      if(hasWeight(exDraft) && exDraft.wStep == null) exDraft.wStep = 2;
+      if(exDraft.type !== 'time' && exDraft.repsStep == null) exDraft.repsStep = hasWeight(exDraft) ? 0 : 1;
+      if(exDraft.type === 'time' && exDraft.timeStep == null) exDraft.timeStep = 5;
+    }
+    ['exStepReps','exStepWeight','exStepTime','exMaxReps','exMaxWeight','exMaxTime'].forEach(id => delete $(id).dataset.touched);
+    renderProgControls();
+    syncExDetailsSum();
+  });
+  registerAction('toggleExerciseDualProgression', () => {
+    exDraft.dualProg = !exDraft.dualProg;
+    if(exDraft.dualProg){
+      const repStep = parseStepNum($('exStepReps').value);
+      const weightStep = parseStepNum($('exStepWeight').value);
+      if(!(repStep > 0)){
+        exDraft.repsStep = 1;
+        $('exStepReps').value = '1';
+        $('exStepReps').dataset.touched = '1';
+      }
+      if(!(weightStep > 0)){
+        exDraft.wStep = 2;
+        $('exStepWeight').value = '2';
+        $('exStepWeight').dataset.touched = '1';
+      }
+      const base = parseValue(normValue($('exValue').value, 'reps'));
+      const max = parseStepNum($('exMaxReps').value);
+      const step = parseStepNum($('exStepReps').value) || 1;
+      if(!(max > base.max)){
+        const nextMax = Math.min(200, base.max + step);
+        exDraft.repsMax = nextMax;
+        $('exMaxReps').value = String(nextMax);
+        $('exMaxReps').dataset.touched = '1';
+      }
+      exDraft.dualRangeV = 2;
+    }
+    $('exDual').classList.toggle('on', exDraft.dualProg);
+    syncExProgSum();
+    syncExNowHints();
+    syncExDetailsSum();
+  });
+  registerAction('toggleExerciseSwap', () => {
+    exDraft.swapOn = !exDraft.swapOn;
+    $('exSwapOn').classList.toggle('on', exDraft.swapOn);
+    setShown('exSwapBox', exDraft.swapOn);
+    if(exDraft.swapOn) autoGrow($('exSwapDesc'));
+  });
+  registerAction('toggleExerciseWarmup', () => {
+    const list = curPlan().exercises;
+    const nWarm = list.filter((e, i) => e.warmup && i !== exIdx).length;
+    const nMain = list.filter((e, i) => !e.warmup && i !== exIdx).length;
+    if(!exDraft.warmup && nWarm >= MAX_WARM){ appAlert(t('exercise.warmMax',{count:MAX_WARM})); return; }
+    if(exDraft.warmup && nMain >= MAX_MAIN){ appAlert(t('exercise.mainMax',{count:MAX_MAIN})); return; }
+    exDraft.warmup = !exDraft.warmup;
+    $('exWarm').classList.toggle('on', exDraft.warmup);
+    if(exDraft.warmup) exDraft.sets = 1;
+    syncExWarm();
+    renderProgControls();
+  });
+  registerAction('toggleExercisePerSide', () => {
+    exDraft.perSide = !exDraft.perSide;
+    $('exSide').classList.toggle('on', exDraft.perSide);
+  });
+  registerAction('toggleExerciseDetails', () => {
+    const box = $('exDetailsBox'), open = box.classList.contains('hidden');
+    box.classList.toggle('hidden', !open);
+    $('exDetailsToggle').classList.toggle('open', open);
+    if(open){
+      autoGrow($('exDesc'));
+      autoGrow($('exMistakes'));
+    }
+  });
+  registerAction('pickExerciseMedia', () => $('exMediaFile').click());
+  registerAction('removeExerciseMedia', () => {
+    dropExMedia(exDraft);
+    $('exMediaFile').value = '';
+    renderExMedia();
+    syncExDetailsSum();
+  });
+  registerAction('generateExerciseMedia', () => {
+    const item = exImageItem(Object.assign({}, exDraft, {
+      name:$('exName').value,
+      desc:$('exDesc').value
+    }));
+    generateOneImageViaAI('ex', item, item.name, data => {
+      setExImg(exDraft, data);
+      renderExMedia();
+      syncExDetailsSum();
+    });
+  });
+  registerAction('openProgramImages', () => {
+    if(premiumGate()) openImages();
+  });
+  registerAction('openProgramSettings', () => {
+    syncRotateUI();
+    fillPlanFields();
+    show('scrProgSettings');
+    window.scrollTo(0, 0);
+  });
+  registerAction('backFromProgramSettings', () => closeProgSettings());
+  registerAction('saveProgramSettings', () => {
+    if(numFieldsOk('scrProgSettings')) closeProgSettings();
+  });
+  registerAction('saveProgram', () => {
+    if(numFieldsOk('scrBuilder')) saveProgram();
+  });
+  registerAction('backFromBuilder', () => {
+    leaveGuard(programDirty(), ()=>{
+      clearSnap('program');
+      goTab('scrPrograms');
+    }, t('builder.programChanges'));
+  });
+  registerAction('pickProgramCover', () => $('bCoverFile').click());
+  registerAction('removeProgramCover', () => {
+    draft.cover = null;
+    $('bCoverFile').value = '';
+    syncCover();
+  });
+  registerAction('generateProgramCover', () => {
+    generateOneImageViaAI('cover', null, t('images.coverProgram'), data => {
+      draft.cover = data;
+      $('bCoverFile').value = '';
+      syncCover();
+    });
+  });
+  registerAction('resetWorkoutStats', async () => {
+    const ok = await appDialog(
+      t('stats.clearQuestion'),
+      {confirm:true, okText:t('stats.clear'), cancelText:t('common.cancel'), type:t('account.deleteConfirmPhrase')}
+    );
+    if(!ok) return;
+    stats.totalSec = 0;
+    stats.count = 0;
+    stats.history = [];
+    await saveStats();
+    renderStats();
+  });
   registerAction('openYouTubeCreate', () => {
     $('createModal').classList.remove('open');
     openYouTube();
@@ -2053,7 +2214,6 @@ export function initEvents(){
   });
   // действия над открытым упражнением — в меню шапки, как у программы на экране старта
   $('exMore').innerHTML = icon('more');
-  $('exMore').onclick = e => { e.stopPropagation(); toggleMenu($('exMenu')); };
   // конструктор: вручную ⇄ через ИИ ⇄ из видео
   document.querySelectorAll('#bModeTabs .tab').forEach(b => {
     b.onclick = async ()=>{
@@ -2095,10 +2255,8 @@ export function initEvents(){
     if(b.dataset.m === 'manual'){ asTab(c.manual); return; }
     asTab(()=> switchCreateMode(b.dataset.m));
   });
-  $('exBackTop').onclick = ()=> leaveExercise();
   // числовые поля проверяются перед сохранением: неверное значение больше не
   // «исправляется» молча в единицу
-  $('btnSaveEx').onclick = ()=>{ if(numFieldsOk('scrExercise') && exNameOk()) saveExAndBack(); };
   [['exValue','range',true],['exSets','int'],['exWeight','dec'],
    ['exStepReps','int'],['exMaxReps','int'],['exStepWeight','dec'],['exMaxWeight','dec'],
    ['exStepTime','int'],['exMaxTime','int']].forEach(([id,k,req])=> guardNum(id,k,req));
@@ -2108,117 +2266,17 @@ export function initEvents(){
   // трогает другое. != null везде вместо простой проверки на «истинность» — иначе
   // явный 0 в шаге (значит «эта ось не растёт») JS воспримет как «не задано» и
   // подставит дефолт заново
-  $('exTypeReps').onclick = ()=>{ exDraft.type = 'reps'; syncExType(); };
-  $('exTypeTime').onclick = ()=>{ exDraft.type = 'time'; syncExType(); };
-  $('exWeightOn').onclick = ()=>{
-    exDraft.trackWeight = !exDraft.trackWeight;
-    if(exDraft.trackWeight && exDraft.wStep == null) exDraft.wStep = 2;
-    syncExType();
-  };
-  $('exProgToggle').onclick = ()=>{
-    const box = $('exProgBox'), open = box.classList.contains('hidden');
-    setShown(box, open);
-    $('exProgToggle').classList.toggle('open', open);
-  };
-  $('exProgOn').onclick = ()=>{
-    const on = !$('exProgOn').classList.contains('on');
-    exDraft.progOn = on;
-    if(on){
-      // включили — проставляем дефолтный шаг для текущего формата, если его ещё вообще не было
-      if(hasWeight(exDraft) && exDraft.wStep == null) exDraft.wStep = 2;
-      if(exDraft.type !== 'time' && exDraft.repsStep == null) exDraft.repsStep = hasWeight(exDraft) ? 0 : 1;
-      if(exDraft.type === 'time' && exDraft.timeStep == null) exDraft.timeStep = 5;
-    }
-    ['exStepReps','exStepWeight','exStepTime','exMaxReps','exMaxWeight','exMaxTime'].forEach(id => delete $(id).dataset.touched);
-    renderProgControls();
-    syncExDetailsSum();
-  };
   ['exStepReps','exStepWeight','exStepTime','exMaxReps','exMaxWeight','exMaxTime'].forEach(id => {
     $(id).oninput = ()=>{ $(id).dataset.touched = '1'; syncExProgSum(); syncExNowHints(); };
   });
   // база поменялась — итог пересчитывается тут же, иначе подсказка врёт до сохранения
   ['exValue','exWeight'].forEach(id => $(id).addEventListener('input', syncExNowHints));
-  $('exDual').onclick = ()=>{
-    exDraft.dualProg = !exDraft.dualProg;
-    if(exDraft.dualProg){
-      // Double progression без двух положительных шагов не имеет смысла:
-      // сначала должен расти диапазон, затем вес. При включении тумблера сразу
-      // приводим пустые/нулевые поля к рабочим значениям, чтобы UI и движок не
-      // расходились (раньше на экране было 0, а движок тайно использовал +1).
-      const repStep = parseStepNum($('exStepReps').value);
-      const weightStep = parseStepNum($('exStepWeight').value);
-      if(!(repStep > 0)){
-        exDraft.repsStep = 1;
-        $('exStepReps').value = '1';
-        $('exStepReps').dataset.touched = '1';
-      }
-      if(!(weightStep > 0)){
-        exDraft.wStep = 2;
-        $('exStepWeight').value = '2';
-        $('exStepWeight').dataset.touched = '1';
-      }
-      const base = parseValue(normValue($('exValue').value, 'reps'));
-      const max = parseStepNum($('exMaxReps').value);
-      const step = parseStepNum($('exStepReps').value) || 1;
-      if(!(max > base.max)){
-        const nextMax = Math.min(200, base.max + step);
-        exDraft.repsMax = nextMax;
-        $('exMaxReps').value = String(nextMax);
-        $('exMaxReps').dataset.touched = '1';
-      }
-      exDraft.dualRangeV = 2;
-    }
-    $('exDual').classList.toggle('on', exDraft.dualProg);
-    syncExProgSum();
-    syncExNowHints();
-    syncExDetailsSum();
-  };
-  $('exSwapOn').onclick = ()=>{
-    exDraft.swapOn = !exDraft.swapOn;
-    $('exSwapOn').classList.toggle('on', exDraft.swapOn);
-    setShown('exSwapBox', exDraft.swapOn);
-    if(exDraft.swapOn) autoGrow($('exSwapDesc'));
-  };
   $('exSwapName').oninput = e => { exDraft.swapName = e.target.value; };
   $('exSwapDesc').oninput = e => { exDraft.swapDesc = e.target.value; };
-  $('exWarm').onclick = ()=>{
-    const list = curPlan().exercises;
-    const nWarm = list.filter((e, i) => e.warmup && i !== exIdx).length;
-    const nMain = list.filter((e, i) => !e.warmup && i !== exIdx).length;
-    if(!exDraft.warmup && nWarm >= MAX_WARM){ appAlert(t('exercise.warmMax',{count:MAX_WARM})); return; }
-    if(exDraft.warmup && nMain >= MAX_MAIN){ appAlert(t('exercise.mainMax',{count:MAX_MAIN})); return; }
-    exDraft.warmup = !exDraft.warmup;
-    $('exWarm').classList.toggle('on', exDraft.warmup);
-    if(exDraft.warmup) exDraft.sets = 1;
-    syncExWarm();
-    renderProgControls(); // разминка блокирует «усложнять со временем» — обновляем сразу
-  };
-  $('exSide').onclick = ()=>{ exDraft.perSide = !exDraft.perSide; $('exSide').classList.toggle('on', exDraft.perSide); };
   $('exDesc').oninput = e => { exDraft.desc = e.target.value; syncExDetailsSum(); };
   $('exMistakes').oninput = e => { exDraft.mistakes = e.target.value; syncExDetailsSum(); };
   $('exVideo').oninput = e => { exDraft.video = e.target.value; syncExDetailsSum(); };
-  $('exDetailsToggle').onclick = ()=>{
-    const box = $('exDetailsBox'), open = box.classList.contains('hidden');
-    box.classList.toggle('hidden', !open);
-    $('exDetailsToggle').classList.toggle('open', open);
-    if(open){ autoGrow($('exDesc')); autoGrow($('exMistakes')); }
-  };
-  $('exMediaBtn').onclick = ()=> $('exMediaFile').click();
-  $('exMediaNone').onclick = ()=>{
-    dropExMedia(exDraft);
-    $('exMediaFile').value = '';
-    renderExMedia(); syncExDetailsSum();
-  };
   // картинка упражнения через ИИ — по тому, что уже набрано в форме
-  $('exMediaAI').onclick = ()=>{
-    const item = exImageItem(Object.assign({}, exDraft, {
-      name:$('exName').value, desc:$('exDesc').value
-    }));
-    generateOneImageViaAI('ex', item, item.name, data => {
-      setExImg(exDraft, data);
-      renderExMedia(); syncExDetailsSum();
-    });
-  };
   $('exMediaFile').onchange = e => {
     const file = e.target.files && e.target.files[0];
     if(!file) return;
@@ -2229,28 +2287,12 @@ export function initEvents(){
     });
   };
   /* ---- сворачивание настроек программы ---- */
-  $('bImagesRow').onclick = ()=>{ if(premiumGate()) openImages(); };
-  $('bSettingsToggle').onclick = ()=>{
-    syncRotateUI();
-    fillPlanFields();
-    show('scrProgSettings');
-    window.scrollTo(0, 0);
-  };
-  $('psBackTop').onclick = closeProgSettings;
-  $('btnPsDone').onclick = ()=>{ if(numFieldsOk('scrProgSettings')) closeProgSettings(); };
   $('bTime').oninput = ()=>{ draft.time = $('bTime').value || ''; syncSettingsSum(); };
   $('bDesc').oninput = e => {
     draft.desc = clampText(e.target.value, LIM.progDesc);
     $('bDescCount').textContent = draft.desc.length;
   };
-  $('btnSaveProgram').onclick = ()=>{ if(numFieldsOk('scrBuilder')) saveProgram(); };
-  $('builderBackTop').onclick = ()=> leaveGuard(programDirty(), ()=>{ clearSnap('program'); goTab('scrPrograms'); }, t('builder.programChanges'));
   // обложка программы
-  $('bCoverBtn').onclick = ()=> $('bCoverFile').click();
-  $('bCoverNone').onclick = ()=>{ draft.cover = null; $('bCoverFile').value=''; syncCover(); };
-  $('bCoverAI').onclick = ()=> generateOneImageViaAI('cover', null, t('images.coverProgram'), data => {
-    draft.cover = data; $('bCoverFile').value = ''; syncCover();
-  });
   $('bCoverFile').onchange = e=>{
     const file = e.target.files && e.target.files[0];
     if(!file) return;
@@ -2261,18 +2303,6 @@ export function initEvents(){
   // Кнопка называлась «сбросить общее время и счётчик», а стирала ВСЮ историю —
   // вместе с календарём, неделями, сериями и достижениями. Теперь говорит правду
   // и требует набрать фразу: восстановить это неоткуда.
-  $('btnResetTotal').onclick = async ()=>{
-    const ok = await appDialog(
-      t('stats.clearQuestion'),
-      {confirm: true, okText: t('stats.clear'), cancelText: t('common.cancel'), type: t('account.deleteConfirmPhrase')}
-    );
-    if(!ok) return;
-    stats.totalSec = 0;
-    stats.count = 0;
-    stats.history = [];
-    await saveStats();
-    renderStats();
-  };
   document.addEventListener('visibilitychange', ()=>{
     const inWorkout = $('scrWork').classList.contains('on');
     if(document.visibilityState !== 'visible'){
