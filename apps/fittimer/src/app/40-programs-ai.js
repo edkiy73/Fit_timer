@@ -3235,10 +3235,12 @@ export function clientSum(c){
 export function setClientIdxShared(value){ clientIdx = value; return clientIdx; }
 export function setClientsShared(value){ clients = value; return clients; }
 export function setCoachPhotoDraftShared(value){ coachPhotoDraft = value; return coachPhotoDraft; }
-export function addImagesToTray(items){
-  (Array.isArray(items) ? items : []).forEach(data => {
-    if(data && !imgTray.includes(data)) imgTray.push(data);
-  });
+export function appendImagesToTray(items){
+  imgTray.push(...(Array.isArray(items) ? items.filter(Boolean) : []));
+  return imgTray.length;
+}
+export function ensureImageInTray(data){
+  if(data && !imgTray.includes(data)) imgTray.push(data);
   return imgTray.length;
 }
 export function clearUnusedImageTray(){
