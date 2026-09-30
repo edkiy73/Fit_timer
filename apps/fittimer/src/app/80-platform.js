@@ -3,7 +3,7 @@ import { appNotifications, appRuntimeCompat, appUi } from './00-dependencies.js'
 import { ACTIONS, registerAction } from './05-actions.js';
 import { $, appAlert, audioCtx, beep, dismissTopModal, fxVol, icon, keepAwake, lastAppSoundT,
   loadDelta, musicMode, plural, previousWorkoutLoad, releaseWake, setLastAppSoundTShared, soundOn,
-  state, syncSoundCascade, voiceVol, workoutLoadSnapshot
+  setCorePlatformHooks, state, syncSoundCascade, voiceVol, workoutLoadSnapshot
 } from './00-core.js';
 import { DAYS, curUser, customPrograms, kvSet, loadSession, loadSessions, localISO, normPlans, planDays,
   progActive, stats
@@ -796,6 +796,12 @@ export function setVoiceWantedShared(value){ voiceWanted = value; return voiceWa
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initPlatform(){
+  setCorePlatformHooks({
+    hasSpeechRecognition: () => !!SR,
+    getHfMode: () => hfMode,
+    hfHintText,
+    syncPrefs
+  });
   registerPlatformActions();
   try{
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{
