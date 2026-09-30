@@ -48,7 +48,7 @@
           </div>
           <!-- аватарка ведёт в свой профиль: на «Сегодня» это единственное место,
                где видно, чей это экран, — а на устройстве профилей может быть несколько -->
-          <button type="button" class="greet-ava" id="greetAva" title="Профиль" data-i18n-title="home.profileTitle"></button>
+          <button type="button" class="greet-ava" id="greetAva" data-act="editCurrentProfile" title="Профиль" data-i18n-title="home.profileTitle"></button>
         </div>
         <div class="greet-chips" id="greetChips"></div>
       </div>
@@ -74,7 +74,7 @@
     <!-- вход в каталог: готовые программы от тренеров для тех, кому не хочется
          собирать свою. Не «магазин»: денег здесь нет и не будет — программу
          добавляют в библиотеку, а не покупают. -->
-    <button class="store-cta" id="btnStoreMenu">
+    <button class="store-cta" id="btnStoreMenu" data-act="openStoreFromMenu">
       <span class="sc-ico" id="storeIcoMenu"></span>
       <span class="sc-txt"><b data-i18n="home.catalogTitle">Каталог программ</b><small data-i18n="home.catalogSub">Тренировки от тренеров</small></span>
       <span class="sc-arrow" id="storeArrowMenu"></span>
@@ -143,7 +143,7 @@
        через тот же parseProgramText — программа из каталога ничем не отличается от
        собранной руками. Программы приходят с сервера, обложки рисуются на месте. -->
   <section class="screen" id="scrStore">
-    <div class="screen-head"><button class="back-chip" id="storeBackTop"></button><h2 data-i18n="common.catalog">Каталог</h2></div>
+    <div class="screen-head"><button class="back-chip" id="storeBackTop" data-act="backFromStore"></button><h2 data-i18n="common.catalog">Каталог</h2></div>
 
     <div class="store-search">
       <span class="ss-ico" id="storeSearchIco"></span>
