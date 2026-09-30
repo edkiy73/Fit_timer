@@ -13,7 +13,7 @@ import { $, ICONS, ROOT_TABS, aiScreenDirty, appAlert, appConfirm, appDialog, as
 import { DAYS, clearSession, closeAllMenus, connectAccountSync, curUser, currentUser,
   customPrograms, customToProgram, hasConsent, kvDel, kvGet, kvSet, loadData, loadIdentity,
   loadSession, localISO, migrateUserAge, newId, normPlans, openWellAdd, openWellHist, planDays,
-  progActive, programDaysUnion, queueAccountSync, recordConsent, renderCalendar, renderStats,
+  progActive, programDaysUnion, queueAccountSync, recordConsent, renderStats,
   renderUsers, renderWeight, renderWellness, savePrograms, saveSession, saveStats, saveUsers,
   saveWell, saveWellHist, selectWeightMetric, selectWellnessMetric, sessionAgeText, sessionForProgram,
   sessionWorkout, setCurrentUserShared, setUsersShared, shiftCalendarMonth, showSyncState,
