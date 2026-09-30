@@ -12,6 +12,8 @@ const events=fs.readFileSync('src/app/90-events.js','utf8');
 const dataSync=fs.readFileSync('src/app/10-data-sync.js','utf8');
 const accountJs=fs.readFileSync('src/app/20-account.js','utf8');
 const progressJs=fs.readFileSync('src/app/30-progress-media.js','utf8');
+const programsAi=fs.readFileSync('src/app/40-programs-ai.js','utf8');
+const workoutJs=fs.readFileSync('src/app/70-workout.js','utf8');
 const actions=fs.readFileSync('src/app/05-actions.js','utf8');
 const shell=fs.readFileSync('src/html/00-shell-home.html','utf8');
 const programsHtml=fs.readFileSync('src/html/10-programs-builder.html','utf8');
@@ -507,6 +509,31 @@ ok('account/progress static markup uses data-act',
   && progressHtml.includes('id="cmpImgB" data-act="openComparePhotoFull" data-compare-side="B"')
   && progressHtml.includes('id="photoFullModal" data-act="closePhotoFullBackdrop"')
   && progressHtml.includes('id="sessModal" data-act="closeModalBackdrop"'));
+
+ok('programs AI dynamic clicks use action registry',
+  programsAi.includes("registerAction('showDynamicInfo'")
+  && programsAi.includes("registerAction('openBodyStats'")
+  && programsAi.includes("registerAction('openTodayProgram'")
+  && programsAi.includes("registerAction('openWeekDay'")
+  && programsAi.includes("registerAction('openDayProgram'")
+  && programsAi.includes("registerAction('removeTrayImage'")
+  && programsAi.includes("registerAction('openImageSlot'")
+  && programsAi.includes("registerAction('assignTrayImageToSlot'")
+  && programsAi.includes("el.dataset.act = 'showDynamicInfo'")
+  && programsAi.includes("b.dataset.act = 'openBodyStats'")
+  && programsAi.includes("cell.dataset.act = 'openWeekDay'")
+  && programsAi.includes("row.dataset.act = 'openDayProgram'"));
+ok('workout dynamic clicks use action registry',
+  workoutJs.includes("registerAction('toggleProgressionHard'")
+  && workoutJs.includes("registerAction('toggleWorkoutMenu'")
+  && workoutJs.includes("registerAction('editWorkoutExercise'")
+  && workoutJs.includes("registerAction('toggleWorkoutPause'")
+  && workoutJs.includes("registerAction('openWorkoutExit'")
+  && workoutJs.includes("b.dataset.act = 'toggleProgressionHard'")
+  && workoutJs.includes("$('workMore').dataset.act = 'toggleWorkoutMenu'"));
+ok('programs AI and workout have no direct onclick wiring',
+  !programsAi.includes('.onclick')
+  && !workoutJs.includes('.onclick'));
 
 
 process.exit(bad?1:0);

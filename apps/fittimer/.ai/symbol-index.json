@@ -417,8 +417,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 3169,
-      "chars": 148084,
+      "lines": 3221,
+      "chars": 149892,
       "symbols": [
         "add",
         "ageError",
@@ -791,8 +791,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1883,
-      "chars": 84524,
+      "lines": 1895,
+      "chars": 85068,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
