@@ -17,6 +17,14 @@ need(!html.includes('id="workEdit"'), 'card edit button must be moved to top men
 need(!html.includes('id="btnPause"'), 'pause must not occupy bottom action bar');
 need(html.includes('id="btnPrev"') && html.includes('id="btnDone"') && html.includes('id="btnSkip"'),
   'bottom bar must contain only Back, Done and Skip');
+need(html.includes('id="btnPrev" data-act="previousWorkoutStep"')
+  && html.includes('id="btnSkip" data-act="skipWorkoutStep"')
+  && html.includes('id="btnDone" data-act="completeWorkoutStep"'),
+  'workout controls must use the action registry');
+need(!events.includes("$('btnPrev').onclick")
+  && !events.includes("$('btnSkip').onclick")
+  && !events.includes("$('btnDone').onclick"),
+  'workout controls must not use direct onclick wiring');
 need(!html.includes('data-icon="check"'), 'Done button must not contain a check icon');
 need(html.indexOf('id="btnSkip"') < html.indexOf('id="btnDone"'), 'Skip must be left of Done');
 need(workout.includes("t(step.phase === 'rest' ? 'workout.next' : 'workout.skip')"),
