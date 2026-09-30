@@ -314,5 +314,29 @@ ok('workout dynamic controls and modal backdrops have no direct onclick wiring',
   && !events.includes("$('btnHfVoiceTest').onclick")
   && !events.includes("document.querySelectorAll('#hfModalSeg [data-hf]').forEach(c =>"));
 
+ok('finish/profile dynamic actions are declarative',
+  workoutHtml.includes('id="btnShareResult" data-act="shareWorkoutResult"')
+  && workoutHtml.includes('id="finNoteToggle" data-act="openFinishNote"')
+  && workoutHtml.includes('id="finProgCheckYes" data-act="applyFinishProgression"')
+  && workoutHtml.includes('id="finProgCheckToggle" data-act="toggleFinishProgressionList"')
+  && workoutHtml.includes('id="btnAgain" data-act="finishResultDone"')
+  && workoutHtml.includes('id="btnDiscardResult" data-act="discardWorkoutResult"')
+  && progressHtml.includes('id="uePhotoBtn" data-act="openProfilePhotoMenu"')
+  && progressHtml.includes('id="whoModal" data-act="skipWhoBackdrop"')
+  && progressHtml.includes('id="loginModal" data-act="dropLoginBackdrop"')
+  && events.includes("b.dataset.act = 'sendChosenProgramToClient'")
+  && events.includes("replace.dataset.act = 'replaceProfilePhoto'")
+  && events.includes("remove.dataset.act = 'deleteProfilePhoto'"));
+ok('finish/profile dynamic actions have no direct onclick wiring',
+  !events.includes("$('btnShareResult').onclick")
+  && !events.includes("$('finNoteToggle').onclick")
+  && !events.includes("$('finProgCheckYes').onclick")
+  && !events.includes("$('finProgCheckToggle').onclick")
+  && !events.includes("$('btnAgain').onclick")
+  && !events.includes("$('btnDiscardResult').onclick")
+  && !events.includes("$('uePhotoBtn').onclick")
+  && !events.includes("$('whoModal').onclick")
+  && !events.includes("$('loginModal').onclick"));
+
 
 process.exit(bad?1:0);
