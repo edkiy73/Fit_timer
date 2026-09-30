@@ -18,7 +18,7 @@ assert.ok(product.products.some(item=>item.sku===A1_STARTER_SKU),'SKU is listed 
 const ids=new Set(course.activities.map(activity=>activity.id));
 assert.equal(ids.size,course.activities.length,'activity ids are unique');
 const nodes=course.roadmaps[0].nodes;
-assert.deepEqual(nodes.map(node=>node.dayIndex),[1,2,3]);
+assert.deepEqual(nodes.map(node=>node.dayIndex),[1,2,3,4,5,6,7,8,9,10,11,12]);
 for(const node of nodes){
   for(const id of node.activityIds) assert.ok(ids.has(id),'node '+node.id+' references '+id);
   assert.ok(node.activityIds.some(id=>id.startsWith('plan.')),'every day has a plan note');
