@@ -1,7 +1,7 @@
 import type { AuthSession } from '@appbase/core/auth.js';
 import type { CourseSet } from './content/schema';
 
-export type CourseEntitlementReason='free'|'owned'|'plus'|'preview';
+export type CourseEntitlementReason='free'|'owned'|'preview';
 
 export interface CourseEntitlementState {
   full:boolean;
@@ -9,7 +9,7 @@ export interface CourseEntitlementState {
   sku:string|null;
 }
 
-function activePremium(session:AuthSession|null|undefined,now:number):boolean{
+export function activePremium(session:AuthSession|null|undefined,now:number):boolean{
   if(!session?.premium)return false;
   const sub=session.sub;
   if(sub&&typeof sub==='object'&&!Array.isArray(sub)){
@@ -34,9 +34,8 @@ export function resolveCourseEntitlement(
   if(session?.owned?.includes(sku)){
     return {full:true,reason:'owned',sku};
   }
-  if(activePremium(session,now)){
-    return {full:true,reason:'plus',sku};
-  }
+  // UnMute Plus is a discount on courses (config/product.json → pricing.plusCourseDiscount),
+  // not access to them: only a purchased course is open in full.
   return {full:false,reason:'preview',sku};
 }
 

@@ -131,7 +131,8 @@ describe('node activity runner',()=>{
     expect(onNodeCompleted).toHaveBeenCalledWith(node);
     // A short summary closes the lesson instead of dropping straight back to the map.
     expect(await screen.findByText('Урок пройден')).toBeTruthy();
-    expect(screen.getByText('Верных ответов: 2 из 2')).toBeTruthy();
+    expect(screen.getByText('Заданий пройдено: 3')).toBeTruthy();
+    expect(screen.getByText('Верных ответов в проверках: 2 из 2')).toBeTruthy();
     expect(onExit).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button',{name:'Готово'}));
     expect(onExit).toHaveBeenCalledTimes(1);

@@ -165,7 +165,7 @@ export function ReviewView({
   if(runtime.status==='error'){
     return (
       <section className="review-shell">
-        <button className="learn-back" type="button" onClick={onExit}>{t('nav.back')}</button>
+        <button className="learn-back" type="button" onClick={onExit}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
         <div className="learn-state" role="alert">
           <strong>{t('review.errorTitle')}</strong>
           <button className="primary-button" type="button" onClick={()=>void runtime.refresh()}>
@@ -181,7 +181,7 @@ export function ReviewView({
   if(mixedActivity){
     return (
       <section className="review-shell" aria-labelledby="review-title">
-        <button className="learn-back" type="button" onClick={()=>setMixedActivity(null)}>{t('nav.back')}</button>
+        <button className="learn-back" type="button" onClick={()=>setMixedActivity(null)}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
         <div>
           <div className="eyebrow">{t('review.eyebrow')}</div>
           <h2 id="review-title">{t('mixed.title')}</h2>

@@ -67,6 +67,9 @@ describe('activity progress writes',()=>{
       value:75,
       at:clock.at
     });
+    // Practising the phrases counts as doing that step: a day made only of seen steps
+    // (the A1 course) is then complete and the next day opens.
+    expect(next.course.seen['pattern.one']).toBeTruthy();
     expect(next.stats.buckets['device-one|pattern.one']).toMatchObject({
       attempts:1,
       correct:1,

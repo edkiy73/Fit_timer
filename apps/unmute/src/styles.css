@@ -154,7 +154,8 @@ h2{margin:0 0 8px;font-weight:800}
 
 .learn-shell{display:grid;gap:16px}
 .learn-header{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--muted);font-size:13px}
-.learn-back{border:0;background:transparent;color:var(--accent-ink,var(--accent));font-weight:800;cursor:pointer;padding:0}
+.learn-back{display:inline-flex;align-items:center;gap:2px;min-height:44px;border:0;background:transparent;color:var(--accent-ink,var(--accent));font:inherit;font-weight:800;line-height:1;cursor:pointer;padding:0 8px 0 0}
+.learn-back svg{flex:none;margin-left:-4px}
 .learn-back:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
 .learn-state,.learn-card{border:1px solid var(--line);border-radius:var(--radius-tile);background:var(--card);padding:20px}
 .learn-state{display:grid;gap:10px;justify-items:start}
@@ -580,7 +581,7 @@ h2{margin:0 0 8px;font-weight:800}
 .stage-chip:focus-visible,.stage-head:focus-visible,.station-body:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .stages{display:grid;gap:10px}
 .stage{border:1px solid var(--line);border-radius:var(--radius-tile);background:var(--card);overflow:hidden}
-.stage-head{display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 14px;border:0;background:transparent;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.stage-head{display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 14px 12px 10px;border:0;background:transparent;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
 .stage-head-text{display:grid;gap:2px;flex:1 1 auto;min-width:0}
 .stage-name{font-size:16px;font-weight:800}
 .stage-sub{color:var(--muted);font-size:12px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -608,7 +609,7 @@ h2{margin:0 0 8px;font-weight:800}
 .station-ai .station-marker{background:var(--surface);color:var(--accent-ink);box-shadow:inset 0 0 0 2px var(--accent)}
 .station-finish .station-marker{background:var(--ink);color:var(--card)}
 .station.is-complete.station-dialogue .station-marker,.station.is-complete.station-ai .station-marker,.station.is-complete.station-finish .station-marker{background:var(--success);color:var(--card);box-shadow:none}
-.station.is-purchase-locked .station-marker{border-color:var(--locked);background:var(--card);color:var(--locked);box-shadow:none}
+.station.is-purchase-locked .station-marker{border-color:var(--locked);background:var(--surface);color:var(--locked);box-shadow:none}
 .station.is-current .station-marker{width:26px;height:26px;margin-top:17px;border:5px solid var(--accent);background:var(--card);color:var(--accent-ink);box-shadow:none}
 .station.is-current .station-marker::after{content:"";position:absolute;inset:-9px;border-radius:50%;background:color-mix(in srgb,var(--accent) 26%,transparent);z-index:-1;animation:here-pulse 2.2s ease-in-out infinite}
 .station.is-current.station-dialogue .station-marker,.station.is-current.station-ai .station-marker,.station.is-current.station-finish .station-marker{width:36px;height:36px;margin-top:12px;border-width:3px}

@@ -304,10 +304,11 @@ export function CourseMapView({
                         aria-current={station.status==='current'?'step':undefined}
                       >
                         <span className="station-marker" aria-hidden="true">
+                          {/* Closed days are plain muted dots: the «Дальше — полный курс» block says why. */}
                           {station.status==='complete'&&station.kind==='lesson'
                             ? <Icon name="check" size={14} />
                             : station.status==='purchase-locked'
-                              ? <Icon name="lock" size={14} />
+                              ? null
                               : KIND_ICON[station.kind]?<Icon name={KIND_ICON[station.kind]!} size={18} />:null}
                         </span>
                         <button

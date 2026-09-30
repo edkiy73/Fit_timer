@@ -18,6 +18,7 @@ import { appDocs, readStatsProgress, readWordsProgress } from './sync';
 import type { RecordMap } from '@appbase/core/document-sync.js';
 import type { TimedFlag } from './progress';
 import { useAllLearningDays, withAllLearningDays } from './learning-days';
+import { Icon } from './icons';
 
 const STATS_QUERY_KEY='progress-screen-stats';
 const WORDS_QUERY_KEY='progress-screen-words';
@@ -229,7 +230,7 @@ export function ProgressView({
   if(runtime.status==='error'||details.status==='error'){
     return (
       <section className="progress-shell">
-        <button className="learn-back" type="button" onClick={onExit}>{t('nav.back')}</button>
+        <button className="learn-back" type="button" onClick={onExit}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
         <div className="learn-state" role="alert">
           <strong>{t('progress.errorTitle')}</strong>
           <button
@@ -261,7 +262,7 @@ export function ProgressView({
   return (
     <section className="progress-shell" aria-labelledby="progress-title">
       <div className="learn-header">
-        <button className="learn-back" type="button" onClick={onExit}>{t('nav.back')}</button>
+        <button className="learn-back" type="button" onClick={onExit}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
       </div>
       <div>
         <div className="eyebrow">{t('progress.eyebrow')}</div>
