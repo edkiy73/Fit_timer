@@ -2581,7 +2581,9 @@ export function editAIPrompt(){
     'Keep the answer short: for an exercise you keep (it has a КОД) whose ОПИСАНИЕ, МЫШЦЫ and ОШИБКИ stay accurate after the change, OMIT those three lines — the app keeps the existing text. Write them in full for new exercises and whenever the movement, equipment or technique changes.\n'+
     'USER: '+userForAI((editAIProg&&editAIProg.locale)||appLocale)+'\n'+
     'USER REQUEST: '+wish+'\n\n'+
-    '=== CURRENT PROGRAM (values shown are the CURRENT working load, not the original baseline) ===\n'+programToText(editAIProg, {forEdit:true});
+    '=== CURRENT PROGRAM ===\n'+
+    'Values shown are the CURRENT working load, except genuine double progression: its ЗНАЧЕНИЕ remains the original reset/start range because the current progressed range is preserved internally by the app. Do not reinterpret that reset range as the user having lost progress.\n'+
+    programToText(editAIProg, {forEdit:true});
 }
 
 export function openEditAI(p){
