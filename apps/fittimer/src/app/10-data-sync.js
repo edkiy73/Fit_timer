@@ -1952,10 +1952,13 @@ export const MONTH_OF = ['января','февраля','марта','апре�
       тренировками лежат дни отдыха, и заморозка простаивала.
    4. РЕКОРД — сгоревшая серия остаётся лучшей (stats.bestStreak). Собранное не
       отбираем — то же правило, что у достижений. */
-export function calcStreakInfo(){
-  const history = stats.history || [];
+export function calcStreakInfo(options){
+  const programId = options && options.programId != null ? String(options.programId) : '';
+  const history = (stats.history || []).filter(h => !programId || String(h.pid || '') === programId);
   const plan = new Set();
-  customPrograms.forEach(p => planDays(p).forEach(d => plan.add(d)));
+  customPrograms
+    .filter(p => !programId || String(p.id || '') === programId)
+    .forEach(p => planDays(p).forEach(d => plan.add(d)));
   const byPlan = plan.size > 0;
 
   // Без расписания серия остаётся «дни активности подряд»: здесь meaningful partial
@@ -1979,7 +1982,8 @@ export function calcStreakInfo(){
       }else break;
       d.setDate(d.getDate() - 1);
     }
-    return {n, freezes, byPlan:false, risk:false, best:Math.max(stats.bestStreak || 0, n)};
+    return {n, freezes, byPlan:false, risk:false,
+      best:programId ? n : Math.max(stats.bestStreak || 0, n)};
   }
 
   // С расписанием источником истины становится weekPlanInfo:
@@ -1989,7 +1993,9 @@ export function calcStreakInfo(){
   // - make-up закрывает исходный слот и считается ровно один раз.
   // Так серия, недельная полоса и «долг/отработка» больше не спорят друг с другом.
   const earliestHistory = history.reduce((m, h) => (h && h.d && (!m || h.d < m)) ? h.d : m, null);
-  if(!earliestHistory) return {n:0, freezes:0, byPlan:true, risk:false, best:stats.bestStreak || 0};
+  if(!earliestHistory) return {
+    n:0, freezes:0, byPlan:true, risk:false, best:programId ? 0 : (stats.bestStreak || 0)
+  };
 
   // Отработка может закрыть слот раньше самой первой записи истории (например,
   // понедельник закрыт тренировкой во вторник), поэтому начинаем не раньше понедельника
@@ -2010,7 +2016,7 @@ export function calcStreakInfo(){
     const monday = new Date(dt);
     monday.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
     const key = localISO(monday);
-    const week = weeks[key] || (weeks[key] = weekPlanInfo(dt));
+    const week = weeks[key] || (weeks[key] = weekPlanInfo(dt, programId ? {programId} : undefined));
     return week.days[(dt.getDay() + 6) % 7];
   };
 
@@ -2053,7 +2059,8 @@ export function calcStreakInfo(){
     d.setDate(d.getDate() - 1);
   }
 
-  return {n, freezes, byPlan:true, risk:risk && n > 0, best:Math.max(stats.bestStreak || 0, n)};
+  return {n, freezes, byPlan:true, risk:risk && n > 0,
+    best:programId ? n : Math.max(stats.bestStreak || 0, n)};
 }
 export function calcStreak(){ return calcStreakInfo().n; }
 // подпись под число серии: по плану считаем тренировки, без плана — дни
