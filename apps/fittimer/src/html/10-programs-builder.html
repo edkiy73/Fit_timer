@@ -122,7 +122,7 @@
       <div class="list-rows" id="bExList"></div>
       <!-- Кнопки «Подобрать через ИИ» здесь нет: путь к нейросети — вкладка сверху,
            и второй вход в него из середины экрана только дробил внимание. -->
-      <button class="btn-ghost" id="btnAddEx"><span data-icon="plus"></span><span data-i18n="programs.addExercise">Добавить упражнение</span></button>
+      <button class="btn-ghost" id="btnAddEx" data-act="openAddExerciseModal"><span data-icon="plus"></span><span data-i18n="programs.addExercise">Добавить упражнение</span></button>
     </div>
     <div class="builder-actions">
       <button class="btn-primary" id="btnSaveProgram" data-i18n="programs.saveProgram">Сохранить программу</button>
@@ -134,7 +134,7 @@
 
   <!-- Картинки программы: массовая загрузка -->
   <section class="screen builder" id="scrImages">
-    <div class="screen-head"><button class="back-chip" id="imgBackTop"></button><h2 data-i18n="builder.exerciseImagesTitle">Картинки упражнений</h2></div>
+    <div class="screen-head"><button class="back-chip" id="imgBackTop" data-act="closeImages"></button><h2 data-i18n="builder.exerciseImagesTitle">Картинки упражнений</h2></div>
 
     <div class="note">
       <span class="n-ico" data-icon="image"></span>
@@ -144,7 +144,7 @@
     <div class="card-block">
       <div class="cb-head"><p class="cb-title" data-i18n="builder.imagesSource">Откуда взять картинки</p></div>
 
-      <button type="button" class="hero-action" id="imgPick">
+      <button type="button" class="hero-action" id="imgPick" data-act="pickImageFiles">
         <span class="ha-ico" data-icon="camera"></span>
         <span class="ha-txt"><b data-i18n="builder.chooseFromPhone">Выбрать с телефона</b><small data-i18n="builder.uploadAndAssign">Загружаем и раскладываем</small></span>
         <span class="ha-go" data-icon="chevR"></span>
@@ -153,7 +153,7 @@
 
       <div class="or-line" data-i18n="common.or">или</div>
 
-      <button type="button" class="hero-action calm ai-self" id="imgSelfGen">
+      <button type="button" class="hero-action calm ai-self" id="imgSelfGen" data-act="openImageGenerationScope">
         <span class="ha-ico" data-icon="sparkle"></span>
         <span class="ha-txt"><b data-i18n="builder.generateWithAI">Нарисовать нейросетью</b><small class="ha-sub" data-i18n="builder.generateAllSub">Все картинки разом, в одном стиле — приложение сделает это само</small></span>
         <span class="ha-go" data-icon="chevR"></span>
@@ -166,7 +166,7 @@
           <span data-i18n="builder.generateInChatSub">Приложение соберёт задание для чата, который рисует. Готовые картинки сохрани на телефон и загрузи кнопкой выше.</span>
         </div>
         <div class="ways">
-          <button type="button" class="way-row" id="imgPromptCopy">
+          <button type="button" class="way-row" id="imgPromptCopy" data-act="copyImagesPrompt">
             <span class="wr-ico" data-icon="copy"></span>
             <span class="wr-txt"><b data-i18n="builder.copyPrompt">Скопировать задание</b><small data-i18n="builder.copyPromptSub">Дальше его нужно вставить в любой чат</small></span>
           </button>
@@ -178,11 +178,11 @@
       <div class="cb-head">
         <p class="cb-title" data-i18n="builder.uploaded">Загружено</p>
         <span class="cb-count" id="trayCount"></span>
-        <button type="button" class="link-btn" id="trayClear" style="margin:0;padding:4px 6px;width:auto;margin-left:auto" data-i18n="builder.remove">Убрать</button>
+        <button type="button" class="link-btn" id="trayClear" data-act="clearImageTray" style="margin:0;padding:4px 6px;width:auto;margin-left:auto" data-i18n="builder.remove">Убрать</button>
       </div>
       <p class="field-hint" id="trayLeft"></p>
       <div class="tray" id="tray"></div>
-      <button type="button" class="btn-ghost" id="trayAuto" data-i18n="builder.assignOrder">Разложить по порядку</button>
+      <button type="button" class="btn-ghost" id="trayAuto" data-act="autoAssignImageTray" data-i18n="builder.assignOrder">Разложить по порядку</button>
     </div>
 
     <div class="card-block">
@@ -192,7 +192,7 @@
     </div>
 
     <div class="builder-actions">
-      <button class="btn-secondary" id="imgDone" data-i18n="common.done">Готово</button>
+      <button class="btn-secondary" id="imgDone" data-act="closeImages" data-i18n="common.done">Готово</button>
     </div>
   </section>
 
@@ -247,31 +247,31 @@
       <b class="ai-run-title" id="aiRunTitle" data-i18n="ai.working">Нейросеть работает</b>
       <p class="ai-run-text" id="aiRunText" data-i18n="ai.workingHint">Запрос обрабатывается — обычно от нескольких секунд до трёх минут. Не закрывай приложение.</p>
       <p class="ai-run-timer" id="aiRunTimer">0:00</p>
-      <button class="btn-skip" id="aiRunCancel" style="margin-top:14px" data-i18n="common.abort">Отменить</button>
+      <button class="btn-skip" id="aiRunCancel" data-act="cancelAiRun" style="margin-top:14px" data-i18n="common.abort">Отменить</button>
     </div>
   </div>
 
-  <div class="modal" id="slotModal">
+  <div class="modal" id="slotModal" data-act="closeModalBackdrop">
     <div class="modal-card">
       <span class="mini-label" id="slotTitle" data-i18n="builder.image">Картинка</span>
       <div class="tray" id="slotTray"></div>
       <p class="field-hint hidden" id="slotEmptyHint" data-i18n="builder.noUploadedImages">Доступных картинок пока нет — выбери их с телефона или создай через ИИ.</p>
-      <button class="btn-ghost" id="slotFromPhone" style="margin-top:10px" data-i18n="builder.chooseFromPhone">Выбрать с телефона</button>
-      <button class="btn-ghost" id="slotGenerateAI" style="margin-top:8px" data-i18n="builder.generateOneAI">Сделать через ИИ</button>
+      <button class="btn-ghost" id="slotFromPhone" data-act="pickSlotImage" style="margin-top:10px" data-i18n="builder.chooseFromPhone">Выбрать с телефона</button>
+      <button class="btn-ghost" id="slotGenerateAI" data-act="generateSlotImage" style="margin-top:8px" data-i18n="builder.generateOneAI">Сделать через ИИ</button>
       <input type="file" id="slotFile" accept="image/*" class="hidden">
-      <button type="button" class="modal-btn danger" id="slotRemove" data-i18n="builder.removeImage">Убрать картинку</button>
+      <button type="button" class="modal-btn danger" id="slotRemove" data-act="removeImageSlot" data-i18n="builder.removeImage">Убрать картинку</button>
       <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
     </div>
   </div>
 
-  <div class="modal" id="imgGenScopeModal">
+  <div class="modal" id="imgGenScopeModal" data-act="closeModalBackdrop">
     <div class="modal-card">
       <span class="mini-label" data-i18n="builder.generateScopeTitle">Какие картинки сделать</span>
-      <button class="choice primary" id="imgGenAll">
+      <button class="choice primary" id="imgGenAll" data-act="generateAllImages">
         <b data-i18n="builder.generateAllImages">Сгенерировать все</b>
         <small data-i18n="builder.generateAllImagesSub">Перерисовать обложку и все упражнения</small>
       </button>
-      <button class="choice" id="imgGenMissing">
+      <button class="choice" id="imgGenMissing" data-act="generateMissingImages">
         <b data-i18n="builder.generateMissingImages">Только недостающие</b>
         <small data-i18n="builder.generateMissingImagesSub">Оставить готовые картинки и сделать только пустые</small>
       </button>
@@ -498,12 +498,12 @@
        работал. Формат обмена с нейросетью не тронут вообще. -->
   <section class="screen builder" id="scrAI">
     <div class="screen-head">
-      <button class="back-chip" id="aiBackTop"></button>
+      <button class="back-chip" id="aiBackTop" data-act="backFromAi"></button>
       <h2 id="aiTitle" data-i18n="common.viaAI">Через ИИ</h2>
       <!-- Те же действия над упражнением, что и на вкладке «Вручную»: вкладка
            меняет способ, а не то, с чем человек работает. -->
       <div class="prog-menu-wrap hidden" id="aiMenuWrap">
-        <button class="more-btn" id="aiMore" title="Действия" data-i18n-title="common.actions"></button>
+        <button class="more-btn" id="aiMore" data-act="toggleAiMenu" title="Действия" data-i18n-title="common.actions"></button>
         <div class="ctx-menu" id="aiMenu"></div>
       </div>
     </div>
@@ -590,7 +590,7 @@
     <div class="card-block">
     <div class="cb-head"><p class="cb-title" id="aiStep2Title" data-i18n="ai.step2">Шаг 2</p></div>
 
-    <button type="button" class="hero-action ai-self" id="aiSelf">
+    <button type="button" class="hero-action ai-self" id="aiSelf" data-act="runAiSelf">
       <span class="ha-ico" data-icon="sparkle"></span>
       <span class="ha-txt"><b id="aiSelfLabel" data-i18n="ai.doForMe">Сделать за меня</b><small class="ha-sub" data-i18n="ai.appDoesIt">Приложение сделает это само</small></span>
       <span class="ha-go" data-icon="chevR"></span>
@@ -611,11 +611,11 @@
         <span id="aiChatNoteTxt"></span>
       </div>
       <div class="ways">
-        <button type="button" class="way-row" id="aiCopy">
+        <button type="button" class="way-row" id="aiCopy" data-act="copyAiRequest">
           <span class="wr-ico" data-icon="copy"></span>
           <span class="wr-txt"><b data-i18n="builder.copyPrompt">Скопировать задание</b><small data-i18n="builder.copyPromptSub">Дальше его нужно вставить в любой чат</small></span>
         </button>
-        <button type="button" class="way-row hidden" id="aiCopyFull">
+        <button type="button" class="way-row hidden" id="aiCopyFull" data-act="copyEditedProgram">
           <span class="wr-ico" data-icon="download"></span>
           <span class="wr-txt"><b data-i18n="ai.copyProgram">Скопировать саму программу</b><small data-i18n="ai.copyProgramSub">Только текст программы, без задания для ИИ — можно вставить в любой чат</small></span>
         </button>
@@ -632,7 +632,7 @@
     </div>
 
     <div class="builder-actions" id="aiActions">
-      <button class="btn-secondary" id="aiApply" data-i18n="ai.build">Собрать</button>
+      <button class="btn-secondary" id="aiApply" data-act="applyAiResult" data-i18n="ai.build">Собрать</button>
     </div>
   </section>
 

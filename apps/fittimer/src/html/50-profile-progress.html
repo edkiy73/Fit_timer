@@ -384,7 +384,7 @@
       </div>
     </div>
 
-    <div class="modal" id="swapModal">
+    <div class="modal" id="swapModal" data-act="closeSwapBackdrop">
       <div class="modal-card">
         <span class="mini-label" data-i18n="swap.title">Можно усложнить</span>
         <p class="dlg-msg" id="swapIntro"></p>
@@ -392,10 +392,10 @@
           <h4 id="swapName"></h4>
           <p id="swapDesc"></p>
         </div>
-        <button class="btn-primary hidden" id="swapAI" style="padding:14px;font-size:16px" data-i18n="swap.replaceAI">Заменить через ИИ сейчас</button>
+        <button class="btn-primary hidden" id="swapAI" data-act="swapViaAI" style="padding:14px;font-size:16px" data-i18n="swap.replaceAI">Заменить через ИИ сейчас</button>
         <p class="field-hint" id="swapHint" style="margin:10px 0 12px"></p>
-        <button class="btn-primary" id="swapOk" style="padding:14px;font-size:16px" data-i18n="common.ok">Понятно</button>
-        <button class="modal-btn" id="swapCopy" data-i18n="workout.copyNameDesc">Скопировать название и описание</button>
+        <button class="btn-primary" id="swapOk" data-act="closeSwapHint" style="padding:14px;font-size:16px" data-i18n="common.ok">Понятно</button>
+        <button class="modal-btn" id="swapCopy" data-act="copySwapSuggestion" data-i18n="workout.copyNameDesc">Скопировать название и описание</button>
       </div>
     </div>
 
@@ -408,7 +408,7 @@
              и НЕ согласуются по роду: «собрать вручную», а не «собрать самой». -->
         <button class="choice ico" id="chAI" data-act="createProgramAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b data-i18n="common.viaAI">Через ИИ</b><small data-i18n="create.aiSub">Ответь на пару вопросов — остальное готово само</small></span></button>
         <button class="choice ico" id="chManual" data-act="createProgramManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b data-i18n="create.manual">Собрать вручную</b><small data-i18n="create.manualSub">Добавляешь упражнения по одному</small></span></button>
-        <button class="choice ico" id="chYT"><span class="ch-ico" data-icon="video"></span><span class="ch-txt"><b data-i18n="create.youtube">Из видео с YouTube</b><small data-i18n="create.youtubeSub">Вставь ссылку на тренировку</small></span></button>
+        <button class="choice ico" id="chYT" data-act="openYouTubeCreate"><span class="ch-ico" data-icon="video"></span><span class="ch-txt"><b data-i18n="create.youtube">Из видео с YouTube</b><small data-i18n="create.youtubeSub">Вставь ссылку на тренировку</small></span></button>
         <!-- Каталога здесь НЕТ намеренно. Он не способ собрать программу, а место, куда
              ходят за чужой готовой, и вход в него стоит на самом экране «Тренировки»
              отдельной кнопкой. В этом попапе он был вторым входом в то же место и
@@ -433,11 +433,11 @@
     <!-- Выбор способа для нового упражнения: вручную заводит пустую строку и
          открывает её в редакторе, через ИИ ведёт сразу на экран подбора с чипами
          (формат, уровень, мышцы, инвентарь) — без промежуточной пустышки. -->
-    <div class="modal" id="addExModal">
+    <div class="modal" id="addExModal" data-act="closeModalBackdrop">
       <div class="modal-card">
         <span class="mini-label" data-i18n="exercise.new">Новое упражнение</span>
-        <button class="choice ico" id="aemAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b data-i18n="common.viaAI">Через ИИ</b><small data-i18n="exercise.aiSub">Опиши, что нужно, — подберёт нейросеть</small></span></button>
-        <button class="choice ico" id="aemManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b data-i18n="common.manual">Вручную</b><small data-i18n="exercise.manualSub">Задаёшь название, формат и подходы</small></span></button>
+        <button class="choice ico" id="aemAI" data-act="addExerciseAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b data-i18n="common.viaAI">Через ИИ</b><small data-i18n="exercise.aiSub">Опиши, что нужно, — подберёт нейросеть</small></span></button>
+        <button class="choice ico" id="aemManual" data-act="addExerciseManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b data-i18n="common.manual">Вручную</b><small data-i18n="exercise.manualSub">Задаёшь название, формат и подходы</small></span></button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>

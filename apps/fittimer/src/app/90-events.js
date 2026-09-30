@@ -71,6 +71,121 @@ import { SR, applyThemeFor, checkSchedules, hfHintText, hfMode, recognitionLang,
 
 /* ================= СОБЫТИЯ ================= */
 function registerEventActions(){
+  registerAction('openYouTubeCreate', () => {
+    $('createModal').classList.remove('open');
+    openYouTube();
+  });
+  registerAction('copyEditedProgram', async () => {
+    const btn = $('aiCopyFull');
+    const text = programToText(editAIProg);
+    try{
+      await navigator.clipboard.writeText(text);
+      flashDone(btn);
+    }catch(e){ appAlert(t('common.copyFailedRetry')); }
+  });
+  registerAction('openSwapHint', () => openSwapHint());
+  registerAction('closeSwapHint', () => closeSwapHint());
+  registerAction('swapViaAI', () => swapViaAI());
+  registerAction('closeSwapBackdrop', (modal, event) => {
+    if(event.target === modal) closeSwapHint();
+  });
+  registerAction('copySwapSuggestion', async () => {
+    const step = state.steps[state.stepIdx];
+    if(!step || !step.swap) return;
+    const text = `${step.swap.name}\n${step.swap.desc || ''}`.trim();
+    try{
+      await navigator.clipboard.writeText(text);
+      $('swapCopy').textContent = t('common.copied');
+    }catch(e){
+      closeSwapHint();
+      appAlert(t('common.copyManual'), {code:text});
+    }
+  });
+  registerAction('openAddExerciseModal', () => $('addExModal').classList.add('open'));
+  registerAction('addExerciseManual', () => {
+    $('addExModal').classList.remove('open');
+    addExManual();
+  });
+  registerAction('addExerciseAI', () => {
+    $('addExModal').classList.remove('open');
+    openExAI();
+  });
+  registerAction('cancelAiRun', () => {
+    aiRunCancelled = true;
+    try{ if(aiRunCtl) aiRunCtl.abort(); }catch(e){}
+    aiRunCtl = null;
+    const cb = aiRunOnCancel;
+    aiRunClose();
+    if(cb) cb();
+  });
+  registerAction('runAiSelf', async () => {
+    const cfg = AI_SOURCES[aiSrc];
+    if(!cfg) return;
+    if(cfg.guard && !(await cfg.guard())) return;
+    runSelfAI(cfg.prompt, 'aiResult', cfg.apply, aiUiText(cfg.selfTitle), cfg.kind);
+  });
+  registerAction('copyAiRequest', async () => {
+    const cfg = AI_SOURCES[aiSrc];
+    if(!cfg) return;
+    if(cfg.guard && !(await cfg.guard())) return;
+    cfg.copy();
+  });
+  registerAction('applyAiResult', () => {
+    const cfg = AI_SOURCES[aiSrc];
+    if(cfg) cfg.apply();
+  });
+  registerAction('toggleAiMenu', (_btn, event) => {
+    event.stopPropagation();
+    toggleMenu($('aiMenu'));
+  });
+  registerAction('backFromAi', async () => {
+    const cfg = AI_SOURCES[aiSrc];
+    if(!cfg) return;
+    if(aiScreenDirty(cfg.dirty)){
+      const ok = await appDialog(t('ai.unsavedRequest'),
+        {confirm:true, okText:t('common.leaveWithoutSaving'), cancelText:t('common.stay')});
+      if(!ok) return;
+    }
+    cfg.back();
+  });
+  registerAction('closeImages', () => closeImages());
+  registerAction('openImageGenerationScope', () => $('imgGenScopeModal').classList.add('open'));
+  registerAction('generateAllImages', () => {
+    $('imgGenScopeModal').classList.remove('open');
+    generateAllImagesViaAI('all');
+  });
+  registerAction('generateMissingImages', () => {
+    $('imgGenScopeModal').classList.remove('open');
+    generateAllImagesViaAI('missing');
+  });
+  registerAction('copyImagesPrompt', async () => {
+    const btn = $('imgPromptCopy');
+    try{
+      await navigator.clipboard.writeText(imagesPromptText());
+      flashDone(btn);
+    }catch(e){ appAlert(t('common.copyFailedManual')); }
+  });
+  registerAction('pickImageFiles', () => $('imgFiles').click());
+  registerAction('autoAssignImageTray', () => trayAutoAssign());
+  registerAction('clearImageTray', async () => {
+    if(!imgTray.length) return;
+    const used = trayUsed();
+    const removable = imgTray.filter(x => !used.has(x));
+    if(!removable.length) return;
+    if(!(await appDialog(t('images.removeQuestion'),
+      {confirm:true, okText:t('images.removeAction'), cancelText:t('common.keep')}))) return;
+    setImgTrayShared(imgTray.filter(x => used.has(x)));
+    renderTray();
+  });
+  registerAction('removeImageSlot', () => {
+    const slot = imageSlots()[slotTarget];
+    if(slot) slot.set(null);
+    $('slotModal').classList.remove('open');
+    renderSlots();
+    renderTray();
+  });
+  registerAction('pickSlotImage', () => $('slotFile').click());
+  registerAction('generateSlotImage', () => generateSlotImageViaAI());
   registerAction('dropLoginBackdrop', (modal, event) => {
     if(event.target === modal) dropLogin();
   });
@@ -1870,102 +1985,18 @@ export function initEvents(){
   $('scrollCue').innerHTML = icon('chevD');
   $('stepDetails').addEventListener('scroll', refreshDetailsFade, {passive:true});
   /* ---- программа из видео ---- */
-  $('chYT').onclick = ()=>{ $('createModal').classList.remove('open'); openYouTube(); };
   $('ytUrl').oninput = ytCheckUrl;
   /* ---- доработка через ИИ ---- */
   // «Скопировать саму программу» означает буквально экспорт текущей программы в
   // переносимом текстовом формате FitTimer. Никаких системных инструкций и скрытого
   // задания здесь нет — полный AI-промт с пожеланием копирует соседняя кнопка.
-  $('aiCopyFull').onclick = async ()=>{
-    const btn = $('aiCopyFull');
-    const text = programToText(editAIProg);
-    try{
-      await navigator.clipboard.writeText(text);
-      flashDone(btn);
-    }catch(e){ appAlert(t('common.copyFailedRetry')); }
-  };
-  $('swapBadge').onclick = openSwapHint;
-  $('swapOk').onclick = closeSwapHint;
-  $('swapAI').onclick = swapViaAI;
-  $('swapModal').onclick = e => { if(e.target === $('swapModal')) closeSwapHint(); };
-  $('swapCopy').onclick = async ()=>{
-    const step = state.steps[state.stepIdx];
-    if(!step || !step.swap) return;
-    const text = `${step.swap.name}\n${step.swap.desc || ''}`.trim();
-    try{
-      await navigator.clipboard.writeText(text);
-      $('swapCopy').textContent = t('common.copied');
-    }catch(e){
-      closeSwapHint();
-      appAlert(t('common.copyManual'), {code: text});
-    }
-  };
-  $('btnAddEx').onclick = ()=> $('addExModal').classList.add('open');
-  $('addExModal').onclick = e=>{ if(e.target === $('addExModal')) $('addExModal').classList.remove('open'); };
-  $('aemManual').onclick = ()=>{ $('addExModal').classList.remove('open'); addExManual(); };
-  $('aemAI').onclick = ()=>{ $('addExModal').classList.remove('open'); openExAI(); };
-  $('aiRunCancel').onclick = ()=>{
-    aiRunCancelled = true;
-    try{ if(aiRunCtl) aiRunCtl.abort(); }catch(e){}
-    aiRunCtl = null;
-    const cb = aiRunOnCancel;
-    aiRunClose();
-    if(cb) cb();
-  };
   // Один обработчик на все источники: чем собрать промт и чем применить ответ,
   // знает таблица AI_SOURCES, а не пять отдельных кнопок.
-  $('aiSelf').onclick = async ()=>{
-    const c = AI_SOURCES[aiSrc];
-    if(!c) return;
-    if(c.guard && !(await c.guard())) return;
-    runSelfAI(c.prompt, 'aiResult', c.apply, aiUiText(c.selfTitle), c.kind);
-  };
-  $('aiCopy').onclick = async ()=>{
-    const c = AI_SOURCES[aiSrc];
-    if(!c) return;
-    if(c.guard && !(await c.guard())) return;
-    c.copy();
-  };
-  $('aiApply').onclick = ()=>{
-    const c = AI_SOURCES[aiSrc];
-    if(c) c.apply();
-  };
   $('aiBackTop').innerHTML = icon('chevL');
   // Вкладка меняет способ, а не то, с чем работает человек: действия над
   // упражнением должны быть на месте и здесь.
   $('aiMore').innerHTML = icon('more');
-  $('aiMore').onclick = e => { e.stopPropagation(); toggleMenu($('aiMenu')); };
-  $('aiBackTop').onclick = async ()=>{
-    const c = AI_SOURCES[aiSrc];
-    if(!c) return;
-    if(aiScreenDirty(c.dirty)){
-      const ok = await appDialog(t('ai.unsavedRequest'),
-        {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')});
-      if(!ok) return;
-    }
-    c.back();
-  };
   /* ---- картинки программы ---- */
-  $('imgBackTop').onclick = ()=> closeImages();
-  $('imgSelfGen').onclick = ()=> $('imgGenScopeModal').classList.add('open');
-  $('imgGenScopeModal').onclick = e => { if(e.target === $('imgGenScopeModal')) $('imgGenScopeModal').classList.remove('open'); };
-  $('imgGenAll').onclick = ()=>{
-    $('imgGenScopeModal').classList.remove('open');
-    generateAllImagesViaAI('all');
-  };
-  $('imgGenMissing').onclick = ()=>{
-    $('imgGenScopeModal').classList.remove('open');
-    generateAllImagesViaAI('missing');
-  };
-  $('imgPromptCopy').onclick = async ()=>{
-    const btn = $('imgPromptCopy');
-    try{
-      await navigator.clipboard.writeText(imagesPromptText());
-      flashDone(btn);
-    }catch(e){ appAlert(t('common.copyFailedManual')); }
-  };
-  $('imgDone').onclick = ()=> closeImages();
-  $('imgPick').onclick = ()=> $('imgFiles').click();
   $('imgFiles').onchange = e => {
     const files = [...(e.target.files || [])];
     e.target.value = '';
@@ -1978,26 +2009,6 @@ export function initEvents(){
       if(list.length) appAlert(t('images.uploaded',{count:list.length}));
     });
   };
-  $('trayAuto').onclick = trayAutoAssign;
-  $('trayClear').onclick = async ()=>{
-    if(!imgTray.length) return;
-    const used = trayUsed();
-    const removable = imgTray.filter(x => !used.has(x));
-    if(!removable.length) return;
-    if(!(await appDialog(t('images.removeQuestion'),
-      {confirm: true, okText: t('images.removeAction'), cancelText: t('common.keep')}))) return;
-    setImgTrayShared(imgTray.filter(x => used.has(x)));
-    renderTray();
-  };
-  $('slotModal').onclick = e => { if(e.target === $('slotModal')) $('slotModal').classList.remove('open'); };
-  $('slotRemove').onclick = ()=>{
-    const s = imageSlots()[slotTarget];
-    if(s) s.set(null);
-    $('slotModal').classList.remove('open');
-    renderSlots(); renderTray();   // счётчик «ещё не разложено» считается по местам
-  };
-  $('slotFromPhone').onclick = ()=> $('slotFile').click();
-  $('slotGenerateAI').onclick = generateSlotImageViaAI;
   $('slotFile').onchange = e => {
     const f = e.target.files && e.target.files[0];
     e.target.value = '';
