@@ -196,9 +196,9 @@
       <div class="cb-head"><p class="cb-title" data-i18n="settings.handsfree">Управление без рук</p></div>
       <div class="hf-block">
         <div class="hf-seg" id="hfSeg">
-          <button type="button" data-hf="off" class="act" data-i18n="common.off">Выкл</button>
-          <button type="button" data-hf="voice" data-i18n="common.voice">Голос</button>
-          <button type="button" data-hf="headset" data-i18n="common.headset">Гарнитура</button>
+          <button type="button" data-act="setHandsFreeMode" data-hf="off" class="act" data-i18n="common.off">Выкл</button>
+          <button type="button" data-act="setHandsFreeMode" data-hf="voice" data-i18n="common.voice">Голос</button>
+          <button type="button" data-act="setHandsFreeMode" data-hf="headset" data-i18n="common.headset">Гарнитура</button>
         </div>
         <p class="field-hint" id="hfHint"></p>
 
@@ -208,10 +208,10 @@
             <div class="voice-pack-status">
               <span id="voicePackStatus" data-i18n="common.checking">Проверяем…</span>
               <div class="voice-pack-progress hidden" id="voicePackProgress"><i id="voicePackProgressBar"></i></div>
-              <button type="button" class="btn-secondary voice-pack-btn" id="btnVoicePack" data-i18n="common.download">Скачать</button>
+              <button type="button" class="btn-secondary voice-pack-btn" id="btnVoicePack" data-act="downloadVoicePack" data-i18n="common.download">Скачать</button>
             </div>
             <!-- проверка без тренировки: сказать «готово» с привычного расстояния и увидеть, что услышал телефон -->
-            <button type="button" class="hf-commands-link hidden" id="btnVoiceTest" data-i18n="voicetest.open">Проверить, как слышит</button>
+            <button type="button" class="hf-commands-link hidden" id="btnVoiceTest" data-act="openVoiceTest" data-i18n="voicetest.open">Проверить, как слышит</button>
           </div>
 
           <div class="hf-inline-commands">
@@ -257,7 +257,7 @@
             <label data-i18n="settings.profileName">Имя в профиле</label>
             <input type="text" id="coachName" maxlength="40" placeholder="Как тебя представить" data-i18n-placeholder="trainer.presentPlaceholder">
           </div>
-          <button type="button" class="ava-pick" id="coachPhotoBtn" title="Фото тренера" data-i18n-title="trainer.photoTitle">
+          <button type="button" class="ava-pick" id="coachPhotoBtn" data-act="pickCoachPhoto" title="Фото тренера" data-i18n-title="trainer.photoTitle">
             <span id="coachPhotoPrev"></span>
           </button>
         </div>
@@ -364,19 +364,19 @@
         <div class="prefs">
           <div class="pref-row">
             <span><span data-i18n="settings.notifWorkouts">Тренировки</span><small data-i18n="settings.notifWorkoutsSub">Расписание, начало и пропущенные тренировки</small></span>
-            <button type="button" class="switch" id="notifWorkouts" role="switch" aria-checked="true"></button>
+            <button type="button" class="switch" id="notifWorkouts" data-act="toggleNotificationPref" data-pref="workouts" role="switch" aria-checked="true"></button>
           </div>
           <div class="pref-row">
             <span><span data-i18n="settings.notifTrainer">Тренер и программы</span><small data-i18n="settings.notifTrainerSub">Изменения от тренера и статусы программ в каталоге</small></span>
-            <button type="button" class="switch" id="notifTrainer" role="switch" aria-checked="true"></button>
+            <button type="button" class="switch" id="notifTrainer" data-act="toggleNotificationPref" data-pref="trainer" role="switch" aria-checked="true"></button>
           </div>
           <div class="pref-row">
             <span><span data-i18n="settings.notifProgress">Достижения и прогресс</span><small data-i18n="settings.notifProgressSub">Важные этапы прогрессии и достижения</small></span>
-            <button type="button" class="switch" id="notifProgress" role="switch" aria-checked="true"></button>
+            <button type="button" class="switch" id="notifProgress" data-act="toggleNotificationPref" data-pref="progress" role="switch" aria-checked="true"></button>
           </div>
           <div class="pref-row">
             <span><span data-i18n="settings.notifOffers">Предложения и новости</span><small data-i18n="settings.notifOffersSub">Редкие новости приложения и предложения Premium</small></span>
-            <button type="button" class="switch" id="notifOffers" role="switch" aria-checked="true"></button>
+            <button type="button" class="switch" id="notifOffers" data-act="toggleNotificationPref" data-pref="offers" role="switch" aria-checked="true"></button>
           </div>
         </div>
       </div>
@@ -386,11 +386,11 @@
         <div class="prefs">
           <div class="pref-row">
             <span><span data-i18n="settings.emailNews">Новости и обновления</span><small data-i18n="settings.emailNewsSub">Крупные обновления и новые возможности Fit Timer</small></span>
-            <button type="button" class="switch" id="emailNews" role="switch" aria-checked="false"></button>
+            <button type="button" class="switch" id="emailNews" data-act="toggleNotificationPref" data-pref="emailNews" role="switch" aria-checked="false"></button>
           </div>
           <div class="pref-row">
             <span><span data-i18n="settings.emailOffers">Акции и Premium</span><small data-i18n="settings.emailOffersSub">Редкие скидки, акции и предложения подписки</small></span>
-            <button type="button" class="switch" id="emailOffers" role="switch" aria-checked="false"></button>
+            <button type="button" class="switch" id="emailOffers" data-act="toggleNotificationPref" data-pref="emailOffers" role="switch" aria-checked="false"></button>
           </div>
         </div>
         <p class="field-hint" data-i18n="settings.emailServiceNote">Коды входа, чеки и важные сообщения об аккаунте могут приходить независимо от этих настроек.</p>

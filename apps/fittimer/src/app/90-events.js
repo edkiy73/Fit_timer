@@ -198,6 +198,48 @@ registerAction('setWhoGender', btn => {
   whoSyncForm();
 });
 
+registerAction('setHandsFreeMode', async btn => {
+  await chooseHandsFree(btn.dataset.hf);
+});
+registerAction('resumeWorkout', () => setPause(false));
+registerAction('commitWeightModal', () => commitWeightModal());
+registerAction('applyHandsFree', async () => {
+  const mode = hfModalDraft;
+  const ok = await chooseHandsFree(mode, {warnMissing:false});
+  if(!ok) return;
+  $('hfModal').classList.remove('open');
+  if(mode === 'voice' && appRuntimeCompat.offlineVoice() && !(await nativeVoiceReady())){
+    appAlert(t('handsfree.voiceSelectedPending'));
+  }
+});
+registerAction('downloadVoicePack', () => downloadSelectedVoicePack());
+registerAction('openVoiceTest', () => openVoiceTest());
+registerAction('clearStoreSearch', () => {
+  $('storeQuery').value = '';
+  storeFilter.q = '';
+  setShown('storeClear', false);
+  renderStore();
+  $('storeQuery').focus();
+});
+registerAction('pickCoachPhoto', () => $('coachPhotoFile').click());
+registerAction('toggleLegalSection', btn => legalToggle(btn.dataset.legal));
+registerAction('toggleNotificationPref', btn => {
+  const key = btn.dataset.pref;
+  if(!key) return;
+  setNotificationPref(key, !getNotificationPrefs()[key]);
+});
+registerAction('unlockApp', () => tryUnlock());
+registerAction('unlockByEmail', () => openLogin(
+  () => $('lockModal').classList.remove('open'),
+  {
+    email:(account && account.email) || '',
+    fixedEmail:true,
+    label:t('lock.email'),
+    msg:t('login.intro')
+  }
+));
+
+
 
 
 
@@ -1402,11 +1444,6 @@ export function initEvents(){
       openStoreItem(id);
     }
   });
-  document.querySelectorAll('#hfSeg button').forEach(b => {
-    b.onclick = async ()=>{ await chooseHandsFree(b.dataset.hf); };
-  });
-  $('btnResume').onclick = ()=> setPause(false);
-  $('weightModalDone').onclick = ()=> commitWeightModal();
   mountWorkoutSettingsBlocks();
   wireLiveSoundCascade('st');
   wireLiveSoundCascade('snd');
@@ -1416,15 +1453,6 @@ export function initEvents(){
       renderHfModalDraft();
     };
   });
-  $('btnHfApply').onclick = async ()=>{
-    const mode = hfModalDraft;
-    const ok = await chooseHandsFree(mode, {warnMissing:false});
-    if(!ok) return;
-    $('hfModal').classList.remove('open');
-    if(mode === 'voice' && appRuntimeCompat.offlineVoice() && !(await nativeVoiceReady())){
-      appAlert(t('handsfree.voiceSelectedPending'));
-    }
-  };
   $('hfModal').onclick = e => { if(e.target === $('hfModal')) $('hfModal').classList.remove('open'); };
   for(const id of ['stVoiceChoice','sndVoiceChoice']){
     if($(id)) $(id).onchange = async e=>{
@@ -1443,12 +1471,10 @@ export function initEvents(){
       await refreshVoicePackUI();
     };
   }
-  if($('btnVoicePack')) $('btnVoicePack').onclick=downloadSelectedVoicePack;
   if($('btnHfVoicePack')) $('btnHfVoicePack').onclick=downloadSelectedVoicePack;
   window.addEventListener('fitVoiceModelStatus', e=>refreshVoicePackUI(e.detail));
   $('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal').classList.remove('open'); };
   window.addEventListener('fitVoiceHeard', onVoiceTestHeard);
-  if($('btnVoiceTest')) $('btnVoiceTest').onclick = openVoiceTest;
   if($('btnHfVoiceTest')) $('btnHfVoiceTest').onclick = ()=>{
     $('hfModal').classList.remove('open');
     openVoiceTest();
@@ -1464,13 +1490,6 @@ export function initEvents(){
     storeFilter.q = $('storeQuery').value;
     setShown('storeClear', !!storeFilter.q);
     renderStore();
-  };
-  $('storeClear').onclick = ()=>{
-    $('storeQuery').value = '';
-    storeFilter.q = '';
-    setShown('storeClear', false);
-    renderStore();
-    $('storeQuery').focus();
   };
   $('createModal').onclick = e=>{ if(e.target === $('createModal')) $('createModal').classList.remove('open'); };
   $('importModal').onclick = e=>{ if(e.target === $('importModal')) $('importModal').classList.remove('open'); };
@@ -1508,7 +1527,6 @@ export function initEvents(){
     // мешает прочитать, что там написано.
     e.target.value = (ok || '').replace(/^https?:\/\//i, '');
   };
-  $('coachPhotoBtn').onclick = ()=> $('coachPhotoFile').click();
   $('coachPhotoFile').onchange = e => {
     const file = e.target.files && e.target.files[0];
     if(!file) return;
@@ -1615,20 +1633,6 @@ export function initEvents(){
     renderTrainerCard();
     goBackTo('scrTrainer');
   };
-  Object.keys(LEGAL_SECTIONS).forEach(k => {
-    $('legalHead' + k[0].toUpperCase() + k.slice(1)).onclick = ()=> legalToggle(k);
-  });
-  ['workouts','trainer','progress','offers','emailNews','emailOffers'].forEach(key => {
-    const btn = $({
-      workouts:'notifWorkouts',
-      trainer:'notifTrainer',
-      progress:'notifProgress',
-      offers:'notifOffers',
-      emailNews:'emailNews',
-      emailOffers:'emailOffers'
-    }[key]);
-    if(btn) btn.onclick = ()=> { setNotificationPref(key, !getNotificationPrefs()[key]); };
-  });
   // трекер веса
   $('btnAddWeight').onclick = ()=>{
     const last = stats.weights[stats.weights.length - 1];
@@ -1721,18 +1725,8 @@ export function initEvents(){
   $('loginHandle').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
   // «Позже» — не отмена: дни, отмеченные до нажатия, уже лежат в программе, поэтому
   // сохраняем и их, иначе выбор молча пропадёт
-  $('lockGo').onclick = ()=> tryUnlock();
   // Биометрия не является авторизацией аккаунта. Если она недоступна или человек
   // просто нажал «Отмена», запасной путь — обычный подтверждённый email + OTP.
-  $('lockMail').onclick = ()=> openLogin(
-    ()=> $('lockModal').classList.remove('open'),
-    {
-      email:(account && account.email) || '',
-      fixedEmail:true,
-      label:t('lock.email'),
-      msg:t('login.intro')
-    }
-  );
   window.addEventListener('fitAppForeground', e=>{
     maybeBiometricRelock(+((e && e.detail && e.detail.awayMs) || 0));
   });
