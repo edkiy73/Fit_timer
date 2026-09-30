@@ -1964,15 +1964,22 @@ export function calcStreakInfo(){
     const streakHistory = history.filter(h => h.status !== 'partial' || h.meaningful !== false);
     const done = new Set(streakHistory.map(h => h.d));
     const earliest = streakHistory.reduce((m, h) => (!m || h.d < m) ? h.d : m, null);
-    let n = 0;
+    let n = 0, freezes = 0, sinceFreeze = 99;
     const d = new Date();
     if(!done.has(localISO(d))) d.setDate(d.getDate() - 1);
     while(earliest && localISO(d) >= earliest){
-      if(done.has(localISO(d))) n++;
-      else break;
+      if(done.has(localISO(d))){
+        n++;
+        sinceFreeze++;
+      }else if(n > 0 && sinceFreeze >= 7){
+        // Старое поведение без расписания сохраняем: один пропущенный календарный
+        // день можно простить после семи засчитанных дней активности.
+        freezes++;
+        sinceFreeze = 0;
+      }else break;
       d.setDate(d.getDate() - 1);
     }
-    return {n, freezes:0, byPlan:false, risk:false, best:Math.max(stats.bestStreak || 0, n)};
+    return {n, freezes, byPlan:false, risk:false, best:Math.max(stats.bestStreak || 0, n)};
   }
 
   // С расписанием источником истины становится weekPlanInfo:
