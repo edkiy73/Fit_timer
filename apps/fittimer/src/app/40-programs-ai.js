@@ -2763,6 +2763,63 @@ export async function claimProgramLink(id){
   }catch(_){return false;}
 }
 
+// У rotating-программы сохраняем не просто число rotIdx, а по возможности тот же
+// следующий вариант. Тренер мог переставить варианты местами; стабильные id
+// упражнений позволяют найти, куда переехал вариант. Если совпадений нет, хотя бы
+// оставляем прежнюю позицию в допустимых границах.
+function linkedRotationIndex(oldP, newP){
+  const oldPlans = normPlans(oldP), newPlans = normPlans(newP);
+  if(!newP.rotate || newPlans.length < 2 || !oldPlans.length) return null;
+  const oldIdx = ((Math.round(+oldP.rotIdx || 0) % oldPlans.length) + oldPlans.length) % oldPlans.length;
+  const oldEx = (oldPlans[oldIdx] && oldPlans[oldIdx].exercises) || [];
+  const ids = new Set(oldEx.map(ex => ex && ex.id).filter(Boolean));
+  const names = new Set(oldEx.map(ex => String((ex && ex.name) || '').trim().toLowerCase()).filter(Boolean));
+  let best = -1, bestScore = 0;
+  newPlans.forEach((pl, i) => {
+    let score = 0;
+    (pl.exercises || []).forEach(ex => {
+      if(ex && ex.id && ids.has(ex.id)) score += 100;
+      else if(names.has(String((ex && ex.name) || '').trim().toLowerCase())) score += 1;
+    });
+    if(score > bestScore){ bestScore = score; best = i; }
+  });
+  return bestScore > 0 ? best : (oldIdx % newPlans.length);
+}
+
+// Обновление ПО ТОЙ ЖЕ тренерской ссылке меняет шаблон программы, но не должно
+// превращаться для подопечного в «начать заново». Локальная статистика, позиция
+// ротации и фактическая прогрессия принадлежат подопечному. Структура, расписание,
+// шаги/потолки и новые упражнения — тренеру.
+//
+// carryExerciseProgress дополнительно защищает от странного переноса: если тренер
+// изменил базовые повторы/вес упражнения, старый ps.cur очищается, но счётчик ps.n
+// сохраняется. Если база не менялась — сохраняется вся достигнутая нагрузка.
+export function carryLinkedProgramState(existing, incoming){
+  if(!existing || !incoming) return incoming;
+  incoming.id = existing.id;
+  incoming.stats = existing.stats ? JSON.parse(JSON.stringify(existing.stats)) : {completions:0};
+  if(existing.active !== undefined) incoming.active = existing.active;
+  if(existing.progStepsAdj != null) incoming.progStepsAdj = existing.progStepsAdj;
+  if(existing.psMigrated != null) incoming.psMigrated = existing.psMigrated;
+
+  const rot = linkedRotationIndex(existing, incoming);
+  if(rot == null) delete incoming.rotIdx;
+  else incoming.rotIdx = rot;
+
+  const diff = FitAIProtocol.diffPrograms(
+    {plans:normPlans(existing)},
+    {plans:normPlans(incoming)}
+  );
+  diff.matches.forEach(({oldEx,newEx}) => {
+    // Старые ссылки были созданы до exercise.id. Если сервер прислал такой блок
+    // без id, сохраняем уже выданный локальный id — иначе каждое обновление снова
+    // делало бы упражнение «новым» для сессий, отчётов и прогрессии.
+    if(!newEx.id && oldEx && oldEx.id) newEx.id = oldEx.id;
+    carryExerciseProgress(oldEx, newEx);
+  });
+  return incoming;
+}
+
 export async function importProgramLink(id){
   let d;
   try{ d = await apiFetch('/api/p/' + encodeURIComponent(id)); }
@@ -2772,15 +2829,17 @@ export async function importProgramLink(id){
       : t('import.linkOffline'));
     return;
   }
-  const prog = d.program;
-  if(!prog || !prog.name){ appAlert(t('import.noProgram')); return; }
+  const raw = d.program;
+  if(!raw || !raw.name){ appAlert(t('import.noProgram')); return; }
   const existing = customPrograms.find(x => x && x.src === id);
+  // Ссылка приносит ШАБЛОН. Даже если серверу подсунули чужой ex.ps/rotIdx,
+  // получателю это состояние не принадлежит. Его собственное состояние вернём ниже.
+  const prog = programTemplateCopy(raw);
   prog.id = existing ? existing.id : ('p' + Date.now());
-  prog.stats = existing && existing.stats ? existing.stats : {completions: 0};
-  if(existing && existing.active !== undefined) prog.active = existing.active;
-  if(existing && existing.progStepsAdj != null) prog.progStepsAdj = existing.progStepsAdj;
+  prog.stats = existing && existing.stats ? JSON.parse(JSON.stringify(existing.stats)) : {completions: 0};
   prog.src = id;
   prog.plans = normPlans(prog);
+  if(existing) carryLinkedProgramState(existing, prog);
   sanitizeProgram(prog);        // пришло по сети — значит, могло прийти любым
   // Снимок присланного — чтобы потом было видно, что подопечный в нём поменял.
   prog.origEx = snapshotEx(prog);

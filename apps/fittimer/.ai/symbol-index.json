@@ -403,8 +403,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 3044,
-      "chars": 142438,
+      "lines": 3103,
+      "chars": 145439,
       "symbols": [
         "add",
         "ageError",
@@ -427,6 +427,7 @@
         "callGeminiImage",
         "callServerAI",
         "carryExerciseText",
+        "carryLinkedProgramState",
         "carryMedia",
         "carryProgressCounters",
         "chip",
@@ -490,6 +491,7 @@
         "isNetworkFail",
         "lastReport",
         "lastSeen",
+        "linkedRotationIndex",
         "linkFailNote",
         "loadTrainer",
         "mailErrText",
