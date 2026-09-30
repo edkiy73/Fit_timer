@@ -10,7 +10,7 @@
             <label data-i18n="profile.name">Имя</label>
             <input type="text" id="ueName" maxlength="20" placeholder="Как тебя зовут?" data-i18n-placeholder="profile.namePlaceholder">
           </div>
-          <button type="button" class="ava-pick" id="uePhotoBtn" title="Фото профиля" data-i18n-title="profile.photoTitle">
+          <button type="button" class="ava-pick" id="uePhotoBtn" data-act="openProfilePhotoMenu" title="Фото профиля" data-i18n-title="profile.photoTitle">
             <span id="uePhotoPrev"></span>
           </button>
           <div class="ctx-menu" id="uePhotoMenu"></div>
@@ -237,7 +237,7 @@
          правда идут в дело — перед составлением программы. Пропустить нельзя: без пола
          и возраста нейросеть выдаёт упражнения наугад, а это хуже, чем лишний вопрос.
          «Отмена» поэтому не пропускает вопрос, а возвращает с экрана назад. -->
-    <div class="modal" id="whoModal">
+    <div class="modal" id="whoModal" data-act="skipWhoBackdrop">
       <div class="modal-card">
         <span class="mini-label" data-i18n="who.title">Пара уточнений</span>
         <p class="dlg-msg" id="whoMsg"></p>
@@ -330,7 +330,7 @@
          заводить, помнить и восстанавливать, то есть завести вторую такую же
          задачу поверх первой. Регистрации отдельной тоже нет: если аккаунта с этой
          почтой не было, он заводится тем же кодом. -->
-    <div class="modal" id="loginModal">
+    <div class="modal" id="loginModal" data-act="dropLoginBackdrop">
       <div class="modal-card">
         <span class="mini-label" id="loginLabel" data-i18n="login.title">Вход в аккаунт</span>
         <p class="dlg-msg" id="loginMsg"></p>
