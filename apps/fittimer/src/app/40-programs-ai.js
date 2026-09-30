@@ -665,17 +665,10 @@ export function renderToday(){
    повышений, метка каталога, метка чужой ссылки. Копия — новая программа,
    а не продолжение старой. */
 export async function duplicateProgram(p){
-  const copy = JSON.parse(JSON.stringify(p));
+  const copy = programTemplateCopy(p, {detachAttribution:true});
   copy.id = 'p' + Date.now();
   copy.name = (p.name || t('program.fallback')) + ' — ' + t('program.copySuffix');
   copy.stats = {completions: 0};
-  delete copy.progStepsAdj; delete copy.progLast;
-  // прогресс каждого упражнения (ex.ps) — тоже часть «пройденного», копия начинает с базы
-  normPlans(copy).forEach(pl => (pl.exercises || []).forEach(ex => { delete ex.ps; }));
-  delete copy.storeId;      // не «из каталога»: это уже своя программа
-  delete copy.pub;          // заявка в каталог принадлежит оригиналу
-  delete copy.src;          // и отчёты чужому тренеру от копии уходить не должны
-  delete copy.by; delete copy.byLink; delete copy.origEx;
   customPrograms.push(copy);
   await savePrograms();
   renderMine();
@@ -736,14 +729,47 @@ export function applyMedia(p, media){
   return p;
 }
 
-// Что уезжает получателю: без чужой статистики, но С картинками.
-function programPayload(p){
-  const copy = JSON.parse(JSON.stringify(p));
+// Граница между «экземпляром программы у конкретного человека» и шаблоном,
+// который можно передать другому. Всё, что описывает ЛИЧНОЕ состояние прохождения,
+// никогда не должно пересекать эту границу: статистика, позиция ротации, текущая
+// прогрессия упражнений, миграционные счётчики, серверная связь с чужим тренером.
+// Иначе получатель продолжит чужой прогресс или, хуже, начнёт отправлять отчёты
+// по связи, на которую он не соглашался.
+export function programTemplateCopy(p, options){
+  const opts = options || {};
+  const copy = JSON.parse(JSON.stringify(p || {}));
+  copy.plans = normPlans(copy).map(pl => ({
+    ...pl,
+    exercises: (pl.exercises || []).map(ex => {
+      const clean = {...ex};
+      delete clean.ps;
+      delete clean.progFrom;
+      return clean;
+    })
+  }));
+  delete copy.exercises; delete copy.rounds; delete copy.roundRest; delete copy.days;
   delete copy.stats;
-  delete copy.active;     // «отключена» — про мой список, а не про саму программу
-  delete copy.src;        // метка чужой ссылки получателю не нужна
-  delete copy.origEx;     // снимок для сравнения — дело получателя, а не отправителя
-  delete copy.pub;        // заявка в каталог принадлежит оригиналу
+  delete copy.active;
+  delete copy.rotIdx;
+  delete copy.progSteps;
+  delete copy.progStepsAdj;
+  delete copy.progLast;
+  delete copy.psMigrated;
+  delete copy.src;
+  delete copy.origEx;
+  delete copy.pub;
+  delete copy.storeId;
+  if(opts.detachAttribution){
+    delete copy.by;
+    delete copy.byLink;
+  }
+  return copy;
+}
+
+// Что уезжает получателю: только шаблон программы, без чужого прогресса,
+// локальных флагов и связи с предыдущим владельцем.
+function programPayload(p){
+  const copy = programTemplateCopy(p);
   // Обложка и фото остаются. Лишний вес срезает programMedia — здесь только то,
   // что не влезло в общий предел.
   const media = programMedia(p);
@@ -760,6 +786,7 @@ function programPayload(p){
   if(typeof trainerOn === 'function' && trainerOn()){
     copy.by = normHandle(trainer.handle);
     if((trainer.links || '').trim()) copy.byLink = trainer.links.trim();
+    else delete copy.byLink;
   }
   return copy;
 }
@@ -945,13 +972,7 @@ export async function exportProgram(p){
 
 // Экспорт программы файлом — со всем содержимым: обложка и фото упражнений
 export async function exportProgramFile(p){
-  const copy = JSON.parse(JSON.stringify(p));
-  delete copy.stats;      // чужая статистика получателю не нужна
-  delete copy.active;     // «отключена» — про мой список, а не про саму программу
-  delete copy.rotIdx;     // позиция в очереди — личная
-  delete copy.progLast;
-  copy.plans = normPlans(copy);
-  delete copy.exercises; delete copy.rounds; delete copy.roundRest;
+  const copy = programTemplateCopy(p);
   const payload = {app: 'fittimer', type: 'program', v: 1, program: copy};
   const json = JSON.stringify(payload);
   const safeName = (p.name || 'program').replace(/[^\wа-яёА-ЯЁ\- ]+/g, '').trim().slice(0, 40) || 'program';
@@ -984,15 +1005,16 @@ export async function importProgramFile(file){
     const text = await file.text();
     const data = JSON.parse(text);
     // поддерживаем и файл программы, и голый объект программы
-    const prog = (data && data.type === 'program' && data.program) ? data.program : data;
-    if(!prog || !prog.name || !Array.isArray(prog.plans)){
+    const raw = (data && data.type === 'program' && data.program) ? data.program : data;
+    if(!raw || !raw.name || !Array.isArray(raw.plans)){
       appAlert(t('share.badFile'));
       return;
     }
+    // Файл — всегда независимая копия. Даже вручную подложенный src не имеет права
+    // включить скрытую отправку отчётов тренеру без предупреждения по App Link.
+    const prog = programTemplateCopy(raw);
     prog.id = 'p' + Date.now();
     prog.stats = {completions: 0};
-    delete prog.rotIdx; delete prog.progLast;
-    prog.plans = normPlans(prog);
     sanitizeProgram(prog);      // файл мог написать кто угодно и чем угодно
     customPrograms.push(prog);
     await savePrograms();
@@ -2812,9 +2834,9 @@ export function importProgramCode(code){
   if(!prog || !prog.name || !normPlans(prog).some(pl => pl.exercises && pl.exercises.length)){
     appAlert(t('import.noProgramCode')); return;
   }
+  prog = programTemplateCopy(prog);
   prog.id = 'p' + Date.now();
   prog.stats = {completions: 0};
-  prog.plans = normPlans(prog);
   sanitizeProgram(prog);        // код можно собрать руками, и собирают
   setDraftShared(prog);
   draft.plans = JSON.parse(JSON.stringify(normPlans(draft)));
