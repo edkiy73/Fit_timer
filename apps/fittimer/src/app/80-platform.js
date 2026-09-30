@@ -807,7 +807,7 @@ export function initPlatform(){
   });
   setDataSyncPlatformHooks({
     applyThemeFor,
-    syncNativeNotifications
+    getSyncNativeNotifications: () => syncNativeNotifications
   });
   setCorePlatformHooks({
     hasSpeechRecognition: () => !!SR,
