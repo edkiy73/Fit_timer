@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1618,
-      "chars": 78011,
+      "lines": 1627,
+      "chars": 78201,
       "symbols": [
         "$",
         "accountUserDirtyHook",
@@ -22,6 +22,7 @@
         "appDialog",
         "asTab",
         "beep",
+        "blockVoiceCommandsFor",
         "buildStartMenu",
         "changeText",
         "check",
@@ -68,6 +69,7 @@
         "nextStepSpeech",
         "numFieldsOk",
         "openStart",
+        "openStartFrom",
         "openWeightModal",
         "platformHfHintTextHook",
         "platformHfModeHook",
@@ -101,9 +103,7 @@
         "setCoreProgressHooks",
         "setCoreTrainerCatalogHooks",
         "setCoreWorkoutHooks",
-        "setLastAppSoundTShared",
         "setShown",
-        "setStartFromShared",
         "show",
         "speak",
         "startSignal",
@@ -113,6 +113,7 @@
         "tag",
         "takeSnap",
         "tick",
+        "voiceCommandsBlockedAt",
         "voiceIsEnglish",
         "voicePlural",
         "voicesForLang",
@@ -475,10 +476,11 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 3337,
-      "chars": 155257,
+      "lines": 3348,
+      "chars": 155532,
       "symbols": [
         "add",
+        "addImagesToTray",
         "ageError",
         "aiAuth",
         "aiClientVerdict",
@@ -506,6 +508,7 @@
         "carryProgressCounters",
         "chip",
         "claimProgramLink",
+        "clearUnusedImageTray",
         "clientSum",
         "closeImages",
         "clProgs",
@@ -611,7 +614,6 @@
         "setClientsShared",
         "setCoachPhotoDraftShared",
         "setExImg",
-        "setImgTrayShared",
         "setProgramsBuilderHooks",
         "setProgramsEventHooks",
         "setProgramsTrainerHooks",
@@ -642,8 +644,8 @@
     },
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
-      "lines": 1925,
-      "chars": 87824,
+      "lines": 1924,
+      "chars": 87799,
       "symbols": [
         "add",
         "addClient",
@@ -863,7 +865,7 @@
     "src/app/70-workout.js": {
       "kind": "frontend-js",
       "lines": 1954,
-      "chars": 86593,
+      "chars": 86583,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -877,6 +879,7 @@
         "badgeName",
         "buildSteps",
         "buildWorkoutTopMenu",
+        "clearExerciseWorkoutOrigin",
         "clearStepTimer",
         "closeSwapHint",
         "col",
@@ -926,7 +929,6 @@
         "reviewPromptState",
         "roundRect",
         "saveExToWorkout",
-        "setExFromWorkShared",
         "setFinRing",
         "setPause",
         "settleQuickFinish",
@@ -957,7 +959,7 @@
     "src/app/80-platform.js": {
       "kind": "frontend-js",
       "lines": 895,
-      "chars": 38407,
+      "chars": 38389,
       "symbols": [
         "add",
         "advanceFromHeadset",
@@ -1016,8 +1018,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2656,
-      "chars": 109880,
+      "lines": 2655,
+      "chars": 109815,
       "symbols": [
         "addExManual",
         "aiRetryDialog",

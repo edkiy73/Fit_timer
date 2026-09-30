@@ -320,7 +320,7 @@ if(!/setCoreBuilderHooks/.test(coreSource) || !/setCoreBuilderHooks\(\{[\s\S]*dr
 if(/from ['"]\.\/70-workout\.js['"]/.test(coreSource)){
   problems.push('src/app/00-core.js must not import 70-workout.js; inject workout-facing hooks instead');
 }
-if(!/setCoreWorkoutHooks/.test(coreSource) || !/setCoreWorkoutHooks\(\{[\s\S]*esc[\s\S]*exitWorkout[\s\S]*setExFromWorkShared[\s\S]*settleQuickFinish[\s\S]*stopFinishFx[\s\S]*tnum/.test(workoutSource)){
+if(!/setCoreWorkoutHooks/.test(coreSource) || !/setCoreWorkoutHooks\(\{[\s\S]*esc[\s\S]*exitWorkout[\s\S]*clearExerciseWorkoutOrigin[\s\S]*settleQuickFinish[\s\S]*stopFinishFx[\s\S]*tnum/.test(workoutSource)){
   problems.push('core/workout hook boundary is missing or incomplete');
 }
 

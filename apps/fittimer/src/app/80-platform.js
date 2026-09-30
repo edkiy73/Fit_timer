@@ -1,9 +1,9 @@
 import { appLocale, t } from '../i18n/index.js';
 import { appNotifications, appRuntimeCompat, appUi } from './00-dependencies.js';
 import { ACTIONS, registerAction } from './05-actions.js';
-import { $, appAlert, audioCtx, beep, dismissTopModal, fxVol, icon, keepAwake, lastAppSoundT,
-  loadDelta, musicMode, plural, previousWorkoutLoad, releaseWake, setLastAppSoundTShared, soundOn,
-  setCorePlatformHooks, state, syncSoundCascade, voiceVol, workoutLoadSnapshot
+import { $, appAlert, audioCtx, beep, blockVoiceCommandsFor, dismissTopModal, fxVol, icon, keepAwake,
+  loadDelta, musicMode, plural, previousWorkoutLoad, releaseWake, soundOn, setCorePlatformHooks,
+  state, syncSoundCascade, voiceCommandsBlockedAt, voiceVol, workoutLoadSnapshot
 } from './00-core.js';
 import { DAYS, curUser, customPrograms, kvSet, loadSession, loadSessions, localISO, normPlans, planDays,
   progActive, setDataSyncPlatformHooks, stats
@@ -150,7 +150,7 @@ function applyVoiceCommand(input){
 
   // Свой гонг и озвучка следующего шага не должны вернуться командой.
   // Защита нужна только действиям, которые реально проигрывают звук.
-  setLastAppSoundTShared(Math.max(lastAppSoundT, now + 700));
+  blockVoiceCommandsFor(700);
 
   // завершить / пропустить текущий рабочий шаг
   if(state.paused) setPause(false);
@@ -299,7 +299,7 @@ function buildRecog(){
     // и «Далее — Планка», и названия упражнений: распознавание охотно отдаёт
     // «дальше» одной из трёх альтернатив, и тренировка сама проматывается вперёд
     // шаг за шагом. Пока звучит наш собственный голос, команд не существует.
-    if(Date.now() < lastAppSoundT) return;
+    if(voiceCommandsBlockedAt()) return;
     for(let i = e.resultIndex; i < e.results.length; i++){
       // Одна фраза — одна команда. Промежуточные результаты повторяют её по
       // несколько раз, а финальный приходит секунды через две, когда защита по
@@ -323,7 +323,7 @@ function buildRecog(){
 function resetVoiceDedup(){ firedSeq = -1; firedIdx = -1; }
 function handleNativeVoiceResult(text, event){
   const startedAt = Date.now() - (Number(event && event.utteranceMs) || 0);
-  if(startedAt < lastAppSoundT) return;
+  if(voiceCommandsBlockedAt(startedAt)) return;
   applyVoiceCommand(event && event.kind ? {text, kind:event.kind} : text);
 }
 function handleNativeVoiceError(error){

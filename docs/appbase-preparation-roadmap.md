@@ -528,7 +528,7 @@ Product-side conversion continues chunk by chunk:
 The product ESM graph is now fully acyclic:
 - the former SCC spanning `00-core` through `90-events` was dismantled incrementally with explicit owner hook boundaries;
 - `tests/app-module-graph-unit.js` now checks the **entire product import graph is a DAG**, in addition to the existing direction-specific regression guards;
-- the current compatibility surface is **41 hook-boundary setters** (`set*Hooks`) and **17 shared-state setters** (`set*Shared`) after three semantic-owner cleanup passes.
+- the current compatibility surface is **41 hook-boundary setters** (`set*Hooks`) and **13 shared-state setters** (`set*Shared`) after four semantic-owner cleanup passes.
 
 Audit conclusion:
 - do **not** remove hook boundaries just to reduce their count; they are currently the dependency-inversion mechanism that keeps the graph acyclic;
@@ -551,6 +551,13 @@ Third semantic-owner cleanup:
 - calendar navigation and progress metric selection now stay inside `10-data-sync.js` through `shiftCalendarMonth()`, `selectWeightMetric()` and `selectWellnessMetric()`;
 - onboarding no longer writes platform theme internals; `30-progress-media.js` asks Platform to apply the system theme;
 - four more raw setters were removed without changing product import direction.
+
+Fourth semantic-owner cleanup:
+- voice-command suppression now uses `blockVoiceCommandsFor()` instead of writing Core's timestamp;
+- catalog-owned program start uses `openStartFrom()` instead of mutating the navigation origin;
+- Core clears workout-editor origin through `clearExerciseWorkoutOrigin()`;
+- image tray updates use `addImagesToTray()` / `clearUnusedImageTray()`, removing external array replacement and push mutation;
+- four more raw setters were removed.
 
 ## Phase 14 — Dependency rules
 

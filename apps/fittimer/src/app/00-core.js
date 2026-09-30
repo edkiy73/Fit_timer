@@ -108,7 +108,7 @@ export function setCoreBuilderHooks(hooks = {}){
 let workoutHooks = {
   esc: v => String(v == null ? '' : v),
   exitWorkout: () => {},
-  setExFromWorkShared: () => {},
+  clearExerciseWorkoutOrigin: () => {},
   settleQuickFinish: () => {},
   stopFinishFx: () => {},
   tnum: v => String(v == null ? '' : v)
@@ -753,7 +753,7 @@ export function asTab(fn){
 // напрямую — и набранная программа исчезала молча.
 const LEAVE_GUARDS = {
   scrBuilder:  ()=> builderHooks.programDirty() ? {what:t('builder.programChanges'), clean:()=> clearSnap('program')} : null,
-  scrExercise: ()=> builderHooks.exDirty() ? {what:t('exercise.changes'), clean:()=>{ builderHooks.dropFreshEx(); builderHooks.setExDraftShared(null); builderHooks.setExIdxShared(-1); builderHooks.setExOrigShared(''); workoutHooks.setExFromWorkShared(false); }} : null,
+  scrExercise: ()=> builderHooks.exDirty() ? {what:t('exercise.changes'), clean:()=>{ builderHooks.dropFreshEx(); builderHooks.setExDraftShared(null); builderHooks.setExIdxShared(-1); builderHooks.setExOrigShared(''); workoutHooks.clearExerciseWorkoutOrigin(); }} : null,
   scrUserEdit: ()=> accountUserDirtyHook() ? {what:t('profile.changes')} : null,
   scrAI:       ()=> { const dirty = programsAiDirtyHook(); return dirty && aiScreenDirty(dirty) ? {what:t('ai.filledRequest')} : null; }
 };
@@ -877,7 +877,7 @@ export function show(id, push = true){
   // Из-за этого ломалась правка упражнения прямо с тренировки: сходил на вкладку
   // «Через ИИ» и обратно — exFromWork терялся, и «Готово» уводило в конструктор,
   // бросив тренировку на середине.
-  if(show._last === 'scrExercise' && id !== 'scrExercise' && !tabSwitch){ builderHooks.dropFreshEx(); workoutHooks.setExFromWorkShared(false); }
+  if(show._last === 'scrExercise' && id !== 'scrExercise' && !tabSwitch){ builderHooks.dropFreshEx(); workoutHooks.clearExerciseWorkoutOrigin(); }
   // С экрана результата ушли, не выбрав про слишком короткую тренировку (жест «назад»,
   // вкладка): засчитываем, как было всегда, — молча терять тренировку нельзя.
   if(show._last === 'scrFinish' && id !== 'scrFinish' && state.pendingFinish) workoutHooks.settleQuickFinish(true);
@@ -1429,8 +1429,17 @@ export function selectRuntimeVoice({language, uri} = {}){
   if(uri !== undefined) savedVoiceURI = uri;
   return {voiceLang, savedVoiceURI};
 }
-export function setLastAppSoundTShared(value){ lastAppSoundT = value; return lastAppSoundT; }
-export function setStartFromShared(value){ startFrom = value; return startFrom; }
+export function blockVoiceCommandsFor(ms = 700){
+  lastAppSoundT = Math.max(lastAppSoundT, Date.now() + Math.max(0, Number(ms) || 0));
+  return lastAppSoundT;
+}
+export function voiceCommandsBlockedAt(at = Date.now()){
+  return Number(at) < lastAppSoundT;
+}
+export function openStartFrom(raw, from){
+  if(from) startFrom = from;
+  return openStart(raw);
+}
 
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
