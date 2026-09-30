@@ -94,6 +94,8 @@ describe('course review screen',()=>{
     const user=userEvent.setup();
     const {saveGraded,onExit}=renderReview();
 
+    expect(await screen.findByText('К повтору сегодня: 1')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Начать повтор'}));
     let input=await screen.findByRole('textbox',{name:'Твой ответ'});
     await user.type(input,'wrong');
     await user.click(screen.getByRole('button',{name:'Проверить'}));
@@ -185,10 +187,13 @@ describe('course review screen',()=>{
       </I18nProvider>
     );
 
+    expect(await screen.findByRole('heading',{name:'Мои слова'})).toBeTruthy();
+    expect(screen.getByText('повторяю')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Начать повтор'}));
     expect(await screen.findByRole('heading',{name:'дом'})).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Показать слово'}));
     expect(await screen.findByText('home')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:'Вспомнил'}));
+    await user.click(screen.getByRole('button',{name:'Помню'}));
 
     expect(saveWord).toHaveBeenCalledWith('lex.home','noun',true);
     expect(await screen.findByRole('heading',{name:'Повтор завершён'})).toBeTruthy();

@@ -4,8 +4,9 @@ import { WORD_PROGRESS_DOC, type WordsProgressDocument } from './progress';
 import { appDocs, readWordsProgress } from './sync';
 import { useLexiconRuntime } from './lexicon-ui';
 import type { LexiconSnapshot } from './lexicon/schema';
+import { WORDS_KEY } from './saved-words';
 
-const WORDS_KEY='word-review-progress';
+export { WORDS_KEY };
 
 export interface WordReviewRuntimeValue {
   words:WordsProgressDocument|null;
