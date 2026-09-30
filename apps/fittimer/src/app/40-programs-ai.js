@@ -3235,7 +3235,18 @@ export function clientSum(c){
 export function setClientIdxShared(value){ clientIdx = value; return clientIdx; }
 export function setClientsShared(value){ clients = value; return clients; }
 export function setCoachPhotoDraftShared(value){ coachPhotoDraft = value; return coachPhotoDraft; }
-export function setImgTrayShared(value){ imgTray = value; return imgTray; }
+export function addImagesToTray(items){
+  (Array.isArray(items) ? items : []).forEach(data => {
+    if(data && !imgTray.includes(data)) imgTray.push(data);
+  });
+  return imgTray.length;
+}
+export function clearUnusedImageTray(){
+  const used = trayUsed();
+  imgTray = imgTray.filter(data => used.has(data));
+  renderTray();
+  return imgTray.length;
+}
 export function setTrainerShared(value){ trainer = value; return trainer; }
 
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
