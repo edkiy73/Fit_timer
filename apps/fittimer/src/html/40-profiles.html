@@ -7,9 +7,9 @@
   <section class="screen root" id="scrStats">
     <div class="page-head"><h1 data-i18n="progress.title">Прогресс</h1></div>
     <div class="tabs seg" id="statsTabs">
-      <button class="tab act" data-tab="workouts" data-i18n="progress.tabWorkouts">Тренировки</button>
-      <button class="tab" data-tab="weight" data-i18n="progress.tabBody">Тело</button>
-      <button class="tab" data-tab="photo" data-i18n="progress.tabPhotos">Фото</button>
+      <button class="tab act" data-act="switchStatsTab" data-tab="workouts" data-i18n="progress.tabWorkouts">Тренировки</button>
+      <button class="tab" data-act="switchStatsTab" data-tab="weight" data-i18n="progress.tabBody">Тело</button>
+      <button class="tab" data-act="switchStatsTab" data-tab="photo" data-i18n="progress.tabPhotos">Фото</button>
     </div>
 
     <div class="tab-pane" id="tabWorkouts">
@@ -153,10 +153,10 @@
          «как звучит», «я тренер», «мой аккаунт», — а не по тому, как это устроено
          внутри. Механика та же, что у «Прогресса»: .tabs.seg плюс .tab-pane. -->
     <div class="tabs seg" id="moreTabs">
-      <button class="tab act" data-more="me" data-i18n="common.profile">Профиль</button>
-      <button class="tab" data-more="sound" data-i18n="common.sound">Звук</button>
-      <button class="tab" data-more="coach" data-i18n="common.trainer">Тренер</button>
-      <button class="tab" data-more="acc" data-i18n="common.account">Аккаунт</button>
+      <button class="tab act" data-act="switchMoreTab" data-more="me" data-i18n="common.profile">Профиль</button>
+      <button class="tab" data-act="switchMoreTab" data-more="sound" data-i18n="common.sound">Звук</button>
+      <button class="tab" data-act="switchMoreTab" data-more="coach" data-i18n="common.trainer">Тренер</button>
+      <button class="tab" data-act="switchMoreTab" data-more="acc" data-i18n="common.account">Аккаунт</button>
     </div>
 
     <div class="tab-pane" id="morePane_me">
