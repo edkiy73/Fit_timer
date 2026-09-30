@@ -71,6 +71,86 @@ import { SR, applyThemeFor, checkSchedules, hfHintText, hfMode, recognitionLang,
 
 /* ================= СОБЫТИЯ ================= */
 function registerEventActions(){
+  registerAction('dropLoginBackdrop', (modal, event) => {
+    if(event.target === modal) dropLogin();
+  });
+  registerAction('skipWhoBackdrop', (modal, event) => {
+    if(event.target === modal) whoFinish(false);
+  });
+  registerAction('openProfilePhotoMenu', (_btn, event) => {
+    event.stopPropagation();
+    if(!uDraft.photo){
+      $('uePhotoFile').click();
+      return;
+    }
+    const menu = $('uePhotoMenu');
+    const wasOpen = menu.classList.contains('open');
+    closeAllMenus();
+    if(wasOpen) return;
+    menu.innerHTML = '';
+
+    const replace = document.createElement('button');
+    replace.innerHTML = icon('camera') + t('profile.replacePhoto');
+    replace.dataset.act = 'replaceProfilePhoto';
+
+    const remove = document.createElement('button');
+    remove.className = 'danger';
+    remove.innerHTML = icon('trash') + t('profile.deletePhoto');
+    remove.dataset.act = 'deleteProfilePhoto';
+
+    menu.append(replace, remove);
+    menu.classList.add('open');
+  });
+  registerAction('replaceProfilePhoto', (_btn, event) => {
+    event.stopPropagation();
+    closeAllMenus();
+    $('uePhotoFile').click();
+  });
+  registerAction('deleteProfilePhoto', (_btn, event) => {
+    event.stopPropagation();
+    closeAllMenus();
+    uDraft.photo = null;
+    $('uePhotoFile').value = '';
+    syncUserForm();
+  });
+  registerAction('sendChosenProgramToClient', async btn => {
+    const client = clients.find(x => String(x.id) === btn.dataset.clientId);
+    const program = customPrograms.find(x => String(x.id) === btn.dataset.programId);
+    if(!client || !program) return;
+    $('pickClientModal').classList.remove('open');
+    await sendProgramToClient(client, program);
+  });
+  registerAction('shareWorkoutResult', () => shareResult());
+  registerAction('openFinishNote', () => {
+    setShown('finNoteToggle', false);
+    setShown('finNoteField', true);
+    $('finNote').focus();
+    setTimeout(()=>{ try{ $('finNote').scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){} }, 260);
+  });
+  registerAction('applyFinishProgression', () => applyProgCheck());
+  registerAction('toggleFinishProgressionList', () => toggleProgCheckList());
+  registerAction('finishResultDone', async () => {
+    if(state.pendingFinish){
+      settleQuickFinish(true);
+      if(state.progCheck){
+        $('finTitle').textContent = t('workout.great');
+        $('btnAgain').className = 'btn-primary';
+        $('btnAgain').textContent = t('finish.done');
+        return;
+      }
+    }
+    if(state.lastHist){
+      await saveStats();
+      state.lastHist = null;
+    }
+    document.body.classList.remove('phase-rest');
+    goTab('scrMenu');
+  });
+  registerAction('discardWorkoutResult', () => {
+    settleQuickFinish(false);
+    document.body.classList.remove('phase-rest');
+    goTab('scrMenu');
+  });
   registerAction('closeModalBackdrop', (modal, event) => {
     if(event.target === modal) modal.classList.remove('open');
   });
@@ -1097,10 +1177,9 @@ function pickProgramForClient(c){
     b.querySelector('small').textContent = has
       ? t('clients.sentAgain')
       : t('clients.exerciseCount',{count:(normPlans(p)[0].exercises || []).length});
-    b.onclick = async ()=>{
-      $('pickClientModal').classList.remove('open');
-      await sendProgramToClient(c, p);
-    };
+    b.dataset.act = 'sendChosenProgramToClient';
+    b.dataset.clientId = String(c.id);
+    b.dataset.programId = String(p.id);
     box.appendChild(b);
   });
   $('pickClientModal').querySelector('.mini-label').textContent = t('clients.chooseWhichProgram');
@@ -1724,7 +1803,6 @@ export function initEvents(){
   $('payEmail').addEventListener('keydown', e => { if(e.key === 'Enter') completePurchase(); });
   // Отмена продления не забирает оплаченное: срок дорабатывает до конца. Иначе это
   // не отмена подписки, а изъятие уже купленного.
-  $('loginModal').onclick = e => { if(e.target === $('loginModal')) dropLogin(); };
   $('loginEmail').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
   $('loginCode').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
   $('loginHandle').addEventListener('input', e => {
@@ -1775,29 +1853,6 @@ export function initEvents(){
   // у человека уже может быть аккаунт — с прошлого телефона или после переустановки
   // пара уточнений
   $('whoAge').oninput = ()=> whoSyncForm();
-  $('whoModal').onclick = e => { if(e.target === $('whoModal')) whoFinish(false); };
-  // нет фото — сразу выбор файла; есть фото — меню «заменить / удалить»
-  $('uePhotoBtn').onclick = e => {
-    e.stopPropagation();
-    if(!uDraft.photo){ $('uePhotoFile').click(); return; }
-    const menu = $('uePhotoMenu');
-    const wasOpen = menu.classList.contains('open');
-    closeAllMenus();
-    if(wasOpen) return;
-    menu.innerHTML = '';
-    const mk = (h, fn, cls)=>{
-      const b = document.createElement('button');
-      if(cls) b.className = cls;
-      b.innerHTML = h;
-      b.onclick = ev => { ev.stopPropagation(); closeAllMenus(); fn(); };
-      return b;
-    };
-    menu.append(
-      mk(icon('camera') + t('profile.replacePhoto'), ()=> $('uePhotoFile').click()),
-      mk(icon('trash') + t('profile.deletePhoto'), ()=>{ uDraft.photo = null; $('uePhotoFile').value = ''; syncUserForm(); }, 'danger')
-    );
-    menu.classList.add('open');
-  };
   $('uePhotoFile').onchange = e=>{
     const file = e.target.files && e.target.files[0];
     if(!file) return;
@@ -1809,44 +1864,11 @@ export function initEvents(){
   });
   // одно слово: на 360 px «поделиться результатом» ломалось на две строки, а капслок
   // в две строки внутри кнопки выглядит дёшево. Иконка и контекст экрана объясняют остальное
-  $('btnShareResult').onclick = shareResult;
   $('finNote').oninput = e => { if(state.lastHist) state.lastHist.note = clampText(e.target.value, LIM.note); };
   $('finNote').onchange = ()=> { if(state.lastHist) saveStats(); };
-  // заметка открывается по нажатию: пустое поле ввода не должно быть громче результата
-  $('finNoteToggle').onclick = ()=>{
-    setShown('finNoteToggle', false);
-    setShown('finNoteField', true);
-    $('finNote').focus();
-    // поле не должно остаться под клавиатурой
-    setTimeout(()=>{ try{ $('finNote').scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){} }, 260);
-  };
-  $('finProgCheckYes').onclick = ()=> applyProgCheck();
-  $('finProgCheckToggle').onclick = ()=> toggleProgCheckList();
   // подсказка прокрутки на экране тренировки
   $('scrollCue').innerHTML = icon('chevD');
   $('stepDetails').addEventListener('scroll', refreshDetailsFade, {passive:true});
-  $('btnAgain').onclick = async ()=>{
-    // у короткой тренировки это кнопка «Засчитать». Если после засчёта подошла
-    // проверка прогресса, остаёмся на экране: иначе вопрос «Всё получилось?»
-    // считался бы и тут же пропадал вместе с экраном, так и не показавшись.
-    if(state.pendingFinish){
-      settleQuickFinish(true);
-      if(state.progCheck){
-        $('finTitle').textContent = t('workout.great');
-        $('btnAgain').className = 'btn-primary';
-        $('btnAgain').textContent = t('finish.done');
-        return;
-      }
-    }
-    if(state.lastHist){ await saveStats(); state.lastHist = null; } // заметка фиксируется, дальше — только чтение
-    document.body.classList.remove('phase-rest');
-    goTab('scrMenu');
-  };
-  $('btnDiscardResult').onclick = ()=>{
-    settleQuickFinish(false);           // ничего не записываем и тренеру не отправляем
-    document.body.classList.remove('phase-rest');
-    goTab('scrMenu');
-  };
   /* ---- программа из видео ---- */
   $('chYT').onclick = ()=>{ $('createModal').classList.remove('open'); openYouTube(); };
   $('ytUrl').oninput = ytCheckUrl;

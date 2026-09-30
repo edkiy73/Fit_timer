@@ -955,7 +955,7 @@
       <div class="fin-quick fin-rise hidden" id="finQuick">
         <b data-i18n="finish.quickTitle">Слишком быстро</b>
         <p data-i18n="finish.quickText">Тренировка заняла меньше 30 секунд — похоже, её завершили случайно. Такую тренировку можно не засчитывать.</p>
-        <button type="button" class="btn-primary" id="btnDiscardResult" data-i18n="finish.discard">Не засчитывать</button>
+        <button type="button" class="btn-primary" id="btnDiscardResult" data-act="discardWorkoutResult" data-i18n="finish.discard">Не засчитывать</button>
       </div>
       <!-- Прогрессия — состояние у каждого упражнения: показывается, только если
            хоть одно из сегодняшних дошло до своей проверки. Автоматического
@@ -963,13 +963,13 @@
       <div class="fin-progcheck fin-rise hidden" id="finProgCheck">
         <div id="finProgCheckAsk">
           <b data-i18n="finish.progCheckTitle">Всё получилось? Нагрузку повысим</b>
-          <button type="button" class="btn-primary" id="finProgCheckYes" data-i18n="finish.progCheckYes">Да, повышаем</button>
-          <button type="button" class="fpc-toggle" id="finProgCheckToggle" data-i18n="finish.progCheckHardLink">Где-то было тяжело</button>
+          <button type="button" class="btn-primary" id="finProgCheckYes" data-act="applyFinishProgression" data-i18n="finish.progCheckYes">Да, повышаем</button>
+          <button type="button" class="fpc-toggle" id="finProgCheckToggle" data-act="toggleFinishProgressionList" data-i18n="finish.progCheckHardLink">Где-то было тяжело</button>
           <div class="fpc-list hidden" id="finProgCheckList"></div>
         </div>
         <p class="fpc-done hidden" id="finProgCheckDone" data-i18n="finish.progCheckApplied">Готово — нагрузка вырастет со следующей тренировки.</p>
       </div>
-      <button type="button" class="note-toggle fin-rise" id="finNoteToggle"></button>
+      <button type="button" class="note-toggle fin-rise" id="finNoteToggle" data-act="openFinishNote"></button>
       <div class="field fin-note hidden" id="finNoteField">
         <label data-i18n="workout.note">Заметка о тренировке</label>
         <textarea id="finNote" maxlength="500" placeholder="Самочувствие, мысли, планы — останется в истории этого дня" data-i18n-placeholder="workout.notePlaceholder"></textarea>
@@ -978,8 +978,8 @@
     <!-- одна строка вместо двух: закреплённая панель финала занимала почти пятую
          часть экрана, хотя оба действия помещаются рядом -->
     <div class="actions act-row fin-rise">
-      <button class="btn-secondary btn-share-res" id="btnShareResult" title="Поделиться" data-i18n-title="finish.shareTitle"></button>
-      <button class="btn-primary" id="btnAgain" data-i18n="finish.done">Готово</button>
+      <button class="btn-secondary btn-share-res" id="btnShareResult" data-act="shareWorkoutResult" title="Поделиться" data-i18n-title="finish.shareTitle"></button>
+      <button class="btn-primary" id="btnAgain" data-act="finishResultDone" data-i18n="finish.done">Готово</button>
     </div>
     <canvas id="finFx" aria-hidden="true"></canvas>
   </section>
@@ -1647,7 +1647,7 @@
             <label data-i18n="profile.name">Имя</label>
             <input type="text" id="ueName" maxlength="20" placeholder="Как тебя зовут?" data-i18n-placeholder="profile.namePlaceholder">
           </div>
-          <button type="button" class="ava-pick" id="uePhotoBtn" title="Фото профиля" data-i18n-title="profile.photoTitle">
+          <button type="button" class="ava-pick" id="uePhotoBtn" data-act="openProfilePhotoMenu" title="Фото профиля" data-i18n-title="profile.photoTitle">
             <span id="uePhotoPrev"></span>
           </button>
           <div class="ctx-menu" id="uePhotoMenu"></div>
@@ -1874,7 +1874,7 @@
          правда идут в дело — перед составлением программы. Пропустить нельзя: без пола
          и возраста нейросеть выдаёт упражнения наугад, а это хуже, чем лишний вопрос.
          «Отмена» поэтому не пропускает вопрос, а возвращает с экрана назад. -->
-    <div class="modal" id="whoModal">
+    <div class="modal" id="whoModal" data-act="skipWhoBackdrop">
       <div class="modal-card">
         <span class="mini-label" data-i18n="who.title">Пара уточнений</span>
         <p class="dlg-msg" id="whoMsg"></p>
@@ -1967,7 +1967,7 @@
          заводить, помнить и восстанавливать, то есть завести вторую такую же
          задачу поверх первой. Регистрации отдельной тоже нет: если аккаунта с этой
          почтой не было, он заводится тем же кодом. -->
-    <div class="modal" id="loginModal">
+    <div class="modal" id="loginModal" data-act="dropLoginBackdrop">
       <div class="modal-card">
         <span class="mini-label" id="loginLabel" data-i18n="login.title">Вход в аккаунт</span>
         <p class="dlg-msg" id="loginMsg"></p>

@@ -939,8 +939,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2517,
-      "chars": 108039,
+      "lines": 2539,
+      "chars": 108306,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -1400,7 +1400,7 @@
     "src/html/20-workout-finish.html": {
       "kind": "frontend-html",
       "lines": 143,
-      "chars": 9015,
+      "chars": 9204,
       "ids": [
         "badgeRow",
         "btnAgain",
@@ -1466,10 +1466,16 @@
         "videoLink"
       ],
       "actions": [
+        "applyFinishProgression",
         "completeWorkoutStep",
+        "discardWorkoutResult",
+        "finishResultDone",
+        "openFinishNote",
         "previousWorkoutStep",
         "resumeWorkout",
-        "skipWorkoutStep"
+        "shareWorkoutResult",
+        "skipWorkoutStep",
+        "toggleFinishProgressionList"
       ]
     },
     "src/html/30-onboarding-account.html": {
@@ -1688,7 +1694,7 @@
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
       "lines": 599,
-      "chars": 40438,
+      "chars": 40526,
       "ids": [
         "addExModal",
         "aemAI",
@@ -1894,12 +1900,14 @@
         "deleteCompareA",
         "deleteCompareB",
         "deleteUser",
+        "dropLoginBackdrop",
         "enableBiometryAfterPurchase",
         "goRootTab",
         "importProgramCode",
         "login",
         "loginCancel",
         "loginUseCode",
+        "openProfilePhotoMenu",
         "openProgramImport",
         "pickProgramImportFile",
         "profileBack",
@@ -1915,6 +1923,7 @@
         "setProfileTheme",
         "setWhoGender",
         "shareCompare",
+        "skipWhoBackdrop",
         "startPremiumPurchase",
         "unlockApp",
         "unlockByEmail",
