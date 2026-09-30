@@ -825,6 +825,7 @@ export function initPlatform(){
     getSyncNativeNotifications: () => syncNativeNotifications
   });
   setProgressPlatformHooks({
+    applyTheme,
     applySystemTheme: () => applyThemeFor({theme:'system'})
   });
   setAccountPlatformHooks({
