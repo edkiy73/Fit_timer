@@ -15,7 +15,7 @@ import { DAYS, calOffset, clearSession, closeAllMenus, connectAccountSync, curUs
   loadSession, localISO, migrateUserAge, newId, normPlans, openWellAdd, openWellHist, planDays,
   progActive, programDaysUnion, queueAccountSync, recordConsent, renderCalendar, renderStats,
   renderUsers, renderWeight, renderWellness, savePrograms, saveSession, saveStats, saveUsers,
-  saveWell, saveWellHist, sessionAgeText, sessionForProgram, setCalOffsetShared,
+  saveWell, saveWellHist, sessionAgeText, sessionForProgram, sessionWorkout, setCalOffsetShared,
   setCurrentUserShared, setUsersShared, setWeightMetricShared, setWellMetricShared, showSyncState,
   stats, syncNotificationPrefsServer, toggleMenu, trackInstallOnce, trackProductEvent, users,
   workStepChoices
@@ -98,7 +98,7 @@ async function resumeWorkoutFromNativeNotification(){
     : 0;
   state.raw = p;
   state.planIdx = planIdx;
-  state.current = customToProgram(p, planIdx);
+  state.current = sessionWorkout(s, p, planIdx);
   state.startLoad = Array.isArray(s.load) ? s.load : workoutLoadSnapshot(p, planIdx);
 
   // Rebuild once to decide what should have happened while the WebView was dead.
@@ -1102,7 +1102,7 @@ export function initEvents(){
     // в котором она была сохранена. Сам экран программы при этом остаётся на варианте,
     // выбранном сейчас (например, на сегодняшнем дне).
     const selectedCurrent = state.current;
-    if(sess) state.current = customToProgram(state.raw, sessionPlanIdx);
+    if(sess) state.current = sessionWorkout(sess, state.raw, sessionPlanIdx);
     const steps = buildSteps();
     state.current = selectedCurrent;
     setShown('startResume', !!sess);
@@ -1123,7 +1123,7 @@ export function initEvents(){
     // stepIdx имеет смысл только внутри того варианта, где сессия была сохранена.
     // Сначала восстанавливаем вариант, затем строим его шаги в startWorkout().
     state.planIdx = s.planIdx;
-    state.current = customToProgram(state.raw, state.planIdx);
+    state.current = sessionWorkout(s, state.raw, state.planIdx);
     startWorkout(s.stepIdx, s.elapsed, {sessionId:s.sessionId, outcomes:s.outcomes});
   };
   $('startFresh').onclick = async ()=>{
