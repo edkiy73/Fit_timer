@@ -66,6 +66,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const blocked = new Set([iso+'|p0']);
     const savedBlocked = todayOnly(buildWorkoutNotificationCandidates(now, prefs, blocked));
 
+    // Незавершённая сессия блокирует программу целиком. Для программы на тот же
+    // день недели это значит: никаких обычных пушей ни сегодня, ни через 7 дней.
+    reset([p('unfinished','Незавершённая')]);
+    const unblockedAcrossHorizon = buildWorkoutNotificationCandidates(now, prefs, new Set(), new Set());
+    const blockedAcrossHorizon = buildWorkoutNotificationCandidates(now, prefs, new Set(), new Set(['unfinished']));
+
     // День с тренировкой: engagement и Premium не должны спорить с workout digest.
     const workoutAt = notifyAt(now,20,0).toISOString();
     const engagementAt = notifyAt(now,19,0).toISOString();
@@ -90,6 +96,16 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       fiveDifferent:{len:fiveDifferent.length,stages:stages(fiveDifferent)},
       partial:{titles:partial.map(x=>x.title),ids:partial.map(x=>x.extra.programIds||[])},
       savedBlocked:{titles:savedBlocked.map(x=>x.title),ids:savedBlocked.map(x=>x.extra.programIds||[])},
+      unfinishedAcrossHorizon:{
+        before:unblockedAcrossHorizon.filter(x =>
+          (x.extra && x.extra.programId === 'unfinished')
+          || ((x.extra && x.extra.programIds) || []).includes('unfinished')
+        ).length,
+        after:blockedAcrossHorizon.filter(x =>
+          (x.extra && x.extra.programId === 'unfinished')
+          || ((x.extra && x.extra.programIds) || []).includes('unfinished')
+        ).length
+      },
       collision:collision.map(x=>x.extra.stage),
       passive:passive.length
     };
@@ -128,6 +144,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('сохранённая незавершённая программа исключается из общего расписания',
     result.savedBlocked.ids.every(x=>x.length===4 && !x.includes('p0')),
     JSON.stringify(result.savedBlocked));
+
+  ok('незавершённая тренировка блокирует обычные пуши программы на всём горизонте',
+    result.unfinishedAcrossHorizon.before > 0 && result.unfinishedAcrossHorizon.after === 0,
+    JSON.stringify(result.unfinishedAcrossHorizon));
 
   ok('engagement и Premium не конкурируют с тренировочным днём',
     result.collision.length === 1 && result.collision[0] === 'missed-summary',
