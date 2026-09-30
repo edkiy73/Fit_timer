@@ -41,7 +41,7 @@ import { AI_SOURCES, aiClientVerdict, aiSrc, aiUiText, apiPost, applyProgression
   openEditAI, openExAI, openExEdAI, openImages, openYouTube, premiumGate, programToText,
   pushProfile, refreshTrainerProfile, renderGreeting, renderSlots, renderToday, renderTray,
   saveClients, saveTrainer, setClientIdxShared, setClientsShared, setCoachPhotoDraftShared,
-  addImagesToTray, clearUnusedImageTray, setExImg, setProgramsEventHooks, setTrainerShared, setupAIAnswer, shrinkAll, slotTarget, trainer,
+  appendImagesToTray, clearUnusedImageTray, ensureImageInTray, setExImg, setProgramsEventHooks, setTrainerShared, setupAIAnswer, shrinkAll, slotTarget, trainer,
   trainerAccountReady, trainerOn, trayAutoAssign, trayUsed, versionedName, wipeTrainerInfo,
   youtubePrompt, ytCheckUrl
 } from './40-programs-ai.js';
@@ -2285,7 +2285,7 @@ export function initEvents(){
     if(!files.length) return;
     const btn = $('imgPick'), restore = btnBusy(btn, t('images.processing',{done:0,total:files.length}));
     shrinkAll(files, 640, list => {
-      addImagesToTray(list);
+      appendImagesToTray(list);
       restore();
       renderTray();
       if(list.length) appAlert(t('images.uploaded',{count:list.length}));
@@ -2299,7 +2299,7 @@ export function initEvents(){
       if(!data){ appAlert(t('images.loadFailed')); return; }
       const s = imageSlots()[slotTarget];
       if(s) s.set(data);
-      addImagesToTray([data]);
+      ensureImageInTray(data);
       $('slotModal').classList.remove('open');
       renderTray(); renderSlots();
     });
