@@ -1,6 +1,7 @@
 import { M_LABEL } from './options.js';
 import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
 import { appRuntimeCompat, appUi } from './00-dependencies.js';
+import { registerAction } from './05-actions.js';
 import { $, DUMBBELL_ICON, ILLO, announceExercise, announceRemaining, announceRest, appAlert,
   appDialog, beep, endSignal, exerciseGong, fanfare, goBackTo, goTab, gong, haptic, hideReadyBar,
   icon, initAudio, keepAwake, plural, prepSec, readySec, releaseWake, roundDone, runReadyBar,
@@ -1180,10 +1181,8 @@ function renderProgCheck(){
     b.textContent = ex.name || t('common.exerciseFallback');
     // только переключаем отметку: перерисовка всего блока сворачивала список,
     // и второе упражнение уже нельзя было отметить
-    b.onclick = () => {
-      if(chk.hard.has(ex.id)) chk.hard.delete(ex.id); else chk.hard.add(ex.id);
-      b.classList.toggle('act', chk.hard.has(ex.id));
-    };
+    b.dataset.act = 'toggleProgressionHard';
+    b.dataset.exerciseId = ex.id;
     box.appendChild(b);
   });
 }
@@ -1821,11 +1820,36 @@ export function setExFromWorkShared(value){ exFromWork = value; return exFromWor
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initWorkout(){
-  $('workMore').innerHTML = icon('more');
-  $('workMore').onclick = e => {
-    e.stopPropagation();
+  registerAction('toggleProgressionHard', btn => {
+    const chk = state.progCheck;
+    const id = btn.dataset.exerciseId;
+    if(!chk || !id) return;
+    if(chk.hard.has(id)) chk.hard.delete(id);
+    else chk.hard.add(id);
+    btn.classList.toggle('act', chk.hard.has(id));
+  });
+  registerAction('toggleWorkoutMenu', (_btn, event) => {
+    event.stopPropagation();
     toggleMenu($('workMenu'));
-  };
+  });
+  registerAction('editWorkoutExercise', (_btn, event) => {
+    event.stopPropagation();
+    closeAllMenus();
+    editExerciseFromWorkout();
+  });
+  registerAction('toggleWorkoutPause', (_btn, event) => {
+    event.stopPropagation();
+    closeAllMenus();
+    setPause(!state.paused);
+  });
+  registerAction('openWorkoutExit', (_btn, event) => {
+    event.stopPropagation();
+    closeAllMenus();
+    exitWorkout();
+  });
+
+  $('workMore').innerHTML = icon('more');
+  $('workMore').dataset.act = 'toggleWorkoutMenu';
   (function buildWorkoutTopMenu(){
     const box = $('workMenu');
     box.innerHTML = '';
@@ -1834,11 +1858,7 @@ export function initWorkout(){
     edit.id = 'workEditItem';
     edit.innerHTML = icon('pencil') + '<span data-i18n="workout.editExercise"></span>';
     edit.querySelector('span').textContent = t('workout.editExercise');
-    edit.onclick = e => {
-      e.stopPropagation();
-      closeAllMenus();
-      editExerciseFromWorkout();
-    };
+    edit.dataset.act = 'editWorkoutExercise';
 
     const sep = document.createElement('div');
     sep.id = 'workMenuSep';
@@ -1848,22 +1868,14 @@ export function initWorkout(){
     pause.id = 'workPauseItem';
     pause.innerHTML = icon('pause') + '<span></span>';
     pause.querySelector('span').textContent = t('workout.pause');
-    pause.onclick = e => {
-      e.stopPropagation();
-      closeAllMenus();
-      setPause(!state.paused);
-    };
+    pause.dataset.act = 'toggleWorkoutPause';
 
     const stop = document.createElement('button');
     stop.id = 'workExitItem';
     stop.className = 'danger';
     stop.innerHTML = icon('stop') + '<span data-i18n="workout.stopWorkout"></span>';
     stop.querySelector('span').textContent = t('workout.stopWorkout');
-    stop.onclick = e => {
-      e.stopPropagation();
-      closeAllMenus();
-      exitWorkout();
-    };
+    stop.dataset.act = 'openWorkoutExit';
 
     box.append(edit, sep, pause, stop);
   })();
