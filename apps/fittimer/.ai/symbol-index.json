@@ -939,8 +939,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2580,
-      "chars": 108364,
+      "lines": 2614,
+      "chars": 108765,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -1123,7 +1123,7 @@
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
       "lines": 639,
-      "chars": 44381,
+      "chars": 44528,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1426,6 +1426,8 @@
         "saveProgramSettings",
         "setExerciseType",
         "startFreshWorkout",
+        "switchBuilderMode",
+        "switchExerciseMode",
         "toggleAiMenu",
         "toggleExerciseDetails",
         "toggleExerciseDualProgression",
