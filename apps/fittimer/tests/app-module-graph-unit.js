@@ -242,7 +242,7 @@ if(!/setProgressProgramsHooks\(\{[\s\S]*ageError[\s\S]*renderToday/.test(program
 if(!/setProgressTrainerHooks\(\{[\s\S]*renderMine/.test(trainerCatalogSource)) problems.push('progress/trainer hook boundary is missing or incomplete');
 if(!/setProgressBuilderHooks\(\{[\s\S]*newExId[\s\S]*shrinkImage/.test(builderSource)) problems.push('progress/builder hook boundary is missing or incomplete');
 if(!/setProgressWorkoutHooks\(\{[\s\S]*esc[\s\S]*roundRect/.test(workoutSource)) problems.push('progress/workout hook boundary is missing or incomplete');
-if(!/setProgressPlatformHooks\(\{[\s\S]*applyTheme[\s\S]*setThemeLightShared/.test(platformCoreSource)) problems.push('progress/platform hook boundary is missing or incomplete');
+if(!/setProgressPlatformHooks\(\{[\s\S]*applyTheme[\s\S]*applySystemTheme/.test(platformCoreSource)) problems.push('progress/platform hook boundary is missing or incomplete');
 
 for(const dep of ['50-trainer-catalog','60-builder','70-workout','90-events']){
   if(new RegExp("from ['\"]\\./" + dep + "\\.js['\"]").test(programsAiSource)){

@@ -380,6 +380,11 @@ function fmtMeasure(v){
   return new Intl.NumberFormat(localeTag(), {maximumFractionDigits:1}).format(Number(v));
 }
 let weightMetric = 'w';
+export function selectWeightMetric(key){
+  weightMetric = key;
+  renderWeight();
+  return weightMetric;
+}
 
 export function renderWeight(){
   const ws = stats.weights;
@@ -544,6 +549,11 @@ function wellSeries(){
 }
 const WELL_LIM = {sys: [70, 250], dia: [40, 160], pulse: [30, 220], sleep: [0, 16]};
 let wellMetric = 'sys';
+export function selectWellnessMetric(key){
+  wellMetric = key;
+  renderWellness();
+  return wellMetric;
+}
 
 export const wellList = ()=> Array.isArray(stats.wellness) ? stats.wellness : (stats.wellness = []);
 // как метрика читается одной строкой: давление всегда парой, остальное — число с единицей
@@ -2032,6 +2042,11 @@ export function workStepChoices(){
 }
 /* ================= КАЛЕНДАРЬ И НЕДЕЛЯ ================= */
 export let calOffset = 0;
+export function shiftCalendarMonth(delta){
+  calOffset += Number(delta) || 0;
+  renderCalendar();
+  return calOffset;
+}
 export const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 export const DAY_FULL = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
 const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
@@ -2611,12 +2626,9 @@ export function toggleMenu(m){
 
 /* Setters for state owned by this chunk and changed from other chunks.
    Other chunks read these bindings directly but write them only through the owner. */
-export function setCalOffsetShared(value){ calOffset = value; return calOffset; }
 export function setCurrentUserShared(value){ currentUser = value; return currentUser; }
 export function setCustomProgramsShared(value){ customPrograms = value; return customPrograms; }
 export function setUsersShared(value){ users = value; return users; }
-export function setWeightMetricShared(value){ weightMetric = value; return weightMetric; }
-export function setWellMetricShared(value){ wellMetric = value; return wellMetric; }
 
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */

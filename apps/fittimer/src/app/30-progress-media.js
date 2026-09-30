@@ -35,7 +35,7 @@ export function setProgressWorkoutHooks(hooks = {}){
 }
 let platformProgressHooks = {
   applyTheme: () => {},
-  setThemeLightShared: v => v
+  applySystemTheme: () => {}
 };
 export function setProgressPlatformHooks(hooks = {}){
   platformProgressHooks = {...platformProgressHooks, ...hooks};
@@ -896,9 +896,7 @@ export function startOnboarding(){
   // Тема первого запуска — системная. Раньше здесь жёстко включалась светлая, и на
   // тёмном телефоне знакомство начиналось с белой вспышки во весь экран. Дальше
   // человек всё равно переключит её в настройках, а первое впечатление уже испорчено.
-  const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  platformProgressHooks.setThemeLightShared(!dark);
-  platformProgressHooks.applyTheme();
+  platformProgressHooks.applySystemTheme();
   show('scrOnboard', false);
 }
 

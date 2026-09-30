@@ -811,7 +811,6 @@ function registerPlatformActions(){
 
 /* Setters for state owned by this chunk and changed from other chunks.
    Other chunks read these bindings directly but write them only through the owner. */
-export function setThemeLightShared(value){ themeLight = value; return themeLight; }
 
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
@@ -827,7 +826,7 @@ export function initPlatform(){
   });
   setProgressPlatformHooks({
     applyTheme,
-    setThemeLightShared
+    applySystemTheme: () => applyThemeFor({theme:'system'})
   });
   setAccountPlatformHooks({
     applyThemeFor,
