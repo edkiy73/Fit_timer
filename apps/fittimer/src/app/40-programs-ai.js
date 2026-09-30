@@ -1295,7 +1295,7 @@ export async function callGemini(prompt, signal){
     if(round > 0){
       // ждём перед новым кругом: 4с, потом 10с — обычно перегрузка проходит за это время
       const waitMs = round === 1 ? 4000 : 10000;
-      if(typeof aiRunNote === 'function') eventProgramsHooks.aiRunNote(t('ai.busyRetry',{seconds:Math.round(waitMs/1000),attempt:round+1,total:ROUNDS}));
+      eventProgramsHooks.aiRunNote(t('ai.busyRetry',{seconds:Math.round(waitMs/1000),attempt:round+1,total:ROUNDS}));
       await new Promise(res => setTimeout(res, waitMs));
       if(signal && signal.aborted) throw Object.assign(new Error('aborted'), {name: 'AbortError'});
     }
