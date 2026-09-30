@@ -220,6 +220,18 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
         return true;
       }
 
+      // «Ты вчера работал?» → «Ты вчера работал(а)?» in the course draft; publishing stays a separate step.
+      if(action === 'content_gender_fix'){
+        const id = Content.cleanId(body.setId || 'general-foundation');
+        const current = await Content.getDraft(id) || await Release.getReleasedSet(id);
+        if(!current){ fail(res,404,'set_not_found'); return true; }
+        const { neutralizeCourse } = await import('./gender-neutral.mjs');
+        const { set, changes } = neutralizeCourse(current);
+        if(changes.length) await Content.putDraft(set);
+        send(res,200,{ok:true,id,changed:changes.length,examples:changes.slice(0,5).map(item=>item.id)});
+        return true;
+      }
+
       if(action === 'content_review_queue'){
         const lexicon = await Lexicon.getDraft() || await Lexicon.getPublished();
         if(!lexicon){ fail(res,404,'lexicon_not_found'); return true; }
