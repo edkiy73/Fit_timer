@@ -85,9 +85,9 @@
   <section class="screen builder" id="scrBuilder">
     <div class="screen-head"><button class="back-chip" id="builderBackTop" data-act="backFromBuilder"></button><h2 id="builderTitle" data-i18n="programs.newProgram">Новая программа</h2></div>
     <div class="tabs" id="bModeTabs">
-      <button class="tab act" data-m="manual" data-i18n="common.manual">Вручную</button>
-      <button class="tab" data-m="text" data-i18n="common.viaAI">Через ИИ</button>
-      <button class="tab" data-m="video" data-i18n="common.fromVideo">Из видео</button>
+      <button class="tab act" data-act="switchBuilderMode" data-m="manual" data-i18n="common.manual">Вручную</button>
+      <button class="tab" data-act="switchBuilderMode" data-m="text" data-i18n="common.viaAI">Через ИИ</button>
+      <button class="tab" data-act="switchBuilderMode" data-m="video" data-i18n="common.fromVideo">Из видео</button>
     </div>
 
     <div class="card-block">
@@ -377,8 +377,8 @@
     </div>
 
     <div class="tabs" id="exModeTabs">
-      <button class="tab act" data-m="manual" data-i18n="common.manual">Вручную</button>
-      <button class="tab" data-m="ai" data-i18n="common.viaAI">Через ИИ</button>
+      <button class="tab act" data-act="switchExerciseMode" data-m="manual" data-i18n="common.manual">Вручную</button>
+      <button class="tab" data-act="switchExerciseMode" data-m="ai" data-i18n="common.viaAI">Через ИИ</button>
     </div>
 
     <div class="card-block">
