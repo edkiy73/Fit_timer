@@ -8,6 +8,9 @@ import { emptyCourseProgress } from './progress';
 import { CourseMapView, buildCourseMapItems, stationOf } from './course-map';
 import { dictionaries } from './i18n';
 
+// The course switcher has its own test; the map is tested without auth/query providers.
+vi.mock('./active-course',()=>({CoursePicker:()=>null}));
+
 function previewState():LearnerCourseState{
   const progress=emptyCourseProgress();
   progress.seen['a1']={at:'2026-09-29T00:00:00Z'};

@@ -13,6 +13,7 @@ import type { CourseProgressDocument } from './progress';
 import { NotificationSettingsPanel } from './notification-settings';
 import { readThemePreference, setThemePreference, type ThemePreference } from './theme';
 import { Icon } from './icons';
+import { CoursePicker } from './active-course';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
@@ -189,6 +190,12 @@ export function MeScreen(){
 
       <section className="settings" aria-labelledby="settings-title">
         <h3 id="settings-title" className="section-title">{t('me.settings')}</h3>
+        {state && (
+          <div className="tile settings-card settings-course">
+            <div className="settings-label">{t('courses.current')}</div>
+            <CoursePicker currentId={state.set.id} />
+          </div>
+        )}
         <div className="tile settings-card">
           <ThemePicker />
           <div className="language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')} /></div>

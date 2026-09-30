@@ -772,3 +772,19 @@ h2{margin:0 0 8px;font-weight:800}
 .access-option-main .access-tag{background:var(--accent);color:var(--on-accent)}
 .access-note,.access-active{border-radius:var(--radius-tile);background:var(--card)}
 .access-shell .learn-back{justify-self:start;min-height:44px}
+
+/* Course picker */
+.course-chip{justify-self:start;max-width:100%;margin-top:8px}
+.course-chip-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.course-chip-chevron{color:var(--muted);transform:rotate(90deg)}
+.settings-course .course-chip{margin-top:0}
+.courses-sheet{display:grid;gap:12px;padding-right:44px}
+.courses-sheet h3{margin:0;font-size:22px}
+.course-list{display:grid;gap:10px;margin:0 -44px 0 0;padding:0;list-style:none}
+.course-option{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:1.5px solid var(--line);border-radius:22px;background:var(--card);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.course-option.is-current{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--card))}
+.course-option:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.course-option-main{display:grid;gap:4px;flex:1 1 auto;min-width:0}
+.course-option-title{font-size:17px;font-weight:800}
+.course-option-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.course-option-check{color:var(--accent-ink)}
