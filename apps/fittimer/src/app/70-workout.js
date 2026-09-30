@@ -1837,7 +1837,7 @@ export function tearDownWorkout(){
 
 /* Setters for state owned by this chunk and changed from other chunks.
    Other chunks read these bindings directly but write them only through the owner. */
-export function setExFromWorkShared(value){ exFromWork = value; return exFromWork; }
+export function clearExerciseWorkoutOrigin(){ exFromWork = false; }
 
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
@@ -1874,7 +1874,7 @@ export function initWorkout(){
   setCoreWorkoutHooks({
     esc,
     exitWorkout,
-    setExFromWorkShared,
+    clearExerciseWorkoutOrigin,
     settleQuickFinish,
     stopFinishFx,
     tnum
