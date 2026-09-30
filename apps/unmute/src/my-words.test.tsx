@@ -50,6 +50,12 @@ describe('My words',()=>{
     expect(savedWordStatus(4)).toBe('learned');
   });
 
+  it('shows a word once even if two of its meanings were saved',()=>{
+    const doc=words({work:1});
+    doc.items['lex.work|s2']={lexemeId:'lex.work',senseId:'s2',box:0,due:0,at:'2026-09-29T00:00:00Z'};
+    expect(listSavedWords(doc,lexicon,'ru').map(word=>word.lemma)).toEqual(['work']);
+  });
+
   it('shows a hint when nothing is saved yet',()=>{
     renderWords(words({}));
     expect(screen.getByText(/сохраняй нужные/)).toBeTruthy();

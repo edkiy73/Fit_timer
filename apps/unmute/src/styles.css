@@ -529,13 +529,12 @@ h2{margin:0 0 8px;font-weight:800}
 .tile-speak-body{display:grid;gap:4px}
 .tile-link{color:var(--accent-ink);font-size:13px;font-weight:800}
 .tile-speak:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.speak-sheet{display:grid;gap:12px;padding-right:44px}
+.speak-sheet{display:grid;gap:12px}
 .speak-sheet h3{margin:0;font-size:22px}
 .speak-task{margin:0;font-size:18px;font-weight:700;line-height:1.4}
 .speak-examples{display:grid;gap:8px;margin:0;padding:0;list-style:none}
 .speak-examples li{display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;border-radius:18px;background:var(--surface)}
 .speak-play{display:grid;place-items:center;flex:0 0 44px;height:44px;border:0;border-radius:22px;background:color-mix(in srgb,var(--listen) 18%,transparent);color:var(--listen);cursor:pointer}
-.speak-sheet .primary-button{margin-right:-44px}
 /* Soft volume only on the big tactile mic (docs/unmute-design-plan.md §4.3). */
 .mic-soft{display:grid;place-items:center;width:56px;height:56px;border-radius:28px;background:var(--surface);color:var(--accent-ink);box-shadow:-3px -3px 8px rgb(255 255 255/.55),4px 4px 10px rgb(27 26 36/.12)}
 .tile-landmark{display:flex;align-items:center;gap:12px;cursor:pointer}
@@ -657,7 +656,7 @@ h2{margin:0 0 8px;font-weight:800}
 .runner-heading-text{display:grid;gap:2px;min-width:0}
 .chip-button{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
 .chip-button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.theory-sheet{display:grid;gap:16px;padding-right:44px}
+.theory-sheet{display:grid;gap:16px}
 .theory-sheet h3{margin:0;font-size:22px}
 .theory-sheet h4{margin:0 0 6px;font-size:17px}
 .theory-sheet-card+.theory-sheet-card{padding-top:14px;border-top:1px solid var(--line)}
@@ -665,7 +664,7 @@ h2{margin:0 0 8px;font-weight:800}
 .runner-action{position:sticky;bottom:calc(12px + var(--safe-bottom));z-index:4;display:grid}
 .runner-action .primary-button{width:100%;box-shadow:var(--elev-2)}
 .dictionary-sheet{border-radius:32px 32px 0 0;animation:sheet-in 420ms var(--spring) both}
-.dictionary-close{width:44px;height:44px;flex-basis:44px;border:0;background:var(--surface)}
+.dictionary-close{display:grid;place-items:center;width:44px;height:44px;flex-basis:44px;border:0;background:var(--surface)}
 @media(prefers-reduced-motion:reduce){
   .learn-feedback.is-sheet,.dictionary-sheet{animation:none}
   .runner-progress>span,.runner-progress>.runner-bar{transition:none}
@@ -703,6 +702,7 @@ h2{margin:0 0 8px;font-weight:800}
 .word-remove:active,.word-remove:focus-visible{background:var(--surface)}
 .word-remove:focus-visible,.word-save:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .word-save{justify-self:start;display:inline-flex;align-items:center;gap:6px;min-height:40px;margin-top:6px;padding:0 14px;border:1.5px solid var(--line);border-radius:999px;background:transparent;color:var(--ink);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.dictionary-sheet .word-save{justify-self:stretch;justify-content:center;margin-top:0;min-height:52px;border-radius:var(--radius-btn,18px);font-size:16px}
 .word-save.is-saved{border-color:var(--success);background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)}
 
 /* «Я»: profile head, stats bento, activity heatmap, grouped settings, account */
@@ -778,7 +778,7 @@ h2{margin:0 0 8px;font-weight:800}
 .course-chip-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .course-chip-chevron{color:var(--muted);transform:rotate(90deg)}
 .settings-course .course-chip{margin-top:0}
-.courses-sheet{display:grid;gap:12px;padding-right:44px}
+.courses-sheet{display:grid;gap:12px}
 .courses-sheet h3{margin:0;font-size:22px}
 .course-list{display:grid;gap:10px;margin:0 -44px 0 0;padding:0;list-style:none}
 .course-option{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:1.5px solid var(--line);border-radius:22px;background:var(--card);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
@@ -788,3 +788,10 @@ h2{margin:0 0 8px;font-weight:800}
 .course-option-title{font-size:17px;font-weight:800}
 .course-option-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 .course-option-check{color:var(--accent-ink)}
+
+/* Sheets: one layout rule. Only the header keeps clear of the close button; the body and
+   every button use the full width. */
+.sheet > :is(.speak-sheet,.theory-sheet,.courses-sheet) > :first-child{padding-right:52px}
+.sheet :is(.primary-button,.secondary-button){width:100%;justify-content:center}
+.learn-feedback.is-sheet :is(.primary-button,.secondary-button){width:100%;justify-content:center}
+.learn-feedback.is-sheet .answer-explain-error{display:grid;gap:10px}

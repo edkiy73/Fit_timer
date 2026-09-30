@@ -28,6 +28,11 @@ const snapshot={
       partOfSpeech:'verb' as const,
       translations:{ru:['работать'],en:['work']},
       tags:[]
+    },{
+      id:'noun',
+      partOfSpeech:'noun' as const,
+      translations:{ru:['работа'],en:['work']},
+      tags:[]
     }],
     examples:[{
       id:'ex-1',
@@ -91,6 +96,8 @@ describe('learner dictionary popup',()=>{
     renderLexicon();
 
     await user.click(await screen.findByRole('button',{name:'Перевести: work'}));
+    // One button for the word, however many meanings it has.
+    expect(await screen.findAllByRole('button',{name:'В мои слова'})).toHaveLength(1);
     const save=await screen.findByRole('button',{name:'В мои слова'});
     expect(save.getAttribute('aria-pressed')).toBe('false');
     await user.click(save);

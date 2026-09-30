@@ -52,5 +52,11 @@
     "sharing": false,
     "voice": true
   },
+  "aiDefaults": {
+    "text": {
+      "primary": {"provider": "gemini", "model": "gemini-3.6-flash"},
+      "backup": {"provider": "openrouter", "model": "google/gemini-3.6-flash"}
+    }
+  },
   "shortName": "UnMute"
 }

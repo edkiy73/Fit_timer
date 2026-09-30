@@ -114,14 +114,6 @@ function DictionaryEntryView({
   const {t,locale}=useI18n();
   const pronunciation=entry.pronunciation;
   const examples=entry.examples.slice(0,3);
-  const saved=useSavedWords();
-  const [saveError,setSaveError]=useState(false);
-  const toggle=async(senseId:string,save:boolean)=>{
-    setSaveError(false);
-    try{await saved.toggle(entry.lexeme.id,senseId,save);}
-    catch{setSaveError(true);}
-  };
-
   return (
     <section className="dictionary-entry">
       {entry.lexeme.lemma!==surface&&(
@@ -143,25 +135,10 @@ function DictionaryEntryView({
               {sense.note&&(
                 <span>{sense.note[locale]||sense.note.ru||sense.note.en||Object.values(sense.note)[0]||''}</span>
               )}
-              {saved.words&&(()=>{
-                const isSaved=saved.isSaved(entry.lexeme.id,sense.id);
-                return (
-                  <button
-                    className={'word-save pressable'+(isSaved?' is-saved':'')}
-                    type="button"
-                    aria-pressed={isSaved}
-                    onClick={()=>void toggle(sense.id,!isSaved)}
-                  >
-                    <Icon name={isSaved?'check':'plus'} size={18} />
-                    {isSaved?t('dictionary.saved'):t('dictionary.save')}
-                  </button>
-                );
-              })()}
             </div>
           );
         })}
       </div>
-      {saveError&&<p className="dictionary-state" role="alert">{t('dictionary.saveError')}</p>}
       {examples.length>0&&(
         <div className="dictionary-examples">
           <div className="dictionary-label">{t('dictionary.examples')}</div>
@@ -185,6 +162,8 @@ function DictionarySheet({
   runtime:LexiconRuntimeValue;
 }){
   const {t}=useI18n();
+  const saved=useSavedWords();
+  const [saveError,setSaveError]=useState(false);
   const resolved=runtime.lexicon
     ? resolveLexiconClick(runtime.lexicon,selection.surface,selection.context)
     : [];
@@ -214,7 +193,7 @@ function DictionarySheet({
             <h2 id="dictionary-title">{selection.surface}</h2>
           </div>
           <button className="dictionary-close" type="button" onClick={runtime.close} aria-label={t('dictionary.close')}>
-            ×
+            <Icon name="close" size={20} />
           </button>
         </div>
 
@@ -254,6 +233,24 @@ function DictionarySheet({
           </>
         )}
 
+        {runtime.status==='ready'&&saved.words&&(()=>{
+          const main=resolved.find(entry=>entry.senses.length>0);
+          if(!main)return null;
+          const lexemeIds=[...new Set(resolved.map(entry=>entry.lexeme.id))];
+          const isSaved=saved.isWordSaved(lexemeIds);
+          const toggle=async()=>{
+            setSaveError(false);
+            try{await saved.toggleWord(main.lexeme.id,main.senses[0]!.id,lexemeIds,!isSaved);}
+            catch{setSaveError(true);}
+          };
+          return (
+            <button className={'secondary-button word-save pressable'+(isSaved?' is-saved':'')} type="button" aria-pressed={isSaved} onClick={()=>void toggle()}>
+              <Icon name={isSaved?'check':'plus'} size={18} />
+              {isSaved?t('dictionary.saved'):t('dictionary.save')}
+            </button>
+          );
+        })()}
+        {saveError&&<p className="dictionary-state" role="alert">{t('dictionary.saveError')}</p>}
         <button className="primary-button dictionary-say" type="button" onClick={()=>void speakText(selection.surface,'en-US')}>
           {t('dictionary.say')}
         </button>
