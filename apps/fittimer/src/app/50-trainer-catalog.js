@@ -5,8 +5,8 @@ import { $, DUMBBELL_ICON, ICONS, appAlert, appDialog, goBackTo, goTab, icon, op
   setCoreTrainerCatalogHooks, setShown, setStartFromShared, show, syncDockTabs
 } from './00-core.js';
 import { DAYS, accountAuth, calcStreakInfo, closeAllMenus, currentUser, customPrograms, kvGet,
-  localISO, normPlans, progActive, programDaysUnion, savePrograms, setCustomProgramsShared, stats,
-  toggleMenu, trackProductEvent, users
+  localISO, normPlans, progActive, programDaysUnion, savePrograms, setCustomProgramsShared,
+  setDataSyncTrainerCatalogHooks, stats, toggleMenu, trackProductEvent, users
 } from './10-data-sync.js';
 import { account, isPremium, refreshServerSubscription } from './20-account.js';
 import { LIM, clampText } from './30-progress-media.js';
@@ -1758,6 +1758,9 @@ export function renderMine(){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initTrainerCatalog(){
+  setDataSyncTrainerCatalogHooks({
+    renderMine
+  });
   setCoreTrainerCatalogHooks({
     openPublish,
     pickClientFor,
