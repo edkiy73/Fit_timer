@@ -102,7 +102,8 @@ if(!backgroundHandler || backgroundHandler[0].includes('stopHeadset()')){
 const handsfreeEvents = await readFile('src/app/90-events.js', 'utf8');
 const handsfreeProfileHtml = await readFile('src/html/50-profile-progress.html', 'utf8');
 if(!handsfreeEvents.includes("registerAction('applyHandsFree'")
-  || !handsfreeEvents.includes("hfModalDraft = c.dataset.hf")
+  || !handsfreeEvents.includes("registerAction('stageHandsFreeMode'")
+  || !handsfreeEvents.includes("hfModalDraft = btn.dataset.hf")
   || !handsfreeProfileHtml.includes('id="btnHfApply" data-act="applyHandsFree"')){
   throw new Error('Hands-free workout modal must stage a mode choice until Apply');
 }

@@ -71,6 +71,24 @@ import { SR, applyThemeFor, checkSchedules, hfHintText, hfMode, recognitionLang,
 
 /* ================= СОБЫТИЯ ================= */
 function registerEventActions(){
+  registerAction('closeModalBackdrop', (modal, event) => {
+    if(event.target === modal) modal.classList.remove('open');
+  });
+  registerAction('chooseWorkoutStartStep', async btn => {
+    const idx = parseInt(btn.dataset.stepIdx, 10);
+    if(!Number.isFinite(idx)) return;
+    $('pickStepModal').classList.remove('open');
+    await clearSession();
+    startWorkout(idx, 0);
+  });
+  registerAction('stageHandsFreeMode', btn => {
+    hfModalDraft = btn.dataset.hf;
+    renderHfModalDraft();
+  });
+  registerAction('openHandsFreeVoiceTest', () => {
+    $('hfModal').classList.remove('open');
+    openVoiceTest();
+  });
   registerAction('completeWorkoutStep', () => {
     resetSkipConfirm();
     initAudio();
@@ -164,11 +182,8 @@ function registerEventActions(){
       b.className = 'pick-item';
       b.innerHTML = '<b></b>' + (c.meta ? `<small>${c.meta}</small>` : '');
       b.querySelector('b').textContent = c.label;
-      b.onclick = async ()=>{
-        $('pickStepModal').classList.remove('open');
-        await clearSession();
-        startWorkout(c.idx, 0);
-      };
+      b.dataset.act = 'chooseWorkoutStartStep';
+      b.dataset.stepIdx = String(c.idx);
       list.appendChild(b);
     });
     $('pickStepModal').classList.add('open');
@@ -840,6 +855,11 @@ function mountWorkoutSettingsBlocks(){
     voicePackProgressBar:'hfVoicePackProgressBar', btnVoicePack:'btnHfVoicePack',
     btnVoiceTest:'btnHfVoiceTest'
   });
+  document.querySelectorAll('#hfModalSeg [data-hf]').forEach(btn => {
+    btn.dataset.act = 'stageHandsFreeMode';
+  });
+  if($('btnHfVoicePack')) $('btnHfVoicePack').dataset.act = 'downloadVoicePack';
+  if($('btnHfVoiceTest')) $('btnHfVoiceTest').dataset.act = 'openHandsFreeVoiceTest';
 }
 
 async function availableTtsVoices(){
@@ -1558,11 +1578,8 @@ export function initEvents(){
     if(appRuntimeCompat.offlineVoice()) refreshVoicePackUI();
   });
   $('startMore').innerHTML = icon('more');
-  $('startModal').onclick = e => { if(e.target === $('startModal')) $('startModal').classList.remove('open'); };
-  $('pickStepModal').onclick = e => { if(e.target === $('pickStepModal')) $('pickStepModal').classList.remove('open'); };
   $('btnPrev').innerHTML = icon('chevL');
   $('swapBadgeIcon').innerHTML = icon('chart'); // растущая кривая — «пора поднять планку»
-  $('exitModal').onclick = e => { if(e.target === $('exitModal')) $('exitModal').classList.remove('open'); };
   window.addEventListener('fitRemotePushToken',async e=>{
     const d=(e&&e.detail)||{};if(!d.token||!account||!account.email||!account.syncToken)return;
     let deviceId=await kvGet('deviceId');if(!deviceId){deviceId=newId();await kvSet('deviceId',deviceId);}
@@ -1619,13 +1636,6 @@ export function initEvents(){
   mountWorkoutSettingsBlocks();
   wireLiveSoundCascade('st');
   wireLiveSoundCascade('snd');
-  document.querySelectorAll('#hfModalSeg [data-hf]').forEach(c => {
-    c.onclick = ()=>{
-      hfModalDraft = c.dataset.hf;
-      renderHfModalDraft();
-    };
-  });
-  $('hfModal').onclick = e => { if(e.target === $('hfModal')) $('hfModal').classList.remove('open'); };
   for(const id of ['stVoiceChoice','sndVoiceChoice']){
     if($(id)) $(id).onchange = async e=>{
       setSavedVoiceURIShared(e.target.value || '');
@@ -1643,15 +1653,8 @@ export function initEvents(){
       await refreshVoicePackUI();
     };
   }
-  if($('btnHfVoicePack')) $('btnHfVoicePack').onclick=downloadSelectedVoicePack;
   window.addEventListener('fitVoiceModelStatus', e=>refreshVoicePackUI(e.detail));
-  $('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal').classList.remove('open'); };
   window.addEventListener('fitVoiceHeard', onVoiceTestHeard);
-  if($('btnHfVoiceTest')) $('btnHfVoiceTest').onclick = ()=>{
-    $('hfModal').classList.remove('open');
-    openVoiceTest();
-  };
-  $('voiceTestModal').onclick = e => { if(e.target === $('voiceTestModal')) $('voiceTestModal').classList.remove('open'); };
   // окно закрывают кнопкой, тапом мимо и системным «назад» — микрофон
   // отпускаем в любом из этих случаев, следя за самим окном
   new MutationObserver(()=>{ if(!$('voiceTestModal').classList.contains('open')) stopVoiceTest(); })
@@ -1663,8 +1666,6 @@ export function initEvents(){
     setShown('storeClear', !!storeFilter.q);
     renderStore();
   };
-  $('createModal').onclick = e=>{ if(e.target === $('createModal')) $('createModal').classList.remove('open'); };
-  $('importModal').onclick = e=>{ if(e.target === $('importModal')) $('importModal').classList.remove('open'); };
   /* Проверяем по УХОДУ из поля, а не на каждой букве: пока человек печатает
      «t.me/lena», адрес по дороге проходит через десяток заведомо неправильных
      состояний, и ругаться на каждое — значит мешать набирать.
@@ -1720,11 +1721,7 @@ export function initEvents(){
   // Кнопка всегда спрашивает, КАКУЮ программу отправить: их может быть несколько,
   // и «отправить ещё раз» живёт у самой программы, а не здесь.
   // трекер веса
-  $('waModal').onclick = e => { if(e.target === $('waModal')) $('waModal').classList.remove('open'); };
-  $('premiumModal').onclick = e => { if(e.target === $('premiumModal')) $('premiumModal').classList.remove('open'); };
-  $('payModal').onclick = e => { if(e.target === $('payModal')) $('payModal').classList.remove('open'); };
   $('payEmail').addEventListener('keydown', e => { if(e.key === 'Enter') completePurchase(); });
-  $('premiumOkModal').onclick = e => { if(e.target === $('premiumOkModal')) $('premiumOkModal').classList.remove('open'); };
   // Отмена продления не забирает оплаченное: срок дорабатывает до конца. Иначе это
   // не отмена подписки, а изъятие уже купленного.
   $('loginModal').onclick = e => { if(e.target === $('loginModal')) dropLogin(); };
@@ -1770,11 +1767,8 @@ export function initEvents(){
     setWellMetricShared(b.dataset.k);
     renderWellness();
   });
-  $('wellModal').onclick = e => { if(e.target === $('wellModal')) $('wellModal').classList.remove('open'); };
   $('cmpA').onchange = renderCmp;
   $('cmpB').onchange = renderCmp;
-  $('cmpModal').onclick = e => { if(e.target === $('cmpModal')) $('cmpModal').classList.remove('open'); };
-  $('whModal').onclick = e => { if(e.target === $('whModal')) $('whModal').classList.remove('open'); };
   // онбординг
   // из знакомства «назад» ведёт обратно в знакомство, а не в настройки: человек
   // ещё не завёл профиль, и вкладки внизу ему пока не принадлежат
