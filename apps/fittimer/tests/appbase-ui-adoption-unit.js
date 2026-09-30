@@ -14,6 +14,7 @@ const shell=fs.readFileSync('src/html/00-shell-home.html','utf8');
 const programsHtml=fs.readFileSync('src/html/10-programs-builder.html','utf8');
 const profilesHtml=fs.readFileSync('src/html/40-profiles.html','utf8');
 const progressHtml=fs.readFileSync('src/html/50-profile-progress.html','utf8');
+const onboardingHtml=fs.readFileSync('src/html/30-onboarding-account.html','utf8');
 const esmEntry=fs.readFileSync('src/main.ts','utf8');
 
 const productDeps = require('fs').readFileSync('src/app/00-dependencies.js','utf8');
@@ -57,5 +58,33 @@ ok('program/catalog static buttons have no direct onclick wiring',
   && !events.includes("$('btnDoImport').onclick")
   && !events.includes("$('btnToStore').onclick")
   && !events.includes("$('btnMyCatalog').onclick"));
+ok('trainer/legal actions are declarative',
+  progressHtml.includes('id="tpBackTop" data-act="backTrainerProfile"')
+  && progressHtml.includes('id="pubBackTop" data-act="backPublish"')
+  && progressHtml.includes('id="mcBackTop" data-act="backMyCatalog"')
+  && profilesHtml.includes('id="coachNoAcc" data-act="openCoachAccount"')
+  && profilesHtml.includes('id="btnCoachWipe" data-act="wipeCoach"')
+  && profilesHtml.includes('id="btnMyPage" data-act="openMyTrainerPage"')
+  && progressHtml.includes('id="btnPublish" data-act="publishProgram"')
+  && progressHtml.includes('id="clBackTop" data-act="backClient"')
+  && onboardingHtml.includes('id="legalBackTop" data-act="legalBack"')
+  && onboardingHtml.includes('id="btnLegalDone" data-act="legalBack"')
+  && profilesHtml.includes('id="btnLegalPrivacy" data-act="openLegalPrivacy"')
+  && profilesHtml.includes('id="btnLegalTerms" data-act="openLegalTerms"')
+  && profilesHtml.includes('id="btnLegalHealth" data-act="openLegalHealth"'));
+ok('trainer/legal static buttons have no direct onclick wiring',
+  !events.includes("$('tpBackTop').onclick")
+  && !events.includes("$('pubBackTop').onclick")
+  && !events.includes("$('mcBackTop').onclick")
+  && !events.includes("$('coachNoAcc').onclick")
+  && !events.includes("$('btnCoachWipe').onclick")
+  && !events.includes("$('btnMyPage').onclick")
+  && !events.includes("$('btnPublish').onclick")
+  && !events.includes("$('clBackTop').onclick")
+  && !events.includes("$('legalBackTop').onclick")
+  && !events.includes("$('btnLegalDone').onclick")
+  && !events.includes("$('btnLegalPrivacy').onclick")
+  && !events.includes("$('btnLegalTerms').onclick")
+  && !events.includes("$('btnLegalHealth').onclick"));
 
 process.exit(bad?1:0);
