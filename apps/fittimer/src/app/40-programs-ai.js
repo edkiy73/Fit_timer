@@ -1040,17 +1040,24 @@ export function ageError(v, required = false){
   if(a > 100) return t('age.tooOld');
   return '';
 }
+function aiProfileSex(u){
+  const g = String(u && u.gender || '').trim().toLowerCase();
+  if(g === 'm') return 'male';
+  if(g === 'f') return 'female';
+  return 'not specified';
+}
+
 // строка о человеке для запроса к ИИ
 export function userForAI(locale){
   const u = curUser();
   if(!u) return '';
   const bits = [];
-  bits.push(u.gender === 'm' ? 'Sex: male' : 'Sex: female');
+  bits.push('Sex: ' + aiProfileSex(u));
   const a = userAge(u);
   if(a) bits.push(`Age: ${a}`);
   const outLang=locale==='ru'?'Russian':locale==='en'?'English':aiOutputLanguage();
   bits.push(`User-visible output language: ${outLang}`);
-  return bits.join('. ') + '. Use age and stated context when choosing exercise selection and recovery, but never infer absolute strength or starting weight from sex alone.';
+  return bits.join('. ') + '. Use age and stated context when choosing exercise selection and recovery. If sex is not specified, do not infer it. Never infer absolute strength or starting weight from sex alone.';
 }
 
 /* ================= GEMINI API ================= */
@@ -1711,9 +1718,11 @@ function imageMuscleRegions(item){
 }
 
 function imageCharacterStyle(genderTxt){
-  return genderTxt === 'man'
-    ? 'lifelike male athlete, natural skin tone, attractive masculine face, strong athletic physique'
-    : 'lifelike female athlete, natural skin tone, beautiful feminine face, fit athletic physique';
+  if(genderTxt === 'man')
+    return 'lifelike male athlete, natural skin tone, attractive masculine face, strong athletic physique';
+  if(genderTxt === 'woman')
+    return 'lifelike female athlete, natural skin tone, beautiful feminine face, fit athletic physique';
+  return 'lifelike adult athlete, natural skin tone, athletic physique, neutral generic presentation; the user sex is not specified, so do not imply that this athlete represents the user sex';
 }
 
 function exerciseImagePrompt(item, genderTxt){
@@ -1809,9 +1818,14 @@ function imageWorkspaceGuard(){
 // Промт под ОДНО конкретное изображение. До этой точки всегда проходит общий
 // guard, поэтому скрытого fallback-названия нет: картинка строится только из
 // реального названия программы/упражнения.
+function imageGenderText(u){
+  const sex = aiProfileSex(u);
+  return sex === 'male' ? 'man' : sex === 'female' ? 'woman' : 'adult athlete; user sex not specified';
+}
+
 function singleImagePrompt(kind, item){
   const u = curUser();
-  const genderTxt = u && u.gender === 'm' ? 'man' : 'woman';
+  const genderTxt = imageGenderText(u);
   const name = imageProgramName();
   return kind === 'cover'
     ? coverImagePrompt(name, genderTxt)
@@ -1993,7 +2007,7 @@ function uniqueProgramExercises(){
 
 export function imagesPromptText(){
   const u = curUser();
-  const genderTxt = u && u.gender === 'm' ? 'man' : 'woman';
+  const genderTxt = imageGenderText(u);
   const name = (draft.name || '').trim() || 'Workout program';
   const exList = uniqueProgramExercises();
   const L = [
