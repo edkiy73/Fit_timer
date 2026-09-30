@@ -83,6 +83,8 @@ export const en: Record<keyof typeof ru, string> = {
   'onboarding.start': 'Start Day 1',
   'onboarding.starting': 'Opening Day 1…',
   'onboarding.accountLater': 'You can connect an account later — it is not required to start.',
+  'onboarding.courseTitle': 'Where do we start?',
+  'onboarding.courseHint': 'Pick a course. You can switch any time on the Today screen.',
   'onboarding.loading': 'Preparing Day 1…',
   'progress.eyebrow': 'Your data',
   'progress.title': 'Progress',

@@ -9,7 +9,9 @@ import {
   hasExistingCourseProgress
 } from './onboarding';
 
-function renderOnboarding(onDone=vi.fn()){
+vi.mock('@appbase/ui-react/auth.js',()=>({useOptionalAuth:()=>({session:null,loading:false})}));
+
+function renderOnboarding(onDone=vi.fn(),extra:Partial<Parameters<typeof OnboardingView>[0]>={}){
   render(
     <I18nProvider
       dictionaries={dictionaries}
@@ -17,7 +19,7 @@ function renderOnboarding(onDone=vi.fn()){
       storageKey="onboarding-test.locale"
       systemLanguages={['ru']}
     >
-      <OnboardingView onDone={onDone} />
+      <OnboardingView onDone={onDone} {...extra} />
     </I18nProvider>
   );
   return onDone;
@@ -42,6 +44,29 @@ describe('minimal onboarding',()=>{
 
     await user.click(screen.getByRole('button',{name:'Начать день 1'}));
     expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers the published courses when there is more than one',async()=>{
+    const user=userEvent.setup();
+    const onCourse=vi.fn();
+    const course=(id:string,title:string,level:string)=>({
+      id,title:{ru:title},description:{ru:title+' — описание'},level:{from:level,to:level},access:{mode:'free'}
+    }) as never;
+    renderOnboarding(vi.fn(),{
+      courses:[course('main','Общий английский','a1'),course('a1-starter','A1: первые шаги','a1')],
+      courseId:'main',
+      onCourse
+    });
+
+    expect(screen.getByRole('heading',{name:'С чего начнём?'})).toBeTruthy();
+    expect(screen.getByRole('button',{name:/Общий английский/}).getAttribute('aria-pressed')).toBe('true');
+    await user.click(screen.getByRole('button',{name:/A1: первые шаги/}));
+    expect(onCourse).toHaveBeenCalledWith('a1-starter');
+  });
+
+  it('skips the course choice with a single course',()=>{
+    renderOnboarding(vi.fn(),{courses:[{id:'main',title:{ru:'Общий'},access:{mode:'free'}} as never],courseId:'main',onCourse:vi.fn()});
+    expect(screen.queryByRole('heading',{name:'С чего начнём?'})).toBeNull();
   });
 
   it('automatically recognizes real/imported progress but ignores tombstones',()=>{

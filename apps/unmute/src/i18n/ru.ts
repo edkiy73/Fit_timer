@@ -81,6 +81,8 @@ export const ru = {
   'onboarding.start': 'Начать день 1',
   'onboarding.starting': 'Открываем день 1…',
   'onboarding.accountLater': 'Аккаунт можно подключить позже — для старта он не нужен.',
+  'onboarding.courseTitle': 'С чего начнём?',
+  'onboarding.courseHint': 'Выбери курс. Сменить его можно в любой момент на «Сегодня».',
   'onboarding.loading': 'Готовим первый день…',
   'progress.eyebrow': 'Твои данные',
   'progress.title': 'Прогресс',

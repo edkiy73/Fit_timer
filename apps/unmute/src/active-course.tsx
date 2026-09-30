@@ -60,10 +60,46 @@ function accessKey(entry: ContentCatalogSet, owned: boolean): {key: string; days
   return days > 0 ? {key:'courses.previewDays', days} : {key:'courses.paid'};
 }
 
+/** Published courses as one-tap options: level, access and a check on the chosen one.
+ *  Shared by the course switcher and the first-run screen. */
+export function CourseOptionList({sets, currentId, busy = false, onPick}: {
+  sets: ContentCatalogSet[];
+  currentId: string;
+  busy?: boolean;
+  onPick: (id: string) => void;
+}){
+  const {t, locale} = useI18n();
+  const auth = useOptionalAuth();
+  return (
+    <ul className="course-list">
+      {sets.map(set => {
+        const entitlement = resolveCourseEntitlement({access:set.access} as CourseSet, auth.session);
+        const access = accessKey(set, entitlement.full && entitlement.reason !== 'free');
+        const selected = set.id === currentId;
+        const level = levelLabel(set.level || {});
+        return (
+          <li key={set.id}>
+            <button className={'course-option pressable' + (selected ? ' is-current' : '')} type="button" aria-pressed={selected} disabled={busy} onClick={() => onPick(set.id)}>
+              <span className="course-option-main">
+                <span className="course-option-title">{localizedText(set.title, locale)}</span>
+                {set.description && <span className="tile-text">{localizedText(set.description, locale)}</span>}
+                <span className="course-option-meta">
+                  {level && <span className="chip">{level}</span>}
+                  <span className="chip">{t(access.key, {days:access.days ?? 0})}</span>
+                </span>
+              </span>
+              {selected && <span className="course-option-check" aria-hidden="true"><Icon name="check" size={20} /></span>}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 /** «Курс: …» chip that opens the list of published courses. */
 export function CoursePicker({currentId}: {currentId: string}){
   const {t, locale} = useI18n();
-  const auth = useOptionalAuth();
   const queryClient = useQueryClient();
   const catalog = useCatalog();
   const [open, setOpen] = useState(false);
@@ -95,29 +131,7 @@ export function CoursePicker({currentId}: {currentId: string}){
         <div className="courses-sheet">
           <h3 id="courses-title">{t('courses.title')}</h3>
           <p className="tile-text">{t('courses.hint')}</p>
-          <ul className="course-list">
-            {sets.map(set => {
-              const entitlement = resolveCourseEntitlement({access:set.access} as CourseSet, auth.session);
-              const access = accessKey(set, entitlement.full && entitlement.reason !== 'free');
-              const selected = set.id === currentId;
-              const level = levelLabel(set.level || {});
-              return (
-                <li key={set.id}>
-                  <button className={'course-option pressable' + (selected ? ' is-current' : '')} type="button" aria-pressed={selected} disabled={busy} onClick={() => void pick(set.id)}>
-                    <span className="course-option-main">
-                      <span className="course-option-title">{localizedText(set.title, locale)}</span>
-                      {set.description && <span className="tile-text">{localizedText(set.description, locale)}</span>}
-                      <span className="course-option-meta">
-                        {level && <span className="chip">{level}</span>}
-                        <span className="chip">{t(access.key, {days:access.days ?? 0})}</span>
-                      </span>
-                    </span>
-                    {selected && <span className="course-option-check" aria-hidden="true"><Icon name="check" size={20} /></span>}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          <CourseOptionList sets={sets} currentId={currentId} busy={busy} onPick={id => void pick(id)} />
         </div>
       </Sheet>
     </>
