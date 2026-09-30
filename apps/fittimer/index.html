@@ -1039,7 +1039,7 @@
        прогресса остаются только локально. Формулировки намеренно не привязаны ни к конкретному
        способу входа, ни к платёжной системе — это меняется чаще, чем политика. -->
   <section class="screen builder" id="scrLegal">
-    <div class="screen-head"><button class="back-chip" id="legalBackTop"></button><h2 data-i18n="legal.title">Данные и правила</h2></div>
+    <div class="screen-head"><button class="back-chip" id="legalBackTop" data-act="legalBack"></button><h2 data-i18n="legal.title">Данные и правила</h2></div>
 
     <div class="note">
       <span class="n-ico" data-icon="shield"></span>
@@ -1197,7 +1197,7 @@
     <p class="legal-upd" data-i18n="legal.updated">Обновлено 10 сентября 2026</p>
 
     <div class="builder-actions">
-      <button class="btn-primary" id="btnLegalDone" data-i18n="common.ok">Понятно</button>
+      <button class="btn-primary" id="btnLegalDone" data-act="legalBack" data-i18n="common.ok">Понятно</button>
     </div>
   </section>
 
@@ -1444,7 +1444,7 @@
         <span><span data-i18n="settings.trainerMode">Я тренирую других</span><small data-i18n="settings.trainerModeSub">Отправлять свои программы подопечным по ссылке и видеть, кто занимается</small></span>
         <button class="switch" id="tglTrainer"></button>
       </div>
-      <button type="button" class="way-row hidden" id="coachNoAcc">
+      <button type="button" class="way-row hidden" id="coachNoAcc" data-act="openCoachAccount">
         <span class="wr-ico" data-icon="user"></span>
         <span class="wr-txt"><b data-i18n="settings.createAccountFirst">Сначала создай аккаунт</b><small data-i18n="settings.createAccountFirstSub">Без основного аккаунта по почте режим тренера недоступен</small></span>
       </button>
@@ -1492,7 +1492,7 @@
         </div>
         <button type="button" class="btn-primary" id="btnSaveCoach" data-i18n="common.save">Сохранить</button>
         <!-- Предпросмотр открывает ровно ту же страницу, которую видит подопечный. -->
-        <button type="button" class="btn-secondary btn-secondary-text" id="btnMyPage" data-i18n="settings.preview">Предпросмотр моего профиля</button>
+        <button type="button" class="btn-secondary btn-secondary-text" id="btnMyPage" data-act="openMyTrainerPage" data-i18n="settings.preview">Предпросмотр моего профиля</button>
         <button type="button" class="way-row coach-catalog-row hidden" id="btnMyCatalog" data-act="openMyCatalog">
           <span class="wr-ico" data-icon="crown"></span>
           <span class="wr-txt"><b data-i18n="programs.catalogRequests">Заявки в каталог</b><small id="coachCatSub"></small></span>
@@ -1507,7 +1507,7 @@
       <div class="cb-head"><p class="cb-title" data-i18n="settings.deleteData">Удаление данных</p></div>
       <div class="danger-zone">
         <p data-i18n="settings.deleteCoachHint">Со страницы уйдут имя, фото, «о себе», стаж и ссылка. Ник останется за тобой, программы из каталога никуда не денутся.</p>
-        <button type="button" class="link-btn" id="btnCoachWipe" data-i18n="settings.deleteCoach">Удалить данные о себе</button>
+        <button type="button" class="link-btn" id="btnCoachWipe" data-act="wipeCoach" data-i18n="settings.deleteCoach">Удалить данные о себе</button>
       </div>
     </div>
     </div>
@@ -1602,15 +1602,15 @@
     <div class="card-block">
       <div class="cb-head"><p class="cb-title" data-i18n="settings.dataRules">Данные и правила</p></div>
       <div class="ways">
-        <button type="button" class="way-row" id="btnLegalPrivacy">
+        <button type="button" class="way-row" id="btnLegalPrivacy" data-act="openLegalPrivacy">
           <span class="wr-ico" data-icon="shield"></span>
           <span class="wr-txt"><b data-i18n="settings.privacy">Политика конфиденциальности</b><small data-i18n="settings.privacySub">Что собирается, где хранится, что уходит наружу</small></span>
         </button>
-        <button type="button" class="way-row" id="btnLegalTerms">
+        <button type="button" class="way-row" id="btnLegalTerms" data-act="openLegalTerms">
           <span class="wr-ico" data-icon="doc"></span>
           <span class="wr-txt"><b data-i18n="settings.terms">Пользовательское соглашение</b><small data-i18n="settings.termsSub">Что это за приложение и кто за что отвечает</small></span>
         </button>
-        <button type="button" class="way-row" id="btnLegalHealth">
+        <button type="button" class="way-row" id="btnLegalHealth" data-act="openLegalHealth">
           <span class="wr-ico" data-icon="heart"></span>
           <span class="wr-txt"><b data-i18n="settings.health">Здоровье и безопасность</b><small data-i18n="settings.healthSub">Когда сначала к врачу и когда остановиться</small></span>
         </button>
@@ -1744,7 +1744,7 @@
   <!-- ОТПРАВЛЕННОЕ В КАТАЛОГ. Тренер должен видеть, что с его программами: без
        этого он не знает, дошло ли вообще, и отправляет повторно. -->
   <section class="screen builder" id="scrMyCatalog">
-    <div class="screen-head"><button class="back-chip" id="mcBackTop">‹</button><h2 data-i18n="publish.catalogTitle">В каталоге</h2></div>
+    <div class="screen-head"><button class="back-chip" id="mcBackTop" data-act="backMyCatalog">‹</button><h2 data-i18n="publish.catalogTitle">В каталоге</h2></div>
     <div class="card-block">
       <div class="list-rows" id="mcList"></div>
       <p class="field-hint" id="mcHint"></p>
@@ -1752,7 +1752,7 @@
   </section>
 
   <section class="screen builder" id="scrPublish">
-    <div class="screen-head"><button class="back-chip" id="pubBackTop">‹</button><h2 data-i18n="publish.toCatalog">В каталог</h2></div>
+    <div class="screen-head"><button class="back-chip" id="pubBackTop" data-act="backPublish">‹</button><h2 data-i18n="publish.toCatalog">В каталог</h2></div>
 
     <div class="card-block">
       <div class="pref-row"><span><span id="pubName"></span><small id="pubSub"></small></span></div>
@@ -1777,12 +1777,12 @@
     </div>
 
     <div class="builder-actions">
-      <button class="btn-primary" id="btnPublish" data-i18n="publish.submit">Отправить на проверку</button>
+      <button class="btn-primary" id="btnPublish" data-act="publishProgram" data-i18n="publish.submit">Отправить на проверку</button>
     </div>
   </section>
 
   <section class="screen builder" id="scrTrainerPage">
-    <div class="screen-head"><button class="back-chip" id="tpBackTop">‹</button><h2 data-i18n="trainer.title">Тренер</h2></div>
+    <div class="screen-head"><button class="back-chip" id="tpBackTop" data-act="backTrainerProfile">‹</button><h2 data-i18n="trainer.title">Тренер</h2></div>
 
     <div class="card-block">
       <div class="tp-head">
@@ -1806,7 +1806,7 @@
   </section>
 
   <section class="screen builder" id="scrClient">
-    <div class="screen-head"><button class="back-chip" id="clBackTop">‹</button><h2 id="clTitle" data-i18n="clients.default">Подопечный</h2></div>
+    <div class="screen-head"><button class="back-chip" id="clBackTop" data-act="backClient">‹</button><h2 id="clTitle" data-i18n="clients.default">Подопечный</h2></div>
 
     <div class="card-block">
       <div class="field"><label data-i18n="common.name">Имя</label><input type="text" id="clName" maxlength="40" placeholder="Как записать" data-i18n-placeholder="clients.namePlaceholder"></div>
