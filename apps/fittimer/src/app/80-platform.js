@@ -10,7 +10,6 @@ import { DAYS, curUser, customPrograms, kvSet, loadSession, loadSessions, localI
 } from './10-data-sync.js';
 import { isPremium } from './20-account.js';
 import { completeStep, nextStep, setPause, skipStep, stopSpeech } from './70-workout.js';
-import { getNotificationPrefs, refreshVoicePackUI } from './90-events.js';
 
 /* ================= ТЕМА ================= */
 // Тема у каждого профиля своя и по умолчанию «как в системе»: телефон один, а вкусы
@@ -57,6 +56,18 @@ let recog = null;
 let voiceWanted = false;  // пользователь включил микрофон
 let voiceActive = false;  // распознавание реально запущено
 export let recognitionLang = 'ru'; // ru | en; в APK выбирает локальный пакет Vosk
+
+let getNotificationPrefsHook = () => ({workouts:true, progress:true});
+let refreshVoicePackUIHook = () => {};
+
+export function setPlatformEventHooks(hooks = {}){
+  getNotificationPrefsHook = typeof hooks.getNotificationPrefs === 'function'
+    ? hooks.getNotificationPrefs
+    : (() => ({workouts:true, progress:true}));
+  refreshVoicePackUIHook = typeof hooks.refreshVoicePackUI === 'function'
+    ? hooks.refreshVoicePackUI
+    : (() => {});
+}
 
 /* Карточки «Синхронизация» убраны с экрана.
 
@@ -300,7 +311,7 @@ function handleNativeVoiceError(error){
     syncPrefs();
     appAlert(t('handsfree.micDenied'));
   }else if(error === 'model_missing'){
-    if(typeof refreshVoicePackUI === 'function') refreshVoicePackUI();
+    refreshVoicePackUIHook();
   }else if(error === 'model'){
     appAlert(t('handsfree.modelFailed'));
   }
@@ -405,7 +416,7 @@ async function showNotification(title, body){
 export function checkSchedules(){
   if(document.hidden) return;
   if(appRuntimeCompat.isNative()) return;
-  const prefs = (typeof getNotificationPrefs === 'function') ? getNotificationPrefs() : {workouts:true,progress:true};
+  const prefs = getNotificationPrefsHook();
   if(prefs.workouts === false) return;
   if(!('Notification' in window) || Notification.permission !== 'granted') return;
   const now = new Date();
@@ -649,9 +660,7 @@ function limitNotificationCandidates(items){
 // вперёд при старте, изменении расписания и завершении тренировки.
 export async function syncNativeNotifications(){
   if(!appRuntimeCompat.hasNative('syncWorkoutNotifications')) return;
-  const prefs = (typeof getNotificationPrefs === 'function') ? getNotificationPrefs() : {
-    workouts:true, trainer:true, progress:true, offers:true
-  };
+  const prefs = getNotificationPrefsHook();
   const now = new Date();
   const horizon = new Date(now.getTime() + NOTIFY_HORIZON_DAYS * NOTIFY_DAY);
   const items = [];

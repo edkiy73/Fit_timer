@@ -885,8 +885,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 840,
-      "chars": 37146,
+      "lines": 849,
+      "chars": 37291,
       "symbols": [
         "add",
         "advanceFromHeadset",
@@ -896,6 +896,7 @@
         "buildRecog",
         "buildWorkoutNotificationCandidates",
         "checkSchedules",
+        "getNotificationPrefsHook",
         "handleNativeVoiceError",
         "handleNativeVoiceResult",
         "handleNativeVoiceStatus",
@@ -919,10 +920,12 @@
         "notifyTimedGroupCopy",
         "notifyTimeParts",
         "notifyWorkoutCount",
+        "refreshVoicePackUIHook",
         "registerPlatformActions",
         "resetVoiceDedup",
         "setHfMode",
         "setHfModeShared",
+        "setPlatformEventHooks",
         "setRecognitionLangShared",
         "setThemeLightShared",
         "setVoiceWantedShared",
@@ -942,8 +945,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2614,
-      "chars": 108765,
+      "lines": 2618,
+      "chars": 108869,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
