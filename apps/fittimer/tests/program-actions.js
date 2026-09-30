@@ -163,6 +163,88 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
      imported && imported.rotIdx === undefined && imported.completions === 0 && imported.ps === undefined,
      JSON.stringify(imported));
 
+  // ---- обновление той же тренерской программы ----
+  const trainerUpdate = await page.evaluate(() => {
+    const existing = {
+      id:'client-program', src:'same-link', rotate:true, rotIdx:1, active:false,
+      psMigrated:true, progStepsAdj:2, stats:{completions:7},
+      plans:[
+        {days:[],rounds:1,roundRest:0,exercises:[
+          {id:'ex-a',name:'Жим',type:'reps',value:'8-10',weight:20,dualProg:true,
+           ps:{n:2,cur:{reps:'12-14',kg:22}}}
+        ]},
+        {days:[],rounds:1,roundRest:0,exercises:[
+          {id:'ex-b',name:'Тяга',type:'reps',value:'10',weight:0,
+           ps:{n:1,cur:{reps:'12'}}}
+        ]}
+      ]
+    };
+    // Тренер переставил варианты, изменил базу Тяги и добавил новое упражнение.
+    // Даже если в сетевом JSON у нового упражнения есть чужой ps, template-copy
+    // обязан выбросить его до переноса локального состояния клиента.
+    const raw = {
+      id:'trainer-copy', rotate:true, rotIdx:99, stats:{completions:999}, psMigrated:false,
+      plans:[
+        {days:[],rounds:1,roundRest:0,exercises:[
+          {id:'ex-b',name:'Тяга',type:'reps',value:'8',weight:0,ps:{n:99,cur:{reps:'99'}}},
+          {id:'ex-c',name:'Планка',type:'time',value:'30',ps:{n:99,cur:{sec:999}}}
+        ]},
+        {days:[],rounds:1,roundRest:0,exercises:[
+          {id:'ex-a',name:'Жим',type:'reps',value:'8-10',weight:20,dualProg:true,
+           ps:{n:99,cur:{reps:'99',kg:99}}}
+        ]}
+      ]
+    };
+    const incoming = programTemplateCopy(raw);
+    carryLinkedProgramState(existing, incoming);
+    const plans = normPlans(incoming);
+    const b = plans[0].exercises.find(x=>x.id==='ex-b');
+    const fresh = plans[0].exercises.find(x=>x.id==='ex-c');
+    const a = plans[1].exercises.find(x=>x.id==='ex-a');
+
+    // Legacy link: сервер ещё не хранил exercise.id. Совпавшему по имени
+    // упражнению возвращаем локальный стабильный id.
+    const legacyOld = {
+      id:'legacy-program', stats:{completions:2}, plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[
+        {id:'legacy-local-id',name:'Приседания',type:'reps',value:'12',ps:{n:2,cur:{reps:'14'}}}
+      ]}]
+    };
+    const legacyIncoming = programTemplateCopy({
+      plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[
+        {name:'Приседания',type:'reps',value:'12'}
+      ]}]
+    });
+    carryLinkedProgramState(legacyOld, legacyIncoming);
+    const legacyEx = normPlans(legacyIncoming)[0].exercises[0];
+
+    return {
+      id:incoming.id, completions:incoming.stats.completions, active:incoming.active,
+      migrated:incoming.psMigrated, adj:incoming.progStepsAdj, rotIdx:incoming.rotIdx,
+      aPs:a && a.ps, bPs:b && b.ps, freshPs:fresh && fresh.ps,
+      legacyId:legacyEx && legacyEx.id, legacyPs:legacyEx && legacyEx.ps
+    };
+  });
+  ok('обновление тренера сохраняет статистику и локальные флаги клиента',
+     trainerUpdate.id === 'client-program' && trainerUpdate.completions === 7
+       && trainerUpdate.active === false && trainerUpdate.migrated === true && trainerUpdate.adj === 2,
+     JSON.stringify(trainerUpdate));
+  ok('очередь ротации следует за тем же вариантом после перестановки',
+     trainerUpdate.rotIdx === 0, JSON.stringify(trainerUpdate));
+  ok('неизменённое упражнение сохраняет достигнутый диапазон и вес',
+     trainerUpdate.aPs && trainerUpdate.aPs.n === 2
+       && trainerUpdate.aPs.cur.reps === '12-14' && trainerUpdate.aPs.cur.kg === 22,
+     JSON.stringify(trainerUpdate.aPs));
+  ok('изменённая тренером база сохраняет счётчик, но сбрасывает старую текущую нагрузку',
+     trainerUpdate.bPs && trainerUpdate.bPs.n === 1
+       && Object.keys(trainerUpdate.bPs.cur || {}).length === 0,
+     JSON.stringify(trainerUpdate.bPs));
+  ok('новое упражнение не наследует сетевой чужой прогресс',
+     trainerUpdate.freshPs === undefined, JSON.stringify(trainerUpdate));
+  ok('legacy-обновление без exercise.id сохраняет локальный id и прогресс',
+     trainerUpdate.legacyId === 'legacy-local-id'
+       && trainerUpdate.legacyPs && trainerUpdate.legacyPs.cur.reps === '14',
+     JSON.stringify(trainerUpdate));
+
   // у копии пункт «в каталог» уже есть — она своя
   const copyMenu = await page.evaluate(() => {
     const c = customPrograms[customPrograms.length - 1];
