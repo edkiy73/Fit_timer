@@ -363,12 +363,15 @@ export function ReviewView({
       : answer.trim();
     const courseExplanation=localized(activity.explanation,locale);
     return (
-      <div className={result?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-wrong'} role="status">
-        <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
+      <div className={'learn-feedback is-sheet '+(result?'learn-feedback-ok':'learn-feedback-wrong')} role="status">
+        <div className="learn-feedback-head">
+          <span className="learn-feedback-icon" aria-hidden="true"><Icon name={result?'check':'review'} size={22} /></span>
+          <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
+        </div>
         {!result&&accepted&&(
           <span><LexiconText text={t('learn.accepted',{answer:accepted})} refs={activity.lexiconRefs} /></span>
         )}
-        {!result&&courseExplanation&&(
+        {courseExplanation&&(
           <p><LexiconText text={courseExplanation} refs={activity.lexiconRefs} /></p>
         )}
         {!result&&learnerAnswer&&acceptedAnswers.length>0&&(
@@ -382,7 +385,7 @@ export function ReviewView({
             onAccess={onAccess}
           />
         )}
-        <button className="primary-button" type="button" onClick={advanceCard}>
+        <button className="primary-button learn-feedback-next" type="button" onClick={advanceCard}>
           {result?t('learn.next'):t('review.retryLater')}
         </button>
       </div>

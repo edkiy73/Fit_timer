@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@appbase/ui-react/i18n.js';
@@ -110,6 +110,11 @@ describe('node activity runner',()=>{
     expect(saveSeen).toHaveBeenCalledWith('general-foundation','theory.one');
 
     expect(await screen.findByRole('heading',{name:'Выбери ответ'})).toBeTruthy();
+    // The day's theory stays reachable without leaving the exercise.
+    await user.click(screen.getByRole('button',{name:'Теория'}));
+    expect(within(screen.getByRole('dialog')).getByText('Короткая теория')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Закрыть теорию'}));
+    expect(screen.queryByRole('dialog')).toBeNull();
     await user.click(screen.getByRole('radio',{name:'I am here'}));
     await user.click(screen.getByRole('button',{name:'Проверить'}));
     expect(saveGraded).toHaveBeenCalledWith('general-foundation','choice.one',true);

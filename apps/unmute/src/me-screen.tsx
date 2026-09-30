@@ -91,6 +91,9 @@ export function MeScreen(){
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
   const todayDay = activitySaveClock().dayNumber;
+  const weekdayFormat = new Intl.DateTimeFormat(locale, {weekday:'short', timeZone:'UTC'});
+  // 2024-01-01 was a Monday: Mon..Sun labels for the heatmap rows.
+  const weekdayLabels = Array.from({length:7}, (_, index) => weekdayFormat.format(new Date(Date.UTC(2024, 0, 1 + index))));
 
   // Coming here to sign in (e.g. from a lesson): the form is the point, show it first.
   useEffect(() => {
@@ -157,10 +160,21 @@ export function MeScreen(){
                 <div className="tile-title">{t('me.activity')}</div>
                 <span className="tile-caption">{t('me.activityWeeks', {count:ACTIVITY_WEEKS})}</span>
               </div>
-              <div className="heatmap" role="img" aria-label={t('me.activityLabel', {count:calendar.active, weeks:ACTIVITY_WEEKS})}>
-                {calendar.cells.map(cell => (
-                  <span key={cell.day} className={'heat' + (cell.active ? ' is-on' : '') + (cell.future ? ' is-future' : '') + (cell.day === todayDay ? ' is-today' : '')} />
-                ))}
+              <p className="tile-text">{t('me.activityHint', {count:calendar.active, weeks:ACTIVITY_WEEKS})}</p>
+              <div className="heatmap-wrap">
+                <div className="heat-days" aria-hidden="true">
+                  {weekdayLabels.map((label, index) => <span key={index}>{index % 2 === 0 ? label : ''}</span>)}
+                </div>
+                <div className="heatmap" role="img" aria-label={t('me.activityLabel', {count:calendar.active, weeks:ACTIVITY_WEEKS})}>
+                  {calendar.cells.map(cell => (
+                    <span key={cell.day} className={'heat' + (cell.active ? ' is-on' : '') + (cell.future ? ' is-future' : '') + (cell.day === todayDay ? ' is-today' : '')} />
+                  ))}
+                </div>
+              </div>
+              <div className="heat-legend" aria-hidden="true">
+                <span><i className="heat is-on" />{t('me.legendActive')}</span>
+                <span><i className="heat" />{t('me.legendEmpty')}</span>
+                <span><i className="heat is-today" />{t('me.legendToday')}</span>
               </div>
             </article>
           )}

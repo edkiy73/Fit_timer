@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
@@ -11,12 +11,15 @@ import { activitySaveClock } from './activity-progress';
 import { currentLearningStreak } from './progress-screen';
 import { stageForDay, stageNameKey } from './course-stages';
 import { Icon } from './icons';
+import { Sheet } from './sheet';
+import { speakText } from './speech-runtime';
 import {
   lastWeekActivity,
   localizedText,
   nextLandmark,
   nodeDoneCount,
   nodeMinutes,
+  nodeSpeakExamples,
   nodeSpeakTask,
   nodeTopic
 } from './today-model';
@@ -63,6 +66,7 @@ export function TodayView({
   todayDay?:number;
 }){
   const {t,locale}=useI18n();
+  const [speakOpen,setSpeakOpen]=useState(false);
   const state=runtime.state;
   const review=reviewDueCounts(state,wordRuntime,locale,todayDay);
   const dateLabel=new Intl.DateTimeFormat(locale,{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'})
@@ -176,6 +180,7 @@ export function TodayView({
   }
 
   const speakTask=node&&!complete?nodeSpeakTask(state.set,node,locale):null;
+  const speakExamples=node&&speakTask?nodeSpeakExamples(state.set,node,locale):[];
   const landmark=node&&!complete?nextLandmark(state.set,state.roadmap,node,locale):null;
 
   return (
@@ -209,14 +214,15 @@ export function TodayView({
           </Tile>
         )}
 
-        {speakTask&&(
-          <Tile className="tile-wide tile-speak" index={index++} label={t('today.speakTitle')}>
+        {speakTask&&node&&(
+          <button className="tile tile-wide tile-speak pressable" style={{'--i':index++} as CSSProperties} type="button" onClick={()=>setSpeakOpen(true)}>
             <span className="mic-soft" aria-hidden="true"><Icon name="mic" /></span>
-            <div>
-              <div className="tile-title">{t('today.speakTitle')}</div>
-              <p className="tile-text"><LexiconText text={speakTask} /></p>
-            </div>
-          </Tile>
+            <span className="tile-speak-body">
+              <span className="tile-title">{t('today.speakTitle')}</span>
+              <span className="tile-text">{speakTask}</span>
+              <span className="tile-link">{t('today.speakOpen')}</span>
+            </span>
+          </button>
         )}
 
         {landmark&&(
@@ -236,6 +242,32 @@ export function TodayView({
           </button>
         )}
       </div>
+
+      {speakTask&&node&&(
+        <Sheet open={speakOpen} onClose={()=>setSpeakOpen(false)} labelledBy="speak-sheet-title" closeLabel={t('learn.theoryClose')}>
+          <div className="speak-sheet">
+            <div className="screen-kicker">{t('today.speakKicker')}</div>
+            <h3 id="speak-sheet-title">{t('today.speakTitle')}</h3>
+            <p className="speak-task"><LexiconText text={speakTask} /></p>
+            <p className="tile-text">{t('today.speakHow')}</p>
+            {speakExamples.length>0&&(
+              <ul className="speak-examples" aria-label={t('today.speakExamples')}>
+                {speakExamples.map(example=>(
+                  <li key={example}>
+                    <button className="speak-play pressable" type="button" aria-label={t('today.speakListen',{text:example})} onClick={()=>void speakText(example,'en-US')}>
+                      <Icon name="speaker" size={18} />
+                    </button>
+                    <span lang="en"><LexiconText text={example} /></span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button className="primary-button" type="button" onClick={()=>{ setSpeakOpen(false); onStart(node.id); }}>
+              {t('today.speakStart')}
+            </button>
+          </div>
+        </Sheet>
+      )}
     </section>
   );
 }

@@ -32,6 +32,18 @@ export function nodeSpeakTask(set: CourseSet, node: RoadmapNode, locale: string)
   return first || null;
 }
 
+/** English example lines of the plan note ("• Yesterday I worked all morning."). */
+export function nodeSpeakExamples(set: CourseSet, node: RoadmapNode, locale: string): string[] {
+  const note = activitiesOf(set, node).find(isPlanNote);
+  if(note?.type !== 'theory') return [];
+  return localizedText(note.body, locale)
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => /^[•\-–*]\s*/.test(line))
+    .map(line => line.replace(/^[•\-–*]\s*/, '').trim())
+    .filter(Boolean);
+}
+
 // Rough timing when a card has no estimatedMinutes: reading theory is slower than a card.
 const DEFAULT_MINUTES: Partial<Record<Activity['type'], number>> = {
   theory: 1.5,

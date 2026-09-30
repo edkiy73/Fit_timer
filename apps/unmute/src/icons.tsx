@@ -18,6 +18,7 @@ const PATHS = {
   back: <path d="M15 6l-6 6 6 6"/>,
   progress: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>,
   plus: <path d="M12 5v14M5 12h14"/>,
+  book: <><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M9 7h6"/></>,
   search: <><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></>,
   trash: <><path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13M9 7V4h6v3"/></>
 } as const;

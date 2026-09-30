@@ -7,6 +7,7 @@ import {
   nextLandmark,
   nodeDoneCount,
   nodeMinutes,
+  nodeSpeakExamples,
   nodeSpeakTask,
   nodeTopic
 } from './today-model';
@@ -56,6 +57,7 @@ describe('Today model',()=>{
   it('takes the speak-aloud task from the first paragraph of the plan note',()=>{
     expect(nodeSpeakTask(set,nodes[0]!,'ru')).toBe('Расскажи вслух, что делал вчера.');
     expect(nodeSpeakTask(set,nodes[1]!,'ru')).toBeNull();
+    expect(nodeSpeakExamples(set,nodes[0]!,'ru')).toEqual(['Yesterday I worked.']);
   });
 
   it('estimates minutes and counts finished tasks',()=>{
