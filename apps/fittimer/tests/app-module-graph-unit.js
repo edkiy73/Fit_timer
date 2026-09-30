@@ -1,9 +1,9 @@
 /* Phase 13 guard: the product runtime is a graph of ES modules (src/app/NN-*.js) that
-   import each other cyclically. That is safe only while:
+   form an acyclic product graph. Keep that invariant explicit:
    1. a part's top level only declares things — startup wiring lives in its exported
       init function, which src/app/index.js calls once, in part order;
-   2. no top-level initializer reads another part's binding at load time (in a cycle
-      it may not be initialised yet); shared constants live in leaf modules (options.js);
+   2. no top-level initializer reads another part's binding at load time; shared constants
+      live in leaf modules (options.js);
    3. every name another module exports is imported where it is used. A forgotten
       import is not a build error: it silently falls back to a global and fails only
       at run time.
@@ -23,6 +23,38 @@ const sfOf = f => program.getSourceFile(path.resolve(f));
 const hasExport = n => (ts.getCombinedModifierFlags(n) & ts.ModifierFlags.Export) !== 0;
 
 const problems = [];
+
+
+// Product modules must remain a DAG. The earlier migration removed the large SCC;
+// checking the whole graph here prevents a future feature from reintroducing a cycle
+// through a dependency path that no pair-specific guard happens to know about.
+const productGraph = new Map(parts.map(name => [name, []]));
+for(const name of parts){
+  const sf = sfOf(path.join(APP, name));
+  for(const st of sf.statements){
+    if(!ts.isImportDeclaration(st) || !ts.isStringLiteral(st.moduleSpecifier)) continue;
+    const m = /^\.\/(\d\d-[\w-]+\.js)$/.exec(st.moduleSpecifier.text);
+    if(m && productGraph.has(m[1])) productGraph.get(name).push(m[1]);
+  }
+}
+const visitState = new Map();
+const visitStack = [];
+function visitProduct(name){
+  const state = visitState.get(name) || 0;
+  if(state === 2) return;
+  if(state === 1){
+    const at = visitStack.indexOf(name);
+    const cycle = visitStack.slice(at).concat(name);
+    problems.push('product module graph must stay acyclic: ' + cycle.join(' -> '));
+    return;
+  }
+  visitState.set(name, 1);
+  visitStack.push(name);
+  for(const dep of productGraph.get(name) || []) visitProduct(dep);
+  visitStack.pop();
+  visitState.set(name, 2);
+}
+for(const name of parts) visitProduct(name);
 const exportedBy = new Map();
 for(const f of parts.map(n => path.join(APP, n)).concat(leaves)){
   for(const st of sfOf(f).statements){
@@ -322,6 +354,6 @@ const calls = [...entry.matchAll(/^(init[A-Z]\w*)\(\);$/gm)].map(m => m[1]);
 if(JSON.stringify(inits.map(i => i[0])) !== JSON.stringify(parts)) problems.push(`src/app/index.js must import the init function of every part in part order (found ${inits.map(i => i[0]).join(', ')})`);
 if(JSON.stringify(calls) !== JSON.stringify(inits.map(i => i[1]))) problems.push(`src/app/index.js must call ${inits.map(i => i[1]).join(', ')} once, in that order`);
 
-console.log((problems.length ? ' ПЛОХО' : '  ok  ') + '  product runtime modules: declaration-only top level, no load-time cycles, no missing imports'
+console.log((problems.length ? ' ПЛОХО' : '  ok  ') + '  product runtime modules: acyclic graph, declaration-only top level, no missing imports'
   + (problems.length ? '\n    ' + problems.join('\n    ') : ` (${parts.length} parts, ${exportedBy.size} exports, ${inits.length} init functions)`));
 process.exit(problems.length ? 1 : 0);
