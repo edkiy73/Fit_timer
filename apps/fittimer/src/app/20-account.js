@@ -827,6 +827,17 @@ export function openLogin(after, opts){
   setTimeout(()=> $('loginEmail').focus(), 60);
 }
 
+export function cancelLogin(){
+  loginDone = null;
+  loginPending = null;
+  loginFixedEmail = '';
+  pendingSub = null;
+  const email = $('loginEmail');
+  if(email) email.readOnly = false;
+  const modal = $('loginModal');
+  if(modal) modal.classList.remove('open');
+}
+
 export function loginUseExistingCode(){
   const email = loginFixedEmail || ($('loginEmail').value || '').trim().toLowerCase();
   $('loginErr').textContent = '';
@@ -1041,6 +1052,11 @@ function bioReason(reason){
   if(reason === 'unsupported') return t('bio.unsupported');
   return t('bio.refused');
 }
+export async function refreshBiometricSupport(){
+  bioOK = await bioSupported();
+  return bioOK;
+}
+
 export async function bioSupported(){
   if(!nativeBiometryHost()){
     bioState = {available:false, reason:'unsupported'};
@@ -1134,11 +1150,6 @@ export function maybeRunDeferredBiometricLock(){
 
 /* Setters for state owned by this chunk and changed from other chunks.
    Other chunks read these bindings directly but write them only through the owner. */
-export function setBioOKShared(value){ bioOK = value; return bioOK; }
-export function setLoginDoneShared(value){ loginDone = value; return loginDone; }
-export function setLoginFixedEmailShared(value){ loginFixedEmail = value; return loginFixedEmail; }
-export function setLoginPendingShared(value){ loginPending = value; return loginPending; }
-export function setPendingSubShared(value){ pendingSub = value; return pendingSub; }
 
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */

@@ -25,8 +25,8 @@ import { account, bioDisable, bioEnable, bioSupported, bumpAccountMeta, complete
   deleteUser, doLogin, humanDate, isPremium, loadAccount, loadPublicConfig, lockNeeded,
   loginUseExistingCode, maybeBiometricRelock, money, openLock, openLogin, openUserEdit, pmPlan,
   priceTable, readAccountBucket, refreshServerSubscription, rememberAccount, renderPlan,
-  renderPremium, saveAccount, saveKnown, saveUser, setBioOKShared, setLoginDoneShared,
-  setLoginFixedEmailShared, setLoginPendingShared, setPendingSubShared, signOut, syncAccountLocale,
+  cancelLogin, refreshBiometricSupport, renderPremium, saveAccount, saveKnown, saveUser,
+  signOut, syncAccountLocale,
   setAccountEventHooks, syncUserForm, tryUnlock, uDraft, userCurrency, userDirty, wipeAccount, writeAccountBucket
 } from './20-account.js';
 import { LIM, addPhoto, clampLine, clampText, cleanLink, delCmpPhoto, deleteAllPhotos, ensureWarmup,
@@ -64,9 +64,10 @@ import { afterExChange, applyProgCheck, autoGrow, backToWorkout, buildSteps, clo
   setPause, settleQuickFinish, shareResult, skipStep, startWorkout, stopSpeech, swapViaAI, tearDownWorkout,
   toggleProgCheckList
 , setWorkoutEventHooks } from './70-workout.js';
-import { SR, applyThemeFor, checkSchedules, hfHintText, hfMode, recognitionLang, setHfMode, setHfModeShared,
-  setPlatformEventHooks, setRecognitionLangShared, setVoiceWantedShared, startHandsFree, startListening, stopHandsFree,
-  stopListening, syncHandsFreeUI, syncNativeNotifications, syncPrefs
+import { SR, applyThemeFor, checkSchedules, clearVoiceWanted, hfHintText, hfMode, recognitionLang,
+  restoreHandsFreeState, resumeVoiceListening, setHfMode, setPlatformEventHooks, setRecognitionLanguage,
+  startHandsFree, startListening, stopHandsFree, stopListening, syncHandsFreeUI,
+  syncNativeNotifications, syncPrefs
 } from './80-platform.js';
 
 /* ================= СОБЫТИЯ ================= */
@@ -784,7 +785,7 @@ function registerEventActions(){
     await setAppLocale(pref, {persist:false});
     await syncAccountLocale(appLocale);
     if((await kvGet('recognitionLangManual')) !== '1'){
-      setRecognitionLangShared(appLocale);
+      setRecognitionLanguage(appLocale);
       await kvSet('recognitionLang', recognitionLang);
       if(hfMode === 'voice') stopListening();
       await refreshVoicePackUI();
@@ -1450,8 +1451,7 @@ async function previewSelectedVoice(){
     if(!resumeRecognition) return;
     setTimeout(()=>{
       if(hfMode === 'voice' && $('scrWork').classList.contains('on')){
-        setVoiceWantedShared(true);
-        startListening();
+        resumeVoiceListening();
       }
     }, 160);
   });
@@ -1582,14 +1582,7 @@ export function openPremium(){
   renderPremium(); $('premiumModal').classList.add('open');
   refreshServerSubscription(true).catch(()=>{});
 }
-const dropLogin = ()=>{
-  setLoginDoneShared(null);
-  setLoginPendingShared(null);
-  setLoginFixedEmailShared('');
-  $('loginEmail').readOnly = false;
-  setPendingSubShared(null);   // ушёл с шага кода — подписки не случилось
-  $('loginModal').classList.remove('open');
-};
+const dropLogin = ()=> cancelLogin();
 
 // Знакомство ведёт на главную, а не сразу в разминку: разминка никуда не денется —
 // она уже в списке, — а начинать чужой сценарий за человека не стоит.
@@ -2139,7 +2132,7 @@ export function initEvents(){
   }
   for(const id of ['voiceRecLang','hfVoiceRecLang']){
     if($(id)) $(id).onchange = async e=>{
-      setRecognitionLangShared(e.target.value === 'en' ? 'en' : 'ru');
+      setRecognitionLanguage(e.target.value);
       kvSet('recognitionLang',recognitionLang);
       kvSet('recognitionLangManual','1');
       if(hfMode==='voice') stopListening();
@@ -2537,7 +2530,7 @@ export function initEvents(){
     }
     loadPublicConfig();
     syncRemotePushRegistration(false).catch(()=>{});
-    setBioOKShared(await bioSupported());
+    await refreshBiometricSupport();
     if(lockNeeded()) openLock();
     // пользователи: миграция со старой схемы профилей f/m
     try{ setUsersShared(JSON.parse(await kvGet('users')) || []); }catch(e){ setUsersShared([]); }
@@ -2557,7 +2550,7 @@ export function initEvents(){
         || (await kvGet('customPrograms')) !== null
         || (await kvGet('migrated')) === '1';
       if(!hasLegacy){
-        setVoiceWantedShared(false); setSoundOnShared(true);
+        clearVoiceWanted(); setSoundOnShared(true);
         setMusicModeShared(false);
         syncPrefs();
         applyThemeFor({theme:'system'});
@@ -2602,19 +2595,19 @@ export function initEvents(){
     if(hasScheduledWorkout && getNotificationPrefs().workouts !== false){
       appRuntimeCompat.requestNotifications().then(ok => { if(ok) syncNativeNotifications(); });
     } else syncNativeNotifications();
-    setHfModeShared((await kvGet('hfMode')) || (((await kvGet('voiceCtl')) === '1' && !!SR) ? 'voice' : 'off'));
+    const restoredHfMode = (await kvGet('hfMode'))
+      || (((await kvGet('voiceCtl')) === '1' && !!SR) ? 'voice' : 'off');
+    const restoredRecognitionLang = (await kvGet('recognitionLang')) || appLocale;
+    restoreHandsFreeState({
+      mode: restoredHfMode,
+      recognitionLanguage: restoredRecognitionLang
+    });
     // Удалённый режим мог остаться в старой резервной копии или localStorage.
-    if(!['off', 'voice', 'headset'].includes(hfMode)){
-      setHfModeShared('off');
-      kvSet('hfMode', 'off');
-    }
-    setVoiceWantedShared(hfMode === 'voice');
+    if(restoredHfMode !== hfMode) kvSet('hfMode', hfMode);
     syncHandsFreeUI();
     setSoundOnShared((await kvGet('soundOff')) !== '1');
     setVoiceLangShared(localeTag());
     setSavedVoiceURIShared((await kvGet('voiceURI')) || '');
-    setRecognitionLangShared((await kvGet('recognitionLang')) || appLocale);
-    if(!['ru','en'].includes(recognitionLang)) setRecognitionLangShared('ru');
     setMusicModeShared((await kvGet('musicMode')) === '1');
     applyAudioFromUser(curUser());
     await syncTtsLocaleToApp(false);

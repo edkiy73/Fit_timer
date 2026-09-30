@@ -528,7 +528,7 @@ Product-side conversion continues chunk by chunk:
 The product ESM graph is now fully acyclic:
 - the former SCC spanning `00-core` through `90-events` was dismantled incrementally with explicit owner hook boundaries;
 - `tests/app-module-graph-unit.js` now checks the **entire product import graph is a DAG**, in addition to the existing direction-specific regression guards;
-- the current compatibility surface is **41 hook-boundary setters** (`set*Hooks`) and **38 shared-state setters** (`set*Shared`).
+- the current compatibility surface is **41 hook-boundary setters** (`set*Hooks`) and **30 shared-state setters** (`set*Shared`) after the first semantic-owner cleanup.
 
 Audit conclusion:
 - do **not** remove hook boundaries just to reduce their count; they are currently the dependency-inversion mechanism that keeps the graph acyclic;
@@ -536,6 +536,11 @@ Audit conclusion:
 - highest-value candidates are the single-consumer setters concentrated in event/platform/account UI wiring (audio/voice settings, login draft state, theme/hands-free state), because their ownership can usually be made clearer without changing persistence or protocols;
 - builder draft/exercise setters remain intentionally shared for now: they have several real consumers across program AI, workout and event flows, so replacing them should be done only together with a focused builder-state API;
 - the browser-test bridge remains the other Phase 13 cleanup target. Convert tests from internal binding mutation/stubbing to UI/public behavior as those tests are touched, then shrink the bridge from measured usage rather than deleting it wholesale.
+
+First semantic-owner cleanup:
+- account login cancellation is now owned by `cancelLogin()`; five raw login/biometry setters were removed from the public module surface;
+- platform hands-free boot/voice state is now restored/changed through `restoreHandsFreeState()`, `setRecognitionLanguage()`, `clearVoiceWanted()` and `resumeVoiceListening()`; three raw platform setters were removed;
+- no product import direction changed, so the DAG stays intact.
 
 ## Phase 14 — Dependency rules
 
