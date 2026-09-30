@@ -2,15 +2,15 @@
   "appId": "app.unmute.english",
   "appName": "UnMute",
   "webDir": "dist",
-  "backgroundColor": "#0F1115",
+  "backgroundColor": "#12131C",
   "android": {
-    "backgroundColor": "#0F1115",
+    "backgroundColor": "#12131C",
     "allowMixedContent": false
   },
   "plugins": {
     "LocalNotifications": {
       "smallIcon": "ic_stat_unmute",
-      "iconColor": "#14B8A6"
+      "iconColor": "#FF7A59"
     }
   }
 }

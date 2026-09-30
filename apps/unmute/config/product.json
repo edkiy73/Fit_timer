@@ -5,8 +5,8 @@
   "defaultApiUrl": "https://unmute99.vercel.app",
   "defaultPublicUrl": "https://unmute99.vercel.app",
   "brand": {
-    "background": "#0F1115",
-    "notificationAccent": "#14B8A6",
+    "background": "#12131C",
+    "notificationAccent": "#FF7A59",
     "ui": {
       "dark": {
         "background": "#12131C",

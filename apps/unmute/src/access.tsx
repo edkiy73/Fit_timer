@@ -106,7 +106,7 @@ export function AccessOfferView({
       </div>
 
       <div className="access-options">
-        <article className="access-option">
+        <article className="access-option access-option-main">
           <span className="access-tag">{t('access.foreverTag')}</span>
           <h3>{t('access.foreverTitle')}</h3>
           <p>{t('access.foreverText')}</p>
