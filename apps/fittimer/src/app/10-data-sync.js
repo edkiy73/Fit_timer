@@ -21,6 +21,21 @@ export function setDataSyncCoreHooks(hooks = {}){
   coreSyncDockTabsHook = typeof hooks.syncDockTabs === 'function' ? hooks.syncDockTabs : coreSyncDockTabsHook;
 }
 const coreState = () => coreStateHook() || {};
+
+
+let trainerCatalogRenderMineHook = () => {};
+export function setDataSyncTrainerCatalogHooks(hooks = {}){
+  trainerCatalogRenderMineHook = typeof hooks.renderMine === 'function' ? hooks.renderMine : (() => {});
+}
+
+let platformApplyThemeForHook = () => {};
+let platformSyncNativeNotificationsHook = async () => {};
+export function setDataSyncPlatformHooks(hooks = {}){
+  platformApplyThemeForHook = typeof hooks.applyThemeFor === 'function' ? hooks.applyThemeFor : (() => {});
+  platformSyncNativeNotificationsHook = typeof hooks.syncNativeNotifications === 'function'
+    ? hooks.syncNativeNotifications
+    : (async () => {});
+}
 import { PROFILE_KEYS, account, bumpAccountMeta, isPremium, openUserEdit, readAccountBucket,
   renderPlan, saveAccount, writeAccountBucket
 } from './20-account.js';
@@ -28,12 +43,10 @@ import { ensureWarmup, loadPhotos, renderPhotos, shortD, uniqueExerciseIds } fro
 import { apiFetch, applyProgressionAll, clients, loadTrainer, openDayProgram, renderGreeting,
   setClientsShared, setTrainerShared, trainer, weekPlanInfo
 } from './40-programs-ai.js';
-import { renderMine } from './50-trainer-catalog.js';
 import { exRestAfter, getExProgValue, hasWeight, normValue, parseValue, progAtCeiling, progAxis,
   progBaseValue, progStepSize, progressedRepsRange
 } from './60-builder.js';
 import { BADGES, badgeDesc, badgeName, earnBadges, esc, hasBadge } from './70-workout.js';
-import { applyThemeFor, syncNativeNotifications } from './80-platform.js';
 import { NOTIFICATION_PREFS_KEY, NOTIFICATION_PREF_DEFAULTS, applyAudioFromUser,
   getNotificationPrefs, syncNotificationSettings, syncSettingsForm
 } from './90-events.js';
@@ -221,9 +234,9 @@ async function switchUserNow(id){
   applyProgressionAll();
   applyAudioFromUser(curUser());
   const u = curUser();
-  applyThemeFor(u);
+  platformApplyThemeForHook(u);
   renderUsers();
-  renderMine();
+  trainerCatalogRenderMineHook();
   renderStats();
   renderWeight();
   renderWellness();
@@ -232,7 +245,7 @@ async function switchUserNow(id){
   // Системное расписание принадлежит активному профилю. До этого переключение
   // меняло программы/историю в памяти, но Android/iOS продолжали держать пуши
   // предыдущего профиля до следующего foreground или ручного изменения программы.
-  await syncNativeNotifications();
+  await platformSyncNativeNotificationsHook();
 }
 
 // Все профили — одинаковыми строками, у каждой одна и та же кнопка-карандаш.
@@ -1127,7 +1140,7 @@ async function applyRemoteSyncNow(result){
     // У непремиум-аккаунта pull может содержать только account-level настройки
     // уведомлений. Даже без profile docs системное расписание должно сразу
     // соответствовать приехавшим prefs.
-    if(notificationPrefsChanged) await syncNativeNotifications();
+    if(notificationPrefsChanged) await platformSyncNativeNotificationsHook();
     return;
   }
   let active = remote.filter(r => !r.deleted);
@@ -1287,10 +1300,10 @@ async function applyRemoteSyncNow(result){
   await loadPhotos();
   await ensureWarmup();
   applyProgressionAll();
-  renderUsers(); renderMine(); renderStats(); renderWeight(); renderWellness(); renderPhotos();
+  renderUsers(); trainerCatalogRenderMineHook(); renderStats(); renderWeight(); renderWellness(); renderPhotos();
   // Только здесь active profile уже полностью перезагружен из принятых docs.
   // Пересборка раньше этого места могла успеть записать в ОС старое расписание.
-  await syncNativeNotifications();
+  await platformSyncNativeNotificationsHook();
 }
 
 function trainerSyncValue(value){
@@ -1402,7 +1415,7 @@ export async function syncNotificationPrefsServer(action){
   if(base.action === 'pull'){
     const result = await syncApiPost(base);
     const changed = await applyRemoteAccountDocs(result);
-    if(changed) await syncNativeNotifications();
+    if(changed) await platformSyncNativeNotificationsHook();
     return true;
   }
   const rec = await readAccountBucket();
