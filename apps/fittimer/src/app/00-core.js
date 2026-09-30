@@ -1429,8 +1429,14 @@ export function selectRuntimeVoice({language, uri} = {}){
   if(uri !== undefined) savedVoiceURI = uri;
   return {voiceLang, savedVoiceURI};
 }
-export function setLastAppSoundTShared(value){ lastAppSoundT = value; return lastAppSoundT; }
-export function setStartFromShared(value){ startFrom = value; return startFrom; }
+export function blockVoiceCommandsFor(ms = 700){
+  lastAppSoundT = Math.max(lastAppSoundT, Date.now() + Math.max(0, Number(ms) || 0));
+  return lastAppSoundT;
+}
+export function openStartFrom(raw, from){
+  if(from) startFrom = from;
+  return openStart(raw);
+}
 
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
