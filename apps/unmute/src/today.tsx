@@ -16,6 +16,7 @@ import { speakText } from './speech-runtime';
 import type { RecordMap } from '@appbase/core/document-sync.js';
 import type { TimedFlag } from './progress';
 import { useAllLearningDays, withAllLearningDays } from './learning-days';
+import { useOtherCourseReviews, type OtherCourseReview } from './other-course-review';
 import {
   lastWeekActivity,
   localizedText,
@@ -59,7 +60,8 @@ export function TodayView({
   onMap,
   onAccess,
   todayDay=activitySaveClock().dayNumber,
-  learningDays=null
+  learningDays=null,
+  otherCourses=[]
 }:{
   runtime:LearnerCourseRuntimeValue;
   wordRuntime?:WordReviewRuntimeValue|null;
@@ -70,11 +72,13 @@ export function TodayView({
   todayDay?:number;
   /** Days with practice in every course (the streak is the learner's, not the course's). */
   learningDays?:RecordMap<TimedFlag>|null;
+  /** Studied courses other than the active one: their due items count toward review. */
+  otherCourses?:OtherCourseReview[];
 }){
   const {t,locale}=useI18n();
   const [speakOpen,setSpeakOpen]=useState(false);
   const state=runtime.state;
-  const review=reviewDueCounts(state,wordRuntime,locale,todayDay);
+  const review=reviewDueCounts(state,wordRuntime,locale,todayDay,otherCourses);
   const dateLabel=new Intl.DateTimeFormat(locale,{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'})
     .format(new Date(todayDay*DAY_MS));
   const weekdayLabel=new Intl.DateTimeFormat(locale,{weekday:'narrow',timeZone:'UTC'});
@@ -281,9 +285,12 @@ export function TodayView({
 
 export function TodayScreen(){
   const navigate=useNavigate();
+  const runtime=useLearnerCourseRuntime();
+  const otherCourses=useOtherCourseReviews(runtime.state?.set.id??'');
   return (
     <TodayView
-      runtime={useLearnerCourseRuntime()}
+      runtime={runtime}
+      otherCourses={otherCourses.courses}
       wordRuntime={useWordReviewRuntime()}
       learningDays={useAllLearningDays()}
       onStart={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId))}

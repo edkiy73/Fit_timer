@@ -7,9 +7,10 @@ import { selectCardReviewQueue } from './engine/review-summary';
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
 type PatternActivity=Extract<Activity,{type:'pattern-drill'}>;
 
+/** `setId` is set for items from a course other than the active one. */
 export type ReviewSessionItem=
-  |{kind:'card';activity:CardActivity}
-  |{kind:'practice';mode:PracticeSrsKind;activity:PatternActivity};
+  |{kind:'card';activity:CardActivity;setId?:string}
+  |{kind:'practice';mode:PracticeSrsKind;activity:PatternActivity;setId?:string};
 
 export interface CourseReviewSession {
   items:ReviewSessionItem[];
