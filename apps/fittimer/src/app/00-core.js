@@ -1,5 +1,6 @@
 import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
 import { appRuntimeCompat, appUi } from './00-dependencies.js';
+import { registerAction } from './05-actions.js';
 import { DAYS, closeAllMenus, curUser, customPrograms, normPlans, progActive, renderStats,
   renderUsers, renderWeight, renderWellness, savePrograms, setCustomProgramsShared, stats
 } from './10-data-sync.js';
@@ -569,16 +570,36 @@ export function syncSoundCascade(p){
 // попапа реально снята из browser history. Иначе следующий переход успевает
 // построить новую навигацию поверх ещё не завершившегося history.back().
 let modalHistoryWaiters = [];
+let dialogResolve = null;
+let dialogConfirm = false;
+let dialogTypedInput = null;
+
+function finishDialog(v){
+  if(!dialogResolve) return;
+  const res = dialogResolve;
+  dialogResolve = null;
+  const typed = dialogTypedInput || $('dlgType');
+  dialogTypedInput = null;
+  const waitHistory = !!(history.state && history.state.m)
+    && ![...document.querySelectorAll('.modal.open')].some(m => m !== $('dlg'));
+  $('dlg').classList.remove('open');
+  $('dlgOk').disabled = false;
+  setShown('dlgTypeBox', false);
+  typed.oninput = null;
+  if(waitHistory) modalHistoryWaiters.push(()=> res(v));
+  else res(v);
+}
+
 export function appDialog(msg, opts = {}){
   return new Promise(res => {
-    // текст передают и готовой строкой, и функцией от t(): на экран не должен
-    // попасть исходный код вроде «()=> t('ai.emptyAnswer')»
+    dialogResolve = res;
+    dialogConfirm = !!opts.confirm;
     $('dlgMsg').textContent = typeof msg === 'function' ? msg() : msg;
     const codeEl = $('dlgCode');
     if(opts.code){ setShown(codeEl, true); codeEl.value = opts.code; }
     else setShown(codeEl, false);
-    // opts.type — фраза, которую надо набрать: пока она не совпала, кнопка не работает
     const typed = $('dlgType');
+    dialogTypedInput = typed;
     setShown('dlgTypeBox', !!opts.type);
     typed.oninput = null;
     if(opts.type){
@@ -592,27 +613,9 @@ export function appDialog(msg, opts = {}){
       $('dlgOk').disabled = false;
     }
     $('dlgOk').textContent = opts.okText || t('common.ok');
-    if(opts.cancelText) $('dlgCancel').textContent = opts.cancelText;
-    else $('dlgCancel').textContent = t('common.cancel');
+    $('dlgCancel').textContent = opts.cancelText || t('common.cancel');
     setShown('dlgCancel', opts.confirm);
     $('dlg').classList.add('open');
-    const done = v => {
-      // Если это последний открытый попап и сверху лежит его history-запись,
-      // сначала даём MutationObserver снять её. Продолжение (например goTab())
-      // запускаем уже после соответствующего popstate — без гонки со старым экраном.
-      const waitHistory = !!(history.state && history.state.m)
-        && ![...document.querySelectorAll('.modal.open')].some(m => m !== $('dlg'));
-      $('dlg').classList.remove('open');
-      $('dlgOk').onclick = $('dlgCancel').onclick = $('dlg').onclick = null;
-      $('dlgOk').disabled = false;
-      setShown('dlgTypeBox', false);
-      typed.oninput = null;
-      if(waitHistory) modalHistoryWaiters.push(()=> res(v));
-      else res(v);
-    };
-    $('dlgOk').onclick = () => done(true);
-    $('dlgCancel').onclick = () => done(false);
-    $('dlg').onclick = e => { if(e.target === $('dlg')) done(opts.confirm ? false : true); };
   });
 }
 export const appAlert = (m, o) => appDialog(m, o);
@@ -962,7 +965,8 @@ export function renderPlanRow(){
     if(rotOn && i === defaultPlanIdx(plans, state.raw)) lbl += ' • ' + t('start.current');
     b.textContent = lbl;
     b.classList.toggle('act', state.planIdx === i);
-    b.onclick = ()=>{ state.planIdx = i; renderPlanRow(); renderStartInfo(); };
+    b.dataset.act = 'selectStartPlan';
+    b.dataset.planIdx = String(i);
     row.appendChild(b);
   });
 }
@@ -1179,7 +1183,8 @@ function renderStartOverview(){
     // блоку «Нагрузка сегодня» с «±» — теперь правка per-упражнение.
     if(hasWeight(ex)){
       row.classList.add('tappable');
-      row.onclick = () => openWeightModal(i);
+      row.dataset.act = 'openStartWeight';
+      row.dataset.exerciseIdx = String(i);
     }
     box.appendChild(row);
   });
@@ -1229,11 +1234,11 @@ function buildStartMenu(){
   const menu = $('startMenu');
   menu.innerHTML = '';
   if(!p || p.id === 'warmup'){ $('startMore').style.display = p ? '' : 'none'; }
-  const mk = (html2, fn, cls)=>{
+  const mk = (html2, action, cls)=>{
     const b = document.createElement('button');
     if(cls) b.className = cls;
     b.innerHTML = html2;
-    b.onclick = e => { e.stopPropagation(); closeAllMenus(); fn(); };
+    b.dataset.act = action;
     return b;
   };
   const on = progActive(p);
@@ -1243,34 +1248,14 @@ function buildStartMenu(){
   setShown('startByChip', !!by);
   if(by) $('startByName').textContent = by;
   menu.append(
-    mk(icon('pencil') + t('common.edit'), ()=> openBuilder(p.id)),
-    // тот же переключатель, что в меню карточки в списке: экран программы — второе
-    // место, где о программе думают целиком, и искать выключатель в другом списке
-    // ради одного действия человек не станет
-    mk(icon('power') + (on ? t('programs.disable') : t('programs.enable')), async ()=>{
-      p.active = !on;
-      await savePrograms();
-      buildStartMenu();     // подпись пункта и чип «Откл» на этом же экране
-      renderMine();         // список под ним уже перерисован к возврату
-      if(on) appAlert(t('programs.disabledAlert'));
-    }),
-    // Порядок пунктов тот же, что в меню карточки списка: одно и то же меню в двух
-    // местах обязано читаться одинаково, иначе рука промахивается.
-    mk(icon('copy') + t('common.duplicate'), async ()=>{
-      const c = await duplicateProgram(p);
-      openBuilder(c.id);
-    }),
-    mk(icon('share') + t('programs.shareLink'), ()=> exportProgram(p)),
-    ...(trainerOn() ? [mk(icon('users') + t('programs.sendClient'), ()=> pickClientFor(p))] : []),
-    ...(trainerOn() && !p.storeId ? [mk(icon('crown') + t('programs.submitCatalog'), ()=> openPublish(p))] : []),
-    mk(icon('download') + t('programs.saveFile'), ()=> exportProgramFile(p)),
-    mk(icon('trash') + t('common.delete'), async ()=>{
-      if(!(await appDialog(t('programs.deleteQuestion',{name:p.name}), {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
-      setCustomProgramsShared(customPrograms.filter(x => x.id !== p.id));
-      await savePrograms();
-      renderMine();
-      goTab('scrPrograms');
-    }, 'danger')
+    mk(icon('pencil') + t('common.edit'), 'editStartProgram'),
+    mk(icon('power') + (on ? t('programs.disable') : t('programs.enable')), 'toggleStartProgramActive'),
+    mk(icon('copy') + t('common.duplicate'), 'duplicateStartProgram'),
+    mk(icon('share') + t('programs.shareLink'), 'shareStartProgram'),
+    ...(trainerOn() ? [mk(icon('users') + t('programs.sendClient'), 'sendStartProgramToClient')] : []),
+    ...(trainerOn() && !p.storeId ? [mk(icon('crown') + t('programs.submitCatalog'), 'publishStartProgram')] : []),
+    mk(icon('download') + t('programs.saveFile'), 'exportStartProgramFile'),
+    mk(icon('trash') + t('common.delete'), 'deleteStartProgram', 'danger')
   );
 }
 
@@ -1343,6 +1328,53 @@ export function setVoiceVolShared(value){ voiceVol = value; return voiceVol; }
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initCore(){
+  registerAction('confirmDialog', () => finishDialog(true));
+  registerAction('cancelDialog', () => finishDialog(false));
+  registerAction('dialogBackdrop', (modal, event) => {
+    if(event.target === modal) finishDialog(dialogConfirm ? false : true);
+  });
+  registerAction('selectStartPlan', btn => {
+    const i = parseInt(btn.dataset.planIdx, 10);
+    if(!Number.isFinite(i)) return;
+    state.planIdx = i;
+    renderPlanRow();
+    renderStartInfo();
+  });
+  registerAction('openStartWeight', btn => {
+    const i = parseInt(btn.dataset.exerciseIdx, 10);
+    if(Number.isFinite(i)) openWeightModal(i);
+  });
+  const withStartProgram = fn => async (btn, event) => {
+    if(event) event.stopPropagation();
+    closeAllMenus();
+    const p = state.raw;
+    if(p) await fn(p, btn);
+  };
+  registerAction('editStartProgram', withStartProgram(async p => openBuilder(p.id)));
+  registerAction('toggleStartProgramActive', withStartProgram(async p => {
+    const wasOn = progActive(p);
+    p.active = !wasOn;
+    await savePrograms();
+    buildStartMenu();
+    renderMine();
+    if(wasOn) appAlert(t('programs.disabledAlert'));
+  }));
+  registerAction('duplicateStartProgram', withStartProgram(async p => {
+    const copy = await duplicateProgram(p);
+    openBuilder(copy.id);
+  }));
+  registerAction('shareStartProgram', withStartProgram(async p => exportProgram(p)));
+  registerAction('sendStartProgramToClient', withStartProgram(async p => pickClientFor(p)));
+  registerAction('publishStartProgram', withStartProgram(async p => openPublish(p)));
+  registerAction('exportStartProgramFile', withStartProgram(async p => exportProgramFile(p)));
+  registerAction('deleteStartProgram', withStartProgram(async p => {
+    if(!(await appDialog(t('programs.deleteQuestion',{name:p.name}),
+      {confirm:true, okText:t('common.delete'), cancelText:t('common.keep')}))) return;
+    setCustomProgramsShared(customPrograms.filter(x => x.id !== p.id));
+    await savePrograms();
+    renderMine();
+    goTab('scrPrograms');
+  }));
   // Подпись строки с переключателем тоже переключает его — как у системных
   // настроек. Раньше отзывался только сам тумблер 48×28, а в подпись попадали
   // пальцем чаще. Кнопки, ссылки и поля внутри строки работают как прежде.
