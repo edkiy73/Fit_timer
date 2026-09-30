@@ -256,6 +256,56 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     choices.every(x => !/подход|круг|сторон/i.test(x.meta || '')),
     choices.map(x=>x.meta).join(' | '));
 
+  const duplicateNames = await page.evaluate(() => {
+    tearDownWorkout();
+    const p = {
+      id:'duplicate-name-live-test', name:'Одинаковые названия', active:true, progression:0,
+      plans:[{days:[],rounds:1,roundRest:0,exercises:[
+        {id:'dup-a',name:'Одинаковое',type:'reps',value:'8',sets:1,rest:0,restAfter:0},
+        {id:'dup-b',name:'Одинаковое',type:'reps',value:'15',sets:1,rest:0,restAfter:0}
+      ]}]
+    };
+    customPrograms.push(p);
+    state.raw = p; state.planIdx = 0; state.current = customToProgram(p, 0);
+    state.steps = buildSteps();
+    state.stepIdx = state.steps.findIndex(s => s.phase === 'work' && s.exId === 'dup-b');
+
+    const step = state.steps[state.stepIdx];
+    const byId = liveExercise(step.exId, step.exName);
+    const ambiguousLegacy = liveExercise('', step.exName);
+
+    // Имитируем AI replacement именно второго из двух одноимённых упражнений.
+    const replacement = {
+      id:'dup-b-new',name:'Заменённое второе',type:'reps',value:'6',sets:1,rest:0,restAfter:0
+    };
+    p.plans[0].exercises[1] = replacement;
+    const touched = refreshLiveSteps('dup-b', 'Одинаковое', replacement);
+    const work = state.steps.filter(s => s.phase === 'work').map(s => ({
+      id:s.exId,name:s.exName,reps:s.reps
+    }));
+
+    return {
+      byId:byId && {idx:byId.idx,id:byId.ex.id,value:byId.ex.value},
+      ambiguousLegacy:!!ambiguousLegacy,
+      touched,
+      work
+    };
+  });
+  ok('редактирование выбирает нужное из одинаково названных упражнений по exercise.id',
+    duplicateNames.byId && duplicateNames.byId.idx === 1
+      && duplicateNames.byId.id === 'dup-b' && duplicateNames.byId.value === '15',
+    JSON.stringify(duplicateNames));
+  ok('legacy поиск по одному названию не выбирает случайное упражнение при дубле',
+    duplicateNames.ambiguousLegacy === false, JSON.stringify(duplicateNames));
+  ok('AI-замена обновляет только упражнение с нужным id',
+    duplicateNames.touched
+      && duplicateNames.work.length === 2
+      && duplicateNames.work[0].id === 'dup-a'
+      && duplicateNames.work[0].name === 'Одинаковое'
+      && duplicateNames.work[1].id === 'dup-b-new'
+      && duplicateNames.work[1].name === 'Заменённое второе',
+    JSON.stringify(duplicateNames.work));
+
   const isolation = await page.evaluate(async () => {
     tearDownWorkout();
     const a = customPrograms.find(x => x.id === 'resume-variant-test');

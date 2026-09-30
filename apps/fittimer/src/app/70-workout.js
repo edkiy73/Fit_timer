@@ -98,7 +98,7 @@ export let exFromWork = false;
 
 function editExerciseFromWorkout(){
   const step = state.steps[state.stepIdx];
-  const src = step && liveExercise(step.exName);
+  const src = step && liveExercise(step.exId, step.exName);
   if(!src){
     appAlert(t('workout.editUnavailable'));
     return;
@@ -121,13 +121,18 @@ export function backToWorkout(rebuild){
     state.current = customToProgram(state.raw, state.planIdx);
     const cur = state.steps[state.stepIdx] || {};
     state.steps = buildSteps();
-    // ищем тот же самый шаг по кругу, упражнению, подходу и стороне; если упражнение
-    // переименовали — остаёмся на том же месте по счёту
-    let i = state.steps.findIndex(x =>
-      x.exName === cur.exName && x.phase === cur.phase &&
-      (x.round || 0) === (cur.round || 0) &&
-      (x.setNo || 1) === (cur.setNo || 1) &&
-      (x.side || 0) === (cur.side || 0));
+    // Ищем тот же шаг прежде всего по стабильному exercise.id: переименование
+    // упражнения не должно сбрасывать человека на соседнее одноимённое упражнение.
+    // Название — только fallback для старых шагов, у которых id ещё не было.
+    let i = state.steps.findIndex(x => {
+      const sameExercise = cur.exId
+        ? x.exId === cur.exId
+        : x.exName === cur.exName;
+      return sameExercise && x.phase === cur.phase &&
+        (x.round || 0) === (cur.round || 0) &&
+        (x.setNo || 1) === (cur.setNo || 1) &&
+        (x.side || 0) === (cur.side || 0);
+    });
     if(i < 0) i = Math.min(state.stepIdx, state.steps.length - 1);
     state.stepIdx = Math.max(0, i);
     renderStep();              // снимает паузу: «новый шаг всегда начинается без паузы»
@@ -752,7 +757,7 @@ export function closeSwapHint(){ appUi.closeModal($('swapModal')); }
 function swapSourceExercise(){
   const step = state.steps[state.stepIdx];
   if(!step) return null;
-  const src = liveExercise(step.exName);
+  const src = liveExercise(step.exId, step.exName);
   return src ? {...src, step} : null;
 }
 
@@ -776,14 +781,22 @@ function swapAIPrompt(ex,swap,locale){
 // переносим содержимое нового упражнения в оставшиеся шаги текущей тренировки.
 // Структура занятия (сколько подходов и в каком порядке) остаётся прежней до конца
 // тренировки — меняется только то, ЧТО делать; новое расписание вступит в силу со следующей.
-function refreshLiveSteps(oldName, ex){
+function refreshLiveSteps(oldId, oldName, ex){
   const fresh = customToProgram(state.raw, (typeof state.planIdx === 'number') ? state.planIdx : 0);
-  const model = [...fresh.warmup, ...fresh.cycle].find(s => s.phase === 'work' && s.exName === ex.name);
+  const freshWork = [...fresh.warmup, ...fresh.cycle].filter(s => s.phase === 'work');
+  let model = ex.id ? freshWork.find(s => s.exId === ex.id) : null;
+  if(!model){
+    const byName = freshWork.filter(s => s.exName === ex.name);
+    if(byName.length === 1) model = byName[0];
+  }
   if(!model) return false;
+
   const KEEP = ['setNo', 'setsTotal', 'side', 'sidesTotal', 'round', 'isWarmup'];
   let touchedCurrent = false;
   state.steps.forEach((s, i) => {
-    if(i < state.stepIdx || s.phase !== 'work' || s.exName !== oldName) return;
+    if(i < state.stepIdx || s.phase !== 'work') return;
+    const sameExercise = oldId ? s.exId === oldId : s.exName === oldName;
+    if(!sameExercise) return;
     const kept = {};
     KEEP.forEach(k => { if(s[k] !== undefined) kept[k] = s[k]; });
     Object.keys(s).forEach(k => delete s[k]);
@@ -800,6 +813,7 @@ export async function swapViaAI(){
     appAlert(t('workout.swapNotFound'));
     return;
   }
+  const oldId = String(src.ex.id || src.step.exId || '');
   const oldName = src.ex.name;
   closeSwapHint();
   aiRunOpen(t('workout.swapPicking'));
@@ -835,7 +849,7 @@ export async function swapViaAI(){
   await savePrograms();
   renderMine();
 
-  const onCurrent = refreshLiveSteps(oldName, got);
+  const onCurrent = refreshLiveSteps(oldId, oldName, got);
   if(onCurrent) renderStep();               // это же упражнение прямо сейчас — показываем новое
   else renderNextUp(state.steps[state.stepIdx]);
   appAlert(t('workout.swapReplaced',{name:got.name}));
