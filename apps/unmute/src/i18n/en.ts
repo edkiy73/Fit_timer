@@ -161,7 +161,7 @@ export const en: Record<keyof typeof ru, string> = {
   'access.errorTitle': 'Could not check access',
   'access.eyebrow': 'Full course',
   'access.title': 'Unlock the full course',
-  'access.lead': 'The first 7 days stay free. After that you can own the course permanently or access it with UnMute Plus.',
+  'access.lead': 'Free days at the start: {days}. After that you can own the course permanently or access it with UnMute Plus.',
   'access.foreverTag': 'Forever',
   'access.foreverTitle': 'Full course forever',
   'access.foreverText': 'A one-time purchase unlocks every current day in this course without a subscription.',

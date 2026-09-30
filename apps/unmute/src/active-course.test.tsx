@@ -26,7 +26,9 @@ function wrap(children:ReactNode){
   const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
   return (
     <QueryClientProvider client={client}>
-      <I18nProvider dictionaries={dictionaries} fallback="ru" initialLocale="ru">{children}</I18nProvider>
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="active-course-test.locale" systemLanguages={['ru']}>
+        {children}
+      </I18nProvider>
     </QueryClientProvider>
   );
 }

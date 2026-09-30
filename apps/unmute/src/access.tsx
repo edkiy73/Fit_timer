@@ -102,7 +102,7 @@ export function AccessOfferView({
       <div className="access-heading">
         <div className="eyebrow">{t('access.eyebrow')}</div>
         <h2 id="access-title">{t('access.title')}</h2>
-        <p>{t('access.lead')}</p>
+        <p>{t('access.lead',{days:state.set.access.mode==='entitlement'?state.set.access.freePreview?.days??0:0})}</p>
       </div>
 
       <div className="access-options">
