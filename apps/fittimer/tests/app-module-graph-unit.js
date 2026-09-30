@@ -105,6 +105,15 @@ for(const f of parts.map(n => path.join(APP, n)).concat(leaves, path.join(APP, '
 }
 
 
+const coreSource = fs.readFileSync(path.join(APP, '00-core.js'), 'utf8');
+const accountSource = fs.readFileSync(path.join(APP, '20-account.js'), 'utf8');
+if(/from ['"]\.\/20-account\.js['"]/.test(coreSource)){
+  problems.push('src/app/00-core.js must not import 20-account.js; inject account-facing hooks instead');
+}
+if(!/setCoreAccountHooks/.test(coreSource) || !/setCoreAccountHooks\(\{[\s\S]*userDirty[\s\S]*maybeRunDeferredBiometricLock/.test(accountSource)){
+  problems.push('core/account hook boundary is missing or incomplete');
+}
+
 const platformSource = fs.readFileSync(path.join(APP, '80-platform.js'), 'utf8');
 const eventsSource = fs.readFileSync(path.join(APP, '90-events.js'), 'utf8');
 if(/from ['"]\.\/90-events\.js['"]/.test(platformSource)){
