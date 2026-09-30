@@ -13,3 +13,5 @@ export function unregisterAction(name){
 }
 
 export { ACTIONS };
+
+export function initActions(){}
