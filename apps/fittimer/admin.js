@@ -1603,7 +1603,6 @@ function reconcileFormMedia(blocks){
   form.media.items=items.filter(x=>valid.has((+x.p||0)+'|'+(+x.i||0)));
 }
 let failedMediaJobs = [];
-let failedMediaJobs = [];
 let adminCreateMode = 'ai';   // картинки живут отдельно от полей ввода
 
 /* Уменьшаем картинку прямо в браузере. Не ради экономии места, а потому что
