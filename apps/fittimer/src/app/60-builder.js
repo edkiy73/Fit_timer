@@ -2,6 +2,7 @@ import { MUSCLES, OPT_EQUIP, OPT_GOAL, OPT_LEVEL, OPT_NONE } from './options.js'
 import { appLocale, canonicalDescription, canonicalLabel, t } from '../i18n/index.js';
 import FitAIProtocol from '../../lib/ai-protocol.js';
 import { appRuntimeCompat } from './00-dependencies.js';
+import { registerAction } from './05-actions.js';
 import { $, appAlert, appDialog, goBackTo, goTab, icon, isChanged, plural, setShown, show, state,
   takeSnap
 } from './00-core.js';
@@ -879,17 +880,11 @@ function buildPlanTabs(boxId){
       x.className = 'pt-x';
       x.innerHTML = icon('close');
       x.title = t('builder.deleteVariantTitle');
-      x.onclick = e => { e.stopPropagation(); delCurrentPlan(); };
+      x.dataset.act = 'deleteCurrentPlan';
       b.appendChild(x);
     }
-    b.onclick = ()=>{
-      if(i === planIdx) return;
-      commitPlanFields();
-      planIdx = i;
-      renderPlanTabs();
-      fillPlanFields();
-      $('stVariantNote').textContent = draft.plans.length > 1 ? `${t('builder.variant')} ${planIdx + 1}` : '';
-    };
+    b.dataset.act = 'selectPlanTab';
+    b.dataset.planIdx = String(i);
     box.appendChild(b);
   });
   if(!isTop){
@@ -899,13 +894,7 @@ function buildPlanTabs(boxId){
       add.className = 'plan-tab add';
       add.innerHTML = icon('plus') + t('builder.add');
       add.title = t('builder.addVariant');
-      add.onclick = ()=>{
-        commitPlanFields();
-        draft.plans.push(blankPlan());
-        planIdx = draft.plans.length - 1;
-        fillPlanFields();
-        syncRotateUI(); // появился второй вариант — показываем выбор режима
-      };
+      add.dataset.act = 'addPlanVariant';
       box.appendChild(add);
     }
   }
@@ -976,18 +965,9 @@ function renderDays(){
     const b = document.createElement('button');
     b.type='button'; b.className='day-chip'; b.textContent = d;
     b.classList.toggle('act', owner.days.includes(d));
-    b.onclick = ()=>{
-      owner.days = owner.days.includes(d) ? owner.days.filter(x=>x!==d) : DAYS.filter(x => owner.days.includes(x) || x===d);
-      // порядок вариантов пересобирается сразу, но редактируемый остаётся выбранным:
-      // иначе смена дня молча перебрасывала бы на соседний вариант
-      if(!rotOn){
-        const cur = draft.plans[planIdx];
-        sortPlans(draft.plans);
-        planIdx = Math.max(0, draft.plans.indexOf(cur));
-      }
-      renderDays();
-      renderPlanTabs();
-    };
+    b.dataset.act = 'togglePlanDay';
+    b.dataset.day = d;
+    b.dataset.owner = rotOn ? 'draft' : 'plan';
     box.appendChild(b);
   });
 }
@@ -1107,12 +1087,8 @@ function renderExMuscles(){
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'day-chip'; b.textContent = label;
     b.classList.toggle('act', exDraft.muscles.includes(id));
-    b.onclick = ()=>{
-      exDraft.muscles = exDraft.muscles.includes(id)
-        ? exDraft.muscles.filter(x => x !== id)
-        : [...exDraft.muscles, id];
-      renderExMuscles(); syncExDetailsSum();
-    };
+    b.dataset.act = 'toggleExerciseMuscle';
+    b.dataset.muscleId = id;
     box.appendChild(b);
   });
 }
@@ -1296,18 +1272,19 @@ function renderRestChipsInto(boxId, key){
     b.type = 'button'; b.className = 'load-chip';
     b.textContent = v === 0 ? t('builder.none') : String(v);
     b.classList.toggle('act', !restCustom[key] && cur === v);
-    b.onclick = ()=>{
-      restCustom[key] = false;
-      exDraft[key] = v;
-      renderRestChipsInto(boxId, key);
-    };
+    b.dataset.act = 'setExerciseRest';
+    b.dataset.restKey = key;
+    b.dataset.boxId = boxId;
+    b.dataset.restValue = String(v);
     box.appendChild(b);
   });
   const own = document.createElement('button');
   own.type = 'button'; own.className = 'load-chip';
   own.textContent = restCustom[key] ? String(cur) : t('builder.custom');
   own.classList.toggle('act', restCustom[key]);
-  own.onclick = ()=> openRestModal(key, boxId);
+  own.dataset.act = 'openCustomRest';
+  own.dataset.restKey = key;
+  own.dataset.boxId = boxId;
   box.appendChild(own);
 }
 function renderExRestChips(){
@@ -1538,17 +1515,19 @@ function exRow(ex, i){
   more.title = t('common.actions');
   const menu = document.createElement('div');
   menu.className = 'ctx-menu';
-  const item = (html, fn, cls) => {
+  const item = (html, action, cls) => {
     const b = document.createElement('button');
     b.type = 'button';
     if(cls) b.className = cls;
     b.innerHTML = html;
-    b.onclick = e => { e.stopPropagation(); closeAllMenus(); fn(); };
+    b.dataset.act = action;
+    b.dataset.exerciseIdx = String(i);
     menu.appendChild(b);
   };
-  item(icon('plus') + t('common.duplicate'), ()=> dupExerciseAt(i));
-  item(icon('trash') + t('common.delete'), ()=> delExerciseAt(i), 'danger');
-  more.onclick = e => { e.stopPropagation(); toggleMenu(menu); };
+  item(icon('plus') + t('common.duplicate'), 'duplicateExerciseAt');
+  item(icon('trash') + t('common.delete'), 'deleteExerciseAt', 'danger');
+  more.dataset.act = 'toggleExerciseRowMenu';
+  more.dataset.exerciseIdx = String(i);
 
   const grip = document.createElement('div');
   grip.className = 'ex-grip';
@@ -1558,10 +1537,8 @@ function exRow(ex, i){
   row.append(thumb, info, more, grip, menu);
   // Нажатие на саму строку открывает редактор; перетаскивание начинается только
   // с ручки и клика по строке не даёт.
-  row.onclick = e => {
-    if(grip.contains(e.target) || more.contains(e.target) || menu.contains(e.target)) return;
-    openExercise(i);
-  };
+  row.dataset.act = 'openExerciseRow';
+  row.dataset.exerciseIdx = String(i);
 
   enableDrag(row, grip, '.ex-row', nodes => {
     const order = nodes.map(n => +n.dataset.idx);
@@ -1939,27 +1916,20 @@ const AI_DEFAULT_DURATION = '10 мин';
 const AI_DEFAULT_LIMITS = ['Без ограничений'];
 const q = {goal: [], level: AI_DEFAULT_LEVEL, days: [], dur: AI_DEFAULT_DURATION, focus: [], equip: [], limit: AI_DEFAULT_LIMITS.slice(),
            note: '', split: false, style: '', warm: '', rotate: false};
+const qChipConfigs = new Map();
+const qCardConfigs = new Map();
 
 export function qChips(boxId, opts, isMulti, get, set, requiredSingle = false){
+  qChipConfigs.set(boxId, {opts, isMulti, get, set, requiredSingle});
   const box = $(boxId); box.innerHTML = '';
   opts.forEach(o => {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'day-chip'; b.textContent = canonicalLabel(o);
     const sel = get();
     b.classList.toggle('act', isMulti ? sel.includes(o) : sel === o);
-    b.onclick = ()=>{
-      if(isMulti){
-        let arr = get();
-        const none = opts.find(x => OPT_NONE.has(x));
-        if(none && o === none){ arr = arr.includes(none) ? [] : [none]; }
-        else {
-          if(none) arr = arr.filter(x => x !== none);
-          arr = arr.includes(o) ? arr.filter(x => x !== o) : [...arr, o];
-        }
-        set(arr);
-      } else set(requiredSingle ? o : (get() === o ? '' : o));
-      qChips(boxId, opts, isMulti, get, set, requiredSingle);
-    };
+    b.dataset.act = 'toggleAiChip';
+    b.dataset.boxId = boxId;
+    b.dataset.value = o;
     box.appendChild(b);
   });
 }
@@ -1975,6 +1945,7 @@ const Q_DESC = {
 };
 // выбор одного варианта с пояснением; повторное нажатие снимает выбор
 function qCards(boxId, opts, get, set){
+  qCardConfigs.set(boxId, {opts, get, set});
   const box = $(boxId); box.innerHTML = '';
   opts.forEach(o => {
     const b = document.createElement('button');
@@ -1983,7 +1954,9 @@ function qCards(boxId, opts, get, set){
     b.innerHTML = `<span class="oc-mark">${icon('check')}</span><span class="oc-txt"><b></b><small></small></span>`;
     b.querySelector('b').textContent = canonicalLabel(o);
     b.querySelector('small').textContent = canonicalDescription(o) || Q_DESC[o] || '';
-    b.onclick = ()=>{ set(get() === o ? '' : o); qCards(boxId, opts, get, set); };
+    b.dataset.act = 'toggleAiCard';
+    b.dataset.boxId = boxId;
+    b.dataset.value = o;
     box.appendChild(b);
   });
 }
@@ -2009,10 +1982,8 @@ export function initAIForm(){
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'day-chip'; b.textContent = canonicalLabel(d);
     b.classList.toggle('act', q.days.includes(d));
-    b.onclick = ()=>{
-      q.days = q.days.includes(d) ? q.days.filter(x => x !== d) : DAYS.filter(x => q.days.includes(x) || x === d);
-      initAIForm();
-    };
+    b.dataset.act = 'toggleAiDay';
+    b.dataset.day = d;
     db.appendChild(b);
   });
   $('qSplit').classList.toggle('on', q.split);
@@ -2251,32 +2222,143 @@ export function setPlanIdxShared(value){ planIdx = value; return planIdx; }
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initBuilder(){
-  document.querySelectorAll('#schedSeg button').forEach(b => {
-    b.onclick = ()=>{
-      draft.rotate = b.dataset.mode === 'rot';
-      if(draft.rotate && !Array.isArray(draft.days)) draft.days = [];
-      syncRotateUI();
-    };
+  registerAction('deleteCurrentPlan', (_btn, event) => {
+    event.stopPropagation();
+    delCurrentPlan();
   });
-  $('bRounds').onchange = ()=>{ curPlan().rounds = +$('bRounds').value; syncVolHint(); };
-  $('bProgOn').onclick = ()=>{
+  registerAction('selectPlanTab', btn => {
+    const i = parseInt(btn.dataset.planIdx, 10);
+    if(!Number.isFinite(i) || i === planIdx) return;
+    commitPlanFields();
+    planIdx = i;
+    renderPlanTabs();
+    fillPlanFields();
+    $('stVariantNote').textContent = draft.plans.length > 1 ? `${t('builder.variant')} ${planIdx + 1}` : '';
+  });
+  registerAction('addPlanVariant', () => {
+    commitPlanFields();
+    draft.plans.push(blankPlan());
+    planIdx = draft.plans.length - 1;
+    fillPlanFields();
+    syncRotateUI();
+  });
+  registerAction('togglePlanDay', btn => {
+    const d = btn.dataset.day;
+    const rotOn = btn.dataset.owner === 'draft';
+    const owner = rotOn ? draft : curPlan();
+    if(!d || !owner) return;
+    owner.days = owner.days.includes(d) ? owner.days.filter(x => x !== d) : DAYS.filter(x => owner.days.includes(x) || x === d);
+    if(!rotOn){
+      const cur = draft.plans[planIdx];
+      sortPlans(draft.plans);
+      planIdx = Math.max(0, draft.plans.indexOf(cur));
+    }
+    renderDays();
+    renderPlanTabs();
+  });
+  registerAction('toggleExerciseMuscle', btn => {
+    const id = btn.dataset.muscleId;
+    if(!id || !exDraft) return;
+    exDraft.muscles = exDraft.muscles.includes(id)
+      ? exDraft.muscles.filter(x => x !== id)
+      : [...exDraft.muscles, id];
+    renderExMuscles();
+    syncExDetailsSum();
+  });
+  registerAction('setExerciseRest', btn => {
+    const key = btn.dataset.restKey;
+    const boxId = btn.dataset.boxId;
+    const v = parseInt(btn.dataset.restValue, 10);
+    if(!key || !boxId || !Number.isFinite(v) || !exDraft) return;
+    restCustom[key] = false;
+    exDraft[key] = v;
+    renderRestChipsInto(boxId, key);
+  });
+  registerAction('openCustomRest', btn => {
+    if(btn.dataset.restKey && btn.dataset.boxId) openRestModal(btn.dataset.restKey, btn.dataset.boxId);
+  });
+  registerAction('duplicateExerciseAt', (btn, event) => {
+    event.stopPropagation();
+    closeAllMenus();
+    const i = parseInt(btn.dataset.exerciseIdx, 10);
+    if(Number.isFinite(i)) dupExerciseAt(i);
+  });
+  registerAction('deleteExerciseAt', async (btn, event) => {
+    event.stopPropagation();
+    closeAllMenus();
+    const i = parseInt(btn.dataset.exerciseIdx, 10);
+    if(Number.isFinite(i)) await delExerciseAt(i);
+  });
+  registerAction('toggleExerciseRowMenu', (btn, event) => {
+    event.stopPropagation();
+    const row = btn.closest('.ex-row');
+    const menu = row && row.querySelector('.ctx-menu');
+    if(menu) toggleMenu(menu);
+  });
+  registerAction('openExerciseRow', (row, event) => {
+    const target = event.target;
+    if(target instanceof Element && target.closest('.ex-grip,.more-btn,.ctx-menu')) return;
+    const i = parseInt(row.dataset.exerciseIdx, 10);
+    if(Number.isFinite(i)) openExercise(i);
+  });
+  registerAction('toggleAiChip', btn => {
+    const boxId = btn.dataset.boxId;
+    const o = btn.dataset.value;
+    const cfg = qChipConfigs.get(boxId);
+    if(!cfg || o == null) return;
+    if(cfg.isMulti){
+      let arr = cfg.get();
+      const none = cfg.opts.find(x => OPT_NONE.has(x));
+      if(none && o === none) arr = arr.includes(none) ? [] : [none];
+      else{
+        if(none) arr = arr.filter(x => x !== none);
+        arr = arr.includes(o) ? arr.filter(x => x !== o) : [...arr, o];
+      }
+      cfg.set(arr);
+    }else cfg.set(cfg.requiredSingle ? o : (cfg.get() === o ? '' : o));
+    qChips(boxId, cfg.opts, cfg.isMulti, cfg.get, cfg.set, cfg.requiredSingle);
+  });
+  registerAction('toggleAiCard', btn => {
+    const boxId = btn.dataset.boxId;
+    const o = btn.dataset.value;
+    const cfg = qCardConfigs.get(boxId);
+    if(!cfg || o == null) return;
+    cfg.set(cfg.get() === o ? '' : o);
+    qCards(boxId, cfg.opts, cfg.get, cfg.set);
+  });
+  registerAction('toggleAiDay', btn => {
+    const d = btn.dataset.day;
+    if(!d) return;
+    q.days = q.days.includes(d) ? q.days.filter(x => x !== d) : DAYS.filter(x => q.days.includes(x) || x === d);
+    initAIForm();
+  });
+  registerAction('setScheduleMode', btn => {
+    draft.rotate = btn.dataset.mode === 'rot';
+    if(draft.rotate && !Array.isArray(draft.days)) draft.days = [];
+    syncRotateUI();
+  });
+  registerAction('toggleBuilderProgression', () => {
     const on = !$('bProgOn').classList.contains('on');
     $('bProgOn').classList.toggle('on', on);
     setShown('bProgOpts', on);
-  };
-  $('restModalDone').onclick = ()=>{
+  });
+  registerAction('applyCustomRest', () => {
     if(!restModalKey) return;
     exDraft[restModalKey] = Math.max(0, Math.min(600, parseInt($('restModalInput').value) || 0));
     restCustom[restModalKey] = true;
     $('restModal').classList.remove('open');
     renderRestChipsInto(restModalBoxId, restModalKey);
-  };
-  $('qNote').oninput = e => q.note = clampText(e.target.value, 300);
-  $('qSplit').onclick = ()=>{
+  });
+  registerAction('toggleAiSplit', () => {
     q.split = !q.split;
     $('qSplit').classList.toggle('on', q.split);
     setShown('qRotateRow', q.split);
     if(!q.split){ q.rotate = false; $('qRotate').classList.remove('on'); }
-  };
-  $('qRotate').onclick = ()=>{ q.rotate = !q.rotate; $('qRotate').classList.toggle('on', q.rotate); };
+  });
+  registerAction('toggleAiRotate', () => {
+    q.rotate = !q.rotate;
+    $('qRotate').classList.toggle('on', q.rotate);
+  });
+  $('bRounds').onchange = ()=>{ curPlan().rounds = +$('bRounds').value; syncVolHint(); };
+  $('qNote').oninput = e => q.note = clampText(e.target.value, 300);
 }
