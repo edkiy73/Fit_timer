@@ -863,7 +863,7 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   if(switchingAccount) await programsAiAccountHooks.loadTrainer();
 
   if(r.handle){
-    if(!trainer) programsAiAccountHooks.setTrainerShared({on: false, handle: '', links: ''});
+    if(!trainerState()) programsAiAccountHooks.setTrainerShared({on: false, handle: '', links: ''});
     trainerState().handle = r.handle;
     if(r.trainerKey) trainerState().key = r.trainerKey;
     const trainerRemote = r.trainer || {};
@@ -931,7 +931,7 @@ export async function doLogin(){
       const claimed = await programsAiAccountHooks.apiPost('/api/auth', {
         action:'set_handle', email:p.email, deviceId:p.deviceId,
         syncToken:p.r.syncToken, handle,
-        trainerKey: !p.switchingAccount && trainer ? (trainerState().key || '') : ''
+        trainerKey: !p.switchingAccount && trainerState() ? (trainerState().key || '') : ''
       });
       p.r.handle = claimed.handle;
       p.r.needsHandle = false;
@@ -966,7 +966,7 @@ export async function doLogin(){
       // Ник и ключ отдаём вместе с кодом: если человек завёл ник до аккаунта,
       // он привяжется к нему сразу, а не потребует второго действия.
       handle: !switchingAccount && trainerState() && trainerState().handle ? programsAiAccountHooks.normHandle(trainerState().handle) : '',
-      trainerKey: !switchingAccount && trainer ? (trainerState().key || '') : '',
+      trainerKey: !switchingAccount && trainerState() ? (trainerState().key || '') : '',
       // Premium — только серверное право. Локальный account.sub является кэшем
       // интерфейса и никогда не отправляется как доказательство подписки.
       locale: appLocale,
