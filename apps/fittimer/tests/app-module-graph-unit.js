@@ -104,6 +104,16 @@ for(const f of parts.map(n => path.join(APP, n)).concat(leaves, path.join(APP, '
   for(const name of missing) problems.push(`${f} uses ${name} without importing it from ${exportedBy.get(name)}`);
 }
 
+
+const platformSource = fs.readFileSync(path.join(APP, '80-platform.js'), 'utf8');
+const eventsSource = fs.readFileSync(path.join(APP, '90-events.js'), 'utf8');
+if(/from ['"]\.\/90-events\.js['"]/.test(platformSource)){
+  problems.push('src/app/80-platform.js must not import 90-events.js; inject event-facing hooks instead');
+}
+if(!/setPlatformEventHooks/.test(platformSource) || !/setPlatformEventHooks\(\{[\s\S]*getNotificationPrefs[\s\S]*refreshVoicePackUI/.test(eventsSource)){
+  problems.push('platform/event hook boundary is missing or incomplete');
+}
+
 // 4. the entry imports one init per part and runs them once, in part order
 const entry = fs.readFileSync(path.join(APP, 'index.js'), 'utf8');
 const inits = [...entry.matchAll(/^import \{ (init[A-Z]\w*) \} from '\.\/([\w-]+\.js)';$/gm)].map(m => [m[2], m[1]]);
