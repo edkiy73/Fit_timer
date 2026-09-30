@@ -41,7 +41,7 @@ import { AI_SOURCES, aiClientVerdict, aiSrc, aiUiText, apiPost, applyProgression
   openEditAI, openExAI, openExEdAI, openImages, openYouTube, premiumGate, programToText,
   pushProfile, refreshTrainerProfile, renderGreeting, renderSlots, renderToday, renderTray,
   saveClients, saveTrainer, setClientIdxShared, setClientsShared, setCoachPhotoDraftShared,
-  setExImg, setImgTrayShared, setProgramsEventHooks, setTrainerShared, setupAIAnswer, shrinkAll, slotTarget, trainer,
+  addImagesToTray, clearUnusedImageTray, setExImg, setProgramsEventHooks, setTrainerShared, setupAIAnswer, shrinkAll, slotTarget, trainer,
   trainerAccountReady, trainerOn, trayAutoAssign, trayUsed, versionedName, wipeTrainerInfo,
   youtubePrompt, ytCheckUrl
 } from './40-programs-ai.js';
@@ -448,8 +448,7 @@ function registerEventActions(){
     if(!removable.length) return;
     if(!(await appDialog(t('images.removeQuestion'),
       {confirm:true, okText:t('images.removeAction'), cancelText:t('common.keep')}))) return;
-    setImgTrayShared(imgTray.filter(x => used.has(x)));
-    renderTray();
+    clearUnusedImageTray();
   });
   registerAction('removeImageSlot', () => {
     const slot = imageSlots()[slotTarget];
@@ -2286,7 +2285,7 @@ export function initEvents(){
     if(!files.length) return;
     const btn = $('imgPick'), restore = btnBusy(btn, t('images.processing',{done:0,total:files.length}));
     shrinkAll(files, 640, list => {
-      setImgTrayShared(imgTray.concat(list));
+      addImagesToTray(list);
       restore();
       renderTray();
       if(list.length) appAlert(t('images.uploaded',{count:list.length}));
@@ -2300,7 +2299,7 @@ export function initEvents(){
       if(!data){ appAlert(t('images.loadFailed')); return; }
       const s = imageSlots()[slotTarget];
       if(s) s.set(data);
-      if(!imgTray.includes(data)) imgTray.push(data);
+      addImagesToTray([data]);
       $('slotModal').classList.remove('open');
       renderTray(); renderSlots();
     });
