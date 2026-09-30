@@ -134,7 +134,7 @@ const fitProductInfrastructure = appInfrastructure.create({
   platform: appRuntimeCompat.runtimePlatform,
   locale: () => (typeof appLocale !== 'undefined' && appLocale === 'en') ? 'en' : 'ru',
   build: appRuntimeCompat.build,
-  premium: () => (typeof isPremium === 'function') ? !!accountDataHooks.isPremium() : false,
+  premium: () => !!accountDataHooks.isPremium(),
   newId: () => newId(),
   post: async body => {
     try{
@@ -935,7 +935,7 @@ export function showSyncState(state, step, total, detailKey){
   }
   const el = coreDollarHook('accSync');
   if(!el) return;
-  if(!account || !accountState().email) el.textContent = '';
+  if(!accountState() || !accountState().email) el.textContent = '';
   else if(!accountDataHooks.isPremium()) el.textContent = t('sync.premiumOnly');
   else if(state === 'busy' && syncStep && syncTotal && syncDetail){
     el.textContent = t('sync.progress',{step:syncStep,total:syncTotal,detail:t(syncDetail)});
@@ -1406,7 +1406,7 @@ function mergeClientLists(localList, remoteList, preferRemote){
   return [...out.values()];
 }
 async function applyRemoteAccountDocs(result){
-  if(!account || !accountState().email) return false;
+  if(!accountState() || !accountState().email) return false;
   const docs = Array.isArray(result && result.accountDocs) ? result.accountDocs : [];
   if(!docs.length) return false;
   let notificationPrefsChanged = false;
@@ -1454,15 +1454,13 @@ async function applyRemoteAccountDocs(result){
 }
 
 async function accountDocsSnapshot(){
-  if(!account || !accountState().email) return [];
+  if(!accountState() || !accountState().email) return [];
   const rec = await accountDataHooks.readAccountBucket();
   if(!rec.bucket.meta) rec.bucket.meta = {};
   const now = new Date().toISOString();
   let localNotificationPrefs = {};
   try{
-    localNotificationPrefs = (typeof getNotificationPrefs === 'function')
-      ? eventDataHooks.getNotificationPrefs()
-      : parsed(localStorage.getItem('fitNotificationPrefsV1'), {});
+    localNotificationPrefs = eventDataHooks.getNotificationPrefs();
   }catch(_){}
   if(!rec.bucket.notificationPrefs) rec.bucket.notificationPrefs = localNotificationPrefs;
   const values = {
@@ -1482,7 +1480,7 @@ async function accountDocsSnapshot(){
 }
 
 export async function syncNotificationPrefsServer(action){
-  if(!account || !accountState().email || !accountState().syncToken) return false;
+  if(!accountState() || !accountState().email || !accountState().syncToken) return false;
   let deviceId = await kvGet('deviceId');
   if(!deviceId){ deviceId = newId(); await kvSet('deviceId', deviceId); }
   const base = {action:action || 'push', email:accountState().email, deviceId, token:accountState().syncToken};
@@ -1508,7 +1506,7 @@ export async function syncNotificationPrefsServer(action){
 }
 
 export async function pushAccountDocs(){
-  if(!account || !accountState().email || !accountState().syncToken || !accountDataHooks.isPremium()) return;
+  if(!accountState() || !accountState().email || !accountState().syncToken || !accountDataHooks.isPremium()) return;
   const docs = await accountDocsSnapshot();
   if(!docs.length) return;
   await syncApiPost(Object.assign(syncAuth('push'), {profiles:[], docs}));
@@ -1652,7 +1650,7 @@ async function flushAccountSync(){
 }
 
 export async function connectAccountSync(opts){
-  if(!account || !accountState().email || !accountState().syncToken || !identity){
+  if(!accountState() || !accountState().email || !accountState().syncToken || !identity){
     showSyncState('idle');
     return false;
   }
@@ -1687,7 +1685,7 @@ export async function connectAccountSync(opts){
 }
 
 export function queueAccountSync(){
-  if(!account || !accountState().email || !accountState().syncToken || !accountDataHooks.isPremium()) return;
+  if(!accountState() || !accountState().email || !accountState().syncToken || !accountDataHooks.isPremium()) return;
   clearTimeout(syncTimer);
   syncTimer = setTimeout(()=>{
     if(SYNC.adapter) flushAccountSync();
