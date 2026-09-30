@@ -636,8 +636,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2249,
-      "chars": 104616,
+      "lines": 2266,
+      "chars": 105335,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
