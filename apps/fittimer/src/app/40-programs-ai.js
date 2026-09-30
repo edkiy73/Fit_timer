@@ -18,8 +18,8 @@ import { renderMine, renderTrainerCard, snapshotEx, storeCountText } from './50-
 import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_NOEX, MSG_AI_PARSE, advanceExerciseProgression,
   aiCreateProgramGuard, aiExerciseBlocks, aiPrompt, carryExerciseProgress, copyPrompt, curPlan,
   draft, ensurePs, exRestAfter, exSummary, fillBuilder, fmtKg, fullAIPrompt, getExProgValue,
-  getExWeight, hasWeight, importFromText, isDualProg, openBuilder, openExercise, parseProgramText,
-  parseValue, progAxis, progressedRepsRange, qChips, renderExList, setDraftShared, setPlanIdxShared,
+  getExWeight, hasWeight, importFromText, isDualProg, migrateLegacyDualRangeExercise, openBuilder, openExercise, parseProgramText,
+  progAxis, progressedRepsRange, qChips, renderExList, setDraftShared, setPlanIdxShared,
   shrinkImage, valueText
 } from './60-builder.js';
 import { afterExChange, autoGrow, backToWorkout, esc, exFromWork } from './70-workout.js';
@@ -118,39 +118,7 @@ function applyDualRangeProgressionMigration(){
   let changed = false;
   customPrograms.forEach(p => {
     normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
-      if(!ex || !ex.dualProg || !hasWeight(ex) || ex.type === 'time' || ex.dualRangeV === 2) return;
-      const base = parseValue(ex.value);
-      const width = Math.max(0, base.max - base.min);
-      if(width <= 0){
-        ex.dualRangeV = 2;
-        changed = true;
-        return;
-      }
-
-      const rawCur = ex.ps && ex.ps.cur ? ex.ps.cur.reps : null;
-      const cur = rawCur != null ? parseValue(rawCur) : null;
-      const alreadyRangeState = !!(cur && cur.min !== cur.max);
-
-      if(!alreadyRangeState){
-        const oldCeil = Math.max(0, Math.round(+ex.repsMax || 0));
-        if(oldCeil > 0){
-          // Сохраняем то же число шагов от нижней границы до потолка:
-          // old 8→…→20 (12 шагов) становится new 8-10→…→20-22 (тоже 12).
-          ex.repsMax = Math.min(200, Math.max(base.max, oldCeil + width));
-        }
-        if(cur){
-          let min = Math.max(1, cur.min);
-          let max = min + width;
-          if(ex.repsMax > 0 && max > ex.repsMax){
-            max = ex.repsMax;
-            min = Math.max(1, max - width);
-          }
-          ex.ps.cur.reps = min === max ? String(min) : min + '-' + max;
-        }
-      }
-
-      ex.dualRangeV = 2;
-      changed = true;
+      if(migrateLegacyDualRangeExercise(ex)) changed = true;
     }));
   });
   return changed;
