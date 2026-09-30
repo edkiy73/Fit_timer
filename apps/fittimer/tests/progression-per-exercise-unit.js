@@ -219,6 +219,18 @@ function runWorkout(exercises, every){
   need(copy.id !== old.id && !copy.ps, 'duplicate gets its own id and starts without progress');
 }
 
+{
+  const old = mkEx('Жим — AI edit', {value:'8-10', type:'reps', progOn:true, trackWeight:true,
+    weight:20, dualProg:true, repsStep:1, wStep:2, repsMax:20, weightMax:30});
+  old.ps = {n:2, cur:{reps:'12-14', kg:22}};
+  const same = carryExerciseProgress(old, Object.assign(JSON.parse(JSON.stringify(old)), {rest:90, ps:undefined}));
+  need(same.ps && same.ps.n === 2 && same.ps.cur.reps === '12-14' && same.ps.cur.kg === 22,
+    'AI-like edit of unchanged double progression keeps current range, weight and counter');
+  const rebased = carryExerciseProgress(old, Object.assign(JSON.parse(JSON.stringify(old)), {value:'10-12', ps:undefined}));
+  need(rebased.ps && rebased.ps.n === 2 && Object.keys(rebased.ps.cur).length === 0,
+    'changing double-progression reset range keeps counter but drops stale current load');
+}
+
 /* ---- двойная прогрессия без заданного веса: полный диапазон остаётся на потолке,
    вес из ничего не создаётся ---- */
 {

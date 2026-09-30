@@ -403,8 +403,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 3020,
-      "chars": 141935,
+      "lines": 3022,
+      "chars": 142151,
       "symbols": [
         "add",
         "ageError",
