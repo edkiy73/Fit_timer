@@ -400,8 +400,8 @@
     },
     "src/app/30-progress-media.js": {
       "kind": "frontend-js",
-      "lines": 1020,
-      "chars": 45975,
+      "lines": 1021,
+      "chars": 45999,
       "symbols": [
         "addPhoto",
         "alpha",
@@ -956,8 +956,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 894,
-      "chars": 38391,
+      "lines": 895,
+      "chars": 38407,
       "symbols": [
         "add",
         "advanceFromHeadset",
