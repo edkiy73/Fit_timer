@@ -66,6 +66,20 @@ function cleanPrice(value){
   return Object.keys(out).length ? out : null;
 }
 
+// Words the learner would tap and get nothing (missing) or a guess (several entries, none pinned).
+function releaseCheck(audit){
+  const top=list=>list.slice().sort((a,b)=>b.count-a.count || a.surface.localeCompare(b.surface)).slice(0,40)
+    .map(item=>({surface:item.surface,count:item.count,context:(item.contexts&&item.contexts[0])||''}));
+  return {
+    ready:!audit.missingSurfaces && !audit.ambiguousSurfaces,
+    words:audit.uniqueSurfaces,
+    missingCount:audit.missingSurfaces,
+    ambiguousCount:audit.ambiguousSurfaces,
+    missing:top(audit.missing),
+    ambiguous:top(audit.ambiguous)
+  };
+}
+
 function newSetFromBody(body){
   const id=Content.cleanId(body && body.id);
   const title=String(body && body.title || '').trim();
@@ -625,6 +639,22 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
           return current;
         },expectedRevision);
         send(res,200,{ok:true,lexeme:updated,reviewed,remainingReview:reviewItems(await Lexicon.getDraft()).length});
+        return true;
+      }
+
+      // Before a release: which course words are missing from the dictionary (the release refuses them).
+      if(action === 'content_release_check'){
+        const requested=Array.isArray(body.setIds) ? body.setIds.map(Content.cleanId).filter(Boolean) : [];
+        const lexiconDraft=await Lexicon.getDraft();
+        if(!lexiconDraft){ fail(res,409,'drafts_required'); return true; }
+        const Coverage=await loadCoverage();
+        const sets={};
+        for(const setId of [...new Set(requested)].slice(0,20)){
+          const draft=await Content.getDraft(setId);
+          if(!draft) continue;
+          sets[setId]=releaseCheck(Coverage.auditLexicalCoverage(draft,lexiconDraft));
+        }
+        send(res,200,{ok:true,sets});
         return true;
       }
 
