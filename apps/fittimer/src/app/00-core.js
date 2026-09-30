@@ -4,7 +4,6 @@ import { registerAction } from './05-actions.js';
 import { DAYS, closeAllMenus, curUser, customPrograms, normPlans, progActive, renderStats,
   renderUsers, renderWeight, renderWellness, savePrograms, setCustomProgramsShared, stats
 } from './10-data-sync.js';
-import { renderPhotos } from './30-progress-media.js';
 import { AI_SOURCES, aiSrc, applyProgressionAll, duplicateProgram, exportProgram, exportProgramFile,
   renderGreeting, renderToday, trainerOn
 } from './40-programs-ai.js';
@@ -27,6 +26,11 @@ export function setCoreAccountHooks(hooks = {}){
   maybeRunDeferredBiometricLockHook = typeof hooks.maybeRunDeferredBiometricLock === 'function'
     ? hooks.maybeRunDeferredBiometricLock
     : (() => {});
+}
+
+let renderPhotosHook = () => {};
+export function setCoreProgressHooks(hooks = {}){
+  renderPhotosHook = typeof hooks.renderPhotos === 'function' ? hooks.renderPhotos : (() => {});
 }
 
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
@@ -843,7 +847,7 @@ export function show(id, push = true){
 // внутри приложения или системным «назад»
 export function prepTab(id){
   try{
-    if(id === 'scrStats'){ renderStats(); renderWeight(); renderWellness(); renderPhotos(); }
+    if(id === 'scrStats'){ renderStats(); renderWeight(); renderWellness(); renderPhotosHook(); }
     else if(id === 'scrPrograms'){ renderMine(); }
     else if(id === 'scrAccount'){
       switchMoreTab(typeof moreTab === 'string' ? moreTab : 'me');
