@@ -1587,7 +1587,7 @@ export function aiExerciseBlocks(text){
 // здесь 0 — ЗНАЧИМОЕ значение: «эту ось для этого упражнения не растим». Отличаем
 // «не указано вовсе» (возвращаем null, пусть вызывающий код подставит дефолт оси)
 // от «явно указано 0» — иначе классическая ошибка JS (0 || default) тихо портит логику.
-function parseStepNum(v){
+export function parseStepNum(v){
   if(v == null || String(v).trim() === '') return null;
   const n = parseFloat(String(v).replace(',', '.'));
   return isFinite(n) && n >= 0 ? n : null;
