@@ -100,7 +100,10 @@ if(!backgroundHandler || backgroundHandler[0].includes('stopHeadset()')){
   throw new Error('Headset media-button control must remain active while an active workout is backgrounded');
 }
 const handsfreeEvents = await readFile('src/app/90-events.js', 'utf8');
-if(!handsfreeEvents.includes("'btnHfApply'") || !handsfreeEvents.includes("hfModalDraft = c.dataset.hf")){
+const handsfreeProfileHtml = await readFile('src/html/50-profile-progress.html', 'utf8');
+if(!handsfreeEvents.includes("registerAction('applyHandsFree'")
+  || !handsfreeEvents.includes("hfModalDraft = c.dataset.hf")
+  || !handsfreeProfileHtml.includes('id="btnHfApply" data-act="applyHandsFree"')){
   throw new Error('Hands-free workout modal must stage a mode choice until Apply');
 }
 if(!handsfreeEvents.includes("handsfree.voiceSelectedPending")
