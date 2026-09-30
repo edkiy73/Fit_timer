@@ -11,8 +11,8 @@ const media=fs.readFileSync('src/app/30-progress-media.js','utf8');
 const workout=fs.readFileSync('src/app/70-workout.js','utf8');
 
 ok('wellness modal uses appUi',
-  data.includes("appUi.openModal($('wellModal'))")
-  && data.includes("appUi.closeModal($('wellModal'))"));
+  data.includes("appUi.openModal(coreDollarHook('wellModal'))")
+  && data.includes("appUi.closeModal(coreDollarHook('wellModal'))"));
 ok('comparison modal uses appUi',
   media.includes("appUi.openModal($('cmpModal'))")
   && media.includes("appUi.closeModal($('cmpModal'))"));
