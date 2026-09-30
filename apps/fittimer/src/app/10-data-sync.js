@@ -13,7 +13,7 @@ import { exRestAfter, getExProgValue, hasWeight, normValue, parseValue, progAtCe
   progBaseValue, progStepSize, progressedRepsRange
 } from './60-builder.js';
 import { BADGES, badgeDesc, badgeName, earnBadges, esc, hasBadge } from './70-workout.js';
-import { applyThemeFor } from './80-platform.js';
+import { applyThemeFor, syncNativeNotifications } from './80-platform.js';
 import { NOTIFICATION_PREFS_KEY, NOTIFICATION_PREF_DEFAULTS, applyAudioFromUser,
   getNotificationPrefs, syncNotificationSettings, syncSettingsForm
 } from './90-events.js';
@@ -209,6 +209,10 @@ async function switchUserNow(id){
   renderWellness();
   renderPhotos();
   syncSettingsForm(); // отсчёты и ключ ИИ — у каждого профиля свои
+  // Системное расписание принадлежит активному профилю. До этого переключение
+  // меняло программы/историю в памяти, но Android/iOS продолжали держать пуши
+  // предыдущего профиля до следующего foreground или ручного изменения программы.
+  await syncNativeNotifications();
 }
 
 // Все профили — одинаковыми строками, у каждой одна и та же кнопка-карандаш.
@@ -1093,9 +1097,15 @@ async function applyRemoteSync(result){
   return queueProfileState(()=> applyRemoteSyncNow(result));
 }
 async function applyRemoteSyncNow(result){
-  await applyRemoteAccountDocs(result);
+  const notificationPrefsChanged = await applyRemoteAccountDocs(result);
   const remote = Array.isArray(result && result.profiles) ? result.profiles : [];
-  if(!remote.length) return;
+  if(!remote.length){
+    // У непремиум-аккаунта pull может содержать только account-level настройки
+    // уведомлений. Даже без profile docs системное расписание должно сразу
+    // соответствовать приехавшим prefs.
+    if(notificationPrefsChanged) await syncNativeNotifications();
+    return;
+  }
   let active = remote.filter(r => !r.deleted);
 
   // Старый клиент мог несколько раз выгрузить технический пустой «Мой профиль».
@@ -1254,6 +1264,9 @@ async function applyRemoteSyncNow(result){
   await ensureWarmup();
   applyProgressionAll();
   renderUsers(); renderMine(); renderStats(); renderWeight(); renderWellness(); renderPhotos();
+  // Только здесь active profile уже полностью перезагружен из принятых docs.
+  // Пересборка раньше этого места могла успеть записать в ОС старое расписание.
+  await syncNativeNotifications();
 }
 
 function trainerSyncValue(value){
@@ -1282,9 +1295,10 @@ function mergeClientLists(localList, remoteList, preferRemote){
   return [...out.values()];
 }
 async function applyRemoteAccountDocs(result){
-  if(!account || !account.email) return;
+  if(!account || !account.email) return false;
   const docs = Array.isArray(result && result.accountDocs) ? result.accountDocs : [];
-  if(!docs.length) return;
+  if(!docs.length) return false;
+  let notificationPrefsChanged = false;
   const rec = await readAccountBucket();
   if(!rec.bucket.meta) rec.bucket.meta = {};
   for(const d of docs){
@@ -1309,6 +1323,7 @@ async function applyRemoteAccountDocs(result){
                                                deviceId:d.deviceId || ''};
     } else if(takeRemote){
       rec.bucket.notificationPrefs = Object.assign({}, incoming || {});
+      notificationPrefsChanged = true;
       rec.bucket.meta[d.key] = {rev:+d.rev || 1, at:d.at || '', schema:+d.schema || 1,
                                 deviceId:d.deviceId || ''};
       try{
@@ -1324,6 +1339,7 @@ async function applyRemoteAccountDocs(result){
   setTrainerShared(rec.bucket.trainer || trainer);
   setClientsShared(Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clients);
   if(typeof syncNotificationSettings === 'function') syncNotificationSettings();
+  return notificationPrefsChanged;
 }
 
 async function accountDocsSnapshot(){
@@ -1361,7 +1377,8 @@ export async function syncNotificationPrefsServer(action){
   const base = {action:action || 'push', email:account.email, deviceId, token:account.syncToken};
   if(base.action === 'pull'){
     const result = await syncApiPost(base);
-    await applyRemoteAccountDocs(result);
+    const changed = await applyRemoteAccountDocs(result);
+    if(changed) await syncNativeNotifications();
     return true;
   }
   const rec = await readAccountBucket();
