@@ -136,6 +136,13 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.equal(createdSet.status,200);
   assert.equal(createdSet.body.set.id,'b1-b2');
 
+  // Learner-addressed past tense gets both forms in the draft; a second run finds nothing.
+  const gf=await action(handler,'content_gender_fix',{setId:'general-foundation'});
+  assert.equal(gf.status,200);
+  assert.equal(typeof gf.body.changed,'number');
+  const gfAgain=await action(handler,'content_gender_fix',{setId:'general-foundation'});
+  assert.equal(gfAgain.body.changed,0);
+
   const a1=await action(handler,'content_a1_seed');
   assert.equal(a1.status,200);
   assert.equal(a1.body.id,'a1-starter');

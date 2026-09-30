@@ -149,6 +149,27 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
     }
   }
 
+  // «Ты вчера работал?» → «работал(а)» in the main course draft; publishing stays a separate click.
+  async function fixGender(){
+    setBusy(true);
+    setMessage('');
+    try{
+      const result=await client.action(adminKey,'content_gender_fix',{setId:'general-foundation'});
+      await load();
+      const changed=Number(result.changed)||0;
+      if(changed){
+        setPublishSetIds(['general-foundation']);
+        setMessage('Исправлено мест: '+changed+'. Основной курс уже отмечен ниже — нажми «Опубликовать release».');
+      }else{
+        setMessage('Исправлять нечего: все обращения уже подходят и мужчинам, и женщинам.');
+      }
+    }catch(error){
+      setMessage('Не удалось исправить: '+String((error as {code?:string})?.code || 'request_failed'));
+    }finally{
+      setBusy(false);
+    }
+  }
+
   async function publish(){
     if(!publishSetIds.length){setMessage('Выбери хотя бы один set для публикации.');return;}
     const names=sets.filter(item=>publishSetIds.includes(item.id)).map(item=>item.title.ru||item.id).join(', ');
@@ -394,6 +415,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
         <div className="ab-admin-action-row">
           <button type="button" disabled={busy} onClick={()=>void importLegacy(false)}>Импортировать legacy</button>
           <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void seedA1()}>Загрузить курс A1 в draft</button>
+          <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void fixGender()}>Основной курс: «работал(а)»</button>
           <button type="button" className="ab-admin-secondary" disabled={busy || !ld || !publishSetIds.length} onClick={()=>void publish()}>Опубликовать release</button>
         </div>
 

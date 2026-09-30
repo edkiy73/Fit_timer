@@ -2,6 +2,7 @@ import vm from 'node:vm';
 import { auditLexicalCoverage, buildLexiconFormIndex, compactCoverageReport, tokenizeEnglish } from './lexicon-coverage.mjs';
 import LEXICON_SUPPLEMENT from './legacy-lexicon-supplement.mjs';
 import { BANNED_PLACE, localizeLegacySource } from './legacy-localization.mjs';
+import { neutralizeCourse } from './gender-neutral.mjs';
 
 function skipSpace(source,i){
   while(i<source.length){
@@ -436,7 +437,8 @@ export function buildCourseSet(model,lexicon=null){
     previous=id;
   }
   if(lexicon)attachCourseExamples(activities,lexicon);
-  return {
+  // Learner-addressed past tense in both forms («работал(а)»), so a re-import keeps the fix.
+  return neutralizeCourse({
     schemaVersion:1,id:'general-foundation',revision:1,slug:'general-foundation',
     title:{ru:'Общий английский A1–B1/B2'},description:{ru:'Основной разговорный курс, перенесённый из English Trainer.'},
     level:{from:'a1',to:'b2',labels:['A1–B1/B2']},
@@ -449,7 +451,7 @@ export function buildCourseSet(model,lexicon=null){
       ...(Array.isArray(model.phrases)&&model.phrases.length ? [buildPhraseBankResource(model,lexicon)] : []),
       ...(Array.isArray(model.verbs)&&model.verbs.length ? [buildVerbTableResource(model,lexicon)] : [])
     ] : []
-  };
+  }).set;
 }
 
 function splitLegacyMeanings(raw){return text(raw).split(/\s*;\s*/).map(x=>x.trim()).filter(Boolean);}
