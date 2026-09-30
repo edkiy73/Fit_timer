@@ -235,14 +235,17 @@ async function boot(b, label, errs, url){
     p.plans[0].exercises[1].value = '12';
     const byId = buildReport(p).diff;
 
-    // Имитируем старый origEx до появления id: уникальное имя всё ещё можно
-    // сопоставить однозначно и не ломать старые программы.
-    const legacy = JSON.parse(JSON.stringify(p));
+    // Имитируем старый origEx до появления id отдельно: уникальное имя всё ещё
+    // можно сопоставить однозначно и не ломать старые программы.
+    const legacy = {
+      id:'report-legacy-test', name:'Legacy diff', progression:0,
+      plans:[{days:[],rounds:1,roundRest:0,exercises:[
+        ex('legacy-one','Уникальное legacy',10)
+      ]}]
+    };
     legacy.origEx = snapshotEx(legacy);
     legacy.origEx.forEach(x => { delete x.id; });
-    legacy.plans[0].exercises[2].value = '11';
-    // Вернём второй дубль к исходному значению: здесь проверяем именно legacy fallback.
-    legacy.plans[0].exercises[1].value = '8';
+    legacy.plans[0].exercises[0].value = '11';
     const legacyDiff = buildReport(legacy).diff;
 
     return {byId, legacyDiff};
