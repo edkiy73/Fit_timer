@@ -1577,6 +1577,7 @@ export const I18N_RU = {
   'builder.progressAutoPeriod': "прибавляется автоматически: {period}",
   'builder.progressProgramOff': "в настройках программы автоприбавка выключена — числа не растут",
   'builder.summaryMax': "{value}, максимум {max}",
+  'builder.dualShort': "+{reps} повт. до {max} → +{weight} кг",
   'day.monFull': "Понедельник",
   'day.tueFull': "Вторник",
   'day.wedFull': "Среда",
