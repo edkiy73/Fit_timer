@@ -65,7 +65,7 @@ import { afterExChange, applyProgCheck, autoGrow, backToWorkout, buildSteps, clo
   toggleProgCheckList
 } from './70-workout.js';
 import { SR, applyThemeFor, checkSchedules, hfHintText, hfMode, recognitionLang, setHfMode, setHfModeShared,
-  setRecognitionLangShared, setVoiceWantedShared, startHandsFree, startListening, stopHandsFree,
+  setPlatformEventHooks, setRecognitionLangShared, setVoiceWantedShared, startHandsFree, startListening, stopHandsFree,
   stopListening, syncHandsFreeUI, syncNativeNotifications, syncPrefs
 } from './80-platform.js';
 
@@ -2008,6 +2008,10 @@ function resetSkipConfirm(){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initEvents(){
+  setPlatformEventHooks({
+    getNotificationPrefs,
+    refreshVoicePackUI
+  });
   registerEventActions();
   window.addEventListener('fitAppForeground', ()=>{
     if(appRuntimeCompat.offlineVoice()) refreshVoicePackUI();
