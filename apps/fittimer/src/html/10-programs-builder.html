@@ -6,14 +6,14 @@
     <div class="page-head">
       <h1><span data-i18n="programs.title">Тренировки</span><span class="ph-sub" id="progCount"></span></h1>
       <div class="ph-tools">
-        <button class="add-btn" id="btnAddProgram" title="Добавить программу" data-i18n-title="programs.addTitle"></button>
+        <button class="add-btn" id="btnAddProgram" data-act="openCreateProgram" title="Добавить программу" data-i18n-title="programs.addTitle"></button>
       </div>
     </div>
 
     <!-- Каталог ищут здесь, а не на главной: за готовой программой идут тогда, когда
          смотрят на свои и понимают, что надоели. Кнопка та же, что на главной, —
          один вход, узнаваемый в двух местах. -->
-    <button class="store-cta" id="btnToStore">
+    <button class="store-cta" id="btnToStore" data-act="openStoreFromPrograms">
       <span class="sc-ico" id="storeIcoProg"></span>
       <span class="sc-txt"><b data-i18n="home.catalogTitle">Каталог программ</b><small id="storeRowSub" data-i18n="home.catalogSub">Тренировки от тренеров</small></span>
       <span class="sc-arrow" id="storeArrowProg"></span>

@@ -70,6 +70,32 @@ import { SR, applyThemeFor, checkSchedules, hfHintText, hfMode, recognitionLang,
 } from './80-platform.js';
 
 /* ================= СОБЫТИЯ ================= */
+registerAction('openCreateProgram', () => $('createModal').classList.add('open'));
+registerAction('editCurrentProfile', () => {
+  const u = curUser();
+  if(u) openUserEdit(u.id);
+});
+registerAction('openStoreFromMenu', () => openStore('scrMenu'));
+registerAction('backFromStore', () => goTab(storeFrom));
+registerAction('createProgramManual', () => {
+  $('createModal').classList.remove('open');
+  openBuilder();
+});
+registerAction('createProgramAI', () => {
+  $('createModal').classList.remove('open');
+  initAIForm();
+  openAI('text');
+});
+registerAction('openProgramImport', () => {
+  $('createModal').classList.remove('open');
+  $('importCode').value = '';
+  $('importModal').classList.add('open');
+});
+registerAction('importProgramCode', () => importProgramCode($('importCode').value));
+registerAction('openStoreFromPrograms', () => openStore('scrPrograms'));
+registerAction('openMyCatalog', () => openMyCatalog());
+
+
 registerAction('openWorkoutSound', () => {
   fillLiveSoundCascade('snd');
   $('soundModal').classList.add('open');
@@ -1345,11 +1371,7 @@ export function initEvents(){
   new MutationObserver(()=>{ if(!$('voiceTestModal').classList.contains('open')) stopVoiceTest(); })
     .observe($('voiceTestModal'), {attributes:true, attributeFilter:['class']});
   // создание программы: одна кнопка + выбор способа
-  $('btnAddProgram').onclick = ()=> $('createModal').classList.add('open');
-  $('greetAva').onclick = ()=>{ const u = curUser(); if(u) openUserEdit(u.id); };
   /* ---- каталог ---- */
-  $('btnStoreMenu').onclick = ()=> openStore('scrMenu');
-  $('storeBackTop').onclick = ()=> goTab(storeFrom);
   $('storeQuery').oninput = ()=>{
     storeFilter.q = $('storeQuery').value;
     setShown('storeClear', !!storeFilter.q);
@@ -1363,11 +1385,7 @@ export function initEvents(){
     $('storeQuery').focus();
   };
   $('createModal').onclick = e=>{ if(e.target === $('createModal')) $('createModal').classList.remove('open'); };
-  $('chManual').onclick = ()=>{ $('createModal').classList.remove('open'); openBuilder(); };
-  $('chAI').onclick = ()=>{ $('createModal').classList.remove('open'); initAIForm(); openAI('text'); };
-  $('chImport').onclick = ()=>{ $('createModal').classList.remove('open'); $('importCode').value=''; $('importModal').classList.add('open'); };
   $('importModal').onclick = e=>{ if(e.target === $('importModal')) $('importModal').classList.remove('open'); };
-  $('btnDoImport').onclick = ()=> importProgramCode($('importCode').value);
   $('tglTrainer').onclick = async ()=>{
     if(!trainerAccountReady()){
       openLogin(enableTrainerMode, {
@@ -1473,8 +1491,6 @@ export function initEvents(){
   $('mcBackTop').onclick = ()=>{ switchMoreTab('coach'); goTab('scrAccount'); };
   // Своя страница — ровно тем же экраном, каким её видит подопечный. Отдельный «просмотр
   // профиля» разошёлся бы с настоящим через месяц.
-  $('btnToStore').onclick = ()=> openStore('scrPrograms');
-  $('btnMyCatalog').onclick = ()=> openMyCatalog();
   // Ника без аккаунта терять нельзя — поэтому строка ведёт прямо туда, где его заводят.
   $('coachNoAcc').onclick = ()=> { switchMoreTab('acc'); setTimeout(()=> openLogin(), 250); };
   $('btnCoachWipe').onclick = wipeTrainerInfo;

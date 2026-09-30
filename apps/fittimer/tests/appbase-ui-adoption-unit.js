@@ -11,6 +11,9 @@ const platform=fs.readFileSync('src/app/80-platform.js','utf8');
 const events=fs.readFileSync('src/app/90-events.js','utf8');
 const actions=fs.readFileSync('src/app/05-actions.js','utf8');
 const shell=fs.readFileSync('src/html/00-shell-home.html','utf8');
+const programsHtml=fs.readFileSync('src/html/10-programs-builder.html','utf8');
+const profilesHtml=fs.readFileSync('src/html/40-profiles.html','utf8');
+const progressHtml=fs.readFileSync('src/html/50-profile-progress.html','utf8');
 const esmEntry=fs.readFileSync('src/main.ts','utf8');
 
 const productDeps = require('fs').readFileSync('src/app/00-dependencies.js','utf8');
@@ -32,5 +35,27 @@ ok('workout toolbar actions are declarative',
   shell.includes('data-act="openWorkoutSound"')&&shell.includes('data-act="openHandsFree"'));
 ok('workout toolbar has no brittle direct onclick wiring',
   !events.includes("$('btnSoundW').onclick")&&!events.includes("$('btnMicW').onclick"));
+ok('program/catalog actions are declarative',
+  programsHtml.includes('id="btnAddProgram" data-act="openCreateProgram"')
+  && programsHtml.includes('id="btnToStore" data-act="openStoreFromPrograms"')
+  && shell.includes('id="greetAva" data-act="editCurrentProfile"')
+  && shell.includes('id="btnStoreMenu" data-act="openStoreFromMenu"')
+  && shell.includes('id="storeBackTop" data-act="backFromStore"')
+  && progressHtml.includes('id="chManual" data-act="createProgramManual"')
+  && progressHtml.includes('id="chAI" data-act="createProgramAI"')
+  && progressHtml.includes('id="chImport" data-act="openProgramImport"')
+  && progressHtml.includes('id="btnDoImport" data-act="importProgramCode"')
+  && profilesHtml.includes('id="btnMyCatalog" data-act="openMyCatalog"'));
+ok('program/catalog static buttons have no direct onclick wiring',
+  !events.includes("$('btnAddProgram').onclick")
+  && !events.includes("$('greetAva').onclick")
+  && !events.includes("$('btnStoreMenu').onclick")
+  && !events.includes("$('storeBackTop').onclick")
+  && !events.includes("$('chManual').onclick")
+  && !events.includes("$('chAI').onclick")
+  && !events.includes("$('chImport').onclick")
+  && !events.includes("$('btnDoImport').onclick")
+  && !events.includes("$('btnToStore').onclick")
+  && !events.includes("$('btnMyCatalog').onclick"));
 
 process.exit(bad?1:0);

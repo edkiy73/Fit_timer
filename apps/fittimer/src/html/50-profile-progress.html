@@ -406,14 +406,14 @@
              секунду и читает их одним взглядом, а не абзацем. Самые частые пути —
              «Через ИИ» и «Собрать вручную» — стоят первыми. Тексты обращаются на «ты»
              и НЕ согласуются по роду: «собрать вручную», а не «собрать самой». -->
-        <button class="choice ico" id="chAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b data-i18n="common.viaAI">Через ИИ</b><small data-i18n="create.aiSub">Ответь на пару вопросов — остальное готово само</small></span></button>
-        <button class="choice ico" id="chManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b data-i18n="create.manual">Собрать вручную</b><small data-i18n="create.manualSub">Добавляешь упражнения по одному</small></span></button>
+        <button class="choice ico" id="chAI" data-act="createProgramAI"><span class="ch-ico" data-icon="sparkle"></span><span class="ch-txt"><b data-i18n="common.viaAI">Через ИИ</b><small data-i18n="create.aiSub">Ответь на пару вопросов — остальное готово само</small></span></button>
+        <button class="choice ico" id="chManual" data-act="createProgramManual"><span class="ch-ico" data-icon="pencil"></span><span class="ch-txt"><b data-i18n="create.manual">Собрать вручную</b><small data-i18n="create.manualSub">Добавляешь упражнения по одному</small></span></button>
         <button class="choice ico" id="chYT"><span class="ch-ico" data-icon="video"></span><span class="ch-txt"><b data-i18n="create.youtube">Из видео с YouTube</b><small data-i18n="create.youtubeSub">Вставь ссылку на тренировку</small></span></button>
         <!-- Каталога здесь НЕТ намеренно. Он не способ собрать программу, а место, куда
              ходят за чужой готовой, и вход в него стоит на самом экране «Тренировки»
              отдельной кнопкой. В этом попапе он был вторым входом в то же место и
              занимал строку среди четырёх, которые про другое. -->
-        <button class="choice ico" id="chImport"><span class="ch-ico" data-icon="download"></span><span class="ch-txt"><b data-i18n="create.import">По ссылке или файлом</b><small data-i18n="create.importSub">Если программу прислали или сохраняли себе</small></span></button>
+        <button class="choice ico" id="chImport" data-act="openProgramImport"><span class="ch-ico" data-icon="download"></span><span class="ch-txt"><b data-i18n="create.import">По ссылке или файлом</b><small data-i18n="create.importSub">Если программу прислали или сохраняли себе</small></span></button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
@@ -567,7 +567,7 @@
              взять уже негде. Старые коды из чужих переписок поле по-прежнему
              понимает — ломать их задним числом незачем. -->
         <div class="field"><textarea id="importCode" maxlength="200000" style="min-height:90px" placeholder="Вставь ссылку, которой поделились" data-i18n-placeholder="import.linkPlaceholder"></textarea></div>
-        <button class="btn-primary" id="btnDoImport" style="padding:15px" data-i18n="import.openLink">Открыть по ссылке</button>
+        <button class="btn-primary" id="btnDoImport" data-act="importProgramCode" style="padding:15px" data-i18n="import.openLink">Открыть по ссылке</button>
         <div class="imp-or"><span data-i18n="common.or">или</span></div>
         <button class="btn-ghost" id="btnImportProgFile" style="margin:0" data-i18n="import.file">Загрузить файл программы</button>
         <p class="field-hint" style="margin-top:8px" data-i18n="import.hint">Файл несёт программу целиком, с картинками. Ссылка — без них: фото подтянутся у того, кто её прислал.</p>
