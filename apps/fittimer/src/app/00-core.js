@@ -16,7 +16,6 @@ import { dropFreshEx, exDirty, exRestAfter, fmtKg, getExProgValue, getExWeight, 
   weightPending
 } from './60-builder.js';
 import { esc, exitWorkout, setExFromWorkShared, settleQuickFinish, stopFinishFx, tnum } from './70-workout.js';
-import { SR, hfHintText, hfMode, syncPrefs } from './80-platform.js';
 import { applyAudioFromUser, fillLiveSoundCascade, moreTab, switchMoreTab, syncSettingsForm } from './90-events.js';
 
 let accountUserDirtyHook = () => false;
@@ -31,6 +30,19 @@ export function setCoreAccountHooks(hooks = {}){
 let renderPhotosHook = () => {};
 export function setCoreProgressHooks(hooks = {}){
   renderPhotosHook = typeof hooks.renderPhotos === 'function' ? hooks.renderPhotos : (() => {});
+}
+
+let platformSpeechRecognitionHook = () => false;
+let platformHfModeHook = () => 'off';
+let platformHfHintTextHook = () => '';
+let platformSyncPrefsHook = () => {};
+export function setCorePlatformHooks(hooks = {}){
+  platformSpeechRecognitionHook = typeof hooks.hasSpeechRecognition === 'function'
+    ? hooks.hasSpeechRecognition
+    : (() => false);
+  platformHfModeHook = typeof hooks.getHfMode === 'function' ? hooks.getHfMode : (() => 'off');
+  platformHfHintTextHook = typeof hooks.hfHintText === 'function' ? hooks.hfHintText : (() => '');
+  platformSyncPrefsHook = typeof hooks.syncPrefs === 'function' ? hooks.syncPrefs : (() => {});
 }
 
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
@@ -827,7 +839,7 @@ export function show(id, push = true){
   setShown('topBar', id==='scrWork');
   $('workMore').classList.toggle('on', id==='scrWork');
   $('btnSoundW').classList.toggle('on', id==='scrWork');
-  $('btnMicW').classList.toggle('on', id==='scrWork' && !!SR);
+  $('btnMicW').classList.toggle('on', id==='scrWork' && platformSpeechRecognitionHook());
   document.querySelectorAll('.dock-btn').forEach(b => {
     const on = b.dataset.scr === id;
     b.classList.toggle('act', on);
@@ -856,8 +868,9 @@ export function prepTab(id){
       // звук и управление без рук переехали сюда из «Настроек»
       syncSettingsForm();
       fillLiveSoundCascade('st');
-      $('hfHint').textContent = hfHintText(hfMode);
-      document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === hfMode));
+      const currentHfMode = platformHfModeHook();
+      $('hfHint').textContent = platformHfHintTextHook(currentHfMode);
+      document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === currentHfMode));
     }
     else if(id === 'scrTrainer'){ refreshClientsScreen(); }
     else if(id === 'scrMenu'){ renderGreeting(); renderToday(); }
@@ -946,7 +959,7 @@ export function openStart(raw){
   $('startTitle').textContent = raw.name;
   renderPlanRow();
   renderStartInfo();
-  syncPrefs();
+  platformSyncPrefsHook();
   show('scrStart');
   window.scrollTo(0, 0); // иначе экран открывается там же, где был прокручен предыдущий, — мимо названия
 }
