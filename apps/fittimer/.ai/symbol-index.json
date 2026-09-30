@@ -101,6 +101,15 @@
       "lines": 38,
       "chars": 1621
     },
+    "src/app/05-actions.js": {
+      "kind": "frontend-js",
+      "lines": 16,
+      "chars": 373,
+      "symbols": [
+        "registerAction",
+        "unregisterAction"
+      ]
+    },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
       "lines": 2554,
@@ -872,8 +881,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 838,
-      "chars": 37029,
+      "lines": 837,
+      "chars": 37074,
       "symbols": [
         "add",
         "advanceFromHeadset",
@@ -928,8 +937,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2469,
-      "chars": 109537,
+      "lines": 2491,
+      "chars": 109747,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -1024,7 +1033,7 @@
     "src/html/00-shell-home.html": {
       "kind": "frontend-html",
       "lines": 207,
-      "chars": 11800,
+      "chars": 11937,
       "ids": [
         "appUpdateBanner",
         "appUpdateGate",
@@ -1096,12 +1105,19 @@
         "workMenu",
         "workMore",
         "workTopMenuWrap"
+      ],
+      "actions": [
+        "backFromStore",
+        "editCurrentProfile",
+        "openHandsFree",
+        "openStoreFromMenu",
+        "openWorkoutSound"
       ]
     },
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
       "lines": 639,
-      "chars": 42460,
+      "chars": 42522,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1357,7 +1373,9 @@
         "ytWish"
       ],
       "actions": [
-        "closeModal"
+        "closeModal",
+        "openCreateProgram",
+        "openStoreFromPrograms"
       ]
     },
     "src/html/20-workout-finish.html": {
@@ -1453,7 +1471,7 @@
     "src/html/40-profiles.html": {
       "kind": "frontend-html",
       "lines": 435,
-      "chars": 28052,
+      "chars": 28077,
       "ids": [
         "accCardTitle",
         "accEmail",
@@ -1595,12 +1613,15 @@
         "wipeCardTitle",
         "wipeNote",
         "workEmpty"
+      ],
+      "actions": [
+        "openMyCatalog"
       ]
     },
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
       "lines": 599,
-      "chars": 38774,
+      "chars": 38890,
       "ids": [
         "addExModal",
         "aemAI",
@@ -1791,7 +1812,11 @@
         "whSave"
       ],
       "actions": [
-        "closeModal"
+        "closeModal",
+        "createProgramAI",
+        "createProgramManual",
+        "importProgramCode",
+        "openProgramImport"
       ]
     }
   }
