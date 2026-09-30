@@ -851,7 +851,7 @@ export function programDirty(){ return isChanged('program', programState()); }
 export function fillBuilder(title){
   $('builderTitle').textContent = title;
   setTimeout(()=> takeSnap('program', programState()), 0);
-  setTimeout(markBuilderTab, 0);
+  setTimeout(eventBuilderHooks.markBuilderTab, 0);
   $('bName').value = draft.name;
   $('bDesc').value = draft.desc || '';
   $('bDescCount').textContent = (draft.desc || '').length;
