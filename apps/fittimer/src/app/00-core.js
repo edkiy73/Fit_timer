@@ -1411,17 +1411,26 @@ export function renderStartInfo(){
 
 /* Setters for state owned by this chunk and changed from other chunks.
    Other chunks read these bindings directly but write them only through the owner. */
-export function setFxVolShared(value){ fxVol = value; return fxVol; }
+export function configureAudioRuntime({soundEnabled, voiceVolume, effectsVolume, preserveMusic} = {}){
+  if(soundEnabled !== undefined) soundOn = !!soundEnabled;
+  if(voiceVolume !== undefined) voiceVol = voiceVolume;
+  if(effectsVolume !== undefined) fxVol = effectsVolume;
+  if(preserveMusic !== undefined) musicMode = !!preserveMusic;
+  return {soundOn, voiceVol, fxVol, musicMode};
+}
+export function configureWorkoutTiming({prep, ready, side} = {}){
+  if(prep !== undefined) prepSec = prep;
+  if(ready !== undefined) readySec = ready;
+  if(side !== undefined) sideSec = side;
+  return {prepSec, readySec, sideSec};
+}
+export function selectRuntimeVoice({language, uri} = {}){
+  if(language !== undefined) voiceLang = language;
+  if(uri !== undefined) savedVoiceURI = uri;
+  return {voiceLang, savedVoiceURI};
+}
 export function setLastAppSoundTShared(value){ lastAppSoundT = value; return lastAppSoundT; }
-export function setMusicModeShared(value){ musicMode = value; return musicMode; }
-export function setPrepSecShared(value){ prepSec = value; return prepSec; }
-export function setReadySecShared(value){ readySec = value; return readySec; }
-export function setSavedVoiceURIShared(value){ savedVoiceURI = value; return savedVoiceURI; }
-export function setSideSecShared(value){ sideSec = value; return sideSec; }
-export function setSoundOnShared(value){ soundOn = value; return soundOn; }
 export function setStartFromShared(value){ startFrom = value; return startFrom; }
-export function setVoiceLangShared(value){ voiceLang = value; return voiceLang; }
-export function setVoiceVolShared(value){ voiceVol = value; return voiceVol; }
 
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
