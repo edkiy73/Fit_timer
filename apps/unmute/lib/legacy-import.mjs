@@ -242,7 +242,9 @@ export function buildPhraseBankResource(model,lexicon){
       if(senses.length>1)throw new Error('phrase_resource_sense_resolution:'+en+':'+senses.length);
       items.push({
         lexemeId:entry.id,
-        ...(senses.length===1?{senseId:senses[0].id}:{})
+        ...(senses.length===1?{senseId:senses[0].id}:{}),
+        text:en,
+        ...(ru?{translation:{ru}}:{})
       });
     }
     groups.push({

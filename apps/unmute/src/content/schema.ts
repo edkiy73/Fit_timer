@@ -185,6 +185,9 @@ export const phraseCollectionResourceSchema = z.object({
     items: z.array(z.object({
       lexemeId: idSchema,
       senseId: idSchema.optional(),
+      /** The phrase as the author wrote it; the lexicon lemma is normalized (lower case, no «?»). */
+      text: z.string().min(1).max(300).optional(),
+      translation: localizedTextSchema.optional(),
     })),
   })).min(1),
 });
