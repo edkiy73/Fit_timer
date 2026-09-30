@@ -197,7 +197,7 @@
   </section>
 
   <!-- Выбор картинки для места -->
-  <div class="modal" id="exitModal">
+  <div class="modal" id="exitModal" data-act="closeModalBackdrop">
     <div class="modal-card">
       <span class="mini-label" data-i18n="workout.interrupt">Прервать тренировку</span>
       <p class="field-hint" id="exitProgress"></p>
@@ -208,7 +208,7 @@
     </div>
   </div>
 
-  <div class="modal" id="startModal">
+  <div class="modal" id="startModal" data-act="closeModalBackdrop">
     <div class="modal-card">
       <span class="mini-label" data-i18n="workout.startFrom">С чего начать</span>
       <!-- порядок снизу вверх по вероятности: обычный ответ — «начать сначала», и он
@@ -233,7 +233,7 @@
     </div>
   </div>
 
-  <div class="modal" id="pickStepModal">
+  <div class="modal" id="pickStepModal" data-act="closeModalBackdrop">
     <div class="modal-card">
       <span class="mini-label" data-i18n="workout.startExerciseTitle">С какого упражнения начать</span>
       <div class="pick-list" id="pickList"></div>
