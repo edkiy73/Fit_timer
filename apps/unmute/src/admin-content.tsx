@@ -13,7 +13,33 @@ type ReleaseSet = {
   title:Record<string,string>;
   draftRevision:number|null;
   publishedRevision:number|null;
+  publishedAt?:string|null;
+  unreleasedChanges?:boolean;
+  access?:{mode?:string;freePreview?:{days?:number};price?:{RUB?:number;USD?:number}}|null;
 };
+
+function courseState(item:ReleaseSet){
+  if(!item.publishedRevision) return {tone:'new',text:'Ещё не выпущен — ученики его не видят'};
+  if(item.unreleasedChanges) return {tone:'changed',text:'Есть правки, ученики их ещё не видят'};
+  return {tone:'live',text:'На сайте, новых правок нет'};
+}
+
+function courseTerms(item:ReleaseSet){
+  const access=item.access;
+  if(!access || access.mode==='free') return 'Бесплатный';
+  const parts=['Бесплатных дней: '+String(access.freePreview?.days ?? 0)];
+  const price=access.price;
+  parts.push(price && (price.RUB || price.USD)
+    ? 'цена '+[price.RUB ? price.RUB+' ₽' : '',price.USD ? '$'+price.USD : ''].filter(Boolean).join(' / ')
+    : 'общая цена');
+  return parts.join(' · ');
+}
+
+function shortDate(iso?:string|null){
+  if(!iso) return '';
+  const date=new Date(iso);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+}
 
 type ReviewItem = {
   lexemeId:string;
@@ -77,6 +103,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   const [bulkPreview,setBulkPreview]=useState<BulkPreview|null>(null);
   const [bulkMessage,setBulkMessage]=useState('');
   const [bulkBusy,setBulkBusy]=useState(false);
+  const [ipaMessage,setIpaMessage]=useState('');
   const [ipaReport,setIpaReport]=useState<{forms:number;alreadyHaveIpa:number;sourceMatches:number;updatedForms:number;unmatched:number;updatedLexemes:number}|null>(null);
 
   const load=useCallback(async()=>{
@@ -95,12 +122,8 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       setBulkSetId(current=>nextSets.some(item=>item.id===current)
         ? current
         : (nextSets.find(item=>item.id==='general-foundation')?.id || nextSets[0]?.id || 'general-foundation'));
-      setPublishSetIds(current=>{
-        const valid=current.filter(id=>nextSets.some(item=>item.id===id&&item.draftRevision));
-        if(valid.length)return valid;
-        const general=nextSets.find(item=>item.id==='general-foundation'&&item.draftRevision);
-        return general ? [general.id] : nextSets.filter(item=>item.draftRevision).slice(0,1).map(item=>item.id);
-      });
+      // Courses with edits the learners do not see yet are ticked for release.
+      setPublishSetIds(nextSets.filter(item=>item.draftRevision&&(item.unreleasedChanges||!item.publishedRevision)).map(item=>item.id));
     }catch(error){
       setMessage(String((error as {code?:string})?.code || 'Не удалось загрузить статус контента.'));
     }finally{
@@ -117,13 +140,13 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
     try{
       const result=await client.action(adminKey,'content_legacy_import',overwrite ? {overwrite:true} : undefined);
       setReport((result.report || {}) as Record<string,unknown>);
-      setMessage('Legacy импортирован в draft. Пользователям ничего не опубликовано.');
+      setMessage('Старый курс импортирован. Ученики его увидят только после «Выпустить».');
       setEditor(null);
       await load();
     }catch(error){
       const code=String((error as {code?:string})?.code || 'request_failed');
       if(code==='draft_exists_use_overwrite' && !overwrite){
-        const ok=window.confirm('Draft уже существует. Повторный импорт заменит текущие draft курса и словаря, включая ручные правки. Продолжить?');
+        const ok=window.confirm('Повторный импорт заменит невыпущенные правки основного курса и словаря, включая ручные. Продолжить?');
         if(ok) await importLegacy(true);
         return;
       }
@@ -141,7 +164,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       await client.action(adminKey,'content_a1_seed');
       await load();
       setPublishSetIds(['a1-starter']);
-      setMessage('Курс A1 загружен в draft. Он уже отмечен ниже — нажми «Опубликовать release». Опубликованные курсы останутся.');
+      setMessage('Курс A1 обновлён из кода. Он отмечен в списке — нажми «Выпустить».');
     }catch(error){
       setMessage('Ошибка загрузки A1: '+String((error as {code?:string})?.code || 'request_failed'));
     }finally{
@@ -159,7 +182,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       const changed=Number(result.changed)||0;
       if(changed){
         setPublishSetIds(['general-foundation']);
-        setMessage('Исправлено мест: '+changed+'. Основной курс уже отмечен ниже — нажми «Опубликовать release».');
+        setMessage('Исправлено мест: '+changed+'. Основной курс отмечен в списке — нажми «Выпустить».');
       }else{
         setMessage('Исправлять нечего: все обращения уже подходят и мужчинам, и женщинам.');
       }
@@ -171,9 +194,9 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   }
 
   async function publish(){
-    if(!publishSetIds.length){setMessage('Выбери хотя бы один set для публикации.');return;}
+    if(!publishSetIds.length){setMessage('Отметь хотя бы один курс.');return;}
     const names=sets.filter(item=>publishSetIds.includes(item.id)).map(item=>item.title.ru||item.id).join(', ');
-    const ok=window.confirm('Опубликовать выбранные set ('+names+') и текущий draft словаря одним release?');
+    const ok=window.confirm('Выпустить для учеников: '+names+'? Словарь выпустится вместе с ними.');
     if(!ok)return;
     setBusy(true);
     setMessage('');
@@ -181,10 +204,10 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       const result=await client.action(adminKey,'content_publish',{setIds:publishSetIds});
       const lexicon=(result.lexicon || {}) as {revision?:unknown};
       const release=(result.release || {}) as {revision?:unknown};
-      setMessage('Опубликован release r'+String(release.revision||'?')+': '+publishSetIds.length+' set, словарь r'+String(lexicon.revision||'?')+'.');
+      setMessage('Готово: ученики уже видят '+names+'. Выпуск №'+String(release.revision||'?')+', словарь №'+String(lexicon.revision||'?')+'.');
       await load();
     }catch(error){
-      setMessage('Ошибка публикации: '+String((error as {code?:string})?.code || 'request_failed'));
+      setMessage('Не выпустилось: '+String((error as {code?:string})?.code || 'request_failed'));
     }finally{
       setBusy(false);
     }
@@ -257,7 +280,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
         changes:{senses:editor.senses}
       });
       setEditor(result.lexeme as LexemeEditor);
-      setEditorMessage(reviewed ? 'Сохранено и отмечено проверенным.' : 'Сохранено в draft.');
+      setEditorMessage(reviewed ? 'Сохранено и отмечено проверенным.' : 'Сохранено. Ученики увидят после «Выпустить».');
       await load();
       if(reviewed)setEditor(null);
     }catch(error){
@@ -272,17 +295,17 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
 
   async function runIpaBootstrap(apply:boolean){
     setBulkBusy(true);
-    setBulkMessage('');
+    setIpaMessage('');
     try{
       const result=await client.action(adminKey,'content_lexicon_ipa_bootstrap',{apply});
       const report=(result.report || null) as typeof ipaReport;
       setIpaReport(report);
-      setBulkMessage(apply
-        ? 'IPA добавлен в draft: '+String(report?.updatedForms || 0)+' форм.'
-        : 'Можно добавить IPA для '+String(report?.updatedForms || 0)+' форм без перезаписи существующих данных.');
+      setIpaMessage(apply
+        ? 'Транскрипция добавлена для '+String(report?.updatedForms || 0)+' форм. Ученики увидят после «Выпустить».'
+        : 'Можно добавить транскрипцию для '+String(report?.updatedForms || 0)+' форм. Уже заполненное не меняется.');
       if(apply) await load();
     }catch(error){
-      setBulkMessage('Ошибка IPA: '+String((error as {code?:string})?.code || 'request_failed'));
+      setIpaMessage('Не получилось: '+String((error as {code?:string})?.code || 'request_failed'));
     }finally{
       setBulkBusy(false);
     }
@@ -300,9 +323,9 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       });
       setBulkPrompt(String(result.prompt || ''));
       setBulkCoverage((result.coverage || null) as CoverageSummary|null);
-      setBulkMessage('Собрано '+String(result.targetCount || 0)+(bulkMode==='missing'?' недостающих форм.':' записей для обогащения.')+' Скопируй prompt в ИИ и вставь JSON-ответ ниже.');
+      setBulkMessage('Собрано '+String(result.targetCount || 0)+(bulkMode==='missing'?' недостающих форм.':' записей для обогащения.')+' Скопируй запрос в ИИ и вставь его ответ ниже.');
     }catch(error){
-      setBulkMessage('Не удалось собрать prompt: '+String((error as {code?:string})?.code || 'request_failed'));
+      setBulkMessage('Не удалось собрать запрос: '+String((error as {code?:string})?.code || 'request_failed'));
     }finally{
       setBulkBusy(false);
     }
@@ -312,14 +335,14 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
     if(!bulkPrompt)return;
     try{
       await navigator.clipboard.writeText(bulkPrompt);
-      setBulkMessage('Prompt скопирован.');
+      setBulkMessage('Запрос скопирован.');
     }catch(_){
       setBulkMessage('Не удалось скопировать автоматически — выдели текст вручную.');
     }
   }
 
   async function previewBulkPatch(){
-    if(!bulkText.trim()){setBulkMessage('Вставь JSON-ответ ИИ.');return;}
+    if(!bulkText.trim()){setBulkMessage('Вставь ответ ИИ.');return;}
     setBulkBusy(true);
     setBulkMessage('');
     try{
@@ -358,7 +381,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       setBulkPreview(null);
       setBulkText('');
       setBulkPrompt('');
-      setBulkMessage('Применено '+String(result.applied || 0)+' записей в draft. Live release не затронут.');
+      setBulkMessage('Добавлено записей: '+String(result.applied || 0)+'. Ученики увидят после «Выпустить».');
       await load();
     }catch(error){
       setBulkMessage('Ошибка применения: '+String((error as {code?:string})?.code || 'request_failed'));
@@ -384,83 +407,97 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       <article className="ab-admin-panel">
         <div className="ab-admin-section-head">
           <div>
-            <h2>Контент курса</h2>
-            <p className="ab-admin-note">Legacy source: <code>{status?.source?.sha?.slice(0,12) || '…'}</code>. Импорт всегда создаёт draft.</p>
+            <h2>Курсы</h2>
+            <p className="ab-admin-note">Ученики видят только выпущенное. Правки из «Редактора уроков» ждут здесь, пока не нажмёшь «Выпустить». Словарь выпускается вместе с курсами.</p>
           </div>
           <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void load()}>Обновить</button>
         </div>
 
-        <div className="ab-admin-status-line">
-          <span><b>Release</b> {status?.release ? 'r'+String(status.release.revision ?? 0) : 'нет'}</span>
-          <span><b>Курс draft</b> {cd ? 'r'+String(cd.revision ?? 0)+' · '+String(cd.activities ?? 0) : 'нет'}</span>
-          <span><b>Курс live</b> {cp ? 'r'+String(cp.revision ?? 0) : 'нет'}</span>
-          <span><b>Словарь draft</b> {ld ? String(ld.entries ?? 0) : 'нет'}</span>
-          <span><b>Словарь live</b> {lp ? 'r'+String(lp.revision ?? 0) : 'нет'}</span>
-        </div>
-
         <div className="ab-release-set-list">
-          {sets.map(item=><label key={item.id}>
-            <input
-              type="checkbox"
-              checked={publishSetIds.includes(item.id)}
-              disabled={!item.draftRevision}
-              onChange={event=>setPublishSetIds(current=>event.target.checked
-                ? [...new Set([...current,item.id])]
-                : current.filter(id=>id!==item.id))}
-            />
-            <span><b>{item.title.ru || item.id}</b><small>{item.draftRevision ? 'draft r'+item.draftRevision : 'нет draft'} · {item.publishedRevision ? 'live r'+item.publishedRevision : 'не опубликован'}</small></span>
-          </label>)}
+          {sets.map(item=>{
+            const state=courseState(item);
+            return <label key={item.id} data-state={state.tone}>
+              <input
+                type="checkbox"
+                checked={publishSetIds.includes(item.id)}
+                disabled={!item.draftRevision}
+                onChange={event=>setPublishSetIds(current=>event.target.checked
+                  ? [...new Set([...current,item.id])]
+                  : current.filter(id=>id!==item.id))}
+              />
+              <span>
+                <b>{item.title.ru || item.id}</b>
+                <small className="ab-release-state">{state.text}{item.publishedAt ? ' · выпущен '+shortDate(item.publishedAt) : ''}</small>
+                <small>{courseTerms(item)}</small>
+              </span>
+            </label>;
+          })}
+          {!sets.length && <p className="ab-admin-empty">{busy ? 'Загружаю…' : 'Курсов пока нет.'}</p>}
         </div>
 
         <div className="ab-admin-action-row">
-          <button type="button" disabled={busy} onClick={()=>void importLegacy(false)}>Импортировать legacy</button>
-          <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void seedA1()}>Загрузить курс A1 в draft</button>
-          <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void fixGender()}>Основной курс: «работал(а)»</button>
-          <button type="button" className="ab-admin-secondary" disabled={busy || !ld || !publishSetIds.length} onClick={()=>void publish()}>Опубликовать release</button>
+          <button type="button" disabled={busy || !ld || !publishSetIds.length} onClick={()=>void publish()}>
+            {publishSetIds.length ? 'Выпустить отмеченные ('+publishSetIds.length+')' : 'Выпустить'}
+          </button>
         </div>
-
         {message && <p role="status" className="ab-admin-feedback">{message}</p>}
-        {report && (
-          <details className="ab-admin-details">
-            <summary>Отчёт последнего импорта</summary>
-            <pre className="ab-admin-json">{JSON.stringify(report,null,2)}</pre>
-          </details>
-        )}
+        <p className="ab-admin-note">Цена, бесплатные дни и уроки меняются в «Редакторе уроков». Курс A1 из кода выпускается сам после каждого изменения, если в GitHub добавлен секрет ADMIN_KEY.</p>
+
+        <details className="ab-admin-details">
+          <summary>Разовые инструменты</summary>
+          <div className="ab-admin-status-line">
+            <span><b>Выпуск</b> {status?.release ? '№'+String(status.release.revision ?? 0) : 'ещё не было'}</span>
+            <span><b>Основной курс</b> {cd ? String(cd.activities ?? 0)+' заданий' : 'нет'}{cp ? ', на сайте' : ''}</span>
+            <span><b>Словарь</b> {ld ? String(ld.entries ?? 0)+' слов' : 'нет'}{lp ? ', на сайте' : ''}</span>
+          </div>
+          <div className="ab-admin-action-row">
+            <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void seedA1()}>Обновить курс A1 из кода</button>
+            <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void fixGender()}>Основной курс: «работал(а)»</button>
+            <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void importLegacy(false)}>Импорт старого курса</button>
+          </div>
+          <p className="ab-admin-note">Источник старого курса: <code>{status?.source?.sha?.slice(0,12) || '…'}</code></p>
+          {report && (
+            <details className="ab-admin-details">
+              <summary>Отчёт последнего импорта</summary>
+              <pre className="ab-admin-json">{JSON.stringify(report,null,2)}</pre>
+            </details>
+          )}
+        </details>
       </article>
 
       <article className="ab-admin-panel ab-admin-bulk">
         <div className="ab-admin-section-head">
           <div>
-            <h2>Автоматический IPA</h2>
-            <p className="ab-admin-note">Pinned US pronunciation dictionary. Заполняет только отсутствующий IPA у exact forms и никогда не перезаписывает существующий.</p>
+            <h2>Транскрипция слов</h2>
+            <p className="ab-admin-note">Берёт американское произношение из словаря и заполняет только пустые места. Уже заполненное не меняет.</p>
           </div>
         </div>
         <div className="ab-admin-action-row">
-          <button type="button" className="ab-admin-secondary" disabled={bulkBusy || !ld} onClick={()=>void runIpaBootstrap(false)}>Проверить IPA</button>
-          <button type="button" disabled={bulkBusy || !ipaReport?.updatedForms} onClick={()=>void runIpaBootstrap(true)}>Добавить IPA в draft</button>
+          <button type="button" className="ab-admin-secondary" disabled={bulkBusy || !ld} onClick={()=>void runIpaBootstrap(false)}>Проверить, чего не хватает</button>
+          <button type="button" disabled={bulkBusy || !ipaReport?.updatedForms} onClick={()=>void runIpaBootstrap(true)}>Добавить транскрипцию</button>
         </div>
         {ipaReport && (
           <div className="ab-admin-status-line">
             <span><b>Форм</b> {ipaReport.forms}</span>
-            <span><b>Уже есть IPA</b> {ipaReport.alreadyHaveIpa}</span>
+            <span><b>Уже есть</b> {ipaReport.alreadyHaveIpa}</span>
             <span><b>Можно добавить</b> {ipaReport.updatedForms}</span>
             <span><b>Нет в базе</b> {ipaReport.unmatched}</span>
           </div>
         )}
-        {bulkMessage && <p className="ab-admin-feedback" role="status">{bulkMessage}</p>}
+        {ipaMessage && <p className="ab-admin-feedback" role="status">{ipaMessage}</p>}
       </article>
 
       <article className="ab-admin-panel ab-admin-bulk">
         <div className="ab-admin-section-head">
           <div>
-            <h2>Массовое заполнение словаря через ИИ</h2>
-            <p className="ab-admin-note">Без API: собираем реальные дырки курса → копируем prompt → вставляем JSON → проверяем → применяем только в draft.</p>
+            <h2>Дополнить словарь через ИИ</h2>
+            <p className="ab-admin-note">Находим слова курса, которых нет в словаре → копируешь запрос в ChatGPT или другой ИИ → вставляешь ответ → проверяем → добавляем. Ученики увидят после «Выпустить».</p>
           </div>
         </div>
 
         <div className="ab-admin-bulk-controls">
           <label>
-            <span>Set</span>
+            <span>Курс</span>
             <select value={bulkSetId} onChange={event=>{
               setBulkSetId(event.target.value);
               setBulkPrompt('');
@@ -473,18 +510,18 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
             </select>
           </label>
           <label>
-            <span>Задача</span>
+            <span>Что сделать</span>
             <select value={bulkMode} onChange={event=>{
               setBulkMode(event.target.value==='enrich'?'enrich':'missing');
               setBulkPrompt('');
               setBulkPreview(null);
             }}>
-              <option value="missing">Добавить отсутствующие формы</option>
-              <option value="enrich">Обогатить существующие</option>
+              <option value="missing">Добавить недостающие слова</option>
+              <option value="enrich">Дополнить уже имеющиеся</option>
             </select>
           </label>
           <label>
-            <span>Пачка</span>
+            <span>Сколько слов за раз</span>
             <select value={bulkLimit} onChange={event=>setBulkLimit(Number(event.target.value))}>
               <option value={25}>25</option>
               <option value={50}>50</option>
@@ -492,16 +529,16 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
             </select>
           </label>
           <button type="button" disabled={bulkBusy || !bulkSetId} onClick={()=>void buildBulkPrompt()}>
-            {bulkMode==='missing'?'Собрать недостающие':'Собрать на обогащение'}
+            {bulkMode==='missing'?'Найти недостающие':'Найти, что дополнить'}
           </button>
         </div>
 
         {bulkCoverage && (
           <div className="ab-admin-status-line">
-            <span><b>Покрытие</b> {String(bulkCoverage.resolvedSurfaces ?? 0)}/{String(bulkCoverage.uniqueSurfaces ?? 0)} · {String(bulkCoverage.coveragePct ?? 0)}%</span>
+            <span><b>Есть в словаре</b> {String(bulkCoverage.resolvedSurfaces ?? 0)}/{String(bulkCoverage.uniqueSurfaces ?? 0)} · {String(bulkCoverage.coveragePct ?? 0)}%</span>
             <span><b>Нет в словаре</b> {String(bulkCoverage.missingSurfaces ?? 0)}</span>
             <span><b>IPA</b> {String(bulkCoverage.ipaCoveragePct ?? 0)}%</span>
-            <span><b>RU произношение</b> {String(bulkCoverage.ruReadingCoveragePct ?? 0)}%</span>
+            <span><b>Произношение по-русски</b> {String(bulkCoverage.ruReadingCoveragePct ?? 0)}%</span>
             <span><b>Примеры</b> {String(bulkCoverage.exampleCoveragePct ?? 0)}%</span>
           </div>
         )}
@@ -509,22 +546,22 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
         {bulkPrompt && (
           <div className="ab-admin-bulk-step">
             <div className="ab-admin-section-head">
-              <div><strong>1. Prompt для ИИ</strong><p className="ab-admin-note">Можно вставить в ChatGPT или другой ИИ целиком.</p></div>
+              <div><strong>1. Запрос для ИИ</strong><p className="ab-admin-note">Можно вставить в ChatGPT или другой ИИ целиком.</p></div>
               <button type="button" className="ab-admin-secondary" onClick={()=>void copyBulkPrompt()}>Копировать</button>
             </div>
-            <textarea readOnly rows={12} value={bulkPrompt} aria-label="Prompt для массового словаря" />
+            <textarea readOnly rows={12} value={bulkPrompt} aria-label="Запрос для ИИ" />
           </div>
         )}
 
         <div className="ab-admin-bulk-step">
           <strong>2. Ответ ИИ</strong>
-          <p className="ab-admin-note">Вставь JSON формата <code>unmute.lexicon.patch.v1</code>. Markdown-код-блок тоже принимается.</p>
+          <p className="ab-admin-note">Вставь ответ ИИ целиком, как есть.</p>
           <textarea
             rows={12}
             value={bulkText}
             onChange={event=>{setBulkText(event.target.value);setBulkPreview(null);}}
             placeholder={'{"format":"unmute.lexicon.patch.v1","entries":[...]}'}
-            aria-label="JSON ответ ИИ"
+            aria-label="Ответ ИИ"
           />
           <div className="ab-admin-action-row">
             <button type="button" className="ab-admin-secondary" disabled={bulkBusy || !bulkText.trim()} onClick={()=>void previewBulkPatch()}>Проверить без изменений</button>
@@ -532,7 +569,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
               type="button"
               disabled={bulkBusy || !bulkPreview || (bulkPreview.summary?.conflicts || 0)>0}
               onClick={()=>void applyBulkPatch()}
-            >Применить в draft</button>
+            >Добавить в словарь</button>
           </div>
         </div>
 
@@ -562,10 +599,10 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
                 <summary>Что изменится ({bulkPreview.changes.length})</summary>
                 <div className="ab-admin-table-wrap">
                   <table>
-                    <thead><tr><th>Лемма</th><th>Действие</th><th>Формы</th><th>Примеры</th></tr></thead>
+                    <thead><tr><th>Слово</th><th>Действие</th><th>Формы</th><th>Примеры</th></tr></thead>
                     <tbody>{bulkPreview.changes.slice(0,100).map(item=>(
                       <tr key={item.id}>
-                        <td data-label="Лемма"><strong>{item.lemma}</strong></td>
+                        <td data-label="Слово"><strong>{item.lemma}</strong></td>
                         <td data-label="Действие">{item.kind}</td>
                         <td data-label="Формы">{item.forms?.join(', ')}</td>
                         <td data-label="Примеры">{String(item.examples ?? 0)}</td>
@@ -585,7 +622,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
         <div className="ab-admin-section-head">
           <div>
             <h2>Словарь: требует проверки ({review.length})</h2>
-            <p className="ab-admin-note">Неоднозначные legacy-значения. До проверки приложение показывает варианты и не угадывает смысл.</p>
+            <p className="ab-admin-note">Слова из старого курса с несколькими значениями. Пока не проверено, приложение показывает все варианты перевода.</p>
           </div>
         </div>
 
@@ -624,7 +661,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
           <div className="ab-admin-section-head">
             <div>
               <h2>{editor.lemma}</h2>
-              <p className="ab-admin-note"><code>{editor.id}</code> · revision {editor.revision}</p>
+              <p className="ab-admin-note"><code>{editor.id}</code> · версия {editor.revision}</p>
             </div>
             <button type="button" className="ab-admin-secondary" onClick={()=>setEditor(null)}>Закрыть</button>
           </div>
@@ -671,7 +708,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
 
           <div className="ab-admin-action-row">
             <button type="button" className="ab-admin-secondary" disabled={editorBusy} onClick={addSense}>+ Значение</button>
-            <button type="button" className="ab-admin-secondary" disabled={editorBusy} onClick={()=>void saveLexeme(false)}>Сохранить draft</button>
+            <button type="button" className="ab-admin-secondary" disabled={editorBusy} onClick={()=>void saveLexeme(false)}>Сохранить</button>
             <button type="button" disabled={editorBusy} onClick={()=>void saveLexeme(true)}>Сохранить и проверить</button>
           </div>
           {editorMessage && <p className="ab-admin-feedback" role="status">{editorMessage}</p>}
@@ -683,7 +720,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
 
 export const contentAdminSection: AdminSection = {
   id:'content',
-  label:'Релизы и словарь',
-  group:'Контент',
+  label:'Курсы и словарь',
+  group:'Курсы',
   render(context){ return <ContentAdmin {...context} />; }
 };
