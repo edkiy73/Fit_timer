@@ -937,8 +937,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2491,
-      "chars": 109747,
+      "lines": 2501,
+      "chars": 109900,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -1033,7 +1033,7 @@
     "src/html/00-shell-home.html": {
       "kind": "frontend-html",
       "lines": 207,
-      "chars": 11937,
+      "chars": 11960,
       "ids": [
         "appUpdateBanner",
         "appUpdateGate",
@@ -1110,6 +1110,7 @@
         "backFromStore",
         "editCurrentProfile",
         "openHandsFree",
+        "openPremium",
         "openStoreFromMenu",
         "openWorkoutSound"
       ]
@@ -1450,7 +1451,7 @@
     "src/html/30-onboarding-account.html": {
       "kind": "frontend-html",
       "lines": 218,
-      "chars": 18143,
+      "chars": 18185,
       "ids": [
         "btnLegalDone",
         "legalBackTop",
@@ -1466,12 +1467,15 @@
         "obStart",
         "scrLegal",
         "scrOnboard"
+      ],
+      "actions": [
+        "legalBack"
       ]
     },
     "src/html/40-profiles.html": {
       "kind": "frontend-html",
       "lines": 435,
-      "chars": 28077,
+      "chars": 28494,
       "ids": [
         "accCardTitle",
         "accEmail",
@@ -1615,13 +1619,29 @@
         "workEmpty"
       ],
       "actions": [
-        "openMyCatalog"
+        "exportAllData",
+        "openCoachAccount",
+        "openLegalHealth",
+        "openLegalPrivacy",
+        "openLegalTerms",
+        "openLogin",
+        "openMyCatalog",
+        "openMyTrainerPage",
+        "openPhotoCompare",
+        "openPremium",
+        "openWeightHistory",
+        "pickAllDataImportFile",
+        "pickProgressPhoto",
+        "shareWeightChart",
+        "signOut",
+        "wipeAccount",
+        "wipeCoach"
       ]
     },
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
       "lines": 599,
-      "chars": 38890,
+      "chars": 39141,
       "ids": [
         "addExModal",
         "aemAI",
@@ -1812,11 +1832,21 @@
         "whSave"
       ],
       "actions": [
+        "backClient",
+        "backMyCatalog",
+        "backPublish",
+        "backTrainerProfile",
         "closeModal",
+        "completePurchase",
         "createProgramAI",
         "createProgramManual",
         "importProgramCode",
-        "openProgramImport"
+        "login",
+        "loginCancel",
+        "loginUseCode",
+        "openProgramImport",
+        "pickProgramImportFile",
+        "publishProgram"
       ]
     }
   }
