@@ -4,10 +4,9 @@ import { appLocale, canonicalLabel, loadAppLocale, localeTag, normalizeLocalePre
 import { appNotifications, appRuntimeCompat, appUi } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
 import { $, ICONS, ROOT_TABS, aiScreenDirty, appAlert, appConfirm, appDialog, asTab, audioCtx, beep,
-  clearSnap, commitWeightModal, fxVol, goBackTo, goTab, guardNum, icon, initAudio, keepAwake,
-  leaveGuard, masterGain, musicMode, numFieldsOk, openStart, prepTab, releaseWake, savedVoiceURI,
-  setFxVolShared, setMusicModeShared, setPrepSecShared, setReadySecShared, setSavedVoiceURIShared,
-  setCoreEventHooks, setShown, setSideSecShared, setSoundOnShared, setVoiceLangShared, setVoiceVolShared, show,
+  clearSnap, commitWeightModal, configureAudioRuntime, configureWorkoutTiming, fxVol, goBackTo, goTab,
+  guardNum, icon, initAudio, keepAwake, leaveGuard, masterGain, musicMode, numFieldsOk, openStart,
+  prepTab, releaseWake, savedVoiceURI, selectRuntimeVoice, setCoreEventHooks, setShown, show,
   soundOn, speak, startFrom, state, syncSoundCascade, tick, voiceIsEnglish, voiceLang, voiceVol,
   workoutLoadSnapshot
 } from './00-core.js';
@@ -74,7 +73,7 @@ import { SR, applyThemeFor, checkSchedules, clearVoiceWanted, hfHintText, hfMode
 function registerEventActions(){
   registerAction('toggleLiveSoundMaster', btn => {
     const p = btn.id.replace(/SoundOn$/, '');
-    setSoundOnShared(!soundOn);
+    configureAudioRuntime({soundEnabled: !soundOn});
     kvSet('soundOff', soundOn ? '0' : '1');
     if(!soundOn) stopSpeech();
     btn.classList.toggle('on', soundOn);
@@ -84,7 +83,7 @@ function registerEventActions(){
   registerAction('toggleLiveSoundVoice', btn => {
     const p = btn.id.replace(/VoiceOn$/, '');
     const on = !btn.classList.contains('on');
-    setVoiceVolShared(on ? 1 : 0);
+    configureAudioRuntime({voiceVolume: on ? 1 : 0});
     btn.classList.toggle('on', on);
     syncSoundCascade(p);
     persistLiveSound();
@@ -93,10 +92,10 @@ function registerEventActions(){
   registerAction('toggleLiveSoundFx', btn => {
     const p = btn.id.replace(/FxOn$/, '');
     const on = !btn.classList.contains('on');
-    if(on) setFxVolShared(clampVol(fxVolMemory / 100, 1));
+    if(on) configureAudioRuntime({effectsVolume: clampVol(fxVolMemory / 100, 1)});
     else{
       fxVolMemory = Math.round(fxVol * 100) || fxVolMemory;
-      setFxVolShared(0);
+      configureAudioRuntime({effectsVolume: 0});
     }
     btn.classList.toggle('on', on);
     $(p + 'FxVol').value = Math.round(fxVol * 100);
@@ -107,7 +106,7 @@ function registerEventActions(){
   });
   registerAction('toggleLiveSoundMusic', btn => {
     const p = btn.id.replace(/Music$/, '');
-    setMusicModeShared(!musicMode);
+    configureAudioRuntime({preserveMusic: !musicMode});
     kvSet('musicMode', musicMode ? '1' : '0');
     if(musicMode) stopSpeech();
     btn.classList.toggle('on', musicMode);
@@ -1215,18 +1214,18 @@ async function chooseHandsFree(mode, options = {}){
 function clampVol(v, def){ v = Number(v); if(!isFinite(v)) v = def; return Math.max(0, Math.min(1, v)); }
 export function applyAudioFromUser(u){
   if(!u) return;
-  setPrepSecShared((u.prepSec == null) ? 5 : Math.max(0, Math.min(30, u.prepSec)));
-  setReadySecShared((u.readySec == null) ? 5 : Math.max(0, Math.min(30, u.readySec)));
-  setSideSecShared((u.sideSec == null) ? 10 : Math.max(3, Math.min(60, u.sideSec)));
-  setSavedVoiceURIShared(u.voiceURI || '');
-  setVoiceVolShared(clampVol((u.voiceVol == null ? 100 : u.voiceVol) / 100, 1));
-  setFxVolShared(clampVol((u.fxVol == null ? 100 : u.fxVol) / 100, 1));
+  configureWorkoutTiming({prep: (u.prepSec == null) ? 5 : Math.max(0, Math.min(30, u.prepSec))});
+  configureWorkoutTiming({ready: (u.readySec == null) ? 5 : Math.max(0, Math.min(30, u.readySec))});
+  configureWorkoutTiming({side: (u.sideSec == null) ? 10 : Math.max(3, Math.min(60, u.sideSec))});
+  selectRuntimeVoice({uri: u.voiceURI || ''});
+  configureAudioRuntime({voiceVolume: clampVol((u.voiceVol == null ? 100 : u.voiceVol) / 100, 1)});
+  configureAudioRuntime({effectsVolume: clampVol((u.fxVol == null ? 100 : u.fxVol) / 100, 1)});
   if(masterGain) masterGain.gain.value = fxVol;
   kvSet('voiceURI', savedVoiceURI);
 }
 
 function toggleSound(){
-  setSoundOnShared(!soundOn);
+  configureAudioRuntime({soundEnabled: !soundOn});
   kvSet('soundOff', soundOn ? '0' : '1');
   if(!soundOn) stopSpeech();
   syncPrefs();
@@ -1264,7 +1263,7 @@ function wireLiveSoundCascade(p){
   $(p + 'FxOn').dataset.act = 'toggleLiveSoundFx';
   $(p + 'FxVol').oninput = e => {
     const v = parseInt(e.target.value) || 0;
-    setFxVolShared(clampVol(v / 100, 1));
+    configureAudioRuntime({effectsVolume: clampVol(v / 100, 1)});
     fxVolMemory = v || fxVolMemory;
     $(p + 'FxVolVal').textContent = v + '%';
     persistLiveSound();
@@ -1333,7 +1332,7 @@ async function fillVoiceChoices(){
     });
     const exists=list.some(v=>v.id===savedVoiceURI);
     sel.value=exists ? savedVoiceURI : list[0].id;
-    if(!exists){ setSavedVoiceURIShared(sel.value); await kvSet('voiceURI',savedVoiceURI); }
+    if(!exists){ selectRuntimeVoice({uri: sel.value}); await kvSet('voiceURI',savedVoiceURI); }
   }
   const u = curUser();
   if(u && u.voiceURI !== savedVoiceURI){
@@ -1343,11 +1342,11 @@ async function fillVoiceChoices(){
 }
 
 async function syncTtsLocaleToApp(resetVoice){
-  setVoiceLangShared(localeTag());
+  selectRuntimeVoice({language: localeTag()});
   await kvDel('voiceLangManual');
   await kvSet('voiceLang', voiceLang);
   if(resetVoice){
-    setSavedVoiceURIShared('');
+    selectRuntimeVoice({uri: ''});
     await kvSet('voiceURI','');
   }
   await fillVoiceChoices();
@@ -2124,7 +2123,7 @@ export function initEvents(){
   wireLiveSoundCascade('snd');
   for(const id of ['stVoiceChoice','sndVoiceChoice']){
     if($(id)) $(id).onchange = async e=>{
-      setSavedVoiceURIShared(e.target.value || '');
+      selectRuntimeVoice({uri: e.target.value || ''});
       persistLiveSound();
       for(const other of ['stVoiceChoice','sndVoiceChoice']) if($(other) && $(other)!==e.target) $(other).value=savedVoiceURI;
       await previewSelectedVoice();
@@ -2550,8 +2549,8 @@ export function initEvents(){
         || (await kvGet('customPrograms')) !== null
         || (await kvGet('migrated')) === '1';
       if(!hasLegacy){
-        clearVoiceWanted(); setSoundOnShared(true);
-        setMusicModeShared(false);
+        clearVoiceWanted(); configureAudioRuntime({soundEnabled: true});
+        configureAudioRuntime({preserveMusic: false});
         syncPrefs();
         applyThemeFor({theme:'system'});
         document.body.classList.remove('booting');
@@ -2605,10 +2604,10 @@ export function initEvents(){
     // Удалённый режим мог остаться в старой резервной копии или localStorage.
     if(restoredHfMode !== hfMode) kvSet('hfMode', hfMode);
     syncHandsFreeUI();
-    setSoundOnShared((await kvGet('soundOff')) !== '1');
-    setVoiceLangShared(localeTag());
-    setSavedVoiceURIShared((await kvGet('voiceURI')) || '');
-    setMusicModeShared((await kvGet('musicMode')) === '1');
+    configureAudioRuntime({soundEnabled: (await kvGet('soundOff')) !== '1'});
+    selectRuntimeVoice({language: localeTag()});
+    selectRuntimeVoice({uri: (await kvGet('voiceURI')) || ''});
+    configureAudioRuntime({preserveMusic: (await kvGet('musicMode')) === '1'});
     applyAudioFromUser(curUser());
     await syncTtsLocaleToApp(false);
     await refreshVoicePackUI();
