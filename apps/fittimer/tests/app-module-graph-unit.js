@@ -193,6 +193,13 @@ if(!/setAccountWorkoutHooks\(\{[\s\S]*esc/.test(workoutSource)) problems.push('a
 if(!/setAccountPlatformHooks\(\{[\s\S]*applyThemeFor[\s\S]*themeOf/.test(platformCoreSource)) problems.push('account/platform hook boundary is missing or incomplete');
 if(!/setAccountEventHooks\(\{[\s\S]*applyAudioFromUser[\s\S]*readTimings[\s\S]*syncRemotePushRegistration[\s\S]*unregisterRemotePushServer/.test(eventsCoreSource)) problems.push('account/events hook boundary is missing or incomplete');
 
+if(/from ['"]\.\/40-programs-ai\.js['"]/.test(accountSource)){
+  problems.push('src/app/20-account.js must not import 40-programs-ai.js; inject programs-ai-facing hooks instead');
+}
+if(!/setAccountProgramsAiHooks\(\{[\s\S]*getApiBase[\s\S]*ageError[\s\S]*apiPost[\s\S]*getClients[\s\S]*forgetMe[\s\S]*loadTrainer[\s\S]*mailErrText[\s\S]*normHandle[\s\S]*saveClients[\s\S]*saveTrainer[\s\S]*setTrainerShared[\s\S]*syncGeminiBtns[\s\S]*getTrainer/.test(programsAiSource)){
+  problems.push('account/programs-ai hook boundary is missing or incomplete');
+}
+
 if(/from ['"]\.\/20-account\.js['"]/.test(coreSource)){
   problems.push('src/app/00-core.js must not import 20-account.js; inject account-facing hooks instead');
 }
