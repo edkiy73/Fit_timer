@@ -3,7 +3,7 @@ import { appNotifications, appRuntimeCompat, appUi } from './00-dependencies.js'
 import { ACTIONS, registerAction } from './05-actions.js';
 import { $, appAlert, audioCtx, beep, blockVoiceCommandsFor, dismissTopModal, fxVol, icon, keepAwake,
   loadDelta, musicMode, plural, previousWorkoutLoad, releaseWake, soundOn, setCorePlatformHooks,
-  state, syncSoundCascade, voiceVol, workoutLoadSnapshot
+  state, syncSoundCascade, voiceCommandsBlockedAt, voiceVol, workoutLoadSnapshot
 } from './00-core.js';
 import { DAYS, curUser, customPrograms, kvSet, loadSession, loadSessions, localISO, normPlans, planDays,
   progActive, setDataSyncPlatformHooks, stats
@@ -299,7 +299,7 @@ function buildRecog(){
     // и «Далее — Планка», и названия упражнений: распознавание охотно отдаёт
     // «дальше» одной из трёх альтернатив, и тренировка сама проматывается вперёд
     // шаг за шагом. Пока звучит наш собственный голос, команд не существует.
-    if(Date.now() < lastAppSoundT) return;
+    if(voiceCommandsBlockedAt()) return;
     for(let i = e.resultIndex; i < e.results.length; i++){
       // Одна фраза — одна команда. Промежуточные результаты повторяют её по
       // несколько раз, а финальный приходит секунды через две, когда защита по
@@ -323,7 +323,7 @@ function buildRecog(){
 function resetVoiceDedup(){ firedSeq = -1; firedIdx = -1; }
 function handleNativeVoiceResult(text, event){
   const startedAt = Date.now() - (Number(event && event.utteranceMs) || 0);
-  if(startedAt < lastAppSoundT) return;
+  if(voiceCommandsBlockedAt(startedAt)) return;
   applyVoiceCommand(event && event.kind ? {text, kind:event.kind} : text);
 }
 function handleNativeVoiceError(error){
