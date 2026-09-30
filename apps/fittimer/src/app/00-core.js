@@ -2,7 +2,7 @@ import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
 import { appRuntimeCompat, appUi } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
 import { DAYS, closeAllMenus, curUser, customPrograms, normPlans, progActive, renderStats,
-  renderUsers, renderWeight, renderWellness, savePrograms, setCustomProgramsShared, stats
+  renderUsers, renderWeight, renderWellness, savePrograms, setCustomProgramsShared, setDataSyncCoreHooks, stats
 } from './10-data-sync.js';
 
 let accountUserDirtyHook = () => false;
@@ -1426,6 +1426,16 @@ export function setVoiceVolShared(value){ voiceVol = value; return voiceVol; }
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initCore(){
+  setDataSyncCoreHooks({
+    $,
+    appAlert,
+    icon,
+    plural,
+    setShown,
+    getSideSec: () => sideSec,
+    getState: () => state,
+    syncDockTabs
+  });
   registerAction('confirmDialog', () => finishDialog(true));
   registerAction('cancelDialog', () => finishDialog(false));
   registerAction('dialogBackdrop', (modal, event) => {
