@@ -9,7 +9,7 @@ import { $, appAlert, appDialog, goBackTo, goTab, icon, isChanged, plural, setCo
 import { DAYS, closeAllMenus, customPrograms, normPlans, planDays, savePrograms,
   setDataSyncBuilderHooks, sortPlans, toggleMenu, trackProductEvent
 } from './10-data-sync.js';
-import { LIM, clampLine, clampText, cleanLink, cleanPic, requireWho, sanitizeProgram } from './30-progress-media.js';
+import { LIM, clampLine, clampText, cleanLink, cleanPic, requireWho, sanitizeProgram, setProgressBuilderHooks } from './30-progress-media.js';
 import { aiWaysReset, claimProgramLink, flashDone, userForAI } from './40-programs-ai.js';
 import { renderMine, storeCountText } from './50-trainer-catalog.js';
 import { autoGrow, esc } from './70-workout.js';
@@ -2222,6 +2222,10 @@ export function setPlanIdxShared(value){ planIdx = value; return planIdx; }
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initBuilder(){
+  setProgressBuilderHooks({
+    newExId,
+    shrinkImage
+  });
   setDataSyncBuilderHooks({
     exRestAfter,
     getExProgValue,
