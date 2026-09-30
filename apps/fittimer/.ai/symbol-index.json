@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1469,
-      "chars": 72329,
+      "lines": 1551,
+      "chars": 74888,
       "symbols": [
         "$",
         "aiScreenDirty",
@@ -83,6 +83,7 @@
         "setVoiceVolShared",
         "show",
         "speak",
+        "startProgramFor",
         "startSignal",
         "syncDock",
         "syncDockTabs",
@@ -883,8 +884,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 840,
-      "chars": 37153,
+      "lines": 839,
+      "chars": 37067,
       "symbols": [
         "add",
         "advanceFromHeadset",
