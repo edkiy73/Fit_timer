@@ -1038,10 +1038,13 @@ async function refreshAfterForeground(){
   loadPublicConfig();
   refreshServerSubscription(true).catch(()=>{});
   if(account && account.email && account.syncToken){
-    connectAccountSync().catch(()=>{});
+    // Сначала принимаем серверные программы/историю/prefs, и только потом
+    // отдаём расписание Android/iOS. Раньше эти операции стартовали параллельно:
+    // ОС успевала получить старый список, а pull менял данные уже после него.
+    await connectAccountSync().catch(()=>{});
     refreshTrainerProfile().catch(()=>{});
   }
-  syncNativeNotifications().catch(()=>{});
+  await syncNativeNotifications().catch(()=>{});
 }
 
 // Кнопки «иконка + подпись» задаются кодом, а не data-i18n (иконку applyI18n стёр бы).
