@@ -1023,9 +1023,9 @@
     <!-- Кнопки закреплены у нижнего края: это единственное, ради чего сюда пришли,
          и они не должны зависеть от того, докрутил человек экран или нет. -->
     <div class="ob-actions">
-      <button class="btn-primary" id="obStart" data-i18n="onboarding.start">Выбрать тренировку</button>
-      <button type="button" class="btn-secondary" id="obLogin" data-i18n="common.loginOrRegister">Вход или регистрация</button>
-      <p class="ob-legal"><span data-i18n="onboarding.legalPrefix">Продолжая, ты принимаешь</span> <button type="button" class="ob-legal-link" id="obLegal1" data-i18n="common.rules">правила</button><span data-i18n="onboarding.legalSuffix"> приложения.</span></p>
+      <button class="btn-primary" id="obStart" data-act="onboardingStart" data-i18n="onboarding.start">Выбрать тренировку</button>
+      <button type="button" class="btn-secondary" id="obLogin" data-act="onboardingLogin" data-i18n="common.loginOrRegister">Вход или регистрация</button>
+      <p class="ob-legal"><span data-i18n="onboarding.legalPrefix">Продолжая, ты принимаешь</span> <button type="button" class="ob-legal-link" id="obLegal1" data-act="onboardingPrivacy" data-i18n="common.rules">правила</button><span data-i18n="onboarding.legalSuffix"> приложения.</span></p>
     </div>
   </section>
 
@@ -1227,9 +1227,9 @@
 
       <div class="metric-card" id="calCard">
         <div class="cal-head">
-          <button class="cal-nav" id="calPrev" title="Прошлый месяц" data-i18n-title="progress.prevMonth"></button>
+          <button class="cal-nav" id="calPrev" data-act="calendarPrev" title="Прошлый месяц" data-i18n-title="progress.prevMonth"></button>
           <b id="calTitle"></b>
-          <button class="cal-nav" id="calNext" title="Следующий месяц" data-i18n-title="progress.nextMonth"></button>
+          <button class="cal-nav" id="calNext" data-act="calendarNext" title="Следующий месяц" data-i18n-title="progress.nextMonth"></button>
         </div>
         <p class="cal-sub" id="calSub"></p>
         <div class="cal-grid" id="calGrid"></div>
@@ -1295,7 +1295,7 @@
             <span class="ts-label" data-i18n="progress.wellnessTitle">Самочувствие</span>
             <div class="mc-now" id="wellNowRow"><b id="wellNow">—</b><span class="w-delta" id="wellWhen"></span></div>
           </div>
-          <button class="add-btn" id="btnAddWell" title="Записать" data-i18n-title="progress.record"></button>
+          <button class="add-btn" id="btnAddWell" data-act="openWellAdd" title="Записать" data-i18n-title="progress.record"></button>
         </div>
         <div class="mc-empty empty-state" id="wellEmpty">
           <span class="es-ico" data-icon="heart"></span>
@@ -1307,8 +1307,8 @@
         <div class="wm-switch hidden" id="wellSwitch"></div>
         <div class="mc-charts hidden" id="wellCharts"></div>
         <div class="mc-actions hidden" id="wellActions">
-          <button class="mc-act" id="btnWellHist"></button>
-          <button class="mc-act" id="btnShareWell"></button>
+          <button class="mc-act" id="btnWellHist" data-act="openWellHistory"></button>
+          <button class="mc-act" id="btnShareWell" data-act="shareWellChart"></button>
         </div>
       </div>
     </div>
@@ -1338,7 +1338,7 @@
         <div class="ph-tools">
           <button type="button" class="btn-ghost" id="btnAddPhoto" data-act="pickProgressPhoto" data-i18n="progress.addPhoto">Добавить фото</button>
           <p class="photo-local-note"><span data-icon="shield"></span><span data-i18n="progress.photoLocalOnly">Фото хранятся только на этом устройстве и не синхронизируются с аккаунтом. Так снимки прогресса не покидают телефон.</span></p>
-          <button type="button" class="mc-danger hidden" id="btnDeleteAllPhotos" data-i18n="progress.deleteAllPhotosBtn">Удалить все фото</button>
+          <button type="button" class="mc-danger hidden" id="btnDeleteAllPhotos" data-act="deleteAllPhotos" data-i18n="progress.deleteAllPhotosBtn">Удалить все фото</button>
         </div>
         <input type="file" id="photoFile" accept="image/*" class="hidden">
       </div>
@@ -1366,7 +1366,7 @@
     <div class="card-block" id="accProfiles">
       <div class="cb-head"><p class="cb-title" data-i18n="settings.profiles">Профили</p></div>
       <div class="list-rows" id="usersList"></div>
-      <button class="choice add-row" id="btnAddUser"><span data-icon="plus"></span><b data-i18n="settings.addProfile">Добавить профиль</b></button>
+      <button class="choice add-row" id="btnAddUser" data-act="addUser"><span data-icon="plus"></span><b data-i18n="settings.addProfile">Добавить профиль</b></button>
       <p class="field-hint" id="usersHint"></p>
     </div>
     </div>
@@ -1637,7 +1637,7 @@
 
   <!-- Редактор профиля -->
   <section class="screen builder" id="scrUserEdit">
-    <div class="screen-head"><button class="back-chip" id="ueBackTop">‹</button><h2 id="ueTitle" data-i18n="profile.title">Профиль</h2></div>
+    <div class="screen-head"><button class="back-chip" id="ueBackTop" data-act="profileBack">‹</button><h2 id="ueTitle" data-i18n="profile.title">Профиль</h2></div>
 
     <!-- Профиль -->
     <div class="ue-pane">
@@ -1697,11 +1697,11 @@
 
       <!-- редкое и необратимое действие не стоит рядом с «Сохранить»: оно живёт
            внизу страницы, а закреплённая панель осталась в одну строку -->
-      <button type="button" class="link-btn" id="btnDelUser" style="color:var(--danger)" data-i18n="profile.delete">Удалить профиль</button>
+      <button type="button" class="link-btn" id="btnDelUser" data-act="deleteUser" style="color:var(--danger)" data-i18n="profile.delete">Удалить профиль</button>
     </div>
 
     <div class="builder-actions">
-      <button class="btn-primary" id="btnSaveUser" data-i18n="common.save">Сохранить</button>
+      <button class="btn-primary" id="btnSaveUser" data-act="saveUser" data-i18n="common.save">Сохранить</button>
     </div>
   </section>
 
@@ -1882,8 +1882,8 @@
           <div class="seg"><button type="button" id="whoF" data-i18n="who.female">Женский</button><button type="button" id="whoM" data-i18n="who.male">Мужской</button></div>
         </div>
         <div class="field"><label data-i18n="profile.age">Возраст, полных лет</label><input type="number" id="whoAge" min="5" max="100" step="1" inputmode="numeric" placeholder="Например, 32" data-i18n-placeholder="profile.ageExample"></div>
-        <button class="btn-primary" id="whoSave" style="padding:14px;font-size:16px" data-i18n="who.save">Сохранить и продолжить</button>
-        <button class="modal-btn" id="whoSkip" data-i18n="common.cancel">Отмена</button>
+        <button class="btn-primary" id="whoSave" data-act="whoSave" style="padding:14px;font-size:16px" data-i18n="who.save">Сохранить и продолжить</button>
+        <button class="modal-btn" id="whoSkip" data-act="whoSkip" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
@@ -2097,17 +2097,17 @@
           <div class="cmp-col">
             <select id="cmpA" class="voice-sel" style="max-width:none;width:100%"></select>
             <div class="cmp-img" id="cmpImgA"></div>
-            <button class="link-btn" id="cmpDelA" style="padding:6px;margin:0" data-i18n="compare.deletePhoto">Удалить это фото</button>
+            <button class="link-btn" id="cmpDelA" data-act="deleteCompareA" style="padding:6px;margin:0" data-i18n="compare.deletePhoto">Удалить это фото</button>
           </div>
           <div class="cmp-col">
             <select id="cmpB" class="voice-sel" style="max-width:none;width:100%"></select>
             <div class="cmp-img" id="cmpImgB"></div>
-            <button class="link-btn" id="cmpDelB" style="padding:6px;margin:0" data-i18n="compare.deletePhoto">Удалить это фото</button>
+            <button class="link-btn" id="cmpDelB" data-act="deleteCompareB" style="padding:6px;margin:0" data-i18n="compare.deletePhoto">Удалить это фото</button>
           </div>
         </div>
         <p class="field-hint" id="cmpDays" style="text-align:center;margin:10px 0 4px"></p>
         <p class="field-hint" style="text-align:center;margin:0 0 10px" data-i18n="compare.hint">Проведи по снимку вбок — сменится дата. Нажми — во весь экран.</p>
-        <button class="btn-primary" id="btnShareCmp" style="padding:14px" data-i18n="compare.share">Поделиться сравнением</button>
+        <button class="btn-primary" id="btnShareCmp" data-act="shareCompare" style="padding:14px" data-i18n="compare.share">Поделиться сравнением</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.close">Закрыть</button>
       </div>
     </div>
@@ -2157,7 +2157,7 @@
       <div class="modal-card">
         <span class="mini-label" data-i18n="weight.history">История веса</span>
         <div id="whList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
-        <button class="btn-primary" id="whSave" style="padding:14px" data-i18n="common.save">Сохранить</button>
+        <button class="btn-primary" id="whSave" data-act="saveWeightHistory" style="padding:14px" data-i18n="common.save">Сохранить</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
@@ -2181,7 +2181,7 @@
           <div class="whc"><label data-i18n="well.pulse">Пульс</label><input type="number" id="pulseInput" min="30" max="220" inputmode="numeric"></div>
           <div class="whc"><label data-i18n="well.sleepHours">Сон, ч</label><input type="number" id="sleepInput" step="0.5" min="0" max="16" inputmode="decimal"></div>
         </div>
-        <button class="btn-primary" id="btnSaveWell" style="padding:14px;margin-top:6px" data-i18n="common.save">Сохранить</button>
+        <button class="btn-primary" id="btnSaveWell" data-act="saveWell" style="padding:14px;margin-top:6px" data-i18n="common.save">Сохранить</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
@@ -2190,7 +2190,7 @@
       <div class="modal-card">
         <span class="mini-label" data-i18n="well.history">История самочувствия</span>
         <div id="wellHistList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
-        <button class="btn-primary" id="wellHistSave" style="padding:14px" data-i18n="common.save">Сохранить</button>
+        <button class="btn-primary" id="wellHistSave" data-act="saveWellHistory" style="padding:14px" data-i18n="common.save">Сохранить</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
