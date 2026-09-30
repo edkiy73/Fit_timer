@@ -2006,7 +2006,7 @@
       </div>
     </div>
 
-    <div class="modal" id="dlg">
+    <div class="modal" id="dlg" data-act="dialogBackdrop">
       <div class="modal-card">
         <p class="dlg-msg" id="dlgMsg"></p>
         <textarea id="dlgCode" readonly class="hidden"></textarea>
@@ -2016,8 +2016,8 @@
           <label id="dlgTypeLabel"></label>
           <input type="text" id="dlgType" maxlength="60" autocomplete="off" autocapitalize="off" spellcheck="false">
         </div>
-        <button class="btn-primary" id="dlgOk" style="padding:14px;font-size:16px" data-i18n="common.ok">ОК</button>
-        <button class="modal-btn" id="dlgCancel" data-i18n="common.cancel">Отмена</button>
+        <button class="btn-primary" id="dlgOk" data-act="confirmDialog" style="padding:14px;font-size:16px" data-i18n="common.ok">ОК</button>
+        <button class="modal-btn" id="dlgCancel" data-act="cancelDialog" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
