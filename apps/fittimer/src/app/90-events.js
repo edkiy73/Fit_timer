@@ -95,6 +95,29 @@ registerAction('importProgramCode', () => importProgramCode($('importCode').valu
 registerAction('openStoreFromPrograms', () => openStore('scrPrograms'));
 registerAction('openMyCatalog', () => openMyCatalog());
 
+registerAction('backTrainerProfile', () => goBackTo(tpFrom || 'scrMenu'));
+registerAction('backPublish', () => goBackTo(pubFrom || 'scrPrograms'));
+registerAction('backMyCatalog', () => {
+  switchMoreTab('coach');
+  goTab('scrAccount');
+});
+registerAction('openCoachAccount', () => {
+  switchMoreTab('acc');
+  setTimeout(() => openLogin(), 250);
+});
+registerAction('wipeCoach', () => wipeTrainerInfo());
+registerAction('openMyTrainerPage', () => {
+  if(trainerOn()) openTrainer(normHandle(trainer.handle));
+  else appAlert(t('trainer.enableFirst'));
+});
+registerAction('publishProgram', () => doPublish());
+registerAction('backClient', () => goBackTo('scrTrainer'));
+registerAction('legalBack', () => legalBack());
+registerAction('openLegalPrivacy', () => openLegal('privacy'));
+registerAction('openLegalTerms', () => openLegal('terms'));
+registerAction('openLegalHealth', () => openLegal('health'));
+
+
 
 registerAction('openWorkoutSound', () => {
   fillLiveSoundCascade('snd');
@@ -1486,18 +1509,10 @@ export function initEvents(){
   // Ник над программой — это вход на страницу тренера, а не украшение: подопечный,
   // получивший программу по ссылке, хочет знать, от кого она.
   $('startByChip').onclick = ()=>{ const p = state.raw; if(p && p.by) openTrainer(p.by); };
-  $('tpBackTop').onclick = ()=> goBackTo(tpFrom || 'scrMenu');
-  $('pubBackTop').onclick = ()=> goBackTo(pubFrom || 'scrPrograms');
-  $('mcBackTop').onclick = ()=>{ switchMoreTab('coach'); goTab('scrAccount'); };
   // Своя страница — ровно тем же экраном, каким её видит подопечный. Отдельный «просмотр
   // профиля» разошёлся бы с настоящим через месяц.
   // Ника без аккаунта терять нельзя — поэтому строка ведёт прямо туда, где его заводят.
-  $('coachNoAcc').onclick = ()=> { switchMoreTab('acc'); setTimeout(()=> openLogin(), 250); };
-  $('btnCoachWipe').onclick = wipeTrainerInfo;
-  $('btnMyPage').onclick = ()=> trainerOn() ? openTrainer(normHandle(trainer.handle))
-    : appAlert(t('trainer.enableFirst'));
   $('pubGives').oninput = e => { pubDraft.gives = clampText(e.target.value, LIM.gives); };
-  $('btnPublish').onclick = ()=> doPublish();
   $('btnAddClient').onclick = async ()=>{
     const c = await addClient();
     renderClients();
@@ -1505,7 +1520,6 @@ export function initEvents(){
     openClient(clients.indexOf(c));
     setTimeout(()=> $('clName').select(), 120);
   };
-  $('clBackTop').onclick = ()=> goBackTo('scrTrainer');
   // Поля карточки сохраняются на лету: «Сохранить» здесь нечего ждать, а её отсутствие
   // снимает весь разговор о несохранённом при выходе жестом.
   $('clName').oninput = async e => {
@@ -1539,8 +1553,6 @@ export function initEvents(){
   Object.keys(LEGAL_SECTIONS).forEach(k => {
     $('legalHead' + k[0].toUpperCase() + k.slice(1)).onclick = ()=> legalToggle(k);
   });
-  $('legalBackTop').onclick = ()=> legalBack();
-  $('btnLegalDone').onclick = ()=> legalBack();
   ['workouts','trainer','progress','offers','emailNews','emailOffers'].forEach(key => {
     const btn = $({
       workouts:'notifWorkouts',
@@ -1552,9 +1564,6 @@ export function initEvents(){
     }[key]);
     if(btn) btn.onclick = ()=> { setNotificationPref(key, !getNotificationPrefs()[key]); };
   });
-  $('btnLegalPrivacy').onclick = ()=> openLegal('privacy');
-  $('btnLegalTerms').onclick   = ()=> openLegal('terms');
-  $('btnLegalHealth').onclick  = ()=> openLegal('health');
   // трекер веса
   $('btnAddWeight').onclick = ()=>{
     const last = stats.weights[stats.weights.length - 1];
