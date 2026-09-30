@@ -17,6 +17,8 @@ export interface AnswerExplanation {
     used:number;
     limit:number;
   };
+  /** Set when this was one of the free explanations (no Plus). */
+  freeRemaining?:number;
 }
 
 export class AnswerAIError extends Error{
@@ -91,7 +93,10 @@ export async function requestAnswerExplanation(
       }
     : undefined;
 
-  return usage?{...explanation,usage}:explanation;
+  const access=payload.access&&typeof payload.access==='object'?payload.access as Record<string,unknown>:null;
+  const result:AnswerExplanation=usage?{...explanation,usage}:{...explanation};
+  if(access?.mode==='free')result.freeRemaining=Math.max(0,Number(access.remaining)||0);
+  return result;
 }
 
 export const answerExplainProtocol={parseAnswerExplanation};

@@ -7,6 +7,7 @@ const {
   authorizeUnMuteAI,
   TRIAL_MAX_CALLS,
   TRIAL_WINDOW_MS,
+  FREE_EXPLAIN_CALLS,
   trialKey
 }=require('../lib/unmute-ai-trial');
 
@@ -19,11 +20,18 @@ const {
   };
   const trial={id:'trial_abcdefghijklmnop',scope:'talk.clinic'};
 
-  let result=await authorizeUnMuteAI({
-    ...base,
-    body:{kind:'answer.explain',trial,start:true}
-  });
-  assert.deepEqual(result,{allowed:false,code:'premium_required',status:402});
+  // «Почему?»: three free explanations per account in total, then Plus only.
+  let result;
+  for(let i=1;i<=FREE_EXPLAIN_CALLS;i++){
+    result=await authorizeUnMuteAI({...base,body:{kind:'answer.explain'}});
+    assert.equal(result.allowed,true);
+    assert.equal(result.meta.mode,'free');
+    assert.equal(result.meta.remaining,FREE_EXPLAIN_CALLS-i);
+  }
+  result=await authorizeUnMuteAI({...base,now:base.now+30*86400000,body:{kind:'answer.explain'}});
+  assert.deepEqual(result,{allowed:false,code:'free_explain_used',status:402});
+  // The explanation allowance does not touch the AI talk trial.
+  assert.equal(await store.get(trialKey(accountHash)),null);
 
   result=await authorizeUnMuteAI({
     ...base,

@@ -213,6 +213,13 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
         return true;
       }
 
+      if(action === 'content_a1_seed'){
+        const { buildA1StarterCourse } = await import('./a1-starter-course.mjs');
+        const draft = await Content.putDraft(buildA1StarterCourse());
+        send(res,200,{ok:true,id:draft.id,course:courseStats(await Content.getDraft(draft.id))});
+        return true;
+      }
+
       if(action === 'content_review_queue'){
         const lexicon = await Lexicon.getDraft() || await Lexicon.getPublished();
         if(!lexicon){ fail(res,404,'lexicon_not_found'); return true; }

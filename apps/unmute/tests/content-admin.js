@@ -136,8 +136,13 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.equal(createdSet.status,200);
   assert.equal(createdSet.body.set.id,'b1-b2');
 
+  const a1=await action(handler,'content_a1_seed');
+  assert.equal(a1.status,200);
+  assert.equal(a1.body.id,'a1-starter');
+
   const sets=await action(handler,'content_sets_list');
   assert.equal(sets.status,200);
+  assert.ok(sets.body.sets.some(set=>set.id==='a1-starter'&&set.draftRevision));
   assert.ok(sets.body.sets.some(set=>set.id==='general-foundation'));
   assert.ok(sets.body.sets.some(set=>set.id==='b1-b2'));
 

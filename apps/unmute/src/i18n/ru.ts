@@ -236,6 +236,8 @@ export const ru = {
   'answerExplain.tipTitle': 'Как запомнить',
   'answerExplain.authRequired': 'Для ИИ-разбора ответа нужно войти.',
   'answerExplain.plusRequired': 'ИИ-разбор ответов доступен в UnMute Plus.',
+  'answerExplain.freeUsed': 'Три бесплатных разбора использованы. Дальше ИИ-разбор ответов — в UnMute Plus.',
+  'answerExplain.freeLeft': 'Бесплатных разборов осталось: {count} из 3.',
   'answerExplain.limit': 'Лимит ИИ на этот период закончился.',
   'answerExplain.timeout': 'ИИ отвечает слишком долго. Попробуй ещё раз.',
   'answerExplain.badResponse': 'ИИ вернул некорректный разбор. Попробуй ещё раз.',

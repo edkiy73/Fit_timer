@@ -133,6 +133,22 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
     }
   }
 
+  // The small A1 course lives in code (lib/a1-starter-course.mjs); this refreshes its draft.
+  async function seedA1(){
+    setBusy(true);
+    setMessage('');
+    try{
+      await client.action(adminKey,'content_a1_seed');
+      await load();
+      setPublishSetIds(['a1-starter']);
+      setMessage('Курс A1 загружен в draft. Он уже отмечен ниже — нажми «Опубликовать release». Опубликованные курсы останутся.');
+    }catch(error){
+      setMessage('Ошибка загрузки A1: '+String((error as {code?:string})?.code || 'request_failed'));
+    }finally{
+      setBusy(false);
+    }
+  }
+
   async function publish(){
     if(!publishSetIds.length){setMessage('Выбери хотя бы один set для публикации.');return;}
     const names=sets.filter(item=>publishSetIds.includes(item.id)).map(item=>item.title.ru||item.id).join(', ');
@@ -377,6 +393,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
 
         <div className="ab-admin-action-row">
           <button type="button" disabled={busy} onClick={()=>void importLegacy(false)}>Импортировать legacy</button>
+          <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void seedA1()}>Загрузить курс A1 в draft</button>
           <button type="button" className="ab-admin-secondary" disabled={busy || !ld || !publishSetIds.length} onClick={()=>void publish()}>Опубликовать release</button>
         </div>
 
