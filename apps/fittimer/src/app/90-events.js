@@ -239,6 +239,171 @@ registerAction('unlockByEmail', () => openLogin(
   }
 ));
 
+registerAction('toggleTrainerMode', async () => {
+  if(!trainerAccountReady()){
+    openLogin(enableTrainerMode, {
+      label:t('trainer.needAccount'),
+      msg:t('trainer.needAccountMsg')
+    });
+    return;
+  }
+  if(trainer.on){
+    trainer.on = false;
+    await saveTrainer();
+    renderTrainerCard();
+    return;
+  }
+  await enableTrainerMode();
+});
+registerAction('saveCoachProfile', async () => {
+  if(!trainerAccountReady()){
+    openLogin(enableTrainerMode, {
+      label:t('trainer.needAccount'),
+      msg:t('trainer.needAccountSaveMsg')
+    });
+    return;
+  }
+  const btn = $('btnSaveCoach');
+  const rawLink = $('coachLinks').value.trim();
+  const link = rawLink ? cleanLink(rawLink) : '';
+  if(rawLink && !link){
+    $('coachLinksErr').textContent = t('trainer.badLink');
+    $('coachLinks').focus();
+    return;
+  }
+  const handle = account.handle;
+  const yearsRaw = $('coachYears').value.replace(/\D/g, '').slice(0, 2);
+  const years = parseInt(yearsRaw, 10);
+  setTrainerShared(Object.assign({}, trainer, {
+    handle,
+    name:clampLine($('coachName').value, LIM.coachName),
+    photo:coachPhotoDraft || '',
+    about:clampText($('coachAbout').value, LIM.coachAbout),
+    years:(isFinite(years) && years > 0 && years <= 60) ? years : null,
+    links:link || '',
+    pageErr:null
+  }));
+  btn.disabled = true;
+  btn.textContent = t('common.saving');
+  showSyncState('busy');
+  await saveTrainer({deferSync:true});
+  const ok = await pushProfile();
+  if(ok){
+    await saveTrainer({deferSync:true});
+    if(isPremium()) queueAccountSync();
+    showSyncState('ok');
+    renderTrainerCard();
+    btn.textContent = t('common.saved');
+    setTimeout(()=>{ if(btn.textContent === t('common.saved')) btn.textContent = t('common.save'); }, 1500);
+  } else {
+    showSyncState('error');
+    appAlert(trainer.pageErr || t('trainer.saveFailed'));
+    btn.textContent = t('common.save');
+  }
+  btn.disabled = false;
+});
+registerAction('openWorkoutTrainer', () => {
+  const p = state.raw;
+  if(p && p.by) openTrainer(p.by);
+});
+registerAction('addClient', async () => {
+  const c = await addClient();
+  renderClients();
+  renderTrainerCard();
+  openClient(clients.indexOf(c));
+  setTimeout(()=> $('clName').select(), 120);
+});
+registerAction('sendClientProgram', () => {
+  const c = curClient();
+  if(c) pickProgramForClient(c);
+});
+registerAction('deleteClient', async () => {
+  const c = curClient();
+  if(!c) return;
+  if(!(await appDialog(t('clients.removeClient',{name:c.name || t('clients.unnamed')}),
+       {confirm: true, okText: t('clients.removeAction'), cancelText: t('common.keep')}))) return;
+  setClientsShared(clients.filter(x => x.id !== c.id));
+  setClientIdxShared(-1);
+  await saveClients();
+  renderClients();
+  renderTrainerCard();
+  goBackTo('scrTrainer');
+});
+registerAction('openWeightEntry', () => {
+  const last = stats.weights[stats.weights.length - 1];
+  $('weightInput').value = last ? last.w : '';
+  $('heightInput').value = stats.height || '';
+  const lastOf = k => { for(let i = stats.weights.length - 1; i >= 0; i--) if(stats.weights[i][k]) return stats.weights[i][k]; return ''; };
+  $('fatInput').value = lastOf('fat');
+  $('muscInput').value = lastOf('musc');
+  $('waistInput').value = lastOf('waist');
+  $('hipsInput').value = lastOf('hips');
+  $('chestInput').value = lastOf('chest');
+  $('waModal').classList.add('open');
+  setTimeout(()=> $('weightInput').focus(), 100);
+});
+registerAction('saveWeightEntry', async () => {
+  const w = parseFloat(String($('weightInput').value).replace(',', '.'));
+  if(!w || w < 20 || w > 300){ appAlert(t('progress.weightRange')); return; }
+  const h = parseInt($('heightInput').value);
+  if(h && h >= 100 && h <= 250) stats.height = h;
+  const cm = id => {
+    const v = parseFloat(String($(id).value).replace(',', '.'));
+    return (v && v >= 30 && v <= 200) ? v : null;
+  };
+  const pct = (id, lo, hi) => {
+    const v = parseFloat(String($(id).value).replace(',', '.'));
+    return (v && v >= lo && v <= hi) ? Math.round(v * 10) / 10 : null;
+  };
+  const today = localISO(new Date());
+  let en = stats.weights.find(e => e.d === today);
+  if(!hasConsent('health')) recordConsent('health');
+  if(!en){ en = {d: today}; stats.weights.push(en); }
+  en.w = w;
+  const waist = cm('waistInput'), hips = cm('hipsInput'), chest = cm('chestInput');
+  const fat = pct('fatInput', 3, 70), musc = pct('muscInput', 10, 80);
+  if(waist) en.waist = waist; else delete en.waist;
+  if(hips) en.hips = hips; else delete en.hips;
+  if(chest) en.chest = chest; else delete en.chest;
+  if(fat) en.fat = fat; else delete en.fat;
+  if(musc) en.musc = musc; else delete en.musc;
+  stats.weights.sort((a2, b) => a2.d < b.d ? -1 : 1);
+  await saveStats();
+  $('waModal').classList.remove('open');
+  renderWeight();
+});
+registerAction('startPremiumPurchase', () => {
+  trackProductEvent('purchase_started').catch(()=>{});
+  const pr = priceTable(), cur = userCurrency();
+  $('payWhat').textContent = pmPlan === 'year'
+    ? t('premium.payYear',{price:money(pr.year,cur)})
+    : t('premium.payMonth',{price:money(pr.month,cur)});
+  $('payGo').textContent = t('premium.pay',{price:money(pr[pmPlan],cur)});
+  $('payEmail').value = (account && account.email) || '';
+  $('payModal').classList.add('open');
+});
+registerAction('enableBiometryAfterPurchase', async () => {
+  if(await bioEnable()) $('premiumOkModal').classList.remove('open');
+});
+registerAction('toggleBiometry', async () => {
+  if(account.biometry && account.biometry.enabled) await bioDisable();
+  else await bioEnable();
+});
+registerAction('toggleRenewal', async () => {
+  if(!account.sub) return;
+  if(account.sub.autoRenew){
+    const ok = await appDialog(
+      t('premium.disableRenew',{date:humanDate(account.sub.until)}),
+      {confirm: true, okText: t('premium.disableRenewAction'), cancelText: t('common.keep')});
+    if(!ok) return;
+  }
+  account.sub.autoRenew = !account.sub.autoRenew;
+  await saveAccount();
+  renderPlan();
+  renderPremium();
+});
+
+
 
 
 
@@ -1493,22 +1658,6 @@ export function initEvents(){
   };
   $('createModal').onclick = e=>{ if(e.target === $('createModal')) $('createModal').classList.remove('open'); };
   $('importModal').onclick = e=>{ if(e.target === $('importModal')) $('importModal').classList.remove('open'); };
-  $('tglTrainer').onclick = async ()=>{
-    if(!trainerAccountReady()){
-      openLogin(enableTrainerMode, {
-        label:t('trainer.needAccount'),
-        msg:t('trainer.needAccountMsg')
-      });
-      return;
-    }
-    if(trainer.on){
-      trainer.on = false;
-      await saveTrainer();
-      renderTrainerCard();
-      return;
-    }
-    await enableTrainerMode();
-  };
   /* Проверяем по УХОДУ из поля, а не на каждой букве: пока человек печатает
      «t.me/lena», адрес по дороге проходит через десяток заведомо неправильных
      состояний, и ругаться на каждое — значит мешать набирать.
@@ -1542,67 +1691,12 @@ export function initEvents(){
     const digits = e.target.value.replace(/\D/g, '').slice(0, 2);
     if(e.target.value !== digits) e.target.value = digits;
   };
-  $('btnSaveCoach').onclick = async ()=>{
-    if(!trainerAccountReady()){
-      openLogin(enableTrainerMode, {
-        label:t('trainer.needAccount'),
-        msg:t('trainer.needAccountSaveMsg')
-      });
-      return;
-    }
-    const btn = $('btnSaveCoach');
-    const rawLink = $('coachLinks').value.trim();
-    const link = rawLink ? cleanLink(rawLink) : '';
-    if(rawLink && !link){
-      $('coachLinksErr').textContent = t('trainer.badLink');
-      $('coachLinks').focus();
-      return;
-    }
-    const handle = account.handle;
-    const yearsRaw = $('coachYears').value.replace(/\D/g, '').slice(0, 2);
-    const years = parseInt(yearsRaw, 10);
-    setTrainerShared(Object.assign({}, trainer, {
-      handle,
-      name:clampLine($('coachName').value, LIM.coachName),
-      photo:coachPhotoDraft || '',
-      about:clampText($('coachAbout').value, LIM.coachAbout),
-      years:(isFinite(years) && years > 0 && years <= 60) ? years : null,
-      links:link || '',
-      pageErr:null
-    }));
-    btn.disabled = true;
-    btn.textContent = t('common.saving');
-    showSyncState('busy');
-    await saveTrainer({deferSync:true});
-    const ok = await pushProfile();
-    if(ok){
-      await saveTrainer({deferSync:true});
-      if(isPremium()) queueAccountSync();
-      showSyncState('ok');
-      renderTrainerCard();
-      btn.textContent = t('common.saved');
-      setTimeout(()=>{ if(btn.textContent === t('common.saved')) btn.textContent = t('common.save'); }, 1500);
-    } else {
-      showSyncState('error');
-      appAlert(trainer.pageErr || t('trainer.saveFailed'));
-      btn.textContent = t('common.save');
-    }
-    btn.disabled = false;
-  };
   // Ник над программой — это вход на страницу тренера, а не украшение: подопечный,
   // получивший программу по ссылке, хочет знать, от кого она.
-  $('startByChip').onclick = ()=>{ const p = state.raw; if(p && p.by) openTrainer(p.by); };
   // Своя страница — ровно тем же экраном, каким её видит подопечный. Отдельный «просмотр
   // профиля» разошёлся бы с настоящим через месяц.
   // Ника без аккаунта терять нельзя — поэтому строка ведёт прямо туда, где его заводят.
   $('pubGives').oninput = e => { pubDraft.gives = clampText(e.target.value, LIM.gives); };
-  $('btnAddClient').onclick = async ()=>{
-    const c = await addClient();
-    renderClients();
-    renderTrainerCard();
-    openClient(clients.indexOf(c));
-    setTimeout(()=> $('clName').select(), 120);
-  };
   // Поля карточки сохраняются на лету: «Сохранить» здесь нечего ждать, а её отсутствие
   // снимает весь разговор о несохранённом при выходе жестом.
   $('clName').oninput = async e => {
@@ -1618,102 +1712,14 @@ export function initEvents(){
   };
   // Кнопка всегда спрашивает, КАКУЮ программу отправить: их может быть несколько,
   // и «отправить ещё раз» живёт у самой программы, а не здесь.
-  $('btnClSend').onclick = ()=>{
-    const c = curClient(); if(!c) return;
-    pickProgramForClient(c);
-  };
-  $('btnDelClient').onclick = async ()=>{
-    const c = curClient(); if(!c) return;
-    if(!(await appDialog(t('clients.removeClient',{name:c.name || t('clients.unnamed')}),
-         {confirm: true, okText: t('clients.removeAction'), cancelText: t('common.keep')}))) return;
-    setClientsShared(clients.filter(x => x.id !== c.id));
-    setClientIdxShared(-1);
-    await saveClients();
-    renderClients();
-    renderTrainerCard();
-    goBackTo('scrTrainer');
-  };
   // трекер веса
-  $('btnAddWeight').onclick = ()=>{
-    const last = stats.weights[stats.weights.length - 1];
-    $('weightInput').value = last ? last.w : '';
-    $('heightInput').value = stats.height || '';
-    const lastOf = k => { for(let i = stats.weights.length - 1; i >= 0; i--) if(stats.weights[i][k]) return stats.weights[i][k]; return ''; };
-    $('fatInput').value = lastOf('fat');
-    $('muscInput').value = lastOf('musc');
-    $('waistInput').value = lastOf('waist');
-    $('hipsInput').value = lastOf('hips');
-    $('chestInput').value = lastOf('chest');
-    $('waModal').classList.add('open');
-    setTimeout(()=> $('weightInput').focus(), 100);
-  };
   $('waModal').onclick = e => { if(e.target === $('waModal')) $('waModal').classList.remove('open'); };
-  $('btnSaveWeight').onclick = async ()=>{
-    const w = parseFloat(String($('weightInput').value).replace(',', '.'));
-    if(!w || w < 20 || w > 300){ appAlert(t('progress.weightRange')); return; }
-    const h = parseInt($('heightInput').value);
-    if(h && h >= 100 && h <= 250) stats.height = h;
-    const cm = id => {
-      const v = parseFloat(String($(id).value).replace(',', '.'));
-      return (v && v >= 30 && v <= 200) ? v : null;
-    };
-    // проценты состава тела: границы свои, иначе «18» в поле жира считалось бы промахом
-    const pct = (id, lo, hi) => {
-      const v = parseFloat(String($(id).value).replace(',', '.'));
-      return (v && v >= lo && v <= hi) ? Math.round(v * 10) / 10 : null;
-    };
-    const today = localISO(new Date());
-    let en = stats.weights.find(e => e.d === today);
-    // вес и обхваты — сведения о здоровье, специальная категория: отмечаем согласие
-    // в момент, когда человек впервые их вводит, а не абстрактно при установке
-    if(!hasConsent('health')) recordConsent('health');
-    if(!en){ en = {d: today}; stats.weights.push(en); }
-    en.w = w;
-    const waist = cm('waistInput'), hips = cm('hipsInput'), chest = cm('chestInput');
-    const fat = pct('fatInput', 3, 70), musc = pct('muscInput', 10, 80);
-    if(waist) en.waist = waist; else delete en.waist;
-    if(hips) en.hips = hips; else delete en.hips;
-    if(chest) en.chest = chest; else delete en.chest;
-    if(fat) en.fat = fat; else delete en.fat;
-    if(musc) en.musc = musc; else delete en.musc;
-    stats.weights.sort((a2, b) => a2.d < b.d ? -1 : 1);
-    await saveStats();
-    $('waModal').classList.remove('open');
-    renderWeight();
-  };
   $('premiumModal').onclick = e => { if(e.target === $('premiumModal')) $('premiumModal').classList.remove('open'); };
-  $('pmBuy').onclick = ()=>{
-    trackProductEvent('purchase_started').catch(()=>{});
-    const pr = priceTable(), cur = userCurrency();
-    $('payWhat').textContent = pmPlan === 'year'
-      ? t('premium.payYear',{price:money(pr.year,cur)})
-      : t('premium.payMonth',{price:money(pr.month,cur)});
-    $('payGo').textContent = t('premium.pay',{price:money(pr[pmPlan],cur)});
-    $('payEmail').value = (account && account.email) || '';
-    $('payModal').classList.add('open');
-  };
   $('payModal').onclick = e => { if(e.target === $('payModal')) $('payModal').classList.remove('open'); };
   $('payEmail').addEventListener('keydown', e => { if(e.key === 'Enter') completePurchase(); });
   $('premiumOkModal').onclick = e => { if(e.target === $('premiumOkModal')) $('premiumOkModal').classList.remove('open'); };
-  $('pokBio').onclick = async ()=>{ if(await bioEnable()) $('premiumOkModal').classList.remove('open'); };
-  $('tglBio').onclick = async ()=>{
-    if(account.biometry && account.biometry.enabled) await bioDisable();
-    else await bioEnable();
-  };
   // Отмена продления не забирает оплаченное: срок дорабатывает до конца. Иначе это
   // не отмена подписки, а изъятие уже купленного.
-  $('tglRenew').onclick = async ()=>{
-    if(!account.sub) return;
-    if(account.sub.autoRenew){
-      const ok = await appDialog(
-        t('premium.disableRenew',{date:humanDate(account.sub.until)}),
-        {confirm: true, okText: t('premium.disableRenewAction'), cancelText: t('common.keep')});
-      if(!ok) return;
-    }
-    account.sub.autoRenew = !account.sub.autoRenew;
-    await saveAccount();
-    renderPlan(); renderPremium();
-  };
   $('loginModal').onclick = e => { if(e.target === $('loginModal')) dropLogin(); };
   $('loginEmail').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
   $('loginCode').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });

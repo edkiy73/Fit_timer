@@ -215,5 +215,32 @@ ok('settings/utility actions have no direct onclick wiring',
   && !events.includes("$('lockGo').onclick")
   && !events.includes("$('lockMail').onclick"));
 
+ok('trainer/client/weight/premium actions are declarative',
+  profilesHtml.includes('id="tglTrainer" data-act="toggleTrainerMode"')
+  && profilesHtml.includes('id="btnSaveCoach" data-act="saveCoachProfile"')
+  && programsHtml.includes('id="startByChip" data-act="openWorkoutTrainer"')
+  && progressHtml.includes('id="btnAddClient" data-act="addClient"')
+  && progressHtml.includes('id="btnClSend" data-act="sendClientProgram"')
+  && progressHtml.includes('id="btnDelClient" data-act="deleteClient"')
+  && profilesHtml.includes('id="btnAddWeight" data-act="openWeightEntry"')
+  && progressHtml.includes('id="btnSaveWeight" data-act="saveWeightEntry"')
+  && progressHtml.includes('id="pmBuy" data-act="startPremiumPurchase"')
+  && progressHtml.includes('id="pokBio" data-act="enableBiometryAfterPurchase"')
+  && profilesHtml.includes('id="tglBio" data-act="toggleBiometry"')
+  && profilesHtml.includes('id="tglRenew" data-act="toggleRenewal"'));
+ok('trainer/client/weight/premium actions have no direct onclick wiring',
+  !events.includes("$('tglTrainer').onclick")
+  && !events.includes("$('btnSaveCoach').onclick")
+  && !events.includes("$('startByChip').onclick")
+  && !events.includes("$('btnAddClient').onclick")
+  && !events.includes("$('btnClSend').onclick")
+  && !events.includes("$('btnDelClient').onclick")
+  && !events.includes("$('btnAddWeight').onclick")
+  && !events.includes("$('btnSaveWeight').onclick")
+  && !events.includes("$('pmBuy').onclick")
+  && !events.includes("$('pokBio').onclick")
+  && !events.includes("$('tglBio').onclick")
+  && !events.includes("$('tglRenew').onclick"));
+
 
 process.exit(bad?1:0);
