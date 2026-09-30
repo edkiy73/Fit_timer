@@ -264,6 +264,45 @@ async function boot(b, label, errs, url){
        && identity.legacyDiff.del.length === 0,
      JSON.stringify(identity.legacyDiff));
 
+  const scopedStreak = await cp.evaluate(() => {
+    const savedPrograms = customPrograms.slice();
+    const savedHistory = (stats.history || []).slice();
+    const savedBest = stats.bestStreak || 0;
+    const now = new Date();
+    const iso = localISO(now);
+    const day = DAYS[(now.getDay() + 6) % 7];
+    const mk = (id, name) => ({
+      id, name, active:true, progression:0,
+      plans:[{days:[day],rounds:1,roundRest:0,exercises:[
+        {id:id+'-ex',name:'Тест',type:'reps',value:'10',sets:1,rest:0}
+      ]}]
+    });
+    const target = mk('trainer-streak-target','Программа тренера');
+    const other = mk('trainer-streak-other','Другая программа');
+
+    customPrograms.splice(0, customPrograms.length, target, other);
+    stats.history = [
+      {id:'st-target',d:iso,pid:target.id,plan:0,status:'full',sec:600},
+      {id:'st-other',d:iso,pid:other.id,plan:0,status:'full',sec:600}
+    ];
+    stats.bestStreak = 99;
+
+    const global = calcStreakInfo().n;
+    const scoped = calcStreakInfo({programId:target.id}).n;
+    const report = buildReport(target).streak;
+
+    customPrograms.splice(0, customPrograms.length, ...savedPrograms);
+    stats.history = savedHistory;
+    stats.bestStreak = savedBest;
+
+    return {global, scoped, report};
+  });
+  ok('отчёт тренеру считает серию только по его программе',
+     scopedStreak.global === 2
+       && scopedStreak.scoped === 1
+       && scopedStreak.report === 1,
+     JSON.stringify(scopedStreak));
+
   await tp.screenshot({path: __dirname + '/shot-report.png', fullPage: true});
   console.log('\npageerror:', errs.length ? errs : 'нет');
   if(errs.length) bad++;
