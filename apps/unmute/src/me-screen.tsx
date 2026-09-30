@@ -190,6 +190,11 @@ export function MeScreen(){
         <span>{t('me.progress')}</span>
         <Icon name="chevron" size={20} className="me-row-chevron" />
       </Link>
+      <Link className="me-row pressable" to="/words">
+        <Icon name="book" />
+        <span>{t('words.title')}</span>
+        <Icon name="chevron" size={20} className="me-row-chevron" />
+      </Link>
 
       <section className="settings" aria-labelledby="settings-title">
         <h3 id="settings-title" className="section-title">{t('me.settings')}</h3>

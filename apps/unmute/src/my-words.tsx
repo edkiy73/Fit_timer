@@ -3,6 +3,8 @@ import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { WordReviewRuntimeValue } from './word-review-runtime';
 import { listSavedWords, removeSavedWord, type SavedWordStatus } from './saved-words';
 import { Icon } from './icons';
+import { useNavigate } from 'react-router';
+import { useWordReviewRuntime } from './word-review-runtime';
 
 const STATUS_KEY: Record<SavedWordStatus, string> = {
   new:'words.statusNew',
@@ -84,6 +86,18 @@ export function MyWordsView({
           {shown.length===0&&<p className="tile-text">{t('words.notFound')}</p>}
         </>
       )}
+    </section>
+  );
+}
+
+/** «Я» → «Мои слова»: the same list as in «Повтор», reachable without starting a review. */
+export function MyWordsScreen(){
+  const {t}=useI18n();
+  const navigate=useNavigate();
+  return (
+    <section className="review-shell" aria-label={t('words.title')}>
+      <button className="learn-back" type="button" onClick={()=>navigate('/account')}>{t('nav.back')}</button>
+      <MyWordsView wordRuntime={useWordReviewRuntime()} />
     </section>
   );
 }

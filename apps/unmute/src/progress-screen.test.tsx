@@ -191,6 +191,6 @@ describe('progress screen summary',()=>{
     expect(screen.getByText('4')).toBeTruthy();
     expect(screen.getByText('3')).toBeTruthy();
     expect(screen.getByText('Ошибок').parentElement?.textContent).toContain('1');
-    expect(screen.getByText('Средний последний результат speed drill')).toBeTruthy();
+    expect(screen.getByText('Фразы на скорость: сколько успеваешь вовремя')).toBeTruthy();
   });
 });
