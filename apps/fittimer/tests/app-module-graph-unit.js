@@ -108,6 +108,7 @@ for(const f of parts.map(n => path.join(APP, n)).concat(leaves, path.join(APP, '
 const coreSource = fs.readFileSync(path.join(APP, '00-core.js'), 'utf8');
 const accountSource = fs.readFileSync(path.join(APP, '20-account.js'), 'utf8');
 const progressSource = fs.readFileSync(path.join(APP, '30-progress-media.js'), 'utf8');
+const platformCoreSource = fs.readFileSync(path.join(APP, '80-platform.js'), 'utf8');
 if(/from ['"]\.\/20-account\.js['"]/.test(coreSource)){
   problems.push('src/app/00-core.js must not import 20-account.js; inject account-facing hooks instead');
 }
@@ -120,6 +121,13 @@ if(/from ['"]\.\/30-progress-media\.js['"]/.test(coreSource)){
 }
 if(!/setCoreProgressHooks/.test(coreSource) || !/setCoreProgressHooks\(\{[\s\S]*renderPhotos/.test(progressSource)){
   problems.push('core/progress hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/80-platform\.js['"]/.test(coreSource)){
+  problems.push('src/app/00-core.js must not import 80-platform.js; inject platform-facing hooks instead');
+}
+if(!/setCorePlatformHooks/.test(coreSource) || !/setCorePlatformHooks\(\{[\s\S]*hasSpeechRecognition[\s\S]*getHfMode[\s\S]*hfHintText[\s\S]*syncPrefs/.test(platformCoreSource)){
+  problems.push('core/platform hook boundary is missing or incomplete');
 }
 
 const platformSource = fs.readFileSync(path.join(APP, '80-platform.js'), 'utf8');
