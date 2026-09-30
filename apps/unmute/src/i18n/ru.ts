@@ -401,6 +401,8 @@ export const ru = {
   'reference.empty': 'В этом курсе пока нет справочника.',
   'reference.loading': 'Загружаем справочник…',
   'reference.errorTitle': 'Справочник не загрузился. Проверь соединение.',
+  'legal.loading': 'Загружаем…',
+  'legal.error': 'Страница не загрузилась. Проверь соединение.',
   'dictionary.save': 'В мои слова',
   'dictionary.saved': 'В моих словах',
   'dictionary.saveError': 'Не получилось сохранить слово. Попробуй ещё раз.',

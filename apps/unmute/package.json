@@ -22,18 +22,20 @@
     "check:ios": "npm run mobile:sync:ios && xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO -derivedDataPath build/ios-derived build"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/ios": "8.5.2",
+    "@capacitor/local-notifications": "8.3.1",
     "@tanstack/react-query": "5.104.0",
     "react": "19.3.0",
     "react-aria-components": "1.21.1",
     "react-dom": "19.3.0",
     "react-router": "8.4.0",
-    "zod": "4.6.5",
-    "@capacitor/android": "8.5.2",
-    "@capacitor/core": "8.5.2",
-    "@capacitor/ios": "8.5.2",
-    "@capacitor/local-notifications": "8.3.1"
+    "zod": "4.6.5"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.2",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.7",
     "@types/react": "19.3.0",
@@ -44,7 +46,6 @@
     "playwright-core": "1.55.0",
     "typescript": "6.0.3",
     "vite": "8.3.1",
-    "vitest": "5.0.2",
-    "@capacitor/cli": "8.5.2"
+    "vitest": "5.0.2"
   }
 }
