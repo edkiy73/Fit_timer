@@ -181,6 +181,18 @@ if(!/setDataSyncProgramsAiHooks/.test(dataSyncSource) || !/setDataSyncProgramsAi
   problems.push('data-sync/programs-ai hook boundary is missing or incomplete');
 }
 
+
+for(const dep of ['30-progress-media','50-trainer-catalog','70-workout','80-platform','90-events']){
+  if(new RegExp("from ['\"]\\./" + dep + "\\.js['\"]").test(accountSource)){
+    problems.push('src/app/20-account.js must not import ' + dep + '.js; inject owner hooks instead');
+  }
+}
+if(!/setAccountProgressHooks\(\{[\s\S]*getNameMax[\s\S]*clampLine[\s\S]*nextProfileName/.test(progressSource)) problems.push('account/progress hook boundary is missing or incomplete');
+if(!/setAccountTrainerCatalogHooks\(\{[\s\S]*renderTrainerCard/.test(trainerCatalogSource)) problems.push('account/trainer-catalog hook boundary is missing or incomplete');
+if(!/setAccountWorkoutHooks\(\{[\s\S]*esc/.test(workoutSource)) problems.push('account/workout hook boundary is missing or incomplete');
+if(!/setAccountPlatformHooks\(\{[\s\S]*applyThemeFor[\s\S]*themeOf/.test(platformCoreSource)) problems.push('account/platform hook boundary is missing or incomplete');
+if(!/setAccountEventHooks\(\{[\s\S]*applyAudioFromUser[\s\S]*readTimings[\s\S]*syncRemotePushRegistration[\s\S]*unregisterRemotePushServer/.test(eventsCoreSource)) problems.push('account/events hook boundary is missing or incomplete');
+
 if(/from ['"]\.\/20-account\.js['"]/.test(coreSource)){
   problems.push('src/app/00-core.js must not import 20-account.js; inject account-facing hooks instead');
 }
