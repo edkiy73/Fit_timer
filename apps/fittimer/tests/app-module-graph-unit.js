@@ -109,6 +109,9 @@ const coreSource = fs.readFileSync(path.join(APP, '00-core.js'), 'utf8');
 const accountSource = fs.readFileSync(path.join(APP, '20-account.js'), 'utf8');
 const progressSource = fs.readFileSync(path.join(APP, '30-progress-media.js'), 'utf8');
 const programsAiSource = fs.readFileSync(path.join(APP, '40-programs-ai.js'), 'utf8');
+const trainerCatalogSource = fs.readFileSync(path.join(APP, '50-trainer-catalog.js'), 'utf8');
+const builderSource = fs.readFileSync(path.join(APP, '60-builder.js'), 'utf8');
+const workoutSource = fs.readFileSync(path.join(APP, '70-workout.js'), 'utf8');
 const platformCoreSource = fs.readFileSync(path.join(APP, '80-platform.js'), 'utf8');
 const eventsCoreSource = fs.readFileSync(path.join(APP, '90-events.js'), 'utf8');
 if(/from ['"]\.\/20-account\.js['"]/.test(coreSource)){
@@ -130,6 +133,28 @@ if(/from ['"]\.\/40-programs-ai\.js['"]/.test(coreSource)){
 }
 if(!/setCoreProgramsAiHooks/.test(coreSource) || !/setCoreProgramsAiHooks\(\{[\s\S]*getActiveAiDirty[\s\S]*applyProgressionAll[\s\S]*duplicateProgram[\s\S]*exportProgram[\s\S]*exportProgramFile[\s\S]*renderGreeting[\s\S]*renderToday[\s\S]*trainerOn/.test(programsAiSource)){
   problems.push('core/programs-ai hook boundary is missing or incomplete');
+}
+
+
+if(/from ['"]\.\/50-trainer-catalog\.js['"]/.test(coreSource)){
+  problems.push('src/app/00-core.js must not import 50-trainer-catalog.js; inject trainer-catalog-facing hooks instead');
+}
+if(!/setCoreTrainerCatalogHooks/.test(coreSource) || !/setCoreTrainerCatalogHooks\(\{[\s\S]*openPublish[\s\S]*pickClientFor[\s\S]*refreshClientsScreen[\s\S]*renderMine[\s\S]*renderTrainerCard[\s\S]*storeCountText/.test(trainerCatalogSource)){
+  problems.push('core/trainer-catalog hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/60-builder\.js['"]/.test(coreSource)){
+  problems.push('src/app/00-core.js must not import 60-builder.js; inject builder-facing hooks instead');
+}
+if(!/setCoreBuilderHooks/.test(coreSource) || !/setCoreBuilderHooks\(\{[\s\S]*dropFreshEx[\s\S]*exDirty[\s\S]*exRestAfter[\s\S]*fmtKg[\s\S]*getExProgValue[\s\S]*getExWeight[\s\S]*hasWeight[\s\S]*normValue[\s\S]*openBuilder[\s\S]*parseKg[\s\S]*parseValue[\s\S]*progAtCeiling[\s\S]*progAxis[\s\S]*progBaseValue[\s\S]*progStepSize[\s\S]*programDirty[\s\S]*progressedRepsRange[\s\S]*setExDraftShared[\s\S]*setExIdxShared[\s\S]*setExOrigShared[\s\S]*setExWeight[\s\S]*weightPending/.test(builderSource)){
+  problems.push('core/builder hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/70-workout\.js['"]/.test(coreSource)){
+  problems.push('src/app/00-core.js must not import 70-workout.js; inject workout-facing hooks instead');
+}
+if(!/setCoreWorkoutHooks/.test(coreSource) || !/setCoreWorkoutHooks\(\{[\s\S]*esc[\s\S]*exitWorkout[\s\S]*setExFromWorkShared[\s\S]*settleQuickFinish[\s\S]*stopFinishFx[\s\S]*tnum/.test(workoutSource)){
+  problems.push('core/workout hook boundary is missing or incomplete');
 }
 
 if(/from ['"]\.\/80-platform\.js['"]/.test(coreSource)){

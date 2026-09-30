@@ -5,7 +5,7 @@ import { registerAction } from './05-actions.js';
 import { $, DUMBBELL_ICON, ILLO, announceExercise, announceRemaining, announceRest, appAlert,
   appDialog, beep, endSignal, exerciseGong, fanfare, goBackTo, goTab, gong, haptic, hideReadyBar,
   icon, initAudio, keepAwake, plural, prepSec, readySec, releaseWake, roundDone, runReadyBar,
-  setShown, show, soundOn, speak, state, tick, voiceIsEnglish, voiceVol, workoutLoadSnapshot
+  setCoreWorkoutHooks, setShown, show, soundOn, speak, state, tick, voiceIsEnglish, voiceVol, workoutLoadSnapshot
 } from './00-core.js';
 import { calcStreak, calcStreakInfo, clearSession, closeAllMenus, curUser, customPrograms,
   customToProgram, localISO, newId, normPlans, progActive, renderStats, savePrograms, saveSession,
@@ -1820,6 +1820,14 @@ export function setExFromWorkShared(value){ exFromWork = value; return exFromWor
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initWorkout(){
+  setCoreWorkoutHooks({
+    esc,
+    exitWorkout,
+    setExFromWorkShared,
+    settleQuickFinish,
+    stopFinishFx,
+    tnum
+  });
   registerAction('toggleProgressionHard', btn => {
     const chk = state.progCheck;
     const id = btn.dataset.exerciseId;

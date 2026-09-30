@@ -2,7 +2,7 @@ import { OPT_GOAL, OPT_LEVEL } from './options.js';
 import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
 import { registerAction } from './05-actions.js';
 import { $, DUMBBELL_ICON, ICONS, appAlert, appDialog, goBackTo, goTab, icon, openStart, plural,
-  setShown, setStartFromShared, show, syncDockTabs
+  setCoreTrainerCatalogHooks, setShown, setStartFromShared, show, syncDockTabs
 } from './00-core.js';
 import { DAYS, accountAuth, calcStreakInfo, closeAllMenus, currentUser, customPrograms, kvGet,
   localISO, normPlans, progActive, programDaysUnion, savePrograms, setCustomProgramsShared, stats,
@@ -1758,6 +1758,14 @@ export function renderMine(){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initTrainerCatalog(){
+  setCoreTrainerCatalogHooks({
+    openPublish,
+    pickClientFor,
+    refreshClientsScreen,
+    renderMine,
+    renderTrainerCard,
+    storeCountText
+  });
   registerAction('openClientFromList', btn => {
     const i = parseInt(btn.dataset.clientIdx, 10);
     if(Number.isFinite(i)) openClient(i);
