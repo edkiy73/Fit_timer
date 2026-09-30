@@ -133,6 +133,35 @@ registerAction('shareWeightChart', () => shareWeightChart());
 registerAction('pickProgressPhoto', () => $('photoFile').click());
 registerAction('openPhotoCompare', () => openCompare());
 
+registerAction('openWellAdd', () => openWellAdd());
+registerAction('saveWell', () => saveWell());
+registerAction('openWellHistory', () => openWellHist());
+registerAction('shareWellChart', () => shareWellChart());
+registerAction('saveWellHistory', () => saveWellHist());
+registerAction('deleteAllPhotos', () => deleteAllPhotos());
+registerAction('deleteCompareA', () => delCmpPhoto('cmpA'));
+registerAction('deleteCompareB', () => delCmpPhoto('cmpB'));
+registerAction('shareCompare', () => shareCompare());
+registerAction('saveWeightHistory', () => saveWeightHist());
+registerAction('calendarPrev', () => {
+  setCalOffsetShared(calOffset - 1);
+  renderCalendar();
+});
+registerAction('calendarNext', () => {
+  setCalOffsetShared(calOffset + 1);
+  renderCalendar();
+});
+registerAction('onboardingPrivacy', () => openLegal('privacy', () => asTab(() => show('scrOnboard'))));
+registerAction('onboardingStart', () => leaveOnboarding());
+registerAction('onboardingLogin', () => openLogin(() => leaveOnboarding()));
+registerAction('whoSave', () => whoFinish(true));
+registerAction('whoSkip', () => whoFinish(false));
+registerAction('profileBack', () => leaveGuard(userDirty(), () => goTab('scrAccount'), t('profile.changes')));
+registerAction('addUser', () => openUserEdit());
+registerAction('saveUser', () => saveUser());
+registerAction('deleteUser', () => deleteUser());
+
+
 
 
 
@@ -1715,45 +1744,24 @@ export function initEvents(){
     setWellMetricShared(b.dataset.k);
     renderWellness();
   });
-  $('btnAddWell').onclick = openWellAdd;
-  $('btnSaveWell').onclick = saveWell;
-  $('btnWellHist').onclick = openWellHist;
-  $('btnShareWell').onclick = shareWellChart;
-  $('wellHistSave').onclick = saveWellHist;
   $('wellModal').onclick = e => { if(e.target === $('wellModal')) $('wellModal').classList.remove('open'); };
-  $('btnDeleteAllPhotos').onclick = deleteAllPhotos;
   $('cmpA').onchange = renderCmp;
   $('cmpB').onchange = renderCmp;
-  $('cmpDelA').onclick = ()=> delCmpPhoto('cmpA');
-  $('cmpDelB').onclick = ()=> delCmpPhoto('cmpB');
-  $('btnShareCmp').onclick = shareCompare;
   $('cmpModal').onclick = e => { if(e.target === $('cmpModal')) $('cmpModal').classList.remove('open'); };
-  $('whSave').onclick = saveWeightHist;
   $('whModal').onclick = e => { if(e.target === $('whModal')) $('whModal').classList.remove('open'); };
-  $('calPrev').onclick = ()=>{ setCalOffsetShared(calOffset - 1); renderCalendar(); };
-  $('calNext').onclick = ()=>{ setCalOffsetShared(calOffset + 1); renderCalendar(); };
   // онбординг
   // из знакомства «назад» ведёт обратно в знакомство, а не в настройки: человек
   // ещё не завёл профиль, и вкладки внизу ему пока не принадлежат
-  $('obLegal1').onclick = ()=> openLegal('privacy', ()=> asTab(()=> show('scrOnboard')));
-  $('obStart').onclick = ()=> leaveOnboarding();
   // у человека уже может быть аккаунт — с прошлого телефона или после переустановки
-  $('obLogin').onclick = ()=> openLogin(()=> leaveOnboarding());
   // пара уточнений
   $('whoF').onclick = ()=>{ whoDraft.gender = 'f'; whoSyncForm(); };
   $('whoM').onclick = ()=>{ whoDraft.gender = 'm'; whoSyncForm(); };
   $('whoAge').oninput = ()=> whoSyncForm();
-  $('whoSave').onclick = ()=> whoFinish(true);
-  $('whoSkip').onclick = ()=> whoFinish(false);
   $('whoModal').onclick = e => { if(e.target === $('whoModal')) whoFinish(false); };
   document.querySelectorAll('#statsTabs .tab').forEach(b => b.onclick = ()=> switchStatsTab(b.dataset.tab));
   document.querySelectorAll('#moreTabs .tab').forEach(b => b.onclick = ()=> switchMoreTab(b.dataset.more));
   document.querySelectorAll('.qs-btn').forEach(b => b.onclick = ()=> openStats(b.dataset.tab));
   document.querySelectorAll('.dock-btn').forEach(b => b.onclick = ()=> goTab(b.dataset.scr));
-  $('ueBackTop').onclick = ()=> leaveGuard(userDirty(), ()=> goTab('scrAccount'), t('profile.changes'));
-  $('btnAddUser').onclick = ()=> openUserEdit();
-  $('btnSaveUser').onclick = saveUser;
-  $('btnDelUser').onclick = deleteUser;
   // тему показываем сразу: выбирать её вслепую, не видя результата, бессмысленно
   document.querySelectorAll('#ueThemeSeg button').forEach(b => {
     b.onclick = ()=>{ uDraft.theme = b.dataset.theme; syncUserForm(); applyThemeFor(uDraft); };

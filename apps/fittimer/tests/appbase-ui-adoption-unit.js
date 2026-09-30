@@ -121,5 +121,50 @@ ok('account/progress static buttons have no direct onclick wiring',
   && !events.includes("$('btnAddPhoto').onclick")
   && !events.includes("$('btnCompare').onclick"));
 
+ok('progress/onboarding/profile actions are declarative',
+  profilesHtml.includes('id="btnAddWell" data-act="openWellAdd"')
+  && progressHtml.includes('id="btnSaveWell" data-act="saveWell"')
+  && profilesHtml.includes('id="btnWellHist" data-act="openWellHistory"')
+  && profilesHtml.includes('id="btnShareWell" data-act="shareWellChart"')
+  && progressHtml.includes('id="wellHistSave" data-act="saveWellHistory"')
+  && profilesHtml.includes('id="btnDeleteAllPhotos" data-act="deleteAllPhotos"')
+  && progressHtml.includes('id="cmpDelA" data-act="deleteCompareA"')
+  && progressHtml.includes('id="cmpDelB" data-act="deleteCompareB"')
+  && progressHtml.includes('id="btnShareCmp" data-act="shareCompare"')
+  && progressHtml.includes('id="whSave" data-act="saveWeightHistory"')
+  && profilesHtml.includes('id="calPrev" data-act="calendarPrev"')
+  && profilesHtml.includes('id="calNext" data-act="calendarNext"')
+  && onboardingHtml.includes('id="obLegal1" data-act="onboardingPrivacy"')
+  && onboardingHtml.includes('id="obStart" data-act="onboardingStart"')
+  && onboardingHtml.includes('id="obLogin" data-act="onboardingLogin"')
+  && progressHtml.includes('id="whoSave" data-act="whoSave"')
+  && progressHtml.includes('id="whoSkip" data-act="whoSkip"')
+  && progressHtml.includes('id="ueBackTop" data-act="profileBack"')
+  && profilesHtml.includes('id="btnAddUser" data-act="addUser"')
+  && progressHtml.includes('id="btnSaveUser" data-act="saveUser"')
+  && progressHtml.includes('id="btnDelUser" data-act="deleteUser"'));
+ok('progress/onboarding/profile static buttons have no direct onclick wiring',
+  !events.includes("$('btnAddWell').onclick")
+  && !events.includes("$('btnSaveWell').onclick")
+  && !events.includes("$('btnWellHist').onclick")
+  && !events.includes("$('btnShareWell').onclick")
+  && !events.includes("$('wellHistSave').onclick")
+  && !events.includes("$('btnDeleteAllPhotos').onclick")
+  && !events.includes("$('cmpDelA').onclick")
+  && !events.includes("$('cmpDelB').onclick")
+  && !events.includes("$('btnShareCmp').onclick")
+  && !events.includes("$('whSave').onclick")
+  && !events.includes("$('calPrev').onclick")
+  && !events.includes("$('calNext').onclick")
+  && !events.includes("$('obLegal1').onclick")
+  && !events.includes("$('obStart').onclick")
+  && !events.includes("$('obLogin').onclick")
+  && !events.includes("$('whoSave').onclick")
+  && !events.includes("$('whoSkip').onclick")
+  && !events.includes("$('ueBackTop').onclick")
+  && !events.includes("$('btnAddUser').onclick")
+  && !events.includes("$('btnSaveUser').onclick")
+  && !events.includes("$('btnDelUser').onclick"));
+
 
 process.exit(bad?1:0);
