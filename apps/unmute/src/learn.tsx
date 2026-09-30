@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity, RoadmapNode } from './content/schema';
 import type { CourseProgressDocument } from './progress';
@@ -94,6 +94,9 @@ export interface NodeRunnerViewProps {
   saveDialogue?:(setId:string,activityId:string,score:number)=>Promise<void>;
   speak?:SpeakText;
   startRecognition?:StartRecognition;
+  /** Open this step first (e.g. «Скажи вслух» → the day's phrases, speaking mode). */
+  startActivityId?:string;
+  startMode?:PracticeSrsKind;
 }
 
 export function NodeRunnerView({
@@ -108,7 +111,9 @@ export function NodeRunnerView({
   savePractice,
   saveDialogue=saveDialogueActivity,
   speak=speakText,
-  startRecognition=startSpeechRecognition
+  startRecognition=startSpeechRecognition,
+  startActivityId,
+  startMode
 }:NodeRunnerViewProps){
   const {t,locale}=useI18n();
   const state=runtime.state;
@@ -133,6 +138,7 @@ export function NodeRunnerView({
   // Answers checked in this sitting, shown on the summary once the lesson is done.
   const [score,setScore]=useState({correct:0,total:0});
   const [finished,setFinished]=useState(false);
+  const [stepsDone,setStepsDone]=useState(0);
   const completionTrackedRef=useRef(false);
 
   useEffect(()=>{
@@ -141,7 +147,8 @@ export function NodeRunnerView({
 
   useEffect(()=>{
     if(!state||!node)return;
-    setIndex(firstPendingActivityIndex(activities,state.progress));
+    const requested=startActivityId?activities.findIndex(item=>item.id===startActivityId):-1;
+    setIndex(requested>=0?requested:firstPendingActivityIndex(activities,state.progress));
   },[node?.id]);
 
   const activity=activities[index] ?? null;
@@ -154,6 +161,7 @@ export function NodeRunnerView({
   },[activity?.id]);
 
   const advance=(completed=true)=>{
+    if(completed)setStepsDone(value=>value+1);
     if(index+1<activities.length){
       setIndex(current=>current+1);
       return;
@@ -204,8 +212,9 @@ export function NodeRunnerView({
           <span className="learn-summary-icon" aria-hidden="true"><Icon name="check" size={32} /></span>
           <div className="screen-kicker">{t('learn.summaryKicker')}</div>
           <h2 id="learn-summary-title"><LexiconText text={localized(node.title,locale)} /></h2>
+          <p className="learn-summary-score">{t('learn.summarySteps',{count:stepsDone})}</p>
           {score.total>0&&(
-            <p className="learn-summary-score">{t('learn.summaryScore',{correct:score.correct,total:score.total})}</p>
+            <p className="learn-hint">{t('learn.summaryScore',{correct:score.correct,total:score.total})}</p>
           )}
           <p className="learn-hint">{t('learn.summaryNext')}</p>
         </div>
@@ -219,7 +228,7 @@ export function NodeRunnerView({
   if(!state||!node||!nodeProgress?.unlocked||!purchaseUnlocked||!activity){
     return (
       <section className="learn-shell">
-        <button className="learn-back" type="button" onClick={onExit}>{t('nav.back')}</button>
+        <button className="learn-back" type="button" onClick={onExit}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
         <div className="learn-state" role="status">
           <strong>{t('learn.unavailableTitle')}</strong>
           <span>{t('learn.unavailableText')}</span>
@@ -459,7 +468,8 @@ export function NodeRunnerView({
           setId={setId}
           savePractice={savePractice}
           speak={speak}
-          onDone={advance}
+          {...(startMode&&activity.id===startActivityId?{initialMode:startMode}:{})}
+          onDone={()=>void saveSeen(setId,activity.id).catch(()=>undefined).then(()=>advance())}
         />
       )}
 
@@ -506,10 +516,16 @@ export function NodeRunnerScreen(){
   const runtime=useLearnerCourseRuntime();
   const navigate=useNavigate();
   const params=useParams();
+  const [search]=useSearchParams();
+  const mode=search.get('mode');
+  const startMode=mode==='drill'||mode==='listening'||mode==='speaking'?mode:undefined;
+  const startActivityId=search.get('activity')||undefined;
   return (
     <NodeRunnerView
       runtime={runtime}
       nodeId={String(params.nodeId||'')}
+      {...(startActivityId?{startActivityId}:{})}
+      {...(startMode?{startMode}:{})}
       onExit={()=>navigate('/')}
       onSignIn={()=>navigate('/account?return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
       onAccess={()=>navigate('/access?from=talk')}

@@ -56,7 +56,7 @@ describe('UnMute course entitlements',()=>{
     )).toMatchObject({full:true,reason:'owned'});
   });
 
-  it('opens the whole course while Plus is active',()=>{
+  it('keeps a paid course in preview for Plus: Plus is a discount, not the course',()=>{
     const now=Date.parse('2026-09-29T00:00:00Z');
     expect(resolveCourseEntitlement(
       paid,
@@ -65,7 +65,7 @@ describe('UnMute course entitlements',()=>{
         sub:{until:'2026-10-29T00:00:00Z'}
       }),
       now
-    )).toMatchObject({full:true,reason:'plus'});
+    )).toMatchObject({full:false,reason:'preview'});
   });
 
   it('does not trust a stale premium boolean after the subscription expiry',()=>{

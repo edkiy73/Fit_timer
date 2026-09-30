@@ -96,7 +96,7 @@ export function MyWordsScreen(){
   const navigate=useNavigate();
   return (
     <section className="review-shell" aria-label={t('words.title')}>
-      <button className="learn-back" type="button" onClick={()=>navigate('/account')}>{t('nav.back')}</button>
+      <button className="learn-back" type="button" onClick={()=>navigate('/account')}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
       <MyWordsView wordRuntime={useWordReviewRuntime()} />
     </section>
   );

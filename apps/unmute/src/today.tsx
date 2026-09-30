@@ -18,6 +18,7 @@ import type { TimedFlag } from './progress';
 import { useAllLearningDays, withAllLearningDays } from './learning-days';
 import { useOtherCourseReviews, type OtherCourseReview } from './other-course-review';
 import { UpdateBanner } from './app-update';
+import type { CourseSet, RoadmapNode } from './content/schema';
 import {
   lastWeekActivity,
   localizedText,
@@ -53,10 +54,21 @@ function Skeleton(){
   );
 }
 
+/** The day's phrase pattern that can be practised out loud, if any. */
+function speakPatternId(set:CourseSet,node:RoadmapNode):string|null{
+  const byId=new Map(set.activities.map(activity=>[activity.id,activity]));
+  for(const id of node.activityIds){
+    const activity=byId.get(id);
+    if(activity?.type==='pattern-drill'&&activity.modes.includes('speaking'))return activity.id;
+  }
+  return null;
+}
+
 export function TodayView({
   runtime,
   wordRuntime=null,
   onStart,
+  onSpeak=(nodeId:string)=>onStart(nodeId),
   onReview,
   onMap,
   onAccess,
@@ -67,6 +79,8 @@ export function TodayView({
   runtime:LearnerCourseRuntimeValue;
   wordRuntime?:WordReviewRuntimeValue|null;
   onStart:(nodeId:string)=>void;
+  /** «Скажи вслух»: the day's phrases in speaking mode, or the day itself when it has none. */
+  onSpeak?:(nodeId:string,patternId:string|null)=>void;
   onReview:()=>void;
   onMap:()=>void;
   onAccess:()=>void;
@@ -202,7 +216,7 @@ export function TodayView({
       <div className="bento">
         {hero}
 
-        <Tile className={'tile-streak'+(hasReview?'':' tile-wide')} index={index++}>
+        <Tile className="tile-streak" index={index++}>
           <div className="tile-kicker tone-streak"><Icon name="flame" size={18} />{t('today.streak')}</div>
           <strong className={'tile-number'+(streak?'':' tile-number-soft')}>{streak?t('today.streakDays',{count:streak}):t('today.streakStart')}</strong>
           <div className="week" aria-label={t('today.week',{count:week.filter(Boolean).length})}>
@@ -215,17 +229,25 @@ export function TodayView({
           </div>
         </Tile>
 
-        {hasReview&&review&&(
-          <Tile className="tile-review" index={index++}>
-            <div className="tile-kicker tone-listen"><Icon name="review" size={18} />{t('nav.review')}</div>
-            <strong className="tile-number">{review.actionableCount}</strong>
-            <span className="tile-caption">{t('today.reviewCaption')}</span>
-            {review.waitingCount>0&&<span className="sr-only">{t('today.reviewWaiting',{count:review.waitingCount})}</span>}
-            <button className="secondary-button tile-action" type="button" onClick={onReview}>
-              {t('today.reviewStart')}
-            </button>
-          </Tile>
-        )}
+        {/* Always shown: with nothing due it explains when reviews appear, so the grid keeps its shape. */}
+        <Tile className="tile-review" index={index++}>
+          <div className="tile-kicker tone-listen"><Icon name="review" size={18} />{t('nav.review')}</div>
+          {hasReview&&review ? (
+            <>
+              <strong className="tile-number">{review.actionableCount}</strong>
+              <span className="tile-caption">{t('today.reviewCaption')}</span>
+              {review.waitingCount>0&&<span className="sr-only">{t('today.reviewWaiting',{count:review.waitingCount})}</span>}
+              <button className="secondary-button tile-action" type="button" onClick={onReview}>
+                {t('today.reviewStart')}
+              </button>
+            </>
+          ) : (
+            <>
+              <strong className="tile-number tile-number-soft">0</strong>
+              <span className="tile-caption">{t('today.reviewEmpty')}</span>
+            </>
+          )}
+        </Tile>
 
         {speakTask&&node&&(
           <button className="tile tile-wide tile-speak pressable" style={{'--i':index++} as CSSProperties} type="button" onClick={()=>setSpeakOpen(true)}>
@@ -275,7 +297,7 @@ export function TodayView({
                 ))}
               </ul>
             )}
-            <button className="primary-button" type="button" onClick={()=>{ setSpeakOpen(false); onStart(node.id); }}>
+            <button className="primary-button" type="button" onClick={()=>{ setSpeakOpen(false); onSpeak(node.id,speakPatternId(state.set,node)); }}>
               {t('today.speakStart')}
             </button>
           </div>
@@ -296,6 +318,7 @@ export function TodayScreen(){
       wordRuntime={useWordReviewRuntime()}
       learningDays={useAllLearningDays()}
       onStart={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId))}
+      onSpeak={(nodeId,patternId)=>navigate('/learn/'+encodeURIComponent(nodeId)+(patternId?'?activity='+encodeURIComponent(patternId)+'&mode=speaking':''))}
       onReview={()=>navigate('/review')}
       onMap={()=>navigate('/course')}
       onAccess={()=>navigate('/access?from=today')}

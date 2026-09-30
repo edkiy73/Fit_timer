@@ -76,7 +76,7 @@ const sample={
   assert.equal(full.body.access,'full');
   assert.equal(full.body.set.activities.length,3);
 
-  // Active Plus opens the same full course even without a permanent owned SKU.
+  // Active Plus is a discount on courses, not the course: without the owned SKU it stays a preview.
   const plusEmail='plus@example.com', plusDevice='device-plus', plusToken='plus-token';
   await store.pipe([['SET',`a:${hash(plusEmail).slice(0,32)}`,JSON.stringify({
     syncDevices:{[plusDevice]:{h:hash(plusToken)}},
@@ -84,8 +84,7 @@ const sample={
   })]]);
   const plus=await call({method:'GET',headers:{'x-fit-email':plusEmail,'x-fit-device':plusDevice,'x-fit-token':plusToken},query:{action:'set',id:'general-foundation'}});
   assert.equal(plus.status,200);
-  assert.equal(plus.body.access,'full');
-  assert.equal(plus.body.set.activities.length,3);
+  assert.equal(plus.body.access,'preview');
 
   // Learned paid activities are retained only while the account currently has full
   // access. The server validates IDs against the released set and keeps a separate

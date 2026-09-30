@@ -72,8 +72,9 @@ export function buildPracticeActivityProgress(
   score:number|undefined,
   clock:ActivitySaveClock
 ):{course:CourseProgressDocument;stats:StatsProgressDocument}{
+  // Practising a pattern also counts as having done that step of the day.
   let nextCourse=gradeCoursePractice(
-    course,
+    markActivitySeen(course,activityId,clock.dayKey,clock.at),
     activityId,
     mode,
     correct,

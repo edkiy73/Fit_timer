@@ -4,7 +4,7 @@ require('../lib/product');
 const crypto = require('crypto');
 const { store } = require('../../../packages/core/server/store');
 const { send, fail, rateOk, rateOkScoped, sameSecret, cors } = require('../../../packages/core/server/util');
-const { hasOwned, hasPremium } = require('../../../packages/core/server/entitlements');
+const { hasOwned } = require('../../../packages/core/server/entitlements');
 const Content = require('../lib/content-store');
 const Release = require('../lib/content-release');
 
@@ -88,7 +88,8 @@ module.exports = async function contentHandler(req,res){
       let account=null;
       if(!full && set.access.mode === 'entitlement'){
         account = await accountFromHeaders(req);
-        full = !!account && (hasOwned(account.acc,set.access.entitlement)||hasPremium(account.acc));
+        // Plus gives a discount on courses, not the course itself (owner decision 30.09.2026).
+        full = !!account && hasOwned(account.acc,set.access.entitlement);
       }
       const keepLearned=set.access.mode==='entitlement'&&set.access.freePreview?.learnedContentStaysAvailable===true;
       const learned = !full&&account&&keepLearned ? await retainedActivityIds(account.accountHash,id) : [];
@@ -108,7 +109,7 @@ module.exports = async function contentHandler(req,res){
   try{ body=await bodyOf(req); }
   catch(error){ return fail(res,error && error.message === 'too_large' ? 413 : 400,'bad_body'); }
 
-  // Learner action: while the account currently owns the course or has active Plus,
+  // Learner action: while the account currently owns the course,
   // remember only activity IDs that the released set actually contains. This ledger is
   // server-authenticated; preview access never trusts client-editable progress docs.
   if(String(body.action||'')==='retain_learned'){
@@ -121,7 +122,7 @@ module.exports = async function contentHandler(req,res){
     if(!set)return fail(res,404,'set_not_found');
     const full=set.access.mode==='free'
       || (set.access.mode==='entitlement'
-        && (hasOwned(account.acc,set.access.entitlement)||hasPremium(account.acc)));
+        && hasOwned(account.acc,set.access.entitlement));
     if(!full)return fail(res,403,'full_access_required');
     const keepLearned=set.access.mode==='entitlement'&&set.access.freePreview?.learnedContentStaysAvailable===true;
     if(!keepLearned)return send(res,200,{ok:true,retained:0});

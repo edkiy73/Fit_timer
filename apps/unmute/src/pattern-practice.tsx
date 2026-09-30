@@ -39,6 +39,8 @@ export interface PatternPracticeViewProps {
   )=>Promise<void>;
   speak:SpeakText;
   startRecognition?:StartRecognition;
+  /** Open a specific training (e.g. «Скажи вслух» on «Сегодня» → speaking). */
+  initialMode?:PracticeSrsKind;
 }
 
 export function PatternPracticeView({
@@ -49,10 +51,15 @@ export function PatternPracticeView({
   onDone,
   savePractice,
   speak,
-  startRecognition=startSpeechRecognition
+  startRecognition=startSpeechRecognition,
+  initialMode
 }:PatternPracticeViewProps){
   const {t,locale}=useI18n();
-  const [mode,setMode]=useState<PatternMode>(()=>firstPatternMode(activity,progress));
+  const [mode,setMode]=useState<PatternMode>(()=>
+    initialMode&&activity.modes.includes(initialMode) ? initialMode : firstPatternMode(activity,progress)
+  );
+  // A training picked by hand from the finished state returns there, not to the next one.
+  const [single,setSingle]=useState(Boolean(initialMode));
 
   const distractors=useMemo(
     ()=>courseActivities.flatMap(candidate=>
@@ -64,6 +71,11 @@ export function PatternPracticeView({
   );
 
   const nextMode=(current:PracticeSrsKind)=>{
+    if(single){
+      setSingle(false);
+      setMode('complete');
+      return;
+    }
     const index=activity.modes.indexOf(current);
     const next=activity.modes[index+1];
     if(next){
@@ -110,6 +122,11 @@ export function PatternPracticeView({
     );
   }
 
+  const modeLabel:Record<PracticeSrsKind,string>={
+    drill:t('pattern.redoDrill'),
+    listening:t('pattern.redoListening'),
+    speaking:t('pattern.redoSpeaking')
+  };
   return (
     <article className="learn-card">
       <div className="eyebrow">{t('pattern.completeMode')}</div>
@@ -118,6 +135,11 @@ export function PatternPracticeView({
       <button className="primary-button" type="button" onClick={onDone}>
         {t('learn.next')}
       </button>
+      {activity.modes.map(item=>(
+        <button key={item} className="secondary-button" type="button" onClick={()=>{ setSingle(true); setMode(item); }}>
+          {modeLabel[item]}
+        </button>
+      ))}
     </article>
   );
 }

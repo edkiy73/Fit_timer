@@ -111,12 +111,14 @@ describe('course access offer',()=>{
     expect(screen.getByText(/навсегда/)).toBeTruthy();
   });
 
-  it('shows active access for Plus',()=>{
-    renderView(runtime('full'),session({
+  it('offers the course at the Plus discount instead of opening it',()=>{
+    renderView(runtime('preview'),session({
       premium:true,
       sub:{until:'2099-01-01T00:00:00.000Z'}
     }));
-    expect(screen.getByText(/UnMute Plus/)).toBeTruthy();
+    expect(screen.getByRole('heading',{name:'Открыть весь курс'})).toBeTruthy();
+    expect(screen.getByText(/скидка 30% на любой курс/)).toBeTruthy();
+    expect(screen.getByText(/Этот курс с Plus: 1\s043\s₽/)).toBeTruthy();
   });
 
   it('does not claim the course is usable until full content is actually loaded',()=>{

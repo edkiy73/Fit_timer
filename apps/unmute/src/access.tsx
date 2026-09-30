@@ -7,7 +7,8 @@ import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
 import { resolveCourseEntitlement } from './entitlements';
 import { trackPaywallShown } from './observability';
-import { coursePrice, plusPrices } from './pricing';
+import { coursePrice, coursePriceWithPlus, plusCourseDiscount, plusPrices } from './pricing';
+import { Icon } from './icons';
 
 export function AccessOfferView({
   runtime,
@@ -43,7 +44,7 @@ export function AccessOfferView({
   if(runtime.status==='error'){
     return (
       <section className="access-shell">
-        <button className="learn-back" type="button" onClick={onCourse}>{t('nav.back')}</button>
+        <button className="learn-back" type="button" onClick={onCourse}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
         <div className="learn-state" role="alert">
           <strong>{t('access.errorTitle')}</strong>
           <button className="primary-button" type="button" onClick={onRefresh}>
@@ -62,12 +63,10 @@ export function AccessOfferView({
   if(full){
     const detail=entitlement.reason==='owned'
       ? t('access.activeOwned')
-      : entitlement.reason==='plus'
-        ? t('access.activePlus')
-        : t('access.activeGeneric');
+      : t('access.activeGeneric');
     return (
       <section className="access-shell" aria-labelledby="access-title">
-        <button className="learn-back" type="button" onClick={onCourse}>{t('nav.back')}</button>
+        <button className="learn-back" type="button" onClick={onCourse}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
         <article className="access-active">
           <div className="eyebrow">{t('access.eyebrow')}</div>
           <h2 id="access-title">{t('access.activeTitle')}</h2>
@@ -83,7 +82,7 @@ export function AccessOfferView({
   if(entitlement.full){
     return (
       <section className="access-shell" aria-labelledby="access-title">
-        <button className="learn-back" type="button" onClick={onCourse}>{t('nav.back')}</button>
+        <button className="learn-back" type="button" onClick={onCourse}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
         <article className="access-active">
           <div className="eyebrow">{t('access.eyebrow')}</div>
           <h2 id="access-title">{t('access.contentPendingTitle')}</h2>
@@ -99,10 +98,12 @@ export function AccessOfferView({
 
   const foreverPrice=coursePrice(state.set.access,locale);
   const plus=plusPrices(locale);
+  const withPlus=coursePriceWithPlus(state.set.access,locale);
+  const discount=plusCourseDiscount();
 
   return (
     <section className="access-shell" aria-labelledby="access-title">
-      <button className="learn-back" type="button" onClick={onCourse}>{t('nav.back')}</button>
+      <button className="learn-back" type="button" onClick={onCourse}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
       <div className="access-heading">
         <div className="eyebrow">{t('access.eyebrow')}</div>
         <h2 id="access-title">{t('access.title')}</h2>
@@ -120,7 +121,8 @@ export function AccessOfferView({
           <span className="access-tag">{t('access.plusTag')}</span>
           <h3>{t('access.plusTitle')}</h3>
           {plus&&<strong className="access-price">{t('access.plusPrice',plus)}</strong>}
-          <p>{t('access.plusText')}</p>
+          <p>{discount?t('access.plusText',{discount}):t('access.plusTextNoDiscount')}</p>
+          {withPlus&&<p className="access-plus-course">{t('access.plusCoursePrice',{price:withPlus})}</p>}
         </article>
       </div>
 
