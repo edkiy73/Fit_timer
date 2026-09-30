@@ -1420,7 +1420,7 @@ async function applyRemoteAccountDocs(result){
   await writeAccountBucket(rec);
   setTrainerShared(rec.bucket.trainer || trainer);
   setClientsShared(Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clients);
-  if(typeof syncNotificationSettings === 'function') eventDataHooks.syncNotificationSettings();
+  eventDataHooks.syncNotificationSettings();
   return notificationPrefsChanged;
 }
 
@@ -1466,7 +1466,7 @@ export async function syncNotificationPrefsServer(action){
   const rec = await readAccountBucket();
   if(!rec.bucket.meta) rec.bucket.meta = {};
   const key = 'notificationPrefs';
-  if(!rec.bucket.notificationPrefs && typeof getNotificationPrefs === 'function'){
+  if(!rec.bucket.notificationPrefs){
     rec.bucket.notificationPrefs = eventDataHooks.getNotificationPrefs();
   }
   if(!rec.bucket.meta[key]) bumpAccountMeta(rec.bucket, key);
