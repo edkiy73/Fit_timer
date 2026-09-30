@@ -16,10 +16,12 @@ import { LexiconProvider } from './lexicon-ui';
 import { ProgressScreen } from './progress-screen';
 import { MyWordsScreen } from './my-words';
 import { ReferenceScreen } from './reference';
+import { LegalScreen } from './legal-page';
 import { OnboardingGate } from './onboarding';
 import { AccessScreen } from './access';
 import { NotificationDelivery, NotificationRouteListener } from './notification-delivery';
 import { TabBar } from './tab-bar';
+import { NativeBackButton } from './native-back';
 import { AppUpdateProvider } from './app-update';
 import { MeScreen } from './me-screen';
 
@@ -100,6 +102,7 @@ function Shell(){
   return (
     <main className="app">
       <ScrollToTop />
+      <NativeBackButton />
       <NotificationRouteListener />
       <NotificationDelivery />
       <AppUpdateProvider>
@@ -130,6 +133,7 @@ export const routes: RouteObject[] = [
         {path:'progress', element:<ProgressScreen />},
         {path:'words', element:<MyWordsScreen />},
         {path:'reference', element:<ReferenceScreen />},
+        {path:'legal/:page', element:<LegalScreen />},
         {path:'access', element:<AccessScreen />},
         {path:'account', element:<MeScreen />}
       ]

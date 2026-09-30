@@ -14,7 +14,7 @@
   --listen:#2F63C8;
   --streak:#8A5A00;
   --locked:#8A8499;
-  --danger:#B3401F;
+  --danger:#C62839;
   --radius-tile:28px;
   --radius-btn:18px;
   --radius-field:14px;
@@ -40,7 +40,7 @@
   --listen:#7FB2FF;
   --streak:#FFC15A;
   --locked:#75728A;
-  --danger:#FF9B7D;
+  --danger:#FF6B7A;
   --glass-bg:color-mix(in srgb,var(--card,#1C1D2A) 78%,transparent);
   --glass-line:rgb(255 255 255/.08);
   --elev-2:0 8px 24px rgb(0 0 0/.35);
@@ -53,7 +53,7 @@
   --listen:#7FB2FF;
   --streak:#FFC15A;
   --locked:#75728A;
-  --danger:#FF9B7D;
+  --danger:#FF6B7A;
   --glass-bg:color-mix(in srgb,var(--card,#1C1D2A) 78%,transparent);
   --glass-line:rgb(255 255 255/.08);
   --elev-2:0 8px 24px rgb(0 0 0/.35);
@@ -178,7 +178,7 @@ h2{margin:0 0 8px;font-weight:800}
 .learn-option:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--card))}
 .learn-option:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
 .learn-option.is-correct:has(input){border-color:var(--success);background:color-mix(in srgb,var(--success) 14%,var(--card))}
-.learn-option.is-wrong:has(input){border-color:var(--streak);background:color-mix(in srgb,var(--streak) 12%,var(--card))}
+.learn-option.is-wrong:has(input){border-color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,var(--card))}
 .learn-option-mark{margin-left:auto;color:var(--success)}
 .learn-answer{display:grid;gap:7px;color:var(--muted);font-size:13px;font-weight:700}
 .learn-answer input{width:100%;min-height:56px;border:1.5px solid var(--line);border-radius:var(--radius-btn);background:var(--surface);color:var(--ink);padding:12px 16px;font-size:17px}
@@ -186,14 +186,16 @@ h2{margin:0 0 8px;font-weight:800}
 /* Answer result: a bottom panel, calm mint for right, warm amber (never red) for a miss. */
 .learn-feedback{display:grid;gap:8px;padding:12px 14px;border-radius:18px;background:var(--surface)}
 .learn-feedback-ok{background:color-mix(in srgb,var(--success) 14%,var(--card))}
-.learn-feedback-wrong{background:color-mix(in srgb,var(--streak) 12%,var(--card))}
+.learn-feedback-wrong{background:color-mix(in srgb,var(--danger) 10%,var(--card))}
+/* «Медленно» in phrases-at-speed is not a mistake: neutral, not red. */
+.learn-feedback-neutral{background:var(--surface)}
 .learn-feedback.is-sheet{position:fixed;z-index:60;left:0;right:0;bottom:0;width:min(100%,720px);max-height:70vh;overflow:auto;margin:0 auto;gap:10px;padding:16px 20px calc(20px + var(--safe-bottom));border-radius:32px 32px 0 0;border-top:1px solid var(--line);background:var(--card);box-shadow:var(--elev-2);animation:sheet-in 420ms var(--spring) both}
 .learn-feedback span,.learn-feedback p{margin:0;line-height:1.45}
 .learn-feedback-head{display:flex;align-items:center;gap:12px}
 .learn-feedback-head strong{font-size:20px}
 .learn-feedback-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:22px}
 .learn-feedback-ok .learn-feedback-icon{color:var(--success);background:color-mix(in srgb,var(--success) 18%,transparent)}
-.learn-feedback-wrong .learn-feedback-icon{color:var(--streak);background:color-mix(in srgb,var(--streak) 16%,transparent)}
+.learn-feedback-wrong .learn-feedback-icon{color:var(--danger);background:color-mix(in srgb,var(--danger) 16%,transparent)}
 .learn-feedback-next{width:100%}
 .runner:has(.learn-feedback.is-sheet){padding-bottom:280px}
 @media(max-width:480px){
@@ -206,8 +208,8 @@ h2{margin:0 0 8px;font-weight:800}
 .drill-card{gap:14px}
 .drill-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--muted);font-size:13px;font-weight:700}
 .drill-timer{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
-.drill-timer span{display:block;height:100%;width:100%;background:var(--accent);transform-origin:left center}
-.drill-timer[data-stage="reading"] span{opacity:.45}
+.drill-timer span{display:block;height:100%;width:100%;background:var(--info,var(--ink));transform-origin:left center}
+.drill-timer[data-stage="reading"] span{opacity:.3}
 .drill-timer[data-stage="speaking"] span{animation:drill-countdown 5.6s linear forwards}
 .drill-target{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;font-size:18px;font-weight:800;line-height:1.4}
 .drill-result{display:grid;gap:6px;border:1px solid var(--line);border-radius:14px;padding:14px}
@@ -659,8 +661,10 @@ h2{margin:0 0 8px;font-weight:800}
 .runner-progress{display:flex;flex:1 1 auto;gap:3px;height:6px;border-radius:3px;overflow:hidden}
 .runner-progress>span{flex:1 1 0;border-radius:3px;background:var(--surface);transition:background-color 300ms ease}
 .runner-progress>.is-done{background:var(--success)}
-.runner-progress>.is-current{background:var(--accent)}
-.runner-progress>.runner-bar{flex:1 1 auto;background:var(--accent);transform-origin:left center;transition:transform 400ms var(--spring)}
+.runner-progress>.is-miss{background:var(--danger)}
+/* The step in progress is neutral: orange read as a mistake. */
+.runner-progress>.is-current{background:color-mix(in srgb,var(--ink) 45%,var(--surface))}
+.runner-progress>.runner-bar{flex:1 1 auto;background:var(--success);transform-origin:left center;transition:transform 400ms var(--spring)}
 .runner-progress:has(.runner-bar){background:var(--surface)}
 .runner-count{color:var(--muted);font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
 .runner-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
@@ -837,3 +841,11 @@ h2{margin:0 0 8px;font-weight:800}
 .reference-phrase strong{font-size:15px;font-weight:700;line-height:1.3}
 .reference-phrase span{white-space:normal}
 .course-map-reference{margin:4px 0 12px;width:100%;text-align:left;font:inherit}
+
+/* Privacy policy / account deletion shown inside the app (legal-page.tsx). */
+.legal-body{display:block;line-height:1.6}
+.legal-body h1{font-size:24px;line-height:1.25;margin:0 0 6px}
+.legal-body h2{font-size:17px;margin:22px 0 6px}
+.legal-body p,.legal-body li{margin:6px 0;color:var(--ink)}
+.legal-body .muted,.legal-body .draft{color:var(--muted);font-size:14px}
+.legal-body a{color:var(--accent-ink,var(--accent))}

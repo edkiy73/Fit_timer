@@ -223,7 +223,7 @@ export function PatternDrillView({
         </>
       ) : (
         <>
-          <div className={lastFast?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-wrong'}>
+          <div className={lastFast?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-neutral'}>
             <strong>{lastFast?t('drill.fast'):t('drill.slow')}</strong>
             <span>{lastFast?t('drill.fastHint'):t('drill.slowHint')}</span>
           </div>

@@ -251,8 +251,8 @@ export function MeScreen(){
       </section>
 
       <p className="account-legal">
-        <a href="./privacy.html" target="_blank" rel="noreferrer">{t('account.privacy')}</a>
-        <a href="./delete-account.html" target="_blank" rel="noreferrer">{t('account.deletionInfo')}</a>
+        <Link to="/legal/privacy">{t('account.privacy')}</Link>
+        <Link to="/legal/delete-account">{t('account.deletionInfo')}</Link>
       </p>
     </section>
   );

@@ -82,10 +82,10 @@ describe('UnMute: English for Expats starter', () => {
     expect(forget).toHaveBeenCalledWith('all');
   });
 
-  it('links the privacy and account deletion pages', async () => {
+  it('opens the privacy and account deletion pages inside the app, so Back returns', async () => {
     renderApp('/account');
-    expect((await screen.findByRole('link', {name:t['account.privacy']})).getAttribute('href')).toBe('./privacy.html');
-    expect(screen.getByRole('link', {name:t['account.deletionInfo']}).getAttribute('href')).toBe('./delete-account.html');
+    expect((await screen.findByRole('link', {name:t['account.privacy']})).getAttribute('href')).toMatch(/\/legal\/privacy$/);
+    expect(screen.getByRole('link', {name:t['account.deletionInfo']}).getAttribute('href')).toMatch(/\/legal\/delete-account$/);
   });
 
   it('keeps dictionaries in sync and offers a language switch only for several locales', async () => {

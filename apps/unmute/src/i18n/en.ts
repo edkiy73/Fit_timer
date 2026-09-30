@@ -403,6 +403,8 @@ export const en: Record<keyof typeof ru, string> = {
   'reference.empty': 'This course has no reference yet.',
   'reference.loading': 'Loading the reference…',
   'reference.errorTitle': 'The reference did not load. Check your connection.',
+  'legal.loading': 'Loading…',
+  'legal.error': 'The page did not load. Check your connection.',
   'dictionary.save': 'Save to my words',
   'dictionary.saved': 'In my words',
   'dictionary.saveError': 'Could not save the word. Try again.',

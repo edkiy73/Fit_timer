@@ -62,13 +62,13 @@ export function firstPendingActivityIndex(
 }
 
 /** Segmented progress for short lessons; a plain bar when there are too many steps to draw. */
-function RunnerProgress({current,total,label}:{current:number;total:number;label:string}){
+function RunnerProgress({current,total,label,missed}:{current:number;total:number;label:string;missed:ReadonlySet<number>}){
   const segments=total<=30;
   return (
     <div className="runner-progress" role="progressbar" aria-label={label} aria-valuemin={1} aria-valuemax={Math.max(1,total)} aria-valuenow={current+1}>
       {segments
         ? Array.from({length:total},(_,step)=>(
-            <span key={step} className={step<current?'is-done':step===current?'is-current':''} />
+            <span key={step} className={step<current?(missed.has(step)?'is-miss':'is-done'):step===current?'is-current':''} />
           ))
         : <span className="runner-bar" style={{transform:`scaleX(${total?(current+1)/total:0})`}} />}
     </div>
@@ -177,6 +177,9 @@ export function NodeRunnerView({
     onExit();
   };
 
+  // Steps answered wrong show red in the step bar; the step in progress stays neutral.
+  const [missed,setMissed]=useState<ReadonlySet<number>>(()=>new Set());
+  const markMissed=(step:number)=>setMissed(previous=>new Set(previous).add(step));
   const countAnswer=(correct:boolean)=>{
     setScore(current=>({correct:current.correct+(correct?1:0),total:current.total+1}));
   };
@@ -260,6 +263,7 @@ export function NodeRunnerView({
       const correct=selected===activity.correctIndex;
       await saveGraded(setId,activity.id,correct);
       countAnswer(correct);
+      if(!correct)markMissed(index);
       setResult(correct);
     }finally{
       setBusy(false);
@@ -277,6 +281,7 @@ export function NodeRunnerView({
         : checkAnswer(input,activity.answer.accepted);
       await saveGraded(setId,activity.id,correct);
       countAnswer(correct);
+      if(!correct)markMissed(index);
       setResult(correct);
     }finally{
       setBusy(false);
@@ -298,7 +303,7 @@ export function NodeRunnerView({
   })=>result===null?null:(
     <div className={'learn-feedback is-sheet '+(result?'learn-feedback-ok':'learn-feedback-wrong')} role="status">
       <div className="learn-feedback-head">
-        <span className="learn-feedback-icon" aria-hidden="true"><Icon name={result?'check':'review'} size={22} /></span>
+        <span className="learn-feedback-icon" aria-hidden="true"><Icon name={result?'check':'close'} size={22} /></span>
         <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
       </div>
       {!result&&accepted&&(
@@ -330,7 +335,7 @@ export function NodeRunnerView({
         <button className="runner-close pressable" type="button" onClick={onExit} aria-label={t('learn.close')}>
           <Icon name="close" size={20} />
         </button>
-        <RunnerProgress current={index} total={activities.length} label={t('learn.activityProgress')} />
+        <RunnerProgress current={index} total={activities.length} label={t('learn.activityProgress')} missed={missed} />
         <span className="runner-count" aria-label={position}>{index+1}/{activities.length}</span>
       </div>
 
