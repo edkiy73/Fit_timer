@@ -1,5 +1,6 @@
 import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
 import { appRuntimeCompat, appUi } from './00-dependencies.js';
+import { registerAction } from './05-actions.js';
 import { DAYS, closeAllMenus, curUser, customPrograms, normPlans, progActive, renderStats,
   renderUsers, renderWeight, renderWellness, savePrograms, setCustomProgramsShared, stats
 } from './10-data-sync.js';
@@ -569,16 +570,36 @@ export function syncSoundCascade(p){
 // попапа реально снята из browser history. Иначе следующий переход успевает
 // построить новую навигацию поверх ещё не завершившегося history.back().
 let modalHistoryWaiters = [];
+let dialogResolve = null;
+let dialogConfirm = false;
+let dialogTypedInput = null;
+
+function finishDialog(v){
+  if(!dialogResolve) return;
+  const res = dialogResolve;
+  dialogResolve = null;
+  const typed = dialogTypedInput || $('dlgType');
+  dialogTypedInput = null;
+  const waitHistory = !!(history.state && history.state.m)
+    && ![...document.querySelectorAll('.modal.open')].some(m => m !== $('dlg'));
+  $('dlg').classList.remove('open');
+  $('dlgOk').disabled = false;
+  setShown('dlgTypeBox', false);
+  typed.oninput = null;
+  if(waitHistory) modalHistoryWaiters.push(()=> res(v));
+  else res(v);
+}
+
 export function appDialog(msg, opts = {}){
   return new Promise(res => {
-    // текст передают и готовой строкой, и функцией от t(): на экран не должен
-    // попасть исходный код вроде «()=> t('ai.emptyAnswer')»
+    dialogResolve = res;
+    dialogConfirm = !!opts.confirm;
     $('dlgMsg').textContent = typeof msg === 'function' ? msg() : msg;
     const codeEl = $('dlgCode');
     if(opts.code){ setShown(codeEl, true); codeEl.value = opts.code; }
     else setShown(codeEl, false);
-    // opts.type — фраза, которую надо набрать: пока она не совпала, кнопка не работает
     const typed = $('dlgType');
+    dialogTypedInput = typed;
     setShown('dlgTypeBox', !!opts.type);
     typed.oninput = null;
     if(opts.type){
@@ -592,27 +613,9 @@ export function appDialog(msg, opts = {}){
       $('dlgOk').disabled = false;
     }
     $('dlgOk').textContent = opts.okText || t('common.ok');
-    if(opts.cancelText) $('dlgCancel').textContent = opts.cancelText;
-    else $('dlgCancel').textContent = t('common.cancel');
+    $('dlgCancel').textContent = opts.cancelText || t('common.cancel');
     setShown('dlgCancel', opts.confirm);
     $('dlg').classList.add('open');
-    const done = v => {
-      // Если это последний открытый попап и сверху лежит его history-запись,
-      // сначала даём MutationObserver снять её. Продолжение (например goTab())
-      // запускаем уже после соответствующего popstate — без гонки со старым экраном.
-      const waitHistory = !!(history.state && history.state.m)
-        && ![...document.querySelectorAll('.modal.open')].some(m => m !== $('dlg'));
-      $('dlg').classList.remove('open');
-      $('dlgOk').onclick = $('dlgCancel').onclick = $('dlg').onclick = null;
-      $('dlgOk').disabled = false;
-      setShown('dlgTypeBox', false);
-      typed.oninput = null;
-      if(waitHistory) modalHistoryWaiters.push(()=> res(v));
-      else res(v);
-    };
-    $('dlgOk').onclick = () => done(true);
-    $('dlgCancel').onclick = () => done(false);
-    $('dlg').onclick = e => { if(e.target === $('dlg')) done(opts.confirm ? false : true); };
   });
 }
 export const appAlert = (m, o) => appDialog(m, o);
@@ -1343,6 +1346,11 @@ export function setVoiceVolShared(value){ voiceVol = value; return voiceVol; }
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initCore(){
+  registerAction('confirmDialog', () => finishDialog(true));
+  registerAction('cancelDialog', () => finishDialog(false));
+  registerAction('dialogBackdrop', (modal, event) => {
+    if(event.target === modal) finishDialog(dialogConfirm ? false : true);
+  });
   // Подпись строки с переключателем тоже переключает его — как у системных
   // настроек. Раньше отзывался только сам тумблер 48×28, а в подпись попадали
   // пальцем чаще. Кнопки, ссылки и поля внутри строки работают как прежде.
