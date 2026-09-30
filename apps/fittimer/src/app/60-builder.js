@@ -1226,6 +1226,23 @@ export function syncExProgSum(){
   if(exDraft.warmup){ $('exProgSum').textContent = t('builder.warmupNoGrowth'); return; }
   if(progAxis(exDraft) === 'none'){ $('exProgSum').textContent = t('builder.noGrowth'); return; }
   const num = id => parseStepNum($(id).value);
+
+  // Double progression — не две независимые прибавки, а последовательный цикл.
+  // В свёрнутой строке показываем весь смысл сразу: диапазон растёт до потолка
+  // верхней границы, затем добавляется вес и диапазон возвращается к старту.
+  if(exDraft.dualProg && hasWeight(exDraft) && exDraft.type !== 'time'){
+    const reps = num('exStepReps');
+    const max = num('exMaxReps');
+    const weight = num('exStepWeight');
+    if(reps > 0 && max > 0 && weight > 0){
+      const start = valueText(normValue($('exValue').value, 'reps')).replace('-', '–');
+      $('exProgSum').textContent = t('builder.dualSummary',{
+        reps:fmtKg(reps), max:fmtKg(max), weight:fmtKg(weight), start
+      });
+      return;
+    }
+  }
+
   // Читаем словами: «+2 повт., до 25» пугала, «+2 повт., максимум 25» — уже ближе.
   const part = (stepId, maxId, unit, withMax) => {
     const st = num(stepId), mx = num(maxId);
