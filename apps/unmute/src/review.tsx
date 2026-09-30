@@ -28,6 +28,8 @@ import { resolveWordReviewSession, type ResolvedWordReviewItem } from './word-re
 import { buildMixedDrillActivity, studiedPatternActivities, MixedDrillView } from './mixed-drill';
 import { LexiconText } from './lexicon-ui';
 import { AnswerExplanationView } from './answer-explanation';
+import { MyWordsView } from './my-words';
+import { Icon } from './icons';
 
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
 type CombinedReviewItem=
@@ -93,6 +95,7 @@ export function ReviewView({
   const [wordShown,setWordShown]=useState(false);
   const [wordSaveError,setWordSaveError]=useState(false);
   const [mixedActivity,setMixedActivity]=useState<Extract<Activity,{type:'pattern-drill'}>|null>(null);
+  const [started,setStarted]=useState(false);
 
   useEffect(()=>{
     if(runtime.status!=='ready'||!state||session)return;
@@ -185,7 +188,7 @@ export function ReviewView({
   };
 
   const mixedOffer=mixedAvailable ? (
-    <article className="review-mixed-offer">
+    <article className="review-mixed-offer tile tile-wide">
       <div>
         <strong>{t('mixed.title')}</strong>
         <span>{t('mixed.description')}</span>
@@ -199,9 +202,10 @@ export function ReviewView({
   if(total===0){
     return (
       <section className="review-shell" aria-labelledby="review-title">
-        <button className="learn-back" type="button" onClick={onExit}>{t('nav.back')}</button>
-        <div className="eyebrow">{t('review.eyebrow')}</div>
-        <h2 id="review-title">{t('review.title')}</h2>
+        <header className="screen-head">
+          <div className="screen-kicker">{t('review.eyebrow')}</div>
+          <h2 id="review-title">{t('review.title')}</h2>
+        </header>
         {session.wordUnavailable ? (
           <>
             <div className="learn-state" role="alert">
@@ -212,24 +216,46 @@ export function ReviewView({
                   {t('today.retry')}
                 </button>
               )}
-              <button className="secondary-button" type="button" onClick={onExit}>
-                {t('review.backToday')}
-              </button>
             </div>
             {mixedOffer}
           </>
         ) : (
           <>
-            <div className="learn-state">
+            <div className="tile review-empty">
+              <span className="review-ring is-clear" aria-hidden="true"><Icon name="check" size={28} /></span>
               <strong>{t('review.emptyTitle')}</strong>
-              <span>{t('review.emptyText')}</span>
-              <button className="secondary-button" type="button" onClick={onExit}>
-                {t('review.backToday')}
-              </button>
+              <span className="tile-text">{t('review.emptyText')}</span>
             </div>
             {mixedOffer}
+            <MyWordsView wordRuntime={wordRuntime} />
           </>
         )}
+      </section>
+    );
+  }
+
+  if(!started&&item){
+    return (
+      <section className="review-shell" aria-labelledby="review-title">
+        <header className="screen-head">
+          <div className="screen-kicker">{t('review.eyebrow')}</div>
+          <h2 id="review-title">{t('review.title')}</h2>
+        </header>
+        <div className="bento">
+          <article className="tile tile-hero review-hero">
+            <span className="review-ring" aria-hidden="true"><strong>{total}</strong></span>
+            <div className="review-hero-text">
+              <strong>{t('review.dueTitle',{count:total})}</strong>
+              {session.waiting>0&&<span className="tile-text">{t('review.waiting',{count:session.waiting})}</span>}
+            </div>
+            <button className="primary-button review-start" type="button" onClick={()=>setStarted(true)}>
+              <Icon name="play" size={18} />
+              {t('today.reviewStart')}
+            </button>
+          </article>
+          {mixedOffer}
+        </div>
+        <MyWordsView wordRuntime={wordRuntime} />
       </section>
     );
   }
@@ -237,9 +263,10 @@ export function ReviewView({
   if(!item){
     return (
       <section className="review-shell" aria-labelledby="review-title">
-        <button className="learn-back" type="button" onClick={onExit}>{t('nav.back')}</button>
-        <div className="eyebrow">{t('review.eyebrow')}</div>
-        <h2 id="review-title">{t('review.doneTitle')}</h2>
+        <header className="screen-head">
+          <div className="screen-kicker">{t('review.eyebrow')}</div>
+          <h2 id="review-title">{t('review.doneTitle')}</h2>
+        </header>
         <div className="learn-state">
           <strong>{t('review.doneCount',{count:completed})}</strong>
           <span>
@@ -363,21 +390,17 @@ export function ReviewView({
   };
 
   return (
-    <section className="review-shell" aria-labelledby="review-title">
-      <div className="learn-header">
-        <button className="learn-back" type="button" onClick={onExit}>{t('nav.back')}</button>
-        <span>{position}</span>
+    <section className="review-shell runner" aria-labelledby="review-title">
+      <div className="runner-top">
+        <button className="runner-close pressable" type="button" onClick={()=>setStarted(false)} aria-label={t('review.close')}>
+          <Icon name="close" size={20} />
+        </button>
+        <div className="runner-progress" role="progressbar" aria-label={t('review.progress')} aria-valuemin={0} aria-valuemax={Math.max(1,total)} aria-valuenow={completed}>
+          <span className="runner-bar" style={{transform:`scaleX(${total?completed/total:0})`}} />
+        </div>
+        <span className="runner-count">{position}</span>
       </div>
-      <div>
-        <div className="eyebrow">{t('review.eyebrow')}</div>
-        <h2 id="review-title">{t('review.title')}</h2>
-      </div>
-      <progress
-        className="today-progress"
-        max={Math.max(1,total)}
-        value={completed}
-        aria-label={t('review.progress')}
-      />
+      <h2 id="review-title" className="sr-only">{t('review.title')}</h2>
 
       {item.kind==='card'&&item.activity.type==='choice'&&(
         <article className="learn-card review-card">

@@ -20,6 +20,8 @@ import {
   type ResolvedLexiconEntry
 } from './lexicon/resolve';
 import { speakText } from './speech-runtime';
+import { useSavedWords } from './saved-words';
+import { Icon } from './icons';
 
 const LEXICON_QUERY_KEY=['published-lexicon'] as const;
 const WORD_RE=/[A-Za-z]+(?:['\u2019][A-Za-z]+)*/g;
@@ -112,6 +114,13 @@ function DictionaryEntryView({
   const {t,locale}=useI18n();
   const pronunciation=entry.pronunciation;
   const examples=entry.examples.slice(0,3);
+  const saved=useSavedWords();
+  const [saveError,setSaveError]=useState(false);
+  const toggle=async(senseId:string,save:boolean)=>{
+    setSaveError(false);
+    try{await saved.toggle(entry.lexeme.id,senseId,save);}
+    catch{setSaveError(true);}
+  };
 
   return (
     <section className="dictionary-entry">
@@ -134,10 +143,25 @@ function DictionaryEntryView({
               {sense.note&&(
                 <span>{sense.note[locale]||sense.note.ru||sense.note.en||Object.values(sense.note)[0]||''}</span>
               )}
+              {saved.words&&(()=>{
+                const isSaved=saved.isSaved(entry.lexeme.id,sense.id);
+                return (
+                  <button
+                    className={'word-save pressable'+(isSaved?' is-saved':'')}
+                    type="button"
+                    aria-pressed={isSaved}
+                    onClick={()=>void toggle(sense.id,!isSaved)}
+                  >
+                    <Icon name={isSaved?'check':'plus'} size={18} />
+                    {isSaved?t('dictionary.saved'):t('dictionary.save')}
+                  </button>
+                );
+              })()}
             </div>
           );
         })}
       </div>
+      {saveError&&<p className="dictionary-state" role="alert">{t('dictionary.saveError')}</p>}
       {examples.length>0&&(
         <div className="dictionary-examples">
           <div className="dictionary-label">{t('dictionary.examples')}</div>

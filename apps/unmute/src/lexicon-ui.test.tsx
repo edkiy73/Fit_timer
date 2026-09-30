@@ -83,8 +83,23 @@ describe('learner dictionary popup',()=>{
     expect(screen.getByText('уорк')).toBeTruthy();
     expect(screen.getByRole('button',{name:'Перевести: remotely'})).toBeTruthy();
     expect(screen.getByText('Я работаю удалённо.')).toBeTruthy();
-    expect(screen.queryByText(/добав/i)).toBeNull();
     expect(speakWebText).toHaveBeenCalledWith('work','en-US');
+  });
+
+  it('saves a meaning to «Мои слова» and shows it as saved',async()=>{
+    const user=userEvent.setup();
+    renderLexicon();
+
+    await user.click(await screen.findByRole('button',{name:'Перевести: work'}));
+    const save=await screen.findByRole('button',{name:'В мои слова'});
+    expect(save.getAttribute('aria-pressed')).toBe('false');
+    await user.click(save);
+    const saved=await screen.findByRole('button',{name:'В моих словах'});
+    expect(saved.getAttribute('aria-pressed')).toBe('true');
+    const {readWordsProgress}=await import('./sync');
+    expect((await readWordsProgress()).items['lex.work|verb']?.deleted).toBeFalsy();
+    await user.click(saved);
+    expect(await screen.findByRole('button',{name:'В мои слова'})).toBeTruthy();
   });
 
   it('does not create a fake meaning when a clickable token is absent from lexicon',async()=>{
