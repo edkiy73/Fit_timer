@@ -219,6 +219,7 @@ export const en: Record<keyof typeof ru, string> = {
   'learn.unavailableTitle': 'This step is not available right now',
   'learn.unavailableText': 'Go back to Today and open the current available step.',
   'learn.position': 'Activity {current} of {total}',
+  'learn.close': 'Close the lesson',
   'learn.activityProgress': 'Lesson progress',
   'learn.continue': 'Continue',
   'learn.chooseAnswer': 'Choose an answer',
