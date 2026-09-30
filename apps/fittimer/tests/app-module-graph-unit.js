@@ -111,6 +111,7 @@ const accountSource = fs.readFileSync(path.join(APP, '20-account.js'), 'utf8');
 const progressSource = fs.readFileSync(path.join(APP, '30-progress-media.js'), 'utf8');
 const programsAiSource = fs.readFileSync(path.join(APP, '40-programs-ai.js'), 'utf8');
 const trainerCatalogSource = fs.readFileSync(path.join(APP, '50-trainer-catalog.js'), 'utf8');
+const platformDataSyncSource = fs.readFileSync(path.join(APP, '80-platform.js'), 'utf8');
 const builderSource = fs.readFileSync(path.join(APP, '60-builder.js'), 'utf8');
 const workoutSource = fs.readFileSync(path.join(APP, '70-workout.js'), 'utf8');
 const platformCoreSource = fs.readFileSync(path.join(APP, '80-platform.js'), 'utf8');
@@ -120,6 +121,20 @@ if(/from ['"]\.\/00-core\.js['"]/.test(dataSyncSource)){
 }
 if(!/setDataSyncCoreHooks/.test(dataSyncSource) || !/setDataSyncCoreHooks\(\{[\s\S]*appAlert[\s\S]*icon[\s\S]*plural[\s\S]*setShown[\s\S]*getSideSec[\s\S]*getState[\s\S]*syncDockTabs/.test(coreSource)){
   problems.push('data-sync/core hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/50-trainer-catalog\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 50-trainer-catalog.js; inject trainer-catalog-facing hooks instead');
+}
+if(!/setDataSyncTrainerCatalogHooks/.test(dataSyncSource) || !/setDataSyncTrainerCatalogHooks\(\{[\s\S]*renderMine/.test(trainerCatalogSource)){
+  problems.push('data-sync/trainer-catalog hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/80-platform\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 80-platform.js; inject platform-facing hooks instead');
+}
+if(!/setDataSyncPlatformHooks/.test(dataSyncSource) || !/setDataSyncPlatformHooks\(\{[\s\S]*applyThemeFor[\s\S]*syncNativeNotifications/.test(platformDataSyncSource)){
+  problems.push('data-sync/platform hook boundary is missing or incomplete');
 }
 
 if(/from ['"]\.\/20-account\.js['"]/.test(coreSource)){
