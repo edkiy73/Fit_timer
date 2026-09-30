@@ -28,6 +28,15 @@ need(markup.includes('<script src="admin.js"></script>'),'admin.html must load a
 need(!/<script>[\s\S]*?<\/script>/.test(markup) && !/ on[a-z]+="/i.test(markup),'admin.html must not contain inline scripts or handlers');
 new vm.Script(adminJs,{filename:'admin.js'});
 need(!/localStorage\.setItem\('adminKey'/.test(adminJs),'admin key must not be persisted in localStorage');
+need(adminJs.includes('const ADMIN_ACTIONS = Object.create(null)'),'admin delegated action registry is missing');
+need(adminJs.includes("target.closest('[data-admin-act]')"),'admin delegated action listener is missing');
+need(adminJs.includes("registerAdminAction('switchAdminTab'"),'admin tab action is not registered');
+need(adminJs.includes("registerAdminAction('adminLogin'"),'admin login action is not registered');
+need(!adminJs.includes("t.onclick = () => {"),'admin top navigation must not use direct onclick');
+need(!adminJs.includes("$('navOpen').onclick"),'admin nav opener must not use direct onclick');
+need(!adminJs.includes("$('navShade').onclick"),'admin nav shade must not use direct onclick');
+need(!adminJs.includes("$('out').onclick"),'admin logout must not use direct onclick');
+need(!adminJs.includes("$('enter').onclick"),'admin login button must not use direct onclick');
 
 need(api.includes("'catalog_ai_create'"),'admin AI-create API is missing');
 need(api.includes('FitAIProtocol.validateProgramResponse(out.text,{requireWeightCeiling:true})'),'AI-created program must be protocol-validated, including the weight ceiling');
