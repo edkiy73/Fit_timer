@@ -103,9 +103,10 @@
     },
     "src/app/05-actions.js": {
       "kind": "frontend-js",
-      "lines": 16,
-      "chars": 373,
+      "lines": 18,
+      "chars": 406,
       "symbols": [
+        "initActions",
         "registerAction",
         "unregisterAction"
       ]
@@ -937,8 +938,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2516,
-      "chars": 108951,
+      "lines": 2520,
+      "chars": 109675,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -993,6 +994,7 @@
         "readTimings",
         "refreshAfterForeground",
         "refreshVoicePackUI",
+        "registerEventActions",
         "renderHfModalDraft",
         "renderIconLabels",
         "resetSkipConfirm",
@@ -1022,8 +1024,8 @@
     },
     "src/app/index.js": {
       "kind": "frontend-js",
-      "lines": 28,
-      "chars": 1148
+      "lines": 30,
+      "chars": 1210
     },
     "src/app/options.js": {
       "kind": "frontend-js",
