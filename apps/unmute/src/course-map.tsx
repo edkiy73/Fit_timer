@@ -7,7 +7,7 @@ import { useLearnerCourseRuntime } from './course-runtime';
 import { isNodeUnlockedByPurchase } from './content/access';
 import type { CourseSet, RoadmapNode } from './content/schema';
 import { LexiconText } from './lexicon-ui';
-import { COURSE_STAGES, stageNameKey, type CourseStage } from './course-stages';
+import { courseStages, stageNameKey, type CourseStage } from './course-stages';
 import { localizedText, nodeMinutes, nodeTopic } from './today-model';
 import { Icon, type IconName } from './icons';
 import { Sheet } from './sheet';
@@ -129,7 +129,7 @@ export function CourseMapView({
       const label=day?t('today.day',{day}):localizedText(item.node.title,locale);
       return {...item,kind,title,label};
     });
-    const result:StageGroup[]=COURSE_STAGES.map(stage=>({stage,stations:[],done:0}));
+    const result:StageGroup[]=courseStages(state.set.id).map(stage=>({stage,stations:[],done:0}));
     const rest:StageGroup={stage:null,stations:[],done:0};
     for(const station of stations){
       const day=station.node.dayIndex??0;
@@ -191,7 +191,8 @@ export function CourseMapView({
   const previewDays=state.set.access.mode==='entitlement'
     ? state.set.access.freePreview?.days ?? 0
     : 0;
-  const stageName=(group:StageGroup)=>group.stage?t(stageNameKey(group.stage)):t('courseMap.moreStage');
+  // A course without stages is one short route: its only group is just «Все дни».
+  const stageName=(group:StageGroup)=>group.stage?t(stageNameKey(group.stage)):t(courseStages(state.set.id).length?'courseMap.moreStage':'courseMap.allDays');
   const toggle=(id:string)=>setOpen(previous=>{
     const next=new Set(previous);
     if(next.has(id))next.delete(id);
@@ -209,7 +210,7 @@ export function CourseMapView({
       <header className="screen-head">
         <div className="screen-kicker">
           {currentGroup?.stage
-            ? t('courseMap.kicker',{stage:currentGroup.stage.number,stages:COURSE_STAGES.length,complete:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})
+            ? t('courseMap.kicker',{stage:currentGroup.stage.number,stages:courseStages(state.set.id).length,complete:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})
             : t('courseMap.progress',{complete:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})}
         </div>
         <div className="screen-title-row">
