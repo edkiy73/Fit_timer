@@ -8,10 +8,11 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1502,
-      "chars": 72952,
+      "lines": 1510,
+      "chars": 73232,
       "symbols": [
         "$",
+        "accountUserDirtyHook",
         "aiScreenDirty",
         "announceExercise",
         "announceRemaining",
@@ -55,6 +56,7 @@
         "loadTargetText",
         "lockPage",
         "markNum",
+        "maybeRunDeferredBiometricLockHook",
         "mk",
         "nextStepSpeech",
         "numFieldsOk",
@@ -70,6 +72,7 @@
         "resolveNavBack",
         "roundDone",
         "runReadyBar",
+        "setCoreAccountHooks",
         "setFxVolShared",
         "setLastAppSoundTShared",
         "setMusicModeShared",
@@ -272,8 +275,8 @@
     },
     "src/app/20-account.js": {
       "kind": "frontend-js",
-      "lines": 1107,
-      "chars": 49219,
+      "lines": 1111,
+      "chars": 49319,
       "symbols": [
         "accountBucketKey",
         "androidUpdateAction",

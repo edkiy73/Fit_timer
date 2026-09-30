@@ -19,6 +19,7 @@ import { OnboardingGate } from './onboarding';
 import { AccessScreen } from './access';
 import { NotificationDelivery, NotificationRouteListener } from './notification-delivery';
 import { TabBar } from './tab-bar';
+import { AppUpdateProvider } from './app-update';
 import { MeScreen } from './me-screen';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
@@ -100,10 +101,12 @@ function Shell(){
       <ScrollToTop />
       <NotificationRouteListener />
       <NotificationDelivery />
-      <OnboardingGate>
-        <div className="app-screen"><Outlet /></div>
-        <TabBar />
-      </OnboardingGate>
+      <AppUpdateProvider>
+        <OnboardingGate>
+          <div className="app-screen"><Outlet /></div>
+          <TabBar />
+        </OnboardingGate>
+      </AppUpdateProvider>
     </main>
   );
 }
