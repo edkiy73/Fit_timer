@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1624,
-      "chars": 78105,
+      "lines": 1627,
+      "chars": 78201,
       "symbols": [
         "$",
         "accountUserDirtyHook",
@@ -113,6 +113,7 @@
         "tag",
         "takeSnap",
         "tick",
+        "voiceCommandsBlockedAt",
         "voiceIsEnglish",
         "voicePlural",
         "voicesForLang",
@@ -958,7 +959,7 @@
     "src/app/80-platform.js": {
       "kind": "frontend-js",
       "lines": 895,
-      "chars": 38359,
+      "chars": 38389,
       "symbols": [
         "add",
         "advanceFromHeadset",
