@@ -14,6 +14,7 @@ const shell=fs.readFileSync('src/html/00-shell-home.html','utf8');
 const programsHtml=fs.readFileSync('src/html/10-programs-builder.html','utf8');
 const profilesHtml=fs.readFileSync('src/html/40-profiles.html','utf8');
 const progressHtml=fs.readFileSync('src/html/50-profile-progress.html','utf8');
+const workoutHtml=fs.readFileSync('src/html/20-workout-finish.html','utf8');
 const onboardingHtml=fs.readFileSync('src/html/30-onboarding-account.html','utf8');
 const esmEntry=fs.readFileSync('src/main.ts','utf8');
 
@@ -264,6 +265,15 @@ ok('workout start/exit actions have no direct onclick wiring',
   && !events.includes("$('exitSave').onclick")
   && !events.includes("$('exitFinishToday').onclick")
   && !events.includes("$('exitDrop').onclick"));
+
+ok('core workout controls are declarative',
+  workoutHtml.includes('id="btnPrev" data-act="previousWorkoutStep"')
+  && workoutHtml.includes('id="btnSkip" data-act="skipWorkoutStep"')
+  && workoutHtml.includes('id="btnDone" data-act="completeWorkoutStep"'));
+ok('core workout controls have no direct onclick wiring',
+  !events.includes("$('btnPrev').onclick")
+  && !events.includes("$('btnSkip').onclick")
+  && !events.includes("$('btnDone').onclick"));
 
 
 process.exit(bad?1:0);
