@@ -13,7 +13,7 @@ import { DAYS, DAY_FULL, accountAuth, calcStreakInfo, curUser, currentUser, cust
 } from './10-data-sync.js';
 import { account, bumpAccountMeta, isPremium, readAccountBucket, setAccountProgramsAiHooks, writeAccountBucket } from './20-account.js';
 import { LIM, clampLine, clampNum, clampText, cleanLink, cleanPic, photos,
-  sanitizeProgram, shareGeneratedFile, uniqueExerciseIds
+  sanitizeProgram, setProgressProgramsHooks, shareGeneratedFile, uniqueExerciseIds
 } from './30-progress-media.js';
 import { renderMine, renderTrainerCard, snapshotEx, storeCountText } from './50-trainer-catalog.js';
 import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_NOEX, MSG_AI_PARSE, advanceExerciseProgression,
@@ -3169,6 +3169,10 @@ export function setTrainerShared(value){ trainer = value; return trainer; }
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initProgramsAi(){
+  setProgressProgramsHooks({
+    ageError,
+    renderToday
+  });
   setAccountProgramsAiHooks({
     getApiBase: () => API_BASE,
     ageError,
