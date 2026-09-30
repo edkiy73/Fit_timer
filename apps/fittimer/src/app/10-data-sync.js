@@ -32,8 +32,11 @@ let platformApplyThemeForHook = () => {};
 let platformSyncNativeNotificationsHook = async () => {};
 export function setDataSyncPlatformHooks(hooks = {}){
   platformApplyThemeForHook = typeof hooks.applyThemeFor === 'function' ? hooks.applyThemeFor : (() => {});
-  platformSyncNativeNotificationsHook = typeof hooks.syncNativeNotifications === 'function'
-    ? hooks.syncNativeNotifications
+  platformSyncNativeNotificationsHook = typeof hooks.getSyncNativeNotifications === 'function'
+    ? (...args) => {
+        const fn = hooks.getSyncNativeNotifications();
+        return typeof fn === 'function' ? fn(...args) : undefined;
+      }
     : (async () => {});
 }
 
