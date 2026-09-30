@@ -71,6 +71,119 @@ import { SR, applyThemeFor, checkSchedules, hfHintText, hfMode, recognitionLang,
 
 /* ================= СОБЫТИЯ ================= */
 function registerEventActions(){
+  registerAction('toggleLiveSoundMaster', btn => {
+    const p = btn.id.replace(/SoundOn$/, '');
+    setSoundOnShared(!soundOn);
+    kvSet('soundOff', soundOn ? '0' : '1');
+    if(!soundOn) stopSpeech();
+    btn.classList.toggle('on', soundOn);
+    syncSoundCascade(p);
+    syncPrefs();
+  });
+  registerAction('toggleLiveSoundVoice', btn => {
+    const p = btn.id.replace(/VoiceOn$/, '');
+    const on = !btn.classList.contains('on');
+    setVoiceVolShared(on ? 1 : 0);
+    btn.classList.toggle('on', on);
+    syncSoundCascade(p);
+    persistLiveSound();
+    if(on) speak(voiceIsEnglish() ? 'Voice enabled' : t('audio.voiceOn'));
+  });
+  registerAction('toggleLiveSoundFx', btn => {
+    const p = btn.id.replace(/FxOn$/, '');
+    const on = !btn.classList.contains('on');
+    if(on) setFxVolShared(clampVol(fxVolMemory / 100, 1));
+    else{
+      fxVolMemory = Math.round(fxVol * 100) || fxVolMemory;
+      setFxVolShared(0);
+    }
+    btn.classList.toggle('on', on);
+    $(p + 'FxVol').value = Math.round(fxVol * 100);
+    $(p + 'FxVolVal').textContent = Math.round(fxVol * 100) + '%';
+    syncSoundCascade(p);
+    persistLiveSound();
+    if(on) tick();
+  });
+  registerAction('toggleLiveSoundMusic', btn => {
+    const p = btn.id.replace(/Music$/, '');
+    setMusicModeShared(!musicMode);
+    kvSet('musicMode', musicMode ? '1' : '0');
+    if(musicMode) stopSpeech();
+    btn.classList.toggle('on', musicMode);
+    syncPrefs();
+  });
+  registerAction('duplicateAiExercise', (_btn, event) => {
+    event.stopPropagation();
+    closeAllMenus();
+    dupExerciseAt(exeIdx);
+    asTab(()=> show('scrBuilder'));
+  });
+  registerAction('deleteAiExercise', async (_btn, event) => {
+    event.stopPropagation();
+    closeAllMenus();
+    await delExerciseAt(exeIdx);
+    asTab(()=> show('scrBuilder'));
+  });
+  registerAction('duplicateExercise', (_btn, event) => {
+    event.stopPropagation();
+    closeAllMenus();
+    dupExercise();
+  });
+  registerAction('deleteExercise', async (_btn, event) => {
+    event.stopPropagation();
+    closeAllMenus();
+    await delExercise();
+  });
+  registerAction('switchExerciseMode', btn => {
+    if(btn.dataset.m !== 'ai') return;
+    document.querySelectorAll('#exModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'manual'));
+    if(!exDraft || exIdx < 0) return;
+    if(exIsNew){
+      const wish = $('exName').value.trim();
+      dropFreshEx();
+      setExDraftShared(null);
+      setExIdxShared(-1);
+      setExOrigShared('');
+      asTab(()=>{
+        openExAI();
+        if(wish){
+          $('exaWish').value = wish;
+          autoGrow($('exaWish'));
+        }
+      });
+      return;
+    }
+    if(!numFieldsOk('scrExercise') || !exNameOk()) return;
+    setExIsNewShared(false);
+    const list = curPlan().exercises;
+    if(list[exIdx]) list[exIdx] = commitExercise();
+    const keep = exIdx;
+    setExDraftShared(null);
+    setExIdxShared(-1);
+    setExOrigShared('');
+    renderExList();
+    asTab(()=> openExEdAI(keep));
+  });
+  registerAction('switchBuilderMode', async btn => {
+    const m = btn.dataset.m;
+    if(m === 'manual') return;
+    const back = ()=> document.querySelectorAll('#bModeTabs .tab')
+      .forEach(x => x.classList.toggle('act', x.dataset.m === 'manual'));
+    const existing = draft && draft.id && customPrograms.find(p => p.id === draft.id);
+    if(programDirty()){
+      const go = await appDialog(
+        t('builder.unsavedProgram'),
+        {confirm:true, okText:t('common.leaveWithoutSaving'), cancelText:t('common.stay')}
+      );
+      back();
+      if(!go) return;
+    }else back();
+    if(existing && m === 'text'){
+      asTab(()=> openEditAI(existing));
+      return;
+    }
+    asTab(()=> switchCreateMode(m));
+  });
   registerAction('toggleExerciseMenu', (_btn, event) => {
     event.stopPropagation();
     toggleMenu($('exMenu'));
@@ -1145,33 +1258,9 @@ function persistLiveSound(){
 
 // вешает обработчики на каскад с префиксом p (вызывается один раз на префикс, при старте)
 function wireLiveSoundCascade(p){
-  $(p + 'SoundOn').onclick = ()=>{
-    setSoundOnShared(!soundOn);
-    kvSet('soundOff', soundOn ? '0' : '1');
-    if(!soundOn) stopSpeech();
-    $(p + 'SoundOn').classList.toggle('on', soundOn);
-    syncSoundCascade(p);
-    syncPrefs();
-  };
-  $(p + 'VoiceOn').onclick = ()=>{
-    const on = !$(p + 'VoiceOn').classList.contains('on');
-    setVoiceVolShared(on ? 1 : 0);
-    $(p + 'VoiceOn').classList.toggle('on', on);
-    syncSoundCascade(p);
-    persistLiveSound();
-    if(on) speak(voiceIsEnglish() ? 'Voice enabled' : t('audio.voiceOn'));
-  };
-  $(p + 'FxOn').onclick = ()=>{
-    const on = !$(p + 'FxOn').classList.contains('on');
-    if(on){ setFxVolShared(clampVol(fxVolMemory / 100, 1)); }
-    else { fxVolMemory = Math.round(fxVol * 100) || fxVolMemory; setFxVolShared(0); }
-    $(p + 'FxOn').classList.toggle('on', on);
-    $(p + 'FxVol').value = Math.round(fxVol * 100);
-    $(p + 'FxVolVal').textContent = Math.round(fxVol * 100) + '%';
-    syncSoundCascade(p);
-    persistLiveSound();
-    if(on) tick();
-  };
+  $(p + 'SoundOn').dataset.act = 'toggleLiveSoundMaster';
+  $(p + 'VoiceOn').dataset.act = 'toggleLiveSoundVoice';
+  $(p + 'FxOn').dataset.act = 'toggleLiveSoundFx';
   $(p + 'FxVol').oninput = e => {
     const v = parseInt(e.target.value) || 0;
     setFxVolShared(clampVol(v / 100, 1));
@@ -1180,13 +1269,7 @@ function wireLiveSoundCascade(p){
     persistLiveSound();
     if(v > 0) tick();
   };
-  $(p + 'Music').onclick = ()=>{
-    setMusicModeShared(!musicMode);
-    kvSet('musicMode', musicMode ? '1' : '0');
-    if(musicMode) stopSpeech();
-    $(p + 'Music').classList.toggle('on', musicMode);
-    syncPrefs();
-  };
+  $(p + 'Music').dataset.act = 'toggleLiveSoundMusic';
 }
 function cloneSettingsBlock(sourceId, targetId, ids){
   const source=$(sourceId), target=$(targetId);
@@ -1681,34 +1764,31 @@ async function runSelfAI(promptFn, targetId, applyFn, title, kind){
 }
 export function buildAiMenu(){
   const box = $('aiMenu'); box.innerHTML = '';
-  const mk = (html, fn, cls) => {
+  const mk = (html, action, cls) => {
     const b = document.createElement('button');
     b.type = 'button';
     if(cls) b.className = cls;
     b.innerHTML = html;
-    b.onclick = ev => { ev.stopPropagation(); closeAllMenus(); fn(); };
+    b.dataset.act = action;
     box.appendChild(b);
   };
   // openBuilder() здесь звать НЕЛЬЗЯ: он перечитывает программу из сохранённых и
   // выбрасывает только что сделанную копию вместе со всей несохранённой правкой
-  mk(icon('plus') + t('common.duplicate'), ()=>{ dupExerciseAt(exeIdx); asTab(()=> show('scrBuilder')); });
-  mk(icon('trash') + t('common.delete'), async ()=>{
-    await delExerciseAt(exeIdx);
-    asTab(()=> show('scrBuilder'));
-  }, 'danger');
+  mk(icon('plus') + t('common.duplicate'), 'duplicateAiExercise');
+  mk(icon('trash') + t('common.delete'), 'deleteAiExercise', 'danger');
 }
 
 export function buildExMenu(){
   const box = $('exMenu'); box.innerHTML = '';
-  const mk = (html, fn, cls) => {
+  const mk = (html, action, cls) => {
     const b = document.createElement('button');
     if(cls) b.className = cls;
     b.innerHTML = html;
-    b.onclick = e => { e.stopPropagation(); closeAllMenus(); fn(); };
+    b.dataset.act = action;
     box.appendChild(b);
   };
-  mk(icon('plus') + t('common.duplicate'), dupExercise);
-  mk(icon('trash') + t('common.delete'), delExercise, 'danger');
+  mk(icon('plus') + t('common.duplicate'), 'duplicateExercise');
+  mk(icon('trash') + t('common.delete'), 'deleteExercise', 'danger');
 }
 
 // создание программы: по описанию ⇄ из видео ⇄ вручную
@@ -2186,55 +2266,9 @@ export function initEvents(){
   /* ---- переключение способа прямо на экране ---- */
   // упражнение: вручную ⇄ через ИИ. Введённое переносится в упражнение по дороге,
   // поэтому спрашивать «а точно?» не о чем — ничего не теряется.
-  document.querySelectorAll('#exModeTabs .tab').forEach(b => {
-    b.onclick = ()=>{
-      if(b.dataset.m !== 'ai') return;
-      document.querySelectorAll('#exModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'manual'));
-      if(!exDraft || exIdx < 0) return;
-      // Упражнение ещё только заводят — «через ИИ» здесь значит «подбери мне
-      // упражнение»: там чипы (формат, уровень, мышцы, инвентарь) и сколько штук.
-      // Раньше отсюда вела правка уже существующего, и чипов человек не видел
-      // вовсе: до них можно было добраться только кнопкой, которую мы убрали.
-      if(exIsNew){
-        const wish = $('exName').value.trim();
-        dropFreshEx();
-        setExDraftShared(null); setExIdxShared(-1); setExOrigShared('');
-        asTab(()=>{ openExAI(); if(wish){ $('exaWish').value = wish; autoGrow($('exaWish')); } });
-        return;
-      }
-      if(!numFieldsOk('scrExercise') || !exNameOk()) return;
-      setExIsNewShared(false);
-      const list = curPlan().exercises;
-      if(list[exIdx]) list[exIdx] = commitExercise();
-      const keep = exIdx;
-      setExDraftShared(null); setExIdxShared(-1); setExOrigShared('');
-      renderExList();
-      asTab(()=> openExEdAI(keep));
-    };
-  });
   // действия над открытым упражнением — в меню шапки, как у программы на экране старта
   $('exMore').innerHTML = icon('more');
   // конструктор: вручную ⇄ через ИИ ⇄ из видео
-  document.querySelectorAll('#bModeTabs .tab').forEach(b => {
-    b.onclick = async ()=>{
-      const m = b.dataset.m;
-      if(m === 'manual') return;
-      const back = ()=> document.querySelectorAll('#bModeTabs .tab')
-        .forEach(x => x.classList.toggle('act', x.dataset.m === 'manual'));
-      // редактируем существующую программу → «через ИИ» = доработка этой же программы
-      const existing = draft && draft.id && customPrograms.find(p => p.id === draft.id);
-      if(programDirty()){
-        const go = await appDialog(
-          t('builder.unsavedProgram'),
-          {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')}
-        );
-        back();
-        if(!go) return;
-      } else back();
-      if(existing && m === 'text'){ asTab(()=> openEditAI(existing)); return; }
-      asTab(()=> switchCreateMode(m));
-    };
-  });
   // Вкладки режима: раньше их было четыре набора с четырьмя почти одинаковыми
   // обработчиками. Теперь набор один, кнопки в нём рисуются под источник, а слушает
   // их сам контейнер — поэтому обработчик переживает перерисовку.
