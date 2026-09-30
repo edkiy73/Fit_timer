@@ -86,5 +86,40 @@ ok('trainer/legal static buttons have no direct onclick wiring',
   && !events.includes("$('btnLegalPrivacy').onclick")
   && !events.includes("$('btnLegalTerms').onclick")
   && !events.includes("$('btnLegalHealth').onclick"));
+ok('account/progress actions are declarative',
+  shell.includes('id="btnPremium" data-act="openPremium"')
+  && profilesHtml.includes('id="btnPlanCard" data-act="openPremium"')
+  && progressHtml.includes('id="payGo" data-act="completePurchase"')
+  && progressHtml.includes('id="loginGo" data-act="login"')
+  && progressHtml.includes('id="loginHaveCode" data-act="loginUseCode"')
+  && progressHtml.includes('id="loginCancel" data-act="loginCancel"')
+  && profilesHtml.includes('id="btnLoginRow" data-act="openLogin"')
+  && profilesHtml.includes('id="btnSignOut" data-act="signOut"')
+  && progressHtml.includes('id="btnImportProgFile" data-act="pickProgramImportFile"')
+  && profilesHtml.includes('id="btnExportAll" data-act="exportAllData"')
+  && profilesHtml.includes('id="btnImportAll" data-act="pickAllDataImportFile"')
+  && profilesHtml.includes('id="btnWipeAccount" data-act="wipeAccount"')
+  && profilesHtml.includes('id="btnWeightHist" data-act="openWeightHistory"')
+  && profilesHtml.includes('id="btnShareWeight" data-act="shareWeightChart"')
+  && profilesHtml.includes('id="btnAddPhoto" data-act="pickProgressPhoto"')
+  && profilesHtml.includes('id="btnCompare" data-act="openPhotoCompare"'));
+ok('account/progress static buttons have no direct onclick wiring',
+  !events.includes("$('btnPremium').onclick")
+  && !events.includes("$('btnPlanCard').onclick")
+  && !events.includes("$('payGo').onclick")
+  && !events.includes("$('loginGo').onclick")
+  && !events.includes("$('loginHaveCode').onclick")
+  && !events.includes("$('loginCancel').onclick")
+  && !events.includes("$('btnLoginRow').onclick")
+  && !events.includes("$('btnSignOut').onclick")
+  && !events.includes("$('btnImportProgFile').onclick")
+  && !events.includes("$('btnExportAll').onclick")
+  && !events.includes("$('btnImportAll').onclick")
+  && !events.includes("$('btnWipeAccount').onclick")
+  && !events.includes("$('btnWeightHist').onclick")
+  && !events.includes("$('btnShareWeight').onclick")
+  && !events.includes("$('btnAddPhoto').onclick")
+  && !events.includes("$('btnCompare').onclick"));
+
 
 process.exit(bad?1:0);
