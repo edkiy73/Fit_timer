@@ -137,6 +137,35 @@ if(!/setDataSyncPlatformHooks/.test(dataSyncSource) || !/setDataSyncPlatformHook
   problems.push('data-sync/platform hook boundary is missing or incomplete');
 }
 
+
+if(/from ['"]\.\/30-progress-media\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 30-progress-media.js; inject progress-media-facing hooks instead');
+}
+if(!/setDataSyncProgressMediaHooks/.test(dataSyncSource) || !/setDataSyncProgressMediaHooks\(\{[\s\S]*ensureWarmup[\s\S]*loadPhotos[\s\S]*renderPhotos[\s\S]*shortD[\s\S]*uniqueExerciseIds/.test(progressSource)){
+  problems.push('data-sync/progress-media hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/60-builder\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 60-builder.js; inject builder-facing hooks instead');
+}
+if(!/setDataSyncBuilderHooks/.test(dataSyncSource) || !/setDataSyncBuilderHooks\(\{[\s\S]*exRestAfter[\s\S]*getExProgValue[\s\S]*hasWeight[\s\S]*normValue[\s\S]*parseValue[\s\S]*progAtCeiling[\s\S]*progAxis[\s\S]*progBaseValue[\s\S]*progStepSize[\s\S]*progressedRepsRange/.test(builderSource)){
+  problems.push('data-sync/builder hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/70-workout\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 70-workout.js; inject workout-facing hooks instead');
+}
+if(!/setDataSyncWorkoutHooks/.test(dataSyncSource) || !/setDataSyncWorkoutHooks\(\{[\s\S]*getBadges[\s\S]*badgeDesc[\s\S]*badgeName[\s\S]*earnBadges[\s\S]*esc[\s\S]*hasBadge/.test(workoutSource)){
+  problems.push('data-sync/workout hook boundary is missing or incomplete');
+}
+
+if(/from ['"]\.\/90-events\.js['"]/.test(dataSyncSource)){
+  problems.push('src/app/10-data-sync.js must not import 90-events.js; inject event-facing hooks instead');
+}
+if(!/setDataSyncEventHooks/.test(dataSyncSource) || !/setDataSyncEventHooks\(\{[\s\S]*getNotificationPrefsKey[\s\S]*getNotificationPrefDefaults[\s\S]*applyAudioFromUser[\s\S]*getNotificationPrefs[\s\S]*syncNotificationSettings[\s\S]*syncSettingsForm/.test(eventsCoreSource)){
+  problems.push('data-sync/events hook boundary is missing or incomplete');
+}
+
 if(/from ['"]\.\/20-account\.js['"]/.test(coreSource)){
   problems.push('src/app/00-core.js must not import 20-account.js; inject account-facing hooks instead');
 }

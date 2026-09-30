@@ -18,7 +18,7 @@ import { DAYS, calOffset, clearSession, closeAllMenus, connectAccountSync, curUs
   renderUsers, renderWeight, renderWellness, savePrograms, saveSession, saveStats, saveUsers,
   saveWell, saveWellHist, sessionAgeText, sessionForProgram, sessionWorkout, setCalOffsetShared,
   setCurrentUserShared, setUsersShared, setWeightMetricShared, setWellMetricShared, showSyncState,
-  stats, syncNotificationPrefsServer, toggleMenu, trackInstallOnce, trackProductEvent, users,
+  setDataSyncEventHooks, stats, syncNotificationPrefsServer, toggleMenu, trackInstallOnce, trackProductEvent, users,
   workStepChoices
 } from './10-data-sync.js';
 import { account, bioDisable, bioEnable, bioSupported, bumpAccountMeta, completePurchase,
@@ -2008,6 +2008,14 @@ function resetSkipConfirm(){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initEvents(){
+  setDataSyncEventHooks({
+    getNotificationPrefsKey: () => NOTIFICATION_PREFS_KEY,
+    getNotificationPrefDefaults: () => NOTIFICATION_PREF_DEFAULTS,
+    applyAudioFromUser,
+    getNotificationPrefs,
+    syncNotificationSettings,
+    syncSettingsForm
+  });
   setCoreEventHooks({
     applyAudioFromUser,
     fillLiveSoundCascade,

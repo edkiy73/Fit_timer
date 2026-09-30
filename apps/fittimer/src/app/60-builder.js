@@ -6,8 +6,8 @@ import { registerAction } from './05-actions.js';
 import { $, appAlert, appDialog, goBackTo, goTab, icon, isChanged, plural, setCoreBuilderHooks, setShown, show, state,
   takeSnap
 } from './00-core.js';
-import { DAYS, closeAllMenus, customPrograms, normPlans, planDays, savePrograms, sortPlans,
-  toggleMenu, trackProductEvent
+import { DAYS, closeAllMenus, customPrograms, normPlans, planDays, savePrograms,
+  setDataSyncBuilderHooks, sortPlans, toggleMenu, trackProductEvent
 } from './10-data-sync.js';
 import { LIM, clampLine, clampText, cleanLink, cleanPic, requireWho, sanitizeProgram } from './30-progress-media.js';
 import { aiWaysReset, claimProgramLink, flashDone, userForAI } from './40-programs-ai.js';
@@ -2222,6 +2222,18 @@ export function setPlanIdxShared(value){ planIdx = value; return planIdx; }
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initBuilder(){
+  setDataSyncBuilderHooks({
+    exRestAfter,
+    getExProgValue,
+    hasWeight,
+    normValue,
+    parseValue,
+    progAtCeiling,
+    progAxis,
+    progBaseValue,
+    progStepSize,
+    progressedRepsRange
+  });
   setCoreBuilderHooks({
     dropFreshEx,
     exDirty,

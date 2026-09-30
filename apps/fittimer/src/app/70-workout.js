@@ -9,7 +9,7 @@ import { $, DUMBBELL_ICON, ILLO, announceExercise, announceRemaining, announceRe
 } from './00-core.js';
 import { calcStreak, calcStreakInfo, clearSession, closeAllMenus, curUser, customPrograms,
   customToProgram, localISO, newId, normPlans, progActive, renderStats, savePrograms, saveSession,
-  saveStats, stats, streakWord, toggleMenu, trackProductEvent, users
+  saveStats, setDataSyncWorkoutHooks, stats, streakWord, toggleMenu, trackProductEvent, users
 } from './10-data-sync.js';
 import { LIM, clampText, photos, shareGeneratedFile } from './30-progress-media.js';
 import { aiClientVerdict, callGemini, exAnswerFormat, exerciseToText, premiumGate, userForAI,
@@ -1820,6 +1820,14 @@ export function setExFromWorkShared(value){ exFromWork = value; return exFromWor
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initWorkout(){
+  setDataSyncWorkoutHooks({
+    getBadges: () => BADGES,
+    badgeDesc,
+    badgeName,
+    earnBadges,
+    esc,
+    hasBadge
+  });
   setCoreWorkoutHooks({
     esc,
     exitWorkout,

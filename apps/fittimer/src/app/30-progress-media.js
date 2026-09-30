@@ -7,7 +7,7 @@ import { $, appAlert, appConfirm, appDialog, icon, plural, setCoreProgressHooks,
 import { MONTH_OF, PROGRAM_DOC, curUser, currentUser, customPrograms, docMeta, kvGet, kvSet,
   loadData, loadIdentity, localISO, migrateUserAge, normPlans, pk, profileAge, recordConsent,
   isDefaultProfileName, renderStats, renderUsers, renderWeight, renderWellness, savePrograms, saveStats, saveUsers,
-  setCurrentUserShared, setUsersShared, stats, users, validAge, wellList
+  setCurrentUserShared, setDataSyncProgressMediaHooks, setUsersShared, stats, users, validAge, wellList
 } from './10-data-sync.js';
 import { GLOBAL_KEYS, PROFILE_KEYS } from './20-account.js';
 import { ageError, renderToday } from './40-programs-ai.js';
@@ -954,6 +954,13 @@ export async function whoFinish(save){
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initProgressMedia(){
+  setDataSyncProgressMediaHooks({
+    ensureWarmup,
+    loadPhotos,
+    renderPhotos,
+    shortD,
+    uniqueExerciseIds
+  });
   setCoreProgressHooks({
     renderPhotos
   });
