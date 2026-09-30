@@ -42,7 +42,8 @@ const COPY = {
     clear:'Очистить', migration:'Миграция хранилища',
     owned:'Куплено', access:'Выдать доступ', sku:'Курс или покупка', grant:'Выдать', revoke:'Забрать',
     premiumDays:'Подписка, дней', grantPremium:'Выдать подписку', revokePremium:'Забрать подписку',
-    search:'Найти по почте', pick:'Нажми на человека в списке — его почта подставится в форму выше.', nobody:'Никого не нашлось.',
+    search:'Найти по почте', pick:'Нажми на человека — его карточка откроется выше.', nobody:'Никого не нашлось.',
+    card:'Сейчас у человека', cardCourses:'Курсы', cardNone:'нет', cardPremium:'Подписка', cardUntil:'до', cardSeen:'Заходил', cardSince:'Аккаунт с', cardNew:'Такого аккаунта ещё нет — он создастся при выдаче доступа.', never:'—',
     accessDone:'Готово.', accessHint:'Для семьи, промо или возврата. Курс открывается навсегда, подписка — на выбранное число дней. Если человек ещё не заходил, аккаунт создастся сам.',
     loginCode:'Код для входа', loginCodeDone:'Одноразовый код для', loginCodeHint:'действует 15 минут. На экране входа: email → «У меня есть код».',
     payments:'Платежи', noPayments:'Платежей пока нет.', when:'Когда', provider:'Провайдер', event:'Событие', account:'Аккаунт',
@@ -64,7 +65,8 @@ const COPY = {
     premium:'Premium', seen:'Last active', count:'Count',
     clear:'Clear', migration:'Storage migration',
     owned:'Purchases', access:'Give access', sku:'Course or purchase', grant:'Grant', revoke:'Revoke',
-    search:'Find by email', pick:'Tap a person in the list to put their email in the form above.', nobody:'Nobody found.',
+    search:'Find by email', pick:'Tap a person to open their card above.', nobody:'Nobody found.',
+    card:'This person has', cardCourses:'Courses', cardNone:'none', cardPremium:'Premium', cardUntil:'until', cardSeen:'Last active', cardSince:'Account since', cardNew:'No such account yet — it is created when you give access.', never:'—',
     premiumDays:'Premium, days', grantPremium:'Grant Premium', revokePremium:'Revoke Premium',
     accessDone:'Done.', accessHint:'Manual access: family, promo, refund. Purchases are permanent, Premium lasts for a period. The account is created if it does not exist yet.',
     loginCode:'Sign-in code', loginCodeDone:'One-time code for', loginCodeHint:'valid for 15 minutes. On the sign-in screen: email → “I have a code”.',
@@ -81,26 +83,38 @@ type Copy = (typeof COPY)[keyof typeof COPY];
 
 /* Manual access for one account: a purchase for good (SKU from the product catalog)
    or Premium for a number of days. */
-function AccessForm({client, adminKey, copy, onChanged, email, setEmail}: {client: AdminClient; adminKey: string; copy: Copy; onChanged(): void; email: string; setEmail(value: string): void}){
+type Product = {sku: string; title: string};
+type Row = 'course' | 'premium' | 'code';
+
+export function formatAdminDate(value: unknown, locale: 'ru' | 'en', withTime = true){
+  const date = new Date(String(value || ''));
+  if(!value || Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString(locale === 'ru' ? 'ru-RU' : 'en-US', withTime
+    ? {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'}
+    : {day:'numeric', month:'short', year:'numeric'});
+}
+
+function productTitle(products: Product[], sku: unknown){
+  return products.find(p => p.sku === sku)?.title || String(sku);
+}
+
+function AccessForm({client, adminKey, copy, locale, onChanged, email, setEmail, products, user}: {
+  client: AdminClient; adminKey: string; copy: Copy; locale: 'ru' | 'en'; onChanged(): void;
+  email: string; setEmail(value: string): void; products: Product[]; user: Record<string, unknown> | null;
+}){
   const [sku, setSku] = useState('');
   const [days, setDays] = useState('30');
-  const [products, setProducts] = useState<Array<{sku: string; title: string}>>([]);
   const [message, setMessage] = useState('');
+  const [messageAt, setMessageAt] = useState<Row>('course');
   const [busy, setBusy] = useState(false);
+  useEffect(() => { if(products[0]) setSku(current => current || products[0]!.sku); }, [products]);
+  useEffect(() => { setMessage(''); }, [email]);
+  const owned = user && Array.isArray(user.owned) ? user.owned as string[] : [];
+  const sub = user?.sub as {until?: string} | null | undefined;
 
-  useEffect(() => {
-    let live = true;
-    client.action(adminKey, 'products_list').then(result => {
-      const list = Array.isArray(result.products) ? result.products as Array<{sku: string; title: string}> : [];
-      if(!live) return;
-      setProducts(list);
-      if(list[0]) setSku(current => current || list[0]!.sku);
-    }).catch(() => undefined);
-    return () => { live = false; };
-  }, [client, adminKey]);
-
-  async function run(action: string, body: Record<string, unknown>){
+  async function run(action: string, body: Record<string, unknown>, row: Row){
     setBusy(true);
+    setMessageAt(row);
     setMessage('');
     try{
       // Family members may not have signed in yet (or mail may be down): granting
@@ -118,6 +132,7 @@ function AccessForm({client, adminKey, copy, onChanged, email, setEmail}: {clien
 
   async function loginCode(){
     setBusy(true);
+    setMessageAt('code');
     setMessage('');
     try{
       const result = await client.action(adminKey, 'user_test_code', {email});
@@ -129,29 +144,44 @@ function AccessForm({client, adminKey, copy, onChanged, email, setEmail}: {clien
     }
   }
 
+  const note = (row: Row) => message && messageAt === row ? <p className="ab-admin-feedback" role="status">{message}</p> : null;
   return (
     <article className="ab-admin-panel ab-admin-access">
       <h2>{copy.access}</h2>
       <p className="ab-admin-empty">{copy.accessHint}</p>
       <label><span>{copy.email}</span><input type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
+      {email.includes('@') && (user ? (
+        <dl className="ab-admin-person" aria-label={copy.card}>
+          <div><dt>{copy.cardCourses}</dt><dd>{owned.length ? owned.map(item => (
+            <span className="ab-admin-chip" key={item}>{productTitle(products, item)}
+              <button type="button" className="ab-admin-link" aria-label={copy.revoke + ': ' + productTitle(products, item)} disabled={busy} onClick={() => void run('user_owned', {sku:item, revoke:true}, 'course')}>{copy.revoke}</button>
+            </span>
+          )) : copy.cardNone}</dd></div>
+          <div><dt>{copy.cardPremium}</dt><dd>{user.premium ? copy.cardUntil + ' ' + formatAdminDate(sub?.until, locale, false) : copy.cardNone}</dd></div>
+          <div><dt>{copy.cardSeen}</dt><dd>{formatAdminDate(user.seen, locale) || copy.never}</dd></div>
+          <div><dt>{copy.cardSince}</dt><dd>{formatAdminDate(user.since, locale) || copy.never}</dd></div>
+        </dl>
+      ) : <p className="ab-admin-empty">{copy.cardNew}</p>)}
       <div className="ab-admin-row">
         <label><span>{copy.sku}</span>
           {products.length
             ? <select value={sku} onChange={e => setSku(e.target.value)}>{products.map(p => <option key={p.sku} value={p.sku}>{p.title}</option>)}</select>
             : <input value={sku} onChange={e => setSku(e.target.value)} />}
         </label>
-        <button type="button" disabled={busy || !email || !sku} onClick={() => void run('user_owned', {sku})}>{copy.grant}</button>
-        <button type="button" className="ab-admin-secondary" disabled={busy || !email || !sku} onClick={() => void run('user_owned', {sku, revoke:true})}>{copy.revoke}</button>
+        <button type="button" disabled={busy || !email || !sku} onClick={() => void run('user_owned', {sku}, 'course')}>{copy.grant}</button>
+        <button type="button" className="ab-admin-secondary" disabled={busy || !email || !sku} onClick={() => void run('user_owned', {sku, revoke:true}, 'course')}>{copy.revoke}</button>
       </div>
+      {note('course')}
       <div className="ab-admin-row">
         <label><span>{copy.premiumDays}</span><input type="number" min={1} max={3650} value={days} onChange={e => setDays(e.target.value)} /></label>
-        <button type="button" disabled={busy || !email} onClick={() => void run('user_premium', {days:Number(days) || 30})}>{copy.grantPremium}</button>
-        <button type="button" className="ab-admin-secondary" disabled={busy || !email} onClick={() => void run('user_premium', {revoke:true})}>{copy.revokePremium}</button>
+        <button type="button" disabled={busy || !email} onClick={() => void run('user_premium', {days:Number(days) || 30}, 'premium')}>{copy.grantPremium}</button>
+        <button type="button" className="ab-admin-secondary" disabled={busy || !email} onClick={() => void run('user_premium', {revoke:true}, 'premium')}>{copy.revokePremium}</button>
       </div>
+      {note('premium')}
       <div className="ab-admin-row">
         <button type="button" className="ab-admin-secondary" disabled={busy || !email} onClick={() => void loginCode()}>{copy.loginCode}</button>
       </div>
-      {message && <p className="ab-admin-empty" role="status">{message}</p>}
+      {note('code')}
     </article>
   );
 }
@@ -222,6 +252,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
   const [navOpen, setNavOpen] = useState(false);
   const [accessEmail, setAccessEmail] = useState('');
   const [userQuery, setUserQuery] = useState('');
+  const [products, setProducts] = useState<Product[]>([]);
 
   const tabs = useMemo(() => [
     ['health', copy.health], ['overview', copy.overview], ['users', copy.users], ['payments', copy.payments],
@@ -299,6 +330,15 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
 
   useEffect(() => { void loadHealth(); }, [loadHealth]);
   useEffect(() => { void loadProtected(tab); }, [tab, key, loadProtected]);
+  // Course titles for the people list and the learner card (instead of raw SKUs).
+  useEffect(() => {
+    if(tab !== 'users' || !key || products.length) return;
+    let live = true;
+    client.action(key, 'products_list').then(result => {
+      if(live && Array.isArray(result.products)) setProducts(result.products as Product[]);
+    }).catch(() => undefined);
+    return () => { live = false; };
+  }, [tab, key, client, products.length]);
 
   function connect(){
     const next = draftKey.trim();
@@ -337,6 +377,8 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
   const users = tab === 'users' && data && Array.isArray(data.users) ? data.users as Array<Record<string, unknown>> : [];
   const needle = userQuery.trim().toLowerCase();
   const shownUsers = needle ? users.filter(user => String(user.email || '').toLowerCase().includes(needle)) : users;
+  const pickedEmail = accessEmail.trim().toLowerCase();
+  const pickedUser = pickedEmail ? users.find(user => String(user.email || '').toLowerCase() === pickedEmail) || null : null;
   const payments = tab === 'payments' && data && Array.isArray(data.events) ? data.events as Array<Record<string, unknown>> : [];
   const errorStats = tab === 'errors' && data && data.stats && typeof data.stats === 'object'
     ? data.stats as Record<string, unknown> : null;
@@ -424,7 +466,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
 
       {tab === 'users' && key && (
         <section className="ab-admin-stack">
-          <AccessForm client={client} adminKey={key} copy={copy} email={accessEmail} setEmail={setAccessEmail} onChanged={() => void loadProtected('users', key)} />
+          <AccessForm client={client} adminKey={key} copy={copy} locale={locale} email={accessEmail} setEmail={setAccessEmail} products={products} user={pickedUser} onChanged={() => void loadProtected('users', key)} />
           {data && <article className="ab-admin-panel">
             <label className="ab-admin-search"><span>{copy.search}</span>
               <input type="search" value={userQuery} onChange={e => setUserQuery(e.target.value)} />
@@ -435,9 +477,9 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
               <div className="ab-admin-table-wrap"><table><thead><tr><th>{copy.email}</th><th>{copy.premium}</th><th>{copy.owned}</th><th>{copy.seen}</th></tr></thead>
               <tbody>{shownUsers.map(user => <tr key={String(user.id || user.email)}>
                 <td><button type="button" className="ab-admin-link" onClick={() => { setAccessEmail(String(user.email || '')); window.scrollTo({top:0, behavior:'smooth'}); }}>{String(user.email || '—')}</button></td>
-                <td>{user.premium ? String((user.sub as {until?: string} | null)?.until || '✓') : '—'}</td>
-                <td>{Array.isArray(user.owned) && user.owned.length ? user.owned.join(', ') : '—'}</td>
-                <td>{String(user.seen || user.since || '—')}</td>
+                <td data-label={copy.premium}>{user.premium ? copy.cardUntil + ' ' + formatAdminDate((user.sub as {until?: string} | null)?.until, locale, false) : '—'}</td>
+                <td data-label={copy.owned}>{Array.isArray(user.owned) && user.owned.length ? user.owned.map(item => productTitle(products, item)).join(', ') : '—'}</td>
+                <td data-label={copy.seen}>{formatAdminDate(user.seen || user.since, locale) || '—'}</td>
               </tr>)}</tbody></table></div>
             ) : users.length ? null : <p className="ab-admin-empty">{copy.noUsers}</p>}
           </article>}
