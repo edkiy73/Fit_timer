@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { AdminClient, AdminHealth } from '@appbase/core/admin.js';
 import './admin.css';
+import { AdminAiSettings } from './admin-ai';
+import { AdminBillingKeys } from './admin-billing-keys';
 
 export interface AdminSectionContext {
   client: AdminClient;
@@ -26,10 +28,14 @@ export interface AdminPanelProps {
 const COPY = {
   ru: {
     title:'Админка', key:'Ключ администратора', connect:'Войти', disconnect:'Выйти',
-    refresh:'Обновить', health:'Health', overview:'Обзор', users:'Пользователи',
+    refresh:'Обновить', health:'Состояние', overview:'Обзор', users:'Пользователи',
     errors:'Ошибки', storage:'Хранилище', noKey:'Введи ключ администратора.',
     badKey:'Ключ не подошёл. Проверь его и попробуй ещё раз.', requestFailed:'Не удалось получить данные.',
-    status:'Статус', deployment:'Сборка', warnings:'Предупреждения', services:'Сервисы',
+    status:'Статус', deployment:'Сборка', warnings:'Что стоит сделать', services:'Сервисы',
+    statusOk:'Всё работает', statusWarning:'Работает, но не всё настроено', statusError:'Есть сбой — ученики могут не сохранить прогресс', statusLoading:'Проверяю…',
+    serviceStorage:'Хранилище данных', serviceMail:'Вход по коду из письма', serviceAi:'ИИ (разбор ошибок, разговор)', servicePush:'Уведомления на телефон', serviceBilling:'Оплата',
+    serviceOn:'работает', serviceOff:'не настроено', serviceMemory:'только временная память — данные пропадут', serviceBroken:'сбой',
+    buildLine:'Сейчас на сайте версия из изменения', details:'Подробности для разработчика',
     analytics:'Аналитика', accounts:'Аккаунты', totalErrors:'Ошибок клиента',
     noErrors:'Ошибок клиента нет.', noUsers:'Аккаунтов пока нет.', email:'Email',
     premium:'Premium', seen:'Последняя активность', count:'Количество',
@@ -39,14 +45,19 @@ const COPY = {
     accessDone:'Готово.', accessHint:'Ручная выдача: семья, промо, возврат. Покупки остаются навсегда, Premium — на срок. Аккаунт создаётся сам, если его ещё нет.',
     loginCode:'Код для входа', loginCodeDone:'Одноразовый код для', loginCodeHint:'действует 15 минут. На экране входа: email → «У меня есть код».',
     payments:'Платежи', noPayments:'Платежей пока нет.', when:'Когда', provider:'Провайдер', event:'Событие', account:'Аккаунт',
-    mainGroup:'Главное', accountsGroup:'Аккаунты', systemGroup:'Система', productGroup:'Продукт', menu:'Меню'
+    mainGroup:'Главное', accountsGroup:'Аккаунты', systemGroup:'Система', productGroup:'Продукт', menu:'Меню',
+    settingsGroup:'Настройки', ai:'ИИ', billingKeys:'Оплата: ключи'
   },
   en: {
     title:'Admin', key:'ADMIN_KEY', connect:'Connect', disconnect:'Sign out',
-    refresh:'Refresh', health:'Health', overview:'Overview', users:'Users',
+    refresh:'Refresh', health:'Status', overview:'Overview', users:'Users',
     errors:'Errors', storage:'Storage', noKey:'Enter ADMIN_KEY for protected data.',
     badKey:'Wrong ADMIN_KEY or access denied.', requestFailed:'Could not load data.',
-    status:'Status', deployment:'Build', warnings:'Warnings', services:'Services',
+    status:'Status', deployment:'Build', warnings:'To do', services:'Services',
+    statusOk:'Everything works', statusWarning:'Works, but not everything is set up', statusError:'Something is broken — learners may lose progress', statusLoading:'Checking…',
+    serviceStorage:'Data storage', serviceMail:'Sign-in by email code', serviceAi:'AI (mistake explanations, talk)', servicePush:'Phone notifications', serviceBilling:'Payments',
+    serviceOn:'works', serviceOff:'not set up', serviceMemory:'temporary memory only — data will be lost', serviceBroken:'broken',
+    buildLine:'The site runs the version from change', details:'Details for developers',
     analytics:'Analytics', accounts:'Accounts', totalErrors:'Client errors',
     noErrors:'No client errors.', noUsers:'No accounts yet.', email:'Email',
     premium:'Premium', seen:'Last active', count:'Count',
@@ -56,11 +67,12 @@ const COPY = {
     accessDone:'Done.', accessHint:'Manual access: family, promo, refund. Purchases are permanent, Premium lasts for a period. The account is created if it does not exist yet.',
     loginCode:'Sign-in code', loginCodeDone:'One-time code for', loginCodeHint:'valid for 15 minutes. On the sign-in screen: email → “I have a code”.',
     payments:'Payments', noPayments:'No payments yet.', when:'When', provider:'Provider', event:'Event', account:'Account',
-    mainGroup:'Main', accountsGroup:'Accounts', systemGroup:'System', productGroup:'Product', menu:'Menu'
+    mainGroup:'Main', accountsGroup:'Accounts', systemGroup:'System', productGroup:'Product', menu:'Menu',
+    settingsGroup:'Settings', ai:'AI', billingKeys:'Payments: keys'
   }
 } as const;
 
-type CoreTab = 'health' | 'overview' | 'users' | 'payments' | 'errors' | 'storage';
+type CoreTab = 'health' | 'overview' | 'users' | 'payments' | 'errors' | 'storage' | 'ai' | 'billing-keys';
 type Tab = CoreTab | string;
 
 type Copy = (typeof COPY)[keyof typeof COPY];
@@ -147,6 +159,50 @@ function JsonCard({value}: {value: unknown}){
   return <pre className="ab-admin-json">{JSON.stringify(value, null, 2)}</pre>;
 }
 
+type Service = {configured?: boolean};
+
+/* «Состояние»: one plain sentence, what works and what does not; raw data stays folded. */
+function HealthView({health, copy}: {health: AdminHealth | null; copy: Copy}){
+  const services = (health?.services || {}) as Record<string, Service>;
+  const storage = (health?.storage || {}) as {status?: string; mode?: string};
+  const build = (health?.deployment || {}) as unknown as {commit?: string | null; env?: string | null};
+  const title = !health ? copy.statusLoading
+    : health.status === 'ok' ? copy.statusOk
+    : health.status === 'warning' ? copy.statusWarning
+    : copy.statusError;
+  const storageState = storage.mode === 'memory' ? copy.serviceMemory
+    : storage.status === 'ok' ? copy.serviceOn : copy.serviceBroken;
+  const rows: Array<[string, boolean, string]> = [
+    [copy.serviceStorage, storage.status === 'ok' && storage.mode !== 'memory', storageState],
+    [copy.serviceMail, !!services.mail?.configured, services.mail?.configured ? copy.serviceOn : copy.serviceOff],
+    [copy.serviceAi, !!services.ai?.configured, services.ai?.configured ? copy.serviceOn : copy.serviceOff],
+    [copy.servicePush, !!services.push?.configured, services.push?.configured ? copy.serviceOn : copy.serviceOff],
+    [copy.serviceBilling, !!services.billing?.configured, services.billing?.configured ? copy.serviceOn : copy.serviceOff]
+  ];
+  return (
+    <section className="ab-admin-stack">
+      <article className="ab-admin-panel ab-admin-status" data-status={health?.status || 'loading'}>
+        <h2>{title}</h2>
+        {build && typeof build === 'object' && build.commit && (
+          <p className="ab-admin-empty">{copy.buildLine} {build.commit}{build.env ? ' ('+build.env+')' : ''}.</p>
+        )}
+        <ul className="ab-admin-services">
+          {rows.map(([name, ok, state]) => (
+            <li key={name} data-ok={ok || undefined}><span>{name}</span><b>{state}</b></li>
+          ))}
+        </ul>
+      </article>
+      {!!health?.warnings?.length && (
+        <article className="ab-admin-panel"><h2>{copy.warnings}</h2><ul>{health.warnings.map(x => <li key={x}>{x}</li>)}</ul></article>
+      )}
+      <details className="ab-admin-panel ab-admin-details">
+        <summary>{copy.details}</summary>
+        <JsonCard value={{deployment:health?.deployment, services:health?.services, probes:health?.probes}} />
+      </details>
+    </section>
+  );
+}
+
 // One shared empty list: a fresh [] default on every render would re-create the loaders
 // and refetch protected data in a loop (hundreds of requests, then the admin rate limit).
 const NO_SECTIONS: readonly AdminSection[] = [];
@@ -166,7 +222,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
 
   const tabs = useMemo(() => [
     ['health', copy.health], ['overview', copy.overview], ['users', copy.users], ['payments', copy.payments],
-    ['errors', copy.errors], ['storage', copy.storage],
+    ['errors', copy.errors], ['storage', copy.storage], ['ai', copy.ai], ['billing-keys', copy.billingKeys],
     ...extraSections.map(section => [section.id, section.label] as const)
   ] as ReadonlyArray<readonly [string,string]>, [copy, extraSections]);
 
@@ -174,6 +230,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
     const core = [
       {label:copy.mainGroup, ids:['health','overview']},
       {label:copy.accountsGroup, ids:['users','payments','errors']},
+      {label:copy.settingsGroup, ids:['ai','billing-keys']},
       {label:copy.systemGroup, ids:['storage']}
     ];
     const extras = new Map<string,string[]>();
@@ -200,7 +257,8 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
   }, [client, copy.requestFailed]);
 
   const loadProtected = useCallback(async (target: Tab, adminKey = key) => {
-    if(target === 'health' || extraSections.some(section => section.id === target)) return;
+    // These tabs load their own data.
+    if(target === 'health' || target === 'ai' || target === 'billing-keys' || extraSections.some(section => section.id === target)) return;
     if(!adminKey){ setData(null); return; }
     setBusy(true);
     setError('');
@@ -344,17 +402,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
         </header>
         <main className="ab-admin">
 
-      {tab === 'health' && (
-        <section className="ab-admin-stack">
-          <div className="ab-admin-grid">
-            <article className="ab-admin-card"><span>{copy.status}</span><strong>{health?.status || '…'}</strong></article>
-            <article className="ab-admin-card"><span>{copy.deployment}</span><strong>{String(health?.deployment || '—')}</strong></article>
-          </div>
-          {!!health?.warnings?.length && <article className="ab-admin-panel"><h2>{copy.warnings}</h2><ul>{health.warnings.map(x => <li key={x}>{x}</li>)}</ul></article>}
-          <article className="ab-admin-panel"><h2>{copy.services}</h2><JsonCard value={health?.services || {}} /></article>
-          <article className="ab-admin-panel"><h2>{copy.health}</h2><JsonCard value={health?.probes || []} /></article>
-        </section>
-      )}
+      {tab === 'health' && <HealthView health={health} copy={copy} />}
 
       {error && <p className="ab-admin-error" role="alert">{error}</p>}
       {busy && <p className="ab-admin-empty">…</p>}
@@ -415,6 +463,9 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
       {tab === 'storage' && key && data && (
         <section className="ab-admin-panel"><h2>{copy.migration}</h2><JsonCard value={data.status || data} /></section>
       )}
+
+      {tab === 'ai' && key && <section className="ab-admin-stack"><AdminAiSettings client={client} adminKey={key} locale={locale} /></section>}
+      {tab === 'billing-keys' && key && <section className="ab-admin-stack"><AdminBillingKeys client={client} adminKey={key} locale={locale} /></section>}
 
       {extraSections.map(section => tab === section.id && key ? (
         <section key={section.id} className="ab-admin-stack">

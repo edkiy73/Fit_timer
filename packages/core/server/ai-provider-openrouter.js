@@ -2,8 +2,10 @@
 
 const API_URL='https://openrouter.ai/api/v1/chat/completions';
 
+const { secret } = require('./secrets');
+
 function configured(){
-  return !!String(process.env.OPENROUTER_API_KEY||'').trim();
+  return !!secret('OPENROUTER_API_KEY');
 }
 
 function info(){
@@ -29,7 +31,7 @@ async function generateText({model,prompt,timeoutMs=48000,maxTokens=32768,temper
   if(!configured()) throw Object.assign(new Error('provider_not_configured'),{status:503});
   const headers={
     'Content-Type':'application/json',
-    Authorization:'Bearer '+String(process.env.OPENROUTER_API_KEY||'').trim()
+    Authorization:'Bearer '+secret('OPENROUTER_API_KEY')
   };
   const referer=String(process.env.OPENROUTER_APP_URL||'').trim();
   const title=String(process.env.OPENROUTER_APP_NAME||'').trim();

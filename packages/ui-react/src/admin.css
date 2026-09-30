@@ -435,3 +435,31 @@
   .ab-admin-cell-action{width:auto;white-space:normal;margin-top:6px}
   .ab-admin-cell-action .ab-admin-secondary{width:100%}
 }
+
+/* «Состояние»: status sentence and a service checklist. */
+.ab-admin-status h2{margin:0 0 6px}
+.ab-admin-status[data-status="ok"] h2{color:var(--success,#16a34a)}
+.ab-admin-status[data-status="error"] h2{color:var(--danger,#dc2626)}
+.ab-admin-services{display:grid;gap:8px;margin:10px 0 0;padding:0;list-style:none}
+.ab-admin-services li{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:12px;background:var(--surface,#f3f4f6)}
+.ab-admin-services li b{color:var(--muted,#6b7280);font-weight:700;text-align:right}
+.ab-admin-services li[data-ok] b{color:var(--success,#16a34a)}
+.ab-admin-details summary{cursor:pointer;font-weight:700}
+
+/* Settings forms: service keys, AI routes, a save bar next to the fields. */
+.ab-admin-secret{display:grid;gap:8px;padding:12px 0;border-top:1px solid var(--line,#e4e6eb)}
+.ab-admin-secret:first-of-type{border-top:0}
+.ab-admin-secret-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ab-admin-secret-head span{color:var(--muted,#6b7280)}
+.ab-admin-secret[data-set] .ab-admin-secret-head span{color:var(--success,#16a34a)}
+.ab-admin-secret textarea,.ab-admin-secret input{box-sizing:border-box;width:100%;font:inherit}
+.ab-admin-fieldset{border:1px solid var(--line,#e4e6eb);border-radius:12px;padding:10px 12px;margin:10px 0}
+.ab-admin-fieldset legend{padding:0 4px;font-weight:700}
+.ab-admin-check{display:flex;align-items:center;gap:8px;font-weight:700}
+.ab-admin-savebar{position:sticky;bottom:0;display:flex;align-items:center;gap:12px;padding:12px 0;background:var(--bg,#f6f7f9)}
+.ab-admin-fieldset label,.ab-admin-limits label{display:grid;gap:5px;flex:1;min-width:0;margin-bottom:8px}
+.ab-admin-fieldset :is(select,input),.ab-admin-limits input{box-sizing:border-box;width:100%}
+.ab-admin-panel label.ab-admin-check{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;margin:0 0 6px}
+.ab-admin-panel label.ab-admin-check input{width:22px;height:22px;margin:0;flex:none}
+.ab-admin-services li>span{min-width:0}
+.ab-admin-services li b{flex:none;max-width:55%}
