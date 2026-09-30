@@ -1433,6 +1433,9 @@ export function blockVoiceCommandsFor(ms = 700){
   lastAppSoundT = Math.max(lastAppSoundT, Date.now() + Math.max(0, Number(ms) || 0));
   return lastAppSoundT;
 }
+export function voiceCommandsBlockedAt(at = Date.now()){
+  return Number(at) < lastAppSoundT;
+}
 export function openStartFrom(raw, from){
   if(from) startFrom = from;
   return openStart(raw);
