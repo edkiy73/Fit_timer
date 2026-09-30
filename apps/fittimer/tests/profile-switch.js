@@ -29,6 +29,13 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(500); }
 
   const r = await page.evaluate(async () => {
+    const notificationRuns = [];
+    syncNativeNotifications = async () => {
+      notificationRuns.push({
+        user:currentUser,
+        programs:customPrograms.filter(p => p.id !== 'warmup').map(p => p.id).sort()
+      });
+    };
     const prog = (id, n) => ({id, name: id, plans: [{days: [], rounds: 1, roundRest: 0,
       exercises: Array.from({length: n}, (_, i) => ({name: 'E' + i, type: 'reps', value: 10, rest: 10}))}]});
     const A = currentUser;
@@ -47,12 +54,22 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       .filter(p => p.id !== 'warmup').map(p => p.id + ':' + p.plans[0].exercises.length).join(',');
     await switchUser('uB');
     const warmupEn = (customPrograms.find(p => p.id === 'warmup') || {}).name;
-    return {A: await read(A), B: await read('uB'), C: await read('uC'), warmupEn, locale: appLocale};
+    const lastNotificationRun = notificationRuns[notificationRuns.length - 1] || null;
+    return {
+      A: await read(A), B: await read('uB'), C: await read('uC'),
+      warmupEn, locale: appLocale, notificationRuns, lastNotificationRun
+    };
   });
   ok('профиль A: только своя программа, упражнение удалено', r.A === 'pa:1', r.A);
   ok('профиль B не получил программы других профилей', r.B === 'pb:5', r.B);
   ok('профиль C не получил программы других профилей', r.C === 'pc:1', r.C);
   ok('разминка профиля на английском переведена', r.locale === 'en' && r.warmupEn === '10-minute warm-up', r.warmupEn);
+  ok('каждое переключение профиля пересобирает нативные уведомления после загрузки его программ',
+    r.notificationRuns.length >= 9
+      && r.lastNotificationRun
+      && r.lastNotificationRun.user === 'uB'
+      && r.lastNotificationRun.programs.join(',') === 'pb',
+    JSON.stringify(r.lastNotificationRun));
   // Удалённая разминка не возвращается ни при переключении, ни после перезапуска.
   await page.evaluate(async () => {
     customPrograms = customPrograms.filter(p => p.id !== 'warmup'); await savePrograms();
