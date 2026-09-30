@@ -485,7 +485,7 @@
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
       "lines": 3337,
-      "chars": 155293,
+      "chars": 155257,
       "symbols": [
         "add",
         "ageError",
