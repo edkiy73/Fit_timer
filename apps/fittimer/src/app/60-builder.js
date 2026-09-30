@@ -3,7 +3,7 @@ import { appLocale, canonicalDescription, canonicalLabel, t } from '../i18n/inde
 import FitAIProtocol from '../../lib/ai-protocol.js';
 import { appRuntimeCompat } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
-import { $, appAlert, appDialog, goBackTo, goTab, icon, isChanged, plural, setShown, show, state,
+import { $, appAlert, appDialog, goBackTo, goTab, icon, isChanged, plural, setCoreBuilderHooks, setShown, show, state,
   takeSnap
 } from './00-core.js';
 import { DAYS, closeAllMenus, customPrograms, normPlans, planDays, savePrograms, sortPlans,
@@ -2222,6 +2222,30 @@ export function setPlanIdxShared(value){ planIdx = value; return planIdx; }
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initBuilder(){
+  setCoreBuilderHooks({
+    dropFreshEx,
+    exDirty,
+    exRestAfter,
+    fmtKg,
+    getExProgValue,
+    getExWeight,
+    hasWeight,
+    normValue,
+    openBuilder,
+    parseKg,
+    parseValue,
+    progAtCeiling,
+    progAxis,
+    progBaseValue,
+    progStepSize,
+    programDirty,
+    progressedRepsRange,
+    setExDraftShared,
+    setExIdxShared,
+    setExOrigShared,
+    setExWeight,
+    weightPending
+  });
   registerAction('deleteCurrentPlan', (_btn, event) => {
     event.stopPropagation();
     delCurrentPlan();
