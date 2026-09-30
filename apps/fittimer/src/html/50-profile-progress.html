@@ -459,12 +459,12 @@
         <div class="cmp-row">
           <div class="cmp-col">
             <select id="cmpA" class="voice-sel" style="max-width:none;width:100%"></select>
-            <div class="cmp-img" id="cmpImgA"></div>
+            <div class="cmp-img" id="cmpImgA" data-act="openComparePhotoFull" data-compare-side="A"></div>
             <button class="link-btn" id="cmpDelA" data-act="deleteCompareA" style="padding:6px;margin:0" data-i18n="compare.deletePhoto">Удалить это фото</button>
           </div>
           <div class="cmp-col">
             <select id="cmpB" class="voice-sel" style="max-width:none;width:100%"></select>
-            <div class="cmp-img" id="cmpImgB"></div>
+            <div class="cmp-img" id="cmpImgB" data-act="openComparePhotoFull" data-compare-side="B"></div>
             <button class="link-btn" id="cmpDelB" data-act="deleteCompareB" style="padding:6px;margin:0" data-i18n="compare.deletePhoto">Удалить это фото</button>
           </div>
         </div>
@@ -478,7 +478,7 @@
     <!-- Снимок во весь экран. Отдельный попап, а не увеличенная карточка: смотреть
          на себя человек приходит намеренно, и в этот момент на экране не должно быть
          ничего, кроме фотографии. -->
-    <div class="modal photo-full" id="photoFullModal">
+    <div class="modal photo-full" id="photoFullModal" data-act="closePhotoFullBackdrop">
       <div class="pf-wrap">
         <img id="pfImg" alt="">
         <p class="pf-cap" id="pfCap"></p>
@@ -489,7 +489,7 @@
     <!-- Что было сделано: за день, за неделю — где угодно. Раньше это был appAlert
          с текстовой простынёй: тренировки слипались в один абзац, а длинный список
          просто не помещался на экран и обрезался. -->
-    <div class="modal" id="sessModal">
+    <div class="modal" id="sessModal" data-act="closeModalBackdrop">
       <div class="modal-card">
         <span class="mini-label" id="sessLabel" data-i18n="progress.tabWorkouts">Тренировки</span>
         <p class="dlg-msg" id="sessTitle"></p>
