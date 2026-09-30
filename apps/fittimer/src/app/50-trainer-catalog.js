@@ -550,16 +550,57 @@ export function pickClientFor(p){
 export function snapshotEx(p){
   const out = [];
   normPlans(p).forEach((pl, pi) => (pl.exercises || []).forEach(e => {
-    out.push({p: pi, w: e.warmup ? 1 : 0, n: e.name || '',
+    out.push({id: String(e.id || ''), p: pi, w: e.warmup ? 1 : 0, n: e.name || '',
               v: String(e.value == null ? '' : e.value),
               s: +e.sets || 1, kg: +e.weight || 0});
   }));
   return out;
 }
 
-// Ключ упражнения — вариант плюс название: одно и то же движение в разных днях
-// это разные строки программы, и путать их нельзя.
-const exKey = x => x.p + '|' + (x.n || '').trim().toLowerCase();
+// Новые снимки сопоставляем только по стабильному exercise.id. Название — обычное
+// редактируемое поле: переименование не должно превращать одно упражнение в
+// «удалил старое + добавил новое», а два одинаковых названия не должны склеиваться.
+//
+// Старые origEx были сохранены до появления id. Для них оставляем совместимость,
+// но только когда fallback однозначен: тот же вариант + warmup/main + имя и ровно
+// один такой текущий кандидат. При двух одинаковых legacy-именах лучше показать
+// delete/add, чем случайно приписать правку не тому упражнению.
+const exLegacyKey = x => [
+  Math.max(0, +((x && x.p) || 0)),
+  x && x.w ? 1 : 0,
+  String((x && x.n) || '').trim().toLowerCase()
+].join('|');
+
+function matchExerciseSnapshots(original, current){
+  const now = Array.isArray(current) ? current : [];
+  const used = new Set();
+  const matches = [], missing = [];
+
+  (Array.isArray(original) ? original : []).forEach(old => {
+    let idx = -1;
+    const id = String((old && old.id) || '').trim();
+    if(id){
+      idx = now.findIndex((cur, i) => !used.has(i) && String((cur && cur.id) || '').trim() === id);
+    } else {
+      const key = exLegacyKey(old);
+      const candidates = [];
+      now.forEach((cur, i) => {
+        if(!used.has(i) && exLegacyKey(cur) === key) candidates.push(i);
+      });
+      if(candidates.length === 1) idx = candidates[0];
+    }
+    if(idx < 0){ missing.push(old); return; }
+    used.add(idx);
+    matches.push({old, cur:now[idx]});
+  });
+
+  return {
+    matches,
+    missing,
+    added: now.filter((_, i) => !used.has(i))
+  };
+}
+
 const exVal = x => x.v + (x.kg > 0 ? ' × ' + x.kg + ' ' + t('progress.kg') : '') + (x.s > 1 ? ' × ' + x.s + ' ' + t('report.setShort') : '');
 
 function buildReport(p){
@@ -619,19 +660,21 @@ function buildReport(p){
   // 4. Правки: что подопечный убрал, добавил и поменял руками.
   const diff = {add: [], del: [], mod: []};
   if(Array.isArray(p.origEx)){
-    const now = snapshotEx(p);
-    const byKey = new Map(now.map(x => [exKey(x), x]));
-    const wasKeys = new Set();
-    p.origEx.forEach(o => {
-      wasKeys.add(exKey(o));
-      const cur = byKey.get(exKey(o));
-      if(!cur){ if(diff.del.length < 12) diff.del.push(o.n); return; }
+    const compared = matchExerciseSnapshots(p.origEx, snapshotEx(p));
+    compared.missing.forEach(o => {
+      if(diff.del.length < 12) diff.del.push(o.n);
+    });
+    compared.matches.forEach(({old:o, cur}) => {
       // Поправку от прогрессии за правку не считаем: она и так в списке роста.
+      // Имя в key больше не участвует, поэтому переименование не даёт ложную пару
+      // delete/add; если вместе с ним менялись числа — это остаётся одна mod-строка.
       if(cur.v !== o.v || cur.s !== o.s || cur.kg !== o.kg){
-        if(diff.mod.length < 12) diff.mod.push({n: o.n, a: exVal(o), b: exVal(cur)});
+        if(diff.mod.length < 12) diff.mod.push({n: cur.n || o.n, a: exVal(o), b: exVal(cur)});
       }
     });
-    now.forEach(x => { if(!wasKeys.has(exKey(x)) && diff.add.length < 12) diff.add.push(x.n); });
+    compared.added.forEach(x => {
+      if(diff.add.length < 12) diff.add.push(x.n);
+    });
   }
 
   return {

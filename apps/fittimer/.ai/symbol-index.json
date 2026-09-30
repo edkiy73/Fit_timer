@@ -567,8 +567,8 @@
     },
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
-      "lines": 1707,
-      "chars": 78265,
+      "lines": 1750,
+      "chars": 79765,
       "symbols": [
         "add",
         "addClient",
@@ -586,7 +586,7 @@
         "doPublish",
         "ensureCatalogBody",
         "estimateMinutes",
-        "exKey",
+        "exLegacyKey",
         "exVal",
         "fact",
         "fill",
@@ -597,6 +597,7 @@
         "initTrainerCatalog",
         "line",
         "loadStoreServer",
+        "matchExerciseSnapshots",
         "openClient",
         "openClients",
         "openMyCatalog",
