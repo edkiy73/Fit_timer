@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { WordReviewRuntimeValue } from './word-review-runtime';
-import { listSavedWords, setWordSaved, type SavedWordStatus } from './saved-words';
+import { listSavedWords, removeSavedWord, type SavedWordStatus } from './saved-words';
 import { Icon } from './icons';
 
 const STATUS_KEY: Record<SavedWordStatus, string> = {
@@ -13,7 +13,7 @@ const STATUS_KEY: Record<SavedWordStatus, string> = {
 /** «Мои слова»: words saved from the dictionary, with their review stage, search and removal. */
 export function MyWordsView({
   wordRuntime,
-  remove=(lexemeId,senseId)=>setWordSaved(lexemeId,senseId,false)
+  remove=lexemeId=>removeSavedWord(lexemeId)
 }:{
   wordRuntime:WordReviewRuntimeValue|null;
   remove?:(lexemeId:string,senseId:string)=>Promise<void>;

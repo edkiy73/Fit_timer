@@ -130,10 +130,24 @@ function sanitizeSettings(src){
   };
 }
 
+/* A product may ship its own starting models (config/product.json → aiDefaults), e.g. when
+   the Core default model is not available to a new provider project. Settings saved in the
+   admin panel always win. */
+function productDefaults(){
+  let product = null;
+  try{ product = require('./product-core').productConfig(); }catch(e){}
+  const own = product && product.aiDefaults && typeof product.aiDefaults === 'object' ? product.aiDefaults : null;
+  if(!own) return DEFAULTS;
+  return Object.assign({}, DEFAULTS, own, {
+    text: Object.assign({}, DEFAULTS.text, own.text || {}),
+    image: Object.assign({}, DEFAULTS.image, own.image || {})
+  });
+}
+
 async function getSettings(){
   let saved = null;
   try{ saved = JSON.parse(await store.get('settings:ai')); }catch(e){}
-  return sanitizeSettings(saved || DEFAULTS);
+  return sanitizeSettings(saved || productDefaults());
 }
 
 const keyFor = provider => {
