@@ -113,9 +113,9 @@
     <div class="panel progress-card">
       <span class="ts-label" data-i18n="common.progress">Прогресс</span>
       <div class="quick-stats">
-        <button class="qs-btn" data-tab="workouts"><span class="qs-ico" id="qsIco1"></span><b id="qsVal1">0</b><span data-i18n="home.progressWorkouts">Тренировки</span></button>
-        <button class="qs-btn" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><b id="qsVal2">—</b><span data-i18n="home.progressWeight">Вес</span></button>
-        <button class="qs-btn" data-tab="photo"><span class="qs-ico" id="qsIco3"></span><b id="qsVal3">0</b><span data-i18n="home.progressPhoto">Фото</span></button>
+        <button class="qs-btn" data-act="openStatsTab" data-tab="workouts"><span class="qs-ico" id="qsIco1"></span><b id="qsVal1">0</b><span data-i18n="home.progressWorkouts">Тренировки</span></button>
+        <button class="qs-btn" data-act="openStatsTab" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><b id="qsVal2">—</b><span data-i18n="home.progressWeight">Вес</span></button>
+        <button class="qs-btn" data-act="openStatsTab" data-tab="photo"><span class="qs-ico" id="qsIco3"></span><b id="qsVal3">0</b><span data-i18n="home.progressPhoto">Фото</span></button>
       </div>
       <!-- Самочувствие средним за месяц. Строка показывается, ТОЛЬКО когда записи
            есть, и в ней ровно те плитки, по которым есть числа. Показывать давление,
@@ -148,7 +148,7 @@
     <div class="store-search">
       <span class="ss-ico" id="storeSearchIco"></span>
       <input type="search" id="storeQuery" maxlength="60" placeholder="Название программы" data-i18n-placeholder="store.searchPlaceholder" autocomplete="off">
-      <button type="button" class="ss-clear hidden" id="storeClear" title="Очистить" data-i18n-title="store.clearTitle"></button>
+      <button type="button" class="ss-clear hidden" id="storeClear" data-act="clearStoreSearch" title="Очистить" data-i18n-title="store.clearTitle"></button>
     </div>
 
     <!-- Фильтры были рядом чипов с прокруткой вбок: что в них есть, видно только

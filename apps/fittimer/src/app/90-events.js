@@ -70,77 +70,354 @@ import { SR, applyThemeFor, checkSchedules, hfHintText, hfMode, recognitionLang,
 } from './80-platform.js';
 
 /* ================= СОБЫТИЯ ================= */
-registerAction('openCreateProgram', () => $('createModal').classList.add('open'));
-registerAction('editCurrentProfile', () => {
-  const u = curUser();
-  if(u) openUserEdit(u.id);
-});
-registerAction('openStoreFromMenu', () => openStore('scrMenu'));
-registerAction('backFromStore', () => goTab(storeFrom));
-registerAction('createProgramManual', () => {
-  $('createModal').classList.remove('open');
-  openBuilder();
-});
-registerAction('createProgramAI', () => {
-  $('createModal').classList.remove('open');
-  initAIForm();
-  openAI('text');
-});
-registerAction('openProgramImport', () => {
-  $('createModal').classList.remove('open');
-  $('importCode').value = '';
-  $('importModal').classList.add('open');
-});
-registerAction('importProgramCode', () => importProgramCode($('importCode').value));
-registerAction('openStoreFromPrograms', () => openStore('scrPrograms'));
-registerAction('openMyCatalog', () => openMyCatalog());
+function registerEventActions(){
+  registerAction('openCreateProgram', () => $('createModal').classList.add('open'));
+  registerAction('editCurrentProfile', () => {
+    const u = curUser();
+    if(u) openUserEdit(u.id);
+  });
+  registerAction('openStoreFromMenu', () => openStore('scrMenu'));
+  registerAction('backFromStore', () => goTab(storeFrom));
+  registerAction('createProgramManual', () => {
+    $('createModal').classList.remove('open');
+    openBuilder();
+  });
+  registerAction('createProgramAI', () => {
+    $('createModal').classList.remove('open');
+    initAIForm();
+    openAI('text');
+  });
+  registerAction('openProgramImport', () => {
+    $('createModal').classList.remove('open');
+    $('importCode').value = '';
+    $('importModal').classList.add('open');
+  });
+  registerAction('importProgramCode', () => importProgramCode($('importCode').value));
+  registerAction('openStoreFromPrograms', () => openStore('scrPrograms'));
+  registerAction('openMyCatalog', () => openMyCatalog());
 
-registerAction('backTrainerProfile', () => goBackTo(tpFrom || 'scrMenu'));
-registerAction('backPublish', () => goBackTo(pubFrom || 'scrPrograms'));
-registerAction('backMyCatalog', () => {
-  switchMoreTab('coach');
-  goTab('scrAccount');
-});
-registerAction('openCoachAccount', () => {
-  switchMoreTab('acc');
-  setTimeout(() => openLogin(), 250);
-});
-registerAction('wipeCoach', () => wipeTrainerInfo());
-registerAction('openMyTrainerPage', () => {
-  if(trainerOn()) openTrainer(normHandle(trainer.handle));
-  else appAlert(t('trainer.enableFirst'));
-});
-registerAction('publishProgram', () => doPublish());
-registerAction('backClient', () => goBackTo('scrTrainer'));
-registerAction('legalBack', () => legalBack());
-registerAction('openLegalPrivacy', () => openLegal('privacy'));
-registerAction('openLegalTerms', () => openLegal('terms'));
-registerAction('openLegalHealth', () => openLegal('health'));
+  registerAction('backTrainerProfile', () => goBackTo(tpFrom || 'scrMenu'));
+  registerAction('backPublish', () => goBackTo(pubFrom || 'scrPrograms'));
+  registerAction('backMyCatalog', () => {
+    switchMoreTab('coach');
+    goTab('scrAccount');
+  });
+  registerAction('openCoachAccount', () => {
+    switchMoreTab('acc');
+    setTimeout(() => openLogin(), 250);
+  });
+  registerAction('wipeCoach', () => wipeTrainerInfo());
+  registerAction('openMyTrainerPage', () => {
+    if(trainerOn()) openTrainer(normHandle(trainer.handle));
+    else appAlert(t('trainer.enableFirst'));
+  });
+  registerAction('publishProgram', () => doPublish());
+  registerAction('backClient', () => goBackTo('scrTrainer'));
+  registerAction('legalBack', () => legalBack());
+  registerAction('openLegalPrivacy', () => openLegal('privacy'));
+  registerAction('openLegalTerms', () => openLegal('terms'));
+  registerAction('openLegalHealth', () => openLegal('health'));
 
-registerAction('openPremium', () => openPremium());
-registerAction('completePurchase', () => completePurchase());
-registerAction('login', () => doLogin());
-registerAction('loginUseCode', () => loginUseExistingCode());
-registerAction('loginCancel', () => dropLogin());
-registerAction('openLogin', () => openLogin());
-registerAction('signOut', () => signOut());
-registerAction('pickProgramImportFile', () => $('importProgFile').click());
-registerAction('exportAllData', () => exportAllData());
-registerAction('pickAllDataImportFile', () => $('importAllFile').click());
-registerAction('wipeAccount', () => wipeAccount());
-registerAction('openWeightHistory', () => openWeightHist());
-registerAction('shareWeightChart', () => shareWeightChart());
-registerAction('pickProgressPhoto', () => $('photoFile').click());
-registerAction('openPhotoCompare', () => openCompare());
+  registerAction('openPremium', () => openPremium());
+  registerAction('completePurchase', () => completePurchase());
+  registerAction('login', () => doLogin());
+  registerAction('loginUseCode', () => loginUseExistingCode());
+  registerAction('loginCancel', () => dropLogin());
+  registerAction('openLogin', () => openLogin());
+  registerAction('signOut', () => signOut());
+  registerAction('pickProgramImportFile', () => $('importProgFile').click());
+  registerAction('exportAllData', () => exportAllData());
+  registerAction('pickAllDataImportFile', () => $('importAllFile').click());
+  registerAction('wipeAccount', () => wipeAccount());
+  registerAction('openWeightHistory', () => openWeightHist());
+  registerAction('shareWeightChart', () => shareWeightChart());
+  registerAction('pickProgressPhoto', () => $('photoFile').click());
+  registerAction('openPhotoCompare', () => openCompare());
+
+  registerAction('openWellAdd', () => openWellAdd());
+  registerAction('saveWell', () => saveWell());
+  registerAction('openWellHistory', () => openWellHist());
+  registerAction('shareWellChart', () => shareWellChart());
+  registerAction('saveWellHistory', () => saveWellHist());
+  registerAction('deleteAllPhotos', () => deleteAllPhotos());
+  registerAction('deleteCompareA', () => delCmpPhoto('cmpA'));
+  registerAction('deleteCompareB', () => delCmpPhoto('cmpB'));
+  registerAction('shareCompare', () => shareCompare());
+  registerAction('saveWeightHistory', () => saveWeightHist());
+  registerAction('calendarPrev', () => {
+    setCalOffsetShared(calOffset - 1);
+    renderCalendar();
+  });
+  registerAction('calendarNext', () => {
+    setCalOffsetShared(calOffset + 1);
+    renderCalendar();
+  });
+  registerAction('onboardingPrivacy', () => openLegal('privacy', () => asTab(() => show('scrOnboard'))));
+  registerAction('onboardingStart', () => leaveOnboarding());
+  registerAction('onboardingLogin', () => openLogin(() => leaveOnboarding()));
+  registerAction('whoSave', () => whoFinish(true));
+  registerAction('whoSkip', () => whoFinish(false));
+  registerAction('profileBack', () => leaveGuard(userDirty(), () => goTab('scrAccount'), t('profile.changes')));
+  registerAction('addUser', () => openUserEdit());
+  registerAction('saveUser', () => saveUser());
+  registerAction('deleteUser', () => deleteUser());
+
+  registerAction('switchStatsTab', btn => switchStatsTab(btn.dataset.tab));
+  registerAction('switchMoreTab', btn => switchMoreTab(btn.dataset.more));
+  registerAction('openStatsTab', btn => openStats(btn.dataset.tab));
+  registerAction('goRootTab', btn => goTab(btn.dataset.scr));
+  registerAction('setProfileTheme', btn => {
+    if(!uDraft) return;
+    uDraft.theme = btn.dataset.theme;
+    syncUserForm();
+    applyThemeFor(uDraft);
+  });
+  registerAction('setProfileLocale', async btn => {
+    const pref = normalizeLocalePreference(btn.dataset.locale);
+    if(uDraft) uDraft.locale = pref;
+    syncUserForm();
+    // Редактирование чужого профиля не должно внезапно переводить текущий интерфейс.
+    if(!uDraft || uDraft.id !== currentUser) return;
+    await setAppLocale(pref, {persist:false});
+    await syncAccountLocale(appLocale);
+    if((await kvGet('recognitionLangManual')) !== '1'){
+      setRecognitionLangShared(appLocale);
+      await kvSet('recognitionLang', recognitionLang);
+      if(hfMode === 'voice') stopListening();
+      await refreshVoicePackUI();
+    }
+    syncHandsFreeUI();
+    syncUserForm();
+  });
+  registerAction('setProfileGender', btn => {
+    if(!uDraft) return;
+    uDraft.gender = btn.dataset.gender;
+    syncUserForm();
+  });
+  registerAction('setWhoGender', btn => {
+    whoDraft.gender = btn.dataset.gender;
+    whoSyncForm();
+  });
+
+  registerAction('setHandsFreeMode', async btn => {
+    await chooseHandsFree(btn.dataset.hf);
+  });
+  registerAction('resumeWorkout', () => setPause(false));
+  registerAction('commitWeightModal', () => commitWeightModal());
+  registerAction('applyHandsFree', async () => {
+    const mode = hfModalDraft;
+    const ok = await chooseHandsFree(mode, {warnMissing:false});
+    if(!ok) return;
+    $('hfModal').classList.remove('open');
+    if(mode === 'voice' && appRuntimeCompat.offlineVoice() && !(await nativeVoiceReady())){
+      appAlert(t('handsfree.voiceSelectedPending'));
+    }
+  });
+  registerAction('downloadVoicePack', () => downloadSelectedVoicePack());
+  registerAction('openVoiceTest', () => openVoiceTest());
+  registerAction('clearStoreSearch', () => {
+    $('storeQuery').value = '';
+    storeFilter.q = '';
+    setShown('storeClear', false);
+    renderStore();
+    $('storeQuery').focus();
+  });
+  registerAction('pickCoachPhoto', () => $('coachPhotoFile').click());
+  registerAction('toggleLegalSection', btn => legalToggle(btn.dataset.legal));
+  registerAction('toggleNotificationPref', btn => {
+    const key = btn.dataset.pref;
+    if(!key) return;
+    setNotificationPref(key, !getNotificationPrefs()[key]);
+  });
+  registerAction('unlockApp', () => tryUnlock());
+  registerAction('unlockByEmail', () => openLogin(
+    () => $('lockModal').classList.remove('open'),
+    {
+      email:(account && account.email) || '',
+      fixedEmail:true,
+      label:t('lock.email'),
+      msg:t('login.intro')
+    }
+  ));
+
+  registerAction('toggleTrainerMode', async () => {
+    if(!trainerAccountReady()){
+      openLogin(enableTrainerMode, {
+        label:t('trainer.needAccount'),
+        msg:t('trainer.needAccountMsg')
+      });
+      return;
+    }
+    if(trainer.on){
+      trainer.on = false;
+      await saveTrainer();
+      renderTrainerCard();
+      return;
+    }
+    await enableTrainerMode();
+  });
+  registerAction('saveCoachProfile', async () => {
+    if(!trainerAccountReady()){
+      openLogin(enableTrainerMode, {
+        label:t('trainer.needAccount'),
+        msg:t('trainer.needAccountSaveMsg')
+      });
+      return;
+    }
+    const btn = $('btnSaveCoach');
+    const rawLink = $('coachLinks').value.trim();
+    const link = rawLink ? cleanLink(rawLink) : '';
+    if(rawLink && !link){
+      $('coachLinksErr').textContent = t('trainer.badLink');
+      $('coachLinks').focus();
+      return;
+    }
+    const handle = account.handle;
+    const yearsRaw = $('coachYears').value.replace(/\D/g, '').slice(0, 2);
+    const years = parseInt(yearsRaw, 10);
+    setTrainerShared(Object.assign({}, trainer, {
+      handle,
+      name:clampLine($('coachName').value, LIM.coachName),
+      photo:coachPhotoDraft || '',
+      about:clampText($('coachAbout').value, LIM.coachAbout),
+      years:(isFinite(years) && years > 0 && years <= 60) ? years : null,
+      links:link || '',
+      pageErr:null
+    }));
+    btn.disabled = true;
+    btn.textContent = t('common.saving');
+    showSyncState('busy');
+    await saveTrainer({deferSync:true});
+    const ok = await pushProfile();
+    if(ok){
+      await saveTrainer({deferSync:true});
+      if(isPremium()) queueAccountSync();
+      showSyncState('ok');
+      renderTrainerCard();
+      btn.textContent = t('common.saved');
+      setTimeout(()=>{ if(btn.textContent === t('common.saved')) btn.textContent = t('common.save'); }, 1500);
+    } else {
+      showSyncState('error');
+      appAlert(trainer.pageErr || t('trainer.saveFailed'));
+      btn.textContent = t('common.save');
+    }
+    btn.disabled = false;
+  });
+  registerAction('openWorkoutTrainer', () => {
+    const p = state.raw;
+    if(p && p.by) openTrainer(p.by);
+  });
+  registerAction('addClient', async () => {
+    const c = await addClient();
+    renderClients();
+    renderTrainerCard();
+    openClient(clients.indexOf(c));
+    setTimeout(()=> $('clName').select(), 120);
+  });
+  registerAction('sendClientProgram', () => {
+    const c = curClient();
+    if(c) pickProgramForClient(c);
+  });
+  registerAction('deleteClient', async () => {
+    const c = curClient();
+    if(!c) return;
+    if(!(await appDialog(t('clients.removeClient',{name:c.name || t('clients.unnamed')}),
+         {confirm: true, okText: t('clients.removeAction'), cancelText: t('common.keep')}))) return;
+    setClientsShared(clients.filter(x => x.id !== c.id));
+    setClientIdxShared(-1);
+    await saveClients();
+    renderClients();
+    renderTrainerCard();
+    goBackTo('scrTrainer');
+  });
+  registerAction('openWeightEntry', () => {
+    const last = stats.weights[stats.weights.length - 1];
+    $('weightInput').value = last ? last.w : '';
+    $('heightInput').value = stats.height || '';
+    const lastOf = k => { for(let i = stats.weights.length - 1; i >= 0; i--) if(stats.weights[i][k]) return stats.weights[i][k]; return ''; };
+    $('fatInput').value = lastOf('fat');
+    $('muscInput').value = lastOf('musc');
+    $('waistInput').value = lastOf('waist');
+    $('hipsInput').value = lastOf('hips');
+    $('chestInput').value = lastOf('chest');
+    $('waModal').classList.add('open');
+    setTimeout(()=> $('weightInput').focus(), 100);
+  });
+  registerAction('saveWeightEntry', async () => {
+    const w = parseFloat(String($('weightInput').value).replace(',', '.'));
+    if(!w || w < 20 || w > 300){ appAlert(t('progress.weightRange')); return; }
+    const h = parseInt($('heightInput').value);
+    if(h && h >= 100 && h <= 250) stats.height = h;
+    const cm = id => {
+      const v = parseFloat(String($(id).value).replace(',', '.'));
+      return (v && v >= 30 && v <= 200) ? v : null;
+    };
+    const pct = (id, lo, hi) => {
+      const v = parseFloat(String($(id).value).replace(',', '.'));
+      return (v && v >= lo && v <= hi) ? Math.round(v * 10) / 10 : null;
+    };
+    const today = localISO(new Date());
+    let en = stats.weights.find(e => e.d === today);
+    if(!hasConsent('health')) recordConsent('health');
+    if(!en){ en = {d: today}; stats.weights.push(en); }
+    en.w = w;
+    const waist = cm('waistInput'), hips = cm('hipsInput'), chest = cm('chestInput');
+    const fat = pct('fatInput', 3, 70), musc = pct('muscInput', 10, 80);
+    if(waist) en.waist = waist; else delete en.waist;
+    if(hips) en.hips = hips; else delete en.hips;
+    if(chest) en.chest = chest; else delete en.chest;
+    if(fat) en.fat = fat; else delete en.fat;
+    if(musc) en.musc = musc; else delete en.musc;
+    stats.weights.sort((a2, b) => a2.d < b.d ? -1 : 1);
+    await saveStats();
+    $('waModal').classList.remove('open');
+    renderWeight();
+  });
+  registerAction('startPremiumPurchase', () => {
+    trackProductEvent('purchase_started').catch(()=>{});
+    const pr = priceTable(), cur = userCurrency();
+    $('payWhat').textContent = pmPlan === 'year'
+      ? t('premium.payYear',{price:money(pr.year,cur)})
+      : t('premium.payMonth',{price:money(pr.month,cur)});
+    $('payGo').textContent = t('premium.pay',{price:money(pr[pmPlan],cur)});
+    $('payEmail').value = (account && account.email) || '';
+    $('payModal').classList.add('open');
+  });
+  registerAction('enableBiometryAfterPurchase', async () => {
+    if(await bioEnable()) $('premiumOkModal').classList.remove('open');
+  });
+  registerAction('toggleBiometry', async () => {
+    if(account.biometry && account.biometry.enabled) await bioDisable();
+    else await bioEnable();
+  });
+  registerAction('toggleRenewal', async () => {
+    if(!account.sub) return;
+    if(account.sub.autoRenew){
+      const ok = await appDialog(
+        t('premium.disableRenew',{date:humanDate(account.sub.until)}),
+        {confirm: true, okText: t('premium.disableRenewAction'), cancelText: t('common.keep')});
+      if(!ok) return;
+    }
+    account.sub.autoRenew = !account.sub.autoRenew;
+    await saveAccount();
+    renderPlan();
+    renderPremium();
+  });
 
 
 
 
-registerAction('openWorkoutSound', () => {
-  fillLiveSoundCascade('snd');
-  $('soundModal').classList.add('open');
-});
-registerAction('openHandsFree', () => openHfModal());
+
+
+
+
+  registerAction('openWorkoutSound', () => {
+    fillLiveSoundCascade('snd');
+    $('soundModal').classList.add('open');
+  });
+  registerAction('openHandsFree', () => openHfModal());
+
+}
 
 
 let pendingStartSession = null;
@@ -1145,6 +1422,7 @@ let pendingAction = null;
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initEvents(){
+  registerEventActions();
   window.addEventListener('fitAppForeground', ()=>{
     if(appRuntimeCompat.offlineVoice()) refreshVoicePackUI();
   });
@@ -1320,25 +1598,6 @@ export function initEvents(){
       }
     }
   });
-  document.querySelectorAll('#ueLocaleSeg button').forEach(b => {
-    b.onclick = async ()=>{
-      const pref = normalizeLocalePreference(b.dataset.locale);
-      if(uDraft) uDraft.locale = pref;
-      syncUserForm();
-      // Редактирование чужого профиля не должно внезапно переводить текущий интерфейс.
-      if(!uDraft || uDraft.id !== currentUser) return;
-      await setAppLocale(pref, {persist:false});
-      await syncAccountLocale(appLocale);
-      if((await kvGet('recognitionLangManual')) !== '1'){
-        setRecognitionLangShared(appLocale);
-        await kvSet('recognitionLang', recognitionLang);
-        if(hfMode === 'voice') stopListening();
-        await refreshVoicePackUI();
-      }
-      syncHandsFreeUI();
-      syncUserForm();
-    };
-  });
   window.addEventListener('appLocaleChanged', async ()=>{
     syncTtsLocaleToApp(true);
     syncHandsFreeUI();
@@ -1354,11 +1613,6 @@ export function initEvents(){
       openStoreItem(id);
     }
   });
-  document.querySelectorAll('#hfSeg button').forEach(b => {
-    b.onclick = async ()=>{ await chooseHandsFree(b.dataset.hf); };
-  });
-  $('btnResume').onclick = ()=> setPause(false);
-  $('weightModalDone').onclick = ()=> commitWeightModal();
   mountWorkoutSettingsBlocks();
   wireLiveSoundCascade('st');
   wireLiveSoundCascade('snd');
@@ -1368,15 +1622,6 @@ export function initEvents(){
       renderHfModalDraft();
     };
   });
-  $('btnHfApply').onclick = async ()=>{
-    const mode = hfModalDraft;
-    const ok = await chooseHandsFree(mode, {warnMissing:false});
-    if(!ok) return;
-    $('hfModal').classList.remove('open');
-    if(mode === 'voice' && appRuntimeCompat.offlineVoice() && !(await nativeVoiceReady())){
-      appAlert(t('handsfree.voiceSelectedPending'));
-    }
-  };
   $('hfModal').onclick = e => { if(e.target === $('hfModal')) $('hfModal').classList.remove('open'); };
   for(const id of ['stVoiceChoice','sndVoiceChoice']){
     if($(id)) $(id).onchange = async e=>{
@@ -1395,12 +1640,10 @@ export function initEvents(){
       await refreshVoicePackUI();
     };
   }
-  if($('btnVoicePack')) $('btnVoicePack').onclick=downloadSelectedVoicePack;
   if($('btnHfVoicePack')) $('btnHfVoicePack').onclick=downloadSelectedVoicePack;
   window.addEventListener('fitVoiceModelStatus', e=>refreshVoicePackUI(e.detail));
   $('soundModal').onclick = e => { if(e.target === $('soundModal')) $('soundModal').classList.remove('open'); };
   window.addEventListener('fitVoiceHeard', onVoiceTestHeard);
-  if($('btnVoiceTest')) $('btnVoiceTest').onclick = openVoiceTest;
   if($('btnHfVoiceTest')) $('btnHfVoiceTest').onclick = ()=>{
     $('hfModal').classList.remove('open');
     openVoiceTest();
@@ -1417,31 +1660,8 @@ export function initEvents(){
     setShown('storeClear', !!storeFilter.q);
     renderStore();
   };
-  $('storeClear').onclick = ()=>{
-    $('storeQuery').value = '';
-    storeFilter.q = '';
-    setShown('storeClear', false);
-    renderStore();
-    $('storeQuery').focus();
-  };
   $('createModal').onclick = e=>{ if(e.target === $('createModal')) $('createModal').classList.remove('open'); };
   $('importModal').onclick = e=>{ if(e.target === $('importModal')) $('importModal').classList.remove('open'); };
-  $('tglTrainer').onclick = async ()=>{
-    if(!trainerAccountReady()){
-      openLogin(enableTrainerMode, {
-        label:t('trainer.needAccount'),
-        msg:t('trainer.needAccountMsg')
-      });
-      return;
-    }
-    if(trainer.on){
-      trainer.on = false;
-      await saveTrainer();
-      renderTrainerCard();
-      return;
-    }
-    await enableTrainerMode();
-  };
   /* Проверяем по УХОДУ из поля, а не на каждой букве: пока человек печатает
      «t.me/lena», адрес по дороге проходит через десяток заведомо неправильных
      состояний, и ругаться на каждое — значит мешать набирать.
@@ -1460,7 +1680,6 @@ export function initEvents(){
     // мешает прочитать, что там написано.
     e.target.value = (ok || '').replace(/^https?:\/\//i, '');
   };
-  $('coachPhotoBtn').onclick = ()=> $('coachPhotoFile').click();
   $('coachPhotoFile').onchange = e => {
     const file = e.target.files && e.target.files[0];
     if(!file) return;
@@ -1476,67 +1695,12 @@ export function initEvents(){
     const digits = e.target.value.replace(/\D/g, '').slice(0, 2);
     if(e.target.value !== digits) e.target.value = digits;
   };
-  $('btnSaveCoach').onclick = async ()=>{
-    if(!trainerAccountReady()){
-      openLogin(enableTrainerMode, {
-        label:t('trainer.needAccount'),
-        msg:t('trainer.needAccountSaveMsg')
-      });
-      return;
-    }
-    const btn = $('btnSaveCoach');
-    const rawLink = $('coachLinks').value.trim();
-    const link = rawLink ? cleanLink(rawLink) : '';
-    if(rawLink && !link){
-      $('coachLinksErr').textContent = t('trainer.badLink');
-      $('coachLinks').focus();
-      return;
-    }
-    const handle = account.handle;
-    const yearsRaw = $('coachYears').value.replace(/\D/g, '').slice(0, 2);
-    const years = parseInt(yearsRaw, 10);
-    setTrainerShared(Object.assign({}, trainer, {
-      handle,
-      name:clampLine($('coachName').value, LIM.coachName),
-      photo:coachPhotoDraft || '',
-      about:clampText($('coachAbout').value, LIM.coachAbout),
-      years:(isFinite(years) && years > 0 && years <= 60) ? years : null,
-      links:link || '',
-      pageErr:null
-    }));
-    btn.disabled = true;
-    btn.textContent = t('common.saving');
-    showSyncState('busy');
-    await saveTrainer({deferSync:true});
-    const ok = await pushProfile();
-    if(ok){
-      await saveTrainer({deferSync:true});
-      if(isPremium()) queueAccountSync();
-      showSyncState('ok');
-      renderTrainerCard();
-      btn.textContent = t('common.saved');
-      setTimeout(()=>{ if(btn.textContent === t('common.saved')) btn.textContent = t('common.save'); }, 1500);
-    } else {
-      showSyncState('error');
-      appAlert(trainer.pageErr || t('trainer.saveFailed'));
-      btn.textContent = t('common.save');
-    }
-    btn.disabled = false;
-  };
   // Ник над программой — это вход на страницу тренера, а не украшение: подопечный,
   // получивший программу по ссылке, хочет знать, от кого она.
-  $('startByChip').onclick = ()=>{ const p = state.raw; if(p && p.by) openTrainer(p.by); };
   // Своя страница — ровно тем же экраном, каким её видит подопечный. Отдельный «просмотр
   // профиля» разошёлся бы с настоящим через месяц.
   // Ника без аккаунта терять нельзя — поэтому строка ведёт прямо туда, где его заводят.
   $('pubGives').oninput = e => { pubDraft.gives = clampText(e.target.value, LIM.gives); };
-  $('btnAddClient').onclick = async ()=>{
-    const c = await addClient();
-    renderClients();
-    renderTrainerCard();
-    openClient(clients.indexOf(c));
-    setTimeout(()=> $('clName').select(), 120);
-  };
   // Поля карточки сохраняются на лету: «Сохранить» здесь нечего ждать, а её отсутствие
   // снимает весь разговор о несохранённом при выходе жестом.
   $('clName').oninput = async e => {
@@ -1552,116 +1716,14 @@ export function initEvents(){
   };
   // Кнопка всегда спрашивает, КАКУЮ программу отправить: их может быть несколько,
   // и «отправить ещё раз» живёт у самой программы, а не здесь.
-  $('btnClSend').onclick = ()=>{
-    const c = curClient(); if(!c) return;
-    pickProgramForClient(c);
-  };
-  $('btnDelClient').onclick = async ()=>{
-    const c = curClient(); if(!c) return;
-    if(!(await appDialog(t('clients.removeClient',{name:c.name || t('clients.unnamed')}),
-         {confirm: true, okText: t('clients.removeAction'), cancelText: t('common.keep')}))) return;
-    setClientsShared(clients.filter(x => x.id !== c.id));
-    setClientIdxShared(-1);
-    await saveClients();
-    renderClients();
-    renderTrainerCard();
-    goBackTo('scrTrainer');
-  };
-  Object.keys(LEGAL_SECTIONS).forEach(k => {
-    $('legalHead' + k[0].toUpperCase() + k.slice(1)).onclick = ()=> legalToggle(k);
-  });
-  ['workouts','trainer','progress','offers','emailNews','emailOffers'].forEach(key => {
-    const btn = $({
-      workouts:'notifWorkouts',
-      trainer:'notifTrainer',
-      progress:'notifProgress',
-      offers:'notifOffers',
-      emailNews:'emailNews',
-      emailOffers:'emailOffers'
-    }[key]);
-    if(btn) btn.onclick = ()=> { setNotificationPref(key, !getNotificationPrefs()[key]); };
-  });
   // трекер веса
-  $('btnAddWeight').onclick = ()=>{
-    const last = stats.weights[stats.weights.length - 1];
-    $('weightInput').value = last ? last.w : '';
-    $('heightInput').value = stats.height || '';
-    const lastOf = k => { for(let i = stats.weights.length - 1; i >= 0; i--) if(stats.weights[i][k]) return stats.weights[i][k]; return ''; };
-    $('fatInput').value = lastOf('fat');
-    $('muscInput').value = lastOf('musc');
-    $('waistInput').value = lastOf('waist');
-    $('hipsInput').value = lastOf('hips');
-    $('chestInput').value = lastOf('chest');
-    $('waModal').classList.add('open');
-    setTimeout(()=> $('weightInput').focus(), 100);
-  };
   $('waModal').onclick = e => { if(e.target === $('waModal')) $('waModal').classList.remove('open'); };
-  $('btnSaveWeight').onclick = async ()=>{
-    const w = parseFloat(String($('weightInput').value).replace(',', '.'));
-    if(!w || w < 20 || w > 300){ appAlert(t('progress.weightRange')); return; }
-    const h = parseInt($('heightInput').value);
-    if(h && h >= 100 && h <= 250) stats.height = h;
-    const cm = id => {
-      const v = parseFloat(String($(id).value).replace(',', '.'));
-      return (v && v >= 30 && v <= 200) ? v : null;
-    };
-    // проценты состава тела: границы свои, иначе «18» в поле жира считалось бы промахом
-    const pct = (id, lo, hi) => {
-      const v = parseFloat(String($(id).value).replace(',', '.'));
-      return (v && v >= lo && v <= hi) ? Math.round(v * 10) / 10 : null;
-    };
-    const today = localISO(new Date());
-    let en = stats.weights.find(e => e.d === today);
-    // вес и обхваты — сведения о здоровье, специальная категория: отмечаем согласие
-    // в момент, когда человек впервые их вводит, а не абстрактно при установке
-    if(!hasConsent('health')) recordConsent('health');
-    if(!en){ en = {d: today}; stats.weights.push(en); }
-    en.w = w;
-    const waist = cm('waistInput'), hips = cm('hipsInput'), chest = cm('chestInput');
-    const fat = pct('fatInput', 3, 70), musc = pct('muscInput', 10, 80);
-    if(waist) en.waist = waist; else delete en.waist;
-    if(hips) en.hips = hips; else delete en.hips;
-    if(chest) en.chest = chest; else delete en.chest;
-    if(fat) en.fat = fat; else delete en.fat;
-    if(musc) en.musc = musc; else delete en.musc;
-    stats.weights.sort((a2, b) => a2.d < b.d ? -1 : 1);
-    await saveStats();
-    $('waModal').classList.remove('open');
-    renderWeight();
-  };
   $('premiumModal').onclick = e => { if(e.target === $('premiumModal')) $('premiumModal').classList.remove('open'); };
-  $('pmBuy').onclick = ()=>{
-    trackProductEvent('purchase_started').catch(()=>{});
-    const pr = priceTable(), cur = userCurrency();
-    $('payWhat').textContent = pmPlan === 'year'
-      ? t('premium.payYear',{price:money(pr.year,cur)})
-      : t('premium.payMonth',{price:money(pr.month,cur)});
-    $('payGo').textContent = t('premium.pay',{price:money(pr[pmPlan],cur)});
-    $('payEmail').value = (account && account.email) || '';
-    $('payModal').classList.add('open');
-  };
   $('payModal').onclick = e => { if(e.target === $('payModal')) $('payModal').classList.remove('open'); };
   $('payEmail').addEventListener('keydown', e => { if(e.key === 'Enter') completePurchase(); });
   $('premiumOkModal').onclick = e => { if(e.target === $('premiumOkModal')) $('premiumOkModal').classList.remove('open'); };
-  $('pokBio').onclick = async ()=>{ if(await bioEnable()) $('premiumOkModal').classList.remove('open'); };
-  $('tglBio').onclick = async ()=>{
-    if(account.biometry && account.biometry.enabled) await bioDisable();
-    else await bioEnable();
-  };
   // Отмена продления не забирает оплаченное: срок дорабатывает до конца. Иначе это
   // не отмена подписки, а изъятие уже купленного.
-  $('tglRenew').onclick = async ()=>{
-    if(!account.sub) return;
-    if(account.sub.autoRenew){
-      const ok = await appDialog(
-        t('premium.disableRenew',{date:humanDate(account.sub.until)}),
-        {confirm: true, okText: t('premium.disableRenewAction'), cancelText: t('common.keep')});
-      if(!ok) return;
-    }
-    account.sub.autoRenew = !account.sub.autoRenew;
-    await saveAccount();
-    renderPlan(); renderPremium();
-  };
   $('loginModal').onclick = e => { if(e.target === $('loginModal')) dropLogin(); };
   $('loginEmail').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
   $('loginCode').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
@@ -1673,18 +1735,8 @@ export function initEvents(){
   $('loginHandle').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
   // «Позже» — не отмена: дни, отмеченные до нажатия, уже лежат в программе, поэтому
   // сохраняем и их, иначе выбор молча пропадёт
-  $('lockGo').onclick = ()=> tryUnlock();
   // Биометрия не является авторизацией аккаунта. Если она недоступна или человек
   // просто нажал «Отмена», запасной путь — обычный подтверждённый email + OTP.
-  $('lockMail').onclick = ()=> openLogin(
-    ()=> $('lockModal').classList.remove('open'),
-    {
-      email:(account && account.email) || '',
-      fixedEmail:true,
-      label:t('lock.email'),
-      msg:t('login.intro')
-    }
-  );
   window.addEventListener('fitAppForeground', e=>{
     maybeBiometricRelock(+((e && e.detail && e.detail.awayMs) || 0));
   });
@@ -1715,51 +1767,18 @@ export function initEvents(){
     setWellMetricShared(b.dataset.k);
     renderWellness();
   });
-  $('btnAddWell').onclick = openWellAdd;
-  $('btnSaveWell').onclick = saveWell;
-  $('btnWellHist').onclick = openWellHist;
-  $('btnShareWell').onclick = shareWellChart;
-  $('wellHistSave').onclick = saveWellHist;
   $('wellModal').onclick = e => { if(e.target === $('wellModal')) $('wellModal').classList.remove('open'); };
-  $('btnDeleteAllPhotos').onclick = deleteAllPhotos;
   $('cmpA').onchange = renderCmp;
   $('cmpB').onchange = renderCmp;
-  $('cmpDelA').onclick = ()=> delCmpPhoto('cmpA');
-  $('cmpDelB').onclick = ()=> delCmpPhoto('cmpB');
-  $('btnShareCmp').onclick = shareCompare;
   $('cmpModal').onclick = e => { if(e.target === $('cmpModal')) $('cmpModal').classList.remove('open'); };
-  $('whSave').onclick = saveWeightHist;
   $('whModal').onclick = e => { if(e.target === $('whModal')) $('whModal').classList.remove('open'); };
-  $('calPrev').onclick = ()=>{ setCalOffsetShared(calOffset - 1); renderCalendar(); };
-  $('calNext').onclick = ()=>{ setCalOffsetShared(calOffset + 1); renderCalendar(); };
   // онбординг
   // из знакомства «назад» ведёт обратно в знакомство, а не в настройки: человек
   // ещё не завёл профиль, и вкладки внизу ему пока не принадлежат
-  $('obLegal1').onclick = ()=> openLegal('privacy', ()=> asTab(()=> show('scrOnboard')));
-  $('obStart').onclick = ()=> leaveOnboarding();
   // у человека уже может быть аккаунт — с прошлого телефона или после переустановки
-  $('obLogin').onclick = ()=> openLogin(()=> leaveOnboarding());
   // пара уточнений
-  $('whoF').onclick = ()=>{ whoDraft.gender = 'f'; whoSyncForm(); };
-  $('whoM').onclick = ()=>{ whoDraft.gender = 'm'; whoSyncForm(); };
   $('whoAge').oninput = ()=> whoSyncForm();
-  $('whoSave').onclick = ()=> whoFinish(true);
-  $('whoSkip').onclick = ()=> whoFinish(false);
   $('whoModal').onclick = e => { if(e.target === $('whoModal')) whoFinish(false); };
-  document.querySelectorAll('#statsTabs .tab').forEach(b => b.onclick = ()=> switchStatsTab(b.dataset.tab));
-  document.querySelectorAll('#moreTabs .tab').forEach(b => b.onclick = ()=> switchMoreTab(b.dataset.more));
-  document.querySelectorAll('.qs-btn').forEach(b => b.onclick = ()=> openStats(b.dataset.tab));
-  document.querySelectorAll('.dock-btn').forEach(b => b.onclick = ()=> goTab(b.dataset.scr));
-  $('ueBackTop').onclick = ()=> leaveGuard(userDirty(), ()=> goTab('scrAccount'), t('profile.changes'));
-  $('btnAddUser').onclick = ()=> openUserEdit();
-  $('btnSaveUser').onclick = saveUser;
-  $('btnDelUser').onclick = deleteUser;
-  // тему показываем сразу: выбирать её вслепую, не видя результата, бессмысленно
-  document.querySelectorAll('#ueThemeSeg button').forEach(b => {
-    b.onclick = ()=>{ uDraft.theme = b.dataset.theme; syncUserForm(); applyThemeFor(uDraft); };
-  });
-  $('ueGenderF').onclick = ()=>{ uDraft.gender = 'f'; syncUserForm(); };
-  $('ueGenderM').onclick = ()=>{ uDraft.gender = 'm'; syncUserForm(); };
   // нет фото — сразу выбор файла; есть фото — меню «заменить / удалить»
   $('uePhotoBtn').onclick = e => {
     e.stopPropagation();

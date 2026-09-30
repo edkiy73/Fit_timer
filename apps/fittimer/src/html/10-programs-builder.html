@@ -48,7 +48,7 @@
         <div class="chip chip-off hidden" id="startOffChip"><span data-icon="power"></span> <span data-i18n="programs.disabled">Отключена</span></div>
         <!-- от кого программа. Подопечный тренера должен видеть это на самом видном месте:
              он пришёл заниматься к конкретному человеку, а не «в приложение». -->
-        <button type="button" class="chip chip-by hidden" id="startByChip"><span data-icon="user"></span> <b id="startByName"></b></button>
+        <button type="button" class="chip chip-by hidden" id="startByChip" data-act="openWorkoutTrainer"><span data-icon="user"></span> <b id="startByName"></b></button>
         <div class="chip"><b id="startExCount"></b> <span id="startExLabel" data-i18n="builder.exercisesSuffix">упражнений</span></div>
         <div class="chip"><b id="startRounds">4</b> <span id="startVolLabel" data-i18n="builder.roundsSuffix">кругов</span></div>
       </div>
@@ -228,7 +228,7 @@
       <span class="mini-label" id="weightModalTitle" data-i18n="start.pickWeightTitle">Рабочий вес</span>
       <div class="field"><input type="number" id="weightModalInput" min="0" max="500" step="0.5" inputmode="decimal" placeholder="Например: 8" data-i18n-placeholder="builder.weightExample"></div>
       <p class="field-hint" data-i18n="start.pickWeightHint">Такой, чтобы последние повторения давались с усилием, но не в отказ</p>
-      <button type="button" class="btn-primary" id="weightModalDone" style="padding:15px;font-size:16px" data-i18n="finish.done">Готово</button>
+      <button type="button" class="btn-primary" id="weightModalDone" data-act="commitWeightModal" style="padding:15px;font-size:16px" data-i18n="finish.done">Готово</button>
       <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
     </div>
   </div>

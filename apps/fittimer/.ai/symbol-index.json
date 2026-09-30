@@ -103,9 +103,10 @@
     },
     "src/app/05-actions.js": {
       "kind": "frontend-js",
-      "lines": 16,
-      "chars": 373,
+      "lines": 17,
+      "chars": 393,
       "symbols": [
+        "initActions",
         "registerAction",
         "unregisterAction"
       ]
@@ -881,8 +882,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 837,
-      "chars": 37074,
+      "lines": 840,
+      "chars": 37153,
       "symbols": [
         "add",
         "advanceFromHeadset",
@@ -915,6 +916,7 @@
         "notifyTimedGroupCopy",
         "notifyTimeParts",
         "notifyWorkoutCount",
+        "registerPlatformActions",
         "resetVoiceDedup",
         "setHfMode",
         "setHfModeShared",
@@ -937,8 +939,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2501,
-      "chars": 109900,
+      "lines": 2520,
+      "chars": 109675,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -993,6 +995,7 @@
         "readTimings",
         "refreshAfterForeground",
         "refreshVoicePackUI",
+        "registerEventActions",
         "renderHfModalDraft",
         "renderIconLabels",
         "resetSkipConfirm",
@@ -1022,8 +1025,8 @@
     },
     "src/app/index.js": {
       "kind": "frontend-js",
-      "lines": 28,
-      "chars": 1148
+      "lines": 30,
+      "chars": 1210
     },
     "src/app/options.js": {
       "kind": "frontend-js",
@@ -1033,7 +1036,7 @@
     "src/html/00-shell-home.html": {
       "kind": "frontend-html",
       "lines": 207,
-      "chars": 11960,
+      "chars": 12060,
       "ids": [
         "appUpdateBanner",
         "appUpdateGate",
@@ -1108,9 +1111,11 @@
       ],
       "actions": [
         "backFromStore",
+        "clearStoreSearch",
         "editCurrentProfile",
         "openHandsFree",
         "openPremium",
+        "openStatsTab",
         "openStoreFromMenu",
         "openWorkoutSound"
       ]
@@ -1118,7 +1123,7 @@
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
       "lines": 639,
-      "chars": 42522,
+      "chars": 42581,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1375,14 +1380,16 @@
       ],
       "actions": [
         "closeModal",
+        "commitWeightModal",
         "openCreateProgram",
-        "openStoreFromPrograms"
+        "openStoreFromPrograms",
+        "openWorkoutTrainer"
       ]
     },
     "src/html/20-workout-finish.html": {
       "kind": "frontend-html",
       "lines": 143,
-      "chars": 8901,
+      "chars": 8926,
       "ids": [
         "badgeRow",
         "btnAgain",
@@ -1446,12 +1453,15 @@
         "swapSlot",
         "videoCta",
         "videoLink"
+      ],
+      "actions": [
+        "resumeWorkout"
       ]
     },
     "src/html/30-onboarding-account.html": {
       "kind": "frontend-html",
       "lines": 218,
-      "chars": 18185,
+      "chars": 18418,
       "ids": [
         "btnLegalDone",
         "legalBackTop",
@@ -1469,13 +1479,17 @@
         "scrOnboard"
       ],
       "actions": [
-        "legalBack"
+        "legalBack",
+        "onboardingLogin",
+        "onboardingPrivacy",
+        "onboardingStart",
+        "toggleLegalSection"
       ]
     },
     "src/html/40-profiles.html": {
       "kind": "frontend-html",
       "lines": 435,
-      "chars": 28494,
+      "chars": 29472,
       "ids": [
         "accCardTitle",
         "accEmail",
@@ -1619,6 +1633,11 @@
         "workEmpty"
       ],
       "actions": [
+        "addUser",
+        "calendarNext",
+        "calendarPrev",
+        "deleteAllPhotos",
+        "downloadVoicePack",
         "exportAllData",
         "openCoachAccount",
         "openLegalHealth",
@@ -1629,11 +1648,25 @@
         "openMyTrainerPage",
         "openPhotoCompare",
         "openPremium",
+        "openVoiceTest",
+        "openWeightEntry",
         "openWeightHistory",
+        "openWellAdd",
+        "openWellHistory",
         "pickAllDataImportFile",
+        "pickCoachPhoto",
         "pickProgressPhoto",
+        "saveCoachProfile",
+        "setHandsFreeMode",
         "shareWeightChart",
+        "shareWellChart",
         "signOut",
+        "switchMoreTab",
+        "switchStatsTab",
+        "toggleBiometry",
+        "toggleNotificationPref",
+        "toggleRenewal",
+        "toggleTrainerMode",
         "wipeAccount",
         "wipeCoach"
       ]
@@ -1641,7 +1674,7 @@
     "src/html/50-profile-progress.html": {
       "kind": "frontend-html",
       "lines": 599,
-      "chars": 39141,
+      "chars": 40078,
       "ids": [
         "addExModal",
         "aemAI",
@@ -1832,6 +1865,8 @@
         "whSave"
       ],
       "actions": [
+        "addClient",
+        "applyHandsFree",
         "backClient",
         "backMyCatalog",
         "backPublish",
@@ -1840,13 +1875,36 @@
         "completePurchase",
         "createProgramAI",
         "createProgramManual",
+        "deleteClient",
+        "deleteCompareA",
+        "deleteCompareB",
+        "deleteUser",
+        "enableBiometryAfterPurchase",
+        "goRootTab",
         "importProgramCode",
         "login",
         "loginCancel",
         "loginUseCode",
         "openProgramImport",
         "pickProgramImportFile",
-        "publishProgram"
+        "profileBack",
+        "publishProgram",
+        "saveUser",
+        "saveWeightEntry",
+        "saveWeightHistory",
+        "saveWell",
+        "saveWellHistory",
+        "sendClientProgram",
+        "setProfileGender",
+        "setProfileLocale",
+        "setProfileTheme",
+        "setWhoGender",
+        "shareCompare",
+        "startPremiumPurchase",
+        "unlockApp",
+        "unlockByEmail",
+        "whoSave",
+        "whoSkip"
       ]
     }
   }

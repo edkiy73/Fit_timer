@@ -113,9 +113,9 @@
     <div class="panel progress-card">
       <span class="ts-label" data-i18n="common.progress">Прогресс</span>
       <div class="quick-stats">
-        <button class="qs-btn" data-tab="workouts"><span class="qs-ico" id="qsIco1"></span><b id="qsVal1">0</b><span data-i18n="home.progressWorkouts">Тренировки</span></button>
-        <button class="qs-btn" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><b id="qsVal2">—</b><span data-i18n="home.progressWeight">Вес</span></button>
-        <button class="qs-btn" data-tab="photo"><span class="qs-ico" id="qsIco3"></span><b id="qsVal3">0</b><span data-i18n="home.progressPhoto">Фото</span></button>
+        <button class="qs-btn" data-act="openStatsTab" data-tab="workouts"><span class="qs-ico" id="qsIco1"></span><b id="qsVal1">0</b><span data-i18n="home.progressWorkouts">Тренировки</span></button>
+        <button class="qs-btn" data-act="openStatsTab" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><b id="qsVal2">—</b><span data-i18n="home.progressWeight">Вес</span></button>
+        <button class="qs-btn" data-act="openStatsTab" data-tab="photo"><span class="qs-ico" id="qsIco3"></span><b id="qsVal3">0</b><span data-i18n="home.progressPhoto">Фото</span></button>
       </div>
       <!-- Самочувствие средним за месяц. Строка показывается, ТОЛЬКО когда записи
            есть, и в ней ровно те плитки, по которым есть числа. Показывать давление,
@@ -148,7 +148,7 @@
     <div class="store-search">
       <span class="ss-ico" id="storeSearchIco"></span>
       <input type="search" id="storeQuery" maxlength="60" placeholder="Название программы" data-i18n-placeholder="store.searchPlaceholder" autocomplete="off">
-      <button type="button" class="ss-clear hidden" id="storeClear" title="Очистить" data-i18n-title="store.clearTitle"></button>
+      <button type="button" class="ss-clear hidden" id="storeClear" data-act="clearStoreSearch" title="Очистить" data-i18n-title="store.clearTitle"></button>
     </div>
 
     <!-- Фильтры были рядом чипов с прокруткой вбок: что в них есть, видно только
@@ -254,7 +254,7 @@
         <div class="chip chip-off hidden" id="startOffChip"><span data-icon="power"></span> <span data-i18n="programs.disabled">Отключена</span></div>
         <!-- от кого программа. Подопечный тренера должен видеть это на самом видном месте:
              он пришёл заниматься к конкретному человеку, а не «в приложение». -->
-        <button type="button" class="chip chip-by hidden" id="startByChip"><span data-icon="user"></span> <b id="startByName"></b></button>
+        <button type="button" class="chip chip-by hidden" id="startByChip" data-act="openWorkoutTrainer"><span data-icon="user"></span> <b id="startByName"></b></button>
         <div class="chip"><b id="startExCount"></b> <span id="startExLabel" data-i18n="builder.exercisesSuffix">упражнений</span></div>
         <div class="chip"><b id="startRounds">4</b> <span id="startVolLabel" data-i18n="builder.roundsSuffix">кругов</span></div>
       </div>
@@ -434,7 +434,7 @@
       <span class="mini-label" id="weightModalTitle" data-i18n="start.pickWeightTitle">Рабочий вес</span>
       <div class="field"><input type="number" id="weightModalInput" min="0" max="500" step="0.5" inputmode="decimal" placeholder="Например: 8" data-i18n-placeholder="builder.weightExample"></div>
       <p class="field-hint" data-i18n="start.pickWeightHint">Такой, чтобы последние повторения давались с усилием, но не в отказ</p>
-      <button type="button" class="btn-primary" id="weightModalDone" style="padding:15px;font-size:16px" data-i18n="finish.done">Готово</button>
+      <button type="button" class="btn-primary" id="weightModalDone" data-act="commitWeightModal" style="padding:15px;font-size:16px" data-i18n="finish.done">Готово</button>
       <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
     </div>
   </div>
@@ -851,7 +851,7 @@
     </div>
     <div class="pause-overlay">
       <div class="po-text"><span data-i18n="workout.pause">Пауза</span><span class="po-sub" data-i18n="workout.pauseSub">Таймер стоит. Описание можно читать и листать</span></div>
-      <button class="btn-resume" id="btnResume" title="Продолжить" data-i18n-title="workout.resume"></button>
+      <button class="btn-resume" id="btnResume" data-act="resumeWorkout" title="Продолжить" data-i18n-title="workout.resume"></button>
     </div>
     <div class="progress">
       <div class="labels">
@@ -1023,9 +1023,9 @@
     <!-- Кнопки закреплены у нижнего края: это единственное, ради чего сюда пришли,
          и они не должны зависеть от того, докрутил человек экран или нет. -->
     <div class="ob-actions">
-      <button class="btn-primary" id="obStart" data-i18n="onboarding.start">Выбрать тренировку</button>
-      <button type="button" class="btn-secondary" id="obLogin" data-i18n="common.loginOrRegister">Вход или регистрация</button>
-      <p class="ob-legal"><span data-i18n="onboarding.legalPrefix">Продолжая, ты принимаешь</span> <button type="button" class="ob-legal-link" id="obLegal1" data-i18n="common.rules">правила</button><span data-i18n="onboarding.legalSuffix"> приложения.</span></p>
+      <button class="btn-primary" id="obStart" data-act="onboardingStart" data-i18n="onboarding.start">Выбрать тренировку</button>
+      <button type="button" class="btn-secondary" id="obLogin" data-act="onboardingLogin" data-i18n="common.loginOrRegister">Вход или регистрация</button>
+      <p class="ob-legal"><span data-i18n="onboarding.legalPrefix">Продолжая, ты принимаешь</span> <button type="button" class="ob-legal-link" id="obLegal1" data-act="onboardingPrivacy" data-i18n="common.rules">правила</button><span data-i18n="onboarding.legalSuffix"> приложения.</span></p>
     </div>
   </section>
 
@@ -1048,7 +1048,7 @@
 
     <div class="legal-list">
       <div class="legal-item">
-        <button type="button" class="legal-head" id="legalHeadPrivacy" aria-expanded="false" aria-controls="legalPrivacy">
+        <button type="button" class="legal-head" id="legalHeadPrivacy" data-act="toggleLegalSection" data-legal="privacy" aria-expanded="false" aria-controls="legalPrivacy">
           <span class="lh-ico" data-icon="shield"></span>
           <span class="lh-txt"><b data-i18n="legal.privacyTitle">Политика конфиденциальности</b><small data-i18n="legal.privacySub">Что собирается, где хранится, что уходит наружу</small></span>
           <span class="lh-chev" data-icon="chevD"></span>
@@ -1112,7 +1112,7 @@
       </div>
 
       <div class="legal-item">
-        <button type="button" class="legal-head" id="legalHeadTerms" aria-expanded="false" aria-controls="legalTerms">
+        <button type="button" class="legal-head" id="legalHeadTerms" data-act="toggleLegalSection" data-legal="terms" aria-expanded="false" aria-controls="legalTerms">
           <span class="lh-ico" data-icon="doc"></span>
           <span class="lh-txt"><b data-i18n="legal.termsTitle">Пользовательское соглашение</b><small data-i18n="legal.termsSub">Что это за приложение и кто за что отвечает</small></span>
           <span class="lh-chev" data-icon="chevD"></span>
@@ -1154,7 +1154,7 @@
       </div>
 
       <div class="legal-item">
-        <button type="button" class="legal-head" id="legalHeadHealth" aria-expanded="false" aria-controls="legalHealth">
+        <button type="button" class="legal-head" id="legalHeadHealth" data-act="toggleLegalSection" data-legal="health" aria-expanded="false" aria-controls="legalHealth">
           <span class="lh-ico" data-icon="heart"></span>
           <span class="lh-txt"><b data-i18n="legal.healthTitle">Здоровье и безопасность</b><small data-i18n="legal.healthSub">Когда нужно сначала к врачу и когда остановиться</small></span>
           <span class="lh-chev" data-icon="chevD"></span>
@@ -1210,9 +1210,9 @@
   <section class="screen root" id="scrStats">
     <div class="page-head"><h1 data-i18n="progress.title">Прогресс</h1></div>
     <div class="tabs seg" id="statsTabs">
-      <button class="tab act" data-tab="workouts" data-i18n="progress.tabWorkouts">Тренировки</button>
-      <button class="tab" data-tab="weight" data-i18n="progress.tabBody">Тело</button>
-      <button class="tab" data-tab="photo" data-i18n="progress.tabPhotos">Фото</button>
+      <button class="tab act" data-act="switchStatsTab" data-tab="workouts" data-i18n="progress.tabWorkouts">Тренировки</button>
+      <button class="tab" data-act="switchStatsTab" data-tab="weight" data-i18n="progress.tabBody">Тело</button>
+      <button class="tab" data-act="switchStatsTab" data-tab="photo" data-i18n="progress.tabPhotos">Фото</button>
     </div>
 
     <div class="tab-pane" id="tabWorkouts">
@@ -1227,9 +1227,9 @@
 
       <div class="metric-card" id="calCard">
         <div class="cal-head">
-          <button class="cal-nav" id="calPrev" title="Прошлый месяц" data-i18n-title="progress.prevMonth"></button>
+          <button class="cal-nav" id="calPrev" data-act="calendarPrev" title="Прошлый месяц" data-i18n-title="progress.prevMonth"></button>
           <b id="calTitle"></b>
-          <button class="cal-nav" id="calNext" title="Следующий месяц" data-i18n-title="progress.nextMonth"></button>
+          <button class="cal-nav" id="calNext" data-act="calendarNext" title="Следующий месяц" data-i18n-title="progress.nextMonth"></button>
         </div>
         <p class="cal-sub" id="calSub"></p>
         <div class="cal-grid" id="calGrid"></div>
@@ -1266,7 +1266,7 @@
             <span class="ts-label" data-i18n="progress.bodyTitle">Вес и объёмы</span>
             <div class="mc-now" id="weightNowRow"><b id="weightNow">—</b><span class="w-delta" id="weightDelta"></span></div>
           </div>
-          <button class="add-btn" id="btnAddWeight" title="Записать" data-i18n-title="progress.record"></button>
+          <button class="add-btn" id="btnAddWeight" data-act="openWeightEntry" title="Записать" data-i18n-title="progress.record"></button>
         </div>
         <div class="mc-meta hidden" id="weightMeta"></div>
         <div class="mc-empty empty-state" id="weightEmpty">
@@ -1295,7 +1295,7 @@
             <span class="ts-label" data-i18n="progress.wellnessTitle">Самочувствие</span>
             <div class="mc-now" id="wellNowRow"><b id="wellNow">—</b><span class="w-delta" id="wellWhen"></span></div>
           </div>
-          <button class="add-btn" id="btnAddWell" title="Записать" data-i18n-title="progress.record"></button>
+          <button class="add-btn" id="btnAddWell" data-act="openWellAdd" title="Записать" data-i18n-title="progress.record"></button>
         </div>
         <div class="mc-empty empty-state" id="wellEmpty">
           <span class="es-ico" data-icon="heart"></span>
@@ -1307,8 +1307,8 @@
         <div class="wm-switch hidden" id="wellSwitch"></div>
         <div class="mc-charts hidden" id="wellCharts"></div>
         <div class="mc-actions hidden" id="wellActions">
-          <button class="mc-act" id="btnWellHist"></button>
-          <button class="mc-act" id="btnShareWell"></button>
+          <button class="mc-act" id="btnWellHist" data-act="openWellHistory"></button>
+          <button class="mc-act" id="btnShareWell" data-act="shareWellChart"></button>
         </div>
       </div>
     </div>
@@ -1338,7 +1338,7 @@
         <div class="ph-tools">
           <button type="button" class="btn-ghost" id="btnAddPhoto" data-act="pickProgressPhoto" data-i18n="progress.addPhoto">Добавить фото</button>
           <p class="photo-local-note"><span data-icon="shield"></span><span data-i18n="progress.photoLocalOnly">Фото хранятся только на этом устройстве и не синхронизируются с аккаунтом. Так снимки прогресса не покидают телефон.</span></p>
-          <button type="button" class="mc-danger hidden" id="btnDeleteAllPhotos" data-i18n="progress.deleteAllPhotosBtn">Удалить все фото</button>
+          <button type="button" class="mc-danger hidden" id="btnDeleteAllPhotos" data-act="deleteAllPhotos" data-i18n="progress.deleteAllPhotosBtn">Удалить все фото</button>
         </div>
         <input type="file" id="photoFile" accept="image/*" class="hidden">
       </div>
@@ -1356,17 +1356,17 @@
          «как звучит», «я тренер», «мой аккаунт», — а не по тому, как это устроено
          внутри. Механика та же, что у «Прогресса»: .tabs.seg плюс .tab-pane. -->
     <div class="tabs seg" id="moreTabs">
-      <button class="tab act" data-more="me" data-i18n="common.profile">Профиль</button>
-      <button class="tab" data-more="sound" data-i18n="common.sound">Звук</button>
-      <button class="tab" data-more="coach" data-i18n="common.trainer">Тренер</button>
-      <button class="tab" data-more="acc" data-i18n="common.account">Аккаунт</button>
+      <button class="tab act" data-act="switchMoreTab" data-more="me" data-i18n="common.profile">Профиль</button>
+      <button class="tab" data-act="switchMoreTab" data-more="sound" data-i18n="common.sound">Звук</button>
+      <button class="tab" data-act="switchMoreTab" data-more="coach" data-i18n="common.trainer">Тренер</button>
+      <button class="tab" data-act="switchMoreTab" data-more="acc" data-i18n="common.account">Аккаунт</button>
     </div>
 
     <div class="tab-pane" id="morePane_me">
     <div class="card-block" id="accProfiles">
       <div class="cb-head"><p class="cb-title" data-i18n="settings.profiles">Профили</p></div>
       <div class="list-rows" id="usersList"></div>
-      <button class="choice add-row" id="btnAddUser"><span data-icon="plus"></span><b data-i18n="settings.addProfile">Добавить профиль</b></button>
+      <button class="choice add-row" id="btnAddUser" data-act="addUser"><span data-icon="plus"></span><b data-i18n="settings.addProfile">Добавить профиль</b></button>
       <p class="field-hint" id="usersHint"></p>
     </div>
     </div>
@@ -1399,9 +1399,9 @@
       <div class="cb-head"><p class="cb-title" data-i18n="settings.handsfree">Управление без рук</p></div>
       <div class="hf-block">
         <div class="hf-seg" id="hfSeg">
-          <button type="button" data-hf="off" class="act" data-i18n="common.off">Выкл</button>
-          <button type="button" data-hf="voice" data-i18n="common.voice">Голос</button>
-          <button type="button" data-hf="headset" data-i18n="common.headset">Гарнитура</button>
+          <button type="button" data-act="setHandsFreeMode" data-hf="off" class="act" data-i18n="common.off">Выкл</button>
+          <button type="button" data-act="setHandsFreeMode" data-hf="voice" data-i18n="common.voice">Голос</button>
+          <button type="button" data-act="setHandsFreeMode" data-hf="headset" data-i18n="common.headset">Гарнитура</button>
         </div>
         <p class="field-hint" id="hfHint"></p>
 
@@ -1411,10 +1411,10 @@
             <div class="voice-pack-status">
               <span id="voicePackStatus" data-i18n="common.checking">Проверяем…</span>
               <div class="voice-pack-progress hidden" id="voicePackProgress"><i id="voicePackProgressBar"></i></div>
-              <button type="button" class="btn-secondary voice-pack-btn" id="btnVoicePack" data-i18n="common.download">Скачать</button>
+              <button type="button" class="btn-secondary voice-pack-btn" id="btnVoicePack" data-act="downloadVoicePack" data-i18n="common.download">Скачать</button>
             </div>
             <!-- проверка без тренировки: сказать «готово» с привычного расстояния и увидеть, что услышал телефон -->
-            <button type="button" class="hf-commands-link hidden" id="btnVoiceTest" data-i18n="voicetest.open">Проверить, как слышит</button>
+            <button type="button" class="hf-commands-link hidden" id="btnVoiceTest" data-act="openVoiceTest" data-i18n="voicetest.open">Проверить, как слышит</button>
           </div>
 
           <div class="hf-inline-commands">
@@ -1442,7 +1442,7 @@
       <div class="cb-head"><p class="cb-title" data-i18n="common.trainer">Тренер</p></div>
       <div class="pref-row">
         <span><span data-i18n="settings.trainerMode">Я тренирую других</span><small data-i18n="settings.trainerModeSub">Отправлять свои программы подопечным по ссылке и видеть, кто занимается</small></span>
-        <button class="switch" id="tglTrainer"></button>
+        <button class="switch" id="tglTrainer" data-act="toggleTrainerMode"></button>
       </div>
       <button type="button" class="way-row hidden" id="coachNoAcc" data-act="openCoachAccount">
         <span class="wr-ico" data-icon="user"></span>
@@ -1460,7 +1460,7 @@
             <label data-i18n="settings.profileName">Имя в профиле</label>
             <input type="text" id="coachName" maxlength="40" placeholder="Как тебя представить" data-i18n-placeholder="trainer.presentPlaceholder">
           </div>
-          <button type="button" class="ava-pick" id="coachPhotoBtn" title="Фото тренера" data-i18n-title="trainer.photoTitle">
+          <button type="button" class="ava-pick" id="coachPhotoBtn" data-act="pickCoachPhoto" title="Фото тренера" data-i18n-title="trainer.photoTitle">
             <span id="coachPhotoPrev"></span>
           </button>
         </div>
@@ -1490,7 +1490,7 @@
                  autocorrect="off" spellcheck="false" placeholder="t.me/lena.doma">
           <p class="field-err" id="coachLinksErr"></p>
         </div>
-        <button type="button" class="btn-primary" id="btnSaveCoach" data-i18n="common.save">Сохранить</button>
+        <button type="button" class="btn-primary" id="btnSaveCoach" data-act="saveCoachProfile" data-i18n="common.save">Сохранить</button>
         <!-- Предпросмотр открывает ровно ту же страницу, которую видит подопечный. -->
         <button type="button" class="btn-secondary btn-secondary-text" id="btnMyPage" data-act="openMyTrainerPage" data-i18n="settings.preview">Предпросмотр моего профиля</button>
         <button type="button" class="way-row coach-catalog-row hidden" id="btnMyCatalog" data-act="openMyCatalog">
@@ -1521,7 +1521,7 @@
       </button>
       <!-- Продление — про тариф, а не про аккаунт, и рядом с ним подпись не нужна:
            над строкой уже написано, какой тариф и до какого числа. -->
-      <div class="pref-row hidden" id="rowRenew"><span data-i18n="settings.autoRenew">Продлевать автоматически</span><button class="switch" id="tglRenew"></button></div>
+      <div class="pref-row hidden" id="rowRenew"><span data-i18n="settings.autoRenew">Продлевать автоматически</span><button class="switch" id="tglRenew" data-act="toggleRenewal"></button></div>
     </div>
 
     <div class="card-block">
@@ -1537,7 +1537,7 @@
       <!-- аккаунт есть -->
       <div class="pref-row hidden" id="rowEmail"><span><span data-i18n="common.email">Почта</span><small id="accEmail"></small><small id="accSync"></small></span></div>
       <div class="pref-row hidden" id="rowHandle"><span><span data-i18n="settings.accountNick">Ник аккаунта</span><small id="accHandle"></small></span></div>
-      <div class="pref-row hidden" id="rowBio"><span><span data-i18n="settings.biometry">Вход по биометрии</span><small data-i18n="settings.biometrySub">Отпечаток или лицо вместо ввода почты при входе</small></span><button class="switch" id="tglBio"></button></div>
+      <div class="pref-row hidden" id="rowBio"><span><span data-i18n="settings.biometry">Вход по биометрии</span><small data-i18n="settings.biometrySub">Отпечаток или лицо вместо ввода почты при входе</small></span><button class="switch" id="tglBio" data-act="toggleBiometry"></button></div>
       <button type="button" class="link-btn hidden" id="btnSignOut" data-act="signOut" data-i18n="settings.signOut">Выйти из аккаунта</button>
     </div>
 
@@ -1567,19 +1567,19 @@
         <div class="prefs">
           <div class="pref-row">
             <span><span data-i18n="settings.notifWorkouts">Тренировки</span><small data-i18n="settings.notifWorkoutsSub">Расписание, начало и пропущенные тренировки</small></span>
-            <button type="button" class="switch" id="notifWorkouts" role="switch" aria-checked="true"></button>
+            <button type="button" class="switch" id="notifWorkouts" data-act="toggleNotificationPref" data-pref="workouts" role="switch" aria-checked="true"></button>
           </div>
           <div class="pref-row">
             <span><span data-i18n="settings.notifTrainer">Тренер и программы</span><small data-i18n="settings.notifTrainerSub">Изменения от тренера и статусы программ в каталоге</small></span>
-            <button type="button" class="switch" id="notifTrainer" role="switch" aria-checked="true"></button>
+            <button type="button" class="switch" id="notifTrainer" data-act="toggleNotificationPref" data-pref="trainer" role="switch" aria-checked="true"></button>
           </div>
           <div class="pref-row">
             <span><span data-i18n="settings.notifProgress">Достижения и прогресс</span><small data-i18n="settings.notifProgressSub">Важные этапы прогрессии и достижения</small></span>
-            <button type="button" class="switch" id="notifProgress" role="switch" aria-checked="true"></button>
+            <button type="button" class="switch" id="notifProgress" data-act="toggleNotificationPref" data-pref="progress" role="switch" aria-checked="true"></button>
           </div>
           <div class="pref-row">
             <span><span data-i18n="settings.notifOffers">Предложения и новости</span><small data-i18n="settings.notifOffersSub">Редкие новости приложения и предложения Premium</small></span>
-            <button type="button" class="switch" id="notifOffers" role="switch" aria-checked="true"></button>
+            <button type="button" class="switch" id="notifOffers" data-act="toggleNotificationPref" data-pref="offers" role="switch" aria-checked="true"></button>
           </div>
         </div>
       </div>
@@ -1589,11 +1589,11 @@
         <div class="prefs">
           <div class="pref-row">
             <span><span data-i18n="settings.emailNews">Новости и обновления</span><small data-i18n="settings.emailNewsSub">Крупные обновления и новые возможности Fit Timer</small></span>
-            <button type="button" class="switch" id="emailNews" role="switch" aria-checked="false"></button>
+            <button type="button" class="switch" id="emailNews" data-act="toggleNotificationPref" data-pref="emailNews" role="switch" aria-checked="false"></button>
           </div>
           <div class="pref-row">
             <span><span data-i18n="settings.emailOffers">Акции и Premium</span><small data-i18n="settings.emailOffersSub">Редкие скидки, акции и предложения подписки</small></span>
-            <button type="button" class="switch" id="emailOffers" role="switch" aria-checked="false"></button>
+            <button type="button" class="switch" id="emailOffers" data-act="toggleNotificationPref" data-pref="emailOffers" role="switch" aria-checked="false"></button>
           </div>
         </div>
         <p class="field-hint" data-i18n="settings.emailServiceNote">Коды входа, чеки и важные сообщения об аккаунте могут приходить независимо от этих настроек.</p>
@@ -1637,7 +1637,7 @@
 
   <!-- Редактор профиля -->
   <section class="screen builder" id="scrUserEdit">
-    <div class="screen-head"><button class="back-chip" id="ueBackTop">‹</button><h2 id="ueTitle" data-i18n="profile.title">Профиль</h2></div>
+    <div class="screen-head"><button class="back-chip" id="ueBackTop" data-act="profileBack">‹</button><h2 id="ueTitle" data-i18n="profile.title">Профиль</h2></div>
 
     <!-- Профиль -->
     <div class="ue-pane">
@@ -1654,7 +1654,7 @@
         </div>
         <input type="file" id="uePhotoFile" accept="image/*" class="hidden">
         <div class="field"><label data-i18n="profile.gender">Пол</label>
-          <div class="seg"><button type="button" id="ueGenderF" data-i18n="profile.femaleShort">Ж</button><button type="button" id="ueGenderM" data-i18n="profile.maleShort">М</button></div>
+          <div class="seg"><button type="button" id="ueGenderF" data-act="setProfileGender" data-gender="f" data-i18n="profile.femaleShort">Ж</button><button type="button" id="ueGenderM" data-act="setProfileGender" data-gender="m" data-i18n="profile.maleShort">М</button></div>
         </div>
         <div class="field"><label data-i18n="profile.age">Возраст, полных лет</label><input type="number" id="ueAge" min="5" max="100" step="1" inputmode="numeric" placeholder="Например, 32" data-i18n-placeholder="profile.ageExample">
           <p class="field-hint" data-i18n="profile.ageHint">От пола и возраста зависят упражнения и нагрузка. Уходят в запрос к ИИ.</p>
@@ -1667,17 +1667,17 @@
         <div class="cb-head"><p class="cb-title" data-i18n="profile.appearance">Оформление и язык</p></div>
         <div class="field"><label data-i18n="profile.theme">Тема</label>
           <div class="seg seg3" id="ueThemeSeg">
-            <button type="button" data-theme="system" data-i18n="profile.themeSystem">Как в системе</button>
-            <button type="button" data-theme="light" data-i18n="profile.themeLight">Светлая</button>
-            <button type="button" data-theme="dark" data-i18n="profile.themeDark">Тёмная</button>
+            <button type="button" data-act="setProfileTheme" data-theme="system" data-i18n="profile.themeSystem">Как в системе</button>
+            <button type="button" data-act="setProfileTheme" data-theme="light" data-i18n="profile.themeLight">Светлая</button>
+            <button type="button" data-act="setProfileTheme" data-theme="dark" data-i18n="profile.themeDark">Тёмная</button>
           </div>
         </div>
         <div class="field">
           <label data-i18n="settings.appLanguage">Язык приложения</label>
           <div class="seg seg3" id="ueLocaleSeg" role="group" aria-label="Язык приложения" data-i18n-aria="settings.appLanguage">
-            <button type="button" data-locale="system" data-i18n="profile.themeSystem">Как в системе</button>
-            <button type="button" data-locale="ru" data-i18n="settings.russian">Русский</button>
-            <button type="button" data-locale="en">English</button>
+            <button type="button" data-act="setProfileLocale" data-locale="system" data-i18n="profile.themeSystem">Как в системе</button>
+            <button type="button" data-act="setProfileLocale" data-locale="ru" data-i18n="settings.russian">Русский</button>
+            <button type="button" data-act="setProfileLocale" data-locale="en">English</button>
           </div>
           <p class="field-hint" data-i18n="settings.languageHint">Меняет язык интерфейса и озвучки. Язык голосовых команд можно настроить отдельно.</p>
         </div>
@@ -1697,11 +1697,11 @@
 
       <!-- редкое и необратимое действие не стоит рядом с «Сохранить»: оно живёт
            внизу страницы, а закреплённая панель осталась в одну строку -->
-      <button type="button" class="link-btn" id="btnDelUser" style="color:var(--danger)" data-i18n="profile.delete">Удалить профиль</button>
+      <button type="button" class="link-btn" id="btnDelUser" data-act="deleteUser" style="color:var(--danger)" data-i18n="profile.delete">Удалить профиль</button>
     </div>
 
     <div class="builder-actions">
-      <button class="btn-primary" id="btnSaveUser" data-i18n="common.save">Сохранить</button>
+      <button class="btn-primary" id="btnSaveUser" data-act="saveUser" data-i18n="common.save">Сохранить</button>
     </div>
   </section>
 
@@ -1725,7 +1725,7 @@
     <div class="card-block">
       <div class="cb-head"><p class="cb-title" data-i18n="clients.list">Список</p></div>
       <div class="list-rows" id="clsList"></div>
-      <button class="choice add-row" id="btnAddClient"><span data-icon="plus"></span><b data-i18n="clients.add">Добавить подопечного</b></button>
+      <button class="choice add-row" id="btnAddClient" data-act="addClient"><span data-icon="plus"></span><b data-i18n="clients.add">Добавить подопечного</b></button>
       <p class="field-hint" id="clsHint"></p>
     </div>
 
@@ -1820,11 +1820,11 @@
          отправка молча затирала первую вместе со всеми её занятиями. -->
     <div id="clProgs"></div>
 
-    <button type="button" class="choice ico-row" id="btnClSend"><span data-icon="plus"></span><b id="btnClSendTxt" data-i18n="clients.send">Отправить программу</b></button>
+    <button type="button" class="choice ico-row" id="btnClSend" data-act="sendClientProgram"><span data-icon="plus"></span><b id="btnClSendTxt" data-i18n="clients.send">Отправить программу</b></button>
     <p class="field-hint" id="clSendHint" data-i18n="clients.sendHintFirst">Ссылку откроет любой, у кого она есть: программа уходит целиком, внутри ссылки. Это удобно для подопечного и не защищает от пересылки.</p>
 
     <div class="card-block danger-zone">
-      <button type="button" class="link-btn" id="btnDelClient" data-i18n="clients.delete">Удалить подопечного</button>
+      <button type="button" class="link-btn" id="btnDelClient" data-act="deleteClient" data-i18n="clients.delete">Удалить подопечного</button>
     </div>
   </section>
 
@@ -1842,7 +1842,7 @@
       <div class="modal-card hf-modal-card">
         <div id="hfModalContent" class="hf-modal-scroll"></div>
         <div class="hf-modal-actions">
-          <button class="modal-btn primary" id="btnHfApply" data-i18n="common.apply">Применить</button>
+          <button class="modal-btn primary" id="btnHfApply" data-act="applyHandsFree" data-i18n="common.apply">Применить</button>
           <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
         </div>
       </div>
@@ -1879,11 +1879,11 @@
         <span class="mini-label" data-i18n="who.title">Пара уточнений</span>
         <p class="dlg-msg" id="whoMsg"></p>
         <div class="field"><label data-i18n="profile.gender">Пол</label>
-          <div class="seg"><button type="button" id="whoF" data-i18n="who.female">Женский</button><button type="button" id="whoM" data-i18n="who.male">Мужской</button></div>
+          <div class="seg"><button type="button" id="whoF" data-act="setWhoGender" data-gender="f" data-i18n="who.female">Женский</button><button type="button" id="whoM" data-act="setWhoGender" data-gender="m" data-i18n="who.male">Мужской</button></div>
         </div>
         <div class="field"><label data-i18n="profile.age">Возраст, полных лет</label><input type="number" id="whoAge" min="5" max="100" step="1" inputmode="numeric" placeholder="Например, 32" data-i18n-placeholder="profile.ageExample"></div>
-        <button class="btn-primary" id="whoSave" style="padding:14px;font-size:16px" data-i18n="who.save">Сохранить и продолжить</button>
-        <button class="modal-btn" id="whoSkip" data-i18n="common.cancel">Отмена</button>
+        <button class="btn-primary" id="whoSave" data-act="whoSave" style="padding:14px;font-size:16px" data-i18n="who.save">Сохранить и продолжить</button>
+        <button class="modal-btn" id="whoSkip" data-act="whoSkip" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
@@ -1921,7 +1921,7 @@
 
         <div class="pm-foot">
           <div class="pm-plans" id="pmPlans"></div>
-          <button class="btn-primary" id="pmBuy" style="padding:15px;font-size:16px" data-i18n="premium.buy">Оформить</button>
+          <button class="btn-primary" id="pmBuy" data-act="startPremiumPurchase" style="padding:15px;font-size:16px" data-i18n="premium.buy">Оформить</button>
           <p class="pm-fine" id="pmFine"></p>
           <button class="modal-btn" data-act="closeModal" data-i18n="common.close">Закрыть</button>
         </div>
@@ -1953,7 +1953,7 @@
         <div class="pm-crown" data-icon="crown"></div>
         <h3 class="pm-title" data-i18n="premium.active">Премиум активен</h3>
         <p class="pm-lead" id="pokLead"></p>
-        <button class="btn-primary" id="pokBio" style="padding:15px;font-size:16px" data-i18n="bio.enable">Включить вход по биометрии</button>
+        <button class="btn-primary" id="pokBio" data-act="enableBiometryAfterPurchase" style="padding:15px;font-size:16px" data-i18n="bio.enable">Включить вход по биометрии</button>
         <p class="pm-fine" data-i18n="bio.enableHint">Отпечаток или лицо вместо ввода почты при входе. Можно включить позже в «Аккаунте».</p>
         <button class="modal-btn" data-act="closeModal" data-i18n="finish.done">Готово</button>
       </div>
@@ -2001,8 +2001,8 @@
         <div class="pm-crown" data-icon="fingerprint"></div>
         <h3 class="pm-title" data-i18n="lock.title">Вход в Fit Timer</h3>
         <p class="pm-lead" id="lockMsg" data-i18n="lock.prompt">Приложи палец или посмотри на камеру — и продолжим.</p>
-        <button class="btn-primary" id="lockGo" style="padding:15px;font-size:16px" data-i18n="lock.unlock">Разблокировать</button>
-        <button type="button" class="link-btn" id="lockMail" data-i18n="lock.email">Войти по почте</button>
+        <button class="btn-primary" id="lockGo" data-act="unlockApp" style="padding:15px;font-size:16px" data-i18n="lock.unlock">Разблокировать</button>
+        <button type="button" class="link-btn" id="lockMail" data-act="unlockByEmail" data-i18n="lock.email">Войти по почте</button>
       </div>
     </div>
 
@@ -2097,17 +2097,17 @@
           <div class="cmp-col">
             <select id="cmpA" class="voice-sel" style="max-width:none;width:100%"></select>
             <div class="cmp-img" id="cmpImgA"></div>
-            <button class="link-btn" id="cmpDelA" style="padding:6px;margin:0" data-i18n="compare.deletePhoto">Удалить это фото</button>
+            <button class="link-btn" id="cmpDelA" data-act="deleteCompareA" style="padding:6px;margin:0" data-i18n="compare.deletePhoto">Удалить это фото</button>
           </div>
           <div class="cmp-col">
             <select id="cmpB" class="voice-sel" style="max-width:none;width:100%"></select>
             <div class="cmp-img" id="cmpImgB"></div>
-            <button class="link-btn" id="cmpDelB" style="padding:6px;margin:0" data-i18n="compare.deletePhoto">Удалить это фото</button>
+            <button class="link-btn" id="cmpDelB" data-act="deleteCompareB" style="padding:6px;margin:0" data-i18n="compare.deletePhoto">Удалить это фото</button>
           </div>
         </div>
         <p class="field-hint" id="cmpDays" style="text-align:center;margin:10px 0 4px"></p>
         <p class="field-hint" style="text-align:center;margin:0 0 10px" data-i18n="compare.hint">Проведи по снимку вбок — сменится дата. Нажми — во весь экран.</p>
-        <button class="btn-primary" id="btnShareCmp" style="padding:14px" data-i18n="compare.share">Поделиться сравнением</button>
+        <button class="btn-primary" id="btnShareCmp" data-act="shareCompare" style="padding:14px" data-i18n="compare.share">Поделиться сравнением</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.close">Закрыть</button>
       </div>
     </div>
@@ -2148,7 +2148,7 @@
           <div class="wf"><label data-i18n="weight.hipsCm">Бёдра, см</label><input type="number" id="hipsInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
           <div class="wf"><label data-i18n="weight.chestCm">Грудь, см</label><input type="number" id="chestInput" step="0.5" min="30" max="200" inputmode="decimal"></div>
         </div>
-        <button class="btn-primary" id="btnSaveWeight" style="padding:14px;margin-top:6px" data-i18n="common.save">Сохранить</button>
+        <button class="btn-primary" id="btnSaveWeight" data-act="saveWeightEntry" style="padding:14px;margin-top:6px" data-i18n="common.save">Сохранить</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
@@ -2157,7 +2157,7 @@
       <div class="modal-card">
         <span class="mini-label" data-i18n="weight.history">История веса</span>
         <div id="whList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
-        <button class="btn-primary" id="whSave" style="padding:14px" data-i18n="common.save">Сохранить</button>
+        <button class="btn-primary" id="whSave" data-act="saveWeightHistory" style="padding:14px" data-i18n="common.save">Сохранить</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
@@ -2181,7 +2181,7 @@
           <div class="whc"><label data-i18n="well.pulse">Пульс</label><input type="number" id="pulseInput" min="30" max="220" inputmode="numeric"></div>
           <div class="whc"><label data-i18n="well.sleepHours">Сон, ч</label><input type="number" id="sleepInput" step="0.5" min="0" max="16" inputmode="decimal"></div>
         </div>
-        <button class="btn-primary" id="btnSaveWell" style="padding:14px;margin-top:6px" data-i18n="common.save">Сохранить</button>
+        <button class="btn-primary" id="btnSaveWell" data-act="saveWell" style="padding:14px;margin-top:6px" data-i18n="common.save">Сохранить</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
@@ -2190,7 +2190,7 @@
       <div class="modal-card">
         <span class="mini-label" data-i18n="well.history">История самочувствия</span>
         <div id="wellHistList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px"></div>
-        <button class="btn-primary" id="wellHistSave" style="padding:14px" data-i18n="common.save">Сохранить</button>
+        <button class="btn-primary" id="wellHistSave" data-act="saveWellHistory" style="padding:14px" data-i18n="common.save">Сохранить</button>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
@@ -2219,13 +2219,13 @@
      открыта клавиатура (см. syncDock) — иначе она садится поверх поля ввода. -->
 <nav class="dock hidden" id="dock" aria-label="Разделы" data-i18n-aria="nav.sections">
   <div class="dock-in">
-    <button class="dock-btn act" data-scr="scrMenu"><span class="db-ico" data-icon="home"></span><span data-i18n="common.today">Сегодня</span></button>
-    <button class="dock-btn" data-scr="scrPrograms"><span class="db-ico" data-icon="dumbbell"></span><span data-i18n="common.workouts">Тренировки</span></button>
+    <button class="dock-btn act" data-act="goRootTab" data-scr="scrMenu"><span class="db-ico" data-icon="home"></span><span data-i18n="common.today">Сегодня</span></button>
+    <button class="dock-btn" data-act="goRootTab" data-scr="scrPrograms"><span class="db-ico" data-icon="dumbbell"></span><span data-i18n="common.workouts">Тренировки</span></button>
     <!-- «Подопечные» появляются вместе с режимом тренера: пока его нет, кнопка занимала
          бы место под раздел, в который человеку незачем заходить. -->
-    <button class="dock-btn hidden" data-scr="scrTrainer"><span class="db-ico" data-icon="users"></span><span data-i18n="common.trainees">Подопечные</span></button>
-    <button class="dock-btn" data-scr="scrStats"><span class="db-ico" data-icon="chart"></span><span data-i18n="common.progress">Прогресс</span></button>
-    <button class="dock-btn" data-scr="scrAccount"><span class="db-ico" data-icon="gear"></span><span data-i18n="common.more">Другое</span></button>
+    <button class="dock-btn hidden" data-act="goRootTab" data-scr="scrTrainer"><span class="db-ico" data-icon="users"></span><span data-i18n="common.trainees">Подопечные</span></button>
+    <button class="dock-btn" data-act="goRootTab" data-scr="scrStats"><span class="db-ico" data-icon="chart"></span><span data-i18n="common.progress">Прогресс</span></button>
+    <button class="dock-btn" data-act="goRootTab" data-scr="scrAccount"><span class="db-ico" data-icon="gear"></span><span data-i18n="common.more">Другое</span></button>
   </div>
 </nav>
 
