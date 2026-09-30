@@ -23,6 +23,8 @@ export const LEGACY_LOCALIZATION = [
     'q:"We arrived ___ Dubai on Sunday.",ru:"Мы прилетели в Дубай в воскресенье."'],
   ['I live on Jalan Raya.', 'I live on Rustaveli Avenue.'],
   ['<span class="en">in Bali, from Russia</span>', '<span class="en">in Lisbon, from Russia</span>'],
+  // The English says Ivan; the Russian named someone else.
+  ['["Hi, I\'m Ivan. Nice to meet you.","Привет, я Эдкий. Приятно познакомиться."]', '["Hi, I\'m Ivan. Nice to meet you.","Привет, я Иван. Приятно познакомиться."]'],
   // Conversation phrases, linkers, story
   ['["How long have you been in Bali?","Давно ты на Бали?"]', '["How long have you been here?","Давно ты здесь?"]'],
   ["That's why I use Grab.", "That's why I use taxi apps."],

@@ -8,6 +8,7 @@ import { isNodeUnlockedByPurchase } from './content/access';
 import type { CourseSet, RoadmapNode } from './content/schema';
 import { LexiconText } from './lexicon-ui';
 import { courseStages, stageNameKey, type CourseStage } from './course-stages';
+import { hasReference } from './reference';
 import { localizedText, nodeMinutes, nodeTopic } from './today-model';
 import { Icon, type IconName } from './icons';
 import { Sheet } from './sheet';
@@ -101,9 +102,12 @@ function Ring({value,total,tone}:{value:number;total:number;tone:'success'|'acce
 export function CourseMapView({
   runtime,
   onOpen,
-  onUnlock
+  onUnlock,
+  onReference
 }:{
   runtime:LearnerCourseRuntimeValue;
+  /** Opens «Справочник» (phrases and irregular verbs) when the course has them. */
+  onReference?:()=>void;
   /** `fromSheet`: the station sheet is open; navigate with replace so Back skips it. */
   onOpen:(nodeId:string,fromSheet?:boolean)=>void;
   onUnlock:(nodeId:string,fromSheet?:boolean)=>void;
@@ -248,6 +252,14 @@ export function CourseMapView({
         </div>
       )}
 
+      {onReference&&hasReference(state.set)&&(
+        <button className="me-row pressable course-map-reference" type="button" onClick={onReference}>
+          <Icon name="chat" />
+          <span>{t('reference.entry')}</span>
+          <Icon name="chevron" size={20} className="me-row-chevron" />
+        </button>
+      )}
+
       <div className="stages">
         {groups.map(group=>{
           const id=groupId(group);
@@ -383,6 +395,7 @@ export function CourseMapScreen(){
       runtime={useLearnerCourseRuntime()}
       onOpen={(nodeId,fromSheet)=>navigate('/learn/'+encodeURIComponent(nodeId),{replace:Boolean(fromSheet)})}
       onUnlock={(nodeId,fromSheet)=>navigate('/access?from=course&node='+encodeURIComponent(nodeId),{replace:Boolean(fromSheet)})}
+      onReference={()=>navigate('/reference')}
     />
   );
 }

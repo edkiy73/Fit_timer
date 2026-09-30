@@ -13,6 +13,7 @@ import type { CourseProgressDocument } from './progress';
 import { NotificationSettingsPanel } from './notification-settings';
 import { readThemePreference, setThemePreference, type ThemePreference } from './theme';
 import { Icon } from './icons';
+import { hasReference } from './reference';
 import { CoursePicker } from './active-course';
 import { useAllLearningDays, withAllLearningDays } from './learning-days';
 
@@ -195,6 +196,13 @@ export function MeScreen(){
         <span>{t('words.title')}</span>
         <Icon name="chevron" size={20} className="me-row-chevron" />
       </Link>
+      {hasReference(state?.set) && (
+        <Link className="me-row pressable" to="/reference">
+          <Icon name="chat" />
+          <span>{t('reference.title')}</span>
+          <Icon name="chevron" size={20} className="me-row-chevron" />
+        </Link>
+      )}
 
       <section className="settings" aria-labelledby="settings-title">
         <h3 id="settings-title" className="section-title">{t('me.settings')}</h3>

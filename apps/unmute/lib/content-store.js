@@ -203,6 +203,9 @@ function validateResource(resource){
         assertObject(item,'phrase_item');
         if(!cleanId(item.lexemeId)) throw new Error('bad_phrase_lexeme:'+id+':'+groupId);
         if(item.senseId!==undefined && !cleanId(item.senseId)) throw new Error('bad_phrase_sense:'+id+':'+groupId);
+        // Optional display text as the author wrote it (the lexicon keeps a normalized lemma).
+        if(item.text!==undefined && (typeof item.text!=='string' || !item.text.trim() || item.text.length>300)) throw new Error('bad_phrase_text:'+id+':'+groupId);
+        if(item.translation!==undefined && !isTextMap(item.translation)) throw new Error('bad_phrase_translation:'+id+':'+groupId);
       }
     }
     return resource;

@@ -15,6 +15,7 @@ import { CourseMapScreen } from './course-map';
 import { LexiconProvider } from './lexicon-ui';
 import { ProgressScreen } from './progress-screen';
 import { MyWordsScreen } from './my-words';
+import { ReferenceScreen } from './reference';
 import { OnboardingGate } from './onboarding';
 import { AccessScreen } from './access';
 import { NotificationDelivery, NotificationRouteListener } from './notification-delivery';
@@ -128,6 +129,7 @@ export const routes: RouteObject[] = [
         {path:'course', element:<CourseMapScreen />},
         {path:'progress', element:<ProgressScreen />},
         {path:'words', element:<MyWordsScreen />},
+        {path:'reference', element:<ReferenceScreen />},
         {path:'access', element:<AccessScreen />},
         {path:'account', element:<MeScreen />}
       ]
