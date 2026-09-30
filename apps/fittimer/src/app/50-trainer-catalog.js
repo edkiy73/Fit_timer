@@ -2,7 +2,7 @@ import { OPT_GOAL, OPT_LEVEL } from './options.js';
 import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
 import { registerAction } from './05-actions.js';
 import { $, DUMBBELL_ICON, ICONS, appAlert, appDialog, goBackTo, goTab, icon, openStart, plural,
-  setCoreTrainerCatalogHooks, setShown, setStartFromShared, show, syncDockTabs
+  setCoreTrainerCatalogHooks, setShown, openStartFrom, show, syncDockTabs
 } from './00-core.js';
 import { DAYS, accountAuth, calcStreakInfo, closeAllMenus, currentUser, customPrograms, kvGet,
   localISO, normPlans, progActive, programDaysUnion, savePrograms, setCustomProgramsShared,
@@ -1221,8 +1221,7 @@ async function addStoreItem(id){
   if(own){
     // уже добавлена — открываем экран старта. Каталог не корневой раздел, поэтому
     // «назад» с него сам не настроится: возвращаем туда, откуда пришли в каталог
-    setStartFromShared(storeFrom);
-    openStart(own);
+    openStartFrom(own, storeFrom);
     return;
   }
   // Локальная проверка — только UX. Сам текст Premium-программы всё равно
