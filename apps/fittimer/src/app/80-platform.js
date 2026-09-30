@@ -6,7 +6,7 @@ import { $, appAlert, audioCtx, beep, dismissTopModal, fxVol, icon, keepAwake, l
   setCorePlatformHooks, state, syncSoundCascade, voiceVol, workoutLoadSnapshot
 } from './00-core.js';
 import { DAYS, curUser, customPrograms, kvSet, loadSession, loadSessions, localISO, normPlans, planDays,
-  progActive, stats
+  progActive, setDataSyncPlatformHooks, stats
 } from './10-data-sync.js';
 import { isPremium } from './20-account.js';
 import { completeStep, nextStep, setPause, skipStep, stopSpeech } from './70-workout.js';
@@ -796,6 +796,10 @@ export function setVoiceWantedShared(value){ voiceWanted = value; return voiceWa
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initPlatform(){
+  setDataSyncPlatformHooks({
+    applyThemeFor,
+    syncNativeNotifications
+  });
   setCorePlatformHooks({
     hasSpeechRecognition: () => !!SR,
     getHfMode: () => hfMode,
