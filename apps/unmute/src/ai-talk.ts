@@ -1,4 +1,5 @@
 import { authClient } from './auth';
+import { apiUrl } from './api-url';
 
 export interface TalkMessage {
   role:'learner'|'partner';
@@ -143,7 +144,7 @@ export async function requestTalkReply(input:TalkReplyInput):Promise<TalkReply>{
   const auth=await authClient.authFields();
   if(!auth)throw new TalkAIError('auth_required',401);
 
-  const response=await fetch('/api/ai',{
+  const response=await fetch(apiUrl('/api/ai'),{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
@@ -231,7 +232,7 @@ export async function requestTalkReview(input:TalkReviewInput):Promise<TalkRevie
   const auth=await authClient.authFields();
   if(!auth)throw new TalkAIError('auth_required',401);
 
-  const response=await fetch('/api/ai',{
+  const response=await fetch(apiUrl('/api/ai'),{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({

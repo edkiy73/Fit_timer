@@ -1,4 +1,5 @@
 import { authClient } from './auth';
+import { apiUrl } from './api-url';
 
 export interface AnswerExplainInput {
   question:string;
@@ -52,7 +53,7 @@ export async function requestAnswerExplanation(
   const auth=await authClient.authFields();
   if(!auth)throw new AnswerAIError('auth_required',401);
 
-  const response=await fetch('/api/ai',{
+  const response=await fetch(apiUrl('/api/ai'),{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({

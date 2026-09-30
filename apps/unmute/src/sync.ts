@@ -14,6 +14,7 @@ import {
   type StatsProgressDocument,
   type WordsProgressDocument
 } from './progress';
+import { apiUrl } from './api-url';
 
 /* Local-first data: documents are written on the device first and sync to the account
    after sign-in. Every synced key must be registered in lib/app-sync-schema.js; data that
@@ -21,7 +22,7 @@ import {
 
 export const SETTINGS_DOC = 'settings';
 
-export const syncClient = createSyncClient({endpoint:'/api/sync', auth:authClient});
+export const syncClient = createSyncClient({endpoint:apiUrl('/api/sync'), auth:authClient});
 
 export const appDocs: DocumentSync = createDocumentSync({
   client: syncClient,

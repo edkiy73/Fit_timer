@@ -1,5 +1,6 @@
 import { createStorage } from '@appbase/core/storage.js';
 import { validateLexicon, lookupLexemes, type LexiconSnapshot, type Lexeme } from './schema';
+import { apiUrl } from '../api-url';
 
 const storage=createStorage({dbName:'unmute/lexicon',storeName:'published'});
 const CACHE_KEY='snapshot';
@@ -17,7 +18,7 @@ async function fetchJson(url:string):Promise<Record<string,unknown>>{
 
 export async function loadLexicon():Promise<{lexicon:LexiconSnapshot;fromCache:boolean}>{
   try{
-    const payload=await fetchJson('/api/lexicon?action=snapshot');
+    const payload=await fetchJson(apiUrl('/api/lexicon?action=snapshot'));
     const lexicon=validateLexicon(payload.lexicon);
     await storage.set(CACHE_KEY,JSON.stringify(lexicon));
     return {lexicon,fromCache:false};
