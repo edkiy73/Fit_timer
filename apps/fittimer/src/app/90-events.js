@@ -95,6 +95,46 @@ registerAction('importProgramCode', () => importProgramCode($('importCode').valu
 registerAction('openStoreFromPrograms', () => openStore('scrPrograms'));
 registerAction('openMyCatalog', () => openMyCatalog());
 
+registerAction('backTrainerProfile', () => goBackTo(tpFrom || 'scrMenu'));
+registerAction('backPublish', () => goBackTo(pubFrom || 'scrPrograms'));
+registerAction('backMyCatalog', () => {
+  switchMoreTab('coach');
+  goTab('scrAccount');
+});
+registerAction('openCoachAccount', () => {
+  switchMoreTab('acc');
+  setTimeout(() => openLogin(), 250);
+});
+registerAction('wipeCoach', () => wipeTrainerInfo());
+registerAction('openMyTrainerPage', () => {
+  if(trainerOn()) openTrainer(normHandle(trainer.handle));
+  else appAlert(t('trainer.enableFirst'));
+});
+registerAction('publishProgram', () => doPublish());
+registerAction('backClient', () => goBackTo('scrTrainer'));
+registerAction('legalBack', () => legalBack());
+registerAction('openLegalPrivacy', () => openLegal('privacy'));
+registerAction('openLegalTerms', () => openLegal('terms'));
+registerAction('openLegalHealth', () => openLegal('health'));
+
+registerAction('openPremium', () => openPremium());
+registerAction('completePurchase', () => completePurchase());
+registerAction('login', () => doLogin());
+registerAction('loginUseCode', () => loginUseExistingCode());
+registerAction('loginCancel', () => dropLogin());
+registerAction('openLogin', () => openLogin());
+registerAction('signOut', () => signOut());
+registerAction('pickProgramImportFile', () => $('importProgFile').click());
+registerAction('exportAllData', () => exportAllData());
+registerAction('pickAllDataImportFile', () => $('importAllFile').click());
+registerAction('wipeAccount', () => wipeAccount());
+registerAction('openWeightHistory', () => openWeightHist());
+registerAction('shareWeightChart', () => shareWeightChart());
+registerAction('pickProgressPhoto', () => $('photoFile').click());
+registerAction('openPhotoCompare', () => openCompare());
+
+
+
 
 registerAction('openWorkoutSound', () => {
   fillLiveSoundCascade('snd');
@@ -1486,18 +1526,10 @@ export function initEvents(){
   // Ник над программой — это вход на страницу тренера, а не украшение: подопечный,
   // получивший программу по ссылке, хочет знать, от кого она.
   $('startByChip').onclick = ()=>{ const p = state.raw; if(p && p.by) openTrainer(p.by); };
-  $('tpBackTop').onclick = ()=> goBackTo(tpFrom || 'scrMenu');
-  $('pubBackTop').onclick = ()=> goBackTo(pubFrom || 'scrPrograms');
-  $('mcBackTop').onclick = ()=>{ switchMoreTab('coach'); goTab('scrAccount'); };
   // Своя страница — ровно тем же экраном, каким её видит подопечный. Отдельный «просмотр
   // профиля» разошёлся бы с настоящим через месяц.
   // Ника без аккаунта терять нельзя — поэтому строка ведёт прямо туда, где его заводят.
-  $('coachNoAcc').onclick = ()=> { switchMoreTab('acc'); setTimeout(()=> openLogin(), 250); };
-  $('btnCoachWipe').onclick = wipeTrainerInfo;
-  $('btnMyPage').onclick = ()=> trainerOn() ? openTrainer(normHandle(trainer.handle))
-    : appAlert(t('trainer.enableFirst'));
   $('pubGives').oninput = e => { pubDraft.gives = clampText(e.target.value, LIM.gives); };
-  $('btnPublish').onclick = ()=> doPublish();
   $('btnAddClient').onclick = async ()=>{
     const c = await addClient();
     renderClients();
@@ -1505,7 +1537,6 @@ export function initEvents(){
     openClient(clients.indexOf(c));
     setTimeout(()=> $('clName').select(), 120);
   };
-  $('clBackTop').onclick = ()=> goBackTo('scrTrainer');
   // Поля карточки сохраняются на лету: «Сохранить» здесь нечего ждать, а её отсутствие
   // снимает весь разговор о несохранённом при выходе жестом.
   $('clName').oninput = async e => {
@@ -1539,8 +1570,6 @@ export function initEvents(){
   Object.keys(LEGAL_SECTIONS).forEach(k => {
     $('legalHead' + k[0].toUpperCase() + k.slice(1)).onclick = ()=> legalToggle(k);
   });
-  $('legalBackTop').onclick = ()=> legalBack();
-  $('btnLegalDone').onclick = ()=> legalBack();
   ['workouts','trainer','progress','offers','emailNews','emailOffers'].forEach(key => {
     const btn = $({
       workouts:'notifWorkouts',
@@ -1552,9 +1581,6 @@ export function initEvents(){
     }[key]);
     if(btn) btn.onclick = ()=> { setNotificationPref(key, !getNotificationPrefs()[key]); };
   });
-  $('btnLegalPrivacy').onclick = ()=> openLegal('privacy');
-  $('btnLegalTerms').onclick   = ()=> openLegal('terms');
-  $('btnLegalHealth').onclick  = ()=> openLegal('health');
   // трекер веса
   $('btnAddWeight').onclick = ()=>{
     const last = stats.weights[stats.weights.length - 1];
@@ -1603,8 +1629,6 @@ export function initEvents(){
     $('waModal').classList.remove('open');
     renderWeight();
   };
-  $('btnPremium').onclick = openPremium;
-  $('btnPlanCard').onclick = openPremium;
   $('premiumModal').onclick = e => { if(e.target === $('premiumModal')) $('premiumModal').classList.remove('open'); };
   $('pmBuy').onclick = ()=>{
     trackProductEvent('purchase_started').catch(()=>{});
@@ -1617,7 +1641,6 @@ export function initEvents(){
     $('payModal').classList.add('open');
   };
   $('payModal').onclick = e => { if(e.target === $('payModal')) $('payModal').classList.remove('open'); };
-  $('payGo').onclick = completePurchase;
   $('payEmail').addEventListener('keydown', e => { if(e.key === 'Enter') completePurchase(); });
   $('premiumOkModal').onclick = e => { if(e.target === $('premiumOkModal')) $('premiumOkModal').classList.remove('open'); };
   $('pokBio').onclick = async ()=>{ if(await bioEnable()) $('premiumOkModal').classList.remove('open'); };
@@ -1639,9 +1662,6 @@ export function initEvents(){
     await saveAccount();
     renderPlan(); renderPremium();
   };
-  $('loginGo').onclick = doLogin;
-  $('loginHaveCode').onclick = loginUseExistingCode;
-  $('loginCancel').onclick = dropLogin;
   $('loginModal').onclick = e => { if(e.target === $('loginModal')) dropLogin(); };
   $('loginEmail').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
   $('loginCode').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
@@ -1651,8 +1671,6 @@ export function initEvents(){
     e.target.value = (at || body) ? '@' + body : '';
   });
   $('loginHandle').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
-  $('btnLoginRow').onclick = ()=> openLogin();
-  $('btnSignOut').onclick = signOut;
   // «Позже» — не отмена: дни, отмеченные до нажатия, уже лежат в программе, поэтому
   // сохраняем и их, иначе выбор молча пропадёт
   $('lockGo').onclick = ()=> tryUnlock();
@@ -1670,7 +1688,6 @@ export function initEvents(){
   window.addEventListener('fitAppForeground', e=>{
     maybeBiometricRelock(+((e && e.detail && e.detail.awayMs) || 0));
   });
-  $('btnImportProgFile').onclick = ()=> $('importProgFile').click();
   $('importProgFile').onchange = async e => {
     const f = e.target.files && e.target.files[0];
     e.target.value = '';
@@ -1678,19 +1695,12 @@ export function initEvents(){
     $('importModal').classList.remove('open');
     await importProgramFile(f);
   };
-  $('btnExportAll').onclick = exportAllData;
-  $('btnImportAll').onclick = ()=> $('importAllFile').click();
-  $('btnWipeAccount').onclick = wipeAccount;
   $('importAllFile').onchange = e => { const f = e.target.files && e.target.files[0]; if(f) importAllData(f); e.target.value=''; };
-  $('btnWeightHist').onclick = openWeightHist;
-  $('btnShareWeight').onclick = shareWeightChart;
-  $('btnAddPhoto').onclick = ()=> $('photoFile').click();
   $('photoFile').onchange = e => {
     const f = e.target.files && e.target.files[0];
     if(f) addPhoto(f);
     e.target.value = '';
   };
-  $('btnCompare').onclick = ()=> openCompare();
   // переключатель метрик на вкладке «Тело»: график один, метрика выбирается здесь
   $('weightSwitch').addEventListener('click', e => {
     const b = e.target.closest('.wm-chip');

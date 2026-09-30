@@ -107,7 +107,7 @@
   <!-- ОТПРАВЛЕННОЕ В КАТАЛОГ. Тренер должен видеть, что с его программами: без
        этого он не знает, дошло ли вообще, и отправляет повторно. -->
   <section class="screen builder" id="scrMyCatalog">
-    <div class="screen-head"><button class="back-chip" id="mcBackTop">‹</button><h2 data-i18n="publish.catalogTitle">В каталоге</h2></div>
+    <div class="screen-head"><button class="back-chip" id="mcBackTop" data-act="backMyCatalog">‹</button><h2 data-i18n="publish.catalogTitle">В каталоге</h2></div>
     <div class="card-block">
       <div class="list-rows" id="mcList"></div>
       <p class="field-hint" id="mcHint"></p>
@@ -115,7 +115,7 @@
   </section>
 
   <section class="screen builder" id="scrPublish">
-    <div class="screen-head"><button class="back-chip" id="pubBackTop">‹</button><h2 data-i18n="publish.toCatalog">В каталог</h2></div>
+    <div class="screen-head"><button class="back-chip" id="pubBackTop" data-act="backPublish">‹</button><h2 data-i18n="publish.toCatalog">В каталог</h2></div>
 
     <div class="card-block">
       <div class="pref-row"><span><span id="pubName"></span><small id="pubSub"></small></span></div>
@@ -140,12 +140,12 @@
     </div>
 
     <div class="builder-actions">
-      <button class="btn-primary" id="btnPublish" data-i18n="publish.submit">Отправить на проверку</button>
+      <button class="btn-primary" id="btnPublish" data-act="publishProgram" data-i18n="publish.submit">Отправить на проверку</button>
     </div>
   </section>
 
   <section class="screen builder" id="scrTrainerPage">
-    <div class="screen-head"><button class="back-chip" id="tpBackTop">‹</button><h2 data-i18n="trainer.title">Тренер</h2></div>
+    <div class="screen-head"><button class="back-chip" id="tpBackTop" data-act="backTrainerProfile">‹</button><h2 data-i18n="trainer.title">Тренер</h2></div>
 
     <div class="card-block">
       <div class="tp-head">
@@ -169,7 +169,7 @@
   </section>
 
   <section class="screen builder" id="scrClient">
-    <div class="screen-head"><button class="back-chip" id="clBackTop">‹</button><h2 id="clTitle" data-i18n="clients.default">Подопечный</h2></div>
+    <div class="screen-head"><button class="back-chip" id="clBackTop" data-act="backClient">‹</button><h2 id="clTitle" data-i18n="clients.default">Подопечный</h2></div>
 
     <div class="card-block">
       <div class="field"><label data-i18n="common.name">Имя</label><input type="text" id="clName" maxlength="40" placeholder="Как записать" data-i18n-placeholder="clients.namePlaceholder"></div>
@@ -303,7 +303,7 @@
           <input type="email" id="payEmail" maxlength="120" inputmode="email" autocomplete="email" placeholder="you@example.com">
           <p class="field-hint" data-i18n="premium.emailHint">На неё придёт чек, по ней вернутся подписка и данные. Пароль не нужен.</p>
         </div>
-        <button class="btn-primary" id="payGo" style="padding:15px;font-size:16px" data-i18n="premium.payBtn">Оплатить</button>
+        <button class="btn-primary" id="payGo" data-act="completePurchase" style="padding:15px;font-size:16px" data-i18n="premium.payBtn">Оплатить</button>
         <p class="pm-fine" data-i18n="premium.termsHint">Нажимая «Оплатить», ты соглашаешься с условиями подписки. Она продлевается автоматически, отменить можно в любой момент в «Аккаунте» — оплаченный срок при этом останется.</p>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
       </div>
@@ -340,7 +340,7 @@
                  autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="120"
                  placeholder="you@example.com">
           <p class="field-hint" data-i18n="login.codeHint">Пришлём код. Писем, кроме кода, не будет.</p>
-          <button type="button" class="link-btn" id="loginHaveCode" data-i18n="login.haveCode">У меня уже есть код</button>
+          <button type="button" class="link-btn" id="loginHaveCode" data-act="loginUseCode" data-i18n="login.haveCode">У меня уже есть код</button>
         </div>
         <div class="field hidden" id="loginStep2">
           <label data-i18n="login.code">Код входа</label>
@@ -354,8 +354,8 @@
           <p class="field-hint" data-i18n="login.nickHint">Задаётся один раз. Это твой ник в Fit Timer, в том числе на странице тренера.</p>
         </div>
         <p class="field-err" id="loginErr"></p>
-        <button class="btn-primary" id="loginGo" style="padding:15px;font-size:16px" data-i18n="login.sendCode">Прислать код</button>
-        <button class="modal-btn" id="loginCancel" data-i18n="common.cancel">Отмена</button>
+        <button class="btn-primary" id="loginGo" data-act="login" style="padding:15px;font-size:16px" data-i18n="login.sendCode">Прислать код</button>
+        <button class="modal-btn" id="loginCancel" data-act="loginCancel" data-i18n="common.cancel">Отмена</button>
       </div>
     </div>
 
@@ -569,7 +569,7 @@
         <div class="field"><textarea id="importCode" maxlength="200000" style="min-height:90px" placeholder="Вставь ссылку, которой поделились" data-i18n-placeholder="import.linkPlaceholder"></textarea></div>
         <button class="btn-primary" id="btnDoImport" data-act="importProgramCode" style="padding:15px" data-i18n="import.openLink">Открыть по ссылке</button>
         <div class="imp-or"><span data-i18n="common.or">или</span></div>
-        <button class="btn-ghost" id="btnImportProgFile" style="margin:0" data-i18n="import.file">Загрузить файл программы</button>
+        <button class="btn-ghost" id="btnImportProgFile" data-act="pickProgramImportFile" style="margin:0" data-i18n="import.file">Загрузить файл программы</button>
         <p class="field-hint" style="margin-top:8px" data-i18n="import.hint">Файл несёт программу целиком, с картинками. Ссылка — без них: фото подтянутся у того, кто её прислал.</p>
         <input type="file" id="importProgFile" accept="application/json,.json" class="hidden">
         <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>

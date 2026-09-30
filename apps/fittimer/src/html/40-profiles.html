@@ -77,8 +77,8 @@
         <div class="wm-switch hidden" id="weightSwitch"></div>
         <div class="mc-charts hidden" id="weightCharts"></div>
         <div class="mc-actions hidden" id="weightActions">
-          <button class="mc-act" id="btnWeightHist"></button>
-          <button class="mc-act" id="btnShareWeight"></button>
+          <button class="mc-act" id="btnWeightHist" data-act="openWeightHistory"></button>
+          <button class="mc-act" id="btnShareWeight" data-act="shareWeightChart"></button>
         </div>
       </div>
 
@@ -127,13 +127,13 @@
              раскрываться во весь экран сами по себе — их открывают, когда захотят,
              кнопкой «Сравнить». -->
         <div class="mc-actions hidden" id="photoActions">
-          <button class="mc-act primary" id="btnCompare" data-i18n="progress.compare">Показать «было / стало»</button>
+          <button class="mc-act primary" id="btnCompare" data-act="openPhotoCompare" data-i18n="progress.compare">Показать «было / стало»</button>
         </div>
         <div class="ph-grid hidden" id="photoStrip"></div>
         <!-- «Добавить» — обычная кнопка рядом с удалением, а не «плюс» в углу карточки:
              маленький значок в шапке не читался как главное действие вкладки. -->
         <div class="ph-tools">
-          <button type="button" class="btn-ghost" id="btnAddPhoto" data-i18n="progress.addPhoto">Добавить фото</button>
+          <button type="button" class="btn-ghost" id="btnAddPhoto" data-act="pickProgressPhoto" data-i18n="progress.addPhoto">Добавить фото</button>
           <p class="photo-local-note"><span data-icon="shield"></span><span data-i18n="progress.photoLocalOnly">Фото хранятся только на этом устройстве и не синхронизируются с аккаунтом. Так снимки прогресса не покидают телефон.</span></p>
           <button type="button" class="mc-danger hidden" id="btnDeleteAllPhotos" data-i18n="progress.deleteAllPhotosBtn">Удалить все фото</button>
         </div>
@@ -241,7 +241,7 @@
         <span><span data-i18n="settings.trainerMode">Я тренирую других</span><small data-i18n="settings.trainerModeSub">Отправлять свои программы подопечным по ссылке и видеть, кто занимается</small></span>
         <button class="switch" id="tglTrainer"></button>
       </div>
-      <button type="button" class="way-row hidden" id="coachNoAcc">
+      <button type="button" class="way-row hidden" id="coachNoAcc" data-act="openCoachAccount">
         <span class="wr-ico" data-icon="user"></span>
         <span class="wr-txt"><b data-i18n="settings.createAccountFirst">Сначала создай аккаунт</b><small data-i18n="settings.createAccountFirstSub">Без основного аккаунта по почте режим тренера недоступен</small></span>
       </button>
@@ -289,7 +289,7 @@
         </div>
         <button type="button" class="btn-primary" id="btnSaveCoach" data-i18n="common.save">Сохранить</button>
         <!-- Предпросмотр открывает ровно ту же страницу, которую видит подопечный. -->
-        <button type="button" class="btn-secondary btn-secondary-text" id="btnMyPage" data-i18n="settings.preview">Предпросмотр моего профиля</button>
+        <button type="button" class="btn-secondary btn-secondary-text" id="btnMyPage" data-act="openMyTrainerPage" data-i18n="settings.preview">Предпросмотр моего профиля</button>
         <button type="button" class="way-row coach-catalog-row hidden" id="btnMyCatalog" data-act="openMyCatalog">
           <span class="wr-ico" data-icon="crown"></span>
           <span class="wr-txt"><b data-i18n="programs.catalogRequests">Заявки в каталог</b><small id="coachCatSub"></small></span>
@@ -304,7 +304,7 @@
       <div class="cb-head"><p class="cb-title" data-i18n="settings.deleteData">Удаление данных</p></div>
       <div class="danger-zone">
         <p data-i18n="settings.deleteCoachHint">Со страницы уйдут имя, фото, «о себе», стаж и ссылка. Ник останется за тобой, программы из каталога никуда не денутся.</p>
-        <button type="button" class="link-btn" id="btnCoachWipe" data-i18n="settings.deleteCoach">Удалить данные о себе</button>
+        <button type="button" class="link-btn" id="btnCoachWipe" data-act="wipeCoach" data-i18n="settings.deleteCoach">Удалить данные о себе</button>
       </div>
     </div>
     </div>
@@ -312,7 +312,7 @@
     <div class="tab-pane hidden" id="morePane_acc">
     <div class="card-block">
       <div class="cb-head"><p class="cb-title" data-i18n="settings.plan">Тариф</p></div>
-      <button type="button" class="pref-row row-link" id="btnPlanCard">
+      <button type="button" class="pref-row row-link" id="btnPlanCard" data-act="openPremium">
         <span><span id="planTitle" data-i18n="settings.freePlan">Бесплатный тариф</span><small id="planSub"></small></span>
         <span class="nr-chev" data-icon="chevR"></span>
       </button>
@@ -328,25 +328,25 @@
            он сохраняет ник и данные аккаунта между устройствами. -->
       <div class="stack hidden" id="accNone">
         <p class="field-hint" data-i18n="settings.accountHint">Быстрая регистрация в один шаг по почте. Аккаунт бесплатный: он сохранит твой ник, подписку и данные аккаунта, чтобы они вернулись на новом телефоне. Синхронизация тренировок доступна по подписке.</p>
-        <button type="button" class="btn-primary" id="btnLoginRow" data-i18n="common.loginOrRegister">Вход или регистрация</button>
+        <button type="button" class="btn-primary" id="btnLoginRow" data-act="openLogin" data-i18n="common.loginOrRegister">Вход или регистрация</button>
       </div>
 
       <!-- аккаунт есть -->
       <div class="pref-row hidden" id="rowEmail"><span><span data-i18n="common.email">Почта</span><small id="accEmail"></small><small id="accSync"></small></span></div>
       <div class="pref-row hidden" id="rowHandle"><span><span data-i18n="settings.accountNick">Ник аккаунта</span><small id="accHandle"></small></span></div>
       <div class="pref-row hidden" id="rowBio"><span><span data-i18n="settings.biometry">Вход по биометрии</span><small data-i18n="settings.biometrySub">Отпечаток или лицо вместо ввода почты при входе</small></span><button class="switch" id="tglBio"></button></div>
-      <button type="button" class="link-btn hidden" id="btnSignOut" data-i18n="settings.signOut">Выйти из аккаунта</button>
+      <button type="button" class="link-btn hidden" id="btnSignOut" data-act="signOut" data-i18n="settings.signOut">Выйти из аккаунта</button>
     </div>
 
     <div class="card-block">
       <div class="cb-head"><p class="cb-title" data-i18n="settings.backup">Резервная копия</p></div>
       <p class="field-hint" data-i18n="settings.backupHint">Профили, программы, статистика, вес, замеры и фото — одним файлом.</p>
       <div class="ways">
-        <button type="button" class="way-row" id="btnExportAll">
+        <button type="button" class="way-row" id="btnExportAll" data-act="exportAllData">
           <span class="wr-ico" data-icon="download"></span>
           <span class="wr-txt"><b data-i18n="settings.saveFile">Сохранить в файл</b><small data-i18n="settings.saveFileSub">Телефон предложит, куда его положить</small></span>
         </button>
-        <button type="button" class="way-row" id="btnImportAll">
+        <button type="button" class="way-row" id="btnImportAll" data-act="pickAllDataImportFile">
           <span class="wr-ico" data-icon="reset"></span>
           <span class="wr-txt"><b data-i18n="settings.restoreFile">Восстановить из файла</b><small data-i18n="settings.restoreFileSub">Всё, что сейчас в приложении, заменится содержимым файла</small></span>
         </button>
@@ -399,15 +399,15 @@
     <div class="card-block">
       <div class="cb-head"><p class="cb-title" data-i18n="settings.dataRules">Данные и правила</p></div>
       <div class="ways">
-        <button type="button" class="way-row" id="btnLegalPrivacy">
+        <button type="button" class="way-row" id="btnLegalPrivacy" data-act="openLegalPrivacy">
           <span class="wr-ico" data-icon="shield"></span>
           <span class="wr-txt"><b data-i18n="settings.privacy">Политика конфиденциальности</b><small data-i18n="settings.privacySub">Что собирается, где хранится, что уходит наружу</small></span>
         </button>
-        <button type="button" class="way-row" id="btnLegalTerms">
+        <button type="button" class="way-row" id="btnLegalTerms" data-act="openLegalTerms">
           <span class="wr-ico" data-icon="doc"></span>
           <span class="wr-txt"><b data-i18n="settings.terms">Пользовательское соглашение</b><small data-i18n="settings.termsSub">Что это за приложение и кто за что отвечает</small></span>
         </button>
-        <button type="button" class="way-row" id="btnLegalHealth">
+        <button type="button" class="way-row" id="btnLegalHealth" data-act="openLegalHealth">
           <span class="wr-ico" data-icon="heart"></span>
           <span class="wr-txt"><b data-i18n="settings.health">Здоровье и безопасность</b><small data-i18n="settings.healthSub">Когда сначала к врачу и когда остановиться</small></span>
         </button>
@@ -417,7 +417,7 @@
       <div class="cb-head"><p class="cb-title" id="wipeCardTitle" data-i18n="account.deleteDataTitle">Удаление данных</p></div>
       <div class="danger-zone">
         <p id="wipeNote"></p>
-        <button type="button" class="link-btn" id="btnWipeAccount" data-i18n="settings.deleteAll">Удалить все данные</button>
+        <button type="button" class="link-btn" id="btnWipeAccount" data-act="wipeAccount" data-i18n="settings.deleteAll">Удалить все данные</button>
       </div>
     </div>
     <!-- Какая версия сейчас на телефоне. Без этой строки «я не вижу изменений»
