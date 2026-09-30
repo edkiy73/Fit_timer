@@ -130,6 +130,9 @@ export function NodeRunnerView({
   const [result,setResult]=useState<boolean|null>(null);
   const [busy,setBusy]=useState(false);
   const [theoryOpen,setTheoryOpen]=useState(false);
+  // Answers checked in this sitting, shown on the summary once the lesson is done.
+  const [score,setScore]=useState({correct:0,total:0});
+  const [finished,setFinished]=useState(false);
   const completionTrackedRef=useRef(false);
 
   useEffect(()=>{
@@ -159,7 +162,15 @@ export function NodeRunnerView({
       completionTrackedRef.current=true;
       onNodeCompleted(node);
     }
+    if(completed&&node){
+      setFinished(true);
+      return;
+    }
     onExit();
+  };
+
+  const countAnswer=(correct:boolean)=>{
+    setScore(current=>({correct:current.correct+(correct?1:0),total:current.total+1}));
   };
 
   if(runtime.status==='pending'){
@@ -186,6 +197,25 @@ export function NodeRunnerView({
     );
   }
 
+  if(finished&&node){
+    return (
+      <section className="learn-shell runner" aria-labelledby="learn-summary-title">
+        <div className="learn-summary">
+          <span className="learn-summary-icon" aria-hidden="true"><Icon name="check" size={32} /></span>
+          <div className="screen-kicker">{t('learn.summaryKicker')}</div>
+          <h2 id="learn-summary-title"><LexiconText text={localized(node.title,locale)} /></h2>
+          {score.total>0&&(
+            <p className="learn-summary-score">{t('learn.summaryScore',{correct:score.correct,total:score.total})}</p>
+          )}
+          <p className="learn-hint">{t('learn.summaryNext')}</p>
+        </div>
+        <div className="runner-action">
+          <button className="primary-button" type="button" onClick={onExit}>{t('learn.summaryDone')}</button>
+        </div>
+      </section>
+    );
+  }
+
   if(!state||!node||!nodeProgress?.unlocked||!purchaseUnlocked||!activity){
     return (
       <section className="learn-shell">
@@ -201,7 +231,7 @@ export function NodeRunnerView({
   const setId=state.set.id;
   const position=t('learn.position',{current:index+1,total:activities.length});
   const theoryCards=activities.filter((item):item is Extract<Activity,{type:'theory'}>=>item.type==='theory');
-  const stage=stageForDay(node.dayIndex);
+  const stage=stageForDay(node.dayIndex,state.set.id);
 
   const handleTheory=async()=>{
     if(busy)return;
@@ -220,6 +250,7 @@ export function NodeRunnerView({
     try{
       const correct=selected===activity.correctIndex;
       await saveGraded(setId,activity.id,correct);
+      countAnswer(correct);
       setResult(correct);
     }finally{
       setBusy(false);
@@ -236,6 +267,7 @@ export function NodeRunnerView({
         ? activity.answer.accepted.some(candidate=>candidate.trim()===input)
         : checkAnswer(input,activity.answer.accepted);
       await saveGraded(setId,activity.id,correct);
+      countAnswer(correct);
       setResult(correct);
     }finally{
       setBusy(false);

@@ -154,6 +154,10 @@ async function finishOnboarding(page){
 
 async function completeTheory(page){
   await page.getByRole('button',{name:COPY.continue}).click();
+  // The finished lesson ends on a short summary before returning to «Сегодня».
+  const summary=await page.getByText('Урок пройден').waitFor({timeout:5000}).then(()=>true,()=>false);
+  if(!summary)return false;
+  await page.getByRole('button',{name:'Готово',exact:true}).click();
   return page.waitForURL(/#\/$/,{timeout:5000}).then(()=>true,()=>false);
 }
 

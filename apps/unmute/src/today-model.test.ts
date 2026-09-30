@@ -89,5 +89,7 @@ describe('Today model',()=>{
     expect(stageForDay(35)?.id).toBe('stories');
     expect(stageForDay(40)?.id).toBe('finish');
     expect(stageForDay(41)).toBeNull();
+    // Stages are the main course's route; a short course has none.
+    expect(stageForDay(1,'a1-starter')).toBeNull();
   });
 });

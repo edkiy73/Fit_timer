@@ -140,7 +140,7 @@ export function TodayView({
   }else if(node){
     const done=nodeDoneCount(state.progress,node);
     const total=node.activityIds.length;
-    const stage=stageForDay(node.dayIndex);
+    const stage=stageForDay(node.dayIndex,state.set.id);
     hero=(
       <Tile className="tile-hero" index={index++}>
         <div className="tile-top">

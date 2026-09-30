@@ -1,6 +1,9 @@
 // The 40-day course read as one move abroad: nine stages ("districts" on the route map).
 // Boundaries follow the course's own review days (6, 10, 15, 19, 23, 27, 31, 35) — see
 // docs/unmute-design-plan.md §4.2. Days outside the table simply have no stage.
+// Stages belong to the main course only; shorter courses (A1…) show their days without them.
+import { DEFAULT_COURSE_ID } from './settings-data';
+
 export interface CourseStage {
   id: string;
   number: number;
@@ -20,9 +23,13 @@ export const COURSE_STAGES: readonly CourseStage[] = [
   {id:'finish', number:9, fromDay:36, toDay:40}
 ];
 
-export function stageForDay(day: number | null | undefined): CourseStage | null {
+export function courseStages(setId: string = DEFAULT_COURSE_ID): readonly CourseStage[] {
+  return setId === DEFAULT_COURSE_ID ? COURSE_STAGES : [];
+}
+
+export function stageForDay(day: number | null | undefined, setId: string = DEFAULT_COURSE_ID): CourseStage | null {
   if(!day) return null;
-  return COURSE_STAGES.find(stage => day >= stage.fromDay && day <= stage.toDay) ?? null;
+  return courseStages(setId).find(stage => day >= stage.fromDay && day <= stage.toDay) ?? null;
 }
 
 /** i18n key of a stage name, e.g. `stage.yesterday`. */

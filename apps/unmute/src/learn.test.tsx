@@ -127,9 +127,14 @@ describe('node activity runner',()=>{
     expect(saveGraded).toHaveBeenCalledWith('general-foundation','text.one',true);
 
     await user.click(screen.getByRole('button',{name:'Завершить'}));
-    expect(onExit).toHaveBeenCalledTimes(1);
     expect(onNodeCompleted).toHaveBeenCalledTimes(1);
     expect(onNodeCompleted).toHaveBeenCalledWith(node);
+    // A short summary closes the lesson instead of dropping straight back to the map.
+    expect(await screen.findByText('Урок пройден')).toBeTruthy();
+    expect(screen.getByText('Верных ответов: 2 из 2')).toBeTruthy();
+    expect(onExit).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button',{name:'Готово'}));
+    expect(onExit).toHaveBeenCalledTimes(1);
   });
 
   it('does not count a replay of an already completed node as a new completion',async()=>{

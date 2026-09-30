@@ -158,6 +158,10 @@ h2{margin:0 0 8px;font-weight:800}
 .learn-back:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
 .learn-state,.learn-card{border:1px solid var(--line);border-radius:var(--radius-tile);background:var(--card);padding:20px}
 .learn-state{display:grid;gap:10px;justify-items:start}
+.learn-summary{display:grid;gap:10px;justify-items:center;text-align:center;padding:32px 20px}
+.learn-summary h2{margin:0}
+.learn-summary-icon{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:color-mix(in srgb,var(--accent) 14%,var(--card));color:var(--accent)}
+.learn-summary-score{margin:0;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
 .learn-state span{color:var(--muted);line-height:1.45}
 .learn-card{display:grid;gap:16px}
 .learn-card h3{margin:0;font-size:22px;line-height:1.25}
