@@ -96,6 +96,63 @@ async function boot(b, label, errs, url){
   ok('обложка доехала до клиента', got.cover);
   ok('фото упражнений доехали', got.withPic === got.total, `${got.withPic} из ${got.total}`);
 
+  const mediaIdentity = await tp.evaluate(() => {
+    const pic = n => 'data:image/png;base64,' + btoa('identity-' + n).replace(/=/g, '');
+    const ex = (id, data) => ({
+      id, name:'Одинаковое', type:'reps', value:'10', sets:1, rest:0,
+      media:{kind:'img',data}
+    });
+    const p = {id:'media-id-test',name:'Media id',plans:[{
+      days:[],rounds:1,roundRest:0,
+      exercises:[ex('media-a',pic('a')),ex('media-b',pic('b'))]
+    }]};
+    const packed = programMedia(p);
+
+    const exact = JSON.parse(JSON.stringify(p));
+    exact.plans[0].exercises.forEach(e => { delete e.media; });
+    exact.plans[0].exercises[1].name = 'Переименованное';
+    applyMedia(exact, packed);
+
+    // Каталог парсит переведённый текст и получает временные новые id.
+    // Position fallback должен вернуть ИСХОДНЫЕ id, а не привязывать фото по имени.
+    const translated = JSON.parse(JSON.stringify(p));
+    translated.plans[0].exercises.forEach((e, i) => {
+      delete e.media;
+      e.id = 'temporary-' + i;
+      e.name = i ? 'Same translated' : 'Same translated';
+    });
+    applyMedia(translated, packed);
+
+    const legacy = JSON.parse(JSON.stringify(p));
+    legacy.plans[0].exercises.forEach(e => { delete e.media; });
+    applyMedia(legacy, {'Одинаковое':pic('legacy')});
+
+    return {
+      version:packed.v,
+      ids:(packed.items || []).map(x => x.id),
+      exact:exact.plans[0].exercises.map(e => [e.id,e.name,e.media && e.media.data]),
+      translated:translated.plans[0].exercises.map(e => [e.id,e.media && e.media.data]),
+      legacyPics:legacy.plans[0].exercises.filter(e => e.media).length
+    };
+  });
+  ok('media v2 хранит отдельную картинку каждого exercise.id даже при одинаковых названиях',
+     mediaIdentity.version === 2
+       && mediaIdentity.ids.join(',') === 'media-a,media-b'
+       && mediaIdentity.exact[0][2] !== mediaIdentity.exact[1][2],
+     JSON.stringify(mediaIdentity));
+  ok('переименование не ломает картинку: exact exercise.id остаётся главным ключом',
+     mediaIdentity.exact[1][0] === 'media-b'
+       && mediaIdentity.exact[1][1] === 'Переименованное'
+       && !!mediaIdentity.exact[1][2],
+     JSON.stringify(mediaIdentity.exact[1]));
+  ok('каталожный position fallback возвращает исходные exercise.id и разные фото',
+     mediaIdentity.translated[0][0] === 'media-a'
+       && mediaIdentity.translated[1][0] === 'media-b'
+       && mediaIdentity.translated[0][1] !== mediaIdentity.translated[1][1],
+     JSON.stringify(mediaIdentity.translated));
+  ok('legacy карта по имени не угадывает между двумя одинаковыми упражнениями',
+     mediaIdentity.legacyPics === 0, mediaIdentity.legacyPics);
+
   // ---- в каталог ----
   await tp.evaluate(async ({name}) => {
     const p = customPrograms.find(x => x.name === name);
@@ -115,8 +172,11 @@ async function boot(b, label, errs, url){
   }).then(r => r.json());
   const queue = await api('overview');
   const mine = queue.pending.find(x => x.name === NAME);
-  ok('заявка дошла с картинками', mine && mine.cover && Object.keys(mine.media || {}).length === 3,
-     mine ? Object.keys(mine.media || {}).length + ' фото' : 'нет заявки');
+  const mineMedia = mine && mine.media && mine.media.v === 2 && Array.isArray(mine.media.items)
+    ? mine.media.items : [];
+  ok('заявка дошла с id-картинками', mine && mine.cover && mineMedia.length === 3
+       && mineMedia.every(x => x.id && x.data),
+     mine ? mineMedia.length + ' фото' : 'нет заявки');
   const enName = 'With pictures ' + NAME.split(' ').pop();
   const enText = mine.text
     .replace('ПРОГРАММА: ' + NAME, 'ПРОГРАММА: ' + enName)
@@ -136,12 +196,15 @@ async function boot(b, label, errs, url){
   ok('но обложка в списке есть', !!(row && row.cover));
 
   const full = await fetch(BASE + '/api/catalog?item=' + row.id + '&lang=ru').then(r => r.json());
-  ok('отдельным запросом фото приходят', Object.keys(full.item.media || {}).length === 3,
-     Object.keys(full.item.media || {}).length + '');
+  const fullItems = full.item.media && full.item.media.v === 2 ? (full.item.media.items || []) : [];
+  ok('отдельным запросом id-фото приходят', fullItems.length === 3 && fullItems.every(x => x.id && x.data),
+     fullItems.map(x => x.id).join(', '));
   const fullEn = await fetch(BASE + '/api/catalog?item=' + row.id + '&lang=en').then(r => r.json());
-  ok('для английского фото перепривязаны к переведённым упражнениям',
-     ['Squats','Plank','Push-ups'].every(n => fullEn.item.media && fullEn.item.media[n]),
-     Object.keys(fullEn.item.media || {}).join(', '));
+  const enItems = fullEn.item.media && fullEn.item.media.v === 2 ? (fullEn.item.media.items || []) : [];
+  ok('для английского сохраняются те же stable exercise.id — перевод имени больше не ключ',
+     enItems.length === 3
+       && enItems.map(x => x.id).join(',') === fullItems.map(x => x.id).join(','),
+     enItems.map(x => x.id).join(', '));
 
   /* ---- страница программы в каталоге показывает фото ----
      Их там нет в момент отрисовки: список каталога фото не несёт, и они доезжают

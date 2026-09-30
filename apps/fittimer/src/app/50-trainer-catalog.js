@@ -1116,7 +1116,8 @@ export async function openStoreItem(id){
     }
     // Номера СВОИ у каждого варианта: сквозные говорили бы, что за одну
     // тренировку делают двенадцать упражнений.
-    const list = sortWarmFirst((pl.exercises || []).slice());
+    const sourceList = pl.exercises || [];
+    const list = sortWarmFirst(sourceList.slice());
     list.forEach((ex, i) => {
       const row = document.createElement('div');
       row.className = 'ex-row static' + (ex.warmup ? ' warm' : '');
@@ -1129,9 +1130,12 @@ export async function openStoreItem(id){
         (progShort(ex) ? `<span class="grow">${progShort(ex)}</span>` : '') +
         `</div></div>`;
       row.querySelector('b').textContent = (ex.name || '').trim() || t('store.untitled');
-      // Название — ключ к фото: карта фото приходит отдельным запросом, и связывать
-      // её с рядами надо по тому же, по чему она собрана на сервере.
-      row.dataset.ex = (ex.name || '').trim();
+      // v2 media привязана к source plan/exercise position и stable id. Текст
+      // каталога после перевода получает новые временные id, поэтому для страницы
+      // храним именно исходную позицию ДО sortWarmFirst().
+      row.dataset.ex = (ex.name || '').trim();       // legacy catalog fallback
+      row.dataset.plan = String(pi);
+      row.dataset.index = String(Math.max(0, sourceList.indexOf(ex)));
       box.appendChild(row);
     });
   });
@@ -1165,8 +1169,25 @@ async function siPaintMedia(it){
   // Пока фото ехали, человек мог уйти на другую программу. Рисуем только если
   // открыта всё та же.
   if(!siItem || siItem.id !== it.id) return;
-  $('siList').querySelectorAll('.ex-row').forEach(row => {
-    const pic = media[row.dataset.ex || ''];
+  const rows = [...$('siList').querySelectorAll('.ex-row')];
+  const v2 = media && +media.v === 2 && Array.isArray(media.items) ? media.items : null;
+  const legacyCounts = {};
+  if(!v2) rows.forEach(row => {
+    const name = row.dataset.ex || '';
+    if(name) legacyCounts[name] = (legacyCounts[name] || 0) + 1;
+  });
+  rows.forEach(row => {
+    let pic = null;
+    if(v2){
+      const pi = +row.dataset.plan || 0, ei = +row.dataset.index || 0;
+      const hit = v2.find(x => +x.p === pi && +x.i === ei);
+      pic = hit && hit.data;
+    }else{
+      const name = row.dataset.ex || '';
+      // У старой карты identity была только по имени. При дублях безопаснее не
+      // показывать фото, чем поставить одну и ту же технику не тому упражнению.
+      if(name && legacyCounts[name] === 1) pic = media[name];
+    }
     if(!pic) return;
     const thumb = row.querySelector('.ex-thumb');
     if(thumb) thumb.innerHTML = `<img src="${esc(pic)}" alt="">`;

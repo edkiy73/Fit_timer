@@ -703,30 +703,78 @@ export async function duplicateProgram(p){
    влезло — отбрасывается с конца, и программа всё равно доезжает. */
 const MEDIA_BUDGET = 700 * 1024;
 
-// Карта «название упражнения → фото». Отдельно от текста программы, потому что в
-// каталоге программа лежит ТЕКСТОМ, а текст картинку в себе не носит. Одна карта
-// работает и для ссылки подопечному, и для каталога.
+// Фото передаём по stable exercise.id. Название — редактируемое поле и не может
+// быть identity: два упражнения могут называться одинаково, а одно и то же упражнение
+// можно переименовать. p/i остаются только транспортным fallback для каталога:
+// каталог хранит программу текстом, после перевода parser создаёт новые временные id,
+// поэтому по позиции возвращаем исходный id вместе с фото.
 export function programMedia(p){
-  const out = {};
+  const items = [];
   let left = MEDIA_BUDGET;
-  normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
+  normPlans(p).forEach((pl, pi) => (pl.exercises || []).forEach((ex, ei) => {
     const d = ex.media && ex.media.kind === 'img' ? ex.media.data : null;
-    const name = (ex.name || '').trim();
-    if(!d || !name || out[name]) return;
-    if(d.length > left) return;          // не влезло — молча пропускаем, программа важнее
-    out[name] = d;
+    if(!d || d.length > left) return;     // не влезло — молча пропускаем, программа важнее
+    items.push({
+      id: String(ex.id || '').trim(),
+      p: pi,
+      i: ei,
+      n: String(ex.name || '').trim(),
+      data: d
+    });
     left -= d.length;
   }));
-  return out;
+  return {v: 2, items};
 }
+
+function mediaItems(media){
+  return media && +media.v === 2 && Array.isArray(media.items) ? media.items : null;
+}
+
+function mediaForExercise(media, ex, pi, ei){
+  const items = mediaItems(media);
+  if(!items) return null;
+  const id = String(ex && ex.id || '').trim();
+  if(id){
+    const exact = items.find(x => String(x && x.id || '').trim() === id);
+    if(exact) return exact;
+  }
+  // Каталожный текст не хранит id. Структура RU/EN проверяется отдельно, поэтому
+  // plan/exercise position — однозначный мост от переведённого текста к source id.
+  return items.find(x => +x.p === pi && +x.i === ei) || null;
+}
+
 // Вернуть фото на места после разбора текста программы.
 export function applyMedia(p, media){
   if(!media) return p;
+  const items = mediaItems(media);
+  if(items){
+    normPlans(p).forEach((pl, pi) => (pl.exercises || []).forEach((ex, ei) => {
+      const hit = mediaForExercise(media, ex, pi, ei);
+      if(!hit) return;
+      // cleanPic, а не «есть значит есть»: payload приходит с сервера обычным JSON.
+      const d = cleanPic(hit.data);
+      if(!d) return;
+      if(hit.id) ex.id = String(hit.id);
+      ex.media = {kind: 'img', data: d};
+    }));
+    // Серверные данные не могут нарушать invariant программы: даже если в payload
+    // случайно/вручную пришли повторные id, прогресс и будущие правки не склеятся.
+    uniqueExerciseIds(p);
+    return p;
+  }
+
+  // Совместимость со старыми каталогами: legacy media была картой «имя → фото».
+  // Fallback используем только для УНИКАЛЬНОГО имени. При двух одинаковых названиях
+  // нельзя угадывать, какому именно упражнению принадлежала старая картинка.
+  const counts = {};
   normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
-    // cleanPic, а не «есть значит есть»: карта фото приходит с сервера обычным
-    // JSON, и строка в ней может быть любой — в том числе такой, что уедет в
-    // атрибут <img src> и станет там не адресом.
-    const d = cleanPic(media[(ex.name || '').trim()]);
+    const key = String(ex.name || '').trim();
+    if(key) counts[key] = (counts[key] || 0) + 1;
+  }));
+  normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
+    const key = String(ex.name || '').trim();
+    if(!key || counts[key] !== 1) return;
+    const d = cleanPic(media[key]);
     if(d) ex.media = {kind: 'img', data: d};
   }));
   return p;
@@ -776,10 +824,11 @@ function programPayload(p){
   // Обложка и фото остаются. Лишний вес срезает programMedia — здесь только то,
   // что не влезло в общий предел.
   const media = programMedia(p);
-  copy.plans = normPlans(copy).map(pl => ({
+  copy.plans = normPlans(copy).map((pl, pi) => ({
     ...pl,
-    exercises: pl.exercises.map(ex => {
-      const keep = media[(ex.name || '').trim()];
+    exercises: pl.exercises.map((ex, ei) => {
+      const hit = mediaForExercise(media, ex, pi, ei);
+      const keep = hit && hit.data;
       return {...ex, media: keep ? {kind: 'img', data: keep} : null};
     })
   }));

@@ -77,10 +77,50 @@ function exerciseNames(text){
   });
   return out;
 }
+function mediaItems(media){
+  return media && +media.v === 2 && Array.isArray(media.items) ? media.items : null;
+}
+function mediaCount(media){
+  const items = mediaItems(media);
+  return items ? items.length : Object.keys((media && typeof media === 'object') ? media : {}).length;
+}
+function cleanMedia(src){
+  const items = mediaItems(src);
+  let budget = 800 * 1024;
+  if(items){
+    const out = [];
+    for(const item of items){
+      if(!item || typeof item !== 'object') continue;
+      const val = cleanPic(item.data, budget);
+      if(!val) continue;
+      out.push({
+        id: clampLine(item.id, 80),
+        p: Math.max(0, Math.min(99, Math.round(+item.p || 0))),
+        i: Math.max(0, Math.min(199, Math.round(+item.i || 0))),
+        n: clampLine(item.n, 60),
+        data: val
+      });
+      budget -= val.length;
+      if(out.length >= 30) break;
+    }
+    return {v:2, items:out};
+  }
+  const out = {};
+  for(const [k, v] of Object.entries((src && typeof src === 'object') ? src : {})){
+    const key = clampLine(k, 60), val = cleanPic(v, budget);
+    if(!key || !val) continue;
+    out[key] = val;
+    budget -= val.length;
+    if(Object.keys(out).length >= 30) break;
+  }
+  return out;
+}
 function localizedMedia(c, locale){
   const media = (c && c.media && typeof c.media === 'object') ? c.media : {};
-  const keys = Object.keys(media);
-  if(!keys.length) return null;
+  if(!mediaCount(media)) return null;
+  // v2 несёт stable exercise.id + plan/exercise position, поэтому перевод названия
+  // больше не требует перекладывать картинки по текстовым ключам.
+  if(mediaItems(media)) return media;
   const source = resolvedLocale(c, normLocale(c && c.sourceLocale));
   const target = resolvedLocale(c, locale);
   if(source.lang === target.lang) return media;
@@ -137,7 +177,7 @@ async function list(req, res){
       exCount:+c.exCount||exerciseNames(loc.text).length,
       locked:!!c.pro && !allowed,
       cover: c.cover || null, media: allowed ? localizedMedia(c, loc.lang) : null,
-      hasMedia:!!(c.media && Object.keys(c.media).length)
+      hasMedia:mediaCount(c.media) > 0
     }});
   }
 
@@ -168,7 +208,7 @@ async function list(req, res){
     items.push({id: c.id, by: c.by, cat: c.cat, level: c.level, min: c.min,
                 name: loc.name, gives: loc.gives, text: c.pro ? '' : loc.text, locale: loc.lang, pro: !!c.pro,
                 exCount:+c.exCount||exerciseNames(loc.text).length, locked:!!c.pro,
-                cover: c.cover || null, hasMedia: !!(c.media && Object.keys(c.media).length)});
+                cover: c.cover || null, hasMedia: mediaCount(c.media) > 0});
   });
   send(res, 200, {items});
 }
@@ -217,17 +257,9 @@ async function submit(req, res){
   // Обложка уедет в атрибут <img src> у каждого, кто откроет каталог: проверяем
   // форму, а не длину.
   const cover = cleanPic(it.cover, 90000) || null;
-  // Фото упражнений: карта «название → картинка». Режем и по числу, и по общему
-  // весу — запись в хранилище не резиновая, а двадцать фото это уже фотоальбом.
-  const media = {};
-  let budget = 800 * 1024;
-  for(const [k, v] of Object.entries((it.media && typeof it.media === 'object') ? it.media : {})){
-    const key = clampLine(k, 60), val = cleanPic(v, budget);
-    if(!key || !val) continue;
-    media[key] = val;
-    budget -= val.length;
-    if(Object.keys(media).length >= 30) break;
-  }
+  // Новые клиенты шлют v2 media по stable exercise.id; старые заявки с
+  // «название → картинка» продолжаем принимать без миграции хранилища.
+  const media = cleanMedia(it.media);
   const exCount = Math.round(+it.exCount || 0);
 
   const miss = [];
