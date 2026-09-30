@@ -476,11 +476,10 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 3348,
-      "chars": 155532,
+      "lines": 3350,
+      "chars": 155611,
       "symbols": [
         "add",
-        "addImagesToTray",
         "ageError",
         "aiAuth",
         "aiClientVerdict",
@@ -491,6 +490,7 @@
         "aiUiText",
         "apiFetch",
         "apiPost",
+        "appendImagesToTray",
         "apply",
         "applyDualRangeProgressionMigration",
         "applyExEdit",
@@ -521,6 +521,7 @@
         "duplicateProgram",
         "editAIPrompt",
         "editSummaryText",
+        "ensureImageInTray",
         "exaAddExercise",
         "exaChips",
         "exAnswerFormat",
@@ -1019,7 +1020,7 @@
     "src/app/90-events.js": {
       "kind": "frontend-js",
       "lines": 2655,
-      "chars": 109815,
+      "chars": 109840,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
