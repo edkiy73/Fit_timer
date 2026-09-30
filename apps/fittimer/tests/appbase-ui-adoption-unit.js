@@ -9,6 +9,9 @@ const ok=(name,cond)=>{
 const core=fs.readFileSync('src/app/00-core.js','utf8');
 const platform=fs.readFileSync('src/app/80-platform.js','utf8');
 const events=fs.readFileSync('src/app/90-events.js','utf8');
+const dataSync=fs.readFileSync('src/app/10-data-sync.js','utf8');
+const accountJs=fs.readFileSync('src/app/20-account.js','utf8');
+const progressJs=fs.readFileSync('src/app/30-progress-media.js','utf8');
 const actions=fs.readFileSync('src/app/05-actions.js','utf8');
 const shell=fs.readFileSync('src/html/00-shell-home.html','utf8');
 const programsHtml=fs.readFileSync('src/html/10-programs-builder.html','utf8');
@@ -471,6 +474,39 @@ ok('final onclick migration uses declarative actions',
   && events.includes("'deleteExercise'"));
 ok('90-events has no direct onclick wiring left',
   !events.includes('.onclick'));
+
+ok('account/progress/data-sync click actions use registry',
+  accountJs.includes("registerAction('openAndroidUpdate'")
+  && accountJs.includes("b.dataset.act = 'selectPremiumPlan'")
+  && progressJs.includes("b.dataset.act = 'openPhotoCompareAt'")
+  && progressJs.includes("del.dataset.act = 'toggleWeightHistoryDelete'")
+  && dataSync.includes("edit.dataset.act = 'editProfileFromList'")
+  && dataSync.includes("row.dataset.act = 'openOrSwitchProfile'")
+  && dataSync.includes("del.dataset.act = 'toggleWellHistoryDelete'")
+  && dataSync.includes("el.dataset.act = 'showBadgeInfo'")
+  && dataSync.includes("row.dataset.act = 'openSessionProgram'"));
+ok('account/progress/data-sync migrated handlers have no direct onclick wiring',
+  !accountJs.includes("$('appUpdateNow').onclick")
+  && !accountJs.includes("banner.onclick")
+  && !accountJs.includes("b.onclick = ()=>{ pmPlan")
+  && !progressJs.includes("b.onclick = ()=> openCompare")
+  && !progressJs.includes("row.querySelector('.wh-del').onclick")
+  && !progressJs.includes("$('cmpImgA').onclick")
+  && !progressJs.includes("$('cmpImgB').onclick")
+  && !progressJs.includes("$('photoFullModal').onclick")
+  && !dataSync.includes("row.querySelector('.ue').onclick")
+  && !dataSync.includes("row.onclick = ()=> act")
+  && !dataSync.includes("row.querySelector('.wh-del').onclick")
+  && !dataSync.includes("el.onclick = ()=> appAlert")
+  && !dataSync.includes("row.onclick = () => openDayProgram")
+  && !dataSync.includes("$('sessModal').onclick"));
+ok('account/progress static markup uses data-act',
+  shell.includes('id="appUpdateBanner" data-act="openAndroidUpdate"')
+  && shell.includes('id="appUpdateNow" data-act="openAndroidUpdate"')
+  && progressHtml.includes('id="cmpImgA" data-act="openComparePhotoFull" data-compare-side="A"')
+  && progressHtml.includes('id="cmpImgB" data-act="openComparePhotoFull" data-compare-side="B"')
+  && progressHtml.includes('id="photoFullModal" data-act="closePhotoFullBackdrop"')
+  && progressHtml.includes('id="sessModal" data-act="closeModalBackdrop"'));
 
 
 process.exit(bad?1:0);
