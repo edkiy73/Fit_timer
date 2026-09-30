@@ -113,9 +113,9 @@
     <div class="panel progress-card">
       <span class="ts-label" data-i18n="common.progress">Прогресс</span>
       <div class="quick-stats">
-        <button class="qs-btn" data-tab="workouts"><span class="qs-ico" id="qsIco1"></span><b id="qsVal1">0</b><span data-i18n="home.progressWorkouts">Тренировки</span></button>
-        <button class="qs-btn" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><b id="qsVal2">—</b><span data-i18n="home.progressWeight">Вес</span></button>
-        <button class="qs-btn" data-tab="photo"><span class="qs-ico" id="qsIco3"></span><b id="qsVal3">0</b><span data-i18n="home.progressPhoto">Фото</span></button>
+        <button class="qs-btn" data-act="openStatsTab" data-tab="workouts"><span class="qs-ico" id="qsIco1"></span><b id="qsVal1">0</b><span data-i18n="home.progressWorkouts">Тренировки</span></button>
+        <button class="qs-btn" data-act="openStatsTab" data-tab="weight"><span class="qs-ico" id="qsIco2"></span><b id="qsVal2">—</b><span data-i18n="home.progressWeight">Вес</span></button>
+        <button class="qs-btn" data-act="openStatsTab" data-tab="photo"><span class="qs-ico" id="qsIco3"></span><b id="qsVal3">0</b><span data-i18n="home.progressPhoto">Фото</span></button>
       </div>
       <!-- Самочувствие средним за месяц. Строка показывается, ТОЛЬКО когда записи
            есть, и в ней ровно те плитки, по которым есть числа. Показывать давление,
@@ -1210,9 +1210,9 @@
   <section class="screen root" id="scrStats">
     <div class="page-head"><h1 data-i18n="progress.title">Прогресс</h1></div>
     <div class="tabs seg" id="statsTabs">
-      <button class="tab act" data-tab="workouts" data-i18n="progress.tabWorkouts">Тренировки</button>
-      <button class="tab" data-tab="weight" data-i18n="progress.tabBody">Тело</button>
-      <button class="tab" data-tab="photo" data-i18n="progress.tabPhotos">Фото</button>
+      <button class="tab act" data-act="switchStatsTab" data-tab="workouts" data-i18n="progress.tabWorkouts">Тренировки</button>
+      <button class="tab" data-act="switchStatsTab" data-tab="weight" data-i18n="progress.tabBody">Тело</button>
+      <button class="tab" data-act="switchStatsTab" data-tab="photo" data-i18n="progress.tabPhotos">Фото</button>
     </div>
 
     <div class="tab-pane" id="tabWorkouts">
@@ -1356,10 +1356,10 @@
          «как звучит», «я тренер», «мой аккаунт», — а не по тому, как это устроено
          внутри. Механика та же, что у «Прогресса»: .tabs.seg плюс .tab-pane. -->
     <div class="tabs seg" id="moreTabs">
-      <button class="tab act" data-more="me" data-i18n="common.profile">Профиль</button>
-      <button class="tab" data-more="sound" data-i18n="common.sound">Звук</button>
-      <button class="tab" data-more="coach" data-i18n="common.trainer">Тренер</button>
-      <button class="tab" data-more="acc" data-i18n="common.account">Аккаунт</button>
+      <button class="tab act" data-act="switchMoreTab" data-more="me" data-i18n="common.profile">Профиль</button>
+      <button class="tab" data-act="switchMoreTab" data-more="sound" data-i18n="common.sound">Звук</button>
+      <button class="tab" data-act="switchMoreTab" data-more="coach" data-i18n="common.trainer">Тренер</button>
+      <button class="tab" data-act="switchMoreTab" data-more="acc" data-i18n="common.account">Аккаунт</button>
     </div>
 
     <div class="tab-pane" id="morePane_me">
@@ -1654,7 +1654,7 @@
         </div>
         <input type="file" id="uePhotoFile" accept="image/*" class="hidden">
         <div class="field"><label data-i18n="profile.gender">Пол</label>
-          <div class="seg"><button type="button" id="ueGenderF" data-i18n="profile.femaleShort">Ж</button><button type="button" id="ueGenderM" data-i18n="profile.maleShort">М</button></div>
+          <div class="seg"><button type="button" id="ueGenderF" data-act="setProfileGender" data-gender="f" data-i18n="profile.femaleShort">Ж</button><button type="button" id="ueGenderM" data-act="setProfileGender" data-gender="m" data-i18n="profile.maleShort">М</button></div>
         </div>
         <div class="field"><label data-i18n="profile.age">Возраст, полных лет</label><input type="number" id="ueAge" min="5" max="100" step="1" inputmode="numeric" placeholder="Например, 32" data-i18n-placeholder="profile.ageExample">
           <p class="field-hint" data-i18n="profile.ageHint">От пола и возраста зависят упражнения и нагрузка. Уходят в запрос к ИИ.</p>
@@ -1667,17 +1667,17 @@
         <div class="cb-head"><p class="cb-title" data-i18n="profile.appearance">Оформление и язык</p></div>
         <div class="field"><label data-i18n="profile.theme">Тема</label>
           <div class="seg seg3" id="ueThemeSeg">
-            <button type="button" data-theme="system" data-i18n="profile.themeSystem">Как в системе</button>
-            <button type="button" data-theme="light" data-i18n="profile.themeLight">Светлая</button>
-            <button type="button" data-theme="dark" data-i18n="profile.themeDark">Тёмная</button>
+            <button type="button" data-act="setProfileTheme" data-theme="system" data-i18n="profile.themeSystem">Как в системе</button>
+            <button type="button" data-act="setProfileTheme" data-theme="light" data-i18n="profile.themeLight">Светлая</button>
+            <button type="button" data-act="setProfileTheme" data-theme="dark" data-i18n="profile.themeDark">Тёмная</button>
           </div>
         </div>
         <div class="field">
           <label data-i18n="settings.appLanguage">Язык приложения</label>
           <div class="seg seg3" id="ueLocaleSeg" role="group" aria-label="Язык приложения" data-i18n-aria="settings.appLanguage">
-            <button type="button" data-locale="system" data-i18n="profile.themeSystem">Как в системе</button>
-            <button type="button" data-locale="ru" data-i18n="settings.russian">Русский</button>
-            <button type="button" data-locale="en">English</button>
+            <button type="button" data-act="setProfileLocale" data-locale="system" data-i18n="profile.themeSystem">Как в системе</button>
+            <button type="button" data-act="setProfileLocale" data-locale="ru" data-i18n="settings.russian">Русский</button>
+            <button type="button" data-act="setProfileLocale" data-locale="en">English</button>
           </div>
           <p class="field-hint" data-i18n="settings.languageHint">Меняет язык интерфейса и озвучки. Язык голосовых команд можно настроить отдельно.</p>
         </div>
@@ -1879,7 +1879,7 @@
         <span class="mini-label" data-i18n="who.title">Пара уточнений</span>
         <p class="dlg-msg" id="whoMsg"></p>
         <div class="field"><label data-i18n="profile.gender">Пол</label>
-          <div class="seg"><button type="button" id="whoF" data-i18n="who.female">Женский</button><button type="button" id="whoM" data-i18n="who.male">Мужской</button></div>
+          <div class="seg"><button type="button" id="whoF" data-act="setWhoGender" data-gender="f" data-i18n="who.female">Женский</button><button type="button" id="whoM" data-act="setWhoGender" data-gender="m" data-i18n="who.male">Мужской</button></div>
         </div>
         <div class="field"><label data-i18n="profile.age">Возраст, полных лет</label><input type="number" id="whoAge" min="5" max="100" step="1" inputmode="numeric" placeholder="Например, 32" data-i18n-placeholder="profile.ageExample"></div>
         <button class="btn-primary" id="whoSave" data-act="whoSave" style="padding:14px;font-size:16px" data-i18n="who.save">Сохранить и продолжить</button>
@@ -2219,13 +2219,13 @@
      открыта клавиатура (см. syncDock) — иначе она садится поверх поля ввода. -->
 <nav class="dock hidden" id="dock" aria-label="Разделы" data-i18n-aria="nav.sections">
   <div class="dock-in">
-    <button class="dock-btn act" data-scr="scrMenu"><span class="db-ico" data-icon="home"></span><span data-i18n="common.today">Сегодня</span></button>
-    <button class="dock-btn" data-scr="scrPrograms"><span class="db-ico" data-icon="dumbbell"></span><span data-i18n="common.workouts">Тренировки</span></button>
+    <button class="dock-btn act" data-act="goRootTab" data-scr="scrMenu"><span class="db-ico" data-icon="home"></span><span data-i18n="common.today">Сегодня</span></button>
+    <button class="dock-btn" data-act="goRootTab" data-scr="scrPrograms"><span class="db-ico" data-icon="dumbbell"></span><span data-i18n="common.workouts">Тренировки</span></button>
     <!-- «Подопечные» появляются вместе с режимом тренера: пока его нет, кнопка занимала
          бы место под раздел, в который человеку незачем заходить. -->
-    <button class="dock-btn hidden" data-scr="scrTrainer"><span class="db-ico" data-icon="users"></span><span data-i18n="common.trainees">Подопечные</span></button>
-    <button class="dock-btn" data-scr="scrStats"><span class="db-ico" data-icon="chart"></span><span data-i18n="common.progress">Прогресс</span></button>
-    <button class="dock-btn" data-scr="scrAccount"><span class="db-ico" data-icon="gear"></span><span data-i18n="common.more">Другое</span></button>
+    <button class="dock-btn hidden" data-act="goRootTab" data-scr="scrTrainer"><span class="db-ico" data-icon="users"></span><span data-i18n="common.trainees">Подопечные</span></button>
+    <button class="dock-btn" data-act="goRootTab" data-scr="scrStats"><span class="db-ico" data-icon="chart"></span><span data-i18n="common.progress">Прогресс</span></button>
+    <button class="dock-btn" data-act="goRootTab" data-scr="scrAccount"><span class="db-ico" data-icon="gear"></span><span data-i18n="common.more">Другое</span></button>
   </div>
 </nav>
 
