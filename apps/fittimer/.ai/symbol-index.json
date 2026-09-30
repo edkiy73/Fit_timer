@@ -103,8 +103,8 @@
     },
     "src/app/05-actions.js": {
       "kind": "frontend-js",
-      "lines": 18,
-      "chars": 406,
+      "lines": 17,
+      "chars": 393,
       "symbols": [
         "initActions",
         "registerAction",
@@ -882,8 +882,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 837,
-      "chars": 37074,
+      "lines": 840,
+      "chars": 37153,
       "symbols": [
         "add",
         "advanceFromHeadset",
@@ -916,6 +916,7 @@
         "notifyTimedGroupCopy",
         "notifyTimeParts",
         "notifyWorkoutCount",
+        "registerPlatformActions",
         "resetVoiceDedup",
         "setHfMode",
         "setHfModeShared",
