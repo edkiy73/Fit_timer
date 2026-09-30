@@ -14,6 +14,7 @@ import { NotificationSettingsPanel } from './notification-settings';
 import { readThemePreference, setThemePreference, type ThemePreference } from './theme';
 import { Icon } from './icons';
 import { CoursePicker } from './active-course';
+import { useAllLearningDays, withAllLearningDays } from './learning-days';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
@@ -102,7 +103,9 @@ export function MeScreen(){
   }, [requestedReturn, auth.session]);
 
   const state = runtime.state;
-  const calendar = useMemo(() => state ? activityCalendar(state.progress, todayDay) : null, [state, todayDay]);
+  const learningDays = useAllLearningDays();
+  const allDays = useMemo(() => state ? withAllLearningDays(state.progress, learningDays) : null, [state, learningDays]);
+  const calendar = useMemo(() => allDays ? activityCalendar(allDays, todayDay) : null, [allDays, todayDay]);
   const wordRecords = saved.words ? Object.values(saved.words.items).filter(item => item && !item.deleted) : [];
   const learnedWords = wordRecords.filter(item => savedWordStatus(item!.box || 0) === 'learned').length;
 
@@ -147,7 +150,7 @@ export function MeScreen(){
           </article>
           <article className="tile" style={{'--i':1} as CSSProperties}>
             <div className="tile-kicker tone-streak"><Icon name="flame" size={18} />{t('today.streak')}</div>
-            <strong className="tile-number">{t('today.streakDays', {count:currentLearningStreak(state.progress, todayDay)})}</strong>
+            <strong className="tile-number">{t('today.streakDays', {count:currentLearningStreak(allDays ?? state.progress, todayDay)})}</strong>
             <span className="tile-caption">{t('me.learningDays', {count:calendar?.active ?? 0})}</span>
           </article>
           <article className="tile" style={{'--i':2} as CSSProperties}>

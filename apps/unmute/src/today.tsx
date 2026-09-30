@@ -13,6 +13,9 @@ import { stageForDay, stageNameKey } from './course-stages';
 import { Icon } from './icons';
 import { Sheet } from './sheet';
 import { speakText } from './speech-runtime';
+import type { RecordMap } from '@appbase/core/document-sync.js';
+import type { TimedFlag } from './progress';
+import { useAllLearningDays, withAllLearningDays } from './learning-days';
 import {
   lastWeekActivity,
   localizedText,
@@ -55,7 +58,8 @@ export function TodayView({
   onReview,
   onMap,
   onAccess,
-  todayDay=activitySaveClock().dayNumber
+  todayDay=activitySaveClock().dayNumber,
+  learningDays=null
 }:{
   runtime:LearnerCourseRuntimeValue;
   wordRuntime?:WordReviewRuntimeValue|null;
@@ -64,6 +68,8 @@ export function TodayView({
   onMap:()=>void;
   onAccess:()=>void;
   todayDay?:number;
+  /** Days with practice in every course (the streak is the learner's, not the course's). */
+  learningDays?:RecordMap<TimedFlag>|null;
 }){
   const {t,locale}=useI18n();
   const [speakOpen,setSpeakOpen]=useState(false);
@@ -104,8 +110,9 @@ export function TodayView({
 
   const node=state.currentNode;
   const complete=state.roadmapProgress.courseComplete;
-  const streak=currentLearningStreak(state.progress,todayDay);
-  const week=lastWeekActivity(state.progress,todayDay);
+  const allDays=withAllLearningDays(state.progress,learningDays);
+  const streak=currentLearningStreak(allDays,todayDay);
+  const week=lastWeekActivity(allDays,todayDay);
   const hasReview=Boolean(review&&review.actionableCount>0);
   const courseProgress=(
     <span className="today-course" aria-label={t('today.courseProgress')}>
@@ -278,6 +285,7 @@ export function TodayScreen(){
     <TodayView
       runtime={useLearnerCourseRuntime()}
       wordRuntime={useWordReviewRuntime()}
+      learningDays={useAllLearningDays()}
       onStart={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId))}
       onReview={()=>navigate('/review')}
       onMap={()=>navigate('/course')}

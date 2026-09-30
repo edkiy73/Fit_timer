@@ -15,6 +15,9 @@ import {
   type WordsProgressDocument
 } from './progress';
 import { appDocs, readStatsProgress, readWordsProgress } from './sync';
+import type { RecordMap } from '@appbase/core/document-sync.js';
+import type { TimedFlag } from './progress';
+import { useAllLearningDays, withAllLearningDays } from './learning-days';
 
 const STATS_QUERY_KEY='progress-screen-stats';
 const WORDS_QUERY_KEY='progress-screen-words';
@@ -96,15 +99,17 @@ export function buildProgressSummary(
   state:LearnerCourseState,
   stats:StatsProgressDocument,
   words:WordsProgressDocument,
-  todayDay:number
+  todayDay:number,
+  learningDays:RecordMap<TimedFlag>|null=null
 ):ProgressSummary{
   const progress=state.progress;
+  const allDays=withAllLearningDays(progress,learningDays);
   const cards=liveValues(progress.cards);
   const drill=liveValues(progress.practice.drill);
   const listening=liveValues(progress.practice.listening);
   const speaking=liveValues(progress.practice.speaking);
   const wordItems=liveValues(words.items);
-  const learningDays=liveValues(progress.learningDays).length;
+  const learningDayCount=liveValues(allDays.learningDays).length;
   const answers=summarizeAnswerStats(stats);
   const dueNow=[
     ...cards,
@@ -121,8 +126,8 @@ export function buildProgressSummary(
   return {
     completedDays:state.roadmapProgress.completedCount,
     requiredDays:state.roadmapProgress.requiredCount,
-    learningDays,
-    streak:currentLearningStreak(progress,todayDay),
+    learningDays:learningDayCount,
+    streak:currentLearningStreak(allDays,todayDay),
     activeCards:cards.length,
     drill:drill.length,
     listening:listening.length,
@@ -136,7 +141,7 @@ export function buildProgressSummary(
     dialogueAverage:dialogue.average,
     dialogueSamples:dialogue.samples,
     hasActivity:
-      learningDays>0||
+      learningDayCount>0||
       seen>0||
       activeReviews>0||
       answers.attempts>0||
@@ -210,12 +215,14 @@ export function ProgressView({
   runtime,
   details,
   todayDay,
-  onExit
+  onExit,
+  learningDays=null
 }:{
   runtime:LearnerCourseRuntimeValue;
   details:ProgressDetailsRuntime;
   todayDay:number;
   onExit:()=>void;
+  learningDays?:RecordMap<TimedFlag>|null;
 }){
   const {t}=useI18n();
 
@@ -249,7 +256,7 @@ export function ProgressView({
   }
 
   if(!runtime.state||!details.stats||!details.words)return null;
-  const summary=buildProgressSummary(runtime.state,details.stats,details.words,todayDay);
+  const summary=buildProgressSummary(runtime.state,details.stats,details.words,todayDay,learningDays);
 
   return (
     <section className="progress-shell" aria-labelledby="progress-title">
@@ -385,8 +392,10 @@ export function ProgressScreen(){
   const runtime=useLearnerCourseRuntime();
   const details=useProgressDetails(runtime.state?.set.id??'');
   const navigate=useNavigate();
+  const learningDays=useAllLearningDays();
   return (
     <ProgressView
+      learningDays={learningDays}
       runtime={runtime}
       details={details}
       todayDay={activitySaveClock().dayNumber}
