@@ -48,6 +48,11 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     p.storeId = 'slim-tiho';        // как будто взята из каталога
     p.src = 'abcd1234';             // и пришла от тренера по ссылке
     p.by = '@someone';
+    p.rotIdx = 1;                   // личная позиция очереди вариантов
+    p.progStepsAdj = 3;             // старое локальное состояние прогрессии
+    const ex = normPlans(p)[0].exercises[0];
+    ex.ps = {n:2, cur:{reps:'16',kg:12}};
+    ex.progFrom = 4;
     customPrograms.push(p);
     await savePrograms();
   });
@@ -97,8 +102,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const copy = await page.evaluate(async () => {
     const p = customPrograms.find(x => x.id === 'src1');
     const c = await duplicateProgram(p);
+    const ex = normPlans(c)[0].exercises[0] || {};
     return {name: c.name, ex: (normPlans(c)[0].exercises || []).length,
             completions: c.stats.completions, storeId: c.storeId, src: c.src, by: c.by,
+            rotIdx:c.rotIdx, progStepsAdj:c.progStepsAdj, ps:ex.ps, progFrom:ex.progFrom,
             sameId: c.id === p.id, total: customPrograms.length};
   });
   ok('копия создана и названа понятно', /копия/.test(copy.name) && !copy.sameId, copy.name);
@@ -106,6 +113,55 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('счётчик пройденного обнулён', copy.completions === 0, String(copy.completions));
   ok('метка каталога не унаследована', copy.storeId === undefined);
   ok('чужая ссылка и тренер не унаследованы', copy.src === undefined && copy.by === undefined);
+  ok('очередь и прогресс копии начинаются с нуля',
+     copy.rotIdx === undefined && copy.progStepsAdj === undefined && copy.ps === undefined && copy.progFrom === undefined,
+     JSON.stringify(copy));
+
+  // ---- граница передачи ----
+  const transfer = await page.evaluate(() => {
+    const p = customPrograms.find(x => x.id === 'src1');
+    const x = programTemplateCopy(p);
+    const ex = normPlans(x)[0].exercises[0] || {};
+    return {
+      stats:x.stats, active:x.active, rotIdx:x.rotIdx, src:x.src, origEx:x.origEx,
+      pub:x.pub, storeId:x.storeId, progStepsAdj:x.progStepsAdj, psMigrated:x.psMigrated,
+      ps:ex.ps, progFrom:ex.progFrom, by:x.by
+    };
+  });
+  ok('шаблон для передачи не содержит состояния владельца',
+     transfer.stats === undefined && transfer.rotIdx === undefined && transfer.src === undefined
+       && transfer.storeId === undefined && transfer.progStepsAdj === undefined
+       && transfer.ps === undefined && transfer.progFrom === undefined,
+     JSON.stringify(transfer));
+  ok('обычная передача сохраняет только авторство, но не связь для отчётов',
+     transfer.by === '@someone' && transfer.src === undefined, JSON.stringify(transfer));
+
+  // Файл может быть собран кем угодно. Даже если в него вручную положили src и
+  // прогресс другого человека, импорт обязан превратить его в независимую копию.
+  const imported = await page.evaluate(async () => {
+    const p = JSON.parse(JSON.stringify(customPrograms.find(x => x.id === 'src1')));
+    p.name = 'Импорт без слежки';
+    p.src = 'malicious-link';
+    p.origEx = [{p:0,n:'Приседания'}];
+    p.rotIdx = 9;
+    p.stats = {completions:99};
+    const ex = normPlans(p)[0].exercises[0];
+    ex.ps = {n:9,cur:{reps:'99'}};
+    const file = new File([JSON.stringify({app:'fittimer',type:'program',v:1,program:p})],
+      'program.json',{type:'application/json'});
+    await importProgramFile(file);
+    const got = customPrograms.find(x => x.name === 'Импорт без слежки');
+    const gx = got && normPlans(got)[0].exercises[0];
+    return got ? {
+      src:got.src, origEx:got.origEx, rotIdx:got.rotIdx, completions:got.stats && got.stats.completions,
+      ps:gx && gx.ps, by:got.by
+    } : null;
+  });
+  ok('файловый импорт не может тайно включить отчёты тренеру',
+     imported && imported.src === undefined && imported.origEx === undefined, JSON.stringify(imported));
+  ok('файловый импорт не переносит чужой прогресс',
+     imported && imported.rotIdx === undefined && imported.completions === 0 && imported.ps === undefined,
+     JSON.stringify(imported));
 
   // у копии пункт «в каталог» уже есть — она своя
   const copyMenu = await page.evaluate(() => {
