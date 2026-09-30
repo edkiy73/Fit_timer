@@ -563,5 +563,23 @@ ok('trainer catalog and builder static markup uses data-act',
   && programsHtml.includes('id="qRotate" data-act="toggleAiRotate"')
   && progressHtml.includes('id="restModalDone" data-act="applyCustomRest"'));
 
+ok('core dialog actions are declarative',
+  core.includes("registerAction('confirmDialog'")
+  && core.includes("registerAction('cancelDialog'")
+  && core.includes("registerAction('dialogBackdrop'")
+  && progressHtml.includes('id="dlg" data-act="dialogBackdrop"')
+  && progressHtml.includes('id="dlgOk" data-act="confirmDialog"')
+  && progressHtml.includes('id="dlgCancel" data-act="cancelDialog"'));
+ok('core start-screen dynamic actions use registry',
+  core.includes("b.dataset.act = 'selectStartPlan'")
+  && core.includes("row.dataset.act = 'openStartWeight'")
+  && core.includes("'editStartProgram'")
+  && core.includes("'toggleStartProgramActive'")
+  && core.includes("'duplicateStartProgram'")
+  && core.includes("'deleteStartProgram'"));
+ok('FitTimer app modules have no direct onclick wiring',
+  [core,actions,dataSync,accountJs,progressJs,programsAi,trainerCatalog,builderJs,workoutJs,platform,events]
+    .every(src => !src.includes('.onclick')));
+
 
 process.exit(bad?1:0);
