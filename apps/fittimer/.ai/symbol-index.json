@@ -407,8 +407,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 3103,
-      "chars": 145439,
+      "lines": 3117,
+      "chars": 145991,
       "symbols": [
         "add",
         "ageError",
@@ -417,6 +417,7 @@
         "aiCreateExerciseGuard",
         "aiEditRequestGuard",
         "aiExerciseHasUserInput",
+        "aiProfileSex",
         "aiUiText",
         "apiFetch",
         "apiPost",
@@ -480,6 +481,7 @@
         "imageCharacterStyle",
         "imageCoverTone",
         "imageEquipment",
+        "imageGenderText",
         "imageGenerationGuard",
         "imageMuscleRegions",
         "imageProgramContext",
