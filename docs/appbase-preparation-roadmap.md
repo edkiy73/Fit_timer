@@ -528,7 +528,7 @@ Product-side conversion continues chunk by chunk:
 The product ESM graph is now fully acyclic:
 - the former SCC spanning `00-core` through `90-events` was dismantled incrementally with explicit owner hook boundaries;
 - `tests/app-module-graph-unit.js` now checks the **entire product import graph is a DAG**, in addition to the existing direction-specific regression guards;
-- the current compatibility surface is **41 hook-boundary setters** (`set*Hooks`) and **30 shared-state setters** (`set*Shared`) after the first semantic-owner cleanup.
+- the current compatibility surface is **41 hook-boundary setters** (`set*Hooks`) and **21 shared-state setters** (`set*Shared`) after the first two semantic-owner cleanup passes.
 
 Audit conclusion:
 - do **not** remove hook boundaries just to reduce their count; they are currently the dependency-inversion mechanism that keeps the graph acyclic;
@@ -541,6 +541,11 @@ First semantic-owner cleanup:
 - account login cancellation is now owned by `cancelLogin()`; five raw login/biometry setters were removed from the public module surface;
 - platform hands-free boot/voice state is now restored/changed through `restoreHandsFreeState()`, `setRecognitionLanguage()`, `clearVoiceWanted()` and `resumeVoiceListening()`; three raw platform setters were removed;
 - no product import direction changed, so the DAG stays intact.
+
+Second semantic-owner cleanup:
+- Core audio/workout timing no longer exposes nine raw setters for sound, voice/effects volume, music mode, voice selection and preparation timing;
+- event wiring now uses `configureAudioRuntime()`, `configureWorkoutTiming()` and `selectRuntimeVoice()`;
+- the remaining Core raw setters are limited to state that still has a distinct cross-module owner/use case.
 
 ## Phase 14 — Dependency rules
 
