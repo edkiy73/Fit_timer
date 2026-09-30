@@ -4,7 +4,6 @@ import { registerAction } from './05-actions.js';
 import { DAYS, closeAllMenus, curUser, customPrograms, normPlans, progActive, renderStats,
   renderUsers, renderWeight, renderWellness, savePrograms, setCustomProgramsShared, stats
 } from './10-data-sync.js';
-import { maybeRunDeferredBiometricLock, userDirty } from './20-account.js';
 import { renderPhotos } from './30-progress-media.js';
 import { AI_SOURCES, aiSrc, applyProgressionAll, duplicateProgram, exportProgram, exportProgramFile,
   renderGreeting, renderToday, trainerOn
@@ -20,6 +19,15 @@ import { dropFreshEx, exDirty, exRestAfter, fmtKg, getExProgValue, getExWeight, 
 import { esc, exitWorkout, setExFromWorkShared, settleQuickFinish, stopFinishFx, tnum } from './70-workout.js';
 import { SR, hfHintText, hfMode, syncPrefs } from './80-platform.js';
 import { applyAudioFromUser, fillLiveSoundCascade, moreTab, switchMoreTab, syncSettingsForm } from './90-events.js';
+
+let accountUserDirtyHook = () => false;
+let maybeRunDeferredBiometricLockHook = () => {};
+export function setCoreAccountHooks(hooks = {}){
+  accountUserDirtyHook = typeof hooks.userDirty === 'function' ? hooks.userDirty : (() => false);
+  maybeRunDeferredBiometricLockHook = typeof hooks.maybeRunDeferredBiometricLock === 'function'
+    ? hooks.maybeRunDeferredBiometricLock
+    : (() => {});
+}
 
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
 export const ILLO = {
@@ -658,7 +666,7 @@ export function asTab(fn){
 const LEAVE_GUARDS = {
   scrBuilder:  ()=> programDirty() ? {what:t('builder.programChanges'), clean:()=> clearSnap('program')} : null,
   scrExercise: ()=> exDirty() ? {what:t('exercise.changes'), clean:()=>{ dropFreshEx(); setExDraftShared(null); setExIdxShared(-1); setExOrigShared(''); setExFromWorkShared(false); }} : null,
-  scrUserEdit: ()=> userDirty() ? {what:t('profile.changes')} : null,
+  scrUserEdit: ()=> accountUserDirtyHook() ? {what:t('profile.changes')} : null,
   scrAI:       ()=> (AI_SOURCES[aiSrc] && aiScreenDirty(AI_SOURCES[aiSrc].dirty)) ? {what:t('ai.filledRequest')} : null
 };
 let guardBypass = false; // второй заход после подтверждения — уже не спрашиваем
@@ -828,7 +836,7 @@ export function show(id, push = true){
   if(ROOT_TABS.includes(id)) prepTab(id);
   // Если приложение долго было в фоне посреди тренировки, не прерываем подход
   // биометрией. Проверку откладываем до первого выхода с экрана тренировки.
-  if(id !== 'scrWork' && typeof maybeRunDeferredBiometricLock === 'function') maybeRunDeferredBiometricLock();
+  if(id !== 'scrWork') maybeRunDeferredBiometricLockHook();
 }
 
 // содержимое вкладки всегда свежее — неважно, пришли в неё по доку, по кнопке
