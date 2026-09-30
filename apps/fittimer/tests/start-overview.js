@@ -81,6 +81,46 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const afterWeight = await page.locator('#startOverviewList .ex-row.tappable').textContent();
   ok('правка веса нажатием на строку сразу обновляет обзор', /9\s*кг/.test(afterWeight), afterWeight);
 
+  const legacy = await page.evaluate(() => {
+    const p = {
+      id:'overview-legacy', name:'Старая история', active:true, progression:2,
+      stats:{completions:9}, psMigrated:true,
+      plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[{
+        id:'legacy-ex', name:'Legacy reps', type:'reps', value:'8', sets:3, rest:45,
+        progOn:true, trackWeight:false, repsStep:1,
+        // Фактическая сегодняшняя нагрузка уже живёт в per-exercise state.
+        ps:{n:1,cur:{reps:'15'}}
+      }]}]
+    };
+    customPrograms.push(p);
+    // Старая запись знает, что тренировка была, но load snapshot в той версии
+    // ещё не сохранялся.
+    stats.history.push({
+      id:'legacy-h', pid:p.id, plan:0, d:localISO(new Date(Date.now()-86400000)),
+      sec:900, status:'full', exercises:['Legacy reps']
+    });
+    const previous = previousWorkoutLoad(p, 0);
+    openStart(p);
+    return {
+      previous,
+      text:$('startLoadChange').textContent.trim(),
+      row:document.querySelector('#startOverviewList .ex-row')?.textContent || ''
+    };
+  });
+  ok('legacy история без snapshot не подделывает предыдущую нагрузку через completions',
+    legacy.previous.first === false
+      && legacy.previous.exact === false
+      && legacy.previous.legacy === true
+      && legacy.previous.rows.length === 0,
+    JSON.stringify(legacy.previous));
+  ok('для старой истории UI честно говорит, что сравнение недоступно',
+    /Предыдущая нагрузка не сохранена/.test(legacy.text)
+      && !/было\s*→\s*сегодня/.test(legacy.text)
+      && !/^Без изменений/.test(legacy.text),
+    legacy.text);
+  ok('сегодняшняя per-exercise нагрузка при этом показывается без отката',
+    /15 повторений/.test(legacy.row), legacy.row);
+
   // Полностью завершённая двойная прогрессия не должна обещать следующую
   // проверку нагрузки: повышать здесь уже нечего.
   const terminalText = await page.evaluate(() => {
