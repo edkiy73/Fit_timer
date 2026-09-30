@@ -2,7 +2,7 @@ import { appLocale, localeTag, normalizeLocale, profileLocalePreference, setAppL
 import { appIdentity, appRuntimeCompat } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
 import { $, appAlert, appConfirm, appDialog, goTab, icon, isChanged, savedVoiceURI, setShown, show,
-  syncDockTabs, takeSnap
+  setCoreAccountHooks, syncDockTabs, takeSnap
 } from './00-core.js';
 import { SCHEMA_VERSION, SYNC, connectAccountSync, currentUser, hasMeaningfulLocalData, identity,
   kvClearAll, kvDel, kvGet, kvSet, newId, parsed, profileAge, profileDisplayName, pushAccountDocs, recordConsent,
@@ -1092,6 +1092,10 @@ export function setPendingSubShared(value){ pendingSub = value; return pendingSu
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initAccount(){
+  setCoreAccountHooks({
+    userDirty,
+    maybeRunDeferredBiometricLock
+  });
   registerAction('openAndroidUpdate', () => openAndroidUpdate());
   registerAction('selectPremiumPlan', btn => {
     pmPlan = btn.dataset.plan === 'month' ? 'month' : 'year';
