@@ -5,6 +5,7 @@
    nothing runs at module evaluation. The init functions run here, after the whole
    graph is evaluated, in the original part order. */
 import { initCore } from './00-core.js';
+import { initActions } from './05-actions.js';
 import { initDataSync } from './10-data-sync.js';
 import { initAccount } from './20-account.js';
 import { initProgressMedia } from './30-progress-media.js';
@@ -16,6 +17,7 @@ import { initPlatform } from './80-platform.js';
 import { initEvents } from './90-events.js';
 
 initCore();
+initActions();
 initDataSync();
 initAccount();
 initProgressMedia();
