@@ -275,5 +275,44 @@ ok('core workout controls have no direct onclick wiring',
   && !events.includes("$('btnSkip').onclick")
   && !events.includes("$('btnDone').onclick"));
 
+ok('workout dynamic controls and modal backdrops use action registry',
+  programsHtml.includes('id="startModal" data-act="closeModalBackdrop"')
+  && programsHtml.includes('id="pickStepModal" data-act="closeModalBackdrop"')
+  && programsHtml.includes('id="exitModal" data-act="closeModalBackdrop"')
+  && progressHtml.includes('id="hfModal" data-act="closeModalBackdrop"')
+  && progressHtml.includes('id="soundModal" data-act="closeModalBackdrop"')
+  && progressHtml.includes('id="voiceTestModal" data-act="closeModalBackdrop"')
+  && progressHtml.includes('id="createModal" data-act="closeModalBackdrop"')
+  && progressHtml.includes('id="importModal" data-act="closeModalBackdrop"')
+  && progressHtml.includes('id="waModal" data-act="closeModalBackdrop"')
+  && progressHtml.includes('id="premiumModal" data-act="closeModalBackdrop"')
+  && progressHtml.includes('id="payModal" data-act="closeModalBackdrop"')
+  && progressHtml.includes('id="premiumOkModal" data-act="closeModalBackdrop"')
+  && progressHtml.includes('id="wellModal" data-act="closeModalBackdrop"')
+  && progressHtml.includes('id="cmpModal" data-act="closeModalBackdrop"')
+  && progressHtml.includes('id="whModal" data-act="closeModalBackdrop"')
+  && events.includes("b.dataset.act = 'chooseWorkoutStartStep'")
+  && events.includes("btn.dataset.act = 'stageHandsFreeMode'")
+  && events.includes("$('btnHfVoiceTest').dataset.act = 'openHandsFreeVoiceTest'"));
+ok('workout dynamic controls and modal backdrops have no direct onclick wiring',
+  !events.includes("$('startModal').onclick")
+  && !events.includes("$('pickStepModal').onclick")
+  && !events.includes("$('exitModal').onclick")
+  && !events.includes("$('hfModal').onclick")
+  && !events.includes("$('soundModal').onclick")
+  && !events.includes("$('voiceTestModal').onclick")
+  && !events.includes("$('createModal').onclick")
+  && !events.includes("$('importModal').onclick")
+  && !events.includes("$('waModal').onclick")
+  && !events.includes("$('premiumModal').onclick")
+  && !events.includes("$('payModal').onclick")
+  && !events.includes("$('premiumOkModal').onclick")
+  && !events.includes("$('wellModal').onclick")
+  && !events.includes("$('cmpModal').onclick")
+  && !events.includes("$('whModal').onclick")
+  && !events.includes("$('btnHfVoicePack').onclick")
+  && !events.includes("$('btnHfVoiceTest').onclick")
+  && !events.includes("document.querySelectorAll('#hfModalSeg [data-hf]').forEach(c =>"));
+
 
 process.exit(bad?1:0);
