@@ -1577,6 +1577,7 @@ export const I18N_EN = {
   'builder.progressAutoPeriod': "increases automatically: {period}",
   'builder.progressProgramOff': "automatic progression is off in program settings, so values do not increase",
   'builder.summaryMax': "{value}, max {max}",
+  'builder.dualShort': "+{reps} reps to {max} → +{weight} kg",
   'day.monFull': "Monday",
   'day.tueFull': "Tuesday",
   'day.wedFull': "Wednesday",
