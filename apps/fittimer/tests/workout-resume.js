@@ -68,6 +68,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     if(!saved.outcomes || !Object.values(saved.outcomes).includes('done')){
       throw new Error('per-step workout outcome was not saved');
     }
+    if(!saved.workout || !saved.workoutSig){
+      throw new Error('workout structure snapshot was not saved');
+    }
     // The saved resume point below is a reps step; keep that session realistic after
     // separately proving that timer recovery fields persist.
     state.stepDeadline = 0;
@@ -124,6 +127,89 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     JSON.stringify(nativeResumed));
   ok('native recovery не запускает повторный предстартовый countdown',
     !nativeResumed.prepOpen, JSON.stringify(nativeResumed));
+
+  // Сохранённая тренировка — уже начатая работа, а не ссылка на текущую версию
+  // программы. После сохранения полностью меняем состав программы и убеждаемся,
+  // что «Продолжить» открывает старые шаги, а не новую тренировку под старым stepIdx.
+  const changedSetup = await page.evaluate(async () => {
+    tearDownWorkout();
+    const p = {
+      id:'resume-structure-test', name:'Версия тренировки', active:true, progression:0,
+      plans:[{days:['Ср'], rounds:1, roundRest:0, exercises:[
+        {id:'snap-a',name:'Старое A',type:'reps',value:'8',sets:1,rest:0,restAfter:0},
+        {id:'snap-b',name:'Старое B',type:'reps',value:'9',sets:1,rest:0,restAfter:0},
+        {id:'snap-c',name:'Старое C',type:'reps',value:'10',sets:1,rest:0,restAfter:0}
+      ]}]
+    };
+    customPrograms.push(p);
+    await savePrograms();
+
+    state.raw = p; state.planIdx = 0; state.current = customToProgram(p, 0);
+    state.steps = buildSteps();
+    state.stepIdx = state.steps.findIndex(s => s.phase === 'work' && s.exId === 'snap-b');
+    state.startLoad = workoutLoadSnapshot(p, 0);
+    state.globalStart = Date.now() - 45000; state.pausedTotal = 0; state.paused = false;
+    state.workoutSessionId = 'session-structure-snapshot';
+    state.stepOutcomes = {};
+    const first = state.steps.findIndex(s => s.phase === 'work' && s.exId === 'snap-a');
+    state.stepOutcomes[workoutStepKey(state.steps[first], first)] = 'done';
+    await saveSession();
+
+    const saved = await sessionForProgram(p.id);
+    const savedSig = saved && saved.workoutSig;
+    const savedNames = saved && saved.workout
+      ? [...saved.workout.warmup, ...saved.workout.cycle].filter(s=>s.phase==='work').map(s=>s.exName)
+      : [];
+
+    // Та же программа теперь совсем другая: другой порядок, удалён B, добавлен X,
+    // увеличено число подходов. Старый абсолютный stepIdx здесь уже означал бы иное.
+    p.plans[0].exercises = [
+      {id:'snap-c',name:'Новое C',type:'reps',value:'20',sets:2,rest:0,restAfter:0},
+      {id:'snap-x',name:'Новое X',type:'reps',value:'30',sets:1,rest:0,restAfter:0},
+      {id:'snap-a',name:'Новое A',type:'reps',value:'40',sets:1,rest:0,restAfter:0}
+    ];
+    await savePrograms();
+    openStart(p);
+    prepSec = 0;
+    return {savedSig, savedNames, savedStep:saved && saved.stepIdx};
+  });
+  ok('сессия хранит отпечаток и исходный состав тренировки',
+    !!changedSetup.savedSig
+      && changedSetup.savedNames.join('|') === 'Старое A|Старое B|Старое C',
+    JSON.stringify(changedSetup));
+
+  await page.click('#btnStart');
+  await page.waitForTimeout(80);
+  const changedModal = await page.evaluate(() => ({
+    resumeOpen:$('startResume') && !$('startResume').classList.contains('hidden'),
+    summary:$('startResumeSub').textContent
+  }));
+  ok('после изменения программы старая сессия всё ещё предлагается к продолжению',
+    changedModal.resumeOpen, changedModal.summary);
+
+  await page.click('#startResume');
+  await page.waitForTimeout(30);
+  const changedResume = await page.evaluate(() => ({
+    title:state.steps[state.stepIdx] && state.steps[state.stepIdx].title,
+    names:state.steps.filter(s=>s.phase==='work').map(s=>s.title),
+    total:state.steps.filter(s=>s.phase==='work').length,
+    currentSig:workoutSessionSignature(state.current)
+  }));
+  ok('«Продолжить» возвращает на старое упражнение, а не на новый stepIdx',
+    changedResume.title === 'Старое B', JSON.stringify(changedResume));
+  ok('вся продолженная тренировка остаётся сохранённой версией',
+    changedResume.total === 3
+      && changedResume.names.join('|') === 'Старое A|Старое B|Старое C'
+      && !changedResume.names.some(x=>/Новое/.test(x)),
+    JSON.stringify(changedResume));
+  ok('продолженная версия имеет тот же отпечаток, что сохранённая',
+    changedResume.currentSig === changedSetup.savedSig,
+    JSON.stringify({saved:changedSetup.savedSig,current:changedResume.currentSig}));
+
+  await page.evaluate(async () => {
+    tearDownWorkout();
+    await clearSession('session-structure-snapshot', 'resume-structure-test');
+  });
 
   const choices = await page.evaluate(() => {
     tearDownWorkout();
