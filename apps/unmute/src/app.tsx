@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link, Outlet, useLocation, useNavigate, type RouteObject } from 'react-router';
-import { AuthProvider, SignInForm, useOptionalAuth } from '@appbase/ui-react/auth.js';
-import { I18nProvider, LanguagePicker, sharedUiLocale, useI18n } from '@appbase/ui-react/i18n.js';
-import product from '../config/product.json';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { Outlet, useLocation, type RouteObject } from 'react-router';
+import { AuthProvider, useOptionalAuth } from '@appbase/ui-react/auth.js';
+import { I18nProvider, useI18n } from '@appbase/ui-react/i18n.js';
 import { authClient } from './auth';
 import { appDocs, syncNow } from './sync';
 import { patchSettings, readSettings } from './settings';
@@ -16,15 +15,12 @@ import { LexiconProvider } from './lexicon-ui';
 import { ProgressScreen } from './progress-screen';
 import { OnboardingGate } from './onboarding';
 import { AccessScreen } from './access';
-import { NotificationSettingsPanel } from './notification-settings';
 import { NotificationDelivery, NotificationRouteListener } from './notification-delivery';
 import { TabBar } from './tab-bar';
-import { Icon } from './icons';
+import { MeScreen } from './me-screen';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
 const DEFAULT_COURSE_SET = 'general-foundation';
-// Handle step at first sign-in: config/product.json → auth.askHandle.
-const ASK_HANDLE = product.auth?.askHandle !== false;
 
 function Localized({children}: {children: ReactNode}){
   return <I18nProvider dictionaries={dictionaries} config={i18nConfig} storageKey={LOCALE_KEY}>{children}</I18nProvider>;
@@ -82,11 +78,19 @@ function Root(){
   );
 }
 
+/** A new tab or screen opens from its top (a screen may then scroll itself, e.g. to «Ты здесь»). */
+function ScrollToTop(){
+  const {pathname} = useLocation();
+  useEffect(() => { window.scrollTo?.(0, 0); }, [pathname]);
+  return null;
+}
+
 // No global header: every screen owns its title; the bottom bar is the navigation.
 // Onboarding replaces the whole shell, bar included.
 function Shell(){
   return (
     <main className="app">
+      <ScrollToTop />
       <NotificationRouteListener />
       <NotificationDelivery />
       <OnboardingGate>
@@ -99,80 +103,6 @@ function Shell(){
 
 function Home(){
   return <TodayScreen />;
-}
-
-function Account(){
-  const auth = useOptionalAuth();
-  const {t, locale} = useI18n();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const requestedReturn=new URLSearchParams(location.search).get('return')||'';
-  const returnTo=requestedReturn.startsWith('/')&&!requestedReturn.startsWith('//')
-    ? requestedReturn
-    : '/';
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleteError, setDeleteError] = useState(false);
-  // Local data stays on the device; the next sign-in merges it into that account.
-  const signOut = async () => {
-    await auth.logout();
-    await appDocs.detach();
-    navigate('/');
-  };
-  // Server data is removed; the device keeps its local copy (never wiped silently).
-  const deleteAccount = async () => {
-    setDeleteError(false);
-    try{
-      await auth.deleteAccount();
-      await appDocs.detach();
-      navigate('/');
-    }catch{
-      setDeleteError(true);
-    }
-  };
-  if(auth.loading) return null;
-  return (
-    <section className="me" aria-labelledby="me-title">
-      <h2 id="me-title">{t('me.title')}</h2>
-      <Link className="me-row pressable" to="/progress">
-        <Icon name="progress" />
-        <span>{t('me.progress')}</span>
-        <Icon name="chevron" size={20} className="me-row-chevron" />
-      </Link>
-      <div className="card">
-        {auth.session ? (
-          <>
-            <h3>{t('account.title')}</h3>
-            <p>{auth.session.email}{auth.session.handle ? ' · ' + auth.session.handle : ''}</p>
-            <p className="muted">{t('account.synced')}</p>
-            <button className="link-button" type="button" onClick={() => void signOut()}>{t('account.signOut')}</button>
-            {confirmDelete ? (
-              <div className="account-delete" role="alertdialog" aria-label={t('account.delete')}>
-                <p>{t('account.deleteConfirm')}</p>
-                <div className="account-delete-actions">
-                  <button className="secondary-button" type="button" onClick={() => void deleteAccount()}>{t('account.deleteYes')}</button>
-                  <button className="link-button" type="button" onClick={() => setConfirmDelete(false)}>{t('account.deleteCancel')}</button>
-                </div>
-                {deleteError && <p className="muted" role="alert">{t('account.deleteFailed')}</p>}
-              </div>
-            ) : (
-              <button className="link-button" type="button" onClick={() => setConfirmDelete(true)}>{t('account.delete')}</button>
-            )}
-          </>
-        ) : (
-          <>
-            <p className="muted">{t('account.localHint')}</p>
-            <SignInForm locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} askHandle={ASK_HANDLE} variant="inline" onSignedIn={() => navigate(returnTo)} />
-          </>
-        )}
-      </div>
-      <NotificationSettingsPanel />
-      <div className="language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')} /></div>
-      <p className="account-legal">
-        <a href="./privacy.html" target="_blank" rel="noreferrer">{t('account.privacy')}</a>
-        <a href="./delete-account.html" target="_blank" rel="noreferrer">{t('account.deletionInfo')}</a>
-      </p>
-    </section>
-  );
 }
 
 export const routes: RouteObject[] = [
@@ -188,7 +118,7 @@ export const routes: RouteObject[] = [
         {path:'course', element:<CourseMapScreen />},
         {path:'progress', element:<ProgressScreen />},
         {path:'access', element:<AccessScreen />},
-        {path:'account', element:<Account />}
+        {path:'account', element:<MeScreen />}
       ]
     }]
   },
