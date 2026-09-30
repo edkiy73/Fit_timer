@@ -202,16 +202,33 @@ export function normalizeExercise(ex){
   return ex;
 }
 
-// упражнение-исходник в самой программе по названию из шага: шаг тренировки — только копия,
-// в нём нет ни потолка, ни двойной прогрессии, ни собственного старта отсчёта
-export function liveExercise(name){
+// Упражнение-источник в самой программе: шаг тренировки — только копия,
+// в нём нет потолков, полного состояния прогрессии и редакторских полей.
+// Основной ключ — стабильный exercise.id. Название оставлено только для старых
+// сохранённых шагов без id; при двух одинаковых названиях fallback намеренно
+// считается неоднозначным и ничего не выбирает.
+export function liveExercise(exId, fallbackName){
   const p = state.raw;
-  if(!p || !p.id || !name) return null;
+  if(!p || !p.id) return null;
   const plan = normPlans(p)[(typeof state.planIdx === 'number') ? state.planIdx : 0];
   if(!plan) return null;
-  const key = String(name).trim().toLowerCase();
-  const idx = (plan.exercises || []).findIndex(e => (e.name || '').trim().toLowerCase() === key);
-  return idx >= 0 ? {p, plan, idx, ex: plan.exercises[idx]} : null;
+  const list = plan.exercises || [];
+
+  const id = String(exId || '').trim();
+  if(id){
+    const idx = list.findIndex(e => String((e && e.id) || '') === id);
+    return idx >= 0 ? {p, plan, idx, ex:list[idx]} : null;
+  }
+
+  const key = String(fallbackName || '').trim().toLowerCase();
+  if(!key) return null;
+  const matches = [];
+  list.forEach((e, idx) => {
+    if(String((e && e.name) || '').trim().toLowerCase() === key) matches.push(idx);
+  });
+  if(matches.length !== 1) return null;
+  const idx = matches[0];
+  return {p, plan, idx, ex:list[idx]};
 }
 
 /* ---- прогрессия по упражнению ----
