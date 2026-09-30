@@ -1,5 +1,6 @@
 import { appLocale, canonicalLabel, localeTag, profileLocalePreference, setAppLocale, t } from '../i18n/index.js';
 import { appInfrastructure, appRuntimeCompat, appSync, appUi } from './00-dependencies.js';
+import { registerAction } from './05-actions.js';
 import { $, appAlert, icon, plural, setShown, sideSec, state, syncDockTabs } from './00-core.js';
 import { PROFILE_KEYS, account, bumpAccountMeta, isPremium, openUserEdit, readAccountBucket,
   renderPlan, saveAccount, writeAccountBucket
@@ -237,9 +238,12 @@ export function renderUsers(){
     row.innerHTML = `<div class="ua">${ua}</div><div class="ub"><b></b><small>${now}${bits.join(' · ')}</small></div>`
       + `<button class="ue" title="${esc(t('profile.edit'))}">${icon('pencil')}</button>`;
     row.querySelector('b').textContent = shownName;
-    row.querySelector('.ue').onclick = e => { e.stopPropagation(); openUserEdit(u.id); };
+    const edit = row.querySelector('.ue');
+    edit.dataset.act = 'editProfileFromList';
+    edit.dataset.userId = u.id;
     // нажатие по строке активного профиля переключать некуда — открываем его правку
-    row.onclick = ()=> act ? openUserEdit(u.id) : switchUser(u.id);
+    row.dataset.act = 'openOrSwitchProfile';
+    row.dataset.userId = u.id;
     box.appendChild(row);
   });
   $('usersHint').textContent = users.length > 1
@@ -556,7 +560,8 @@ export function openWellHist(){
           `<span class="whp">${inp('sys')}<i>/</i>${inp('dia')}</span></div>` +
         cell('pulse', t('progress.pulseShort')) + cell('sleep', t('well.sleepHours'), 0.5) +
       `</div>`;
-    row.querySelector('.wh-del').onclick = ()=> row.classList.toggle('del');
+    const del = row.querySelector('.wh-del');
+    del.dataset.act = 'toggleWellHistoryDelete';
     list.appendChild(row);
   });
   $('wellHistModal').classList.add('open');
@@ -2153,7 +2158,8 @@ function renderStatBadges(){
     el.innerHTML = `<i>${icon(b.ico)}</i><span></span>`;
     el.querySelector('span').textContent = badgeName(b);
     // за что выдано — не написано нигде, а название само по себе не объясняет
-    el.onclick = ()=> appAlert(`«${badgeName(b)}» — ${badgeDesc(b).toLowerCase()}.`);
+    el.dataset.act = 'showBadgeInfo';
+    el.dataset.badgeId = b.id;
     box.appendChild(el);
   });
   const next = BADGES.find(b => !hasBadge(b.id));
@@ -2237,7 +2243,12 @@ function sessRow(en, withDate, withStatus){
   // нажатие по карточке.
   const row = document.createElement(p ? 'button' : 'div');
   row.className = 'sess-row' + (p ? ' sess-link' : '');
-  if(p){ row.type = 'button'; row.onclick = () => openDayProgram(p.id, typeof en.plan === 'number' ? en.plan : -1); }
+  if(p){
+    row.type = 'button';
+    row.dataset.act = 'openSessionProgram';
+    row.dataset.programId = p.id;
+    row.dataset.planIdx = String(typeof en.plan === 'number' ? en.plan : -1);
+  }
   row.innerHTML =
     '<div class="sess-head"><b></b>' + (withDate ? '<span class="sess-date"></span>' : '') + '</div>' +
     (parts.length ? '<p class="sess-line"></p>' : '') +
@@ -2503,6 +2514,29 @@ export function setWellMetricShared(value){ wellMetric = value; return wellMetri
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initDataSync(){
+  registerAction('editProfileFromList', (btn, event) => {
+    event.stopPropagation();
+    if(btn.dataset.userId) openUserEdit(btn.dataset.userId);
+  });
+  registerAction('openOrSwitchProfile', btn => {
+    const id = btn.dataset.userId;
+    if(!id) return;
+    if(id === currentUser) openUserEdit(id);
+    else switchUser(id);
+  });
+  registerAction('toggleWellHistoryDelete', btn => {
+    const row = btn.closest('.wh-row');
+    if(row) row.classList.toggle('del');
+  });
+  registerAction('showBadgeInfo', btn => {
+    const badge = BADGES.find(x => x.id === btn.dataset.badgeId);
+    if(badge) appAlert(`«${badgeName(badge)}» — ${badgeDesc(badge).toLowerCase()}.`);
+  });
+  registerAction('openSessionProgram', btn => {
+    const id = btn.dataset.programId;
+    const plan = parseInt(btn.dataset.planIdx, 10);
+    if(id) openDayProgram(id, Number.isFinite(plan) ? plan : -1);
+  });
   window.addEventListener('error',e=>{
     reportClientError('error',e&&e.error,e&&e.message).catch(()=>{});
   });
@@ -2515,7 +2549,6 @@ export function initDataSync(){
       connectAccountSync().catch(()=> showSyncState('error'));
     }
   });
-  $('sessModal').onclick = e => { if(e.target === $('sessModal')) $('sessModal').classList.remove('open'); };
   // неделя целиком: что было пройдено с понедельника по воскресенье того столбика
   $('weekBars').addEventListener('click', e => {
     // колонку считаем по координате нажатия, а не по элементу: столбик бывает высотой
