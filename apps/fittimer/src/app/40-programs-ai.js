@@ -2,6 +2,7 @@ import { MUSCLES, M_LABEL, OPT_EQUIP, OPT_LEVEL } from './options.js';
 import { aiCanonicalEnglish, aiOutputLanguage, appLocale, canonicalLabel, t } from '../i18n/index.js';
 import FitAIProtocol from '../../lib/ai-protocol.js';
 import { appRuntimeCompat } from './00-dependencies.js';
+import { registerAction } from './05-actions.js';
 import { $, DUMBBELL_ICON, appAlert, appDialog, asTab, defaultPlanIdx, estimatedWorkoutMinutes,
   goBackTo, goTab, icon, openStart, plural, renderPlanRow, renderStartInfo, setShown, show, state
 } from './00-core.js';
@@ -138,7 +139,10 @@ function makeChip({ico, val, label, cls, why}){
   el.innerHTML = icon(ico) + (has ? '<b></b>' : '') + '<span></span>';
   if(has) el.querySelector('b').textContent = val;
   el.querySelector('span').textContent = label;
-  if(why) el.onclick = ()=> appAlert(why);
+  if(why){
+    el.dataset.act = 'showDynamicInfo';
+    el.dataset.info = why;
+  }
   return el;
 }
 
@@ -218,7 +222,7 @@ function renderWellQuick(){
     b.querySelector('b').textContent = val;
     b.querySelector('span:last-child').textContent = label;
     // самочувствие живёт во вкладке «Тело» — там же, где вес
-    b.onclick = ()=> openStats('weight');
+    b.dataset.act = 'openBodyStats';
     box.appendChild(b);
   });
   setShown(box, !!cards.length);
@@ -241,7 +245,7 @@ function countTo(id, val){
 }
 
 // строка плана — целиком кнопка, чтобы нажатие по названию программы работало
-function todayRow({cls, ico, title, sub, action, onclick}){
+function todayRow({cls, ico, title, sub, action, actionName, programId}){
   const row = document.createElement('button');
   row.type = 'button';
   row.className = 'today-row' + (cls ? ' ' + cls : '');
@@ -251,7 +255,8 @@ function todayRow({cls, ico, title, sub, action, onclick}){
   row.querySelector('b').textContent = title;
   row.querySelector('small').textContent = sub;
   row.querySelector('.tr-go').textContent = action;
-  row.onclick = onclick;
+  if(actionName) row.dataset.act = actionName;
+  if(programId) row.dataset.programId = String(programId);
   return row;
 }
 
@@ -384,7 +389,8 @@ function renderWeekStrip(){
     else if(d.debt) mark = '<i class="ws-debt"></i>';
     else if(!d.planned && d.any) mark = `<span class="ws-extra">${icon('check')}</span>`;
     cell.innerHTML = `<b>${canonicalLabel(d.name)}</b>` + mark;
-    cell.onclick = ()=> openWeekDay(d);
+    cell.dataset.act = 'openWeekDay';
+    cell.dataset.dayIso = d.iso;
     box.appendChild(cell);
   });
   // ---- счёт недели: цифра, полоса и чипы вместо одной серой строки через « · » ----
@@ -487,7 +493,9 @@ function openWeekDay(d){
     row.innerHTML = '<div class="sess-head"><b></b></div><p class="sess-line"></p>';
     row.querySelector('.sess-head b').textContent = p.name || t('sessions.workoutFallback');
     row.querySelector('.sess-line').textContent = parts.join(' ');
-    row.onclick = () => openDayProgram(p.id, plans.indexOf(plan));
+    row.dataset.act = 'openDayProgram';
+    row.dataset.programId = p.id;
+    row.dataset.planIdx = String(plans.indexOf(plan));
 
     box.appendChild(row);
     plannedRows++;
@@ -528,7 +536,7 @@ export function renderToday(){
       sub: allOff ? t('today.enableProgram')
                   : (own ? t('today.chooseDays') : t('today.buildProgram')),
       action: own ? t('today.open') : t('today.create'),
-      onclick: ()=> goTab('scrPrograms')
+      actionName: 'openProgramsTab'
     }));
     return;
   }
@@ -572,7 +580,8 @@ export function renderToday(){
       title: t('today.makeUp'),
       sub: t('today.makeUpSub',{day:canonicalLabel(DAY_FULL[slot.idx]),name:p.name,more}),
       action: t('today.start'),
-      onclick: ()=> openStart(p)
+      actionName: 'openTodayProgram',
+      programId: p.id
     });
   };
 
@@ -600,7 +609,8 @@ export function renderToday(){
               ? t('today.partial',{done:Math.max(0,+partial.doneExercises||0),all:Math.max(0,+partial.plannedExercises||0)})
               : bits.join(' · ')),
         action: done ? t('today.again') : (partial ? t('today.again') : t('today.start')),
-        onclick: () => openStart(p)
+        actionName: 'openTodayProgram',
+        programId: p.id
       }));
     });
     // сегодняшнее сделано — можно предложить закрыть долг недели
@@ -635,7 +645,8 @@ export function renderToday(){
         title: neverTrained ? t('today.startToday') : t('today.rest'),   // заголовок — не больше двух строк: длиннее — обрежется
         sub: neverTrained ? t('today.firstWorkout',{name:next.p.name}) : t('today.next',{when}),
         action: neverTrained ? t('today.start') : t('today.open'),
-        onclick: () => openStart(next.p)
+        actionName: 'openTodayProgram',
+        programId: next.p.id
       }));
       // в день отдыха незакрытый долг важнее общих слов про отдых: он конкретен,
       // выполним сегодня и закрывает неделю
@@ -656,7 +667,7 @@ export function renderToday(){
         title: t('today.rest'),
         sub: t('today.noWeekWorkouts'),
         action: t('today.open'),
-        onclick: () => goTab('scrPrograms')
+        actionName: 'openProgramsTab'
       }));
     }
   }
@@ -2146,8 +2157,11 @@ export function renderTray(){
     el.innerHTML = `<img src="${esc(data)}" alt="">` +
       (isUsed ? '' : `<button type="button" class="ti-x">${icon('close')}</button>`);
     const x = el.querySelector('.ti-x');
-    if(x) x.onclick = e => { e.stopPropagation(); imgTray.splice(i, 1); renderTray(); };
-    el.onclick = ()=> appAlert(t('images.pickHint'));
+    if(x){
+      x.dataset.act = 'removeTrayImage';
+      x.dataset.trayIdx = String(i);
+    }
+    el.dataset.act = 'showImagePickHint';
     box.appendChild(el);
   });
 }
@@ -2189,7 +2203,8 @@ export function renderSlots(){
       `<div class="sl-thumb">${cur ? `<img src="${esc(cur)}" alt="">` : DUMBBELL_ICON}</div>` +
       `<div class="sl-body"><b></b><small class="${cur ? 'has' : ''}">${cur ? 'картинка есть' : 'нет картинки'}</small></div>`;
     row.querySelector('b').textContent = s.title;
-    row.onclick = ()=> openSlotPicker(i);
+    row.dataset.act = 'openImageSlot';
+    row.dataset.slotIdx = String(i);
     box.appendChild(row);
   });
 }
@@ -2206,11 +2221,8 @@ function openSlotPicker(i){
     const el = document.createElement('div');
     el.className = 'tray-item' + (data === cur ? ' act' : '');
     el.innerHTML = `<img src="${esc(data)}" alt="">`;
-    el.onclick = ()=>{
-      s.set(data);                       // копируем, лоток не трогаем
-      $('slotModal').classList.remove('open');
-      renderTray(); renderSlots();
-    };
+    el.dataset.act = 'assignTrayImageToSlot';
+    el.dataset.trayIdx = String(imgTray.indexOf(data));
     box.appendChild(el);
   });
   // обложку тоже можно нарисовать — как и картинку упражнения
@@ -3157,6 +3169,46 @@ export function setTrainerShared(value){ trainer = value; return trainer; }
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initProgramsAi(){
+  registerAction('showDynamicInfo', btn => {
+    if(btn.dataset.info) appAlert(btn.dataset.info);
+  });
+  registerAction('openBodyStats', () => openStats('weight'));
+  registerAction('openProgramsTab', () => goTab('scrPrograms'));
+  registerAction('openTodayProgram', btn => {
+    const p = customPrograms.find(x => String(x.id) === btn.dataset.programId);
+    if(p) openStart(p);
+  });
+  registerAction('openWeekDay', btn => {
+    const d = weekPlanInfo().days.find(x => x.iso === btn.dataset.dayIso);
+    if(d) openWeekDay(d);
+  });
+  registerAction('openDayProgram', btn => {
+    const id = btn.dataset.programId;
+    const pi = parseInt(btn.dataset.planIdx, 10);
+    if(id) openDayProgram(id, Number.isFinite(pi) ? pi : -1);
+  });
+  registerAction('removeTrayImage', (btn, event) => {
+    event.stopPropagation();
+    const i = parseInt(btn.dataset.trayIdx, 10);
+    if(!Number.isFinite(i) || i < 0 || i >= imgTray.length) return;
+    imgTray.splice(i, 1);
+    renderTray();
+  });
+  registerAction('showImagePickHint', () => appAlert(t('images.pickHint')));
+  registerAction('openImageSlot', btn => {
+    const i = parseInt(btn.dataset.slotIdx, 10);
+    if(Number.isFinite(i)) openSlotPicker(i);
+  });
+  registerAction('assignTrayImageToSlot', btn => {
+    const i = parseInt(btn.dataset.trayIdx, 10);
+    const data = imgTray[i];
+    const slot = imageSlots()[slotTarget];
+    if(!data || !slot) return;
+    slot.set(data);
+    $('slotModal').classList.remove('open');
+    renderTray();
+    renderSlots();
+  });
   // Более позднее присваивание заменяет прежний прямой вызов Gemini во всех
   // обработчиках, включая те, которые были объявлены выше по файлу.
   callGemini = async function(prompt, signal, kind){
