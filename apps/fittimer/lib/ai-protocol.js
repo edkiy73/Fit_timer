@@ -30,9 +30,9 @@ Act like a deeply experienced strength-and-conditioning coach. Base decisions on
 - For weighted reps, distinguish three cases:
   1) weight-only progression: fixed reps, positive ШАГ ВЕСА, no automatic rep increase;
   2) rep progression: positive ШАГ ПОВТОРОВ;
-  3) double progression: reps rise toward ПОТОЛОК ПОВТОРОВ; then ПРИ ПОТОЛКЕ: да raises weight by ШАГ ВЕСА and reps return toward the starting range.
+  3) double progression: the WHOLE rep range moves upward by positive ШАГ ПОВТОРОВ while keeping its width. ПОТОЛОК ПОВТОРОВ is the ceiling of the range's UPPER bound. Example: ЗНАЧЕНИЕ: 8-10, ШАГ ПОВТОРОВ: 1, ПОТОЛОК ПОВТОРОВ: 20 means 8-10 → 9-11 → ... → 18-20; then ПРИ ПОТОЛКЕ: да raises weight by ШАГ ВЕСА and reps reset to 8-10.
 - Whenever ШАГ ВЕСА is positive (cases 1 and 3 above), always give ПОТОЛОК ВЕСА — weight that grows without any realistic cap is the actual injury/plateau risk, not a missing field. This applies even when the user hasn't picked a starting weight yet.
-- ПРИ ПОТОЛКЕ: да is valid only for a weighted format with a positive ШАГ ВЕСА and a meaningful ПОТОЛОК ПОВТОРОВ/ВРЕМЕНИ. For double progression, make the rep/time progression explicit too instead of relying on an accidental default.
+- ПРИ ПОТОЛКЕ: да is valid only for genuine double progression: weighted reps, positive ШАГ ПОВТОРОВ, positive ШАГ ВЕСА, ПОТОЛОК ПОВТОРОВ above the starting upper bound, and ПОТОЛОК ВЕСА. Never rely on accidental defaults for either step.
 - ЗАМЕНА is NOT a generic alternative. Use it only as the next harder movement after the useful ceiling of the current exercise. Do not add it when normal progression in reps/time/weight is sufficient.
 - СТОРОНА: да means ЗНАЧЕНИЕ is performed PER SIDE, not the sum of both sides.
 - If external load is requested, use a weighted ФОРМАТ, add ВЕС, and configure progression only when appropriate.
@@ -63,10 +63,10 @@ Act like a deeply experienced strength-and-conditioning coach. Base decisions on
 ШАГ ВРЕМЕНИ: seconds increment for weighted time, only when time itself should progress
 ШАГ ВЕСА: kg increment for weighted formats
 ПОТОЛОК: required ceiling for progressive unweighted formats
-ПОТОЛОК ПОВТОРОВ: reps ceiling for weighted reps
+ПОТОЛОК ПОВТОРОВ: upper-bound reps ceiling for weighted reps; for a range this caps the UPPER end (8-10 with ceiling 20 ends at 18-20)
 ПОТОЛОК ВРЕМЕНИ: time ceiling for weighted time
 ПОТОЛОК ВЕСА: required realistic kg ceiling whenever weight itself progresses (positive ШАГ ВЕСА) — weight-only progression and double progression both need it, not just double progression. Set it even when the starting ВЕС is 0 (unknown/not yet chosen by the user): the ceiling is about the movement and the user's level, not about today's starting number.
-ПРИ ПОТОЛКЕ: "да" or "нет"; use "да" only for genuine double progression
+ПРИ ПОТОЛКЕ: "да" or "нет"; use "да" only for genuine double progression with positive ШАГ ПОВТОРОВ and ШАГ ВЕСА, a ПОТОЛОК ПОВТОРОВ above the starting upper bound, and ПОТОЛОК ВЕСА
 ЗАМЕНА: harder next-level exercise in ${outputLanguage}, only when a movement progression is preferable after the ceiling
 ОПИСАНИЕ ЗАМЕНЫ: 2-4 sentences in ${outputLanguage}, only when ЗАМЕНА exists
 ВИДЕО: real technique URL only if confident it exists; otherwise omit`;
@@ -153,6 +153,45 @@ ${exerciseSchema(outputLanguage)}`;
     return !/(?:^|\n)ПОТОЛОК ВЕСА:\s*\S/.test(block);
   }
 
+  function protocolNumber(block, label){
+    const m = block.match(new RegExp('(?:^|\\n)' + label + ':\\s*([-+]?\\d+(?:[.,]\\d+)?)', 'm'));
+    return m ? parseFloat(m[1].replace(',', '.')) : null;
+  }
+
+  function exerciseValueBounds(block){
+    const m = block.match(/(?:^|\n)ЗНАЧЕНИЕ:\s*([-+]?\d+(?:[.,]\d+)?)(?:\s*[-–—]\s*([-+]?\d+(?:[.,]\d+)?))?/m);
+    if(!m) return null;
+    const a = parseFloat(m[1].replace(',', '.'));
+    const b = m[2] == null ? a : parseFloat(m[2].replace(',', '.'));
+    if(!isFinite(a) || !isFinite(b)) return null;
+    return {min:Math.min(a,b), max:Math.max(a,b)};
+  }
+
+  // Double progression is a coupled cycle, so "almost valid" values are not
+  // harmless: zero steps or a ceiling at/below the starting upper bound make
+  // one of the stages disappear. Reject those NEW AI-generated configurations
+  // instead of silently inventing a different program in the client normalizer.
+  function exerciseBlockDoubleIssues(block){
+    const dual = block.match(/(?:^|\n)(?:ПРИ ПОТОЛКЕ|ДВОЙНАЯ ПРОГРЕССИЯ):\s*(\S.*)$/m);
+    if(!dual || /нет|no|false|^0(?:\s|$)/i.test(dual[1].trim())) return [];
+
+    const issues = [];
+    const format = ((block.match(/(?:^|\n)ФОРМАТ:\s*(\S.*)$/m) || [])[1] || '').toLowerCase();
+    if(!(/повтор/.test(format) && /вес/.test(format))) issues.push('ФОРМАТ');
+
+    const repsStep = protocolNumber(block, 'ШАГ ПОВТОРОВ');
+    const weightStep = protocolNumber(block, 'ШАГ ВЕСА');
+    const repsMax = protocolNumber(block, 'ПОТОЛОК ПОВТОРОВ');
+    const weightMax = protocolNumber(block, 'ПОТОЛОК ВЕСА');
+    const bounds = exerciseValueBounds(block);
+
+    if(!(repsStep > 0)) issues.push('ШАГ ПОВТОРОВ');
+    if(!(weightStep > 0)) issues.push('ШАГ ВЕСА');
+    if(!(repsMax > 0) || (bounds && !(repsMax > bounds.max))) issues.push('ПОТОЛОК ПОВТОРОВ');
+    if(!(weightMax > 0)) issues.push('ПОТОЛОК ВЕСА');
+    return [...new Set(issues)];
+  }
+
   function validateExerciseResponse(raw, opts){
     const needCeiling = !!(opts && opts.requireWeightCeiling);
     const text = normalizeResponse(raw);
@@ -164,12 +203,16 @@ ${exerciseSchema(outputLanguage)}`;
         if(!new RegExp('(?:^|\\n)'+label+':\\s*\\S','m').test(block)) missing.push((i+1)+':'+label);
       });
       if(needCeiling && exerciseBlockMissingWeightCeiling(block)) missing.push((i+1)+':ПОТОЛОК ВЕСА');
+      if(opts && opts.requireValidDouble){
+        exerciseBlockDoubleIssues(block).forEach(label => missing.push((i+1)+':'+label));
+      }
     });
+    const uniqueMissing = [...new Set(missing)];
     const min = opts && opts.minCount != null ? Math.max(1,+opts.minCount||1) : 1;
     const max = opts && opts.maxCount != null ? Math.max(min,+opts.maxCount||min) : 1;
     const countOk = blocks.length >= min && blocks.length <= max;
-    return {ok: !!blocks.length && !missing.length && countOk, text, missing, count:blocks.length,
-      reason: missing.length ? 'missing_fields' : (!countOk ? 'exercise_count' : '')};
+    return {ok: !!blocks.length && !uniqueMissing.length && countOk, text, missing:uniqueMissing, count:blocks.length,
+      reason: uniqueMissing.length ? 'missing_fields' : (!countOk ? 'exercise_count' : '')};
   }
 
   // Вариант без единого упражнения — это лишняя строка «ДЕНЬ:», а не повод
@@ -200,8 +243,14 @@ ${exerciseSchema(outputLanguage)}`;
     const exBlocks = text.split(/(?=^УПРАЖНЕНИЕ:\s*\S)/gm);
     const weightCeilingMissing = !!(opts && opts.requireWeightCeiling) && exBlocks.some(exerciseBlockMissingWeightCeiling);
     if(weightCeilingMissing) missing.push('ПОТОЛОК ВЕСА');
-    return {ok: !missing.length && exercises > 0 && days > 0 && !emptyVariant, text, missing,
-      reason: missing.length ? 'missing_fields' : (!exercises ? 'no_exercises' : (!days ? 'no_days' : (emptyVariant ? 'empty_variant' : '')))};
+    if(opts && opts.requireValidDouble){
+      exBlocks.forEach((block, i) => {
+        exerciseBlockDoubleIssues(block).forEach(label => missing.push((i || 1)+':'+label));
+      });
+    }
+    const uniqueMissing = [...new Set(missing)];
+    return {ok: !uniqueMissing.length && exercises > 0 && days > 0 && !emptyVariant, text, missing:uniqueMissing,
+      reason: uniqueMissing.length ? 'missing_fields' : (!exercises ? 'no_exercises' : (!days ? 'no_days' : (emptyVariant ? 'empty_variant' : '')))};
   }
 
   function validateResponse(kind, raw){
@@ -210,9 +259,9 @@ ${exerciseSchema(outputLanguage)}`;
       return {ok:/^data:image\/(?:png|jpe?g|webp|gif|avif);base64,[A-Za-z0-9+/=]{8,}$/.test(image),
         text:image, missing:[], reason:'bad_image'};
     }
-    if(String(kind || '') === 'exercise.create') return validateExerciseResponse(raw,{minCount:1,maxCount:10,requireWeightCeiling:true});
+    if(String(kind || '') === 'exercise.create') return validateExerciseResponse(raw,{minCount:1,maxCount:10,requireWeightCeiling:true,requireValidDouble:true});
     if(/^exercise\.(?:modify|replace)$/.test(String(kind || ''))) return validateExerciseResponse(raw,{minCount:1,maxCount:1});
-    if(String(kind || '') === 'program.create') return validateProgramResponse(raw,{requireWeightCeiling:true});
+    if(String(kind || '') === 'program.create') return validateProgramResponse(raw,{requireWeightCeiling:true,requireValidDouble:true});
     if(/^(?:program\.modify|video\.parse)$/.test(String(kind || ''))) return validateProgramResponse(raw);
     return {ok:!!normalizeResponse(raw), text:normalizeResponse(raw), missing:[], reason:'empty_response'};
   }

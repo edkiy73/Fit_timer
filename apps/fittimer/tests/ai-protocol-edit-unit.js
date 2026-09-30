@@ -72,6 +72,49 @@ function need(cond, msg){
   need(FitAIProtocol.validateResponse('program.modify', prog).ok === true, 'program edit keeping an old ceiling-less exercise passes');
 }
 
+/* ---- double progression в новых AI-ответах должна быть полным циклом:
+   диапазон растёт целиком до потолка верхней границы, затем растёт вес ---- */
+{
+  const valid = 'УПРАЖНЕНИЕ: Жим гантелей\nФОРМАТ: повторения и вес\nЗНАЧЕНИЕ: 8-10\nВЕС: 10\nПОДХОДЫ: 3\nОТДЫХ: 60\n'
+    + 'УСЛОЖНЯТЬ: да\nШАГ ПОВТОРОВ: 1\nШАГ ВЕСА: 2\nПОТОЛОК ПОВТОРОВ: 20\nПОТОЛОК ВЕСА: 30\nПРИ ПОТОЛКЕ: да';
+  need(FitAIProtocol.validateResponse('exercise.create', valid).ok === true,
+    'new double progression with 8-10 → ... → 18-20 → +weight passes');
+
+  const noRepStep = valid.replace('ШАГ ПОВТОРОВ: 1', 'ШАГ ПОВТОРОВ: 0');
+  const vr = FitAIProtocol.validateResponse('exercise.create', noRepStep);
+  need(vr.ok === false && vr.missing.some(m => /ШАГ ПОВТОРОВ/.test(m)),
+    'new double progression rejects zero rep step');
+
+  const noWeightStep = valid.replace('ШАГ ВЕСА: 2', 'ШАГ ВЕСА: 0');
+  const vw = FitAIProtocol.validateResponse('exercise.create', noWeightStep);
+  need(vw.ok === false && vw.missing.some(m => /ШАГ ВЕСА/.test(m)),
+    'new double progression rejects zero weight step');
+
+  const lowRepCeiling = valid.replace('ПОТОЛОК ПОВТОРОВ: 20', 'ПОТОЛОК ПОВТОРОВ: 10');
+  const vc = FitAIProtocol.validateResponse('exercise.create', lowRepCeiling);
+  need(vc.ok === false && vc.missing.some(m => /ПОТОЛОК ПОВТОРОВ/.test(m)),
+    'new double progression rejects rep ceiling at the starting upper bound');
+
+  const noWeightCeiling = valid.replace('\nПОТОЛОК ВЕСА: 30', '');
+  const vm = FitAIProtocol.validateResponse('exercise.create', noWeightCeiling);
+  need(vm.ok === false && vm.missing.some(m => /ПОТОЛОК ВЕСА/.test(m)),
+    'new double progression requires a weight ceiling');
+
+  // Старые данные могут быть неполными: modify остаётся совместимым, чтобы узкая
+  // правка существующей программы не блокировалась новым create-validator.
+  const legacy = valid.replace('\nПОТОЛОК ВЕСА: 30', '').replace('ШАГ ПОВТОРОВ: 1', 'ШАГ ПОВТОРОВ: 0');
+  need(FitAIProtocol.validateResponse('exercise.modify', legacy).ok === true,
+    'legacy double progression remains editable without create-only validation');
+}
+{
+  const prog = 'ПРОГРАММА: Т\n\nДЕНЬ: \nКРУГИ: 1\n\n'
+    + 'УПРАЖНЕНИЕ: Жим гантелей\nФОРМАТ: повторения и вес\nЗНАЧЕНИЕ: 8-10\nВЕС: 10\nПОДХОДЫ: 3\nОТДЫХ: 60\n'
+    + 'ШАГ ПОВТОРОВ: 0\nШАГ ВЕСА: 2\nПОТОЛОК ПОВТОРОВ: 20\nПОТОЛОК ВЕСА: 30\nПРИ ПОТОЛКЕ: да';
+  const v = FitAIProtocol.validateResponse('program.create', prog);
+  need(v.ok === false && v.missing.some(m => /ШАГ ПОВТОРОВ/.test(m)),
+    'program.create applies double-progression validation to every exercise');
+}
+
 /* ---- carryExerciseFields: ответ ИИ используется как есть, добавляются только
    недостающие описательные поля из исходника ---- */
 {
