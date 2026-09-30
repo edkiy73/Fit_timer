@@ -11,6 +11,7 @@ import { COURSE_STAGES, stageNameKey, type CourseStage } from './course-stages';
 import { localizedText, nodeMinutes, nodeTopic } from './today-model';
 import { Icon, type IconName } from './icons';
 import { Sheet } from './sheet';
+import { CoursePicker } from './active-course';
 
 export type CourseMapStatus=
   |'complete'
@@ -215,6 +216,7 @@ export function CourseMapView({
           <h2 id="course-map-title">{t('courseMap.title')}</h2>
           {state.fromCache&&<span className="today-badge">{t('today.offline')}</span>}
         </div>
+        <CoursePicker currentId={state.set.id} />
       </header>
 
       {groups.length>1&&(

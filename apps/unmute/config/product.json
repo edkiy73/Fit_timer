@@ -37,6 +37,10 @@
     {
       "sku": "course.general-foundation",
       "title": "General Foundation"
+    },
+    {
+      "sku": "course.a1-starter",
+      "title": "A1: First steps"
     }
   ],
   "features": {

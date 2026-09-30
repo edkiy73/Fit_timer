@@ -2,6 +2,8 @@
 import fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { parseLegacySource,buildCourseSet,buildLexicon,validateImport } from '../lib/legacy-import.mjs';
+import { auditLexicalCoverage } from '../lib/lexicon-coverage.mjs';
+import { buildA1StarterCourse } from '../lib/a1-starter-course.mjs';
 
 const LEGACY_SOURCE_SHA='011572be908d64a1e092e63a821e407d85753205';
 const LEGACY_SOURCE_URL='https://raw.githubusercontent.com/edkiy73/English/'+LEGACY_SOURCE_SHA+'/index.html';
@@ -61,6 +63,14 @@ if(coverage.missingSurfaces||coverage.ambiguousSurfaces){
   process.exit(1);
 }
 createRequire(import.meta.url)('../lib/lexicon-store.js').validateLexicon(lexicon);
+
+// The small A1 course shares this lexicon: keep it publishable too.
+const a1Coverage=auditLexicalCoverage(buildA1StarterCourse(),lexicon);
+if(a1Coverage.missingSurfaces||a1Coverage.ambiguousSurfaces){
+  console.error('A1 course lexical coverage incomplete: missing '+a1Coverage.missing.map(item=>item.surface).join(', ')
+    +'; ambiguous '+a1Coverage.ambiguous.map(item=>item.surface).join(', '));
+  process.exit(1);
+}
 
 if(args.dryRun)process.exit(0);
 

@@ -7,6 +7,7 @@ import { appDocs, syncNow } from './sync';
 import { patchSettings, readSettings } from './settings';
 import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
 import { LearnerCourseProvider } from './course-runtime';
+import { useActiveCourseId } from './active-course';
 import { TodayScreen } from './today';
 import { NodeRunnerScreen } from './learn';
 import { ReviewScreen } from './review';
@@ -20,7 +21,6 @@ import { TabBar } from './tab-bar';
 import { MeScreen } from './me-screen';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
-const DEFAULT_COURSE_SET = 'general-foundation';
 
 function Localized({children}: {children: ReactNode}){
   return <I18nProvider dictionaries={dictionaries} config={i18nConfig} storageKey={LOCALE_KEY}>{children}</I18nProvider>;
@@ -63,15 +63,21 @@ function SettingsSync(){
   return null;
 }
 
+/** Several courses can be published; the learner's choice lives in the synced settings. */
+function ActiveCourse({children}: {children: ReactNode}){
+  const setId = useActiveCourseId();
+  return <LearnerCourseProvider setId={setId}>{children}</LearnerCourseProvider>;
+}
+
 function Root(){
   return (
     <Localized>
       <AuthProvider client={authClient}>
         <SettingsSync />
         <LexiconProvider>
-          <LearnerCourseProvider setId={DEFAULT_COURSE_SET}>
+          <ActiveCourse>
             <Outlet />
-          </LearnerCourseProvider>
+          </ActiveCourse>
         </LexiconProvider>
       </AuthProvider>
     </Localized>

@@ -73,4 +73,12 @@ describe('UnMute settings',()=>{
       onboardingDoneAt:'2026-09-29T10:00:00.000Z'
     });
   });
+  it('keeps the most recently chosen course across devices',()=>{
+    const older={id:'general-foundation',changedAt:'2026-09-29T10:00:00.000Z'};
+    const newer={id:'a1-starter',changedAt:'2026-09-30T10:00:00.000Z'};
+    expect(mergeSettings({activeCourse:older},{activeCourse:newer}).activeCourse).toEqual(newer);
+    expect(mergeSettings({activeCourse:newer},{activeCourse:older}).activeCourse).toEqual(newer);
+    expect(mergeSettings({},{}).activeCourse).toBeUndefined();
+    expect(parseSettings(JSON.stringify({activeCourse:{id:'',changedAt:'x'}})).activeCourse).toBeUndefined();
+  });
 });

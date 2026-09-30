@@ -7,10 +7,28 @@ export interface NotificationSettings {
   changedAt:string;
 }
 
+/** The course the learner is taking now (several published courses can exist). */
+export interface ActiveCourseSetting {
+  id:string;
+  changedAt:string;
+}
+
 export interface UnMuteSettings {
   locale?:string;
   onboardingDoneAt?:string;
   notifications?:NotificationSettings;
+  activeCourse?:ActiveCourseSetting;
+}
+
+export const DEFAULT_COURSE_ID='general-foundation';
+
+function parseActiveCourse(value:unknown):ActiveCourseSetting|undefined{
+  if(!value||typeof value!=='object'||Array.isArray(value))return undefined;
+  const source=value as Record<string,unknown>;
+  const id=typeof source.id==='string'?source.id.trim().toLowerCase():'';
+  if(!/^[a-z0-9][a-z0-9._-]{0,79}$/.test(id))return undefined;
+  if(typeof source.changedAt!=='string'||!Number.isFinite(Date.parse(source.changedAt)))return undefined;
+  return {id,changedAt:source.changedAt};
 }
 
 export const DEFAULT_NOTIFICATION_SETTINGS:NotificationSettings={
@@ -61,6 +79,8 @@ export function parseSettings(raw:string|null):UnMuteSettings{
     }
     const notifications=parseNotificationSettings(source.notifications);
     if(notifications)result.notifications=notifications;
+    const activeCourse=parseActiveCourse(source.activeCourse);
+    if(activeCourse)result.activeCourse=activeCourse;
     return result;
   }catch{
     return {};
@@ -89,6 +109,12 @@ export function mergeSettings(
   const notifications=latestNotifications(local.notifications,remote.notifications);
   if(notifications)result.notifications=notifications;
   else delete result.notifications;
+
+  const activeCourse=[local.activeCourse,remote.activeCourse]
+    .filter((value):value is ActiveCourseSetting=>Boolean(value))
+    .sort((a,b)=>(Date.parse(b.changedAt)||0)-(Date.parse(a.changedAt)||0))[0];
+  if(activeCourse)result.activeCourse=activeCourse;
+  else delete result.activeCourse;
 
   return result;
 }
