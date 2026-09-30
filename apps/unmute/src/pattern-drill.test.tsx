@@ -24,7 +24,8 @@ const activity:Extract<Activity,{type:'pattern-drill'}>={
     {
       id:'pattern.present.item-1',
       prompt:{ru:'Я работаю дома.'},
-      answer:{accepted:['I work at home.'],nearMiss:true,caseSensitive:false}
+      answer:{accepted:['I work at home.'],nearMiss:true,caseSensitive:false},
+      explanation:{ru:'После I глагол без окончания -s.'}
     },
     {
       id:'pattern.present.item-2',
@@ -106,6 +107,8 @@ describe('pattern drill',()=>{
     for(let i=0;i<2;i++){
       await user.click(screen.getByRole('button',{name:'Сказал'}));
       expect(screen.getByText(i===0?'I work at home.':'She works here.')).toBeTruthy();
+      // The phrase's explanation shows with the answer; phrases without one show none.
+      expect(Boolean(screen.queryByText('После I глагол без окончания -s.'))).toBe(i===0);
       await user.click(screen.getByRole('button',{name:'Сказал так же'}));
     }
 

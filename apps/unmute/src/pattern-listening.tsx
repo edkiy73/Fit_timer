@@ -212,6 +212,9 @@ export function PatternListeningView({
             <span>{isCorrect?t('listening.correctHint'):t('listening.incorrectHint')}</span>
           </div>
           <div className="drill-target"><LexiconText text={target} refs={activity.lexiconRefs} /></div>
+          {item?.explanation&&(
+            <p className="drill-explanation"><LexiconText text={localized(item.explanation,locale)} refs={activity.lexiconRefs} /></p>
+          )}
           <div className="learn-hint"><LexiconText text={correctLabel} refs={activity.lexiconRefs} /></div>
           <button className="primary-button" type="button" onClick={next}>
             {pos+1<items.length?t('learn.next'):t('learn.finish')}

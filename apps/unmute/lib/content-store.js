@@ -145,6 +145,7 @@ function validateActivity(activity){
       for(const item of activity.items){
         if(!item || !cleanId(item.id) || !isTextMap(item.prompt)) throw new Error(`bad_pattern_item:${id}`);
         validateAnswer(item.answer,id);
+        if(item.explanation!==undefined && !isTextMap(item.explanation)) throw new Error(`bad_pattern_item_explanation:${id}`);
       }
       break;
     case 'dialogue':

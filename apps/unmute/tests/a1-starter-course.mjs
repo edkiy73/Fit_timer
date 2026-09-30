@@ -28,4 +28,9 @@ for(const activity of course.activities){
   if(activity.type!=='choice' && activity.type!=='translation') continue;
   assert.ok(activity.explanation?.ru && activity.explanation?.en,activity.id+' has an explanation');
 }
+// Every phrase in a drill says why it is built that way.
+for(const activity of course.activities){
+  if(activity.type!=='pattern-drill') continue;
+  for(const item of activity.items) assert.ok(item.explanation?.ru && item.explanation?.en,item.id+' has an explanation');
+}
 console.log('a1 starter course ok');

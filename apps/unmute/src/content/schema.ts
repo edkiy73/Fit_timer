@@ -74,6 +74,8 @@ export const activitySchema = z.discriminatedUnion('type', [
       id: idSchema,
       prompt: localizedTextSchema,
       answer: answerCheckSchema,
+      /** Why the phrase is built this way; shown with the answer. */
+      explanation: localizedTextSchema.optional(),
     })).min(1),
   }),
   activityBaseSchema.extend({
