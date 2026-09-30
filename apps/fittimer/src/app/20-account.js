@@ -9,17 +9,49 @@ import { SCHEMA_VERSION, SYNC, connectAccountSync, currentUser, hasMeaningfulLoc
   renderUsers, saveIdentity, saveUsers, setCurrentUserShared, setDataSyncAccountHooks, setUsersShared, showSyncState,
   switchUser, syncState, users, validAge
 } from './10-data-sync.js';
-import { NAME_MAX, clampLine, nextProfileName } from './30-progress-media.js';
 import { API_BASE, ageError, apiPost, clients, forgetMe, loadTrainer, mailErrText, normHandle,
   saveClients, saveTrainer, setTrainerShared, syncGeminiBtns, trainer
 } from './40-programs-ai.js';
-import { renderTrainerCard } from './50-trainer-catalog.js';
-import { esc } from './70-workout.js';
-import { applyThemeFor, themeOf } from './80-platform.js';
-import { applyAudioFromUser, readTimings, syncRemotePushRegistration, unregisterRemotePushServer } from './90-events.js';
 
 /* ================= РЕДАКТОР ПРОФИЛЯ ================= */
 export let uDraft = null;
+
+let progressAccountHooks = {
+  getNameMax: () => 80,
+  clampLine: v => String(v == null ? '' : v).trim(),
+  nextProfileName: () => t('profile.defaultName')
+};
+export function setAccountProgressHooks(hooks = {}){
+  progressAccountHooks = {...progressAccountHooks, ...hooks};
+}
+
+let trainerCatalogAccountHooks = { renderTrainerCard: () => {} };
+export function setAccountTrainerCatalogHooks(hooks = {}){
+  trainerCatalogAccountHooks = {...trainerCatalogAccountHooks, ...hooks};
+}
+
+let workoutAccountHooks = { esc: v => String(v == null ? '' : v) };
+export function setAccountWorkoutHooks(hooks = {}){
+  workoutAccountHooks = {...workoutAccountHooks, ...hooks};
+}
+
+let platformAccountHooks = {
+  applyThemeFor: () => {},
+  themeOf: () => 'system'
+};
+export function setAccountPlatformHooks(hooks = {}){
+  platformAccountHooks = {...platformAccountHooks, ...hooks};
+}
+
+let eventAccountHooks = {
+  applyAudioFromUser: () => {},
+  readTimings: () => {},
+  syncRemotePushRegistration: async () => {},
+  unregisterRemotePushServer: async () => {}
+};
+export function setAccountEventHooks(hooks = {}){
+  eventAccountHooks = {...eventAccountHooks, ...hooks};
+}
 // текущее состояние профиля для сравнения
 function userState(){
   if(!uDraft) return null;
@@ -32,7 +64,7 @@ export function userDirty(){ return isChanged('user', userState()); }
 
 export function openUserEdit(id = null){
   // новый профиль сразу назван: пустое поле «Имя» — это опять анкета, только в другом месте
-  const u = id ? users.find(x => x.id === id) : appIdentity.createProfile(nextProfileName());
+  const u = id ? users.find(x => x.id === id) : appIdentity.createProfile(progressAccountHooks.nextProfileName());
   uDraft = JSON.parse(JSON.stringify(u));
   $('ueTitle').textContent = id ? t('profile.title') : t('profile.new');
   $('ueName').value = profileDisplayName(uDraft);
@@ -62,22 +94,22 @@ export function syncUserForm(){
   // «женский» уходил в запрос к ИИ как настоящий ответ
   $('ueGenderF').classList.toggle('act', uDraft.gender === 'f');
   $('ueGenderM').classList.toggle('act', uDraft.gender === 'm');
-  const th = themeOf(uDraft);
+  const th = platformAccountHooks.themeOf(uDraft);
   document.querySelectorAll('#ueThemeSeg button').forEach(b => b.classList.toggle('act', b.dataset.theme === th));
   const loc = profileLocalePreference(uDraft);
   document.querySelectorAll('#ueLocaleSeg button').forEach(b => b.classList.toggle('act', b.dataset.locale === loc));
   // аватарка: фото, либо первая буква имени, либо иконка
   const nm = (uDraft.name || '').trim();
   $('uePhotoPrev').innerHTML = uDraft.photo
-    ? `<img src="${esc(uDraft.photo)}" alt="">`
+    ? `<img src="${workoutAccountHooks.esc(uDraft.photo)}" alt="">`
     : (nm ? `<span class="ava-let">${nm[0].toUpperCase()}</span>` : icon('camera'));
 }
 export async function saveUser(){
   // maxlength сторожит только набор с клавиатуры — вставка и перенос данных мимо него
-  uDraft.name = clampLine($('ueName').value, NAME_MAX);
+  uDraft.name = progressAccountHooks.clampLine($('ueName').value, progressAccountHooks.getNameMax());
   uDraft.age = validAge($('ueAge').value);
   uDraft.syncAt = new Date().toISOString();
-  readTimings();
+  eventAccountHooks.readTimings();
   if(!uDraft.name){ appAlert(t('profile.nameRequired')); return; }
   // Пол и возраст в самом профиле необязательны. Они становятся обязательными
   // только перед AI-генерацией, где askWho() отдельно запрашивает недостающие данные.
@@ -93,8 +125,8 @@ export async function saveUser(){
     await saveUsers();
     if(uDraft.id === currentUser){
       await setAppLocale(profileLocalePreference(uDraft), {persist:false});
-      applyAudioFromUser(uDraft);
-      applyThemeFor(uDraft);
+      eventAccountHooks.applyAudioFromUser(uDraft);
+      platformAccountHooks.applyThemeFor(uDraft);
     }
     renderUsers();
     if(account && account.email) connectAccountSync().catch(()=>{});
@@ -808,7 +840,7 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   await saveAccount();
   await saveKnown();
   if(identity){ identity.email = email; await saveIdentity(); }
-  if(typeof syncRemotePushRegistration === 'function') syncRemotePushRegistration(false).catch(()=>{});
+  eventAccountHooks.syncRemotePushRegistration(false).catch(()=>{});
   if(switchingAccount) await loadTrainer();
 
   if(r.handle){
@@ -829,7 +861,7 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   }
 
   renderPlan(); renderPremium(); syncGeminiBtns();
-  renderTrainerCard(); syncDockTabs();
+  trainerCatalogAccountHooks.renderTrainerCard(); syncDockTabs();
   // Вход с экрана знакомства: профиля на телефоне ещё нет, и без него синхронизация
   // не запускалась. Потом появлялся пустой «Мой профиль», уезжал в аккаунт отдельным
   // профилем и оставался активным. Заводим его до синхронизации — она заменит его
@@ -957,7 +989,7 @@ export async function signOut(){
     {confirm: true, okText: t('account.signOut'), cancelText: t('common.cancel')});
   if(!ok) return;
   try{ if(SYNC.adapter) await Promise.all([SYNC.push(), pushAccountDocs()]); }catch(e){}
-  try{ if(typeof unregisterRemotePushServer === 'function') await unregisterRemotePushServer(); }catch(e){}
+  try{ await eventAccountHooks.unregisterRemotePushServer(); }catch(e){}
   SYNC.adapter = null;
   rememberAccount();
   await saveKnown();
@@ -966,7 +998,7 @@ export async function signOut(){
   if(identity){ identity.email = null; await saveIdentity(); }
   await loadTrainer();
   renderPlan(); renderPremium(); syncGeminiBtns();
-  renderTrainerCard(); syncDockTabs();
+  trainerCatalogAccountHooks.renderTrainerCard(); syncDockTabs();
   goTab('scrAccount');
 }
 
