@@ -225,14 +225,12 @@ export function startWorkout(fromIdx, elapsed, options){
   state.globalStart = 0;
   // Результат каждого рабочего шага хранится отдельно: «готово» и «пропустить»
   // больше не являются одним и тем же переходом вперёд.
-  state.stepOutcomes = (opts.outcomes && typeof opts.outcomes === 'object')
-    ? {...opts.outcomes}
-    : {};
+  state.stepOutcomes = normalizeWorkoutOutcomes(opts.outcomes, state.steps);
   // Совместимость со старыми сохранёнными сессиями: раньше результата по подходам
   // не было, поэтому пройденные до точки продолжения шаги считаем выполненными.
   if(state.resumeElapsed > 0 && !Object.keys(state.stepOutcomes).length){
     state.steps.slice(0, state.stepIdx).forEach((step, i) => {
-      if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
+      if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step)] = 'done';
     });
   }
   show('scrWork');
@@ -647,20 +645,67 @@ export function refreshDetailsFade(){
   setShown('scrollCue', below > 24);
 }
 
-export function workoutStepKey(step, index){
+// Результат рабочего шага привязан к самому шагу, а не к его абсолютной позиции
+// в state.steps. Вставили/убрали отдых перед упражнением — индекс сдвинулся, но
+// «Готово» у уже сделанного подхода всё равно должно остаться на нём.
+export function workoutStepKey(step){
   if(!step || step.phase !== 'work') return '';
   const ex = String(step.exId || step.exName || step.title || 'exercise');
+  const round = Number(step.round) || 0;
+  const setNo = Number(step.setNo) || 1;
+  const side = Number(step.side) || 0;
+  return [ex, round, setNo, side].join('|');
+}
+
+function legacyWorkoutStepKey(step, index, identity){
+  if(!step || step.phase !== 'work') return '';
+  const ex = String(identity || step.exId || step.exName || step.title || 'exercise');
   const round = Number(step.round) || 0;
   const setNo = Number(step.setNo) || 1;
   const side = Number(step.side) || 0;
   return [ex, round, setNo, side, Math.max(0, Number(index) || 0)].join('|');
 }
 
+// Одноразовая совместимость с уже сохранёнными session предыдущих версий:
+// старый ключ заканчивался абсолютным index. Переводим такие outcomes в новый
+// стабильный формат при каждом старте; следующий autosave уже запишет только новые
+// ключи. Дополнительно ищем старый индекс по префиксу — это спасает сессию, если
+// перед её шагом успели вставить/убрать отдых и индекс уже не совпадает.
+export function normalizeWorkoutOutcomes(value, steps){
+  const src = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+  const out = {};
+  (steps || []).forEach((step, index) => {
+    if(!step || step.phase !== 'work') return;
+    const key = workoutStepKey(step);
+    const identities = [...new Set([
+      step.exId,
+      step.exName,
+      step.title
+    ].map(v => String(v || '')).filter(Boolean))];
+    let outcome = src[key];
+    if(outcome !== 'done' && outcome !== 'skipped'){
+      for(const identity of identities){
+        const exact = src[legacyWorkoutStepKey(step, index, identity)];
+        if(exact === 'done' || exact === 'skipped'){ outcome = exact; break; }
+
+        const prefix = legacyWorkoutStepKey(step, 0, identity).replace(/\|0$/, '|');
+        const matches = Object.keys(src).filter(k =>
+          k.startsWith(prefix) && /^\d+$/.test(k.slice(prefix.length))
+            && (src[k] === 'done' || src[k] === 'skipped')
+        );
+        if(matches.length === 1){ outcome = src[matches[0]]; break; }
+      }
+    }
+    if(outcome === 'done' || outcome === 'skipped') out[key] = outcome;
+  });
+  return out;
+}
+
 function markCurrentStep(outcome){
   const step = state.steps && state.steps[state.stepIdx];
   if(!step || step.phase !== 'work') return;
   state.stepOutcomes = state.stepOutcomes || {};
-  const key = workoutStepKey(step, state.stepIdx);
+  const key = workoutStepKey(step);
   if(key) state.stepOutcomes[key] = outcome;
   if(state.stepIdx < (state.steps || []).length - 1) saveSession().catch(()=>{});
 }
@@ -930,7 +975,7 @@ export function workoutOutcomeSummary(){
       groups.set(id, g);
     }
     g.total++;
-    const outcome = (state.stepOutcomes || {})[workoutStepKey(step, index)] || '';
+    const outcome = (state.stepOutcomes || {})[workoutStepKey(step)] || '';
     if(outcome === 'done'){ g.done++; doneSteps++; }
     else if(outcome === 'skipped'){ g.skipped++; skippedSteps++; }
   });
@@ -1016,7 +1061,7 @@ function commitFinish(ctx){
   let lifted = 0;
   (state.steps || []).forEach((step, index) => {
     if(step.phase !== 'work' || !(step.weight > 0)) return;
-    if((state.stepOutcomes || {})[workoutStepKey(step, index)] !== 'done') return;
+    if((state.stepOutcomes || {})[workoutStepKey(step)] !== 'done') return;
     const reps = parseInt(String(step.reps || '').split('-')[0], 10);
     if(reps > 0) lifted += step.weight * reps;
   });
