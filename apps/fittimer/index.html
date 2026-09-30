@@ -148,7 +148,7 @@
     <div class="store-search">
       <span class="ss-ico" id="storeSearchIco"></span>
       <input type="search" id="storeQuery" maxlength="60" placeholder="Название программы" data-i18n-placeholder="store.searchPlaceholder" autocomplete="off">
-      <button type="button" class="ss-clear hidden" id="storeClear" title="Очистить" data-i18n-title="store.clearTitle"></button>
+      <button type="button" class="ss-clear hidden" id="storeClear" data-act="clearStoreSearch" title="Очистить" data-i18n-title="store.clearTitle"></button>
     </div>
 
     <!-- Фильтры были рядом чипов с прокруткой вбок: что в них есть, видно только
@@ -434,7 +434,7 @@
       <span class="mini-label" id="weightModalTitle" data-i18n="start.pickWeightTitle">Рабочий вес</span>
       <div class="field"><input type="number" id="weightModalInput" min="0" max="500" step="0.5" inputmode="decimal" placeholder="Например: 8" data-i18n-placeholder="builder.weightExample"></div>
       <p class="field-hint" data-i18n="start.pickWeightHint">Такой, чтобы последние повторения давались с усилием, но не в отказ</p>
-      <button type="button" class="btn-primary" id="weightModalDone" style="padding:15px;font-size:16px" data-i18n="finish.done">Готово</button>
+      <button type="button" class="btn-primary" id="weightModalDone" data-act="commitWeightModal" style="padding:15px;font-size:16px" data-i18n="finish.done">Готово</button>
       <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
     </div>
   </div>
@@ -851,7 +851,7 @@
     </div>
     <div class="pause-overlay">
       <div class="po-text"><span data-i18n="workout.pause">Пауза</span><span class="po-sub" data-i18n="workout.pauseSub">Таймер стоит. Описание можно читать и листать</span></div>
-      <button class="btn-resume" id="btnResume" title="Продолжить" data-i18n-title="workout.resume"></button>
+      <button class="btn-resume" id="btnResume" data-act="resumeWorkout" title="Продолжить" data-i18n-title="workout.resume"></button>
     </div>
     <div class="progress">
       <div class="labels">
@@ -1048,7 +1048,7 @@
 
     <div class="legal-list">
       <div class="legal-item">
-        <button type="button" class="legal-head" id="legalHeadPrivacy" aria-expanded="false" aria-controls="legalPrivacy">
+        <button type="button" class="legal-head" id="legalHeadPrivacy" data-act="toggleLegalSection" data-legal="privacy" aria-expanded="false" aria-controls="legalPrivacy">
           <span class="lh-ico" data-icon="shield"></span>
           <span class="lh-txt"><b data-i18n="legal.privacyTitle">Политика конфиденциальности</b><small data-i18n="legal.privacySub">Что собирается, где хранится, что уходит наружу</small></span>
           <span class="lh-chev" data-icon="chevD"></span>
@@ -1112,7 +1112,7 @@
       </div>
 
       <div class="legal-item">
-        <button type="button" class="legal-head" id="legalHeadTerms" aria-expanded="false" aria-controls="legalTerms">
+        <button type="button" class="legal-head" id="legalHeadTerms" data-act="toggleLegalSection" data-legal="terms" aria-expanded="false" aria-controls="legalTerms">
           <span class="lh-ico" data-icon="doc"></span>
           <span class="lh-txt"><b data-i18n="legal.termsTitle">Пользовательское соглашение</b><small data-i18n="legal.termsSub">Что это за приложение и кто за что отвечает</small></span>
           <span class="lh-chev" data-icon="chevD"></span>
@@ -1154,7 +1154,7 @@
       </div>
 
       <div class="legal-item">
-        <button type="button" class="legal-head" id="legalHeadHealth" aria-expanded="false" aria-controls="legalHealth">
+        <button type="button" class="legal-head" id="legalHeadHealth" data-act="toggleLegalSection" data-legal="health" aria-expanded="false" aria-controls="legalHealth">
           <span class="lh-ico" data-icon="heart"></span>
           <span class="lh-txt"><b data-i18n="legal.healthTitle">Здоровье и безопасность</b><small data-i18n="legal.healthSub">Когда нужно сначала к врачу и когда остановиться</small></span>
           <span class="lh-chev" data-icon="chevD"></span>
@@ -1399,9 +1399,9 @@
       <div class="cb-head"><p class="cb-title" data-i18n="settings.handsfree">Управление без рук</p></div>
       <div class="hf-block">
         <div class="hf-seg" id="hfSeg">
-          <button type="button" data-hf="off" class="act" data-i18n="common.off">Выкл</button>
-          <button type="button" data-hf="voice" data-i18n="common.voice">Голос</button>
-          <button type="button" data-hf="headset" data-i18n="common.headset">Гарнитура</button>
+          <button type="button" data-act="setHandsFreeMode" data-hf="off" class="act" data-i18n="common.off">Выкл</button>
+          <button type="button" data-act="setHandsFreeMode" data-hf="voice" data-i18n="common.voice">Голос</button>
+          <button type="button" data-act="setHandsFreeMode" data-hf="headset" data-i18n="common.headset">Гарнитура</button>
         </div>
         <p class="field-hint" id="hfHint"></p>
 
@@ -1411,10 +1411,10 @@
             <div class="voice-pack-status">
               <span id="voicePackStatus" data-i18n="common.checking">Проверяем…</span>
               <div class="voice-pack-progress hidden" id="voicePackProgress"><i id="voicePackProgressBar"></i></div>
-              <button type="button" class="btn-secondary voice-pack-btn" id="btnVoicePack" data-i18n="common.download">Скачать</button>
+              <button type="button" class="btn-secondary voice-pack-btn" id="btnVoicePack" data-act="downloadVoicePack" data-i18n="common.download">Скачать</button>
             </div>
             <!-- проверка без тренировки: сказать «готово» с привычного расстояния и увидеть, что услышал телефон -->
-            <button type="button" class="hf-commands-link hidden" id="btnVoiceTest" data-i18n="voicetest.open">Проверить, как слышит</button>
+            <button type="button" class="hf-commands-link hidden" id="btnVoiceTest" data-act="openVoiceTest" data-i18n="voicetest.open">Проверить, как слышит</button>
           </div>
 
           <div class="hf-inline-commands">
@@ -1460,7 +1460,7 @@
             <label data-i18n="settings.profileName">Имя в профиле</label>
             <input type="text" id="coachName" maxlength="40" placeholder="Как тебя представить" data-i18n-placeholder="trainer.presentPlaceholder">
           </div>
-          <button type="button" class="ava-pick" id="coachPhotoBtn" title="Фото тренера" data-i18n-title="trainer.photoTitle">
+          <button type="button" class="ava-pick" id="coachPhotoBtn" data-act="pickCoachPhoto" title="Фото тренера" data-i18n-title="trainer.photoTitle">
             <span id="coachPhotoPrev"></span>
           </button>
         </div>
@@ -1567,19 +1567,19 @@
         <div class="prefs">
           <div class="pref-row">
             <span><span data-i18n="settings.notifWorkouts">Тренировки</span><small data-i18n="settings.notifWorkoutsSub">Расписание, начало и пропущенные тренировки</small></span>
-            <button type="button" class="switch" id="notifWorkouts" role="switch" aria-checked="true"></button>
+            <button type="button" class="switch" id="notifWorkouts" data-act="toggleNotificationPref" data-pref="workouts" role="switch" aria-checked="true"></button>
           </div>
           <div class="pref-row">
             <span><span data-i18n="settings.notifTrainer">Тренер и программы</span><small data-i18n="settings.notifTrainerSub">Изменения от тренера и статусы программ в каталоге</small></span>
-            <button type="button" class="switch" id="notifTrainer" role="switch" aria-checked="true"></button>
+            <button type="button" class="switch" id="notifTrainer" data-act="toggleNotificationPref" data-pref="trainer" role="switch" aria-checked="true"></button>
           </div>
           <div class="pref-row">
             <span><span data-i18n="settings.notifProgress">Достижения и прогресс</span><small data-i18n="settings.notifProgressSub">Важные этапы прогрессии и достижения</small></span>
-            <button type="button" class="switch" id="notifProgress" role="switch" aria-checked="true"></button>
+            <button type="button" class="switch" id="notifProgress" data-act="toggleNotificationPref" data-pref="progress" role="switch" aria-checked="true"></button>
           </div>
           <div class="pref-row">
             <span><span data-i18n="settings.notifOffers">Предложения и новости</span><small data-i18n="settings.notifOffersSub">Редкие новости приложения и предложения Premium</small></span>
-            <button type="button" class="switch" id="notifOffers" role="switch" aria-checked="true"></button>
+            <button type="button" class="switch" id="notifOffers" data-act="toggleNotificationPref" data-pref="offers" role="switch" aria-checked="true"></button>
           </div>
         </div>
       </div>
@@ -1589,11 +1589,11 @@
         <div class="prefs">
           <div class="pref-row">
             <span><span data-i18n="settings.emailNews">Новости и обновления</span><small data-i18n="settings.emailNewsSub">Крупные обновления и новые возможности Fit Timer</small></span>
-            <button type="button" class="switch" id="emailNews" role="switch" aria-checked="false"></button>
+            <button type="button" class="switch" id="emailNews" data-act="toggleNotificationPref" data-pref="emailNews" role="switch" aria-checked="false"></button>
           </div>
           <div class="pref-row">
             <span><span data-i18n="settings.emailOffers">Акции и Premium</span><small data-i18n="settings.emailOffersSub">Редкие скидки, акции и предложения подписки</small></span>
-            <button type="button" class="switch" id="emailOffers" role="switch" aria-checked="false"></button>
+            <button type="button" class="switch" id="emailOffers" data-act="toggleNotificationPref" data-pref="emailOffers" role="switch" aria-checked="false"></button>
           </div>
         </div>
         <p class="field-hint" data-i18n="settings.emailServiceNote">Коды входа, чеки и важные сообщения об аккаунте могут приходить независимо от этих настроек.</p>
@@ -1842,7 +1842,7 @@
       <div class="modal-card hf-modal-card">
         <div id="hfModalContent" class="hf-modal-scroll"></div>
         <div class="hf-modal-actions">
-          <button class="modal-btn primary" id="btnHfApply" data-i18n="common.apply">Применить</button>
+          <button class="modal-btn primary" id="btnHfApply" data-act="applyHandsFree" data-i18n="common.apply">Применить</button>
           <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
         </div>
       </div>
@@ -2001,8 +2001,8 @@
         <div class="pm-crown" data-icon="fingerprint"></div>
         <h3 class="pm-title" data-i18n="lock.title">Вход в Fit Timer</h3>
         <p class="pm-lead" id="lockMsg" data-i18n="lock.prompt">Приложи палец или посмотри на камеру — и продолжим.</p>
-        <button class="btn-primary" id="lockGo" style="padding:15px;font-size:16px" data-i18n="lock.unlock">Разблокировать</button>
-        <button type="button" class="link-btn" id="lockMail" data-i18n="lock.email">Войти по почте</button>
+        <button class="btn-primary" id="lockGo" data-act="unlockApp" style="padding:15px;font-size:16px" data-i18n="lock.unlock">Разблокировать</button>
+        <button type="button" class="link-btn" id="lockMail" data-act="unlockByEmail" data-i18n="lock.email">Войти по почте</button>
       </div>
     </div>
 
