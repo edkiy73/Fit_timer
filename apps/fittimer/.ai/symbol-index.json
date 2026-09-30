@@ -777,8 +777,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1824,
-      "chars": 81883,
+      "lines": 1869,
+      "chars": 83960,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -818,10 +818,12 @@
         "initWorkout",
         "lastWorkStep",
         "launch",
+        "legacyWorkoutStepKey",
         "markCurrentStep",
         "maybeRequestAppReview",
         "nextNativeWorkStep",
         "nextStep",
+        "normalizeWorkoutOutcomes",
         "openSwapHint",
         "paintPause",
         "playFinishFx",
