@@ -2,6 +2,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  type CSSProperties,
   type ReactNode
 } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -12,6 +13,7 @@ import { useLearnerCourseRuntime } from './course-runtime';
 import { appDocs, SETTINGS_DOC } from './sync';
 import { patchSettings, readSettings } from './settings';
 import { trackOnboardingComplete } from './observability';
+import { Icon, type IconName } from './icons';
 
 export const ONBOARDING_KEY='unmute.onboarding.v1';
 const SETTINGS_QUERY_KEY=['unmute-settings'] as const;
@@ -53,37 +55,38 @@ export function OnboardingView({
 }){
   const {t}=useI18n();
 
+  const points:{icon:IconName;title:string;text:string}[]=[
+    {icon:'mic',title:t('onboarding.speakTitle'),text:t('onboarding.speakText')},
+    {icon:'chat',title:t('onboarding.wordsTitle'),text:t('onboarding.wordsText')},
+    {icon:'review',title:t('onboarding.reviewTitle'),text:t('onboarding.reviewText')}
+  ];
+
   return (
     <section className="onboarding" aria-labelledby="onboarding-title">
-      <div className="onboarding-card">
-        <div className="eyebrow">{t('onboarding.eyebrow')}</div>
+      <div className="onboarding-glow" aria-hidden="true" />
+      {/* "Turning the voice on": a quiet sound wave, frozen under reduced motion. */}
+      <div className="voice-wave" aria-hidden="true">
+        {Array.from({length:9},(_,bar)=><span key={bar} style={{'--bar':bar} as CSSProperties} />)}
+      </div>
+      <div className="onboarding-body">
+        <div className="screen-kicker">{t('onboarding.eyebrow')}</div>
         <h2 id="onboarding-title">{t('onboarding.title')}</h2>
         <p className="onboarding-lead">{t('onboarding.lead')}</p>
 
-        <div className="onboarding-points">
-          <article>
-            <span className="onboarding-number" aria-hidden="true">1</span>
-            <div>
-              <strong>{t('onboarding.speakTitle')}</strong>
-              <p>{t('onboarding.speakText')}</p>
-            </div>
-          </article>
-          <article>
-            <span className="onboarding-number" aria-hidden="true">2</span>
-            <div>
-              <strong>{t('onboarding.wordsTitle')}</strong>
-              <p>{t('onboarding.wordsText')}</p>
-            </div>
-          </article>
-          <article>
-            <span className="onboarding-number" aria-hidden="true">3</span>
-            <div>
-              <strong>{t('onboarding.reviewTitle')}</strong>
-              <p>{t('onboarding.reviewText')}</p>
-            </div>
-          </article>
-        </div>
+        <ul className="onboarding-points">
+          {points.map((point,index)=>(
+            <li key={point.icon} style={{'--i':index+1} as CSSProperties}>
+              <span className="onboarding-icon" aria-hidden="true"><Icon name={point.icon} size={22} /></span>
+              <div>
+                <strong>{point.title}</strong>
+                <p>{point.text}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
 
+      <div className="onboarding-actions">
         <button
           className="primary-button onboarding-start"
           type="button"

@@ -63,7 +63,7 @@ body{margin:0;min-height:100vh;background:var(--bg,#FBF7F2);-webkit-tap-highligh
 button,input,select,textarea{font:inherit}
 h1,h2,h3{letter-spacing:-.01em}
 h2{margin:0 0 8px;font-weight:800}
-.app{width:min(100%,720px);margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 20px) 16px calc(var(--tabbar-h) + var(--safe-bottom) + 40px)}
+.app{width:min(100%,720px);margin:0 auto;overflow-x:clip;padding:calc(env(safe-area-inset-top,0px) + 20px) 16px calc(var(--tabbar-h) + var(--safe-bottom) + 40px)}
 .app-screen{min-height:50vh}
 .eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-tile);padding:18px}
@@ -374,22 +374,7 @@ h2{margin:0 0 8px;font-weight:800}
 }
 
 
-.onboarding{display:grid;max-width:720px;margin:0 auto;padding:8px 0 28px}
-.onboarding-card{display:grid;gap:20px;border:1px solid var(--line);border-radius:22px;padding:28px;background:var(--surface)}
-.onboarding-card h2{margin:4px 0 0;font-size:32px;line-height:1.08}
-.onboarding-lead{margin:0;max-width:58ch;color:var(--muted);font-size:16px;line-height:1.55}
-.onboarding-points{display:grid;gap:12px}
-.onboarding-points article{display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;align-items:start;border:1px solid var(--line);border-radius:14px;padding:14px}
-.onboarding-points strong{display:block;margin-bottom:4px}
-.onboarding-points p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
-.onboarding-number{display:grid;place-items:center;width:30px;height:30px;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,transparent);font-weight:900}
-.onboarding-start{width:100%}
-.onboarding-account-note{margin:0;text-align:center;color:var(--muted);font-size:12px;line-height:1.4}
 .onboarding-loading{min-height:320px;align-content:center}
-@media(max-width:520px){
-  .onboarding-card{padding:20px}
-  .onboarding-card h2{font-size:28px}
-}
 
 
 
@@ -728,3 +713,36 @@ h2{margin:0 0 8px;font-weight:800}
 .segment:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
 .danger-link{justify-self:start;color:var(--danger)}
 .secondary-button.danger{color:var(--danger)}
+
+/* Onboarding: one calm screen — warm glow, a live sound wave, three promises, action at the bottom. */
+.onboarding{position:relative;isolation:isolate;display:grid;align-content:start;gap:20px;min-height:calc(100svh - 60px);max-width:560px;margin:0 auto;padding:12px 0 0}
+.onboarding-glow{position:absolute;z-index:-1;top:-160px;right:-140px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 30%,transparent),transparent 68%);pointer-events:none}
+.voice-wave{display:flex;align-items:center;gap:6px;height:72px}
+.voice-wave span{width:8px;height:100%;border-radius:4px;background:var(--accent);transform:scaleY(.3);transform-origin:center;animation:voice 1.6s ease-in-out infinite;animation-delay:calc(var(--bar) * -140ms)}
+.voice-wave span:nth-child(odd){opacity:.7}
+@keyframes voice{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}
+.onboarding-body{display:grid;gap:14px}
+.onboarding-body h2{margin:0;font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-.02em}
+.onboarding-lead{margin:0;max-width:58ch;color:var(--muted);font-size:16px;line-height:1.55}
+.onboarding-points{display:grid;gap:10px;margin:6px 0 0;padding:0;list-style:none}
+.onboarding-points li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:start;padding:14px;border:1px solid var(--line);border-radius:var(--radius-tile);background:var(--card);animation:tile-in 420ms var(--spring) both;animation-delay:calc(var(--i,0) * 60ms)}
+.onboarding-points strong{display:block;margin-bottom:3px;font-size:16px}
+.onboarding-points p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
+.onboarding-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:22px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent-ink)}
+.onboarding-actions{position:sticky;bottom:calc(12px + var(--safe-bottom));display:grid;gap:10px;margin-top:auto;padding-top:8px}
+.onboarding-start{width:100%;box-shadow:var(--elev-2)}
+.onboarding-account-note{margin:0;text-align:center;color:var(--muted);font-size:12px;line-height:1.4}
+@media(prefers-reduced-motion:reduce){
+  .voice-wave span{animation:none;transform:scaleY(.6)}
+  .onboarding-points li{animation:none}
+}
+
+/* Access: the lifetime option leads (bigger, accent edge); Plus sits below it. */
+.access-options{grid-template-columns:1fr}
+.access-option{border-radius:var(--radius-tile);background:var(--card);padding:20px}
+.access-option-main{border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--card))}
+.access-option-main h3{font-size:24px}
+.access-tag{border-color:transparent;background:var(--surface);color:var(--muted);font-weight:800}
+.access-option-main .access-tag{background:var(--accent);color:var(--on-accent)}
+.access-note,.access-active{border-radius:var(--radius-tile);background:var(--card)}
+.access-shell .learn-back{justify-self:start;min-height:44px}
