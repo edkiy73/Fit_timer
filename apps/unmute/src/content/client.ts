@@ -2,6 +2,7 @@ import { createStorage } from '@appbase/core/storage.js';
 import { authClient } from '../auth';
 import { validateCourseSet, type CourseSet } from './schema';
 import { resolveCourseEntitlement } from '../entitlements';
+import { apiUrl } from '../api-url';
 
 export interface ContentCatalogSet {
   id: string;
@@ -47,7 +48,7 @@ async function fetchJson(url:string, init?:RequestInit): Promise<Record<string,u
 
 export async function loadCatalog(): Promise<ContentCatalog> {
   try{
-    const payload=await fetchJson('/api/content?action=catalog');
+    const payload=await fetchJson(apiUrl('/api/content?action=catalog'));
     const catalog=payload.catalog as ContentCatalog;
     if(!catalog || !Array.isArray(catalog.sets)) throw new Error('bad_catalog');
     await storage.set(CATALOG_CACHE,JSON.stringify(catalog));
@@ -66,7 +67,7 @@ export async function loadSet(id:string): Promise<{set:CourseSet; access:'full'|
   const cacheKey=`set:${safe}`;
   try{
     const headers=await authHeaders();
-    const payload=await fetchJson(`/api/content?action=set&id=${encodeURIComponent(safe)}`,{headers});
+    const payload=await fetchJson(apiUrl(`/api/content?action=set&id=${encodeURIComponent(safe)}`),{headers});
     const set=validateCourseSet(payload.set);
     const access=payload.access==='full'?'full':'preview';
     await storage.set(cacheKey,JSON.stringify({set,access}));
@@ -98,7 +99,7 @@ export async function retainLearnedActivities(
   if(!safe||!ids.length)return;
   const headers=await authHeaders();
   if(!Object.keys(headers).length)return;
-  await fetchJson('/api/content',{
+  await fetchJson(apiUrl('/api/content'),{
     method:'POST',
     headers:{'Content-Type':'application/json',...headers},
     body:JSON.stringify({

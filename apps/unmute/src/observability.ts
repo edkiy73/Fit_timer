@@ -1,12 +1,13 @@
 import { createClient } from '@appbase/core/observability.js';
 import { authClient } from './auth';
+import { apiUrl } from './api-url';
 
 declare const __APP_BUILD_ID__: string;
 
 const client = createClient({
   post: async body => {
     try{
-      const response = await fetch('/api/auth', {
+      const response = await fetch(apiUrl('/api/auth'), {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify(body)
