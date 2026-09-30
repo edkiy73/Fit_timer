@@ -34,6 +34,7 @@ export function setProgressWorkoutHooks(hooks = {}){
   workoutProgressHooks = {...workoutProgressHooks, ...hooks};
 }
 let platformProgressHooks = {
+  applyTheme: () => {},
   applySystemTheme: () => {}
 };
 export function setProgressPlatformHooks(hooks = {}){
