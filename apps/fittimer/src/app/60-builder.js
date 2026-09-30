@@ -10,7 +10,7 @@ import { DAYS, closeAllMenus, customPrograms, normPlans, planDays, savePrograms,
   setDataSyncBuilderHooks, sortPlans, toggleMenu, trackProductEvent
 } from './10-data-sync.js';
 import { LIM, clampLine, clampText, cleanLink, cleanPic, requireWho, sanitizeProgram, setProgressBuilderHooks } from './30-progress-media.js';
-import { aiWaysReset, claimProgramLink, flashDone, userForAI } from './40-programs-ai.js';
+import { aiWaysReset, claimProgramLink, flashDone, setProgramsBuilderHooks, userForAI } from './40-programs-ai.js';
 import { renderMine, setTrainerBuilderHooks, storeCountText } from './50-trainer-catalog.js';
 import { autoGrow, esc } from './70-workout.js';
 import { syncNativeNotifications } from './80-platform.js';
@@ -2222,6 +2222,44 @@ export function setPlanIdxShared(value){ planIdx = value; return planIdx; }
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initBuilder(){
+  setProgramsBuilderHooks({
+    getMaxMain: () => MAX_MAIN,
+    getMaxWarm: () => MAX_WARM,
+    msgAiEmpty: MSG_AI_EMPTY,
+    msgAiNoEx: MSG_AI_NOEX,
+    msgAiParse: MSG_AI_PARSE,
+    advanceExerciseProgression,
+    aiCreateProgramGuard,
+    aiExerciseBlocks,
+    aiPrompt,
+    carryExerciseProgress,
+    copyPrompt,
+    curPlan,
+    getDraft: () => draft,
+    ensurePs,
+    exRestAfter,
+    exSummary,
+    fillBuilder,
+    fmtKg,
+    fullAIPrompt,
+    getExProgValue,
+    getExWeight,
+    hasWeight,
+    importFromText,
+    isDualProg,
+    migrateLegacyDualRangeExercise,
+    openBuilder,
+    openExercise,
+    parseProgramText,
+    progAxis,
+    progressedRepsRange,
+    qChips,
+    renderExList,
+    setDraftShared,
+    setPlanIdxShared,
+    shrinkImage,
+    valueText
+  });
   setTrainerBuilderHooks({
     enableDrag,
     exRestAfter,
