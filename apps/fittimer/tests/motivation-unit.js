@@ -21,7 +21,10 @@ const weekDayEnd = programs.indexOf('\nfunction renderToday()', weekDayStart);
 const weekDay = programs.slice(weekDayStart, weekDayEnd);
 need(weekDayStart >= 0, 'week day popup handler is missing');
 need(weekDay.includes("(d.slots || []).forEach"), 'week day popup must render planned slots separately');
-need(weekDay.includes("openDayProgram(p.id, plans.indexOf(plan))"), 'week day popup program must open the program page');
+need(weekDay.includes("row.dataset.act = 'openDayProgram'")
+  && weekDay.includes("row.dataset.programId = p.id")
+  && weekDay.includes("row.dataset.planIdx = String(plans.indexOf(plan))"),
+  'week day popup program must open the program page');
 need(!weekDay.includes("sess-ex"), 'week day popup must not list exercises');
 need(!weekDay.includes("week.plannedExercises"), 'week day popup must not repeat a planned-exercises label');
 need(weekDay.includes("row.className = 'sess-row sess-link'"), 'week day plan must use structured session rows');
