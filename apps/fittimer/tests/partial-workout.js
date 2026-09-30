@@ -128,6 +128,84 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     override.full && !override.part && override.done >= 1 && override.partial === 0,
     JSON.stringify(override));
 
+  const streakConsistency = await page.evaluate(() => {
+    const savedPrograms = JSON.parse(JSON.stringify(customPrograms));
+    const savedHistory = JSON.parse(JSON.stringify(stats.history || []));
+    const savedBest = stats.bestStreak || 0;
+    const todayDate = new Date();
+    const yesterdayDate = new Date(todayDate);
+    yesterdayDate.setDate(todayDate.getDate() - 1);
+    const today = DAYS[(todayDate.getDay() + 6) % 7];
+    const yesterday = DAYS[(yesterdayDate.getDay() + 6) % 7];
+    const todayIso = localISO(todayDate);
+    const yesterdayIso = localISO(yesterdayDate);
+    const p = (id, days) => ({
+      id, name:id, active:true,
+      plans:[{days,rounds:1,roundRest:0,exercises:[]}]
+    });
+
+    customPrograms.splice(0, customPrograms.length,
+      p('slot-a',[today]),
+      p('slot-b',[today]),
+      p('slot-partial',[yesterday]),
+      p('extra-workout',[])
+    );
+    stats.history = [
+      {id:'sa',d:todayIso,pid:'slot-a',status:'full',sec:600},
+      {id:'sb',d:todayIso,pid:'slot-b',status:'full',sec:600},
+      // meaningful=true раньше ошибочно давал +1 к серии, хотя weekPlanInfo
+      // считает такой слот лишь закрытым частично.
+      {id:'sp',d:yesterdayIso,pid:'slot-partial',status:'partial',meaningful:true,sec:500},
+      {id:'sx',d:yesterdayIso,pid:'extra-workout',status:'full',sec:300}
+    ];
+    stats.bestStreak = 0;
+
+    const currentWeek = weekPlanInfo(todayDate);
+    const partialWeek = weekPlanInfo(yesterdayDate);
+    const streak = calcStreakInfo();
+
+    // Без расписания meaningful partial остаётся обычным днём активности —
+    // это прежняя fallback-семантика, её этой унификацией не меняем.
+    customPrograms.splice(0, customPrograms.length, p('free',[]));
+    stats.history = [{id:'free-p',d:todayIso,pid:'free',status:'partial',meaningful:true,sec:500}];
+    const noPlan = calcStreakInfo();
+
+    customPrograms.splice(0, customPrograms.length, ...savedPrograms);
+    stats.history = savedHistory;
+    stats.bestStreak = savedBest;
+
+    const todayState = currentWeek.days.find(x => x.iso === todayIso) || {};
+    const partialState = partialWeek.days.find(x => x.iso === yesterdayIso) || {};
+    return {
+      streak,
+      noPlan,
+      weekDone:todayState.done,
+      weekPlanned:todayState.planned,
+      partialClosed:partialState.closed,
+      partialDone:partialState.done,
+      partialCount:partialState.partial,
+      extra:partialWeek.extraTotal
+    };
+  });
+
+  ok('серия считает плановые слоты, поэтому две полные программы в день дают +2',
+    streakConsistency.weekPlanned === 2
+      && streakConsistency.weekDone === 2
+      && streakConsistency.streak.n === 2,
+    JSON.stringify(streakConsistency));
+  ok('meaningful partial закрывает слот, но не увеличивает серию',
+    streakConsistency.partialClosed >= 1
+      && streakConsistency.partialDone === 0
+      && streakConsistency.partialCount >= 1
+      && streakConsistency.streak.n === 2,
+    JSON.stringify(streakConsistency));
+  ok('тренировка сверх плана не увеличивает серию по плану',
+    streakConsistency.extra >= 1 && streakConsistency.streak.n === 2,
+    JSON.stringify(streakConsistency));
+  ok('без расписания meaningful partial по-прежнему считается днём активности',
+    streakConsistency.noPlan.byPlan === false && streakConsistency.noPlan.n === 1,
+    JSON.stringify(streakConsistency.noPlan));
+
   ok('без ошибок в консоли', !errs.length, errs.join(' | '));
 
   await b.close();
