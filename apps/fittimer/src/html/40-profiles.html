@@ -24,9 +24,9 @@
 
       <div class="metric-card" id="calCard">
         <div class="cal-head">
-          <button class="cal-nav" id="calPrev" title="Прошлый месяц" data-i18n-title="progress.prevMonth"></button>
+          <button class="cal-nav" id="calPrev" data-act="calendarPrev" title="Прошлый месяц" data-i18n-title="progress.prevMonth"></button>
           <b id="calTitle"></b>
-          <button class="cal-nav" id="calNext" title="Следующий месяц" data-i18n-title="progress.nextMonth"></button>
+          <button class="cal-nav" id="calNext" data-act="calendarNext" title="Следующий месяц" data-i18n-title="progress.nextMonth"></button>
         </div>
         <p class="cal-sub" id="calSub"></p>
         <div class="cal-grid" id="calGrid"></div>
@@ -92,7 +92,7 @@
             <span class="ts-label" data-i18n="progress.wellnessTitle">Самочувствие</span>
             <div class="mc-now" id="wellNowRow"><b id="wellNow">—</b><span class="w-delta" id="wellWhen"></span></div>
           </div>
-          <button class="add-btn" id="btnAddWell" title="Записать" data-i18n-title="progress.record"></button>
+          <button class="add-btn" id="btnAddWell" data-act="openWellAdd" title="Записать" data-i18n-title="progress.record"></button>
         </div>
         <div class="mc-empty empty-state" id="wellEmpty">
           <span class="es-ico" data-icon="heart"></span>
@@ -104,8 +104,8 @@
         <div class="wm-switch hidden" id="wellSwitch"></div>
         <div class="mc-charts hidden" id="wellCharts"></div>
         <div class="mc-actions hidden" id="wellActions">
-          <button class="mc-act" id="btnWellHist"></button>
-          <button class="mc-act" id="btnShareWell"></button>
+          <button class="mc-act" id="btnWellHist" data-act="openWellHistory"></button>
+          <button class="mc-act" id="btnShareWell" data-act="shareWellChart"></button>
         </div>
       </div>
     </div>
@@ -135,7 +135,7 @@
         <div class="ph-tools">
           <button type="button" class="btn-ghost" id="btnAddPhoto" data-act="pickProgressPhoto" data-i18n="progress.addPhoto">Добавить фото</button>
           <p class="photo-local-note"><span data-icon="shield"></span><span data-i18n="progress.photoLocalOnly">Фото хранятся только на этом устройстве и не синхронизируются с аккаунтом. Так снимки прогресса не покидают телефон.</span></p>
-          <button type="button" class="mc-danger hidden" id="btnDeleteAllPhotos" data-i18n="progress.deleteAllPhotosBtn">Удалить все фото</button>
+          <button type="button" class="mc-danger hidden" id="btnDeleteAllPhotos" data-act="deleteAllPhotos" data-i18n="progress.deleteAllPhotosBtn">Удалить все фото</button>
         </div>
         <input type="file" id="photoFile" accept="image/*" class="hidden">
       </div>
@@ -163,7 +163,7 @@
     <div class="card-block" id="accProfiles">
       <div class="cb-head"><p class="cb-title" data-i18n="settings.profiles">Профили</p></div>
       <div class="list-rows" id="usersList"></div>
-      <button class="choice add-row" id="btnAddUser"><span data-icon="plus"></span><b data-i18n="settings.addProfile">Добавить профиль</b></button>
+      <button class="choice add-row" id="btnAddUser" data-act="addUser"><span data-icon="plus"></span><b data-i18n="settings.addProfile">Добавить профиль</b></button>
       <p class="field-hint" id="usersHint"></p>
     </div>
     </div>
