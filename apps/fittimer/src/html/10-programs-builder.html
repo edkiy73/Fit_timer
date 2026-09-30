@@ -298,8 +298,8 @@
     <div class="cb-head"><p class="cb-title" data-i18n="builder.schedule">Когда тренироваться</p></div>
     <div class="sched-mode hidden" id="schedModeRow">
       <div class="hf-seg" id="schedSeg">
-        <button type="button" data-mode="days" data-i18n="builder.scheduleByDays">По дням недели</button>
-        <button type="button" data-mode="rot" data-i18n="builder.scheduleSequence">По очереди</button>
+        <button type="button" data-act="setScheduleMode" data-mode="days" data-i18n="builder.scheduleByDays">По дням недели</button>
+        <button type="button" data-act="setScheduleMode" data-mode="rot" data-i18n="builder.scheduleSequence">По очереди</button>
       </div>
       <p class="field-hint" id="schedHint"></p>
     </div>
@@ -328,7 +328,7 @@
 
     <div class="card-block">
     <div class="cb-head"><p class="cb-title" data-i18n="builder.progressionTitle">Со временем сложнее</p></div>
-    <div class="pref-row"><span><span data-i18n="builder.autoLoadTitle">Автоматически добавлять нагрузку</span><small data-i18n="builder.progressionSub">повторения и вес станут чуть больше по мере занятий</small></span><button class="switch" id="bProgOn"></button></div>
+    <div class="pref-row"><span><span data-i18n="builder.autoLoadTitle">Автоматически добавлять нагрузку</span><small data-i18n="builder.progressionSub">повторения и вес станут чуть больше по мере занятий</small></span><button class="switch" id="bProgOn" data-act="toggleBuilderProgression"></button></div>
     <div id="bProgOpts" class="stack hidden">
       <div class="field">
         <label data-i18n="builder.progressionFrequency">Как часто повышать</label>
@@ -541,8 +541,8 @@
       </div>
       <div class="field"><label data-i18n="ai.exerciseOrder">Порядок упражнений</label><div class="opt-list" id="qStyle"></div></div>
       <div class="field"><label data-i18n="ai.warmup">Разминка</label><div class="opt-list" id="qWarm"></div></div>
-      <div class="pref-row" style="border-top:none;padding-top:2px"><span><span data-i18n="ai.splitDaysTitle">Разные упражнения в разные дни</span><small data-i18n="ai.splitDaysSub">например, ноги в понедельник, спина в четверг</small></span><button class="switch" id="qSplit"></button></div>
-      <div class="pref-row hidden" id="qRotateRow"><span><span data-i18n="ai.rotateTitle">Чередовать варианты по очереди</span><small data-i18n="ai.rotateSub">сначала первый, потом второй, потом снова первый</small></span><button class="switch" id="qRotate"></button></div>
+      <div class="pref-row" style="border-top:none;padding-top:2px"><span><span data-i18n="ai.splitDaysTitle">Разные упражнения в разные дни</span><small data-i18n="ai.splitDaysSub">например, ноги в понедельник, спина в четверг</small></span><button class="switch" id="qSplit" data-act="toggleAiSplit"></button></div>
+      <div class="pref-row hidden" id="qRotateRow"><span><span data-i18n="ai.rotateTitle">Чередовать варианты по очереди</span><small data-i18n="ai.rotateSub">сначала первый, потом второй, потом снова первый</small></span><button class="switch" id="qRotate" data-act="toggleAiRotate"></button></div>
     </div>
 
     <div class="ai-pane hidden" id="aiPaneVideo">
