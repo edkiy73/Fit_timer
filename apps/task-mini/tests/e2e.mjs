@@ -121,8 +121,8 @@ try{
   const adminPage = await (await browser.newContext({locale: 'ru-RU'})).newPage();
   adminPage.on('pageerror', e => errors.push(String(e)));
   await adminPage.goto(URL_ + '#/admin');
-  await adminPage.getByLabel('ADMIN_KEY').fill(process.env.ADMIN_KEY);
-  await adminPage.getByRole('button', {name: 'Подключиться'}).click();
+  await adminPage.getByLabel('Ключ администратора').fill(process.env.ADMIN_KEY);
+  await adminPage.getByRole('button', {name: 'Войти'}).click();
   await adminPage.getByRole('button', {name: 'Пользователи'}).click();
   await adminPage.getByRole('textbox', {name: 'Email'}).fill('person@example.com');
   await adminPage.getByLabel('Покупка (SKU)').selectOption('export');

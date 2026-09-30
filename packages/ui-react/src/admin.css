@@ -246,7 +246,9 @@
   background:var(--bg,#f6f7f9);
 }
 .ab-admin-gate-card{
+  box-sizing:border-box;
   width:min(100%,380px);
+  min-width:0;
   padding:20px;
   border:1px solid var(--line,#e4e6eb);
   border-radius:14px;
@@ -261,9 +263,10 @@
 }
 .ab-admin-gate h1{margin:5px 0 8px;font-size:21px}
 .ab-admin-gate p{margin:0 0 14px;color:var(--muted,#6b7280);font-size:13px}
-.ab-admin-auth{display:flex;gap:8px}
+.ab-admin-auth{display:grid;gap:10px}
 .ab-admin-auth input{
-  flex:1;
+  box-sizing:border-box;
+  width:100%;
   min-width:0;
   border:1px solid var(--line,#e4e6eb);
   border-radius:9px;
@@ -273,6 +276,7 @@
   font:inherit;
 }
 .ab-admin-auth button{
+  width:100%;
   border:0;
   border-radius:9px;
   padding:9px 12px;

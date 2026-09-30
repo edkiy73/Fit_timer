@@ -25,10 +25,10 @@ export interface AdminPanelProps {
 
 const COPY = {
   ru: {
-    title:'Админка', key:'ADMIN_KEY', connect:'Подключиться', disconnect:'Выйти',
+    title:'Админка', key:'Ключ администратора', connect:'Войти', disconnect:'Выйти',
     refresh:'Обновить', health:'Health', overview:'Обзор', users:'Пользователи',
-    errors:'Ошибки', storage:'Хранилище', noKey:'Введи ADMIN_KEY для защищённых данных.',
-    badKey:'Неверный ADMIN_KEY или доступ запрещён.', requestFailed:'Не удалось получить данные.',
+    errors:'Ошибки', storage:'Хранилище', noKey:'Введи ключ администратора.',
+    badKey:'Ключ не подошёл. Проверь его и попробуй ещё раз.', requestFailed:'Не удалось получить данные.',
     status:'Статус', deployment:'Сборка', warnings:'Предупреждения', services:'Сервисы',
     analytics:'Аналитика', accounts:'Аккаунты', totalErrors:'Ошибок клиента',
     noErrors:'Ошибок клиента нет.', noUsers:'Аккаунтов пока нет.', email:'Email',

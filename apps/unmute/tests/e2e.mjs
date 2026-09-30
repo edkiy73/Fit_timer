@@ -239,7 +239,7 @@ try{
   const admin=await adminContext.newPage();
   admin.on('pageerror',error=>errors.push(String(error)));
   await admin.goto(URL_+'#/admin');
-  ok('shared Admin opens and asks for the key',await appears(admin.getByLabel('ADMIN_KEY')));
+  ok('shared Admin opens and asks for the key',await appears(admin.getByLabel('Ключ администратора')));
 
   ok('no runtime errors',errors.length===0);
   if(errors.length)console.log(errors.join('\n'));
