@@ -172,7 +172,7 @@
        названием: во всю ширину квадрат съедал пол-экрана. Состав премиум-программы
        открыт только по подписке — вместо него заглушка, ведущая в витрину подписки. -->
   <section class="screen" id="scrStoreItem">
-    <div class="screen-head"><button class="back-chip" id="siBackTop"></button><h2 data-i18n="common.program">Программа</h2></div>
+    <div class="screen-head"><button class="back-chip" id="siBackTop" data-act="backFromStoreItem"></button><h2 data-i18n="common.program">Программа</h2></div>
     <div class="card-block">
       <div class="si-hero">
         <div class="si-cover" id="siCover"></div>
@@ -184,7 +184,7 @@
       </div>
       <div class="ex-meta" id="siFacts"></div>
       <p class="st-gives" id="siGives"></p>
-      <button type="button" class="st-by" id="siBy">
+      <button type="button" class="st-by" id="siBy" data-act="openStoreTrainer">
         <span class="st-ava" data-icon="user"></span>
         <span class="st-nick" id="siNick"></span>
         <span class="st-role" data-i18n="store.roleTrainer">тренер</span>
@@ -193,14 +193,14 @@
     <div class="card-block">
       <div class="cb-head"><p class="cb-title" data-i18n="store.inside">Что внутри</p><span class="cb-count" id="siCount"></span></div>
       <div class="list-rows" id="siList"></div>
-      <button type="button" class="si-lock hidden" id="siLock">
+      <button type="button" class="si-lock hidden" id="siLock" data-act="openStorePremium">
         <span class="sl-ico" data-icon="crown"></span>
         <b data-i18n="store.locked">Состав открыт по подписке</b>
         <p id="siLockTxt"></p>
       </button>
     </div>
     <div class="builder-actions">
-      <button class="btn-primary" id="siBuy" data-i18n="common.add">Добавить</button>
+      <button class="btn-primary" id="siBuy" data-act="buyStoreItem" data-i18n="common.add">Добавить</button>
     </div>
   </section>
 
