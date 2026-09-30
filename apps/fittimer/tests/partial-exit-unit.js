@@ -11,7 +11,8 @@ const need = (ok, msg) => { if(!ok) throw new Error(msg); };
 
 need(/import\s*\{[\s\S]*\bfinishPartialWorkout\b[\s\S]*\}\s*from\s*['"]\.\/70-workout\.js['"]/.test(events),
   'finishPartialWorkout must be imported into 90-events.js');
-need(events.includes("$('exitFinishToday').onclick"), 'finish-for-today click handler is missing');
+need(events.includes("registerAction('finishWorkoutToday'"), 'finish-for-today action handler is missing');
+need(sourceHtml.includes('id="exitFinishToday" data-act="finishWorkoutToday"'), 'finish-for-today action is not wired declaratively');
 need(workout.includes('export function finishPartialWorkout()'), 'finishPartialWorkout export is missing');
 
 for(const key of [

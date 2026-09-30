@@ -939,8 +939,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2520,
-      "chars": 109675,
+      "lines": 2516,
+      "chars": 109221,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -1123,7 +1123,7 @@
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
       "lines": 639,
-      "chars": 42581,
+      "chars": 42881,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1379,11 +1379,21 @@
         "ytWish"
       ],
       "actions": [
+        "backFromWorkoutStart",
         "closeModal",
         "commitWeightModal",
+        "discardWorkout",
+        "finishWorkoutToday",
         "openCreateProgram",
         "openStoreFromPrograms",
-        "openWorkoutTrainer"
+        "openWorkoutStart",
+        "openWorkoutTrainer",
+        "pickWorkoutStartStep",
+        "resumeSavedWorkout",
+        "saveAndExitWorkout",
+        "startFreshWorkout",
+        "toggleProgramDescription",
+        "toggleStartMenu"
       ]
     },
     "src/html/20-workout-finish.html": {

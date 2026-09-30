@@ -231,10 +231,10 @@
   <!-- ШАГ 2: экран старта -->
   <section class="screen" id="scrStart">
     <div class="screen-head start-head">
-      <button class="back-chip" id="startBackTop"></button>
+      <button class="back-chip" id="startBackTop" data-act="backFromWorkoutStart"></button>
       <span class="sh-kicker" data-i18n="programs.programKicker">Программа</span>
       <div class="prog-menu-wrap">
-        <button class="more-btn" id="startMore" title="Действия" data-i18n-title="common.actions"></button>
+        <button class="more-btn" id="startMore" data-act="toggleStartMenu" title="Действия" data-i18n-title="common.actions"></button>
         <div class="ctx-menu" id="startMenu"></div>
       </div>
     </div>
@@ -263,7 +263,7 @@
         <p class="cb-title" data-i18n="programs.about">О программе</p>
         <div class="prog-desc">
           <p id="progDescText"></p>
-          <button type="button" class="pd-more" id="progDescMore" data-i18n="builder.showFull">Показать полностью</button>
+          <button type="button" class="pd-more" id="progDescMore" data-act="toggleProgramDescription" data-i18n="builder.showFull">Показать полностью</button>
         </div>
       </div>
 
@@ -283,7 +283,7 @@
 
     </div>
     <div class="builder-actions">
-      <button class="btn-primary" id="btnStart" data-i18n="programs.startWorkout">Начать тренировку</button>
+      <button class="btn-primary" id="btnStart" data-act="openWorkoutStart" data-i18n="programs.startWorkout">Начать тренировку</button>
     </div>
   </section>
 
@@ -407,9 +407,9 @@
     <div class="modal-card">
       <span class="mini-label" data-i18n="workout.interrupt">Прервать тренировку</span>
       <p class="field-hint" id="exitProgress"></p>
-      <button class="choice" id="exitSave"><b data-i18n="workout.saveExit">Продолжить позже</b><small data-i18n="workout.saveExitSub">Сохраним место и всё уже сделанное</small></button>
-      <button class="choice primary" id="exitFinishToday"><b data-i18n="workout.finishToday">Закончить на сегодня</b><small data-i18n="workout.finishTodaySub">Сохраним то, что успел сделать</small></button>
-      <button class="choice" id="exitDrop"><b data-i18n="workout.discardExit">Выйти без сохранения</b><small data-i18n="workout.discardExitSub">Результат этой тренировки не сохранится</small></button>
+      <button class="choice" id="exitSave" data-act="saveAndExitWorkout"><b data-i18n="workout.saveExit">Продолжить позже</b><small data-i18n="workout.saveExitSub">Сохраним место и всё уже сделанное</small></button>
+      <button class="choice primary" id="exitFinishToday" data-act="finishWorkoutToday"><b data-i18n="workout.finishToday">Закончить на сегодня</b><small data-i18n="workout.finishTodaySub">Сохраним то, что успел сделать</small></button>
+      <button class="choice" id="exitDrop" data-act="discardWorkout"><b data-i18n="workout.discardExit">Выйти без сохранения</b><small data-i18n="workout.discardExitSub">Результат этой тренировки не сохранится</small></button>
       <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
     </div>
   </div>
@@ -419,9 +419,9 @@
       <span class="mini-label" data-i18n="workout.startFrom">С чего начать</span>
       <!-- порядок снизу вверх по вероятности: обычный ответ — «начать сначала», и он
            стоит последним, у самого пальца, и единственный выделен -->
-      <button class="choice" id="startPick"><b data-i18n="workout.chooseExercise">Выбрать упражнение</b><small data-i18n="workout.chooseExerciseSub">Начать с любого места программы</small></button>
-      <button class="choice" id="startResume"><b data-i18n="workout.continue">Продолжить</b><small id="startResumeSub"></small></button>
-      <button class="choice primary" id="startFresh"><b data-i18n="workout.startOver">Начать сначала</b><small data-i18n="workout.startOverSub">С первого упражнения</small></button>
+      <button class="choice" id="startPick" data-act="pickWorkoutStartStep"><b data-i18n="workout.chooseExercise">Выбрать упражнение</b><small data-i18n="workout.chooseExerciseSub">Начать с любого места программы</small></button>
+      <button class="choice" id="startResume" data-act="resumeSavedWorkout"><b data-i18n="workout.continue">Продолжить</b><small id="startResumeSub"></small></button>
+      <button class="choice primary" id="startFresh" data-act="startFreshWorkout"><b data-i18n="workout.startOver">Начать сначала</b><small data-i18n="workout.startOverSub">С первого упражнения</small></button>
       <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
     </div>
   </div>
