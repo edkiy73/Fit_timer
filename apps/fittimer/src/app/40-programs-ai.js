@@ -270,18 +270,21 @@ function todayRow({cls, ico, title, sub, action, onclick}){
    друг про друга.
    Записи истории до появления pid (id программы) отнести к плану нельзя — они идут
    в «сверх плана», а не занижают выполнение. */
-export function weekPlanInfo(date){
+export function weekPlanInfo(date, options){
   const now = date || new Date();
+  const programId = options && options.programId != null ? String(options.programId) : '';
   const monday = new Date(now);
   monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
   monday.setHours(0, 0, 0, 0);
   // «сегодня» — всегда настоящее сегодня: для прошедших недель все слоты уже позади
   const todayIso = localISO(new Date());
   const isos = DAYS.map((_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return localISO(d); });
-  const hist = stats.history || [];
+  const hist = (stats.history || []).filter(h => !programId || String(h.pid || '') === programId);
 
   const slots = [];
-  customPrograms.forEach(p => planDays(p).forEach(nm => {
+  customPrograms
+    .filter(p => !programId || String(p.id || '') === programId)
+    .forEach(p => planDays(p).forEach(nm => {
     const i = DAYS.indexOf(nm);
     if(i >= 0) slots.push({pid: p.id, idx: i, from: null});
   }));
