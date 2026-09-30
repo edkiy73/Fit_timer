@@ -1,4 +1,4 @@
-const ACTIONS = Object.create(null);
+export const ACTIONS = Object.create(null);
 
 export function registerAction(name, handler){
   if(!name || typeof handler !== 'function') return false;
@@ -12,6 +12,5 @@ export function unregisterAction(name){
   return true;
 }
 
-export { ACTIONS };
 
 export function initActions(){}
