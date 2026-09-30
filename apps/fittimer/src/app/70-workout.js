@@ -11,6 +11,7 @@ import { calcStreak, calcStreakInfo, clearSession, closeAllMenus, curUser, custo
   customToProgram, localISO, newId, normPlans, progActive, renderStats, savePrograms, saveSession,
   saveStats, setDataSyncWorkoutHooks, stats, streakWord, toggleMenu, trackProductEvent, users
 } from './10-data-sync.js';
+import { setAccountWorkoutHooks } from './20-account.js';
 import { LIM, clampText, photos, shareGeneratedFile } from './30-progress-media.js';
 import { aiClientVerdict, callGemini, exAnswerFormat, exerciseToText, premiumGate, userForAI,
   weekPlanInfo
@@ -1820,6 +1821,9 @@ export function setExFromWorkShared(value){ exFromWork = value; return exFromWor
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initWorkout(){
+  setAccountWorkoutHooks({
+    esc
+  });
   setDataSyncWorkoutHooks({
     getBadges: () => BADGES,
     badgeDesc,
