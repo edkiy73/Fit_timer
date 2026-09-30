@@ -16,7 +16,6 @@ import { dropFreshEx, exDirty, exRestAfter, fmtKg, getExProgValue, getExWeight, 
   weightPending
 } from './60-builder.js';
 import { esc, exitWorkout, setExFromWorkShared, settleQuickFinish, stopFinishFx, tnum } from './70-workout.js';
-import { applyAudioFromUser, fillLiveSoundCascade, moreTab, switchMoreTab, syncSettingsForm } from './90-events.js';
 
 let accountUserDirtyHook = () => false;
 let maybeRunDeferredBiometricLockHook = () => {};
@@ -43,6 +42,19 @@ export function setCorePlatformHooks(hooks = {}){
   platformHfModeHook = typeof hooks.getHfMode === 'function' ? hooks.getHfMode : (() => 'off');
   platformHfHintTextHook = typeof hooks.hfHintText === 'function' ? hooks.hfHintText : (() => '');
   platformSyncPrefsHook = typeof hooks.syncPrefs === 'function' ? hooks.syncPrefs : (() => {});
+}
+
+let eventApplyAudioFromUserHook = () => {};
+let eventFillLiveSoundCascadeHook = () => {};
+let eventMoreTabHook = () => 'me';
+let eventSwitchMoreTabHook = () => {};
+let eventSyncSettingsFormHook = () => {};
+export function setCoreEventHooks(hooks = {}){
+  eventApplyAudioFromUserHook = typeof hooks.applyAudioFromUser === 'function' ? hooks.applyAudioFromUser : (() => {});
+  eventFillLiveSoundCascadeHook = typeof hooks.fillLiveSoundCascade === 'function' ? hooks.fillLiveSoundCascade : (() => {});
+  eventMoreTabHook = typeof hooks.getMoreTab === 'function' ? hooks.getMoreTab : (() => 'me');
+  eventSwitchMoreTabHook = typeof hooks.switchMoreTab === 'function' ? hooks.switchMoreTab : (() => {});
+  eventSyncSettingsFormHook = typeof hooks.syncSettingsForm === 'function' ? hooks.syncSettingsForm : (() => {});
 }
 
 /* ================= ВСТРОЕННЫЕ КАРТИНКИ ЭКРАНА ТРЕНИРОВКИ ================= */
@@ -862,12 +874,12 @@ export function prepTab(id){
     if(id === 'scrStats'){ renderStats(); renderWeight(); renderWellness(); renderPhotosHook(); }
     else if(id === 'scrPrograms'){ renderMine(); }
     else if(id === 'scrAccount'){
-      switchMoreTab(typeof moreTab === 'string' ? moreTab : 'me');
+      eventSwitchMoreTabHook(eventMoreTabHook());
       renderUsers();
       renderTrainerCard();
       // звук и управление без рук переехали сюда из «Настроек»
-      syncSettingsForm();
-      fillLiveSoundCascade('st');
+      eventSyncSettingsFormHook();
+      eventFillLiveSoundCascadeHook('st');
       const currentHfMode = platformHfModeHook();
       $('hfHint').textContent = platformHfHintTextHook(currentHfMode);
       document.querySelectorAll('#hfSeg button').forEach(b => b.classList.toggle('act', b.dataset.hf === currentHfMode));
@@ -951,7 +963,7 @@ export let startFrom = 'scrMenu';
 export function openStart(raw){
   if(ROOT_TABS.includes(show._last)) startFrom = show._last;
   applyProgressionAll();
-  applyAudioFromUser(curUser());
+  eventApplyAudioFromUserHook(curUser());
   state.raw = raw;
   const plans = normPlans(raw);
   state.planIdx = defaultPlanIdx(plans, raw);
