@@ -14,6 +14,8 @@ import { appDocs, SETTINGS_DOC } from './sync';
 import { patchSettings, readSettings } from './settings';
 import { trackOnboardingComplete } from './observability';
 import { Icon, type IconName } from './icons';
+import { chooseCourse, CourseOptionList, useActiveCourseId, useCatalog } from './active-course';
+import type { ContentCatalogSet } from './content/client';
 
 export const ONBOARDING_KEY='unmute.onboarding.v1';
 const SETTINGS_QUERY_KEY=['unmute-settings'] as const;
@@ -48,10 +50,17 @@ export function markOnboardingDone(storage:Pick<Storage,'setItem'>=localStorage)
 
 export function OnboardingView({
   onDone,
-  busy=false
+  busy=false,
+  courses=[],
+  courseId='',
+  onCourse
 }:{
   onDone:()=>void;
   busy?:boolean;
+  /** Published courses; the choice is shown only when there is more than one. */
+  courses?:ContentCatalogSet[];
+  courseId?:string;
+  onCourse?:(id:string)=>void;
 }){
   const {t}=useI18n();
 
@@ -84,6 +93,14 @@ export function OnboardingView({
             </li>
           ))}
         </ul>
+
+        {courses.length>1&&onCourse&&(
+          <div className="onboarding-courses">
+            <h3 id="onboarding-courses-title">{t('onboarding.courseTitle')}</h3>
+            <p className="tile-text">{t('onboarding.courseHint')}</p>
+            <CourseOptionList sets={courses} currentId={courseId} busy={busy} onPick={onCourse} />
+          </div>
+        )}
       </div>
 
       <div className="onboarding-actions">
@@ -109,6 +126,10 @@ export function OnboardingGate({children}:{children:ReactNode}){
   const {t}=useI18n();
   const [localDone,setLocalDone]=useState(()=>onboardingStoredDone());
   const [busy,setBusy]=useState(false);
+  const catalog=useCatalog();
+  const activeCourseId=useActiveCourseId();
+  const [pickedCourseId,setPickedCourseId]=useState<string|null>(null);
+  const courseId=pickedCourseId??activeCourseId;
 
   const settingsQuery=useQuery({
     queryKey:SETTINGS_QUERY_KEY,
@@ -158,7 +179,7 @@ export function OnboardingGate({children}:{children:ReactNode}){
 
   if(runtime.status==='error'||settingsQuery.isError)return <>{children}</>;
 
-  if(runtime.status==='pending'||settingsQuery.isPending){
+  if(runtime.status==='pending'||settingsQuery.isPending||catalog.isPending){
     return (
       <section className="onboarding onboarding-loading">
         <div className="learn-state" role="status">
@@ -173,9 +194,13 @@ export function OnboardingGate({children}:{children:ReactNode}){
     setBusy(true);
     markOnboardingDone();
 
-    const nodeId=runtime.state?.currentNode?.id??null;
+    // Another course was picked: its day 1 opens from «Сегодня» once that course loads.
+    const switching=Boolean(pickedCourseId&&pickedCourseId!==activeCourseId);
+    const nodeId=switching?null:runtime.state?.currentNode?.id??null;
     try{
+      if(switching&&pickedCourseId)await chooseCourse(pickedCourseId);
       await patchSettings({onboardingDoneAt:new Date().toISOString()});
+      await queryClient.invalidateQueries({queryKey:SETTINGS_QUERY_KEY,exact:true});
       void trackOnboardingComplete();
     }catch{}
     setLocalDone(true);
@@ -187,5 +212,13 @@ export function OnboardingGate({children}:{children:ReactNode}){
     }
   };
 
-  return <OnboardingView busy={busy} onDone={()=>void finish()} />;
+  return (
+    <OnboardingView
+      busy={busy}
+      onDone={()=>void finish()}
+      courses={catalog.data?.sets??[]}
+      courseId={courseId}
+      onCourse={setPickedCourseId}
+    />
+  );
 }
