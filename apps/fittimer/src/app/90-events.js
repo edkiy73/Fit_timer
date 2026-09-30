@@ -70,338 +70,339 @@ import { SR, applyThemeFor, checkSchedules, hfHintText, hfMode, recognitionLang,
 } from './80-platform.js';
 
 /* ================= СОБЫТИЯ ================= */
-registerAction('openCreateProgram', () => $('createModal').classList.add('open'));
-registerAction('editCurrentProfile', () => {
-  const u = curUser();
-  if(u) openUserEdit(u.id);
-});
-registerAction('openStoreFromMenu', () => openStore('scrMenu'));
-registerAction('backFromStore', () => goTab(storeFrom));
-registerAction('createProgramManual', () => {
-  $('createModal').classList.remove('open');
-  openBuilder();
-});
-registerAction('createProgramAI', () => {
-  $('createModal').classList.remove('open');
-  initAIForm();
-  openAI('text');
-});
-registerAction('openProgramImport', () => {
-  $('createModal').classList.remove('open');
-  $('importCode').value = '';
-  $('importModal').classList.add('open');
-});
-registerAction('importProgramCode', () => importProgramCode($('importCode').value));
-registerAction('openStoreFromPrograms', () => openStore('scrPrograms'));
-registerAction('openMyCatalog', () => openMyCatalog());
+function registerEventActions(){
+  registerAction('openCreateProgram', () => $('createModal').classList.add('open'));
+  registerAction('editCurrentProfile', () => {
+    const u = curUser();
+    if(u) openUserEdit(u.id);
+  });
+  registerAction('openStoreFromMenu', () => openStore('scrMenu'));
+  registerAction('backFromStore', () => goTab(storeFrom));
+  registerAction('createProgramManual', () => {
+    $('createModal').classList.remove('open');
+    openBuilder();
+  });
+  registerAction('createProgramAI', () => {
+    $('createModal').classList.remove('open');
+    initAIForm();
+    openAI('text');
+  });
+  registerAction('openProgramImport', () => {
+    $('createModal').classList.remove('open');
+    $('importCode').value = '';
+    $('importModal').classList.add('open');
+  });
+  registerAction('importProgramCode', () => importProgramCode($('importCode').value));
+  registerAction('openStoreFromPrograms', () => openStore('scrPrograms'));
+  registerAction('openMyCatalog', () => openMyCatalog());
 
-registerAction('backTrainerProfile', () => goBackTo(tpFrom || 'scrMenu'));
-registerAction('backPublish', () => goBackTo(pubFrom || 'scrPrograms'));
-registerAction('backMyCatalog', () => {
-  switchMoreTab('coach');
-  goTab('scrAccount');
-});
-registerAction('openCoachAccount', () => {
-  switchMoreTab('acc');
-  setTimeout(() => openLogin(), 250);
-});
-registerAction('wipeCoach', () => wipeTrainerInfo());
-registerAction('openMyTrainerPage', () => {
-  if(trainerOn()) openTrainer(normHandle(trainer.handle));
-  else appAlert(t('trainer.enableFirst'));
-});
-registerAction('publishProgram', () => doPublish());
-registerAction('backClient', () => goBackTo('scrTrainer'));
-registerAction('legalBack', () => legalBack());
-registerAction('openLegalPrivacy', () => openLegal('privacy'));
-registerAction('openLegalTerms', () => openLegal('terms'));
-registerAction('openLegalHealth', () => openLegal('health'));
+  registerAction('backTrainerProfile', () => goBackTo(tpFrom || 'scrMenu'));
+  registerAction('backPublish', () => goBackTo(pubFrom || 'scrPrograms'));
+  registerAction('backMyCatalog', () => {
+    switchMoreTab('coach');
+    goTab('scrAccount');
+  });
+  registerAction('openCoachAccount', () => {
+    switchMoreTab('acc');
+    setTimeout(() => openLogin(), 250);
+  });
+  registerAction('wipeCoach', () => wipeTrainerInfo());
+  registerAction('openMyTrainerPage', () => {
+    if(trainerOn()) openTrainer(normHandle(trainer.handle));
+    else appAlert(t('trainer.enableFirst'));
+  });
+  registerAction('publishProgram', () => doPublish());
+  registerAction('backClient', () => goBackTo('scrTrainer'));
+  registerAction('legalBack', () => legalBack());
+  registerAction('openLegalPrivacy', () => openLegal('privacy'));
+  registerAction('openLegalTerms', () => openLegal('terms'));
+  registerAction('openLegalHealth', () => openLegal('health'));
 
-registerAction('openPremium', () => openPremium());
-registerAction('completePurchase', () => completePurchase());
-registerAction('login', () => doLogin());
-registerAction('loginUseCode', () => loginUseExistingCode());
-registerAction('loginCancel', () => dropLogin());
-registerAction('openLogin', () => openLogin());
-registerAction('signOut', () => signOut());
-registerAction('pickProgramImportFile', () => $('importProgFile').click());
-registerAction('exportAllData', () => exportAllData());
-registerAction('pickAllDataImportFile', () => $('importAllFile').click());
-registerAction('wipeAccount', () => wipeAccount());
-registerAction('openWeightHistory', () => openWeightHist());
-registerAction('shareWeightChart', () => shareWeightChart());
-registerAction('pickProgressPhoto', () => $('photoFile').click());
-registerAction('openPhotoCompare', () => openCompare());
+  registerAction('openPremium', () => openPremium());
+  registerAction('completePurchase', () => completePurchase());
+  registerAction('login', () => doLogin());
+  registerAction('loginUseCode', () => loginUseExistingCode());
+  registerAction('loginCancel', () => dropLogin());
+  registerAction('openLogin', () => openLogin());
+  registerAction('signOut', () => signOut());
+  registerAction('pickProgramImportFile', () => $('importProgFile').click());
+  registerAction('exportAllData', () => exportAllData());
+  registerAction('pickAllDataImportFile', () => $('importAllFile').click());
+  registerAction('wipeAccount', () => wipeAccount());
+  registerAction('openWeightHistory', () => openWeightHist());
+  registerAction('shareWeightChart', () => shareWeightChart());
+  registerAction('pickProgressPhoto', () => $('photoFile').click());
+  registerAction('openPhotoCompare', () => openCompare());
 
-registerAction('openWellAdd', () => openWellAdd());
-registerAction('saveWell', () => saveWell());
-registerAction('openWellHistory', () => openWellHist());
-registerAction('shareWellChart', () => shareWellChart());
-registerAction('saveWellHistory', () => saveWellHist());
-registerAction('deleteAllPhotos', () => deleteAllPhotos());
-registerAction('deleteCompareA', () => delCmpPhoto('cmpA'));
-registerAction('deleteCompareB', () => delCmpPhoto('cmpB'));
-registerAction('shareCompare', () => shareCompare());
-registerAction('saveWeightHistory', () => saveWeightHist());
-registerAction('calendarPrev', () => {
-  setCalOffsetShared(calOffset - 1);
-  renderCalendar();
-});
-registerAction('calendarNext', () => {
-  setCalOffsetShared(calOffset + 1);
-  renderCalendar();
-});
-registerAction('onboardingPrivacy', () => openLegal('privacy', () => asTab(() => show('scrOnboard'))));
-registerAction('onboardingStart', () => leaveOnboarding());
-registerAction('onboardingLogin', () => openLogin(() => leaveOnboarding()));
-registerAction('whoSave', () => whoFinish(true));
-registerAction('whoSkip', () => whoFinish(false));
-registerAction('profileBack', () => leaveGuard(userDirty(), () => goTab('scrAccount'), t('profile.changes')));
-registerAction('addUser', () => openUserEdit());
-registerAction('saveUser', () => saveUser());
-registerAction('deleteUser', () => deleteUser());
+  registerAction('openWellAdd', () => openWellAdd());
+  registerAction('saveWell', () => saveWell());
+  registerAction('openWellHistory', () => openWellHist());
+  registerAction('shareWellChart', () => shareWellChart());
+  registerAction('saveWellHistory', () => saveWellHist());
+  registerAction('deleteAllPhotos', () => deleteAllPhotos());
+  registerAction('deleteCompareA', () => delCmpPhoto('cmpA'));
+  registerAction('deleteCompareB', () => delCmpPhoto('cmpB'));
+  registerAction('shareCompare', () => shareCompare());
+  registerAction('saveWeightHistory', () => saveWeightHist());
+  registerAction('calendarPrev', () => {
+    setCalOffsetShared(calOffset - 1);
+    renderCalendar();
+  });
+  registerAction('calendarNext', () => {
+    setCalOffsetShared(calOffset + 1);
+    renderCalendar();
+  });
+  registerAction('onboardingPrivacy', () => openLegal('privacy', () => asTab(() => show('scrOnboard'))));
+  registerAction('onboardingStart', () => leaveOnboarding());
+  registerAction('onboardingLogin', () => openLogin(() => leaveOnboarding()));
+  registerAction('whoSave', () => whoFinish(true));
+  registerAction('whoSkip', () => whoFinish(false));
+  registerAction('profileBack', () => leaveGuard(userDirty(), () => goTab('scrAccount'), t('profile.changes')));
+  registerAction('addUser', () => openUserEdit());
+  registerAction('saveUser', () => saveUser());
+  registerAction('deleteUser', () => deleteUser());
 
-registerAction('switchStatsTab', btn => switchStatsTab(btn.dataset.tab));
-registerAction('switchMoreTab', btn => switchMoreTab(btn.dataset.more));
-registerAction('openStatsTab', btn => openStats(btn.dataset.tab));
-registerAction('goRootTab', btn => goTab(btn.dataset.scr));
-registerAction('setProfileTheme', btn => {
-  if(!uDraft) return;
-  uDraft.theme = btn.dataset.theme;
-  syncUserForm();
-  applyThemeFor(uDraft);
-});
-registerAction('setProfileLocale', async btn => {
-  const pref = normalizeLocalePreference(btn.dataset.locale);
-  if(uDraft) uDraft.locale = pref;
-  syncUserForm();
-  // Редактирование чужого профиля не должно внезапно переводить текущий интерфейс.
-  if(!uDraft || uDraft.id !== currentUser) return;
-  await setAppLocale(pref, {persist:false});
-  await syncAccountLocale(appLocale);
-  if((await kvGet('recognitionLangManual')) !== '1'){
-    setRecognitionLangShared(appLocale);
-    await kvSet('recognitionLang', recognitionLang);
-    if(hfMode === 'voice') stopListening();
-    await refreshVoicePackUI();
-  }
-  syncHandsFreeUI();
-  syncUserForm();
-});
-registerAction('setProfileGender', btn => {
-  if(!uDraft) return;
-  uDraft.gender = btn.dataset.gender;
-  syncUserForm();
-});
-registerAction('setWhoGender', btn => {
-  whoDraft.gender = btn.dataset.gender;
-  whoSyncForm();
-});
+  registerAction('switchStatsTab', btn => switchStatsTab(btn.dataset.tab));
+  registerAction('switchMoreTab', btn => switchMoreTab(btn.dataset.more));
+  registerAction('openStatsTab', btn => openStats(btn.dataset.tab));
+  registerAction('goRootTab', btn => goTab(btn.dataset.scr));
+  registerAction('setProfileTheme', btn => {
+    if(!uDraft) return;
+    uDraft.theme = btn.dataset.theme;
+    syncUserForm();
+    applyThemeFor(uDraft);
+  });
+  registerAction('setProfileLocale', async btn => {
+    const pref = normalizeLocalePreference(btn.dataset.locale);
+    if(uDraft) uDraft.locale = pref;
+    syncUserForm();
+    // Редактирование чужого профиля не должно внезапно переводить текущий интерфейс.
+    if(!uDraft || uDraft.id !== currentUser) return;
+    await setAppLocale(pref, {persist:false});
+    await syncAccountLocale(appLocale);
+    if((await kvGet('recognitionLangManual')) !== '1'){
+      setRecognitionLangShared(appLocale);
+      await kvSet('recognitionLang', recognitionLang);
+      if(hfMode === 'voice') stopListening();
+      await refreshVoicePackUI();
+    }
+    syncHandsFreeUI();
+    syncUserForm();
+  });
+  registerAction('setProfileGender', btn => {
+    if(!uDraft) return;
+    uDraft.gender = btn.dataset.gender;
+    syncUserForm();
+  });
+  registerAction('setWhoGender', btn => {
+    whoDraft.gender = btn.dataset.gender;
+    whoSyncForm();
+  });
 
-registerAction('setHandsFreeMode', async btn => {
-  await chooseHandsFree(btn.dataset.hf);
-});
-registerAction('resumeWorkout', () => setPause(false));
-registerAction('commitWeightModal', () => commitWeightModal());
-registerAction('applyHandsFree', async () => {
-  const mode = hfModalDraft;
-  const ok = await chooseHandsFree(mode, {warnMissing:false});
-  if(!ok) return;
-  $('hfModal').classList.remove('open');
-  if(mode === 'voice' && appRuntimeCompat.offlineVoice() && !(await nativeVoiceReady())){
-    appAlert(t('handsfree.voiceSelectedPending'));
-  }
-});
-registerAction('downloadVoicePack', () => downloadSelectedVoicePack());
-registerAction('openVoiceTest', () => openVoiceTest());
-registerAction('clearStoreSearch', () => {
-  $('storeQuery').value = '';
-  storeFilter.q = '';
-  setShown('storeClear', false);
-  renderStore();
-  $('storeQuery').focus();
-});
-registerAction('pickCoachPhoto', () => $('coachPhotoFile').click());
-registerAction('toggleLegalSection', btn => legalToggle(btn.dataset.legal));
-registerAction('toggleNotificationPref', btn => {
-  const key = btn.dataset.pref;
-  if(!key) return;
-  setNotificationPref(key, !getNotificationPrefs()[key]);
-});
-registerAction('unlockApp', () => tryUnlock());
-registerAction('unlockByEmail', () => openLogin(
-  () => $('lockModal').classList.remove('open'),
-  {
-    email:(account && account.email) || '',
-    fixedEmail:true,
-    label:t('lock.email'),
-    msg:t('login.intro')
-  }
-));
-
-registerAction('toggleTrainerMode', async () => {
-  if(!trainerAccountReady()){
-    openLogin(enableTrainerMode, {
-      label:t('trainer.needAccount'),
-      msg:t('trainer.needAccountMsg')
-    });
-    return;
-  }
-  if(trainer.on){
-    trainer.on = false;
-    await saveTrainer();
-    renderTrainerCard();
-    return;
-  }
-  await enableTrainerMode();
-});
-registerAction('saveCoachProfile', async () => {
-  if(!trainerAccountReady()){
-    openLogin(enableTrainerMode, {
-      label:t('trainer.needAccount'),
-      msg:t('trainer.needAccountSaveMsg')
-    });
-    return;
-  }
-  const btn = $('btnSaveCoach');
-  const rawLink = $('coachLinks').value.trim();
-  const link = rawLink ? cleanLink(rawLink) : '';
-  if(rawLink && !link){
-    $('coachLinksErr').textContent = t('trainer.badLink');
-    $('coachLinks').focus();
-    return;
-  }
-  const handle = account.handle;
-  const yearsRaw = $('coachYears').value.replace(/\D/g, '').slice(0, 2);
-  const years = parseInt(yearsRaw, 10);
-  setTrainerShared(Object.assign({}, trainer, {
-    handle,
-    name:clampLine($('coachName').value, LIM.coachName),
-    photo:coachPhotoDraft || '',
-    about:clampText($('coachAbout').value, LIM.coachAbout),
-    years:(isFinite(years) && years > 0 && years <= 60) ? years : null,
-    links:link || '',
-    pageErr:null
-  }));
-  btn.disabled = true;
-  btn.textContent = t('common.saving');
-  showSyncState('busy');
-  await saveTrainer({deferSync:true});
-  const ok = await pushProfile();
-  if(ok){
-    await saveTrainer({deferSync:true});
-    if(isPremium()) queueAccountSync();
-    showSyncState('ok');
-    renderTrainerCard();
-    btn.textContent = t('common.saved');
-    setTimeout(()=>{ if(btn.textContent === t('common.saved')) btn.textContent = t('common.save'); }, 1500);
-  } else {
-    showSyncState('error');
-    appAlert(trainer.pageErr || t('trainer.saveFailed'));
-    btn.textContent = t('common.save');
-  }
-  btn.disabled = false;
-});
-registerAction('openWorkoutTrainer', () => {
-  const p = state.raw;
-  if(p && p.by) openTrainer(p.by);
-});
-registerAction('addClient', async () => {
-  const c = await addClient();
-  renderClients();
-  renderTrainerCard();
-  openClient(clients.indexOf(c));
-  setTimeout(()=> $('clName').select(), 120);
-});
-registerAction('sendClientProgram', () => {
-  const c = curClient();
-  if(c) pickProgramForClient(c);
-});
-registerAction('deleteClient', async () => {
-  const c = curClient();
-  if(!c) return;
-  if(!(await appDialog(t('clients.removeClient',{name:c.name || t('clients.unnamed')}),
-       {confirm: true, okText: t('clients.removeAction'), cancelText: t('common.keep')}))) return;
-  setClientsShared(clients.filter(x => x.id !== c.id));
-  setClientIdxShared(-1);
-  await saveClients();
-  renderClients();
-  renderTrainerCard();
-  goBackTo('scrTrainer');
-});
-registerAction('openWeightEntry', () => {
-  const last = stats.weights[stats.weights.length - 1];
-  $('weightInput').value = last ? last.w : '';
-  $('heightInput').value = stats.height || '';
-  const lastOf = k => { for(let i = stats.weights.length - 1; i >= 0; i--) if(stats.weights[i][k]) return stats.weights[i][k]; return ''; };
-  $('fatInput').value = lastOf('fat');
-  $('muscInput').value = lastOf('musc');
-  $('waistInput').value = lastOf('waist');
-  $('hipsInput').value = lastOf('hips');
-  $('chestInput').value = lastOf('chest');
-  $('waModal').classList.add('open');
-  setTimeout(()=> $('weightInput').focus(), 100);
-});
-registerAction('saveWeightEntry', async () => {
-  const w = parseFloat(String($('weightInput').value).replace(',', '.'));
-  if(!w || w < 20 || w > 300){ appAlert(t('progress.weightRange')); return; }
-  const h = parseInt($('heightInput').value);
-  if(h && h >= 100 && h <= 250) stats.height = h;
-  const cm = id => {
-    const v = parseFloat(String($(id).value).replace(',', '.'));
-    return (v && v >= 30 && v <= 200) ? v : null;
-  };
-  const pct = (id, lo, hi) => {
-    const v = parseFloat(String($(id).value).replace(',', '.'));
-    return (v && v >= lo && v <= hi) ? Math.round(v * 10) / 10 : null;
-  };
-  const today = localISO(new Date());
-  let en = stats.weights.find(e => e.d === today);
-  if(!hasConsent('health')) recordConsent('health');
-  if(!en){ en = {d: today}; stats.weights.push(en); }
-  en.w = w;
-  const waist = cm('waistInput'), hips = cm('hipsInput'), chest = cm('chestInput');
-  const fat = pct('fatInput', 3, 70), musc = pct('muscInput', 10, 80);
-  if(waist) en.waist = waist; else delete en.waist;
-  if(hips) en.hips = hips; else delete en.hips;
-  if(chest) en.chest = chest; else delete en.chest;
-  if(fat) en.fat = fat; else delete en.fat;
-  if(musc) en.musc = musc; else delete en.musc;
-  stats.weights.sort((a2, b) => a2.d < b.d ? -1 : 1);
-  await saveStats();
-  $('waModal').classList.remove('open');
-  renderWeight();
-});
-registerAction('startPremiumPurchase', () => {
-  trackProductEvent('purchase_started').catch(()=>{});
-  const pr = priceTable(), cur = userCurrency();
-  $('payWhat').textContent = pmPlan === 'year'
-    ? t('premium.payYear',{price:money(pr.year,cur)})
-    : t('premium.payMonth',{price:money(pr.month,cur)});
-  $('payGo').textContent = t('premium.pay',{price:money(pr[pmPlan],cur)});
-  $('payEmail').value = (account && account.email) || '';
-  $('payModal').classList.add('open');
-});
-registerAction('enableBiometryAfterPurchase', async () => {
-  if(await bioEnable()) $('premiumOkModal').classList.remove('open');
-});
-registerAction('toggleBiometry', async () => {
-  if(account.biometry && account.biometry.enabled) await bioDisable();
-  else await bioEnable();
-});
-registerAction('toggleRenewal', async () => {
-  if(!account.sub) return;
-  if(account.sub.autoRenew){
-    const ok = await appDialog(
-      t('premium.disableRenew',{date:humanDate(account.sub.until)}),
-      {confirm: true, okText: t('premium.disableRenewAction'), cancelText: t('common.keep')});
+  registerAction('setHandsFreeMode', async btn => {
+    await chooseHandsFree(btn.dataset.hf);
+  });
+  registerAction('resumeWorkout', () => setPause(false));
+  registerAction('commitWeightModal', () => commitWeightModal());
+  registerAction('applyHandsFree', async () => {
+    const mode = hfModalDraft;
+    const ok = await chooseHandsFree(mode, {warnMissing:false});
     if(!ok) return;
-  }
-  account.sub.autoRenew = !account.sub.autoRenew;
-  await saveAccount();
-  renderPlan();
-  renderPremium();
-});
+    $('hfModal').classList.remove('open');
+    if(mode === 'voice' && appRuntimeCompat.offlineVoice() && !(await nativeVoiceReady())){
+      appAlert(t('handsfree.voiceSelectedPending'));
+    }
+  });
+  registerAction('downloadVoicePack', () => downloadSelectedVoicePack());
+  registerAction('openVoiceTest', () => openVoiceTest());
+  registerAction('clearStoreSearch', () => {
+    $('storeQuery').value = '';
+    storeFilter.q = '';
+    setShown('storeClear', false);
+    renderStore();
+    $('storeQuery').focus();
+  });
+  registerAction('pickCoachPhoto', () => $('coachPhotoFile').click());
+  registerAction('toggleLegalSection', btn => legalToggle(btn.dataset.legal));
+  registerAction('toggleNotificationPref', btn => {
+    const key = btn.dataset.pref;
+    if(!key) return;
+    setNotificationPref(key, !getNotificationPrefs()[key]);
+  });
+  registerAction('unlockApp', () => tryUnlock());
+  registerAction('unlockByEmail', () => openLogin(
+    () => $('lockModal').classList.remove('open'),
+    {
+      email:(account && account.email) || '',
+      fixedEmail:true,
+      label:t('lock.email'),
+      msg:t('login.intro')
+    }
+  ));
+
+  registerAction('toggleTrainerMode', async () => {
+    if(!trainerAccountReady()){
+      openLogin(enableTrainerMode, {
+        label:t('trainer.needAccount'),
+        msg:t('trainer.needAccountMsg')
+      });
+      return;
+    }
+    if(trainer.on){
+      trainer.on = false;
+      await saveTrainer();
+      renderTrainerCard();
+      return;
+    }
+    await enableTrainerMode();
+  });
+  registerAction('saveCoachProfile', async () => {
+    if(!trainerAccountReady()){
+      openLogin(enableTrainerMode, {
+        label:t('trainer.needAccount'),
+        msg:t('trainer.needAccountSaveMsg')
+      });
+      return;
+    }
+    const btn = $('btnSaveCoach');
+    const rawLink = $('coachLinks').value.trim();
+    const link = rawLink ? cleanLink(rawLink) : '';
+    if(rawLink && !link){
+      $('coachLinksErr').textContent = t('trainer.badLink');
+      $('coachLinks').focus();
+      return;
+    }
+    const handle = account.handle;
+    const yearsRaw = $('coachYears').value.replace(/\D/g, '').slice(0, 2);
+    const years = parseInt(yearsRaw, 10);
+    setTrainerShared(Object.assign({}, trainer, {
+      handle,
+      name:clampLine($('coachName').value, LIM.coachName),
+      photo:coachPhotoDraft || '',
+      about:clampText($('coachAbout').value, LIM.coachAbout),
+      years:(isFinite(years) && years > 0 && years <= 60) ? years : null,
+      links:link || '',
+      pageErr:null
+    }));
+    btn.disabled = true;
+    btn.textContent = t('common.saving');
+    showSyncState('busy');
+    await saveTrainer({deferSync:true});
+    const ok = await pushProfile();
+    if(ok){
+      await saveTrainer({deferSync:true});
+      if(isPremium()) queueAccountSync();
+      showSyncState('ok');
+      renderTrainerCard();
+      btn.textContent = t('common.saved');
+      setTimeout(()=>{ if(btn.textContent === t('common.saved')) btn.textContent = t('common.save'); }, 1500);
+    } else {
+      showSyncState('error');
+      appAlert(trainer.pageErr || t('trainer.saveFailed'));
+      btn.textContent = t('common.save');
+    }
+    btn.disabled = false;
+  });
+  registerAction('openWorkoutTrainer', () => {
+    const p = state.raw;
+    if(p && p.by) openTrainer(p.by);
+  });
+  registerAction('addClient', async () => {
+    const c = await addClient();
+    renderClients();
+    renderTrainerCard();
+    openClient(clients.indexOf(c));
+    setTimeout(()=> $('clName').select(), 120);
+  });
+  registerAction('sendClientProgram', () => {
+    const c = curClient();
+    if(c) pickProgramForClient(c);
+  });
+  registerAction('deleteClient', async () => {
+    const c = curClient();
+    if(!c) return;
+    if(!(await appDialog(t('clients.removeClient',{name:c.name || t('clients.unnamed')}),
+         {confirm: true, okText: t('clients.removeAction'), cancelText: t('common.keep')}))) return;
+    setClientsShared(clients.filter(x => x.id !== c.id));
+    setClientIdxShared(-1);
+    await saveClients();
+    renderClients();
+    renderTrainerCard();
+    goBackTo('scrTrainer');
+  });
+  registerAction('openWeightEntry', () => {
+    const last = stats.weights[stats.weights.length - 1];
+    $('weightInput').value = last ? last.w : '';
+    $('heightInput').value = stats.height || '';
+    const lastOf = k => { for(let i = stats.weights.length - 1; i >= 0; i--) if(stats.weights[i][k]) return stats.weights[i][k]; return ''; };
+    $('fatInput').value = lastOf('fat');
+    $('muscInput').value = lastOf('musc');
+    $('waistInput').value = lastOf('waist');
+    $('hipsInput').value = lastOf('hips');
+    $('chestInput').value = lastOf('chest');
+    $('waModal').classList.add('open');
+    setTimeout(()=> $('weightInput').focus(), 100);
+  });
+  registerAction('saveWeightEntry', async () => {
+    const w = parseFloat(String($('weightInput').value).replace(',', '.'));
+    if(!w || w < 20 || w > 300){ appAlert(t('progress.weightRange')); return; }
+    const h = parseInt($('heightInput').value);
+    if(h && h >= 100 && h <= 250) stats.height = h;
+    const cm = id => {
+      const v = parseFloat(String($(id).value).replace(',', '.'));
+      return (v && v >= 30 && v <= 200) ? v : null;
+    };
+    const pct = (id, lo, hi) => {
+      const v = parseFloat(String($(id).value).replace(',', '.'));
+      return (v && v >= lo && v <= hi) ? Math.round(v * 10) / 10 : null;
+    };
+    const today = localISO(new Date());
+    let en = stats.weights.find(e => e.d === today);
+    if(!hasConsent('health')) recordConsent('health');
+    if(!en){ en = {d: today}; stats.weights.push(en); }
+    en.w = w;
+    const waist = cm('waistInput'), hips = cm('hipsInput'), chest = cm('chestInput');
+    const fat = pct('fatInput', 3, 70), musc = pct('muscInput', 10, 80);
+    if(waist) en.waist = waist; else delete en.waist;
+    if(hips) en.hips = hips; else delete en.hips;
+    if(chest) en.chest = chest; else delete en.chest;
+    if(fat) en.fat = fat; else delete en.fat;
+    if(musc) en.musc = musc; else delete en.musc;
+    stats.weights.sort((a2, b) => a2.d < b.d ? -1 : 1);
+    await saveStats();
+    $('waModal').classList.remove('open');
+    renderWeight();
+  });
+  registerAction('startPremiumPurchase', () => {
+    trackProductEvent('purchase_started').catch(()=>{});
+    const pr = priceTable(), cur = userCurrency();
+    $('payWhat').textContent = pmPlan === 'year'
+      ? t('premium.payYear',{price:money(pr.year,cur)})
+      : t('premium.payMonth',{price:money(pr.month,cur)});
+    $('payGo').textContent = t('premium.pay',{price:money(pr[pmPlan],cur)});
+    $('payEmail').value = (account && account.email) || '';
+    $('payModal').classList.add('open');
+  });
+  registerAction('enableBiometryAfterPurchase', async () => {
+    if(await bioEnable()) $('premiumOkModal').classList.remove('open');
+  });
+  registerAction('toggleBiometry', async () => {
+    if(account.biometry && account.biometry.enabled) await bioDisable();
+    else await bioEnable();
+  });
+  registerAction('toggleRenewal', async () => {
+    if(!account.sub) return;
+    if(account.sub.autoRenew){
+      const ok = await appDialog(
+        t('premium.disableRenew',{date:humanDate(account.sub.until)}),
+        {confirm: true, okText: t('premium.disableRenewAction'), cancelText: t('common.keep')});
+      if(!ok) return;
+    }
+    account.sub.autoRenew = !account.sub.autoRenew;
+    await saveAccount();
+    renderPlan();
+    renderPremium();
+  });
 
 
 
@@ -410,11 +411,13 @@ registerAction('toggleRenewal', async () => {
 
 
 
-registerAction('openWorkoutSound', () => {
-  fillLiveSoundCascade('snd');
-  $('soundModal').classList.add('open');
-});
-registerAction('openHandsFree', () => openHfModal());
+  registerAction('openWorkoutSound', () => {
+    fillLiveSoundCascade('snd');
+    $('soundModal').classList.add('open');
+  });
+  registerAction('openHandsFree', () => openHfModal());
+
+}
 
 
 let pendingStartSession = null;
@@ -1419,6 +1422,7 @@ let pendingAction = null;
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
 export function initEvents(){
+  registerEventActions();
   window.addEventListener('fitAppForeground', ()=>{
     if(appRuntimeCompat.offlineVoice()) refreshVoicePackUI();
   });
