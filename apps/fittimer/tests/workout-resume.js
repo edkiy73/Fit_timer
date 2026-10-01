@@ -306,20 +306,26 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       && duplicateNames.work[1].name === 'Заменённое второе',
     JSON.stringify(duplicateNames.work));
 
-  const isolation = await page.evaluate(async () => {
+  await page.evaluate(async () => {
     tearDownWorkout();
-    const a = customPrograms.find(x => x.id === 'resume-variant-test');
     const b = {
       id:'resume-other-test', name:'Другая тренировка', active:true, progression:0,
       plans:[{days:['Ср'], rounds:1, roundRest:0, exercises:[{name:'Другое',type:'reps',value:'10',sets:1,rest:0,restAfter:0}]}]
     };
-    customPrograms.push(b);
-    await savePrograms();
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, b]));
+    await loadData();
+    configureWorkoutTiming({prep: 0});
+    openStart(customPrograms.find(x => x.id === b.id));
+  });
+  await page.click('#btnStart');
+  await page.waitForSelector('#startModal.open');
+  await page.click('#startFresh');
+  await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
 
-    state.raw = b; state.planIdx = 0; state.current = customToProgram(b, 0);
-    state.steps = buildSteps(); state.stepIdx = 0; state.startLoad = workoutLoadSnapshot(b,0);
-    state.globalStart = Date.now() - 10000; state.pausedTotal = 0; state.paused = false;
-    state.workoutSessionId = 'session-b'; state.stepOutcomes = {};
+  const isolation = await page.evaluate(async () => {
+    const a = customPrograms.find(x => x.id === 'resume-variant-test');
+    const b = customPrograms.find(x => x.id === 'resume-other-test');
+    startWorkout(0, 10000, {skipPrep:true, sessionId:'session-b', outcomes:{}});
     await saveSession();
 
     const aBefore = await sessionForProgram(a.id);
