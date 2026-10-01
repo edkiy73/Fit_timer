@@ -80,7 +80,7 @@ describe('course access and purchase',()=>{
     await user.click(screen.getByRole('button',{name:/Оплатить 1\s490\s₽/}));
     expect(onBuy).toHaveBeenCalledWith('course');
     await user.click(screen.getByRole('radio',{name:/Plus на год/}));
-    expect(screen.getByText('Разбор ошибок и разговор с ИИ без ограничений')).toBeTruthy();
+    expect(screen.getByText('Расширенный доступ к разбору ошибок и разговорам с ИИ')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:/Оплатить 2\s990\s₽/}));
     expect(onBuy).toHaveBeenLastCalledWith('plus.year');
   });
