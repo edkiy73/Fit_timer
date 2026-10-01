@@ -16,7 +16,7 @@ export function ScreenHeader({
   return (
     <header className="screen-head">
       {kicker!==undefined&&kicker!==null&&<div className="screen-kicker">{kicker}</div>}
-      <div className="screen-title-row">
+      <div className={'screen-title-row'+(action?' has-action':'')}>
         <h2 id={titleId}>{title}</h2>
         {action&&<div className="screen-title-action">{action}</div>}
       </div>
