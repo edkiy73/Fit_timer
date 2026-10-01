@@ -131,7 +131,6 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "programTemplateCopy",
   "programToText",
   "progressedRepsRange",
-  "pubDraft",
   "pushProfile",
   "refreshLiveSteps",
   "refreshPubStatus",

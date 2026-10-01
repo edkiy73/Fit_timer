@@ -92,11 +92,12 @@ const progEn = (name) => `ПРОГРАММА: ${name}
   await page.click('#dlgOk'); await page.waitForTimeout(300);
 
   // ---- нормальная отправка ----
+  await page.click('#pubCatBtn');
+  await page.click('#optList .opt-row[data-opt-value="Кардио и энергия"]');
+  await page.click('#pubLevelBtn');
+  await page.click('#optList .opt-row[data-opt-value="Средний"]');
+  await page.fill('#pubGives', 'Три базовых движения по кругу. Ничего, кроме коврика, не нужно.');
   const sent = await page.evaluate(async (name) => {
-    pubDraft.cat = 'Кардио и энергия';
-    pubDraft.level = 'Средний';
-    pubDraft.gives = 'Три базовых движения по кругу. Ничего, кроме коврика, не нужно.';
-    document.getElementById('pubGives').value = pubDraft.gives;
     await doPublish();
     const published = customPrograms.find(p => p.name === name);
     return {status: published && published.pub && published.pub.status, msg: document.getElementById('dlgMsg').textContent};
