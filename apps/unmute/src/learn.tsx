@@ -264,6 +264,7 @@ export function NodeRunnerView({
     const saved=requested<0?readLessonRun(state.set.id,node.id):null;
     const validSaved=Boolean(
       saved&&
+      !nodeProgress?.complete&&
       saved.stepIds.join('|')===stepSignature&&
       saved.order.length>0&&
       saved.order.every(index=>Number.isInteger(index)&&index>=0&&index<steps.length)&&
