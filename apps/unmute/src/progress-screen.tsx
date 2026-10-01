@@ -1,4 +1,5 @@
 import { useCallback, useEffect } from 'react';
+import { ActivityCalendar } from './activity-calendar';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
@@ -294,6 +295,11 @@ export function ProgressView({
               detail={summary.streak>0?t('progress.streakHint'):t('progress.streakPaused')}
             />
           </div>
+
+          <ActivityCalendar
+            learningDays={runtime.state?withAllLearningDays(runtime.state.progress,learningDays).learningDays:null}
+            todayDay={todayDay}
+          />
 
           <article className="progress-section">
             <div className="progress-section-head">

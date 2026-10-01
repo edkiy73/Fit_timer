@@ -849,3 +849,42 @@ h2{margin:0 0 8px;font-weight:800}
 .legal-body p,.legal-body li{margin:6px 0;color:var(--ink)}
 .legal-body .muted,.legal-body .draft{color:var(--muted);font-size:14px}
 .legal-body a{color:var(--accent-ink,var(--accent))}
+
+/* «Сегодня»: «Серия» and «Повтор» are the same short height; the due review tile is one button. */
+.tile-streak,.tile-review{align-content:start}
+.tile-review.is-due{cursor:pointer}
+.tile-review .tile-link{margin-top:auto;color:var(--accent-ink,var(--accent));font-size:14px;font-weight:800}
+
+/* «Маршрут»: the current course is a card you cannot miss, with «Сменить». */
+.course-card{display:flex;align-items:center;gap:12px;width:100%;margin-top:10px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-tile);background:var(--card);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.course-card-icon{display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:12px;background:color-mix(in srgb,var(--accent) 16%,var(--card));color:var(--accent-ink,var(--accent))}
+.course-card-text{display:grid;gap:1px;flex:1 1 auto;min-width:0}
+.course-card-text small{color:var(--muted);font-size:12px;font-weight:700}
+.course-card-text strong{font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.course-card-action{flex:none;padding:8px 12px;border-radius:999px;background:var(--surface);color:var(--accent-ink,var(--accent));font-size:13px;font-weight:800}
+.course-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* «Я»: two rows with a one-line summary each. */
+.me-rows{display:grid;gap:10px}
+.me-row-text{display:grid;gap:2px;min-width:0}
+.me-row-text small{color:var(--muted);font-size:12.5px;font-weight:600}
+.me-row{min-height:64px}
+
+/* Activity: an ordinary month calendar. */
+.activity-calendar{gap:10px}
+.calendar-head{display:flex;align-items:center;gap:8px}
+.calendar-title{flex:1 1 auto;display:grid;justify-items:center;gap:2px;text-align:center}
+.calendar-title h3{margin:0;font-size:18px}
+.calendar-title span{color:var(--muted);font-size:12.5px}
+.icon-button{display:grid;place-items:center;width:44px;height:44px;flex:none;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);cursor:pointer}
+.icon-button:disabled{opacity:.35;cursor:default}
+.calendar-next svg{transform:rotate(180deg)}
+.calendar-grid{width:100%;border-collapse:collapse;table-layout:fixed}
+.calendar-grid th{padding:4px 0;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase}
+.calendar-grid td{padding:3px 0;text-align:center}
+.calendar-day{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;color:var(--ink);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.calendar-day.is-active{background:var(--success);color:var(--on-accent,#fff);font-weight:800}
+.calendar-day.is-today{box-shadow:inset 0 0 0 2px var(--ink)}
+.calendar-day.is-future{color:var(--muted);opacity:.55}
+.calendar-legend{display:flex;align-items:center;gap:8px}
+.calendar-legend .calendar-day{width:22px;height:22px;font-size:11px}

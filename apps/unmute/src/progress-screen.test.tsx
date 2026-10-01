@@ -188,8 +188,8 @@ describe('progress screen summary',()=>{
     renderProgress(state,stats);
 
     expect(screen.getAllByText('75%')).toHaveLength(2);
-    expect(screen.getByText('4')).toBeTruthy();
-    expect(screen.getByText('3')).toBeTruthy();
+    expect(screen.getByText('Попыток').parentElement?.textContent).toContain('4');
+    expect(screen.getByText('Верно').parentElement?.textContent).toContain('3');
     expect(screen.getByText('Ошибок').parentElement?.textContent).toContain('1');
     expect(screen.getByText('Фразы на скорость: сколько успеваешь вовремя')).toBeTruthy();
   });
