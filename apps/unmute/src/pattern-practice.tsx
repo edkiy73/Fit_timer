@@ -96,7 +96,11 @@ export function PatternPracticeView({
         <h3><LexiconText text={pattern} refs={activity.lexiconRefs} /></h3>
         <p className="practice-intro-text">{t('practice.intro.'+mode,{count:activity.items.length})}</p>
         <ul className="practice-steps">
-          {[1,2,3].map(step=><li key={step}>{t('practice.step.'+mode+'.'+step)}</li>)}
+          {[1,2,3].map(step=>{
+            const total=activity.items.length;
+            const needed=Math.max(1,Math.ceil(total*0.7));
+            return <li key={step}>{t('practice.step.'+mode+'.'+step,{count:total,needed})}</li>;
+          })}
         </ul>
         <div className="runner-action">
           <button className="primary-button" type="button" onClick={()=>setBriefed(previous=>new Set(previous).add(mode))}>
