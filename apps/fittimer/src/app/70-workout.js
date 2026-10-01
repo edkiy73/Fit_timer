@@ -42,8 +42,7 @@ export function setWorkoutEventHooks(hooks = {}){
 }
 import { advanceExerciseProgression, commitExercise, curPlan, draft, ensurePs, exIdx, fmtKg,
   liveExercise, normalizeExercise, openExercise, parseProgramText, progAtCeiling, progAxis,
-  renderExList, setBuilderWorkoutHooks, setDraftShared, setExDraftShared, setExIdxShared, setExIsNewShared, setExOrigShared,
-  setPlanIdxShared, valueText
+  renderExList, setBuilderWorkoutHooks, loadBuilderDraft, clearExerciseDraft, selectPlanVariant, valueText
 } from './60-builder.js';
 
 /* ================= СБОРКА ШАГОВ ================= */
@@ -128,10 +127,10 @@ function editExerciseFromWorkout(){
   }
   setPause(true);
   // редактор работает с draft: подставляем ту самую программу и тот самый вариант
-  setDraftShared(JSON.parse(JSON.stringify(src.p)));
+  loadBuilderDraft(JSON.parse(JSON.stringify(src.p)));
   draft.plans = JSON.parse(JSON.stringify(normPlans(draft)));
   delete draft.exercises; delete draft.rounds; delete draft.roundRest; delete draft.days; delete draft.tod;
-  setPlanIdxShared((typeof state.planIdx === 'number') ? state.planIdx : 0);
+  selectPlanVariant((typeof state.planIdx === 'number') ? state.planIdx : 0);
   exFromWork = true;
   openExercise(src.idx);
 }
@@ -184,7 +183,7 @@ export async function saveExToWorkout(){
   if(i >= 0) customPrograms[i] = draft;
   await savePrograms();
   renderMine();
-  setExDraftShared(null); setExIdxShared(-1); setExOrigShared(''); setExIsNewShared(false);
+  clearExerciseDraft();
   backToWorkout(true);
 }
 
