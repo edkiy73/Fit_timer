@@ -1591,18 +1591,11 @@ function exRow(ex, i){
   info.append(name, meta);
 
   // Справа всё как у карточки программы: «⋮» сверху, ручка перетаскивания снизу.
-  // Кнопка и меню живут в своей relative-обёртке: раньше оба были разнесены по
-  // строке, и после изменений layout/stacking меню могло открыться вне кликабельной
-  // области или под соседней строкой. У обёртки один владелец позиции и z-index.
-  const menuWrap = document.createElement('div');
-  menuWrap.className = 'ex-menu-wrap';
   const more = document.createElement('button');
   more.type = 'button';
   more.className = 'more-btn';
   more.innerHTML = icon('more');
   more.title = t('common.actions');
-  more.setAttribute('aria-haspopup', 'menu');
-  more.setAttribute('aria-expanded', 'false');
   const menu = document.createElement('div');
   menu.className = 'ctx-menu';
   const item = (html, action, cls) => {
@@ -1618,14 +1611,13 @@ function exRow(ex, i){
   item(icon('trash') + t('common.delete'), 'deleteExerciseAt', 'danger');
   more.dataset.act = 'toggleExerciseRowMenu';
   more.dataset.exerciseIdx = String(i);
-  menuWrap.append(more, menu);
 
   const grip = document.createElement('div');
   grip.className = 'ex-grip';
   grip.innerHTML = icon('grip');
   grip.title = t('programs.drag');
 
-  row.append(thumb, info, menuWrap, grip);
+  row.append(thumb, info, more, grip, menu);
   // Нажатие на саму строку открывает редактор; перетаскивание начинается только
   // с ручки и клика по строке не даёт.
   row.dataset.act = 'openExerciseRow';
@@ -2495,12 +2487,9 @@ export function initBuilder(){
   });
   registerAction('toggleExerciseRowMenu', (btn, event) => {
     event.stopPropagation();
-    const wrap = btn.closest('.ex-menu-wrap');
-    const menu = wrap && wrap.querySelector('.ctx-menu');
-    if(!menu) return;
-    const willOpen = !menu.classList.contains('open');
-    toggleMenu(menu);
-    btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    const row = btn.closest('.ex-row');
+    const menu = row && row.querySelector('.ctx-menu');
+    if(menu) toggleMenu(menu);
   });
   registerAction('openExerciseRow', (row, event) => {
     const target = event.target;
