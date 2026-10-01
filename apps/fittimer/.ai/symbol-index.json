@@ -737,8 +737,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2493,
-      "chars": 111485,
+      "lines": 2509,
+      "chars": 112191,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -1215,7 +1215,7 @@
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
       "lines": 639,
-      "chars": 44669,
+      "chars": 44626,
       "ids": [
         "aiActions",
         "aiAnswer",
