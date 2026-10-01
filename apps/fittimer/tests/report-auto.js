@@ -96,9 +96,11 @@ async function boot(b, label, errs, url){
 
   // ---- тренировка целиком, через настоящий финал ----
   await cp.evaluate(async () => {
+    const current = customPrograms.find(x => x.name === 'Сила дома');
+    const history = [...(stats.history || []), {d: localISO(new Date()), t: 9, pid: current.id, sec: 900, kcal: 90, plan: 0}];
+    await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history, count:1})));
+    await loadData();
     const p = customPrograms.find(x => x.name === 'Сила дома');
-    stats.history.push({d: localISO(new Date()), t: 9, pid: p.id, sec: 900, kcal: 90, plan: 0});
-    stats.count = 1; await saveStats();
     p.stats = {completions: 0};
     // финал — единственное место, откуда теперь уходит отчёт
     openStart(p);
@@ -130,15 +132,18 @@ async function boot(b, label, errs, url){
 
   // ---- частичная тренировка тоже уходит автоматически и помечается честно ----
   await cp.evaluate(async () => {
-    const p = customPrograms.find(x => x.name === 'Сила дома');
-    stats.history.push({
-      id:'partial-report-test', d:localISO(new Date()), t:10, pid:p.id, sec:420, plan:0,
+    const current = customPrograms.find(x => x.name === 'Сила дома');
+    const history = [...(stats.history || []), {
+      id:'partial-report-test', d:localISO(new Date()), t:10, pid:current.id, sec:420, plan:0,
       status:'partial', meaningful:true, doneExercises:1, plannedExercises:2,
       doneSteps:1, plannedSteps:2, exercises:['Приседания']
-    });
-    stats.totalSec += 420;
-    await saveStats();
-    autoReport(p);
+    }];
+    await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {
+      history,
+      totalSec:(Number(stats.totalSec) || 0) + 420
+    })));
+    await loadData();
+    autoReport(customPrograms.find(x => x.name === 'Сила дома'));
   });
   await cp.waitForTimeout(1200);
   await tp.evaluate(() => openClient(0));
