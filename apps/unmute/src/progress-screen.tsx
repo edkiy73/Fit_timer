@@ -332,7 +332,7 @@ export function ProgressView({
         </div>
       ) : (
         <>
-          <article className="progress-dashboard progress-general">
+          <article className="card progress-dashboard progress-general">
             <div className="progress-dashboard-head">
               <div>
                 <h3>{t('progress.generalTitle')}</h3>
@@ -351,7 +351,7 @@ export function ProgressView({
             />
           </article>
 
-          <article className="progress-dashboard progress-course-dashboard">
+          <article className="card progress-dashboard progress-course-dashboard">
             <div className="progress-dashboard-head progress-course-head">
               <div>
                 <h3>{t('progress.courseTitle')}</h3>
