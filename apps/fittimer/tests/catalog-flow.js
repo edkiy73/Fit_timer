@@ -191,7 +191,11 @@ const progEn = (name) => `ПРОГРАММА: ${name}
   ok('и лежит вместе с остальными в одном списке', after.inAll && after.all > 5, after.all + ' программ');
 
   // ---- статус у тренера обновился сам ----
-  const st = await page.evaluate(async () => { await refreshPubStatus(); return pubProg.pub.status; });
+  const st = await page.evaluate(async (name) => {
+    await refreshPubStatus();
+    const published = customPrograms.find(p => p.name === name);
+    return published && published.pub && published.pub.status;
+  }, NAME);
   ok('тренер видит, что программу взяли', st === 'approved', st);
 
   // ---- её можно добавить себе, как любую другую ----
