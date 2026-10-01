@@ -330,8 +330,11 @@ async function scenario(ctx, name, fn, errs){
 
   await scenario(ctx, 'конструктор → картинки → Готово', async page => {
     await seedProgram(page, 'nav-images');
-    await page.evaluate(() => {
-      account.sub = {plan:'year', until:'2099-01-01'};
+    await page.evaluate(async () => {
+      await kvSet('account', JSON.stringify(Object.assign({}, account, {
+        sub: {plan:'year', until:'2099-01-01'}
+      })));
+      await loadAccount();
       goTab('scrPrograms');
       openBuilder('nav-images');
       openImages();
