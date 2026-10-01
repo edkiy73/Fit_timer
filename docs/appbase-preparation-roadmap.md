@@ -528,7 +528,7 @@ Product-side conversion continues chunk by chunk:
 The product ESM graph is now fully acyclic:
 - the former SCC spanning `00-core` through `90-events` was dismantled incrementally with explicit owner hook boundaries;
 - `tests/app-module-graph-unit.js` now checks the **entire product import graph is a DAG**, in addition to the existing direction-specific regression guards;
-- the current compatibility surface is **41 hook-boundary setters** (`set*Hooks`) and **11 shared-state setters** (`set*Shared`) after five semantic-owner cleanup passes.
+- the current compatibility surface is **41 hook-boundary setters** (`set*Hooks`) and **9 shared-state setters** (`set*Shared`) after six semantic-owner cleanup passes.
 
 Audit conclusion:
 - do **not** remove hook boundaries just to reduce their count; they are currently the dependency-inversion mechanism that keeps the graph acyclic;
@@ -562,6 +562,11 @@ Fourth semantic-owner cleanup:
 Fifth semantic-owner cleanup:
 - active client selection is now owned by Programs AI through `activateClientAt()` / `clearActiveClient()`;
 - trainer photo editing now uses `resetCoachPhotoDraft()` / `useUploadedCoachPhoto()`;
+
+Sixth semantic-owner cleanup:
+- trainer/client state restoration is now owned by `restoreTrainerClientState()`;
+- account initialization uses `ensureTrainerState()`, trainer profile edits use `updateTrainerProfile()`, and client deletion uses `removeClientById()`;
+- `setClientsShared` and `setTrainerShared` were removed, leaving nine raw setters total.
 - two more raw setters were removed; the remaining shared setters are the coupled user/program/trainer collections and builder draft-state group.
 
 ## Phase 14 — Dependency rules

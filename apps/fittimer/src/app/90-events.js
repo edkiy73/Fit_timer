@@ -40,8 +40,8 @@ import { AI_SOURCES, aiClientVerdict, aiSrc, aiUiText, apiPost, applyProgression
   importProgramCode, importProgramFile, importProgramLink, markAITab, normHandle, openAI,
   openEditAI, openExAI, openExEdAI, openImages, openYouTube, premiumGate, programToText,
   pushProfile, refreshTrainerProfile, renderGreeting, renderSlots, renderToday, renderTray,
-  clearActiveClient, saveClients, saveTrainer, setClientsShared, useUploadedCoachPhoto,
-  appendImagesToTray, clearUnusedImageTray, ensureImageInTray, setExImg, setProgramsEventHooks, setTrainerShared, setupAIAnswer, shrinkAll, slotTarget, trainer,
+  clearActiveClient, removeClientById, saveClients, saveTrainer, useUploadedCoachPhoto,
+  appendImagesToTray, clearUnusedImageTray, ensureImageInTray, setExImg, setProgramsEventHooks, updateTrainerProfile, setupAIAnswer, shrinkAll, slotTarget, trainer,
   trainerAccountReady, trainerOn, trayAutoAssign, trayUsed, versionedName, wipeTrainerInfo,
   youtubePrompt, ytCheckUrl
 } from './40-programs-ai.js';
@@ -871,7 +871,7 @@ function registerEventActions(){
     const handle = account.handle;
     const yearsRaw = $('coachYears').value.replace(/\D/g, '').slice(0, 2);
     const years = parseInt(yearsRaw, 10);
-    setTrainerShared(Object.assign({}, trainer, {
+    updateTrainerProfile({
       handle,
       name:clampLine($('coachName').value, LIM.coachName),
       photo:coachPhotoDraft || '',
@@ -879,7 +879,7 @@ function registerEventActions(){
       years:(isFinite(years) && years > 0 && years <= 60) ? years : null,
       links:link || '',
       pageErr:null
-    }));
+    });
     btn.disabled = true;
     btn.textContent = t('common.saving');
     showSyncState('busy');
@@ -919,7 +919,7 @@ function registerEventActions(){
     if(!c) return;
     if(!(await appDialog(t('clients.removeClient',{name:c.name || t('clients.unnamed')}),
          {confirm: true, okText: t('clients.removeAction'), cancelText: t('common.keep')}))) return;
-    setClientsShared(clients.filter(x => x.id !== c.id));
+    removeClientById(c.id);
     clearActiveClient();
     await saveClients();
     renderClients();

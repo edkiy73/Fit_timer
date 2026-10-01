@@ -209,7 +209,7 @@ if(!/setDataSyncAccountHooks/.test(dataSyncSource) || !/setDataSyncAccountHooks\
 if(/from ['"]\.\/40-programs-ai\.js['"]/.test(dataSyncSource)){
   problems.push('src/app/10-data-sync.js must not import 40-programs-ai.js; inject programs-ai-facing hooks instead');
 }
-if(!/setDataSyncProgramsAiHooks/.test(dataSyncSource) || !/setDataSyncProgramsAiHooks\(\{[\s\S]*apiFetch[\s\S]*applyProgressionAll[\s\S]*getClients[\s\S]*loadTrainer[\s\S]*openDayProgram[\s\S]*renderGreeting[\s\S]*setClientsShared[\s\S]*setTrainerShared[\s\S]*getTrainer[\s\S]*weekPlanInfo/.test(programsAiSource)){
+if(!/setDataSyncProgramsAiHooks/.test(dataSyncSource) || !/setDataSyncProgramsAiHooks\(\{[\s\S]*apiFetch[\s\S]*applyProgressionAll[\s\S]*getClients[\s\S]*loadTrainer[\s\S]*openDayProgram[\s\S]*renderGreeting[\s\S]*restoreTrainerClientState[\s\S]*getTrainer[\s\S]*weekPlanInfo/.test(programsAiSource)){
   problems.push('data-sync/programs-ai hook boundary is missing or incomplete');
 }
 
@@ -228,8 +228,20 @@ if(!/setAccountEventHooks\(\{[\s\S]*applyAudioFromUser[\s\S]*readTimings[\s\S]*s
 if(/from ['"]\.\/40-programs-ai\.js['"]/.test(accountSource)){
   problems.push('src/app/20-account.js must not import 40-programs-ai.js; inject programs-ai-facing hooks instead');
 }
-if(!/setAccountProgramsAiHooks\(\{[\s\S]*getApiBase[\s\S]*ageError[\s\S]*apiPost[\s\S]*getClients[\s\S]*forgetMe[\s\S]*loadTrainer[\s\S]*mailErrText[\s\S]*normHandle[\s\S]*saveClients[\s\S]*saveTrainer[\s\S]*setTrainerShared[\s\S]*syncGeminiBtns[\s\S]*getTrainer/.test(programsAiSource)){
+if(!/setAccountProgramsAiHooks\(\{[\s\S]*getApiBase[\s\S]*ageError[\s\S]*apiPost[\s\S]*getClients[\s\S]*forgetMe[\s\S]*loadTrainer[\s\S]*mailErrText[\s\S]*normHandle[\s\S]*saveClients[\s\S]*saveTrainer[\s\S]*ensureTrainerState[\s\S]*syncGeminiBtns[\s\S]*getTrainer/.test(programsAiSource)){
   problems.push('account/programs-ai hook boundary is missing or incomplete');
+}
+
+for(const removed of ['setClientsShared','setTrainerShared']){
+  if((dataSyncSource + accountSource + programsAiSource + eventsCoreSource).includes(removed)){
+    problems.push('removed trainer/client raw setter must not return: ' + removed);
+  }
+}
+if(!/export function restoreTrainerClientState\(/.test(programsAiSource)
+  || !/export function ensureTrainerState\(/.test(programsAiSource)
+  || !/export function updateTrainerProfile\(/.test(programsAiSource)
+  || !/export function removeClientById\(/.test(programsAiSource)){
+  problems.push('semantic trainer/client owner API is missing or incomplete');
 }
 
 
