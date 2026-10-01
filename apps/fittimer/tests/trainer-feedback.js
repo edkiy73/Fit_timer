@@ -121,8 +121,11 @@ async function boot(b, label, errs, url){
   // клиент занимается
   await cp.evaluate(async () => {
     const p = customPrograms.find(x => x.name === 'Сила дома');
-    stats.history.push({d: localISO(new Date()), t: 9, pid: p.id, sec: 900, kcal: 90, plan: 0});
-    stats.count = 1; await saveStats();
+    restoreStatsState(Object.assign({}, stats, {
+      history:[...(stats.history || []), {d:localISO(new Date()),t:9,pid:p.id,sec:900,kcal:90,plan:0}],
+      count:1
+    }));
+    await saveStats();
     state.current = customToProgram(p, 0); state.raw = p; state.planIdx = 0;
     state.steps = buildSteps();
     state.stepOutcomes = {};
