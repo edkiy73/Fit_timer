@@ -1510,6 +1510,7 @@ export const I18N_EN = {
   'program.editSummary': "{variants}{exercises}",
   'program.createdEdited': "Done: “{name}” was created.\n\nThe original program was not changed.",
   'program.imagesCarried': "\nImages carried over: {count}.",
+  'program.newExercisesNoImages': "\nNew exercises without an image: {names}.",
   'ai.parseProblems': "Problems:",
   'ai.editAdded': "\nAdded: {names}.",
   'ai.editRemoved': "\nRemoved: {names}.",
