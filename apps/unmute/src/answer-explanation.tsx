@@ -68,7 +68,7 @@ export function AnswerExplanationView({
 
   if(result){
     return (
-      <div className="answer-explain-result" aria-live="polite">
+      <div className={'answer-explain-result'+(compact?' is-compact':'')} aria-live="polite">
         <div>
           <strong>{t('answerExplain.whyTitle')}</strong>
           <p>{refs
@@ -96,7 +96,7 @@ export function AnswerExplanationView({
   const accessError=error==='auth_required'||needsPlus;
 
   return (
-    <div className={'answer-explain'+(compact?' is-compact':'')}>
+    <div className={'answer-explain'+(compact?' is-compact':'')+(error?' is-error':'')}>
       {!error&&(
         <button className="secondary-button" type="button" disabled={busy} onClick={()=>void run()}>
           {busy?t('answerExplain.loading'):t('answerExplain.button')}
