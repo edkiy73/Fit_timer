@@ -21,6 +21,7 @@ import { useAllLearningDays, withAllLearningDays } from './learning-days';
 import { useOtherCourseReviews, type OtherCourseReview } from './other-course-review';
 import { UpdateBanner } from './app-update';
 import { ipaForDisplay } from './lexicon/schema';
+import { ScreenHeader } from './screen-header';
 import type { CourseSet, RoadmapNode } from './content/schema';
 import {
   lastWeekActivity,
@@ -103,13 +104,12 @@ export function TodayView({
   const weekdayLabel=new Intl.DateTimeFormat(locale,{weekday:'narrow',timeZone:'UTC'});
 
   const heading=(
-    <header className="screen-head">
-      <div className="screen-kicker">{dateLabel.charAt(0).toUpperCase()+dateLabel.slice(1)}</div>
-      <div className="screen-title-row">
-        <h2 id="today-title">{t('today.title')}</h2>
-        {state?.fromCache && <span className="today-badge">{t('today.offline')}</span>}
-      </div>
-    </header>
+    <ScreenHeader
+      kicker={dateLabel.charAt(0).toUpperCase()+dateLabel.slice(1)}
+      title={t('today.title')}
+      titleId="today-title"
+      action={state?.fromCache ? <span className="today-badge">{t('today.offline')}</span> : null}
+    />
   );
 
   if(runtime.status==='pending'){
