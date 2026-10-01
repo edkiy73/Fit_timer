@@ -83,11 +83,15 @@ async function restore(page, dump){
     const p = r.program || r; p.id = 'bk1';
     customPrograms.push(p); await savePrograms();
 
-    stats.count = 12;
-    stats.totalSec = 42000;
-    stats.weights = [{d: '2026-09-01', v: 61.5}, {d: '2026-09-10', v: 60.8}];
-    stats.badges = ['first'];
-    await saveStats();
+    await kvSet(pk('stats'), JSON.stringify({
+      count: 12,
+      totalSec: 42000,
+      weights: [{d: '2026-09-01', v: 61.5}, {d: '2026-09-10', v: 60.8}],
+      badges: ['first'],
+      history: [],
+      wellness: []
+    }));
+    await loadData();
 
     // Старая ручная поправка веса моделируется в её реальном persisted-формате.
     await kvSet(pk('progWeights'), JSON.stringify({'bk1|Приседания': 4}));
