@@ -14,9 +14,9 @@ import { DAYS, clearSession, closeAllMenus, connectAccountSync, curUser, current
   customPrograms, customToProgram, hasConsent, kvDel, kvGet, kvSet, loadData, loadIdentity,
   loadSession, localISO, migrateUserAge, newId, normPlans, openWellAdd, openWellHist, planDays,
   progActive, programDaysUnion, queueAccountSync, recordConsent, renderStats,
-  renderUsers, renderWeight, renderWellness, savePrograms, saveSession, saveStats, saveUsers,
+  renderUsers, renderWeight, renderWellness, restoreActiveProfile, restoreProfiles, savePrograms, saveSession, saveStats, saveUsers,
   saveWell, saveWellHist, selectWeightMetric, selectWellnessMetric, sessionAgeText, sessionForProgram,
-  sessionWorkout, setCurrentUserShared, setUsersShared, shiftCalendarMonth, showSyncState,
+  sessionWorkout, shiftCalendarMonth, showSyncState,
   setDataSyncEventHooks, stats, syncNotificationPrefsServer, toggleMenu, trackInstallOnce, trackProductEvent, users,
   workStepChoices
 } from './10-data-sync.js';
@@ -2518,7 +2518,7 @@ export function initEvents(){
     await refreshBiometricSupport();
     if(lockNeeded()) openLock();
     // пользователи: миграция со старой схемы профилей f/m
-    try{ setUsersShared(JSON.parse(await kvGet('users')) || []); }catch(e){ setUsersShared([]); }
+    try{ restoreProfiles(JSON.parse(await kvGet('users')) || []); }catch(e){ restoreProfiles([]); }
     const hadLegacyBirth = users.some(u => u && Object.prototype.hasOwnProperty.call(u, 'birth'));
     let migratedProfilePrefs = false;
     users.forEach(u => {
@@ -2543,14 +2543,14 @@ export function initEvents(){
         startOnboarding();
         return;
       }
-      setUsersShared([{id:'f', name:t('profile.defaultMine'), gender:'f', age:null, photo:null, theme:'system', locale:'system'}]);
+      const legacyProfiles = [{id:'f', name:t('profile.defaultMine'), gender:'f', age:null, photo:null, theme:'system', locale:'system'}];
       if((await kvGet('customPrograms_m')) !== null){
-        users.push({id:'m', name:t('profile.defaultNumber',{count:2}), gender:'m', age:null, photo:null, theme:'system', locale:'system'});
+        legacyProfiles.push({id:'m', name:t('profile.defaultNumber',{count:2}), gender:'m', age:null, photo:null, theme:'system', locale:'system'});
       }
+      restoreProfiles(legacyProfiles);
       await saveUsers();
     }
-    setCurrentUserShared((await kvGet('currentUser')) || (await kvGet('profile')) || users[0].id);
-    if(!users.some(u => u.id === currentUser)) setCurrentUserShared(users[0].id);
+    restoreActiveProfile((await kvGet('currentUser')) || (await kvGet('profile')) || users[0].id);
     // До первой динамической отрисовки включаем язык и тему активного профиля:
     // пользователь не должен видеть дефолтный экран, пока восстанавливается его состояние.
     await setAppLocale(profileLocalePreference(curUser()), {persist:false, silent:true});
