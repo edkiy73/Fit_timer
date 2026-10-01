@@ -117,7 +117,10 @@ export function PatternListeningView({
 
   const choose=(option:string)=>{
     if(!item||phase!=='ask')return;
-    setChosen(option);
+    if(chosen!==option){
+      setChosen(option);
+      return;
+    }
     if(option===localized(item.prompt,locale))setHits(value=>value+1);
     setPhase('show');
   };
@@ -204,8 +207,9 @@ export function PatternListeningView({
       {phase==='ask' ? (
         <div className="listening-options">
           {options.map(option=>(
-            <button className="listening-option" type="button" key={option} onClick={()=>choose(option)}>
+            <button className={'listening-option'+(chosen===option?' is-selected':'')} type="button" key={option} onClick={()=>choose(option)}>
               <LexiconText text={option} refs={activity.lexiconRefs} interactive={false} />
+              {chosen===option&&<span className="listening-option-confirm">{t('learn.tapAgain')}</span>}
             </button>
           ))}
         </div>
