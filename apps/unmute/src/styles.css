@@ -372,6 +372,11 @@ h2{margin:0 0 8px;font-weight:800}
 .progress-section h3{margin:3px 0 0;font-size:20px}
 .progress-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
 .progress-section-head>strong{font-size:20px}
+.progress-course-head{align-items:center}
+.progress-course-picker{display:flex;align-items:center;min-width:0}
+.progress-course-picker select{max-width:210px;min-height:40px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);padding:0 34px 0 12px;font:inherit;font-size:13px;font-weight:700;text-overflow:ellipsis}
+.progress-general{background:var(--card)}
+.progress-course-section{background:color-mix(in srgb,var(--accent) 4%,var(--surface))}
 .progress-mini-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .progress-practice-row{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:13px}
 .progress-practice-row strong{color:var(--ink)}
@@ -380,6 +385,8 @@ h2{margin:0 0 8px;font-weight:800}
 /* Phones keep three numbers in a row: a column of full-width pills wasted half the screen. */
 @media(max-width:620px){
   .progress-overview,.progress-mini-grid{gap:8px}
+  .progress-course-head{display:grid}
+  .progress-course-picker select{width:100%;max-width:none}
   .progress-metric{padding:12px 10px;border-radius:18px}
   .progress-metric strong{font-size:22px}
   .progress-metric span{font-size:12px}
