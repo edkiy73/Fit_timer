@@ -158,7 +158,7 @@ describe('course review screen',()=>{
     expect(await screen.findByRole('heading',{name:'Повтор завершён'})).toBeTruthy();
     expect(document.documentElement.dataset.focusRun).toBeUndefined();
     // This runtime never refreshes, so the card still counts as due: the screen says so.
-    expect(screen.getByText('Не получилось: 1. Лучше пройти их ещё раз сейчас, пока свежо.')).toBeTruthy();
+    expect(screen.getByText('Ещё к повтору: 1. Лучше пройти их сейчас, пока всё свежо.')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Пройти ещё раз: 1'}));
     expect(await screen.findByRole('textbox',{name:'Твой ответ'})).toBeTruthy();
   });
@@ -235,7 +235,7 @@ describe('course review screen',()=>{
     );
 
     expect(await screen.findByRole('heading',{name:'Мои слова'})).toBeTruthy();
-    expect(screen.getByText('повторяю')).toBeTruthy();
+    expect(screen.getByText('на повторе')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Начать повтор'}));
     expect(await screen.findByRole('heading',{name:'дом'})).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Показать слово'}));
