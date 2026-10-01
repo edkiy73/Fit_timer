@@ -315,10 +315,8 @@ async function boot(b, label, errs, url){
      await four.evaluate(() => JSON.stringify(account.sub)));
 
   // теперь по-настоящему — выбираем тариф через реальный UI, без записи внутреннего состояния
-  await four.click('.dock-btn[data-scr="scrAccount"]');
-  await four.click('#moreTabs [data-more="acc"]');
-  await four.click('#btnPlanCard');
-  await four.click('#pmPlans .pm-plan[data-plan="month"]');
+  // После отмены подтверждения Premium остаётся открытым под login modal.
+  // Тариф уже выбран через UI выше — повторно открываем только checkout.
   await four.click('#pmBuy');
   await four.fill('#payEmail', MAIL3);
   await four.click('#payGo');
