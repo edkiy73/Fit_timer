@@ -1061,7 +1061,7 @@ export const I18N_EN = {
   'start.exerciseLocMany': "exercises",
   'start.noChanges': "No changes",
   'start.previousLoadUnknown': "The previous load was not saved in older history — only today’s load is shown.",
-  'start.nextCheck': "We'll ask about an increase in {count} {workouts}.",
+  'start.nextCheck': "We'll ask about an increase in {count} {executions}.",
   'start.noChangesOff': "No changes · automatic progression is off.",
   'start.workoutOne': "workout",
   'start.workoutFew': "workouts",
