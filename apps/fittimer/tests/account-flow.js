@@ -159,11 +159,13 @@ async function boot(b, label, errs, url){
   await two.evaluate(async (r) => {
     account.email = r.email; account.syncToken = r.syncToken; account.handle = r.handle;
     await saveAccount();
-    trainer = {on: true, handle: r.handle, key: r.trainerKey, name: r.trainer.name,
-               about: r.trainer.about, years: r.trainer.years, links: r.trainer.links};
+    restoreTrainerClientState({
+      trainer: {on: true, handle: r.handle, key: r.trainerKey, name: r.trainer.name,
+                about: r.trainer.about, years: r.trainer.years, links: r.trainer.links},
+      clients: [{id: 'c1', name: 'Марина', progs: [{pid: null, name: 'программа',
+                 link: {id: r.linkId, key: 'неважно'}, reports: []}]}]
+    });
     await saveTrainer();
-    clients = [{id: 'c1', name: 'Марина', progs: [{pid: null, name: 'программа',
-                link: {id: r.linkId, key: 'неважно'}, reports: []}]}];
     await saveClients();
   }, Object.assign({}, back, {email: MAIL, linkId}));
 

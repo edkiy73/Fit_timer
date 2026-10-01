@@ -30,7 +30,7 @@ async function becomeTrainer(page, opts){
     await saveAccount();
     identity.email = o.email; await saveIdentity();
     await enableTrainerMode();
-    trainer = Object.assign({}, trainer, o.trainer, {handle: account.handle, on: true});
+    restoreTrainerClientState({trainer: Object.assign({}, trainer, o.trainer, {handle: account.handle, on: true})});
     await saveTrainer({deferSync: true});
     const ok = await pushProfile();
     await saveTrainer({deferSync: true});
