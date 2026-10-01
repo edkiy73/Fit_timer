@@ -1968,27 +1968,40 @@ email / guest state
 
 Retry в конце не создаёт новые ложные сегменты первого прохода.
 
-#### Убран лишний второй tap для choice
+#### Choice переведён на осознанное подтверждение двумя tap
 
 В Lesson и Review:
 
 ```
-tap answer
-→ immediately check
+первый tap
+→ выбрать вариант
+
+второй tap по уже выбранному варианту
+→ подтвердить
 → feedback
 ```
 
-Отдельная кнопка «Проверить» для multiple choice удалена.
+Причина: защита от ложного случайного нажатия.
+
+Отдельной кнопки «Проверить» для multiple choice нет. Выбранный вариант показывает подсказку «Нажми ещё раз».
+
+Listening-choice приведён к тому же принципу.
 
 Для typed/chips ответов явная отправка остаётся, потому что пользователь должен закончить ввод.
 
-#### Длинный «Почему?» больше не прячет «Далее»
+#### Feedback / «Почему?» переработан после device QA
 
-В feedback sheet:
+Текущий контракт:
 
-- `Далее` / `Завершить` теперь sticky;
-- длинный AI explanation прокручивается под action;
-- action остаётся доступным в нижней части окна.
+- корректный ответ: `Верно`, затем `Далее` на всю ширину;
+- ошибочный ответ: `Ответ неверный`;
+- если задание будет возвращено, короткая строка `Это задание вернётся в конце урока` находится сразу под заголовком;
+- закрытый `Почему?` + `Далее` стоят в одной строке;
+- раскрытый AI-разбор идёт обычным контентом, а `Далее` переносится ниже на всю ширину;
+- Plus/error-state разбора также занимает полную строку;
+- старые конфликтующие sticky/shadow overrides удалены.
+
+Это заменяет прежнюю реализацию со sticky CTA, которая давала большие пустоты и наложение тени на текст.
 
 #### Выход из урока
 
@@ -2002,7 +2015,10 @@ tap answer
 Действия:
 
 - продолжить урок;
-- выйти и сохранить.
+- выйти и сохранить;
+- выйти без сохранения локального незавершённого run.
+
+Важно: graded/progress writes происходят по ходу урока. Поэтому «выйти без сохранения» сейчас удаляет локальный `LessonRunSnapshot`, но не откатывает уже записанные ответы/SRS. Семантика этой кнопки отмечена ниже как открытый P1.
 
 ---
 
@@ -2213,7 +2229,7 @@ Those changes are already documented in sections 20–22 and included:
 - Profile rename/header changes;
 - per-course statistics selector/layout;
 - segmented lesson progress;
-- one-tap choice checking;
+- two-tap choice confirmation;
 - sticky feedback action;
 - lesson exit confirmation;
 - local unfinished LessonRun snapshot;
@@ -2930,24 +2946,25 @@ Status: ✅ configuration, ❌ rendered visual result.
 
 ---
 
-### One-tap choice answers
+### Two-tap choice confirmation
 
-The current test suite is inconsistent here.
-
-Product code implements immediate choice checking, but some existing unit tests still perform:
+Current product behavior is:
 
 ```
-click radio
-click «Проверить»
+first tap → select
+second tap on selected option → confirm
 ```
 
-Therefore:
+The same principle is used in Lesson, Review and listening choices.
 
-- behavior has some coverage indirectly;
-- test expectations need synchronization;
-- current suite cannot be treated as authoritative for this interaction until updated.
+Older tests were written around previous interaction contracts and must be rechecked deliberately. Required regression assertions:
 
-Status: ⚠️.
+- first tap never grades or mutates SRS;
+- second tap on the selected option grades exactly once;
+- tapping another option changes selection instead of grading the previous one;
+- restored unfinished Lesson preserves option order and selected state.
+
+Status: 🟡 — implementation exists, dedicated contract coverage is incomplete.
 
 ---
 
@@ -3030,4 +3047,313 @@ The following checks can be treated as the remaining audit backlog without touch
 - [ ] required-update behavior when update policy cannot be fetched;
 - [ ] which statistics are global vs per-course;
 - [ ] first-attempt metric across resume/replay.
+
+
+
+---
+
+## 35. Live QA reconciliation after implementation changes — 2026-10-01
+
+Этот раздел актуализирует аудит после серии проверок на реальном Android/browser UI и последних правок. Он имеет приоритет над историческими формулировками выше, если они расходятся.
+
+### 35.1. Исправлено и подтверждено по коду / production build
+
+#### Feedback ошибочного ответа
+
+Текущий RU copy:
+
+- `Ответ неверный` вместо неоднозначного `Пока не так`;
+- `Это задание вернётся в конце урока` уменьшено до вторичного текста и расположено непосредственно под заголовком.
+
+Layout больше не использует накопленный набор conflicting sticky overrides: состояния correct / wrong / expanded Why / Why error разделены явно.
+
+#### Dock
+
+Нижний dock — именно `Сегодня / Маршрут / Повтор / Профиль`.
+
+После live QA найден старый CSS override с `backdrop-filter:none`, который отменял новые правила.
+
+Он удалён. В production используется один canonical dock rule:
+
+- fixed;
+- semi-transparent background;
+- `backdrop-filter`;
+- `-webkit-backdrop-filter`;
+- высокий z-index.
+
+На реальном устройстве blur после этого появился.
+
+#### Sheets поверх dock
+
+После повышения dock z-index generic sheets оказывались под ним.
+
+Исправлено: sheet/dictionary overlay поднимаются выше dock.
+
+Нужно сохранить regression test на stacking order.
+
+#### Основные screen headers / spacing
+
+Today и Profile переведены на общий `ScreenHeader`.
+
+Выявлена отдельная ошибка: одинаковый header ещё не гарантировал одинаковый gap до первого блока. После этого введён единый screen-level gap и убраны конкурирующие page-specific header margins.
+
+Route также отделяет:
+
+- общий gap: title → первый utility block;
+- 12 px: `Твой курс → Справочник → Темы курса`;
+- существующий меньший gap между самими темами/stages.
+
+#### Route entry / current day
+
+Удалён автоматический `scrollIntoView` при обычном входе на Route: вкладка теперь должна открываться сверху.
+
+Добавлена отдельная вторичная команда:
+
+> Темы курса         Текущий день
+
+По нажатию current stage раскрывается и выполняется explicit scroll к текущей station.
+
+Автотест этого scroll contract пока отсутствует.
+
+#### Skeleton loading
+
+Fullscreen loaders заменены на skeleton layouts как минимум для:
+
+- Route;
+- Profile / Progress.
+
+Нужно visual regression на loading → ready, чтобы layout shift не возвращался.
+
+#### Profile statistics course
+
+Контракт после правки:
+
+- default = active course приложения;
+- ручной выбор статистики не меняет active course;
+- ручной override живёт только в текущей app session;
+- после нового запуска снова подхватывается active course.
+
+Dedicated regression coverage пока нужна.
+
+#### LessonRun → Plus → return
+
+Найден реальный баг:
+
+```
+урок
+→ Почему?
+→ free allowance exhausted
+→ Plus
+→ покупка
+→ возврат
+→ урок начинался с первого задания
+```
+
+Причины:
+
+1. возврат зависел от browser history;
+2. local snapshot валидировался слишком строго по старому step signature;
+3. refresh entitlement/content мог изменить runtime state во время remount.
+
+Исправлено:
+
+- Plus получает explicit lesson return URL;
+- возврат идёт с `resume=1`;
+- snapshot remap выполняется по activity ids;
+- изменение/reorder content больше не обязано уничтожать run.
+
+Нужен отдельный automated integration test именно на этот полный сценарий.
+
+#### Choice safety + shuffle
+
+Lesson и Review choice:
+
+- первый tap только выбирает;
+- второй tap подтверждает;
+- случайное одиночное нажатие не должно grade-ить ответ.
+
+Listening choice также приведён к double-tap подтверждению.
+
+Порядок вариантов перемешивается.
+
+Lesson хранит `shuffleSeed` в persisted LessonRunSnapshot, поэтому незавершённый урок не должен менять расположение после восстановления.
+
+Sentence-builder chips также строятся с run-specific seed.
+
+Открытый вопрос: Review seed пока живёт в component session и не сохраняется как часть persistent review session. После полного выхода/возврата расположение choice может измениться.
+
+#### Speed drill
+
+Найдены два hardcoded UI/engine расхождения:
+
+- UI говорил «5 секунд», а speaking window действительно был фиксирован на 5000 ms;
+- UI говорил «7 из 10», хотя activity может содержать другое количество фраз.
+
+Исправлено локально в practice engine — переработка курса не потребовалась.
+
+Теперь:
+
+- speaking time зависит от длины английского ответа;
+- диапазон ограничен разумным min/max;
+- pass rule остаётся 70%;
+- required count вычисляется как `ceil(total * 0.7)`;
+- intro получает фактические `needed` и `count`;
+- то же hardcoded `7 из 10` убрано из listening copy.
+
+Для 3 фраз 70% означает минимум 3/3; для 6 — 5/6; для 10 — 7/10.
+
+Добавлен unit test на dynamic drill timing.
+
+#### Speed compare UI
+
+`Совпало` и `Не совпало` теперь являются одной бинарной развилкой и находятся в одной строке двумя равными кнопками.
+
+Смешанный RU/EN explanation в A1 исправлен.
+
+Первый content release после изменения был заблокирован lexical coverage новым английским словом. Copy переписан на уже покрытую лексику, после чего workflow выпуска курса завершился успешно.
+
+---
+
+### 35.2. Новые / оставшиеся P0–P1 после повторного прохода
+
+#### P1. «Выйти без сохранения» не откатывает уже persisted progress
+
+Текущая реализация:
+
+```
+clear LessonRunSnapshot
+→ exit
+```
+
+Но graded answers, seen/SRS и часть stats пишутся сразу по ходу урока.
+
+Следовательно пользовательское ожидание:
+
+> выйти без сохранения = отменить текущий прогресс
+
+не соответствует реальности.
+
+Нужно принять один контракт:
+
+1. **Discard run only** — переименовать действие так, чтобы не обещать rollback;
+2. **True discard** — отложить writes / иметь reversible run transaction;
+3. **Hybrid** — уже засчитанное остаётся, но незавершённая позиция не восстанавливается; это нужно явно объяснить.
+
+До решения статус: **P1 semantic/data contract**.
+
+#### P1. Partial-write / double grading остаётся главным data-risk
+
+Исправления UI и LessonRun не устранили базовую проблему:
+
+```
+course/SRS write succeeds
+stats write fails
+→ UI sees failure
+→ retry can grade same physical answer again
+```
+
+Это всё ещё один из первых P0/P1 технических тестов.
+
+#### P1. Replay vs Review SRS contract всё ещё не закрыт
+
+Persisted LessonRun улучшает resume, но не вводит полноценный first/resume/replay mode во всех writes.
+
+Повтор завершённого урока всё ещё требует явного contract test на:
+
+- card SRS;
+- practice SRS;
+- stats;
+- completion analytics.
+
+#### P1. Summary semantics всё ещё требуют formal run mode
+
+Resume persistence стала сильнее, но исходная проблема «что именно означает first attempt после resume/replay» не считается закрытой до явной модели и тестов.
+
+#### P1. Review shuffle persistence
+
+Lesson shuffle устойчив к resume благодаря `shuffleSeed`.
+
+Review использует session seed в React state. Полный remount/reopen может дать новый порядок вариантов.
+
+Нужно решить:
+
+- новый порядок при каждой review session допустим;
+- или pinned review session должен сохранять order/seed.
+
+#### P1. Test-suite drift остаётся release risk
+
+Во время повторной проверки найдено, что общий AppBase check падал уже не только из-за старого copy, но и из-за двух регрессий последних правок:
+
+- dynamic drill timing test использовал `drillSayMs` без импорта;
+- Review choice shuffle потерял TypeScript narrowing внутри callback.
+
+Обе ошибки исправлены сразу после обнаружения.
+
+Это подтверждает исходный вывод аудита:
+
+> Vercel READY недостаточно; release gate должен включать typecheck + tests + build.
+
+На момент записи этого раздела новые workflow после этих исправлений ещё должны завершиться; green status нельзя предполагать заранее.
+
+#### P1. Content release — отдельный обязательный gate
+
+Изменение code-owned курса может успешно попасть в Vercel, но не попасть в live content DB.
+
+Фактический пример из этого прохода:
+
+```
+Vercel READY
+content release → 409 lexical_coverage_incomplete
+```
+
+Поэтому для изменений в code-owned course copy/content Definition of Done должен включать:
+
+- app build;
+- lexical coverage;
+- content release workflow success;
+- опубликованную revision.
+
+---
+
+### 35.3. Новые regression tests после live QA
+
+Добавить к 2J:
+
+- [ ] wrong feedback: correct и wrong header alignment отдельно;
+- [ ] retry notice visual hierarchy: smaller + directly under wrong title;
+- [ ] Why collapsed: two buttons in one row;
+- [ ] Why expanded: explanation immediately follows body, Next has 12 px gap and full width;
+- [ ] Why exhausted/error/Plus: no horizontal overflow, Next stays inside sheet;
+- [ ] correct feedback: Next is full width;
+- [ ] lesson choice: first tap selects only, second grades exactly once;
+- [ ] review choice: same double-tap contract;
+- [ ] listening choice: same double-tap contract;
+- [ ] shuffled options differ between new runs but remain stable during restored Lesson run;
+- [ ] sentence chips are shuffled and stable for restored Lesson run;
+- [ ] exit: save vs discard-run semantics;
+- [ ] Plus purchase from Answer Explain returns to exact activity/feedback state;
+- [ ] dynamic drill timing short / medium / long phrase;
+- [ ] pass copy uses actual item count;
+- [ ] speed compare buttons remain two columns at 320–412 px;
+- [ ] Route opens at top;
+- [ ] Route «Текущий день» scrolls to current station;
+- [ ] Sheet always stacks over dock;
+- [ ] Profile statistics default/temporary override lifecycle;
+- [ ] Route/Profile skeleton → ready without large layout shift;
+- [ ] code-course change cannot be considered shipped until content release is green.
+
+---
+
+### 35.4. Текущий короткий приоритет после актуализации
+
+1. Partial-write idempotency / double SRS.
+2. Explicit first / resume / replay mode.
+3. Replay vs Review write contract.
+4. «Выйти без сохранения» semantics.
+5. Plus-return full integration regression.
+6. Review partial-source completeness.
+7. Removed/unpublished learned course discovery.
+8. Analytics exactly-once + mode.
+9. Synchronize stale automated tests with current UI contracts.
+10. Device/visual matrix: 320/360/390/412, keyboard, sheets, dock, status bar.
 
