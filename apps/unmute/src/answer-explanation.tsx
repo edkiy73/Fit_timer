@@ -82,7 +82,7 @@ export function AnswerExplanationView({
           }</p>
         </div>
         {result.freeRemaining!==undefined
-          ? <small>{t('answerExplain.freeLeft',{count:result.freeRemaining})}</small>
+          ? <small>{t('answerExplain.freeLeft',{count:result.freeRemaining,limit:result.freeLimit??0})}</small>
           : result.usage&&(
             <small>{t('aiTalk.usage',{used:result.usage.used,limit:result.usage.limit})}</small>
           )}
