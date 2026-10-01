@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
@@ -114,6 +114,7 @@ function renderRunner(
 }
 
 describe('node activity runner',()=>{
+  beforeEach(()=>localStorage.clear());
   it('shows theory first, then the tasks; builds a new phrase from words; counts the day',async()=>{
     const user=userEvent.setup();
     const {saveSeen,saveGraded,onExit,onNodeCompleted}=renderRunner();
@@ -132,7 +133,6 @@ describe('node activity runner',()=>{
     await user.click(screen.getByRole('button',{name:'Закрыть теорию'}));
     expect(screen.queryByRole('dialog')).toBeNull();
     await user.click(screen.getByRole('radio',{name:'I am here'}));
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
     expect(saveGraded).toHaveBeenCalledWith('general-foundation','choice.one',true);
     expect(await screen.findByText('Верно')).toBeTruthy();
 
@@ -172,7 +172,6 @@ describe('node activity runner',()=>{
       </I18nProvider>
     );
     await user.click(screen.getByRole('radio',{name:'I is here'}));
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
     expect(await screen.findByText('Это задание вернётся в конце урока.')).toBeTruthy();
     // The mistake does not add a task to the count.
     expect(screen.getByText('1/2')).toBeTruthy();
@@ -187,7 +186,6 @@ describe('node activity runner',()=>{
     expect(screen.getByText('2/2')).toBeTruthy();
     expect(screen.getByRole('heading',{name:'Выбери ответ'})).toBeTruthy();
     await user.click(screen.getByRole('radio',{name:'I am here'}));
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
     await user.click(screen.getByRole('button',{name:'Завершить'}));
     // The runtime here never marks the day complete: the summary says so honestly.
     expect(await screen.findByText('День пока не засчитан')).toBeTruthy();
@@ -234,7 +232,6 @@ describe('node activity runner',()=>{
 
     await user.click(screen.getByRole('button',{name:'К заданиям'}));
     await user.click(await screen.findByRole('radio',{name:'I am here'}));
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
     await user.click(screen.getByRole('button',{name:'Далее'}));
     await user.click(await screen.findByRole('button',{name:'Написать с клавиатуры'}));
     const input=await screen.findByRole('textbox',{name:'Твой ответ'});
