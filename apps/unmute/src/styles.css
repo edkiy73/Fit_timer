@@ -90,8 +90,8 @@ h2{margin:0 0 8px;font-weight:800}
 .tabbar-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:48px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:600;border-radius:var(--radius-tile)}
 .tabbar-item:focus-visible{outline:2px solid var(--accent);outline-offset:-4px}
 .tabbar-icon{position:relative;display:flex;align-items:center;justify-content:center;width:56px;height:30px;border-radius:15px;transition:background-color var(--dur-spring) ease}
-.tabbar-item.active{color:var(--accent-ink);font-weight:800}
-.tabbar-item.active .tabbar-icon{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.tabbar-item.active,.tabbar-item[aria-current="page"]{color:var(--accent-ink);font-weight:800}
+.tabbar-item.active .tabbar-icon,.tabbar-item[aria-current="page"] .tabbar-icon{background:color-mix(in srgb,var(--accent) 18%,transparent)}
 .tabbar-badge{position:absolute;top:-3px;right:2px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--on-accent);font-size:11px;font-weight:800;line-height:18px;text-align:center;font-variant-numeric:tabular-nums}
 
 /* "Я" */
@@ -856,7 +856,7 @@ h2{margin:0 0 8px;font-weight:800}
 .tile-review .tile-link{margin-top:auto;color:var(--accent-ink,var(--accent));font-size:14px;font-weight:800}
 
 /* «Маршрут»: the current course is a card you cannot miss, with «Сменить». */
-.course-card{display:flex;align-items:center;gap:12px;width:100%;margin-top:10px;padding:11px 14px;border:1px solid color-mix(in srgb,var(--accent) 24%,var(--line));border-radius:20px;background:color-mix(in srgb,var(--accent) 5%,var(--card));color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.course-card{display:flex;align-items:center;gap:12px;width:100%;margin-top:10px;min-height:58px;padding:11px 14px;border:1px solid color-mix(in srgb,var(--accent) 24%,var(--line));border-radius:20px;background:color-mix(in srgb,var(--accent) 5%,var(--card));color:var(--ink);font:inherit;text-align:left;cursor:pointer}
 .course-card-icon{display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:12px;background:color-mix(in srgb,var(--accent) 16%,var(--card));color:var(--accent-ink,var(--accent))}
 .course-card-text{display:grid;gap:1px;flex:1 1 auto;min-width:0}
 .course-card-text small{color:var(--muted);font-size:12px;font-weight:700}
