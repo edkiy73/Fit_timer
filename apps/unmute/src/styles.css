@@ -209,10 +209,10 @@ h2{margin:0 0 8px;font-weight:800}
 .learn-feedback span,.learn-feedback p{margin:0;line-height:1.45}
 .learn-feedback-head{display:grid;grid-template-columns:44px minmax(0,1fr);align-items:center;gap:12px}
 .learn-feedback-head.has-subtitle{align-items:start}
-.learn-feedback-head-copy{display:grid;align-content:center;gap:4px;min-width:0;min-height:44px}
+.learn-feedback-head-copy{display:grid;align-content:center;gap:2px;min-width:0;min-height:44px}
 .learn-feedback-head.has-subtitle .learn-feedback-head-copy{align-content:start;padding-top:1px}
 .learn-feedback-head-copy strong{font-size:20px;line-height:1.2}
-.learn-feedback-return{margin:0}
+.learn-feedback-return{margin:0;font-size:12px;line-height:1.25;color:var(--muted)}
 .learn-feedback-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:22px}
 .learn-feedback-ok .learn-feedback-icon{color:var(--success);background:color-mix(in srgb,var(--success) 18%,transparent)}
 .learn-feedback-wrong .learn-feedback-icon{color:var(--danger);background:color-mix(in srgb,var(--danger) 16%,transparent)}
