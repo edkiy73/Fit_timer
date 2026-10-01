@@ -256,7 +256,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     choices.every(x => !/подход|круг|сторон/i.test(x.meta || '')),
     choices.map(x=>x.meta).join(' | '));
 
-  const duplicateNames = await page.evaluate(() => {
+  await page.evaluate(async () => {
     tearDownWorkout();
     const p = {
       id:'duplicate-name-live-test', name:'Одинаковые названия', active:true, progression:0,
@@ -265,16 +265,25 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
         {id:'dup-b',name:'Одинаковое',type:'reps',value:'15',sets:1,rest:0,restAfter:0}
       ]}]
     };
-    customPrograms.push(p);
-    state.raw = p; state.planIdx = 0; state.current = customToProgram(p, 0);
-    state.steps = buildSteps();
-    state.stepIdx = state.steps.findIndex(s => s.phase === 'work' && s.exId === 'dup-b');
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
+    configureWorkoutTiming({prep: 0});
+    openStart(customPrograms.find(x => x.id === p.id));
+  });
+  await page.click('#btnStart');
+  await page.waitForSelector('#startModal.open');
+  await page.click('#startFresh');
+  await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
 
+  const duplicateNames = await page.evaluate(() => {
+    const target = state.steps.findIndex(s => s.phase === 'work' && s.exId === 'dup-b');
+    startWorkout(target, 0, {skipPrep:true});
     const step = state.steps[state.stepIdx];
     const byId = liveExercise(step.exId, step.exName);
     const ambiguousLegacy = liveExercise('', step.exName);
 
     // Имитируем AI replacement именно второго из двух одноимённых упражнений.
+    const p = customPrograms.find(x => x.id === 'duplicate-name-live-test');
     const replacement = {
       id:'dup-b-new',name:'Заменённое второе',type:'reps',value:'6',sets:1,rest:0,restAfter:0
     };
