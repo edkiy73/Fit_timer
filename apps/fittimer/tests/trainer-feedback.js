@@ -126,14 +126,16 @@ async function boot(b, label, errs, url){
     openStart(p);
     const firstPlan = document.querySelector('#planRow .plan-chip[data-plan-idx="0"]');
     if(firstPlan) firstPlan.click();
-    state.current = customToProgram(p, 0);
-    state.steps = buildSteps();
-    state.stepOutcomes = {};
-    state.steps.forEach((step, i) => {
-      if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
+  });
+  await cp.click('#btnStart');
+  await cp.waitForSelector('#startModal.open');
+  await cp.evaluate(async () => {
+    const outcomes = {};
+    buildSteps().forEach((step, i) => {
+      if(step.phase === 'work') outcomes[workoutStepKey(step, i)] = 'done';
     });
-    state.globalStart = Date.now() - 60000;
-    state.pausedTotal = 0;
+    $('startModal').classList.remove('open');
+    startWorkout(0, 60000, {skipPrep:true, outcomes});
     await finishWorkout();
   });
   await cp.waitForTimeout(1800);
