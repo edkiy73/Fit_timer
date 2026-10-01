@@ -146,7 +146,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     account.email = 'edit-ai-test@example.com';
     account.syncToken = 'edit-ai-test-token';
     account.sub = {plan:'year', until:'2099-01-01'};
-    identity.deviceId = 'edit-ai-test-device';
+    await kvSet('deviceId', 'edit-ai-test-device'); await loadIdentity();
     openBuilder('exn');
   });
   await page.waitForTimeout(300);
