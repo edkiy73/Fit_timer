@@ -81,6 +81,7 @@ let builderHooks = {
   dropFreshEx: () => {},
   exDirty: () => false,
   exRestAfter: () => 0,
+  exerciseProgEvery: () => 0,
   fmtKg: v => String(v == null ? '' : v),
   getExProgValue: () => 0,
   getExWeight: () => 0,
@@ -93,6 +94,7 @@ let builderHooks = {
   progAxis: () => 'none',
   progBaseValue: () => 0,
   progStepSize: () => 0,
+  programHasProgression: () => false,
   programDirty: () => false,
   progressedRepsRange: () => '',
   clearExerciseDraft: () => {},
@@ -1210,14 +1212,21 @@ function renderStartOverview(){
   // Показываем и тогда, когда нагрузка уже изменилась, — иначе после первого
   // повышения человек терял из виду, когда будет следующее.
   let nextText = '';
-  if(p.progression){
-    const every = Math.max(1, +p.progression || 1);
-    const ns = exercises
+  if(builderHooks.programHasProgression(p)){
+    const lefts = exercises
       .filter(ex => !ex.warmup && builderHooks.progAxis(ex) !== 'none' && !builderHooks.progAtCeiling(p.id, ex, p))
-      .map(ex => Math.max(0, Math.round(+(ex.ps && ex.ps.n) || 0)));
-    if(ns.length){
-      const left = Math.max(1, every - Math.max(...ns));
-      nextText = t('start.nextCheck',{count:left,workouts:appLocale === 'ru' ? plural(left,t('start.workoutOne'),t('start.workoutFew'),t('start.workoutMany')) : t(left === 1 ? 'start.workoutOne' : 'start.workoutFew')});
+      .map(ex => {
+        const every = builderHooks.exerciseProgEvery(ex, p);
+        if(every <= 0) return null;
+        const done = Math.max(0, Math.round(+(ex.ps && ex.ps.n) || 0));
+        return Math.max(1, every - done);
+      })
+      .filter(x => x != null);
+    if(lefts.length){
+      const left = Math.min(...lefts);
+      nextText = t('start.nextCheck',{count:left,executions:appLocale === 'ru'
+        ? plural(left,t('builder.exerciseCompletionOne'),t('builder.exerciseCompletionFew'),t('builder.exerciseCompletionMany'))
+        : (left === 1 ? t('builder.exerciseCompletionOne') : t('builder.exerciseCompletionFew'))});
     }
   }
   if(previous.first){
