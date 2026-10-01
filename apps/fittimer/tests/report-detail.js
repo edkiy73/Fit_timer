@@ -115,12 +115,17 @@ async function boot(b, label, errs, url){
 
   // ---- клиент занимается по обоим вариантам и ПЕРЕДЕЛЫВАЕТ программу ----
   await cp.evaluate(async () => {
-    const p = customPrograms.find(x => x.name === 'Сила дома');
+    const current = customPrograms.find(x => x.name === 'Сила дома');
     const day = i => localISO(new Date(Date.now() - i * 86400000));
     // четыре по первому варианту, один по второму
-    [[1,0],[4,0],[8,0],[11,0],[2,1]].forEach(([ago, pl]) =>
-      stats.history.push({d: day(ago), t: 9, pid: p.id, sec: 1500, kcal: 120, plan: pl}));
-    stats.count = 5; await saveStats();
+    const added = [[1,0],[4,0],[8,0],[11,0],[2,1]].map(([ago, pl]) =>
+      ({d: day(ago), t: 9, pid: current.id, sec: 1500, kcal: 120, plan: pl}));
+    await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {
+      history:[...(stats.history || []), ...added],
+      count:5
+    })));
+    await loadData();
+    const p = customPrograms.find(x => x.name === 'Сила дома');
 
     const plans = normPlans(p);
     plans[0].exercises = plans[0].exercises.filter(e => e.name !== 'Отжимания');  // выкинул
