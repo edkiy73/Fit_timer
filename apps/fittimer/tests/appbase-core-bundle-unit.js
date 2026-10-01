@@ -38,6 +38,9 @@ ok('shared AI protocol is imported, not concatenated into the product runtime',
 ok('test-only binding bridge has an explicit measured allowlist',
   /TEST_BRIDGE_ALLOWLIST = new Set/.test(bridge)
   && /filter\(\(\[name\]\) => TEST_BRIDGE_ALLOWLIST\.has\(name\)\)/.test(bridge));
+ok('test-only binding bridge exposes setters only for measured writes',
+  /TEST_BRIDGE_WRITABLE = new Set/.test(bridge)
+  && /mutable && TEST_BRIDGE_WRITABLE\.has\(name\)/.test(bridge));
 ok('test-only binding bridge is generated, gated and never enabled by production config',
   /__FIT_TEST_MODE__ === true/.test(bridge)
   && /testBridge\(/.test(esm) && !/__FIT_TEST_MODE__/.test(app)

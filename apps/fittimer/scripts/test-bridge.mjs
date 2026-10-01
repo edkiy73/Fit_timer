@@ -5,9 +5,8 @@
    globalThis. scripts/build-esm.mjs appends this bridge to each product module, but only
    bindings in TEST_BRIDGE_ALLOWLIST are re-exposed on
    globalThis only when the harness sets globalThis.__FIT_TEST_MODE__ (never in
-   production). Mutable bindings (let/var/function) get setters, so a stub assigned in a
-   test replaces the binding every importer sees (ES imports are live bindings);
-   const/class bindings are read-only. */
+   production). Only names in TEST_BRIDGE_WRITABLE receive setters, so ordinary
+   compatibility reads cannot mutate module state by accident. */
 import ts from 'typescript';
 
 /* Explicit compatibility surface for browser tests. The audit script measures real
@@ -191,6 +190,26 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "workStepChoices"
 ]);
 
+/* Only bindings that browser tests deliberately overwrite get setters. Everything
+   else in the test compatibility surface is getter-only even when its declaration is mutable. */
+export const TEST_BRIDGE_WRITABLE = new Set([
+  "callGemini",
+  "callGeminiImage",
+  "clientIdx",
+  "clients",
+  "customPrograms",
+  "editAIProg",
+  "photos",
+  "pmPlan",
+  "premiumGate",
+  "prepSec",
+  "progWeights",
+  "stats",
+  "storeServer",
+  "syncNativeNotifications",
+  "trainer"
+]);
+
 export function testBridge(source, fileName = 'module.js'){
   const file = ts.createSourceFile(fileName, source, ts.ScriptTarget.ES2022, false, ts.ScriptKind.JS);
   const names = new Map();
@@ -209,7 +228,7 @@ export function testBridge(source, fileName = 'module.js'){
   }
   const exposed = [...names].filter(([name]) => TEST_BRIDGE_ALLOWLIST.has(name));
   if(!exposed.length) return '';
-  const lines = exposed.map(([name, mutable]) => mutable
+  const lines = exposed.map(([name, mutable]) => mutable && TEST_BRIDGE_WRITABLE.has(name)
     ? `  __fitExpose(${JSON.stringify(name)}, () => ${name}, value => { ${name} = value; });`
     : `  __fitExpose(${JSON.stringify(name)}, () => ${name});`);
   return `
