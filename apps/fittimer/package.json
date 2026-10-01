@@ -25,7 +25,7 @@
     "test:foundation": "node tests/appbase-foundation-unit.js",
     "test:boundaries": "node tests/dependency-boundaries-unit.js",
     "build:web": "npm run build:sources && node scripts/build-esm.mjs --outdir esm --stamp-index index.html",
-    "check": "node scripts/audit-test-bridge.mjs --json && node scripts/test.mjs --static && node scripts/test.mjs --unit && npm run typecheck && npm run test:boundaries && npm run test:foundation && npm run check:sources && npm run build && npm run check:mobile",
+    "check": "node scripts/audit-test-bridge.mjs --check && node scripts/test.mjs --static && node scripts/test.mjs --unit && npm run typecheck && npm run test:boundaries && npm run test:foundation && npm run check:sources && npm run build && npm run check:mobile",
     "test:browser": "node scripts/test.mjs --browser"
   },
   "dependencies": {
