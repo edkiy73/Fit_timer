@@ -41,7 +41,7 @@ UI → навигация → состояние урока → сохранен
 | Review partial-source completeness | ❌ открыто | Нельзя молча считать очередь полной при failed source |
 | Removed/unpublished learned courses | ❌ открыто | Review/Reset discovery требует отдельного решения |
 | Analytics exactly-once / run mode | ❌ открыто | Durable completion и replay/resume events не закрыты |
-| CI gate | 🟡 перепроверяется | Две свежие typecheck-регрессии найдены и исправлены; новый общий workflow должен подтвердить green |
+| CI gate | 🔴 не green | Typecheck-регрессии исправлены; текущий общий check дошёл до unit suite: 11 failed / 257 passed. Нужна синхронизация тестов и проверка возможных настоящих регрессий |
 
 > Если исторический раздел ниже противоречит этой таблице или разделу 35, актуальным считается этот статус и раздел 35.
 
@@ -1967,8 +1967,9 @@ email / guest state
 
 - дни занятий;
 - серия;
-- мои слова;
 - календарь активности.
+
+«Мои слова» из общего блока убраны: это не независимая общая метрика для текущей компоновки Profile.
 
 **По курсу:**
 
@@ -2263,11 +2264,11 @@ Those changes are already documented in sections 20–22 and included:
 - local unfinished LessonRun snapshot;
 - several copy changes and matching test edits.
 
-From this section onward the task is **audit-only**:
+На момент написания этого раздела была установлена граница **audit-only**:
 
 > inspect existing behavior/tests → record evidence/gaps here → do not change product code or tests.
 
-No product/test code changes are part of the audit pass below.
+Позже владелец отдельно вернул задачу в implementation mode и последовали UI/state fixes. Поэтому разделы 26–34 отражают тот audit-only снимок, а актуальное состояние после последующих изменений зафиксировано в разделе 35.
 
 ---
 
@@ -2301,15 +2302,18 @@ The dedicated `.github/workflows/unmute.yml` is designed to run:
 - Android debug builds + emulator launch smoke for native changes;
 - iOS simulator build + launch smoke for native changes.
 
-### Important limitation of this audit pass
+### Execution evidence update
 
-The GitHub connector did not return runnable workflow results for the current commits, so this section distinguishes:
+Изначально в audit-only проходе workflow results были недоступны, поэтому coverage ниже оценивался по исходникам.
 
-- **test exists** — verified from source;
-- **scenario covered by test code** — verified from assertions;
-- **green on current main** — **not assumed unless execution evidence exists**.
+Позже execution evidence был получен из GitHub Actions. Важный вывод подтвердился:
 
-A Vercel deployment reaching `READY` proves the Vercel build completed; it does **not** prove `test:unit` or `test:browser` passed.
+- Vercel `READY` не равен green test gate;
+- `UnMute — production readiness` может быть green, когда общий `AppBase — all apps consistency` красный;
+- после последних UI/state изменений typecheck-регрессии были найдены и исправлены;
+- следующий общий check дошёл до unit suite и показал 11 failures / 257 passes.
+
+Поэтому ниже статус `✅ coverage exists` не означает, что текущий suite целиком green.
 
 ---
 
@@ -3384,4 +3388,58 @@ content release → 409 lexical_coverage_incomplete
 8. Analytics exactly-once + mode.
 9. Synchronize stale automated tests with current UI contracts.
 10. Device/visual matrix: 320/360/390/412, keyboard, sheets, dock, status bar.
+
+
+### 35.5. Фактический CI после последних правок
+
+Последний проверенный общий AppBase run после исправления двух typecheck-регрессий дошёл до unit tests.
+
+Результат:
+
+```
+Test Files: 5 failed | 59 passed
+Tests:      11 failed | 257 passed
+```
+
+То есть typecheck-блокирующие ошибки `drillSayMs` import и Review choice narrowing уже устранены, но suite всё ещё **не green**.
+
+Текущие failures:
+
+1. `answer-explanation.test.tsx` — ждёт старый hardcoded copy «Три бесплатных разбора использованы».
+2. `dialogue.test.tsx` ×2 — ждёт старый текст «Так и есть».
+3. `learn.test.tsx` basic flow — старые ожидания interaction/save после изменения choice/chips contract.
+4. `learn.test.tsx` wrong-return — literal matcher не совпадает с текущей retry notice.
+5. `learn.test.tsx` restore unfinished run — та же copy/structure drift.
+6. `learn.test.tsx` completed-node replay — старый сценарий не учитывает текущий two-tap flow и не находит `Далее`.
+7. `pattern-listening.test.tsx` — старый one-tap сценарий больше не доходит до target result.
+8. `progress-screen.test.tsx` summary — expected summary shape устарела после переработки статистики.
+9. `progress-screen.test.tsx` empty state — ждёт старый heading `Прогресс`.
+10. `progress-screen.test.tsx` populated state — ждёт старый текст `ответов`.
+
+Итого 11 test cases.
+
+Предварительная классификация:
+
+- **явно stale expectations:** AI free copy, Dialogue copy, Progress title/copy, часть choice/listening flows;
+- **нужно перепроверить как behavior regression, а не автоматически переписывать test:** basic Learn save assertion, restore/replay flows, Progress summary semantics.
+
+Правило для следующего test-sync pass:
+
+> сначала подтвердить текущий продуктовый контракт, потом менять expectation; не делать suite green удалением полезных assertions.
+
+### 35.6. Что после повторного прохода считается забытым
+
+Кроме крупных P0/P1 выше, не потерять следующие меньшие, но реальные хвосты:
+
+- dedicated test для `Route → Текущий день`;
+- skeleton loading visual/state tests;
+- Profile temporary statistics-course selection lifecycle;
+- Sheet-over-dock stacking regression;
+- Review shuffle order across full remount;
+- process-kill recovery LessonRun;
+- full Plus purchase → exact feedback/activity resume test;
+- 320/360/390/412 feedback layout, особенно expanded Why / Plus error;
+- RU/EN semantic copy pass после большого числа RU правок;
+- code-owned content release как отдельный release gate, а не только Vercel build.
+
 
