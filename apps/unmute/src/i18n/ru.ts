@@ -161,6 +161,8 @@ export const ru = {
   'today.previewCompleteTitle': 'Бесплатная часть пройдена',
   'today.previewCompleteText': 'Следующий день есть на карте курса, но его содержимое откроется с полным доступом.',
   'courseMap.title': 'Маршрут',
+  'courseMap.topicsTitle': 'Темы курса',
+  'courseMap.currentDayAction': 'Текущий день',
   'courses.title': 'Курсы',
   'courses.hint': 'Прогресс каждого курса сохраняется отдельно — можно переключаться в любой момент.',
   'courses.choose': 'Выбрать курс',
