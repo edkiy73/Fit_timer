@@ -27,8 +27,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.evaluate(async () => {
     const u = curUser(); u.gender = 'f'; u.age = 30; await saveUsers();
     configureWorkoutTiming({prep: 0});
-    customPrograms.push({id: 'pq', name: 'Проба', plans: [{days: ['Пн'], rounds: 1, roundRest: 0,
-      exercises: [{name: 'Планка', type: 'time', value: 30, rest: 10}]}]});
+    const p = {id: 'pq', name: 'Проба', plans: [{days: ['Пн'], rounds: 1, roundRest: 0,
+      exercises: [{name: 'Планка', type: 'time', value: 30, rest: 10}]}]};
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
     await savePrograms();
   });
 
