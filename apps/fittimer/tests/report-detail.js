@@ -138,7 +138,10 @@ async function boot(b, label, errs, url){
     p.stats = {completions: 6};
     await savePrograms();
 
-    state.current = customToProgram(p, 0); state.raw = p; state.planIdx = 0;
+    openStart(p);
+    const firstPlan = document.querySelector('#planRow .plan-chip[data-plan-idx="0"]');
+    if(firstPlan) firstPlan.click();
+    state.current = customToProgram(p, 0);
     state.steps = buildSteps();
     state.stepOutcomes = {};
     state.steps.forEach((step, i) => {
