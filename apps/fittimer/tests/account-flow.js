@@ -188,7 +188,7 @@ async function boot(b, label, errs, url){
   ok('ссылка подопечному цела', soft.link === 'есть', soft.link);
 
   const stillMine = await two.evaluate(async () => {
-    trainer.name = 'Лена снова';
+    updateTrainerProfile({name: 'Лена снова'});
     try{ await pushProfile(); }catch(e){}
     const page = await apiFetch('/api/trainer/' + encodeURIComponent(trainer.handle));
     return page.name;

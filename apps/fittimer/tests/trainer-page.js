@@ -82,7 +82,7 @@ const stats = page => page.evaluate(() => [...document.querySelectorAll('#tpStat
 
   await cp.evaluate(() => {
     const p = customPrograms.find(x => x.name === 'Сила дома');
-    state.raw = p; state.planIdx = 0; show('scrStart'); renderStartInfo();
+    openStart(p);
   });
   await cp.waitForTimeout(500);
   ok('ник тренера виден на экране программы', await cp.isVisible('#startByChip'));

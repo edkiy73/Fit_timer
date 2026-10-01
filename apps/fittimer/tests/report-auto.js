@@ -89,7 +89,7 @@ async function boot(b, label, errs, url){
 
   const menu = await cp.evaluate(() => {
     const p = customPrograms.find(x => x.name === 'Сила дома');
-    state.raw = p; state.planIdx = 0; show('scrStart'); buildStartMenu();
+    openStart(p); buildStartMenu();
     return [...document.querySelectorAll('#startMenu button')].map(x => x.textContent.trim());
   });
   ok('кнопки «отправить отчёт» больше нет', !menu.some(t => /отчёт/i.test(t)), menu.join(' | '));
