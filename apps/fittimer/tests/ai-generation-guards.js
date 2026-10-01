@@ -76,10 +76,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await page.evaluate(() => aiCreateExerciseGuard()) === true);
 
   await page.evaluate(async () => {
-    customPrograms.push({id:'guard-edit', name:'Тестовая программа', plans:[{days:['Пн'], rounds:1, roundRest:0,
-      exercises:[{name:'Присед', type:'reps', value:10, rest:30}]}]});
+    const p = {id:'guard-edit', name:'Тестовая программа', plans:[{days:['Пн'], rounds:1, roundRest:0,
+      exercises:[{name:'Присед', type:'reps', value:10, rest:30}]}]};
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
     await savePrograms();
-    openEditAI(customPrograms.find(p => p.id === 'guard-edit'));
+    openEditAI(customPrograms.find(x => x.id === p.id));
   });
   await page.waitForTimeout(100);
   ok('пустое изменение программы блокируется общим guard',
@@ -129,8 +131,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     })));
     await loadAccount();
     await kvSet('deviceId', 'guard-test-device'); await loadIdentity();
-    customPrograms.push({id:'guard-images', name:'', plans:[{days:['Пн'], rounds:1, roundRest:0,
-      exercises:[{name:'Присед', type:'reps', value:10, rest:30}]}]});
+    const p = {id:'guard-images', name:'', plans:[{days:['Пн'], rounds:1, roundRest:0,
+      exercises:[{name:'Присед', type:'reps', value:10, rest:30}]}]};
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
     await savePrograms();
     openBuilder('guard-images');
   });
