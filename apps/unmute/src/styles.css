@@ -86,7 +86,14 @@ h2{margin:0 0 8px;font-weight:800}
 
 /* Bottom navigation: the one glass layer, in thumb reach, hidden inside lessons. */
 :root[data-focus-run] .tabbar{display:none}
-.tabbar{position:fixed;z-index:50;left:max(12px,calc(50% - 348px));right:max(12px,calc(50% - 348px));bottom:calc(var(--safe-bottom) + 12px);height:var(--tabbar-h);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-radius:var(--radius-tile);background:rgba(255,255,255,.66);-webkit-backdrop-filter:blur(28px) saturate(1.45);backdrop-filter:blur(28px) saturate(1.45);border:1px solid rgba(255,255,255,.42);box-shadow:var(--elev-2);overflow:hidden;background-clip:padding-box}
+.tabbar{position:fixed;z-index:1000;left:50%;bottom:calc(var(--safe-bottom) + 12px);width:min(calc(100% - 24px),696px);height:var(--tabbar-h);transform:translateX(-50%);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-radius:var(--radius-tile);background-color:rgba(255,255,255,.40);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.20);box-shadow:0 20px 40px rgba(0,0,0,.15);overflow:hidden}
+:root[data-theme="dark"] .tabbar{background-color:rgba(30,30,38,.50);border-color:rgba(255,255,255,.10)}
+@media(prefers-color-scheme:dark){:root:not([data-theme]) .tabbar{background-color:rgba(30,30,38,.50);border-color:rgba(255,255,255,.10)}}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .tabbar{background-color:rgba(255,255,255,.88)}
+  :root[data-theme="dark"] .tabbar{background-color:rgba(30,30,38,.90)}
+  @media(prefers-color-scheme:dark){:root:not([data-theme]) .tabbar{background-color:rgba(30,30,38,.90)}}
+}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){}
 .tabbar-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:48px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:600;border-radius:var(--radius-tile)}
 .tabbar-item:focus-visible{outline:2px solid var(--accent);outline-offset:-4px}
@@ -1156,22 +1163,9 @@ h2{margin:0 0 8px;font-weight:800}
 .progress-course-head{gap:12px}
 .progress-course-kpis{margin-top:0}
 
-/* Real glass layer: blur lives on its own translucent pseudo-element. */
-.tabbar{background:transparent;overflow:hidden;backdrop-filter:none;-webkit-backdrop-filter:none}
-.tabbar::before{content:"";position:absolute;inset:0;z-index:0;border-radius:inherit;background:var(--glass-bg);backdrop-filter:blur(30px) saturate(1.25);-webkit-backdrop-filter:blur(30px) saturate(1.25);transform:translateZ(0);pointer-events:none}
-.tabbar-item{position:relative;z-index:1}
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
-  .tabbar::before{background:var(--card)}
-}
 
 @media(max-width:620px){
   .progress-dashboard.card{padding:16px}
   .progress-dashboard-head h3{font-size:20px}
 }
 
-:root[data-theme="dark"] @media(prefers-color-scheme:dark){:root:not([data-theme]) :root:not([data-theme]) .tabbar{background:rgb(28 29 42/.10)}}
-
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.tabbar{background:rgba(255,255,255,.92)}}
-
-:root[data-theme="dark"] .tabbar{background:rgba(24,25,36,.68);border-color:rgba(255,255,255,.10)}
-@media(prefers-color-scheme:dark){:root:not([data-theme]) .tabbar{background:rgba(24,25,36,.68);border-color:rgba(255,255,255,.10)}}
