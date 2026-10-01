@@ -607,15 +607,16 @@ export function NodeRunnerView({
     acceptedAnswers?:string[]|undefined;
     learnerAnswer?:string|undefined;
     explanation?:Record<string,string>|undefined;
-  })=>result===null?null:(
+  })=>{
+    if(result===null)return null;
+    const willReturn=!result&&stepIndex!==undefined&&order.slice(pos+1).includes(stepIndex);
+    return (
     <div className={'learn-feedback is-sheet '+(result?'learn-feedback-ok':'learn-feedback-wrong')} role="status">
-      <div className="learn-feedback-head">
+      <div className={'learn-feedback-head'+(willReturn?' has-subtitle':'')}>
         <span className="learn-feedback-icon" aria-hidden="true"><Icon name={result?'check':'close'} size={22} /></span>
         <div className="learn-feedback-head-copy">
           <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
-          {!result&&stepIndex!==undefined&&order.slice(pos+1).includes(stepIndex)&&(
-            <p className="learn-hint learn-feedback-return">{t('learn.willReturn')}</p>
-          )}
+          {willReturn&&<p className="learn-hint learn-feedback-return">{t('learn.willReturn')}</p>}
         </div>
       </div>
       {!result&&accepted&&(
@@ -642,7 +643,8 @@ export function NodeRunnerView({
         </button>
       </div>
     </div>
-  );
+    );
+  };
 
   const dueReview=activity.type==='review'?buildCourseReviewSession(state.set,state.progress,activitySaveClock().dayNumber).actionableCount:0;
   const completeReviewDay=async()=>{
