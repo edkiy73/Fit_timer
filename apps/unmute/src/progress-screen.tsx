@@ -19,7 +19,6 @@ import { appDocs, readStatsProgress, readWordsProgress } from './sync';
 import type { RecordMap } from '@appbase/core/document-sync.js';
 import type { TimedFlag } from './progress';
 import { withAllLearningDays } from './learning-days';
-import { Loader } from './loader';
 import { Icon, type IconName } from './icons';
 import { Sheet } from './sheet';
 import { CourseOptionList } from './active-course';
@@ -303,8 +302,20 @@ export function ProgressView({
 
   if(runtime.status==='pending'||details.status==='pending'){
     return (
-      <section className="progress-shell">
-        <Loader title={t('progress.loadingTitle')} className={embedded?'is-compact':''} />
+      <section className="progress-shell profile-progress-skeleton" aria-busy="true" aria-label={t('progress.loadingTitle')}>
+        <article className="card progress-dashboard profile-skeleton-card" aria-hidden="true">
+          <span className="skeleton skeleton-line skeleton-section-title" />
+          <div className="progress-general-metrics">
+            <span className="skeleton skeleton-metric" />
+            <span className="skeleton skeleton-metric" />
+          </div>
+          <span className="skeleton skeleton-calendar" />
+        </article>
+        <article className="card progress-dashboard profile-skeleton-card" aria-hidden="true">
+          <span className="skeleton skeleton-line skeleton-section-title" />
+          <span className="skeleton skeleton-course-hero" />
+          <span className="skeleton skeleton-course-detail" />
+        </article>
       </section>
     );
   }
