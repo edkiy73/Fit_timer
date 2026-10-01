@@ -97,16 +97,27 @@ const shot = page => page.evaluate(() => ({
   const errs = [];
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
   page.on('pageerror', e => errs.push(String(e)));
+  let catalogItem = null;
+  await page.route('**/api/catalog*', async route => {
+    const u = new URL(route.request().url());
+    const body = u.searchParams.get('item')
+      ? {item: catalogItem}
+      : {items: catalogItem ? [catalogItem] : []};
+    await route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(body)});
+  });
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(1500); }
 
-  const open = (txt, extra) => page.evaluate(({txt, extra}) => {
-    storeServer = [Object.assign({id: 'utest01', by: '@lena.doma', cat: 'tone', level: 'Средний',
+  const open = async (txt, extra) => {
+    catalogItem = Object.assign({id: 'utest01', by: '@lena.doma', cat: 'tone', level: 'Средний',
       min: 35, name: 'Проверка', gives: 'Описание программы для проверки состава.',
-      text: txt, cover: null}, extra || {})];
-    openStoreItem('utest01');
-  }, {txt, extra});
+      text: txt, cover: null}, extra || {});
+    await page.evaluate(async () => {
+      await loadStoreServer();
+      await openStoreItem('utest01');
+    });
+  };
 
   /* ---- два варианта ---- */
   await open(TWO);
@@ -159,7 +170,12 @@ const shot = page => page.evaluate(() => ({
   ok('и сказано, что внутри', /2 упражнения/.test(locked.txt), locked.txt.slice(0, 40));
   ok('метка «Премиум» стоит', /Премиум/.test(locked.tag), locked.tag);
 
-  await page.evaluate(() => { account.sub = {plan: 'year', until: '2099-01-01'}; });
+  await page.evaluate(async () => {
+    account.email = 'store-test@example.com';
+    account.syncToken = 'store-test-token';
+    account.sub = {plan: 'year', until: '2099-01-01'};
+    await kvSet('deviceId', 'store-test-device');
+  });
   await open(ONE, {pro: true});
   await page.waitForTimeout(400);
   const unlocked = await page.evaluate(() => ({
