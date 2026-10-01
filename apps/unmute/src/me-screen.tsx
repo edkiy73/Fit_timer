@@ -41,12 +41,12 @@ export function MeScreen(){
 
   return (
     <section className="me" aria-labelledby="me-title">
-      <header className="me-head">
-        <div className="me-head-text">
-          <span className="screen-kicker">{email ? email + (auth.session?.handle ? ' · ' + auth.session.handle : '') : t('me.guestName')}</span>
+      <header className="screen-head">
+        <div className="screen-kicker">{email ? email + (auth.session?.handle ? ' · ' + auth.session.handle : '') : t('me.guestName')}</div>
+        <div className="screen-title-row">
           <h2 id="me-title">{t('me.title')}</h2>
+          <Link className="me-settings pressable" to="/settings" aria-label={t('me.settings')}><Icon name="settings" size={22} /></Link>
         </div>
-        <Link className="me-settings pressable" to="/settings" aria-label={t('me.settings')}><Icon name="settings" size={22} /></Link>
       </header>
 
       {!auth.session && (
