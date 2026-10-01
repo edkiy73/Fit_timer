@@ -459,13 +459,17 @@ async function scenario(ctx, name, fn, errs){
       goTab('scrPrograms');
       const p = customPrograms.find(x => x.id === 'nav-finish');
       openStart(p);
-      state.current = customToProgram(p, 0);
-      startWorkout();
-      state.stepOutcomes = {};
+    });
+    await page.click('#btnStart');
+    await page.waitForSelector('#startModal.open');
+    await page.click('#startFresh');
+    await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
+    await page.evaluate(() => {
+      const outcomes = {};
       state.steps.forEach((step, i) => {
-        if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
+        if(step.phase === 'work') outcomes[workoutStepKey(step, i)] = 'done';
       });
-      state.globalStart = Date.now() - 40000;
+      startWorkout(0, 40000, {skipPrep:true, outcomes});
       finishWorkout();
     });
     await nap(page, 550);
