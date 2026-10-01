@@ -43,8 +43,8 @@ export function MeScreen(){
     <section className="me" aria-labelledby="me-title">
       <header className="me-head">
         <div className="me-head-text">
-          <h2 id="me-title">{t('me.title')}</h2>
           <span>{email ? email + (auth.session?.handle ? ' · ' + auth.session.handle : '') : t('me.guestName')}</span>
+          <h2 id="me-title">{t('me.title')}</h2>
         </div>
         <Link className="me-settings pressable" to="/settings" aria-label={t('me.settings')}><Icon name="settings" size={22} /></Link>
       </header>
