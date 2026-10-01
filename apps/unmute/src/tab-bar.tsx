@@ -38,7 +38,9 @@ export function TabBar(){
   const location = useLocation();
   if(tabBarHidden(location.pathname)) return null;
   return (
-    <nav className="tabbar" aria-label={t('nav.tabs')}>
+    <>
+      <div className="tabbar-glass" aria-hidden="true" />
+      <nav className="tabbar" aria-label={t('nav.tabs')}>
       {TABS.map(tab => (
         <NavLink key={tab.to} to={tab.to} end={tab.end ?? false} className="tabbar-item pressable">
           <span className="tabbar-icon">
@@ -48,6 +50,7 @@ export function TabBar(){
           <span className="tabbar-label">{t(tab.label)}</span>
         </NavLink>
       ))}
-    </nav>
+      </nav>
+    </>
   );
 }
