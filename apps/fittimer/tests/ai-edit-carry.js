@@ -26,7 +26,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const body = route.request().postDataJSON() || {};
     aiKinds.push(body.kind || '');
     await route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify({
-      text:'УПРАЖНЕНИЕ: Присед\\nФОРМАТ: время\\nЗНАЧЕНИЕ: 40\\nПОДХОДЫ: 3\\nОТДЫХ: 60'
+      text:'УПРАЖНЕНИЕ: Присед\nФОРМАТ: время\nЗНАЧЕНИЕ: 40\nПОДХОДЫ: 3\nОТДЫХ: 60'
     })});
   });
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
