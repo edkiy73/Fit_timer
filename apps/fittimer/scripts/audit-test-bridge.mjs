@@ -186,6 +186,7 @@ if(check){
     process.exit(1);
   }
   console.log(`Test bridge covers ${report.usedBindings} measured reads, ${report.overwrittenBindings} binding writes and ${report.mutatedBindings} object-mutation roots (from ${report.candidateBindings} candidates).`);
+  if(mutationRows.length) console.log('Object-mutation roots: ' + mutationRows.map(row => row.name + ' [' + row.kinds.join(',') + ']').join(', '));
 }else if(json){
   console.log(JSON.stringify(report, null, 2));
 }else{
