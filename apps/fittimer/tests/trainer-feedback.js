@@ -51,7 +51,7 @@ async function boot(b, label, errs, url){
   const tp = await boot(b, 'тренер', errs);
 
   // ---- профиль уезжает по «Сохранить», до всякой отправки программы ----
-  await tp.evaluate(() => { users.find(u => u.id === currentUser).name = 'Лена'; });
+  await tp.evaluate(() => { curUser().name = 'Лена'; });
   await becomeTrainer(tp, {handle: NICK, trainer: {links: '', about: '', years: null}});
   await tp.evaluate(() => { goTab('scrAccount'); switchMoreTab('coach'); renderTrainerCard(); });
   await tp.waitForTimeout(600);
