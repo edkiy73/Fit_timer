@@ -350,7 +350,7 @@ export function ProgressView({
             <div className="progress-dashboard-head progress-course-head">
               <div>
                 <h3>{t('progress.courseTitle')}</h3>
-                <p className="progress-course-name">{selectedCourse}</p>
+                {!(courses.length>1&&onCourseChange)&&<p className="progress-course-name">{selectedCourse}</p>}
               </div>
               {courses.length>1&&onCourseChange&&(
                 <label className="progress-course-picker">
