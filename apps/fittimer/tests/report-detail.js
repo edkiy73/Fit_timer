@@ -139,6 +139,8 @@ async function boot(b, label, errs, url){
     await savePrograms();
 
     openStart(p);
+    const firstPlan = document.querySelector('#planRow .plan-chip[data-plan-idx="0"]');
+    if(firstPlan) firstPlan.click();
     state.current = customToProgram(p, 0);
     state.steps = buildSteps();
     state.stepOutcomes = {};
