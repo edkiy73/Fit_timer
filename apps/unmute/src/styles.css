@@ -662,6 +662,11 @@ h2{margin:0 0 8px;font-weight:800}
 .runner-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .runner-progress{display:flex;flex:1 1 auto;height:6px;border-radius:3px;overflow:hidden;background:var(--surface)}
 .runner-progress>.runner-bar{flex:1 1 auto;background:var(--success);transform-origin:left center;transition:transform 400ms var(--spring)}
+.runner-progress-segmented{gap:4px;overflow:visible;background:transparent}
+.runner-progress-step{flex:1 1 0;min-width:3px;border-radius:999px;background:var(--surface);transition:background-color 180ms ease,transform 180ms ease}
+.runner-progress-step.is-current{background:var(--accent);transform:scaleY(1.35)}
+.runner-progress-step.is-correct{background:var(--success)}
+.runner-progress-step.is-wrong{background:var(--danger)}
 .runner-count{color:var(--muted);font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
 .runner-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
 .runner-heading-text{display:grid;gap:2px;min-width:0}
@@ -721,7 +726,7 @@ h2{margin:0 0 8px;font-weight:800}
 .me-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px}
 .me-head-text{display:grid;gap:2px;min-width:0}
 .me-head-text h2{margin:0;font-size:34px;line-height:40px;font-weight:800;letter-spacing:-.02em}
-.me-head-text span{grid-row:1;overflow:hidden;color:var(--muted);font-size:13px;text-overflow:ellipsis;white-space:nowrap}
+.me-head-text span{overflow:hidden;color:var(--muted);font-size:13px;text-overflow:ellipsis;white-space:nowrap}
 .me-course{grid-template-columns:auto minmax(0,1fr);align-items:center;gap:14px}
 .ring-lg{flex-basis:64px;width:64px;height:64px;font-size:13px}
 .heatmap-wrap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px}
