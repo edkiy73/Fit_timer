@@ -872,3 +872,354 @@ saveManual
 3. не менять UI больше необходимого;
 4. подготовить `learn.tsx` к 2B;
 5. обновить этот документ по найденным дополнительным кейсам.
+
+
+---
+
+## 16. Второй независимый проход по коду — дополнительные находки
+
+Дата повторного прохода: 2026-10-01.
+
+Ниже — проблемы, найденные отдельным повторным просмотром, без опоры на исходный список.
+
+### P0/P1. Частичный save может повторно изменить SRS
+
+`saveGradedActivity()` делает две записи последовательно:
+
+```
+writeCourseProgress(...)
+writeStatsProgress(...)
+```
+
+Course progress/SRS пишется первым.
+
+Если первая запись прошла, а `writeStatsProgress` упал:
+
+1. SRS уже изменён;
+2. `saveGradedActivity` отклоняет Promise;
+3. `learn.tsx` не выставляет `result`;
+4. пользователь остаётся на том же задании;
+5. повторное нажатие «Проверить» снова вызывает grading.
+
+В результате один физический ответ может дважды изменить:
+
+- card box;
+- due;
+- seen;
+- learning day;
+- затем statistics.
+
+Та же архитектурная проблема есть у `savePracticeActivity()`, где course progress также записывается до stats.
+
+Нужно одно из решений:
+
+- атомарная/идемпотентная операция;
+- стабильный answer/run id;
+- UI считает critical course write успешным отдельно от secondary stats;
+- повтор сохранения не должен повторно grade-ить уже принятый answer event.
+
+Обязательно добавить fault-injection тест:
+
+```
+course write succeeds
+stats write fails
+user retries
+SRS changes exactly once
+```
+
+---
+
+### P1. Near-miss реализован, но не подключён к learner runtime
+
+В коде есть:
+
+`src/engine/answer-near-miss.ts`
+
+и в content schema есть:
+
+```
+answer.nearMiss
+```
+
+В старом плане фаза 3.4c отмечена как завершённая.
+
+Но реальные пользовательские потоки:
+
+- `learn.tsx`;
+- `review.tsx`;
+- dialogue checking
+
+используют обычный `checkAnswer()` и не вызывают `nearMiss()`.
+
+То есть алгоритм существует и тестируется изолированно, но пользователь его фактически не получает.
+
+Нужно решить контракт near-miss:
+
+- что считается опечаткой;
+- считается ли ответ правильным для SRS;
+- показывается ли «почти правильно»;
+- создаётся ли retry;
+- как это влияет на first-attempt accuracy.
+
+После этого подключить одинаково в Learn / Review / Dialogue там, где это применимо.
+
+---
+
+### P1. «Начать заново» не гарантирует сброс действительно всех курсов
+
+Экран Reset собирает ids так:
+
+```
+DEFAULT_COURSE_ID
++ catalog.data.sets
+```
+
+`resetAllProgress()` умеет сбрасывать только явно переданные set ids.
+
+Проблемные случаи:
+
+- каталог загрузился с ошибкой;
+- ранее изученный курс больше не опубликован;
+- курс убрали из текущего каталога;
+- на устройстве остался progress старого set id.
+
+Текст интерфейса обещает:
+
+> «Сотрёт всё пройденное»
+
+но такие документы могут остаться.
+
+Нужно получать ids не только из опубликованного каталога, а из фактически существующих локальных/synced progress documents.
+
+---
+
+### P1. Повторения старого/снятого с публикации курса могут тихо исчезнуть
+
+`useOtherCourseReviews()` ищет курсы только среди:
+
+```
+DEFAULT_COURSE_ID
++ текущий published catalog
+```
+
+Если пользователь раньше учил курс, который больше не находится в каталоге, его progress document не обнаруживается.
+
+Кроме того, при ошибке `loadSet(id)` код делает пустой `catch{}` и просто пропускает курс.
+
+Следствия:
+
+- badge «к повтору» уменьшается без объяснения;
+- часть due items исчезает из Review;
+- пользователь не знает, что кусок повторения не загрузился.
+
+Это особенно важно с обещанием, что уже изученный материал остаётся доступным.
+
+Нужно:
+
+- discover studied set ids из progress storage/sync;
+- различать `ready`, `partial`, `error`;
+- не превращать load failure в «у тебя просто ничего нет к повтору».
+
+---
+
+### P1. Review day может быть засчитан при неполностью загруженной очереди
+
+Review session допускает частичную деградацию:
+
+- ошибка personal words превращается в `wordUnavailable`;
+- ошибки других курсов вообще пропускаются;
+- итоговый `total` считается только по успешно загруженным источникам.
+
+Для course review day условие завершения:
+
+```
+total === 0
+OR
+started && queue finished
+```
+
+Риск:
+
+> источник review не загрузился → items не попали в total → день выглядит пустым → review day засчитывается.
+
+Нужно явно определить, входят ли personal words / other-course due items в completion review-day.
+
+Если входят — при partial/error нельзя засчитывать день как «всё выполнено».
+
+Если не входят — это надо формально зафиксировать, а course-day completion должен считать только свою обязательную очередь.
+
+---
+
+### P1/P2. Ошибка смены курса не показывается пользователю
+
+`CoursePicker.pick()`:
+
+- ставит busy;
+- вызывает `chooseCourse()`;
+- в `finally` снимает busy;
+- error state отсутствует.
+
+При ошибке сохранения:
+
+- выбранный курс не меняется;
+- sheet остаётся открыт;
+- пользователю не объясняется, что произошло;
+- rejection уходит наружу.
+
+Нужно:
+
+- явное состояние ошибки;
+- «Не удалось сменить курс. Попробовать ещё раз»;
+- сохранить текущий курс без визуальной неоднозначности.
+
+---
+
+### P1/P2. Настройки уведомлений оптимистично меняются даже если save упал
+
+`NotificationSettingsPanel.save()` сначала:
+
+```
+setSettings(next)
+```
+
+а потом:
+
+```
+await patchSettings(...)
+```
+
+Если write падает:
+
+- UI уже показывает новое значение;
+- rollback нет;
+- error message нет;
+- обработчики вызываются через `void save(...)`, поэтому пользователь не получает понятной ошибки.
+
+В результате человек может быть уверен, что включил напоминания или изменил время, хотя persisted settings остались прежними.
+
+Нужно:
+
+- либо rollback на previous settings;
+- либо confirmed/pending state;
+- обязательный visible save error.
+
+То же проверить для language/theme/settings в целом.
+
+---
+
+### P2 / продуктовый контракт. Required update сейчас fail-open при ошибке проверки
+
+`useAppUpdate()` получает конфиг обновления через сеть.
+
+Вся ошибка initial check проглатывается:
+
+```
+catch {}
+```
+
+Если сервер пометил версию как обязательную, но:
+
+- config request упал;
+- plugin state упал;
+- JSON не прочитан,
+
+то `offer` остаётся null и приложение продолжает работать.
+
+Это может быть правильной offline-политикой, но тогда «обязательное обновление» фактически означает:
+
+> обязательно только если удалось проверить конфиг.
+
+Нужно зафиксировать решение:
+
+- fail-open для offline usability;
+- либо cached minimum version;
+- либо last-known update policy.
+
+---
+
+### P2. Account destructive actions не имеют полного busy/idempotency UX
+
+`signOut()` и `deleteAccount()` не имеют отдельного busy guard.
+
+При повторных быстрых нажатиях возможны:
+
+- повторные запросы;
+- гонка detach/navigation;
+- неоднозначный error state.
+
+Нужно унифицировать destructive actions:
+
+```
+idle → confirming → submitting → success/error
+```
+
+и блокировать повторный submit.
+
+---
+
+## 17. Дополнительные сценарии для regression matrix
+
+Добавить к 2J:
+
+### Partial-write integrity
+
+- course write success + stats failure;
+- retry того же ответа;
+- SRS изменяется один раз;
+- UI не заставляет повторно grade-ить сохранённый ответ.
+
+### Removed/unpublished course
+
+- изучить Course B;
+- получить due items;
+- убрать B из catalog;
+- due items не должны молча исчезнуть;
+- Reset All действительно удаляет B progress.
+
+### Partial Review data
+
+- active course loads;
+- personal words fail;
+- other course fails;
+- review day не получает ложное «всё выполнено».
+
+### Settings persistence failure
+
+- notification toggle;
+- reminder time;
+- course switch;
+- settings write rejects;
+- UI показывает реальное persisted state и понятную ошибку.
+
+### Near miss
+
+- typo;
+- grammar error;
+- exact answer;
+- near miss disabled;
+- Learn и Review дают одинаковую классификацию.
+
+### Required update offline
+
+- cached known mandatory version;
+- config unavailable;
+- явно проверить выбранную продуктовую политику.
+
+---
+
+## 18. Обновлённый порядок P0/P1
+
+После второго прохода порядок предлагается такой:
+
+1. **Partial writes / double grading / SRS idempotency.**
+2. **First / resume / replay state model.**
+3. **Replay vs Review SRS contract.**
+4. **Resume integrity и summary.**
+5. **Review completeness при partial data.**
+6. **Discovery старых/неопубликованных курсов для Review и Reset.**
+7. **Stats semantics.**
+8. **Near-miss runtime integration.**
+9. **Analytics contract.**
+10. **Text/state audit.**
+11. **Settings/save error UX.**
+12. **Course switching / account / offline / navigation.**
