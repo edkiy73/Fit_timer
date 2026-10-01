@@ -1141,3 +1141,41 @@ h2{margin:0 0 8px;font-weight:800}
 .progress-practice-panel .progress-practice-row{display:flex;align-items:baseline;justify-content:space-between;gap:16px;color:var(--muted);font-size:12px}
 .progress-practice-panel .progress-practice-row>span{min-width:0}
 .progress-practice-panel .progress-practice-row>strong{flex:none;color:var(--ink);font-size:12px;text-align:right}
+
+
+/* Profile consistency pass: reuse the app's shared typography and surfaces. */
+.me{gap:14px}
+.me>.screen-head{margin-bottom:0}
+.me>.screen-head .screen-kicker{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.progress-shell{gap:14px}
+.progress-dashboard{gap:14px;box-shadow:none}
+.progress-dashboard.card{border:1px solid var(--line);border-radius:var(--radius-tile);padding:18px;background:var(--card)}
+.progress-dashboard-head{gap:12px}
+.progress-dashboard-head h3{margin:0;font-size:20px;line-height:1.25;letter-spacing:-.01em}
+.progress-dashboard-head p{margin:4px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.progress-general{background:var(--card)}
+.progress-course-dashboard{background:var(--card)}
+.progress-general-metrics{gap:10px}
+.progress-metric{border:1px solid var(--line);background:var(--surface)}
+.progress-metric.is-accent,.progress-metric.is-success,.progress-metric.is-listen{background:var(--surface)}
+.progress-metric.is-accent .progress-metric-icon,.progress-metric.is-success .progress-metric-icon,.progress-metric.is-listen .progress-metric-icon{background:var(--card)}
+.progress-general .activity-calendar{border:1px solid var(--line);background:var(--surface)}
+.progress-course-detail{border:1px solid var(--line);background:var(--surface)}
+.progress-practice-panel{border:1px solid var(--line);background:var(--surface)}
+.progress-practice-title>svg{color:var(--muted)}
+.progress-course-picker{margin:0}
+.progress-course-head{gap:12px}
+.progress-course-kpis{margin-top:0}
+
+/* Real glass layer: blur lives on its own translucent pseudo-element. */
+.tabbar{background:transparent;overflow:hidden;backdrop-filter:none;-webkit-backdrop-filter:none}
+.tabbar::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--glass-bg);backdrop-filter:blur(30px) saturate(1.25);-webkit-backdrop-filter:blur(30px) saturate(1.25);transform:translateZ(0);pointer-events:none}
+.tabbar-item{position:relative;z-index:1}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .tabbar::before{background:var(--card)}
+}
+
+@media(max-width:620px){
+  .progress-dashboard.card{padding:16px}
+  .progress-dashboard-head h3{font-size:20px}
+}
