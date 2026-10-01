@@ -27,15 +27,16 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.evaluate(async () => {
     const u = curUser(); u.gender = 'f'; u.age = 30; await saveUsers();
     const today = DAYS[(new Date().getDay() + 6) % 7];
-    customPrograms.push({
+    const p = {
       id:'partial-test', name:'Частичная проверка', active:true, progression:1,
       stats:{completions:0},
       plans:[{days:[today], rounds:1, roundRest:0, exercises:[
         {name:'Первое', type:'reps', value:'10', sets:1, rest:0, restAfter:0, progOn:true, repsStep:1},
         {name:'Второе', type:'reps', value:'10', sets:1, rest:0, restAfter:0, progOn:true, repsStep:1}
       ]}]
-    });
-    await savePrograms();
+    };
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
     configureWorkoutTiming({prep: 0});
     openStart(customPrograms.find(x => x.id === 'partial-test'));
   });
@@ -113,12 +114,14 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('частичная закрывает долг недели, но остаётся частичной', !snap.debt && snap.partialTotal >= 1, JSON.stringify(snap));
   ok('на Сегодня видно «Частично», а не полную галочку', /Частично/.test(snap.today), snap.today);
 
-  const override = await page.evaluate(() => {
+  const override = await page.evaluate(async () => {
     const last = stats.history[stats.history.length - 1];
-    stats.history.push({
+    const history = [...(stats.history || []), {
       id:'partial-test-full-override', d:last.d, pid:'partial-test', status:'full',
       sec:600, plan:0, exercises:['Первое','Второе']
-    });
+    }];
+    await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history})));
+    await loadData();
     const w = weekPlanInfo();
     const day = w.days.find(x => x.iso === last.d);
     return {full:day && day.full, part:day && day.part, done:w.doneTotal, partial:w.partialTotal};
@@ -127,10 +130,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     override.full && !override.part && override.done >= 1 && override.partial === 0,
     JSON.stringify(override));
 
-  const streakConsistency = await page.evaluate(() => {
+  const streakConsistency = await page.evaluate(async () => {
     const savedPrograms = JSON.parse(JSON.stringify(customPrograms));
-    const savedHistory = JSON.parse(JSON.stringify(stats.history || []));
-    const savedBest = stats.bestStreak || 0;
+    const savedStats = JSON.parse(JSON.stringify(stats || {}));
     const todayDate = new Date();
     const yesterdayDate = new Date(todayDate);
     yesterdayDate.setDate(todayDate.getDate() - 1);
@@ -143,13 +145,13 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       plans:[{days,rounds:1,roundRest:0,exercises:[]}]
     });
 
-    customPrograms.splice(0, customPrograms.length,
+    const plannedPrograms = [
       p('slot-a',[today]),
       p('slot-b',[today]),
       p('slot-partial',[yesterday]),
       p('extra-workout',[])
-    );
-    stats.history = [
+    ];
+    const plannedHistory = [
       {id:'sa',d:todayIso,pid:'slot-a',status:'full',sec:600},
       {id:'sb',d:todayIso,pid:'slot-b',status:'full',sec:600},
       // meaningful=true раньше ошибочно давал +1 к серии, хотя weekPlanInfo
@@ -157,7 +159,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       {id:'sp',d:yesterdayIso,pid:'slot-partial',status:'partial',meaningful:true,sec:500},
       {id:'sx',d:yesterdayIso,pid:'extra-workout',status:'full',sec:300}
     ];
-    stats.bestStreak = 0;
+    await kvSet(pk('customPrograms'), JSON.stringify(plannedPrograms));
+    await kvSet(pk('stats'), JSON.stringify(Object.assign({}, savedStats, {
+      history:plannedHistory,
+      bestStreak:0
+    })));
+    await loadData();
 
     const currentWeek = weekPlanInfo(todayDate);
     const partialWeek = weekPlanInfo(yesterdayDate);
@@ -165,13 +172,16 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
     // Без расписания meaningful partial остаётся обычным днём активности —
     // это прежняя fallback-семантика, её этой унификацией не меняем.
-    customPrograms.splice(0, customPrograms.length, p('free',[]));
-    stats.history = [{id:'free-p',d:todayIso,pid:'free',status:'partial',meaningful:true,sec:500}];
+    await kvSet(pk('customPrograms'), JSON.stringify([p('free',[])]));
+    await kvSet(pk('stats'), JSON.stringify(Object.assign({}, savedStats, {
+      history:[{id:'free-p',d:todayIso,pid:'free',status:'partial',meaningful:true,sec:500}]
+    })));
+    await loadData();
     const noPlan = calcStreakInfo();
 
-    customPrograms.splice(0, customPrograms.length, ...savedPrograms);
-    stats.history = savedHistory;
-    stats.bestStreak = savedBest;
+    await kvSet(pk('customPrograms'), JSON.stringify(savedPrograms));
+    await kvSet(pk('stats'), JSON.stringify(savedStats));
+    await loadData();
 
     const todayState = currentWeek.days.find(x => x.iso === todayIso) || {};
     const partialState = partialWeek.days.find(x => x.iso === yesterdayIso) || {};
