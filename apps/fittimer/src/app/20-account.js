@@ -62,7 +62,7 @@ let programsAiAccountHooks = {
   normHandle: v => String(v == null ? '' : v).trim(),
   saveClients: async () => {},
   saveTrainer: async () => {},
-  setTrainerShared: v => v,
+  ensureTrainerState: () => null,
   syncGeminiBtns: () => {},
   getTrainer: () => null
 };
@@ -874,7 +874,7 @@ async function finishVerifiedLogin(r, email, cleanInstall, switchingAccount){
   if(switchingAccount) await programsAiAccountHooks.loadTrainer();
 
   if(r.handle){
-    if(!trainerState()) programsAiAccountHooks.setTrainerShared({on: false, handle: '', links: ''});
+    if(!trainerState()) programsAiAccountHooks.ensureTrainerState();
     trainerState().handle = r.handle;
     if(r.trainerKey) trainerState().key = r.trainerKey;
     const trainerRemote = r.trainer || {};
