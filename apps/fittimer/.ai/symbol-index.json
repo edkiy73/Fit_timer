@@ -138,8 +138,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2711,
-      "chars": 125975,
+      "lines": 2739,
+      "chars": 126607,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -171,6 +171,7 @@
         "coreState",
         "coreStateHook",
         "coreSyncDockTabsHook",
+        "createInitialProfile",
         "curUser",
         "customToProgram",
         "dayState",
@@ -245,6 +246,7 @@
         "remoteProfileHasData",
         "remoteProgramRepairPlan",
         "remoteWins",
+        "removeProfileById",
         "renderAccount",
         "renderCalendar",
         "renderStatBadges",
@@ -256,6 +258,8 @@
         "renderWellness",
         "repairRemoteDuplicatePrograms",
         "reportClientError",
+        "restoreActiveProfile",
+        "restoreProfiles",
         "saveDoc",
         "saveIdentity",
         "savePrograms",
@@ -272,7 +276,6 @@
         "sessionsKey",
         "sessionWorkout",
         "sessRow",
-        "setCurrentUserShared",
         "setDataSyncAccountHooks",
         "setDataSyncBuilderHooks",
         "setDataSyncCoreHooks",
@@ -282,7 +285,6 @@
         "setDataSyncProgressMediaHooks",
         "setDataSyncTrainerCatalogHooks",
         "setDataSyncWorkoutHooks",
-        "setUsersShared",
         "shiftCalendarMonth",
         "showSyncState",
         "smooth",
@@ -319,8 +321,8 @@
     },
     "src/app/20-account.js": {
       "kind": "frontend-js",
-      "lines": 1184,
-      "chars": 51488,
+      "lines": 1177,
+      "chars": 51304,
       "symbols": [
         "accountBucketKey",
         "androidUpdateAction",
@@ -401,8 +403,8 @@
     },
     "src/app/30-progress-media.js": {
       "kind": "frontend-js",
-      "lines": 1021,
-      "chars": 45999,
+      "lines": 1018,
+      "chars": 45912,
       "symbols": [
         "addPhoto",
         "alpha",
@@ -1022,7 +1024,7 @@
     "src/app/90-events.js": {
       "kind": "frontend-js",
       "lines": 2650,
-      "chars": 109471,
+      "chars": 109447,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
