@@ -37,8 +37,6 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "buildSteps",
   "buildWorkoutNotificationCandidates",
   "calcStreakInfo",
-  "callGemini",
-  "callGeminiImage",
   "carryLinkedProgramState",
   "clampLine",
   "clampText",
@@ -195,9 +193,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
 
 /* Only bindings that browser tests deliberately overwrite get setters. Everything
    else in the test compatibility surface is getter-only even when its declaration is mutable. */
-export const TEST_BRIDGE_WRITABLE = new Set([
-  "callGemini",
-  "callGeminiImage",]);
+export const TEST_BRIDGE_WRITABLE = new Set([]);
 
 export function testBridge(source, fileName = 'module.js'){
   const file = ts.createSourceFile(fileName, source, ts.ScriptTarget.ES2022, false, ts.ScriptKind.JS);
