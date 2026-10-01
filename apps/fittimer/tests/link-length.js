@@ -61,7 +61,8 @@ async function boot(b, url, errs, withTrainer){
     const r = parseProgramText(txt);
     const p = r.program || r;
     p.id = 'big';
-    customPrograms.push(p);
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
     await savePrograms();
   }, BIG);
   return page;
