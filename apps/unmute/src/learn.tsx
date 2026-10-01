@@ -436,8 +436,10 @@ export function NodeRunnerView({
         <h3 id="lesson-exit-title">{t('learn.exitTitle')}</h3>
         <p className="tile-text">{t('learn.exitText')}</p>
         <button className="primary-button" type="button" onClick={()=>setExitOpen(false)}>{t('learn.exitStay')}</button>
-        <button className="secondary-button" type="button" onClick={onExit}>{t('learn.exitSave')}</button>
-        <button className="link-button danger-link" type="button" onClick={exitWithoutSaving}>{t('learn.exitDiscard')}</button>
+        <button className="secondary-button" type="button" onClick={onExit} aria-describedby="lesson-exit-save-hint">{t('learn.exitSave')}</button>
+        <p className="tile-text" id="lesson-exit-save-hint">{t('learn.exitSaveHint')}</p>
+        <button className="link-button danger-link" type="button" onClick={exitWithoutSaving} aria-describedby="lesson-exit-discard-hint">{t('learn.exitDiscard')}</button>
+        <p className="tile-text" id="lesson-exit-discard-hint">{t('learn.exitDiscardHint')}</p>
       </div>
     </Sheet>
   );
