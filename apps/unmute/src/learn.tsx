@@ -55,12 +55,35 @@ export function firstPendingActivityIndex(
   return index<0?0:index;
 }
 
-/** One bar for the whole lesson: how many of its tasks are behind. Mistakes replayed at the
- *  end do not add to it, so the count never grows while the learner is answering. */
-function RunnerProgress({done,total,label}:{done:number;total:number;label:string}){
+/** One segment per first-pass task: correct / wrong / current / not reached yet.
+ * Mistakes replayed at the end do not add extra segments. */
+function RunnerProgress({
+  order,
+  total,
+  pos,
+  results,
+  label
+}:{
+  order:number[];
+  total:number;
+  pos:number;
+  results:Record<number,boolean>;
+  label:string;
+}){
+  const steps=order.slice(0,total);
+  const answered=steps.filter(step=>results[step]!==undefined).length;
   return (
-    <div className="runner-progress" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={Math.max(1,total)} aria-valuenow={done}>
-      <span className="runner-bar" style={{transform:`scaleX(${total?done/total:0})`}} />
+    <div className="runner-progress runner-progress-segmented" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={Math.max(1,total)} aria-valuenow={answered}>
+      {steps.map((step,index)=>{
+        const state=results[step]===true
+          ? 'correct'
+          : results[step]===false
+            ? 'wrong'
+            : index===pos&&pos<total
+              ? 'current'
+              : 'pending';
+        return <span key={step} className={'runner-progress-step is-'+state} aria-hidden="true" />;
+      })}
     </div>
   );
 }
@@ -169,6 +192,8 @@ export function NodeRunnerView({
   const [busy,setBusy]=useState(false);
   const [theoryOpen,setTheoryOpen]=useState(false);
   const [score,setScore]=useState({correct:0,total:0});
+  const [firstPassResults,setFirstPassResults]=useState<Record<number,boolean>>({});
+  const [exitOpen,setExitOpen]=useState(false);
   const [finished,setFinished]=useState(false);
   const [checking,setChecking]=useState(false);
   const [practiceMode,setPracticeMode]=useState<PracticeSrsKind|undefined>(startMode);
@@ -183,6 +208,8 @@ export function NodeRunnerView({
     setFirstPass(steps.length-startIndex);
     setPos(0);
     setScore({correct:0,total:0});
+    setFirstPassResults({});
+    setExitOpen(false);
     setFinished(false);
   };
 
@@ -244,8 +271,22 @@ export function NodeRunnerView({
     });
   };
   const countAnswer=(correct:boolean)=>{
-    if(pos<firstPass)setScore(current=>({correct:current.correct+(correct?1:0),total:current.total+1}));
+    if(pos>=firstPass)return;
+    setScore(current=>({correct:current.correct+(correct?1:0),total:current.total+1}));
+    const answeredStep=order[pos];
+    if(answeredStep!==undefined)setFirstPassResults(current=>({...current,[answeredStep]:correct}));
   };
+
+  const exitSheet=(
+    <Sheet open={exitOpen} onClose={()=>setExitOpen(false)} labelledBy="lesson-exit-title" closeLabel={t('learn.exitStay')}>
+      <div className="confirm-sheet">
+        <h3 id="lesson-exit-title">{t('learn.exitTitle')}</h3>
+        <p className="tile-text">{t('learn.exitText')}</p>
+        <button className="primary-button" type="button" onClick={()=>setExitOpen(false)}>{t('learn.exitStay')}</button>
+        <button className="secondary-button" type="button" onClick={onExit}>{t('learn.exitSave')}</button>
+      </div>
+    </Sheet>
+  );
 
   if(runtime.status==='pending'){
     return (
@@ -374,11 +415,12 @@ export function NodeRunnerView({
     return (
       <section className="learn-shell runner" aria-labelledby="learn-title">
         <div className="runner-top">
-          <button className="runner-close pressable" type="button" onClick={onExit} aria-label={t('learn.close')}>
+          <button className="runner-close pressable" type="button" onClick={()=>setExitOpen(true)} aria-label={t('learn.close')}>
             <Icon name="close" size={20} />
           </button>
           <span className="runner-intro-label">{t('learn.introLabel',{count:steps.length})}</span>
         </div>
+        {exitSheet}
         {header}
         <article className="learn-card theory-page">
           <div className="exercise-kind kind-review"><span className="exercise-kind-icon" aria-hidden="true"><Icon name="book" size={16} /></span>{t('learn.introKicker')}</div>
@@ -399,11 +441,11 @@ export function NodeRunnerView({
   const shown=retrying?firstPass:pos+1;
   const position=t('learn.position',{current:shown,total:firstPass});
 
-  const handleChoice=async()=>{
-    if(activity.type!=='choice'||selected===null||busy||result!==null)return;
+  const handleChoice=async(choice:number|null=selected)=>{
+    if(activity.type!=='choice'||choice===null||busy||result!==null)return;
     setBusy(true);
     try{
-      const correct=selected===activity.correctIndex;
+      const correct=choice===activity.correctIndex;
       await saveGraded(setId,activity.id,correct);
       countAnswer(correct);
       if(!correct)retryLater();
@@ -496,12 +538,13 @@ export function NodeRunnerView({
   return (
     <section className="learn-shell runner" aria-labelledby="learn-title">
       <div className="runner-top">
-        <button className="runner-close pressable" type="button" onClick={onExit} aria-label={t('learn.close')}>
+        <button className="runner-close pressable" type="button" onClick={()=>setExitOpen(true)} aria-label={t('learn.close')}>
           <Icon name="close" size={20} />
         </button>
-        <RunnerProgress done={Math.min(pos,firstPass)} total={firstPass} label={t('learn.activityProgress')} />
+        <RunnerProgress order={order} total={firstPass} pos={pos} results={firstPassResults} label={t('learn.activityProgress')} />
         <span className="runner-count" aria-label={position}>{shown}/{firstPass}</span>
       </div>
+      {exitSheet}
 
       {header}
       {retrying&&<p className="runner-retry" role="status">{t('learn.retryPhase',{current:pos-firstPass+1,total:order.length-firstPass})}</p>}
@@ -530,25 +573,16 @@ export function NodeRunnerView({
                   type="radio"
                   name={activity.id+'-'+pos}
                   checked={selected===optionIndex}
-                  onChange={()=>setSelected(optionIndex)}
+                  onChange={()=>{
+                    setSelected(optionIndex);
+                    void handleChoice(optionIndex);
+                  }}
                 />
                 <span><LexiconText text={localized(option,locale)} refs={activity.lexiconRefs} interactive={result!==null} /></span>
                 {result!==null&&optionIndex===activity.correctIndex&&<Icon name="check" size={20} className="learn-option-mark" />}
               </label>
             ))}
           </fieldset>
-          {result===null&&(
-            <div className="runner-action">
-              <button
-                className="primary-button"
-                type="button"
-                disabled={selected===null||busy}
-                onClick={()=>void handleChoice()}
-              >
-                {t('learn.check')}
-              </button>
-            </div>
-          )}
           {feedback({
             question:localized(activity.prompt,locale),
             accepted:localized(activity.options[activity.correctIndex],locale),
