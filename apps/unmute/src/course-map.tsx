@@ -209,19 +209,20 @@ export function CourseMapView({
           <h2 id="course-map-title">{t('courseMap.title')}</h2>
           {state.fromCache&&<span className="today-badge">{t('today.offline')}</span>}
         </div>
-        <CoursePicker currentId={state.set.id} variant="card" />
       </header>
 
+      <div className="course-map-content">
+        <CoursePicker currentId={state.set.id} variant="card" />
 
-      {onReference&&hasReference(state.set)&&(
-        <button className="me-row pressable course-map-reference" type="button" onClick={onReference}>
-          <Icon name="chat" />
-          <span>{t('reference.title')}</span>
-          <Icon name="chevron" size={20} className="me-row-chevron" />
-        </button>
-      )}
+        {onReference&&hasReference(state.set)&&(
+          <button className="me-row pressable course-map-reference" type="button" onClick={onReference}>
+            <Icon name="chat" />
+            <span>{t('reference.title')}</span>
+            <Icon name="chevron" size={20} className="me-row-chevron" />
+          </button>
+        )}
 
-      <div className="stages">
+        <div className="stages">
         {groups.map(group=>{
           const id=groupId(group);
           const expanded=open.has(id);
@@ -315,6 +316,7 @@ export function CourseMapView({
             </section>
           );
         })}
+        </div>
       </div>
 
       <Sheet
