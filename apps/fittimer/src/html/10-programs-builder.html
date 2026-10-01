@@ -432,6 +432,11 @@
 
       <div id="exProgBox" class="stack hidden">
         <div class="pref-row"><span><span data-i18n="builder.progressOverTime">Усложнять со временем</span><small id="exProgOnHint"></small></span><button type="button" class="switch" id="exProgOn" data-act="toggleExerciseProgression"></button></div>
+        <div class="field hidden" id="exProgEveryRow">
+          <label data-i18n="builder.exerciseProgressionFrequency">Частота проверки этого упражнения</label>
+          <select id="exProgEvery"></select>
+          <p class="field-hint" data-i18n="builder.exerciseProgressionFrequencyHint">Не выбрано — используется настройка программы. 0 — прогрессия этого упражнения отключена.</p>
+        </div>
         <div class="step-grid hidden" id="exStepRow">
           <!-- Порядок пар в разметке = порядок на экране. Вес идёт ПОСЛЕДНИМ:
                он сочетается и с повторениями, и со временем, и в обоих случаях
