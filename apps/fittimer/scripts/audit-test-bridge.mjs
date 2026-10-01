@@ -29,7 +29,7 @@ function bindingNames(node){
 
 function topLevelBindings(fileName){
   const source = readFileSync(fileName, 'utf8');
-  const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.ES2022, false, ts.ScriptKind.JS);
+  const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.JS);
   const out = new Set();
   for(const stmt of sf.statements){
     if((ts.isFunctionDeclaration(stmt) || ts.isClassDeclaration(stmt)) && stmt.name) out.add(stmt.name.text);
@@ -76,7 +76,7 @@ function mark(name, file, write){
 
 for(const fileName of walkTests('tests')){
   const source = readFileSync(fileName, 'utf8');
-  const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.ES2022, false, ts.ScriptKind.JS);
+  const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.JS);
   const short = path.relative(ROOT, path.resolve(fileName)).replaceAll('\\\\','/');
   const scanCallback = root => {
     const visit = node => {
