@@ -154,15 +154,16 @@ async function boot(b, label, errs, url){
      mediaIdentity.legacyPics === 0, mediaIdentity.legacyPics);
 
   // ---- в каталог ----
-  await tp.evaluate(async ({name}) => {
+  await tp.evaluate(({name}) => {
     const p = customPrograms.find(x => x.name === name);
     openPublish(p);
-    pubDraft.cat = 'Сила и выносливость';
-    pubDraft.level = 'Средний';
-    pubDraft.gives = 'Три движения по кругу, у каждого своя картинка — видно, что делать.';
-    document.getElementById('pubGives').value = pubDraft.gives;
-    await doPublish();
   }, {name: NAME});
+  await tp.click('#pubCatBtn');
+  await tp.click('#optList .opt-row[data-opt-value="Сила и выносливость"]');
+  await tp.click('#pubLevelBtn');
+  await tp.click('#optList .opt-row[data-opt-value="Средний"]');
+  await tp.fill('#pubGives', 'Три движения по кругу, у каждого своя картинка — видно, что делать.');
+  await tp.evaluate(async () => { await doPublish(); });
   await tp.waitForTimeout(800);
   if(await tp.isVisible('#dlgOk')){ await tp.click('#dlgOk'); await tp.waitForTimeout(300); }
 
