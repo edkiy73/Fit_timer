@@ -158,7 +158,7 @@ const shot = page => page.evaluate(() => ({
      one.rows.map(r => r.num).join(','));
 
   /* ---- премиум закрывает состав ---- */
-  await open(ONE, {pro: true});
+  await open(ONE, {pro: true, exCount: 2});
   await page.waitForTimeout(400);
   const locked = await page.evaluate(() => ({
     list: !document.getElementById('siList').classList.contains('hidden'),
@@ -176,7 +176,7 @@ const shot = page => page.evaluate(() => ({
     account.sub = {plan: 'year', until: '2099-01-01'};
     await kvSet('deviceId', 'store-test-device');
   });
-  await open(ONE, {pro: true});
+  await open(ONE, {pro: true, exCount: 2});
   await page.waitForTimeout(400);
   const unlocked = await page.evaluate(() => ({
     list: !document.getElementById('siList').classList.contains('hidden'),
