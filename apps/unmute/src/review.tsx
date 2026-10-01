@@ -281,6 +281,7 @@ export function ReviewView({
               <span className="review-ring is-clear" aria-hidden="true"><Icon name="check" size={28} /></span>
               <strong>{t('review.emptyTitle')}</strong>
               <span className="tile-text">{t('review.emptyText')}</span>
+              {(otherCourses.failed??0)>0&&<span className="tile-text" role="status">{t('review.otherCourseFailed')}</span>}
             </div>
             {mixedOffer}
             <MyWordsView wordRuntime={wordRuntime} />
@@ -369,6 +370,7 @@ export function ReviewView({
                 ? t('review.waiting',{count:session.waiting})
                 : t('review.doneText')}
           </span>
+          {(otherCourses.failed??0)>0&&<span role="status">{t('review.otherCourseFailed')}</span>}
           {left>0&&(
             <button className="primary-button" type="button" onClick={restart}>
               {t('review.again',{count:left})}
@@ -395,11 +397,13 @@ export function ReviewView({
     setIndex(value=>value+1);
   };
 
+  const returnedCard=queue.indexOf(item)<index;
   const finishCard=async(correct:boolean)=>{
     if(item.kind!=='card'||busy||result!==null)return;
     setBusy(true);
     try{
-      await saveGraded(setId,item.activity.id,correct);
+      // A card that came back after a mistake is practice: its first answer already set the interval.
+      if(!returnedCard)await saveGraded(setId,item.activity.id,correct);
       setResult(correct);
     }finally{
       setBusy(false);
@@ -424,7 +428,8 @@ export function ReviewView({
 
   const advanceCard=()=>{
     if(item.kind!=='card'||result===null)return;
-    if(result){
+    // A wrong card comes back once at the end of the session, like in a lesson; never in a loop.
+    if(result||returnedCard){
       setCompleted(value=>Math.min(total,value+1));
     }else{
       setQueue(current=>[...current,item]);
@@ -489,7 +494,7 @@ export function ReviewView({
             />
           )}
           <button className="primary-button learn-feedback-next" type="button" onClick={advanceCard}>
-            {result?t('learn.next'):t('review.retryLater')}
+            {result||returnedCard?t('learn.next'):t('review.retryLater')}
           </button>
         </div>
       </div>

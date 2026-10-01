@@ -26,6 +26,12 @@ function renderOnboarding(onDone=vi.fn(),extra:Partial<Parameters<typeof Onboard
 }
 
 describe('minimal onboarding',()=>{
+  it('says when the choice was not saved and keeps the start button',()=>{
+    renderOnboarding(vi.fn(),{error:true});
+    expect(screen.getByRole('alert').textContent).toContain('Не получилось сохранить выбор');
+    expect(screen.getByRole('button',{name:'Начать день 1'})).toBeTruthy();
+  });
+
   it('is one short screen with no questionnaire and starts day one directly',async()=>{
     const user=userEvent.setup();
     const onDone=renderOnboarding();

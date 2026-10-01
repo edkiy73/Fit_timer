@@ -15,6 +15,8 @@ export interface OtherCourseReview {
 export interface OtherCourseReviews {
   status:'pending'|'ready';
   courses:OtherCourseReview[];
+  /** Studied courses that could not load now: their reviews are missing, not done. */
+  failed?:number;
 }
 
 const QUERY_KEY='other-course-reviews';
@@ -28,7 +30,7 @@ export function hasReviewProgress(progress:CourseProgressDocument):boolean{
 }
 
 /** Courses other than the active one that the learner has studied: switching courses must
- *  not drop what is already due for review. A course that cannot load is skipped. */
+ *  not drop what is already due for review. A course that cannot load is skipped and counted. */
 export function useOtherCourseReviews(activeSetId:string):OtherCourseReviews{
   const queryClient=useQueryClient();
   const catalog=useCatalog();
@@ -41,15 +43,18 @@ export function useOtherCourseReviews(activeSetId:string):OtherCourseReviews{
     staleTime:Infinity,
     queryFn:async()=>{
       const courses:OtherCourseReview[]=[];
+      let failed=0;
       for(const id of ids){
         try{
           const progress=await readCourseProgress(id);
           if(!hasReviewProgress(progress))continue;
           const {set}=await loadSet(id);
           courses.push({set,progress});
-        }catch{}
+        }catch{
+          failed++;
+        }
       }
-      return courses;
+      return {courses,failed};
     }
   });
   useEffect(()=>appDocs.subscribe(change=>{
@@ -59,5 +64,5 @@ export function useOtherCourseReviews(activeSetId:string):OtherCourseReviews{
   }),[queryClient]);
   if(!activeSetId)return {status:'pending',courses:[]};
   if(catalog.isPending||query.isPending)return {status:'pending',courses:[]};
-  return {status:'ready',courses:query.data??[]};
+  return {status:'ready',courses:query.data?.courses??[],failed:query.data?.failed??0};
 }

@@ -52,12 +52,15 @@ export function markOnboardingDone(storage:Pick<Storage,'setItem'>=localStorage)
 export function OnboardingView({
   onDone,
   busy=false,
+  error=false,
   courses=[],
   courseId='',
   onCourse
 }:{
   onDone:()=>void;
   busy?:boolean;
+  /** Saving the choice failed: onboarding stays open so the person can try again. */
+  error?:boolean;
   /** Published courses; the choice is shown only when there is more than one. */
   courses?:ContentCatalogSet[];
   courseId?:string;
@@ -113,6 +116,7 @@ export function OnboardingView({
         >
           {busy?t('onboarding.starting'):t('onboarding.start')}
         </button>
+        {error&&<p className="access-error" role="alert">{t('onboarding.saveError')}</p>}
         <p className="onboarding-account-note">{t('onboarding.accountLater')}</p>
       </div>
     </section>
@@ -127,6 +131,7 @@ export function OnboardingGate({children}:{children:ReactNode}){
   const {t}=useI18n();
   const [localDone,setLocalDone]=useState(()=>onboardingStoredDone());
   const [busy,setBusy]=useState(false);
+  const [saveError,setSaveError]=useState(false);
   const catalog=useCatalog();
   const activeCourseId=useActiveCourseId();
   const [pickedCourseId,setPickedCourseId]=useState<string|null>(null);
@@ -191,7 +196,7 @@ export function OnboardingGate({children}:{children:ReactNode}){
   const finish=async()=>{
     if(busy)return;
     setBusy(true);
-    markOnboardingDone();
+    setSaveError(false);
 
     // Another course was picked: its day 1 opens from «Сегодня» once that course loads.
     const switching=Boolean(pickedCourseId&&pickedCourseId!==activeCourseId);
@@ -201,7 +206,13 @@ export function OnboardingGate({children}:{children:ReactNode}){
       await patchSettings({onboardingDoneAt:new Date().toISOString()});
       await queryClient.invalidateQueries({queryKey:SETTINGS_QUERY_KEY,exact:true});
       void trackOnboardingComplete();
-    }catch{}
+    }catch{
+      // Not saved: keep onboarding open instead of pretending the choice was made.
+      setBusy(false);
+      setSaveError(true);
+      return;
+    }
+    markOnboardingDone();
     setLocalDone(true);
 
     if(nodeId){
@@ -214,6 +225,7 @@ export function OnboardingGate({children}:{children:ReactNode}){
   return (
     <OnboardingView
       busy={busy}
+      error={saveError}
       onDone={()=>void finish()}
       courses={catalog.data?.sets??[]}
       courseId={courseId}
