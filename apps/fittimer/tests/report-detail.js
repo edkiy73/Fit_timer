@@ -138,7 +138,8 @@ async function boot(b, label, errs, url){
     p.stats = {completions: 6};
     await savePrograms();
 
-    state.current = customToProgram(p, 0); state.raw = p; state.planIdx = 0;
+    openStart(p);
+    state.current = customToProgram(p, 0);
     state.steps = buildSteps();
     state.stepOutcomes = {};
     state.steps.forEach((step, i) => {
