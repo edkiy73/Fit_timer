@@ -2197,3 +2197,567 @@ UI-пачка не отменяет P0 из функционального ау�
 6. reset all progress для старых set ids;
 7. nearMiss runtime integration;
 8. analytics contract и idempotency.
+
+
+---
+
+## 25. Clarification: what was changed before the audit-only boundary
+
+Important: during the previous UI pass implementation work was performed before the task boundary was clarified.
+
+Those changes are already documented in sections 20–22 and included:
+
+- Android status-bar web strip removal;
+- route rail visual changes;
+- dock blur;
+- Profile rename/header changes;
+- per-course statistics selector/layout;
+- segmented lesson progress;
+- one-tap choice checking;
+- sticky feedback action;
+- lesson exit confirmation;
+- local unfinished LessonRun snapshot;
+- several copy changes and matching test edits.
+
+From this section onward the task is **audit-only**:
+
+> inspect existing behavior/tests → record evidence/gaps here → do not change product code or tests.
+
+No product/test code changes are part of the audit pass below.
+
+---
+
+## 26. Existing automated test coverage — verified by source review
+
+The current UnMute test suite is substantial. It includes:
+
+- Vitest unit/component tests;
+- Node smoke/integration scripts;
+- Chromium E2E over the production Vite build;
+- Android shell/build/emulator smoke;
+- iOS shell/build/simulator smoke;
+- legacy-parity tests.
+
+Current scripts:
+
+```
+test:smoke
+test:unit
+test:browser
+check
+check:android
+check:ios
+```
+
+The dedicated `.github/workflows/unmute.yml` is designed to run:
+
+- legacy import dry-run;
+- legacy parity;
+- production build + Chromium E2E;
+- Android debug builds + emulator launch smoke for native changes;
+- iOS simulator build + launch smoke for native changes.
+
+### Important limitation of this audit pass
+
+The GitHub connector did not return runnable workflow results for the current commits, so this section distinguishes:
+
+- **test exists** — verified from source;
+- **scenario covered by test code** — verified from assertions;
+- **green on current main** — **not assumed unless execution evidence exists**.
+
+A Vercel deployment reaching `READY` proves the Vercel build completed; it does **not** prove `test:unit` or `test:browser` passed.
+
+---
+
+## 27. Scenario coverage matrix: what is already tested
+
+Legend:
+
+- ✅ — good automated coverage exists;
+- 🟡 — partial / lower-level coverage only;
+- ❌ — no meaningful automated coverage found;
+- ⚠️ — a test exists but is currently stale/inconsistent with current UI.
+
+| Scenario | Status | Existing evidence |
+|---|---:|---|
+| Minimal onboarding | ✅ | `onboarding.test.tsx` |
+| Course picker in onboarding | ✅ | single/multiple published course cases |
+| Existing progress skips onboarding | ✅ | tombstone-aware recognition test |
+| First lesson basic flow | ✅ | `learn.test.tsx` |
+| Wrong answer returns at lesson end | ✅ | `learn.test.tsx` |
+| Resume at first unseen activity | ✅ | `learn.test.tsx` |
+| Close and restore unfinished run | ✅/⚠️ | dedicated test exists from previous pass; see stale-suite section below |
+| Replay completed node does not re-fire node completion | ✅ | `learn.test.tsx` |
+| Replay does not mutate SRS | ❌ | completion analytics only; SRS side effect not covered |
+| first/resume/replay summary semantics | ❌ | no persistent first-attempt contract test |
+| Partial write: course save succeeds, stats save fails | ❌ | no fault-injection test |
+| Duplicate tap / duplicate answer idempotency | ❌ | not found |
+| Card SRS intervals | ✅ | `card-srs.test.ts`, legacy parity |
+| Practice SRS parity | ✅ | legacy parity |
+| Review wrong card requeue | ✅ | `review.test.tsx` |
+| Review across another studied course | ✅ | `review.test.tsx`, `other-course-review.test.ts` |
+| Review waits for other-course loading | ✅ | `review.test.tsx` |
+| Personal word review | ✅ | `review.test.tsx`, word SRS tests |
+| Mixed drill | ✅ | session construction/cap + UI entry |
+| Review partial-data failure | ❌ | no test proving failure cannot become false “all done” |
+| Removed/unpublished course review | ❌ | only deleted-progress records are tested, not catalog removal |
+| Due course load failure | ❌ | no user-visible partial/error contract test |
+| Stats merge across devices | ✅ | `progress.test.ts` |
+| Stats semantic consistency across task types | ❌ | counters tested, comparability is not |
+| Learning streak across course switch | ✅ | `learning-days.test.ts` |
+| Meaning of learning day vs completed day | 🟡 | implementation helpers tested, product semantics not |
+| Two-device progress merge | ✅ | unit merge + Chromium E2E |
+| Guest → login keeps local progress | ✅ | Chromium E2E |
+| Two devices converge after sign-in | ✅ | Chromium E2E |
+| Offline badge/cached Today | ✅ | component-level |
+| Full offline lesson → reconnect → sync | ❌ | no end-to-end offline mutation/recovery test found |
+| Course switching saved choice | ✅ | `active-course.test.tsx`, settings merge |
+| Switch course mid-lesson | ❌ | not found |
+| Course switch write failure | ❌ | not found |
+| Reset tombstone beats old account copy | ✅ | `progress-reset.test.ts` |
+| Reset answer stats | ✅ | `progress-reset.test.ts` |
+| Reset includes unpublished/unknown old course | ❌ | not covered |
+| Delete account server records | ✅ | `tests/account-delete.js` |
+| Delete account UI confirmation | ✅ | `app.test.tsx` |
+| Double-submit delete/sign-out | ❌ | not found |
+| Permanent course entitlement | ✅ | `entitlements.test.ts` |
+| Plus expiry | ✅ | stale premium flag test |
+| Paid cached lesson blocked after access ends | ✅ | `learn.test.tsx` |
+| Purchase offer/pricing/restore | ✅ | `access.test.tsx` |
+| Purchase entitlement refresh race/failure | 🟡 | UI states tested, full external billing round-trip not |
+| AI conversation trial/auth/Plus gates | ✅ | AI conversation + AI trial tests |
+| AI whole-conversation review failure | ✅ | completion remains possible |
+| AI answer explanation opt-in | ✅ | request only after explicit “Почему?” |
+| Free explanation allowance | ✅/⚠️ | backend allowance tested; current UI expectation drift exists |
+| Near-miss algorithm | ✅ | strong unit + legacy parity |
+| Near-miss used by Learn/Review runtime | ❌ | no runtime integration; algorithm remains isolated |
+| Speech fallback | ✅ | dialogue + speech runtime |
+| Android Back state machine | ✅ | sheet/tab/lesson/minimize/double-back |
+| Notification prioritization | ✅ | review > streak > lesson |
+| Notification scheduling | ✅ | local-time plan and disabled state |
+| Notification deep link whitelist | ✅ | supported vs arbitrary routes |
+| Notification permission/settings save failure UX | ❌ | not found |
+| Optional/required app update decision | ✅ | unit |
+| APK/store update banner behavior | ✅ | component |
+| Required update when config unavailable/offline | ❌ | no cached-policy/fail-open contract test |
+| Android native shell config | ✅ | transparent status bar, permissions, direct/play channels |
+| Android emulator launches | 🟡 | workflow exists; current run result not available here |
+| iOS simulator launches | 🟡 | workflow exists; current run result not available here |
+| 360 px main-screen overflow, light/dark | ✅/⚠️ | Chromium E2E contains screen walk, but suite currently has stale copy selectors |
+| 320 px | ❌ | not in current E2E |
+| 390 px main flows | 🟡 | main E2E device uses 390×800, but not systematic visual matrix |
+| 412 px | ❌ | not in current E2E |
+| Large system font scaling | ❌ | not found |
+| Keyboard/IME + long feedback sheet | ❌ | not found |
+| Status-bar icon contrast on real Android | ❌ | shell config only, no screenshot/device assertion |
+| Dock blur visual correctness | ❌ | no pixel/screenshot assertion |
+| Segmented progress visual states | 🟡 | behavior can be inferred; no visual-state assertion found |
+| Route rail visual consistency | 🟡 | E2E checks rail geometry, not green/gray dot visual parity |
+| RU/EN complete visual regression | ❌ | E2E is primarily RU |
+| Copy parity RU/EN | 🟡 | dictionary key structure exists; semantic parity not automatically asserted |
+
+---
+
+## 28. Current test-suite drift discovered during audit
+
+This is important because existing tests cannot currently be treated as a fully trustworthy green gate without first checking their expectations against the current UI.
+
+### ⚠️ Chromium E2E still searches for «Я»
+
+Current `tests/e2e.mjs` contains:
+
+```
+me: 'Я'
+```
+
+and uses it to open the account/profile tab.
+
+Current UI dictionary says:
+
+```
+nav.me = 'Профиль'
+```
+
+Therefore the current E2E sign-in path is stale and would fail at that locator if executed unchanged.
+
+This is a **test maintenance issue**, not a new product defect.
+
+---
+
+### ⚠️ Today component tests still expect old Review copy
+
+Current `today.test.tsx` contains expectations for:
+
+> «карточек ждут»
+
+while the current UI copy was changed to a generic review label.
+
+This is another stale expectation.
+
+---
+
+### ⚠️ Access test still expects old unlimited-AI copy
+
+Current `access.test.tsx` still contains:
+
+> «Разбор ошибок и разговор с ИИ без ограничений»
+
+while RU product copy now uses a more limited/expanded-access formulation.
+
+At the same time the **current English dictionary still contains** an old unlimited-AI claim in `access.plusLead`.
+
+So this audit found two separate issues:
+
+1. stale automated test expectation;
+2. RU/EN copy semantic drift remains possible.
+
+Do not infer copy correctness only from one locale.
+
+---
+
+### ⚠️ Lesson test still assumes a separate «Проверить» click after a choice
+
+Current `learn.test.tsx` still contains flows:
+
+```
+click radio
+click «Проверить»
+```
+
+Current lesson implementation contains one-tap choice checking.
+
+Therefore those choice-path test steps are stale.
+
+Typed/chips answers still legitimately require explicit submit; the stale part is specifically choice/radio.
+
+---
+
+### ⚠️ App-level tests still name the tab «Я»
+
+`app.test.tsx` test descriptions and expectations still include the old product term «Я».
+
+Even if some assertions use dictionary keys dynamically, these tests need a deliberate review for semantic/copy drift.
+
+---
+
+### Consequence
+
+Before treating `npm run test:unit` / `npm run test:browser` as a release gate, perform a **test expectation synchronization pass**.
+
+That pass should update tests only after deciding the final UI/copy contract.
+
+For this audit, the important finding is:
+
+> current test coverage is broad, but some top-level tests are stale after the recent UI changes.
+
+---
+
+## 29. New tests still required by the audit
+
+These are the highest-value missing tests; they should be added before release or before fixing the corresponding P0/P1 logic.
+
+### P0 — state/data integrity
+
+#### 1. Partial write / double grading
+
+Inject:
+
+```
+writeCourseProgress → success
+writeStatsProgress → failure
+same UI answer retried
+```
+
+Assert:
+
+- card/practice SRS changes once;
+- answer does not duplicate;
+- stats eventually converge exactly once.
+
+#### 2. Replay must not silently behave as Review
+
+Complete a lesson, record its SRS state, replay it.
+
+Assert the explicitly chosen contract:
+
+- SRS unchanged, **or**
+- replay has a deliberately separate grading rule.
+
+It must never happen by accident.
+
+#### 3. Resume with previous wrong answer
+
+Test not just UI restoration but persisted semantics:
+
+- wrong answer;
+- close/process recreation;
+- resume;
+- retry queue preserved;
+- first-pass score preserved;
+- final summary still describes the original run correctly.
+
+#### 4. Synced completion beats stale local LessonRun
+
+Device A has unfinished local snapshot.
+
+Device B completes the node and syncs.
+
+Device A reloads.
+
+Assert:
+
+- stale run is ignored/cleared;
+- completed node opens as completed/replay state.
+
+---
+
+### P1 — Review integrity
+
+#### 5. Other-course load fails
+
+Simulate one studied course loading successfully and another failing.
+
+Assert:
+
+- failure is represented explicitly;
+- due count does not silently pretend to be complete;
+- completing Review does not falsely claim all work is done.
+
+#### 6. Personal words fail to load
+
+Same requirement for word review source.
+
+#### 7. Unpublished previously studied course
+
+Study course B → create due state → remove B from published catalog.
+
+Assert product contract:
+
+- old learned material remains discoverable if promised;
+- due items do not silently disappear;
+- Reset All can still discover/delete that progress.
+
+---
+
+### P1 — Sync/offline
+
+#### 8. Offline lesson mutation → reconnect
+
+- start from cached content;
+- answer tasks offline;
+- close/reopen;
+- reconnect;
+- sync account.
+
+Assert no rollback, no duplicate SRS and no duplicate analytics completion.
+
+#### 9. Course switch during unfinished lesson
+
+Define expected policy:
+
+- old run persists;
+- switching course does not attach it to the new course;
+- returning restores it correctly.
+
+#### 10. Course switch persistence failure
+
+Inject settings/document write failure.
+
+Assert visible error and active course consistency.
+
+---
+
+### P1 — analytics
+
+#### 11. Durable completion event
+
+Complete the last required activity, then terminate UI before summary.
+
+Assert whether `lesson_completed` / `day_completed` must still be emitted exactly once.
+
+Current completion tracking is UI-transition based and needs a contract test.
+
+#### 12. first / resume / replay event contract
+
+Assert exact event count and mode for:
+
+- first start;
+- resume;
+- first completion;
+- replay;
+- exit without completion.
+
+#### 13. Analytics failure
+
+If analytics delivery fails:
+
+- learning state remains valid;
+- retry does not duplicate business events.
+
+---
+
+### P1/P2 — visual/device
+
+#### 14. Width matrix
+
+Run learner screens at:
+
+- 320;
+- 360;
+- 390;
+- 412 px.
+
+Current systematic screen walk covers only 360 px.
+
+#### 15. Long feedback + keyboard
+
+Test:
+
+- long course explanation;
+- long AI “Почему?” result;
+- keyboard open;
+- bottom CTA remains reachable;
+- no content is permanently hidden.
+
+#### 16. Android status bar
+
+On emulator/device in light and dark:
+
+- transparent background;
+- readable icons;
+- no artificial web strip;
+- content respects safe inset.
+
+A static shell test already verifies transparent native configuration, but not rendered result.
+
+#### 17. Segmented lesson progress
+
+Assert states after:
+
+- correct;
+- wrong;
+- current;
+- pending;
+- retry phase.
+
+Ideally visual/screenshot, not only class names.
+
+#### 18. Route rail
+
+Visual regression for:
+
+- all pending;
+- first days complete;
+- current station;
+- stage boundaries;
+- dialogue/review/AI landmarks.
+
+The existing E2E checks rail start/arrival geometry but not visual dot consistency.
+
+#### 19. RU/EN screenshot matrix
+
+At least critical screens:
+
+- Today;
+- Route;
+- Lesson;
+- Review;
+- Profile;
+- Access.
+
+Current visual walk is effectively RU-centric.
+
+#### 20. Large font
+
+Use browser/mobile font scaling if feasible.
+
+Assert:
+
+- no clipped CTA;
+- no hidden close icon;
+- no overlapping cards;
+- dock labels remain usable.
+
+---
+
+## 30. Tests already stronger than initially assumed
+
+The audit also confirmed several areas that do **not** need duplicate test plans:
+
+### Sync merge
+
+Already covered at two levels:
+
+- document-level merge tests;
+- real Chromium two-device E2E.
+
+### Reset tombstones
+
+An older account copy losing to newer reset tombstones is already covered.
+
+The remaining reset problem is **discovery of unknown/unpublished course ids**, not basic tombstone precedence.
+
+### Android Back
+
+Core order is already tested:
+
+```
+sheet → history
+inner/lesson → history
+other tab → Today
+Today → minimize / second-back exit
+```
+
+The missing part is interaction with an unfinished lesson snapshot/exit confirmation, not the basic Back state machine.
+
+### Near-miss
+
+The algorithm itself has strong tests and legacy parity.
+
+The missing part is **runtime wiring into Learn/Review**, not algorithm quality.
+
+### Notifications
+
+Priority and scheduling are already well covered.
+
+The missing area is **settings persistence/permission failure UX** and actual device delivery behavior.
+
+### Account deletion
+
+Server cleanup and UI confirmation already have tests.
+
+The remaining audit concern is duplicate submit/race/error UX, not basic deletion.
+
+---
+
+## 31. Audit status after this test-coverage pass
+
+The remaining unknowns are now concentrated rather than broad.
+
+Highest-risk unverified areas:
+
+1. partial writes / double SRS mutation;
+2. first-resume-replay semantics;
+3. replay vs Review;
+4. Review with partial/missing data sources;
+5. unpublished/removed studied courses;
+6. offline mutation + reconnect;
+7. analytics idempotency/durable completion;
+8. test-suite drift after recent UI copy/interaction changes;
+9. real-device visual behavior at status bar / IME / multiple widths.
+
+The existing suite already gives good confidence in:
+
+- base SRS algorithms;
+- legacy parity;
+- two-device merge;
+- onboarding;
+- entitlements;
+- Android Back;
+- notification policy;
+- account deletion;
+- speech fallbacks;
+- AI gates;
+- update flow;
+- basic route/screen overflow at 360 px.
+
