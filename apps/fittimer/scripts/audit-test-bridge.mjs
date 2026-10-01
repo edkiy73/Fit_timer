@@ -90,10 +90,11 @@ for(const fileName of walkTests('tests')){
       if(ts.isPropertyAccessExpression(node)
         && ts.isIdentifier(node.expression)
         && ['window','globalThis'].includes(node.expression.text)){
+        const parent = node.parent;
         mark(node.name.text, short,
-          ts.isBinaryExpression(node.parent) && node.parent.left === node
-          && node.parent.operatorToken.kind >= ts.SyntaxKind.FirstAssignment
-          && node.parent.operatorToken.kind <= ts.SyntaxKind.LastAssignment);
+          !!parent && ts.isBinaryExpression(parent) && parent.left === node
+          && parent.operatorToken.kind >= ts.SyntaxKind.FirstAssignment
+          && parent.operatorToken.kind <= ts.SyntaxKind.LastAssignment);
       }
       ts.forEachChild(node, visit);
     };
