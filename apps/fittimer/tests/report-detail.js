@@ -118,9 +118,10 @@ async function boot(b, label, errs, url){
     const p = customPrograms.find(x => x.name === 'Сила дома');
     const day = i => localISO(new Date(Date.now() - i * 86400000));
     // четыре по первому варианту, один по второму
-    [[1,0],[4,0],[8,0],[11,0],[2,1]].forEach(([ago, pl]) =>
-      stats.history.push({d: day(ago), t: 9, pid: p.id, sec: 1500, kcal: 120, plan: pl}));
-    stats.count = 5; await saveStats();
+    const seededHistory = [...(stats.history || []), ...[[1,0],[4,0],[8,0],[11,0],[2,1]]
+      .map(([ago, pl]) => ({d:day(ago),t:9,pid:p.id,sec:1500,kcal:120,plan:pl}))];
+    restoreStatsState(Object.assign({}, stats, {history:seededHistory,count:5}));
+    await saveStats();
 
     const plans = normPlans(p);
     plans[0].exercises = plans[0].exercises.filter(e => e.name !== 'Отжимания');  // выкинул
@@ -281,19 +282,20 @@ async function boot(b, label, errs, url){
     const other = mk('trainer-streak-other','Другая программа');
 
     customPrograms.splice(0, customPrograms.length, target, other);
-    stats.history = [
-      {id:'st-target',d:iso,pid:target.id,plan:0,status:'full',sec:600},
-      {id:'st-other',d:iso,pid:other.id,plan:0,status:'full',sec:600}
-    ];
-    stats.bestStreak = 99;
+    restoreStatsState(Object.assign({}, stats, {
+      history:[
+        {id:'st-target',d:iso,pid:target.id,plan:0,status:'full',sec:600},
+        {id:'st-other',d:iso,pid:other.id,plan:0,status:'full',sec:600}
+      ],
+      bestStreak:99
+    }));
 
     const global = calcStreakInfo().n;
     const scoped = calcStreakInfo({programId:target.id}).n;
     const report = buildReport(target).streak;
 
     customPrograms.splice(0, customPrograms.length, ...savedPrograms);
-    stats.history = savedHistory;
-    stats.bestStreak = savedBest;
+    restoreStatsState(Object.assign({}, stats, {history:savedHistory,bestStreak:savedBest}));
 
     return {global, scoped, report};
   });
