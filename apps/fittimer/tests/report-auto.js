@@ -101,8 +101,10 @@ async function boot(b, label, errs, url){
     stats.count = 1; await saveStats();
     p.stats = {completions: 0};
     // финал — единственное место, откуда теперь уходит отчёт
+    openStart(p);
+    const firstPlan = document.querySelector('#planRow .plan-chip[data-plan-idx="0"]');
+    if(firstPlan) firstPlan.click();
     state.current = customToProgram(p, 0);
-    state.raw = p; state.planIdx = 0;
     state.steps = buildSteps();
     state.stepOutcomes = {};
     state.steps.forEach((step, i) => {
