@@ -132,7 +132,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const nativeResumed = await page.evaluate(async () => {
     // Имитируем уничтоженный WebView: живого workout state больше нет, но session осталась.
     tearDownWorkout();
-    prepSec = 5; // notification recovery должна миновать обычный предстартовый countdown
+    configureWorkoutTiming({prep: 5}); // notification recovery должна миновать обычный предстартовый countdown
     const ok = await resumeWorkoutFromNativeNotification();
     return {
       ok,
