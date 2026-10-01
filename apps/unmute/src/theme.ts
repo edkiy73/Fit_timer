@@ -1,3 +1,4 @@
+import { Capacitor, SystemBars, SystemBarsStyle } from '@capacitor/core';
 import { applyCssVars, themeCssVars } from '@appbase/core/ui.js';
 import type { AppBrandConfig } from '@appbase/types/core.js';
 import product from '../config/product.json';
@@ -36,6 +37,11 @@ export function applyProductTheme(root: HTMLElement = document.documentElement):
     applyCssVars(root, themeCssVars(brand.ui[mode]));
     root.style.colorScheme = mode;
     root.dataset.theme = mode;
+    // On the phone the status bar sits over the app: its clock and icons follow the app's theme
+    // (light icons on the dark theme), not the phone's own setting.
+    if(Capacitor.isNativePlatform()){
+      void SystemBars.setStyle({style:mode === 'dark' ? SystemBarsStyle.Dark : SystemBarsStyle.Light}).catch(() => undefined);
+    }
   };
   apply();
   media.addEventListener('change', apply);

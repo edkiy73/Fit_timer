@@ -25,6 +25,7 @@
   --glass-line:color-mix(in srgb,var(--ink) 8%,transparent);
   --elev-2:0 8px 24px rgb(27 26 36/.12);
   --tabbar-h:68px;
+  --safe-top:env(safe-area-inset-top,0px);
   --safe-bottom:env(safe-area-inset-bottom,0px);
   font-family:Manrope,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   color:var(--ink);
@@ -60,10 +61,13 @@
 }}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;background:var(--bg,#FBF7F2);-webkit-tap-highlight-color:transparent;accent-color:var(--accent)}
+/* The app is drawn under the phone's status bar (viewport-fit=cover): this strip keeps the clock
+   readable over scrolled content and takes the theme's colour, like the rest of the screen. */
+body::before{content:"";position:fixed;z-index:90;top:0;left:0;right:0;height:var(--safe-top);background:var(--bg);pointer-events:none}
 button,input,select,textarea{font:inherit}
 h1,h2,h3{letter-spacing:-.01em}
 h2{margin:0 0 8px;font-weight:800}
-.app{width:min(100%,720px);margin:0 auto;overflow-x:clip;padding:calc(env(safe-area-inset-top,0px) + 20px) 16px calc(var(--tabbar-h) + var(--safe-bottom) + 40px)}
+.app{width:min(100%,720px);margin:0 auto;overflow-x:clip;padding:calc(var(--safe-top) + 20px) 16px calc(var(--tabbar-h) + var(--safe-bottom) + 40px)}
 .app-screen{min-height:50vh}
 .eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-tile);padding:18px}
@@ -648,7 +652,7 @@ h2{margin:0 0 8px;font-weight:800}
 
 /* Lesson runner: full screen, no tab bar; close + segmented progress on top, action pinned low. */
 .runner{gap:14px}
-.runner-top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;margin:-8px 0 0;padding:8px 0;background:var(--bg)}
+.runner-top{position:sticky;top:var(--safe-top);z-index:5;display:flex;align-items:center;gap:12px;margin:-8px 0 0;padding:8px 0;background:var(--bg)}
 .runner-close{display:grid;place-items:center;flex:0 0 44px;height:44px;border:0;border-radius:22px;background:var(--surface);color:var(--ink);cursor:pointer}
 .runner-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .runner-progress{display:flex;flex:1 1 auto;height:6px;border-radius:3px;overflow:hidden;background:var(--surface)}
