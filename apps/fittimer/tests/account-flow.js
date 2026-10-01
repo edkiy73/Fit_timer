@@ -284,7 +284,9 @@ async function boot(b, label, errs, url){
   const MAIL3 = 'pay.' + Math.random().toString(36).slice(2, 8) + '@example.com';
   const four = await boot(b, 'телефон 4', errs);
 
-  await four.click('#btnPremium');
+  await four.click('.dock-btn[data-scr="scrAccount"]');
+  await four.click('#moreTabs [data-more="acc"]');
+  await four.click('#btnPlanCard');
   await four.click('#pmPlans .pm-plan[data-plan="month"]');
   await four.click('#pmBuy');
   await four.fill('#payEmail', MAIL3);
@@ -313,7 +315,9 @@ async function boot(b, label, errs, url){
      await four.evaluate(() => JSON.stringify(account.sub)));
 
   // теперь по-настоящему — выбираем тариф через реальный UI, без записи внутреннего состояния
-  await four.click('#btnPremium');
+  await four.click('.dock-btn[data-scr="scrAccount"]');
+  await four.click('#moreTabs [data-more="acc"]');
+  await four.click('#btnPlanCard');
   await four.click('#pmPlans .pm-plan[data-plan="month"]');
   await four.click('#pmBuy');
   await four.fill('#payEmail', MAIL3);
