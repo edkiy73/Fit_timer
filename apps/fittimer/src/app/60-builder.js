@@ -2238,14 +2238,24 @@ export async function saveProgram(){
   goTab('scrPrograms');
 }
 
-/* Setters for state owned by this chunk and changed from other chunks.
-   Other chunks read these bindings directly but write them only through the owner. */
-export function setDraftShared(value){ draft = value; return draft; }
-export function setExDraftShared(value){ exDraft = value; return exDraft; }
-export function setExIdxShared(value){ exIdx = value; return exIdx; }
-export function setExIsNewShared(value){ exIsNew = value; return exIsNew; }
-export function setExOrigShared(value){ exOrig = value; return exOrig; }
-export function setPlanIdxShared(value){ planIdx = value; return planIdx; }
+/* Builder owns its editing state. Other chunks ask for domain operations instead of
+   assigning individual bindings, so an exercise edit cannot be left half-reset. */
+export function loadBuilderDraft(value, selectedPlan = 0){
+  draft = value;
+  planIdx = Math.max(0, Number.isFinite(Number(selectedPlan)) ? Number(selectedPlan) : 0);
+  return draft;
+}
+export function clearExerciseDraft(){
+  exDraft = null;
+  exIdx = -1;
+  exIsNew = false;
+  exOrig = '';
+}
+export function markExerciseExisting(){ exIsNew = false; }
+export function selectPlanVariant(value){
+  planIdx = Math.max(0, Number.isFinite(Number(value)) ? Number(value) : 0);
+  return planIdx;
+}
 
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
@@ -2283,8 +2293,8 @@ export function initBuilder(){
     progressedRepsRange,
     qChips,
     renderExList,
-    setDraftShared,
-    setPlanIdxShared,
+    loadBuilderDraft,
+    selectPlanVariant,
     shrinkImage,
     valueText
   });
@@ -2336,9 +2346,7 @@ export function initBuilder(){
     progStepSize,
     programDirty,
     progressedRepsRange,
-    setExDraftShared,
-    setExIdxShared,
-    setExOrigShared,
+    clearExerciseDraft,
     setExWeight,
     weightPending
   });

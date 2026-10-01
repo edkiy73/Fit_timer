@@ -6,7 +6,7 @@ import { $, appAlert, appConfirm, appDialog, goTab, icon, isChanged, savedVoiceU
 } from './00-core.js';
 import { SCHEMA_VERSION, SYNC, connectAccountSync, currentUser, hasMeaningfulLocalData, identity,
   kvClearAll, kvDel, kvGet, kvSet, newId, parsed, profileAge, profileDisplayName, pushAccountDocs, recordConsent,
-  renderUsers, saveIdentity, saveUsers, setCurrentUserShared, setDataSyncAccountHooks, setUsersShared, showSyncState,
+  removeProfileById, renderUsers, saveIdentity, saveUsers, setDataSyncAccountHooks, showSyncState,
   switchUser, syncState, users, validAge
 } from './10-data-sync.js';
 
@@ -183,14 +183,7 @@ export async function deleteUser(){
     await saveAccount();
   }
   for(const k of PROFILE_KEYS) await kvDel(k + '_' + id);
-  setUsersShared(users.filter(x => x.id !== id));
-  await saveUsers();
-  if(id === currentUser){
-    setCurrentUserShared('');
-    await switchUser(users[0].id);
-  } else {
-    renderUsers();
-  }
+  await removeProfileById(id);
   connectAccountSync().catch(()=>{});
   goTab('scrAccount');
 }

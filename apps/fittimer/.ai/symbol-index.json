@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1626,
-      "chars": 78136,
+      "lines": 1624,
+      "chars": 78012,
       "symbols": [
         "$",
         "accountUserDirtyHook",
@@ -138,8 +138,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2711,
-      "chars": 125975,
+      "lines": 2739,
+      "chars": 126607,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -171,6 +171,7 @@
         "coreState",
         "coreStateHook",
         "coreSyncDockTabsHook",
+        "createInitialProfile",
         "curUser",
         "customToProgram",
         "dayState",
@@ -245,6 +246,7 @@
         "remoteProfileHasData",
         "remoteProgramRepairPlan",
         "remoteWins",
+        "removeProfileById",
         "renderAccount",
         "renderCalendar",
         "renderStatBadges",
@@ -256,6 +258,8 @@
         "renderWellness",
         "repairRemoteDuplicatePrograms",
         "reportClientError",
+        "restoreActiveProfile",
+        "restoreProfiles",
         "saveDoc",
         "saveIdentity",
         "savePrograms",
@@ -272,7 +276,6 @@
         "sessionsKey",
         "sessionWorkout",
         "sessRow",
-        "setCurrentUserShared",
         "setDataSyncAccountHooks",
         "setDataSyncBuilderHooks",
         "setDataSyncCoreHooks",
@@ -282,7 +285,6 @@
         "setDataSyncProgressMediaHooks",
         "setDataSyncTrainerCatalogHooks",
         "setDataSyncWorkoutHooks",
-        "setUsersShared",
         "shiftCalendarMonth",
         "showSyncState",
         "smooth",
@@ -319,8 +321,8 @@
     },
     "src/app/20-account.js": {
       "kind": "frontend-js",
-      "lines": 1184,
-      "chars": 51488,
+      "lines": 1177,
+      "chars": 51304,
       "symbols": [
         "accountBucketKey",
         "androidUpdateAction",
@@ -401,8 +403,8 @@
     },
     "src/app/30-progress-media.js": {
       "kind": "frontend-js",
-      "lines": 1021,
-      "chars": 45999,
+      "lines": 1018,
+      "chars": 45912,
       "symbols": [
         "addPhoto",
         "alpha",
@@ -477,7 +479,7 @@
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
       "lines": 3378,
-      "chars": 156316,
+      "chars": 156325,
       "symbols": [
         "activateClientAt",
         "add",
@@ -732,8 +734,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2485,
-      "chars": 111463,
+      "lines": 2493,
+      "chars": 111485,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -753,6 +755,7 @@
         "carryExerciseProgress",
         "clampProgEvery",
         "cleanup",
+        "clearExerciseDraft",
         "cloneExerciseAsNew",
         "commitExercise",
         "commitPlanFields",
@@ -790,6 +793,8 @@
         "isDualProg",
         "item",
         "liveExercise",
+        "loadBuilderDraft",
+        "markExerciseExisting",
         "migrateLegacyDualRangeExercise",
         "move",
         "MSG_AI_EMPTY",
@@ -839,17 +844,12 @@
         "repairLines",
         "saveProgram",
         "scaleValue",
+        "selectPlanVariant",
         "set",
         "setBuilderEventHooks",
         "setBuilderPlatformHooks",
         "setBuilderWorkoutHooks",
-        "setDraftShared",
-        "setExDraftShared",
-        "setExIdxShared",
-        "setExIsNewShared",
-        "setExOrigShared",
         "setExWeight",
-        "setPlanIdxShared",
         "shrinkImage",
         "sortWarmFirst",
         "startDragging",
@@ -869,8 +869,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1954,
-      "chars": 86583,
+      "lines": 1953,
+      "chars": 86470,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -1023,8 +1023,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2655,
-      "chars": 109780,
+      "lines": 2650,
+      "chars": 109447,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
