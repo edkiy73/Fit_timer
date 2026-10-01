@@ -96,15 +96,16 @@ async function restore(page, dump){
     photos = [{d: '2026-09-01', img: 'data:image/png;base64,iVBORw0KGgo='}];
     await savePhotos();
 
-    trainer = {on: true, handle: '@lena.doma', key: 'ключ-правки-страницы',
-               name: 'Лена', about: 'Домашний фитнес', years: 8,
-               links: 'https://t.me/lena.doma'};
+    restoreTrainerClientState({
+      trainer: {on: true, handle: '@lena.doma', key: 'ключ-правки-страницы',
+                name: 'Лена', about: 'Домашний фитнес', years: 8,
+                links: 'https://t.me/lena.doma'},
+      clients: [{id: 'c1', name: 'Марина', note: 'колено', progs: [
+        {pid: 'bk1', name: 'Сила дома', sentAt: '2026-09-05',
+         link: {id: 'abc12345', key: 'ключ-ссылки'}, opens: 2, reports: []}
+      ]}]
+    });
     await saveTrainer();
-
-    clients = [{id: 'c1', name: 'Марина', note: 'колено', progs: [
-      {pid: 'bk1', name: 'Сила дома', sentAt: '2026-09-05',
-       link: {id: 'abc12345', key: 'ключ-ссылки'}, opens: 2, reports: []}
-    ]}];
     await saveClients();
 
     account.email = 'lena@example.com';
