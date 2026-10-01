@@ -61,6 +61,10 @@ async function boot(browser, label, errors){
     await kvSet(pk('photos'), JSON.stringify(seededPhotos));
     await loadData();
     await loadPhotos();
+    // loadData hydrates memory; save* records the sync documents/outbox exactly as
+    // a real local edit would. Photos and legacy progWeights intentionally stay local.
+    await savePrograms();
+    await saveStats();
 
     const sent = await apiPost('/api/auth',{action:'send',email});
     const sub = {plan:'year',since:'2026-09-17',until:'2099-09-17',currency:'RUB',price:2990,autoRenew:true};
