@@ -11,8 +11,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(UnMuteAudioPlugin.class);
         registerPlugin(UnMuteUpdatePlugin.class);
         super.onCreate(savedInstanceState);
-        // Draw the app under the status and navigation bars on every Android version (15+ does it
-        // anyway): the page paints that strip in the theme's colour and keeps the clock readable.
+        // Draw edge-to-edge under transparent system bars. The web layer keeps safe-area spacing
+        // but does not paint a separate status-bar strip.
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.TRANSPARENT);
