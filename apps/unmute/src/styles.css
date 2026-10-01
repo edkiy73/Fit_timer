@@ -774,7 +774,7 @@ h2{margin:0 0 8px;font-weight:800}
 .onboarding-points strong{display:block;margin-bottom:3px;font-size:16px}
 .onboarding-points p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
 .onboarding-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:22px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent-ink)}
-.onboarding-actions{position:sticky;bottom:calc(12px + var(--safe-bottom));display:grid;gap:10px;margin-top:auto;padding-top:8px}
+.onboarding-actions{position:sticky;bottom:0;z-index:1;display:grid;gap:10px;margin:auto -16px 0;padding:24px 16px calc(12px + var(--safe-bottom));background:linear-gradient(to bottom,transparent,var(--bg) 24px)}
 .onboarding-start{width:100%;box-shadow:var(--elev-2)}
 .onboarding-account-note{margin:0;text-align:center;color:var(--muted);font-size:12px;line-height:1.4}
 @media(prefers-reduced-motion:reduce){
@@ -888,3 +888,33 @@ h2{margin:0 0 8px;font-weight:800}
 .calendar-day.is-future{color:var(--muted);opacity:.55}
 .calendar-legend{display:flex;align-items:center;gap:8px}
 .calendar-legend .calendar-day{width:22px;height:22px;font-size:11px}
+
+/* Purchase (access.tsx): choose a plan → see what it gives → pay. */
+.access-plans{display:grid;gap:10px}
+.access-plan{position:relative;display:flex;align-items:center;gap:12px;min-height:72px;padding:14px 16px;border:1.5px solid var(--line);border-radius:var(--radius-tile);background:var(--card);cursor:pointer}
+.access-plan input{position:absolute;opacity:0;pointer-events:none}
+.access-plan.is-on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--card))}
+.access-plan:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.access-plan-radio{flex:none;width:22px;height:22px;border:2px solid var(--line);border-radius:50%;background:var(--card)}
+.access-plan.is-on .access-plan-radio{border:7px solid var(--accent)}
+.access-plan-text{display:grid;gap:3px;flex:1 1 auto;min-width:0}
+.access-plan-text b{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:16px}
+.access-plan-text small{color:var(--muted);font-size:13px}
+.access-plan-badge{padding:2px 8px;border-radius:999px;background:var(--success);color:var(--on-accent,#fff);font-size:11px;font-style:normal;font-weight:800}
+.access-plan-price{display:grid;justify-items:end;flex:none;font-variant-numeric:tabular-nums}
+.access-plan-price strong{font-size:16px;white-space:nowrap}
+.access-plan-price s{color:var(--muted);font-size:12px}
+.access-benefits{display:grid;gap:10px;margin:0;padding:16px;list-style:none;border-radius:var(--radius-tile);background:var(--surface)}
+.access-benefits li{display:flex;align-items:flex-start;gap:10px;font-size:14px;line-height:1.4}
+.access-benefits svg{flex:none;margin-top:1px;color:var(--success)}
+.access-pay{display:grid;gap:8px;justify-items:center}
+.access-pay .primary-button{width:100%}
+.access-fineprint{margin:0;color:var(--muted);font-size:12.5px;text-align:center}
+.access-done{display:grid;justify-items:center;gap:12px;padding:32px 20px;border:1px solid var(--line);border-radius:var(--radius-tile);background:var(--card);text-align:center}
+.access-done h2{margin:0;font-size:28px}
+.access-done p{margin:0;color:var(--muted);line-height:1.5}
+.access-done .primary-button{width:100%;margin-top:8px}
+.access-done-mark{display:grid;place-items:center;width:72px;height:72px;border-radius:50%;background:color-mix(in srgb,var(--success) 16%,var(--card));color:var(--success);animation:tile-in 420ms var(--spring) both}
+.access-signin{display:grid;gap:10px}
+.access-signin h3{margin:0;font-size:20px}
+@media(prefers-reduced-motion:reduce){.access-done-mark{animation:none}}

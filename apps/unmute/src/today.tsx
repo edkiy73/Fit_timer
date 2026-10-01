@@ -1,6 +1,7 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
+import { countDays } from './plural';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
 import type { WordReviewRuntimeValue } from './word-review-runtime';
@@ -271,7 +272,7 @@ export function TodayView({
                   ? t('today.landmarkReview')
                   : t(landmark.kind==='dialogue'?'today.landmarkDialogue':'today.landmarkTalk',{title:landmark.title})}
               </span>
-              <span className="tile-caption">{t('today.landmarkWhen',{day:landmark.dayIndex,count:landmark.inDays})}</span>
+              <span className="tile-caption">{t('today.landmarkWhen',{day:landmark.dayIndex,days:countDays(t,locale,landmark.inDays)})}</span>
             </span>
             <Icon name="chevron" size={20} className="landmark-chevron" />
           </button>

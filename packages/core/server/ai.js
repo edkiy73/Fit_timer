@@ -115,6 +115,8 @@ function sanitizeSettings(src){
         year: line(payment.rustore && payment.rustore.year, 120)
       },
       yookassa: { enabled: payment.yookassa ? payment.yookassa.enabled !== false : true },
+      // «Выдавать сразу»: the pay button grants the purchase while no payment provider is connected.
+      instant: payment.instant !== false,
       androidMonth: line(payment.google && payment.google.month || payment.androidMonth, 120),
       androidYear: line(payment.google && payment.google.year || payment.androidYear, 120),
       iosMonth: line(payment.iosMonth, 120), iosYear: line(payment.iosYear, 120)

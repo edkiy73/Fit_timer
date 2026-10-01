@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react';
 import type { AdminClient } from '@appbase/core/admin.js';
 import { SecretField, useSecrets } from './admin-secrets';
 
-/* Admin → «Оплата: ключи». Keys for each payment provider, pasted by the owner.
+/* Admin → «Способы оплаты». The instant-grant switch (settings.payment.instant: the pay button grants
+   the purchase at once while no payment provider is connected) and the keys for each provider.
    A provider starts taking payments once its key is here and its checkout is connected. */
 
 const PROVIDERS = [
@@ -39,10 +41,60 @@ const PROVIDERS = [
   }
 ] as const;
 
+type Settings = {payment?: {instant?: boolean}} & Record<string, unknown>;
+
+function InstantSwitch({client, adminKey, locale}: {client: AdminClient; adminKey: string; locale: 'ru' | 'en'}){
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState('');
+  const ru = locale === 'ru';
+
+  useEffect(() => {
+    client.action(adminKey, 'settings_get')
+      .then(result => setSettings(result.settings as Settings))
+      .catch(() => setNote(ru ? 'Не удалось загрузить настройки.' : 'Could not load settings.'));
+  }, [client, adminKey, ru]);
+
+  async function toggle(instant: boolean){
+    if(!settings) return;
+    setBusy(true);
+    setNote('');
+    try{
+      const result = await client.action(adminKey, 'save_settings', {settings:{...settings, payment:{...settings.payment, instant}}});
+      setSettings(result.settings as Settings);
+      setNote(instant
+        ? (ru ? 'Включено: кнопка «Оплатить» сразу открывает покупку.' : 'On: the pay button grants the purchase at once.')
+        : (ru ? 'Выключено: покупки идут только через подключённую оплату.' : 'Off: purchases go only through a connected payment provider.'));
+    }catch(error){
+      setNote((ru ? 'Не сохранилось: ' : 'Not saved: ') + String((error as {code?: string})?.code || (ru ? 'ошибка' : 'error')));
+    }finally{
+      setBusy(false);
+    }
+  }
+
+  return (
+    <article className="ab-admin-panel">
+      <h2>{ru ? 'Покупки без оплаты' : 'Purchases without payment'}</h2>
+      <p className="ab-admin-empty">{ru
+        ? 'Пока оплата не подключена, кнопка «Оплатить» сразу открывает выбранный курс или Plus. Выключи, когда подключишь ЮKassa или магазин приложений.'
+        : 'Until payments are connected, the pay button unlocks the chosen course or Plus at once. Turn it off once YooKassa or an app store is connected.'}</p>
+      {settings && (
+        <label className="ab-admin-check">
+          <input type="checkbox" checked={settings.payment?.instant !== false} disabled={busy}
+            onChange={e => void toggle(e.target.checked)} />
+          <span>{ru ? 'Выдавать покупку сразу' : 'Grant purchases at once'}</span>
+        </label>
+      )}
+      {note && <p className="ab-admin-empty" role="status">{note}</p>}
+    </article>
+  );
+}
+
 export function AdminBillingKeys({client, adminKey, locale = 'ru'}: {client: AdminClient; adminKey: string; locale?: 'ru' | 'en'}){
   const keys = useSecrets(client, adminKey);
   return (
     <>
+      <InstantSwitch client={client} adminKey={adminKey} locale={locale} />
       <p className="ab-admin-empty">
         {locale === 'ru'
           ? 'Ключи хранятся на сервере и сюда не возвращаются — видно только, задан ли ключ. Оплата каждым способом заработает, когда его подключение будет готово.'

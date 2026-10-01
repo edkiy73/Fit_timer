@@ -56,8 +56,9 @@ function fakeRes(){
   const billing = require('../api/billing');
   const billingRes = fakeRes();
   await billing({method:'POST',headers:{},body:{action:'providers'}},billingRes);
-  ok('billing endpoint is mounted (test provider only on the memory store)',
-    JSON.parse(billingRes.body || '{}').providers.join() === 'test');
+  // «instant» is on by default (Admin → «Способы оплаты» turns it off); «test» only on the memory store.
+  ok('billing endpoint is mounted with the instant and test providers',
+    JSON.parse(billingRes.body || '{}').providers.join() === 'instant,test');
   ok('settings and learner progress sync without Premium',
     registry.isFree('account','settings')
     && registry.isFree('account','progress:course:general-foundation')

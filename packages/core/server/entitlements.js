@@ -67,12 +67,22 @@ function productCatalog(){
   });
 }
 
+/** config/product.json → skuPatterns, e.g. ["course.*"]: SKUs the product creates at run time
+ *  (a course published from Admin) that the static catalog cannot list. Only a trailing «*». */
+function skuPatterns(){
+  let config = null;
+  try{ config = productConfig(); }catch(_){ return []; }
+  const list = Array.isArray(config && config.skuPatterns) ? config.skuPatterns : [];
+  return list.map(p => String(p || '').trim().toLowerCase()).filter(p => /^[a-z0-9][a-z0-9._:-]{0,62}\*$/.test(p));
+}
+
 /** null when the SKU may be granted, otherwise an error code. */
 function checkSku(sku){
   const key = cleanSku(sku);
   if(!key) return 'bad_sku';
   const catalog = productCatalog();
-  if(catalog.length && !catalog.some(item => item.sku === key)) return 'unknown_sku';
+  if(catalog.length && !catalog.some(item => item.sku === key)
+    && !skuPatterns().some(p => key.length > p.length - 1 && key.startsWith(p.slice(0, -1)))) return 'unknown_sku';
   return null;
 }
 
