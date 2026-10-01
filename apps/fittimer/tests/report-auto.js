@@ -76,7 +76,7 @@ async function boot(b, label, errs, url){
   if(await cp.isVisible('#dlgOk')){ await cp.click('#dlgOk'); await cp.waitForTimeout(400); }
 
   // сохраняем программу настоящей кнопкой — метки тренера должны пережить сохранение
-  await cp.evaluate(() => { const u = users.find(x => x.id === currentUser); u.name = 'Марина'; });
+  await cp.evaluate(() => { curUser().name = 'Марина'; });
   await cp.click('#btnSaveProgram');
   await cp.waitForTimeout(1200);
   if(await cp.isVisible('#dlgOk')){ await cp.click('#dlgOk'); await cp.waitForTimeout(400); }
