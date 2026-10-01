@@ -1,5 +1,7 @@
 # UnMute — Product Flow Audit
 
+> **План работ и отметки о выполнении:** `docs/unmute-audit-plan.md`. Сделанные пункты помечаются там и здесь (`✅ сделано (#PR)`).
+
 Дата: 2026-10-01  
 Репозиторий: `edkiy73/Fit_timer`  
 Область: `apps/unmute`
