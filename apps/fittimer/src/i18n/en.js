@@ -247,7 +247,7 @@ export const I18N_EN = {
   'builder.exerciseProgressionFrequencyHint': "Leave unset to use the program setting. 0 disables progression for this exercise.",
   'builder.exerciseProgressionUseProgram': "Program default ({count})",
   'builder.exerciseProgressionUseProgramOff': "Program default (off)",
-  'builder.exerciseProgressionOff': "No progression",
+  'builder.exerciseProgressionOff': "0 — No progression",
   'builder.exerciseProgressionDisabledHint': "progression is disabled for this exercise",
   'builder.descriptionCover': "Description & cover",
   'builder.descriptionOptional': "Description (optional)",
