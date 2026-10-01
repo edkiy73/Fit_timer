@@ -698,9 +698,14 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
         if(!setIds.length || !lexiconDraft){ fail(res,409,'drafts_required'); return true; }
         const Coverage=await loadCoverage();
         const lexicalReadiness={};
+        const { neutralizeCourse } = await import('./gender-neutral.mjs');
         for(const setId of setIds){
-          const draft=await Content.getDraft(setId);
+          let draft=await Content.getDraft(setId);
           if(!draft){ fail(res,409,'course_draft_not_found:'+setId); return true; }
+          // Learner-addressed past tense always goes out in both forms («ты работал(а)»),
+          // whatever was typed in the editor; already neutral text is left as is.
+          const neutral=neutralizeCourse(draft);
+          if(neutral.changes.length){ await Content.putDraft(neutral.set); draft=await Content.getDraft(setId); }
           Content.validateSet(draft);
           const audit=Coverage.auditLexicalCoverage(draft,lexiconDraft);
           lexicalReadiness[setId]=Coverage.compactCoverageReport(audit);

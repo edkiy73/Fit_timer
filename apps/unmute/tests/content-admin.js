@@ -322,6 +322,12 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.equal(before.status,200);
   assert.equal(before.body.course.published,null);
 
+  // Publishing puts learner-addressed past tense in both forms, whatever the editor saved.
+  const gendered=await Content.getDraft('general-foundation');
+  const genderedActivity=gendered.activities.find(item=>item.type==='theory');
+  genderedActivity.body.ru='I work. Ты вчера работал?';
+  await Content.putDraft(gendered);
+
   const readyCheck=await action(handler,'content_release_check',{setIds:['general-foundation']});
   assert.equal(readyCheck.body.sets['general-foundation'].ready,true);
   const published=await action(handler,'content_publish');
@@ -331,6 +337,7 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.equal(published.body.release.revision,1);
   assert.equal(published.body.release.sets['general-foundation'],1);
   assert.equal(published.body.release.lexiconRevision,1);
+  assert.equal((await Release.getReleasedSet('general-foundation')).activities.find(item=>item.id===genderedActivity.id).body.ru,'I work. Ты вчера работал(а)?');
 
   const publishedB=await action(handler,'content_publish',{setIds:['b1-b2']});
   assert.equal(publishedB.status,200);
