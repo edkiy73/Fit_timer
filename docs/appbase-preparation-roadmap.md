@@ -553,6 +553,12 @@ Third semantic-owner cleanup:
 - four more raw setters were removed without changing product import direction.
 
 Fourth semantic-owner cleanup:
+- Core voice-command suppression and catalog start-origin now use `blockVoiceCommandsFor()` and `openStartFrom()` instead of raw setters;
+- workout exercise-origin cleanup is now `clearExerciseWorkoutOrigin()`;
+- image-tray mutation is now owned by Programs AI through `appendImagesToTray()`, `ensureImageInTray()` and `clearUnusedImageTray()`;
+- four more raw setters were removed; the remaining 13 are the coupled user/program/trainer/builder state groups.
+
+Fourth semantic-owner cleanup:
 - Core voice-command suppression and catalog start origin now use `blockVoiceCommandsFor()` and `openStartFrom()`;
 - workout editor cleanup uses `clearExerciseWorkoutOrigin()` instead of writing the origin flag;
 - image tray mutations now use semantic append/ensure/clear-unused operations owned by Programs AI;
