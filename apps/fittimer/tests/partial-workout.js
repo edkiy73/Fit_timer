@@ -45,11 +45,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
 
   await page.evaluate(() => {
+    startWorkout(0, 120000, {skipPrep:true});
     // Первый рабочий шаг выполнен честно через новый семантический переход.
     while(state.steps[state.stepIdx] && state.steps[state.stepIdx].phase !== 'work') nextStep();
     completeStep();
-    state.globalStart = Date.now() - 120000;
-    state.pausedTotal = 0;
     exitWorkout();
   });
   await page.waitForTimeout(100);
