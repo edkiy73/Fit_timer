@@ -59,7 +59,7 @@ async function boot(b, label, errs, url){
     navigator.clipboard.writeText = async t => { out = t; };
     navigator.share = async d => { out = d.url; };
     const c = await addClient(); c.name = 'Марина';
-    await saveClients(); clientIdx = clients.indexOf(c);
+    await saveClients(); activateClientAt(clients.indexOf(c));
     await sendProgramToClient(c, customPrograms.find(x => x.id === 'tp1'));
     return out;
   }, PROG);

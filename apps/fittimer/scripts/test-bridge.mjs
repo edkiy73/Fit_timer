@@ -44,7 +44,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "cleanLink",
   "cleanPic",
   "clearSession",
-  "clientIdx",
+  "activateClientAt",
   "clients",
   "closeImages",
   "completeStep",
@@ -195,7 +195,6 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
 export const TEST_BRIDGE_WRITABLE = new Set([
   "callGemini",
   "callGeminiImage",
-  "clientIdx",
   "clients",
   "customPrograms",
   "editAIProg",
