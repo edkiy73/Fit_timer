@@ -11,6 +11,7 @@ import { Sheet } from './sheet';
 import { useAllLearningDays } from './learning-days';
 import { useCatalog } from './active-course';
 import { localizedText } from './today-model';
+import { ScreenHeader } from './screen-header';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
@@ -41,13 +42,12 @@ export function MeScreen(){
 
   return (
     <section className="me me-profile" aria-labelledby="me-title">
-      <header className="screen-head">
-        <div className="screen-kicker">{email ? email + (auth.session?.handle ? ' · ' + auth.session.handle : '') : t('me.guestName')}</div>
-        <div className="screen-title-row">
-          <h2 id="me-title">{t('me.title')}</h2>
-          <Link className="me-settings pressable" to="/settings" aria-label={t('me.settings')}><Icon name="settings" size={22} /></Link>
-        </div>
-      </header>
+      <ScreenHeader
+        kicker={email ? email + (auth.session?.handle ? ' · ' + auth.session.handle : '') : t('me.guestName')}
+        title={t('me.title')}
+        titleId="me-title"
+        action={<Link className="me-settings pressable" to="/settings" aria-label={t('me.settings')}><Icon name="settings" size={22} /></Link>}
+      />
 
       {!auth.session && (
         <div className="tile me-signin">
