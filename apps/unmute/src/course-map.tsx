@@ -275,7 +275,7 @@ export function CourseMapView({
                       )}
                       <li
                         ref={station.status==='current'?currentRef:undefined}
-                        className={'station station-'+station.kind+' is-'+station.status+(solid?' rail-solid':'')+(arriving?' rail-arriving':'')+(isLast?' is-last':'')}
+                        className={'station station-'+station.kind+' is-'+station.status+(solid?' rail-solid':'')+(arriving?' rail-arriving':'')+(index===0?' is-first':'')+(isLast?' is-last':'')}
                         style={{'--i':index} as CSSProperties}
                         aria-current={station.status==='current'?'step':undefined}
                       >

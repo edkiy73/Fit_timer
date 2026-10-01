@@ -593,6 +593,9 @@ h2{margin:0 0 8px;font-weight:800}
 .station::before{content:"";position:absolute;left:30px;top:0;bottom:0;width:4px;border-radius:2px;background:repeating-linear-gradient(to bottom,var(--line) 0 6px,transparent 6px 12px)}
 .station.rail-solid::before{background:var(--success)}
 .station.is-last::before{bottom:auto;height:30px}
+/* The rail starts at the stage's first marker: nothing sticks out above it. */
+.station.is-first::before{top:30px}
+.station.is-first.is-last::before{display:none}
 .station.rail-arriving::after{content:"";position:absolute;left:30px;top:0;height:30px;width:4px;border-radius:0 0 2px 2px;background:var(--success)}
 .station-marker{grid-column:1;grid-row:1;z-index:1;justify-self:center;align-self:start;display:grid;place-items:center;width:20px;height:20px;margin-top:20px;border-radius:50%;border:3px solid var(--locked);background:var(--card);color:var(--card)}
 .station.is-complete .station-marker{border-color:var(--success);background:var(--success)}

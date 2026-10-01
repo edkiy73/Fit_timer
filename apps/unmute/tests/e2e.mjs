@@ -213,6 +213,14 @@ try{
   });
   ok('day sheet buttons span the whole sheet',sheetButtonsFit);
   ok('the solid rail reaches the current day',await phone.page.locator('.station.is-current.rail-arriving').count()===1);
+  ok('the rail starts at the first day, not above it',await phone.page.evaluate(()=>{
+    const first=document.querySelector('.station.is-first');
+    const marker=first?.querySelector('.station-marker');
+    if(!first||!marker)return false;
+    const railTop=first.getBoundingClientRect().top+parseFloat(getComputedStyle(first,'::before').top);
+    const box=marker.getBoundingClientRect();
+    return railTop>=box.top&&railTop<=box.bottom;
+  }));
   await phone.page.keyboard.press('Escape');
   await phone.page.goto(URL_+'#/');
   ok('theme tokens are applied',(await phone.page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()))!=='');
