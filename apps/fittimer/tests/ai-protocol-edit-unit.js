@@ -183,4 +183,11 @@ if(bad){
   console.error('\nFailed:', bad);
   process.exit(1);
 }
+
+{
+  const prompt = FitAIProtocol.programPrompt('Russian');
+  need(prompt.includes('ЧАСТОТА ПРОГРЕССИИ'), 'AI protocol documents per-exercise progression frequency');
+  need(prompt.includes('0 = disable progression for this exercise'), 'AI protocol documents zero as exercise progression off');
+}
+
 console.log('\nAI edit protocol: ok');
