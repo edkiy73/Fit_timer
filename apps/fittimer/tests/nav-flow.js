@@ -83,7 +83,9 @@ const screen = page => page.evaluate(() => (document.querySelector('.screen.on')
   await page.evaluate(async () => {
     const r = parseProgramText('ПРОГРАММА: Проба\nДНИ: Пн\nКРУГИ: 1\n\nУПРАЖНЕНИЕ: Планка\nФОРМАТ: время\nЗНАЧЕНИЕ: 40\nПОДХОДЫ: 1\nОТДЫХ: 20');
     const p = r.program || r; p.id = 'navp1'; p.pub = {id: 'u1', status: 'pending'};
-    customPrograms.push(p); await savePrograms();
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
+    await savePrograms();
     renderTrainerCard();
   });
   await page.waitForTimeout(300);
