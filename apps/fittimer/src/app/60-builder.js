@@ -321,21 +321,26 @@ function exFormatState(ex){
   const format = ex.type === 'time' ? 'time' : (hasWeight(ex) ? 'reps_weight' : 'reps');
   return {format, progOn: progAxis(ex) !== 'none'};
 }
-// подпись периода прогрессии программы. Считаем в ПРОЙДЕННЫХ ТРЕНИРОВКАХ, а не в днях:
-// календарь поднимал нагрузку за время отпуска, поэтому от него отказались (см. progAutoSteps)
+// Частота прогрессии — это число ПОЛНЫХ ВЫПОЛНЕНИЙ КОНКРЕТНОГО УПРАЖНЕНИЯ,
+// а не число тренировок программы. У программы хранится общий дефолт; позже
+// отдельное упражнение сможет переопределить его своим значением.
+const PROG_EVERY_DEFAULT = 4;
 const PROG_EVERY_MAX = 15;
-// у программ, созданных до перехода на счёт по тренировкам, здесь мог лежать календарный
-// период (например, 30 — «каждый месяц»): загоняем такое значение в допустимый диапазон
+// у старых программ здесь мог лежать календарный/тренировочный период: оставляем
+// значение в допустимом диапазоне, но для нового/пустого значения используем 4.
 function clampProgEvery(n){
-  return Math.max(1, Math.min(PROG_EVERY_MAX, Math.round(+n || 0) || 6));
+  return Math.max(1, Math.min(PROG_EVERY_MAX, Math.round(+n || 0) || PROG_EVERY_DEFAULT));
 }
 function progPeriodLabel(n){
   n = Math.max(1, Math.round(+n || 1));
-  if(n === 1) return t('builder.everyWorkout');
-  const workouts = appLocale === 'ru' ? plural(n,t('start.workoutOne'),t('start.workoutFew'),t('start.workoutMany')) : t(n === 1 ? 'start.workoutOne' : 'start.workoutFew');
-  return t('builder.everyNWorkouts',{count:n,workouts});
+  if(n === 1) return t('builder.everyExerciseCompletion');
+  if(appLocale === 'ru'){
+    const executions = plural(n, t('builder.exerciseCompletionOne'), t('builder.exerciseCompletionFew'), t('builder.exerciseCompletionMany'));
+    return t('builder.everyNExerciseCompletions',{count:n,executions});
+  }
+  return t('builder.everyNExerciseCompletions',{count:n});
 }
-// «как часто повышать» в настройках программы: 1–15 тренировок
+// Общий дефолт программы: 1–15 выполнений каждого упражнения
 function fillProgEveryOptions(){
   const sel = $('bProgEvery');
   if(sel.options.length) return;
@@ -864,7 +869,7 @@ export function fillBuilder(title){
   $('bProgOn').classList.toggle('on', pOn);
   setShown('bProgOpts', pOn);
   fillProgEveryOptions();
-  $('bProgEvery').value = String(clampProgEvery(draft.progression || 6)); // 6 тренировок — примерно 2-3 недели при 2-3 занятиях в неделю
+  $('bProgEvery').value = String(clampProgEvery(draft.progression || PROG_EVERY_DEFAULT));
   syncCover();
   renderPlanTabs();
   fillPlanFields();
@@ -1536,11 +1541,18 @@ function exRow(ex, i){
   info.append(name, meta);
 
   // Справа всё как у карточки программы: «⋮» сверху, ручка перетаскивания снизу.
+  // Кнопка и меню живут в своей relative-обёртке: раньше оба были разнесены по
+  // строке, и после изменений layout/stacking меню могло открыться вне кликабельной
+  // области или под соседней строкой. У обёртки один владелец позиции и z-index.
+  const menuWrap = document.createElement('div');
+  menuWrap.className = 'ex-menu-wrap';
   const more = document.createElement('button');
   more.type = 'button';
   more.className = 'more-btn';
   more.innerHTML = icon('more');
   more.title = t('common.actions');
+  more.setAttribute('aria-haspopup', 'menu');
+  more.setAttribute('aria-expanded', 'false');
   const menu = document.createElement('div');
   menu.className = 'ctx-menu';
   const item = (html, action, cls) => {
@@ -1556,13 +1568,14 @@ function exRow(ex, i){
   item(icon('trash') + t('common.delete'), 'deleteExerciseAt', 'danger');
   more.dataset.act = 'toggleExerciseRowMenu';
   more.dataset.exerciseIdx = String(i);
+  menuWrap.append(more, menu);
 
   const grip = document.createElement('div');
   grip.className = 'ex-grip';
   grip.innerHTML = icon('grip');
   grip.title = t('programs.drag');
 
-  row.append(thumb, info, more, grip, menu);
+  row.append(thumb, info, menuWrap, grip);
   // Нажатие на саму строку открывает редактор; перетаскивание начинается только
   // с ручки и клика по строке не даёт.
   row.dataset.act = 'openExerciseRow';
@@ -2419,9 +2432,12 @@ export function initBuilder(){
   });
   registerAction('toggleExerciseRowMenu', (btn, event) => {
     event.stopPropagation();
-    const row = btn.closest('.ex-row');
-    const menu = row && row.querySelector('.ctx-menu');
-    if(menu) toggleMenu(menu);
+    const wrap = btn.closest('.ex-menu-wrap');
+    const menu = wrap && wrap.querySelector('.ctx-menu');
+    if(!menu) return;
+    const willOpen = !menu.classList.contains('open');
+    toggleMenu(menu);
+    btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
   });
   registerAction('openExerciseRow', (row, event) => {
     const target = event.target;
