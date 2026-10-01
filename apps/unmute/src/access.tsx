@@ -249,8 +249,11 @@ export function AccessScreen(){
   // A guest picks a plan first; the sheet signs them in and the purchase continues.
   const [pendingPlan, setPendingPlan] = useState<Plan | 'restore' | null>(null);
 
-  const rawPlace = new URLSearchParams(location.search).get('from') || 'other';
+  const searchParams = new URLSearchParams(location.search);
+  const rawPlace = searchParams.get('from') || 'other';
   const place = rawPlace === 'course' || rawPlace === 'today' || rawPlace === 'talk' || rawPlace === 'answer' ? rawPlace : 'other';
+  const requestedReturn = searchParams.get('return') || '';
+  const returnTo = requestedReturn.startsWith('/') && !requestedReturn.startsWith('//') ? requestedReturn : '';
   const focus: AccessFocus = place === 'talk' || place === 'answer' ? 'plus' : 'course';
 
   const providers = useQuery({queryKey:['billing-providers'], queryFn:() => billingClient.providers(), staleTime:60_000, retry:1});
@@ -330,8 +333,14 @@ export function AccessScreen(){
         refreshError={refreshError}
         onBuy={plan => void buy(plan)}
         onRestore={() => void restore()}
-        onCourse={() => { if(focus === 'plus') navigate(-1); else navigate('/course'); }}
-        onContinue={() => { if(done?.plan !== 'course' && focus === 'plus') navigate(-1); else navigate('/'); }}
+        onCourse={() => {
+          if(focus === 'plus') navigate(returnTo || -1);
+          else navigate('/course');
+        }}
+        onContinue={() => {
+          if(done?.plan !== 'course' && focus === 'plus') navigate(returnTo || -1);
+          else navigate('/');
+        }}
       />
       <Sheet open={pendingPlan !== null && !auth.session} onClose={() => setPendingPlan(null)} labelledBy="access-signin-title" closeLabel={t('access.signInClose')}>
         <div className="access-signin" id="access-signin-title">
