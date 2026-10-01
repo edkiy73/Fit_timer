@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import { applyLegalDetails, type LegalDetails } from '@appbase/core/legal.js';
 import { Icon } from './icons';
+import { Loader } from './loader';
 import { apiUrl } from './api-url';
 
 /* Privacy policy and account deletion inside the app. They stay public pages
@@ -53,7 +54,7 @@ export function LegalScreen(){
       {!url || failed
         ? <p className="tile-text" role="alert">{t('legal.error')}</p>
         : html === null
-          ? <p className="tile-text" role="status">{t('legal.loading')}</p>
+          ? <Loader title={t('legal.loading')} />
           : <article className="tile legal-body" dangerouslySetInnerHTML={{__html:html}} />}
     </section>
   );

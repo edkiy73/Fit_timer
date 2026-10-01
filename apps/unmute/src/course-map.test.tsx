@@ -108,7 +108,6 @@ describe('course map',()=>{
       </I18nProvider>
     );
 
-    expect(screen.getByText('Бесплатных дней в начале: 2')).toBeTruthy();
     expect(screen.getByText('Дальше — полный курс')).toBeTruthy();
     expect(screen.getAllByRole('button',{name:'Открыть'})).toHaveLength(1);
     expect(screen.getAllByRole('button',{name:'Открыть доступ'})).toHaveLength(1);

@@ -187,10 +187,11 @@ describe('progress screen summary',()=>{
 
     renderProgress(state,stats);
 
-    expect(screen.getAllByText('75%')).toHaveLength(2);
-    expect(screen.getByText('Попыток').parentElement?.textContent).toContain('4');
-    expect(screen.getByText('Верно').parentElement?.textContent).toContain('3');
-    expect(screen.getByText('Ошибок').parentElement?.textContent).toContain('1');
-    expect(screen.getByText('Фразы на скорость: сколько успеваешь вовремя')).toBeTruthy();
+    expect(screen.getByText('75% верно')).toBeTruthy();
+    expect(screen.getByText('ответов').parentElement?.textContent).toContain('4');
+    expect(screen.getByText('верно').parentElement?.textContent).toContain('3');
+    expect(screen.getByText('с ошибкой').parentElement?.textContent).toContain('1');
+    // Practice is a row: label on the left, the result on the right.
+    expect(screen.getByText('Фразы на скорость — успеваешь вовремя').closest('li')?.textContent).toContain('75%');
   });
 });

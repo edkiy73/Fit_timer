@@ -9,6 +9,7 @@ import { PatternDrillView } from './pattern-drill';
 import { PatternListeningView } from './pattern-listening';
 import { PatternSpeakingView } from './pattern-speaking';
 import { LexiconText } from './lexicon-ui';
+import { ExerciseKind } from './exercise-kind';
 
 type PatternActivity=Extract<Activity,{type:'pattern-drill'}>;
 type PatternMode=PracticeSrsKind|'complete';
@@ -60,6 +61,8 @@ export function PatternPracticeView({
   );
   // A training picked by hand from the finished state returns there, not to the next one.
   const [single,setSingle]=useState(Boolean(initialMode));
+  // Each training starts with «what to do and how»; its timer or microphone waits for «Начать».
+  const [briefed,setBriefed]=useState<ReadonlySet<PracticeSrsKind>>(()=>new Set());
 
   const distractors=useMemo(
     ()=>courseActivities.flatMap(candidate=>
@@ -84,6 +87,25 @@ export function PatternPracticeView({
     }
     onDone();
   };
+
+  if(mode!=='complete'&&!briefed.has(mode)){
+    const pattern=activity.pattern[locale]||activity.pattern.ru||activity.pattern.en||Object.values(activity.pattern)[0]||'';
+    return (
+      <article className="learn-card practice-intro">
+        <ExerciseKind kind={mode} />
+        <h3><LexiconText text={pattern} refs={activity.lexiconRefs} /></h3>
+        <p className="practice-intro-text">{t('practice.intro.'+mode,{count:activity.items.length})}</p>
+        <ul className="practice-steps">
+          {[1,2,3].map(step=><li key={step}>{t('practice.step.'+mode+'.'+step)}</li>)}
+        </ul>
+        <div className="runner-action">
+          <button className="primary-button" type="button" onClick={()=>setBriefed(previous=>new Set(previous).add(mode))}>
+            {t('practice.start')}
+          </button>
+        </div>
+      </article>
+    );
+  }
 
   if(mode==='drill'){
     return (

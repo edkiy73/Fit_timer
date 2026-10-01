@@ -1620,4 +1620,59 @@ export function initCore(){
   });
   document.addEventListener('focusin', ()=> syncDock());
   document.addEventListener('focusout', ()=> setTimeout(syncDock, 60));
+  installNativeBack();
+}
+
+// Системная «Назад» в APK. Без своего слушателя Capacitor то отматывал служебные записи
+// истории на «Сегодня» (казалось, что кнопка не работает), то закрывал приложение.
+// Теперь: где есть куда вернуться — обычный Back по истории (попапы, тренировка и
+// защита несохранённого работают как раньше); на «Сегодня» первое нажатие только
+// подсказывает «Нажми ещё раз, чтобы выйти», второе в течение 2 секунд сворачивает.
+const EXIT_WINDOW_MS = 2000;
+let lastExitPress = 0;
+let exitHintTimer = 0;
+export function onRootBack(now = Date.now()){
+  if(lastExitPress && now - lastExitPress <= EXIT_WINDOW_MS){
+    lastExitPress = 0;
+    return 'exit';
+  }
+  lastExitPress = now;
+  return 'hint';
+}
+function showExitHint(){
+  let el = document.getElementById('exitHint');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'exitHint';
+    el.className = 'exit-hint';
+    el.setAttribute('role', 'status');
+    document.body.appendChild(el);
+  }
+  el.textContent = t('common.exitHint');
+  el.classList.add('on');
+  clearTimeout(exitHintTimer);
+  exitHintTimer = setTimeout(() => el.classList.remove('on'), EXIT_WINDOW_MS);
+}
+function installNativeBack(){
+  const cap = window.Capacitor;
+  const app = cap && cap.Plugins && cap.Plugins.App;
+  if(!cap || !cap.isNativePlatform || !cap.isNativePlatform() || !app || !app.addListener) return;
+  try{
+    app.addListener('backButton', ({canGoBack}) => {
+      const onToday = $('scrMenu') && $('scrMenu').classList.contains('on');
+      const atRoot = onToday && !document.querySelector('.modal.open') && navStack.length <= 1;
+      if(!atRoot){
+        if(canGoBack) history.back();
+        else show('scrMenu');
+        return;
+      }
+      if(onRootBack() === 'exit'){
+        const hint = document.getElementById('exitHint');
+        if(hint) hint.classList.remove('on');
+        if(app.minimizeApp) app.minimizeApp(); else if(app.exitApp) app.exitApp();
+      }else{
+        showExitHint();
+      }
+    });
+  }catch(_){}
 }

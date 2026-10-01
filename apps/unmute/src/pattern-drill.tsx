@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
+import { ExerciseKind } from './exercise-kind';
 import { LexiconText } from './lexicon-ui';
 
 type PatternDrillActivity=Extract<Activity,{type:'pattern-drill'}>;
@@ -50,6 +51,8 @@ export function PatternDrillView({
   const [slow,setSlow]=useState(0);
   const [phase,setPhase]=useState<'ask'|'show'>('ask');
   const [lastFast,setLastFast]=useState<boolean|null>(null);
+  // «Не получилось»: the answer is shown and the phrase simply comes back — nothing to compare.
+  const [gaveUp,setGaveUp]=useState(false);
   const [stage,setStage]=useState<'reading'|'speaking'>('reading');
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(variant==='mixed');
@@ -89,9 +92,10 @@ export function PatternDrillView({
       .finally(()=>setSaving(false));
   },[activity.id,done,passed,savePractice,saved,saving,score,setId,variant]);
 
-  const reveal=(wasFast:boolean)=>{
+  const reveal=(wasFast:boolean,failed=false)=>{
     if(phase!=='ask')return;
     setLastFast(wasFast);
+    setGaveUp(failed);
     setPhase('show');
   };
 
@@ -115,6 +119,7 @@ export function PatternDrillView({
     setSlow(nextSlow);
     setPos(current=>current+1);
     setLastFast(null);
+    setGaveUp(false);
     setPhase('ask');
   };
 
@@ -144,6 +149,7 @@ export function PatternDrillView({
   if(done){
     return (
       <article className="learn-card drill-card">
+        <ExerciseKind kind="drill" />
         <div className="eyebrow">{variant==='mixed'?t('mixed.eyebrow'):t('drill.mode')}</div>
         <h3>{variant==='mixed'?t('mixed.title'):<LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} />}</h3>
         <div className="drill-result">
@@ -200,6 +206,7 @@ export function PatternDrillView({
 
   return (
     <article className="learn-card drill-card">
+        <ExerciseKind kind="drill" />
       <div className="drill-meta">
         <span>{variant==='mixed'?t('mixed.title'):<LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} />}</span>
         <span>{t('drill.position',{current:pos+1,total:items.length})}</span>
@@ -217,30 +224,45 @@ export function PatternDrillView({
           <button className="primary-button" type="button" onClick={said}>
             {t('drill.said')}
           </button>
-          <button className="secondary-button" type="button" onClick={()=>reveal(false)}>
+          <button className="secondary-button" type="button" onClick={()=>reveal(false,true)}>
             {t('drill.couldNot')}
           </button>
         </>
       ) : (
         <>
-          <div className={lastFast?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-neutral'}>
-            <strong>{lastFast?t('drill.fast'):t('drill.slow')}</strong>
-            <span>{lastFast?t('drill.fastHint'):t('drill.slowHint')}</span>
-          </div>
+          {gaveUp ? (
+            <div className="learn-feedback learn-feedback-neutral">
+              <strong>{t('drill.gaveUp')}</strong>
+              <span>{t('drill.gaveUpHint')}</span>
+            </div>
+          ) : (
+            <div className={lastFast?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-neutral'}>
+              <strong>{lastFast?t('drill.fast'):t('drill.slow')}</strong>
+              <span>{t('drill.compare')}</span>
+            </div>
+          )}
           <div className="drill-target"><LexiconText text={accepted} refs={activity.lexiconRefs} /></div>
           {explanation&&(
             <p className="drill-explanation"><LexiconText text={explanation} refs={activity.lexiconRefs} /></p>
           )}
-          <button className="primary-button" type="button" onClick={()=>nextItem(true)}>
-            {t('drill.same')}
-          </button>
-          <button className="secondary-button" type="button" onClick={()=>nextItem(false)}>
-            {t('drill.wrong')}
-          </button>
-          {!lastFast&&(
-            <button className="learn-back" type="button" onClick={()=>setLastFast(true)}>
-              {t('drill.wasFast')}
+          {gaveUp ? (
+            <button className="primary-button" type="button" onClick={()=>nextItem(false)}>
+              {t('learn.next')}
             </button>
+          ) : (
+            <>
+              <button className="primary-button" type="button" onClick={()=>nextItem(true)}>
+                {t('drill.same')}
+              </button>
+              <button className="secondary-button" type="button" onClick={()=>nextItem(false)}>
+                {t('drill.wrong')}
+              </button>
+              {!lastFast&&(
+                <button className="learn-back" type="button" onClick={()=>setLastFast(true)}>
+                  {t('drill.wasFast')}
+                </button>
+              )}
+            </>
           )}
         </>
       )}

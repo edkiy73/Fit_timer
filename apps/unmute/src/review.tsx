@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
@@ -9,8 +9,11 @@ import type { PracticeSrsKind } from './engine/practice-srs';
 import {
   activitySaveClock,
   saveGradedActivity,
-  savePracticeActivity
+  saveManualNode,
+  savePracticeActivity,
+  saveSeenActivity
 } from './activity-progress';
+import { nodeTopic } from './today-model';
 import {
   buildCourseReviewSession,
   type CourseReviewSession,
@@ -31,6 +34,7 @@ import { AnswerExplanationView } from './answer-explanation';
 import { useOtherCourseReviews, type OtherCourseReviews } from './other-course-review';
 import { MyWordsView } from './my-words';
 import { Icon } from './icons';
+import { Loader } from './loader';
 import { reviewDueCounts } from './review-count';
 
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
@@ -71,6 +75,10 @@ export interface ReviewViewProps {
   startRecognition?:StartRecognition;
   /** Due items from other studied courses (switching courses keeps them in review). */
   otherCourses?:OtherCourseReviews;
+  /** Opened from a course review day: finishing the review counts that day. */
+  completeDayId?:string;
+  saveManual?:(setId:string,nodeId:string)=>Promise<void>;
+  saveSeen?:(setId:string,activityId:string)=>Promise<void>;
 }
 
 const NO_OTHER_COURSES:OtherCourseReviews={status:'ready',courses:[]};
@@ -87,7 +95,10 @@ export function ReviewView({
   onAccess=()=>{},
   speak=speakText,
   startRecognition=startSpeechRecognition,
-  otherCourses=NO_OTHER_COURSES
+  otherCourses=NO_OTHER_COURSES,
+  completeDayId,
+  saveManual=saveManualNode,
+  saveSeen=saveSeenActivity
 }:ReviewViewProps){
   const {t,locale}=useI18n();
   const state=runtime.state;
@@ -103,6 +114,7 @@ export function ReviewView({
   const [wordSaveError,setWordSaveError]=useState(false);
   const [mixedActivity,setMixedActivity]=useState<Extract<Activity,{type:'pattern-drill'}>|null>(null);
   const [started,setStarted]=useState(false);
+  const [dayCounted,setDayCounted]=useState(false);
 
   useEffect(()=>{
     if(runtime.status!=='ready'||!state||session)return;
@@ -141,6 +153,20 @@ export function ReviewView({
   const item=queue[index] ?? null;
   const total=session?.total ?? 0;
 
+  // A review day counts once its review is through (or nothing was due).
+  const reviewDayNode=completeDayId&&state?state.roadmap.nodes.find(node=>node.id===completeDayId)??null:null;
+  const dayFinished=Boolean(reviewDayNode&&session&&(total===0||(started&&!item)));
+  useEffect(()=>{
+    if(!dayFinished||dayCounted||!state||!reviewDayNode)return;
+    setDayCounted(true);
+    const reviewActivity=reviewDayNode.activityIds.find(id=>state.set.activities.find(activity=>activity.id===id)?.type==='review');
+    void (async()=>{
+      if(reviewActivity)await saveSeen(state.set.id,reviewActivity);
+      await saveManual(state.set.id,reviewDayNode.id);
+      await runtime.refresh();
+    })().catch(()=>setDayCounted(false));
+  },[dayFinished,dayCounted,state?.set.id,reviewDayNode?.id]);
+
   // A running review is a focused run, like a lesson: the bottom bar hides (styles.css).
   const running=started&&item!==null;
   useEffect(()=>{
@@ -172,10 +198,7 @@ export function ReviewView({
   if(runtime.status==='pending'||wordRuntime?.status==='pending'||(runtime.status==='ready'&&!session)){
     return (
       <section className="review-shell">
-        <div className="learn-state" role="status">
-          <strong>{t('review.loadingTitle')}</strong>
-          <span>{t('review.loadingText')}</span>
-        </div>
+        <Loader title={t('review.loadingTitle')} />
       </section>
     );
   }
@@ -264,6 +287,37 @@ export function ReviewView({
     );
   }
 
+  const kindCount=(match:(entry:CombinedReviewItem)=>boolean)=>queue.filter(match).length;
+  const breakdown=[
+    {key:'card',label:t('progress.cards'),count:kindCount(entry=>entry.kind==='card')},
+    {key:'drill',label:t('progress.drill'),count:kindCount(entry=>entry.kind==='practice'&&entry.mode==='drill')},
+    {key:'listening',label:t('progress.listening'),count:kindCount(entry=>entry.kind==='practice'&&entry.mode==='listening')},
+    {key:'speaking',label:t('progress.speaking'),count:kindCount(entry=>entry.kind==='practice'&&entry.mode==='speaking')},
+    {key:'word',label:t('progress.words'),count:kindCount(entry=>entry.kind==='word')}
+  ].filter(row=>row.count>0);
+  const topics=[...new Set(queue.flatMap(entry=>{
+    if(entry.kind==='word')return [];
+    const set=entry.setId?otherCourses.courses.find(other=>other.set.id===entry.setId)?.set:state.set;
+    const node=set?.roadmaps.flatMap(roadmap=>roadmap.nodes).find(candidate=>candidate.activityIds.includes(entry.activity.id));
+    return set&&node?[nodeTopic(set,node,locale)]:[];
+  }))].slice(0,5);
+
+  if(completeDayId&&dayFinished){
+    return (
+      <section className="review-shell" aria-labelledby="review-title">
+        <div className="learn-summary">
+          <span className="learn-summary-icon" aria-hidden="true"><Icon name="check" size={32} /></span>
+          <div className="screen-kicker">{t('learn.summaryKicker')}</div>
+          <h2 id="review-title">{t('learn.reviewDayTitle')}</h2>
+          <p className="learn-hint">{dayCounted?t('review.dayCounted'):t('learn.checking')}</p>
+        </div>
+        <div className="runner-action">
+          <button className="primary-button" type="button" onClick={onExit}>{t('learn.summaryDone')}</button>
+        </div>
+      </section>
+    );
+  }
+
   if(!started&&item){
     return (
       <section className="review-shell" aria-labelledby="review-title">
@@ -278,6 +332,11 @@ export function ReviewView({
               <strong>{t('review.dueTitle',{count:total})}</strong>
               {session.waiting>0&&<span className="tile-text">{t('review.waiting',{count:session.waiting})}</span>}
             </div>
+            {/* What exactly comes now: kinds with counts and the topics they are from. */}
+            <ul className="stat-list review-breakdown">
+              {breakdown.map(row=><li key={row.key} className="stat-row"><span>{row.label}</span><strong>{row.count}</strong></li>)}
+            </ul>
+            {topics.length>0&&<p className="tile-text review-topics">{t('review.topics',{topics:topics.join(', ')})}</p>}
             <button className="primary-button review-start" type="button" onClick={()=>setStarted(true)}>
               <Icon name="play" size={18} />
               {t('today.reviewStart')}
@@ -591,6 +650,8 @@ export function ReviewView({
 
 export function ReviewScreen(){
   const navigate=useNavigate();
+  const [search]=useSearchParams();
+  const day=search.get('day')||undefined;
   const runtime=useLearnerCourseRuntime();
   const otherCourses=useOtherCourseReviews(runtime.state?.set.id??'');
   return (
@@ -604,6 +665,7 @@ export function ReviewScreen(){
       savePractice={savePracticeActivity}
       saveWord={saveWordReview}
       otherCourses={otherCourses}
+      {...(day?{completeDayId:day}:{})}
     />
   );
 }

@@ -1,5 +1,6 @@
 import type { Activity, CourseSet, Roadmap, RoadmapNode } from './content/schema';
 import type { CourseProgressDocument } from './progress';
+import type { LexiconSnapshot } from './lexicon/schema';
 import { dayNumberFromKey } from './engine/course-progress';
 
 type Localized = Record<string, string>;
@@ -108,4 +109,36 @@ export function lastWeekActivity(progress: CourseProgressDocument, todayDay: num
     try{ days.add(dayNumberFromKey(key)); }catch{}
   }
   return Array.from({length:7}, (_, index) => days.has(todayDay - 6 + index));
+}
+
+export interface WordOfDay {
+  lexemeId: string;
+  lemma: string;
+  ipa: string;
+  translation: string;
+}
+
+/** «Слово дня»: one word from the current day's lessons, the same all day and different tomorrow.
+ *  Single words with a translation only (transcription when the dictionary has it). */
+export function wordOfTheDay(set: CourseSet, node: RoadmapNode, lexicon: LexiconSnapshot | null | undefined, todayDay: number, locale: string): WordOfDay | null {
+  if(!lexicon) return null;
+  const byId = new Map(lexicon.entries.map(entry => [entry.id, entry]));
+  const activities = node.activityIds.map(id => set.activities.find(activity => activity.id === id)).filter((activity): activity is Activity => Boolean(activity));
+  const seen = new Set<string>();
+  const words: WordOfDay[] = [];
+  for(const activity of activities){
+    for(const ref of activity.lexiconRefs ?? []){
+      if(seen.has(ref.lexemeId)) continue;
+      seen.add(ref.lexemeId);
+      const entry = byId.get(ref.lexemeId);
+      const ipa = entry?.pronunciation?.ipa ?? '';
+      if(!entry || /\s/.test(entry.lemma.trim()) || entry.lemma.length < 3) continue;
+      const sense = entry.senses[0];
+      const list = sense ? (sense.translations[locale] || sense.translations.ru || Object.values(sense.translations)[0] || []) : [];
+      if(!list.length) continue;
+      words.push({lexemeId:entry.id, lemma:entry.lemma, ipa, translation:list.slice(0, 2).join(', ')});
+    }
+  }
+  if(!words.length) return null;
+  return words[((todayDay % words.length) + words.length) % words.length] ?? null;
 }

@@ -1,11 +1,9 @@
 import { useCallback, useEffect } from 'react';
 import { ActivityCalendar } from './activity-calendar';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
-import { useLearnerCourseRuntime } from './course-runtime';
 import { activitySaveClock } from './activity-progress';
 import { dayNumberFromKey } from './engine/course-progress';
 import { summarizeAnswerStats, type AnswerStatsSummary } from './engine/learner-stats';
@@ -18,7 +16,8 @@ import {
 import { appDocs, readStatsProgress, readWordsProgress } from './sync';
 import type { RecordMap } from '@appbase/core/document-sync.js';
 import type { TimedFlag } from './progress';
-import { useAllLearningDays, withAllLearningDays } from './learning-days';
+import { withAllLearningDays } from './learning-days';
+import { Loader } from './loader';
 import { Icon } from './icons';
 
 const STATS_QUERY_KEY='progress-screen-stats';
@@ -153,7 +152,7 @@ export function buildProgressSummary(
   };
 }
 
-function useProgressDetails(setId:string):ProgressDetailsRuntime{
+export function useProgressDetails(setId:string):ProgressDetailsRuntime{
   const queryClient=useQueryClient();
   const statsQuery=useQuery({
     queryKey:[STATS_QUERY_KEY,setId],
@@ -203,13 +202,22 @@ function useProgressDetails(setId:string):ProgressDetailsRuntime{
   };
 }
 
-function MetricCard({value,label,detail}:{value:string;label:string;detail?:string}){
+function MetricCard({value,label}:{value:string;label:string}){
   return (
     <article className="progress-metric">
       <strong>{value}</strong>
       <span>{label}</span>
-      {detail&&<small>{detail}</small>}
     </article>
+  );
+}
+
+/** One line of a section: what on the left, how much on the right — long labels wrap, nothing stretches. */
+function StatRow({label,value,detail}:{label:string;value:string;detail?:string}){
+  return (
+    <li className="stat-row">
+      <span>{label}{detail&&<small>{detail}</small>}</span>
+      <strong>{value}</strong>
+    </li>
   );
 }
 
@@ -218,20 +226,24 @@ export function ProgressView({
   details,
   todayDay,
   onExit,
-  learningDays=null
+  learningDays=null,
+  embedded=false
 }:{
   runtime:LearnerCourseRuntimeValue;
   details:ProgressDetailsRuntime;
   todayDay:number;
   onExit:()=>void;
   learningDays?:RecordMap<TimedFlag>|null;
+  /** Inside «Я»: no back button or page title, the screen already has them. */
+  embedded?:boolean;
 }){
   const {t}=useI18n();
+  const back=embedded?null:<button className="learn-back" type="button" onClick={onExit}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>;
 
   if(runtime.status==='error'||details.status==='error'){
     return (
       <section className="progress-shell">
-        <button className="learn-back" type="button" onClick={onExit}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
+        {back}
         <div className="learn-state" role="alert">
           <strong>{t('progress.errorTitle')}</strong>
           <button
@@ -249,10 +261,7 @@ export function ProgressView({
   if(runtime.status==='pending'||details.status==='pending'){
     return (
       <section className="progress-shell">
-        <div className="learn-state" role="status">
-          <strong>{t('progress.loadingTitle')}</strong>
-          <span>{t('progress.loadingText')}</span>
-        </div>
+        <Loader title={t('progress.loadingTitle')} className={embedded?'is-compact':''} />
       </section>
     );
   }
@@ -262,13 +271,12 @@ export function ProgressView({
 
   return (
     <section className="progress-shell" aria-labelledby="progress-title">
-      <div className="learn-header">
-        <button className="learn-back" type="button" onClick={onExit}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
-      </div>
-      <div>
-        <div className="eyebrow">{t('progress.eyebrow')}</div>
-        <h2 id="progress-title">{t('progress.title')}</h2>
-      </div>
+      {embedded
+        ? <h3 id="progress-title" className="section-title">{t('progress.title')}</h3>
+        : <>
+            <div className="learn-header">{back}</div>
+            <h2 id="progress-title">{t('progress.title')}</h2>
+          </>}
 
       {!summary.hasActivity ? (
         <div className="learn-state progress-empty">
@@ -281,19 +289,9 @@ export function ProgressView({
       ) : (
         <>
           <div className="progress-overview">
-            <MetricCard
-              value={summary.completedDays+'/'+summary.requiredDays}
-              label={t('progress.courseDays')}
-            />
-            <MetricCard
-              value={String(summary.learningDays)}
-              label={t('progress.learningDays')}
-            />
-            <MetricCard
-              value={String(summary.streak)}
-              label={t('progress.streak')}
-              detail={summary.streak>0?t('progress.streakHint'):t('progress.streakPaused')}
-            />
+            <MetricCard value={summary.completedDays+'/'+summary.requiredDays} label={t('progress.courseDays')} />
+            <MetricCard value={String(summary.learningDays)} label={t('progress.learningDays')} />
+            <MetricCard value={String(summary.streak)} label={t('progress.streak')} />
           </div>
 
           <ActivityCalendar
@@ -303,41 +301,17 @@ export function ProgressView({
 
           <article className="progress-section">
             <div className="progress-section-head">
-              <div>
-                <div className="eyebrow">{t('progress.courseEyebrow')}</div>
-                <h3>{t('progress.courseTitle')}</h3>
-              </div>
-              <strong>{summary.completedDays}/{summary.requiredDays}</strong>
-            </div>
-            <progress
-              className="today-progress"
-              max={Math.max(1,summary.requiredDays)}
-              value={summary.completedDays}
-              aria-label={t('progress.courseTitle')}
-            />
-          </article>
-
-          <article className="progress-section">
-            <div className="progress-section-head">
-              <div>
-                <div className="eyebrow">{t('progress.reviewEyebrow')}</div>
-                <h3>{t('progress.reviewTitle')}</h3>
-              </div>
-              <strong>{summary.activeReviews}</strong>
+              <h3>{t('progress.reviewTitle')}</h3>
+              {summary.dueNow>0&&<strong className="progress-due">{t('progress.dueBadge',{count:summary.dueNow})}</strong>}
             </div>
             {summary.activeReviews>0 ? (
-              <>
-                <div className="progress-mini-grid">
-                  <MetricCard value={String(summary.dueNow)} label={t('progress.dueNow')} />
-                  <MetricCard value={String(summary.activeCards)} label={t('progress.cards')} />
-                  <MetricCard value={String(summary.words)} label={t('progress.words')} />
-                </div>
-                <div className="progress-practice-row">
-                  <span>{t('progress.drill')}: <strong>{summary.drill}</strong></span>
-                  <span>{t('progress.listening')}: <strong>{summary.listening}</strong></span>
-                  <span>{t('progress.speaking')}: <strong>{summary.speaking}</strong></span>
-                </div>
-              </>
+              <ul className="stat-list">
+                <StatRow label={t('progress.cards')} value={String(summary.activeCards)} />
+                <StatRow label={t('progress.drill')} value={String(summary.drill)} />
+                <StatRow label={t('progress.listening')} value={String(summary.listening)} />
+                <StatRow label={t('progress.speaking')} value={String(summary.speaking)} />
+                <StatRow label={t('progress.words')} value={String(summary.words)} />
+              </ul>
             ) : (
               <p className="progress-muted">{t('progress.reviewEmpty')}</p>
             )}
@@ -345,11 +319,8 @@ export function ProgressView({
 
           <article className="progress-section">
             <div className="progress-section-head">
-              <div>
-                <div className="eyebrow">{t('progress.answersEyebrow')}</div>
-                <h3>{t('progress.answersTitle')}</h3>
-              </div>
-              {summary.answers.attempts>0&&<strong>{summary.answers.accuracy}%</strong>}
+              <h3>{t('progress.answersTitle')}</h3>
+              {summary.answers.attempts>0&&<strong>{t('progress.accuracy',{percent:summary.answers.accuracy})}</strong>}
             </div>
             {summary.answers.attempts>0 ? (
               <div className="progress-mini-grid">
@@ -365,48 +336,21 @@ export function ProgressView({
           {(summary.speedSamples>0||summary.dialogueSamples>0)&&(
             <article className="progress-section">
               <div className="progress-section-head">
-                <div>
-                  <div className="eyebrow">{t('progress.performanceEyebrow')}</div>
-                  <h3>{t('progress.performanceTitle')}</h3>
-                </div>
+                <h3>{t('progress.performanceTitle')}</h3>
               </div>
-              <div className="progress-mini-grid">
+              <ul className="stat-list">
                 {summary.speedAverage!==null&&(
-                  <MetricCard
-                    value={summary.speedAverage+'%'}
-                    label={t('progress.speedLatest')}
-                    detail={t('progress.samples',{count:summary.speedSamples})}
-                  />
+                  <StatRow label={t('progress.speedLatest')} detail={t('progress.samples',{count:summary.speedSamples})} value={summary.speedAverage+'%'} />
                 )}
                 {summary.dialogueAverage!==null&&(
-                  <MetricCard
-                    value={summary.dialogueAverage+'%'}
-                    label={t('progress.dialogueLatest')}
-                    detail={t('progress.samples',{count:summary.dialogueSamples})}
-                  />
+                  <StatRow label={t('progress.dialogueLatest')} detail={t('progress.samples',{count:summary.dialogueSamples})} value={summary.dialogueAverage+'%'} />
                 )}
-              </div>
+              </ul>
               <p className="progress-muted">{t('progress.latestNote')}</p>
             </article>
           )}
         </>
       )}
     </section>
-  );
-}
-
-export function ProgressScreen(){
-  const runtime=useLearnerCourseRuntime();
-  const details=useProgressDetails(runtime.state?.set.id??'');
-  const navigate=useNavigate();
-  const learningDays=useAllLearningDays();
-  return (
-    <ProgressView
-      learningDays={learningDays}
-      runtime={runtime}
-      details={details}
-      todayDay={activitySaveClock().dayNumber}
-      onExit={()=>navigate('/account')}
-    />
   );
 }

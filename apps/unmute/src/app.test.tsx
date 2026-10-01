@@ -51,7 +51,10 @@ describe('UnMute: English for Expats starter', () => {
     expect(within(tabs).getByRole('link', {name:t['nav.today']}).getAttribute('aria-current')).toBe('page');
     await user.click(within(tabs).getByRole('link', {name:t['nav.me']}));
     expect(router.state.location.pathname).toBe('/account');
+    // Signing in is one button; the code form opens in a sheet.
+    await user.click(await screen.findByRole('button', {name:t['me.signIn']}));
     expect(await screen.findByRole('textbox', {name:'Email'})).toBeTruthy();
+    await user.click(screen.getByRole('button', {name:t['access.signInClose']}));
     await user.click(within(tabs).getByRole('link', {name:t['nav.route']}));
     expect(router.state.location.pathname).toBe('/course');
   });
@@ -68,8 +71,11 @@ describe('UnMute: English for Expats starter', () => {
     const user = userEvent.setup();
     renderApp('/account');
     expect(await screen.findByText(/demo@example\.com/)).toBeTruthy();
-    await user.click(screen.getByRole('button', {name:t['account.signOut']}));
-    expect(await screen.findByRole('textbox', {name:'Email'})).toBeTruthy();
+    // Signing out lives in «Настройки» next to deleting the account.
+    await user.click(screen.getByRole('link', {name:t['me.settings']}));
+    await user.click(await screen.findByRole('button', {name:t['account.signOut']}));
+    await user.click(await screen.findByRole('link', {name:t['nav.me']}));
+    expect(await screen.findByRole('button', {name:t['me.signIn']})).toBeTruthy();
   });
 
   it('deletes the account after an explicit confirmation', async () => {
@@ -84,11 +90,14 @@ describe('UnMute: English for Expats starter', () => {
     await waitFor(() => expect(forget).toHaveBeenCalledWith('all'));
   });
 
-  it('«Я» is short: progress and settings are their own screens', async () => {
-    renderApp('/account');
-    expect(await screen.findByRole('link', {name:new RegExp(t['me.progress'])})).toBeTruthy();
-    expect(screen.getByRole('link', {name:new RegExp(t['me.settings'])})).toBeTruthy();
+  it('«Я» shows results and a sign-in button; settings are their own screen', async () => {
+    const router = renderApp('/account');
+    expect(await screen.findByRole('link', {name:t['me.settings']})).toBeTruthy();
+    expect(screen.getByRole('button', {name:t['me.signIn']})).toBeTruthy();
     expect(screen.queryByText(t['me.theme'])).toBeNull();
+    // The old results page now lands on «Я».
+    await router.navigate('/progress');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/account'));
   });
 
   it('resets all progress only after an explicit confirmation', async () => {

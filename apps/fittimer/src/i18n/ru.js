@@ -955,6 +955,7 @@ export const I18N_RU = {
   'ai.notNow': "Не сейчас",
   'ai.unsavedRequest': "Заполненный запрос ещё не сохранён. Если выйти сейчас, он пропадёт.",
   'common.leaveWithoutSaving': "Выйти без сохранения",
+  'common.exitHint': "Нажми «Назад» ещё раз, чтобы выйти",
   'common.stay': "Остаться",
   'audio.voiceOn': "Голос включён",
   'images.processing': "Обработка… {done}/{total}",

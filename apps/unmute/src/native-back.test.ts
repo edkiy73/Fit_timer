@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { backAction } from './native-back';
+import { backAction, secondExitPress } from './native-back';
 
 describe('Android system Back', () => {
   it('closes an open sheet first', () => {
@@ -16,5 +16,10 @@ describe('Android system Back', () => {
     expect(backAction('/learn/day-1', null, true)).toBe('history');
     expect(backAction('/reference', null, true)).toBe('history');
     expect(backAction('/progress', null, false)).toBe('today');
+  });
+  it('leaves «Сегодня» only on a second Back within two seconds', () => {
+    expect(secondExitPress(10_000, null)).toBe(false);
+    expect(secondExitPress(11_500, 10_000)).toBe(true);
+    expect(secondExitPress(13_000, 10_000)).toBe(false);
   });
 });

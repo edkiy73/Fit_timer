@@ -97,6 +97,9 @@ describe('course access and purchase',()=>{
     renderView(runtime(),session({premium:true,sub:{plan:'plus.month',until:'2099-01-01'} as AuthSession['sub']}));
     expect(screen.getByRole('button',{name:/Оплатить 1\s043\s₽/})).toBeTruthy();
     expect(screen.getByText('Цена со скидкой Plus −30%')).toBeTruthy();
+    // Plus is already theirs: the screen does not sell it again.
+    expect(screen.queryByText('Plus на месяц')).toBeNull();
+    expect(screen.queryByText('Plus на год')).toBeNull();
   });
 
   it('says plainly when purchases are unavailable and keeps the button off',()=>{

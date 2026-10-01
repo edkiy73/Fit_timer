@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import { Outlet, useLocation, type RouteObject } from 'react-router';
+import { Navigate, Outlet, useLocation, type RouteObject } from 'react-router';
 import { AuthProvider, useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { I18nProvider, useI18n } from '@appbase/ui-react/i18n.js';
 import { authClient } from './auth';
@@ -13,7 +13,6 @@ import { NodeRunnerScreen } from './learn';
 import { ReviewScreen } from './review';
 import { CourseMapScreen } from './course-map';
 import { LexiconProvider } from './lexicon-ui';
-import { ProgressScreen } from './progress-screen';
 import { MyWordsScreen } from './my-words';
 import { ReferenceScreen } from './reference';
 import { LegalScreen } from './legal-page';
@@ -131,7 +130,8 @@ export const routes: RouteObject[] = [
         {path:'learn/:nodeId', element:<NodeRunnerScreen />},
         {path:'review', element:<ReviewScreen />},
         {path:'course', element:<CourseMapScreen />},
-        {path:'progress', element:<ProgressScreen />},
+        // Results now live on «Я»; old links and reminders land there.
+        {path:'progress', element:<Navigate to="/account" replace />},
         {path:'words', element:<MyWordsScreen />},
         {path:'reference', element:<ReferenceScreen />},
         {path:'legal/:page', element:<LegalScreen />},

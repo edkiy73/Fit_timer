@@ -68,6 +68,10 @@ describe('My words',()=>{
     expect(screen.getByText('work')).toBeTruthy();
     expect(screen.queryByText('home')).toBeNull();
     await user.click(screen.getByRole('button',{name:'Убрать «work» из моих слов'}));
+    // A stray tap only asks: nothing is removed until the learner confirms.
+    expect(remove).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading',{name:'Убрать «work»?'})).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Убрать слово'}));
     expect(remove).toHaveBeenCalledWith('lex.work','s1');
     expect(refresh).toHaveBeenCalled();
   });
