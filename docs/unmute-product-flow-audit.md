@@ -2569,6 +2569,8 @@ Assert:
 
 #### 5. Other-course load fails
 
+✅ сделано (#443): «Повтор» говорит, что повторения другого курса не загрузились.
+
 Simulate one studied course loading successfully and another failing.
 
 Assert:
@@ -3295,6 +3297,8 @@ stats write fails
 
 #### P1. Replay vs Review SRS contract всё ещё не закрыт
 
+✅ сделано (#443): replay = тренировка, SRS не меняется (решение D1).
+
 Persisted LessonRun улучшает resume, но не вводит полноценный first/resume/replay mode во всех writes.
 
 Повтор завершённого урока всё ещё требует явного contract test на:
@@ -3517,6 +3521,8 @@ review
 Статус: **P1, не закрыто**.
 
 #### P0/P1 — replay всё ещё может менять SRS и stats
+
+✅ сделано (#443): повтор пройденного дня не пишет SRS/статистику, итог — свой текст; «Работа над ошибками» не оценивает задание второй раз.
 
 `saveGradedActivity` и `savePracticeActivity` не получают run mode.
 
@@ -3790,6 +3796,8 @@ active items
 Статус: **P1 product/load contract**.
 
 ### 37.3. Неправильная карточка может бесконечно расти внутри одной сессии
+
+✅ сделано (#443): карточка возвращается максимум 1 раз, повторный ответ не пишет SRS.
 
 Текущий card flow:
 
