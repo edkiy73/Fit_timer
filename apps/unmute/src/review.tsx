@@ -509,37 +509,40 @@ export function ReviewView({
       </div>
       <h2 id="review-title" className="sr-only">{t('review.title')}</h2>
 
-      {item.kind==='card'&&item.activity.type==='choice'&&(
+      {item.kind==='card'&&item.activity.type==='choice'&&(()=>{
+        const activity=item.activity;
+        return (
         <article className="learn-card review-card">
           <div className="review-kind">{t('review.card')}</div>
-          <h3><LexiconText text={localized(item.activity.prompt,locale)} refs={item.activity.lexiconRefs} /></h3>
-          {item.activity.hint&&(
-            <p className="learn-hint"><LexiconText text={localized(item.activity.hint,locale)} refs={item.activity.lexiconRefs} /></p>
+          <h3><LexiconText text={localized(activity.prompt,locale)} refs={activity.lexiconRefs} /></h3>
+          {activity.hint&&(
+            <p className="learn-hint"><LexiconText text={localized(activity.hint,locale)} refs={activity.lexiconRefs} /></p>
           )}
           <fieldset className="learn-options" disabled={busy||result!==null}>
             <legend className="sr-only">{t('learn.chooseAnswer')}</legend>
-            {shuffledIndices(item.activity.options.length,shuffleSeed+'|review|'+item.activity.id+'|'+index).map(optionIndex=>{
-              const option=item.activity.options[optionIndex]!;
+            {shuffledIndices(activity.options.length,shuffleSeed+'|review|'+activity.id+'|'+index).map(optionIndex=>{
+              const option=activity.options[optionIndex]!;
               return (
                 <label className={'learn-option'+(selected===optionIndex&&result===null?' is-selected':'')} key={optionIndex}>
                   <input
                     type="radio"
-                    name={'review-'+item.activity.id+'-'+index}
+                    name={'review-'+activity.id+'-'+index}
                     checked={selected===optionIndex}
                     onChange={()=>setSelected(optionIndex)}
                     onClick={()=>{
                       if(selected===optionIndex&&result===null)checkChoice(optionIndex);
                     }}
                   />
-                  <span><LexiconText text={localized(option,locale)} refs={item.activity.lexiconRefs} interactive={result!==null} /></span>
+                  <span><LexiconText text={localized(option,locale)} refs={activity.lexiconRefs} interactive={result!==null} /></span>
                   {selected===optionIndex&&result===null&&<span className="learn-option-confirm">{t('learn.tapAgain')}</span>}
                 </label>
               );
             })}
           </fieldset>
-          {cardFeedback(item.activity)}
+          {cardFeedback(activity)}
         </article>
-      )}
+        );
+      })()}
 
       {item.kind==='card'&&(item.activity.type==='text-input'||item.activity.type==='translation')&&(
         <article className="learn-card review-card">
