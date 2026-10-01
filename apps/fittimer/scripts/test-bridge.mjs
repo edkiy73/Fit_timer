@@ -149,6 +149,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "renderStartInfo",
   "renderToday",
   "renderTrainerCard",
+  "restoreTrainerClientState",
   "repairLines",
   "resumeWorkoutFromNativeNotification",
   "sanitizeProgram",
@@ -194,16 +195,13 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
 export const TEST_BRIDGE_WRITABLE = new Set([
   "callGemini",
   "callGeminiImage",
-  "clients",
   "customPrograms",
   "photos",
   "premiumGate",
   "progWeights",
   "stats",
   "storeServer",
-  "syncNativeNotifications",
-  "trainer"
-]);
+  "syncNativeNotifications"]);
 
 export function testBridge(source, fileName = 'module.js'){
   const file = ts.createSourceFile(fileName, source, ts.ScriptTarget.ES2022, false, ts.ScriptKind.JS);
