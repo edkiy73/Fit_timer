@@ -232,12 +232,14 @@ export function PatternDrillView({
           <p className="learn-hint">
             {stage==='reading'?t('drill.reading'):t('drill.speaking')}
           </p>
-          <button className="primary-button" type="button" onClick={said}>
-            {t('drill.said')}
-          </button>
-          <button className="secondary-button" type="button" onClick={()=>reveal(false,true)}>
-            {t('drill.couldNot')}
-          </button>
+          <div className="drill-binary-actions">
+            <button className="secondary-button" type="button" onClick={()=>reveal(false,true)}>
+              {t('drill.couldNot')}
+            </button>
+            <button className="primary-button" type="button" onClick={said}>
+              {t('drill.said')}
+            </button>
+          </div>
         </>
       ) : (
         <>
@@ -262,12 +264,12 @@ export function PatternDrillView({
             </button>
           ) : (
             <>
-              <div className="drill-compare-actions">
-                <button className="primary-button" type="button" onClick={()=>nextItem(true)}>
-                  {t('drill.same')}
-                </button>
+              <div className="drill-binary-actions">
                 <button className="secondary-button" type="button" onClick={()=>nextItem(false)}>
                   {t('drill.wrong')}
+                </button>
+                <button className="primary-button" type="button" onClick={()=>nextItem(true)}>
+                  {t('drill.same')}
                 </button>
               </div>
               {!lastFast&&(
