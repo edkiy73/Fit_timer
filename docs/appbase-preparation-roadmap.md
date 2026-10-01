@@ -539,6 +539,7 @@ Audit conclusion:
 - ✅ 2026-10-01: added `scripts/audit-test-bridge.mjs`, a read-only audit that measures which bridged bindings browser callbacks actually read and which ones they overwrite. It intentionally does not change the bridge yet; the next cleanup can be scoped from measured usage and kept separate from concurrent product work.
 - ✅ 2026-10-01: measured **1,251** candidate top-level bindings, **175** directly referenced by browser callbacks and **15** overwritten/stubbed. Full browser CI found one additional intentionally dynamic dependency (`exportProgram`, invoked through `eval(src)` in `link-length.js`), so the generated bridge is now allowlisted to **176** bindings instead of exposing every product-module binding. `audit-test-bridge.mjs --check` guards direct callback usage; the full browser suite remains the guard for deliberately dynamic code.
 - ✅ 2026-10-01: bridge mutation is now independently allowlisted: only the **15** bindings actually overwritten/stubbed by browser tests receive setters; the other exposed bindings are getter-only. The audit fails if a direct browser callback starts writing a new internal binding.
+- ✅ 2026-10-01: browser workout tests no longer assign raw `prepSec`; they use `configureWorkoutTiming({prep: 0})`. `prepSec` was removed from the bridge entirely, reducing writable bridge bindings from **15 → 14**.
 
 First semantic-owner cleanup:
 - account login cancellation is now owned by `cancelLogin()`; five raw login/biometry setters were removed from the public module surface;
