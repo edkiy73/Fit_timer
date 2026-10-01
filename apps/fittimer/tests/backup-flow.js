@@ -89,9 +89,8 @@ async function restore(page, dump){
     stats.badges = ['first'];
     await saveStats();
 
-    // ручная правка веса с тренировки — то, чего копия и не забирала
-    progWeights['bk1|Приседания'] = 4;
-    await saveProgWeights();
+    // Старая ручная поправка веса моделируется в её реальном persisted-формате.
+    await kvSet(pk('progWeights'), JSON.stringify({'bk1|Приседания': 4}));
 
     await kvSet(pk('photos'), JSON.stringify([{d: '2026-09-01', img: 'data:image/png;base64,iVBORw0KGgo='}]));
     await loadPhotos();
@@ -168,8 +167,10 @@ async function restore(page, dump){
   // перезагружает страницу — подтверждаем нажатием, перезагрузку просто ждём.
   await restore(two, dump);
 
-  const got = await two.evaluate(() => {
+  const got = await two.evaluate(async () => {
     const me = users.find(u => u.id === currentUser) || {};
+    const legacyWeights = JSON.parse(await kvGet(pk('progWeights')) || '{}');
+    const restoredPhotos = JSON.parse(await kvGet(pk('photos')) || '[]');
     return {
       name: me.name, theme: me.theme, prep: me.prepSec,
       gender: me.gender, age: me.age, profileId: !!(identity && identity.profileId),
@@ -184,8 +185,8 @@ async function restore(page, dump){
       // Достижения пересчитываются при загрузке, и на двенадцати тренировках их
       // становится больше, чем было записано, — проверяем, что записанное на месте.
       badge: (stats.badges || []).includes('first'),
-      manual: progWeights['bk1|Приседания'],
-      photos: photos.length,
+      manual: legacyWeights['bk1|Приседания'],
+      photos: restoredPhotos.length,
       coach: trainer && trainer.handle, coachKey: trainer && trainer.key,
       coachLink: trainer && trainer.links,
       clients: clients.length, clientName: clients[0] && clients[0].name,
