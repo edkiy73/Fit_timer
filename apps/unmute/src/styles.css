@@ -42,7 +42,7 @@
   --streak:#FFC15A;
   --locked:#75728A;
   --danger:#FF6B7A;
-  --glass-bg:color-mix(in srgb,var(--card,#1C1D2A) 78%,transparent);
+  --glass-bg:color-mix(in srgb,var(--card,#1C1D2A) 48%,transparent);
   --glass-line:rgb(255 255 255/.08);
   --elev-2:0 8px 24px rgb(0 0 0/.35);
 }
@@ -55,7 +55,7 @@
   --streak:#FFC15A;
   --locked:#75728A;
   --danger:#FF6B7A;
-  --glass-bg:color-mix(in srgb,var(--card,#1C1D2A) 78%,transparent);
+  --glass-bg:color-mix(in srgb,var(--card,#1C1D2A) 48%,transparent);
   --glass-line:rgb(255 255 255/.08);
   --elev-2:0 8px 24px rgb(0 0 0/.35);
 }}
@@ -86,7 +86,7 @@ h2{margin:0 0 8px;font-weight:800}
 /* Bottom navigation: the one glass layer, in thumb reach, hidden inside lessons. */
 :root[data-focus-run] .tabbar{display:none}
 .tabbar{position:fixed;z-index:50;left:max(12px,calc(50% - 348px));right:max(12px,calc(50% - 348px));bottom:calc(var(--safe-bottom) + 12px);height:var(--tabbar-h);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-radius:var(--radius-tile);background:var(--glass-bg);backdrop-filter:blur(32px) saturate(1.35);-webkit-backdrop-filter:blur(32px) saturate(1.35);border:1px solid var(--glass-line);box-shadow:var(--elev-2)}
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.tabbar{background:var(--card)}}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.tabbar::before{background:color-mix(in srgb,var(--card,#fff) 82%,transparent)}}
 .tabbar-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:48px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:600;border-radius:var(--radius-tile)}
 .tabbar-item:focus-visible{outline:2px solid var(--accent);outline-offset:-4px}
 .tabbar-icon{position:relative;display:flex;align-items:center;justify-content:center;width:56px;height:30px;border-radius:15px;transition:background-color var(--dur-spring) ease}
@@ -248,12 +248,10 @@ h2{margin:0 0 8px;font-weight:800}
 
 
 .review-shell{display:grid;gap:16px}
-.review-shell h2{margin:4px 0 0;font-size:28px}
+.review-shell h2{margin:0}
 .review-card{gap:16px}
 .review-kind{color:var(--muted);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
-@media(max-width:480px){
-  .review-shell h2{font-size:26px}
-}
+@media(max-width:480px){}
 
 
 .word-review-card h3{font-size:26px}
@@ -511,7 +509,7 @@ h2{margin:0 0 8px;font-weight:800}
 .screen-head{display:grid;gap:2px;margin-bottom:16px}
 .screen-kicker{color:var(--muted);font-size:13px;font-weight:600}
 .screen-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.screen-head h2{margin:0;font-size:34px;line-height:40px;font-weight:800;letter-spacing:-.02em}
+.screen-head h2{margin:0;font-size:30px;line-height:36px;font-weight:800;letter-spacing:-.02em}
 
 /* Bento: tile size = importance. 2 columns on phones, 4 from 600 px. */
 .bento{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:dense;gap:12px}
@@ -721,12 +719,8 @@ h2{margin:0 0 8px;font-weight:800}
 .dictionary-sheet .word-save{justify-self:stretch;justify-content:center;margin-top:0;min-height:52px;border-radius:var(--radius-btn,18px);font-size:16px}
 .word-save.is-saved{border-color:var(--success);background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)}
 
-/* Profile: title follows the same kicker + large-title hierarchy as the other screens. */
+/* Profile reuses the shared screen-head typography and spacing. */
 .me{gap:16px}
-.me-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px}
-.me-head-text{display:grid;gap:2px;min-width:0}
-.me-head-text h2{margin:0;font-size:34px;line-height:40px;font-weight:800;letter-spacing:-.02em}
-.me-head-text .screen-kicker{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .me-course{grid-template-columns:auto minmax(0,1fr);align-items:center;gap:14px}
 .ring-lg{flex-basis:64px;width:64px;height:64px;font-size:13px}
 .heatmap-wrap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px}
@@ -1018,12 +1012,11 @@ h2{margin:0 0 8px;font-weight:800}
 .me{gap:18px}
 .me-head{margin-bottom:2px}
 .me-head-text{gap:1px}
-.me-head-text .screen-kicker{font-size:13px;line-height:1.35;font-weight:600;letter-spacing:0}
 .me-head-text h2{font-size:38px;line-height:42px}
 .progress-shell{display:grid;gap:18px}
-.progress-dashboard{display:grid;gap:16px;border:1px solid var(--line);border-radius:var(--radius-tile);padding:18px;background:var(--card);box-shadow:0 1px 0 rgb(255 255 255/.35)}
+.progress-dashboard{display:grid;gap:16px}
 .progress-dashboard-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
-.progress-dashboard-head h3{margin:0;font-size:26px;line-height:1.08;letter-spacing:-.02em}
+.progress-dashboard-head h3{margin:0;font-size:20px;line-height:1.25}
 .progress-dashboard-head p{margin:5px 0 0;color:var(--muted);font-size:13px;line-height:1.4}
 .progress-general{gap:14px}
 .progress-general-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -1031,20 +1024,18 @@ h2{margin:0 0 8px;font-weight:800}
 .progress-metric-icon{grid-row:1/3;display:grid;place-items:center;width:36px;height:36px;border-radius:18px}
 .progress-metric strong{font-size:26px;line-height:1;font-variant-numeric:tabular-nums}
 .progress-metric>span:last-child{min-width:0;color:var(--muted);font-size:12px;line-height:1.25}
-.progress-metric.is-accent{background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.progress-metric.is-accent{background:var(--surface)}
 .progress-metric.is-accent .progress-metric-icon{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent-ink)}
-.progress-metric.is-success{background:color-mix(in srgb,var(--success) 7%,var(--surface))}
+.progress-metric.is-success{background:var(--surface)}
 .progress-metric.is-success .progress-metric-icon{background:color-mix(in srgb,var(--success) 16%,transparent);color:var(--success)}
-.progress-metric.is-listen{background:color-mix(in srgb,var(--listen) 7%,var(--surface))}
+.progress-metric.is-listen{background:var(--surface)}
 .progress-metric.is-listen .progress-metric-icon{background:color-mix(in srgb,var(--listen) 14%,transparent);color:var(--listen)}
 .progress-general .activity-calendar{gap:12px;margin:0;padding:14px;border:0;border-radius:22px;background:var(--surface)}
 .progress-general .calendar-title h3{font-size:18px}
 .progress-general .calendar-title span{font-size:12px}
 .progress-general .calendar-legend{margin-top:0}
 
-.progress-course-dashboard{position:relative;overflow:hidden;gap:18px;background:
-  radial-gradient(circle at 100% 0,color-mix(in srgb,var(--accent) 10%,transparent),transparent 38%),
-  var(--card)}
+.progress-course-dashboard{position:relative;overflow:hidden;gap:18px}
 .progress-course-head{align-items:center}
 .progress-course-name{max-width:36ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .progress-course-picker{flex:0 0 auto}
@@ -1086,9 +1077,7 @@ h2{margin:0 0 8px;font-weight:800}
 .progress-practice-strip strong{color:var(--ink)}
 
 @media(max-width:620px){
-  .me-head-text h2{font-size:36px;line-height:40px}
   .progress-dashboard{padding:16px}
-  .progress-dashboard-head h3{font-size:24px}
   .progress-general-metrics{gap:8px}
   .progress-metric{grid-template-columns:32px minmax(0,1fr);padding:10px 9px}
   .progress-metric-icon{width:32px;height:32px}
@@ -1134,7 +1123,7 @@ h2{margin:0 0 8px;font-weight:800}
 .courses-sheet .course-option-check{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;margin-left:8px;border-radius:18px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent-ink)}
 
 /* Practice metrics are grouped and labelled instead of floating at the bottom of the course card. */
-.progress-practice-panel{display:grid;gap:8px;padding:14px;border-radius:20px;background:color-mix(in srgb,var(--listen) 5%,var(--surface))}
+.progress-practice-panel{display:grid;gap:8px;padding:14px;border-radius:20px;background:var(--surface)}
 .progress-practice-title{display:flex;align-items:center;gap:8px;margin-bottom:2px}
 .progress-practice-title>svg{color:var(--listen)}
 .progress-practice-title>strong{font-size:14px}
