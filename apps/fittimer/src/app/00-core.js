@@ -2,7 +2,7 @@ import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
 import { appRuntimeCompat, appUi } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
 import { DAYS, closeAllMenus, curUser, customPrograms, normPlans, progActive, renderStats,
-  renderUsers, renderWeight, renderWellness, savePrograms, setCustomProgramsShared, setDataSyncCoreHooks, stats
+  renderUsers, renderWeight, renderWellness, savePrograms, deleteCustomProgram, setDataSyncCoreHooks, stats
 } from './10-data-sync.js';
 
 let accountUserDirtyHook = () => false;
@@ -1496,8 +1496,7 @@ export function initCore(){
   registerAction('deleteStartProgram', withStartProgram(async p => {
     if(!(await appDialog(t('programs.deleteQuestion',{name:p.name}),
       {confirm:true, okText:t('common.delete'), cancelText:t('common.keep')}))) return;
-    setCustomProgramsShared(customPrograms.filter(x => x.id !== p.id));
-    await savePrograms();
+    await deleteCustomProgram(p.id);
     trainerCatalogHooks.renderMine();
     goTab('scrPrograms');
   }));
