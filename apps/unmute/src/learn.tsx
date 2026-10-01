@@ -162,6 +162,31 @@ function clearLessonRun(setId:string,nodeId:string):void{
   try{localStorage.removeItem(lessonRunKey(setId,nodeId));}catch{}
 }
 
+function remapLessonRun(snapshot:LessonRunSnapshot,steps:Activity[]):LessonRunSnapshot|null{
+  const currentIndex=new Map(steps.map((step,index)=>[step.id,index] as const));
+  const orderedIds=snapshot.order.map(index=>snapshot.stepIds[index]).filter((id):id is string=>Boolean(id));
+  const mappedOrder:number[]=[];
+  let mappedPos=0;
+  let mappedFirstPass=0;
+  for(let i=0;i<orderedIds.length;i++){
+    const index=currentIndex.get(orderedIds[i]!);
+    if(index===undefined)continue;
+    if(i<snapshot.pos)mappedPos++;
+    if(i<snapshot.firstPass)mappedFirstPass++;
+    mappedOrder.push(index);
+  }
+  if(mappedOrder.length===0)return null;
+  mappedPos=Math.min(mappedPos,mappedOrder.length-1);
+  mappedFirstPass=Math.min(mappedFirstPass,mappedOrder.length);
+  return {
+    ...snapshot,
+    stepIds:steps.map(step=>step.id),
+    order:mappedOrder,
+    pos:mappedPos,
+    firstPass:mappedFirstPass
+  };
+}
+
 
 /** What still keeps the day from counting: practice not passed yet, steps not done. */
 export function missingForNode(node:RoadmapNode,progress:CourseProgressDocument){
@@ -266,33 +291,33 @@ export function NodeRunnerView({
     setRunHydrated(false);
     const requested=startActivityId?steps.findIndex(item=>item.id===startActivityId):-1;
     const saved=requested<0?readLessonRun(state.set.id,node.id):null;
+    const restored=saved&&!nodeProgress?.complete?remapLessonRun(saved,steps):null;
     const validSaved=Boolean(
-      saved&&
-      !nodeProgress?.complete&&
-      saved.stepIds.join('|')===stepSignature&&
-      saved.order.length>0&&
-      saved.order.every(index=>Number.isInteger(index)&&index>=0&&index<steps.length)&&
-      saved.firstPass>=0&&saved.firstPass<=saved.order.length&&
-      saved.pos>=0&&saved.pos<saved.order.length
+      restored&&
+      restored.order.length>0&&
+      restored.firstPass>=0&&restored.firstPass<=restored.order.length&&
+      restored.pos>=0&&restored.pos<restored.order.length
     );
-    if(saved&&validSaved){
+    if(restored&&validSaved){
       restoringRunRef.current=true;
-      setOrder(saved.order);
-      setFirstPass(saved.firstPass);
-      setPos(saved.pos);
-      setIntro(saved.intro);
-      setSelected(saved.selected);
-      setAnswer(saved.answer);
-      setTyping(saved.typing);
-      setPicked(saved.picked);
-      setResult(saved.result);
-      setScore(saved.score);
-      setFirstPassResults(saved.firstPassResults);
-      setShuffleSeed(saved.shuffleSeed??randomSeed());
-      setPracticeMode(saved.practiceMode);
+      setOrder(restored.order);
+      setFirstPass(restored.firstPass);
+      setPos(restored.pos);
+      setIntro(restored.intro);
+      setSelected(restored.selected);
+      setAnswer(restored.answer);
+      setTyping(restored.typing);
+      setPicked(restored.picked);
+      setResult(restored.result);
+      setScore(restored.score);
+      setFirstPassResults(restored.firstPassResults);
+      setShuffleSeed(restored.shuffleSeed??randomSeed());
+      setPracticeMode(restored.practiceMode);
       setFinished(false);
     }else{
-      if(saved)clearLessonRun(state.set.id,node.id);
+      // Never destroy an unfinished run merely because refreshed course content is temporarily
+      // different (e.g. after auth/Plus purchase). Only a completed node invalidates it.
+      if(saved&&nodeProgress?.complete)clearLessonRun(state.set.id,node.id);
       begin(requested>=0?requested:firstPendingActivityIndex(steps,state.progress));
       setIntro(requested<0&&theoryCards.some(card=>!isSeen(state.progress,card.id)));
       setPracticeMode(startMode);
@@ -858,7 +883,7 @@ export function NodeRunnerScreen(){
       {...(startMode?{startMode}:{})}
       onExit={()=>navigate('/')}
       onSignIn={()=>navigate('/account?return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
-      onAccess={()=>navigate('/access?from=talk')}
+      onAccess={()=>navigate('/access?from=answer&return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
       onReviewDay={nodeId=>navigate('/review?day='+encodeURIComponent(nodeId))}
       onNodeCompleted={node=>{
         if(node.kind==='lesson')trackLessonCompleted();
