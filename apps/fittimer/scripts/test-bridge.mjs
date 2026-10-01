@@ -59,6 +59,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "DAYS",
   "doPublish",
   "draft",
+  "deleteCustomProgram",
   "duplicateProgram",
   "editAIProg",
   "editExerciseFromWorkout",
@@ -89,7 +90,9 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "kvSet",
   "limitNotificationCandidates",
   "liveExercise",
+  "loadData",
   "loadBuilderDraft",
+  "loadPhotos",
   "loadSession",
   "loadSessions",
   "loadStoreServer",
@@ -195,11 +198,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
 export const TEST_BRIDGE_WRITABLE = new Set([
   "callGemini",
   "callGeminiImage",
-  "customPrograms",
-  "photos",
   "premiumGate",
-  "progWeights",
-  "stats",
   "storeServer",
   "syncNativeNotifications"]);
 
