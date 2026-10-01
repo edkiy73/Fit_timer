@@ -77,7 +77,7 @@ async function boot(b, label, errs, url){
   const NICK = '@rep.' + Math.random().toString(36).slice(2, 8);
 
   const tp = await boot(b, 'тренер', errs);
-  await tp.evaluate(() => { users.find(u => u.id === currentUser).name = 'Лена'; });
+  await tp.evaluate(() => { curUser().name = 'Лена'; });
   await becomeTrainer(tp, {handle: NICK, trainer: {about: '', years: null, links: ''}});
   const link = await tp.evaluate(async ({txt, nick}) => {
     const r = parseProgramText(txt);

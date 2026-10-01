@@ -67,7 +67,7 @@ async function restore(page, dump){
 
   /* ---- набиваем телефон всем, что бывает ---- */
   await page.evaluate(async (txt) => {
-    const me = users.find(u => u.id === currentUser);
+    const me = curUser();
     me.name = 'Лена';
     me.theme = 'light';
     me.prepSec = 7;
@@ -118,7 +118,7 @@ async function restore(page, dump){
 
   /* ---- снимаем копию тем же кодом, каким её снимает кнопка ---- */
   const dump = await page.evaluate(async () => {
-    const out = {app: 'fittimer', version: 2, users, currentUser, data: {}, settings: {}};
+    const out = {app: 'fittimer', version: 2, users, currentUser: curUser().id, data: {}, settings: {}};
     for(const u of users){
       const d = {};
       for(const k of backupProfileKeys()){
@@ -168,7 +168,7 @@ async function restore(page, dump){
   await restore(two, dump);
 
   const got = await two.evaluate(async () => {
-    const me = users.find(u => u.id === currentUser) || {};
+    const me = curUser() || {};
     const legacyWeights = JSON.parse(await kvGet(pk('progWeights')) || '{}');
     const restoredPhotos = JSON.parse(await kvGet(pk('photos')) || '[]');
     return {
@@ -192,7 +192,7 @@ async function restore(page, dump){
       clients: clients.length, clientName: clients[0] && clients[0].name,
       clientLink: clients[0] && clients[0].progs[0] && clients[0].progs[0].link.id,
       email: account.email, sub: account.sub && account.sub.plan, premium: isPremium(),
-      hf: hfMode
+      hf: await kvGet('hfMode')
     };
   });
 

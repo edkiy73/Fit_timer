@@ -70,7 +70,7 @@ const progEn = (name) => `ПРОГРАММА: ${name}
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(1500); }
 
   // тренер — режим аккаунта: вход, ник, сохранение страницы
-  await page.evaluate(() => { users.find(u => u.id === currentUser).name = 'Лена'; });
+  await page.evaluate(() => { curUser().name = 'Лена'; });
   await becomeTrainer(page, {handle: NICK, trainer: {about: 'Домашний фитнес.', years: 5, links: ''}});
   ok('ник закреплён', await page.evaluate(() => !!trainer.key));
 

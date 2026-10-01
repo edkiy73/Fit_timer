@@ -34,14 +34,14 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       applyThemeFor,
       getSyncNativeNotifications: () => async () => {
         notificationRuns.push({
-          user:currentUser,
+          user:curUser().id,
           programs:customPrograms.filter(p => p.id !== 'warmup').map(p => p.id).sort()
         });
       }
     });
     const prog = (id, n) => ({id, name: id, plans: [{days: [], rounds: 1, roundRest: 0,
       exercises: Array.from({length: n}, (_, i) => ({name: 'E' + i, type: 'reps', value: 10, rest: 10}))}]});
-    const A = currentUser;
+    const A = curUser().id;
     curUser().locale = 'ru';
     users.push({id: 'uB', name: 'B', gender: 'm', age: 30, theme: 'system', locale: 'en'});
     users.push({id: 'uC', name: 'C', gender: 'f', age: 30, theme: 'system', locale: 'ru'});
@@ -125,7 +125,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   });
   const back = await page.evaluate(() => customPrograms.some(p => p.id === 'warmup'));
   await page.reload({waitUntil: 'load'}); await page.waitForTimeout(1200);
-  const afterReload = await page.evaluate(() => currentUser === 'uB' && customPrograms.some(p => p.id === 'warmup'));
+  const afterReload = await page.evaluate(() => curUser().id === 'uB' && customPrograms.some(p => p.id === 'warmup'));
   ok('удалённая разминка не возвращается', !back && !afterReload, `после переключения ${back}, после перезапуска ${afterReload}`);
   ok('без ошибок в консоли', !errs.length, errs.join(' | '));
   await b.close();

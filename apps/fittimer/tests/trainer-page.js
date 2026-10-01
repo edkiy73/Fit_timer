@@ -54,7 +54,7 @@ const stats = page => page.evaluate(() => [...document.querySelectorAll('#tpStat
 
   // ---- тренер заполняет о себе и отправляет программу ----
   const tp = await boot(b, 'тренер', errs);
-  await tp.evaluate(() => { users.find(u => u.id === currentUser).name = 'Лена'; });
+  await tp.evaluate(() => { curUser().name = 'Лена'; });
   await becomeTrainer(tp, {handle: NICK, trainer: {name: 'Лена', links: 't.me/' + NICK.slice(1),
     about: 'Тренер по домашнему фитнесу. Веду тех, у кого дома только коврик.', years: 8}});
   const link = await tp.evaluate(async ({txt, nick}) => {

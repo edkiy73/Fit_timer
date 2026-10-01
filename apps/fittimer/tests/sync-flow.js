@@ -202,7 +202,7 @@ async function boot(browser, label, errors){
       getSyncNativeNotifications: () => async () => {
         const p = customPrograms.find(x=>x.id==='sync-program');
         globalThis.__notificationSyncRuns.push({
-          user:currentUser,
+          user:curUser().id,
           time:p && p.time,
           history:stats.history.length
         });
