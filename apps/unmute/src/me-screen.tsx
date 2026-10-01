@@ -35,7 +35,6 @@ export function MeScreen(){
   return (
     <section className="me" aria-labelledby="me-title">
       <header className="me-head">
-        <span className="avatar" aria-hidden="true">{email ? email.charAt(0).toUpperCase() : <Icon name="me" size={26} />}</span>
         <div className="me-head-text">
           <h2 id="me-title">{t('me.title')}</h2>
           <span>{email ? email + (auth.session?.handle ? ' · ' + auth.session.handle : '') : t('me.guestName')}</span>
