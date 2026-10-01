@@ -141,7 +141,26 @@ interface LessonRunSnapshot{
   result:boolean|null;
   score:{correct:number;total:number};
   firstPassResults:Record<number,boolean>;
+  shuffleSeed?:string;
   practiceMode?:PracticeSrsKind;
+}
+const randomSeed=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
+function shuffledIndices(length:number,seed:string):number[]{
+  const values=Array.from({length},(_,index)=>index);
+  let state=2166136261;
+  for(let i=0;i<seed.length;i++){ state^=seed.charCodeAt(i); state=Math.imul(state,16777619); }
+  const next=()=>{
+    state+=0x6D2B79F5;
+    let t=state;
+    t=Math.imul(t^(t>>>15),t|1);
+    t^=t+Math.imul(t^(t>>>7),t|61);
+    return ((t^(t>>>14))>>>0)/4294967296;
+  };
+  for(let i=values.length-1;i>0;i--){
+    const j=Math.floor(next()*(i+1));
+    [values[i],values[j]]=[values[j]!,values[i]!];
+  }
+  return values;
 }
 const lessonRunKey=(setId:string,nodeId:string)=>'unmute.lesson-run:'+setId+':'+nodeId;
 function readLessonRun(setId:string,nodeId:string):LessonRunSnapshot|null{
@@ -233,6 +252,7 @@ export function NodeRunnerView({
   const [finished,setFinished]=useState(false);
   const [checking,setChecking]=useState(false);
   const [practiceMode,setPracticeMode]=useState<PracticeSrsKind|undefined>(startMode);
+  const [shuffleSeed,setShuffleSeed]=useState(()=>randomSeed());
   const [runHydrated,setRunHydrated]=useState(false);
   const completionTrackedRef=useRef(false);
   const restoringRunRef=useRef(false);
@@ -252,6 +272,7 @@ export function NodeRunnerView({
     setResult(null);
     setScore({correct:0,total:0});
     setFirstPassResults({});
+    setShuffleSeed(randomSeed());
     setExitOpen(false);
     setFinished(false);
   };
@@ -284,6 +305,7 @@ export function NodeRunnerView({
       setResult(saved.result);
       setScore(saved.score);
       setFirstPassResults(saved.firstPassResults);
+      setShuffleSeed(saved.shuffleSeed??randomSeed());
       setPracticeMode(saved.practiceMode);
       setFinished(false);
     }else{
@@ -317,9 +339,10 @@ export function NodeRunnerView({
       result,
       score,
       firstPassResults,
+      shuffleSeed,
       ...(practiceMode?{practiceMode}:{})
     });
-  },[runHydrated,state?.set.id,node?.id,stepSignature,order,firstPass,pos,intro,selected,answer,typing,picked,result,score,firstPassResults,practiceMode,finished]);
+  },[runHydrated,state?.set.id,node?.id,stepSignature,order,firstPass,pos,intro,selected,answer,typing,picked,result,score,firstPassResults,shuffleSeed,practiceMode,finished]);
 
   const stepIndex=order[pos];
   const activity=stepIndex===undefined?null:steps[stepIndex]??null;
@@ -380,6 +403,11 @@ export function NodeRunnerView({
     if(answeredStep!==undefined)setFirstPassResults(current=>({...current,[answeredStep]:correct}));
   };
 
+  const exitWithoutSaving=()=>{
+    if(state&&node)clearLessonRun(state.set.id,node.id);
+    setExitOpen(false);
+    onExit();
+  };
   const exitSheet=(
     <Sheet open={exitOpen} onClose={()=>setExitOpen(false)} labelledBy="lesson-exit-title" closeLabel={t('learn.exitStay')}>
       <div className="confirm-sheet">
@@ -387,6 +415,7 @@ export function NodeRunnerView({
         <p className="tile-text">{t('learn.exitText')}</p>
         <button className="primary-button" type="button" onClick={()=>setExitOpen(false)}>{t('learn.exitStay')}</button>
         <button className="secondary-button" type="button" onClick={onExit}>{t('learn.exitSave')}</button>
+        <button className="link-button danger-link" type="button" onClick={exitWithoutSaving}>{t('learn.exitDiscard')}</button>
       </div>
     </Sheet>
   );
@@ -562,7 +591,7 @@ export function NodeRunnerView({
   // New phrases are built from word chips; ones answered before are typed (recall, not recognition).
   const cardKnown=Boolean(state.progress.cards[activity.id]&&!state.progress.cards[activity.id]?.deleted);
   const chips=(activity.type==='text-input'||activity.type==='translation')&&!cardKnown&&!typing&&answerWords(textAnswer)
-    ? buildChips(activity.id,textAnswer,steps.flatMap(item=>(item.type==='text-input'||item.type==='translation')&&item.id!==activity.id?[item.answer.accepted[0]??'']:[]))
+    ? buildChips(shuffleSeed+'|'+activity.id+'|'+pos,textAnswer,steps.flatMap(item=>(item.type==='text-input'||item.type==='translation')&&item.id!==activity.id?[item.answer.accepted[0]??'']:[]))
     : null;
   const input=chips?chipsText(chips,picked):answer.trim();
 
@@ -601,27 +630,30 @@ export function NodeRunnerView({
         <span className="learn-feedback-icon" aria-hidden="true"><Icon name={result?'check':'close'} size={22} /></span>
         <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
       </div>
+      {!result&&stepIndex!==undefined&&order.slice(pos+1).includes(stepIndex)&&<p className="learn-hint learn-feedback-return">{t('learn.willReturn')}</p>}
       {!result&&accepted&&(
         <span><LexiconText text={t('learn.accepted',{answer:accepted})} refs={activity.lexiconRefs} /></span>
       )}
       {explanation&&(
         <p><LexiconText text={localized(explanation,locale)} refs={activity.lexiconRefs} /></p>
       )}
-      {!result&&stepIndex!==undefined&&order.slice(pos+1).includes(stepIndex)&&<p className="learn-hint">{t('learn.willReturn')}</p>}
-      {!result&&learnerAnswer&&acceptedAnswers.length>0&&(
-        <AnswerExplanationView
-          question={question}
-          learnerAnswer={learnerAnswer}
-          acceptedAnswers={acceptedAnswers}
-          courseExplanation={localized(explanation,locale)}
-          refs={activity.lexiconRefs}
-          onSignIn={onSignIn}
-          onAccess={onAccess}
-        />
-      )}
-      <button className="primary-button learn-feedback-next" type="button" onClick={()=>advance()}>
-        {pos+1<order.length?t('learn.next'):t('learn.finish')}
-      </button>
+      <div className="learn-feedback-actions">
+        {!result&&learnerAnswer&&acceptedAnswers.length>0&&(
+          <AnswerExplanationView
+            compact
+            question={question}
+            learnerAnswer={learnerAnswer}
+            acceptedAnswers={acceptedAnswers}
+            courseExplanation={localized(explanation,locale)}
+            refs={activity.lexiconRefs}
+            onSignIn={onSignIn}
+            onAccess={onAccess}
+          />
+        )}
+        <button className="primary-button learn-feedback-next" type="button" onClick={()=>advance()}>
+          {pos+1<order.length?t('learn.next'):t('learn.finish')}
+        </button>
+      </div>
     </div>
   );
 
@@ -667,24 +699,28 @@ export function NodeRunnerView({
           {activity.hint&&<p className="learn-hint"><LexiconText text={localized(activity.hint,locale)} refs={activity.lexiconRefs} /></p>}
           <fieldset className="learn-options" disabled={busy||result!==null}>
             <legend className="sr-only">{t('learn.chooseAnswer')}</legend>
-            {activity.options.map((option,optionIndex)=>(
-              <label
-                className={'learn-option pressable'+(result!==null&&optionIndex===activity.correctIndex?' is-correct':'')+(result===false&&optionIndex===selected?' is-wrong':'')}
-                key={optionIndex}
-              >
-                <input
-                  type="radio"
-                  name={activity.id+'-'+pos}
-                  checked={selected===optionIndex}
-                  onChange={()=>{
-                    setSelected(optionIndex);
-                    void handleChoice(optionIndex);
-                  }}
-                />
-                <span><LexiconText text={localized(option,locale)} refs={activity.lexiconRefs} interactive={result!==null} /></span>
-                {result!==null&&optionIndex===activity.correctIndex&&<Icon name="check" size={20} className="learn-option-mark" />}
-              </label>
-            ))}
+            {shuffledIndices(activity.options.length,shuffleSeed+'|choice|'+activity.id+'|'+pos).map(optionIndex=>{
+              const option=activity.options[optionIndex]!;
+              return (
+                <label
+                  className={'learn-option pressable'+(selected===optionIndex&&result===null?' is-selected':'')+(result!==null&&optionIndex===activity.correctIndex?' is-correct':'')+(result===false&&optionIndex===selected?' is-wrong':'')}
+                  key={optionIndex}
+                >
+                  <input
+                    type="radio"
+                    name={activity.id+'-'+pos}
+                    checked={selected===optionIndex}
+                    onChange={()=>setSelected(optionIndex)}
+                    onClick={()=>{
+                      if(selected===optionIndex&&result===null)void handleChoice(optionIndex);
+                    }}
+                  />
+                  <span><LexiconText text={localized(option,locale)} refs={activity.lexiconRefs} interactive={result!==null} /></span>
+                  {selected===optionIndex&&result===null&&<span className="learn-option-confirm">{t('learn.tapAgain')}</span>}
+                  {result!==null&&optionIndex===activity.correctIndex&&<Icon name="check" size={20} className="learn-option-mark" />}
+                </label>
+              );
+            })}
           </fieldset>
           {feedback({
             question:localized(activity.prompt,locale),
