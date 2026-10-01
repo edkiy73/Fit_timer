@@ -1785,6 +1785,18 @@ export async function savePrograms(){
     queueAccountSync();
   }
 }
+export function restoreStatsState(next = {}){
+  const value = next && typeof next === 'object' && !Array.isArray(next)
+    ? JSON.parse(JSON.stringify(next))
+    : {};
+  if(typeof value.totalSec !== 'number') value.totalSec = 0;
+  if(!Array.isArray(value.weights)) value.weights = [];
+  if(!Array.isArray(value.wellness)) value.wellness = [];
+  if(!Array.isArray(value.history)) value.history = [];
+  if(typeof value.count !== 'number') value.count = 0;
+  stats = value;
+  return stats;
+}
 export async function saveStats(){ await saveDoc('stats', stats); }
 async function saveProgWeights(){ progWeights = {}; await kvSet(pk('progWeights'), '{}'); }
 async function loadProgWeights(ownerId = currentUser){
