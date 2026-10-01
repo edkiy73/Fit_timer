@@ -93,8 +93,8 @@ async function restore(page, dump){
     progWeights['bk1|Приседания'] = 4;
     await saveProgWeights();
 
-    photos = [{d: '2026-09-01', img: 'data:image/png;base64,iVBORw0KGgo='}];
-    await savePhotos();
+    await kvSet(pk('photos'), JSON.stringify([{d: '2026-09-01', img: 'data:image/png;base64,iVBORw0KGgo='}]));
+    await loadPhotos();
 
     restoreTrainerClientState({
       trainer: {on: true, handle: '@lena.doma', key: 'ключ-правки-страницы',
