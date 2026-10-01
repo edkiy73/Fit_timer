@@ -21,17 +21,22 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const errs = [];
   const page = await (await b.newContext({viewport: {width: 360, height: 800}, locale: 'ru-RU'})).newPage();
   page.on('pageerror', e => errs.push(String(e)));
+  const aiKinds = [];
+  const aiImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZQWQAAAAASUVORK5CYII=";
+  await page.route('**/api/ai', async route => {
+    const body = route.request().postDataJSON() || {};
+    aiKinds.push(body.kind || '');
+    await route.fulfill({status:200, contentType:'application/json', body:JSON.stringify({image:aiImage})});
+  });
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(1000);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(800); }
   await page.evaluate(async () => {
     const u = curUser(); u.gender = 'f'; u.age = 30; await saveUsers();
+    account.email = 'ai-image@example.com';
+    account.syncToken = 'ai-image-token';
     account.sub = {plan:'year', until:'2099-01-01'};
-    const c = document.createElement('canvas'); c.width = 40; c.height = 30;
-    c.getContext('2d').fillRect(0, 0, 40, 30);
-    const url = c.toDataURL('image/png');
-    window.__kinds = [];
-    window.callGeminiImage = async (prompt, signal, kind) => { __kinds.push(kind); return url; };
+    identity.deviceId = 'ai-image-device';
     customPrograms.push({id: 'pd', name: 'Силовая', plans: [{days: ['Пн'], rounds: 1, roundRest: 0,
       exercises: [{name: 'Присед', type: 'reps', value: 10, rest: 30}]}]});
     await savePrograms(); openBuilder('pd');
@@ -43,8 +48,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.waitForTimeout(300);
   ok('у обложки в выборе есть «Сделать через ИИ»', await page.isVisible('#slotGenerateAI'));
   await page.click('#slotGenerateAI'); await page.waitForTimeout(600);
-  ok('обложка нарисована', await page.evaluate(() => !!draft.cover && __kinds.join() === 'image.cover'),
-     await page.evaluate(() => __kinds.join()));
+  ok('обложка нарисована', await page.evaluate(() => !!draft.cover) && aiKinds.join() === 'image.cover',
+     aiKinds.join());
   await page.evaluate(() => closeImages()); await page.waitForTimeout(700);
 
   // редактор упражнения
