@@ -40,7 +40,7 @@ export function MeScreen(){
   const email = auth.session?.email || '';
 
   return (
-    <section className="me" aria-labelledby="me-title">
+    <section className="me me-profile" aria-labelledby="me-title">
       <header className="screen-head">
         <div className="screen-kicker">{email ? email + (auth.session?.handle ? ' · ' + auth.session.handle : '') : t('me.guestName')}</div>
         <div className="screen-title-row">
