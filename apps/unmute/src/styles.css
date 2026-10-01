@@ -551,10 +551,10 @@ h2{margin:0 0 8px;font-weight:800}
 .speak-play{display:grid;place-items:center;flex:0 0 44px;height:44px;border:0;border-radius:22px;background:color-mix(in srgb,var(--listen) 18%,transparent);color:var(--listen);cursor:pointer}
 /* Soft volume only on the big tactile mic (docs/unmute-design-plan.md §4.3). */
 .mic-soft{display:grid;place-items:center;width:56px;height:56px;border-radius:28px;background:var(--surface);color:var(--accent-ink);box-shadow:-3px -3px 8px rgb(255 255 255/.55),4px 4px 10px rgb(27 26 36/.12)}
-.tile-landmark{display:flex;align-items:center;gap:12px;cursor:pointer;min-height:108px}
+.tile-landmark{display:grid;grid-template-columns:56px minmax(0,1fr) 20px;align-items:center;gap:14px;cursor:pointer;min-height:108px}
 .tile-landmark:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.landmark-body{display:grid;gap:2px;flex:1 1 auto;min-width:0}
-.landmark-icon{display:grid;place-items:center;flex:0 0 40px;height:40px;border-radius:20px;color:var(--listen);background:color-mix(in srgb,var(--listen) 16%,transparent)}
+.landmark-body{display:grid;grid-template-rows:minmax(1.3em,auto) minmax(1.4em,auto);align-content:center;gap:4px;min-width:0}
+.landmark-icon{display:grid;place-items:center;width:56px;height:56px;border-radius:28px;color:var(--listen);background:color-mix(in srgb,var(--listen) 16%,transparent)}
 .landmark-ai{color:var(--accent-ink);background:color-mix(in srgb,var(--accent) 16%,transparent)}
 .landmark-chevron{color:var(--muted)}
 .today-state{gap:10px}
