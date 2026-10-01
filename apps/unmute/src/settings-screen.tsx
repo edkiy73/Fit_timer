@@ -95,6 +95,13 @@ export function SettingsScreen(){
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
 
+  // Local data stays on the device; the next sign-in merges it into that account.
+  const signOut = async () => {
+    await auth.logout();
+    await appDocs.detach();
+    navigate('/');
+  };
+
   // Server data is removed; the device keeps its local copy (never wiped silently).
   const deleteAccount = async () => {
     setDeleteError(false);
@@ -124,6 +131,8 @@ export function SettingsScreen(){
       {auth.session && (
         <div className="tile settings-card">
           <div className="settings-label">{t('account.title')}</div>
+          <p className="tile-text">{auth.session.email}</p>
+          <button className="secondary-button" type="button" onClick={() => void signOut()}>{t('account.signOut')}</button>
           {confirmDelete ? (
             <div className="account-delete" role="alertdialog" aria-label={t('account.delete')}>
               <p>{t('account.deleteConfirm')}</p>

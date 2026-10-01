@@ -7,6 +7,7 @@ import { useLearnerCourseRuntime } from './course-runtime';
 import { useLexiconRuntime } from './lexicon-ui';
 import { localizedText } from './today-model';
 import { speakText } from './speech-runtime';
+import { Loader } from './loader';
 import { Icon } from './icons';
 
 /* «Справочник» (English Trainer's «Банк»): the course's phrase collection by topic and its
@@ -151,9 +152,9 @@ export function ReferenceScreen(){
     const failed = runtime.status === 'error' || lexicon.status === 'error';
     return (
       <section className="review-shell">
-        <div className="learn-state" role={failed ? 'alert' : 'status'}>
-          <strong>{t(failed ? 'reference.errorTitle' : 'reference.loading')}</strong>
-        </div>
+        {failed
+          ? <div className="learn-state" role="alert"><strong>{t('reference.errorTitle')}</strong></div>
+          : <Loader title={t('reference.loading')} />}
       </section>
     );
   }

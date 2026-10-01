@@ -15,6 +15,7 @@ import { patchSettings, readSettings } from './settings';
 import { trackOnboardingComplete } from './observability';
 import { Icon, type IconName } from './icons';
 import { chooseCourse, CourseOptionList, useActiveCourseId, useCatalog } from './active-course';
+import { Loader } from './loader';
 import type { ContentCatalogSet } from './content/client';
 
 export const ONBOARDING_KEY='unmute.onboarding.v1';
@@ -182,9 +183,7 @@ export function OnboardingGate({children}:{children:ReactNode}){
   if(runtime.status==='pending'||settingsQuery.isPending||catalog.isPending){
     return (
       <section className="onboarding onboarding-loading">
-        <div className="learn-state" role="status">
-          <strong>{t('onboarding.loading')}</strong>
-        </div>
+        <Loader title={t('onboarding.loading')} />
       </section>
     );
   }

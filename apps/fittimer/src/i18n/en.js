@@ -955,6 +955,7 @@ export const I18N_EN = {
   'ai.notNow': "Not now",
   'ai.unsavedRequest': "The filled request has not been saved. If you leave now, it will be lost.",
   'common.leaveWithoutSaving': "Leave without saving",
+  'common.exitHint': "Press Back again to exit",
   'common.stay': "Stay",
   'audio.voiceOn': "Voice enabled",
   'images.processing': "Processing… {done}/{total}",

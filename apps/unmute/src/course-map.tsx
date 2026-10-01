@@ -6,12 +6,12 @@ import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
 import { isNodeUnlockedByPurchase } from './content/access';
 import type { CourseSet, RoadmapNode } from './content/schema';
-import { LexiconText } from './lexicon-ui';
 import { courseStages, stageNameKey, type CourseStage } from './course-stages';
 import { hasReference } from './reference';
 import { localizedText, nodeMinutes, nodeTopic } from './today-model';
 import { Icon, type IconName } from './icons';
 import { Sheet } from './sheet';
+import { Loader } from './loader';
 import { CoursePicker } from './active-course';
 
 export type CourseMapStatus=
@@ -68,7 +68,7 @@ export function stationOf(set:CourseSet,node:RoadmapNode,isLast:boolean,locale:s
   return {kind:isLast?'finish':'lesson',special:''};
 }
 
-const KIND_ICON:Partial<Record<StationKind,IconName>>={dialogue:'chat',ai:'mic',finish:'flag'};
+const KIND_ICON:Partial<Record<StationKind,IconName>>={dialogue:'chat',ai:'sparkle',finish:'flag'};
 
 interface Station extends CourseMapItem {
   kind:StationKind;
@@ -151,7 +151,6 @@ export function CourseMapView({
   const currentId=currentGroup?groupId(currentGroup):null;
   const [open,setOpen]=useState<Set<string>>(()=>new Set());
   const [selected,setSelected]=useState<Station|null>(null);
-  const sections=useRef(new Map<string,HTMLElement>());
   const currentRef=useRef<HTMLLIElement|null>(null);
   const placed=useRef(false);
 
@@ -170,10 +169,7 @@ export function CourseMapView({
   if(runtime.status==='pending'){
     return (
       <section className="course-map-shell">
-        <div className="learn-state" role="status">
-          <strong>{t('courseMap.loadingTitle')}</strong>
-          <span>{t('courseMap.loadingText')}</span>
-        </div>
+        <Loader title={t('courseMap.loadingTitle')} />
       </section>
     );
   }
@@ -192,9 +188,6 @@ export function CourseMapView({
   }
 
   const firstLocked=groups.flatMap(group=>group.stations).find(station=>station.status==='purchase-locked')?.node.id??null;
-  const previewDays=state.set.access.mode==='entitlement'
-    ? state.set.access.freePreview?.days ?? 0
-    : 0;
   // A course without stages is one short route: its only group is just «Все дни».
   const stageName=(group:StageGroup)=>group.stage?t(stageNameKey(group.stage)):t(courseStages(state.set.id).length?'courseMap.moreStage':'courseMap.allDays');
   const toggle=(id:string)=>setOpen(previous=>{
@@ -203,11 +196,6 @@ export function CourseMapView({
     else next.add(id);
     return next;
   });
-  const jump=(group:StageGroup)=>{
-    const id=groupId(group);
-    setOpen(previous=>new Set(previous).add(id));
-    requestAnimationFrame(()=>sections.current.get(id)?.scrollIntoView?.({behavior:'smooth',block:'start'}));
-  };
 
   return (
     <section className="course-map-shell" aria-labelledby="course-map-title">
@@ -224,33 +212,6 @@ export function CourseMapView({
         <CoursePicker currentId={state.set.id} variant="card" />
       </header>
 
-      {groups.length>1&&(
-        <nav className="stage-chips" aria-label={t('courseMap.stages')}>
-          {groups.map(group=>{
-            const complete=group.done===group.stations.length;
-            const current=group===currentGroup;
-            return (
-              <button
-                key={groupId(group)}
-                className={'stage-chip pressable'+(current?' is-current':'')}
-                type="button"
-                aria-current={current?'step':undefined}
-                onClick={()=>jump(group)}
-              >
-                {complete?<Icon name="check" size={14} />:group.stage&&<span className="stage-chip-number">{group.stage.number}</span>}
-                {stageName(group)}
-              </button>
-            );
-          })}
-        </nav>
-      )}
-
-      {state.access==='preview'&&previewDays>0&&(
-        <div className="course-map-preview" role="note">
-          <strong>{t('courseMap.previewTitle',{days:previewDays})}</strong>
-          <span>{t('courseMap.previewText',{day:previewDays+1})}</span>
-        </div>
-      )}
 
       {onReference&&hasReference(state.set)&&(
         <button className="me-row pressable course-map-reference" type="button" onClick={onReference}>
@@ -277,7 +238,6 @@ export function CourseMapView({
             <section
               key={id}
               className={'stage'+(expanded?' is-open':'')}
-              ref={element=>{ if(element)sections.current.set(id,element); }}
               aria-labelledby={'stage-'+id}
             >
               <button className="stage-head pressable" type="button" aria-expanded={expanded} onClick={()=>toggle(id)}>
@@ -286,7 +246,8 @@ export function CourseMapView({
                   <span className="stage-name" id={'stage-'+id}>{group.stage?group.stage.number+' · ':''}{stageName(group)}</span>
                   <span className="stage-sub">
                     {first&&last?t('courseMap.days',{from:first,to:last}):''}
-                    {topics.length?' · '+topics.slice(0,3).join(', ')+(topics.length>3?'…':''):''}
+                    {/* Folded: a short teaser; open: every topic of the stage, wrapped. */}
+                    {topics.length?' · '+(expanded?topics.join(', '):topics.slice(0,3).join(', ')+(topics.length>3?'…':'')):''}
                   </span>
                 </span>
                 <Icon name="chevron" size={18} className="stage-chevron" />
@@ -316,11 +277,11 @@ export function CourseMapView({
                         aria-current={station.status==='current'?'step':undefined}
                       >
                         <span className="station-marker" aria-hidden="true">
-                          {/* Closed days are plain muted dots: the «Дальше — полный курс» block says why. */}
+                          {/* Closed days carry a filled lock: visibly part of the course, not yet open. */}
                           {station.status==='complete'&&station.kind==='lesson'
                             ? <Icon name="check" size={14} />
                             : station.status==='purchase-locked'
-                              ? null
+                              ? <Icon name="lock" size={14} />
                               : KIND_ICON[station.kind]?<Icon name={KIND_ICON[station.kind]!} size={18} />:null}
                         </span>
                         <button
@@ -333,7 +294,7 @@ export function CourseMapView({
                             {station.label}
                             {station.status==='current'&&<span className="here-pill">{t('courseMap.here')}</span>}
                           </span>
-                          {station.title!==station.label&&<span className="station-title"><LexiconText text={station.title} /></span>}
+                          {station.title!==station.label&&<span className="station-title">{station.title}</span>}
                           {station.status==='available'&&<span className="station-status">{t(statusKey(station.status))}</span>}
                         </button>
                         {station.status==='current'&&station.canOpen&&(
@@ -365,7 +326,7 @@ export function CourseMapView({
               {selected.label}
               {selected.status==='complete'||selected.status==='current'||selected.status==='available'?' · '+t(statusKey(selected.status)):''}
             </div>
-            <h3 id="station-sheet-title"><LexiconText text={selected.title} /></h3>
+            <h3 id="station-sheet-title">{selected.title}</h3>
             {selected.node.activityIds.length>0&&(
               <p className="tile-meta">{t('courseMap.sheetMeta',{count:selected.node.activityIds.length,minutes:nodeMinutes(state.set,selected.node)})}</p>
             )}

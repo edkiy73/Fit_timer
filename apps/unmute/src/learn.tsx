@@ -19,6 +19,7 @@ import { AnswerExplanationView } from './answer-explanation';
 import { trackDayCompleted, trackLessonCompleted } from './observability';
 import { Icon } from './icons';
 import { Sheet } from './sheet';
+import { Loader } from './loader';
 import { stageForDay, stageNameKey } from './course-stages';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
@@ -187,10 +188,7 @@ export function NodeRunnerView({
   if(runtime.status==='pending'){
     return (
       <section className="learn-shell">
-        <div className="learn-state" role="status">
-          <strong>{t('learn.loadingTitle')}</strong>
-          <span>{t('learn.loadingText')}</span>
-        </div>
+        <Loader title={t('learn.loadingTitle')} />
       </section>
     );
   }

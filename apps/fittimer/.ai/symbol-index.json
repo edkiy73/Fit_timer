@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1627,
-      "chars": 78201,
+      "lines": 1682,
+      "chars": 80205,
       "symbols": [
         "$",
         "accountUserDirtyHook",
@@ -56,6 +56,7 @@
         "icon",
         "initAudio",
         "initCore",
+        "installNativeBack",
         "isChanged",
         "kbFocused",
         "keepAwake",
@@ -68,6 +69,7 @@
         "mk",
         "nextStepSpeech",
         "numFieldsOk",
+        "onRootBack",
         "openStart",
         "openStartFrom",
         "openWeightModal",
@@ -105,6 +107,7 @@
         "setCoreWorkoutHooks",
         "setShown",
         "show",
+        "showExitHint",
         "speak",
         "startSignal",
         "syncDock",

@@ -28,7 +28,8 @@ import {
   nodeMinutes,
   nodeSpeakExamples,
   nodeSpeakTask,
-  nodeTopic
+  nodeTopic,
+  wordOfTheDay
 } from './today-model';
 
 const DAY_MS = 86_400_000;
@@ -209,6 +210,10 @@ export function TodayView({
   const speakTask=node&&!complete?nodeSpeakTask(state.set,node,locale):null;
   const speakExamples=node&&speakTask?nodeSpeakExamples(state.set,node,locale):[];
   const landmark=node&&!complete?nextLandmark(state.set,state.roadmap,node,locale):null;
+  // After the free part (no open day) the word comes from the last day the learner did.
+  const lastDone=[...state.roadmapProgress.nodes].reverse().find(item=>item.complete)?.node??null;
+  const wordNode=node??lastDone;
+  const word=wordNode?wordOfTheDay(state.set,wordNode,wordRuntime?.lexicon,todayDay,locale):null;
 
   return (
     <section className="today" aria-labelledby="today-title">
@@ -219,7 +224,7 @@ export function TodayView({
 
         <Tile className="tile-streak" index={index++}>
           <div className="tile-kicker tone-streak"><Icon name="flame" size={18} />{t('today.streak')}</div>
-          <strong className="tile-number">{t('today.streakDays',{count:streak})}</strong>
+          <strong className="tile-number">{streak}<span className="tile-unit">{countDays(t,locale,streak).replace(/^\S+\s/,'')}</span></strong>
           {!streak&&<span className="tile-caption">{t('today.streakStart')}</span>}
           <div className="week" aria-label={t('today.week',{count:week.filter(Boolean).length})}>
             {week.map((active,day)=>(
@@ -261,10 +266,27 @@ export function TodayView({
           </button>
         )}
 
+        {/* A word from today's lessons: tap it for the dictionary (sound, examples, «В мои слова»). */}
+        {word&&(
+          <Tile className="tile-wide tile-word" index={index++}>
+            <div className="tile-kicker tone-accent"><Icon name="book" size={18} />{t('today.wordTitle')}</div>
+            <div className="word-day">
+              <span className="word-day-text">
+                <strong lang="en" className="word-day-lemma"><LexiconText text={word.lemma} refs={[{surface:word.lemma,lexemeId:word.lexemeId}]} /></strong>
+                <span className="word-day-ipa">/{word.ipa.replace(/^\/|\/$/g,'')}/</span>
+                <span className="tile-text">{word.translation}</span>
+              </span>
+              <button className="speak-play pressable" type="button" aria-label={t('today.speakListen',{text:word.lemma})} onClick={()=>void speakText(word.lemma,'en-US')}>
+                <Icon name="speaker" size={20} />
+              </button>
+            </div>
+          </Tile>
+        )}
+
         {landmark&&(
           <button className="tile tile-wide tile-landmark pressable" style={{'--i':index++} as CSSProperties} type="button" onClick={onMap}>
             <span className={'landmark-icon landmark-'+landmark.kind} aria-hidden="true">
-              <Icon name={landmark.kind==='dialogue'?'chat':landmark.kind==='ai'?'mic':'review'} size={20} />
+              <Icon name={landmark.kind==='dialogue'?'chat':landmark.kind==='ai'?'sparkle':'review'} size={20} />
             </span>
             <span className="landmark-body">
               <span className="tile-title">

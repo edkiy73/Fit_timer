@@ -14,6 +14,7 @@ import { billingClient } from './billing';
 import { authClient } from './auth';
 import { localizedText } from './today-model';
 import { Sheet } from './sheet';
+import { Loader } from './loader';
 import { Icon } from './icons';
 
 /* «Открыть весь курс» / UnMute Plus: choose what to buy, see what it gives, pay.
@@ -71,7 +72,7 @@ export function AccessOfferView({
   const back = <button className="learn-back" type="button" onClick={onCourse}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>;
 
   if(runtime.status === 'pending' || authLoading){
-    return <section className="access-shell"><div className="learn-state" role="status"><strong>{t('access.loading')}</strong></div></section>;
+    return <section className="access-shell"><Loader title={t('access.loading')} /></section>;
   }
   if(runtime.status === 'error' || !state){
     return (
@@ -154,7 +155,8 @@ export function AccessOfferView({
       note:session?.premium && discount ? t('access.courseNotePlus', {discount}) : t('access.courseNote')
     });
   }
-  if(plus){
+  // Plus already active: on the course screen it only lowers the course price, never sold twice.
+  if(plus && !(offerCourse && session?.premium)){
     plans.push({id:'plus.month', title:t('access.plusMonthTitle'), price:t('access.perMonth', {price:plus.monthly}), note:t('access.plusMonthNote')});
     plans.push({
       id:'plus.year', title:t('access.plusYearTitle'), price:t('access.perYear', {price:plus.yearly}), note:t('access.plusYearNote'),

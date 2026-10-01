@@ -101,7 +101,7 @@ const COPY = {
     tabs:'Разделы',
     me:'Я',
     route:'Маршрут',
-    signOut:'Выйти',
+    signIn:'Войти или создать аккаунт',
     today:'Сегодня',
     onboarding:'Говори по-английски в реальной жизни',
     start:'Начать день 1',
@@ -163,17 +163,19 @@ async function completeTheory(page){
 
 async function signIn(page,email){
   await page.getByRole('navigation',{name:COPY.tabs}).getByRole('link',{name:COPY.me,exact:true}).click();
+  // «Я» shows one sign-in button; the code form opens in a sheet.
+  await page.getByRole('button',{name:COPY.signIn}).click();
   await page.getByRole('textbox',{name:'Email'}).fill(email);
   await page.getByRole('button',{name:COPY.send}).click();
   await page.getByText(/^DEV: \d+$/).waitFor();
-  await page.getByRole('button',{name:COPY.verify}).click();
+  await page.getByRole('button',{name:COPY.verify,exact:true}).click();
   if(await appears(page.getByRole('textbox',{name:COPY.handle}),1200)){
     await page.getByRole('textbox',{name:COPY.handle}).fill('@person');
     await page.getByRole('button',{name:COPY.create}).click();
   }
   await page.waitForURL(/#\/$/,{timeout:5000}).catch(()=>{});
   await page.getByRole('navigation',{name:COPY.tabs}).getByRole('link',{name:COPY.me,exact:true}).click();
-  return appears(page.getByRole('button',{name:COPY.signOut}),5000);
+  return appears(page.getByText(email,{exact:true}),5000);
 }
 
 const browser = await chromium.launch(CHROME ? {executablePath:CHROME} : {});

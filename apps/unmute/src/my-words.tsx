@@ -3,6 +3,7 @@ import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { WordReviewRuntimeValue } from './word-review-runtime';
 import { listSavedWords, removeSavedWord, type SavedWordStatus } from './saved-words';
 import { Icon } from './icons';
+import { Sheet } from './sheet';
 import { useNavigate } from 'react-router';
 import { useWordReviewRuntime } from './word-review-runtime';
 
@@ -23,6 +24,8 @@ export function MyWordsView({
   const {t,locale}=useI18n();
   const [query,setQuery]=useState('');
   const [error,setError]=useState(false);
+  // Removing a word stops its reviews: one stray tap must not do that, so it asks first.
+  const [pending,setPending]=useState<{lexemeId:string;senseId:string;lemma:string}|null>(null);
   const words=useMemo(
     ()=>wordRuntime?.words&&wordRuntime.lexicon?listSavedWords(wordRuntime.words,wordRuntime.lexicon,locale):[],
     [wordRuntime?.words,wordRuntime?.lexicon,locale]
@@ -48,6 +51,7 @@ export function MyWordsView({
         <h3 id="my-words-title">{t('words.title')}</h3>
         {words.length>0&&<span className="section-count">{words.length}</span>}
       </div>
+      {words.length>0&&<p className="section-lead">{t('words.lead')}</p>}
 
       {words.length===0 ? (
         <div className="tile my-words-empty">
@@ -76,7 +80,7 @@ export function MyWordsView({
                   className="word-remove pressable"
                   type="button"
                   aria-label={t('words.remove',{word:word.lemma})}
-                  onClick={()=>void drop(word.record.lexemeId,word.record.senseId)}
+                  onClick={()=>setPending({lexemeId:word.record.lexemeId,senseId:word.record.senseId,lemma:word.lemma})}
                 >
                   <Icon name="trash" size={18} />
                 </button>
@@ -86,6 +90,19 @@ export function MyWordsView({
           {shown.length===0&&<p className="tile-text">{t('words.notFound')}</p>}
         </>
       )}
+
+      <Sheet open={Boolean(pending)} onClose={()=>setPending(null)} labelledBy="word-remove-title" closeLabel={t('words.removeCancel')}>
+        {pending&&(
+          <div className="confirm-sheet">
+            <h3 id="word-remove-title">{t('words.removeTitle',{word:pending.lemma})}</h3>
+            <p className="tile-text">{t('words.removeText')}</p>
+            <button className="primary-button" type="button" onClick={()=>{ const word=pending; setPending(null); void drop(word.lexemeId,word.senseId); }}>
+              {t('words.removeConfirm')}
+            </button>
+            <button className="secondary-button" type="button" onClick={()=>setPending(null)}>{t('words.removeCancel')}</button>
+          </div>
+        )}
+      </Sheet>
     </section>
   );
 }

@@ -31,6 +31,7 @@ import { AnswerExplanationView } from './answer-explanation';
 import { useOtherCourseReviews, type OtherCourseReviews } from './other-course-review';
 import { MyWordsView } from './my-words';
 import { Icon } from './icons';
+import { Loader } from './loader';
 import { reviewDueCounts } from './review-count';
 
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
@@ -172,10 +173,7 @@ export function ReviewView({
   if(runtime.status==='pending'||wordRuntime?.status==='pending'||(runtime.status==='ready'&&!session)){
     return (
       <section className="review-shell">
-        <div className="learn-state" role="status">
-          <strong>{t('review.loadingTitle')}</strong>
-          <span>{t('review.loadingText')}</span>
-        </div>
+        <Loader title={t('review.loadingTitle')} />
       </section>
     );
   }
