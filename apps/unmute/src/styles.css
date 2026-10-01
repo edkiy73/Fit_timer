@@ -94,7 +94,6 @@ h2{margin:0 0 8px;font-weight:800}
   :root[data-theme="dark"] .tabbar{background-color:rgba(30,30,38,.90)}
   @media(prefers-color-scheme:dark){:root:not([data-theme]) .tabbar{background-color:rgba(30,30,38,.90)}}
 }
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){}
 .tabbar-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:48px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:600;border-radius:var(--radius-tile)}
 .tabbar-item:focus-visible{outline:2px solid var(--accent);outline-offset:-4px}
 .tabbar-icon{position:relative;display:flex;align-items:center;justify-content:center;width:56px;height:30px;border-radius:15px;transition:background-color var(--dur-spring) ease}
