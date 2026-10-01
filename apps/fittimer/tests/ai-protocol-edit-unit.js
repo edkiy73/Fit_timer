@@ -179,15 +179,15 @@ const prog = plans => ({plans});
   need(d.moved === 1, 'adjacent swap counts as one move: ' + d.moved);
 }
 
-if(bad){
-  console.error('\nFailed:', bad);
-  process.exit(1);
-}
-
 {
   const prompt = FitAIProtocol.programPrompt('Russian');
   need(prompt.includes('ЧАСТОТА ПРОГРЕССИИ'), 'AI protocol documents per-exercise progression frequency');
   need(prompt.includes('0 = disable progression for this exercise'), 'AI protocol documents zero as exercise progression off');
+}
+
+if(bad){
+  console.error('\nFailed:', bad);
+  process.exit(1);
 }
 
 console.log('\nAI edit protocol: ok');
