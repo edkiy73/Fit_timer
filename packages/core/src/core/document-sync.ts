@@ -70,6 +70,8 @@ export interface DocumentSync {
   read(ref: DocumentRef | string): Promise<string | null>;
   write(ref: DocumentRef | string, value: string): Promise<void>;
   remove(ref: DocumentRef | string): Promise<void>;
+  /** Documents stored on this device (deleted ones excluded), e.g. to reset every course. */
+  keys(): Promise<Array<Required<DocumentRef>>>;
   /** Has unsent changes. */
   pending(): Promise<boolean>;
   sync(): Promise<SyncOutcome>;
@@ -315,6 +317,10 @@ export function createDocumentSync(options: DocumentSyncOptions): DocumentSync {
     },
     write: (ref, value) => localWrite(ref, String(value)),
     remove: ref => localWrite(ref, null),
+    async keys(){
+      const m = await serial(load);
+      return Object.entries(m.docs).filter(([, d]) => !d.deleted).map(([id]) => refOf(id));
+    },
     async pending(){
       const m = await serial(load);
       return Object.values(m.docs).some(d => d.dirty);

@@ -5,6 +5,7 @@ import {
   type WordsProgressDocument
 } from './progress';
 import {
+  appDocs,
   readCourseProgress,
   readStatsProgress,
   readWordsProgress,
@@ -54,10 +55,24 @@ export function resetWordsProgress(doc:WordsProgressDocument,at:string):WordsPro
   return {schemaVersion:1,items:tombstones(doc.items,at)};
 }
 
-/** Resets the given courses (every course the learner could have studied) and saved words. */
+const COURSE_DOC_PREFIXES=['progress:course:','progress:stats:'];
+
+/** Course ids that have progress or stats stored on this device, including courses no longer published. */
+export function courseIdsFromKeys(keys:readonly {key:string}[]):string[]{
+  const ids=new Set<string>();
+  for(const {key} of keys){
+    const prefix=COURSE_DOC_PREFIXES.find(item=>key.startsWith(item));
+    if(prefix&&key.length>prefix.length)ids.add(key.slice(prefix.length));
+  }
+  return [...ids];
+}
+
+/** Resets the given courses, every course stored on this device (also ones removed from the
+ *  catalog) and saved words. */
 export async function resetAllProgress(setIds:readonly string[],now:Date=new Date()):Promise<void>{
   const at=now.toISOString();
-  for(const setId of [...new Set(setIds)]){
+  const stored=courseIdsFromKeys(await appDocs.keys());
+  for(const setId of [...new Set([...setIds,...stored])]){
     await writeCourseProgress(setId,resetCourseProgress(await readCourseProgress(setId),at));
     await writeStatsProgress(setId,resetStatsProgress(await readStatsProgress(setId),at));
   }

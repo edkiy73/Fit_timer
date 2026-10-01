@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@appbase/ui-react/i18n.js';
@@ -58,13 +58,23 @@ function learnerState():LearnerCourseState{
   };
 }
 
+function choiceState():LearnerCourseState{
+  const state=learnerState();
+  state.set={...state.set,activities:[{
+    id:'card.one',revision:1,type:'choice',tags:[],revisionProgress:'preserve',lexiconRefs:[],
+    prompt:{ru:'Выбери: Я дома'},options:[{ru:'I am home'},{ru:'I is home'},{ru:'I are home'},{ru:'I be home'}],correctIndex:0
+  } as LearnerCourseState['set']['activities'][number]]};
+  return state;
+}
+
 function renderReview(
   saveGraded=vi.fn(async()=>{}),
   savePractice=vi.fn(async()=>{}),
-  otherCourses:OtherCourseReviews={status:'ready',courses:[]}
+  otherCourses:OtherCourseReviews={status:'ready',courses:[]},
+  state:LearnerCourseState=learnerState()
 ){
   const runtime:LearnerCourseRuntimeValue={
-    state:learnerState(),
+    state,
     status:'ready',
     error:null,
     refresh:async()=>{}
@@ -156,6 +166,20 @@ describe('course review screen',()=>{
     await user.click(screen.getByRole('button',{name:'Проверить'}));
     await user.click(screen.getByRole('button',{name:'Далее'}));
     expect(await screen.findByText(/Повторения другого курса сейчас не загрузились/)).toBeTruthy();
+  });
+
+  it('keeps the same answer order after leaving and reopening review the same day',async()=>{
+    const user=userEvent.setup();
+    const order=async()=>{
+      renderReview(vi.fn(async()=>{}),vi.fn(async()=>{}),{status:'ready',courses:[]},choiceState());
+      await user.click(await screen.findByRole('button',{name:'Начать повтор'}));
+      const names=(await screen.findAllByRole('radio')).map(radio=>radio.closest('label')?.textContent??'');
+      cleanup();
+      return names;
+    };
+    const first=await order();
+    expect(first).toHaveLength(4);
+    expect(await order()).toEqual(first);
   });
 
   it('does not loop a card that is wrong again after coming back',async()=>{
