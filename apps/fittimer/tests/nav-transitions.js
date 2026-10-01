@@ -327,7 +327,7 @@ async function scenario(ctx, name, fn, errs){
   await scenario(ctx, 'конструктор → картинки → Готово', async page => {
     await seedProgram(page, 'nav-images');
     await page.evaluate(() => {
-      premiumGate = () => true;
+      account.sub = {plan:'year', until:'2099-01-01'};
       goTab('scrPrograms');
       openBuilder('nav-images');
       openImages();
