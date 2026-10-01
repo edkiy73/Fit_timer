@@ -19,6 +19,34 @@ UI → навигация → состояние урока → сохранен
 
 ---
 
+## Текущий статус после live QA — 2026-10-01
+
+| Область | Статус | Комментарий |
+|---|---:|---|
+| Resume незавершённого урока | 🟡 частично закрыто | Есть persisted LessonRunSnapshot и remap по activity id; нужен полный process-kill / sync / Plus-return regression |
+| Plus → возврат в текущий урок | ✅ исправлено по коду | Explicit return URL + `resume=1`; integration test ещё нужен |
+| Choice accidental tap | ✅ исправлено по коду | Первый tap выбирает, второй подтверждает; Learn/Review/listening |
+| Shuffle ответов / chips | 🟡 частично закрыто | Lesson seed persisted; Review seed пока только session-local |
+| Wrong-answer feedback layout/copy | ✅ исправлено по коду | `Ответ неверный`, retry notice меньше и ближе, Why/Next state layout разделён |
+| Speed drill timing / threshold copy | ✅ исправлено | Dynamic speaking window; real `needed/count`; code-course release прошёл |
+| Route entry / current-day jump | ✅ исправлено по коду | Вход сверху; отдельная тихая кнопка «Текущий день» |
+| Profile/Route fullscreen loading | ✅ исправлено по коду | Skeleton states вместо full-screen loader |
+| Profile statistics course | ✅ исправлено по коду | Default active course; manual override только на app session |
+| Dock blur | ✅ подтверждено live QA | Старый override `backdrop-filter:none` удалён |
+| Sheets над dock | ✅ исправлено по коду | Overlay z-index выше dock |
+| Formal first/resume/replay model | ❌ открыто | Snapshot есть, но write semantics ещё не привязаны к явному run mode |
+| Replay vs SRS | ❌ открыто | Нужен явный контракт + test |
+| Partial write / double grading | ❌ открыто P0/P1 | Самый рискованный data-integrity кейс |
+| «Выйти без сохранения» semantics | ❌ открыто P1 | Сейчас очищает run snapshot, но не откатывает уже persisted answers/SRS |
+| Review partial-source completeness | ❌ открыто | Нельзя молча считать очередь полной при failed source |
+| Removed/unpublished learned courses | ❌ открыто | Review/Reset discovery требует отдельного решения |
+| Analytics exactly-once / run mode | ❌ открыто | Durable completion и replay/resume events не закрыты |
+| CI gate | 🟡 перепроверяется | Две свежие typecheck-регрессии найдены и исправлены; новый общий workflow должен подтвердить green |
+
+> Если исторический раздел ниже противоречит этой таблице или разделу 35, актуальным считается этот статус и раздел 35.
+
+---
+
 ## 2. Уже подтверждённые проблемы
 
 ### P0/P1. Итог урока всегда говорит «С первого раза»
