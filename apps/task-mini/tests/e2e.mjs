@@ -154,7 +154,7 @@ try{
   ok('purchase through the payment provider opens the feature at once',
     await appears(laptop.getByRole('button', {name: /Скачать задачи/}), 8000));
   await adminPage.getByRole('button', {name: 'Платежи'}).click();
-  ok('payment appears in the Admin journal', await appears(adminPage.getByRole('cell', {name: 'paid'})));
+  ok('payment appears in the Admin journal', await appears(adminPage.getByRole('cell', {name: 'оплачено'})));
 
   await phone.getByRole('link', {name: /Готовые/}).click();
   await phone.waitForURL(/#\/done$/);

@@ -33,8 +33,10 @@ function fakeRes(){
     'paywall_shown.today',
     'paywall_shown.talk',
     'talk_started',
-    'purchase_started.course.general-foundation',
-    'purchase_completed.course.general-foundation'
+    'purchase_started.course',
+    'purchase_started.plus',
+    'purchase_completed.course',
+    'purchase_completed.plus'
   ];
   ok('launch funnel analytics are registered server-side',
     expectedFunnelEvents.every(event => analytics.EVENTS.includes(event)));

@@ -24,6 +24,8 @@ export interface AdminPanelProps {
   productName: string;
   locale?: 'ru' | 'en';
   extraSections?: readonly AdminSection[];
+  /** Readable names of the product's analytics events, in the Admin language. */
+  eventLabels?: Readonly<Record<string, string>>;
 }
 
 const COPY = {
@@ -37,8 +39,8 @@ const COPY = {
     serviceStorage:'Хранилище данных', serviceMail:'Вход по коду из письма', serviceAi:'ИИ (разбор ошибок, разговор)', servicePush:'Уведомления на телефон', serviceBilling:'Оплата',
     serviceOn:'работает', serviceOff:'не настроено', serviceMemory:'только временная память — данные пропадут', serviceBroken:'сбой',
     buildLine:'Сейчас на сайте версия из изменения', details:'Подробности для разработчика',
-    analytics:'Аналитика', accounts:'Аккаунты', totalErrors:'Ошибок клиента',
-    noErrors:'Ошибок клиента нет.', noUsers:'Аккаунтов пока нет.', email:'Email',
+    analytics:'Аналитика', accounts:'Аккаунты', totalErrors:'Ошибок в приложении',
+    noErrors:'Ошибок в приложении нет.', noUsers:'Аккаунтов пока нет.', email:'Email',
     premium:'Подписка', seen:'Последняя активность', count:'Количество',
     clear:'Очистить', migration:'Миграция хранилища',
     owned:'Куплено', access:'Выдать доступ', sku:'Курс или покупка', grant:'Выдать', revoke:'Забрать',
@@ -49,7 +51,12 @@ const COPY = {
     loginCode:'Код для входа', loginCodeDone:'Одноразовый код для', loginCodeHint:'действует 15 минут. На экране входа: email → «У меня есть код».',
     payments:'Платежи', noPayments:'Платежей пока нет.', when:'Когда', provider:'Провайдер', event:'Событие', account:'Аккаунт',
     mainGroup:'Главное', accountsGroup:'Аккаунты', systemGroup:'Система', productGroup:'Продукт', menu:'Меню',
-    settingsGroup:'Настройки', ai:'ИИ', billingKeys:'Способы оплаты', legal:'Владелец и контакты'
+    settingsGroup:'Настройки', ai:'ИИ', billingKeys:'Способы оплаты', legal:'Владелец и контакты',
+    eventInstall:'Открыли приложение впервые', newDevices:'Новых устройств за 30 дней', activity:'Что делали за 30 дней', activityHint:'«Раз» — сколько всего, «Устройств» — у скольких разных телефонов и браузеров.',
+    times:'Раз', devices:'Устройств', platforms:'Откуда приходят', platformAndroid:'Android', platformIos:'iPhone', platformWeb:'Сайт',
+    errorTimes:'раз', errorFirst:'впервые', errorLast:'последний раз', errorBuild:'версия',
+    buyer:'Покупатель', product:'Покупка', statusPaid:'оплачено', statusRefunded:'возврат', statusCanceled:'продление отключено',
+    providerInstant:'без оплаты (выдано сразу)'
   },
   en: {
     title:'Admin', key:'ADMIN_KEY', connect:'Connect', disconnect:'Sign out',
@@ -61,8 +68,8 @@ const COPY = {
     serviceStorage:'Data storage', serviceMail:'Sign-in by email code', serviceAi:'AI (mistake explanations, talk)', servicePush:'Phone notifications', serviceBilling:'Payments',
     serviceOn:'works', serviceOff:'not set up', serviceMemory:'temporary memory only — data will be lost', serviceBroken:'broken',
     buildLine:'The site runs the version from change', details:'Details for developers',
-    analytics:'Analytics', accounts:'Accounts', totalErrors:'Client errors',
-    noErrors:'No client errors.', noUsers:'No accounts yet.', email:'Email',
+    analytics:'Analytics', accounts:'Accounts', totalErrors:'App errors',
+    noErrors:'No app errors.', noUsers:'No accounts yet.', email:'Email',
     premium:'Premium', seen:'Last active', count:'Count',
     clear:'Clear', migration:'Storage migration',
     owned:'Purchases', access:'Give access', sku:'Course or purchase', grant:'Grant', revoke:'Revoke',
@@ -73,7 +80,12 @@ const COPY = {
     loginCode:'Sign-in code', loginCodeDone:'One-time code for', loginCodeHint:'valid for 15 minutes. On the sign-in screen: email → “I have a code”.',
     payments:'Payments', noPayments:'No payments yet.', when:'When', provider:'Provider', event:'Event', account:'Account',
     mainGroup:'Main', accountsGroup:'Accounts', systemGroup:'System', productGroup:'Product', menu:'Menu',
-    settingsGroup:'Settings', ai:'AI', billingKeys:'Payment methods', legal:'Owner and contacts'
+    settingsGroup:'Settings', ai:'AI', billingKeys:'Payment methods', legal:'Owner and contacts',
+    eventInstall:'Opened the app for the first time', newDevices:'New devices in 30 days', activity:'Activity in 30 days', activityHint:'“Times” is the total, “Devices” is how many different phones and browsers.',
+    times:'Times', devices:'Devices', platforms:'Where people come from', platformAndroid:'Android', platformIos:'iPhone', platformWeb:'Web',
+    errorTimes:'times', errorFirst:'first', errorLast:'last', errorBuild:'build',
+    buyer:'Buyer', product:'Purchase', statusPaid:'paid', statusRefunded:'refunded', statusCanceled:'renewal off',
+    providerInstant:'without payment (granted at once)'
   }
 } as const;
 
@@ -239,7 +251,88 @@ function HealthView({health, copy}: {health: AdminHealth | null; copy: Copy}){
 // and refetch protected data in a loop (hundreds of requests, then the admin rate limit).
 const NO_SECTIONS: readonly AdminSection[] = [];
 
-export function AdminPanel({client, productName, locale='ru', extraSections=NO_SECTIONS}: AdminPanelProps){
+const NO_LABELS: Readonly<Record<string, string>> = {};
+
+type EventTotals = Record<string, {count?: number; unique?: number}>;
+type Platforms = {android?: number; ios?: number; web?: number};
+
+/* «Обзор»: plain numbers — people, new devices, what they did, where they come from. */
+function OverviewView({data, copy, eventLabels}: {data: Record<string, unknown>; copy: Copy; eventLabels: Readonly<Record<string, string>>}){
+  const stats = (data.analytics || {}) as {events?: string[]; totals?: EventTotals; cohort?: {devices?: number; platform?: Platforms}};
+  const totals = stats.totals || {};
+  const events = Array.isArray(stats.events) ? stats.events : Object.keys(totals);
+  const platform = stats.cohort?.platform || {};
+  return (
+    <section className="ab-admin-stack">
+      <div className="ab-admin-grid">
+        <article className="ab-admin-card"><span>{copy.accounts}</span><strong>{String(data.accounts ?? 0)}</strong></article>
+        <article className="ab-admin-card"><span>{copy.newDevices}</span><strong>{String(stats.cohort?.devices ?? 0)}</strong></article>
+        <article className="ab-admin-card"><span>{copy.totalErrors}</span><strong>{String(data.clientErrors ?? 0)}</strong></article>
+      </div>
+      <article className="ab-admin-panel">
+        <h2>{copy.activity}</h2>
+        <p className="ab-admin-note">{copy.activityHint}</p>
+        <div className="ab-admin-table-wrap"><table className="ab-admin-compact"><thead><tr><th></th><th className="ab-admin-num">{copy.times}</th><th className="ab-admin-num">{copy.devices}</th></tr></thead>
+        <tbody>{events.map(event => <tr key={event} data-zero={totals[event]?.count ? undefined : ''}>
+          <td>{eventLabels[event] || (event === 'install' ? copy.eventInstall : event)}</td>
+          <td className="ab-admin-num">{String(totals[event]?.count || 0)}</td>
+          <td className="ab-admin-num">{String(totals[event]?.unique || 0)}</td>
+        </tr>)}</tbody></table></div>
+      </article>
+      <article className="ab-admin-panel">
+        <h2>{copy.platforms}</h2>
+        <div className="ab-admin-status-line">
+          <span><b>{copy.platformAndroid}</b> {String(platform.android || 0)}</span>
+          <span><b>{copy.platformIos}</b> {String(platform.ios || 0)}</span>
+          <span><b>{copy.platformWeb}</b> {String(platform.web || 0)}</span>
+        </div>
+      </article>
+    </section>
+  );
+}
+
+/* «Ошибки»: what broke, how often and when; the stack stays folded for the developer. */
+function ErrorsView({errors, copy, locale, onClear}: {errors: Array<Record<string, unknown>>; copy: Copy; locale: 'ru' | 'en'; onClear(sig: string): void}){
+  if(!errors.length) return <section className="ab-admin-stack"><p className="ab-admin-empty">{copy.noErrors}</p></section>;
+  return (
+    <section className="ab-admin-stack">
+      {errors.map(item => {
+        const platform = (item.platform || {}) as Platforms;
+        const where = [
+          platform.android ? copy.platformAndroid + ' ' + platform.android : '',
+          platform.ios ? copy.platformIos + ' ' + platform.ios : '',
+          platform.web ? copy.platformWeb + ' ' + platform.web : ''
+        ].filter(Boolean).join(' · ');
+        return (
+          <article className="ab-admin-panel" key={String(item.sig)}>
+            <strong>{String(item.message || item.name || 'Error')}</strong>
+            <p className="ab-admin-note">
+              {String(item.count || 0)} {copy.errorTimes}
+              {Number(item.count) > 1
+                ? (item.first ? ' · ' + copy.errorFirst + ' ' + formatAdminDate(item.first, locale) : '')
+                  + (item.last ? ' · ' + copy.errorLast + ' ' + formatAdminDate(item.last, locale) : '')
+                : (item.last ? ' · ' + formatAdminDate(item.last, locale) : '')}
+            </p>
+            <p className="ab-admin-note">{where}{item.build ? ' · ' + copy.errorBuild + ' ' + String(item.build) : ''}</p>
+            <details className="ab-admin-details"><summary>{copy.details}</summary><pre className="ab-admin-json">{String(item.name || '')}{'\n'}{String(item.stack || '')}</pre></details>
+            <button type="button" className="ab-admin-secondary" onClick={() => onClear(String(item.sig || ''))}>{copy.clear}</button>
+          </article>
+        );
+      })}
+    </section>
+  );
+}
+
+function providerLabel(provider: unknown, copy: Copy){
+  const names: Record<string, string> = {instant:copy.providerInstant, yookassa:'ЮKassa', stripe:'Stripe', google:'Google Play', apple:'App Store', test:'test'};
+  return names[String(provider || '')] || String(provider || '');
+}
+
+function paymentStatusLabel(status: unknown, copy: Copy){
+  return status === 'paid' ? copy.statusPaid : status === 'refunded' ? copy.statusRefunded : status === 'canceled' ? copy.statusCanceled : String(status || '');
+}
+
+export function AdminPanel({client, productName, locale='ru', extraSections=NO_SECTIONS, eventLabels=NO_LABELS}: AdminPanelProps){
   const copy = COPY[locale];
   const [key, setKey] = useState(() => {
     try { return sessionStorage.getItem('appbase.admin.key') || ''; } catch (_) { return ''; }
@@ -333,7 +426,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
   useEffect(() => { void loadProtected(tab); }, [tab, key, loadProtected]);
   // Course titles for the people list and the learner card (instead of raw SKUs).
   useEffect(() => {
-    if(tab !== 'users' || !key || products.length) return;
+    if((tab !== 'users' && tab !== 'payments') || !key || products.length) return;
     let live = true;
     client.action(key, 'products_list').then(result => {
       if(live && Array.isArray(result.products)) setProducts(result.products as Product[]);
@@ -455,15 +548,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
       {error && <p className="ab-admin-error" role="alert">{error}</p>}
       {busy && <p className="ab-admin-empty">…</p>}
 
-      {tab === 'overview' && key && data && (
-        <section className="ab-admin-stack">
-          <div className="ab-admin-grid">
-            <article className="ab-admin-card"><span>{copy.accounts}</span><strong>{String(data.accounts ?? 0)}</strong></article>
-            <article className="ab-admin-card"><span>{copy.totalErrors}</span><strong>{String(data.clientErrors ?? 0)}</strong></article>
-          </div>
-          <article className="ab-admin-panel"><h2>{copy.analytics}</h2><JsonCard value={data.analytics || {}} /></article>
-        </section>
-      )}
+      {tab === 'overview' && key && data && <OverviewView data={data} copy={copy} eventLabels={eventLabels} />}
 
       {tab === 'users' && key && (
         <section className="ab-admin-stack">
@@ -490,28 +575,19 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
       {tab === 'payments' && key && data && (
         <section className="ab-admin-panel">
           {payments.length ? (
-            <div className="ab-admin-table-wrap"><table><thead><tr><th>{copy.when}</th><th>{copy.provider}</th><th>{copy.event}</th><th>SKU</th><th>{copy.account}</th></tr></thead>
+            <div className="ab-admin-table-wrap"><table><thead><tr><th>{copy.when}</th><th>{copy.product}</th><th>{copy.event}</th><th>{copy.provider}</th><th>{copy.buyer}</th></tr></thead>
             <tbody>{payments.map((row, i) => <tr key={i}>
-              <td>{String(row.at || '').replace('T', ' ').slice(0, 19)}</td>
-              <td>{String(row.provider || '')}</td>
-              <td>{String(row.status || '')}</td>
-              <td>{String(row.sku || '')}</td>
-              <td>{String(row.account || '')}</td>
+              <td>{formatAdminDate(row.at, locale)}</td>
+              <td data-label={copy.product}>{productTitle(products, row.sku)}</td>
+              <td data-label={copy.event}>{paymentStatusLabel(row.status, copy)}</td>
+              <td data-label={copy.provider}>{providerLabel(row.provider, copy)}</td>
+              <td data-label={copy.buyer}>№ {String(row.account || '').slice(0, 6)}</td>
             </tr>)}</tbody></table></div>
           ) : <p className="ab-admin-empty">{copy.noPayments}</p>}
         </section>
       )}
 
-      {tab === 'errors' && key && data && (
-        <section className="ab-admin-stack">
-          {!errors.length && <p className="ab-admin-empty">{copy.noErrors}</p>}
-          {errors.map(item => <article className="ab-admin-panel" key={String(item.sig)}>
-            <div className="ab-admin-row"><div><strong>{String(item.name || 'Error')}</strong><div>{String(item.message || '')}</div></div><span>{copy.count}: {String(item.count || 0)}</span></div>
-            <pre className="ab-admin-json">{String(item.stack || '')}</pre>
-            <button type="button" className="ab-admin-secondary" onClick={() => void clearError(String(item.sig || ''))}>{copy.clear}</button>
-          </article>)}
-        </section>
-      )}
+      {tab === 'errors' && key && data && <ErrorsView errors={errors} copy={copy} locale={locale} onClear={sig => void clearError(sig)} />}
 
       {tab === 'storage' && key && data && (
         <section className="ab-admin-panel"><h2>{copy.migration}</h2><JsonCard value={data.status || data} /></section>

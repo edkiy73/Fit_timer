@@ -12,9 +12,11 @@ const EVENTS = Object.freeze([
   'paywall_shown.talk',
   'paywall_shown.other',
   'talk_started',
-  'purchase_started.course.general-foundation',
+  'purchase_started.course',
+  'purchase_started.plus',
   'purchase_started.other',
-  'purchase_completed.course.general-foundation',
+  'purchase_completed.course',
+  'purchase_completed.plus',
   'purchase_completed.other'
 ]);
 const engine = createAnalyticsEngine({store, events:EVENTS});

@@ -338,7 +338,15 @@
     font-size:11px;
   }
   .ab-admin-access .ab-admin-row{align-items:stretch}
+  /* Short number tables stay tables on a phone: one line per row. */
+  .ab-admin table.ab-admin-compact{display:table}
+  .ab-admin-compact thead{display:table-header-group}
+  .ab-admin-compact tbody{display:table-row-group}
+  .ab-admin-compact tr{display:table-row;padding:0}
+  .ab-admin-compact td,.ab-admin-compact th{display:table-cell;width:auto;padding:7px 6px;border-bottom:1px solid var(--line,#e4e6eb)}
 }
+.ab-admin-compact .ab-admin-num{width:1%;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+.ab-admin-compact tr[data-zero] td{color:var(--muted,#6b7280)}
 
 @media(max-width:420px){
   .ab-admin-grid{grid-template-columns:1fr 1fr}

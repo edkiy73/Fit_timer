@@ -164,9 +164,16 @@ function Localized({children}: {children: ReactNode}){
   return <I18nProvider dictionaries={dictionaries} config={i18nConfig} storageKey={LOCALE_KEY}>{children}</I18nProvider>;
 }
 
+/* Readable names of the analytics events (lib/app-analytics.js) for Admin «Обзор». */
+const EVENT_LABELS = {
+  ru:{task_created:'Создали задачу', task_completed:'Выполнили задачу'},
+  en:{task_created:'Created a task', task_completed:'Completed a task'}
+} as const;
+
 function Admin(){
   const {locale} = useI18n();
-  return <AdminPanel client={taskAdmin} locale={sharedUiLocale(locale)} productName="Task Mini" />;
+  const adminLocale = sharedUiLocale(locale);
+  return <AdminPanel client={taskAdmin} locale={adminLocale} productName="Task Mini" eventLabels={EVENT_LABELS[adminLocale]} />;
 }
 
 function TaskList({filter}: {filter: TaskFilter}){

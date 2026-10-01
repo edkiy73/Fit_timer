@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import type { AdminSection, AdminSectionContext } from '@appbase/ui-react/admin.js';
 
 type Status = {
@@ -55,6 +55,15 @@ function shortDate(iso?:string|null){
   const date=new Date(iso);
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
 }
+
+type LookupItem = {
+  lexemeId:string;
+  lemma:string;
+  forms:string[];
+  ipa:string;
+  translations:string[];
+  deprecated:boolean;
+};
 
 type ReviewItem = {
   lexemeId:string;
@@ -118,6 +127,10 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   const [bulkPreview,setBulkPreview]=useState<BulkPreview|null>(null);
   const [bulkMessage,setBulkMessage]=useState('');
   const [bulkBusy,setBulkBusy]=useState(false);
+  const [lookup,setLookup]=useState('');
+  const [lookupResults,setLookupResults]=useState<LookupItem[]|null>(null);
+  const [lookupMessage,setLookupMessage]=useState('');
+  const editorPanel=useRef<HTMLElement|null>(null);
   const [ipaMessage,setIpaMessage]=useState('');
   const [ipaReport,setIpaReport]=useState<{forms:number;alreadyBritish:number;updatedForms:number;unmatched:number;unmatchedSample:string[];updatedLexemes:number}|null>(null);
 
@@ -261,6 +274,27 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       setBusy(false);
     }
   }
+
+  async function findWord(event:FormEvent){
+    event.preventDefault();
+    const query=lookup.trim();
+    if(!query)return;
+    setLookupMessage('');
+    try{
+      const result=await client.action(adminKey,'content_lexicon_search',{query});
+      const items=(result.items || []) as LookupItem[];
+      setLookupResults(items);
+      if(!items.length)setLookupMessage('Ничего не нашлось. Слова нет в словаре — добавь его через ИИ ниже.');
+    }catch(error){
+      setLookupResults(null);
+      setLookupMessage('Не получилось: '+String((error as {code?:string})?.code || 'request_failed'));
+    }
+  }
+
+  // The editor opens below the lists: bring it into view so the click visibly did something.
+  useEffect(()=>{
+    if(editor)editorPanel.current?.scrollIntoView({behavior:'smooth',block:'start'});
+  },[editor?.id]);
 
   async function openLexeme(id:string){
     setEditorBusy(true);
@@ -525,6 +559,40 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
         </details>
       </article>
 
+      <article className="ab-admin-panel">
+        <div className="ab-admin-section-head">
+          <div>
+            <h2>Найти слово</h2>
+            <p className="ab-admin-note">По-английски (любая форма: worked, can't) или по переводу. Изменения видны ученикам после «Выпустить».</p>
+          </div>
+        </div>
+        <form className="ab-admin-toolbar" onSubmit={event=>void findWord(event)}>
+          <input type="search" value={lookup} onChange={event=>setLookup(event.target.value)} placeholder="Слово или перевод" aria-label="Слово или перевод" />
+          <button type="submit" disabled={!lookup.trim()}>Найти</button>
+        </form>
+        {lookupMessage && <p className="ab-admin-feedback" role="status">{lookupMessage}</p>}
+        {!!lookupResults?.length && (
+          <div className="ab-admin-table-wrap">
+            <table>
+              <thead><tr><th>Слово</th><th>Перевод</th><th></th></tr></thead>
+              <tbody>{lookupResults.map(item=>(
+                <tr key={item.lexemeId}>
+                  <td data-label="Слово">
+                    <strong>{item.lemma}</strong>{item.ipa && <span className="ab-admin-cell-sub"> /{item.ipa.replace(/^\/|\/$/g,'')}/</span>}
+                    {item.deprecated && <div className="ab-admin-cell-sub">скрыто из приложения</div>}
+                    {!!item.forms.length && <div className="ab-admin-cell-sub">{item.forms.join(', ')}</div>}
+                  </td>
+                  <td data-label="Перевод">{item.translations.join(' · ') || '—'}</td>
+                  <td className="ab-admin-cell-action">
+                    <button type="button" className="ab-admin-secondary" disabled={editorBusy} onClick={()=>void openLexeme(item.lexemeId)}>Изменить</button>
+                  </td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        )}
+      </article>
+
       <article className="ab-admin-panel ab-admin-bulk">
         <div className="ab-admin-section-head">
           <div>
@@ -720,7 +788,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       </article>
 
       {editor && (
-        <article className="ab-admin-panel">
+        <article className="ab-admin-panel" ref={editorPanel}>
           <div className="ab-admin-section-head">
             <div>
               <h2>{editor.lemma}</h2>

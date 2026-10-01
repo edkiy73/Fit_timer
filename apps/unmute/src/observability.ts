@@ -74,11 +74,7 @@ export function purchaseEventName(
   phase:'purchase_started'|'purchase_completed',
   sku:string
 ):string{
-  return phase+'.'+(
-    sku==='course.general-foundation'
-      ? 'course.general-foundation'
-      : 'other'
-  );
+  return phase+'.'+(sku.startsWith('course.') ? 'course' : sku.startsWith('plus.') ? 'plus' : 'other');
 }
 
 export function trackLessonCompleted():void{

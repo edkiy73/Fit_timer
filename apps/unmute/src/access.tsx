@@ -8,7 +8,7 @@ import type { AuthSession } from '@appbase/core/auth.js';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
 import { resolveCourseEntitlement } from './entitlements';
-import { trackPaywallShown } from './observability';
+import { trackPaywallShown, trackPurchaseCompleted, trackPurchaseStarted } from './observability';
 import { coursePrice, coursePriceWithPlus, plusCourseDiscount, plusPrices, plusYearSaving } from './pricing';
 import { billingClient } from './billing';
 import { authClient } from './auth';
@@ -288,8 +288,10 @@ export function AccessScreen(){
     try{
       const sku = plan === 'course' ? runtime.state.set.access.mode === 'entitlement' ? runtime.state.set.access.entitlement : '' : plan;
       if(!sku) throw Object.assign(new Error('unknown_sku'), {code:'unknown_sku'});
+      trackPurchaseStarted(sku);
       const result = await billingClient.checkout(provider, sku);
       if(result.url){ window.location.assign(result.url); return; }
+      trackPurchaseCompleted(sku);
       await auth.refresh();
       await runtime.refresh();
       const fresh = await authClient.getSession();
