@@ -239,7 +239,7 @@ export function CourseMapView({
           <h3>{t('courseMap.topicsTitle')}</h3>
           {state.currentNode&&(
             <button className="quiet-button course-map-current" type="button" onClick={scrollToCurrent}>
-              <Icon name="target" size={15} />
+              <Icon name="route" size={15} />
               <span>{t('courseMap.currentDayAction')}</span>
             </button>
           )}
