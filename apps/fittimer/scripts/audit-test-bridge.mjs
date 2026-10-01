@@ -7,13 +7,16 @@
    Usage:
      node scripts/audit-test-bridge.mjs
      node scripts/audit-test-bridge.mjs --json
+     node scripts/audit-test-bridge.mjs --check
 */
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
+import { TEST_BRIDGE_ALLOWLIST } from './test-bridge.mjs';
 
 const ROOT = process.cwd();
 const json = process.argv.includes('--json');
+const check = process.argv.includes('--check');
 const SOURCE_FILES = [
   ...readdirSync('src/app').filter(name => /^(?:\d\d-[\w-]+|options)\.js$/.test(name)).map(name => path.join('src/app', name)),
   'src/i18n/index.js'
@@ -122,7 +125,14 @@ const report = {
   bindings:rows
 };
 
-if(json){
+if(check){
+  const missing = rows.map(row => row.name).filter(name => !TEST_BRIDGE_ALLOWLIST.has(name));
+  if(missing.length){
+    console.error('Browser tests use bindings missing from TEST_BRIDGE_ALLOWLIST: ' + missing.join(', '));
+    process.exit(1);
+  }
+  console.log(`Test bridge allowlist covers ${report.usedBindings} measured bindings (from ${report.candidateBindings} candidates).`);
+}else if(json){
   console.log(JSON.stringify(report, null, 2));
 }else{
   console.log(`Bridge candidates: ${report.candidateBindings}`);
