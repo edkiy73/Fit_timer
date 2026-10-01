@@ -17,6 +17,10 @@ const PRODUCT_NAME = 'UnMute: English for Expats';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
 const ASK_HANDLE = product.auth?.askHandle !== false;
 
+// Manual statistics course lives only for the current app session.
+// A fresh app launch starts from the active course again.
+let profileStatsCourseOverride:string|null=null;
+
 /* «Я»: who you are, your results and the way to settings. Signing in is one button that opens
    the code form in a sheet; signing out and deleting the account live in «Настройки». */
 export function MeScreen(){
@@ -26,8 +30,17 @@ export function MeScreen(){
   const location = useLocation();
   const runtime = useLearnerCourseRuntime();
   const catalog = useCatalog();
-  const [statsCourseId,setStatsCourseId] = useState('');
-  const selectedCourseId = statsCourseId || runtime.state?.set.id || '';
+  const activeCourseId = runtime.state?.set.id || '';
+  const availableCourseIds = new Set((catalog.data?.sets ?? []).map(set=>set.id));
+  const rememberedCourseId = profileStatsCourseOverride && availableCourseIds.has(profileStatsCourseOverride)
+    ? profileStatsCourseOverride
+    : '';
+  const [statsCourseId,setStatsCourseIdState] = useState(rememberedCourseId);
+  const selectedCourseId = statsCourseId || activeCourseId;
+  const setStatsCourseId=(id:string)=>{
+    profileStatsCourseOverride=id;
+    setStatsCourseIdState(id);
+  };
   const statsRuntime = useProgressCourseRuntime(selectedCourseId);
   const details = useProgressDetails(selectedCourseId);
   const learningDays = useAllLearningDays();
@@ -37,7 +50,31 @@ export function MeScreen(){
   // Arriving with ?return= (a lesson asked to sign in) opens the form straight away.
   const [signInOpen, setSignInOpen] = useState(Boolean(returnTo));
 
-  if(auth.loading) return null;
+  if(auth.loading){
+    return (
+      <section className="me me-profile profile-loading" aria-busy="true">
+        <header className="screen-head" aria-hidden="true">
+          <span className="skeleton skeleton-line skeleton-kicker" />
+          <span className="skeleton skeleton-line skeleton-title" />
+        </header>
+        <div className="progress-shell" aria-hidden="true">
+          <article className="card progress-dashboard profile-skeleton-card">
+            <span className="skeleton skeleton-line skeleton-section-title" />
+            <div className="progress-general-metrics">
+              <span className="skeleton skeleton-metric" />
+              <span className="skeleton skeleton-metric" />
+            </div>
+            <span className="skeleton skeleton-calendar" />
+          </article>
+          <article className="card progress-dashboard profile-skeleton-card">
+            <span className="skeleton skeleton-line skeleton-section-title" />
+            <span className="skeleton skeleton-course-hero" />
+            <span className="skeleton skeleton-course-detail" />
+          </article>
+        </div>
+      </section>
+    );
+  }
   const email = auth.session?.email || '';
 
   return (
