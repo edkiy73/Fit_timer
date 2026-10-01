@@ -186,17 +186,20 @@ async function boot(browser, label, errors){
     JSON.stringify(repairedRemote));
 
   await two.evaluate(async()=>{
-    stats.history.push({
-      id:'h-b',d:'2026-09-18',t:8,pid:'sync-program',sec:720,plan:0,
-      status:'partial',meaningful:true,doneExercises:2,plannedExercises:4,
-      doneSteps:4,plannedSteps:8,exercises:['Присед','Жим']
-    });
+    restoreStatsState(Object.assign({}, stats, {
+      history:[...(stats.history || []), {
+        id:'h-b',d:'2026-09-18',t:8,pid:'sync-program',sec:720,plan:0,
+        status:'partial',meaningful:true,doneExercises:2,plannedExercises:4,
+        doneSteps:4,plannedSteps:8,exercises:['Присед','Жим']
+      }],
+      count:1,
+      totalSec:1320
+    }));
     // Заодно меняем расписание: уведомления на первом устройстве должны
     // пересобраться уже ПОСЛЕ того, как pull применил эту версию программы.
     const p = customPrograms.find(x=>x.id==='sync-program');
     if(p) p.time = '21:45';
     // Частичная активность добавляет время/историю, но не полный счётчик.
-    stats.count=1; stats.totalSec=1320;
     await savePrograms();
     await saveStats();
   });
