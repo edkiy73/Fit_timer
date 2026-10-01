@@ -25,6 +25,7 @@
   --glass-line:color-mix(in srgb,var(--ink) 8%,transparent);
   --elev-2:0 8px 24px rgb(27 26 36/.12);
   --tabbar-h:68px;
+  --screen-gap:16px;
   --safe-top:env(safe-area-inset-top,0px);
   --safe-bottom:env(safe-area-inset-bottom,0px);
   font-family:Manrope,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
@@ -97,7 +98,7 @@ h2{margin:0 0 8px;font-weight:800}
 
 /* "Я" */
 .me{display:grid;gap:14px}
-.me-profile{display:block}
+.me-profile{}
 .me-row{display:flex;align-items:center;gap:12px;min-height:56px;padding:0 16px;border:1px solid var(--line);border-radius:var(--radius-tile);background:var(--card);color:var(--ink);font-weight:700;text-decoration:none}
 .me-row>span{flex:1 1 auto}
 .me-row-chevron{color:var(--muted)}
@@ -249,7 +250,7 @@ h2{margin:0 0 8px;font-weight:800}
 .dialogue-task{margin:0;font-weight:800;line-height:1.45}
 
 
-.review-shell{display:grid;gap:16px}
+.review-shell{}
 .review-shell h2{margin:0}
 .review-card{gap:16px}
 .review-kind{color:var(--muted);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
@@ -508,12 +509,14 @@ h2{margin:0 0 8px;font-weight:800}
 .account-legal a{color:var(--muted)}
 
 /* Screen heading (M3 large title) */
-.screen-head{display:grid;gap:2px;margin-bottom:16px}
+.screen-head{display:grid;gap:2px;margin-bottom:0}
 .screen-kicker{color:var(--muted);font-size:13px;font-weight:600}
 .screen-title-row{position:relative;display:block;min-height:36px}
 .screen-title-row.has-action h2{padding-right:60px}
 .screen-title-action{position:absolute;top:50%;right:0;display:flex;align-items:center;transform:translateY(-50%)}
 .screen-head h2{margin:0;font-size:30px;line-height:36px;font-weight:800;letter-spacing:-.02em}
+
+.today,.course-map-shell,.review-shell,.me-profile{display:grid;gap:var(--screen-gap)}
 
 /* Bento: tile size = importance. 2 columns on phones, 4 from 600 px. */
 .bento{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:dense;gap:12px}
@@ -580,8 +583,7 @@ h2{margin:0 0 8px;font-weight:800}
 }
 
 /* Route: the course as a metro line (docs/unmute-design-plan.md §4.2) */
-.course-map-shell{display:grid;gap:14px}
-.course-map-shell .screen-head{margin-bottom:0}
+.course-map-shell{}
 .stage-head:focus-visible,.station-body:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .stages{display:grid;gap:10px}
 .stage{border:1px solid var(--line);border-radius:var(--radius-tile);background:var(--card);overflow:hidden}
@@ -1013,7 +1015,6 @@ h2{margin:0 0 8px;font-weight:800}
 
 
 /* Profile dashboard v2 — one calm overall card + one unified per-course card. */
-.me{gap:18px}
 .progress-shell{display:grid;gap:14px}
 .progress-dashboard{display:grid;gap:16px}
 .progress-dashboard-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
