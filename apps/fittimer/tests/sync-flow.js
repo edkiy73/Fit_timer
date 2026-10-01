@@ -85,13 +85,17 @@ async function boot(browser, label, errors){
   await two.click('#loginGo');
   await two.waitForTimeout(1200);
 
-  const got = await two.evaluate(() => ({
-    email:account.email, premium:isPremium(), users:users.map(u=>({name:u.name,photo:u.photo||null})),
-    programs:customPrograms.map(p=>p.name), count:stats.count, history:stats.history.length,
-    weight:stats.weights[0] && stats.weights[0].w,
-    prog:Object.values(progWeights)[0], photos:photos.length,
-    state:$('accSync').textContent
-  }));
+  const got = await two.evaluate(async () => {
+    const legacyWeights = JSON.parse(await kvGet(pk('progWeights')) || '{}');
+    const localPhotos = JSON.parse(await kvGet(pk('photos')) || '[]');
+    return {
+      email:account.email, premium:isPremium(), users:users.map(u=>({name:u.name,photo:u.photo||null})),
+      programs:customPrograms.map(p=>p.name), count:stats.count, history:stats.history.length,
+      weight:stats.weights[0] && stats.weights[0].w,
+      prog:Object.values(legacyWeights)[0], photos:localPhotos.length,
+      state:$('accSync').textContent
+    };
+  });
   ok('второе устройство вошло в тот же аккаунт', got.email === MAIL, got.email);
   ok('подписка вернулась с аккаунтом', got.premium);
   ok('профиль вернулся без аватара', got.users.length === 1 && got.users[0].name === 'Лена' && !got.users[0].photo, JSON.stringify(got.users));
