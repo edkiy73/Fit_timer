@@ -29,10 +29,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.evaluate(async () => {
     const u = curUser(); u.gender = 'f'; u.age = 30; await saveUsers();
     configureWorkoutTiming({prep: 0});
-    customPrograms.push({id: 'pc', name: 'Проверка прогресса', progression: 1, stats: {completions: 0},
+    const p = {id: 'pc', name: 'Проверка прогресса', progression: 1, stats: {completions: 0},
       plans: [{days: ['Пн'], rounds: 1, roundRest: 0, exercises: [
         {name: 'Присед', type: 'reps', value: '10', sets: 1, rest: 5, progOn: true, trackWeight: false, repsStep: 1}
-      ]}]});
+      ]}]};
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
     await savePrograms();
   });
 
@@ -107,12 +109,14 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   // ---- полностью пройденная двойная прогрессия больше не спрашивает «повышаем?» ----
   await page.evaluate(async () => {
-    customPrograms.push({id:'pc-terminal', name:'Финальный потолок', progression:1, stats:{completions:1},
+    const p = {id:'pc-terminal', name:'Финальный потолок', progression:1, stats:{completions:1},
       plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[{
         id:'term1', name:'Финальный жим', type:'reps', value:'8-10', sets:1, rest:5,
         progOn:true, trackWeight:true, weight:20, weightMax:20, wStep:2,
         repsStep:1, repsMax:20, dualProg:true, ps:{n:0, cur:{kg:20, reps:'18-20'}}
-      }]}]});
+      }]}]};
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
     await savePrograms();
     openStart(customPrograms.find(x => x.id === 'pc-terminal'));
   });
@@ -144,14 +148,16 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.evaluate(async () => {
     const ex = (id, name, extra) => Object.assign({id, name, type:'reps', value:'10', sets:1, rest:5,
       progOn:true, trackWeight:false, repsStep:1}, extra || {});
-    customPrograms.push({id:'pc2', name:'Два варианта', progression:1, stats:{completions:0}, plans:[
+    const p = {id:'pc2', name:'Два варианта', progression:1, stats:{completions:0}, plans:[
       {days:['Пн'], rounds:1, roundRest:0, exercises:[
         // старая копия: разминка унаследовала id основного упражнения
         ex('dup', 'Махи руками', {warmup:true, progOn:false}),
         ex('dup', 'Присед'), ex('e2', 'Отжимания')
       ]},
       {days:['Чт'], rounds:1, roundRest:0, exercises:[ex('e3', 'Выпады')]}
-    ]});
+    ]};
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
     await savePrograms();
   });
   const ids = await page.evaluate(() => normPlans(customPrograms.find(x => x.id === 'pc2'))[0].exercises.map(e => e.id));
