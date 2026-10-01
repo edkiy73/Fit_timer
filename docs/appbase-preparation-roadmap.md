@@ -552,6 +552,7 @@ Audit conclusion:
 - ✅ 2026-10-01: the read-only allowlist is now exact and CI-enforced: **174** statically measured callback bindings plus the one intentional dynamic `exportProgram` dependency = **175** exposed test-only getters. Stale `premiumGate` and `savePhotos` entries were removed; future unused bridge entries now fail `npm run check`.
 - ✅ 2026-10-01: AI/editor browser assertions no longer depend on `editAIProg`, `exDraft` or `curPlan` globals: copy checks use the owned program collection, image checks use rendered UI, and single-plan edit checks use the builder draft. The exact bridge surface drops from **175 → 172** getter-only bindings.
 - ✅ 2026-10-01: sync/backup assertions now inspect persisted `photos` and legacy `progWeights` through `kvGet(pk(...))` instead of module bindings. That also makes `saveProgWeights` unused by browser callbacks, so all three getters leave the bridge, reducing the exact surface from **172 → 169**.
+- ✅ 2026-10-01: active-profile tests now use `curUser()` instead of the raw `currentUser` id, and backup restore reads hands-free mode from persisted `hfMode` storage instead of the module binding. Those two getters leave the bridge, reducing the exact surface from **169 → 167**.
 
 First semantic-owner cleanup:
 - account login cancellation is now owned by `cancelLogin()`; five raw login/biometry setters were removed from the public module surface;
