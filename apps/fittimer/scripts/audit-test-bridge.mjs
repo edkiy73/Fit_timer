@@ -2,7 +2,8 @@
 /* Audit the temporary browser-test binding bridge.
    This does not change runtime behavior. It answers two questions before we shrink the bridge:
    1) which product-module bindings browser/admin tests actually reference inside browser callbacks;
-   2) which of those bindings tests overwrite/stub.
+   2) which of those bindings tests overwrite/stub;
+   3) which exposed object/array bindings tests mutate through properties or mutating methods.
 
    Usage:
      node scripts/audit-test-bridge.mjs
@@ -71,11 +72,43 @@ function isWrite(id){
   return false;
 }
 
+const MUTATING_METHODS = new Set(['push','pop','shift','unshift','splice','sort','reverse','copyWithin','fill','set','add','delete','clear']);
+function rootMutationKind(id){
+  let node = id;
+  let parent = node.parent;
+  while(parent
+    && ((ts.isPropertyAccessExpression(parent) || ts.isElementAccessExpression(parent))
+      && parent.expression === node)){
+    node = parent;
+    parent = node.parent;
+  }
+  if(!parent) return '';
+  if(ts.isBinaryExpression(parent) && parent.left === node
+    && parent.operatorToken.kind >= ts.SyntaxKind.FirstAssignment
+    && parent.operatorToken.kind <= ts.SyntaxKind.LastAssignment) return 'property-write';
+  if((ts.isPrefixUnaryExpression(parent) || ts.isPostfixUnaryExpression(parent))
+    && [ts.SyntaxKind.PlusPlusToken, ts.SyntaxKind.MinusMinusToken].includes(parent.operator)) return 'property-update';
+  if(ts.isCallExpression(parent) && parent.expression === node
+    && ts.isPropertyAccessExpression(node) && MUTATING_METHODS.has(node.name.text)) return 'method:' + node.name.text;
+  if(ts.isCallExpression(parent) && ts.isPropertyAccessExpression(parent.expression)
+    && parent.expression.expression.getText() === 'Object'
+    && parent.expression.name.text === 'assign'
+    && parent.arguments[0] === id) return 'Object.assign';
+  return '';
+}
+
 const usage = new Map();
+const mutations = new Map();
 function mark(name, file, write){
   if(!candidates.has(name)) return;
   if(!usage.has(name)) usage.set(name, {read:new Set(), write:new Set()});
   usage.get(name)[write ? 'write' : 'read'].add(file);
+}
+function markMutation(name, file, kind){
+  if(!kind || !candidates.has(name)) return;
+  if(!mutations.has(name)) mutations.set(name, {files:new Set(), kinds:new Set()});
+  mutations.get(name).files.add(file);
+  mutations.get(name).kinds.add(kind);
 }
 
 for(const fileName of walkTests('tests')){
@@ -90,6 +123,7 @@ for(const fileName of walkTests('tests')){
         const propertyName = ts.isPropertyAccessExpression(p) && p.name === node;
         const objectKey = (ts.isPropertyAssignment(p) || ts.isMethodDeclaration(p)) && p.name === node;
         if(!propertyName && !objectKey) mark(node.text, short, isWrite(node));
+        if(!propertyName && !objectKey) markMutation(node.text, short, rootMutationKind(node));
       }
       if(ts.isPropertyAccessExpression(node)
         && ts.isIdentifier(node.expression)
@@ -119,10 +153,20 @@ const rows = [...usage.entries()]
   }))
   .sort((a,b) => a.name.localeCompare(b.name));
 
+const mutationRows = [...mutations.entries()]
+  .map(([name, value]) => ({
+    name,
+    files:[...value.files].sort(),
+    kinds:[...value.kinds].sort()
+  }))
+  .sort((a,b) => a.name.localeCompare(b.name));
+
 const report = {
   candidateBindings:candidates.size,
   usedBindings:rows.length,
   overwrittenBindings:rows.filter(row => row.writes.length).length,
+  mutatedBindings:mutationRows.length,
+  mutations:mutationRows,
   bindings:rows
 };
 
@@ -141,13 +185,17 @@ if(check){
     if(missingDynamic.length) console.error('Dynamic bridge bindings must stay exposed: ' + missingDynamic.join(', '));
     process.exit(1);
   }
-  console.log(`Test bridge covers ${report.usedBindings} measured reads and ${report.overwrittenBindings} measured writes (from ${report.candidateBindings} candidates).`);
+  console.log(`Test bridge covers ${report.usedBindings} measured reads, ${report.overwrittenBindings} binding writes and ${report.mutatedBindings} object-mutation roots (from ${report.candidateBindings} candidates).`);
 }else if(json){
   console.log(JSON.stringify(report, null, 2));
 }else{
   console.log(`Bridge candidates: ${report.candidateBindings}`);
   console.log(`Referenced by browser callbacks: ${report.usedBindings}`);
   console.log(`Overwritten/stubbed by browser callbacks: ${report.overwrittenBindings}`);
+  console.log(`Object/array bindings mutated through bridge: ${report.mutatedBindings}`);
+  for(const row of mutationRows){
+    console.log(`MUTATE ${row.name} [${row.kinds.join(', ')}] ← ${row.files.join(', ')}`);
+  }
   console.log('');
   for(const row of rows){
     const mode = row.writes.length ? 'WRITE' : 'read ';
