@@ -1238,3 +1238,8 @@ h2{margin:0 0 8px;font-weight:800}
 /* Speed drill compare actions are paired: one decision, two equal choices. */
 .drill-compare-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .drill-compare-actions :is(.primary-button,.secondary-button){width:100%;min-width:0}
+
+
+/* Speed drill compare is one binary decision, so keep both actions on one row. */
+.drill-compare-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.drill-compare-actions :is(.primary-button,.secondary-button){width:100%;min-width:0}
