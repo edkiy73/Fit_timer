@@ -26,7 +26,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(800); }
   await page.evaluate(async () => {
     const u = curUser(); u.gender = 'f'; u.age = 30; await saveUsers();
-    window.premiumGate = () => true;
+    account.sub = {plan:'year', until:'2099-01-01'};
     const c = document.createElement('canvas'); c.width = 40; c.height = 30;
     c.getContext('2d').fillRect(0, 0, 40, 30);
     const url = c.toDataURL('image/png');

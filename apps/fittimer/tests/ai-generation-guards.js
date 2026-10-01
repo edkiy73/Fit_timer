@@ -117,7 +117,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await page.evaluate(() => aiEditRequestGuard('exeWish')) === true);
 
   await page.evaluate(async () => {
-    window.premiumGate = () => true;
+    account.sub = {plan:'year', until:'2099-01-01'};
     window.__imageCalls = 0;
     window.callGeminiImage = async () => { __imageCalls++; throw new Error('provider must not be called by guard tests'); };
     customPrograms.push({id:'guard-images', name:'', plans:[{days:['Пн'], rounds:1, roundRest:0,

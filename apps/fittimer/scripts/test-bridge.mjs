@@ -198,7 +198,6 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
 export const TEST_BRIDGE_WRITABLE = new Set([
   "callGemini",
   "callGeminiImage",
-  "premiumGate",
   "storeServer",
   "syncNativeNotifications"]);
 
