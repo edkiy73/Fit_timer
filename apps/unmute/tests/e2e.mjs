@@ -198,6 +198,23 @@ try{
   ok('onboarding starts day 1',await finishOnboarding(phone.page));
   ok('day 1 is completed locally before sign-in',await completeTheory(phone.page));
   ok('anonymous phone advances to day 2',await appears(phone.page.getByRole('heading',{name:'День 2'})));
+
+  // Route map: the solid rail reaches the current day, and the day sheet's button spans the sheet.
+  await phone.page.goto(URL_+'#/course');
+  await phone.page.locator('.station.is-complete .station-body').first().click();
+  await phone.page.locator('.sheet').waitFor({timeout:5000}).catch(()=>{});
+  const sheetButtonsFit=await phone.page.evaluate(()=>{
+    const sheet=document.querySelector('.sheet');
+    if(!sheet)return false;
+    const style=getComputedStyle(sheet);
+    const inner=sheet.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight);
+    const buttons=[...sheet.querySelectorAll('.primary-button,.secondary-button')];
+    return buttons.length>0&&buttons.every(button=>Math.abs(button.getBoundingClientRect().width-inner)<=1);
+  });
+  ok('day sheet buttons span the whole sheet',sheetButtonsFit);
+  ok('the solid rail reaches the current day',await phone.page.locator('.station.is-current.rail-arriving').count()===1);
+  await phone.page.keyboard.press('Escape');
+  await phone.page.goto(URL_+'#/');
   ok('theme tokens are applied',(await phone.page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()))!=='');
 
   const phoneSignedIn=await signIn(phone.page,'person@example.com',{slowSend:true});

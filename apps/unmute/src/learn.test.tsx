@@ -174,13 +174,17 @@ describe('node activity runner',()=>{
     await user.click(screen.getByRole('radio',{name:'I is here'}));
     await user.click(screen.getByRole('button',{name:'Проверить'}));
     expect(await screen.findByText('Это задание вернётся в конце урока.')).toBeTruthy();
+    // The mistake does not add a task to the count.
+    expect(screen.getByText('1/2')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Далее'}));
+    expect(screen.getByText('2/2')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Написать с клавиатуры'}));
     await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am here');
     await user.click(screen.getByRole('button',{name:'Проверить'}));
     await user.click(screen.getByRole('button',{name:'Далее'}));
     // The mistake returns: same question, now in «работа над ошибками».
-    expect(await screen.findByText(/Работа над ошибками/)).toBeTruthy();
+    expect(await screen.findByText('Работа над ошибками: 1 из 1')).toBeTruthy();
+    expect(screen.getByText('2/2')).toBeTruthy();
     expect(screen.getByRole('heading',{name:'Выбери ответ'})).toBeTruthy();
     await user.click(screen.getByRole('radio',{name:'I am here'}));
     await user.click(screen.getByRole('button',{name:'Проверить'}));

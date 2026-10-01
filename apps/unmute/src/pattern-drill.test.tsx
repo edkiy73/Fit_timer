@@ -124,4 +124,21 @@ describe('pattern drill',()=>{
     await user.click(screen.getByRole('button',{name:'Далее'}));
     expect(onDone).toHaveBeenCalledTimes(1);
   });
+
+  it('replays a missed phrase once at the end without growing the count',async()=>{
+    const user=userEvent.setup();
+    renderDrill();
+    expect(screen.getByText('1 из 2')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Не получилось'}));
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+    expect(screen.getByText('2 из 2')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Готово'}));
+    await user.click(screen.getByRole('button',{name:'Совпало'}));
+    // The missed phrase comes back once, counted apart from the drill's two phrases.
+    expect(screen.getByText('Повтор: 1 из 1')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Не получилось'}));
+    expect(screen.getByText('Произнеси вслух пару раз.')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+    expect(await screen.findByText('1 из 2 вовремя')).toBeTruthy();
+  });
 });
