@@ -114,6 +114,8 @@ export interface NodeRunnerViewProps {
   /** Open this step first (e.g. «Скажи вслух» → the day's phrases, speaking mode). */
   startActivityId?:string;
   startMode?:PracticeSrsKind;
+  /** Explicit return to an already-running lesson (e.g. after Plus purchase). */
+  resumeSavedRun?:boolean;
 }
 
 const isPlan=(activity:Activity)=>activity.type==='theory'&&(activity.tags??[]).includes('plan');
@@ -223,7 +225,8 @@ export function NodeRunnerView({
   speak=speakText,
   startRecognition=startSpeechRecognition,
   startActivityId,
-  startMode
+  startMode,
+  resumeSavedRun=false
 }:NodeRunnerViewProps){
   const {t,locale}=useI18n();
   const state=runtime.state;
@@ -291,7 +294,7 @@ export function NodeRunnerView({
     setRunHydrated(false);
     const requested=startActivityId?steps.findIndex(item=>item.id===startActivityId):-1;
     const saved=requested<0?readLessonRun(state.set.id,node.id):null;
-    const restored=saved&&!nodeProgress?.complete?remapLessonRun(saved,steps):null;
+    const restored=saved&&(resumeSavedRun||!nodeProgress?.complete)?remapLessonRun(saved,steps):null;
     const validSaved=Boolean(
       restored&&
       restored.order.length>0&&
@@ -327,7 +330,7 @@ export function NodeRunnerView({
     for(const plan of activities.filter(isPlan)){
       if(!isSeen(state.progress,plan.id))void saveSeen(state.set.id,plan.id).catch(()=>undefined);
     }
-  },[node?.id,state?.set.id,startActivityId,stepSignature]);
+  },[node?.id,state?.set.id,startActivityId,stepSignature,resumeSavedRun]);
 
   useEffect(()=>{
     if(!runHydrated||!state||!node||finished||order.length===0)return;
@@ -875,15 +878,17 @@ export function NodeRunnerScreen(){
   const mode=search.get('mode');
   const startMode=mode==='drill'||mode==='listening'||mode==='speaking'?mode:undefined;
   const startActivityId=search.get('activity')||undefined;
+  const resumeSavedRun=search.get('resume')==='1';
   return (
     <NodeRunnerView
       runtime={runtime}
       nodeId={String(params.nodeId||'')}
       {...(startActivityId?{startActivityId}:{})}
       {...(startMode?{startMode}:{})}
+      {...(resumeSavedRun?{resumeSavedRun:true}:{})}
       onExit={()=>navigate('/')}
       onSignIn={()=>navigate('/account?return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
-      onAccess={()=>navigate('/access?from=answer&return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
+      onAccess={()=>navigate('/access?from=answer&return='+encodeURIComponent('/learn/'+String(params.nodeId||'')+'?resume=1'))}
       onReviewDay={nodeId=>navigate('/review?day='+encodeURIComponent(nodeId))}
       onNodeCompleted={node=>{
         if(node.kind==='lesson')trackLessonCompleted();
