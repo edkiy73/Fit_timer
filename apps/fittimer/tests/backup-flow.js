@@ -107,10 +107,12 @@ async function restore(page, dump){
     await saveTrainer();
     await saveClients();
 
-    account.email = 'lena@example.com';
-    account.sub = {plan: 'year', since: '2026-09-01', until: '2027-09-01',
-                   currency: 'RUB', price: 1990, autoRenew: true};
-    await saveAccount();
+    await kvSet('account', JSON.stringify(Object.assign({}, account, {
+      email: 'lena@example.com',
+      sub: {plan: 'year', since: '2026-09-01', until: '2027-09-01',
+            currency: 'RUB', price: 1990, autoRenew: true}
+    })));
+    await loadAccount();
 
     await kvSet('hfMode', 'voice');
     await kvSet('soundOff', '0');
