@@ -72,8 +72,10 @@ async function boot(browser, label, errors){
     // Вход без ника не завершается: аккаунт сразу получает ник, как в приложении.
     await apiPost('/api/auth',{action:'set_handle',email,deviceId:identity.deviceId,syncToken:r.syncToken,
       handle:'@' + email.split('@')[0].replace(/[^a-z0-9]/g, '')});
-    account.email=email; account.sub=r.sub; account.syncToken=r.syncToken;
-    await saveAccount();
+    await kvSet('account', JSON.stringify(Object.assign({}, account, {
+      email, sub:r.sub, syncToken:r.syncToken
+    })));
+    await loadAccount();
     const persistedIdentity = JSON.parse(await kvGet(pk('identity')) || '{}');
     persistedIdentity.email = email;
     await kvSet(pk('identity'), JSON.stringify(persistedIdentity));
