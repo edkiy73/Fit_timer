@@ -831,7 +831,7 @@ h2{margin:0 0 8px;font-weight:800}
 .update-gate-card h2{margin:0;font-size:24px}
 
 /* «Справочник»: phrases by topic and irregular verbs (English Trainer's «Банк»). */
-.reference .screen-head{margin-bottom:4px}
+.reference .screen-head{margin-bottom:0}
 .reference-tabs{grid-template-columns:repeat(2,minmax(0,1fr));margin:8px 0}
 .reference-tabs .segment{border:0;background:transparent;font:inherit}
 .reference-tabs .segment.is-on{background:var(--card)}
