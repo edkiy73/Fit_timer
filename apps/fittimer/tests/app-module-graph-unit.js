@@ -232,7 +232,7 @@ if(!/setAccountProgramsAiHooks\(\{[\s\S]*getApiBase[\s\S]*ageError[\s\S]*apiPost
   problems.push('account/programs-ai hook boundary is missing or incomplete');
 }
 
-for(const removed of ['setClientsShared','setTrainerShared','setDraftShared','setPlanIdxShared','setExDraftShared','setExIdxShared','setExOrigShared','setExIsNewShared,'setUsersShared','setCurrentUserShared','setCustomProgramsShared']){
+for(const removed of ['setClientsShared','setTrainerShared','setDraftShared','setPlanIdxShared','setExDraftShared','setExIdxShared','setExOrigShared','setExIsNewShared','setUsersShared','setCurrentUserShared','setCustomProgramsShared']){
   if((dataSyncSource + accountSource + programsAiSource + eventsCoreSource).includes(removed)){
     problems.push('removed raw shared setter must not return: ' + removed);
   }
@@ -325,7 +325,7 @@ if(!/setCoreTrainerCatalogHooks/.test(coreSource) || !/setCoreTrainerCatalogHook
 if(/from ['"]\.\/60-builder\.js['"]/.test(coreSource)){
   problems.push('src/app/00-core.js must not import 60-builder.js; inject builder-facing hooks instead');
 }
-if(!/setCoreBuilderHooks/.test(coreSource) || !/setCoreBuilderHooks\(\{[\s\S]*dropFreshEx[\s\S]*exDirty[\s\S]*exRestAfter[\s\S]*fmtKg[\s\S]*getExProgValue[\s\S]*getExWeight[\s\S]*hasWeight[\s\S]*normValue[\s\S]*openBuilder[\s\S]*parseKg[\s\S]*parseValue[\s\S]*progAtCeiling[\s\S]*progAxis[\s\S]*progBaseValue[\s\S]*progStepSize[\s\S]*programDirty[\s\S]*progressedRepsRange[\s\S]*setExDraftShared[\s\S]*setExIdxShared[\s\S]*setExOrigShared[\s\S]*setExWeight[\s\S]*weightPending/.test(builderSource)){
+if(!/setCoreBuilderHooks/.test(coreSource) || !/setCoreBuilderHooks\(\{[\s\S]*dropFreshEx[\s\S]*exDirty[\s\S]*exRestAfter[\s\S]*fmtKg[\s\S]*getExProgValue[\s\S]*getExWeight[\s\S]*hasWeight[\s\S]*normValue[\s\S]*openBuilder[\s\S]*parseKg[\s\S]*parseValue[\s\S]*progAtCeiling[\s\S]*progAxis[\s\S]*progBaseValue[\s\S]*progStepSize[\s\S]*programDirty[\s\S]*progressedRepsRange[\s\S]*clearExerciseDraft[\s\S]*setExWeight[\s\S]*weightPending/.test(builderSource)){
   problems.push('core/builder hook boundary is missing or incomplete');
 }
 
