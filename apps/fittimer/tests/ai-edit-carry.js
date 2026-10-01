@@ -42,7 +42,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       {days:['Пн'], rounds:1, roundRest:0, exercises:[ex('e1', 'Присед', {ps:{n:3, cur:{reps:'12'}}})]},
       {days:['Чт'], rounds:1, roundRest:0, exercises:[ex('e2', 'Отжимания', {ps:{n:1, cur:{}}})]}
     ]};
-    customPrograms.push(p);
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
     await savePrograms();
 
     // «ответ ИИ»: та же программа, но четверговый вариант раздут подходами
@@ -50,7 +51,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     edited.plans[1].exercises[0].sets = 15;
     const text = programToText(edited, {forEdit:true});
 
-    openEditAI(p);
+    openEditAI(customPrograms.find(x => x.id === p.id));
     $('aiResult').value = text;
     // итог правки показывается в общем диалоге (appAlert → #dlgMsg)
     await Promise.race([createEditedProgram(), new Promise(r => setTimeout(r, 1500))]);
@@ -79,10 +80,11 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       {days:['Пн'], rounds:1, roundRest:0, exercises:[{id:'d1', name:'Жим гантелей', type:'reps', value:'8-10',
         sets:3, rest:60, progOn:true, trackWeight:true, weight:10, wStep:2, repsStep:1, repsMax:20, dualProg:true,
         ps:{n:2, cur:{reps:'9-11'}}}]}]};
-    customPrograms.push(p);
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
     const edited = JSON.parse(JSON.stringify(p));
     edited.plans[0].exercises[0].rest = 90;   // правка отдыха — база та же
-    openEditAI(p);
+    openEditAI(customPrograms.find(x => x.id === p.id));
     $('aiResult').value = programToText(edited, {forEdit:true});
     await Promise.race([createEditedProgram(), new Promise(r => setTimeout(r, 1500))]);
     const made = customPrograms.find(x => x.id !== 'ecd' && /Двойная/.test(x.name || ''));
@@ -95,7 +97,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const exEdit = await page.evaluate(async () => {
     const p = {id:'exe', name:'Правка упражнения', progression:0, stats:{completions:0}, plans:[
       {days:['Пн'], rounds:1, roundRest:0, exercises:[{id:'x1', name:'Присед', type:'reps', value:'10', sets:3, rest:60}]}]};
-    customPrograms.push(p);
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
     openBuilder('exe');
     openExEdAI(0);
     $('exeWish').value = 'сделай 15 повторений';
@@ -117,9 +120,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
         {id:'t1', name:'Приседания', desc:'Стопы на ширине плеч.', muscles:['glutes'], mistakes:'Колени внутрь.',
          type:'reps', value:'15', sets:1, rest:30},
         {id:'t2', name:'Отжимания', desc:'Корпус прямой.', type:'reps', value:'10', sets:1, rest:30}]}]};
-    customPrograms.push(p);
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
     const sent = programToText(p, {forEdit:true});
-    openEditAI(p);
+    openEditAI(customPrograms.find(x => x.id === p.id));
     // ответ без описаний: первое упражнение то же, второе заменено на новое
     $('aiResult').value = 'ПРОГРАММА: Круговая\nДЕНЬ: Пн\nКРУГИ: 2\nОТДЫХ МЕЖДУ КРУГАМИ: 60\n\n'
       + 'УПРАЖНЕНИЕ: Приседания\nКОД: t1\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\nОТДЫХ: 30\n\n'
@@ -142,7 +146,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.evaluate(async () => {
     const p = {id:'exn', name:'Навигация', progression:0, stats:{completions:0}, plans:[
       {days:['Пн'], rounds:1, roundRest:0, exercises:[{id:'n1', name:'Присед', type:'reps', value:'10', sets:3, rest:60}]}]};
-    customPrograms.push(p);
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
     await kvSet('account', JSON.stringify(Object.assign({}, account, {
       email: 'edit-ai-test@example.com',
       syncToken: 'edit-ai-test-token',
