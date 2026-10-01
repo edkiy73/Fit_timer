@@ -42,7 +42,7 @@ function day1(){
     drill('a1.pattern.hello',[tag],{ru:'I am … / My name is …',en:'I am … / My name is …'},[
       [{ru:'Я Анна.',en:'I am Anna.'},answer('I am Anna','I\'m Anna'),{ru:'«Я» по-английски — I am, коротко I\'m. Без am фраза не работает.',en:'Say I am (short: I\'m), not just I.'}],
       [{ru:'Меня зовут Анна.',en:'My name is Anna.'},answer('My name is Anna'),{ru:'Дословно «моё имя есть Анна»: после My name нужен is.',en:'My name + is + your name.'}],
-      [{ru:'Приятно познакомиться.',en:'Nice to meet you.'},answer('Nice to meet you'),{ru:'Устойчивая фраза при знакомстве — произноси её целиком.',en:'A fixed phrase for introductions — say it as a whole.'}]
+      [{ru:'Приятно познакомиться.',en:'Nice to meet you.'},answer('Nice to meet you'),{ru:'Устойчивая фраза при знакомстве — произноси её целиком.',en:'Say it as a whole when you meet someone.'}]
     ])
   ];
 }
