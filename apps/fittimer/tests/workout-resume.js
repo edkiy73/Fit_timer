@@ -25,7 +25,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.waitForTimeout(700);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(500); }
 
-  const setup = await page.evaluate(async () => {
+  await page.evaluate(async () => {
     const ex = (name, sets = 1) => ({name, type:'reps', value:'10', sets, rest:0, restAfter:0});
     const p = {
       id:'resume-variant-test', name:'Проверка продолжения', active:true, progression:0,
@@ -38,25 +38,37 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     };
     customPrograms.push(p);
     await savePrograms();
-
-    state.raw = p;
-    state.planIdx = 1;
-    state.current = customToProgram(p, 1);
-    state.steps = buildSteps();
-    state.stepIdx = state.steps.findIndex(s =>
-      s.phase === 'work' && s.title === 'Вт 5' && (s.setNo || 1) === 1 && s.round === 1);
-    state.startLoad = workoutLoadSnapshot(p, 1);
-    state.globalStart = Date.now() - 90000;
-    state.pausedTotal = 0;
-    state.paused = false;
-    state.stepDeadline = Date.now() + 42000;
-    state.remaining = 42;
     configureWorkoutTiming({prep: 0});
-    state.workoutSessionId = 'test-session-inactivity';
-    state.stepOutcomes = {};
+    openStart(p);
+    const secondPlan = document.querySelector('#planRow .plan-chip[data-plan-idx="1"]');
+    if(secondPlan) secondPlan.click();
+  });
+  await page.click('#btnStart');
+  await page.waitForSelector('#startModal.open');
+  await page.click('#startFresh');
+  await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
+
+  const setup = await page.evaluate(async () => {
+    const p = customPrograms.find(x => x.id === 'resume-variant-test');
+    const target = state.steps.findIndex(s =>
+      s.phase === 'work' && s.title === 'Вт 5' && (s.setNo || 1) === 1 && s.round === 1);
+    const outcomes = {};
     const firstDone = state.steps.findIndex(x => x.phase === 'work');
-    state.stepOutcomes[workoutStepKey(state.steps[firstDone], firstDone)] = 'done';
+    outcomes[workoutStepKey(state.steps[firstDone], firstDone)] = 'done';
+    startWorkout(target, 90000, {
+      skipPrep:true,
+      sessionId:'test-session-inactivity',
+      outcomes
+    });
     await saveSession();
+
+    const key = pk('workoutSessionsV2');
+    const sessions = JSON.parse(await kvGet(key) || '[]');
+    const stored = sessions.find(x => x.sessionId === 'test-session-inactivity');
+    if(!stored) throw new Error('saved workout session not found');
+    stored.stepDeadline = Date.now() + 42000;
+    stored.remaining = 42;
+    await kvSet(key, JSON.stringify(sessions));
 
     const saved = await loadSession();
     if(!saved || !(saved.stepDeadline > Date.now()) || saved.remaining !== 42){
@@ -71,17 +83,15 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     if(!saved.workout || !saved.workoutSig){
       throw new Error('workout structure snapshot was not saved');
     }
-    // The saved resume point below is a reps step; keep that session realistic after
-    // separately proving that timer recovery fields persist.
-    state.stepDeadline = 0;
-    state.remaining = 0;
-    await saveSession();
+
+    stored.stepDeadline = 0;
+    stored.remaining = 0;
+    await kvSet(key, JSON.stringify(sessions));
 
     openStart(p);
-    state.planIdx = 0;
-    renderPlanRow();
-    renderStartInfo();
-    return {savedStep:state.stepIdx};
+    const firstPlan = document.querySelector('#planRow .plan-chip[data-plan-idx="0"]');
+    if(firstPlan) firstPlan.click();
+    return {savedStep:target};
   });
   ok('сессия сохранена на пятом упражнении', setup.savedStep >= 0, setup.savedStep);
 
