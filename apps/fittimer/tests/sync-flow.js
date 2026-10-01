@@ -39,7 +39,7 @@ async function boot(browser, label, errors){
     u.photo = 'data:image/png;base64,aGVsbG8=';
     u.syncAt = new Date().toISOString();
     await saveUsers();
-    customPrograms = [{
+    const seededPrograms = [{
       id:'sync-program', name:'Синхронная сила', time:'08:30', progression:2,
       stats:{completions:1}, plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[
         {name:'Приседания',type:'reps',value:'12',sets:2,rest:30,restAfter:45,weight:0}
@@ -50,13 +50,17 @@ async function boot(browser, label, errors){
         {name:'Наклоны',type:'reps',value:'10',sets:1,rest:20}
       ]}]
     }];
-    stats = {totalSec:600,count:1,history:[{id:'h-a',d:'2026-09-17',t:8,pid:'sync-program',sec:600,plan:0}],
-             weights:[{d:'2026-09-17',w:61.2,waist:70}],wellness:[],badges:['first']};
-    // Старая скрытая поправка веса должна быть отброшена и не синхронизироваться.
-    progWeights = {'w_sync-program_приседания':-2};
-    photos = [{d:'2026-09-17',img:'data:image/png;base64,cGhvdG8='}];
-    await savePrograms(); await saveStats(); await saveProgWeights();
-    await kvSet(pk('photos'), JSON.stringify(photos));
+    const seededStats = {totalSec:600,count:1,history:[{id:'h-a',d:'2026-09-17',t:8,pid:'sync-program',sec:600,plan:0}],
+                         weights:[{d:'2026-09-17',w:61.2,waist:70}],wellness:[],badges:['first']};
+    const seededPhotos = [{d:'2026-09-17',img:'data:image/png;base64,cGhvdG8='}];
+    // Сеем профиль так, как он реально лежит на диске, и даём приложению загрузить его.
+    // Старую скрытую поправку веса loadData обязан отбросить до синхронизации.
+    await kvSet(pk('customPrograms'), JSON.stringify(seededPrograms));
+    await kvSet(pk('stats'), JSON.stringify(seededStats));
+    await kvSet(pk('progWeights'), JSON.stringify({'w_sync-program_приседания':-2}));
+    await kvSet(pk('photos'), JSON.stringify(seededPhotos));
+    await loadData();
+    await loadPhotos();
 
     const sent = await apiPost('/api/auth',{action:'send',email});
     const sub = {plan:'year',since:'2026-09-17',until:'2099-09-17',currency:'RUB',price:2990,autoRenew:true};
