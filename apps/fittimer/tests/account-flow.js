@@ -157,8 +157,10 @@ async function boot(b, label, errs, url){
 
   /* ---- «убрать данные о себе»: страница пустеет, каталог цел ---- */
   await two.evaluate(async (r) => {
-    account.email = r.email; account.syncToken = r.syncToken; account.handle = r.handle;
-    await saveAccount();
+    await kvSet('account', JSON.stringify(Object.assign({}, account, {
+      email:r.email, syncToken:r.syncToken, handle:r.handle
+    })));
+    await loadAccount();
     restoreTrainerClientState({
       trainer: {on: true, handle: r.handle, key: r.trainerKey, name: r.trainer.name,
                 about: r.trainer.about, years: r.trainer.years, links: r.trainer.links},
