@@ -53,7 +53,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const ex = normPlans(p)[0].exercises[0];
     ex.ps = {n:2, cur:{reps:'16',kg:12}};
     ex.progFrom = 4;
-    customPrograms.push(p);
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
     await savePrograms();
   });
 
@@ -70,7 +71,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     // Своя программа, не из каталога: у взятой из каталога предлагать нечего.
     const r = parseProgramText('ПРОГРАММА: Своя\nДНИ: Пн\nКРУГИ: 1\n\nУПРАЖНЕНИЕ: Планка\nФОРМАТ: время\nЗНАЧЕНИЕ: 40\nПОДХОДЫ: 1\nОТДЫХ: 20');
     const own = r.program || r; own.id = 'own1';
-    customPrograms.push(own); await savePrograms();
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, own]));
+    await loadData();
+    await savePrograms();
     goTab('scrPrograms');
     renderMine();
     const menus = [...document.querySelectorAll('#mineList .ctx-menu')];
