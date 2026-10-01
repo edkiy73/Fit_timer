@@ -55,3 +55,12 @@ export function plusPrices(locale: string): {monthly: string; yearly: string} | 
   if(monthly === null || yearly === null) return null;
   return {monthly:formatPrice(monthly, currency, locale), yearly:formatPrice(yearly, currency, locale)};
 }
+
+/** How much cheaper a year of Plus is than twelve months, in whole percent (0 when unknown). */
+export function plusYearSaving(locale: string): number {
+  const currency = currencyForLocale(locale);
+  const monthly = pick(pricing.plusMonthly, currency);
+  const yearly = pick(pricing.plusYearly, currency);
+  if(monthly === null || yearly === null || monthly * 12 <= yearly) return 0;
+  return Math.round((1 - yearly / (monthly * 12)) * 100);
+}

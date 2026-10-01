@@ -5,6 +5,7 @@
      {
        id: 'yookassa',
        testOnly?: true,                              // только при ALLOW_MEMORY_STORE=1
+       available?(): Promise<boolean>,               // включён ли сейчас (например, настройкой в админке)
        checkout?({email, sku, product}) → {url} | {events},   // начать покупку
        verifyWebhook({headers, body, query}) → {ok, events}   // подтвердить уведомление
      }
@@ -89,7 +90,10 @@ async function applyBillingEvent(provider, rawEvent, now = new Date()){
       if(event.status === 'paid') grantOwned(acc, event.sku, {provider: event.provider, orderId: event.orderId, now});
       else revokeOwned(acc, event.sku);
     }else if(event.status === 'paid'){
-      const until = Date.parse(event.until) ? new Date(event.until) : new Date(now.getTime() + item.days * 86400000);
+      // Buying again while Plus is active adds the period to what is left, not from today.
+      const activeUntil = acc.sub ? (Date.parse(acc.sub.until) || 0) : 0;
+      const start = Math.max(now.getTime(), activeUntil);
+      const until = Date.parse(event.until) ? new Date(event.until) : new Date(start + item.days * 86400000);
       acc.sub = {
         plan: event.sku, since: now.toISOString().slice(0, 10), until: until.toISOString().slice(0, 10),
         autoRenew: event.autoRenew, provider: event.provider, source: 'billing', orderId: event.orderId
@@ -147,8 +151,20 @@ async function signedInAccount(body){
    POST /api/billing?provider=<id>                                   → уведомление провайдера */
 function createBillingHandler({adapters = []} = {}){
   const list = (Array.isArray(adapters) ? adapters : []).filter(a => a && PROVIDER.test(String(a.id || '')));
-  const enabled = () => list.filter(a => !a.testOnly || process.env.ALLOW_MEMORY_STORE === '1');
-  const find = id => enabled().find(a => a.id === id) || null;
+  const enabled = async () => {
+    const out = [];
+    for(const adapter of list){
+      if(adapter.testOnly && process.env.ALLOW_MEMORY_STORE !== '1') continue;
+      if(typeof adapter.available === 'function'){
+        let on = false;
+        try{ on = !!(await adapter.available()); }catch(_){}
+        if(!on) continue;
+      }
+      out.push(adapter);
+    }
+    return out;
+  };
+  const find = async id => (await enabled()).find(a => a.id === id) || null;
 
   return async function billingHandler(req, res){
     if(cors(req, res)) return;
@@ -160,14 +176,14 @@ function createBillingHandler({adapters = []} = {}){
 
     // Needs no storage: tells the app which buy buttons to show.
     if(!query.provider && body && body.action === 'providers'){
-      return send(res, 200, {ok: true, providers: enabled().filter(a => typeof a.checkout === 'function').map(a => a.id)});
+      return send(res, 200, {ok: true, providers: (await enabled()).filter(a => typeof a.checkout === 'function').map(a => a.id)});
     }
 
     if(!store.configured()) return fail(res, 503, 'no_store');
     if(!(await rateOk(req, 'billing', 240))) return fail(res, 429, 'rate_limited');
 
     if(query.provider){
-      const adapter = find(String(query.provider));
+      const adapter = await find(String(query.provider));
       if(!adapter || typeof adapter.verifyWebhook !== 'function') return fail(res, 404, 'unknown_provider');
       let verified;
       try{ verified = await adapter.verifyWebhook({headers: req.headers || {}, body, query}); }
@@ -185,7 +201,7 @@ function createBillingHandler({adapters = []} = {}){
 
     const action = String((body && body.action) || '');
     if(action === 'checkout'){
-      const adapter = find(String(body.provider || ''));
+      const adapter = await find(String(body.provider || ''));
       if(!adapter || typeof adapter.checkout !== 'function') return fail(res, 404, 'unknown_provider');
       const who = await signedInAccount(body);
       if(!who) return fail(res, 403, 'bad_sync_token');
@@ -193,7 +209,9 @@ function createBillingHandler({adapters = []} = {}){
       const skuError = checkSku(sku);
       if(skuError) return fail(res, 400, skuError);
       const product = productCatalog().find(item => item.sku === sku) || {sku, title: sku};
-      const started = await adapter.checkout({email: who.email, sku, product});
+      let started;
+      try{ started = await adapter.checkout({email: who.email, sku, product}); }
+      catch(e){ return fail(res, (e && e.status) || 502, String((e && e.message) || 'checkout_failed')); }
       if(started && started.url) return send(res, 200, {ok: true, url: String(started.url)});
       const results = [];
       for(const event of (started && Array.isArray(started.events)) ? started.events : []){
@@ -206,6 +224,20 @@ function createBillingHandler({adapters = []} = {}){
     }
 
     return fail(res, 400, 'unknown_action');
+  };
+}
+
+/* «Выдать сразу»: until a payment provider is connected, the pay button grants the
+   purchase at once. Works in production, but only while `isEnabled()` says so (the product
+   wires it to a switch in Admin → «Оплата»); a real provider replaces it later. */
+function createInstantBillingAdapter({isEnabled = async () => false} = {}){
+  return {
+    id: 'instant',
+    available: isEnabled,
+    async checkout({email, sku}){
+      if(!(await isEnabled())) throw Object.assign(new Error('provider_disabled'), {status: 409});
+      return {events: [{orderId: 'instant-' + crypto.randomBytes(10).toString('hex'), email, sku, status: 'paid'}]};
+    }
   };
 }
 
@@ -234,4 +266,4 @@ async function handleAdminBilling(action, body, res){
   return true;
 }
 
-module.exports = { applyBillingEvent, billingLog, createBillingHandler, createTestBillingAdapter, handleAdminBilling };
+module.exports = { applyBillingEvent, billingLog, createBillingHandler, createInstantBillingAdapter, createTestBillingAdapter, handleAdminBilling };

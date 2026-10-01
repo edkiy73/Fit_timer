@@ -25,6 +25,10 @@ export interface SignInFormProps {
   askHandle?: boolean;
   /** Visual variant: 'card' for a standalone screen, 'inline' inside a product screen. */
   variant?: 'card' | 'inline';
+  /** Heading and first line for a sign-in asked for a reason (e.g. «Войди, чтобы покупка
+   *  осталась с тобой»); the product kicker is then left out. */
+  title?: string;
+  lead?: string;
   onSignedIn?: (session: AuthSession) => void;
 }
 
@@ -198,7 +202,7 @@ export function useAuth(): AuthContextValue {
   return {session, logout, deleteAccount, claimHandle, refresh};
 }
 
-export function SignInForm({locale = 'ru', productName, askHandle = true, variant = 'card', onSignedIn}: SignInFormProps){
+export function SignInForm({locale = 'ru', productName, askHandle = true, variant = 'card', title, lead, onSignedIn}: SignInFormProps){
   const auth = useOptionalAuth();
   const client = auth.client;
   const copy = COPY[locale];
@@ -285,12 +289,12 @@ export function SignInForm({locale = 'ru', productName, askHandle = true, varian
 
   return (
     <section className={'ab-auth-card' + (variant === 'inline' ? ' ab-auth-card--inline' : '')} aria-labelledby="ab-auth-title">
-      <div className="ab-auth-kicker">{productName || copy.account}</div>
-      <h1 id="ab-auth-title">{copy.account}</h1>
+      {!title && <div className="ab-auth-kicker">{productName || copy.account}</div>}
+      <h1 id="ab-auth-title">{title || copy.account}</h1>
 
       {step === 'email' && (
         <form onSubmit={sendCode}>
-          <p className="ab-auth-lead">{copy.intro}</p>
+          <p className="ab-auth-lead">{lead || copy.intro}</p>
           <label className="ab-auth-field">
             <span>{copy.email}</span>
             <input

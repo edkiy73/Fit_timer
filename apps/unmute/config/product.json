@@ -39,6 +39,7 @@
     "plusYearly": {"RUB": 2990, "USD": 30},
     "plusCourseDiscount": 30
   },
+  "skuPatterns": ["course.*"],
   "products": [
     {
       "sku": "course.general-foundation",
@@ -47,7 +48,9 @@
     {
       "sku": "course.a1-starter",
       "title": "A1: первые шаги"
-    }
+    },
+    {"sku": "plus.month", "title": "UnMute Plus на месяц", "kind": "subscription", "days": 30},
+    {"sku": "plus.year", "title": "UnMute Plus на год", "kind": "subscription", "days": 365}
   ],
   "features": {
     "profiles": false,

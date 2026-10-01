@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
+import { countDays } from './plural';
 import type { CourseSet } from './content/schema';
 import type { LexiconSnapshot } from './lexicon/schema';
 import type { CourseProgressDocument, WordsProgressDocument } from './progress';
@@ -109,7 +110,8 @@ export function nextReminderPlan(input:ReminderPlanInput):ReminderPlan|null{
 
 function notificationPayload(
   plan:ReminderPlan,
-  t:(key:string,vars?:Readonly<Record<string,string|number>>)=>string
+  t:(key:string,vars?:Readonly<Record<string,string|number>>)=>string,
+  locale:string
 ):Record<string,unknown>{
   const title=plan.intent.kind==='review-due'
     ? t('notifications.systemReviewTitle')
@@ -119,7 +121,7 @@ function notificationPayload(
   const body=plan.intent.kind==='review-due'
     ? t('notifications.systemReviewBody',{count:plan.intent.dueCount??0})
     : plan.intent.kind==='streak-risk'
-      ? t('notifications.systemStreakBody',{streak:plan.intent.streak??0})
+      ? t('notifications.systemStreakBody',{streak:countDays(t,locale,plan.intent.streak??0)})
       : t('notifications.systemDailyBody');
 
   return {
@@ -229,7 +231,7 @@ export function NotificationDelivery(){
         wordRuntime.status!=='ready'
       )return;
 
-      const notifications=plan?[notificationPayload(plan,t)]:[];
+      const notifications=plan?[notificationPayload(plan,t,locale)]:[];
       if(cancelled)return;
       await notificationTransport.replaceRange(
         REMINDER_MIN_ID,

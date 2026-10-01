@@ -14,13 +14,13 @@ const ok = (name, cond) => {
 const authHandler = require('../template/api/auth');
 const adminHandler = require('../template/api/admin');
 const { configureProduct, productConfig } = require('../server/product-core');
-const { createBillingHandler, createTestBillingAdapter } = require('../server/billing');
+const { createBillingHandler, createInstantBillingAdapter, createTestBillingAdapter } = require('../server/billing');
 const { store } = require('../server/store');
 const crypto = require('crypto');
 const {createAuthClient, hasEntitlement} = await import('../dist/core/auth.js');
 const {createBillingClient} = await import('../dist/core/billing.js');
 
-configureProduct({...productConfig(), products:[
+configureProduct({...productConfig(), skuPatterns:['course.*'], products:[
   {sku:'pack.a', title:'Pack A'},
   {sku:'pack.b', title:'Pack B'},
   {sku:'plus.month', title:'Plus', kind:'subscription', days:30}
@@ -65,6 +65,10 @@ await auth.status();
 ok('checkout grants the purchased SKU', bought.granted && bought.owned.includes('pack.a') && hasEntitlement(await auth.getSession(), 'pack.a'));
 ok('checkout rejects a SKU outside the catalog',
   await billing.checkout('test', 'pack.zzz').then(() => false, e => e.code === 'unknown_sku'));
+ok('a SKU matching skuPatterns (a course published from Admin) can be bought',
+  (await billing.checkout('test', 'course.b1-b2')).owned.includes('course.b1-b2'));
+ok('a pattern does not open other SKUs',
+  await billing.checkout('test', 'coursex').then(() => false, e => e.code === 'unknown_sku'));
 ok('checkout requires a signed-in device',
   (await call(billingHandler, {action:'checkout', provider:'test', sku:'pack.a', email:'payer@example.com', deviceId:'x', syncToken:'y'})).status === 403);
 
@@ -113,6 +117,34 @@ const prodWebhook = await webhook([{orderId:'ord-prod', email:'payer@example.com
 process.env.ALLOW_MEMORY_STORE = '1';
 ok('without the memory store the test provider is not offered', prodProviders.body.providers.length === 0);
 ok('without the memory store test webhooks are refused', prodWebhook.status >= 400 && !prodWebhook.body.applied);
+
+// 7. «Выдать сразу»: works in production, only while its switch is on.
+let instantOn = false;
+const instantHandler = createBillingHandler({adapters:[testAdapter, createInstantBillingAdapter({isEnabled:async () => instantOn})]});
+const instantBilling = createBillingClient({auth, fetch:viaFetch(instantHandler)});
+process.env.ALLOW_MEMORY_STORE = '';
+const offList = await instantBilling.providers();
+process.env.ALLOW_MEMORY_STORE = '1';
+ok('switched off, the instant provider is not offered', !offList.includes('instant'));
+ok('switched off, an instant checkout is refused',
+  (await call(instantHandler, {action:'checkout', provider:'instant', sku:'pack.b', ...(await auth.authFields())})).status === 404);
+instantOn = true;
+process.env.ALLOW_MEMORY_STORE = '';
+const onList = await instantBilling.providers();
+process.env.ALLOW_MEMORY_STORE = '1';
+ok('switched on, the instant provider is offered even in production', onList.join() === 'instant');
+const instant = await instantBilling.checkout('instant', 'pack.b');
+ok('instant checkout grants the SKU at once', instant.granted && instant.owned.includes('pack.b'));
+
+// 8. Buying Plus again while it is active adds the period to what is left.
+await instantBilling.checkout('instant', 'plus.month');
+await auth.status();
+const firstUntil = Date.parse((await auth.getSession()).sub.until);
+await instantBilling.checkout('instant', 'plus.month');
+await auth.status();
+const secondUntil = Date.parse((await auth.getSession()).sub.until);
+const added = Math.round((secondUntil - firstUntil) / 86400000);
+ok('a second month extends the active subscription by 30 days', added === 30);
 
 console.log(bad ? `\nBilling failures: ${bad}` : '\nBilling behaves correctly');
 process.exit(bad ? 1 : 0);
