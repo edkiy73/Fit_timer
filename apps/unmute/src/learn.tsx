@@ -266,7 +266,9 @@ export function NodeRunnerView({
   const [shuffleSeed,setShuffleSeed]=useState(()=>randomSeed());
   const [runHydrated,setRunHydrated]=useState(false);
   const completionTrackedRef=useRef(false);
-  const restoringRunRef=useRef(false);
+  // The step a restored run lands on: its saved answer/feedback must survive the first render
+  // of that step (the reset below would otherwise wipe it once the restored order arrives).
+  const restoringRunRef=useRef<string|null>(null);
 
   useEffect(()=>{
     completionTrackedRef.current=Boolean(nodeProgress?.complete);
@@ -302,7 +304,7 @@ export function NodeRunnerView({
       restored.pos>=0&&restored.pos<restored.order.length
     );
     if(restored&&validSaved){
-      restoringRunRef.current=true;
+      restoringRunRef.current=String(steps[restored.order[restored.pos]!]?.id??'')+'|'+restored.pos;
       setOrder(restored.order);
       setFirstPass(restored.firstPass);
       setPos(restored.pos);
@@ -359,10 +361,12 @@ export function NodeRunnerView({
   const activity=stepIndex===undefined?null:steps[stepIndex]??null;
 
   useEffect(()=>{
-    if(restoringRunRef.current){
-      restoringRunRef.current=false;
-      setBusy(false);
-      return;
+    if(restoringRunRef.current!==null){
+      // Mount render (no step yet): keep waiting for the restored step.
+      if(!activity)return;
+      const restoredStep=restoringRunRef.current===activity.id+'|'+pos;
+      restoringRunRef.current=null;
+      if(restoredStep){ setBusy(false); return; }
     }
     setSelected(null);
     setAnswer('');

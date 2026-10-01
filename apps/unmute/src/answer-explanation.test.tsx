@@ -61,7 +61,7 @@ describe('wrong-answer explanation UI',()=>{
     const onAccess=vi.fn();
     renderView(vi.fn(async()=>{throw error;}),vi.fn(),onAccess);
     await user.click(screen.getByRole('button',{name:'Почему?'}));
-    expect(await screen.findByText(/Три бесплатных разбора использованы/)).toBeTruthy();
+    expect(await screen.findByText(/Бесплатные разборы использованы/)).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Открыть Plus'}));
     expect(onAccess).toHaveBeenCalledTimes(1);
   });
