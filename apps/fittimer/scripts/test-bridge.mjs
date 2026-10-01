@@ -68,6 +68,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "exaAddExercise",
   "exDraft",
   "exitWorkout",
+  "exportProgram", // tests/link-length.js executes this name through eval(src)
   "fillTrainerPage",
   "finishWorkout",
   "fitStorage",
