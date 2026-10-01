@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Fragment, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
@@ -151,20 +151,13 @@ export function CourseMapView({
   const currentId=currentGroup?groupId(currentGroup):null;
   const [open,setOpen]=useState<Set<string>>(()=>new Set());
   const [selected,setSelected]=useState<Station|null>(null);
-  const currentRef=useRef<HTMLLIElement|null>(null);
-  const placed=useRef(false);
 
-  // Open the map where the learner is: expand that stage once the course is known, then
-  // scroll the "you are here" station into view (only the first time).
+  // Expand the learner's current stage, but keep the Route screen itself at the top.
+  // Entering a main tab must never auto-scroll away from its page heading.
   useEffect(()=>{
-    if(!currentId||placed.current)return;
+    if(!currentId)return;
     setOpen(previous=>new Set(previous).add(currentId));
   },[currentId]);
-  useEffect(()=>{
-    if(placed.current||!currentId||!open.has(currentId))return;
-    placed.current=true;
-    currentRef.current?.scrollIntoView?.({block:'center'});
-  },[currentId,open]);
 
   if(runtime.status==='pending'){
     return (
@@ -275,7 +268,6 @@ export function CourseMapView({
                         </li>
                       )}
                       <li
-                        ref={station.status==='current'?currentRef:undefined}
                         className={'station station-'+station.kind+' is-'+station.status+(solid?' rail-solid':'')+(arriving?' rail-arriving':'')+(index===0?' is-first':'')+(isLast?' is-last':'')}
                         style={{'--i':index} as CSSProperties}
                         aria-current={station.status==='current'?'step':undefined}
