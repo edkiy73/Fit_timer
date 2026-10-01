@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1627,
-      "chars": 78201,
+      "lines": 1626,
+      "chars": 78136,
       "symbols": [
         "$",
         "accountUserDirtyHook",
@@ -138,8 +138,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2707,
-      "chars": 125891,
+      "lines": 2711,
+      "chars": 125975,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -175,6 +175,7 @@
         "customToProgram",
         "dayState",
         "dayTitle",
+        "deleteCustomProgram",
         "discardLegacyWeightCorrections",
         "docHash",
         "docValue",
@@ -272,7 +273,6 @@
         "sessionWorkout",
         "sessRow",
         "setCurrentUserShared",
-        "setCustomProgramsShared",
         "setDataSyncAccountHooks",
         "setDataSyncBuilderHooks",
         "setDataSyncCoreHooks",
@@ -649,8 +649,8 @@
     },
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
-      "lines": 1924,
-      "chars": 87781,
+      "lines": 1923,
+      "chars": 87716,
       "symbols": [
         "add",
         "addClient",
