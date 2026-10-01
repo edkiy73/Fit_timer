@@ -481,8 +481,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 3378,
-      "chars": 156325,
+      "lines": 3405,
+      "chars": 157618,
       "symbols": [
         "activateClientAt",
         "add",
@@ -588,6 +588,7 @@
         "mediaForExercise",
         "mediaItems",
         "networkFailMessage",
+        "newExercisesWithoutImages",
         "next",
         "normHandle",
         "note",
