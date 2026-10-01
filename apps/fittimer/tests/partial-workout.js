@@ -116,10 +116,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   const override = await page.evaluate(() => {
     const last = stats.history[stats.history.length - 1];
-    stats.history.push({
+    restoreStatsState(Object.assign({}, stats, {history:[...(stats.history || []), {
       id:'partial-test-full-override', d:last.d, pid:'partial-test', status:'full',
       sec:600, plan:0, exercises:['Первое','Второе']
-    });
+    }]}));
     const w = weekPlanInfo();
     const day = w.days.find(x => x.iso === last.d);
     return {full:day && day.full, part:day && day.part, done:w.doneTotal, partial:w.partialTotal};
@@ -150,15 +150,17 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       p('slot-partial',[yesterday]),
       p('extra-workout',[])
     );
-    stats.history = [
-      {id:'sa',d:todayIso,pid:'slot-a',status:'full',sec:600},
-      {id:'sb',d:todayIso,pid:'slot-b',status:'full',sec:600},
-      // meaningful=true раньше ошибочно давал +1 к серии, хотя weekPlanInfo
-      // считает такой слот лишь закрытым частично.
-      {id:'sp',d:yesterdayIso,pid:'slot-partial',status:'partial',meaningful:true,sec:500},
-      {id:'sx',d:yesterdayIso,pid:'extra-workout',status:'full',sec:300}
-    ];
-    stats.bestStreak = 0;
+    restoreStatsState(Object.assign({}, stats, {
+      history:[
+        {id:'sa',d:todayIso,pid:'slot-a',status:'full',sec:600},
+        {id:'sb',d:todayIso,pid:'slot-b',status:'full',sec:600},
+        // meaningful=true раньше ошибочно давал +1 к серии, хотя weekPlanInfo
+        // считает такой слот лишь закрытым частично.
+        {id:'sp',d:yesterdayIso,pid:'slot-partial',status:'partial',meaningful:true,sec:500},
+        {id:'sx',d:yesterdayIso,pid:'extra-workout',status:'full',sec:300}
+      ],
+      bestStreak:0
+    }));
 
     const currentWeek = weekPlanInfo(todayDate);
     const partialWeek = weekPlanInfo(yesterdayDate);
@@ -167,12 +169,13 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     // Без расписания meaningful partial остаётся обычным днём активности —
     // это прежняя fallback-семантика, её этой унификацией не меняем.
     customPrograms.splice(0, customPrograms.length, p('free',[]));
-    stats.history = [{id:'free-p',d:todayIso,pid:'free',status:'partial',meaningful:true,sec:500}];
+    restoreStatsState(Object.assign({}, stats, {
+      history:[{id:'free-p',d:todayIso,pid:'free',status:'partial',meaningful:true,sec:500}]
+    }));
     const noPlan = calcStreakInfo();
 
     customPrograms.splice(0, customPrograms.length, ...savedPrograms);
-    stats.history = savedHistory;
-    stats.bestStreak = savedBest;
+    restoreStatsState(Object.assign({}, stats, {history:savedHistory,bestStreak:savedBest}));
 
     const todayState = currentWeek.days.find(x => x.iso === todayIso) || {};
     const partialState = partialWeek.days.find(x => x.iso === yesterdayIso) || {};
