@@ -2761,3 +2761,273 @@ The existing suite already gives good confidence in:
 - update flow;
 - basic route/screen overflow at 360 px.
 
+
+
+---
+
+## 32. Coverage of the latest UI changes
+
+A separate audit pass checked whether the UI changes from sections 20–22 are themselves protected by automated assertions.
+
+### Profile rename/header
+
+**Partial coverage only.**
+
+There are app-level navigation tests that resolve the tab label through:
+
+```
+t['nav.me']
+```
+
+so they follow the dictionary value.
+
+But there is no direct assertion for:
+
+- visible title `Профиль`;
+- email above title;
+- avatar absence;
+- long email overflow;
+- visual hierarchy matching other screen headers.
+
+Status: 🟡.
+
+---
+
+### Per-course Progress selector
+
+No test references were found for:
+
+- `progress.courseTitle`;
+- `progress.courseLabel`;
+- `.progress-course-picker`.
+
+Missing cases:
+
+- selecting Course B changes course-dependent statistics;
+- global metrics remain unchanged;
+- active application course does not switch;
+- long course names fit;
+- selected course survives only for the intended lifetime.
+
+Status: ❌.
+
+---
+
+### Segmented lesson progress
+
+No direct automated assertions were found for:
+
+- `.runner-progress-step`;
+- correct/wrong/current/pending classes;
+- number of segments;
+- segment state after entering retry phase.
+
+The lesson flow tests cover the underlying answering behavior, but not the new visual state machine.
+
+Status: ❌ for visual/state rendering, 🟡 for underlying logic.
+
+---
+
+### Lesson exit confirmation / unfinished run restore
+
+This area **does have direct component coverage**.
+
+The test checks:
+
+- wrong answer schedules a return;
+- close button opens `Выйти из урока?`;
+- `Выйти и сохранить` calls exit;
+- remount restores `Пока не так`;
+- retry notice remains;
+- lesson position remains.
+
+What is still missing:
+
+- Android system Back using the same unfinished-run semantics;
+- process death rather than React remount;
+- force-stop/relaunch;
+- typed/chips input restoration;
+- practice activity restoration;
+- sync completion overriding stale local run in an automated integration test.
+
+Status: ✅ basic restore, 🟡 real-device/process cases.
+
+---
+
+### Sticky «Далее» in long feedback
+
+No direct test references `.learn-feedback-next`.
+
+Missing:
+
+- long course explanation;
+- expanded AI explanation;
+- feedback sheet scroll;
+- keyboard open;
+- CTA still visible/reachable.
+
+Status: ❌.
+
+---
+
+### Route utility cards
+
+No direct test references `.course-map-reference`.
+
+Existing E2E checks:
+
+- route opens;
+- station sheet opens;
+- rail reaches current day;
+- rail starts at first day.
+
+It does **not** check:
+
+- “Твой курс” and “Справочник” height parity;
+- utility-card visual distinction from days;
+- long copy wrapping;
+- alignment at 320/360/390/412.
+
+Status: 🟡.
+
+---
+
+### Dock blur
+
+No test checks `backdrop-filter` or rendered blur.
+
+Current screen-walk only checks layout overflow/runtime errors.
+
+Missing visual snapshots over:
+
+- white background;
+- colored content;
+- scrolled content;
+- dark mode.
+
+Status: ❌.
+
+---
+
+### Android status bar
+
+Static native-shell coverage exists:
+
+- edge-to-edge enabled;
+- native status bar color is transparent;
+- `viewport-fit=cover`.
+
+This proves configuration, **not visual rendering**.
+
+Missing:
+
+- status-bar icon contrast;
+- light/dark mode;
+- Samsung/Pixel differences;
+- no accidental web strip after actual WebView paint.
+
+Status: ✅ configuration, ❌ rendered visual result.
+
+---
+
+### One-tap choice answers
+
+The current test suite is inconsistent here.
+
+Product code implements immediate choice checking, but some existing unit tests still perform:
+
+```
+click radio
+click «Проверить»
+```
+
+Therefore:
+
+- behavior has some coverage indirectly;
+- test expectations need synchronization;
+- current suite cannot be treated as authoritative for this interaction until updated.
+
+Status: ⚠️.
+
+---
+
+## 33. Additional test-maintenance risk
+
+The test suite currently mixes two styles:
+
+1. semantic/dictionary-driven selectors:
+   ```
+   t['nav.me']
+   ```
+2. duplicated hardcoded product copy:
+   ```
+   'Я'
+   'карточек ждут'
+   '...без ограничений'
+   ```
+
+The second style causes false failures whenever copy changes without changing behavior.
+
+Recommended audit rule for future tests:
+
+- use role/state/semantic ids for behavior;
+- use dictionary keys for localized navigation labels;
+- hardcode literal copy only in tests whose purpose is explicitly copy verification.
+
+This is especially important for:
+
+- tab names;
+- paywall copy;
+- Review captions;
+- result feedback;
+- button labels whose interaction model may change.
+
+---
+
+## 34. Final audit-only test checklist
+
+The following checks can be treated as the remaining audit backlog without touching product code:
+
+### Can be automated in current browser/unit infrastructure
+
+- [ ] partial-write fault injection;
+- [ ] replay vs SRS;
+- [ ] first/resume/replay summary contract;
+- [ ] stale local run vs synced completion;
+- [ ] partial Review source failure;
+- [ ] unpublished-course Review discovery;
+- [ ] Reset All with unknown old course id;
+- [ ] offline write → reconnect → sync;
+- [ ] course switch mid-run;
+- [ ] course-switch save failure;
+- [ ] analytics exactly-once completion;
+- [ ] analytics first/resume/replay modes;
+- [ ] notification settings write failure;
+- [ ] required-update config unavailable;
+- [ ] per-course statistics selector;
+- [ ] segmented progress state classes;
+- [ ] long feedback sticky CTA;
+- [ ] 320/390/412 screen walk;
+- [ ] RU/EN critical-route walk.
+
+### Requires emulator/device-level validation
+
+- [ ] Android status-bar icon contrast;
+- [ ] actual dock blur;
+- [ ] keyboard/IME with feedback sheet;
+- [ ] process kill / force-stop lesson recovery;
+- [ ] notification permission system dialog;
+- [ ] actual local notification delivery/deep link;
+- [ ] large OS font scaling;
+- [ ] Android Back while exit confirmation is open.
+
+### Requires explicit product contract before a useful test can be written
+
+- [ ] whether replay changes SRS;
+- [ ] exact meaning of “learning day” / streak;
+- [ ] whether missing optional Review sources can block a review day;
+- [ ] whether learned content from an unpublished course must remain reviewable;
+- [ ] required-update behavior when update policy cannot be fetched;
+- [ ] which statistics are global vs per-course;
+- [ ] first-attempt metric across resume/replay.
+
