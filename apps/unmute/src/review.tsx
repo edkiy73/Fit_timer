@@ -37,6 +37,7 @@ import { MyWordsView } from './my-words';
 import { Icon } from './icons';
 import { Loader } from './loader';
 import { reviewDueCounts } from './review-count';
+import { randomSeed, shuffledIndices } from './shuffle';
 
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
 type CombinedReviewItem=
@@ -108,6 +109,7 @@ export function ReviewView({
   const [index,setIndex]=useState(0);
   const [completed,setCompleted]=useState(0);
   const [selected,setSelected]=useState<number|null>(null);
+  const [shuffleSeed]=useState(()=>randomSeed());
   const [answer,setAnswer]=useState('');
   const [result,setResult]=useState<boolean|null>(null);
   const [busy,setBusy]=useState(false);
@@ -473,20 +475,23 @@ export function ReviewView({
         {courseExplanation&&(
           <p><LexiconText text={courseExplanation} refs={activity.lexiconRefs} /></p>
         )}
-        {!result&&learnerAnswer&&acceptedAnswers.length>0&&(
-          <AnswerExplanationView
-            question={localized(activity.prompt,locale)}
-            learnerAnswer={learnerAnswer}
-            acceptedAnswers={acceptedAnswers}
-            courseExplanation={courseExplanation}
-            refs={activity.lexiconRefs}
-            onSignIn={onSignIn}
-            onAccess={onAccess}
-          />
-        )}
-        <button className="primary-button learn-feedback-next" type="button" onClick={advanceCard}>
-          {result?t('learn.next'):t('review.retryLater')}
-        </button>
+        <div className="learn-feedback-actions">
+          {!result&&learnerAnswer&&acceptedAnswers.length>0&&(
+            <AnswerExplanationView
+              compact
+              question={localized(activity.prompt,locale)}
+              learnerAnswer={learnerAnswer}
+              acceptedAnswers={acceptedAnswers}
+              courseExplanation={courseExplanation}
+              refs={activity.lexiconRefs}
+              onSignIn={onSignIn}
+              onAccess={onAccess}
+            />
+          )}
+          <button className="primary-button learn-feedback-next" type="button" onClick={advanceCard}>
+            {result?t('learn.next'):t('review.retryLater')}
+          </button>
+        </div>
       </div>
     );
   };
@@ -513,20 +518,24 @@ export function ReviewView({
           )}
           <fieldset className="learn-options" disabled={busy||result!==null}>
             <legend className="sr-only">{t('learn.chooseAnswer')}</legend>
-            {item.activity.options.map((option,optionIndex)=>(
-              <label className="learn-option" key={optionIndex}>
-                <input
-                  type="radio"
-                  name={'review-'+item.activity.id+'-'+index}
-                  checked={selected===optionIndex}
-                  onChange={()=>{
-                    setSelected(optionIndex);
-                    checkChoice(optionIndex);
-                  }}
-                />
-                <span><LexiconText text={localized(option,locale)} refs={item.activity.lexiconRefs} interactive={result!==null} /></span>
-              </label>
-            ))}
+            {shuffledIndices(item.activity.options.length,shuffleSeed+'|review|'+item.activity.id+'|'+index).map(optionIndex=>{
+              const option=item.activity.options[optionIndex]!;
+              return (
+                <label className={'learn-option'+(selected===optionIndex&&result===null?' is-selected':'')} key={optionIndex}>
+                  <input
+                    type="radio"
+                    name={'review-'+item.activity.id+'-'+index}
+                    checked={selected===optionIndex}
+                    onChange={()=>setSelected(optionIndex)}
+                    onClick={()=>{
+                      if(selected===optionIndex&&result===null)checkChoice(optionIndex);
+                    }}
+                  />
+                  <span><LexiconText text={localized(option,locale)} refs={item.activity.lexiconRefs} interactive={result!==null} /></span>
+                  {selected===optionIndex&&result===null&&<span className="learn-option-confirm">{t('learn.tapAgain')}</span>}
+                </label>
+              );
+            })}
           </fieldset>
           {cardFeedback(item.activity)}
         </article>
