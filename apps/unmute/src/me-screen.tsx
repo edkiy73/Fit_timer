@@ -4,11 +4,13 @@ import { SignInForm, useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { sharedUiLocale, useI18n } from '@appbase/ui-react/i18n.js';
 import product from '../config/product.json';
 import { useLearnerCourseRuntime } from './course-runtime';
-import { ProgressView, useProgressDetails } from './progress-screen';
+import { ProgressView, useProgressCourseRuntime, useProgressDetails } from './progress-screen';
 import { activitySaveClock } from './activity-progress';
 import { Icon } from './icons';
 import { Sheet } from './sheet';
 import { useAllLearningDays } from './learning-days';
+import { useCatalog } from './active-course';
+import { localizedText } from './today-model';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
@@ -22,8 +24,13 @@ export function MeScreen(){
   const navigate = useNavigate();
   const location = useLocation();
   const runtime = useLearnerCourseRuntime();
-  const details = useProgressDetails(runtime.state?.set.id ?? '');
+  const catalog = useCatalog();
+  const [statsCourseId,setStatsCourseId] = useState('');
+  const selectedCourseId = statsCourseId || runtime.state?.set.id || '';
+  const statsRuntime = useProgressCourseRuntime(selectedCourseId);
+  const details = useProgressDetails(selectedCourseId);
   const learningDays = useAllLearningDays();
+  const courseOptions = (catalog.data?.sets ?? []).map(set=>({id:set.id,label:localizedText(set.title,locale)}));
   const requestedReturn = new URLSearchParams(location.search).get('return') || '';
   const returnTo = requestedReturn.startsWith('/') && !requestedReturn.startsWith('//') ? requestedReturn : '';
   // Arriving with ?return= (a lesson asked to sign in) opens the form straight away.
@@ -51,11 +58,14 @@ export function MeScreen(){
 
       <ProgressView
         embedded
-        runtime={runtime}
+        runtime={statsRuntime}
         details={details}
         learningDays={learningDays}
         todayDay={activitySaveClock().dayNumber}
         onExit={() => navigate('/')}
+        courses={courseOptions}
+        selectedCourseId={selectedCourseId}
+        onCourseChange={setStatsCourseId}
       />
 
       <Sheet open={signInOpen && !auth.session} onClose={() => setSignInOpen(false)} labelledBy="me-signin-title" closeLabel={t('access.signInClose')}>
