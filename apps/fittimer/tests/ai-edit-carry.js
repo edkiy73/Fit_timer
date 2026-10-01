@@ -42,7 +42,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     edited.plans[1].exercises[0].sets = 15;
     const text = programToText(edited, {forEdit:true});
 
-    editAIProg = p;
+    openEditAI(p);
     $('aiResult').value = text;
     // итог правки показывается в общем диалоге (appAlert → #dlgMsg)
     await Promise.race([createEditedProgram(), new Promise(r => setTimeout(r, 1500))]);
@@ -74,7 +74,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     customPrograms.push(p);
     const edited = JSON.parse(JSON.stringify(p));
     edited.plans[0].exercises[0].rest = 90;   // правка отдыха — база та же
-    editAIProg = p;
+    openEditAI(p);
     $('aiResult').value = programToText(edited, {forEdit:true});
     await Promise.race([createEditedProgram(), new Promise(r => setTimeout(r, 1500))]);
     const made = customPrograms.find(x => x.id !== 'ecd' && /Двойная/.test(x.name || ''));
@@ -111,7 +111,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
         {id:'t2', name:'Отжимания', desc:'Корпус прямой.', type:'reps', value:'10', sets:1, rest:30}]}]};
     customPrograms.push(p);
     const sent = programToText(p, {forEdit:true});
-    editAIProg = p;
+    openEditAI(p);
     // ответ без описаний: первое упражнение то же, второе заменено на новое
     $('aiResult').value = 'ПРОГРАММА: Круговая\nДЕНЬ: Пн\nКРУГИ: 2\nОТДЫХ МЕЖДУ КРУГАМИ: 60\n\n'
       + 'УПРАЖНЕНИЕ: Приседания\nКОД: t1\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\nОТДЫХ: 30\n\n'
