@@ -12,7 +12,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
-import { TEST_BRIDGE_ALLOWLIST } from './test-bridge.mjs';
+import { TEST_BRIDGE_ALLOWLIST, TEST_BRIDGE_WRITABLE } from './test-bridge.mjs';
 
 const ROOT = process.cwd();
 const json = process.argv.includes('--json');
@@ -127,11 +127,15 @@ const report = {
 
 if(check){
   const missing = rows.map(row => row.name).filter(name => !TEST_BRIDGE_ALLOWLIST.has(name));
-  if(missing.length){
-    console.error('Browser tests use bindings missing from TEST_BRIDGE_ALLOWLIST: ' + missing.join(', '));
+  const missingWritable = rows.filter(row => row.writes.length && !TEST_BRIDGE_WRITABLE.has(row.name)).map(row => row.name);
+  const writableOutsideBridge = [...TEST_BRIDGE_WRITABLE].filter(name => !TEST_BRIDGE_ALLOWLIST.has(name));
+  if(missing.length || missingWritable.length || writableOutsideBridge.length){
+    if(missing.length) console.error('Browser tests use bindings missing from TEST_BRIDGE_ALLOWLIST: ' + missing.join(', '));
+    if(missingWritable.length) console.error('Browser tests overwrite bindings missing from TEST_BRIDGE_WRITABLE: ' + missingWritable.join(', '));
+    if(writableOutsideBridge.length) console.error('Writable bridge names must also be exposed: ' + writableOutsideBridge.join(', '));
     process.exit(1);
   }
-  console.log(`Test bridge allowlist covers ${report.usedBindings} measured bindings (from ${report.candidateBindings} candidates).`);
+  console.log(`Test bridge covers ${report.usedBindings} measured reads and ${report.overwrittenBindings} measured writes (from ${report.candidateBindings} candidates).`);
 }else if(json){
   console.log(JSON.stringify(report, null, 2));
 }else{
