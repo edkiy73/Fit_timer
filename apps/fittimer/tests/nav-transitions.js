@@ -383,18 +383,15 @@ async function scenario(ctx, name, fn, errs){
   await scenario(ctx, 'активная тренировка → упражнение → ИИ → тренировка', async page => {
     await seedProgram(page, 'nav-live-workout');
     await page.evaluate(() => {
+      configureWorkoutTiming({prep: 0});
       goTab('scrPrograms');
-      const p = customPrograms.find(x => x.id === 'nav-live-workout');
-      state.raw = p;
-      state.planIdx = 0;
-      state.current = {sourceId:p.id, title:p.name, cycle:[], warmup:[], rounds:1};
-      state.steps = [{phase:'work', kind:'click', exName:'Присед', exId:'nav-live-workout-e1', title:'Присед', reps:'10'}];
-      state.stepIdx = 0;
-      state.live = true;
-      state.paused = false;
-      show('scrWork');
-      editExerciseFromWorkout();
+      openStart(customPrograms.find(x => x.id === 'nav-live-workout'));
     });
+    await page.click('#btnStart');
+    await page.waitForSelector('#startModal.open');
+    await page.click('#startFresh');
+    await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
+    await page.evaluate(() => editExerciseFromWorkout());
     await nap(page, 500);
     await aligned(page, 'упражнение из тренировки', 'scrExercise');
     await page.click('#exModeTabs .tab[data-m="ai"]');
