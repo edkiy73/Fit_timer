@@ -343,7 +343,6 @@ export function ProgressView({
             <div className="progress-general-metrics">
               <MetricCard value={String(summary.learningDays)} label={t('progress.learningDays')} icon="book" tone="accent" />
               <MetricCard value={String(summary.streak)} label={t('progress.streak')} icon="flame" tone="success" />
-              <MetricCard value={String(summary.words)} label={t('progress.words')} icon="progress" tone="listen" />
             </div>
 
             <ActivityCalendar
