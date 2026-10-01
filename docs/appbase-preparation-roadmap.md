@@ -554,6 +554,7 @@ Audit conclusion:
 - ✅ 2026-10-01: sync/backup assertions now inspect persisted `photos` and legacy `progWeights` through `kvGet(pk(...))` instead of module bindings. That also makes `saveProgWeights` unused by browser callbacks, so all three getters leave the bridge, reducing the exact surface from **172 → 169**.
 - ✅ 2026-10-01: active-profile tests now use `curUser()` instead of the raw `currentUser` id, and backup restore reads hands-free mode from persisted `hfMode` storage instead of the module binding. Those two getters leave the bridge, reducing the exact surface from **169 → 167**.
 - ✅ 2026-10-01: trainer/account and catalog assertions no longer depend on `trainerOn` or `pubProg`: they inspect the owned trainer/program state already under test. Both getters leave the bridge, reducing the exact surface from **167 → 165**.
+- ✅ 2026-10-01: object-mutation audit measured **9** roots despite writable bindings being zero. The first cleanup moves profile fixture creation from `users.push()` to `restoreProfiles()` and trainer disable from `trainer.on = false` to the existing owner restore API, reducing mutable roots from **9 → 7** without changing product runtime.
 
 First semantic-owner cleanup:
 - account login cancellation is now owned by `cancelLogin()`; five raw login/biometry setters were removed from the public module surface;
