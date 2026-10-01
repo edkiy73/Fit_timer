@@ -108,6 +108,7 @@ export const en: Record<keyof typeof ru, string> = {
   'onboarding.wordsText': 'Tap any English word in a lesson to see its translation, pronunciation and examples.',
   'onboarding.reviewTitle': 'Reviews come back automatically',
   'onboarding.reviewText': 'UnMute brings cards and speaking patterns back when they are due.',
+  'onboarding.saveError': "Couldn't save your choice. Check your connection and tap again.",
   'onboarding.start': 'Start Day 1',
   'onboarding.starting': 'Opening Day 1…',
   'onboarding.accountLater': 'You can connect an account later — it is not required to start.',

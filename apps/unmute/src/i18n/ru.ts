@@ -106,6 +106,7 @@ export const ru = {
   'onboarding.wordsText': 'Нажми на любое английское слово в уроке — откроются перевод, произношение и примеры.',
   'onboarding.reviewTitle': 'Повторы придут сами',
   'onboarding.reviewText': 'UnMute сам вернёт карточки и фразы, когда их пора повторить.',
+  'onboarding.saveError': 'Не получилось сохранить выбор. Проверь соединение и нажми ещё раз.',
   'onboarding.start': 'Начать день 1',
   'onboarding.starting': 'Открываем день 1…',
   'onboarding.accountLater': 'Аккаунт можно подключить позже — для старта он не нужен.',
