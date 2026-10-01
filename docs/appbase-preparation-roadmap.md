@@ -541,6 +541,7 @@ Audit conclusion:
 - ✅ 2026-10-01: bridge mutation is now independently allowlisted: only the **15** bindings actually overwritten/stubbed by browser tests receive setters; the other exposed bindings are getter-only. The audit fails if a direct browser callback starts writing a new internal binding.
 - ✅ 2026-10-01: browser workout tests no longer assign raw `prepSec`; they use `configureWorkoutTiming({prep: 0})`. `prepSec` was removed from the bridge entirely, reducing writable bridge bindings from **15 → 14**.
 - ✅ 2026-10-01: trainer/client browser tests no longer assign raw `clientIdx`; they use the existing owner API `activateClientAt()`. `clientIdx` was removed from the bridge, reducing writable bindings from **14 → 13**.
+- ✅ 2026-10-01: premium purchase browser flow now selects the monthly plan and opens checkout through the real UI. Raw `pmPlan` is no longer exposed by the test bridge, reducing writable bindings from **13 → 12**.
 
 First semantic-owner cleanup:
 - account login cancellation is now owned by `cancelLogin()`; five raw login/biometry setters were removed from the public module surface;
