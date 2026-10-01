@@ -89,7 +89,9 @@ describe('Today model',()=>{
     expect(stageForDay(35)?.id).toBe('stories');
     expect(stageForDay(40)?.id).toBe('finish');
     expect(stageForDay(41)).toBeNull();
-    // Stages are the main course's route; a short course has none.
-    expect(stageForDay(1,'a1-starter')).toBeNull();
+    // A1 has three stages of four days; an unknown course has none.
+    expect(stageForDay(1,'a1-starter')?.id).toBe('a1-first');
+    expect(stageForDay(12,'a1-starter')?.id).toBe('a1-out');
+    expect(stageForDay(1,'some-course')).toBeNull();
   });
 });

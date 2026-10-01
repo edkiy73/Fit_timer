@@ -244,6 +244,41 @@ try{
   await admin.goto(URL_+'#/admin');
   ok('shared Admin opens and asks for the key',await appears(admin.getByLabel('Ключ администратора')));
 
+  // Screen walk: every main screen on a small phone, light and dark — nothing sticks out
+  // sideways and no screen throws. Catches layout breaks before anyone opens the app.
+  const ROUTES=['#/','#/course','#/review','#/account','#/settings','#/access?from=talk','#/legal/privacy','#/learn/day-1'];
+  for(const colorScheme of ['light','dark']){
+    const walkContext=await browser.newContext({viewport:{width:360,height:740},locale:'ru-RU',colorScheme});
+    await walkContext.addInitScript(()=>{ try{ localStorage.setItem('unmute.onboarding.v1','1'); }catch{} });
+    const walk=await walkContext.newPage();
+    walk.on('pageerror',error=>errors.push(colorScheme+': '+String(error)));
+    const broken=[];
+    for(const route of ROUTES){
+      await walk.goto(URL_+route);
+      await walk.locator('.app-screen, .learn-shell').first().waitFor({timeout:8000}).catch(()=>{});
+      await walk.locator('.screen-loader').first().waitFor({state:'detached',timeout:8000}).catch(()=>{});
+      const wide=await walk.evaluate(()=>{
+        const width=document.documentElement.clientWidth;
+        if(document.documentElement.scrollWidth>width+1)return ['page scrolls sideways'];
+        const out=[];
+        for(const element of document.querySelectorAll('body *')){
+          const box=element.getBoundingClientRect();
+          if(!box.width||!box.height||box.right<=width+1)continue;
+          const style=getComputedStyle(element);
+          if(style.visibility==='hidden'||style.position==='fixed')continue;
+          let parent=element.parentElement,scrolls=false;
+          while(parent){ const overflow=getComputedStyle(parent).overflowX; if((overflow==='auto'||overflow==='scroll'||overflow==='hidden')&&parent!==document.body){scrolls=true;break;} parent=parent.parentElement; }
+          if(!scrolls)out.push((element.className&&typeof element.className==='string'?'.'+element.className.split(' ')[0]:element.tagName)+' → '+Math.round(box.right)+'px');
+        }
+        return out.slice(0,5);
+      });
+      if(wide.length)broken.push(route+': '+wide.join(', '));
+    }
+    ok(colorScheme+' theme: main screens fit a 360 px phone',broken.length===0);
+    if(broken.length)console.log(broken.join('\n'));
+    await walkContext.close();
+  }
+
   ok('no runtime errors',errors.length===0);
   if(errors.length)console.log(errors.join('\n'));
 

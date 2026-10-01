@@ -89,7 +89,7 @@ describe('Today learner shell',()=>{
     expect(screen.getByText('День 2')).toBeTruthy();
     expect(screen.getByRole('heading',{name:'Настоящее время'})).toBeTruthy();
     expect(screen.getByText('0 из 2 заданий · ~1 мин')).toBeTruthy();
-    expect(screen.getByText('Старт')).toBeTruthy();
+    expect(screen.getByText('Основа фразы')).toBeTruthy();
     expect(screen.getByText('1/4')).toBeTruthy();
     expect(screen.getByRole('button',{name:'Начать'})).toBeTruthy();
   });

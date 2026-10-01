@@ -69,6 +69,7 @@ export function decideUpdate(
 }
 
 const DISMISS_KEY = 'unmute.update.dismissed';
+export const START_GRACE_MS = 6000;
 
 export function useAppUpdate(){
   const {locale} = useI18n();
@@ -94,12 +95,17 @@ export function useAppUpdate(){
     else setStatus('error');
   }, []);
 
-  const watch = useCallback((target: UpdateOffer) => {
+  const watch = useCallback((target: UpdateOffer, fresh = false) => {
     const native = plugin();
     if(!native) return;
     stopPolling();
+    // Right after «Обновить» the new download may not be visible yet and an old, finished one
+    // answers instead: its «error»/«idle» is not about this press. Give the new one a moment.
+    const startedAt = Date.now();
     poll.current = window.setInterval(() => {
       void native.getUpdateState().then(state => {
+        const settling = fresh && Date.now() - startedAt < START_GRACE_MS;
+        if(settling && (state.status === 'error' || state.status === 'idle' || state.status === 'cancelled')) return;
         if(state.status === 'downloading'){
           setStatus('downloading');
           setProgress(typeof state.progress === 'number' ? state.progress : -1);
@@ -153,7 +159,7 @@ export function useAppUpdate(){
     if(result.status === 'error'){ setStatus('error'); return; }
     if(result.status === 'installer_opened'){ setStatus('ready'); return; }
     if(result.status === 'permission_required'){ setStatus('permission'); return; }
-    watch(offer);
+    watch(offer, true);
   };
 
   const cancel = async () => {
