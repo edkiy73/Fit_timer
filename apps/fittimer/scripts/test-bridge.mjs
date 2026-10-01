@@ -171,6 +171,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "tearDownWorkout",
   "trainer",
   "trainerProfile",
+  "updateTrainerProfile",
   "userForAI",
   "users",
   "weekPlanInfo",
