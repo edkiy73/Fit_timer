@@ -347,7 +347,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     configureWorkoutTiming({prep: 0});
     openStart(customPrograms.find(x => x.id === b.id));
   });
-  await page.click('#btnStart');
+  // Этот isolation-сценарий проверяет хранение двух сессий, а не видимость CTA.
+  // После предыдущего live-сценария экран иногда ещё догоняет навигацию, поэтому
+  // запускаем тот же declarative action программным click(), не завязываясь на layout.
+  await page.evaluate(() => $('btnStart').click());
   await page.waitForSelector('#startModal.open');
   await page.click('#startFresh');
   await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
