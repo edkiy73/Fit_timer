@@ -19,6 +19,7 @@ export interface AnswerExplanation {
   };
   /** Set when this was one of the free explanations (no Plus). */
   freeRemaining?:number;
+  freeLimit?:number;
 }
 
 export class AnswerAIError extends Error{
@@ -95,7 +96,10 @@ export async function requestAnswerExplanation(
 
   const access=payload.access&&typeof payload.access==='object'?payload.access as Record<string,unknown>:null;
   const result:AnswerExplanation=usage?{...explanation,usage}:{...explanation};
-  if(access?.mode==='free')result.freeRemaining=Math.max(0,Number(access.remaining)||0);
+  if(access?.mode==='free'){
+    result.freeRemaining=Math.max(0,Number(access.remaining)||0);
+    result.freeLimit=Math.max(0,Number(access.maxCalls)||0);
+  }
   return result;
 }
 
