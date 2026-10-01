@@ -24,7 +24,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.waitForTimeout(2000);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(1500); }
 
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
     const ex = (name, value, extra = {}) => Object.assign({
       name, type:'reps', value:String(value), sets:3, rest:45, restAfter:30,
       progOn:true, repsStep:1, trackWeight:false
@@ -40,10 +40,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
         ex('Скручивания', 12)
       ]}]
     };
-    customPrograms.push(p);
-    stats.history.push({pid:p.id, plan:0, sec:31 * 60, at:Date.now() - 86400000,
-      load:[{i:1, n:'Приседания', reps:'11', sec:0, kg:0}]});
-    openStart(p);
+    const history = [...(stats.history || []), {pid:p.id, plan:0, sec:31 * 60, at:Date.now() - 86400000,
+      load:[{i:1, n:'Приседания', reps:'11', sec:0, kg:0}]}];
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history})));
+    await loadData();
+    openStart(customPrograms.find(x => x.id === p.id));
   });
 
   const before = await page.evaluate(() => ({
@@ -81,7 +83,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const afterWeight = await page.locator('#startOverviewList .ex-row.tappable').textContent();
   ok('правка веса нажатием на строку сразу обновляет обзор', /9\s*кг/.test(afterWeight), afterWeight);
 
-  const legacy = await page.evaluate(() => {
+  const legacy = await page.evaluate(async () => {
     const p = {
       id:'overview-legacy', name:'Старая история', active:true, progression:2,
       stats:{completions:9}, psMigrated:true,
@@ -92,15 +94,18 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
         ps:{n:1,cur:{reps:'15'}}
       }]}]
     };
-    customPrograms.push(p);
     // Старая запись знает, что тренировка была, но load snapshot в той версии
     // ещё не сохранялся.
-    stats.history.push({
+    const history = [...(stats.history || []), {
       id:'legacy-h', pid:p.id, plan:0, d:localISO(new Date(Date.now()-86400000)),
       sec:900, status:'full', exercises:['Legacy reps']
-    });
-    const previous = previousWorkoutLoad(p, 0);
-    openStart(p);
+    }];
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history})));
+    await loadData();
+    const live = customPrograms.find(x => x.id === p.id);
+    const previous = previousWorkoutLoad(live, 0);
+    openStart(live);
     return {
       previous,
       text:$('startLoadChange').textContent.trim(),
@@ -123,7 +128,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   // Полностью завершённая двойная прогрессия не должна обещать следующую
   // проверку нагрузки: повышать здесь уже нечего.
-  const terminalText = await page.evaluate(() => {
+  const terminalText = await page.evaluate(async () => {
     const p = {
       id:'overview-terminal', name:'Финальный потолок', active:true, progression:1,
       stats:{completions:1}, plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[{
@@ -132,8 +137,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
         repsStep:1, repsMax:20, dualProg:true, ps:{n:1, cur:{kg:20, reps:'18-20'}}
       }]}]
     };
-    customPrograms.push(p);
-    openStart(p);
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
+    openStart(customPrograms.find(x => x.id === p.id));
     return $('startLoadChange').textContent.trim();
   });
   ok('на полном потолке нет обещания следующей проверки',
