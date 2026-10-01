@@ -259,6 +259,10 @@ export function AccessScreen(){
   const providers = useQuery({queryKey:['billing-providers'], queryFn:() => billingClient.providers(), staleTime:60_000, retry:1});
   const provider = providers.data?.[0] ?? null;
   const canBuy = providers.isPending ? null : Boolean(provider);
+  const returnFromPlus=()=>{
+    if(returnTo)navigate(returnTo);
+    else navigate(-1);
+  };
 
   useEffect(() => {
     if(runtime.status !== 'ready' || !runtime.state) return;
@@ -334,11 +338,11 @@ export function AccessScreen(){
         onBuy={plan => void buy(plan)}
         onRestore={() => void restore()}
         onCourse={() => {
-          if(focus === 'plus') navigate(returnTo || -1);
+          if(focus === 'plus') returnFromPlus();
           else navigate('/course');
         }}
         onContinue={() => {
-          if(done?.plan !== 'course' && focus === 'plus') navigate(returnTo || -1);
+          if(done?.plan !== 'course' && focus === 'plus') returnFromPlus();
           else navigate('/');
         }}
       />
