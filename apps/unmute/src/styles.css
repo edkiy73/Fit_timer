@@ -86,7 +86,13 @@ h2{margin:0 0 8px;font-weight:800}
 
 /* Bottom navigation: the one glass layer, in thumb reach, hidden inside lessons. */
 :root[data-focus-run] .tabbar{display:none}
-.tabbar{position:fixed;z-index:1000;left:50%;bottom:calc(var(--safe-bottom) + 12px);width:min(calc(100% - 24px),696px);height:var(--tabbar-h);transform:translateX(-50%);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-radius:var(--radius-tile);background-color:rgba(255,255,255,.40);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.20);box-shadow:0 20px 40px rgba(0,0,0,.15);overflow:hidden}
+.tabbar{position:fixed;z-index:1000;left:50%;bottom:calc(var(--safe-bottom) + 12px);width:min(calc(100% - 24px),696px);height:var(--tabbar-h);transform:translateX(-50%);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-radius:var(--radius-tile);background-color:rgba(255,255,255,.40);border:1px solid rgba(255,255,255,.20);box-shadow:0 20px 40px rgba(0,0,0,.15);overflow:hidden}
+@supports (backdrop-filter:blur(1px)){
+  .tabbar{backdrop-filter:blur(16px)}
+}
+@supports (-webkit-backdrop-filter:blur(1px)){
+  .tabbar{-webkit-backdrop-filter:blur(16px)}
+}
 :root[data-theme="dark"] .tabbar{background-color:rgba(30,30,38,.50);border-color:rgba(255,255,255,.10)}
 @media(prefers-color-scheme:dark){:root:not([data-theme]) .tabbar{background-color:rgba(30,30,38,.50);border-color:rgba(255,255,255,.10)}}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
