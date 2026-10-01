@@ -24,6 +24,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const errs = [];
   const page = await (await b.newContext({viewport: {width: 360, height: 800}, locale: 'ru-RU'})).newPage();
   page.on('pageerror', e => errs.push(String(e)));
+  let imageCalls = 0;
+  const aiImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZQWQAAAAASUVORK5CYII=";
+  await page.route('**/api/ai', async route => {
+    imageCalls++;
+    await route.fulfill({status:200, contentType:'application/json', body:JSON.stringify({image:aiImage})});
+  });
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(800);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(500); }
@@ -117,9 +123,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await page.evaluate(() => aiEditRequestGuard('exeWish')) === true);
 
   await page.evaluate(async () => {
+    account.email = 'guard-ai@example.com';
+    account.syncToken = 'guard-ai-token';
     account.sub = {plan:'year', until:'2099-01-01'};
-    window.__imageCalls = 0;
-    window.callGeminiImage = async () => { __imageCalls++; throw new Error('provider must not be called by guard tests'); };
+    identity.deviceId = 'guard-ai-device';
     customPrograms.push({id:'guard-images', name:'', plans:[{days:['Пн'], rounds:1, roundRest:0,
       exercises:[{name:'Присед', type:'reps', value:10, rest:30}]}]});
     await savePrograms();
@@ -156,7 +163,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     return await generateOneImageViaAI('cover', null, 'Обложка', ()=>{});
   });
   ok('обложка без названия программы блокируется общим генератором', blockedCover === false);
-  ok('провайдер не вызывается для пустой обложки', await page.evaluate(() => __imageCalls) === 0);
+  ok('провайдер не вызывается для пустой обложки', imageCalls === 0, imageCalls);
   await page.evaluate(() => document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')));
 
   const blockedExercise = await page.evaluate(async () => {
@@ -165,7 +172,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     return await generateOneImageViaAI('ex', {name:'', desc:'', muscles:[]}, 'Упражнение', ()=>{});
   });
   ok('картинка без названия упражнения блокируется общим генератором', blockedExercise === false);
-  ok('провайдер всё ещё не вызван', await page.evaluate(() => __imageCalls) === 0);
+  ok('провайдер всё ещё не вызван', imageCalls === 0, imageCalls);
 
   ok('без ошибок в консоли', !errs.length, errs.join(' | '));
   await b.close();
