@@ -144,8 +144,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   await page.evaluate(() => {
     $('bName').value = 'Тест';
-    draft.name = 'Тест';
-    draft.plans[0].exercises[0].name = '';
+    const next = JSON.parse(JSON.stringify(draft));
+    next.name = 'Тест';
+    next.plans[0].exercises[0].name = '';
+    loadBuilderDraft(next, 0);
   });
   const unnamedExerciseWorkspace = await page.evaluate(() => openImages());
   ok('в раздел картинок нельзя войти с безымянным упражнением', unnamedExerciseWorkspace === false);
@@ -153,7 +155,11 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     /назови все упражнения/.test(await page.textContent('#dlgMsg')));
   await page.evaluate(() => document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')));
 
-  await page.evaluate(() => { draft.plans[0].exercises[0].name = 'Присед'; });
+  await page.evaluate(() => {
+    const next = JSON.parse(JSON.stringify(draft));
+    next.plans[0].exercises[0].name = 'Присед';
+    loadBuilderDraft(next, 0);
+  });
   ok('после названий раздел картинок открывается', await page.evaluate(() => openImages()) !== false);
   ok('экран картинок действительно открыт', await page.isVisible('#scrImages'));
   await page.evaluate(() => closeImages());
@@ -161,7 +167,6 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   const blockedCover = await page.evaluate(async () => {
     $('bName').value = '';
-    draft.name = '';
     return await generateOneImageViaAI('cover', null, 'Обложка', ()=>{});
   });
   ok('обложка без названия программы блокируется общим генератором', blockedCover === false);
@@ -170,7 +175,6 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   const blockedExercise = await page.evaluate(async () => {
     $('bName').value = 'Тест';
-    draft.name = 'Тест';
     return await generateOneImageViaAI('ex', {name:'', desc:'', muscles:[]}, 'Упражнение', ()=>{});
   });
   ok('картинка без названия упражнения блокируется общим генератором', blockedExercise === false);
