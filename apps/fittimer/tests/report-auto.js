@@ -101,8 +101,8 @@ async function boot(b, label, errs, url){
     stats.count = 1; await saveStats();
     p.stats = {completions: 0};
     // финал — единственное место, откуда теперь уходит отчёт
+    openStart(p);
     state.current = customToProgram(p, 0);
-    state.raw = p; state.planIdx = 0;
     state.steps = buildSteps();
     state.stepOutcomes = {};
     state.steps.forEach((step, i) => {
