@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
@@ -11,7 +11,6 @@ import { hasReference } from './reference';
 import { localizedText, nodeMinutes, nodeTopic } from './today-model';
 import { Icon, type IconName } from './icons';
 import { Sheet } from './sheet';
-import { Loader } from './loader';
 import { CoursePicker } from './active-course';
 
 export type CourseMapStatus=
@@ -151,6 +150,7 @@ export function CourseMapView({
   const currentId=currentGroup?groupId(currentGroup):null;
   const [open,setOpen]=useState<Set<string>>(()=>new Set());
   const [selected,setSelected]=useState<Station|null>(null);
+  const currentStationRef=useRef<HTMLLIElement|null>(null);
 
   // Expand the learner's current stage, but keep the Route screen itself at the top.
   // Entering a main tab must never auto-scroll away from its page heading.
@@ -161,8 +161,22 @@ export function CourseMapView({
 
   if(runtime.status==='pending'){
     return (
-      <section className="course-map-shell">
-        <Loader title={t('courseMap.loadingTitle')} />
+      <section className="course-map-shell route-skeleton" aria-busy="true" aria-label={t('courseMap.loadingTitle')}>
+        <header className="screen-head" aria-hidden="true">
+          <span className="skeleton skeleton-line skeleton-kicker" />
+          <span className="skeleton skeleton-line skeleton-title" />
+        </header>
+        <div className="course-map-content" aria-hidden="true">
+          <div className="skeleton skeleton-route-card" />
+          <div className="skeleton skeleton-route-reference" />
+          <div className="course-map-topics-head">
+            <span className="skeleton skeleton-line skeleton-section-title" />
+            <span className="skeleton skeleton-line skeleton-quiet-action" />
+          </div>
+          <div className="stages">
+            {Array.from({length:5},(_,index)=><div className="skeleton skeleton-stage" key={index} />)}
+          </div>
+        </div>
       </section>
     );
   }
@@ -189,6 +203,12 @@ export function CourseMapView({
     else next.add(id);
     return next;
   });
+  const scrollToCurrent=()=>{
+    if(currentId)setOpen(previous=>new Set(previous).add(currentId));
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      currentStationRef.current?.scrollIntoView({block:'center',behavior:'smooth'});
+    }));
+  };
 
   return (
     <section className="course-map-shell" aria-labelledby="course-map-title">
@@ -214,6 +234,16 @@ export function CourseMapView({
             <Icon name="chevron" size={20} className="me-row-chevron" />
           </button>
         )}
+
+        <div className="course-map-topics-head">
+          <h3>{t('courseMap.topicsTitle')}</h3>
+          {state.currentNode&&(
+            <button className="quiet-button course-map-current" type="button" onClick={scrollToCurrent}>
+              <Icon name="target" size={15} />
+              <span>{t('courseMap.currentDayAction')}</span>
+            </button>
+          )}
+        </div>
 
         <div className="stages">
         {groups.map(group=>{
@@ -268,6 +298,7 @@ export function CourseMapView({
                         </li>
                       )}
                       <li
+                        ref={station.status==='current'?currentStationRef:undefined}
                         className={'station station-'+station.kind+' is-'+station.status+(solid?' rail-solid':'')+(arriving?' rail-arriving':'')+(index===0?' is-first':'')+(isLast?' is-last':'')}
                         style={{'--i':index} as CSSProperties}
                         aria-current={station.status==='current'?'step':undefined}
