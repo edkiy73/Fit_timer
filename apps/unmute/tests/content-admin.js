@@ -81,6 +81,7 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.equal(structure.status,200);
   assert.equal(structure.body.roadmaps[0].nodes[0].id,'day-1');
   assert.equal(structure.body.roadmaps[0].nodes[0].activityCount,1);
+  assert.equal(typeof structure.body.roadmaps[0].nodes[0].topic,'string');
 
   const nodeBefore=await action(handler,'content_course_node',{roadmapId:'main',nodeId:'day-1'});
   assert.equal(nodeBefore.status,200);
@@ -348,6 +349,14 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.equal((await Release.getReleasedSet('general-foundation')).revision,1);
   assert.equal((await Release.getReleasedSet('b1-b2')).revision,1);
 
+  // A dictionary-only release keeps every course at the revision learners already have.
+  const lexiconOnly=await action(handler,'content_publish_lexicon');
+  assert.equal(lexiconOnly.status,200);
+  assert.equal(lexiconOnly.body.release.sets['general-foundation'],1);
+  assert.equal(lexiconOnly.body.release.sets['b1-b2'],1);
+  assert.equal(lexiconOnly.body.release.revision,3);
+  assert.ok(lexiconOnly.body.lexicon.revision>publishedB.body.release.lexiconRevision);
+
   // The course list says which courses have edits the learners do not see yet.
   const afterRelease=(await action(handler,'content_sets_list')).body.sets;
   assert.equal(afterRelease.find(set=>set.id==='b1-b2').unreleasedChanges,false);
@@ -366,7 +375,7 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
 
   const after=await action(handler,'content_status');
   assert.equal(after.body.course.published.revision,1);
-  assert.equal(after.body.lexicon.published.revision,2);
+  assert.equal(after.body.lexicon.published.revision,3);
 
   // British transcription: check, write, and a second check finds nothing left to change.
   const ipaEntry=(await Lexicon.getDraft()).entries.find(entry=>!entry.deprecated&&/^[a-z]+$/.test(entry.lemma));

@@ -74,6 +74,30 @@ async function publishDraftRelease(setIds=['general-foundation']){
   },{ttl:20,retries:100,delay:50});
 }
 
+// Dictionary edits (transcription, translations) go out on their own: the courses stay at
+// the revisions learners already have, unfinished course edits are not released with them.
+async function publishLexiconRelease(){
+  return store.withLock('lock:content-release',async()=>{
+    const previous=await getRelease();
+    if(!previous || !previous.sets || !Object.keys(previous.sets).length) throw new Error('no_released_courses');
+    const lexiconDraft=await Lexicon.getDraft();
+    if(!lexiconDraft) throw new Error('lexicon_draft_not_found');
+    Lexicon.validateLexicon(lexiconDraft);
+    const stagedLexicon=await Lexicon.stageDraft();
+    const revision=await nextReleaseRevision();
+    const release={
+      schemaVersion:1,
+      revision,
+      publishedAt:new Date().toISOString(),
+      sets:{...previous.sets},
+      lexiconRevision:stagedLexicon.revision
+    };
+    await store.pipe([['SET',RELEASE_KEY,JSON.stringify(release)]]);
+    await Lexicon.activateRevision(stagedLexicon.revision).catch(()=>{});
+    return {release,lexiconRevision:stagedLexicon.revision};
+  },{ttl:20,retries:100,delay:50});
+}
+
 async function getReleasedSet(id){
   const release=await getRelease();
   const key=Content.cleanId(id);
@@ -112,4 +136,4 @@ async function getReleasedCatalog(){
   return {schemaVersion:1,revision:release.revision,updatedAt:release.publishedAt,sets};
 }
 
-module.exports={getRelease,publishDraftRelease,getReleasedSet,getReleasedLexicon,getReleasedCatalog,keys:{RELEASE_KEY,RELEASE_COUNTER}};
+module.exports={getRelease,publishDraftRelease,publishLexiconRelease,getReleasedSet,getReleasedLexicon,getReleasedCatalog,keys:{RELEASE_KEY,RELEASE_COUNTER}};
