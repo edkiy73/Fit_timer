@@ -143,9 +143,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const p = {id:'exn', name:'Навигация', progression:0, stats:{completions:0}, plans:[
       {days:['Пн'], rounds:1, roundRest:0, exercises:[{id:'n1', name:'Присед', type:'reps', value:'10', sets:3, rest:60}]}]};
     customPrograms.push(p);
-    account.email = 'edit-ai-test@example.com';
-    account.syncToken = 'edit-ai-test-token';
-    account.sub = {plan:'year', until:'2099-01-01'};
+    await kvSet('account', JSON.stringify(Object.assign({}, account, {
+      email: 'edit-ai-test@example.com',
+      syncToken: 'edit-ai-test-token',
+      sub: {plan:'year', until:'2099-01-01'}
+    })));
+    await loadAccount();
     await kvSet('deviceId', 'edit-ai-test-device'); await loadIdentity();
     openBuilder('exn');
   });

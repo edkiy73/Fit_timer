@@ -171,9 +171,12 @@ const shot = page => page.evaluate(() => ({
   ok('метка «Премиум» стоит', /Премиум/.test(locked.tag), locked.tag);
 
   await page.evaluate(async () => {
-    account.email = 'store-test@example.com';
-    account.syncToken = 'store-test-token';
-    account.sub = {plan: 'year', until: '2099-01-01'};
+    await kvSet('account', JSON.stringify(Object.assign({}, account, {
+      email: 'store-test@example.com',
+      syncToken: 'store-test-token',
+      sub: {plan: 'year', until: '2099-01-01'}
+    })));
+    await loadAccount();
     await kvSet('deviceId', 'store-test-device');
   });
   await open(ONE, {pro: true, exCount: 2});

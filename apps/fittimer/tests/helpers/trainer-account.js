@@ -22,12 +22,14 @@ async function becomeTrainer(page, opts){
       deviceId: identity.deviceId, sub});
     const claimed = await apiPost('/api/auth', {action: 'set_handle', email: o.email,
       deviceId: identity.deviceId, syncToken: r.syncToken, handle: o.handle});
-    account.email = o.email;
-    account.syncToken = r.syncToken;
-    account.handle = claimed.handle;
-    account.sub = r.sub || null;
-    account.linkedAt = new Date().toISOString();
-    await saveAccount();
+    await kvSet('account', JSON.stringify(Object.assign({}, account, {
+      email: o.email,
+      syncToken: r.syncToken,
+      handle: claimed.handle,
+      sub: r.sub || null,
+      linkedAt: new Date().toISOString()
+    })));
+    await loadAccount();
     const persistedIdentity = JSON.parse(await kvGet(pk('identity')) || '{}');
     persistedIdentity.email = o.email;
     await kvSet(pk('identity'), JSON.stringify(persistedIdentity));

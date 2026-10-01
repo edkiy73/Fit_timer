@@ -33,9 +33,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(800); }
   await page.evaluate(async () => {
     const u = curUser(); u.gender = 'f'; u.age = 30; await saveUsers();
-    account.email = 'image-test@example.com';
-    account.syncToken = 'image-test-token';
-    account.sub = {plan:'year', until:'2099-01-01'};
+    await kvSet('account', JSON.stringify(Object.assign({}, account, {
+      email: 'image-test@example.com',
+      syncToken: 'image-test-token',
+      sub: {plan:'year', until:'2099-01-01'}
+    })));
+    await loadAccount();
     await kvSet('deviceId', 'image-test-device'); await loadIdentity();
     customPrograms.push({id: 'pd', name: 'Силовая', plans: [{days: ['Пн'], rounds: 1, roundRest: 0,
       exercises: [{name: 'Присед', type: 'reps', value: 10, rest: 30}]}]});

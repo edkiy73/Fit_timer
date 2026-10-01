@@ -148,7 +148,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "repairLines",
   "resumeWorkoutFromNativeNotification",
   "sanitizeProgram",
-  "saveAccount",
+  "loadAccount",
   "saveClients",
   "savePrograms",
   "saveSession",
