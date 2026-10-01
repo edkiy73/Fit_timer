@@ -1247,3 +1247,22 @@ h2{margin:0 0 8px;font-weight:800}
 .learn-feedback-actions>.answer-explain.is-compact:has(.answer-explain-error)+.learn-feedback-next{grid-column:1/-1;width:100%}
 .learn-feedback-actions>.answer-explain.is-compact .answer-explain-error{width:100%;min-width:0}
 .learn-feedback-actions>.answer-explain.is-compact .answer-explain-error>.secondary-button{width:100%}
+
+
+/* Expanded Why content is normal document flow: no sticky offset before it.
+   Only the final Next action gets breathing room below the explanation. */
+.learn-feedback-actions:has(>.answer-explain-result){
+  position:static;
+  margin-top:0;
+  padding-top:0;
+  grid-template-columns:1fr;
+  gap:0;
+}
+.learn-feedback-actions:has(>.answer-explain-result)>.answer-explain-result{
+  grid-column:1/-1;
+}
+.learn-feedback-actions:has(>.answer-explain-result)>.learn-feedback-next{
+  grid-column:1/-1;
+  margin-top:12px;
+  width:100%;
+}
