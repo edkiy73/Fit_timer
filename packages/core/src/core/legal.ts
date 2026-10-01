@@ -3,13 +3,13 @@
    The pages mark the places with data-legal attributes and keep their own text as the fallback:
      <span data-legal="operator">…</span>   owner, plus «, country» when set
      <a data-legal="email" href="mailto:…">…</a>   contact address (text and link)
-     <span data-legal="minAge">14</span>   minimum age */
+     <span data-legal="ageFrom">14</span>   minimum age */
 
 export interface LegalDetails {
   owner?: string;
   country?: string;
   email?: string;
-  minAge?: number;
+  ageFrom?: number;
 }
 
 export function applyLegalDetails(root: ParentNode, legal: LegalDetails | null | undefined): void {
@@ -27,7 +27,7 @@ export function applyLegalDetails(root: ParentNode, legal: LegalDetails | null |
       if(link.tagName === 'A') link.setAttribute('href', 'mailto:' + email);
     });
   }
-  if(typeof legal.minAge === 'number' && Number.isFinite(legal.minAge) && legal.minAge > 0){
-    root.querySelectorAll('[data-legal="minAge"]').forEach(node => { node.textContent = String(Math.round(legal.minAge as number)); });
+  if(typeof legal.ageFrom === 'number' && Number.isFinite(legal.ageFrom) && legal.ageFrom > 0){
+    root.querySelectorAll('[data-legal="ageFrom"]').forEach(node => { node.textContent = String(Math.round(legal.ageFrom as number)); });
   }
 }

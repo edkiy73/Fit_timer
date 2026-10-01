@@ -33,7 +33,7 @@ const DEFAULTS = {
   payment: {provider:'not_connected', androidMonth:'', androidYear:'', iosMonth:'', iosYear:''},
   // Who runs the app, for the privacy policy and account-deletion pages (Admin → «Владелец и
   // контакты»). Public: the pages show it to everyone. Empty fields keep the page's own text.
-  legal: {owner:'', country:'', email:'', minAge:14},
+  legal: {owner:'', country:'', email:'', ageFrom:14},
   update: {android:{
     latestCode:0, minimumCode:0, latestName:'', url:'', messageRu:'', messageEn:'',
     direct:{latestCode:0, minimumCode:0, latestName:'', url:'', messageRu:'', messageEn:''},
@@ -129,7 +129,7 @@ function sanitizeSettings(src){
       owner: line(legal.owner, 160),
       country: line(legal.country, 80),
       email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(line(legal.email, 120)) ? line(legal.email, 120) : '',
-      minAge: Math.round(num(legal.minAge, 14, 0, 21))
+      ageFrom: Math.round(num(legal.ageFrom, 14, 0, 21))
     },
     update: {
       android: {

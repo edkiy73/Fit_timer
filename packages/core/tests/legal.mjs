@@ -9,22 +9,22 @@ function page(){
   const nodes = {
     operator:[node('SPAN', 'владелец приложения')],
     email:[node('A', 'old@example.com', {href:'mailto:old@example.com'}), node('A', 'old@example.com', {href:'mailto:old@example.com'})],
-    minAge:[node('SPAN', '14')]
+    ageFrom:[node('SPAN', '14')]
   };
   return {nodes, querySelectorAll(selector){ return nodes[/data-legal="(\w+)"/.exec(selector)[1]] || []; }};
 }
 
 const empty = page();
-applyLegalDetails(empty, {owner:'', country:'', email:'', minAge:0});
+applyLegalDetails(empty, {owner:'', country:'', email:'', ageFrom:0});
 ok('empty fields keep the page text', empty.nodes.operator[0].textContent === 'владелец приложения'
-  && empty.nodes.email[0].textContent === 'old@example.com' && empty.nodes.minAge[0].textContent === '14');
+  && empty.nodes.email[0].textContent === 'old@example.com' && empty.nodes.ageFrom[0].textContent === '14');
 
 const filled = page();
-applyLegalDetails(filled, {owner:'ИП Иванов И. И.', country:'Сербия', email:'help@unmute.app', minAge:16});
+applyLegalDetails(filled, {owner:'ИП Иванов И. И.', country:'Сербия', email:'help@unmute.app', ageFrom:16});
 ok('owner and country are shown together', filled.nodes.operator[0].textContent === 'ИП Иванов И. И., Сербия');
 ok('every email place gets the text and the mail link',
   filled.nodes.email.every(n => n.textContent === 'help@unmute.app' && n.attrs.href === 'mailto:help@unmute.app'));
-ok('minimum age is replaced', filled.nodes.minAge[0].textContent === '16');
+ok('minimum age is replaced', filled.nodes.ageFrom[0].textContent === '16');
 
 const noCountry = page();
 applyLegalDetails(noCountry, {owner:'UnMute Ltd'});

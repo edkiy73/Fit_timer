@@ -45,7 +45,7 @@ p,li{margin:6px 0}.muted{color:var(--muted)}a{color:var(--accent)}
 <h2>Твои права</h2>
 <p>Ты можешь получить копию своих данных, исправить их или удалить аккаунт — в приложении или письмом на <a data-legal="email" href="mailto:edkiy73@gmail.com">edkiy73@gmail.com</a>. Как удалить аккаунт: <a href="./delete-account.html">отдельная страница</a>.</p>
 <h2>Возраст</h2>
-<p>Приложение предназначено для людей от <span data-legal="minAge">14</span> лет.</p>
+<p>Приложение предназначено для людей от <span data-legal="ageFrom">14</span> лет.</p>
 <h2>Изменения</h2>
 <p>О существенных изменениях политики мы сообщим в приложении.</p>
 </article></main>
@@ -55,7 +55,7 @@ fetch('/api/config').then(function(r){return r.ok?r.json():null}).then(function(
   var l=c&&c.legal;if(!l)return;
   if(l.owner){var o=l.country?l.owner+', '+l.country:l.owner;document.querySelectorAll('[data-legal="operator"]').forEach(function(n){n.textContent=o})}
   if(l.email)document.querySelectorAll('[data-legal="email"]').forEach(function(n){n.textContent=l.email;n.setAttribute('href','mailto:'+l.email)});
-  if(l.minAge>0)document.querySelectorAll('[data-legal="minAge"]').forEach(function(n){n.textContent=l.minAge});
+  if(l.ageFrom>0)document.querySelectorAll('[data-legal="ageFrom"]').forEach(function(n){n.textContent=l.ageFrom});
 }).catch(function(){});
 </script>
 </body>

@@ -12,7 +12,7 @@ const COPY = {
     hint:'Эти данные видны всем на страницах «Политика конфиденциальности» и «Удаление аккаунта» — на сайте и в приложении. Пустое поле — страница оставит свой текст.',
     owner:'Владелец приложения', ownerHint:'Например: ИП Иванов Иван Иванович или Иван Иванов',
     country:'Страна', email:'Почта для обращений', emailHint:'Сюда пишут о данных и просят удалить аккаунт',
-    minAge:'Возраст, с которого можно пользоваться', save:'Сохранить', saving:'Сохраняю…', saved:'Сохранено. Страницы покажут новые данные сразу.',
+    ageFrom:'Возраст, с которого можно пользоваться', save:'Сохранить', saving:'Сохраняю…', saved:'Сохранено. Страницы покажут новые данные сразу.',
     saveError:'Не сохранилось: ', badEmail:'Проверь адрес почты.', loading:'Загружаю…', loadError:'Не удалось загрузить настройки.',
     preview:'Как будет на странице', previewEmpty:'(текст страницы)'
   },
@@ -21,7 +21,7 @@ const COPY = {
     hint:'Shown to everyone on the privacy policy and account deletion pages, on the website and in the app. An empty field keeps the page text.',
     owner:'App owner', ownerHint:'For example: John Smith or Smith Apps Ltd',
     country:'Country', email:'Contact email', emailHint:'People write here about their data and account deletion',
-    minAge:'Minimum age', save:'Save', saving:'Saving…', saved:'Saved. The pages show the new details right away.',
+    ageFrom:'Minimum age', save:'Save', saving:'Saving…', saved:'Saved. The pages show the new details right away.',
     saveError:'Not saved: ', badEmail:'Check the email address.', loading:'Loading…', loadError:'Could not load settings.',
     preview:'On the page', previewEmpty:'(page text)'
   }
@@ -33,7 +33,7 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function AdminLegal({client, adminKey, locale = 'ru'}: {client: AdminClient; adminKey: string; locale?: 'ru' | 'en'}){
   const copy = COPY[locale];
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [legal, setLegal] = useState<Required<LegalDetails>>({owner:'', country:'', email:'', minAge:14});
+  const [legal, setLegal] = useState<Required<LegalDetails>>({owner:'', country:'', email:'', ageFrom:14});
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -41,7 +41,7 @@ export function AdminLegal({client, adminKey, locale = 'ru'}: {client: AdminClie
     const result = await client.action(adminKey, 'settings_get');
     const next = result.settings as Settings;
     setSettings(next);
-    setLegal({owner:'', country:'', email:'', minAge:14, ...next.legal} as Required<LegalDetails>);
+    setLegal({owner:'', country:'', email:'', ageFrom:14, ...next.legal} as Required<LegalDetails>);
   }, [client, adminKey]);
 
   useEffect(() => { void load().catch(() => setNote(copy.loadError)); }, [load, copy.loadError]);
@@ -58,7 +58,7 @@ export function AdminLegal({client, adminKey, locale = 'ru'}: {client: AdminClie
       const result = await client.action(adminKey, 'save_settings', {settings:{...settings, legal:{...legal, email}}});
       const next = result.settings as Settings;
       setSettings(next);
-      setLegal({owner:'', country:'', email:'', minAge:14, ...next.legal} as Required<LegalDetails>);
+      setLegal({owner:'', country:'', email:'', ageFrom:14, ...next.legal} as Required<LegalDetails>);
       setNote(copy.saved);
     }catch(error){
       setNote(copy.saveError + String((error as {code?: string})?.code || ''));
@@ -80,8 +80,8 @@ export function AdminLegal({client, adminKey, locale = 'ru'}: {client: AdminClie
         <label><span>{copy.email}</span>
           <input type="email" value={legal.email} maxLength={120} placeholder={copy.emailHint} onChange={e => setLegal({...legal, email:e.target.value})} />
         </label>
-        <label><span>{copy.minAge}</span>
-          <input type="number" min={0} max={21} value={legal.minAge} onChange={e => setLegal({...legal, minAge:Math.max(0, Math.min(21, Number(e.target.value) || 0))})} />
+        <label><span>{copy.ageFrom}</span>
+          <input type="number" min={0} max={21} value={legal.ageFrom} onChange={e => setLegal({...legal, ageFrom:Math.max(0, Math.min(21, Number(e.target.value) || 0))})} />
         </label>
         <p className="ab-admin-empty">{copy.preview}: {operator}</p>
       </article>

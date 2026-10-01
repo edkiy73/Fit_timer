@@ -14,11 +14,11 @@ describe('legal pages inside the app', () => {
 
   it('shows the owner and contacts typed in Admin, and keeps the page text without them', () => {
     const page = privacyPage;
-    const filled = extractLegalBody(page, {owner:'ИП Иванов И. И.', country:'Сербия', email:'help@unmute.app', minAge:16});
+    const filled = extractLegalBody(page, {owner:'ИП Иванов И. И.', country:'Сербия', email:'help@unmute.app', ageFrom:16});
     expect(filled).toContain('Данные обрабатывает <span data-legal="operator">ИП Иванов И. И., Сербия</span>');
     expect(filled).toContain('href="mailto:help@unmute.app">help@unmute.app</a>');
     expect(filled).not.toContain('edkiy73@gmail.com');
-    expect(filled).toContain('<span data-legal="minAge">16</span>');
+    expect(filled).toContain('<span data-legal="ageFrom">16</span>');
     const plain = extractLegalBody(page, null);
     expect(plain).toContain('владелец приложения UnMute: English for Expats');
     expect(plain).not.toContain('<script');

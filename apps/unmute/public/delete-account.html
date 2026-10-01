@@ -49,7 +49,7 @@ fetch('/api/config').then(function(r){return r.ok?r.json():null}).then(function(
   var l=c&&c.legal;if(!l)return;
   if(l.owner){var o=l.country?l.owner+', '+l.country:l.owner;document.querySelectorAll('[data-legal="operator"]').forEach(function(n){n.textContent=o})}
   if(l.email)document.querySelectorAll('[data-legal="email"]').forEach(function(n){n.textContent=l.email;n.setAttribute('href','mailto:'+l.email)});
-  if(l.minAge>0)document.querySelectorAll('[data-legal="minAge"]').forEach(function(n){n.textContent=l.minAge});
+  if(l.ageFrom>0)document.querySelectorAll('[data-legal="ageFrom"]').forEach(function(n){n.textContent=l.ageFrom});
 }).catch(function(){});
 </script>
 </body>
