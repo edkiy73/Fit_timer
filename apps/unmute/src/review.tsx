@@ -404,9 +404,9 @@ export function ReviewView({
     }
   };
 
-  const checkChoice=()=>{
-    if(item.kind!=='card'||item.activity.type!=='choice'||selected===null)return;
-    void finishCard(selected===item.activity.correctIndex);
+  const checkChoice=(choice:number)=>{
+    if(item.kind!=='card'||item.activity.type!=='choice')return;
+    void finishCard(choice===item.activity.correctIndex);
   };
 
   const checkText=()=>{
@@ -519,17 +519,15 @@ export function ReviewView({
                   type="radio"
                   name={'review-'+item.activity.id+'-'+index}
                   checked={selected===optionIndex}
-                  onChange={()=>setSelected(optionIndex)}
+                  onChange={()=>{
+                    setSelected(optionIndex);
+                    checkChoice(optionIndex);
+                  }}
                 />
                 <span><LexiconText text={localized(option,locale)} refs={item.activity.lexiconRefs} interactive={result!==null} /></span>
               </label>
             ))}
           </fieldset>
-          {result===null&&(
-            <button className="primary-button" type="button" disabled={selected===null||busy} onClick={checkChoice}>
-              {t('learn.check')}
-            </button>
-          )}
           {cardFeedback(item.activity)}
         </article>
       )}
