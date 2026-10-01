@@ -35,6 +35,9 @@ ok('product runtime contains no AppBase Core references',
   && !/AppBase(?:Storage|Identity|Sync|Observability|Notifications|UI)/.test(fs.readFileSync('src/main.ts','utf8')));
 ok('shared AI protocol is imported, not concatenated into the product runtime',
   !build.includes("'lib/ai-protocol.js'") && !/Shared Fit Timer AI protocol contract/.test(app));
+ok('test-only binding bridge has an explicit measured allowlist',
+  /TEST_BRIDGE_ALLOWLIST = new Set/.test(bridge)
+  && /filter\(\(\[name\]\) => TEST_BRIDGE_ALLOWLIST\.has\(name\)\)/.test(bridge));
 ok('test-only binding bridge is generated, gated and never enabled by production config',
   /__FIT_TEST_MODE__ === true/.test(bridge)
   && /testBridge\(/.test(esm) && !/__FIT_TEST_MODE__/.test(app)

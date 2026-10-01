@@ -7,13 +7,16 @@
    Usage:
      node scripts/audit-test-bridge.mjs
      node scripts/audit-test-bridge.mjs --json
+     node scripts/audit-test-bridge.mjs --check
 */
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
+import { TEST_BRIDGE_ALLOWLIST } from './test-bridge.mjs';
 
 const ROOT = process.cwd();
 const json = process.argv.includes('--json');
+const check = process.argv.includes('--check');
 const SOURCE_FILES = [
   ...readdirSync('src/app').filter(name => /^(?:\d\d-[\w-]+|options)\.js$/.test(name)).map(name => path.join('src/app', name)),
   'src/i18n/index.js'
@@ -29,7 +32,7 @@ function bindingNames(node){
 
 function topLevelBindings(fileName){
   const source = readFileSync(fileName, 'utf8');
-  const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.ES2022, false, ts.ScriptKind.JS);
+  const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.JS);
   const out = new Set();
   for(const stmt of sf.statements){
     if((ts.isFunctionDeclaration(stmt) || ts.isClassDeclaration(stmt)) && stmt.name) out.add(stmt.name.text);
@@ -60,6 +63,7 @@ const browserCall = node => ts.isCallExpression(node)
 
 function isWrite(id){
   const p = id.parent;
+  if(!p) return false;
   if(ts.isBinaryExpression(p) && p.left === id && p.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && p.operatorToken.kind <= ts.SyntaxKind.LastAssignment) return true;
   if((ts.isPrefixUnaryExpression(p) || ts.isPostfixUnaryExpression(p))
     && [ts.SyntaxKind.PlusPlusToken, ts.SyntaxKind.MinusMinusToken].includes(p.operator)) return true;
@@ -75,12 +79,13 @@ function mark(name, file, write){
 
 for(const fileName of walkTests('tests')){
   const source = readFileSync(fileName, 'utf8');
-  const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.ES2022, false, ts.ScriptKind.JS);
+  const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.JS);
   const short = path.relative(ROOT, path.resolve(fileName)).replaceAll('\\\\','/');
   const scanCallback = root => {
     const visit = node => {
       if(ts.isIdentifier(node)){
         const p = node.parent;
+        if(!p){ ts.forEachChild(node, visit); return; }
         const propertyName = ts.isPropertyAccessExpression(p) && p.name === node;
         const objectKey = (ts.isPropertyAssignment(p) || ts.isMethodDeclaration(p)) && p.name === node;
         if(!propertyName && !objectKey) mark(node.text, short, isWrite(node));
@@ -88,10 +93,11 @@ for(const fileName of walkTests('tests')){
       if(ts.isPropertyAccessExpression(node)
         && ts.isIdentifier(node.expression)
         && ['window','globalThis'].includes(node.expression.text)){
+        const parent = node.parent;
         mark(node.name.text, short,
-          ts.isBinaryExpression(node.parent) && node.parent.left === node
-          && node.parent.operatorToken.kind >= ts.SyntaxKind.FirstAssignment
-          && node.parent.operatorToken.kind <= ts.SyntaxKind.LastAssignment);
+          !!parent && ts.isBinaryExpression(parent) && parent.left === node
+          && parent.operatorToken.kind >= ts.SyntaxKind.FirstAssignment
+          && parent.operatorToken.kind <= ts.SyntaxKind.LastAssignment);
       }
       ts.forEachChild(node, visit);
     };
@@ -119,7 +125,14 @@ const report = {
   bindings:rows
 };
 
-if(json){
+if(check){
+  const missing = rows.map(row => row.name).filter(name => !TEST_BRIDGE_ALLOWLIST.has(name));
+  if(missing.length){
+    console.error('Browser tests use bindings missing from TEST_BRIDGE_ALLOWLIST: ' + missing.join(', '));
+    process.exit(1);
+  }
+  console.log(`Test bridge allowlist covers ${report.usedBindings} measured bindings (from ${report.candidateBindings} candidates).`);
+}else if(json){
   console.log(JSON.stringify(report, null, 2));
 }else{
   console.log(`Bridge candidates: ${report.candidateBindings}`);
