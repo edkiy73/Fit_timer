@@ -117,7 +117,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   // Удалённая разминка не возвращается ни при переключении, ни после перезапуска.
   await page.evaluate(async () => {
-    customPrograms = customPrograms.filter(p => p.id !== 'warmup'); await savePrograms();
+    await deleteCustomProgram('warmup');
     await switchUser('uC'); await switchUser('uB');
   });
   const back = await page.evaluate(() => customPrograms.some(p => p.id === 'warmup'));

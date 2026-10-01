@@ -544,6 +544,7 @@ Audit conclusion:
 - ✅ 2026-10-01: premium purchase browser flow now selects the monthly plan and opens checkout through the real UI. Raw `pmPlan` is no longer exposed by the test bridge, reducing writable bindings from **13 → 12**.
 - ✅ 2026-10-01: AI edit carry tests now enter program-edit state through `openEditAI(p)` instead of assigning `editAIProg`. The binding remains readable for one copy/export assertion but is no longer writable through the bridge, reducing writable bindings from **12 → 11**.
 - ✅ 2026-10-01: trainer/account/backup browser fixtures now seed trainer and client collections through `restoreTrainerClientState()` instead of replacing `trainer` / `clients` directly. Both bindings remain readable for assertions but are no longer writable through the bridge, reducing writable bindings from **11 → 9**.
+- ✅ 2026-10-01: profile-heavy browser fixtures now hydrate programs/stats/photos through persisted profile storage (`loadData()` / `loadPhotos()`), and profile-switch deletes warm-up via `deleteCustomProgram()`. `customPrograms`, `stats`, `photos` and `progWeights` no longer need bridge setters, reducing writable bindings from **9 → 5**.
 
 First semantic-owner cleanup:
 - account login cancellation is now owned by `cancelLogin()`; five raw login/biometry setters were removed from the public module surface;
