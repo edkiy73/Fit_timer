@@ -1226,3 +1226,14 @@ h2{margin:0 0 8px;font-weight:800}
 
 /* Exit sheet offers an explicit discard path without competing with the primary actions. */
 .confirm-sheet .danger-link{justify-self:center;margin-top:2px}
+
+
+/* Feedback heading: icon and copy share one row; retry notice sits under the title. */
+.learn-feedback-head{align-items:flex-start}
+.learn-feedback-head-copy{display:grid;gap:4px;min-width:0;padding-top:2px}
+.learn-feedback-head-copy strong{font-size:20px;line-height:1.2}
+.learn-feedback-head-copy .learn-feedback-return{margin:0}
+
+/* Keep actions clear of explanation text and make the whole row sticky instead of shadowing from the CTA. */
+.learn-feedback-actions{position:sticky;bottom:0;z-index:2;margin-top:10px;padding-top:10px;background:inherit}
+.learn-feedback.is-sheet .learn-feedback-next{position:static;margin-top:0;box-shadow:none}
