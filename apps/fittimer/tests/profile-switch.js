@@ -75,7 +75,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const u = curUser();
     const oldGender = u.gender;
     const oldDraft = draft;
-    setDraftShared({
+    loadBuilderDraft({
       name:'Gender test',
       plans:[{days:[],rounds:1,roundRest:0,exercises:[
         {id:'gender-ex',name:'Squat',desc:'',muscles:[],type:'reps',value:'10',sets:1,weight:0}
@@ -95,7 +95,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const femaleImages = imagesPromptText();
 
     u.gender = oldGender;
-    setDraftShared(oldDraft);
+    loadBuilderDraft(oldDraft);
 
     return {blankUser,blankImages,maleUser,maleImages,femaleUser,femaleImages};
   });
