@@ -153,7 +153,6 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "saveClients",
   "saveIdentity",
   "savePrograms",
-  "saveProgWeights",
   "saveSession",
   "saveStats",
   "saveTrainer",
