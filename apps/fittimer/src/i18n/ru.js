@@ -247,7 +247,7 @@ export const I18N_RU = {
   'builder.exerciseProgressionFrequencyHint': "Не выбрано — используется настройка программы. 0 — прогрессия этого упражнения отключена.",
   'builder.exerciseProgressionUseProgram': "По умолчанию программы ({count})",
   'builder.exerciseProgressionUseProgramOff': "По умолчанию программы (выключено)",
-  'builder.exerciseProgressionOff': "Без прогрессии",
+  'builder.exerciseProgressionOff': "0 — Без прогрессии",
   'builder.exerciseProgressionDisabledHint': "для этого упражнения прогрессия отключена",
   'builder.descriptionCover': "Описание и обложка",
   'builder.descriptionOptional': "Описание (необязательно)",
