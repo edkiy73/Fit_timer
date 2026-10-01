@@ -1,4 +1,4 @@
-import { useCallback, useEffect, type CSSProperties } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { ActivityCalendar } from './activity-calendar';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@appbase/ui-react/i18n.js';
@@ -21,6 +21,9 @@ import type { TimedFlag } from './progress';
 import { withAllLearningDays } from './learning-days';
 import { Loader } from './loader';
 import { Icon, type IconName } from './icons';
+import { Sheet } from './sheet';
+import { CourseOptionList } from './active-course';
+import type { ContentCatalogSet } from './content/client';
 
 const STATS_QUERY_KEY='progress-screen-stats';
 const COURSE_QUERY_KEY='progress-screen-course';
@@ -260,6 +263,7 @@ export function ProgressView({
   learningDays=null,
   embedded=false,
   courses=[],
+  courseSets=[],
   selectedCourseId='',
   onCourseChange
 }:{
@@ -271,10 +275,12 @@ export function ProgressView({
   /** Inside Profile: no back button or page title, the screen already has them. */
   embedded?:boolean;
   courses?:Array<{id:string;label:string}>;
+  courseSets?:ContentCatalogSet[];
   selectedCourseId?:string;
   onCourseChange?:(id:string)=>void;
 }){
   const {t}=useI18n();
+  const [courseSheetOpen,setCourseSheetOpen]=useState(false);
   const back=embedded?null:<button className="learn-back" type="button" onClick={onExit}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>;
 
   if(runtime.status==='error'||details.status==='error'){
@@ -350,15 +356,19 @@ export function ProgressView({
             <div className="progress-dashboard-head progress-course-head">
               <div>
                 <h3>{t('progress.courseTitle')}</h3>
-                {!(courses.length>1&&onCourseChange)&&<p className="progress-course-name">{selectedCourse}</p>}
               </div>
-              {courses.length>1&&onCourseChange&&(
-                <label className="progress-course-picker">
-                  <span className="sr-only">{t('progress.courseLabel')}</span>
-                  <select value={selectedCourseId} onChange={event=>onCourseChange(event.target.value)}>
-                    {courses.map(course=><option key={course.id} value={course.id}>{course.label}</option>)}
-                  </select>
-                </label>
+              {courses.length>1&&onCourseChange ? (
+                <button
+                  className="progress-course-picker pressable"
+                  type="button"
+                  onClick={()=>setCourseSheetOpen(true)}
+                  aria-haspopup="dialog"
+                >
+                  <span>{selectedCourse}</span>
+                  <Icon name="chevron" size={16} />
+                </button>
+              ) : (
+                <p className="progress-course-name">{selectedCourse}</p>
               )}
             </div>
 
@@ -427,11 +437,49 @@ export function ProgressView({
               ) : <p className="progress-muted">{t('progress.answersEmpty')}</p>}
             </div>
 
-            <div className="progress-practice-strip">
-              <span><Icon name="progress" size={18}/>{t('progress.drillShort')} <strong>{summary.drill}</strong></span>
-              {summary.speedAverage!==null&&<span>{t('progress.speedShort')} <strong>{summary.speedAverage}%</strong></span>}
-              {summary.dialogueAverage!==null&&<span>{t('progress.dialogueShort')} <strong>{summary.dialogueAverage}%</strong></span>}
-            </div>
+            {(summary.drill>0||summary.speedAverage!==null||summary.dialogueAverage!==null)&&(
+              <div className="progress-practice-panel">
+                <div className="progress-practice-title">
+                  <Icon name="progress" size={18}/>
+                  <strong>{t('progress.practiceTitle')}</strong>
+                </div>
+                {summary.drill>0&&(
+                  <div className="progress-practice-row">
+                    <span>{t('progress.drill')}</span>
+                    <strong>{summary.speedAverage!==null
+                      ? t('progress.practiceSpeedValue',{count:summary.drill,percent:summary.speedAverage})
+                      : t('progress.practiceCount',{count:summary.drill})}</strong>
+                  </div>
+                )}
+                {summary.dialogueAverage!==null&&(
+                  <div className="progress-practice-row">
+                    <span>{t('progress.dialogueShort')}</span>
+                    <strong>{t('progress.practiceDialogueValue',{count:summary.dialogueSamples,percent:summary.dialogueAverage})}</strong>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {courses.length>1&&onCourseChange&&(
+              <Sheet
+                open={courseSheetOpen}
+                onClose={()=>setCourseSheetOpen(false)}
+                labelledBy="progress-course-sheet-title"
+                closeLabel={t('courses.close')}
+              >
+                <div className="courses-sheet">
+                  <h3 id="progress-course-sheet-title">{t('progress.courseLabel')}</h3>
+                  <CourseOptionList
+                    sets={courseSets}
+                    currentId={selectedCourseId}
+                    onPick={id=>{
+                      onCourseChange(id);
+                      setCourseSheetOpen(false);
+                    }}
+                  />
+                </div>
+              </Sheet>
+            )}
           </article>
         </>
       )}
