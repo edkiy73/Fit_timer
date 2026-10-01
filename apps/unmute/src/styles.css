@@ -1233,3 +1233,8 @@ h2{margin:0 0 8px;font-weight:800}
 
 /* Exit sheet offers an explicit discard path without competing with the primary actions. */
 .confirm-sheet .danger-link{justify-self:center;margin-top:2px}
+
+
+/* Speed drill compare actions are paired: one decision, two equal choices. */
+.drill-compare-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.drill-compare-actions :is(.primary-button,.secondary-button){width:100%;min-width:0}
