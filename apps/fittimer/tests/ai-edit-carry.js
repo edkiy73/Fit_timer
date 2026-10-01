@@ -21,6 +21,14 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const errs = [];
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
   page.on('pageerror', e => errs.push(String(e)));
+  const aiKinds = [];
+  await page.route('**/api/ai', async route => {
+    const body = route.request().postDataJSON() || {};
+    aiKinds.push(body.kind || '');
+    await route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify({
+      text:'УПРАЖНЕНИЕ: Присед\nФОРМАТ: время\nЗНАЧЕНИЕ: 40\nПОДХОДЫ: 3\nОТДЫХ: 60'
+    })});
+  });
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(1000);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(800); }
@@ -135,8 +143,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const p = {id:'exn', name:'Навигация', progression:0, stats:{completions:0}, plans:[
       {days:['Пн'], rounds:1, roundRest:0, exercises:[{id:'n1', name:'Присед', type:'reps', value:'10', sets:3, rest:60}]}]};
     customPrograms.push(p);
+    account.email = 'edit-ai-test@example.com';
+    account.syncToken = 'edit-ai-test-token';
     account.sub = {plan:'year', until:'2099-01-01'};
-    callGemini = async () => 'УПРАЖНЕНИЕ: Присед\nФОРМАТ: время\nЗНАЧЕНИЕ: 40\nПОДХОДЫ: 3\nОТДЫХ: 60';
+    identity.deviceId = 'edit-ai-test-device';
     openBuilder('exn');
   });
   await page.waitForTimeout(300);
@@ -151,6 +161,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const afterAi = await page.evaluate(() => ({screen: show._last, value: curPlan().exercises[0].value, type: curPlan().exercises[0].type}));
   ok('после «Изменить за меня» открыт редактор упражнения с результатом',
      afterAi.screen === 'scrExercise' && afterAi.type === 'time', JSON.stringify(afterAi));
+  ok('ИИ-правка упражнения прошла через API boundary', aiKinds.includes('exercise.modify'), aiKinds.join(','));
   await page.click('#btnSaveEx');
   await page.waitForTimeout(600);
   const back = await page.evaluate(() => show._last);

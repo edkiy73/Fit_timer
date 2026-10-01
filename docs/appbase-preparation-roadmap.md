@@ -548,6 +548,7 @@ Audit conclusion:
 - ✅ 2026-10-01: premium-gated browser scenarios now use actual Premium account state (`account.sub` with a future expiry) instead of replacing `premiumGate()`. The gate is no longer writable through the bridge, reducing writable bindings from **5 → 4**.
 - ✅ 2026-10-01: catalog browser fixtures now enter through the `/api/catalog` boundary (Playwright route) and assertions use `storeAll()`. Raw `storeServer` is no longer exposed by the bridge at all, reducing writable bindings from **4 → 3**.
 - ✅ 2026-10-01: notification-related browser tests now inject their observer through `setDataSyncPlatformHooks()` / `getSyncNativeNotifications` instead of replacing the platform function. Raw `syncNativeNotifications` is no longer exposed by the bridge, reducing writable bindings from **3 → 2**.
+- ✅ 2026-10-01: the remaining AI provider doubles now run through the real `/api/ai` boundary using Playwright routing. `callGemini` and `callGeminiImage` are no longer exposed by the test bridge; writable bridge bindings are now **2 → 0**. Browser tests can still fake external AI deterministically, but no longer by replacing product-module bindings.
 
 First semantic-owner cleanup:
 - account login cancellation is now owned by `cancelLogin()`; five raw login/biometry setters were removed from the public module surface;
