@@ -56,8 +56,8 @@ let builderProgramsHooks = {
   progressedRepsRange: () => '',
   qChips: () => {},
   renderExList: () => {},
-  setDraftShared: v => v,
-  setPlanIdxShared: v => v,
+  loadBuilderDraft: v => v,
+  selectPlanVariant: v => v,
   shrinkImage: (_file, _maxSide, cb) => { if(cb) cb(null); },
   valueText: v => String(v == null ? '' : v)
 };
@@ -2995,10 +2995,10 @@ export async function importProgramLink(id){
   prog.origEx = trainerProgramsHooks.snapshotEx(prog);
   if(d.by) prog.by = d.by;
   if(d.byLink) prog.byLink = d.byLink;
-  builderProgramsHooks.setDraftShared(prog);
+  builderProgramsHooks.loadBuilderDraft(prog);
   builderDraft().plans = JSON.parse(JSON.stringify(normPlans(builderDraft())));
   delete builderDraft().exercises; delete builderDraft().rounds; delete builderDraft().roundRest; delete builderDraft().days;
-  builderProgramsHooks.setPlanIdxShared(0);
+  builderProgramsHooks.selectPlanVariant(0);
   builderProgramsHooks.fillBuilder(t('import.reviewSave'));
   // Говорим ОДИН РАЗ и ЗАРАНЕЕ: тренер будет видеть занятия по этой программе.
   // Отчёты уходят сами, и узнавать об этом постфактум человек не должен —
@@ -3047,10 +3047,10 @@ export function importProgramCode(code){
   prog.id = 'p' + Date.now();
   prog.stats = {completions: 0};
   sanitizeProgram(prog);        // код можно собрать руками, и собирают
-  builderProgramsHooks.setDraftShared(prog);
+  builderProgramsHooks.loadBuilderDraft(prog);
   builderDraft().plans = JSON.parse(JSON.stringify(normPlans(builderDraft())));
   delete builderDraft().exercises; delete builderDraft().rounds; delete builderDraft().roundRest; delete builderDraft().days;
-  builderProgramsHooks.setPlanIdxShared(0);
+  builderProgramsHooks.selectPlanVariant(0);
   $('importModal').classList.remove('open');
   builderProgramsHooks.fillBuilder(t('import.reviewSave'));
 }
