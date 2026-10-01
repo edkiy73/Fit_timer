@@ -302,16 +302,20 @@ async function scenario(ctx, name, fn, errs){
   }, errs);
 
   await scenario(ctx, 'каталог → карточка программы → назад', async page => {
-    await page.evaluate(() => {
+    const item = {
+      id:'nav-store-item', by:'@nav.trainer', cat:'tone', level:'Средний', min:20,
+      name:'Навигация каталога', gives:'Проверка возврата из карточки.',
+      cover:null,
+      text:'ПРОГРАММА: Навигация каталога\\nДНИ: Пн\\nКРУГИ: 1\\n\\nУПРАЖНЕНИЕ: Планка\\nФОРМАТ: время\\nЗНАЧЕНИЕ: 30\\nПОДХОДЫ: 1\\nОТДЫХ: 20'
+    };
+    await page.route('**/api/catalog*', route => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({items:[item]})
+    }));
+    await page.evaluate(async () => {
       goTab('scrPrograms');
       openStore('scrPrograms');
-      storeServer = [{
-        id:'nav-store-item', by:'@nav.trainer', cat:'tone', level:'Средний', min:20,
-        name:'Навигация каталога', gives:'Проверка возврата из карточки.',
-        cover:null,
-        text:'ПРОГРАММА: Навигация каталога\\nДНИ: Пн\\nКРУГИ: 1\\n\\nУПРАЖНЕНИЕ: Планка\\nФОРМАТ: время\\nЗНАЧЕНИЕ: 30\\nПОДХОДЫ: 1\\nОТДЫХ: 20'
-      }];
-      openStoreItem('nav-store-item');
+      await loadStoreServer();
+      await openStoreItem('nav-store-item');
     });
     await nap(page, 450);
     await aligned(page, 'карточка каталога', 'scrStoreItem');
