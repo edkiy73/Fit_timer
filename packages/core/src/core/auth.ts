@@ -139,7 +139,10 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
   const storage = options.storage === undefined ? browserStorage() : options.storage;
   const sessionKey = options.sessionKey || 'appbase.auth.session';
   const deviceKey = options.deviceKey || 'appbase.auth.device';
-  const fetchImpl = options.fetch || globalThis.fetch;
+  // globalThis.fetch is looked up per request, so a wrapper installed later (busy buttons) applies.
+  const fetchImpl = options.fetch || (typeof globalThis.fetch === 'function'
+    ? (input: RequestInfo | URL, init?: RequestInit) => globalThis.fetch(input, init)
+    : undefined);
   const createDeviceId = options.createDeviceId || defaultDeviceId;
 
   async function read(key: string): Promise<string | null> {

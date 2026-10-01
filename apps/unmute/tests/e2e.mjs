@@ -162,12 +162,22 @@ async function completeTheory(page){
   return page.waitForURL(/#\/$/,{timeout:5000}).then(()=>true,()=>false);
 }
 
-async function signIn(page,email){
+async function signIn(page,email,{slowSend=false}={}){
   await page.getByRole('navigation',{name:COPY.tabs}).getByRole('link',{name:COPY.me,exact:true}).click();
   // «Я» shows one sign-in button; the code form opens in a sheet.
   await page.getByRole('button',{name:COPY.signIn}).click();
   await page.getByRole('textbox',{name:'Email'}).fill(email);
-  await page.getByRole('button',{name:COPY.send}).click();
+  if(slowSend){
+    // A slow server: the pressed button shows a spinner instead of looking frozen.
+    await page.route('**/api/auth',async route=>{await new Promise(r=>setTimeout(r,700));await route.continue();});
+    await page.getByRole('button',{name:COPY.send}).click();
+    ok('a button waiting for the server shows a spinner',await appears(page.locator('.ab-auth-primary[aria-busy="true"]'),1000));
+    await page.getByText(/^DEV: \d+$/).waitFor();
+    ok('the spinner goes away when the answer comes',await page.locator('[aria-busy="true"]').count()===0);
+    await page.unroute('**/api/auth');
+  }else{
+    await page.getByRole('button',{name:COPY.send}).click();
+  }
   await page.getByText(/^DEV: \d+$/).waitFor();
   await page.getByRole('button',{name:COPY.verify,exact:true}).click();
   if(await appears(page.getByRole('textbox',{name:COPY.handle}),1200)){
@@ -190,7 +200,7 @@ try{
   ok('anonymous phone advances to day 2',await appears(phone.page.getByRole('heading',{name:'День 2'})));
   ok('theme tokens are applied',(await phone.page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()))!=='');
 
-  const phoneSignedIn=await signIn(phone.page,'person@example.com');
+  const phoneSignedIn=await signIn(phone.page,'person@example.com',{slowSend:true});
   await phone.page.goto(URL_+'#/');
   ok(
     'first sign-in keeps the phone local progress',

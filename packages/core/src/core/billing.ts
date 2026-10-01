@@ -31,7 +31,10 @@ export interface BillingError extends Error {
 
 export function createBillingClient(options: BillingClientOptions): BillingClient {
   const endpoint = options.endpoint || '/api/billing';
-  const fetchImpl = options.fetch || globalThis.fetch;
+  // globalThis.fetch is looked up per request, so a wrapper installed later (busy buttons) applies.
+  const fetchImpl = options.fetch || (typeof globalThis.fetch === 'function'
+    ? (input: RequestInfo | URL, init?: RequestInit) => globalThis.fetch(input, init)
+    : undefined);
 
   async function post(body: Record<string, unknown>): Promise<Record<string, unknown>> {
     if(typeof fetchImpl !== 'function') throw new Error('fetch_unavailable');
