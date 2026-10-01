@@ -232,7 +232,7 @@ if(!/setAccountProgramsAiHooks\(\{[\s\S]*getApiBase[\s\S]*ageError[\s\S]*apiPost
   problems.push('account/programs-ai hook boundary is missing or incomplete');
 }
 
-for(const removed of ['setClientsShared','setTrainerShared']){
+for(const removed of ['setClientsShared','setTrainerShared','setCustomProgramsShared']){
   if((dataSyncSource + accountSource + programsAiSource + eventsCoreSource).includes(removed)){
     problems.push('removed trainer/client raw setter must not return: ' + removed);
   }
