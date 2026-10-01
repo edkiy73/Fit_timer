@@ -82,7 +82,9 @@ async function boot(b, label, errs, url){
   const link = await tp.evaluate(async ({txt, nick}) => {
     const r = parseProgramText(txt);
     const p = r.program || r; p.id = 'tp1';
-    customPrograms.push(p); await savePrograms();
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
+    await savePrograms();
     let out = null;
     navigator.clipboard.writeText = async t => { out = t; };
     navigator.share = async d => { out = d.url; };
@@ -198,8 +200,10 @@ async function boot(b, label, errs, url){
   const two = await tp.evaluate(async () => {
     const r = parseProgramText('ПРОГРАММА: Растяжка\nДНИ: Сб\nКРУГИ: 1\n\nУПРАЖНЕНИЕ: Наклоны\nФОРМАТ: время\nЗНАЧЕНИЕ: 40\nПОДХОДЫ: 1\nОТДЫХ: 20');
     const p2 = r.program || r; p2.id = 'tp2';
-    customPrograms.push(p2); await savePrograms();
-    await sendProgramToClient(clients[0], p2);
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p2]));
+    await loadData();
+    await savePrograms();
+    await sendProgramToClient(clients[0], customPrograms.find(x => x.id === p2.id));
     return {progs: clients[0].progs.length,
             names: clients[0].progs.map(x => x.name),
             firstKeeps: (clients[0].progs[0].reports || []).length};
@@ -274,10 +278,9 @@ async function boot(b, label, errs, url){
        && identity.legacyDiff.del.length === 0,
      JSON.stringify(identity.legacyDiff));
 
-  const scopedStreak = await cp.evaluate(() => {
-    const savedPrograms = customPrograms.slice();
-    const savedHistory = (stats.history || []).slice();
-    const savedBest = stats.bestStreak || 0;
+  const scopedStreak = await cp.evaluate(async () => {
+    const savedPrograms = JSON.parse(JSON.stringify(customPrograms));
+    const savedStats = JSON.parse(JSON.stringify(stats || {}));
     const now = new Date();
     const iso = localISO(now);
     const day = DAYS[(now.getDay() + 6) % 7];
@@ -290,20 +293,24 @@ async function boot(b, label, errs, url){
     const target = mk('trainer-streak-target','Программа тренера');
     const other = mk('trainer-streak-other','Другая программа');
 
-    customPrograms.splice(0, customPrograms.length, target, other);
-    stats.history = [
-      {id:'st-target',d:iso,pid:target.id,plan:0,status:'full',sec:600},
-      {id:'st-other',d:iso,pid:other.id,plan:0,status:'full',sec:600}
-    ];
-    stats.bestStreak = 99;
+    await kvSet(pk('customPrograms'), JSON.stringify([target, other]));
+    await kvSet(pk('stats'), JSON.stringify(Object.assign({}, savedStats, {
+      history:[
+        {id:'st-target',d:iso,pid:target.id,plan:0,status:'full',sec:600},
+        {id:'st-other',d:iso,pid:other.id,plan:0,status:'full',sec:600}
+      ],
+      bestStreak:99
+    })));
+    await loadData();
 
+    const liveTarget = customPrograms.find(x => x.id === target.id);
     const global = calcStreakInfo().n;
     const scoped = calcStreakInfo({programId:target.id}).n;
-    const report = buildReport(target).streak;
+    const report = buildReport(liveTarget).streak;
 
-    customPrograms.splice(0, customPrograms.length, ...savedPrograms);
-    stats.history = savedHistory;
-    stats.bestStreak = savedBest;
+    await kvSet(pk('customPrograms'), JSON.stringify(savedPrograms));
+    await kvSet(pk('stats'), JSON.stringify(savedStats));
+    await loadData();
 
     return {global, scoped, report};
   });
