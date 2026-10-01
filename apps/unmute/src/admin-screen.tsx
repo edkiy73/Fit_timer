@@ -47,5 +47,5 @@ const EVENT_LABELS = {
 export function AdminScreen({productName}: {productName: string}){
   const {locale} = useI18n();
   const adminLocale = sharedUiLocale(locale);
-  return <AdminPanel client={adminClient} locale={adminLocale} productName={productName} eventLabels={EVENT_LABELS[adminLocale]} extraSections={[contentAdminSection,courseAdminSection,updateAdminSection]} />;
+  return <AdminPanel client={adminClient} locale={adminLocale} productName={productName} eventLabels={EVENT_LABELS[adminLocale]} extraSections={[courseAdminSection,contentAdminSection,updateAdminSection]} />;
 }

@@ -269,7 +269,14 @@ try{
   ok('Admin overview shows no raw JSON',await admin.locator('.ab-admin-json').count()===0);
   await adminTab('Ошибки');
   ok('Admin errors say how often and when',await appears(admin.getByText(/^1 раз · \d/)));
-  await adminTab('Курсы и словарь');
+  await adminTab('Курсы');
+  await admin.getByRole('button',{name:/Hello|День 1/}).first().click();
+  ok('Admin «Курсы»: a day opens with its tasks',await appears(admin.locator('.ab-course-task').first()));
+  await admin.locator('.ab-course-task-main').first().click();
+  ok('Admin «Курсы»: a task opens right under it',await appears(admin.locator('.ab-course-task[data-open] .ab-course-editor')));
+  await admin.getByRole('button',{name:'← Все дни'}).click();
+  ok('Admin «Курсы»: back to all days on a phone',await appears(admin.locator('.ab-course-days-pane')));
+  await adminTab('Словарь');
   await admin.getByRole('searchbox',{name:'Слово или перевод'}).fill('hello');
   await admin.getByRole('button',{name:'Найти',exact:true}).click();
   ok('Admin word search answers',await appears(admin.getByText(/Ничего не нашлось|Изменить/).first()));

@@ -403,6 +403,12 @@ async function getDraftStructure(id){
   return Draft.getStructure(key);
 }
 
+async function getDraftActivities(id,activityIds){
+  const key=cleanId(id);
+  await ensureDraftWorkspace(key);
+  return Draft.getActivities(key,activityIds);
+}
+
 async function getDraftNode(id,roadmapId,nodeId){
   const key=cleanId(id);
   await ensureDraftWorkspace(key);
@@ -573,6 +579,7 @@ module.exports = {
   listDraftSetIds,
   updateDraftSetMeta,
   getDraftStructure,
+  getDraftActivities,
   getDraftNode,
   createDraftNode,
   updateDraftNode,

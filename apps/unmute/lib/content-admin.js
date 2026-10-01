@@ -140,7 +140,9 @@ function activitySummary(activity){
   let label=firstText(activity.title)||firstText(activity.prompt)||firstText(activity.topic)
     ||firstText(activity.pattern)||firstText(activity.scene)||String(activity.text||'');
   label=label.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,120);
-  return {id:activity.id,revision:activity.revision,type:activity.type,revisionProgress:activity.revisionProgress,label};
+  // The day's plan note is titled «День N»: name it for what it is.
+  const plan=activity.type==='theory' && Array.isArray(activity.tags) && activity.tags.includes('plan');
+  return {id:activity.id,revision:activity.revision,type:activity.type,revisionProgress:activity.revisionProgress,label,plan};
 }
 
 // Admin «Найти слово»: by English spelling (lemma or any form) or by Russian translation.
@@ -437,6 +439,15 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
         const setId=requestedSetId(body);
         const structure=await Content.getDraftStructure(setId);
         if(!structure){ fail(res,404,'draft_not_found'); return true; }
+        // Day topic for the list («Past Simple»): the first theory card that is not the plan
+        // note, as in the learner's course map. Imported days are all titled «День N».
+        const allIds=(structure.roadmaps||[]).flatMap(roadmap=>(roadmap.nodes||[]).flatMap(node=>node.activityIds||[]));
+        const activities=new Map((await Content.getDraftActivities(setId,[...new Set(allIds)])).filter(Boolean).map(item=>[item.id,item]));
+        const topicOf=node=>{
+          const theory=(node.activityIds||[]).map(id=>activities.get(id))
+            .find(item=>item&&item.type==='theory'&&!(item.tags||[]).includes('plan'));
+          return theory&&theory.title&&typeof theory.title.ru==='string' ? theory.title.ru : '';
+        };
         send(res,200,{ok:true,
           draftRevision:structure.draftRevision,
           draftUpdatedAt:structure.draftUpdatedAt,
@@ -446,7 +457,8 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
             title:roadmap.title,
             nodes:(roadmap.nodes||[]).map(node=>({
               id:node.id,kind:node.kind,title:node.title,dayIndex:node.dayIndex,order:node.order,
-              optional:!!node.optional,prerequisites:node.prerequisites||[],activityCount:(node.activityIds||[]).length
+              optional:!!node.optional,prerequisites:node.prerequisites||[],activityCount:(node.activityIds||[]).length,
+              topic:topicOf(node)
             }))
           }))
         });
@@ -688,6 +700,27 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
           sets[setId]=releaseCheck(Coverage.auditLexicalCoverage(draft,lexiconDraft));
         }
         send(res,200,{ok:true,sets});
+        return true;
+      }
+
+      if(action === 'content_publish_lexicon'){
+        const lexiconDraft=await Lexicon.getDraft();
+        const release=await Release.getRelease();
+        const releasedIds=release&&release.sets ? Object.keys(release.sets) : [];
+        if(!lexiconDraft || !releasedIds.length){ fail(res,409,'no_released_courses'); return true; }
+        Lexicon.validateLexicon(lexiconDraft);
+        // The courses learners have must still find every word in the new dictionary.
+        const Coverage=await loadCoverage();
+        const blocked={};
+        for(const setId of releasedIds){
+          const course=await Release.getReleasedSet(setId);
+          if(!course) continue;
+          const coverage=Coverage.compactCoverageReport(Coverage.auditLexicalCoverage(course,lexiconDraft));
+          if(Number(coverage.missingSurfaces||0)>0 || Number(coverage.ambiguousSurfaces||0)>0) blocked[setId]=coverage;
+        }
+        if(Object.keys(blocked).length){ send(res,409,{ok:false,error:'lexical_coverage_incomplete',sets:blocked}); return true; }
+        const published=await Release.publishLexiconRelease();
+        send(res,200,{ok:true,release:published.release,lexicon:{revision:published.lexiconRevision}});
         return true;
       }
 

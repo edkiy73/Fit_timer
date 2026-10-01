@@ -19,36 +19,9 @@ type ReleaseSet = {
   access?:{mode?:string;freePreview?:{days?:number};price?:{RUB?:number;USD?:number}}|null;
 };
 
-type WordCheck = {
-  ready:boolean;
-  words:number;
-  missingCount:number;
-  ambiguousCount:number;
-  missing:Array<{surface:string;count:number;context:string}>;
-  ambiguous:Array<{surface:string;count:number;context:string}>;
-};
 
-function wordList(items:WordCheck['missing'],total:number){
-  const shown=items.slice(0,12).map(item=>item.surface).join(', ');
-  return total>12 ? shown+' и ещё '+(total-12) : shown;
-}
 
-function courseState(item:ReleaseSet){
-  if(!item.publishedRevision) return {tone:'new',text:'Ещё не выпущен — ученики его не видят'};
-  if(item.unreleasedChanges) return {tone:'changed',text:'Есть правки, ученики их ещё не видят'};
-  return {tone:'live',text:'На сайте, новых правок нет'};
-}
 
-function courseTerms(item:ReleaseSet){
-  const access=item.access;
-  if(!access || access.mode==='free') return 'Бесплатный';
-  const parts=['Бесплатных дней: '+String(access.freePreview?.days ?? 0)];
-  const price=access.price;
-  parts.push(price && (price.RUB || price.USD)
-    ? 'цена '+[price.RUB ? price.RUB+' ₽' : '',price.USD ? '$'+price.USD : ''].filter(Boolean).join(' / ')
-    : 'общая цена');
-  return parts.join(' · ');
-}
 
 function shortDate(iso?:string|null){
   if(!iso) return '';
@@ -118,7 +91,6 @@ function failureText(error:unknown):string{
 function ContentAdmin({client,adminKey}: AdminSectionContext){
   const [status,setStatus]=useState<Status|null>(null);
   const [review,setReview]=useState<ReviewItem[]>([]);
-  const [report,setReport]=useState<Record<string,unknown>|null>(null);
   const [message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
   const [query,setQuery]=useState('');
@@ -126,7 +98,6 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   const [editorMessage,setEditorMessage]=useState('');
   const [editorBusy,setEditorBusy]=useState(false);
   const [sets,setSets]=useState<ReleaseSet[]>([]);
-  const [publishSetIds,setPublishSetIds]=useState<string[]>([]);
   const [bulkSetId,setBulkSetId]=useState('general-foundation');
   const [bulkLimit,setBulkLimit]=useState(50);
   const [bulkMode,setBulkMode]=useState<'missing'|'enrich'>('missing');
@@ -142,6 +113,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   const editorPanel=useRef<HTMLElement|null>(null);
   const [ipaMessage,setIpaMessage]=useState('');
   const [ipaApplied,setIpaApplied]=useState(false);
+  const [dictMessage,setDictMessage]=useState('');
   const [ipaReport,setIpaReport]=useState<{forms:number;alreadyBritish:number;updatedForms:number;unmatched:number;unmatchedSample:string[];updatedLexemes:number}|null>(null);
 
   const load=useCallback(async()=>{
@@ -160,8 +132,6 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       setBulkSetId(current=>nextSets.some(item=>item.id===current)
         ? current
         : (nextSets.find(item=>item.id==='general-foundation')?.id || nextSets[0]?.id || 'general-foundation'));
-      // Courses with edits the learners do not see yet are ticked for release.
-      setPublishSetIds(nextSets.filter(item=>item.draftRevision&&(item.unreleasedChanges||!item.publishedRevision)).map(item=>item.id));
     }catch(error){
       setMessage(String((error as {code?:string})?.code || 'Не удалось загрузить статус контента.'));
     }finally{
@@ -170,120 +140,6 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   },[client,adminKey]);
 
   useEffect(()=>{void load();},[load]);
-
-  // Ticked courses are checked against the dictionary before «Выпустить»: the release
-  // refuses words a learner would tap and find nothing (or several entries) for.
-  const [checks,setChecks]=useState<Record<string,WordCheck>>({});
-  const [checking,setChecking]=useState(false);
-  const bulkPanel=useRef<HTMLElement|null>(null);
-  // Re-check when the ticked courses, their drafts or the dictionary draft change.
-  const checkKey=publishSetIds.slice().sort().map(id=>id+':'+String(sets.find(item=>item.id===id)?.draftUpdatedAt ?? '')).join(',')
-    +'|'+String(status?.lexicon?.draft?.draftUpdatedAt ?? '')+':'+String(status?.lexicon?.draft?.entries ?? '');
-  const runCheck=useCallback(async(ids:string[])=>{
-    if(!ids.length){setChecks({});return;}
-    setChecking(true);
-    try{
-      const result=await client.action(adminKey,'content_release_check',{setIds:ids});
-      setChecks((result.sets || {}) as Record<string,WordCheck>);
-    }catch(_){
-      setChecks({});
-    }finally{setChecking(false);}
-  },[client,adminKey]);
-  useEffect(()=>{void runCheck(publishSetIds);},[checkKey,runCheck]);
-  const blockedIds=publishSetIds.filter(id=>checks[id] && !checks[id]!.ready);
-
-  function fillWithAi(setId:string){
-    setBulkSetId(setId);
-    setBulkMode('missing');
-    setBulkPrompt('');
-    setBulkPreview(null);
-    setBulkCoverage(null);
-    bulkPanel.current?.scrollIntoView?.({block:'start',behavior:'smooth'});
-  }
-
-  async function importLegacy(overwrite=false){
-    setBusy(true);
-    setMessage('');
-    setReport(null);
-    try{
-      const result=await client.action(adminKey,'content_legacy_import',overwrite ? {overwrite:true} : undefined);
-      setReport((result.report || {}) as Record<string,unknown>);
-      setMessage('Старый курс импортирован. Ученики его увидят только после «Выпустить».');
-      setEditor(null);
-      await load();
-    }catch(error){
-      const code=String((error as {code?:string})?.code || 'request_failed');
-      if(code==='draft_exists_use_overwrite' && !overwrite){
-        const ok=window.confirm('Повторный импорт заменит невыпущенные правки основного курса и словаря, включая ручные. Продолжить?');
-        if(ok) await importLegacy(true);
-        return;
-      }
-      setMessage('Ошибка импорта: '+code);
-    }finally{
-      setBusy(false);
-    }
-  }
-
-  // The small A1 course lives in code (lib/a1-starter-course.mjs); this refreshes its draft.
-  async function seedA1(){
-    setBusy(true);
-    setMessage('');
-    try{
-      await client.action(adminKey,'content_a1_seed');
-      await load();
-      setPublishSetIds(['a1-starter']);
-      setMessage('Курс A1 обновлён из кода. Он отмечен в списке — нажми «Выпустить».');
-    }catch(error){
-      setMessage('Ошибка загрузки A1: '+String((error as {code?:string})?.code || 'request_failed'));
-    }finally{
-      setBusy(false);
-    }
-  }
-
-  // «Ты вчера работал?» → «работал(а)» in the main course draft; publishing stays a separate click.
-  async function fixGender(){
-    setBusy(true);
-    setMessage('');
-    try{
-      const result=await client.action(adminKey,'content_gender_fix',{setId:'general-foundation'});
-      await load();
-      const changed=Number(result.changed)||0;
-      if(changed){
-        setPublishSetIds(['general-foundation']);
-        setMessage('Исправлено мест: '+changed+'. Основной курс отмечен в списке — нажми «Выпустить».');
-      }else{
-        setMessage('Исправлять нечего: все обращения уже подходят и мужчинам, и женщинам.');
-      }
-    }catch(error){
-      setMessage('Не удалось исправить: '+String((error as {code?:string})?.code || 'request_failed'));
-    }finally{
-      setBusy(false);
-    }
-  }
-
-  async function publish(){
-    if(!publishSetIds.length){setMessage('Отметь хотя бы один курс.');return;}
-    const names=sets.filter(item=>publishSetIds.includes(item.id)).map(item=>item.title.ru||item.id).join(', ');
-    const ok=window.confirm('Выпустить для учеников: '+names+'? Словарь выпустится вместе с ними.');
-    if(!ok)return;
-    setBusy(true);
-    setMessage('');
-    try{
-      const result=await client.action(adminKey,'content_publish',{setIds:publishSetIds});
-      const lexicon=(result.lexicon || {}) as {revision?:unknown};
-      const release=(result.release || {}) as {revision?:unknown};
-      setMessage('Готово: ученики уже видят '+names+'. Выпуск №'+String(release.revision||'?')+', словарь №'+String(lexicon.revision||'?')+'.');
-      await load();
-    }catch(error){
-      const code=String((error as {code?:string})?.code || 'request_failed');
-      setMessage(code==='lexical_coverage_incomplete'
-        ? 'Не выпустилось: в курсе есть слова, которых нет в словаре. Список — под курсом выше.'
-        : 'Не выпустилось: '+code);
-      if(code==='lexical_coverage_incomplete') await runCheck(publishSetIds);
-    }finally{
-      setBusy(false);
-    }
-  }
 
   async function findWord(event:FormEvent){
     event.preventDefault();
@@ -386,24 +242,20 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
     }
   }
 
-  async function runIpaBootstrap(apply:boolean){
+  // One press writes British IPA for every dictionary word, then re-checks what is left.
+  async function updateTranscription(){
     setBulkBusy(true);
     setIpaMessage('');
-    if(!apply)setIpaApplied(false);
     try{
-      const result=await client.action(adminKey,'content_lexicon_ipa_bootstrap',{apply});
-      const report=(result.report || null) as typeof ipaReport;
-      if(apply){
-        // Re-check right away: the numbers then show what is left (normally nothing).
-        const after=await client.action(adminKey,'content_lexicon_ipa_bootstrap',{});
-        setIpaReport((after.report || report) as typeof ipaReport);
-        setIpaApplied(true);
-        setIpaMessage('Готово: британская транскрипция записана для '+String(report?.updatedForms || 0)+' форм. Осталось выпустить, чтобы ученики увидели.');
-        await load();
-      }else{
-        setIpaReport(report);
-        setIpaMessage(report?.updatedForms ? 'Обновится '+String(report.updatedForms)+' форм.' : 'Все слова из словаря уже с британской транскрипцией.');
-      }
+      const result=await client.action(adminKey,'content_lexicon_ipa_bootstrap',{apply:true});
+      const written=Number((result.report as {updatedForms?:number}|undefined)?.updatedForms || 0);
+      const after=await client.action(adminKey,'content_lexicon_ipa_bootstrap',{});
+      setIpaReport((after.report || result.report || null) as typeof ipaReport);
+      setIpaApplied(written>0 || dictionaryChanged);
+      setIpaMessage(written
+        ? 'Готово: британская транскрипция записана для '+written+' форм. Осталось выпустить словарь, чтобы ученики увидели.'
+        : 'Обновлять нечего: у всех слов из словаря уже британская транскрипция.'+(dictionaryChanged ? ' Выпусти словарь, если ещё не выпускал.' : ''));
+      await load();
     }catch(error){
       setIpaMessage(failureText(error));
     }finally{
@@ -411,21 +263,21 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
     }
   }
 
-  // The dictionary goes out together with the courses that are already on the site.
-  async function publishDictionary(){
-    const released=sets.filter(item=>item.publishedRevision).map(item=>item.id);
-    if(!released.length){setIpaMessage('Ни один курс ещё не выпущен — выпусти курс в блоке «Курсы».');return;}
+  // Dictionary edits go out on their own; the courses learners have stay as they are.
+  // The result shows under the button that was pressed (header or transcription panel).
+  async function publishDictionary(say:(text:string)=>void=setDictMessage){
     setBulkBusy(true);
+    say('');
     try{
-      await client.action(adminKey,'content_publish',{setIds:released});
+      await client.action(adminKey,'content_publish_lexicon');
       setIpaApplied(false);
-      setIpaMessage('Выпущено: ученики уже видят новую транскрипцию.');
+      say('Выпущено: ученики уже видят новый словарь.');
       await load();
     }catch(error){
       const code=String((error as {code?:string})?.code||'');
-      setIpaMessage(code==='lexical_coverage_incomplete'
-        ? 'Не выпустилось: в курсе есть слова, которых нет в словаре. Список — в блоке «Курсы».'
-        : failureText(error));
+      say(code==='lexical_coverage_incomplete'
+        ? 'Не выпустилось: в выпущенном курсе есть слова, которых в новом словаре нет. Верни их через «Найти слово» или «Дополнить словарь через ИИ».'
+        : code==='no_released_courses' ? 'Сначала выпусти хотя бы один курс в разделе «Курсы».' : failureText(error));
     }finally{
       setBulkBusy(false);
     }
@@ -517,83 +369,28 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       || item.senses.some(sense=>(sense.translations.ru || []).some(value=>value.toLowerCase().includes(q)));
   });
 
-  const cd=status?.course?.draft;
-  const cp=status?.course?.published;
   const ld=status?.lexicon?.draft;
   const lp=status?.lexicon?.published;
+  // The draft changed after the last release (transcription, AI batch, a word edit).
+  const dictionaryChanged=!!ld && (!lp || String(ld.draftUpdatedAt||'')>String(lp.publishedAt||''));
 
   return (
     <>
       <article className="ab-admin-panel">
         <div className="ab-admin-section-head">
           <div>
-            <h2>Курсы</h2>
-            <p className="ab-admin-note">Ученики видят только выпущенное. Правки из «Редактора уроков» ждут здесь, пока не нажмёшь «Выпустить». Словарь выпускается вместе с курсами.</p>
+            <h2>Словарь{ld ? ' · '+String(ld.entries ?? 0)+' слов' : ''}</h2>
+            <p className="ab-admin-note" data-tone={dictionaryChanged ? 'changed' : 'live'}>
+              {!ld ? (busy ? 'Загружаю…' : 'Словаря ещё нет.')
+                : dictionaryChanged ? 'Есть правки, ученики их ещё не видят.'
+                : 'На сайте, новых правок нет'+(lp?.publishedAt ? ' · выпущен '+shortDate(String(lp.publishedAt)) : '')+'.'}
+            </p>
           </div>
-          <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void load()}>Обновить</button>
+          <button type="button" disabled={bulkBusy || !dictionaryChanged} onClick={()=>void publishDictionary()}>Выпустить словарь</button>
         </div>
-
-        <div className="ab-release-set-list">
-          {sets.map(item=>{
-            const state=courseState(item);
-            const check=publishSetIds.includes(item.id) ? checks[item.id] : undefined;
-            return <div className="ab-release-course" key={item.id}><label data-state={state.tone}>
-              <input
-                type="checkbox"
-                checked={publishSetIds.includes(item.id)}
-                disabled={!item.draftRevision}
-                onChange={event=>setPublishSetIds(current=>event.target.checked
-                  ? [...new Set([...current,item.id])]
-                  : current.filter(id=>id!==item.id))}
-              />
-              <span>
-                <b>{item.title.ru || item.id}</b>
-                <small className="ab-release-state">{state.text}{item.publishedAt ? ' · выпущен '+shortDate(item.publishedAt) : ''}</small>
-                <small>{courseTerms(item)}</small>
-              </span>
-            </label>
-            {check && (check.ready
-              ? <p className="ab-release-check" data-ok>Все слова курса есть в словаре ({check.words}).</p>
-              : <div className="ab-release-check">
-                  {check.missingCount>0 && <p>Нет в словаре ({check.missingCount}): <b>{wordList(check.missing,check.missingCount)}</b></p>}
-                  {check.ambiguousCount>0 && <p>В словаре несколько записей, приложение не знает, какую показать ({check.ambiguousCount}): <b>{wordList(check.ambiguous,check.ambiguousCount)}</b>. Объедини их в словаре.</p>}
-                  {check.missingCount>0 && <button type="button" className="ab-admin-secondary" onClick={()=>fillWithAi(item.id)}>Дополнить словарь через ИИ</button>}
-                </div>)}
-            </div>;
-          })}
-          {!sets.length && <p className="ab-admin-empty">{busy ? 'Загружаю…' : 'Курсов пока нет.'}</p>}
-        </div>
-
-        <div className="ab-admin-action-row">
-          <button type="button" disabled={busy || checking || !ld || !publishSetIds.length || blockedIds.length>0} onClick={()=>void publish()}>
-            {publishSetIds.length ? 'Выпустить отмеченные ('+publishSetIds.length+')' : 'Выпустить'}
-          </button>
-        </div>
-        {checking && <p className="ab-admin-feedback">Проверяю слова курса…</p>}
-        {!checking && blockedIds.length>0 && <p className="ab-admin-feedback">Сначала добавь в словарь слова, которых не хватает, — иначе ученик нажмёт на слово и ничего не увидит.</p>}
-        {message && <p role="status" className="ab-admin-feedback">{message}</p>}
-        <p className="ab-admin-note">Цена, бесплатные дни и уроки меняются в «Редакторе уроков». Курс A1 из кода выпускается сам после каждого изменения, если в GitHub добавлен секрет ADMIN_KEY.</p>
-
-        <details className="ab-admin-details">
-          <summary>Разовые инструменты</summary>
-          <div className="ab-admin-status-line">
-            <span><b>Выпуск</b> {status?.release ? '№'+String(status.release.revision ?? 0) : 'ещё не было'}</span>
-            <span><b>Основной курс</b> {cd ? String(cd.activities ?? 0)+' заданий' : 'нет'}{cp ? ', на сайте' : ''}</span>
-            <span><b>Словарь</b> {ld ? String(ld.entries ?? 0)+' слов' : 'нет'}{lp ? ', на сайте' : ''}</span>
-          </div>
-          <div className="ab-admin-action-row">
-            <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void seedA1()}>Обновить курс A1 из кода</button>
-            <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void fixGender()}>Основной курс: «работал(а)»</button>
-            <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void importLegacy(false)}>Импорт старого курса</button>
-          </div>
-          <p className="ab-admin-note">Источник старого курса: <code>{status?.source?.sha?.slice(0,12) || '…'}</code></p>
-          {report && (
-            <details className="ab-admin-details">
-              <summary>Отчёт последнего импорта</summary>
-              <pre className="ab-admin-json">{JSON.stringify(report,null,2)}</pre>
-            </details>
-          )}
-        </details>
+        <p className="ab-admin-note">Курсы выпускаются отдельно, в разделе «Курсы». Выпуск словаря их не трогает.</p>
+        {dictMessage && <p className="ab-admin-feedback" role="status">{dictMessage}</p>}
+        {message && <p className="ab-admin-feedback" role="status">{message}</p>}
       </article>
 
       <article className="ab-admin-panel">
@@ -634,33 +431,33 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
         <div className="ab-admin-section-head">
           <div>
             <h2>Транскрипция слов</h2>
-            <p className="ab-admin-note">Британское произношение из словаря Britfone и подсказка русскими буквами с ударением. Слова, которых нет в словаре, сохраняют свою транскрипцию без американского «r». Запускай после пополнения словаря через ИИ.</p>
+            <p className="ab-admin-note">Британское произношение и подсказка русскими буквами с ударением — для всех слов словаря. Нажимай после пополнения словаря через ИИ, потом «Выпустить словарь».</p>
           </div>
         </div>
         <div className="ab-admin-action-row">
-          <button type="button" className="ab-admin-secondary" disabled={bulkBusy || !ld} onClick={()=>void runIpaBootstrap(false)}>Проверить</button>
-          <button type="button" disabled={bulkBusy || !ipaReport?.updatedForms} onClick={()=>void runIpaBootstrap(true)}>Обновить транскрипцию</button>
+          <button type="button" disabled={bulkBusy || !ld} onClick={()=>void updateTranscription()}>Обновить транскрипцию</button>
         </div>
+        {ipaMessage && <p className="ab-admin-feedback" role="status">{ipaMessage}</p>}
         {ipaReport && (
           <div className="ab-admin-status-line">
-            <span><b>Форм</b> {ipaReport.forms}</span>
-            <span><b>Уже британская</b> {ipaReport.alreadyBritish}</span>
-            <span><b>Обновится</b> {ipaReport.updatedForms}</span>
+            <span><b>Британская</b> {ipaReport.alreadyBritish}</span>
             <span><b>Без транскрипции</b> {ipaReport.unmatched}</span>
           </div>
         )}
         {!!ipaReport?.unmatchedSample?.length && (
-          <p className="ab-admin-note">Без транскрипции (обычно целые фразы): {ipaReport.unmatchedSample.join(' · ')}</p>
+          <details className="ab-admin-details">
+            <summary>Что осталось без транскрипции (обычно целые фразы)</summary>
+            <p className="ab-admin-note">{ipaReport.unmatchedSample.join(' · ')}</p>
+          </details>
         )}
-        {ipaMessage && <p className="ab-admin-feedback" role="status">{ipaMessage}</p>}
         {ipaApplied && (
           <div className="ab-admin-action-row">
-            <button type="button" disabled={bulkBusy} onClick={()=>void publishDictionary()}>Выпустить для учеников</button>
+            <button type="button" disabled={bulkBusy} onClick={()=>void publishDictionary(setIpaMessage)}>Выпустить словарь</button>
           </div>
         )}
       </article>
 
-      <article className="ab-admin-panel ab-admin-bulk ab-course-open-day" ref={bulkPanel}>
+      <article className="ab-admin-panel ab-admin-bulk">
         <div className="ab-admin-section-head">
           <div>
             <h2>Дополнить словарь через ИИ</h2>
@@ -893,7 +690,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
 
 export const contentAdminSection: AdminSection = {
   id:'content',
-  label:'Курсы и словарь',
+  label:'Словарь',
   group:'Курсы',
   render(context){ return <ContentAdmin {...context} />; }
 };
