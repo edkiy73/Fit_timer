@@ -71,7 +71,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.evaluate(() => document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')));
 
   // обложка в настройках программы
-  await page.evaluate(() => { openBuilder('pd'); draft.cover = null; $('bSettingsToggle').click(); });
+  await page.evaluate(() => { openBuilder('pd'); $('bSettingsToggle').click(); });
+  await page.click('#bCoverNone');
   await page.waitForTimeout(300);
   ok('в настройках программы есть «Через ИИ» у обложки', await page.isVisible('#bCoverAI'));
   await page.click('#bCoverAI'); await page.waitForTimeout(600);
