@@ -313,7 +313,7 @@ describe('AI conversation runner',()=>{
 
     await user.click(screen.getByRole('button',{name:'Начать разговор'}));
     expect(await screen.findByText('Hello. How can I help you?')).toBeTruthy();
-    expect(speak).toHaveBeenCalledWith('Hello. How can I help you?','en-US');
+    expect(speak).toHaveBeenCalledWith('Hello. How can I help you?','en-GB');
 
     await user.click(screen.getByRole('button',{name:'Ответить голосом'}));
     expect(startRecognition).toHaveBeenCalledTimes(1);
@@ -327,7 +327,7 @@ describe('AI conversation runner',()=>{
     expect(requestReply).toHaveBeenNthCalledWith(2,expect.objectContaining({
       learnerText:'I need an appointment'
     }));
-    expect(speak).toHaveBeenCalledWith('Sure. What day works for you?','en-US');
+    expect(speak).toHaveBeenCalledWith('Sure. What day works for you?','en-GB');
   });
 
   it('keeps text reply available when speech recognition is unsupported',async()=>{

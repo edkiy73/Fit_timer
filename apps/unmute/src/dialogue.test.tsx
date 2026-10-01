@@ -88,7 +88,7 @@ describe('dialogue runner',()=>{
     const recognition=fakeRecognition();
     const {saveDialogue,onDone,speak}=renderDialogue(recognition.startRecognition);
 
-    await waitFor(()=>expect(speak).toHaveBeenCalledWith('Hi! Are you here on holiday?','en-US'));
+    await waitFor(()=>expect(speak).toHaveBeenCalledWith('Hi! Are you here on holiday?','en-GB'));
 
     const input=screen.getByRole('textbox',{name:'Твой ответ'});
     await user.type(input,'No, I live here');

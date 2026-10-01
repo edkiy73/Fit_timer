@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pronunciationForSurface, validateLexicon } from './schema';
+import { ipaForDisplay, pronunciationForSurface, validateLexicon } from './schema';
 import { resolveLexiconClick } from './resolve';
 
 const snapshot=validateLexicon({
@@ -49,5 +49,13 @@ describe('form pronunciation',()=>{
     expect(pronunciationForSurface(work,'work')?.ipa).toBe('wɜːk');
     expect(pronunciationForSurface(work,'worked')?.ipa).toBe('wɜːkt');
     expect(pronunciationForSurface(work,'working')).toBeNull();
+  });
+});
+
+describe('ipaForDisplay',()=>{
+  it('wraps IPA in one pair of slashes whether or not the stored value has them',()=>{
+    expect(ipaForDisplay('wɜːk')).toBe('/wɜːk/');
+    expect(ipaForDisplay('/wɜːk/')).toBe('/wɜːk/');
+    expect(ipaForDisplay('  ')).toBe('');
   });
 });

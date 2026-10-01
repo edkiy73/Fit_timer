@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import { loadLexicon } from './lexicon/client';
 import {
+  ipaForDisplay,
   normalizeSurface,
   type LexiconSnapshot
 } from './lexicon/schema';
@@ -20,6 +21,7 @@ import {
   type ResolvedLexiconEntry
 } from './lexicon/resolve';
 import { speakText } from './speech-runtime';
+import { ENGLISH_SPEECH_LOCALE } from './speech-locale';
 import { useSavedWords } from './saved-words';
 import { Icon } from './icons';
 
@@ -121,7 +123,7 @@ function DictionaryEntryView({
       )}
       {(pronunciation?.ipa||pronunciation?.ruReading)&&(
         <div className="dictionary-pronunciation">
-          {pronunciation.ipa&&<span>/{pronunciation.ipa}/</span>}
+          {pronunciation.ipa&&<span>{ipaForDisplay(pronunciation.ipa)}</span>}
           {pronunciation.ruReading&&<span>{pronunciation.ruReading}</span>}
         </div>
       )}
@@ -178,7 +180,7 @@ function DictionarySheet({
   },[runtime.close]);
 
   useEffect(()=>{
-    void speakText(selection.surface,'en-US');
+    void speakText(selection.surface,ENGLISH_SPEECH_LOCALE);
   },[selection.surface]);
 
   return (
@@ -251,7 +253,7 @@ function DictionarySheet({
           );
         })()}
         {saveError&&<p className="dictionary-state" role="alert">{t('dictionary.saveError')}</p>}
-        <button className="primary-button dictionary-say" type="button" onClick={()=>void speakText(selection.surface,'en-US')}>
+        <button className="primary-button dictionary-say" type="button" onClick={()=>void speakText(selection.surface,ENGLISH_SPEECH_LOCALE)}>
           {t('dictionary.say')}
         </button>
       </section>

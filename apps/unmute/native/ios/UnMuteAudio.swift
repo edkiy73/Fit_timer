@@ -70,7 +70,7 @@ public final class UnMuteAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         DispatchQueue.main.async {
-            let locale = call.getString("locale") ?? "en-US"
+            let locale = call.getString("locale") ?? "en-GB"
             let requestedVoice = call.getString("voice") ?? ""
             let utterance = AVSpeechUtterance(string: text)
 
@@ -104,7 +104,7 @@ public final class UnMuteAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         DispatchQueue.main.async {
             self.stopRecognitionInternal(emitStatus: false)
 
-            let language = call.getString("language") ?? "en-US"
+            let language = call.getString("language") ?? "en-GB"
             guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: language)),
                   recognizer.isAvailable else {
                 call.resolve(["started": false])

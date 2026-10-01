@@ -4,6 +4,7 @@ import type { Activity } from './content/schema';
 import type { SpeakText } from './speech-web';
 import { ExerciseKind } from './exercise-kind';
 import { LexiconText } from './lexicon-ui';
+import { ENGLISH_SPEECH_LOCALE } from './speech-locale';
 
 type PatternDrillActivity=Extract<Activity,{type:'pattern-drill'}>;
 type LocalizedText=Record<string,string>;
@@ -101,7 +102,7 @@ export function PatternListeningView({
 
   useEffect(()=>{
     if(!item||phase!=='ask'||!target)return;
-    void speak(target,'en-US');
+    void speak(target,ENGLISH_SPEECH_LOCALE);
   },[item?.id,phase,target,speak]);
 
   useEffect(()=>{
@@ -196,7 +197,7 @@ export function PatternListeningView({
         <span>{t('listening.position',{current:pos+1,total:items.length})}</span>
       </div>
       <h3>{t('listening.prompt')}</h3>
-      <button className="secondary-button listening-play" type="button" onClick={()=>void speak(target,'en-US')}>
+      <button className="secondary-button listening-play" type="button" onClick={()=>void speak(target,ENGLISH_SPEECH_LOCALE)}>
         {t('listening.playAgain')}
       </button>
 
