@@ -92,14 +92,15 @@ const progEn = (name) => `ПРОГРАММА: ${name}
   await page.click('#dlgOk'); await page.waitForTimeout(300);
 
   // ---- нормальная отправка ----
-  const sent = await page.evaluate(async () => {
+  const sent = await page.evaluate(async (name) => {
     pubDraft.cat = 'Кардио и энергия';
     pubDraft.level = 'Средний';
     pubDraft.gives = 'Три базовых движения по кругу. Ничего, кроме коврика, не нужно.';
     document.getElementById('pubGives').value = pubDraft.gives;
     await doPublish();
-    return {status: pubProg.pub && pubProg.pub.status, msg: document.getElementById('dlgMsg').textContent};
-  });
+    const published = customPrograms.find(p => p.name === name);
+    return {status: published && published.pub && published.pub.status, msg: document.getElementById('dlgMsg').textContent};
+  }, NAME);
   ok('заявка ушла и ждёт проверки', sent.status === 'pending', sent.status);
   ok('человеку сказано, что заявка ушла на проверку', /на проверку/.test(sent.msg), sent.msg.slice(0, 60));
   await page.click('#dlgOk'); await page.waitForTimeout(300);
