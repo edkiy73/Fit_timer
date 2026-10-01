@@ -124,6 +124,8 @@ async function boot(b, label, errs, url){
     stats.history.push({d: localISO(new Date()), t: 9, pid: p.id, sec: 900, kcal: 90, plan: 0});
     stats.count = 1; await saveStats();
     openStart(p);
+    const firstPlan = document.querySelector('#planRow .plan-chip[data-plan-idx="0"]');
+    if(firstPlan) firstPlan.click();
     state.current = customToProgram(p, 0);
     state.steps = buildSteps();
     state.stepOutcomes = {};
