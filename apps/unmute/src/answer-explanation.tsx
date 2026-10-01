@@ -28,7 +28,8 @@ export function AnswerExplanationView({
   refs,
   onSignIn,
   onAccess,
-  requestExplain=requestAnswerExplanation
+  requestExplain=requestAnswerExplanation,
+  compact=false
 }:{
   question:string;
   learnerAnswer:string;
@@ -38,6 +39,7 @@ export function AnswerExplanationView({
   onSignIn:()=>void;
   onAccess:()=>void;
   requestExplain?:typeof requestAnswerExplanation;
+  compact?:boolean;
 }){
   const {t,locale}=useI18n();
   const [busy,setBusy]=useState(false);
@@ -94,7 +96,7 @@ export function AnswerExplanationView({
   const accessError=error==='auth_required'||needsPlus;
 
   return (
-    <div className="answer-explain">
+    <div className={'answer-explain'+(compact?' is-compact':'')}>
       {!error&&(
         <button className="secondary-button" type="button" disabled={busy} onClick={()=>void run()}>
           {busy?t('answerExplain.loading'):t('answerExplain.button')}
