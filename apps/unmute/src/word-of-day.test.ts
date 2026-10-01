@@ -17,14 +17,14 @@ const lexicon={entries:[
 ]} as unknown as LexiconSnapshot;
 
 describe('word of the day', () => {
-  it('takes single words with a transcription from the day, same all day, next one tomorrow', () => {
+  it('takes single words from the day, same all day, next one tomorrow', () => {
     const today=wordOfTheDay(set,node,lexicon,100,'ru');
     const tomorrow=wordOfTheDay(set,node,lexicon,101,'ru');
     expect(['work','home']).toContain(today?.lemma);
     expect(tomorrow?.lemma).not.toBe(today?.lemma);
     expect(wordOfTheDay(set,node,lexicon,100,'ru')).toEqual(today);
   });
-  it('skips phrases and words without a transcription', () => {
+  it('skips phrases and very short words', () => {
     const lemmas=[0,1,2,3].map(day=>wordOfTheDay(set,node,lexicon,day,'ru')?.lemma);
     expect(lemmas).not.toContain('a lot');
     expect(lemmas).not.toContain('go');

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -72,6 +73,19 @@ const runtime:LearnerCourseRuntimeValue={
   refresh:async()=>{}
 };
 
+/** A runtime whose refresh() marks the day complete, like the real one after saving. */
+function LiveRunner(props:Omit<Parameters<typeof NodeRunnerView>[0],'runtime'>&{completeOnRefresh?:boolean}){
+  const {completeOnRefresh=true,...rest}=props;
+  const [value,setValue]=useState<LearnerCourseRuntimeValue>(()=>({
+    ...runtime,
+    refresh:async()=>{
+      if(!completeOnRefresh)return;
+      setValue(current=>({...current,state:{...current.state!,roadmapProgress:{...current.state!.roadmapProgress,nodes:[{node,complete:true,unlocked:true}]}}}));
+    }
+  }));
+  return <NodeRunnerView runtime={value} {...rest} />;
+}
+
 function renderRunner(
   saveSeen=vi.fn(async()=>{}),
   saveGraded=vi.fn(async()=>{}),
@@ -86,8 +100,7 @@ function renderRunner(
       storageKey="learn-test.locale"
       systemLanguages={['ru']}
     >
-      <NodeRunnerView
-        runtime={runtime}
+      <LiveRunner
         nodeId="day-1"
         onExit={onExit}
         onNodeCompleted={onNodeCompleted}
@@ -101,15 +114,18 @@ function renderRunner(
 }
 
 describe('node activity runner',()=>{
-  it('moves through theory, choice and text input while saving progress',async()=>{
+  it('shows theory first, then the tasks; builds a new phrase from words; counts the day',async()=>{
     const user=userEvent.setup();
     const {saveSeen,saveGraded,onExit,onNodeCompleted}=renderRunner();
 
+    // Theory is a page before the tasks, not a step of the lesson.
     expect(screen.getByText('Короткая теория')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:'Продолжить'}));
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    await user.click(screen.getByRole('button',{name:'К заданиям'}));
     expect(saveSeen).toHaveBeenCalledWith('general-foundation','theory.one');
 
     expect(await screen.findByRole('heading',{name:'Выбери ответ'})).toBeTruthy();
+    expect(screen.getByText('1/2')).toBeTruthy();
     // The day's theory stays reachable without leaving the exercise.
     await user.click(screen.getByRole('button',{name:'Теория'}));
     expect(within(screen.getByRole('dialog')).getByText('Короткая теория')).toBeTruthy();
@@ -121,21 +137,57 @@ describe('node activity runner',()=>{
     expect(await screen.findByText('Верно')).toBeTruthy();
 
     await user.click(screen.getByRole('button',{name:'Далее'}));
-    const input=await screen.findByRole('textbox',{name:'Твой ответ'});
-    await user.type(input,'I am here');
+    // A phrase never answered before is built from word chips.
+    expect(await screen.findByText('Собери фразу из слов')).toBeTruthy();
+    const pool=screen.getByLabelText('Слова');
+    for(const word of ['I','am','here'])await user.click(within(pool).getByRole('button',{name:word}));
     await user.click(screen.getByRole('button',{name:'Проверить'}));
     expect(saveGraded).toHaveBeenCalledWith('general-foundation','text.one',true);
 
     await user.click(screen.getByRole('button',{name:'Завершить'}));
+    expect(await screen.findByText('День пройден')).toBeTruthy();
     expect(onNodeCompleted).toHaveBeenCalledTimes(1);
     expect(onNodeCompleted).toHaveBeenCalledWith(node);
-    // A short summary closes the lesson instead of dropping straight back to the map.
-    expect(await screen.findByText('Урок пройден')).toBeTruthy();
-    expect(screen.getByText('Заданий пройдено: 3')).toBeTruthy();
-    expect(screen.getByText('Верных ответов в проверках: 2 из 2')).toBeTruthy();
+    expect(screen.getByText('С первого раза верно: 2 из 2')).toBeTruthy();
     expect(onExit).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button',{name:'Готово'}));
     expect(onExit).toHaveBeenCalledTimes(1);
+  });
+
+  it('brings a wrong answer back at the end and does not call an unfinished day done',async()=>{
+    const user=userEvent.setup();
+    const progress=emptyCourseProgress();
+    progress.seen['theory.one']={at:'2026-09-29T01:00:00.000Z'};
+    const saveGraded=vi.fn(async()=>{});
+    render(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="learn-retry.locale" systemLanguages={['ru']}>
+        <NodeRunnerView
+          runtime={{...runtime,state:{...state,progress}}}
+          nodeId="day-1"
+          onExit={()=>{}}
+          saveSeen={async()=>{}}
+          saveGraded={saveGraded}
+          savePractice={async()=>{}}
+        />
+      </I18nProvider>
+    );
+    await user.click(screen.getByRole('radio',{name:'I is here'}));
+    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    expect(await screen.findByText('Это задание вернётся в конце урока.')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+    await user.click(screen.getByRole('button',{name:'Написать с клавиатуры'}));
+    await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am here');
+    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+    // The mistake returns: same question, now in «работа над ошибками».
+    expect(await screen.findByText(/Работа над ошибками/)).toBeTruthy();
+    expect(screen.getByRole('heading',{name:'Выбери ответ'})).toBeTruthy();
+    await user.click(screen.getByRole('radio',{name:'I am here'}));
+    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Завершить'}));
+    // The runtime here never marks the day complete: the summary says so honestly.
+    expect(await screen.findByText('День пока не засчитан')).toBeTruthy();
+    expect(screen.getByText('С первого раза верно: 1 из 2')).toBeTruthy();
   });
 
   it('does not count a replay of an already completed node as a new completion',async()=>{
@@ -176,10 +228,11 @@ describe('node activity runner',()=>{
       </I18nProvider>
     );
 
-    await user.click(screen.getByRole('button',{name:'Продолжить'}));
+    await user.click(screen.getByRole('button',{name:'К заданиям'}));
     await user.click(await screen.findByRole('radio',{name:'I am here'}));
     await user.click(screen.getByRole('button',{name:'Проверить'}));
     await user.click(screen.getByRole('button',{name:'Далее'}));
+    await user.click(await screen.findByRole('button',{name:'Написать с клавиатуры'}));
     const input=await screen.findByRole('textbox',{name:'Твой ответ'});
     await user.type(input,'I am here');
     await user.click(screen.getByRole('button',{name:'Проверить'}));

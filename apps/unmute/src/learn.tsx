@@ -7,7 +7,7 @@ import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
 import { checkAnswer } from './engine/answer-check';
 import type { PracticeSrsKind } from './engine/practice-srs';
-import { saveDialogueActivity, saveGradedActivity, savePracticeActivity, saveSeenActivity } from './activity-progress';
+import { saveDialogueActivity, saveGradedActivity, saveManualNode, savePracticeActivity, saveSeenActivity } from './activity-progress';
 import type { SpeakText, StartRecognition } from './speech-runtime';
 import { speakText, startRecognition as startSpeechRecognition } from './speech-runtime';
 import { PatternPracticeView } from './pattern-practice';
@@ -21,24 +21,17 @@ import { Icon } from './icons';
 import { Sheet } from './sheet';
 import { Loader } from './loader';
 import { stageForDay, stageNameKey } from './course-stages';
+import { TheoryContent } from './theory-content';
+import { ExerciseKind } from './exercise-kind';
+import { WordChips, answerWords, buildChips, chipsText } from './word-chips';
+import { isNodeRequirementComplete } from './engine/course-progress';
+import { roadmapProgressFromDocument } from './progress-actions';
+import { buildCourseReviewSession } from './review-session';
+import { activitySaveClock } from './activity-progress';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
   return text[locale] || text.ru || text.en || Object.values(text)[0] || '';
-}
-
-function plainTheory(activity:Extract<Activity,{type:'theory'}>,locale:string):string{
-  const body=localized(activity.body,locale);
-  if(activity.format!=='html')return body;
-  if(typeof DOMParser==='undefined')return body.replace(/<[^>]+>/g,' ');
-  const source=body
-    .replace(/<br\s*\/?>/gi,'\n')
-    .replace(/<\/(p|li|h[1-6]|blockquote)>/gi,'\n');
-  const doc=new DOMParser().parseFromString(source,'text/html');
-  return (doc.body.textContent||'')
-    .replace(/[ \t]+\n/g,'\n')
-    .replace(/\n{3,}/g,'\n\n')
-    .trim();
 }
 
 export function activitiesForNode(
@@ -82,6 +75,8 @@ export interface NodeRunnerViewProps {
   onExit:()=>void;
   onSignIn?:()=>void;
   onAccess?:()=>void;
+  /** A review day: run the regular review; it completes the day when finished. */
+  onReviewDay?:(nodeId:string)=>void;
   onNodeCompleted?:(node:RoadmapNode)=>void;
   saveSeen:(setId:string,activityId:string)=>Promise<void>;
   saveGraded:(setId:string,activityId:string,correct:boolean)=>Promise<void>;
@@ -93,11 +88,40 @@ export interface NodeRunnerViewProps {
     score?:number
   )=>Promise<void>;
   saveDialogue?:(setId:string,activityId:string,score:number)=>Promise<void>;
+  saveManual?:(setId:string,nodeId:string)=>Promise<void>;
   speak?:SpeakText;
   startRecognition?:StartRecognition;
   /** Open this step first (e.g. «Скажи вслух» → the day's phrases, speaking mode). */
   startActivityId?:string;
   startMode?:PracticeSrsKind;
+}
+
+const isPlan=(activity:Activity)=>activity.type==='theory'&&(activity.tags??[]).includes('plan');
+const isSeen=(progress:CourseProgressDocument,id:string)=>{
+  const seen=progress.seen[id];
+  return Boolean(seen&&!seen.deleted);
+};
+const MAX_RETURNS=2;
+const range=(from:number,to:number)=>Array.from({length:Math.max(0,to-from)},(_,i)=>from+i);
+const MODE_KEY:Record<PracticeSrsKind,string>={drill:'kind.drill',listening:'kind.listening',speaking:'kind.speaking'};
+
+/** What still keeps the day from counting: practice not passed yet, steps not done. */
+export function missingForNode(node:RoadmapNode,progress:CourseProgressDocument){
+  const state=roadmapProgressFromDocument(progress);
+  const practice:{activityId:string;mode:PracticeSrsKind}[]=[];
+  const unseen:string[]=[];
+  for(const requirement of node.completion?.requirements??[]){
+    if(isNodeRequirementComplete(requirement,node.id,state))continue;
+    if(requirement.kind==='practice-started'){
+      for(const mode of requirement.modes){
+        const record=state.practice[mode]?.[requirement.activityId];
+        if(!record||record.box<=0)practice.push({activityId:requirement.activityId,mode});
+      }
+    }else if(requirement.kind==='activity-seen'){
+      unseen.push(...requirement.activityIds.filter(id=>!state.seenActivityIds.has(id)));
+    }
+  }
+  return {practice,unseen};
 }
 
 export function NodeRunnerView({
@@ -106,11 +130,13 @@ export function NodeRunnerView({
   onExit,
   onSignIn=()=>{},
   onAccess=()=>{},
+  onReviewDay=()=>{},
   onNodeCompleted=()=>{},
   saveSeen,
   saveGraded,
   savePractice,
   saveDialogue=saveDialogueActivity,
+  saveManual=saveManualNode,
   speak=speakText,
   startRecognition=startSpeechRecognition,
   startActivityId,
@@ -129,60 +155,102 @@ export function NodeRunnerView({
     ()=>state&&node?activitiesForNode(state.set.activities,node):[],
     [node,state]
   );
+  // Theory is read once before the tasks (and stays one tap away); the day's «сделай сам»
+  // task lives on «Сегодня» as «Скажи вслух». Only exercises are steps.
+  const theoryCards=useMemo(()=>activities.filter((item):item is Extract<Activity,{type:'theory'}>=>item.type==='theory'&&!isPlan(item)),[activities]);
+  const steps=useMemo(()=>activities.filter(item=>item.type!=='theory'),[activities]);
 
-  const [index,setIndex]=useState(0);
+  const [order,setOrder]=useState<number[]>([]);
+  const [firstPass,setFirstPass]=useState(0);
+  const [pos,setPos]=useState(0);
+  const [intro,setIntro]=useState(false);
   const [selected,setSelected]=useState<number|null>(null);
   const [answer,setAnswer]=useState('');
+  const [typing,setTyping]=useState(false);
+  const [picked,setPicked]=useState<string[]>([]);
   const [result,setResult]=useState<boolean|null>(null);
   const [busy,setBusy]=useState(false);
   const [theoryOpen,setTheoryOpen]=useState(false);
-  // Answers checked in this sitting, shown on the summary once the lesson is done.
   const [score,setScore]=useState({correct:0,total:0});
   const [finished,setFinished]=useState(false);
-  const [stepsDone,setStepsDone]=useState(0);
+  const [checking,setChecking]=useState(false);
+  const [practiceMode,setPracticeMode]=useState<PracticeSrsKind|undefined>(startMode);
+  const [missed,setMissed]=useState<ReadonlySet<number>>(()=>new Set());
   const completionTrackedRef=useRef(false);
 
   useEffect(()=>{
     completionTrackedRef.current=Boolean(nodeProgress?.complete);
   },[node?.id]);
 
+  const begin=(startIndex:number)=>{
+    setOrder(range(startIndex,steps.length));
+    setFirstPass(steps.length-startIndex);
+    setPos(0);
+    setMissed(new Set());
+    setScore({correct:0,total:0});
+    setFinished(false);
+  };
+
   useEffect(()=>{
     if(!state||!node)return;
-    const requested=startActivityId?activities.findIndex(item=>item.id===startActivityId):-1;
-    setIndex(requested>=0?requested:firstPendingActivityIndex(activities,state.progress));
-  },[node?.id]);
+    const requested=startActivityId?steps.findIndex(item=>item.id===startActivityId):-1;
+    begin(requested>=0?requested:firstPendingActivityIndex(steps,state.progress));
+    setIntro(requested<0&&theoryCards.some(card=>!isSeen(state.progress,card.id)));
+    // Old progress may still miss the day's plan card: it is part of the day, mark it quietly.
+    for(const plan of activities.filter(isPlan)){
+      if(!isSeen(state.progress,plan.id))void saveSeen(state.set.id,plan.id).catch(()=>undefined);
+    }
+  },[node?.id,state?.set.id]);
 
-  const activity=activities[index] ?? null;
+  const stepIndex=order[pos];
+  const activity=stepIndex===undefined?null:steps[stepIndex]??null;
 
   useEffect(()=>{
     setSelected(null);
     setAnswer('');
+    setPicked([]);
+    setTyping(false);
     setResult(null);
     setBusy(false);
-  },[activity?.id]);
+  },[activity?.id,pos]);
 
-  const advance=(completed=true)=>{
-    if(completed)setStepsDone(value=>value+1);
-    if(index+1<activities.length){
-      setIndex(current=>current+1);
-      return;
-    }
-    if(completed&&node&&!completionTrackedRef.current){
+  // Count the day the moment it really counts, not when the last screen is reached.
+  const nodeComplete=Boolean(nodeProgress?.complete);
+  useEffect(()=>{
+    if(finished&&nodeComplete&&node&&!completionTrackedRef.current){
       completionTrackedRef.current=true;
       onNodeCompleted(node);
     }
-    if(completed&&node){
-      setFinished(true);
-      return;
-    }
-    onExit();
+  },[finished,nodeComplete,node?.id]);
+
+  const finish=async()=>{
+    setChecking(true);
+    try{ await runtime.refresh(); }catch{ /* the summary still shows what is known */ }
+    setChecking(false);
+    setFinished(true);
   };
 
-  // Steps answered wrong show red in the step bar; the step in progress stays neutral.
-  const [missed,setMissed]=useState<ReadonlySet<number>>(()=>new Set());
-  const markMissed=(step:number)=>setMissed(previous=>new Set(previous).add(step));
+  const advance=()=>{
+    if(pos+1<order.length){
+      setPos(current=>current+1);
+      return;
+    }
+    if(node)void finish();
+    else onExit();
+  };
+
+  const markMissed=()=>setMissed(previous=>new Set(previous).add(pos));
+  // A wrong answer comes back at the end of the lesson — at most twice, so nobody gets stuck.
+  const retryLater=()=>{
+    if(stepIndex===undefined)return;
+    setOrder(current=>{
+      if(current.slice(pos+1).includes(stepIndex))return current;
+      const returns=current.filter(item=>item===stepIndex).length-1;
+      return returns>=MAX_RETURNS?current:[...current,stepIndex];
+    });
+  };
   const countAnswer=(correct:boolean)=>{
-    setScore(current=>({correct:current.correct+(correct?1:0),total:current.total+1}));
+    if(pos<firstPass)setScore(current=>({correct:current.correct+(correct?1:0),total:current.total+1}));
   };
 
   if(runtime.status==='pending'){
@@ -206,27 +274,61 @@ export function NodeRunnerView({
     );
   }
 
-  if(finished&&node){
+  if(checking){
+    return <section className="learn-shell"><Loader title={t('learn.checking')} /></section>;
+  }
+
+  if(finished&&node&&state){
+    const missing=missingForNode(node,state.progress);
+    const plan=activities.find(isPlan);
+    const firstPractice=missing.practice[0];
+    const firstUnseen=missing.unseen.map(id=>steps.findIndex(item=>item.id===id)).find(index=>index>=0);
+    const redo=()=>{
+      if(firstPractice){
+        const index=steps.findIndex(item=>item.id===firstPractice.activityId);
+        setPracticeMode(firstPractice.mode);
+        begin(index>=0?index:0);
+        setOrder(index>=0?[index]:range(0,steps.length));
+        return;
+      }
+      begin(firstUnseen??0);
+    };
     return (
       <section className="learn-shell runner" aria-labelledby="learn-summary-title">
         <div className="learn-summary">
-          <span className="learn-summary-icon" aria-hidden="true"><Icon name="check" size={32} /></span>
-          <div className="screen-kicker">{t('learn.summaryKicker')}</div>
+          <span className={'learn-summary-icon'+(nodeComplete?'':' is-pending')} aria-hidden="true"><Icon name={nodeComplete?'check':'review'} size={32} /></span>
+          <div className="screen-kicker">{t(nodeComplete?'learn.summaryKicker':'learn.notCountedKicker')}</div>
           <h2 id="learn-summary-title"><LexiconText text={localized(node.title,locale)} /></h2>
-          <p className="learn-summary-score">{t('learn.summarySteps',{count:stepsDone})}</p>
           {score.total>0&&(
-            <p className="learn-hint">{t('learn.summaryScore',{correct:score.correct,total:score.total})}</p>
+            <p className="learn-summary-score">{t('learn.summaryScore',{correct:score.correct,total:score.total})}</p>
           )}
-          <p className="learn-hint">{t('learn.summaryNext')}</p>
+          {nodeComplete
+            ? <p className="learn-hint">{t('learn.summaryNext')}</p>
+            : <div className="learn-missing">
+                <p className="learn-hint">{t('learn.notCountedText')}</p>
+                {missing.practice.length>0&&(
+                  <ul>{missing.practice.map(item=><li key={item.activityId+item.mode}>{t(MODE_KEY[item.mode])}</li>)}</ul>
+                )}
+                {missing.practice.length===0&&missing.unseen.length>0&&<p className="learn-hint">{t('learn.notCountedSteps',{count:missing.unseen.length})}</p>}
+              </div>}
+          {nodeComplete&&plan&&plan.type==='theory'&&(
+            <article className="learn-task">
+              <div className="screen-kicker">{t('learn.taskKicker')}</div>
+              <TheoryContent activity={plan} locale={locale} />
+            </article>
+          )}
         </div>
-        <div className="runner-action">
-          <button className="primary-button" type="button" onClick={onExit}>{t('learn.summaryDone')}</button>
+        <div className="runner-action runner-action-stack">
+          {!nodeComplete&&(missing.practice.length>0||missing.unseen.length>0)&&(
+            <button className="primary-button" type="button" onClick={redo}>{t('learn.redo')}</button>
+          )}
+          <button className={nodeComplete?'primary-button':'secondary-button'} type="button" onClick={onExit}>{t('learn.summaryDone')}</button>
         </div>
       </section>
     );
   }
 
-  if(!state||!node||!nodeProgress?.unlocked||!purchaseUnlocked||!activity){
+  if(!state||!node||!nodeProgress?.unlocked||!purchaseUnlocked||(!activity&&!intro)){
     return (
       <section className="learn-shell">
         <button className="learn-back" type="button" onClick={onExit}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
@@ -239,20 +341,67 @@ export function NodeRunnerView({
   }
 
   const setId=state.set.id;
-  const position=t('learn.position',{current:index+1,total:activities.length});
-  const theoryCards=activities.filter((item):item is Extract<Activity,{type:'theory'}>=>item.type==='theory');
   const stage=stageForDay(node.dayIndex,state.set.id);
+  const header=(
+    <div className="runner-heading">
+      <div className="runner-heading-text">
+        {stage&&<div className="screen-kicker">{t(stageNameKey(stage))}</div>}
+        <h2 id="learn-title"><LexiconText text={localized(node.title,locale)} /></h2>
+      </div>
+      {theoryCards.length>0&&!intro&&(
+        <button className="chip-button pressable" type="button" onClick={()=>setTheoryOpen(true)}>
+          <Icon name="book" size={18} />
+          {t('learn.theory')}
+        </button>
+      )}
+    </div>
+  );
 
-  const handleTheory=async()=>{
-    if(busy)return;
-    setBusy(true);
-    try{
-      await saveSeen(setId,activity.id);
-      advance();
-    }finally{
-      setBusy(false);
-    }
-  };
+  const theoryBody=theoryCards.map(card=>(
+    <section key={card.id} className="theory-sheet-card">
+      {card.title&&localized(card.title,locale)!==localized(node.title,locale)&&<h3 className="theory-title"><LexiconText text={localized(card.title,locale)} refs={card.lexiconRefs} /></h3>}
+      <TheoryContent activity={card} locale={locale} />
+    </section>
+  ));
+
+  // Theory first: a page to read, then «К заданиям». It is not a step of the lesson.
+  if(intro){
+    const toTasks=async()=>{
+      if(busy)return;
+      setBusy(true);
+      try{
+        await Promise.all(theoryCards.filter(card=>!isSeen(state.progress,card.id)).map(card=>saveSeen(setId,card.id)));
+      }finally{
+        setBusy(false);
+      }
+      setIntro(false);
+      if(steps.length===0)void finish();
+    };
+    return (
+      <section className="learn-shell runner" aria-labelledby="learn-title">
+        <div className="runner-top">
+          <button className="runner-close pressable" type="button" onClick={onExit} aria-label={t('learn.close')}>
+            <Icon name="close" size={20} />
+          </button>
+          <span className="runner-intro-label">{t('learn.introLabel',{count:steps.length})}</span>
+        </div>
+        {header}
+        <article className="learn-card theory-page">
+          <div className="exercise-kind kind-review"><span className="exercise-kind-icon" aria-hidden="true"><Icon name="book" size={16} /></span>{t('learn.introKicker')}</div>
+          {theoryBody}
+        </article>
+        <div className="runner-action">
+          <button className="primary-button" type="button" disabled={busy} onClick={()=>void toTasks()}>
+            {steps.length?t('learn.toTasks'):t('learn.finish')}
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  if(!activity)return null;
+  const position=t('learn.position',{current:pos+1,total:order.length});
+  const retrying=pos>=firstPass;
 
   const handleChoice=async()=>{
     if(activity.type!=='choice'||selected===null||busy||result!==null)return;
@@ -261,16 +410,23 @@ export function NodeRunnerView({
       const correct=selected===activity.correctIndex;
       await saveGraded(setId,activity.id,correct);
       countAnswer(correct);
-      if(!correct)markMissed(index);
+      if(!correct){ markMissed(); retryLater(); }
       setResult(correct);
     }finally{
       setBusy(false);
     }
   };
 
+  const textAnswer=(activity.type==='text-input'||activity.type==='translation')?activity.answer.accepted[0]??'':'';
+  // New phrases are built from word chips; ones answered before are typed (recall, not recognition).
+  const cardKnown=Boolean(state.progress.cards[activity.id]&&!state.progress.cards[activity.id]?.deleted);
+  const chips=(activity.type==='text-input'||activity.type==='translation')&&!cardKnown&&!typing&&answerWords(textAnswer)
+    ? buildChips(activity.id,textAnswer,steps.flatMap(item=>(item.type==='text-input'||item.type==='translation')&&item.id!==activity.id?[item.answer.accepted[0]??'']:[]))
+    : null;
+  const input=chips?chipsText(chips,picked):answer.trim();
+
   const handleText=async()=>{
     if((activity.type!=='text-input'&&activity.type!=='translation')||busy||result!==null)return;
-    const input=answer.trim();
     if(!input)return;
     setBusy(true);
     try{
@@ -279,7 +435,7 @@ export function NodeRunnerView({
         : checkAnswer(input,activity.answer.accepted);
       await saveGraded(setId,activity.id,correct);
       countAnswer(correct);
-      if(!correct)markMissed(index);
+      if(!correct){ markMissed(); retryLater(); }
       setResult(correct);
     }finally{
       setBusy(false);
@@ -310,6 +466,7 @@ export function NodeRunnerView({
       {explanation&&(
         <p><LexiconText text={localized(explanation,locale)} refs={activity.lexiconRefs} /></p>
       )}
+      {!result&&stepIndex!==undefined&&order.slice(pos+1).includes(stepIndex)&&<p className="learn-hint">{t('learn.willReturn')}</p>}
       {!result&&learnerAnswer&&acceptedAnswers.length>0&&(
         <AnswerExplanationView
           question={question}
@@ -322,10 +479,23 @@ export function NodeRunnerView({
         />
       )}
       <button className="primary-button learn-feedback-next" type="button" onClick={()=>advance()}>
-        {index+1<activities.length?t('learn.next'):t('learn.finish')}
+        {pos+1<order.length?t('learn.next'):t('learn.finish')}
       </button>
     </div>
   );
+
+  const dueReview=activity.type==='review'?buildCourseReviewSession(state.set,state.progress,activitySaveClock().dayNumber).actionableCount:0;
+  const completeReviewDay=async()=>{
+    if(busy)return;
+    setBusy(true);
+    try{
+      await saveSeen(setId,activity.id);
+      await saveManual(setId,node.id);
+    }finally{
+      setBusy(false);
+    }
+    advance();
+  };
 
   return (
     <section className="learn-shell runner" aria-labelledby="learn-title">
@@ -333,50 +503,24 @@ export function NodeRunnerView({
         <button className="runner-close pressable" type="button" onClick={onExit} aria-label={t('learn.close')}>
           <Icon name="close" size={20} />
         </button>
-        <RunnerProgress current={index} total={activities.length} label={t('learn.activityProgress')} missed={missed} />
-        <span className="runner-count" aria-label={position}>{index+1}/{activities.length}</span>
+        <RunnerProgress current={pos} total={order.length} label={t('learn.activityProgress')} missed={missed} />
+        <span className="runner-count" aria-label={position}>{pos+1}/{order.length}</span>
       </div>
 
-      <div className="runner-heading">
-        <div className="runner-heading-text">
-          {stage&&<div className="screen-kicker">{t(stageNameKey(stage))}</div>}
-          <h2 id="learn-title"><LexiconText text={localized(node.title,locale)} /></h2>
-        </div>
-        {theoryCards.length>0&&activity.type!=='theory'&&(
-          <button className="chip-button pressable" type="button" onClick={()=>setTheoryOpen(true)}>
-            <Icon name="book" size={18} />
-            {t('learn.theory')}
-          </button>
-        )}
-      </div>
+      {header}
+      {retrying&&<p className="runner-retry" role="status">{t('learn.retryPhase')}</p>}
 
       {/* The day's theory stays one tap away without moving the lesson back. */}
       <Sheet open={theoryOpen} onClose={()=>setTheoryOpen(false)} labelledBy="theory-sheet-title" closeLabel={t('learn.theoryClose')}>
         <div className="theory-sheet">
           <h3 id="theory-sheet-title">{t('learn.theory')}</h3>
-          {theoryCards.map(card=>(
-            <section key={card.id} className="theory-sheet-card">
-              {card.title&&localized(card.title,locale)!==localized(node.title,locale)&&<h4><LexiconText text={localized(card.title,locale)} refs={card.lexiconRefs} /></h4>}
-              <div className="learn-theory"><LexiconText text={plainTheory(card,locale)} refs={card.lexiconRefs} /></div>
-            </section>
-          ))}
+          {theoryBody}
         </div>
       </Sheet>
 
-      {activity.type==='theory'&&(
-        <article className="learn-card">
-          {activity.title&&localized(activity.title,locale)!==localized(node.title,locale)&&<h3><LexiconText text={localized(activity.title,locale)} refs={activity.lexiconRefs} /></h3>}
-          <div className="learn-theory"><LexiconText text={plainTheory(activity,locale)} refs={activity.lexiconRefs} /></div>
-          <div className="runner-action">
-            <button className="primary-button" type="button" disabled={busy} onClick={()=>void handleTheory()}>
-              {t('learn.continue')}
-            </button>
-          </div>
-        </article>
-      )}
-
       {activity.type==='choice'&&(
         <article className="learn-card">
+          <ExerciseKind kind="choice" />
           <h3><LexiconText text={localized(activity.prompt,locale)} refs={activity.lexiconRefs} /></h3>
           {activity.hint&&<p className="learn-hint"><LexiconText text={localized(activity.hint,locale)} refs={activity.lexiconRefs} /></p>}
           <fieldset className="learn-options" disabled={busy||result!==null}>
@@ -388,7 +532,7 @@ export function NodeRunnerView({
               >
                 <input
                   type="radio"
-                  name={activity.id}
+                  name={activity.id+'-'+pos}
                   checked={selected===optionIndex}
                   onChange={()=>setSelected(optionIndex)}
                 />
@@ -421,31 +565,43 @@ export function NodeRunnerView({
 
       {(activity.type==='text-input'||activity.type==='translation')&&(
         <article className="learn-card">
+          <ExerciseKind kind={chips?'chips':'write'} />
           <h3><LexiconText text={localized(activity.prompt,locale)} refs={activity.lexiconRefs} /></h3>
           {activity.type==='text-input'&&activity.source&&(
             <p className="learn-source"><LexiconText text={localized(activity.source,locale)} refs={activity.lexiconRefs} /></p>
           )}
-          <label className="learn-answer">
-            <span>{t('learn.answerLabel')}</span>
-            <input
-              value={answer}
-              disabled={busy||result!==null}
-              onChange={event=>setAnswer(event.target.value)}
-              onKeyDown={event=>{
-                if(event.key==='Enter'){
-                  event.preventDefault();
-                  void handleText();
-                }
-              }}
-              autoComplete="off"
-            />
-          </label>
+          {chips ? (
+            <WordChips chips={chips} picked={picked} disabled={busy||result!==null} onChange={setPicked} />
+          ) : (
+            <label className="learn-answer">
+              <span>{t('learn.answerLabel')}</span>
+              <input
+                value={answer}
+                disabled={busy||result!==null}
+                onChange={event=>setAnswer(event.target.value)}
+                onKeyDown={event=>{
+                  if(event.key==='Enter'){
+                    event.preventDefault();
+                    void handleText();
+                  }
+                }}
+                autoComplete="off"
+                autoCapitalize="off"
+                spellCheck={false}
+              />
+            </label>
+          )}
+          {result===null&&answerWords(textAnswer)&&!cardKnown&&(
+            <button className="link-toggle" type="button" onClick={()=>{ setTyping(value=>!value); setPicked([]); setAnswer(''); }}>
+              {chips?t('chips.typeInstead'):t('chips.buildInstead')}
+            </button>
+          )}
           {result===null&&(
             <div className="runner-action">
               <button
                 className="primary-button"
                 type="button"
-                disabled={!answer.trim()||busy}
+                disabled={!input||busy}
                 onClick={()=>void handleText()}
               >
                 {t('learn.check')}
@@ -456,7 +612,7 @@ export function NodeRunnerView({
             question:localized(activity.prompt,locale),
             accepted:activity.answer.accepted[0],
             acceptedAnswers:activity.answer.accepted,
-            learnerAnswer:answer.trim(),
+            learnerAnswer:input,
             explanation:activity.explanation
           })}
         </article>
@@ -464,15 +620,15 @@ export function NodeRunnerView({
 
       {activity.type==='pattern-drill'&&(
         <PatternPracticeView
-          key={activity.id}
+          key={activity.id+'-'+pos+'-'+(practiceMode??'')}
           activity={activity}
           courseActivities={state.set.activities}
           progress={state.progress}
           setId={setId}
           savePractice={savePractice}
           speak={speak}
-          {...(startMode&&activity.id===startActivityId?{initialMode:startMode}:{})}
-          onDone={()=>void saveSeen(setId,activity.id).catch(()=>undefined).then(()=>advance())}
+          {...(practiceMode?{initialMode:practiceMode}:{})}
+          onDone={()=>{ setPracticeMode(undefined); void saveSeen(setId,activity.id).catch(()=>undefined).then(()=>advance()); }}
         />
       )}
 
@@ -502,12 +658,25 @@ export function NodeRunnerView({
         />
       )}
 
-      {!['theory','choice','text-input','translation','pattern-drill','dialogue','ai-conversation'].includes(activity.type)&&(
+      {activity.type==='review'&&(
+        <article className="learn-card">
+          <ExerciseKind kind="review" />
+          <h3>{t('learn.reviewDayTitle')}</h3>
+          <p className="learn-hint">{dueReview>0?t('learn.reviewDayText',{count:dueReview}):t('learn.reviewDayClear')}</p>
+          <div className="runner-action">
+            {dueReview>0
+              ? <button className="primary-button" type="button" onClick={()=>onReviewDay(node.id)}>{t('today.reviewStart')}</button>
+              : <button className="primary-button" type="button" disabled={busy} onClick={()=>void completeReviewDay()}>{t('learn.reviewDayDone')}</button>}
+          </div>
+        </article>
+      )}
+
+      {!['choice','text-input','translation','pattern-drill','dialogue','ai-conversation','review'].includes(activity.type)&&(
         <article className="learn-card">
           <h3><LexiconText text={activity.title?localized(activity.title,locale):t('learn.unsupportedTitle')} refs={activity.lexiconRefs} /></h3>
           <p className="learn-hint">{t('learn.unsupportedText')}</p>
-          <button className="secondary-button" type="button" onClick={()=>advance(false)}>
-            {index+1<activities.length?t('learn.skipForNow'):t('learn.backToday')}
+          <button className="secondary-button" type="button" onClick={()=>advance()}>
+            {t('learn.next')}
           </button>
         </article>
       )}
@@ -532,6 +701,7 @@ export function NodeRunnerScreen(){
       onExit={()=>navigate('/')}
       onSignIn={()=>navigate('/account?return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
       onAccess={()=>navigate('/access?from=talk')}
+      onReviewDay={nodeId=>navigate('/review?day='+encodeURIComponent(nodeId))}
       onNodeCompleted={node=>{
         if(node.kind==='lesson')trackLessonCompleted();
         if(node.dayIndex)trackDayCompleted();

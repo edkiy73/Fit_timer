@@ -19,6 +19,7 @@ import {
   type TalkReview,
   type TalkTrialUsage
 } from './ai-talk';
+import { ExerciseKind } from './exercise-kind';
 import { trackTalkStarted } from './observability';
 
 type AIActivity=Extract<Activity,{type:'ai-conversation'}>;
@@ -269,6 +270,7 @@ export function AIConversationView({
 
   return (
     <article className="learn-card ai-talk-card">
+        <ExerciseKind kind="ai" />
       <div className="ai-talk-head">
         <div>
           <div className="eyebrow">{review?t('aiTalk.reviewEyebrow'):t('aiTalk.eyebrow')}</div>

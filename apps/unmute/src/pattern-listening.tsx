@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
 import type { SpeakText } from './speech-web';
+import { ExerciseKind } from './exercise-kind';
 import { LexiconText } from './lexicon-ui';
 
 type PatternDrillActivity=Extract<Activity,{type:'pattern-drill'}>;
@@ -150,6 +151,7 @@ export function PatternListeningView({
   if(done){
     return (
       <article className="learn-card listening-card">
+        <ExerciseKind kind="listening" />
         <div className="eyebrow">{t('listening.mode')}</div>
         <h3><LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} /></h3>
         <div className="drill-result">
@@ -188,6 +190,7 @@ export function PatternListeningView({
 
   return (
     <article className="learn-card listening-card">
+        <ExerciseKind kind="listening" />
       <div className="drill-meta">
         <span><LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} /></span>
         <span>{t('listening.position',{current:pos+1,total:items.length})}</span>

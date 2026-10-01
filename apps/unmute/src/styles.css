@@ -937,3 +937,65 @@ h2{margin:0 0 8px;font-weight:800}
 .tile-word .speak-play{width:48px;height:48px;flex:none}
 .tile-unit{margin-left:6px;font-size:.5em;font-weight:700;color:var(--muted)}
 .progress-due{padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--accent) 16%,transparent);font-size:13px;white-space:nowrap}
+
+/* Theory: a readable page, not a wall of text. */
+.theory{display:grid;gap:12px;line-height:1.55;font-size:16px}
+.theory p,.theory ul,.theory ol{margin:0}
+.theory ul,.theory ol{padding-left:20px;display:grid;gap:4px}
+.theory-heading{margin:8px 0 0;font-size:18px;line-height:1.3}
+.theory b,.theory strong{color:var(--ink);font-weight:800}
+.theory s{color:var(--danger)}
+.theory-table-wrap{overflow-x:auto;margin:0 -4px}
+.theory-table{width:100%;border-collapse:collapse;font-size:15px}
+.theory-table td,.theory-table th{padding:9px 8px;border-top:1px solid var(--line);vertical-align:top;text-align:left}
+.theory-table tr:first-child td,.theory-table tr:first-child th{border-top:0}
+.theory-table td:first-child{font-weight:600}
+.theory-table td.is-ru{color:var(--muted);font-weight:400}
+.theory-callout{padding:12px 14px;border-radius:16px;background:color-mix(in srgb,var(--accent) 12%,var(--surface));border-left:4px solid var(--accent)}
+.theory-callout.is-warn{background:color-mix(in srgb,var(--danger) 10%,var(--surface));border-left-color:var(--danger)}
+.theory-image{display:block;max-width:100%;height:auto;border-radius:16px}
+.theory code{padding:1px 6px;border-radius:6px;background:var(--surface);font-size:.95em}
+
+/* Exercise kinds: colour + icon + «what to do». */
+.exercise-kind{display:inline-flex;align-items:center;gap:6px;justify-self:start;min-height:28px;padding:3px 10px 3px 4px;border-radius:999px;font-size:13px;font-weight:800;color:var(--kind);background:color-mix(in srgb,var(--kind) 14%,transparent)}
+.exercise-kind-icon{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--kind);color:var(--card)}
+.kind-choice{--kind:var(--accent-ink)}
+.kind-write,.kind-chips{--kind:var(--streak)}
+.kind-drill{--kind:var(--danger)}
+.kind-listening,.kind-dialogue{--kind:var(--listen)}
+.kind-speaking{--kind:var(--accent)}
+.kind-ai{--kind:var(--success)}
+.kind-review{--kind:var(--listen)}
+
+/* «Собери фразу» */
+.chips-builder{display:grid;gap:14px}
+.chips-line{display:flex;flex-wrap:wrap;align-content:flex-start;gap:8px;min-height:64px;padding:10px;border-bottom:2px solid var(--line)}
+.chips-placeholder{align-self:center;color:var(--muted);font-size:14px}
+.chips-pool{display:flex;flex-wrap:wrap;gap:8px}
+.word-chip{min-height:44px;padding:8px 14px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font:inherit;font-size:17px;font-weight:600;cursor:pointer;box-shadow:0 2px 0 var(--line)}
+.word-chip.is-picked{background:var(--surface)}
+.word-chip.is-used{visibility:hidden}
+.word-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.link-toggle{justify-self:center;border:0;background:none;color:var(--accent-ink);font:inherit;font-size:14px;font-weight:700;cursor:pointer;padding:8px}
+.runner-intro-label{flex:1;color:var(--muted);font-size:14px;font-weight:700;text-align:right}
+.theory-page{display:grid;gap:14px}
+.theory-title,.learn-card .theory-title{margin:0 0 10px;font-size:22px;line-height:1.25}
+.runner-retry{margin:0;padding:8px 12px;border-radius:12px;background:color-mix(in srgb,var(--streak) 14%,transparent);color:var(--ink);font-size:14px;font-weight:700}
+.runner-action-stack{display:grid;gap:10px}
+.learn-summary-icon.is-pending{background:color-mix(in srgb,var(--streak) 18%,transparent);color:var(--streak)}
+.learn-missing{display:grid;gap:6px;justify-items:center}
+.learn-missing ul{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-weight:700}
+.learn-task{display:grid;gap:8px;margin-top:8px;padding:16px;border-radius:20px;background:var(--surface);text-align:left}
+.review-breakdown,.review-topics{grid-column:1/-1}
+.review-breakdown{width:100%}
+.review-topics{margin:0;color:var(--muted)}
+.practice-intro{display:grid;gap:12px}
+.practice-intro-text{margin:0;line-height:1.5}
+.practice-steps{margin:0;padding-left:22px;display:grid;gap:8px;line-height:1.45}
+.practice-steps li::marker{color:var(--accent-ink);font-weight:800}
+.theory-example{display:grid;gap:4px;padding:12px 14px;border-radius:16px;background:var(--surface);font-weight:600}
+.theory-example .is-ru{display:block;font-weight:400;color:var(--muted)}
+.theory-formula{padding:12px 14px;border-radius:16px;border:1px dashed var(--accent);font-weight:700;text-align:center}
+.theory .is-small{font-size:14px;color:var(--muted)}
+.theory span.is-ru{color:var(--muted)}
+.theory .is-en{font-weight:600}

@@ -119,7 +119,7 @@ export interface WordOfDay {
 }
 
 /** «Слово дня»: one word from the current day's lessons, the same all day and different tomorrow.
- *  Single words with a transcription and a translation only; phrases stay in the lessons. */
+ *  Single words with a translation only (transcription when the dictionary has it). */
 export function wordOfTheDay(set: CourseSet, node: RoadmapNode, lexicon: LexiconSnapshot | null | undefined, todayDay: number, locale: string): WordOfDay | null {
   if(!lexicon) return null;
   const byId = new Map(lexicon.entries.map(entry => [entry.id, entry]));
@@ -132,7 +132,7 @@ export function wordOfTheDay(set: CourseSet, node: RoadmapNode, lexicon: Lexicon
       seen.add(ref.lexemeId);
       const entry = byId.get(ref.lexemeId);
       const ipa = entry?.pronunciation?.ipa ?? '';
-      if(!entry || !ipa || /\s/.test(entry.lemma.trim()) || entry.lemma.length < 3) continue;
+      if(!entry || /\s/.test(entry.lemma.trim()) || entry.lemma.length < 3) continue;
       const sense = entry.senses[0];
       const list = sense ? (sense.translations[locale] || sense.translations.ru || Object.values(sense.translations)[0] || []) : [];
       if(!list.length) continue;

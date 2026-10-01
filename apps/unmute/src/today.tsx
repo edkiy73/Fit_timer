@@ -273,7 +273,7 @@ export function TodayView({
             <div className="word-day">
               <span className="word-day-text">
                 <strong lang="en" className="word-day-lemma"><LexiconText text={word.lemma} refs={[{surface:word.lemma,lexemeId:word.lexemeId}]} /></strong>
-                <span className="word-day-ipa">/{word.ipa.replace(/^\/|\/$/g,'')}/</span>
+                {word.ipa&&<span className="word-day-ipa">/{word.ipa.replace(/^\/|\/$/g,'')}/</span>}
                 <span className="tile-text">{word.translation}</span>
               </span>
               <button className="speak-play pressable" type="button" aria-label={t('today.speakListen',{text:word.lemma})} onClick={()=>void speakText(word.lemma,'en-US')}>

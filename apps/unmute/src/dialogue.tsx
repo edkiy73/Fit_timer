@@ -9,6 +9,7 @@ import type {
   WebRecognitionError,
   WebRecognitionHandle
 } from './speech-web';
+import { ExerciseKind } from './exercise-kind';
 import { LexiconText } from './lexicon-ui';
 
 type DialogueActivity=Extract<Activity,{type:'dialogue'}>;
@@ -203,6 +204,7 @@ export function DialogueView({
   if(done){
     return (
       <article className="learn-card dialogue-card">
+        <ExerciseKind kind="dialogue" />
         <div className="eyebrow">{t('dialogue.mode')}</div>
         <h3><LexiconText text={localized(activity.scene,locale)} refs={activity.lexiconRefs} /></h3>
         <div className="drill-result">
@@ -243,6 +245,7 @@ export function DialogueView({
 
   return (
     <article className="learn-card dialogue-card">
+        <ExerciseKind kind="dialogue" />
       <div className="drill-meta">
         <span>{t('dialogue.mode')}</span>
         <span>{t('dialogue.position',{current:pos+1,total:activity.lines.length})}</span>

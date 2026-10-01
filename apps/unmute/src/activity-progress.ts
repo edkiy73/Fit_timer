@@ -3,6 +3,7 @@ import { dayNumberFromKey } from './engine/course-progress';
 import { recordAnswer } from './engine/learner-stats';
 import type { PracticeSrsKind } from './engine/practice-srs';
 import {
+  completeManualNode,
   gradeCourseCard,
   gradeCoursePractice,
   markActivitySeen
@@ -169,6 +170,17 @@ export async function saveSeenActivity(
     setId,
     buildSeenActivityProgress(course,activityId,activitySaveClock(now))
   );
+}
+
+/** A review day counts once its review is done (completion «manual» in the course). */
+export async function saveManualNode(
+  setId:string,
+  nodeId:string,
+  now=new Date()
+):Promise<void>{
+  const clock=activitySaveClock(now);
+  const course=await readCourseProgress(setId);
+  await writeCourseProgress(setId,completeManualNode(course,nodeId,clock.dayKey,clock.at));
 }
 
 export async function saveGradedActivity(
