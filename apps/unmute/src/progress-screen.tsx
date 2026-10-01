@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, type CSSProperties } from 'react';
 import { ActivityCalendar } from './activity-calendar';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@appbase/ui-react/i18n.js';
@@ -252,16 +252,6 @@ function MetricCard({
   );
 }
 
-/** One line of a section: what on the left, how much on the right — long labels wrap, nothing stretches. */
-function StatRow({label,value,detail}:{label:string;value:string;detail?:string}){
-  return (
-    <li className="stat-row">
-      <span>{label}{detail&&<small>{detail}</small>}</span>
-      <strong>{value}</strong>
-    </li>
-  );
-}
-
 export function ProgressView({
   runtime,
   details,
@@ -375,7 +365,7 @@ export function ProgressView({
             <div className="progress-course-hero">
               <div
                 className="progress-course-ring"
-                style={{'--course-progress':coursePercent+'%'} as React.CSSProperties}
+                style={{'--course-progress':coursePercent+'%'} as CSSProperties}
                 role="img"
                 aria-label={t('progress.coursePercent',{percent:coursePercent})}
               >
