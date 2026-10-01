@@ -549,6 +549,7 @@ Audit conclusion:
 - ✅ 2026-10-01: catalog browser fixtures now enter through the `/api/catalog` boundary (Playwright route) and assertions use `storeAll()`. Raw `storeServer` is no longer exposed by the bridge at all, reducing writable bindings from **4 → 3**.
 - ✅ 2026-10-01: notification-related browser tests now inject their observer through `setDataSyncPlatformHooks()` / `getSyncNativeNotifications` instead of replacing the platform function. Raw `syncNativeNotifications` is no longer exposed by the bridge, reducing writable bindings from **3 → 2**.
 - ✅ 2026-10-01: the remaining AI provider doubles now run through the real `/api/ai` boundary using Playwright routing. `callGemini` and `callGeminiImage` are no longer exposed by the test bridge; writable bridge bindings are now **2 → 0**. Browser tests can still fake external AI deterministically, but no longer by replacing product-module bindings.
+- ✅ 2026-10-01: the read-only allowlist is now exact and CI-enforced: **174** statically measured callback bindings plus the one intentional dynamic `exportProgram` dependency = **175** exposed test-only getters. Stale `premiumGate` and `savePhotos` entries were removed; future unused bridge entries now fail `npm run check`.
 
 First semantic-owner cleanup:
 - account login cancellation is now owned by `cancelLogin()`; five raw login/biometry setters were removed from the public module surface;
