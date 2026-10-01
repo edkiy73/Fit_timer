@@ -30,12 +30,15 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   const r = await page.evaluate(async () => {
     const notificationRuns = [];
-    syncNativeNotifications = async () => {
-      notificationRuns.push({
-        user:currentUser,
-        programs:customPrograms.filter(p => p.id !== 'warmup').map(p => p.id).sort()
-      });
-    };
+    setDataSyncPlatformHooks({
+      applyThemeFor,
+      getSyncNativeNotifications: () => async () => {
+        notificationRuns.push({
+          user:currentUser,
+          programs:customPrograms.filter(p => p.id !== 'warmup').map(p => p.id).sort()
+        });
+      }
+    });
     const prog = (id, n) => ({id, name: id, plans: [{days: [], rounds: 1, roundRest: 0,
       exercises: Array.from({length: n}, (_, i) => ({name: 'E' + i, type: 'reps', value: 10, rest: 10}))}]});
     const A = currentUser;
