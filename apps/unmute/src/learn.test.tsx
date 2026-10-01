@@ -192,6 +192,50 @@ describe('node activity runner',()=>{
     expect(screen.getByText('С первого раза верно: 1 из 2')).toBeTruthy();
   });
 
+  it('restores an unfinished run with a wrong answer after closing the lesson',async()=>{
+    const user=userEvent.setup();
+    const progress=emptyCourseProgress();
+    progress.seen['theory.one']={at:'2026-09-29T01:00:00.000Z'};
+    const onExit=vi.fn();
+    const view=render(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="learn-persist.locale" systemLanguages={['ru']}>
+        <NodeRunnerView
+          runtime={{...runtime,state:{...state,progress}}}
+          nodeId="day-1"
+          onExit={onExit}
+          saveSeen={async()=>{}}
+          saveGraded={async()=>{}}
+          savePractice={async()=>{}}
+        />
+      </I18nProvider>
+    );
+
+    await user.click(screen.getByRole('radio',{name:'I is here'}));
+    expect(await screen.findByText('Это задание вернётся в конце урока.')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Закрыть урок'}));
+    expect(screen.getByRole('heading',{name:'Выйти из урока?'})).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Выйти и сохранить'}));
+    expect(onExit).toHaveBeenCalledTimes(1);
+
+    view.unmount();
+    render(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="learn-persist.locale" systemLanguages={['ru']}>
+        <NodeRunnerView
+          runtime={{...runtime,state:{...state,progress}}}
+          nodeId="day-1"
+          onExit={()=>{}}
+          saveSeen={async()=>{}}
+          saveGraded={async()=>{}}
+          savePractice={async()=>{}}
+        />
+      </I18nProvider>
+    );
+
+    expect(await screen.findByText('Пока не так')).toBeTruthy();
+    expect(screen.getByText('Это задание вернётся в конце урока.')).toBeTruthy();
+    expect(screen.getByText('1/2')).toBeTruthy();
+  });
+
   it('does not count a replay of an already completed node as a new completion',async()=>{
     const user=userEvent.setup();
     const completedRuntime:LearnerCourseRuntimeValue={
