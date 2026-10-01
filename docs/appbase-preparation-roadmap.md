@@ -568,6 +568,7 @@ Sixth semantic-owner cleanup:
 - account initialization uses `ensureTrainerState()`, trainer profile edits use `updateTrainerProfile()`, and client deletion uses `removeClientById()`;
 - `setClientsShared` and `setTrainerShared` were removed, leaving nine raw setters total.
 - two more raw setters were removed; the remaining shared setters are the coupled user/program/trainer collections and builder draft-state group.
+- ✅ 2026-10-01: builder draft state now uses semantic operations (`loadBuilderDraft`, `clearExerciseDraft`, `selectPlanVariant`, `markExerciseExisting`), and profile state uses `restoreProfiles`, `restoreActiveProfile`, `createInitialProfile`, `removeProfileById`; no raw `set*Shared` exports remain.
 
 ## Phase 14 — Dependency rules
 
