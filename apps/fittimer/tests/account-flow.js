@@ -270,7 +270,7 @@ async function boot(b, label, errs, url){
   const bound2 = await three.evaluate(()=> account.email || '');
   ok('аккаунт записался', bound2 === MAIL2, bound2);
   ok('попап закрылся', !(await three.isVisible('#loginCode')));
-  const nickKept = await three.evaluate(()=> ({handle: trainer.handle, on: trainerOn()}));
+  const nickKept = await three.evaluate(()=> ({handle: trainer.handle, on: !!trainer.on}));
   ok('после входа режим тренера включился с ником аккаунта',
      nickKept.on && nickKept.handle === NICK2, JSON.stringify(nickKept));
 
