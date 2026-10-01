@@ -106,7 +106,7 @@ async function boot(b, label, errs, url){
   // клиент смотрит страницу тренера — она должна быть заполнена
   await cp.evaluate(() => {
     const p = customPrograms.find(x => x.name === 'Сила дома');
-    state.raw = p; state.planIdx = 0; show('scrStart'); renderStartInfo();
+    openStart(p);
   });
   await cp.waitForTimeout(400);
   await cp.click('#startByChip');
