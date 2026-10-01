@@ -174,7 +174,6 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "state",
   "stats",
   "storeAll",
-  "storeServer",
   "switchMoreTab",
   "switchUser",
   "syncDockTabs",
@@ -198,7 +197,6 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
 export const TEST_BRIDGE_WRITABLE = new Set([
   "callGemini",
   "callGeminiImage",
-  "storeServer",
   "syncNativeNotifications"]);
 
 export function testBridge(source, fileName = 'module.js'){
