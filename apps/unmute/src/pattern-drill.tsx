@@ -29,6 +29,11 @@ export function drillReadMs(prompt:string):number{
   return Math.min(3200,Math.max(1200,600+320*words));
 }
 
+export function drillSayMs(answer:string):number{
+  const words=answer.trim().split(/\s+/).filter(Boolean).length;
+  return Math.min(6500,Math.max(2200,1400+550*words));
+}
+
 export function drillScore(fast:number,total:number):number{
   return total>0?Math.round(Math.max(0,fast)/total*100):0;
 }
@@ -70,7 +75,7 @@ export function PatternDrillView({
   useEffect(()=>{
     if(!item||phase!=='ask')return;
     const readMs=drillReadMs(localized(item.prompt,locale));
-    const sayMs=5000;
+    const sayMs=drillSayMs(item.answer.accepted[0]||'');
     const graceMs=600;
     const started=Date.now();
     deadlineRef.current=started+readMs+sayMs+graceMs;
@@ -257,12 +262,14 @@ export function PatternDrillView({
             </button>
           ) : (
             <>
-              <button className="primary-button" type="button" onClick={()=>nextItem(true)}>
-                {t('drill.same')}
-              </button>
-              <button className="secondary-button" type="button" onClick={()=>nextItem(false)}>
-                {t('drill.wrong')}
-              </button>
+              <div className="drill-compare-actions">
+                <button className="primary-button" type="button" onClick={()=>nextItem(true)}>
+                  {t('drill.same')}
+                </button>
+                <button className="secondary-button" type="button" onClick={()=>nextItem(false)}>
+                  {t('drill.wrong')}
+                </button>
+              </div>
               {!lastFast&&(
                 <button className="learn-back" type="button" onClick={()=>setLastFast(true)}>
                   {t('drill.wasFast')}
