@@ -1175,3 +1175,27 @@ h2{margin:0 0 8px;font-weight:800}
   .progress-dashboard-head h3{font-size:20px}
 }
 
+
+
+/* Shared skeleton primitives for screen-level loading states. */
+.skeleton-line{display:block;min-height:14px;border-radius:999px}
+.skeleton-kicker{width:132px;min-height:14px}
+.skeleton-title{width:168px;min-height:36px;border-radius:14px}
+.skeleton-section-title{width:112px;min-height:22px;border-radius:10px}
+.skeleton-quiet-action{width:112px;min-height:32px;border-radius:16px}
+.skeleton-route-card{min-height:76px;border-radius:20px}
+.skeleton-route-reference{min-height:58px;border-radius:20px}
+.skeleton-stage{min-height:92px;border-radius:var(--radius-tile)}
+.skeleton-metric{display:block;min-height:66px;border-radius:20px}
+.skeleton-calendar{display:block;min-height:300px;border-radius:22px}
+.skeleton-course-hero{display:block;min-height:132px;border-radius:22px}
+.skeleton-course-detail{display:block;min-height:112px;border-radius:20px}
+.profile-skeleton-card{display:grid;gap:14px}
+
+/* Route topics header and a deliberately quiet jump-to-current action. */
+.course-map-topics-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:2px}
+.course-map-topics-head h3{margin:0;font-size:18px;line-height:1.3;font-weight:800}
+.quiet-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.quiet-button:hover{background:var(--surface);color:var(--ink)}
+.quiet-button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.course-map-current{flex:none}
