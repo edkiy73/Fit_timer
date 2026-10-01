@@ -1712,6 +1712,8 @@ export function renderMine(){
     more.className = 'more-btn';
     more.innerHTML = icon('more');
     more.title = t('common.actions');
+    more.setAttribute('aria-haspopup', 'menu');
+    more.setAttribute('aria-expanded', 'false');
     const menu = document.createElement('div');
     menu.className = 'ctx-menu';
     const bEdit = document.createElement('button');
@@ -1911,9 +1913,15 @@ export function initTrainerCatalog(){
   });
   registerAction('toggleMineProgramMenu', (btn, event) => {
     event.stopPropagation();
-    const wrap = btn.closest('.mine-wrap');
+    // Карточки списка имеют класс .mine-card. После перехода на data-act здесь
+    // остался старый селектор .mine-wrap, которого в DOM больше нет — поэтому ⋮
+    // находил null и визуально не делал вообще ничего.
+    const wrap = btn.closest('.mine-card');
     const menu = wrap && wrap.querySelector('.ctx-menu');
-    if(menu) toggleMenu(menu);
+    if(!menu) return;
+    const willOpen = !menu.classList.contains('open');
+    toggleMenu(menu);
+    btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
   });
   registerAction('openStorePremium', () => eventTrainerHooks.openPremium());
   registerAction('openStoreTrainer', () => { if(siItem) openTrainer(siItem.by); });
