@@ -3137,6 +3137,24 @@ export let clients = [];
 export let clientIdx = -1;    // какого подопечного открыли на scrClient
 export let coachPhotoDraft = null;
 
+export function restoreTrainerClientState({trainer: nextTrainer, clients: nextClients} = {}){
+  if(nextTrainer !== undefined) trainer = nextTrainer || {on:false, handle:'', links:''};
+  if(nextClients !== undefined) clients = Array.isArray(nextClients) ? nextClients : [];
+  return {trainer, clients};
+}
+export function ensureTrainerState(){
+  if(!trainer) trainer = {on:false, handle:'', links:''};
+  return trainer;
+}
+export function updateTrainerProfile(patch = {}){
+  trainer = Object.assign({}, ensureTrainerState(), patch);
+  return trainer;
+}
+export function removeClientById(id){
+  clients = clients.filter(x => x && x.id !== id);
+  return clients.length;
+}
+
 export async function loadTrainer(){
   let localTrainer = null, localClients = [];
   try{ localTrainer = JSON.parse(await kvGet(pk('trainer'))) || null; }catch(e){}
@@ -3239,7 +3257,6 @@ export function activateClientAt(index){
 export function clearActiveClient(){
   clientIdx = -1;
 }
-export function setClientsShared(value){ clients = value; return clients; }
 export function resetCoachPhotoDraft(photo){
   coachPhotoDraft = photo || '';
   return coachPhotoDraft;
@@ -3262,7 +3279,6 @@ export function clearUnusedImageTray(){
   renderTray();
   return imgTray.length;
 }
-export function setTrainerShared(value){ trainer = value; return trainer; }
 
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
@@ -3282,7 +3298,7 @@ export function initProgramsAi(){
     normHandle,
     saveClients,
     saveTrainer,
-    setTrainerShared,
+    ensureTrainerState,
     syncGeminiBtns,
     getTrainer: () => trainer
   });
@@ -3293,8 +3309,7 @@ export function initProgramsAi(){
     loadTrainer,
     openDayProgram,
     renderGreeting,
-    setClientsShared,
-    setTrainerShared,
+    restoreTrainerClientState,
     getTrainer: () => trainer,
     weekPlanInfo
   });
