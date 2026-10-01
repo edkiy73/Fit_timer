@@ -85,10 +85,9 @@ h2{margin:0 0 8px;font-weight:800}
 .pressable:active,.primary-button:not(:disabled):active,.secondary-button:not(:disabled):active{transform:scale(.96);transition-duration:var(--dur-press);transition-timing-function:ease-out}
 
 /* Bottom navigation: the one glass layer, in thumb reach, hidden inside lessons. */
-:root[data-focus-run] .tabbar,:root[data-focus-run] .tabbar-glass{display:none}
-.tabbar-glass{position:fixed;z-index:49;left:max(12px,calc(50% - 348px));right:max(12px,calc(50% - 348px));bottom:calc(var(--safe-bottom) + 12px);height:var(--tabbar-h);border-radius:var(--radius-tile);background:rgb(255 255 255/.32);backdrop-filter:blur(36px) saturate(1.45);-webkit-backdrop-filter:blur(36px) saturate(1.45);box-shadow:var(--elev-2);pointer-events:none}
-.tabbar{position:fixed;z-index:50;left:max(12px,calc(50% - 348px));right:max(12px,calc(50% - 348px));bottom:calc(var(--safe-bottom) + 12px);height:var(--tabbar-h);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-radius:var(--radius-tile);background:rgb(255 255 255/.08);border:1px solid var(--glass-line);box-shadow:none;overflow:hidden}
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.tabbar-glass{background:rgb(255 255 255/.82)}}
+:root[data-focus-run] .tabbar{display:none}
+.tabbar{position:fixed;z-index:50;left:max(12px,calc(50% - 348px));right:max(12px,calc(50% - 348px));bottom:calc(var(--safe-bottom) + 12px);height:var(--tabbar-h);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-radius:var(--radius-tile);background:rgba(255,255,255,.66);-webkit-backdrop-filter:blur(28px) saturate(1.45);backdrop-filter:blur(28px) saturate(1.45);border:1px solid rgba(255,255,255,.42);box-shadow:var(--elev-2);overflow:hidden;background-clip:padding-box}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){}
 .tabbar-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:48px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:600;border-radius:var(--radius-tile)}
 .tabbar-item:focus-visible{outline:2px solid var(--accent);outline-offset:-4px}
 .tabbar-icon{position:relative;display:flex;align-items:center;justify-content:center;width:56px;height:30px;border-radius:15px;transition:background-color var(--dur-spring) ease}
@@ -1170,6 +1169,9 @@ h2{margin:0 0 8px;font-weight:800}
   .progress-dashboard-head h3{font-size:20px}
 }
 
-:root[data-theme="dark"] .tabbar-glass{background:rgb(28 29 42/.42)}
-:root[data-theme="dark"] .tabbar{background:rgb(28 29 42/.10)}
-@media(prefers-color-scheme:dark){:root:not([data-theme]) .tabbar-glass{background:rgb(28 29 42/.42)}:root:not([data-theme]) .tabbar{background:rgb(28 29 42/.10)}}
+:root[data-theme="dark"] @media(prefers-color-scheme:dark){:root:not([data-theme]) :root:not([data-theme]) .tabbar{background:rgb(28 29 42/.10)}}
+
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.tabbar{background:rgba(255,255,255,.92)}}
+
+:root[data-theme="dark"] .tabbar{background:rgba(24,25,36,.68);border-color:rgba(255,255,255,.10)}
+@media(prefers-color-scheme:dark){:root:not([data-theme]) .tabbar{background:rgba(24,25,36,.68);border-color:rgba(255,255,255,.10)}}
