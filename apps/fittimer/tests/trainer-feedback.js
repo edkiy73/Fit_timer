@@ -123,7 +123,10 @@ async function boot(b, label, errs, url){
     const p = customPrograms.find(x => x.name === 'Сила дома');
     stats.history.push({d: localISO(new Date()), t: 9, pid: p.id, sec: 900, kcal: 90, plan: 0});
     stats.count = 1; await saveStats();
-    state.current = customToProgram(p, 0); state.raw = p; state.planIdx = 0;
+    openStart(p);
+    const firstPlan = document.querySelector('#planRow .plan-chip[data-plan-idx="0"]');
+    if(firstPlan) firstPlan.click();
+    state.current = customToProgram(p, 0);
     state.steps = buildSteps();
     state.stepOutcomes = {};
     state.steps.forEach((step, i) => {
