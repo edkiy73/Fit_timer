@@ -41,8 +41,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       ]}]
     };
     customPrograms.push(p);
-    stats.history.push({pid:p.id, plan:0, sec:31 * 60, at:Date.now() - 86400000,
-      load:[{i:1, n:'Приседания', reps:'11', sec:0, kg:0}]});
+    restoreStatsState(Object.assign({}, stats, {history:[...(stats.history || []), {
+      pid:p.id, plan:0, sec:31 * 60, at:Date.now() - 86400000,
+      load:[{i:1, n:'Приседания', reps:'11', sec:0, kg:0}]
+    }]}));
     openStart(p);
   });
 
@@ -95,10 +97,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     customPrograms.push(p);
     // Старая запись знает, что тренировка была, но load snapshot в той версии
     // ещё не сохранялся.
-    stats.history.push({
+    restoreStatsState(Object.assign({}, stats, {history:[...(stats.history || []), {
       id:'legacy-h', pid:p.id, plan:0, d:localISO(new Date(Date.now()-86400000)),
       sec:900, status:'full', exercises:['Legacy reps']
-    });
+    }]}));
     const previous = previousWorkoutLoad(p, 0);
     openStart(p);
     return {
