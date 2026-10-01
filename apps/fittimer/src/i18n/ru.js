@@ -1061,7 +1061,7 @@ export const I18N_RU = {
   'start.exerciseLocMany': "упражнениях",
   'start.noChanges': "Без изменений",
   'start.previousLoadUnknown': "Предыдущая нагрузка не сохранена в старой истории — показываем только сегодняшнюю.",
-  'start.nextCheck': "Спросим о повышении через {count} {workouts}.",
+  'start.nextCheck': "Спросим о повышении через {count} {executions}.",
   'start.noChangesOff': "Без изменений · автоматическое повышение выключено.",
   'start.workoutOne': "тренировку",
   'start.workoutFew': "тренировки",
