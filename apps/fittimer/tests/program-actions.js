@@ -248,7 +248,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   // у копии пункт «в каталог» уже есть — она своя
   const copyMenu = await page.evaluate(() => {
     const c = customPrograms[customPrograms.length - 1];
-    state.raw = c; state.planIdx = 0; show('scrStart'); buildStartMenu();
+    openStart(c);
+    buildStartMenu();
     return [...document.querySelectorAll('#startMenu button')].map(x => x.textContent.trim());
   });
   ok('копию уже можно предложить в каталог', copyMenu.some(t => /каталог/.test(t)));
