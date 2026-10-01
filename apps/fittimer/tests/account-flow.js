@@ -75,7 +75,9 @@ async function boot(b, label, errs, url){
   await one.evaluate(async ({txt}) => {
     const r = parseProgramText(txt);
     const p = r.program || r; p.id = 'm1';
-    customPrograms.push(p); await savePrograms();
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
+    await savePrograms();
     navigator.clipboard.writeText = async () => {};
     navigator.share = async () => {};
     const c = await addClient(); c.name = 'Марина';
