@@ -332,7 +332,7 @@ export const en: Record<keyof typeof ru, string> = {
   'learn.check': 'Check',
   'learn.answerLabel': 'Your answer',
   'learn.correct': 'Correct',
-  'learn.incorrect': 'Not quite',
+  'learn.incorrect': 'Incorrect answer',
   'learn.accepted': 'Accepted answer: {answer}',
   'learn.next': 'Next',
   'learn.summaryKicker': 'Day complete',
