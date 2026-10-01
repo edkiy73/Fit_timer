@@ -51,11 +51,13 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   // 2) программы больше лимита localStorage
   const size = await page.evaluate(async () => {
     const pic = 'data:image/jpeg;base64,' + 'A'.repeat(100 * 1024);
-    for(let n = 0; n < 12; n++){
-      customPrograms.push({id: 'big' + n, name: 'Большая ' + n, cover: pic,
-        plans: [{days: ['Вт'], rounds: 1, roundRest: 0, exercises: Array.from({length: 10}, (_, i) =>
-          ({name: 'У' + i, type: 'reps', value: 10, rest: 10, media: {kind: 'img', data: pic}}))}]});
-    }
+    const added = Array.from({length:12}, (_, n) => ({
+      id: 'big' + n, name: 'Большая ' + n, cover: pic,
+      plans: [{days: ['Вт'], rounds: 1, roundRest: 0, exercises: Array.from({length: 10}, (_, i) =>
+        ({name: 'У' + i, type: 'reps', value: 10, rest: 10, media: {kind: 'img', data: pic}}))}]
+    }));
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, ...added]));
+    await loadData();
     await savePrograms();
     return JSON.stringify(customPrograms).length;
   });

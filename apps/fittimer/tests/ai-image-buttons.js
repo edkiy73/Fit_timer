@@ -40,8 +40,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     })));
     await loadAccount();
     await kvSet('deviceId', 'image-test-device'); await loadIdentity();
-    customPrograms.push({id: 'pd', name: 'Силовая', plans: [{days: ['Пн'], rounds: 1, roundRest: 0,
-      exercises: [{name: 'Присед', type: 'reps', value: 10, rest: 30}]}]});
+    const p = {id: 'pd', name: 'Силовая', plans: [{days: ['Пн'], rounds: 1, roundRest: 0,
+      exercises: [{name: 'Присед', type: 'reps', value: 10, rest: 30}]}]};
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
     await savePrograms(); openBuilder('pd');
   });
   await page.waitForTimeout(300);
