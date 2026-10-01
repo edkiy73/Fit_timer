@@ -242,7 +242,7 @@ export const I18N_EN = {
   'builder.progressionTitle': "Progress over time",
   'builder.progressionSub': "reps and weight will gradually increase as you train",
   'builder.progressionFrequency': "Default",
-  'builder.progressionHint': "Only full completions of that specific exercise count. By default, load is checked after 4 completions. Skipped or unfinished exercises do not advance the counter. Later, the frequency can be set separately for each exercise.",
+  'builder.progressionHint': "Only full completions of that specific exercise count. By default, load is checked after 4 completions. Skipped or unfinished exercises do not advance the counter. This setting applies only to exercises without their own frequency; an exercise-specific value takes priority.",
   'builder.exerciseProgressionFrequency': "Check frequency for this exercise",
   'builder.exerciseProgressionFrequencyHint': "Leave unset to use the program setting. 0 disables progression for this exercise.",
   'builder.exerciseProgressionUseProgram': "Program default ({count})",
