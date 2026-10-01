@@ -446,7 +446,7 @@ export function ProgressView({
                   <div className="progress-practice-row">
                     <span>{t('progress.drill')}</span>
                     <strong>{summary.speedAverage!==null
-                      ? t('progress.practiceSpeedValue',{count:summary.drill,percent:summary.speedAverage})
+                      ? t('progress.practiceSpeedValue',{count:summary.speedSamples,percent:summary.speedAverage})
                       : t('progress.practiceCount',{count:summary.drill})}</strong>
                   </div>
                 )}
