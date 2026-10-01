@@ -60,6 +60,7 @@ const browserCall = node => ts.isCallExpression(node)
 
 function isWrite(id){
   const p = id.parent;
+  if(!p) return false;
   if(ts.isBinaryExpression(p) && p.left === id && p.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && p.operatorToken.kind <= ts.SyntaxKind.LastAssignment) return true;
   if((ts.isPrefixUnaryExpression(p) || ts.isPostfixUnaryExpression(p))
     && [ts.SyntaxKind.PlusPlusToken, ts.SyntaxKind.MinusMinusToken].includes(p.operator)) return true;
@@ -81,6 +82,7 @@ for(const fileName of walkTests('tests')){
     const visit = node => {
       if(ts.isIdentifier(node)){
         const p = node.parent;
+        if(!p){ ts.forEachChild(node, visit); return; }
         const propertyName = ts.isPropertyAccessExpression(p) && p.name === node;
         const objectKey = (ts.isPropertyAssignment(p) || ts.isMethodDeclaration(p)) && p.name === node;
         if(!propertyName && !objectKey) mark(node.text, short, isWrite(node));
