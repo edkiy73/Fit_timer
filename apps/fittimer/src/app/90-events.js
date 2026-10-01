@@ -14,9 +14,9 @@ import { DAYS, clearSession, closeAllMenus, connectAccountSync, curUser, current
   customPrograms, customToProgram, hasConsent, kvDel, kvGet, kvSet, loadData, loadIdentity,
   loadSession, localISO, migrateUserAge, newId, normPlans, openWellAdd, openWellHist, planDays,
   progActive, programDaysUnion, queueAccountSync, recordConsent, renderStats,
-  renderUsers, renderWeight, renderWellness, savePrograms, saveSession, saveStats, saveUsers,
+  renderUsers, renderWeight, renderWellness, restoreActiveProfile, restoreProfiles, savePrograms, saveSession, saveStats, saveUsers,
   saveWell, saveWellHist, selectWeightMetric, selectWellnessMetric, sessionAgeText, sessionForProgram,
-  sessionWorkout, setCurrentUserShared, setUsersShared, shiftCalendarMonth, showSyncState,
+  sessionWorkout, shiftCalendarMonth, showSyncState,
   setDataSyncEventHooks, stats, syncNotificationPrefsServer, toggleMenu, trackInstallOnce, trackProductEvent, users,
   workStepChoices
 } from './10-data-sync.js';
@@ -52,10 +52,9 @@ import { addClient, curClient, doPublish, loadStoreServer, openClient, openMyCat
 } from './50-trainer-catalog.js';
 import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExerciseAsNew,
   commitExercise, commitPlanFields, curPlan, delExerciseAt, draft, dropFreshEx, dupExerciseAt,
-  exDirty, exDraft, exIdx, exIsNew, fillPlanFields, hasWeight, initAIForm, normValue, openBuilder,
+  clearExerciseDraft, exDirty, exDraft, exIdx, exIsNew, fillPlanFields, markExerciseExisting, hasWeight, initAIForm, normValue, openBuilder,
   openExercise, parseProgramText, parseStepNum, parseValue, planIdx, programDirty, renderExList, renderExMedia,
-  renderProgControls, saveProgram, setExDraftShared, setExIdxShared, setExIsNewShared,
-  setExOrigShared, setPlanIdxShared, shrinkImage, syncCover, syncExDetailsSum, syncExNowHints,
+  renderProgControls, saveProgram, selectPlanVariant, shrinkImage, syncCover, syncExDetailsSum, syncExNowHints,
   syncExProgSum, syncExType, syncExWarm, syncRotateUI
 , setBuilderEventHooks } from './60-builder.js';
 import { afterExChange, applyProgCheck, autoGrow, backToWorkout, buildSteps, closeSwapHint, esc,
@@ -141,9 +140,7 @@ function registerEventActions(){
     if(exIsNew){
       const wish = $('exName').value.trim();
       dropFreshEx();
-      setExDraftShared(null);
-      setExIdxShared(-1);
-      setExOrigShared('');
+      clearExerciseDraft();
       asTab(()=>{
         openExAI();
         if(wish){
@@ -154,13 +151,11 @@ function registerEventActions(){
       return;
     }
     if(!numFieldsOk('scrExercise') || !exNameOk()) return;
-    setExIsNewShared(false);
+    markExerciseExisting();
     const list = curPlan().exercises;
     if(list[exIdx]) list[exIdx] = commitExercise();
     const keep = exIdx;
-    setExDraftShared(null);
-    setExIdxShared(-1);
-    setExOrigShared('');
+    clearExerciseDraft();
     renderExList();
     asTab(()=> openExEdAI(keep));
   });
@@ -1541,7 +1536,7 @@ export async function delCurrentPlan(){
   if(!(await appDialog(t('builder.deleteVariant'),
     {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
   draft.plans.splice(planIdx, 1);
-  setPlanIdxShared(Math.max(0, planIdx - 1));
+  selectPlanVariant(Math.max(0, planIdx - 1));
   if(draft.plans.length < 2) draft.rotate = false; // остался один вариант — очередь не нужна
   fillPlanFields();
   syncRotateUI();
@@ -1844,7 +1839,7 @@ function exNameOk(){
 // дублируем то, что видно сейчас, вместе с несохранёнными правками формы
 function dupExercise(){
   if(!exDraft || exIdx < 0) return;
-  setExIsNewShared(false);
+  markExerciseExisting();
   const list = curPlan().exercises;
   const nWarm = list.filter(x => x.warmup).length;
   if(exDraft.warmup ? nWarm >= MAX_WARM : list.length - nWarm >= MAX_MAIN){
@@ -1856,27 +1851,27 @@ function dupExercise(){
   if(!numFieldsOk('scrExercise') || !exNameOk()) return;
   if(list[exIdx]) list[exIdx] = commitExercise();
   list.splice(exIdx + 1, 0, cloneExerciseAsNew(list[exIdx]));
-  setExDraftShared(null); setExIdxShared(-1); setExOrigShared('');
+  clearExerciseDraft();
   afterExChange();
 }
 async function delExercise(){
   if(!exDraft || exIdx < 0) return;
   const nameTxt = (exDraft.name || '').trim() || t('exercise.this');
   if(!(await appDialog(t('exercise.deleteQuestion',{name:nameTxt}), {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
-  setExIsNewShared(false);
+  markExerciseExisting();
   curPlan().exercises.splice(exIdx, 1);
-  setExDraftShared(null); setExIdxShared(-1); setExOrigShared('');
+  clearExerciseDraft();
   await afterExChange();
 }
 
 function saveExAndBack(){
   if(exFromWork){ saveExToWorkout(); return; }
-  setExIsNewShared(false);
+  markExerciseExisting();
   if(exDraft && exIdx >= 0){
     const list = curPlan().exercises;
     if(list[exIdx]) list[exIdx] = commitExercise();
   }
-  setExDraftShared(null); setExIdxShared(-1); setExOrigShared('');
+  clearExerciseDraft();
   renderExList();
   goBackTo('scrBuilder');
 }
@@ -1893,7 +1888,7 @@ async function leaveExercise(){
     if(!go) return;
   }
   dropFreshEx();
-  setExDraftShared(null); setExIdxShared(-1); setExOrigShared('');
+  clearExerciseDraft();
   if(exFromWork){ backToWorkout(false); return; }
   renderExList();
   goBackTo('scrBuilder');
@@ -2523,7 +2518,7 @@ export function initEvents(){
     await refreshBiometricSupport();
     if(lockNeeded()) openLock();
     // пользователи: миграция со старой схемы профилей f/m
-    try{ setUsersShared(JSON.parse(await kvGet('users')) || []); }catch(e){ setUsersShared([]); }
+    try{ restoreProfiles(JSON.parse(await kvGet('users')) || []); }catch(e){ restoreProfiles([]); }
     const hadLegacyBirth = users.some(u => u && Object.prototype.hasOwnProperty.call(u, 'birth'));
     let migratedProfilePrefs = false;
     users.forEach(u => {
@@ -2548,14 +2543,14 @@ export function initEvents(){
         startOnboarding();
         return;
       }
-      setUsersShared([{id:'f', name:t('profile.defaultMine'), gender:'f', age:null, photo:null, theme:'system', locale:'system'}]);
+      const legacyProfiles = [{id:'f', name:t('profile.defaultMine'), gender:'f', age:null, photo:null, theme:'system', locale:'system'}];
       if((await kvGet('customPrograms_m')) !== null){
-        users.push({id:'m', name:t('profile.defaultNumber',{count:2}), gender:'m', age:null, photo:null, theme:'system', locale:'system'});
+        legacyProfiles.push({id:'m', name:t('profile.defaultNumber',{count:2}), gender:'m', age:null, photo:null, theme:'system', locale:'system'});
       }
+      restoreProfiles(legacyProfiles);
       await saveUsers();
     }
-    setCurrentUserShared((await kvGet('currentUser')) || (await kvGet('profile')) || users[0].id);
-    if(!users.some(u => u.id === currentUser)) setCurrentUserShared(users[0].id);
+    restoreActiveProfile((await kvGet('currentUser')) || (await kvGet('profile')) || users[0].id);
     // До первой динамической отрисовки включаем язык и тему активного профиля:
     // пользователь не должен видеть дефолтный экран, пока восстанавливается его состояние.
     await setAppLocale(profileLocalePreference(curUser()), {persist:false, silent:true});

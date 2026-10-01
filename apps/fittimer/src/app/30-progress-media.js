@@ -4,10 +4,10 @@ import { I18N_EN } from '../i18n/en.js';
 import { appRuntimeCompat, appUi } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
 import { $, appAlert, appConfirm, appDialog, icon, plural, setCoreProgressHooks, setShown, show } from './00-core.js';
-import { MONTH_OF, PROGRAM_DOC, curUser, currentUser, customPrograms, docMeta, kvGet, kvSet,
+import { MONTH_OF, PROGRAM_DOC, createInitialProfile, curUser, currentUser, customPrograms, docMeta, kvGet, kvSet,
   loadData, loadIdentity, localISO, migrateUserAge, normPlans, pk, profileAge, recordConsent,
   isDefaultProfileName, renderStats, renderUsers, renderWeight, renderWellness, savePrograms, saveStats, saveUsers,
-  setCurrentUserShared, setDataSyncProgressMediaHooks, setUsersShared, stats, users, validAge, wellList
+  setDataSyncProgressMediaHooks, stats, users, validAge, wellList
 } from './10-data-sync.js';
 import { GLOBAL_KEYS, PROFILE_KEYS, setAccountProgressHooks } from './20-account.js';
 
@@ -910,10 +910,7 @@ export async function finishOnboardingCreate(){
     gender: '', age: null, photo: null,
     theme: 'system', locale: 'system'
   };
-  setUsersShared([u]);
-  await saveUsers();
-  setCurrentUserShared(u.id);
-  kvSet('currentUser', u.id);
+  await createInitialProfile(u);
   await loadIdentity();
   recordConsent('terms');
   await loadData();

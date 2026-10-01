@@ -5,7 +5,7 @@ import { $, DUMBBELL_ICON, ICONS, appAlert, appDialog, goBackTo, goTab, icon, op
   setCoreTrainerCatalogHooks, setShown, openStartFrom, show, syncDockTabs
 } from './00-core.js';
 import { DAYS, accountAuth, calcStreakInfo, closeAllMenus, currentUser, customPrograms, kvGet,
-  localISO, normPlans, progActive, programDaysUnion, savePrograms, setCustomProgramsShared,
+  localISO, normPlans, progActive, programDaysUnion, savePrograms, deleteCustomProgram,
   setDataSyncTrainerCatalogHooks, stats, toggleMenu, trackProductEvent, users
 } from './10-data-sync.js';
 import { account, isPremium, refreshServerSubscription, setAccountTrainerCatalogHooks } from './20-account.js';
@@ -1897,8 +1897,7 @@ export function initTrainerCatalog(){
     const p = mineProgram(btn); if(!p) return;
     if(!(await appDialog(t('programs.deleteQuestion',{name:p.name}),
       {confirm:true, okText:t('common.delete'), cancelText:t('common.keep')}))) return;
-    setCustomProgramsShared(customPrograms.filter(x => x.id !== p.id));
-    await savePrograms();
+    await deleteCustomProgram(p.id);
     renderMine();
   });
   registerAction('duplicateMineProgram', async btn => {

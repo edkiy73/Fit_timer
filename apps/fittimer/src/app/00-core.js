@@ -2,7 +2,7 @@ import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
 import { appRuntimeCompat, appUi } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
 import { DAYS, closeAllMenus, curUser, customPrograms, normPlans, progActive, renderStats,
-  renderUsers, renderWeight, renderWellness, savePrograms, setCustomProgramsShared, setDataSyncCoreHooks, stats
+  renderUsers, renderWeight, renderWellness, savePrograms, deleteCustomProgram, setDataSyncCoreHooks, stats
 } from './10-data-sync.js';
 
 let accountUserDirtyHook = () => false;
@@ -95,9 +95,7 @@ let builderHooks = {
   progStepSize: () => 0,
   programDirty: () => false,
   progressedRepsRange: () => '',
-  setExDraftShared: () => {},
-  setExIdxShared: () => {},
-  setExOrigShared: () => {},
+  clearExerciseDraft: () => {},
   setExWeight: () => {},
   weightPending: () => false
 };
@@ -753,7 +751,7 @@ export function asTab(fn){
 // напрямую — и набранная программа исчезала молча.
 const LEAVE_GUARDS = {
   scrBuilder:  ()=> builderHooks.programDirty() ? {what:t('builder.programChanges'), clean:()=> clearSnap('program')} : null,
-  scrExercise: ()=> builderHooks.exDirty() ? {what:t('exercise.changes'), clean:()=>{ builderHooks.dropFreshEx(); builderHooks.setExDraftShared(null); builderHooks.setExIdxShared(-1); builderHooks.setExOrigShared(''); workoutHooks.clearExerciseWorkoutOrigin(); }} : null,
+  scrExercise: ()=> builderHooks.exDirty() ? {what:t('exercise.changes'), clean:()=>{ builderHooks.dropFreshEx(); builderHooks.clearExerciseDraft(); workoutHooks.clearExerciseWorkoutOrigin(); }} : null,
   scrUserEdit: ()=> accountUserDirtyHook() ? {what:t('profile.changes')} : null,
   scrAI:       ()=> { const dirty = programsAiDirtyHook(); return dirty && aiScreenDirty(dirty) ? {what:t('ai.filledRequest')} : null; }
 };
@@ -1496,8 +1494,7 @@ export function initCore(){
   registerAction('deleteStartProgram', withStartProgram(async p => {
     if(!(await appDialog(t('programs.deleteQuestion',{name:p.name}),
       {confirm:true, okText:t('common.delete'), cancelText:t('common.keep')}))) return;
-    setCustomProgramsShared(customPrograms.filter(x => x.id !== p.id));
-    await savePrograms();
+    await deleteCustomProgram(p.id);
     trainerCatalogHooks.renderMine();
     goTab('scrPrograms');
   }));

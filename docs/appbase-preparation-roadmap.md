@@ -528,7 +528,7 @@ Product-side conversion continues chunk by chunk:
 The product ESM graph is now fully acyclic:
 - the former SCC spanning `00-core` through `90-events` was dismantled incrementally with explicit owner hook boundaries;
 - `tests/app-module-graph-unit.js` now checks the **entire product import graph is a DAG**, in addition to the existing direction-specific regression guards;
-- the current compatibility surface is **41 hook-boundary setters** (`set*Hooks`) and **9 shared-state setters** (`set*Shared`) after six semantic-owner cleanup passes.
+- the current compatibility surface is **41 hook-boundary setters** (`set*Hooks`) and **8 shared-state setters** (`set*Shared`) after seven semantic-owner cleanup passes.
 
 Audit conclusion:
 - do **not** remove hook boundaries just to reduce their count; they are currently the dependency-inversion mechanism that keeps the graph acyclic;
@@ -536,6 +536,8 @@ Audit conclusion:
 - highest-value candidates are the single-consumer setters concentrated in event/platform/account UI wiring (audio/voice settings, login draft state, theme/hands-free state), because their ownership can usually be made clearer without changing persistence or protocols;
 - builder draft/exercise setters remain intentionally shared for now: they have several real consumers across program AI, workout and event flows, so replacing them should be done only together with a focused builder-state API;
 - the browser-test bridge remains the other Phase 13 cleanup target. Convert tests from internal binding mutation/stubbing to UI/public behavior as those tests are touched, then shrink the bridge from measured usage rather than deleting it wholesale.
+- ✅ 2026-10-01: added `scripts/audit-test-bridge.mjs`, a read-only audit that measures which bridged bindings browser callbacks actually read and which ones they overwrite. It intentionally does not change the bridge yet; the next cleanup can be scoped from measured usage and kept separate from concurrent product work.
+- ✅ 2026-10-01: measured **1,251** candidate top-level bindings, **175** directly referenced by browser callbacks and **15** overwritten/stubbed. Full browser CI found one additional intentionally dynamic dependency (`exportProgram`, invoked through `eval(src)` in `link-length.js`), so the generated bridge is now allowlisted to **176** bindings instead of exposing every product-module binding. `audit-test-bridge.mjs --check` guards direct callback usage; the full browser suite remains the guard for deliberately dynamic code.
 
 First semantic-owner cleanup:
 - account login cancellation is now owned by `cancelLogin()`; five raw login/biometry setters were removed from the public module surface;
@@ -568,6 +570,7 @@ Sixth semantic-owner cleanup:
 - account initialization uses `ensureTrainerState()`, trainer profile edits use `updateTrainerProfile()`, and client deletion uses `removeClientById()`;
 - `setClientsShared` and `setTrainerShared` were removed, leaving nine raw setters total.
 - two more raw setters were removed; the remaining shared setters are the coupled user/program/trainer collections and builder draft-state group.
+- ✅ 2026-10-01: builder draft state now uses semantic operations (`loadBuilderDraft`, `clearExerciseDraft`, `selectPlanVariant`, `markExerciseExisting`), and profile state uses `restoreProfiles`, `restoreActiveProfile`, `createInitialProfile`, `removeProfileById`; no raw `set*Shared` exports remain.
 
 ## Phase 14 — Dependency rules
 
@@ -719,3 +722,7 @@ A future Mini Language App remains useful as a third-domain stress test, but it 
 18. Add products as `apps/<name>/` on the same Core.
 
 Each item should remain a separate, reviewable task unless current evidence shows combining steps is safer.
+Seventh semantic-owner cleanup:
+- custom program removal is now owned by `10-data-sync.js` through `deleteCustomProgram(id)`, which mutates and persists atomically;
+- Core and Trainer Catalog no longer replace the whole program array just to delete one program;
+- one more raw `set*Shared` export was removed.

@@ -2625,11 +2625,43 @@ export function toggleMenu(m){
   placeMenu(m);
 }
 
-/* Setters for state owned by this chunk and changed from other chunks.
-   Other chunks read these bindings directly but write them only through the owner. */
-export function setCurrentUserShared(value){ currentUser = value; return currentUser; }
-export function setCustomProgramsShared(value){ customPrograms = value; return customPrograms; }
-export function setUsersShared(value){ users = value; return users; }
+/* Semantic state operations owned by data-sync. Product chunks never assign the
+   profile/program bindings directly. */
+export function restoreProfiles(value){
+  users = Array.isArray(value) ? value : [];
+  return users;
+}
+export function restoreActiveProfile(preferredId){
+  const wanted = String(preferredId || '');
+  currentUser = users.some(user => user && user.id === wanted)
+    ? wanted
+    : ((users[0] && users[0].id) || '');
+  return currentUser;
+}
+export async function createInitialProfile(profile){
+  users = [profile];
+  await saveUsers();
+  currentUser = profile.id;
+  await kvSet('currentUser', currentUser);
+  return profile;
+}
+export async function removeProfileById(id){
+  const wasActive = currentUser === id;
+  users = users.filter(user => user && user.id !== id);
+  await saveUsers();
+  if(wasActive && users.length){
+    currentUser = '';
+    await switchUser(users[0].id);
+  }else{
+    renderUsers();
+  }
+  return users;
+}
+export async function deleteCustomProgram(id){
+  customPrograms = customPrograms.filter(program => program && program.id !== id);
+  await savePrograms();
+  return customPrograms;
+}
 
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
    after every product module is evaluated, in the original part order. */
