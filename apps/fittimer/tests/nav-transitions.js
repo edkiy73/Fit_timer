@@ -51,8 +51,11 @@ async function seedProgram(page, id='nav-matrix'){
         {id:id+'-e1', name:'Присед', type:'reps', value:'10', sets:1, rest:30}
       ]}]
     };
-    const at = customPrograms.findIndex(x => x.id === id);
-    if(at >= 0) customPrograms[at] = p; else customPrograms.push(p);
+    const programs = customPrograms.some(x => x.id === id)
+      ? customPrograms.map(x => x.id === id ? p : x)
+      : [...customPrograms, p];
+    await kvSet(pk('customPrograms'), JSON.stringify(programs));
+    await loadData();
     await savePrograms();
     renderMine();
   }, id);
