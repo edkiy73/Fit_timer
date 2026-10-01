@@ -49,9 +49,9 @@ describe('wrong-answer explanation UI',()=>{
 
   it('shows how many free explanations are left, then offers Plus',async()=>{
     const user=userEvent.setup();
-    renderView(vi.fn(async()=>({why:'Нужен глагол live.',tip:'Проверь глагол.',freeRemaining:2})));
+    renderView(vi.fn(async()=>({why:'Нужен глагол live.',tip:'Проверь глагол.',freeRemaining:2,freeLimit:5})));
     await user.click(screen.getByRole('button',{name:'Почему?'}));
-    expect(await screen.findByText('Бесплатных разборов осталось: 2 из 3.')).toBeTruthy();
+    expect(await screen.findByText('Бесплатных разборов осталось: 2 из 5.')).toBeTruthy();
   });
 
   it('after the free explanations are used, sends to Plus',async()=>{
