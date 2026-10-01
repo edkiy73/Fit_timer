@@ -6,7 +6,7 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "build": "tsc -p tsconfig.build.json && node -e \"require('fs').writeFileSync('dist/package.json','{\\\"type\\\":\\\"module\\\"}\\\\n')\"",
-    "test": "npm run build && node tests/runtime.mjs && node tests/document-sync.mjs && node tests/entitlements.mjs && node tests/billing.mjs && node tests/admin-rate.mjs && node tests/ai-auth.mjs && node tests/ai-product-defaults.mjs && node tests/secrets.mjs && node tests/smoke.js",
+    "test": "npm run build && node tests/runtime.mjs && node tests/document-sync.mjs && node tests/entitlements.mjs && node tests/billing.mjs && node tests/legal.mjs && node tests/admin-rate.mjs && node tests/ai-auth.mjs && node tests/ai-product-defaults.mjs && node tests/secrets.mjs && node tests/smoke.js",
     "check": "npm run typecheck && node tests/boundaries.js && npm test"
   },
   "devDependencies": {

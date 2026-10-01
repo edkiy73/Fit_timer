@@ -21,7 +21,7 @@ p,li{margin:6px 0}.muted{color:var(--muted)}a{color:var(--accent)}
 <h1>Политика конфиденциальности</h1>
 <p class="muted">UnMute: English for Expats · редакция от 1 октября 2026 года</p>
 <h2>Кто мы</h2>
-<p>UnMute — приложение для разговорной практики английского. Данные обрабатывает владелец приложения UnMute: English for Expats. По любым вопросам о данных пиши на <a href="mailto:edkiy73@gmail.com">edkiy73@gmail.com</a>.</p>
+<p>UnMute — приложение для разговорной практики английского. Данные обрабатывает <span data-legal="operator">владелец приложения UnMute: English for Expats</span>. По любым вопросам о данных пиши на <a data-legal="email" href="mailto:edkiy73@gmail.com">edkiy73@gmail.com</a>.</p>
 <h2>Какие данные мы храним</h2>
 <ul>
 <li><b>Email</b> — только если ты входишь в аккаунт. Нужен для входа по одноразовому коду; пароль мы не храним.</li>
@@ -43,11 +43,20 @@ p,li{margin:6px 0}.muted{color:var(--muted)}a{color:var(--accent)}
 <li>обезличенная статистика — без ограничения срока, по ней нельзя определить человека.</li>
 </ul>
 <h2>Твои права</h2>
-<p>Ты можешь получить копию своих данных, исправить их или удалить аккаунт — в приложении или письмом на <a href="mailto:edkiy73@gmail.com">edkiy73@gmail.com</a>. Как удалить аккаунт: <a href="./delete-account.html">отдельная страница</a>.</p>
+<p>Ты можешь получить копию своих данных, исправить их или удалить аккаунт — в приложении или письмом на <a data-legal="email" href="mailto:edkiy73@gmail.com">edkiy73@gmail.com</a>. Как удалить аккаунт: <a href="./delete-account.html">отдельная страница</a>.</p>
 <h2>Возраст</h2>
-<p>Приложение предназначено для людей от 14 лет.</p>
+<p>Приложение предназначено для людей от <span data-legal="ageFrom">14</span> лет.</p>
 <h2>Изменения</h2>
 <p>О существенных изменениях политики мы сообщим в приложении.</p>
 </article></main>
+<script>
+/* Owner and contacts from Admin → «Владелец и контакты»; without them the text above stays. */
+fetch('/api/config').then(function(r){return r.ok?r.json():null}).then(function(c){
+  var l=c&&c.legal;if(!l)return;
+  if(l.owner){var o=l.country?l.owner+', '+l.country:l.owner;document.querySelectorAll('[data-legal="operator"]').forEach(function(n){n.textContent=o})}
+  if(l.email)document.querySelectorAll('[data-legal="email"]').forEach(function(n){n.textContent=l.email;n.setAttribute('href','mailto:'+l.email)});
+  if(l.ageFrom>0)document.querySelectorAll('[data-legal="ageFrom"]').forEach(function(n){n.textContent=l.ageFrom});
+}).catch(function(){});
+</script>
 </body>
 </html>
