@@ -230,7 +230,7 @@ h2{margin:0 0 8px;font-weight:800}
 .drill-timer{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
 .drill-timer span{display:block;height:100%;width:100%;background:var(--info,var(--ink));transform-origin:left center}
 .drill-timer[data-stage="reading"] span{opacity:.3}
-.drill-timer[data-stage="speaking"] span{animation:drill-countdown 5.6s linear forwards}
+.drill-timer[data-stage="speaking"] span{animation:drill-countdown 5.6s linear forwards} /* duration set inline from drillSayMs */
 .drill-target{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;font-size:18px;font-weight:800;line-height:1.4}
 .drill-result{display:grid;gap:6px;border:1px solid var(--line);border-radius:14px;padding:14px}
 .drill-result strong{font-size:22px}

@@ -75,11 +75,15 @@ describe('pattern listening',()=>{
 
     await waitFor(()=>expect(speak).toHaveBeenCalledWith('I work at home.','en-GB'));
     await user.click(screen.getByRole('button',{name:'Я работаю дома.'}));
+    // Two taps: the first picks, the second confirms.
+    await user.click(screen.getByRole('button',{name:new RegExp('^'+'Я работаю дома\\.')}));
     expect(await screen.findByText('I work at home.')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Далее'}));
 
     await waitFor(()=>expect(speak).toHaveBeenCalledWith('She works here.','en-GB'));
     await user.click(screen.getByRole('button',{name:'Она работает здесь.'}));
+    // Two taps: the first picks, the second confirms.
+    await user.click(screen.getByRole('button',{name:new RegExp('^'+'Она работает здесь\\.')}));
     await user.click(screen.getByRole('button',{name:'Завершить'}));
 
     await waitFor(()=>expect(savePractice).toHaveBeenCalledWith(

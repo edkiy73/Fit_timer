@@ -29,6 +29,8 @@ export function drillReadMs(prompt:string):number{
   return Math.min(3200,Math.max(1200,600+320*words));
 }
 
+export const DRILL_GRACE_MS=600;
+
 export function drillSayMs(answer:string):number{
   const words=answer.trim().split(/\s+/).filter(Boolean).length;
   return Math.min(6500,Math.max(2200,1400+550*words));
@@ -76,7 +78,7 @@ export function PatternDrillView({
     if(!item||phase!=='ask')return;
     const readMs=drillReadMs(localized(item.prompt,locale));
     const sayMs=drillSayMs(item.answer.accepted[0]||'');
-    const graceMs=600;
+    const graceMs=DRILL_GRACE_MS;
     const started=Date.now();
     deadlineRef.current=started+readMs+sayMs+graceMs;
     setStage('reading');
@@ -227,7 +229,7 @@ export function PatternDrillView({
       {phase==='ask' ? (
         <>
           <div className="drill-timer" data-stage={stage} aria-label={t('drill.timer')}>
-            <span />
+            <span style={{animationDuration:`${drillSayMs(accepted)+DRILL_GRACE_MS}ms`}} />
           </div>
           <p className="learn-hint">
             {stage==='reading'?t('drill.reading'):t('drill.speaking')}

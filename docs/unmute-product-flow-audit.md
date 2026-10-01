@@ -1,5 +1,7 @@
 # UnMute — Product Flow Audit
 
+> **План работ и отметки о выполнении:** `docs/unmute-audit-plan.md`. Сделанные пункты помечаются там и здесь (`✅ сделано (#PR)`).
+
 Дата: 2026-10-01  
 Репозиторий: `edkiy73/Fit_timer`  
 Область: `apps/unmute`
@@ -2408,6 +2410,8 @@ Legend:
 
 ## 28. Current test-suite drift discovered during audit
 
+✅ сделано (#442): unit 268/268 и e2e зелёные; заодно исправлена потеря обратной связи при восстановлении урока.
+
 This is important because existing tests cannot currently be treated as a fully trustworthy green gate without first checking their expectations against the current UI.
 
 ### ⚠️ Chromium E2E still searches for «Я»
@@ -3668,6 +3672,8 @@ real product regression
 Это аргумент в пользу отдельного test contract для choice, а не дальнейших локальных DOM-правок.
 
 #### Practice timer visual animation может не отражать dynamic sayMs
+
+✅ сделано (#442): длительность анимации = `drillSayMs(answer) + 600 мс`.
 
 Engine speaking window теперь динамический.
 

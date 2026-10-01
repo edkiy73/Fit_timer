@@ -141,8 +141,8 @@ describe('progress screen summary',()=>{
       listening:1,
       speaking:0,
       words:1,
-      activeReviews:5,
-      dueNow:3,
+      activeReviews:4,
+      dueNow:2,
       answers:{attempts:10,correct:7,wrong:3,accuracy:70},
       speedAverage:70,
       speedSamples:2,
@@ -166,7 +166,6 @@ describe('progress screen summary',()=>{
   it('shows a real empty state instead of zero accuracy and zero performance',()=>{
     renderProgress(learnerState());
 
-    expect(screen.getByRole('heading',{name:'Прогресс'})).toBeTruthy();
     expect(screen.getByText('Здесь появится твой прогресс')).toBeTruthy();
     expect(screen.queryByText('0%')).toBeNull();
   });
@@ -175,6 +174,7 @@ describe('progress screen summary',()=>{
     const state=learnerState();
     state.progress.learningDays['2026-09-29']={at:'2026-09-29T10:00:00Z'};
     state.progress.metrics['speed:pattern.one']={value:75,at:'2026-09-29T10:00:00Z'};
+    state.progress.practice.drill['pattern.one']={box:1,due:0,at:'2026-09-29T10:00:00Z'};
     const stats=emptyStatsProgress();
     stats.buckets['device|one']={
       deviceId:'device',
@@ -188,10 +188,12 @@ describe('progress screen summary',()=>{
     renderProgress(state,stats);
 
     expect(screen.getByText('75% верно')).toBeTruthy();
-    expect(screen.getByText('ответов').parentElement?.textContent).toContain('4');
-    expect(screen.getByText('верно').parentElement?.textContent).toContain('3');
-    expect(screen.getByText('с ошибкой').parentElement?.textContent).toContain('1');
+    // One line under the bar: «верно: 3 · с ошибкой: 1 · ответов: 4».
+    const meta=document.querySelector('.progress-answer-meta')?.textContent??'';
+    expect(meta).toContain('верно: 3');
+    expect(meta).toContain('с ошибкой: 1');
+    expect(meta).toContain('ответов: 4');
     // Practice is a row: label on the left, the result on the right.
-    expect(screen.getByText('Фразы на скорость — успеваешь вовремя').closest('li')?.textContent).toContain('75%');
+    expect(screen.getByText('1 упражн. · 75% вовремя').closest('.progress-practice-row')?.textContent).toContain('Фразы на скорость');
   });
 });

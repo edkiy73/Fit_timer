@@ -93,13 +93,13 @@ describe('dialogue runner',()=>{
     const input=screen.getByRole('textbox',{name:'Твой ответ'});
     await user.type(input,'No, I live here');
     await user.click(screen.getByRole('button',{name:'Проверить'}));
-    expect(await screen.findByText('Так и есть')).toBeTruthy();
+    expect(await screen.findByText('Подходит')).toBeTruthy();
     expect(screen.getByText('No, I live here.')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Далее'}));
 
     await user.click(screen.getByRole('button',{name:'Ответить голосом'}));
     recognition.result(['I work in tech']);
-    expect(await screen.findByText('Так и есть')).toBeTruthy();
+    expect(await screen.findByText('Подходит')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Завершить'}));
 
     await waitFor(()=>expect(saveDialogue).toHaveBeenCalledWith(
@@ -127,6 +127,6 @@ describe('dialogue runner',()=>{
     const input=screen.getByRole('textbox',{name:'Твой ответ'});
     await user.type(input,'I live here');
     await user.click(screen.getByRole('button',{name:'Проверить'}));
-    expect(await screen.findByText('Так и есть')).toBeTruthy();
+    expect(await screen.findByText('Подходит')).toBeTruthy();
   });
 });

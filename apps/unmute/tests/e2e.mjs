@@ -99,7 +99,7 @@ await Release.publishDraftRelease(['general-foundation']);
 const COPY = {
   ru: {
     tabs:'Разделы',
-    me:'Я',
+    me:'Профиль',
     route:'Маршрут',
     signIn:'Войти или создать аккаунт',
     today:'Сегодня',

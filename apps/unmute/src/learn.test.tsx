@@ -113,6 +113,12 @@ function renderRunner(
   return {saveSeen,saveGraded,savePractice,onExit,onNodeCompleted};
 }
 
+// A choice is answered with two taps: the first picks the option, the second confirms it.
+async function chooseAnswer(user:ReturnType<typeof userEvent.setup>,name:string){
+  await user.click(await screen.findByRole('radio',{name}));
+  await user.click(screen.getByRole('radio',{name:new RegExp('^'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))}));
+}
+
 describe('node activity runner',()=>{
   beforeEach(()=>localStorage.clear());
   it('shows theory first, then the tasks; builds a new phrase from words; counts the day',async()=>{
@@ -132,7 +138,7 @@ describe('node activity runner',()=>{
     expect(within(screen.getByRole('dialog')).getByText('Короткая теория')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Закрыть теорию'}));
     expect(screen.queryByRole('dialog')).toBeNull();
-    await user.click(screen.getByRole('radio',{name:'I am here'}));
+    await chooseAnswer(user,'I am here');
     expect(saveGraded).toHaveBeenCalledWith('general-foundation','choice.one',true);
     expect(await screen.findByText('Верно')).toBeTruthy();
 
@@ -171,7 +177,7 @@ describe('node activity runner',()=>{
         />
       </I18nProvider>
     );
-    await user.click(screen.getByRole('radio',{name:'I is here'}));
+    await chooseAnswer(user,'I is here');
     expect(await screen.findByText('Это задание вернётся в конце урока.')).toBeTruthy();
     // The mistake does not add a task to the count.
     expect(screen.getByText('1/2')).toBeTruthy();
@@ -185,7 +191,7 @@ describe('node activity runner',()=>{
     expect(await screen.findByText('Работа над ошибками: 1 из 1')).toBeTruthy();
     expect(screen.getByText('2/2')).toBeTruthy();
     expect(screen.getByRole('heading',{name:'Выбери ответ'})).toBeTruthy();
-    await user.click(screen.getByRole('radio',{name:'I am here'}));
+    await chooseAnswer(user,'I am here');
     await user.click(screen.getByRole('button',{name:'Завершить'}));
     // The runtime here never marks the day complete: the summary says so honestly.
     expect(await screen.findByText('День пока не засчитан')).toBeTruthy();
@@ -210,7 +216,7 @@ describe('node activity runner',()=>{
       </I18nProvider>
     );
 
-    await user.click(screen.getByRole('radio',{name:'I is here'}));
+    await chooseAnswer(user,'I is here');
     expect(await screen.findByText('Это задание вернётся в конце урока.')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Закрыть урок'}));
     expect(screen.getByRole('heading',{name:'Выйти из урока?'})).toBeTruthy();
@@ -231,7 +237,7 @@ describe('node activity runner',()=>{
       </I18nProvider>
     );
 
-    expect(await screen.findByText('Пока не так')).toBeTruthy();
+    expect(await screen.findByText('Ответ неверный')).toBeTruthy();
     expect(screen.getByText('Это задание вернётся в конце урока.')).toBeTruthy();
     expect(screen.getByText('1/2')).toBeTruthy();
   });
@@ -275,7 +281,7 @@ describe('node activity runner',()=>{
     );
 
     await user.click(screen.getByRole('button',{name:'К заданиям'}));
-    await user.click(await screen.findByRole('radio',{name:'I am here'}));
+    await chooseAnswer(user,'I am here');
     await user.click(screen.getByRole('button',{name:'Далее'}));
     await user.click(await screen.findByRole('button',{name:'Написать с клавиатуры'}));
     const input=await screen.findByRole('textbox',{name:'Твой ответ'});
