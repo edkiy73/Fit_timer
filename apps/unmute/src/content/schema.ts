@@ -64,7 +64,7 @@ export const activitySchema = z.discriminatedUnion('type', [
     prompt: localizedTextSchema,
     target: z.string().min(1).optional(),
     answer: answerCheckSchema.optional(),
-    speechLocale: z.string().default('en-US'),
+    speechLocale: z.string().default('en-GB'),
   }),
   activityBaseSchema.extend({
     type: z.literal('pattern-drill'),
@@ -93,7 +93,7 @@ export const activitySchema = z.discriminatedUnion('type', [
     type: z.literal('listening'),
     prompt: localizedTextSchema.optional(),
     text: z.string().min(1),
-    speechLocale: z.string().default('en-US'),
+    speechLocale: z.string().default('en-GB'),
     answer: answerCheckSchema.optional(),
   }),
   activityBaseSchema.extend({

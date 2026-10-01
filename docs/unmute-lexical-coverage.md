@@ -172,16 +172,19 @@ The server converts this into the strict internal schema and preserves stable ID
 
 The Admin workflow is deliberately API-free: generate a prompt for 25/50/100 missing surfaces, copy it to a model, paste the JSON answer, Preview, then Apply to draft. A batch is atomic at the lexicon-workspace pointer: conflicts block the apply rather than partially changing the draft.
 
-## Pronunciation bootstrap
+## Pronunciation (British)
 
-Use a pinned snapshot of `open-dict-data/ipa-dict` US English as a pronunciation enrichment source.
+UnMute teaches British English: TTS, speech recognition (`ENGLISH_SPEECH_LOCALE = 'en-GB'`, `src/speech-locale.ts`) and transcription are all British.
 
-Pinned source commit:
-`43c3570eb3553bdd19fccd2bd0091534889af023`
+Admin «Транскрипция слов» (`content_lexicon_ipa_bootstrap`, `lib/ipa-bootstrap.js`) uses a pinned snapshot of Britfone (MIT, ~16k everyday British words) plus a small built-in supplement for contractions and course names:
 
-Only the fields needed by the current UnMute lexicon are imported into the DB; the full external dictionary is not shipped inside the app bundle.
+- Pinned source: `JoseLlarena/Britfone` commit `1062be14adc96c358f2087ac5449d72130c7a6f4`, `britfone.main.3.0.1.csv`.
+- IPA is normalised to learner-dictionary style (`e`, `ʌ`, `r`, no slashes, stress mark before the syllable, secondary stress only before the main one).
+- `ruReading` is generated from that IPA with the stressed vowel marked by U+0301.
+- Every word the dictionary knows is set to it. A word outside it keeps its stored IPA minus the American `r`, and short phrases are composed word by word. Whole sentences stay without transcription.
+- Homographs keep the variant closest to the stored one (live /lɪv/ vs /laɪv/). Re-running is idempotent; run it again after an AI lexicon batch, then «Выпустить».
 
-Russian learner readings remain optional and can be bulk-generated/reviewed through the AI paste workflow.
+Only the fields needed by the lexicon are written to the DB; the dictionary is not shipped in the app bundle. The AI paste workflow asks for the same British style.
 
 ## Examples
 

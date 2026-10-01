@@ -11,6 +11,7 @@ import {
   type WebRecognitionError,
   type WebRecognitionHandle
 } from './speech-web';
+import { ENGLISH_SPEECH_LOCALE } from './speech-locale';
 
 interface CapacitorLike {
   isNativePlatform?():boolean;
@@ -35,8 +36,8 @@ function nativeTransport():SpeechTransport|null{
   return createSpeech({
     native:true,
     audio,
-    defaultLanguage:'en-US',
-    defaultLocale:'en-US'
+    defaultLanguage:ENGLISH_SPEECH_LOCALE,
+    defaultLocale:ENGLISH_SPEECH_LOCALE
   });
 }
 
@@ -62,7 +63,7 @@ export function nativeSpeechAvailable():boolean{
   return nativeAudio()!==null;
 }
 
-export const speakText:SpeakText=async(text,locale='en-US')=>{
+export const speakText:SpeakText=async(text,locale=ENGLISH_SPEECH_LOCALE)=>{
   const native=nativeTransport();
   if(native){
     const spoken=await native.speak(text,{locale});
@@ -71,7 +72,7 @@ export const speakText:SpeakText=async(text,locale='en-US')=>{
   return speakWebText(text,locale);
 };
 
-export const startRecognition:StartRecognition=(handlers,locale='en-US')=>{
+export const startRecognition:StartRecognition=(handlers,locale=ENGLISH_SPEECH_LOCALE)=>{
   const native=nativeTransport();
   if(!native)return startWebRecognition(handlers,locale);
 

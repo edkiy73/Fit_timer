@@ -350,8 +350,8 @@ function buildAiPrompt(audit,limit=50,options={}){
       lexemeId:mode==='enrich'?'lex.work':undefined,
       lemma:'work',
       forms:[
-        {text:'work',kind:'lemma',ipa:'wɝːk',ruReading:'уёрк'},
-        {text:'worked',kind:'inflection',ipa:'wɝːkt',ruReading:'уёркт'}
+        {text:'work',kind:'lemma',ipa:'wɜːk',ruReading:'уёк'},
+        {text:'worked',kind:'inflection',ipa:'wɜːkt',ruReading:'уёкт'}
       ],
       senses:[{
         id:mode==='enrich'?'verb':undefined,
@@ -385,9 +385,11 @@ function buildAiPrompt(audit,limit=50,options={}){
     'MODE: '+mode,
     'TASK',
     ...taskLines,
-    '- Use General American English pronunciation.',
+    '- Use modern standard British English pronunciation (non-rhotic: no r before a consonant or at the end).',
+    '- IPA in the style of Oxford/Cambridge learner dictionaries (e, ʌ, r, əʊ), without slashes.',
     '- IPA must describe the EXACT form next to it, not merely the lemma.',
     '- ruReading is a short Russian learner-friendly sound hint, not a spelling transliteration.',
+    '- In ruReading of words with two or more syllables put an acute accent (U+0301) after the stressed vowel.',
     '- Give 1-2 short natural examples per returned sense with accurate Russian translations.',
     '- Preserve apostrophes in contractions.',
     '- Do not invent obscure senses unrelated to these contexts.',

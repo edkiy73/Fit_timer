@@ -14,11 +14,13 @@ import { stageForDay, stageNameKey } from './course-stages';
 import { Icon } from './icons';
 import { Sheet } from './sheet';
 import { speakText } from './speech-runtime';
+import { ENGLISH_SPEECH_LOCALE } from './speech-locale';
 import type { RecordMap } from '@appbase/core/document-sync.js';
 import type { TimedFlag } from './progress';
 import { useAllLearningDays, withAllLearningDays } from './learning-days';
 import { useOtherCourseReviews, type OtherCourseReview } from './other-course-review';
 import { UpdateBanner } from './app-update';
+import { ipaForDisplay } from './lexicon/schema';
 import type { CourseSet, RoadmapNode } from './content/schema';
 import {
   lastWeekActivity,
@@ -273,10 +275,10 @@ export function TodayView({
             <div className="word-day">
               <span className="word-day-text">
                 <strong lang="en" className="word-day-lemma"><LexiconText text={word.lemma} refs={[{surface:word.lemma,lexemeId:word.lexemeId}]} /></strong>
-                {word.ipa&&<span className="word-day-ipa">/{word.ipa.replace(/^\/|\/$/g,'')}/</span>}
+                {word.ipa&&<span className="word-day-ipa">{ipaForDisplay(word.ipa)}</span>}
                 <span className="tile-text">{word.translation}</span>
               </span>
-              <button className="speak-play pressable" type="button" aria-label={t('today.speakListen',{text:word.lemma})} onClick={()=>void speakText(word.lemma,'en-US')}>
+              <button className="speak-play pressable" type="button" aria-label={t('today.speakListen',{text:word.lemma})} onClick={()=>void speakText(word.lemma,ENGLISH_SPEECH_LOCALE)}>
                 <Icon name="speaker" size={20} />
               </button>
             </div>
@@ -312,7 +314,7 @@ export function TodayView({
               <ul className="speak-examples" aria-label={t('today.speakExamples')}>
                 {speakExamples.map(example=>(
                   <li key={example}>
-                    <button className="speak-play pressable" type="button" aria-label={t('today.speakListen',{text:example})} onClick={()=>void speakText(example,'en-US')}>
+                    <button className="speak-play pressable" type="button" aria-label={t('today.speakListen',{text:example})} onClick={()=>void speakText(example,ENGLISH_SPEECH_LOCALE)}>
                       <Icon name="speaker" size={18} />
                     </button>
                     <span lang="en"><LexiconText text={example} /></span>

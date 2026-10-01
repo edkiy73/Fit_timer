@@ -10,6 +10,7 @@ import type {
 import { looseSpeechMatch } from './speech-match';
 import { ExerciseKind } from './exercise-kind';
 import { LexiconText } from './lexicon-ui';
+import { ENGLISH_SPEECH_LOCALE } from './speech-locale';
 
 type PatternDrillActivity=Extract<Activity,{type:'pattern-drill'}>;
 
@@ -96,7 +97,7 @@ export function PatternSpeakingView({
 
   useEffect(()=>{
     if(phase!=='show'||!target)return;
-    void speak(target,'en-US');
+    void speak(target,ENGLISH_SPEECH_LOCALE);
   },[phase,target,speak]);
 
   useEffect(()=>{
@@ -148,7 +149,7 @@ export function PatternSpeakingView({
         setListening(false);
         if(!receivedRef.current)setRecognitionError(current=>current||'no-speech');
       }
-    },'en-US');
+    },ENGLISH_SPEECH_LOCALE);
 
     handleRef.current=handle;
     if(!handle)setListening(false);
@@ -290,7 +291,7 @@ export function PatternSpeakingView({
             <p className="drill-explanation"><LexiconText text={localized(item.explanation,locale)} refs={activity.lexiconRefs} /></p>
           )}
           {heard&&<div className="learn-hint">{t('speaking.heard',{heard})}</div>}
-          <button className="secondary-button" type="button" onClick={()=>void speak(target,'en-US')}>
+          <button className="secondary-button" type="button" onClick={()=>void speak(target,ENGLISH_SPEECH_LOCALE)}>
             {t('speaking.playReference')}
           </button>
           {!correct&&(

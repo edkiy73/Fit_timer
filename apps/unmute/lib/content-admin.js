@@ -39,10 +39,10 @@ function newActivity(type){
     case 'choice': return {...base,prompt:{ru:'Новый вопрос'},options:[{ru:'Вариант 1'},{ru:'Вариант 2'}],correctIndex:0};
     case 'text-input': return {...base,prompt:{ru:'Новый вопрос'},answer:{accepted:['answer'],nearMiss:true,caseSensitive:false}};
     case 'translation': return {...base,direction:'to-target',prompt:{ru:'Новая фраза'},answer:{accepted:['answer'],nearMiss:true,caseSensitive:false}};
-    case 'speaking': return {...base,prompt:{ru:'Произнеси фразу'},speechLocale:'en-US'};
+    case 'speaking': return {...base,prompt:{ru:'Произнеси фразу'},speechLocale:'en-GB'};
     case 'pattern-drill': return {...base,pattern:{ru:'Новый паттерн'},items:[{id:id+'.item-1',prompt:{ru:'Пример'},answer:{accepted:['answer'],nearMiss:true,caseSensitive:false}}]};
     case 'dialogue': return {...base,scene:{ru:'Новый диалог'},lines:[{id:id+'.line-1',partner:{ru:'Реплика собеседника'},answer:{accepted:['answer'],nearMiss:true,caseSensitive:false}}]};
-    case 'listening': return {...base,prompt:{ru:'Послушай'},text:'New listening text',speechLocale:'en-US'};
+    case 'listening': return {...base,prompt:{ru:'Послушай'},text:'New listening text',speechLocale:'en-GB'};
     case 'review': return {...base,source:{activityIds:[],tags:[],dueOnly:true}};
     case 'ai-conversation': return {...base,topic:{ru:'Новая тема'},promptTemplate:'New conversation topic',focus:[]};
     default: throw new Error('bad_activity_type');

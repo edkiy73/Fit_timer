@@ -11,6 +11,7 @@ import type {
 } from './speech-web';
 import { ExerciseKind } from './exercise-kind';
 import { LexiconText } from './lexicon-ui';
+import { ENGLISH_SPEECH_LOCALE } from './speech-locale';
 
 type DialogueActivity=Extract<Activity,{type:'dialogue'}>;
 type DialogueLine=DialogueActivity['lines'][number];
@@ -91,11 +92,11 @@ export function DialogueView({
     if(!line)return;
     if(phase==='ask'){
       const partner=localized(line.partner,locale);
-      if(partner)void speak(partner,'en-US');
+      if(partner)void speak(partner,ENGLISH_SPEECH_LOCALE);
       return;
     }
     const reference=line.displayAnswer || line.answer.accepted[0] || '';
-    if(reference)void speak(reference,'en-US');
+    if(reference)void speak(reference,ENGLISH_SPEECH_LOCALE);
   },[line?.id,phase,locale,speak]);
 
   useEffect(()=>{
@@ -151,7 +152,7 @@ export function DialogueView({
         setListening(false);
         if(!receivedRef.current)setRecognitionError(current=>current||'no-speech');
       }
-    },'en-US');
+    },ENGLISH_SPEECH_LOCALE);
 
     recognitionRef.current=handle;
     if(!handle)setListening(false);
@@ -253,7 +254,7 @@ export function DialogueView({
 
       <div className="dialogue-bubble">
         <strong><LexiconText text={partner} refs={activity.lexiconRefs} /></strong>
-        <button className="learn-back" type="button" onClick={()=>void speak(partner,'en-US')}>
+        <button className="learn-back" type="button" onClick={()=>void speak(partner,ENGLISH_SPEECH_LOCALE)}>
           {t('dialogue.playPartner')}
         </button>
       </div>
@@ -302,7 +303,7 @@ export function DialogueView({
             {lastAnswer&&<span>{t('dialogue.yourAnswer',{answer:lastAnswer})}</span>}
           </div>
           <div className="drill-target"><LexiconText text={reference} refs={activity.lexiconRefs} /></div>
-          <button className="secondary-button" type="button" onClick={()=>void speak(reference,'en-US')}>
+          <button className="secondary-button" type="button" onClick={()=>void speak(reference,ENGLISH_SPEECH_LOCALE)}>
             {t('speaking.playReference')}
           </button>
           <button className="primary-button" type="button" onClick={next}>

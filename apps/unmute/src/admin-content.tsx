@@ -119,7 +119,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   const [bulkMessage,setBulkMessage]=useState('');
   const [bulkBusy,setBulkBusy]=useState(false);
   const [ipaMessage,setIpaMessage]=useState('');
-  const [ipaReport,setIpaReport]=useState<{forms:number;alreadyHaveIpa:number;sourceMatches:number;updatedForms:number;unmatched:number;updatedLexemes:number}|null>(null);
+  const [ipaReport,setIpaReport]=useState<{forms:number;alreadyBritish:number;updatedForms:number;unmatched:number;unmatchedSample:string[];updatedLexemes:number}|null>(null);
 
   const load=useCallback(async()=>{
     setBusy(true);
@@ -350,8 +350,8 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       const report=(result.report || null) as typeof ipaReport;
       setIpaReport(report);
       setIpaMessage(apply
-        ? 'Транскрипция добавлена для '+String(report?.updatedForms || 0)+' форм. Ученики увидят после «Выпустить».'
-        : 'Можно добавить транскрипцию для '+String(report?.updatedForms || 0)+' форм. Уже заполненное не меняется.');
+        ? 'Британская транскрипция записана для '+String(report?.updatedForms || 0)+' форм. Ученики увидят после «Выпустить».'
+        : (report?.updatedForms ? 'Обновится '+String(report.updatedForms)+' форм.' : 'Все слова из словаря уже с британской транскрипцией.'));
       if(apply) await load();
     }catch(error){
       setIpaMessage('Не получилось: '+String((error as {code?:string})?.code || 'request_failed'));
@@ -529,20 +529,23 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
         <div className="ab-admin-section-head">
           <div>
             <h2>Транскрипция слов</h2>
-            <p className="ab-admin-note">Берёт американское произношение из словаря и заполняет только пустые места. Уже заполненное не меняет.</p>
+            <p className="ab-admin-note">Британское произношение из словаря Britfone и подсказка русскими буквами с ударением. Слова, которых нет в словаре, сохраняют свою транскрипцию без американского «r». Запускай после пополнения словаря через ИИ.</p>
           </div>
         </div>
         <div className="ab-admin-action-row">
-          <button type="button" className="ab-admin-secondary" disabled={bulkBusy || !ld} onClick={()=>void runIpaBootstrap(false)}>Проверить, чего не хватает</button>
-          <button type="button" disabled={bulkBusy || !ipaReport?.updatedForms} onClick={()=>void runIpaBootstrap(true)}>Добавить транскрипцию</button>
+          <button type="button" className="ab-admin-secondary" disabled={bulkBusy || !ld} onClick={()=>void runIpaBootstrap(false)}>Проверить</button>
+          <button type="button" disabled={bulkBusy || !ipaReport?.updatedForms} onClick={()=>void runIpaBootstrap(true)}>Обновить транскрипцию</button>
         </div>
         {ipaReport && (
           <div className="ab-admin-status-line">
             <span><b>Форм</b> {ipaReport.forms}</span>
-            <span><b>Уже есть</b> {ipaReport.alreadyHaveIpa}</span>
-            <span><b>Можно добавить</b> {ipaReport.updatedForms}</span>
-            <span><b>Нет в базе</b> {ipaReport.unmatched}</span>
+            <span><b>Уже британская</b> {ipaReport.alreadyBritish}</span>
+            <span><b>Обновится</b> {ipaReport.updatedForms}</span>
+            <span><b>Без транскрипции</b> {ipaReport.unmatched}</span>
           </div>
+        )}
+        {!!ipaReport?.unmatchedSample?.length && (
+          <p className="ab-admin-note">Без транскрипции (обычно целые фразы): {ipaReport.unmatchedSample.join(' · ')}</p>
         )}
         {ipaMessage && <p className="ab-admin-feedback" role="status">{ipaMessage}</p>}
       </article>

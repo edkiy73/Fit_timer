@@ -53,9 +53,11 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
     buildLexicon(input){assert.equal(input,model);return lexicon;},
     validateImport(input,c,l){assert.equal(input,model);assert.equal(c,course);assert.equal(l,lexicon);return report;}
   };
+  let ipaSource='';
   const handler=createContentAdminHandler({
     loadLegacySource:async()=> 'fixture-source',
-    loadImporter:async()=> importer
+    loadImporter:async()=> importer,
+    loadIpaSource:async()=> ipaSource
   });
 
   const ignored=await action(handler,'users_list');
@@ -358,6 +360,20 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   const after=await action(handler,'content_status');
   assert.equal(after.body.course.published.revision,1);
   assert.equal(after.body.lexicon.published.revision,2);
+
+  // British transcription: check, write, and a second check finds nothing left to change.
+  const ipaEntry=(await Lexicon.getDraft()).entries.find(entry=>!entry.deprecated&&/^[a-z]+$/.test(entry.lemma));
+  ipaSource=ipaEntry.lemma.toUpperCase()+', t ˈɛ s t';
+  const ipaCheck=await action(handler,'content_lexicon_ipa_bootstrap',{});
+  assert.equal(ipaCheck.status,200);
+  assert.equal(ipaCheck.body.applied,false);
+  assert.ok(ipaCheck.body.report.updatedForms>=1);
+  const ipaApplied=await action(handler,'content_lexicon_ipa_bootstrap',{apply:true});
+  assert.equal(ipaApplied.body.applied,true);
+  const ipaLexeme=(await Lexicon.getDraft()).entries.find(entry=>entry.id===ipaEntry.id);
+  assert.deepEqual(ipaLexeme.pronunciation,{...(ipaEntry.pronunciation||{}),ipa:'test',ruReading:'тэст'});
+  assert.equal((await action(handler,'content_lexicon_ipa_bootstrap',{})).body.report.updatedForms,0);
+
 
   console.log('UnMute content Admin tests passed');
 })().catch(error=>{console.error(error);process.exit(1);});

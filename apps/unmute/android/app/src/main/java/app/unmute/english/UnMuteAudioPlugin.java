@@ -47,7 +47,7 @@ public class UnMuteAudioPlugin extends Plugin implements RecognitionListener {
     public void load() {
         main.post(() -> tts = new TextToSpeech(getContext(), status -> {
             ttsReady = status == TextToSpeech.SUCCESS;
-            if (ttsReady) tts.setLanguage(Locale.forLanguageTag("en-US"));
+            if (ttsReady) tts.setLanguage(Locale.forLanguageTag("en-GB"));
         }));
     }
 
@@ -101,7 +101,7 @@ public class UnMuteAudioPlugin extends Plugin implements RecognitionListener {
             return;
         }
 
-        final String localeTag = call.getString("locale", "en-US");
+        final String localeTag = call.getString("locale", "en-GB");
         final String voiceName = call.getString("voice", "");
         final String utteranceId = UUID.randomUUID().toString();
         final AtomicBoolean finished = new AtomicBoolean(false);
@@ -114,6 +114,11 @@ public class UnMuteAudioPlugin extends Plugin implements RecognitionListener {
 
             Locale locale = Locale.forLanguageTag(localeTag);
             int languageStatus = tts.setLanguage(locale);
+            // A phone without the British voice still speaks English rather than staying silent.
+            if (languageStatus == TextToSpeech.LANG_MISSING_DATA ||
+                languageStatus == TextToSpeech.LANG_NOT_SUPPORTED) {
+                languageStatus = tts.setLanguage(Locale.ENGLISH);
+            }
             if (languageStatus == TextToSpeech.LANG_MISSING_DATA ||
                 languageStatus == TextToSpeech.LANG_NOT_SUPPORTED) {
                 resolveSpoken(call, false);
@@ -190,7 +195,7 @@ public class UnMuteAudioPlugin extends Plugin implements RecognitionListener {
             return;
         }
 
-        final String language = call.getString("language", "en-US");
+        final String language = call.getString("language", "en-GB");
         main.post(() -> {
             if (!SpeechRecognizer.isRecognitionAvailable(getContext())) {
                 JSObject result = new JSObject();

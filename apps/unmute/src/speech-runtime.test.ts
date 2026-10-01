@@ -33,10 +33,10 @@ describe('UnMute speech runtime',()=>{
     setCapacitor({speak});
 
     expect(nativeSpeechAvailable()).toBe(true);
-    await expect(speakText('hello','en-US')).resolves.toBe(true);
+    await expect(speakText('hello','en-GB')).resolves.toBe(true);
     expect(speak).toHaveBeenCalledWith({
       text:'hello',
-      locale:'en-US',
+      locale:'en-GB',
       voice:''
     });
   });
@@ -58,9 +58,9 @@ describe('UnMute speech runtime',()=>{
     });
 
     const onResult=vi.fn();
-    const handle=startRecognition({onResult},'en-US');
+    const handle=startRecognition({onResult},'en-GB');
     expect(handle).not.toBeNull();
-    await vi.waitFor(()=>expect(startNative).toHaveBeenCalledWith({language:'en-US'}));
+    await vi.waitFor(()=>expect(startNative).toHaveBeenCalledWith({language:'en-GB'}));
     await vi.waitFor(()=>expect(resultListener).not.toBeNull());
     (resultListener as unknown as (event:Record<string,unknown>)=>void)({
       text:'I am home',

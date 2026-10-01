@@ -7,6 +7,7 @@ import { useLearnerCourseRuntime } from './course-runtime';
 import { useLexiconRuntime } from './lexicon-ui';
 import { localizedText } from './today-model';
 import { speakText } from './speech-runtime';
+import { ENGLISH_SPEECH_LOCALE } from './speech-locale';
 import { Loader } from './loader';
 import { Icon } from './icons';
 
@@ -75,7 +76,7 @@ export function ReferenceView({phrases, verbs, onBack}: {phrases: PhraseGroup[];
   const {t} = useI18n();
   const [tab, setTab] = useState<Tab>(phrases.length ? 'phrases' : 'verbs');
   const [hidden, setHidden] = useState(false);
-  const say = (text: string) => { void speakText(text, 'en-US'); };
+  const say = (text: string) => { void speakText(text, ENGLISH_SPEECH_LOCALE); };
   const tabs: Array<[Tab, string, number]> = [['phrases', t('reference.phrases'), phrases.length], ['verbs', t('reference.verbs'), verbs.length]];
   return (
     <section className="review-shell reference" aria-labelledby="reference-title">

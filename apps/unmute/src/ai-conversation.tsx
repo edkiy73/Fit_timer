@@ -9,6 +9,7 @@ import type {
   WebRecognitionHandle
 } from './speech-runtime';
 import { speakText, startRecognition as startSpeechRecognition } from './speech-runtime';
+import { ENGLISH_SPEECH_LOCALE } from './speech-locale';
 import {
   clearTalkTrialContext,
   getTalkTrialContext,
@@ -121,7 +122,7 @@ export function AIConversationView({
       applyReply(reply);
       setStarted(true);
       onStarted();
-      void speak(reply.reply,'en-US');
+      void speak(reply.reply,ENGLISH_SPEECH_LOCALE);
     }catch(err:any){
       setError(String(err?.code||'ai_failed'));
     }finally{
@@ -154,7 +155,7 @@ export function AIConversationView({
       ]);
       applyReply(reply);
       setInput('');
-      void speak(reply.reply,'en-US');
+      void speak(reply.reply,ENGLISH_SPEECH_LOCALE);
     }catch(err:any){
       setError(String(err?.code||'ai_failed'));
     }finally{
@@ -206,7 +207,7 @@ export function AIConversationView({
           setRecognitionError(current=>current||'no-speech');
         }
       }
-    },'en-US');
+    },ENGLISH_SPEECH_LOCALE);
 
     if(recognitionReceivedRef.current){
       handle?.abort();
@@ -479,7 +480,7 @@ export function AIConversationView({
                 disabled={busy||listening}
                 onClick={()=>{
                   const latest=[...messages].reverse().find(message=>message.role==='partner');
-                  if(latest)void speak(latest.text,'en-US');
+                  if(latest)void speak(latest.text,ENGLISH_SPEECH_LOCALE);
                 }}
               >
                 {t('aiTalk.playPartner')}

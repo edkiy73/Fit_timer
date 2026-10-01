@@ -1,3 +1,5 @@
+import { ENGLISH_SPEECH_LOCALE } from './speech-locale';
+
 export type SpeakText=(text:string,locale?:string)=>Promise<boolean>;
 
 export type WebRecognitionError=
@@ -57,7 +59,7 @@ function recognitionError(value:string|undefined):WebRecognitionError{
   return 'recognition';
 }
 
-export const startWebRecognition:StartRecognition=(handlers,locale='en-US')=>{
+export const startWebRecognition:StartRecognition=(handlers,locale=ENGLISH_SPEECH_LOCALE)=>{
   if(typeof window==='undefined'){
     handlers.onError?.('unsupported');
     return null;
@@ -111,7 +113,18 @@ export const startWebRecognition:StartRecognition=(handlers,locale='en-US')=>{
   };
 };
 
-export async function speakWebText(text:string,locale='en-US'):Promise<boolean>{
+// Browsers often default to an American voice even for lang="en-GB": pick a voice of the exact
+// locale, otherwise leave the choice to the browser.
+function voiceFor(synth:SpeechSynthesis,locale:string):SpeechSynthesisVoice|null{
+  try{
+    const wanted=locale.toLowerCase();
+    return synth.getVoices().find(voice=>String(voice.lang||'').replace('_','-').toLowerCase()===wanted)??null;
+  }catch(_){
+    return null;
+  }
+}
+
+export async function speakWebText(text:string,locale=ENGLISH_SPEECH_LOCALE):Promise<boolean>{
   if(typeof window==='undefined')return false;
   const synth=window.speechSynthesis;
   if(!synth||typeof SpeechSynthesisUtterance==='undefined'||!String(text||'').trim())return false;
@@ -121,6 +134,8 @@ export async function speakWebText(text:string,locale='en-US'):Promise<boolean>{
       synth.cancel();
       const utterance=new SpeechSynthesisUtterance(String(text));
       utterance.lang=locale;
+      const voice=voiceFor(synth,locale);
+      if(voice)utterance.voice=voice;
       let settled=false;
       const finish=(value:boolean)=>{
         if(settled)return;

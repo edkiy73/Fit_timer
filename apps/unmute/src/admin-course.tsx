@@ -149,7 +149,6 @@ function FriendlyFields({activity,onChange}:{activity:EditableActivity;onChange(
     return <>
       <label><span>Задание</span><textarea rows={3} value={textValue(activity.prompt)} onChange={e=>text('prompt',e.target.value)} /></label>
       <label><span>Целевая фраза</span><input value={String(activity.target||'')} onChange={e=>update('target',e.target.value)} /></label>
-      <label><span>Speech locale</span><input value={String(activity.speechLocale||'en-US')} onChange={e=>update('speechLocale',e.target.value)} /></label>
     </>;
   }
 
@@ -157,7 +156,6 @@ function FriendlyFields({activity,onChange}:{activity:EditableActivity;onChange(
     return <>
       <label><span>Подсказка</span><textarea rows={2} value={textValue(activity.prompt)} onChange={e=>text('prompt',e.target.value)} /></label>
       <label><span>Текст для аудио</span><textarea rows={5} value={String(activity.text||'')} onChange={e=>update('text',e.target.value)} /></label>
-      <label><span>Speech locale</span><input value={String(activity.speechLocale||'en-US')} onChange={e=>update('speechLocale',e.target.value)} /></label>
     </>;
   }
 

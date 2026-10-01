@@ -133,6 +133,12 @@ export function findLexiconForm(entry:Lexeme,surface:string,formId?:string){
   return matches.length===1 ? (matches[0] ?? null) : null;
 }
 
+/** Shows IPA between slashes once, whether or not the stored value already has them. */
+export function ipaForDisplay(ipa:string):string{
+  const bare=String(ipa||'').trim().replace(/^\/+|\/+$/g,'').trim();
+  return bare?'/'+bare+'/':'';
+}
+
 export function pronunciationForSurface(entry:Lexeme,surface:string,formId?:string){
   const matches=findLexiconForms(entry,surface);
   if(formId){

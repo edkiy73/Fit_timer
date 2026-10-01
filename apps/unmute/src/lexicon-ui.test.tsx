@@ -88,7 +88,7 @@ describe('learner dictionary popup',()=>{
     expect(screen.getByText('уорк')).toBeTruthy();
     expect(screen.getByRole('button',{name:'Перевести: remotely'})).toBeTruthy();
     expect(screen.getByText('Я работаю удалённо.')).toBeTruthy();
-    expect(speakWebText).toHaveBeenCalledWith('work','en-US');
+    expect(speakWebText).toHaveBeenCalledWith('work','en-GB');
   });
 
   it('keeps answer options plain until checked: a tap picks the answer, not a word',async()=>{

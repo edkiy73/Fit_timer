@@ -73,12 +73,12 @@ describe('pattern listening',()=>{
     const user=userEvent.setup();
     const {savePractice,onDone,speak}=renderListening();
 
-    await waitFor(()=>expect(speak).toHaveBeenCalledWith('I work at home.','en-US'));
+    await waitFor(()=>expect(speak).toHaveBeenCalledWith('I work at home.','en-GB'));
     await user.click(screen.getByRole('button',{name:'Я работаю дома.'}));
     expect(await screen.findByText('I work at home.')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Далее'}));
 
-    await waitFor(()=>expect(speak).toHaveBeenCalledWith('She works here.','en-US'));
+    await waitFor(()=>expect(speak).toHaveBeenCalledWith('She works here.','en-GB'));
     await user.click(screen.getByRole('button',{name:'Она работает здесь.'}));
     await user.click(screen.getByRole('button',{name:'Завершить'}));
 

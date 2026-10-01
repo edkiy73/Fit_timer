@@ -21,6 +21,7 @@ import {
 } from './review-session';
 import type { SpeakText, StartRecognition } from './speech-runtime';
 import { speakText, startRecognition as startSpeechRecognition } from './speech-runtime';
+import { ENGLISH_SPEECH_LOCALE } from './speech-locale';
 import { PatternDrillView } from './pattern-drill';
 import { PatternListeningView } from './pattern-listening';
 import { PatternSpeakingView } from './pattern-speaking';
@@ -432,7 +433,7 @@ export function ReviewView({
   const revealWord=()=>{
     if(item?.kind!=='word')return;
     setWordShown(true);
-    void speak(item.word.lemma,'en-US');
+    void speak(item.word.lemma,ENGLISH_SPEECH_LOCALE);
   };
 
   const gradeWord=async(correct:boolean)=>{
@@ -592,7 +593,7 @@ export function ReviewView({
           ) : (
             <>
               <div className="drill-target"><LexiconText text={item.word.lemma} /></div>
-              <button className="secondary-button" type="button" onClick={()=>void speak(item.word.lemma,'en-US')}>
+              <button className="secondary-button" type="button" onClick={()=>void speak(item.word.lemma,ENGLISH_SPEECH_LOCALE)}>
                 {t('speaking.playReference')}
               </button>
               {wordSaveError&&(
