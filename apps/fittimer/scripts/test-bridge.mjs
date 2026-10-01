@@ -138,10 +138,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "refreshPubStatus",
   "refreshVoicePackUI",
   "renderClients",
-  "renderMine",
-  "renderPlanRow",
-  "renderStartInfo",
-  "renderToday",
+  "renderMine",  "renderToday",
   "renderTrainerCard",
   "restoreProfiles",
   "restoreTrainerClientState",
@@ -174,9 +171,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "updateTrainerProfile",
   "userForAI",
   "users",
-  "weekPlanInfo",
-  "workoutLoadSnapshot",
-  "workoutSessionSignature",
+  "weekPlanInfo",  "workoutSessionSignature",
   "workoutStepKey",
   "workStepChoices"
 ]);
