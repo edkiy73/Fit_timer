@@ -122,9 +122,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await page.evaluate(() => aiEditRequestGuard('exeWish')) === true);
 
   await page.evaluate(async () => {
-    account.email = 'guard-test@example.com';
-    account.syncToken = 'guard-test-token';
-    account.sub = {plan:'year', until:'2099-01-01'};
+    await kvSet('account', JSON.stringify(Object.assign({}, account, {
+      email: 'guard-test@example.com',
+      syncToken: 'guard-test-token',
+      sub: {plan:'year', until:'2099-01-01'}
+    })));
+    await loadAccount();
     await kvSet('deviceId', 'guard-test-device'); await loadIdentity();
     customPrograms.push({id:'guard-images', name:'', plans:[{days:['Пн'], rounds:1, roundRest:0,
       exercises:[{name:'Присед', type:'reps', value:10, rest:30}]}]});
