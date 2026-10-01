@@ -49,12 +49,19 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       {id: 'uC', name: 'C', gender: 'f', age: 30, theme: 'system', locale: 'ru'}
     ]);
     await saveUsers();
-    customPrograms.push(prog('pa', 2)); await savePrograms();
-    await switchUser('uB'); customPrograms.push(prog('pb', 5)); await savePrograms();
-    await switchUser('uC'); customPrograms.push(prog('pc', 1)); await savePrograms();
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, prog('pa', 2)])); await loadData(); await savePrograms();
+    await switchUser('uB');
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, prog('pb', 5)])); await loadData(); await savePrograms();
+    await switchUser('uC');
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, prog('pc', 1)])); await loadData(); await savePrograms();
     // удаляем упражнение в A и несколько раз переключаемся
     await switchUser(A);
-    customPrograms.find(p => p.id === 'pa').plans[0].exercises.pop(); await savePrograms();
+    const programsA = customPrograms.map(p => p.id === 'pa'
+      ? Object.assign({}, p, {plans:p.plans.map((pl, i) => i === 0
+        ? Object.assign({}, pl, {exercises:pl.exercises.slice(0, -1)})
+        : pl)})
+      : p);
+    await kvSet(pk('customPrograms'), JSON.stringify(programsA)); await loadData(); await savePrograms();
     for(const id of ['uB', 'uC', A, 'uC', 'uB', A]) await switchUser(id);
     const read = async id => JSON.parse(await kvGet('customPrograms_' + id))
       .filter(p => p.id !== 'warmup').map(p => p.id + ':' + p.plans[0].exercises.length).join(',');
