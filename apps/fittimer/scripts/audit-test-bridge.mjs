@@ -17,6 +17,7 @@ import { TEST_BRIDGE_ALLOWLIST, TEST_BRIDGE_WRITABLE } from './test-bridge.mjs';
 const ROOT = process.cwd();
 const json = process.argv.includes('--json');
 const check = process.argv.includes('--check');
+const DYNAMIC_BRIDGE_ALLOWLIST = new Set(['exportProgram']);
 const SOURCE_FILES = [
   ...readdirSync('src/app').filter(name => /^(?:\d\d-[\w-]+|options)\.js$/.test(name)).map(name => path.join('src/app', name)),
   'src/i18n/index.js'
@@ -126,13 +127,18 @@ const report = {
 };
 
 if(check){
+  const measured = new Set(rows.map(row => row.name));
   const missing = rows.map(row => row.name).filter(name => !TEST_BRIDGE_ALLOWLIST.has(name));
   const missingWritable = rows.filter(row => row.writes.length && !TEST_BRIDGE_WRITABLE.has(row.name)).map(row => row.name);
   const writableOutsideBridge = [...TEST_BRIDGE_WRITABLE].filter(name => !TEST_BRIDGE_ALLOWLIST.has(name));
-  if(missing.length || missingWritable.length || writableOutsideBridge.length){
+  const stale = [...TEST_BRIDGE_ALLOWLIST].filter(name => !measured.has(name) && !DYNAMIC_BRIDGE_ALLOWLIST.has(name));
+  const missingDynamic = [...DYNAMIC_BRIDGE_ALLOWLIST].filter(name => !TEST_BRIDGE_ALLOWLIST.has(name));
+  if(missing.length || missingWritable.length || writableOutsideBridge.length || stale.length || missingDynamic.length){
     if(missing.length) console.error('Browser tests use bindings missing from TEST_BRIDGE_ALLOWLIST: ' + missing.join(', '));
     if(missingWritable.length) console.error('Browser tests overwrite bindings missing from TEST_BRIDGE_WRITABLE: ' + missingWritable.join(', '));
     if(writableOutsideBridge.length) console.error('Writable bridge names must also be exposed: ' + writableOutsideBridge.join(', '));
+    if(stale.length) console.error('Stale read-only bridge bindings: ' + stale.join(', '));
+    if(missingDynamic.length) console.error('Dynamic bridge bindings must stay exposed: ' + missingDynamic.join(', '));
     process.exit(1);
   }
   console.log(`Test bridge covers ${report.usedBindings} measured reads and ${report.overwrittenBindings} measured writes (from ${report.candidateBindings} candidates).`);
