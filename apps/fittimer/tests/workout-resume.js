@@ -235,18 +235,21 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await clearSession('session-structure-snapshot', 'resume-structure-test');
   });
 
-  const choices = await page.evaluate(() => {
+  await page.evaluate(() => {
     tearDownWorkout();
     const p = customPrograms.find(x => x.id === 'resume-variant-test');
-    state.raw = p;
-    state.planIdx = 1;
-    state.current = customToProgram(p, 1);
-    state.steps = buildSteps();
-    return workStepChoices().map(c => {
-      const s = state.steps[c.idx];
-      return {label:c.label, meta:c.meta, setNo:s.setNo || 1, side:s.side || 1, round:s.round};
-    });
+    openStart(p);
+    const secondPlan = document.querySelector('#planRow .plan-chip[data-plan-idx="1"]');
+    if(secondPlan) secondPlan.click();
   });
+  await page.click('#btnStart');
+  await page.waitForSelector('#startModal.open');
+  await page.click('#startFresh');
+  await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
+  const choices = await page.evaluate(() => workStepChoices().map(c => {
+    const s = state.steps[c.idx];
+    return {label:c.label, meta:c.meta, setNo:s.setNo || 1, side:s.side || 1, round:s.round};
+  }));
   ok('в выборе каждое упражнение показано один раз',
     choices.length === 5, choices.map(x=>x.label).join(', '));
   ok('выбор всегда ведёт на первый подход/сторону/круг',
