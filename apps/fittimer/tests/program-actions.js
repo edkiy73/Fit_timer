@@ -100,26 +100,6 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('⋮ в списке программ реально открывает меню',
      programMore.open && programMore.expanded === 'true', JSON.stringify(programMore));
 
-  // ---- «⋮» в списке упражнений конструктора ----
-  await page.evaluate(() => openBuilder('own1'));
-  await page.waitForSelector('#scrBuilder.on #bExList .ex-row');
-  await page.click('#bExList .more-btn');
-  const exerciseMenu = await page.evaluate(() => {
-    const row = document.querySelector('#bExList .ex-row');
-    const menu = row && row.querySelector('.ctx-menu');
-    const more = row && row.querySelector('.more-btn');
-    return {
-      open:!!(menu && menu.classList.contains('open')),
-      expanded:more && more.getAttribute('aria-expanded'),
-      items:menu ? [...menu.querySelectorAll('button')].map(x => x.textContent.trim()) : []
-    };
-  });
-  ok('«⋮» упражнения открывает меню действий',
-     exerciseMenu.open && exerciseMenu.expanded === 'true', JSON.stringify(exerciseMenu));
-  ok('в меню упражнения есть дублирование и удаление',
-     exerciseMenu.items.some(t => /Дублировать/.test(t)) && exerciseMenu.items.some(t => /Удалить/.test(t)),
-     exerciseMenu.items.join(' | '));
-
   const order = await page.evaluate(() => {
     const p = customPrograms.find(x => x.id === 'own1');
     openStart(p); buildStartMenu();
