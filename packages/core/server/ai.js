@@ -31,6 +31,9 @@ const DEFAULTS = {
   limits: {heavy:30, light:100, image:10},
   prices: DEFAULT_PRICES,
   payment: {provider:'not_connected', androidMonth:'', androidYear:'', iosMonth:'', iosYear:''},
+  // Who runs the app, for the privacy policy and account-deletion pages (Admin → «Владелец и
+  // контакты»). Public: the pages show it to everyone. Empty fields keep the page's own text.
+  legal: {owner:'', country:'', email:'', minAge:14},
   update: {android:{
     latestCode:0, minimumCode:0, latestName:'', url:'', messageRu:'', messageEn:'',
     direct:{latestCode:0, minimumCode:0, latestName:'', url:'', messageRu:'', messageEn:''},
@@ -74,6 +77,7 @@ function sanitizeSettings(src){
     };
   });
   const payment = src.payment || {};
+  const legal = src.legal && typeof src.legal === 'object' ? src.legal : {};
   const update = src.update && typeof src.update === 'object' ? src.update : {};
   const androidUpdate = update.android && typeof update.android === 'object' ? update.android : {};
   const legacyUrl = line(androidUpdate.url, 500);
@@ -120,6 +124,12 @@ function sanitizeSettings(src){
       androidMonth: line(payment.google && payment.google.month || payment.androidMonth, 120),
       androidYear: line(payment.google && payment.google.year || payment.androidYear, 120),
       iosMonth: line(payment.iosMonth, 120), iosYear: line(payment.iosYear, 120)
+    },
+    legal: {
+      owner: line(legal.owner, 160),
+      country: line(legal.country, 80),
+      email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(line(legal.email, 120)) ? line(legal.email, 120) : '',
+      minAge: Math.round(num(legal.minAge, 14, 0, 21))
     },
     update: {
       android: {

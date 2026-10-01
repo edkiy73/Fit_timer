@@ -27,7 +27,7 @@ p,li{margin:6px 0}.muted{color:var(--muted)}a{color:var(--accent)}
 <li>Подтверди: «Удалить навсегда». Аккаунт удаляется сразу.</li>
 </ol>
 <h2>Без доступа к приложению</h2>
-<p>Напиши на <a href="mailto:edkiy73@gmail.com">edkiy73@gmail.com</a> с адреса, к которому привязан аккаунт, с темой «Удалить аккаунт». Мы удалим его в течение 30 дней и ответим письмом.</p>
+<p>Напиши на <a data-legal="email" href="mailto:edkiy73@gmail.com">edkiy73@gmail.com</a> с адреса, к которому привязан аккаунт, с темой «Удалить аккаунт». Мы удалим его в течение 30 дней и ответим письмом.</p>
 <h2>Что удаляется</h2>
 <ul>
 <li>email и данные входа;</li>
@@ -43,5 +43,14 @@ p,li{margin:6px 0}.muted{color:var(--muted)}a{color:var(--accent)}
 </ul>
 <p><a href="./privacy.html">Политика конфиденциальности</a></p>
 </article></main>
+<script>
+/* Owner and contacts from Admin → «Владелец и контакты»; without them the text above stays. */
+fetch('/api/config').then(function(r){return r.ok?r.json():null}).then(function(c){
+  var l=c&&c.legal;if(!l)return;
+  if(l.owner){var o=l.country?l.owner+', '+l.country:l.owner;document.querySelectorAll('[data-legal="operator"]').forEach(function(n){n.textContent=o})}
+  if(l.email)document.querySelectorAll('[data-legal="email"]').forEach(function(n){n.textContent=l.email;n.setAttribute('href','mailto:'+l.email)});
+  if(l.minAge>0)document.querySelectorAll('[data-legal="minAge"]').forEach(function(n){n.textContent=l.minAge});
+}).catch(function(){});
+</script>
 </body>
 </html>

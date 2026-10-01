@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
+import { applyLegalDetails, type LegalDetails } from '@appbase/core/legal.js';
 import { Icon } from './icons';
+import { apiUrl } from './api-url';
 
 /* Privacy policy and account deletion inside the app. They stay public pages
    (public/*.html, linked from the stores), but opening them as a separate page left no
@@ -9,8 +11,10 @@ import { Icon } from './icons';
 
 const PAGES: Record<string, string> = {privacy:'./privacy.html', 'delete-account':'./delete-account.html'};
 
-export function extractLegalBody(html: string): string {
+export function extractLegalBody(html: string, legal?: LegalDetails | null): string {
   const doc = new DOMParser().parseFromString(html, 'text/html');
+  // Owner and contacts typed in Admin replace the page's own text (the bundled copy can be older).
+  applyLegalDetails(doc, legal);
   // Only the page's own article; scripts never come along.
   doc.querySelectorAll('script').forEach(node => node.remove());
   // Links between the two pages stay inside the app.
@@ -33,8 +37,12 @@ export function LegalScreen(){
   useEffect(() => {
     if(!url) return;
     let live = true;
+    const legal = fetch(apiUrl('/api/config'))
+      .then(response => response.ok ? response.json() as Promise<{legal?: LegalDetails}> : null)
+      .then(config => config?.legal ?? null)
+      .catch(() => null);
     fetch(url).then(response => response.ok ? response.text() : Promise.reject(new Error('http')))
-      .then(text => { if(live) setHtml(extractLegalBody(text)); })
+      .then(async text => { const details = await legal; if(live) setHtml(extractLegalBody(text, details)); })
       .catch(() => { if(live) setFailed(true); });
     return () => { live = false; };
   }, [url]);

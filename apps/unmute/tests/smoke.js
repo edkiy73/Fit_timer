@@ -65,6 +65,12 @@ function fakeRes(){
     && registry.isFree('account','progress:stats:general-foundation')
     && registry.isFree('account','progress:words'));
 
+  const configRes = fakeRes();
+  await admin({method:'GET',headers:{},query:{public_config:'1'}},configRes);
+  const config = JSON.parse(configRes.body || '{}');
+  ok('public config carries the owner and contacts for the legal pages',
+    config.legal && typeof config.legal.owner === 'string' && config.legal.minAge === 14);
+
   const health = require('../api/health');
   const healthRes = fakeRes();
   await health({method:'GET',headers:{},query:{}},healthRes);

@@ -3,6 +3,7 @@ import type { AdminClient, AdminHealth } from '@appbase/core/admin.js';
 import './admin.css';
 import { AdminAiSettings } from './admin-ai';
 import { AdminBillingKeys } from './admin-billing-keys';
+import { AdminLegal } from './admin-legal';
 
 export interface AdminSectionContext {
   client: AdminClient;
@@ -48,7 +49,7 @@ const COPY = {
     loginCode:'Код для входа', loginCodeDone:'Одноразовый код для', loginCodeHint:'действует 15 минут. На экране входа: email → «У меня есть код».',
     payments:'Платежи', noPayments:'Платежей пока нет.', when:'Когда', provider:'Провайдер', event:'Событие', account:'Аккаунт',
     mainGroup:'Главное', accountsGroup:'Аккаунты', systemGroup:'Система', productGroup:'Продукт', menu:'Меню',
-    settingsGroup:'Настройки', ai:'ИИ', billingKeys:'Способы оплаты'
+    settingsGroup:'Настройки', ai:'ИИ', billingKeys:'Способы оплаты', legal:'Владелец и контакты'
   },
   en: {
     title:'Admin', key:'ADMIN_KEY', connect:'Connect', disconnect:'Sign out',
@@ -72,11 +73,11 @@ const COPY = {
     loginCode:'Sign-in code', loginCodeDone:'One-time code for', loginCodeHint:'valid for 15 minutes. On the sign-in screen: email → “I have a code”.',
     payments:'Payments', noPayments:'No payments yet.', when:'When', provider:'Provider', event:'Event', account:'Account',
     mainGroup:'Main', accountsGroup:'Accounts', systemGroup:'System', productGroup:'Product', menu:'Menu',
-    settingsGroup:'Settings', ai:'AI', billingKeys:'Payment methods'
+    settingsGroup:'Settings', ai:'AI', billingKeys:'Payment methods', legal:'Owner and contacts'
   }
 } as const;
 
-type CoreTab = 'health' | 'overview' | 'users' | 'payments' | 'errors' | 'storage' | 'ai' | 'billing-keys';
+type CoreTab = 'health' | 'overview' | 'users' | 'payments' | 'errors' | 'storage' | 'ai' | 'billing-keys' | 'legal';
 type Tab = CoreTab | string;
 
 type Copy = (typeof COPY)[keyof typeof COPY];
@@ -256,7 +257,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
 
   const tabs = useMemo(() => [
     ['health', copy.health], ['overview', copy.overview], ['users', copy.users], ['payments', copy.payments],
-    ['errors', copy.errors], ['storage', copy.storage], ['ai', copy.ai], ['billing-keys', copy.billingKeys],
+    ['errors', copy.errors], ['storage', copy.storage], ['ai', copy.ai], ['billing-keys', copy.billingKeys], ['legal', copy.legal],
     ...extraSections.map(section => [section.id, section.label] as const)
   ] as ReadonlyArray<readonly [string,string]>, [copy, extraSections]);
 
@@ -264,7 +265,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
     const core = [
       {label:copy.mainGroup, ids:['health','overview']},
       {label:copy.accountsGroup, ids:['users','payments','errors']},
-      {label:copy.settingsGroup, ids:['ai','billing-keys']},
+      {label:copy.settingsGroup, ids:['ai','billing-keys','legal']},
       {label:copy.systemGroup, ids:['storage']}
     ];
     const extras = new Map<string,string[]>();
@@ -292,7 +293,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
 
   const loadProtected = useCallback(async (target: Tab, adminKey = key) => {
     // These tabs load their own data.
-    if(target === 'health' || target === 'ai' || target === 'billing-keys' || extraSections.some(section => section.id === target)) return;
+    if(target === 'health' || target === 'ai' || target === 'billing-keys' || target === 'legal' || extraSections.some(section => section.id === target)) return;
     if(!adminKey){ setData(null); return; }
     setBusy(true);
     setError('');
@@ -518,6 +519,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
 
       {tab === 'ai' && key && <section className="ab-admin-stack"><AdminAiSettings client={client} adminKey={key} locale={locale} /></section>}
       {tab === 'billing-keys' && key && <section className="ab-admin-stack"><AdminBillingKeys client={client} adminKey={key} locale={locale} /></section>}
+      {tab === 'legal' && key && <section className="ab-admin-stack"><AdminLegal client={client} adminKey={key} locale={locale} /></section>}
 
       {extraSections.map(section => tab === section.id && key ? (
         <section key={section.id} className="ab-admin-stack">
