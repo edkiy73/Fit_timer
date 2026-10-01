@@ -45,12 +45,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await page.click('#startFresh');
     await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
     await page.evaluate((reach) => {
-      state.stepOutcomes = {};
+      const outcomes = {};
       state.steps.forEach((step, i) => {
         if(step.phase !== 'work') return;
-        state.stepOutcomes[workoutStepKey(step, i)] = reach ? 'done' : 'skipped';
+        outcomes[workoutStepKey(step, i)] = reach ? 'done' : 'skipped';
       });
-      state.globalStart = Date.now() - 120 * 1000; state.pausedTotal = 0;
+      startWorkout(0, 120 * 1000, {skipPrep:true, outcomes});
       finishWorkout();
       document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
     }, reach);
@@ -121,11 +121,11 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.click('#startFresh');
   await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
   await page.evaluate(() => {
-    state.stepOutcomes = {};
+    const outcomes = {};
     state.steps.forEach((step, i) => {
-      if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
+      if(step.phase === 'work') outcomes[workoutStepKey(step, i)] = 'done';
     });
-    state.globalStart = Date.now() - 120 * 1000; state.pausedTotal = 0;
+    startWorkout(0, 120 * 1000, {skipPrep:true, outcomes});
     finishWorkout();
     document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
   });
@@ -159,19 +159,21 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   await page.evaluate(() => {
     const p = customPrograms.find(x => x.id === 'pc2');
-    openStart(p); state.planIdx = 0;
+    openStart(p);
+    const firstPlan = document.querySelector('#planRow .plan-chip[data-plan-idx="0"]');
+    if(firstPlan) firstPlan.click();
   });
   await page.click('#btnStart');
   await page.waitForSelector('#startModal.open');
   await page.click('#startFresh');
   await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
   await page.evaluate(() => {
-    state.stepOutcomes = {};
+    const outcomes = {};
     state.steps.forEach((step, i) => {
-      if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
+      if(step.phase === 'work') outcomes[workoutStepKey(step, i)] = 'done';
     });
     // короче 30 секунд: финал сначала спрашивает, засчитывать ли
-    state.globalStart = Date.now() - 10 * 1000; state.pausedTotal = 0;
+    startWorkout(0, 10 * 1000, {skipPrep:true, outcomes});
     finishWorkout();
     document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
   });
