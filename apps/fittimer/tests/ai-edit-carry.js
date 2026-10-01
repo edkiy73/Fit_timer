@@ -135,7 +135,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const p = {id:'exn', name:'Навигация', progression:0, stats:{completions:0}, plans:[
       {days:['Пн'], rounds:1, roundRest:0, exercises:[{id:'n1', name:'Присед', type:'reps', value:'10', sets:3, rest:60}]}]};
     customPrograms.push(p);
-    premiumGate = () => true;
+    account.sub = {plan:'year', until:'2099-01-01'};
     callGemini = async () => 'УПРАЖНЕНИЕ: Присед\nФОРМАТ: время\nЗНАЧЕНИЕ: 40\nПОДХОДЫ: 3\nОТДЫХ: 60';
     openBuilder('exn');
   });
