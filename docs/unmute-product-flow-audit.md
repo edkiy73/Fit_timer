@@ -3713,3 +3713,301 @@ A1 copy change показал, что app deploy и course publish — неза�
 - [x] sheet above dock live QA;
 - [x] Route entry stays at top;
 - [x] explicit current-day jump exists.
+
+
+---
+
+## 37. Review load / daily budget audit — 2026-10-01
+
+Этот проход проверяет не качество отдельных SRS-интервалов, а сколько работы реально может попасть пользователю в «Повтор» за день и за одну сессию.
+
+### 37.1. Что ограничено сейчас
+
+Текущие локальные caps:
+
+```
+cards:      30 на курс
+drill:       3 на курс
+listening:   2 на курс
+speaking:    2 на курс
+words:      20 глобально
+```
+
+То есть один курс способен дать:
+
+```
+30 cards + 7 practice = 37
+```
+
+и вместе с личными словами уже до:
+
+```
+57 элементов
+```
+
+за один сформированный review batch.
+
+### 37.2. Главная проблема: caps применяются по курсам, а очередь потом склеивается
+
+Для active course строится отдельный `buildCourseReviewSession()`.
+
+Для каждого другого изученного курса строится ещё один отдельный `buildCourseReviewSession()`.
+
+После этого:
+
+```
+active items
++ other course 1 items
++ other course 2 items
++ ...
++ words
+```
+
+просто объединяются в одну queue.
+
+Следовательно общий cap отсутствует.
+
+Пример:
+
+```
+3 изученных курса
+→ до 37 × 3 + 20 words
+→ до 131 actionable item
+```
+
+Это уже противоречит цели «Повтор» как короткой ежедневной привычки.
+
+Статус: **P1 product/load contract**.
+
+### 37.3. Неправильная карточка может бесконечно расти внутри одной сессии
+
+Текущий card flow:
+
+```
+wrong
+→ setQueue([...queue, sameItem])
+→ item появляется снова в конце
+```
+
+Если пользователь снова ошибается:
+
+```
+wrong
+→ тот же item снова append
+```
+
+Отдельного max-return counter у Review cards нет.
+
+В Lesson такой limiter уже есть:
+
+```
+MAX_RETURNS = 1
+```
+
+а в Review аналогичной защиты нет.
+
+Следовательно одна трудная карточка теоретически может сделать текущую review session бесконечной.
+
+Статус: **P0/P1 UX loop**.
+
+### 37.4. Practice / Words могут возвращаться снова в тот же день через новый запуск Review
+
+Для failed SRS:
+
+- card box сбрасывается в `0`, interval = `0`;
+- practice box сбрасывается в `0`, interval = `0`;
+- word box сбрасывается в `0`, interval = `0`.
+
+Следовательно:
+
+```
+due = today
+```
+
+Текущая pinned session может считать item завершённым, но новый запуск Review в тот же календарный день снова увидит его due.
+
+Это означает, что session cap не является daily cap.
+
+### 37.5. Рекомендуемый контракт
+
+Нужны два разных ограничения.
+
+#### A. Global daily budget
+
+Один бюджет на пользователя, а не отдельный cap на каждый курс.
+
+Безопасная продуктовая модель:
+
+```
+REVIEW_DAILY_NEW_ITEM_BUDGET = 30
+```
+
+Под «item» понимается уникальная единица первого показа сегодня:
+
+- card;
+- word;
+- drill session;
+- listening session;
+- speaking session.
+
+Ошибочный возврат того же item внутри текущей сессии не расходует новый слот бюджета.
+
+Оставшийся backlog не исчезает:
+
+```
+actionable today: 30
+waiting/backlog: N
+```
+
+На следующий день старые overdue элементы имеют приоритет.
+
+Число 30 — предлагаемая стартовая величина, его можно вынести в product config.
+
+#### B. Same-session retry cap
+
+Для обычной card:
+
+```
+first miss
+→ вернуть один раз в конец текущей сессии
+
+second miss
+→ закончить item на сегодня
+→ SRS остаётся due/weak
+→ не зацикливать текущую сессию
+```
+
+То есть аналогично Lesson:
+
+```
+MAX_RETURNS_PER_REVIEW_ITEM = 1
+```
+
+Для practice внутренние retry уже ограничиваются самим activity flow; поверх него повторно добавлять activity в текущую review queue не нужно.
+
+Для personal word:
+
+- одна self-grade попытка в текущей pinned session;
+- `forgot` сохраняет weak/due state;
+- слово не должно автоматически появляться второй раз в той же сессии.
+
+### 37.6. Как формировать общий batch
+
+Не делать:
+
+```
+30 cards course A
++ 30 cards course B
++ ...
+```
+
+Вместо этого сначала собрать все due candidates с metadata:
+
+```
+{
+  key,
+  kind,
+  courseId?,
+  due,
+  sourceOrder
+}
+```
+
+Затем сформировать **один** pinned daily batch.
+
+Приоритет:
+
+1. самое overdue;
+2. затем due today;
+3. не давать одному курсу полностью вытеснить остальные;
+4. mixed types interleave, чтобы 30 одинаковых карточек подряд не превращали Review в монотонный тест.
+
+Минимальная справедливая стратегия:
+
+- round-robin между courses;
+- внутри course — oldest due first;
+- practice/words периодически вставлять между cards.
+
+### 37.7. Daily budget должен быть persisted
+
+Обычного React state недостаточно.
+
+Иначе:
+
+```
+закрыл приложение
+→ открыл снова
+→ получил ещё 30
+```
+
+Нужен persisted daily review record, например:
+
+```
+review-day:YYYY-MM-DD
+{
+  selectedItemKeys: [...],
+  completedItemKeys: [...],
+  retryCounts: {...}
+}
+```
+
+или эквивалентная структура в learner progress.
+
+Это одновременно решит:
+
+- стабильную очередь после process kill;
+- дневной budget;
+- retry cap;
+- стабильный order;
+- корректный счётчик Today/таббара;
+- возможность продолжить незавершённый Review.
+
+### 37.8. Что должны показывать Today / badge
+
+Нельзя показывать весь backlog как обязательную работу сегодня.
+
+Нужно различать:
+
+```
+Сегодня: 30
+Ещё в очереди: 84
+```
+
+или более мягко:
+
+```
+К повтору сегодня: 30
+Остальное распределим дальше
+```
+
+Badge в dock должен отражать **сегодняшний actionable batch**, а не весь accumulated debt.
+
+### 37.9. Обязательные regression tests
+
+- [ ] один курс с 100 due cards → today batch не превышает global budget;
+- [ ] три курса с 100 due каждый → всё равно один global budget;
+- [ ] words + cards + practice вместе не превышают budget;
+- [ ] oldest overdue получает приоритет;
+- [ ] второй курс не starvation;
+- [ ] wrong card возвращается максимум один раз в текущей session;
+- [ ] повторная ошибка не увеличивает queue бесконечно;
+- [ ] app restart в тот же день восстанавливает тот же daily batch;
+- [ ] новый запуск Review не выдаёт ещё один полный daily budget;
+- [ ] tomorrow создаёт новый budget;
+- [ ] waiting/backlog считается отдельно от today's batch;
+- [ ] badge/Today показывают today batch, а не весь debt.
+
+### 37.10. Вывод
+
+Текущие caps полезны как локальная защита, но не решают проблему нагрузки.
+
+Нужна модель:
+
+```
+global daily budget
++ persisted pinned daily batch
++ one same-session retry
++ backlog carried forward
+```
+
+Это следует реализовать до активного масштабирования количества курсов и пользовательского словаря.
