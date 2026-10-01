@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1679,
-      "chars": 80016,
+      "lines": 1688,
+      "chars": 80333,
       "symbols": [
         "$",
         "accountUserDirtyHook",
@@ -737,8 +737,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2567,
-      "chars": 114869,
+      "lines": 2576,
+      "chars": 115163,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -828,6 +828,7 @@
         "progFloor",
         "progPeriodLabel",
         "programDirty",
+        "programHasProgression",
         "programState",
         "progressedRepsRange",
         "progRound",
@@ -969,7 +970,7 @@
     "src/app/80-platform.js": {
       "kind": "frontend-js",
       "lines": 895,
-      "chars": 38389,
+      "chars": 38423,
       "symbols": [
         "add",
         "advanceFromHeadset",
@@ -1029,7 +1030,7 @@
     "src/app/90-events.js": {
       "kind": "frontend-js",
       "lines": 2650,
-      "chars": 109447,
+      "chars": 109481,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
