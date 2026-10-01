@@ -40,7 +40,7 @@ import { AI_SOURCES, aiClientVerdict, aiSrc, aiUiText, apiPost, applyProgression
   importProgramCode, importProgramFile, importProgramLink, markAITab, normHandle, openAI,
   openEditAI, openExAI, openExEdAI, openImages, openYouTube, premiumGate, programToText,
   pushProfile, refreshTrainerProfile, renderGreeting, renderSlots, renderToday, renderTray,
-  saveClients, saveTrainer, setClientIdxShared, setClientsShared, setCoachPhotoDraftShared,
+  clearActiveClient, saveClients, saveTrainer, setClientsShared, useUploadedCoachPhoto,
   appendImagesToTray, clearUnusedImageTray, ensureImageInTray, setExImg, setProgramsEventHooks, setTrainerShared, setupAIAnswer, shrinkAll, slotTarget, trainer,
   trainerAccountReady, trainerOn, trayAutoAssign, trayUsed, versionedName, wipeTrainerInfo,
   youtubePrompt, ytCheckUrl
@@ -920,7 +920,7 @@ function registerEventActions(){
     if(!(await appDialog(t('clients.removeClient',{name:c.name || t('clients.unnamed')}),
          {confirm: true, okText: t('clients.removeAction'), cancelText: t('common.keep')}))) return;
     setClientsShared(clients.filter(x => x.id !== c.id));
-    setClientIdxShared(-1);
+    clearActiveClient();
     await saveClients();
     renderClients();
     renderTrainerCard();
@@ -2167,7 +2167,7 @@ export function initEvents(){
     if(!file) return;
     shrinkImage(file, 240, async data => {
       if(!data){ appAlert(t('trainer.photoFailed')); return; }
-      setCoachPhotoDraftShared(data);
+      useUploadedCoachPhoto(data);
       $('coachPhotoPrev').innerHTML = `<img src="${esc(data)}" alt="">`;
     });
   };

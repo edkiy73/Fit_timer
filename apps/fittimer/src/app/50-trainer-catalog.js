@@ -39,7 +39,7 @@ export function setTrainerEventHooks(hooks = {}){
 import { FILE_HINT, PUBLIC_APP_URL, apiFetch, apiPost, applyMedia, clProgs, clientIdx, clientSum,
   clients, daysSince, duplicateProgram, exportProgram, exportProgramFile, humanDay, lastReport,
   lastSeen, linkFailNote, loadTrainer, normHandle, programLink, programMedia, programToText,
-  renderToday, saveClients, setClientIdxShared, setCoachPhotoDraftShared, setProgramsTrainerHooks, trainer,
+  renderToday, activateClientAt, resetCoachPhotoDraft, saveClients, setProgramsTrainerHooks, trainer,
   trainerAccountReady, trainerOn
 } from './40-programs-ai.js';
 
@@ -55,7 +55,7 @@ export function renderTrainerCard(){
   setShown('coachDeleteBlock', modeOn);
   if(document.activeElement !== $('coachName'))   $('coachName').value   = (trainer && trainer.name) || '';
   const ph = trainer && trainer.photo;
-  setCoachPhotoDraftShared(ph || '');
+  resetCoachPhotoDraft(ph);
   $('coachPhotoPrev').innerHTML = ph ? `<img src="${workoutTrainerHooks.esc(ph)}" alt="">` : icon('camera');
   if(document.activeElement !== $('coachLinks')){
     $('coachLinks').value = ((trainer && trainer.links) || '').replace(/^https?:\/\//i, '');
@@ -163,7 +163,7 @@ export function renderClients(){
 
 /* ---- карточка подопечного ---- */
 export function openClient(i){
-  setClientIdxShared(i);
+  activateClientAt(i);
   fillClient();                 // сначала показываем что есть — экран не ждёт сети
   show('scrClient');
   const c = curClient();
