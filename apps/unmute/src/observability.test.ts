@@ -11,9 +11,11 @@ describe('UnMute funnel analytics names',()=>{
 
   it('keeps purchase SKU dimensions bounded to known analytics events',()=>{
     expect(purchaseEventName('purchase_started','course.general-foundation'))
-      .toBe('purchase_started.course.general-foundation');
-    expect(purchaseEventName('purchase_completed','course.general-foundation'))
-      .toBe('purchase_completed.course.general-foundation');
+      .toBe('purchase_started.course');
+    expect(purchaseEventName('purchase_completed','course.a1-starter'))
+      .toBe('purchase_completed.course');
+    expect(purchaseEventName('purchase_completed','plus.year'))
+      .toBe('purchase_completed.plus');
     expect(purchaseEventName('purchase_started','unknown'))
       .toBe('purchase_started.other');
   });

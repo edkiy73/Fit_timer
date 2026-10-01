@@ -91,6 +91,7 @@ async function upsertEntries(entries,validateEntry){
     const commands=[];
     const written=[];
 
+    const planned=[];
     for(const raw of entries){
       if(!raw || typeof raw!=='object' || Array.isArray(raw)) throw new Error('bad_lexeme_batch');
       const id=String(raw.id||'').trim();
@@ -104,9 +105,20 @@ async function upsertEntries(entries,validateEntry){
       const next=clone(raw.entry);
       if(!next || typeof next!=='object' || Array.isArray(next)) throw new Error('bad_lexeme_update');
       if(next.id!==id) throw new Error('lexeme_id_immutable');
+      const revision=currentRevision ? currentRevision+1 : Math.max(1,+next.revision||1);
+      planned.push({id,next,revision,currentRevision});
+    }
 
-      let revision=currentRevision ? currentRevision+1 : Math.max(1,+next.revision||1);
-      while(await store.get(entryKey(pointer.generation,id,revision))) revision++;
+    // One batched read for every candidate key (hundreds of lexemes in one admin action),
+    // not one round trip per lexeme: a sequential loop ran past the 60 s function limit.
+    const taken=await manyJson(planned.map(item=>entryKey(pointer.generation,item.id,item.revision)));
+    for(let i=0;i<planned.length;i++){
+      const {id,next,currentRevision}=planned[i];
+      let revision=planned[i].revision;
+      if(taken[i]){
+        revision++;
+        while(await store.get(entryKey(pointer.generation,id,revision))) revision++;
+      }
       next.revision=revision;
       if(validateEntry) validateEntry(next);
 

@@ -322,6 +322,12 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.equal(before.status,200);
   assert.equal(before.body.course.published,null);
 
+  // Publishing puts learner-addressed past tense in both forms, whatever the editor saved.
+  const gendered=await Content.getDraft('general-foundation');
+  const genderedActivity=gendered.activities.find(item=>item.type==='theory');
+  genderedActivity.body.ru='I work. Ты вчера работал?';
+  await Content.putDraft(gendered);
+
   const readyCheck=await action(handler,'content_release_check',{setIds:['general-foundation']});
   assert.equal(readyCheck.body.sets['general-foundation'].ready,true);
   const published=await action(handler,'content_publish');
@@ -331,6 +337,7 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.equal(published.body.release.revision,1);
   assert.equal(published.body.release.sets['general-foundation'],1);
   assert.equal(published.body.release.lexiconRevision,1);
+  assert.equal((await Release.getReleasedSet('general-foundation')).activities.find(item=>item.id===genderedActivity.id).body.ru,'I work. Ты вчера работал(а)?');
 
   const publishedB=await action(handler,'content_publish',{setIds:['b1-b2']});
   assert.equal(publishedB.status,200);
@@ -374,6 +381,15 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.deepEqual(ipaLexeme.pronunciation,{...(ipaEntry.pronunciation||{}),ipa:'test',ruReading:'тэст'});
   assert.equal((await action(handler,'content_lexicon_ipa_bootstrap',{})).body.report.updatedForms,0);
 
+
+  // «Найти слово»: by English spelling or by translation, exact match first.
+  const searchEntry=(await Lexicon.getDraft()).entries.find(entry=>!entry.deprecated&&/^[a-z]+$/.test(entry.lemma));
+  const found=await action(handler,'content_lexicon_search',{query:searchEntry.lemma.toUpperCase()});
+  assert.equal(found.status,200);
+  assert.equal(found.body.items[0].lexemeId,searchEntry.id);
+  const ru=searchEntry.senses[0].translations.ru[0];
+  assert.ok((await action(handler,'content_lexicon_search',{query:ru})).body.items.some(item=>item.lexemeId===searchEntry.id));
+  assert.equal((await action(handler,'content_lexicon_search',{query:'   '})).body.count,0);
 
   console.log('UnMute content Admin tests passed');
 })().catch(error=>{console.error(error);process.exit(1);});

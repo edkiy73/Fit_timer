@@ -254,6 +254,27 @@ try{
   await admin.goto(URL_+'#/admin');
   ok('shared Admin opens and asks for the key',await appears(admin.getByLabel('Ключ администратора')));
 
+  // Admin reads as plain Russian on a phone: overview numbers, errors with dates, word search.
+  await fetch(URL_+'api/auth',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'client_error',kind:'error',name:'TypeError',message:'e2e sample failure',stack:'at e2e (app.js:1:1)',platform:'android',locale:'ru'})});
+  await admin.setViewportSize({width:360,height:740});
+  await admin.getByLabel('Ключ администратора').fill(process.env.ADMIN_KEY);
+  await admin.getByRole('button',{name:'Войти',exact:true}).click();
+  const adminTab=async name=>{
+    await admin.locator('.ab-admin-menu').click();
+    await admin.locator('.ab-admin-nav').getByRole('button',{name,exact:true}).click();
+  };
+  await adminTab('Обзор');
+  ok('Admin overview names events in Russian',await appears(admin.getByText('Открыли приложение впервые')));
+  ok('Admin overview shows no raw JSON',await admin.locator('.ab-admin-json').count()===0);
+  await adminTab('Ошибки');
+  ok('Admin errors say how often and when',await appears(admin.getByText(/^1 раз · \d/)));
+  await adminTab('Курсы и словарь');
+  await admin.getByRole('searchbox',{name:'Слово или перевод'}).fill('hello');
+  await admin.getByRole('button',{name:'Найти',exact:true}).click();
+  ok('Admin word search answers',await appears(admin.getByText(/Ничего не нашлось|Изменить/).first()));
+  ok('Admin fits a 360 px phone',await admin.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1));
+
   // Screen walk: every main screen on a small phone, light and dark — nothing sticks out
   // sideways and no screen throws. Catches layout breaks before anyone opens the app.
   const ROUTES=['#/','#/course','#/review','#/account','#/settings','#/access?from=talk','#/legal/privacy','#/learn/day-1'];

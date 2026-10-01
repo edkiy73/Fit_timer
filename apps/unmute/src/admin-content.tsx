@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import type { AdminSection, AdminSectionContext } from '@appbase/ui-react/admin.js';
 
 type Status = {
@@ -56,6 +56,15 @@ function shortDate(iso?:string|null){
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
 }
 
+type LookupItem = {
+  lexemeId:string;
+  lemma:string;
+  forms:string[];
+  ipa:string;
+  translations:string[];
+  deprecated:boolean;
+};
+
 type ReviewItem = {
   lexemeId:string;
   revision:number;
@@ -97,6 +106,15 @@ type BulkPreview = {
   coverage?:CoverageSummary;
 };
 
+// Plain-language reason for a failed Admin request; a timeout means nothing was saved.
+function failureText(error:unknown):string{
+  const status=Number((error as {status?:number})?.status||0);
+  const code=String((error as {code?:string})?.code||'');
+  if(status===504||status===502)return 'Сервер не успел ответить, ничего не сохранилось. Попробуй ещё раз.';
+  if(!status&&!code||code==='admin_request_failed')return 'Нет связи с сервером. Проверь интернет и попробуй ещё раз.';
+  return 'Ошибка: '+code;
+}
+
 function ContentAdmin({client,adminKey}: AdminSectionContext){
   const [status,setStatus]=useState<Status|null>(null);
   const [review,setReview]=useState<ReviewItem[]>([]);
@@ -118,7 +136,12 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   const [bulkPreview,setBulkPreview]=useState<BulkPreview|null>(null);
   const [bulkMessage,setBulkMessage]=useState('');
   const [bulkBusy,setBulkBusy]=useState(false);
+  const [lookup,setLookup]=useState('');
+  const [lookupResults,setLookupResults]=useState<LookupItem[]|null>(null);
+  const [lookupMessage,setLookupMessage]=useState('');
+  const editorPanel=useRef<HTMLElement|null>(null);
   const [ipaMessage,setIpaMessage]=useState('');
+  const [ipaApplied,setIpaApplied]=useState(false);
   const [ipaReport,setIpaReport]=useState<{forms:number;alreadyBritish:number;updatedForms:number;unmatched:number;unmatchedSample:string[];updatedLexemes:number}|null>(null);
 
   const load=useCallback(async()=>{
@@ -262,6 +285,27 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
     }
   }
 
+  async function findWord(event:FormEvent){
+    event.preventDefault();
+    const query=lookup.trim();
+    if(!query)return;
+    setLookupMessage('');
+    try{
+      const result=await client.action(adminKey,'content_lexicon_search',{query});
+      const items=(result.items || []) as LookupItem[];
+      setLookupResults(items);
+      if(!items.length)setLookupMessage('Ничего не нашлось. Слова нет в словаре — добавь его через ИИ ниже.');
+    }catch(error){
+      setLookupResults(null);
+      setLookupMessage('Не получилось: '+String((error as {code?:string})?.code || 'request_failed'));
+    }
+  }
+
+  // The editor opens below the lists: bring it into view so the click visibly did something.
+  useEffect(()=>{
+    if(editor)editorPanel.current?.scrollIntoView({behavior:'smooth',block:'start'});
+  },[editor?.id]);
+
   async function openLexeme(id:string){
     setEditorBusy(true);
     setEditorMessage('');
@@ -345,16 +389,43 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   async function runIpaBootstrap(apply:boolean){
     setBulkBusy(true);
     setIpaMessage('');
+    if(!apply)setIpaApplied(false);
     try{
       const result=await client.action(adminKey,'content_lexicon_ipa_bootstrap',{apply});
       const report=(result.report || null) as typeof ipaReport;
-      setIpaReport(report);
-      setIpaMessage(apply
-        ? 'Британская транскрипция записана для '+String(report?.updatedForms || 0)+' форм. Ученики увидят после «Выпустить».'
-        : (report?.updatedForms ? 'Обновится '+String(report.updatedForms)+' форм.' : 'Все слова из словаря уже с британской транскрипцией.'));
-      if(apply) await load();
+      if(apply){
+        // Re-check right away: the numbers then show what is left (normally nothing).
+        const after=await client.action(adminKey,'content_lexicon_ipa_bootstrap',{});
+        setIpaReport((after.report || report) as typeof ipaReport);
+        setIpaApplied(true);
+        setIpaMessage('Готово: британская транскрипция записана для '+String(report?.updatedForms || 0)+' форм. Осталось выпустить, чтобы ученики увидели.');
+        await load();
+      }else{
+        setIpaReport(report);
+        setIpaMessage(report?.updatedForms ? 'Обновится '+String(report.updatedForms)+' форм.' : 'Все слова из словаря уже с британской транскрипцией.');
+      }
     }catch(error){
-      setIpaMessage('Не получилось: '+String((error as {code?:string})?.code || 'request_failed'));
+      setIpaMessage(failureText(error));
+    }finally{
+      setBulkBusy(false);
+    }
+  }
+
+  // The dictionary goes out together with the courses that are already on the site.
+  async function publishDictionary(){
+    const released=sets.filter(item=>item.publishedRevision).map(item=>item.id);
+    if(!released.length){setIpaMessage('Ни один курс ещё не выпущен — выпусти курс в блоке «Курсы».');return;}
+    setBulkBusy(true);
+    try{
+      await client.action(adminKey,'content_publish',{setIds:released});
+      setIpaApplied(false);
+      setIpaMessage('Выпущено: ученики уже видят новую транскрипцию.');
+      await load();
+    }catch(error){
+      const code=String((error as {code?:string})?.code||'');
+      setIpaMessage(code==='lexical_coverage_incomplete'
+        ? 'Не выпустилось: в курсе есть слова, которых нет в словаре. Список — в блоке «Курсы».'
+        : failureText(error));
     }finally{
       setBulkBusy(false);
     }
@@ -525,6 +596,40 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
         </details>
       </article>
 
+      <article className="ab-admin-panel">
+        <div className="ab-admin-section-head">
+          <div>
+            <h2>Найти слово</h2>
+            <p className="ab-admin-note">По-английски (любая форма: worked, can't) или по переводу. Изменения видны ученикам после «Выпустить».</p>
+          </div>
+        </div>
+        <form className="ab-admin-toolbar" onSubmit={event=>void findWord(event)}>
+          <input type="search" value={lookup} onChange={event=>setLookup(event.target.value)} placeholder="Слово или перевод" aria-label="Слово или перевод" />
+          <button type="submit" disabled={!lookup.trim()}>Найти</button>
+        </form>
+        {lookupMessage && <p className="ab-admin-feedback" role="status">{lookupMessage}</p>}
+        {!!lookupResults?.length && (
+          <div className="ab-admin-table-wrap">
+            <table>
+              <thead><tr><th>Слово</th><th>Перевод</th><th></th></tr></thead>
+              <tbody>{lookupResults.map(item=>(
+                <tr key={item.lexemeId}>
+                  <td data-label="Слово">
+                    <strong>{item.lemma}</strong>{item.ipa && <span className="ab-admin-cell-sub"> /{item.ipa.replace(/^\/|\/$/g,'')}/</span>}
+                    {item.deprecated && <div className="ab-admin-cell-sub">скрыто из приложения</div>}
+                    {!!item.forms.length && <div className="ab-admin-cell-sub">{item.forms.join(', ')}</div>}
+                  </td>
+                  <td data-label="Перевод">{item.translations.join(' · ') || '—'}</td>
+                  <td className="ab-admin-cell-action">
+                    <button type="button" className="ab-admin-secondary" disabled={editorBusy} onClick={()=>void openLexeme(item.lexemeId)}>Изменить</button>
+                  </td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        )}
+      </article>
+
       <article className="ab-admin-panel ab-admin-bulk">
         <div className="ab-admin-section-head">
           <div>
@@ -548,6 +653,11 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
           <p className="ab-admin-note">Без транскрипции (обычно целые фразы): {ipaReport.unmatchedSample.join(' · ')}</p>
         )}
         {ipaMessage && <p className="ab-admin-feedback" role="status">{ipaMessage}</p>}
+        {ipaApplied && (
+          <div className="ab-admin-action-row">
+            <button type="button" disabled={bulkBusy} onClick={()=>void publishDictionary()}>Выпустить для учеников</button>
+          </div>
+        )}
       </article>
 
       <article className="ab-admin-panel ab-admin-bulk ab-course-open-day" ref={bulkPanel}>
@@ -720,7 +830,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       </article>
 
       {editor && (
-        <article className="ab-admin-panel">
+        <article className="ab-admin-panel" ref={editorPanel}>
           <div className="ab-admin-section-head">
             <div>
               <h2>{editor.lemma}</h2>

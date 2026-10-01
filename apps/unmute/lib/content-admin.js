@@ -143,6 +143,31 @@ function activitySummary(activity){
   return {id:activity.id,revision:activity.revision,type:activity.type,revisionProgress:activity.revisionProgress,label};
 }
 
+// Admin «Найти слово»: by English spelling (lemma or any form) or by Russian translation.
+// Exact and prefix matches first, so «work» shows work before homework.
+function searchLexicon(lexicon,rawQuery,limit=30){
+  const query=String(rawQuery||'').toLowerCase().replace(/[\u2019\u02bc]/g,"'").replace(/\s+/g,' ').trim().slice(0,80);
+  if(!query || !lexicon || !Array.isArray(lexicon.entries)) return [];
+  const scored=[];
+  for(const entry of lexicon.entries){
+    const english=[entry.lemma,...(entry.forms||[]).map(form=>form&&form.text)].map(value=>String(value||'').toLowerCase());
+    const russian=(entry.senses||[]).flatMap(sense=>Object.values(sense&&sense.translations||{}).flat()).map(value=>String(value||'').toLowerCase());
+    const all=[...english,...russian];
+    const score=all.includes(query)?0:all.some(value=>value.startsWith(query))?1:all.some(value=>value.includes(query))?2:-1;
+    if(score<0) continue;
+    scored.push({score,entry});
+  }
+  scored.sort((a,b)=>a.score-b.score||String(a.entry.lemma).localeCompare(String(b.entry.lemma)));
+  return scored.slice(0,limit).map(({entry})=>({
+    lexemeId:String(entry.id||''),
+    lemma:String(entry.lemma||''),
+    forms:(entry.forms||[]).map(form=>String(form&&form.text||'')).filter(text=>text&&text!==entry.lemma),
+    ipa:String(entry.pronunciation&&entry.pronunciation.ipa||''),
+    translations:(entry.senses||[]).map(sense=>(sense&&sense.translations&&sense.translations.ru||[]).join(', ')).filter(Boolean),
+    deprecated:entry.deprecated===true
+  }));
+}
+
 function reviewItems(lexicon){
   if(!lexicon || !Array.isArray(lexicon.entries)) return [];
   const out = [];
@@ -607,6 +632,14 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
         return true;
       }
 
+      if(action === 'content_lexicon_search'){
+        const lexicon=await Lexicon.getDraft() || await Lexicon.getPublished();
+        if(!lexicon){ fail(res,404,'lexicon_not_found'); return true; }
+        const items=searchLexicon(lexicon,body.query);
+        send(res,200,{ok:true,count:items.length,items});
+        return true;
+      }
+
       if(action === 'content_lexeme_get'){
         const id=String(body.lexemeId || '').trim();
         if(!id){ fail(res,400,'bad_lexeme_id'); return true; }
@@ -665,9 +698,14 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
         if(!setIds.length || !lexiconDraft){ fail(res,409,'drafts_required'); return true; }
         const Coverage=await loadCoverage();
         const lexicalReadiness={};
+        const { neutralizeCourse } = await import('./gender-neutral.mjs');
         for(const setId of setIds){
-          const draft=await Content.getDraft(setId);
+          let draft=await Content.getDraft(setId);
           if(!draft){ fail(res,409,'course_draft_not_found:'+setId); return true; }
+          // Learner-addressed past tense always goes out in both forms («ты работал(а)»),
+          // whatever was typed in the editor; already neutral text is left as is.
+          const neutral=neutralizeCourse(draft);
+          if(neutral.changes.length){ await Content.putDraft(neutral.set); draft=await Content.getDraft(setId); }
           Content.validateSet(draft);
           const audit=Coverage.auditLexicalCoverage(draft,lexiconDraft);
           lexicalReadiness[setId]=Coverage.compactCoverageReport(audit);
@@ -705,4 +743,4 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
   };
 }
 
-module.exports = { createContentAdminHandler, reviewItems, courseStats, lexiconStats, LEGACY_SHA, LEGACY_URL };
+module.exports = { createContentAdminHandler, reviewItems, searchLexicon, courseStats, lexiconStats, LEGACY_SHA, LEGACY_URL };
