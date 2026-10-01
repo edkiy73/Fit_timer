@@ -51,7 +51,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     state.paused = false;
     state.stepDeadline = Date.now() + 42000;
     state.remaining = 42;
-    prepSec = 0;
+    configureWorkoutTiming({prep: 0});
     state.workoutSessionId = 'test-session-inactivity';
     state.stepOutcomes = {};
     const firstDone = state.steps.findIndex(x => x.phase === 'work');
@@ -132,7 +132,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const nativeResumed = await page.evaluate(async () => {
     // Имитируем уничтоженный WebView: живого workout state больше нет, но session осталась.
     tearDownWorkout();
-    prepSec = 5; // notification recovery должна миновать обычный предстартовый countdown
+    configureWorkoutTiming({prep: 5}); // notification recovery должна миновать обычный предстартовый countdown
     const ok = await resumeWorkoutFromNativeNotification();
     return {
       ok,
@@ -194,7 +194,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     ];
     await savePrograms();
     openStart(p);
-    prepSec = 0;
+    configureWorkoutTiming({prep: 0});
     return {savedSig, savedNames, savedStep:saved && saved.stepIdx};
   });
   ok('сессия хранит отпечаток и исходный состав тренировки',
