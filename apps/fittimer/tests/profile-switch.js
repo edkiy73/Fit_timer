@@ -43,8 +43,11 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       exercises: Array.from({length: n}, (_, i) => ({name: 'E' + i, type: 'reps', value: 10, rest: 10}))}]});
     const A = curUser().id;
     curUser().locale = 'ru';
-    users.push({id: 'uB', name: 'B', gender: 'm', age: 30, theme: 'system', locale: 'en'});
-    users.push({id: 'uC', name: 'C', gender: 'f', age: 30, theme: 'system', locale: 'ru'});
+    restoreProfiles([
+      ...users,
+      {id: 'uB', name: 'B', gender: 'm', age: 30, theme: 'system', locale: 'en'},
+      {id: 'uC', name: 'C', gender: 'f', age: 30, theme: 'system', locale: 'ru'}
+    ]);
     await saveUsers();
     customPrograms.push(prog('pa', 2)); await savePrograms();
     await switchUser('uB'); customPrograms.push(prog('pb', 5)); await savePrograms();
