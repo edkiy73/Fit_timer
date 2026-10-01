@@ -485,10 +485,12 @@
   /* превью состава в каталоге: ни «⋮», ни ручки перетаскивания — правый отступ
      под них не нужен, и метки жались в две строки при живом месте справа */
   .ex-row.static{padding-right:12px;cursor:default}
-  /* -1px — поверх рамки строки: при 88 px кнопки встают вплотную, не наезжая друг на друга */
-  .ex-row > .more-btn{top:-1px;right:4px}
-  .ex-row > .ctx-menu{top:44px;right:6px}
-  .ex-row > .ctx-menu.up{top:auto}   /* иначе top и bottom сразу — меню схлопывалось в линию */
+  /* Меню упражнения держим в отдельной обёртке: кнопка и popup имеют один
+     positioning context и не зависят от stacking соседних строк. */
+  .ex-menu-wrap{position:absolute;top:-1px;right:4px;z-index:35;width:44px;height:44px}
+  .ex-menu-wrap > .more-btn{position:static;top:auto;right:auto;width:44px;height:44px}
+  .ex-menu-wrap > .ctx-menu{top:44px;right:0}
+  .ex-menu-wrap > .ctx-menu.up{top:auto}
   .ex-grip{
     position:absolute;bottom:-1px;right:4px;width:44px;height:44px;
     display:flex;align-items:center;justify-content:center;
