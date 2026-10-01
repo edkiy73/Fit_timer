@@ -2791,10 +2791,26 @@ export function versionedName(base){
 function carryMedia(oldProg, newProg, diff){
   let carried = 0;
   diff.matches.forEach(({oldEx, newEx}) => {
+    // Это всё ещё ТО ЖЕ упражнение: сохраняем не только картинку, но и стабильный id.
+    // Тогда следующая AI-правка снова привяжется к нему по КОД, даже если упражнение
+    // переименовали или переставили. Новые упражнения в diff.added сюда не попадают.
+    if(oldEx.id) newEx.id = oldEx.id;
     if(!newEx.media && oldEx.media){ newEx.media = JSON.parse(JSON.stringify(oldEx.media)); carried++; }
   });
   if(!newProg.cover && oldProg.cover) newProg.cover = oldProg.cover;
   return carried;
+}
+
+function newExercisesWithoutImages(diff){
+  const seen = new Set();
+  return (diff.added || []).filter(ex => !(ex.media && ex.media.kind === 'img' && ex.media.data))
+    .map(ex => String(ex.name || t('common.exerciseFallback')).trim())
+    .filter(name => {
+      const key = name.toLowerCase();
+      if(!name || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 // Счётчик «сколько раз выполнено до проверки повышения» (ex.ps.n) — у того же
@@ -2885,7 +2901,7 @@ async function createEditedProgram(){
   delete program.rotIdx; delete program.progLast;
   // имя: если не изменилось — добавляем версию
   program.name = versionedName(program.name || editAIProg.name);
-  carryMedia(editAIProg, program, diff);
+  const carriedImages = carryMedia(editAIProg, program, diff);
   carryExerciseText(diff);
   carryProgressCounters(diff);
   // настройки, которые ИИ мог не вернуть, берём из исходника
@@ -2897,7 +2913,13 @@ async function createEditedProgram(){
   trainerProgramsHooks.renderMine();
   $('aiResult').value = '';
   goTab('scrPrograms');
-  appAlert(t('program.createdEdited',{name:program.name}) + editSummaryText(diff, editAIProg, program));
+  const missingNewImages = newExercisesWithoutImages(diff);
+  appAlert(
+    t('program.createdEdited',{name:program.name}) +
+    editSummaryText(diff, editAIProg, program) +
+    (carriedImages ? t('program.imagesCarried',{count:carriedImages}) : '') +
+    (missingNewImages.length ? t('program.newExercisesNoImages',{names:missingNewImages.join(', ')}) : '')
+  );
 }
 
 /* Короткая ссылка /p/<id>: программу забираем с сервера. Метка src остаётся в

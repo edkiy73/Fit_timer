@@ -1510,6 +1510,7 @@ export const I18N_RU = {
   'program.editSummary': "{variants}{exercises}",
   'program.createdEdited': "Готово: создана «{name}».\n\nИсходная программа осталась без изменений.",
   'program.imagesCarried': "\nПеренесено картинок: {count}.",
+  'program.newExercisesNoImages': "\nБез картинки у новых упражнений: {names}.",
   'ai.parseProblems': "Что не так:",
   'ai.editAdded': "\nДобавлено: {names}.",
   'ai.editRemoved': "\nУбрано: {names}.",
