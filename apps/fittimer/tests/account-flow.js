@@ -284,11 +284,12 @@ async function boot(b, label, errs, url){
   const MAIL3 = 'pay.' + Math.random().toString(36).slice(2, 8) + '@example.com';
   const four = await boot(b, 'телефон 4', errs);
 
-  await four.evaluate((mail) => {
-    pmPlan = 'month';
-    $('payEmail').value = mail;
-    $('payModal').classList.add('open');
-  }, MAIL3);
+  await four.click('.dock-btn[data-scr="scrAccount"]');
+  await four.click('#moreTabs [data-more="acc"]');
+  await four.click('#btnPlanCard');
+  await four.click('#pmPlans .pm-plan[data-plan="month"]');
+  await four.click('#pmBuy');
+  await four.fill('#payEmail', MAIL3);
   await four.click('#payGo');
   await four.waitForTimeout(700);
   ok('вместо «куплено» просят подтвердить почту',
@@ -313,12 +314,11 @@ async function boot(b, label, errs, url){
      await four.evaluate(() => !isPremium() && !account.sub),
      await four.evaluate(() => JSON.stringify(account.sub)));
 
-  // теперь по-настоящему
-  await four.evaluate((mail) => {
-    pmPlan = 'month';
-    $('payEmail').value = mail;
-    $('payModal').classList.add('open');
-  }, MAIL3);
+  // теперь по-настоящему — выбираем тариф через реальный UI, без записи внутреннего состояния
+  // После отмены подтверждения Premium остаётся открытым под login modal.
+  // Тариф уже выбран через UI выше — повторно открываем только checkout.
+  await four.click('#pmBuy');
+  await four.fill('#payEmail', MAIL3);
   await four.click('#payGo');
   await four.waitForTimeout(700);
   await four.click('#loginGo');          // прислать код
