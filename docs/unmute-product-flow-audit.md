@@ -2463,20 +2463,20 @@ Do not infer copy correctness only from one locale.
 
 ---
 
-### ⚠️ Lesson test still assumes a separate «Проверить» click after a choice
+### ⚠️ Lesson/Review tests need synchronization with two-tap choice
 
-Current `learn.test.tsx` still contains flows:
+Current product contract is:
 
 ```
-click radio
-click «Проверить»
+first tap → select
+second tap on selected option → confirm
 ```
 
-Current lesson implementation contains one-tap choice checking.
+There is no separate «Проверить» button for multiple choice.
 
-Therefore those choice-path test steps are stale.
+Older tests still contain assumptions from previous interaction contracts, so choice-path expectations must be synchronized.
 
-Typed/chips answers still legitimately require explicit submit; the stale part is specifically choice/radio.
+Typed/chips answers still legitimately require explicit submit.
 
 ---
 
@@ -3095,7 +3095,8 @@ The following checks can be treated as the remaining audit backlog without touch
 Текущий RU copy:
 
 - `Ответ неверный` вместо неоднозначного `Пока не так`;
-- `Это задание вернётся в конце урока` уменьшено до вторичного текста и расположено непосредственно под заголовком.
+- `Это задание вернётся в конце урока` расположено непосредственно под заголовком;
+- retry notice теперь намеренно слабее заголовка: `11px`, line-height `1.2`, внутренний gap `1px`.
 
 Layout больше не использует накопленный набор conflicting sticky overrides: состояния correct / wrong / expanded Why / Why error разделены явно.
 
@@ -3113,7 +3114,7 @@ Layout больше не использует накопленный набор 
 - `-webkit-backdrop-filter`;
 - высокий z-index.
 
-На реальном устройстве blur после этого появился.
+На реальном устройстве blur после этого появился и подтверждён live QA. Этот пункт считается закрытым по текущей реализации, но screenshot regression всё ещё полезен.
 
 #### Sheets поверх dock
 
@@ -3314,18 +3315,29 @@ Review использует session seed в React state. Полный remount/re
 
 #### P1. Test-suite drift остаётся release risk
 
-Во время повторной проверки найдено, что общий AppBase check падал уже не только из-за старого copy, но и из-за двух регрессий последних правок:
+Во время повторной проверки общий AppBase check сначала падал на двух новых TypeScript-регрессиях:
 
 - dynamic drill timing test использовал `drillSayMs` без импорта;
 - Review choice shuffle потерял TypeScript narrowing внутри callback.
 
-Обе ошибки исправлены сразу после обнаружения.
+Обе compile-регрессии уже исправлены.
 
-Это подтверждает исходный вывод аудита:
+После этого typecheck проходит дальше, но общий AppBase consistency на актуальном проходе всё ещё красный: **11 unit-тестов в 5 файлах** не соответствуют текущему продукту.
 
-> Vercel READY недостаточно; release gate должен включать typecheck + tests + build.
+Среди фактических failures:
 
-На момент записи этого раздела новые workflow после этих исправлений ещё должны завершиться; green status нельзя предполагать заранее.
+- старый hardcoded copy «Три бесплатных разбора использованы»;
+- старый dialogue copy «Так и есть»;
+- старые Lesson expectations вокруг двухкликового choice и retry notice;
+- replay test всё ещё ожидает старую последовательность кнопок;
+- listening test не учитывает новое подтверждение выбора;
+- Progress tests ожидают старую структуру/заголовки статистики.
+
+При этом `UnMute — production readiness` на текущих коммитах зелёный. Это важный сигнал:
+
+> Vercel/production build READY не означает, что весь продуктовый test gate зелёный.
+
+Release gate должен включать как минимум typecheck + unit + smoke + build + критичный browser flow.
 
 #### P1. Content release — отдельный обязательный gate
 
@@ -3443,3 +3455,261 @@ Tests:      11 failed | 257 passed
 - code-owned content release как отдельный release gate, а не только Vercel build.
 
 
+
+
+---
+
+## 36. Re-audit current main after live fixes — 2026-10-01
+
+Этот проход сделан уже после последних live-правок Route / Profile / feedback / Plus return / practice.
+
+Статусы ниже имеют приоритет над более ранними историческими описаниями.
+
+### 36.1. Закрыто или существенно улучшено
+
+| Область | Статус | Что подтверждено |
+|---|---:|---|
+| Wrong feedback copy | ✅ | RU: `Ответ неверный`; retry notice под заголовком, визуально вторичный |
+| Feedback layout | ✅/🟡 | correct/wrong/Why/Why-error разделены; device QA ещё нужен на 320 px + keyboard |
+| Dock blur | ✅ | live QA подтвердил реальный backdrop blur |
+| Sheet vs dock stacking | ✅ | sheet/dictionary layer выше dock |
+| Route entry scroll | ✅ | обычный вход больше не auto-scroll к current |
+| Route current-day action | ✅/🟡 | отдельная кнопка есть; regression test отсутствует |
+| Route/Profile loading | ✅/🟡 | fullscreen loader заменён skeleton; visual layout-shift test отсутствует |
+| Profile stats default course | ✅/🟡 | default = active course; manual override только app session |
+| Lesson unfinished run | ✅/🟡 | LessonRunSnapshot сохраняет позицию/feedback/shuffle; process-kill test ещё нужен |
+| Plus purchase return | ✅/🟡 | explicit return + `resume=1` + activity-id remap; полного integration test пока нет |
+| Choice accidental tap protection | ✅/🟡 | two-tap в Lesson/Review/listening; dedicated contract tests не синхронизированы |
+| Choice/chips random order | ✅/🟡 | Lesson seed сохраняется при resume; Review seed не persisted |
+| Speed drill timing | ✅ | speaking window зависит от длины английского ответа |
+| Speed drill threshold copy | ✅ | `needed = ceil(total * 0.7)`, больше нет ложного `7 из 10` |
+| Speed compare actions | ✅ | `Совпало / Не совпало` одной строкой |
+| A1 mixed-language explanation | ✅ | code copy исправлен; content-release после lexical fix прошёл |
+
+### 36.2. Главные функциональные проблемы всё ещё открыты
+
+#### P0/P1 — first / resume / replay по-прежнему не являются полноценной state model
+
+`LessonRunSnapshot` сильно улучшил resume, но это всё ещё snapshot UI-run, а не формальный бизнес-режим.
+
+В коде нет единого persisted/derived:
+
+```
+first
+resume
+replay
+review
+```
+
+Следствия остаются:
+
+- summary продолжает использовать `learn.summaryScore = "С первого раза верно..."`;
+- replay завершённого урока не имеет отдельного текста результата;
+- writes не знают, что это replay;
+- analytics не получает run mode.
+
+Статус: **P1, не закрыто**.
+
+#### P0/P1 — replay всё ещё может менять SRS и stats
+
+`saveGradedActivity` и `savePracticeActivity` не получают run mode.
+
+Они по-прежнему вызывают:
+
+```
+gradeCourseCard(...)
+gradeCoursePractice(...)
+recordAnswer(...)
+```
+
+независимо от того, это первое прохождение, resume или replay.
+
+Статус: **P0/P1 data semantics, не закрыто**.
+
+#### P0/P1 — partial write остаётся неатомарным
+
+Для graded/practice:
+
+```
+writeCourseProgress(...)
+→ writeStatsProgress(...)
+```
+
+Если первый write прошёл, а второй упал, повтор пользовательского действия способен повторно изменить SRS.
+
+Комментарий в коде правильно приоритизирует learner-critical course progress, но idempotency операции не решает.
+
+Нужен operation/run key либо транзакционный/idempotent слой.
+
+Статус: **P0/P1**.
+
+#### P1 — firstPendingActivityIndex всё ещё смотрит только на seen
+
+Функция ищет первый activity без `progress.seen`.
+
+Она не использует полный completion contract practice requirements.
+
+`missingForNode()` знает о недостающих practice modes, но применяется позднее, после finish.
+
+Следствие: в некоторых incomplete-node сценариях resume способен стартовать не с фактически недостающего requirement.
+
+Статус: **P1**.
+
+#### P1 — onboarding persistence failure всё ещё проглатывается
+
+В `OnboardingGate.finish()`:
+
+```
+try {
+  chooseCourse(...)
+  patchSettings(...)
+  ...
+} catch {}
+setLocalDone(true)
+```
+
+UI способен закончить onboarding, даже если course/settings persistence не подтвердились.
+
+Отдельный background sync-path также проглатывает `patchSettings` error.
+
+Статус: **P1**.
+
+#### P1 — Review может молча потерять другой изученный курс
+
+`useOtherCourseReviews()` оборачивает каждый course load в:
+
+```
+try { ... } catch {}
+```
+
+Если studied course не загрузился / удалён из catalog / временно недоступен, он просто исчезает из агрегированной review queue.
+
+Это всё ещё позволяет ложный UX:
+
+> всё повторено
+
+при неполных источниках.
+
+Статус: **P1**.
+
+#### P1 — analytics completion остаётся UI-transition based
+
+`lesson_completed` / `day_completed` вызываются через `onNodeCompleted` после `finished && nodeComplete`.
+
+Нет durable outbox / transition event, который гарантирует exactly-once при:
+
+- app kill после последнего save;
+- refresh failure;
+- remount;
+- offline completion.
+
+События также не имеют first/resume/replay context.
+
+Статус: **P1**.
+
+#### P1 — общая answer accuracy всё ещё смешивает разные единицы
+
+`buildProgressSummary()` продолжает брать единый `summarizeAnswerStats(stats)`.
+
+При этом graded activity и whole practice session имеют разную гранулярность записи.
+
+UI Profile стал понятнее визуально, но data semantics общей accuracy этим не исправлены.
+
+Статус: **P1**.
+
+#### P1 — «Выйти без сохранения» остаётся семантически опасным
+
+Действие удаляет только локальный `LessonRunSnapshot`.
+
+Уже выполненные:
+
+- graded writes;
+- seen;
+- SRS;
+- stats;
+
+не откатываются.
+
+Следовательно это не настоящий transaction rollback.
+
+До product decision текст/контракт требует особого внимания.
+
+Статус: **P1**.
+
+### 36.3. Новые риски, найденные после последних UI-правок
+
+#### CI сейчас не зелёный
+
+Последний просмотр workflow показал:
+
+- `UnMute — production readiness`: success;
+- `AppBase — all apps consistency`: failure;
+- 59 test files passed / 5 failed;
+- 257 tests passed / 11 failed.
+
+То есть приложение собирается, но test suite сейчас не является зелёным release gate.
+
+Текущие failures в основном соответствуют UI/copy drift, однако один только факт «это старый тест» нельзя принимать без разбора каждого assertion.
+
+До release каждый из 11 failures должен быть классифицирован:
+
+```
+stale expectation
+или
+real product regression
+```
+
+и закрыт.
+
+#### Review two-tap пока был источником compile-регрессии
+
+Недавний shuffle/two-tap change уже породил TypeScript narrowing regression, который был найден CI и исправлен отдельным коммитом.
+
+Это аргумент в пользу отдельного test contract для choice, а не дальнейших локальных DOM-правок.
+
+#### Practice timer visual animation может не отражать dynamic sayMs
+
+Engine speaking window теперь динамический.
+
+Нужно отдельно проверить CSS animation `.drill-timer[data-stage="speaking"]`: если её duration остаётся фиксированной, визуальная полоска и реальный deadline могут расходиться.
+
+Это новый **P1 UX/behavior consistency check**.
+
+#### Content code ≠ live content
+
+A1 copy change показал, что app deploy и course publish — независимые gates.
+
+Любое изменение `lib/*course*.mjs` должно проверяться не только Vercel, но и workflow выпуска контента.
+
+### 36.4. Что проверить следующим аудитом в первую очередь
+
+1. **Dynamic drill timer UI** — совпадает ли animation duration с реальным `drillSayMs(answer)`.
+2. **Все 11 failing unit tests** — классифицировать stale vs real regression.
+3. **Replay SRS test** — фактически доказать, меняет ли replay due/box сейчас.
+4. **Partial-write fault injection** — course write success + stats write fail + retry.
+5. **firstPending vs missing requirements** — practice incomplete, seen already true.
+6. **Onboarding save failure** — UI не должен ложно завершаться.
+7. **Other-course Review load failure** — нельзя показывать false all-clear.
+8. **Plus return full flow** — exhausted Why → purchase → exact feedback/activity restored.
+9. **Exit discard semantics** — принять продуктовый контракт.
+10. **Analytics durability/mode** — exactly-once completion + first/resume/replay.
+
+### 36.5. Обновлённый release gate
+
+До того как считать текущую ветку готовой к оплате/stores:
+
+- [ ] AppBase consistency green;
+- [ ] UnMute production readiness green;
+- [ ] UnMute E2E green;
+- [ ] content-release green для code-owned content changes;
+- [ ] 0 unexplained unit failures;
+- [ ] replay/SRS contract тест;
+- [ ] partial-write test;
+- [ ] Plus-return regression;
+- [ ] 320/360/390/412 critical screen walk;
+- [ ] keyboard + long feedback;
+- [ ] process kill restore;
+- [x] dock blur live-device check;
+- [x] sheet above dock live QA;
+- [x] Route entry stays at top;
+- [x] explicit current-day jump exists.
