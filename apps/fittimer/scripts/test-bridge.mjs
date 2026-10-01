@@ -196,7 +196,6 @@ export const TEST_BRIDGE_WRITABLE = new Set([
   "callGeminiImage",
   "clients",
   "customPrograms",
-  "editAIProg",
   "photos",
   "premiumGate",
   "progWeights",
