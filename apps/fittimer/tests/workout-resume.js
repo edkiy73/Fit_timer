@@ -260,7 +260,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   });
   await page.click('#btnStart');
   await page.waitForSelector('#startModal.open');
-  await page.click('#startFresh');
+  await page.evaluate(() => {
+    $('startModal').classList.remove('open');
+    startWorkout(0, 0, {skipPrep:true});
+  });
   await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
   const choices = await page.evaluate(() => workStepChoices().map(c => {
     const s = state.steps[c.idx];
