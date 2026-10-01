@@ -163,6 +163,8 @@ export const en: Record<keyof typeof ru, string> = {
   'today.previewCompleteTitle': 'Free preview complete',
   'today.previewCompleteText': 'The next day is visible on the course map, but its content needs full access.',
   'courseMap.title': 'Route',
+  'courseMap.topicsTitle': 'Course topics',
+  'courseMap.currentDayAction': 'Current day',
   'courses.title': 'Courses',
   'courses.hint': 'Each course keeps its own progress — switch any time.',
   'courses.choose': 'Choose a course',
