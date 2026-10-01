@@ -324,6 +324,18 @@ if(!/setCoreWorkoutHooks/.test(coreSource) || !/setCoreWorkoutHooks\(\{[\s\S]*es
   problems.push('core/workout hook boundary is missing or incomplete');
 }
 
+for(const removed of ['setLastAppSoundTShared','setStartFromShared','setExFromWorkShared','setImgTrayShared']){
+  if((coreSource + programsAiSource + workoutSource + platformCoreSource + eventsCoreSource + trainerCatalogSource).includes(removed)){
+    problems.push('removed raw shared-state setter must not return: ' + removed);
+  }
+}
+if(!/export function blockVoiceCommandsFor\(/.test(coreSource)) problems.push('semantic voice-command guard API is missing');
+if(!/export function openStartFrom\(/.test(coreSource)) problems.push('semantic start-origin API is missing');
+if(!/export function clearExerciseWorkoutOrigin\(/.test(workoutSource)) problems.push('semantic workout-origin cleanup API is missing');
+if(!/export function appendImagesToTray\(/.test(programsAiSource) || !/export function ensureImageInTray\(/.test(programsAiSource) || !/export function clearUnusedImageTray\(/.test(programsAiSource)){
+  problems.push('semantic image-tray API is missing or incomplete');
+}
+
 if(/from ['"]\.\/80-platform\.js['"]/.test(coreSource)){
   problems.push('src/app/00-core.js must not import 80-platform.js; inject platform-facing hooks instead');
 }
