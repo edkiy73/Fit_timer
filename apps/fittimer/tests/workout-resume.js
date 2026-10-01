@@ -155,7 +155,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   // Сохранённая тренировка — уже начатая работа, а не ссылка на текущую версию
   // программы. После сохранения полностью меняем состав программы и убеждаемся,
   // что «Продолжить» открывает старые шаги, а не новую тренировку под старым stepIdx.
-  const changedSetup = await page.evaluate(async () => {
+  await page.evaluate(async () => {
     tearDownWorkout();
     const p = {
       id:'resume-structure-test', name:'Версия тренировки', active:true, progression:0,
@@ -167,16 +167,25 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     };
     customPrograms.push(p);
     await savePrograms();
+    configureWorkoutTiming({prep: 0});
+    openStart(p);
+  });
+  await page.click('#btnStart');
+  await page.waitForSelector('#startModal.open');
+  await page.click('#startFresh');
+  await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
 
-    state.raw = p; state.planIdx = 0; state.current = customToProgram(p, 0);
-    state.steps = buildSteps();
-    state.stepIdx = state.steps.findIndex(s => s.phase === 'work' && s.exId === 'snap-b');
-    state.startLoad = workoutLoadSnapshot(p, 0);
-    state.globalStart = Date.now() - 45000; state.pausedTotal = 0; state.paused = false;
-    state.workoutSessionId = 'session-structure-snapshot';
-    state.stepOutcomes = {};
+  const changedSetup = await page.evaluate(async () => {
+    const p = customPrograms.find(x => x.id === 'resume-structure-test');
+    const target = state.steps.findIndex(s => s.phase === 'work' && s.exId === 'snap-b');
     const first = state.steps.findIndex(s => s.phase === 'work' && s.exId === 'snap-a');
-    state.stepOutcomes[workoutStepKey(state.steps[first], first)] = 'done';
+    const outcomes = {};
+    outcomes[workoutStepKey(state.steps[first], first)] = 'done';
+    startWorkout(target, 45000, {
+      skipPrep:true,
+      sessionId:'session-structure-snapshot',
+      outcomes
+    });
     await saveSession();
 
     const saved = await sessionForProgram(p.id);
@@ -194,7 +203,6 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     ];
     await savePrograms();
     openStart(p);
-    configureWorkoutTiming({prep: 0});
     return {savedSig, savedNames, savedStep:saved && saved.stepIdx};
   });
   ok('сессия хранит отпечаток и исходный состав тренировки',
