@@ -284,11 +284,10 @@ async function boot(b, label, errs, url){
   const MAIL3 = 'pay.' + Math.random().toString(36).slice(2, 8) + '@example.com';
   const four = await boot(b, 'телефон 4', errs);
 
-  await four.evaluate((mail) => {
-    pmPlan = 'month';
-    $('payEmail').value = mail;
-    $('payModal').classList.add('open');
-  }, MAIL3);
+  await four.click('#btnPremium');
+  await four.click('#pmPlans .pm-plan[data-plan="month"]');
+  await four.click('#pmBuy');
+  await four.fill('#payEmail', MAIL3);
   await four.click('#payGo');
   await four.waitForTimeout(700);
   ok('вместо «куплено» просят подтвердить почту',
