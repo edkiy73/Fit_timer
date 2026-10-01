@@ -19,7 +19,7 @@ import { Icon } from './icons';
 /* «Открыть весь курс» / UnMute Plus: choose what to buy, see what it gives, pay.
    The server decides the price and what a SKU opens; checkout goes through Core billing.
    Until a payment provider is connected, the «instant» provider grants the purchase at
-   once (Admin → «Оплата»); a provider that answers with a payment page is opened instead. */
+   once (Admin → «Способы оплаты»); a provider that answers with a payment page is opened instead. */
 
 export type Plan = 'course' | 'plus.month' | 'plus.year';
 export type AccessFocus = 'course' | 'plus';

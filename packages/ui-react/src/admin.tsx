@@ -48,7 +48,7 @@ const COPY = {
     loginCode:'Код для входа', loginCodeDone:'Одноразовый код для', loginCodeHint:'действует 15 минут. На экране входа: email → «У меня есть код».',
     payments:'Платежи', noPayments:'Платежей пока нет.', when:'Когда', provider:'Провайдер', event:'Событие', account:'Аккаунт',
     mainGroup:'Главное', accountsGroup:'Аккаунты', systemGroup:'Система', productGroup:'Продукт', menu:'Меню',
-    settingsGroup:'Настройки', ai:'ИИ', billingKeys:'Оплата: ключи'
+    settingsGroup:'Настройки', ai:'ИИ', billingKeys:'Способы оплаты'
   },
   en: {
     title:'Admin', key:'ADMIN_KEY', connect:'Connect', disconnect:'Sign out',
@@ -72,7 +72,7 @@ const COPY = {
     loginCode:'Sign-in code', loginCodeDone:'One-time code for', loginCodeHint:'valid for 15 minutes. On the sign-in screen: email → “I have a code”.',
     payments:'Payments', noPayments:'No payments yet.', when:'When', provider:'Provider', event:'Event', account:'Account',
     mainGroup:'Main', accountsGroup:'Accounts', systemGroup:'System', productGroup:'Product', menu:'Menu',
-    settingsGroup:'Settings', ai:'AI', billingKeys:'Payments: keys'
+    settingsGroup:'Settings', ai:'AI', billingKeys:'Payment methods'
   }
 } as const;
 

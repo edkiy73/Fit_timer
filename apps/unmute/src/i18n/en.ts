@@ -112,7 +112,7 @@ export const en: Record<keyof typeof ru, string> = {
   'onboarding.speakTitle': 'Speak out loud',
   'onboarding.speakText': 'Short activities train quick answers, listening and speaking — not just grammar reading.',
   'onboarding.wordsTitle': 'Tap any word',
-  'onboarding.wordsText': 'Any English word in learning content opens its translation, pronunciation and examples when available.',
+  'onboarding.wordsText': 'Tap any English word in a lesson to see its translation, pronunciation and examples.',
   'onboarding.reviewTitle': 'Reviews come back automatically',
   'onboarding.reviewText': 'UnMute brings cards and speaking patterns back when they are due.',
   'onboarding.start': 'Start Day 1',

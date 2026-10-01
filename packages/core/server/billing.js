@@ -229,7 +229,7 @@ function createBillingHandler({adapters = []} = {}){
 
 /* «Выдать сразу»: until a payment provider is connected, the pay button grants the
    purchase at once. Works in production, but only while `isEnabled()` says so (the product
-   wires it to a switch in Admin → «Оплата»); a real provider replaces it later. */
+   wires it to a switch in Admin → «Способы оплаты»); a real provider replaces it later. */
 function createInstantBillingAdapter({isEnabled = async () => false} = {}){
   return {
     id: 'instant',

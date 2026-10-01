@@ -774,7 +774,7 @@ h2{margin:0 0 8px;font-weight:800}
 .onboarding-points strong{display:block;margin-bottom:3px;font-size:16px}
 .onboarding-points p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
 .onboarding-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:22px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent-ink)}
-.onboarding-actions{position:sticky;bottom:calc(12px + var(--safe-bottom));display:grid;gap:10px;margin-top:auto;padding-top:8px}
+.onboarding-actions{position:sticky;bottom:0;z-index:1;display:grid;gap:10px;margin:auto -16px 0;padding:24px 16px calc(12px + var(--safe-bottom));background:linear-gradient(to bottom,transparent,var(--bg) 24px)}
 .onboarding-start{width:100%;box-shadow:var(--elev-2)}
 .onboarding-account-note{margin:0;text-align:center;color:var(--muted);font-size:12px;line-height:1.4}
 @media(prefers-reduced-motion:reduce){
