@@ -654,8 +654,8 @@
     },
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
-      "lines": 1923,
-      "chars": 87716,
+      "lines": 1931,
+      "chars": 88166,
       "symbols": [
         "add",
         "addClient",
@@ -737,8 +737,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2509,
-      "chars": 112191,
+      "lines": 2567,
+      "chars": 114869,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -773,6 +773,7 @@
         "ensurePs",
         "exBits",
         "exDirty",
+        "exerciseProgEvery",
         "exFormatState",
         "exRestAfter",
         "exRow",
@@ -781,6 +782,7 @@
         "exWeightKey",
         "fillBuilder",
         "fillExercise",
+        "fillExerciseProgEveryOptions",
         "fillPlanFields",
         "fillProgEveryOptions",
         "finalizeExercise",
@@ -872,8 +874,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1953,
-      "chars": 86470,
+      "lines": 1954,
+      "chars": 86525,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -1214,8 +1216,8 @@
     },
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
-      "lines": 639,
-      "chars": 44626,
+      "lines": 644,
+      "chars": 45028,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1338,6 +1340,8 @@
         "exNowHint",
         "exProgBox",
         "exProgChev",
+        "exProgEvery",
+        "exProgEveryRow",
         "exProgOn",
         "exProgOnHint",
         "exProgSum",
