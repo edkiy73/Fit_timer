@@ -509,6 +509,7 @@ export const en: Record<keyof typeof ru, string> = {
   'review.loadingTitle': 'Building your review',
   'review.errorTitle': 'Could not load review',
   'review.emptyTitle': 'Nothing to review today',
+  'review.otherCourseFailed': 'Reviews from your other course did not load right now. They will show up here once you are online.',
   'review.emptyText': 'Cards, phrases and your words come back on their own when they are due.',
   'review.topics': 'Topics: {topics}',
   'review.dayCounted': 'Review done — the day counts. The next day is open.',

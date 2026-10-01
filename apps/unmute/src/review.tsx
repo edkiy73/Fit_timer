@@ -281,6 +281,7 @@ export function ReviewView({
               <span className="review-ring is-clear" aria-hidden="true"><Icon name="check" size={28} /></span>
               <strong>{t('review.emptyTitle')}</strong>
               <span className="tile-text">{t('review.emptyText')}</span>
+              {(otherCourses.failed??0)>0&&<span className="tile-text" role="status">{t('review.otherCourseFailed')}</span>}
             </div>
             {mixedOffer}
             <MyWordsView wordRuntime={wordRuntime} />
@@ -369,6 +370,7 @@ export function ReviewView({
                 ? t('review.waiting',{count:session.waiting})
                 : t('review.doneText')}
           </span>
+          {(otherCourses.failed??0)>0&&<span role="status">{t('review.otherCourseFailed')}</span>}
           {left>0&&(
             <button className="primary-button" type="button" onClick={restart}>
               {t('review.again',{count:left})}

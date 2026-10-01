@@ -148,6 +148,16 @@ describe('course review screen',()=>{
   });
 
 
+  it('says when another studied course could not load instead of calling the review done',async()=>{
+    const user=userEvent.setup();
+    renderReview(vi.fn(async()=>{}),vi.fn(async()=>{}),{status:'ready',courses:[],failed:1});
+    await user.click(await screen.findByRole('button',{name:'Начать повтор'}));
+    await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am home');
+    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+    expect(await screen.findByText(/Повторения другого курса сейчас не загрузились/)).toBeTruthy();
+  });
+
   it('does not loop a card that is wrong again after coming back',async()=>{
     const user=userEvent.setup();
     const {saveGraded}=renderReview();

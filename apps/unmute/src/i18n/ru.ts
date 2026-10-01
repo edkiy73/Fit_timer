@@ -507,6 +507,7 @@ export const ru = {
   'review.loadingTitle': 'Собираем повтор',
   'review.errorTitle': 'Повтор не загрузился',
   'review.emptyTitle': 'Сегодня повторять нечего',
+  'review.otherCourseFailed': 'Повторения другого курса сейчас не загрузились. Они появятся здесь, когда будет связь.',
   'review.emptyText': 'Карточки, фразы и твои слова вернутся сами, когда подойдёт их срок.',
   'review.topics': 'Темы: {topics}',
   'review.dayCounted': 'Повтор пройден — день засчитан. Следующий день уже открыт.',
