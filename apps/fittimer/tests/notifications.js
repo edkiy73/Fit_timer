@@ -40,7 +40,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     });
     const reset = list => {
       customPrograms.splice(0, customPrograms.length, ...list);
-      stats.history = [];
+      restoreStatsState(Object.assign({}, stats, {history:[]}));
     };
     const todayOnly = items => items.filter(x => notifyDayKey(new Date(x.at)) === iso);
     const stages = items => items.map(x => x.extra && x.extra.stage);
@@ -59,10 +59,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const fiveDifferent = todayOnly(buildWorkoutNotificationCandidates(now, prefs, new Set()));
 
     reset(Array.from({length:5},(_,i)=>p('p'+i,'Частично '+(i+1))));
-    stats.history = [{d:iso,pid:'p0',status:'partial',meaningful:true,doneExercises:2,plannedExercises:5}];
+    restoreStatsState(Object.assign({}, stats, {history:[
+      {d:iso,pid:'p0',status:'partial',meaningful:true,doneExercises:2,plannedExercises:5}
+    ]}));
     const partial = todayOnly(buildWorkoutNotificationCandidates(now, prefs, new Set()));
 
-    stats.history = [];
+    restoreStatsState(Object.assign({}, stats, {history:[]}));
     const blocked = new Set([iso+'|p0']);
     const savedBlocked = todayOnly(buildWorkoutNotificationCandidates(now, prefs, blocked));
 
