@@ -2406,6 +2406,7 @@ export function initBuilder(){
     dropFreshEx,
     exDirty,
     exRestAfter,
+    exerciseProgEvery,
     fmtKg,
     getExProgValue,
     getExWeight,
