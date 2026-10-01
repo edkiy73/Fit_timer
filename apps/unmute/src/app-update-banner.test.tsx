@@ -52,4 +52,18 @@ describe('update banner',()=>{
     expect(await screen.findByRole('dialog',{name:'Нужно обновить приложение'})).toBeTruthy();
     await waitFor(()=>expect(screen.queryByRole('button',{name:'Позже'})).toBeNull());
   });
+
+  it('does not show an error on the first press when an old finished download answers first',async()=>{
+    const user=userEvent.setup();
+    const native=phone('direct',{direct:{latestCode:1010,latestName:'0.1.10',url:'https://example.com/UnMute-1010.apk'}});
+    await screen.findByRole('heading',{name:'Вышла версия 0.1.10'});
+    // The stale entry from the previous update says «error», then the new download shows up.
+    native.getUpdateState
+      .mockResolvedValueOnce({status:'error'})
+      .mockResolvedValueOnce({status:'idle'})
+      .mockResolvedValue({status:'downloading',progress:40} as never);
+    await user.click(screen.getByRole('button',{name:'Обновить'}));
+    expect(await screen.findByRole('button',{name:/40/},{timeout:4500})).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+  },8000);
 });

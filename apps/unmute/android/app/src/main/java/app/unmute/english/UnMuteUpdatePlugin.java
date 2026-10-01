@@ -154,7 +154,7 @@ public class UnMuteUpdatePlugin extends Plugin {
                     int progress = data.getInt(UpdateDownloadWorker.KEY_PROGRESS, -1);
                     String error = info.getOutputData().getString(UpdateDownloadWorker.KEY_ERROR);
                     if (running && (status == null || status.isEmpty())) status = "downloading";
-                    if (state == WorkInfo.State.SUCCEEDED) status = apk.isFile() ? "ready" : "error";
+                    if (state == WorkInfo.State.SUCCEEDED) status = apk.isFile() ? "ready" : "idle";
                     else if (state == WorkInfo.State.FAILED) status = "error";
                     else if (state == WorkInfo.State.CANCELLED) status = "cancelled";
                     result.put("running", running);
@@ -194,10 +194,20 @@ public class UnMuteUpdatePlugin extends Plugin {
         });
     }
 
+    /**
+     * The unique work keeps finished entries from earlier updates (a SUCCEEDED one whose APK was
+     * already installed and deleted). Their order is not guaranteed, so a fresh download must win:
+     * prefer the entry that is still running, otherwise the last one.
+     */
     private WorkInfo latestUpdateWork() throws Exception {
         List<WorkInfo> infos = WorkManager.getInstance(getContext())
             .getWorkInfosForUniqueWork(UpdateDownloadWorker.WORK_NAME).get();
-        return infos.isEmpty() ? null : infos.get(infos.size() - 1);
+        if (infos.isEmpty()) return null;
+        for (WorkInfo info : infos) {
+            WorkInfo.State state = info.getState();
+            if (state == WorkInfo.State.RUNNING || state == WorkInfo.State.ENQUEUED || state == WorkInfo.State.BLOCKED) return info;
+        }
+        return infos.get(infos.size() - 1);
     }
 
     private void verifyUpdateApk(File apk, int expectedVersionCode) throws Exception {
