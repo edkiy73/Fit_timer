@@ -95,9 +95,7 @@ let builderHooks = {
   progStepSize: () => 0,
   programDirty: () => false,
   progressedRepsRange: () => '',
-  setExDraftShared: () => {},
-  setExIdxShared: () => {},
-  setExOrigShared: () => {},
+  clearExerciseDraft: () => {},
   setExWeight: () => {},
   weightPending: () => false
 };
@@ -753,7 +751,7 @@ export function asTab(fn){
 // напрямую — и набранная программа исчезала молча.
 const LEAVE_GUARDS = {
   scrBuilder:  ()=> builderHooks.programDirty() ? {what:t('builder.programChanges'), clean:()=> clearSnap('program')} : null,
-  scrExercise: ()=> builderHooks.exDirty() ? {what:t('exercise.changes'), clean:()=>{ builderHooks.dropFreshEx(); builderHooks.setExDraftShared(null); builderHooks.setExIdxShared(-1); builderHooks.setExOrigShared(''); workoutHooks.clearExerciseWorkoutOrigin(); }} : null,
+  scrExercise: ()=> builderHooks.exDirty() ? {what:t('exercise.changes'), clean:()=>{ builderHooks.dropFreshEx(); builderHooks.clearExerciseDraft(); workoutHooks.clearExerciseWorkoutOrigin(); }} : null,
   scrUserEdit: ()=> accountUserDirtyHook() ? {what:t('profile.changes')} : null,
   scrAI:       ()=> { const dirty = programsAiDirtyHook(); return dirty && aiScreenDirty(dirty) ? {what:t('ai.filledRequest')} : null; }
 };
