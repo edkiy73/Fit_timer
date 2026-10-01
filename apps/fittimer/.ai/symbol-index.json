@@ -476,9 +476,10 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 3350,
-      "chars": 155611,
+      "lines": 3363,
+      "chars": 155812,
       "symbols": [
+        "activateClientAt",
         "add",
         "ageError",
         "aiAuth",
@@ -508,6 +509,7 @@
         "carryProgressCounters",
         "chip",
         "claimProgramLink",
+        "clearActiveClient",
         "clearUnusedImageTray",
         "clientSum",
         "closeImages",
@@ -608,12 +610,11 @@
         "renderTray",
         "renderWeekStrip",
         "renderWellQuick",
+        "resetCoachPhotoDraft",
         "runOne",
         "saveClients",
         "saveTrainer",
-        "setClientIdxShared",
         "setClientsShared",
-        "setCoachPhotoDraftShared",
         "setExImg",
         "setProgramsBuilderHooks",
         "setProgramsEventHooks",
@@ -636,6 +637,7 @@
         "unnamedImageExerciseCount",
         "userAge",
         "userForAI",
+        "useUploadedCoachPhoto",
         "versionedName",
         "weekPlanInfo",
         "wipeTrainerInfo",
@@ -646,7 +648,7 @@
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
       "lines": 1924,
-      "chars": 87799,
+      "chars": 87781,
       "symbols": [
         "add",
         "addClient",
@@ -1020,7 +1022,7 @@
     "src/app/90-events.js": {
       "kind": "frontend-js",
       "lines": 2655,
-      "chars": 109840,
+      "chars": 109830,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
