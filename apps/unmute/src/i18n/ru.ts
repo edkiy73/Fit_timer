@@ -330,7 +330,7 @@ export const ru = {
   'learn.check': 'Проверить',
   'learn.answerLabel': 'Твой ответ',
   'learn.correct': 'Верно',
-  'learn.incorrect': 'Пока не так',
+  'learn.incorrect': 'Ответ неверный',
   'learn.accepted': 'Подходящий ответ: {answer}',
   'learn.next': 'Далее',
   'learn.summaryKicker': 'День пройден',
