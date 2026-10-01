@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import { useLearnerCourseRuntime } from './course-runtime';
@@ -36,21 +37,22 @@ function ReviewBadge(){
 export function TabBar(){
   const {t} = useI18n();
   const location = useLocation();
-  if(tabBarHidden(location.pathname)) return null;
-  return (
+  if(tabBarHidden(location.pathname)||typeof document==='undefined') return null;
+  return createPortal(
     <>
       <div className="tabbar-glass" aria-hidden="true" />
       <nav className="tabbar" aria-label={t('nav.tabs')}>
-      {TABS.map(tab => (
-        <NavLink key={tab.to} to={tab.to} end={tab.end ?? false} className="tabbar-item pressable">
-          <span className="tabbar-icon">
-            <Icon name={tab.icon} size={22} />
-            {tab.to === '/review' && <ReviewBadge />}
-          </span>
-          <span className="tabbar-label">{t(tab.label)}</span>
-        </NavLink>
-      ))}
+        {TABS.map(tab => (
+          <NavLink key={tab.to} to={tab.to} end={tab.end ?? false} className="tabbar-item pressable">
+            <span className="tabbar-icon">
+              <Icon name={tab.icon} size={22} />
+              {tab.to === '/review' && <ReviewBadge />}
+            </span>
+            <span className="tabbar-label">{t(tab.label)}</span>
+          </NavLink>
+        ))}
       </nav>
-    </>
+    </>,
+    document.body
   );
 }
