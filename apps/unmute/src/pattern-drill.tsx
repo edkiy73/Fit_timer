@@ -45,6 +45,9 @@ export function PatternDrillView({
   variant='practice'
 }:PatternDrillViewProps){
   const {t,locale}=useI18n();
+  // The drill has a fixed number of phrases; a missed one is replayed once at the end
+  // («Повтор: 1 из 2») instead of growing the count.
+  const base=activity.items.length;
   const [items,setItems]=useState(()=>activity.items.slice());
   const [pos,setPos]=useState(0);
   const [fast,setFast]=useState(0);
@@ -60,8 +63,9 @@ export function PatternDrillView({
   const deadlineRef=useRef(0);
   const item=items[pos] ?? null;
   const done=pos>=items.length;
-  const score=drillScore(fast,items.length);
-  const passed=drillPassed(fast,items.length);
+  const score=drillScore(fast,base);
+  const passed=drillPassed(fast,base);
+  const replaying=pos>=base;
 
   useEffect(()=>{
     if(!item||phase!=='ask')return;
@@ -108,10 +112,10 @@ export function PatternDrillView({
     let nextItems=items;
     let nextFast=fast;
     let nextSlow=slow;
-    if(same&&lastFast){
-      nextFast++;
-    }else{
-      nextSlow++;
+    // Only the first round counts toward the result; replays are for practice.
+    if(pos<base){
+      if(same&&lastFast)nextFast++;
+      else nextSlow++;
       if(!same)nextItems=[...items,item];
     }
     setItems(nextItems);
@@ -153,7 +157,7 @@ export function PatternDrillView({
         <div className="eyebrow">{variant==='mixed'?t('mixed.eyebrow'):t('drill.mode')}</div>
         <h3>{variant==='mixed'?t('mixed.title'):<LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} />}</h3>
         <div className="drill-result">
-          <strong>{t('drill.score',{fast,total:items.length})}</strong>
+          <strong>{t('drill.score',{fast,total:base})}</strong>
           <span>
             {variant==='mixed'
               ? (passed?t('mixed.passed'):t('mixed.retryHint'))
@@ -209,7 +213,9 @@ export function PatternDrillView({
         <ExerciseKind kind="drill" />
       <div className="drill-meta">
         <span>{variant==='mixed'?t('mixed.title'):<LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} />}</span>
-        <span>{t('drill.position',{current:pos+1,total:items.length})}</span>
+        <span>{replaying
+          ? t('drill.replayPosition',{current:pos-base+1,total:items.length-base})
+          : t('drill.position',{current:pos+1,total:base})}</span>
       </div>
       <h3><LexiconText text={prompt} refs={activity.lexiconRefs} /></h3>
 
@@ -233,7 +239,7 @@ export function PatternDrillView({
           {gaveUp ? (
             <div className="learn-feedback learn-feedback-neutral">
               <strong>{t('drill.gaveUp')}</strong>
-              <span>{t('drill.gaveUpHint')}</span>
+              <span>{t(replaying?'drill.gaveUpHintLast':'drill.gaveUpHint')}</span>
             </div>
           ) : (
             <div className={lastFast?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-neutral'}>

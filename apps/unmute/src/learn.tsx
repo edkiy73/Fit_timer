@@ -55,16 +55,12 @@ export function firstPendingActivityIndex(
   return index<0?0:index;
 }
 
-/** Segmented progress for short lessons; a plain bar when there are too many steps to draw. */
-function RunnerProgress({current,total,label,missed}:{current:number;total:number;label:string;missed:ReadonlySet<number>}){
-  const segments=total<=30;
+/** One bar for the whole lesson: how many of its tasks are behind. Mistakes replayed at the
+ *  end do not add to it, so the count never grows while the learner is answering. */
+function RunnerProgress({done,total,label}:{done:number;total:number;label:string}){
   return (
-    <div className="runner-progress" role="progressbar" aria-label={label} aria-valuemin={1} aria-valuemax={Math.max(1,total)} aria-valuenow={current+1}>
-      {segments
-        ? Array.from({length:total},(_,step)=>(
-            <span key={step} className={step<current?(missed.has(step)?'is-miss':'is-done'):step===current?'is-current':''} />
-          ))
-        : <span className="runner-bar" style={{transform:`scaleX(${total?(current+1)/total:0})`}} />}
+    <div className="runner-progress" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={Math.max(1,total)} aria-valuenow={done}>
+      <span className="runner-bar" style={{transform:`scaleX(${total?done/total:0})`}} />
     </div>
   );
 }
@@ -101,7 +97,8 @@ const isSeen=(progress:CourseProgressDocument,id:string)=>{
   const seen=progress.seen[id];
   return Boolean(seen&&!seen.deleted);
 };
-const MAX_RETURNS=2;
+// A wrong answer is replayed once at the end of the lesson («Работа над ошибками»).
+const MAX_RETURNS=1;
 const range=(from:number,to:number)=>Array.from({length:Math.max(0,to-from)},(_,i)=>from+i);
 const MODE_KEY:Record<PracticeSrsKind,string>={drill:'kind.drill',listening:'kind.listening',speaking:'kind.speaking'};
 
@@ -175,7 +172,6 @@ export function NodeRunnerView({
   const [finished,setFinished]=useState(false);
   const [checking,setChecking]=useState(false);
   const [practiceMode,setPracticeMode]=useState<PracticeSrsKind|undefined>(startMode);
-  const [missed,setMissed]=useState<ReadonlySet<number>>(()=>new Set());
   const completionTrackedRef=useRef(false);
 
   useEffect(()=>{
@@ -186,7 +182,6 @@ export function NodeRunnerView({
     setOrder(range(startIndex,steps.length));
     setFirstPass(steps.length-startIndex);
     setPos(0);
-    setMissed(new Set());
     setScore({correct:0,total:0});
     setFinished(false);
   };
@@ -239,7 +234,6 @@ export function NodeRunnerView({
     else onExit();
   };
 
-  const markMissed=()=>setMissed(previous=>new Set(previous).add(pos));
   // A wrong answer comes back at the end of the lesson — at most twice, so nobody gets stuck.
   const retryLater=()=>{
     if(stepIndex===undefined)return;
@@ -400,8 +394,10 @@ export function NodeRunnerView({
   }
 
   if(!activity)return null;
-  const position=t('learn.position',{current:pos+1,total:order.length});
   const retrying=pos>=firstPass;
+  // The counter names the lesson's tasks; the replayed mistakes are counted separately.
+  const shown=retrying?firstPass:pos+1;
+  const position=t('learn.position',{current:shown,total:firstPass});
 
   const handleChoice=async()=>{
     if(activity.type!=='choice'||selected===null||busy||result!==null)return;
@@ -410,7 +406,7 @@ export function NodeRunnerView({
       const correct=selected===activity.correctIndex;
       await saveGraded(setId,activity.id,correct);
       countAnswer(correct);
-      if(!correct){ markMissed(); retryLater(); }
+      if(!correct)retryLater();
       setResult(correct);
     }finally{
       setBusy(false);
@@ -435,7 +431,7 @@ export function NodeRunnerView({
         : checkAnswer(input,activity.answer.accepted);
       await saveGraded(setId,activity.id,correct);
       countAnswer(correct);
-      if(!correct){ markMissed(); retryLater(); }
+      if(!correct)retryLater();
       setResult(correct);
     }finally{
       setBusy(false);
@@ -503,12 +499,12 @@ export function NodeRunnerView({
         <button className="runner-close pressable" type="button" onClick={onExit} aria-label={t('learn.close')}>
           <Icon name="close" size={20} />
         </button>
-        <RunnerProgress current={pos} total={order.length} label={t('learn.activityProgress')} missed={missed} />
-        <span className="runner-count" aria-label={position}>{pos+1}/{order.length}</span>
+        <RunnerProgress done={Math.min(pos,firstPass)} total={firstPass} label={t('learn.activityProgress')} />
+        <span className="runner-count" aria-label={position}>{shown}/{firstPass}</span>
       </div>
 
       {header}
-      {retrying&&<p className="runner-retry" role="status">{t('learn.retryPhase')}</p>}
+      {retrying&&<p className="runner-retry" role="status">{t('learn.retryPhase',{current:pos-firstPass+1,total:order.length-firstPass})}</p>}
 
       {/* The day's theory stays one tap away without moving the lesson back. */}
       <Sheet open={theoryOpen} onClose={()=>setTheoryOpen(false)} labelledBy="theory-sheet-title" closeLabel={t('learn.theoryClose')}>

@@ -301,24 +301,6 @@ export function ProgressView({
 
           <article className="progress-section">
             <div className="progress-section-head">
-              <h3>{t('progress.reviewTitle')}</h3>
-              {summary.dueNow>0&&<strong className="progress-due">{t('progress.dueBadge',{count:summary.dueNow})}</strong>}
-            </div>
-            {summary.activeReviews>0 ? (
-              <ul className="stat-list">
-                <StatRow label={t('progress.cards')} value={String(summary.activeCards)} />
-                <StatRow label={t('progress.drill')} value={String(summary.drill)} />
-                <StatRow label={t('progress.listening')} value={String(summary.listening)} />
-                <StatRow label={t('progress.speaking')} value={String(summary.speaking)} />
-                <StatRow label={t('progress.words')} value={String(summary.words)} />
-              </ul>
-            ) : (
-              <p className="progress-muted">{t('progress.reviewEmpty')}</p>
-            )}
-          </article>
-
-          <article className="progress-section">
-            <div className="progress-section-head">
               <h3>{t('progress.answersTitle')}</h3>
               {summary.answers.attempts>0&&<strong>{t('progress.accuracy',{percent:summary.answers.accuracy})}</strong>}
             </div>

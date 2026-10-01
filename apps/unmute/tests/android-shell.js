@@ -41,4 +41,10 @@ assert.match(read('android/app/src/main/res/xml/file_paths.xml'),/path="updates\
 assert.match(manifest,/android\.permission\.RECORD_AUDIO/);
 assert.match(manifest,/android\.permission\.POST_NOTIFICATIONS/);
 
+// No fixed-colour strip under the status bar: the page is drawn edge to edge and paints it
+// in the theme's colour (index.html viewport-fit=cover, theme.ts sets the icon colour).
+assert.match(activity,/setDecorFitsSystemWindows\(getWindow\(\), false\)/);
+assert.match(read('android/app/src/main/res/values/styles.xml'),/statusBarColor">@android:color\/transparent/);
+assert.match(read('index.html'),/viewport-fit=cover/);
+
 console.log('UnMute Android shell OK');
