@@ -1237,3 +1237,13 @@ h2{margin:0 0 8px;font-weight:800}
 /* Keep actions clear of explanation text and make the whole row sticky instead of shadowing from the CTA. */
 .learn-feedback-actions{position:sticky;bottom:0;z-index:2;margin-top:10px;padding-top:10px;background:inherit}
 .learn-feedback.is-sheet .learn-feedback-next{position:static;margin-top:0;box-shadow:none}
+
+
+/* Feedback action grid contracts:
+   - no Why action => Next owns the full row;
+   - expanded/error Why state => it owns a full row and Next moves below full-width. */
+.learn-feedback-actions>.learn-feedback-next:only-child{grid-column:1/-1;width:100%}
+.learn-feedback-actions>.answer-explain.is-compact:has(.answer-explain-error){grid-column:1/-1;width:100%;min-width:0}
+.learn-feedback-actions>.answer-explain.is-compact:has(.answer-explain-error)+.learn-feedback-next{grid-column:1/-1;width:100%}
+.learn-feedback-actions>.answer-explain.is-compact .answer-explain-error{width:100%;min-width:0}
+.learn-feedback-actions>.answer-explain.is-compact .answer-explain-error>.secondary-button{width:100%}
