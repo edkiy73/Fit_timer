@@ -58,8 +58,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.waitForTimeout(300);
   ok('в редакторе упражнения есть «Через ИИ»', await page.isVisible('#exMediaAI'));
   await page.click('#exMediaAI'); await page.waitForTimeout(600);
-  ok('картинка упражнения нарисована', await page.evaluate(() =>
-    !!(exDraft.media && exDraft.media.data) && /<img/.test($('exMediaPrev').innerHTML)));
+  ok('картинка упражнения нарисована', await page.evaluate(() => {
+    const img = $('exMediaPrev').querySelector('img');
+    return !!img && /^data:image\//.test(img.src || '');
+  }));
   await page.evaluate(() => { $('exName').value = ''; });
   await page.click('#exMediaAI'); await page.waitForTimeout(300);
   ok('без названия просит сначала назвать упражнение', /назови упражнение/.test(await page.textContent('#dlgMsg')));

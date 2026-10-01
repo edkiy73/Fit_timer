@@ -102,7 +102,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     $('aiResult').value = 'УПРАЖНЕНИЕ: Присед\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 15\nПОДХОДЫ: 3\nОТДЫХ: 60';
     await applyExEdit();
     await new Promise(r => setTimeout(r, 300));
-    return {screen: show._last, wish: $('exeWish').value, value: curPlan().exercises[0].value,
+    return {screen: show._last, wish: $('exeWish').value, value: draft.plans[0].exercises[0].value,
       dialog: $('dlgMsg').textContent};
   });
   ok('после правки упражнения открыт его редактор', exEdit.screen === 'scrExercise', exEdit.screen);
@@ -158,7 +158,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.waitForTimeout(800);
   if(await page.isVisible('#dlgOk')) await page.click('#dlgOk');
   await page.waitForTimeout(500);
-  const afterAi = await page.evaluate(() => ({screen: show._last, value: curPlan().exercises[0].value, type: curPlan().exercises[0].type}));
+  const afterAi = await page.evaluate(() => {
+    const ex = draft.plans[0].exercises[0];
+    return {screen: show._last, value: ex.value, type: ex.type};
+  });
   ok('после «Изменить за меня» открыт редактор упражнения с результатом',
      afterAi.screen === 'scrExercise' && afterAi.type === 'time', JSON.stringify(afterAi));
   ok('ИИ-правка упражнения прошла через API boundary', aiKinds.includes('exercise.modify'), aiKinds.join(','));

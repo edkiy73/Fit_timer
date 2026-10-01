@@ -101,7 +101,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     }catch(e){
       navigator.clipboard.writeText = async text => { window.__copiedProgramText = text; };
     }
-    const expected = programToText(editAIProg);
+    const expected = programToText(customPrograms.find(p => p.id === 'guard-edit'));
     $('aiCopyFull').click();
     await new Promise(r => setTimeout(r, 20));
     return {expected, actual: window.__copiedProgramText};
