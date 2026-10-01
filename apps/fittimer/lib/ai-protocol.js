@@ -11,7 +11,7 @@
     'УСЛОЖНЯТЬ','КАК УСЛОЖНЯТЬ',
     'ШАГ','ШАГ ВЕСА','ШАГ ПОВТОРОВ','ШАГ ВРЕМЕНИ',
     'ПОТОЛОК','ПОТОЛОК ВЕСА','ПОТОЛОК ПОВТОРОВ','ПОТОЛОК ВРЕМЕНИ',
-    'ПРИ ПОТОЛКЕ','ДВОЙНАЯ ПРОГРЕССИЯ',
+    'ПРИ ПОТОЛКЕ','ДВОЙНАЯ ПРОГРЕССИЯ','ЧАСТОТА ПРОГРЕССИИ',
     'ЗАМЕНА','ОПИСАНИЕ ЗАМЕНЫ','ЗАМЕНА ОПИСАНИЕ','ВИДЕО'
   ];
 
@@ -26,6 +26,7 @@ Act like a deeply experienced strength-and-conditioning coach. Base decisions on
 
 - ПРОГРЕССИЯ at PROGRAM level is the DEFAULT check frequency for progressive exercises: after N FULL COMPLETIONS of a given exercise, the app checks with the user whether to raise its load. It is per exercise, not a program-wide workout counter, and skipped or unfinished exercises do not count. Use 4 as the default unless the program clearly needs another value. In the future an exercise may override this default individually. ПРОГРЕССИЯ does NOT mean +N reps or +N kg.
 - Exercise-level ШАГ / ШАГ ПОВТОРОВ / ШАГ ВРЕМЕНИ / ШАГ ВЕСА define WHAT changes on each progression step.
+- Optional ЧАСТОТА ПРОГРЕССИИ on an exercise overrides the program default for that exercise only: 1-15 = check after that many FULL completions, 0 = disable progression for this exercise, omit the line = inherit the program-level ПРОГРЕССИЯ. Use an override only when that exercise genuinely needs a different cadence.
 - For unweighted reps/time with УСЛОЖНЯТЬ: да, provide a sensible ШАГ and ПОТОЛОК.
 - For weighted reps, distinguish three cases:
   1) weight-only progression: fixed reps, positive ШАГ ВЕСА, no automatic rep increase;
@@ -58,6 +59,7 @@ Act like a deeply experienced strength-and-conditioning coach. Base decisions on
 ОТДЫХ: seconds between sets
 ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: seconds after the last set before the next exercise; include only when different from ОТДЫХ
 УСЛОЖНЯТЬ: "да" or "нет"
+ЧАСТОТА ПРОГРЕССИИ: optional integer 0-15; omit to inherit program ПРОГРЕССИЯ, 0 disables progression for this exercise
 ШАГ: progression increment for unweighted reps/time only
 ШАГ ПОВТОРОВ: reps increment for weighted reps, only when reps themselves should progress
 ШАГ ВРЕМЕНИ: seconds increment for weighted time, only when time itself should progress
