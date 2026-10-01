@@ -336,6 +336,8 @@ export const ru = {
   'learn.next': 'Далее',
   'learn.summaryKicker': 'День пройден',
   'learn.summaryScore': 'С первого раза верно: {correct} из {total}',
+  'learn.replayScore': 'Верно: {correct} из {total}',
+  'learn.replayNext': 'Это была тренировка: интервалы «Повтора» не изменились.',
   'learn.summaryNext': 'Новые фразы вернутся в «Повторе», когда их пора освежить.',
   'learn.summaryDone': 'Готово',
   'learn.checking': 'Проверяем день',

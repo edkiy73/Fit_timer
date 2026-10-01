@@ -164,7 +164,7 @@ describe('node activity runner',()=>{
     const user=userEvent.setup();
     const progress=emptyCourseProgress();
     progress.seen['theory.one']={at:'2026-09-29T01:00:00.000Z'};
-    const saveGraded=vi.fn(async()=>{});
+    const saveGraded=vi.fn(async(_setId:string,_activityId:string,_correct:boolean)=>{});
     render(
       <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="learn-retry.locale" systemLanguages={['ru']}>
         <NodeRunnerView
@@ -192,6 +192,8 @@ describe('node activity runner',()=>{
     expect(screen.getByText('2/2')).toBeTruthy();
     expect(screen.getByRole('heading',{name:'Выбери ответ'})).toBeTruthy();
     await chooseAnswer(user,'I am here');
+    // «Работа над ошибками» is practice: the review schedule keeps the first (wrong) answer only.
+    expect(saveGraded.mock.calls.filter(call=>call[1]==='choice.one')).toEqual([['general-foundation','choice.one',false]]);
     await user.click(screen.getByRole('button',{name:'Завершить'}));
     // The runtime here never marks the day complete: the summary says so honestly.
     expect(await screen.findByText('День пока не засчитан')).toBeTruthy();
@@ -260,6 +262,7 @@ describe('node activity runner',()=>{
       }
     };
     const onNodeCompleted=vi.fn();
+    const saveGraded=vi.fn(async(_setId:string,_activityId:string,_correct:boolean)=>{});
 
     render(
       <I18nProvider
@@ -274,7 +277,7 @@ describe('node activity runner',()=>{
           onExit={()=>{}}
           onNodeCompleted={onNodeCompleted}
           saveSeen={async()=>{}}
-          saveGraded={async()=>{}}
+          saveGraded={saveGraded}
           savePractice={async()=>{}}
         />
       </I18nProvider>
@@ -290,6 +293,10 @@ describe('node activity runner',()=>{
     await user.click(screen.getByRole('button',{name:'Завершить'}));
 
     expect(onNodeCompleted).not.toHaveBeenCalled();
+    // A replay is practice: review intervals and answer stats are left alone.
+    expect(saveGraded).not.toHaveBeenCalled();
+    expect(await screen.findByText('Верно: 2 из 2')).toBeTruthy();
+    expect(screen.getByText('Это была тренировка: интервалы «Повтора» не изменились.')).toBeTruthy();
   });
 
   it('resumes from the first activity that is not already seen',()=>{

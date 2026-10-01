@@ -146,6 +146,8 @@ interface LessonRunSnapshot{
   firstPassResults:Record<number,boolean>;
   shuffleSeed?:string;
   practiceMode?:PracticeSrsKind;
+  /** Replay of a completed day: practice only, review intervals and answer stats stay as they were. */
+  replay?:boolean;
 }
 const lessonRunKey=(setId:string,nodeId:string)=>'unmute.lesson-run:'+setId+':'+nodeId;
 function readLessonRun(setId:string,nodeId:string):LessonRunSnapshot|null{
@@ -265,6 +267,7 @@ export function NodeRunnerView({
   const [practiceMode,setPracticeMode]=useState<PracticeSrsKind|undefined>(startMode);
   const [shuffleSeed,setShuffleSeed]=useState(()=>randomSeed());
   const [runHydrated,setRunHydrated]=useState(false);
+  const [replay,setReplay]=useState(false);
   const completionTrackedRef=useRef(false);
   // The step a restored run lands on: its saved answer/feedback must survive the first render
   // of that step (the reset below would otherwise wipe it once the restored order arrives).
@@ -318,6 +321,7 @@ export function NodeRunnerView({
       setFirstPassResults(restored.firstPassResults);
       setShuffleSeed(restored.shuffleSeed??randomSeed());
       setPracticeMode(restored.practiceMode);
+      setReplay(Boolean(restored.replay));
       setFinished(false);
     }else{
       // Never destroy an unfinished run merely because refreshed course content is temporarily
@@ -326,6 +330,8 @@ export function NodeRunnerView({
       begin(requested>=0?requested:firstPendingActivityIndex(steps,state.progress));
       setIntro(requested<0&&theoryCards.some(card=>!isSeen(state.progress,card.id)));
       setPracticeMode(startMode);
+      // A completed day opened again is a replay; a step opened on purpose («Скажи вслух») still counts.
+      setReplay(Boolean(nodeProgress?.complete)&&requested<0);
     }
     setRunHydrated(true);
     // Old progress may still miss the day's plan card: it is part of the day, mark it quietly.
@@ -353,9 +359,10 @@ export function NodeRunnerView({
       score,
       firstPassResults,
       shuffleSeed,
-      ...(practiceMode?{practiceMode}:{})
+      ...(practiceMode?{practiceMode}:{}),
+      ...(replay?{replay}:{})
     });
-  },[runHydrated,state?.set.id,node?.id,stepSignature,order,firstPass,pos,intro,selected,answer,typing,picked,result,score,firstPassResults,shuffleSeed,practiceMode,finished]);
+  },[runHydrated,state?.set.id,node?.id,stepSignature,order,firstPass,pos,intro,selected,answer,typing,picked,result,score,firstPassResults,shuffleSeed,practiceMode,finished,replay]);
 
   const stepIndex=order[pos];
   const activity=stepIndex===undefined?null:steps[stepIndex]??null;
@@ -482,10 +489,10 @@ export function NodeRunnerView({
           <div className="screen-kicker">{t(nodeComplete?'learn.summaryKicker':'learn.notCountedKicker')}</div>
           <h2 id="learn-summary-title"><LexiconText text={localized(node.title,locale)} /></h2>
           {score.total>0&&(
-            <p className="learn-summary-score">{t('learn.summaryScore',{correct:score.correct,total:score.total})}</p>
+            <p className="learn-summary-score">{t(replay?'learn.replayScore':'learn.summaryScore',{correct:score.correct,total:score.total})}</p>
           )}
           {nodeComplete
-            ? <p className="learn-hint">{t('learn.summaryNext')}</p>
+            ? <p className="learn-hint">{t(replay?'learn.replayNext':'learn.summaryNext')}</p>
             : <div className="learn-missing">
                 <p className="learn-hint">{t('learn.notCountedText')}</p>
                 {missing.practice.length>0&&(
@@ -587,13 +594,19 @@ export function NodeRunnerView({
   // The counter names the lesson's tasks; the replayed mistakes are counted separately.
   const shown=retrying?firstPass:pos+1;
   const position=t('learn.position',{current:shown,total:firstPass});
+  // Only the first answer of a first run moves review intervals and stats: a replayed day and
+  // «Работа над ошибками» are practice, so a mistake plus its fix never reads as a right answer.
+  const recordsAnswers=!replay&&!retrying;
+  const gradeAnswer=(correct:boolean)=>recordsAnswers?saveGraded(setId,activity.id,correct):Promise.resolve();
+  const practiceSave:NodeRunnerViewProps['savePractice']=(...args)=>recordsAnswers?savePractice(...args):Promise.resolve();
+  const dialogueSave:typeof saveDialogue=(...args)=>recordsAnswers?saveDialogue(...args):Promise.resolve();
 
   const handleChoice=async(choice:number|null=selected)=>{
     if(activity.type!=='choice'||choice===null||busy||result!==null)return;
     setBusy(true);
     try{
       const correct=choice===activity.correctIndex;
-      await saveGraded(setId,activity.id,correct);
+      await gradeAnswer(correct);
       countAnswer(correct);
       if(!correct)retryLater();
       setResult(correct);
@@ -618,7 +631,7 @@ export function NodeRunnerView({
       const correct=activity.answer.caseSensitive
         ? activity.answer.accepted.some(candidate=>candidate.trim()===input)
         : checkAnswer(input,activity.answer.accepted);
-      await saveGraded(setId,activity.id,correct);
+      await gradeAnswer(correct);
       countAnswer(correct);
       if(!correct)retryLater();
       setResult(correct);
@@ -815,7 +828,7 @@ export function NodeRunnerView({
           courseActivities={state.set.activities}
           progress={state.progress}
           setId={setId}
-          savePractice={savePractice}
+          savePractice={practiceSave}
           speak={speak}
           {...(practiceMode?{initialMode:practiceMode}:{})}
           onDone={()=>{ setPracticeMode(undefined); void saveSeen(setId,activity.id).catch(()=>undefined).then(()=>advance()); }}
@@ -827,7 +840,7 @@ export function NodeRunnerView({
           key={activity.id}
           activity={activity}
           setId={setId}
-          saveDialogue={saveDialogue}
+          saveDialogue={dialogueSave}
           speak={speak}
           startRecognition={startRecognition}
           onDone={advance}

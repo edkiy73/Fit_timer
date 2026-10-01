@@ -338,6 +338,8 @@ export const en: Record<keyof typeof ru, string> = {
   'learn.next': 'Next',
   'learn.summaryKicker': 'Day complete',
   'learn.summaryScore': 'Right first time: {correct} of {total}',
+  'learn.replayScore': 'Correct: {correct} of {total}',
+  'learn.replayNext': 'This was practice: your Review schedule did not change.',
   'learn.summaryNext': 'New phrases come back in Review when it is time to refresh them.',
   'learn.summaryDone': 'Done',
   'learn.checking': 'Checking the day',
