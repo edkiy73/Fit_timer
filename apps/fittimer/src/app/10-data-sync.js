@@ -2628,7 +2628,11 @@ export function toggleMenu(m){
 /* Setters for state owned by this chunk and changed from other chunks.
    Other chunks read these bindings directly but write them only through the owner. */
 export function setCurrentUserShared(value){ currentUser = value; return currentUser; }
-export function setCustomProgramsShared(value){ customPrograms = value; return customPrograms; }
+export async function deleteCustomProgram(id){
+  customPrograms = customPrograms.filter(program => program && program.id !== id);
+  await savePrograms();
+  return customPrograms;
+}
 export function setUsersShared(value){ users = value; return users; }
 
 /* Startup wiring of this part (listeners, handlers, timers). Runs from src/app/index.js,
