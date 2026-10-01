@@ -21,6 +21,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const errs = [];
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
   page.on('pageerror', e => errs.push(String(e)));
+  const aiEditResponse = "УПРАЖНЕНИЕ: Присед\nФОРМАТ: время\nЗНАЧЕНИЕ: 40\nПОДХОДЫ: 3\nОТДЫХ: 60";
+  await page.route('**/api/ai', route => route.fulfill({
+    status:200, contentType:'application/json', body:JSON.stringify({text:aiEditResponse})
+  }));
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(1000);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(800); }
@@ -135,8 +139,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const p = {id:'exn', name:'Навигация', progression:0, stats:{completions:0}, plans:[
       {days:['Пн'], rounds:1, roundRest:0, exercises:[{id:'n1', name:'Присед', type:'reps', value:'10', sets:3, rest:60}]}]};
     customPrograms.push(p);
+    account.email = 'ai-edit@example.com';
+    account.syncToken = 'ai-edit-token';
     account.sub = {plan:'year', until:'2099-01-01'};
-    callGemini = async () => 'УПРАЖНЕНИЕ: Присед\nФОРМАТ: время\nЗНАЧЕНИЕ: 40\nПОДХОДЫ: 3\nОТДЫХ: 60';
+    identity.deviceId = 'ai-edit-device';
     openBuilder('exn');
   });
   await page.waitForTimeout(300);
