@@ -60,7 +60,9 @@ const stats = page => page.evaluate(() => [...document.querySelectorAll('#tpStat
   const link = await tp.evaluate(async ({txt, nick}) => {
     const r = parseProgramText(txt);
     const p = r.program || r; p.id = 'tp1';
-    customPrograms.push(p); await savePrograms();
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
+    await savePrograms();
     let out = null;
     navigator.clipboard.writeText = async t => { out = t; };
     navigator.share = async d => { out = d.url; };
