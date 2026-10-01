@@ -5,10 +5,12 @@ import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { activitySaveClock } from './activity-progress';
+import { loadLearnerCourse } from './course-loader';
 import { dayNumberFromKey } from './engine/course-progress';
 import { summarizeAnswerStats, type AnswerStatsSummary } from './engine/learner-stats';
 import {
   WORD_PROGRESS_DOC,
+  courseProgressDoc,
   statsProgressDoc,
   type StatsProgressDocument,
   type WordsProgressDocument
@@ -21,6 +23,7 @@ import { Loader } from './loader';
 import { Icon } from './icons';
 
 const STATS_QUERY_KEY='progress-screen-stats';
+const COURSE_QUERY_KEY='progress-screen-course';
 const WORDS_QUERY_KEY='progress-screen-words';
 
 export interface ProgressDetailsRuntime {
@@ -116,12 +119,11 @@ export function buildProgressSummary(
     ...cards,
     ...drill,
     ...listening,
-    ...speaking,
-    ...wordItems
+    ...speaking
   ].filter(item=>Number.isFinite(item.due)&&item.due<=todayDay).length;
   const speed=metricAverage(progress.metrics,'speed:');
   const dialogue=metricAverage(progress.metrics,'dialogue-score:');
-  const activeReviews=cards.length+drill.length+listening.length+speaking.length+wordItems.length;
+  const activeReviews=cards.length+drill.length+listening.length+speaking.length;
   const seen=liveValues(progress.seen).length;
 
   return {
@@ -149,6 +151,34 @@ export function buildProgressSummary(
       speed.samples>0||
       dialogue.samples>0||
       state.roadmapProgress.completedCount>0
+  };
+}
+
+export function useProgressCourseRuntime(setId:string):LearnerCourseRuntimeValue{
+  const queryClient=useQueryClient();
+  const query=useQuery({
+    queryKey:[COURSE_QUERY_KEY,setId],
+    queryFn:()=>loadLearnerCourse(setId),
+    enabled:setId.length>0,
+    staleTime:Infinity
+  });
+  useEffect(()=>{
+    if(!setId)return;
+    const key=courseProgressDoc(setId);
+    return appDocs.subscribe(change=>{
+      if(change.keys.some(ref=>ref.key===key)){
+        void queryClient.invalidateQueries({queryKey:[COURSE_QUERY_KEY,setId],exact:true});
+      }
+    });
+  },[queryClient,setId]);
+  const refresh=useCallback(async()=>{
+    await queryClient.invalidateQueries({queryKey:[COURSE_QUERY_KEY,setId],exact:true});
+  },[queryClient,setId]);
+  return {
+    state:query.data??null,
+    status:query.isError?'error':query.data?'ready':'pending',
+    error:query.error??null,
+    refresh
   };
 }
 
@@ -227,15 +257,21 @@ export function ProgressView({
   todayDay,
   onExit,
   learningDays=null,
-  embedded=false
+  embedded=false,
+  courses=[],
+  selectedCourseId='',
+  onCourseChange
 }:{
   runtime:LearnerCourseRuntimeValue;
   details:ProgressDetailsRuntime;
   todayDay:number;
   onExit:()=>void;
   learningDays?:RecordMap<TimedFlag>|null;
-  /** Inside «Я»: no back button or page title, the screen already has them. */
+  /** Inside Profile: no back button or page title, the screen already has them. */
   embedded?:boolean;
+  courses?:Array<{id:string;label:string}>;
+  selectedCourseId?:string;
+  onCourseChange?:(id:string)=>void;
 }){
   const {t}=useI18n();
   const back=embedded?null:<button className="learn-back" type="button" onClick={onExit}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>;
@@ -288,16 +324,44 @@ export function ProgressView({
         </div>
       ) : (
         <>
-          <div className="progress-overview">
-            <MetricCard value={summary.completedDays+'/'+summary.requiredDays} label={t('progress.courseDays')} />
-            <MetricCard value={String(summary.learningDays)} label={t('progress.learningDays')} />
-            <MetricCard value={String(summary.streak)} label={t('progress.streak')} />
-          </div>
+          <article className="progress-section progress-general">
+            <div className="progress-section-head">
+              <h3>{t('progress.generalTitle')}</h3>
+            </div>
+            <div className="progress-overview">
+              <MetricCard value={String(summary.learningDays)} label={t('progress.learningDays')} />
+              <MetricCard value={String(summary.streak)} label={t('progress.streak')} />
+              <MetricCard value={String(summary.words)} label={t('progress.words')} />
+            </div>
+            <ActivityCalendar
+              learningDays={runtime.state?withAllLearningDays(runtime.state.progress,learningDays).learningDays:null}
+              todayDay={todayDay}
+            />
+          </article>
 
-          <ActivityCalendar
-            learningDays={runtime.state?withAllLearningDays(runtime.state.progress,learningDays).learningDays:null}
-            todayDay={todayDay}
-          />
+          <article className="progress-section progress-course-section">
+            <div className="progress-section-head progress-course-head">
+              <h3>{t('progress.courseTitle')}</h3>
+              {courses.length>1&&onCourseChange&&(
+                <label className="progress-course-picker">
+                  <span className="sr-only">{t('progress.courseLabel')}</span>
+                  <select value={selectedCourseId} onChange={event=>onCourseChange(event.target.value)}>
+                    {courses.map(course=><option key={course.id} value={course.id}>{course.label}</option>)}
+                  </select>
+                </label>
+              )}
+            </div>
+            <div className="progress-overview">
+              <MetricCard value={summary.completedDays+'/'+summary.requiredDays} label={t('progress.courseDays')} />
+              <MetricCard value={String(summary.activeCards)} label={t('progress.cards')} />
+              <MetricCard value={String(summary.dueNow)} label={t('progress.dueNow')} />
+            </div>
+            <div className="progress-practice-row">
+              <span>{t('progress.drill')}: <strong>{summary.drill}</strong></span>
+              <span>{t('progress.listening')}: <strong>{summary.listening}</strong></span>
+              <span>{t('progress.speaking')}: <strong>{summary.speaking}</strong></span>
+            </div>
+          </article>
 
           <article className="progress-section">
             <div className="progress-section-head">
