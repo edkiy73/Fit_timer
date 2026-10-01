@@ -40,11 +40,11 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await page.click('#startFresh');
     await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
     await page.evaluate(sec => {
-      state.stepOutcomes = {};
+      const outcomes = {};
       state.steps.forEach((step, i) => {
-        if(step.phase === 'work') state.stepOutcomes[workoutStepKey(step, i)] = 'done';
+        if(step.phase === 'work') outcomes[workoutStepKey(step, i)] = 'done';
       });
-      state.globalStart = Date.now() - sec * 1000; state.pausedTotal = 0;
+      startWorkout(0, sec * 1000, {skipPrep:true, outcomes});
       finishWorkout();
       document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
     }, sec);
