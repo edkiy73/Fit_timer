@@ -124,6 +124,42 @@ const isSeen=(progress:CourseProgressDocument,id:string)=>{
 const MAX_RETURNS=1;
 const range=(from:number,to:number)=>Array.from({length:Math.max(0,to-from)},(_,i)=>from+i);
 const MODE_KEY:Record<PracticeSrsKind,string>={drill:'kind.drill',listening:'kind.listening',speaking:'kind.speaking'};
+const LESSON_RUN_VERSION=1;
+interface LessonRunSnapshot{
+  version:1;
+  setId:string;
+  nodeId:string;
+  stepIds:string[];
+  order:number[];
+  firstPass:number;
+  pos:number;
+  intro:boolean;
+  selected:number|null;
+  answer:string;
+  typing:boolean;
+  picked:string[];
+  result:boolean|null;
+  score:{correct:number;total:number};
+  firstPassResults:Record<number,boolean>;
+  practiceMode?:PracticeSrsKind;
+}
+const lessonRunKey=(setId:string,nodeId:string)=>'unmute.lesson-run:'+setId+':'+nodeId;
+function readLessonRun(setId:string,nodeId:string):LessonRunSnapshot|null{
+  try{
+    const raw=localStorage.getItem(lessonRunKey(setId,nodeId));
+    if(!raw)return null;
+    const parsed=JSON.parse(raw) as LessonRunSnapshot;
+    if(parsed?.version!==LESSON_RUN_VERSION||parsed.setId!==setId||parsed.nodeId!==nodeId)return null;
+    return parsed;
+  }catch{return null;}
+}
+function writeLessonRun(snapshot:LessonRunSnapshot):void{
+  try{localStorage.setItem(lessonRunKey(snapshot.setId,snapshot.nodeId),JSON.stringify(snapshot));}catch{}
+}
+function clearLessonRun(setId:string,nodeId:string):void{
+  try{localStorage.removeItem(lessonRunKey(setId,nodeId));}catch{}
+}
+
 
 /** What still keeps the day from counting: practice not passed yet, steps not done. */
 export function missingForNode(node:RoadmapNode,progress:CourseProgressDocument){
@@ -197,7 +233,9 @@ export function NodeRunnerView({
   const [finished,setFinished]=useState(false);
   const [checking,setChecking]=useState(false);
   const [practiceMode,setPracticeMode]=useState<PracticeSrsKind|undefined>(startMode);
+  const [runHydrated,setRunHydrated]=useState(false);
   const completionTrackedRef=useRef(false);
+  const restoringRunRef=useRef(false);
 
   useEffect(()=>{
     completionTrackedRef.current=Boolean(nodeProgress?.complete);
@@ -207,27 +245,90 @@ export function NodeRunnerView({
     setOrder(range(startIndex,steps.length));
     setFirstPass(steps.length-startIndex);
     setPos(0);
+    setSelected(null);
+    setAnswer('');
+    setTyping(false);
+    setPicked([]);
+    setResult(null);
     setScore({correct:0,total:0});
     setFirstPassResults({});
     setExitOpen(false);
     setFinished(false);
   };
 
+  const stepSignature=steps.map(item=>item.id).join('|');
   useEffect(()=>{
     if(!state||!node)return;
+    setRunHydrated(false);
     const requested=startActivityId?steps.findIndex(item=>item.id===startActivityId):-1;
-    begin(requested>=0?requested:firstPendingActivityIndex(steps,state.progress));
-    setIntro(requested<0&&theoryCards.some(card=>!isSeen(state.progress,card.id)));
+    const saved=requested<0?readLessonRun(state.set.id,node.id):null;
+    const validSaved=Boolean(
+      saved&&
+      saved.stepIds.join('|')===stepSignature&&
+      saved.order.length>0&&
+      saved.order.every(index=>Number.isInteger(index)&&index>=0&&index<steps.length)&&
+      saved.firstPass>=0&&saved.firstPass<=saved.order.length&&
+      saved.pos>=0&&saved.pos<saved.order.length
+    );
+    if(saved&&validSaved){
+      restoringRunRef.current=true;
+      setOrder(saved.order);
+      setFirstPass(saved.firstPass);
+      setPos(saved.pos);
+      setIntro(saved.intro);
+      setSelected(saved.selected);
+      setAnswer(saved.answer);
+      setTyping(saved.typing);
+      setPicked(saved.picked);
+      setResult(saved.result);
+      setScore(saved.score);
+      setFirstPassResults(saved.firstPassResults);
+      setPracticeMode(saved.practiceMode);
+      setFinished(false);
+    }else{
+      if(saved)clearLessonRun(state.set.id,node.id);
+      begin(requested>=0?requested:firstPendingActivityIndex(steps,state.progress));
+      setIntro(requested<0&&theoryCards.some(card=>!isSeen(state.progress,card.id)));
+      setPracticeMode(startMode);
+    }
+    setRunHydrated(true);
     // Old progress may still miss the day's plan card: it is part of the day, mark it quietly.
     for(const plan of activities.filter(isPlan)){
       if(!isSeen(state.progress,plan.id))void saveSeen(state.set.id,plan.id).catch(()=>undefined);
     }
-  },[node?.id,state?.set.id]);
+  },[node?.id,state?.set.id,startActivityId,stepSignature]);
+
+  useEffect(()=>{
+    if(!runHydrated||!state||!node||finished||order.length===0)return;
+    writeLessonRun({
+      version:LESSON_RUN_VERSION,
+      setId:state.set.id,
+      nodeId:node.id,
+      stepIds:steps.map(item=>item.id),
+      order,
+      firstPass,
+      pos,
+      intro,
+      selected,
+      answer,
+      typing,
+      picked,
+      result,
+      score,
+      firstPassResults,
+      ...(practiceMode?{practiceMode}:{})
+    });
+  },[runHydrated,state?.set.id,node?.id,stepSignature,order,firstPass,pos,intro,selected,answer,typing,picked,result,score,firstPassResults,practiceMode,finished]);
 
   const stepIndex=order[pos];
   const activity=stepIndex===undefined?null:steps[stepIndex]??null;
 
   useEffect(()=>{
+    if(restoringRunRef.current){
+      restoringRunRef.current=false;
+      setBusy(false);
+      return;
+    }
     setSelected(null);
     setAnswer('');
     setPicked([]);
@@ -246,6 +347,7 @@ export function NodeRunnerView({
   },[finished,nodeComplete,node?.id]);
 
   const finish=async()=>{
+    if(state&&node)clearLessonRun(state.set.id,node.id);
     setChecking(true);
     try{ await runtime.refresh(); }catch{ /* the summary still shows what is known */ }
     setChecking(false);
