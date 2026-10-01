@@ -216,7 +216,7 @@ export function CourseMapView({
       {onReference&&hasReference(state.set)&&(
         <button className="me-row pressable course-map-reference" type="button" onClick={onReference}>
           <Icon name="chat" />
-          <span>{t('reference.entry')}</span>
+          <span>{t('reference.title')}</span>
           <Icon name="chevron" size={20} className="me-row-chevron" />
         </button>
       )}
