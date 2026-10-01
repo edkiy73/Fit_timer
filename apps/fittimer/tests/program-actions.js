@@ -60,7 +60,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   // ---- меню на ЭКРАНЕ ПРОГРАММЫ ----
   const onStart = await page.evaluate(() => {
     const p = customPrograms.find(x => x.id === 'src1');
-    state.raw = p; state.planIdx = 0; show('scrStart'); buildStartMenu();
+    openStart(p); buildStartMenu();
     return [...document.querySelectorAll('#startMenu button')].map(x => x.textContent.trim());
   });
   ok('на экране программы есть «Дублировать»', onStart.some(t => /Дублировать/.test(t)), onStart.join(' | '));
@@ -82,7 +82,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   const order = await page.evaluate(() => {
     const p = customPrograms.find(x => x.id === 'own1');
-    state.raw = p; state.planIdx = 0; show('scrStart'); buildStartMenu();
+    openStart(p); buildStartMenu();
     return [...document.querySelectorAll('#startMenu button')].map(x => x.textContent.trim());
   });
   ok('порядок пунктов одинаков в обоих меню',
@@ -93,7 +93,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   // у программы ИЗ каталога предлагать нечего — она там уже есть
   const store = await page.evaluate(() => {
     const p = customPrograms.find(x => x.id === 'src1');
-    state.raw = p; state.planIdx = 0; show('scrStart'); buildStartMenu();
+    openStart(p); buildStartMenu();
     return [...document.querySelectorAll('#startMenu button')].map(x => x.textContent.trim());
   });
   ok('у программы из каталога пункта «в каталог» нет', !store.some(t => /каталог/.test(t)));
