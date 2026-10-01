@@ -21,7 +21,7 @@
   --dur-press:120ms;
   --dur-spring:360ms;
   --spring:linear(0,0.5 7%,0.93 15%,1.06 23%,1.04 30%,0.99 40%,1.005 55%,1);
-  --glass-bg:color-mix(in srgb,var(--card,#fff) 78%,transparent);
+  --glass-bg:color-mix(in srgb,var(--card,#fff) 56%,transparent);
   --glass-line:color-mix(in srgb,var(--ink) 8%,transparent);
   --elev-2:0 8px 24px rgb(27 26 36/.12);
   --tabbar-h:68px;
@@ -85,7 +85,7 @@ h2{margin:0 0 8px;font-weight:800}
 
 /* Bottom navigation: the one glass layer, in thumb reach, hidden inside lessons. */
 :root[data-focus-run] .tabbar{display:none}
-.tabbar{position:fixed;z-index:50;left:max(12px,calc(50% - 348px));right:max(12px,calc(50% - 348px));bottom:calc(var(--safe-bottom) + 12px);height:var(--tabbar-h);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-radius:var(--radius-tile);background:var(--glass-bg);backdrop-filter:blur(26px) saturate(1.25);-webkit-backdrop-filter:blur(26px) saturate(1.25);border:1px solid var(--glass-line);box-shadow:var(--elev-2)}
+.tabbar{position:fixed;z-index:50;left:max(12px,calc(50% - 348px));right:max(12px,calc(50% - 348px));bottom:calc(var(--safe-bottom) + 12px);height:var(--tabbar-h);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-radius:var(--radius-tile);background:var(--glass-bg);backdrop-filter:blur(32px) saturate(1.35);-webkit-backdrop-filter:blur(32px) saturate(1.35);border:1px solid var(--glass-line);box-shadow:var(--elev-2);isolation:isolate}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.tabbar{background:var(--card)}}
 .tabbar-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:48px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:600;border-radius:var(--radius-tile)}
 .tabbar-item:focus-visible{outline:2px solid var(--accent);outline-offset:-4px}
@@ -726,7 +726,7 @@ h2{margin:0 0 8px;font-weight:800}
 .me-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px}
 .me-head-text{display:grid;gap:2px;min-width:0}
 .me-head-text h2{margin:0;font-size:34px;line-height:40px;font-weight:800;letter-spacing:-.02em}
-.me-head-text span{overflow:hidden;color:var(--muted);font-size:13px;text-overflow:ellipsis;white-space:nowrap}
+.me-head-text .screen-kicker{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .me-course{grid-template-columns:auto minmax(0,1fr);align-items:center;gap:14px}
 .ring-lg{flex-basis:64px;width:64px;height:64px;font-size:13px}
 .heatmap-wrap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px}
@@ -885,7 +885,7 @@ h2{margin:0 0 8px;font-weight:800}
 .calendar-grid th{padding:4px 0;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase}
 .calendar-grid td{padding:3px 0;text-align:center}
 .calendar-day{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;color:var(--ink);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
-.calendar-day.is-active{background:var(--success);color:var(--on-accent,#fff);font-weight:800}
+.calendar-day.is-active{background:var(--accent);color:var(--on-accent,#fff);font-weight:800}
 .calendar-day.is-today{box-shadow:inset 0 0 0 2px var(--ink)}
 .calendar-day.is-future{color:var(--muted);opacity:.55}
 .calendar-legend{display:flex;align-items:center;gap:8px}
@@ -1018,7 +1018,7 @@ h2{margin:0 0 8px;font-weight:800}
 .me{gap:18px}
 .me-head{margin-bottom:2px}
 .me-head-text{gap:1px}
-.me-head-text span{font-size:14px;line-height:20px;font-weight:500;letter-spacing:-.01em}
+.me-head-text .screen-kicker{font-size:13px;line-height:1.35;font-weight:600;letter-spacing:0}
 .me-head-text h2{font-size:38px;line-height:42px}
 .progress-shell{display:grid;gap:18px}
 .progress-dashboard{display:grid;gap:16px;border:1px solid var(--line);border-radius:var(--radius-tile);padding:18px;background:var(--card);box-shadow:0 1px 0 rgb(255 255 255/.35)}
@@ -1026,7 +1026,7 @@ h2{margin:0 0 8px;font-weight:800}
 .progress-dashboard-head h3{margin:0;font-size:26px;line-height:1.08;letter-spacing:-.02em}
 .progress-dashboard-head p{margin:5px 0 0;color:var(--muted);font-size:13px;line-height:1.4}
 .progress-general{gap:14px}
-.progress-general-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.progress-general-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .progress-metric{display:grid;grid-template-columns:36px minmax(0,1fr);grid-template-rows:auto auto;column-gap:8px;row-gap:1px;align-items:center;min-width:0;border:0;border-radius:20px;padding:12px;background:var(--surface)}
 .progress-metric-icon{grid-row:1/3;display:grid;place-items:center;width:36px;height:36px;border-radius:18px}
 .progress-metric strong{font-size:26px;line-height:1;font-variant-numeric:tabular-nums}
@@ -1119,3 +1119,25 @@ h2{margin:0 0 8px;font-weight:800}
   .progress-course-ring::before{width:72px}
   .progress-course-ring strong{font-size:24px}
 }
+
+
+/* Shared secondary heading text: profile email follows the same screen-kicker rule as Review and other screens. */
+.screen-kicker{color:var(--muted);font-size:13px;font-weight:600;line-height:1.35}
+
+/* Course selector in Profile uses the app bottom sheet, never the platform select menu. */
+.progress-course-head{display:grid;grid-template-columns:1fr;align-items:stretch;gap:14px}
+.progress-course-picker{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:52px;padding:0 16px;border:1px solid var(--line);border-radius:18px;background:var(--surface);color:var(--ink);font:inherit;font-size:14px;font-weight:750;text-align:left;cursor:pointer}
+.progress-course-picker>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.progress-course-picker>svg{flex:none;color:var(--muted);transform:rotate(90deg);margin-right:2px}
+.progress-course-picker:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.courses-sheet .course-option{padding-right:16px}
+.courses-sheet .course-option-check{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;margin-left:8px;border-radius:18px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent-ink)}
+
+/* Practice metrics are grouped and labelled instead of floating at the bottom of the course card. */
+.progress-practice-panel{display:grid;gap:8px;padding:14px;border-radius:20px;background:color-mix(in srgb,var(--listen) 5%,var(--surface))}
+.progress-practice-title{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.progress-practice-title>svg{color:var(--listen)}
+.progress-practice-title>strong{font-size:14px}
+.progress-practice-panel .progress-practice-row{display:flex;align-items:baseline;justify-content:space-between;gap:16px;color:var(--muted);font-size:12px}
+.progress-practice-panel .progress-practice-row>span{min-width:0}
+.progress-practice-panel .progress-practice-row>strong{flex:none;color:var(--ink);font-size:12px;text-align:right}
