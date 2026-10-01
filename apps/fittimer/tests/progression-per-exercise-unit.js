@@ -70,6 +70,46 @@ function runWorkout(exercises, every){
   });
 }
 
+/* ---- частота прогрессии: упражнение переопределяет программу ---- */
+{
+  const inherited = mkEx('Наследует', {progOn:true, repsStep:1, progEvery:null});
+  const custom = mkEx('Своя частота', {progOn:true, repsStep:1, progEvery:2});
+  const off = mkEx('Отключено', {progOn:true, repsStep:1, progEvery:0});
+  need(exerciseProgEvery(inherited, {progression:4}) === 4, 'empty exercise frequency inherits program default');
+  need(exerciseProgEvery(custom, {progression:4}) === 2, 'exercise frequency overrides program default');
+  need(exerciseProgEvery(off, {progression:4}) === 0, 'exercise frequency 0 disables progression');
+  need(exerciseProgEvery(custom, {progression:0}) === 2, 'positive exercise override works even when program default is off');
+}
+{
+  const parsed = parseProgramText(`ПРОГРАММА: Частоты
+ПРОГРЕССИЯ: 4
+ДЕНЬ: Пн
+КРУГИ: 1
+ОТДЫХ МЕЖДУ КРУГАМИ: 30
+УПРАЖНЕНИЕ: Своя
+ФОРМАТ: повторения
+ЗНАЧЕНИЕ: 10
+ПОДХОДЫ: 1
+ОТДЫХ: 30
+УСЛОЖНЯТЬ: да
+ЧАСТОТА ПРОГРЕССИИ: 2
+ШАГ: 1
+ПОТОЛОК: 15
+УПРАЖНЕНИЕ: Без прогрессии
+ФОРМАТ: повторения
+ЗНАЧЕНИЕ: 10
+ПОДХОДЫ: 1
+ОТДЫХ: 30
+УСЛОЖНЯТЬ: да
+ЧАСТОТА ПРОГРЕССИИ: 0
+ШАГ: 1
+ПОТОЛОК: 15`);
+  const p = parsed.program || parsed;
+  const list = normPlans(p)[0].exercises;
+  need(list[0].progEvery === 2, 'parser keeps per-exercise progression frequency');
+  need(list[1].progEvery === 0, 'parser keeps explicit zero progression frequency');
+}
+
 /* ---- обычная прогрессия по повторам ---- */
 {
   const ex = mkEx('Отжимания', {value:'10', type:'reps', progOn:true, trackWeight:false, repsStep:1, repsMax:20});

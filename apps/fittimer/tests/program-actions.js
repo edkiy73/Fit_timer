@@ -83,6 +83,23 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('в списке есть «Дублировать»', inList.some(t => /Дублировать/.test(t)), inList.join(' | '));
   ok('в списке есть «Предложить в каталог»', inList.some(t => /каталог/.test(t)));
 
+  // Реальный клик по ⋮ в списке программ. Раньше обработчик искал .mine-wrap,
+  // хотя карточка называется .mine-card, поэтому меню вообще не открывалось.
+  await page.evaluate(() => { goTab('scrPrograms'); renderMine(); });
+  const ownCard = page.locator('#mineList .mine-card').filter({hasText:'Своя'}).first();
+  await ownCard.locator('.more-btn').click();
+  const programMore = await ownCard.evaluate(card => {
+    const menu = card.querySelector('.ctx-menu');
+    const more = card.querySelector('.more-btn');
+    return {
+      open:!!(menu && menu.classList.contains('open')),
+      expanded:more && more.getAttribute('aria-expanded'),
+      items:menu ? [...menu.querySelectorAll('button')].map(x => x.textContent.trim()) : []
+    };
+  });
+  ok('⋮ в списке программ реально открывает меню',
+     programMore.open && programMore.expanded === 'true', JSON.stringify(programMore));
+
   const order = await page.evaluate(() => {
     const p = customPrograms.find(x => x.id === 'own1');
     openStart(p); buildStartMenu();

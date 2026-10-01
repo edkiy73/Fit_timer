@@ -40,7 +40,7 @@ let eventWorkoutHooks = {
 export function setWorkoutEventHooks(hooks = {}){
   eventWorkoutHooks = {...eventWorkoutHooks, ...hooks};
 }
-import { advanceExerciseProgression, commitExercise, curPlan, draft, ensurePs, exIdx, fmtKg,
+import { advanceExerciseProgression, commitExercise, curPlan, draft, ensurePs, exIdx, exerciseProgEvery, fmtKg,
   liveExercise, normalizeExercise, openExercise, parseProgramText, progAtCeiling, progAxis,
   renderExList, setBuilderWorkoutHooks, loadBuilderDraft, clearExerciseDraft, selectPlanVariant, valueText
 } from './60-builder.js';
@@ -1126,16 +1126,17 @@ function commitFinish(ctx){
     // полного завершения всей тренировки. Если все подходы упражнения реально
     // отмечены «Готово», оно получает свой шаг даже в частичной тренировке.
     // Недоделанное и пропущенное упражнение не получает ничего.
-    if(p.progression && !activityOnly){
-      const every = Math.max(1, +p.progression || 1);
+    if(!activityOnly){
       const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
       const completed = new Set([...(summary.completedIds || []), ...(summary.completedNames || [])].map(String));
       const eligible = [];
       ((pl && pl.exercises) || []).forEach(ex => {
         if(ex.warmup || progAxis(ex) === 'none') return;
         if(!completed.has(String(ex.id || '')) && !completed.has(String(ex.name || ''))) return;
-        // Полностью завершённая прогрессия больше не копит счётчик и не задаёт
-        // бессмысленный вопрос «повышаем?» через N тренировок.
+        const every = exerciseProgEvery(ex, p);
+        // 0 на упражнении отключает его прогрессию; пусто наследует программу.
+        if(every <= 0){ ensurePs(ex).n = 0; return; }
+        // Полностью завершённая прогрессия больше не копит счётчик.
         if(progAtCeiling(p.id, ex, p)){
           ensurePs(ex).n = 0;
           return;

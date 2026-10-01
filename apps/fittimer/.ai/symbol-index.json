@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1679,
-      "chars": 80016,
+      "lines": 1688,
+      "chars": 80333,
       "symbols": [
         "$",
         "accountUserDirtyHook",
@@ -481,8 +481,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 3378,
-      "chars": 156325,
+      "lines": 3405,
+      "chars": 157618,
       "symbols": [
         "activateClientAt",
         "add",
@@ -588,6 +588,7 @@
         "mediaForExercise",
         "mediaItems",
         "networkFailMessage",
+        "newExercisesWithoutImages",
         "next",
         "normHandle",
         "note",
@@ -654,8 +655,8 @@
     },
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
-      "lines": 1923,
-      "chars": 87716,
+      "lines": 1931,
+      "chars": 88166,
       "symbols": [
         "add",
         "addClient",
@@ -737,8 +738,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2493,
-      "chars": 111485,
+      "lines": 2565,
+      "chars": 114560,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -773,6 +774,7 @@
         "ensurePs",
         "exBits",
         "exDirty",
+        "exerciseProgEvery",
         "exFormatState",
         "exRestAfter",
         "exRow",
@@ -781,6 +783,7 @@
         "exWeightKey",
         "fillBuilder",
         "fillExercise",
+        "fillExerciseProgEveryOptions",
         "fillPlanFields",
         "fillProgEveryOptions",
         "finalizeExercise",
@@ -826,6 +829,7 @@
         "progFloor",
         "progPeriodLabel",
         "programDirty",
+        "programHasProgression",
         "programState",
         "progressedRepsRange",
         "progRound",
@@ -872,8 +876,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1953,
-      "chars": 86470,
+      "lines": 1954,
+      "chars": 86525,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -967,7 +971,7 @@
     "src/app/80-platform.js": {
       "kind": "frontend-js",
       "lines": 895,
-      "chars": 38389,
+      "chars": 38423,
       "symbols": [
         "add",
         "advanceFromHeadset",
@@ -1027,7 +1031,7 @@
     "src/app/90-events.js": {
       "kind": "frontend-js",
       "lines": 2650,
-      "chars": 109447,
+      "chars": 109481,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -1214,8 +1218,8 @@
     },
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
-      "lines": 639,
-      "chars": 44669,
+      "lines": 644,
+      "chars": 45152,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1338,6 +1342,8 @@
         "exNowHint",
         "exProgBox",
         "exProgChev",
+        "exProgEvery",
+        "exProgEveryRow",
         "exProgOn",
         "exProgOnHint",
         "exProgSum",

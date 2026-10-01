@@ -10,7 +10,7 @@ import { DAYS, curUser, customPrograms, kvSet, loadSession, loadSessions, localI
 } from './10-data-sync.js';
 import { isPremium, setAccountPlatformHooks } from './20-account.js';
 import { setProgressPlatformHooks } from './30-progress-media.js';
-import { setBuilderPlatformHooks } from './60-builder.js';
+import { programHasProgression, setBuilderPlatformHooks } from './60-builder.js';
 import { completeStep, nextStep, setPause, setWorkoutPlatformHooks, skipStep, stopSpeech } from './70-workout.js';
 
 /* ================= ТЕМА ================= */
@@ -497,7 +497,7 @@ function notifyPlanFor(p, scheduledPlan){
   return plans.length ? plans[Math.max(0, Math.round(+p.rotIdx || 0)) % plans.length] : null;
 }
 function notifyProgressionChanged(p, scheduledPlan){
-  if(!p || !p.progression) return false;
+  if(!p || !programHasProgression(p)) return false;
   const pl = notifyPlanFor(p, scheduledPlan);
   const idx = Math.max(0, normPlans(p).indexOf(pl));
   const prev = previousWorkoutLoad(p, idx);

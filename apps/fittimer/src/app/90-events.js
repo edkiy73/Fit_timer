@@ -52,7 +52,7 @@ import { addClient, curClient, doPublish, loadStoreServer, openClient, openMyCat
 } from './50-trainer-catalog.js';
 import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExerciseAsNew,
   commitExercise, commitPlanFields, curPlan, delExerciseAt, draft, dropFreshEx, dupExerciseAt,
-  clearExerciseDraft, exDirty, exDraft, exIdx, exIsNew, fillPlanFields, markExerciseExisting, hasWeight, initAIForm, normValue, openBuilder,
+  clearExerciseDraft, exDirty, exDraft, exIdx, exIsNew, fillPlanFields, markExerciseExisting, hasWeight, initAIForm, normValue, openBuilder, programHasProgression,
   openExercise, parseProgramText, parseStepNum, parseValue, planIdx, programDirty, renderExList, renderExMedia,
   renderProgControls, saveProgram, selectPlanVariant, shrinkImage, syncCover, syncExDetailsSum, syncExNowHints,
   syncExProgSum, syncExType, syncExWarm, syncRotateUI
@@ -1931,7 +1931,7 @@ export function syncSettingsSum(){
   bits.push(storeCountText(rounds,'round'));
   const rr = (pl && +pl.roundRest) || 0;
   if(rounds > 1 && rr > 0) bits.push(t('builder.restSummary',{time:(rr % 60 === 0 ? (rr / 60) + ' ' + t('store.minuteShort') : rr + ' ' + t('store.secShort'))}));
-  if(draft.progression) bits.push(t('builder.progressionAuto'));
+  if(programHasProgression(draft)) bits.push(t('builder.progressionAuto'));
   $('bSettingsSum').textContent = bits.join(' · ');
 }
 

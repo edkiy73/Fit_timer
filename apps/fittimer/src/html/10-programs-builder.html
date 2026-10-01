@@ -331,12 +331,12 @@
     <div class="pref-row"><span><span data-i18n="builder.autoLoadTitle">Автоматически добавлять нагрузку</span><small data-i18n="builder.progressionSub">повторения и вес станут чуть больше по мере занятий</small></span><button class="switch" id="bProgOn" data-act="toggleBuilderProgression"></button></div>
     <div id="bProgOpts" class="stack hidden">
       <div class="field">
-        <label data-i18n="builder.progressionFrequency">Как часто повышать</label>
+        <label data-i18n="builder.progressionFrequency">По умолчанию</label>
         <select id="bProgEvery"></select>
       </div>
       <div class="note">
         <span class="n-ico" data-icon="chart"></span>
-        <span data-i18n="builder.progressionHint">Нагрузка растёт от пройденных тренировок, а не от календаря: пропуски её не поднимают. У каждого упражнения своя прибавка и свой предел. Перед стартом видно, сколько повышений было, — число можно поправить.</span>
+        <span data-i18n="builder.progressionHint">Считаются только полные выполнения конкретного упражнения. По умолчанию проверяем нагрузку после 4 выполнений. Пропущенные и незавершённые упражнения счётчик не двигают. Эта настройка влияет только на упражнения без своей частоты: если у упражнения задано отдельное значение, используется оно.</span>
       </div>
     </div>
     </div>
@@ -432,6 +432,11 @@
 
       <div id="exProgBox" class="stack hidden">
         <div class="pref-row"><span><span data-i18n="builder.progressOverTime">Усложнять со временем</span><small id="exProgOnHint"></small></span><button type="button" class="switch" id="exProgOn" data-act="toggleExerciseProgression"></button></div>
+        <div class="field hidden" id="exProgEveryRow">
+          <label data-i18n="builder.exerciseProgressionFrequency">Частота проверки этого упражнения</label>
+          <select id="exProgEvery"></select>
+          <p class="field-hint" data-i18n="builder.exerciseProgressionFrequencyHint">Не выбрано — используется настройка программы. 0 — прогрессия этого упражнения отключена.</p>
+        </div>
         <div class="step-grid hidden" id="exStepRow">
           <!-- Порядок пар в разметке = порядок на экране. Вес идёт ПОСЛЕДНИМ:
                он сочетается и с повторениями, и со временем, и в обоих случаях

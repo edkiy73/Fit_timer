@@ -138,7 +138,7 @@ export function blankExercise(){
           rest:45, restAfter:null, media:null, muscles:[], mistakes:'',
           // ось прогрессии: reps | weight | time | none.
           // Каждая ось — свой шаг на одно повышение: вес в кг, повторы числом, время в секундах.
-          prog:'', weight:0, wStep:2, repsStep:1, timeStep:5,
+          prog:'', weight:0, wStep:2, repsStep:1, timeStep:5, progEvery:null,
           // Потолок: выше него прогрессия не поднимает. Без него линейный рост за год
           // доводит до нереальных значений (60 кг гантель, 60 повторений, 5 минут планки).
           repsMax:0, weightMax:0, timeMax:0,
@@ -184,6 +184,11 @@ export function normalizeExercise(ex){
   // ось усложнения и вес: приводим к валидным значениям, чтобы кривой ответ ИИ не ломал показ
   if(ex.prog && !['reps','weight','time','none'].includes(ex.prog)) ex.prog = '';
   ex.weight = parseKg(ex.weight);
+  // Частота проверки конкретного упражнения:
+  // null/пусто = наследовать программу; 0 = полностью отключить прогрессию;
+  // 1..15 = собственный порог выполнений.
+  if(ex.progEvery == null || String(ex.progEvery).trim() === '') ex.progEvery = null;
+  else ex.progEvery = Math.max(0, Math.min(PROG_EVERY_MAX, Math.round(+ex.progEvery || 0)));
   // Шаг 0 — законное значение: «эта ось у этого упражнения не растёт», и именно на
   // нём держится независимая прогрессия формата «повторения и вес» (progStepSize
   // и подсказка «можно усложнить» уже понимают его так). Раньше здесь стоял
@@ -321,24 +326,66 @@ function exFormatState(ex){
   const format = ex.type === 'time' ? 'time' : (hasWeight(ex) ? 'reps_weight' : 'reps');
   return {format, progOn: progAxis(ex) !== 'none'};
 }
-// подпись периода прогрессии программы. Считаем в ПРОЙДЕННЫХ ТРЕНИРОВКАХ, а не в днях:
-// календарь поднимал нагрузку за время отпуска, поэтому от него отказались (см. progAutoSteps)
+// Частота прогрессии — это число ПОЛНЫХ ВЫПОЛНЕНИЙ КОНКРЕТНОГО УПРАЖНЕНИЯ,
+// а не число тренировок программы. У программы хранится общий дефолт; позже
+// отдельное упражнение сможет переопределить его своим значением.
+const PROG_EVERY_DEFAULT = 4;
 const PROG_EVERY_MAX = 15;
-// у программ, созданных до перехода на счёт по тренировкам, здесь мог лежать календарный
-// период (например, 30 — «каждый месяц»): загоняем такое значение в допустимый диапазон
+// у старых программ здесь мог лежать календарный/тренировочный период: оставляем
+// значение в допустимом диапазоне, но для нового/пустого значения используем 4.
 function clampProgEvery(n){
-  return Math.max(1, Math.min(PROG_EVERY_MAX, Math.round(+n || 0) || 6));
+  return Math.max(1, Math.min(PROG_EVERY_MAX, Math.round(+n || 0) || PROG_EVERY_DEFAULT));
 }
 function progPeriodLabel(n){
   n = Math.max(1, Math.round(+n || 1));
-  if(n === 1) return t('builder.everyWorkout');
-  const workouts = appLocale === 'ru' ? plural(n,t('start.workoutOne'),t('start.workoutFew'),t('start.workoutMany')) : t(n === 1 ? 'start.workoutOne' : 'start.workoutFew');
-  return t('builder.everyNWorkouts',{count:n,workouts});
+  if(n === 1) return t('builder.everyExerciseCompletion');
+  if(appLocale === 'ru'){
+    const executions = plural(n, t('builder.exerciseCompletionOne'), t('builder.exerciseCompletionFew'), t('builder.exerciseCompletionMany'));
+    return t('builder.everyNExerciseCompletions',{count:n,executions});
+  }
+  return t('builder.everyNExerciseCompletions',{count:n});
 }
-// «как часто повышать» в настройках программы: 1–15 тренировок
+// Общий дефолт программы: 1–15 выполнений каждого упражнения
 function fillProgEveryOptions(){
   const sel = $('bProgEvery');
   if(sel.options.length) return;
+  for(let n = 1; n <= PROG_EVERY_MAX; n++){
+    const o = document.createElement('option');
+    o.value = String(n);
+    o.textContent = progPeriodLabel(n);
+    sel.appendChild(o);
+  }
+}
+
+export function exerciseProgEvery(ex, program){
+  if(!ex) return 0;
+  if(ex.progEvery != null && String(ex.progEvery).trim() !== ''){
+    return Math.max(0, Math.min(PROG_EVERY_MAX, Math.round(+ex.progEvery || 0)));
+  }
+  return Math.max(0, Math.min(PROG_EVERY_MAX, Math.round(+((program && program.progression) || 0) || 0)));
+}
+
+export function programHasProgression(program){
+  return !!program && normPlans(program).some(pl => (pl.exercises || []).some(ex =>
+    !ex.warmup && progAxis(ex) !== 'none' && exerciseProgEvery(ex, program) > 0
+  ));
+}
+
+function fillExerciseProgEveryOptions(){
+  const sel = $('exProgEvery');
+  if(!sel) return;
+  const inherited = Math.max(0, +((draft && draft.progression) || 0));
+  sel.innerHTML = '';
+  const def = document.createElement('option');
+  def.value = '';
+  def.textContent = inherited
+    ? t('builder.exerciseProgressionUseProgram',{count:inherited})
+    : t('builder.exerciseProgressionUseProgramOff');
+  sel.appendChild(def);
+  const off = document.createElement('option');
+  off.value = '0';
+  off.textContent = t('builder.exerciseProgressionOff');
+  sel.appendChild(off);
   for(let n = 1; n <= PROG_EVERY_MAX; n++){
     const o = document.createElement('option');
     o.value = String(n);
@@ -864,7 +911,7 @@ export function fillBuilder(title){
   $('bProgOn').classList.toggle('on', pOn);
   setShown('bProgOpts', pOn);
   fillProgEveryOptions();
-  $('bProgEvery').value = String(clampProgEvery(draft.progression || 6)); // 6 тренировок — примерно 2-3 недели при 2-3 занятиях в неделю
+  $('bProgEvery').value = String(clampProgEvery(draft.progression || PROG_EVERY_DEFAULT));
   syncCover();
   renderPlanTabs();
   fillPlanFields();
@@ -1067,6 +1114,8 @@ function fillExercise(){
   $('exMistakes').value = ex.mistakes || '';
   $('exVideo').value = ex.video || '';
   $('exWeight').value = ex.weight ? fmtKg(ex.weight) : '';
+  fillExerciseProgEveryOptions();
+  $('exProgEvery').value = ex.progEvery == null ? '' : String(ex.progEvery);
   renderProgControls();
   $('exWarm').classList.toggle('on', !!ex.warmup);
   $('exSide').classList.toggle('on', !!ex.perSide);
@@ -1139,7 +1188,7 @@ export function renderProgControls(){
     $('exProgOn').classList.add('disabled');
     $('exProgOn').disabled = true;
     $('exProgOnHint').textContent = t('builder.progressWarmupOff');
-    ['exStepRow','exDualRow','exStepBothHint','exSwapRow','exSwapBox'].forEach(id => setShown(id, false));
+    ['exProgEveryRow','exStepRow','exDualRow','exStepBothHint','exSwapRow','exSwapBox'].forEach(id => setShown(id, false));
     syncExProgSum(); syncExNowHints();
     return;
   }
@@ -1147,18 +1196,19 @@ export function renderProgControls(){
   $('exProgOn').disabled = false;
 
   const on = progAxis(exDraft) !== 'none';
-  const period = (typeof draft !== 'undefined' && draft && draft.progression) ? draft.progression : 0;
+  const period = exerciseProgEvery(exDraft, draft);
   $('exProgOn').classList.toggle('on', on);
   if(!on){
     $('exProgOnHint').textContent = t('builder.progressOffHint');
-    ['exStepRow','exDualRow','exStepBothHint','exSwapRow','exSwapBox'].forEach(id => setShown(id, false));
+    ['exProgEveryRow','exStepRow','exDualRow','exStepBothHint','exSwapRow','exSwapBox'].forEach(id => setShown(id, false));
     syncExProgSum(); syncExNowHints();
     return;
   }
 
+  setShown('exProgEveryRow', true);
   $('exProgOnHint').textContent = period
     ? t('builder.progressAutoPeriod',{period:progPeriodLabel(period)})
-    : t('builder.progressProgramOff');
+    : t('builder.exerciseProgressionDisabledHint');
 
   const withWeight = hasWeight(exDraft);
   const isTime = exDraft.type === 'time';
@@ -1246,6 +1296,9 @@ export function syncExNowHints(){
 export function syncExProgSum(){
   if(exDraft.warmup){ $('exProgSum').textContent = t('builder.warmupNoGrowth'); return; }
   if(progAxis(exDraft) === 'none'){ $('exProgSum').textContent = t('builder.noGrowth'); return; }
+  const rawEvery = $('exProgEvery') ? $('exProgEvery').value : '';
+  const effectiveEvery = rawEvery === '' ? exerciseProgEvery({...exDraft, progEvery:null}, draft) : Math.max(0, +rawEvery || 0);
+  if(effectiveEvery === 0){ $('exProgSum').textContent = t('builder.exerciseProgressionOff'); return; }
   const num = id => parseStepNum($(id).value);
 
   // Double progression — не две независимые прибавки, а последовательный цикл.
@@ -1355,6 +1408,8 @@ function applyFormTo(target){
   target.mistakes = $('exMistakes').value.trim();
   target.video = $('exVideo').value.trim();
   target.weight = parseKg($('exWeight').value);
+  const rawProgEvery = $('exProgEvery') ? $('exProgEvery').value : '';
+  target.progEvery = rawProgEvery === '' ? null : Math.max(0, Math.min(PROG_EVERY_MAX, Math.round(+rawProgEvery || 0)));
   // читаем оба поля шага независимо — для «повторения и вес» обе цифры реальны одновременно,
   // и явный 0 в любом из них означает «эта ось у этого упражнения не растёт» (не путать
   // с пустым полем, куда ещё не вписали ничего — там остаётся дефолт оси)
@@ -1858,6 +1913,16 @@ export function parseProgramText(txt){
         else p.progression = 0;
         break;
       }
+      case 'ЧАСТОТА ПРОГРЕССИИ': {
+        if(!cur) break;
+        const v = String(val || '').trim().toLowerCase();
+        if(!v || /по умолчанию|inherit|program/.test(v)) cur.progEvery = null;
+        else{
+          const n = parseInt(v.match(/\d+/));
+          if(Number.isFinite(n)) cur.progEvery = Math.max(0, Math.min(PROG_EVERY_MAX, n));
+        }
+        break;
+      }
       case 'ВИДЕО': if(cur && val) cur.video = val; break;
       case 'УСЛОЖНЯТЬ': case 'КАК УСЛОЖНЯТЬ': {
         // новая форма — просто да/нет, ось решает уже распарсенный ФОРМАТ этого же упражнения.
@@ -2301,6 +2366,7 @@ export function initBuilder(){
   setTrainerBuilderHooks({
     enableDrag,
     exRestAfter,
+    exerciseProgEvery,
     fmtKg,
     getExWeight,
     hasWeight,
@@ -2332,6 +2398,7 @@ export function initBuilder(){
     dropFreshEx,
     exDirty,
     exRestAfter,
+    exerciseProgEvery,
     fmtKg,
     getExProgValue,
     getExWeight,
@@ -2344,6 +2411,7 @@ export function initBuilder(){
     progAxis,
     progBaseValue,
     progStepSize,
+    programHasProgression,
     programDirty,
     progressedRepsRange,
     clearExerciseDraft,
@@ -2487,6 +2555,10 @@ export function initBuilder(){
     q.rotate = !q.rotate;
     $('qRotate').classList.toggle('on', q.rotate);
   });
+  $('exProgEvery').onchange = ()=>{
+    exDraft.progEvery = $('exProgEvery').value === '' ? null : Math.max(0, Math.min(PROG_EVERY_MAX, Math.round(+$('exProgEvery').value || 0)));
+    renderProgControls();
+  };
   $('bRounds').onchange = ()=>{ curPlan().rounds = +$('bRounds').value; syncVolHint(); };
   $('qNote').oninput = e => q.note = clampText(e.target.value, 300);
 }

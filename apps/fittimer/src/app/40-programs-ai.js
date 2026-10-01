@@ -2351,6 +2351,7 @@ function exProgToLines(ex, opts){
   const p = opts && opts.program;
   const weightNow = p ? builderProgramsHooks.getExWeight(p.id, ex, p) : (+ex.weight || 0);
   const L = ['УСЛОЖНЯТЬ: ' + (builderProgramsHooks.progAxis(ex) === 'none' ? 'нет' : 'да')];
+  if(ex.progEvery != null) L.push('ЧАСТОТА ПРОГРЕССИИ: ' + Math.max(0, Math.min(15, Math.round(+ex.progEvery || 0))));
   // ВЕС: 0 — не «пустое место», а значимое «снаряд ещё не выбран» (см.
   // weightPending() в 60-builder.js): раньше строку пропускали при нуле, и
   // формат «повторения и вес» без выбранного снаряда терял ВЕС из протокола
@@ -2703,6 +2704,10 @@ export function programToText(p, opts){
   if(p.time) L.push('ВРЕМЯ: ' + p.time);
   if(p.progression){
     L.push(`ПРОГРЕССИЯ: ${p.progression} — проверять нагрузку раз в ${p.progression} ${plural(p.progression, 'выполнение упражнения', 'выполнения упражнения', 'выполнений упражнения')}`);
+  } else {
+    // Важно писать "нет", а не просто опускать строку: отдельные упражнения
+    // могут иметь собственную положительную частоту поверх выключенного дефолта.
+    L.push('ПРОГРЕССИЯ: нет');
   }
   const plans = normPlans(p);
   if(p.rotate && plans.length > 1){
