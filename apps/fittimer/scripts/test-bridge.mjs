@@ -142,6 +142,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "renderStartInfo",
   "renderToday",
   "renderTrainerCard",
+  "restoreProfiles",
   "restoreTrainerClientState",
   "repairLines",
   "resumeWorkoutFromNativeNotification",
