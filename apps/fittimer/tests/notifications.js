@@ -29,7 +29,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.waitForTimeout(900);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(500); }
 
-  const result = await page.evaluate(() => {
+  const result = await page.evaluate(async () => {
     const now = new Date();
     now.setHours(7, 0, 0, 0);
     const iso = localISO(now);
@@ -38,37 +38,40 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       id, name, active:true, progression:0,
       plans:[{days:[day], time, rounds:1, roundRest:0, exercises:[]}]
     });
-    const reset = list => {
-      customPrograms.splice(0, customPrograms.length, ...list);
-      stats.history = [];
+    const reset = async (list, history = []) => {
+      await kvSet(pk('customPrograms'), JSON.stringify(list));
+      await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history})));
+      await loadData();
     };
     const todayOnly = items => items.filter(x => notifyDayKey(new Date(x.at)) === iso);
     const stages = items => items.map(x => x.extra && x.extra.stage);
     const prefs = {workouts:true, progress:true, trainer:true, offers:true};
 
-    reset([p('one','Одна')]);
+    await reset([p('one','Одна')]);
     const one = todayOnly(buildWorkoutNotificationCandidates(now, prefs, new Set()));
 
-    reset(Array.from({length:5},(_,i)=>p('u'+i,'Без времени '+(i+1))));
+    await reset(Array.from({length:5},(_,i)=>p('u'+i,'Без времени '+(i+1))));
     const fiveUntimed = todayOnly(buildWorkoutNotificationCandidates(now, prefs, new Set()));
 
-    reset(Array.from({length:5},(_,i)=>p('s'+i,'Вместе '+(i+1),'18:00')));
+    await reset(Array.from({length:5},(_,i)=>p('s'+i,'Вместе '+(i+1),'18:00')));
     const fiveSame = todayOnly(buildWorkoutNotificationCandidates(now, prefs, new Set()));
 
-    reset(['10:00','12:00','14:00','16:00','18:00'].map((time,i)=>p('d'+i,'Разное '+(i+1),time)));
+    await reset(['10:00','12:00','14:00','16:00','18:00'].map((time,i)=>p('d'+i,'Разное '+(i+1),time)));
     const fiveDifferent = todayOnly(buildWorkoutNotificationCandidates(now, prefs, new Set()));
 
-    reset(Array.from({length:5},(_,i)=>p('p'+i,'Частично '+(i+1))));
-    stats.history = [{d:iso,pid:'p0',status:'partial',meaningful:true,doneExercises:2,plannedExercises:5}];
+    await reset(
+      Array.from({length:5},(_,i)=>p('p'+i,'Частично '+(i+1))),
+      [{d:iso,pid:'p0',status:'partial',meaningful:true,doneExercises:2,plannedExercises:5}]
+    );
     const partial = todayOnly(buildWorkoutNotificationCandidates(now, prefs, new Set()));
 
-    stats.history = [];
+    await reset(Array.from({length:5},(_,i)=>p('p'+i,'Частично '+(i+1))));
     const blocked = new Set([iso+'|p0']);
     const savedBlocked = todayOnly(buildWorkoutNotificationCandidates(now, prefs, blocked));
 
     // Незавершённая сессия блокирует программу целиком. Для программы на тот же
     // день недели это значит: никаких обычных пушей ни сегодня, ни через 7 дней.
-    reset([p('unfinished','Незавершённая')]);
+    await reset([p('unfinished','Незавершённая')]);
     const unblockedAcrossHorizon = buildWorkoutNotificationCandidates(now, prefs, new Set(), new Set());
     const blockedAcrossHorizon = buildWorkoutNotificationCandidates(now, prefs, new Set(), new Set(['unfinished']));
 
@@ -83,7 +86,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     ]);
 
     // Защитный budget: произвольных пассивных касаний не больше трёх в сутки.
-    customPrograms.splice(0, customPrograms.length);
+    await reset([]);
     const passive = limitNotificationCandidates(Array.from({length:5},(_,i)=>({
       at:new Date(now.getTime() + (10+i) * 60000).toISOString(),
       title:'passive '+i, body:'', priority:20-i, extra:{stage:'x'+i,category:'offers'}
