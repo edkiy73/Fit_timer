@@ -562,6 +562,7 @@ export const ru = {
   'notifications.title': 'Когда напоминать',
   'notifications.deliveryNote': 'Одно короткое напоминание в день, в удобное тебе время.',
   'notifications.enabled': 'Напоминать мне',
+  'notifications.saveError': 'Не удалось сохранить. Проверь соединение и попробуй ещё раз.',
   'notifications.enabledHint': 'Выключено, пока не включишь. Разрешение телефона спросим только тогда.',
   'notifications.time': 'Время',
   'notifications.hours': 'Часы',

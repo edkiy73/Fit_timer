@@ -38,6 +38,7 @@ export function NotificationSettingsPanel(){
   const [settings,setSettings]=useState<NotificationSettings>(DEFAULT_NOTIFICATION_SETTINGS);
   const [loaded,setLoaded]=useState(false);
   const [saving,setSaving]=useState(false);
+  const [saveError,setSaveError]=useState(false);
   const [permission,setPermission]=useState<NotificationPermissionState>('unavailable');
   const [exact,setExact]=useState<boolean|null>(null);
   const native=nativeNotificationsAvailable();
@@ -73,20 +74,27 @@ export function NotificationSettingsPanel(){
     return ()=>{live=false;stop();};
   },[]);
 
-  const save=async(patch:Partial<Omit<NotificationSettings,'changedAt'>>)=>{
+  const save=async(patch:Partial<Omit<NotificationSettings,'changedAt'>>):Promise<boolean>=>{
+    const previous=settings;
     const next=nextSettings(settings,patch);
     setSettings(next);
     setSaving(true);
+    setSaveError(false);
     try{
       await patchSettings({notifications:next});
+      return true;
+    }catch{
+      setSettings(previous);
+      setSaveError(true);
+      return false;
     }finally{
       setSaving(false);
     }
   };
 
   const setEnabled=async(enabled:boolean)=>{
-    await save({enabled});
-    if(enabled&&native)await refreshNativeState(true);
+    const saved=await save({enabled});
+    if(saved&&enabled&&native)await refreshNativeState(true);
   };
 
   const askSystemPermission=async()=>{
@@ -116,6 +124,8 @@ export function NotificationSettingsPanel(){
         <h3 id="notification-settings-title">{t('notifications.title')}</h3>
         <p>{t('notifications.deliveryNote')}</p>
       </div>
+
+      {saveError&&<p className="access-error" role="alert">{t('notifications.saveError')}</p>}
 
       <label className="notification-toggle">
         <input

@@ -564,6 +564,7 @@ export const en: Record<keyof typeof ru, string> = {
   'notifications.title': 'When to remind me',
   'notifications.deliveryNote': 'One short reminder a day, at a time that suits you.',
   'notifications.enabled': 'Remind me',
+  'notifications.saveError': "Couldn't save. Check your connection and try again.",
   'notifications.enabledHint': 'Off until you turn it on. We ask for phone permission only then.',
   'notifications.time': 'Time',
   'notifications.hours': 'Hours',
