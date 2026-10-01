@@ -25,7 +25,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.waitForTimeout(700);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(500); }
 
-  const setup = await page.evaluate(async () => {
+  await page.evaluate(async () => {
     const ex = (name, sets = 1) => ({name, type:'reps', value:'10', sets, rest:0, restAfter:0});
     const p = {
       id:'resume-variant-test', name:'Проверка продолжения', active:true, progression:0,
@@ -36,27 +36,39 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
         ]}
       ]
     };
-    customPrograms.push(p);
-    await savePrograms();
-
-    state.raw = p;
-    state.planIdx = 1;
-    state.current = customToProgram(p, 1);
-    state.steps = buildSteps();
-    state.stepIdx = state.steps.findIndex(s =>
-      s.phase === 'work' && s.title === 'Вт 5' && (s.setNo || 1) === 1 && s.round === 1);
-    state.startLoad = workoutLoadSnapshot(p, 1);
-    state.globalStart = Date.now() - 90000;
-    state.pausedTotal = 0;
-    state.paused = false;
-    state.stepDeadline = Date.now() + 42000;
-    state.remaining = 42;
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
     configureWorkoutTiming({prep: 0});
-    state.workoutSessionId = 'test-session-inactivity';
-    state.stepOutcomes = {};
+    openStart(customPrograms.find(x => x.id === p.id));
+    const secondPlan = document.querySelector('#planRow .plan-chip[data-plan-idx="1"]');
+    if(secondPlan) secondPlan.click();
+  });
+  await page.click('#btnStart');
+  await page.waitForSelector('#startModal.open');
+  await page.click('#startFresh');
+  await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
+
+  const setup = await page.evaluate(async () => {
+    const p = customPrograms.find(x => x.id === 'resume-variant-test');
+    const target = state.steps.findIndex(s =>
+      s.phase === 'work' && s.title === 'Вт 5' && (s.setNo || 1) === 1 && s.round === 1);
+    const outcomes = {};
     const firstDone = state.steps.findIndex(x => x.phase === 'work');
-    state.stepOutcomes[workoutStepKey(state.steps[firstDone], firstDone)] = 'done';
+    outcomes[workoutStepKey(state.steps[firstDone], firstDone)] = 'done';
+    startWorkout(target, 90000, {
+      skipPrep:true,
+      sessionId:'test-session-inactivity',
+      outcomes
+    });
     await saveSession();
+
+    const key = pk('workoutSessionsV2');
+    const sessions = JSON.parse(await kvGet(key) || '[]');
+    const stored = sessions.find(x => x.sessionId === 'test-session-inactivity');
+    if(!stored) throw new Error('saved workout session not found');
+    stored.stepDeadline = Date.now() + 42000;
+    stored.remaining = 42;
+    await kvSet(key, JSON.stringify(sessions));
 
     const saved = await loadSession();
     if(!saved || !(saved.stepDeadline > Date.now()) || saved.remaining !== 42){
@@ -71,17 +83,15 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     if(!saved.workout || !saved.workoutSig){
       throw new Error('workout structure snapshot was not saved');
     }
-    // The saved resume point below is a reps step; keep that session realistic after
-    // separately proving that timer recovery fields persist.
-    state.stepDeadline = 0;
-    state.remaining = 0;
-    await saveSession();
+
+    stored.stepDeadline = 0;
+    stored.remaining = 0;
+    await kvSet(key, JSON.stringify(sessions));
 
     openStart(p);
-    state.planIdx = 0;
-    renderPlanRow();
-    renderStartInfo();
-    return {savedStep:state.stepIdx};
+    const firstPlan = document.querySelector('#planRow .plan-chip[data-plan-idx="0"]');
+    if(firstPlan) firstPlan.click();
+    return {savedStep:target};
   });
   ok('сессия сохранена на пятом упражнении', setup.savedStep >= 0, setup.savedStep);
 
@@ -155,7 +165,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   // Сохранённая тренировка — уже начатая работа, а не ссылка на текущую версию
   // программы. После сохранения полностью меняем состав программы и убеждаемся,
   // что «Продолжить» открывает старые шаги, а не новую тренировку под старым stepIdx.
-  const changedSetup = await page.evaluate(async () => {
+  await page.evaluate(async () => {
     tearDownWorkout();
     const p = {
       id:'resume-structure-test', name:'Версия тренировки', active:true, progression:0,
@@ -165,18 +175,27 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
         {id:'snap-c',name:'Старое C',type:'reps',value:'10',sets:1,rest:0,restAfter:0}
       ]}]
     };
-    customPrograms.push(p);
-    await savePrograms();
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
+    configureWorkoutTiming({prep: 0});
+    openStart(customPrograms.find(x => x.id === p.id));
+  });
+  await page.click('#btnStart');
+  await page.waitForSelector('#startModal.open');
+  await page.click('#startFresh');
+  await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
 
-    state.raw = p; state.planIdx = 0; state.current = customToProgram(p, 0);
-    state.steps = buildSteps();
-    state.stepIdx = state.steps.findIndex(s => s.phase === 'work' && s.exId === 'snap-b');
-    state.startLoad = workoutLoadSnapshot(p, 0);
-    state.globalStart = Date.now() - 45000; state.pausedTotal = 0; state.paused = false;
-    state.workoutSessionId = 'session-structure-snapshot';
-    state.stepOutcomes = {};
+  const changedSetup = await page.evaluate(async () => {
+    const p = customPrograms.find(x => x.id === 'resume-structure-test');
+    const target = state.steps.findIndex(s => s.phase === 'work' && s.exId === 'snap-b');
     const first = state.steps.findIndex(s => s.phase === 'work' && s.exId === 'snap-a');
-    state.stepOutcomes[workoutStepKey(state.steps[first], first)] = 'done';
+    const outcomes = {};
+    outcomes[workoutStepKey(state.steps[first], first)] = 'done';
+    startWorkout(target, 45000, {
+      skipPrep:true,
+      sessionId:'session-structure-snapshot',
+      outcomes
+    });
     await saveSession();
 
     const saved = await sessionForProgram(p.id);
@@ -185,8 +204,6 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       ? [...saved.workout.warmup, ...saved.workout.cycle].filter(s=>s.phase==='work').map(s=>s.exName)
       : [];
 
-    // Та же программа теперь совсем другая: другой порядок, удалён B, добавлен X,
-    // увеличено число подходов. Старый абсолютный stepIdx здесь уже означал бы иное.
     p.plans[0].exercises = [
       {id:'snap-c',name:'Новое C',type:'reps',value:'20',sets:2,rest:0,restAfter:0},
       {id:'snap-x',name:'Новое X',type:'reps',value:'30',sets:1,rest:0,restAfter:0},
@@ -194,7 +211,6 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     ];
     await savePrograms();
     openStart(p);
-    configureWorkoutTiming({prep: 0});
     return {savedSig, savedNames, savedStep:saved && saved.stepIdx};
   });
   ok('сессия хранит отпечаток и исходный состав тренировки',
@@ -235,18 +251,21 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await clearSession('session-structure-snapshot', 'resume-structure-test');
   });
 
-  const choices = await page.evaluate(() => {
+  await page.evaluate(() => {
     tearDownWorkout();
     const p = customPrograms.find(x => x.id === 'resume-variant-test');
-    state.raw = p;
-    state.planIdx = 1;
-    state.current = customToProgram(p, 1);
-    state.steps = buildSteps();
-    return workStepChoices().map(c => {
-      const s = state.steps[c.idx];
-      return {label:c.label, meta:c.meta, setNo:s.setNo || 1, side:s.side || 1, round:s.round};
-    });
+    openStart(p);
+    const secondPlan = document.querySelector('#planRow .plan-chip[data-plan-idx="1"]');
+    if(secondPlan) secondPlan.click();
   });
+  await page.click('#btnStart');
+  await page.waitForSelector('#startModal.open');
+  await page.click('#startFresh');
+  await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
+  const choices = await page.evaluate(() => workStepChoices().map(c => {
+    const s = state.steps[c.idx];
+    return {label:c.label, meta:c.meta, setNo:s.setNo || 1, side:s.side || 1, round:s.round};
+  }));
   ok('в выборе каждое упражнение показано один раз',
     choices.length === 5, choices.map(x=>x.label).join(', '));
   ok('выбор всегда ведёт на первый подход/сторону/круг',
@@ -256,7 +275,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     choices.every(x => !/подход|круг|сторон/i.test(x.meta || '')),
     choices.map(x=>x.meta).join(' | '));
 
-  const duplicateNames = await page.evaluate(() => {
+  await page.evaluate(async () => {
     tearDownWorkout();
     const p = {
       id:'duplicate-name-live-test', name:'Одинаковые названия', active:true, progression:0,
@@ -265,16 +284,24 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
         {id:'dup-b',name:'Одинаковое',type:'reps',value:'15',sets:1,rest:0,restAfter:0}
       ]}]
     };
-    customPrograms.push(p);
-    state.raw = p; state.planIdx = 0; state.current = customToProgram(p, 0);
-    state.steps = buildSteps();
-    state.stepIdx = state.steps.findIndex(s => s.phase === 'work' && s.exId === 'dup-b');
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
+    configureWorkoutTiming({prep: 0});
+    openStart(customPrograms.find(x => x.id === p.id));
+  });
+  await page.click('#btnStart');
+  await page.waitForSelector('#startModal.open');
+  await page.click('#startFresh');
+  await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
 
+  const duplicateNames = await page.evaluate(() => {
+    const target = state.steps.findIndex(s => s.phase === 'work' && s.exId === 'dup-b');
+    startWorkout(target, 0, {skipPrep:true});
     const step = state.steps[state.stepIdx];
     const byId = liveExercise(step.exId, step.exName);
     const ambiguousLegacy = liveExercise('', step.exName);
 
-    // Имитируем AI replacement именно второго из двух одноимённых упражнений.
+    const p = customPrograms.find(x => x.id === 'duplicate-name-live-test');
     const replacement = {
       id:'dup-b-new',name:'Заменённое второе',type:'reps',value:'6',sets:1,rest:0,restAfter:0
     };
@@ -306,20 +333,26 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       && duplicateNames.work[1].name === 'Заменённое второе',
     JSON.stringify(duplicateNames.work));
 
-  const isolation = await page.evaluate(async () => {
+  await page.evaluate(async () => {
     tearDownWorkout();
-    const a = customPrograms.find(x => x.id === 'resume-variant-test');
     const b = {
       id:'resume-other-test', name:'Другая тренировка', active:true, progression:0,
       plans:[{days:['Ср'], rounds:1, roundRest:0, exercises:[{name:'Другое',type:'reps',value:'10',sets:1,rest:0,restAfter:0}]}]
     };
-    customPrograms.push(b);
-    await savePrograms();
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, b]));
+    await loadData();
+    configureWorkoutTiming({prep: 0});
+    openStart(customPrograms.find(x => x.id === b.id));
+  });
+  await page.click('#btnStart');
+  await page.waitForSelector('#startModal.open');
+  await page.click('#startFresh');
+  await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
 
-    state.raw = b; state.planIdx = 0; state.current = customToProgram(b, 0);
-    state.steps = buildSteps(); state.stepIdx = 0; state.startLoad = workoutLoadSnapshot(b,0);
-    state.globalStart = Date.now() - 10000; state.pausedTotal = 0; state.paused = false;
-    state.workoutSessionId = 'session-b'; state.stepOutcomes = {};
+  const isolation = await page.evaluate(async () => {
+    const a = customPrograms.find(x => x.id === 'resume-variant-test');
+    const b = customPrograms.find(x => x.id === 'resume-other-test');
+    startWorkout(0, 10000, {skipPrep:true, sessionId:'session-b', outcomes:{}});
     await saveSession();
 
     const aBefore = await sessionForProgram(a.id);
