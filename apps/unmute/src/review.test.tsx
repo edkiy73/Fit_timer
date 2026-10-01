@@ -121,7 +121,7 @@ describe('course review screen',()=>{
     expect(screen.queryByText(/К повтору сегодня/)).toBeNull();
   });
 
-  it('requeues a wrong card until it is answered correctly',async()=>{
+  it('brings a wrong card back once and grades only its first answer',async()=>{
     const user=userEvent.setup();
     const {saveGraded,onExit}=renderReview();
 
@@ -136,7 +136,8 @@ describe('course review screen',()=>{
     input=await screen.findByRole('textbox',{name:'Твой ответ'});
     await user.type(input,'I am home');
     await user.click(screen.getByRole('button',{name:'Проверить'}));
-    expect(saveGraded).toHaveBeenLastCalledWith('general-foundation','card.one',true);
+    // The return is practice: the first (wrong) answer already set the interval.
+    expect(saveGraded).toHaveBeenCalledTimes(1);
 
     await user.click(screen.getByRole('button',{name:'Далее'}));
     expect(await screen.findByRole('heading',{name:'Повтор завершён'})).toBeTruthy();
@@ -146,6 +147,20 @@ describe('course review screen',()=>{
     expect(onExit).toHaveBeenCalledTimes(1);
   });
 
+
+  it('does not loop a card that is wrong again after coming back',async()=>{
+    const user=userEvent.setup();
+    const {saveGraded}=renderReview();
+    await user.click(await screen.findByRole('button',{name:'Начать повтор'}));
+    await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'wrong');
+    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Повторить в конце'}));
+    await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'wrong again');
+    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+    expect(await screen.findByRole('heading',{name:'Повтор завершён'})).toBeTruthy();
+    expect(saveGraded).toHaveBeenCalledTimes(1);
+  });
 
   it('hides the bottom bar while reviewing and offers the still-due cards again at the end',async()=>{
     const user=userEvent.setup();
