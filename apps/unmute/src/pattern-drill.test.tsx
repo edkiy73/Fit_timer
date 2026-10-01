@@ -61,6 +61,9 @@ describe('pattern drill',()=>{
   it('keeps the frozen legacy timing and pass threshold',()=>{
     expect(drillReadMs('one two three')).toBe(1560);
     expect(drillReadMs('one')).toBe(1200);
+    expect(drillSayMs('Nice to meet you')).toBe(3600);
+    expect(drillSayMs('I')).toBe(2200);
+    expect(drillSayMs('one two three four five six seven eight nine ten')).toBe(6500);
     expect(drillScore(7,10)).toBe(70);
     expect(drillPassed(7,10)).toBe(true);
     expect(drillPassed(6,10)).toBe(false);
