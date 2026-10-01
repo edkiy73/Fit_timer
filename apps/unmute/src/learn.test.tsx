@@ -222,7 +222,7 @@ describe('node activity runner',()=>{
     expect(await screen.findByText('Это задание вернётся в конце урока.')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Закрыть урок'}));
     expect(screen.getByRole('heading',{name:'Выйти из урока?'})).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:'Выйти и сохранить'}));
+    await user.click(screen.getByRole('button',{name:'Выйти'}));
     expect(onExit).toHaveBeenCalledTimes(1);
 
     view.unmount();
