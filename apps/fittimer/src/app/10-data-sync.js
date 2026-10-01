@@ -117,8 +117,7 @@ let programsAiDataHooks = {
   loadTrainer: async () => {},
   openDayProgram: () => {},
   renderGreeting: () => {},
-  setClientsShared: () => {},
-  setTrainerShared: () => {},
+  restoreTrainerClientState: () => {},
   getTrainer: () => null,
   weekPlanInfo: () => ({days:[]})
 };
@@ -1460,8 +1459,10 @@ async function applyRemoteAccountDocs(result){
     }
   }
   await accountDataHooks.writeAccountBucket(rec);
-  programsAiDataHooks.setTrainerShared(rec.bucket.trainer || trainerState());
-  programsAiDataHooks.setClientsShared(Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clientsState());
+  programsAiDataHooks.restoreTrainerClientState({
+    trainer: rec.bucket.trainer || trainerState(),
+    clients: Array.isArray(rec.bucket.clients) ? rec.bucket.clients : clientsState()
+  });
   eventDataHooks.syncNotificationSettings();
   return notificationPrefsChanged;
 }
