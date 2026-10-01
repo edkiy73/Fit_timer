@@ -26,6 +26,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "appLocale",
   "applyAndroidUpdateConfig",
   "applyExEdit",
+  "applyThemeFor",
   "applyMedia",
   "asTab",
   "autoReport",
@@ -168,6 +169,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "saveUsers",
   "sendProgramToClient",
   "sessionForProgram",
+  "setDataSyncPlatformHooks",
   "show",
   "snapshotEx",
   "startWorkout",
@@ -177,7 +179,6 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "switchMoreTab",
   "switchUser",
   "syncDockTabs",
-  "syncNativeNotifications",
   "t",
   "tearDownWorkout",
   "trainer",
@@ -196,8 +197,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
    else in the test compatibility surface is getter-only even when its declaration is mutable. */
 export const TEST_BRIDGE_WRITABLE = new Set([
   "callGemini",
-  "callGeminiImage",
-  "syncNativeNotifications"]);
+  "callGeminiImage",]);
 
 export function testBridge(source, fileName = 'module.js'){
   const file = ts.createSourceFile(fileName, source, ts.ScriptTarget.ES2022, false, ts.ScriptKind.JS);

@@ -193,14 +193,17 @@ async function boot(browser, label, errors){
   await two.waitForTimeout(1700);
   await one.evaluate(()=>{
     globalThis.__notificationSyncRuns = [];
-    syncNativeNotifications = async () => {
-      const p = customPrograms.find(x=>x.id==='sync-program');
-      globalThis.__notificationSyncRuns.push({
-        user:currentUser,
-        time:p && p.time,
-        history:stats.history.length
-      });
-    };
+    setDataSyncPlatformHooks({
+      applyThemeFor,
+      getSyncNativeNotifications: () => async () => {
+        const p = customPrograms.find(x=>x.id==='sync-program');
+        globalThis.__notificationSyncRuns.push({
+          user:currentUser,
+          time:p && p.time,
+          history:stats.history.length
+        });
+      }
+    });
   });
   await one.evaluate(async()=>{ await accountSyncAdapter.pull(); });
   const merged = await one.evaluate(()=>{

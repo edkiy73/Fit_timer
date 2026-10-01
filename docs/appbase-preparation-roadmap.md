@@ -547,6 +547,7 @@ Audit conclusion:
 - ✅ 2026-10-01: profile-heavy browser fixtures now hydrate programs/stats/photos through persisted profile storage (`loadData()` / `loadPhotos()`), and profile-switch deletes warm-up via `deleteCustomProgram()`. `customPrograms`, `stats`, `photos` and `progWeights` no longer need bridge setters, reducing writable bindings from **9 → 5**.
 - ✅ 2026-10-01: premium-gated browser scenarios now use actual Premium account state (`account.sub` with a future expiry) instead of replacing `premiumGate()`. The gate is no longer writable through the bridge, reducing writable bindings from **5 → 4**.
 - ✅ 2026-10-01: catalog browser fixtures now enter through the `/api/catalog` boundary (Playwright route) and assertions use `storeAll()`. Raw `storeServer` is no longer exposed by the bridge at all, reducing writable bindings from **4 → 3**.
+- ✅ 2026-10-01: notification-related browser tests now inject their observer through `setDataSyncPlatformHooks()` / `getSyncNativeNotifications` instead of replacing the platform function. Raw `syncNativeNotifications` is no longer exposed by the bridge, reducing writable bindings from **3 → 2**.
 
 First semantic-owner cleanup:
 - account login cancellation is now owned by `cancelLogin()`; five raw login/biometry setters were removed from the public module surface;
