@@ -85,7 +85,8 @@ h2{margin:0 0 8px;font-weight:800}
 
 /* Bottom navigation: the one glass layer, in thumb reach, hidden inside lessons. */
 :root[data-focus-run] .tabbar{display:none}
-.tabbar{position:fixed;z-index:50;left:max(12px,calc(50% - 348px));right:max(12px,calc(50% - 348px));bottom:calc(var(--safe-bottom) + 12px);height:var(--tabbar-h);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-radius:var(--radius-tile);background:var(--glass-bg);backdrop-filter:blur(32px) saturate(1.35);-webkit-backdrop-filter:blur(32px) saturate(1.35);border:1px solid var(--glass-line);box-shadow:var(--elev-2)}
+.tabbar{position:fixed;z-index:50;left:max(12px,calc(50% - 348px));right:max(12px,calc(50% - 348px));bottom:calc(var(--safe-bottom) + 12px);height:var(--tabbar-h);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-radius:var(--radius-tile);background:transparent;border:1px solid var(--glass-line);box-shadow:var(--elev-2);overflow:hidden;isolation:isolate}
+.tabbar::before{content:"";position:absolute;z-index:-1;inset:0;border-radius:inherit;background:color-mix(in srgb,var(--card,#fff) 34%,transparent);backdrop-filter:blur(30px) saturate(1.4);-webkit-backdrop-filter:blur(30px) saturate(1.4)}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.tabbar::before{background:color-mix(in srgb,var(--card,#fff) 82%,transparent)}}
 .tabbar-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:48px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:600;border-radius:var(--radius-tile)}
 .tabbar-item:focus-visible{outline:2px solid var(--accent);outline-offset:-4px}
@@ -1010,9 +1011,6 @@ h2{margin:0 0 8px;font-weight:800}
 
 /* Profile dashboard v2 — one calm overall card + one unified per-course card. */
 .me{gap:18px}
-.me-head{margin-bottom:2px}
-.me-head-text{gap:1px}
-.me-head-text h2{font-size:38px;line-height:42px}
 .progress-shell{display:grid;gap:18px}
 .progress-dashboard{display:grid;gap:16px}
 .progress-dashboard-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
