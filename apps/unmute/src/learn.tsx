@@ -611,9 +611,13 @@ export function NodeRunnerView({
     <div className={'learn-feedback is-sheet '+(result?'learn-feedback-ok':'learn-feedback-wrong')} role="status">
       <div className="learn-feedback-head">
         <span className="learn-feedback-icon" aria-hidden="true"><Icon name={result?'check':'close'} size={22} /></span>
-        <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
+        <div className="learn-feedback-head-copy">
+          <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
+          {!result&&stepIndex!==undefined&&order.slice(pos+1).includes(stepIndex)&&(
+            <p className="learn-hint learn-feedback-return">{t('learn.willReturn')}</p>
+          )}
+        </div>
       </div>
-      {!result&&stepIndex!==undefined&&order.slice(pos+1).includes(stepIndex)&&<p className="learn-hint learn-feedback-return">{t('learn.willReturn')}</p>}
       {!result&&accepted&&(
         <span><LexiconText text={t('learn.accepted',{answer:accepted})} refs={activity.lexiconRefs} /></span>
       )}
