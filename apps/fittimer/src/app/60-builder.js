@@ -365,6 +365,12 @@ export function exerciseProgEvery(ex, program){
   return Math.max(0, Math.min(PROG_EVERY_MAX, Math.round(+((program && program.progression) || 0) || 0)));
 }
 
+export function programHasProgression(program){
+  return !!program && normPlans(program).some(pl => (pl.exercises || []).some(ex =>
+    !ex.warmup && progAxis(ex) !== 'none' && exerciseProgEvery(ex, program) > 0
+  ));
+}
+
 function fillExerciseProgEveryOptions(){
   const sel = $('exProgEvery');
   if(!sel) return;
@@ -2368,6 +2374,7 @@ export function initBuilder(){
   setTrainerBuilderHooks({
     enableDrag,
     exRestAfter,
+    exerciseProgEvery,
     fmtKg,
     getExWeight,
     hasWeight,
@@ -2411,6 +2418,7 @@ export function initBuilder(){
     progAxis,
     progBaseValue,
     progStepSize,
+    programHasProgression,
     programDirty,
     progressedRepsRange,
     clearExerciseDraft,
