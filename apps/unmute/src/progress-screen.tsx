@@ -20,7 +20,7 @@ import type { RecordMap } from '@appbase/core/document-sync.js';
 import type { TimedFlag } from './progress';
 import { withAllLearningDays } from './learning-days';
 import { Loader } from './loader';
-import { Icon } from './icons';
+import { Icon, type IconName } from './icons';
 
 const STATS_QUERY_KEY='progress-screen-stats';
 const COURSE_QUERY_KEY='progress-screen-course';
@@ -232,12 +232,23 @@ export function useProgressDetails(setId:string):ProgressDetailsRuntime{
   };
 }
 
-function MetricCard({value,label}:{value:string;label:string}){
+function MetricCard({
+  value,
+  label,
+  icon,
+  tone='accent'
+}:{
+  value:string;
+  label:string;
+  icon:IconName;
+  tone?:'accent'|'success'|'listen';
+}){
   return (
-    <article className="progress-metric">
+    <div className={'progress-metric is-'+tone}>
+      <span className="progress-metric-icon" aria-hidden="true"><Icon name={icon} size={20} /></span>
       <strong>{value}</strong>
       <span>{label}</span>
-    </article>
+    </div>
   );
 }
 
@@ -305,15 +316,16 @@ export function ProgressView({
   if(!runtime.state||!details.stats||!details.words)return null;
   const summary=buildProgressSummary(runtime.state,details.stats,details.words,todayDay,learningDays);
 
-  return (
-    <section className="progress-shell" aria-labelledby="progress-title">
-      {embedded
-        ? <h3 id="progress-title" className="section-title">{t('progress.title')}</h3>
-        : <>
-            <div className="learn-header">{back}</div>
-            <h2 id="progress-title">{t('progress.title')}</h2>
-          </>}
+  const coursePercent=summary.requiredDays>0
+    ? Math.min(100,Math.round((summary.completedDays/summary.requiredDays)*100))
+    : 0;
+  const selectedCourse=courses.find(course=>course.id===selectedCourseId)?.label??runtime.state.set.id;
+  const currentStage=runtime.state.currentDayIndex!==null
+    ? t('progress.currentDay',{current:runtime.state.currentDayIndex,total:summary.requiredDays})
+    : t('progress.courseComplete');
 
+  return (
+    <section className="progress-shell" aria-label={t('progress.title')}>
       {!summary.hasActivity ? (
         <div className="learn-state progress-empty">
           <strong>{t('progress.emptyTitle')}</strong>
@@ -324,24 +336,32 @@ export function ProgressView({
         </div>
       ) : (
         <>
-          <article className="progress-section progress-general">
-            <div className="progress-section-head">
-              <h3>{t('progress.generalTitle')}</h3>
+          <article className="progress-dashboard progress-general">
+            <div className="progress-dashboard-head">
+              <div>
+                <h3>{t('progress.generalTitle')}</h3>
+                <p>{t('progress.generalLead')}</p>
+              </div>
             </div>
-            <div className="progress-overview">
-              <MetricCard value={String(summary.learningDays)} label={t('progress.learningDays')} />
-              <MetricCard value={String(summary.streak)} label={t('progress.streak')} />
-              <MetricCard value={String(summary.words)} label={t('progress.words')} />
+
+            <div className="progress-general-metrics">
+              <MetricCard value={String(summary.learningDays)} label={t('progress.learningDays')} icon="book" tone="accent" />
+              <MetricCard value={String(summary.streak)} label={t('progress.streak')} icon="flame" tone="success" />
+              <MetricCard value={String(summary.words)} label={t('progress.words')} icon="progress" tone="listen" />
             </div>
+
             <ActivityCalendar
               learningDays={runtime.state?withAllLearningDays(runtime.state.progress,learningDays).learningDays:null}
               todayDay={todayDay}
             />
           </article>
 
-          <article className="progress-section progress-course-section">
-            <div className="progress-section-head progress-course-head">
-              <h3>{t('progress.courseTitle')}</h3>
+          <article className="progress-dashboard progress-course-dashboard">
+            <div className="progress-dashboard-head progress-course-head">
+              <div>
+                <h3>{t('progress.courseTitle')}</h3>
+                <p className="progress-course-name">{selectedCourse}</p>
+              </div>
               {courses.length>1&&onCourseChange&&(
                 <label className="progress-course-picker">
                   <span className="sr-only">{t('progress.courseLabel')}</span>
@@ -351,50 +371,78 @@ export function ProgressView({
                 </label>
               )}
             </div>
-            <div className="progress-overview">
-              <MetricCard value={summary.completedDays+'/'+summary.requiredDays} label={t('progress.courseDays')} />
-              <MetricCard value={String(summary.activeCards)} label={t('progress.cards')} />
-              <MetricCard value={String(summary.dueNow)} label={t('progress.dueNow')} />
+
+            <div className="progress-course-hero">
+              <div
+                className="progress-course-ring"
+                style={{'--course-progress':coursePercent+'%'} as React.CSSProperties}
+                role="img"
+                aria-label={t('progress.coursePercent',{percent:coursePercent})}
+              >
+                <div>
+                  <strong>{coursePercent}%</strong>
+                  <span>{t('progress.courseProgress')}</span>
+                </div>
+              </div>
+
+              <div className="progress-course-now">
+                <span className="progress-eyebrow">{t('progress.currentStage')}</span>
+                <strong>{currentStage}</strong>
+                <div className="progress-course-track" aria-hidden="true">
+                  <span style={{width:coursePercent+'%'}} />
+                </div>
+                <small>{t('progress.courseDaysValue',{done:summary.completedDays,total:summary.requiredDays})}</small>
+              </div>
             </div>
-            <div className="progress-practice-row">
-              <span>{t('progress.drill')}: <strong>{summary.drill}</strong></span>
-              <span>{t('progress.listening')}: <strong>{summary.listening}</strong></span>
-              <span>{t('progress.speaking')}: <strong>{summary.speaking}</strong></span>
+
+            <div className="progress-course-kpis">
+              <div>
+                <span className="progress-kpi-icon is-review"><Icon name="review" size={18} /></span>
+                <strong>{summary.dueNow}</strong>
+                <span>{t('progress.dueNow')}</span>
+              </div>
+              <div>
+                <span className="progress-kpi-icon is-card"><Icon name="book" size={18} /></span>
+                <strong>{summary.activeCards}</strong>
+                <span>{t('progress.cardsShort')}</span>
+              </div>
+              <div>
+                <span className="progress-kpi-icon is-listen"><Icon name="speaker" size={18} /></span>
+                <strong>{summary.listening}</strong>
+                <span>{t('progress.listeningShort')}</span>
+              </div>
+              <div>
+                <span className="progress-kpi-icon is-speak"><Icon name="mic" size={18} /></span>
+                <strong>{summary.speaking}</strong>
+                <span>{t('progress.speakingShort')}</span>
+              </div>
+            </div>
+
+            <div className="progress-course-detail">
+              <div className="progress-course-detail-head">
+                <span>{t('progress.answersTitle')}</span>
+                {summary.answers.attempts>0&&<strong>{t('progress.accuracy',{percent:summary.answers.accuracy})}</strong>}
+              </div>
+              {summary.answers.attempts>0 ? (
+                <>
+                  <div className="progress-answer-bar" aria-hidden="true">
+                    <span style={{width:summary.answers.accuracy+'%'}} />
+                  </div>
+                  <div className="progress-answer-meta">
+                    <span>{t('progress.correct')}: <strong>{summary.answers.correct}</strong></span>
+                    <span>{t('progress.wrong')}: <strong>{summary.answers.wrong}</strong></span>
+                    <span>{t('progress.attempts')}: <strong>{summary.answers.attempts}</strong></span>
+                  </div>
+                </>
+              ) : <p className="progress-muted">{t('progress.answersEmpty')}</p>}
+            </div>
+
+            <div className="progress-practice-strip">
+              <span><Icon name="progress" size={18}/>{t('progress.drillShort')} <strong>{summary.drill}</strong></span>
+              {summary.speedAverage!==null&&<span>{t('progress.speedShort')} <strong>{summary.speedAverage}%</strong></span>}
+              {summary.dialogueAverage!==null&&<span>{t('progress.dialogueShort')} <strong>{summary.dialogueAverage}%</strong></span>}
             </div>
           </article>
-
-          <article className="progress-section">
-            <div className="progress-section-head">
-              <h3>{t('progress.answersTitle')}</h3>
-              {summary.answers.attempts>0&&<strong>{t('progress.accuracy',{percent:summary.answers.accuracy})}</strong>}
-            </div>
-            {summary.answers.attempts>0 ? (
-              <div className="progress-mini-grid">
-                <MetricCard value={String(summary.answers.attempts)} label={t('progress.attempts')} />
-                <MetricCard value={String(summary.answers.correct)} label={t('progress.correct')} />
-                <MetricCard value={String(summary.answers.wrong)} label={t('progress.wrong')} />
-              </div>
-            ) : (
-              <p className="progress-muted">{t('progress.answersEmpty')}</p>
-            )}
-          </article>
-
-          {(summary.speedSamples>0||summary.dialogueSamples>0)&&(
-            <article className="progress-section">
-              <div className="progress-section-head">
-                <h3>{t('progress.performanceTitle')}</h3>
-              </div>
-              <ul className="stat-list">
-                {summary.speedAverage!==null&&(
-                  <StatRow label={t('progress.speedLatest')} detail={t('progress.samples',{count:summary.speedSamples})} value={summary.speedAverage+'%'} />
-                )}
-                {summary.dialogueAverage!==null&&(
-                  <StatRow label={t('progress.dialogueLatest')} detail={t('progress.samples',{count:summary.dialogueSamples})} value={summary.dialogueAverage+'%'} />
-                )}
-              </ul>
-              <p className="progress-muted">{t('progress.latestNote')}</p>
-            </article>
-          )}
         </>
       )}
     </section>
