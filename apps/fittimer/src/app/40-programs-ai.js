@@ -3232,9 +3232,22 @@ export function clientSum(c){
 
 /* Setters for state owned by this chunk and changed from other chunks.
    Other chunks read these bindings directly but write them only through the owner. */
-export function setClientIdxShared(value){ clientIdx = value; return clientIdx; }
+export function activateClientAt(index){
+  clientIdx = Number.isInteger(index) ? index : -1;
+  return clientIdx;
+}
+export function clearActiveClient(){
+  clientIdx = -1;
+}
 export function setClientsShared(value){ clients = value; return clients; }
-export function setCoachPhotoDraftShared(value){ coachPhotoDraft = value; return coachPhotoDraft; }
+export function resetCoachPhotoDraft(photo){
+  coachPhotoDraft = photo || '';
+  return coachPhotoDraft;
+}
+export function useUploadedCoachPhoto(data){
+  coachPhotoDraft = data || '';
+  return coachPhotoDraft;
+}
 export function appendImagesToTray(items){
   imgTray.push(...(Array.isArray(items) ? items.filter(Boolean) : []));
   return imgTray.length;
