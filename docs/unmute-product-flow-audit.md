@@ -1106,6 +1106,8 @@ started && queue finished
 
 ### P1/P2. Настройки уведомлений оптимистично меняются даже если save упал
 
+✅ сделано (#443): откат переключателя + сообщение об ошибке.
+
 `NotificationSettingsPanel.save()` сначала:
 
 ```
@@ -3560,6 +3562,8 @@ writeCourseProgress(...)
 Статус: **P1**.
 
 #### P1 — onboarding persistence failure всё ещё проглатывается
+
+✅ сделано (#443): при ошибке онбординг остаётся открытым и показывает ошибку.
 
 В `OnboardingGate.finish()`:
 
