@@ -2704,6 +2704,10 @@ export function programToText(p, opts){
   if(p.time) L.push('ВРЕМЯ: ' + p.time);
   if(p.progression){
     L.push(`ПРОГРЕССИЯ: ${p.progression} — проверять нагрузку раз в ${p.progression} ${plural(p.progression, 'выполнение упражнения', 'выполнения упражнения', 'выполнений упражнения')}`);
+  } else {
+    // Важно писать "нет", а не просто опускать строку: отдельные упражнения
+    // могут иметь собственную положительную частоту поверх выключенного дефолта.
+    L.push('ПРОГРЕССИЯ: нет');
   }
   const plans = normPlans(p);
   if(p.rotate && plans.length > 1){
