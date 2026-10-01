@@ -536,6 +536,7 @@ Audit conclusion:
 - highest-value candidates are the single-consumer setters concentrated in event/platform/account UI wiring (audio/voice settings, login draft state, theme/hands-free state), because their ownership can usually be made clearer without changing persistence or protocols;
 - builder draft/exercise setters remain intentionally shared for now: they have several real consumers across program AI, workout and event flows, so replacing them should be done only together with a focused builder-state API;
 - the browser-test bridge remains the other Phase 13 cleanup target. Convert tests from internal binding mutation/stubbing to UI/public behavior as those tests are touched, then shrink the bridge from measured usage rather than deleting it wholesale.
+- ✅ 2026-10-01: added `scripts/audit-test-bridge.mjs`, a read-only audit that measures which bridged bindings browser callbacks actually read and which ones they overwrite. It intentionally does not change the bridge yet; the next cleanup can be scoped from measured usage and kept separate from concurrent product work.
 
 First semantic-owner cleanup:
 - account login cancellation is now owned by `cancelLogin()`; five raw login/biometry setters were removed from the public module surface;
