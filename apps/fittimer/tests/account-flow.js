@@ -313,12 +313,11 @@ async function boot(b, label, errs, url){
      await four.evaluate(() => !isPremium() && !account.sub),
      await four.evaluate(() => JSON.stringify(account.sub)));
 
-  // теперь по-настоящему
-  await four.evaluate((mail) => {
-    pmPlan = 'month';
-    $('payEmail').value = mail;
-    $('payModal').classList.add('open');
-  }, MAIL3);
+  // теперь по-настоящему — выбираем тариф через реальный UI, без записи внутреннего состояния
+  await four.click('#btnPremium');
+  await four.click('#pmPlans .pm-plan[data-plan="month"]');
+  await four.click('#pmBuy');
+  await four.fill('#payEmail', MAIL3);
   await four.click('#payGo');
   await four.waitForTimeout(700);
   await four.click('#loginGo');          // прислать код
