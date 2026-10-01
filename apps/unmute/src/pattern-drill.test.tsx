@@ -8,6 +8,7 @@ import {
   PatternDrillView,
   drillPassed,
   drillReadMs,
+  drillSayMs,
   drillScore
 } from './pattern-drill';
 
@@ -58,7 +59,7 @@ function renderDrill(
 }
 
 describe('pattern drill',()=>{
-  it('keeps the frozen legacy timing and pass threshold',()=>{
+  it('scales speaking time by phrase length and keeps the 70% pass threshold',()=>{
     expect(drillReadMs('one two three')).toBe(1560);
     expect(drillReadMs('one')).toBe(1200);
     expect(drillSayMs('Nice to meet you')).toBe(3600);
