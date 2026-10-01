@@ -181,7 +181,7 @@ const progEn = (name) => `ПРОГРАММА: ${name}
   // ---- и вот теперь она в каталоге ----
   const after = await page.evaluate(async (name) => {
     await loadStoreServer();
-    const it = storeServer.find(x => x.name === name);
+    const it = storeAll().find(x => x.name === name);
     return {found: !!it, by: it && it.by, cat: it && it.cat,
             inAll: storeAll().some(x => x.name === name), all: storeAll().length};
   }, NAME);
