@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { SignInForm, useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { sharedUiLocale, useI18n } from '@appbase/ui-react/i18n.js';
@@ -36,6 +36,10 @@ export function MeScreen(){
     ? profileStatsCourseOverride
     : '';
   const [statsCourseId,setStatsCourseIdState] = useState(rememberedCourseId);
+  useEffect(()=>{
+    if(statsCourseId||!profileStatsCourseOverride)return;
+    if(availableCourseIds.has(profileStatsCourseOverride))setStatsCourseIdState(profileStatsCourseOverride);
+  },[catalog.data,statsCourseId]);
   const selectedCourseId = statsCourseId || activeCourseId;
   const setStatsCourseId=(id:string)=>{
     profileStatsCourseOverride=id;
