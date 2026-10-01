@@ -1,4 +1,5 @@
 import { createClient } from '@appbase/core/observability.js';
+import { untrackedFetch } from '@appbase/core/busy-buttons.js';
 import { authClient } from './auth';
 
 declare const __APP_BUILD_ID__: string;
@@ -6,7 +7,7 @@ declare const __APP_BUILD_ID__: string;
 const client = createClient({
   post: async body => {
     try{
-      const response = await fetch('/api/auth', {
+      const response = await untrackedFetch('/api/auth', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify(body)

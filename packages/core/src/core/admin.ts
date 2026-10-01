@@ -33,7 +33,10 @@ export interface AdminError extends Error {
 export function createAdminClient(options: AdminClientOptions = {}): AdminClient {
   const endpoint = options.endpoint || '/api/admin';
   const healthEndpoint = options.healthEndpoint || '/api/health';
-  const fetchImpl = options.fetch || globalThis.fetch;
+  // globalThis.fetch is looked up per request, so a wrapper installed later (busy buttons) applies.
+  const fetchImpl = options.fetch || (typeof globalThis.fetch === 'function'
+    ? (input: RequestInfo | URL, init?: RequestInit) => globalThis.fetch(input, init)
+    : undefined);
 
   async function json(response: Response): Promise<Record<string, unknown>> {
     let payload: Record<string, unknown> = {};
