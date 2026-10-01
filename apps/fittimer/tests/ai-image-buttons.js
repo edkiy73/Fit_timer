@@ -36,7 +36,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     account.email = 'image-test@example.com';
     account.syncToken = 'image-test-token';
     account.sub = {plan:'year', until:'2099-01-01'};
-    identity.deviceId = 'image-test-device';
+    await kvSet('deviceId', 'image-test-device'); await loadIdentity();
     customPrograms.push({id: 'pd', name: 'Силовая', plans: [{days: ['Пн'], rounds: 1, roundRest: 0,
       exercises: [{name: 'Присед', type: 'reps', value: 10, rest: 30}]}]});
     await savePrograms(); openBuilder('pd');

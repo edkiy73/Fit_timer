@@ -73,7 +73,11 @@ async function boot(browser, label, errors){
     await apiPost('/api/auth',{action:'set_handle',email,deviceId:identity.deviceId,syncToken:r.syncToken,
       handle:'@' + email.split('@')[0].replace(/[^a-z0-9]/g, '')});
     account.email=email; account.sub=r.sub; account.syncToken=r.syncToken;
-    await saveAccount(); identity.email=email; await saveIdentity();
+    await saveAccount();
+    const persistedIdentity = JSON.parse(await kvGet(pk('identity')) || '{}');
+    persistedIdentity.email = email;
+    await kvSet(pk('identity'), JSON.stringify(persistedIdentity));
+    await loadIdentity();
     await connectAccountSync();
   }, MAIL);
 

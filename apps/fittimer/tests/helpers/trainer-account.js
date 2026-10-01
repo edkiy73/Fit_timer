@@ -28,7 +28,10 @@ async function becomeTrainer(page, opts){
     account.sub = r.sub || null;
     account.linkedAt = new Date().toISOString();
     await saveAccount();
-    identity.email = o.email; await saveIdentity();
+    const persistedIdentity = JSON.parse(await kvGet(pk('identity')) || '{}');
+    persistedIdentity.email = o.email;
+    await kvSet(pk('identity'), JSON.stringify(persistedIdentity));
+    await loadIdentity();
     await enableTrainerMode();
     restoreTrainerClientState({trainer: Object.assign({}, trainer, o.trainer, {handle: account.handle, on: true})});
     await saveTrainer({deferSync: true});
