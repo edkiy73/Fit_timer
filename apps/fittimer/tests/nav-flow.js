@@ -117,7 +117,7 @@ const screen = page => page.evaluate(() => (document.querySelector('.screen.on')
 
   // ---- выключаем — раздел уходит ----
   await page.evaluate(async () => {
-    trainer.on = false;
+    restoreTrainerClientState({trainer: Object.assign({}, trainer, {on: false}), clients});
     await saveTrainer();
     renderTrainerCard();
   });
