@@ -658,8 +658,8 @@
     },
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
-      "lines": 2012,
-      "chars": 90953,
+      "lines": 2023,
+      "chars": 91445,
       "symbols": [
         "add",
         "addClient",
