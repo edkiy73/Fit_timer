@@ -353,6 +353,16 @@ function runWorkout(exercises, every){
     'existing compatible manual mode is preserved');
 }
 {
+  const ex = mkEx('Выключенная прогрессия', {type:'reps', progOn:false, trackWeight:false,
+    loadType:'none', repsStep:1});
+  setExerciseLoadType(ex, 'weight', false);
+  need(ex.loadType === 'weight' && ex.progOn === false,
+    'changing load type does not silently enable explicitly disabled progression');
+  setExerciseMetric(ex, 'time', false);
+  need(ex.type === 'time' && ex.progOn === false,
+    'changing reps/time does not silently enable explicitly disabled progression');
+}
+{
   const ex = mkEx('Смена на время', {type:'reps', progOn:true, trackWeight:true, weight:10,
     repsStep:1, wStep:2, repsMax:14, progMode:'double_range', loadType:'weight', dualProg:true});
   setExerciseMetric(ex, 'time', false);
