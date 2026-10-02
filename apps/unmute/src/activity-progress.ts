@@ -2,6 +2,7 @@ import { authClient } from './auth';
 import { dayNumberFromKey } from './engine/course-progress';
 import { recordAnswer } from './engine/learner-stats';
 import type { PracticeSrsKind } from './engine/practice-srs';
+import type { SentenceResponseKind } from './engine/sentence-progression';
 import {
   completeManualNode,
   gradeCourseCard,
@@ -48,7 +49,8 @@ export function buildGradedActivityProgress(
   deviceId:string,
   activityId:string,
   correct:boolean,
-  clock:ActivitySaveClock
+  clock:ActivitySaveClock,
+  responseKind?:SentenceResponseKind
 ):{course:CourseProgressDocument;stats:StatsProgressDocument}{
   return {
     course:gradeCourseCard(
@@ -57,7 +59,8 @@ export function buildGradedActivityProgress(
       correct,
       clock.dayNumber,
       clock.dayKey,
-      clock.at
+      clock.at,
+      responseKind
     ),
     stats:recordAnswer(stats,deviceId,activityId,correct,clock.at)
   };
@@ -187,6 +190,7 @@ export async function saveGradedActivity(
   setId:string,
   activityId:string,
   correct:boolean,
+  responseKind?:SentenceResponseKind,
   now=new Date()
 ):Promise<void>{
   const [course,stats,deviceId]=await Promise.all([
@@ -200,7 +204,8 @@ export async function saveGradedActivity(
     deviceId,
     activityId,
     correct,
-    activitySaveClock(now)
+    activitySaveClock(now),
+    responseKind
   );
 
   // Course progress is the learner-critical write. Stats are written second so an
