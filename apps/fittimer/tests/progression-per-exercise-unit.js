@@ -110,6 +110,139 @@ function runWorkout(exercises, every){
   need(list[1].progEvery === 0, 'parser keeps explicit zero progression frequency');
 }
 
+/* ---- parser materializes explicit semantic modes for existing kg protocol too ---- */
+{
+  const parsed = parseProgramText(`ПРОГРАММА: Семантика
+ПРОГРЕССИЯ: 2
+ДЕНЬ: Пн
+КРУГИ: 1
+УПРАЖНЕНИЕ: Двойная
+ФОРМАТ: повторения и вес
+ЗНАЧЕНИЕ: 8-10
+ВЕС: 10
+ПОДХОДЫ: 3
+ОТДЫХ: 60
+УСЛОЖНЯТЬ: да
+ШАГ ПОВТОРОВ: 1
+ШАГ ВЕСА: 2
+ПОТОЛОК ПОВТОРОВ: 14
+ПОТОЛОК ВЕСА: 30
+ПРИ ПОТОЛКЕ: да
+УПРАЖНЕНИЕ: Только вес
+ФОРМАТ: повторения и вес
+ЗНАЧЕНИЕ: 10
+ВЕС: 8
+ПОДХОДЫ: 3
+ОТДЫХ: 60
+УСЛОЖНЯТЬ: да
+ШАГ ВЕСА: 2
+ПОТОЛОК ВЕСА: 24
+УПРАЖНЕНИЕ: Параллельно
+ФОРМАТ: повторения и вес
+ЗНАЧЕНИЕ: 10
+ВЕС: 8
+ПОДХОДЫ: 3
+ОТДЫХ: 60
+УСЛОЖНЯТЬ: да
+ШАГ ПОВТОРОВ: 1
+ШАГ ВЕСА: 2
+ПОТОЛОК ПОВТОРОВ: 16
+ПОТОЛОК ВЕСА: 24`);
+  const list = normPlans(parsed.program || parsed)[0].exercises;
+  need(list[0].loadType === 'weight' && list[0].progMode === 'double_range',
+    'parser persists double_range semantic mode');
+  need(list[1].loadType === 'weight' && list[1].progMode === 'weight',
+    'parser persists weight-only semantic mode');
+  need(list[2].loadType === 'weight' && list[2].progMode === 'parallel',
+    'parser persists legacy simultaneous reps+weight as parallel');
+}
+
+/* ---- AI protocol resistance → та же модель, что ручной редактор ---- */
+{
+  const parsed = parseProgramText(`ПРОГРАММА: Резинки
+ПРОГРЕССИЯ: 2
+ДЕНЬ: Пн
+КРУГИ: 1
+ОТДЫХ МЕЖДУ КРУГАМИ: 30
+УПРАЖНЕНИЕ: Тяга резинки
+ФОРМАТ: повторения
+ЗНАЧЕНИЕ: 12-15
+НАГРУЗКА: сопротивление
+СОПРОТИВЛЕНИЕ: Среднее
+УРОВНИ СОПРОТИВЛЕНИЯ: Лёгкое | Среднее | Сильное | Очень сильное
+ПОДХОДЫ: 3
+ОТДЫХ: 60
+УСЛОЖНЯТЬ: да
+ШАГ ПОВТОРОВ: 2
+ПОТОЛОК ПОВТОРОВ: 18`);
+  const ex = normPlans(parsed.program || parsed)[0].exercises[0];
+  need(ex.loadType === 'level' && ex.progMode === 'level' && ex.loadLevel === 1,
+    'parser maps resistance protocol to level strategy/current base: ' + JSON.stringify(ex));
+  need(ex.loadLevels.map(x => x.key || x.label).join(',') === 'light,medium,strong,veryStrong',
+    'built-in RU resistance labels become canonical keys');
+  need(ex.repsStep === 2 && ex.repsMax === 18,
+    'reps→resistance keeps explicit rep step and ceiling');
+}
+{
+  const parsed = parseProgramText(`ПРОГРАММА: Фиксированная резинка
+ПРОГРЕССИЯ: 2
+ДЕНЬ: Пн
+КРУГИ: 1
+УПРАЖНЕНИЕ: Разведение
+ФОРМАТ: повторения
+ЗНАЧЕНИЕ: 12
+НАГРУЗКА: сопротивление
+СОПРОТИВЛЕНИЕ: Strong
+УРОВНИ СОПРОТИВЛЕНИЯ: Light | Medium | Strong | Very strong
+ПОДХОДЫ: 3
+ОТДЫХ: 45
+УСЛОЖНЯТЬ: да
+ШАГ: 2
+ПОТОЛОК: 20`);
+  const ex = normPlans(parsed.program || parsed)[0].exercises[0];
+  need(ex.loadType === 'level' && ex.progMode === 'reps' && ex.loadLevel === 2,
+    'generic step with resistance means reps-only at fixed resistance');
+  need(ex.repsStep === 2 && ex.repsMax === 20,
+    'reps-only resistance keeps generic step/cap');
+}
+{
+  const parsed = parseProgramText(`ПРОГРАММА: Только сопротивление
+ПРОГРЕССИЯ: 2
+ДЕНЬ: Пн
+КРУГИ: 1
+УПРАЖНЕНИЕ: Тяга
+ФОРМАТ: повторения
+ЗНАЧЕНИЕ: 12
+НАГРУЗКА: сопротивление
+СОПРОТИВЛЕНИЕ: B
+УРОВНИ СОПРОТИВЛЕНИЯ: A | B | C
+ПОДХОДЫ: 3
+ОТДЫХ: 45
+УСЛОЖНЯТЬ: да
+ШАГ ПОВТОРОВ: 0`);
+  const ex = normPlans(parsed.program || parsed)[0].exercises[0];
+  need(ex.progMode === 'level' && ex.repsStep === 0 && ex.loadLevel === 1,
+    'zero rep step means direct resistance progression with fixed reps');
+}
+
+/* ---- carry AI edit: same scale keeps current state; incompatible scale never carries index ---- */
+{
+  const oldEx = mkEx('Резинка', {value:'12-15', type:'reps', progOn:true, loadType:'level', progMode:'level',
+    loadLevels:[{label:'A'},{label:'B'},{label:'C'}], loadLevel:0, repsStep:2, repsMax:19, progEvery:4});
+  oldEx.ps = {n:3, cur:{reps:'14-17', level:1}};
+  const same = mkEx('Резинка', {value:'12-15', type:'reps', progOn:true, loadType:'level', progMode:'level',
+    loadLevels:[{label:'A'},{label:'B'},{label:'C'}], loadLevel:0, repsStep:2, repsMax:19, progEvery:2});
+  carryExerciseProgress(oldEx, same);
+  need(same.ps.n === 2 && same.ps.cur.level === 1 && same.ps.cur.reps === '14-17',
+    'compatible AI edit keeps current resistance state and clamps counter to new cadence: ' + JSON.stringify(same.ps));
+
+  const other = mkEx('Резинка', {value:'12-15', type:'reps', progOn:true, loadType:'level', progMode:'level',
+    loadLevels:[{label:'A'},{label:'X'},{label:'C'}], loadLevel:0, repsStep:2, repsMax:19, progEvery:2});
+  carryExerciseProgress(oldEx, other);
+  need(other.ps.n === 2 && Object.keys(other.ps.cur).length === 0,
+    'different resistance scale keeps only safe counter and clears current level: ' + JSON.stringify(other.ps));
+}
+
 /* ---- normalization adapter: legacy → единая semantic strategy ---- */
 {
   const reps = mkEx('Повторы', {value:'10-12', type:'reps', progOn:true, trackWeight:false,
