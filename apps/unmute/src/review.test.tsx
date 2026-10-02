@@ -138,6 +138,25 @@ describe('course review screen',()=>{
     expect(screen.queryByText(/К повтору сегодня/)).toBeNull();
   });
 
+  it('counts a keyboard typo as correct without returning the card',async()=>{
+    const user=userEvent.setup();
+    const {saveGraded}=renderReview();
+
+    await user.click(await screen.findByRole('button',{name:'Начать повтор'}));
+    await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am homw');
+    await user.click(screen.getByRole('button',{name:'Проверить'}));
+
+    expect(await screen.findByText('Почти правильно')).toBeTruthy();
+    expect(screen.getByText('Похоже на опечатку — ответ засчитан.')).toBeTruthy();
+    expect(saveGraded).toHaveBeenLastCalledWith(
+      'general-foundation','card.one',true,'write',expect.any(String)
+    );
+    expect(screen.queryByRole('button',{name:'Повторить в конце'})).toBeNull();
+
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+    expect(await screen.findByRole('heading',{name:'Повтор завершён'})).toBeTruthy();
+  });
+
   it('brings a wrong card back once and grades only its first answer',async()=>{
     const user=userEvent.setup();
     const {saveGraded,onExit}=renderReview();

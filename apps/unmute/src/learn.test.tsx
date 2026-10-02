@@ -196,6 +196,27 @@ describe('node activity runner',()=>{
     expect(onExit).toHaveBeenCalledTimes(1);
   });
 
+  it('counts a keyboard typo as near miss instead of an SRS error',async()=>{
+    const user=userEvent.setup();
+    const {saveGraded}=renderRunner();
+
+    await user.click(screen.getByRole('button',{name:'К заданиям'}));
+    await chooseAnswer(user,'I am here');
+    await user.click(await screen.findByRole('button',{name:'Далее'}));
+
+    await user.click(screen.getByRole('button',{name:'Написать с клавиатуры'}));
+    await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am herw');
+    await user.click(screen.getByRole('button',{name:'Проверить'}));
+
+    expect(await screen.findByText('Почти правильно')).toBeTruthy();
+    expect(screen.getByText('Похоже на опечатку — ответ засчитан.')).toBeTruthy();
+    expect(screen.getByText('Подходящий ответ: I am here')).toBeTruthy();
+    expect(screen.queryByText('Это задание вернётся в конце урока.')).toBeNull();
+    expect(saveGraded).toHaveBeenLastCalledWith(
+      'general-foundation','text.one',true,'write',expect.any(String)
+    );
+  });
+
   it('brings a wrong answer back at the end and does not call an unfinished day done',async()=>{
     const user=userEvent.setup();
     const progress=emptyCourseProgress();

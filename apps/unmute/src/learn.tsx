@@ -6,6 +6,7 @@ import type { CourseProgressDocument } from './progress';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
 import { checkAnswer } from './engine/answer-check';
+import { nearMiss } from './engine/answer-near-miss';
 import type { PracticeSrsKind } from './engine/practice-srs';
 import { saveDialogueActivity, saveGradedActivity, saveManualNode, savePracticeActivity, saveSeenActivity } from './activity-progress';
 import type { SpeakText, StartRecognition } from './speech-runtime';
@@ -305,6 +306,7 @@ export function NodeRunnerView({
   const [typing,setTyping]=useState(false);
   const [picked,setPicked]=useState<string[]>([]);
   const [result,setResult]=useState<boolean|null>(null);
+  const [nearResult,setNearResult]=useState(false);
   const [busy,setBusy]=useState(false);
   const [theoryOpen,setTheoryOpen]=useState(false);
   const [score,setScore]=useState({correct:0,total:0});
@@ -338,6 +340,7 @@ export function NodeRunnerView({
     setTyping(false);
     setPicked([]);
     setResult(null);
+    setNearResult(false);
     setScore({correct:0,total:0});
     setFirstPassResults({});
     setShuffleSeed(randomSeed());
@@ -452,6 +455,7 @@ export function NodeRunnerView({
     setPicked([]);
     setTyping(false);
     setResult(null);
+    setNearResult(false);
     setBusy(false);
   },[activity?.id,pos]);
 
@@ -750,12 +754,19 @@ export function NodeRunnerView({
     if(!input)return;
     setBusy(true);
     try{
-      const correct=activity.answer.caseSensitive
+      const exactCorrect=activity.answer.caseSensitive
         ? activity.answer.accepted.some(candidate=>candidate.trim()===input)
         : checkAnswer(input,activity.answer.accepted);
+      const typo=!exactCorrect
+        && !chips
+        && !activity.answer.caseSensitive
+        && activity.answer.nearMiss!==false
+        && nearMiss(input,activity.answer.accepted);
+      const correct=exactCorrect||typo;
       await gradeAnswer(correct,chips?'build':'write');
       countAnswer(correct);
       if(!correct)retryLater();
+      setNearResult(typo);
       setResult(correct);
     }finally{
       setBusy(false);
@@ -778,22 +789,23 @@ export function NodeRunnerView({
     if(result===null)return null;
     const willReturn=!result&&stepIndex!==undefined&&order.slice(pos+1).includes(stepIndex);
     return (
-    <div className={'learn-feedback is-sheet '+(result?'learn-feedback-ok':'learn-feedback-wrong')} role="status">
+    <div className={'learn-feedback is-sheet '+(nearResult?'learn-feedback-near':result?'learn-feedback-ok':'learn-feedback-wrong')} role="status">
       <div className={'learn-feedback-head'+(willReturn?' has-subtitle':'')}>
         <span className="learn-feedback-icon" aria-hidden="true"><Icon name={result?'check':'close'} size={22} /></span>
         <div className="learn-feedback-head-copy">
-          <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
+          <strong>{nearResult?t('learn.nearMiss'):result?t('learn.correct'):t('learn.incorrect')}</strong>
+          {nearResult&&<p className="learn-hint learn-feedback-return">{t('learn.nearMissHint')}</p>}
           {willReturn&&<p className="learn-hint learn-feedback-return">{t('learn.willReturn')}</p>}
         </div>
       </div>
-      {!result&&accepted&&(
+      {(nearResult||!result)&&accepted&&(
         <span><LexiconText text={t('learn.accepted',{answer:accepted})} refs={activity.lexiconRefs} /></span>
       )}
       {explanation&&(
         <p><LexiconText text={localized(explanation,locale)} refs={activity.lexiconRefs} /></p>
       )}
       <div className="learn-feedback-actions">
-        {!result&&learnerAnswer&&acceptedAnswers.length>0&&(
+        {!result&&!nearResult&&learnerAnswer&&acceptedAnswers.length>0&&(
           <AnswerExplanationView
             compact
             question={question}
