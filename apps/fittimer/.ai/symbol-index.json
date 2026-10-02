@@ -738,8 +738,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2845,
-      "chars": 124435,
+      "lines": 2843,
+      "chars": 124379,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -839,6 +839,7 @@
         "progPeriodLabel",
         "programDirty",
         "programHasProgression",
+        "programProgEvery",
         "programState",
         "progressedRepsRange",
         "progressionChanged",
@@ -1237,8 +1238,8 @@
     },
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
-      "lines": 652,
-      "chars": 45395,
+      "lines": 649,
+      "chars": 44986,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1300,8 +1301,6 @@
         "bModeTabs",
         "bName",
         "bProgEvery",
-        "bProgOn",
-        "bProgOpts",
         "bRoundRest",
         "bRounds",
         "bSettingsChev",
@@ -1554,7 +1553,6 @@
         "toggleAiMenu",
         "toggleAiRotate",
         "toggleAiSplit",
-        "toggleBuilderProgression",
         "toggleExerciseDetails",
         "toggleExerciseDualProgression",
         "toggleExerciseMenu",
