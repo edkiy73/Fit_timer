@@ -802,7 +802,7 @@ function swapAIPrompt(ex,swap,locale){
     'USER: '+userForAI(locale),
     'TARGET REPLACEMENT: '+swap.name+(swap.desc?' — '+swap.desc:''),
     'WHY: the current exercise reached its useful progression ceiling.',
-    '=== CURRENT EXERCISE ===\n'+exerciseToText(ex),
+    '=== CURRENT EXERCISE ===\n'+exerciseToText(ex,{locale}),
     exAnswerFormat(locale)
   ].join('\n\n');
 }
