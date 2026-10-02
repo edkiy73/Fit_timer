@@ -52,7 +52,7 @@ import { addClient, curClient, doPublish, loadStoreServer, openClient, openMyCat
 } from './50-trainer-catalog.js';
 import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExerciseAsNew,
   commitExercise, commitPlanFields, curPlan, delExerciseAt, draft, dropFreshEx, dupExerciseAt,
-  clearExerciseDraft, exDirty, exDraft, exIdx, exIsNew, fillPlanFields, markExerciseExisting, hasWeight, initAIForm, normValue, openBuilder, programHasProgression,
+  clearExerciseDraft, exDirty, exDraft, exIdx, exIsNew, exerciseResistanceScaleOk, fillPlanFields, markExerciseExisting, hasWeight, initAIForm, normValue, openBuilder, programHasProgression,
   openExercise, parseProgramText, parseStepNum, parseValue, planIdx, programDirty, renderExList, renderExMedia,
   renderProgControls, saveProgram, selectPlanVariant, setExerciseLoadType, setExerciseMetric, shrinkImage, syncCover, syncExDetailsSum, syncExNowHints,
   syncExProgSum, syncExType, syncExWarm, syncRotateUI
@@ -185,7 +185,7 @@ function registerEventActions(){
   });
   registerAction('backFromExercise', () => leaveExercise());
   registerAction('saveExercise', () => {
-    if(numFieldsOk('scrExercise') && exNameOk()) saveExAndBack();
+    if(numFieldsOk('scrExercise') && exNameOk() && exerciseResistanceScaleOk(true)) saveExAndBack();
   });
   registerAction('setExerciseType', btn => {
     setExerciseMetric(exDraft, btn.dataset.exType === 'time' ? 'time' : 'reps', exIsNew);
@@ -194,6 +194,10 @@ function registerEventActions(){
   registerAction('setExerciseLoadType', btn => {
     setExerciseLoadType(exDraft, btn.dataset.loadType, exIsNew);
     syncExType();
+  });
+  registerAction('toggleExerciseLevelScale', () => {
+    const box = $('exLevelScaleBox');
+    setShown(box, box.classList.contains('hidden'));
   });
   // Compatibility для старой собранной разметки/кеша: после следующей сборки кнопки
   // toggleExerciseWeight уже нет, но старое событие безопасно приводит к той же модели.
