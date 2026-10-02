@@ -146,6 +146,7 @@ const MAX_RETURNS=1;
 const range=(from:number,to:number)=>Array.from({length:Math.max(0,to-from)},(_,i)=>from+i);
 const MODE_KEY:Record<PracticeSrsKind,string>={drill:'kind.drill',listening:'kind.listening',speaking:'kind.speaking'};
 const LESSON_RUN_VERSION=1;
+export type LessonRunMode='first'|'resume'|'replay';
 interface LessonRunSnapshot{
   version:1;
   setId:string;
@@ -166,7 +167,9 @@ interface LessonRunSnapshot{
   practiceMode?:PracticeSrsKind;
   /** Stable id used to make answer writes idempotent across retries/resume. */
   runId?:string;
-  /** Replay of a completed day: practice only, review intervals and answer stats stay as they were. */
+  /** Explicit run mode. Old snapshots may only have replay=true. */
+  mode?:LessonRunMode;
+  /** Legacy field kept readable for backward compatibility with old snapshots. */
   replay?:boolean;
 }
 const lessonRunKey=(setId:string,nodeId:string)=>'unmute.lesson-run:'+setId+':'+nodeId;
@@ -288,7 +291,8 @@ export function NodeRunnerView({
   const [shuffleSeed,setShuffleSeed]=useState(()=>randomSeed());
   const [runHydrated,setRunHydrated]=useState(false);
   const [runId,setRunId]=useState(()=>randomSeed());
-  const [replay,setReplay]=useState(false);
+  const [runMode,setRunMode]=useState<LessonRunMode>('first');
+  const replay=runMode==='replay';
   const completionTrackedRef=useRef(false);
   // The step a restored run lands on: its saved answer/feedback must survive the first render
   // of that step (the reset below would otherwise wipe it once the restored order arrives).
@@ -344,7 +348,11 @@ export function NodeRunnerView({
       setShuffleSeed(restored.shuffleSeed??randomSeed());
       setRunId(restored.runId??randomSeed());
       setPracticeMode(restored.practiceMode);
-      setReplay(Boolean(restored.replay));
+      setRunMode(
+        restored.mode==='replay'||restored.replay
+          ? 'replay'
+          : 'resume'
+      );
       setFinished(false);
     }else{
       // Never destroy an unfinished run merely because refreshed course content is temporarily
@@ -353,8 +361,20 @@ export function NodeRunnerView({
       begin(requested>=0?requested:firstIncompleteRequirementIndex(node,steps,state.progress));
       setIntro(requested<0&&theoryCards.some(card=>!isSeen(state.progress,card.id)));
       setPracticeMode(startMode);
-      // A completed day opened again is a replay; a step opened on purpose («Скажи вслух») still counts.
-      setReplay(Boolean(nodeProgress?.complete)&&requested<0);
+      // A completed day opened again is a replay. Otherwise continuing any existing
+      // progress without a saved snapshot is an explicit resume, not a fresh first run.
+      const hasExistingProgress=activities.some(item=>isSeen(state.progress,item.id))
+        || steps.some(step=>Object.values(state.progress.practice).some(records=>{
+          const record=records[step.id];
+          return Boolean(record&&!record.deleted);
+        }));
+      setRunMode(
+        Boolean(nodeProgress?.complete)&&requested<0
+          ? 'replay'
+          : hasExistingProgress
+            ? 'resume'
+            : 'first'
+      );
     }
     setRunHydrated(true);
     // Old progress may still miss the day's plan card: it is part of the day, mark it quietly.
@@ -383,10 +403,11 @@ export function NodeRunnerView({
       firstPassResults,
       shuffleSeed,
       runId,
+      mode:runMode,
       ...(practiceMode?{practiceMode}:{}),
-      ...(replay?{replay}:{})
+      ...(replay?{replay:true}:{})
     });
-  },[runHydrated,state?.set.id,node?.id,stepSignature,order,firstPass,pos,intro,selected,answer,typing,picked,result,score,firstPassResults,shuffleSeed,runId,practiceMode,finished,replay]);
+  },[runHydrated,state?.set.id,node?.id,stepSignature,order,firstPass,pos,intro,selected,answer,typing,picked,result,score,firstPassResults,shuffleSeed,runId,runMode,practiceMode,finished,replay]);
 
   const stepIndex=order[pos];
   const activity=stepIndex===undefined?null:steps[stepIndex]??null;
