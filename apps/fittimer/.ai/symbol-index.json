@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1724,
-      "chars": 82002,
+      "lines": 1821,
+      "chars": 85591,
       "symbols": [
         "$",
         "accountUserDirtyHook",
@@ -28,6 +28,7 @@
         "check",
         "clearSnap",
         "clicks",
+        "commitStartLoadEdit",
         "commitWeightModal",
         "configureAudioRuntime",
         "configureWorkoutTiming",
@@ -72,6 +73,7 @@
         "onRootBack",
         "openStart",
         "openStartFrom",
+        "openStartLoadEditor",
         "openWeightModal",
         "platformHfHintTextHook",
         "platformHfModeHook",
@@ -109,6 +111,7 @@
         "show",
         "showExitHint",
         "speak",
+        "startLoadEditConfig",
         "startSignal",
         "syncDock",
         "syncDockTabs",
@@ -745,8 +748,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 3420,
-      "chars": 148289,
+      "lines": 3426,
+      "chars": 148473,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -1273,8 +1276,8 @@
     },
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
-      "lines": 665,
-      "chars": 46147,
+      "lines": 680,
+      "chars": 46855,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1504,6 +1507,13 @@
         "startExLabel",
         "startFresh",
         "startLoadChange",
+        "startLoadHint",
+        "startLoadInput",
+        "startLoadInputWrap",
+        "startLoadModal",
+        "startLoadModalTitle",
+        "startLoadSelect",
+        "startLoadSelectWrap",
         "startMenu",
         "startModal",
         "startMore",
@@ -1551,6 +1561,7 @@
         "closeImages",
         "closeModal",
         "closeModalBackdrop",
+        "commitStartLoadEdit",
         "commitWeightModal",
         "copyAiRequest",
         "copyEditedProgram",
