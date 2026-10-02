@@ -533,18 +533,15 @@
     </div>
 
     <div class="card-block">
-    <div class="cb-head"><p class="cb-title" data-i18n="builder.progressionTitle">Со временем сложнее</p></div>
-    <div class="pref-row"><span><span data-i18n="builder.autoLoadTitle">Автоматически добавлять нагрузку</span><small data-i18n="builder.progressionSub">повторения и вес станут чуть больше по мере занятий</small></span><button class="switch" id="bProgOn" data-act="toggleBuilderProgression"></button></div>
-    <div id="bProgOpts" class="stack hidden">
+    <div class="cb-head"><p class="cb-title" data-i18n="builder.programProgressionTitle">Повышение нагрузки</p></div>
       <div class="field">
-        <label data-i18n="builder.progressionFrequency">По умолчанию</label>
+        <label data-i18n="builder.progressionFrequency">Обычно предлагать после</label>
         <select id="bProgEvery"></select>
       </div>
       <div class="note">
         <span class="n-ico" data-icon="chart"></span>
-        <span data-i18n="builder.progressionHint">Считаются только полные выполнения конкретного упражнения. По умолчанию проверяем нагрузку после 4 выполнений. Пропущенные и незавершённые упражнения счётчик не двигают. Эта настройка влияет только на упражнения без своей частоты: если у упражнения задано отдельное значение, используется оно.</span>
+        <span data-i18n="builder.progressionHint">Это общая частота для упражнений без своей настройки. Считаются только полные выполнения конкретного упражнения. Упражнение со своей частотой продолжит работать независимо от общей настройки. Ничего не повышается без подтверждения.</span>
       </div>
-    </div>
     </div>
 
     <div class="card-block">
