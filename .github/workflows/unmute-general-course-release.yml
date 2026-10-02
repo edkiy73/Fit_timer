@@ -1,0 +1,44 @@
+name: UnMute — выпуск основного курса
+
+# general-foundation строится из закреплённого legacy English. Когда меняется импортёр
+# или его выпускной скрипт, пересобираем курс и лексикон и выпускаем их парой.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/unmute/lib/legacy-import.mjs'
+      - 'apps/unmute/scripts/import-legacy-content.mjs'
+      - '.github/workflows/unmute-general-course-release.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: unmute-general-course-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/unmute
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Проверить основной курс
+        run: node scripts/import-legacy-content.mjs --dry-run
+
+      - name: Выпустить основной курс и словарь
+        env:
+          ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
+        run: |
+          if [ -z "$ADMIN_KEY" ]; then
+            echo "::notice::Секрет ADMIN_KEY не задан — основной курс не выпущен."
+            exit 0
+          fi
+          node scripts/import-legacy-content.mjs --publish
