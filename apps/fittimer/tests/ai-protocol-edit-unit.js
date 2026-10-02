@@ -48,14 +48,16 @@ function need(cond, msg){
   need(FitAIProtocol.validateProgramResponse(good).ok === true, 'well-formed single-variant program passes');
 }
 
-/* ---- ШАГ ВЕСА без ПОТОЛОК ВЕСА: новые упражнения/программы (*.create)
-   обязаны прийти с потолком; правки (*.modify) — нет, иначе обычная узкая
-   правка старого упражнения без потолка отклонялась бы ---- */
+/* ---- ШАГ ВЕСА без ПОТОЛОК ВЕСА: и create, и modify обязаны вернуть
+   текущий полный контракт. Узкая правка не меняет тренировочный смысл,
+   но legacy-дырки должна закрывать. ---- */
 {
   const block = 'УПРАЖНЕНИЕ: Жим гантелей\nФОРМАТ: повторения и вес\nЗНАЧЕНИЕ: 10\nВЕС: 0\nПОДХОДЫ: 3\nОТДЫХ: 60\nУСЛОЖНЯТЬ: да\nШАГ ВЕСА: 2';
   const v = FitAIProtocol.validateResponse('exercise.create', block);
   need(v.ok === false && v.missing.some(m => /ПОТОЛОК ВЕСА/.test(m)), 'new exercise with growing weight and no ceiling is rejected');
-  need(FitAIProtocol.validateResponse('exercise.modify', block).ok === true, 'edit of an old exercise without a ceiling is NOT rejected');
+  const vm = FitAIProtocol.validateResponse('exercise.modify', block);
+  need(vm.ok === false && vm.missing.some(m => /ПОТОЛОК ВЕСА/.test(m)),
+    'edit of a legacy exercise without required ceiling is rejected until contract-complete');
 }
 {
   const block = 'УПРАЖНЕНИЕ: Жим гантелей\nФОРМАТ: повторения и вес\nЗНАЧЕНИЕ: 10\nВЕС: 0\nПОДХОДЫ: 3\nОТДЫХ: 60\nУСЛОЖНЯТЬ: да\nШАГ ВЕСА: 2\nПОТОЛОК ВЕСА: 24';
@@ -69,7 +71,9 @@ function need(cond, msg){
   const prog = 'ПРОГРАММА: Т\n\nДЕНЬ: \nКРУГИ: 1\n\nУПРАЖНЕНИЕ: Присед\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 10\nПОДХОДЫ: 3\nОТДЫХ: 60\n\n'
     + 'УПРАЖНЕНИЕ: Жим гантелей\nФОРМАТ: повторения и вес\nЗНАЧЕНИЕ: 10\nВЕС: 8\nПОДХОДЫ: 3\nОТДЫХ: 60\nШАГ ВЕСА: 2';
   need(FitAIProtocol.validateResponse('program.create', prog).ok === false, 'new program: one exercise missing the ceiling fails the response');
-  need(FitAIProtocol.validateResponse('program.modify', prog).ok === true, 'program edit keeping an old ceiling-less exercise passes');
+  const vmod = FitAIProtocol.validateResponse('program.modify', prog);
+  need(vmod.ok === false && vmod.missing.some(m => /ПОТОЛОК ВЕСА/.test(m)),
+    'program.modify also requires legacy weighted progression to be contract-complete');
 }
 
 /* ---- double progression в новых AI-ответах должна быть полным циклом:
@@ -100,11 +104,11 @@ function need(cond, msg){
   need(vm.ok === false && vm.missing.some(m => /ПОТОЛОК ВЕСА/.test(m)),
     'new double progression requires a weight ceiling');
 
-  // Старые данные могут быть неполными: modify остаётся совместимым, чтобы узкая
-  // правка существующей программы не блокировалась новым create-validator.
+  // Даже узкая правка должна вернуть полный текущий double-progression contract.
   const legacy = valid.replace('\nПОТОЛОК ВЕСА: 30', '').replace('ШАГ ПОВТОРОВ: 1', 'ШАГ ПОВТОРОВ: 0');
-  need(FitAIProtocol.validateResponse('exercise.modify', legacy).ok === true,
-    'legacy double progression remains editable without create-only validation');
+  const vl = FitAIProtocol.validateResponse('exercise.modify', legacy);
+  need(vl.ok === false && vl.missing.some(m => /ШАГ ПОВТОРОВ|ПОТОЛОК ВЕСА/.test(m)),
+    'legacy incomplete double progression is rejected on modify until completed');
 }
 {
   const prog = 'ПРОГРАММА: Т\n\nДЕНЬ: \nКРУГИ: 1\n\n'
@@ -171,8 +175,12 @@ function need(cond, msg){
   const edit = FitAIProtocol.editRules();
   need(/data snapshot, not a definition of what FitTimer supports/.test(edit),
     'edit source is treated as legacy data, not the capability schema');
+  need(/MANDATORY CONTRACT COMPLETION PASS/.test(edit) && /normalize the ENTIRE returned program\/exercise to the CURRENT contract/.test(edit),
+    'every edit requires a current-contract completion pass');
+  need(/NARROW EDIT:[\s\S]*MUST still perform the mandatory contract-completion pass/.test(edit),
+    'narrow edits preserve training meaning but still fill required legacy fields');
   need(/CURRENT-CONTRACT AUDIT/.test(edit) && /Audit every program-level setting and every exercise/.test(edit),
-    'broad edits require a full audit against the current contract');
+    'broad edits additionally require a full audit against the current contract');
   need(/ANY current or future protocol field\/rule/.test(edit),
     'modernization rule automatically covers future protocol fields');
   need(/Legacy absence of a field is NOT an instruction to keep that field absent/.test(edit),

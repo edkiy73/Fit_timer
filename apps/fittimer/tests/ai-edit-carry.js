@@ -77,7 +77,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const dual = await page.evaluate(async () => {
     const p = {id:'ecd', name:'Двойная', progression:3, stats:{completions:2}, plans:[
       {days:['Пн'], rounds:1, roundRest:0, exercises:[{id:'d1', name:'Жим гантелей', type:'reps', value:'8-10',
-        sets:3, rest:60, progOn:true, trackWeight:true, weight:10, wStep:2, repsStep:1, repsMax:20, dualProg:true,
+        sets:3, rest:60, progOn:true, trackWeight:true, weight:10, wStep:2, repsStep:1, repsMax:20, weightMax:30, dualProg:true,
         ps:{n:2, cur:{reps:'9-11'}}}]}]};
     customPrograms.push(p);
     const edited = JSON.parse(JSON.stringify(p));

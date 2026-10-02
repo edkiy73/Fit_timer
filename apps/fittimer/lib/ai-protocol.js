@@ -117,14 +117,24 @@ ${exerciseSchema(outputLanguage)}`;
   const editRules = () => `=== EDIT RULES ===
 First determine the semantic scope of the user's request. The CURRENT PROGRAM / CURRENT EXERCISE is a data snapshot, not a definition of what FitTimer supports. The current PROGRAM PROTOCOL, EXERCISE PROTOCOL, TRAINING AND PROGRESSION RULES, and quality checks anywhere in this prompt are the source of truth for current capabilities.
 
+EVERY EDIT — MANDATORY CONTRACT COMPLETION PASS:
+- After applying the requested semantic change, normalize the ENTIRE returned program/exercise to the CURRENT contract in this prompt, even when the user's request is narrow.
+- The edit scope controls WHAT training meaning may change; it does NOT permit returning an obsolete or incomplete legacy representation.
+- For every existing exercise, infer its intended current meaning from its name, equipment, current values and existing fields, then add/convert every field that is REQUIRED or CONDITIONALLY REQUIRED by the current protocol/rules for that meaning.
+- This completion pass must preserve the exercise's training intent. Do not add optional features merely because they exist, and do not change exercise selection, volume, cadence or progression strategy unless required to represent the existing meaning correctly or requested by the user.
+- Legacy absence is never enough reason to omit a field that the CURRENT contract requires. Conversely, optional fields that are not meaningful for that exercise should remain absent.
+- Examples are illustrative, not exhaustive: a positive ШАГ ВЕСА requires its current required ceiling; a genuine double-progression cycle must be complete; discrete resistance must use the current resistance representation; an exercise whose movement/equipment clearly makes it weighted should not remain falsely represented as unweighted merely because an old schema omitted its load fields.
+- Apply this rule to ANY current or future required/conditional field present elsewhere in this prompt. Never maintain a hard-coded legacy exception list.
+- Before answering, perform this completion pass on every exercise and program-level block, not only on the item the user explicitly edited.
+
 NARROW EDIT:
-- A narrow request ("set rest to 60 seconds", "rename this exercise", "change Monday to Tuesday") must change only what it asks for and fields that must change to keep that request internally coherent.
-- Do not use a narrow edit as an excuse to modernize unrelated legacy fields, add exercises, reorder the workout, or change progression strategy.
+- A narrow request ("set rest to 60 seconds", "rename this exercise", "change Monday to Tuesday") must not change unrelated training meaning, structure, exercise selection, volume or progression strategy.
+- It MUST still perform the mandatory contract-completion pass above. Filling or converting fields required to express the same existing meaning under the current contract is not considered an unrelated change.
 - Preserve existing protocol lines that remain relevant. Never drop a line merely because the old program could technically work without it.
 
 BROAD / MODERNIZING EDIT:
 - A broad request ("improve this", "make it correct", "optimize it", "rebuild it", "update it for current FitTimer", "use the previous improvements") requires a CURRENT-CONTRACT AUDIT before answering.
-- Audit every program-level setting and every exercise against the current protocol and training rules in this prompt. Legacy absence of a field is NOT an instruction to keep that field absent.
+- Audit every program-level setting and every exercise against the current protocol and training rules in this prompt. The mandatory completion pass already makes the representation current; a broad request may additionally change training meaning/strategy where justified. Legacy absence of a field is NOT an instruction to keep that field absent.
 - When the current contract has a newer or more expressive representation that is semantically appropriate, migrate the old representation to it. Add, remove, or convert fields as needed so the returned program actually uses current FitTimer capabilities rather than merely echoing the legacy shape.
 - This rule is intentionally future-proof: apply it to ANY current or future protocol field/rule present in this prompt, even if that field is not named in these edit rules.
 - Do not mechanically populate every optional field. Add a field only when it has real meaning for that program/exercise under the current rules.
@@ -172,13 +182,10 @@ GENERAL:
   }
 
   // Вес без реалистичного предела — не мелочь, а риск: за месяцы прогрессия
-  // без ПОТОЛОК ВЕСА уезжает в нереальные килограммы. Промт просит эту строку
-  // всегда, когда сам вес растёт (см. exerciseSchema/progressionRules), но
-  // промт — не гарантия; поэтому НОВЫЕ упражнения/программы (kind *.create)
-  // проверяются и после генерации. Правки (*.modify) — нет: старые упражнения
-  // сериализуются с «ШАГ ВЕСА: 2» и без потолка (так их создавали раньше), и
-  // узкая правка вроде «отдых 60 сек» законно возвращает их как есть —
-  // требовать потолок там значило бы отклонять обычные правки.
+  // без ПОТОЛОК ВЕСА уезжает в нереальные килограммы. Текущий контракт требует
+  // потолок всегда, когда растёт вес. Это относится И К CREATE, И К MODIFY:
+  // legacy-ответ при любом AI-edit обязан пройти contract-completion pass, поэтому
+  // неполную старую схему больше не принимаем как допустимый результат правки.
   function exerciseBlockMissingWeightCeiling(block){
     const stepM = block.match(/(?:^|\n)ШАГ ВЕСА:\s*([\d.,]+)/);
     if(!stepM) return false;
@@ -327,16 +334,24 @@ GENERAL:
       reason: uniqueMissing.length ? 'missing_fields' : (!exercises ? 'no_exercises' : (!days ? 'no_days' : (emptyVariant ? 'empty_variant' : '')))};
   }
 
+  // One current semantic contract for every AI-generated exercise/program.
+  // Create and edit deliberately share it: when a new required/conditional rule is
+  // added here, legacy edits become subject to it automatically instead of keeping
+  // a second weaker "modify" policy that can drift behind the product.
+  const CURRENT_EXERCISE_CONTRACT = Object.freeze({requireWeightCeiling:true, requireValidDouble:true});
+  const CURRENT_PROGRAM_CONTRACT = Object.freeze({requireWeightCeiling:true, requireValidDouble:true});
+
   function validateResponse(kind, raw){
-    if(String(kind || '').startsWith('image.')){
+    const k = String(kind || '');
+    if(k.startsWith('image.')){
       const image = String(raw == null ? '' : raw).trim();
       return {ok:/^data:image\/(?:png|jpe?g|webp|gif|avif);base64,[A-Za-z0-9+/=]{8,}$/.test(image),
         text:image, missing:[], reason:'bad_image'};
     }
-    if(String(kind || '') === 'exercise.create') return validateExerciseResponse(raw,{minCount:1,maxCount:10,requireWeightCeiling:true,requireValidDouble:true});
-    if(/^exercise\.(?:modify|replace)$/.test(String(kind || ''))) return validateExerciseResponse(raw,{minCount:1,maxCount:1});
-    if(String(kind || '') === 'program.create') return validateProgramResponse(raw,{requireWeightCeiling:true,requireValidDouble:true});
-    if(/^(?:program\.modify|video\.parse)$/.test(String(kind || ''))) return validateProgramResponse(raw);
+    if(k === 'exercise.create') return validateExerciseResponse(raw,{...CURRENT_EXERCISE_CONTRACT,minCount:1,maxCount:10});
+    if(/^exercise\.(?:modify|replace)$/.test(k)) return validateExerciseResponse(raw,{...CURRENT_EXERCISE_CONTRACT,minCount:1,maxCount:1});
+    if(/^(?:program\.create|program\.modify)$/.test(k)) return validateProgramResponse(raw,CURRENT_PROGRAM_CONTRACT);
+    if(k === 'video.parse') return validateProgramResponse(raw);
     return {ok:!!normalizeResponse(raw), text:normalizeResponse(raw), missing:[], reason:'empty_response'};
   }
 
