@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { emptyCourseProgress, emptyStatsProgress, mergeCourseProgress, mergeStatsProgress } from './progress';
-import { resetCourseProgress, resetStatsProgress } from './progress-reset';
+import { progressSetIdsFromRefs, resetCourseProgress, resetStatsProgress } from './progress-reset';
 import { recordAnswer, summarizeAnswerStats } from './engine/learner-stats';
 import { activityDone } from './today-model';
 
@@ -20,6 +20,16 @@ describe('«Начать заново»', () => {
     // Learning after the reset counts again.
     merged.seen['a1']={at:'2026-10-01T09:00:00.000Z'};
     expect(activityDone(mergeCourseProgress(merged,reset),'a1')).toBe(true);
+  });
+
+  it('discovers retired course ids from synced progress documents', () => {
+    expect(progressSetIdsFromRefs([
+      {key:'settings'},
+      {key:'progress:course:current-course'},
+      {key:'progress:stats:retired-course'},
+      {key:'progress:course:retired-course'},
+      {key:'progress:words'}
+    ])).toEqual(['current-course','retired-course']);
   });
 
   it('zeroes answer statistics and starts counting again', () => {
