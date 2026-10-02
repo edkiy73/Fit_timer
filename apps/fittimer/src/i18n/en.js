@@ -280,7 +280,7 @@ export const I18N_EN = {
   'builder.resistanceMedium': "Medium",
   'builder.resistanceStrong': "Strong",
   'builder.resistanceVeryStrong': "Very strong",
-  'builder.resistanceLevelFallback': "Level {count}",
+  'builder.resistanceLevelFallback': "Resistance step {count}",
   'builder.resistanceValue': "Resistance: {value}",
   'builder.progressionMethod': "How to progress",
   'builder.progressionMethodHint': "FitTimer suggests a suitable option for the exercise format. You can change it if needed.",
