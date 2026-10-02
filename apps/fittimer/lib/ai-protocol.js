@@ -97,6 +97,7 @@ Workout variants:
 - different exercise sets = multiple variants, max 7
 - every variant starts with ДЕНЬ:
 ДЕНЬ: canonical weekday tokens for this variant; leave empty when ЧЕРЕДОВАНИЕ: да
+ВРЕМЯ ВАРИАНТА: HH:MM (optional); per-variant training time, distinct from program-level ВРЕМЯ
 КРУГИ: 1-10; repetitions of the ENTIRE exercise list
 ОТДЫХ МЕЖДУ КРУГАМИ: seconds, 0-600
 
@@ -134,6 +135,7 @@ ${exerciseSchema(outputLanguage)}`;
     '- When a target workout duration is supplied, estimate the whole session, not just active work: timed work = stated seconds × sides; rep-based work ≈ reps × 3 seconds × sides; multiply by sets and rounds; then add between-set rest, rest after exercises, side-switch time and between-round rest. Warm-up exercises run once before the main rounds.',
     '- For target durations from 5 to 20 minutes, aim to stay within about ±5 minutes. For targets of 30 minutes or more, aim to stay within about ±20%. Treat an open-ended target such as 45+ minutes as a lower-bound preference rather than an exact cap.',
     '- Do not create conflicting progression fields.',
+    '- For weighted exercises, audit every ВЕС before answering: if the prompt contains a known positive load for the same/comparable movement or enough experience/equipment context for a conservative choice, do not output ВЕС: 0.',
     '- Return only the protocol.'
   ].join('\n\n');
 
