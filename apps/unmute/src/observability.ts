@@ -27,6 +27,63 @@ const client = createClient({
   })
 });
 
+export type CompletionRunMode='first'|'resume'|'replay';
+export type CompletionKind='lesson'|'day';
+
+interface PendingAnalyticsEvent {
+  id:string;
+  event:string;
+}
+
+const ANALYTICS_OUTBOX_KEY='unmute.analytics.outbox.v1';
+
+function readAnalyticsOutbox():PendingAnalyticsEvent[]{
+  try{
+    const raw=localStorage.getItem(ANALYTICS_OUTBOX_KEY);
+    const parsed=raw?JSON.parse(raw):[];
+    if(!Array.isArray(parsed))return [];
+    return parsed.filter(item=>
+      item&&typeof item.id==='string'&&item.id&&typeof item.event==='string'&&item.event
+    ).slice(-100);
+  }catch{return [];}
+}
+
+function writeAnalyticsOutbox(items:PendingAnalyticsEvent[]):void{
+  try{
+    if(items.length)localStorage.setItem(ANALYTICS_OUTBOX_KEY,JSON.stringify(items.slice(-100)));
+    else localStorage.removeItem(ANALYTICS_OUTBOX_KEY);
+  }catch{}
+}
+
+export function completionEventName(kind:CompletionKind,mode:CompletionRunMode):string{
+  return kind+'_completed.'+mode;
+}
+
+/** Retry pending analytics after reload/reconnect. Server-side eventId makes retries exactly-once. */
+export async function flushAnalyticsOutbox():Promise<void>{
+  const items=readAnalyticsOutbox();
+  if(!items.length)return;
+  const remaining:PendingAnalyticsEvent[]=[];
+  for(const item of items){
+    if(!(await client.track(item.event,item.id)))remaining.push(item);
+  }
+  writeAnalyticsOutbox(remaining);
+}
+
+/** Persist before network I/O so closing the app cannot lose a completion event. */
+export function trackCompletionOnce(kind:CompletionKind,runId:string,mode:CompletionRunMode):void{
+  const stableRunId=String(runId||'').trim().slice(0,120);
+  if(!stableRunId)return;
+  const id='completion:'+kind+':'+stableRunId;
+  const event=completionEventName(kind,mode);
+  const items=readAnalyticsOutbox();
+  if(!items.some(item=>item.id===id)){
+    items.push({id,event});
+    writeAnalyticsOutbox(items);
+  }
+  void flushAnalyticsOutbox();
+}
+
 export async function trackInstallOnce(): Promise<void> {
   const key = 'unmute.analytics.install';
   try{
@@ -77,12 +134,12 @@ export function purchaseEventName(
   return phase+'.'+(sku.startsWith('course.') ? 'course' : sku.startsWith('plus.') ? 'plus' : 'other');
 }
 
-export function trackLessonCompleted():void{
-  void client.track('lesson_completed');
+export function trackLessonCompleted(runId:string,mode:CompletionRunMode):void{
+  trackCompletionOnce('lesson',runId,mode);
 }
 
-export function trackDayCompleted():void{
-  void client.track('day_completed');
+export function trackDayCompleted(runId:string,mode:CompletionRunMode):void{
+  trackCompletionOnce('day',runId,mode);
 }
 
 export function trackPaywallShown(place:string):void{
