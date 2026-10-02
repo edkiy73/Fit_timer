@@ -36,7 +36,30 @@ function learnerState():LearnerCourseState{
       access:{mode:'free'},
       defaultRoadmapId:'main',
       roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[node]}],
-      activities:[],
+      activities:[
+        {
+          id:'card.one',
+          revision:1,
+          type:'choice',
+          tags:[],
+          revisionProgress:'preserve',
+          lexiconRefs:[],
+          prompt:{ru:'Вопрос'},
+          options:[{ru:'Да'},{ru:'Нет'}],
+          correctIndex:0
+        },
+        {
+          id:'pattern.one',
+          revision:1,
+          type:'pattern-drill',
+          tags:[],
+          revisionProgress:'preserve',
+          lexiconRefs:[],
+          pattern:{ru:'Фраза'},
+          modes:['drill','listening','speaking'],
+          items:[]
+        }
+      ],
       resources:[]
     },
     roadmap:{id:'main',title:{ru:'Путь'},nodes:[node]},
@@ -115,6 +138,14 @@ describe('progress screen summary',()=>{
       wrong:3,
       at:'2026-09-29T10:00:00Z'
     };
+    stats.buckets['device|pattern.one']={
+      deviceId:'device',
+      activityId:'pattern.one',
+      attempts:4,
+      correct:3,
+      wrong:1,
+      at:'2026-09-29T10:01:00Z'
+    };
     const words=emptyWordsProgress();
     words.items['lex.home|noun']={
       lexemeId:'lex.home',
@@ -143,7 +174,9 @@ describe('progress screen summary',()=>{
       words:1,
       activeReviews:4,
       dueNow:2,
-      answers:{attempts:10,correct:7,wrong:3,accuracy:70},
+      answers:{attempts:14,correct:10,wrong:4,accuracy:71},
+      taskAnswers:{attempts:10,correct:7,wrong:3,accuracy:70},
+      practiceAnswers:{attempts:4,correct:3,wrong:1,accuracy:75},
       speedAverage:70,
       speedSamples:2,
       dialogueAverage:90,
@@ -176,23 +209,36 @@ describe('progress screen summary',()=>{
     state.progress.metrics['speed:pattern.one']={value:75,at:'2026-09-29T10:00:00Z'};
     state.progress.practice.drill['pattern.one']={box:1,due:0,at:'2026-09-29T10:00:00Z'};
     const stats=emptyStatsProgress();
-    stats.buckets['device|one']={
+    stats.buckets['device|card.one']={
       deviceId:'device',
-      activityId:'one',
+      activityId:'card.one',
       attempts:4,
       correct:3,
       wrong:1,
       at:'2026-09-29T10:00:00Z'
     };
+    stats.buckets['device|pattern.one']={
+      deviceId:'device',
+      activityId:'pattern.one',
+      attempts:2,
+      correct:1,
+      wrong:1,
+      at:'2026-09-29T10:01:00Z'
+    };
 
     renderProgress(state,stats);
 
     expect(screen.getByText('75% верно')).toBeTruthy();
-    // One line under the bar: «верно: 3 · с ошибкой: 1 · ответов: 4».
-    const meta=document.querySelector('.progress-answer-meta')?.textContent??'';
-    expect(meta).toContain('верно: 3');
-    expect(meta).toContain('с ошибкой: 1');
-    expect(meta).toContain('ответов: 4');
+    expect(screen.getByText('50% верно')).toBeTruthy();
+    const groups=[...document.querySelectorAll('.progress-answer-group')].map(node=>node.textContent??'');
+    expect(groups[0]).toContain('Задания');
+    expect(groups[0]).toContain('верно: 3');
+    expect(groups[0]).toContain('с ошибкой: 1');
+    expect(groups[0]).toContain('ответов: 4');
+    expect(groups[1]).toContain('Практика');
+    expect(groups[1]).toContain('верно: 1');
+    expect(groups[1]).toContain('с ошибкой: 1');
+    expect(groups[1]).toContain('ответов: 2');
     // Practice is a row: label on the left, the result on the right.
     expect(screen.getByText('1 упражн. · 75% вовремя').closest('.progress-practice-row')?.textContent).toContain('Фразы на скорость');
   });

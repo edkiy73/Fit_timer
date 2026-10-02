@@ -47,9 +47,11 @@ export function recordAnswer(
   };
 }
 
-export function summarizeAnswerStats(doc:StatsProgressDocument):AnswerStatsSummary{
+function summarizeBuckets(
+  buckets:Iterable<StatsBucket|undefined>
+):AnswerStatsSummary{
   let attempts=0,correct=0,wrong=0;
-  for(const bucket of Object.values(doc.buckets)){
+  for(const bucket of buckets){
     if(!bucket||bucket.deleted)continue;
     attempts+=Math.max(0,bucket.attempts||0);
     correct+=Math.max(0,bucket.correct||0);
@@ -61,6 +63,19 @@ export function summarizeAnswerStats(doc:StatsProgressDocument):AnswerStatsSumma
     wrong,
     accuracy:attempts?Math.round(correct/attempts*100):0,
   };
+}
+
+export function summarizeAnswerStats(doc:StatsProgressDocument):AnswerStatsSummary{
+  return summarizeBuckets(Object.values(doc.buckets));
+}
+
+export function summarizeAnswerStatsForActivities(
+  doc:StatsProgressDocument,
+  activityIds:ReadonlySet<string>
+):AnswerStatsSummary{
+  return summarizeBuckets(
+    Object.values(doc.buckets).filter(bucket=>Boolean(bucket&&activityIds.has(bucket.activityId)))
+  );
 }
 
 export function weakActivities(

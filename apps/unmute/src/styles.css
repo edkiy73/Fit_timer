@@ -1081,9 +1081,12 @@ h2{margin:0 0 8px;font-weight:800}
 .progress-kpi-icon.is-speak{background:color-mix(in srgb,var(--streak) 14%,transparent);color:var(--streak)}
 .progress-course-kpis strong{font-size:20px;line-height:1.05;font-variant-numeric:tabular-nums}
 .progress-course-kpis>div>span:last-child{overflow:hidden;color:var(--muted);font-size:11px;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
-.progress-course-detail{display:grid;gap:9px;padding:14px;border-radius:20px;background:var(--surface)}
+.progress-course-detail{display:grid;gap:12px;padding:14px;border-radius:20px;background:var(--surface)}
+.progress-answer-title{font-size:14px;font-weight:800}
+.progress-answer-group{display:grid;gap:7px}
+.progress-answer-group+.progress-answer-group{padding-top:11px;border-top:1px solid var(--line)}
 .progress-course-detail-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.progress-course-detail-head>span{font-size:14px;font-weight:800}
+.progress-course-detail-head>span{font-size:13px;font-weight:600}
 .progress-course-detail-head>strong{font-size:13px}
 .progress-answer-bar{height:7px;background:color-mix(in srgb,var(--line) 80%,transparent)}
 .progress-answer-bar>span{background:var(--accent)}
