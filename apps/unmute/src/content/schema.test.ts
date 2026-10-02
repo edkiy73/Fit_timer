@@ -46,6 +46,21 @@ describe('course set content model', () => {
     expect(isActivityReviewable('ex.2', { owned: false, learnedActivityIds: new Set(['ex.2']) })).toBe(true);
   });
 
+  it('defaults text answers to progressive build-then-write mode', () => {
+    const first = sample.activities.find(activity => activity.id === 'ex.1');
+    expect(first?.type).toBe('text-input');
+    if(first?.type === 'text-input') expect(first.responseMode).toBe('progressive');
+  });
+
+  it('accepts explicit build and write response modes', () => {
+    const raw = JSON.parse(JSON.stringify(sample));
+    raw.activities[0].responseMode = 'build';
+    raw.activities[1].responseMode = 'write';
+    const parsed = validateCourseSet(raw);
+    expect(parsed.activities[0]?.type === 'text-input' && parsed.activities[0].responseMode).toBe('build');
+    expect(parsed.activities[1]?.type === 'text-input' && parsed.activities[1].responseMode).toBe('write');
+  });
+
   it('rejects dangling activity references', () => {
     const raw = JSON.parse(JSON.stringify(sample));
     raw.roadmaps[0].nodes[0].activityIds = ['missing'];
