@@ -541,7 +541,7 @@ ok('workout dynamic clicks use action registry',
   && workoutJs.includes("registerAction('editWorkoutExercise'")
   && workoutJs.includes("registerAction('toggleWorkoutPause'")
   && workoutJs.includes("registerAction('openWorkoutExit'")
-  && workoutJs.includes("b.dataset.act = 'toggleProgressionHard'")
+  && workoutJs.includes("card.dataset.act = 'toggleProgressionHard'")
   && workoutJs.includes("$('workMore').dataset.act = 'toggleWorkoutMenu'"));
 ok('programs AI and workout have no direct onclick wiring',
   !programsAi.includes('.onclick')
