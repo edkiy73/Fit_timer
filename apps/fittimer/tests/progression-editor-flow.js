@@ -140,6 +140,21 @@ const ok = (name, cond, extra) => {
   ok('ручной редактор даёт все осмысленные weight-режимы',
     weightModes.join(',') === 'double_range,weight,reps,parallel', weightModes.join(','));
 
+  const doubleCeilingHint = await page.textContent('#exCeilingHint');
+  ok('для «Повторы → вес» редактор прямо говорит, что максимум повторов обязателен',
+    /максимум повторов обязателен/i.test(doubleCeilingHint), doubleCeilingHint);
+
+  await page.selectOption('#exProgMode','weight');
+  await page.dispatchEvent('#exProgMode','change');
+  await page.waitForTimeout(30);
+  const weightCeilingHint = await page.textContent('#exCeilingHint');
+  ok('для простого роста веса максимум остаётся необязательным',
+    /можно оставить пуст/i.test(weightCeilingHint), weightCeilingHint);
+
+  await page.selectOption('#exProgMode','double_range');
+  await page.dispatchEvent('#exProgMode','change');
+  await page.waitForTimeout(30);
+
   await page.selectOption('#exProgEvery','2');
   await page.waitForTimeout(50);
   const hint = await page.textContent('#exProgOnHint');
@@ -180,6 +195,9 @@ const ok = (name, cond, extra) => {
   ok('для reps + resistance предлагается Повторы → сопротивление',
     await page.inputValue('#exProgMode') === 'level',
     await page.inputValue('#exProgMode'));
+  const levelCeilingHint = await page.textContent('#exCeilingHint');
+  ok('для «Повторы → сопротивление» максимум повторов тоже обозначен обязательным',
+    /максимум повторов обязателен/i.test(levelCeilingHint), levelCeilingHint);
 
   await page.click('[data-act="toggleExerciseLevelScale"]');
   await page.fill('#exLoadLevels','Лёгкое\nСреднее\nСильное');
