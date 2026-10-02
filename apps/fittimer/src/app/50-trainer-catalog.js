@@ -9,17 +9,19 @@ import { DAYS, accountAuth, calcStreakInfo, closeAllMenus, currentUser, customPr
   setDataSyncTrainerCatalogHooks, stats, toggleMenu, trackProductEvent, users
 } from './10-data-sync.js';
 import { account, isPremium, refreshServerSubscription, setAccountTrainerCatalogHooks } from './20-account.js';
-import { LIM, clampText, setProgressTrainerHooks } from './30-progress-media.js';
+import { LIM, clampText, sanitizeProgram, setProgressTrainerHooks } from './30-progress-media.js';
 
 let builderTrainerHooks = {
   enableDrag: () => {},
   exRestAfter: () => 0,
+  exerciseLoadLevelState: () => ({level:0,label:''}),
   fmtKg: v => String(v == null ? '' : v),
   getExWeight: () => 0,
   hasWeight: () => false,
   openBuilder: async () => {},
   parseProgramText: () => null,
   parseValue: v => ({min:+v || 0,max:+v || 0}),
+  progressionLoadType: () => 'none',
   progShort: () => '',
   progressedRepsRange: () => '',
   sortWarmFirst: list => list,
@@ -1043,6 +1045,10 @@ function siBits(ex){
   const sets = Math.max(1, parseInt(ex.sets) || 1);
   if(sets > 1) b.push(storeCountText(sets, 'set'));
   if(+ex.weight > 0) b.push(`${builderTrainerHooks.fmtKg(ex.weight)} ${t('progress.kg')}`);
+  if(builderTrainerHooks.progressionLoadType(ex) === 'level'){
+    const state = builderTrainerHooks.exerciseLoadLevelState(ex) || {};
+    if(state.label) b.push(String(state.label));
+  }
   if(ex.perSide) b.push(t('store.perSide'));
   return b;
 }
@@ -1237,6 +1243,9 @@ async function addStoreItem(id){
     appAlert(t('store.addFailed'));
     return;
   }
+  // Каталог — внешний источник так же, как ссылка или файл. Parser проверяет
+  // протокол, sanitizer дополнительно ограничивает persisted labels/state.
+  sanitizeProgram(program);
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
   // После добавления это обычная личная одноязычная копия. Язык нужен ИИ-правкам,

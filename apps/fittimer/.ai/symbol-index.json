@@ -658,8 +658,8 @@
     },
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
-      "lines": 1931,
-      "chars": 88166,
+      "lines": 1940,
+      "chars": 88644,
       "symbols": [
         "add",
         "addClient",
@@ -741,8 +741,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 3213,
-      "chars": 139424,
+      "lines": 3215,
+      "chars": 139477,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
