@@ -167,7 +167,8 @@ export function ReviewView({
       ? otherCourses.courses.find(other=>other.set.id===item.setId)?.progress
       : state?.progress;
     const stage=sentenceResponseStage(itemProgress?.cards[item.activity.id]);
-    if(responseMode==='write'||(responseMode==='progressive'&&stage==='write'))return null;
+    const keepSubmittedBuilder=result!==null&&picked.length>0;
+    if(responseMode==='write'||(responseMode==='progressive'&&stage==='write'&&!keepSubmittedBuilder))return null;
     const target=item.activity.answer.accepted[0]??'';
     if(!answerWords(target))return null;
     const itemSet=item.setId
@@ -179,7 +180,7 @@ export function ReviewView({
         : []
     )??[];
     return buildChips(shuffleSeed+'|review|'+item.activity.id+'|'+index,target,otherAnswers);
-  },[item,index,otherCourses,state?.set,shuffleSeed]);
+  },[item,index,otherCourses,state?.set,shuffleSeed,result,picked.length]);
 
   // A review day counts once its review is through (or nothing was due).
   const reviewDayNode=completeDayId&&state?state.roadmap.nodes.find(node=>node.id===completeDayId)??null:null;

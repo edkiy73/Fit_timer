@@ -996,15 +996,16 @@ h2{margin:0 0 8px;font-weight:800}
 .kind-review{--kind:var(--listen)}
 
 /* «Собери фразу» */
-.chips-builder{display:grid;gap:14px}
-.chips-line{display:flex;flex-wrap:wrap;align-content:flex-start;gap:8px;min-height:64px;padding:10px;border-bottom:2px solid var(--line)}
-.chips-placeholder{align-self:center;color:var(--muted);font-size:14px}
-.chips-pool{display:flex;flex-wrap:wrap;gap:8px}
-.word-chip{min-height:44px;padding:8px 14px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font:inherit;font-size:17px;font-weight:600;cursor:pointer;box-shadow:0 2px 0 var(--line)}
-.word-chip.is-picked{background:var(--surface)}
+.chips-builder{display:grid;gap:7px}
+.chips-label{color:var(--muted);font-size:13px;font-weight:400}
+.chips-line{display:flex;flex-wrap:wrap;align-content:flex-start;align-items:center;gap:6px;min-height:56px;padding:10px 12px;border:1.5px solid var(--line);border-radius:var(--radius-btn);background:var(--surface)}
+.chips-placeholder{align-self:center;color:var(--muted);font-size:13px;font-weight:400}
+.chips-pool{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.word-chip{min-height:36px;padding:6px 11px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font:inherit;font-size:15px;font-weight:400;cursor:pointer;box-shadow:0 1px 0 var(--line)}
+.word-chip.is-picked{background:var(--card)}
 .word-chip.is-used{visibility:hidden}
 .word-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.link-toggle{justify-self:center;border:0;background:none;color:var(--accent-ink);font:inherit;font-size:14px;font-weight:700;cursor:pointer;padding:8px}
+.link-toggle{justify-self:center;border:0;background:none;color:var(--accent-ink);font:inherit;font-size:13px;font-weight:500;cursor:pointer;padding:8px}
 .runner-intro-label{flex:1;color:var(--muted);font-size:14px;font-weight:700;text-align:right}
 .theory-page{display:grid;gap:14px}
 .theory-title,.learn-card .theory-title{margin:0 0 10px;font-size:22px;line-height:1.25}

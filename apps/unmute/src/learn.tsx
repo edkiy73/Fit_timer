@@ -630,8 +630,12 @@ export function NodeRunnerView({
   const responseMode=(activity.type==='text-input'||activity.type==='translation')?(activity.responseMode??'progressive'):'write';
   const adaptiveStage=sentenceResponseStage(cardState);
   const canBuild=Boolean(answerWords(textAnswer));
+  // Keep the UI mode of the current attempt stable after grading. Saving a correct
+  // chip answer may immediately advance the stored stage to "write", but the learner
+  // should still see the chips they just submitted until tapping Next.
+  const keepSubmittedBuilder=result!==null&&picked.length>0&&!typing;
   const shouldBuild=canBuild&&!typing&&(
-    responseMode==='build' || (responseMode==='progressive'&&adaptiveStage==='build')
+    responseMode==='build' || (responseMode==='progressive'&&(adaptiveStage==='build'||keepSubmittedBuilder))
   );
   const chips=(activity.type==='text-input'||activity.type==='translation')&&shouldBuild
     ? buildChips(shuffleSeed+'|'+activity.id+'|'+pos,textAnswer,steps.flatMap(item=>(item.type==='text-input'||item.type==='translation')&&item.id!==activity.id?[item.answer.accepted[0]??'']:[]))
