@@ -55,7 +55,7 @@ import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExe
   clearExerciseDraft, exDirty, exDraft, exIdx, exIsNew, exerciseResistanceScaleOk, fillPlanFields, markExerciseExisting, hasWeight, initAIForm, normValue, openBuilder, programHasProgression,
   openExercise, parseProgramText, parseStepNum, parseValue, planIdx, programDirty, renderExList, renderExMedia,
   renderProgControls, saveProgram, selectPlanVariant, setExerciseLoadType, setExerciseMetric, shrinkImage, syncCover, syncExDetailsSum, syncExNowHints,
-  syncExProgSum, syncExType, syncExWarm, syncRotateUI
+  syncExProgSum, syncExSwapAvailability, syncExType, syncExWarm, syncRotateUI
 , setBuilderEventHooks } from './60-builder.js';
 import { afterExChange, applyProgCheck, autoGrow, backToWorkout, buildSteps, closeSwapHint, esc,
   completeStep, exFromWork, finishPartialWorkout, nextStep, openSwapHint, prevStep, refreshDetailsFade, saveExToWorkout,
@@ -2320,10 +2320,18 @@ export function initEvents(){
   // явный 0 в шаге (значит «эта ось не растёт») JS воспримет как «не задано» и
   // подставит дефолт заново
   ['exStepReps','exStepWeight','exStepTime','exMaxReps','exMaxWeight','exMaxTime'].forEach(id => {
-    $(id).oninput = ()=>{ $(id).dataset.touched = '1'; syncExProgSum(); syncExNowHints(); };
+    $(id).oninput = ()=>{
+      $(id).dataset.touched = '1';
+      syncExProgSum();
+      syncExNowHints();
+      syncExSwapAvailability();
+    };
   });
-  // база поменялась — итог пересчитывается тут же, иначе подсказка врёт до сохранения
-  ['exValue','exWeight'].forEach(id => $(id).addEventListener('input', syncExNowHints));
+  // база поменялась — итог и достижимость потолка пересчитываются тут же
+  ['exValue','exWeight'].forEach(id => $(id).addEventListener('input', ()=>{
+    syncExNowHints();
+    syncExSwapAvailability();
+  }));
   $('exSwapName').oninput = e => { exDraft.swapName = e.target.value; };
   $('exSwapDesc').oninput = e => { exDraft.swapDesc = e.target.value; };
   $('exDesc').oninput = e => { exDraft.desc = e.target.value; syncExDetailsSum(); };
