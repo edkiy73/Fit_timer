@@ -1355,7 +1355,7 @@ function samePhysicalLevelScale(oldEx, newEx){
   // Дубликаты физически неоднозначны: безопаснее сбросить current, чем угадать не ту резинку.
   if(oldIds.length < 2 || newIds.length !== oldIds.length) return false;
   if(new Set(oldIds).size !== oldIds.length || new Set(newIds).size !== newIds.length) return false;
-  if(oldIds.slice().sort().join('|') !== newIds.slice().sort().join('|')) return false;
+  if(JSON.stringify(oldIds.slice().sort()) !== JSON.stringify(newIds.slice().sort())) return false;
 
   const oldBase = Math.max(0, Math.min(oldIds.length - 1, Math.round(+oldEx.loadLevel || 0)));
   const newBase = Math.max(0, Math.min(newIds.length - 1, Math.round(+newEx.loadLevel || 0)));
