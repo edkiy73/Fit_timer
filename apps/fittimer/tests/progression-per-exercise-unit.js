@@ -240,6 +240,87 @@ function runWorkout(exercises, every){
     'reps-only zeroes weight growth but keeps weighted exercise format');
 }
 
+/* ---- resistance/level model and engine ---- */
+{
+  const ex = mkEx('Резинка default', {type:'reps', value:'12-15', progOn:true,
+    loadType:'level', progMode:'level', trackWeight:false, repsStep:2, repsMax:18,
+    loadLevel:1});
+  need(Array.isArray(ex.loadLevels) && ex.loadLevels.length === 4 &&
+      ex.loadLevels.map(x=>x.key).join(',') === 'light,medium,strong,veryStrong',
+    'level load gets a stable built-in resistance scale');
+  need(exerciseLoadLevel(ex) === 1, 'base resistance level is normalized');
+}
+{
+  const ex = mkEx('Свои резинки', {type:'reps', value:'12', progOn:true,
+    loadType:'level', progMode:'level',
+    loadLevels:['Жёлтая', {label:'Красная 15–25 lb'}, {key:'strong'}, {key:'invalid'}],
+    loadLevel:20});
+  need(ex.loadLevels.length === 3 && ex.loadLevels[0].label === 'Жёлтая' &&
+      ex.loadLevels[1].label === 'Красная 15–25 lb' && ex.loadLevels[2].key === 'strong',
+    'custom resistance labels and known built-in keys are sanitized');
+  need(ex.loadLevel === 2, 'base level is clamped to the scale');
+}
+{
+  const ex = mkEx('Тяга резинки', {type:'reps', value:'12-15', progOn:true,
+    loadType:'level', progMode:'level', loadLevel:1,
+    repsStep:2, repsMax:18,
+    loadLevels:[{key:'light'},{key:'medium'},{key:'strong'},{key:'veryStrong'}]});
+  const seq=[];
+  for(let i=0;i<4;i++){
+    const p=previewNextProgression(ex,{progression:2});
+    seq.push(p.current.reps+'@'+p.current.level+'→'+p.next.reps+'@'+p.next.level);
+    const before=JSON.stringify(ex);
+    need(JSON.stringify(ex)===before, 'level preview is pure');
+    advanceExerciseProgression(ex);
+  }
+  need(seq[0] === '12-15@1→14-17@1' &&
+      seq[1] === '14-17@1→16-18@1' &&
+      seq[2] === '16-18@1→12-15@2' &&
+      seq[3] === '12-15@2→14-17@2',
+    'reps then resistance progression sequence: '+seq.join(' | '));
+}
+{
+  const ex = mkEx('Прямая смена резинки', {type:'reps', value:'12', progOn:true,
+    loadType:'level', progMode:'level', loadLevel:0, repsStep:0,
+    loadLevels:[{label:'A'},{label:'B'},{label:'C'}]});
+  const p=previewNextProgression(ex,{progression:2});
+  need(p.changed.join(',') === 'level' && p.current.level === 0 && p.next.level === 1 &&
+      p.current.reps === p.next.reps,
+    'level mode can raise resistance directly with fixed reps');
+  advanceExerciseProgression(ex);
+  need(ex.ps.cur.level === 1, 'apply stores current resistance in ps.cur.level');
+}
+{
+  const ex = mkEx('Время + сопротивление', {type:'time', value:'30', progOn:true,
+    loadType:'level', progMode:'level', loadLevel:1, timeStep:0,
+    loadLevels:[{label:'Лёгкая'},{label:'Средняя'},{label:'Тяжёлая'}]});
+  const p=previewNextProgression(ex,{progression:2});
+  need(p.next.sec === 30 && p.next.level === 2 && p.changed.join(',') === 'level',
+    'time+level can keep time fixed and raise resistance');
+}
+{
+  const ex = mkEx('Последняя резинка', {type:'reps', value:'12-15', progOn:true,
+    loadType:'level', progMode:'level', loadLevel:2, repsStep:2, repsMax:18,
+    loadLevels:[{label:'A'},{label:'B'},{label:'C'}],
+    ps:{n:0,cur:{reps:'16-18',level:2}}});
+  const p=previewNextProgression(ex,{progression:2});
+  need(!p.canAdvance && p.next.level === 2 && p.next.reps === '16-18',
+    'last resistance at rep ceiling is terminal');
+  need(progAtCeiling('p',ex,{id:'p',progression:2}),
+    'level strategy reports terminal ceiling only at last level and rep ceiling');
+}
+{
+  const old = mkEx('Шкала', {type:'reps', value:'12', progOn:true, loadType:'level',
+    progMode:'level', loadLevels:[{label:'A'},{label:'B'}], loadLevel:0, repsStep:0});
+  old.ps={n:2,cur:{level:1}};
+  const changedScale=Object.assign(JSON.parse(JSON.stringify(old)),{
+    loadLevels:[{label:'Красная'},{label:'Чёрная'}], ps:undefined
+  });
+  const carried=carryExerciseProgress(old,changedScale);
+  need(carried.ps.n === 2 && carried.ps.cur.level == null,
+    'changing resistance scale keeps counter but never carries the old numeric level into another scale');
+}
+
 /* ---- pure compute/preview/apply: один источник расчёта ---- */
 {
   const ex = mkEx('Preview reps', {value:'10-12', type:'reps', progOn:true, trackWeight:false,
