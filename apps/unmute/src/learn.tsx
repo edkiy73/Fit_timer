@@ -57,6 +57,22 @@ export function firstPendingActivityIndex(
   return index<0?0:index;
 }
 
+/** Resume from the earliest requirement that is still genuinely incomplete.
+ * A pattern may already be "seen" while one of its required practice modes is not passed. */
+export function firstIncompleteRequirementIndex(
+  node:RoadmapNode,
+  activities:Activity[],
+  progress:CourseProgressDocument
+):number{
+  const missing=missingForNode(node,progress);
+  const missingIds=new Set([
+    ...missing.unseen,
+    ...missing.practice.map(item=>item.activityId)
+  ]);
+  const requiredIndex=activities.findIndex(activity=>missingIds.has(activity.id));
+  return requiredIndex>=0 ? requiredIndex : firstPendingActivityIndex(activities,progress);
+}
+
 /** One segment per first-pass task: correct / wrong / current / not reached yet.
  * Mistakes replayed at the end do not add extra segments. */
 function RunnerProgress({
@@ -334,7 +350,7 @@ export function NodeRunnerView({
       // Never destroy an unfinished run merely because refreshed course content is temporarily
       // different (e.g. after auth/Plus purchase). Only a completed node invalidates it.
       if(saved&&nodeProgress?.complete)clearLessonRun(state.set.id,node.id);
-      begin(requested>=0?requested:firstPendingActivityIndex(steps,state.progress));
+      begin(requested>=0?requested:firstIncompleteRequirementIndex(node,steps,state.progress));
       setIntro(requested<0&&theoryCards.some(card=>!isSeen(state.progress,card.id)));
       setPracticeMode(startMode);
       // A completed day opened again is a replay; a step opened on purpose («Скажи вслух») still counts.
