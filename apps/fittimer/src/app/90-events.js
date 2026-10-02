@@ -1794,6 +1794,12 @@ export function addExManual(){
   const nWarm = list.filter(e => e.warmup).length;
   if(list.length - nWarm >= MAX_MAIN){ appAlert(t('exercise.mainLimitAdd',{count:MAX_MAIN})); return; }
   const ex = blankExercise();
+  // В ручном редакторе прогрессия — осознанный opt-in. blankExercise хранит
+  // compatibility-дефолты для parser/legacy, поэтому выключаем её именно здесь,
+  // не меняя семантику старых и AI-созданных упражнений.
+  ex.progOn = false;
+  ex.loadType = 'none';
+  ex.trackWeight = false;
   // наследуем формат, подходы и отдых у предыдущего — при сборке они обычно одинаковые
   const prev = list.filter(e => !e.warmup).slice(-1)[0];
   if(prev){ ex.type = prev.type; ex.sets = prev.sets || 1; ex.rest = prev.rest; ex.value = prev.value; }
