@@ -23,13 +23,14 @@ for(const node of nodes){
   for(const id of node.activityIds) assert.ok(ids.has(id),'node '+node.id+' references '+id);
   assert.ok(node.activityIds.some(id=>id.startsWith('plan.')),'every day has a plan note');
 }
-// Difficulty ladder: beginners arrange words first, then transition, then recall by typing.
+// Every day starts with a scaffolded sentence and later asks for keyboard recall.
 for(const node of nodes){
-  const expected=node.dayIndex<=4?'build':node.dayIndex<=8?'progressive':'write';
-  const translations=node.activityIds
+  const sentenceActivities=node.activityIds
     .map(id=>course.activities.find(activity=>activity.id===id))
-    .filter(activity=>activity?.type==='translation');
-  for(const activity of translations) assert.equal(activity.responseMode,expected,activity.id+' response mode');
+    .filter(activity=>activity?.type==='text-input'||activity?.type==='translation');
+  assert.ok(sentenceActivities.length>=2,'day '+node.dayIndex+' has both scaffold and recall');
+  assert.equal(sentenceActivities[0].responseMode,'progressive','day '+node.dayIndex+' starts with chips');
+  assert.equal(sentenceActivities.at(-1).responseMode,'write','day '+node.dayIndex+' ends with keyboard recall');
 }
 // Every graded card explains the answer in both languages.
 for(const activity of course.activities){
