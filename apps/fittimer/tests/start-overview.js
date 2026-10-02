@@ -53,7 +53,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     change:$('startLoadChange').textContent.trim(),
     first:document.querySelector('#startOverviewList .ex-row')?.textContent || '',
     second:document.querySelectorAll('#startOverviewList .ex-row')[1]?.textContent || '',
-    warmFirst:document.querySelector('#startOverviewList .ex-row .ex-meta span')?.textContent,
+    warmFirst:document.querySelector('#startOverviewList .ex-row .ex-meta .wm')?.textContent,
     photos:document.querySelectorAll('#startOverviewList .ex-thumb img').length,
     rests:[...document.querySelectorAll('#startOverviewList .ex-meta *')].some(x => /отдых/i.test(x.textContent)),
     rows:document.querySelectorAll('#startOverviewList .ex-row').length
