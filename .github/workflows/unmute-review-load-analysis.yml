@@ -1,0 +1,26 @@
+name: UnMute — review load analysis
+
+on:
+  pull_request:
+    paths:
+      - 'apps/unmute/scripts/simulate-review-load.mjs'
+      - '.github/workflows/unmute-review-load-analysis.yml'
+  workflow_dispatch:
+
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Simulate 30 days
+        run: |
+          node apps/unmute/scripts/simulate-review-load.mjs > review-load.json
+          node -e "const r=require('./review-load.json'); for(const s of r.scenarios) console.log([s.copies+' course'+(s.copies===1?'':'s'),Math.round(s.accuracy*100)+'%',s.breaks?'breaks':'no breaks','avg='+s.summary.avgOffered,'p95='+s.summary.p95Offered,'max='+s.summary.maxOffered,'raw='+s.summary.maxRawDue,'waiting='+s.summary.maxWaiting,'attempts='+s.summary.maxReviewAttempts].join(' | '))"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unmute-review-load
+          path: review-load.json
