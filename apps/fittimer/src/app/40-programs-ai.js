@@ -46,6 +46,9 @@ let builderProgramsHooks = {
   getExProgValue: () => 0,
   getExWeight: () => 0,
   hasWeight: () => false,
+  progressionLoadType: () => 'none',
+  exerciseLoadLevels: () => [],
+  editorProgressionMode: () => null,
   importFromText: () => {},
   isDualProg: () => false,
   migrateLegacyDualRangeExercise: () => false,
@@ -2331,6 +2334,28 @@ function exFormatLine(ex){
   const axis = ex.type === 'time' ? 'время' : 'повторения';
   return 'ФОРМАТ: ' + (builderProgramsHooks.hasWeight(ex) ? axis + ' и вес' : axis);
 }
+function protocolResistanceLabel(level, locale){
+  if(!level) return '';
+  if(level.label) return String(level.label);
+  const en = locale === 'en';
+  if(level.key === 'light') return en ? 'Light' : 'Лёгкое';
+  if(level.key === 'medium') return en ? 'Medium' : 'Среднее';
+  if(level.key === 'strong') return en ? 'Strong' : 'Сильное';
+  if(level.key === 'veryStrong') return en ? 'Very strong' : 'Очень сильное';
+  return '';
+}
+function exResistanceLines(ex, opts){
+  if(builderProgramsHooks.progressionLoadType(ex) !== 'level') return [];
+  const levels = builderProgramsHooks.exerciseLoadLevels(ex);
+  if(levels.length < 2) return [];
+  const locale = (opts && opts.locale) || (opts && opts.program && opts.program.locale) || appLocale;
+  const idx = Math.max(0, Math.min(levels.length - 1, Math.round(+ex.loadLevel || 0)));
+  return [
+    'НАГРУЗКА: сопротивление',
+    'СОПРОТИВЛЕНИЕ: ' + protocolResistanceLabel(levels[idx], locale),
+    'УРОВНИ СОПРОТИВЛЕНИЯ: ' + levels.map(level => protocolResistanceLabel(level, locale)).filter(Boolean).join(' | ')
+  ];
+}
 // ОТДЫХ — между подходами (как раньше). Вторую строку, «после упражнения»,
 // пишем только когда она реально отличается: у большинства упражнений отдых
 // после — то же число, и не указанное явно поле само возьмёт его в качестве
@@ -2347,18 +2372,37 @@ function exRestLines(ex){
 // «…и вес» — обе независимо (0 = эта ось намеренно не растёт), для простых — одна.
 function exProgToLines(ex, opts){
   // при forEdit (opts.program задан) показываем текущий прогрессированный вес,
-  // а не базу — см. exCurrentValueText/programToText выше
+  // но resistance policy всегда сериализует БАЗОВЫЙ loadLevel: текущий ps.cur.level
+  // переносится carryExerciseProgress(), иначе обычная AI-правка сделает его новой базой.
   const p = opts && opts.program;
   const weightNow = p ? builderProgramsHooks.getExWeight(p.id, ex, p) : (+ex.weight || 0);
+  const loadType = builderProgramsHooks.progressionLoadType(ex);
+  const mode = builderProgramsHooks.editorProgressionMode(ex);
   const L = ['УСЛОЖНЯТЬ: ' + (builderProgramsHooks.progAxis(ex) === 'none' ? 'нет' : 'да')];
   if(ex.progEvery != null) L.push('ЧАСТОТА ПРОГРЕССИИ: ' + Math.max(0, Math.min(15, Math.round(+ex.progEvery || 0))));
-  // ВЕС: 0 — не «пустое место», а значимое «снаряд ещё не выбран» (см.
-  // weightPending() в 60-builder.js): раньше строку пропускали при нуле, и
-  // формат «повторения и вес» без выбранного снаряда терял ВЕС из протокола
-  // вовсе, а прогрессия молча копилась поверх несуществующей базы.
+  L.push(...exResistanceLines(ex, opts));
+
+  // ВЕС: 0 — не «пустое место», а значимое «снаряд ещё не выбран».
   if(builderProgramsHooks.hasWeight(ex)) L.push('ВЕС: ' + builderProgramsHooks.fmtKg(weightNow));
+
   if(builderProgramsHooks.progAxis(ex) !== 'none'){
-    if(builderProgramsHooks.hasWeight(ex)){
+    if(loadType === 'level'){
+      if(mode === 'level'){
+        if(ex.type !== 'time'){
+          // 0 = сразу переходить к следующему сопротивлению; >0 = сначала
+          // растить повторы до потолка, затем level и сброс диапазона.
+          L.push('ШАГ ПОВТОРОВ: ' + (ex.repsStep != null ? ex.repsStep : 0));
+          if(+ex.repsStep > 0 && +ex.repsMax > 0) L.push('ПОТОЛОК ПОВТОРОВ: ' + ex.repsMax);
+        }
+      }else if(mode === 'time'){
+        L.push('ШАГ: ' + (ex.timeStep != null ? ex.timeStep : 5));
+        if(+ex.timeMax > 0) L.push('ПОТОЛОК: ' + ex.timeMax);
+      }else{
+        // reps при фиксированном сопротивлении.
+        L.push('ШАГ: ' + (ex.repsStep != null ? ex.repsStep : 1));
+        if(+ex.repsMax > 0) L.push('ПОТОЛОК: ' + ex.repsMax);
+      }
+    }else if(builderProgramsHooks.hasWeight(ex)){
       if(ex.type === 'time'){
         L.push('ШАГ ВРЕМЕНИ: ' + (ex.timeStep != null ? ex.timeStep : 5));
         L.push('ШАГ ВЕСА: ' + builderProgramsHooks.fmtKg(ex.wStep != null ? ex.wStep : 2));
@@ -2387,7 +2431,7 @@ function exProgToLines(ex, opts){
 }
 
 // одно упражнение → текст в нашем формате
-export function exerciseToText(ex){
+export function exerciseToText(ex, opts){
   const L = ['УПРАЖНЕНИЕ: ' + (ex.name || '')];
   if((ex.desc || '').trim()) L.push('ОПИСАНИЕ: ' + ex.desc.replace(/\s*\n+\s*/g, ' ').trim());
   const mus = (ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean);
@@ -2399,7 +2443,7 @@ export function exerciseToText(ex){
   if(ex.perSide) L.push('СТОРОНА: да');
   if(ex.warmup) L.push('РАЗМИНКА: да');
   L.push(...exRestLines(ex));
-  L.push(...exProgToLines(ex));
+  L.push(...exProgToLines(ex, opts));
   if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
   return L.join('\n');
 }
@@ -2449,7 +2493,7 @@ export function exePrompt(){
     FitAIProtocol.editRules(),
     'USER: '+userForAI(builderDraft()&&builderDraft().locale),
     'REQUEST: '+wish,
-    '=== CURRENT EXERCISE ===\n'+exerciseToText(ex),
+    '=== CURRENT EXERCISE ===\n'+exerciseToText(ex,{locale:builderDraft()&&builderDraft().locale}),
     exAnswerFormat(builderDraft()&&builderDraft().locale)
   ].join('\n\n');
 }
@@ -2687,7 +2731,9 @@ function exCurrentValueText(p, ex){
   // переносится отдельно через ex.ps (carryExerciseProgress). Иначе безобидная
   // правка отдыха превратила бы текущие 12-14 в новый старт и после +веса уже не
   // вернула бы пользователя к исходным 8-10.
-  if(builderProgramsHooks.isDualProg(ex)) return builderProgramsHooks.valueText(ex.value).replace('–', '-');
+  const levelCycle = builderProgramsHooks.progressionLoadType(ex) === 'level'
+    && builderProgramsHooks.editorProgressionMode(ex) === 'level';
+  if(builderProgramsHooks.isDualProg(ex) || levelCycle) return builderProgramsHooks.valueText(ex.value).replace('–', '-');
   return builderProgramsHooks.progressedRepsRange(p.id, ex, p).replace('–', '-');
 }
 
@@ -2736,7 +2782,7 @@ export function programToText(p, opts){
       if(ex.perSide) L.push('СТОРОНА: да');
       if(ex.warmup) L.push('РАЗМИНКА: да');
       L.push(...exRestLines(ex));
-      L.push(...exProgToLines(ex, forEdit ? {program:p} : null));
+      L.push(...exProgToLines(ex, {program:forEdit ? p : null, locale:p.locale || appLocale}));
       if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
     });
   });
@@ -2759,7 +2805,7 @@ export function editAIPrompt(){
     'USER: '+userForAI((editAIProg&&editAIProg.locale)||appLocale)+'\n'+
     'USER REQUEST: '+wish+'\n\n'+
     '=== CURRENT PROGRAM ===\n'+
-    'Values shown are the CURRENT working load, except genuine double progression: its ЗНАЧЕНИЕ remains the original reset/start range because the current progressed range is preserved internally by the app. Do not reinterpret that reset range as the user having lost progress.\n'+
+    'Values shown are the CURRENT working load, except genuine double progression and reps→resistance cycles: their ЗНАЧЕНИЕ (and base resistance policy) remains the original reset/start state because current progressed state is preserved internally by the app. Do not reinterpret that reset state as the user having lost progress.\n'+
     programToText(editAIProg, {forEdit:true});
 }
 
