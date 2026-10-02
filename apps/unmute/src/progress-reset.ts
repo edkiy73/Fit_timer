@@ -4,6 +4,7 @@ import {
   type StatsProgressDocument,
   type WordsProgressDocument
 } from './progress';
+import { appDocs } from './sync';
 import {
   readCourseProgress,
   readStatsProgress,
@@ -59,10 +60,26 @@ export function resetWordsProgress(doc:WordsProgressDocument,at:string):WordsPro
   return {schemaVersion:1,items:tombstones(doc.items,at)};
 }
 
-/** Resets the given courses (every course the learner could have studied) and saved words. */
+export function progressSetIdsFromRefs(
+  refs:ReadonlyArray<{key:string}>
+):string[]{
+  const ids=new Set<string>();
+  for(const ref of refs){
+    const key=String(ref.key||'');
+    if(key.startsWith('progress:course:'))ids.add(key.slice('progress:course:'.length));
+    if(key.startsWith('progress:stats:'))ids.add(key.slice('progress:stats:'.length));
+  }
+  return [...ids].filter(Boolean);
+}
+
+/** Resets catalog courses plus every historical progress document already known to sync.
+ * Pull first when possible so a retired course that only exists on the account is included. */
 export async function resetAllProgress(setIds:readonly string[],now:Date=new Date()):Promise<void>{
+  await syncNow().catch(()=>undefined);
+  const historical=progressSetIdsFromRefs(await appDocs.refs());
+  const allSetIds=[...new Set([...setIds,...historical])];
   const at=now.toISOString();
-  for(const setId of [...new Set(setIds)]){
+  for(const setId of allSetIds){
     await writeCourseProgress(setId,resetCourseProgress(await readCourseProgress(setId),at));
     await writeStatsProgress(setId,resetStatsProgress(await readStatsProgress(setId),at));
   }
