@@ -600,7 +600,12 @@ export function NodeRunnerView({
   // Only the first answer of a first run moves review intervals and stats: a replayed day and
   // «Работа над ошибками» are practice, so a mistake plus its fix never reads as a right answer.
   const recordsAnswers=!replay&&!retrying;
-  const gradeAnswer=(correct:boolean,responseKind?:SentenceResponseKind)=>recordsAnswers?saveGraded(setId,activity.id,correct,responseKind):Promise.resolve();
+  const gradeAnswer=(correct:boolean,responseKind?:SentenceResponseKind)=>{
+    if(!recordsAnswers)return Promise.resolve();
+    return responseKind
+      ? saveGraded(setId,activity.id,correct,responseKind)
+      : saveGraded(setId,activity.id,correct);
+  };
   const practiceSave:NodeRunnerViewProps['savePractice']=(...args)=>recordsAnswers?savePractice(...args):Promise.resolve();
   const dialogueSave:typeof saveDialogue=(...args)=>recordsAnswers?saveDialogue(...args):Promise.resolve();
 
