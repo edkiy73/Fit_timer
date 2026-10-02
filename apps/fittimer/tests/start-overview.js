@@ -67,7 +67,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('при изменившейся нагрузке виден и срок следующего повышения', /Спросим о повышении через/.test(before.change), before.change);
   const kgChip = await page.evaluate(() => {
     const row = document.querySelectorAll('#startOverviewList .ex-row')[2];
-    const chip = row && row.querySelector('.kg-edit');
+    const chip = row && row.querySelector('[data-load-field="weight"]');
     return {chip: chip ? chip.textContent : '', icon: !!(chip && chip.querySelector('svg')),
       reps: row ? (row.querySelector('[data-load-field="reps"]')?.textContent || '') : ''};
   });
