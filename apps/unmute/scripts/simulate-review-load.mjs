@@ -172,6 +172,7 @@ function simulate(set,{copies,accuracy,breaks,seed}){
       maxWaiting:Math.max(...days.map(d=>d.waiting)),
       avgReviewAttempts:+avg(active.map(d=>d.reviewAttempts)).toFixed(1),
       maxReviewAttempts:Math.max(...active.map(d=>d.reviewAttempts)),
+      avgLessonItems:+avg(active.map(d=>d.lessonAttempts)).toFixed(1),
       maxEndDebt:Math.max(...days.map(d=>d.endRawDue)),
     },
     days
@@ -222,7 +223,8 @@ for(const s of scenarios){
     'max offered '+s.summary.maxOffered,
     'max raw '+s.summary.maxRawDue,
     'max waiting '+s.summary.maxWaiting,
-    'max attempts '+s.summary.maxReviewAttempts
+    'max attempts '+s.summary.maxReviewAttempts,
+    'avg new '+s.summary.avgLessonItems
   ].join(' | '));
   console.error('  offered/day: '+s.days.map(day=>day.skipped?'·':day.offered).join(','));
 }
