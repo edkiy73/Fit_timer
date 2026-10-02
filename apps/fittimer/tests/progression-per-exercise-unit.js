@@ -454,7 +454,21 @@ function runWorkout(exercises, every){
     'changing resistance scale keeps counter but never carries the old numeric level into another scale');
 }
 
-/* ---- pure compute/preview/apply: один источник расчёта ---- */
+/* ---- UX invariant: смена формата не включает выключенную progression ---- */
+{
+  const ex = mkEx('Без прогрессии', {type:'reps', progOn:false, trackWeight:false, loadType:'none'});
+  setExerciseLoadType(ex, 'weight', true);
+  need(ex.progOn === false && ex.loadType === 'weight' && ex.progMode === 'double_range',
+    'changing load type prepares a sensible mode but preserves explicit progression off: ' + JSON.stringify(ex));
+  setExerciseMetric(ex, 'time', true);
+  need(ex.progOn === false && ex.type === 'time' && ex.progMode === 'time',
+    'changing reps/time preserves explicit progression off: ' + JSON.stringify(ex));
+  setExerciseLoadType(ex, 'level', true);
+  need(ex.progOn === false && ex.loadType === 'level' && Array.isArray(ex.loadLevels) && ex.loadLevels.length >= 2,
+    'switching to resistance preserves progression off while preparing the scale: ' + JSON.stringify(ex));
+}
+
+/* ---- pure compute/preview/apply: один источник расчёта ---- *//* ---- pure compute/preview/apply: один источник расчёта ---- */
 {
   const ex = mkEx('Preview reps', {value:'10-12', type:'reps', progOn:true, trackWeight:false,
     repsStep:1, repsMax:15});
