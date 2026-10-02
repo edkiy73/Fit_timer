@@ -551,6 +551,29 @@ export function setExerciseMetric(ex, type, preferRecommended=false){
   return setExerciseProgressionMode(ex, target);
 }
 
+export function progressionModeLabel(ex, mode){
+  if(mode === 'double_range') return t('builder.progModeDouble');
+  if(mode === 'weight') return t('builder.progModeWeight');
+  if(mode === 'time') return t('builder.progModeTime');
+  if(mode === 'parallel') return t(ex && ex.type === 'time' ? 'builder.progModeParallelTime' : 'builder.progModeParallelReps');
+  if(mode === 'level') return t('builder.progModeLevel');
+  return t('builder.progModeReps');
+}
+
+function fillExerciseProgModeOptions(){
+  const sel = $('exProgMode');
+  if(!sel || !exDraft) return;
+  const current = editorProgressionMode(exDraft);
+  sel.innerHTML = '';
+  progressionModeOptions(exDraft).forEach(mode=>{
+    const o = document.createElement('option');
+    o.value = mode;
+    o.textContent = progressionModeLabel(exDraft, mode);
+    sel.appendChild(o);
+  });
+  sel.value = current || recommendedProgressionMode(exDraft);
+}
+
 function fillExerciseProgEveryOptions(){
   const sel = $('exProgEvery');
   if(!sel) return;
@@ -562,10 +585,6 @@ function fillExerciseProgEveryOptions(){
     ? t('builder.exerciseProgressionUseProgram',{count:inherited})
     : t('builder.exerciseProgressionUseProgramOff');
   sel.appendChild(def);
-  const off = document.createElement('option');
-  off.value = '0';
-  off.textContent = t('builder.exerciseProgressionOff');
-  sel.appendChild(off);
   for(let n = 1; n <= PROG_EVERY_MAX; n++){
     const o = document.createElement('option');
     o.value = String(n);
@@ -1328,6 +1347,14 @@ export function openExercise(i, isNew){
     exDraft.progOn = progAxis(exDraft) !== 'none';
     exDraft.trackWeight = hasWeight(exDraft);
   }
+  // Старый технический progEvery=0 больше не показываем как второй способ
+  // выключить прогрессию: в редакторе это обычный OFF тумблера.
+  if(exDraft.progEvery === 0){
+    exDraft.progOn = false;
+    exDraft.progEvery = null;
+  }
+  if(exDraft.loadType == null) exDraft.loadType = progressionLoadType(exDraft);
+  if(exDraft.progMode == null && exDraft.progOn) exDraft.progMode = editorProgressionMode(exDraft);
   // старые упражнения (и только что заведённые) не знают «отдых после упражнения»
   // отдельно от «между подходами» — на первое открытие подставляем то же число,
   // что и в rest, тем же приёмом, что и progOn/trackWeight выше. С этого момента
@@ -1365,6 +1392,7 @@ function fillExercise(){
   $('exVideo').value = ex.video || '';
   $('exWeight').value = ex.weight ? fmtKg(ex.weight) : '';
   fillExerciseProgEveryOptions();
+  fillExerciseProgModeOptions();
   $('exProgEvery').value = ex.progEvery == null ? '' : String(ex.progEvery);
   renderProgControls();
   $('exWarm').classList.toggle('on', !!ex.warmup);
@@ -1388,21 +1416,18 @@ function fillExercise(){
 // или перенос с грузом: планка с блином, фермерская прогулка).
 export function syncExType(){
   const reps = exDraft.type !== 'time';
-  const withWeight = hasWeight(exDraft);
+  const loadType = progressionLoadType(exDraft);
+  const withWeight = loadType === 'weight';
   $('exTypeReps').classList.toggle('act', reps);
   $('exTypeTime').classList.toggle('act', !reps);
-  $('exWeightOn').classList.toggle('on', withWeight);
+  $('exLoadNone').classList.toggle('act', loadType === 'none');
+  $('exLoadWeight').classList.toggle('act', withWeight);
   $('exValLabel').textContent = reps ? t('builder.repsLabel') : t('builder.secondsLabel');
   $('exValue').placeholder = reps ? t('builder.repsExample2') : t('builder.secondsExample2');
-  // Подпись объясняет выбранный формат своими словами: «повт. + 8 кг» в списке
-  // не читалось как «повторения и килограммы вместе».
-  if($('exTypeHint')){
-    $('exTypeHint').textContent = withWeight
-      ? t(reps ? 'builder.typeWeightedRepsHint' : 'builder.typeWeightedTimeHint')
-      : t(reps ? 'builder.typeRepsHint' : 'builder.typeTimeHint');
-  }
+  if($('exTypeHint')) $('exTypeHint').textContent = t(reps ? 'builder.typeRepsHint' : 'builder.typeTimeHint');
+  if($('exLoadHint')) $('exLoadHint').textContent = t(withWeight ? 'builder.loadHintWeight' : 'builder.loadHintNone');
   setShown('exWeightRow', withWeight);
-  renderProgControls(); // смена формата может сделать текущую ось прогрессии бессмысленной
+  renderProgControls();
 }
 export function syncExWarm(){
   setShown('exSetsField', true);
@@ -1431,14 +1456,17 @@ export function parseKg(v){
 // вес и повторы растут независимо друг от друга (0 в одном из них = эта ось не растёт,
 // решает либо сам человек, либо ИИ по промту). Для простых форматов — одно поле.
 export function renderProgControls(){
-  // разминка выполняется один раз и технически не может «усложняться со временем» —
-  // тумблер здесь не имеет смысла, поэтому блокируем его явно, а не просто прячем шаг
+  const hideControls = ()=>{
+    ['exProgModeRow','exProgEveryRow','exStepRow','exDualRow','exStepBothHint','exSwapRow','exSwapBox']
+      .forEach(id => setShown(id, false));
+  };
+
   if(exDraft.warmup){
     $('exProgOn').classList.remove('on');
     $('exProgOn').classList.add('disabled');
     $('exProgOn').disabled = true;
     $('exProgOnHint').textContent = t('builder.progressWarmupOff');
-    ['exProgEveryRow','exStepRow','exDualRow','exStepBothHint','exSwapRow','exSwapBox'].forEach(id => setShown(id, false));
+    hideControls();
     syncExProgSum(); syncExNowHints();
     return;
   }
@@ -1450,33 +1478,38 @@ export function renderProgControls(){
   $('exProgOn').classList.toggle('on', on);
   if(!on){
     $('exProgOnHint').textContent = t('builder.progressOffHint');
-    ['exProgEveryRow','exStepRow','exDualRow','exStepBothHint','exSwapRow','exSwapBox'].forEach(id => setShown(id, false));
+    hideControls();
     syncExProgSum(); syncExNowHints();
     return;
   }
 
+  fillExerciseProgModeOptions();
+  setShown('exProgModeRow', true);
   setShown('exProgEveryRow', true);
   $('exProgOnHint').textContent = period
     ? t('builder.progressAutoPeriod',{period:progPeriodLabel(period)})
     : t('builder.exerciseProgressionDisabledHint');
 
-  const withWeight = hasWeight(exDraft);
+  const mode = editorProgressionMode(exDraft);
   const isTime = exDraft.type === 'time';
-  // Пары «прибавка + потолок» живут одним рядом, показываем те, чья ось у этого
-  // упражнения вообще растёт: повторения, вес (обе сразу — это и есть двойная
-  // прогрессия) или секунды. Ось известна из формата, гадать не нужно.
-  setShown('exStepRow', true);
-  setShown('exStepRepsRow', !isTime);
-  setShown('exStepMaxRepsRow', !isTime);
-  setShown('exStepWeightRow', withWeight);
-  setShown('exStepMaxWeightRow', withWeight);
-  setShown('exStepTimeRow', isTime);
-  setShown('exStepMaxTimeRow', isTime);
-  // двойная прогрессия возможна только там, где есть и повторы, и вес
-  setShown('exDualRow', withWeight && !isTime);
-  $('exDual').classList.toggle('on', !!exDraft.dualProg);
-  setShown('exStepBothHint', true);
-  // замена нужна только усложняющемуся упражнению — при выключенном тумблере блок скрыт выше
+  const withWeight = progressionLoadType(exDraft) === 'weight';
+  const growReps = mode === 'reps' || mode === 'double_range' || (mode === 'parallel' && !isTime);
+  const growTime = mode === 'time' || (mode === 'parallel' && isTime);
+  const growWeight = withWeight && (mode === 'weight' || mode === 'double_range' || mode === 'parallel');
+
+  setShown('exStepRow', growReps || growTime || growWeight);
+  setShown('exStepRepsRow', growReps);
+  setShown('exStepMaxRepsRow', growReps);
+  setShown('exStepWeightRow', growWeight);
+  setShown('exStepMaxWeightRow', growWeight);
+  setShown('exStepTimeRow', growTime);
+  setShown('exStepMaxTimeRow', growTime);
+  // dualProg теперь compatibility-поле. Пользователь выбирает тот же смысл
+  // через «Как усложнять → Повторы → вес».
+  setShown('exDualRow', false);
+  $('exDual').classList.toggle('on', mode === 'double_range');
+  setShown('exStepBothHint', growReps);
+
   setShown('exSwapRow', true);
   $('exSwapOn').classList.toggle('on', !!exDraft.swapOn);
   setShown('exSwapBox', !!exDraft.swapOn);
@@ -1484,15 +1517,15 @@ export function renderProgControls(){
   $('exSwapDesc').value = exDraft.swapDesc || '';
 
   const set = (id, val) => { if(!$(id).dataset.touched) $(id).value = val; };
-  if(!isTime){
-    set('exStepReps', exDraft.repsStep != null ? exDraft.repsStep : (withWeight ? 0 : 1));
+  if(growReps){
+    set('exStepReps', exDraft.repsStep != null ? exDraft.repsStep : 1);
     set('exMaxReps', exDraft.repsMax > 0 ? exDraft.repsMax : '');
   }
-  if(withWeight){
+  if(growWeight){
     set('exStepWeight', fmtKg(exDraft.wStep != null ? exDraft.wStep : 2));
     set('exMaxWeight', exDraft.weightMax > 0 ? fmtKg(exDraft.weightMax) : '');
   }
-  if(isTime){
+  if(growTime){
     set('exStepTime', exDraft.timeStep != null ? exDraft.timeStep : 5);
     set('exMaxTime', exDraft.timeMax > 0 ? exDraft.timeMax : '');
   }
@@ -1546,44 +1579,23 @@ export function syncExNowHints(){
 export function syncExProgSum(){
   if(exDraft.warmup){ $('exProgSum').textContent = t('builder.warmupNoGrowth'); return; }
   if(progAxis(exDraft) === 'none'){ $('exProgSum').textContent = t('builder.noGrowth'); return; }
+
+  const mode = editorProgressionMode(exDraft);
+  const modeText = progressionModeLabel(exDraft, mode);
   const rawEvery = $('exProgEvery') ? $('exProgEvery').value : '';
-  const effectiveEvery = rawEvery === '' ? exerciseProgEvery({...exDraft, progEvery:null}, draft) : Math.max(0, +rawEvery || 0);
-  if(effectiveEvery === 0){ $('exProgSum').textContent = t('builder.exerciseProgressionOff'); return; }
-  const num = id => parseStepNum($(id).value);
+  const effectiveEvery = rawEvery === ''
+    ? exerciseProgEvery({...exDraft, progEvery:null}, draft)
+    : Math.max(0, +rawEvery || 0);
 
-  // Double progression — не две независимые прибавки, а последовательный цикл.
-  // В свёрнутой строке показываем весь смысл сразу: диапазон растёт до потолка
-  // верхней границы, затем добавляется вес и диапазон возвращается к старту.
-  if(exDraft.dualProg && hasWeight(exDraft) && exDraft.type !== 'time'){
-    const reps = num('exStepReps');
-    const max = num('exMaxReps');
-    const weight = num('exStepWeight');
-    if(reps > 0 && max > 0 && weight > 0){
-      const start = valueText(normValue($('exValue').value, 'reps')).replace('-', '–');
-      $('exProgSum').textContent = t('builder.dualSummary',{
-        reps:fmtKg(reps), max:fmtKg(max), weight:fmtKg(weight), start
-      });
-      return;
-    }
+  let frequencyText;
+  if(rawEvery === ''){
+    frequencyText = effectiveEvery > 0
+      ? t('builder.progressionProgramFrequencyShort',{count:effectiveEvery})
+      : t('builder.progressionProgramFrequencyMissing');
+  }else{
+    frequencyText = progPeriodLabel(effectiveEvery);
   }
-
-  // Читаем словами: «+2 повт., до 25» пугала, «+2 повт., максимум 25» — уже ближе.
-  const part = (stepId, maxId, unit, withMax) => {
-    const st = num(stepId), mx = num(maxId);
-    if(st == null || st <= 0) return '';
-    const s = `+${fmtKg(st)} ${unit}`;
-    return withMax && mx > 0 ? t('builder.summaryMax',{value:s,max:fmtKg(mx)}) : s;
-  };
-  // осей может быть две (вес — независимо от повторений или времени) — тогда
-  // предел в строку не влезает, и сводка говорит только про прибавку: подробности —
-  // в раскрытом блоке
-  const dual = hasWeight(exDraft);
-  const bits = exDraft.type === 'time'
-    ? [part('exStepTime', 'exMaxTime', t('store.secShort'), !dual)]
-    : [part('exStepReps', 'exMaxReps', t('store.repShort'), !dual)];
-  if(dual) bits.push(part('exStepWeight', 'exMaxWeight', t('progress.kg'), !dual));
-  const txt = bits.filter(Boolean).join(appLocale === 'ru' ? ' и ' : ' & ');
-  $('exProgSum').textContent = txt || t('builder.emptyProgress');
+  $('exProgSum').textContent = modeText + ' · ' + frequencyText;
 }
 
 // Одно значение — один видимый контрол. Раньше рядом с чипами стояло числовое
@@ -1658,27 +1670,40 @@ function applyFormTo(target){
   target.mistakes = $('exMistakes').value.trim();
   target.video = $('exVideo').value.trim();
   target.weight = parseKg($('exWeight').value);
+  target.loadType = progressionLoadType(target);
+  target.trackWeight = target.loadType === 'weight';
+  if(target.progOn){
+    target.progMode = editorProgressionMode(target);
+    target.dualProg = target.progMode === 'double_range';
+  }
   const rawProgEvery = $('exProgEvery') ? $('exProgEvery').value : '';
   target.progEvery = rawProgEvery === '' ? null : Math.max(0, Math.min(PROG_EVERY_MAX, Math.round(+rawProgEvery || 0)));
-  // читаем оба поля шага независимо — для «повторения и вес» обе цифры реальны одновременно,
-  // и явный 0 в любом из них означает «эта ось у этого упражнения не растёт» (не путать
-  // с пустым полем, куда ещё не вписали ничего — там остаётся дефолт оси)
+  // Читаем только оси выбранной стратегии. Скрытая ось получает шаг 0,
+  // но её максимум оставляем — при переключении режима туда-обратно настройка не теряется.
   if(target.progOn){
     const num = (id, def, round) => {
       const n = parseStepNum($(id).value);
       return n != null ? round(n) : def;
     };
-    if(target.type !== 'time'){
-      target.repsStep = num('exStepReps', hasWeight(target) ? 0 : 1, Math.round);
-      target.repsMax = num('exMaxReps', 0, Math.round);   // 0 = потолка нет
+    const mode = editorProgressionMode(target);
+    target.progMode = mode;
+    target.dualProg = mode === 'double_range';
+    const isTime = target.type === 'time';
+    const growReps = mode === 'reps' || mode === 'double_range' || (mode === 'parallel' && !isTime);
+    const growTime = mode === 'time' || (mode === 'parallel' && isTime);
+    const growWeight = hasWeight(target) && (mode === 'weight' || mode === 'double_range' || mode === 'parallel');
+
+    if(!isTime){
+      target.repsStep = growReps ? num('exStepReps', 1, Math.round) : 0;
+      if(growReps) target.repsMax = num('exMaxReps', 0, Math.round);
     }
     if(hasWeight(target)){
-      target.wStep = num('exStepWeight', 2, v => Math.round(v * 2) / 2);
-      target.weightMax = num('exMaxWeight', 0, v => Math.round(v * 2) / 2);
+      target.wStep = growWeight ? num('exStepWeight', 2, v => Math.round(v * 2) / 2) : 0;
+      if(growWeight) target.weightMax = num('exMaxWeight', 0, v => Math.round(v * 2) / 2);
     }
-    if(target.type === 'time'){
-      target.timeStep = num('exStepTime', 5, Math.round);
-      target.timeMax = num('exMaxTime', 0, Math.round);
+    if(isTime){
+      target.timeStep = growTime ? num('exStepTime', 5, Math.round) : 0;
+      if(growTime) target.timeMax = num('exMaxTime', 0, Math.round);
     }
     target.swapName = $('exSwapName').value.trim().slice(0, 60);
     target.swapDesc = $('exSwapDesc').value.trim().slice(0, 600);
@@ -2805,8 +2830,13 @@ export function initBuilder(){
     q.rotate = !q.rotate;
     $('qRotate').classList.toggle('on', q.rotate);
   });
+  $('exProgMode').onchange = ()=>{
+    setExerciseProgressionMode(exDraft, $('exProgMode').value);
+    ['exStepReps','exStepWeight','exStepTime','exMaxReps','exMaxWeight','exMaxTime'].forEach(id => delete $(id).dataset.touched);
+    renderProgControls();
+  };
   $('exProgEvery').onchange = ()=>{
-    exDraft.progEvery = $('exProgEvery').value === '' ? null : Math.max(0, Math.min(PROG_EVERY_MAX, Math.round(+$('exProgEvery').value || 0)));
+    exDraft.progEvery = $('exProgEvery').value === '' ? null : Math.max(1, Math.min(PROG_EVERY_MAX, Math.round(+$('exProgEvery').value || 1)));
     renderProgControls();
   };
   $('bRounds').onchange = ()=>{ curPlan().rounds = +$('bRounds').value; syncVolHint(); };

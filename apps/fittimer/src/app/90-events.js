@@ -54,7 +54,7 @@ import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExe
   commitExercise, commitPlanFields, curPlan, delExerciseAt, draft, dropFreshEx, dupExerciseAt,
   clearExerciseDraft, exDirty, exDraft, exIdx, exIsNew, fillPlanFields, markExerciseExisting, hasWeight, initAIForm, normValue, openBuilder, programHasProgression,
   openExercise, parseProgramText, parseStepNum, parseValue, planIdx, programDirty, renderExList, renderExMedia,
-  renderProgControls, saveProgram, selectPlanVariant, shrinkImage, syncCover, syncExDetailsSum, syncExNowHints,
+  renderProgControls, saveProgram, selectPlanVariant, setExerciseLoadType, setExerciseMetric, shrinkImage, syncCover, syncExDetailsSum, syncExNowHints,
   syncExProgSum, syncExType, syncExWarm, syncRotateUI
 , setBuilderEventHooks } from './60-builder.js';
 import { afterExChange, applyProgCheck, autoGrow, backToWorkout, buildSteps, closeSwapHint, esc,
@@ -188,12 +188,17 @@ function registerEventActions(){
     if(numFieldsOk('scrExercise') && exNameOk()) saveExAndBack();
   });
   registerAction('setExerciseType', btn => {
-    exDraft.type = btn.dataset.exType === 'time' ? 'time' : 'reps';
+    setExerciseMetric(exDraft, btn.dataset.exType === 'time' ? 'time' : 'reps', exIsNew);
     syncExType();
   });
+  registerAction('setExerciseLoadType', btn => {
+    setExerciseLoadType(exDraft, btn.dataset.loadType, exIsNew);
+    syncExType();
+  });
+  // Compatibility для старой собранной разметки/кеша: после следующей сборки кнопки
+  // toggleExerciseWeight уже нет, но старое событие безопасно приводит к той же модели.
   registerAction('toggleExerciseWeight', () => {
-    exDraft.trackWeight = !exDraft.trackWeight;
-    if(exDraft.trackWeight && exDraft.wStep == null) exDraft.wStep = 2;
+    setExerciseLoadType(exDraft, hasWeight(exDraft) ? 'none' : 'weight', exIsNew);
     syncExType();
   });
   registerAction('toggleExerciseProgressionBox', () => {
