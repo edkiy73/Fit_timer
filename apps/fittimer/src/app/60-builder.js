@@ -141,23 +141,38 @@ const DEFAULT_LOAD_LEVELS = [
   {key:'veryStrong'}
 ];
 
+function cleanLoadLevelLabel(raw){
+  // "|" — машинный разделитель УРОВНИ СОПРОТИВЛЕНИЯ в AI-протоколе.
+  // В пользовательском label заменяем его заранее, иначе один физический
+  // уровень после round-trip может превратиться в два.
+  return clampLine(raw, 60).replace(/\|+/g, ' / ').replace(/\s+/g, ' ').trim();
+}
 function cleanLoadLevels(raw, withDefault=false){
-  const out = [];
+  const out = [], seen = new Set();
   const list = Array.isArray(raw) ? raw : [];
+  const push = level => {
+    if(!level || out.length >= 12) return;
+    const key = level.key
+      ? 'k:' + level.key
+      : 'l:' + String(level.label || '').trim().toLocaleLowerCase();
+    if(!key || seen.has(key)) return;
+    seen.add(key);
+    out.push(level);
+  };
   for(const item of list){
     if(out.length >= 12) break;
     if(typeof item === 'string'){
-      const label = clampLine(item, 60);
-      if(label) out.push({label});
+      const label = cleanLoadLevelLabel(item);
+      if(label) push({label});
       continue;
     }
     if(!item || typeof item !== 'object') continue;
     if(BUILTIN_LOAD_LEVEL_KEYS.has(item.key)){
-      out.push({key:item.key});
+      push({key:item.key});
       continue;
     }
-    const label = clampLine(item.label, 60);
-    if(label) out.push({label});
+    const label = cleanLoadLevelLabel(item.label);
+    if(label) push({label});
   }
   if(out.length >= 2) return out;
   return withDefault ? DEFAULT_LOAD_LEVELS.map(x=>({...x})) : out;
@@ -197,9 +212,10 @@ export function exerciseLoadLevelState(ex){
   const item = levels[level] || null;
   return {
     level,
+    key: item && item.key ? item.key : '',
     label: item ? loadLevelLabel(item) : '',
-    // Стабильная физическая identity нужна resume-снимку. Для встроенной шкалы
-    // используем ключ (он не меняется при RU↔EN), для пользовательской — её label.
+    // Стабильная physical identity нужна resume-снимку. Для встроенной шкалы
+    // используем key (он не меняется при RU↔EN), для пользовательской — label.
     identity: loadLevelIdentity(item)
   };
 }
@@ -3145,6 +3161,7 @@ export function initBuilder(){
     exDirty,
     exRestAfter,
     exerciseLoadLevelState,
+    loadLevelLabel,
     exerciseProgEvery,
     fmtKg,
     getExProgValue,
