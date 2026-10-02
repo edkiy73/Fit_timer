@@ -443,6 +443,114 @@ export function getProgressionStrategy(ex, program){
   };
 }
 
+
+/* ---- модель ручного редактора прогрессии ----
+   AI и ручной редактор должны писать одну и ту же семантику. Эти функции не зависят
+   от названия упражнения: только от «как считаем» (reps/time) и типа нагрузки.
+   UI следующей пачки использует их для списка вариантов и разумного default. */
+export function progressionModeOptions(ex){
+  const isTime = !!ex && ex.type === 'time';
+  const loadType = progressionLoadType(ex);
+
+  if(loadType === 'level'){
+    // level появится отдельной пачкой. Уже фиксируем совместимую матрицу, чтобы UI
+    // не пришлось потом придумывать другую семантику.
+    return isTime ? ['time','level'] : ['level','reps'];
+  }
+  if(loadType === 'weight'){
+    return isTime
+      ? ['time','weight','parallel']
+      : ['double_range','weight','reps','parallel'];
+  }
+  return isTime ? ['time'] : ['reps'];
+}
+
+export function recommendedProgressionMode(ex){
+  const isTime = !!ex && ex.type === 'time';
+  const loadType = progressionLoadType(ex);
+  if(loadType === 'level') return isTime ? 'time' : 'level';
+  if(loadType === 'weight') return isTime ? 'time' : 'double_range';
+  return isTime ? 'time' : 'reps';
+}
+
+export function editorProgressionMode(ex){
+  if(!ex) return null;
+  const allowed = progressionModeOptions(ex);
+  const explicit = EX_PROG_MODES.has(ex.progMode) ? ex.progMode : null;
+  const inferred = explicit || inferredProgressionMode(ex);
+  return allowed.includes(inferred) ? inferred : recommendedProgressionMode(ex);
+}
+
+// Применяет выбранный пользователем способ прогрессии и синхронизирует legacy-поля,
+// которыми пока пользуются parser/workout/старые сохранения. Потолки не стираем:
+// переключиться туда-обратно должно быть безопасно.
+export function setExerciseProgressionMode(ex, mode){
+  if(!ex) return ex;
+  const allowed = progressionModeOptions(ex);
+  const nextMode = allowed.includes(mode) ? mode : recommendedProgressionMode(ex);
+  ex.progMode = nextMode;
+  ex.progOn = true;
+
+  const weighted = progressionLoadType(ex) === 'weight';
+  ex.trackWeight = weighted;
+  ex.dualProg = nextMode === 'double_range';
+
+  if(nextMode === 'double_range'){
+    if(!(ex.repsStep > 0)) ex.repsStep = 1;
+    if(!(ex.wStep > 0)) ex.wStep = 2;
+    const base = parseValue(ex.value);
+    ex.repsMax = Math.max(base.max + ex.repsStep, +ex.repsMax || 0);
+    ex.dualRangeV = 2;
+  } else if(nextMode === 'reps'){
+    if(!(ex.repsStep > 0)) ex.repsStep = 1;
+    if(weighted) ex.wStep = 0;
+  } else if(nextMode === 'weight'){
+    if(!(ex.wStep > 0)) ex.wStep = 2;
+    if(ex.type === 'time') ex.timeStep = 0;
+    else ex.repsStep = 0;
+  } else if(nextMode === 'time'){
+    if(!(ex.timeStep > 0)) ex.timeStep = 5;
+    if(weighted) ex.wStep = 0;
+  } else if(nextMode === 'parallel'){
+    if(ex.type === 'time'){
+      if(!(ex.timeStep > 0)) ex.timeStep = 5;
+    }else if(!(ex.repsStep > 0)) ex.repsStep = 1;
+    if(!(ex.wStep > 0)) ex.wStep = 2;
+  }
+  return ex;
+}
+
+// Явное изменение типа нагрузки для ручного редактора.
+// preferRecommended=true используется для НОВОГО упражнения: пользователь добавил вес,
+// значит нормальный default меняется reps→double_range. Для уже настроенного упражнения
+// false сохраняет текущий способ, пока он совместим.
+export function setExerciseLoadType(ex, loadType, preferRecommended=false){
+  if(!ex) return ex;
+  const next = loadType === 'weight' ? 'weight' : loadType === 'level' ? 'level' : 'none';
+  ex.loadType = next;
+  ex.trackWeight = next === 'weight';
+
+  const current = editorProgressionMode(ex);
+  const allowed = progressionModeOptions(ex);
+  const target = preferRecommended || !allowed.includes(current)
+    ? recommendedProgressionMode(ex)
+    : current;
+  return setExerciseProgressionMode(ex, target);
+}
+
+// То же для «Повторения / Время»: новый черновик получает default нового формата,
+// существующая ручная настройка сохраняется, если такой mode всё ещё имеет смысл.
+export function setExerciseMetric(ex, type, preferRecommended=false){
+  if(!ex) return ex;
+  ex.type = type === 'time' ? 'time' : 'reps';
+  const current = editorProgressionMode(ex);
+  const allowed = progressionModeOptions(ex);
+  const target = preferRecommended || !allowed.includes(current)
+    ? recommendedProgressionMode(ex)
+    : current;
+  return setExerciseProgressionMode(ex, target);
+}
+
 function fillExerciseProgEveryOptions(){
   const sel = $('exProgEvery');
   if(!sel) return;
