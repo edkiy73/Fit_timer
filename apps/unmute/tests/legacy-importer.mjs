@@ -97,7 +97,13 @@ const day1TextActivities=day1.activityIds
   .map(id=>course.activities.find(activity=>activity.id===id))
   .filter(activity=>activity?.type==='text-input'||activity?.type==='translation');
 assert.ok(day1TextActivities.length>0);
-assert.ok(day1TextActivities.every(activity=>activity.responseMode==='build'),'early course uses sentence builder');
+if(day1TextActivities.length===1){
+  assert.equal(day1TextActivities[0].responseMode,'progressive','single sentence task starts scaffolded');
+}else{
+  const buildCount=Math.ceil(day1TextActivities.length*2/3);
+  assert.ok(day1TextActivities.slice(0,buildCount).every(activity=>activity.responseMode==='progressive'),'day starts scaffolded');
+  assert.ok(day1TextActivities.slice(buildCount).every(activity=>activity.responseMode==='write'),'day ends with keyboard recall');
+}
 assert.equal(course.resources.length,2);
 const phraseBank=course.resources.find(resource=>resource.type==='phrase-collection');
 const verbTable=course.resources.find(resource=>resource.type==='verb-table');
