@@ -618,9 +618,15 @@ export function NodeRunnerView({
   };
 
   const textAnswer=(activity.type==='text-input'||activity.type==='translation')?activity.answer.accepted[0]??'':'';
-  // New phrases are built from word chips; ones answered before are typed (recall, not recognition).
+  // Course content controls the learning ladder explicitly:
+  // build → recognition/order, progressive → build until learned then recall by typing, write → recall only.
   const cardKnown=Boolean(state.progress.cards[activity.id]&&!state.progress.cards[activity.id]?.deleted);
-  const chips=(activity.type==='text-input'||activity.type==='translation')&&!cardKnown&&!typing&&answerWords(textAnswer)
+  const responseMode=(activity.type==='text-input'||activity.type==='translation')?activity.responseMode:'write';
+  const canBuild=Boolean(answerWords(textAnswer));
+  const shouldBuild=canBuild&&!typing&&(
+    responseMode==='build' || (responseMode==='progressive'&&!cardKnown)
+  );
+  const chips=(activity.type==='text-input'||activity.type==='translation')&&shouldBuild
     ? buildChips(shuffleSeed+'|'+activity.id+'|'+pos,textAnswer,steps.flatMap(item=>(item.type==='text-input'||item.type==='translation')&&item.id!==activity.id?[item.answer.accepted[0]??'']:[]))
     : null;
   const input=chips?chipsText(chips,picked):answer.trim();
@@ -796,7 +802,7 @@ export function NodeRunnerView({
               />
             </label>
           )}
-          {result===null&&answerWords(textAnswer)&&!cardKnown&&(
+          {result===null&&responseMode==='progressive'&&canBuild&&!cardKnown&&(
             <button className="link-toggle" type="button" onClick={()=>{ setTyping(value=>!value); setPicked([]); setAnswer(''); }}>
               {chips?t('chips.typeInstead'):t('chips.buildInstead')}
             </button>
