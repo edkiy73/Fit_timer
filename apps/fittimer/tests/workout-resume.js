@@ -251,6 +251,85 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await clearSession('session-structure-snapshot', 'resume-structure-test');
   });
 
+  const resistanceSignatures = await page.evaluate(() => {
+    const work = (label, key) => ({
+      phase:'work',exId:'band',exName:'Резинка',kind:'click',
+      setNo:1,setsTotal:1,side:0,sidesTotal:0,reps:'12',seconds:0,weight:0,
+      loadLevel:1,loadLabel:label,loadKey:key
+    });
+    const cur = step => ({rounds:1,warmup:[],cycle:[step]});
+    return {
+      builtinRu:workoutSessionSignature(cur(work('Среднее','key:medium'))),
+      builtinEn:workoutSessionSignature(cur(work('Medium','key:medium'))),
+      customRed:workoutSessionSignature(cur(work('Красная','label:Красная'))),
+      customBlack:workoutSessionSignature(cur(work('Чёрная','label:Чёрная')))
+    };
+  });
+  ok('смена языка не меняет fingerprint встроенной resistance-ступени',
+    resistanceSignatures.builtinRu === resistanceSignatures.builtinEn,
+    JSON.stringify(resistanceSignatures));
+  ok('смена физической custom-резинки на том же индексе меняет fingerprint',
+    resistanceSignatures.customRed !== resistanceSignatures.customBlack,
+    JSON.stringify(resistanceSignatures));
+
+  await page.evaluate(async () => {
+    tearDownWorkout();
+    const p = {
+      id:'resume-resistance-test',name:'Resume resistance',active:true,progression:0,
+      plans:[{days:[],rounds:1,roundRest:0,exercises:[{
+        id:'resume-band',name:'Тяга резинки',type:'reps',value:'12',sets:1,rest:0,restAfter:0,
+        loadType:'level',progOn:false,progMode:'level',
+        loadLevels:[{label:'Красная'},{label:'Чёрная'}],loadLevel:0,repsStep:0
+      }]}]
+    };
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
+    configureWorkoutTiming({prep:0});
+    openStart(customPrograms.find(x => x.id === p.id));
+  });
+  await page.evaluate(() => $('btnStart').click());
+  await page.waitForSelector('#startModal.open');
+  await page.click('#startFresh');
+  await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
+
+  const resistanceSaved = await page.evaluate(async () => {
+    const idx = state.steps.findIndex(s => s.phase === 'work' && s.exId === 'resume-band');
+    startWorkout(idx, 15000, {skipPrep:true,sessionId:'session-resistance-label'});
+    await saveSession();
+    const p = customPrograms.find(x => x.id === 'resume-resistance-test');
+    const saved = await sessionForProgram(p.id);
+    const oldStep = saved && saved.workout
+      ? [...saved.workout.warmup,...saved.workout.cycle].find(s => s.phase === 'work')
+      : null;
+    p.plans[0].exercises[0].loadLevels[0].label = 'Зелёная';
+    await savePrograms();
+    tearDownWorkout();
+    openStart(p);
+    return {savedLabel:oldStep && oldStep.loadLabel,savedKey:oldStep && oldStep.loadKey};
+  });
+  ok('сохранённая resistance-сессия хранит физический label и key',
+    resistanceSaved.savedLabel === 'Красная' && resistanceSaved.savedKey === 'label:Красная',
+    JSON.stringify(resistanceSaved));
+
+  await page.evaluate(() => $('btnStart').click());
+  await page.waitForTimeout(80);
+  ok('после смены custom resistance старая сессия всё ещё доступна',
+    await page.isVisible('#startResume'));
+  await page.click('#startResume');
+  await page.waitForTimeout(30);
+  const resistanceResumed = await page.evaluate(() => {
+    const step = state.steps.find(s => s.phase === 'work' && s.exId === 'resume-band');
+    return step && {label:step.loadLabel,key:step.loadKey};
+  });
+  ok('resume использует сохранённую физическую resistance, а не новую шкалу',
+    resistanceResumed && resistanceResumed.label === 'Красная'
+      && resistanceResumed.key === 'label:Красная',
+    JSON.stringify(resistanceResumed));
+  await page.evaluate(async () => {
+    tearDownWorkout();
+    await clearSession('session-resistance-label','resume-resistance-test');
+  });
+
   await page.evaluate(() => {
     tearDownWorkout();
     const p = customPrograms.find(x => x.id === 'resume-variant-test');
