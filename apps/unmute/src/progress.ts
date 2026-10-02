@@ -1,6 +1,7 @@
 import { mergeRecordMaps, type RecordMap, type RecordMeta } from '@appbase/core/document-sync.js';
 import type { CardSrsState } from './engine/card-srs';
 import type { PracticeSrsState } from './engine/practice-srs';
+import type { SentenceResponseStage } from './engine/sentence-progression';
 import { mergeSettingsRaw } from './settings-data';
 
 export const WORD_PROGRESS_DOC='progress:words';
@@ -15,6 +16,8 @@ export interface TimedFlag extends RecordMeta {
 export interface TimedCardState extends CardSrsState, RecordMeta {
   at:string;
   deleted?:boolean;
+  responseStage?:SentenceResponseStage;
+  writeWrongStreak?:number;
 }
 
 export interface TimedPracticeState extends PracticeSrsState, RecordMeta {

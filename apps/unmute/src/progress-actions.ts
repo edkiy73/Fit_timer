@@ -1,4 +1,5 @@
 import { gradeCardSrs } from './engine/card-srs';
+import { gradeSentenceResponse, type SentenceResponseKind } from './engine/sentence-progression';
 import { gradePracticeSrs, type PracticeSrsKind } from './engine/practice-srs';
 import type { LearningCalendarState, RoadmapProgressState } from './engine/course-progress';
 import type { CourseProgressDocument, TimedFlag } from './progress';
@@ -48,10 +49,13 @@ export function gradeCourseCard(
   correct:boolean,
   todayDay:number,
   dayKey:string,
-  at:string
+  at:string,
+  responseKind?:SentenceResponseKind
 ):CourseProgressDocument{
   const previous=doc.cards[activityId];
-  const graded=gradeCardSrs(previous&& !previous.deleted ? previous : undefined,correct,todayDay);
+  const livePrevious=previous&& !previous.deleted ? previous : undefined;
+  const graded=gradeCardSrs(livePrevious,correct,todayDay);
+  const sentence=gradeSentenceResponse(livePrevious,responseKind,correct);
   return withLearningDay({
     ...doc,
     seen:{
@@ -60,7 +64,7 @@ export function gradeCourseCard(
     },
     cards:{
       ...doc.cards,
-      [activityId]:{...graded,at},
+      [activityId]:{...graded,...sentence,at},
     },
   },dayKey,at);
 }

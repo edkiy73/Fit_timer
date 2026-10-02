@@ -39,6 +39,7 @@ import { Loader } from './loader';
 import { reviewDueCounts } from './review-count';
 import { randomSeed, shuffledIndices } from './shuffle';
 import { WordChips, answerWords, buildChips, chipsText } from './word-chips';
+import { sentenceResponseStage, type SentenceResponseKind } from './engine/sentence-progression';
 
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
 type CombinedReviewItem=
@@ -62,7 +63,7 @@ export interface ReviewViewProps {
   runtime:LearnerCourseRuntimeValue;
   onExit:()=>void;
   todayDay?:number;
-  saveGraded:(setId:string,activityId:string,correct:boolean)=>Promise<void>;
+  saveGraded:(setId:string,activityId:string,correct:boolean,responseKind?:SentenceResponseKind)=>Promise<void>;
   savePractice:(
     setId:string,
     activityId:string,
@@ -161,9 +162,12 @@ export function ReviewView({
 
   const reviewChips=useMemo(()=>{
     if(item?.kind!=='card'||(item.activity.type!=='text-input'&&item.activity.type!=='translation'))return null;
-    // Review is already recall for progressive cards. Only explicitly introductory "build" cards
-    // keep the word bank when they become due.
-    if((item.activity.responseMode??'progressive')!=='build')return null;
+    const responseMode=item.activity.responseMode??'progressive';
+    const itemProgress=item.setId
+      ? otherCourses.courses.find(other=>other.set.id===item.setId)?.progress
+      : state?.progress;
+    const stage=sentenceResponseStage(itemProgress?.cards[item.activity.id]);
+    if(responseMode==='write'||(responseMode==='progressive'&&stage==='write'))return null;
     const target=item.activity.answer.accepted[0]??'';
     if(!answerWords(target))return null;
     const itemSet=item.setId
@@ -424,7 +428,10 @@ export function ReviewView({
     setBusy(true);
     try{
       // A card that came back after a mistake is practice: its first answer already set the interval.
-      if(!returnedCard)await saveGraded(setId,item.activity.id,correct);
+      if(!returnedCard){
+        if(item.activity.type==='choice')await saveGraded(setId,item.activity.id,correct);
+        else await saveGraded(setId,item.activity.id,correct,reviewChips?'build':'write');
+      }
       setResult(correct);
     }finally{
       setBusy(false);

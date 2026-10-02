@@ -29,6 +29,7 @@ import { roadmapProgressFromDocument } from './progress-actions';
 import { buildCourseReviewSession } from './review-session';
 import { activitySaveClock } from './activity-progress';
 import { randomSeed, shuffledIndices } from './shuffle';
+import { sentenceResponseStage, type SentenceResponseKind } from './engine/sentence-progression';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -99,7 +100,7 @@ export interface NodeRunnerViewProps {
   onReviewDay?:(nodeId:string)=>void;
   onNodeCompleted?:(node:RoadmapNode)=>void;
   saveSeen:(setId:string,activityId:string)=>Promise<void>;
-  saveGraded:(setId:string,activityId:string,correct:boolean)=>Promise<void>;
+  saveGraded:(setId:string,activityId:string,correct:boolean,responseKind?:SentenceResponseKind)=>Promise<void>;
   savePractice:(
     setId:string,
     activityId:string,
@@ -599,7 +600,12 @@ export function NodeRunnerView({
   // Only the first answer of a first run moves review intervals and stats: a replayed day and
   // «Работа над ошибками» are practice, so a mistake plus its fix never reads as a right answer.
   const recordsAnswers=!replay&&!retrying;
-  const gradeAnswer=(correct:boolean)=>recordsAnswers?saveGraded(setId,activity.id,correct):Promise.resolve();
+  const gradeAnswer=(correct:boolean,responseKind?:SentenceResponseKind)=>{
+    if(!recordsAnswers)return Promise.resolve();
+    return responseKind
+      ? saveGraded(setId,activity.id,correct,responseKind)
+      : saveGraded(setId,activity.id,correct);
+  };
   const practiceSave:NodeRunnerViewProps['savePractice']=(...args)=>recordsAnswers?savePractice(...args):Promise.resolve();
   const dialogueSave:typeof saveDialogue=(...args)=>recordsAnswers?saveDialogue(...args):Promise.resolve();
 
@@ -620,11 +626,12 @@ export function NodeRunnerView({
   const textAnswer=(activity.type==='text-input'||activity.type==='translation')?activity.answer.accepted[0]??'':'';
   // Course content controls the learning ladder explicitly:
   // build → recognition/order, progressive → build until learned then recall by typing, write → recall only.
-  const cardKnown=Boolean(state.progress.cards[activity.id]&&!state.progress.cards[activity.id]?.deleted);
+  const cardState=(activity.type==='text-input'||activity.type==='translation')?state.progress.cards[activity.id]:undefined;
   const responseMode=(activity.type==='text-input'||activity.type==='translation')?(activity.responseMode??'progressive'):'write';
+  const adaptiveStage=sentenceResponseStage(cardState);
   const canBuild=Boolean(answerWords(textAnswer));
   const shouldBuild=canBuild&&!typing&&(
-    responseMode==='build' || (responseMode==='progressive'&&!cardKnown)
+    responseMode==='build' || (responseMode==='progressive'&&adaptiveStage==='build')
   );
   const chips=(activity.type==='text-input'||activity.type==='translation')&&shouldBuild
     ? buildChips(shuffleSeed+'|'+activity.id+'|'+pos,textAnswer,steps.flatMap(item=>(item.type==='text-input'||item.type==='translation')&&item.id!==activity.id?[item.answer.accepted[0]??'']:[]))
@@ -639,7 +646,7 @@ export function NodeRunnerView({
       const correct=activity.answer.caseSensitive
         ? activity.answer.accepted.some(candidate=>candidate.trim()===input)
         : checkAnswer(input,activity.answer.accepted);
-      await gradeAnswer(correct);
+      await gradeAnswer(correct,chips?'build':'write');
       countAnswer(correct);
       if(!correct)retryLater();
       setResult(correct);
@@ -802,7 +809,7 @@ export function NodeRunnerView({
               />
             </label>
           )}
-          {result===null&&responseMode==='progressive'&&canBuild&&!cardKnown&&(
+          {result===null&&responseMode==='progressive'&&canBuild&&adaptiveStage==='build'&&(
             <button className="link-toggle" type="button" onClick={()=>{ setTyping(value=>!value); setPicked([]); setAnswer(''); }}>
               {chips?t('chips.typeInstead'):t('chips.buildInstead')}
             </button>

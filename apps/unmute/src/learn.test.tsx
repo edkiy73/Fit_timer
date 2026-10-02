@@ -148,7 +148,7 @@ describe('node activity runner',()=>{
     const pool=screen.getByLabelText('Слова');
     for(const word of ['I','am','here'])await user.click(within(pool).getByRole('button',{name:word}));
     await user.click(screen.getByRole('button',{name:'Проверить'}));
-    expect(saveGraded).toHaveBeenCalledWith('general-foundation','text.one',true);
+    expect(saveGraded).toHaveBeenCalledWith('general-foundation','text.one',true,'build');
 
     await user.click(screen.getByRole('button',{name:'Завершить'}));
     expect(await screen.findByText('День пройден')).toBeTruthy();
