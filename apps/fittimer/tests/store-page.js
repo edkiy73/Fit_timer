@@ -78,6 +78,25 @@ const ONE = `ПРОГРАММА: Просто круг
 ПОДХОДЫ: 3
 ОТДЫХ: 40`;
 
+const BAND = `ПРОГРАММА: Резинки
+ПРОГРЕССИЯ: 2
+
+ДЕНЬ: Ср
+КРУГИ: 1
+ОТДЫХ МЕЖДУ КРУГАМИ: 0
+
+УПРАЖНЕНИЕ: Тяга резинки сверху
+ФОРМАТ: повторения
+ЗНАЧЕНИЕ: 12-15
+НАГРУЗКА: сопротивление
+СОПРОТИВЛЕНИЕ: Среднее
+УРОВНИ СОПРОТИВЛЕНИЯ: Лёгкое | Среднее | Сильное | Очень сильное
+ПОДХОДЫ: 3
+ОТДЫХ: 60
+УСЛОЖНЯТЬ: да
+ШАГ ПОВТОРОВ: 2
+ПОТОЛОК ПОВТОРОВ: 18`;
+
 const shot = page => page.evaluate(() => ({
   heads: [...document.querySelectorAll('#siList .si-plan')].map(h => ({
     title: h.childNodes[0].textContent.trim(),
@@ -86,7 +105,8 @@ const shot = page => page.evaluate(() => ({
   rows: [...document.querySelectorAll('#siList .ex-row')].map(r => ({
     num: r.querySelector('.ex-thumb').textContent.trim(),
     name: r.querySelector('b').textContent.trim(),
-    warm: r.classList.contains('warm')
+    warm: r.classList.contains('warm'),
+    meta: (r.querySelector('.ex-meta') || {}).textContent || ''
   })),
   facts: [...document.querySelectorAll('#siFacts span')].map(e => e.textContent),
   count: document.getElementById('siCount').textContent
@@ -156,6 +176,16 @@ const shot = page => page.evaluate(() => ({
   ok('и в заголовке снова упражнения', one.count === '2 упражнения', one.count);
   ok('нумерация сквозная', one.rows.map(r => r.num).join(',') === '1,2',
      one.rows.map(r => r.num).join(','));
+
+  /* ---- resistance видно в каталоге человеческим label ---- */
+  await open(BAND);
+  await page.waitForTimeout(400);
+  const band = await shot(page);
+  ok('каталог показывает базовое сопротивление, а не номер уровня',
+    band.rows.length === 1
+      && /Среднее/.test(band.rows[0].meta)
+      && !/level\s*1/i.test(band.rows[0].meta),
+    band.rows[0] && band.rows[0].meta);
 
   /* ---- премиум закрывает состав ---- */
   await open(ONE, {pro: true, exCount: 2});
