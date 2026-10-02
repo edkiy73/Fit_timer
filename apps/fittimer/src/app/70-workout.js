@@ -41,8 +41,9 @@ export function setWorkoutEventHooks(hooks = {}){
   eventWorkoutHooks = {...eventWorkoutHooks, ...hooks};
 }
 import { advanceExerciseProgression, commitExercise, curPlan, draft, ensurePs, exIdx, exerciseProgEvery, fmtKg,
-  liveExercise, normalizeExercise, openExercise, parseProgramText, progAtCeiling, progAxis,
-  renderExList, setBuilderWorkoutHooks, loadBuilderDraft, clearExerciseDraft, selectPlanVariant, valueText
+  liveExercise, normalizeExercise, openExercise, parseProgramText, previewNextProgression, progressionStateLabel,
+  progAtCeiling, progAxis, renderExList, setBuilderWorkoutHooks, loadBuilderDraft, clearExerciseDraft,
+  selectPlanVariant, valueText
 } from './60-builder.js';
 
 /* ================= СБОРКА ШАГОВ ================= */
@@ -1193,49 +1194,82 @@ function progCheckExercises(chk){
 }
 function renderProgCheck(){
   const chk = state.progCheck;
-  const exercises = progCheckExercises(chk);
-  const on = exercises.length > 0;
+  const p = chk && customPrograms.find(x => x.id === chk.pid);
+  const rows = progCheckExercises(chk).map(ex => ({
+    ex,
+    preview: previewNextProgression(ex, p)
+  })).filter(x => x.preview && x.preview.canAdvance);
+
+  const on = rows.length > 0;
   setShown('finProgCheck', on);
-  setShown('finProgCheckList', false);
   if(!on) return;
+
   setShown('finProgCheckAsk', true);
   setShown('finProgCheckDone', false);
+  setShown('finProgCheckList', true);
+
   const box = $('finProgCheckList');
   box.innerHTML = '';
-  exercises.forEach(ex => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'fpc-chip' + (chk.hard.has(ex.id) ? ' act' : '');
-    b.textContent = ex.name || t('common.exerciseFallback');
-    // только переключаем отметку: перерисовка всего блока сворачивала список,
-    // и второе упражнение уже нельзя было отметить
-    b.dataset.act = 'toggleProgressionHard';
-    b.dataset.exerciseId = ex.id;
-    box.appendChild(b);
+  rows.forEach(({ex, preview}) => {
+    const keep = chk.hard.has(ex.id);
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'fpc-card' + (keep ? ' act' : '');
+    card.dataset.act = 'toggleProgressionHard';
+    card.dataset.exerciseId = ex.id;
+
+    const name = document.createElement('b');
+    name.className = 'fpc-name';
+    name.textContent = ex.name || t('common.exerciseFallback');
+
+    const change = document.createElement('div');
+    change.className = 'fpc-change';
+    const before = document.createElement('span');
+    before.textContent = progressionStateLabel(ex, preview.current);
+    const arrow = document.createElement('span');
+    arrow.className = 'fpc-arrow';
+    arrow.textContent = '→';
+    const after = document.createElement('span');
+    after.textContent = progressionStateLabel(ex, preview.next);
+    change.append(before, arrow, after);
+
+    const action = document.createElement('span');
+    action.className = 'fpc-action';
+    action.textContent = t(keep ? 'finish.progCheckKept' : 'finish.progCheckKeep');
+
+    card.append(name, change, action);
+    box.appendChild(card);
   });
 }
-export function toggleProgCheckList(){
-  setShown('finProgCheckList', $('finProgCheckList').classList.contains('hidden'));
-}
-// «Да, повышаем» — шаг применяется всем упражнениям из проверки, кроме
-// отмеченных «тяжело»: у них счётчик остаётся на пороге, и тот же вопрос
-// вернётся после следующей тренировки, где это упражнение снова встретится.
+
+// По умолчанию повышаем все. Отмеченные «оставить» не меняются, а их счётчик
+// остаётся на пороге — после следующего полного выполнения вопрос вернётся.
 export async function applyProgCheck(){
   const chk = state.progCheck;
   if(!chk) return;
-  // сразу снимаем проверку и прячем кнопку: второй быстрый тап не должен
-  // добавить ещё один шаг, пока идёт сохранение
+  const p = customPrograms.find(x => x.id === chk.pid);
+  const exercises = progCheckExercises(chk);
+
   state.progCheck = null;
   setShown('finProgCheckAsk', false);
   setShown('finProgCheckList', false);
   setShown('finProgCheckDone', true);
-  progCheckExercises(chk).forEach(ex => {
-    if(chk.hard.has(ex.id)) return;
-    // На случай, если состояние успело измениться/синхронизироваться пока открыт
-    // финальный экран: уже достигнутый потолок не сбрасываем повторным шагом.
-    if(!progAtCeiling(chk.pid, ex, null)) advanceExerciseProgression(ex);
+
+  let raised = 0, kept = 0;
+  exercises.forEach(ex => {
+    if(chk.hard.has(ex.id)){
+      kept++;
+      return;
+    }
+    const preview = previewNextProgression(ex, p);
+    if(preview && preview.canAdvance){
+      advanceExerciseProgression(ex);
+      raised++;
+    }
     ensurePs(ex).n = 0;
   });
+
+  $('finProgCheckDone').textContent = t('finish.progCheckAppliedSummary',{raised,kept});
   await savePrograms();
 }
 
@@ -1891,7 +1925,10 @@ export function initWorkout(){
     if(!chk || !id) return;
     if(chk.hard.has(id)) chk.hard.delete(id);
     else chk.hard.add(id);
-    btn.classList.toggle('act', chk.hard.has(id));
+    const keep = chk.hard.has(id);
+    btn.classList.toggle('act', keep);
+    const action = btn.querySelector('.fpc-action');
+    if(action) action.textContent = t(keep ? 'finish.progCheckKept' : 'finish.progCheckKeep');
   });
   registerAction('toggleWorkoutMenu', (_btn, event) => {
     event.stopPropagation();
