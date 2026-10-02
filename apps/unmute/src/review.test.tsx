@@ -107,7 +107,7 @@ describe('course review screen',()=>{
     await user.click(screen.getByRole('button',{name:'am'}));
     await user.click(screen.getByRole('button',{name:'home'}));
     await user.click(screen.getByRole('button',{name:'Проверить'}));
-    expect(saveGraded).toHaveBeenLastCalledWith('general-foundation','card.one',true,'build');
+    expect(saveGraded).toHaveBeenLastCalledWith('general-foundation','card.one',true,'build',expect.any(String));
   });
 
   it('keeps due cards of another studied course and saves them to that course',async()=>{
@@ -125,12 +125,12 @@ describe('course review screen',()=>{
     await user.click(screen.getByRole('button',{name:'Начать повтор'}));
     await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am home');
     await user.click(screen.getByRole('button',{name:'Проверить'}));
-    expect(saveGraded).toHaveBeenLastCalledWith('general-foundation','card.one',true,'write');
+    expect(saveGraded).toHaveBeenLastCalledWith('general-foundation','card.one',true,'write',expect.any(String));
     await user.click(screen.getByRole('button',{name:'Далее'}));
     expect(await screen.findByText('Напиши: Привет')).toBeTruthy();
     await user.type(screen.getByRole('textbox',{name:'Твой ответ'}),'Hi');
     await user.click(screen.getByRole('button',{name:'Проверить'}));
-    expect(saveGraded).toHaveBeenLastCalledWith('a1-starter','a1.card',true,'write');
+    expect(saveGraded).toHaveBeenLastCalledWith('a1-starter','a1.card',true,'write',expect.any(String));
   });
 
   it('waits for other courses before pinning the session',async()=>{
@@ -147,7 +147,7 @@ describe('course review screen',()=>{
     let input=await screen.findByRole('textbox',{name:'Твой ответ'});
     await user.type(input,'wrong');
     await user.click(screen.getByRole('button',{name:'Проверить'}));
-    expect(saveGraded).toHaveBeenLastCalledWith('general-foundation','card.one',false,'write');
+    expect(saveGraded).toHaveBeenLastCalledWith('general-foundation','card.one',false,'write',expect.any(String));
 
     await user.click(screen.getByRole('button',{name:'Повторить в конце'}));
     input=await screen.findByRole('textbox',{name:'Твой ответ'});
