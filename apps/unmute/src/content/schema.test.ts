@@ -46,10 +46,10 @@ describe('course set content model', () => {
     expect(isActivityReviewable('ex.2', { owned: false, learnedActivityIds: new Set(['ex.2']) })).toBe(true);
   });
 
-  it('defaults text answers to progressive build-then-write mode', () => {
+  it('keeps legacy text answers valid without an explicit response mode', () => {
     const first = sample.activities.find(activity => activity.id === 'ex.1');
     expect(first?.type).toBe('text-input');
-    if(first?.type === 'text-input') expect(first.responseMode).toBe('progressive');
+    if(first?.type === 'text-input') expect(first.responseMode).toBeUndefined();
   });
 
   it('accepts explicit build and write response modes', () => {
