@@ -99,6 +99,8 @@ const t = s => new Date(Date.UTC(2026, 0, 1, 0, 0, s)).toISOString();
 // 1. Signed out: the app works locally, sync is a no-op.
 await A.put('a1', 'from A offline', t(1));
 ok('signed out: writes are kept locally', (await A.notes()).a1.text === 'from A offline');
+ok('document mirror can enumerate its live references',
+  (await A.docs.refs()).some(ref => ref.profileId === '__account__' && ref.key === 'notes'));
 ok('signed out: sync reports signed_out and keeps changes pending',
   (await A.docs.sync()).status === 'signed_out' && await A.docs.pending());
 
@@ -167,6 +169,7 @@ const paid = await A.docs.sync();
 ok('non-free document without Premium fails with premium_required',
   paid.status === 'failed' && paid.error?.code === 'premium_required');
 await A.docs.remove('paid');
+ok('removed documents are not returned by refs()', !(await A.docs.refs()).some(ref => ref.key === 'paid'));
 
 // 9. Old clients (no base) keep the previous server rules.
 const session = await A.auth.getSession();

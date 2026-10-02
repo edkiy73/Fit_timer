@@ -70,6 +70,8 @@ export interface DocumentSync {
   read(ref: DocumentRef | string): Promise<string | null>;
   write(ref: DocumentRef | string, value: string): Promise<void>;
   remove(ref: DocumentRef | string): Promise<void>;
+  /** Live documents currently known to this local mirror, including ones pulled from sync. */
+  refs(): Promise<Array<Required<DocumentRef>>>;
   /** Has unsent changes. */
   pending(): Promise<boolean>;
   sync(): Promise<SyncOutcome>;
@@ -315,6 +317,12 @@ export function createDocumentSync(options: DocumentSyncOptions): DocumentSync {
     },
     write: (ref, value) => localWrite(ref, String(value)),
     remove: ref => localWrite(ref, null),
+    async refs(){
+      const m = await serial(load);
+      return Object.entries(m.docs)
+        .filter(([, doc]) => !doc.deleted && doc.value !== null)
+        .map(([id]) => refOf(id));
+    },
     async pending(){
       const m = await serial(load);
       return Object.values(m.docs).some(d => d.dirty);
