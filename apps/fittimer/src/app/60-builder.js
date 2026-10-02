@@ -1139,6 +1139,30 @@ export function previewNextProgression(ex, program){
   return computeNextProgression(ex, program);
 }
 
+// Один formatter для всех экранов, где человек должен понимать фактическую
+// нагрузку. Preview финальной проверки и реально применённый шаг используют
+// один compute, а здесь только переводим его state в человекочитаемый текст.
+export function progressionStateLabel(ex, value){
+  const v = value || {};
+  const bits = [];
+  if(ex && ex.type === 'time'){
+    bits.push(`${Math.max(0, Math.round(+v.sec || 0))} ${t('store.secShort')}`);
+  }else{
+    const reps = String(v.reps != null ? v.reps : normValue(ex && ex.value, 'reps')).replace('-', '–');
+    bits.push(`${reps} ${t('workout.repsShort')}`);
+  }
+  const loadType = progressionLoadType(ex);
+  if(loadType === 'weight' && +v.kg > 0){
+    bits.push(`${fmtKg(v.kg)} ${t('progress.kg')}`);
+  }else if(loadType === 'level'){
+    const levels = exerciseLoadLevels(ex);
+    const idx = Math.max(0, Math.min(Math.max(0, levels.length - 1), Math.round(+v.level || 0)));
+    const label = levels[idx] ? loadLevelLabel(levels[idx]) : '';
+    if(label) bits.push(t('builder.resistanceValue',{value:label}));
+  }
+  return bits.join(' · ');
+}
+
 // Потолок теперь определяется тем же расчётом, что preview/apply:
 // если следующий подтверждённый шаг ничего не может изменить — автоматический рост закончен.
 // Для осей БЕЗ потолка compute всегда сможет дать следующий шаг, поэтому false сохраняется.
