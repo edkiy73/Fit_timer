@@ -363,7 +363,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       mode:$('exProgMode').value,
       modeHint:$('exProgModeHint').textContent.trim(),
       freqHint:$('exProgOnHint').textContent.trim(),
-      seg3:$('exLoadNone').parentElement.classList.contains('seg3')
+      seg3:$('exLoadNone').parentElement.classList.contains('seg3'),
+      loadButtonHeight:$('exLoadNone').getBoundingClientRect().height
     };
 
     openExercise(1);
@@ -406,6 +407,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     progressionEditor.weighted.freqHint);
   ok('три типа нагрузки используют компактный mobile segment',
     progressionEditor.weighted.seg3, JSON.stringify(progressionEditor.weighted));
+  ok('mobile selector нагрузки сохраняет нормальный touch-target',
+    progressionEditor.weighted.loadButtonHeight >= 44,
+    JSON.stringify(progressionEditor.weighted));
   ok('редактор resistance показывает базовую ступень отдельно от текущей',
     progressionEditor.resistance.baseValue === '1'
       && /Среднее/.test(progressionEditor.resistance.baseLabel)
