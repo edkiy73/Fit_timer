@@ -14,10 +14,13 @@ import { LIM, clampText, sanitizeProgram, setProgressTrainerHooks } from './30-p
 let builderTrainerHooks = {
   enableDrag: () => {},
   exRestAfter: () => 0,
+  exerciseLoadLevels: () => [],
   exerciseLoadLevelState: () => ({level:0,label:''}),
   fmtKg: v => String(v == null ? '' : v),
+  getExProgValue: () => 0,
   getExWeight: () => 0,
   hasWeight: () => false,
+  loadLevelLabel: level => String((level && (level.label || level.key)) || ''),
   openBuilder: async () => {},
   parseProgramText: () => null,
   parseValue: v => ({min:+v || 0,max:+v || 0}),
@@ -565,12 +568,38 @@ export function pickClientFor(p){
 
 // Снимок присланного: с чем сравнивать правки подопечного. Снимается один раз, при
 // получении программы, и живёт в ней же — сравнивать «сейчас» не с чем иначе.
+function resistanceSnapshot(e){
+  const loadType = builderTrainerHooks.progressionLoadType(e);
+  if(loadType !== 'level') return {lt:loadType};
+  const levels = builderTrainerHooks.exerciseLoadLevels(e);
+  const max = Math.max(0, levels.length - 1);
+  const level = Math.max(0, Math.min(max, Math.round(+e.loadLevel || 0)));
+  const scale = levels.map(item => {
+    if(item && item.key) return 'k:' + item.key;
+    return 'l:' + String((item && item.label) || '');
+  }).join('|');
+  return {
+    lt:'level',
+    lv:level,
+    ls:scale,
+    rl:levels[level] ? builderTrainerHooks.loadLevelLabel(levels[level]) : ''
+  };
+}
+
+function snapshotExercise(e, pi){
+  return Object.assign({
+    id:String(e.id || ''), p:pi, w:e.warmup ? 1 : 0, n:e.name || '',
+    ty:e.type === 'time' ? 'time' : 'reps',
+    v:String(e.value == null ? '' : e.value),
+    s:+e.sets || 1,
+    kg:+e.weight || 0
+  }, resistanceSnapshot(e));
+}
+
 export function snapshotEx(p){
   const out = [];
   normPlans(p).forEach((pl, pi) => (pl.exercises || []).forEach(e => {
-    out.push({id: String(e.id || ''), p: pi, w: e.warmup ? 1 : 0, n: e.name || '',
-              v: String(e.value == null ? '' : e.value),
-              s: +e.sets || 1, kg: +e.weight || 0});
+    out.push(snapshotExercise(e, pi));
   }));
   return out;
 }
@@ -619,7 +648,13 @@ function matchExerciseSnapshots(original, current){
   };
 }
 
-const exVal = x => x.v + (x.kg > 0 ? ' × ' + x.kg + ' ' + t('progress.kg') : '') + (x.s > 1 ? ' × ' + x.s + ' ' + t('report.setShort') : '');
+const exVal = x => {
+  const metric = x.ty === 'time' ? x.v + ' ' + t('store.secShort') : x.v;
+  return metric
+    + (x.kg > 0 ? ' × ' + x.kg + ' ' + t('progress.kg') : '')
+    + (x.rl ? ' × ' + x.rl : '')
+    + (x.s > 1 ? ' × ' + x.s + ' ' + t('report.setShort') : '');
+};
 
 function buildReport(p){
   const mine = stats.history.filter(h => h.pid === p.id);
@@ -665,14 +700,44 @@ function buildReport(p){
   plans.forEach((pl, pi) => (pl.exercises || []).forEach(e => {
     if(ex.length >= 40) return;
     const was = String(e.value == null ? '' : e.value);
-    const now = e.warmup ? was : builderTrainerHooks.progressedRepsRange(p.id, e, p);
+    const isTime = e.type === 'time';
+    const now = e.warmup
+      ? was
+      : (isTime
+        ? String(builderTrainerHooks.getExProgValue(p.id, e, p, 'time'))
+        : builderTrainerHooks.progressedRepsRange(p.id, e, p));
+
     const kgWas = builderTrainerHooks.hasWeight(e) ? (+e.weight || 0) : 0;
     const kgNow = builderTrainerHooks.hasWeight(e) ? builderTrainerHooks.getExWeight(p.id, e, p) : 0;
-    const grew = builderTrainerHooks.parseValue(now).min > builderTrainerHooks.parseValue(was).min || kgNow > kgWas;
+
+    const loadType = builderTrainerHooks.progressionLoadType(e);
+    const baseResistance = resistanceSnapshot(e);
+    const liveResistance = loadType === 'level' ? builderTrainerHooks.exerciseLoadLevelState(e) : null;
+    const levelNow = liveResistance && Number.isFinite(+liveResistance.level)
+      ? Math.max(0, Math.round(+liveResistance.level))
+      : (baseResistance.lv || 0);
+
+    const metricGrew = isTime
+      ? (+now || 0) > (+builderTrainerHooks.parseValue(was).min || 0)
+      : builderTrainerHooks.parseValue(now).min > builderTrainerHooks.parseValue(was).min;
+    const resistanceGrew = loadType === 'level' && levelNow > (+baseResistance.lv || 0);
+    const grew = metricGrew || kgNow > kgWas || resistanceGrew;
     if(!grew) return;
-    ex.push({p: pi, w: e.warmup ? 1 : 0, n: e.name || t('common.exerciseFallback'),
-             a: was + (kgWas > 0 ? ` × ${builderTrainerHooks.fmtKg(kgWas)} ${t('progress.kg')}` : ''),
-             b: now + (kgNow > 0 ? ` × ${builderTrainerHooks.fmtKg(kgNow)} ${t('progress.kg')}` : '')});
+
+    const before = Object.assign(snapshotExercise(e, pi), {
+      v:was,
+      kg:kgWas,
+      rl:baseResistance.rl || ''
+    });
+    const after = Object.assign({}, before, {
+      v:now,
+      kg:kgNow,
+      rl:liveResistance ? String(liveResistance.label || '') : before.rl
+    });
+    ex.push({
+      p:pi, w:e.warmup ? 1 : 0, n:e.name || t('common.exerciseFallback'),
+      a:exVal(before), b:exVal(after)
+    });
   }));
 
   // 4. Правки: что подопечный убрал, добавил и поменял руками.
@@ -686,7 +751,14 @@ function buildReport(p){
       // Поправку от прогрессии за правку не считаем: она и так в списке роста.
       // Имя в key больше не участвует, поэтому переименование не даёт ложную пару
       // delete/add; если вместе с ним менялись числа — это остаётся одна mod-строка.
-      if(cur.v !== o.v || cur.s !== o.s || cur.kg !== o.kg){
+      // Новые snapshots умеют сравнивать формат и resistance policy. Старые
+      // origEx этих полей не имели — для них не создаём ложную «правку» после обновления.
+      const policyChanged =
+        (o.ty != null && cur.ty !== o.ty)
+        || (o.lt != null && cur.lt !== o.lt)
+        || (o.lv != null && cur.lv !== o.lv)
+        || (o.ls != null && cur.ls !== o.ls);
+      if(cur.v !== o.v || cur.s !== o.s || cur.kg !== o.kg || policyChanged){
         if(diff.mod.length < 12) diff.mod.push({n: cur.n || o.n, a: exVal(o), b: exVal(cur)});
       }
     });
