@@ -225,6 +225,19 @@ function runWorkout(exercises, every){
     'zero rep step means direct resistance progression with fixed reps');
 }
 
+/* ---- resistance labels безопасны для protocol round-trip ---- */
+{
+  const ex = mkEx('Шкала с разделителем', {
+    type:'reps', progOn:true, loadType:'level', progMode:'level',
+    loadLevels:[{label:'Red|15 lb'},{label:'red / 15 lb'},{label:'Black'}],
+    loadLevel:0, repsStep:2, repsMax:18
+  });
+  need(ex.loadLevels.length === 2
+      && ex.loadLevels[0].label === 'Red / 15 lb'
+      && ex.loadLevels[1].label === 'Black',
+    'resistance labels replace protocol delimiter and dedupe case-insensitively: ' + JSON.stringify(ex.loadLevels));
+}
+
 /* ---- carry AI edit: same scale keeps current state; incompatible scale never carries index ---- */
 {
   const oldEx = mkEx('Резинка', {value:'12-15', type:'reps', progOn:true, loadType:'level', progMode:'level',
