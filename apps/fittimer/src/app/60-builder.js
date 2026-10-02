@@ -185,6 +185,12 @@ export function loadLevelLabel(level){
   if(level.key === 'veryStrong') return t('builder.resistanceVeryStrong');
   return '';
 }
+function loadLevelIdentity(level){
+  if(!level) return '';
+  if(level.key) return 'key:' + level.key;
+  if(level.label) return 'label:' + level.label;
+  return '';
+}
 export function exerciseLoadLevelState(ex){
   const levels = exerciseLoadLevels(ex);
   const level = exerciseLoadLevel(ex);
@@ -194,7 +200,7 @@ export function exerciseLoadLevelState(ex){
     label: item ? loadLevelLabel(item) : '',
     // Стабильная физическая identity нужна resume-снимку. Для встроенной шкалы
     // используем ключ (он не меняется при RU↔EN), для пользовательской — её label.
-    identity: item && item.key ? 'key:' + item.key : (item && item.label ? 'label:' + item.label : '')
+    identity: loadLevelIdentity(item)
   };
 }
 function resistanceScaleText(ex){
@@ -202,7 +208,8 @@ function resistanceScaleText(ex){
 }
 function parsedResistanceScaleText(raw){
   const rows = String(raw || '').split(/\r?\n/)
-    .map(x=>clampLine(x.trim(),60)).filter(Boolean);
+    .map(x=>clampLine(x.trim(),60)).filter(Boolean)
+    .map(protocolLoadLevelItem).filter(Boolean);
   return cleanLoadLevels(rows, false);
 }
 function protocolLevelNorm(raw){
@@ -247,12 +254,39 @@ export function exerciseResistanceScaleOk(showError=true){
     if(showError) appAlert(t('builder.resistanceNeedTwo'));
     return false;
   }
+
+  // Numeric index сам по себе не описывает физическую резинку. При редактировании
+  // шкалы сначала пытаемся найти ТУ ЖЕ ступень по стабильному key/custom label.
+  // Если её больше нет, старый current level переносить нельзя: иначе «Красная»
+  // может молча превратиться в «Чёрную» только потому, что обе были index=1.
+  const oldLevels = exerciseLoadLevels(exDraft);
+  const oldBaseIndex = Math.max(0, Math.min(Math.max(0, oldLevels.length - 1), Math.round(+exDraft.loadLevel || 0)));
+  const oldBaseId = loadLevelIdentity(oldLevels[oldBaseIndex]);
+  const rawCurrent = exDraft.ps && exDraft.ps.cur && exDraft.ps.cur.level != null
+    ? Math.max(0, Math.min(Math.max(0, oldLevels.length - 1), Math.round(+exDraft.ps.cur.level || 0)))
+    : null;
+  const oldCurrentId = rawCurrent == null ? '' : loadLevelIdentity(oldLevels[rawCurrent]);
+  const findIdentity = id => id ? levels.findIndex(x => loadLevelIdentity(x) === id) : -1;
+
   exDraft.loadLevels = levels;
-  exDraft.loadLevel = Math.max(0, Math.min(levels.length - 1, Math.round(+exDraft.loadLevel || 0)));
+  const mappedBase = findIdentity(oldBaseId);
+  exDraft.loadLevel = mappedBase >= 0 ? mappedBase : 0;
+
+  if(rawCurrent != null && exDraft.ps && exDraft.ps.cur){
+    const mappedCurrent = findIdentity(oldCurrentId);
+    if(mappedCurrent >= 0){
+      exDraft.ps.cur.level = mappedCurrent;
+    }else{
+      // Счётчик выполнений ps.n сохраняем, а текущую нагрузку сбрасываем к новой базе.
+      exDraft.ps.cur = {};
+    }
+  }
+
   // После успешного применения новая шкала становится сохранённой базой формы.
   // Иначе exDirty() продолжал считать её несохранённой до закрытия экрана.
   delete field.dataset.initialValue;
   renderExerciseLevelControls();
+  syncExNowHints();
   return true;
 }
 
