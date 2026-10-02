@@ -373,7 +373,27 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       nowHint:$('exNowHint').textContent.trim(),
       nowVisible:!$('exNowHint').classList.contains('hidden')
     };
-    return {weighted,resistance};
+
+    // Перестановка тех же физических ступеней должна сохранить и BASE, и CURRENT
+    // по key/label, а не по старому numeric index.
+    $('exLoadLevels').value = 'Очень сильное\nСильное\nСреднее\nЛёгкое';
+    $('exLoadLevels').dispatchEvent(new Event('change',{bubbles:true}));
+    const reordered = {
+      baseLabel:$('exLoadLevel').selectedOptions[0] && $('exLoadLevel').selectedOptions[0].textContent.trim(),
+      nowHint:$('exNowHint').textContent.trim(),
+      nowVisible:!$('exNowHint').classList.contains('hidden')
+    };
+
+    // Полностью другая физическая шкала несовместима со старым current level:
+    // BASE становится первой новой ступенью, текущая прогрессия уровня сбрасывается.
+    $('exLoadLevels').value = 'Красная\nЧёрная';
+    $('exLoadLevels').dispatchEvent(new Event('change',{bubbles:true}));
+    const replaced = {
+      baseLabel:$('exLoadLevel').selectedOptions[0] && $('exLoadLevel').selectedOptions[0].textContent.trim(),
+      nowHint:$('exNowHint').textContent.trim(),
+      nowVisible:!$('exNowHint').classList.contains('hidden')
+    };
+    return {weighted,resistance,reordered,replaced};
   });
   ok('«Повторы → вес» объясняет переход на вес и сброс диапазона',
     progressionEditor.weighted.mode === 'double_range'
@@ -393,6 +413,15 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       && /Сильное/.test(progressionEditor.resistance.nowHint)
       && /12.?15/.test(progressionEditor.resistance.nowHint),
     JSON.stringify(progressionEditor.resistance));
+  ok('перестановка той же resistance-шкалы сохраняет физические base/current ступени',
+    /Среднее/.test(progressionEditor.reordered.baseLabel)
+      && progressionEditor.reordered.nowVisible
+      && /Сильное/.test(progressionEditor.reordered.nowHint),
+    JSON.stringify(progressionEditor.reordered));
+  ok('полная замена resistance-шкалы не переносит старый numeric current level',
+    /Красная/.test(progressionEditor.replaced.baseLabel)
+      && !progressionEditor.replaced.nowVisible,
+    JSON.stringify(progressionEditor.replaced));
 
   // у копии пункт «в каталог» уже есть — она своя
   const copyMenu = await page.evaluate(() => {
