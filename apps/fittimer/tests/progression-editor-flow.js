@@ -191,6 +191,9 @@ const ok = (name, cond, extra) => {
   // Переводим то же упражнение на resistance полностью через UI.
   await page.evaluate(() => openExercise(0));
   await page.waitForTimeout(100);
+  if(await page.locator('#exProgBox').evaluate(el => el.classList.contains('hidden'))){
+    await page.click('#exProgToggle');
+  }
   await page.click('#exLoadLevelType');
   ok('для reps + resistance предлагается Повторы → сопротивление',
     await page.inputValue('#exProgMode') === 'level',
