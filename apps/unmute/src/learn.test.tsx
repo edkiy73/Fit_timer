@@ -6,7 +6,7 @@ import { I18nProvider } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { emptyCourseProgress } from './progress';
-import { NodeRunnerView } from './learn';
+import { firstIncompleteRequirementIndex, NodeRunnerView } from './learn';
 import { dictionaries } from './i18n';
 
 const node={
@@ -121,6 +121,36 @@ async function chooseAnswer(user:ReturnType<typeof userEvent.setup>,name:string)
 
 describe('node activity runner',()=>{
   beforeEach(()=>localStorage.clear());
+
+  it('resumes at a seen pattern when a required practice mode is still missing',()=>{
+    const practiceNode={
+      ...node,
+      activityIds:['choice.one','pattern.one','text.one'],
+      completion:{
+        mode:'all' as const,
+        requirements:[
+          {kind:'activity-seen' as const,activityIds:['choice.one','text.one']},
+          {kind:'practice-started' as const,activityId:'pattern.one',modes:['drill' as const,'listening' as const]}
+        ]
+      }
+    };
+    const activities=[
+      state.set.activities.find(activity=>activity.id==='choice.one')!,
+      {
+        id:'pattern.one',revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,
+        lexiconRefs:[],pattern:{ru:'Фразы'},modes:['drill' as const,'listening' as const],
+        items:[{id:'p1',prompt:{ru:'Я здесь'},answer:{accepted:['I am here'],nearMiss:true,caseSensitive:false}}]
+      },
+      state.set.activities.find(activity=>activity.id==='text.one')!
+    ];
+    const progress=emptyCourseProgress();
+    progress.seen['choice.one']={at:'2026-10-02T10:00:00Z'};
+    progress.seen['pattern.one']={at:'2026-10-02T10:01:00Z'};
+    progress.seen['text.one']={at:'2026-10-02T10:02:00Z'};
+    progress.practice.drill['pattern.one']={box:1,due:100,at:'2026-10-02T10:01:00Z'};
+
+    expect(firstIncompleteRequirementIndex(practiceNode,activities,progress)).toBe(1);
+  });
   it('shows theory first, then the tasks; builds a new phrase from words; counts the day',async()=>{
     const user=userEvent.setup();
     const {saveSeen,saveGraded,onExit,onNodeCompleted}=renderRunner();
