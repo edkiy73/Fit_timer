@@ -28,7 +28,7 @@ UI → навигация → состояние урока → сохранен
 | Resume незавершённого урока | 🟡 частично закрыто | Есть persisted LessonRunSnapshot и remap по activity id; нужен полный process-kill / sync / Plus-return regression |
 | Plus → возврат в текущий урок | ✅ исправлено по коду | Explicit return URL + `resume=1`; integration test ещё нужен |
 | Choice accidental tap | ✅ исправлено по коду | Первый tap выбирает, второй подтверждает; Learn/Review/listening |
-| Shuffle ответов / chips | 🟡 частично закрыто | Lesson seed persisted; Review seed пока только session-local |
+| Shuffle ответов / chips | ✅ (#450) | Lesson seed persisted; Review — порядок постоянный в течение дня |
 | Wrong-answer feedback layout/copy | ✅ исправлено по коду | `Ответ неверный`, retry notice меньше и ближе, Why/Next state layout разделён |
 | Speed drill timing / threshold copy | ✅ исправлено | Dynamic speaking window; real `needed/count`; code-course release прошёл |
 | Route entry / current-day jump | ✅ исправлено по коду | Вход сверху; отдельная тихая кнопка «Текущий день» |
@@ -996,6 +996,8 @@ answer.nearMiss
 ---
 
 ### P1. «Начать заново» не гарантирует сброс действительно всех курсов
+
+✅ сделано (#450): сброс берёт курсы из всех документов на устройстве (`DocumentSync.keys()`), включая снятые с сайта.
 
 Экран Reset собирает ids так:
 

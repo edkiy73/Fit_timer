@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { emptyCourseProgress, emptyStatsProgress, mergeCourseProgress, mergeStatsProgress } from './progress';
-import { resetCourseProgress, resetStatsProgress } from './progress-reset';
+import { courseIdsFromKeys, resetCourseProgress, resetStatsProgress } from './progress-reset';
 import { recordAnswer, summarizeAnswerStats } from './engine/learner-stats';
 import { activityDone } from './today-model';
 
@@ -28,5 +28,15 @@ describe('«Начать заново»', () => {
     expect(summarizeAnswerStats(mergeStatsProgress(stats,emptyStatsProgress())).attempts).toBe(0);
     stats=recordAnswer(stats,'dev','a1',true,'2026-10-01T09:00:00.000Z');
     expect(summarizeAnswerStats(stats)).toMatchObject({attempts:1,correct:1,wrong:0});
+  });
+
+  it('finds every stored course, also one removed from the catalog',()=>{
+    expect(courseIdsFromKeys([
+      {key:'progress:course:general-foundation'},
+      {key:'progress:stats:general-foundation'},
+      {key:'progress:stats:retired-course'},
+      {key:'settings'},
+      {key:'progress:words'}
+    ]).sort()).toEqual(['general-foundation','retired-course']);
   });
 });

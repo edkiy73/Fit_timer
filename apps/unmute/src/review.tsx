@@ -37,7 +37,7 @@ import { MyWordsView } from './my-words';
 import { Icon } from './icons';
 import { Loader } from './loader';
 import { reviewDueCounts } from './review-count';
-import { randomSeed, shuffledIndices } from './shuffle';
+import { shuffledIndices } from './shuffle';
 
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
 type CombinedReviewItem=
@@ -109,7 +109,8 @@ export function ReviewView({
   const [index,setIndex]=useState(0);
   const [completed,setCompleted]=useState(0);
   const [selected,setSelected]=useState<number|null>(null);
-  const [shuffleSeed]=useState(()=>randomSeed());
+  // Same answer order all day, even after leaving and reopening «Повтор»; a returned card is reshuffled.
+  const shuffleSeed='review-day-'+todayDay;
   const [answer,setAnswer]=useState('');
   const [result,setResult]=useState<boolean|null>(null);
   const [busy,setBusy]=useState(false);
@@ -525,7 +526,7 @@ export function ReviewView({
           )}
           <fieldset className="learn-options" disabled={busy||result!==null}>
             <legend className="sr-only">{t('learn.chooseAnswer')}</legend>
-            {shuffledIndices(activity.options.length,shuffleSeed+'|review|'+activity.id+'|'+index).map(optionIndex=>{
+            {shuffledIndices(activity.options.length,shuffleSeed+'|'+activity.id+(returnedCard?'|again':'')).map(optionIndex=>{
               const option=activity.options[optionIndex]!;
               return (
                 <label className={'learn-option'+(selected===optionIndex&&result===null?' is-selected':'')} key={optionIndex}>

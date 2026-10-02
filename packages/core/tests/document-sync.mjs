@@ -167,6 +167,9 @@ const paid = await A.docs.sync();
 ok('non-free document without Premium fails with premium_required',
   paid.status === 'failed' && paid.error?.code === 'premium_required');
 await A.docs.remove('paid');
+ok('keys() lists stored documents and leaves removed ones out',
+  (await A.docs.keys()).some(ref => ref.key === 'notes' && ref.profileId === '__account__') &&
+  !(await A.docs.keys()).some(ref => ref.key === 'paid'));
 
 // 9. Old clients (no base) keep the previous server rules.
 const session = await A.auth.getSession();
