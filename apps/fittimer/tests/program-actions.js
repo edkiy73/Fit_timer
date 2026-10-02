@@ -335,6 +335,65 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       && Object.keys(resistanceUpdate.changed.cur || {}).length === 0,
     JSON.stringify(resistanceUpdate.changed));
 
+  // ---- UX ручного редактора прогрессии ----
+  const progressionEditor = await page.evaluate(async () => {
+    const program = {
+      id:'progression-editor-audit', name:'Редактор прогрессии', progression:0,
+      plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[
+        {
+          id:'double-audit',name:'Махи',type:'reps',value:'8-10',sets:3,rest:45,
+          loadType:'weight',trackWeight:true,weight:5,progOn:true,progMode:'double_range',
+          dualProg:true,repsStep:1,repsMax:14,wStep:1,weightMax:12,progEvery:null
+        },
+        {
+          id:'level-audit',name:'Тяга резинки',type:'reps',value:'12-15',sets:3,rest:45,
+          loadType:'level',progOn:true,progMode:'level',
+          loadLevels:[{key:'light'},{key:'medium'},{key:'strong'},{key:'veryStrong'}],
+          loadLevel:1,repsStep:2,repsMax:18,progEvery:2,
+          ps:{n:1,cur:{reps:'12-15',level:2}}
+        }
+      ]}]
+    };
+    customPrograms.push(program);
+    await savePrograms();
+
+    openBuilder(program.id);
+    openExercise(0);
+    const weighted = {
+      mode:$('exProgMode').value,
+      modeHint:$('exProgModeHint').textContent.trim(),
+      freqHint:$('exProgOnHint').textContent.trim(),
+      seg3:$('exLoadNone').parentElement.classList.contains('seg3')
+    };
+
+    openExercise(1);
+    const resistance = {
+      baseValue:$('exLoadLevel').value,
+      baseLabel:$('exLoadLevel').selectedOptions[0] && $('exLoadLevel').selectedOptions[0].textContent.trim(),
+      nowHint:$('exNowHint').textContent.trim(),
+      nowVisible:!$('exNowHint').classList.contains('hidden')
+    };
+    return {weighted,resistance};
+  });
+  ok('«Повторы → вес» объясняет переход на вес и сброс диапазона',
+    progressionEditor.weighted.mode === 'double_range'
+      && /потолк/i.test(progressionEditor.weighted.modeHint)
+      && /стартов/i.test(progressionEditor.weighted.modeHint),
+    JSON.stringify(progressionEditor.weighted));
+  ok('включённая прогрессия без общей частоты не называется отключённой',
+    /Частота не задана/.test(progressionEditor.weighted.freqHint)
+      && !/прогрессия отключена/i.test(progressionEditor.weighted.freqHint),
+    progressionEditor.weighted.freqHint);
+  ok('три типа нагрузки используют компактный mobile segment',
+    progressionEditor.weighted.seg3, JSON.stringify(progressionEditor.weighted));
+  ok('редактор resistance показывает базовую ступень отдельно от текущей',
+    progressionEditor.resistance.baseValue === '1'
+      && /Среднее/.test(progressionEditor.resistance.baseLabel)
+      && progressionEditor.resistance.nowVisible
+      && /Сильное/.test(progressionEditor.resistance.nowHint)
+      && /12.?15/.test(progressionEditor.resistance.nowHint),
+    JSON.stringify(progressionEditor.resistance));
+
   // у копии пункт «в каталог» уже есть — она своя
   const copyMenu = await page.evaluate(() => {
     const c = customPrograms[customPrograms.length - 1];
