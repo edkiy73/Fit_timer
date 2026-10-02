@@ -55,9 +55,26 @@ const ok = (name, cond, extra) => {
     await savePrograms();
     goTab('scrPrograms');
     openBuilder('progress-editor-audit');
-    addExManual();
   });
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(180);
+
+  // Program-level setting — только default frequency, а не master switch.
+  await page.click('#bSettingsToggle');
+  await page.waitForTimeout(120);
+  ok('общая частота программы открывается со значением 4',
+    await page.inputValue('#bProgEvery') === '4', await page.inputValue('#bProgEvery'));
+  const programFreqOptions = await page.$eval('#bProgEvery option', xs => xs.map(x=>({v:x.value,t:x.textContent.trim()})));
+  ok('у программы можно убрать общий default без обещания выключить overrides',
+    programFreqOptions.some(x => x.v === '0' && /Не задавать общую частоту/.test(x.t)),
+    JSON.stringify(programFreqOptions));
+  await page.selectOption('#bProgEvery','0');
+  ok('изменение общей частоты сразу попадает в draft',
+    await page.evaluate(() => draft.progression) === 0,
+    String(await page.evaluate(() => draft.progression)));
+  await page.click('#btnPsDone');
+  await page.waitForTimeout(120);
+  await page.evaluate(() => addExManual());
+  await page.waitForTimeout(180);
 
   ok('новое ручное упражнение открыто', await page.isVisible('#scrExercise'));
   ok('новое ручное упражнение не прогрессирует само',
@@ -115,15 +132,19 @@ const ok = (name, cond, extra) => {
   ok('reps + weight по умолчанию = Повторы → вес',
     await page.inputValue('#exProgMode') === 'double_range',
     await page.inputValue('#exProgMode'));
-  const hint = await page.textContent('#exProgOnHint');
-  ok('подсказка говорит про предложение повышения, а не автоприбавку',
-    /предложим повышение/i.test(hint) && !/автомат/i.test(hint), hint);
+  const missingFreqHint = await page.textContent('#exProgOnHint');
+  ok('без program default редактор прямо просит выбрать частоту',
+    /частота не задана/i.test(missingFreqHint), missingFreqHint);
 
-  const weightModes = await page.$$eval('#exProgMode option', xs => xs.map(x=>x.value));
+  const weightModes = await page.$eval('#exProgMode option', xs => xs.map(x=>x.value));
   ok('ручной редактор даёт все осмысленные weight-режимы',
     weightModes.join(',') === 'double_range,weight,reps,parallel', weightModes.join(','));
 
   await page.selectOption('#exProgEvery','2');
+  await page.waitForTimeout(50);
+  const hint = await page.textContent('#exProgOnHint');
+  ok('после своей частоты подсказка говорит про предложение, а не автоматическое изменение',
+    /предложим повышение/i.test(hint) && !/автомат/i.test(hint), hint);
   await page.fill('#exStepReps','1');
   await page.fill('#exMaxReps','14');
   await page.fill('#exStepWeight','1');
