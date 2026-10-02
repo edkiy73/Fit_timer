@@ -188,9 +188,13 @@ export function loadLevelLabel(level){
 export function exerciseLoadLevelState(ex){
   const levels = exerciseLoadLevels(ex);
   const level = exerciseLoadLevel(ex);
+  const item = levels[level] || null;
   return {
     level,
-    label: levels[level] ? loadLevelLabel(levels[level]) : ''
+    label: item ? loadLevelLabel(item) : '',
+    // Стабильная физическая identity нужна resume-снимку. Для встроенной шкалы
+    // используем ключ (он не меняется при RU↔EN), для пользовательской — её label.
+    identity: item && item.key ? 'key:' + item.key : (item && item.label ? 'label:' + item.label : '')
   };
 }
 function resistanceScaleText(ex){
@@ -723,6 +727,19 @@ export function progressionModeLabel(ex, mode){
       : t('builder.progModeLevel');
   }
   return t('builder.progModeReps');
+}
+
+function progressionModeHintKey(ex, mode){
+  if(mode === 'double_range') return 'builder.progModeHintDouble';
+  if(mode === 'weight') return 'builder.progModeHintWeight';
+  if(mode === 'time') return 'builder.progModeHintTime';
+  if(mode === 'parallel') return ex && ex.type === 'time'
+    ? 'builder.progModeHintParallelTime'
+    : 'builder.progModeHintParallelReps';
+  if(mode === 'level') return ex && ex.type !== 'time' && ex.repsStep > 0
+    ? 'builder.progModeHintLevelReps'
+    : 'builder.progModeHintLevel';
+  return 'builder.progModeHintReps';
 }
 
 function fillExerciseProgModeOptions(){
@@ -1672,9 +1689,8 @@ function fillExercise(){
   setShown('exLevelScaleBox', false);
 }
 
-// «Как считать» (повторения/время) и «Упражнение с доп. весом» — независимые переключатели:
-// вес сочетается с обоими, четыре формата вместо трёх («время и вес» — удержание
-// или перенос с грузом: планка с блином, фермерская прогулка).
+// «Как считать» и «Нагрузка» независимы: время/повторы сочетаются с весом,
+// сопротивлением или отсутствием внешней нагрузки.
 export function renderExerciseLevelControls(){
   if(!exDraft) return;
   const active = progressionLoadType(exDraft) === 'level';
@@ -1781,9 +1797,10 @@ export function renderProgControls(){
   setShown('exProgEveryRow', true);
   $('exProgOnHint').textContent = period
     ? t('builder.progressAutoPeriod',{period:progPeriodLabel(period)})
-    : t('builder.exerciseProgressionDisabledHint');
+    : t('builder.exerciseProgressionNoFrequencyHint');
 
   const mode = editorProgressionMode(exDraft);
+  if($('exProgModeHint')) $('exProgModeHint').textContent = t(progressionModeHintKey(exDraft, mode));
   const isTime = exDraft.type === 'time';
   const withWeight = progressionLoadType(exDraft) === 'weight';
   const growReps = mode === 'reps' || mode === 'double_range' ||
@@ -1841,22 +1858,29 @@ export function syncExNowHints(){
   // важно само значение. Диапазон считает progressedRepsRange (растит min и max порознь,
   // режет по потолку), при двойной прогрессии min===max — уже готовое число.
   const parts = [];
-  let weightChanged = false;
+  let loadChanged = false;
   if(hasWeight(probe)){
     const base = progBaseValue(probe, 'weight'), now = getExWeight(p.id, probe, p);
-    weightChanged = now > 0 && Math.abs(now - base) > 0.01;
-    if(weightChanged) parts.push(`${fmtKg(now)} ${t('progress.kg')}`);
+    loadChanged = now > 0 && Math.abs(now - base) > 0.01;
+    if(loadChanged) parts.push(`${fmtKg(now)} ${t('progress.kg')}`);
+  }else if(progressionLoadType(probe) === 'level'){
+    const levels = exerciseLoadLevels(probe);
+    const baseLevel = Math.max(0, Math.min(Math.max(0, levels.length - 1), Math.round(+probe.loadLevel || 0)));
+    const nowLevel = exerciseLoadLevel(probe);
+    loadChanged = nowLevel !== baseLevel;
+    if(loadChanged && levels[nowLevel]){
+      parts.push(t('builder.nowResistance',{value:loadLevelLabel(levels[nowLevel])}));
+    }
   }
-  // Растёт вес, а вторая ось (повторы или секунды) сама по себе — нет (обычное
-  // дело: «время и вес» просит держать секунды на месте и добавлять только груз):
-  // всё равно показываем её рядом с весом, иначе «Сейчас 18 кг» без неё читалась
-  // так, будто сколько делать — не сказано.
+  // Если меняется внешняя нагрузка, показываем рядом и «сколько делать», даже когда
+  // сама метрика не выросла: иначе «Сейчас: Сильное сопротивление» не отвечает,
+  // сколько повторов/секунд осталось в назначении.
   if(probe.type === 'time'){
     const base = parseValue(probe.value).min, now = getExProgValue(p.id, probe, p, 'time');
-    if(now !== base || weightChanged) parts.push(`${now} ${t('store.secShort')}`);
+    if(now !== base || loadChanged) parts.push(`${now} ${t('store.secShort')}`);
   } else {
     const base = valueText(probe.value), now = progressedRepsRange(p.id, probe, p).replace('-', '–');
-    if(now !== base || weightChanged) parts.push(`${now} ${t('store.repShort')}`);
+    if(now !== base || loadChanged) parts.push(`${now} ${t('store.repShort')}`);
   }
   if(!parts.length){ setShown(el, false); return; }
   // «повт.» уже заканчивается точкой — не дублируем её точкой предложения
@@ -2995,11 +3019,14 @@ export function initBuilder(){
   setTrainerBuilderHooks({
     enableDrag,
     exRestAfter,
+    exerciseLoadLevels,
     exerciseLoadLevelState,
     exerciseProgEvery,
     fmtKg,
+    getExProgValue,
     getExWeight,
     hasWeight,
+    loadLevelLabel,
     openBuilder,
     parseProgramText,
     parseValue,
