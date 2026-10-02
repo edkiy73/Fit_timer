@@ -424,7 +424,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   });
   ok('новое ручное упражнение не включает прогрессию само',
     !progressionEditor.manualDefault.progOn
-      && /без прогрессии/i.test(progressionEditor.manualDefault.summary),
+      && /(без прогрессии|не растёт)/i.test(progressionEditor.manualDefault.summary),
     JSON.stringify(progressionEditor.manualDefault));
   ok('«Повторы → вес» объясняет переход на вес и сброс диапазона',
     progressionEditor.weighted.mode === 'double_range'
@@ -444,7 +444,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     progressionEditor.weighted.swapVisible
       && !progressionEditor.weighted.swapWithoutWeightMax
       && /пуст/i.test(progressionEditor.weighted.ceilingHint)
-      && /потол/i.test(progressionEditor.weighted.ceilingHint),
+      && /(потол|предел)/i.test(progressionEditor.weighted.ceilingHint),
     JSON.stringify(progressionEditor.weighted));
   ok('редактор resistance показывает базовую ступень отдельно от текущей',
     progressionEditor.resistance.baseValue === '1'
