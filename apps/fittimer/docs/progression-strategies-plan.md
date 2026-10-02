@@ -1,7 +1,18 @@
 # План: универсальная прогрессия FitTimer без усложнения тренировки
 
-Статус: план работ, повторно проверен против текущего `main` 2026-10-02.
-PR #456 уже влит в `main`: индивидуальная частота `ex.progEvery`, наследование от `p.progression`, подсчёт только полных выполнений и AI-поле `ЧАСТОТА ПРОГРЕССИИ` уже реализованы.
+Статус на 2026-10-02: функциональная часть плана завершена и находится в `main`.
+
+Влито:
+- #456 — индивидуальная частота упражнения;
+- #457 — normalization adapter;
+- #458 — единый compute/preview/apply engine;
+- #459–#461 — ручной редактор и program default frequency;
+- #462–#464 — resistance/level engine, UI и runtime/history;
+- #466 — финальная проверка `сейчас → будет`;
+- #467 — AI protocol + resistance;
+- #469–#470 — sync/backup/catalog/trainer/import hardening.
+
+Осталась только Пачка 8 — cleanup legacy. Безопасный dead-UI cleanup можно делать сразу. Удаление compatibility-полей `prog/trackWeight/dualProg/dualRangeV` откладывается до стабильного релиза и подтверждённого migration coverage. Persistent `progression{}` добавлять не нужно: текущая normalized runtime model закрывает задачу без второго source of truth.
 
 ## 0. Цель
 
@@ -1575,6 +1586,19 @@ UI не должен позволять сохранить заведомо пр
 ---
 
 # 30. План реализации по пачкам
+
+## Фактический статус
+
+- Пачки 1–7: ✅ завершены и влиты в `main`.
+- Пачка 8: 🟡 частичный cleanup.
+  - можно удалять мёртвый UI/action-код, который больше не участвует в runtime;
+  - нельзя пока удалять reader/migration compatibility для старых программ и backup;
+  - `dualProg/dualRangeV` пока нужны старой double-progression migration и protocol round-trip;
+  - `trackWeight` пока нужен как legacy fallback формата веса;
+  - `ex.prog` пока нужен reader'у старых документов;
+  - `parallel` остаётся полноценным advanced mode, не legacy-мусором.
+
+
 
 ## Уже сделано — база индивидуальной частоты
 
