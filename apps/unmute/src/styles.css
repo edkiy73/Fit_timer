@@ -215,6 +215,7 @@ h2{margin:0 0 8px;font-weight:800}
 .learn-feedback-return{margin:0;font-size:11px;line-height:1.2;color:var(--muted)}
 .learn-feedback-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:22px}
 .learn-feedback-ok .learn-feedback-icon{color:var(--success);background:color-mix(in srgb,var(--success) 18%,transparent)}
+.learn-feedback-near .learn-feedback-icon{color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,transparent)}
 .learn-feedback-wrong .learn-feedback-icon{color:var(--danger);background:color-mix(in srgb,var(--danger) 16%,transparent)}
 .learn-feedback-next{width:100%}
 .runner:has(.learn-feedback.is-sheet){padding-bottom:280px}
