@@ -189,6 +189,31 @@ function clearLessonRun(setId:string,nodeId:string):void{
   try{localStorage.removeItem(lessonRunKey(setId,nodeId));}catch{}
 }
 
+interface CompletionCandidate{
+  version:1;
+  setId:string;
+  nodeId:string;
+  runId:string;
+  mode:LessonRunMode;
+}
+const completionCandidateKey=(setId:string,nodeId:string)=>'unmute.lesson-completion:'+setId+':'+nodeId;
+function readCompletionCandidate(setId:string,nodeId:string):CompletionCandidate|null{
+  try{
+    const raw=localStorage.getItem(completionCandidateKey(setId,nodeId));
+    if(!raw)return null;
+    const parsed=JSON.parse(raw) as CompletionCandidate;
+    if(parsed?.version!==1||parsed.setId!==setId||parsed.nodeId!==nodeId||!parsed.runId)return null;
+    if(parsed.mode!=='first'&&parsed.mode!=='resume'&&parsed.mode!=='replay')return null;
+    return parsed;
+  }catch{return null;}
+}
+function writeCompletionCandidate(candidate:CompletionCandidate):void{
+  try{localStorage.setItem(completionCandidateKey(candidate.setId,candidate.nodeId),JSON.stringify(candidate));}catch{}
+}
+function clearCompletionCandidate(setId:string,nodeId:string):void{
+  try{localStorage.removeItem(completionCandidateKey(setId,nodeId));}catch{}
+}
+
 function remapLessonRun(snapshot:LessonRunSnapshot,steps:Activity[]):LessonRunSnapshot|null{
   const currentIndex=new Map(steps.map((step,index)=>[step.id,index] as const));
   const orderedIds=snapshot.order.map(index=>snapshot.stepIds[index]).filter((id):id is string=>Boolean(id));
@@ -299,7 +324,9 @@ export function NodeRunnerView({
   const restoringRunRef=useRef<string|null>(null);
 
   useEffect(()=>{
-    completionTrackedRef.current=Boolean(nodeProgress?.complete);
+    // Completed nodes opened later are not new completions. A persisted completion candidate
+    // is the proof that this particular run still needs its completion event delivered.
+    completionTrackedRef.current=false;
   },[node?.id]);
 
   const begin=(startIndex:number)=>{
@@ -428,19 +455,43 @@ export function NodeRunnerView({
     setBusy(false);
   },[activity?.id,pos]);
 
-  // Count the day the moment it really counts, not when the last screen is reached.
+  // Count completion from a durable candidate. It is written before refresh, so an app
+  // kill between the final answer and the refreshed roadmap cannot lose the event.
   const nodeComplete=Boolean(nodeProgress?.complete);
   useEffect(()=>{
-    if(finished&&nodeComplete&&node&&!completionTrackedRef.current){
+    if(!runHydrated||!state||!node)return;
+    const candidate=readCompletionCandidate(state.set.id,node.id);
+    if(candidate&&nodeComplete&&!completionTrackedRef.current){
       completionTrackedRef.current=true;
-      onNodeCompleted(node);
+      if(node.kind==='lesson')trackLessonCompleted(candidate.runId,candidate.mode);
+      if(node.dayIndex)trackDayCompleted(candidate.runId,candidate.mode);
+      clearCompletionCandidate(state.set.id,node.id);
+      clearLessonRun(state.set.id,node.id);
+      if(candidate.mode!=='replay')onNodeCompleted(node);
+      return;
     }
-  },[finished,nodeComplete,node?.id]);
+    // A stale candidate from a run that did not actually satisfy the node is discarded
+    // on the next normal hydration. During finish/checking we keep it until refresh resolves.
+    if(candidate&&!nodeComplete&&!checking&&!finished){
+      clearCompletionCandidate(state.set.id,node.id);
+    }
+    if(finished&&!nodeComplete&&!checking){
+      clearLessonRun(state.set.id,node.id);
+    }
+  },[runHydrated,state?.set.id,node?.id,nodeComplete,checking,finished]);
 
   const finish=async()=>{
-    if(state&&node)clearLessonRun(state.set.id,node.id);
+    if(state&&node){
+      writeCompletionCandidate({
+        version:1,
+        setId:state.set.id,
+        nodeId:node.id,
+        runId,
+        mode:runMode
+      });
+    }
     setChecking(true);
-    try{ await runtime.refresh(); }catch{ /* the summary still shows what is known */ }
+    try{ await runtime.refresh(); }catch{ /* candidate stays durable for the next launch */ }
     setChecking(false);
     setFinished(true);
   };
@@ -471,7 +522,10 @@ export function NodeRunnerView({
   };
 
   const exitWithoutSaving=()=>{
-    if(state&&node)clearLessonRun(state.set.id,node.id);
+    if(state&&node){
+      clearLessonRun(state.set.id,node.id);
+      clearCompletionCandidate(state.set.id,node.id);
+    }
     setExitOpen(false);
     onExit();
   };
@@ -975,10 +1029,6 @@ export function NodeRunnerScreen(){
       onSignIn={()=>navigate('/account?return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
       onAccess={()=>navigate('/access?from=answer&return='+encodeURIComponent('/learn/'+String(params.nodeId||'')+'?resume=1'))}
       onReviewDay={nodeId=>navigate('/review?day='+encodeURIComponent(nodeId))}
-      onNodeCompleted={node=>{
-        if(node.kind==='lesson')trackLessonCompleted();
-        if(node.dayIndex)trackDayCompleted();
-      }}
       saveSeen={saveSeenActivity}
       saveGraded={saveGradedActivity}
       savePractice={savePracticeActivity}

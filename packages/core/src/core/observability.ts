@@ -10,6 +10,8 @@ export interface RuntimeContext {
 export interface AnalyticsEnvelope {
   action: 'analytics';
   event: string;
+  /** Stable client operation id. Server uses it to make analytics retries exactly-once. */
+  eventId?: string;
   deviceId: string;
   platform: Platform;
   locale: string;
@@ -34,7 +36,7 @@ export interface ClientOptions {
 }
 
 export interface ObservabilityClient {
-  track(event: string): Promise<boolean>;
+  track(event: string, eventId?: string): Promise<boolean>;
   capture(kind: 'error' | 'rejection', error: unknown, fallbackMessage?: string): Promise<boolean>;
   diagnosticPayload(kind: 'error' | 'rejection', error: unknown, fallbackMessage?: string): DiagnosticEnvelope;
 }
@@ -64,14 +66,16 @@ export function createClient(options: ClientOptions): ObservabilityClient {
   };
 
   return {
-    async track(event: string): Promise<boolean> {
+    async track(event: string, eventId?: string): Promise<boolean> {
       const name = String(event || '').trim();
       if(!name) return false;
+      const id=String(eventId||'').trim().slice(0,160);
       try {
         const ctx = options.context();
         return await options.post({
           action:'analytics',
           event:name,
+          ...(id?{eventId:id}:{}),
           deviceId:await options.deviceId(),
           platform:ctx.platform,
           locale:String(ctx.locale || '').slice(0,20),
