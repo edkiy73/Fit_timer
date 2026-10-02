@@ -233,6 +233,21 @@
     </div>
   </div>
 
+  <div class="modal" id="startLoadModal">
+    <div class="modal-card">
+      <span class="mini-label" id="startLoadModalTitle"></span>
+      <div class="field" id="startLoadInputWrap">
+        <input type="text" id="startLoadInput" inputmode="decimal">
+      </div>
+      <div class="field hidden" id="startLoadSelectWrap">
+        <select id="startLoadSelect"></select>
+      </div>
+      <p class="field-hint" id="startLoadHint"></p>
+      <button type="button" class="btn-primary" data-act="commitStartLoadEdit" style="padding:15px;font-size:16px" data-i18n="finish.done">Готово</button>
+      <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
+    </div>
+  </div>
+
   <div class="modal" id="pickStepModal" data-act="closeModalBackdrop">
     <div class="modal-card">
       <span class="mini-label" data-i18n="workout.startExerciseTitle">С какого упражнения начать</span>
