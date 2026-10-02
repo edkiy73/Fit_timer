@@ -133,6 +133,49 @@ export function newExId(){
   return 'e' + Math.random().toString(36).slice(2, 8);
 }
 
+const BUILTIN_LOAD_LEVEL_KEYS = new Set(['light','medium','strong','veryStrong']);
+const DEFAULT_LOAD_LEVELS = [
+  {key:'light'},
+  {key:'medium'},
+  {key:'strong'},
+  {key:'veryStrong'}
+];
+
+function cleanLoadLevels(raw, withDefault=false){
+  const out = [];
+  const list = Array.isArray(raw) ? raw : [];
+  for(const item of list){
+    if(out.length >= 12) break;
+    if(typeof item === 'string'){
+      const label = clampLine(item, 60);
+      if(label) out.push({label});
+      continue;
+    }
+    if(!item || typeof item !== 'object') continue;
+    if(BUILTIN_LOAD_LEVEL_KEYS.has(item.key)){
+      out.push({key:item.key});
+      continue;
+    }
+    const label = clampLine(item.label, 60);
+    if(label) out.push({label});
+  }
+  if(out.length >= 2) return out;
+  return withDefault ? DEFAULT_LOAD_LEVELS.map(x=>({...x})) : out;
+}
+
+export function exerciseLoadLevels(ex){
+  return cleanLoadLevels(ex && ex.loadLevels, progressionLoadType(ex) === 'level');
+}
+
+export function exerciseLoadLevel(ex){
+  const levels = exerciseLoadLevels(ex);
+  if(!levels.length) return 0;
+  const raw = ex && ex.ps && ex.ps.cur && ex.ps.cur.level != null
+    ? ex.ps.cur.level
+    : (ex && ex.loadLevel != null ? ex.loadLevel : 0);
+  return Math.max(0, Math.min(levels.length - 1, Math.round(+raw || 0)));
+}
+
 export function blankExercise(){
   return {id:newExId(), name:'', desc:'', video:'', type:'reps', value:10, sets:1, perSide:false, warmup:false,
           rest:45, restAfter:null, media:null, muscles:[], mistakes:'',
@@ -142,7 +185,7 @@ export function blankExercise(){
           // Нормализованная модель новой прогрессии вводится постепенно.
           // null = старые/текущие данные, strategy adapter выводит смысл из legacy-полей.
           // UI начнёт записывать эти поля отдельной пачкой — пока поведение не меняем.
-          loadType:null, progMode:null,
+          loadType:null, progMode:null, loadLevels:null, loadLevel:null,
           // Потолок: выше него прогрессия не поднимает. Без него линейный рост за год
           // доводит до нереальных значений (60 кг гантель, 60 повторений, 5 минут планки).
           repsMax:0, weightMax:0, timeMax:0,
@@ -191,6 +234,17 @@ export function normalizeExercise(ex){
   // существующие программы: null = читать legacy trackWeight/dualProg/steps.
   if(ex.loadType != null && !['none','weight','level'].includes(ex.loadType)) delete ex.loadType;
   if(ex.progMode != null && !['reps','weight','double_range','time','level','parallel'].includes(ex.progMode)) delete ex.progMode;
+  if(ex.loadLevels != null) ex.loadLevels = cleanLoadLevels(ex.loadLevels, ex.loadType === 'level');
+  if(ex.loadType === 'level'){
+    if(!Array.isArray(ex.loadLevels) || ex.loadLevels.length < 2) ex.loadLevels = cleanLoadLevels(null, true);
+    ex.loadLevel = Math.max(0, Math.min(ex.loadLevels.length - 1, Math.round(+ex.loadLevel || 0)));
+    ex.trackWeight = false;
+    if(ex.ps && ex.ps.cur && ex.ps.cur.level != null){
+      ex.ps.cur.level = Math.max(0, Math.min(ex.loadLevels.length - 1, Math.round(+ex.ps.cur.level || 0)));
+    }
+  }else if(ex.loadLevel != null){
+    ex.loadLevel = Math.max(0, Math.round(+ex.loadLevel || 0));
+  }
   ex.weight = parseKg(ex.weight);
   // Частота проверки конкретного упражнения:
   // null/пусто = наследовать программу; 0 = полностью отключить прогрессию;
@@ -447,6 +501,11 @@ export function getProgressionStrategy(ex, program){
     weight: {
       step: ex && loadType === 'weight' ? Math.max(0, +progStepSize(ex, 'weight') || 0) : 0,
       max: ex && loadType === 'weight' ? progCeil(ex, 'weight') : null
+    },
+    level: {
+      current: ex && loadType === 'level' ? exerciseLoadLevel(ex) : 0,
+      max: ex && loadType === 'level' ? Math.max(0, exerciseLoadLevels(ex).length - 1) : null,
+      levels: ex && loadType === 'level' ? exerciseLoadLevels(ex) : []
     }
   };
 }
@@ -524,6 +583,20 @@ export function setExerciseProgressionMode(ex, mode){
       if(!(ex.timeStep > 0)) ex.timeStep = 5;
     }else if(!(ex.repsStep > 0)) ex.repsStep = 1;
     if(!(ex.wStep > 0)) ex.wStep = 2;
+  } else if(nextMode === 'level'){
+    ex.trackWeight = false;
+    ex.loadLevels = cleanLoadLevels(ex.loadLevels, true);
+    ex.loadLevel = Math.max(0, Math.min(ex.loadLevels.length - 1, Math.round(+ex.loadLevel || 0)));
+    ex.wStep = 0;
+    if(ex.type === 'time'){
+      // level-mode для времени держит время фиксированным и меняет сопротивление.
+      ex.timeStep = 0;
+    }else{
+      // Для повторов default — сначала два небольших шага повторов, потом следующий level.
+      if(!(ex.repsStep > 0)) ex.repsStep = 2;
+      const base = parseValue(ex.value);
+      if(!(ex.repsMax > base.max)) ex.repsMax = Math.min(200, base.max + ex.repsStep * 2);
+    }
   }
   return ex;
 }
@@ -537,6 +610,10 @@ export function setExerciseLoadType(ex, loadType, preferRecommended=false){
   const next = loadType === 'weight' ? 'weight' : loadType === 'level' ? 'level' : 'none';
   ex.loadType = next;
   ex.trackWeight = next === 'weight';
+  if(next === 'level'){
+    ex.loadLevels = cleanLoadLevels(ex.loadLevels, true);
+    ex.loadLevel = Math.max(0, Math.min(ex.loadLevels.length - 1, Math.round(+ex.loadLevel || 0)));
+  }
 
   const current = editorProgressionMode(ex);
   const allowed = progressionModeOptions(ex);
@@ -862,10 +939,13 @@ function progressionCurrentState(ex, mode){
     ? Math.max(0, progRound('weight', weightCeil != null ? Math.min(weightCeil, rawKg) : rawKg))
     : 0;
 
+  const level = ex && progressionLoadType(ex) === 'level' ? exerciseLoadLevel(ex) : 0;
+
   return {
     reps: min === max ? String(min) : min + '-' + max,
     sec,
-    kg
+    kg,
+    level
   };
 }
 
@@ -876,6 +956,7 @@ function progressionChanged(current, next){
   if(!sameProgressionValue(current.reps, next.reps)) changed.push('reps');
   if(!sameProgressionValue(current.sec, next.sec)) changed.push('time');
   if(!sameProgressionValue(current.kg, next.kg)) changed.push('weight');
+  if(!sameProgressionValue(current.level, next.level)) changed.push('level');
   return changed;
 }
 
@@ -937,6 +1018,27 @@ function computeDoubleRangeStep(ex, current, next){
   next.reps = nextMin === nextMax ? String(nextMin) : nextMin + '-' + nextMax;
 }
 
+function computeLevelStep(ex, strategy, current, next){
+  if(strategy.loadType !== 'level' || !strategy.level.levels.length) return;
+
+  // reps+level по умолчанию работает как double progression без килограммов:
+  // сначала растёт диапазон повторов, затем сопротивление и диапазон сбрасывается.
+  if(ex.type !== 'time' && strategy.reps.step > 0){
+    const ceil = strategy.reps.max;
+    const r = parseValue(current.reps);
+    if(ceil == null || r.max < ceil){
+      computeRepsStep(ex, current, next);
+      return;
+    }
+  }
+
+  if(current.level >= strategy.level.max) return;
+  next.level = current.level + 1;
+  if(ex.type !== 'time' && strategy.reps.step > 0 && strategy.reps.max != null){
+    next.reps = normValue(ex.value, 'reps');
+  }
+}
+
 // ЕДИНСТВЕННЫЙ расчёт следующего шага. Не мутирует ex.
 // previewNextProgression() показывает его, advanceExerciseProgression() применяет его.
 export function computeNextProgression(ex, program){
@@ -961,8 +1063,9 @@ export function computeNextProgression(ex, program){
     if(ex.type === 'time') computeTimeStep(ex, current, next);
     else computeRepsStep(ex, current, next);
     computeWeightStep(ex, current, next);
+  } else if(mode === 'level'){
+    computeLevelStep(ex, strategy, current, next);
   }
-  // mode=level появится отдельной пачкой вместе с loadLevels/ps.cur.level.
 
   const changed = progressionChanged(current, next);
   return {canAdvance:changed.length > 0, mode, current, next, changed};
@@ -985,12 +1088,15 @@ export function progAtCeiling(pid, ex, program){
     ? ['reps','weight']
     : strategy.mode === 'parallel'
       ? (ex.type === 'time' ? ['time','weight'] : ['reps','weight'])
-      : [strategy.mode];
+      : strategy.mode === 'level'
+        ? (ex.type !== 'time' && strategy.reps.step > 0 ? ['reps','level'] : ['level'])
+        : [strategy.mode];
 
   const growing = axes.filter(axis => {
     if(axis === 'reps') return strategy.reps.step > 0;
     if(axis === 'time') return strategy.time.step > 0;
     if(axis === 'weight') return strategy.weight.step > 0;
+    if(axis === 'level') return strategy.level.max != null;
     return false;
   });
   if(!growing.length) return false;
@@ -1003,6 +1109,7 @@ export function progAtCeiling(pid, ex, program){
     if(axis === 'reps') return strategy.reps.max != null;
     if(axis === 'time') return strategy.time.max != null;
     if(axis === 'weight') return strategy.weight.max != null;
+    if(axis === 'level') return strategy.level.max != null;
     return false;
   });
   if(!allBounded) return false;
@@ -1020,6 +1127,7 @@ export function advanceExerciseProgression(ex){
   if(result.changed.includes('reps')) ps.cur.reps = result.next.reps;
   if(result.changed.includes('time')) ps.cur.sec = result.next.sec;
   if(result.changed.includes('weight')) ps.cur.kg = result.next.kg;
+  if(result.changed.includes('level')) ps.cur.level = result.next.level;
 }
 
 // База упражнения (числа, которые задают человек в конструкторе или ИИ) поменялась —
@@ -1029,8 +1137,19 @@ export function advanceExerciseProgression(ex){
 // сохраняем — упражнение то же. База не менялась (правили описание, отдых,
 // подходы, название) — прогресс переносится целиком.
 function progBaseKey(ex){
-  return [ex.type === 'time' ? 'time' : 'reps', hasWeight(ex) ? 1 : 0,
-    normValue(ex.value, ex.type), +ex.weight || 0, ex.dualProg ? 1 : 0].join('|');
+  const loadType = progressionLoadType(ex);
+  const mode = editorProgressionMode(ex) || inferredProgressionMode(ex) || '';
+  const levelKey = loadType === 'level'
+    ? JSON.stringify({levels:exerciseLoadLevels(ex), base:Math.max(0, Math.round(+ex.loadLevel || 0))})
+    : '';
+  return [
+    ex.type === 'time' ? 'time' : 'reps',
+    loadType,
+    normValue(ex.value, ex.type),
+    loadType === 'weight' ? (+ex.weight || 0) : 0,
+    mode,
+    levelKey
+  ].join('|');
 }
 export function carryExerciseProgress(oldEx, newEx){
   if(!newEx) return newEx;
