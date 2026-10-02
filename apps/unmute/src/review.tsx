@@ -63,13 +63,14 @@ export interface ReviewViewProps {
   runtime:LearnerCourseRuntimeValue;
   onExit:()=>void;
   todayDay?:number;
-  saveGraded:(setId:string,activityId:string,correct:boolean,responseKind?:SentenceResponseKind)=>Promise<void>;
+  saveGraded:(setId:string,activityId:string,correct:boolean,responseKind?:SentenceResponseKind,operationId?:string)=>Promise<void>;
   savePractice:(
     setId:string,
     activityId:string,
     mode:PracticeSrsKind,
     correct:boolean,
-    score?:number
+    score?:number,
+    operationId?:string
   )=>Promise<void>;
   wordRuntime?:WordReviewRuntimeValue|null;
   saveWord?:(lexemeId:string,senseId:string,correct:boolean)=>Promise<void>;
@@ -112,6 +113,7 @@ export function ReviewView({
   const [completed,setCompleted]=useState(0);
   const [selected,setSelected]=useState<number|null>(null);
   const [shuffleSeed]=useState(()=>randomSeed());
+  const [reviewRunId]=useState(()=>randomSeed());
   const [answer,setAnswer]=useState('');
   const [picked,setPicked]=useState<string[]>([]);
   const [result,setResult]=useState<boolean|null>(null);
@@ -422,6 +424,15 @@ export function ReviewView({
     setCompleted(value=>Math.min(total,value+1));
     setIndex(value=>value+1);
   };
+  const reviewPracticeSave:ReviewViewProps['savePractice']=(setIdArg,activityId,mode,correct,score)=>
+    savePractice(
+      setIdArg,
+      activityId,
+      mode,
+      correct,
+      score,
+      reviewRunId+'|'+setIdArg+'|'+activityId+'|'+index+'|practice:'+mode
+    );
 
   const returnedCard=queue.indexOf(item)<index;
   const finishCard=async(correct:boolean)=>{
@@ -430,8 +441,9 @@ export function ReviewView({
     try{
       // A card that came back after a mistake is practice: its first answer already set the interval.
       if(!returnedCard){
-        if(item.activity.type==='choice')await saveGraded(setId,item.activity.id,correct);
-        else await saveGraded(setId,item.activity.id,correct,reviewChips?'build':'write');
+        const operationId=reviewRunId+'|'+setId+'|'+item.activity.id+'|'+index+'|card';
+        if(item.activity.type==='choice')await saveGraded(setId,item.activity.id,correct,undefined,operationId);
+        else await saveGraded(setId,item.activity.id,correct,reviewChips?'build':'write',operationId);
       }
       setResult(correct);
     }finally{
@@ -666,7 +678,7 @@ export function ReviewView({
           key={'review-drill-'+setId+'-'+item.activity.id}
           activity={item.activity}
           setId={setId}
-          savePractice={savePractice}
+          savePractice={reviewPracticeSave}
           onDone={completePractice}
         />
       )}
@@ -677,7 +689,7 @@ export function ReviewView({
           activity={item.activity}
           setId={setId}
           distractors={distractors}
-          savePractice={savePractice}
+          savePractice={reviewPracticeSave}
           speak={speak}
           onDone={completePractice}
         />
@@ -688,7 +700,7 @@ export function ReviewView({
           key={'review-speaking-'+setId+'-'+item.activity.id}
           activity={item.activity}
           setId={setId}
-          savePractice={savePractice}
+          savePractice={reviewPracticeSave}
           speak={speak}
           startRecognition={startRecognition}
           onDone={completePractice}
