@@ -35,6 +35,24 @@ const PROG = `ПРОГРАММА: Сила дома
 ОТДЫХ: 60
 ШАГ ВЕСА: 2`;
 
+const BAND = `ПРОГРАММА: Резинки
+ПРОГРЕССИЯ: 2
+ДНИ: Вт
+КРУГИ: 1
+ОТДЫХ МЕЖДУ КРУГАМИ: 0
+
+УПРАЖНЕНИЕ: Тяга резинки
+ФОРМАТ: повторения
+ЗНАЧЕНИЕ: 12-15
+НАГРУЗКА: сопротивление
+СОПРОТИВЛЕНИЕ: Средняя
+УРОВНИ СОПРОТИВЛЕНИЯ: Лёгкая | Средняя | Сильная
+ПОДХОДЫ: 3
+ОТДЫХ: 45
+УСЛОЖНЯТЬ: да
+ШАГ ПОВТОРОВ: 2
+ПОТОЛОК ПОВТОРОВ: 18`;
+
 const boot = async (b, errs, label) => {
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
   page.on('pageerror', e => errs.push(label + ': ' + e));
@@ -66,7 +84,7 @@ async function restore(page, dump){
   const page = await boot(b, errs, 'телефон 1');
 
   /* ---- набиваем телефон всем, что бывает ---- */
-  await page.evaluate(async (txt) => {
+  await page.evaluate(async ({progTxt, bandTxt}) => {
     const me = curUser();
     me.name = 'Лена';
     me.theme = 'light';
@@ -79,9 +97,19 @@ async function restore(page, dump){
     me.age = 36;
     await saveUsers();
 
-    const r = parseProgramText(txt);
+    const r = parseProgramText(progTxt);
     const p = r.program || r; p.id = 'bk1';
-    customPrograms.push(p); await savePrograms();
+
+    const rb = parseProgramText(bandTxt);
+    const band = rb.program || rb; band.id = 'bk-band';
+    // Это современная программа с уже materialized per-exercise state.
+    // Без marker loadData законно прогонит legacy migration и пересчитает ps.n.
+    band.psMigrated = true;
+    const bx = normPlans(band)[0].exercises[0];
+    // Моделируем не просто шаблон, а реальный пользовательский прогресс к моменту бэкапа.
+    bx.ps = {n:2,cur:{reps:'16-18',level:2}};
+
+    customPrograms.push(p, band); await savePrograms();
 
     await kvSet(pk('stats'), JSON.stringify({
       count: 12,
@@ -120,7 +148,7 @@ async function restore(page, dump){
 
     await kvSet('hfMode', 'voice');
     await kvSet('soundOff', '0');
-  }, PROG);
+  }, {progTxt:PROG, bandTxt:BAND});
 
   /* ---- снимаем копию тем же кодом, каким её снимает кнопка ---- */
   const dump = await page.evaluate(async () => {
@@ -187,6 +215,17 @@ async function restore(page, dump){
         const p = customPrograms.find(p => p.name === 'Сила дома');
         return p ? normPlans(p)[0].exercises[0].wStep : null;
       })(),
+      resistance:(() => {
+        const p = customPrograms.find(p => p.id === 'bk-band');
+        const ex = p && normPlans(p)[0] && normPlans(p)[0].exercises[0];
+        return ex ? {
+          loadType:ex.loadType, progMode:ex.progMode, loadLevel:ex.loadLevel,
+          levels:(ex.loadLevels||[]).map(x=>x.label||x.key),
+          n:ex.ps && ex.ps.n,
+          reps:ex.ps && ex.ps.cur && ex.ps.cur.reps,
+          level:ex.ps && ex.ps.cur && ex.ps.cur.level
+        } : null;
+      })(),
       count: stats.count, body: (stats.weights || []).length,
       // Достижения пересчитываются при загрузке, и на двенадцати тренировках их
       // становится больше, чем было записано, — проверяем, что записанное на месте.
@@ -209,6 +248,16 @@ async function restore(page, dump){
   ok('и «кто я для сервера» на месте', got.profileId);
   ok('программа вернулась', got.prog === 'Сила дома' && got.weightStep === 2,
      `${got.prog}, шаг ${got.weightStep}`);
+  ok('backup сохранил resistance policy и текущую ступень прогрессии',
+    got.resistance
+      && got.resistance.loadType === 'level'
+      && got.resistance.progMode === 'level'
+      && got.resistance.loadLevel === 1
+      && got.resistance.levels.join('|') === 'Лёгкая|Средняя|Сильная'
+      && got.resistance.n === 2
+      && got.resistance.reps === '16-18'
+      && got.resistance.level === 2,
+    JSON.stringify(got.resistance));
   ok('статистика, вес тела и достижения', got.count === 12 && got.body === 2 && got.badge,
      `${got.count} тренировок, ${got.body} замера, достижение на месте: ${got.badge}`);
   // Скрытые поправки веса убраны намеренно (discardLegacyWeightCorrections): вес
