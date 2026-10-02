@@ -1862,7 +1862,8 @@ export function workoutSessionSignature(cur){
         Number(s.side) || 0, Number(s.sidesTotal) || 0,
         s.reps == null ? '' : String(s.reps),
         Number(s.seconds) || 0, Number(s.weight) || 0,
-        s.loadLevel == null ? '' : Number(s.loadLevel) || 0];
+        s.loadLevel == null ? '' : Number(s.loadLevel) || 0,
+        String(s.loadKey || s.loadLabel || '')];
     }
     return ['r', String(s.kind || ''), Number(s.seconds) || 0,
       s.sideSwitch ? 1 : 0, s.roundRest ? 1 : 0];
@@ -2493,6 +2494,7 @@ export function customToProgram(p, planIdx = 0){
       wStep: ex.wStep != null ? +ex.wStep : 2, // != null — иначе явный 0 (не растим вес) подменится дефолтом
       loadType,
       loadLevel: levelState && Number.isFinite(+levelState.level) ? Math.max(0, Math.round(+levelState.level)) : null,
+      loadKey: levelState ? String(levelState.key || '') : '',
       loadLabel: levelState ? String(levelState.label || '') : '',
       exName: ex.name,
       exId: ex.id || ''  // по id проверка прогресса узнаёт, до каких упражнений дошла тренировка
