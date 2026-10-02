@@ -162,6 +162,7 @@ ex.progMode:
   | 'double_range'
   | 'time'
   | 'level'
+  | 'parallel'
 ```
 
 Пользовательские названия:
@@ -176,17 +177,16 @@ ex.progMode:
 
 Технические имена пользователь не видит.
 
-Для compatibility adapter разрешён внутренний непользовательский режим:
-
-```js
-'legacy_parallel'
-```
-
-Он нужен только для старых упражнений, где текущий движок на одном шаге одновременно увеличивает две оси:
+Отдельно нужен `parallel` — одновременный рост двух осей:
 - повторы + вес;
 - время + вес.
 
-Новый UI этот режим не создаёт. Старое упражнение сохраняет прежнее поведение до тех пор, пока пользователь явно не сменит способ прогрессии.
+Причина: текущий ручной редактор уже умеет это через два положительных шага, а `advanceExerciseProgression()` реально повышает обе оси на одном подтверждении. Новый редактор не должен терять существующую возможность.
+
+Но `parallel`:
+- не является default;
+- AI сам его не выбирает без явного запроса;
+- в UI показывается как продвинутый вариант «Повторы и вес одновременно» / «Время и вес одновременно».
 
 ---
 
@@ -200,7 +200,7 @@ Persistent source of truth на переходном этапе:
 ex.type        // 'reps' | 'time' — уже существует
 ex.loadType    // 'none' | 'weight' | 'level' — новое
 ex.progOn      // включена ли прогрессия — уже существует
-ex.progMode    // reps | weight | double_range | time | level — новое
+ex.progMode    // reps | weight | double_range | time | level | parallel — новое
 ex.progEvery   // null | 0 | 1..15 — уже существует после PR #456
 
 // существующие параметры шага и потолка пока сохраняем:
@@ -321,7 +321,12 @@ getProgressionStrategy(ex, program) => {
   type: 'reps',
   loadType: 'level',
   value: '12-15',
-  loadLevels: ['Лёгкое', 'Среднее', 'Сильное', 'Очень сильное'],
+  loadLevels: [
+    {key:'light'},
+    {key:'medium'},
+    {key:'strong'},
+    {key:'veryStrong'}
+  ],
   loadLevel: 1,
   progOn: true,
   progMode: 'level',
@@ -417,7 +422,7 @@ type=reps + trackWeight=true + dualProg=false
 repsStep > 0 + wStep > 0
 ```
 
-→ internal `mode = legacy_parallel`
+→ `mode = parallel`
 
 и:
 
@@ -426,11 +431,11 @@ type=time + trackWeight=true
 timeStep > 0 + wStep > 0
 ```
 
-→ internal `mode = legacy_parallel`
+→ `mode = parallel`
 
-Новый UI этот mode не предлагает, но adapter и migration tests обязаны воспроизводить прежний next step 1:1.
+Adapter и migration tests обязаны воспроизводить прежний next step 1:1.
 
-Если пользователь открыл такое упражнение и явно изменил «Как усложнять», оно переводится в один из новых пяти режимов.
+В новом ручном UI `parallel` остаётся доступен как продвинутый вариант, чтобы не потерять существующую функциональность. При этом recommended/default режимом он не является.
 
 ## 4.2. Запись новых данных
 
@@ -593,6 +598,7 @@ AI и ручное создание используют один и тот же
 - Повторы → вес (рекомендуется)
 - Только вес
 - Только повторы
+- Дополнительно: Повторы и вес одновременно
 
 ### reps + level
 
@@ -608,6 +614,7 @@ AI и ручное создание используют один и тот же
 
 - Время (рекомендуется)
 - Вес
+- Дополнительно: Время и вес одновременно
 
 ### time + level
 
@@ -813,10 +820,10 @@ AI и ручное создание используют один и тот же
 
 ```js
 loadLevels: [
-  'Лёгкое',
-  'Среднее',
-  'Сильное',
-  'Очень сильное'
+  { key: 'light' },
+  { key: 'medium' },
+  { key: 'strong' },
+  { key: 'veryStrong' }
 ],
 loadLevel: 1
 ```
@@ -829,7 +836,19 @@ loadLevel: 1
 ex.ps.cur.level
 ```
 
-Алгоритм всегда показывает label из `loadLevels[index]`, а не индекс.
+Алгоритм всегда показывает пользовательский label, а не индекс.
+
+Formatter:
+- если у элемента есть `label` → показывать его как пользовательский текст;
+- если есть built-in `key` → брать локализованное название через i18n.
+
+Пример custom level:
+
+```js
+{ label: 'Красная 15–25 lb' }
+```
+
+Так встроенные «Лёгкое / Среднее / Сильное» корректно переключаются RU/EN, а пользовательские цвета/номера остаются ровно такими, как их назвал человек.
 
 В V1 переход уровня всегда на следующую соседнюю ступень. Настройка «ШАГ УРОВНЯ = 2» не нужна пользователю и не нужна движку.
 
@@ -863,7 +882,9 @@ ex.ps.cur.level
 
 UI всегда показывает label.
 
-Внутренне прогрессия двигается по индексу/ID.
+При выборе «Сопротивление» ручной редактор сразу показывает текущую шкалу и позволяет её переименовать. Пользователь может оставить встроенную относительную шкалу или сделать её физически конкретной: «Красная», «Чёрная», «№3», «20–30 lb», «дальше от крепления» и т.п.
+
+Внутренне прогрессия двигается по индексу массива.
 
 ## 10.4. Где хранить шкалы
 
@@ -1036,8 +1057,8 @@ function advanceExerciseProgression(ex, program) {
     case 'level':
       return advanceLevel(ex, p);
 
-    case 'legacy_parallel':
-      return advanceLegacyParallel(ex, p);
+    case 'parallel':
+      return advanceParallel(ex, p);
   }
 }
 ```
@@ -1243,7 +1264,7 @@ AI должен использовать ту же модель, что ручн
 - сопротивление;
 - шкала сопротивления;
 - текущий уровень;
-- шаг уровня.
+- ordered шкала сопротивления.
 
 Не обязательно сразу менять публичный plain-text протокол на полностью новую форму. Можно сначала научить parser преобразовывать новые labels в новую модель.
 
@@ -1282,6 +1303,8 @@ AI:
 - reps + resistance band → level;
 - time + none → time;
 - warmup → progression off.
+
+`parallel` AI не выбирает сам по умолчанию. Только если пользователь явно просит одновременно повышать обе оси или редактируется существующее упражнение с таким режимом.
 
 AI может отклоняться от default, если программа этого требует.
 
@@ -1424,7 +1447,7 @@ UI не должен позволять сохранить заведомо пр
 
 # 25. Синхронизация
 
-`progression`, `loadType`, `loadLevel` и шкала должны синхронизироваться вместе с программой.
+`progMode`, `loadType`, `loadLevels`, `loadLevel` и `ps.cur.level` должны синхронизироваться вместе с программой.
 
 Проверить:
 - профильный storage;
@@ -1572,13 +1595,13 @@ PR #456 в main:
 2. Добавить `progMode`.
 3. Добавить `getProgressionStrategy()`.
 4. Научить adapter читать все legacy комбинации.
-5. Добавить internal `legacy_parallel`.
+5. Поддержать `parallel` и legacy-инференс старых двухосевых упражнений.
 6. Пока не менять пользовательский UI.
 7. Unit tests: current load + next step old engine == normalized engine.
 
 Acceptance:
 - существующие программы дают тот же next step;
-- weighted reps/time с двумя положительными шагами не меняют поведение;
+- weighted reps/time с двумя положительными шагами не меняют поведение и становятся `parallel`;
 - `ex.progEvery` остаётся единственным exercise-level source частоты.
 
 ---
@@ -1591,7 +1614,7 @@ Acceptance:
    - weight;
    - double_range;
    - time;
-   - legacy_parallel.
+   - parallel.
 3. `previewNextProgression()`.
 4. `advanceExerciseProgression()` применяет результат того же compute.
 5. `progAtCeiling()` использует ту же strategy model.
@@ -1614,7 +1637,8 @@ Acceptance:
    - Повторы;
    - Вес;
    - Повторы → вес;
-   - Время.
+   - Время;
+   - продвинутый parallel для «Повторы/время и вес одновременно».
 6. Сохранить ручной override.
 7. Переделать human-readable `exProgSum`.
 8. Program-level UI привести к default-frequency semantics из раздела 9.
@@ -1710,7 +1734,7 @@ Acceptance:
 2. Убрать ненужную двойную запись.
 3. Удалить старые `prog/dualProg` ветки только после migration coverage.
 4. Оставить import migration старых backup/program text.
-5. `legacy_parallel` оставить reader-совместимостью, пока возможны старые документы.
+5. `parallel` оставить поддерживаемым advanced mode; legacy reader продолжает выводить его из старых двухосевых документов.
 
 Не смешивать cleanup с функциональными PR.
 
@@ -1788,8 +1812,8 @@ Acceptance:
 - reps;
 - time;
 - weighted weight-only;
-- weighted reps + weight simultaneously (legacy_parallel);
-- weighted time + weight simultaneously (legacy_parallel);
+- weighted reps + weight simultaneously (parallel);
+- weighted time + weight simultaneously (parallel);
 - dual;
 - уже прогрессированные;
 - на потолке;
@@ -1831,7 +1855,7 @@ Acceptance:
 - program default frequency: только `p.progression`;
 - exercise frequency override: только `ex.progEvery`;
 - progression on/off упражнения: `ex.progOn`;
-- новый явный strategy mode: `ex.progMode` (fallback из legacy, если отсутствует);
+- новый явный strategy mode: `ex.progMode` (включая advanced `parallel`; fallback из legacy, если отсутствует);
 - тип нагрузки: `ex.loadType` (fallback из legacy `trackWeight`, если отсутствует);
 - текущие reps/sec/kg/level: только `ex.ps.cur`;
 - базовый level: `ex.loadLevel`;
@@ -1849,7 +1873,7 @@ Acceptance:
 2. Новую программу можно полностью собрать вручную без AI.
 3. Для обычного упражнения пользователь не обязан понимать терминологию прогрессии.
 4. FitTimer предлагает разумный тип прогрессии по ex.type + loadType.
-5. Продвинутый пользователь может изменить стратегию вручную.
+5. Продвинутый пользователь может изменить стратегию вручную, включая существующий режим одновременного роста двух осей.
 6. Гантели, вес тела, время и резинки работают через одну архитектуру.
 7. Сопротивление всегда показывается понятным label, а не абстрактным номером.
 8. Перед повышением пользователь видит точное `сейчас → будет`.
