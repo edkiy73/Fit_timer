@@ -34,6 +34,8 @@ export interface TimedMetric extends RecordMeta {
 export interface CourseProgressDocument {
   schemaVersion:1;
   seen:RecordMap<TimedFlag>;
+  /** Idempotency keys for graded answers/practice already applied to this document. */
+  answerOps:RecordMap<TimedFlag>;
   cards:RecordMap<TimedCardState>;
   practice:{
     drill:RecordMap<TimedPracticeState>;
@@ -58,6 +60,8 @@ export interface StatsBucket extends RecordMeta {
 export interface StatsProgressDocument {
   schemaVersion:1;
   buckets:RecordMap<StatsBucket>;
+  /** Idempotency keys for answers already counted in aggregate stats. */
+  answerOps:RecordMap<TimedFlag>;
 }
 
 export interface WordProgressRecord extends RecordMeta {
@@ -84,6 +88,7 @@ export function emptyCourseProgress():CourseProgressDocument{
   return {
     schemaVersion:1,
     seen:{},
+    answerOps:{},
     cards:{},
     practice:{drill:{},listening:{},speaking:{}},
     manualNodes:{},
@@ -93,7 +98,7 @@ export function emptyCourseProgress():CourseProgressDocument{
 }
 
 export function emptyStatsProgress():StatsProgressDocument{
-  return {schemaVersion:1,buckets:{}};
+  return {schemaVersion:1,buckets:{},answerOps:{}};
 }
 
 export function emptyWordsProgress():WordsProgressDocument{
@@ -109,6 +114,7 @@ export function parseCourseProgress(raw:string|null):CourseProgressDocument{
     return {
       schemaVersion:1,
       seen:asMap<TimedFlag>(parsed.seen),
+      answerOps:asMap<TimedFlag>(parsed.answerOps),
       cards:asMap<TimedCardState>(parsed.cards),
       practice:{
         drill:asMap<TimedPracticeState>(practice.drill),
@@ -129,7 +135,11 @@ export function parseStatsProgress(raw:string|null):StatsProgressDocument{
   try{
     const parsed=JSON.parse(raw) as unknown;
     if(!isObject(parsed)||parsed.schemaVersion!==1)return emptyStatsProgress();
-    return {schemaVersion:1,buckets:asMap<StatsBucket>(parsed.buckets)};
+    return {
+      schemaVersion:1,
+      buckets:asMap<StatsBucket>(parsed.buckets),
+      answerOps:asMap<TimedFlag>(parsed.answerOps)
+    };
   }catch{
     return emptyStatsProgress();
   }
@@ -153,6 +163,7 @@ export function mergeCourseProgress(
   return {
     schemaVersion:1,
     seen:mergeRecordMaps(local.seen,remote.seen),
+    answerOps:mergeRecordMaps(local.answerOps,remote.answerOps),
     cards:mergeRecordMaps(local.cards,remote.cards),
     practice:{
       drill:mergeRecordMaps(local.practice.drill,remote.practice.drill),
@@ -169,7 +180,11 @@ export function mergeStatsProgress(
   local:StatsProgressDocument,
   remote:StatsProgressDocument
 ):StatsProgressDocument{
-  return {schemaVersion:1,buckets:mergeRecordMaps(local.buckets,remote.buckets)};
+  return {
+    schemaVersion:1,
+    buckets:mergeRecordMaps(local.buckets,remote.buckets),
+    answerOps:mergeRecordMaps(local.answerOps,remote.answerOps)
+  };
 }
 
 export function mergeWordsProgress(

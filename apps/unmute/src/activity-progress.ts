@@ -50,7 +50,8 @@ export function buildGradedActivityProgress(
   activityId:string,
   correct:boolean,
   clock:ActivitySaveClock,
-  responseKind?:SentenceResponseKind
+  responseKind?:SentenceResponseKind,
+  operationId?:string
 ):{course:CourseProgressDocument;stats:StatsProgressDocument}{
   return {
     course:gradeCourseCard(
@@ -60,9 +61,10 @@ export function buildGradedActivityProgress(
       clock.dayNumber,
       clock.dayKey,
       clock.at,
-      responseKind
+      responseKind,
+      operationId
     ),
-    stats:recordAnswer(stats,deviceId,activityId,correct,clock.at)
+    stats:recordAnswer(stats,deviceId,activityId,correct,clock.at,operationId)
   };
 }
 
@@ -74,19 +76,25 @@ export function buildPracticeActivityProgress(
   mode:PracticeSrsKind,
   correct:boolean,
   score:number|undefined,
-  clock:ActivitySaveClock
+  clock:ActivitySaveClock,
+  operationId?:string
 ):{course:CourseProgressDocument;stats:StatsProgressDocument}{
   // Practising a pattern also counts as having done that step of the day.
-  let nextCourse=gradeCoursePractice(
-    markActivitySeen(course,activityId,clock.dayKey,clock.at),
-    activityId,
-    mode,
-    correct,
-    clock.dayNumber,
-    clock.dayKey,
-    clock.at
-  );
-  if(mode==='drill'&&Number.isFinite(score)){
+  // A retried operation must not refresh seen/speed timestamps or move SRS again.
+  const alreadyApplied=Boolean(operationId&&course.answerOps[operationId]&&!course.answerOps[operationId]?.deleted);
+  let nextCourse=alreadyApplied
+    ? course
+    : gradeCoursePractice(
+        markActivitySeen(course,activityId,clock.dayKey,clock.at),
+        activityId,
+        mode,
+        correct,
+        clock.dayNumber,
+        clock.dayKey,
+        clock.at,
+        operationId
+      );
+  if(!alreadyApplied&&mode==='drill'&&Number.isFinite(score)){
     nextCourse={
       ...nextCourse,
       metrics:{
@@ -100,7 +108,7 @@ export function buildPracticeActivityProgress(
   }
   return {
     course:nextCourse,
-    stats:recordAnswer(stats,deviceId,activityId,correct,clock.at)
+    stats:recordAnswer(stats,deviceId,activityId,correct,clock.at,operationId)
   };
 }
 
@@ -142,6 +150,7 @@ export async function savePracticeActivity(
   mode:PracticeSrsKind,
   correct:boolean,
   score?:number,
+  operationId?:string,
   now=new Date()
 ):Promise<void>{
   const [course,stats,deviceId]=await Promise.all([
@@ -157,7 +166,8 @@ export async function savePracticeActivity(
     mode,
     correct,
     score,
-    activitySaveClock(now)
+    activitySaveClock(now),
+    operationId
   );
   await writeCourseProgress(setId,next.course);
   await writeStatsProgress(setId,next.stats);
@@ -191,6 +201,7 @@ export async function saveGradedActivity(
   activityId:string,
   correct:boolean,
   responseKind?:SentenceResponseKind,
+  operationId?:string,
   now=new Date()
 ):Promise<void>{
   const [course,stats,deviceId]=await Promise.all([
@@ -205,7 +216,8 @@ export async function saveGradedActivity(
     activityId,
     correct,
     activitySaveClock(now),
-    responseKind
+    responseKind,
+    operationId
   );
 
   // Course progress is the learner-critical write. Stats are written second so an

@@ -50,8 +50,10 @@ export function gradeCourseCard(
   todayDay:number,
   dayKey:string,
   at:string,
-  responseKind?:SentenceResponseKind
+  responseKind?:SentenceResponseKind,
+  operationId?:string
 ):CourseProgressDocument{
+  if(operationId&&doc.answerOps[operationId]&&!doc.answerOps[operationId]?.deleted)return doc;
   const previous=doc.cards[activityId];
   const livePrevious=previous&& !previous.deleted ? previous : undefined;
   const graded=gradeCardSrs(livePrevious,correct,todayDay);
@@ -66,6 +68,9 @@ export function gradeCourseCard(
       ...doc.cards,
       [activityId]:{...graded,...sentence,at},
     },
+    answerOps:operationId
+      ? {...doc.answerOps,[operationId]:touchedFlag(at)}
+      : doc.answerOps,
   },dayKey,at);
 }
 
@@ -76,8 +81,10 @@ export function gradeCoursePractice(
   correct:boolean,
   todayDay:number,
   dayKey:string,
-  at:string
+  at:string,
+  operationId?:string
 ):CourseProgressDocument{
+  if(operationId&&doc.answerOps[operationId]&&!doc.answerOps[operationId]?.deleted)return doc;
   const previous=doc.practice[mode][activityId];
   const graded=gradePracticeSrs(mode,previous&& !previous.deleted ? previous : undefined,correct,todayDay);
   return withLearningDay({
@@ -89,6 +96,9 @@ export function gradeCoursePractice(
         [activityId]:{...graded,at},
       },
     },
+    answerOps:operationId
+      ? {...doc.answerOps,[operationId]:touchedFlag(at)}
+      : doc.answerOps,
   },dayKey,at);
 }
 

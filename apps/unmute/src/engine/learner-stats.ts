@@ -19,8 +19,10 @@ export function recordAnswer(
   deviceId:string,
   activityId:string,
   correct:boolean,
-  at:string
+  at:string,
+  operationId?:string
 ):StatsProgressDocument{
+  if(operationId&&doc.answerOps[operationId]&&!doc.answerOps[operationId]?.deleted)return doc;
   const key=deviceId+'|'+activityId;
   // A reset leaves a deleted bucket: counting starts again from zero.
   const stored=doc.buckets[key];
@@ -39,6 +41,9 @@ export function recordAnswer(
   return {
     schemaVersion:1,
     buckets:{...doc.buckets,[key]:next},
+    answerOps:operationId
+      ? {...doc.answerOps,[operationId]:{at}}
+      : doc.answerOps,
   };
 }
 

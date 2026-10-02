@@ -77,6 +77,73 @@ describe('activity progress writes',()=>{
     });
   });
 
+  it('retries a partially saved card operation without grading SRS twice',()=>{
+    const clock={
+      at:'2026-09-29T01:15:00.000Z',
+      dayKey:'2026-09-29',
+      dayNumber:20725
+    };
+    const operationId='run-one|card.one|0|card';
+    const first=buildGradedActivityProgress(
+      emptyCourseProgress(),
+      emptyStatsProgress(),
+      'device-one',
+      'card.one',
+      true,
+      clock,
+      undefined,
+      operationId
+    );
+    expect(first.course.cards['card.one']).toMatchObject({box:1,due:20726});
+    expect(first.course.answerOps[operationId]).toBeTruthy();
+
+    // Simulate: course write succeeded, stats write failed.
+    const retry=buildGradedActivityProgress(
+      first.course,
+      emptyStatsProgress(),
+      'device-one',
+      'card.one',
+      true,
+      clock,
+      undefined,
+      operationId
+    );
+    expect(retry.course.cards['card.one']).toMatchObject({box:1,due:20726});
+    expect(retry.stats.buckets['device-one|card.one']).toMatchObject({attempts:1,correct:1,wrong:0});
+
+    const duplicate=buildGradedActivityProgress(
+      retry.course,
+      retry.stats,
+      'device-one',
+      'card.one',
+      true,
+      clock,
+      undefined,
+      operationId
+    );
+    expect(duplicate.course.cards['card.one']).toMatchObject({box:1,due:20726});
+    expect(duplicate.stats.buckets['device-one|card.one']).toMatchObject({attempts:1,correct:1,wrong:0});
+  });
+
+  it('keeps a retried practice operation fully idempotent',()=>{
+    const clock={
+      at:'2026-09-29T01:20:00.000Z',
+      dayKey:'2026-09-29',
+      dayNumber:20725
+    };
+    const operationId='run-one|pattern.one|1|practice:drill';
+    const first=buildPracticeActivityProgress(
+      emptyCourseProgress(),emptyStatsProgress(),'device-one','pattern.one','drill',true,75,clock,operationId
+    );
+    const retry=buildPracticeActivityProgress(
+      first.course,emptyStatsProgress(),'device-one','pattern.one','drill',true,75,
+      {...clock,at:'2026-09-29T01:21:00.000Z'},operationId
+    );
+    expect(retry.course.practice.drill['pattern.one']).toMatchObject({box:1,due:20727});
+    expect(retry.course.metrics['speed:pattern.one']?.at).toBe(clock.at);
+    expect(retry.stats.buckets['device-one|pattern.one']).toMatchObject({attempts:1,correct:1,wrong:0});
+  });
+
   it('grades a card and records a per-device answer bucket together',()=>{
     const clock={
       at:'2026-09-29T01:15:00.000Z',

@@ -34,6 +34,7 @@ export function resetCourseProgress(doc:CourseProgressDocument,at:string):Course
   return {
     schemaVersion:1,
     seen:tombstones(doc.seen,at),
+    answerOps:tombstones(doc.answerOps,at),
     cards:tombstones(doc.cards,at),
     practice:{
       drill:tombstones(doc.practice.drill,at),
@@ -47,7 +48,11 @@ export function resetCourseProgress(doc:CourseProgressDocument,at:string):Course
 }
 
 export function resetStatsProgress(doc:StatsProgressDocument,at:string):StatsProgressDocument{
-  return {schemaVersion:1,buckets:tombstones(doc.buckets,at)};
+  return {
+    schemaVersion:1,
+    buckets:tombstones(doc.buckets,at),
+    answerOps:tombstones(doc.answerOps,at)
+  };
 }
 
 export function resetWordsProgress(doc:WordsProgressDocument,at:string):WordsProgressDocument{
