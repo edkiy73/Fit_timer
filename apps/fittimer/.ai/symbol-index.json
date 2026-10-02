@@ -745,8 +745,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 3343,
-      "chars": 145559,
+      "lines": 3381,
+      "chars": 147071,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -866,6 +866,7 @@
         "progressedRepsRange",
         "progressionChanged",
         "progressionCurrentState",
+        "progressionHasTerminalCeiling",
         "progressionLoadType",
         "progressionModeHintKey",
         "progressionModeLabel",
@@ -916,6 +917,7 @@
         "syncExDetailsSum",
         "syncExNowHints",
         "syncExProgSum",
+        "syncExSwapAvailability",
         "syncExType",
         "syncExWarm",
         "syncRotateUI",
