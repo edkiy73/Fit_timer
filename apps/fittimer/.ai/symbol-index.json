@@ -1277,7 +1277,7 @@
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
       "lines": 680,
-      "chars": 46855,
+      "chars": 46870,
       "ids": [
         "aiActions",
         "aiAnswer",
