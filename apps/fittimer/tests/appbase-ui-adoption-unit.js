@@ -326,7 +326,8 @@ ok('finish/profile dynamic actions are declarative',
   workoutHtml.includes('id="btnShareResult" data-act="shareWorkoutResult"')
   && workoutHtml.includes('id="finNoteToggle" data-act="openFinishNote"')
   && workoutHtml.includes('id="finProgCheckYes" data-act="applyFinishProgression"')
-  && workoutHtml.includes('id="finProgCheckToggle" data-act="toggleFinishProgressionList"')
+  && workoutHtml.includes('id="finProgCheckList"')
+  && !workoutHtml.includes('id="finProgCheckToggle"')
   && workoutHtml.includes('id="btnAgain" data-act="finishResultDone"')
   && workoutHtml.includes('id="btnDiscardResult" data-act="discardWorkoutResult"')
   && progressHtml.includes('id="uePhotoBtn" data-act="openProfilePhotoMenu"')
@@ -340,6 +341,7 @@ ok('finish/profile dynamic actions have no direct onclick wiring',
   && !events.includes("$('finNoteToggle').onclick")
   && !events.includes("$('finProgCheckYes').onclick")
   && !events.includes("$('finProgCheckToggle').onclick")
+  && !events.includes("registerAction('toggleFinishProgressionList'")
   && !events.includes("$('btnAgain').onclick")
   && !events.includes("$('btnDiscardResult').onclick")
   && !events.includes("$('uePhotoBtn').onclick")
@@ -539,7 +541,7 @@ ok('workout dynamic clicks use action registry',
   && workoutJs.includes("registerAction('editWorkoutExercise'")
   && workoutJs.includes("registerAction('toggleWorkoutPause'")
   && workoutJs.includes("registerAction('openWorkoutExit'")
-  && workoutJs.includes("b.dataset.act = 'toggleProgressionHard'")
+  && workoutJs.includes("card.dataset.act = 'toggleProgressionHard'")
   && workoutJs.includes("$('workMore').dataset.act = 'toggleWorkoutMenu'"));
 ok('programs AI and workout have no direct onclick wiring',
   !programsAi.includes('.onclick')

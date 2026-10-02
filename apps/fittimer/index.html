@@ -988,12 +988,12 @@
            повышения больше нет — решает человек, одним нажатием. -->
       <div class="fin-progcheck fin-rise hidden" id="finProgCheck">
         <div id="finProgCheckAsk">
-          <b data-i18n="finish.progCheckTitle">Всё получилось? Нагрузку повысим</b>
-          <button type="button" class="btn-primary" id="finProgCheckYes" data-act="applyFinishProgression" data-i18n="finish.progCheckYes">Да, повышаем</button>
-          <button type="button" class="fpc-toggle" id="finProgCheckToggle" data-act="toggleFinishProgressionList" data-i18n="finish.progCheckHardLink">Где-то было тяжело</button>
-          <div class="fpc-list hidden" id="finProgCheckList"></div>
+          <b data-i18n="finish.progCheckTitle">Пора немного увеличить нагрузку</b>
+          <p class="fpc-sub" data-i18n="finish.progCheckText">По плану готовы следующие упражнения. Если где-то было тяжело — оставь его как есть.</p>
+          <div class="fpc-list" id="finProgCheckList"></div>
+          <button type="button" class="btn-primary" id="finProgCheckYes" data-act="applyFinishProgression" data-i18n="finish.progCheckYes">Применить изменения</button>
         </div>
-        <p class="fpc-done hidden" id="finProgCheckDone" data-i18n="finish.progCheckApplied">Готово — нагрузка вырастет со следующей тренировки.</p>
+        <p class="fpc-done hidden" id="finProgCheckDone"></p>
       </div>
       <button type="button" class="note-toggle fin-rise" id="finNoteToggle" data-act="openFinishNote"></button>
       <div class="field fin-note hidden" id="finNoteField">
