@@ -327,6 +327,7 @@ export const I18N_EN = {
   'builder.stepWeight': "Increase, kg",
   'builder.maxWeight': "Maximum, kg",
   'builder.stepHint': "For a rep range, “increase” moves both bounds and “maximum” caps the upper bound.",
+  'builder.ceilingOptionalHint': "You can leave Maximum empty. Then there is no final ceiling, and FitTimer will not automatically suggest a harder exercise.",
   'builder.swapSub': "we’ll suggest it during the workout when you reach the maximum",
   'builder.swapWith': "Replace with",
   'builder.swapHow': "How to perform the replacement",
