@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@appbase/ui-react/i18n.js';
@@ -113,6 +113,11 @@ function renderRunner(
   return {saveSeen,saveGraded,savePractice,onExit,onNodeCompleted};
 }
 
+function storedRunMode():string|null{
+  const raw=localStorage.getItem('unmute.lesson-run:general-foundation:day-1');
+  return raw ? String(JSON.parse(raw).mode||'') : null;
+}
+
 // A choice is answered with two taps: the first picks the option, the second confirms it.
 async function chooseAnswer(user:ReturnType<typeof userEvent.setup>,name:string){
   await user.click(await screen.findByRole('radio',{name}));
@@ -157,6 +162,7 @@ describe('node activity runner',()=>{
 
     // Theory is a page before the tasks, not a step of the lesson.
     expect(screen.getByText('Короткая теория')).toBeTruthy();
+    await waitFor(()=>expect(storedRunMode()).toBe('first'));
     expect(screen.queryByRole('progressbar')).toBeNull();
     await user.click(screen.getByRole('button',{name:'К заданиям'}));
     expect(saveSeen).toHaveBeenCalledWith('general-foundation','theory.one');
@@ -272,6 +278,7 @@ describe('node activity runner',()=>{
     );
 
     expect(await screen.findByText('Ответ неверный')).toBeTruthy();
+    await waitFor(()=>expect(storedRunMode()).toBe('resume'));
     expect(screen.getByText('Это задание вернётся в конце урока.')).toBeTruthy();
     expect(screen.getByText('1/2')).toBeTruthy();
   });
@@ -316,6 +323,7 @@ describe('node activity runner',()=>{
     );
 
     await user.click(screen.getByRole('button',{name:'К заданиям'}));
+    await waitFor(()=>expect(storedRunMode()).toBe('replay'));
     await chooseAnswer(user,'I am here');
     await user.click(screen.getByRole('button',{name:'Далее'}));
     await user.click(await screen.findByRole('button',{name:'Написать с клавиатуры'}));
