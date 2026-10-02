@@ -58,7 +58,8 @@ const ok = (name, cond, extra) => {
         n:ex.ps && ex.ps.n,
         cur:ex.ps && ex.ps.cur,
         repsMax:ex.repsMax,
-        dualRangeV:ex.dualRangeV
+        dualRangeV:ex.dualRangeV,
+        weightNow:getExWeight(p.id, ex, p)
       } : null;
     };
     return {reps:pick('legacy-reps'), dual:pick('legacy-dual')};
@@ -72,7 +73,8 @@ const ok = (name, cond, extra) => {
   ok('legacy double range converts ceiling and current range before applying old steps',
     first.dual && first.dual.migrated === true && first.dual.dualRangeV === 2
       && first.dual.repsMax === 22 && first.dual.n === 1
-      && first.dual.cur && first.dual.cur.reps === '10-12' && first.dual.cur.kg === 10,
+      && first.dual.cur && first.dual.cur.reps === '10-12'
+      && first.dual.weightNow === 10 && first.dual.cur.kg == null,
     JSON.stringify(first.dual));
 
   await page.evaluate(async()=>{
