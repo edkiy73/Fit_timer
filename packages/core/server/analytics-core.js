@@ -2,7 +2,14 @@
 
 const crypto=require('crypto');
 
-function createAnalyticsEngine({store, events, dayTtl=120*24*3600, deviceTtl=180*24*3600, uniqueTtl=45*24*3600}){
+function createAnalyticsEngine({
+  store,
+  events,
+  dayTtl=120*24*3600,
+  deviceTtl=180*24*3600,
+  uniqueTtl=45*24*3600,
+  idempotencyTtl=365*24*3600
+}){
   const eventList=Object.freeze([...(events||[])].map(String));
   const eventSet=new Set(eventList);
   const cleanPlatform=v=>['android','ios','web'].includes(String(v||''))?String(v):'web';
@@ -19,6 +26,19 @@ function createAnalyticsEngine({store, events, dayTtl=120*24*3600, deviceTtl=180
     const locale=cleanLocale(input&&input.locale);
     const premium=!!(input&&input.premium);
     const dh=deviceHash(rawDevice);
+    const eventId=String(input&&input.eventId||'').trim().slice(0,160);
+
+    // A client may retry after the server committed but the response was lost.
+    // Claim the event operation before counters so the retry is a no-op.
+    if(eventId){
+      const onceHash=crypto.createHash('sha256')
+        .update(rawDevice+'\0'+event+'\0'+eventId)
+        .digest('hex').slice(0,32);
+      const [created]=await store.pipe([
+        ['SET',`analytics:event-once:${onceHash}`,'1','NX','EX',String(idempotencyTtl)]
+      ]);
+      if(created!=='OK')return {ok:true,event,duplicate:true};
+    }
 
     await Promise.all([
       store.incr(`analytics:event:${day}:${event}`,dayTtl),
