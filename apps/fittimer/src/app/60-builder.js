@@ -792,7 +792,7 @@ function fillExerciseProgEveryOptions(){
   const def = document.createElement('option');
   def.value = '';
   def.textContent = inherited
-    ? t('builder.exerciseProgressionUseProgram',{count:inherited})
+    ? t('builder.exerciseProgressionUseProgram',{period:progPeriodLabel(inherited)})
     : t('builder.exerciseProgressionUseProgramOff');
   sel.appendChild(def);
   for(let n = 1; n <= PROG_EVERY_MAX; n++){
@@ -1914,7 +1914,7 @@ export function syncExProgSum(){
   let frequencyText;
   if(rawEvery === ''){
     frequencyText = effectiveEvery > 0
-      ? t('builder.progressionProgramFrequencyShort',{count:effectiveEvery})
+      ? t('builder.progressionProgramFrequencyShort',{period:progPeriodLabel(effectiveEvery)})
       : t('builder.progressionProgramFrequencyMissing');
   }else{
     frequencyText = progPeriodLabel(effectiveEvery);
