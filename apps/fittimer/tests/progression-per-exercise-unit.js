@@ -241,6 +241,8 @@ function runWorkout(exercises, every){
     'unset weight cannot be invented by preview');
   advanceExerciseProgression(ex);
   need(getExWeight('p', ex, {id:'p'}) === 0, 'unset weight still cannot be invented by apply');
+  need(!progAtCeiling('p', ex, {id:'p',progression:2}),
+    'unset weight is not mistaken for a terminal progression ceiling');
 }
 {
   const ex = mkEx('Terminal dual preview', {value:'8-10', type:'reps', progOn:true, trackWeight:true,
