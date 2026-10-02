@@ -100,13 +100,14 @@ export interface NodeRunnerViewProps {
   onReviewDay?:(nodeId:string)=>void;
   onNodeCompleted?:(node:RoadmapNode)=>void;
   saveSeen:(setId:string,activityId:string)=>Promise<void>;
-  saveGraded:(setId:string,activityId:string,correct:boolean,responseKind?:SentenceResponseKind)=>Promise<void>;
+  saveGraded:(setId:string,activityId:string,correct:boolean,responseKind?:SentenceResponseKind,operationId?:string)=>Promise<void>;
   savePractice:(
     setId:string,
     activityId:string,
     mode:PracticeSrsKind,
     correct:boolean,
-    score?:number
+    score?:number,
+    operationId?:string
   )=>Promise<void>;
   saveDialogue?:(setId:string,activityId:string,score:number)=>Promise<void>;
   saveManual?:(setId:string,nodeId:string)=>Promise<void>;
@@ -147,6 +148,8 @@ interface LessonRunSnapshot{
   firstPassResults:Record<number,boolean>;
   shuffleSeed?:string;
   practiceMode?:PracticeSrsKind;
+  /** Stable id used to make answer writes idempotent across retries/resume. */
+  runId?:string;
   /** Replay of a completed day: practice only, review intervals and answer stats stay as they were. */
   replay?:boolean;
 }
@@ -268,6 +271,7 @@ export function NodeRunnerView({
   const [practiceMode,setPracticeMode]=useState<PracticeSrsKind|undefined>(startMode);
   const [shuffleSeed,setShuffleSeed]=useState(()=>randomSeed());
   const [runHydrated,setRunHydrated]=useState(false);
+  const [runId,setRunId]=useState(()=>randomSeed());
   const [replay,setReplay]=useState(false);
   const completionTrackedRef=useRef(false);
   // The step a restored run lands on: its saved answer/feedback must survive the first render
@@ -290,6 +294,7 @@ export function NodeRunnerView({
     setScore({correct:0,total:0});
     setFirstPassResults({});
     setShuffleSeed(randomSeed());
+    setRunId(randomSeed());
     setExitOpen(false);
     setFinished(false);
   };
@@ -321,6 +326,7 @@ export function NodeRunnerView({
       setScore(restored.score);
       setFirstPassResults(restored.firstPassResults);
       setShuffleSeed(restored.shuffleSeed??randomSeed());
+      setRunId(restored.runId??randomSeed());
       setPracticeMode(restored.practiceMode);
       setReplay(Boolean(restored.replay));
       setFinished(false);
@@ -360,10 +366,11 @@ export function NodeRunnerView({
       score,
       firstPassResults,
       shuffleSeed,
+      runId,
       ...(practiceMode?{practiceMode}:{}),
       ...(replay?{replay}:{})
     });
-  },[runHydrated,state?.set.id,node?.id,stepSignature,order,firstPass,pos,intro,selected,answer,typing,picked,result,score,firstPassResults,shuffleSeed,practiceMode,finished,replay]);
+  },[runHydrated,state?.set.id,node?.id,stepSignature,order,firstPass,pos,intro,selected,answer,typing,picked,result,score,firstPassResults,shuffleSeed,runId,practiceMode,finished,replay]);
 
   const stepIndex=order[pos];
   const activity=stepIndex===undefined?null:steps[stepIndex]??null;
@@ -600,13 +607,18 @@ export function NodeRunnerView({
   // Only the first answer of a first run moves review intervals and stats: a replayed day and
   // «Работа над ошибками» are practice, so a mistake plus its fix never reads as a right answer.
   const recordsAnswers=!replay&&!retrying;
+  const answerOperationId=(kind:string)=>runId+'|'+activity.id+'|'+pos+'|'+kind;
   const gradeAnswer=(correct:boolean,responseKind?:SentenceResponseKind)=>{
     if(!recordsAnswers)return Promise.resolve();
+    const operationId=answerOperationId('card');
     return responseKind
-      ? saveGraded(setId,activity.id,correct,responseKind)
-      : saveGraded(setId,activity.id,correct);
+      ? saveGraded(setId,activity.id,correct,responseKind,operationId)
+      : saveGraded(setId,activity.id,correct,undefined,operationId);
   };
-  const practiceSave:NodeRunnerViewProps['savePractice']=(...args)=>recordsAnswers?savePractice(...args):Promise.resolve();
+  const practiceSave:NodeRunnerViewProps['savePractice']=(setIdArg,activityId,mode,correct,score)=>
+    recordsAnswers
+      ? savePractice(setIdArg,activityId,mode,correct,score,runId+'|'+activityId+'|'+pos+'|practice:'+mode)
+      : Promise.resolve();
   const dialogueSave:typeof saveDialogue=(...args)=>recordsAnswers?saveDialogue(...args):Promise.resolve();
 
   const handleChoice=async(choice:number|null=selected)=>{
