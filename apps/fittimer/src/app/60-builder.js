@@ -303,6 +303,7 @@ export function exerciseResistanceScaleOk(showError=true){
   delete field.dataset.initialValue;
   renderExerciseLevelControls();
   syncExNowHints();
+  syncExSwapAvailability();
   return true;
 }
 
