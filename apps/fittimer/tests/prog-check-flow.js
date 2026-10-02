@@ -199,12 +199,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.waitForTimeout(400);
   ok('после «Засчитать» экран финала остаётся и спрашивает про повышение',
      await page.isVisible('#scrFinish') && await page.isVisible('#finProgCheck'));
-  const names = await page.$eval('.fpc-card .fpc-name', xs => xs.map(x => x.textContent));
+  const names = await page.$$eval('.fpc-card .fpc-name', xs => xs.map(x => x.textContent));
   ok('в проверке основные упражнения, а не разминка', names.join('|') === 'Присед|Отжимания', names.join('|'));
   await page.click('.fpc-card >> nth=0');
   ok('после исключения список остаётся видимым', await page.isVisible('#finProgCheckList'));
   await page.click('.fpc-card >> nth=1');
-  const marked = await page.$eval('.fpc-card.act', xs => xs.length);
+  const marked = await page.$$eval('.fpc-card.act', xs => xs.length);
   ok('можно оставить два упражнения без изменений подряд', marked === 2, marked);
 
   ok('без ошибок в консоли', !errs.length, errs.join(' | '));
