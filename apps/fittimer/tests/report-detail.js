@@ -240,7 +240,7 @@ async function boot(b, label, errs, url){
           loadType:'level',progOn:true,progMode:'level',
           loadLevels:[{label:'Лёгкая'},{label:'Средняя'},{label:'Сильная'}],
           loadLevel:0,repsStep:2,repsMax:18,
-          ps:{n:1,cur:{reps:'14-17',level:1}}
+          ps:{n:1,cur:{reps:'12-15',level:1}}
         },
         {
           id:'manual-level-axis',name:'Ручная резинка',type:'reps',value:'12',sets:2,rest:30,
