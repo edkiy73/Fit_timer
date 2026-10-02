@@ -36,13 +36,19 @@ ok('ESM sync registry handles account/free policy generically',
   && demoRegistry.isFree('account', 'prefs')
   && !demoRegistry.accepts('profile', 'prefs'));
 
+const analyticsBodies = [];
 const obs = createClient({
-  post: async () => true,
+  post: async body => { analyticsBodies.push(body); return true; },
   deviceId: async () => 'device-demo',
   context: () => ({platform:'web', locale:'en', build:'demo', premium:false})
 });
 ok('ESM observability exposes generic track/capture',
   typeof obs.track === 'function' && typeof obs.capture === 'function');
+await obs.track('demo_event','event-op-1');
+ok('ESM observability forwards an optional analytics event id',
+  analyticsBodies[0].action === 'analytics'
+  && analyticsBodies[0].event === 'demo_event'
+  && analyticsBodies[0].eventId === 'event-op-1');
 const diagPayload = obs.diagnosticPayload('error', new Error('boom'), 'fallback');
 ok('ESM diagnostic payload contains no FitTimer semantics',
   diagPayload.action === 'client_error'
