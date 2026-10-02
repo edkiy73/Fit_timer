@@ -582,6 +582,7 @@ function resistanceSnapshot(e){
     lt:'level',
     lv:level,
     ls:scale,
+    rs:levels.map(item => builderTrainerHooks.loadLevelLabel(item)).filter(Boolean).join(' → '),
     rl:levels[level] ? builderTrainerHooks.loadLevelLabel(levels[level]) : ''
   };
 }
@@ -727,7 +728,10 @@ function buildReport(p){
     const before = Object.assign(snapshotExercise(e, pi), {
       v:was,
       kg:kgWas,
-      rl:baseResistance.rl || ''
+      rl:baseResistance.rl || '',
+      // Рост нагрузки не должен внезапно начать показывать число подходов:
+      // раньше a/b были только про саму рабочую нагрузку.
+      s:1
     });
     const after = Object.assign({}, before, {
       v:now,
@@ -759,7 +763,14 @@ function buildReport(p){
         || (o.lv != null && cur.lv !== o.lv)
         || (o.ls != null && cur.ls !== o.ls);
       if(cur.v !== o.v || cur.s !== o.s || cur.kg !== o.kg || policyChanged){
-        if(diff.mod.length < 12) diff.mod.push({n: cur.n || o.n, a: exVal(o), b: exVal(cur)});
+        if(diff.mod.length < 12){
+          let a = exVal(o), b = exVal(cur);
+          if(o.ls != null && cur.ls !== o.ls){
+            a += ' · ' + t('report.resistanceScale',{scale:o.rs || '—'});
+            b += ' · ' + t('report.resistanceScale',{scale:cur.rs || '—'});
+          }
+          diff.mod.push({n:cur.n || o.n,a,b});
+        }
       }
     });
     compared.added.forEach(x => {
