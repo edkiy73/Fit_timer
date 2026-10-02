@@ -6,6 +6,7 @@
   const OPTIONAL_EXERCISE_LABELS = [
     'ОПИСАНИЕ','МЫШЦЫ','ОШИБКИ',
     'ФОРМАТ','ЗНАЧЕНИЕ','ВЕС','ПОДХОДЫ',
+    'НАГРУЗКА','СОПРОТИВЛЕНИЕ','УРОВНИ СОПРОТИВЛЕНИЯ',
     'СТОРОНА','НА КАЖДУЮ СТОРОНУ','РАЗМИНКА',
     'ОТДЫХ','ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ',
     'УСЛОЖНЯТЬ','КАК УСЛОЖНЯТЬ',
@@ -27,6 +28,11 @@ Act like a deeply experienced strength-and-conditioning coach. Base decisions on
 - ПРОГРЕССИЯ at PROGRAM level is the DEFAULT check frequency for progressive exercises: after N FULL COMPLETIONS of a given exercise, the app checks with the user whether to raise its load. It is per exercise, not a program-wide workout counter, and skipped or unfinished exercises do not count. Use 4 as the default unless the program clearly needs another value. In the future an exercise may override this default individually. ПРОГРЕССИЯ does NOT mean +N reps or +N kg.
 - Exercise-level ШАГ / ШАГ ПОВТОРОВ / ШАГ ВРЕМЕНИ / ШАГ ВЕСА define WHAT changes on each progression step.
 - Optional ЧАСТОТА ПРОГРЕССИИ on an exercise overrides the program default for that exercise only: 1-15 = check after that many FULL completions, 0 = disable progression for this exercise, omit the line = inherit the program-level ПРОГРЕССИЯ. Use an override only when that exercise genuinely needs a different cadence.
+- Discrete non-kg resistance (bands, machine levels, numbered resistance settings) uses НАГРУЗКА: сопротивление with СОПРОТИВЛЕНИЕ and an ordered УРОВНИ СОПРОТИВЛЕНИЯ list. Never combine this with a weighted ФОРМАТ or ВЕС.
+- For resistance where the user did NOT provide concrete labels, use the generic relative scale in the output language: Russian = Лёгкое | Среднее | Сильное | Очень сильное; English = Light | Medium | Strong | Very strong. Never invent band colors: colors are manufacturer-specific. If the user provided real colors/numbers/lb labels, preserve those exact labels and order.
+- For reps + resistance, the default is reps → resistance: use positive ШАГ ПОВТОРОВ and ПОТОЛОК ПОВТОРОВ. The app raises the whole rep range to that ceiling, then moves to the next resistance level and resets reps to ЗНАЧЕНИЕ. Use ШАГ ПОВТОРОВ: 0 only when resistance itself should increase directly with fixed reps.
+- For reps at a fixed resistance where only reps should grow, use ordinary ШАГ and ПОТОЛОК instead. For time + resistance, default to ordinary time progression with ШАГ and ПОТОЛОК; choose resistance-only progression only when the request calls for it.
+- Do not choose simultaneous/parallel progression by default. Preserve it when editing an existing exercise that already uses it, or use it only when the user explicitly requests both axes to rise together.
 - For unweighted reps/time with УСЛОЖНЯТЬ: да, provide a sensible ШАГ and ПОТОЛОК.
 - For weighted reps, distinguish three cases:
   1) weight-only progression: fixed reps, positive ШАГ ВЕСА, no automatic rep increase;
@@ -50,9 +56,12 @@ Act like a deeply experienced strength-and-conditioning coach. Base decisions on
 ОПИСАНИЕ: 3-4 practical sentences in ${outputLanguage} covering setup, movement, bracing/breathing, and what to avoid; max 600 characters
 МЫШЦЫ: comma-separated tokens STRICTLY from: Шея, Плечи, Грудь, Руки, Пресс, Спина, Ягодицы, Квадрицепс, Задняя бедра, Икры
 ОШИБКИ: 1-2 common mistakes in ${outputLanguage}, max 300 characters (optional)
-ФОРМАТ: exactly one of "повторения", "повторения и вес", "время", "время и вес"
+ФОРМАТ: exactly one of "повторения", "повторения и вес", "время", "время и вес"; resistance uses plain "повторения" or "время", never a weighted format
 ЗНАЧЕНИЕ: number or range like 12-15; for time formats use seconds
-ВЕС: starting kilograms for weighted formats
+ВЕС: starting kilograms for weighted formats; omit for resistance
+НАГРУЗКА: exactly "сопротивление" only for discrete non-kg resistance; omit otherwise
+СОПРОТИВЛЕНИЕ: current/base resistance label in ${outputLanguage}; required when НАГРУЗКА is resistance
+УРОВНИ СОПРОТИВЛЕНИЯ: ordered resistance labels separated by " | ", minimum 2; required when НАГРУЗКА is resistance
 ПОДХОДЫ: consecutive sets before the next exercise, 1-10
 СТОРОНА: "да" if ЗНАЧЕНИЕ is performed separately for each side; omit otherwise
 РАЗМИНКА: "да" for warm-up exercises; omit otherwise
@@ -194,6 +203,42 @@ ${exerciseSchema(outputLanguage)}`;
     return [...new Set(issues)];
   }
 
+  function resistanceNorm(value){
+    return String(value || '').trim().toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ');
+  }
+
+  // Resistance did not exist in legacy protocol, so every block that opts into it
+  // must be self-contained: current label + ordered scale, with no kg contradiction.
+  function exerciseBlockResistanceIssues(block){
+    const load = ((block.match(/(?:^|\n)НАГРУЗКА:\s*(\S.*)$/m) || [])[1] || '').trim();
+    if(!/сопротив|resistance|резин|band/i.test(load)) return [];
+
+    const issues = [];
+    const format = ((block.match(/(?:^|\n)ФОРМАТ:\s*(\S.*)$/m) || [])[1] || '').toLowerCase();
+    if(/вес|weight/.test(format)) issues.push('ФОРМАТ');
+    if(/(?:^|\n)ВЕС:\s*\S/m.test(block)) issues.push('ВЕС');
+
+    const current = ((block.match(/(?:^|\n)СОПРОТИВЛЕНИЕ:\s*(\S.*)$/m) || [])[1] || '').trim();
+    const rawLevels = ((block.match(/(?:^|\n)УРОВНИ СОПРОТИВЛЕНИЯ:\s*(\S.*)$/m) || [])[1] || '').trim();
+    const levels = rawLevels.split('|').map(x => x.trim()).filter(Boolean);
+
+    if(!current) issues.push('СОПРОТИВЛЕНИЕ');
+    if(levels.length < 2) issues.push('УРОВНИ СОПРОТИВЛЕНИЯ');
+    if(current && levels.length >= 2 && !levels.some(x => resistanceNorm(x) === resistanceNorm(current))){
+      issues.push('СОПРОТИВЛЕНИЕ');
+    }
+
+    // Coupled reps→resistance needs a real transition point. Zero means direct
+    // resistance growth and intentionally needs no rep ceiling.
+    const repsStep = protocolNumber(block, 'ШАГ ПОВТОРОВ');
+    if(repsStep != null && repsStep > 0){
+      const repsMax = protocolNumber(block, 'ПОТОЛОК ПОВТОРОВ');
+      const bounds = exerciseValueBounds(block);
+      if(!(repsMax > 0) || (bounds && !(repsMax > bounds.max))) issues.push('ПОТОЛОК ПОВТОРОВ');
+    }
+    return [...new Set(issues)];
+  }
+
   function validateExerciseResponse(raw, opts){
     const needCeiling = !!(opts && opts.requireWeightCeiling);
     const text = normalizeResponse(raw);
@@ -208,6 +253,7 @@ ${exerciseSchema(outputLanguage)}`;
       if(opts && opts.requireValidDouble){
         exerciseBlockDoubleIssues(block).forEach(label => missing.push((i+1)+':'+label));
       }
+      exerciseBlockResistanceIssues(block).forEach(label => missing.push((i+1)+':'+label));
     });
     const uniqueMissing = [...new Set(missing)];
     const min = opts && opts.minCount != null ? Math.max(1,+opts.minCount||1) : 1;
@@ -250,6 +296,9 @@ ${exerciseSchema(outputLanguage)}`;
         exerciseBlockDoubleIssues(block).forEach(label => missing.push((i || 1)+':'+label));
       });
     }
+    exBlocks.forEach((block, i) => {
+      exerciseBlockResistanceIssues(block).forEach(label => missing.push((i || 1)+':'+label));
+    });
     const uniqueMissing = [...new Set(missing)];
     return {ok: !uniqueMissing.length && exercises > 0 && days > 0 && !emptyVariant, text, missing:uniqueMissing,
       reason: uniqueMissing.length ? 'missing_fields' : (!exercises ? 'no_exercises' : (!days ? 'no_days' : (emptyVariant ? 'empty_variant' : '')))};

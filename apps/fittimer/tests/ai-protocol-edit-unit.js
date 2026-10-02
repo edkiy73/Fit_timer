@@ -115,6 +115,47 @@ function need(cond, msg){
     'program.create applies double-progression validation to every exercise');
 }
 
+/* ---- resistance protocol: self-contained scale, no kg contradiction ---- */
+{
+  const valid = 'УПРАЖНЕНИЕ: Тяга резинки\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12-15\n'
+    + 'НАГРУЗКА: сопротивление\nСОПРОТИВЛЕНИЕ: Среднее\n'
+    + 'УРОВНИ СОПРОТИВЛЕНИЯ: Лёгкое | Среднее | Сильное | Очень сильное\n'
+    + 'ПОДХОДЫ: 3\nОТДЫХ: 60\nУСЛОЖНЯТЬ: да\nШАГ ПОВТОРОВ: 2\nПОТОЛОК ПОВТОРОВ: 18';
+  need(FitAIProtocol.validateResponse('exercise.create', valid).ok === true,
+    'valid reps→resistance block passes');
+
+  const oneLevel = valid.replace('Лёгкое | Среднее | Сильное | Очень сильное', 'Среднее');
+  const vl = FitAIProtocol.validateResponse('exercise.create', oneLevel);
+  need(vl.ok === false && vl.missing.some(m => /УРОВНИ СОПРОТИВЛЕНИЯ/.test(m)),
+    'resistance scale requires at least two levels');
+
+  const absentCurrent = valid.replace('СОПРОТИВЛЕНИЕ: Среднее', 'СОПРОТИВЛЕНИЕ: Красная');
+  const vc = FitAIProtocol.validateResponse('exercise.create', absentCurrent);
+  need(vc.ok === false && vc.missing.some(m => /СОПРОТИВЛЕНИЕ/.test(m)),
+    'current resistance must exist in the ordered scale');
+
+  const weighted = valid.replace('ФОРМАТ: повторения', 'ФОРМАТ: повторения и вес') + '\nВЕС: 8';
+  const vw = FitAIProtocol.validateResponse('exercise.create', weighted);
+  need(vw.ok === false && vw.missing.some(m => /ФОРМАТ|ВЕС/.test(m)),
+    'resistance cannot be mixed with kg weighted format');
+
+  const noRepCeiling = valid.replace('\nПОТОЛОК ПОВТОРОВ: 18', '');
+  const vr = FitAIProtocol.validateResponse('exercise.create', noRepCeiling);
+  need(vr.ok === false && vr.missing.some(m => /ПОТОЛОК ПОВТОРОВ/.test(m)),
+    'positive reps step in reps→resistance requires a rep ceiling');
+
+  const direct = valid.replace('ШАГ ПОВТОРОВ: 2\nПОТОЛОК ПОВТОРОВ: 18', 'ШАГ ПОВТОРОВ: 0');
+  need(FitAIProtocol.validateResponse('exercise.create', direct).ok === true,
+    'zero rep step is valid direct resistance progression');
+
+  const rules = FitAIProtocol.progressionRules();
+  need(/Never invent band colors/.test(rules) && /Light \| Medium \| Strong \| Very strong/.test(rules),
+    'AI rules explicitly forbid invented band colors and define generic scale');
+  const schema = FitAIProtocol.exerciseSchema('Russian');
+  need(/НАГРУЗКА:/.test(schema) && /СОПРОТИВЛЕНИЕ:/.test(schema) && /УРОВНИ СОПРОТИВЛЕНИЯ:/.test(schema),
+    'exercise protocol exposes only resistance-specific new fields');
+}
+
 /* ---- carryExerciseFields: ответ ИИ используется как есть, добавляются только
    недостающие описательные поля из исходника ---- */
 {
