@@ -482,8 +482,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 3405,
-      "chars": 157618,
+      "lines": 3451,
+      "chars": 159940,
       "symbols": [
         "activateClientAt",
         "add",
@@ -546,6 +546,7 @@
         "exportProgram",
         "exportProgramFile",
         "exProgToLines",
+        "exResistanceLines",
         "exRestLines",
         "FILE_HINT",
         "finishImgGen",
@@ -609,6 +610,7 @@
         "programPayload",
         "programTemplateCopy",
         "programToText",
+        "protocolResistanceLabel",
         "pushProfile",
         "r1",
         "refreshTrainerProfile",
@@ -739,8 +741,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 3113,
-      "chars": 134994,
+      "lines": 3213,
+      "chars": 139424,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -756,6 +758,7 @@
         "blankPlan",
         "builderSyncNativeNotifications",
         "buildPlanTabs",
+        "carriedProgressCounter",
         "carryExerciseProgress",
         "clampProgEvery",
         "cleanLoadLevels",
@@ -835,6 +838,7 @@
         "parseKeys",
         "parseKg",
         "parseProgramText",
+        "parseProtocolLoadLevels",
         "parseStepNum",
         "parseValue",
         "pregnancyWarning",
@@ -860,6 +864,9 @@
         "progRound",
         "progShort",
         "progStepSize",
+        "protocolLevelNorm",
+        "protocolLoadLevelIndex",
+        "protocolLoadLevelItem",
         "psKg",
         "psReps",
         "psSec",
@@ -909,7 +916,7 @@
     "src/app/70-workout.js": {
       "kind": "frontend-js",
       "lines": 1997,
-      "chars": 87681,
+      "chars": 87690,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
