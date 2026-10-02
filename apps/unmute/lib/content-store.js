@@ -131,11 +131,13 @@ function validateActivity(activity){
       break;
     case 'text-input':
       if(!isTextMap(activity.prompt)) throw new Error(`bad_text_input_prompt:${id}`);
+      if(activity.responseMode!==undefined && !['build','progressive','write'].includes(activity.responseMode)) throw new Error(`bad_response_mode:${id}`);
       validateAnswer(activity.answer,id);
       break;
     case 'translation':
       if(!['to-target','from-target'].includes(activity.direction)) throw new Error(`bad_translation_direction:${id}`);
       if(!isTextMap(activity.prompt)) throw new Error(`bad_translation_prompt:${id}`);
+      if(activity.responseMode!==undefined && !['build','progressive','write'].includes(activity.responseMode)) throw new Error(`bad_response_mode:${id}`);
       validateAnswer(activity.answer,id);
       break;
     case 'speaking':
