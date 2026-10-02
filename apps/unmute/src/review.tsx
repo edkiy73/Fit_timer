@@ -5,6 +5,7 @@ import type { Activity } from './content/schema';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
 import { checkAnswer } from './engine/answer-check';
+import { nearMiss } from './engine/answer-near-miss';
 import type { PracticeSrsKind } from './engine/practice-srs';
 import {
   activitySaveClock,
@@ -117,6 +118,7 @@ export function ReviewView({
   const [answer,setAnswer]=useState('');
   const [picked,setPicked]=useState<string[]>([]);
   const [result,setResult]=useState<boolean|null>(null);
+  const [nearResult,setNearResult]=useState(false);
   const [busy,setBusy]=useState(false);
   const [wordShown,setWordShown]=useState(false);
   const [wordSaveError,setWordSaveError]=useState(false);
@@ -154,6 +156,7 @@ export function ReviewView({
     setAnswer('');
     setPicked([]);
     setResult(null);
+    setNearResult(false);
     setBusy(false);
     setWordShown(false);
     setWordSaveError(false);
@@ -435,7 +438,7 @@ export function ReviewView({
     );
 
   const returnedCard=queue.indexOf(item)<index;
-  const finishCard=async(correct:boolean)=>{
+  const finishCard=async(correct:boolean,near=false)=>{
     if(item.kind!=='card'||busy||result!==null)return;
     setBusy(true);
     try{
@@ -445,6 +448,7 @@ export function ReviewView({
         if(item.activity.type==='choice')await saveGraded(setId,item.activity.id,correct,undefined,operationId);
         else await saveGraded(setId,item.activity.id,correct,reviewChips?'build':'write',operationId);
       }
+      setNearResult(near);
       setResult(correct);
     }finally{
       setBusy(false);
@@ -461,10 +465,15 @@ export function ReviewView({
     const value=reviewChips?chipsText(reviewChips,picked):answer.trim();
     if(!value)return;
     const answerSpec=item.activity.answer;
-    const correct=answerSpec.caseSensitive
+    const exactCorrect=answerSpec.caseSensitive
       ? answerSpec.accepted.some(candidate=>candidate.trim()===value)
       : checkAnswer(value,answerSpec.accepted);
-    void finishCard(correct);
+    const typo=!exactCorrect
+      && !reviewChips
+      && !answerSpec.caseSensitive
+      && answerSpec.nearMiss!==false
+      && nearMiss(value,answerSpec.accepted);
+    void finishCard(exactCorrect||typo,typo);
   };
 
   const advanceCard=()=>{
@@ -510,19 +519,22 @@ export function ReviewView({
       : (reviewChips?chipsText(reviewChips,picked):answer.trim());
     const courseExplanation=localized(activity.explanation,locale);
     return (
-      <div className={'learn-feedback is-sheet '+(result?'learn-feedback-ok':'learn-feedback-wrong')} role="status">
+      <div className={'learn-feedback is-sheet '+(nearResult?'learn-feedback-near':result?'learn-feedback-ok':'learn-feedback-wrong')} role="status">
         <div className="learn-feedback-head">
           <span className="learn-feedback-icon" aria-hidden="true"><Icon name={result?'check':'review'} size={22} /></span>
-          <strong>{result?t('learn.correct'):t('learn.incorrect')}</strong>
+          <div className="learn-feedback-head-copy">
+            <strong>{nearResult?t('learn.nearMiss'):result?t('learn.correct'):t('learn.incorrect')}</strong>
+            {nearResult&&<p className="learn-hint learn-feedback-return">{t('learn.nearMissHint')}</p>}
+          </div>
         </div>
-        {!result&&accepted&&(
+        {(nearResult||!result)&&accepted&&(
           <span><LexiconText text={t('learn.accepted',{answer:accepted})} refs={activity.lexiconRefs} /></span>
         )}
         {courseExplanation&&(
           <p><LexiconText text={courseExplanation} refs={activity.lexiconRefs} /></p>
         )}
         <div className="learn-feedback-actions">
-          {!result&&learnerAnswer&&acceptedAnswers.length>0&&(
+          {!result&&!nearResult&&learnerAnswer&&acceptedAnswers.length>0&&(
             <AnswerExplanationView
               compact
               question={localized(activity.prompt,locale)}
