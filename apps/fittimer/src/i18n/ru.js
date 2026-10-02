@@ -316,8 +316,6 @@ export const I18N_RU = {
   'builder.swapTitle': "Есть упражнение посложнее",
   'ai.splitDaysTitle': "Разные упражнения в разные дни",
   'ai.rotateTitle': "Чередовать варианты по очереди",
-  'builder.autoLoadTitle': "Автоматически добавлять нагрузку",
-  'builder.weightedTitle': "Упражнение с доп. весом",
   'builder.warmupTitle': "Разминка",
   'builder.eachSideTitle': "На каждую сторону",
   'profile.prepSecondsExample': "Например: 5",
