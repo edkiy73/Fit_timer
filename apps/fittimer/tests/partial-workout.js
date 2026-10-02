@@ -94,10 +94,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   ok('полностью выполненное упражнение внутри частичной попало в проверку прогрессии',
     await page.isVisible('#finProgCheck'));
-  await page.click('#finProgCheckToggle');
-  const progChips = await page.evaluate(() => [...document.querySelectorAll('.fpc-chip')].map(x => x.textContent.trim()));
+  const progCards = await page.evaluate(() => [...document.querySelectorAll('.fpc-card .fpc-name')].map(x => x.textContent.trim()));
   ok('в проверке прогрессии только реально завершённое упражнение',
-    progChips.length === 1 && progChips[0] === 'Первое', progChips.join('|'));
+    progCards.length === 1 && progCards[0] === 'Первое', progCards.join('|'));
   await page.click('#finProgCheckYes');
   await page.waitForTimeout(200);
   const progValues = await page.evaluate(() => {
