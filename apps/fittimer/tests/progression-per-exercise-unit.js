@@ -110,6 +110,73 @@ function runWorkout(exercises, every){
   need(list[1].progEvery === 0, 'parser keeps explicit zero progression frequency');
 }
 
+/* ---- normalization adapter: legacy → единая semantic strategy ---- */
+{
+  const reps = mkEx('Повторы', {value:'10-12', type:'reps', progOn:true, trackWeight:false,
+    repsStep:1, repsMax:20});
+  const s = getProgressionStrategy(reps, {progression:4});
+  need(s.enabled && s.every === 4 && s.metric === 'reps' && s.loadType === 'none' && s.mode === 'reps',
+    'strategy adapter infers reps-only and program frequency: ' + JSON.stringify(s));
+}
+{
+  const weight = mkEx('Вес', {value:'10', type:'reps', progOn:true, trackWeight:true,
+    weight:10, repsStep:0, wStep:2, weightMax:30});
+  const s = getProgressionStrategy(weight, {progression:3});
+  need(s.enabled && s.loadType === 'weight' && s.mode === 'weight' && s.weight.step === 2,
+    'strategy adapter infers weight-only: ' + JSON.stringify(s));
+}
+{
+  const dual = mkEx('Двойная', {value:'8-10', type:'reps', progOn:true, trackWeight:true,
+    weight:10, repsStep:1, repsMax:14, wStep:2, weightMax:30, dualProg:true});
+  const s = getProgressionStrategy(dual, {progression:2});
+  need(s.mode === 'double_range' && s.reps.step === 1 && s.weight.step === 2,
+    'strategy adapter infers double_range: ' + JSON.stringify(s));
+}
+{
+  const timed = mkEx('Планка', {value:'30', type:'time', progOn:true, trackWeight:false,
+    timeStep:5, timeMax:60});
+  const s = getProgressionStrategy(timed, {progression:2});
+  need(s.mode === 'time' && s.metric === 'time' && s.time.step === 5,
+    'strategy adapter infers time-only: ' + JSON.stringify(s));
+}
+{
+  const parallel = mkEx('Обе оси', {value:'8-10', type:'reps', progOn:true, trackWeight:true,
+    weight:10, repsStep:1, repsMax:15, wStep:2, weightMax:30, dualProg:false});
+  const s = getProgressionStrategy(parallel, {progression:2});
+  need(s.mode === 'parallel' && s.reps.step === 1 && s.weight.step === 2,
+    'strategy adapter preserves legacy reps+weight simultaneous growth: ' + JSON.stringify(s));
+}
+{
+  const parallelTime = mkEx('Время и вес', {value:'30', type:'time', progOn:true, trackWeight:true,
+    weight:10, timeStep:5, timeMax:60, wStep:2, weightMax:30});
+  const s = getProgressionStrategy(parallelTime, {progression:2});
+  need(s.mode === 'parallel' && s.metric === 'time' && s.time.step === 5 && s.weight.step === 2,
+    'strategy adapter preserves legacy time+weight simultaneous growth: ' + JSON.stringify(s));
+}
+{
+  const override = mkEx('Override', {progOn:true, trackWeight:false, repsStep:1, progEvery:2});
+  const s = getProgressionStrategy(override, {progression:0});
+  need(s.enabled && s.every === 2,
+    'exercise frequency override stays active when program default is off: ' + JSON.stringify(s));
+
+  override.progEvery = 0;
+  const off = getProgressionStrategy(override, {progression:4});
+  need(!off.enabled && off.every === 0 && off.mode === 'reps',
+    'exercise frequency 0 disables checks without destroying its strategy: ' + JSON.stringify(off));
+}
+{
+  const explicit = mkEx('Явный режим', {value:'10', type:'reps', progOn:true, trackWeight:true,
+    weight:10, repsStep:1, wStep:2, progMode:'weight', loadType:'weight'});
+  const s = getProgressionStrategy(explicit, {progression:2});
+  need(s.mode === 'weight' && s.loadType === 'weight',
+    'explicit new progMode/loadType override legacy inference in the adapter: ' + JSON.stringify(s));
+}
+{
+  const bad = mkEx('Кривые новые поля', {progOn:true, loadType:'wat', progMode:'magic'});
+  need(bad.loadType === null && bad.progMode === null,
+    'normalizeExercise drops invalid loadType/progMode');
+}
+
 /* ---- обычная прогрессия по повторам ---- */
 {
   const ex = mkEx('Отжимания', {value:'10', type:'reps', progOn:true, trackWeight:false, repsStep:1, repsMax:20});
