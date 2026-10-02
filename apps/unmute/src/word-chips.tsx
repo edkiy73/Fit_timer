@@ -48,6 +48,7 @@ export function WordChips({chips, picked, disabled, onChange}: {
   const byId = useMemo(() => new Map(chips.map(chip => [chip.id, chip])), [chips]);
   return (
     <div className="chips-builder">
+      <span className="chips-label">{t('learn.answerLabel')}</span>
       <div className={'chips-line' + (picked.length ? '' : ' is-empty')} aria-label={t('chips.line')} aria-live="polite">
         {picked.length === 0 && <span className="chips-placeholder">{t('chips.placeholder')}</span>}
         {picked.map(id => (
