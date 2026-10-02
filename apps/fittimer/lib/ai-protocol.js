@@ -115,13 +115,31 @@ ${exerciseSchema(outputLanguage)}`;
   // а итог всё равно проверяется после генерации (парсинг + семантический diff),
   // а не запрещается заранее.
   const editRules = () => `=== EDIT RULES ===
-- Match the size of the change to the request. A narrow request ("set rest to 60 seconds", "rename this exercise") must change only what it asks for — do not also add, remove, reorder or replace exercises, and do not touch unrelated fields. A broad request ("optimize for 20 minutes", "make this harder", "rebuild the plan") may add, remove, reorder or replace exercises, and change variant count, as needed to satisfy it.
-- When a change requires touching a related field to stay coherent (replacing an exercise changes its muscles/description/progression/rest; shortening a workout changes exercise count or sets/rounds), make that related change too. Do not change fields the request has no bearing on.
-- Keep existing protocol lines that stay relevant after the change; never drop a line only because it looks unnecessary (a missing ШАГ / ШАГ ВЕСА silently turns progression off).
+First determine the semantic scope of the user's request. The CURRENT PROGRAM / CURRENT EXERCISE is a data snapshot, not a definition of what FitTimer supports. The current PROGRAM PROTOCOL, EXERCISE PROTOCOL, TRAINING AND PROGRESSION RULES, and quality checks anywhere in this prompt are the source of truth for current capabilities.
+
+NARROW EDIT:
+- A narrow request ("set rest to 60 seconds", "rename this exercise", "change Monday to Tuesday") must change only what it asks for and fields that must change to keep that request internally coherent.
+- Do not use a narrow edit as an excuse to modernize unrelated legacy fields, add exercises, reorder the workout, or change progression strategy.
+- Preserve existing protocol lines that remain relevant. Never drop a line merely because the old program could technically work without it.
+
+BROAD / MODERNIZING EDIT:
+- A broad request ("improve this", "make it correct", "optimize it", "rebuild it", "update it for current FitTimer", "use the previous improvements") requires a CURRENT-CONTRACT AUDIT before answering.
+- Audit every program-level setting and every exercise against the current protocol and training rules in this prompt. Legacy absence of a field is NOT an instruction to keep that field absent.
+- When the current contract has a newer or more expressive representation that is semantically appropriate, migrate the old representation to it. Add, remove, or convert fields as needed so the returned program actually uses current FitTimer capabilities rather than merely echoing the legacy shape.
+- This rule is intentionally future-proof: apply it to ANY current or future protocol field/rule present in this prompt, even if that field is not named in these edit rules.
+- Do not mechanically populate every optional field. Add a field only when it has real meaning for that program/exercise under the current rules.
+- Missing legacy data means "not recorded / old schema", not "the user explicitly chose no". By contrast, an explicit current value such as ПРОГРЕССИЯ: нет, УСЛОЖНЯТЬ: нет, or ЧАСТОТА ПРОГРЕССИИ: 0 is intentional state; change it only when the broad request and training logic justify doing so.
+- Preserve user-specific state and evidence while modernizing: current working performance, positive ВЕС, current resistance level, unilateral/bilateral intent, equipment constraints, limitations, and exercise identity must not be erased just because the schema is being upgraded.
+- If an old exercise name/equipment clearly implies external load or discrete resistance but its legacy block lacks the modern load representation, a broad modernization may convert it to the appropriate current weighted/resistance model instead of preserving the omission.
+- Re-evaluate progression under the current rules: cadence, progression axis, steps, ceilings, resistance levels, double progression, and harder-movement replacement should be present only where they make training sense. Do not preserve an obsolete progression pattern merely because it existed in the legacy text.
+
+GENERAL:
+- Match the size of structural changes to the request. A broad request may add, remove, reorder or replace exercises and change variant count when that improves the requested outcome; a narrow request may not.
+- When a change requires touching a related field to stay coherent (replacing an exercise changes its muscles/description/progression/rest; shortening a workout changes exercise count or sets/rounds), make that related change too.
 - Treat an existing positive working ВЕС and an existing current resistance level as authoritative user data. Preserve them for the same movement unless the request explicitly asks to change/reset that load or the movement/equipment change makes the old load inapplicable. Never turn a known positive ВЕС into 0 as a generic uncertainty fallback.
-- Remove an optional line when the requested change makes it obsolete or contradictory (e.g. ЗАМЕНА of a replaced movement, a rep ceiling after switching to weight-only progression).
-- If the user asks to disable a numeric setting while keeping the exercise, set a neutral value such as 0.
-- You may add valid optional exercise fields when the requested change needs them.`;
+- Remove an optional line when the change makes it obsolete or contradictory (e.g. ЗАМЕНА of a replaced movement, a rep ceiling after switching to weight-only progression).
+- If the user explicitly asks to disable a numeric setting while keeping the exercise, set the protocol's neutral/off value such as 0 where supported.
+- Before answering, verify the edited result against the CURRENT contract, not against the set of fields that happened to exist in the input.`;
 
   const programPrompt = outputLanguage => [
     'You are a fitness-program assistant for home workouts.',
