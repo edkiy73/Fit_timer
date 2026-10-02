@@ -50,6 +50,9 @@ export const activitySchema = z.discriminatedUnion('type', [
     prompt: localizedTextSchema,
     source: localizedTextSchema.optional(),
     answer: answerCheckSchema,
+    /** build = word bank only; progressive = build first, type once learned; write = keyboard only.
+     * Missing means progressive for backward compatibility with already-published content. */
+    responseMode: z.enum(['build','progressive','write']).optional(),
     explanation: localizedTextSchema.optional(),
   }),
   activityBaseSchema.extend({
@@ -57,6 +60,9 @@ export const activitySchema = z.discriminatedUnion('type', [
     direction: z.enum(['to-target','from-target']),
     prompt: localizedTextSchema,
     answer: answerCheckSchema,
+    /** build = word bank only; progressive = build first, type once learned; write = keyboard only.
+     * Missing means progressive for backward compatibility with already-published content. */
+    responseMode: z.enum(['build','progressive','write']).optional(),
     explanation: localizedTextSchema.optional(),
   }),
   activityBaseSchema.extend({

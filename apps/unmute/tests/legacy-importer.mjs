@@ -93,6 +93,11 @@ assert.deepEqual(Array.from(practiceRequirement.modes),['drill','listening','spe
 assert.ok(!day1.completion.requirements.some(r=>r.kind==='activity-seen'&&r.activityIds.includes('dialogue.d1')));
 assert.equal(day2.kind,'review');
 assert.deepEqual(Array.from(day2.completion.requirements).map(r=>r.kind),['manual']);
+const day1TextActivities=day1.activityIds
+  .map(id=>course.activities.find(activity=>activity.id===id))
+  .filter(activity=>activity?.type==='text-input'||activity?.type==='translation');
+assert.ok(day1TextActivities.length>0);
+assert.ok(day1TextActivities.every(activity=>activity.responseMode==='build'),'early course uses sentence builder');
 assert.equal(course.resources.length,2);
 const phraseBank=course.resources.find(resource=>resource.type==='phrase-collection');
 const verbTable=course.resources.find(resource=>resource.type==='verb-table');

@@ -36,7 +36,7 @@ function day1(){
     choice('a1.ex.hello.2',[tag],{ru:'Что ответить на «Nice to meet you»?',en:'Choose the answer to «Nice to meet you».'},
       [{ru:'Nice to meet you too.'},{ru:'I am fine.'},{ru:'Good night.'}],0,
       {ru:'На «приятно познакомиться» отвечают тем же и добавляют «too» — тоже.',en:'Say the same, then say «too».'}),
-    {...base,id:'a1.ex.hello.3',type:'translation',tags:[tag],direction:'to-target',prompt:{ru:'Я Анна.',en:'I am Anna.'},
+    {...base,id:'a1.ex.hello.3',type:'translation',tags:[tag],direction:'to-target',responseMode:'build',prompt:{ru:'Я Анна.',en:'I am Anna.'},
       answer:answer('I am Anna','I\'m Anna'),
       explanation:{ru:'«Я» — это I am, в разговоре коротко I\'m.',en:'I am, short: I\'m.'}},
     drill('a1.pattern.hello',[tag],{ru:'I am … / My name is …',en:'I am … / My name is …'},[
@@ -66,7 +66,7 @@ function day2(){
     choice('a1.ex.from.2',[tag],{ru:'Выбери: «Я живу в Дубае».',en:'Choose the right answer.'},
       [{ru:'I live in Dubai.'},{ru:'I live Dubai.'},{ru:'I am live in Dubai.'}],0,
       {ru:'После «live» нужен предлог «in», а «am» здесь лишний.',en:'Say «live in», without «am».'}),
-    {...base,id:'a1.ex.from.3',type:'translation',tags:[tag],direction:'to-target',prompt:{ru:'Я из России.',en:'I am from Russia.'},
+    {...base,id:'a1.ex.from.3',type:'translation',tags:[tag],direction:'to-target',responseMode:'build',prompt:{ru:'Я из России.',en:'I am from Russia.'},
       answer:answer('I am from Russia','I\'m from Russia'),
       explanation:{ru:'«Из» — from: I am from Russia.',en:'Use «from»: I am from Russia.'}},
     drill('a1.pattern.from',[tag],{ru:'I am from … / I live in …',en:'I am from … / I live in …'},[
@@ -96,7 +96,7 @@ function day3(){
     choice('a1.ex.cafe.2',[tag],{ru:'Что сказать, когда тебе дали заказ?',en:'What do you say when you get your coffee?'},
       [{ru:'Thank you.'},{ru:'Please.'},{ru:'Good night.'}],0,
       {ru:'«Thank you» — спасибо. «Please» — это «пожалуйста» в просьбе.',en:'«Thank you» after you get it; «please» when you ask.'}),
-    {...base,id:'a1.ex.cafe.3',type:'translation',tags:[tag],direction:'to-target',prompt:{ru:'Воду, пожалуйста.',en:'Water, please.'},
+    {...base,id:'a1.ex.cafe.3',type:'translation',tags:[tag],direction:'to-target',responseMode:'build',prompt:{ru:'Воду, пожалуйста.',en:'Water, please.'},
       answer:answer('Water, please','Water please','A water, please'),
       explanation:{ru:'Коротко: название + please.',en:'Short: the thing + please.'}},
     {...base,id:'a1.dialogue.cafe',type:'dialogue',tags:['dialogue'],scene:{ru:'Кофе с собой',en:'A coffee to go'},
@@ -111,13 +111,20 @@ function day3(){
 
 // Days 4+ share one shape: a plan note, a short rule, two choices, one translation,
 // a phrase drill and sometimes a dialogue. Every graded item explains the answer.
+function responseModeForDay(n){
+  if(n<=4)return 'build';
+  if(n<=8)return 'progressive';
+  return 'write';
+}
+
 function day(n,{key,plan,title,body,choices,translation,pattern,pairs,dialogue}){
   const tag='a1-day-'+n;
+  const responseMode=responseModeForDay(n);
   const items=[
     {...base,id:'plan.a1-day-'+n,type:'theory',tags:['plan'],title:{ru:'День '+n,en:'Day '+n},format:'text',body:plan},
     {...base,id:'a1.theory.'+key,type:'theory',tags:[tag],title,format:'html',body},
     ...choices.map((item,index)=>choice('a1.ex.'+key+'.'+(index+1),[tag],item.prompt,item.options.map(ru=>({ru})),0,item.explanation)),
-    {...base,id:'a1.ex.'+key+'.'+(choices.length+1),type:'translation',tags:[tag],direction:'to-target',
+    {...base,id:'a1.ex.'+key+'.'+(choices.length+1),type:'translation',tags:[tag],direction:'to-target',responseMode,
       prompt:translation.prompt,answer:answer(...translation.answers),explanation:translation.explanation},
     drill('a1.pattern.'+key,[tag],pattern,pairs.map(([ru,en,accepted,why])=>[{ru,en},answer(...accepted),why]))
   ];

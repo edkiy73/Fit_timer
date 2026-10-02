@@ -398,6 +398,12 @@ function attachCourseExamples(activities,lexicon){
   }
 }
 
+function responseModeForCourseDay(day){
+  if(day<=10)return 'build';
+  if(day<=24)return 'progressive';
+  return 'write';
+}
+
 export function buildCourseSet(model,lexicon=null){
   const built=buildActivities(model),activities=built.activities,nodes=[];
   let previous=null;
@@ -438,6 +444,18 @@ export function buildCourseSet(model,lexicon=null){
       optional:false});
     previous=id;
   }
+
+  // Difficulty grows with the course: first arrange known words, then gradually recall them,
+  // and in the later part type the sentence without a word bank.
+  const activityById=new Map(activities.map(activity=>[activity.id,activity]));
+  for(const node of nodes){
+    const mode=responseModeForCourseDay(node.dayIndex||1);
+    for(const activityId of node.activityIds){
+      const activity=activityById.get(activityId);
+      if(activity&&(activity.type==='text-input'||activity.type==='translation'))activity.responseMode=mode;
+    }
+  }
+
   if(lexicon)attachCourseExamples(activities,lexicon);
   // Learner-addressed past tense in both forms («работал(а)»), so a re-import keeps the fix.
   return neutralizeCourse({

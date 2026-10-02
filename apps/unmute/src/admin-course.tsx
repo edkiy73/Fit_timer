@@ -144,6 +144,11 @@ function FriendlyFields({activity,onChange}:{activity:EditableActivity;onChange(
       </select></label>}
       <label><span>Задание / фраза</span><textarea rows={3} value={textValue(activity.prompt)} onChange={e=>text('prompt',e.target.value)} /></label>
       <label><span>Допустимые ответы — один на строку</span><textarea rows={5} value={answers} onChange={e=>onChange(setAnswer(activity,e.target.value))} /></label>
+      <label><span>Как отвечать</span><select value={String(activity.responseMode||'progressive')} onChange={e=>update('responseMode',e.target.value)}>
+        <option value="build">Собрать из слов</option>
+        <option value="progressive">Сначала собрать, потом писать</option>
+        <option value="write">Написать самому</option>
+      </select></label>
       <label><span>Объяснение</span><textarea rows={3} value={textValue(activity.explanation)} onChange={e=>text('explanation',e.target.value)} /></label>
     </>;
   }

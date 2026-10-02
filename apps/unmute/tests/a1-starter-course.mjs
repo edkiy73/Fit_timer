@@ -23,6 +23,14 @@ for(const node of nodes){
   for(const id of node.activityIds) assert.ok(ids.has(id),'node '+node.id+' references '+id);
   assert.ok(node.activityIds.some(id=>id.startsWith('plan.')),'every day has a plan note');
 }
+// Difficulty ladder: beginners arrange words first, then transition, then recall by typing.
+for(const node of nodes){
+  const expected=node.dayIndex<=4?'build':node.dayIndex<=8?'progressive':'write';
+  const translations=node.activityIds
+    .map(id=>course.activities.find(activity=>activity.id===id))
+    .filter(activity=>activity?.type==='translation');
+  for(const activity of translations) assert.equal(activity.responseMode,expected,activity.id+' response mode');
+}
 // Every graded card explains the answer in both languages.
 for(const activity of course.activities){
   if(activity.type!=='choice' && activity.type!=='translation') continue;

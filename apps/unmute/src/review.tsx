@@ -38,6 +38,7 @@ import { Icon } from './icons';
 import { Loader } from './loader';
 import { reviewDueCounts } from './review-count';
 import { randomSeed, shuffledIndices } from './shuffle';
+import { WordChips, answerWords, buildChips, chipsText } from './word-chips';
 
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
 type CombinedReviewItem=
@@ -111,6 +112,7 @@ export function ReviewView({
   const [selected,setSelected]=useState<number|null>(null);
   const [shuffleSeed]=useState(()=>randomSeed());
   const [answer,setAnswer]=useState('');
+  const [picked,setPicked]=useState<string[]>([]);
   const [result,setResult]=useState<boolean|null>(null);
   const [busy,setBusy]=useState(false);
   const [wordShown,setWordShown]=useState(false);
@@ -147,6 +149,7 @@ export function ReviewView({
   useEffect(()=>{
     setSelected(null);
     setAnswer('');
+    setPicked([]);
     setResult(null);
     setBusy(false);
     setWordShown(false);
@@ -155,6 +158,24 @@ export function ReviewView({
 
   const item=queue[index] ?? null;
   const total=session?.total ?? 0;
+
+  const reviewChips=useMemo(()=>{
+    if(item?.kind!=='card'||(item.activity.type!=='text-input'&&item.activity.type!=='translation'))return null;
+    // Review is already recall for progressive cards. Only explicitly introductory "build" cards
+    // keep the word bank when they become due.
+    if((item.activity.responseMode??'progressive')!=='build')return null;
+    const target=item.activity.answer.accepted[0]??'';
+    if(!answerWords(target))return null;
+    const itemSet=item.setId
+      ? otherCourses.courses.find(other=>other.set.id===item.setId)?.set
+      : state?.set;
+    const otherAnswers=itemSet?.activities.flatMap(activity=>
+      (activity.type==='text-input'||activity.type==='translation')&&activity.id!==item.activity.id
+        ? [activity.answer.accepted[0]??'']
+        : []
+    )??[];
+    return buildChips(shuffleSeed+'|review|'+item.activity.id+'|'+index,target,otherAnswers);
+  },[item,index,otherCourses,state?.set,shuffleSeed]);
 
   // A review day counts once its review is through (or nothing was due).
   const reviewDayNode=completeDayId&&state?state.roadmap.nodes.find(node=>node.id===completeDayId)??null:null;
@@ -417,7 +438,7 @@ export function ReviewView({
 
   const checkText=()=>{
     if(item.kind!=='card'||(item.activity.type!=='text-input'&&item.activity.type!=='translation'))return;
-    const value=answer.trim();
+    const value=reviewChips?chipsText(reviewChips,picked):answer.trim();
     if(!value)return;
     const answerSpec=item.activity.answer;
     const correct=answerSpec.caseSensitive
@@ -466,7 +487,7 @@ export function ReviewView({
     const accepted=acceptedAnswers[0];
     const learnerAnswer=activity.type==='choice'
       ? (selected===null?'':localized(activity.options[selected],locale))
-      : answer.trim();
+      : (reviewChips?chipsText(reviewChips,picked):answer.trim());
     const courseExplanation=localized(activity.explanation,locale);
     return (
       <div className={'learn-feedback is-sheet '+(result?'learn-feedback-ok':'learn-feedback-wrong')} role="status">
@@ -556,23 +577,28 @@ export function ReviewView({
           {item.activity.type==='text-input'&&item.activity.source&&(
             <p className="learn-source"><LexiconText text={localized(item.activity.source,locale)} refs={item.activity.lexiconRefs} /></p>
           )}
-          <label className="learn-answer">
-            <span>{t('learn.answerLabel')}</span>
-            <input
-              value={answer}
-              disabled={busy||result!==null}
-              onChange={event=>setAnswer(event.target.value)}
-              onKeyDown={event=>{
-                if(event.key==='Enter'){
-                  event.preventDefault();
-                  checkText();
-                }
-              }}
-              autoComplete="off"
-            />
-          </label>
+          {reviewChips ? (
+            <WordChips chips={reviewChips} picked={picked} disabled={busy||result!==null} onChange={setPicked} />
+          ) : (
+            <label className="learn-answer">
+              <span>{t('learn.answerLabel')}</span>
+              <input
+                value={answer}
+                disabled={busy||result!==null}
+                onChange={event=>setAnswer(event.target.value)}
+                onKeyDown={event=>{
+                  if(event.key==='Enter'){
+                    event.preventDefault();
+                    checkText();
+                  }
+                }}
+                autoComplete="off"
+              />
+            </label>
+          )}
           {result===null&&(
-            <button className="primary-button" type="button" disabled={!answer.trim()||busy} onClick={checkText}>
+            <button className="primary-button" type="button"
+              disabled={!(reviewChips?chipsText(reviewChips,picked):answer.trim())||busy} onClick={checkText}>
               {t('learn.check')}
             </button>
           )}
