@@ -203,9 +203,11 @@ export function loadLevelLabel(level){
 export function exerciseLoadLevelState(ex){
   const levels = exerciseLoadLevels(ex);
   const level = exerciseLoadLevel(ex);
+  const item = levels[level] || null;
   return {
     level,
-    label: levels[level] ? loadLevelLabel(levels[level]) : ''
+    key: item && item.key ? item.key : '',
+    label: item ? loadLevelLabel(item) : ''
   };
 }
 function resistanceScaleText(ex){
@@ -3025,6 +3027,7 @@ export function initBuilder(){
     enableDrag,
     exRestAfter,
     exerciseLoadLevelState,
+    loadLevelLabel,
     exerciseProgEvery,
     fmtKg,
     getExWeight,
