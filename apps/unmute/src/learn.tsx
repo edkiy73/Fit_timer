@@ -609,7 +609,7 @@ export function NodeRunnerView({
     setBusy(true);
     try{
       const correct=choice===activity.correctIndex;
-      await gradeAnswer(correct,chips?'build':'write');
+      await gradeAnswer(correct);
       countAnswer(correct);
       if(!correct)retryLater();
       setResult(correct);
@@ -641,7 +641,7 @@ export function NodeRunnerView({
       const correct=activity.answer.caseSensitive
         ? activity.answer.accepted.some(candidate=>candidate.trim()===input)
         : checkAnswer(input,activity.answer.accepted);
-      await gradeAnswer(correct);
+      await gradeAnswer(correct,chips?'build':'write');
       countAnswer(correct);
       if(!correct)retryLater();
       setResult(correct);
