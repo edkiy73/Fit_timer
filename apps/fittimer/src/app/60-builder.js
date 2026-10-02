@@ -683,6 +683,10 @@ export function setExerciseProgressionMode(ex, mode){
 // false сохраняет текущий способ, пока он совместим.
 export function setExerciseLoadType(ex, loadType, preferRecommended=false){
   if(!ex) return ex;
+  // Смена формата нагрузки не должна сама включать progression. Особенно важно
+  // для ручного редактора: пользователь может настраивать вес/резинку, оставив
+  // «Усложнять со временем» выключенным.
+  const wasExplicitlyOff = ex.progOn === false;
   const next = loadType === 'weight' ? 'weight' : loadType === 'level' ? 'level' : 'none';
   ex.loadType = next;
   ex.trackWeight = next === 'weight';
@@ -696,20 +700,27 @@ export function setExerciseLoadType(ex, loadType, preferRecommended=false){
   const target = preferRecommended || !allowed.includes(current)
     ? recommendedProgressionMode(ex)
     : current;
-  return setExerciseProgressionMode(ex, target);
+  setExerciseProgressionMode(ex, target);
+  if(wasExplicitlyOff) ex.progOn = false;
+  return ex;
 }
 
 // То же для «Повторения / Время»: новый черновик получает default нового формата,
 // существующая ручная настройка сохраняется, если такой mode всё ещё имеет смысл.
 export function setExerciseMetric(ex, type, preferRecommended=false){
   if(!ex) return ex;
+  // «Повторения ↔ Время» меняет формат, а не решение пользователя о том,
+  // должна ли нагрузка вообще прогрессировать.
+  const wasExplicitlyOff = ex.progOn === false;
   ex.type = type === 'time' ? 'time' : 'reps';
   const current = editorProgressionMode(ex);
   const allowed = progressionModeOptions(ex);
   const target = preferRecommended || !allowed.includes(current)
     ? recommendedProgressionMode(ex)
     : current;
-  return setExerciseProgressionMode(ex, target);
+  setExerciseProgressionMode(ex, target);
+  if(wasExplicitlyOff) ex.progOn = false;
+  return ex;
 }
 
 export function progressionModeLabel(ex, mode){
