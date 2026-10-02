@@ -54,6 +54,8 @@ export function setDataSyncProgressMediaHooks(hooks = {}){
 
 let builderDataHooks = {
   exRestAfter: () => 0,
+  exerciseLoadLevelState: () => ({level:0,label:''}),
+  progressionLoadType: () => 'none',
   getExProgValue: () => 0,
   hasWeight: () => false,
   normValue: v => v,
@@ -1859,7 +1861,8 @@ export function workoutSessionSignature(cur){
         String(s.kind || ''), Number(s.setNo) || 1, Number(s.setsTotal) || 1,
         Number(s.side) || 0, Number(s.sidesTotal) || 0,
         s.reps == null ? '' : String(s.reps),
-        Number(s.seconds) || 0, Number(s.weight) || 0];
+        Number(s.seconds) || 0, Number(s.weight) || 0,
+        s.loadLevel == null ? '' : Number(s.loadLevel) || 0];
     }
     return ['r', String(s.kind || ''), Number(s.seconds) || 0,
       s.sideSwitch ? 1 : 0, s.roundRest ? 1 : 0];
@@ -2467,6 +2470,8 @@ export function customToProgram(p, planIdx = 0){
     const axis = builderDataHooks.progAxis(ex);          // 'weight' и для формата «вес», и для «повторения и вес»
     const on = axis !== 'none';         // общий тумблер «усложнять со временем»
     const isWeight = builderDataHooks.hasWeight(ex);     // формат включает вес — независимо от того, растёт ли он
+    const loadType = builderDataHooks.progressionLoadType(ex);
+    const levelState = loadType === 'level' ? (builderDataHooks.exerciseLoadLevelState(ex) || {}) : null;
     const isTimeFmt = ex.type === 'time';
     // «повторения и вес» — особый случай: вес и повторы растут НЕЗАВИСИМО друг от друга.
     // Явный 0 в шаге означает «эта конкретная ось у этого упражнения не растёт» — так ИИ
@@ -2486,6 +2491,9 @@ export function customToProgram(p, planIdx = 0){
       weight: isWeight ? (wGrows ? builderDataHooks.getExProgValue(p.id, ex, p, 'weight') : builderDataHooks.progBaseValue(ex, 'weight')) : 0,
       weightBase: +ex.weight || 0,   // база упражнения (без прогрессии) — для справки в шаге тренировки
       wStep: ex.wStep != null ? +ex.wStep : 2, // != null — иначе явный 0 (не растим вес) подменится дефолтом
+      loadType,
+      loadLevel: levelState && Number.isFinite(+levelState.level) ? Math.max(0, Math.round(+levelState.level)) : null,
+      loadLabel: levelState ? String(levelState.label || '') : '',
       exName: ex.name,
       exId: ex.id || ''  // по id проверка прогресса узнаёт, до каких упражнений дошла тренировка
     };

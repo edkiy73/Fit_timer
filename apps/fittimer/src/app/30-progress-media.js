@@ -848,6 +848,23 @@ export function uniqueExerciseIds(p){
   });
   return changed;
 }
+const SAFE_LOAD_LEVEL_KEYS = new Set(['light','medium','strong','veryStrong']);
+function sanitizeLoadLevels(raw){
+  const out = [];
+  (Array.isArray(raw) ? raw : []).forEach(item => {
+    if(out.length >= 12) return;
+    if(typeof item === 'string'){
+      const label = clampLine(item, 60);
+      if(label) out.push({label});
+      return;
+    }
+    if(!item || typeof item !== 'object') return;
+    if(SAFE_LOAD_LEVEL_KEYS.has(item.key)){ out.push({key:item.key}); return; }
+    const label = clampLine(item.label, 60);
+    if(label) out.push({label});
+  });
+  return out;
+}
 function sanitizeExercise(ex){
   if(!ex || typeof ex !== 'object') return;
   // упражнения из старых данных (созданы до появления id) или пришедшие по
@@ -860,6 +877,17 @@ function sanitizeExercise(ex){
   if(ex.swapDesc != null) ex.swapDesc = clampText(ex.swapDesc, LIM.exSwapDesc);
   if(ex.video != null)    ex.video = cleanLink(ex.video, LIM.video) || '';
   if(ex.value != null && typeof ex.value === 'string') ex.value = clampLine(ex.value, LIM.exValue);
+  if(ex.loadType != null && !['none','weight','level'].includes(ex.loadType)) delete ex.loadType;
+  if(ex.progMode != null && !['reps','weight','double_range','time','level','parallel'].includes(ex.progMode)) delete ex.progMode;
+  if(ex.loadType === 'level'){
+    let levels = sanitizeLoadLevels(ex.loadLevels);
+    if(levels.length < 2) levels = [{key:'light'},{key:'medium'},{key:'strong'},{key:'veryStrong'}];
+    ex.loadLevels = levels;
+    ex.loadLevel = Math.max(0, Math.min(levels.length - 1, Math.round(+ex.loadLevel || 0)));
+    ex.trackWeight = false;
+  } else if(ex.loadLevels != null){
+    ex.loadLevels = sanitizeLoadLevels(ex.loadLevels);
+  }
   const pic = ex.media && ex.media.kind === 'img' ? cleanPic(ex.media.data) : null;
   ex.media = pic ? {kind: 'img', data: pic} : null;
   // ex.ps — фактическая прогрессия (см. 60-builder.js), сюда же может прийти
@@ -870,7 +898,10 @@ function sanitizeExercise(ex){
     ex.ps.cur = (cur && typeof cur === 'object') ? {
       reps: cur.reps != null ? clampLine(String(cur.reps), LIM.exValue) : undefined,
       sec: cur.sec != null ? Math.max(0, Math.min(3600, Math.round(+cur.sec || 0))) : undefined,
-      kg: cur.kg != null ? Math.max(0, Math.min(500, Math.round((+cur.kg || 0) * 2) / 2)) : undefined
+      kg: cur.kg != null ? Math.max(0, Math.min(500, Math.round((+cur.kg || 0) * 2) / 2)) : undefined,
+      level: cur.level != null && ex.loadType === 'level'
+        ? Math.max(0, Math.min((ex.loadLevels || []).length - 1, Math.round(+cur.level || 0)))
+        : undefined
     } : {};
   } else delete ex.ps;
 }

@@ -126,6 +126,51 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('сегодняшняя per-exercise нагрузка при этом показывается без отката',
     /15 повторений/.test(legacy.row), legacy.row);
 
+  // Сопротивление — полноценная ось нагрузки: обзор должен показать понятный label,
+  // а переход на следующую ступень считать повышением даже если диапазон повторов
+  // при этом сбросился вниз, как в double progression.
+  const resistance = await page.evaluate(async () => {
+    const p = {
+      id:'overview-level', name:'Резинки', active:true, progression:2,
+      stats:{completions:2}, plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[{
+        id:'band-row', name:'Тяга резинки', type:'reps', value:'12-15', sets:3, rest:45,
+        progOn:true, trackWeight:false, loadType:'level', progMode:'level',
+        loadLevels:[{label:'Лёгкое'},{label:'Среднее'},{label:'Сильное'}],
+        loadLevel:1, repsStep:2, repsMax:18,
+        ps:{n:0,cur:{reps:'12-15',level:2}}
+      }]}]
+    };
+    const history = [...(stats.history || []), {
+      id:'level-prev', pid:p.id, plan:0, d:localISO(new Date(Date.now()-86400000)),
+      sec:900, status:'full', exercises:['Тяга резинки'],
+      load:[{i:0,n:'Тяга резинки',reps:'16-18',sec:0,kg:0,level:1,levelLabel:'Среднее'}]
+    }];
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history})));
+    await loadData();
+    const live = customPrograms.find(x => x.id === p.id);
+    const current = workoutLoadSnapshot(live, 0);
+    const delta = loadDelta(history[history.length - 1].load[0], current[0]);
+    openStart(live);
+    return {
+      current:current[0],
+      delta,
+      change:$('startLoadChange').textContent.trim(),
+      row:document.querySelector('#startOverviewList .ex-row')?.textContent || ''
+    };
+  });
+  ok('сопротивление сохраняется в snapshot понятным label',
+    resistance.current.level === 2 && resistance.current.levelLabel === 'Сильное',
+    JSON.stringify(resistance.current));
+  ok('следующая ступень сопротивления считается повышением несмотря на сброс повторов',
+    resistance.delta.dir === 'up'
+      && /Сопротивление: было Среднее → сегодня Сильное/.test(resistance.delta.text)
+      && /Нагрузка выше/.test(resistance.change),
+    JSON.stringify({delta:resistance.delta,change:resistance.change}));
+  ok('обзор показывает физически понятное сопротивление, а не level 2',
+    /Сильное/.test(resistance.row) && !/level\s*2/i.test(resistance.row),
+    resistance.row);
+
   // Полностью завершённая двойная прогрессия не должна обещать следующую
   // проверку нагрузки: повышать здесь уже нечего.
   const terminalText = await page.evaluate(async () => {

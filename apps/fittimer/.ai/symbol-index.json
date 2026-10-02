@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1688,
-      "chars": 80333,
+      "lines": 1715,
+      "chars": 81491,
       "symbols": [
         "$",
         "accountUserDirtyHook",
@@ -141,8 +141,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2739,
-      "chars": 126607,
+      "lines": 2747,
+      "chars": 127130,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -406,8 +406,8 @@
     },
     "src/app/30-progress-media.js": {
       "kind": "frontend-js",
-      "lines": 1018,
-      "chars": 45912,
+      "lines": 1049,
+      "chars": 47320,
       "symbols": [
         "addPhoto",
         "alpha",
@@ -455,6 +455,7 @@
         "requireWho",
         "sanitizeBackupValue",
         "sanitizeExercise",
+        "sanitizeLoadLevels",
         "sanitizeProgram",
         "savePhotos",
         "saveWeightHist",
@@ -738,8 +739,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 3077,
-      "chars": 133583,
+      "lines": 3089,
+      "chars": 133904,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -783,6 +784,7 @@
         "exDirty",
         "exerciseLoadLevel",
         "exerciseLoadLevels",
+        "exerciseLoadLevelState",
         "exerciseProgEvery",
         "exerciseResistanceScaleOk",
         "exFormatState",
@@ -905,8 +907,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1954,
-      "chars": 86525,
+      "lines": 1960,
+      "chars": 86763,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",

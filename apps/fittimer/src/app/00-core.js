@@ -81,6 +81,7 @@ let builderHooks = {
   dropFreshEx: () => {},
   exDirty: () => false,
   exRestAfter: () => 0,
+  exerciseLoadLevelState: () => ({level:0,label:''}),
   exerciseProgEvery: () => 0,
   fmtKg: v => String(v == null ? '' : v),
   getExProgValue: () => 0,
@@ -92,6 +93,7 @@ let builderHooks = {
   parseValue: v => ({min:+v || 0, max:+v || 0}),
   progAtCeiling: () => false,
   progAxis: () => 'none',
+  progressionLoadType: () => 'none',
   progBaseValue: () => 0,
   progStepSize: () => 0,
   programHasProgression: () => false,
@@ -386,6 +388,10 @@ export function announceExercise(step, onDone){
     text += voiceIsEnglish()
       ? `, weight ${kg} ${voicePlural(Math.round(step.weight),'килограмм','килограмма','килограммов','kilogram','kilograms')}`
       : `, вес ${kg} ${plural(Math.round(step.weight), 'килограмм', 'килограмма', 'килограммов')}`;
+  } else if(step.loadLabel){
+    text += voiceIsEnglish()
+      ? `, resistance ${step.loadLabel}`
+      : `, сопротивление ${step.loadLabel}`;
   }
   speak(text, null, onDone);
 }
@@ -1074,7 +1080,7 @@ export function renderPlanRow(){
 function exerciseLoad(p, ex){
   const on = builderHooks.progAxis(ex) !== 'none';
   const timed = ex.type === 'time';
-  const load = {reps:'', sec:0, kg:0};
+  const load = {reps:'', sec:0, kg:0, level:null, levelLabel:''};
   if(timed){
     load.sec = on && builderHooks.progStepSize(ex, 'time') > 0
       ? builderHooks.getExProgValue(p.id, ex, p, 'time')
@@ -1089,6 +1095,11 @@ function exerciseLoad(p, ex){
       ? builderHooks.getExProgValue(p.id, ex, p, 'weight')
       : builderHooks.progBaseValue(ex, 'weight');
   }
+  if(builderHooks.progressionLoadType(ex) === 'level'){
+    const state = builderHooks.exerciseLoadLevelState(ex) || {};
+    load.level = Number.isFinite(+state.level) ? Math.max(0, Math.round(+state.level)) : null;
+    load.levelLabel = String(state.label || '');
+  }
   return load;
 }
 
@@ -1101,7 +1112,12 @@ export function workoutLoadSnapshot(p, planIdx){
   const pl = normPlans(p)[planIdx] || normPlans(p)[0];
   return ((pl && pl.exercises) || []).map((ex, i) => {
     const v = exerciseLoad(p, ex);
-    return {i, n:ex.name || '', reps:v.reps || '', sec:+v.sec || 0, kg:+v.kg || 0};
+    return {
+      i, n:ex.name || '',
+      reps:v.reps || '', sec:+v.sec || 0, kg:+v.kg || 0,
+      level:v.level == null ? null : +v.level,
+      levelLabel:String(v.levelLabel || '')
+    };
   });
 }
 
@@ -1127,6 +1143,7 @@ function loadTargetText(ex, v){
   if(ex.type === 'time') bits.push(`${v.sec} ${t('store.secShort')}`);
   else bits.push(`${v.reps} ${t('workout.repsShort')}`);
   if(v.kg > 0) bits.push(`${builderHooks.fmtKg(v.kg)} ${t('progress.kg')}`);
+  if(v.levelLabel) bits.push(v.levelLabel);
   let out = bits.join(' × ');
   if(ex.perSide) out += ' ' + t('store.perSide');
   return out;
@@ -1147,12 +1164,22 @@ export function loadDelta(a, b){
   if((+a.kg || 0) !== (+b.kg || 0)){
     bits.push(t('start.deltaWeight',{before:builderHooks.fmtKg(a.kg),today:builderHooks.fmtKg(b.kg)})); moves.push((+b.kg || 0) - (+a.kg || 0));
   }
+  const aLevel = a.level == null ? null : +a.level;
+  const bLevel = b.level == null ? null : +b.level;
+  if(Number.isFinite(aLevel) && Number.isFinite(bLevel) && aLevel !== bLevel){
+    bits.push(t('start.deltaResistance',{
+      before:String(a.levelLabel || (aLevel + 1)),
+      today:String(b.levelLabel || (bLevel + 1))
+    }));
+    moves.push(bLevel - aLevel);
+  }
   const directional = moves.filter(x => x !== 0);
   // вес вырос, а повторы вернулись к началу диапазона — это шаг двойной
   // прогрессии, то есть нагрузка ВЫШЕ, а не «изменилась»
   const kgUp = (+b.kg || 0) > (+a.kg || 0);
+  const levelUp = Number.isFinite(aLevel) && Number.isFinite(bLevel) && bLevel > aLevel;
   const secSame = (+a.sec || 0) === (+b.sec || 0);
-  const dir = kgUp && secSame ? 'up'
+  const dir = (kgUp || levelUp) && secSame ? 'up'
     : directional.length && directional.every(x => x > 0) ? 'up'
     : directional.length && directional.every(x => x < 0) ? 'down'
     : directional.length ? 'mixed' : 'same';

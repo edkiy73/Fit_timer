@@ -185,6 +185,14 @@ export function loadLevelLabel(level){
   if(level.key === 'veryStrong') return t('builder.resistanceVeryStrong');
   return '';
 }
+export function exerciseLoadLevelState(ex){
+  const levels = exerciseLoadLevels(ex);
+  const level = exerciseLoadLevel(ex);
+  return {
+    level,
+    label: levels[level] ? loadLevelLabel(levels[level]) : ''
+  };
+}
 function resistanceScaleText(ex){
   return exerciseLoadLevels(ex).map(loadLevelLabel).filter(Boolean).join('\n');
 }
@@ -2883,6 +2891,8 @@ export function initBuilder(){
   });
   setDataSyncBuilderHooks({
     exRestAfter,
+    exerciseLoadLevelState,
+    progressionLoadType,
     getExProgValue,
     hasWeight,
     normValue,
@@ -2897,6 +2907,7 @@ export function initBuilder(){
     dropFreshEx,
     exDirty,
     exRestAfter,
+    exerciseLoadLevelState,
     exerciseProgEvery,
     fmtKg,
     getExProgValue,
@@ -2908,6 +2919,7 @@ export function initBuilder(){
     parseValue,
     progAtCeiling,
     progAxis,
+    progressionLoadType,
     progBaseValue,
     progStepSize,
     programHasProgression,

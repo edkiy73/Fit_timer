@@ -83,6 +83,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "limitNotificationCandidates",
   "liveExercise",
   "loadData",
+  "loadDelta",
   "loadIdentity",
   "loadBuilderDraft",
   "loadPhotos",
@@ -169,7 +170,9 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "updateTrainerProfile",
   "userForAI",
   "users",
-  "weekPlanInfo",  "workoutSessionSignature",
+  "weekPlanInfo",
+  "workoutLoadSnapshot",
+  "workoutSessionSignature",
   "workoutStepKey",
   "workStepChoices"
 ]);
