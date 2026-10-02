@@ -163,6 +163,29 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     !nativeResumed.prepOpen, JSON.stringify(nativeResumed));
 
   // Сохранённая тренировка — уже начатая работа, а не ссылка на текущую версию
+  // Resistance semantics входят в отпечаток сохранённой тренировки:
+  // одного numeric index недостаточно, потому что в другой шкале level=1 может
+  // означать уже совершенно другую физическую нагрузку.
+  const resistanceSignatures = await page.evaluate(() => {
+    const mk = key => ({
+      rounds:1,
+      warmup:[],
+      cycle:[{
+        phase:'work', exId:'band', exName:'Тяга резинки', kind:'reps',
+        setNo:1, setsTotal:1, side:0, sidesTotal:0,
+        reps:'12-15', seconds:0, weight:0,
+        loadLevel:1, loadKey:key, loadLabel:key === 'medium' ? 'Среднее' : 'Сильное'
+      }]
+    });
+    return {
+      medium:workoutSessionSignature(mk('medium')),
+      strong:workoutSessionSignature(mk('strong'))
+    };
+  });
+  ok('resume fingerprint различает физический resistance при одинаковом индексе',
+    resistanceSignatures.medium !== resistanceSignatures.strong,
+    JSON.stringify(resistanceSignatures));
+
   // программы. После сохранения полностью меняем состав программы и убеждаемся,
   // что «Продолжить» открывает старые шаги, а не новую тренировку под старым stepIdx.
   await page.evaluate(async () => {
