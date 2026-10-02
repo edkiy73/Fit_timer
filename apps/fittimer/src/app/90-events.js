@@ -52,7 +52,7 @@ import { addClient, curClient, doPublish, loadStoreServer, openClient, openMyCat
 } from './50-trainer-catalog.js';
 import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExerciseAsNew,
   commitExercise, commitPlanFields, curPlan, delExerciseAt, draft, dropFreshEx, dupExerciseAt,
-  clearExerciseDraft, exDirty, exDraft, exIdx, exIsNew, exerciseResistanceScaleOk, fillPlanFields, markExerciseExisting, hasWeight, initAIForm, normValue, openBuilder, programHasProgression,
+  clearExerciseDraft, exDirty, exDraft, exIdx, exIsNew, exerciseProgressionConfigOk, exerciseResistanceScaleOk, fillPlanFields, markExerciseExisting, hasWeight, initAIForm, normValue, openBuilder, programHasProgression,
   openExercise, parseProgramText, parseStepNum, parseValue, planIdx, programDirty, renderExList, renderExMedia,
   renderProgControls, saveProgram, selectPlanVariant, setExerciseLoadType, setExerciseMetric, shrinkImage, syncCover, syncExDetailsSum, syncExNowHints,
   syncExProgSum, syncExSwapAvailability, syncExType, syncExWarm, syncRotateUI
@@ -150,7 +150,8 @@ function registerEventActions(){
       });
       return;
     }
-    if(!numFieldsOk('scrExercise') || !exNameOk()) return;
+    if(!numFieldsOk('scrExercise') || !exNameOk()
+      || !exerciseResistanceScaleOk(true) || !exerciseProgressionConfigOk(true)) return;
     markExerciseExisting();
     const list = curPlan().exercises;
     if(list[exIdx]) list[exIdx] = commitExercise();
@@ -185,7 +186,8 @@ function registerEventActions(){
   });
   registerAction('backFromExercise', () => leaveExercise());
   registerAction('saveExercise', () => {
-    if(numFieldsOk('scrExercise') && exNameOk() && exerciseResistanceScaleOk(true)) saveExAndBack();
+    if(numFieldsOk('scrExercise') && exNameOk()
+      && exerciseResistanceScaleOk(true) && exerciseProgressionConfigOk(true)) saveExAndBack();
   });
   registerAction('setExerciseType', btn => {
     setExerciseMetric(exDraft, btn.dataset.exType === 'time' ? 'time' : 'reps', exIsNew);
@@ -1831,7 +1833,8 @@ function dupExercise(){
       : t('exercise.mainLimitDuplicate',{count:MAX_MAIN}));
     return;
   }
-  if(!numFieldsOk('scrExercise') || !exNameOk()) return;
+  if(!numFieldsOk('scrExercise') || !exNameOk()
+    || !exerciseResistanceScaleOk(true) || !exerciseProgressionConfigOk(true)) return;
   if(list[exIdx]) list[exIdx] = commitExercise();
   list.splice(exIdx + 1, 0, cloneExerciseAsNew(list[exIdx]));
   clearExerciseDraft();
