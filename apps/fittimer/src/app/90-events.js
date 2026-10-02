@@ -222,37 +222,6 @@ function registerEventActions(){
     renderProgControls();
     syncExDetailsSum();
   });
-  registerAction('toggleExerciseDualProgression', () => {
-    exDraft.dualProg = !exDraft.dualProg;
-    if(exDraft.dualProg){
-      const repStep = parseStepNum($('exStepReps').value);
-      const weightStep = parseStepNum($('exStepWeight').value);
-      if(!(repStep > 0)){
-        exDraft.repsStep = 1;
-        $('exStepReps').value = '1';
-        $('exStepReps').dataset.touched = '1';
-      }
-      if(!(weightStep > 0)){
-        exDraft.wStep = 2;
-        $('exStepWeight').value = '2';
-        $('exStepWeight').dataset.touched = '1';
-      }
-      const base = parseValue(normValue($('exValue').value, 'reps'));
-      const max = parseStepNum($('exMaxReps').value);
-      const step = parseStepNum($('exStepReps').value) || 1;
-      if(!(max > base.max)){
-        const nextMax = Math.min(200, base.max + step);
-        exDraft.repsMax = nextMax;
-        $('exMaxReps').value = String(nextMax);
-        $('exMaxReps').dataset.touched = '1';
-      }
-      exDraft.dualRangeV = 2;
-    }
-    $('exDual').classList.toggle('on', exDraft.dualProg);
-    syncExProgSum();
-    syncExNowHints();
-    syncExDetailsSum();
-  });
   registerAction('toggleExerciseSwap', () => {
     exDraft.swapOn = !exDraft.swapOn;
     $('exSwapOn').classList.toggle('on', exDraft.swapOn);

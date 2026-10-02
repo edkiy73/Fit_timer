@@ -1750,7 +1750,7 @@ export function parseKg(v){
 // решает либо сам человек, либо ИИ по промту). Для простых форматов — одно поле.
 export function renderProgControls(){
   const hideControls = ()=>{
-    ['exProgModeRow','exProgEveryRow','exStepRow','exDualRow','exStepBothHint','exSwapRow','exSwapBox']
+    ['exProgModeRow','exProgEveryRow','exStepRow','exStepBothHint','exSwapRow','exSwapBox']
       .forEach(id => setShown(id, false));
   };
 
@@ -1799,10 +1799,8 @@ export function renderProgControls(){
   setShown('exStepMaxWeightRow', growWeight);
   setShown('exStepTimeRow', growTime);
   setShown('exStepMaxTimeRow', growTime);
-  // dualProg теперь compatibility-поле. Пользователь выбирает тот же смысл
-  // через «Как усложнять → Повторы → вес».
-  setShown('exDualRow', false);
-  $('exDual').classList.toggle('on', mode === 'double_range');
+  // dualProg остаётся compatibility-полем данных, но отдельного UI для него больше нет:
+  // пользователь выбирает тот же смысл через «Как усложнять → Повторы → вес».
   setShown('exStepBothHint', growReps);
 
   setShown('exSwapRow', true);

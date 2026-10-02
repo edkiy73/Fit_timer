@@ -741,8 +741,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 3215,
-      "chars": 139477,
+      "lines": 3213,
+      "chars": 139418,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -1068,8 +1068,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2658,
-      "chars": 109930,
+      "lines": 2627,
+      "chars": 108807,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -1256,8 +1256,8 @@
     },
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
-      "lines": 665,
-      "chars": 46276,
+      "lines": 664,
+      "chars": 45894,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1352,8 +1352,6 @@
         "exDetailsChev",
         "exDetailsSum",
         "exDetailsToggle",
-        "exDual",
-        "exDualRow",
         "exeWish",
         "exitDrop",
         "exitFinishToday",
@@ -1577,7 +1575,6 @@
         "toggleAiRotate",
         "toggleAiSplit",
         "toggleExerciseDetails",
-        "toggleExerciseDualProgression",
         "toggleExerciseLevelScale",
         "toggleExerciseMenu",
         "toggleExercisePerSide",
