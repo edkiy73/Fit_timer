@@ -73,29 +73,39 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await run();
   ok('нагрузка не выросла сама по достижении порога',
      (await reps()) === 10, 'reps=' + (await reps()));
-  ok('экран финала спрашивает про повышение', await page.isVisible('#finProgCheck'));
-  ok('список упражнений свёрнут по умолчанию', !(await page.isVisible('#finProgCheckList')));
+  ok('экран финала предлагает повышение', await page.isVisible('#finProgCheck'));
+  ok('карточки изменений видны сразу', await page.isVisible('#finProgCheckList'));
+  const firstCard = await page.locator('.fpc-card').first().textContent();
+  ok('карточка показывает упражнение и точное сейчас → будет',
+    /Присед/.test(firstCard) && /10/.test(firstCard) && /11/.test(firstCard) && /→/.test(firstCard),
+    firstCard);
+  ok('главная кнопка говорит применить изменения',
+    /Применить изменения/.test(await page.textContent('#finProgCheckYes')),
+    await page.textContent('#finProgCheckYes'));
 
-  await page.click('#finProgCheckToggle');
-  ok('«где-то было тяжело» разворачивает список', await page.isVisible('#finProgCheckList'));
-  const chipText = await page.textContent('.fpc-chip');
-  ok('в списке названо нужное упражнение', /Присед/.test(chipText), chipText);
-
-  // ---- отмечаем «тяжело» и подтверждаем: рост не применяется ----
-  await page.click('.fpc-chip');
+  // ---- оставляем упражнение без изменений и подтверждаем: рост не применяется ----
+  await page.click('.fpc-card');
+  ok('исключение явно подписано «Без изменений»',
+    /Без изменений/.test(await page.locator('.fpc-card').first().textContent()));
   await page.click('#finProgCheckYes');
   await page.waitForTimeout(300);
-  ok('отмеченное «тяжело» упражнение не растёт', (await reps()) === 10, 'reps=' + (await reps()));
+  ok('оставленное без изменений упражнение не растёт', (await reps()) === 10, 'reps=' + (await reps()));
   ok('после подтверждения виден статус «готово»', await page.isVisible('#finProgCheckDone'));
-  ok('кнопка «Да, повышаем» скрыта после подтверждения', !(await page.isVisible('#finProgCheckAsk')));
+  ok('карточки и кнопка скрыты после подтверждения', !(await page.isVisible('#finProgCheckAsk')));
+  const firstDone = await page.textContent('#finProgCheckDone');
+  ok('итог показывает сколько повышено и сколько оставлено',
+    /Повышено:\s*0/.test(firstDone) && /Без изменений:\s*1/.test(firstDone), firstDone);
 
   // ---- тренировка 2: снова достигнут порог (счётчик не сбрасывался для «тяжело») ----
   await run();
   ok('проверка вернулась на следующей тренировке', await page.isVisible('#finProgCheck'));
-  await page.click('#finProgCheckYes'); // на этот раз ничего не отмечаем
+  await page.click('#finProgCheckYes'); // на этот раз ничего не оставляем
   await page.waitForTimeout(300);
-  ok('без отметки «тяжело» нагрузка растёт по «Да, повышаем»',
+  ok('без исключения нагрузка растёт после «Применить изменения»',
      (await reps()) === 11, 'reps=' + (await reps()));
+  const secondDone = await page.textContent('#finProgCheckDone');
+  ok('итог подтверждает применённое повышение',
+    /Повышено:\s*1/.test(secondDone) && /Без изменений:\s*0/.test(secondDone), secondDone);
 
   // ---- тренировка 3: порог ещё не достигнут (реплика упражнения сброшена, progression не 1) ----
   await page.evaluate(async () => {
@@ -189,14 +199,13 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.waitForTimeout(400);
   ok('после «Засчитать» экран финала остаётся и спрашивает про повышение',
      await page.isVisible('#scrFinish') && await page.isVisible('#finProgCheck'));
-  await page.click('#finProgCheckToggle');
-  const chips = await page.$$eval('.fpc-chip', xs => xs.map(x => x.textContent));
-  ok('в проверке основные упражнения, а не разминка', chips.join('|') === 'Присед|Отжимания', chips.join('|'));
-  await page.click('.fpc-chip >> nth=0');
-  ok('после отметки список не сворачивается', await page.isVisible('#finProgCheckList'));
-  await page.click('.fpc-chip >> nth=1');
-  const marked = await page.$$eval('.fpc-chip.act', xs => xs.length);
-  ok('можно отметить два упражнения подряд', marked === 2, marked);
+  const names = await page.$eval('.fpc-card .fpc-name', xs => xs.map(x => x.textContent));
+  ok('в проверке основные упражнения, а не разминка', names.join('|') === 'Присед|Отжимания', names.join('|'));
+  await page.click('.fpc-card >> nth=0');
+  ok('после исключения список остаётся видимым', await page.isVisible('#finProgCheckList'));
+  await page.click('.fpc-card >> nth=1');
+  const marked = await page.$eval('.fpc-card.act', xs => xs.length);
+  ok('можно оставить два упражнения без изменений подряд', marked === 2, marked);
 
   ok('без ошибок в консоли', !errs.length, errs.join(' | '));
 
