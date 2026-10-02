@@ -119,6 +119,67 @@ const BULLETS = GOOD.split('\n').filter(Boolean).map(l => '- ' + l).join(' ');
   const same = await page.evaluate((t) => repairLines(t) === t, GOOD);
   ok('целый текст остаётся нетронутым', same);
 
+  // resistance — настоящий round-trip через тот же serializer/parser, которым
+  // пользуется AI-редактор программы.
+  const resistanceRt = await page.evaluate(() => {
+    const p = {
+      id:'resistance-rt', name:'Резинки', locale:'ru', progression:2,
+      plans:[{days:['Пн'], rounds:1, roundRest:30, exercises:[{
+        id:'band-1', name:'Тяга резинки', type:'reps', value:'12-15', sets:3, rest:60,
+        progOn:true, trackWeight:false, loadType:'level', progMode:'level',
+        loadLevels:[{key:'light'},{key:'medium'},{key:'strong'},{key:'veryStrong'}],
+        loadLevel:1, repsStep:2, repsMax:18, wStep:0
+      }]}]
+    };
+    const text = programToText(p);
+    const {program,errors} = parseProgramText(text);
+    const ex = program.plans[0].exercises[0];
+    return {
+      text, errors,
+      loadType:ex.loadType, progMode:ex.progMode, loadLevel:ex.loadLevel,
+      levels:(ex.loadLevels||[]).map(x=>x.key||x.label),
+      repsStep:ex.repsStep, repsMax:ex.repsMax,
+      hasWeight:/^ВЕС:/m.test(text)
+    };
+  });
+  ok('programToText сериализует resistance без килограммов',
+    /НАГРУЗКА: сопротивление/.test(resistanceRt.text)
+      && /СОПРОТИВЛЕНИЕ: Среднее/.test(resistanceRt.text)
+      && /УРОВНИ СОПРОТИВЛЕНИЯ: Лёгкое \| Среднее \| Сильное \| Очень сильное/.test(resistanceRt.text)
+      && !resistanceRt.hasWeight,
+    resistanceRt.text);
+  ok('resistance round-trip сохраняет ту же progression semantics',
+    !resistanceRt.errors.length
+      && resistanceRt.loadType === 'level'
+      && resistanceRt.progMode === 'level'
+      && resistanceRt.loadLevel === 1
+      && resistanceRt.levels.join(',') === 'light,medium,strong,veryStrong'
+      && resistanceRt.repsStep === 2
+      && resistanceRt.repsMax === 18,
+    JSON.stringify(resistanceRt));
+
+  const customRt = await page.evaluate(() => {
+    const p = {
+      id:'resistance-custom', name:'Мои резинки', locale:'en', progression:3,
+      plans:[{days:['Вт'], rounds:1, roundRest:0, exercises:[{
+        id:'band-custom', name:'Band row', type:'reps', value:'10-12', sets:2, rest:45,
+        progOn:true, trackWeight:false, loadType:'level', progMode:'level',
+        loadLevels:[{label:'Yellow 10 lb'},{label:'Red 20 lb'},{label:'Black 30 lb'}],
+        loadLevel:1, repsStep:0, repsMax:0, wStep:0
+      }]}]
+    };
+    const text = programToText(p);
+    const {program} = parseProgramText(text);
+    const ex = program.plans[0].exercises[0];
+    return {text, level:ex.loadLevel, labels:(ex.loadLevels||[]).map(x=>x.label||x.key), step:ex.repsStep};
+  });
+  ok('кастомные названия resistance round-trip сохраняются дословно',
+    /Yellow 10 lb \| Red 20 lb \| Black 30 lb/.test(customRt.text)
+      && customRt.level === 1
+      && customRt.labels.join('|') === 'Yellow 10 lb|Red 20 lb|Black 30 lb'
+      && customRt.step === 0,
+    JSON.stringify(customRt));
+
   console.log('\npageerror: ' + (errs.length ? errs.join(' | ') : 'нет'));
   if(errs.length) bad += errs.length;
   await b.close();
