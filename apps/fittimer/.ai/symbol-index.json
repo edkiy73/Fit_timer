@@ -745,8 +745,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 3381,
-      "chars": 147071,
+      "lines": 3382,
+      "chars": 147099,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -1082,8 +1082,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2627,
-      "chars": 108807,
+      "lines": 2641,
+      "chars": 109206,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -1270,8 +1270,8 @@
     },
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
-      "lines": 664,
-      "chars": 45919,
+      "lines": 665,
+      "chars": 46147,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1360,6 +1360,7 @@
         "exaMuscles",
         "exaWish",
         "exBackTop",
+        "exCeilingHint",
         "exCountNote",
         "exDesc",
         "exDetailsBox",
