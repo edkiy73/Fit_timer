@@ -177,6 +177,69 @@ function runWorkout(exercises, every){
     'normalizeExercise drops invalid loadType/progMode');
 }
 
+/* ---- ручной редактор: матрица доступных режимов и defaults ---- */
+{
+  const reps = mkEx('Без веса', {type:'reps', progOn:true, trackWeight:false});
+  need(progressionModeOptions(reps).join(',') === 'reps' && recommendedProgressionMode(reps) === 'reps',
+    'reps + no load exposes only reps progression');
+}
+{
+  const weighted = mkEx('Гантели', {type:'reps', progOn:true, trackWeight:true, weight:8,
+    repsStep:0, wStep:2});
+  need(progressionModeOptions(weighted).join(',') === 'double_range,weight,reps,parallel',
+    'reps + weight exposes all meaningful manual modes');
+  need(recommendedProgressionMode(weighted) === 'double_range',
+    'reps + weight recommends double_range');
+}
+{
+  const timed = mkEx('Планка', {type:'time', progOn:true, trackWeight:false});
+  need(progressionModeOptions(timed).join(',') === 'time' && recommendedProgressionMode(timed) === 'time',
+    'time + no load exposes time progression');
+}
+{
+  const carry = mkEx('Фермерская прогулка', {type:'time', progOn:true, trackWeight:true, weight:12,
+    timeStep:5, wStep:2});
+  need(progressionModeOptions(carry).join(',') === 'time,weight,parallel',
+    'time + weight exposes time, weight and parallel');
+  need(recommendedProgressionMode(carry) === 'time',
+    'time + weight recommends time by default');
+}
+{
+  const ex = mkEx('Новый жим', {type:'reps', progOn:true, trackWeight:false, repsStep:1});
+  setExerciseLoadType(ex, 'weight', true);
+  need(ex.loadType === 'weight' && ex.trackWeight && ex.progMode === 'double_range' && ex.dualProg,
+    'new reps exercise switches to recommended double_range when weight is added');
+  need(ex.repsStep > 0 && ex.wStep > 0 && ex.repsMax > parseValue(ex.value).max,
+    'double_range materializes valid rep/weight steps and a rep ceiling');
+}
+{
+  const ex = mkEx('Существующий жим', {type:'reps', progOn:true, trackWeight:true, weight:10,
+    repsStep:0, wStep:2, progMode:'weight', loadType:'weight'});
+  setExerciseLoadType(ex, 'weight', false);
+  need(ex.progMode === 'weight' && ex.repsStep === 0 && ex.wStep > 0,
+    'existing compatible manual mode is preserved');
+}
+{
+  const ex = mkEx('Смена на время', {type:'reps', progOn:true, trackWeight:true, weight:10,
+    repsStep:1, wStep:2, repsMax:14, progMode:'double_range', loadType:'weight', dualProg:true});
+  setExerciseMetric(ex, 'time', false);
+  need(ex.type === 'time' && ex.progMode === 'time' && !ex.dualProg && ex.timeStep > 0 && ex.wStep === 0,
+    'incompatible double_range falls back to recommended time when metric changes');
+}
+{
+  const ex = mkEx('Ручной parallel', {type:'reps', progOn:true, trackWeight:true, weight:10,
+    repsStep:1, wStep:2, progMode:'parallel', loadType:'weight'});
+  setExerciseProgressionMode(ex, 'parallel');
+  need(ex.progMode === 'parallel' && ex.repsStep > 0 && ex.wStep > 0 && !ex.dualProg,
+    'advanced parallel remains manually available');
+  setExerciseProgressionMode(ex, 'weight');
+  need(ex.progMode === 'weight' && ex.repsStep === 0 && ex.wStep > 0 && !ex.dualProg,
+    'weight-only zeroes rep growth without deleting weight settings');
+  setExerciseProgressionMode(ex, 'reps');
+  need(ex.progMode === 'reps' && ex.repsStep > 0 && ex.wStep === 0,
+    'reps-only zeroes weight growth but keeps weighted exercise format');
+}
+
 /* ---- pure compute/preview/apply: один источник расчёта ---- */
 {
   const ex = mkEx('Preview reps', {value:'10-12', type:'reps', progOn:true, trackWeight:false,
