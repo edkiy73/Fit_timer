@@ -19,6 +19,21 @@ describe('learner progress actions',()=>{
     expect(doc.learningDays['2026-09-28']).toBeTruthy();
   });
 
+  it('advances and rolls back the adaptive sentence stage without changing SRS semantics',()=>{
+    let doc=emptyCourseProgress();
+    doc=gradeCourseCard(doc,'sentence.a',false,100,'2026-09-28','2026-09-28T10:00:00Z','build');
+    expect(doc.cards['sentence.a']).toMatchObject({box:0,responseStage:'build',writeWrongStreak:0});
+
+    doc=gradeCourseCard(doc,'sentence.a',true,100,'2026-09-28','2026-09-28T10:01:00Z','build');
+    expect(doc.cards['sentence.a']).toMatchObject({box:1,responseStage:'write',writeWrongStreak:0});
+
+    doc=gradeCourseCard(doc,'sentence.a',false,101,'2026-09-29','2026-09-29T10:00:00Z','write');
+    expect(doc.cards['sentence.a']).toMatchObject({box:0,responseStage:'write',writeWrongStreak:1});
+
+    doc=gradeCourseCard(doc,'sentence.a',false,101,'2026-09-29','2026-09-29T10:01:00Z','write');
+    expect(doc.cards['sentence.a']).toMatchObject({box:0,responseStage:'build',writeWrongStreak:0});
+  });
+
   it('grades all explicit practice modes without legacy pat/voc/lis keys',()=>{
     let doc=emptyCourseProgress();
     doc=gradeCoursePractice(doc,'pattern.a','drill',true,100,'2026-09-28','2026-09-28T10:00:00Z');
