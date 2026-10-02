@@ -362,6 +362,15 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await savePrograms();
 
     openBuilder(program.id);
+    addExManual();
+    const manualDefault = {
+      progOn:$('exProgOn').classList.contains('on'),
+      summary:$('exProgSum').textContent.trim()
+    };
+
+    // Несохранённый новый exercise существует только в draft. Переоткрываем программу,
+    // чтобы следующие проверки работали с исходными audit-упражнениями.
+    openBuilder(program.id);
     openExercise(0);
     const weighted = {
       mode:$('exProgMode').value,
@@ -406,8 +415,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     $('exTypeTime').click();
     const offAfterMetric = !$('exProgOn').classList.contains('on');
 
-    return {weighted,resistance,reordered,replaced,offBefore,offAfterLoad,offAfterMetric};
+    return {manualDefault,weighted,resistance,reordered,replaced,offBefore,offAfterLoad,offAfterMetric};
   });
+  ok('новое ручное упражнение не включает прогрессию само',
+    !progressionEditor.manualDefault.progOn
+      && /без прогрессии/i.test(progressionEditor.manualDefault.summary),
+    JSON.stringify(progressionEditor.manualDefault));
   ok('«Повторы → вес» объясняет переход на вес и сброс диапазона',
     progressionEditor.weighted.mode === 'double_range'
       && /потолк/i.test(progressionEditor.weighted.modeHint)
