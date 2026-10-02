@@ -850,18 +850,28 @@ export function uniqueExerciseIds(p){
 }
 const SAFE_LOAD_LEVEL_KEYS = new Set(['light','medium','strong','veryStrong']);
 function sanitizeLoadLevels(raw){
-  const out = [];
+  const out = [], seen = new Set();
+  const cleanLabel = value => clampLine(value, 60).replace(/\|+/g, ' / ').replace(/\s+/g, ' ').trim();
+  const push = level => {
+    if(!level || out.length >= 12) return;
+    const key = level.key
+      ? 'k:' + level.key
+      : 'l:' + String(level.label || '').trim().toLocaleLowerCase();
+    if(seen.has(key)) return;
+    seen.add(key);
+    out.push(level);
+  };
   (Array.isArray(raw) ? raw : []).forEach(item => {
     if(out.length >= 12) return;
     if(typeof item === 'string'){
-      const label = clampLine(item, 60);
-      if(label) out.push({label});
+      const label = cleanLabel(item);
+      if(label) push({label});
       return;
     }
     if(!item || typeof item !== 'object') return;
-    if(SAFE_LOAD_LEVEL_KEYS.has(item.key)){ out.push({key:item.key}); return; }
-    const label = clampLine(item.label, 60);
-    if(label) out.push({label});
+    if(SAFE_LOAD_LEVEL_KEYS.has(item.key)){ push({key:item.key}); return; }
+    const label = cleanLabel(item.label);
+    if(label) push({label});
   });
   return out;
 }
