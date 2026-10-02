@@ -25,6 +25,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "apiPost",
   "appLocale",
   "applyAndroidUpdateConfig",
+  "applyProgressionAll",
   "applyExEdit",
   "applyThemeFor",
   "applyMedia",

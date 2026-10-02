@@ -107,7 +107,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
           {label:'A'.repeat(500)},
           {key:'medium'},
           {key:'javascript'},
-          '<img src=x onerror=alert(1)>'
+          '<img src=x onerror=alert(1)>',
+          {label:'Red|15 lb'},
+          {label:'red / 15 lb'}
         ],
         loadLevel:999,
         ps:{n:999999,cur:{reps:'12-15',level:999,kg:999999}}
@@ -122,16 +124,17 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     };
   });
   ok('чужая шкала сопротивления очищается и ограничивается',
-    levelSafe.levels.length === 3
+    levelSafe.levels.length === 4
       && levelSafe.levels[0].label.length === 60
       && levelSafe.levels[1].key === 'medium'
-      && levelSafe.levels[2].label === '<img src=x onerror=alert(1)>',
+      && levelSafe.levels[2].label === '<img src=x onerror=alert(1)>'
+      && levelSafe.levels[3].label === 'Red / 15 lb',
     JSON.stringify(levelSafe.levels));
   ok('индекс resistance и ps.cur.level не выходят за границы шкалы',
-    levelSafe.loadLevel === 2 && levelSafe.ps.cur.level === 2 && levelSafe.ps.n === 9999,
+    levelSafe.loadLevel === 3 && levelSafe.ps.cur.level === 3 && levelSafe.ps.n === 9999,
     JSON.stringify(levelSafe));
   ok('лишний kg в level-state не влияет на сохранность уровня',
-    levelSafe.ps.cur.kg === 500 && levelSafe.ps.cur.level === 2,
+    levelSafe.ps.cur.kg === 500 && levelSafe.ps.cur.level === 3,
     JSON.stringify(levelSafe.ps.cur));
 
   /* ---- картинка обязана быть картинкой ---- */

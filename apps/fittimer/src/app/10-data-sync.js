@@ -1857,12 +1857,16 @@ export function workoutSessionSignature(cur){
   const stepKey = s => {
     if(!s || typeof s !== 'object') return ['?'];
     if(s.phase === 'work'){
-      return ['w', String(s.exId || ''), String(s.exName || s.title || ''),
+      const key = ['w', String(s.exId || ''), String(s.exName || s.title || ''),
         String(s.kind || ''), Number(s.setNo) || 1, Number(s.setsTotal) || 1,
         Number(s.side) || 0, Number(s.sidesTotal) || 0,
         s.reps == null ? '' : String(s.reps),
         Number(s.seconds) || 0, Number(s.weight) || 0,
         s.loadLevel == null ? '' : Number(s.loadLevel) || 0];
+      // Не добавляем пустое поле: подпись старых/non-resistance сессий остаётся
+      // совместимой. Для resistance это именно стабильная physical identity.
+      if(s.loadKey) key.push(String(s.loadKey));
+      return key;
     }
     return ['r', String(s.kind || ''), Number(s.seconds) || 0,
       s.sideSwitch ? 1 : 0, s.roundRest ? 1 : 0];
@@ -2494,6 +2498,10 @@ export function customToProgram(p, planIdx = 0){
       loadType,
       loadLevel: levelState && Number.isFinite(+levelState.level) ? Math.max(0, Math.round(+levelState.level)) : null,
       loadLabel: levelState ? String(levelState.label || '') : '',
+      // identity отличается от локализованной подписи: built-in resistance хранит
+      // стабильный key, custom scale — физический label. Так RU↔EN не ломает resume,
+      // а замена «Красная» на «Чёрная» на том же numeric index считается новой нагрузкой.
+      loadKey: levelState ? String(levelState.identity || '') : '',
       exName: ex.name,
       exId: ex.id || ''  // по id проверка прогресса узнаёт, до каких упражнений дошла тренировка
     };

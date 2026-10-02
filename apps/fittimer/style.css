@@ -442,7 +442,7 @@ body.booting .app{visibility:hidden}
   .row2 .field{flex:1;min-width:0}
   .seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
   .seg button{flex:1;background:none;border:none;color:var(--muted);padding:10px;font-family:var(--font-text);font-size:14px;cursor:pointer}
-  .seg3 button{padding:8px 4px;font-size:12px;line-height:1.25}
+  .seg3 button{min-height:44px;padding:8px 4px;font-size:12px;line-height:1.25}
   .seg button.act{background:var(--work);color:var(--on-accent)}
   .media-row{display:flex;flex-wrap:wrap;gap:8px}
   /* три кнопки в ряд (фото · через ИИ · убрать): ширина по подписи, без переноса строк */

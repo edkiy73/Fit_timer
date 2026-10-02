@@ -52,10 +52,10 @@ import { addClient, curClient, doPublish, loadStoreServer, openClient, openMyCat
 } from './50-trainer-catalog.js';
 import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExerciseAsNew,
   commitExercise, commitPlanFields, curPlan, delExerciseAt, draft, dropFreshEx, dupExerciseAt,
-  clearExerciseDraft, exDirty, exDraft, exIdx, exIsNew, exerciseResistanceScaleOk, fillPlanFields, markExerciseExisting, hasWeight, initAIForm, normValue, openBuilder, programHasProgression,
+  clearExerciseDraft, exDirty, exDraft, exIdx, exIsNew, exerciseProgressionConfigOk, exerciseResistanceScaleOk, fillPlanFields, markExerciseExisting, hasWeight, initAIForm, normValue, openBuilder, programHasProgression,
   openExercise, parseProgramText, parseStepNum, parseValue, planIdx, programDirty, renderExList, renderExMedia,
   renderProgControls, saveProgram, selectPlanVariant, setExerciseLoadType, setExerciseMetric, shrinkImage, syncCover, syncExDetailsSum, syncExNowHints,
-  syncExProgSum, syncExType, syncExWarm, syncRotateUI
+  syncExProgSum, syncExSwapAvailability, syncExType, syncExWarm, syncRotateUI
 , setBuilderEventHooks } from './60-builder.js';
 import { afterExChange, applyProgCheck, autoGrow, backToWorkout, buildSteps, closeSwapHint, esc,
   completeStep, exFromWork, finishPartialWorkout, nextStep, openSwapHint, prevStep, refreshDetailsFade, saveExToWorkout,
@@ -150,7 +150,8 @@ function registerEventActions(){
       });
       return;
     }
-    if(!numFieldsOk('scrExercise') || !exNameOk()) return;
+    if(!numFieldsOk('scrExercise') || !exNameOk()
+      || !exerciseResistanceScaleOk(true) || !exerciseProgressionConfigOk(true)) return;
     markExerciseExisting();
     const list = curPlan().exercises;
     if(list[exIdx]) list[exIdx] = commitExercise();
@@ -185,7 +186,8 @@ function registerEventActions(){
   });
   registerAction('backFromExercise', () => leaveExercise());
   registerAction('saveExercise', () => {
-    if(numFieldsOk('scrExercise') && exNameOk() && exerciseResistanceScaleOk(true)) saveExAndBack();
+    if(numFieldsOk('scrExercise') && exNameOk()
+      && exerciseResistanceScaleOk(true) && exerciseProgressionConfigOk(true)) saveExAndBack();
   });
   registerAction('setExerciseType', btn => {
     setExerciseMetric(exDraft, btn.dataset.exType === 'time' ? 'time' : 'reps', exIsNew);
@@ -1794,6 +1796,12 @@ export function addExManual(){
   const nWarm = list.filter(e => e.warmup).length;
   if(list.length - nWarm >= MAX_MAIN){ appAlert(t('exercise.mainLimitAdd',{count:MAX_MAIN})); return; }
   const ex = blankExercise();
+  // В ручном редакторе прогрессия — осознанный opt-in. blankExercise хранит
+  // compatibility-дефолты для parser/legacy, поэтому выключаем её именно здесь,
+  // не меняя семантику старых и AI-созданных упражнений.
+  ex.progOn = false;
+  ex.loadType = 'none';
+  ex.trackWeight = false;
   // наследуем формат, подходы и отдых у предыдущего — при сборке они обычно одинаковые
   const prev = list.filter(e => !e.warmup).slice(-1)[0];
   if(prev){ ex.type = prev.type; ex.sets = prev.sets || 1; ex.rest = prev.rest; ex.value = prev.value; }
@@ -1825,7 +1833,8 @@ function dupExercise(){
       : t('exercise.mainLimitDuplicate',{count:MAX_MAIN}));
     return;
   }
-  if(!numFieldsOk('scrExercise') || !exNameOk()) return;
+  if(!numFieldsOk('scrExercise') || !exNameOk()
+    || !exerciseResistanceScaleOk(true) || !exerciseProgressionConfigOk(true)) return;
   if(list[exIdx]) list[exIdx] = commitExercise();
   list.splice(exIdx + 1, 0, cloneExerciseAsNew(list[exIdx]));
   clearExerciseDraft();
@@ -2314,10 +2323,18 @@ export function initEvents(){
   // явный 0 в шаге (значит «эта ось не растёт») JS воспримет как «не задано» и
   // подставит дефолт заново
   ['exStepReps','exStepWeight','exStepTime','exMaxReps','exMaxWeight','exMaxTime'].forEach(id => {
-    $(id).oninput = ()=>{ $(id).dataset.touched = '1'; syncExProgSum(); syncExNowHints(); };
+    $(id).oninput = ()=>{
+      $(id).dataset.touched = '1';
+      syncExProgSum();
+      syncExNowHints();
+      syncExSwapAvailability();
+    };
   });
-  // база поменялась — итог пересчитывается тут же, иначе подсказка врёт до сохранения
-  ['exValue','exWeight'].forEach(id => $(id).addEventListener('input', syncExNowHints));
+  // база поменялась — итог и достижимость потолка пересчитываются тут же
+  ['exValue','exWeight'].forEach(id => $(id).addEventListener('input', ()=>{
+    syncExNowHints();
+    syncExSwapAvailability();
+  }));
   $('exSwapName').oninput = e => { exDraft.swapName = e.target.value; };
   $('exSwapDesc').oninput = e => { exDraft.swapDesc = e.target.value; };
   $('exDesc').oninput = e => { exDraft.desc = e.target.value; syncExDetailsSum(); };

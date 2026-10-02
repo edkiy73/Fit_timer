@@ -69,6 +69,23 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('заголовок раздела — цель не ниже 44 точек', heads.every(h => h.h >= 44), JSON.stringify(heads));
   ok('отступ скомпенсирован отрицательным полем', heads.every(h => h.pad === '13px' && h.margin === '-13px'));
 
+  // ---- трёхсегментные переключатели: и читаются, и остаются нормальной целью для пальца ----
+  const seg3 = await page.evaluate(() => {
+    const load = document.querySelector('#exLoadNone')?.parentElement;
+    const buttons = load ? [...load.querySelectorAll('button')] : [];
+    return {
+      cls:load ? load.className : '',
+      heights:buttons.map(x => Math.round(x.getBoundingClientRect().height)),
+      overflow:load ? Math.round(load.scrollWidth - load.clientWidth) : 999,
+      pageOverflow:Math.round(document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    };
+  });
+  ok('три варианта нагрузки — цели не ниже 44 точек',
+    /\bseg3\b/.test(seg3.cls) && seg3.heights.length === 3 && seg3.heights.every(h => h >= 44),
+    JSON.stringify(seg3));
+  ok('три варианта нагрузки не раздвигают экран на 360 px',
+    seg3.overflow <= 1 && seg3.pageOverflow <= 1, JSON.stringify(seg3));
+
   ok('без ошибок на странице', !errs.length, errs.join(' | '));
   await b.close();
   console.log(bad ? `\nПровалено: ${bad}` : '\nЦели для пальца: ok');

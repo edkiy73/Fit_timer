@@ -1215,6 +1215,7 @@ function renderProgCheck(){
     const card = document.createElement('button');
     card.type = 'button';
     card.className = 'fpc-card' + (keep ? ' act' : '');
+    card.setAttribute('aria-pressed', keep ? 'true' : 'false');
     card.dataset.act = 'toggleProgressionHard';
     card.dataset.exerciseId = ex.id;
 
@@ -1927,6 +1928,7 @@ export function initWorkout(){
     else chk.hard.add(id);
     const keep = chk.hard.has(id);
     btn.classList.toggle('act', keep);
+    btn.setAttribute('aria-pressed', keep ? 'true' : 'false');
     const action = btn.querySelector('.fpc-action');
     if(action) action.textContent = t(keep ? 'finish.progCheckKept' : 'finish.progCheckKeep');
   });

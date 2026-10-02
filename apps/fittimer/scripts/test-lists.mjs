@@ -33,6 +33,6 @@ export const BROWSER_TESTS = [
   'csp', 'parse-flat', 'start-overview', 'notifications', 'workout-resume', 'partial-workout', 'profile-switch', 'quick-finish', 'update-banner',
   'storage-idb', 'ai-image-buttons', 'ai-generation-guards', 'program-actions', 'nav-flow', 'nav-transitions',
   'limits', 'link-length', 'tap-targets', 'stale-deploy', 'store-page', 'backup-flow', 'media-flow', 'catalog-flow',
-  'report-auto', 'report-detail', 'prog-check-flow', 'ai-edit-carry', 'voice-test-ui', 'trainer-page', 'trainer-feedback', 'sync-flow', 'account-flow'
+  'report-auto', 'report-detail', 'prog-check-flow', 'progression-editor-flow', 'progression-migration-flow', 'ai-edit-carry', 'voice-test-ui', 'trainer-page', 'trainer-feedback', 'sync-flow', 'account-flow'
 ];
 

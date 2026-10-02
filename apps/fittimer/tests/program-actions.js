@@ -335,6 +335,137 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       && Object.keys(resistanceUpdate.changed.cur || {}).length === 0,
     JSON.stringify(resistanceUpdate.changed));
 
+  // ---- UX ручного редактора прогрессии ----
+  const progressionEditor = await page.evaluate(async () => {
+    const program = {
+      id:'progression-editor-audit', name:'Редактор прогрессии', progression:0,
+      plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[
+        {
+          id:'double-audit',name:'Махи',type:'reps',value:'8-10',sets:3,rest:45,
+          loadType:'weight',trackWeight:true,weight:5,progOn:true,progMode:'double_range',
+          dualProg:true,repsStep:1,repsMax:14,wStep:1,weightMax:12,progEvery:null
+        },
+        {
+          id:'level-audit',name:'Тяга резинки',type:'reps',value:'12-15',sets:3,rest:45,
+          loadType:'level',progOn:true,progMode:'level',
+          loadLevels:[{key:'light'},{key:'medium'},{key:'strong'},{key:'veryStrong'}],
+          loadLevel:1,repsStep:2,repsMax:18,progEvery:2,
+          ps:{n:1,cur:{reps:'12-15',level:2}}
+        },
+        {
+          id:'off-audit',name:'Без автопрогрессии',type:'reps',value:'10',sets:2,rest:45,
+          loadType:'none',progOn:false,progMode:'reps',repsStep:1,progEvery:null
+        }
+      ]}]
+    };
+    customPrograms.push(program);
+    await savePrograms();
+
+    openBuilder(program.id);
+    addExManual();
+    const manualDefault = {
+      progOn:$('exProgOn').classList.contains('on'),
+      summary:$('exProgSum').textContent.trim()
+    };
+
+    // Несохранённый новый exercise существует только в draft. Переоткрываем программу,
+    // чтобы следующие проверки работали с исходными audit-упражнениями.
+    openBuilder(program.id);
+    openExercise(0);
+    const weighted = {
+      mode:$('exProgMode').value,
+      modeHint:$('exProgModeHint').textContent.trim(),
+      freqHint:$('exProgOnHint').textContent.trim(),
+      seg3:$('exLoadNone').parentElement.classList.contains('seg3'),
+      loadButtonHeight:$('exLoadNone').getBoundingClientRect().height,
+      ceilingHint:$('exCeilingHint').textContent.trim(),
+      swapVisible:!$('exSwapRow').classList.contains('hidden')
+    };
+    $('exMaxWeight').value = '';
+    $('exMaxWeight').dispatchEvent(new Event('input',{bubbles:true}));
+    weighted.swapWithoutWeightMax = !$('exSwapRow').classList.contains('hidden');
+
+    openExercise(1);
+    const resistance = {
+      baseValue:$('exLoadLevel').value,
+      baseLabel:$('exLoadLevel').selectedOptions[0] && $('exLoadLevel').selectedOptions[0].textContent.trim(),
+      nowHint:$('exNowHint').textContent.trim(),
+      nowVisible:!$('exNowHint').classList.contains('hidden')
+    };
+
+    // Перестановка тех же физических ступеней должна сохранить и BASE, и CURRENT
+    // по key/label, а не по старому numeric index.
+    $('exLoadLevels').value = 'Очень сильное\nСильное\nСреднее\nЛёгкое';
+    $('exLoadLevels').dispatchEvent(new Event('change',{bubbles:true}));
+    const reordered = {
+      baseLabel:$('exLoadLevel').selectedOptions[0] && $('exLoadLevel').selectedOptions[0].textContent.trim(),
+      nowHint:$('exNowHint').textContent.trim(),
+      nowVisible:!$('exNowHint').classList.contains('hidden')
+    };
+
+    // Полностью другая физическая шкала несовместима со старым current level:
+    // BASE становится первой новой ступенью, текущая прогрессия уровня сбрасывается.
+    $('exLoadLevels').value = 'Красная\nЧёрная';
+    $('exLoadLevels').dispatchEvent(new Event('change',{bubbles:true}));
+    const replaced = {
+      baseLabel:$('exLoadLevel').selectedOptions[0] && $('exLoadLevel').selectedOptions[0].textContent.trim(),
+      nowHint:$('exNowHint').textContent.trim(),
+      nowVisible:!$('exNowHint').classList.contains('hidden')
+    };
+
+    openExercise(2);
+    const offBefore = !$('exProgOn').classList.contains('on');
+    $('exLoadWeight').click();
+    const offAfterLoad = !$('exProgOn').classList.contains('on');
+    $('exTypeTime').click();
+    const offAfterMetric = !$('exProgOn').classList.contains('on');
+
+    return {manualDefault,weighted,resistance,reordered,replaced,offBefore,offAfterLoad,offAfterMetric};
+  });
+  ok('новое ручное упражнение не включает прогрессию само',
+    !progressionEditor.manualDefault.progOn
+      && /(без прогрессии|не растёт)/i.test(progressionEditor.manualDefault.summary),
+    JSON.stringify(progressionEditor.manualDefault));
+  ok('«Повторы → вес» объясняет переход на вес и сброс диапазона',
+    progressionEditor.weighted.mode === 'double_range'
+      && /потолк/i.test(progressionEditor.weighted.modeHint)
+      && /стартов/i.test(progressionEditor.weighted.modeHint),
+    JSON.stringify(progressionEditor.weighted));
+  ok('включённая прогрессия без общей частоты не называется отключённой',
+    /Частота не задана/.test(progressionEditor.weighted.freqHint)
+      && !/прогрессия отключена/i.test(progressionEditor.weighted.freqHint),
+    progressionEditor.weighted.freqHint);
+  ok('три типа нагрузки используют компактный mobile segment',
+    progressionEditor.weighted.seg3, JSON.stringify(progressionEditor.weighted));
+  ok('mobile selector нагрузки сохраняет нормальный touch-target',
+    progressionEditor.weighted.loadButtonHeight >= 44,
+    JSON.stringify(progressionEditor.weighted));
+  ok('замена более сложным упражнением доступна только при достижимом потолке',
+    progressionEditor.weighted.swapVisible
+      && !progressionEditor.weighted.swapWithoutWeightMax
+      && /пуст/i.test(progressionEditor.weighted.ceilingHint)
+      && /(потол|предел)/i.test(progressionEditor.weighted.ceilingHint),
+    JSON.stringify(progressionEditor.weighted));
+  ok('редактор resistance показывает базовую ступень отдельно от текущей',
+    progressionEditor.resistance.baseValue === '1'
+      && /Среднее/.test(progressionEditor.resistance.baseLabel)
+      && progressionEditor.resistance.nowVisible
+      && /Сильное/.test(progressionEditor.resistance.nowHint)
+      && /12.?15/.test(progressionEditor.resistance.nowHint),
+    JSON.stringify(progressionEditor.resistance));
+  ok('перестановка той же resistance-шкалы сохраняет физические base/current ступени',
+    /Среднее/.test(progressionEditor.reordered.baseLabel)
+      && progressionEditor.reordered.nowVisible
+      && /Сильное/.test(progressionEditor.reordered.nowHint),
+    JSON.stringify(progressionEditor.reordered));
+  ok('полная замена resistance-шкалы не переносит старый numeric current level',
+    /Красная/.test(progressionEditor.replaced.baseLabel)
+      && !progressionEditor.replaced.nowVisible,
+    JSON.stringify(progressionEditor.replaced));
+  ok('смена нагрузки и формата не включает выключенную прогрессию сама',
+    progressionEditor.offBefore && progressionEditor.offAfterLoad && progressionEditor.offAfterMetric,
+    JSON.stringify(progressionEditor));
+
   // у копии пункт «в каталог» уже есть — она своя
   const copyMenu = await page.evaluate(() => {
     const c = customPrograms[customPrograms.length - 1];
