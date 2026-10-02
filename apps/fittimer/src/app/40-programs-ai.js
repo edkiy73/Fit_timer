@@ -2538,6 +2538,23 @@ export function exePrompt(){
   ].join('\n\n');
 }
 
+function requestAllowsUnknownWeight(text){
+  return /(?:вес\s*[:=]?\s*0(?:[.,]0)?\b|0(?:[.,]0)?\s*кг\b|убер(?:и|ите).*вес|сброс(?:ь|ить|ьте).*вес|вес.*не\s*знаю|неизвестн.*вес|reset\s+(?:the\s+)?weight|clear\s+(?:the\s+)?weight|unknown\s+weight)/i.test(String(text || ''));
+}
+
+// Модель иногда превращает известный рабочий вес в ВЕС: 0, хотя 0 у нас означает
+// «снаряд ещё не выбран». Для ТОГО ЖЕ упражнения это потеря данных, а не решение.
+// Промт запрещает такое, но важное пользовательское состояние защищаем и после ответа.
+function preserveKnownWeightIfPlaceholder(oldEx, newEx, p, request){
+  if(!oldEx || !newEx || !p || requestAllowsUnknownWeight(request)) return false;
+  if(!builderProgramsHooks.hasWeight(oldEx) || !builderProgramsHooks.hasWeight(newEx)) return false;
+  const known = +builderProgramsHooks.getExWeight(p.id, oldEx, p) || 0;
+  if(!(known > 0) || (+newEx.weight || 0) > 0) return false;
+  newEx.weight = known;
+  if(newEx.ps && newEx.ps.cur) delete newEx.ps.cur.kg;
+  return true;
+}
+
 async function applyExEdit(){
   const raw=($('aiResult').value||'').trim();
   if(!raw){appAlert(builderProgramsHooks.msgAiEmpty());return;}
@@ -2558,6 +2575,7 @@ async function applyExEdit(){
   if(got.length!==1){appAlert(builderProgramsHooks.msgAiNoEx());return;}
   const upd=got[0];
   if(!upd.media&&oldEx.media)upd.media=oldEx.media;
+  preserveKnownWeightIfPlaceholder(oldEx, upd, builderDraft(), $('exeWish').value);
   // это правка, а не замена: то же самое упражнение сохраняет свой id, а
   // прогресс — если ИИ не менял его базовые числа (см. carryExerciseProgress)
   upd.id=oldEx.id;
@@ -2987,6 +3005,7 @@ async function createEditedProgram(){
     return;
   }
   const diff = FitAIProtocol.diffPrograms({plans: normPlans(editAIProg)}, {plans: newPlans});
+  diff.matches.forEach(({oldEx,newEx}) => preserveKnownWeightIfPlaceholder(oldEx, newEx, editAIProg, $('eaWish').value));
   // КОД — техническая метка сопоставления, в сохранённой программе ей делать нечего
   newPlans.forEach(pl => (pl.exercises || []).forEach(ex => { delete ex._code; }));
 
