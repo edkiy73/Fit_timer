@@ -156,6 +156,17 @@ function need(cond, msg){
     'exercise protocol exposes only resistance-specific new fields');
 }
 
+{
+  const rules = FitAIProtocol.progressionRules();
+  need(/ВЕС: 0 is a last-resort/.test(rules), 'AI treats zero weight as a last-resort placeholder, not a default');
+  need(/Never replace a known positive load with 0/.test(rules), 'AI preserves known positive working loads');
+  const edit = FitAIProtocol.editRules();
+  need(/existing positive working ВЕС/.test(edit) && /Never turn a known positive ВЕС into 0/.test(edit),
+    'edit rules protect known load from being zeroed');
+  const schema = FitAIProtocol.programSchema('Russian');
+  need(/ВРЕМЯ ВАРИАНТА: HH:MM/.test(schema), 'program schema documents per-variant time used by parser/serializer');
+}
+
 /* ---- carryExerciseFields: ответ ИИ используется как есть, добавляются только
    недостающие описательные поля из исходника ---- */
 {
