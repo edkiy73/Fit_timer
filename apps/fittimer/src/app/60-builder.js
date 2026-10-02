@@ -2997,6 +2997,7 @@ export function initBuilder(){
   setTrainerBuilderHooks({
     enableDrag,
     exRestAfter,
+    exerciseLoadLevelState,
     exerciseProgEvery,
     fmtKg,
     getExWeight,
@@ -3004,6 +3005,7 @@ export function initBuilder(){
     openBuilder,
     parseProgramText,
     parseValue,
+    progressionLoadType,
     progShort,
     progressedRepsRange,
     sortWarmFirst,
