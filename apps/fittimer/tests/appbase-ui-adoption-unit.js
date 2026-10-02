@@ -551,7 +551,7 @@ ok('trainer catalog and builder actions use registry',
   && builderJs.includes("registerAction('toggleAiChip'")
   && builderJs.includes("registerAction('toggleAiCard'")
   && builderJs.includes("registerAction('setScheduleMode'")
-  && builderJs.includes("registerAction('toggleBuilderProgression'"));
+  && !builderJs.includes("registerAction('toggleBuilderProgression'"));
 ok('trainer catalog and builder have no direct onclick wiring',
   !trainerCatalog.includes('.onclick')
   && !builderJs.includes('.onclick'));
@@ -562,7 +562,8 @@ ok('trainer catalog and builder static markup uses data-act',
   && shell.includes('id="siBuy" data-act="buyStoreItem"')
   && programsHtml.includes('data-act="setScheduleMode" data-mode="days"')
   && programsHtml.includes('data-act="setScheduleMode" data-mode="rot"')
-  && programsHtml.includes('id="bProgOn" data-act="toggleBuilderProgression"')
+  && programsHtml.includes('id="bProgEvery"')
+  && !programsHtml.includes('id="bProgOn"')
   && programsHtml.includes('id="qSplit" data-act="toggleAiSplit"')
   && programsHtml.includes('id="qRotate" data-act="toggleAiRotate"')
   && progressHtml.includes('id="restModalDone" data-act="applyCustomRest"'));
