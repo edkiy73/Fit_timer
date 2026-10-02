@@ -392,6 +392,7 @@
         <div class="seg">
           <button type="button" id="exLoadNone" data-act="setExerciseLoadType" data-load-type="none" data-i18n="builder.loadNone">Без веса</button>
           <button type="button" id="exLoadWeight" data-act="setExerciseLoadType" data-load-type="weight" data-i18n="builder.loadWeight">Вес</button>
+          <button type="button" id="exLoadLevelType" data-act="setExerciseLoadType" data-load-type="level" data-i18n="builder.loadLevel">Сопротивление</button>
         </div>
         <p class="field-hint" id="exLoadHint"></p>
       </div>
@@ -400,6 +401,21 @@
         <div class="field" id="exSetsField"><label data-i18n="builder.sets">Подходов подряд</label><input type="number" id="exSets" min="1" max="10" inputmode="numeric" placeholder="Например: 3" data-i18n-placeholder="builder.setsExample"></div>
       </div>
       <div class="field hidden" id="exWeightRow"><label data-i18n="builder.weightKg">Вес, кг</label><input type="text" id="exWeight" maxlength="7" inputmode="decimal" placeholder="Например: 8" data-i18n-placeholder="builder.weightExample"></div>
+      <div class="stack hidden" id="exLevelRow">
+        <div class="field">
+          <label data-i18n="builder.resistanceCurrent">Сопротивление</label>
+          <select id="exLoadLevel"></select>
+          <p class="field-hint" data-i18n="builder.resistanceCurrentHint">Выбирай понятную физическую ступень, а не абстрактный номер уровня.</p>
+        </div>
+        <button type="button" class="btn-ghost" data-act="toggleExerciseLevelScale" data-i18n="builder.resistanceConfigure">Настроить шкалу</button>
+        <div class="stack hidden" id="exLevelScaleBox">
+          <div class="field">
+            <label data-i18n="builder.resistanceScale">Шкала сопротивления — от лёгкого к тяжёлому</label>
+            <textarea id="exLoadLevels" maxlength="720" rows="4" placeholder="Лёгкое&#10;Среднее&#10;Сильное&#10;Очень сильное" data-i18n-placeholder="builder.resistanceScalePlaceholder"></textarea>
+            <p class="field-hint" data-i18n="builder.resistanceScaleHint">Один уровень на строку. Можно написать цвет резинки, номер, диапазон lb или любое своё понятное название.</p>
+          </div>
+        </div>
+      </div>
       <p class="field-hint hidden" id="exNowHint"></p>
       <!-- Два разных отдыха: между подходами ОДНОГО упражнения обычно короче, чем
            после него целиком — например, дальше идёт совсем другая группа мышц,
