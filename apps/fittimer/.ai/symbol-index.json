@@ -141,8 +141,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2747,
-      "chars": 127130,
+      "lines": 2755,
+      "chars": 127689,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -658,8 +658,8 @@
     },
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
-      "lines": 1940,
-      "chars": 88644,
+      "lines": 2012,
+      "chars": 90953,
       "symbols": [
         "add",
         "addClient",
@@ -719,6 +719,7 @@
         "renderStoreFilters",
         "renderTrainerCard",
         "resendProgram",
+        "resistanceSnapshot",
         "sendProgramToClient",
         "setTrainerBuilderHooks",
         "setTrainerEventHooks",
@@ -728,6 +729,7 @@
         "siPaintMedia",
         "skeletonTrainer",
         "snapshotEx",
+        "snapshotExercise",
         "storeAll",
         "storeCat",
         "storeCountText",
@@ -741,8 +743,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 3213,
-      "chars": 139418,
+      "lines": 3240,
+      "chars": 140671,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -858,6 +860,7 @@
         "progressionChanged",
         "progressionCurrentState",
         "progressionLoadType",
+        "progressionModeHintKey",
         "progressionModeLabel",
         "progressionModeOptions",
         "progressionStateLabel",
@@ -1257,7 +1260,7 @@
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
       "lines": 664,
-      "chars": 45894,
+      "chars": 45919,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1387,6 +1390,7 @@
         "exProgEvery",
         "exProgEveryRow",
         "exProgMode",
+        "exProgModeHint",
         "exProgModeRow",
         "exProgOn",
         "exProgOnHint",
