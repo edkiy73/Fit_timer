@@ -201,6 +201,36 @@ function parsedResistanceScaleText(raw){
     .map(x=>clampLine(x.trim(),60)).filter(Boolean);
   return cleanLoadLevels(rows, false);
 }
+function protocolLevelNorm(raw){
+  return String(raw || '').trim().toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ');
+}
+function protocolLoadLevelItem(raw){
+  const label = clampLine(String(raw || '').trim(), 60);
+  const v = protocolLevelNorm(label);
+  if(v === 'легкое' || v === 'light') return {key:'light'};
+  if(v === 'среднее' || v === 'medium') return {key:'medium'};
+  if(v === 'сильное' || v === 'strong') return {key:'strong'};
+  if(v === 'очень сильное' || v === 'very strong') return {key:'veryStrong'};
+  return label ? {label} : null;
+}
+function parseProtocolLoadLevels(raw){
+  return cleanLoadLevels(String(raw || '').split('|').map(protocolLoadLevelItem).filter(Boolean), false);
+}
+function protocolLoadLevelIndex(levels, raw){
+  const wanted = protocolLevelNorm(raw);
+  if(!wanted || !Array.isArray(levels)) return 0;
+  const aliases = {
+    light:['легкое','light'],
+    medium:['среднее','medium'],
+    strong:['сильное','strong'],
+    veryStrong:['очень сильное','very strong']
+  };
+  const i = levels.findIndex(level => {
+    if(level && level.label) return protocolLevelNorm(level.label) === wanted;
+    return !!(level && level.key && (aliases[level.key] || []).includes(wanted));
+  });
+  return i >= 0 ? i : 0;
+}
 export function exerciseResistanceScaleOk(showError=true){
   if(!exDraft || progressionLoadType(exDraft) !== 'level') return true;
   const field = $('exLoadLevels');
@@ -1239,11 +1269,27 @@ function progBaseKey(ex){
     levelKey
   ].join('|');
 }
+function carriedProgressCounter(oldEx, newEx){
+  let n = Math.max(0, Math.round(+((oldEx && oldEx.ps && oldEx.ps.n) || 0)));
+  if(newEx && newEx.progEvery != null){
+    const every = Math.max(0, Math.min(PROG_EVERY_MAX, Math.round(+newEx.progEvery || 0)));
+    if(every <= 0) return 0;
+    n = Math.min(n, every);
+  }
+  return n;
+}
 export function carryExerciseProgress(oldEx, newEx){
   if(!newEx) return newEx;
   if(!oldEx || !oldEx.ps){ delete newEx.ps; return newEx; }
-  if(progBaseKey(oldEx) === progBaseKey(newEx)) newEx.ps = JSON.parse(JSON.stringify(oldEx.ps));
-  else newEx.ps = {n: Math.max(0, Math.round(+oldEx.ps.n || 0)), cur: {}};
+  const n = carriedProgressCounter(oldEx, newEx);
+  if(progBaseKey(oldEx) === progBaseKey(newEx)){
+    newEx.ps = JSON.parse(JSON.stringify(oldEx.ps));
+    newEx.ps.n = n;
+  }else{
+    // Несовместимая база/тип/шкала: счётчик можно сохранить, фактическое
+    // значение нельзя. В частности level-index никогда не переезжает в другую шкалу.
+    newEx.ps = {n, cur:{}};
+  }
   return newEx;
 }
 // копия упражнения — отдельное упражнение: свой id (по нему сопоставляются
@@ -2316,10 +2362,46 @@ export function parseProgramText(txt){
     // вопреки ответу: «10 повторений × 8 кг» через три повышения превращалось
     // в «13 повторений × 14 кг».
     if(ex.trackWeight && ex.type !== 'time' && !ex._gotRepsStep) ex.repsStep = 0;
+    // Новые protocol labels превращаем в ту же semantic model, которую пишет
+    // ручной редактор. Порядок строк не важен: current label резолвим только здесь.
+    if(ex.loadType === 'level'){
+      ex.trackWeight = false;
+      ex.dualProg = false;
+      ex.wStep = 0;
+      ex.loadLevels = cleanLoadLevels(ex.loadLevels, true);
+      if(ex._rawLoadLevel != null) ex.loadLevel = protocolLoadLevelIndex(ex.loadLevels, ex._rawLoadLevel);
+      else ex.loadLevel = Math.max(0, Math.min(ex.loadLevels.length - 1, Math.round(+ex.loadLevel || 0)));
+      // Для reps+level раздельный ШАГ ПОВТОРОВ описывает цикл
+      // «повторы → сопротивление». Обычный ШАГ — только рост повторов при
+      // фиксированном сопротивлении. Для time аналогично: ШАГ = рост времени.
+      if(ex.type === 'time'){
+        ex.progMode = ex._gotGenericStep || ex._gotTimeStep ? 'time' : 'level';
+        if(ex.progMode === 'level') ex.timeStep = 0;
+      }else{
+        ex.progMode = ex._gotGenericStep ? 'reps' : 'level';
+        // Без строки ШАГ ПОВТОРОВ не придумываем скрытый рост повторов.
+        // AI-default обязан прислать её явно; отсутствие означает прямой переход resistance.
+        if(ex.progMode === 'level' && !ex._gotRepsStep) ex.repsStep = 0;
+      }
+    }else{
+      if(ex.loadType == null) ex.loadType = ex.trackWeight ? 'weight' : 'none';
+      // двойная прогрессия имеет смысл только с весом и потолком повторов —
+      // иначе неоткуда взяться моменту «повторы упёрлись, добавляем вес»
+      if(ex.dualProg && !(ex.trackWeight && ex.repsMax > 0)) ex.dualProg = false;
+      if(ex.type === 'time'){
+        if(ex.loadType === 'weight'){
+          const tGrow = ex.timeStep > 0, wGrow = ex.wStep > 0;
+          ex.progMode = tGrow && wGrow ? 'parallel' : (wGrow ? 'weight' : 'time');
+        }else ex.progMode = 'time';
+      }else if(ex.loadType === 'weight'){
+        const rGrow = ex.repsStep > 0, wGrow = ex.wStep > 0;
+        ex.progMode = ex.dualProg ? 'double_range' : (rGrow && wGrow ? 'parallel' : (wGrow ? 'weight' : 'reps'));
+      }else ex.progMode = 'reps';
+    }
+    delete ex._rawLoadLevel;
+    delete ex._gotGenericStep;
+    delete ex._gotTimeStep;
     delete ex._gotRepsStep;
-    // двойная прогрессия имеет смысл только с весом и потолком повторов —
-    // иначе неоткуда взяться моменту «повторы упёрлись, добавляем вес»
-    if(ex.dualProg && !(ex.trackWeight && ex.repsMax > 0)) ex.dualProg = false;
     // замена без названия — это просто пустой флаг, он ничего не покажет
     if(!(ex.swapName || '').trim()){ ex.swapOn = false; ex.swapName = ''; ex.swapDesc = ''; }
     else ex.swapOn = true;
@@ -2392,10 +2474,25 @@ export function parseProgramText(txt){
           const v = val.toLowerCase();
           cur.type = /врем|сек|time/.test(v) ? 'time' : 'reps';
           // «и вес» — отдельно от простого формата, у обеих осей (повторения и
-          // время): удержание с утяжелением, фермерская прогулка на время. Порядок
-          // важен: слово «вес» не должно случайно сработать на будущей строке
-          // УСЛОЖНЯТЬ, поэтому проверяем здесь и сразу.
-          if(/вес/.test(v)) cur.trackWeight = true;
+          // время): удержание с утяжелением, фермерская прогулка на время.
+          if(/вес/.test(v)){ cur.trackWeight = true; if(cur.loadType == null) cur.loadType = 'weight'; }
+        }
+        break;
+      case 'НАГРУЗКА':
+        if(cur){
+          const v = val.toLowerCase();
+          if(/сопротив|resistance|резин|band/.test(v)){ cur.loadType = 'level'; cur.trackWeight = false; }
+          else if(/вес|weight|кг|kg/.test(v)){ cur.loadType = 'weight'; cur.trackWeight = true; }
+          else if(/нет|none|без/.test(v)){ cur.loadType = 'none'; cur.trackWeight = false; }
+        }
+        break;
+      case 'СОПРОТИВЛЕНИЕ':
+        if(cur) cur._rawLoadLevel = val;
+        break;
+      case 'УРОВНИ СОПРОТИВЛЕНИЯ':
+        if(cur){
+          const levels = parseProtocolLoadLevels(val);
+          if(levels.length >= 2) cur.loadLevels = levels;
         }
         break;
       case 'ЗНАЧЕНИЕ': case 'ПОВТОРЕНИЯ': case 'СЕКУНДЫ':
@@ -2480,11 +2577,11 @@ export function parseProgramText(txt){
       // не резолвим сразу: ШАГ мог встретиться в тексте РАНЬШЕ строки ФОРМАТ, а его смысл
       // (кг / повторы / секунды) зависит именно от формата. Копим «сырым» и решаем один раз
       // при завершении упражнения — см. finalizeExercise ниже. Так порядок строк не важен.
-      case 'ШАГ': if(cur){ const n = parseStepNum(val); if(n != null) cur._rawStep = n; } break;
+      case 'ШАГ': if(cur){ const n = parseStepNum(val); if(n != null){ cur._rawStep = n; cur._gotGenericStep = true; } } break;
       // старые раздельные ключи шага — поддержаны для устойчивости к прежнему формату текста
       case 'ШАГ ВЕСА': if(cur){ const n = parseStepNum(val); cur.wStep = n != null ? Math.round(n * 2) / 2 : 2; } break;
       case 'ШАГ ПОВТОРОВ': if(cur){ const n = parseStepNum(val); cur.repsStep = n != null ? Math.round(n) : 1; cur._gotRepsStep = true; } break;
-      case 'ШАГ ВРЕМЕНИ': if(cur){ const n = parseStepNum(val); cur.timeStep = n != null ? Math.round(n) : 5; } break;
+      case 'ШАГ ВРЕМЕНИ': if(cur){ const n = parseStepNum(val); cur.timeStep = n != null ? Math.round(n) : 5; cur._gotTimeStep = true; } break;
       // потолок роста: выше него прогрессия не поднимает. Единый ключ ПОТОЛОК разбирается
       // по формату упражнения в finalizeExercise, раздельные — сразу
       case 'ПОТОЛОК': if(cur){ const n = parseStepNum(val); if(n != null) cur._rawMax = n; } break;
@@ -2879,6 +2976,9 @@ export function initBuilder(){
     getExProgValue,
     getExWeight,
     hasWeight,
+    progressionLoadType,
+    exerciseLoadLevels,
+    editorProgressionMode,
     importFromText,
     isDualProg,
     migrateLegacyDualRangeExercise,
