@@ -388,6 +388,10 @@ export function announceExercise(step, onDone){
     text += voiceIsEnglish()
       ? `, weight ${kg} ${voicePlural(Math.round(step.weight),'килограмм','килограмма','килограммов','kilogram','kilograms')}`
       : `, вес ${kg} ${plural(Math.round(step.weight), 'килограмм', 'килограмма', 'килограммов')}`;
+  } else if(step.loadLabel){
+    text += voiceIsEnglish()
+      ? `, resistance ${step.loadLabel}`
+      : `, сопротивление ${step.loadLabel}`;
   }
   speak(text, null, onDone);
 }
