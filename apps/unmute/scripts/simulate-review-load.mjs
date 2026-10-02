@@ -224,4 +224,5 @@ for(const s of scenarios){
     'max waiting '+s.summary.maxWaiting,
     'max attempts '+s.summary.maxReviewAttempts
   ].join(' | '));
+  console.error('  offered/day: '+s.days.map(day=>day.skipped?'·':day.offered).join(','));
 }
