@@ -2507,11 +2507,13 @@ function exerciseWorkingContext(p, ex){
 
 function compactProgramAIContext(p){
   if(!p) return '';
+  const plans = normPlans(p);
+  if(!plans.some(pl => (pl.exercises || []).length)) return '';
   const lines = [];
   lines.push('Program: ' + (p.name || '(untitled)'));
   if((p.desc || '').trim()) lines.push('Purpose/context: ' + p.desc.replace(/\s*\n+\s*/g, ' ').trim().slice(0, 500));
   lines.push('Default progression check: ' + (p.progression ? p.progression + ' completed executions per exercise' : 'off'));
-  normPlans(p).forEach((pl, pi) => {
+  plans.forEach((pl, pi) => {
     lines.push('Variant ' + (pi + 1) + ': rounds ' + (pl.rounds || 1) + ', round rest ' + (pl.roundRest || 0) + ' sec');
     (pl.exercises || []).forEach(ex => {
       lines.push('- ' + (ex.name || t('common.exerciseFallback')) + ': ' + exerciseWorkingContext(p, ex)
