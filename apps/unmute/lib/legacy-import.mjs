@@ -398,10 +398,21 @@ function attachCourseExamples(activities,lexicon){
   }
 }
 
-function responseModeForCourseDay(day){
-  if(day<=10)return 'build';
-  if(day<=24)return 'progressive';
-  return 'write';
+function applyIntradayResponseModes(node,activityById){
+  const sentenceActivities=node.activityIds
+    .map(id=>activityById.get(id))
+    .filter(activity=>activity&&(activity.type==='text-input'||activity.type==='translation'));
+  if(sentenceActivities.length===0)return;
+  if(sentenceActivities.length===1){
+    sentenceActivities[0].responseMode='progressive';
+    return;
+  }
+  const buildCount=Math.ceil(sentenceActivities.length*2/3);
+  sentenceActivities.forEach((activity,index)=>{
+    // First encounter: mostly chips. The final third is recall from the keyboard.
+    // Progressive cards become keyboard recall when they return in Review.
+    activity.responseMode=index<buildCount?'progressive':'write';
+  });
 }
 
 export function buildCourseSet(model,lexicon=null){
@@ -445,16 +456,11 @@ export function buildCourseSet(model,lexicon=null){
     previous=id;
   }
 
-  // Difficulty grows with the course: first arrange known words, then gradually recall them,
-  // and in the later part type the sentence without a word bank.
+  // Every learning day grows from recognition to recall inside the same session.
+  // Do not make whole weeks "chips only" or "typing only": that is both weaker practice
+  // and more tiring on mobile.
   const activityById=new Map(activities.map(activity=>[activity.id,activity]));
-  for(const node of nodes){
-    const mode=responseModeForCourseDay(node.dayIndex||1);
-    for(const activityId of node.activityIds){
-      const activity=activityById.get(activityId);
-      if(activity&&(activity.type==='text-input'||activity.type==='translation'))activity.responseMode=mode;
-    }
-  }
+  for(const node of nodes)applyIntradayResponseModes(node,activityById);
 
   if(lexicon)attachCourseExamples(activities,lexicon);
   // Learner-addressed past tense in both forms («работал(а)»), so a re-import keeps the fix.
