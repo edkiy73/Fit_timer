@@ -1338,6 +1338,46 @@ function carriedProgressCounter(oldEx, newEx){
   }
   return n;
 }
+
+function levelIdentityList(ex){
+  return exerciseLoadLevels(ex).map(loadLevelIdentity).filter(Boolean);
+}
+function samePhysicalLevelScale(oldEx, newEx){
+  if(progressionLoadType(oldEx) !== 'level' || progressionLoadType(newEx) !== 'level') return false;
+  if((oldEx.type === 'time' ? 'time' : 'reps') !== (newEx.type === 'time' ? 'time' : 'reps')) return false;
+  if(normValue(oldEx.value, oldEx.type) !== normValue(newEx.value, newEx.type)) return false;
+  const oldMode = editorProgressionMode(oldEx) || inferredProgressionMode(oldEx) || '';
+  const newMode = editorProgressionMode(newEx) || inferredProgressionMode(newEx) || '';
+  if(oldMode !== newMode) return false;
+
+  const oldIds = levelIdentityList(oldEx);
+  const newIds = levelIdentityList(newEx);
+  // Дубликаты физически неоднозначны: безопаснее сбросить current, чем угадать не ту резинку.
+  if(oldIds.length < 2 || newIds.length !== oldIds.length) return false;
+  if(new Set(oldIds).size !== oldIds.length || new Set(newIds).size !== newIds.length) return false;
+  if(oldIds.slice().sort().join('|') !== newIds.slice().sort().join('|')) return false;
+
+  const oldBase = Math.max(0, Math.min(oldIds.length - 1, Math.round(+oldEx.loadLevel || 0)));
+  const newBase = Math.max(0, Math.min(newIds.length - 1, Math.round(+newEx.loadLevel || 0)));
+  return oldIds[oldBase] === newIds[newBase];
+}
+function carryReorderedLevelProgress(oldEx, newEx, n){
+  if(!samePhysicalLevelScale(oldEx, newEx)) return false;
+  newEx.ps = JSON.parse(JSON.stringify(oldEx.ps || {n:0,cur:{}}));
+  newEx.ps.n = n;
+  if(!newEx.ps.cur) newEx.ps.cur = {};
+
+  if(oldEx.ps && oldEx.ps.cur && oldEx.ps.cur.level != null){
+    const oldLevels = exerciseLoadLevels(oldEx);
+    const newLevels = exerciseLoadLevels(newEx);
+    const oldIndex = Math.max(0, Math.min(oldLevels.length - 1, Math.round(+oldEx.ps.cur.level || 0)));
+    const currentId = loadLevelIdentity(oldLevels[oldIndex]);
+    const mapped = newLevels.findIndex(level => loadLevelIdentity(level) === currentId);
+    if(mapped < 0) return false;
+    newEx.ps.cur.level = mapped;
+  }
+  return true;
+}
 export function carryExerciseProgress(oldEx, newEx){
   if(!newEx) return newEx;
   if(!oldEx || !oldEx.ps){ delete newEx.ps; return newEx; }
@@ -1345,6 +1385,9 @@ export function carryExerciseProgress(oldEx, newEx){
   if(progBaseKey(oldEx) === progBaseKey(newEx)){
     newEx.ps = JSON.parse(JSON.stringify(oldEx.ps));
     newEx.ps.n = n;
+  }else if(carryReorderedLevelProgress(oldEx, newEx, n)){
+    // Та же физическая шкала может быть переставлена. Индекс — не identity:
+    // переносим current level по key/custom label, а reps/time state сохраняем.
   }else{
     // Несовместимая база/тип/шкала: счётчик можно сохранить, фактическое
     // значение нельзя. В частности level-index никогда не переезжает в другую шкалу.
