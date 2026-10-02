@@ -621,7 +621,7 @@ export function NodeRunnerView({
   // Course content controls the learning ladder explicitly:
   // build → recognition/order, progressive → build until learned then recall by typing, write → recall only.
   const cardKnown=Boolean(state.progress.cards[activity.id]&&!state.progress.cards[activity.id]?.deleted);
-  const responseMode=(activity.type==='text-input'||activity.type==='translation')?activity.responseMode:'write';
+  const responseMode=(activity.type==='text-input'||activity.type==='translation')?(activity.responseMode??'progressive'):'write';
   const canBuild=Boolean(answerWords(textAnswer));
   const shouldBuild=canBuild&&!typing&&(
     responseMode==='build' || (responseMode==='progressive'&&!cardKnown)
