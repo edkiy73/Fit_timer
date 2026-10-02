@@ -60,8 +60,8 @@ import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExe
 import { afterExChange, applyProgCheck, autoGrow, backToWorkout, buildSteps, closeSwapHint, esc,
   completeStep, exFromWork, finishPartialWorkout, nextStep, openSwapHint, prevStep, refreshDetailsFade, saveExToWorkout,
   setPause, settleQuickFinish, shareResult, skipStep, startWorkout, stopSpeech, swapViaAI, tearDownWorkout,
-  toggleProgCheckList
-, setWorkoutEventHooks } from './70-workout.js';
+  setWorkoutEventHooks
+} from './70-workout.js';
 import { SR, applyThemeFor, checkSchedules, clearVoiceWanted, hfHintText, hfMode, recognitionLang,
   restoreHandsFreeState, resumeVoiceListening, setHfMode, setPlatformEventHooks, setRecognitionLanguage,
   startHandsFree, startListening, stopHandsFree, stopListening, syncHandsFreeUI,
@@ -520,7 +520,6 @@ function registerEventActions(){
     setTimeout(()=>{ try{ $('finNote').scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){} }, 260);
   });
   registerAction('applyFinishProgression', () => applyProgCheck());
-  registerAction('toggleFinishProgressionList', () => toggleProgCheckList());
   registerAction('finishResultDone', async () => {
     if(state.pendingFinish){
       settleQuickFinish(true);
