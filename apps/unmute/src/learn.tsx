@@ -467,7 +467,7 @@ export function NodeRunnerView({
       if(node.dayIndex)trackDayCompleted(candidate.runId,candidate.mode);
       clearCompletionCandidate(state.set.id,node.id);
       clearLessonRun(state.set.id,node.id);
-      onNodeCompleted(node);
+      if(candidate.mode!=='replay')onNodeCompleted(node);
       return;
     }
     // A stale candidate from a run that did not actually satisfy the node is discarded
