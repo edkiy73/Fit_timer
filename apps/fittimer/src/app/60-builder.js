@@ -2845,6 +2845,7 @@ const Q_OPTS = {
 const AI_DEFAULT_LEVEL = 'Новичок';
 const AI_DEFAULT_DURATION = '10 мин';
 const AI_DEFAULT_LIMITS = ['Без ограничений'];
+const AI_CONTEXT_MAX = 3000;
 const q = {goal: [], level: AI_DEFAULT_LEVEL, days: [], dur: AI_DEFAULT_DURATION, focus: [], equip: [], limit: AI_DEFAULT_LIMITS.slice(),
            note: '', split: false, style: '', warm: '', rotate: false};
 const qChipConfigs = new Map();
@@ -2943,7 +2944,7 @@ function aiListEnglish(arr){
 }
 
 function aiProgramHasUserInput(){
-  const context = clampText((($('qContext') && $('qContext').value) || ''), 600).trim();
+  const context = clampText((($('qContext') && $('qContext').value) || ''), AI_CONTEXT_MAX).trim();
   const realLimits = (q.limit || []).filter(x => x && !AI_DEFAULT_LIMITS.includes(x));
   return !!(
     (q.goal && q.goal.length) ||
@@ -2978,8 +2979,8 @@ function composeRequest(){
   if(q.goal.length) parts.push(`Goal: ${aiListEnglish(q.goal)}.`);
   else free.push('goal');
 
-  if(q.level) parts.push(`Level: ${aiChoiceEnglish(q.level)}.`);
-  else free.push('fitness level');
+  if(q.level && q.level !== AI_DEFAULT_LEVEL) parts.push(`Explicitly selected level: ${aiChoiceEnglish(q.level)}.`);
+  else parts.push('Fitness level: infer from authoritative self-reported context and recorded training history when available; if neither gives useful evidence, use a conservative beginner baseline.');
 
   if(q.days.length) parts.push(`Training weekdays (canonical tokens): ${q.days.join(', ')}.`);
   else free.push('training days and weekly frequency');
@@ -3022,9 +3023,9 @@ function composeRequest(){
 
   let out = 'Build a home-workout program. ' + userForAI() + ' ' + parts.join(' ');
   if(free.length) out += ` Decide these unspecified items yourself using sensible training logic: ${free.join('; ')}.`;
-  const context = clampText(($('qContext') && $('qContext').value) || '', 600).trim();
+  const context = clampText(($('qContext') && $('qContext').value) || '', AI_CONTEXT_MAX).trim();
   if(context){
-    out += ` USER CAPABILITIES / LIMITATIONS CONTEXT: ${context}. Treat this as authoritative self-reported context for exercise selection, starting load, volume, range of motion, impact and progression. Do not diagnose from it. If it describes an injury, pain, or other health limitation, avoid choices that clearly conflict with it and do not claim medical clearance.`;
+    out += ` USER CAPABILITIES / LIMITATIONS CONTEXT: ${context}. Treat this as authoritative self-reported context for exercise selection, starting load, volume, range of motion, impact and progression. Known numeric performance and working-load data are evidence: preserve/reuse them for the same movement and use them to choose conservative positive loads for comparable movements instead of defaulting to ВЕС: 0. Do not diagnose from it. If it describes an injury, pain, or other health limitation, avoid choices that clearly conflict with it and do not claim medical clearance.`;
   }
   if(q.note && q.note.trim()) out += ` Additional user request: ${q.note.trim()}`;
   return out.trim();
@@ -3183,6 +3184,8 @@ export function initBuilder(){
     hasWeight,
     progressionLoadType,
     exerciseLoadLevels,
+    exerciseLoadLevelState,
+    loadLevelLabel,
     editorProgressionMode,
     importFromText,
     isDualProg,

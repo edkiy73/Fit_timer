@@ -43,7 +43,9 @@ Act like a deeply experienced strength-and-conditioning coach. Base decisions on
 - ЗАМЕНА is NOT a generic alternative. Use it only as the next harder movement after the useful ceiling of the current exercise. Do not add it when normal progression in reps/time/weight is sufficient.
 - СТОРОНА: да means ЗНАЧЕНИЕ is performed PER SIDE, not the sum of both sides.
 - If external load is requested, use a weighted ФОРМАТ, add ВЕС, and configure progression only when appropriate.
-- Do not infer absolute strength or starting weight from sex alone. Prefer known current load, experience, requested difficulty, equipment and the movement itself. When strength is unknown, choose a conservative starting load without downgrading the overall program difficulty.
+- For a weighted exercise, ВЕС is a real working starting load, not a placeholder. Reuse a known positive current load for the same movement. For a new but comparable movement, use the user's known loads, training experience, available equipment and requested difficulty to choose a conservative positive starting load. Never replace a known positive load with 0 merely because the program is being rebuilt or edited.
+- ВЕС: 0 is a last-resort "not chosen yet" state, not the normal answer to uncertainty. Use 0 only when the prompt truly contains no defensible basis for a positive starting load (no useful current/comparable loads and insufficient equipment/loading information). If there is enough context to make a conservative choice, make it.
+- Do not infer absolute strength or starting weight from sex alone. Prefer known current load, experience, requested difficulty, equipment and the movement itself. When strength is uncertain but there is usable training context, choose a conservative positive starting load without downgrading the overall program difficulty.
 - Respect the declared fitness level. Beginner, intermediate and advanced programs should differ meaningfully in exercise complexity, volume, density and progression where appropriate; do not silently turn an intermediate or advanced request into a beginner workout.
 - Warm-up, mobility, breathing and technique drills normally use УСЛОЖНЯТЬ: нет.
 - Keep total volume and recovery realistic. More fields are not automatically better; only include progression axes that make sense for that exercise.
@@ -58,7 +60,7 @@ Act like a deeply experienced strength-and-conditioning coach. Base decisions on
 ОШИБКИ: 1-2 common mistakes in ${outputLanguage}, max 300 characters (optional)
 ФОРМАТ: exactly one of "повторения", "повторения и вес", "время", "время и вес"; resistance uses plain "повторения" or "время", never a weighted format
 ЗНАЧЕНИЕ: number or range like 12-15; for time formats use seconds
-ВЕС: starting kilograms for weighted formats; omit for resistance
+ВЕС: starting working kilograms for weighted formats; normally >0 when usable load/experience/equipment context exists. Use 0 only as a genuine last-resort "not chosen yet" value when no defensible positive starting load can be selected; omit for resistance
 НАГРУЗКА: exactly "сопротивление" only for discrete non-kg resistance; omit otherwise
 СОПРОТИВЛЕНИЕ: current/base resistance label in ${outputLanguage}; required when НАГРУЗКА is resistance
 УРОВНИ СОПРОТИВЛЕНИЯ: ordered resistance labels separated by " | ", minimum 2; required when НАГРУЗКА is resistance
@@ -76,7 +78,7 @@ Act like a deeply experienced strength-and-conditioning coach. Base decisions on
 ПОТОЛОК: required ceiling for progressive unweighted formats
 ПОТОЛОК ПОВТОРОВ: upper-bound reps ceiling for weighted reps; for a range this caps the UPPER end (8-10 with ceiling 20 ends at 18-20)
 ПОТОЛОК ВРЕМЕНИ: time ceiling for weighted time
-ПОТОЛОК ВЕСА: required realistic kg ceiling whenever weight itself progresses (positive ШАГ ВЕСА) — weight-only progression and double progression both need it, not just double progression. Set it even when the starting ВЕС is 0 (unknown/not yet chosen by the user): the ceiling is about the movement and the user's level, not about today's starting number.
+ПОТОЛОК ВЕСА: required realistic kg ceiling whenever weight itself progresses (positive ШАГ ВЕСА) — weight-only progression and double progression both need it, not just double progression. If a true last-resort ВЕС: 0 is unavoidable, still set the ceiling from the movement, level and available context.
 ПРИ ПОТОЛКЕ: "да" or "нет"; use "да" only for genuine double progression with positive ШАГ ПОВТОРОВ and ШАГ ВЕСА, a ПОТОЛОК ПОВТОРОВ above the starting upper bound, and ПОТОЛОК ВЕСА
 ЗАМЕНА: harder next-level exercise in ${outputLanguage}, only when a movement progression is preferable after the ceiling
 ОПИСАНИЕ ЗАМЕНЫ: 2-4 sentences in ${outputLanguage}, only when ЗАМЕНА exists
@@ -95,6 +97,7 @@ Workout variants:
 - different exercise sets = multiple variants, max 7
 - every variant starts with ДЕНЬ:
 ДЕНЬ: canonical weekday tokens for this variant; leave empty when ЧЕРЕДОВАНИЕ: да
+ВРЕМЯ ВАРИАНТА: HH:MM (optional); per-variant training time, distinct from program-level ВРЕМЯ
 КРУГИ: 1-10; repetitions of the ENTIRE exercise list
 ОТДЫХ МЕЖДУ КРУГАМИ: seconds, 0-600
 
@@ -115,6 +118,7 @@ ${exerciseSchema(outputLanguage)}`;
 - Match the size of the change to the request. A narrow request ("set rest to 60 seconds", "rename this exercise") must change only what it asks for — do not also add, remove, reorder or replace exercises, and do not touch unrelated fields. A broad request ("optimize for 20 minutes", "make this harder", "rebuild the plan") may add, remove, reorder or replace exercises, and change variant count, as needed to satisfy it.
 - When a change requires touching a related field to stay coherent (replacing an exercise changes its muscles/description/progression/rest; shortening a workout changes exercise count or sets/rounds), make that related change too. Do not change fields the request has no bearing on.
 - Keep existing protocol lines that stay relevant after the change; never drop a line only because it looks unnecessary (a missing ШАГ / ШАГ ВЕСА silently turns progression off).
+- Treat an existing positive working ВЕС and an existing current resistance level as authoritative user data. Preserve them for the same movement unless the request explicitly asks to change/reset that load or the movement/equipment change makes the old load inapplicable. Never turn a known positive ВЕС into 0 as a generic uncertainty fallback.
 - Remove an optional line when the requested change makes it obsolete or contradictory (e.g. ЗАМЕНА of a replaced movement, a rep ceiling after switching to weight-only progression).
 - If the user asks to disable a numeric setting while keeping the exercise, set a neutral value such as 0.
 - You may add valid optional exercise fields when the requested change needs them.`;
@@ -131,6 +135,7 @@ ${exerciseSchema(outputLanguage)}`;
     '- When a target workout duration is supplied, estimate the whole session, not just active work: timed work = stated seconds × sides; rep-based work ≈ reps × 3 seconds × sides; multiply by sets and rounds; then add between-set rest, rest after exercises, side-switch time and between-round rest. Warm-up exercises run once before the main rounds.',
     '- For target durations from 5 to 20 minutes, aim to stay within about ±5 minutes. For targets of 30 minutes or more, aim to stay within about ±20%. Treat an open-ended target such as 45+ minutes as a lower-bound preference rather than an exact cap.',
     '- Do not create conflicting progression fields.',
+    '- For weighted exercises, audit every ВЕС before answering: if the prompt contains a known positive load for the same/comparable movement or enough experience/equipment context for a conservative choice, do not output ВЕС: 0.',
     '- Return only the protocol.'
   ].join('\n\n');
 

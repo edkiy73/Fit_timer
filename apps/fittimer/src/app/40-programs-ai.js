@@ -48,6 +48,8 @@ let builderProgramsHooks = {
   hasWeight: () => false,
   progressionLoadType: () => 'none',
   exerciseLoadLevels: () => [],
+  exerciseLoadLevelState: () => ({level:0,key:'',label:'',identity:''}),
+  loadLevelLabel: level => String((level && level.label) || ''),
   editorProgressionMode: () => null,
   importFromText: () => {},
   isDualProg: () => false,
@@ -1193,9 +1195,25 @@ export function userForAI(locale){
   bits.push('Sex: ' + aiProfileSex(u));
   const a = userAge(u);
   if(a) bits.push(`Age: ${a}`);
+  const hist = (stats.history || []).filter(h => h && (h.pid || h.d || h.at));
+  if(hist.length){
+    const times = hist.map(h => {
+      const direct = +h.at;
+      if(Number.isFinite(direct) && direct > 0) return direct;
+      if(h.d){
+        const ts = Date.parse(String(h.d) + 'T00:00:00');
+        if(Number.isFinite(ts)) return ts;
+      }
+      return NaN;
+    }).filter(Number.isFinite).sort((x,y)=>x-y);
+    if(times.length){
+      const weeks = Math.max(1, Math.round((Date.now() - times[0]) / (7 * 86400000)));
+      bits.push(`FitTimer recorded history: ${hist.length} workouts across about ${weeks} weeks`);
+    }else bits.push(`FitTimer recorded history: ${hist.length} workouts`);
+  }
   const outLang=locale==='ru'?'Russian':locale==='en'?'English':aiOutputLanguage();
   bits.push(`User-visible output language: ${outLang}`);
-  return bits.join('. ') + '. Use age and stated context when choosing exercise selection and recovery. If sex is not specified, do not infer it. Never infer absolute strength or starting weight from sex alone.';
+  return bits.join('. ') + '. Recorded FitTimer history is evidence about recent consistency, not proof of total lifetime training experience. Use explicit self-reported experience as authoritative when supplied. Use age and stated context when choosing exercise selection and recovery. If sex is not specified, do not infer it. Never infer absolute strength or starting weight from sex alone.';
 }
 
 /* ================= GEMINI API ================= */
@@ -2438,7 +2456,8 @@ export function exerciseToText(ex, opts){
   if(mus.length) L.push('МЫШЦЫ: ' + mus.join(', '));
   if((ex.mistakes || '').trim()) L.push('ОШИБКИ: ' + ex.mistakes.replace(/\s*\n+\s*/g, ' ').trim());
   L.push(exFormatLine(ex));
-  L.push('ЗНАЧЕНИЕ: ' + builderProgramsHooks.valueText(ex.value).replace('–', '-'));
+  const p = opts && opts.program;
+  L.push('ЗНАЧЕНИЕ: ' + (p ? exCurrentValueText(p, ex) : builderProgramsHooks.valueText(ex.value).replace('–', '-')));
   L.push('ПОДХОДЫ: ' + (parseInt(ex.sets) || 1));
   if(ex.perSide) L.push('СТОРОНА: да');
   if(ex.warmup) L.push('РАЗМИНКА: да');
@@ -2484,18 +2503,74 @@ export function exAnswerFormat(locale){
   ].join('\n\n');
 }
 
+function exerciseWorkingContext(p, ex){
+  if(!p || !ex) return '';
+  const bits = [];
+  if(ex.type === 'time') bits.push('current time ' + builderProgramsHooks.getExProgValue(p.id, ex, p, 'time') + ' sec');
+  else bits.push('current reps ' + builderProgramsHooks.progressedRepsRange(p.id, ex, p));
+  if(builderProgramsHooks.hasWeight(ex)){
+    const kg = builderProgramsHooks.getExWeight(p.id, ex, p);
+    bits.push('current weight ' + builderProgramsHooks.fmtKg(kg) + ' kg');
+  }
+  if(builderProgramsHooks.progressionLoadType(ex) === 'level'){
+    const level = builderProgramsHooks.exerciseLoadLevelState(ex) || {};
+    if(level.label) bits.push('current resistance ' + level.label);
+  }
+  bits.push('sets ' + (parseInt(ex.sets) || 1));
+  if(+ex.rest >= 0) bits.push('rest ' + (+ex.rest || 0) + ' sec');
+  return bits.join(' · ');
+}
+
+function compactProgramAIContext(p){
+  if(!p) return '';
+  const plans = normPlans(p);
+  if(!plans.some(pl => (pl.exercises || []).length)) return '';
+  const lines = [];
+  lines.push('Program: ' + (p.name || '(untitled)'));
+  if((p.desc || '').trim()) lines.push('Purpose/context: ' + p.desc.replace(/\s*\n+\s*/g, ' ').trim().slice(0, 500));
+  lines.push('Default progression check: ' + (p.progression ? p.progression + ' completed executions per exercise' : 'off'));
+  plans.forEach((pl, pi) => {
+    lines.push('Variant ' + (pi + 1) + ': rounds ' + (pl.rounds || 1) + ', round rest ' + (pl.roundRest || 0) + ' sec');
+    (pl.exercises || []).forEach(ex => {
+      lines.push('- ' + (ex.name || t('common.exerciseFallback')) + ': ' + exerciseWorkingContext(p, ex)
+        + (ex.warmup ? ' · warm-up' : ''));
+    });
+  });
+  return lines.join('\n');
+}
+
 export function exePrompt(){
+  const p=builderDraft();
   const ex=builderProgramsHooks.curPlan().exercises[exeIdx];
   const wish=clampText($('exeWish').value,LIM.wish);
   return [
     'Edit exactly ONE home-workout exercise.',
     'Return exactly ONE complete exercise block and nothing else: no Markdown and no explanation.',
     FitAIProtocol.editRules(),
-    'USER: '+userForAI(builderDraft()&&builderDraft().locale),
+    'USER: '+userForAI(p&&p.locale),
     'REQUEST: '+wish,
-    '=== CURRENT EXERCISE ===\n'+exerciseToText(ex,{locale:builderDraft()&&builderDraft().locale}),
-    exAnswerFormat(builderDraft()&&builderDraft().locale)
+    '=== CURRENT EXERCISE ===\n'+exerciseToText(ex,{program:p,locale:p&&p.locale}),
+    '=== CURRENT WORKING STATE ===\n'+exerciseWorkingContext(p, ex)+
+      '\nTreat positive current weight/resistance above as authoritative. Do not replace it with 0/unknown unless the request explicitly requires resetting or changing the load.',
+    exAnswerFormat(p&&p.locale)
   ].join('\n\n');
+}
+
+function requestAllowsUnknownWeight(text){
+  return /(?:вес\s*[:=]?\s*0(?:[.,]0)?\b|0(?:[.,]0)?\s*кг\b|убер(?:и|ите).*вес|сброс(?:ь|ить|ьте).*вес|вес.*не\s*знаю|неизвестн.*вес|reset\s+(?:the\s+)?weight|clear\s+(?:the\s+)?weight|unknown\s+weight)/i.test(String(text || ''));
+}
+
+// Модель иногда превращает известный рабочий вес в ВЕС: 0, хотя 0 у нас означает
+// «снаряд ещё не выбран». Для ТОГО ЖЕ упражнения это потеря данных, а не решение.
+// Промт запрещает такое, но важное пользовательское состояние защищаем и после ответа.
+function preserveKnownWeightIfPlaceholder(oldEx, newEx, p, request){
+  if(!oldEx || !newEx || !p || requestAllowsUnknownWeight(request)) return false;
+  if(!builderProgramsHooks.hasWeight(oldEx) || !builderProgramsHooks.hasWeight(newEx)) return false;
+  const known = +builderProgramsHooks.getExWeight(p.id, oldEx, p) || 0;
+  if(!(known > 0) || (+newEx.weight || 0) > 0) return false;
+  newEx.weight = known;
+  if(newEx.ps && newEx.ps.cur) delete newEx.ps.cur.kg;
+  return true;
 }
 
 async function applyExEdit(){
@@ -2518,6 +2593,7 @@ async function applyExEdit(){
   if(got.length!==1){appAlert(builderProgramsHooks.msgAiNoEx());return;}
   const upd=got[0];
   if(!upd.media&&oldEx.media)upd.media=oldEx.media;
+  preserveKnownWeightIfPlaceholder(oldEx, upd, builderDraft(), $('exeWish').value);
   // это правка, а не замена: то же самое упражнение сохраняет свой id, а
   // прогресс — если ИИ не менял его базовые числа (см. carryExerciseProgress)
   upd.id=oldEx.id;
@@ -2623,10 +2699,15 @@ export function exaPrompt(){
     ? `Create exactly ${cnt} different home-workout exercises. Return exactly ${cnt} separate exercise blocks, each beginning with "УПРАЖНЕНИЕ:", separated by a blank line. Do not duplicate exercises. Return nothing else.`
     : 'Create exactly one home-workout exercise. Return exactly one exercise block and nothing else.';
   let req='USER: '+userForAI(builderDraft()&&builderDraft().locale)+'\nREQUEST: '+(wish||'(No specific request. Suggest a useful exercise that fits the user.)');
-  const context=clampText(($('exaContext')&&$('exaContext').value)||'',600).trim();
+  const context=clampText(($('exaContext')&&$('exaContext').value)||'',3000).trim();
   if(context){
     req+='\nUSER CAPABILITIES / LIMITATIONS CONTEXT: '+context+
-      '. Treat this as authoritative self-reported context for exercise selection, starting load, range of motion, impact and progression. Do not diagnose from it. If it describes an injury, pain, or other health limitation, avoid exercise choices that clearly conflict with it and do not claim medical clearance.';
+      '. Treat this as authoritative self-reported context for exercise selection, starting load, range of motion, impact and progression. Known numeric performance/load data are evidence: reuse them instead of falling back to ВЕС: 0 when they support a conservative positive load. Do not diagnose from it. If it describes an injury, pain, or other health limitation, avoid exercise choices that clearly conflict with it and do not claim medical clearance.';
+  }
+  const currentProgram = compactProgramAIContext(builderDraft());
+  if(currentProgram){
+    req+='\n=== CURRENT PROGRAM CONTEXT ===\n'+currentProgram+
+      '\nChoose additions that complement this program, avoid pointless duplicates, and use its known working loads as evidence for conservative starting loads on comparable weighted movements.';
   }
   if(given.length)req+='\n'+given.join(' ');
   if(free.length)req+='\nDecide these unspecified items yourself using sensible training logic: '+free.join('; ')+'.';
@@ -2942,6 +3023,7 @@ async function createEditedProgram(){
     return;
   }
   const diff = FitAIProtocol.diffPrograms({plans: normPlans(editAIProg)}, {plans: newPlans});
+  diff.matches.forEach(({oldEx,newEx}) => preserveKnownWeightIfPlaceholder(oldEx, newEx, editAIProg, $('eaWish').value));
   // КОД — техническая метка сопоставления, в сохранённой программе ей делать нечего
   newPlans.forEach(pl => (pl.exercises || []).forEach(ex => { delete ex._code; }));
 
