@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1715,
-      "chars": 81491,
+      "lines": 1724,
+      "chars": 82002,
       "symbols": [
         "$",
         "accountUserDirtyHook",
@@ -406,8 +406,8 @@
     },
     "src/app/30-progress-media.js": {
       "kind": "frontend-js",
-      "lines": 1049,
-      "chars": 47320,
+      "lines": 1059,
+      "chars": 47695,
       "symbols": [
         "addPhoto",
         "alpha",
@@ -418,6 +418,7 @@
         "clampLine",
         "clampNum",
         "clampText",
+        "cleanLabel",
         "cleanLink",
         "cleanPic",
         "cmpStep",
@@ -448,6 +449,7 @@
         "openWeightHist",
         "parse",
         "pfStep",
+        "push",
         "raw",
         "renderCmp",
         "renderPhotoFull",
@@ -743,8 +745,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 3326,
-      "chars": 144896,
+      "lines": 3343,
+      "chars": 145559,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -764,6 +766,7 @@
         "carryExerciseProgress",
         "carryReorderedLevelProgress",
         "clampProgEvery",
+        "cleanLoadLevelLabel",
         "cleanLoadLevels",
         "cleanup",
         "clearExerciseDraft",
@@ -877,6 +880,7 @@
         "psKg",
         "psReps",
         "psSec",
+        "push",
         "qCards",
         "qChips",
         "recommendedProgressionMode",
@@ -923,8 +927,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1997,
-      "chars": 87690,
+      "lines": 1999,
+      "chars": 87817,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
