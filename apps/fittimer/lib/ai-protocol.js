@@ -334,17 +334,24 @@ GENERAL:
       reason: uniqueMissing.length ? 'missing_fields' : (!exercises ? 'no_exercises' : (!days ? 'no_days' : (emptyVariant ? 'empty_variant' : '')))};
   }
 
+  // One current semantic contract for every AI-generated exercise/program.
+  // Create and edit deliberately share it: when a new required/conditional rule is
+  // added here, legacy edits become subject to it automatically instead of keeping
+  // a second weaker "modify" policy that can drift behind the product.
+  const CURRENT_EXERCISE_CONTRACT = Object.freeze({requireWeightCeiling:true, requireValidDouble:true});
+  const CURRENT_PROGRAM_CONTRACT = Object.freeze({requireWeightCeiling:true, requireValidDouble:true});
+
   function validateResponse(kind, raw){
-    if(String(kind || '').startsWith('image.')){
+    const k = String(kind || '');
+    if(k.startsWith('image.')){
       const image = String(raw == null ? '' : raw).trim();
       return {ok:/^data:image\/(?:png|jpe?g|webp|gif|avif);base64,[A-Za-z0-9+/=]{8,}$/.test(image),
         text:image, missing:[], reason:'bad_image'};
     }
-    if(String(kind || '') === 'exercise.create') return validateExerciseResponse(raw,{minCount:1,maxCount:10,requireWeightCeiling:true,requireValidDouble:true});
-    if(/^exercise\.(?:modify|replace)$/.test(String(kind || ''))) return validateExerciseResponse(raw,{minCount:1,maxCount:1,requireWeightCeiling:true,requireValidDouble:true});
-    if(String(kind || '') === 'program.create') return validateProgramResponse(raw,{requireWeightCeiling:true,requireValidDouble:true});
-    if(String(kind || '') === 'program.modify') return validateProgramResponse(raw,{requireWeightCeiling:true,requireValidDouble:true});
-    if(String(kind || '') === 'video.parse') return validateProgramResponse(raw);
+    if(k === 'exercise.create') return validateExerciseResponse(raw,{...CURRENT_EXERCISE_CONTRACT,minCount:1,maxCount:10});
+    if(/^exercise\.(?:modify|replace)$/.test(k)) return validateExerciseResponse(raw,{...CURRENT_EXERCISE_CONTRACT,minCount:1,maxCount:1});
+    if(/^(?:program\.create|program\.modify)$/.test(k)) return validateProgramResponse(raw,CURRENT_PROGRAM_CONTRACT);
+    if(k === 'video.parse') return validateProgramResponse(raw);
     return {ok:!!normalizeResponse(raw), text:normalizeResponse(raw), missing:[], reason:'empty_response'};
   }
 
