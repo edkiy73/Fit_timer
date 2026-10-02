@@ -1195,9 +1195,25 @@ export function userForAI(locale){
   bits.push('Sex: ' + aiProfileSex(u));
   const a = userAge(u);
   if(a) bits.push(`Age: ${a}`);
+  const hist = (stats.history || []).filter(h => h && (h.pid || h.d || h.at));
+  if(hist.length){
+    const times = hist.map(h => {
+      const direct = +h.at;
+      if(Number.isFinite(direct) && direct > 0) return direct;
+      if(h.d){
+        const ts = Date.parse(String(h.d) + 'T00:00:00');
+        if(Number.isFinite(ts)) return ts;
+      }
+      return NaN;
+    }).filter(Number.isFinite).sort((x,y)=>x-y);
+    if(times.length){
+      const weeks = Math.max(1, Math.round((Date.now() - times[0]) / (7 * 86400000)));
+      bits.push(`FitTimer recorded history: ${hist.length} workouts across about ${weeks} weeks`);
+    }else bits.push(`FitTimer recorded history: ${hist.length} workouts`);
+  }
   const outLang=locale==='ru'?'Russian':locale==='en'?'English':aiOutputLanguage();
   bits.push(`User-visible output language: ${outLang}`);
-  return bits.join('. ') + '. Use age and stated context when choosing exercise selection and recovery. If sex is not specified, do not infer it. Never infer absolute strength or starting weight from sex alone.';
+  return bits.join('. ') + '. Recorded FitTimer history is evidence about recent consistency, not proof of total lifetime training experience. Use explicit self-reported experience as authoritative when supplied. Use age and stated context when choosing exercise selection and recovery. If sex is not specified, do not infer it. Never infer absolute strength or starting weight from sex alone.';
 }
 
 /* ================= GEMINI API ================= */
