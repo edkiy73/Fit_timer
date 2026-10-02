@@ -270,6 +270,36 @@ function MetricCard({
   );
 }
 
+function AccuracyGroup({
+  title,
+  stats
+}:{
+  title:string;
+  stats:AnswerStatsSummary;
+}){
+  const {t}=useI18n();
+  return (
+    <div className="progress-answer-group">
+      <div className="progress-course-detail-head">
+        <span>{title}</span>
+        {stats.attempts>0&&<strong>{t('progress.accuracy',{percent:stats.accuracy})}</strong>}
+      </div>
+      {stats.attempts>0 ? (
+        <>
+          <div className="progress-answer-bar" aria-hidden="true">
+            <span style={{width:stats.accuracy+'%'}} />
+          </div>
+          <div className="progress-answer-meta">
+            <span>{t('progress.correct')}: <strong>{stats.correct}</strong></span>
+            <span>{t('progress.wrong')}: <strong>{stats.wrong}</strong></span>
+            <span>{t('progress.attempts')}: <strong>{stats.attempts}</strong></span>
+          </div>
+        </>
+      ) : <p className="progress-muted">{t('progress.answersGroupEmpty')}</p>}
+    </div>
+  );
+}
+
 export function ProgressView({
   runtime,
   details,
@@ -445,20 +475,11 @@ export function ProgressView({
             </div>
 
             <div className="progress-course-detail">
-              <div className="progress-course-detail-head">
-                <span>{t('progress.answersTitle')}</span>
-                {summary.answers.attempts>0&&<strong>{t('progress.accuracy',{percent:summary.answers.accuracy})}</strong>}
-              </div>
+              <div className="progress-answer-title">{t('progress.answersTitle')}</div>
               {summary.answers.attempts>0 ? (
                 <>
-                  <div className="progress-answer-bar" aria-hidden="true">
-                    <span style={{width:summary.answers.accuracy+'%'}} />
-                  </div>
-                  <div className="progress-answer-meta">
-                    <span>{t('progress.correct')}: <strong>{summary.answers.correct}</strong></span>
-                    <span>{t('progress.wrong')}: <strong>{summary.answers.wrong}</strong></span>
-                    <span>{t('progress.attempts')}: <strong>{summary.answers.attempts}</strong></span>
-                  </div>
+                  <AccuracyGroup title={t('progress.tasksAccuracy')} stats={summary.taskAnswers} />
+                  <AccuracyGroup title={t('progress.practiceAccuracy')} stats={summary.practiceAnswers} />
                 </>
               ) : <p className="progress-muted">{t('progress.answersEmpty')}</p>}
             </div>
