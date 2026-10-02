@@ -48,6 +48,8 @@ let builderProgramsHooks = {
   hasWeight: () => false,
   progressionLoadType: () => 'none',
   exerciseLoadLevels: () => [],
+  exerciseLoadLevelState: () => ({level:0,key:'',label:'',identity:''}),
+  loadLevelLabel: level => String((level && level.label) || ''),
   editorProgressionMode: () => null,
   importFromText: () => {},
   isDualProg: () => false,
@@ -2438,7 +2440,8 @@ export function exerciseToText(ex, opts){
   if(mus.length) L.push('МЫШЦЫ: ' + mus.join(', '));
   if((ex.mistakes || '').trim()) L.push('ОШИБКИ: ' + ex.mistakes.replace(/\s*\n+\s*/g, ' ').trim());
   L.push(exFormatLine(ex));
-  L.push('ЗНАЧЕНИЕ: ' + builderProgramsHooks.valueText(ex.value).replace('–', '-'));
+  const p = opts && opts.program;
+  L.push('ЗНАЧЕНИЕ: ' + (p ? exCurrentValueText(p, ex) : builderProgramsHooks.valueText(ex.value).replace('–', '-')));
   L.push('ПОДХОДЫ: ' + (parseInt(ex.sets) || 1));
   if(ex.perSide) L.push('СТОРОНА: да');
   if(ex.warmup) L.push('РАЗМИНКА: да');
@@ -2484,17 +2487,54 @@ export function exAnswerFormat(locale){
   ].join('\n\n');
 }
 
+function exerciseWorkingContext(p, ex){
+  if(!p || !ex) return '';
+  const bits = [];
+  if(ex.type === 'time') bits.push('current time ' + builderProgramsHooks.getExProgValue(p.id, ex, p, 'time') + ' sec');
+  else bits.push('current reps ' + builderProgramsHooks.progressedRepsRange(p.id, ex, p));
+  if(builderProgramsHooks.hasWeight(ex)){
+    const kg = builderProgramsHooks.getExWeight(p.id, ex, p);
+    bits.push('current weight ' + builderProgramsHooks.fmtKg(kg) + ' kg');
+  }
+  if(builderProgramsHooks.progressionLoadType(ex) === 'level'){
+    const level = builderProgramsHooks.exerciseLoadLevelState(ex) || {};
+    if(level.label) bits.push('current resistance ' + level.label);
+  }
+  bits.push('sets ' + (parseInt(ex.sets) || 1));
+  if(+ex.rest >= 0) bits.push('rest ' + (+ex.rest || 0) + ' sec');
+  return bits.join(' · ');
+}
+
+function compactProgramAIContext(p){
+  if(!p) return '';
+  const lines = [];
+  lines.push('Program: ' + (p.name || '(untitled)'));
+  if((p.desc || '').trim()) lines.push('Purpose/context: ' + p.desc.replace(/\s*\n+\s*/g, ' ').trim().slice(0, 500));
+  lines.push('Default progression check: ' + (p.progression ? p.progression + ' completed executions per exercise' : 'off'));
+  normPlans(p).forEach((pl, pi) => {
+    lines.push('Variant ' + (pi + 1) + ': rounds ' + (pl.rounds || 1) + ', round rest ' + (pl.roundRest || 0) + ' sec');
+    (pl.exercises || []).forEach(ex => {
+      lines.push('- ' + (ex.name || t('common.exerciseFallback')) + ': ' + exerciseWorkingContext(p, ex)
+        + (ex.warmup ? ' · warm-up' : ''));
+    });
+  });
+  return lines.join('\n');
+}
+
 export function exePrompt(){
+  const p=builderDraft();
   const ex=builderProgramsHooks.curPlan().exercises[exeIdx];
   const wish=clampText($('exeWish').value,LIM.wish);
   return [
     'Edit exactly ONE home-workout exercise.',
     'Return exactly ONE complete exercise block and nothing else: no Markdown and no explanation.',
     FitAIProtocol.editRules(),
-    'USER: '+userForAI(builderDraft()&&builderDraft().locale),
+    'USER: '+userForAI(p&&p.locale),
     'REQUEST: '+wish,
-    '=== CURRENT EXERCISE ===\n'+exerciseToText(ex,{locale:builderDraft()&&builderDraft().locale}),
-    exAnswerFormat(builderDraft()&&builderDraft().locale)
+    '=== CURRENT EXERCISE ===\n'+exerciseToText(ex,{program:p,locale:p&&p.locale}),
+    '=== CURRENT WORKING STATE ===\n'+exerciseWorkingContext(p, ex)+
+      '\nTreat positive current weight/resistance above as authoritative. Do not replace it with 0/unknown unless the request explicitly requires resetting or changing the load.',
+    exAnswerFormat(p&&p.locale)
   ].join('\n\n');
 }
 
@@ -2623,10 +2663,15 @@ export function exaPrompt(){
     ? `Create exactly ${cnt} different home-workout exercises. Return exactly ${cnt} separate exercise blocks, each beginning with "УПРАЖНЕНИЕ:", separated by a blank line. Do not duplicate exercises. Return nothing else.`
     : 'Create exactly one home-workout exercise. Return exactly one exercise block and nothing else.';
   let req='USER: '+userForAI(builderDraft()&&builderDraft().locale)+'\nREQUEST: '+(wish||'(No specific request. Suggest a useful exercise that fits the user.)');
-  const context=clampText(($('exaContext')&&$('exaContext').value)||'',600).trim();
+  const context=clampText(($('exaContext')&&$('exaContext').value)||'',3000).trim();
   if(context){
     req+='\nUSER CAPABILITIES / LIMITATIONS CONTEXT: '+context+
-      '. Treat this as authoritative self-reported context for exercise selection, starting load, range of motion, impact and progression. Do not diagnose from it. If it describes an injury, pain, or other health limitation, avoid exercise choices that clearly conflict with it and do not claim medical clearance.';
+      '. Treat this as authoritative self-reported context for exercise selection, starting load, range of motion, impact and progression. Known numeric performance/load data are evidence: reuse them instead of falling back to ВЕС: 0 when they support a conservative positive load. Do not diagnose from it. If it describes an injury, pain, or other health limitation, avoid exercise choices that clearly conflict with it and do not claim medical clearance.';
+  }
+  const currentProgram = compactProgramAIContext(builderDraft());
+  if(currentProgram){
+    req+='\n=== CURRENT PROGRAM CONTEXT ===\n'+currentProgram+
+      '\nChoose additions that complement this program, avoid pointless duplicates, and use its known working loads as evidence for conservative starting loads on comparable weighted movements.';
   }
   if(given.length)req+='\n'+given.join(' ');
   if(free.length)req+='\nDecide these unspecified items yourself using sensible training logic: '+free.join('; ')+'.';
