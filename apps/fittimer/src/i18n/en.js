@@ -919,6 +919,7 @@ export const I18N_EN = {
   'report.reportOn': "Report from {date}",
   'report.totalReports': "{count} reports total",
   'report.setShort': "sets",
+  'report.resistanceScale': "scale: {scale}",
   'common.exerciseFallback': "Exercise",
   'programs.none': "No programs",
   'programs.emptyTitle': "No programs yet",
