@@ -356,13 +356,21 @@ function progPeriodLabel(n){
 // Общий дефолт программы: 1–15 выполнений каждого упражнения
 function fillProgEveryOptions(){
   const sel = $('bProgEvery');
-  if(sel.options.length) return;
+  sel.innerHTML = '';
+  const none = document.createElement('option');
+  none.value = '0';
+  none.textContent = t('builder.progressionNoProgramDefault');
+  sel.appendChild(none);
   for(let n = 1; n <= PROG_EVERY_MAX; n++){
     const o = document.createElement('option');
     o.value = String(n);
     o.textContent = progPeriodLabel(n);
     sel.appendChild(o);
   }
+}
+
+function programProgEvery(n){
+  return Math.max(0, Math.min(PROG_EVERY_MAX, Math.round(+n || 0)));
 }
 
 export function exerciseProgEvery(ex, program){
@@ -1103,7 +1111,7 @@ export function openBuilder(id=null){
     if(!draft.cover) draft.cover = null;
     if(!draft.stats) draft.stats = {completions: 0};
   } else {
-    draft = {id:'p'+Date.now(), name:'', time:'', cover:null, stats:{completions:0}, plans:[blankPlan()]};
+    draft = {id:'p'+Date.now(), name:'', time:'', cover:null, stats:{completions:0}, progression:PROG_EVERY_DEFAULT, plans:[blankPlan()]};
   }
   planIdx = 0;
   fillBuilder(id ? t('ai.editTitle') : t('programs.newProgram'));
@@ -1176,11 +1184,8 @@ export function fillBuilder(title){
 
   // ротация вариантов доступна, когда вариантов больше одного
   syncRotateUI();
-  const pOn = !!draft.progression;
-  $('bProgOn').classList.toggle('on', pOn);
-  setShown('bProgOpts', pOn);
   fillProgEveryOptions();
-  $('bProgEvery').value = String(clampProgEvery(draft.progression || PROG_EVERY_DEFAULT));
+  $('bProgEvery').value = String(programProgEvery(draft.progression));
   syncCover();
   renderPlanTabs();
   fillPlanFields();
@@ -2511,16 +2516,11 @@ export async function saveProgram(){
   if((draft.plans || []).length < 2) draft.rotate = false;
   if(!draft.rotate){ delete draft.rotIdx; delete draft.days; }
   else if(!Array.isArray(draft.days)) draft.days = [];
-  if($('bProgOn').classList.contains('on')){
-    draft.progression = clampProgEvery($('bProgEvery').value);
-    // progLast — метка календарной прогрессии, от которой отказались. Если её проставить
-    // здесь, миграция applyProgressionAll при следующем запуске примет программу за старую
-    // и запишет отрицательную поправку, обнулив весь накопленный рост
-    delete draft.progLast;
-  } else {
-    draft.progression = 0;
-    delete draft.progLast;
-  }
+  draft.progression = programProgEvery($('bProgEvery').value);
+  // progLast — метка календарной прогрессии, от которой отказались. Если её проставить
+  // здесь, миграция applyProgressionAll при следующем запуске примет программу за старую
+  // и запишет отрицательную поправку, обнулив весь накопленный рост
+  delete draft.progLast;
   // Проверки собираются в один список и показываются одним попапом: раньше каждая
   // проблема — отдельный попап, и пять нажатий «Сохранить» давали пять попапов.
   const many = draft.plans.length > 1;
@@ -2808,11 +2808,6 @@ export function initBuilder(){
     if(draft.rotate && !Array.isArray(draft.days)) draft.days = [];
     syncRotateUI();
   });
-  registerAction('toggleBuilderProgression', () => {
-    const on = !$('bProgOn').classList.contains('on');
-    $('bProgOn').classList.toggle('on', on);
-    setShown('bProgOpts', on);
-  });
   registerAction('applyCustomRest', () => {
     if(!restModalKey) return;
     exDraft[restModalKey] = Math.max(0, Math.min(600, parseInt($('restModalInput').value) || 0));
@@ -2838,6 +2833,9 @@ export function initBuilder(){
   $('exProgEvery').onchange = ()=>{
     exDraft.progEvery = $('exProgEvery').value === '' ? null : Math.max(1, Math.min(PROG_EVERY_MAX, Math.round(+$('exProgEvery').value || 1)));
     renderProgControls();
+  };
+  $('bProgEvery').onchange = ()=>{
+    draft.progression = programProgEvery($('bProgEvery').value);
   };
   $('bRounds').onchange = ()=>{ curPlan().rounds = +$('bRounds').value; syncVolHint(); };
   $('qNote').oninput = e => q.note = clampText(e.target.value, 300);
