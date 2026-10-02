@@ -802,6 +802,45 @@ function progressionModeHintKey(ex, mode){
   return 'builder.progModeHintReps';
 }
 
+function progressionCeilingHintKey(ex, mode){
+  if(mode === 'double_range') return 'builder.ceilingRequiredDoubleHint';
+  if(mode === 'level' && ex && ex.type !== 'time' && ex.repsStep > 0){
+    return 'builder.ceilingRequiredLevelHint';
+  }
+  return 'builder.ceilingOptionalHint';
+}
+
+export function progressionConfigIssue(ex){
+  if(!ex || !ex.progOn || ex.warmup) return '';
+  const mode = editorProgressionMode(ex);
+  const needsRepTransition = mode === 'double_range'
+    || (mode === 'level' && ex.type !== 'time' && +ex.repsStep > 0);
+  if(!needsRepTransition) return '';
+
+  const base = parseValue(ex.value);
+  const ceil = Math.round(+ex.repsMax || 0);
+  if(ceil > base.max) return '';
+  return mode === 'double_range'
+    ? 'builder.ceilingRequiredDoubleError'
+    : 'builder.ceilingRequiredLevelError';
+}
+
+export function exerciseProgressionConfigOk(showError=true){
+  if(!exDraft) return true;
+  let probe = exDraft;
+  try{ probe = applyFormTo(JSON.parse(JSON.stringify(exDraft))); }catch(_){}
+  const issue = progressionConfigIssue(probe);
+  if(!issue) return true;
+
+  if(showError) appAlert(t(issue));
+  const field = $('exMaxReps');
+  if(field){
+    try{ field.scrollIntoView({block:'center',behavior:'smooth'}); }catch(_){}
+    field.focus();
+  }
+  return false;
+}
+
 function fillExerciseProgModeOptions(){
   const sel = $('exProgMode');
   if(!sel || !exDraft) return;
@@ -1961,7 +2000,9 @@ export function renderProgControls(){
   // dualProg остаётся compatibility-полем данных, но отдельного UI для него больше нет:
   // пользователь выбирает тот же смысл через «Как усложнять → Повторы → вес».
   setShown('exStepBothHint', growReps);
-  setShown('exCeilingHint', growReps || growTime || growWeight);
+  const ceilingHint = $('exCeilingHint');
+  setShown(ceilingHint, growReps || growTime || growWeight);
+  if(ceilingHint) ceilingHint.textContent = t(progressionCeilingHintKey(exDraft, mode));
 
   $('exSwapName').value = exDraft.swapName || '';
   $('exSwapDesc').value = exDraft.swapDesc || '';
