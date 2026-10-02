@@ -61,10 +61,11 @@ function learnerState():LearnerCourseState{
 function renderReview(
   saveGraded=vi.fn(async()=>{}),
   savePractice=vi.fn(async()=>{}),
-  otherCourses:OtherCourseReviews={status:'ready',courses:[]}
+  otherCourses:OtherCourseReviews={status:'ready',courses:[]},
+  customState: LearnerCourseState = learnerState()
 ){
   const runtime:LearnerCourseRuntimeValue={
-    state:learnerState(),
+    state:customState,
     status:'ready',
     error:null,
     refresh:async()=>{}
@@ -93,6 +94,22 @@ function renderReview(
 }
 
 describe('course review screen',()=>{
+  it('uses word chips for explicitly introductory build cards',async()=>{
+    const user=userEvent.setup();
+    const state=learnerState();
+    const card=state.set.activities.find(activity=>activity.id==='card.one');
+    if(card?.type==='text-input')card.responseMode='build';
+    const {saveGraded}=renderReview(undefined,undefined,{status:'ready',courses:[]},state);
+
+    await user.click(await screen.findByRole('button',{name:'Начать повтор'}));
+    expect(screen.queryByRole('textbox',{name:'Твой ответ'})).toBeNull();
+    await user.click(screen.getByRole('button',{name:'I'}));
+    await user.click(screen.getByRole('button',{name:'am'}));
+    await user.click(screen.getByRole('button',{name:'home'}));
+    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    expect(saveGraded).toHaveBeenLastCalledWith('general-foundation','card.one',true);
+  });
+
   it('keeps due cards of another studied course and saves them to that course',async()=>{
     const user=userEvent.setup();
     const other=learnerState();
