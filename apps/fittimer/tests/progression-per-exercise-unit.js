@@ -401,6 +401,41 @@ function runWorkout(exercises, every){
     'reps-only zeroes weight growth but keeps weighted exercise format');
 }
 
+/* ---- staged progression requires a real transition ceiling ---- */
+{
+  const ex = mkEx('Double без потолка', {type:'reps', value:'8-10', progOn:true,
+    loadType:'weight', trackWeight:true, weight:5, progMode:'double_range',
+    repsStep:1, repsMax:0, wStep:1, weightMax:12, dualProg:true});
+  need(progressionConfigIssue(ex) === 'builder.ceilingRequiredDoubleError',
+    'double_range rejects missing rep transition ceiling');
+  ex.repsMax = 10;
+  need(progressionConfigIssue(ex) === 'builder.ceilingRequiredDoubleError',
+    'double_range ceiling must be above the starting upper bound');
+  ex.repsMax = 14;
+  need(progressionConfigIssue(ex) === '',
+    'double_range accepts a usable rep transition ceiling');
+}
+{
+  const ex = mkEx('Резинка без потолка', {type:'reps', value:'12-15', progOn:true,
+    loadType:'level', progMode:'level', repsStep:2, repsMax:0, loadLevel:0,
+    loadLevels:[{label:'A'},{label:'B'},{label:'C'}]});
+  need(progressionConfigIssue(ex) === 'builder.ceilingRequiredLevelError',
+    'reps→resistance rejects missing rep transition ceiling');
+  ex.repsMax = 18;
+  need(progressionConfigIssue(ex) === '',
+    'reps→resistance accepts a usable rep transition ceiling');
+  ex.repsStep = 0;
+  ex.repsMax = 0;
+  need(progressionConfigIssue(ex) === '',
+    'direct resistance progression does not require a rep ceiling');
+}
+{
+  const ex = mkEx('Простые повторы без потолка', {type:'reps', value:'10', progOn:true,
+    loadType:'none', progMode:'reps', repsStep:1, repsMax:0});
+  need(progressionConfigIssue(ex) === '',
+    'simple reps progression may remain unbounded');
+}
+
 /* ---- resistance/level model and engine ---- */
 {
   const ex = mkEx('Резинка default', {type:'reps', value:'12-15', progOn:true,
