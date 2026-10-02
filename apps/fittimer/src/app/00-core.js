@@ -81,7 +81,8 @@ let builderHooks = {
   dropFreshEx: () => {},
   exDirty: () => false,
   exRestAfter: () => 0,
-  exerciseLoadLevelState: () => ({level:0,label:''}),
+  exerciseLoadLevelState: () => ({level:0,key:'',label:'',identity:''}),
+  loadLevelLabel: level => String((level && level.label) || ''),
   exerciseProgEvery: () => 0,
   fmtKg: v => String(v == null ? '' : v),
   getExProgValue: () => 0,
@@ -1080,7 +1081,7 @@ export function renderPlanRow(){
 function exerciseLoad(p, ex){
   const on = builderHooks.progAxis(ex) !== 'none';
   const timed = ex.type === 'time';
-  const load = {reps:'', sec:0, kg:0, level:null, levelLabel:''};
+  const load = {reps:'', sec:0, kg:0, level:null, levelKey:'', levelLabel:''};
   if(timed){
     load.sec = on && builderHooks.progStepSize(ex, 'time') > 0
       ? builderHooks.getExProgValue(p.id, ex, p, 'time')
@@ -1098,6 +1099,7 @@ function exerciseLoad(p, ex){
   if(builderHooks.progressionLoadType(ex) === 'level'){
     const state = builderHooks.exerciseLoadLevelState(ex) || {};
     load.level = Number.isFinite(+state.level) ? Math.max(0, Math.round(+state.level)) : null;
+    load.levelKey = String(state.key || '');
     load.levelLabel = String(state.label || '');
   }
   return load;
@@ -1116,6 +1118,7 @@ export function workoutLoadSnapshot(p, planIdx){
       i, n:ex.name || '',
       reps:v.reps || '', sec:+v.sec || 0, kg:+v.kg || 0,
       level:v.level == null ? null : +v.level,
+      levelKey:String(v.levelKey || ''),
       levelLabel:String(v.levelLabel || '')
     };
   });
@@ -1143,7 +1146,10 @@ function loadTargetText(ex, v){
   if(ex.type === 'time') bits.push(`${v.sec} ${t('store.secShort')}`);
   else bits.push(`${v.reps} ${t('workout.repsShort')}`);
   if(v.kg > 0) bits.push(`${builderHooks.fmtKg(v.kg)} ${t('progress.kg')}`);
-  if(v.levelLabel) bits.push(v.levelLabel);
+  const resistanceLabel = v.levelKey
+    ? builderHooks.loadLevelLabel({key:v.levelKey})
+    : String(v.levelLabel || '');
+  if(resistanceLabel) bits.push(resistanceLabel);
   let out = bits.join(' × ');
   if(ex.perSide) out += ' ' + t('store.perSide');
   return out;
@@ -1167,10 +1173,13 @@ export function loadDelta(a, b){
   const aLevel = a.level == null ? null : +a.level;
   const bLevel = b.level == null ? null : +b.level;
   if(Number.isFinite(aLevel) && Number.isFinite(bLevel) && aLevel !== bLevel){
-    bits.push(t('start.deltaResistance',{
-      before:String(a.levelLabel || (aLevel + 1)),
-      today:String(b.levelLabel || (bLevel + 1))
-    }));
+    const beforeLabel = a.levelKey
+      ? builderHooks.loadLevelLabel({key:a.levelKey})
+      : String(a.levelLabel || (aLevel + 1));
+    const todayLabel = b.levelKey
+      ? builderHooks.loadLevelLabel({key:b.levelKey})
+      : String(b.levelLabel || (bLevel + 1));
+    bits.push(t('start.deltaResistance',{before:beforeLabel,today:todayLabel}));
     moves.push(bLevel - aLevel);
   }
   const directional = moves.filter(x => x !== 0);
