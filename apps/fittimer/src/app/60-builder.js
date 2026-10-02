@@ -1861,6 +1861,45 @@ export function parseKg(v){
   return isFinite(n) && n > 0 ? Math.round(n * 2) / 2 : 0;
 }
 
+
+function progressionHasTerminalCeiling(ex){
+  if(!ex || progAxis(ex) === 'none') return false;
+  const strategy = getProgressionStrategy(ex, draft || null);
+  const mode = strategy.mode;
+  if(!mode) return false;
+
+  const base = parseValue(ex.value);
+  const repsBounded = strategy.reps.max != null && strategy.reps.max >= base.max;
+  const timeBounded = strategy.time.max != null && strategy.time.max >= base.min;
+  const baseKg = +ex.weight || 0;
+  const weightBounded = baseKg > 0 && strategy.weight.max != null && strategy.weight.max >= baseKg;
+
+  if(mode === 'reps') return repsBounded;
+  if(mode === 'time') return timeBounded;
+  if(mode === 'weight') return weightBounded;
+  if(mode === 'double_range') return repsBounded && weightBounded;
+  if(mode === 'parallel'){
+    return (ex.type === 'time' ? timeBounded : repsBounded) && weightBounded;
+  }
+  if(mode === 'level'){
+    const hasScaleEnd = exerciseLoadLevels(ex).length >= 2;
+    if(!hasScaleEnd) return false;
+    if(ex.type !== 'time' && strategy.reps.step > 0) return repsBounded;
+    return true; // direct level progression ends at the last physical resistance step
+  }
+  return false;
+}
+
+export function syncExSwapAvailability(){
+  if(!exDraft) return;
+  let probe = exDraft;
+  try{ probe = applyFormTo(JSON.parse(JSON.stringify(exDraft))); }catch(_){}
+  const available = progressionHasTerminalCeiling(probe);
+  setShown('exSwapRow', available);
+  $('exSwapOn').classList.toggle('on', !!exDraft.swapOn);
+  setShown('exSwapBox', available && !!exDraft.swapOn);
+}
+
 // подпись шага и плейсхолдер зависят от текущего формата — одно и то же поле,
 // разный смысл: прибавка кг / повторений / секунд
 // тумблер «усложнять со временем» + поля шага. Для «повторения и вес» полей ДВА сразу —
@@ -1868,7 +1907,7 @@ export function parseKg(v){
 // решает либо сам человек, либо ИИ по промту). Для простых форматов — одно поле.
 export function renderProgControls(){
   const hideControls = ()=>{
-    ['exProgModeRow','exProgEveryRow','exStepRow','exStepBothHint','exSwapRow','exSwapBox']
+    ['exProgModeRow','exProgEveryRow','exStepRow','exStepBothHint','exCeilingHint','exSwapRow','exSwapBox']
       .forEach(id => setShown(id, false));
   };
 
@@ -1921,10 +1960,8 @@ export function renderProgControls(){
   // dualProg остаётся compatibility-полем данных, но отдельного UI для него больше нет:
   // пользователь выбирает тот же смысл через «Как усложнять → Повторы → вес».
   setShown('exStepBothHint', growReps);
+  setShown('exCeilingHint', growReps || growTime || growWeight);
 
-  setShown('exSwapRow', true);
-  $('exSwapOn').classList.toggle('on', !!exDraft.swapOn);
-  setShown('exSwapBox', !!exDraft.swapOn);
   $('exSwapName').value = exDraft.swapName || '';
   $('exSwapDesc').value = exDraft.swapDesc || '';
 
@@ -1941,6 +1978,7 @@ export function renderProgControls(){
     set('exStepTime', exDraft.timeStep != null ? exDraft.timeStep : 5);
     set('exMaxTime', exDraft.timeMax > 0 ? exDraft.timeMax : '');
   }
+  syncExSwapAvailability();
   syncExProgSum(); syncExNowHints();
 }
 
