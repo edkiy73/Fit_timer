@@ -3025,7 +3025,7 @@ function composeRequest(){
   if(free.length) out += ` Decide these unspecified items yourself using sensible training logic: ${free.join('; ')}.`;
   const context = clampText(($('qContext') && $('qContext').value) || '', AI_CONTEXT_MAX).trim();
   if(context){
-    out += ` USER CAPABILITIES / LIMITATIONS CONTEXT: ${context}. Treat this as authoritative self-reported context for exercise selection, starting load, volume, range of motion, impact and progression. Do not diagnose from it. If it describes an injury, pain, or other health limitation, avoid choices that clearly conflict with it and do not claim medical clearance.`;
+    out += ` USER CAPABILITIES / LIMITATIONS CONTEXT: ${context}. Treat this as authoritative self-reported context for exercise selection, starting load, volume, range of motion, impact and progression. Known numeric performance and working-load data are evidence: preserve/reuse them for the same movement and use them to choose conservative positive loads for comparable movements instead of defaulting to ВЕС: 0. Do not diagnose from it. If it describes an injury, pain, or other health limitation, avoid choices that clearly conflict with it and do not claim medical clearance.`;
   }
   if(q.note && q.note.trim()) out += ` Additional user request: ${q.note.trim()}`;
   return out.trim();
