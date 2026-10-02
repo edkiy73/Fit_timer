@@ -84,7 +84,11 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await page.textContent('#finProgCheckYes'));
 
   // ---- оставляем упражнение без изменений и подтверждаем: рост не применяется ----
+  ok('карточка исключения сначала aria-pressed=false',
+    await page.locator('.fpc-card').first().getAttribute('aria-pressed') === 'false');
   await page.click('.fpc-card');
+  ok('карточка исключения после нажатия aria-pressed=true',
+    await page.locator('.fpc-card').first().getAttribute('aria-pressed') === 'true');
   ok('исключение явно подписано «Без изменений»',
     /Без изменений/.test(await page.locator('.fpc-card').first().textContent()));
   await page.click('#finProgCheckYes');
