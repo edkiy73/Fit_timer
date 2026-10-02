@@ -135,7 +135,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       stats:{completions:2}, plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[{
         id:'band-row', name:'Тяга резинки', type:'reps', value:'12-15', sets:3, rest:45,
         progOn:true, trackWeight:false, loadType:'level', progMode:'level',
-        loadLevels:[{label:'Лёгкое'},{label:'Среднее'},{label:'Сильное'}],
+        loadLevels:[{key:'light'},{key:'medium'},{key:'strong'}],
         loadLevel:1, repsStep:2, repsMax:18,
         ps:{n:0,cur:{reps:'12-15',level:2}}
       }]}]
@@ -143,7 +143,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const history = [...(stats.history || []), {
       id:'level-prev', pid:p.id, plan:0, d:localISO(new Date(Date.now()-86400000)),
       sec:900, status:'full', exercises:['Тяга резинки'],
-      load:[{i:0,n:'Тяга резинки',reps:'16-18',sec:0,kg:0,level:1,levelLabel:'Среднее'}]
+      load:[{i:0,n:'Тяга резинки',reps:'16-18',sec:0,kg:0,level:1,levelKey:'medium',levelLabel:'Medium stale'}]
     }];
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
     await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history})));
@@ -159,12 +159,15 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       row:document.querySelector('#startOverviewList .ex-row')?.textContent || ''
     };
   });
-  ok('сопротивление сохраняется в snapshot понятным label',
-    resistance.current.level === 2 && resistance.current.levelLabel === 'Сильное',
+  ok('сопротивление сохраняет canonical key и текущий локализованный label',
+    resistance.current.level === 2
+      && resistance.current.levelKey === 'strong'
+      && resistance.current.levelLabel === 'Сильное',
     JSON.stringify(resistance.current));
   ok('следующая ступень сопротивления считается повышением несмотря на сброс повторов',
     resistance.delta.dir === 'up'
       && /Сопротивление: было Среднее → сегодня Сильное/.test(resistance.delta.text)
+      && !/Medium stale/.test(resistance.delta.text)
       && /Нагрузка выше/.test(resistance.change),
     JSON.stringify({delta:resistance.delta,change:resistance.change}));
   ok('обзор показывает физически понятное сопротивление, а не level 2',
