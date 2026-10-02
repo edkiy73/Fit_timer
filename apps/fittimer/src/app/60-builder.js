@@ -2362,7 +2362,6 @@ export function parseProgramText(txt){
     // вопреки ответу: «10 повторений × 8 кг» через три повышения превращалось
     // в «13 повторений × 14 кг».
     if(ex.trackWeight && ex.type !== 'time' && !ex._gotRepsStep) ex.repsStep = 0;
-    delete ex._gotRepsStep;
     // Новые protocol labels превращаем в ту же semantic model, которую пишет
     // ручной редактор. Порядок строк не важен: current label резолвим только здесь.
     if(ex.loadType === 'level'){
@@ -2375,8 +2374,15 @@ export function parseProgramText(txt){
       // Для reps+level раздельный ШАГ ПОВТОРОВ описывает цикл
       // «повторы → сопротивление». Обычный ШАГ — только рост повторов при
       // фиксированном сопротивлении. Для time аналогично: ШАГ = рост времени.
-      if(ex.type === 'time') ex.progMode = ex._gotGenericStep || ex._gotTimeStep ? 'time' : 'level';
-      else ex.progMode = ex._gotGenericStep ? 'reps' : 'level';
+      if(ex.type === 'time'){
+        ex.progMode = ex._gotGenericStep || ex._gotTimeStep ? 'time' : 'level';
+        if(ex.progMode === 'level') ex.timeStep = 0;
+      }else{
+        ex.progMode = ex._gotGenericStep ? 'reps' : 'level';
+        // Без строки ШАГ ПОВТОРОВ не придумываем скрытый рост повторов.
+        // AI-default обязан прислать её явно; отсутствие означает прямой переход resistance.
+        if(ex.progMode === 'level' && !ex._gotRepsStep) ex.repsStep = 0;
+      }
     }else{
       if(ex.loadType == null) ex.loadType = ex.trackWeight ? 'weight' : 'none';
       // двойная прогрессия имеет смысл только с весом и потолком повторов —
@@ -2395,6 +2401,7 @@ export function parseProgramText(txt){
     delete ex._rawLoadLevel;
     delete ex._gotGenericStep;
     delete ex._gotTimeStep;
+    delete ex._gotRepsStep;
     // замена без названия — это просто пустой флаг, он ничего не покажет
     if(!(ex.swapName || '').trim()){ ex.swapOn = false; ex.swapName = ''; ex.swapDesc = ''; }
     else ex.swapOn = true;
