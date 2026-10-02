@@ -745,8 +745,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 3382,
-      "chars": 147099,
+      "lines": 3423,
+      "chars": 148507,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -795,6 +795,7 @@
         "exerciseLoadLevels",
         "exerciseLoadLevelState",
         "exerciseProgEvery",
+        "exerciseProgressionConfigOk",
         "exerciseResistanceScaleOk",
         "exFormatState",
         "exRestAfter",
@@ -864,7 +865,9 @@
         "programProgEvery",
         "programState",
         "progressedRepsRange",
+        "progressionCeilingHintKey",
         "progressionChanged",
+        "progressionConfigIssue",
         "progressionCurrentState",
         "progressionHasTerminalCeiling",
         "progressionLoadType",
@@ -1082,8 +1085,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2641,
-      "chars": 109206,
+      "lines": 2644,
+      "chars": 109436,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
