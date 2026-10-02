@@ -110,6 +110,53 @@ function runWorkout(exercises, every){
   need(list[1].progEvery === 0, 'parser keeps explicit zero progression frequency');
 }
 
+/* ---- parser materializes explicit semantic modes for existing kg protocol too ---- */
+{
+  const parsed = parseProgramText(`ПРОГРАММА: Семантика
+ПРОГРЕССИЯ: 2
+ДЕНЬ: Пн
+КРУГИ: 1
+УПРАЖНЕНИЕ: Двойная
+ФОРМАТ: повторения и вес
+ЗНАЧЕНИЕ: 8-10
+ВЕС: 10
+ПОДХОДЫ: 3
+ОТДЫХ: 60
+УСЛОЖНЯТЬ: да
+ШАГ ПОВТОРОВ: 1
+ШАГ ВЕСА: 2
+ПОТОЛОК ПОВТОРОВ: 14
+ПОТОЛОК ВЕСА: 30
+ПРИ ПОТОЛКЕ: да
+УПРАЖНЕНИЕ: Только вес
+ФОРМАТ: повторения и вес
+ЗНАЧЕНИЕ: 10
+ВЕС: 8
+ПОДХОДЫ: 3
+ОТДЫХ: 60
+УСЛОЖНЯТЬ: да
+ШАГ ВЕСА: 2
+ПОТОЛОК ВЕСА: 24
+УПРАЖНЕНИЕ: Параллельно
+ФОРМАТ: повторения и вес
+ЗНАЧЕНИЕ: 10
+ВЕС: 8
+ПОДХОДЫ: 3
+ОТДЫХ: 60
+УСЛОЖНЯТЬ: да
+ШАГ ПОВТОРОВ: 1
+ШАГ ВЕСА: 2
+ПОТОЛОК ПОВТОРОВ: 16
+ПОТОЛОК ВЕСА: 24`);
+  const list = normPlans(parsed.program || parsed)[0].exercises;
+  need(list[0].loadType === 'weight' && list[0].progMode === 'double_range',
+    'parser persists double_range semantic mode');
+  need(list[1].loadType === 'weight' && list[1].progMode === 'weight',
+    'parser persists weight-only semantic mode');
+  need(list[2].loadType === 'weight' && list[2].progMode === 'parallel',
+    'parser persists legacy simultaneous reps+weight as parallel');
+}
+
 /* ---- AI protocol resistance → та же модель, что ручной редактор ---- */
 {
   const parsed = parseProgramText(`ПРОГРАММА: Резинки
