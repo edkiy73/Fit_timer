@@ -487,8 +487,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 3451,
-      "chars": 159940,
+      "lines": 3533,
+      "chars": 164640,
       "symbols": [
         "activateClientAt",
         "add",
@@ -526,6 +526,7 @@
         "closeImages",
         "clProgs",
         "coachLinkIds",
+        "compactProgramAIContext",
         "countTo",
         "coverImagePrompt",
         "createEditedProgram",
@@ -545,6 +546,7 @@
         "exePrompt",
         "exerciseImagePrompt",
         "exerciseToText",
+        "exerciseWorkingContext",
         "exFormatLine",
         "exImageItem",
         "exitExAI",
@@ -610,6 +612,7 @@
         "openYouTube",
         "parseYouTubeUrl",
         "premiumGate",
+        "preserveKnownWeightIfPlaceholder",
         "programLink",
         "programMedia",
         "programPayload",
@@ -626,6 +629,7 @@
         "renderTray",
         "renderWeekStrip",
         "renderWellQuick",
+        "requestAllowsUnknownWeight",
         "resetCoachPhotoDraft",
         "restoreTrainerClientState",
         "runOne",
@@ -748,8 +752,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 3426,
-      "chars": 148473,
+      "lines": 3429,
+      "chars": 149004,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -1277,7 +1281,7 @@
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
       "lines": 680,
-      "chars": 46870,
+      "chars": 46872,
       "ids": [
         "aiActions",
         "aiAnswer",
