@@ -548,7 +548,9 @@ function renderStep(){
     // у форматов с весом, и при выключенной автопрогрессии там лежит зафиксированная
     // база. По старому условию (progAxis === 'weight') такой вес не показывался вовсе —
     // человек вписал 12 кг, а на тренировке их не видел.
-    const kgTxt = step.weight > 0 ? `<span class="v-unit v-kg">× ${fmtKg(step.weight)} ${appLocale === 'ru' ? 'кг' : 'kg'}</span>` : '';
+    const loadTxt = step.weight > 0
+      ? `<span class="v-unit v-kg">× ${fmtKg(step.weight)} ${appLocale === 'ru' ? 'кг' : 'kg'}</span>`
+      : (step.loadLabel ? `<span class="v-unit v-kg">× ${esc(step.loadLabel)}</span>` : '');
     // здесь у строки есть своя цифра: слот главной цифры нужен целиком, а место
     // справа от неё ничем не занято — кольцу подготовки на этом шаге и не нужно
     $('stepReps').classList.remove('kg-side');
@@ -556,7 +558,7 @@ function renderStep(){
     // пробелы между частями строки — для чтения вслух и копирования; во флекс-контейнере
     // они не создают отдельных элементов и на раскладку не влияют
     $('stepReps').innerHTML = `<span class="v-num">${valueText(step.reps)}</span> `
-      + (step.repsNote ? `<span class="v-unit">${step.repsNote}</span> ` : '') + kgTxt;
+      + (step.repsNote ? `<span class="v-unit">${step.repsNote}</span> ` : '') + loadTxt;
     // «на каждую сторону» — отдельной строкой, чтобы не ломать вёрстку под числом
     const snR = $('sideNote');
     if(step.perSide){ snR.textContent = t('workout.eachSide'); setShown(snR, true); }
@@ -571,13 +573,17 @@ function renderStep(){
     // Встаёт он СПРАВА от таймера, на одной с ним базовой линии (одна .count-row):
     // отдельной строкой он занимал весь слот главной цифры и весил столько же,
     // сколько сам отсчёт. Класс kg-side снимает этот слот.
-    const withKg = step.phase === 'work' && step.weight > 0;
-    if(withKg) $('stepReps').innerHTML = `<span class="v-unit v-kg">× ${fmtKg(step.weight)} ${appLocale === 'ru' ? 'кг' : 'kg'}</span>`;
-    $('stepReps').classList.toggle('kg-side', withKg);
-    setShown('stepReps', withKg);
+    const withLoad = step.phase === 'work' && (step.weight > 0 || !!step.loadLabel);
+    if(withLoad){
+      $('stepReps').innerHTML = step.weight > 0
+        ? `<span class="v-unit v-kg">× ${fmtKg(step.weight)} ${appLocale === 'ru' ? 'кг' : 'kg'}</span>`
+        : `<span class="v-unit v-kg">× ${esc(step.loadLabel)}</span>`;
+    }
+    $('stepReps').classList.toggle('kg-side', withLoad);
+    setShown('stepReps', withLoad);
     // класс нужен только вёрстке слота (.reps.kg-side чуть выше) — на позицию кольца
     // подготовки больше не влияет, оно на время отсчёта прячет вес сам (body.readying)
-    $('countRow').classList.toggle('with-kg', withKg);
+    $('countRow').classList.toggle('with-kg', withLoad);
     setShown('btnDone', step.phase === 'work');
     setShown('btnSkip', true);
     $('btnSkip').textContent = t(step.phase === 'rest' ? 'workout.next' : 'workout.skip');
