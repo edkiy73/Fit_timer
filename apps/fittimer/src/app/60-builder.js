@@ -860,6 +860,10 @@ export function progAtCeiling(pid, ex, program){
   });
   if(!growing.length) return false;
 
+  // Неизвестный вес (0) — это «снаряд ещё не выбран», а не достигнутый потолок.
+  // Старый progAtCeiling() в этом случае тоже возвращал false.
+  if(growing.includes('weight') && weightPending(ex)) return false;
+
   const allBounded = growing.every(axis => {
     if(axis === 'reps') return strategy.reps.max != null;
     if(axis === 'time') return strategy.time.max != null;
