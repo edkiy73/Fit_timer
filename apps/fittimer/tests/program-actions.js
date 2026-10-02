@@ -377,8 +377,13 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       modeHint:$('exProgModeHint').textContent.trim(),
       freqHint:$('exProgOnHint').textContent.trim(),
       seg3:$('exLoadNone').parentElement.classList.contains('seg3'),
-      loadButtonHeight:$('exLoadNone').getBoundingClientRect().height
+      loadButtonHeight:$('exLoadNone').getBoundingClientRect().height,
+      ceilingHint:$('exCeilingHint').textContent.trim(),
+      swapVisible:!$('exSwapRow').classList.contains('hidden')
     };
+    $('exMaxWeight').value = '';
+    $('exMaxWeight').dispatchEvent(new Event('input',{bubbles:true}));
+    weighted.swapWithoutWeightMax = !$('exSwapRow').classList.contains('hidden');
 
     openExercise(1);
     const resistance = {
@@ -434,6 +439,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     progressionEditor.weighted.seg3, JSON.stringify(progressionEditor.weighted));
   ok('mobile selector нагрузки сохраняет нормальный touch-target',
     progressionEditor.weighted.loadButtonHeight >= 44,
+    JSON.stringify(progressionEditor.weighted));
+  ok('замена более сложным упражнением доступна только при достижимом потолке',
+    progressionEditor.weighted.swapVisible
+      && !progressionEditor.weighted.swapWithoutWeightMax
+      && /пуст/i.test(progressionEditor.weighted.ceilingHint)
+      && /потол/i.test(progressionEditor.weighted.ceilingHint),
     JSON.stringify(progressionEditor.weighted));
   ok('редактор resistance показывает базовую ступень отдельно от текущей',
     progressionEditor.resistance.baseValue === '1'
