@@ -2979,8 +2979,8 @@ function composeRequest(){
   if(q.goal.length) parts.push(`Goal: ${aiListEnglish(q.goal)}.`);
   else free.push('goal');
 
-  if(q.level) parts.push(`Level: ${aiChoiceEnglish(q.level)}.`);
-  else free.push('fitness level');
+  if(q.level && q.level !== AI_DEFAULT_LEVEL) parts.push(`Explicitly selected level: ${aiChoiceEnglish(q.level)}.`);
+  else parts.push('Fitness level: infer from authoritative self-reported context and recorded training history when available; if neither gives useful evidence, use a conservative beginner baseline.');
 
   if(q.days.length) parts.push(`Training weekdays (canonical tokens): ${q.days.join(', ')}.`);
   else free.push('training days and weekly frequency');
