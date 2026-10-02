@@ -267,9 +267,9 @@ function runWorkout(exercises, every){
     loadLevels:[{key:'light'},{key:'medium'},{key:'strong'},{key:'veryStrong'}]});
   const seq=[];
   for(let i=0;i<4;i++){
+    const before=JSON.stringify(ex);
     const p=previewNextProgression(ex,{progression:2});
     seq.push(p.current.reps+'@'+p.current.level+'→'+p.next.reps+'@'+p.next.level);
-    const before=JSON.stringify(ex);
     need(JSON.stringify(ex)===before, 'level preview is pure');
     advanceExerciseProgression(ex);
   }
