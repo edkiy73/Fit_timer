@@ -5,8 +5,15 @@ const { createAnalyticsEngine } = require('../../../packages/core/server/analyti
 const EVENTS = Object.freeze([
   'install',
   'onboarding_done',
+  // Legacy unsuffixed events stay readable in historical analytics.
   'lesson_completed',
   'day_completed',
+  'lesson_completed.first',
+  'lesson_completed.resume',
+  'lesson_completed.replay',
+  'day_completed.first',
+  'day_completed.resume',
+  'day_completed.replay',
   'paywall_shown.course',
   'paywall_shown.today',
   'paywall_shown.talk',
