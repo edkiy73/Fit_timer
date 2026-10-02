@@ -428,12 +428,10 @@ export function ReviewView({
     setBusy(true);
     try{
       // A card that came back after a mistake is practice: its first answer already set the interval.
-      if(!returnedCard)await saveGraded(
-        setId,
-        item.activity.id,
-        correct,
-        item.activity.type==='choice'?undefined:(reviewChips?'build':'write')
-      );
+      if(!returnedCard){
+        if(item.activity.type==='choice')await saveGraded(setId,item.activity.id,correct);
+        else await saveGraded(setId,item.activity.id,correct,reviewChips?'build':'write');
+      }
       setResult(correct);
     }finally{
       setBusy(false);
