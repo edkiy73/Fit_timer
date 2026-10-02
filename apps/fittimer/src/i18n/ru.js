@@ -919,6 +919,7 @@ export const I18N_RU = {
   'report.reportOn': "Отчёт от {date}",
   'report.totalReports': "всего отчётов {count}",
   'report.setShort': "подх.",
+  'report.resistanceScale': "шкала: {scale}",
   'common.exerciseFallback': "Упражнение",
   'programs.none': "Ни одной программы",
   'programs.emptyTitle': "Своих программ пока нет",
