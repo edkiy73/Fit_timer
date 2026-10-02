@@ -406,6 +406,7 @@ function runWorkout(exercises, every){
   const ex = mkEx('Double без потолка', {type:'reps', value:'8-10', progOn:true,
     loadType:'weight', trackWeight:true, weight:5, progMode:'double_range',
     repsStep:1, repsMax:0, wStep:1, weightMax:12, dualProg:true});
+  ex.repsMax = 0; // проверяем явное очищение обязательного потолка после нормализации
   need(progressionConfigIssue(ex) === 'builder.ceilingRequiredDoubleError',
     'double_range rejects missing rep transition ceiling');
   ex.repsMax = 10;
