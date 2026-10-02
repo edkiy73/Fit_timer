@@ -139,6 +139,10 @@ export function blankExercise(){
           // ось прогрессии: reps | weight | time | none.
           // Каждая ось — свой шаг на одно повышение: вес в кг, повторы числом, время в секундах.
           prog:'', weight:0, wStep:2, repsStep:1, timeStep:5, progEvery:null,
+          // Нормализованная модель новой прогрессии вводится постепенно.
+          // null = старые/текущие данные, strategy adapter выводит смысл из legacy-полей.
+          // UI начнёт записывать эти поля отдельной пачкой — пока поведение не меняем.
+          loadType:null, progMode:null,
           // Потолок: выше него прогрессия не поднимает. Без него линейный рост за год
           // доводит до нереальных значений (60 кг гантель, 60 повторений, 5 минут планки).
           repsMax:0, weightMax:0, timeMax:0,
@@ -183,6 +187,10 @@ export function normalizeExercise(ex){
   ex.restAfter = ex.restAfter == null ? null : Math.max(0, Math.min(600, parseInt(ex.restAfter) || 0));
   // ось усложнения и вес: приводим к валидным значениям, чтобы кривой ответ ИИ не ломал показ
   if(ex.prog && !['reps','weight','time','none'].includes(ex.prog)) ex.prog = '';
+  // Новые поля пока только описывают смысл старой модели. Они не должны ломать
+  // существующие программы: null = читать legacy trackWeight/dualProg/steps.
+  if(!['none','weight','level'].includes(ex.loadType)) ex.loadType = null;
+  if(!['reps','weight','double_range','time','level','parallel'].includes(ex.progMode)) ex.progMode = null;
   ex.weight = parseKg(ex.weight);
   // Частота проверки конкретного упражнения:
   // null/пусто = наследовать программу; 0 = полностью отключить прогрессию;
@@ -369,6 +377,70 @@ export function programHasProgression(program){
   return !!program && normPlans(program).some(pl => (pl.exercises || []).some(ex =>
     !ex.warmup && progAxis(ex) !== 'none' && exerciseProgEvery(ex, program) > 0
   ));
+}
+
+
+// Нормализованный semantic adapter для новой progression architecture.
+// ВАЖНО: это пока READ-слой. Он не меняет advanceExerciseProgression() и не
+// переписывает старые программы — только однозначно описывает уже существующую
+// конфигурацию, чтобы следующая пачка могла перевести движок без скрытой смены поведения.
+const EX_LOAD_TYPES = new Set(['none','weight','level']);
+const EX_PROG_MODES = new Set(['reps','weight','double_range','time','level','parallel']);
+
+export function progressionLoadType(ex){
+  if(!ex) return 'none';
+  if(EX_LOAD_TYPES.has(ex.loadType)) return ex.loadType;
+  return hasWeight(ex) ? 'weight' : 'none';
+}
+
+function inferredProgressionMode(ex){
+  if(!ex || ex.warmup || progAxis(ex) === 'none') return null;
+
+  const loadType = progressionLoadType(ex);
+  if(loadType === 'level') return 'level';
+  if(isDualProg(ex)) return 'double_range';
+
+  const weightStep = loadType === 'weight' ? progStepSize(ex, 'weight') : 0;
+  if(ex.type === 'time'){
+    const timeStep = progStepSize(ex, 'time');
+    if(timeStep > 0 && weightStep > 0) return 'parallel';
+    if(weightStep > 0) return 'weight';
+    return 'time';
+  }
+
+  const repsStep = progStepSize(ex, 'reps');
+  if(repsStep > 0 && weightStep > 0) return 'parallel';
+  if(weightStep > 0) return 'weight';
+  return 'reps';
+}
+
+export function getProgressionStrategy(ex, program){
+  const every = exerciseProgEvery(ex, program);
+  const metric = ex && ex.type === 'time' ? 'time' : 'reps';
+  const loadType = progressionLoadType(ex);
+  const explicitMode = ex && EX_PROG_MODES.has(ex.progMode) ? ex.progMode : null;
+  const mode = explicitMode || inferredProgressionMode(ex);
+  const switchedOn = !!ex && !ex.warmup && progAxis(ex) !== 'none';
+
+  return {
+    enabled: switchedOn && every > 0 && mode != null,
+    every,
+    mode,
+    metric,
+    loadType,
+    reps: {
+      step: ex ? Math.max(0, +progStepSize(ex, 'reps') || 0) : 0,
+      max: ex ? progCeil(ex, 'reps') : null
+    },
+    time: {
+      step: ex ? Math.max(0, +progStepSize(ex, 'time') || 0) : 0,
+      max: ex ? progCeil(ex, 'time') : null
+    },
+    weight: {
+      step: ex && loadType === 'weight' ? Math.max(0, +progStepSize(ex, 'weight') || 0) : 0,
+      max: ex && loadType === 'weight' ? progCeil(ex, 'weight') : null
+    }
+  };
 }
 
 function fillExerciseProgEveryOptions(){
