@@ -316,8 +316,6 @@ export const I18N_EN = {
   'builder.swapTitle': "There's a harder exercise",
   'ai.splitDaysTitle': "Different exercises on different days",
   'ai.rotateTitle': "Alternate variants in turn",
-  'builder.autoLoadTitle': "Increase load automatically",
-  'builder.weightedTitle': "Weighted exercise",
   'builder.warmupTitle': "Warm-up",
   'builder.eachSideTitle': "Each side",
   'profile.prepSecondsExample': "For example: 5",
