@@ -161,7 +161,7 @@ const ok = (name, cond, extra) => {
     await page.inputValue('#exProgMode'));
 
   await page.click('[data-act="toggleExerciseLevelScale"]');
-  await page.fill('#exLoadLevels','Жёлтая\nКрасная\nЧёрная');
+  await page.fill('#exLoadLevels','Лёгкое\nСреднее\nСильное');
   await page.dispatchEvent('#exLoadLevels','change');
   await page.selectOption('#exLoadLevel','1');
   await page.fill('#exValue','12-15');
@@ -179,11 +179,11 @@ const ok = (name, cond, extra) => {
       value:ex.value, repsStep:ex.repsStep, repsMax:ex.repsMax, progEvery:ex.progEvery
     };
   });
-  ok('custom resistance-шкала и текущая ступень сохраняются',
+  ok('стандартная ручная resistance-шкала канонизируется и сохраняет текущую ступень',
     savedLevel.loadType === 'level'
       && savedLevel.progMode === 'level'
       && savedLevel.loadLevel === 1
-      && savedLevel.levels.join('|') === 'Жёлтая|Красная|Чёрная'
+      && savedLevel.levels.join('|') === 'light|medium|strong'
       && savedLevel.value === '12-15'
       && savedLevel.repsStep === 2
       && savedLevel.repsMax === 18
