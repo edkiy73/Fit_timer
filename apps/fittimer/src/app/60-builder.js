@@ -176,6 +176,41 @@ export function exerciseLoadLevel(ex){
   return Math.max(0, Math.min(levels.length - 1, Math.round(+raw || 0)));
 }
 
+export function loadLevelLabel(level){
+  if(!level) return '';
+  if(level.label) return String(level.label);
+  if(level.key === 'light') return t('builder.resistanceLight');
+  if(level.key === 'medium') return t('builder.resistanceMedium');
+  if(level.key === 'strong') return t('builder.resistanceStrong');
+  if(level.key === 'veryStrong') return t('builder.resistanceVeryStrong');
+  return '';
+}
+function resistanceScaleText(ex){
+  return exerciseLoadLevels(ex).map(loadLevelLabel).filter(Boolean).join('\n');
+}
+function parsedResistanceScaleText(raw){
+  const rows = String(raw || '').split(/\r?\n/)
+    .map(x=>clampLine(x.trim(),60)).filter(Boolean);
+  return cleanLoadLevels(rows, false);
+}
+export function exerciseResistanceScaleOk(showError=true){
+  if(!exDraft || progressionLoadType(exDraft) !== 'level') return true;
+  const field = $('exLoadLevels');
+  if(!field) return true;
+  const raw = field.value.trim();
+  const initial = String(field.dataset.initialValue || '').trim();
+  if(raw === initial) return true;
+  const levels = parsedResistanceScaleText(raw);
+  if(levels.length < 2){
+    if(showError) appAlert(t('builder.resistanceNeedTwo'));
+    return false;
+  }
+  exDraft.loadLevels = levels;
+  exDraft.loadLevel = Math.max(0, Math.min(levels.length - 1, Math.round(+exDraft.loadLevel || 0)));
+  renderExerciseLevelControls();
+  return true;
+}
+
 export function blankExercise(){
   return {id:newExId(), name:'', desc:'', video:'', type:'reps', value:10, sets:1, perSide:false, warmup:false,
           rest:45, restAfter:null, media:null, muscles:[], mistakes:'',
@@ -641,7 +676,11 @@ export function progressionModeLabel(ex, mode){
   if(mode === 'weight') return t('builder.progModeWeight');
   if(mode === 'time') return t('builder.progModeTime');
   if(mode === 'parallel') return t(ex && ex.type === 'time' ? 'builder.progModeParallelTime' : 'builder.progModeParallelReps');
-  if(mode === 'level') return t('builder.progModeLevel');
+  if(mode === 'level'){
+    return ex && ex.type !== 'time' && ex.repsStep > 0
+      ? t('builder.progModeLevelReps')
+      : t('builder.progModeLevel');
+  }
   return t('builder.progModeReps');
 }
 
@@ -649,14 +688,28 @@ function fillExerciseProgModeOptions(){
   const sel = $('exProgMode');
   if(!sel || !exDraft) return;
   const current = editorProgressionMode(exDraft);
+  const levelLoad = progressionLoadType(exDraft) === 'level';
   sel.innerHTML = '';
   progressionModeOptions(exDraft).forEach(mode=>{
+    if(mode === 'level' && levelLoad && exDraft.type !== 'time'){
+      const seq = document.createElement('option');
+      seq.value = 'level';
+      seq.textContent = t('builder.progModeLevelReps');
+      sel.appendChild(seq);
+      const direct = document.createElement('option');
+      direct.value = 'level_direct';
+      direct.textContent = t('builder.progModeLevel');
+      sel.appendChild(direct);
+      return;
+    }
     const o = document.createElement('option');
     o.value = mode;
     o.textContent = progressionModeLabel(exDraft, mode);
     sel.appendChild(o);
   });
-  sel.value = current || recommendedProgressionMode(exDraft);
+  sel.value = current === 'level' && levelLoad && exDraft.type !== 'time' && !(exDraft.repsStep > 0)
+    ? 'level_direct'
+    : (current || recommendedProgressionMode(exDraft));
 }
 
 function fillExerciseProgEveryOptions(){
@@ -1508,6 +1561,7 @@ function fillExercise(){
   // При открытии ДРУГОГО упражнения метка должна сбрасываться, иначе в полях остаются
   // цифры предыдущего — и уходят в него при сохранении
   ['exStepReps','exStepWeight','exStepTime','exMaxReps','exMaxWeight','exMaxTime'].forEach(id => delete $(id).dataset.touched);
+  if($('exLoadLevels')) delete $('exLoadLevels').dataset.initialValue;
   $('exName').value = ex.name || '';
   $('exValue').value = valueText(ex.value).replace('–', '-');
   $('exSets').value = ex.sets || 1;
@@ -1518,6 +1572,7 @@ function fillExercise(){
   fillExerciseProgEveryOptions();
   fillExerciseProgModeOptions();
   $('exProgEvery').value = ex.progEvery == null ? '' : String(ex.progEvery);
+  renderExerciseLevelControls();
   renderProgControls();
   $('exWarm').classList.toggle('on', !!ex.warmup);
   $('exSide').classList.toggle('on', !!ex.perSide);
@@ -1533,24 +1588,57 @@ function fillExercise(){
   $('exDetailsToggle').classList.remove('open');
   setShown('exProgBox', false);
   $('exProgToggle').classList.remove('open');
+  setShown('exLevelScaleBox', false);
 }
 
 // «Как считать» (повторения/время) и «Упражнение с доп. весом» — независимые переключатели:
 // вес сочетается с обоими, четыре формата вместо трёх («время и вес» — удержание
 // или перенос с грузом: планка с блином, фермерская прогулка).
+export function renderExerciseLevelControls(){
+  if(!exDraft) return;
+  const active = progressionLoadType(exDraft) === 'level';
+  setShown('exLevelRow', active);
+  if(!active) return;
+  const levels = exerciseLoadLevels(exDraft);
+  const baseLevel = Math.max(0, Math.min(levels.length - 1, Math.round(+exDraft.loadLevel || 0)));
+  exDraft.loadLevel = baseLevel;
+  const sel = $('exLoadLevel');
+  sel.innerHTML = '';
+  levels.forEach((level, index)=>{
+    const o = document.createElement('option');
+    o.value = String(index);
+    o.textContent = loadLevelLabel(level) || t('builder.resistanceLevelFallback',{count:index+1});
+    sel.appendChild(o);
+  });
+  sel.value = String(baseLevel);
+  const text = resistanceScaleText(exDraft);
+  const field = $('exLoadLevels');
+  if(field && !field.dataset.initialValue){
+    field.value = text;
+    field.dataset.initialValue = text;
+  }
+}
+
 export function syncExType(){
   const reps = exDraft.type !== 'time';
   const loadType = progressionLoadType(exDraft);
   const withWeight = loadType === 'weight';
+  const withLevel = loadType === 'level';
   $('exTypeReps').classList.toggle('act', reps);
   $('exTypeTime').classList.toggle('act', !reps);
   $('exLoadNone').classList.toggle('act', loadType === 'none');
   $('exLoadWeight').classList.toggle('act', withWeight);
+  $('exLoadLevelType').classList.toggle('act', withLevel);
   $('exValLabel').textContent = reps ? t('builder.repsLabel') : t('builder.secondsLabel');
   $('exValue').placeholder = reps ? t('builder.repsExample2') : t('builder.secondsExample2');
   if($('exTypeHint')) $('exTypeHint').textContent = t(reps ? 'builder.typeRepsHint' : 'builder.typeTimeHint');
-  if($('exLoadHint')) $('exLoadHint').textContent = t(withWeight ? 'builder.loadHintWeight' : 'builder.loadHintNone');
+  if($('exLoadHint')){
+    $('exLoadHint').textContent = t(withWeight
+      ? 'builder.loadHintWeight'
+      : withLevel ? 'builder.loadHintLevel' : 'builder.loadHintNone');
+  }
   setShown('exWeightRow', withWeight);
+  renderExerciseLevelControls();
   renderProgControls();
 }
 export function syncExWarm(){
@@ -1617,7 +1705,9 @@ export function renderProgControls(){
   const mode = editorProgressionMode(exDraft);
   const isTime = exDraft.type === 'time';
   const withWeight = progressionLoadType(exDraft) === 'weight';
-  const growReps = mode === 'reps' || mode === 'double_range' || (mode === 'parallel' && !isTime);
+  const growReps = mode === 'reps' || mode === 'double_range' ||
+    (mode === 'parallel' && !isTime) ||
+    (mode === 'level' && !isTime && exDraft.repsStep > 0);
   const growTime = mode === 'time' || (mode === 'parallel' && isTime);
   const growWeight = withWeight && (mode === 'weight' || mode === 'double_range' || mode === 'parallel');
 
@@ -1796,6 +1886,11 @@ function applyFormTo(target){
   target.weight = parseKg($('exWeight').value);
   target.loadType = progressionLoadType(target);
   target.trackWeight = target.loadType === 'weight';
+  if(target.loadType === 'level'){
+    target.loadLevels = cleanLoadLevels(target.loadLevels, true);
+    const selectedLevel = $('exLoadLevel') ? Math.round(+$('exLoadLevel').value || 0) : (+target.loadLevel || 0);
+    target.loadLevel = Math.max(0, Math.min(target.loadLevels.length - 1, selectedLevel));
+  }
   if(target.progOn){
     target.progMode = editorProgressionMode(target);
     target.dualProg = target.progMode === 'double_range';
@@ -1813,7 +1908,9 @@ function applyFormTo(target){
     target.progMode = mode;
     target.dualProg = mode === 'double_range';
     const isTime = target.type === 'time';
-    const growReps = mode === 'reps' || mode === 'double_range' || (mode === 'parallel' && !isTime);
+    const growReps = mode === 'reps' || mode === 'double_range' ||
+      (mode === 'parallel' && !isTime) ||
+      (mode === 'level' && !isTime && target.repsStep > 0);
     const growTime = mode === 'time' || (mode === 'parallel' && isTime);
     const growWeight = hasWeight(target) && (mode === 'weight' || mode === 'double_range' || mode === 'parallel');
 
@@ -1838,6 +1935,11 @@ function applyFormTo(target){
 // есть ли несохранённые правки
 export function exDirty(){
   if(!exDraft || exIdx < 0) return false;
+  if(progressionLoadType(exDraft) === 'level' && $('exLoadLevels')){
+    const raw = $('exLoadLevels').value.trim();
+    const initial = String($('exLoadLevels').dataset.initialValue || '').trim();
+    if(raw !== initial) return true;
+  }
   const snapshot = applyFormTo(JSON.parse(JSON.stringify(exDraft)));
   return JSON.stringify(snapshot) !== exOrig;
 }
@@ -2944,8 +3046,18 @@ export function initBuilder(){
     q.rotate = !q.rotate;
     $('qRotate').classList.toggle('on', q.rotate);
   });
+  $('exLoadLevel').onchange = ()=>{
+    exDraft.loadLevel = Math.max(0, Math.min(exerciseLoadLevels(exDraft).length - 1, Math.round(+$('exLoadLevel').value || 0)));
+  };
+  $('exLoadLevels').onchange = ()=>{ exerciseResistanceScaleOk(true); };
   $('exProgMode').onchange = ()=>{
-    setExerciseProgressionMode(exDraft, $('exProgMode').value);
+    const selected = $('exProgMode').value;
+    if(selected === 'level_direct'){
+      setExerciseProgressionMode(exDraft, 'level');
+      exDraft.repsStep = 0;
+    }else{
+      setExerciseProgressionMode(exDraft, selected);
+    }
     ['exStepReps','exStepWeight','exStepTime','exMaxReps','exMaxWeight','exMaxTime'].forEach(id => delete $(id).dataset.touched);
     renderProgControls();
   };
