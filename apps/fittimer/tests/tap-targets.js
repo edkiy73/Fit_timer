@@ -81,7 +81,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     };
   });
   ok('три варианта нагрузки — цели не ниже 44 точек',
-    /\\bseg3\\b/.test(seg3.cls) && seg3.heights.length === 3 && seg3.heights.every(h => h >= 44),
+    /\bseg3\b/.test(seg3.cls) && seg3.heights.length === 3 && seg3.heights.every(h => h >= 44),
     JSON.stringify(seg3));
   ok('три варианта нагрузки не раздвигают экран на 360 px',
     seg3.overflow <= 1 && seg3.pageOverflow <= 1, JSON.stringify(seg3));
