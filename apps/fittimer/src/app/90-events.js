@@ -1794,6 +1794,10 @@ export function addExManual(){
   const nWarm = list.filter(e => e.warmup).length;
   if(list.length - nWarm >= MAX_MAIN){ appAlert(t('exercise.mainLimitAdd',{count:MAX_MAIN})); return; }
   const ex = blankExercise();
+  // В ручном редакторе progression — осознанная настройка. Раньше blankExercise()
+  // через legacy fallback выглядел как прогрессирующий, хотя человек ещё ни разу
+  // не включал «Усложнять со временем».
+  ex.progOn = false;
   // наследуем формат, подходы и отдых у предыдущего — при сборке они обычно одинаковые
   const prev = list.filter(e => !e.warmup).slice(-1)[0];
   if(prev){ ex.type = prev.type; ex.sets = prev.sets || 1; ex.rest = prev.rest; ex.value = prev.value; }
