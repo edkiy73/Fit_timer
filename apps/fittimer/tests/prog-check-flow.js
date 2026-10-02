@@ -84,7 +84,11 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await page.textContent('#finProgCheckYes'));
 
   // ---- оставляем упражнение без изменений и подтверждаем: рост не применяется ----
+  ok('карточка исключения сначала aria-pressed=false',
+    await page.locator('.fpc-card').first().getAttribute('aria-pressed') === 'false');
   await page.click('.fpc-card');
+  ok('карточка исключения после нажатия aria-pressed=true',
+    await page.locator('.fpc-card').first().getAttribute('aria-pressed') === 'true');
   ok('исключение явно подписано «Без изменений»',
     /Без изменений/.test(await page.locator('.fpc-card').first().textContent()));
   await page.click('#finProgCheckYes');
@@ -152,6 +156,51 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('после полного потолка счётчик проверки не копится',
      terminalState.n === 0 && terminalState.reps === '18-20' && terminalState.kg === 20,
      JSON.stringify(terminalState));
+
+  // ---- resistance: финальный review показывает физические labels, а не level-index ----
+  await page.evaluate(async () => {
+    const p = {id:'pc-level', name:'Резинки', progression:1, stats:{completions:0},
+      plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[{
+        id:'band1', name:'Тяга резинки', type:'reps', value:'12-15', sets:1, rest:5,
+        progOn:true, trackWeight:false, loadType:'level', progMode:'level',
+        loadLevels:[{label:'Лёгкое'},{label:'Среднее'},{label:'Сильное'}],
+        loadLevel:1, repsStep:2, repsMax:18,
+        ps:{n:0,cur:{reps:'16-18',level:1}}
+      }]}]};
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await loadData();
+    await savePrograms();
+    openStart(customPrograms.find(x => x.id === 'pc-level'));
+  });
+  await page.click('#btnStart');
+  await page.waitForSelector('#startModal.open');
+  await page.click('#startFresh');
+  await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
+  await page.evaluate(() => {
+    const outcomes = {};
+    state.steps.forEach((step, i) => {
+      if(step.phase === 'work') outcomes[workoutStepKey(step, i)] = 'done';
+    });
+    startWorkout(0, 120 * 1000, {skipPrep:true, outcomes});
+    finishWorkout();
+    document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
+  });
+  await page.waitForTimeout(900);
+  const resistanceCard = await page.locator('.fpc-card').first().textContent();
+  ok('review resistance показывает Среднее → Сильное понятными словами',
+    /Среднее/.test(resistanceCard) && /Сильное/.test(resistanceCard) && /→/.test(resistanceCard),
+    resistanceCard);
+  ok('review resistance не показывает технический level-index',
+    !/level\s*\d/i.test(resistanceCard), resistanceCard);
+  await page.click('#finProgCheckYes');
+  await page.waitForTimeout(250);
+  const resistanceApplied = await page.evaluate(() => {
+    const ex = normPlans(customPrograms.find(x => x.id === 'pc-level'))[0].exercises[0];
+    return {reps:ex.ps && ex.ps.cur && ex.ps.cur.reps, level:ex.ps && ex.ps.cur && ex.ps.cur.level};
+  });
+  ok('после подтверждения resistance реально переходит на следующий уровень и сбрасывает диапазон',
+    resistanceApplied.level === 2 && resistanceApplied.reps === '12-15',
+    JSON.stringify(resistanceApplied));
 
   // ---- находки с устройства: разминка с тем же id, два чипа подряд,
   //      тренировка короче 30 секунд ----
