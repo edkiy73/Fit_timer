@@ -139,7 +139,7 @@ describe('node activity runner',()=>{
     await user.click(screen.getByRole('button',{name:'Закрыть теорию'}));
     expect(screen.queryByRole('dialog')).toBeNull();
     await chooseAnswer(user,'I am here');
-    expect(saveGraded).toHaveBeenCalledWith('general-foundation','choice.one',true);
+    expect(saveGraded).toHaveBeenCalledWith('general-foundation','choice.one',true,undefined,expect.any(String));
     expect(await screen.findByText('Верно')).toBeTruthy();
 
     await user.click(screen.getByRole('button',{name:'Далее'}));
@@ -148,7 +148,7 @@ describe('node activity runner',()=>{
     const pool=screen.getByLabelText('Слова');
     for(const word of ['I','am','here'])await user.click(within(pool).getByRole('button',{name:word}));
     await user.click(screen.getByRole('button',{name:'Проверить'}));
-    expect(saveGraded).toHaveBeenCalledWith('general-foundation','text.one',true,'build');
+    expect(saveGraded).toHaveBeenCalledWith('general-foundation','text.one',true,'build',expect.any(String));
 
     await user.click(screen.getByRole('button',{name:'Завершить'}));
     expect(await screen.findByText('День пройден')).toBeTruthy();
@@ -193,7 +193,9 @@ describe('node activity runner',()=>{
     expect(screen.getByRole('heading',{name:'Выбери ответ'})).toBeTruthy();
     await chooseAnswer(user,'I am here');
     // «Работа над ошибками» is practice: the review schedule keeps the first (wrong) answer only.
-    expect(saveGraded.mock.calls.filter(call=>call[1]==='choice.one')).toEqual([['general-foundation','choice.one',false]]);
+    expect(saveGraded.mock.calls.filter(call=>call[1]==='choice.one')).toEqual([
+      ['general-foundation','choice.one',false,undefined,expect.any(String)]
+    ]);
     await user.click(screen.getByRole('button',{name:'Завершить'}));
     // The runtime here never marks the day complete: the summary says so honestly.
     expect(await screen.findByText('День пока не засчитан')).toBeTruthy();
