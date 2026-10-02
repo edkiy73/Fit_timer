@@ -156,6 +156,33 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('обычная передача сохраняет только авторство, но не связь для отчётов',
      transfer.by === '@someone' && transfer.src === undefined, JSON.stringify(transfer));
 
+  // Resistance policy — часть шаблона, а ps.cur.level — личное состояние владельца.
+  const resistanceTransfer = await page.evaluate(() => {
+    const source = {
+      name:'Резинки', plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[{
+        id:'band-1',name:'Тяга резинки',type:'reps',value:'12-15',
+        loadType:'level',progMode:'level',
+        loadLevels:[{label:'Лёгкая'},{label:'Средняя'},{label:'Сильная'}],
+        loadLevel:1,repsStep:2,repsMax:18,
+        ps:{n:2,cur:{reps:'16-18',level:2}}
+      }]}]
+    };
+    const copy = programTemplateCopy(source);
+    const ex = normPlans(copy)[0].exercises[0];
+    return {
+      loadType:ex.loadType, progMode:ex.progMode,
+      levels:ex.loadLevels, loadLevel:ex.loadLevel, ps:ex.ps
+    };
+  });
+  ok('шаблон сохраняет resistance policy и базовую ступень',
+    resistanceTransfer.loadType === 'level'
+      && resistanceTransfer.progMode === 'level'
+      && resistanceTransfer.loadLevel === 1
+      && resistanceTransfer.levels.map(x=>x.label).join('|') === 'Лёгкая|Средняя|Сильная',
+    JSON.stringify(resistanceTransfer));
+  ok('шаблон не передаёт чужую текущую resistance-ступень',
+    resistanceTransfer.ps === undefined, JSON.stringify(resistanceTransfer.ps));
+
   // Файл может быть собран кем угодно. Даже если в него вручную положили src и
   // прогресс другого человека, импорт обязан превратить его в независимую копию.
   const imported = await page.evaluate(async () => {
@@ -264,6 +291,49 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
      trainerUpdate.legacyId === 'legacy-local-id'
        && trainerUpdate.legacyPs && trainerUpdate.legacyPs.cur.reps === '14',
      JSON.stringify(trainerUpdate));
+
+  const resistanceUpdate = await page.evaluate(() => {
+    const existing = {
+      id:'res-client',stats:{completions:3},plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[{
+        id:'band-1',name:'Тяга резинки',type:'reps',value:'12-15',
+        loadType:'level',progMode:'level',
+        loadLevels:[{label:'A'},{label:'B'},{label:'C'}],loadLevel:0,
+        repsStep:2,repsMax:18,progEvery:2,
+        ps:{n:2,cur:{reps:'16-18',level:1}}
+      }]}]
+    };
+    const same = programTemplateCopy({
+      plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[{
+        id:'band-1',name:'Тяга резинки',type:'reps',value:'12-15',
+        loadType:'level',progMode:'level',
+        loadLevels:[{label:'A'},{label:'B'},{label:'C'}],loadLevel:0,
+        repsStep:2,repsMax:18,progEvery:2
+      }]}]
+    });
+    carryLinkedProgramState(existing, same);
+    const sameEx = normPlans(same)[0].exercises[0];
+
+    const changed = programTemplateCopy({
+      plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[{
+        id:'band-1',name:'Тяга резинки',type:'reps',value:'12-15',
+        loadType:'level',progMode:'level',
+        loadLevels:[{label:'A'},{label:'X'},{label:'C'}],loadLevel:0,
+        repsStep:2,repsMax:18,progEvery:2
+      }]}]
+    });
+    carryLinkedProgramState(existing, changed);
+    const changedEx = normPlans(changed)[0].exercises[0];
+    return {same:sameEx.ps, changed:changedEx.ps};
+  });
+  ok('обновление той же resistance-шкалы сохраняет текущий level и reps',
+    resistanceUpdate.same && resistanceUpdate.same.n === 2
+      && resistanceUpdate.same.cur.level === 1
+      && resistanceUpdate.same.cur.reps === '16-18',
+    JSON.stringify(resistanceUpdate.same));
+  ok('смена resistance-шкалы сохраняет счётчик, но сбрасывает старый numeric level',
+    resistanceUpdate.changed && resistanceUpdate.changed.n === 2
+      && Object.keys(resistanceUpdate.changed.cur || {}).length === 0,
+    JSON.stringify(resistanceUpdate.changed));
 
   // у копии пункт «в каталог» уже есть — она своя
   const copyMenu = await page.evaluate(() => {
