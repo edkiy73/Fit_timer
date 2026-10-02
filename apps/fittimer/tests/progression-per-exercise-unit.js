@@ -241,6 +241,24 @@ function runWorkout(exercises, every){
   carryExerciseProgress(oldEx, other);
   need(other.ps.n === 2 && Object.keys(other.ps.cur).length === 0,
     'different resistance scale keeps only safe counter and clears current level: ' + JSON.stringify(other.ps));
+
+  const reordered = mkEx('Резинка', {value:'12-15', type:'reps', progOn:true, loadType:'level', progMode:'level',
+    loadLevels:[{label:'C'},{label:'B'},{label:'A'}], loadLevel:2, repsStep:2, repsMax:19, progEvery:2});
+  carryExerciseProgress(oldEx, reordered);
+  need(reordered.ps.n === 2 && reordered.ps.cur.level === 1 && reordered.ps.cur.reps === '14-17',
+    'reordering the same physical resistance scale preserves current physical level and reps: ' + JSON.stringify(reordered.ps));
+
+  const movedCurrent = mkEx('Резинка', {value:'12-15', type:'reps', progOn:true, loadType:'level', progMode:'level',
+    loadLevels:[{label:'B'},{label:'A'},{label:'C'}], loadLevel:1, repsStep:2, repsMax:19, progEvery:2});
+  carryExerciseProgress(oldEx, movedCurrent);
+  need(movedCurrent.ps.cur.level === 0 && movedCurrent.ps.cur.reps === '14-17',
+    'current resistance is remapped by physical label when its numeric index changes: ' + JSON.stringify(movedCurrent.ps));
+
+  const changedBase = mkEx('Резинка', {value:'12-15', type:'reps', progOn:true, loadType:'level', progMode:'level',
+    loadLevels:[{label:'A'},{label:'B'},{label:'C'}], loadLevel:1, repsStep:2, repsMax:19, progEvery:2});
+  carryExerciseProgress(oldEx, changedBase);
+  need(Object.keys(changedBase.ps.cur).length === 0,
+    'changing the physical base resistance still resets stale current progression: ' + JSON.stringify(changedBase.ps));
 }
 
 /* ---- normalization adapter: legacy → единая semantic strategy ---- */
