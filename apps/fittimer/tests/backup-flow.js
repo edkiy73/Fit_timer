@@ -102,6 +102,9 @@ async function restore(page, dump){
 
     const rb = parseProgramText(bandTxt);
     const band = rb.program || rb; band.id = 'bk-band';
+    // Это современная программа с уже materialized per-exercise state.
+    // Без marker loadData законно прогонит legacy migration и пересчитает ps.n.
+    band.psMigrated = true;
     const bx = normPlans(band)[0].exercises[0];
     // Моделируем не просто шаблон, а реальный пользовательский прогресс к моменту бэкапа.
     bx.ps = {n:2,cur:{reps:'16-18',level:2}};
