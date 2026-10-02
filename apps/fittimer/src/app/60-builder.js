@@ -207,6 +207,9 @@ export function exerciseResistanceScaleOk(showError=true){
   }
   exDraft.loadLevels = levels;
   exDraft.loadLevel = Math.max(0, Math.min(levels.length - 1, Math.round(+exDraft.loadLevel || 0)));
+  // После успешного применения новая шкала становится сохранённой базой формы.
+  // Иначе exDirty() продолжал считать её несохранённой до закрытия экрана.
+  delete field.dataset.initialValue;
   renderExerciseLevelControls();
   return true;
 }
