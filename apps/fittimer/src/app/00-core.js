@@ -82,6 +82,8 @@ let builderHooks = {
   exDirty: () => false,
   exRestAfter: () => 0,
   exerciseLoadLevelState: () => ({level:0,key:'',label:'',identity:''}),
+  exerciseLoadLevels: () => [],
+  ensurePs: ex => ex && ex.ps,
   loadLevelLabel: level => String((level && level.label) || ''),
   exerciseProgEvery: () => 0,
   fmtKg: v => String(v == null ? '' : v),
