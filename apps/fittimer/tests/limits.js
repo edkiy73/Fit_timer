@@ -97,6 +97,43 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('«частые ошибки» обрезаны', huge.exMist === 300, huge.exMist);
   ok('отдых не бывает сутками', huge.rest === 600, huge.rest);
 
+  /* ---- resistance state из чужой программы тоже проходит единый sanitizer ---- */
+  const levelSafe = await page.evaluate(() => {
+    const p = {
+      name:'Резинки', plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[{
+        id:'evil-level', name:'Тяга резинки', type:'reps', value:'12-15', sets:3, rest:45,
+        loadType:'level', progMode:'level',
+        loadLevels:[
+          {label:'A'.repeat(500)},
+          {key:'medium'},
+          {key:'javascript'},
+          '<img src=x onerror=alert(1)>'
+        ],
+        loadLevel:999,
+        ps:{n:999999,cur:{reps:'12-15',level:999,kg:999999}}
+      }]}]
+    };
+    sanitizeProgram(p);
+    const ex=p.plans[0].exercises[0];
+    return {
+      levels:ex.loadLevels,
+      loadLevel:ex.loadLevel,
+      ps:ex.ps
+    };
+  });
+  ok('чужая шкала сопротивления очищается и ограничивается',
+    levelSafe.levels.length === 3
+      && levelSafe.levels[0].label.length === 60
+      && levelSafe.levels[1].key === 'medium'
+      && levelSafe.levels[2].label === '<img src=x onerror=alert(1)>',
+    JSON.stringify(levelSafe.levels));
+  ok('индекс resistance и ps.cur.level не выходят за границы шкалы',
+    levelSafe.loadLevel === 2 && levelSafe.ps.cur.level === 2 && levelSafe.ps.n === 9999,
+    JSON.stringify(levelSafe));
+  ok('лишний kg в level-state не влияет на сохранность уровня',
+    levelSafe.ps.cur.kg === 500 && levelSafe.ps.cur.level === 2,
+    JSON.stringify(levelSafe.ps.cur));
+
   /* ---- картинка обязана быть картинкой ---- */
   const pics = await page.evaluate(() => ({
     good: cleanPic('data:image/png;base64,iVBORw0KGgo='),
