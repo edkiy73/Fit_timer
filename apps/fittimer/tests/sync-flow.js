@@ -51,7 +51,7 @@ async function boot(browser, label, errors){
       ]}]
     },{
       id:'sync-resistance', name:'Синхронные резинки', time:'', progression:2,
-      stats:{completions:2}, plans:[{days:['Пт'],rounds:1,roundRest:0,exercises:[
+      psMigrated:true, stats:{completions:2}, plans:[{days:['Пт'],rounds:1,roundRest:0,exercises:[
         {id:'band-sync',name:'Тяга резинки',type:'reps',value:'12-15',sets:3,rest:45,
          loadType:'level',progMode:'level',
          loadLevels:[{label:'Лёгкая'},{label:'Средняя'},{label:'Сильная'}],
