@@ -7,7 +7,7 @@ import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { activitySaveClock } from './activity-progress';
 import { loadLearnerCourse } from './course-loader';
 import { dayNumberFromKey } from './engine/course-progress';
-import { summarizeAnswerStats, type AnswerStatsSummary } from './engine/learner-stats';
+import { summarizeAnswerStats, summarizeAnswerStatsForActivities, type AnswerStatsSummary } from './engine/learner-stats';
 import {
   WORD_PROGRESS_DOC,
   courseProgressDoc,
@@ -49,6 +49,8 @@ export interface ProgressSummary {
   activeReviews:number;
   dueNow:number;
   answers:AnswerStatsSummary;
+  taskAnswers:AnswerStatsSummary;
+  practiceAnswers:AnswerStatsSummary;
   speedAverage:number|null;
   speedSamples:number;
   dialogueAverage:number|null;
@@ -117,6 +119,18 @@ export function buildProgressSummary(
   const wordItems=liveValues(words.items);
   const learningDayCount=liveValues(allDays.learningDays).length;
   const answers=summarizeAnswerStats(stats);
+  const taskIds=new Set(
+    state.set.activities
+      .filter(activity=>activity.type==='choice'||activity.type==='text-input'||activity.type==='translation')
+      .map(activity=>activity.id)
+  );
+  const practiceIds=new Set(
+    state.set.activities
+      .filter(activity=>activity.type==='pattern-drill')
+      .map(activity=>activity.id)
+  );
+  const taskAnswers=summarizeAnswerStatsForActivities(stats,taskIds);
+  const practiceAnswers=summarizeAnswerStatsForActivities(stats,practiceIds);
   const dueNow=[
     ...cards,
     ...drill,
@@ -141,6 +155,8 @@ export function buildProgressSummary(
     activeReviews,
     dueNow,
     answers,
+    taskAnswers,
+    practiceAnswers,
     speedAverage:speed.average,
     speedSamples:speed.samples,
     dialogueAverage:dialogue.average,
