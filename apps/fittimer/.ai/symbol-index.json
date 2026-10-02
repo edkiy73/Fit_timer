@@ -739,8 +739,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 3089,
-      "chars": 133904,
+      "lines": 3113,
+      "chars": 134994,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -856,6 +856,7 @@
         "progressionLoadType",
         "progressionModeLabel",
         "progressionModeOptions",
+        "progressionStateLabel",
         "progRound",
         "progShort",
         "progStepSize",
@@ -907,8 +908,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1960,
-      "chars": 86763,
+      "lines": 1997,
+      "chars": 87681,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -992,7 +993,6 @@
         "tearDownWorkout",
         "textH",
         "tnum",
-        "toggleProgCheckList",
         "warmupPosition",
         "workoutOutcomeSummary",
         "workoutStepKey",
@@ -1061,8 +1061,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2659,
-      "chars": 110030,
+      "lines": 2658,
+      "chars": 109930,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -1585,7 +1585,7 @@
     "src/html/20-workout-finish.html": {
       "kind": "frontend-html",
       "lines": 143,
-      "chars": 9228,
+      "chars": 9112,
       "ids": [
         "badgeRow",
         "btnAgain",
@@ -1613,7 +1613,6 @@
         "finProgCheckAsk",
         "finProgCheckDone",
         "finProgCheckList",
-        "finProgCheckToggle",
         "finProgCheckYes",
         "finQuick",
         "finRingGrad",
@@ -1660,8 +1659,7 @@
         "previousWorkoutStep",
         "resumeWorkout",
         "shareWorkoutResult",
-        "skipWorkoutStep",
-        "toggleFinishProgressionList"
+        "skipWorkoutStep"
       ]
     },
     "src/html/30-onboarding-account.html": {
