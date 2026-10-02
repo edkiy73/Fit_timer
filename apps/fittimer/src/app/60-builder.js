@@ -721,6 +721,10 @@ export function setExerciseProgressionMode(ex, mode){
 // false сохраняет текущий способ, пока он совместим.
 export function setExerciseLoadType(ex, loadType, preferRecommended=false){
   if(!ex) return ex;
+  // Формат нагрузки и ON/OFF прогрессии — независимые настройки. В частности,
+  // редактирование упражнения с явно выключенной прогрессией не должно молча
+  // включать её только потому, что человек добавил вес или резинку.
+  const progressionWasOn = ex.progOn != null ? !!ex.progOn : progAxis(ex) !== 'none';
   const next = loadType === 'weight' ? 'weight' : loadType === 'level' ? 'level' : 'none';
   ex.loadType = next;
   ex.trackWeight = next === 'weight';
@@ -734,20 +738,25 @@ export function setExerciseLoadType(ex, loadType, preferRecommended=false){
   const target = preferRecommended || !allowed.includes(current)
     ? recommendedProgressionMode(ex)
     : current;
-  return setExerciseProgressionMode(ex, target);
+  setExerciseProgressionMode(ex, target);
+  ex.progOn = progressionWasOn;
+  return ex;
 }
 
 // То же для «Повторения / Время»: новый черновик получает default нового формата,
 // существующая ручная настройка сохраняется, если такой mode всё ещё имеет смысл.
 export function setExerciseMetric(ex, type, preferRecommended=false){
   if(!ex) return ex;
+  const progressionWasOn = ex.progOn != null ? !!ex.progOn : progAxis(ex) !== 'none';
   ex.type = type === 'time' ? 'time' : 'reps';
   const current = editorProgressionMode(ex);
   const allowed = progressionModeOptions(ex);
   const target = preferRecommended || !allowed.includes(current)
     ? recommendedProgressionMode(ex)
     : current;
-  return setExerciseProgressionMode(ex, target);
+  setExerciseProgressionMode(ex, target);
+  ex.progOn = progressionWasOn;
+  return ex;
 }
 
 export function progressionModeLabel(ex, mode){
