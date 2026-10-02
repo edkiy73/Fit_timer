@@ -69,7 +69,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const row = document.querySelectorAll('#startOverviewList .ex-row')[2];
     const chip = row && row.querySelector('.kg-edit');
     return {chip: chip ? chip.textContent : '', icon: !!(chip && chip.querySelector('svg')),
-      reps: row ? row.querySelector('.ex-meta span').textContent : ''};
+      reps: row ? (row.querySelector('[data-load-field="reps"]')?.textContent || '') : ''};
   });
   ok("вес — отдельная метка-кнопка с карандашом", /\d+\s*кг/.test(kgChip.chip) && kgChip.icon, JSON.stringify(kgChip));
   ok('вес не дублируется в метке повторов', !/кг/.test(kgChip.reps), kgChip.reps);
