@@ -336,6 +336,8 @@ export const ru = {
   'learn.check': 'Проверить',
   'learn.answerLabel': 'Твой ответ',
   'learn.correct': 'Верно',
+  'learn.nearMiss': 'Почти правильно',
+  'learn.nearMissHint': 'Похоже на опечатку — ответ засчитан.',
   'learn.incorrect': 'Ответ неверный',
   'learn.accepted': 'Подходящий ответ: {answer}',
   'learn.next': 'Далее',
