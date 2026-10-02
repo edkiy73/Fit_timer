@@ -12,6 +12,11 @@ function choice(id,tags,prompt,options,correctIndex,explanation){
   return {...base,id,type:'choice',tags,prompt,options,correctIndex,explanation};
 }
 
+function sentenceBuilder(id,tags,prompt,accepted,explanation){
+  return {...base,id,type:'text-input',tags,prompt,responseMode:'progressive',
+    answer:answer(...accepted),explanation};
+}
+
 function drill(id,tags,pattern,pairs){
   return {...base,id,type:'pattern-drill',tags,pattern,modes:['drill','listening','speaking'],
     items:pairs.map(([prompt,itemAnswer,explanation],index)=>({id:id+'.item-'+(index+1),prompt,answer:itemAnswer,...(explanation?{explanation}:{})}))};
@@ -30,13 +35,13 @@ function day1(){
         ru:'<p><b>Hi</b> — привет, здравствуй.</p><p><b>I am</b> (коротко <b>I\'m</b>) — я. <b>My name is</b> — меня зовут.</p><p><b>Nice to meet you</b> — приятно познакомиться.</p>',
         en:'<p><b>Hi</b> — say it first.</p><p><b>I am</b> (short: <b>I\'m</b>) and <b>My name is</b> — to say your name.</p><p><b>Nice to meet you</b> — when you meet someone.</p>'
       }},
-    choice('a1.ex.hello.1',[tag],{ru:'Как сказать «Меня зовут Анна»?',en:'Choose the right answer.'},
-      [{ru:'My name is Anna.'},{ru:'My name Anna.'},{ru:'I name is Anna.'}],0,
+    sentenceBuilder('a1.ex.hello.1',[tag],{ru:'Собери: «Меня зовут Анна».',en:'Build: “My name is Anna.”'},
+      ['My name is Anna'],
       {ru:'После «My name» нужен глагол «is»: My name is Anna.',en:'«My name» + «is»: My name is Anna.'}),
     choice('a1.ex.hello.2',[tag],{ru:'Что ответить на «Nice to meet you»?',en:'Choose the answer to «Nice to meet you».'},
       [{ru:'Nice to meet you too.'},{ru:'I am fine.'},{ru:'Good night.'}],0,
       {ru:'На «приятно познакомиться» отвечают тем же и добавляют «too» — тоже.',en:'Say the same, then say «too».'}),
-    {...base,id:'a1.ex.hello.3',type:'translation',tags:[tag],direction:'to-target',responseMode:'build',prompt:{ru:'Я Анна.',en:'I am Anna.'},
+    {...base,id:'a1.ex.hello.3',type:'translation',tags:[tag],direction:'to-target',responseMode:'write',prompt:{ru:'Я Анна.',en:'I am Anna.'},
       answer:answer('I am Anna','I\'m Anna'),
       explanation:{ru:'«Я» — это I am, в разговоре коротко I\'m.',en:'I am, short: I\'m.'}},
     drill('a1.pattern.hello',[tag],{ru:'I am … / My name is …',en:'I am … / My name is …'},[
@@ -60,13 +65,13 @@ function day2(){
         ru:'<p><b>Where are you from?</b> — откуда ты?</p><p><b>I am from</b> Russia — я из России.</p><p><b>I live in</b> Dubai — я живу в Дубае. После <b>live</b> идёт <b>in</b>.</p>',
         en:'<p><b>Where are you from?</b></p><p><b>I am from</b> Russia.</p><p><b>I live in</b> Dubai. After <b>live</b> we say <b>in</b>.</p>'
       }},
-    choice('a1.ex.from.1',[tag],{ru:'Как спросить «Откуда ты?»',en:'Choose the right question.'},
-      [{ru:'Where are you from?'},{ru:'Where you are from?'},{ru:'Where is you from?'}],0,
+    sentenceBuilder('a1.ex.from.1',[tag],{ru:'Собери: «Откуда ты?»',en:'Build: “Where are you from?”'},
+      ['Where are you from'],
       {ru:'В вопросе «are» идёт перед «you»: Where are you from?',en:'In a question «are» is before «you».'}),
     choice('a1.ex.from.2',[tag],{ru:'Выбери: «Я живу в Дубае».',en:'Choose the right answer.'},
       [{ru:'I live in Dubai.'},{ru:'I live Dubai.'},{ru:'I am live in Dubai.'}],0,
       {ru:'После «live» нужен предлог «in», а «am» здесь лишний.',en:'Say «live in», without «am».'}),
-    {...base,id:'a1.ex.from.3',type:'translation',tags:[tag],direction:'to-target',responseMode:'build',prompt:{ru:'Я из России.',en:'I am from Russia.'},
+    {...base,id:'a1.ex.from.3',type:'translation',tags:[tag],direction:'to-target',responseMode:'write',prompt:{ru:'Я из России.',en:'I am from Russia.'},
       answer:answer('I am from Russia','I\'m from Russia'),
       explanation:{ru:'«Из» — from: I am from Russia.',en:'Use «from»: I am from Russia.'}},
     drill('a1.pattern.from',[tag],{ru:'I am from … / I live in …',en:'I am from … / I live in …'},[
@@ -90,13 +95,13 @@ function day3(){
         ru:'<p><b>Can I have</b> a coffee, <b>please</b>? — можно мне кофе?</p><p>Короче: <b>Water, please.</b></p><p><b>Thank you</b> — спасибо.</p>',
         en:'<p><b>Can I have</b> a coffee, <b>please</b>?</p><p>Short: <b>Water, please.</b></p><p><b>Thank you.</b></p>'
       }},
-    choice('a1.ex.cafe.1',[tag],{ru:'Как вежливо попросить кофе?',en:'Choose the polite way to ask.'},
-      [{ru:'Can I have a coffee, please?'},{ru:'Give coffee.'},{ru:'I coffee.'}],0,
+    sentenceBuilder('a1.ex.cafe.1',[tag],{ru:'Собери вежливую просьбу о кофе.',en:'Build a polite request for coffee.'},
+      ['Can I have a coffee, please','Can I have a coffee please'],
       {ru:'«Can I have…, please?» — вежливая просьба, подходит везде.',en:'«Can I have…, please?» is polite.'}),
     choice('a1.ex.cafe.2',[tag],{ru:'Что сказать, когда тебе дали заказ?',en:'What do you say when you get your coffee?'},
       [{ru:'Thank you.'},{ru:'Please.'},{ru:'Good night.'}],0,
       {ru:'«Thank you» — спасибо. «Please» — это «пожалуйста» в просьбе.',en:'«Thank you» after you get it; «please» when you ask.'}),
-    {...base,id:'a1.ex.cafe.3',type:'translation',tags:[tag],direction:'to-target',responseMode:'build',prompt:{ru:'Воду, пожалуйста.',en:'Water, please.'},
+    {...base,id:'a1.ex.cafe.3',type:'translation',tags:[tag],direction:'to-target',responseMode:'write',prompt:{ru:'Воду, пожалуйста.',en:'Water, please.'},
       answer:answer('Water, please','Water please','A water, please'),
       explanation:{ru:'Коротко: название + please.',en:'Short: the thing + please.'}},
     {...base,id:'a1.dialogue.cafe',type:'dialogue',tags:['dialogue'],scene:{ru:'Кофе с собой',en:'A coffee to go'},
@@ -111,20 +116,15 @@ function day3(){
 
 // Days 4+ share one shape: a plan note, a short rule, two choices, one translation,
 // a phrase drill and sometimes a dialogue. Every graded item explains the answer.
-function responseModeForDay(n){
-  if(n<=4)return 'build';
-  if(n<=8)return 'progressive';
-  return 'write';
-}
-
 function day(n,{key,plan,title,body,choices,translation,pattern,pairs,dialogue}){
   const tag='a1-day-'+n;
-  const responseMode=responseModeForDay(n);
   const items=[
     {...base,id:'plan.a1-day-'+n,type:'theory',tags:['plan'],title:{ru:'День '+n,en:'Day '+n},format:'text',body:plan},
     {...base,id:'a1.theory.'+key,type:'theory',tags:[tag],title,format:'html',body},
-    ...choices.map((item,index)=>choice('a1.ex.'+key+'.'+(index+1),[tag],item.prompt,item.options.map(ru=>({ru})),0,item.explanation)),
-    {...base,id:'a1.ex.'+key+'.'+(choices.length+1),type:'translation',tags:[tag],direction:'to-target',responseMode,
+    ...choices.map((item,index)=>index===0
+      ? sentenceBuilder('a1.ex.'+key+'.1',[tag],item.prompt,[item.options[0]],item.explanation)
+      : choice('a1.ex.'+key+'.'+(index+1),[tag],item.prompt,item.options.map(ru=>({ru})),0,item.explanation)),
+    {...base,id:'a1.ex.'+key+'.'+(choices.length+1),type:'translation',tags:[tag],direction:'to-target',responseMode:'write',
       prompt:translation.prompt,answer:answer(...translation.answers),explanation:translation.explanation},
     drill('a1.pattern.'+key,[tag],pattern,pairs.map(([ru,en,accepted,why])=>[{ru,en},answer(...accepted),why]))
   ];
