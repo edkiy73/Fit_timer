@@ -2899,7 +2899,6 @@ export function initBuilder(){
     parseValue,
     progAtCeiling,
     progAxis,
-    progressionLoadType,
     progBaseValue,
     progStepSize,
     progressedRepsRange
@@ -2920,6 +2919,7 @@ export function initBuilder(){
     parseValue,
     progAtCeiling,
     progAxis,
+    progressionLoadType,
     progBaseValue,
     progStepSize,
     programHasProgression,
