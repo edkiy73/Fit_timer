@@ -226,6 +226,52 @@ async function boot(b, label, errs, url){
   ok('диапазон, схлопнутый прогрессией, не считается ростом', fake.length === 0,
      fake.map(x => `${x.a}→${x.b}`).join() || 'нет строки');
 
+  const progressionAxes = await cp.evaluate(() => {
+    const p = {
+      id:'report-progression-axes', name:'Все оси', progression:2,
+      plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[
+        {
+          id:'time-axis',name:'Планка',type:'time',value:'30',sets:1,rest:30,
+          progOn:true,progMode:'time',timeStep:5,timeMax:60,
+          ps:{n:1,cur:{sec:45}}
+        },
+        {
+          id:'level-axis',name:'Тяга резинки',type:'reps',value:'12-15',sets:3,rest:45,
+          loadType:'level',progOn:true,progMode:'level',
+          loadLevels:[{label:'Лёгкая'},{label:'Средняя'},{label:'Сильная'}],
+          loadLevel:0,repsStep:2,repsMax:18,
+          ps:{n:1,cur:{reps:'14-17',level:1}}
+        },
+        {
+          id:'manual-level-axis',name:'Ручная резинка',type:'reps',value:'12',sets:2,rest:30,
+          loadType:'level',progOn:false,progMode:'level',
+          loadLevels:[{label:'Красная'},{label:'Чёрная'}],
+          loadLevel:0,repsStep:0
+        }
+      ]}]
+    };
+    p.origEx = snapshotEx(p);
+    // Это именно ручная правка базы, не progression state.
+    p.plans[0].exercises[2].loadLevel = 1;
+    const report = buildReport(p);
+    return {ex:report.ex,diff:report.diff};
+  });
+  const timeGrowth = progressionAxes.ex.find(x => x.n === 'Планка');
+  const levelGrowth = progressionAxes.ex.find(x => x.n === 'Тяга резинки');
+  const levelManual = (progressionAxes.diff.mod || []).find(x => x.n === 'Ручная резинка');
+  ok('отчёт тренеру видит рост времени',
+    !!timeGrowth && /30\s*сек/.test(timeGrowth.a) && /45\s*сек/.test(timeGrowth.b),
+    JSON.stringify(timeGrowth));
+  ok('отчёт тренеру видит рост resistance',
+    !!levelGrowth && /Лёгкая/.test(levelGrowth.a) && /Средняя/.test(levelGrowth.b),
+    JSON.stringify(levelGrowth));
+  ok('обычная progression resistance не считается ручной правкой программы',
+    !(progressionAxes.diff.mod || []).some(x => x.n === 'Тяга резинки'),
+    JSON.stringify(progressionAxes.diff));
+  ok('ручная смена базовой resistance-ступени видна тренеру как правка',
+    !!levelManual && /Красная/.test(levelManual.a) && /Чёрная/.test(levelManual.b),
+    JSON.stringify(levelManual));
+
   const identity = await cp.evaluate(() => {
     const ex = (id, name, value) => ({
       id, name, type:'reps', value:String(value), sets:3, rest:30,
