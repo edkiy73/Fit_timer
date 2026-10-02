@@ -63,7 +63,7 @@ const ok = (name, cond, extra) => {
   await page.waitForTimeout(120);
   ok('общая частота программы открывается со значением 4',
     await page.inputValue('#bProgEvery') === '4', await page.inputValue('#bProgEvery'));
-  const programFreqOptions = await page.$eval('#bProgEvery option', xs => xs.map(x=>({v:x.value,t:x.textContent.trim()})));
+  const programFreqOptions = await page.$$eval('#bProgEvery option', xs => xs.map(x=>({v:x.value,t:x.textContent.trim()})));
   ok('у программы можно убрать общий default без обещания выключить overrides',
     programFreqOptions.some(x => x.v === '0' && /Не задавать общую частоту/.test(x.t)),
     JSON.stringify(programFreqOptions));
@@ -136,7 +136,7 @@ const ok = (name, cond, extra) => {
   ok('без program default редактор прямо просит выбрать частоту',
     /частота не задана/i.test(missingFreqHint), missingFreqHint);
 
-  const weightModes = await page.$eval('#exProgMode option', xs => xs.map(x=>x.value));
+  const weightModes = await page.$$eval('#exProgMode option', xs => xs.map(x=>x.value));
   ok('ручной редактор даёт все осмысленные weight-режимы',
     weightModes.join(',') === 'double_range,weight,reps,parallel', weightModes.join(','));
 
