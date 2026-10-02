@@ -692,129 +692,199 @@ export function progressedRepsRange(pid, ex, program){
   max = Math.max(min, max);
   return min === max ? String(min) : min + '-' + max;
 }
-// упёрлось ли упражнение в свой потолок — чтобы подсказать «пора усложнить вариант».
-// Потолок считается достигнутым, только когда РАСТИ БОЛЬШЕ НЕКУДА: каждая растущая ось
-// упражнения имеет потолок и уже на нём. Если хоть одна ось растёт без ограничения,
-// упражнение продолжает усложняться само и подсказка была бы ложной.
-function axisAtCeiling(pid, ex, program, axis){
-  const ceil = progCeil(ex, axis);
-  if(ceil == null) return false;
-  if(axis === 'reps'){
-    const top = parseValue(progressedRepsRange(pid, ex, program));
-    return top.max >= ceil;
+// Чистое чтение текущей нагрузки: НЕ создаёт ex.ps и не меняет упражнение.
+// Это принципиально для preview: просто открыть экран проверки прогрессии не должно
+// материализовать состояние или пачкать sync-данные.
+function progressionCurrentState(ex, mode){
+  const baseReps = parseValue(ex && ex.value);
+  const rawReps = ex && ex.ps && ex.ps.cur && ex.ps.cur.reps != null
+    ? parseValue(ex.ps.cur.reps)
+    : baseReps;
+  const repsCeil = ex ? progCeil(ex, 'reps') : null;
+  const baseWidth = Math.max(0, baseReps.max - baseReps.min);
+
+  let min = rawReps.min, max = rawReps.max;
+  if(mode === 'double_range' && baseWidth > 0 && min === max &&
+      ex && ex.ps && ex.ps.cur && ex.ps.cur.reps != null){
+    max = min + baseWidth;
   }
-  return getExProgValue(pid, ex, program, axis) >= ceil;
-}
-export function progAtCeiling(pid, ex, program){
-  const axis = progAxis(ex);
-  if(axis === 'none') return false;
-  // В двойной прогрессии достижение максимального веса ещё НЕ означает конец:
-  // на последнем весе нужно снова пройти весь диапазон повторов до repsMax.
-  // Окончательный потолок — только когда одновременно достигнуты оба максимума.
-  if(isDualProg(ex)){
-    return axisAtCeiling(pid, ex, program, 'weight')
-      && axisAtCeiling(pid, ex, program, 'reps');
+  if(repsCeil != null && max > repsCeil){
+    max = repsCeil;
+    if(mode === 'double_range' && baseWidth > 0) min = Math.max(1, max - baseWidth);
+    else min = Math.min(min, max);
   }
-  // вес — независимая ось что при повторениях, что при времени («время и вес»)
-  const axes = ex.type === 'time'
-    ? (hasWeight(ex) ? ['time', 'weight'] : ['time'])
-    : (hasWeight(ex) ? ['weight', 'reps'] : ['reps']);
-  const growing = axes.filter(a => progStepSize(ex, a) > 0);
-  if(!growing.length) return false;
-  return growing.every(a => axisAtCeiling(pid, ex, program, a));
+  min = Math.max(1, min);
+  max = Math.max(min, max);
+
+  const baseSec = parseValue(ex && ex.value).min;
+  const rawSec = ex && ex.ps && ex.ps.cur && ex.ps.cur.sec != null ? +ex.ps.cur.sec : baseSec;
+  const timeCeil = ex ? progCeil(ex, 'time') : null;
+  const sec = Math.max(1, progRound('time', timeCeil != null ? Math.min(timeCeil, rawSec) : rawSec));
+
+  const rawKg = ex && ex.ps && ex.ps.cur && ex.ps.cur.kg != null ? +ex.ps.cur.kg : +(ex && ex.weight || 0);
+  const weightCeil = ex ? progCeil(ex, 'weight') : null;
+  const kg = rawKg > 0
+    ? Math.max(0, progRound('weight', weightCeil != null ? Math.min(weightCeil, rawKg) : rawKg))
+    : 0;
+
+  return {
+    reps: min === max ? String(min) : min + '-' + max,
+    sec,
+    kg
+  };
 }
 
-// ОДИН шаг прогрессии для упражнения — вызывается, когда ex.ps.n достиг порога
-// (см. commitFinish в 70-workout.js). Мутирует ex.ps.cur; счётчик n сбрасывает
-// вызывающий код. При двойной прогрессии диапазон повторов растёт ЦЕЛИКОМ:
-// 8-10 → 9-11 → … → 18-20. Максимум — потолок верхней границы. Следующий шаг
-// добавляет вес и возвращает исходный диапазон. Иначе каждая растущая ось просто
-// сдвигается на свой шаг.
-export function advanceExerciseProgression(ex){
-  const axis = progAxis(ex);
-  if(axis === 'none') return;
-  ensurePs(ex);
-  if(axis === 'weight' && isDualProg(ex)){
-    const base = parseValue(ex.value);
-    const width = Math.max(0, base.max - base.min);
-    const repsCeil = progCeil(ex, 'reps');
-    const repsStep = progStepSize(ex, 'reps') || 1;
-    const stored = psReps(ex);
+function sameProgressionValue(a, b){ return String(a) === String(b); }
 
-    // Старые версии двойной прогрессии хранили одно число. Считаем его нижней
-    // границей и достраиваем исходную ширину диапазона, чтобы обновление приложения
-    // не сбрасывало достигнутую нагрузку.
-    let curMin = stored.min;
-    let curMax = (width > 0 && stored.min === stored.max && ex.ps.cur.reps != null)
-      ? stored.min + width
-      : stored.max;
-    if(repsCeil != null && curMax > repsCeil){
-      curMax = repsCeil;
-      curMin = Math.max(1, curMax - width);
-    }
+function progressionChanged(current, next){
+  const changed = [];
+  if(!sameProgressionValue(current.reps, next.reps)) changed.push('reps');
+  if(!sameProgressionValue(current.sec, next.sec)) changed.push('time');
+  if(!sameProgressionValue(current.kg, next.kg)) changed.push('weight');
+  return changed;
+}
 
-    // Вес добавляется только СЛЕДУЮЩИМ шагом после того, как верхняя граница уже
-    // дошла до максимума. Например: 17-19 → 18-20 → (+вес) 8-10.
-    if(repsCeil != null && curMax >= repsCeil){
-      const currentKg = psKg(ex);
-      if(currentKg <= 0){
-        // Вес ещё не выбран — на потолке остаётся полный диапазон, а не одно число.
-        const topMin = Math.max(1, repsCeil - width);
-        ex.ps.cur.reps = topMin === repsCeil ? String(repsCeil) : topMin + '-' + repsCeil;
-      } else {
-        const weightCeil = progCeil(ex, 'weight');
+function computeRepsStep(ex, current, next){
+  const step = progStepSize(ex, 'reps');
+  if(!(step > 0)) return;
+  const ceil = progCeil(ex, 'reps');
+  const r = parseValue(current.reps);
+  const min = Math.max(1, r.min + step);
+  const max = Math.max(min, r.max + step);
+  const a = ceil != null ? Math.min(ceil, min) : min;
+  const z = ceil != null ? Math.min(ceil, max) : max;
+  next.reps = String(a) + (z !== a ? '-' + z : '');
+}
 
-        // Уже дошли И до максимального веса, И до верхней границы повторов:
-        // дальше автоматической прогрессии нет. Важно не сбрасывать 18-20 обратно
-        // в 8-10 на том же самом весе.
-        if(weightCeil != null && currentKg >= weightCeil){
-          const topMin = Math.max(1, repsCeil - width);
-          ex.ps.cur.reps = topMin === repsCeil ? String(repsCeil) : topMin + '-' + repsCeil;
-          ex.ps.cur.kg = progRound('weight', weightCeil);
-          return;
-        }
+function computeTimeStep(ex, current, next){
+  const step = progStepSize(ex, 'time');
+  if(!(step > 0)) return;
+  const ceil = progCeil(ex, 'time');
+  const value = current.sec + step;
+  next.sec = Math.max(1, ceil != null ? Math.min(ceil, value) : value);
+}
 
-        const nextKg = currentKg + progStepSize(ex, 'weight');
-        ex.ps.cur.kg = progRound('weight', weightCeil != null ? Math.min(weightCeil, nextKg) : nextKg);
-        ex.ps.cur.reps = normValue(ex.value, 'reps');
-      }
-      return;
-    }
+function computeWeightStep(ex, current, next){
+  const step = progStepSize(ex, 'weight');
+  if(!(step > 0) || !(current.kg > 0)) return; // 0 = вес ещё не выбран
+  const ceil = progCeil(ex, 'weight');
+  const value = current.kg + step;
+  next.kg = progRound('weight', ceil != null ? Math.min(ceil, value) : value);
+}
 
-    const nextMax = repsCeil != null
-      ? Math.min(repsCeil, curMax + repsStep)
-      : curMax + repsStep;
-    const nextMin = Math.max(1, nextMax - width);
-    ex.ps.cur.reps = nextMin === nextMax ? String(nextMin) : nextMin + '-' + nextMax;
+function computeDoubleRangeStep(ex, current, next){
+  const base = parseValue(ex.value);
+  const width = Math.max(0, base.max - base.min);
+  const repsCeil = progCeil(ex, 'reps');
+  if(repsCeil == null) return; // invalid double_range: нет точки перехода к весу
+
+  const repsStep = progStepSize(ex, 'reps') || 1;
+  const stored = parseValue(current.reps);
+  let curMin = stored.min;
+  let curMax = stored.max;
+
+  if(curMax >= repsCeil){
+    if(!(current.kg > 0)) return; // weight pending: не создаём кг из воздуха
+
+    const weightCeil = progCeil(ex, 'weight');
+    if(weightCeil != null && current.kg >= weightCeil) return; // полный потолок
+
+    const step = progStepSize(ex, 'weight');
+    if(!(step > 0)) return;
+    const nextKg = current.kg + step;
+    next.kg = progRound('weight', weightCeil != null ? Math.min(weightCeil, nextKg) : nextKg);
+    next.reps = normValue(ex.value, 'reps');
     return;
   }
-  if(ex.type === 'time'){
-    const step = progStepSize(ex, 'time');
-    if(step > 0){
-      const ceil = progCeil(ex, 'time');
-      const next = psSec(ex) + step;
-      ex.ps.cur.sec = Math.max(1, ceil != null ? Math.min(ceil, next) : next);
-    }
-  } else {
-    const step = progStepSize(ex, 'reps');
-    if(step > 0){
-      const ceil = progCeil(ex, 'reps');
-      const r = psReps(ex);
-      const min = Math.max(1, r.min + step), max = Math.max(min, r.max + step);
-      ex.ps.cur.reps = String(ceil != null ? Math.min(ceil, min) : min) +
-        (max !== min ? '-' + (ceil != null ? Math.min(ceil, max) : max) : '');
-    }
+
+  const nextMax = Math.min(repsCeil, curMax + repsStep);
+  const nextMin = Math.max(1, nextMax - width);
+  next.reps = nextMin === nextMax ? String(nextMin) : nextMin + '-' + nextMax;
+}
+
+// ЕДИНСТВЕННЫЙ расчёт следующего шага. Не мутирует ex.
+// previewNextProgression() показывает его, advanceExerciseProgression() применяет его.
+export function computeNextProgression(ex, program){
+  const strategy = getProgressionStrategy(ex, program);
+  const mode = strategy.mode;
+  const current = progressionCurrentState(ex, mode);
+  const next = {...current};
+
+  if(!ex || ex.warmup || progAxis(ex) === 'none' || !mode){
+    return {canAdvance:false, mode:null, current, next, changed:[]};
   }
-  // вес — независимая ось при формате «…и вес» вне двойной прогрессии
-  if(hasWeight(ex)){
-    const wStep = progStepSize(ex, 'weight');
-    const base = psKg(ex);
-    if(wStep > 0 && base > 0){ // 0 — вес ещё не выбран, расти нечему (см. getExProgValue)
-      const ceil = progCeil(ex, 'weight');
-      const next = base + wStep;
-      ex.ps.cur.kg = progRound('weight', ceil != null ? Math.min(ceil, next) : next);
-    }
+
+  if(mode === 'double_range'){
+    computeDoubleRangeStep(ex, current, next);
+  } else if(mode === 'reps'){
+    computeRepsStep(ex, current, next);
+  } else if(mode === 'time'){
+    computeTimeStep(ex, current, next);
+  } else if(mode === 'weight'){
+    computeWeightStep(ex, current, next);
+  } else if(mode === 'parallel'){
+    if(ex.type === 'time') computeTimeStep(ex, current, next);
+    else computeRepsStep(ex, current, next);
+    computeWeightStep(ex, current, next);
   }
+  // mode=level появится отдельной пачкой вместе с loadLevels/ps.cur.level.
+
+  const changed = progressionChanged(current, next);
+  return {canAdvance:changed.length > 0, mode, current, next, changed};
+}
+
+export function previewNextProgression(ex, program){
+  return computeNextProgression(ex, program);
+}
+
+// Потолок теперь определяется тем же расчётом, что preview/apply:
+// если следующий подтверждённый шаг ничего не может изменить — автоматический рост закончен.
+// Для осей БЕЗ потолка compute всегда сможет дать следующий шаг, поэтому false сохраняется.
+export function progAtCeiling(pid, ex, program){
+  if(!ex || progAxis(ex) === 'none') return false;
+  const strategy = getProgressionStrategy(ex, program);
+  if(!strategy.mode) return false;
+
+  // Историческая семантика «без потолка = не показывать замену» сохраняется.
+  const axes = strategy.mode === 'double_range'
+    ? ['reps','weight']
+    : strategy.mode === 'parallel'
+      ? (ex.type === 'time' ? ['time','weight'] : ['reps','weight'])
+      : [strategy.mode];
+
+  const growing = axes.filter(axis => {
+    if(axis === 'reps') return strategy.reps.step > 0;
+    if(axis === 'time') return strategy.time.step > 0;
+    if(axis === 'weight') return strategy.weight.step > 0;
+    return false;
+  });
+  if(!growing.length) return false;
+
+  // Неизвестный вес (0) — это «снаряд ещё не выбран», а не достигнутый потолок.
+  // Старый progAtCeiling() в этом случае тоже возвращал false.
+  if(growing.includes('weight') && weightPending(ex)) return false;
+
+  const allBounded = growing.every(axis => {
+    if(axis === 'reps') return strategy.reps.max != null;
+    if(axis === 'time') return strategy.time.max != null;
+    if(axis === 'weight') return strategy.weight.max != null;
+    return false;
+  });
+  if(!allBounded) return false;
+
+  return !computeNextProgression(ex, program).canAdvance;
+}
+
+// Один подтверждённый шаг = применить ровно то, что до этого мог показать preview.
+export function advanceExerciseProgression(ex){
+  if(!ex || progAxis(ex) === 'none') return;
+  const result = computeNextProgression(ex, null);
+  if(!result.canAdvance) return;
+
+  const ps = ensurePs(ex);
+  if(result.changed.includes('reps')) ps.cur.reps = result.next.reps;
+  if(result.changed.includes('time')) ps.cur.sec = result.next.sec;
+  if(result.changed.includes('weight')) ps.cur.kg = result.next.kg;
 }
 
 // База упражнения (числа, которые задают человек в конструкторе или ИИ) поменялась —

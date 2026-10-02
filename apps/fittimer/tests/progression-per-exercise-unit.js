@@ -177,6 +177,83 @@ function runWorkout(exercises, every){
     'normalizeExercise drops invalid loadType/progMode');
 }
 
+/* ---- pure compute/preview/apply: один источник расчёта ---- */
+{
+  const ex = mkEx('Preview reps', {value:'10-12', type:'reps', progOn:true, trackWeight:false,
+    repsStep:1, repsMax:15});
+  const before = JSON.stringify(ex);
+  const p = previewNextProgression(ex, {progression:2});
+  need(p.canAdvance && p.mode === 'reps' && p.current.reps === '10-12' && p.next.reps === '11-13',
+    'preview computes reps next step: ' + JSON.stringify(p));
+  need(JSON.stringify(ex) === before, 'preview does not mutate exercise state');
+  advanceExerciseProgression(ex);
+  need(progressedRepsRange('p', ex, {id:'p'}) === p.next.reps,
+    'apply uses exactly the reps value shown by preview');
+}
+{
+  const ex = mkEx('Preview weight', {value:'10', type:'reps', progOn:true, trackWeight:true,
+    weight:10, repsStep:0, wStep:2, weightMax:14});
+  const p = previewNextProgression(ex, {progression:2});
+  need(p.changed.join(',') === 'weight' && p.current.kg === 10 && p.next.kg === 12,
+    'preview computes weight-only next step: ' + JSON.stringify(p));
+  advanceExerciseProgression(ex);
+  need(getExWeight('p', ex, {id:'p'}) === p.next.kg, 'weight apply equals preview');
+}
+{
+  const ex = mkEx('Preview parallel', {value:'8-10', type:'reps', progOn:true, trackWeight:true,
+    weight:10, repsStep:1, repsMax:14, wStep:2, weightMax:20, dualProg:false});
+  const p = previewNextProgression(ex, {progression:2});
+  need(p.mode === 'parallel' && p.next.reps === '9-11' && p.next.kg === 12 &&
+      p.changed.includes('reps') && p.changed.includes('weight'),
+    'parallel preview advances both axes: ' + JSON.stringify(p));
+  advanceExerciseProgression(ex);
+  need(progressedRepsRange('p', ex, {id:'p'}) === p.next.reps && getExWeight('p', ex, {id:'p'}) === p.next.kg,
+    'parallel apply equals preview on both axes');
+}
+{
+  const ex = mkEx('Preview time+weight', {value:'30', type:'time', progOn:true, trackWeight:true,
+    weight:10, timeStep:5, timeMax:40, wStep:2, weightMax:14});
+  const p = previewNextProgression(ex, {progression:2});
+  need(p.mode === 'parallel' && p.next.sec === 35 && p.next.kg === 12,
+    'time+weight parallel preview advances both axes: ' + JSON.stringify(p));
+  advanceExerciseProgression(ex);
+  need(getExProgValue('p', ex, {id:'p'}, 'time') === 35 && getExWeight('p', ex, {id:'p'}) === 12,
+    'time+weight apply equals preview');
+}
+{
+  const ex = mkEx('Preview dual', {value:'8-10', type:'reps', progOn:true, trackWeight:true,
+    weight:20, repsStep:1, repsMax:12, wStep:2, weightMax:24, dualProg:true});
+  const p1 = previewNextProgression(ex, {progression:2});
+  need(p1.next.reps === '9-11' && p1.next.kg === 20, 'dual preview first grows range');
+  advanceExerciseProgression(ex);
+  const p2 = previewNextProgression(ex, {progression:2});
+  need(p2.next.reps === '10-12' && p2.next.kg === 20, 'dual preview reaches rep ceiling before weight');
+  advanceExerciseProgression(ex);
+  const p3 = previewNextProgression(ex, {progression:2});
+  need(p3.next.reps === '8-10' && p3.next.kg === 22,
+    'dual preview then raises weight and resets range: ' + JSON.stringify(p3));
+}
+{
+  const ex = mkEx('Pending weight', {value:'10', type:'reps', progOn:true, trackWeight:true,
+    weight:0, repsStep:0, wStep:2, weightMax:20});
+  const p = previewNextProgression(ex, {progression:2});
+  need(!p.canAdvance && p.current.kg === 0 && p.next.kg === 0,
+    'unset weight cannot be invented by preview');
+  advanceExerciseProgression(ex);
+  need(getExWeight('p', ex, {id:'p'}) === 0, 'unset weight still cannot be invented by apply');
+  need(!progAtCeiling('p', ex, {id:'p',progression:2}),
+    'unset weight is not mistaken for a terminal progression ceiling');
+}
+{
+  const ex = mkEx('Terminal dual preview', {value:'8-10', type:'reps', progOn:true, trackWeight:true,
+    weight:20, repsStep:1, repsMax:12, wStep:2, weightMax:22, dualProg:true,
+    ps:{n:0,cur:{reps:'10-12',kg:22}}});
+  const p = previewNextProgression(ex, {progression:2});
+  need(!p.canAdvance && p.next.reps === '10-12' && p.next.kg === 22,
+    'terminal dual preview reports no further automatic step');
+  need(progAtCeiling('p', ex, {id:'p',progression:2}), 'terminal dual is reported at ceiling');
+}
+
 /* ---- обычная прогрессия по повторам ---- */
 {
   const ex = mkEx('Отжимания', {value:'10', type:'reps', progOn:true, trackWeight:false, repsStep:1, repsMax:20});
