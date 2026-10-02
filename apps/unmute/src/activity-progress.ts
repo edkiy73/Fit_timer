@@ -80,17 +80,21 @@ export function buildPracticeActivityProgress(
   operationId?:string
 ):{course:CourseProgressDocument;stats:StatsProgressDocument}{
   // Practising a pattern also counts as having done that step of the day.
-  let nextCourse=gradeCoursePractice(
-    markActivitySeen(course,activityId,clock.dayKey,clock.at),
-    activityId,
-    mode,
-    correct,
-    clock.dayNumber,
-    clock.dayKey,
-    clock.at,
-    operationId
-  );
-  if(mode==='drill'&&Number.isFinite(score)){
+  // A retried operation must not refresh seen/speed timestamps or move SRS again.
+  const alreadyApplied=Boolean(operationId&&course.answerOps[operationId]&&!course.answerOps[operationId]?.deleted);
+  let nextCourse=alreadyApplied
+    ? course
+    : gradeCoursePractice(
+        markActivitySeen(course,activityId,clock.dayKey,clock.at),
+        activityId,
+        mode,
+        correct,
+        clock.dayNumber,
+        clock.dayKey,
+        clock.at,
+        operationId
+      );
+  if(!alreadyApplied&&mode==='drill'&&Number.isFinite(score)){
     nextCourse={
       ...nextCourse,
       metrics:{
