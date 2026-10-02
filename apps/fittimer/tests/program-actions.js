@@ -351,6 +351,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
           loadLevels:[{key:'light'},{key:'medium'},{key:'strong'},{key:'veryStrong'}],
           loadLevel:1,repsStep:2,repsMax:18,progEvery:2,
           ps:{n:1,cur:{reps:'12-15',level:2}}
+        },
+        {
+          id:'off-audit',name:'Без автопрогрессии',type:'reps',value:'10',sets:2,rest:45,
+          loadType:'none',progOn:false,progMode:'reps',repsStep:1,progEvery:null
         }
       ]}]
     };
@@ -394,7 +398,15 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       nowHint:$('exNowHint').textContent.trim(),
       nowVisible:!$('exNowHint').classList.contains('hidden')
     };
-    return {weighted,resistance,reordered,replaced};
+
+    openExercise(2);
+    const offBefore = !$('exProgOn').classList.contains('on');
+    $('exLoadWeight').click();
+    const offAfterLoad = !$('exProgOn').classList.contains('on');
+    $('exTypeTime').click();
+    const offAfterMetric = !$('exProgOn').classList.contains('on');
+
+    return {weighted,resistance,reordered,replaced,offBefore,offAfterLoad,offAfterMetric};
   });
   ok('«Повторы → вес» объясняет переход на вес и сброс диапазона',
     progressionEditor.weighted.mode === 'double_range'
@@ -426,6 +438,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     /Красная/.test(progressionEditor.replaced.baseLabel)
       && !progressionEditor.replaced.nowVisible,
     JSON.stringify(progressionEditor.replaced));
+  ok('смена нагрузки и формата не включает выключенную прогрессию сама',
+    progressionEditor.offBefore && progressionEditor.offAfterLoad && progressionEditor.offAfterMetric,
+    JSON.stringify(progressionEditor));
 
   // у копии пункт «в каталог» уже есть — она своя
   const copyMenu = await page.evaluate(() => {
