@@ -49,6 +49,15 @@ async function boot(browser, label, errors){
       stats:{completions:0}, plans:[{days:['Ср'],rounds:1,roundRest:0,exercises:[
         {name:'Наклоны',type:'reps',value:'10',sets:1,rest:20}
       ]}]
+    },{
+      id:'sync-resistance', name:'Синхронные резинки', time:'', progression:2,
+      stats:{completions:2}, plans:[{days:['Пт'],rounds:1,roundRest:0,exercises:[
+        {id:'band-sync',name:'Тяга резинки',type:'reps',value:'12-15',sets:3,rest:45,
+         loadType:'level',progMode:'level',
+         loadLevels:[{label:'Лёгкая'},{label:'Средняя'},{label:'Сильная'}],
+         loadLevel:1,repsStep:2,repsMax:18,progEvery:2,
+         ps:{n:2,cur:{reps:'16-18',level:2}}}
+      ]}]
     }];
     const seededStats = {totalSec:600,count:1,history:[{id:'h-a',d:'2026-09-17',t:8,pid:'sync-program',sec:600,plan:0}],
                          weights:[{d:'2026-09-17',w:61.2,waist:70}],wellness:[],badges:['first']};
@@ -98,6 +107,17 @@ async function boot(browser, label, errors){
       email:account.email, premium:isPremium(), users:users.map(u=>({name:u.name,photo:u.photo||null})),
       programs:customPrograms.map(p=>p.name), count:stats.count, history:stats.history.length,
       weight:stats.weights[0] && stats.weights[0].w,
+      resistance:(() => {
+        const p=customPrograms.find(x=>x.id==='sync-resistance');
+        const ex=p && normPlans(p)[0] && normPlans(p)[0].exercises[0];
+        return ex ? {
+          loadType:ex.loadType, progMode:ex.progMode, loadLevel:ex.loadLevel,
+          levels:(ex.loadLevels||[]).map(x=>x.label||x.key),
+          n:ex.ps && ex.ps.n,
+          reps:ex.ps && ex.ps.cur && ex.ps.cur.reps,
+          level:ex.ps && ex.ps.cur && ex.ps.cur.level
+        } : null;
+      })(),
       prog:Object.values(legacyWeights)[0], photos:localPhotos.length,
       state:$('accSync').textContent
     };
@@ -106,6 +126,16 @@ async function boot(browser, label, errors){
   ok('подписка вернулась с аккаунтом', got.premium);
   ok('профиль вернулся без аватара', got.users.length === 1 && got.users[0].name === 'Лена' && !got.users[0].photo, JSON.stringify(got.users));
   ok('программа подтянулась', got.programs.includes('Синхронная сила'), got.programs.join(', '));
+  ok('resistance policy и текущая ступень приехали на чистое устройство 1:1',
+    got.resistance
+      && got.resistance.loadType === 'level'
+      && got.resistance.progMode === 'level'
+      && got.resistance.loadLevel === 1
+      && got.resistance.levels.join('|') === 'Лёгкая|Средняя|Сильная'
+      && got.resistance.n === 2
+      && got.resistance.reps === '16-18'
+      && got.resistance.level === 2,
+    JSON.stringify(got.resistance));
   ok('история и замеры подтянулись', got.count === 1 && got.history === 1 && got.weight === 61.2, JSON.stringify(got));
   ok('скрытая ручная поправка веса не вернулась', got.prog == null, got.prog);
   ok('фото-прогресс не ушёл на сервер', got.photos === 0, got.photos);
