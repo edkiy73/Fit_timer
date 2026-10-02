@@ -189,8 +189,8 @@ export function normalizeExercise(ex){
   if(ex.prog && !['reps','weight','time','none'].includes(ex.prog)) ex.prog = '';
   // Новые поля пока только описывают смысл старой модели. Они не должны ломать
   // существующие программы: null = читать legacy trackWeight/dualProg/steps.
-  if(!['none','weight','level'].includes(ex.loadType)) ex.loadType = null;
-  if(!['reps','weight','double_range','time','level','parallel'].includes(ex.progMode)) ex.progMode = null;
+  if(ex.loadType != null && !['none','weight','level'].includes(ex.loadType)) delete ex.loadType;
+  if(ex.progMode != null && !['reps','weight','double_range','time','level','parallel'].includes(ex.progMode)) delete ex.progMode;
   ex.weight = parseKg(ex.weight);
   // Частота проверки конкретного упражнения:
   // null/пусто = наследовать программу; 0 = полностью отключить прогрессию;
