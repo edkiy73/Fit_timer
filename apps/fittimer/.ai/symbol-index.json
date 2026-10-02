@@ -743,8 +743,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 3240,
-      "chars": 140671,
+      "lines": 3274,
+      "chars": 142098,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -805,6 +805,7 @@
         "fillPlanFields",
         "fillProgEveryOptions",
         "finalizeExercise",
+        "findIdentity",
         "finish",
         "fmtKg",
         "fullAIPrompt",
@@ -821,6 +822,7 @@
         "item",
         "liveExercise",
         "loadBuilderDraft",
+        "loadLevelIdentity",
         "loadLevelLabel",
         "markExerciseExisting",
         "migrateLegacyDualRangeExercise",
