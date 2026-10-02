@@ -584,7 +584,7 @@ ok('core dialog actions are declarative',
   && progressHtml.includes('id="dlgCancel" data-act="cancelDialog"'));
 ok('core start-screen dynamic actions use registry',
   core.includes("b.dataset.act = 'selectStartPlan'")
-  && core.includes("row.dataset.act = 'openStartWeight'")
+  && core.includes("el.dataset.act = 'openStartLoadEdit'")
   && core.includes("'editStartProgram'")
   && core.includes("'toggleStartProgramActive'")
   && core.includes("'duplicateStartProgram'")
@@ -595,13 +595,14 @@ ok('FitTimer app modules have no direct onclick wiring',
 
 ok('core dynamic actions use action registry',
   coreJs.includes("registerAction('selectStartPlan'")
-  && coreJs.includes("registerAction('openStartWeight'")
+  && coreJs.includes("registerAction('openStartLoadEdit'")
+  && coreJs.includes("registerAction('commitStartLoadEdit'")
   && coreJs.includes("registerAction('editStartProgram'")
   && coreJs.includes("registerAction('toggleStartProgramActive'")
   && coreJs.includes("registerAction('duplicateStartProgram'")
   && coreJs.includes("registerAction('deleteStartProgram'")
   && coreJs.includes("b.dataset.act = 'selectStartPlan'")
-  && coreJs.includes("row.dataset.act = 'openStartWeight'")
+  && coreJs.includes("el.dataset.act = 'openStartLoadEdit'")
   && coreJs.includes("b.dataset.act = action"));
 const appJsFiles=fs.readdirSync('src/app').filter(name => name.endsWith('.js'));
 const directOnclickFiles=appJsFiles.filter(name => fs.readFileSync('src/app/' + name,'utf8').includes('.onclick'));

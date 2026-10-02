@@ -2305,6 +2305,10 @@ function exBits(ex){
     const w = p ? getExWeight(p.id, ex, p) : (+ex.weight || 0);
     if(w) bits.push(`${fmtKg(w)} ${t('progress.kg')}`);
   }
+  if(progressionLoadType(ex) === 'level'){
+    const level = exerciseLoadLevelState(ex);
+    if(level && level.label) bits.push(level.label);
+  }
   if(ex.perSide) bits.push(t('store.perSide'));
   if(+ex.rest > 0) bits.push(`${t('workout.rest')} ${ex.rest} ${t('store.secShort')}`);
   return bits;
@@ -3238,6 +3242,8 @@ export function initBuilder(){
     exDirty,
     exRestAfter,
     exerciseLoadLevelState,
+    exerciseLoadLevels,
+    ensurePs,
     loadLevelLabel,
     exerciseProgEvery,
     fmtKg,

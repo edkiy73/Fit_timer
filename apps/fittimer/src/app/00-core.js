@@ -82,6 +82,8 @@ let builderHooks = {
   exDirty: () => false,
   exRestAfter: () => 0,
   exerciseLoadLevelState: () => ({level:0,key:'',label:'',identity:''}),
+  exerciseLoadLevels: () => [],
+  ensurePs: ex => ex && ex.ps,
   loadLevelLabel: level => String((level && level.label) || ''),
   exerciseProgEvery: () => 0,
   fmtKg: v => String(v == null ? '' : v),
@@ -1289,14 +1291,6 @@ function renderStartOverview(){
     if(!ex.warmup) mainNo++;
     const sets = Math.max(1, parseInt(ex.sets) || 1);
     const rounds = ex.warmup ? 1 : Math.max(1, +pl.rounds || 1);
-    const meta = [];
-    if(ex.warmup) meta.push({text:t('store.warmup'), cls:'wm'});
-    // вес — отдельной кнопкой-меткой с карандашом (см. ниже): так видно, что
-    // нажимается именно он, а повторы и время растут сами по плану
-    meta.push({text:loadTargetText(ex, builderHooks.hasWeight(ex) ? Object.assign({}, current[i], {kg:0}) : current[i]), cls:''});
-    if(!ex.warmup && rounds > 1) meta.push({text:sets > 1 ? `${sets} ${t('start.setShort')} × ${rounds} ${t('start.roundShort')}` : trainerCatalogHooks.storeCountText(rounds,'round'), cls:''});
-    else meta.push({text:trainerCatalogHooks.storeCountText(sets,'set'), cls:''});
-    const delta = changes.find(x => x.i === i);
     const row = document.createElement('div');
     row.className = 'ex-row static' + (ex.warmup ? ' warm' : '');
     const thumb = ex.media && ex.media.kind === 'img'
@@ -1305,68 +1299,165 @@ function renderStartOverview(){
     row.innerHTML = `<div class="ex-thumb">${thumb}</div><div class="ex-info"><b></b><div class="ex-meta"></div></div>`;
     row.querySelector('b').textContent = ex.name || t('common.exerciseFallback');
     const tags = row.querySelector('.ex-meta');
-    const tag = (text, cls) => { const el = document.createElement('span'); if(cls) el.className = cls; el.textContent = text; tags.appendChild(el); };
-    meta.forEach((x, k) => {
-      tag(x.text, x.cls);
-      if(k === (ex.warmup ? 1 : 0) && builderHooks.hasWeight(ex)){
-        const pending = builderHooks.weightPending(ex) || !(+current[i].kg > 0);
-        const kg = document.createElement('span');
-        kg.className = 'kg-edit' + (pending ? ' weight-pending' : '');
-        kg.innerHTML = icon('pencil') + '<i></i>';
-        kg.querySelector('i').textContent = pending ? t('start.weightPending') : `${builderHooks.fmtKg(current[i].kg)} ${t('progress.kg')}`;
-        tags.appendChild(kg);
+
+    const tag = (text, cls, field) => {
+      const el = document.createElement(field ? 'button' : 'span');
+      if(field){
+        el.type = 'button';
+        el.className = 'kg-edit start-load-edit' + (cls ? ' ' + cls : '');
+        el.dataset.act = 'openStartLoadEdit';
+        el.dataset.exerciseIdx = String(i);
+        el.dataset.loadField = field;
+        el.innerHTML = icon('pencil') + '<i></i>';
+        el.querySelector('i').textContent = text;
+      }else{
+        if(cls) el.className = cls;
+        el.textContent = text;
       }
-    });
-    if(delta) tag(delta.text, 'grow');
-    // формат с весом — строка кликабельна: снаряд ещё не выбран (предлагаем задать
-    // прямо тут, без похода в конструктор) либо просто хочется поправить вес на
-    // сегодня (тот же попап; см. openWeightModal ниже). Замена бывшему общему
-    // блоку «Нагрузка сегодня» с «±» — теперь правка per-упражнение.
-    if(builderHooks.hasWeight(ex)){
-      row.classList.add('tappable');
-      row.dataset.act = 'openStartWeight';
-      row.dataset.exerciseIdx = String(i);
+      tags.appendChild(el);
+    };
+
+    if(ex.warmup) tag(t('store.warmup'), 'wm');
+
+    // На экране перед стартом каждый параметр редактируется отдельно: тап по
+    // конкретной метке меняет именно её, без открытия полного редактора упражнения.
+    const target = current[i] || {};
+    if(ex.type === 'time'){
+      tag(`${target.sec} ${t('store.secShort')}`, '', 'time');
+    }else{
+      const reps = `${target.reps} ${t('workout.repsShort')}` + (ex.perSide ? ' ' + t('store.perSide') : '');
+      tag(reps, '', 'reps');
     }
+
+    if(builderHooks.hasWeight(ex)){
+      const pending = builderHooks.weightPending(ex) || !(+target.kg > 0);
+      tag(pending ? t('start.weightPending') : `${builderHooks.fmtKg(target.kg)} ${t('progress.kg')}`,
+        pending ? 'weight-pending' : '', 'weight');
+    }
+
+    if(builderHooks.progressionLoadType(ex) === 'level'){
+      const resistanceLabel = target.levelKey
+        ? builderHooks.loadLevelLabel({key:target.levelKey})
+        : String(target.levelLabel || '');
+      if(resistanceLabel) tag(resistanceLabel, '', 'level');
+    }
+
+    const setsText = !ex.warmup && rounds > 1
+      ? (sets > 1 ? `${sets} ${t('start.setShort')} × ${rounds} ${t('start.roundShort')}` : trainerCatalogHooks.storeCountText(rounds,'round'))
+      : trainerCatalogHooks.storeCountText(sets,'set');
+    tag(setsText, '', 'sets');
+    if(+ex.rest > 0) tag(`${t('workout.rest')} ${ex.rest} ${t('store.secShort')}`, '', 'rest');
+
+    const delta = changes.find(x => x.i === i);
+    if(delta) tag(delta.text, 'grow');
     box.appendChild(row);
   });
 }
 
-// правка веса одного упражнения — общий попап на весь список, какое открыто,
-// помнит weightModalIdx (тот же приём, что у #restModal в конструкторе).
-// Если вес ещё не был выбран — записываем в базу (ex.weight), она же и есть
-// текущая нагрузка, пока прогрессия её не сдвинула. Если уже была выбрана —
-// это разовая правка «сегодня беру другой снаряд», она идёт в ex.ps.cur и
-// не переписывает исходную базу упражнения.
-let weightModalIdx = -1;
-function openWeightModal(i){
+let startLoadEditIdx = -1;
+let startLoadEditField = '';
+
+function startLoadEditConfig(ex, p, field){
+  const load = exerciseLoad(p, ex);
+  if(field === 'reps') return {title:t('start.editReps'), value:load.reps || ex.value || '', inputMode:'numeric', hint:t('start.editValueHint')};
+  if(field === 'time') return {title:t('start.editTime'), value:String(load.sec || builderHooks.parseValue(ex.value).min || ''), inputMode:'numeric', hint:t('start.editValueHint')};
+  if(field === 'weight') return {title:t('start.editWeight'), value:load.kg > 0 ? builderHooks.fmtKg(load.kg) : '', inputMode:'decimal', hint:t('start.pickWeightHint')};
+  if(field === 'sets') return {title:t('start.editSets'), value:String(Math.max(1, parseInt(ex.sets) || 1)), inputMode:'numeric', hint:t('start.editStructureHint')};
+  if(field === 'rest') return {title:t('start.editRest'), value:String(Math.max(0, parseInt(ex.rest) || 0)), inputMode:'numeric', hint:t('start.editStructureHint')};
+  if(field === 'level') return {title:t('start.editResistance'), select:true, hint:t('start.editResistanceHint')};
+  return null;
+}
+
+function openStartLoadEditor(i, field){
   const p = state.raw;
   const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
   const ex = pl && pl.exercises && pl.exercises[i];
-  if(!ex) return;
-  weightModalIdx = i;
-  $('weightModalTitle').textContent = ex.name || t('common.exerciseFallback');
-  const now = builderHooks.getExWeight(p.id, ex, p);
-  $('weightModalInput').value = now > 0 ? builderHooks.fmtKg(now) : '';
-  $('weightModal').classList.add('open');
-  $('weightModalInput').focus();
+  const cfg = ex && startLoadEditConfig(ex, p, field);
+  if(!cfg) return;
+  startLoadEditIdx = i;
+  startLoadEditField = field;
+  $('startLoadModalTitle').textContent = cfg.title + ' · ' + (ex.name || t('common.exerciseFallback'));
+  $('startLoadHint').textContent = cfg.hint || '';
+  setShown('startLoadInputWrap', !cfg.select);
+  setShown('startLoadSelectWrap', !!cfg.select);
+
+  if(cfg.select){
+    const select = $('startLoadSelect');
+    select.innerHTML = '';
+    const levels = builderHooks.exerciseLoadLevels(ex);
+    const now = builderHooks.exerciseLoadLevelState(ex) || {};
+    levels.forEach((level, idx) => {
+      const opt = document.createElement('option');
+      opt.value = String(idx);
+      opt.textContent = builderHooks.loadLevelLabel(level) || String(idx + 1);
+      select.appendChild(opt);
+    });
+    select.value = String(Number.isFinite(+now.level) ? +now.level : 0);
+  }else{
+    const input = $('startLoadInput');
+    input.value = cfg.value;
+    input.inputMode = cfg.inputMode || 'numeric';
+  }
+  $('startLoadModal').classList.add('open');
+  if(!cfg.select) $('startLoadInput').focus();
 }
-export async function commitWeightModal(){
+
+export async function commitStartLoadEdit(){
   const p = state.raw;
   const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
-  const ex = pl && pl.exercises && pl.exercises[weightModalIdx];
-  weightModalIdx = -1;
-  $('weightModal').classList.remove('open');
+  const ex = pl && pl.exercises && pl.exercises[startLoadEditIdx];
+  const field = startLoadEditField;
+  startLoadEditIdx = -1;
+  startLoadEditField = '';
+  $('startLoadModal').classList.remove('open');
   if(!ex) return;
-  const kg = builderHooks.parseKg($('weightModalInput').value);
-  if(!(kg > 0)) return; // пусто/0 — не считаем заданным, оставляем как есть, спросим в другой раз
-  if(builderHooks.weightPending(ex)){
-    ex.weight = kg;
-    // первая база веса: никаких «накопленных» кг поверх неё быть не может
-    if(ex.ps && ex.ps.cur) delete ex.ps.cur.kg;
+
+  if(field === 'level'){
+    const levels = builderHooks.exerciseLoadLevels(ex);
+    const level = Math.max(0, Math.min(Math.max(0, levels.length - 1), parseInt($('startLoadSelect').value, 10) || 0));
+    builderHooks.ensurePs(ex).cur.level = level;
+  }else{
+    const raw = String($('startLoadInput').value || '').trim();
+    if(!raw && field !== 'rest') return;
+    if(field === 'reps'){
+      const value = builderHooks.normValue(raw, 'reps');
+      if(builderHooks.progAxis(ex) !== 'none' && builderHooks.progStepSize(ex, 'reps') > 0) builderHooks.ensurePs(ex).cur.reps = value;
+      else ex.value = value;
+    }else if(field === 'time'){
+      const value = builderHooks.normValue(raw, 'time');
+      if(builderHooks.progAxis(ex) !== 'none' && builderHooks.progStepSize(ex, 'time') > 0) builderHooks.ensurePs(ex).cur.sec = builderHooks.parseValue(value).min;
+      else ex.value = value;
+    }else if(field === 'weight'){
+      const kg = builderHooks.parseKg(raw);
+      if(!(kg > 0)) return;
+      if(builderHooks.weightPending(ex) || builderHooks.progAxis(ex) === 'none' || builderHooks.progStepSize(ex, 'weight') <= 0){
+        ex.weight = kg;
+        if(ex.ps && ex.ps.cur) delete ex.ps.cur.kg;
+      }else builderHooks.setExWeight(ex, kg);
+    }else if(field === 'sets'){
+      ex.sets = Math.max(1, Math.min(10, parseInt(raw, 10) || 1));
+    }else if(field === 'rest'){
+      ex.rest = Math.max(0, Math.min(600, parseInt(raw, 10) || 0));
+    }
   }
-  else builderHooks.setExWeight(ex, kg);
   await savePrograms();
   renderStartOverview();
+}
+
+// Старый публичный handler оставляем совместимым для тестов/старой разметки,
+// но направляем его в тот же источник текущего веса.
+let weightModalIdx = -1;
+function openWeightModal(i){
+  weightModalIdx = i;
+  openStartLoadEditor(i, 'weight');
+}
+export async function commitWeightModal(){
+  if(weightModalIdx >= 0){
+    startLoadEditIdx = weightModalIdx;
+    startLoadEditField = 'weight';
+    weightModalIdx = -1;
+  }
+  return commitStartLoadEdit();
 }
 
 // меню действий на экране просмотра программы — те же пункты, что на карточке
@@ -1513,6 +1604,12 @@ export function initCore(){
     const i = parseInt(btn.dataset.exerciseIdx, 10);
     if(Number.isFinite(i)) openWeightModal(i);
   });
+  registerAction('openStartLoadEdit', btn => {
+    const i = parseInt(btn.dataset.exerciseIdx, 10);
+    const field = String(btn.dataset.loadField || '');
+    if(Number.isFinite(i) && field) openStartLoadEditor(i, field);
+  });
+  registerAction('commitStartLoadEdit', () => commitStartLoadEdit());
   const withStartProgram = fn => async (btn, event) => {
     if(event) event.stopPropagation();
     closeAllMenus();

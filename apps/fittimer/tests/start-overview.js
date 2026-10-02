@@ -53,35 +53,56 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     change:$('startLoadChange').textContent.trim(),
     first:document.querySelector('#startOverviewList .ex-row')?.textContent || '',
     second:document.querySelectorAll('#startOverviewList .ex-row')[1]?.textContent || '',
-    warmFirst:document.querySelector('#startOverviewList .ex-row .ex-meta span')?.textContent,
+    warmFirst:document.querySelector('#startOverviewList .ex-row .ex-meta .wm')?.textContent,
     photos:document.querySelectorAll('#startOverviewList .ex-thumb img').length,
-    rests:[...document.querySelectorAll('#startOverviewList .ex-meta span')].some(x => /отдых/i.test(x.textContent)),
+    rests:[...document.querySelectorAll('#startOverviewList .ex-meta *')].some(x => /отдых/i.test(x.textContent)),
     rows:document.querySelectorAll('#startOverviewList .ex-row').length
   }));
   ok('сразу виден состав, объём и время', /6 упражнений/.test(before.summary) && /16 подходов/.test(before.summary) && /31 мин/.test(before.summary), before.summary);
   ok('изменение нагрузки объяснено', /Нагрузка выше в 1 упражнении/.test(before.change) && /было → сегодня/.test(before.change), before.change);
   ok('используются строки упражнений редактора', before.rows === 6 && /Приседания/.test(before.second), before.second);
   ok('разминка стоит первой и фото загружено', before.warmFirst === 'Разминка' && before.photos === 1, `${before.warmFirst} · ${before.photos}`);
-  ok('отдых в строках не показывается', !before.rests);
+  ok('отдых виден отдельной редактируемой меткой', before.rests);
   ok('показана сегодняшняя цель и точное изменение', /12 повторений/.test(before.second) && /было 11 → сегодня 12/.test(before.second), before.second);
   ok('при изменившейся нагрузке виден и срок следующего повышения', /Спросим о повышении через/.test(before.change), before.change);
   const kgChip = await page.evaluate(() => {
     const row = document.querySelectorAll('#startOverviewList .ex-row')[2];
-    const chip = row && row.querySelector('.kg-edit');
+    const chip = row && row.querySelector('[data-load-field="weight"]');
     return {chip: chip ? chip.textContent : '', icon: !!(chip && chip.querySelector('svg')),
-      reps: row ? row.querySelector('.ex-meta span').textContent : ''};
+      reps: row ? (row.querySelector('[data-load-field="reps"]')?.textContent || '') : ''};
   });
   ok("вес — отдельная метка-кнопка с карандашом", /\d+\s*кг/.test(kgChip.chip) && kgChip.icon, JSON.stringify(kgChip));
   ok('вес не дублируется в метке повторов', !/кг/.test(kgChip.reps), kgChip.reps);
 
-  // общего счётчика «Нагрузка сегодня» с ±  больше нет — правка веса теперь
-  // per-упражнение: строка с форматом «…и вес» кликабельна и открывает попап
-  await page.click('#startOverviewList .ex-row.tappable');
-  ok('попап открылся с текущим весом упражнения', await page.isVisible('#weightModal'));
-  await page.fill('#weightModalInput', '9');
-  await page.click('#weightModalDone');
-  const afterWeight = await page.locator('#startOverviewList .ex-row.tappable').textContent();
-  ok('правка веса нажатием на строку сразу обновляет обзор', /9\s*кг/.test(afterWeight), afterWeight);
+  // Каждый параметр меняется по своей метке, без открытия полного редактора.
+  const weightChip = '#startOverviewList .ex-row:nth-child(3) [data-load-field="weight"]';
+  await page.click(weightChip);
+  ok('тап по весу открывает общий редактор параметра', await page.isVisible('#startLoadModal'));
+  await page.fill('#startLoadInput', '9');
+  await page.click('[data-act="commitStartLoadEdit"]');
+  const afterWeight = await page.locator('#startOverviewList .ex-row:nth-child(3)').textContent();
+  ok('правка веса сразу обновляет обзор', /9\s*кг/.test(afterWeight), afterWeight);
+
+  const repsChip = '#startOverviewList .ex-row:nth-child(2) [data-load-field="reps"]';
+  await page.click(repsChip);
+  await page.fill('#startLoadInput', '9-11');
+  await page.click('[data-act="commitStartLoadEdit"]');
+  const afterReps = await page.locator('#startOverviewList .ex-row:nth-child(2)').textContent();
+  ok('тап по повторам меняет только рабочие повторы', /9[–-]11\s*повт/.test(afterReps), afterReps);
+
+  const setsChip = '#startOverviewList .ex-row:nth-child(2) [data-load-field="sets"]';
+  await page.click(setsChip);
+  await page.fill('#startLoadInput', '2');
+  await page.click('[data-act="commitStartLoadEdit"]');
+  const afterSets = await page.locator('#startOverviewList .ex-row:nth-child(2)').textContent();
+  ok('тап по подходам меняет число подходов', /2\s*подход/.test(afterSets), afterSets);
+
+  const restChip = '#startOverviewList .ex-row:nth-child(2) [data-load-field="rest"]';
+  await page.click(restChip);
+  await page.fill('#startLoadInput', '75');
+  await page.click('[data-act="commitStartLoadEdit"]');
+  const afterRest = await page.locator('#startOverviewList .ex-row:nth-child(2)').textContent();
+  ok('тап по отдыху меняет отдых', /Отдых\s*75\s*сек/.test(afterRest), afterRest);
 
   const legacy = await page.evaluate(async () => {
     const p = {
@@ -173,6 +194,15 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('обзор показывает физически понятное сопротивление, а не level 2',
     /Сильное/.test(resistance.row) && !/level\s*2/i.test(resistance.row),
     resistance.row);
+
+  const effortChip = '#startOverviewList .ex-row [data-load-field="level"]';
+  await page.click(effortChip);
+  ok('тап по усилию открывает шкалу сопротивления', await page.isVisible('#startLoadModal')
+    && await page.isVisible('#startLoadSelect'));
+  await page.selectOption('#startLoadSelect', '0');
+  await page.click('[data-act="commitStartLoadEdit"]');
+  const afterEffort = await page.locator('#startOverviewList .ex-row').textContent();
+  ok('усилие меняется так же, как вес', /Лёгкое/.test(afterEffort) && !/Сильное/.test(afterEffort), afterEffort);
 
   // Полностью завершённая двойная прогрессия не должна обещать следующую
   // проверку нагрузки: повышать здесь уже нечего.
