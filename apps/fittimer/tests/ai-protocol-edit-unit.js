@@ -167,6 +167,22 @@ function need(cond, msg){
   need(/ВРЕМЯ ВАРИАНТА: HH:MM/.test(schema), 'program schema documents per-variant time used by parser/serializer');
 }
 
+{
+  const edit = FitAIProtocol.editRules();
+  need(/data snapshot, not a definition of what FitTimer supports/.test(edit),
+    'edit source is treated as legacy data, not the capability schema');
+  need(/CURRENT-CONTRACT AUDIT/.test(edit) && /Audit every program-level setting and every exercise/.test(edit),
+    'broad edits require a full audit against the current contract');
+  need(/ANY current or future protocol field\/rule/.test(edit),
+    'modernization rule automatically covers future protocol fields');
+  need(/Legacy absence of a field is NOT an instruction to keep that field absent/.test(edit),
+    'missing legacy fields may be added when current semantics require them');
+  need(/Do not mechanically populate every optional field/.test(edit),
+    'contract modernization remains semantic instead of blindly filling fields');
+  need(/explicit current value such as ПРОГРЕССИЯ: нет/.test(edit),
+    'explicit off values are distinguished from legacy absence');
+}
+
 /* ---- carryExerciseFields: ответ ИИ используется как есть, добавляются только
    недостающие описательные поля из исходника ---- */
 {
