@@ -232,6 +232,10 @@ const ok = (name, cond, extra) => {
       && savedLevel.progEvery === 2,
     JSON.stringify(savedLevel));
 
+  const builderResistanceRow = await page.locator('#bExList .ex-row').first().textContent();
+  ok('в карточке упражнения редактора видно текущее усилие',
+    /Среднее/.test(builderResistanceRow), builderResistanceRow);
+
   // Старый current level нельзя механически перенести в совершенно новую шкалу.
   await page.evaluate(() => {
     const ex = draft.plans[0].exercises[0];
