@@ -173,7 +173,7 @@ function runWorkout(exercises, every){
 }
 {
   const bad = mkEx('Кривые новые поля', {progOn:true, loadType:'wat', progMode:'magic'});
-  need(bad.loadType === null && bad.progMode === null,
+  need(bad.loadType == null && bad.progMode == null,
     'normalizeExercise drops invalid loadType/progMode');
 }
 
