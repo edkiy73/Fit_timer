@@ -20,7 +20,7 @@ describe('UnMute notification policy',()=>{
     });
   });
 
-  it('warns about a live streak only when yesterday was the last learning day',()=>{
+  it('uses a streak reminder only for an established 3+ day streak',()=>{
     const progress=emptyCourseProgress();
     progress.learningDays['2026-09-26']={at:'2026-09-26T10:00:00Z'};
     progress.learningDays['2026-09-27']={at:'2026-09-27T10:00:00Z'};
@@ -41,6 +41,17 @@ describe('UnMute notification policy',()=>{
       route:'/',
       streak:3
     });
+
+    const short=emptyCourseProgress();
+    short.learningDays['2026-09-27']={at:'2026-09-27T10:00:00Z'};
+    short.learningDays['2026-09-28']={at:'2026-09-28T10:00:00Z'};
+    expect(chooseLearnerNotification({
+      progress:short,
+      todayKey:'2026-09-29',
+      dueCount:0,
+      currentLessonAvailable:true,
+      courseComplete:false
+    })).toMatchObject({kind:'daily-lesson'});
   });
 
   it('returns only on days 2, 5 and 12 after a break, then stays quiet',()=>{
