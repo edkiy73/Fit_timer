@@ -23,6 +23,7 @@ import { Icon, type IconName } from './icons';
 import { Sheet } from './sheet';
 import { CourseOptionList } from './active-course';
 import type { ContentCatalogSet } from './content/client';
+import { AnimatedNumber } from './animated-number';
 
 const STATS_QUERY_KEY='progress-screen-stats';
 const COURSE_QUERY_KEY='progress-screen-course';
@@ -256,7 +257,7 @@ function MetricCard({
   icon,
   tone='accent'
 }:{
-  value:string;
+  value:number;
   label:string;
   icon:IconName;
   tone?:'accent'|'success'|'listen';
@@ -264,7 +265,7 @@ function MetricCard({
   return (
     <div className={'progress-metric is-'+tone}>
       <span className="progress-metric-icon" aria-hidden="true"><Icon name={icon} size={20} /></span>
-      <strong>{value}</strong>
+      <strong><AnimatedNumber value={value} /></strong>
       <span>{label}</span>
     </div>
   );
@@ -398,8 +399,8 @@ export function ProgressView({
             </div>
 
             <div className="progress-general-metrics">
-              <MetricCard value={String(summary.learningDays)} label={t('progress.learningDays')} icon="book" tone="accent" />
-              <MetricCard value={String(summary.streak)} label={t('progress.streak')} icon="flame" tone="success" />
+              <MetricCard value={summary.learningDays} label={t('progress.learningDays')} icon="book" tone="accent" />
+              <MetricCard value={summary.streak} label={t('progress.streak')} icon="flame" tone="success" />
             </div>
 
             <ActivityCalendar
@@ -436,7 +437,7 @@ export function ProgressView({
                 aria-label={t('progress.coursePercent',{percent:coursePercent})}
               >
                 <div>
-                  <strong>{coursePercent}%</strong>
+                  <strong><AnimatedNumber value={coursePercent} suffix="%" /></strong>
                   <span>{t('progress.courseProgress')}</span>
                 </div>
               </div>
@@ -454,22 +455,22 @@ export function ProgressView({
             <div className="progress-course-kpis">
               <div>
                 <span className="progress-kpi-icon is-review"><Icon name="review" size={18} /></span>
-                <strong>{summary.dueNow}</strong>
+                <strong><AnimatedNumber value={summary.dueNow} /></strong>
                 <span>{t('progress.dueNow')}</span>
               </div>
               <div>
                 <span className="progress-kpi-icon is-card"><Icon name="book" size={18} /></span>
-                <strong>{summary.activeCards}</strong>
+                <strong><AnimatedNumber value={summary.activeCards} /></strong>
                 <span>{t('progress.cardsShort')}</span>
               </div>
               <div>
                 <span className="progress-kpi-icon is-listen"><Icon name="speaker" size={18} /></span>
-                <strong>{summary.listening}</strong>
+                <strong><AnimatedNumber value={summary.listening} /></strong>
                 <span>{t('progress.listeningShort')}</span>
               </div>
               <div>
                 <span className="progress-kpi-icon is-speak"><Icon name="mic" size={18} /></span>
-                <strong>{summary.speaking}</strong>
+                <strong><AnimatedNumber value={summary.speaking} /></strong>
                 <span>{t('progress.speakingShort')}</span>
               </div>
             </div>
