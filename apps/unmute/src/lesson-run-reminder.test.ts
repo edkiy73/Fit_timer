@@ -44,7 +44,8 @@ describe('unfinished lesson reminder',()=>{
     expect(latestPausedLessonRun()?.remaining).toBe(1);
   });
 
-  it('schedules about three hours later but never after 21:00',()=>{
+  it('schedules about three hours later, respects 09:00 start and never goes after 21:00',()=>{
+    expect(unfinishedReminderTime(new Date(2026,9,3,4,30))?.getHours()).toBe(9);
     expect(unfinishedReminderTime(new Date(2026,9,3,16,30))?.getHours()).toBe(19);
     expect(unfinishedReminderTime(new Date(2026,9,3,18,0))?.getHours()).toBe(21);
     expect(unfinishedReminderTime(new Date(2026,9,3,18,1))).toBeNull();
