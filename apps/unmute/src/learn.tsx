@@ -21,6 +21,7 @@ import { trackDayCompleted, trackLessonCompleted } from './observability';
 import { Icon } from './icons';
 import { Sheet } from './sheet';
 import { FirstLessonNotificationOffer } from './first-lesson-notification-offer';
+import { clearPausedLessonRun, markLessonRunPaused, notifyLessonRunChanged } from './lesson-run-reminder';
 import { Loader } from './loader';
 import { stageForDay, stageNameKey } from './course-stages';
 import { TheoryContent } from './theory-content';
@@ -185,10 +186,16 @@ function readLessonRun(setId:string,nodeId:string):LessonRunSnapshot|null{
   }catch{return null;}
 }
 function writeLessonRun(snapshot:LessonRunSnapshot):void{
-  try{localStorage.setItem(lessonRunKey(snapshot.setId,snapshot.nodeId),JSON.stringify(snapshot));}catch{}
+  try{
+    localStorage.setItem(lessonRunKey(snapshot.setId,snapshot.nodeId),JSON.stringify(snapshot));
+    notifyLessonRunChanged();
+  }catch{}
 }
 function clearLessonRun(setId:string,nodeId:string):void{
-  try{localStorage.removeItem(lessonRunKey(setId,nodeId));}catch{}
+  try{
+    localStorage.removeItem(lessonRunKey(setId,nodeId));
+    notifyLessonRunChanged();
+  }catch{}
 }
 
 interface CompletionCandidate{
@@ -384,6 +391,7 @@ export function NodeRunnerView({
           ? 'replay'
           : 'resume'
       );
+      clearPausedLessonRun(state.set.id,node.id);
       setFinished(false);
     }else{
       // Never destroy an unfinished run merely because refreshed course content is temporarily
@@ -540,7 +548,15 @@ export function NodeRunnerView({
         <h3 id="lesson-exit-title">{t('learn.exitTitle')}</h3>
         <p className="tile-text">{t('learn.exitText')}</p>
         <button className="primary-button" type="button" onClick={()=>setExitOpen(false)}>{t('learn.exitStay')}</button>
-        <button className="secondary-button" type="button" onClick={onExit} aria-describedby="lesson-exit-save-hint">{t('learn.exitSave')}</button>
+        <button
+          className="secondary-button"
+          type="button"
+          onClick={()=>{
+            if(state&&node)markLessonRunPaused(state.set.id,node.id);
+            onExit();
+          }}
+          aria-describedby="lesson-exit-save-hint"
+        >{t('learn.exitSave')}</button>
         <p className="tile-text" id="lesson-exit-save-hint">{t('learn.exitSaveHint')}</p>
         <button className="link-button danger-link" type="button" onClick={exitWithoutSaving} aria-describedby="lesson-exit-discard-hint">{t('learn.exitDiscard')}</button>
         <p className="tile-text" id="lesson-exit-discard-hint">{t('learn.exitDiscardHint')}</p>
