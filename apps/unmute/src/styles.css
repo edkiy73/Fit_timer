@@ -492,6 +492,10 @@ h2{margin:0 0 8px;font-weight:800}
 }
 
 
+.notification-offer{display:grid;gap:12px}
+.notification-offer h3{margin:0;padding-right:48px;font-size:22px;line-height:1.25}
+.notification-offer p{margin:0;color:var(--muted);font-size:14px;line-height:1.5}
+.notification-offer .primary-button{margin-top:4px}
 .notification-settings{display:grid;gap:14px;margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}
 .notification-settings h3{margin:4px 0 5px;font-size:18px}
 .notification-settings>div>p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
