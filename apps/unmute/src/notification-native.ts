@@ -87,7 +87,7 @@ export async function requestExactNotificationTime():Promise<boolean>{
   return exactNotificationTimeAvailable();
 }
 
-export function notificationRouteFromAction(event:unknown):'/'|'/review'|null{
+export function notificationRouteFromAction(event:unknown):string|null{
   if(!event||typeof event!=='object')return null;
   const notification=(event as {notification?:unknown}).notification;
   if(!notification||typeof notification!=='object')return null;
@@ -95,11 +95,13 @@ export function notificationRouteFromAction(event:unknown):'/'|'/review'|null{
     ??(notification as {data?:unknown}).data;
   if(!extra||typeof extra!=='object')return null;
   const route=(extra as {route?:unknown}).route;
-  return route==='/'||route==='/review'?route:null;
+  if(route==='/'||route==='/review')return route;
+  if(typeof route==='string'&&/^\/learn\/[a-zA-Z0-9._-]+\?resume=1$/.test(route))return route;
+  return null;
 }
 
 export function subscribeNotificationRoute(
-  listener:(route:'/'|'/review')=>void
+  listener:(route:string)=>void
 ):()=>void{
   const plugin=localPlugin();
   if(!nativeNotificationsAvailable()||!plugin?.addListener)return ()=>{};

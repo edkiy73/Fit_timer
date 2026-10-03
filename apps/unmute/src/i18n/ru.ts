@@ -606,4 +606,6 @@ export const ru = {
   'notifications.systemStreakBody': 'Серия сейчас: {streak}. Короткое занятие сегодня её сохранит.',
   'notifications.systemDailyTitle': 'Немного английского сегодня',
   'notifications.systemDailyBody': 'Следующий урок уже готов — можно пройти короткий подход.',
+  'notifications.systemUnfinishedTitle': 'Продолжим урок?',
+  'notifications.systemUnfinishedBody': 'Осталось заданий: {count}. Можно продолжить с того же места.',
 } as const;
