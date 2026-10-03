@@ -1138,6 +1138,17 @@ h2{margin:0 0 8px;font-weight:800}
 /* Shared secondary heading text: profile email follows the same screen-kicker rule as Review and other screens. */
 .screen-kicker{color:var(--muted);font-size:13px;font-weight:600;line-height:1.35}
 
+.animated-number{display:inline-block;min-width:.6ch;font-variant-numeric:tabular-nums;transform-origin:50% 70%;will-change:transform,filter,opacity}
+.animated-number.is-running{animation:number-pop 520ms var(--spring) both}
+@keyframes number-pop{
+  0%{opacity:.35;transform:translateY(5px) scale(.96);filter:blur(2px)}
+  55%{opacity:1;filter:blur(0)}
+  100%{transform:none;filter:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .animated-number,.animated-number.is-running{animation:none!important;transform:none!important;filter:none!important}
+}
+
 /* Course selector in Profile uses the app bottom sheet, never the platform select menu. */
 .progress-course-head{display:grid;grid-template-columns:1fr;align-items:stretch;gap:14px}
 .progress-course-picker{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:52px;padding:0 16px;border:1px solid var(--line);border-radius:18px;background:var(--surface);color:var(--ink);font:inherit;font-size:14px;font-weight:750;text-align:left;cursor:pointer}
