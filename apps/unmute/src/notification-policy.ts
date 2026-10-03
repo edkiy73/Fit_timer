@@ -103,7 +103,7 @@ export function chooseLearnerNotification(
 
   const today=dayNumberFromKey(input.todayKey);
   const streakAtRisk=
-    day.streak>0&&
+    day.streak>=3&&
     day.lastLearningDay!==null&&
     today-day.lastLearningDay===1;
 
