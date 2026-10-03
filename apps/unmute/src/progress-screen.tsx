@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityCalendar } from './activity-calendar';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@appbase/ui-react/i18n.js';
@@ -24,6 +24,7 @@ import { Sheet } from './sheet';
 import { CourseOptionList } from './active-course';
 import type { ContentCatalogSet } from './content/client';
 import { AnimatedNumber } from './animated-number';
+import { AnimatedProgressFill, AnimatedProgressRing } from './animated-progress';
 
 const STATS_QUERY_KEY='progress-screen-stats';
 const COURSE_QUERY_KEY='progress-screen-course';
@@ -288,7 +289,7 @@ function AccuracyGroup({
       {stats.attempts>0 ? (
         <>
           <div className="progress-answer-bar" aria-hidden="true">
-            <span style={{width:stats.accuracy+'%'}} />
+            <AnimatedProgressFill value={stats.accuracy} />
           </div>
           <div className="progress-answer-meta">
             <span>{t('progress.correct')}: <strong>{stats.correct}</strong></span>
@@ -430,23 +431,21 @@ export function ProgressView({
             </div>
 
             <div className="progress-course-hero">
-              <div
-                className="progress-course-ring"
-                style={{'--course-progress':coursePercent+'%'} as CSSProperties}
-                role="img"
-                aria-label={t('progress.coursePercent',{percent:coursePercent})}
+              <AnimatedProgressRing
+                value={coursePercent}
+                label={t('progress.coursePercent',{percent:coursePercent})}
               >
                 <div>
                   <strong><AnimatedNumber value={coursePercent} suffix="%" /></strong>
                   <span>{t('progress.courseProgress')}</span>
                 </div>
-              </div>
+              </AnimatedProgressRing>
 
               <div className="progress-course-now">
                 <span className="progress-eyebrow">{t('progress.currentStage')}</span>
                 <strong>{currentStage}</strong>
                 <div className="progress-course-track" aria-hidden="true">
-                  <span style={{width:coursePercent+'%'}} />
+                  <AnimatedProgressFill value={coursePercent} />
                 </div>
                 <small>{t('progress.courseDaysValue',{done:summary.completedDays,total:summary.requiredDays})}</small>
               </div>
