@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
 function reducedMotion():boolean{
   try{return window.matchMedia('(prefers-reduced-motion: reduce)').matches;}
@@ -59,7 +59,7 @@ export function AnimatedProgressRing({
 }:{
   value:number;
   label:string;
-  children:React.ReactNode;
+  children:ReactNode;
   className?:string;
 }){
   const display=useAnimatedPercent(value,760);
