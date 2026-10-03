@@ -6,7 +6,8 @@ import { dayNumberFromKey } from './engine/course-progress';
 import {
   localDayKey,
   nextReminderPlan,
-  nextUnfinishedReminderPlan
+  nextUnfinishedReminderPlan,
+  reminderTime
 } from './notification-delivery';
 
 const set:CourseSet={
@@ -62,6 +63,19 @@ const preferences={
 
 describe('native reminder planning',()=>{
   beforeEach(()=>localStorage.clear());
+
+  it('moves configured quiet-hour times to 09:00',()=>{
+    const day=new Date(2026,8,29,12,0,0);
+    const early=reminderTime(day,'07:30');
+    expect(early.getDate()).toBe(29);
+    expect(early.getHours()).toBe(9);
+    expect(early.getMinutes()).toBe(0);
+
+    const late=reminderTime(day,'22:15');
+    expect(late.getDate()).toBe(30);
+    expect(late.getHours()).toBe(9);
+    expect(late.getMinutes()).toBe(0);
+  });
 
   it('plans an unfinished lesson about three hours after saved exit',()=>{
     localStorage.setItem('unmute.lesson-run:general-foundation:day-2',JSON.stringify({

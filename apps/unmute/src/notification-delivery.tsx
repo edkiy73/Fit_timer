@@ -68,16 +68,24 @@ export function localDayKey(date:Date):string{
   ].join('-');
 }
 
-function reminderTime(day:Date,time:string):Date{
+export function reminderTime(day:Date,time:string):Date{
   const [hourRaw,minuteRaw]=time.split(':');
   const hour=Number(hourRaw);
   const minute=Number(minuteRaw);
+  const safeHour=Number.isInteger(hour)?hour:19;
+  const safeMinute=Number.isInteger(minute)?minute:0;
+  if(safeHour<9){
+    return new Date(day.getFullYear(),day.getMonth(),day.getDate(),9,0,0,0);
+  }
+  if(safeHour>=22){
+    return new Date(day.getFullYear(),day.getMonth(),day.getDate()+1,9,0,0,0);
+  }
   return new Date(
     day.getFullYear(),
     day.getMonth(),
     day.getDate(),
-    Number.isInteger(hour)?hour:19,
-    Number.isInteger(minute)?minute:0,
+    safeHour,
+    safeMinute,
     0,
     0
   );

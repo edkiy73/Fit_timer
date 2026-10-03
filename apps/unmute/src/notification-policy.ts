@@ -89,16 +89,15 @@ export function chooseLearnerNotification(
   const streakEnabled=preferences?.streak!==false;
   const dailyEnabled=preferences?.daily!==false;
 
+  // Any learning activity today means quiet for the rest of the day.
+  if(day.studiedToday)return null;
+
   if(reviewEnabled&&dueCount>0){
     return {
       kind:'review-due',
       route:'/review',
       dueCount
     };
-  }
-
-  if(day.studiedToday){
-    return null;
   }
 
   const today=dayNumberFromKey(input.todayKey);

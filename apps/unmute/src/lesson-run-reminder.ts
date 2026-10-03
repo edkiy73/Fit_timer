@@ -88,7 +88,10 @@ export function latestPausedLessonRun(
 }
 
 export function unfinishedReminderTime(pausedAt:Date):Date|null{
-  const at=new Date(pausedAt.getTime()+3*60*60*1000);
+  let at=new Date(pausedAt.getTime()+3*60*60*1000);
+  if(at.getHours()<9){
+    at=new Date(at.getFullYear(),at.getMonth(),at.getDate(),9,0,0,0);
+  }
   const cutoff=new Date(
     pausedAt.getFullYear(),
     pausedAt.getMonth(),

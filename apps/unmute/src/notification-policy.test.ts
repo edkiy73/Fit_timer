@@ -107,7 +107,7 @@ describe('UnMute notification policy',()=>{
     })).toBeNull();
   });
 
-  it('still surfaces due reviews after the learner studied today',()=>{
+  it('stays quiet after the learner studied today even if reviews are due',()=>{
     const progress=emptyCourseProgress();
     progress.learningDays['2026-09-29']={at:'2026-09-29T08:00:00Z'};
 
@@ -117,7 +117,7 @@ describe('UnMute notification policy',()=>{
       dueCount:2,
       currentLessonAvailable:true,
       courseComplete:false
-    })).toMatchObject({kind:'review-due',dueCount:2});
+    })).toBeNull();
   });
 
   it('does not invent a lesson reminder for a completed course',()=>{
