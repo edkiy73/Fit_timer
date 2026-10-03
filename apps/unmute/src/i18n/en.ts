@@ -608,4 +608,6 @@ export const en: Record<keyof typeof ru, string> = {
   'notifications.systemStreakBody': 'Your streak: {streak}. A short session today keeps it going.',
   'notifications.systemDailyTitle': 'A little English today',
   'notifications.systemDailyBody': 'Your next lesson is ready for a short session.',
+  'notifications.systemUnfinishedTitle': 'Continue your lesson?',
+  'notifications.systemUnfinishedBody': '{count} tasks left. Continue from where you stopped.',
 };
