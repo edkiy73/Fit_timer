@@ -128,7 +128,7 @@ export function nextReminderPlan(input:ReminderPlanInput):ReminderPlan|null{
       dueCount:dueCountForDay(input,dayKey),
       currentLessonAvailable:input.currentLessonAvailable,
       courseComplete:input.courseComplete,
-      currentLessonDayIndex:input.currentLessonDayIndex,
+      ...(input.currentLessonDayIndex?{currentLessonDayIndex:input.currentLessonDayIndex}:{}),
       preferences:input.preferences
     });
     if(intent)return {at,dayKey,intent};
@@ -258,7 +258,7 @@ export function NotificationDelivery(){
       locale,
       currentLessonAvailable:Boolean(state.currentNode),
       courseComplete:state.roadmapProgress.courseComplete,
-      currentLessonDayIndex:state.currentNode?.dayIndex
+      ...(state.currentNode?.dayIndex?{currentLessonDayIndex:state.currentNode.dayIndex}:{})
     });
   },[
     settingsReady,
