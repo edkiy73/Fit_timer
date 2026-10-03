@@ -43,7 +43,32 @@ describe('UnMute notification policy',()=>{
     });
   });
 
-  it('uses the ordinary daily lesson reminder when there is no active streak',()=>{
+  it('returns only on days 2, 5 and 12 after a break, then stays quiet',()=>{
+    const progress=emptyCourseProgress();
+    progress.learningDays['2026-09-27']={at:'2026-09-27T08:00:00Z'};
+
+    const make=(todayKey:string)=>chooseLearnerNotification({
+      progress,
+      todayKey,
+      dueCount:0,
+      currentLessonAvailable:true,
+      currentLessonDayIndex:4,
+      courseComplete:false
+    });
+
+    expect(make('2026-09-29')).toEqual({
+      kind:'return-break',
+      route:'/',
+      breakDays:2,
+      lessonDayIndex:4
+    });
+    expect(make('2026-09-30')).toBeNull();
+    expect(make('2026-10-02')).toMatchObject({kind:'return-break',breakDays:5});
+    expect(make('2026-10-09')).toMatchObject({kind:'return-break',breakDays:12});
+    expect(make('2026-10-10')).toBeNull();
+  });
+
+  it('uses the ordinary daily lesson reminder before the learner has studied at all',()=>{
     const progress=emptyCourseProgress();
 
     expect(chooseLearnerNotification({
