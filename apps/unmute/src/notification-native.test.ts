@@ -10,6 +10,9 @@ describe('native notification deep links',()=>{
     expect(notificationRouteFromAction({
       notification:{data:{route:'/'}}
     })).toBe('/');
+    expect(notificationRouteFromAction({
+      notification:{extra:{route:'/learn/day-2?resume=1'}}
+    })).toBe('/learn/day-2?resume=1');
   });
 
   it('rejects arbitrary routes from notification payloads',()=>{
