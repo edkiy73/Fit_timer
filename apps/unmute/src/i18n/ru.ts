@@ -608,4 +608,7 @@ export const ru = {
   'notifications.systemDailyBody': 'Следующий урок уже готов — можно пройти короткий подход.',
   'notifications.systemUnfinishedTitle': 'Продолжим урок?',
   'notifications.systemUnfinishedBody': 'Осталось заданий: {count}. Можно продолжить с того же места.',
+  'notifications.systemReturnTitle': 'Продолжим с того же места?',
+  'notifications.systemReturnBody': 'Курс ждёт — можно вернуться без спешки.',
+  'notifications.systemReturnBodyDay': 'День {day} ждёт — продолжим с того же места?',
 } as const;
