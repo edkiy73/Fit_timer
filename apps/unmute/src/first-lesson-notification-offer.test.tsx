@@ -48,7 +48,9 @@ describe('first lesson notification offer',()=>{
     await user.click(await screen.findByRole('button',{name:'Напоминать в 19:00'}));
 
     await waitFor(()=>expect(patchSettings).toHaveBeenCalledTimes(1));
-    expect(patchSettings.mock.calls[0][0]).toMatchObject({
+    const patch=patchSettings.mock.calls[0]?.[0];
+    expect(patch).toBeTruthy();
+    expect(patch).toMatchObject({
       notificationOfferDoneAt:expect.any(String),
       notifications:{
         enabled:true,
