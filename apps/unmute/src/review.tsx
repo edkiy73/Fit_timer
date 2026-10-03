@@ -39,6 +39,7 @@ import { Icon } from './icons';
 import { Loader } from './loader';
 import { reviewDueCounts } from './review-count';
 import { randomSeed, shuffledIndices } from './shuffle';
+import { reviewSessionSeed } from './review-seed';
 import { WordChips, answerWords, buildChips, chipsText } from './word-chips';
 import { sentenceResponseStage, type SentenceResponseKind } from './engine/sentence-progression';
 
@@ -49,6 +50,7 @@ type CombinedReviewItem=
 
 interface PinnedReviewSession {
   course:CourseReviewSession;
+  shuffleSeed:string;
   total:number;
   waiting:number;
   unresolvedWords:number;
@@ -113,7 +115,6 @@ export function ReviewView({
   const [index,setIndex]=useState(0);
   const [completed,setCompleted]=useState(0);
   const [selected,setSelected]=useState<number|null>(null);
-  const [shuffleSeed]=useState(()=>randomSeed());
   const [reviewRunId]=useState(()=>randomSeed());
   const [answer,setAnswer]=useState('');
   const [picked,setPicked]=useState<string[]>([]);
@@ -143,6 +144,7 @@ export function ReviewView({
     const wordItems=(words?.items??[]).map(word=>({kind:'word' as const,word}));
     setSession({
       course,
+      shuffleSeed:reviewSessionSeed(state.set.id,todayDay),
       total:course.actionableCount+otherItems.length+wordItems.length,
       waiting:course.waitingCount+others.reduce((sum,other)=>sum+other.waitingCount,0)+(words?.waiting??0),
       unresolvedWords:words?.unresolved??0,
@@ -184,8 +186,8 @@ export function ReviewView({
         ? [activity.answer.accepted[0]??'']
         : []
     )??[];
-    return buildChips(shuffleSeed+'|review|'+item.activity.id+'|'+index,target,otherAnswers);
-  },[item,index,otherCourses,state?.set,shuffleSeed,result,picked.length]);
+    return buildChips((session?.shuffleSeed??'')+'|review|'+item.activity.id+'|'+index,target,otherAnswers);
+  },[item,index,otherCourses,state?.set,session?.shuffleSeed,result,picked.length]);
 
   // A review day counts once its review is through (or nothing was due).
   const reviewDayNode=completeDayId&&state?state.roadmap.nodes.find(node=>node.id===completeDayId)??null:null;
@@ -578,7 +580,7 @@ export function ReviewView({
           )}
           <fieldset className="learn-options" disabled={busy||result!==null}>
             <legend className="sr-only">{t('learn.chooseAnswer')}</legend>
-            {shuffledIndices(activity.options.length,shuffleSeed+'|review|'+activity.id+'|'+index).map(optionIndex=>{
+            {shuffledIndices(activity.options.length,(session?.shuffleSeed??'')+'|review|'+activity.id+'|'+index).map(optionIndex=>{
               const option=activity.options[optionIndex]!;
               return (
                 <label className={'learn-option'+(selected===optionIndex&&result===null?' is-selected':'')} key={optionIndex}>
