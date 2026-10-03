@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityCalendar } from './activity-calendar';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@appbase/ui-react/i18n.js';
