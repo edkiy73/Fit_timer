@@ -68,7 +68,7 @@ export function FirstLessonNotificationOffer({
       open={open}
       onClose={()=>void dismiss()}
       labelledBy="first-notification-offer-title"
-      closeLabel={t('common.close')}
+      closeLabel={t('notifications.offerClose')}
     >
       <div className="notification-offer">
         <div className="screen-kicker">{t('notifications.offerKicker')}</div>
