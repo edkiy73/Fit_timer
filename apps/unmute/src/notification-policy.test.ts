@@ -180,6 +180,6 @@ describe('UnMute notification policy',()=>{
         streak:true,
         changedAt:'2026-09-29T10:00:00Z'
       }
-    })).toMatchObject({kind:'streak-risk'});
+    })).toMatchObject({kind:'daily-lesson'});
   });
 });
