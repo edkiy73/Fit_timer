@@ -16,6 +16,7 @@ export interface ActiveCourseSetting {
 export interface UnMuteSettings {
   locale?:string;
   onboardingDoneAt?:string;
+  notificationOfferDoneAt?:string;
   notifications?:NotificationSettings;
   activeCourse?:ActiveCourseSetting;
 }
@@ -77,6 +78,9 @@ export function parseSettings(raw:string|null):UnMuteSettings{
     if(typeof source.onboardingDoneAt==='string'&&source.onboardingDoneAt.trim()){
       result.onboardingDoneAt=source.onboardingDoneAt;
     }
+    if(typeof source.notificationOfferDoneAt==='string'&&source.notificationOfferDoneAt.trim()){
+      result.notificationOfferDoneAt=source.notificationOfferDoneAt;
+    }
     const notifications=parseNotificationSettings(source.notifications);
     if(notifications)result.notifications=notifications;
     const activeCourse=parseActiveCourse(source.activeCourse);
@@ -105,6 +109,9 @@ export function mergeSettings(
   const result:UnMuteSettings={...remote,...local};
   const onboardingDoneAt=local.onboardingDoneAt||remote.onboardingDoneAt;
   if(onboardingDoneAt)result.onboardingDoneAt=onboardingDoneAt;
+
+  const notificationOfferDoneAt=local.notificationOfferDoneAt||remote.notificationOfferDoneAt;
+  if(notificationOfferDoneAt)result.notificationOfferDoneAt=notificationOfferDoneAt;
 
   const notifications=latestNotifications(local.notifications,remote.notifications);
   if(notifications)result.notifications=notifications;
