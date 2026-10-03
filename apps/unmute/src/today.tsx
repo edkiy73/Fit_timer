@@ -22,6 +22,7 @@ import { useOtherCourseReviews, type OtherCourseReview } from './other-course-re
 import { UpdateBanner } from './app-update';
 import { ipaForDisplay } from './lexicon/schema';
 import { ScreenHeader } from './screen-header';
+import { AnimatedNumber } from './animated-number';
 import type { CourseSet, RoadmapNode } from './content/schema';
 import {
   lastWeekActivity,
@@ -226,7 +227,7 @@ export function TodayView({
 
         <Tile className="tile-streak" index={index++}>
           <div className="tile-kicker tone-streak"><Icon name="flame" size={18} />{t('today.streak')}</div>
-          <strong className="tile-number">{streak}<span className="tile-unit">{countDays(t,locale,streak).replace(/^\S+\s/,'')}</span></strong>
+          <strong className="tile-number"><AnimatedNumber value={streak} /><span className="tile-unit">{countDays(t,locale,streak).replace(/^\S+\s/,'')}</span></strong>
           {!streak&&<span className="tile-caption">{t('today.streakStart')}</span>}
           <div className="week" aria-label={t('today.week',{count:week.filter(Boolean).length})}>
             {week.map((active,day)=>(
@@ -244,7 +245,7 @@ export function TodayView({
           <button className="tile tile-review is-due pressable" style={{'--i':index++} as CSSProperties} type="button" onClick={onReview}
             aria-label={t('today.reviewStart')+': '+review.actionableCount}>
             <span className="tile-kicker tone-listen"><Icon name="review" size={18} />{t('nav.review')}</span>
-            <strong className="tile-number">{review.actionableCount}</strong>
+            <strong className="tile-number"><AnimatedNumber value={review.actionableCount} /></strong>
             <span className="tile-caption">{t('today.reviewCaption')}</span>
             <span className="tile-link">{t('today.reviewStart')} →</span>
             {review.waitingCount>0&&<span className="sr-only">{t('today.reviewWaiting',{count:review.waitingCount})}</span>}
@@ -252,7 +253,7 @@ export function TodayView({
         ) : (
           <Tile className="tile-review" index={index++}>
             <div className="tile-kicker tone-listen"><Icon name="review" size={18} />{t('nav.review')}</div>
-            <strong className="tile-number">0</strong>
+            <strong className="tile-number"><AnimatedNumber value={0} /></strong>
             <span className="tile-caption">{t('today.reviewEmpty')}</span>
           </Tile>
         )}
