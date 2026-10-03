@@ -122,7 +122,7 @@ describe('native reminder planning',()=>{
     expect(plan&&localDayKey(plan.at)).toBe('2026-09-29');
   });
 
-  it('moves to tomorrow when today already passed and keeps streak priority',()=>{
+  it('moves to tomorrow when today already passed without inventing a short streak alert',()=>{
     const progress=emptyCourseProgress();
     progress.learningDays['2026-09-29']={at:'2026-09-29T12:00:00Z'};
 
@@ -140,9 +140,8 @@ describe('native reminder planning',()=>{
 
     expect(plan?.dayKey).toBe('2026-09-30');
     expect(plan?.intent).toMatchObject({
-      kind:'streak-risk',
-      route:'/',
-      streak:1
+      kind:'daily-lesson',
+      route:'/'
     });
   });
 
