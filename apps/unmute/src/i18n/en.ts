@@ -610,4 +610,7 @@ export const en: Record<keyof typeof ru, string> = {
   'notifications.systemDailyBody': 'Your next lesson is ready for a short session.',
   'notifications.systemUnfinishedTitle': 'Continue your lesson?',
   'notifications.systemUnfinishedBody': '{count} tasks left. Continue from where you stopped.',
+  'notifications.systemReturnTitle': 'Continue where you left off?',
+  'notifications.systemReturnBody': 'Your course is waiting — come back when it suits you.',
+  'notifications.systemReturnBodyDay': 'Day {day} is waiting — continue where you left off.',
 };

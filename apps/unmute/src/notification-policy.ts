@@ -5,6 +5,7 @@ import { dayNumberFromKey } from './engine/course-progress';
 export type LearnerNotificationKind=
   |'review-due'
   |'streak-risk'
+  |'return-break'
   |'daily-lesson';
 
 export interface LearnerNotificationIntent {
@@ -12,6 +13,8 @@ export interface LearnerNotificationIntent {
   route:'/'|'/review';
   dueCount?:number;
   streak?:number;
+  breakDays?:number;
+  lessonDayIndex?:number;
 }
 
 export interface NotificationPolicyInput {
@@ -20,6 +23,7 @@ export interface NotificationPolicyInput {
   dueCount:number;
   currentLessonAvailable:boolean;
   courseComplete:boolean;
+  currentLessonDayIndex?:number;
   preferences?:NotificationSettings;
 }
 
@@ -109,6 +113,26 @@ export function chooseLearnerNotification(
       route:'/',
       streak:day.streak
     };
+  }
+
+  if(
+    dailyEnabled&&
+    day.lastLearningDay!==null&&
+    input.currentLessonAvailable&&
+    !input.courseComplete
+  ){
+    const breakDays=today-day.lastLearningDay;
+    if(breakDays===2||breakDays===5||breakDays===12){
+      return {
+        kind:'return-break',
+        route:'/',
+        breakDays,
+        ...(input.currentLessonDayIndex?{lessonDayIndex:input.currentLessonDayIndex}:{})
+      };
+    }
+    // After the learner has started a course, do not nag every missed day.
+    // Return nudges happen only at 2 / 5 / 12 days, then stop.
+    if(breakDays>1)return null;
   }
 
   if(dailyEnabled&&input.currentLessonAvailable&&!input.courseComplete){

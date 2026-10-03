@@ -57,6 +57,7 @@ export interface ReminderPlanInput {
   locale:string;
   currentLessonAvailable:boolean;
   courseComplete:boolean;
+  currentLessonDayIndex?:number;
 }
 
 export function localDayKey(date:Date):string{
@@ -127,6 +128,7 @@ export function nextReminderPlan(input:ReminderPlanInput):ReminderPlan|null{
       dueCount:dueCountForDay(input,dayKey),
       currentLessonAvailable:input.currentLessonAvailable,
       courseComplete:input.courseComplete,
+      ...(input.currentLessonDayIndex?{currentLessonDayIndex:input.currentLessonDayIndex}:{}),
       preferences:input.preferences
     });
     if(intent)return {at,dayKey,intent};
@@ -159,12 +161,19 @@ function notificationPayload(
     ? t('notifications.systemReviewTitle')
     : plan.intent.kind==='streak-risk'
       ? t('notifications.systemStreakTitle')
-      : t('notifications.systemDailyTitle');
+      : plan.intent.kind==='return-break'
+        ? t('notifications.systemReturnTitle')
+        : t('notifications.systemDailyTitle');
   const body=plan.intent.kind==='review-due'
     ? t('notifications.systemReviewBody',{count:plan.intent.dueCount??0})
     : plan.intent.kind==='streak-risk'
       ? t('notifications.systemStreakBody',{streak:countDays(t,locale,plan.intent.streak??0)})
-      : t('notifications.systemDailyBody');
+      : plan.intent.kind==='return-break'
+        ? t(
+            plan.intent.lessonDayIndex?'notifications.systemReturnBodyDay':'notifications.systemReturnBody',
+            {day:plan.intent.lessonDayIndex??0}
+          )
+        : t('notifications.systemDailyBody');
 
   return {
     id:REMINDER_ID,
@@ -248,7 +257,8 @@ export function NotificationDelivery(){
       lexicon:wordRuntime.lexicon,
       locale,
       currentLessonAvailable:Boolean(state.currentNode),
-      courseComplete:state.roadmapProgress.courseComplete
+      courseComplete:state.roadmapProgress.courseComplete,
+      ...(state.currentNode?.dayIndex?{currentLessonDayIndex:state.currentNode.dayIndex}:{})
     });
   },[
     settingsReady,
