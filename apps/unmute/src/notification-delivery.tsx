@@ -22,16 +22,29 @@ import {
   notificationTransport,
   subscribeNotificationRoute
 } from './notification-native';
+import {
+  LESSON_RUN_CHANGED_EVENT,
+  latestPausedLessonRun,
+  unfinishedReminderTime
+} from './lesson-run-reminder';
 
 const REMINDER_MIN_ID=884000;
 const REMINDER_MAX_ID=884009;
 const REMINDER_ID=884001;
+const UNFINISHED_REMINDER_ID=884002;
 const LOOKAHEAD_DAYS=7;
 
 export interface ReminderPlan {
   at:Date;
   dayKey:string;
   intent:LearnerNotificationIntent;
+}
+
+export interface UnfinishedReminderPlan {
+  at:Date;
+  dayKey:string;
+  nodeId:string;
+  remaining:number;
 }
 
 export interface ReminderPlanInput {
@@ -81,6 +94,19 @@ function dueCountForDay(input:ReminderPlanInput,dayKey:string):number{
   return course.actionableCount+words.items.length;
 }
 
+export function nextUnfinishedReminderPlan(now:Date):UnfinishedReminderPlan|null{
+  const paused=latestPausedLessonRun();
+  if(!paused)return null;
+  const at=unfinishedReminderTime(paused.pausedAt);
+  if(!at||at.getTime()<=now.getTime())return null;
+  return {
+    at,
+    dayKey:localDayKey(at),
+    nodeId:paused.nodeId,
+    remaining:paused.remaining
+  };
+}
+
 export function nextReminderPlan(input:ReminderPlanInput):ReminderPlan|null{
   if(!input.preferences.enabled)return null;
 
@@ -106,6 +132,22 @@ export function nextReminderPlan(input:ReminderPlanInput):ReminderPlan|null{
     if(intent)return {at,dayKey,intent};
   }
   return null;
+}
+
+function unfinishedNotificationPayload(
+  plan:UnfinishedReminderPlan,
+  t:(key:string,vars?:Readonly<Record<string,string|number>>)=>string
+):Record<string,unknown>{
+  return {
+    id:UNFINISHED_REMINDER_ID,
+    title:t('notifications.systemUnfinishedTitle'),
+    body:t('notifications.systemUnfinishedBody',{count:plan.remaining}),
+    schedule:{at:plan.at},
+    extra:{
+      route:'/learn/'+encodeURIComponent(plan.nodeId)+'?resume=1',
+      kind:'unfinished-lesson'
+    }
+  };
 }
 
 function notificationPayload(
@@ -152,10 +194,17 @@ export function NotificationDelivery(){
   const [preferences,setPreferences]=useState<NotificationSettings>(DEFAULT_NOTIFICATION_SETTINGS);
   const [settingsReady,setSettingsReady]=useState(false);
   const [clock,setClock]=useState(()=>Date.now());
+  const [lessonRunsVersion,setLessonRunsVersion]=useState(0);
 
   useEffect(()=>{
     const timer=window.setInterval(()=>setClock(Date.now()),60_000);
     return ()=>window.clearInterval(timer);
+  },[]);
+
+  useEffect(()=>{
+    const changed=()=>setLessonRunsVersion(value=>value+1);
+    window.addEventListener(LESSON_RUN_CHANGED_EVENT,changed);
+    return ()=>window.removeEventListener(LESSON_RUN_CHANGED_EVENT,changed);
   },[]);
 
   useEffect(()=>{
@@ -176,6 +225,10 @@ export function NotificationDelivery(){
   },[]);
 
   const state=runtime.state;
+  const unfinishedPlan=useMemo(
+    ()=>preferences.enabled?nextUnfinishedReminderPlan(new Date(clock)):null,
+    [preferences.enabled,clock,lessonRunsVersion]
+  );
   const plan=useMemo(()=>{
     if(
       !settingsReady||
@@ -231,7 +284,11 @@ export function NotificationDelivery(){
         wordRuntime.status!=='ready'
       )return;
 
-      const notifications=plan?[notificationPayload(plan,t,locale)]:[];
+      const notifications:Record<string,unknown>[]=[];
+      if(unfinishedPlan)notifications.push(unfinishedNotificationPayload(unfinishedPlan,t));
+      if(plan&&(!unfinishedPlan||plan.dayKey!==unfinishedPlan.dayKey)){
+        notifications.push(notificationPayload(plan,t,locale));
+      }
       if(cancelled)return;
       await notificationTransport.replaceRange(
         REMINDER_MIN_ID,
@@ -246,6 +303,7 @@ export function NotificationDelivery(){
     settingsReady,
     preferences.enabled,
     plan,
+    unfinishedPlan,
     runtime.status,
     wordRuntime.status,
     t
