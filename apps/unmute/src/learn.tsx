@@ -20,6 +20,7 @@ import { AnswerExplanationView } from './answer-explanation';
 import { trackDayCompleted, trackLessonCompleted } from './observability';
 import { Icon } from './icons';
 import { Sheet } from './sheet';
+import { FirstLessonNotificationOffer } from './first-lesson-notification-offer';
 import { Loader } from './loader';
 import { stageForDay, stageNameKey } from './course-stages';
 import { TheoryContent } from './theory-content';
@@ -574,6 +575,8 @@ export function NodeRunnerView({
 
   if(finished&&node&&state){
     const missing=missingForNode(node,state.progress);
+    const completedLessons=state.roadmapProgress.nodes.filter(item=>item.node.kind==='lesson'&&item.complete).length;
+    const offerReminder=node.kind==='lesson'&&nodeComplete&&runMode==='first'&&completedLessons===1;
     const plan=activities.find(isPlan);
     const firstPractice=missing.practice[0];
     const firstUnseen=missing.unseen.map(id=>steps.findIndex(item=>item.id===id)).find(index=>index>=0);
@@ -589,6 +592,7 @@ export function NodeRunnerView({
     };
     return (
       <section className="learn-shell runner" aria-labelledby="learn-summary-title">
+        <FirstLessonNotificationOffer eligible={offerReminder} />
         <div className="learn-summary">
           <span className={'learn-summary-icon'+(nodeComplete?'':' is-pending')} aria-hidden="true"><Icon name={nodeComplete?'check':'review'} size={32} /></span>
           <div className="screen-kicker">{t(nodeComplete?'learn.summaryKicker':'learn.notCountedKicker')}</div>
