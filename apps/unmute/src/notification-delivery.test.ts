@@ -1,11 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import type { CourseSet } from './content/schema';
 import type { LexiconSnapshot } from './lexicon/schema';
 import { emptyCourseProgress, emptyWordsProgress } from './progress';
 import { dayNumberFromKey } from './engine/course-progress';
 import {
   localDayKey,
-  nextReminderPlan
+  nextReminderPlan,
+  nextUnfinishedReminderPlan
 } from './notification-delivery';
 
 const set:CourseSet={
@@ -60,6 +61,37 @@ const preferences={
 };
 
 describe('native reminder planning',()=>{
+  beforeEach(()=>localStorage.clear());
+
+  it('plans an unfinished lesson about three hours after saved exit',()=>{
+    localStorage.setItem('unmute.lesson-run:general-foundation:day-2',JSON.stringify({
+      version:1,
+      setId:'general-foundation',
+      nodeId:'day-2',
+      order:[0,1,2,3],
+      pos:1,
+      result:null,
+      pausedAt:new Date(2026,8,29,14,0,0).toISOString()
+    }));
+    const plan=nextUnfinishedReminderPlan(new Date(2026,8,29,15,0,0));
+    expect(plan).toMatchObject({nodeId:'day-2',remaining:3});
+    expect(plan?.at.getHours()).toBe(17);
+    expect(plan?.at.getMinutes()).toBe(0);
+  });
+
+  it('does not schedule an unfinished lesson after the 21:00 cutoff',()=>{
+    localStorage.setItem('unmute.lesson-run:general-foundation:day-2',JSON.stringify({
+      version:1,
+      setId:'general-foundation',
+      nodeId:'day-2',
+      order:[0,1],
+      pos:0,
+      result:null,
+      pausedAt:new Date(2026,8,29,19,0,0).toISOString()
+    }));
+    expect(nextUnfinishedReminderPlan(new Date(2026,8,29,19,5,0))).toBeNull();
+  });
+
   it('plans a due-review notification at the configured local time',()=>{
     const progress=emptyCourseProgress();
     progress.cards['card.one']={
