@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useI18n } from '@appbase/ui-react/i18n.js';
+import { AnswerFeedbackSheet } from './answer-feedback-sheet';
 import type { Activity } from './content/schema';
 import type { SpeakText } from './speech-web';
 import { ExerciseKind } from './exercise-kind';
@@ -221,27 +221,21 @@ export function PatternListeningView({
           ))}
         </div>
       ) : (
-        createPortal(
-          <div className="lesson-feedback-overlay" role="presentation">
-            <div className={'learn-feedback is-sheet '+(isCorrect?'learn-feedback-ok':'learn-feedback-wrong')} role="status">
-              <div className="learn-feedback-head">
-                <span className="learn-feedback-icon" aria-hidden="true"><span>{isCorrect?'✓':'×'}</span></span>
-                <div className="learn-feedback-head-copy">
-                  <strong>{isCorrect?t('learn.correct'):t('listening.incorrect')}</strong>
-                </div>
-              </div>
-              <div className="drill-target"><LexiconText text={target} refs={activity.lexiconRefs} /></div>
-              <div className="learn-hint"><LexiconText text={correctLabel} refs={activity.lexiconRefs} /></div>
-              {item?.explanation&&(
-                <p className="drill-explanation"><LexiconText text={localized(item.explanation,locale)} refs={activity.lexiconRefs} /></p>
-              )}
-              <button className="primary-button learn-feedback-next" type="button" onClick={next}>
-                {pos+1<items.length?t('learn.next'):t('learn.finish')}
-              </button>
-            </div>
-          </div>,
-          document.body
-        )
+        <AnswerFeedbackSheet
+          tone={isCorrect?'correct':'wrong'}
+          title={isCorrect?t('learn.correct'):t('listening.incorrect')}
+          actions={
+            <button className="primary-button learn-feedback-next" type="button" onClick={next}>
+              {pos+1<items.length?t('learn.next'):t('learn.finish')}
+            </button>
+          }
+        >
+          <div className="drill-target"><LexiconText text={target} refs={activity.lexiconRefs} /></div>
+          <div className="learn-hint"><LexiconText text={correctLabel} refs={activity.lexiconRefs} /></div>
+          {item?.explanation&&(
+            <p className="drill-explanation"><LexiconText text={localized(item.explanation,locale)} refs={activity.lexiconRefs} /></p>
+          )}
+        </AnswerFeedbackSheet>
       )}
 
       <div className="learn-hint">{t('listening.sessionStats',{correct:hits,total:items.length})}</div>
