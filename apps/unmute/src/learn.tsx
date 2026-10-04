@@ -578,7 +578,7 @@ export function NodeRunnerView({
   };
   const exitSheet=(
     <Sheet open={exitOpen} onClose={()=>setExitOpen(false)} labelledBy="lesson-exit-title" closeLabel={t('learn.exitStay')}>
-      <div className="confirm-sheet">
+      <div className="confirm-sheet confirm-sheet-compact">
         <h3 id="lesson-exit-title">{t('learn.exitTitle')}</h3>
         <p className="tile-text">{t('learn.exitText')}</p>
         <button className="primary-button" type="button" onClick={()=>setExitOpen(false)}>{t('learn.exitStay')}</button>
@@ -589,11 +589,8 @@ export function NodeRunnerView({
             if(state&&node)markLessonRunPaused(state.set.id,node.id);
             onExit();
           }}
-          aria-describedby="lesson-exit-save-hint"
         >{t('learn.exitSave')}</button>
-        <p className="tile-text" id="lesson-exit-save-hint">{t('learn.exitSaveHint')}</p>
-        <button className="link-button danger-link" type="button" onClick={exitWithoutSaving} aria-describedby="lesson-exit-discard-hint">{t('learn.exitDiscard')}</button>
-        <p className="tile-text" id="lesson-exit-discard-hint">{t('learn.exitDiscardHint')}</p>
+        <button className="link-button danger-link" type="button" onClick={exitWithoutSaving}>{t('learn.exitDiscard')}</button>
       </div>
     </Sheet>
   );
@@ -688,6 +685,20 @@ export function NodeRunnerView({
     );
   }
 
+  const regularTaskIndices=steps
+    .map((item,index)=>({item,index}))
+    .filter(({item})=>item.type==='choice'||item.type==='text-input'||item.type==='translation')
+    .map(({index})=>index);
+  const replayRegularTasks=()=>{
+    if(!regularTaskIndices.length)return;
+    begin(0);
+    setOrder(regularTaskIndices);
+    setFirstPass(regularTaskIndices.length);
+    setIntro(false);
+    setPracticeMode(undefined);
+    setRunMode('replay');
+  };
+
   const setId=state.set.id;
   const stage=stageForDay(node.dayIndex,state.set.id);
   const header=(
@@ -696,11 +707,20 @@ export function NodeRunnerView({
         {stage&&<div className="screen-kicker">{t(stageNameKey(stage))}</div>}
         <h2 id="learn-title"><LexiconText text={localized(node.title,locale)} /></h2>
       </div>
-      {theoryCards.length>0&&!intro&&(
-        <button className="chip-button pressable" type="button" onClick={()=>setTheoryOpen(true)}>
-          <Icon name="book" size={18} />
-          {t('learn.theory')}
-        </button>
+      {!intro&&(
+        <div className="runner-heading-actions">
+          {regularTaskIndices.length>0&&(
+            <button className="chip-button pressable" type="button" onClick={replayRegularTasks}>
+              {t('learn.tasks')}
+            </button>
+          )}
+          {theoryCards.length>0&&(
+            <button className="chip-button pressable" type="button" onClick={()=>setTheoryOpen(true)}>
+              <Icon name="book" size={18} />
+              {t('learn.theory')}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
@@ -843,6 +863,7 @@ export function NodeRunnerView({
     if(result===null)return null;
     const willReturn=!result&&stepIndex!==undefined&&order.slice(pos+1).includes(stepIndex);
     return createPortal(
+    <div className="lesson-feedback-overlay" role="presentation">
     <div className={'learn-feedback is-sheet '+(nearResult?'learn-feedback-near':result?'learn-feedback-ok':'learn-feedback-wrong')} role="status">
       <div className={'learn-feedback-head'+(willReturn?' has-subtitle':'')}>
         <span className="learn-feedback-icon" aria-hidden="true"><Icon name={result?'check':'close'} size={22} /></span>
@@ -875,6 +896,7 @@ export function NodeRunnerView({
           {pos+1<order.length?t('learn.next'):t('learn.finish')}
         </button>
       </div>
+    </div>
     </div>,
     document.body
     );
