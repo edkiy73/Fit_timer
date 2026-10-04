@@ -1,9 +1,5 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-
-function reducedMotion():boolean{
-  try{return window.matchMedia('(prefers-reduced-motion: reduce)').matches;}
-  catch{return false;}
-}
+import { MOTION, MOTION_EASING, prefersReducedMotion } from './motion';
 
 export function AnswerModeTransition({
   mode,
@@ -31,7 +27,7 @@ export function AnswerModeTransition({
     previousMode.current=mode;
     previousHeight.current=nextHeight;
 
-    if(reducedMotion()||Math.abs(from-nextHeight)<1){
+    if(prefersReducedMotion()||Math.abs(from-nextHeight)<1){
       node.style.height='';
       setTransitioning(false);
       return;
@@ -42,7 +38,7 @@ export function AnswerModeTransition({
     node.style.overflow='hidden';
 
     const frame=requestAnimationFrame(()=>{
-      node.style.transition='height 300ms cubic-bezier(.2,.8,.2,1)';
+      node.style.transition=`height ${MOTION.base}ms ${MOTION_EASING.standard}`;
       node.style.height=nextHeight+'px';
     });
     const timer=window.setTimeout(()=>{
@@ -50,7 +46,7 @@ export function AnswerModeTransition({
       node.style.height='';
       node.style.overflow='';
       setTransitioning(false);
-    },320);
+    },MOTION.base+20);
 
     return ()=>{
       cancelAnimationFrame(frame);

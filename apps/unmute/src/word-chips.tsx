@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
+import { MOTION, MOTION_EASING, prefersReducedMotion } from './motion';
 
 /* «Собери фразу»: the answer's words plus a few from other answers of the lesson, shuffled.
    The learner taps words into the line (tap again to take one back). New phrases start here;
@@ -59,9 +60,7 @@ export function WordChips({chips, picked, disabled, onChange}: {
     const pending=pendingMove.current;
     if(!pending)return;
     pendingMove.current=null;
-    let reduced=false;
-    try{reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;}catch{}
-    if(reduced)return;
+    if(prefersReducedMotion())return;
     const target=picked.includes(pending.id)
       ? pickedRefs.current.get(pending.id)
       : poolRefs.current.get(pending.id);
@@ -76,7 +75,7 @@ export function WordChips({chips, picked, disabled, onChange}: {
         {transform:`translate(${dx}px,${dy}px) scale(${sx},${sy})`,opacity:.72},
         {transform:'translate(0,0) scale(1)',opacity:1}
       ],
-      {duration:360,easing:'cubic-bezier(.2,.8,.2,1)'}
+      {duration:MOTION.spring,easing:MOTION_EASING.standard}
     );
   },[picked]);
 

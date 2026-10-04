@@ -342,6 +342,41 @@ try{
     await walkContext.close();
   }
 
+  // Motion/layout smoke at the edges of the supported phone range.
+  // Reduced motion must remove decorative animation without changing geometry.
+  for(const width of [320,412]){
+    const motionContext=await browser.newContext({
+      viewport:{width,height:760},
+      locale:'ru-RU',
+      reducedMotion:'reduce'
+    });
+    await motionContext.addInitScript(()=>{ try{ localStorage.setItem('unmute.onboarding.v1','1'); }catch{} });
+    const motionPage=await motionContext.newPage();
+    motionPage.on('pageerror',error=>errors.push('motion '+width+': '+String(error)));
+    await motionPage.goto(URL_+'#/');
+    await motionPage.locator('.today .tile').first().waitFor({timeout:8000}).catch(()=>{});
+    const todayMotion=await motionPage.evaluate(()=>{
+      const root=getComputedStyle(document.documentElement);
+      const tile=document.querySelector('.today .tile');
+      return {
+        reduce:matchMedia('(prefers-reduced-motion: reduce)').matches,
+        token:root.getPropertyValue('--motion-base').trim(),
+        animation:tile?getComputedStyle(tile).animationName:'',
+        fits:document.documentElement.scrollWidth<=document.documentElement.clientWidth+1
+      };
+    });
+    ok(width+' px: motion tokens are present',todayMotion.token.length>0);
+    ok(width+' px: reduced motion is respected',todayMotion.reduce&&todayMotion.animation==='none');
+    ok(width+' px: Today fits without horizontal jump',todayMotion.fits);
+
+    await motionPage.goto(URL_+'#/course');
+    await motionPage.locator('.course-map-shell').first().waitFor({timeout:8000}).catch(()=>{});
+    ok(width+' px: Route fits without horizontal jump',await motionPage.evaluate(
+      ()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1
+    ));
+    await motionContext.close();
+  }
+
   ok('no runtime errors',errors.length===0);
   if(errors.length)console.log(errors.join('\n'));
 
