@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
-import { useLocation } from 'react-router';
+import { useInRouterContext, useLocation } from 'react-router';
 import { apiUrl } from './api-url';
 import { Icon } from './icons';
 
@@ -215,19 +215,23 @@ function UpdateBody({state}: {state: UpdateState}){
 const UpdateContext = createContext<UpdateState | null>(null);
 
 /** One update check for the whole app; the required-update screen covers everything. */
-export function AppUpdateProvider({children}: {children: ReactNode}){
-  const state = useAppUpdate();
+function UpdateRouteRecheck({check}:{check:()=>Promise<void>}){
   const location = useLocation();
   const previousPath = useRef(location.pathname);
-
   useEffect(() => {
     const previous = previousPath.current;
     previousPath.current = location.pathname;
-    if(previous !== '/' && location.pathname === '/') void state.check();
-  }, [location.pathname, state.check]);
+    if(previous !== '/' && location.pathname === '/') void check();
+  }, [location.pathname, check]);
+  return null;
+}
 
+export function AppUpdateProvider({children}: {children: ReactNode}){
+  const state = useAppUpdate();
+  const inRouter = useInRouterContext();
   return (
     <UpdateContext.Provider value={state}>
+      {inRouter&&<UpdateRouteRecheck check={state.check} />}
       {children}
       <UpdateGate state={state} />
     </UpdateContext.Provider>
