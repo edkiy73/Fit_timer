@@ -487,4 +487,26 @@
 /* Products style every <button>; a text link must stay a text link. */
 .ab-admin button.ab-admin-link,.ab-admin-link{background:none!important;box-shadow:none!important;border:0!important;padding:0!important;margin:0!important;min-height:0!important;width:auto!important;color:var(--accent-ink,var(--accent,#2f5fe0))!important}
 .ab-admin-chip .ab-admin-link{font-size:12px}
+
+.ab-admin-campaign{display:grid;gap:12px}
+.ab-admin-campaign>h2{margin:0}
+.ab-admin-campaign-grid{display:grid;grid-template-columns:minmax(150px,.6fr) minmax(220px,1.4fr);gap:10px}
+.ab-admin-campaign-grid>label,.ab-admin-campaign .ab-admin-fieldset>label:not(.ab-admin-check){display:grid;gap:5px}
+.ab-admin-campaign-grid small{color:var(--muted,#6b7280);font-size:11px}
+.ab-admin-campaign textarea{resize:vertical;min-height:92px}
+.ab-admin-campaign-summary{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:7px 12px;
+  padding:10px 12px;
+  border-radius:10px;
+  background:var(--surface,#eef1f6);
+  font-size:12px;
+}
+.ab-admin-campaign-summary strong{width:100%;font-size:13px}
+.ab-admin-campaign-summary span{color:var(--muted,#6b7280)}
+@media(max-width:760px){
+  .ab-admin-campaign-grid{grid-template-columns:1fr}
+}
 .ab-admin-access .ab-admin-feedback{margin:4px 0 8px;color:var(--ink,#111);font-weight:600}
