@@ -40,6 +40,19 @@ function localized(text:Record<string,string>|undefined,locale:string):string{
   return text[locale] || text.ru || text.en || Object.values(text)[0] || '';
 }
 
+function withActivityViewTransition(change:()=>void):void{
+  let reduced=false;
+  try{reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;}catch{}
+  const doc=document as Document&{
+    startViewTransition?:((callback:()=>void)=>unknown)|undefined;
+  };
+  if(!reduced&&doc.startViewTransition){
+    doc.startViewTransition(change);
+    return;
+  }
+  change();
+}
+
 export function activitiesForNode(
   activities:Activity[],
   node:RoadmapNode
@@ -512,12 +525,14 @@ export function NodeRunnerView({
   };
 
   const advance=()=>{
-    if(pos+1<order.length){
-      setPos(current=>current+1);
-      return;
-    }
-    if(node)void finish();
-    else onExit();
+    withActivityViewTransition(()=>{
+      if(pos+1<order.length){
+        setPos(current=>current+1);
+        return;
+      }
+      if(node)void finish();
+      else onExit();
+    });
   };
 
   // A wrong answer comes back at the end of the lesson — at most twice, so nobody gets stuck.
@@ -882,6 +897,7 @@ export function NodeRunnerView({
         </div>
       </Sheet>
 
+      <div className="runner-activity">
       {activity.type==='choice'&&(
         <article className="learn-card">
           <ExerciseKind kind="choice" />
@@ -1058,6 +1074,7 @@ export function NodeRunnerView({
           </button>
         </article>
       )}
+      </div>
     </section>
   );
 }
