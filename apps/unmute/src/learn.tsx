@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity, RoadmapNode } from './content/schema';
@@ -18,6 +17,7 @@ import { LexiconText } from './lexicon-ui';
 import { isNodeUnlockedByPurchase } from './content/access';
 import { AIConversationView } from './ai-conversation';
 import { AnswerExplanationView } from './answer-explanation';
+import { AnswerFeedbackSheet } from './answer-feedback-sheet';
 import { trackDayCompleted, trackLessonCompleted } from './observability';
 import { Icon } from './icons';
 import { Sheet } from './sheet';
@@ -862,43 +862,44 @@ export function NodeRunnerView({
   })=>{
     if(result===null)return null;
     const willReturn=!result&&stepIndex!==undefined&&order.slice(pos+1).includes(stepIndex);
-    return createPortal(
-    <div className="lesson-feedback-overlay" role="presentation">
-    <div className={'learn-feedback is-sheet '+(nearResult?'learn-feedback-near':result?'learn-feedback-ok':'learn-feedback-wrong')} role="status">
-      <div className={'learn-feedback-head'+(willReturn?' has-subtitle':'')}>
-        <span className="learn-feedback-icon" aria-hidden="true"><Icon name={result?'check':'close'} size={22} /></span>
-        <div className="learn-feedback-head-copy">
-          <strong>{nearResult?t('learn.nearMiss'):result?t('learn.correct'):t('learn.incorrect')}</strong>
-          {nearResult&&<p className="learn-hint learn-feedback-return">{t('learn.nearMissHint')}</p>}
-          {willReturn&&<p className="learn-hint learn-feedback-return">{t('learn.willReturn')}</p>}
-        </div>
-      </div>
-      {(nearResult||!result)&&accepted&&(
-        <span><LexiconText text={t('learn.accepted',{answer:accepted})} refs={activity.lexiconRefs} /></span>
-      )}
-      {explanation&&(
-        <p><LexiconText text={localized(explanation,locale)} refs={activity.lexiconRefs} /></p>
-      )}
-      <div className="learn-feedback-actions">
-        {!result&&!nearResult&&learnerAnswer&&acceptedAnswers.length>0&&(
-          <AnswerExplanationView
-            compact
-            question={question}
-            learnerAnswer={learnerAnswer}
-            acceptedAnswers={acceptedAnswers}
-            courseExplanation={localized(explanation,locale)}
-            refs={activity.lexiconRefs}
-            onSignIn={onSignIn}
-            onAccess={onAccess}
-          />
+    return (
+      <AnswerFeedbackSheet
+        tone={nearResult?'near':result?'correct':'wrong'}
+        title={nearResult?t('learn.nearMiss'):result?t('learn.correct'):t('learn.incorrect')}
+        headClassName={willReturn?'has-subtitle':''}
+        subtitle={
+          <>
+            {nearResult&&<p className="learn-hint learn-feedback-return">{t('learn.nearMissHint')}</p>}
+            {willReturn&&<p className="learn-hint learn-feedback-return">{t('learn.willReturn')}</p>}
+          </>
+        }
+        actions={
+          <>
+            {!result&&!nearResult&&learnerAnswer&&acceptedAnswers.length>0&&(
+              <AnswerExplanationView
+                compact
+                question={question}
+                learnerAnswer={learnerAnswer}
+                acceptedAnswers={acceptedAnswers}
+                courseExplanation={localized(explanation,locale)}
+                refs={activity.lexiconRefs}
+                onSignIn={onSignIn}
+                onAccess={onAccess}
+              />
+            )}
+            <button className="primary-button learn-feedback-next" type="button" onClick={()=>advance()}>
+              {pos+1<order.length?t('learn.next'):t('learn.finish')}
+            </button>
+          </>
+        }
+      >
+        {(nearResult||!result)&&accepted&&(
+          <span><LexiconText text={t('learn.accepted',{answer:accepted})} refs={activity.lexiconRefs} /></span>
         )}
-        <button className="primary-button learn-feedback-next" type="button" onClick={()=>advance()}>
-          {pos+1<order.length?t('learn.next'):t('learn.finish')}
-        </button>
-      </div>
-    </div>
-    </div>,
-    document.body
+        {explanation&&(
+          <p><LexiconText text={localized(explanation,locale)} refs={activity.lexiconRefs} /></p>
+        )}
+      </AnswerFeedbackSheet>
     );
   };
 
