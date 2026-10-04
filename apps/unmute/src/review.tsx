@@ -36,7 +36,6 @@ import { AnswerExplanationView } from './answer-explanation';
 import { useOtherCourseReviews, type OtherCourseReviews } from './other-course-review';
 import { MyWordsView } from './my-words';
 import { Icon } from './icons';
-import { Loader } from './loader';
 import { reviewDueCounts } from './review-count';
 import { randomSeed, shuffledIndices } from './shuffle';
 import { reviewSessionSeed } from './review-seed';
@@ -233,15 +232,22 @@ export function ReviewView({
 
   if(runtime.status==='pending'||wordRuntime?.status==='pending'||(runtime.status==='ready'&&!session)){
     return (
-      <section className="review-shell">
-        <Loader title={t('review.loadingTitle')} />
+      <section className="review-shell review-loading is-loading" aria-busy="true" aria-label={t('review.loadingTitle')}>
+        <header className="screen-head" aria-hidden="true">
+          <span className="skeleton skeleton-line skeleton-kicker" />
+          <span className="skeleton skeleton-line skeleton-title" />
+        </header>
+        <div className="bento review-loading-grid" aria-hidden="true">
+          <article className="tile tile-hero skeleton review-loading-hero" />
+          <div className="tile skeleton review-loading-side" />
+        </div>
       </section>
     );
   }
 
   if(runtime.status==='error'){
     return (
-      <section className="review-shell">
+      <section className="review-shell is-ready">
         <button className="learn-back" type="button" onClick={onExit}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
         <div className="learn-state" role="alert">
           <strong>{t('review.errorTitle')}</strong>
@@ -257,7 +263,7 @@ export function ReviewView({
 
   if(mixedActivity){
     return (
-      <section className="review-shell" aria-labelledby="review-title">
+      <section className="review-shell is-ready" aria-labelledby="review-title">
         <button className="learn-back" type="button" onClick={()=>setMixedActivity(null)}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
         <div>
           <div className="eyebrow">{t('review.eyebrow')}</div>
@@ -290,7 +296,7 @@ export function ReviewView({
 
   if(total===0){
     return (
-      <section className="review-shell" aria-labelledby="review-title">
+      <section className="review-shell is-ready" aria-labelledby="review-title">
         <header className="screen-head">
           <div className="screen-kicker">{t('review.eyebrow')}</div>
           <h2 id="review-title">{t('review.title')}</h2>
@@ -341,7 +347,7 @@ export function ReviewView({
 
   if(completeDayId&&dayFinished){
     return (
-      <section className="review-shell" aria-labelledby="review-title">
+      <section className="review-shell is-ready" aria-labelledby="review-title">
         <div className="learn-summary">
           <span className="learn-summary-icon" aria-hidden="true"><Icon name="check" size={32} /></span>
           <div className="screen-kicker">{t('learn.summaryKicker')}</div>
@@ -357,7 +363,7 @@ export function ReviewView({
 
   if(!started&&item){
     return (
-      <section className="review-shell" aria-labelledby="review-title">
+      <section className="review-shell is-ready" aria-labelledby="review-title">
         <header className="screen-head">
           <div className="screen-kicker">{t('review.eyebrow')}</div>
           <h2 id="review-title">{t('review.title')}</h2>
@@ -389,7 +395,7 @@ export function ReviewView({
   if(!item){
     const left=reviewDueCounts(state,wordRuntime,locale,todayDay,otherCourses.courses)?.actionableCount ?? 0;
     return (
-      <section className="review-shell" aria-labelledby="review-title">
+      <section className="review-shell is-ready" aria-labelledby="review-title">
         <header className="screen-head">
           <div className="screen-kicker">{t('review.eyebrow')}</div>
           <h2 id="review-title">{t('review.doneTitle')}</h2>

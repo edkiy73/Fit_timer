@@ -206,7 +206,7 @@ export function CourseMapView({
 
   if(runtime.status==='pending'){
     return (
-      <section className="course-map-shell route-skeleton" aria-busy="true" aria-label={t('courseMap.loadingTitle')}>
+      <section className="course-map-shell route-skeleton is-loading" aria-busy="true" aria-label={t('courseMap.loadingTitle')}>
         <header className="screen-head" aria-hidden="true">
           <span className="skeleton skeleton-line skeleton-kicker" />
           <span className="skeleton skeleton-line skeleton-title" />
@@ -228,7 +228,7 @@ export function CourseMapView({
 
   if(runtime.status==='error'||!state){
     return (
-      <section className="course-map-shell">
+      <section className="course-map-shell is-ready">
         <div className="learn-state" role="alert">
           <strong>{t('courseMap.errorTitle')}</strong>
           <button className="primary-button" type="button" onClick={()=>void runtime.refresh()}>
@@ -256,7 +256,7 @@ export function CourseMapView({
   };
 
   return (
-    <section className="course-map-shell" aria-labelledby="course-map-title">
+    <section className="course-map-shell is-ready" aria-labelledby="course-map-title">
       <header className="screen-head">
         <div className="screen-kicker">
           {currentGroup?.stage

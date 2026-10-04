@@ -648,6 +648,17 @@ select:active{transform:scale(.985)}
 .skeleton{min-height:150px;border-color:transparent;background:linear-gradient(90deg,var(--surface) 25%,color-mix(in srgb,var(--surface) 55%,var(--card)) 37%,var(--surface) 63%) 0 0/400% 100%;animation:shimmer 1.4s ease infinite}
 .skeleton.tile-hero{min-height:240px}
 .skeleton.tile-short{min-height:76px}
+.course-map-shell.is-loading,.review-shell.is-loading{min-height:min(620px,calc(100svh - var(--tabbar-h) - var(--safe-bottom) - 72px))}
+.progress-shell.is-loading{min-height:420px}
+:is(.course-map-shell,.progress-shell,.review-shell).is-ready{animation:content-ready-in 300ms cubic-bezier(.2,.8,.2,1) both}
+.review-loading{display:grid;align-content:start;gap:14px}
+.review-loading-grid{min-height:300px}
+.review-loading-hero{min-height:250px}
+.review-loading-side{min-height:120px}
+@keyframes content-ready-in{
+  from{opacity:.45;transform:translateY(5px);filter:blur(1.5px)}
+  to{opacity:1;transform:none;filter:none}
+}
 .tile-number-soft{font-size:22px}
 @keyframes shimmer{to{background-position:-135% 0}}
 @keyframes tile-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -659,6 +670,7 @@ select:active{transform:scale(.985)}
 @media(prefers-reduced-motion:reduce){
   .tile{animation:none}
   .skeleton{animation:none}
+  :is(.course-map-shell,.progress-shell,.review-shell).is-ready{animation:none!important}
   .today-meter>span{transition:none}
 }
 
