@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom';
+import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import { useLearnerCourseRuntime } from './course-runtime';
@@ -6,6 +7,7 @@ import { useWordReviewRuntime } from './word-review-runtime';
 import { reviewDueCounts } from './review-count';
 import { useOtherCourseReviews } from './other-course-review';
 import { Icon, type IconName } from './icons';
+import { REVIEW_QUOTA_EVENT } from './review-quota';
 
 const TABS: {to: string; icon: IconName; label: string; end?: boolean}[] = [
   {to:'/', icon:'today', label:'nav.today', end:true},
@@ -21,6 +23,12 @@ export function tabBarHidden(pathname: string): boolean {
 
 function ReviewBadge(){
   const {t, locale} = useI18n();
+  const [,setQuotaVersion]=useState(0);
+  useEffect(()=>{
+    const changed=()=>setQuotaVersion(value=>value+1);
+    window.addEventListener(REVIEW_QUOTA_EVENT,changed);
+    return ()=>window.removeEventListener(REVIEW_QUOTA_EVENT,changed);
+  },[]);
   const runtime = useLearnerCourseRuntime();
   const words = useWordReviewRuntime();
   const others = useOtherCourseReviews(runtime.state?.set.id ?? '');
