@@ -280,11 +280,13 @@ export function DialogueView({
               spellCheck={false}
             />
           </label>
-          <button className="primary-button" type="button" disabled={!answer.trim()||listening} onClick={checkTyped}>
-            {t('learn.check')}
-          </button>
+          <div className="runner-action">
+            <button className="primary-button" type="button" disabled={!answer.trim()||listening} onClick={checkTyped}>
+              {t('learn.check')}
+            </button>
+          </div>
           <button
-            className={listening?'secondary-button speaking-mic speaking-mic-on':'secondary-button speaking-mic'}
+            className={listening?'link-button speaking-mic speaking-mic-on':'link-button speaking-mic'}
             type="button"
             onClick={startVoice}
           >
@@ -303,12 +305,14 @@ export function DialogueView({
             {lastAnswer&&<span>{t('dialogue.yourAnswer',{answer:lastAnswer})}</span>}
           </div>
           <div className="drill-target"><LexiconText text={reference} refs={activity.lexiconRefs} /></div>
-          <button className="secondary-button" type="button" onClick={()=>void speak(reference,ENGLISH_SPEECH_LOCALE)}>
+          <button className="link-button" type="button" onClick={()=>void speak(reference,ENGLISH_SPEECH_LOCALE)}>
             {t('speaking.playReference')}
           </button>
-          <button className="primary-button" type="button" onClick={next}>
-            {pos+1<activity.lines.length?t('learn.next'):t('learn.finish')}
-          </button>
+          <div className="runner-action">
+            <button className="primary-button" type="button" onClick={next}>
+              {pos+1<activity.lines.length?t('learn.next'):t('learn.finish')}
+            </button>
+          </div>
         </>
       )}
 
