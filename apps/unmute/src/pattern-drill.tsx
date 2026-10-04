@@ -61,8 +61,6 @@ export function PatternDrillView({
   const [slow,setSlow]=useState(0);
   const [phase,setPhase]=useState<'ask'|'show'>('ask');
   const [lastFast,setLastFast]=useState<boolean|null>(null);
-  // «Не получилось»: the answer is shown and the phrase simply comes back — nothing to compare.
-  const [gaveUp,setGaveUp]=useState(false);
   const [stage,setStage]=useState<'reading'|'speaking'>('reading');
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(variant==='mixed');
@@ -103,15 +101,10 @@ export function PatternDrillView({
       .finally(()=>setSaving(false));
   },[activity.id,done,passed,savePractice,saved,saving,score,setId,variant]);
 
-  const reveal=(wasFast:boolean,failed=false)=>{
+  const reveal=()=>{
     if(phase!=='ask')return;
-    setLastFast(wasFast);
-    setGaveUp(failed);
+    setLastFast(Date.now()<=deadlineRef.current);
     setPhase('show');
-  };
-
-  const said=()=>{
-    reveal(Date.now()<=deadlineRef.current);
   };
 
   const nextItem=(same:boolean)=>{
@@ -130,7 +123,6 @@ export function PatternDrillView({
     setSlow(nextSlow);
     setPos(current=>current+1);
     setLastFast(null);
-    setGaveUp(false);
     setPhase('ask');
   };
 
@@ -232,57 +224,34 @@ export function PatternDrillView({
             <span style={{animationDuration:`${drillSayMs(accepted)+DRILL_GRACE_MS}ms`}} />
           </div>
           <p className="learn-hint">
-            {stage==='reading'?t('drill.reading'):t('drill.speaking')}
+            {stage==='reading'
+              ? t('drill.reading')
+              : t('drill.speaking',{seconds:Math.ceil((drillSayMs(accepted)+DRILL_GRACE_MS)/1000)})}
           </p>
-          <div className="drill-binary-actions">
-            <button className="secondary-button" type="button" onClick={()=>reveal(false,true)}>
-              {t('drill.couldNot')}
-            </button>
-            <button className="primary-button" type="button" onClick={said}>
-              {t('drill.said')}
+          <div className="runner-action">
+            <button className="primary-button" type="button" onClick={reveal}>
+              {t('drill.showAnswer')}
             </button>
           </div>
         </>
       ) : (
         <>
-          {gaveUp ? (
-            <div className="learn-feedback learn-feedback-neutral">
-              <strong>{t('drill.gaveUp')}</strong>
-              <span>{t(replaying?'drill.gaveUpHintLast':'drill.gaveUpHint')}</span>
-            </div>
-          ) : (
-            <div className={lastFast?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-neutral'}>
-              <strong>{lastFast?t('drill.fast'):t('drill.slow')}</strong>
-              <span>{t('drill.compare')}</span>
-            </div>
-          )}
+          <div className={lastFast?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-neutral'}>
+            <strong>{lastFast?t('drill.fast'):t('drill.slow')}</strong>
+            <span>{t('drill.compare')}</span>
+          </div>
           <div className="drill-target"><LexiconText text={accepted} refs={activity.lexiconRefs} /></div>
           {explanation&&(
             <p className="drill-explanation"><LexiconText text={explanation} refs={activity.lexiconRefs} /></p>
           )}
-          {gaveUp ? (
-            <div className="runner-action">
-              <button className="primary-button" type="button" onClick={()=>nextItem(false)}>
-                {t('learn.next')}
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="drill-binary-actions">
-                <button className="secondary-button" type="button" onClick={()=>nextItem(false)}>
-                  {t('drill.wrong')}
-                </button>
-                <button className="primary-button" type="button" onClick={()=>nextItem(true)}>
-                  {t('drill.same')}
-                </button>
-              </div>
-              {!lastFast&&(
-                <button className="link-button" type="button" onClick={()=>setLastFast(true)}>
-                  {t('drill.wasFast')}
-                </button>
-              )}
-            </>
-          )}
+          <div className="drill-binary-actions">
+            <button className="secondary-button" type="button" onClick={()=>nextItem(false)}>
+              {t('drill.wrong')}
+            </button>
+            <button className="primary-button" type="button" onClick={()=>nextItem(true)}>
+              {t('drill.same')}
+            </button>
+          </div>
         </>
       )}
 
