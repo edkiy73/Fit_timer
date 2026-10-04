@@ -27,6 +27,7 @@ import { stageForDay, stageNameKey } from './course-stages';
 import { TheoryContent } from './theory-content';
 import { ExerciseKind } from './exercise-kind';
 import { WordChips, answerWords, buildChips, chipsText } from './word-chips';
+import { AnswerModeTransition } from './answer-mode-transition';
 import { isNodeRequirementComplete } from './engine/course-progress';
 import { roadmapProgressFromDocument } from './progress-actions';
 import { buildCourseReviewSession } from './review-session';
@@ -312,6 +313,7 @@ export function NodeRunnerView({
   const [selected,setSelected]=useState<number|null>(null);
   const [answer,setAnswer]=useState('');
   const [typing,setTyping]=useState(false);
+  const answerInputRef=useRef<HTMLInputElement>(null);
   const [picked,setPicked]=useState<string[]>([]);
   const [result,setResult]=useState<boolean|null>(null);
   const [nearResult,setNearResult]=useState(false);
@@ -927,29 +929,48 @@ export function NodeRunnerView({
           {activity.type==='text-input'&&activity.source&&(
             <p className="learn-source"><LexiconText text={localized(activity.source,locale)} refs={activity.lexiconRefs} /></p>
           )}
-          {chips ? (
-            <WordChips chips={chips} picked={picked} disabled={busy||result!==null} onChange={setPicked} />
-          ) : (
-            <label className="learn-answer">
-              <span>{t('learn.answerLabel')}</span>
-              <input
-                value={answer}
-                disabled={busy||result!==null}
-                onChange={event=>setAnswer(event.target.value)}
-                onKeyDown={event=>{
-                  if(event.key==='Enter'){
-                    event.preventDefault();
-                    void handleText();
-                  }
-                }}
-                autoComplete="off"
-                autoCapitalize="off"
-                spellCheck={false}
-              />
-            </label>
-          )}
+          <AnswerModeTransition mode={chips?'chips':'write'}>
+            {chips ? (
+              <WordChips chips={chips} picked={picked} disabled={busy||result!==null} onChange={setPicked} />
+            ) : (
+              <label className="learn-answer">
+                <span>{t('learn.answerLabel')}</span>
+                <input
+                  ref={answerInputRef}
+                  value={answer}
+                  disabled={busy||result!==null}
+                  onChange={event=>setAnswer(event.target.value)}
+                  onKeyDown={event=>{
+                    if(event.key==='Enter'){
+                      event.preventDefault();
+                      void handleText();
+                    }
+                  }}
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                />
+              </label>
+            )}
+          </AnswerModeTransition>
           {result===null&&responseMode==='progressive'&&canBuild&&adaptiveStage==='build'&&(
-            <button className="link-toggle" type="button" onClick={()=>{ setTyping(value=>!value); setPicked([]); setAnswer(''); }}>
+            <button
+              className="link-toggle"
+              type="button"
+              onClick={()=>{
+                if(chips){
+                  setPicked([]);
+                  setAnswer('');
+                  setTyping(true);
+                  window.setTimeout(()=>answerInputRef.current?.focus(),320);
+                }else{
+                  answerInputRef.current?.blur();
+                  setAnswer('');
+                  setPicked([]);
+                  setTyping(false);
+                }
+              }}
+            >
               {chips?t('chips.typeInstead'):t('chips.buildInstead')}
             </button>
           )}
