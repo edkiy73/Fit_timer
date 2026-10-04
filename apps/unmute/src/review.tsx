@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
@@ -34,6 +33,7 @@ import { resolveWordReviewSession, type ResolvedWordReviewItem } from './word-re
 import { buildMixedDrillActivity, studiedPatternActivities, MixedDrillView } from './mixed-drill';
 import { LexiconText } from './lexicon-ui';
 import { AnswerExplanationView } from './answer-explanation';
+import { AnswerFeedbackSheet } from './answer-feedback-sheet';
 import { useOtherCourseReviews, type OtherCourseReviews } from './other-course-review';
 import { MyWordsView } from './my-words';
 import { Icon } from './icons';
@@ -578,42 +578,38 @@ export function ReviewView({
       ? (selected===null?'':localized(activity.options[selected],locale))
       : (reviewChips?chipsText(reviewChips,picked):answer.trim());
     const courseExplanation=localized(activity.explanation,locale);
-    return createPortal(
-      <div className="lesson-feedback-overlay" role="presentation">
-      <div className={'learn-feedback is-sheet '+(nearResult?'learn-feedback-near':result?'learn-feedback-ok':'learn-feedback-wrong')} role="status">
-        <div className="learn-feedback-head">
-          <span className="learn-feedback-icon" aria-hidden="true"><Icon name={result?'check':'review'} size={22} /></span>
-          <div className="learn-feedback-head-copy">
-            <strong>{nearResult?t('learn.nearMiss'):result?t('learn.correct'):t('learn.incorrect')}</strong>
-            {nearResult&&<p className="learn-hint learn-feedback-return">{t('learn.nearMissHint')}</p>}
-          </div>
-        </div>
+    return (
+      <AnswerFeedbackSheet
+        tone={nearResult?'near':result?'correct':'wrong'}
+        title={nearResult?t('learn.nearMiss'):result?t('learn.correct'):t('learn.incorrect')}
+        subtitle={nearResult?<p className="learn-hint learn-feedback-return">{t('learn.nearMissHint')}</p>:undefined}
+        actions={
+          <>
+            {!result&&!nearResult&&learnerAnswer&&acceptedAnswers.length>0&&(
+              <AnswerExplanationView
+                compact
+                question={localized(activity.prompt,locale)}
+                learnerAnswer={learnerAnswer}
+                acceptedAnswers={acceptedAnswers}
+                courseExplanation={courseExplanation}
+                refs={activity.lexiconRefs}
+                onSignIn={onSignIn}
+                onAccess={onAccess}
+              />
+            )}
+            <button className="primary-button learn-feedback-next" type="button" onClick={advanceCard}>
+              {result||returnedCard?t('learn.next'):t('review.retryLater')}
+            </button>
+          </>
+        }
+      >
         {(nearResult||!result)&&accepted&&(
           <span><LexiconText text={t('learn.accepted',{answer:accepted})} refs={activity.lexiconRefs} /></span>
         )}
         {courseExplanation&&(
           <p><LexiconText text={courseExplanation} refs={activity.lexiconRefs} /></p>
         )}
-        <div className="learn-feedback-actions">
-          {!result&&!nearResult&&learnerAnswer&&acceptedAnswers.length>0&&(
-            <AnswerExplanationView
-              compact
-              question={localized(activity.prompt,locale)}
-              learnerAnswer={learnerAnswer}
-              acceptedAnswers={acceptedAnswers}
-              courseExplanation={courseExplanation}
-              refs={activity.lexiconRefs}
-              onSignIn={onSignIn}
-              onAccess={onAccess}
-            />
-          )}
-          <button className="primary-button learn-feedback-next" type="button" onClick={advanceCard}>
-            {result||returnedCard?t('learn.next'):t('review.retryLater')}
-          </button>
-        </div>
-      </div>
-      </div>,
-      document.body
+      </AnswerFeedbackSheet>
     );
   };
 
