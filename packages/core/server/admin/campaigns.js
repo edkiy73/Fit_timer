@@ -5,9 +5,9 @@ const { store } = require('../store');
 const { send, fail, clampLine, clampText } = require('../util');
 const { sendPushToAccountHash, notificationPrefs } = require('../push');
 const { sendMail } = require('../mail');
-const { ensureAccountIndex } = require('./accounts');
+const { ensureAccountIndex, accountMail, accountHash } = require('./accounts');
 
-const ACTIONS = new Set(['campaign_send']);
+const ACTIONS = new Set(['campaign_send','campaign_test_push']);
 const productName = () => productIdentity().name || 'App';
 
 const escMail = v => String(v == null ? '' : v)
@@ -15,6 +15,22 @@ const escMail = v => String(v == null ? '' : v)
 
 async function handleAdminCampaigns(action, body, res){
   if(!ACTIONS.has(action)) return false;
+
+  if(action === 'campaign_test_push'){
+    const email=accountMail(body&&body.email);
+    const mh=accountHash(email);
+    const raw=email&&await store.get(`a:${mh}`);
+    if(!raw){fail(res,404,'account_not_found');return true;}
+    const title=clampLine(body&&body.title,100);
+    const message=clampText(body&&body.body,500);
+    if(!title||!message){fail(res,400,'push_copy_required');return true;}
+    const route=clampLine(body&&body.route,200);
+    const data={stage:'admin_test'};
+    if(route&&route.startsWith('/'))data.route=route;
+    const result=await sendPushToAccountHash(mh,{category:'general',title,body:message,data});
+    send(res,200,{ok:true,email,...result});
+    return true;
+  }
 
   await ensureAccountIndex();
   const kind = body && body.kind === 'offers' ? 'offers' : 'news';

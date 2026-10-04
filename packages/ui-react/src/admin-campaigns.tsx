@@ -13,7 +13,10 @@ const COPY={
     confirm:'Отправить рассылку всем подходящим пользователям?', required:'Заполни RU и EN заголовок и текст.',
     noChannel:'Выбери хотя бы один канал.', failed:'Не удалось выполнить рассылку.',
     eligible:'Подходит', sent:'Отправлено', skipped:'Пропущено', errors:'Ошибок', total:'Аккаунтов',
-    note:'Push имеет приоритет. Email используется как fallback, если push недоступен и пользователь разрешил email. Для offers действует лимит частоты Core.'
+    note:'Push имеет приоритет. Email используется как fallback, если push недоступен и пользователь разрешил email. Для offers действует лимит частоты Core.',
+    testPush:'Тестовый push', testHint:'Отправляет одному аккаунту. Удобно для проверки реального устройства перед общей рассылкой.',
+    testEmail:'Email аккаунта', testRoute:'Маршрут после тапа (необязательно)', testSend:'Отправить тест', testSending:'Отправляю…',
+    testTitle:'Тестовое уведомление', testBody:'Если ты это видишь — server push работает.', testDone:'Отправлено устройств', testFailed:'Не удалось отправить тестовый push.'
   },
   en:{
     title:'Campaigns', intro:'Delivery uses shared AppBase Core. Run preview first; preview sends nothing.',
@@ -23,7 +26,10 @@ const COPY={
     confirm:'Send this campaign to all eligible users?', required:'Fill RU and EN title and body.',
     noChannel:'Choose at least one channel.', failed:'Campaign request failed.',
     eligible:'Eligible', sent:'Sent', skipped:'Skipped', errors:'Errors', total:'Accounts',
-    note:'Push has priority. Email is fallback when push is unavailable and the user allowed email. Offers also use the Core frequency limit.'
+    note:'Push has priority. Email is fallback when push is unavailable and the user allowed email. Offers also use the Core frequency limit.',
+    testPush:'Test push', testHint:'Sends to one account. Use it to verify a real device before a broadcast.',
+    testEmail:'Account email', testRoute:'Route after tap (optional)', testSend:'Send test', testSending:'Sending…',
+    testTitle:'Test notification', testBody:'If you can see this, server push works.', testDone:'Devices sent', testFailed:'Could not send test push.'
   }
 } as const;
 
@@ -43,6 +49,11 @@ export function AdminCampaigns({client,adminKey,locale}:{client:AdminClient;admi
   const [busy,setBusy]=useState<'preview'|'send'|''>('');
   const [error,setError]=useState('');
   const [result,setResult]=useState<Result|null>(null);
+  const [testEmail,setTestEmail]=useState('');
+  const [testRoute,setTestRoute]=useState('');
+  const [testBusy,setTestBusy]=useState(false);
+  const [testResult,setTestResult]=useState<{sent?:number;failed?:number;removed?:number}|null>(null);
+  const [testError,setTestError]=useState('');
 
   function valid(){
     if(!push&&!email){setError(copy.noChannel);return false;}
@@ -79,10 +90,36 @@ export function AdminCampaigns({client,adminKey,locale}:{client:AdminClient;admi
     finally{setBusy('');}
   }
 
+  async function sendTest(){
+    if(!testEmail.trim())return;
+    setTestBusy(true);setTestError('');setTestResult(null);
+    try{
+      const r=await client.action(adminKey,'campaign_test_push',{
+        email:testEmail.trim(),title:copy.testTitle,body:copy.testBody,route:testRoute.trim()
+      }) as {sent?:number;failed?:number;removed?:number};
+      setTestResult(r);
+    }catch(_){setTestError(copy.testFailed);}
+    finally{setTestBusy(false);}
+  }
+
   const eligible=(result?.pushEligible||0)+(result?.emailEligible||0);
   const sent=(result?.pushSent||0)+(result?.emailSent||0);
 
   return <section className="ab-admin-stack">
+    <article className="ab-admin-panel">
+      <h2>{copy.testPush}</h2>
+      <p className="ab-admin-note">{copy.testHint}</p>
+      <div className="ab-admin-grid">
+        <label><span>{copy.testEmail}</span><input type="email" value={testEmail} onChange={e=>setTestEmail(e.target.value)} /></label>
+        <label><span>{copy.testRoute}</span><input placeholder="/review" value={testRoute} onChange={e=>setTestRoute(e.target.value)} /></label>
+      </div>
+      {testError&&<p className="ab-admin-error" role="alert">{testError}</p>}
+      {testResult&&<p className="ab-admin-feedback" role="status">{copy.testDone}: {String(testResult.sent||0)}{testResult.failed?' · '+copy.errors+': '+testResult.failed:''}</p>}
+      <div className="ab-admin-row">
+        <button type="button" disabled={testBusy||!testEmail.trim()} onClick={()=>void sendTest()}>{testBusy?copy.testSending:copy.testSend}</button>
+      </div>
+    </article>
+
     <article className="ab-admin-panel">
       <h2>{copy.title}</h2>
       <p className="ab-admin-note">{copy.intro}</p>
