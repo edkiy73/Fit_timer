@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { MOTION, easeOutCubic, motionProgress, prefersReducedMotion } from './motion';
 
-function useAnimatedPercent(value:number,duration=MOTION.progress):number{
+function useAnimatedPercent(value:number,duration:number=MOTION.progress):number{
   const target=Math.max(0,Math.min(100,Number.isFinite(value)?value:0));
   const previous=useRef<number|null>(null);
   const [display,setDisplay]=useState(target);
