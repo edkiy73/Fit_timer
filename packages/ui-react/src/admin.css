@@ -4,6 +4,8 @@
 
 .ab-admin-shell{
   min-height:100vh;
+  max-width:100%;
+  overflow-x:hidden;
   color:var(--ink,#17181b);
   background:var(--bg,#f6f7f9);
 }
@@ -78,7 +80,7 @@
   color:var(--accent,#2f5fe0);
   font-weight:750;
 }
-.ab-admin-main{margin-left:228px;min-width:0}
+.ab-admin-main{margin-left:228px;min-width:0;max-width:100%;overflow-x:hidden}
 .ab-admin-topbar{
   position:sticky;
   top:0;
@@ -119,7 +121,11 @@
 .ab-admin-shade{display:none}
 
 .ab-admin{
+  box-sizing:border-box;
   width:auto;
+  min-width:0;
+  max-width:100%;
+  overflow-x:hidden;
   max-width:980px;
   margin:0 auto;
   padding:14px 20px 72px;
@@ -145,6 +151,7 @@
 .ab-admin-stack{display:grid;gap:10px}
 .ab-admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .ab-admin-card,.ab-admin-panel{
+  min-width:0;
   background:var(--card,#fff);
   border:1px solid var(--line,#e4e6eb);
   border-radius:12px;
@@ -223,10 +230,13 @@
 }
 .ab-admin tr:last-child td{border-bottom:0}
 
-.ab-admin-access label{display:grid;gap:5px;margin-bottom:9px;flex:1}
+.ab-admin label{min-width:0}.ab-admin-access label{display:grid;gap:5px;margin-bottom:9px;flex:1}
 .ab-admin-access input,.ab-admin-access select,
 .ab-admin input,.ab-admin select,.ab-admin textarea{
+  box-sizing:border-box;
+  width:100%;
   min-width:0;
+  max-width:100%;
   border:1px solid var(--line,#e4e6eb);
   border-radius:9px;
   padding:9px 10px;
