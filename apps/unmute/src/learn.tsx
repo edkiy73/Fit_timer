@@ -34,6 +34,7 @@ import { buildCourseReviewSession } from './review-session';
 import { activitySaveClock } from './activity-progress';
 import { randomSeed, shuffledIndices } from './shuffle';
 import { sentenceResponseStage, type SentenceResponseKind } from './engine/sentence-progression';
+import { MOTION, prefersReducedMotion } from './motion';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -41,12 +42,10 @@ function localized(text:Record<string,string>|undefined,locale:string):string{
 }
 
 function withActivityViewTransition(change:()=>void):void{
-  let reduced=false;
-  try{reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;}catch{}
   const doc=document as Document&{
     startViewTransition?:((callback:()=>void)=>unknown)|undefined;
   };
-  if(!reduced&&doc.startViewTransition){
+  if(!prefersReducedMotion()&&doc.startViewTransition){
     doc.startViewTransition(change);
     return;
   }
@@ -978,7 +977,7 @@ export function NodeRunnerView({
                   setPicked([]);
                   setAnswer('');
                   setTyping(true);
-                  window.setTimeout(()=>answerInputRef.current?.focus(),320);
+                  window.setTimeout(()=>answerInputRef.current?.focus(),MOTION.base+20);
                 }else{
                   answerInputRef.current?.blur();
                   setAnswer('');
