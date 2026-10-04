@@ -1,6 +1,7 @@
 import { appLocale, canonicalLabel, loadAppLocale, localeTag, normalizeLocalePreference,
   profileLocalePreference, setAppLocale, t
 } from '../i18n/index.js';
+import { createRemotePushClient } from '@appbase/core/remote-push.js';
 import { appNotifications, appRuntimeCompat, appUi } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
 import { $, ICONS, ROOT_TABS, aiScreenDirty, appAlert, appConfirm, appDialog, asTab, audioCtx, beep,
@@ -67,6 +68,36 @@ import { SR, applyThemeFor, checkSchedules, clearVoiceWanted, hfHintText, hfMode
   startHandsFree, startListening, stopHandsFree, stopListening, syncHandsFreeUI,
   syncNativeNotifications, syncPrefs
 } from './80-platform.js';
+
+const fitRemotePushClient = createRemotePushClient({
+  auth:{
+    authFields:async()=>{
+      if(!account||!account.email||!account.syncToken)return null;
+      let deviceId=await kvGet('deviceId');
+      if(!deviceId){
+        deviceId=newId();
+        await kvSet('deviceId',deviceId);
+      }
+      return {
+        email:account.email,
+        deviceId,
+        syncToken:account.syncToken
+      };
+    }
+  },
+  plugin:null,
+  native:false,
+  platform:()=>appRuntimeCompat.runtimePlatform(),
+  locale:()=>appLocale,
+  post:async body=>{
+    try{
+      await apiPost('/api/auth',body);
+      return true;
+    }catch(_){
+      return false;
+    }
+  }
+});
 
 /* ================= СОБЫТИЯ ================= */
 function registerEventActions(){
@@ -1120,9 +1151,7 @@ export async function syncRemotePushRegistration(requestPermission){
   return appRuntimeCompat.registerRemotePush(!!requestPermission);
 }
 export async function unregisterRemotePushServer(){
-  if(!account||!account.email||!account.syncToken)return;
-  const deviceId=await kvGet('deviceId'); if(!deviceId)return;
-  try{await apiPost('/api/auth',{action:'push_device',email:account.email,deviceId,syncToken:account.syncToken,enabled:false});}catch(_){}
+  await fitRemotePushClient.unregister();
 }
 export function syncSettingsForm(){
   // Настройки ИИ находятся в серверной админке; пользовательских ключей больше нет.
@@ -2039,20 +2068,15 @@ export function initEvents(){
   $('startMore').innerHTML = icon('more');
   $('btnPrev').innerHTML = icon('chevL');
   $('swapBadgeIcon').innerHTML = icon('chart'); // растущая кривая — «пора поднять планку»
-  window.addEventListener('fitRemotePushToken',async e=>{
-    const d=(e&&e.detail)||{};if(!d.token||!account||!account.email||!account.syncToken)return;
-    let deviceId=await kvGet('deviceId');if(!deviceId){deviceId=newId();await kvSet('deviceId',deviceId);}
-    try{await apiPost('/api/auth',{action:'push_device',email:account.email,deviceId,syncToken:account.syncToken,token:d.token,platform:d.platform,enabled:true});}catch(_){}
+  window.addEventListener('fitRemotePushToken',e=>{
+    const d=(e&&e.detail)||{};
+    if(!d.token)return;
+    fitRemotePushClient.registerToken(String(d.token),String(d.platform||'')).catch(()=>{});
   });
   window.addEventListener('fitNotificationAction', e => {
     const n = e && e.detail && e.detail.notification;
     const extra = (n && n.extra) || (n && n.data) || (e && e.detail && e.detail.extra) || {};
-    (async()=>{
-      if(!account||!account.email||!account.syncToken)return;
-      const deviceId=await kvGet('deviceId');if(!deviceId)return;
-      try{await apiPost('/api/auth',{action:'notification_event',email:account.email,deviceId,
-        syncToken:account.syncToken,event:'open',stage:String(extra.stage||extra.kind||'unknown')});}catch(_){}
-    })();
+    fitRemotePushClient.recordOpen(String(extra.stage||extra.kind||'unknown')).catch(()=>{});
     if(extra.stage === 'premium'){
       if(typeof openPremium === 'function') openPremium();
       return;
