@@ -24,6 +24,7 @@ import { TabBar } from './tab-bar';
 import { NativeBackButton } from './native-back';
 import { AppUpdateProvider } from './app-update';
 import { MeScreen } from './me-screen';
+import { RemotePushLifecycle } from './remote-push-lifecycle';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
 
@@ -79,6 +80,7 @@ function Root(){
     <Localized>
       <AuthProvider client={authClient}>
         <SettingsSync />
+        <RemotePushLifecycle />
         <LexiconProvider>
           <ActiveCourse>
             <Outlet />
