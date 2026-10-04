@@ -93,7 +93,7 @@ describe('pattern drill',()=>{
     );
 
     for(let i=0;i<2;i++){
-      await user.click(screen.getByRole('button',{name:'Готово'}));
+      await user.click(screen.getByRole('button',{name:'Показать ответ'}));
       await user.click(screen.getByRole('button',{name:'Совпало'}));
     }
 
@@ -109,7 +109,7 @@ describe('pattern drill',()=>{
     const {savePractice,onDone}=renderDrill();
 
     for(let i=0;i<2;i++){
-      await user.click(screen.getByRole('button',{name:'Готово'}));
+      await user.click(screen.getByRole('button',{name:'Показать ответ'}));
       expect(screen.getByText(i===0?'I work at home.':'She works here.')).toBeTruthy();
       // The phrase's explanation shows with the answer; phrases without one show none.
       expect(Boolean(screen.queryByText('После I глагол без окончания -s.'))).toBe(i===0);
@@ -133,16 +133,15 @@ describe('pattern drill',()=>{
     const user=userEvent.setup();
     renderDrill();
     expect(screen.getByText('1 из 2')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:'Не получилось'}));
-    await user.click(screen.getByRole('button',{name:'Далее'}));
+    await user.click(screen.getByRole('button',{name:'Показать ответ'}));
+    await user.click(screen.getByRole('button',{name:'Не совпало'}));
     expect(screen.getByText('2 из 2')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:'Готово'}));
+    await user.click(screen.getByRole('button',{name:'Показать ответ'}));
     await user.click(screen.getByRole('button',{name:'Совпало'}));
     // The missed phrase comes back once, counted apart from the drill's two phrases.
     expect(screen.getByText('Повтор: 1 из 1')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:'Не получилось'}));
-    expect(screen.getByText('Произнеси вслух пару раз.')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:'Далее'}));
+    await user.click(screen.getByRole('button',{name:'Показать ответ'}));
+    await user.click(screen.getByRole('button',{name:'Не совпало'}));
     expect(await screen.findByText('1 из 2 вовремя')).toBeTruthy();
   });
 });
