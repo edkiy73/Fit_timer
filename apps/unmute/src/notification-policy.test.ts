@@ -79,6 +79,24 @@ describe('UnMute notification policy',()=>{
     expect(make('2026-10-10')).toBeNull();
   });
 
+  it('carries the lesson day and topic into the daily reminder',()=>{
+    const progress=emptyCourseProgress();
+    expect(chooseLearnerNotification({
+      progress,
+      todayKey:'2026-09-29',
+      dueCount:0,
+      currentLessonAvailable:true,
+      currentLessonDayIndex:6,
+      currentLessonTopic:'Вопросы в настоящем времени',
+      courseComplete:false
+    })).toEqual({
+      kind:'daily-lesson',
+      route:'/',
+      lessonDayIndex:6,
+      lessonTopic:'Вопросы в настоящем времени'
+    });
+  });
+
   it('uses the ordinary daily lesson reminder before the learner has studied at all',()=>{
     const progress=emptyCourseProgress();
 

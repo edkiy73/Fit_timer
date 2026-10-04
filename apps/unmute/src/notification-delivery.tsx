@@ -13,6 +13,9 @@ import { useLearnerCourseRuntime } from './course-runtime';
 import { useWordReviewRuntime } from './word-review-runtime';
 import { buildCourseReviewSession } from './review-session';
 import { resolveWordReviewSession } from './word-review';
+import { useOtherCourseReviews, type OtherCourseReview } from './other-course-review';
+import { capReviewCount } from './review-daily-budget';
+import { nodeTopic } from './today-model';
 import { dayNumberFromKey } from './engine/course-progress';
 import {
   chooseLearnerNotification,
@@ -58,6 +61,8 @@ export interface ReminderPlanInput {
   currentLessonAvailable:boolean;
   courseComplete:boolean;
   currentLessonDayIndex?:number;
+  currentLessonTopic?:string;
+  otherCourses?:OtherCourseReview[];
 }
 
 export function localDayKey(date:Date):string{
@@ -94,13 +99,18 @@ export function reminderTime(day:Date,time:string):Date{
 function dueCountForDay(input:ReminderPlanInput,dayKey:string):number{
   const day=dayNumberFromKey(dayKey);
   const course=buildCourseReviewSession(input.set,input.progress,day);
+  const others=(input.otherCourses??[]).map(other=>buildCourseReviewSession(other.set,other.progress,day));
   const words=resolveWordReviewSession(
     input.words,
     input.lexicon,
     day,
     input.locale
   );
-  return course.actionableCount+words.items.length;
+  const raw=
+    course.actionableCount+
+    others.reduce((sum,other)=>sum+other.actionableCount,0)+
+    words.items.length;
+  return capReviewCount(raw,day);
 }
 
 export function nextUnfinishedReminderPlan(now:Date):UnfinishedReminderPlan|null{
@@ -137,6 +147,7 @@ export function nextReminderPlan(input:ReminderPlanInput):ReminderPlan|null{
       currentLessonAvailable:input.currentLessonAvailable,
       courseComplete:input.courseComplete,
       ...(input.currentLessonDayIndex?{currentLessonDayIndex:input.currentLessonDayIndex}:{}),
+      ...(input.currentLessonTopic?{currentLessonTopic:input.currentLessonTopic}:{}),
       preferences:input.preferences
     });
     if(intent)return {at,dayKey,intent};
@@ -181,7 +192,12 @@ function notificationPayload(
             plan.intent.lessonDayIndex?'notifications.systemReturnBodyDay':'notifications.systemReturnBody',
             {day:plan.intent.lessonDayIndex??0}
           )
-        : t('notifications.systemDailyBody');
+        : plan.intent.lessonDayIndex&&plan.intent.lessonTopic
+          ? t('notifications.systemDailyBodyDetails',{
+              day:plan.intent.lessonDayIndex,
+              topic:plan.intent.lessonTopic
+            })
+          : t('notifications.systemDailyBody');
 
   return {
     id:REMINDER_ID,
@@ -207,6 +223,7 @@ export function NotificationRouteListener(){
 export function NotificationDelivery(){
   const runtime=useLearnerCourseRuntime();
   const wordRuntime=useWordReviewRuntime();
+  const otherCourses=useOtherCourseReviews(runtime.state?.set.id??'');
   const {t,locale}=useI18n();
   const [preferences,setPreferences]=useState<NotificationSettings>(DEFAULT_NOTIFICATION_SETTINGS);
   const [settingsReady,setSettingsReady]=useState(false);
@@ -253,7 +270,8 @@ export function NotificationDelivery(){
       !state||
       wordRuntime.status!=='ready'||
       !wordRuntime.words||
-      !wordRuntime.lexicon
+      !wordRuntime.lexicon||
+      otherCourses.status==='pending'
     )return null;
 
     return nextReminderPlan({
@@ -266,7 +284,9 @@ export function NotificationDelivery(){
       locale,
       currentLessonAvailable:Boolean(state.currentNode),
       courseComplete:state.roadmapProgress.courseComplete,
-      ...(state.currentNode?.dayIndex?{currentLessonDayIndex:state.currentNode.dayIndex}:{})
+      ...(state.currentNode?.dayIndex?{currentLessonDayIndex:state.currentNode.dayIndex}:{}),
+      ...(state.currentNode?{currentLessonTopic:nodeTopic(state.set,state.currentNode,locale)}:{}),
+      otherCourses:otherCourses.courses
     });
   },[
     settingsReady,
@@ -277,6 +297,7 @@ export function NotificationDelivery(){
     wordRuntime.words,
     wordRuntime.lexicon,
     locale,
+    otherCourses,
     clock
   ]);
 

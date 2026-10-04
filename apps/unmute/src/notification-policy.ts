@@ -15,6 +15,7 @@ export interface LearnerNotificationIntent {
   streak?:number;
   breakDays?:number;
   lessonDayIndex?:number;
+  lessonTopic?:string;
 }
 
 export interface NotificationPolicyInput {
@@ -24,6 +25,7 @@ export interface NotificationPolicyInput {
   currentLessonAvailable:boolean;
   courseComplete:boolean;
   currentLessonDayIndex?:number;
+  currentLessonTopic?:string;
   preferences?:NotificationSettings;
 }
 
@@ -137,7 +139,9 @@ export function chooseLearnerNotification(
   if(dailyEnabled&&input.currentLessonAvailable&&!input.courseComplete){
     return {
       kind:'daily-lesson',
-      route:'/'
+      route:'/',
+      ...(input.currentLessonDayIndex?{lessonDayIndex:input.currentLessonDayIndex}:{}),
+      ...(input.currentLessonTopic?{lessonTopic:input.currentLessonTopic}:{})
     };
   }
 
