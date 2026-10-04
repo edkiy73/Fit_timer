@@ -387,6 +387,7 @@ export const ru = {
   'drill.gaveUpHintLast': 'Произнеси вслух пару раз.',
   'drill.compare': 'Сравни со своим вариантом.',
   'practice.start': 'Начать',
+  'practice.modeNav': 'Режим практики',
   'practice.intro.drill': 'Тренируем скорость: фразы должны вылетать без раздумий. Фраз: {count}.',
   'practice.intro.listening': 'Тренируем слух: понимать фразу с первого раза, без текста. Фраз: {count}.',
   'practice.intro.speaking': 'Тренируем произношение: телефон слушает и проверяет, узнаются ли слова. Фраз: {count}.',

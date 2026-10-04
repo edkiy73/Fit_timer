@@ -389,6 +389,7 @@ export const en: Record<keyof typeof ru, string> = {
   'drill.gaveUpHintLast': 'Say it out loud a couple of times.',
   'drill.compare': 'Compare it with what you said.',
   'practice.start': 'Start',
+  'practice.modeNav': 'Practice mode',
   'practice.intro.drill': 'Speed training: phrases should come out without thinking. Phrases: {count}.',
   'practice.intro.listening': 'Listening training: understand a phrase the first time, without text. Phrases: {count}.',
   'practice.intro.speaking': 'Pronunciation training: the phone listens and checks the words. Phrases: {count}.',

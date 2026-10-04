@@ -88,9 +88,36 @@ export function PatternPracticeView({
     onDone();
   };
 
+  const modeLabel:Record<PracticeSrsKind,string>={
+    drill:t('kind.drill'),
+    listening:t('kind.listening'),
+    speaking:t('kind.speaking')
+  };
+  const modeNav=(
+    <div className="practice-mode-nav" role="navigation" aria-label={t('practice.modeNav')}>
+      {activity.modes.map(item=>(
+        <button
+          key={item}
+          className={'chip-button pressable'+(mode===item?' is-active':'')}
+          type="button"
+          aria-current={mode===item?'page':undefined}
+          onClick={()=>{
+            if(mode===item)return;
+            setSingle(true);
+            setMode(item);
+          }}
+        >
+          {modeLabel[item]}
+        </button>
+      ))}
+    </div>
+  );
+
   if(mode!=='complete'&&!briefed.has(mode)){
     const pattern=activity.pattern[locale]||activity.pattern.ru||activity.pattern.en||Object.values(activity.pattern)[0]||'';
     return (
+      <>
+        {modeNav}
       <article className="learn-card practice-intro">
         <ExerciseKind kind={mode} />
         <h3><LexiconText text={pattern} refs={activity.lexiconRefs} /></h3>
@@ -108,22 +135,28 @@ export function PatternPracticeView({
           </button>
         </div>
       </article>
+      </>
     );
   }
 
   if(mode==='drill'){
     return (
+      <>
+        {modeNav}
       <PatternDrillView
         activity={activity}
         setId={setId}
         savePractice={savePractice}
         onDone={()=>nextMode('drill')}
       />
+      </>
     );
   }
 
   if(mode==='listening'){
     return (
+      <>
+        {modeNav}
       <PatternListeningView
         activity={activity}
         setId={setId}
@@ -132,11 +165,14 @@ export function PatternPracticeView({
         speak={speak}
         onDone={()=>nextMode('listening')}
       />
+      </>
     );
   }
 
   if(mode==='speaking'){
     return (
+      <>
+        {modeNav}
       <PatternSpeakingView
         activity={activity}
         setId={setId}
@@ -145,15 +181,13 @@ export function PatternPracticeView({
         startRecognition={startRecognition}
         onDone={()=>nextMode('speaking')}
       />
+      </>
     );
   }
 
-  const modeLabel:Record<PracticeSrsKind,string>={
-    drill:t('pattern.redoDrill'),
-    listening:t('pattern.redoListening'),
-    speaking:t('pattern.redoSpeaking')
-  };
   return (
+    <>
+      {modeNav}
     <article className="learn-card">
       <div className="eyebrow">{t('pattern.completeMode')}</div>
       <h3><LexiconText text={activity.pattern[locale]||activity.pattern.ru||activity.pattern.en||Object.values(activity.pattern)[0]||''} refs={activity.lexiconRefs} /></h3>
@@ -163,11 +197,7 @@ export function PatternPracticeView({
           {t('learn.next')}
         </button>
       </div>
-      {activity.modes.map(item=>(
-        <button key={item} className="link-button" type="button" onClick={()=>{ setSingle(true); setMode(item); }}>
-          {modeLabel[item]}
-        </button>
-      ))}
     </article>
+    </>
   );
 }
