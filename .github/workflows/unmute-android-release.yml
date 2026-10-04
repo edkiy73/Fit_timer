@@ -59,6 +59,17 @@ jobs:
         with:
           gradle-version: '8.14.3'
 
+      - name: Настроить Firebase для remote push
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.UNMUTE_GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+            echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > android/app/google-services.json
+            echo "UnMute Firebase config installed"
+          else
+            echo "::warning::UNMUTE_GOOGLE_SERVICES_JSON_BASE64 is not configured; APK will build without remote push"
+          fi
+
       - name: Зависимости и Capacitor
         run: |
           npm ci --no-audit --no-fund
