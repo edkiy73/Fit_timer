@@ -626,7 +626,7 @@ export function NodeRunnerView({
     return (
       <section className="learn-shell runner" aria-labelledby="learn-summary-title">
         <FirstLessonNotificationOffer eligible={offerReminder} />
-        <div className="learn-summary">
+        <div className={'learn-summary'+(nodeComplete&&runMode!=='replay'?' is-reward':'')}>
           <span className={'learn-summary-icon'+(nodeComplete?'':' is-pending')} aria-hidden="true"><Icon name={nodeComplete?'check':'review'} size={32} /></span>
           <div className="screen-kicker">{t(nodeComplete?'learn.summaryKicker':'learn.notCountedKicker')}</div>
           <h2 id="learn-summary-title"><LexiconText text={localized(node.title,locale)} /></h2>
