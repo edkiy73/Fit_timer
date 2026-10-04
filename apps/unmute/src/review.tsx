@@ -411,7 +411,7 @@ export function ReviewView({
             <span className="review-ring" aria-hidden="true"><strong>{total}</strong></span>
             <div className="review-hero-text">
               <strong>{t('review.dueTitle',{count:total})}</strong>
-              {session.waiting>0&&<span className="tile-text">{t('review.waiting',{count:session.waiting})}</span>}
+              {session.waiting>0&&<span className="tile-text">{t('review.moreLater')}</span>}
             </div>
             {/* What exactly comes now: kinds with counts and the topics they are from. */}
             <ul className="stat-list review-breakdown">
