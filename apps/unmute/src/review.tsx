@@ -319,6 +319,8 @@ export function ReviewView({
   ) : null;
 
   if(total===0){
+    const quota=readReviewDayQuota(todayDay);
+    const quotaDone=quota.completed>=quota.limit&&session.waiting>0;
     return (
       <section className="review-shell is-ready" aria-labelledby="review-title">
         <header className="screen-head">
@@ -338,6 +340,18 @@ export function ReviewView({
             </div>
             {mixedOffer}
           </>
+        ) : quotaDone ? (
+          <div className="tile review-empty">
+            <span className="review-ring is-clear" aria-hidden="true"><Icon name="check" size={28} /></span>
+            <strong>{t('review.quotaDoneTitle')}</strong>
+            <span className="tile-text">{t('review.quotaDoneText',{count:quota.limit})}</span>
+            <button className="secondary-button" type="button" onClick={()=>restart(true)}>
+              {t('review.moreTen')}
+            </button>
+            <button className="primary-button" type="button" onClick={onExit}>
+              {t('review.backToday')}
+            </button>
+          </div>
         ) : (
           <>
             <div className="tile review-empty">
@@ -418,6 +432,8 @@ export function ReviewView({
 
   if(!item){
     const left=reviewDueCounts(state,wordRuntime,locale,todayDay,otherCourses.courses)?.actionableCount ?? 0;
+    const quotaLeft=remainingReviewQuota(todayDay);
+    const canTakeExtra=quotaLeft===0&&session.waiting>0;
     return (
       <section className="review-shell is-ready" aria-labelledby="review-title">
         <header className="screen-head">
@@ -429,17 +445,22 @@ export function ReviewView({
           <span>
             {left>0
               ? t('review.moreDue',{count:left})
-              : session.waiting>0
-                ? t('review.waiting',{count:session.waiting})
+              : canTakeExtra
+                ? t('review.quotaDoneShort')
                 : t('review.doneText')}
           </span>
           {(otherCourses.failed??0)>0&&<span role="status">{t('review.otherCourseFailed')}</span>}
           {left>0&&(
-            <button className="primary-button" type="button" onClick={restart}>
-              {t('review.again',{count:left})}
+            <button className="primary-button" type="button" onClick={()=>restart(false)}>
+              {t('review.continue',{count:left})}
             </button>
           )}
-          <button className={left>0?'secondary-button':'primary-button'} type="button" onClick={onExit}>
+          {canTakeExtra&&(
+            <button className="secondary-button" type="button" onClick={()=>restart(true)}>
+              {t('review.moreTen')}
+            </button>
+          )}
+          <button className={left>0||canTakeExtra?'secondary-button':'primary-button'} type="button" onClick={onExit}>
             {t('review.backToday')}
           </button>
         </div>
