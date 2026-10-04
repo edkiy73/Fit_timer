@@ -270,7 +270,8 @@ export function NotificationDelivery(){
       !state||
       wordRuntime.status!=='ready'||
       !wordRuntime.words||
-      !wordRuntime.lexicon
+      !wordRuntime.lexicon||
+      otherCourses.status==='pending'
     )return null;
 
     return nextReminderPlan({
