@@ -81,6 +81,7 @@ export const en: Record<keyof typeof ru, string> = {
   'today.blockedText': 'Refresh the course or finish the previous required step.',
   'today.start': 'Start',
   'today.continue': 'Continue',
+  'today.replayTasks': 'Replay tasks',
   'today.courseMap': 'Course map',
   'update.title': 'A new version is out',
   'update.titleVersion': 'Version {version} is out',
