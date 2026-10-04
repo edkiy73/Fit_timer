@@ -4,6 +4,7 @@ import { buildCourseReviewSession } from './review-session';
 import type { WordReviewRuntimeValue } from './word-review-runtime';
 import { resolveWordReviewSession } from './word-review';
 import type { OtherCourseReview } from './other-course-review';
+import { remainingReviewQuota } from './review-quota';
 
 export interface ReviewDueCounts {
   actionableCount:number;
@@ -24,8 +25,18 @@ export function reviewDueCounts(
   const words=wordRuntime?.status==='ready'&&wordRuntime.words&&wordRuntime.lexicon
     ? resolveWordReviewSession(wordRuntime.words,wordRuntime.lexicon,todayDay,locale)
     : null;
+  const available=
+    course.actionableCount+
+    others.reduce((sum,other)=>sum+other.actionableCount,0)+
+    (words?.items.length??0);
+  const remaining=remainingReviewQuota(todayDay);
+  const actionableCount=Math.min(remaining,available);
   return {
-    actionableCount:course.actionableCount+others.reduce((sum,other)=>sum+other.actionableCount,0)+(words?.items.length??0),
-    waitingCount:course.waitingCount+others.reduce((sum,other)=>sum+other.waitingCount,0)+(words?.waiting??0)
+    actionableCount,
+    waitingCount:
+      course.waitingCount+
+      others.reduce((sum,other)=>sum+other.waitingCount,0)+
+      (words?.waiting??0)+
+      Math.max(0,available-actionableCount)
   };
 }
