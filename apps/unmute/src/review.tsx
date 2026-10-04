@@ -36,7 +36,6 @@ import { AnswerExplanationView } from './answer-explanation';
 import { useOtherCourseReviews, type OtherCourseReviews } from './other-course-review';
 import { MyWordsView } from './my-words';
 import { Icon } from './icons';
-import { Loader } from './loader';
 import { reviewDueCounts } from './review-count';
 import { randomSeed, shuffledIndices } from './shuffle';
 import { reviewSessionSeed } from './review-seed';
@@ -233,8 +232,15 @@ export function ReviewView({
 
   if(runtime.status==='pending'||wordRuntime?.status==='pending'||(runtime.status==='ready'&&!session)){
     return (
-      <section className="review-shell">
-        <Loader title={t('review.loadingTitle')} />
+      <section className="review-shell review-loading is-loading" aria-busy="true" aria-label={t('review.loadingTitle')}>
+        <header className="screen-head" aria-hidden="true">
+          <span className="skeleton skeleton-line skeleton-kicker" />
+          <span className="skeleton skeleton-line skeleton-title" />
+        </header>
+        <div className="bento review-loading-grid" aria-hidden="true">
+          <article className="tile tile-hero skeleton review-loading-hero" />
+          <div className="tile skeleton review-loading-side" />
+        </div>
       </section>
     );
   }
