@@ -117,11 +117,12 @@ export function PatternListeningView({
 
   const choose=(option:string)=>{
     if(!item||phase!=='ask')return;
-    if(chosen!==option){
-      setChosen(option);
-      return;
-    }
-    if(option===localized(item.prompt,locale))setHits(value=>value+1);
+    setChosen(option);
+  };
+
+  const confirmChoice=()=>{
+    if(!item||phase!=='ask'||!chosen)return;
+    if(chosen===localized(item.prompt,locale))setHits(value=>value+1);
     setPhase('show');
   };
 
@@ -200,19 +201,31 @@ export function PatternListeningView({
         <span>{t('listening.position',{current:pos+1,total:items.length})}</span>
       </div>
       <h3>{t('listening.prompt')}</h3>
-      <button className="secondary-button listening-play" type="button" onClick={()=>void speak(target,ENGLISH_SPEECH_LOCALE)}>
+      <button className="link-button listening-play" type="button" onClick={()=>void speak(target,ENGLISH_SPEECH_LOCALE)}>
         {t('listening.playAgain')}
       </button>
 
       {phase==='ask' ? (
-        <div className="listening-options">
-          {options.map(option=>(
-            <button className={'listening-option'+(chosen===option?' is-selected':'')} type="button" key={option} onClick={()=>choose(option)}>
-              <LexiconText text={option} refs={activity.lexiconRefs} interactive={false} />
-              {chosen===option&&<span className="listening-option-confirm">{t('learn.tapAgain')}</span>}
+        <>
+          <div className="listening-options">
+            {options.map(option=>(
+              <button
+                className={'listening-option'+(chosen===option?' is-selected':'')}
+                type="button"
+                key={option}
+                aria-pressed={chosen===option}
+                onClick={()=>choose(option)}
+              >
+                <LexiconText text={option} refs={activity.lexiconRefs} interactive={false} />
+              </button>
+            ))}
+          </div>
+          <div className="runner-action">
+            <button className="primary-button" type="button" disabled={!chosen} onClick={confirmChoice}>
+              {t('learn.check')}
             </button>
-          ))}
-        </div>
+          </div>
+        </>
       ) : (
         <>
           <div className={isCorrect?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-wrong'} role="status">
