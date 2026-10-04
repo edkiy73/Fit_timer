@@ -261,9 +261,11 @@ export function PatternDrillView({
             <p className="drill-explanation"><LexiconText text={explanation} refs={activity.lexiconRefs} /></p>
           )}
           {gaveUp ? (
-            <button className="primary-button" type="button" onClick={()=>nextItem(false)}>
-              {t('learn.next')}
-            </button>
+            <div className="runner-action">
+              <button className="primary-button" type="button" onClick={()=>nextItem(false)}>
+                {t('learn.next')}
+              </button>
+            </div>
           ) : (
             <>
               <div className="drill-binary-actions">
@@ -275,7 +277,7 @@ export function PatternDrillView({
                 </button>
               </div>
               {!lastFast&&(
-                <button className="learn-back" type="button" onClick={()=>setLastFast(true)}>
+                <button className="link-button" type="button" onClick={()=>setLastFast(true)}>
                   {t('drill.wasFast')}
                 </button>
               )}
