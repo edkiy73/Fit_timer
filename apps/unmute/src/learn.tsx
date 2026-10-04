@@ -151,6 +151,8 @@ export interface NodeRunnerViewProps {
   startMode?:PracticeSrsKind;
   /** Explicit return to an already-running lesson (e.g. after Plus purchase). */
   resumeSavedRun?:boolean;
+  /** Replay only the regular answer tasks without changing review/progression. */
+  replayTasksOnly?:boolean;
 }
 
 const isPlan=(activity:Activity)=>activity.type==='theory'&&(activity.tags??[]).includes('plan');
@@ -299,7 +301,8 @@ export function NodeRunnerView({
   startRecognition=startSpeechRecognition,
   startActivityId,
   startMode,
-  resumeSavedRun=false
+  resumeSavedRun=false,
+  replayTasksOnly=false
 }:NodeRunnerViewProps){
   const {t,locale}=useI18n();
   const state=runtime.state;
@@ -376,6 +379,20 @@ export function NodeRunnerView({
   useEffect(()=>{
     if(!state||!node)return;
     setRunHydrated(false);
+    if(replayTasksOnly){
+      const regular=steps
+        .map((item,index)=>({item,index}))
+        .filter(({item})=>item.type==='choice'||item.type==='text-input'||item.type==='translation')
+        .map(({index})=>index);
+      const replayOrder=regular.length?regular:range(0,steps.length);
+      begin(0);
+      setOrder(replayOrder);
+      setFirstPass(replayOrder.length);
+      setIntro(false);
+      setRunMode('replay');
+      setRunHydrated(true);
+      return;
+    }
     const requested=startActivityId?steps.findIndex(item=>item.id===startActivityId):-1;
     const saved=requested<0?readLessonRun(state.set.id,node.id):null;
     const restored=saved&&(resumeSavedRun||!nodeProgress?.complete)?remapLessonRun(saved,steps):null;
@@ -435,7 +452,7 @@ export function NodeRunnerView({
     for(const plan of activities.filter(isPlan)){
       if(!isSeen(state.progress,plan.id))void saveSeen(state.set.id,plan.id).catch(()=>undefined);
     }
-  },[node?.id,state?.set.id,startActivityId,stepSignature,resumeSavedRun]);
+  },[node?.id,state?.set.id,startActivityId,stepSignature,resumeSavedRun,replayTasksOnly]);
 
   useEffect(()=>{
     if(!runHydrated||!state||!node||finished||order.length===0)return;
@@ -1089,6 +1106,7 @@ export function NodeRunnerScreen(){
   const startMode=mode==='drill'||mode==='listening'||mode==='speaking'?mode:undefined;
   const startActivityId=search.get('activity')||undefined;
   const resumeSavedRun=search.get('resume')==='1';
+  const replayTasksOnly=search.get('tasks')==='1';
   return (
     <NodeRunnerView
       runtime={runtime}
@@ -1096,6 +1114,7 @@ export function NodeRunnerScreen(){
       {...(startActivityId?{startActivityId}:{})}
       {...(startMode?{startMode}:{})}
       {...(resumeSavedRun?{resumeSavedRun:true}:{})}
+      {...(replayTasksOnly?{replayTasksOnly:true}:{})}
       onExit={()=>navigate('/')}
       onSignIn={()=>navigate('/account?return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
       onAccess={()=>navigate('/access?from=answer&return='+encodeURIComponent('/learn/'+String(params.nodeId||'')+'?resume=1'))}
