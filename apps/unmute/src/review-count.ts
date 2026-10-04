@@ -4,10 +4,13 @@ import { buildCourseReviewSession } from './review-session';
 import type { WordReviewRuntimeValue } from './word-review-runtime';
 import { resolveWordReviewSession } from './word-review';
 import type { OtherCourseReview } from './other-course-review';
+import { capReviewCount, remainingReviewQuota } from './review-daily-budget';
 
 export interface ReviewDueCounts {
   actionableCount:number;
   waitingCount:number;
+  rawActionableCount:number;
+  quotaRemaining:number;
 }
 
 /** Course cards plus saved words due today — one number for Today and the Review tab badge. */
@@ -24,8 +27,19 @@ export function reviewDueCounts(
   const words=wordRuntime?.status==='ready'&&wordRuntime.words&&wordRuntime.lexicon
     ? resolveWordReviewSession(wordRuntime.words,wordRuntime.lexicon,todayDay,locale)
     : null;
+  const rawActionableCount=
+    course.actionableCount+
+    others.reduce((sum,other)=>sum+other.actionableCount,0)+
+    (words?.items.length??0);
+  const actionableCount=capReviewCount(rawActionableCount,todayDay);
   return {
-    actionableCount:course.actionableCount+others.reduce((sum,other)=>sum+other.actionableCount,0)+(words?.items.length??0),
-    waitingCount:course.waitingCount+others.reduce((sum,other)=>sum+other.waitingCount,0)+(words?.waiting??0)
+    actionableCount,
+    rawActionableCount,
+    quotaRemaining:remainingReviewQuota(todayDay),
+    waitingCount:
+      course.waitingCount+
+      others.reduce((sum,other)=>sum+other.waitingCount,0)+
+      (words?.waiting??0)+
+      Math.max(0,rawActionableCount-actionableCount)
   };
 }
