@@ -21,6 +21,12 @@ Server:
 - aggregate open analytics;
 - generic admin campaign delivery.
 
+Shared Admin:
+- `packages/ui-react` exposes one Campaigns screen to every React AppBase app;
+- preview counts eligible push/email targets before sending;
+- RU/EN copy, news/offers kind and optional internal product route are supported;
+- delivery continues through the generic Core `campaign_send` server action in small batches.
+
 The Core layer must not contain FitTimer/UnMute route names or business events.
 
 ## Product responsibilities
