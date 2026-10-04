@@ -332,7 +332,7 @@ export function ProgressView({
 
   if(runtime.status==='error'||details.status==='error'){
     return (
-      <section className="progress-shell">
+      <section className="progress-shell is-ready">
         {back}
         <div className="learn-state" role="alert">
           <strong>{t('progress.errorTitle')}</strong>
@@ -350,7 +350,7 @@ export function ProgressView({
 
   if(runtime.status==='pending'||details.status==='pending'){
     return (
-      <section className="progress-shell profile-progress-skeleton" aria-busy="true" aria-label={t('progress.loadingTitle')}>
+      <section className="progress-shell profile-progress-skeleton is-loading" aria-busy="true" aria-label={t('progress.loadingTitle')}>
         <article className="card progress-dashboard profile-skeleton-card" aria-hidden="true">
           <span className="skeleton skeleton-line skeleton-section-title" />
           <div className="progress-general-metrics">
@@ -380,7 +380,7 @@ export function ProgressView({
     : t('progress.courseComplete');
 
   return (
-    <section className="progress-shell" aria-label={t('progress.title')}>
+    <section className="progress-shell is-ready" aria-label={t('progress.title')}>
       {!summary.hasActivity ? (
         <div className="learn-state progress-empty">
           <strong>{t('progress.emptyTitle')}</strong>
