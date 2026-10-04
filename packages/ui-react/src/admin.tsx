@@ -339,7 +339,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
     try { return sessionStorage.getItem('appbase.admin.key') || ''; } catch (_) { return ''; }
   });
   const [draftKey, setDraftKey] = useState(key);
-  const [tab, setTab] = useState<Tab>('health');
+  const [tab, setTab] = useState<Tab>(() => sessionStorage.getItem('appbase.admin.tab') || 'health');
   const [health, setHealth] = useState<AdminHealth | null>(null);
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [busy, setBusy] = useState(false);
@@ -454,6 +454,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
 
   function selectTab(next: Tab){
     setTab(next);
+    sessionStorage.setItem('appbase.admin.tab', String(next));
     setNavOpen(false);
     window.scrollTo({top:0,left:0,behavior:'auto'});
   }
