@@ -18,9 +18,13 @@
   --radius-tile:28px;
   --radius-btn:18px;
   --radius-field:14px;
-  --dur-press:120ms;
+  --dur-press:110ms;
+  --dur-control:180ms;
   --dur-spring:360ms;
+  --ease-control:cubic-bezier(.2,.8,.2,1);
   --spring:linear(0,0.5 7%,0.93 15%,1.06 23%,1.04 30%,0.99 40%,1.005 55%,1);
+  --control-press-scale:.965;
+  --control-hover-lift:-1px;
   --glass-bg:color-mix(in srgb,var(--card,#fff) 56%,transparent);
   --glass-line:color-mix(in srgb,var(--ink) 8%,transparent);
   --elev-2:0 8px 24px rgb(27 26 36/.12);
@@ -80,9 +84,36 @@ h2{margin:0 0 8px;font-weight:800}
 .icon{flex:0 0 auto;display:block}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
-/* Press feedback: quick squeeze on press, spring back on release. */
-.pressable,.primary-button,.secondary-button{transition:transform var(--dur-spring) var(--spring)}
-.pressable:active,.primary-button:not(:disabled):active,.secondary-button:not(:disabled):active{transform:scale(.96);transition-duration:var(--dur-press);transition-timing-function:ease-out}
+/* Shared control physics: quick press, soft release, tiny hover lift where hover exists. */
+:is(.pressable,.primary-button,.secondary-button,.link-button,.link-toggle,.segment,.tabbar-item,.me-row,.chip-button){
+  transform-origin:center;
+  transition:
+    transform var(--dur-spring) var(--spring),
+    background-color var(--dur-control) var(--ease-control),
+    border-color var(--dur-control) var(--ease-control),
+    color var(--dur-control) var(--ease-control),
+    box-shadow var(--dur-control) var(--ease-control),
+    opacity var(--dur-control) ease;
+}
+:is(.pressable,.primary-button,.secondary-button,.link-button,.link-toggle,.segment,.tabbar-item,.me-row,.chip-button):not(:disabled):active{
+  transform:scale(var(--control-press-scale));
+  transition-duration:var(--dur-press);
+  transition-timing-function:ease-out;
+}
+@media(hover:hover){
+  :is(.primary-button,.secondary-button,.link-button,.link-toggle,.segment,.tabbar-item,.me-row,.chip-button):not(:disabled):hover{
+    transform:translateY(var(--control-hover-lift));
+  }
+}
+:is(input[type="checkbox"],input[type="radio"]){
+  transition:transform var(--dur-control) var(--ease-control),filter var(--dur-control) ease;
+}
+:is(input[type="checkbox"],input[type="radio"]):active{transform:scale(.9)}
+select{
+  transition:border-color var(--dur-control) var(--ease-control),background-color var(--dur-control) var(--ease-control),box-shadow var(--dur-control) var(--ease-control),transform var(--dur-control) var(--ease-control);
+}
+select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+select:active{transform:scale(.985)}
 
 /* Bottom navigation: the one glass layer, in thumb reach, hidden inside lessons. */
 :root[data-focus-run] .tabbar{display:none}
@@ -116,8 +147,11 @@ h2{margin:0 0 8px;font-weight:800}
 .me-row:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 @media(prefers-reduced-motion:reduce){
-  .pressable,.primary-button,.secondary-button,.tabbar-icon{transition:none}
-  .pressable:active,.primary-button:not(:disabled):active,.secondary-button:not(:disabled):active{transform:none}
+  :is(.pressable,.primary-button,.secondary-button,.link-button,.link-toggle,.segment,.tabbar-item,.me-row,.chip-button,.tabbar-icon,select,input[type="checkbox"],input[type="radio"]){transition:none!important}
+  :is(.pressable,.primary-button,.secondary-button,.link-button,.link-toggle,.segment,.tabbar-item,.me-row,.chip-button,select,input[type="checkbox"],input[type="radio"]):active{transform:none!important}
+  @media(hover:hover){
+    :is(.primary-button,.secondary-button,.link-button,.link-toggle,.segment,.tabbar-item,.me-row,.chip-button):hover{transform:none!important}
+  }
 }
 
 .ab-admin-bulk-controls{
