@@ -39,7 +39,7 @@ export const en: Record<keyof typeof ru, string> = {
   'today.streak': 'Streak',
   'today.streakStart': 'Start today',
   'today.week': 'Days with practice this week: {count} of 7',
-  'today.reviewCaption': 'for today',
+  'today.reviewCaption': 'due for review',
   'today.speakTitle': 'Say it out loud',
   'today.speakOpen': 'How to do it →',
   'today.speakKicker': 'Today’s speaking task',
