@@ -299,7 +299,7 @@ export function LexiconProvider({children}:{children:ReactNode}){
   return (
     <LexiconContext.Provider value={value}>
       {children}
-      {selection&&<DictionarySheet selection={selection} runtime={value} />}
+      {selection&&createPortal(<DictionarySheet selection={selection} runtime={value} />,document.body)}
     </LexiconContext.Provider>
   );
 }
