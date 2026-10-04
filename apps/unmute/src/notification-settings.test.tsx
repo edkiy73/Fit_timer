@@ -30,7 +30,7 @@ describe('notification settings',()=>{
         <NotificationSettingsPanel />
       </I18nProvider>
     );
-    const toggle=await screen.findByRole('checkbox',{name:/Напоминать мне/});
+    const toggle=await screen.findByRole('checkbox',{name:/Если накопились повторения/});
     expect((toggle as HTMLInputElement).checked).toBe(false);
     await user.click(toggle);
     expect((await screen.findByRole('alert')).textContent).toContain('Не удалось сохранить');

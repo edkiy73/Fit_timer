@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
 import type { SpeakText } from './speech-web';
@@ -117,12 +118,11 @@ export function PatternListeningView({
 
   const choose=(option:string)=>{
     if(!item||phase!=='ask')return;
-    setChosen(option);
-  };
-
-  const confirmChoice=()=>{
-    if(!item||phase!=='ask'||!chosen)return;
-    if(chosen===localized(item.prompt,locale))setHits(value=>value+1);
+    if(chosen!==option){
+      setChosen(option);
+      return;
+    }
+    if(option===localized(item.prompt,locale))setHits(value=>value+1);
     setPhase('show');
   };
 
@@ -206,41 +206,42 @@ export function PatternListeningView({
       </button>
 
       {phase==='ask' ? (
-        <>
-          <div className="listening-options">
-            {options.map(option=>(
-              <button
-                className={'listening-option'+(chosen===option?' is-selected':'')}
-                type="button"
-                key={option}
-                aria-pressed={chosen===option}
-                onClick={()=>choose(option)}
-              >
-                <LexiconText text={option} refs={activity.lexiconRefs} interactive={false} />
-              </button>
-            ))}
-          </div>
-          <div className="runner-action">
-            <button className="primary-button" type="button" disabled={!chosen} onClick={confirmChoice}>
-              {t('learn.check')}
+        <div className="listening-options">
+          {options.map(option=>(
+            <button
+              className={'listening-option'+(chosen===option?' is-selected':'')}
+              type="button"
+              key={option}
+              aria-pressed={chosen===option}
+              onClick={()=>choose(option)}
+            >
+              <LexiconText text={option} refs={activity.lexiconRefs} interactive={false} />
+              {chosen===option&&<span className="listening-option-confirm">{t('learn.tapAgain')}</span>}
             </button>
-          </div>
-        </>
+          ))}
+        </div>
       ) : (
-        <>
-          <div className={isCorrect?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-wrong'} role="status">
-            <strong>{isCorrect?t('learn.correct'):t('listening.incorrect')}</strong>
-            <span>{isCorrect?t('listening.correctHint'):t('listening.incorrectHint')}</span>
-          </div>
-          <div className="drill-target"><LexiconText text={target} refs={activity.lexiconRefs} /></div>
-          {item?.explanation&&(
-            <p className="drill-explanation"><LexiconText text={localized(item.explanation,locale)} refs={activity.lexiconRefs} /></p>
-          )}
-          <div className="learn-hint"><LexiconText text={correctLabel} refs={activity.lexiconRefs} /></div>
-          <button className="primary-button" type="button" onClick={next}>
-            {pos+1<items.length?t('learn.next'):t('learn.finish')}
-          </button>
-        </>
+        createPortal(
+          <div className="lesson-feedback-overlay" role="presentation">
+            <div className={'learn-feedback is-sheet '+(isCorrect?'learn-feedback-ok':'learn-feedback-wrong')} role="status">
+              <div className="learn-feedback-head">
+                <span className="learn-feedback-icon" aria-hidden="true"><span>{isCorrect?'✓':'×'}</span></span>
+                <div className="learn-feedback-head-copy">
+                  <strong>{isCorrect?t('learn.correct'):t('listening.incorrect')}</strong>
+                </div>
+              </div>
+              <div className="drill-target"><LexiconText text={target} refs={activity.lexiconRefs} /></div>
+              <div className="learn-hint"><LexiconText text={correctLabel} refs={activity.lexiconRefs} /></div>
+              {item?.explanation&&(
+                <p className="drill-explanation"><LexiconText text={localized(item.explanation,locale)} refs={activity.lexiconRefs} /></p>
+              )}
+              <button className="primary-button learn-feedback-next" type="button" onClick={next}>
+                {pos+1<items.length?t('learn.next'):t('learn.finish')}
+              </button>
+            </div>
+          </div>,
+          document.body
+        )
       )}
 
       <div className="learn-hint">{t('listening.sessionStats',{correct:hits,total:items.length})}</div>
