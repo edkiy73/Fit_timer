@@ -269,14 +269,16 @@ export function PatternSpeakingView({
               <span>{errorText(recognitionError)}</span>
             </div>
           )}
-          <button
-            className={listening?'primary-button speaking-mic speaking-mic-on':'primary-button speaking-mic'}
-            type="button"
-            onClick={beginRecognition}
-          >
-            {listening?t('speaking.listening'):t('speaking.start')}
-          </button>
-          <button className="secondary-button" type="button" onClick={showAnswer}>
+          <div className="runner-action">
+            <button
+              className={listening?'primary-button speaking-mic speaking-mic-on':'primary-button speaking-mic'}
+              type="button"
+              onClick={beginRecognition}
+            >
+              {listening?t('speaking.listening'):t('speaking.start')}
+            </button>
+          </div>
+          <button className="link-button" type="button" onClick={showAnswer}>
             {t('speaking.showAnswer')}
           </button>
         </>
@@ -291,17 +293,19 @@ export function PatternSpeakingView({
             <p className="drill-explanation"><LexiconText text={localized(item.explanation,locale)} refs={activity.lexiconRefs} /></p>
           )}
           {heard&&<div className="learn-hint">{t('speaking.heard',{heard})}</div>}
-          <button className="secondary-button" type="button" onClick={()=>void speak(target,ENGLISH_SPEECH_LOCALE)}>
+          <button className="link-button" type="button" onClick={()=>void speak(target,ENGLISH_SPEECH_LOCALE)}>
             {t('speaking.playReference')}
           </button>
           {!correct&&(
-            <button className="secondary-button" type="button" onClick={acceptManually}>
+            <button className="link-button" type="button" onClick={acceptManually}>
               {t('speaking.acceptAnyway')}
             </button>
           )}
-          <button className="primary-button" type="button" onClick={next}>
-            {pos+1<items.length?t('learn.next'):t('learn.finish')}
-          </button>
+          <div className="runner-action">
+            <button className="primary-button" type="button" onClick={next}>
+              {pos+1<items.length?t('learn.next'):t('learn.finish')}
+            </button>
+          </div>
         </>
       )}
 
