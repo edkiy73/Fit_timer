@@ -1,15 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { MOTION, easeOutCubic, motionProgress, prefersReducedMotion } from './motion';
 
-function reducedMotion():boolean{
-  try{return window.matchMedia('(prefers-reduced-motion: reduce)').matches;}
-  catch{return false;}
-}
-
-function easeOutCubic(t:number):number{
-  return 1-Math.pow(1-t,3);
-}
-
-function useAnimatedPercent(value:number,duration=650):number{
+function useAnimatedPercent(value:number,duration=MOTION.progress):number{
   const target=Math.max(0,Math.min(100,Number.isFinite(value)?value:0));
   const previous=useRef<number|null>(null);
   const [display,setDisplay]=useState(target);
@@ -17,7 +9,7 @@ function useAnimatedPercent(value:number,duration=650):number{
   useEffect(()=>{
     const from=previous.current===null?0:previous.current;
     previous.current=target;
-    if(reducedMotion()||duration<=0||from===target){
+    if(prefersReducedMotion()||duration<=0||from===target){
       setDisplay(target);
       return;
     }
@@ -26,7 +18,7 @@ function useAnimatedPercent(value:number,duration=650):number{
     const start=performance.now();
     const tick=(now:number)=>{
       if(cancelled)return;
-      const t=Math.min(1,(now-start)/duration);
+      const t=motionProgress(start,now,duration);
       setDisplay(from+(target-from)*easeOutCubic(t));
       if(t<1)frame=requestAnimationFrame(tick);
     };
@@ -62,7 +54,7 @@ export function AnimatedProgressRing({
   children:ReactNode;
   className?:string;
 }){
-  const display=useAnimatedPercent(value,760);
+  const display=useAnimatedPercent(value,MOTION.ring);
   return (
     <div
       className={'progress-course-ring'+(className?' '+className:'')}
