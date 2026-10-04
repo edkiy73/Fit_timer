@@ -4,6 +4,7 @@ import './admin.css';
 import { AdminAiSettings } from './admin-ai';
 import { AdminBillingKeys } from './admin-billing-keys';
 import { AdminLegal } from './admin-legal';
+import { AdminCampaigns } from './admin-campaigns';
 
 export interface AdminSectionContext {
   client: AdminClient;
@@ -51,7 +52,7 @@ const COPY = {
     loginCode:'Код для входа', loginCodeDone:'Одноразовый код для', loginCodeHint:'действует 15 минут. На экране входа: email → «У меня есть код».',
     payments:'Платежи', noPayments:'Платежей пока нет.', when:'Когда', provider:'Провайдер', event:'Событие', account:'Аккаунт',
     mainGroup:'Главное', accountsGroup:'Аккаунты', systemGroup:'Система', productGroup:'Продукт', menu:'Меню',
-    settingsGroup:'Настройки', ai:'ИИ', billingKeys:'Способы оплаты', legal:'Владелец и контакты',
+    settingsGroup:'Настройки', ai:'ИИ', billingKeys:'Способы оплаты', legal:'Владелец и контакты', campaigns:'Рассылки',
     eventInstall:'Открыли приложение впервые', newDevices:'Новых устройств за 30 дней', activity:'Что делали за 30 дней', activityHint:'«Раз» — сколько всего, «Устройств» — у скольких разных телефонов и браузеров.',
     times:'Раз', devices:'Устройств', platforms:'Откуда приходят', platformAndroid:'Android', platformIos:'iPhone', platformWeb:'Сайт',
     errorTimes:'раз', errorFirst:'впервые', errorLast:'последний раз', errorBuild:'версия',
@@ -80,7 +81,7 @@ const COPY = {
     loginCode:'Sign-in code', loginCodeDone:'One-time code for', loginCodeHint:'valid for 15 minutes. On the sign-in screen: email → “I have a code”.',
     payments:'Payments', noPayments:'No payments yet.', when:'When', provider:'Provider', event:'Event', account:'Account',
     mainGroup:'Main', accountsGroup:'Accounts', systemGroup:'System', productGroup:'Product', menu:'Menu',
-    settingsGroup:'Settings', ai:'AI', billingKeys:'Payment methods', legal:'Owner and contacts',
+    settingsGroup:'Settings', ai:'AI', billingKeys:'Payment methods', legal:'Owner and contacts', campaigns:'Campaigns',
     eventInstall:'Opened the app for the first time', newDevices:'New devices in 30 days', activity:'Activity in 30 days', activityHint:'“Times” is the total, “Devices” is how many different phones and browsers.',
     times:'Times', devices:'Devices', platforms:'Where people come from', platformAndroid:'Android', platformIos:'iPhone', platformWeb:'Web',
     errorTimes:'times', errorFirst:'first', errorLast:'last', errorBuild:'build',
@@ -89,7 +90,7 @@ const COPY = {
   }
 } as const;
 
-type CoreTab = 'health' | 'overview' | 'users' | 'payments' | 'errors' | 'storage' | 'ai' | 'billing-keys' | 'legal';
+type CoreTab = 'health' | 'overview' | 'users' | 'payments' | 'campaigns' | 'errors' | 'storage' | 'ai' | 'billing-keys' | 'legal';
 type Tab = CoreTab | string;
 
 type Copy = (typeof COPY)[keyof typeof COPY];
@@ -349,14 +350,14 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
   const [products, setProducts] = useState<Product[]>([]);
 
   const tabs = useMemo(() => [
-    ['health', copy.health], ['overview', copy.overview], ['users', copy.users], ['payments', copy.payments],
+    ['health', copy.health], ['overview', copy.overview], ['users', copy.users], ['payments', copy.payments], ['campaigns', copy.campaigns],
     ['errors', copy.errors], ['storage', copy.storage], ['ai', copy.ai], ['billing-keys', copy.billingKeys], ['legal', copy.legal],
     ...extraSections.map(section => [section.id, section.label] as const)
   ] as ReadonlyArray<readonly [string,string]>, [copy, extraSections]);
 
   const navGroups = useMemo(() => {
     const core = [
-      {label:copy.mainGroup, ids:['health','overview']},
+      {label:copy.mainGroup, ids:['health','overview','campaigns']},
       {label:copy.accountsGroup, ids:['users','payments','errors']},
       {label:copy.settingsGroup, ids:['ai','billing-keys','legal']},
       {label:copy.systemGroup, ids:['storage']}
@@ -386,7 +387,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
 
   const loadProtected = useCallback(async (target: Tab, adminKey = key) => {
     // These tabs load their own data.
-    if(target === 'health' || target === 'ai' || target === 'billing-keys' || target === 'legal' || extraSections.some(section => section.id === target)) return;
+    if(target === 'health' || target === 'campaigns' || target === 'ai' || target === 'billing-keys' || target === 'legal' || extraSections.some(section => section.id === target)) return;
     if(!adminKey){ setData(null); return; }
     setBusy(true);
     setError('');
@@ -571,6 +572,8 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
           </article>}
         </section>
       )}
+
+      {tab === 'campaigns' && key && <AdminCampaigns client={client} adminKey={key} locale={locale} />}
 
       {tab === 'payments' && key && data && (
         <section className="ab-admin-panel">
