@@ -136,6 +136,39 @@ describe('native reminder planning',()=>{
     expect(plan&&localDayKey(plan.at)).toBe('2026-09-29');
   });
 
+  it('caps a large due backlog to today’s Review quota',()=>{
+    const manySet:CourseSet={
+      ...set,
+      activities:Array.from({length:25},(_,index)=>({
+        id:'card.'+index,
+        revision:1,
+        type:'text-input' as const,
+        tags:[],
+        revisionProgress:'preserve' as const,
+        lexiconRefs:[],
+        prompt:{ru:'Фраза '+index},
+        answer:{accepted:['Phrase '+index],nearMiss:true,caseSensitive:false}
+      }))
+    };
+    const progress=emptyCourseProgress();
+    const due=dayNumberFromKey('2026-09-29');
+    for(const activity of manySet.activities){
+      progress.cards[activity.id]={box:1,due,at:'2026-09-29T08:00:00Z'};
+    }
+    const plan=nextReminderPlan({
+      now:new Date(2026,8,29,18,0,0),
+      preferences,
+      set:manySet,
+      progress,
+      words:emptyWordsProgress(),
+      lexicon,
+      locale:'ru',
+      currentLessonAvailable:true,
+      courseComplete:false
+    });
+    expect(plan?.intent).toMatchObject({kind:'review-due',dueCount:20});
+  });
+
   it('moves to tomorrow when today already passed without inventing a short streak alert',()=>{
     const progress=emptyCourseProgress();
     progress.learningDays['2026-09-29']={at:'2026-09-29T12:00:00Z'};
@@ -149,13 +182,17 @@ describe('native reminder planning',()=>{
       lexicon,
       locale:'ru',
       currentLessonAvailable:true,
+      currentLessonDayIndex:6,
+      currentLessonTopic:'Вопросы в настоящем времени',
       courseComplete:false
     });
 
     expect(plan?.dayKey).toBe('2026-09-30');
     expect(plan?.intent).toMatchObject({
       kind:'daily-lesson',
-      route:'/'
+      route:'/',
+      lessonDayIndex:6,
+      lessonTopic:'Вопросы в настоящем времени'
     });
   });
 
