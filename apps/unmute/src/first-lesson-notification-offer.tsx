@@ -7,6 +7,7 @@ import {
   nativeNotificationsAvailable,
   requestNotificationPermission
 } from './notification-native';
+import { syncRemotePush } from './remote-push';
 
 export function FirstLessonNotificationOffer({
   eligible
@@ -55,6 +56,7 @@ export function FirstLessonNotificationOffer({
       });
       // Permission is requested only after the explicit opt-in action above.
       await requestNotificationPermission();
+      await syncRemotePush(true);
       setOpen(false);
     }catch{
       setError(true);
