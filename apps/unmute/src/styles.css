@@ -149,9 +149,9 @@ select:active{transform:scale(.985)}
 @media(prefers-reduced-motion:reduce){
   :is(.pressable,.primary-button,.secondary-button,.link-button,.link-toggle,.segment,.tabbar-item,.me-row,.chip-button,.tabbar-icon,select,input[type="checkbox"],input[type="radio"]){transition:none!important}
   :is(.pressable,.primary-button,.secondary-button,.link-button,.link-toggle,.segment,.tabbar-item,.me-row,.chip-button,select,input[type="checkbox"],input[type="radio"]):active{transform:none!important}
-  @media(hover:hover){
-    :is(.primary-button,.secondary-button,.link-button,.link-toggle,.segment,.tabbar-item,.me-row,.chip-button):hover{transform:none!important}
-  }
+}
+@media(prefers-reduced-motion:reduce) and (hover:hover){
+  :is(.primary-button,.secondary-button,.link-button,.link-toggle,.segment,.tabbar-item,.me-row,.chip-button):hover{transform:none!important}
 }
 
 .ab-admin-bulk-controls{
