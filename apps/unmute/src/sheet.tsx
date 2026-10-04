@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from './icons';
 import { MOTION, prefersReducedMotion } from './motion';
 
@@ -68,7 +69,7 @@ export function Sheet({
   }, [open]);
 
   if(!present) return null;
-  return (
+  const content=(
     <div className={'sheet-scrim'+(leaving?' is-leaving':'')} role="presentation" onMouseDown={event => {
       if(!leaving&&event.currentTarget === event.target) onClose();
     }}>
@@ -89,4 +90,5 @@ export function Sheet({
       </section>
     </div>
   );
+  return createPortal(content,document.body);
 }
