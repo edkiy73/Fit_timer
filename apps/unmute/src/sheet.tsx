@@ -1,5 +1,10 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from './icons';
+
+function reducedMotion():boolean{
+  try{return window.matchMedia('(prefers-reduced-motion: reduce)').matches;}
+  catch{return false;}
+}
 
 /** Bottom sheet. The system Back button closes it first: opening pushes a history entry
  *  on the same URL, Back pops it; closing any other way pops it ourselves. */
@@ -19,6 +24,28 @@ export function Sheet({
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const panel = useRef<HTMLElement>(null);
+  const [present,setPresent]=useState(open);
+  const [leaving,setLeaving]=useState(false);
+
+  useEffect(()=>{
+    if(open){
+      setPresent(true);
+      setLeaving(false);
+      return;
+    }
+    if(!present)return;
+    if(reducedMotion()){
+      setPresent(false);
+      setLeaving(false);
+      return;
+    }
+    setLeaving(true);
+    const timer=window.setTimeout(()=>{
+      setPresent(false);
+      setLeaving(false);
+    },260);
+    return ()=>window.clearTimeout(timer);
+  },[open,present]);
 
   useEffect(() => {
     if(!open) return;
@@ -44,14 +71,14 @@ export function Sheet({
     };
   }, [open]);
 
-  if(!open) return null;
+  if(!present) return null;
   return (
-    <div className="sheet-scrim" role="presentation" onMouseDown={event => {
-      if(event.currentTarget === event.target) onClose();
+    <div className={'sheet-scrim'+(leaving?' is-leaving':'')} role="presentation" onMouseDown={event => {
+      if(!leaving&&event.currentTarget === event.target) onClose();
     }}>
-      <section ref={panel} className="sheet" role="dialog" aria-modal="true" aria-labelledby={labelledBy} tabIndex={-1}>
+      <section ref={panel} className={'sheet'+(leaving?' is-leaving':'')} role="dialog" aria-modal="true" aria-labelledby={labelledBy} tabIndex={-1}>
         <div className="sheet-grab" aria-hidden="true" />
-        <button className="sheet-close pressable" type="button" onClick={onClose} aria-label={closeLabel}>
+        <button className="sheet-close pressable" type="button" onClick={onClose} aria-label={closeLabel} disabled={leaving}>
           <Icon name="close" size={20} />
         </button>
         {children}
