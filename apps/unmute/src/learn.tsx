@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity, RoadmapNode } from './content/schema';
@@ -824,7 +825,7 @@ export function NodeRunnerView({
   })=>{
     if(result===null)return null;
     const willReturn=!result&&stepIndex!==undefined&&order.slice(pos+1).includes(stepIndex);
-    return (
+    return createPortal(
     <div className={'learn-feedback is-sheet '+(nearResult?'learn-feedback-near':result?'learn-feedback-ok':'learn-feedback-wrong')} role="status">
       <div className={'learn-feedback-head'+(willReturn?' has-subtitle':'')}>
         <span className="learn-feedback-icon" aria-hidden="true"><Icon name={result?'check':'close'} size={22} /></span>
@@ -857,7 +858,8 @@ export function NodeRunnerView({
           {pos+1<order.length?t('learn.next'):t('learn.finish')}
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
     );
   };
 
