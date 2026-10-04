@@ -125,7 +125,8 @@
 | 7.4 | Возврат после перерыва: 2/5/12 дней, потом тишина | ✅ #494 |
 | 7.5 | Серия — мягкий текст и только при серии ≥ 3 | ✅ #495 |
 | 7.6 | Тихие часы 22:00–9:00 и «после занятия — тишина» — тесты на политику | ✅ #496 |
-| 7.7 | Серверный push (FCM/APNs): общий AppBase Core client + server transport; UnMute регистрирует устройство, deep links и open analytics; внешняя Firebase/APNs конфигурация отдельная для каждого приложения | 🟡 Core/UnMute implementation |
+| 7.7 | Серверный push (FCM/APNs): общий AppBase Core client + server transport; UnMute регистрирует устройство, deep links и open analytics; внешняя Firebase/APNs конфигурация отдельная для каждого приложения | ✅ код #513/#514 · ⏳ внешний Firebase/APNs config |
+| 7.8 | Общий экран рассылок AppBase Admin: RU/EN copy, push/email, preview аудитории, batch send и статистика результата | ✅ #516 |
 
 ---
 
@@ -144,3 +145,20 @@
 | 8.7 | Roadmap / открытие следующего дня / completed-state: короткий reward-motion без конфетти по умолчанию и без блокировки следующего действия | ✅ #503 |
 | 8.8 | Skeleton/loading/empty-state transitions: убрать резкие прыжки layout при загрузке курса, статистики и «Повтора» | ✅ #504 |
 | 8.9 | Свести motion-токены в одном месте (durations/easing/spring), проверить 320–412 px, 60/120 Hz и `prefers-reduced-motion`; добавить visual/e2e smoke на ключевые переходы | ✅ #505 |
+
+
+## Remote push — что осталось вне кода
+
+Кодовый слой закрыт. Для реальной доставки на production-устройство нужны app-specific credentials:
+
+- Android UnMute: Firebase Android app с package `app.unmute.english`;
+- GitHub Actions secret `UNMUTE_GOOGLE_SERVICES_JSON_BASE64` — содержимое `google-services.json` в base64;
+- Vercel UnMute: `FIREBASE_SERVICE_ACCOUNT_JSON` — Firebase service account с правом отправки FCM;
+- iOS позже: APNs key/team/bundle variables для bundle id UnMute.
+
+После добавления Android credentials:
+1. собрать production APK;
+2. войти в аккаунт;
+3. включить уведомления;
+4. убедиться в health/admin, что Push Android = работает;
+5. выполнить сценарий 8 из `docs/unmute-phone-qa.md`.
