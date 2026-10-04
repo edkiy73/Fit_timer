@@ -3,6 +3,7 @@ import type { CourseSet } from './content/schema';
 import type { LexiconSnapshot } from './lexicon/schema';
 import { emptyCourseProgress, emptyWordsProgress } from './progress';
 import { dayNumberFromKey } from './engine/course-progress';
+import { recordReviewCompletion } from './review-daily-budget';
 import {
   localDayKey,
   nextReminderPlan,
@@ -134,6 +135,37 @@ describe('native reminder planning',()=>{
     expect(plan?.at.getHours()).toBe(19);
     expect(plan?.at.getMinutes()).toBe(0);
     expect(plan&&localDayKey(plan.at)).toBe('2026-09-29');
+  });
+
+  it('uses the remaining daily Review quota for reminder priority',()=>{
+    const progress=emptyCourseProgress();
+    progress.cards['card.one']={
+      box:1,
+      due:dayNumberFromKey('2026-09-29'),
+      at:'2026-09-29T08:00:00Z'
+    };
+    recordReviewCompletion(dayNumberFromKey('2026-09-29'),20);
+
+    const plan=nextReminderPlan({
+      now:new Date(2026,8,29,18,0,0),
+      preferences,
+      set,
+      progress,
+      words:emptyWordsProgress(),
+      lexicon,
+      locale:'ru',
+      currentLessonAvailable:true,
+      currentLessonDayIndex:1,
+      currentLessonTopic:'Основа фразы',
+      courseComplete:false
+    });
+
+    expect(plan?.intent).toEqual({
+      kind:'daily-lesson',
+      route:'/',
+      lessonDayIndex:1,
+      lessonTopic:'Основа фразы'
+    });
   });
 
   it('moves to tomorrow when today already passed without inventing a short streak alert',()=>{
