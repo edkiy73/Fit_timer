@@ -41,7 +41,7 @@ import { randomSeed, shuffledIndices } from './shuffle';
 import { reviewSessionSeed } from './review-seed';
 import { WordChips, answerWords, buildChips, chipsText } from './word-chips';
 import { sentenceResponseStage, type SentenceResponseKind } from './engine/sentence-progression';
-import { addReviewExtra, recordReviewCompletion, remainingReviewQuota } from './review-daily-budget';
+import { addReviewExtra, recordReviewCompletion, remainingReviewQuota, takeReviewQuota } from './review-daily-budget';
 
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
 type CombinedReviewItem=
@@ -138,15 +138,19 @@ export function ReviewView({
       const built=buildCourseReviewSession(other.set,other.progress,todayDay);
       return {...built,items:built.items.map(entry=>({...entry,setId:other.set.id}))};
     });
-    const otherItems=others.flatMap(other=>other.items);
     const words=wordRuntime?.status==='ready'&&wordRuntime.words&&wordRuntime.lexicon
       ? resolveWordReviewSession(wordRuntime.words,wordRuntime.lexicon,todayDay,locale)
       : null;
     const wordItems=(words?.items??[]).map(word=>({kind:'word' as const,word}));
-    const rawItems:CombinedReviewItem[]=[...course.items,...otherItems,...wordItems];
+    const sources:CombinedReviewItem[][]=[
+      course.items,
+      ...others.map(other=>other.items),
+      wordItems
+    ];
     const quota=remainingReviewQuota(todayDay);
-    const items=rawItems.slice(0,quota);
-    const hiddenDue=Math.max(0,rawItems.length-items.length);
+    const limited=takeReviewQuota(sources,quota);
+    const items=limited.items;
+    const hiddenDue=limited.hidden;
     setSession({
       course,
       shuffleSeed:reviewSessionSeed(state.set.id,todayDay),
