@@ -41,6 +41,13 @@ import { randomSeed, shuffledIndices } from './shuffle';
 import { reviewSessionSeed } from './review-seed';
 import { WordChips, answerWords, buildChips, chipsText } from './word-chips';
 import { sentenceResponseStage, type SentenceResponseKind } from './engine/sentence-progression';
+import {
+  completeReviewQuotaItem,
+  extendReviewQuota,
+  readReviewDayQuota,
+  remainingReviewQuota,
+  takeGlobalReviewQuota
+} from './review-quota';
 
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
 type CombinedReviewItem=
@@ -52,6 +59,8 @@ interface PinnedReviewSession {
   shuffleSeed:string;
   total:number;
   waiting:number;
+  available:number;
+  quotaRemaining:number;
   unresolvedWords:number;
   wordUnavailable:boolean;
 }
@@ -136,20 +145,34 @@ export function ReviewView({
       const built=buildCourseReviewSession(other.set,other.progress,todayDay);
       return {...built,items:built.items.map(entry=>({...entry,setId:other.set.id}))};
     });
-    const otherItems=others.flatMap(other=>other.items);
     const words=wordRuntime?.status==='ready'&&wordRuntime.words&&wordRuntime.lexicon
       ? resolveWordReviewSession(wordRuntime.words,wordRuntime.lexicon,todayDay,locale)
       : null;
     const wordItems=(words?.items??[]).map(word=>({kind:'word' as const,word}));
+    const quota=readReviewDayQuota(todayDay);
+    const quotaRemaining=Math.max(0,quota.limit-quota.completed);
+    const sources:CombinedReviewItem[][]=[
+      course.items,
+      ...others.map(other=>other.items),
+      wordItems
+    ];
+    const available=sources.reduce((sum,items)=>sum+items.length,0);
+    const limited=takeGlobalReviewQuota(sources,quotaRemaining);
     setSession({
       course,
       shuffleSeed:reviewSessionSeed(state.set.id,todayDay),
-      total:course.actionableCount+otherItems.length+wordItems.length,
-      waiting:course.waitingCount+others.reduce((sum,other)=>sum+other.waitingCount,0)+(words?.waiting??0),
+      total:limited.items.length,
+      waiting:
+        course.waitingCount+
+        others.reduce((sum,other)=>sum+other.waitingCount,0)+
+        (words?.waiting??0)+
+        limited.overflow,
+      available,
+      quotaRemaining,
       unresolvedWords:words?.unresolved??0,
       wordUnavailable:Boolean(wordRuntime&&wordRuntime.status==='error'),
     });
-    setQueue([...course.items,...otherItems,...wordItems]);
+    setQueue(limited.items);
   },[runtime.status,state?.set.id,session,todayDay,wordRuntime?.status,wordRuntime?.words,wordRuntime?.lexicon,locale,otherCourses]);
 
   useEffect(()=>{
@@ -211,7 +234,8 @@ export function ReviewView({
   },[running]);
 
   // Items answered wrong come back at once; the done screen offers them instead of «all clear».
-  const restart=()=>{
+  const restart=(extra=false)=>{
+    if(extra)extendReviewQuota(todayDay);
     setSession(null);
     setQueue([]);
     setIndex(0);
@@ -431,8 +455,12 @@ export function ReviewView({
     total
   });
 
-  const completePractice=()=>{
+  const markQuotaComplete=()=>{
+    completeReviewQuotaItem(todayDay);
     setCompleted(value=>Math.min(total,value+1));
+  };
+  const completePractice=()=>{
+    markQuotaComplete();
     setIndex(value=>value+1);
   };
   const reviewPracticeSave:ReviewViewProps['savePractice']=(setIdArg,activityId,mode,correct,score)=>
@@ -488,7 +516,7 @@ export function ReviewView({
     if(item.kind!=='card'||result===null)return;
     // A wrong card comes back once at the end of the session, like in a lesson; never in a loop.
     if(result||returnedCard){
-      setCompleted(value=>Math.min(total,value+1));
+      markQuotaComplete();
     }else{
       setQueue(current=>[...current,item]);
     }
@@ -507,7 +535,7 @@ export function ReviewView({
     setWordSaveError(false);
     try{
       await saveWord(item.word.record.lexemeId,item.word.record.senseId,correct);
-      setCompleted(value=>Math.min(total,value+1));
+      markQuotaComplete();
       setIndex(value=>value+1);
     }catch(_){
       setWordSaveError(true);
