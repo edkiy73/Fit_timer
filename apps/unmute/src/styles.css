@@ -704,6 +704,24 @@ select:active{transform:scale(.985)}
 .station.is-purchase-locked .station-marker{width:26px;height:26px;margin-top:17px;border:0;background:var(--locked);color:var(--card);box-shadow:none}
 .station.is-current .station-marker{width:26px;height:26px;margin-top:17px;border:5px solid var(--accent);background:var(--card);color:var(--accent-ink);box-shadow:none}
 .station.is-current .station-marker::after{content:"";position:absolute;inset:-9px;border-radius:50%;background:color-mix(in srgb,var(--accent) 26%,transparent);z-index:-1;animation:here-pulse 2.2s ease-in-out infinite}
+.station.is-reward .station-marker{animation:roadmap-reward-pop 680ms var(--spring) both}
+.station.is-reward .station-body{animation:roadmap-reward-body 760ms cubic-bezier(.2,.8,.2,1) both}
+.station.is-reward .here-pill{animation:roadmap-reward-pill 620ms var(--spring) both}
+@keyframes roadmap-reward-pop{
+  0%{transform:scale(.72);filter:brightness(1.22)}
+  58%{transform:scale(1.14);filter:brightness(1.08)}
+  100%{transform:none;filter:none}
+}
+@keyframes roadmap-reward-body{
+  0%{opacity:.65;transform:translateY(4px);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+  45%{opacity:1;background:color-mix(in srgb,var(--accent) 9%,transparent)}
+  100%{transform:none;background:transparent}
+}
+@keyframes roadmap-reward-pill{
+  0%{transform:scale(.82);opacity:.45}
+  60%{transform:scale(1.08);opacity:1}
+  100%{transform:none}
+}
 .station.is-current.station-dialogue .station-marker,.station.is-current.station-ai .station-marker,.station.is-current.station-finish .station-marker{width:36px;height:36px;margin-top:12px;border-width:3px}
 .station-marker{position:relative}
 .station-body{grid-column:2;grid-row:1;display:grid;gap:2px;min-height:60px;padding:10px 0;border:0;background:transparent;color:var(--ink);font:inherit;text-align:left;cursor:pointer;align-content:center}
@@ -739,7 +757,7 @@ select:active{transform:scale(.985)}
 @keyframes scrim-out{from{opacity:1}to{opacity:0}}
 @keyframes scrim-in{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){
-  .station,.sheet,.sheet-scrim,.learn-card,.learn-feedback-head,.learn-feedback-actions{animation:none!important}
+  .station,.sheet,.sheet-scrim,.learn-card,.learn-feedback-head,.learn-feedback-actions,.station.is-reward .station-marker,.station.is-reward .station-body,.station.is-reward .here-pill{animation:none!important}
   ::view-transition-old(runner-activity),::view-transition-new(runner-activity){animation:none!important}
   .station.is-current .station-marker::after{animation:none}
   .stage-chevron{transition:none}
