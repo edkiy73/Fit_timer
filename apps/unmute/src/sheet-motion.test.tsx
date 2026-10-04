@@ -26,7 +26,7 @@ describe('Sheet motion',()=>{
       </Sheet>
     );
 
-    expect(screen.getByRole('dialog').className).toContain('is-leaving');
+    expect(screen.getByRole('dialog',{hidden:true}).className).toContain('is-leaving');
     act(()=>vi.advanceTimersByTime(270));
     expect(screen.queryByRole('dialog')).toBeNull();
   });
