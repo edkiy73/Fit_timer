@@ -122,7 +122,7 @@ describe('course review screen',()=>{
     other.progress.cards={'a1.card':{box:1,due:9,at:'2026-09-28T00:00:00Z'}};
     const {saveGraded}=renderReview(undefined,undefined,{status:'ready',courses:[{set:other.set,progress:other.progress}]});
 
-    expect(await screen.findByText('К повтору сегодня: 2')).toBeTruthy();
+    expect(await screen.findByText('На сегодня: 2')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Начать повтор'}));
     await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am home');
     await user.click(screen.getByRole('button',{name:'Проверить'}));
@@ -162,7 +162,7 @@ describe('course review screen',()=>{
     const user=userEvent.setup();
     const {saveGraded,onExit}=renderReview();
 
-    expect(await screen.findByText('К повтору сегодня: 1')).toBeTruthy();
+    expect(await screen.findByText('На сегодня: 1')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Начать повтор'}));
     let input=await screen.findByRole('textbox',{name:'Твой ответ'});
     await user.type(input,'wrong');
