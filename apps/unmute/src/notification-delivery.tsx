@@ -14,6 +14,8 @@ import { useWordReviewRuntime } from './word-review-runtime';
 import { buildCourseReviewSession } from './review-session';
 import { resolveWordReviewSession } from './word-review';
 import { dayNumberFromKey } from './engine/course-progress';
+import { capReviewCount } from './review-daily-budget';
+import { nodeTopic } from './today-model';
 import {
   chooseLearnerNotification,
   type LearnerNotificationIntent
@@ -58,6 +60,7 @@ export interface ReminderPlanInput {
   currentLessonAvailable:boolean;
   courseComplete:boolean;
   currentLessonDayIndex?:number;
+  currentLessonTopic?:string;
 }
 
 export function localDayKey(date:Date):string{
@@ -100,7 +103,7 @@ function dueCountForDay(input:ReminderPlanInput,dayKey:string):number{
     day,
     input.locale
   );
-  return course.actionableCount+words.items.length;
+  return capReviewCount(course.actionableCount+words.items.length,day);
 }
 
 export function nextUnfinishedReminderPlan(now:Date):UnfinishedReminderPlan|null{
@@ -137,6 +140,7 @@ export function nextReminderPlan(input:ReminderPlanInput):ReminderPlan|null{
       currentLessonAvailable:input.currentLessonAvailable,
       courseComplete:input.courseComplete,
       ...(input.currentLessonDayIndex?{currentLessonDayIndex:input.currentLessonDayIndex}:{}),
+      ...(input.currentLessonTopic?{currentLessonTopic:input.currentLessonTopic}:{}),
       preferences:input.preferences
     });
     if(intent)return {at,dayKey,intent};
@@ -171,7 +175,12 @@ function notificationPayload(
       ? t('notifications.systemStreakTitle')
       : plan.intent.kind==='return-break'
         ? t('notifications.systemReturnTitle')
-        : t('notifications.systemDailyTitle');
+        : plan.intent.lessonDayIndex&&plan.intent.lessonTopic
+          ? t('notifications.systemDailyTitleWithDay',{
+              day:plan.intent.lessonDayIndex,
+              topic:plan.intent.lessonTopic
+            })
+          : t('notifications.systemDailyTitle');
   const body=plan.intent.kind==='review-due'
     ? t('notifications.systemReviewBody',{count:plan.intent.dueCount??0})
     : plan.intent.kind==='streak-risk'
@@ -181,7 +190,9 @@ function notificationPayload(
             plan.intent.lessonDayIndex?'notifications.systemReturnBodyDay':'notifications.systemReturnBody',
             {day:plan.intent.lessonDayIndex??0}
           )
-        : t('notifications.systemDailyBody');
+        : plan.intent.lessonDayIndex&&plan.intent.lessonTopic
+          ? t('notifications.systemDailyBodyWithTopic')
+          : t('notifications.systemDailyBody');
 
   return {
     id:REMINDER_ID,
@@ -266,7 +277,8 @@ export function NotificationDelivery(){
       locale,
       currentLessonAvailable:Boolean(state.currentNode),
       courseComplete:state.roadmapProgress.courseComplete,
-      ...(state.currentNode?.dayIndex?{currentLessonDayIndex:state.currentNode.dayIndex}:{})
+      ...(state.currentNode?.dayIndex?{currentLessonDayIndex:state.currentNode.dayIndex}:{}),
+      ...(state.currentNode?{currentLessonTopic:nodeTopic(state.set,state.currentNode,locale)}:{})
     });
   },[
     settingsReady,
