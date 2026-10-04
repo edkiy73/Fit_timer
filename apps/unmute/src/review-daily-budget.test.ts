@@ -6,7 +6,8 @@ import {
   capReviewCount,
   readReviewBudget,
   recordReviewCompletion,
-  remainingReviewQuota
+  remainingReviewQuota,
+  takeReviewQuota
 } from './review-daily-budget';
 
 describe('daily Review quota',()=>{
@@ -35,5 +36,25 @@ describe('daily Review quota',()=>{
 
   it('never exposes more items than are actually due',()=>{
     expect(capReviewCount(6,10)).toBe(6);
+  });
+
+  it('round-robins courses and words inside the global quota',()=>{
+    expect(takeReviewQuota(
+      [['a1','a2','a3'],['b1','b2'],['w1','w2']],
+      5
+    )).toEqual({
+      items:['a1','b1','w1','a2','b2'],
+      hidden:2
+    });
+  });
+
+  it('notifies mounted UI when the budget changes',()=>{
+    let changes=0;
+    const handler=()=>{changes++;};
+    window.addEventListener('unmute:review-budget-changed',handler);
+    recordReviewCompletion(10);
+    addReviewExtra(10);
+    window.removeEventListener('unmute:review-budget-changed',handler);
+    expect(changes).toBe(2);
   });
 });
