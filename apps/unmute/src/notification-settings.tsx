@@ -8,20 +8,12 @@ import {
 } from './settings-data';
 
 import {
-  exactNotificationTimeAvailable,
   nativeNotificationsAvailable,
   notificationPermissionState,
-  requestExactNotificationTime,
   requestNotificationPermission,
   type NotificationPermissionState
 } from './notification-native';
 import { syncRemotePush, unregisterRemotePush } from './remote-push';
-
-// 24-hour picker on every phone: the native time input follows the system 12/24 h setting.
-const pad=(value:number)=>String(value).padStart(2,'0');
-const HOURS=Array.from({length:24},(_,hour)=>pad(hour));
-const MINUTES=Array.from({length:12},(_,step)=>pad(step*5));
-const minuteOptions=(current:string)=>MINUTES.includes(current)?MINUTES:[...MINUTES,current].sort();
 
 function nextSettings(
   current:NotificationSettings,
@@ -41,20 +33,17 @@ export function NotificationSettingsPanel(){
   const [saving,setSaving]=useState(false);
   const [saveError,setSaveError]=useState(false);
   const [permission,setPermission]=useState<NotificationPermissionState>('unavailable');
-  const [exact,setExact]=useState<boolean|null>(null);
   const native=nativeNotificationsAvailable();
 
   const refreshNativeState=async(request=false)=>{
     if(!native){
       setPermission('unavailable');
-      setExact(null);
       return;
     }
     const next=request
       ? await requestNotificationPermission()
       : await notificationPermissionState();
     setPermission(next);
-    setExact(next==='granted'?await exactNotificationTimeAvailable():null);
   };
 
   useEffect(()=>{
@@ -93,19 +82,6 @@ export function NotificationSettingsPanel(){
     }
   };
 
-  const setEnabled=async(enabled:boolean)=>{
-    const saved=await save({enabled});
-    if(!saved)return;
-    if(!enabled){
-      await unregisterRemotePush();
-      return;
-    }
-    if(native){
-      await refreshNativeState(true);
-      await syncRemotePush(true);
-    }
-  };
-
   const askSystemPermission=async()=>{
     setSaving(true);
     try{
@@ -116,19 +92,34 @@ export function NotificationSettingsPanel(){
     }
   };
 
-  const askExactTime=async()=>{
-    setSaving(true);
-    try{
-      setExact(await requestExactNotificationTime());
-    }finally{
-      setSaving(false);
+  const setKind=async(kind:'review'|'streak'|'daily',enabled:boolean)=>{
+    const base=settings.enabled
+      ? settings
+      : {...settings,review:false,streak:false,daily:false};
+    const nextKinds={...base,[kind]:enabled};
+    const nextEnabled=Boolean(nextKinds.review||nextKinds.streak||nextKinds.daily);
+    const saved=await save({
+      enabled:nextEnabled,
+      review:nextKinds.review,
+      streak:nextKinds.streak,
+      daily:nextKinds.daily
+    });
+    if(!saved)return;
+    if(!nextEnabled){
+      await unregisterRemotePush();
+      return;
+    }
+    if(native){
+      const nextPermission=permission==='granted' ? permission : await requestNotificationPermission();
+      setPermission(nextPermission);
+      if(nextPermission==='granted')await syncRemotePush(true);
     }
   };
 
   if(!loaded)return null;
 
   return (
-    <section className="notification-settings" aria-labelledby="notification-settings-title">
+    <section className="notification-settings notification-settings-compact" aria-labelledby="notification-settings-title">
       <div>
         <div className="eyebrow">{t('notifications.eyebrow')}</div>
         <h3 id="notification-settings-title">{t('notifications.title')}</h3>
@@ -137,124 +128,31 @@ export function NotificationSettingsPanel(){
 
       {saveError&&<p className="access-error" role="alert">{t('notifications.saveError')}</p>}
 
-      <label className="notification-toggle">
-        <input
-          type="checkbox"
-          checked={settings.enabled}
-          disabled={saving}
-          onChange={event=>void setEnabled(event.target.checked)}
-        />
-        <span>
-          <strong>{t('notifications.enabled')}</strong>
-          <small>{t('notifications.enabledHint')}</small>
-        </span>
-      </label>
-
-      {settings.enabled&&!native&&(
-        <div className="notification-status" role="note">
-          <strong>{t('notifications.webStatusTitle')}</strong>
-          <span>{t('notifications.webStatusText')}</span>
-        </div>
-      )}
-
-      {settings.enabled&&native&&permission==='granted'&&(
-        <div className="notification-status notification-status-ok" role="status">
-          <strong>{t('notifications.nativeReadyTitle')}</strong>
-          <span>
-            {exact===false
-              ? t('notifications.nativeApproximate')
-              : t('notifications.nativeReadyText')}
-          </span>
-          {exact===false&&(
-            <button
-              className="secondary-button"
-              type="button"
+      <div className="notification-kinds notification-kind-cards">
+        {(['review','streak','daily'] as const).map(kind=>(
+          <label key={kind} className="notification-kind-toggle">
+            <span>{t('notifications.'+kind)}</span>
+            <input
+              type="checkbox"
+              checked={settings.enabled&&settings[kind]}
               disabled={saving}
-              onClick={()=>void askExactTime()}
-            >
-              {t('notifications.allowExact')}
-            </button>
-          )}
-        </div>
-      )}
+              onChange={event=>void setKind(kind,event.target.checked)}
+            />
+          </label>
+        ))}
+      </div>
 
       {settings.enabled&&native&&permission!=='granted'&&(
         <div className="notification-status notification-status-warning" role="status">
-          <strong>
-            {permission==='denied'
-              ? t('notifications.permissionDeniedTitle')
-              : t('notifications.permissionNeededTitle')}
-          </strong>
-          <span>
-            {permission==='denied'
-              ? t('notifications.permissionDeniedText')
-              : t('notifications.permissionNeededText')}
-          </span>
-          <button
-            className="secondary-button"
-            type="button"
-            disabled={saving}
-            onClick={()=>void askSystemPermission()}
-          >
+          <span>{permission==='denied'?t('notifications.permissionDeniedText'):t('notifications.permissionNeededText')}</span>
+          <button className="secondary-button" type="button" disabled={saving} onClick={()=>void askSystemPermission()}>
             {t('notifications.allowSystem')}
           </button>
         </div>
       )}
 
-      <div className="notification-time" role="group" aria-label={t('notifications.time')}>
-        <span>{t('notifications.time')}</span>
-        <span className="notification-time-fields">
-          <select
-            aria-label={t('notifications.hours')}
-            value={settings.time.slice(0,2)}
-            disabled={!settings.enabled||saving}
-            onChange={event=>void save({time:event.target.value+settings.time.slice(2)})}
-          >
-            {HOURS.map(hour=><option key={hour} value={hour}>{hour}</option>)}
-          </select>
-          <span aria-hidden="true">:</span>
-          <select
-            aria-label={t('notifications.minutes')}
-            value={settings.time.slice(3,5)}
-            disabled={!settings.enabled||saving}
-            onChange={event=>void save({time:settings.time.slice(0,3)+event.target.value})}
-          >
-            {minuteOptions(settings.time.slice(3,5)).map(minute=><option key={minute} value={minute}>{minute}</option>)}
-          </select>
-        </span>
-      </div>
-
-      <div className="notification-kinds">
-        <label>
-          <input
-            type="checkbox"
-            checked={settings.review}
-            disabled={!settings.enabled||saving}
-            onChange={event=>void save({review:event.target.checked})}
-          />
-          <span>{t('notifications.review')}</span>
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={settings.streak}
-            disabled={!settings.enabled||saving}
-            onChange={event=>void save({streak:event.target.checked})}
-          />
-          <span>{t('notifications.streak')}</span>
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={settings.daily}
-            disabled={!settings.enabled||saving}
-            onChange={event=>void save({daily:event.target.checked})}
-          />
-          <span>{t('notifications.daily')}</span>
-        </label>
-      </div>
-
-      <p className="notification-priority">{t('notifications.priority')}</p>
+      {settings.enabled&&!native&&(
+        <p className="notification-priority">{t('notifications.webStatusText')}</p>
+      )}
     </section>
-  );
-}
+  );}
