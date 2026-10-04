@@ -26,6 +26,22 @@ export interface CourseMapItem {
   canOpen:boolean;
 }
 
+export interface CourseMapRewardSnapshot {
+  completedCount:number;
+  currentNodeId:string|null;
+}
+
+export function roadmapRewardNode(
+  previous:CourseMapRewardSnapshot|null,
+  state:LearnerCourseState
+):string|null{
+  if(!previous)return null;
+  if(state.roadmapProgress.completedCount<=previous.completedCount)return null;
+  if(state.currentNode)return state.currentNode.id;
+  const lastComplete=[...state.roadmapProgress.nodes].reverse().find(item=>item.complete);
+  return lastComplete?.node.id??null;
+}
+
 export function buildCourseMapItems(state:LearnerCourseState):CourseMapItem[]{
   return state.roadmapProgress.nodes.map(progress=>{
     const purchaseUnlocked=isNodeUnlockedByPurchase(
@@ -150,6 +166,7 @@ export function CourseMapView({
   const currentId=currentGroup?groupId(currentGroup):null;
   const [open,setOpen]=useState<Set<string>>(()=>new Set());
   const [selected,setSelected]=useState<Station|null>(null);
+  const [rewardNodeId,setRewardNodeId]=useState<string|null>(null);
   const currentStationRef=useRef<HTMLLIElement|null>(null);
 
   // Expand the learner's current stage, but keep the Route screen itself at the top.
@@ -158,6 +175,34 @@ export function CourseMapView({
     if(!currentId)return;
     setOpen(previous=>new Set(previous).add(currentId));
   },[currentId]);
+
+  useEffect(()=>{
+    if(!state)return;
+    const key='unmute.course-map-reward:'+state.set.id;
+    let previous:CourseMapRewardSnapshot|null=null;
+    try{
+      const raw=sessionStorage.getItem(key);
+      if(raw)previous=JSON.parse(raw) as CourseMapRewardSnapshot;
+    }catch{}
+    const target=roadmapRewardNode(previous,state);
+    if(target){
+      setRewardNodeId(target);
+      const timer=window.setTimeout(()=>setRewardNodeId(current=>current===target?null:current),900);
+      try{
+        sessionStorage.setItem(key,JSON.stringify({
+          completedCount:state.roadmapProgress.completedCount,
+          currentNodeId:state.currentNode?.id??null
+        } satisfies CourseMapRewardSnapshot));
+      }catch{}
+      return ()=>window.clearTimeout(timer);
+    }
+    try{
+      sessionStorage.setItem(key,JSON.stringify({
+        completedCount:state.roadmapProgress.completedCount,
+        currentNodeId:state.currentNode?.id??null
+      } satisfies CourseMapRewardSnapshot));
+    }catch{}
+  },[state?.set.id,state?.roadmapProgress.completedCount,state?.currentNode?.id]);
 
   if(runtime.status==='pending'){
     return (
@@ -299,7 +344,7 @@ export function CourseMapView({
                       )}
                       <li
                         ref={station.status==='current'?currentStationRef:undefined}
-                        className={'station station-'+station.kind+' is-'+station.status+(solid?' rail-solid':'')+(arriving?' rail-arriving':'')+(index===0?' is-first':'')+(isLast?' is-last':'')}
+                        className={'station station-'+station.kind+' is-'+station.status+(solid?' rail-solid':'')+(arriving?' rail-arriving':'')+(index===0?' is-first':'')+(isLast?' is-last':'')+(station.node.id===rewardNodeId?' is-reward':'')}
                         style={{'--i':index} as CSSProperties}
                         aria-current={station.status==='current'?'step':undefined}
                       >
