@@ -76,7 +76,15 @@ export function Sheet({
     <div className={'sheet-scrim'+(leaving?' is-leaving':'')} role="presentation" onMouseDown={event => {
       if(!leaving&&event.currentTarget === event.target) onClose();
     }}>
-      <section ref={panel} className={'sheet'+(leaving?' is-leaving':'')} role="dialog" aria-modal="true" aria-labelledby={labelledBy} tabIndex={-1}>
+      <section
+        ref={panel}
+        className={'sheet'+(leaving?' is-leaving':'')}
+        role="dialog"
+        aria-modal={leaving?undefined:true}
+        aria-hidden={leaving||undefined}
+        aria-labelledby={labelledBy}
+        tabIndex={-1}
+      >
         <div className="sheet-grab" aria-hidden="true" />
         <button className="sheet-close pressable" type="button" onClick={onClose} aria-label={closeLabel} disabled={leaving}>
           <Icon name="close" size={20} />
