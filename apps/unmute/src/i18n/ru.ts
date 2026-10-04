@@ -37,7 +37,7 @@ export const ru = {
   'today.streak': 'Серия',
   'today.streakStart': 'Начни сегодня',
   'today.week': 'Дней с занятиями за неделю: {count} из 7',
-  'today.reviewCaption': 'на сегодня',
+  'today.reviewCaption': 'к повтору',
   'today.speakTitle': 'Скажи вслух',
   'today.speakOpen': 'Как это сделать →',
   'today.speakKicker': 'Задание дня на разговор',
