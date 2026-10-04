@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
@@ -94,6 +94,7 @@ function renderReview(
 }
 
 describe('course review screen',()=>{
+  beforeEach(()=>localStorage.clear());
   it('uses word chips for explicitly introductory build cards',async()=>{
     const user=userEvent.setup();
     const state=learnerState();
@@ -121,7 +122,7 @@ describe('course review screen',()=>{
     other.progress.cards={'a1.card':{box:1,due:9,at:'2026-09-28T00:00:00Z'}};
     const {saveGraded}=renderReview(undefined,undefined,{status:'ready',courses:[{set:other.set,progress:other.progress}]});
 
-    expect(await screen.findByText('К повтору сегодня: 2')).toBeTruthy();
+    expect(await screen.findByText('На сегодня: 2')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Начать повтор'}));
     await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am home');
     await user.click(screen.getByRole('button',{name:'Проверить'}));
@@ -161,7 +162,7 @@ describe('course review screen',()=>{
     const user=userEvent.setup();
     const {saveGraded,onExit}=renderReview();
 
-    expect(await screen.findByText('К повтору сегодня: 1')).toBeTruthy();
+    expect(await screen.findByText('На сегодня: 1')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Начать повтор'}));
     let input=await screen.findByRole('textbox',{name:'Твой ответ'});
     await user.type(input,'wrong');
@@ -219,8 +220,8 @@ describe('course review screen',()=>{
     expect(await screen.findByRole('heading',{name:'Повтор завершён'})).toBeTruthy();
     expect(document.documentElement.dataset.focusRun).toBeUndefined();
     // This runtime never refreshes, so the card still counts as due: the screen says so.
-    expect(screen.getByText('Ещё к повтору: 1. Лучше пройти их сейчас, пока всё свежо.')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:'Пройти ещё раз: 1'}));
+    expect(screen.getByText('В сегодняшней норме осталось: 1.')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Продолжить: 1'}));
     expect(await screen.findByRole('textbox',{name:'Твой ответ'})).toBeTruthy();
   });
 
