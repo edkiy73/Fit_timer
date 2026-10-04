@@ -223,6 +223,7 @@ export function NotificationRouteListener(){
 export function NotificationDelivery(){
   const runtime=useLearnerCourseRuntime();
   const wordRuntime=useWordReviewRuntime();
+  const otherCourses=useOtherCourseReviews(runtime.state?.set.id??'');
   const {t,locale}=useI18n();
   const [preferences,setPreferences]=useState<NotificationSettings>(DEFAULT_NOTIFICATION_SETTINGS);
   const [settingsReady,setSettingsReady]=useState(false);
@@ -282,7 +283,9 @@ export function NotificationDelivery(){
       locale,
       currentLessonAvailable:Boolean(state.currentNode),
       courseComplete:state.roadmapProgress.courseComplete,
-      ...(state.currentNode?.dayIndex?{currentLessonDayIndex:state.currentNode.dayIndex}:{})
+      ...(state.currentNode?.dayIndex?{currentLessonDayIndex:state.currentNode.dayIndex}:{}),
+      ...(state.currentNode?{currentLessonTopic:nodeTopic(state.set,state.currentNode,locale)}:{}),
+      otherCourses:otherCourses.courses
     });
   },[
     settingsReady,
@@ -293,6 +296,7 @@ export function NotificationDelivery(){
     wordRuntime.words,
     wordRuntime.lexicon,
     locale,
+    otherCourses,
     clock
   ]);
 
