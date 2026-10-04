@@ -13,9 +13,18 @@ export interface ReviewBudgetStorage {
 }
 
 const PREFIX='unmute.review-budget:';
+export const REVIEW_BUDGET_EVENT='unmute:review-budget-changed';
 
 function key(day:number):string{
   return PREFIX+day;
+}
+
+function changed(day:number):void{
+  try{
+    if(typeof window!=='undefined'){
+      window.dispatchEvent(new CustomEvent(REVIEW_BUDGET_EVENT,{detail:{day}}));
+    }
+  }catch{}
 }
 
 export function readReviewBudget(
@@ -56,7 +65,10 @@ export function recordReviewCompletion(
     ...current,
     completed:Math.max(0,current.completed+Math.max(0,count))
   };
-  try{storage.setItem(key(day),JSON.stringify(next));}catch{}
+  try{
+    storage.setItem(key(day),JSON.stringify(next));
+    changed(day);
+  }catch{}
   return next;
 }
 
@@ -66,8 +78,30 @@ export function addReviewExtra(
 ):ReviewDailyBudget{
   const current=readReviewBudget(day,storage);
   const next={...current,limit:current.limit+REVIEW_DAILY_EXTRA};
-  try{storage.setItem(key(day),JSON.stringify(next));}catch{}
+  try{
+    storage.setItem(key(day),JSON.stringify(next));
+    changed(day);
+  }catch{}
   return next;
+}
+
+export function takeReviewQuota<T>(
+  sources:ReadonlyArray<readonly T[]>,
+  limit:number
+):{items:T[];hidden:number}{
+  const queues=sources.map(source=>[...source]);
+  const items:T[]=[];
+  while(items.length<Math.max(0,limit)&&queues.some(queue=>queue.length>0)){
+    for(const queue of queues){
+      if(items.length>=limit)break;
+      const item=queue.shift();
+      if(item!==undefined)items.push(item);
+    }
+  }
+  return {
+    items,
+    hidden:queues.reduce((sum,queue)=>sum+queue.length,0)
+  };
 }
 
 export function capReviewCount(
