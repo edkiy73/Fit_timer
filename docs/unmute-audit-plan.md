@@ -125,7 +125,7 @@
 | 7.4 | Возврат после перерыва: 2/5/12 дней, потом тишина | ✅ #494 |
 | 7.5 | Серия — мягкий текст и только при серии ≥ 3 | ✅ #495 |
 | 7.6 | Тихие часы 22:00–9:00 и «после занятия — тишина» — тесты на политику | ✅ #496 |
-| 7.7 | Серверный push (FCM/APNs): общий AppBase Core client + server transport; UnMute регистрирует устройство, deep links и open analytics; внешняя Firebase/APNs конфигурация отдельная для каждого приложения | 🟡 Core/UnMute implementation |
+| 7.7 | Серверный push (FCM/APNs): общий AppBase Core client + server transport + shared Admin campaigns; UnMute регистрирует устройство, deep links и open analytics; production Firebase/APNs credentials остаются внешней конфигурацией | 🟡 code complete · live credentials/device smoke pending |
 
 ---
 
