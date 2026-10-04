@@ -308,7 +308,8 @@ try{
   ok('Admin fits a 360 px phone',await admin.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1));
 
   // Screen walk: every main screen on a small phone, light and dark — nothing sticks out
-  // sideways and no screen throws. Catches layout breaks before anyone opens the app.
+  // sideways and no screen throws. 360 px remains the full route walk; edge widths get a
+  // focused smoke below so motion/layout changes are also checked at 320 and 412 px.
   const ROUTES=['#/','#/course','#/review','#/account','#/settings','#/access?from=talk','#/legal/privacy','#/learn/day-1'];
   for(const colorScheme of ['light','dark']){
     const walkContext=await browser.newContext({viewport:{width:360,height:740},locale:'ru-RU',colorScheme});
@@ -341,6 +342,44 @@ try{
     if(broken.length)console.log(broken.join('\n'));
     await walkContext.close();
   }
+
+  // Motion/layout edge smoke: the supported compact phone range must not overflow.
+  for(const width of [320,412]){
+    const compact=await browser.newContext({viewport:{width,height:740},locale:'ru-RU'});
+    await compact.addInitScript(()=>{ try{ localStorage.setItem('unmute.onboarding.v1','1'); }catch{} });
+    const page=await compact.newPage();
+    page.on('pageerror',error=>errors.push(width+'px: '+String(error)));
+    for(const route of ['#/','#/course','#/review','#/learn/day-1']){
+      await page.goto(URL_+route);
+      await page.locator('.app-screen, .learn-shell').first().waitFor({timeout:8000}).catch(()=>{});
+      await page.locator('.screen-loader').first().waitFor({state:'detached',timeout:8000}).catch(()=>{});
+      ok(width+'px '+route+' fits without horizontal overflow',await page.evaluate(
+        ()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1
+      ));
+    }
+    await compact.close();
+  }
+
+  // Reduced-motion smoke: key route/sheet motion becomes instantaneous. CSS/RAF animations
+  // are duration-based rather than frame-count based, so the same logic works at 60/120 Hz.
+  const reduced=await browser.newContext({
+    viewport:{width:390,height:800},
+    locale:'ru-RU',
+    reducedMotion:'reduce'
+  });
+  await reduced.addInitScript(()=>{ try{ localStorage.setItem('unmute.onboarding.v1','1'); }catch{} });
+  const reducedPage=await reduced.newPage();
+  await reducedPage.goto(URL_+'#/course');
+  await reducedPage.locator('.station').first().waitFor({timeout:8000});
+  ok('reduced motion disables station entrance animation',await reducedPage.locator('.station').first().evaluate(
+    element=>getComputedStyle(element).animationName==='none'
+  ));
+  await reducedPage.locator('.station-body').first().click();
+  await reducedPage.locator('.sheet').waitFor({timeout:5000});
+  ok('reduced motion disables sheet animation',await reducedPage.locator('.sheet').evaluate(
+    element=>getComputedStyle(element).animationName==='none'
+  ));
+  await reduced.close();
 
   ok('no runtime errors',errors.length===0);
   if(errors.length)console.log(errors.join('\n'));
