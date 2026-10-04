@@ -41,6 +41,7 @@ import { randomSeed, shuffledIndices } from './shuffle';
 import { reviewSessionSeed } from './review-seed';
 import { WordChips, answerWords, buildChips, chipsText } from './word-chips';
 import { sentenceResponseStage, type SentenceResponseKind } from './engine/sentence-progression';
+import { addReviewExtra, recordReviewCompletion, remainingReviewQuota } from './review-daily-budget';
 
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
 type CombinedReviewItem=
@@ -54,6 +55,7 @@ interface PinnedReviewSession {
   waiting:number;
   unresolvedWords:number;
   wordUnavailable:boolean;
+  hiddenDue:number;
 }
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
@@ -141,15 +143,24 @@ export function ReviewView({
       ? resolveWordReviewSession(wordRuntime.words,wordRuntime.lexicon,todayDay,locale)
       : null;
     const wordItems=(words?.items??[]).map(word=>({kind:'word' as const,word}));
+    const rawItems:CombinedReviewItem[]=[...course.items,...otherItems,...wordItems];
+    const quota=remainingReviewQuota(todayDay);
+    const items=rawItems.slice(0,quota);
+    const hiddenDue=Math.max(0,rawItems.length-items.length);
     setSession({
       course,
       shuffleSeed:reviewSessionSeed(state.set.id,todayDay),
-      total:course.actionableCount+otherItems.length+wordItems.length,
-      waiting:course.waitingCount+others.reduce((sum,other)=>sum+other.waitingCount,0)+(words?.waiting??0),
+      total:items.length,
+      waiting:
+        course.waitingCount+
+        others.reduce((sum,other)=>sum+other.waitingCount,0)+
+        (words?.waiting??0)+
+        hiddenDue,
       unresolvedWords:words?.unresolved??0,
       wordUnavailable:Boolean(wordRuntime&&wordRuntime.status==='error'),
+      hiddenDue,
     });
-    setQueue([...course.items,...otherItems,...wordItems]);
+    setQueue(items);
   },[runtime.status,state?.set.id,session,todayDay,wordRuntime?.status,wordRuntime?.words,wordRuntime?.lexicon,locale,otherCourses]);
 
   useEffect(()=>{
@@ -295,13 +306,30 @@ export function ReviewView({
   ) : null;
 
   if(total===0){
+    const quotaDone=session.hiddenDue>0;
     return (
       <section className="review-shell is-ready" aria-labelledby="review-title">
         <header className="screen-head">
           <div className="screen-kicker">{t('review.eyebrow')}</div>
           <h2 id="review-title">{t('review.title')}</h2>
         </header>
-        {session.wordUnavailable ? (
+        {quotaDone ? (
+          <div className="tile review-empty">
+            <span className="review-ring is-clear" aria-hidden="true"><Icon name="check" size={28} /></span>
+            <strong>{t('review.dailyDoneTitle')}</strong>
+            <span className="tile-text">{t('review.dailyDoneText',{count:session.hiddenDue})}</span>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={()=>{
+                addReviewExtra(todayDay);
+                restart();
+              }}
+            >
+              {t('review.moreTen')}
+            </button>
+          </div>
+        ) : session.wordUnavailable ? (
           <>
             <div className="learn-state" role="alert">
               <strong>{t('review.wordsLoadTitle')}</strong>
@@ -394,6 +422,7 @@ export function ReviewView({
 
   if(!item){
     const left=reviewDueCounts(state,wordRuntime,locale,todayDay,otherCourses.courses)?.actionableCount ?? 0;
+    const moreDue=session.hiddenDue;
     return (
       <section className="review-shell is-ready" aria-labelledby="review-title">
         <header className="screen-head">
@@ -403,19 +432,33 @@ export function ReviewView({
         <div className="learn-state">
           <strong>{t('review.doneCount',{count:completed})}</strong>
           <span>
-            {left>0
-              ? t('review.moreDue',{count:left})
-              : session.waiting>0
-                ? t('review.waiting',{count:session.waiting})
-                : t('review.doneText')}
+            {moreDue>0
+              ? t('review.dailyDoneText',{count:moreDue})
+              : left>0
+                ? t('review.moreDue',{count:left})
+                : session.waiting>0
+                  ? t('review.waiting',{count:session.waiting})
+                  : t('review.doneText')}
           </span>
           {(otherCourses.failed??0)>0&&<span role="status">{t('review.otherCourseFailed')}</span>}
-          {left>0&&(
+          {moreDue>0&&(
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={()=>{
+                addReviewExtra(todayDay);
+                restart();
+              }}
+            >
+              {t('review.moreTen')}
+            </button>
+          )}
+          {left>0&&moreDue===0&&(
             <button className="primary-button" type="button" onClick={restart}>
               {t('review.again',{count:left})}
             </button>
           )}
-          <button className={left>0?'secondary-button':'primary-button'} type="button" onClick={onExit}>
+          <button className={(left>0||moreDue>0)?'secondary-button':'primary-button'} type="button" onClick={onExit}>
             {t('review.backToday')}
           </button>
         </div>
@@ -432,6 +475,7 @@ export function ReviewView({
   });
 
   const completePractice=()=>{
+    recordReviewCompletion(todayDay);
     setCompleted(value=>Math.min(total,value+1));
     setIndex(value=>value+1);
   };
@@ -488,6 +532,7 @@ export function ReviewView({
     if(item.kind!=='card'||result===null)return;
     // A wrong card comes back once at the end of the session, like in a lesson; never in a loop.
     if(result||returnedCard){
+      recordReviewCompletion(todayDay);
       setCompleted(value=>Math.min(total,value+1));
     }else{
       setQueue(current=>[...current,item]);
@@ -507,6 +552,7 @@ export function ReviewView({
     setWordSaveError(false);
     try{
       await saveWord(item.word.record.lexemeId,item.word.record.senseId,correct);
+      recordReviewCompletion(todayDay);
       setCompleted(value=>Math.min(total,value+1));
       setIndex(value=>value+1);
     }catch(_){
