@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
+import { useLocation } from 'react-router';
 import { apiUrl } from './api-url';
 import { Icon } from './icons';
 
@@ -123,27 +124,26 @@ export function useAppUpdate(){
     }, 1000);
   }, [install]);
 
-  useEffect(() => {
+  const check = useCallback(async () => {
     const native = plugin();
     if(!native) return;
-    let live = true;
-    void (async () => {
-      try{
-        const [build, response] = await Promise.all([native.getDistribution(), fetch(apiUrl('/api/config'))]);
-        const config = await response.json() as {update?: {android?: {direct?: UpdateChannel; store?: UpdateChannel}}};
-        const next = decideUpdate(config.update?.android, build.channel, Number(build.versionCode) || 0, locale);
-        if(!live) return;
-        setOffer(next);
-        if(next?.channel === 'direct'){
-          // A download started earlier keeps running in the background: pick it up.
-          const state = await native.getUpdateState().catch(() => null);
-          if(state?.status === 'downloading'){ setStatus('downloading'); watch(next); }
-          else if(state?.status === 'ready') setStatus('ready');
-        }
-      }catch{}
-    })();
-    return () => { live = false; stopPolling(); };
+    try{
+      const [build, response] = await Promise.all([native.getDistribution(), fetch(apiUrl('/api/config'), {cache:'no-store'})]);
+      const config = await response.json() as {update?: {android?: {direct?: UpdateChannel; store?: UpdateChannel}}};
+      const next = decideUpdate(config.update?.android, build.channel, Number(build.versionCode) || 0, locale);
+      setOffer(next);
+      if(next?.channel === 'direct'){
+        const state = await native.getUpdateState().catch(() => null);
+        if(state?.status === 'downloading'){ setStatus('downloading'); watch(next); }
+        else if(state?.status === 'ready') setStatus('ready');
+      }
+    }catch{}
   }, [locale, watch]);
+
+  useEffect(() => {
+    void check();
+    return () => stopPolling();
+  }, [check]);
 
   const start = async () => {
     const native = plugin();
@@ -176,7 +176,7 @@ export function useAppUpdate(){
   };
 
   const visible = Boolean(offer && (offer.level === 'required' || dismissed !== offer.versionCode));
-  return {offer: visible ? offer : null, status, progress, start, cancel, dismiss};
+  return {offer: visible ? offer : null, status, progress, start, cancel, dismiss, check};
 }
 
 type UpdateState = ReturnType<typeof useAppUpdate>;
@@ -217,6 +217,15 @@ const UpdateContext = createContext<UpdateState | null>(null);
 /** One update check for the whole app; the required-update screen covers everything. */
 export function AppUpdateProvider({children}: {children: ReactNode}){
   const state = useAppUpdate();
+  const location = useLocation();
+  const previousPath = useRef(location.pathname);
+
+  useEffect(() => {
+    const previous = previousPath.current;
+    previousPath.current = location.pathname;
+    if(previous !== '/' && location.pathname === '/') void state.check();
+  }, [location.pathname, state.check]);
+
   return (
     <UpdateContext.Provider value={state}>
       {children}
