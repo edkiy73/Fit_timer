@@ -12,6 +12,7 @@ import { localizedText, nodeMinutes, nodeTopic } from './today-model';
 import { Icon, type IconName } from './icons';
 import { Sheet } from './sheet';
 import { CoursePicker } from './active-course';
+import { MOTION } from './motion';
 
 export type CourseMapStatus=
   |'complete'
@@ -187,7 +188,7 @@ export function CourseMapView({
     const target=roadmapRewardNode(previous,state);
     if(target){
       setRewardNodeId(target);
-      const timer=window.setTimeout(()=>setRewardNodeId(current=>current===target?null:current),900);
+      const timer=window.setTimeout(()=>setRewardNodeId(current=>current===target?null:current),MOTION.reward);
       try{
         sessionStorage.setItem(key,JSON.stringify({
           completedCount:state.roadmapProgress.completedCount,
