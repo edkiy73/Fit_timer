@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
@@ -94,6 +94,7 @@ function renderReview(
 }
 
 describe('course review screen',()=>{
+  beforeEach(()=>localStorage.clear());
   it('uses word chips for explicitly introductory build cards',async()=>{
     const user=userEvent.setup();
     const state=learnerState();
