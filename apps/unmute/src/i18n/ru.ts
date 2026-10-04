@@ -79,6 +79,7 @@ export const ru = {
   'today.blockedText': 'Обнови курс или заверши предыдущий обязательный шаг.',
   'today.start': 'Начать',
   'today.continue': 'Продолжить',
+  'today.replayTasks': 'Повторить задания',
   'today.courseMap': 'Карта курса',
   'update.title': 'Вышла новая версия',
   'update.titleVersion': 'Вышла версия {version}',
