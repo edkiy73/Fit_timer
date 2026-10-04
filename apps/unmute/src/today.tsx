@@ -248,7 +248,7 @@ export function TodayView({
             <strong className="tile-number"><AnimatedNumber value={review.actionableCount} /></strong>
             <span className="tile-caption">{t('today.reviewCaption')}</span>
             <span className="tile-link">{t('today.reviewStart')} →</span>
-            {review.waitingCount>0&&<span className="sr-only">{t('today.reviewWaiting',{count:review.waitingCount})}</span>}
+            {review.waitingCount>0&&<span className="sr-only">{t('today.reviewMoreWaiting')}</span>}
           </button>
         ) : (
           <Tile className="tile-review" index={index++}>
