@@ -158,11 +158,13 @@ export function PatternPracticeView({
       <div className="eyebrow">{t('pattern.completeMode')}</div>
       <h3><LexiconText text={activity.pattern[locale]||activity.pattern.ru||activity.pattern.en||Object.values(activity.pattern)[0]||''} refs={activity.lexiconRefs} /></h3>
       <p className="learn-hint">{t('pattern.completeText')}</p>
-      <button className="primary-button" type="button" onClick={onDone}>
-        {t('learn.next')}
-      </button>
+      <div className="runner-action">
+        <button className="primary-button" type="button" onClick={onDone}>
+          {t('learn.next')}
+        </button>
+      </div>
       {activity.modes.map(item=>(
-        <button key={item} className="secondary-button" type="button" onClick={()=>{ setSingle(true); setMode(item); }}>
+        <button key={item} className="link-button" type="button" onClick={()=>{ setSingle(true); setMode(item); }}>
           {modeLabel[item]}
         </button>
       ))}
