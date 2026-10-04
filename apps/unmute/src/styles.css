@@ -184,7 +184,21 @@ h2{margin:0 0 8px;font-weight:800}
 .learn-summary-icon{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:color-mix(in srgb,var(--accent) 14%,var(--card));color:var(--accent)}
 .learn-summary-score{margin:0;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
 .learn-state span{color:var(--muted);line-height:1.45}
-.learn-card{display:grid;gap:16px}
+.learn-card{display:grid;gap:16px;animation:card-enter 280ms cubic-bezier(.2,.8,.2,1) both}
+.runner-activity{view-transition-name:runner-activity;min-width:0}
+@keyframes card-enter{
+  from{opacity:0;transform:translateY(7px) scale(.995)}
+  to{opacity:1;transform:none}
+}
+@keyframes activity-view-out{
+  to{opacity:0;transform:translateY(-5px) scale(.995);filter:blur(1px)}
+}
+@keyframes activity-view-in{
+  from{opacity:0;transform:translateY(7px) scale(.995);filter:blur(1px)}
+  to{opacity:1;transform:none;filter:none}
+}
+::view-transition-old(runner-activity){animation:activity-view-out 150ms ease both}
+::view-transition-new(runner-activity){animation:activity-view-in 260ms cubic-bezier(.2,.8,.2,1) both}
 .learn-card h3{margin:0;font-size:22px;line-height:1.25}
 .learn-theory{white-space:pre-wrap;line-height:1.6}
 .learn-hint,.learn-source{margin:0;color:var(--muted);line-height:1.5}
@@ -206,7 +220,13 @@ h2{margin:0 0 8px;font-weight:800}
   to{opacity:1;transform:none;filter:none}
 }
 /* Answer result: a bottom panel, calm mint for right, warm amber (never red) for a miss. */
-.learn-feedback{display:grid;gap:8px;padding:12px 14px;border-radius:18px;background:var(--surface)}
+.learn-feedback{display:grid;gap:8px;padding:12px 14px;border-radius:18px;background:var(--surface);transition:background-color 260ms ease,box-shadow 260ms ease}
+.learn-feedback-head,.learn-feedback-actions{animation:feedback-content-in 280ms cubic-bezier(.2,.8,.2,1) both}
+.learn-feedback-actions{animation-delay:45ms}
+@keyframes feedback-content-in{
+  from{opacity:0;transform:translateY(5px)}
+  to{opacity:1;transform:none}
+}
 .learn-feedback-ok{background:color-mix(in srgb,var(--success) 14%,var(--card))}
 .learn-feedback-wrong{background:color-mix(in srgb,var(--danger) 10%,var(--card))}
 /* «Медленно» in phrases-at-speed is not a mistake: neutral, not red. */
@@ -669,6 +689,8 @@ h2{margin:0 0 8px;font-weight:800}
 /* Bottom sheet: slides up with a spring; Back/Escape/scrim close it. */
 .sheet-scrim{position:fixed;inset:0;z-index:1200;display:flex;align-items:flex-end;justify-content:center;background:rgb(8 8 14/.45);animation:scrim-in 200ms ease both}
 .sheet{position:relative;width:min(100%,620px);max-height:82vh;overflow:auto;display:grid;gap:12px;padding:12px 20px calc(24px + var(--safe-bottom));border-radius:32px 32px 0 0;background:var(--card);color:var(--ink);box-shadow:var(--elev-2);outline:none;animation:sheet-in 420ms var(--spring) both}
+.sheet-scrim.is-leaving{pointer-events:none;animation:scrim-out 240ms ease both}
+.sheet.is-leaving{animation:sheet-out 260ms cubic-bezier(.4,0,1,1) both}
 .sheet > *{min-width:0}
 .sheet-grab{justify-self:center;width:40px;height:4px;border-radius:2px;background:var(--line)}
 .sheet-close{position:absolute;top:12px;right:12px;display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:22px;background:var(--surface);color:var(--ink);cursor:pointer}
@@ -679,9 +701,12 @@ h2{margin:0 0 8px;font-weight:800}
 .station-sheet h3{margin:0;font-size:22px;line-height:1.25}
 .station-sheet .primary-button{margin-top:4px}
 @keyframes sheet-in{from{transform:translateY(100%)}to{transform:none}}
+@keyframes sheet-out{from{transform:none;opacity:1}to{transform:translateY(100%);opacity:.92}}
+@keyframes scrim-out{from{opacity:1}to{opacity:0}}
 @keyframes scrim-in{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){
-  .station,.sheet,.sheet-scrim{animation:none}
+  .station,.sheet,.sheet-scrim,.learn-card,.learn-feedback-head,.learn-feedback-actions{animation:none!important}
+  ::view-transition-old(runner-activity),::view-transition-new(runner-activity){animation:none!important}
   .station.is-current .station-marker::after{animation:none}
   .stage-chevron{transition:none}
 }
