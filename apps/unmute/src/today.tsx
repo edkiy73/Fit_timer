@@ -74,6 +74,7 @@ export function TodayView({
   runtime,
   wordRuntime=null,
   onStart,
+  onReplayTasks=(nodeId:string)=>onStart(nodeId),
   onSpeak=(nodeId:string)=>onStart(nodeId),
   onReview,
   onMap,
@@ -85,6 +86,8 @@ export function TodayView({
   runtime:LearnerCourseRuntimeValue;
   wordRuntime?:WordReviewRuntimeValue|null;
   onStart:(nodeId:string)=>void;
+  /** Replay only the regular answer tasks of the current day. */
+  onReplayTasks?:(nodeId:string)=>void;
   /** «Скажи вслух»: the day's phrases in speaking mode, or the day itself when it has none. */
   onSpeak?:(nodeId:string,patternId:string|null)=>void;
   onReview:()=>void;
@@ -188,6 +191,11 @@ export function TodayView({
           <Icon name="play" size={18} />
           {done>0?t('today.continue'):t('today.start')}
         </button>
+        {done>0&&(
+          <button className="secondary-button today-replay-tasks" type="button" onClick={()=>onReplayTasks(node.id)}>
+            {t('today.replayTasks')}
+          </button>
+        )}
       </Tile>
     );
   }else{
@@ -344,6 +352,7 @@ export function TodayScreen(){
       wordRuntime={useWordReviewRuntime()}
       learningDays={useAllLearningDays()}
       onStart={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId))}
+      onReplayTasks={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId)+'?tasks=1')}
       onSpeak={(nodeId,patternId)=>navigate('/learn/'+encodeURIComponent(nodeId)+(patternId?'?activity='+encodeURIComponent(patternId)+'&mode=speaking':''))}
       onReview={()=>navigate('/review')}
       onMap={()=>navigate('/course')}
