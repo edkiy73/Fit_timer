@@ -26,6 +26,9 @@ async function handleAdminCampaigns(action, body, res){
     return true;
   }
 
+  const rawRoute=clampLine(body&&body.route,300);
+  const route=/^\/(?!\/)[^\s]*$/.test(rawRoute)?rawRoute:'';
+
   const copy = (body && body.copy) || {};
   const cleanCopy = lang => ({
     title: clampLine(copy[lang] && copy[lang].title, 100),
@@ -69,7 +72,12 @@ async function handleAdminCampaigns(action, body, res){
         try{
           const r=await sendPushToAccountHash(mh,{
             category:'offers',title:msg.title,body:msg.body,
-            data:{stage:'campaign',kind,category:'offers'}
+            data:{
+              stage:'campaign',
+              kind,
+              category:'offers',
+              ...(route?{route}:{})
+            }
           });
           if(r&&r.sent>0){pushSent+=r.sent;delivered=true;}
         }catch(_){failed++;}
