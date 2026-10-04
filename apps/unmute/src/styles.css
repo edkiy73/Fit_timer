@@ -214,6 +214,20 @@ select:active{transform:scale(.985)}
 .learn-state,.learn-card{border:1px solid var(--line);border-radius:var(--radius-tile);background:var(--card);padding:20px}
 .learn-state{display:grid;gap:10px;justify-items:start}
 .learn-summary{display:grid;gap:10px;justify-items:center;text-align:center;padding:32px 20px}
+.learn-summary.is-reward .learn-summary-icon{animation:summary-reward-pop 620ms var(--spring) both}
+.learn-summary.is-reward :is(.screen-kicker,h2,.learn-summary-score,.learn-hint){animation:summary-reward-copy 420ms var(--ease-control) both}
+.learn-summary.is-reward h2{animation-delay:55ms}
+.learn-summary.is-reward .learn-summary-score{animation-delay:90ms}
+.learn-summary.is-reward .learn-hint{animation-delay:120ms}
+@keyframes summary-reward-pop{
+  0%{opacity:.5;transform:scale(.7) rotate(-5deg)}
+  58%{opacity:1;transform:scale(1.12) rotate(2deg)}
+  100%{transform:none}
+}
+@keyframes summary-reward-copy{
+  from{opacity:0;transform:translateY(5px)}
+  to{opacity:1;transform:none}
+}
 .learn-summary h2{margin:0}
 .learn-summary-icon{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:color-mix(in srgb,var(--accent) 14%,var(--card));color:var(--accent)}
 .learn-summary-score{margin:0;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
@@ -769,7 +783,7 @@ select:active{transform:scale(.985)}
 @keyframes scrim-out{from{opacity:1}to{opacity:0}}
 @keyframes scrim-in{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){
-  .station,.sheet,.sheet-scrim,.learn-card,.learn-feedback-head,.learn-feedback-actions,.station.is-reward .station-marker,.station.is-reward .station-body,.station.is-reward .here-pill{animation:none!important}
+  .station,.sheet,.sheet-scrim,.learn-card,.learn-feedback-head,.learn-feedback-actions,.station.is-reward .station-marker,.station.is-reward .station-body,.station.is-reward .here-pill,.learn-summary.is-reward .learn-summary-icon,.learn-summary.is-reward :is(.screen-kicker,h2,.learn-summary-score,.learn-hint){animation:none!important}
   ::view-transition-old(runner-activity),::view-transition-new(runner-activity){animation:none!important}
   .station.is-current .station-marker::after{animation:none}
   .stage-chevron{transition:none}
