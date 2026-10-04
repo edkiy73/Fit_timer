@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
@@ -36,6 +37,7 @@ import { AnswerExplanationView } from './answer-explanation';
 import { useOtherCourseReviews, type OtherCourseReviews } from './other-course-review';
 import { MyWordsView } from './my-words';
 import { Icon } from './icons';
+import { Sheet } from './sheet';
 import { reviewDueCounts } from './review-count';
 import { randomSeed, shuffledIndices } from './shuffle';
 import { reviewSessionSeed } from './review-seed';
@@ -127,6 +129,7 @@ export function ReviewView({
   const [mixedActivity,setMixedActivity]=useState<Extract<Activity,{type:'pattern-drill'}>|null>(null);
   const [started,setStarted]=useState(false);
   const [dayCounted,setDayCounted]=useState(false);
+  const [exitOpen,setExitOpen]=useState(false);
 
   useEffect(()=>{
     if(runtime.status!=='ready'||!state||session)return;
@@ -575,7 +578,8 @@ export function ReviewView({
       ? (selected===null?'':localized(activity.options[selected],locale))
       : (reviewChips?chipsText(reviewChips,picked):answer.trim());
     const courseExplanation=localized(activity.explanation,locale);
-    return (
+    return createPortal(
+      <div className="lesson-feedback-overlay" role="presentation">
       <div className={'learn-feedback is-sheet '+(nearResult?'learn-feedback-near':result?'learn-feedback-ok':'learn-feedback-wrong')} role="status">
         <div className="learn-feedback-head">
           <span className="learn-feedback-icon" aria-hidden="true"><Icon name={result?'check':'review'} size={22} /></span>
@@ -608,13 +612,15 @@ export function ReviewView({
           </button>
         </div>
       </div>
+      </div>,
+      document.body
     );
   };
 
   return (
     <section className="review-shell runner" aria-labelledby="review-title">
       <div className="runner-top">
-        <button className="runner-close pressable" type="button" onClick={()=>setStarted(false)} aria-label={t('review.close')}>
+        <button className="runner-close pressable" type="button" onClick={()=>setExitOpen(true)} aria-label={t('review.close')}>
           <Icon name="close" size={20} />
         </button>
         <div className="runner-progress" role="progressbar" aria-label={t('review.progress')} aria-valuemin={0} aria-valuemax={Math.max(1,total)} aria-valuenow={completed}>
@@ -623,6 +629,14 @@ export function ReviewView({
         <span className="runner-count">{position}</span>
       </div>
       <h2 id="review-title" className="sr-only">{t('review.title')}</h2>
+      <Sheet open={exitOpen} onClose={()=>setExitOpen(false)} labelledBy="review-exit-title" closeLabel={t('review.exitStay')}>
+        <div className="confirm-sheet confirm-sheet-compact">
+          <h3 id="review-exit-title">{t('review.exitTitle')}</h3>
+          <p className="tile-text">{t('review.exitText')}</p>
+          <button className="primary-button" type="button" onClick={()=>setExitOpen(false)}>{t('review.exitStay')}</button>
+          <button className="secondary-button" type="button" onClick={()=>{setExitOpen(false);setStarted(false);}}>{t('review.exitLeave')}</button>
+        </div>
+      </Sheet>
 
       {item.kind==='card'&&item.activity.type==='choice'&&(()=>{
         const activity=item.activity;
