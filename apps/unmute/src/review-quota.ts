@@ -8,6 +8,7 @@ export interface ReviewDayQuota {
 }
 
 const key=(day:number)=>'unmute.review-quota:'+day;
+export const REVIEW_QUOTA_EVENT='unmute:review-quota-changed';
 
 function normalize(day:number,value:Partial<ReviewDayQuota>|null|undefined):ReviewDayQuota{
   return {
@@ -28,7 +29,10 @@ export function readReviewDayQuota(day:number,storage:Storage=localStorage):Revi
 
 function writeReviewDayQuota(state:ReviewDayQuota,storage:Storage=localStorage):ReviewDayQuota{
   const next=normalize(state.day,state);
-  try{storage.setItem(key(state.day),JSON.stringify(next));}catch{}
+  try{
+    storage.setItem(key(state.day),JSON.stringify(next));
+    if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent(REVIEW_QUOTA_EVENT,{detail:{day:state.day}}));
+  }catch{}
   return next;
 }
 
