@@ -115,13 +115,18 @@ export function createRemotePushClient(options:RemotePushClientOptions):RemotePu
     return body?post(body):false;
   }
 
-  async function attach<T extends keyof Pick<RemotePushPlugin,'addListener'>>(
+  async function attach(
     name:'registration'|'registrationError'|'pushNotificationActionPerformed',
-    listener:(value:any)=>void
+    listener:(value:unknown)=>void
   ):Promise<RemotePushListenerHandle|null>{
     if(!options.plugin)return null;
     try{
-      return await Promise.resolve((options.plugin.addListener as any)(name,listener));
+      return await Promise.resolve(
+        (options.plugin.addListener as (
+          event:string,
+          handler:(value:unknown)=>void
+        )=>Promise<RemotePushListenerHandle>|RemotePushListenerHandle)(name,listener)
+      );
     }catch{
       return null;
     }
@@ -132,8 +137,9 @@ export function createRemotePushClient(options:RemotePushClientOptions):RemotePu
     started=true;
     alive=true;
 
-    void attach('registration',token=>{
+    void attach('registration',value=>{
       if(!alive)return;
+      const token=value as RemotePushToken;
       void registerToken(String(token?.value||''));
     }).then(handle=>{if(alive)registration=handle;else void handle?.remove();});
 
@@ -141,8 +147,9 @@ export function createRemotePushClient(options:RemotePushClientOptions):RemotePu
       if(alive)options.onRegistrationError?.(error);
     }).then(handle=>{if(alive)registrationError=handle;else void handle?.remove();});
 
-    void attach('pushNotificationActionPerformed',event=>{
+    void attach('pushNotificationActionPerformed',value=>{
       if(!alive)return;
+      const event=value as RemotePushActionEvent;
       const notification=event?.notification;
       const data=(notification?.data??notification?.extra??{}) as Record<string,unknown>;
       void client.recordOpen(stageOf(data));
