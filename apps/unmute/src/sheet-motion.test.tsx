@@ -8,6 +8,27 @@ describe('Sheet motion',()=>{
     vi.restoreAllMocks();
   });
 
+  it('opens from a closed state and portals to document.body',()=>{
+    const onClose=vi.fn();
+    const {rerender,container}=render(
+      <Sheet open={false} onClose={onClose} labelledBy="sheet-title" closeLabel="Закрыть">
+        <h3 id="sheet-title">Панель</h3>
+      </Sheet>
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    rerender(
+      <Sheet open onClose={onClose} labelledBy="sheet-title" closeLabel="Закрыть">
+        <h3 id="sheet-title">Панель</h3>
+      </Sheet>
+    );
+
+    const dialog=screen.getByRole('dialog');
+    expect(dialog).toBeTruthy();
+    expect(document.body.contains(dialog)).toBe(true);
+    expect(container.contains(dialog)).toBe(false);
+  });
+
   it('keeps the sheet mounted for its exit animation',()=>{
     vi.useFakeTimers();
     vi.stubGlobal('matchMedia',()=>({matches:false}));
