@@ -43,6 +43,7 @@ export interface RemotePushClientOptions {
   endpoint?:string;
   locale?:()=>string;
   fetch?:typeof fetch;
+  post?:(body:Record<string,unknown>)=>Promise<boolean>;
   onAction?:(data:Record<string,unknown>)=>void;
   onRegistrationError?:(error:unknown)=>void;
 }
@@ -51,6 +52,7 @@ export interface RemotePushClient {
   start():void;
   stop():void;
   sync(requestPermission?:boolean):Promise<boolean>;
+  registerToken(token:string,platformOverride?:string):Promise<boolean>;
   unregister():Promise<boolean>;
   recordOpen(stage:string):Promise<boolean>;
 }
@@ -82,6 +84,9 @@ export function createRemotePushClient(options:RemotePushClientOptions):RemotePu
   let action:RemotePushListenerHandle|null=null;
 
   async function post(body:Record<string,unknown>):Promise<boolean>{
+    if(options.post){
+      try{return await options.post(body);}catch{return false;}
+    }
     if(typeof fetchImpl!=='function')return false;
     try{
       const response=await fetchImpl(endpoint,{
@@ -101,8 +106,8 @@ export function createRemotePushClient(options:RemotePushClientOptions):RemotePu
     return {...extra,...fields};
   }
 
-  async function registerToken(token:string):Promise<boolean>{
-    const platform=normalizedPlatform(options.platform());
+  async function registerToken(token:string,platformOverride?:string):Promise<boolean>{
+    const platform=normalizedPlatform(platformOverride||options.platform());
     const clean=String(token||'').trim().slice(0,4096);
     if(!platform||clean.length<16)return false;
     const body=await authenticatedBody({
@@ -185,6 +190,8 @@ export function createRemotePushClient(options:RemotePushClientOptions):RemotePu
         return false;
       }
     },
+
+    registerToken,
 
     async unregister(){
       const body=await authenticatedBody({action:'push_device',enabled:false});

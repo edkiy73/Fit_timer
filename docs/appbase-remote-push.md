@@ -53,6 +53,6 @@ Secrets must never be committed.
 
 ## Current adoption
 
-- FitTimer: server transport is Core; native token registration still has legacy product wrappers and should be migrated to `createRemotePushClient`.
-- UnMute: uses `createRemotePushClient`; local learning reminders remain local, while future account/payment/content/campaign events can use server push.
+- FitTimer: native Capacitor bridge still emits its legacy token/action events, but token registration, unregister and open analytics now go through `createRemotePushClient`. A later bridge cleanup may remove those legacy event names without changing the Core/server contract.
+- UnMute: uses `createRemotePushClient` directly with Capacitor Push Notifications; local learning reminders remain local, while account/payment/content/campaign events can use server push.
 - New AppBase apps: use the same Core client/server contract instead of adding product-specific token plumbing.

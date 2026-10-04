@@ -46,6 +46,21 @@ const fakeFetch=async (_url,init)=>{
 }
 
 {
+  const posted=[];
+  const client=createRemotePushClient({
+    auth:auth(),
+    plugin:null,
+    native:false,
+    platform:()=> 'web',
+    post:async body=>{posted.push(body);return true;}
+  });
+  assert.equal(await client.registerToken('token-12345678901234567890','ios'),true);
+  assert.equal(posted[0].action,'push_device');
+  assert.equal(posted[0].platform,'ios');
+  assert.equal(posted[0].enabled,true);
+}
+
+{
   calls.length=0;
   const p=plugin('granted');
   const actions=[];
