@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from './icons';
-
-function reducedMotion():boolean{
-  try{return window.matchMedia('(prefers-reduced-motion: reduce)').matches;}
-  catch{return false;}
-}
+import { motionMs, prefersReducedMotion } from './motion';
 
 /** Bottom sheet. The system Back button closes it first: opening pushes a history entry
  *  on the same URL, Back pops it; closing any other way pops it ourselves. */
@@ -34,7 +30,7 @@ export function Sheet({
       return;
     }
     if(!present)return;
-    if(reducedMotion()){
+    if(prefersReducedMotion()){
       setPresent(false);
       setLeaving(false);
       return;
@@ -43,7 +39,7 @@ export function Sheet({
     const timer=window.setTimeout(()=>{
       setPresent(false);
       setLeaving(false);
-    },260);
+    },motionMs('--dur-exit',260));
     return ()=>window.clearTimeout(timer);
   },[open,present]);
 
