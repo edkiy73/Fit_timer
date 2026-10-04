@@ -199,6 +199,12 @@ h2{margin:0 0 8px;font-weight:800}
 .learn-answer{display:grid;gap:7px;color:var(--muted);font-size:13px;font-weight:700}
 .learn-answer input{width:100%;min-height:56px;border:1.5px solid var(--line);border-radius:var(--radius-btn);background:var(--surface);color:var(--ink);padding:12px 16px;font-size:17px}
 .learn-answer input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.answer-mode-transition{min-width:0}
+.answer-mode-content{animation:answer-mode-in 300ms cubic-bezier(.2,.8,.2,1) both}
+@keyframes answer-mode-in{
+  from{opacity:0;transform:translateY(6px) scale(.992);filter:blur(1.5px)}
+  to{opacity:1;transform:none;filter:none}
+}
 /* Answer result: a bottom panel, calm mint for right, warm amber (never red) for a miss. */
 .learn-feedback{display:grid;gap:8px;padding:12px 14px;border-radius:18px;background:var(--surface)}
 .learn-feedback-ok{background:color-mix(in srgb,var(--success) 14%,var(--card))}
@@ -1151,7 +1157,7 @@ h2{margin:0 0 8px;font-weight:800}
 }
 @media (prefers-reduced-motion:reduce){
   .animated-number,.animated-number.is-running{animation:none!important;transform:none!important;filter:none!important}
-  .animated-progress-fill,.week-dot,.runner-progress-step,.segment,.word-chip{transition:none!important;animation:none!important;transform:none!important}
+  .animated-progress-fill,.week-dot,.runner-progress-step,.segment,.word-chip,.answer-mode-content{transition:none!important;animation:none!important;transform:none!important;filter:none!important}
 }
 
 /* Course selector in Profile uses the app bottom sheet, never the platform select menu. */
