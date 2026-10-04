@@ -139,6 +139,6 @@
 | 8.4 | Переключение режима «чипы ↔ клавиатура»: morph/crossfade без скачка высоты карточки; фокус и клавиатура появляются после завершения основного перехода | ✅ #500 |
 | 8.5 | Карточки/feedback/sheets: аккуратные enter/exit и смена correct/wrong/result-state, без внезапной подмены контента | ✅ #501 |
 | 8.6 | Интерактивные controls: press/hover/focus micro-interactions для кнопок, tab/chip/toggle/select; единая физика duration/easing по приложению | ✅ #502 |
-| 8.7 | Roadmap / открытие следующего дня / completed-state: короткий reward-motion без конфетти по умолчанию и без блокировки следующего действия | ⬜ |
+| 8.7 | Roadmap / открытие следующего дня / completed-state: короткий reward-motion без конфетти по умолчанию и без блокировки следующего действия | ✅ #503 |
 | 8.8 | Skeleton/loading/empty-state transitions: убрать резкие прыжки layout при загрузке курса, статистики и «Повтора» | ⬜ |
 | 8.9 | Свести motion-токены в одном месте (durations/easing/spring), проверить 320–412 px, 60/120 Hz и `prefers-reduced-motion`; добавить visual/e2e smoke на ключевые переходы | ⬜ |
