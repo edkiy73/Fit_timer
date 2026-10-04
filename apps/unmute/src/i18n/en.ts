@@ -419,7 +419,7 @@ export const en: Record<keyof typeof ru, string> = {
   'drill.sessionStats': 'Counted on time: {fast} · not counted: {slow}',
   'drill.score': '{fast} of {total} on time',
   'drill.passed': 'Great! These phrases will come back for review in a few days.',
-  'drill.retryHint': 'Not enough phrases counted on time yet. Go again — it takes a couple of minutes.'
+  'drill.retryHint': 'Not enough phrases counted on time yet. Go again — it takes a couple of minutes.',
   'drill.again': 'Again',
   'drill.continueAnyway': 'Next, I will repeat later',
   'drill.saving': 'Saving result…',
