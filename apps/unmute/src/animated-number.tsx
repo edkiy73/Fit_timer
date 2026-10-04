@@ -1,18 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-
-function prefersReducedMotion():boolean{
-  try{return window.matchMedia('(prefers-reduced-motion: reduce)').matches;}
-  catch{return false;}
-}
-
-function easeOutCubic(t:number):number{
-  return 1-Math.pow(1-t,3);
-}
+import { MOTION, easeOutCubic, motionProgress, prefersReducedMotion } from './motion';
 
 export function AnimatedNumber({
   value,
   suffix='',
-  duration=520,
+  duration=MOTION.number,
   className=''
 }:{
   value:number;
@@ -42,7 +34,7 @@ export function AnimatedNumber({
 
     const tick=(now:number)=>{
       if(cancelled)return;
-      const t=Math.min(1,(now-start)/duration);
+      const t=motionProgress(start,now,duration);
       const next=from+(target-from)*easeOutCubic(t);
       setDisplay(Math.round(next));
       if(t<1)frame=requestAnimationFrame(tick);
