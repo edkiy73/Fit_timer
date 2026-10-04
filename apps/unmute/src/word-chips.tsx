@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 
 /* «Собери фразу»: the answer's words plus a few from other answers of the lesson, shuffled.
@@ -46,6 +46,40 @@ export function WordChips({chips, picked, disabled, onChange}: {
 }){
   const {t} = useI18n();
   const byId = useMemo(() => new Map(chips.map(chip => [chip.id, chip])), [chips]);
+  const pickedRefs=useRef(new Map<string,HTMLButtonElement>());
+  const poolRefs=useRef(new Map<string,HTMLButtonElement>());
+  const pendingMove=useRef<{id:string;from:DOMRect}|null>(null);
+
+  const move=(id:string,from:HTMLButtonElement|null,next:string[])=>{
+    if(from)pendingMove.current={id,from:from.getBoundingClientRect()};
+    onChange(next);
+  };
+
+  useLayoutEffect(()=>{
+    const pending=pendingMove.current;
+    if(!pending)return;
+    pendingMove.current=null;
+    let reduced=false;
+    try{reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;}catch{}
+    if(reduced)return;
+    const target=picked.includes(pending.id)
+      ? pickedRefs.current.get(pending.id)
+      : poolRefs.current.get(pending.id);
+    if(!target||typeof target.animate!=='function')return;
+    const to=target.getBoundingClientRect();
+    const dx=pending.from.left-to.left;
+    const dy=pending.from.top-to.top;
+    const sx=to.width?pending.from.width/to.width:1;
+    const sy=to.height?pending.from.height/to.height:1;
+    target.animate(
+      [
+        {transform:`translate(${dx}px,${dy}px) scale(${sx},${sy})`,opacity:.72},
+        {transform:'translate(0,0) scale(1)',opacity:1}
+      ],
+      {duration:360,easing:'cubic-bezier(.2,.8,.2,1)'}
+    );
+  },[picked]);
+
   return (
     <div className="chips-builder">
       <span className="chips-label">{t('learn.answerLabel')}</span>
@@ -53,8 +87,9 @@ export function WordChips({chips, picked, disabled, onChange}: {
         {picked.length === 0 && <span className="chips-placeholder">{t('chips.placeholder')}</span>}
         {picked.map(id => (
           <button key={id} type="button" className="word-chip is-picked pressable" disabled={disabled}
+            ref={element=>{if(element)pickedRefs.current.set(id,element);else pickedRefs.current.delete(id);}}
             aria-label={t('chips.remove', {word:byId.get(id)?.text ?? ''})}
-            onClick={() => onChange(picked.filter(item => item !== id))} lang="en">
+            onClick={event=>move(id,event.currentTarget,picked.filter(item => item !== id))} lang="en">
             {byId.get(id)?.text}
           </button>
         ))}
@@ -64,8 +99,9 @@ export function WordChips({chips, picked, disabled, onChange}: {
           const used = picked.includes(chip.id);
           return (
             <button key={chip.id} type="button" className={'word-chip pressable' + (used ? ' is-used' : '')}
+              ref={element=>{if(element)poolRefs.current.set(chip.id,element);else poolRefs.current.delete(chip.id);}}
               disabled={disabled || used} aria-hidden={used || undefined} tabIndex={used ? -1 : undefined}
-              onClick={() => onChange([...picked, chip.id])} lang="en">
+              onClick={event=>move(chip.id,event.currentTarget,[...picked,chip.id])} lang="en">
               {chip.text}
             </button>
           );
