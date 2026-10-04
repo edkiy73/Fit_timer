@@ -15,6 +15,7 @@ import {
   requestNotificationPermission,
   type NotificationPermissionState
 } from './notification-native';
+import { syncRemotePush, unregisterRemotePush } from './remote-push';
 
 // 24-hour picker on every phone: the native time input follows the system 12/24 h setting.
 const pad=(value:number)=>String(value).padStart(2,'0');
@@ -94,13 +95,22 @@ export function NotificationSettingsPanel(){
 
   const setEnabled=async(enabled:boolean)=>{
     const saved=await save({enabled});
-    if(saved&&enabled&&native)await refreshNativeState(true);
+    if(!saved)return;
+    if(!enabled){
+      await unregisterRemotePush();
+      return;
+    }
+    if(native){
+      await refreshNativeState(true);
+      await syncRemotePush(true);
+    }
   };
 
   const askSystemPermission=async()=>{
     setSaving(true);
     try{
       await refreshNativeState(true);
+      await syncRemotePush(true);
     }finally{
       setSaving(false);
     }

@@ -10,6 +10,7 @@ import { useCatalog } from './active-course';
 import { DEFAULT_COURSE_ID } from './settings-data';
 import { resetAllProgress } from './progress-reset';
 import { Icon } from './icons';
+import { unregisterRemotePush } from './remote-push';
 
 /* «Я» → «Настройки»: appearance, reminders, «Начать заново», account deletion and the
    legal pages. Kept off «Я» itself, which was one long screen of everything. */
@@ -97,6 +98,7 @@ export function SettingsScreen(){
 
   // Local data stays on the device; the next sign-in merges it into that account.
   const signOut = async () => {
+    await unregisterRemotePush();
     await auth.logout();
     await appDocs.detach();
     navigate('/');
@@ -106,6 +108,7 @@ export function SettingsScreen(){
   const deleteAccount = async () => {
     setDeleteError(false);
     try{
+      await unregisterRemotePush();
       await auth.deleteAccount();
       await appDocs.detach();
       navigate('/');

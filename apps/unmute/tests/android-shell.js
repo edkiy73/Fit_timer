@@ -26,6 +26,8 @@ assert.doesNotMatch(plugin,/FitAudio/);
 // In-app updates: the direct APK may install updates, the store build may not.
 const updater=read('android/app/src/main/java/app/unmute/english/UnMuteUpdatePlugin.java');
 const gradle=read('android/app/build.gradle');
+const rootGradle=read('android/build.gradle');
+const pkg=JSON.parse(read('package.json'));
 const directManifest=read('android/app/src/direct/AndroidManifest.xml');
 assert.match(activity,/registerPlugin\(UnMuteUpdatePlugin\.class\)/);
 assert.match(updater,/@CapacitorPlugin\(\s*name\s*=\s*"UnMuteUpdate"/s);
@@ -40,6 +42,10 @@ assert.match(read('android/app/src/main/res/xml/file_paths.xml'),/path="updates\
 
 assert.match(manifest,/android\.permission\.RECORD_AUDIO/);
 assert.match(manifest,/android\.permission\.POST_NOTIFICATIONS/);
+assert.equal(pkg.dependencies['@capacitor/push-notifications'],'8.1.2');
+assert.match(rootGradle,/com\.google\.gms:google-services:4\.4\.4/);
+assert.match(gradle,/google-services\.json/);
+assert.match(gradle,/com\.google\.gms\.google-services/);
 
 // No fixed-colour strip under the status bar: the page is drawn edge to edge and paints it
 // in the theme's colour (index.html viewport-fit=cover, theme.ts sets the icon colour).
