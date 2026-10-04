@@ -15,6 +15,7 @@ export interface LearnerNotificationIntent {
   streak?:number;
   breakDays?:number;
   lessonDayIndex?:number;
+  lessonTopic?:string;
 }
 
 export interface NotificationPolicyInput {
@@ -24,6 +25,7 @@ export interface NotificationPolicyInput {
   currentLessonAvailable:boolean;
   courseComplete:boolean;
   currentLessonDayIndex?:number;
+  currentLessonTopic?:string;
   preferences?:NotificationSettings;
 }
 
@@ -126,7 +128,8 @@ export function chooseLearnerNotification(
         kind:'return-break',
         route:'/',
         breakDays,
-        ...(input.currentLessonDayIndex?{lessonDayIndex:input.currentLessonDayIndex}:{})
+        ...(input.currentLessonDayIndex?{lessonDayIndex:input.currentLessonDayIndex}:{}),
+        ...(input.currentLessonTopic?{lessonTopic:input.currentLessonTopic}:{})
       };
     }
     // After the learner has started a course, do not nag every missed day.
@@ -137,7 +140,9 @@ export function chooseLearnerNotification(
   if(dailyEnabled&&input.currentLessonAvailable&&!input.courseComplete){
     return {
       kind:'daily-lesson',
-      route:'/'
+      route:'/',
+      ...(input.currentLessonDayIndex?{lessonDayIndex:input.currentLessonDayIndex}:{}),
+      ...(input.currentLessonTopic?{lessonTopic:input.currentLessonTopic}:{})
     };
   }
 
