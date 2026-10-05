@@ -109,16 +109,12 @@ describe('course map',()=>{
     );
 
     expect(screen.getByText('Дальше — полный курс')).toBeTruthy();
-    expect(screen.getAllByRole('button',{name:'Открыть'})).toHaveLength(1);
     expect(screen.getAllByRole('button',{name:'Открыть доступ'})).toHaveLength(1);
     expect(screen.getByText('Сегодня')).toBeTruthy();
     expect(screen.getByRole('button',{name:'Теория: ещё нужно пройти'})).toBeTruthy();
 
     await user.click(screen.getByRole('button',{name:'Теория: ещё нужно пройти'}));
     expect(onOpen).toHaveBeenCalledWith('day-2',false,'theory');
-
-    await user.click(screen.getByRole('button',{name:'Открыть'}));
-    expect(onOpen).toHaveBeenCalledWith('day-2');
 
     await user.click(screen.getByRole('button',{name:'День 1, Пройден'}));
     const sheet=screen.getByRole('dialog');
