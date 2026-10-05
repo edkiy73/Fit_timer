@@ -29,3 +29,15 @@ export function easeOutCubic(t:number):number{
   const value=Math.max(0,Math.min(1,t));
   return 1-Math.pow(1-value,3);
 }
+
+
+export function withViewTransition(change:()=>void):void{
+  const doc=document as Document&{
+    startViewTransition?:((callback:()=>void)=>unknown)|undefined;
+  };
+  if(!prefersReducedMotion()&&doc.startViewTransition){
+    doc.startViewTransition(change);
+    return;
+  }
+  change();
+}
