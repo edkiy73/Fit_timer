@@ -611,6 +611,9 @@ select:active{transform:scale(.985)}
 .screen-head h2{margin:0;font-size:30px;line-height:36px;font-weight:800;letter-spacing:-.02em}
 
 .today,.course-map-shell,.review-shell,.me-profile{display:grid;gap:var(--screen-gap)}
+.today-section{display:grid;gap:10px}
+.today-section-title{margin:2px 2px 0;font-size:14px;line-height:1.2;font-weight:800;color:var(--muted)}
+.today-main{gap:0}
 
 /* Bento: tile size = importance. 2 columns on phones, 4 from 600 px. */
 .bento{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:dense;gap:12px}
