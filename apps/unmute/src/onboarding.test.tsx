@@ -40,9 +40,10 @@ describe('minimal onboarding',()=>{
     expect(screen.getByText('Говори вслух')).toBeTruthy();
     expect(screen.getByText('Нажимай любое слово')).toBeTruthy();
     expect(screen.getByText('Повторы придут сами')).toBeTruthy();
+    expect(screen.getByRole('heading',{name:'Как это работает'})).toBeTruthy();
 
     expect(screen.queryByRole('textbox')).toBeNull();
-    expect(screen.queryByText(/уровень/i)).toBeNull();
+    expect(screen.getByText('Можно начать сразу')).toBeTruthy();
     expect(screen.queryByText(/где жив/i)).toBeNull();
     expect(screen.queryByText(/минут в день/i)).toBeNull();
     expect(screen.queryByRole('button',{name:'Далее'})).toBeNull();
@@ -64,7 +65,7 @@ describe('minimal onboarding',()=>{
       onCourse
     });
 
-    expect(screen.getByRole('heading',{name:'С чего начнём?'})).toBeTruthy();
+    expect(screen.getByRole('heading',{name:'Выбери курс'})).toBeTruthy();
     expect(screen.getByRole('button',{name:/Общий английский/}).getAttribute('aria-pressed')).toBe('true');
     await user.click(screen.getByRole('button',{name:/A1: первые шаги/}));
     expect(onCourse).toHaveBeenCalledWith('a1-starter');
@@ -72,7 +73,7 @@ describe('minimal onboarding',()=>{
 
   it('skips the course choice with a single course',()=>{
     renderOnboarding(vi.fn(),{courses:[{id:'main',title:{ru:'Общий'},access:{mode:'free'}} as never],courseId:'main',onCourse:vi.fn()});
-    expect(screen.queryByRole('heading',{name:'С чего начнём?'})).toBeNull();
+    expect(screen.queryByRole('heading',{name:'Выбери курс'})).toBeNull();
   });
 
   it('automatically recognizes real/imported progress but ignores tombstones',()=>{
