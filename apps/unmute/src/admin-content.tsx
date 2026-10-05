@@ -132,6 +132,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   const [bulkPreview,setBulkPreview]=useState<BulkPreview|null>(null);
   const [bulkMessage,setBulkMessage]=useState('');
   const [bulkBusy,setBulkBusy]=useState(false);
+  const [bulkStep,setBulkStep]=useState<1|2|3>(1);
   const [lookup,setLookup]=useState(initialContext.lookup);
   const [lookupResults,setLookupResults]=useState<LookupItem[]|null>(null);
   const [lookupMessage,setLookupMessage]=useState('');
@@ -334,7 +335,8 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       });
       setBulkPrompt(String(result.prompt || ''));
       setBulkCoverage((result.coverage || null) as CoverageSummary|null);
-      setBulkMessage('Собрано '+String(result.targetCount || 0)+(bulkMode==='missing'?' недостающих форм.':' записей для обогащения.')+' Скопируй запрос в ИИ и вставь его ответ ниже.');
+      setBulkStep(2);
+      setBulkMessage('Собрано '+String(result.targetCount || 0)+(bulkMode==='missing'?' недостающих форм.':' записей для обогащения.')+'.');
     }catch(error){
       setBulkMessage('Не удалось собрать запрос: '+String((error as {code?:string})?.code || 'request_failed'));
     }finally{
@@ -363,6 +365,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       });
       setBulkPreview(result as BulkPreview);
       setBulkCoverage((result.coverage || null) as CoverageSummary|null);
+      setBulkStep(3);
       const summary=(result.summary || {}) as Record<string,unknown>;
       setBulkMessage('Проверено: '+String(summary.creates||0)+' новых, '+String(summary.updates||0)+' обновлений, '+String(summary.conflicts||0)+' конфликтов.');
     }catch(error){
@@ -392,6 +395,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
       setBulkPreview(null);
       setBulkText('');
       setBulkPrompt('');
+      setBulkStep(1);
       setBulkMessage('Добавлено записей: '+String(result.applied || 0)+'. Ученики увидят после «Выпустить».');
       await load();
     }catch(error){
@@ -496,114 +500,161 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
         )}
       </article>
 
-      <article className="ab-admin-panel ab-admin-bulk">
+      <article className="ab-admin-panel ab-admin-bulk ab-bulk-wizard">
         <div className="ab-admin-section-head">
           <div>
             <h2>Дополнить словарь через ИИ</h2>
-            <p className="ab-admin-note">Находим слова курса, которых нет в словаре → копируешь запрос в ChatGPT или другой ИИ → вставляешь ответ → проверяем → добавляем. Ученики увидят после «Выпустить».</p>
+            <p className="ab-admin-note">Три шага: подготовить запрос → вставить ответ ИИ → проверить и применить.</p>
           </div>
         </div>
 
-        <div className="ab-admin-bulk-controls">
-          <label>
-            <span>Курс</span>
-            <select value={bulkSetId} onChange={event=>{
-              setBulkSetId(event.target.value);
-              setBulkPrompt('');
-              setBulkPreview(null);
-              setBulkCoverage(null);
-            }}>
-              {sets.filter(item=>item.draftRevision).map(item=>(
-                <option value={item.id} key={item.id}>{item.title.ru || item.id}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Что сделать</span>
-            <select value={bulkMode} onChange={event=>{
-              setBulkMode(event.target.value==='enrich'?'enrich':'missing');
-              setBulkPrompt('');
-              setBulkPreview(null);
-            }}>
-              <option value="missing">Добавить недостающие слова</option>
-              <option value="enrich">Дополнить уже имеющиеся</option>
-            </select>
-          </label>
-          <label>
-            <span>Сколько слов за раз</span>
-            <select value={bulkLimit} onChange={event=>setBulkLimit(Number(event.target.value))}>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-          </label>
-          <button type="button" disabled={bulkBusy || !bulkSetId} onClick={()=>void buildBulkPrompt()}>
-            {bulkMode==='missing'?'Найти недостающие':'Найти, что дополнить'}
+        <nav className="ab-bulk-wizard-nav" aria-label="Шаги дополнения словаря">
+          <button type="button" data-state={bulkStep===1?'current':bulkStep>1?'done':'idle'} onClick={()=>setBulkStep(1)}>
+            <span>1</span><b>Запрос</b>
           </button>
-        </div>
+          <button type="button" data-state={bulkStep===2?'current':bulkStep>2?'done':'idle'} disabled={!bulkPrompt} onClick={()=>bulkPrompt&&setBulkStep(2)}>
+            <span>2</span><b>Ответ ИИ</b>
+          </button>
+          <button type="button" data-state={bulkStep===3?'current':'idle'} disabled={!bulkPreview} onClick={()=>bulkPreview&&setBulkStep(3)}>
+            <span>3</span><b>Проверка</b>
+          </button>
+        </nav>
 
-        {bulkCoverage && (
-          <div className="ab-admin-status-line">
-            <span><b>Есть в словаре</b> {String(bulkCoverage.resolvedSurfaces ?? 0)}/{String(bulkCoverage.uniqueSurfaces ?? 0)} · {String(bulkCoverage.coveragePct ?? 0)}%</span>
-            <span><b>Нет в словаре</b> {String(bulkCoverage.missingSurfaces ?? 0)}</span>
-            <span><b>IPA</b> {String(bulkCoverage.ipaCoveragePct ?? 0)}%</span>
-            <span><b>Произношение по-русски</b> {String(bulkCoverage.ruReadingCoveragePct ?? 0)}%</span>
-            <span><b>Примеры</b> {String(bulkCoverage.exampleCoveragePct ?? 0)}%</span>
-          </div>
-        )}
-
-        {bulkPrompt && (
-          <div className="ab-admin-bulk-step">
-            <div className="ab-admin-section-head">
-              <div><strong>1. Запрос для ИИ</strong><p className="ab-admin-note">Можно вставить в ChatGPT или другой ИИ целиком.</p></div>
-              <button type="button" className="ab-admin-secondary" onClick={()=>void copyBulkPrompt()}>Копировать</button>
+        {bulkStep===1&&(
+          <section className="ab-bulk-wizard-step" aria-labelledby="bulk-step-1-title">
+            <div className="ab-bulk-wizard-step-head">
+              <div>
+                <span className="ab-bulk-step-kicker">Шаг 1 из 3</span>
+                <h3 id="bulk-step-1-title">Подготовить запрос</h3>
+                <p className="ab-admin-note">Выбери курс и что нужно сделать. Мы соберём готовый запрос для ChatGPT или другого ИИ.</p>
+              </div>
             </div>
-            <textarea readOnly rows={12} value={bulkPrompt} aria-label="Запрос для ИИ" />
-          </div>
+
+            <div className="ab-admin-bulk-controls">
+              <label>
+                <span>Курс</span>
+                <select value={bulkSetId} onChange={event=>{
+                  setBulkSetId(event.target.value);
+                  setBulkPrompt('');
+                  setBulkText('');
+                  setBulkPreview(null);
+                  setBulkCoverage(null);
+                  setBulkStep(1);
+                }}>
+                  {sets.filter(item=>item.draftRevision).map(item=>(
+                    <option value={item.id} key={item.id}>{item.title.ru || item.id}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Что сделать</span>
+                <select value={bulkMode} onChange={event=>{
+                  setBulkMode(event.target.value==='enrich'?'enrich':'missing');
+                  setBulkPrompt('');
+                  setBulkText('');
+                  setBulkPreview(null);
+                  setBulkCoverage(null);
+                  setBulkStep(1);
+                }}>
+                  <option value="missing">Добавить недостающие слова</option>
+                  <option value="enrich">Дополнить уже имеющиеся</option>
+                </select>
+              </label>
+              <label>
+                <span>Сколько слов за раз</span>
+                <select value={bulkLimit} onChange={event=>setBulkLimit(Number(event.target.value))}>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="ab-admin-action-row">
+              <button type="button" disabled={bulkBusy || !bulkSetId} onClick={()=>void buildBulkPrompt()}>
+                {bulkMode==='missing'?'Подготовить недостающие':'Подготовить обогащение'}
+              </button>
+            </div>
+          </section>
         )}
 
-        <div className="ab-admin-bulk-step">
-          <strong>2. Ответ ИИ</strong>
-          <p className="ab-admin-note">Вставь ответ ИИ целиком, как есть.</p>
-          <textarea
-            rows={12}
-            value={bulkText}
-            onChange={event=>{setBulkText(event.target.value);setBulkPreview(null);}}
-            placeholder={'{"format":"unmute.lexicon.patch.v1","entries":[...]}'}
-            aria-label="Ответ ИИ"
-          />
-          <div className="ab-admin-action-row">
-            <button type="button" className="ab-admin-secondary" disabled={bulkBusy || !bulkText.trim()} onClick={()=>void previewBulkPatch()}>Проверить без изменений</button>
-            <button
-              type="button"
-              disabled={bulkBusy || !bulkPreview || (bulkPreview.summary?.conflicts || 0)>0}
-              onClick={()=>void applyBulkPatch()}
-            >Добавить в словарь</button>
-          </div>
-        </div>
+        {bulkStep===2&&(
+          <section className="ab-bulk-wizard-step" aria-labelledby="bulk-step-2-title">
+            <div className="ab-bulk-wizard-step-head">
+              <div>
+                <span className="ab-bulk-step-kicker">Шаг 2 из 3</span>
+                <h3 id="bulk-step-2-title">Вставить ответ ИИ</h3>
+                <p className="ab-admin-note">Запрос уже готов. Скопируй его, отправь в ИИ и вставь сюда ответ целиком.</p>
+              </div>
+            </div>
 
-        {bulkPreview && (
-          <div className="ab-admin-bulk-preview">
-            <div className="ab-admin-status-line">
+            <div className="ab-bulk-ready">
+              <div>
+                <strong>Запрос готов</strong>
+                {bulkCoverage&&<span>{String(bulkCoverage.resolvedSurfaces ?? 0)}/{String(bulkCoverage.uniqueSurfaces ?? 0)} слов уже покрыто · {String(bulkCoverage.coveragePct ?? 0)}%</span>}
+              </div>
+              <button type="button" className="ab-admin-secondary" onClick={()=>void copyBulkPrompt()}>Копировать запрос</button>
+            </div>
+
+            <details className="ab-admin-details">
+              <summary>Посмотреть запрос</summary>
+              <textarea readOnly rows={10} value={bulkPrompt} aria-label="Запрос для ИИ" />
+            </details>
+
+            <label className="ab-bulk-answer">
+              <span>Ответ ИИ</span>
+              <textarea
+                rows={12}
+                value={bulkText}
+                onChange={event=>{
+                  setBulkText(event.target.value);
+                  setBulkPreview(null);
+                }}
+                placeholder={'{"format":"unmute.lexicon.patch.v1","entries":[...]}'}
+                aria-label="Ответ ИИ"
+              />
+            </label>
+
+            <div className="ab-admin-action-row">
+              <button type="button" className="ab-admin-secondary" onClick={()=>setBulkStep(1)}>Назад</button>
+              <button type="button" disabled={bulkBusy || !bulkText.trim()} onClick={()=>void previewBulkPatch()}>Проверить ответ</button>
+            </div>
+          </section>
+        )}
+
+        {bulkStep===3&&bulkPreview&&(
+          <section className="ab-bulk-wizard-step" aria-labelledby="bulk-step-3-title">
+            <div className="ab-bulk-wizard-step-head">
+              <div>
+                <span className="ab-bulk-step-kicker">Шаг 3 из 3</span>
+                <h3 id="bulk-step-3-title">Проверить и применить</h3>
+                <p className="ab-admin-note">Ничего ещё не изменено. Проверь результат и только потом добавляй в draft словаря.</p>
+              </div>
+            </div>
+
+            <div className="ab-admin-status-line ab-bulk-summary">
               <span><b>Новых</b> {String(bulkPreview.summary?.creates ?? 0)}</span>
               <span><b>Обновлений</b> {String(bulkPreview.summary?.updates ?? 0)}</span>
               <span><b>Конфликтов</b> {String(bulkPreview.summary?.conflicts ?? 0)}</span>
               <span><b>Предупреждений</b> {String(bulkPreview.summary?.warnings ?? 0)}</span>
             </div>
-            {!!bulkPreview.conflicts?.length && (
+
+            {!!bulkPreview.conflicts?.length&&(
               <div className="ab-admin-error">
                 {bulkPreview.conflicts.map((item,index)=>(
                   <div key={index}><b>{item.lemma || item.surface || 'entry'}</b>: {item.code}{item.detail ? ' · '+item.detail : ''}</div>
                 ))}
               </div>
             )}
-            {!!bulkPreview.warnings?.length && (
+
+            {!!bulkPreview.warnings?.length&&(
               <details className="ab-admin-details">
                 <summary>Предупреждения ({bulkPreview.warnings.length})</summary>
                 <ul>{bulkPreview.warnings.map((item,index)=><li key={index}>{item}</li>)}</ul>
               </details>
             )}
-            {!!bulkPreview.changes?.length && (
+
+            {!!bulkPreview.changes?.length&&(
               <details className="ab-admin-details">
                 <summary>Что изменится ({bulkPreview.changes.length})</summary>
                 <div className="ab-admin-table-wrap">
@@ -621,10 +672,31 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
                 </div>
               </details>
             )}
-          </div>
+
+            {bulkCoverage&&(
+              <details className="ab-admin-details">
+                <summary>Покрытие словаря после изменений</summary>
+                <div className="ab-admin-status-line">
+                  <span><b>Словарь</b> {String(bulkCoverage.coveragePct ?? 0)}%</span>
+                  <span><b>IPA</b> {String(bulkCoverage.ipaCoveragePct ?? 0)}%</span>
+                  <span><b>Произношение</b> {String(bulkCoverage.ruReadingCoveragePct ?? 0)}%</span>
+                  <span><b>Примеры</b> {String(bulkCoverage.exampleCoveragePct ?? 0)}%</span>
+                </div>
+              </details>
+            )}
+
+            <div className="ab-admin-action-row">
+              <button type="button" className="ab-admin-secondary" onClick={()=>setBulkStep(2)}>Исправить ответ</button>
+              <button
+                type="button"
+                disabled={bulkBusy || (bulkPreview.summary?.conflicts || 0)>0}
+                onClick={()=>void applyBulkPatch()}
+              >Добавить в словарь</button>
+            </div>
+          </section>
         )}
 
-        {bulkMessage && <p className="ab-admin-feedback" role="status">{bulkMessage}</p>}
+        {bulkMessage&&<p className="ab-admin-feedback" role="status">{bulkMessage}</p>}
       </article>
 
       <article className="ab-admin-panel">
