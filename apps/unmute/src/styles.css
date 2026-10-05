@@ -774,6 +774,10 @@ select:active{transform:scale(.985)}
 .station-title{font-size:16px;font-weight:800;line-height:1.3}
 .station-status{color:var(--muted);font-size:12px}
 .station.is-purchase-locked .station-title,.station.is-prerequisite-locked .station-title{color:var(--muted)}
+.station-section-chips{grid-column:2;display:flex;flex-wrap:wrap;gap:7px;margin:-2px 0 10px 12px}
+.station-section-chip{display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--muted);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.station-section-chip.is-complete{border-color:color-mix(in srgb,var(--success) 36%,var(--line));background:color-mix(in srgb,var(--success) 9%,var(--card));color:var(--ink)}
+.station-section-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .station-go{grid-column:2;justify-self:start;display:inline-flex;align-items:center;gap:6px;margin:0 0 12px}
 .turnstile{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:8px 14px;padding:12px 14px;border:1.5px dashed var(--locked);border-radius:20px;background:var(--surface)}
 .turnstile-icon{color:var(--locked)}
@@ -842,6 +846,7 @@ select:active{transform:scale(.985)}
 .lesson-section-nav::-webkit-scrollbar{display:none}
 .lesson-section-nav .chip-button{min-height:38px;padding-inline:11px;color:var(--muted);font-size:13px;white-space:nowrap}
 .lesson-section-nav .chip-button.is-active{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));background:color-mix(in srgb,var(--accent) 12%,var(--card));color:var(--ink)}
+.lesson-section-nav .chip-button.is-complete:not(.is-active){border-color:color-mix(in srgb,var(--success) 38%,var(--line));background:color-mix(in srgb,var(--success) 8%,var(--card));color:var(--ink)}
 @media(max-width:620px){
   .runner-heading{display:grid;align-items:start}
   .lesson-section-nav{justify-content:flex-start;width:100%}
