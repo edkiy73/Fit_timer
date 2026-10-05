@@ -349,6 +349,8 @@ select:active{transform:scale(.985)}
 
 .word-review-card h3{font-size:26px}
 .word-review-card .drill-target{font-size:24px}
+.review-word-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.review-word-actions :is(.primary-button,.secondary-button){width:100%;min-width:0}
 .review-word-warning{align-items:start}
 
 
