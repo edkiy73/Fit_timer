@@ -1027,20 +1027,147 @@ select:active{transform:scale(.985)}
 .legal-body .muted,.legal-body .draft{color:var(--muted);font-size:14px}
 .legal-body a{color:var(--accent-ink,var(--accent))}
 
-/* «Сегодня»: secondary cards are content-sized, with no decorative empty zones. */
-.tile-streak,.tile-course-mini,.tile-review{align-content:start}
-.tile-streak,.tile-course-mini{min-height:132px;padding:14px}
-.tile-review.is-due{cursor:pointer;min-height:82px;padding:13px 16px;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:16px}
-.tile-review .tile-kicker{align-self:center}
-.tile-review-row{display:flex;align-items:baseline;justify-content:flex-end;gap:8px;min-width:0}
-.tile-review-row .tile-number{font-size:32px}
-.tile-review-row .tile-caption{font-size:13px;white-space:nowrap}
-.course-mini-body{display:flex;align-items:center;gap:10px;min-width:0}
-.course-mini-ring{--p:0;display:grid;place-items:center;width:52px;height:52px;flex:none;border-radius:50%;background:conic-gradient(var(--accent) calc(var(--p)*1%),var(--surface) 0);position:relative}
-.course-mini-ring::after{content:"";position:absolute;inset:6px;border-radius:50%;background:var(--card)}
-.course-mini-ring strong{position:relative;z-index:1;font-size:14px;font-variant-numeric:tabular-nums}
-.tile-course-mini .tile-caption{line-height:1.3}
-@media(max-width:390px){.tile-streak,.tile-course-mini{min-height:138px}.tile-review.is-due{grid-template-columns:1fr auto}}
+/* «Сегодня»: premium composition in the native UnMute visual language. */
+.tile-review.is-due{
+  position:relative;
+  overflow:hidden;
+  cursor:pointer;
+  min-height:104px;
+  padding:16px 18px;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  column-gap:18px;
+  border-color:color-mix(in srgb,var(--listen) 26%,var(--line));
+  background:
+    radial-gradient(circle at 8% 50%,color-mix(in srgb,var(--listen) 11%,transparent),transparent 34%),
+    linear-gradient(135deg,color-mix(in srgb,var(--card) 98%,var(--listen) 2%),var(--card));
+}
+.tile-review.is-due::after{
+  content:"";
+  position:absolute;
+  right:-40px;
+  bottom:-64px;
+  width:180px;
+  height:150px;
+  border-radius:50%;
+  background:color-mix(in srgb,var(--accent) 7%,transparent);
+  filter:blur(28px);
+  pointer-events:none;
+}
+.review-card-main{display:flex;align-items:center;gap:12px;min-width:0}
+.review-card-icon{
+  display:grid;
+  place-items:center;
+  width:48px;
+  height:48px;
+  flex:none;
+  border-radius:16px;
+  background:color-mix(in srgb,var(--listen) 14%,var(--card));
+  color:var(--listen);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--listen) 18%,transparent);
+}
+.review-card-copy{display:grid;gap:2px;min-width:0}
+.review-card-copy strong{font-size:18px;line-height:1.2;font-weight:800}
+.review-card-copy span{overflow:hidden;color:var(--muted);font-size:12.5px;line-height:1.3;text-overflow:ellipsis;white-space:nowrap}
+.review-card-count{position:relative;z-index:1;display:grid;justify-items:end;gap:0;min-width:86px}
+.review-card-count strong{font-size:36px;line-height:.95;font-weight:800;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+.review-card-count>span{margin-top:5px;color:var(--muted);font-size:12.5px;white-space:nowrap}
+
+.tile-streak,.tile-course-mini{
+  min-height:154px;
+  padding:14px;
+  align-content:stretch;
+  overflow:hidden;
+}
+.tile-streak{
+  background:
+    radial-gradient(circle at 0 0,color-mix(in srgb,var(--streak) 9%,transparent),transparent 46%),
+    var(--card);
+}
+.tile-course-mini{
+  background:
+    radial-gradient(circle at 100% 0,color-mix(in srgb,var(--accent) 9%,transparent),transparent 46%),
+    var(--card);
+}
+.mini-card-head{display:flex;align-items:center;gap:8px;min-height:30px}
+.mini-card-icon{
+  display:grid;
+  place-items:center;
+  width:30px;
+  height:30px;
+  flex:none;
+  border-radius:10px;
+  background:color-mix(in srgb,currentColor 10%,var(--card));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 14%,transparent);
+}
+.mini-card-head .tile-kicker{font-size:14px;font-weight:800}
+.streak-number{display:flex;align-items:baseline;gap:6px;margin-top:4px;font-size:36px;letter-spacing:-.03em}
+.streak-number .tile-unit{font-size:15px;font-weight:700;color:var(--muted);letter-spacing:0}
+.tile-streak .week{margin-top:auto}
+
+.course-mini-body{display:grid;grid-template-columns:62px minmax(0,1fr);align-items:center;gap:10px;margin-top:auto}
+.course-mini-ring{
+  --p:0;
+  position:relative;
+  display:grid;
+  place-items:center;
+  width:62px;
+  height:62px;
+  flex:none;
+}
+.course-mini-ring-track{
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  background:conic-gradient(var(--accent) calc(var(--p)*1%),color-mix(in srgb,var(--surface) 82%,var(--card)) 0);
+  -webkit-mask:radial-gradient(circle,transparent 55%,#000 57%);
+  mask:radial-gradient(circle,transparent 55%,#000 57%);
+}
+.course-mini-ring::after{
+  content:"";
+  position:absolute;
+  inset:7px;
+  border-radius:50%;
+  background:color-mix(in srgb,var(--card) 94%,var(--accent) 6%);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--line) 75%,transparent);
+}
+.course-mini-ring strong{position:relative;z-index:1;font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
+.course-mini-copy{display:grid;gap:2px;min-width:0}
+.course-mini-copy strong{font-size:14px;line-height:1.25;font-weight:800;white-space:nowrap}
+.course-mini-copy span{color:var(--muted);font-size:12.5px;line-height:1.25}
+
+.tile-speak,.tile-landmark{
+  position:relative;
+  overflow:hidden;
+  border-color:color-mix(in srgb,var(--accent) 12%,var(--line));
+  background:
+    linear-gradient(135deg,color-mix(in srgb,var(--card) 98%,var(--accent) 2%),var(--card));
+}
+.tile-speak::after,.tile-landmark::after{
+  content:"";
+  position:absolute;
+  right:-50px;
+  bottom:-70px;
+  width:190px;
+  height:135px;
+  border-radius:50%;
+  background:color-mix(in srgb,var(--accent) 6%,transparent);
+  filter:blur(28px);
+  pointer-events:none;
+}
+.tile-speak>*,
+.tile-landmark>*{position:relative;z-index:1}
+
+@media(max-width:390px){
+  .tile-review.is-due{grid-template-columns:minmax(0,1fr) auto;column-gap:10px;padding-inline:14px}
+  .review-card-icon{width:44px;height:44px;border-radius:14px}
+  .review-card-copy span{max-width:150px}
+  .review-card-count strong{font-size:34px}
+  .tile-streak,.tile-course-mini{min-height:148px}
+  .course-mini-body{grid-template-columns:58px minmax(0,1fr)}
+  .course-mini-ring{width:58px;height:58px}
+  .course-mini-copy strong{font-size:13px}
+}
 
 /* «Маршрут»: the current course is a card you cannot miss, with «Сменить». */
 .course-card{display:flex;align-items:center;gap:12px;width:100%;margin:0;min-height:58px;padding:11px 14px;border:1px solid color-mix(in srgb,var(--accent) 24%,var(--line));border-radius:20px;background:color-mix(in srgb,var(--accent) 5%,var(--card));color:var(--ink);font:inherit;text-align:left;cursor:pointer}
