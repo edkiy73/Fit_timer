@@ -344,11 +344,11 @@ describe('node activity runner',()=>{
     const {onExit}=renderRunner();
 
     expect(window.dispatchEvent(new Event(SYSTEM_BACK_EVENT,{cancelable:true}))).toBe(false);
-    expect(screen.getByRole('heading',{name:'Выйти из урока?'})).toBeTruthy();
+    expect(await screen.findByRole('heading',{name:'Выйти из урока?'})).toBeTruthy();
     expect(onExit).not.toHaveBeenCalled();
 
     expect(window.dispatchEvent(new Event(SYSTEM_BACK_EVENT,{cancelable:true}))).toBe(false);
-    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());
     expect(onExit).not.toHaveBeenCalled();
   });
 
