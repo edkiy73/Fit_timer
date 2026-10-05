@@ -60,10 +60,11 @@ export function gradeCourseCard(
   const sentence=gradeSentenceResponse(livePrevious,responseKind,correct);
   return withLearningDay({
     ...doc,
-    seen:{
-      ...doc.seen,
-      [activityId]:touchedFlag(at),
-    },
+    // A first-pass mistake is learned activity, but it is not a resolved lesson step yet.
+    // The correction flow marks it seen only after the learner later supplies a passing answer.
+    seen:correct
+      ? {...doc.seen,[activityId]:touchedFlag(at)}
+      : doc.seen,
     cards:{
       ...doc.cards,
       [activityId]:{...graded,...sentence,at},
