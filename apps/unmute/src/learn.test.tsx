@@ -339,12 +339,15 @@ describe('node activity runner',()=>{
     expect(screen.getByText('С первого раза верно: 1 из 2')).toBeTruthy();
   });
 
-  it('opens exit confirmation on Android Back without exiting the lesson',async()=>{
+  it('uses Android Back only to open and close the lesson exit confirmation',async()=>{
     const {onExit}=renderRunner();
-    const event=new Event(SYSTEM_BACK_EVENT,{cancelable:true});
 
-    expect(window.dispatchEvent(event)).toBe(false);
+    expect(window.dispatchEvent(new Event(SYSTEM_BACK_EVENT,{cancelable:true}))).toBe(false);
     expect(screen.getByRole('heading',{name:'Выйти из урока?'})).toBeTruthy();
+    expect(onExit).not.toHaveBeenCalled();
+
+    expect(window.dispatchEvent(new Event(SYSTEM_BACK_EVENT,{cancelable:true}))).toBe(false);
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(onExit).not.toHaveBeenCalled();
   });
 

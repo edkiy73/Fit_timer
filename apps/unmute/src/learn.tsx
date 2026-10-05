@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useBlocker, useNavigate, useParams, useSearchParams } from 'react-router';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity, RoadmapNode } from './content/schema';
 import type { CourseProgressDocument } from './progress';
@@ -146,10 +146,6 @@ export interface NodeRunnerViewProps {
   resumeSavedRun?:boolean;
   /** Replay only the regular answer tasks without changing review/progression. */
   replayTasksOnly?:boolean;
-  /** Browser/system Back asks the runner to open the same exit sheet as the close button. */
-  exitRequest?:number;
-  /** Called when the user keeps the lesson after a blocked Back navigation. */
-  onExitCancelled?:()=>void;
 }
 
 const isPlan=(activity:Activity)=>activity.type==='theory'&&(activity.tags??[]).includes('plan');
@@ -300,9 +296,7 @@ export function NodeRunnerView({
   startSection,
   startMode,
   resumeSavedRun=false,
-  replayTasksOnly=false,
-  exitRequest=0,
-  onExitCancelled=()=>{}
+  replayTasksOnly=false
 }:NodeRunnerViewProps){
   const {t,locale}=useI18n();
   const state=runtime.state;
@@ -372,34 +366,13 @@ export function NodeRunnerView({
     runId:string;
     runMode:LessonRunMode;
   }|null>(null);
-  const lastExitRequestRef=useRef(exitRequest);
-
-  const closeExitSheet=()=>{
-    setExitOpen(false);
-    onExitCancelled();
-  };
+  const closeExitSheet=()=>setExitOpen(false);
 
   const leaveFromExitSheet=()=>{
     if(state&&node)markLessonRunPaused(state.set.id,node.id);
-    // Sheet owns a same-URL history entry. If we leave while that marker is still current,
-    // Sheet cleanup calls history.back() and can bounce us straight back into the lesson.
-    try{
-      const current=window.history.state;
-      if(current?.unmuteSheet){
-        const next={...current};
-        delete next.unmuteSheet;
-        window.history.replaceState(next,'',window.location.href);
-      }
-    }catch{}
     setExitOpen(false);
     onExit();
   };
-
-  useEffect(()=>{
-    if(exitRequest===lastExitRequestRef.current)return;
-    lastExitRequestRef.current=exitRequest;
-    setExitOpen(true);
-  },[exitRequest]);
 
   useEffect(()=>{
     const onSystemBack=(event:Event)=>{
@@ -408,11 +381,15 @@ export function NodeRunnerView({
         onExit();
         return;
       }
+      if(exitOpen){
+        setExitOpen(false);
+        return;
+      }
       setExitOpen(true);
     };
     window.addEventListener(SYSTEM_BACK_EVENT,onSystemBack);
     return ()=>window.removeEventListener(SYSTEM_BACK_EVENT,onSystemBack);
-  },[finished,onExit]);
+  },[exitOpen,finished,onExit]);
 
   useEffect(()=>{
     // Completed nodes opened later are not new completions. A persisted completion candidate
@@ -668,7 +645,7 @@ export function NodeRunnerView({
   };
 
   const exitSheet=(
-    <Sheet open={exitOpen} onClose={closeExitSheet} labelledBy="lesson-exit-title" closeLabel={t('learn.exitStay')}>
+    <Sheet open={exitOpen} onClose={closeExitSheet} labelledBy="lesson-exit-title" closeLabel={t('learn.exitStay')} historyEntry={false}>
       <div className="confirm-sheet confirm-sheet-compact">
         <h3 id="lesson-exit-title">{t('learn.exitTitle')}</h3>
         <p className="tile-text">{t('learn.exitText')}</p>
@@ -1367,30 +1344,7 @@ export function NodeRunnerScreen(){
   const startActivityId=search.get('activity')||undefined;
   const resumeSavedRun=search.get('resume')==='1';
   const replayTasksOnly=search.get('tasks')==='1';
-  const allowExitRef=useRef(false);
-  const [exitRequest,setExitRequest]=useState(0);
-  const blocker=useBlocker(({currentLocation,nextLocation})=>
-    !allowExitRef.current&&
-    currentLocation.pathname.startsWith('/learn/')&&
-    nextLocation.pathname!==currentLocation.pathname
-  );
-
-  useEffect(()=>{
-    if(blocker.state==='blocked')setExitRequest(value=>value+1);
-  },[blocker.state]);
-
-  const leaveLesson=()=>{
-    if(blocker.state==='blocked'){
-      allowExitRef.current=true;
-      blocker.proceed();
-      return;
-    }
-    allowExitRef.current=true;
-    navigate('/',{replace:true});
-  };
-  const cancelBlockedExit=()=>{
-    if(blocker.state==='blocked')blocker.reset();
-  };
+  const leaveLesson=()=>navigate('/',{replace:true});
 
   return (
     <NodeRunnerView
@@ -1401,8 +1355,6 @@ export function NodeRunnerScreen(){
       {...(startMode?{startMode}:{})}
       {...(resumeSavedRun?{resumeSavedRun:true}:{})}
       {...(replayTasksOnly?{replayTasksOnly:true}:{})}
-      exitRequest={exitRequest}
-      onExitCancelled={cancelBlockedExit}
       onExit={leaveLesson}
       onSignIn={()=>navigate('/account?return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
       onAccess={()=>navigate('/access?from=answer&return='+encodeURIComponent('/learn/'+String(params.nodeId||'')+'?resume=1'))}
