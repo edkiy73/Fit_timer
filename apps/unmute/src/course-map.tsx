@@ -378,10 +378,10 @@ export function CourseMapView({
                         </button>
                         {station.status==='current'&&station.canOpen&&sectionStates.length>0&&(
                           <div className="station-section-summary">
-                            {sectionStates.some(section=>section.required&&!section.complete)
+                            {sectionStates.some(section=>section.blocking)
                               ? t('courseMap.remainingSections',{
                                   sections:sectionStates
-                                    .filter(section=>section.required&&!section.complete)
+                                    .filter(section=>section.blocking)
                                     .map(section=>t(section.labelKey))
                                     .join(' · ')
                                 })
@@ -393,14 +393,14 @@ export function CourseMapView({
                             {sectionStates.map(section=>(
                               <button
                                 key={section.id}
-                                className={'station-section-chip pressable'+(section.complete?' is-complete':'')+(!section.required?' is-optional':'')}
+                                className={'station-section-chip pressable'+(section.complete?' is-complete':'')+(!section.complete&&!section.blocking?' is-optional':'')}
                                 type="button"
                                 onClick={()=>onOpen(station.node.id,false,section.id)}
                                 aria-label={t('courseMap.sectionStatus',{
                                   section:t(section.labelKey),
                                   status:t(section.complete
                                     ? 'courseMap.sectionDone'
-                                    : section.required
+                                    : section.blocking
                                       ? 'courseMap.sectionTodo'
                                       : 'courseMap.sectionOptional')
                                 })}
