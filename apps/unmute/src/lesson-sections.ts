@@ -1,6 +1,7 @@
 import type { CourseProgressDocument } from './progress';
 import type { Activity, CourseSet, RoadmapNode } from './content/schema';
 import type { PracticeSrsKind } from './engine/practice-srs';
+import { practiceProgressComplete } from './engine/course-progress';
 
 export type LessonSectionId='theory'|'tasks'|PracticeSrsKind;
 
@@ -53,7 +54,7 @@ function practiceRequirementState(
   progress:CourseProgressDocument
 ):{required:boolean;blocking:boolean}{
   const record=progress.practice[mode]?.[activity.id];
-  const complete=Boolean(record&&!record.deleted&&record.box>0);
+  const complete=Boolean(record&&!record.deleted&&practiceProgressComplete(record));
   if(node.completion){
     const required=node.completion.requirements.some(requirement=>
       requirement.kind==='practice-started'&&
@@ -118,7 +119,7 @@ export function lessonSectionStates(
     sections.push({
       id:mode,
       labelKey:MODE_KEY[mode],
-      complete:Boolean(record&&!record.deleted&&record.box>0),
+      complete:Boolean(record&&!record.deleted&&practiceProgressComplete(record)),
       required:requirement.required,
       blocking:requirement.blocking,
       activityId:pattern.id
