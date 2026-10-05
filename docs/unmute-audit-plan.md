@@ -23,7 +23,7 @@
 | Терминология learner UI | ✅ #544 |
 | Явный контракт save/error/retry copy | ✅ #545 |
 | Admin status flow «черновик → проверен → готов → выпущен» | ✅ #546 |
-| Motion / premium polish | ✅ foundation #497–#505 · navigation #547 · core screens #548 · Route/sheets/states #549 |
+| Motion / premium polish | ✅ foundation #497–#505 · navigation #547 · core screens #548 · Route/sheets/states #549 · forms/settings/paywall #550 |
 | Реальный Android device QA | 🟡 |
 
 

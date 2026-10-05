@@ -70,7 +70,7 @@ function ResetProgress(){
   };
 
   return (
-    <div className="tile settings-card">
+    <div className="tile settings-card settings-card-reset">
       <div className="settings-label">{t('reset.title')}</div>
       <p className="tile-text">{t('reset.text')}</p>
       {confirm ? (
@@ -122,17 +122,17 @@ export function SettingsScreen(){
       <button className="learn-back" type="button" onClick={() => navigate(-1)}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
       <header className="screen-head"><h2 id="settings-title">{t('me.settings')}</h2></header>
 
-      <div className="tile settings-card">
+      <div className="tile settings-card settings-card-preferences">
         <ThemePicker />
         <div className="language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')} /></div>
       </div>
-      <div className="tile settings-card">
+      <div className="tile settings-card settings-card-notifications">
         <NotificationSettingsPanel />
       </div>
       <ResetProgress />
 
       {auth.session && (
-        <div className="tile settings-card">
+        <div className="tile settings-card settings-card-account">
           <div className="settings-label">{t('account.title')}</div>
           <p className="tile-text">{auth.session.email}</p>
           <button className="secondary-button" type="button" onClick={() => void signOut()}>{t('account.signOut')}</button>
