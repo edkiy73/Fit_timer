@@ -14,6 +14,8 @@ assert.match(android,/"\$ADB" install -r/);
 assert.match(android,/"\$ADB" shell am start -W/);
 assert.match(android,/pidof/);
 assert.match(android,/app\.unmute\.english/);
+assert.match(android,/settings put system font_scale 1\.5/);
+assert.match(android,/restore_font_scale/);
 assert.match(ios,/simctl install/);
 assert.match(ios,/simctl launch --terminate-running-process/);
 assert.match(ios,/kill -0/);

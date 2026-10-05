@@ -37,6 +37,20 @@ if [[ "$booted" != "1" ]]; then
 fi
 
 "$ADB" install -r "$APK"
+
+# Exercise the same Android configuration used by accessibility QA. MainActivity mirrors the
+# system font scale into WebView text zoom; launch the app once at 150% so regressions here crash
+# in CI instead of only on a physical phone. Always restore the emulator afterwards.
+old_font_scale="$("$ADB" shell settings get system font_scale 2>/dev/null | tr -d '\r' || true)"
+restore_font_scale(){
+  if [[ -n "$old_font_scale" && "$old_font_scale" != "null" ]]; then
+    "$ADB" shell settings put system font_scale "$old_font_scale" >/dev/null 2>&1 || true
+  else
+    "$ADB" shell settings delete system font_scale >/dev/null 2>&1 || true
+  fi
+}
+trap restore_font_scale EXIT
+"$ADB" shell settings put system font_scale 1.5
 "$ADB" shell am force-stop "$PACKAGE"
 
 launch="$("$ADB" shell am start -W -n "$ACTIVITY" | tr -d '\r')"
@@ -61,4 +75,4 @@ if ! grep -q "$PACKAGE/.MainActivity" <<<"$activities" && ! grep -q "$PACKAGE/.M
   exit 1
 fi
 
-echo "UnMute Android device launch OK (pid $pid)"
+echo "UnMute Android device launch OK at 150% system font scale (pid $pid)"

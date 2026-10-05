@@ -53,4 +53,12 @@ assert.match(activity,/setDecorFitsSystemWindows\(getWindow\(\), false\)/);
 assert.match(read('android/app/src/main/res/values/styles.xml'),/statusBarColor">@android:color\/transparent/);
 assert.match(read('index.html'),/viewport-fit=cover/);
 
+// Real Android accessibility/keyboard behavior: WebView text follows the system font scale and
+// the visual viewport shrinks when the IME opens instead of letting the keyboard cover content.
+assert.match(activity,/applySystemFontScale\(\)/);
+assert.match(activity,/getResources\(\)\.getConfiguration\(\)\.fontScale/);
+assert.match(activity,/setTextZoom\(zoom\)/);
+assert.match(activity,/onConfigurationChanged\(Configuration newConfig\)/);
+assert.match(read('index.html'),/interactive-widget=resizes-content/);
+
 console.log('UnMute Android shell OK');
