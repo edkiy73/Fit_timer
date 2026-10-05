@@ -30,6 +30,7 @@ export interface PatternSpeakingViewProps {
   startRecognition:StartRecognition;
   random?:()=>number;
   onProgress?:(current:number,total:number)=>void;
+  active?:boolean;
 }
 
 function localized(text:Record<string,string>,locale:string):string{
@@ -68,7 +69,8 @@ export function PatternSpeakingView({
   speak,
   startRecognition,
   random=Math.random,
-  onProgress
+  onProgress,
+  active=true
 }:PatternSpeakingViewProps){
   const {t,locale}=useI18n();
   const [items,setItems]=useState(()=>pickSpeakingItems(activity,random));
@@ -91,7 +93,15 @@ export function PatternSpeakingView({
   const score=speakingScore(hits,items.length);
   const passed=speakingPassed(hits,items.length);
 
-  useEffect(()=>{ onProgress?.(Math.min(pos+1,items.length),items.length); },[items.length,onProgress,pos]);
+  useEffect(()=>{ if(active)onProgress?.(Math.min(pos+1,items.length),items.length); },[active,items.length,onProgress,pos]);
+
+  useEffect(()=>{
+    if(!active){
+      handleRef.current?.abort();
+      handleRef.current=null;
+      setListening(false);
+    }
+  },[active]);
 
   useEffect(()=>{
     return ()=>{
@@ -101,9 +111,9 @@ export function PatternSpeakingView({
   },[]);
 
   useEffect(()=>{
-    if(phase!=='show'||!target)return;
+    if(!active||phase!=='show'||!target)return;
     void speak(target,ENGLISH_SPEECH_LOCALE);
-  },[phase,target,speak]);
+  },[active,phase,target,speak]);
 
   useEffect(()=>{
     if(!done||saved||saving||saveError)return;

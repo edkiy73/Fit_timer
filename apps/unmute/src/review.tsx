@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useBlocker, useNavigate, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
@@ -43,6 +43,7 @@ import { reviewSessionSeed } from './review-seed';
 import { WordChips, answerWords, buildChips, chipsText } from './word-chips';
 import { sentenceResponseStage, type SentenceResponseKind } from './engine/sentence-progression';
 import { addReviewExtra, recordReviewCompletion, remainingReviewQuota, takeReviewQuota } from './review-daily-budget';
+import { SYSTEM_BACK_EVENT } from './native-back';
 
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
 type CombinedReviewItem=
@@ -819,11 +820,41 @@ export function ReviewScreen(){
   const day=search.get('day')||undefined;
   const runtime=useLearnerCourseRuntime();
   const otherCourses=useOtherCourseReviews(runtime.state?.set.id??'');
+  const allowExitRef=useRef(false);
+  const blocker=useBlocker(({currentLocation,nextLocation})=>
+    !allowExitRef.current&&
+    currentLocation.pathname==='/review'&&
+    nextLocation.pathname!==currentLocation.pathname
+  );
+
+  const leaveReview=()=>{
+    allowExitRef.current=true;
+    if(blocker.state==='blocked'){
+      blocker.reset();
+      window.setTimeout(()=>navigate('/',{replace:true}),0);
+      return;
+    }
+    navigate('/',{replace:true});
+  };
+
+  useEffect(()=>{
+    if(blocker.state==='blocked')leaveReview();
+  },[blocker.state]);
+
+  useEffect(()=>{
+    const onSystemBack=(event:Event)=>{
+      event.preventDefault();
+      leaveReview();
+    };
+    window.addEventListener(SYSTEM_BACK_EVENT,onSystemBack);
+    return ()=>window.removeEventListener(SYSTEM_BACK_EVENT,onSystemBack);
+  });
+
   return (
     <ReviewView
       runtime={runtime}
       wordRuntime={useWordReviewRuntime()}
-      onExit={()=>navigate('/')}
+      onExit={leaveReview}
       onSignIn={()=>navigate('/account?return='+encodeURIComponent('/review'))}
       onAccess={()=>navigate('/access?from=answer')}
       saveGraded={saveGradedActivity}

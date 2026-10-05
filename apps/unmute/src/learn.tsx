@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { useBlocker, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity, RoadmapNode } from './content/schema';
 import type { CourseProgressDocument } from './progress';
@@ -36,6 +36,7 @@ import { activitySaveClock } from './activity-progress';
 import { randomSeed, shuffledIndices } from './shuffle';
 import { sentenceResponseStage, type SentenceResponseKind } from './engine/sentence-progression';
 import { MOTION, prefersReducedMotion, withViewTransition } from './motion';
+import { SYSTEM_BACK_EVENT } from './native-back';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -142,6 +143,10 @@ export interface NodeRunnerViewProps {
   resumeSavedRun?:boolean;
   /** Replay only the regular answer tasks without changing review/progression. */
   replayTasksOnly?:boolean;
+  /** Browser/system Back asks the runner to open the same exit sheet as the close button. */
+  exitRequest?:number;
+  /** Called when the user keeps the lesson after a blocked Back navigation. */
+  onExitCancelled?:()=>void;
 }
 
 const isPlan=(activity:Activity)=>activity.type==='theory'&&(activity.tags??[]).includes('plan');
@@ -291,7 +296,9 @@ export function NodeRunnerView({
   startActivityId,
   startMode,
   resumeSavedRun=false,
-  replayTasksOnly=false
+  replayTasksOnly=false,
+  exitRequest=0,
+  onExitCancelled=()=>{}
 }:NodeRunnerViewProps){
   const {t,locale}=useI18n();
   const state=runtime.state;
@@ -332,6 +339,7 @@ export function NodeRunnerView({
   const [checking,setChecking]=useState(false);
   const [practiceMode,setPracticeMode]=useState<PracticeSrsKind|undefined>(startMode);
   const [practiceProgress,setPracticeProgress]=useState<{current:number;total:number}|null>(null);
+  const [practiceActivityIndex,setPracticeActivityIndex]=useState<number|null>(null);
   const [shuffleSeed,setShuffleSeed]=useState(()=>randomSeed());
   const [runHydrated,setRunHydrated]=useState(false);
   const [runId,setRunId]=useState(()=>randomSeed());
@@ -341,6 +349,44 @@ export function NodeRunnerView({
   // The step a restored run lands on: its saved answer/feedback must survive the first render
   // of that step (the reset below would otherwise wipe it once the restored order arrives).
   const restoringRunRef=useRef<string|null>(null);
+  const taskSectionRef=useRef<{
+    order:number[];
+    firstPass:number;
+    pos:number;
+    selected:number|null;
+    answer:string;
+    typing:boolean;
+    picked:string[];
+    result:boolean|null;
+    nearResult:boolean;
+    score:{correct:number;total:number};
+    firstPassResults:Record<number,boolean>;
+    shuffleSeed:string;
+    runId:string;
+    runMode:LessonRunMode;
+  }|null>(null);
+  const lastExitRequestRef=useRef(exitRequest);
+
+  const closeExitSheet=()=>{
+    setExitOpen(false);
+    onExitCancelled();
+  };
+
+  useEffect(()=>{
+    if(exitRequest===lastExitRequestRef.current)return;
+    lastExitRequestRef.current=exitRequest;
+    setExitOpen(true);
+  },[exitRequest]);
+
+  useEffect(()=>{
+    const onSystemBack=(event:Event)=>{
+      if(finished)return;
+      event.preventDefault();
+      setExitOpen(true);
+    };
+    window.addEventListener(SYSTEM_BACK_EVENT,onSystemBack);
+    return ()=>window.removeEventListener(SYSTEM_BACK_EVENT,onSystemBack);
+  },[finished]);
 
   useEffect(()=>{
     // Completed nodes opened later are not new completions. A persisted completion candidate
@@ -476,6 +522,10 @@ export function NodeRunnerView({
   const activity=stepIndex===undefined?null:steps[stepIndex]??null;
 
   useEffect(()=>{
+    if(activity?.type==='pattern-drill'&&stepIndex!==undefined)setPracticeActivityIndex(stepIndex);
+  },[activity?.id,stepIndex]);
+
+  useEffect(()=>{
     setPracticeProgress(null);
   },[activity?.id,practiceMode]);
 
@@ -566,11 +616,11 @@ export function NodeRunnerView({
   };
 
   const exitSheet=(
-    <Sheet open={exitOpen} onClose={()=>setExitOpen(false)} labelledBy="lesson-exit-title" closeLabel={t('learn.exitStay')}>
+    <Sheet open={exitOpen} onClose={closeExitSheet} labelledBy="lesson-exit-title" closeLabel={t('learn.exitStay')}>
       <div className="confirm-sheet confirm-sheet-compact">
         <h3 id="lesson-exit-title">{t('learn.exitTitle')}</h3>
         <p className="tile-text">{t('learn.exitText')}</p>
-        <button className="primary-button" type="button" onClick={()=>setExitOpen(false)}>{t('learn.exitStay')}</button>
+        <button className="primary-button" type="button" onClick={closeExitSheet}>{t('learn.exitStay')}</button>
         <button
           className="secondary-button"
           type="button"
@@ -682,13 +732,64 @@ export function NodeRunnerView({
     .filter((entry):entry is {item:Extract<Activity,{type:'pattern-drill'}>;index:number}=>entry.item.type==='pattern-drill');
   const availablePracticeModes=(['drill','listening','speaking'] as PracticeSrsKind[])
     .filter(mode=>patternEntries.some(({item})=>item.modes.includes(mode)));
+  const visiblePatternIndex=activity?.type==='pattern-drill'&&stepIndex!==undefined
+    ? stepIndex
+    : practiceActivityIndex;
+  const persistentPatternEntry=visiblePatternIndex===null
+    ? null
+    : patternEntries.find(entry=>entry.index===visiblePatternIndex)??null;
+
+  const captureTaskSection=()=>{
+    if(!activity||!(activity.type==='choice'||activity.type==='text-input'||activity.type==='translation'))return;
+    taskSectionRef.current={
+      order:[...order],
+      firstPass,
+      pos,
+      selected,
+      answer,
+      typing,
+      picked:[...picked],
+      result,
+      nearResult,
+      score:{...score},
+      firstPassResults:{...firstPassResults},
+      shuffleSeed,
+      runId,
+      runMode
+    };
+  };
+
+  const restoreTaskSection=()=>{
+    const saved=taskSectionRef.current;
+    if(!saved)return false;
+    setOrder(saved.order);
+    setFirstPass(saved.firstPass);
+    setPos(saved.pos);
+    setSelected(saved.selected);
+    setAnswer(saved.answer);
+    setTyping(saved.typing);
+    setPicked(saved.picked);
+    setResult(saved.result);
+    setNearResult(saved.nearResult);
+    setScore(saved.score);
+    setFirstPassResults(saved.firstPassResults);
+    setShuffleSeed(saved.shuffleSeed);
+    setRunId(saved.runId);
+    setRunMode(saved.runMode);
+    setIntro(false);
+    setPracticeMode(undefined);
+    setBusy(false);
+    setAnswerSaveError(false);
+    return true;
+  };
 
   const openTasks=()=>{
     if(!regularTaskIndices.length)return;
-    const firstIncomplete=regularTaskIndices.find(index=>!isSeen(state.progress,steps[index]!.id));
-    const start=firstIncomplete??regularTaskIndices[0]!;
-    const taskOrder=regularTaskIndices.filter(index=>index>=start);
     withViewTransition(()=>{
+      if(restoreTaskSection())return;
+      const firstIncomplete=regularTaskIndices.find(index=>!isSeen(state.progress,steps[index]!.id));
+      const start=firstIncomplete??regularTaskIndices[0]!;
+      const taskOrder=regularTaskIndices.filter(index=>index>=start);
       begin(start);
       setOrder(taskOrder.length?taskOrder:[start]);
       setFirstPass(taskOrder.length||1);
@@ -701,6 +802,8 @@ export function NodeRunnerView({
   const openPractice=(mode:PracticeSrsKind)=>{
     const target=patternEntries.find(({item})=>item.modes.includes(mode));
     if(!target)return;
+    captureTaskSection();
+    setPracticeActivityIndex(target.index);
     withViewTransition(()=>{
       begin(target.index);
       setOrder([target.index]);
@@ -1126,21 +1229,27 @@ export function NodeRunnerView({
         </article>
       )}
 
-      {activity.type==='pattern-drill'&&(
-        <PatternPracticeView
-          key={activity.id+'-'+pos}
-          activity={activity}
-          courseActivities={state.set.activities}
-          progress={state.progress}
-          setId={setId}
-          savePractice={practiceSave}
-          speak={speak}
-          {...(practiceMode?{initialMode:practiceMode}:{})}
-          showModeNav={false}
-          onModeChange={setPracticeMode}
-          onProgress={(current,total)=>setPracticeProgress({current,total})}
-          onDone={()=>{ setPracticeMode(undefined); void saveSeen(setId,activity.id).catch(()=>undefined).then(()=>advance()); }}
-        />
+      {persistentPatternEntry&&(
+        <div hidden={activity.type!=='pattern-drill'}>
+          <PatternPracticeView
+            key={persistentPatternEntry.item.id}
+            activity={persistentPatternEntry.item}
+            courseActivities={state.set.activities}
+            progress={state.progress}
+            setId={setId}
+            savePractice={practiceSave}
+            speak={speak}
+            {...(practiceMode?{initialMode:practiceMode}:{})}
+            showModeNav={false}
+            active={activity.type==='pattern-drill'}
+            onModeChange={setPracticeMode}
+            onProgress={(current,total)=>setPracticeProgress({current,total})}
+            onDone={()=>{
+              setPracticeMode(undefined);
+              void saveSeen(setId,persistentPatternEntry.item.id).catch(()=>undefined).then(()=>advance());
+            }}
+          />
+        </div>
       )}
 
       {activity.type==='dialogue'&&(
@@ -1206,6 +1315,31 @@ export function NodeRunnerScreen(){
   const startActivityId=search.get('activity')||undefined;
   const resumeSavedRun=search.get('resume')==='1';
   const replayTasksOnly=search.get('tasks')==='1';
+  const allowExitRef=useRef(false);
+  const [exitRequest,setExitRequest]=useState(0);
+  const blocker=useBlocker(({currentLocation,nextLocation})=>
+    !allowExitRef.current&&
+    currentLocation.pathname.startsWith('/learn/')&&
+    nextLocation.pathname!==currentLocation.pathname
+  );
+
+  useEffect(()=>{
+    if(blocker.state==='blocked')setExitRequest(value=>value+1);
+  },[blocker.state]);
+
+  const leaveLesson=()=>{
+    if(blocker.state==='blocked'){
+      allowExitRef.current=true;
+      blocker.proceed();
+      return;
+    }
+    allowExitRef.current=true;
+    navigate('/',{replace:true});
+  };
+  const cancelBlockedExit=()=>{
+    if(blocker.state==='blocked')blocker.reset();
+  };
+
   return (
     <NodeRunnerView
       runtime={runtime}
@@ -1214,7 +1348,9 @@ export function NodeRunnerScreen(){
       {...(startMode?{startMode}:{})}
       {...(resumeSavedRun?{resumeSavedRun:true}:{})}
       {...(replayTasksOnly?{replayTasksOnly:true}:{})}
-      onExit={()=>navigate('/',{replace:true})}
+      exitRequest={exitRequest}
+      onExitCancelled={cancelBlockedExit}
+      onExit={leaveLesson}
       onSignIn={()=>navigate('/account?return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
       onAccess={()=>navigate('/access?from=answer&return='+encodeURIComponent('/learn/'+String(params.nodeId||'')+'?resume=1'))}
       onReviewDay={nodeId=>navigate('/review?day='+encodeURIComponent(nodeId))}

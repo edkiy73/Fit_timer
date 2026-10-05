@@ -48,6 +48,8 @@ export interface PatternPracticeViewProps {
   onModeChange?:(mode:PracticeSrsKind)=>void;
   /** Report phrase-level progress to the lesson header. */
   onProgress?:(current:number,total:number)=>void;
+  /** Keep the mounted session paused while another lesson section is visible. */
+  active?:boolean;
 }
 
 export function PatternPracticeView({
@@ -62,7 +64,8 @@ export function PatternPracticeView({
   initialMode,
   showModeNav=true,
   onModeChange,
-  onProgress
+  onProgress,
+  active=true
 }:PatternPracticeViewProps){
   const {t,locale}=useI18n();
   const [mode,setMode]=useState<PatternMode>(()=>
@@ -74,13 +77,13 @@ export function PatternPracticeView({
   const [briefed,setBriefed]=useState<ReadonlySet<PracticeSrsKind>>(()=>new Set());
 
   useEffect(()=>{
-    if(mode!=='complete')onModeChange?.(mode);
-  },[mode,onModeChange]);
+    if(active&&mode!=='complete')onModeChange?.(mode);
+  },[active,mode,onModeChange]);
 
   useEffect(()=>{
-    if(mode==='complete'||!onProgress)return;
+    if(!active||mode==='complete'||!onProgress)return;
     onProgress(1,activity.items.length);
-  },[activity.items.length,mode,onProgress]);
+  },[active,activity.items.length,mode,onProgress]);
 
   // The lesson-level tabs can change initialMode while this component keeps the same key.
   // Mirror that prop into local state instead of getting stuck in the previously mounted mode.
@@ -139,94 +142,88 @@ export function PatternPracticeView({
     </div>
   ):null;
 
-  if(mode!=='complete'&&!briefed.has(mode)){
-    const pattern=activity.pattern[locale]||activity.pattern.ru||activity.pattern.en||Object.values(activity.pattern)[0]||'';
-    return (
-      <>
-        {modeNav}
-      <article className="learn-card practice-intro">
-        <ExerciseKind kind={mode} />
-        <h3><LexiconText text={pattern} refs={activity.lexiconRefs} /></h3>
-        <p className="practice-intro-text">{t('practice.intro.'+mode,{count:activity.items.length})}</p>
-        <ul className="practice-steps">
-          {[1,2,3].map(step=>{
-            const total=activity.items.length;
-            const needed=Math.max(1,Math.ceil(total*0.7));
-            return <li key={step}>{t('practice.step.'+mode+'.'+step,{count:total,needed})}</li>;
-          })}
-        </ul>
-        <div className="runner-action">
-          <button className="primary-button" type="button" onClick={()=>setBriefed(previous=>new Set(previous).add(mode))}>
-            {t('practice.start')}
-          </button>
-        </div>
-      </article>
-      </>
-    );
-  }
-
-  if(mode==='drill'){
-    return (
-      <>
-        {modeNav}
-      <PatternDrillView
-        activity={activity}
-        setId={setId}
-        savePractice={savePractice}
-        onDone={()=>nextMode('drill')}
-        {...(onProgress?{onProgress}:{})}
-      />
-      </>
-    );
-  }
-
-  if(mode==='listening'){
-    return (
-      <>
-        {modeNav}
-      <PatternListeningView
-        activity={activity}
-        setId={setId}
-        distractors={distractors}
-        savePractice={savePractice}
-        speak={speak}
-        onDone={()=>nextMode('listening')}
-        {...(onProgress?{onProgress}:{})}
-      />
-      </>
-    );
-  }
-
-  if(mode==='speaking'){
-    return (
-      <>
-        {modeNav}
-      <PatternSpeakingView
-        activity={activity}
-        setId={setId}
-        savePractice={savePractice}
-        speak={speak}
-        startRecognition={startRecognition}
-        onDone={()=>nextMode('speaking')}
-        {...(onProgress?{onProgress}:{})}
-      />
-      </>
-    );
-  }
+  const pattern=activity.pattern[locale]||activity.pattern.ru||activity.pattern.en||Object.values(activity.pattern)[0]||'';
+  const introMode=mode!=='complete'&&!briefed.has(mode)?mode:null;
 
   return (
     <>
       {modeNav}
-    <article className="learn-card">
-      <div className="eyebrow">{t('pattern.completeMode')}</div>
-      <h3><LexiconText text={activity.pattern[locale]||activity.pattern.ru||activity.pattern.en||Object.values(activity.pattern)[0]||''} refs={activity.lexiconRefs} /></h3>
-      <p className="learn-hint">{t('pattern.completeText')}</p>
-      <div className="runner-action">
-        <button className="primary-button" type="button" onClick={onDone}>
-          {t('learn.next')}
-        </button>
-      </div>
-    </article>
+
+      {introMode&&(
+        <article className="learn-card practice-intro">
+          <ExerciseKind kind={introMode} />
+          <h3><LexiconText text={pattern} refs={activity.lexiconRefs} /></h3>
+          <p className="practice-intro-text">{t('practice.intro.'+introMode,{count:activity.items.length})}</p>
+          <ul className="practice-steps">
+            {[1,2,3].map(step=>{
+              const total=activity.items.length;
+              const needed=Math.max(1,Math.ceil(total*0.7));
+              return <li key={step}>{t('practice.step.'+introMode+'.'+step,{count:total,needed})}</li>;
+            })}
+          </ul>
+          <div className="runner-action">
+            <button className="primary-button" type="button" onClick={()=>setBriefed(previous=>new Set(previous).add(introMode))}>
+              {t('practice.start')}
+            </button>
+          </div>
+        </article>
+      )}
+
+      {activity.modes.includes('drill')&&briefed.has('drill')&&(
+        <div hidden={mode!=='drill'}>
+          <PatternDrillView
+            activity={activity}
+            setId={setId}
+            savePractice={savePractice}
+            onDone={()=>nextMode('drill')}
+            active={active&&mode==='drill'}
+            {...(onProgress?{onProgress}:{})}
+          />
+        </div>
+      )}
+
+      {activity.modes.includes('listening')&&briefed.has('listening')&&(
+        <div hidden={mode!=='listening'}>
+          <PatternListeningView
+            activity={activity}
+            setId={setId}
+            distractors={distractors}
+            savePractice={savePractice}
+            speak={speak}
+            onDone={()=>nextMode('listening')}
+            active={active&&mode==='listening'}
+            {...(onProgress?{onProgress}:{})}
+          />
+        </div>
+      )}
+
+      {activity.modes.includes('speaking')&&briefed.has('speaking')&&(
+        <div hidden={mode!=='speaking'}>
+          <PatternSpeakingView
+            activity={activity}
+            setId={setId}
+            savePractice={savePractice}
+            speak={speak}
+            startRecognition={startRecognition}
+            onDone={()=>nextMode('speaking')}
+            active={active&&mode==='speaking'}
+            {...(onProgress?{onProgress}:{})}
+          />
+        </div>
+      )}
+
+      {mode==='complete'&&(
+        <article className="learn-card">
+          <div className="eyebrow">{t('pattern.completeMode')}</div>
+          <h3><LexiconText text={pattern} refs={activity.lexiconRefs} /></h3>
+          <p className="learn-hint">{t('pattern.completeText')}</p>
+          <div className="runner-action">
+            <button className="primary-button" type="button" onClick={onDone}>
+              {t('learn.next')}
+            </button>
+          </div>
+        </article>
+      )}
     </>
   );
 }

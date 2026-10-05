@@ -25,6 +25,7 @@ export interface PatternListeningViewProps {
   speak:SpeakText;
   random?:()=>number;
   onProgress?:(current:number,total:number)=>void;
+  active?:boolean;
 }
 
 function localized(text:LocalizedText,locale:string):string{
@@ -79,7 +80,8 @@ export function PatternListeningView({
   savePractice,
   speak,
   random=Math.random,
-  onProgress
+  onProgress,
+  active=true
 }:PatternListeningViewProps){
   const {t,locale}=useI18n();
   const [items,setItems]=useState(()=>pickListeningItems(activity,random));
@@ -96,7 +98,7 @@ export function PatternListeningView({
   const score=listeningScore(hits,items.length);
   const passed=listeningPassed(hits,items.length);
 
-  useEffect(()=>{ onProgress?.(Math.min(pos+1,items.length),items.length); },[items.length,onProgress,pos]);
+  useEffect(()=>{ if(active)onProgress?.(Math.min(pos+1,items.length),items.length); },[active,items.length,onProgress,pos]);
 
   const options=useMemo(
     ()=>item?buildListeningOptions(item.prompt,distractors,locale,random):[],
@@ -106,9 +108,9 @@ export function PatternListeningView({
   const target=item?.answer.accepted[0] || '';
 
   useEffect(()=>{
-    if(!item||phase!=='ask'||!target)return;
+    if(!active||!item||phase!=='ask'||!target)return;
     void speak(target,ENGLISH_SPEECH_LOCALE);
-  },[item?.id,phase,target,speak]);
+  },[active,item?.id,phase,target,speak]);
 
   useEffect(()=>{
     if(!done||saved||saving||saveError)return;

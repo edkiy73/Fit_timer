@@ -20,6 +20,7 @@ export interface PatternDrillViewProps {
   )=>Promise<void>;
   variant?:'practice'|'mixed';
   onProgress?:(current:number,total:number)=>void;
+  active?:boolean;
 }
 
 function localized(text:Record<string,string>,locale:string):string{
@@ -52,7 +53,8 @@ export function PatternDrillView({
   onDone,
   savePractice,
   variant='practice',
-  onProgress
+  onProgress,
+  active=true
 }:PatternDrillViewProps){
   const {t,locale}=useI18n();
   // The admin controls the phrase count. A missed phrase is replayed once at the end
@@ -75,10 +77,10 @@ export function PatternDrillView({
   const passed=drillPassed(fast,base);
   const replaying=pos>=base;
 
-  useEffect(()=>{ onProgress?.(Math.min(pos+1,base),base); },[base,onProgress,pos]);
+  useEffect(()=>{ if(active)onProgress?.(Math.min(pos+1,base),base); },[active,base,onProgress,pos]);
 
   useEffect(()=>{
-    if(!item||phase!=='ask')return;
+    if(!active||!item||phase!=='ask')return;
     const readMs=drillReadMs(localized(item.prompt,locale));
     const sayMs=drillSayMs(item.answer.accepted[0]||'');
     const graceMs=DRILL_GRACE_MS;
@@ -94,7 +96,7 @@ export function PatternDrillView({
       window.clearTimeout(speakTimer);
       window.clearTimeout(revealTimer);
     };
-  },[item?.id,locale,phase]);
+  },[active,item?.id,locale,phase]);
 
   useEffect(()=>{
     if(variant==='mixed'||!done||saved||saving||saveError)return;
