@@ -10,12 +10,16 @@ export function Sheet({
   onClose,
   labelledBy,
   closeLabel,
+  historyEntry=true,
   children
 }:{
   open: boolean;
   onClose: () => void;
   labelledBy: string;
   closeLabel: string;
+  /** Most sheets own a same-URL history entry so Android Back closes them.
+   * Focused flows can opt out and own Back explicitly. */
+  historyEntry?: boolean;
   children: ReactNode;
 }){
   const closeRef = useRef(onClose);
@@ -46,27 +50,27 @@ export function Sheet({
 
   useEffect(() => {
     if(!open) return;
-    // Our own history entry, tagged so we only pop it while it is still the current one.
-    // An action that navigates away from inside the sheet should navigate with `replace`.
     const tag = 'sheet-' + Math.random().toString(36).slice(2);
     let pushed = false;
-    try{
-      window.history.pushState({...(window.history.state ?? {}), unmuteSheet:tag}, '', window.location.href);
-      pushed = true;
-    }catch{}
+    if(historyEntry){
+      try{
+        window.history.pushState({...(window.history.state ?? {}), unmuteSheet:tag}, '', window.location.href);
+        pushed = true;
+      }catch{}
+    }
     const onPop = () => { pushed = false; closeRef.current(); };
     const onKey = (event: KeyboardEvent) => { if(event.key === 'Escape') closeRef.current(); };
-    window.addEventListener('popstate', onPop);
+    if(historyEntry)window.addEventListener('popstate', onPop);
     window.addEventListener('keydown', onKey);
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     panel.current?.focus();
     return () => {
-      window.removeEventListener('popstate', onPop);
+      if(historyEntry)window.removeEventListener('popstate', onPop);
       window.removeEventListener('keydown', onKey);
-      if(pushed && window.history.state?.unmuteSheet === tag) window.history.back();
+      if(historyEntry&&pushed&&window.history.state?.unmuteSheet === tag)window.history.back();
       previous?.focus?.();
     };
-  }, [open]);
+  }, [open,historyEntry]);
 
   if(!present) return null;
   const content=(
