@@ -404,6 +404,8 @@
   font-size:11.5px;
 }
 .ab-admin-status-line b{color:var(--ink,#17181b);font-weight:700}
+.ab-dictionary-release-actions{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ab-dictionary-release-actions .ab-admin-note{margin:0}
 .ab-admin-action-row{display:flex;gap:6px;flex-wrap:wrap}
 .ab-bulk-wizard{display:grid;gap:12px}
 .ab-bulk-wizard-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
@@ -454,6 +456,8 @@
   .ab-admin-section-head .ab-admin-secondary{width:auto}
   .ab-admin-status-line{gap:5px}
   .ab-admin-status-line span{font-size:11px;padding:4px 7px}
+  .ab-dictionary-release-actions{display:grid}
+  .ab-dictionary-release-actions button{width:100%}
   .ab-admin-action-row{display:grid;grid-template-columns:1fr}
   .ab-admin-action-row button{width:100%}
 }
