@@ -14,6 +14,12 @@ import {
   type NotificationPermissionState
 } from './notification-native';
 import { syncRemotePush, unregisterRemotePush } from './remote-push';
+import {
+  DEFAULT_CAMPAIGN_PREFERENCES,
+  patchCampaignPreferences,
+  readCampaignPreferences,
+  type CampaignPreferences
+} from './campaign-preferences';
 
 function nextSettings(
   current:NotificationSettings,
@@ -33,6 +39,8 @@ export function NotificationSettingsPanel(){
   const [saving,setSaving]=useState(false);
   const [saveError,setSaveError]=useState(false);
   const [permission,setPermission]=useState<NotificationPermissionState>('unavailable');
+  const [campaigns,setCampaigns]=useState<CampaignPreferences>(DEFAULT_CAMPAIGN_PREFERENCES);
+  const [campaignSaving,setCampaignSaving]=useState(false);
   const native=nativeNotificationsAvailable();
 
   const refreshNativeState=async(request=false)=>{
@@ -50,8 +58,11 @@ export function NotificationSettingsPanel(){
     let live=true;
     const load=async()=>{
       try{
-        const value=await readSettings();
-        if(live)setSettings(value.notifications??DEFAULT_NOTIFICATION_SETTINGS);
+        const [value,campaignValue]=await Promise.all([readSettings(),readCampaignPreferences()]);
+        if(live){
+          setSettings(value.notifications??DEFAULT_NOTIFICATION_SETTINGS);
+          setCampaigns(campaignValue);
+        }
       }finally{
         if(live)setLoaded(true);
       }
@@ -116,6 +127,28 @@ export function NotificationSettingsPanel(){
     }
   };
 
+  const setCampaignKind=async(kind:'news'|'offers'|'emailNews'|'emailOffers',enabled:boolean)=>{
+    const previous=campaigns;
+    const next={...campaigns,[kind]:enabled};
+    setCampaigns(next);
+    setCampaignSaving(true);
+    setSaveError(false);
+    try{
+      const saved=await patchCampaignPreferences({[kind]:enabled});
+      setCampaigns(saved);
+      if((kind==='news'||kind==='offers')&&enabled&&native){
+        const nextPermission=permission==='granted' ? permission : await requestNotificationPermission();
+        setPermission(nextPermission);
+        if(nextPermission==='granted')await syncRemotePush(true);
+      }
+    }catch{
+      setCampaigns(previous);
+      setSaveError(true);
+    }finally{
+      setCampaignSaving(false);
+    }
+  };
+
   if(!loaded)return null;
 
   return (
@@ -140,6 +173,24 @@ export function NotificationSettingsPanel(){
             />
           </label>
         ))}
+      </div>
+
+      <div className="notification-group">
+        <div className="settings-label">{t('notifications.campaignsTitle')}</div>
+        <p className="notification-group-hint">{t('notifications.campaignsHint')}</p>
+        <div className="notification-kinds notification-kind-cards">
+          {(['news','offers','emailNews','emailOffers'] as const).map(kind=>(
+            <label key={kind} className="notification-kind-toggle">
+              <span>{t('notifications.'+kind)}</span>
+              <input
+                type="checkbox"
+                checked={campaigns[kind]}
+                disabled={campaignSaving}
+                onChange={event=>void setCampaignKind(kind,event.target.checked)}
+              />
+            </label>
+          ))}
+        </div>
       </div>
 
       {settings.enabled&&native&&permission!=='granted'&&(
