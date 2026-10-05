@@ -433,7 +433,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   // The draft changed after the last release (transcription, AI batch, a word edit).
   const dictionaryChanged=!!ld && (!lp || String(ld.draftUpdatedAt||'')>String(lp.publishedAt||''));
   const dictionaryStage:'draft'|'checked'|'ready'|'published'=
-    !dictionaryChanged ? 'published' : review.length===0 ? 'ready' : 'checked';
+    !ld ? 'draft' : !dictionaryChanged ? 'published' : review.length===0 ? 'ready' : 'checked';
 
   return (
     <>
