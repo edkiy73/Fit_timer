@@ -55,10 +55,11 @@ export function PatternDrillView({
   onProgress
 }:PatternDrillViewProps){
   const {t,locale}=useI18n();
-  // The drill has a fixed number of phrases; a missed one is replayed once at the end
-  // («Повтор: 1 из 2») instead of growing the count.
-  const base=activity.items.length;
-  const [items,setItems]=useState(()=>activity.items.slice());
+  // All pattern practice modes use the same six-phrase session size.
+  // A missed phrase is replayed once at the end without growing the base count.
+  const sessionItems=activity.items.slice(0,6);
+  const base=sessionItems.length;
+  const [items,setItems]=useState(()=>sessionItems);
   const [pos,setPos]=useState(0);
   const [fast,setFast]=useState(0);
   const [slow,setSlow]=useState(0);
@@ -132,7 +133,7 @@ export function PatternDrillView({
   };
 
   const reset=()=>{
-    setItems(activity.items.slice());
+    setItems(activity.items.slice(0,6));
     setPos(0);
     setFast(0);
     setSlow(0);
