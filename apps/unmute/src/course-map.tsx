@@ -361,44 +361,46 @@ export function CourseMapView({
                               ? <Icon name="lock" size={14} />
                               : KIND_ICON[station.kind]?<Icon name={KIND_ICON[station.kind]!} size={18} />:null}
                         </span>
-                        <button
-                          className="station-body"
-                          type="button"
-                          onClick={()=>setSelected(station)}
-                          aria-label={[station.label,station.title===station.label?'':station.title,t(statusKey(station.status))].filter(Boolean).join(', ')}
-                        >
-                          <span className="station-day">
-                            {station.label}
-                            {station.status==='current'&&<span className="here-pill">{t('courseMap.statusCurrent')}</span>}
-                          </span>
-                          {station.title!==station.label&&<span className="station-title">{station.title}</span>}
-                          {(station.status==='available'||station.status==='prerequisite-locked'||station.status==='purchase-locked')&&(
-                            <span className="station-status">{t(statusKey(station.status))}</span>
+                        <div className="station-main">
+                          <button
+                            className="station-body"
+                            type="button"
+                            onClick={()=>setSelected(station)}
+                            aria-label={[station.label,station.title===station.label?'':station.title,t(statusKey(station.status))].filter(Boolean).join(', ')}
+                          >
+                            <span className="station-day">
+                              {station.label}
+                              {station.status==='current'&&<span className="here-pill">{t('courseMap.statusCurrent')}</span>}
+                            </span>
+                            {station.title!==station.label&&<span className="station-title">{station.title}</span>}
+                            {(station.status==='available'||station.status==='prerequisite-locked'||station.status==='purchase-locked')&&(
+                              <span className="station-status">{t(statusKey(station.status))}</span>
+                            )}
+                          </button>
+                          {station.status==='current'&&station.canOpen&&sectionStates.length>0&&(
+                            <div className="station-section-chips" aria-label={t('courseMap.daySections')}>
+                              {sectionStates.map(section=>(
+                                <button
+                                  key={section.id}
+                                  className={'station-section-chip pressable'+(section.complete?' is-complete':'')+(!section.complete&&!section.blocking?' is-optional':'')}
+                                  type="button"
+                                  onClick={()=>onOpen(station.node.id,false,section.id)}
+                                  aria-label={t('courseMap.sectionStatus',{
+                                    section:t(section.labelKey),
+                                    status:t(section.complete
+                                      ? 'courseMap.sectionDone'
+                                      : section.blocking
+                                        ? 'courseMap.sectionTodo'
+                                        : 'courseMap.sectionOptional')
+                                  })}
+                                >
+                                  {section.complete&&<Icon name="check" size={12} />}
+                                  <span>{t(section.labelKey)}</span>
+                                </button>
+                              ))}
+                            </div>
                           )}
-                        </button>
-                        {station.status==='current'&&station.canOpen&&sectionStates.length>0&&(
-                          <div className="station-section-chips" aria-label={t('courseMap.daySections')}>
-                            {sectionStates.map(section=>(
-                              <button
-                                key={section.id}
-                                className={'station-section-chip pressable'+(section.complete?' is-complete':'')+(!section.complete&&!section.blocking?' is-optional':'')}
-                                type="button"
-                                onClick={()=>onOpen(station.node.id,false,section.id)}
-                                aria-label={t('courseMap.sectionStatus',{
-                                  section:t(section.labelKey),
-                                  status:t(section.complete
-                                    ? 'courseMap.sectionDone'
-                                    : section.blocking
-                                      ? 'courseMap.sectionTodo'
-                                      : 'courseMap.sectionOptional')
-                                })}
-                              >
-                                {section.complete&&<Icon name="check" size={12} />}
-                                <span>{t(section.labelKey)}</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                        </div>
                       </li>
                       </Fragment>
                     );
