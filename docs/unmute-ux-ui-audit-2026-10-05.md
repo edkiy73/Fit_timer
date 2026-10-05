@@ -27,7 +27,7 @@
 | Admin draft/review/release flow | ✅ #546 | курсы и словарь показывают единый путь «Черновик → Проверен → Готов к выпуску → Выпущен» и один release action area |
 | Word of the Day / Route complexity | P2 | продуктовый/polish вопрос, ключевые сценарии не блокирует |
 | Motion / premium polish | ✅ foundation #497–#505 · navigation #547 · core screens #548 · Route/sheets/states #549 · forms/settings/paywall #550 · final consistency #551 | финальный pass выровнял оставшиеся service surfaces в drill/listening/AI/dictionary/notifications; hardcoded малые радиусы остались только у компактных controls/chips/skeletons |
-| Реальный Android device QA | 🟡 · hardening #552 | font scale и keyboard viewport теперь поддержаны кодом + emulator smoke 150%; на реальном устройстве остаются визуальная клавиатура/large-font проверка, process kill/resume, system Back/status bar и локальные/remote push |
+| Реальный Android device QA | 🟡 · hardening #552 · push readiness #553 | font scale/keyboard viewport закрыты кодом; remote server push сейчас внешне заблокирован отсутствием `FIREBASE_*` env в Vercel `unmute`; на устройстве остаются process kill/resume, visual IME/large-font, system Back/status bar, local push и remote push после настройки Firebase |
 
 **Известных незакрытых P0 по коду из этого аудита сейчас нет.** P0-сценарии из §17 всё равно остаются обязательным device QA перед релизом.
 ## 0. Что считаем проблемой
