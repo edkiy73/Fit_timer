@@ -307,7 +307,7 @@ export function CourseMapView({
           return (
             <section
               key={id}
-              className={'stage'+(expanded?' is-open':'')}
+              className={'stage'+(expanded?' is-open':'')+(id===currentId?' is-current-stage':'')}
               aria-labelledby={'stage-'+id}
             >
               <button className="stage-head pressable" type="button" aria-expanded={expanded} onClick={()=>toggle(id)}>
@@ -397,7 +397,7 @@ export function CourseMapView({
         closeLabel={t('dictionary.close')}
       >
         {selected&&(
-          <div className="station-sheet">
+          <div className="station-sheet" data-status={selected.status}>
             <div className="screen-kicker">
               {selected.label}
               {selected.status==='complete'||selected.status==='current'||selected.status==='available'?' · '+t(statusKey(selected.status)):''}
