@@ -7,9 +7,14 @@ export interface LearningCalendarState {
   streak:number;
 }
 
+export interface PracticeProgressState extends PracticeSrsState {
+  /** Durable completion is separate from SRS strength. Old records may omit it. */
+  completed?:boolean;
+}
+
 export interface RoadmapProgressState {
   seenActivityIds:ReadonlySet<string>;
-  practice:Record<PracticeSrsKind,Record<string,PracticeSrsState|undefined>>;
+  practice:Record<PracticeSrsKind,Record<string,PracticeProgressState|undefined>>;
   manualNodeIds:ReadonlySet<string>;
 }
 
@@ -75,14 +80,21 @@ export function learningGapDays(
   return Math.max(0,dayNumberFromKey(todayKey)-dayNumberFromKey(state.activeDay));
 }
 
+export function practiceProgressComplete(state:PracticeProgressState|undefined):boolean{
+  if(!state)return false;
+  if(state.completed!==undefined)return state.completed===true;
+  // Backward compatibility: before an explicit completion marker existed, only box > 0
+  // could represent a practice mode that had been accepted as completed.
+  return state.box>0;
+}
+
 function practiceRequirementComplete(
   requirement:Extract<NodeCompletionRequirement,{kind:'practice-started'}>,
   progress:RoadmapProgressState
 ):boolean{
-  return requirement.modes.every(mode=>{
-    const state=progress.practice[mode]?.[requirement.activityId];
-    return Boolean(state&&state.box>0);
-  });
+  return requirement.modes.every(mode=>
+    practiceProgressComplete(progress.practice[mode]?.[requirement.activityId])
+  );
 }
 
 export function isNodeRequirementComplete(
