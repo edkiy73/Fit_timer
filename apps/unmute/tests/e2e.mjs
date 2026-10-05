@@ -212,6 +212,8 @@ try{
     return buttons.length>0&&buttons.every(button=>Math.abs(button.getBoundingClientRect().width-inner)<=1);
   });
   ok('day sheet buttons span the whole sheet',sheetButtonsFit);
+  ok('route sheet exposes its station status for visual treatment',await phone.page.locator('.station-sheet[data-status]').count()===1);
+  ok('the current stage has one premium emphasis',await phone.page.locator('.stage.is-current-stage').count()===1);
   ok('the solid rail reaches the current day',await phone.page.locator('.station.is-current.rail-arriving').count()===1);
   ok('the rail starts at the first day, not above it',await phone.page.evaluate(()=>{
     const first=document.querySelector('.station.is-first');
