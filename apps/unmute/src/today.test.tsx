@@ -158,7 +158,7 @@ describe('Today learner shell',()=>{
       {practice:[{activityId:pattern.id,mode:'drill',resolvedSteps:3,attemptedSteps:4,pendingCorrections:1}]}
     );
 
-    expect(screen.getByText('22 из 43 заданий · ~25 мин')).toBeTruthy();
+    expect(screen.getByText('22 из 43 заданий · ~12 мин')).toBeTruthy();
     expect(screen.getByRole('button',{name:'Продолжить'})).toBeTruthy();
   });
 
