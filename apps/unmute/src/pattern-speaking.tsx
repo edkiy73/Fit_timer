@@ -190,6 +190,7 @@ export function PatternSpeakingView({
 
     receivedRef.current=false;
     setRecognitionError(null);
+    setVerification('recognition');
     setListening(true);
 
     const handle=startRecognition({
@@ -201,7 +202,8 @@ export function PatternSpeakingView({
         setListening(false);
         setHeard(best);
         setCorrect(ok);
-        if(ok)setHits(value=>value+1);
+        setVerification('recognition');
+        if(pos<base&&ok)setHits(value=>value+1);
         setPhase('show');
       },
       onError:error=>{
@@ -226,37 +228,29 @@ export function PatternSpeakingView({
     setRecognitionError(null);
     setHeard('');
     setCorrect(false);
+    setVerification('revealed');
     setPhase('show');
   };
 
-  const acceptManually=()=>{
-    if(correct===true)return;
-    setCorrect(true);
-    setHits(value=>value+1);
+  const beginManualCompare=()=>{
+    stopCurrent();
+    receivedRef.current=true;
+    setRecognitionError(null);
+    setHeard('');
+    setCorrect(null);
+    setVerification('manual');
+    setPhase('show');
   };
 
-  const next=()=>{
+  const advanceAttempt=(resolved:boolean)=>{
     stopCurrent();
+    if(!resolved&&item)setItems(current=>[...current,item]);
     setPos(value=>value+1);
     setPhase('ask');
     setHeard('');
     setCorrect(null);
+    setVerification('recognition');
     setRecognitionError(null);
-    receivedRef.current=false;
-  };
-
-  const reset=()=>{
-    stopCurrent();
-    setItems(pickSpeakingItems(activity,random));
-    setPos(0);
-    setHits(0);
-    setPhase('ask');
-    setHeard('');
-    setCorrect(null);
-    setRecognitionError(null);
-    setSaving(false);
-    setSaved(false);
-    setSaveError(false);
     receivedRef.current=false;
   };
 
@@ -264,7 +258,7 @@ export function PatternSpeakingView({
     if(saving)return;
     setSaving(true);
     setSaveError(false);
-    void savePractice(setId,activity.id,'speaking',passed,score)
+    void savePractice(setId,activity.id,'speaking',strongFirstPass,score)
       .then(()=>setSaved(true))
       .catch(()=>setSaveError(true))
       .finally(()=>setSaving(false));
