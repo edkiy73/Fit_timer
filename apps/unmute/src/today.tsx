@@ -195,11 +195,10 @@ export function TodayView({
               return (
                 <span
                   key={dot}
-                  className={'today-progress-dot'+(dot<activeProgressDots?' is-active':'')}
+                  className={'today-progress-dot '+(dot<radialDotCount/2?'is-accent':'is-listen')+(dot<activeProgressDots?' is-active':'')}
                   style={{
                     '--dot-i':dot,
-                    '--dot-angle':angle+'deg',
-                    '--dot-hue':dot/(radialDotCount-1)
+                    '--dot-angle':angle+'deg'
                   } as CSSProperties}
                 />
               );
