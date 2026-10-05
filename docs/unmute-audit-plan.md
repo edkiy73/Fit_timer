@@ -6,6 +6,27 @@
 
 Статусы: ⬜ не начато · 🟡 в работе · ✅ сделано · ❓ ждёт решения владельца.
 
+
+## Текущий UX-проход — 2026-10-05
+
+> Старые этапы ниже остаются историей выполненных работ. Для следующего шага ориентироваться сначала на этот блок и `docs/unmute-ux-ui-audit-2026-10-05.md`.
+
+| Задача | Статус |
+|---|---:|
+| Единый feedback / answer mechanics | ✅ #526–#530/#539 |
+| Today / Route / onboarding / profile / dictionary / paywall | ✅ #531–#536 |
+| Общий навигатор урока | ✅ #538 |
+| Admin main + nested state / campaigns overflow | ✅ #537/#540 |
+| Bulk dictionary wizard | ✅ #541 |
+| Activity editor как отдельный уровень | ✅ #542 |
+| Admin 360 px browser audit | ✅ #543 |
+| Терминология learner UI | 🟡 текущая пачка |
+| Явный контракт save/error/retry copy | ⬜ следующий P1 |
+| Admin status flow «черновик → проверен → готов → выпущен» | ⬜ P1 |
+| Motion / premium polish | ⬜ после P1 |
+| Реальный Android device QA | 🟡 |
+
+
 ---
 
 ## 0. Решения владельца (2026-10-01)
