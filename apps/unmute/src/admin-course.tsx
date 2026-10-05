@@ -425,8 +425,12 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
       setOpenNode({roadmapId,version:Number(result.version||1),node:result.node as OpenNode['node'],activities:result.activities as ActivitySummary[]});
       writeCourseAdminContext({setId,roadmapId,nodeId,...(activityId?{activityId}:{})});
       if(activityId){
-        const activityResult=await client.action(adminKey,'content_activity_get',{setId,activityId});
-        setEditor(activityResult.activity as EditableActivity);
+        try{
+          const activityResult=await client.action(adminKey,'content_activity_get',{setId,activityId});
+          setEditor(activityResult.activity as EditableActivity);
+        }catch(_){
+          writeCourseAdminContext({setId,roadmapId,nodeId});
+        }
       }
     }catch(error){
       writeCourseAdminContext({setId});
@@ -451,8 +455,8 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     }finally{setBusy(false);}
   }
 
-  async function reloadOpenNode(){
-    if(openNode) await open(openNode.roadmapId,openNode.node.id,editor?.id);
+  async function reloadOpenNode(activityId=editor?.id){
+    if(openNode) await open(openNode.roadmapId,openNode.node.id,activityId);
   }
 
   async function createActivity(){
@@ -460,7 +464,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     setBusy(true);setDayMessage('');
     try{
       const result=await client.action(adminKey,'content_activity_create',{setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,type:newType});
-      await Promise.all([reloadOpenNode(),refreshCourse()]);
+      await Promise.all([reloadOpenNode(editor?.id===id?undefined:editor?.id),refreshCourse()]);
       const created=result.activity as EditableActivity;
       setEditor(created);
       writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityId:created.id});
