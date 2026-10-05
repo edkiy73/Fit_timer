@@ -460,7 +460,12 @@ export function NodeRunnerView({
     const requested=startActivityId?steps.findIndex(item=>item.id===startActivityId):-1;
     const forcedTheory=startSection==='theory';
     const forcedTasks=startSection==='tasks';
-    const saved=requested<0&&!forcedTheory&&!forcedTasks?readLessonRun(state.set.id,node.id):null;
+    const forcedPractice=startMode
+      ? steps.findIndex(item=>item.type==='pattern-drill'&&item.modes.includes(startMode))
+      : -1;
+    const saved=requested<0&&!forcedTheory&&!forcedTasks&&forcedPractice<0
+      ? readLessonRun(state.set.id,node.id)
+      : null;
     const restored=saved&&(resumeSavedRun||!nodeProgress?.complete)?remapLessonRun(saved,steps):null;
     const validSaved=Boolean(
       restored&&
@@ -504,16 +509,18 @@ export function NodeRunnerView({
         : -1;
       const startIndex=requested>=0
         ? requested
-        : firstTask>=0
-          ? firstTask
-          : firstIncompleteRequirementIndex(node,steps,state.progress);
+        : forcedPractice>=0
+          ? forcedPractice
+          : firstTask>=0
+            ? firstTask
+            : firstIncompleteRequirementIndex(node,steps,state.progress);
       begin(startIndex);
       if(forcedTasks&&firstTask>=0){
         const taskOrder=taskIndices.filter(index=>index>=firstTask);
         setOrder(taskOrder.length?taskOrder:[firstTask]);
         setFirstPass(taskOrder.length||1);
       }
-      setIntro(forcedTheory||(!forcedTasks&&requested<0&&theoryCards.some(card=>!isSeen(state.progress,card.id))));
+      setIntro(forcedTheory||(!forcedTasks&&forcedPractice<0&&requested<0&&theoryCards.some(card=>!isSeen(state.progress,card.id))));
       setPracticeMode(startMode);
       // A completed day opened again is a replay. Otherwise continuing any existing
       // progress without a saved snapshot is an explicit resume, not a fresh first run.
@@ -535,7 +542,7 @@ export function NodeRunnerView({
     for(const plan of activities.filter(isPlan)){
       if(!isSeen(state.progress,plan.id))void saveSeen(state.set.id,plan.id).catch(()=>undefined);
     }
-  },[node?.id,state?.set.id,startActivityId,startSection,stepSignature,resumeSavedRun,replayTasksOnly]);
+  },[node?.id,state?.set.id,startActivityId,startSection,startMode,stepSignature,resumeSavedRun,replayTasksOnly]);
 
   useEffect(()=>{
     if(!runHydrated||!state||!node||finished||order.length===0)return;
