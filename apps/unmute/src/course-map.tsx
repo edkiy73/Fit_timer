@@ -14,6 +14,8 @@ import { Sheet } from './sheet';
 import { CoursePicker } from './active-course';
 import { MOTION } from './motion';
 import { lessonSectionStates, type LessonSectionId } from './lesson-sections';
+import { getDayProgress, type ActiveDayProgress } from './day-progress';
+import { readActiveDayProgress } from './day-progress-local';
 
 export type CourseMapStatus=
   |'complete'
@@ -120,7 +122,8 @@ export function CourseMapView({
   runtime,
   onOpen,
   onUnlock,
-  onReference
+  onReference,
+  activeDayProgress={}
 }:{
   runtime:LearnerCourseRuntimeValue;
   /** Opens «Справочник» (phrases and irregular verbs) when the course has them. */
@@ -128,6 +131,8 @@ export function CourseMapView({
   /** `fromSheet`: the station sheet is open; navigate with replace so Back skips it. */
   onOpen:(nodeId:string,fromSheet?:boolean,target?:LessonSectionId)=>void;
   onUnlock:(nodeId:string,fromSheet?:boolean)=>void;
+  /** Same-device unfinished state for the current day only. */
+  activeDayProgress?:ActiveDayProgress;
 }){
   const {t,locale}=useI18n();
   const state=runtime.state;
@@ -257,6 +262,15 @@ export function CourseMapView({
     }));
   };
 
+  const selectedProgress=selected&&selected.node.activityIds.length>0
+    ? getDayProgress(
+        state.set,
+        selected.node,
+        state.progress,
+        selected.status==='current'?activeDayProgress:{}
+      )
+    : null;
+
   return (
     <section className="course-map-shell is-ready" aria-labelledby="course-map-title">
       <header className="screen-head">
@@ -336,6 +350,14 @@ export function CourseMapView({
                     const sectionStates=station.status==='current'
                       ? lessonSectionStates(state.set,station.node,state.progress)
                       : [];
+                    const stationProgress=station.node.activityIds.length>0
+                      ? getDayProgress(
+                          state.set,
+                          station.node,
+                          state.progress,
+                          station.status==='current'?activeDayProgress:{}
+                        )
+                      : null;
                     return (
                       <Fragment key={station.node.id}>
                       {station.node.id===firstLocked&&(
@@ -373,6 +395,14 @@ export function CourseMapView({
                               {station.status==='current'&&<span className="here-pill">{t('courseMap.statusCurrent')}</span>}
                             </span>
                             {station.title!==station.label&&<span className="station-title">{station.title}</span>}
+                            {station.status==='current'&&stationProgress&&stationProgress.totalSteps>0&&(
+                              <span className="station-status">
+                                {t('courseMap.dayStepProgress',{
+                                  done:stationProgress.completedSteps,
+                                  total:stationProgress.totalSteps
+                                })}
+                              </span>
+                            )}
                             {(station.status==='available'||station.status==='prerequisite-locked'||station.status==='purchase-locked')&&(
                               <span className="station-status">{t(statusKey(station.status))}</span>
                             )}
@@ -433,8 +463,12 @@ export function CourseMapView({
               {selected.status==='complete'||selected.status==='current'||selected.status==='available'?' · '+t(statusKey(selected.status)):''}
             </div>
             <h3 id="station-sheet-title">{selected.title}</h3>
-            {selected.node.activityIds.length>0&&(
-              <p className="tile-meta">{t('courseMap.sheetMeta',{count:selected.node.activityIds.length,minutes:nodeMinutes(state.set,selected.node)})}</p>
+            {selectedProgress&&selectedProgress.totalSteps>0&&(
+              <p className="tile-meta">{t('courseMap.sheetMeta',{
+                done:selectedProgress.completedSteps,
+                total:selectedProgress.totalSteps,
+                minutes:nodeMinutes(state.set,selected.node)
+              })}</p>
             )}
             {selected.status==='prerequisite-locked'&&<p className="tile-text">{t('courseMap.prerequisiteHint')}</p>}
             {selected.status==='purchase-locked'&&<p className="tile-text">{t('courseMap.purchaseHint')}</p>}
@@ -457,9 +491,14 @@ export function CourseMapView({
 
 export function CourseMapScreen(){
   const navigate=useNavigate();
+  const runtime=useLearnerCourseRuntime();
+  const activeDayProgress=runtime.state?.currentNode
+    ? readActiveDayProgress(runtime.state.set,runtime.state.currentNode,runtime.state.progress)
+    : {};
   return (
     <CourseMapView
-      runtime={useLearnerCourseRuntime()}
+      runtime={runtime}
+      activeDayProgress={activeDayProgress}
       onOpen={(nodeId,fromSheet,target)=>{
         const query=target==='theory'||target==='tasks'
           ? '?section='+encodeURIComponent(target)
