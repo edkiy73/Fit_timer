@@ -108,6 +108,7 @@ export function PatternListeningView({
   sessionKey
 }:PatternListeningViewProps){
   const {t,locale}=useI18n();
+  const base=activity.items.length;
   const restored=restoredListeningSession(activity,sessionKey);
   const [items,setItems]=useState(()=>restored?.items??pickListeningItems(activity,random));
   const [pos,setPos]=useState(()=>restored?.pos??0);
@@ -120,8 +121,12 @@ export function PatternListeningView({
 
   const item=items[pos] ?? null;
   const done=pos>=items.length;
-  const score=listeningScore(hits,items.length);
-  const passed=listeningPassed(hits,items.length);
+  const score=listeningScore(hits,base);
+  const strongFirstPass=base>0&&hits===base;
+  const correcting=pos>=base;
+  const correctionRemaining=correcting
+    ? new Set(items.slice(pos).map(entry=>entry.id)).size
+    : 0;
 
   useEffect(()=>{
     writePracticeRunState(sessionKey,{
@@ -137,7 +142,7 @@ export function PatternListeningView({
     } satisfies ListeningRunSession);
   },[activity.revision,chosen,hits,items,phase,pos,saveError,saved,sessionKey]);
 
-  useEffect(()=>{ if(active)onProgress?.(Math.min(pos+1,items.length),items.length); },[active,items.length,onProgress,pos]);
+  useEffect(()=>{ if(active)onProgress?.(Math.min(pos+1,base),base); },[active,base,onProgress,pos]);
 
   const options=useMemo(
     ()=>item?buildListeningOptions(item.prompt,distractors,locale,random):[],
@@ -155,11 +160,11 @@ export function PatternListeningView({
     if(!done||saved||saving||saveError)return;
     setSaving(true);
     setSaveError(false);
-    void savePractice(setId,activity.id,'listening',passed,score)
+    void savePractice(setId,activity.id,'listening',strongFirstPass,score)
       .then(()=>setSaved(true))
       .catch(()=>setSaveError(true))
       .finally(()=>setSaving(false));
-  },[activity.id,done,passed,saveError,savePractice,saved,saving,score,setId]);
+  },[activity.id,done,saveError,savePractice,saved,saving,score,setId,strongFirstPass]);
 
   const choose=(option:string)=>{
     if(!item||phase!=='ask')return;
@@ -167,7 +172,9 @@ export function PatternListeningView({
       setChosen(option);
       return;
     }
-    if(option===localized(item.prompt,locale))setHits(value=>value+1);
+    const correct=option===localized(item.prompt,locale);
+    if(pos<base&&correct)setHits(value=>value+1);
+    if(!correct)setItems(current=>[...current,item]);
     setPhase('show');
   };
 
@@ -177,22 +184,11 @@ export function PatternListeningView({
     setPhase('ask');
   };
 
-  const reset=()=>{
-    setItems(pickListeningItems(activity,random));
-    setPos(0);
-    setHits(0);
-    setPhase('ask');
-    setChosen(null);
-    setSaving(false);
-    setSaved(false);
-    setSaveError(false);
-  };
-
   const retrySave=()=>{
     if(saving)return;
     setSaving(true);
     setSaveError(false);
-    void savePractice(setId,activity.id,'listening',passed,score)
+    void savePractice(setId,activity.id,'listening',strongFirstPass,score)
       .then(()=>setSaved(true))
       .catch(()=>setSaveError(true))
       .finally(()=>setSaving(false));
@@ -205,8 +201,8 @@ export function PatternListeningView({
         <div className="eyebrow">{t('listening.mode')}</div>
         <h3><LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} /></h3>
         <div className="drill-result">
-          <strong>{t('listening.score',{correct:hits,total:items.length})}</strong>
-          <span>{passed?t('listening.passed'):t('listening.retryHint')}</span>
+          <strong>{t('listening.score',{correct:hits,total:base})}</strong>
+          <span>{strongFirstPass?t('listening.passed'):t('listening.corrected')}</span>
         </div>
         {saveError&&(
           <div className="learn-feedback learn-feedback-wrong learn-save-error" role="alert">
@@ -217,19 +213,9 @@ export function PatternListeningView({
             </button>
           </div>
         )}
-        <button className="primary-button" type="button" disabled={!saved} onClick={passed?onDone:reset}>
-          {passed?t('learn.next'):t('drill.again')}
+        <button className="primary-button" type="button" disabled={!saved} onClick={onDone}>
+          {t('learn.next')}
         </button>
-        {passed&&(
-          <button className="secondary-button" type="button" disabled={!saved} onClick={reset}>
-            {t('drill.again')}
-          </button>
-        )}
-        {!passed&&(
-          <button className="secondary-button" type="button" disabled={!saved} onClick={onDone}>
-            {t('drill.continueAnyway')}
-          </button>
-        )}
         {saving&&<span className="learn-hint" role="status">{t('drill.saving')}</span>}
       </article>
     );
@@ -244,7 +230,9 @@ export function PatternListeningView({
         <ExerciseKind kind="listening" />
       <div className="drill-meta">
         <span><LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} /></span>
-        <span>{t('listening.position',{current:pos+1,total:items.length})}</span>
+        <span>{correcting
+          ? t('drill.correctionRemaining',{count:correctionRemaining})
+          : t('listening.position',{current:pos+1,total:base})}</span>
       </div>
       <h3>{t('listening.prompt')}</h3>
       <button className="link-button listening-play" type="button" onClick={()=>void speak(target,ENGLISH_SPEECH_LOCALE)}>

@@ -96,4 +96,41 @@ describe('pattern listening',()=>{
     await user.click(screen.getByRole('button',{name:'Далее'}));
     expect(onDone).toHaveBeenCalledTimes(1);
   });
+
+
+  it('keeps a wrong phrase in correction until the learner gets it right',async()=>{
+    const user=userEvent.setup();
+    const {savePractice}=renderListening();
+
+    await user.click(await screen.findByRole('button',{name:'Мы живём рядом.'}));
+    await user.click(screen.getByRole('button',{name:/^Мы живём рядом\./}));
+    expect(await screen.findByText('Не то')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+
+    await user.click(await screen.findByRole('button',{name:'Она работает здесь.'}));
+    await user.click(screen.getByRole('button',{name:/^Она работает здесь\./}));
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+
+    expect(await screen.findByText('Работа над ошибками · осталось 1')).toBeTruthy();
+
+    // A failed correction remains in the queue.
+    await user.click(await screen.findByRole('button',{name:'Мы живём рядом.'}));
+    await user.click(screen.getByRole('button',{name:/^Мы живём рядом\./}));
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+    expect(await screen.findByText('Работа над ошибками · осталось 1')).toBeTruthy();
+
+    await user.click(await screen.findByRole('button',{name:'Я работаю дома.'}));
+    await user.click(screen.getByRole('button',{name:/^Я работаю дома\./}));
+    await user.click(screen.getByRole('button',{name:'Завершить'}));
+
+    await waitFor(()=>expect(savePractice).toHaveBeenCalledWith(
+      'general-foundation',
+      'pattern.present',
+      'listening',
+      false,
+      50
+    ));
+    expect(await screen.findByText('1 из 2 правильно')).toBeTruthy();
+    expect(screen.getByText('Все ошибки исправлены. Слабые фразы вернутся в «Повторе».')).toBeTruthy();
+  });
 });
