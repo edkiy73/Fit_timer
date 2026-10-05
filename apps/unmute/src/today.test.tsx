@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
+import type { Activity, RoadmapNode } from './content/schema';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { emptyCourseProgress } from './progress';
 import { TodayView } from './today';
@@ -34,7 +35,16 @@ const state: LearnerCourseState={
       title:{ru:'Путь'},
       nodes:[node]
     }],
-    activities:[],
+    activities:[
+      {
+        id:'card.one',revision:1,type:'choice' as const,tags:[],revisionProgress:'preserve' as const,
+        lexiconRefs:[],prompt:{ru:'Один'},options:[{ru:'A'},{ru:'B'}],correctIndex:0
+      },
+      {
+        id:'card.two',revision:1,type:'choice' as const,tags:[],revisionProgress:'preserve' as const,
+        lexiconRefs:[],prompt:{ru:'Два'},options:[{ru:'A'},{ru:'B'}],correctIndex:0
+      }
+    ],
     resources:[]
   },
   roadmap:{
@@ -67,7 +77,14 @@ function runtime(overrides:Partial<LearnerCourseRuntimeValue>={}):LearnerCourseR
   };
 }
 
-function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn(),onReview=vi.fn(),onMap=vi.fn(),onAccess=vi.fn()){
+function renderToday(
+  value:LearnerCourseRuntimeValue,
+  onStart=vi.fn(),
+  onReview=vi.fn(),
+  onMap=vi.fn(),
+  onAccess=vi.fn(),
+  activeDayProgress:Parameters<typeof TodayView>[0]['activeDayProgress']={}
+){
   render(
     <I18nProvider
       dictionaries={dictionaries}
@@ -75,7 +92,7 @@ function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn(),onReview=vi
       storageKey="today-test.locale"
       systemLanguages={['ru']}
     >
-      <TodayView runtime={value} onStart={onStart} onReview={onReview} onMap={onMap} onAccess={onAccess} />
+      <TodayView runtime={value} onStart={onStart} onReview={onReview} onMap={onMap} onAccess={onAccess} activeDayProgress={activeDayProgress} />
     </I18nProvider>
   );
   return {onStart,onReview,onMap,onAccess};
@@ -93,6 +110,67 @@ describe('Today learner shell',()=>{
     expect(screen.queryByText('1/4')).toBeNull();
     expect(screen.getByText('1 из 4 дней')).toBeTruthy();
     expect(screen.getByRole('button',{name:'Начать'})).toBeTruthy();
+  });
+
+  it('shows real 19 + 8 + 8 + 8 day progress and includes unfinished phrase state',()=>{
+    const cards:Activity[]=Array.from({length:19},(_,index)=>({
+      id:'big.'+(index+1),revision:1,type:'choice' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],prompt:{ru:'Вопрос'},options:[{ru:'A'},{ru:'B'}],correctIndex:0
+    }));
+    const pattern:Extract<Activity,{type:'pattern-drill'}>={
+      id:'big.pattern',revision:1,type:'pattern-drill',tags:[],revisionProgress:'preserve',
+      lexiconRefs:[],pattern:{ru:'Привычки'},modes:['drill','listening','speaking'],
+      items:Array.from({length:8},(_,index)=>({
+        id:'big.p'+(index+1),prompt:{ru:'Фраза'},answer:{accepted:['Phrase'],nearMiss:true,caseSensitive:false}
+      }))
+    };
+    const bigNode:RoadmapNode={
+      id:'day-3',kind:'lesson' as const,title:{ru:'День 3'},dayIndex:3,order:2,prerequisites:[],
+      activityIds:[...cards.map(card=>card.id),pattern.id],
+      completion:{mode:'all',requirements:[
+        {kind:'activity-seen',activityIds:cards.map(card=>card.id)},
+        {kind:'practice-started',activityId:pattern.id,modes:['drill','listening','speaking']}
+      ]},
+      optional:false
+    };
+    const progress=emptyCourseProgress();
+    for(const card of cards)progress.seen[card.id]={at:'2026-10-06T00:00:00Z'};
+    const bigState:LearnerCourseState={
+      ...state,
+      set:{
+        ...state.set,
+        roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[bigNode]}],
+        activities:[...cards,pattern]
+      },
+      roadmap:{id:'main',title:{ru:'Путь'},nodes:[bigNode]},
+      progress,
+      roadmapProgress:{
+        nodes:[{node:bigNode,complete:false,unlocked:true}],
+        currentNode:bigNode,currentDayIndex:3,completedCount:2,requiredCount:40,courseComplete:false
+      },
+      currentNode:bigNode,
+      currentDayIndex:3
+    };
+
+    renderToday(
+      runtime({state:bigState}),
+      vi.fn(),vi.fn(),vi.fn(),vi.fn(),
+      {practice:[{activityId:pattern.id,mode:'drill',resolvedSteps:3,attemptedSteps:4,pendingCorrections:1}]}
+    );
+
+    expect(screen.getByText('22 из 43 заданий · ~12 мин')).toBeTruthy();
+    expect(screen.getByRole('button',{name:'Продолжить'})).toBeTruthy();
+  });
+
+  it('shows Continue even when every attempted task is still wrong',()=>{
+    renderToday(
+      runtime(),
+      vi.fn(),vi.fn(),vi.fn(),vi.fn(),
+      {tasks:{attemptedSteps:2,pendingCorrections:2}}
+    );
+
+    expect(screen.getByText('0 из 2 заданий · ~1 мин')).toBeTruthy();
+    expect(screen.getByRole('button',{name:'Продолжить'})).toBeTruthy();
   });
 
   it('does not offer replaying current-day tasks from the Today hero',()=>{

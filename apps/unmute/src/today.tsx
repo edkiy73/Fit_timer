@@ -24,11 +24,12 @@ import { ipaForDisplay } from './lexicon/schema';
 import { ScreenHeader } from './screen-header';
 import { AnimatedNumber } from './animated-number';
 import type { CourseSet, RoadmapNode } from './content/schema';
+import { getDayProgress, type ActiveDayProgress } from './day-progress';
+import { readActiveDayProgress } from './day-progress-local';
 import {
   lastWeekActivity,
   localizedText,
   nextLandmark,
-  nodeDoneCount,
   nodeMinutes,
   nodeSpeakExamples,
   nodeSpeakTask,
@@ -80,7 +81,8 @@ export function TodayView({
   onAccess,
   todayDay=activitySaveClock().dayNumber,
   learningDays=null,
-  otherCourses=[]
+  otherCourses=[],
+  activeDayProgress={}
 }:{
   runtime:LearnerCourseRuntimeValue;
   wordRuntime?:WordReviewRuntimeValue|null;
@@ -95,6 +97,8 @@ export function TodayView({
   learningDays?:RecordMap<TimedFlag>|null;
   /** Studied courses other than the active one: their due items count toward review. */
   otherCourses?:OtherCourseReview[];
+  /** Same-device unfinished task/practice state, merged on top of durable course progress. */
+  activeDayProgress?:ActiveDayProgress;
 }){
   const {t,locale}=useI18n();
   const [speakOpen,setSpeakOpen]=useState(false);
@@ -155,8 +159,9 @@ export function TodayView({
       </Tile>
     );
   }else if(node){
-    const done=nodeDoneCount(state.progress,node);
-    const total=node.activityIds.length;
+    const dayProgress=getDayProgress(state.set,node,state.progress,activeDayProgress);
+    const done=dayProgress.completedSteps;
+    const total=dayProgress.totalSteps;
     const stage=stageForDay(node.dayIndex,state.set.id);
     hero=(
       <Tile className="tile-hero today-hero" index={index++}>
@@ -182,7 +187,7 @@ export function TodayView({
         </p>
         <button className="primary-button today-start" type="button" onClick={()=>onStart(node.id)}>
           <Icon name="play" size={18} />
-          {done>0?t('today.continue'):t('today.start')}
+          {dayProgress.status==='not_started'?t('today.start'):t('today.continue')}
         </button>
       </Tile>
     );
@@ -370,10 +375,14 @@ export function TodayScreen(){
   const navigate=useNavigate();
   const runtime=useLearnerCourseRuntime();
   const otherCourses=useOtherCourseReviews(runtime.state?.set.id??'');
+  const activeDayProgress=runtime.state?.currentNode
+    ? readActiveDayProgress(runtime.state.set,runtime.state.currentNode,runtime.state.progress)
+    : {};
   return (
     <TodayView
       runtime={runtime}
       otherCourses={otherCourses.courses}
+      activeDayProgress={activeDayProgress}
       wordRuntime={useWordReviewRuntime()}
       learningDays={useAllLearningDays()}
       onStart={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId))}
