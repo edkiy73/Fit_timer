@@ -37,6 +37,7 @@ import { randomSeed, shuffledIndices } from './shuffle';
 import { sentenceResponseStage, type SentenceResponseKind } from './engine/sentence-progression';
 import { MOTION, prefersReducedMotion, withViewTransition } from './motion';
 import { SYSTEM_BACK_EVENT } from './native-back';
+import { lessonSectionStates, type LessonSectionId } from './lesson-sections';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -138,6 +139,8 @@ export interface NodeRunnerViewProps {
   startRecognition?:StartRecognition;
   /** Open this step first (e.g. «Скажи вслух» → the day's phrases, speaking mode). */
   startActivityId?:string;
+  /** Open a concrete lesson section from Route. */
+  startSection?:Extract<LessonSectionId,'theory'|'tasks'>;
   startMode?:PracticeSrsKind;
   /** Explicit return to an already-running lesson (e.g. after Plus purchase). */
   resumeSavedRun?:boolean;
@@ -294,6 +297,7 @@ export function NodeRunnerView({
   speak=speakText,
   startRecognition=startSpeechRecognition,
   startActivityId,
+  startSection,
   startMode,
   resumeSavedRun=false,
   replayTasksOnly=false,
@@ -435,7 +439,9 @@ export function NodeRunnerView({
       return;
     }
     const requested=startActivityId?steps.findIndex(item=>item.id===startActivityId):-1;
-    const saved=requested<0?readLessonRun(state.set.id,node.id):null;
+    const forcedTheory=startSection==='theory';
+    const forcedTasks=startSection==='tasks';
+    const saved=requested<0&&!forcedTheory&&!forcedTasks?readLessonRun(state.set.id,node.id):null;
     const restored=saved&&(resumeSavedRun||!nodeProgress?.complete)?remapLessonRun(saved,steps):null;
     const validSaved=Boolean(
       restored&&
@@ -470,8 +476,25 @@ export function NodeRunnerView({
       // Never destroy an unfinished run merely because refreshed course content is temporarily
       // different (e.g. after auth/Plus purchase). Only a completed node invalidates it.
       if(saved&&nodeProgress?.complete)clearLessonRun(state.set.id,node.id);
-      begin(requested>=0?requested:firstIncompleteRequirementIndex(node,steps,state.progress));
-      setIntro(requested<0&&theoryCards.some(card=>!isSeen(state.progress,card.id)));
+      const taskIndices=steps
+        .map((item,index)=>({item,index}))
+        .filter(({item})=>item.type==='choice'||item.type==='text-input'||item.type==='translation')
+        .map(({index})=>index);
+      const firstTask=forcedTasks
+        ? (taskIndices.find(index=>!isSeen(state.progress,steps[index]!.id))??taskIndices[0]??-1)
+        : -1;
+      const startIndex=requested>=0
+        ? requested
+        : firstTask>=0
+          ? firstTask
+          : firstIncompleteRequirementIndex(node,steps,state.progress);
+      begin(startIndex);
+      if(forcedTasks&&firstTask>=0){
+        const taskOrder=taskIndices.filter(index=>index>=firstTask);
+        setOrder(taskOrder.length?taskOrder:[firstTask]);
+        setFirstPass(taskOrder.length||1);
+      }
+      setIntro(forcedTheory||(!forcedTasks&&requested<0&&theoryCards.some(card=>!isSeen(state.progress,card.id))));
       setPracticeMode(startMode);
       // A completed day opened again is a replay. Otherwise continuing any existing
       // progress without a saved snapshot is an explicit resume, not a fresh first run.
@@ -493,7 +516,7 @@ export function NodeRunnerView({
     for(const plan of activities.filter(isPlan)){
       if(!isSeen(state.progress,plan.id))void saveSeen(state.set.id,plan.id).catch(()=>undefined);
     }
-  },[node?.id,state?.set.id,startActivityId,stepSignature,resumeSavedRun,replayTasksOnly]);
+  },[node?.id,state?.set.id,startActivityId,startSection,stepSignature,resumeSavedRun,replayTasksOnly]);
 
   useEffect(()=>{
     if(!runHydrated||!state||!node||finished||order.length===0)return;
@@ -819,38 +842,39 @@ export function NodeRunnerView({
 
   const setId=state.set.id;
   const stage=stageForDay(node.dayIndex,state.set.id);
+  const sectionStates=lessonSectionStates(state.set,node,state.progress);
+  const sectionComplete=(id:LessonSectionId)=>sectionStates.find(section=>section.id===id)?.complete===true;
+  const navChip=(id:LessonSectionId,label:string,active:boolean,onClick:()=>void)=>(
+    <button
+      key={id}
+      className={'chip-button pressable'+(active?' is-active':'')+(sectionComplete(id)?' is-complete':'')}
+      type="button"
+      aria-current={active?'page':undefined}
+      onClick={onClick}
+    >
+      {sectionComplete(id)&&<Icon name="check" size={13} />}
+      {label}
+    </button>
+  );
   const lessonNav=(
     <nav className="lesson-section-nav" aria-label={t('learn.sectionNav')}>
-      {theoryCards.length>0&&(
-        <button
-          className={'chip-button pressable'+(intro?' is-active':'')}
-          type="button"
-          aria-current={intro?'page':undefined}
-          onClick={()=>{ if(!intro)setTheoryOpen(true); }}
-        >
-          {t('learn.theory')}
-        </button>
+      {theoryCards.length>0&&navChip(
+        'theory',
+        t('learn.theory'),
+        intro||theoryOpen,
+        ()=>{ if(!intro)setTheoryOpen(true); }
       )}
-      {regularTaskIndices.length>0&&(
-        <button
-          className={'chip-button pressable'+(!intro&&activity&&(activity.type==='choice'||activity.type==='text-input'||activity.type==='translation')?' is-active':'')}
-          type="button"
-          aria-current={!intro&&activity&&(activity.type==='choice'||activity.type==='text-input'||activity.type==='translation')?'page':undefined}
-          onClick={openTasks}
-        >
-          {t('learn.tasks')}
-        </button>
+      {regularTaskIndices.length>0&&navChip(
+        'tasks',
+        t('learn.tasks'),
+        !intro&&Boolean(activity&&(activity.type==='choice'||activity.type==='text-input'||activity.type==='translation')),
+        openTasks
       )}
-      {availablePracticeModes.map(mode=>(
-        <button
-          key={mode}
-          className={'chip-button pressable'+(!intro&&activity?.type==='pattern-drill'&&practiceMode===mode?' is-active':'')}
-          type="button"
-          aria-current={!intro&&activity?.type==='pattern-drill'&&practiceMode===mode?'page':undefined}
-          onClick={()=>openPractice(mode)}
-        >
-          {t(MODE_KEY[mode])}
-        </button>
+      {availablePracticeModes.map(mode=>navChip(
+        mode,
+        t(MODE_KEY[mode]),
+        !intro&&activity?.type==='pattern-drill'&&practiceMode===mode,
+        ()=>openPractice(mode)
       ))}
     </nav>
   );
@@ -1315,6 +1339,8 @@ export function NodeRunnerScreen(){
   const [search]=useSearchParams();
   const mode=search.get('mode');
   const startMode=mode==='drill'||mode==='listening'||mode==='speaking'?mode:undefined;
+  const section=search.get('section');
+  const startSection=section==='theory'||section==='tasks'?section:undefined;
   const startActivityId=search.get('activity')||undefined;
   const resumeSavedRun=search.get('resume')==='1';
   const replayTasksOnly=search.get('tasks')==='1';
@@ -1348,6 +1374,7 @@ export function NodeRunnerScreen(){
       runtime={runtime}
       nodeId={String(params.nodeId||'')}
       {...(startActivityId?{startActivityId}:{})}
+      {...(startSection?{startSection}:{})}
       {...(startMode?{startMode}:{})}
       {...(resumeSavedRun?{resumeSavedRun:true}:{})}
       {...(replayTasksOnly?{replayTasksOnly:true}:{})}
