@@ -1032,11 +1032,13 @@ select:active{transform:scale(.985)}
   position:relative;
   overflow:hidden;
   cursor:pointer;
-  min-height:88px;
-  padding:12px 16px;
+  min-height:76px;
+  padding:10px 16px;
   grid-template-columns:minmax(0,1fr) auto;
   align-items:center;
+  align-content:center;
   column-gap:18px;
+  row-gap:0;
   border-color:color-mix(in srgb,var(--listen) 26%,var(--line));
   background:
     radial-gradient(circle at 8% 50%,color-mix(in srgb,var(--listen) 11%,transparent),transparent 34%),
@@ -1066,9 +1068,8 @@ select:active{transform:scale(.985)}
   color:var(--listen);
   box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--listen) 18%,transparent);
 }
-.review-card-copy{display:grid;gap:2px;min-width:0}
+.review-card-copy{display:flex;align-items:center;min-width:0}
 .review-card-copy strong{font-size:18px;line-height:1.2;font-weight:800}
-.review-card-copy span{overflow:hidden;color:var(--muted);font-size:12.5px;line-height:1.3;text-overflow:ellipsis;white-space:nowrap}
 .review-card-count{position:relative;z-index:1;display:grid;place-items:center end;min-width:64px;align-self:center}
 .review-card-count strong{font-size:38px;line-height:1;font-weight:800;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
 
@@ -1088,7 +1089,7 @@ select:active{transform:scale(.985)}
     radial-gradient(circle at 100% 0,color-mix(in srgb,var(--accent) 9%,transparent),transparent 46%),
     var(--card);
 }
-.mini-card-head{display:flex;align-items:center;gap:8px;min-height:30px}
+.mini-card-head{display:flex;align-items:center;gap:8px;height:30px;min-height:30px}
 .mini-card-icon{
   display:grid;
   place-items:center;
@@ -1104,8 +1105,8 @@ select:active{transform:scale(.985)}
 .streak-number .tile-unit{font-size:15px;font-weight:700;color:var(--muted);letter-spacing:0}
 .tile-streak .week{margin-top:auto}
 
-.course-progress-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.course-progress-title{display:flex;align-items:center;gap:8px;min-width:0}
+.course-progress-head{display:flex;align-items:center;justify-content:space-between;gap:10px;height:30px;min-height:30px}
+.course-progress-title{display:flex;align-items:center;gap:8px;min-width:0;height:30px}
 .course-progress-percent{font-size:22px;line-height:1;font-weight:800;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
 .course-progress-copy{display:grid;gap:1px;margin-top:auto}
 .course-progress-copy strong{font-size:14px;line-height:1.25;font-weight:800;white-space:nowrap}
@@ -1139,7 +1140,6 @@ select:active{transform:scale(.985)}
 @media(max-width:390px){
   .tile-review.is-due{grid-template-columns:minmax(0,1fr) auto;column-gap:10px;padding-inline:14px}
   .review-card-icon{width:44px;height:44px;border-radius:14px}
-  .review-card-copy span{max-width:150px}
   .review-card-count strong{font-size:36px}
   .tile-streak,.tile-course-mini{min-height:148px}
   .course-progress-percent{font-size:20px}
