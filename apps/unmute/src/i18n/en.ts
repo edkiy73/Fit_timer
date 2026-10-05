@@ -336,6 +336,7 @@ export const en: Record<keyof typeof ru, string> = {
   'courseMap.daySections': 'Current day sections',
   'courseMap.sectionDone': 'complete',
   'courseMap.sectionTodo': 'still to do',
+  'courseMap.sectionOptional': 'optional',
   'courseMap.sectionStatus': '{section}: {status}',
   'learn.loadingTitle': 'Opening your lesson',
   'learn.errorTitle': 'Could not load the lesson',
