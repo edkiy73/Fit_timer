@@ -828,6 +828,7 @@ select:active{transform:scale(.985)}
 /* Lesson runner: full screen, no tab bar; close + segmented progress on top, action pinned low. */
 .runner{gap:14px}
 .runner-top{position:sticky;top:var(--safe-top);z-index:5;display:flex;align-items:center;gap:12px;margin:-8px 0 0;padding:8px 0;background:var(--bg)}
+.runner-top-intro{position:relative;top:auto;z-index:auto;background:transparent}
 .runner-close{display:grid;place-items:center;flex:0 0 44px;height:44px;border:0;border-radius:22px;background:var(--surface);color:var(--ink);cursor:pointer}
 .runner-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .runner-progress{display:flex;flex:1 1 auto;height:6px;border-radius:3px;overflow:hidden;background:var(--surface)}

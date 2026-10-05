@@ -222,6 +222,7 @@ describe('node activity runner',()=>{
 
     // Theory is a page before the tasks, not a step of the lesson.
     expect(screen.getByText('Короткая теория')).toBeTruthy();
+    expect(document.querySelector('.runner-top-intro')).toBeTruthy();
     await waitFor(()=>expect(storedRunMode()).toBe('first'));
     expect(screen.queryByRole('progressbar')).toBeNull();
     await user.click(screen.getByRole('button',{name:'К заданиям'}));
