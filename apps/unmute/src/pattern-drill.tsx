@@ -63,6 +63,14 @@ export function drillSayMs(answer:string):number{
   return Math.min(6500,Math.max(2200,1400+550*words));
 }
 
+export function drillCommitOnTime(commitAt:number,nominalDeadline:number):boolean{
+  return commitAt<=nominalDeadline+DRILL_GRACE_MS;
+}
+
+export function drillAttemptResolved(same:boolean,onTime:boolean):boolean{
+  return same&&onTime;
+}
+
 export function drillScore(fast:number,total:number):number{
   return total>0?Math.round(Math.max(0,fast)/total*100):0;
 }
@@ -166,7 +174,7 @@ export function PatternDrillView({
     if(phase!=='ask')return;
     const commitAt=activationRef.current??Date.now();
     activationRef.current=null;
-    setLastFast(commitAt<=deadlineRef.current+DRILL_GRACE_MS);
+    setLastFast(drillCommitOnTime(commitAt,deadlineRef.current));
     setPhase('show');
   };
 
@@ -175,7 +183,7 @@ export function PatternDrillView({
     let nextItems=items;
     let nextFast=fast;
     let nextSlow=slow;
-    const resolved=same&&lastFast===true;
+    const resolved=drillAttemptResolved(same,lastFast===true);
     // Only the first round defines quality/SRS. Correction attempts only resolve the unit.
     if(pos<base){
       if(resolved)nextFast++;
