@@ -76,7 +76,14 @@ function runtime(overrides:Partial<LearnerCourseRuntimeValue>={}):LearnerCourseR
   };
 }
 
-function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn(),onReview=vi.fn(),onMap=vi.fn(),onAccess=vi.fn()){
+function renderToday(
+  value:LearnerCourseRuntimeValue,
+  onStart=vi.fn(),
+  onReview=vi.fn(),
+  onMap=vi.fn(),
+  onAccess=vi.fn(),
+  activePractice:Parameters<typeof TodayView>[0]['activePractice']=[]
+){
   render(
     <I18nProvider
       dictionaries={dictionaries}
@@ -84,7 +91,7 @@ function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn(),onReview=vi
       storageKey="today-test.locale"
       systemLanguages={['ru']}
     >
-      <TodayView runtime={value} onStart={onStart} onReview={onReview} onMap={onMap} onAccess={onAccess} />
+      <TodayView runtime={value} onStart={onStart} onReview={onReview} onMap={onMap} onAccess={onAccess} activePractice={activePractice} />
     </I18nProvider>
   );
   return {onStart,onReview,onMap,onAccess};
@@ -102,6 +109,56 @@ describe('Today learner shell',()=>{
     expect(screen.queryByText('1/4')).toBeNull();
     expect(screen.getByText('1 из 4 дней')).toBeTruthy();
     expect(screen.getByRole('button',{name:'Начать'})).toBeTruthy();
+  });
+
+  it('shows real 19 + 8 + 8 + 8 day progress and includes unfinished phrase state',()=>{
+    const cards=Array.from({length:19},(_,index)=>({
+      id:'big.'+(index+1),revision:1,type:'choice' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],prompt:{ru:'Вопрос'},options:[{ru:'A'},{ru:'B'}],correctIndex:0
+    }));
+    const pattern={
+      id:'big.pattern',revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],pattern:{ru:'Привычки'},modes:['drill','listening','speaking'] as const,
+      items:Array.from({length:8},(_,index)=>({
+        id:'big.p'+(index+1),prompt:{ru:'Фраза'},answer:{accepted:['Phrase'],nearMiss:true,caseSensitive:false}
+      }))
+    };
+    const bigNode={
+      id:'day-3',kind:'lesson' as const,title:{ru:'День 3'},dayIndex:3,order:2,prerequisites:[],
+      activityIds:[...cards.map(card=>card.id),pattern.id],
+      completion:{mode:'all' as const,requirements:[
+        {kind:'activity-seen' as const,activityIds:cards.map(card=>card.id)},
+        {kind:'practice-started' as const,activityId:pattern.id,modes:['drill','listening','speaking'] as const}
+      ]},
+      optional:false
+    };
+    const progress=emptyCourseProgress();
+    for(const card of cards)progress.seen[card.id]={at:'2026-10-06T00:00:00Z'};
+    const bigState:LearnerCourseState={
+      ...state,
+      set:{
+        ...state.set,
+        roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[bigNode]}],
+        activities:[...cards,pattern]
+      },
+      roadmap:{id:'main',title:{ru:'Путь'},nodes:[bigNode]},
+      progress,
+      roadmapProgress:{
+        nodes:[{node:bigNode,complete:false,unlocked:true}],
+        currentNode:bigNode,currentDayIndex:3,completedCount:2,requiredCount:40,courseComplete:false
+      },
+      currentNode:bigNode,
+      currentDayIndex:3
+    };
+
+    renderToday(
+      runtime({state:bigState}),
+      vi.fn(),vi.fn(),vi.fn(),vi.fn(),
+      [{activityId:pattern.id,mode:'drill',resolvedSteps:3,attemptedSteps:4,pendingCorrections:1}]
+    );
+
+    expect(screen.getByText('22 из 43 заданий · ~25 мин')).toBeTruthy();
+    expect(screen.getByRole('button',{name:'Продолжить'})).toBeTruthy();
   });
 
   it('does not offer replaying current-day tasks from the Today hero',()=>{
