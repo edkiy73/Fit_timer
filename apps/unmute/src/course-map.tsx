@@ -261,7 +261,7 @@ export function CourseMapView({
       <header className="screen-head">
         <div className="screen-kicker">
           {currentGroup?.stage
-            ? t('courseMap.kicker',{stage:currentGroup.stage.number,stages:courseStages(state.set.id).length,complete:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})
+            ? t('courseMap.kicker',{stage:currentGroup.stage.number,stages:courseStages(state.set.id).length})
             : t('courseMap.progress',{complete:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})}
         </div>
         <div className="screen-title-row">
@@ -365,10 +365,12 @@ export function CourseMapView({
                         >
                           <span className="station-day">
                             {station.label}
-                            {station.status==='current'&&<span className="here-pill">{t('courseMap.here')}</span>}
+                            {station.status==='current'&&<span className="here-pill">{t('courseMap.statusCurrent')}</span>}
                           </span>
                           {station.title!==station.label&&<span className="station-title">{station.title}</span>}
-                          {station.status==='available'&&<span className="station-status">{t(statusKey(station.status))}</span>}
+                          {(station.status==='available'||station.status==='prerequisite-locked'||station.status==='purchase-locked')&&(
+                            <span className="station-status">{t(statusKey(station.status))}</span>
+                          )}
                         </button>
                         {station.status==='current'&&station.canOpen&&(
                           <button className="primary-button station-go" type="button" onClick={()=>onOpen(station.node.id)}>
