@@ -107,7 +107,7 @@ describe('course review screen',()=>{
     await user.click(screen.getByRole('button',{name:'I'}));
     await user.click(screen.getByRole('button',{name:'am'}));
     await user.click(screen.getByRole('button',{name:'home'}));
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     expect(saveGraded).toHaveBeenLastCalledWith('general-foundation','card.one',true,'build',expect.any(String));
   });
 
@@ -125,12 +125,12 @@ describe('course review screen',()=>{
     expect(await screen.findByText('К повтору сегодня: 2')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Начать повтор'}));
     await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am home');
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     expect(saveGraded).toHaveBeenLastCalledWith('general-foundation','card.one',true,'write',expect.any(String));
     await user.click(screen.getByRole('button',{name:'Далее'}));
     expect(await screen.findByText('Напиши: Привет')).toBeTruthy();
     await user.type(screen.getByRole('textbox',{name:'Твой ответ'}),'Hi');
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     expect(saveGraded).toHaveBeenLastCalledWith('a1-starter','a1.card',true,'write',expect.any(String));
   });
 
@@ -145,7 +145,7 @@ describe('course review screen',()=>{
 
     await user.click(await screen.findByRole('button',{name:'Начать повтор'}));
     await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am homw');
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
 
     expect(await screen.findByText('Почти правильно')).toBeTruthy();
     expect(screen.getByText('Похоже на опечатку — ответ засчитан.')).toBeTruthy();
@@ -166,13 +166,13 @@ describe('course review screen',()=>{
     await user.click(screen.getByRole('button',{name:'Начать повтор'}));
     let input=await screen.findByRole('textbox',{name:'Твой ответ'});
     await user.type(input,'wrong');
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     expect(saveGraded).toHaveBeenLastCalledWith('general-foundation','card.one',false,'write',expect.any(String));
 
     await user.click(screen.getByRole('button',{name:'Повторить в конце'}));
     input=await screen.findByRole('textbox',{name:'Твой ответ'});
     await user.type(input,'I am home');
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     // The return is practice: the first (wrong) answer already set the interval.
     expect(saveGraded).toHaveBeenCalledTimes(1);
 
@@ -190,7 +190,7 @@ describe('course review screen',()=>{
     renderReview(vi.fn(async()=>{}),vi.fn(async()=>{}),{status:'ready',courses:[],failed:1});
     await user.click(await screen.findByRole('button',{name:'Начать повтор'}));
     await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am home');
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     await user.click(screen.getByRole('button',{name:'Далее'}));
     expect(await screen.findByText(/Повторения другого курса сейчас не загрузились/)).toBeTruthy();
   });
@@ -200,10 +200,10 @@ describe('course review screen',()=>{
     const {saveGraded}=renderReview();
     await user.click(await screen.findByRole('button',{name:'Начать повтор'}));
     await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'wrong');
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     await user.click(screen.getByRole('button',{name:'Повторить в конце'}));
     await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'wrong again');
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     await user.click(screen.getByRole('button',{name:'Далее'}));
     expect(await screen.findByRole('heading',{name:'Повтор завершён'})).toBeTruthy();
     expect(saveGraded).toHaveBeenCalledTimes(1);
@@ -215,7 +215,7 @@ describe('course review screen',()=>{
     await user.click(await screen.findByRole('button',{name:'Начать повтор'}));
     expect(document.documentElement.dataset.focusRun).toBe('review');
     await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am home');
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     await user.click(screen.getByRole('button',{name:'Далее'}));
     expect(await screen.findByRole('heading',{name:'Повтор завершён'})).toBeTruthy();
     expect(document.documentElement.dataset.focusRun).toBeUndefined();
