@@ -8,6 +8,7 @@ export interface LessonSectionState {
   id:LessonSectionId;
   labelKey:string;
   complete:boolean;
+  required:boolean;
   activityId?:string;
 }
 
@@ -24,6 +25,20 @@ const isSeen=(progress:CourseProgressDocument,id:string)=>{
 
 const isPlan=(activity:Activity)=>activity.type==='theory'&&(activity.tags??[]).includes('plan');
 
+function activitiesRequiredBySeen(node:RoadmapNode,activityIds:string[]):boolean{
+  if(!node.completion)return activityIds.some(id=>node.activityIds.includes(id));
+  return node.completion.requirements.some(requirement=>
+    requirement.kind==='activity-seen'&&activityIds.some(id=>requirement.activityIds.includes(id))
+  );
+}
+
+function practiceRequired(node:RoadmapNode,activityId:string,mode:PracticeSrsKind):boolean{
+  if(!node.completion)return true;
+  return node.completion.requirements.some(requirement=>
+    requirement.kind==='practice-started'&&requirement.activityId===activityId&&requirement.modes.includes(mode)
+  );
+}
+
 export function lessonSectionStates(
   set:CourseSet,
   node:RoadmapNode,
@@ -39,7 +54,8 @@ export function lessonSectionStates(
     sections.push({
       id:'theory',
       labelKey:'learn.theory',
-      complete:theory.every(activity=>isSeen(progress,activity.id))
+      complete:theory.every(activity=>isSeen(progress,activity.id)),
+      required:activitiesRequiredBySeen(node,theory.map(activity=>activity.id))
     });
   }
 
@@ -50,7 +66,8 @@ export function lessonSectionStates(
     sections.push({
       id:'tasks',
       labelKey:'learn.tasks',
-      complete:tasks.every(activity=>isSeen(progress,activity.id))
+      complete:tasks.every(activity=>isSeen(progress,activity.id)),
+      required:activitiesRequiredBySeen(node,tasks.map(activity=>activity.id))
     });
   }
 
@@ -65,6 +82,7 @@ export function lessonSectionStates(
       id:mode,
       labelKey:MODE_KEY[mode],
       complete:Boolean(record&&!record.deleted&&record.box>0),
+      required:practiceRequired(node,pattern.id,mode),
       activityId:pattern.id
     });
   }
