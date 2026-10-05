@@ -105,7 +105,7 @@ export function AdminCampaigns({client,adminKey,locale}:{client:AdminClient;admi
   const eligible=(result?.pushEligible||0)+(result?.emailEligible||0);
   const sent=(result?.pushSent||0)+(result?.emailSent||0);
 
-  return <section className="ab-admin-stack">
+  return <section className="ab-admin-stack ab-admin-campaigns">
     <article className="ab-admin-panel">
       <h2>{copy.testPush}</h2>
       <p className="ab-admin-note">{copy.testHint}</p>
