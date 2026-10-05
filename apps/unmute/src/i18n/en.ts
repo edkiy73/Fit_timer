@@ -340,6 +340,7 @@ export const en: Record<keyof typeof ru, string> = {
   'learn.exitSave': 'Leave',
   'learn.tapAgain': 'Tap again to confirm',
   'learn.theory': 'Theory',
+  'learn.sectionNav': 'Lesson sections',
   'learn.tasks': 'Tasks',
   'learn.theoryClose': 'Close theory',
   'learn.activityProgress': 'Lesson progress',
