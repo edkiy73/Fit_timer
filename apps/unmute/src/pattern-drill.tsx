@@ -3,6 +3,7 @@ import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
 import { ExerciseKind } from './exercise-kind';
 import { LexiconText } from './lexicon-ui';
+import { AnswerFeedbackSheet } from './answer-feedback-sheet';
 
 type PatternDrillActivity=Extract<Activity,{type:'pattern-drill'}>;
 
@@ -240,24 +241,26 @@ export function PatternDrillView({
           </div>
         </>
       ) : (
-        <>
-          <div className={lastFast?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-neutral'}>
-            <strong>{lastFast?t('drill.fast'):t('drill.slow')}</strong>
-            <span>{t('drill.compare')}</span>
-          </div>
+        <AnswerFeedbackSheet
+          tone={lastFast?'correct':'near'}
+          title={lastFast?t('drill.fast'):t('drill.slow')}
+          subtitle={<span>{t('drill.compare')}</span>}
+          actions={
+            <>
+              <button className="secondary-button" type="button" onClick={()=>nextItem(false)}>
+                {t('drill.wrong')}
+              </button>
+              <button className="primary-button learn-feedback-next" type="button" onClick={()=>nextItem(true)}>
+                {t('drill.same')}
+              </button>
+            </>
+          }
+        >
           <div className="drill-target"><LexiconText text={accepted} refs={activity.lexiconRefs} /></div>
           {explanation&&(
             <p className="drill-explanation"><LexiconText text={explanation} refs={activity.lexiconRefs} /></p>
           )}
-          <div className="drill-binary-actions">
-            <button className="secondary-button" type="button" onClick={()=>nextItem(false)}>
-              {t('drill.wrong')}
-            </button>
-            <button className="primary-button" type="button" onClick={()=>nextItem(true)}>
-              {t('drill.same')}
-            </button>
-          </div>
-        </>
+        </AnswerFeedbackSheet>
       )}
 
     </article>
