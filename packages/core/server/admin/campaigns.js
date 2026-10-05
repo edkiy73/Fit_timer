@@ -73,7 +73,7 @@ async function handleAdminCampaigns(action, body, res){
     }
 
     let delivered=false;
-    const pushCan = wantPush && prefs.offers !== false && Object.keys(acc.pushDevices||{}).length > 0;
+    const pushCan = wantPush && prefs[kind] !== false && Object.keys(acc.pushDevices||{}).length > 0;
     const emailPref = kind==='offers' ? prefs.emailOffers === true : prefs.emailNews === true;
     const emailCan = !pushCan && wantEmail && emailPref;
 
@@ -81,11 +81,11 @@ async function handleAdminCampaigns(action, body, res){
       if(pushCan){pushEligible++;delivered=true;}
       else if(emailCan){emailEligible++;delivered=true;}
     }else{
-      if(wantPush && prefs.offers !== false){
+      if(wantPush && prefs[kind] !== false){
         try{
           const r=await sendPushToAccountHash(mh,{
-            category:'offers',title:msg.title,body:msg.body,
-            data:{stage:'campaign',kind,category:'offers'}
+            category:kind,title:msg.title,body:msg.body,
+            data:{stage:'campaign',kind,category:kind}
           });
           if(r&&r.sent>0){pushSent+=r.sent;delivered=true;}
         }catch(_){failed++;}
