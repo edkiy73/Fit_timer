@@ -40,6 +40,37 @@ describe('pattern practice orchestration',()=>{
     progress.practice.drill[activity.id]={box:0,due:1,at:'2026-09-29T00:00:00.000Z'};
     expect(firstPatternMode(activity,progress)).toBe('drill');
   });
+
+  it('shows phrase-level progress before starting and hides phrase count from the intro',async()=>{
+    const onProgress=vi.fn();
+    const manyItems=Array.from({length:8},(_,index)=>({
+      id:'p'+(index+1),
+      prompt:{ru:'Фраза '+(index+1)},
+      answer:{accepted:['Phrase '+(index+1)],nearMiss:true,caseSensitive:false}
+    }));
+    const manyActivity={...activity,items:manyItems};
+
+    render(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="practice-progress-test.locale" systemLanguages={['ru']}>
+        <PatternPracticeView
+          activity={manyActivity}
+          courseActivities={[manyActivity]}
+          progress={emptyCourseProgress()}
+          setId="general-foundation"
+          onDone={()=>{}}
+          savePractice={async()=>{}}
+          speak={async()=>true}
+          initialMode="speaking"
+          onProgress={onProgress}
+        />
+      </I18nProvider>
+    );
+
+    await waitFor(()=>expect(onProgress).toHaveBeenCalledWith(1,6));
+    expect(screen.queryByText(/Фраз:\s*8/)).toBeNull();
+    expect(screen.getByText('Тренируем произношение: телефон слушает и проверяет, узнаются ли слова.')).toBeTruthy();
+  });
+
   it('lets the lesson own the shared mode navigator',async()=>{
     const onModeChange=vi.fn();
     const view=render(
