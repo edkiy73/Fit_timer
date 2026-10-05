@@ -1073,7 +1073,7 @@ export function NodeRunnerView({
   };
 
   const patternHeaderProgress=activity.type==='pattern-drill'
-    ? (practiceProgress??{current:1,total:activity.items.length})
+    ? (practiceProgress??{current:0,total:activity.items.length})
     : null;
   const dueReview=activity.type==='review'?buildCourseReviewSession(state.set,state.progress,activitySaveClock().dayNumber).actionableCount:0;
   const completeReviewDay=async()=>{
@@ -1096,7 +1096,7 @@ export function NodeRunnerView({
         </button>
         {patternHeaderProgress ? (
           <>
-            <div className="runner-progress runner-progress-segmented" role="progressbar" aria-label={t('learn.activityProgress')} aria-valuemin={1} aria-valuemax={patternHeaderProgress.total} aria-valuenow={patternHeaderProgress.current}>
+            <div className="runner-progress runner-progress-segmented" role="progressbar" aria-label={t('learn.activityProgress')} aria-valuemin={0} aria-valuemax={patternHeaderProgress.total} aria-valuenow={patternHeaderProgress.current}>
               {Array.from({length:patternHeaderProgress.total},(_,index)=>(
                 <span
                   key={index}
