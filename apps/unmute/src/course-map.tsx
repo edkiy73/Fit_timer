@@ -377,6 +377,18 @@ export function CourseMapView({
                           )}
                         </button>
                         {station.status==='current'&&station.canOpen&&sectionStates.length>0&&(
+                          <div className="station-section-summary">
+                            {sectionStates.some(section=>section.required&&!section.complete)
+                              ? t('courseMap.remainingSections',{
+                                  sections:sectionStates
+                                    .filter(section=>section.required&&!section.complete)
+                                    .map(section=>t(section.labelKey))
+                                    .join(' · ')
+                                })
+                              : t('courseMap.requiredSectionsDone')}
+                          </div>
+                        )}
+                        {station.status==='current'&&station.canOpen&&sectionStates.length>0&&(
                           <div className="station-section-chips" aria-label={t('courseMap.daySections')}>
                             {sectionStates.map(section=>(
                               <button
