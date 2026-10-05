@@ -51,7 +51,7 @@ describe('pattern practice orchestration',()=>{
           setId="general-foundation"
           onDone={()=>{}}
           savePractice={async()=>{}}
-          speak={async()=>{}}
+          speak={async()=>true}
           showModeNav={false}
           initialMode="speaking"
           onModeChange={onModeChange}
@@ -72,7 +72,7 @@ describe('pattern practice orchestration',()=>{
           setId="general-foundation"
           onDone={()=>{}}
           savePractice={async()=>{}}
-          speak={async()=>{}}
+          speak={async()=>true}
           showModeNav={false}
           initialMode="listening"
           onModeChange={onModeChange}
