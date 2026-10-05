@@ -22,7 +22,7 @@
 | Admin 360 px browser audit | ✅ #543 |
 | Терминология learner UI | 🟡 текущая пачка |
 | Явный контракт save/error/retry copy | ✅ #545 |
-| Admin status flow «черновик → проверен → готов → выпущен» | ⬜ P1 |
+| Admin status flow «черновик → проверен → готов → выпущен» | ✅ #546 |
 | Motion / premium polish | ⬜ после P1 |
 | Реальный Android device QA | 🟡 |
 

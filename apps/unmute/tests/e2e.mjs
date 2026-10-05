@@ -295,6 +295,7 @@ try{
   await adminTab('Ошибки');
   ok('Admin errors say how often and when',await appears(admin.getByText(/^1 раз · \d/)));
   await adminTab('Курсы');
+  ok('Admin «Курсы»: release flow is visible',await appears(admin.locator('.ab-course-release .ab-release-flow')));
   await admin.getByRole('button',{name:/Hello|День 1/}).first().click();
   ok('Admin «Курсы»: a day opens with its tasks',await appears(admin.locator('.ab-course-task').first()));
   await admin.locator('.ab-course-task-main').first().click();
@@ -304,6 +305,7 @@ try{
   await admin.getByRole('button',{name:'← Все дни'}).click();
   ok('Admin «Курсы»: back to all days on a phone',await appears(admin.locator('.ab-course-days-pane')));
   await adminTab('Словарь');
+  ok('Admin «Словарь»: release flow is visible',await appears(admin.locator('.ab-dictionary-release .ab-release-flow')));
   await admin.getByRole('searchbox',{name:'Слово или перевод'}).fill('hello');
   await admin.getByRole('button',{name:'Найти',exact:true}).click();
   ok('Admin word search answers',await appears(admin.getByText(/Ничего не нашлось|Изменить/).first()));

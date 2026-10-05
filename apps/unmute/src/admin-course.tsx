@@ -282,6 +282,22 @@ function courseState(item:CourseSetSummary){
   return {tone:'live',text:'На сайте, новых правок нет'};
 }
 
+function ReleaseFlow({stage}:{stage:'draft'|'checked'|'ready'|'published'}){
+  const items=[
+    ['draft','Черновик'],
+    ['checked','Проверен'],
+    ['ready','Готов к выпуску'],
+    ['published','Выпущен']
+  ] as const;
+  const order={draft:0,checked:1,ready:2,published:3} as const;
+  return <div className="ab-release-flow" aria-label="Статус выпуска">
+    {items.map(([id,label])=>{
+      const state=order[id]<order[stage]?'done':order[id]===order[stage]?'current':'next';
+      return <div className="ab-release-step" data-state={state} key={id}><span aria-hidden="true" /> <b>{label}</b></div>;
+    })}
+  </div>;
+}
+
 function failureText(error:unknown,what:string){
   const status=Number((error as {status?:number})?.status||0);
   const code=String((error as {code?:string})?.code||'');
@@ -394,6 +410,8 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
   const current=sets.find(item=>item.id===setId) ?? null;
   const state=current ? courseState(current) : null;
   const needsRelease=!!current && (!current.publishedRevision || !!current.unreleasedChanges);
+  const releaseStage:'draft'|'checked'|'ready'|'published'=
+    !needsRelease ? 'published' : check?.ready ? 'ready' : check ? 'checked' : 'draft';
   useEffect(()=>{ if(needsRelease) void runCheck(); else setCheck(null); },[needsRelease,runCheck,current?.draftRevision]);
 
   async function refreshCourse(){
@@ -671,8 +689,14 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
           <h2>{textValue(current.title)||current.id}</h2>
           <p className="ab-course-release-state">{state.text}</p>
         </div>
-        <button type="button" disabled={busy||!needsRelease||(check!==null&&!check.ready)} onClick={()=>void publish()}>Выпустить</button>
       </div>
+      <ReleaseFlow stage={releaseStage} />
+      {needsRelease&&(
+        <div className="ab-course-release-actions">
+          <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void runCheck()}>Проверить</button>
+          <button type="button" disabled={busy||!check?.ready} onClick={()=>void publish()}>Выпустить</button>
+        </div>
+      )}
       {needsRelease && check && !check.ready && <div className="ab-release-check">
         {check.missingCount>0 && <p>Выпуск ждёт словаря — нет слов ({check.missingCount}): <b>{wordList(check.missing,check.missingCount)}</b>. Добавь их в разделе «Словарь» → «Дополнить словарь через ИИ».</p>}
         {check.ambiguousCount>0 && <p>У слов несколько записей в словаре ({check.ambiguousCount}): <b>{wordList(check.ambiguous,check.ambiguousCount)}</b>. Объедини их в разделе «Словарь».</p>}

@@ -79,6 +79,22 @@ type BulkPreview = {
   coverage?:CoverageSummary;
 };
 
+function ReleaseFlow({stage}:{stage:'draft'|'checked'|'ready'|'published'}){
+  const items=[
+    ['draft','Черновик'],
+    ['checked','Проверен'],
+    ['ready','Готов к выпуску'],
+    ['published','Выпущен']
+  ] as const;
+  const order={draft:0,checked:1,ready:2,published:3} as const;
+  return <div className="ab-release-flow" aria-label="Статус выпуска">
+    {items.map(([id,label])=>{
+      const state=order[id]<order[stage]?'done':order[id]===order[stage]?'current':'next';
+      return <div className="ab-release-step" data-state={state} key={id}><span aria-hidden="true" /><b>{label}</b></div>;
+    })}
+  </div>;
+}
+
 type ContentAdminContext={
   query:string;
   lookup:string;
@@ -416,10 +432,12 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   const lp=status?.lexicon?.published;
   // The draft changed after the last release (transcription, AI batch, a word edit).
   const dictionaryChanged=!!ld && (!lp || String(ld.draftUpdatedAt||'')>String(lp.publishedAt||''));
+  const dictionaryStage:'draft'|'checked'|'ready'|'published'=
+    !ld ? 'draft' : !dictionaryChanged ? 'published' : review.length===0 ? 'ready' : 'checked';
 
   return (
     <>
-      <article className="ab-admin-panel">
+      <article className="ab-admin-panel ab-dictionary-release">
         <div className="ab-admin-section-head">
           <div>
             <h2>Словарь{ld ? ' · '+String(ld.entries ?? 0)+' слов' : ''}</h2>
@@ -429,8 +447,14 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
                 : 'На сайте, новых правок нет'+(lp?.publishedAt ? ' · выпущен '+shortDate(String(lp.publishedAt)) : '')+'.'}
             </p>
           </div>
-          <button type="button" disabled={bulkBusy || !dictionaryChanged} onClick={()=>void publishDictionary()}>Выпустить словарь</button>
         </div>
+        <ReleaseFlow stage={dictionaryStage} />
+        {dictionaryChanged&&(
+          <div className="ab-dictionary-release-actions">
+            <span className="ab-admin-note">{review.length?('Сначала проверь записи: '+review.length):'Проверка завершена — можно выпускать.'}</span>
+            <button type="button" disabled={bulkBusy || review.length>0} onClick={()=>void publishDictionary()}>Выпустить словарь</button>
+          </div>
+        )}
         <p className="ab-admin-note">Курсы выпускаются отдельно, в разделе «Курсы». Выпуск словаря их не трогает.</p>
         {dictMessage && <p className="ab-admin-feedback" role="status">{dictMessage}</p>}
         {message && <p className="ab-admin-feedback" role="status">{message}</p>}
