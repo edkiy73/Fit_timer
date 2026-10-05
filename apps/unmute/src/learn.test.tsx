@@ -380,6 +380,74 @@ describe('node activity runner',()=>{
     expect(screen.getByText('Это была тренировка: интервалы «Повтора» не изменились.')).toBeTruthy();
   });
 
+
+  it('keeps the lesson header in sync with phrase progress inside speed practice',async()=>{
+    const user=userEvent.setup();
+    const patternActivity={
+      id:'pattern.progress',revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],pattern:{ru:'I / he + глагол'},modes:['drill' as const],
+      items:[
+        {id:'p1',prompt:{ru:'Я живу здесь.'},answer:{accepted:['I live here.'],nearMiss:true,caseSensitive:false}},
+        {id:'p2',prompt:{ru:'Он живёт здесь.'},answer:{accepted:['He lives here.'],nearMiss:true,caseSensitive:false}}
+      ]
+    };
+    const patternNode={
+      id:'day-pattern',
+      kind:'lesson' as const,
+      title:{ru:'День паттерна'},
+      dayIndex:2,
+      order:1,
+      prerequisites:[],
+      activityIds:[patternActivity.id],
+      optional:false
+    };
+    const patternState:LearnerCourseState={
+      ...state,
+      set:{
+        ...state.set,
+        roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[patternNode]}],
+        activities:[patternActivity]
+      },
+      roadmap:{id:'main',title:{ru:'Путь'},nodes:[patternNode]},
+      roadmapProgress:{
+        nodes:[{node:patternNode,complete:false,unlocked:true}],
+        currentNode:patternNode,
+        currentDayIndex:2,
+        completedCount:0,
+        requiredCount:1,
+        courseComplete:false
+      },
+      currentNode:patternNode,
+      currentDayIndex:2
+    };
+    const patternRuntime:LearnerCourseRuntimeValue={...runtime,state:patternState};
+
+    render(
+      <I18nProvider
+        dictionaries={dictionaries}
+        config={{locales:['ru'],default:'ru'}}
+        storageKey="learn-pattern-progress.locale"
+        systemLanguages={['ru']}
+      >
+        <NodeRunnerView
+          runtime={patternRuntime}
+          nodeId="day-pattern"
+          onExit={()=>{}}
+          saveSeen={async()=>{}}
+          saveGraded={async()=>{}}
+          savePractice={async()=>{}}
+        />
+      </I18nProvider>
+    );
+
+    await waitFor(()=>expect(screen.getByText('1/2')).toBeTruthy());
+    await user.click(screen.getByRole('button',{name:'Начать'}));
+    await user.click(screen.getByRole('button',{name:'Показать ответ'}));
+    await user.click(screen.getByRole('button',{name:'Совпало'}));
+
+    await waitFor(()=>expect(screen.getByText('2/2')).toBeTruthy());
+  });
+
   it('resumes from the first activity that is not already seen',()=>{
     const progress=emptyCourseProgress();
     progress.seen['theory.one']={at:'2026-09-29T01:00:00.000Z'};
