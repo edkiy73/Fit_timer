@@ -24,8 +24,8 @@ import { ipaForDisplay } from './lexicon/schema';
 import { ScreenHeader } from './screen-header';
 import { AnimatedNumber } from './animated-number';
 import type { CourseSet, RoadmapNode } from './content/schema';
-import { getDayProgress, type ActivePracticeProgress } from './day-progress';
-import { readActivePracticeProgress } from './day-progress-local';
+import { getDayProgress, type ActiveDayProgress } from './day-progress';
+import { readActiveDayProgress } from './day-progress-local';
 import {
   lastWeekActivity,
   localizedText,
@@ -82,7 +82,7 @@ export function TodayView({
   todayDay=activitySaveClock().dayNumber,
   learningDays=null,
   otherCourses=[],
-  activePractice=[]
+  activeDayProgress={}
 }:{
   runtime:LearnerCourseRuntimeValue;
   wordRuntime?:WordReviewRuntimeValue|null;
@@ -98,7 +98,7 @@ export function TodayView({
   /** Studied courses other than the active one: their due items count toward review. */
   otherCourses?:OtherCourseReview[];
   /** Same-device unfinished phrase progress, merged on top of durable course progress. */
-  activePractice?:readonly ActivePracticeProgress[];
+  activeDayProgress?:ActiveDayProgress;
 }){
   const {t,locale}=useI18n();
   const [speakOpen,setSpeakOpen]=useState(false);
@@ -159,7 +159,7 @@ export function TodayView({
       </Tile>
     );
   }else if(node){
-    const dayProgress=getDayProgress(state.set,node,state.progress,activePractice);
+    const dayProgress=getDayProgress(state.set,node,state.progress,activeDayProgress);
     const done=dayProgress.completedSteps;
     const total=dayProgress.totalSteps;
     const stage=stageForDay(node.dayIndex,state.set.id);
@@ -375,14 +375,14 @@ export function TodayScreen(){
   const navigate=useNavigate();
   const runtime=useLearnerCourseRuntime();
   const otherCourses=useOtherCourseReviews(runtime.state?.set.id??'');
-  const activePractice=runtime.state?.currentNode
-    ? readActivePracticeProgress(runtime.state.set,runtime.state.currentNode)
-    : [];
+  const activeDayProgress=runtime.state?.currentNode
+    ? readActiveDayProgress(runtime.state.set,runtime.state.currentNode,runtime.state.progress)
+    : {};
   return (
     <TodayView
       runtime={runtime}
       otherCourses={otherCourses.courses}
-      activePractice={activePractice}
+      activeDayProgress={activeDayProgress}
       wordRuntime={useWordReviewRuntime()}
       learningDays={useAllLearningDays()}
       onStart={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId))}
