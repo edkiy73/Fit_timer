@@ -168,7 +168,8 @@ export function TodayView({
     const total=node.activityIds.length;
     const dayProgress=total?done/total:0;
     const dayPercent=Math.round(dayProgress*100);
-    const activeProgressDots=Math.round(dayProgress*8);
+    const radialDotCount=24;
+    const activeProgressDots=Math.round(dayProgress*radialDotCount);
     const stage=stageForDay(node.dayIndex,state.set.id);
     hero=(
       <Tile className="tile-hero today-hero" index={index++}>
@@ -188,27 +189,24 @@ export function TodayView({
           aria-valuemax={Math.max(1,total)}
           aria-valuenow={done}
         >
-          <span className="today-progress-dots today-progress-dots-left" aria-hidden="true">
-            {Array.from({length:8},(_,dot)=>(
-              <span
-                key={'left-'+dot}
-                className={'today-progress-dot'+(dot<activeProgressDots?' is-active':'')}
-                style={{'--dot-i':dot,'--dot-shift':dot%4<2?'5px':'0px'} as CSSProperties}
-              />
-            ))}
+          <span className="today-progress-radial" aria-hidden="true">
+            {Array.from({length:radialDotCount},(_,dot)=>{
+              const angle=-138+(276/(radialDotCount-1))*dot;
+              return (
+                <span
+                  key={dot}
+                  className={'today-progress-dot '+(dot<radialDotCount/2?'is-accent':'is-listen')+(dot<activeProgressDots?' is-active':'')}
+                  style={{
+                    '--dot-i':dot,
+                    '--dot-angle':angle+'deg'
+                  } as CSSProperties}
+                />
+              );
+            })}
           </span>
           <span className="today-progress-value">
             <strong><AnimatedNumber value={dayPercent} suffix="%" /></strong>
             <span>{t('today.heroProgressLabel')}</span>
-          </span>
-          <span className="today-progress-dots today-progress-dots-right" aria-hidden="true">
-            {Array.from({length:8},(_,dot)=>(
-              <span
-                key={'right-'+dot}
-                className={'today-progress-dot'+(dot<activeProgressDots?' is-active':'')}
-                style={{'--dot-i':dot,'--dot-shift':dot%4>=2?'-5px':'0px'} as CSSProperties}
-              />
-            ))}
           </span>
         </div>
         <p className="tile-meta today-progress-meta">
