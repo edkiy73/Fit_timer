@@ -166,6 +166,9 @@ export function TodayView({
   }else if(node){
     const done=nodeDoneCount(state.progress,node);
     const total=node.activityIds.length;
+    const dayProgress=total?done/total:0;
+    const dayPercent=Math.round(dayProgress*100);
+    const activeProgressDots=Math.round(dayProgress*8);
     const stage=stageForDay(node.dayIndex,state.set.id);
     hero=(
       <Tile className="tile-hero today-hero" index={index++}>
@@ -178,16 +181,37 @@ export function TodayView({
         </div>
         <h3><LexiconText text={nodeTopic(state.set,node,locale)} /></h3>
         <div
-          className="today-meter"
+          className="today-hero-progress"
           role="progressbar"
           aria-label={t('today.dayProgress')}
           aria-valuemin={0}
           aria-valuemax={Math.max(1,total)}
           aria-valuenow={done}
         >
-          <span style={{'--p':total?done/total:0} as CSSProperties} />
+          <span className="today-progress-dots today-progress-dots-left" aria-hidden="true">
+            {Array.from({length:8},(_,dot)=>(
+              <span
+                key={'left-'+dot}
+                className={'today-progress-dot'+(dot<activeProgressDots?' is-active':'')}
+                style={{'--dot-i':dot} as CSSProperties}
+              />
+            ))}
+          </span>
+          <span className="today-progress-value">
+            <strong><AnimatedNumber value={dayPercent} suffix="%" /></strong>
+            <span>{t('today.heroProgressLabel')}</span>
+          </span>
+          <span className="today-progress-dots today-progress-dots-right" aria-hidden="true">
+            {Array.from({length:8},(_,dot)=>(
+              <span
+                key={'right-'+dot}
+                className={'today-progress-dot'+(dot<activeProgressDots?' is-active':'')}
+                style={{'--dot-i':dot} as CSSProperties}
+              />
+            ))}
+          </span>
         </div>
-        <p className="tile-meta">
+        <p className="tile-meta today-progress-meta">
           {t('today.dayMeta',{done,total,minutes:nodeMinutes(state.set,node)})}
         </p>
         <button className="primary-button today-start" type="button" onClick={()=>onStart(node.id)}>
