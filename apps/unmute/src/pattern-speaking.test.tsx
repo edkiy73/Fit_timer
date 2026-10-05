@@ -154,12 +154,14 @@ describe('pattern speaking',()=>{
 
     await user.click(screen.getByRole('button',{name:'Нажми и скажи'}));
     recognition.result(['work home']);
-    await user.click(screen.getByRole('button',{name:'Далее'}));
+    expect(await screen.findByText('Не совпало')).toBeTruthy();
+    await user.click(await screen.findByRole('button',{name:'Далее'}));
     expect(await screen.findByText('Работа над ошибками · осталось 1')).toBeTruthy();
 
     await user.click(screen.getByRole('button',{name:'Нажми и скажи'}));
     recognition.result(['I work at home']);
-    await user.click(screen.getByRole('button',{name:'Завершить'}));
+    expect(await screen.findByText('Получилось')).toBeTruthy();
+    await user.click(await screen.findByRole('button',{name:'Завершить'}));
 
     await waitFor(()=>expect(savePractice).toHaveBeenCalledWith(
       'general-foundation',
