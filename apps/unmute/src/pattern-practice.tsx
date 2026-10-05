@@ -183,6 +183,9 @@ export function PatternPracticeView({
 
   const pattern=activity.pattern[locale]||activity.pattern.ru||activity.pattern.en||Object.values(activity.pattern)[0]||'';
   const introMode=mode!=='complete'&&!briefed.has(mode)?mode:null;
+  const drillSessionKey=practiceRunStateKey(sessionKey,'drill');
+  const listeningSessionKey=practiceRunStateKey(sessionKey,'listening');
+  const speakingSessionKey=practiceRunStateKey(sessionKey,'speaking');
 
   return (
     <>
@@ -216,7 +219,7 @@ export function PatternPracticeView({
             savePractice={savePractice}
             onDone={()=>nextMode('drill')}
             active={active&&mode==='drill'}
-            sessionKey={practiceRunStateKey(sessionKey,'drill')}
+            {...(drillSessionKey?{sessionKey:drillSessionKey}:{})}
             {...(onProgress?{onProgress}:{})}
           />
         </div>
@@ -232,7 +235,7 @@ export function PatternPracticeView({
             speak={speak}
             onDone={()=>nextMode('listening')}
             active={active&&mode==='listening'}
-            sessionKey={practiceRunStateKey(sessionKey,'listening')}
+            {...(listeningSessionKey?{sessionKey:listeningSessionKey}:{})}
             {...(onProgress?{onProgress}:{})}
           />
         </div>
@@ -248,7 +251,7 @@ export function PatternPracticeView({
             startRecognition={startRecognition}
             onDone={()=>nextMode('speaking')}
             active={active&&mode==='speaking'}
-            sessionKey={practiceRunStateKey(sessionKey,'speaking')}
+            {...(speakingSessionKey?{sessionKey:speakingSessionKey}:{})}
             {...(onProgress?{onProgress}:{})}
           />
         </div>
