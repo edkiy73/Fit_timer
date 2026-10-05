@@ -21,7 +21,7 @@
 | Activity editor как отдельный уровень | ✅ #542 |
 | Admin 360 px browser audit | ✅ #543 |
 | Терминология learner UI | 🟡 текущая пачка |
-| Явный контракт save/error/retry copy | ⬜ следующий P1 |
+| Явный контракт save/error/retry copy | ✅ #545 |
 | Admin status flow «черновик → проверен → готов → выпущен» | ⬜ P1 |
 | Motion / premium polish | ⬜ после P1 |
 | Реальный Android device QA | 🟡 |
