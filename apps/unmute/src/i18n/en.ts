@@ -208,7 +208,7 @@ export const en: Record<keyof typeof ru, string> = {
   'courseMap.unlock': 'Unlock access',
   'today.openAccess': 'Unlock access',
   'access.plusHeading': 'UnMute Plus',
-  'access.plusLead': 'More mistake explanations and AI conversations, plus a discount on course purchases.'
+  'access.plusLead': 'More mistake explanations and AI conversations, plus a discount on course purchases.',
   'access.plusActiveTitle': 'Plus is already on',
   'access.plusActiveUntil': 'Active until {date}. You can extend early — the new period adds to the current one.',
   'access.choose': 'Access choice',
