@@ -39,7 +39,7 @@ UI → навигация → состояние урока → сохранен
 | Save/error wording contract | ✅ #545 |
 | Admin release status flow | ✅ #546 |
 | Real Android device QA | 🟡 осталось |
-| Motion / visual polish | ✅ foundation #497–#505 · navigation #547 · core screens #548 · Route/sheets/states #549 |
+| Motion / visual polish | ✅ foundation #497–#505 · navigation #547 · core screens #548 · Route/sheets/states #549 · forms/settings/paywall #550 |
 
 CI/browser regression по learner screens и Admin 360 px есть; отдельные нативные сценарии остаются в phone QA.
 
