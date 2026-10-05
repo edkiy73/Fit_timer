@@ -15,6 +15,7 @@ import { AnswerFeedbackSheet } from './answer-feedback-sheet';
 import { readPracticeRunState, writePracticeRunState } from './practice-run-state';
 
 type PatternDrillActivity=Extract<Activity,{type:'pattern-drill'}>;
+type SpeakingVerification='recognition'|'manual'|'revealed';
 
 interface SpeakingRunSession {
   version:1;
@@ -25,6 +26,7 @@ interface SpeakingRunSession {
   phase:'ask'|'show';
   heard:string;
   correct:boolean|null;
+  verification?:SpeakingVerification;
   saved:boolean;
   saveError:boolean;
 }
@@ -98,6 +100,7 @@ export function PatternSpeakingView({
   sessionKey
 }:PatternSpeakingViewProps){
   const {t,locale}=useI18n();
+  const base=activity.items.length;
   const restored=restoredSpeakingSession(activity,sessionKey);
   const [items,setItems]=useState(()=>restored?.items??pickSpeakingItems(activity,random));
   const [pos,setPos]=useState(()=>restored?.pos??0);
@@ -105,6 +108,7 @@ export function PatternSpeakingView({
   const [phase,setPhase]=useState<'ask'|'show'>(()=>restored?.phase??'ask');
   const [heard,setHeard]=useState(()=>restored?.heard??'');
   const [correct,setCorrect]=useState<boolean|null>(()=>restored?.correct??null);
+  const [verification,setVerification]=useState<SpeakingVerification>(()=>restored?.verification??'recognition');
   const [listening,setListening]=useState(false);
   const [recognitionError,setRecognitionError]=useState<WebRecognitionError|null>(null);
   const [saving,setSaving]=useState(false);
@@ -116,8 +120,12 @@ export function PatternSpeakingView({
   const item=items[pos] ?? null;
   const target=item?.answer.accepted[0] || '';
   const done=pos>=items.length;
-  const score=speakingScore(hits,items.length);
-  const passed=speakingPassed(hits,items.length);
+  const score=speakingScore(hits,base);
+  const strongFirstPass=base>0&&hits===base;
+  const correcting=pos>=base;
+  const correctionRemaining=correcting
+    ? new Set(items.slice(pos).map(entry=>entry.id)).size
+    : 0;
 
   useEffect(()=>{
     writePracticeRunState(sessionKey,{
@@ -129,12 +137,13 @@ export function PatternSpeakingView({
       phase,
       heard,
       correct,
+      verification,
       saved,
       saveError
     } satisfies SpeakingRunSession);
-  },[activity.revision,correct,heard,hits,items,phase,pos,saveError,saved,sessionKey]);
+  },[activity.revision,correct,heard,hits,items,phase,pos,saveError,saved,sessionKey,verification]);
 
-  useEffect(()=>{ if(active)onProgress?.(Math.min(pos+1,items.length),items.length); },[active,items.length,onProgress,pos]);
+  useEffect(()=>{ if(active)onProgress?.(Math.min(pos+1,base),base); },[active,base,onProgress,pos]);
 
   useEffect(()=>{
     if(!active){
@@ -160,11 +169,11 @@ export function PatternSpeakingView({
     if(!done||saved||saving||saveError)return;
     setSaving(true);
     setSaveError(false);
-    void savePractice(setId,activity.id,'speaking',passed,score)
+    void savePractice(setId,activity.id,'speaking',strongFirstPass,score)
       .then(()=>setSaved(true))
       .catch(()=>setSaveError(true))
       .finally(()=>setSaving(false));
-  },[activity.id,done,passed,saveError,savePractice,saved,saving,score,setId]);
+  },[activity.id,done,saveError,savePractice,saved,saving,score,setId,strongFirstPass]);
 
   const stopCurrent=()=>{
     handleRef.current?.abort();
