@@ -458,7 +458,7 @@ describe('node activity runner',()=>{
     const user=userEvent.setup();
     const patternActivity={
       id:'pattern.progress',revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,
-      lexiconRefs:[],pattern:{ru:'I / he + глагол'},modes:['drill' as const],
+      lexiconRefs:[],pattern:{ru:'I / he + глагол'},modes:['drill' as const,'listening' as const],
       items:[
         {id:'p1',prompt:{ru:'Я живу здесь.'},answer:{accepted:['I live here.'],nearMiss:true,caseSensitive:false}},
         {id:'p2',prompt:{ru:'Он живёт здесь.'},answer:{accepted:['He lives here.'],nearMiss:true,caseSensitive:false}}
@@ -495,7 +495,7 @@ describe('node activity runner',()=>{
     };
     const patternRuntime:LearnerCourseRuntimeValue={...runtime,state:patternState};
 
-    render(
+    const renderPattern=()=>render(
       <I18nProvider
         dictionaries={dictionaries}
         config={{locales:['ru'],default:'ru'}}
@@ -513,12 +513,27 @@ describe('node activity runner',()=>{
       </I18nProvider>
     );
 
+    const view=renderPattern();
     await waitFor(()=>expect(screen.getByText('0/2')).toBeTruthy());
     await user.click(screen.getByRole('button',{name:'Начать'}));
     await waitFor(()=>expect(screen.getByText('1/2')).toBeTruthy());
     await user.click(screen.getByRole('button',{name:'Показать ответ'}));
     await user.click(screen.getByRole('button',{name:'Совпало'}));
+    await waitFor(()=>expect(screen.getByText('2/2')).toBeTruthy());
 
+    // A different practice mode has its own counter. Returning to speed must show
+    // the exact phrase position immediately, not 0/N until one more answer.
+    await user.click(screen.getByRole('button',{name:'Слушание'}));
+    await waitFor(()=>expect(screen.getByText('0/2')).toBeTruthy());
+    await user.click(screen.getByRole('button',{name:'На скорость'}));
+    await waitFor(()=>expect(screen.getByText('2/2')).toBeTruthy());
+
+    // The exit copy promises that progress is saved, so an app-level re-entry must
+    // restore the same phrase, not only the coarse Today progress.
+    await user.click(screen.getByRole('button',{name:'Закрыть урок'}));
+    await user.click(screen.getByRole('button',{name:'Выйти'}));
+    view.unmount();
+    renderPattern();
     await waitFor(()=>expect(screen.getByText('2/2')).toBeTruthy());
   });
 
