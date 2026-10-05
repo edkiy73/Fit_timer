@@ -56,6 +56,12 @@ describe('My words',()=>{
     expect(listSavedWords(doc,lexicon,'ru').map(word=>word.lemma)).toEqual(['work']);
   });
 
+  it('does not expose the technical new-word state',()=>{
+    renderWords(words({home:0,work:2}));
+    expect(screen.queryByText('новое')).toBeNull();
+    expect(screen.getByText('на повторе')).toBeTruthy();
+  });
+
   it('shows a hint when nothing is saved yet',()=>{
     renderWords(words({}));
     expect(screen.getByText(/сохраняй нужные/)).toBeTruthy();
