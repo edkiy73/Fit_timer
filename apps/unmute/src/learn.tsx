@@ -557,10 +557,6 @@ export function NodeRunnerView({
   },[activity?.id,stepIndex]);
 
   useEffect(()=>{
-    setPracticeProgress(null);
-  },[activity?.id]);
-
-  useEffect(()=>{
     if(restoringRunRef.current!==null){
       // Mount render (no step yet): keep waiting for the restored step.
       if(!activity)return;
