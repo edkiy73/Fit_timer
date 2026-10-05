@@ -35,22 +35,11 @@ import { buildCourseReviewSession } from './review-session';
 import { activitySaveClock } from './activity-progress';
 import { randomSeed, shuffledIndices } from './shuffle';
 import { sentenceResponseStage, type SentenceResponseKind } from './engine/sentence-progression';
-import { MOTION, prefersReducedMotion } from './motion';
+import { MOTION, prefersReducedMotion, withViewTransition } from './motion';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
   return text[locale] || text.ru || text.en || Object.values(text)[0] || '';
-}
-
-function withActivityViewTransition(change:()=>void):void{
-  const doc=document as Document&{
-    startViewTransition?:((callback:()=>void)=>unknown)|undefined;
-  };
-  if(!prefersReducedMotion()&&doc.startViewTransition){
-    doc.startViewTransition(change);
-    return;
-  }
-  change();
 }
 
 export function activitiesForNode(
@@ -545,7 +534,7 @@ export function NodeRunnerView({
   };
 
   const advance=()=>{
-    withActivityViewTransition(()=>{
+    withViewTransition(()=>{
       if(pos+1<order.length){
         setPos(current=>current+1);
         return;
@@ -694,23 +683,27 @@ export function NodeRunnerView({
     const firstIncomplete=regularTaskIndices.find(index=>!isSeen(state.progress,steps[index]!.id));
     const start=firstIncomplete??regularTaskIndices[0]!;
     const taskOrder=regularTaskIndices.filter(index=>index>=start);
-    begin(start);
-    setOrder(taskOrder.length?taskOrder:[start]);
-    setFirstPass(taskOrder.length||1);
-    setIntro(false);
-    setPracticeMode(undefined);
-    setRunMode(firstIncomplete===undefined?'replay':'resume');
+    withViewTransition(()=>{
+      begin(start);
+      setOrder(taskOrder.length?taskOrder:[start]);
+      setFirstPass(taskOrder.length||1);
+      setIntro(false);
+      setPracticeMode(undefined);
+      setRunMode(firstIncomplete===undefined?'replay':'resume');
+    });
   };
 
   const openPractice=(mode:PracticeSrsKind)=>{
     const target=patternEntries.find(({item})=>item.modes.includes(mode));
     if(!target)return;
-    begin(target.index);
-    setOrder([target.index]);
-    setFirstPass(1);
-    setIntro(false);
-    setPracticeMode(mode);
-    setRunMode(nodeProgress?.complete?'replay':'resume');
+    withViewTransition(()=>{
+      begin(target.index);
+      setOrder([target.index]);
+      setFirstPass(1);
+      setIntro(false);
+      setPracticeMode(mode);
+      setRunMode(nodeProgress?.complete?'replay':'resume');
+    });
   };
 
   const setId=state.set.id;

@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useState } from 'react';
-import { NavLink, useLocation } from 'react-router';
+import { NavLink, useLocation, useNavigate } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import { useLearnerCourseRuntime } from './course-runtime';
 import { useWordReviewRuntime } from './word-review-runtime';
@@ -8,6 +8,7 @@ import { reviewDueCounts } from './review-count';
 import { useOtherCourseReviews } from './other-course-review';
 import { Icon, type IconName } from './icons';
 import { REVIEW_BUDGET_EVENT } from './review-daily-budget';
+import { withViewTransition } from './motion';
 
 const TABS: {to: string; icon: IconName; label: string; end?: boolean}[] = [
   {to:'/', icon:'today', label:'nav.today', end:true},
@@ -45,11 +46,27 @@ function ReviewBadge(){
 export function TabBar(){
   const {t} = useI18n();
   const location = useLocation();
+  const navigate = useNavigate();
   if(tabBarHidden(location.pathname)||typeof document==='undefined') return null;
   return createPortal(
     <nav className="tabbar" aria-label={t('nav.tabs')}>
       {TABS.map(tab => (
-        <NavLink key={tab.to} to={tab.to} end={tab.end ?? false} className="tabbar-item pressable">
+        <NavLink
+          key={tab.to}
+          to={tab.to}
+          end={tab.end ?? false}
+          className="tabbar-item pressable"
+          onClick={event=>{
+            if(
+              event.defaultPrevented||
+              event.button!==0||
+              event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||
+              location.pathname===tab.to
+            )return;
+            event.preventDefault();
+            withViewTransition(()=>navigate(tab.to));
+          }}
+        >
           <span className="tabbar-icon">
             <Icon name={tab.icon} size={22} />
             {tab.to === '/review' && <ReviewBadge />}

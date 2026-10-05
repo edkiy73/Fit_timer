@@ -20,10 +20,10 @@
 | Bulk dictionary wizard | ✅ #541 |
 | Activity editor как отдельный уровень | ✅ #542 |
 | Admin 360 px browser audit | ✅ #543 |
-| Терминология learner UI | 🟡 текущая пачка |
+| Терминология learner UI | ✅ #544 |
 | Явный контракт save/error/retry copy | ✅ #545 |
 | Admin status flow «черновик → проверен → готов → выпущен» | ✅ #546 |
-| Motion / premium polish | ⬜ после P1 |
+| Motion / premium polish | ✅ foundation #497–#505 · navigation polish #547 |
 | Реальный Android device QA | 🟡 |
 
 

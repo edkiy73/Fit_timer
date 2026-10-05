@@ -412,15 +412,17 @@ try{
     const todayMotion=await motionPage.evaluate(()=>{
       const root=getComputedStyle(document.documentElement);
       const tile=document.querySelector('.today .tile');
+      const screen=document.querySelector('.app-screen');
       return {
         reduce:matchMedia('(prefers-reduced-motion: reduce)').matches,
         token:root.getPropertyValue('--motion-base').trim(),
         animation:tile?getComputedStyle(tile).animationName:'',
+        screenAnimation:screen?getComputedStyle(screen).animationName:'',
         fits:document.documentElement.scrollWidth<=document.documentElement.clientWidth+1
       };
     });
     ok(width+' px: motion tokens are present',todayMotion.token.length>0);
-    ok(width+' px: reduced motion is respected',todayMotion.reduce&&todayMotion.animation==='none');
+    ok(width+' px: reduced motion is respected',todayMotion.reduce&&todayMotion.animation==='none'&&todayMotion.screenAnimation==='none');
     ok(width+' px: Today fits without horizontal jump',todayMotion.fits);
 
     await motionPage.goto(URL_+'#/course');
