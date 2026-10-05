@@ -41,6 +41,8 @@ export const en: Record<keyof typeof ru, string> = {
   'today.locked': 'Locked ahead',
   'today.streak': 'Streak',
   'today.streakStart': 'Start today',
+  'today.courseMini': 'Course',
+  'today.courseMiniCaption': '{done} of {total} days complete',
   'today.week': 'Days with practice this week: {count} of 7',
   'today.reviewCaption': 'due for review',
   'today.speakTitle': 'Say it out loud',
