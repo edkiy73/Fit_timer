@@ -124,7 +124,9 @@ export function ReviewView({
   const [nearResult,setNearResult]=useState(false);
   const [busy,setBusy]=useState(false);
   const [wordShown,setWordShown]=useState(false);
+  const [cardSaveError,setCardSaveError]=useState(false);
   const [wordSaveError,setWordSaveError]=useState(false);
+  const [pendingWordGrade,setPendingWordGrade]=useState<boolean|null>(null);
   const [mixedActivity,setMixedActivity]=useState<Extract<Activity,{type:'pattern-drill'}>|null>(null);
   const [started,setStarted]=useState(false);
   const [dayCounted,setDayCounted]=useState(false);
@@ -176,7 +178,9 @@ export function ReviewView({
     setNearResult(false);
     setBusy(false);
     setWordShown(false);
+    setCardSaveError(false);
     setWordSaveError(false);
+    setPendingWordGrade(null);
   },[index]);
 
   const item=queue[index] ?? null;
@@ -494,6 +498,7 @@ export function ReviewView({
   const finishCard=async(correct:boolean,near=false)=>{
     if(item.kind!=='card'||busy||result!==null)return;
     setBusy(true);
+    setCardSaveError(false);
     try{
       // A card that came back after a mistake is practice: its first answer already set the interval.
       if(!returnedCard){
@@ -503,6 +508,8 @@ export function ReviewView({
       }
       setNearResult(near);
       setResult(correct);
+    }catch(_){
+      setCardSaveError(true);
     }finally{
       setBusy(false);
     }
@@ -550,9 +557,11 @@ export function ReviewView({
   const gradeWord=async(correct:boolean)=>{
     if(item?.kind!=='word'||busy)return;
     setBusy(true);
+    setPendingWordGrade(correct);
     setWordSaveError(false);
     try{
       await saveWord(item.word.record.lexemeId,item.word.record.senseId,correct);
+      setPendingWordGrade(null);
       recordReviewCompletion(todayDay);
       setCompleted(value=>Math.min(total,value+1));
       setIndex(value=>value+1);
@@ -696,6 +705,15 @@ export function ReviewView({
               {t('learn.check')}
             </button>
           )}
+          {cardSaveError&&(
+            <div className="learn-feedback learn-feedback-wrong learn-save-error" role="alert">
+              <strong>{t('learn.saveError')}</strong>
+              <span>{t('learn.saveErrorHint')}</span>
+              <button className="secondary-button" type="button" disabled={busy} onClick={item.activity.type==='choice'?()=>checkChoice(selected??-1):checkText}>
+                {t('learn.retrySave')}
+              </button>
+            </div>
+          )}
           {cardFeedback(item.activity)}
         </article>
       )}
@@ -732,8 +750,12 @@ export function ReviewView({
                 {t('speaking.playReference')}
               </button>
               {wordSaveError&&(
-                <div className="learn-feedback learn-feedback-wrong" role="alert">
-                  <span>{t('review.wordSaveError')}</span>
+                <div className="learn-feedback learn-feedback-wrong learn-save-error" role="alert">
+                  <strong>{t('review.wordSaveError')}</strong>
+                  <span>{t('learn.saveErrorHint')}</span>
+                  <button className="secondary-button" type="button" disabled={busy||pendingWordGrade===null} onClick={()=>pendingWordGrade!==null&&void gradeWord(pendingWordGrade)}>
+                    {t('learn.retrySave')}
+                  </button>
                 </div>
               )}
               <div className="review-word-actions">
