@@ -260,7 +260,6 @@ export function TodayView({
               </span>
               <span className="review-card-count">
                 <strong><AnimatedNumber value={review.actionableCount} /></strong>
-                <span>{t('today.reviewCaption')}</span>
               </span>
               {review.waitingCount>0&&<span className="sr-only">{t('today.reviewWaiting',{count:review.waitingCount})}</span>}
             </button>
@@ -288,19 +287,26 @@ export function TodayView({
           </Tile>
 
           <Tile className="tile-course-mini" index={index++}>
-            <div className="mini-card-head">
-              <span className="mini-card-icon tone-accent" aria-hidden="true"><Icon name="progress" size={18} /></span>
-              <span className="tile-kicker tone-accent">{t('today.courseMini')}</span>
-            </div>
-            <div className="course-mini-body">
-              <div className="course-mini-ring" style={{'--p':coursePercent} as CSSProperties}>
-                <span className="course-mini-ring-track" aria-hidden="true" />
-                <strong><AnimatedNumber value={coursePercent} suffix="%" /></strong>
-              </div>
-              <span className="course-mini-copy">
-                <strong>{t('today.courseMiniDone',{done:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})}</strong>
-                <span>{t('today.courseMiniPassed')}</span>
+            <div className="course-progress-head">
+              <span className="course-progress-title">
+                <span className="mini-card-icon tone-accent" aria-hidden="true"><Icon name="progress" size={18} /></span>
+                <span className="tile-kicker tone-accent">{t('today.courseMini')}</span>
               </span>
+              <strong className="course-progress-percent"><AnimatedNumber value={coursePercent} suffix="%" /></strong>
+            </div>
+            <div className="course-progress-copy">
+              <strong>{t('today.courseMiniDone',{done:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})}</strong>
+              <span>{t('today.courseMiniPassed')}</span>
+            </div>
+            <div
+              className="course-progress-bar"
+              role="progressbar"
+              aria-label={t('today.courseMiniCaption',{done:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={coursePercent}
+            >
+              <span className="course-progress-fill" style={{'--p':coursePercent/100} as CSSProperties} />
             </div>
           </Tile>
 
