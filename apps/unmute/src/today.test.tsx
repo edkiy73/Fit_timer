@@ -127,7 +127,9 @@ describe('Today learner shell',()=>{
     renderToday(runtime({state:reviewState}),vi.fn(),onReview);
 
     expect(screen.getByRole('heading',{name:'Нужно сегодня'})).toBeTruthy();
-    expect(screen.getByText('к повтору').closest('.tile-review')?.textContent).toContain('1');
+    const reviewCard=screen.getByRole('button',{name:'Начать повтор: 1'});
+    expect(reviewCard.textContent).toContain('1');
+    expect(screen.queryByText('к повтору')).toBeNull();
     await user.click(screen.getByRole('button',{name:/Начать повтор/}));
     expect(onReview).toHaveBeenCalledTimes(1);
   });
@@ -184,7 +186,9 @@ describe('Today learner shell',()=>{
       </I18nProvider>
     );
 
-    expect(screen.getByText('к повтору').closest('.tile-review')?.textContent).toContain('1');
+    const reviewCard=screen.getByRole('button',{name:'Начать повтор: 1'});
+    expect(reviewCard.textContent).toContain('1');
+    expect(screen.queryByText('к повтору')).toBeNull();
   });
 
   it('shows an offline badge for a cached course snapshot',()=>{
