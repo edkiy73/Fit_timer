@@ -451,28 +451,13 @@ export function ProgressView({
               </div>
             </div>
 
-            <div className="progress-course-kpis">
-              <div>
+            {summary.dueNow>0&&(
+              <div className="progress-due-callout">
                 <span className="progress-kpi-icon is-review"><Icon name="review" size={18} /></span>
-                <strong><AnimatedNumber value={summary.dueNow} /></strong>
                 <span>{t('progress.dueNow')}</span>
+                <strong><AnimatedNumber value={summary.dueNow} /></strong>
               </div>
-              <div>
-                <span className="progress-kpi-icon is-card"><Icon name="book" size={18} /></span>
-                <strong><AnimatedNumber value={summary.activeCards} /></strong>
-                <span>{t('progress.cardsShort')}</span>
-              </div>
-              <div>
-                <span className="progress-kpi-icon is-listen"><Icon name="speaker" size={18} /></span>
-                <strong><AnimatedNumber value={summary.listening} /></strong>
-                <span>{t('progress.listeningShort')}</span>
-              </div>
-              <div>
-                <span className="progress-kpi-icon is-speak"><Icon name="mic" size={18} /></span>
-                <strong><AnimatedNumber value={summary.speaking} /></strong>
-                <span>{t('progress.speakingShort')}</span>
-              </div>
-            </div>
+            )}
 
             <div className="progress-course-detail">
               <div className="progress-answer-title">{t('progress.answersTitle')}</div>
@@ -484,27 +469,42 @@ export function ProgressView({
               ) : <p className="progress-muted">{t('progress.answersEmpty')}</p>}
             </div>
 
-            {(summary.drill>0||summary.speedAverage!==null||summary.dialogueAverage!==null)&&(
-              <div className="progress-practice-panel">
-                <div className="progress-practice-title">
-                  <Icon name="progress" size={18}/>
-                  <strong>{t('progress.practiceTitle')}</strong>
+            {(summary.drill>0||summary.speedAverage!==null||summary.dialogueAverage!==null||summary.activeCards>0||summary.listening>0||summary.speaking>0)&&(
+              <details className="progress-more">
+                <summary>{t('progress.moreDetails')}</summary>
+                <div className="progress-practice-panel">
+                  <div className="progress-practice-title">
+                    <Icon name="progress" size={18}/>
+                    <strong>{t('progress.practiceTitle')}</strong>
+                  </div>
+                  <div className="progress-practice-row">
+                    <span>{t('progress.cardsShort')}</span>
+                    <strong>{summary.activeCards}</strong>
+                  </div>
+                  <div className="progress-practice-row">
+                    <span>{t('progress.listeningShort')}</span>
+                    <strong>{summary.listening}</strong>
+                  </div>
+                  <div className="progress-practice-row">
+                    <span>{t('progress.speakingShort')}</span>
+                    <strong>{summary.speaking}</strong>
+                  </div>
+                  {summary.drill>0&&(
+                    <div className="progress-practice-row">
+                      <span>{t('progress.drill')}</span>
+                      <strong>{summary.speedAverage!==null
+                        ? t('progress.practiceSpeedValue',{count:summary.speedSamples,percent:summary.speedAverage})
+                        : t('progress.practiceCount',{count:summary.drill})}</strong>
+                    </div>
+                  )}
+                  {summary.dialogueAverage!==null&&(
+                    <div className="progress-practice-row">
+                      <span>{t('progress.dialogueShort')}</span>
+                      <strong>{t('progress.practiceDialogueValue',{count:summary.dialogueSamples,percent:summary.dialogueAverage})}</strong>
+                    </div>
+                  )}
                 </div>
-                {summary.drill>0&&(
-                  <div className="progress-practice-row">
-                    <span>{t('progress.drill')}</span>
-                    <strong>{summary.speedAverage!==null
-                      ? t('progress.practiceSpeedValue',{count:summary.speedSamples,percent:summary.speedAverage})
-                      : t('progress.practiceCount',{count:summary.drill})}</strong>
-                  </div>
-                )}
-                {summary.dialogueAverage!==null&&(
-                  <div className="progress-practice-row">
-                    <span>{t('progress.dialogueShort')}</span>
-                    <strong>{t('progress.practiceDialogueValue',{count:summary.dialogueSamples,percent:summary.dialogueAverage})}</strong>
-                  </div>
-                )}
-              </div>
+              </details>
             )}
 
             {courses.length>1&&onCourseChange&&(
