@@ -464,7 +464,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     setBusy(true);setDayMessage('');
     try{
       const result=await client.action(adminKey,'content_activity_create',{setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,type:newType});
-      await Promise.all([reloadOpenNode(editor?.id===id?undefined:editor?.id),refreshCourse()]);
+      await Promise.all([reloadOpenNode(),refreshCourse()]);
       const created=result.activity as EditableActivity;
       setEditor(created);
       writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityId:created.id});
@@ -483,7 +483,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
         setEditor(null);
         writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id});
       }
-      await Promise.all([reloadOpenNode(),refreshCourse()]);
+      await Promise.all([reloadOpenNode(editor?.id===id?undefined:editor?.id),refreshCourse()]);
     }catch(error){
       setDayMessage(failureText(error,'Задание не убралось'));
     }finally{setBusy(false);}
