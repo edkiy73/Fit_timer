@@ -24,6 +24,7 @@ import { speakText } from './speech-runtime';
 import { ENGLISH_SPEECH_LOCALE } from './speech-locale';
 import { useSavedWords } from './saved-words';
 import { Icon } from './icons';
+import { Sheet } from './sheet';
 
 const LEXICON_QUERY_KEY=['published-lexicon'] as const;
 const WORD_RE=/[A-Za-z]+(?:['\u2019][A-Za-z]+)*/g;
@@ -172,31 +173,27 @@ function DictionarySheet({
   const ambiguous=resolved.length>1||resolved.some(entry=>entry.senses.length>1);
 
   useEffect(()=>{
-    const onKey=(event:KeyboardEvent)=>{
-      if(event.key==='Escape')runtime.close();
-    };
-    window.addEventListener('keydown',onKey);
-    return ()=>window.removeEventListener('keydown',onKey);
-  },[runtime.close]);
-
-  useEffect(()=>{
     void speakText(selection.surface,ENGLISH_SPEECH_LOCALE);
   },[selection.surface]);
 
   return (
-    <div className="dictionary-scrim" role="presentation" onMouseDown={event=>{
-      if(event.currentTarget===event.target)runtime.close();
-    }}>
-      <section className="dictionary-sheet" role="dialog" aria-modal="true" aria-labelledby="dictionary-title">
-        <div className="dictionary-grab" aria-hidden="true" />
+    <Sheet open onClose={runtime.close} labelledBy="dictionary-title" closeLabel={t('dictionary.close')}>
+      <div className="dictionary-sheet-content">
         <div className="dictionary-head">
           <div>
             <div className="eyebrow">{t('dictionary.eyebrow')}</div>
-            <h2 id="dictionary-title">{selection.surface}</h2>
+            <div className="dictionary-title-row">
+              <h2 id="dictionary-title">{selection.surface}</h2>
+              <button
+                className="speak-play pressable dictionary-listen"
+                type="button"
+                aria-label={t('dictionary.listen',{word:selection.surface})}
+                onClick={()=>void speakText(selection.surface,ENGLISH_SPEECH_LOCALE)}
+              >
+                <Icon name="speaker" size={20} />
+              </button>
+            </div>
           </div>
-          <button className="dictionary-close" type="button" onClick={runtime.close} aria-label={t('dictionary.close')}>
-            <Icon name="close" size={20} />
-          </button>
         </div>
 
         {runtime.status==='pending'&&(
@@ -253,11 +250,8 @@ function DictionarySheet({
           );
         })()}
         {saveError&&<p className="dictionary-state" role="alert">{t('dictionary.saveError')}</p>}
-        <button className="primary-button dictionary-say" type="button" onClick={()=>void speakText(selection.surface,ENGLISH_SPEECH_LOCALE)}>
-          {t('dictionary.say')}
-        </button>
-      </section>
-    </div>
+      </div>
+    </Sheet>
   );
 }
 
