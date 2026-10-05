@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { useBlocker, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity, RoadmapNode } from './content/schema';
 import type { CourseProgressDocument } from './progress';
@@ -36,6 +36,7 @@ import { activitySaveClock } from './activity-progress';
 import { randomSeed, shuffledIndices } from './shuffle';
 import { sentenceResponseStage, type SentenceResponseKind } from './engine/sentence-progression';
 import { MOTION, prefersReducedMotion, withViewTransition } from './motion';
+import { SYSTEM_BACK_EVENT } from './native-back';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -142,6 +143,10 @@ export interface NodeRunnerViewProps {
   resumeSavedRun?:boolean;
   /** Replay only the regular answer tasks without changing review/progression. */
   replayTasksOnly?:boolean;
+  /** Browser/system Back asks the runner to open the same exit sheet as the close button. */
+  exitRequest?:number;
+  /** Called when the user keeps the lesson after a blocked Back navigation. */
+  onExitCancelled?:()=>void;
 }
 
 const isPlan=(activity:Activity)=>activity.type==='theory'&&(activity.tags??[]).includes('plan');
