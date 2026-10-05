@@ -682,12 +682,12 @@ select:active{transform:scale(.985)}
     opacity var(--motion-base) ease,
     transform var(--motion-sheet) var(--motion-spring-ease);
 }
+.today-progress-dot.is-listen.is-active{
+  background:var(--listen);
+  box-shadow:0 0 12px color-mix(in srgb,var(--listen) 22%,transparent);
+}
 .today-progress-dot.is-active{
-  background:color-mix(
-    in srgb,
-    var(--accent) calc((1 - var(--dot-hue)) * 100%),
-    var(--listen) calc(var(--dot-hue) * 100%)
-  );
+  background:var(--accent);
   box-shadow:0 0 12px color-mix(in srgb,var(--accent) 24%,transparent);
   opacity:1;
   animation:today-progress-dot-in var(--motion-sheet) var(--motion-spring-ease) both;
