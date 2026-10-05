@@ -166,13 +166,6 @@ export function TodayView({
   }else if(node){
     const done=nodeDoneCount(state.progress,node);
     const total=node.activityIds.length;
-    const dayProgress=total?done/total:0;
-    const dayPercent=Math.round(dayProgress*100);
-    const outerDotCount=15;
-    const innerDotCount=11;
-    const radialDotCount=outerDotCount+innerDotCount;
-    const activeProgressDots=Math.round(dayProgress*radialDotCount);
-    const trailDotCount=4;
     const stage=stageForDay(node.dayIndex,state.set.id);
     hero=(
       <Tile className="tile-hero today-hero" index={index++}>
@@ -185,46 +178,16 @@ export function TodayView({
         </div>
         <h3><LexiconText text={nodeTopic(state.set,node,locale)} /></h3>
         <div
-          className="today-hero-progress"
+          className="today-meter"
           role="progressbar"
           aria-label={t('today.dayProgress')}
           aria-valuemin={0}
           aria-valuemax={Math.max(1,total)}
           aria-valuenow={done}
         >
-          <span className="today-progress-radial" aria-hidden="true">
-            {Array.from({length:radialDotCount},(_,dot)=>{
-              const outer=dot<outerDotCount;
-              const ringIndex=outer?dot:dot-outerDotCount;
-              const ringCount=outer?outerDotCount:innerDotCount;
-              const angle=-108+(216/(ringCount-1))*ringIndex;
-              const normalized=dot/(radialDotCount-1);
-              const tone=Math.min(6,Math.floor(normalized*7));
-              const trail=dot-activeProgressDots;
-              return (
-                <span
-                  key={dot}
-                  className={
-                    'today-progress-dot '+
-                    (outer?'is-outer':'is-inner')+
-                    ' tone-'+tone+
-                    (dot<activeProgressDots?' is-active':'')+
-                    (trail>=0&&trail<trailDotCount?' is-trail-'+(trail+1):'')
-                  }
-                  style={{
-                    '--dot-i':dot,
-                    '--dot-angle':angle+'deg'
-                  } as CSSProperties}
-                />
-              );
-            })}
-          </span>
-          <span className="today-progress-value">
-            <strong><AnimatedNumber value={dayPercent} suffix="%" /></strong>
-            <span>{t('today.heroProgressLabel')}</span>
-          </span>
+          <span style={{'--p':total?done/total:0} as CSSProperties} />
         </div>
-        <p className="tile-meta today-progress-meta">
+        <p className="tile-meta">
           {t('today.dayMeta',{done,total,minutes:nodeMinutes(state.set,node)})}
         </p>
         <button className="primary-button today-start" type="button" onClick={()=>onStart(node.id)}>
