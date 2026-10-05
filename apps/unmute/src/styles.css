@@ -1597,3 +1597,24 @@ select:active{transform:scale(.985)}
 /* Speed drill compare is one binary decision, so keep both actions on one row. */
 .drill-binary-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .drill-binary-actions :is(.primary-button,.secondary-button){width:100%;min-width:0}
+
+
+/* Mobile lesson section navigator: keep every section visible instead of leaving
+   half-clipped chips at the horizontal scroll edges. */
+@media(max-width:620px){
+  .runner-heading{min-width:0}
+  .lesson-section-nav{
+    width:100%;
+    max-width:100%;
+    flex-wrap:wrap;
+    justify-content:flex-start;
+    overflow:visible;
+    gap:7px;
+    padding:2px 0 3px;
+  }
+  .lesson-section-nav .chip-button{
+    min-height:36px;
+    padding-inline:10px;
+    font-size:12px;
+  }
+}

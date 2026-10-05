@@ -440,8 +440,9 @@ describe('node activity runner',()=>{
       </I18nProvider>
     );
 
-    await waitFor(()=>expect(screen.getByText('1/2')).toBeTruthy());
+    await waitFor(()=>expect(screen.getByText('0/2')).toBeTruthy());
     await user.click(screen.getByRole('button',{name:'Начать'}));
+    await waitFor(()=>expect(screen.getByText('1/2')).toBeTruthy());
     await user.click(screen.getByRole('button',{name:'Показать ответ'}));
     await user.click(screen.getByRole('button',{name:'Совпало'}));
 
