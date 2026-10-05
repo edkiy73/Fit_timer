@@ -77,6 +77,11 @@ export function PatternPracticeView({
     if(mode!=='complete')onModeChange?.(mode);
   },[mode,onModeChange]);
 
+  useEffect(()=>{
+    if(mode==='complete'||!onProgress)return;
+    onProgress(1,Math.min(activity.items.length,6));
+  },[activity.items.length,mode,onProgress]);
+
   // The lesson-level tabs can change initialMode while this component keeps the same key.
   // Mirror that prop into local state instead of getting stuck in the previously mounted mode.
   useEffect(()=>{
