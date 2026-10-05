@@ -26,7 +26,7 @@
 | Save/error semantics | ✅ #545 | урок, Review и practice явно говорят, что результат не засчитан/не сохранён; retry повторяет именно сохранение |
 | Admin draft/review/release flow | ✅ #546 | курсы и словарь показывают единый путь «Черновик → Проверен → Готов к выпуску → Выпущен» и один release action area |
 | Word of the Day / Route complexity | P2 | продуктовый/polish вопрос, ключевые сценарии не блокирует |
-| Motion / premium polish | ✅ foundation #497–#505 · navigation #547 · core screens #548 | базовый motion-язык закрыт; #547 — переходы навигации, #548 — визуальный вес Today/Profile и calm reward-state финалов урока/Review |
+| Motion / premium polish | ✅ foundation #497–#505 · navigation #547 · core screens #548 · Route/sheets/states #549 | базовый motion-язык закрыт; #547 — навигация, #548 — Today/Profile/финалы, #549 — Route, bottom sheets и empty/error/status surfaces |
 | Реальный Android device QA | 🟡 | browser CI есть; остаются клавиатура, process kill, system Back/large font и нативные уведомления на устройстве |
 
 **Известных незакрытых P0 по коду из этого аудита сейчас нет.** P0-сценарии из §17 всё равно остаются обязательным device QA перед релизом.
