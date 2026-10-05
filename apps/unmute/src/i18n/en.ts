@@ -478,7 +478,7 @@ export const en: Record<keyof typeof ru, string> = {
   'speaking.noMatchHint': 'Listen to how it should sound and compare with what the phone heard.',
   'speaking.heard': 'Heard: {heard}',
   'speaking.playReference': 'Listen to how it should sound',
-  'speaking.acceptAnyway': 'I said it correctly',
+  'speaking.acceptAnyway': 'It was correct',
   'speaking.manualCheck': 'Done — compare',
   'speaking.manualCompare': 'Compare with what you said',
   'speaking.manualCompareHint': 'Choose whether your phrase matched.',
