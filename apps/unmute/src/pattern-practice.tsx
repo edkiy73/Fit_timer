@@ -79,7 +79,7 @@ export function PatternPracticeView({
 
   useEffect(()=>{
     if(mode==='complete'||!onProgress)return;
-    onProgress(1,Math.min(activity.items.length,6));
+    onProgress(1,activity.items.length);
   },[activity.items.length,mode,onProgress]);
 
   // The lesson-level tabs can change initialMode while this component keeps the same key.
