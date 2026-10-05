@@ -77,8 +77,12 @@ export function PatternPracticeView({
   const [briefed,setBriefed]=useState<ReadonlySet<PracticeSrsKind>>(()=>new Set());
 
   useEffect(()=>{
-    if(active&&mode!=='complete')onModeChange?.(mode);
-  },[active,mode,onModeChange]);
+    if(!active||mode==='complete')return;
+    // When parent just requested another tab, do not immediately report the stale local mode
+    // back to the parent. That feedback loop made tabs bounce at high speed.
+    if(initialMode&&activity.modes.includes(initialMode)&&mode!==initialMode)return;
+    onModeChange?.(mode);
+  },[active,activity.modes,initialMode,mode,onModeChange]);
 
   useEffect(()=>{
     if(!active||mode==='complete'||!onProgress||briefed.has(mode))return;
