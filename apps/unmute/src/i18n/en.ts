@@ -37,7 +37,6 @@ export const en: Record<keyof typeof ru, string> = {
   'today.requiredTitle': 'Do today',
   'today.extraTitle': 'Extra',
   'today.dayProgress': 'Day progress',
-  'today.heroProgressLabel': 'today',
   'today.dayMeta': '{done} of {total} tasks · ~{minutes} min',
   'today.locked': 'Locked ahead',
   'today.streak': 'Streak',
