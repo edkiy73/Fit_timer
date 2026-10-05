@@ -728,7 +728,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
       <section className="ab-admin-panel ab-course-day-pane" ref={dayPane} aria-label={editor?'Редактор задания':'Выбранный день'} data-editor-open={editor?'' : undefined}>
         {!openNode ? <p className="ab-admin-empty">Выбери день в списке — здесь откроются его задания.</p> : editor ? (
           <div className="ab-course-activity-level">
-            <button type="button" className="ab-admin-link ab-course-back" data-busy="off" onClick={()=>{setEditor(null);writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id});}}>← К заданиям</button>
+            <button type="button" className="ab-admin-link ab-course-activity-back" data-busy="off" onClick={()=>{setEditor(null);writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id});}}>← К заданиям</button>
             <div className="ab-course-activity-head">
               <div>
                 <span className="ab-course-level-kicker">День {openNode.node.dayIndex ?? '—'} · {openRow ? dayTitle(openRow) : textValue(openNode.node.title)}</span>
