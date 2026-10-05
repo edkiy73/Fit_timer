@@ -169,7 +169,7 @@ export function PatternPracticeView({
         setId={setId}
         savePractice={savePractice}
         onDone={()=>nextMode('drill')}
-        onProgress={onProgress}
+        {...(onProgress?{onProgress}:{})}
       />
       </>
     );
@@ -186,7 +186,7 @@ export function PatternPracticeView({
         savePractice={savePractice}
         speak={speak}
         onDone={()=>nextMode('listening')}
-        onProgress={onProgress}
+        {...(onProgress?{onProgress}:{})}
       />
       </>
     );
@@ -203,7 +203,7 @@ export function PatternPracticeView({
         speak={speak}
         startRecognition={startRecognition}
         onDone={()=>nextMode('speaking')}
-        onProgress={onProgress}
+        {...(onProgress?{onProgress}:{})}
       />
       </>
     );
