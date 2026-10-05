@@ -151,7 +151,7 @@ export function TodayView({
   let hero:ReactNode;
   if(complete){
     hero=(
-      <Tile className="tile-hero" index={index++}>
+      <Tile className="tile-hero today-hero" index={index++}>
         <div className="tile-top">
           <span className="chip"><LexiconText text={localizedText(state.set.title,locale)} /></span>
           {courseProgress}
@@ -165,7 +165,7 @@ export function TodayView({
     const total=node.activityIds.length;
     const stage=stageForDay(node.dayIndex,state.set.id);
     hero=(
-      <Tile className="tile-hero" index={index++}>
+      <Tile className="tile-hero today-hero" index={index++}>
         <div className="tile-top">
           <span className="chip">
             <span>{node.dayIndex?t('today.day',{day:node.dayIndex}):t('today.nextStep')}</span>
@@ -201,7 +201,7 @@ export function TodayView({
   }else{
     const preview=state.access==='preview'&&Boolean(state.roadmapProgress.currentNode);
     hero=(
-      <Tile className="tile-hero" index={index++}>
+      <Tile className="tile-hero today-hero" index={index++}>
         <div className="tile-top">
           <span className="chip"><Icon name="lock" size={16} />{t('today.locked')}</span>
           {courseProgress}
