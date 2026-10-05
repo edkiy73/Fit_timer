@@ -239,6 +239,23 @@ select:active{transform:scale(.985)}
 .learn-summary h2{margin:0}
 .learn-summary-icon{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:color-mix(in srgb,var(--accent) 14%,var(--card));color:var(--accent)}
 .learn-summary-score{margin:0;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.completion-summary{position:relative;overflow:hidden;min-height:300px;align-content:center;border:1px solid color-mix(in srgb,var(--success) 24%,var(--line));border-radius:32px;background:
+  radial-gradient(circle at 50% 18%,color-mix(in srgb,var(--success) 14%,transparent),transparent 34%),
+  linear-gradient(180deg,color-mix(in srgb,var(--card) 96%,var(--success) 4%),var(--card));animation:completion-enter var(--motion-ring) var(--motion-spring-ease) both}
+.completion-summary::before{content:"";position:absolute;inset:14px;border-radius:26px;border:1px solid color-mix(in srgb,var(--success) 10%,transparent);pointer-events:none}
+.completion-summary>*{position:relative;z-index:1}
+.completion-summary .learn-summary-icon{width:72px;height:72px;border-radius:36px;background:color-mix(in srgb,var(--success) 16%,var(--card));color:var(--success);box-shadow:0 14px 32px color-mix(in srgb,var(--success) 16%,transparent);animation:completion-icon-pop var(--motion-progress) var(--motion-spring-ease) both}
+.completion-summary h2{max-width:22ch;font-size:28px;line-height:1.15;letter-spacing:-.025em}
+.completion-summary .learn-summary-score{font-size:20px}
+@keyframes completion-enter{
+  from{opacity:0;transform:translateY(10px) scale(.99)}
+  to{opacity:1;transform:none}
+}
+@keyframes completion-icon-pop{
+  0%{transform:scale(.72);opacity:0}
+  70%{transform:scale(1.06);opacity:1}
+  100%{transform:scale(1)}
+}
 .learn-state span{color:var(--muted);line-height:1.45}
 .learn-card{display:grid;gap:16px;animation:card-enter var(--motion-base) var(--motion-ease) both}
 .runner-activity{view-transition-name:runner-activity;min-width:0}
@@ -581,6 +598,14 @@ select:active{transform:scale(.985)}
 .tile{position:relative;display:grid;align-content:start;gap:10px;min-width:0;border:1px solid var(--line);border-radius:var(--radius-tile);background:var(--card);color:var(--ink);padding:16px;text-align:left;font:inherit;animation:tile-in var(--motion-sheet) var(--motion-spring-ease) both;animation-delay:calc(var(--i,0) * 35ms)}
 .tile-hero,.tile-wide{grid-column:span 2}
 .tile-hero{gap:14px;padding:20px}
+.today-hero{overflow:hidden;background:
+  radial-gradient(circle at 88% -10%,color-mix(in srgb,var(--accent) 18%,transparent),transparent 42%),
+  linear-gradient(180deg,color-mix(in srgb,var(--card) 94%,var(--accent) 6%),var(--card))}
+.today-hero::after{content:"";position:absolute;right:-42px;bottom:-54px;width:150px;height:150px;border-radius:50%;background:color-mix(in srgb,var(--accent) 7%,transparent);filter:blur(2px);pointer-events:none}
+.today-hero>*{position:relative;z-index:1}
+.today-hero h3{max-width:20ch;font-size:24px;letter-spacing:-.025em}
+.today-hero .today-meter{height:9px}
+.today-hero .today-start{min-height:52px;box-shadow:0 10px 24px color-mix(in srgb,var(--accent) 18%,transparent)}
 .tile-hero h3{margin:0;font-size:22px;line-height:1.25;font-weight:800}
 .tile-short{min-height:76px}
 .tile-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -750,7 +775,7 @@ select:active{transform:scale(.985)}
 @keyframes scrim-out{from{opacity:1}to{opacity:0}}
 @keyframes scrim-in{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){
-  .station,.sheet,.sheet-scrim,.learn-card,.learn-feedback-head,.learn-feedback-actions,.station.is-reward .station-marker,.station.is-reward .station-body,.station.is-reward .here-pill{animation:none!important}
+  .station,.sheet,.sheet-scrim,.learn-card,.learn-feedback-head,.learn-feedback-actions,.station.is-reward .station-marker,.station.is-reward .station-body,.station.is-reward .here-pill,.completion-summary,.completion-summary .learn-summary-icon{animation:none!important}
   ::view-transition-old(runner-activity),::view-transition-new(runner-activity){animation:none!important}
   .station.is-current .station-marker::after{animation:none}
   .stage-chevron{transition:none}
@@ -1302,6 +1327,16 @@ select:active{transform:scale(.985)}
 .progress-dashboard-head p{margin:4px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
 .progress-general{background:var(--card)}
 .progress-course-dashboard{background:var(--card)}
+.me-profile .progress-general{border-color:color-mix(in srgb,var(--line) 86%,transparent);background:color-mix(in srgb,var(--card) 96%,var(--surface))}
+.me-profile .progress-course-dashboard{border-color:color-mix(in srgb,var(--accent) 20%,var(--line));background:
+  radial-gradient(circle at 100% 0,color-mix(in srgb,var(--accent) 10%,transparent),transparent 36%),
+  var(--card)}
+.me-profile .progress-course-ring{filter:drop-shadow(0 10px 20px color-mix(in srgb,var(--success) 12%,transparent))}
+.me-profile .progress-course-now>strong{font-size:22px;letter-spacing:-.015em}
+.me-profile .progress-metric{transition:transform var(--motion-base) var(--motion-spring-ease),border-color var(--motion-fast) ease,background-color var(--motion-fast) ease}
+@media(hover:hover){
+  .me-profile .progress-metric:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--accent) 20%,var(--line))}
+}
 .progress-general-metrics{gap:10px}
 .progress-metric{border:1px solid var(--line);background:var(--surface)}
 .progress-metric.is-accent,.progress-metric.is-success,.progress-metric.is-listen{background:var(--surface)}
