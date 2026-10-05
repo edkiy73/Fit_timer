@@ -34,7 +34,16 @@ const state: LearnerCourseState={
       title:{ru:'Путь'},
       nodes:[node]
     }],
-    activities:[],
+    activities:[
+      {
+        id:'card.one',revision:1,type:'choice' as const,tags:[],revisionProgress:'preserve' as const,
+        lexiconRefs:[],prompt:{ru:'Один'},options:[{ru:'A'},{ru:'B'}],correctIndex:0
+      },
+      {
+        id:'card.two',revision:1,type:'choice' as const,tags:[],revisionProgress:'preserve' as const,
+        lexiconRefs:[],prompt:{ru:'Два'},options:[{ru:'A'},{ru:'B'}],correctIndex:0
+      }
+    ],
     resources:[]
   },
   roadmap:{
