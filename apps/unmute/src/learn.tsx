@@ -154,8 +154,7 @@ const isSeen=(progress:CourseProgressDocument,id:string)=>{
   const seen=progress.seen[id];
   return Boolean(seen&&!seen.deleted);
 };
-// A wrong answer is replayed once at the end of the lesson («Работа над ошибками»).
-const MAX_RETURNS=1;
+// Wrong answers stay unresolved and keep returning until the learner passes them.
 const range=(from:number,to:number)=>Array.from({length:Math.max(0,to-from)},(_,i)=>from+i);
 const MODE_KEY:Record<PracticeSrsKind,string>={drill:'kind.drill',listening:'kind.listening',speaking:'kind.speaking'};
 const LESSON_RUN_VERSION=1;
@@ -626,14 +625,10 @@ export function NodeRunnerView({
     });
   };
 
-  // A wrong answer comes back at the end of the lesson — at most twice, so nobody gets stuck.
+  // A wrong answer comes back at the end of the section until it is actually resolved.
   const retryLater=()=>{
     if(stepIndex===undefined)return;
-    setOrder(current=>{
-      if(current.slice(pos+1).includes(stepIndex))return current;
-      const returns=current.filter(item=>item===stepIndex).length-1;
-      return returns>=MAX_RETURNS?current:[...current,stepIndex];
-    });
+    setOrder(current=>current.slice(pos+1).includes(stepIndex)?current:[...current,stepIndex]);
   };
   const countAnswer=(correct:boolean)=>{
     if(pos>=firstPass)return;
@@ -939,7 +934,11 @@ export function NodeRunnerView({
   const recordsAnswers=!replay&&!retrying;
   const answerOperationId=(kind:string)=>runId+'|'+activity.id+'|'+pos+'|'+kind;
   const gradeAnswer=(correct:boolean,responseKind?:SentenceResponseKind)=>{
-    if(!recordsAnswers)return Promise.resolve();
+    if(!recordsAnswers){
+      // Correction answers must resolve the lesson step without grading SRS/stats again.
+      if(!replay&&retrying&&correct)return saveSeen(setId,activity.id);
+      return Promise.resolve();
+    }
     const operationId=answerOperationId('card');
     return responseKind
       ? saveGraded(setId,activity.id,correct,responseKind,operationId)
@@ -1002,7 +1001,12 @@ export function NodeRunnerView({
         && activity.answer.nearMiss!==false
         && nearMiss(input,activity.answer.accepted);
       const correct=exactCorrect||typo;
-      await gradeAnswer(correct,chips?'build':'write');
+      // Near miss is accepted for the lesson, but it must not create or advance SRS debt.
+      if(typo){
+        await saveSeen(setId,activity.id);
+      }else{
+        await gradeAnswer(correct,chips?'build':'write');
+      }
       countAnswer(correct);
       if(!correct)retryLater();
       setNearResult(typo);
