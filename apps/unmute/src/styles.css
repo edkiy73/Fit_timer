@@ -645,8 +645,8 @@ select:active{transform:scale(.985)}
 .week-day{display:grid;justify-items:center;gap:4px;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase}
 .week-dot{width:12px;height:12px;border-radius:6px;border:1.5px solid var(--line);transform:scale(.92);transition:background-color var(--motion-base) ease,border-color var(--motion-base) ease,transform var(--motion-sheet) var(--motion-spring-ease)}
 .week-day.is-active .week-dot{background:var(--streak);border-color:var(--streak);transform:scale(1)}
-.tile-speak{grid-template-columns:auto minmax(0,1fr);align-items:center;gap:14px;cursor:pointer;min-height:96px}
-.tile-speak-body{display:grid;grid-template-rows:auto minmax(2.9em,auto) auto;gap:4px}
+.tile-speak{grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px;cursor:pointer;min-height:78px;padding:12px 14px}
+.tile-speak-body{display:grid;grid-template-rows:auto auto;gap:2px}
 .tile-link{color:var(--accent-ink);font-size:13px;font-weight:800}
 .tile-speak:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .speak-sheet{display:grid;gap:12px}
@@ -656,13 +656,12 @@ select:active{transform:scale(.985)}
 .speak-examples li{display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;border-radius:18px;background:var(--surface)}
 .speak-play{display:grid;place-items:center;flex:0 0 44px;height:44px;border:0;border-radius:22px;background:color-mix(in srgb,var(--listen) 18%,transparent);color:var(--listen);cursor:pointer}
 /* Soft volume only on the big tactile mic (docs/unmute-design-plan.md §4.3). */
-.mic-soft{display:grid;place-items:center;width:56px;height:56px;border-radius:28px;background:var(--surface);color:var(--accent-ink);box-shadow:-3px -3px 8px rgb(255 255 255/.55),4px 4px 10px rgb(27 26 36/.12)}
-.tile-landmark{display:grid;grid-template-columns:56px minmax(0,1fr) 20px;align-items:center;gap:14px;cursor:pointer;min-height:96px}
+.mic-soft{display:grid;place-items:center;width:48px;height:48px;border-radius:24px;background:var(--surface);color:var(--accent-ink);box-shadow:-3px -3px 8px rgb(255 255 255/.55),4px 4px 10px rgb(27 26 36/.12)}
+.tile-landmark{display:grid;grid-template-columns:48px minmax(0,1fr);align-items:center;gap:12px;cursor:pointer;min-height:78px;padding:12px 14px}
 .tile-landmark:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .landmark-body{display:grid;grid-template-rows:minmax(1.3em,auto) minmax(1.4em,auto);align-content:center;gap:4px;min-width:0}
-.landmark-icon{display:grid;place-items:center;width:56px;height:56px;border-radius:28px;color:var(--listen);background:color-mix(in srgb,var(--listen) 16%,transparent)}
+.landmark-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:24px;color:var(--listen);background:color-mix(in srgb,var(--listen) 16%,transparent)}
 .landmark-ai{color:var(--accent-ink);background:color-mix(in srgb,var(--accent) 16%,transparent)}
-.landmark-chevron{color:var(--muted)}
 .today-state{gap:10px}
 .today-state span{color:var(--muted);line-height:1.45}
 .today-state-actions{display:flex;gap:10px;flex-wrap:wrap}
@@ -1028,14 +1027,20 @@ select:active{transform:scale(.985)}
 .legal-body .muted,.legal-body .draft{color:var(--muted);font-size:14px}
 .legal-body a{color:var(--accent-ink,var(--accent))}
 
-/* «Сегодня»: «Серия» and «Повтор» are the same short height; the due review tile is one button. */
+/* «Сегодня»: secondary cards are content-sized, with no decorative empty zones. */
 .tile-streak,.tile-course-mini,.tile-review{align-content:start}
-.tile-streak,.tile-course-mini{min-height:154px}
-.tile-review.is-due{cursor:pointer;min-height:116px;padding:15px 16px}
-.tile-review-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:end;gap:10px}
-.tile-review-row .tile-number{font-size:34px}.tile-review-row .tile-caption{align-self:center}.tile-review .tile-link{margin:0;align-self:center;color:var(--accent-ink,var(--accent));font-size:14px;font-weight:800;white-space:nowrap}
-.course-mini-body{display:flex;align-items:center;gap:12px;min-width:0}.course-mini-ring{--p:0;display:grid;place-items:center;width:64px;height:64px;flex:none;border-radius:50%;background:conic-gradient(var(--accent) calc(var(--p)*1%),var(--surface) 0);position:relative}.course-mini-ring::after{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--card)}.course-mini-ring strong{position:relative;z-index:1;font-size:15px;font-variant-numeric:tabular-nums}.tile-course-mini .tile-caption{line-height:1.35}
-@media(max-width:390px){.tile-review-row{grid-template-columns:auto 1fr}.tile-review-row .tile-link{grid-column:1/-1}.tile-streak,.tile-course-mini{min-height:164px}}
+.tile-streak,.tile-course-mini{min-height:132px;padding:14px}
+.tile-review.is-due{cursor:pointer;min-height:82px;padding:13px 16px;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:16px}
+.tile-review .tile-kicker{align-self:center}
+.tile-review-row{display:flex;align-items:baseline;justify-content:flex-end;gap:8px;min-width:0}
+.tile-review-row .tile-number{font-size:32px}
+.tile-review-row .tile-caption{font-size:13px;white-space:nowrap}
+.course-mini-body{display:flex;align-items:center;gap:10px;min-width:0}
+.course-mini-ring{--p:0;display:grid;place-items:center;width:52px;height:52px;flex:none;border-radius:50%;background:conic-gradient(var(--accent) calc(var(--p)*1%),var(--surface) 0);position:relative}
+.course-mini-ring::after{content:"";position:absolute;inset:6px;border-radius:50%;background:var(--card)}
+.course-mini-ring strong{position:relative;z-index:1;font-size:14px;font-variant-numeric:tabular-nums}
+.tile-course-mini .tile-caption{line-height:1.3}
+@media(max-width:390px){.tile-streak,.tile-course-mini{min-height:138px}.tile-review.is-due{grid-template-columns:1fr auto}}
 
 /* «Маршрут»: the current course is a card you cannot miss, with «Сменить». */
 .course-card{display:flex;align-items:center;gap:12px;width:100%;margin:0;min-height:58px;padding:11px 14px;border:1px solid color-mix(in srgb,var(--accent) 24%,var(--line));border-radius:20px;background:color-mix(in srgb,var(--accent) 5%,var(--card));color:var(--ink);font:inherit;text-align:left;cursor:pointer}
