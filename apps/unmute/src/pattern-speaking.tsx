@@ -15,6 +15,7 @@ import { AnswerFeedbackSheet } from './answer-feedback-sheet';
 import { readPracticeRunState, writePracticeRunState } from './practice-run-state';
 
 type PatternDrillActivity=Extract<Activity,{type:'pattern-drill'}>;
+type SpeakingVerification='recognition'|'manual'|'revealed';
 
 interface SpeakingRunSession {
   version:1;
@@ -25,6 +26,7 @@ interface SpeakingRunSession {
   phase:'ask'|'show';
   heard:string;
   correct:boolean|null;
+  verification?:SpeakingVerification;
   saved:boolean;
   saveError:boolean;
 }
@@ -98,6 +100,7 @@ export function PatternSpeakingView({
   sessionKey
 }:PatternSpeakingViewProps){
   const {t,locale}=useI18n();
+  const base=activity.items.length;
   const restored=restoredSpeakingSession(activity,sessionKey);
   const [items,setItems]=useState(()=>restored?.items??pickSpeakingItems(activity,random));
   const [pos,setPos]=useState(()=>restored?.pos??0);
@@ -105,6 +108,7 @@ export function PatternSpeakingView({
   const [phase,setPhase]=useState<'ask'|'show'>(()=>restored?.phase??'ask');
   const [heard,setHeard]=useState(()=>restored?.heard??'');
   const [correct,setCorrect]=useState<boolean|null>(()=>restored?.correct??null);
+  const [verification,setVerification]=useState<SpeakingVerification>(()=>restored?.verification??'recognition');
   const [listening,setListening]=useState(false);
   const [recognitionError,setRecognitionError]=useState<WebRecognitionError|null>(null);
   const [saving,setSaving]=useState(false);
@@ -116,8 +120,12 @@ export function PatternSpeakingView({
   const item=items[pos] ?? null;
   const target=item?.answer.accepted[0] || '';
   const done=pos>=items.length;
-  const score=speakingScore(hits,items.length);
-  const passed=speakingPassed(hits,items.length);
+  const score=speakingScore(hits,base);
+  const strongFirstPass=base>0&&hits===base;
+  const correcting=pos>=base;
+  const correctionRemaining=correcting
+    ? new Set(items.slice(pos).map(entry=>entry.id)).size
+    : 0;
 
   useEffect(()=>{
     writePracticeRunState(sessionKey,{
@@ -129,12 +137,13 @@ export function PatternSpeakingView({
       phase,
       heard,
       correct,
+      verification,
       saved,
       saveError
     } satisfies SpeakingRunSession);
-  },[activity.revision,correct,heard,hits,items,phase,pos,saveError,saved,sessionKey]);
+  },[activity.revision,correct,heard,hits,items,phase,pos,saveError,saved,sessionKey,verification]);
 
-  useEffect(()=>{ if(active)onProgress?.(Math.min(pos+1,items.length),items.length); },[active,items.length,onProgress,pos]);
+  useEffect(()=>{ if(active)onProgress?.(Math.min(pos+1,base),base); },[active,base,onProgress,pos]);
 
   useEffect(()=>{
     if(!active){
@@ -160,11 +169,11 @@ export function PatternSpeakingView({
     if(!done||saved||saving||saveError)return;
     setSaving(true);
     setSaveError(false);
-    void savePractice(setId,activity.id,'speaking',passed,score)
+    void savePractice(setId,activity.id,'speaking',strongFirstPass,score)
       .then(()=>setSaved(true))
       .catch(()=>setSaveError(true))
       .finally(()=>setSaving(false));
-  },[activity.id,done,passed,saveError,savePractice,saved,saving,score,setId]);
+  },[activity.id,done,saveError,savePractice,saved,saving,score,setId,strongFirstPass]);
 
   const stopCurrent=()=>{
     handleRef.current?.abort();
@@ -181,6 +190,7 @@ export function PatternSpeakingView({
 
     receivedRef.current=false;
     setRecognitionError(null);
+    setVerification('recognition');
     setListening(true);
 
     const handle=startRecognition({
@@ -192,7 +202,8 @@ export function PatternSpeakingView({
         setListening(false);
         setHeard(best);
         setCorrect(ok);
-        if(ok)setHits(value=>value+1);
+        setVerification('recognition');
+        if(pos<base&&ok)setHits(value=>value+1);
         setPhase('show');
       },
       onError:error=>{
@@ -217,37 +228,29 @@ export function PatternSpeakingView({
     setRecognitionError(null);
     setHeard('');
     setCorrect(false);
+    setVerification('revealed');
     setPhase('show');
   };
 
-  const acceptManually=()=>{
-    if(correct===true)return;
-    setCorrect(true);
-    setHits(value=>value+1);
+  const beginManualCompare=()=>{
+    stopCurrent();
+    receivedRef.current=true;
+    setRecognitionError(null);
+    setHeard('');
+    setCorrect(null);
+    setVerification('manual');
+    setPhase('show');
   };
 
-  const next=()=>{
+  const advanceAttempt=(resolved:boolean)=>{
     stopCurrent();
+    if(!resolved&&item)setItems(current=>[...current,item]);
     setPos(value=>value+1);
     setPhase('ask');
     setHeard('');
     setCorrect(null);
+    setVerification('recognition');
     setRecognitionError(null);
-    receivedRef.current=false;
-  };
-
-  const reset=()=>{
-    stopCurrent();
-    setItems(pickSpeakingItems(activity,random));
-    setPos(0);
-    setHits(0);
-    setPhase('ask');
-    setHeard('');
-    setCorrect(null);
-    setRecognitionError(null);
-    setSaving(false);
-    setSaved(false);
-    setSaveError(false);
     receivedRef.current=false;
   };
 
@@ -255,7 +258,7 @@ export function PatternSpeakingView({
     if(saving)return;
     setSaving(true);
     setSaveError(false);
-    void savePractice(setId,activity.id,'speaking',passed,score)
+    void savePractice(setId,activity.id,'speaking',strongFirstPass,score)
       .then(()=>setSaved(true))
       .catch(()=>setSaveError(true))
       .finally(()=>setSaving(false));
@@ -276,8 +279,8 @@ export function PatternSpeakingView({
         <div className="eyebrow">{t('speaking.mode')}</div>
         <h3><LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} /></h3>
         <div className="drill-result">
-          <strong>{t('speaking.score',{correct:hits,total:items.length})}</strong>
-          <span>{passed?t('speaking.passed'):t('speaking.retryHint')}</span>
+          <strong>{t('speaking.score',{correct:hits,total:base})}</strong>
+          <span>{strongFirstPass?t('speaking.passed'):t('speaking.completed')}</span>
         </div>
         {saveError&&(
           <div className="learn-feedback learn-feedback-wrong learn-save-error" role="alert">
@@ -288,19 +291,9 @@ export function PatternSpeakingView({
             </button>
           </div>
         )}
-        <button className="primary-button" type="button" disabled={!saved} onClick={passed?onDone:reset}>
-          {passed?t('learn.next'):t('drill.again')}
+        <button className="primary-button" type="button" disabled={!saved} onClick={onDone}>
+          {t('learn.next')}
         </button>
-        {passed&&(
-          <button className="secondary-button" type="button" disabled={!saved} onClick={reset}>
-            {t('drill.again')}
-          </button>
-        )}
-        {!passed&&(
-          <button className="secondary-button" type="button" disabled={!saved} onClick={onDone}>
-            {t('drill.continueAnyway')}
-          </button>
-        )}
         {saving&&<span className="learn-hint" role="status">{t('drill.saving')}</span>}
       </article>
     );
@@ -314,7 +307,9 @@ export function PatternSpeakingView({
         <ExerciseKind kind="speaking" />
       <div className="drill-meta">
         <span><LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} /></span>
-        <span>{t('speaking.position',{current:pos+1,total:items.length})}</span>
+        <span>{correcting
+          ? t('drill.correctionRemaining',{count:correctionRemaining})
+          : t('speaking.position',{current:pos+1,total:base})}</span>
       </div>
       <h3><LexiconText text={prompt} refs={activity.lexiconRefs} /></h3>
 
@@ -335,26 +330,60 @@ export function PatternSpeakingView({
               {listening?t('speaking.listening'):t('speaking.start')}
             </button>
           </div>
+          {recognitionError&&(
+            <button className="secondary-button" type="button" onClick={beginManualCompare}>
+              {t('speaking.manualCheck')}
+            </button>
+          )}
           <button className="link-button" type="button" onClick={showAnswer}>
             {t('speaking.showAnswer')}
           </button>
         </>
       ) : (
         <AnswerFeedbackSheet
-          tone={correct?'correct':'wrong'}
-          title={correct?t('speaking.match'):t('speaking.noMatch')}
-          subtitle={<span>{correct?t('speaking.matchHint'):t('speaking.noMatchHint')}</span>}
+          tone={verification==='manual'?'near':correct?'correct':'wrong'}
+          title={
+            verification==='manual'
+              ? t('speaking.manualCompare')
+              : verification==='revealed'
+                ? t('speaking.gaveUp')
+                : correct?t('speaking.match'):t('speaking.noMatch')
+          }
+          subtitle={
+            <span>{
+              verification==='manual'
+                ? t('speaking.manualCompareHint')
+                : verification==='revealed'
+                  ? t('speaking.gaveUpHint')
+                  : correct?t('speaking.matchHint'):t('speaking.noMatchHint')
+            }</span>
+          }
           actions={
-            <>
-              {!correct&&(
-                <button className="secondary-button" type="button" onClick={acceptManually}>
-                  {t('speaking.acceptAnyway')}
+            verification==='manual' ? (
+              <>
+                <button className="secondary-button" type="button" onClick={()=>advanceAttempt(false)}>
+                  {t('drill.wrong')}
                 </button>
-              )}
-              <button className="primary-button learn-feedback-next" type="button" onClick={next}>
-                {pos+1<items.length?t('learn.next'):t('learn.finish')}
-              </button>
-            </>
+                <button className="primary-button learn-feedback-next" type="button" onClick={()=>advanceAttempt(true)}>
+                  {t('drill.same')}
+                </button>
+              </>
+            ) : (
+              <>
+                {verification==='recognition'&&!correct&&(
+                  <button className="secondary-button" type="button" onClick={()=>advanceAttempt(true)}>
+                    {t('speaking.acceptAnyway')}
+                  </button>
+                )}
+                <button
+                  className="primary-button learn-feedback-next"
+                  type="button"
+                  onClick={()=>advanceAttempt(verification==='recognition'&&correct===true)}
+                >
+                  {verification==='recognition'&&correct===true&&pos+1>=items.length?t('learn.finish'):t('learn.next')}
+                </button>
+              </>
+            )
           }
         >
           <div className="drill-target"><LexiconText text={target} refs={activity.lexiconRefs} /></div>
