@@ -334,6 +334,7 @@ export const ru = {
   'courseMap.daySections': 'Разделы текущего дня',
   'courseMap.sectionDone': 'пройдено',
   'courseMap.sectionTodo': 'ещё нужно пройти',
+  'courseMap.sectionOptional': 'необязательно',
   'courseMap.sectionStatus': '{section}: {status}',
   'learn.loadingTitle': 'Открываем урок',
   'learn.errorTitle': 'Урок не загрузился',
