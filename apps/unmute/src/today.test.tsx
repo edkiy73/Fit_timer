@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
+import type { Activity, RoadmapNode } from './content/schema';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { emptyCourseProgress } from './progress';
 import { TodayView } from './today';
@@ -112,23 +113,23 @@ describe('Today learner shell',()=>{
   });
 
   it('shows real 19 + 8 + 8 + 8 day progress and includes unfinished phrase state',()=>{
-    const cards=Array.from({length:19},(_,index)=>({
+    const cards:Activity[]=Array.from({length:19},(_,index)=>({
       id:'big.'+(index+1),revision:1,type:'choice' as const,tags:[],revisionProgress:'preserve' as const,
       lexiconRefs:[],prompt:{ru:'Вопрос'},options:[{ru:'A'},{ru:'B'}],correctIndex:0
     }));
-    const pattern={
-      id:'big.pattern',revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,
-      lexiconRefs:[],pattern:{ru:'Привычки'},modes:['drill','listening','speaking'] as const,
+    const pattern:Extract<Activity,{type:'pattern-drill'}>={
+      id:'big.pattern',revision:1,type:'pattern-drill',tags:[],revisionProgress:'preserve',
+      lexiconRefs:[],pattern:{ru:'Привычки'},modes:['drill','listening','speaking'],
       items:Array.from({length:8},(_,index)=>({
         id:'big.p'+(index+1),prompt:{ru:'Фраза'},answer:{accepted:['Phrase'],nearMiss:true,caseSensitive:false}
       }))
     };
-    const bigNode={
+    const bigNode:RoadmapNode={
       id:'day-3',kind:'lesson' as const,title:{ru:'День 3'},dayIndex:3,order:2,prerequisites:[],
       activityIds:[...cards.map(card=>card.id),pattern.id],
-      completion:{mode:'all' as const,requirements:[
-        {kind:'activity-seen' as const,activityIds:cards.map(card=>card.id)},
-        {kind:'practice-started' as const,activityId:pattern.id,modes:['drill','listening','speaking'] as const}
+      completion:{mode:'all',requirements:[
+        {kind:'activity-seen',activityIds:cards.map(card=>card.id)},
+        {kind:'practice-started',activityId:pattern.id,modes:['drill','listening','speaking']}
       ]},
       optional:false
     };
