@@ -201,7 +201,7 @@ export const en: Record<keyof typeof ru, string> = {
   'courseMap.statusAvailable': 'Available',
   'courseMap.statusPurchaseLocked': 'Locked',
   'courseMap.statusPrerequisiteLocked': 'Locked',
-  'courseMap.purchaseHint': 'This day is available in the full course.'
+  'courseMap.purchaseHint': 'This day is available in the full course.',
   'courseMap.unlock': 'Unlock access',
   'today.openAccess': 'Unlock access',
   'access.plusHeading': 'UnMute Plus',
