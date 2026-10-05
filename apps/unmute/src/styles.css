@@ -1139,6 +1139,14 @@ select:active{transform:scale(.985)}
 .review-breakdown,.review-topics{grid-column:1/-1}
 .review-breakdown{width:100%}
 .review-topics{margin:0;color:var(--muted)}
+.review-details{grid-column:1/-1;width:100%;border-top:1px solid var(--line);padding-top:10px}
+.review-details summary{cursor:pointer;color:var(--muted);font-size:14px;font-weight:700;list-style:none}
+.review-details summary::-webkit-details-marker{display:none}
+.review-details summary::after{content:'+';float:right;font-size:18px;line-height:1}
+.review-details[open] summary::after{content:'–'}
+.review-details[open] .review-breakdown{margin-top:10px}
+.review-details[open] .review-topics{margin-top:8px}
+.review-done-actions{width:100%}
 .practice-intro{display:grid;gap:12px}
 .practice-intro-text{margin:0;line-height:1.5}
 .practice-steps{margin:0;padding-left:22px;display:grid;gap:8px;line-height:1.45}
