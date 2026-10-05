@@ -82,13 +82,13 @@ describe('canonical day progress',()=>{
       ['speaking',8]
     ]);
 
-    const drillPartial=getDayProgress(set,node,progress,[{
+    const drillPartial=getDayProgress(set,node,progress,{practice:[{
       activityId:pattern.id,
       mode:'drill',
       resolvedSteps:3,
       attemptedSteps:4,
       pendingCorrections:1
-    }]);
+    }]});
     expect(drillPartial.completedSteps).toBe(22);
     expect(drillPartial.attemptedSteps).toBe(23);
     expect(drillPartial.pendingCorrections).toBe(1);
@@ -115,17 +115,30 @@ describe('canonical day progress',()=>{
 
   it('never treats attempted-but-wrong units as completed',()=>{
     const progress=emptyCourseProgress();
-    const state=getDayProgress(set,node,progress,[
+    const state=getDayProgress(set,node,progress,{practice:[
       {activityId:pattern.id,mode:'drill',resolvedSteps:0,attemptedSteps:8,pendingCorrections:8},
       {activityId:pattern.id,mode:'listening',resolvedSteps:0,attemptedSteps:8,pendingCorrections:8},
       {activityId:pattern.id,mode:'speaking',resolvedSteps:0,attemptedSteps:8,pendingCorrections:8}
-    ]);
+    ]});
 
     expect(state.totalSteps).toBe(43);
     expect(state.completedSteps).toBe(0);
     expect(state.attemptedSteps).toBe(24);
     expect(state.pendingCorrections).toBe(24);
     expect(state.dayComplete).toBe(false);
+  });
+
+  it('keeps an all-wrong regular task run in progress at 0 completed',()=>{
+    const progress=emptyCourseProgress();
+    const state=getDayProgress(set,node,progress,{
+      tasks:{attemptedSteps:19,pendingCorrections:19}
+    });
+
+    expect(state.completedSteps).toBe(0);
+    expect(state.attemptedSteps).toBe(19);
+    expect(state.pendingCorrections).toBe(19);
+    expect(state.status).toBe('in_progress');
+    expect(state.sections.find(section=>section.id==='tasks')?.status).toBe('correcting');
   });
 
   it('stays incomplete when only speed is missing',()=>{
