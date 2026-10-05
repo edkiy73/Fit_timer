@@ -1235,6 +1235,31 @@ export function NodeRunnerScreen(){
   const startActivityId=search.get('activity')||undefined;
   const resumeSavedRun=search.get('resume')==='1';
   const replayTasksOnly=search.get('tasks')==='1';
+  const allowExitRef=useRef(false);
+  const [exitRequest,setExitRequest]=useState(0);
+  const blocker=useBlocker(({currentLocation,nextLocation})=>
+    !allowExitRef.current&&
+    currentLocation.pathname.startsWith('/learn/')&&
+    nextLocation.pathname!==currentLocation.pathname
+  );
+
+  useEffect(()=>{
+    if(blocker.state==='blocked')setExitRequest(value=>value+1);
+  },[blocker.state]);
+
+  const leaveLesson=()=>{
+    if(blocker.state==='blocked'){
+      allowExitRef.current=true;
+      blocker.proceed();
+      return;
+    }
+    allowExitRef.current=true;
+    navigate('/',{replace:true});
+  };
+  const cancelBlockedExit=()=>{
+    if(blocker.state==='blocked')blocker.reset();
+  };
+
   return (
     <NodeRunnerView
       runtime={runtime}
@@ -1243,7 +1268,9 @@ export function NodeRunnerScreen(){
       {...(startMode?{startMode}:{})}
       {...(resumeSavedRun?{resumeSavedRun:true}:{})}
       {...(replayTasksOnly?{replayTasksOnly:true}:{})}
-      onExit={()=>navigate('/',{replace:true})}
+      exitRequest={exitRequest}
+      onExitCancelled={cancelBlockedExit}
+      onExit={leaveLesson}
       onSignIn={()=>navigate('/account?return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
       onAccess={()=>navigate('/access?from=answer&return='+encodeURIComponent('/learn/'+String(params.nodeId||'')+'?resume=1'))}
       onReviewDay={nodeId=>navigate('/review?day='+encodeURIComponent(nodeId))}
