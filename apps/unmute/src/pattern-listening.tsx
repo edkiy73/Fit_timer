@@ -184,17 +184,6 @@ export function PatternListeningView({
     setPhase('ask');
   };
 
-  const reset=()=>{
-    setItems(pickListeningItems(activity,random));
-    setPos(0);
-    setHits(0);
-    setPhase('ask');
-    setChosen(null);
-    setSaving(false);
-    setSaved(false);
-    setSaveError(false);
-  };
-
   const retrySave=()=>{
     if(saving)return;
     setSaving(true);
