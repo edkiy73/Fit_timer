@@ -142,7 +142,7 @@ export function PatternListeningView({
     } satisfies ListeningRunSession);
   },[activity.revision,chosen,hits,items,phase,pos,saveError,saved,sessionKey]);
 
-  useEffect(()=>{ if(active)onProgress?.(Math.min(pos+1,items.length),items.length); },[active,items.length,onProgress,pos]);
+  useEffect(()=>{ if(active)onProgress?.(Math.min(pos+1,base),base); },[active,base,onProgress,pos]);
 
   const options=useMemo(
     ()=>item?buildListeningOptions(item.prompt,distractors,locale,random):[],
