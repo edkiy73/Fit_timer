@@ -94,7 +94,7 @@ export function gradeCoursePractice(
       ...doc.practice,
       [mode]:{
         ...doc.practice[mode],
-        [activityId]:{...graded,at},
+        [activityId]:{...graded,completed:true,at},
       },
     },
     answerOps:operationId
@@ -122,7 +122,11 @@ export function roadmapProgressFromDocument(doc:CourseProgressDocument):RoadmapP
   const toPractice=(records:CourseProgressDocument['practice'][PracticeSrsKind])=>
     Object.fromEntries(Object.entries(records)
       .filter(([,value])=>Boolean(value&&!value.deleted))
-      .map(([id,value])=>[id,value ? {box:value.box,due:value.due} : undefined]));
+      .map(([id,value])=>[id,value ? {
+        box:value.box,
+        due:value.due,
+        ...(value.completed!==undefined?{completed:value.completed}:{})
+      } : undefined]));
 
   return {
     seenActivityIds:liveIds(doc.seen),
