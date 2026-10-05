@@ -910,7 +910,7 @@ export function NodeRunnerView({
     };
     return (
       <section className="learn-shell runner" aria-labelledby="learn-title">
-        <div className="runner-top">
+        <div className="runner-top runner-top-intro">
           <button className="runner-close pressable" type="button" onClick={()=>setExitOpen(true)} aria-label={t('learn.close')}>
             <Icon name="close" size={20} />
           </button>
