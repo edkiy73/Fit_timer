@@ -445,7 +445,6 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     try{
       const result=await client.action(adminKey,'content_activity_get',{setId,activityId:id});
       setEditor(result.activity as EditableActivity);
-      if(openNode)writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityId:String((result.activity as EditableActivity).id)});
       if(openNode)writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityId:id});
     }catch(error){
       setDayMessage(failureText(error,'Задание не открылось'));
@@ -462,7 +461,9 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     try{
       const result=await client.action(adminKey,'content_activity_create',{setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,type:newType});
       await Promise.all([reloadOpenNode(),refreshCourse()]);
-      setEditor(result.activity as EditableActivity);
+      const created=result.activity as EditableActivity;
+      setEditor(created);
+      writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityId:created.id});
     }catch(error){
       setDayMessage(failureText(error,'Задание не добавилось'));
     }finally{setBusy(false);}
@@ -748,8 +749,8 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
                 </span>
               </div>
               {editor?.id===activity.id && <ActivityEditor client={client} adminKey={adminKey} setId={setId} activity={editor}
-                onClose={()=>setEditor(null)}
-                onSaved={next=>{setEditor(next);void reloadOpenNode();void loadSets();}} />}
+                onClose={()=>{setEditor(null);writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id});}}
+                onSaved={next=>{setEditor(next);writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityId:next.id});void reloadOpenNode();void loadSets();}} />}
             </li>)}
           </ol>
           {!openNode.activities.length && <p className="ab-admin-empty">В этом дне пока нет заданий.</p>}
