@@ -160,6 +160,15 @@
 .ab-admin-card{display:grid;gap:4px;min-height:72px}
 .ab-admin-card span{color:var(--muted,#6b7280);font-size:12px}
 .ab-admin-card strong{font-size:20px;line-height:1.25}
+
+.ab-admin-campaigns{min-width:0;max-width:100%}
+.ab-admin-campaigns>.ab-admin-panel{min-width:0;max-width:100%;overflow:hidden}
+.ab-admin-campaigns .ab-admin-grid{min-width:0;max-width:100%}
+.ab-admin-campaigns .ab-admin-grid>*{min-width:0;max-width:100%}
+.ab-admin-campaigns .ab-admin-note,.ab-admin-campaigns .ab-admin-feedback,.ab-admin-campaigns .ab-admin-error{overflow-wrap:anywhere}
+@media(max-width:760px){
+  .ab-admin-campaigns .ab-admin-grid{grid-template-columns:1fr}
+}
 .ab-admin-panel ul{margin:0;padding-left:18px}
 
 .ab-admin-json{
