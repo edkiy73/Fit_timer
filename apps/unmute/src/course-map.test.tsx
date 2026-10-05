@@ -111,7 +111,7 @@ describe('course map',()=>{
     expect(screen.getByText('Дальше — полный курс')).toBeTruthy();
     expect(screen.getAllByRole('button',{name:'Открыть'})).toHaveLength(1);
     expect(screen.getAllByRole('button',{name:'Открыть доступ'})).toHaveLength(1);
-    expect(screen.getByText('Ты здесь')).toBeTruthy();
+    expect(screen.getByText('Сегодня')).toBeTruthy();
 
     await user.click(screen.getByRole('button',{name:'Открыть'}));
     expect(onOpen).toHaveBeenCalledWith('day-2');
@@ -121,9 +121,34 @@ describe('course map',()=>{
     await user.click(within(sheet).getByRole('button',{name:'Пройти ещё раз'}));
     expect(onOpen).toHaveBeenLastCalledWith('day-1',true);
 
-    await user.click(screen.getByRole('button',{name:'День 3, Нужен полный курс'}));
+    await user.click(screen.getByRole('button',{name:'День 3, Закрыт'}));
     expect(within(screen.getByRole('dialog')).queryByRole('button',{name:'Открыть'})).toBeNull();
     expect(onOpen).not.toHaveBeenCalledWith('day-3',expect.anything());
+  });
+
+  it('uses one simple status language on the route',()=>{
+    const runtime:LearnerCourseRuntimeValue={
+      state:previewState(),
+      status:'ready',
+      error:null,
+      refresh:async()=>{}
+    };
+
+    render(
+      <I18nProvider
+        dictionaries={dictionaries}
+        config={{locales:['ru'],default:'ru'}}
+        storageKey="course-map-status-test.locale"
+        systemLanguages={['ru']}
+      >
+        <CourseMapView runtime={runtime} onOpen={()=>{}} onUnlock={()=>{}} />
+      </I18nProvider>
+    );
+
+    expect(screen.getByText('Сегодня')).toBeTruthy();
+    expect(screen.getByText('Закрыт')).toBeTruthy();
+    expect(screen.queryByText('Ты здесь')).toBeNull();
+    expect(screen.queryByText('Сейчас')).toBeNull();
   });
 
   it('opens the access offer from a paid roadmap node',async()=>{
