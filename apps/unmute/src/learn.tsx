@@ -728,6 +728,14 @@ export function NodeRunnerView({
     return <section className="learn-shell"><Loader title={t('learn.checking')} /></section>;
   }
 
+  const pendingRequiredTarget=finished&&state&&node&&!nodeComplete
+    ? firstMissingRequirementTarget(node,steps,state.progress)
+    : null;
+  if(pendingRequiredTarget){
+    // The effect above immediately reopens this target. Avoid flashing an incomplete-day summary.
+    return <section className="learn-shell"><Loader title={t('learn.continuingRequired')} /></section>;
+  }
+
   if(finished&&node&&state){
     const missing=missingForNode(node,state.progress);
     const completedLessons=state.roadmapProgress.nodes.filter(item=>item.node.kind==='lesson'&&item.complete).length;
