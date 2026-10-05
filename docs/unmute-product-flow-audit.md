@@ -21,6 +21,29 @@ UI → навигация → состояние урока → сохранен
 
 ---
 
+## Актуальный статус — 2026-10-05
+
+> Эта таблица **заменяет статус от 2026-10-01 ниже**. Старый раздел оставлен как история расследования.
+
+| Область | Статус |
+|---|---:|
+| first/resume/replay + SRS/retry idempotency | ✅ #443/#482–#485 |
+| Review global cap / finite retry / partial-source notice | ✅ #443/#507 |
+| Profile statistics / analytics exactly-once | ✅ #485/#487 |
+| Onboarding persistence / notification save rollback | ✅ #443 |
+| Lesson navigation / feedback / exit / speed drill | ✅ #526/#528/#529/#538 |
+| Today / Route / Review UX hierarchy | ✅ #530–#532/#539 |
+| Onboarding / Profile / Dictionary / Access UX | ✅ #533–#536 |
+| Admin state / overflow / bulk wizard / activity hierarchy | ✅ #537/#540–#543 |
+| Learner terminology cleanup | 🟡 текущая пачка |
+| Save/error wording contract | 🟡 осталось |
+| Real Android device QA | 🟡 осталось |
+| Motion / visual polish | P2/P3 следующий этап |
+
+CI/browser regression по learner screens и Admin 360 px есть; отдельные нативные сценарии остаются в phone QA.
+
+---
+
 ## Текущий статус после live QA — 2026-10-01
 
 | Область | Статус | Комментарий |
