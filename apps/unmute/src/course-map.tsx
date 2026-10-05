@@ -13,6 +13,7 @@ import { Icon, type IconName } from './icons';
 import { Sheet } from './sheet';
 import { CoursePicker } from './active-course';
 import { MOTION } from './motion';
+import { lessonSectionStates, type LessonSectionId } from './lesson-sections';
 
 export type CourseMapStatus=
   |'complete'
@@ -125,7 +126,7 @@ export function CourseMapView({
   /** Opens «Справочник» (phrases and irregular verbs) when the course has them. */
   onReference?:()=>void;
   /** `fromSheet`: the station sheet is open; navigate with replace so Back skips it. */
-  onOpen:(nodeId:string,fromSheet?:boolean)=>void;
+  onOpen:(nodeId:string,fromSheet?:boolean,target?:LessonSectionId)=>void;
   onUnlock:(nodeId:string,fromSheet?:boolean)=>void;
 }){
   const {t,locale}=useI18n();
@@ -332,6 +333,9 @@ export function CourseMapView({
                     // The solid rail reaches into the next station up to its marker, not just to the row's edge.
                     const previous=group.stations[index-1];
                     const arriving=previous?.status==='complete'&&(station.status==='complete'||station.status==='current');
+                    const sectionStates=station.status==='current'
+                      ? lessonSectionStates(state.set,station.node,state.progress)
+                      : [];
                     return (
                       <Fragment key={station.node.id}>
                       {station.node.id===firstLocked&&(
@@ -372,6 +376,25 @@ export function CourseMapView({
                             <span className="station-status">{t(statusKey(station.status))}</span>
                           )}
                         </button>
+                        {station.status==='current'&&station.canOpen&&sectionStates.length>0&&(
+                          <div className="station-section-chips" aria-label={t('courseMap.daySections')}>
+                            {sectionStates.map(section=>(
+                              <button
+                                key={section.id}
+                                className={'station-section-chip pressable'+(section.complete?' is-complete':'')}
+                                type="button"
+                                onClick={()=>onOpen(station.node.id,false,section.id)}
+                                aria-label={t('courseMap.sectionStatus',{
+                                  section:t(section.labelKey),
+                                  status:t(section.complete?'courseMap.sectionDone':'courseMap.sectionTodo')
+                                })}
+                              >
+                                {section.complete&&<Icon name="check" size={12} />}
+                                <span>{t(section.labelKey)}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                         {station.status==='current'&&station.canOpen&&(
                           <button className="primary-button station-go" type="button" onClick={()=>onOpen(station.node.id)}>
                             <Icon name="play" size={16} />
@@ -430,7 +453,14 @@ export function CourseMapScreen(){
   return (
     <CourseMapView
       runtime={useLearnerCourseRuntime()}
-      onOpen={(nodeId,fromSheet)=>navigate('/learn/'+encodeURIComponent(nodeId),{replace:Boolean(fromSheet)})}
+      onOpen={(nodeId,fromSheet,target)=>{
+        const query=target==='theory'||target==='tasks'
+          ? '?section='+encodeURIComponent(target)
+          : target
+            ? '?mode='+encodeURIComponent(target)
+            : '';
+        navigate('/learn/'+encodeURIComponent(nodeId)+query,{replace:Boolean(fromSheet)});
+      }
       onUnlock={(nodeId,fromSheet)=>navigate('/access?from=course&node='+encodeURIComponent(nodeId),{replace:Boolean(fromSheet)})}
       onReference={()=>navigate('/reference')}
     />
