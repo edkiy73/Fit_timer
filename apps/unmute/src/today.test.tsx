@@ -83,7 +83,7 @@ function renderToday(
   onReview=vi.fn(),
   onMap=vi.fn(),
   onAccess=vi.fn(),
-  activePractice:Parameters<typeof TodayView>[0]['activePractice']=[]
+  activeDayProgress:Parameters<typeof TodayView>[0]['activeDayProgress']={}
 ){
   render(
     <I18nProvider
@@ -92,7 +92,7 @@ function renderToday(
       storageKey="today-test.locale"
       systemLanguages={['ru']}
     >
-      <TodayView runtime={value} onStart={onStart} onReview={onReview} onMap={onMap} onAccess={onAccess} activePractice={activePractice} />
+      <TodayView runtime={value} onStart={onStart} onReview={onReview} onMap={onMap} onAccess={onAccess} activeDayProgress={activeDayProgress} />
     </I18nProvider>
   );
   return {onStart,onReview,onMap,onAccess};
@@ -155,10 +155,21 @@ describe('Today learner shell',()=>{
     renderToday(
       runtime({state:bigState}),
       vi.fn(),vi.fn(),vi.fn(),vi.fn(),
-      [{activityId:pattern.id,mode:'drill',resolvedSteps:3,attemptedSteps:4,pendingCorrections:1}]
+      {practice:[{activityId:pattern.id,mode:'drill',resolvedSteps:3,attemptedSteps:4,pendingCorrections:1}]}
     );
 
     expect(screen.getByText('22 из 43 заданий · ~25 мин')).toBeTruthy();
+    expect(screen.getByRole('button',{name:'Продолжить'})).toBeTruthy();
+  });
+
+  it('shows Continue even when every attempted task is still wrong',()=>{
+    renderToday(
+      runtime(),
+      vi.fn(),vi.fn(),vi.fn(),vi.fn(),
+      {tasks:{attemptedSteps:2,pendingCorrections:2}}
+    );
+
+    expect(screen.getByText('0 из 2 заданий · ~1 мин')).toBeTruthy();
     expect(screen.getByRole('button',{name:'Продолжить'})).toBeTruthy();
   });
 
