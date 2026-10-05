@@ -230,87 +230,96 @@ export function TodayView({
     <section className="today" aria-labelledby="today-title">
       {heading}
       <UpdateBanner />
-      <div className="bento">
-        {hero}
 
-        <Tile className="tile-streak" index={index++}>
-          <div className="tile-kicker tone-streak"><Icon name="flame" size={18} />{t('today.streak')}</div>
-          <strong className="tile-number"><AnimatedNumber value={streak} /><span className="tile-unit">{countDays(t,locale,streak).replace(/^\S+\s/,'')}</span></strong>
-          {!streak&&<span className="tile-caption">{t('today.streakStart')}</span>}
-          <div className="week" aria-label={t('today.week',{count:week.filter(Boolean).length})}>
-            {week.map((active,day)=>(
-              <span key={day} className={'week-day'+(active?' is-active':'')} aria-hidden="true">
-                <span className="week-dot" />
-                {weekdayLabel.format(new Date((todayDay-6+day)*DAY_MS))}
-              </span>
-            ))}
+      <div className="today-section today-main">
+        <div className="bento">
+          {hero}
+        </div>
+      </div>
+
+      {hasReview&&review&&(
+        <section className="today-section" aria-labelledby="today-required-title">
+          <h3 id="today-required-title" className="today-section-title">{t('today.requiredTitle')}</h3>
+          <div className="bento">
+            <button
+              className="tile tile-wide tile-review is-due pressable"
+              style={{'--i':index++} as CSSProperties}
+              type="button"
+              onClick={onReview}
+              aria-label={t('today.reviewStart')+': '+review.actionableCount}
+            >
+              <span className="tile-kicker tone-listen"><Icon name="review" size={18} />{t('nav.review')}</span>
+              <strong className="tile-number"><AnimatedNumber value={review.actionableCount} /></strong>
+              <span className="tile-caption">{t('today.reviewCaption')}</span>
+              <span className="tile-link">{t('today.reviewStart')} →</span>
+              {review.waitingCount>0&&<span className="sr-only">{t('today.reviewWaiting',{count:review.waitingCount})}</span>}
+            </button>
           </div>
-        </Tile>
+        </section>
+      )}
 
-        {/* Always shown and as short as «Серия»: the whole tile starts the review when
-            something is due, so there is no extra button stretching the row. */}
-        {hasReview&&review ? (
-          <button className="tile tile-review is-due pressable" style={{'--i':index++} as CSSProperties} type="button" onClick={onReview}
-            aria-label={t('today.reviewStart')+': '+review.actionableCount}>
-            <span className="tile-kicker tone-listen"><Icon name="review" size={18} />{t('nav.review')}</span>
-            <strong className="tile-number"><AnimatedNumber value={review.actionableCount} /></strong>
-            <span className="tile-caption">{t('today.reviewCaption')}</span>
-            <span className="tile-link">{t('today.reviewStart')} →</span>
-            {review.waitingCount>0&&<span className="sr-only">{t('today.reviewWaiting',{count:review.waitingCount})}</span>}
-          </button>
-        ) : (
-          <Tile className="tile-review" index={index++}>
-            <div className="tile-kicker tone-listen"><Icon name="review" size={18} />{t('nav.review')}</div>
-            <strong className="tile-number"><AnimatedNumber value={0} /></strong>
-            <span className="tile-caption">{t('today.reviewEmpty')}</span>
-          </Tile>
-        )}
-
-        {speakTask&&node&&(
-          <button className="tile tile-wide tile-speak pressable" style={{'--i':index++} as CSSProperties} type="button" onClick={()=>setSpeakOpen(true)}>
-            <span className="mic-soft" aria-hidden="true"><Icon name="mic" /></span>
-            <span className="tile-speak-body">
-              <span className="tile-title">{t('today.speakTitle')}</span>
-              <span className="tile-text">{speakTask}</span>
-              <span className="tile-link">{t('today.speakOpen')}</span>
-            </span>
-          </button>
-        )}
-
-        {/* A word from today's lessons: tap it for the dictionary (sound, examples, «В мои слова»). */}
-        {word&&(
-          <Tile className="tile-wide tile-word" index={index++}>
-            <div className="tile-kicker tone-accent"><Icon name="book" size={18} />{t('today.wordTitle')}</div>
-            <div className="word-day">
-              <span className="word-day-text">
-                <strong lang="en" className="word-day-lemma"><LexiconText text={word.lemma} refs={[{surface:word.lemma,lexemeId:word.lexemeId}]} /></strong>
-                {word.ipa&&<span className="word-day-ipa">{ipaForDisplay(word.ipa)}</span>}
-                <span className="tile-text">{word.translation}</span>
-              </span>
-              <button className="speak-play pressable" type="button" aria-label={t('today.speakListen',{text:word.lemma})} onClick={()=>void speakText(word.lemma,ENGLISH_SPEECH_LOCALE)}>
-                <Icon name="speaker" size={20} />
-              </button>
+      <section className="today-section" aria-labelledby="today-extra-title">
+        <h3 id="today-extra-title" className="today-section-title">{t('today.extraTitle')}</h3>
+        <div className="bento">
+          <Tile className="tile-streak" index={index++}>
+            <div className="tile-kicker tone-streak"><Icon name="flame" size={18} />{t('today.streak')}</div>
+            <strong className="tile-number"><AnimatedNumber value={streak} /><span className="tile-unit">{countDays(t,locale,streak).replace(/^\S+\s/,'')}</span></strong>
+            {!streak&&<span className="tile-caption">{t('today.streakStart')}</span>}
+            <div className="week" aria-label={t('today.week',{count:week.filter(Boolean).length})}>
+              {week.map((active,day)=>(
+                <span key={day} className={'week-day'+(active?' is-active':'')} aria-hidden="true">
+                  <span className="week-dot" />
+                  {weekdayLabel.format(new Date((todayDay-6+day)*DAY_MS))}
+                </span>
+              ))}
             </div>
           </Tile>
-        )}
 
-        {landmark&&(
-          <button className="tile tile-wide tile-landmark pressable" style={{'--i':index++} as CSSProperties} type="button" onClick={onMap}>
-            <span className={'landmark-icon landmark-'+landmark.kind} aria-hidden="true">
-              <Icon name={landmark.kind==='dialogue'?'chat':landmark.kind==='ai'?'sparkle':'review'} size={20} />
-            </span>
-            <span className="landmark-body">
-              <span className="tile-title">
-                {landmark.kind==='review'
-                  ? t('today.landmarkReview')
-                  : t(landmark.kind==='dialogue'?'today.landmarkDialogue':'today.landmarkTalk',{title:landmark.title})}
+          {speakTask&&node&&(
+            <button className="tile tile-wide tile-speak pressable" style={{'--i':index++} as CSSProperties} type="button" onClick={()=>setSpeakOpen(true)}>
+              <span className="mic-soft" aria-hidden="true"><Icon name="mic" /></span>
+              <span className="tile-speak-body">
+                <span className="tile-title">{t('today.speakTitle')}</span>
+                <span className="tile-text">{t('today.speakFromLesson')}</span>
+                <span className="tile-link">{t('today.speakOpen')}</span>
               </span>
-              <span className="tile-caption">{t('today.landmarkWhen',{day:landmark.dayIndex,days:countDays(t,locale,landmark.inDays)})}</span>
-            </span>
-            <Icon name="chevron" size={20} className="landmark-chevron" />
-          </button>
-        )}
-      </div>
+            </button>
+          )}
+
+          {word&&(
+            <Tile className="tile-wide tile-word" index={index++}>
+              <div className="tile-kicker tone-accent"><Icon name="book" size={18} />{t('today.wordTitle')}</div>
+              <div className="word-day">
+                <span className="word-day-text">
+                  <strong lang="en" className="word-day-lemma"><LexiconText text={word.lemma} refs={[{surface:word.lemma,lexemeId:word.lexemeId}]} /></strong>
+                  {word.ipa&&<span className="word-day-ipa">{ipaForDisplay(word.ipa)}</span>}
+                  <span className="tile-text">{word.translation}</span>
+                </span>
+                <button className="speak-play pressable" type="button" aria-label={t('today.speakListen',{text:word.lemma})} onClick={()=>void speakText(word.lemma,ENGLISH_SPEECH_LOCALE)}>
+                  <Icon name="speaker" size={20} />
+                </button>
+              </div>
+            </Tile>
+          )}
+
+          {landmark&&(
+            <button className="tile tile-wide tile-landmark pressable" style={{'--i':index++} as CSSProperties} type="button" onClick={onMap}>
+              <span className={'landmark-icon landmark-'+landmark.kind} aria-hidden="true">
+                <Icon name={landmark.kind==='dialogue'?'chat':landmark.kind==='ai'?'sparkle':'review'} size={20} />
+              </span>
+              <span className="landmark-body">
+                <span className="tile-title">
+                  {landmark.kind==='review'
+                    ? t('today.landmarkReview')
+                    : t(landmark.kind==='dialogue'?'today.landmarkDialogue':'today.landmarkTalk',{title:landmark.title})}
+                </span>
+                <span className="tile-caption">{t('today.landmarkWhen',{day:landmark.dayIndex,days:countDays(t,locale,landmark.inDays)})}</span>
+              </span>
+              <Icon name="chevron" size={20} className="landmark-chevron" />
+            </button>
+          )}
+        </div>
+      </section>
 
       {speakTask&&node&&(
         <Sheet open={speakOpen} onClose={()=>setSpeakOpen(false)} labelledBy="speak-sheet-title" closeLabel={t('learn.theoryClose')}>
