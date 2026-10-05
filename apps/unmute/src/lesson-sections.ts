@@ -9,6 +9,8 @@ export interface LessonSectionState {
   labelKey:string;
   complete:boolean;
   required:boolean;
+  /** True only when this section currently prevents the next required node from unlocking. */
+  blocking:boolean;
   activityId?:string;
 }
 
@@ -25,18 +27,48 @@ const isSeen=(progress:CourseProgressDocument,id:string)=>{
 
 const isPlan=(activity:Activity)=>activity.type==='theory'&&(activity.tags??[]).includes('plan');
 
-function activitiesRequiredBySeen(node:RoadmapNode,activityIds:string[]):boolean{
-  if(!node.completion)return activityIds.some(id=>node.activityIds.includes(id));
-  return node.completion.requirements.some(requirement=>
-    requirement.kind==='activity-seen'&&activityIds.some(id=>requirement.activityIds.includes(id))
-  );
+function seenRequirementState(
+  node:RoadmapNode,
+  activityIds:string[],
+  progress:CourseProgressDocument
+):{required:boolean;blocking:boolean}{
+  const requiredIds=node.completion
+    ? node.completion.requirements.flatMap(requirement=>
+        requirement.kind==='activity-seen'
+          ? requirement.activityIds.filter(id=>activityIds.includes(id))
+          : []
+      )
+    : activityIds.filter(id=>node.activityIds.includes(id));
+  const unique=[...new Set(requiredIds)];
+  return {
+    required:unique.length>0,
+    blocking:unique.some(id=>!isSeen(progress,id))
+  };
 }
 
-function practiceRequired(node:RoadmapNode,activityId:string,mode:PracticeSrsKind):boolean{
-  if(!node.completion)return true;
-  return node.completion.requirements.some(requirement=>
-    requirement.kind==='practice-started'&&requirement.activityId===activityId&&requirement.modes.includes(mode)
-  );
+function practiceRequirementState(
+  node:RoadmapNode,
+  activity:Extract<Activity,{type:'pattern-drill'}>,
+  mode:PracticeSrsKind,
+  progress:CourseProgressDocument
+):{required:boolean;blocking:boolean}{
+  const record=progress.practice[mode]?.[activity.id];
+  const complete=Boolean(record&&!record.deleted&&record.box>0);
+  if(node.completion){
+    const required=node.completion.requirements.some(requirement=>
+      requirement.kind==='practice-started'&&
+      requirement.activityId===activity.id&&
+      requirement.modes.includes(mode)
+    );
+    return {required,blocking:required&&!complete};
+  }
+
+  // Legacy fallback completion only requires the activity to become seen.
+  // Any practice mode marks the pattern activity seen, so present one entry mode as the
+  // actionable blocker instead of falsely claiming that every mode is mandatory.
+  const entryMode=activity.modes[0];
+  const required=node.activityIds.includes(activity.id)&&mode===entryMode;
+  return {required,blocking:required&&!isSeen(progress,activity.id)};
 }
 
 export function lessonSectionStates(
@@ -51,11 +83,13 @@ export function lessonSectionStates(
   const sections:LessonSectionState[]=[];
   const theory=activities.filter(activity=>activity.type==='theory'&&!isPlan(activity));
   if(theory.length){
+    const requirement=seenRequirementState(node,theory.map(activity=>activity.id),progress);
     sections.push({
       id:'theory',
       labelKey:'learn.theory',
       complete:theory.every(activity=>isSeen(progress,activity.id)),
-      required:activitiesRequiredBySeen(node,theory.map(activity=>activity.id))
+      required:requirement.required,
+      blocking:requirement.blocking
     });
   }
 
@@ -63,11 +97,13 @@ export function lessonSectionStates(
     activity.type==='choice'||activity.type==='text-input'||activity.type==='translation'
   );
   if(tasks.length){
+    const requirement=seenRequirementState(node,tasks.map(activity=>activity.id),progress);
     sections.push({
       id:'tasks',
       labelKey:'learn.tasks',
       complete:tasks.every(activity=>isSeen(progress,activity.id)),
-      required:activitiesRequiredBySeen(node,tasks.map(activity=>activity.id))
+      required:requirement.required,
+      blocking:requirement.blocking
     });
   }
 
@@ -78,11 +114,13 @@ export function lessonSectionStates(
     const pattern=patterns.find(activity=>activity.modes.includes(mode));
     if(!pattern)continue;
     const record=progress.practice[mode]?.[pattern.id];
+    const requirement=practiceRequirementState(node,pattern,mode,progress);
     sections.push({
       id:mode,
       labelKey:MODE_KEY[mode],
       complete:Boolean(record&&!record.deleted&&record.box>0),
-      required:practiceRequired(node,pattern.id,mode),
+      required:requirement.required,
+      blocking:requirement.blocking,
       activityId:pattern.id
     });
   }
