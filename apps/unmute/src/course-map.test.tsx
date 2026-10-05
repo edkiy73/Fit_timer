@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
+import type { Activity, RoadmapNode } from './content/schema';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { emptyCourseProgress } from './progress';
 import { CourseMapView, buildCourseMapItems, stationOf } from './course-map';
@@ -223,6 +224,109 @@ describe('course map',()=>{
     );
 
     expect(screen.getAllByRole('button',{name:'Открыть доступ'})).toHaveLength(1);
+  });
+
+  it('shows the same canonical 22/43 progress as Today for an unfinished current day',async()=>{
+    const user=userEvent.setup();
+    const cards:Activity[]=Array.from({length:19},(_,index)=>({
+      id:'real.'+(index+1),
+      revision:1,
+      type:'choice' as const,
+      tags:[],
+      revisionProgress:'preserve' as const,
+      lexiconRefs:[],
+      prompt:{ru:'Вопрос'},
+      options:[{ru:'A'},{ru:'B'}],
+      correctIndex:0
+    }));
+    const pattern:Extract<Activity,{type:'pattern-drill'}>={
+      id:'real.pattern',
+      revision:1,
+      type:'pattern-drill',
+      tags:[],
+      revisionProgress:'preserve',
+      lexiconRefs:[],
+      pattern:{ru:'Привычки'},
+      modes:['drill','listening','speaking'],
+      items:Array.from({length:8},(_,index)=>({
+        id:'real.p'+(index+1),
+        prompt:{ru:'Фраза'},
+        answer:{accepted:['Phrase'],nearMiss:true,caseSensitive:false}
+      }))
+    };
+    const current:RoadmapNode={
+      id:'day-3',
+      kind:'lesson',
+      title:{ru:'День 3'},
+      dayIndex:3,
+      order:2,
+      prerequisites:[],
+      activityIds:[...cards.map(card=>card.id),pattern.id],
+      completion:{mode:'all',requirements:[
+        {kind:'activity-seen',activityIds:cards.map(card=>card.id)},
+        {kind:'practice-started',activityId:pattern.id,modes:['drill','listening','speaking']}
+      ]},
+      optional:false
+    };
+    const progress=emptyCourseProgress();
+    for(const card of cards)progress.seen[card.id]={at:'2026-10-06T00:00:00Z'};
+
+    const base=previewState();
+    const currentState:LearnerCourseState={
+      ...base,
+      set:{
+        ...base.set,
+        roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[current]}],
+        activities:[...cards,pattern]
+      },
+      roadmap:{id:'main',title:{ru:'Путь'},nodes:[current]},
+      progress,
+      roadmapProgress:{
+        nodes:[{node:current,complete:false,unlocked:true}],
+        currentNode:current,
+        currentDayIndex:3,
+        completedCount:2,
+        requiredCount:40,
+        courseComplete:false
+      },
+      currentNode:current,
+      currentDayIndex:3,
+      access:'full'
+    };
+    const runtime:LearnerCourseRuntimeValue={
+      state:currentState,
+      status:'ready',
+      error:null,
+      refresh:async()=>{}
+    };
+
+    render(
+      <I18nProvider
+        dictionaries={dictionaries}
+        config={{locales:['ru'],default:'ru'}}
+        storageKey="course-map-canonical-progress.locale"
+        systemLanguages={['ru']}
+      >
+        <CourseMapView
+          runtime={runtime}
+          activeDayProgress={{practice:[{
+            activityId:pattern.id,
+            mode:'drill',
+            resolvedSteps:3,
+            attemptedSteps:4,
+            pendingCorrections:1
+          }]}}
+          onOpen={()=>{}}
+          onUnlock={()=>{}}
+        />
+      </I18nProvider>
+    );
+
+    expect(await screen.findByText('22/43')).toBeTruthy();
+
+    await user.click(screen.getByRole('button',{name:/День 3.*Сегодня/}));
+    expect(await screen.findByText('22 из 43 заданий · ~12 мин')).toBeTruthy();
+    expect(screen.queryByText('Заданий: 20')).toBeNull();
   });
 
   it('draws review days as transfers, dialogues and AI talks as landmarks, the last day as the finish',()=>{
