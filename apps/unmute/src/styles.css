@@ -983,6 +983,12 @@ select:active{transform:scale(.985)}
 .calendar-legend .calendar-day{width:22px;height:22px;font-size:11px}
 
 /* Purchase (access.tsx): choose a plan → see what it gives → pay. */
+.access-offers{display:grid;gap:14px}
+.access-offer-group{display:grid;gap:9px}
+.access-offer-group+.access-offer-group{padding-top:14px;border-top:1px solid var(--line)}
+.access-offer-head{display:grid;gap:3px}
+.access-offer-head h3{margin:0;font-size:17px;line-height:1.3}
+.access-offer-head p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
 .access-plans{display:grid;gap:10px}
 .access-plan{position:relative;display:flex;align-items:center;gap:12px;min-height:72px;padding:14px 16px;border:1.5px solid var(--line);border-radius:var(--radius-tile);background:var(--card);cursor:pointer}
 .access-plan input{position:absolute;opacity:0;pointer-events:none}
