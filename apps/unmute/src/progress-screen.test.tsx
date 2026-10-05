@@ -203,6 +203,19 @@ describe('progress screen summary',()=>{
     expect(screen.queryByText('0%')).toBeNull();
   });
 
+  it('keeps technical practice counters behind details',()=>{
+    const state=learnerState();
+    state.progress.learningDays['2026-09-29']={at:'2026-09-29T10:00:00Z'};
+    state.progress.cards['card.one']={box:1,due:0,at:'2026-09-29T10:00:00Z'};
+    state.progress.practice.listening['pattern.one']={box:1,due:0,at:'2026-09-29T10:00:00Z'};
+
+    renderProgress(state);
+
+    expect(screen.getByText('К повтору')).toBeTruthy();
+    expect(screen.getByText('Подробнее о практике')).toBeTruthy();
+    expect(screen.queryByText('карточки')?.closest('.progress-course-kpis')).toBeNull();
+  });
+
   it('renders stored accuracy and latest performance averages when they exist',()=>{
     const state=learnerState();
     state.progress.learningDays['2026-09-29']={at:'2026-09-29T10:00:00Z'};

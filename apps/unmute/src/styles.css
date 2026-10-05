@@ -1293,6 +1293,17 @@ select:active{transform:scale(.985)}
 
 /* Practice metrics are grouped and labelled instead of floating at the bottom of the course card. */
 .progress-practice-panel{display:grid;gap:8px;padding:14px;border-radius:20px;background:var(--surface)}
+.progress-due-callout{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:18px;background:var(--surface);font-size:13px}
+.progress-due-callout>span:nth-child(2){font-weight:700}
+.progress-due-callout>strong{font-size:20px}
+.progress-more{border:1px solid var(--line);border-radius:20px;background:var(--surface);overflow:hidden}
+.progress-more>summary{cursor:pointer;padding:13px 14px;color:var(--muted);font-size:13px;font-weight:800;list-style:none}
+.progress-more>summary::-webkit-details-marker{display:none}
+.progress-more>summary::after{content:'+';float:right;font-size:18px;line-height:1}
+.progress-more[open]>summary::after{content:'–'}
+.progress-more .progress-practice-panel{border:0;border-top:1px solid var(--line);border-radius:0;background:transparent}
+.profile-account{display:grid;gap:8px}
+.profile-account>h3{margin:0 2px;font-size:14px;color:var(--muted)}
 .progress-practice-title{display:flex;align-items:center;gap:8px;margin-bottom:2px}
 .progress-practice-title>svg{color:var(--listen)}
 .progress-practice-title>strong{font-size:14px}
