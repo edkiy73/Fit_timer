@@ -54,6 +54,12 @@ export function NativeBackButton(){
         return;
       }
       const event=new Event(SYSTEM_BACK_EVENT,{cancelable:true});
+      if(path.current.startsWith('/learn/')){
+        // Lesson owns Android Back completely. Never also mutate browser history here:
+        // otherwise one press can both open the confirmation sheet and leave the lesson.
+        window.dispatchEvent(event);
+        return;
+      }
       if(!window.dispatchEvent(event))return;
       if(action === 'history') window.history.back();
       else if(action === 'today') navigate('/', {replace:true});
