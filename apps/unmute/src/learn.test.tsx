@@ -424,7 +424,7 @@ describe('node activity runner',()=>{
       </I18nProvider>
     );
 
-    expect(screen.getByText('Этот шаг сейчас недоступен')).toBeTruthy();
+    expect(screen.getByText('Этот урок сейчас недоступен')).toBeTruthy();
     expect(screen.queryByText('Короткая теория')).toBeNull();
   });
 });
