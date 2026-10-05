@@ -102,7 +102,7 @@ describe('Today learner shell',()=>{
     expect(onStart).toHaveBeenCalledWith('day-2');
   });
 
-  it('puts due interval review before the current lesson',async()=>{
+  it('shows due review as a separate required-today block',async()=>{
     const user=userEvent.setup();
     const progress=emptyCourseProgress();
     progress.cards['card.one']={box:2,due:0,at:'2026-09-29T00:00:00Z'};
@@ -126,6 +126,7 @@ describe('Today learner shell',()=>{
     const onReview=vi.fn();
     renderToday(runtime({state:reviewState}),vi.fn(),onReview);
 
+    expect(screen.getByRole('heading',{name:'Нужно сегодня'})).toBeTruthy();
     expect(screen.getByText('к повтору').closest('.tile-review')?.textContent).toContain('1');
     await user.click(screen.getByRole('button',{name:/Начать повтор/}));
     expect(onReview).toHaveBeenCalledTimes(1);
@@ -188,7 +189,14 @@ describe('Today learner shell',()=>{
 
   it('shows an offline badge for a cached course snapshot',()=>{
     renderToday(runtime({state:{...state,fromCache:true}}));
-    expect(screen.getByText('Офлайн-копия')).toBeTruthy();
+    expect(screen.getByText('Без интернета')).toBeTruthy();
+  });
+
+  it('does not show an empty review card when nothing is due',()=>{
+    renderToday(runtime());
+    expect(screen.queryByRole('heading',{name:'Нужно сегодня'})).toBeNull();
+    expect(screen.queryByText('Пока пусто — фразы вернутся сами')).toBeNull();
+    expect(screen.getByRole('heading',{name:'Дополнительно'})).toBeTruthy();
   });
 
   it('shows completion instead of a current node when the course is done',()=>{
