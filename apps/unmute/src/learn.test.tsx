@@ -157,6 +157,65 @@ describe('node activity runner',()=>{
 
     expect(firstIncompleteRequirementIndex(practiceNode,activities,progress)).toBe(1);
   });
+  it('opens the exact practice mode requested from Route instead of falling back to tasks',async()=>{
+    const routeNode={
+      ...node,
+      id:'day-route-practice',
+      activityIds:['theory.one','choice.one','pattern.route']
+    };
+    const routePattern={
+      id:'pattern.route',
+      revision:1,
+      type:'pattern-drill' as const,
+      tags:[],
+      revisionProgress:'preserve' as const,
+      lexiconRefs:[],
+      pattern:{ru:'Фразы'},
+      modes:['drill' as const,'listening' as const,'speaking' as const],
+      items:[{id:'p1',prompt:{ru:'Я здесь'},answer:{accepted:['I am here'],nearMiss:true,caseSensitive:false}}]
+    };
+    const progress=emptyCourseProgress();
+    progress.seen['theory.one']={at:'2026-10-05T10:00:00Z'};
+    const routeState:LearnerCourseState={
+      ...state,
+      set:{
+        ...state.set,
+        roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[routeNode]}],
+        activities:[
+          state.set.activities.find(activity=>activity.id==='theory.one')!,
+          state.set.activities.find(activity=>activity.id==='choice.one')!,
+          routePattern
+        ]
+      },
+      roadmap:{id:'main',title:{ru:'Путь'},nodes:[routeNode]},
+      progress,
+      roadmapProgress:{
+        ...state.roadmapProgress,
+        nodes:[{node:routeNode,complete:false,unlocked:true}],
+        currentNode:routeNode
+      },
+      currentNode:routeNode
+    };
+
+    render(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="learn-route-mode.locale" systemLanguages={['ru']}>
+        <NodeRunnerView
+          runtime={{...runtime,state:routeState}}
+          nodeId={routeNode.id}
+          startMode="listening"
+          onExit={()=>{}}
+          saveSeen={async()=>{}}
+          saveGraded={async()=>{}}
+          savePractice={async()=>{}}
+        />
+      </I18nProvider>
+    );
+
+    expect(await screen.findByText('Фразы')).toBeTruthy();
+    expect(screen.getByRole('button',{name:'Начать'})).toBeTruthy();
+    expect(screen.queryByRole('heading',{name:'Выбери ответ'})).toBeNull();
+  });
+
   it('shows theory first, then the tasks; builds a new phrase from words; counts the day',async()=>{
     const user=userEvent.setup();
     const {saveSeen,saveGraded,onExit,onNodeCompleted}=renderRunner();

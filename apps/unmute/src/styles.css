@@ -776,8 +776,10 @@ select:active{transform:scale(.985)}
 .station-status{color:var(--muted);font-size:12px}
 .station.is-purchase-locked .station-title,.station.is-prerequisite-locked .station-title{color:var(--muted)}
 .station.is-current .station-body{margin:0;padding:10px 12px 6px}
-.station-section-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 12px;margin:0;min-width:0}
-.station-section-chip{display:inline-flex;align-items:center;gap:4px;min-height:28px;max-width:100%;padding:4px 8px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--muted);font:inherit;font-size:11px;font-weight:700;line-height:1.1;cursor:pointer;white-space:nowrap}
+.station-section-chips{display:grid;gap:5px;padding:0 10px 10px;margin:0;min-width:0}
+.station-section-row{display:flex;align-items:center;gap:5px;min-width:0}
+.station-section-chip{display:inline-flex;align-items:center;gap:3px;min-width:0;min-height:26px;padding:3px 5px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--muted);font:inherit;font-size:10px;font-weight:400;letter-spacing:-.012em;line-height:1.1;cursor:pointer;white-space:nowrap}
+.station-section-chip svg{flex:0 0 auto;width:10px;height:10px}
 .station-section-chip.is-complete{border-color:color-mix(in srgb,var(--success) 36%,var(--line));background:color-mix(in srgb,var(--success) 9%,var(--card));color:var(--ink)}
 .station-section-chip.is-optional:not(.is-complete){border-style:dashed;opacity:.72}
 .station-section-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
