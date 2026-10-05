@@ -42,7 +42,7 @@ describe('pattern practice orchestration',()=>{
   });
   it('lets the lesson own the shared mode navigator',async()=>{
     const onModeChange=vi.fn();
-    render(
+    const view=render(
       <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="practice-nav-test.locale" systemLanguages={['ru']}>
         <PatternPracticeView
           activity={activity}
@@ -51,7 +51,7 @@ describe('pattern practice orchestration',()=>{
           setId="general-foundation"
           onDone={()=>{}}
           savePractice={async()=>{}}
-          speak={async()=>{}}
+          speak={async()=>true}
           showModeNav={false}
           initialMode="speaking"
           onModeChange={onModeChange}
@@ -62,6 +62,25 @@ describe('pattern practice orchestration',()=>{
     expect(screen.queryByRole('navigation',{name:'Режим практики'})).toBeNull();
     expect(screen.getByText('Говорение')).toBeTruthy();
     await waitFor(()=>expect(onModeChange).toHaveBeenCalledWith('speaking'));
+
+    view.rerender(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="practice-nav-test.locale" systemLanguages={['ru']}>
+        <PatternPracticeView
+          activity={activity}
+          courseActivities={[activity]}
+          progress={emptyCourseProgress()}
+          setId="general-foundation"
+          onDone={()=>{}}
+          savePractice={async()=>{}}
+          speak={async()=>true}
+          showModeNav={false}
+          initialMode="listening"
+          onModeChange={onModeChange}
+        />
+      </I18nProvider>
+    );
+    await waitFor(()=>expect(screen.getByText('Слушание')).toBeTruthy());
+    await waitFor(()=>expect(onModeChange).toHaveBeenCalledWith('listening'));
   });
 
 });

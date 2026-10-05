@@ -331,6 +331,7 @@ export function NodeRunnerView({
   const [finished,setFinished]=useState(false);
   const [checking,setChecking]=useState(false);
   const [practiceMode,setPracticeMode]=useState<PracticeSrsKind|undefined>(startMode);
+  const [practiceProgress,setPracticeProgress]=useState<{current:number;total:number}|null>(null);
   const [shuffleSeed,setShuffleSeed]=useState(()=>randomSeed());
   const [runHydrated,setRunHydrated]=useState(false);
   const [runId,setRunId]=useState(()=>randomSeed());
@@ -473,6 +474,10 @@ export function NodeRunnerView({
 
   const stepIndex=order[pos];
   const activity=stepIndex===undefined?null:steps[stepIndex]??null;
+
+  useEffect(()=>{
+    setPracticeProgress(null);
+  },[activity?.id,practiceMode]);
 
   useEffect(()=>{
     if(restoringRunRef.current!==null){
@@ -956,8 +961,25 @@ export function NodeRunnerView({
         <button className="runner-close pressable" type="button" onClick={()=>setExitOpen(true)} aria-label={t('learn.close')}>
           <Icon name="close" size={20} />
         </button>
-        <RunnerProgress order={order} total={firstPass} pos={pos} results={firstPassResults} label={t('learn.activityProgress')} />
-        <span className="runner-count" aria-label={position}>{shown}/{firstPass}</span>
+        {activity.type==='pattern-drill'&&practiceProgress ? (
+          <>
+            <div className="runner-progress runner-progress-segmented" role="progressbar" aria-label={t('learn.activityProgress')} aria-valuemin={1} aria-valuemax={practiceProgress.total} aria-valuenow={practiceProgress.current}>
+              {Array.from({length:practiceProgress.total},(_,index)=>(
+                <span
+                  key={index}
+                  className={'runner-progress-step '+(index<practiceProgress.current-1?'is-correct':index===practiceProgress.current-1?'is-current':'is-pending')}
+                  aria-hidden="true"
+                />
+              ))}
+            </div>
+            <span className="runner-count">{practiceProgress.current}/{practiceProgress.total}</span>
+          </>
+        ) : (
+          <>
+            <RunnerProgress order={order} total={firstPass} pos={pos} results={firstPassResults} label={t('learn.activityProgress')} />
+            <span className="runner-count" aria-label={position}>{shown}/{firstPass}</span>
+          </>
+        )}
       </div>
       {exitSheet}
 
@@ -1113,6 +1135,7 @@ export function NodeRunnerView({
           {...(practiceMode?{initialMode:practiceMode}:{})}
           showModeNav={false}
           onModeChange={setPracticeMode}
+          onProgress={(current,total)=>setPracticeProgress({current,total})}
           onDone={()=>{ setPracticeMode(undefined); void saveSeen(setId,activity.id).catch(()=>undefined).then(()=>advance()); }}
         />
       )}

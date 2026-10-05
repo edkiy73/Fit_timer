@@ -11,12 +11,12 @@
 | Область | Статус | Что сейчас |
 |---|---:|---|
 | Механика ответов | ✅ | choice/listening — 2 tap; free input — одна primary «Готово»; self-assessment — негатив слева, позитив справа |
-| Feedback | ✅ | общий `AnswerFeedbackSheet` для lesson/review; словарь тоже переведён на общий `Sheet` |
-| Навигация урока | ✅ #538 | единый навигатор «Теория / Задания / На скорость / На слух / Вслух», deep-link больше не тупик |
+| Feedback | ✅ · #555 | общий `AnswerFeedbackSheet` для lesson/review/listening/speaking/speed; одинаковая нижняя геометрия feedback вместо отдельных inline-состояний |
+| Навигация урока | ✅ #538 · #555 | единый навигатор «Теория / Задания / На скорость / Слушание / Говорение»; #555 чинит фактическое переключение уже смонтированного pattern practice и убирает лишний view-transition |
 | Speed drill | ✅ #528 | одна самооценка после показа ответа; скорость считается автоматически |
 | Exit урока | ✅ #529 | убран вводящий в заблуждение «Сбросить этот проход» |
 | Review | ✅ #530/#539 | конечная дневная сессия, один retry, простой финал, Word Review в общей бинарной механике |
-| Today / Route | ✅ #531/#532 | иерархия Today и единые статусы Route |
+| Today / Route | ✅ #531/#532 · #555 | иерархия Today и единые статусы Route; #555 уплотняет вторичные карточки, добавляет компактный прогресс курса рядом с серией и убирает пустые зоны |
 | Onboarding / Profile / Dictionary / Paywall | ✅ #533–#536 | упрощены и приведены к общей системе |
 | Админка: tabs / nested state | ✅ #537/#540 | основной раздел и вложенный контекст переживают refresh |
 | Админка: bulk dictionary | ✅ #541 | 3-шаговый wizard |
@@ -25,6 +25,8 @@
 | Терминология learner UI | ✅ #544 | пользовательские тексты приведены к «день / урок / задание / практика / повтор» |
 | Save/error semantics | ✅ #545 | урок, Review и practice явно говорят, что результат не засчитан/не сохранён; retry повторяет именно сохранение |
 | Admin draft/review/release flow | ✅ #546 | курсы и словарь показывают единый путь «Черновик → Проверен → Готов к выпуску → Выпущен» и один release action area |
+| Practice progress | ✅ #555 | pattern practice показывает один верхний segmented progress по фразам (например 1/6), без родительского 1/1 и дублирующих нижних «распознано/правильно … из 6» |
+| Рассылки в настройках | ✅ #555 | пользователь управляет News/Offers отдельно для push и email; Core campaign delivery различает категории `news`/`offers` |
 | Word of the Day / Route complexity | P2 | продуктовый/polish вопрос, ключевые сценарии не блокирует |
 | Motion / premium polish | ✅ foundation #497–#505 · navigation #547 · core screens #548 · Route/sheets/states #549 · forms/settings/paywall #550 · final consistency #551 | финальный pass выровнял оставшиеся service surfaces в drill/listening/AI/dictionary/notifications; hardcoded малые радиусы остались только у компактных controls/chips/skeletons |
 | Реальный Android device QA | 🟡 · hardening #552 · push readiness #553 | font scale/keyboard viewport закрыты кодом; production health подтверждает Android FCM backend (`push.android: true`); на устройстве остаются process kill/resume, visual IME/large-font, system Back/status bar и фактическая local/remote push доставка |
@@ -59,7 +61,7 @@
 
 ## P0/P1. В приложении несколько разных моделей взаимодействия с «ответом»
 
-Сейчас похожие учебные действия ведут себя по-разному:
+Исторически похожие учебные действия вели себя по-разному; текущий статус после #555 отражён в сводке выше:
 
 - choice: первый tap выбирает, второй подтверждает;
 - listening: тоже два tap;
@@ -109,8 +111,8 @@ Feedback после ответа должен быть одним компоне
 - «Теория»;
 - «Задания»;
 - «На скорость»;
-- «На слух»;
-- «Вслух»;
+- «Слушание»;
+- «Говорение»;
 
 Показывать только реально существующие блоки. Текущий блок выделен. Нажатие переключает без выхода из урока.
 

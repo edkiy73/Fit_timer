@@ -3,6 +3,7 @@ import type { CardSrsState } from './engine/card-srs';
 import type { PracticeSrsState } from './engine/practice-srs';
 import type { SentenceResponseStage } from './engine/sentence-progression';
 import { mergeSettingsRaw } from './settings-data';
+import { mergeCampaignPreferencesRaw } from './campaign-preferences-data';
 
 export const WORD_PROGRESS_DOC='progress:words';
 export const courseProgressDoc=(setId:string)=>'progress:course:'+setId;
@@ -210,6 +211,9 @@ export function mergeUnMuteDocument(
   }
   if(key==='settings'){
     return mergeSettingsRaw(local,remote);
+  }
+  if(key==='notificationPrefs'){
+    return mergeCampaignPreferencesRaw(local,remote);
   }
   return local ?? remote;
 }

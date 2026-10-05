@@ -134,7 +134,7 @@ describe('course access and purchase',()=>{
 
   it('leads with Plus when the learner came from the AI limits',()=>{
     renderView(runtime('full'),session(),{focus:'plus'});
-    expect(screen.getByRole('heading',{name:'UnMute Plus'})).toBeTruthy();
+    expect(screen.getByRole('heading',{name:'UnMute Plus',level:2})).toBeTruthy();
     expect(screen.queryByText(/Plus не открывает этот курс/)).toBeNull();
     expect(screen.queryByRole('radio',{name:/Весь курс навсегда/})).toBeNull();
     expect(screen.getByRole('radio',{name:/Plus на год/})).toHaveProperty('checked',true);

@@ -64,7 +64,7 @@ describe('My words',()=>{
 
   it('shows a hint when nothing is saved yet',()=>{
     renderWords(words({}));
-    expect(screen.getByText(/сохраняй нужные/)).toBeTruthy();
+    expect(screen.getByText(/сохраняй нужные/i)).toBeTruthy();
   });
 
   it('searches and removes a word',async()=>{

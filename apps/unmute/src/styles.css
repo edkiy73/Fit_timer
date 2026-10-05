@@ -577,6 +577,7 @@ select:active{transform:scale(.985)}
 .notification-kinds{display:grid;gap:9px}.notification-kind-cards{gap:8px}.notification-kind-toggle{display:flex!important;align-items:center!important;justify-content:space-between;gap:14px;min-height:56px;padding:12px 14px;border:1px solid var(--line);border-radius:18px;background:var(--surface);transition:border-color var(--motion-fast) ease,background-color var(--motion-fast) ease,transform var(--motion-base) var(--motion-spring-ease)}.notification-kind-toggle span{font-size:15px;line-height:1.35}.notification-kind-toggle input{flex:none;appearance:none;width:46px;height:28px;margin:0;border:0;border-radius:999px;background:var(--line);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ink) 6%,transparent);cursor:pointer;transition:background-color var(--motion-base) ease}.notification-kind-toggle input::before{content:"";display:block;width:22px;height:22px;margin:3px;border-radius:50%;background:var(--card);box-shadow:0 2px 6px rgb(0 0 0/.18);transform:translateX(0);transition:transform var(--motion-spring) var(--motion-spring-ease)}.notification-kind-toggle input:checked{background:var(--accent)}.notification-kind-toggle input:checked::before{transform:translateX(18px)}.notification-kind-toggle:has(input:checked){border-color:color-mix(in srgb,var(--accent) 22%,var(--line));background:color-mix(in srgb,var(--accent) 7%,var(--surface))}.notification-kind-toggle:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
 .notification-kinds label{display:flex;gap:9px;align-items:center;color:var(--ink);font-size:14px}
 .notification-priority{margin:0;color:var(--muted);font-size:12px;line-height:1.45}
+.notification-group{display:grid;gap:8px;padding-top:4px}.notification-group-hint{margin:0;color:var(--muted);font-size:12px;line-height:1.45}
 @media(max-width:520px){
   .notification-time{align-items:flex-start;flex-direction:column}
 }
@@ -644,7 +645,7 @@ select:active{transform:scale(.985)}
 .week-day{display:grid;justify-items:center;gap:4px;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase}
 .week-dot{width:12px;height:12px;border-radius:6px;border:1.5px solid var(--line);transform:scale(.92);transition:background-color var(--motion-base) ease,border-color var(--motion-base) ease,transform var(--motion-sheet) var(--motion-spring-ease)}
 .week-day.is-active .week-dot{background:var(--streak);border-color:var(--streak);transform:scale(1)}
-.tile-speak{grid-template-columns:auto minmax(0,1fr);align-items:center;gap:14px;cursor:pointer;min-height:108px}
+.tile-speak{grid-template-columns:auto minmax(0,1fr);align-items:center;gap:14px;cursor:pointer;min-height:96px}
 .tile-speak-body{display:grid;grid-template-rows:auto minmax(2.9em,auto) auto;gap:4px}
 .tile-link{color:var(--accent-ink);font-size:13px;font-weight:800}
 .tile-speak:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -656,7 +657,7 @@ select:active{transform:scale(.985)}
 .speak-play{display:grid;place-items:center;flex:0 0 44px;height:44px;border:0;border-radius:22px;background:color-mix(in srgb,var(--listen) 18%,transparent);color:var(--listen);cursor:pointer}
 /* Soft volume only on the big tactile mic (docs/unmute-design-plan.md §4.3). */
 .mic-soft{display:grid;place-items:center;width:56px;height:56px;border-radius:28px;background:var(--surface);color:var(--accent-ink);box-shadow:-3px -3px 8px rgb(255 255 255/.55),4px 4px 10px rgb(27 26 36/.12)}
-.tile-landmark{display:grid;grid-template-columns:56px minmax(0,1fr) 20px;align-items:center;gap:14px;cursor:pointer;min-height:108px}
+.tile-landmark{display:grid;grid-template-columns:56px minmax(0,1fr) 20px;align-items:center;gap:14px;cursor:pointer;min-height:96px}
 .tile-landmark:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .landmark-body{display:grid;grid-template-rows:minmax(1.3em,auto) minmax(1.4em,auto);align-content:center;gap:4px;min-width:0}
 .landmark-icon{display:grid;place-items:center;width:56px;height:56px;border-radius:28px;color:var(--listen);background:color-mix(in srgb,var(--listen) 16%,transparent)}
@@ -842,9 +843,6 @@ select:active{transform:scale(.985)}
 .lesson-section-nav::-webkit-scrollbar{display:none}
 .lesson-section-nav .chip-button{min-height:38px;padding-inline:11px;color:var(--muted);font-size:13px;white-space:nowrap}
 .lesson-section-nav .chip-button.is-active{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));background:color-mix(in srgb,var(--accent) 12%,var(--card));color:var(--ink)}
-.lesson-section-nav .chip-button.is-active{view-transition-name:lesson-section-active}
-::view-transition-group(lesson-section-active){animation-duration:var(--motion-spring);animation-timing-function:var(--motion-spring-ease)}
-::view-transition-old(lesson-section-active),::view-transition-new(lesson-section-active){animation-duration:var(--motion-fast)}
 @media(max-width:620px){
   .runner-heading{display:grid;align-items:start}
   .lesson-section-nav{justify-content:flex-start;width:100%}
@@ -1031,9 +1029,13 @@ select:active{transform:scale(.985)}
 .legal-body a{color:var(--accent-ink,var(--accent))}
 
 /* «Сегодня»: «Серия» and «Повтор» are the same short height; the due review tile is one button. */
-.tile-streak,.tile-review{align-content:start}
-.tile-review.is-due{cursor:pointer}
-.tile-review .tile-link{margin-top:auto;color:var(--accent-ink,var(--accent));font-size:14px;font-weight:800}
+.tile-streak,.tile-course-mini,.tile-review{align-content:start}
+.tile-streak,.tile-course-mini{min-height:154px}
+.tile-review.is-due{cursor:pointer;min-height:116px;padding:15px 16px}
+.tile-review-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:end;gap:10px}
+.tile-review-row .tile-number{font-size:34px}.tile-review-row .tile-caption{align-self:center}.tile-review .tile-link{margin:0;align-self:center;color:var(--accent-ink,var(--accent));font-size:14px;font-weight:800;white-space:nowrap}
+.course-mini-body{display:flex;align-items:center;gap:12px;min-width:0}.course-mini-ring{--p:0;display:grid;place-items:center;width:64px;height:64px;flex:none;border-radius:50%;background:conic-gradient(var(--accent) calc(var(--p)*1%),var(--surface) 0);position:relative}.course-mini-ring::after{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--card)}.course-mini-ring strong{position:relative;z-index:1;font-size:15px;font-variant-numeric:tabular-nums}.tile-course-mini .tile-caption{line-height:1.35}
+@media(max-width:390px){.tile-review-row{grid-template-columns:auto 1fr}.tile-review-row .tile-link{grid-column:1/-1}.tile-streak,.tile-course-mini{min-height:164px}}
 
 /* «Маршрут»: the current course is a card you cannot miss, with «Сменить». */
 .course-card{display:flex;align-items:center;gap:12px;width:100%;margin:0;min-height:58px;padding:11px 14px;border:1px solid color-mix(in srgb,var(--accent) 24%,var(--line));border-radius:20px;background:color-mix(in srgb,var(--accent) 5%,var(--card));color:var(--ink);font:inherit;text-align:left;cursor:pointer}
@@ -1443,9 +1445,9 @@ select:active{transform:scale(.985)}
 /* Deliberate two-tap selection: first tap selects, second confirms. */
 .learn-option.is-selected{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--card))}
 .learn-option-confirm{margin-left:auto;color:var(--muted);font-size:11px;font-weight:700;white-space:nowrap}
-.listening-option{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.listening-option{position:relative;display:block;padding-right:116px}
 .listening-option.is-selected{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--card))}
-.listening-option-confirm{color:var(--muted);font-size:11px;font-weight:700;white-space:nowrap}
+.listening-option-confirm{position:absolute;right:16px;top:50%;max-width:92px;color:var(--muted);font-size:11px;font-weight:700;line-height:1.15;text-align:right;white-space:normal;transform:translateY(-50%)}
 
 /* Feedback footer: one stable layout for correct, wrong, AI-expanded and AI-error states. */
 .learn-feedback-actions{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:stretch;margin-top:10px}

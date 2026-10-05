@@ -3,6 +3,7 @@ import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
 import { ExerciseKind } from './exercise-kind';
 import { LexiconText } from './lexicon-ui';
+import { AnswerFeedbackSheet } from './answer-feedback-sheet';
 
 type PatternDrillActivity=Extract<Activity,{type:'pattern-drill'}>;
 
@@ -18,6 +19,7 @@ export interface PatternDrillViewProps {
     score:number
   )=>Promise<void>;
   variant?:'practice'|'mixed';
+  onProgress?:(current:number,total:number)=>void;
 }
 
 function localized(text:Record<string,string>,locale:string):string{
@@ -49,7 +51,8 @@ export function PatternDrillView({
   setId,
   onDone,
   savePractice,
-  variant='practice'
+  variant='practice',
+  onProgress
 }:PatternDrillViewProps){
   const {t,locale}=useI18n();
   // The drill has a fixed number of phrases; a missed one is replayed once at the end
@@ -71,6 +74,8 @@ export function PatternDrillView({
   const score=drillScore(fast,base);
   const passed=drillPassed(fast,base);
   const replaying=pos>=base;
+
+  useEffect(()=>{ onProgress?.(Math.min(pos+1,base),base); },[base,onProgress,pos]);
 
   useEffect(()=>{
     if(!item||phase!=='ask')return;
@@ -236,29 +241,28 @@ export function PatternDrillView({
           </div>
         </>
       ) : (
-        <>
-          <div className={lastFast?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-neutral'}>
-            <strong>{lastFast?t('drill.fast'):t('drill.slow')}</strong>
-            <span>{t('drill.compare')}</span>
-          </div>
+        <AnswerFeedbackSheet
+          tone={lastFast?'correct':'near'}
+          title={lastFast?t('drill.fast'):t('drill.slow')}
+          subtitle={<span>{t('drill.compare')}</span>}
+          actions={
+            <>
+              <button className="secondary-button" type="button" onClick={()=>nextItem(false)}>
+                {t('drill.wrong')}
+              </button>
+              <button className="primary-button learn-feedback-next" type="button" onClick={()=>nextItem(true)}>
+                {t('drill.same')}
+              </button>
+            </>
+          }
+        >
           <div className="drill-target"><LexiconText text={accepted} refs={activity.lexiconRefs} /></div>
           {explanation&&(
             <p className="drill-explanation"><LexiconText text={explanation} refs={activity.lexiconRefs} /></p>
           )}
-          <div className="drill-binary-actions">
-            <button className="secondary-button" type="button" onClick={()=>nextItem(false)}>
-              {t('drill.wrong')}
-            </button>
-            <button className="primary-button" type="button" onClick={()=>nextItem(true)}>
-              {t('drill.same')}
-            </button>
-          </div>
-        </>
+        </AnswerFeedbackSheet>
       )}
 
-      <div className="learn-hint">
-        {t('drill.sessionStats',{fast,slow})}
-      </div>
     </article>
   );
 }

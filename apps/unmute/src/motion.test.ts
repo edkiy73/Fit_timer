@@ -41,6 +41,6 @@ describe('motion system',()=>{
     withViewTransition(change);
     expect(start).not.toHaveBeenCalled();
     expect(change).toHaveBeenCalledTimes(1);
-    delete (document as Document&{startViewTransition?:unknown}).startViewTransition;
+    Reflect.deleteProperty(document,'startViewTransition');
   });
 });

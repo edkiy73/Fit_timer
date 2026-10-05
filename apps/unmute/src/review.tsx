@@ -712,8 +712,8 @@ export function ReviewView({
               <button
                 className="secondary-button"
                 type="button"
-                disabled={busy||(item.activity.type==='choice'&&selected===null)}
-                onClick={item.activity.type==='choice'?()=>selected!==null&&checkChoice(selected):checkText}
+                disabled={busy}
+                onClick={checkText}
               >
                 {t('learn.retrySave')}
               </button>
