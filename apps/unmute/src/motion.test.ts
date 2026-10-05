@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MOTION, easeOutCubic, motionProgress, prefersReducedMotion } from './motion';
+import { MOTION, easeOutCubic, motionProgress, prefersReducedMotion, withViewTransition } from './motion';
 
 describe('motion system',()=>{
   afterEach(()=>vi.restoreAllMocks());
@@ -24,5 +24,23 @@ describe('motion system',()=>{
   it('uses the OS reduced-motion preference',()=>{
     vi.stubGlobal('matchMedia',()=>({matches:true}));
     expect(prefersReducedMotion()).toBe(true);
+  });
+
+  it('uses View Transitions when motion is allowed and skips them for reduced motion',()=>{
+    const start=vi.fn((callback:()=>void)=>{callback();});
+    Object.defineProperty(document,'startViewTransition',{configurable:true,value:start});
+    vi.stubGlobal('matchMedia',()=>({matches:false}));
+    const change=vi.fn();
+    withViewTransition(change);
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(change).toHaveBeenCalledTimes(1);
+
+    start.mockClear();
+    change.mockClear();
+    vi.stubGlobal('matchMedia',()=>({matches:true}));
+    withViewTransition(change);
+    expect(start).not.toHaveBeenCalled();
+    expect(change).toHaveBeenCalledTimes(1);
+    delete (document as Document&{startViewTransition?:unknown}).startViewTransition;
   });
 });
