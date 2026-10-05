@@ -11,6 +11,13 @@ const node:RoadmapNode={
   order:2,
   prerequisites:[],
   activityIds:['theory','choice','pattern'],
+  completion:{
+    mode:'all',
+    requirements:[
+      {kind:'activity-seen',activityIds:['theory','choice']},
+      {kind:'practice-started',activityId:'pattern',modes:['drill','listening','speaking']}
+    ]
+  },
   optional:false
 };
 
@@ -50,12 +57,12 @@ describe('lesson section states',()=>{
     progress.practice.drill.pattern={box:1,due:2,at:'2026-10-05T10:02:00Z'};
     progress.practice.listening.pattern={box:0,due:1,at:'2026-10-05T10:03:00Z'};
 
-    expect(lessonSectionStates(set,node,progress).map(section=>[section.id,section.complete])).toEqual([
-      ['theory',true],
-      ['tasks',true],
-      ['drill',true],
-      ['listening',false],
-      ['speaking',false]
+    expect(lessonSectionStates(set,node,progress).map(section=>[section.id,section.complete,section.blocking])).toEqual([
+      ['theory',true,false],
+      ['tasks',true,false],
+      ['drill',true,false],
+      ['listening',false,true],
+      ['speaking',false,true]
     ]);
   });
 });
