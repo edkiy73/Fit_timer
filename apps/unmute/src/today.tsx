@@ -187,7 +187,7 @@ export function TodayView({
         </p>
         <button className="primary-button today-start" type="button" onClick={()=>onStart(node.id)}>
           <Icon name="play" size={18} />
-          {done>0?t('today.continue'):t('today.start')}
+          {dayProgress.status==='not_started'?t('today.start'):t('today.continue')}
         </button>
       </Tile>
     );
