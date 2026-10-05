@@ -842,9 +842,6 @@ select:active{transform:scale(.985)}
 .lesson-section-nav::-webkit-scrollbar{display:none}
 .lesson-section-nav .chip-button{min-height:38px;padding-inline:11px;color:var(--muted);font-size:13px;white-space:nowrap}
 .lesson-section-nav .chip-button.is-active{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));background:color-mix(in srgb,var(--accent) 12%,var(--card));color:var(--ink)}
-.lesson-section-nav .chip-button.is-active{view-transition-name:lesson-section-active}
-::view-transition-group(lesson-section-active){animation-duration:var(--motion-spring);animation-timing-function:var(--motion-spring-ease)}
-::view-transition-old(lesson-section-active),::view-transition-new(lesson-section-active){animation-duration:var(--motion-fast)}
 @media(max-width:620px){
   .runner-heading{display:grid;align-items:start}
   .lesson-section-nav{justify-content:flex-start;width:100%}
