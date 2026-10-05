@@ -12,8 +12,31 @@ import { ExerciseKind } from './exercise-kind';
 import { LexiconText } from './lexicon-ui';
 import { ENGLISH_SPEECH_LOCALE } from './speech-locale';
 import { AnswerFeedbackSheet } from './answer-feedback-sheet';
+import { readPracticeRunState, writePracticeRunState } from './practice-run-state';
 
 type PatternDrillActivity=Extract<Activity,{type:'pattern-drill'}>;
+
+interface SpeakingRunSession {
+  version:1;
+  activityRevision:number;
+  itemIds:string[];
+  pos:number;
+  hits:number;
+  phase:'ask'|'show';
+  heard:string;
+  correct:boolean|null;
+  saved:boolean;
+  saveError:boolean;
+}
+
+function restoredSpeakingSession(activity:PatternDrillActivity,key:string|undefined){
+  const saved=readPracticeRunState<SpeakingRunSession>(key);
+  if(!saved||saved.version!==1||saved.activityRevision!==activity.revision)return null;
+  const byId=new Map(activity.items.map(item=>[item.id,item] as const));
+  const items=saved.itemIds.map(id=>byId.get(id)).filter((item):item is PatternDrillActivity['items'][number]=>Boolean(item));
+  if(items.length!==saved.itemIds.length||saved.pos<0||saved.pos>items.length)return null;
+  return {...saved,items};
+}
 
 export interface PatternSpeakingViewProps {
   activity:PatternDrillActivity;
@@ -31,6 +54,7 @@ export interface PatternSpeakingViewProps {
   random?:()=>number;
   onProgress?:(current:number,total:number)=>void;
   active?:boolean;
+  sessionKey?:string;
 }
 
 function localized(text:Record<string,string>,locale:string):string{
@@ -70,20 +94,22 @@ export function PatternSpeakingView({
   startRecognition,
   random=Math.random,
   onProgress,
-  active=true
+  active=true,
+  sessionKey
 }:PatternSpeakingViewProps){
   const {t,locale}=useI18n();
-  const [items,setItems]=useState(()=>pickSpeakingItems(activity,random));
-  const [pos,setPos]=useState(0);
-  const [hits,setHits]=useState(0);
-  const [phase,setPhase]=useState<'ask'|'show'>('ask');
-  const [heard,setHeard]=useState('');
-  const [correct,setCorrect]=useState<boolean|null>(null);
+  const restored=restoredSpeakingSession(activity,sessionKey);
+  const [items,setItems]=useState(()=>restored?.items??pickSpeakingItems(activity,random));
+  const [pos,setPos]=useState(()=>restored?.pos??0);
+  const [hits,setHits]=useState(()=>restored?.hits??0);
+  const [phase,setPhase]=useState<'ask'|'show'>(()=>restored?.phase??'ask');
+  const [heard,setHeard]=useState(()=>restored?.heard??'');
+  const [correct,setCorrect]=useState<boolean|null>(()=>restored?.correct??null);
   const [listening,setListening]=useState(false);
   const [recognitionError,setRecognitionError]=useState<WebRecognitionError|null>(null);
   const [saving,setSaving]=useState(false);
-  const [saved,setSaved]=useState(false);
-  const [saveError,setSaveError]=useState(false);
+  const [saved,setSaved]=useState(()=>Boolean(restored?.saved));
+  const [saveError,setSaveError]=useState(()=>Boolean(restored?.saveError));
   const handleRef=useRef<WebRecognitionHandle|null>(null);
   const receivedRef=useRef(false);
 
@@ -92,6 +118,21 @@ export function PatternSpeakingView({
   const done=pos>=items.length;
   const score=speakingScore(hits,items.length);
   const passed=speakingPassed(hits,items.length);
+
+  useEffect(()=>{
+    writePracticeRunState(sessionKey,{
+      version:1,
+      activityRevision:activity.revision,
+      itemIds:items.map(item=>item.id),
+      pos,
+      hits,
+      phase,
+      heard,
+      correct,
+      saved,
+      saveError
+    } satisfies SpeakingRunSession);
+  },[activity.revision,correct,heard,hits,items,phase,pos,saveError,saved,sessionKey]);
 
   useEffect(()=>{ if(active)onProgress?.(Math.min(pos+1,items.length),items.length); },[active,items.length,onProgress,pos]);
 

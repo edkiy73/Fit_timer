@@ -11,6 +11,7 @@ export function Sheet({
   labelledBy,
   closeLabel,
   historyEntry=true,
+  className='',
   children
 }:{
   open: boolean;
@@ -20,6 +21,8 @@ export function Sheet({
   /** Most sheets own a same-URL history entry so Android Back closes them.
    * Focused flows can opt out and own Back explicitly. */
   historyEntry?: boolean;
+  /** Optional root class for a deliberately different sheet layer/context. */
+  className?: string;
   children: ReactNode;
 }){
   const closeRef = useRef(onClose);
@@ -74,7 +77,7 @@ export function Sheet({
 
   if(!present) return null;
   const content=(
-    <div className={'sheet-scrim'+(leaving?' is-leaving':'')} role="presentation" onMouseDown={event => {
+    <div className={'sheet-scrim'+(className?' '+className:'')+(leaving?' is-leaving':'')} role="presentation" onMouseDown={event => {
       if(!leaving&&event.currentTarget === event.target) onClose();
     }}>
       <section

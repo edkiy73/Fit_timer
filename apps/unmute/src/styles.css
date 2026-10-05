@@ -791,6 +791,7 @@ select:active{transform:scale(.985)}
 
 /* Bottom sheet: slides up with a spring; Back/Escape/scrim close it. */
 .sheet-scrim{position:fixed;inset:0;z-index:1200;display:flex;align-items:flex-end;justify-content:center;background:rgb(8 8 14/.45);animation:scrim-in var(--motion-fast) ease both}
+.sheet-scrim.lesson-exit-sheet{z-index:1400}
 .sheet{position:relative;width:min(100%,620px);max-height:82vh;overflow:auto;display:grid;gap:12px;padding:12px 20px calc(24px + var(--safe-bottom));border-radius:32px 32px 0 0;border-top:1px solid color-mix(in srgb,var(--line) 72%,white 28%);background:
   radial-gradient(circle at 50% -20%,color-mix(in srgb,var(--accent) 7%,transparent),transparent 34%),
   var(--card);color:var(--ink);box-shadow:0 -10px 40px rgb(0 0 0/.18);outline:none;animation:sheet-in var(--motion-sheet) var(--motion-spring-ease) both}

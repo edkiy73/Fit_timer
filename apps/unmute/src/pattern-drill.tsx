@@ -4,8 +4,31 @@ import type { Activity } from './content/schema';
 import { ExerciseKind } from './exercise-kind';
 import { LexiconText } from './lexicon-ui';
 import { AnswerFeedbackSheet } from './answer-feedback-sheet';
+import { readPracticeRunState, writePracticeRunState } from './practice-run-state';
 
 type PatternDrillActivity=Extract<Activity,{type:'pattern-drill'}>;
+
+interface DrillRunSession {
+  version:1;
+  activityRevision:number;
+  itemIds:string[];
+  pos:number;
+  fast:number;
+  slow:number;
+  phase:'ask'|'show';
+  lastFast:boolean|null;
+  saved:boolean;
+  saveError:boolean;
+}
+
+function restoredDrillSession(activity:PatternDrillActivity,key:string|undefined){
+  const saved=readPracticeRunState<DrillRunSession>(key);
+  if(!saved||saved.version!==1||saved.activityRevision!==activity.revision)return null;
+  const byId=new Map(activity.items.map(item=>[item.id,item] as const));
+  const items=saved.itemIds.map(id=>byId.get(id)).filter((item):item is PatternDrillActivity['items'][number]=>Boolean(item));
+  if(items.length!==saved.itemIds.length||saved.pos<0||saved.pos>items.length)return null;
+  return {...saved,items};
+}
 
 export interface PatternDrillViewProps {
   activity:PatternDrillActivity;
@@ -21,6 +44,7 @@ export interface PatternDrillViewProps {
   variant?:'practice'|'mixed';
   onProgress?:(current:number,total:number)=>void;
   active?:boolean;
+  sessionKey?:string;
 }
 
 function localized(text:Record<string,string>,locale:string):string{
@@ -54,28 +78,46 @@ export function PatternDrillView({
   savePractice,
   variant='practice',
   onProgress,
-  active=true
+  active=true,
+  sessionKey
 }:PatternDrillViewProps){
   const {t,locale}=useI18n();
   // The admin controls the phrase count. A missed phrase is replayed once at the end
   // without growing the base count.
   const base=activity.items.length;
-  const [items,setItems]=useState(()=>activity.items.slice());
-  const [pos,setPos]=useState(0);
-  const [fast,setFast]=useState(0);
-  const [slow,setSlow]=useState(0);
-  const [phase,setPhase]=useState<'ask'|'show'>('ask');
-  const [lastFast,setLastFast]=useState<boolean|null>(null);
+  const restored=variant==='mixed'?null:restoredDrillSession(activity,sessionKey);
+  const [items,setItems]=useState(()=>restored?.items??activity.items.slice());
+  const [pos,setPos]=useState(()=>restored?.pos??0);
+  const [fast,setFast]=useState(()=>restored?.fast??0);
+  const [slow,setSlow]=useState(()=>restored?.slow??0);
+  const [phase,setPhase]=useState<'ask'|'show'>(()=>restored?.phase??'ask');
+  const [lastFast,setLastFast]=useState<boolean|null>(()=>restored?.lastFast??null);
   const [stage,setStage]=useState<'reading'|'speaking'>('reading');
   const [saving,setSaving]=useState(false);
-  const [saved,setSaved]=useState(variant==='mixed');
-  const [saveError,setSaveError]=useState(false);
+  const [saved,setSaved]=useState(()=>variant==='mixed'||Boolean(restored?.saved));
+  const [saveError,setSaveError]=useState(()=>Boolean(restored?.saveError));
   const deadlineRef=useRef(0);
   const item=items[pos] ?? null;
   const done=pos>=items.length;
   const score=drillScore(fast,base);
   const passed=drillPassed(fast,base);
   const replaying=pos>=base;
+
+  useEffect(()=>{
+    if(variant==='mixed')return;
+    writePracticeRunState(sessionKey,{
+      version:1,
+      activityRevision:activity.revision,
+      itemIds:items.map(item=>item.id),
+      pos,
+      fast,
+      slow,
+      phase,
+      lastFast,
+      saved,
+      saveError
+    } satisfies DrillRunSession);
+  },[activity.revision,fast,items,lastFast,phase,pos,saveError,saved,sessionKey,slow,variant]);
 
   useEffect(()=>{ if(active)onProgress?.(Math.min(pos+1,base),base); },[active,base,onProgress,pos]);
 

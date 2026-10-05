@@ -55,7 +55,7 @@ export const en: Record<keyof typeof ru, string> = {
   'today.speakHow': 'Say it out loud in your own words, 3–5 sentences. Quietly is fine, on the go too. Mistakes are fine: the goal is to hear your English. Examples below — tap to listen.',
   'today.speakExamples': 'Example sentences',
   'today.speakListen': 'Listen: {text}',
-  'today.speakStart': 'Go to today’s lesson',
+  'today.speakStart': 'Start speaking practice',
   'today.landmarkDialogue': 'Coming up: dialogue “{title}”',
   'today.landmarkTalk': 'Coming up: talk “{title}”',
   'today.landmarkReview': 'Coming up: review day',
