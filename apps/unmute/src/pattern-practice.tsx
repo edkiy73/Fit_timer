@@ -82,9 +82,9 @@ export function PatternPracticeView({
 
   useEffect(()=>{
     if(!active||mode==='complete'||!onProgress||briefed.has(mode))return;
-    // Only an unstarted mode owns the default 1/N header value.
-    // Once the mode has started, its mounted child reports the real phrase position.
-    onProgress(1,activity.items.length);
+    // The briefing is not the first phrase. Keep lesson progress at 0/N until «Начать».
+    // Once the mode starts, the mounted child reports the real 1/N…N/N phrase position.
+    onProgress(0,activity.items.length);
   },[active,activity.items.length,briefed,mode,onProgress]);
 
   // The lesson-level tabs can change initialMode while this component keeps the same key.
