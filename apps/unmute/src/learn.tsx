@@ -522,6 +522,10 @@ export function NodeRunnerView({
   const activity=stepIndex===undefined?null:steps[stepIndex]??null;
 
   useEffect(()=>{
+    if(activity?.type==='pattern-drill'&&stepIndex!==undefined)setPracticeActivityIndex(stepIndex);
+  },[activity?.id,stepIndex]);
+
+  useEffect(()=>{
     setPracticeProgress(null);
   },[activity?.id,practiceMode]);
 
