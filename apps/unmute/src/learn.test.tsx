@@ -196,6 +196,26 @@ describe('node activity runner',()=>{
     expect(onExit).toHaveBeenCalledTimes(1);
   });
 
+  it('does not count an answer until a failed save is retried',async()=>{
+    const user=userEvent.setup();
+    const saveGraded=vi.fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValue(undefined);
+    renderRunner(vi.fn(async()=>{}),saveGraded);
+
+    await user.click(screen.getByRole('button',{name:'К заданиям'}));
+    await chooseAnswer(user,'I am here');
+
+    expect(await screen.findByText('Не сохранилось.')).toBeTruthy();
+    expect(screen.getByText('Ответ пока не засчитан.')).toBeTruthy();
+    expect(screen.queryByText('Верно')).toBeNull();
+
+    await user.click(screen.getByRole('button',{name:'Повторить сохранение'}));
+    expect(await screen.findByText('Верно')).toBeTruthy();
+    expect(saveGraded).toHaveBeenCalledTimes(2);
+    expect(saveGraded.mock.calls[1]?.[4]).toBe(saveGraded.mock.calls[0]?.[4]);
+  });
+
   it('counts a keyboard typo as near miss instead of an SRS error',async()=>{
     const user=userEvent.setup();
     const {saveGraded}=renderRunner();

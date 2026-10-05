@@ -111,6 +111,27 @@ describe('course review screen',()=>{
     expect(saveGraded).toHaveBeenLastCalledWith('general-foundation','card.one',true,'build',expect.any(String));
   });
 
+  it('keeps a review answer uncounted until a failed save is retried',async()=>{
+    const user=userEvent.setup();
+    const saveGraded=vi.fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValue(undefined);
+    renderReview(saveGraded);
+
+    await user.click(await screen.findByRole('button',{name:'Начать повтор'}));
+    await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am home');
+    await user.click(screen.getByRole('button',{name:'Готово'}));
+
+    expect(await screen.findByText('Не сохранилось.')).toBeTruthy();
+    expect(screen.getByText('Ответ пока не засчитан.')).toBeTruthy();
+    expect(screen.queryByText('Верно')).toBeNull();
+
+    await user.click(screen.getByRole('button',{name:'Повторить сохранение'}));
+    expect(await screen.findByText('Верно')).toBeTruthy();
+    expect(saveGraded).toHaveBeenCalledTimes(2);
+    expect(saveGraded.mock.calls[1]?.[4]).toBe(saveGraded.mock.calls[0]?.[4]);
+  });
+
   it('keeps due cards of another studied course and saves them to that course',async()=>{
     const user=userEvent.setup();
     const other=learnerState();
