@@ -168,8 +168,11 @@ export function TodayView({
     const total=node.activityIds.length;
     const dayProgress=total?done/total:0;
     const dayPercent=Math.round(dayProgress*100);
-    const radialDotCount=24;
+    const outerDotCount=15;
+    const innerDotCount=11;
+    const radialDotCount=outerDotCount+innerDotCount;
     const activeProgressDots=Math.round(dayProgress*radialDotCount);
+    const trailDotCount=4;
     const stage=stageForDay(node.dayIndex,state.set.id);
     hero=(
       <Tile className="tile-hero today-hero" index={index++}>
@@ -191,11 +194,23 @@ export function TodayView({
         >
           <span className="today-progress-radial" aria-hidden="true">
             {Array.from({length:radialDotCount},(_,dot)=>{
-              const angle=-138+(276/(radialDotCount-1))*dot;
+              const outer=dot<outerDotCount;
+              const ringIndex=outer?dot:dot-outerDotCount;
+              const ringCount=outer?outerDotCount:innerDotCount;
+              const angle=-108+(216/(ringCount-1))*ringIndex;
+              const normalized=dot/(radialDotCount-1);
+              const tone=Math.min(6,Math.floor(normalized*7));
+              const trail=dot-activeProgressDots;
               return (
                 <span
                   key={dot}
-                  className={'today-progress-dot '+(dot<radialDotCount/2?'is-accent':'is-listen')+(dot<activeProgressDots?' is-active':'')}
+                  className={
+                    'today-progress-dot '+
+                    (outer?'is-outer':'is-inner')+
+                    ' tone-'+tone+
+                    (dot<activeProgressDots?' is-active':'')+
+                    (trail>=0&&trail<trailDotCount?' is-trail-'+(trail+1):'')
+                  }
                   style={{
                     '--dot-i':dot,
                     '--dot-angle':angle+'deg'
