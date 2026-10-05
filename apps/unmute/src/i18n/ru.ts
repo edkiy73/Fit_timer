@@ -199,7 +199,7 @@ export const ru = {
   'courseMap.statusAvailable': 'Доступен',
   'courseMap.statusPurchaseLocked': 'Закрыт',
   'courseMap.statusPrerequisiteLocked': 'Закрыт',
-  'courseMap.purchaseHint': 'Этот день доступен в полном курсе.'
+  'courseMap.purchaseHint': 'Этот день доступен в полном курсе.',
   'courseMap.unlock': 'Открыть доступ',
   'today.openAccess': 'Открыть доступ',
   'access.plusHeading': 'UnMute Plus',
