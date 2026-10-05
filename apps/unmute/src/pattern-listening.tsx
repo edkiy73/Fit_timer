@@ -24,6 +24,7 @@ export interface PatternListeningViewProps {
   )=>Promise<void>;
   speak:SpeakText;
   random?:()=>number;
+  onProgress?:(current:number,total:number)=>void;
 }
 
 function localized(text:LocalizedText,locale:string):string{
@@ -77,7 +78,8 @@ export function PatternListeningView({
   onDone,
   savePractice,
   speak,
-  random=Math.random
+  random=Math.random,
+  onProgress
 }:PatternListeningViewProps){
   const {t,locale}=useI18n();
   const [items,setItems]=useState(()=>pickListeningItems(activity,random));
@@ -93,6 +95,8 @@ export function PatternListeningView({
   const done=pos>=items.length;
   const score=listeningScore(hits,items.length);
   const passed=listeningPassed(hits,items.length);
+
+  useEffect(()=>{ onProgress?.(Math.min(pos+1,items.length),items.length); },[items.length,onProgress,pos]);
 
   const options=useMemo(
     ()=>item?buildListeningOptions(item.prompt,distractors,locale,random):[],
@@ -239,7 +243,6 @@ export function PatternListeningView({
         </AnswerFeedbackSheet>
       )}
 
-      <div className="learn-hint">{t('listening.sessionStats',{correct:hits,total:items.length})}</div>
     </article>
   );
 }
