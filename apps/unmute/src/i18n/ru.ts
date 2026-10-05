@@ -206,7 +206,7 @@ export const ru = {
   'courseMap.unlock': 'Открыть доступ',
   'today.openAccess': 'Открыть доступ',
   'access.plusHeading': 'UnMute Plus',
-  'access.plusLead': 'Больше разборов ошибок и разговоров с ИИ, плюс скидка на покупку курсов.'
+  'access.plusLead': 'Больше разборов ошибок и разговоров с ИИ, плюс скидка на покупку курсов.',
   'access.plusActiveTitle': 'Plus уже подключён',
   'access.plusActiveUntil': 'Действует до {date}. Можно продлить заранее — новый срок добавится к текущему.',
   'access.choose': 'Выбор доступа',
