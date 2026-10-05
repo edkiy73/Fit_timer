@@ -12,9 +12,12 @@
 - `prefers-reduced-motion` для ключевых motion-сценариев;
 - lesson / Review e2e;
 - сохранение LessonRun и resume-логика unit/e2e;
-- production readiness + Android build на каждом push в `main`.
+- production readiness + Android build на каждом push в `main`;
+- Android emulator launch smoke **при 150% системном font scale**; WebView получает реальный `fontScale` через `setTextZoom` (#552);
+- Android keyboard viewport contract: `interactive-widget=resizes-content`, чтобы IME уменьшала viewport вместо перекрытия контента (#552);
+- system Back policy покрыта unit-тестом: sheet → history, tab → «Сегодня», double Back → minimize.
 
-Эти проверки не заменяют реальный Android WebView, системную клавиатуру, убийство процесса, системные настройки шрифта и реальную доставку push через FCM.
+Эти проверки не заменяют **визуальный** прогон на реальном Android: клавиатура/IME, process kill посреди урока, фактическая верстка при 130–150% font size, system Back в WebView, status bar и реальная доставка push через FCM.
 
 ## Устройство — обязательные сценарии
 
@@ -62,7 +65,7 @@
 
 ### 4. Крупный системный шрифт
 
-Проверить минимум на 130–150% font size:
+Кодовая поддержка закрыта #552: Android `fontScale` прокидывается в WebView `setTextZoom`, emulator smoke запускает приложение при 150%. На устройстве остаётся проверить **визуальный результат** минимум на 130–150% font size:
 
 - «Сегодня»;
 - «Курс» / roadmap;
