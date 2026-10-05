@@ -95,6 +95,7 @@ describe('pattern practice orchestration',()=>{
     expect(screen.getByText('Говорение')).toBeTruthy();
     await waitFor(()=>expect(onModeChange).toHaveBeenCalledWith('speaking'));
 
+    onModeChange.mockClear();
     view.rerender(
       <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="practice-nav-test.locale" systemLanguages={['ru']}>
         <PatternPracticeView
@@ -113,6 +114,7 @@ describe('pattern practice orchestration',()=>{
     );
     await waitFor(()=>expect(screen.getByText('Слушание')).toBeTruthy());
     await waitFor(()=>expect(onModeChange).toHaveBeenCalledWith('listening'));
+    expect(onModeChange).not.toHaveBeenCalledWith('speaking');
   });
 
 });
