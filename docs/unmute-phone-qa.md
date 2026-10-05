@@ -132,8 +132,10 @@
 Предусловия:
 
 - production APK собран с `UNMUTE_GOOGLE_SERVICES_JSON_BASE64`;
-- UnMute Vercel-проект имеет `FIREBASE_SERVICE_ACCOUNT_JSON`;
+- UnMute Vercel-проект имеет `FIREBASE_SERVICE_ACCOUNT_JSON` или `FIREBASE_SERVICE_ACCOUNT_BASE64`;
 - пользователь вошёл в аккаунт и включил уведомления.
+
+**Проверка 2026-10-05:** в Vercel-проекте `unmute` сейчас нет ни одного `FIREBASE_*` env. Поэтому server push на production пока **заблокирован внешней конфигурацией**, а не кодом. `scripts/check-production.mjs` с #553 теперь показывает `androidPush` / `firebaseEnvSeen` и выдаёт явный warning, если FCM server config отсутствует.
 
 Проверить:
 
