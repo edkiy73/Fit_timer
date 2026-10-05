@@ -6,6 +6,8 @@ import type { Activity } from './content/schema';
 import { dictionaries } from './i18n';
 import {
   PatternDrillView,
+  drillAttemptResolved,
+  drillCommitOnTime,
   drillPassed,
   drillReadMs,
   drillSayMs,
@@ -59,7 +61,7 @@ function renderDrill(
 }
 
 describe('pattern drill',()=>{
-  it('scales speaking time by phrase length and keeps the 70% pass threshold',()=>{
+  it('scales speaking time, keeps hidden reaction grace and requires correct + on-time',()=>{
     expect(drillReadMs('one two three')).toBe(1560);
     expect(drillReadMs('one')).toBe(1200);
     expect(drillSayMs('Nice to meet you')).toBe(3600);
@@ -68,6 +70,12 @@ describe('pattern drill',()=>{
     expect(drillScore(7,10)).toBe(70);
     expect(drillPassed(7,10)).toBe(true);
     expect(drillPassed(6,10)).toBe(false);
+    expect(drillCommitOnTime(5500,5000)).toBe(true);
+    expect(drillCommitOnTime(5600,5000)).toBe(true);
+    expect(drillCommitOnTime(5601,5000)).toBe(false);
+    expect(drillAttemptResolved(true,true)).toBe(true);
+    expect(drillAttemptResolved(true,false)).toBe(false);
+    expect(drillAttemptResolved(false,true)).toBe(false);
   });
 
   it('keeps mixed drill outside SRS persistence',async()=>{
@@ -93,7 +101,7 @@ describe('pattern drill',()=>{
     );
 
     for(let i=0;i<2;i++){
-      await user.click(screen.getByRole('button',{name:'Показать ответ'}));
+      await user.click(screen.getByRole('button',{name:'Готово'}));
       await user.click(screen.getByRole('button',{name:'Совпало'}));
     }
 
@@ -109,7 +117,7 @@ describe('pattern drill',()=>{
     const {savePractice,onDone}=renderDrill();
 
     for(let i=0;i<2;i++){
-      await user.click(screen.getByRole('button',{name:'Показать ответ'}));
+      await user.click(screen.getByRole('button',{name:'Готово'}));
       expect(screen.getByText(i===0?'I work at home.':'She works here.')).toBeTruthy();
       // The phrase's explanation shows with the answer; phrases without one show none.
       expect(Boolean(screen.queryByText('После I глагол без окончания -s.'))).toBe(i===0);
@@ -129,19 +137,35 @@ describe('pattern drill',()=>{
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 
-  it('replays a missed phrase once at the end without growing the count',async()=>{
+  it('keeps a missed phrase in correction until it is actually resolved',async()=>{
     const user=userEvent.setup();
-    renderDrill();
+    const {savePractice}=renderDrill();
     expect(screen.getByText('1 из 2')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:'Показать ответ'}));
+
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     await user.click(screen.getByRole('button',{name:'Не совпало'}));
+
     expect(screen.getByText('2 из 2')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:'Показать ответ'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     await user.click(screen.getByRole('button',{name:'Совпало'}));
-    // The missed phrase comes back once, counted apart from the drill's two phrases.
-    expect(screen.getByText('Повтор: 1 из 1')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:'Показать ответ'}));
+
+    expect(screen.getByText('Работа над ошибками · осталось 1')).toBeTruthy();
+
+    // A second failed correction must not drop the phrase from the queue.
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     await user.click(screen.getByRole('button',{name:'Не совпало'}));
+    expect(screen.getByText('Работа над ошибками · осталось 1')).toBeTruthy();
+
+    await user.click(screen.getByRole('button',{name:'Готово'}));
+    await user.click(screen.getByRole('button',{name:'Совпало'}));
+
+    await waitFor(()=>expect(savePractice).toHaveBeenCalledWith(
+      'general-foundation',
+      'pattern.present',
+      'drill',
+      false,
+      50
+    ));
     expect(await screen.findByText('1 из 2 вовремя')).toBeTruthy();
   });
 });
