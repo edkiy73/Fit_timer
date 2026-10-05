@@ -146,7 +146,7 @@
 | 7.4 | Возврат после перерыва: 2/5/12 дней, потом тишина | ✅ #494 |
 | 7.5 | Серия — мягкий текст и только при серии ≥ 3 | ✅ #495 |
 | 7.6 | Тихие часы 22:00–9:00 и «после занятия — тишина» — тесты на политику | ✅ #496 |
-| 7.7 | Серверный push (FCM/APNs): общий AppBase Core client + server transport; UnMute регистрирует устройство, deep links и open analytics; внешняя Firebase/APNs конфигурация отдельная для каждого приложения | ✅ код #513/#514 · #553 production readiness · ⏳ **Vercel `unmute`: FIREBASE_* env отсутствуют на 2026-10-05** |
+| 7.7 | Серверный push (FCM/APNs): общий AppBase Core client + server transport; UnMute регистрирует устройство, deep links и open analytics; внешняя Firebase/APNs конфигурация отдельная для каждого приложения | ✅ код #513/#514 · #553 production readiness · ✅ production health 2026-10-05: Android FCM настроен |
 | 7.8 | Общий экран рассылок AppBase Admin: RU/EN copy, push/email, preview аудитории, batch send и статистика результата | ✅ #516 |
 
 ---
@@ -177,9 +177,9 @@
 - Vercel UnMute: `FIREBASE_SERVICE_ACCOUNT_JSON` — Firebase service account с правом отправки FCM;
 - iOS позже: APNs key/team/bundle variables для bundle id UnMute.
 
-Текущее состояние внешней конфигурации (2026-10-05): **Vercel `unmute` не содержит `FIREBASE_SERVICE_ACCOUNT_JSON` / `FIREBASE_SERVICE_ACCOUNT_BASE64`**, поэтому server-side Android push пока не готов. Наличие GitHub secret `UNMUTE_GOOGLE_SERVICES_JSON_BASE64` из чата не читается; release workflow уже умеет материализовать его, когда secret настроен.
+Текущее состояние внешней конфигурации (2026-10-05): production `/api/health` подтверждает `push.android: true` и `firebaseEnvSeen: ["FIREBASE_SERVICE_ACCOUNT_JSON"]`; backend FCM настроен. Список прямых project env в Vercel не является полным источником истины для runtime-конфигурации.
 
-После добавления Android credentials:
+Для device QA:
 1. собрать production APK;
 2. войти в аккаунт;
 3. включить уведомления;

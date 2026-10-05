@@ -38,7 +38,7 @@ UI → навигация → состояние урока → сохранен
 | Learner terminology cleanup | ✅ #544 |
 | Save/error wording contract | ✅ #545 |
 | Admin release status flow | ✅ #546 |
-| Real Android device QA | 🟡 hardening #552 · push readiness #553; Vercel `unmute` пока без `FIREBASE_*`, ручной production-device прогон ещё нужен |
+| Real Android device QA | 🟡 hardening #552 · push readiness #553; production health подтверждает Android FCM backend, ручной production-device прогон ещё нужен |
 | Motion / visual polish | ✅ foundation #497–#505 · navigation #547 · core screens #548 · Route/sheets/states #549 · forms/settings/paywall #550 · final consistency #551 |
 
 CI/browser regression по learner screens и Admin 360 px есть; отдельные нативные сценарии остаются в phone QA.
