@@ -48,6 +48,8 @@ export interface PatternPracticeViewProps {
   onModeChange?:(mode:PracticeSrsKind)=>void;
   /** Report phrase-level progress to the lesson header. */
   onProgress?:(current:number,total:number)=>void;
+  /** Keep the mounted session paused while another lesson section is visible. */
+  active?:boolean;
 }
 
 export function PatternPracticeView({
@@ -62,7 +64,8 @@ export function PatternPracticeView({
   initialMode,
   showModeNav=true,
   onModeChange,
-  onProgress
+  onProgress,
+  active=true
 }:PatternPracticeViewProps){
   const {t,locale}=useI18n();
   const [mode,setMode]=useState<PatternMode>(()=>
@@ -74,13 +77,13 @@ export function PatternPracticeView({
   const [briefed,setBriefed]=useState<ReadonlySet<PracticeSrsKind>>(()=>new Set());
 
   useEffect(()=>{
-    if(mode!=='complete')onModeChange?.(mode);
-  },[mode,onModeChange]);
+    if(active&&mode!=='complete')onModeChange?.(mode);
+  },[active,mode,onModeChange]);
 
   useEffect(()=>{
-    if(mode==='complete'||!onProgress)return;
+    if(!active||mode==='complete'||!onProgress)return;
     onProgress(1,activity.items.length);
-  },[activity.items.length,mode,onProgress]);
+  },[active,activity.items.length,mode,onProgress]);
 
   // The lesson-level tabs can change initialMode while this component keeps the same key.
   // Mirror that prop into local state instead of getting stuck in the previously mounted mode.
@@ -173,7 +176,7 @@ export function PatternPracticeView({
             setId={setId}
             savePractice={savePractice}
             onDone={()=>nextMode('drill')}
-            active={mode==='drill'}
+            active={active&&mode==='drill'}
             {...(onProgress?{onProgress}:{})}
           />
         </div>
@@ -188,7 +191,7 @@ export function PatternPracticeView({
             savePractice={savePractice}
             speak={speak}
             onDone={()=>nextMode('listening')}
-            active={mode==='listening'}
+            active={active&&mode==='listening'}
             {...(onProgress?{onProgress}:{})}
           />
         </div>
@@ -203,7 +206,7 @@ export function PatternPracticeView({
             speak={speak}
             startRecognition={startRecognition}
             onDone={()=>nextMode('speaking')}
-            active={mode==='speaking'}
+            active={active&&mode==='speaking'}
             {...(onProgress?{onProgress}:{})}
           />
         </div>
