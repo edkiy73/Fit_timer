@@ -29,7 +29,7 @@ import { TheoryContent } from './theory-content';
 import { ExerciseKind } from './exercise-kind';
 import { WordChips, answerWords, buildChips, chipsText } from './word-chips';
 import { AnswerModeTransition } from './answer-mode-transition';
-import { isNodeRequirementComplete } from './engine/course-progress';
+import { isNodeRequirementComplete, practiceProgressComplete } from './engine/course-progress';
 import { roadmapProgressFromDocument } from './progress-actions';
 import { buildCourseReviewSession } from './review-session';
 import { activitySaveClock } from './activity-progress';
@@ -269,7 +269,7 @@ export function missingForNode(node:RoadmapNode,progress:CourseProgressDocument)
     if(requirement.kind==='practice-started'){
       for(const mode of requirement.modes){
         const record=state.practice[mode]?.[requirement.activityId];
-        if(!record||record.box<=0)practice.push({activityId:requirement.activityId,mode});
+        if(!record||!practiceProgressComplete(record))practice.push({activityId:requirement.activityId,mode});
       }
     }else if(requirement.kind==='activity-seen'){
       unseen.push(...requirement.activityIds.filter(id=>!state.seenActivityIds.has(id)));

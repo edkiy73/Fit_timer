@@ -35,10 +35,13 @@ describe('pattern practice orchestration',()=>{
     expect(firstPatternMode(activity,progress)).toBe('complete');
   });
 
-  it('retries a failed mode whose SRS box is still zero',()=>{
+  it('separates a completed weak mode from an unfinished legacy box-zero mode',()=>{
     const progress=emptyCourseProgress();
     progress.practice.drill[activity.id]={box:0,due:1,at:'2026-09-29T00:00:00.000Z'};
     expect(firstPatternMode(activity,progress)).toBe('drill');
+
+    progress.practice.drill[activity.id]={box:0,due:1,completed:true,at:'2026-09-29T00:00:00.000Z'};
+    expect(firstPatternMode(activity,progress)).toBe('listening');
   });
 
   it('shows phrase-level progress before starting and hides phrase count from the intro',async()=>{

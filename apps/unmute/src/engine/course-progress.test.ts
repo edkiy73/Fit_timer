@@ -77,6 +77,19 @@ describe('course progress and streak',()=>{
     expect(isRoadmapNodeComplete(roadmap.nodes[0]!,progress)).toBe(true);
   });
 
+  it('treats explicit practice completion independently from a weak SRS box',()=>{
+    const progress=emptyRoadmapProgress();
+    progress.seenActivityIds=new Set(['card.a1','card.a2']);
+    progress.practice.drill['pattern.a']={box:0,due:0,completed:true};
+    progress.practice.listening['pattern.a']={box:0,due:0,completed:true};
+    progress.practice.speaking['pattern.a']={box:0,due:0,completed:true};
+
+    expect(isRoadmapNodeComplete(roadmap.nodes[0]!,progress)).toBe(true);
+
+    progress.practice.speaking['pattern.a']={box:0,due:0};
+    expect(isRoadmapNodeComplete(roadmap.nodes[0]!,progress)).toBe(false);
+  });
+
   it('moves current day through lesson, manual review day and next lesson',()=>{
     const progress=emptyRoadmapProgress();
 

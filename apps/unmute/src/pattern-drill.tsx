@@ -63,6 +63,14 @@ export function drillSayMs(answer:string):number{
   return Math.min(6500,Math.max(2200,1400+550*words));
 }
 
+export function drillCommitOnTime(commitAt:number,nominalDeadline:number):boolean{
+  return commitAt<=nominalDeadline+DRILL_GRACE_MS;
+}
+
+export function drillAttemptResolved(same:boolean,onTime:boolean):boolean{
+  return same&&onTime;
+}
+
 export function drillScore(fast:number,total:number):number{
   return total>0?Math.round(Math.max(0,fast)/total*100):0;
 }
@@ -82,8 +90,8 @@ export function PatternDrillView({
   sessionKey
 }:PatternDrillViewProps){
   const {t,locale}=useI18n();
-  // The admin controls the phrase count. A missed phrase is replayed once at the end
-  // without growing the base count.
+  // The admin controls the phrase count. Failed/slow phrases return in correction
+  // until each one is both correct and on time; retries never grow the base count.
   const base=activity.items.length;
   const restored=variant==='mixed'?null:restoredDrillSession(activity,sessionKey);
   const [items,setItems]=useState(()=>restored?.items??activity.items.slice());
@@ -97,11 +105,16 @@ export function PatternDrillView({
   const [saved,setSaved]=useState(()=>variant==='mixed'||Boolean(restored?.saved));
   const [saveError,setSaveError]=useState(()=>Boolean(restored?.saveError));
   const deadlineRef=useRef(0);
+  const activationRef=useRef<number|null>(null);
   const item=items[pos] ?? null;
   const done=pos>=items.length;
   const score=drillScore(fast,base);
   const passed=drillPassed(fast,base);
+  const strongFirstPass=base>0&&fast===base;
   const replaying=pos>=base;
+  const correctionRemaining=replaying
+    ? new Set(items.slice(pos).map(entry=>entry.id)).size
+    : 0;
 
   useEffect(()=>{
     if(variant==='mixed')return;
@@ -125,15 +138,17 @@ export function PatternDrillView({
     if(!active||!item||phase!=='ask')return;
     const readMs=drillReadMs(localized(item.prompt,locale));
     const sayMs=drillSayMs(item.answer.accepted[0]||'');
-    const graceMs=DRILL_GRACE_MS;
     const started=Date.now();
-    deadlineRef.current=started+readMs+sayMs+graceMs;
+    // Nominal learning deadline excludes the hidden reaction/tap grace.
+    deadlineRef.current=started+readMs+sayMs;
+    activationRef.current=null;
     setStage('reading');
     const speakTimer=window.setTimeout(()=>setStage('speaking'),readMs);
     const revealTimer=window.setTimeout(()=>{
+      activationRef.current=null;
       setLastFast(false);
       setPhase('show');
-    },readMs+sayMs+graceMs);
+    },readMs+sayMs+DRILL_GRACE_MS);
     return ()=>{
       window.clearTimeout(speakTimer);
       window.clearTimeout(revealTimer);
@@ -144,15 +159,22 @@ export function PatternDrillView({
     if(variant==='mixed'||!done||saved||saving||saveError)return;
     setSaving(true);
     setSaveError(false);
-    void savePractice(setId,activity.id,'drill',passed,score)
+    void savePractice(setId,activity.id,'drill',strongFirstPass,score)
       .then(()=>setSaved(true))
       .catch(()=>setSaveError(true))
       .finally(()=>setSaving(false));
-  },[activity.id,done,passed,savePractice,saved,saving,score,setId,variant]);
+  },[activity.id,done,savePractice,saved,saving,score,setId,strongFirstPass,variant]);
+
+  const captureActivation=()=>{
+    if(phase!=='ask'||activationRef.current!==null)return;
+    activationRef.current=Date.now();
+  };
 
   const reveal=()=>{
     if(phase!=='ask')return;
-    setLastFast(Date.now()<=deadlineRef.current);
+    const commitAt=activationRef.current??Date.now();
+    activationRef.current=null;
+    setLastFast(drillCommitOnTime(commitAt,deadlineRef.current));
     setPhase('show');
   };
 
@@ -161,12 +183,15 @@ export function PatternDrillView({
     let nextItems=items;
     let nextFast=fast;
     let nextSlow=slow;
-    // Only the first round counts toward the result; replays are for practice.
+    const resolved=drillAttemptResolved(same,lastFast===true);
+    // Only the first round defines quality/SRS. Correction attempts only resolve the unit.
     if(pos<base){
-      if(same&&lastFast)nextFast++;
+      if(resolved)nextFast++;
       else nextSlow++;
-      if(!same)nextItems=[...items,item];
     }
+    // A slow-but-correct phrase is still unresolved for this mode, exactly like a mismatch.
+    // During correction it keeps returning until it is both correct and on time.
+    if(!resolved)nextItems=[...items,item];
     setItems(nextItems);
     setFast(nextFast);
     setSlow(nextSlow);
@@ -192,7 +217,7 @@ export function PatternDrillView({
     if(saving)return;
     setSaveError(false);
     setSaving(true);
-    void savePractice(setId,activity.id,'drill',passed,score)
+    void savePractice(setId,activity.id,'drill',strongFirstPass,score)
       .then(()=>setSaved(true))
       .catch(()=>setSaveError(true))
       .finally(()=>setSaving(false));
@@ -209,7 +234,7 @@ export function PatternDrillView({
           <span>
             {variant==='mixed'
               ? (passed?t('mixed.passed'):t('mixed.retryHint'))
-              : (passed?t('drill.passed'):t('drill.retryHint'))}
+              : t('drill.passed')}
           </span>
         </div>
         {saveError&&(
@@ -232,19 +257,12 @@ export function PatternDrillView({
           </>
         ) : (
           <>
-            <button className="primary-button" type="button" disabled={!saved} onClick={passed?onDone:reset}>
-              {passed?t('learn.next'):t('drill.again')}
+            <button className="primary-button" type="button" disabled={!saved} onClick={onDone}>
+              {t('learn.next')}
             </button>
-            {passed&&(
-              <button className="secondary-button" type="button" disabled={!saved} onClick={reset}>
-                {t('drill.again')}
-              </button>
-            )}
-            {!passed&&(
-              <button className="secondary-button" type="button" disabled={!saved} onClick={onDone}>
-                {t('drill.continueAnyway')}
-              </button>
-            )}
+            <button className="secondary-button" type="button" disabled={!saved} onClick={reset}>
+              {t('drill.again')}
+            </button>
           </>
         )}
         {saving&&<span className="learn-hint" role="status">{t('drill.saving')}</span>}
@@ -263,7 +281,7 @@ export function PatternDrillView({
       <div className="drill-meta">
         <span>{variant==='mixed'?t('mixed.title'):<LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} />}</span>
         <span>{replaying
-          ? t('drill.replayPosition',{current:pos-base+1,total:items.length-base})
+          ? t('drill.correctionRemaining',{count:correctionRemaining})
           : t('drill.position',{current:pos+1,total:base})}</span>
       </div>
       <h3><LexiconText text={prompt} refs={activity.lexiconRefs} /></h3>
@@ -271,16 +289,24 @@ export function PatternDrillView({
       {phase==='ask' ? (
         <>
           <div className="drill-timer" data-stage={stage} aria-label={t('drill.timer')}>
-            <span style={{animationDuration:`${drillSayMs(accepted)+DRILL_GRACE_MS}ms`}} />
+            <span style={{animationDuration:`${drillSayMs(accepted)}ms`}} />
           </div>
           <p className="learn-hint">
             {stage==='reading'
               ? t('drill.reading')
-              : t('drill.speaking',{seconds:Math.ceil((drillSayMs(accepted)+DRILL_GRACE_MS)/1000)})}
+              : t('drill.speaking',{seconds:Math.ceil(drillSayMs(accepted)/1000)})}
           </p>
           <div className="runner-action">
-            <button className="primary-button" type="button" onClick={reveal}>
-              {t('drill.showAnswer')}
+            <button
+              className="primary-button"
+              type="button"
+              onPointerDown={captureActivation}
+              onKeyDown={event=>{
+                if(event.key==='Enter'||event.key===' ')captureActivation();
+              }}
+              onClick={reveal}
+            >
+              {t('drill.said')}
             </button>
           </div>
         </>

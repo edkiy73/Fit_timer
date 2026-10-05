@@ -24,6 +24,8 @@ export interface TimedCardState extends CardSrsState, RecordMeta {
 export interface TimedPracticeState extends PracticeSrsState, RecordMeta {
   at:string;
   deleted?:boolean;
+  /** The learner finished this required practice mode. Independent from SRS box. */
+  completed?:boolean;
 }
 
 export interface TimedMetric extends RecordMeta {

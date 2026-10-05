@@ -61,7 +61,8 @@ describe('activity progress writes',()=>{
 
     expect(next.course.practice.drill['pattern.one']).toMatchObject({
       box:1,
-      due:20727
+      due:20727,
+      completed:true
     });
     expect(next.course.metrics['speed:pattern.one']).toMatchObject({
       value:75,
@@ -74,6 +75,23 @@ describe('activity progress writes',()=>{
       attempts:1,
       correct:1,
       wrong:0
+    });
+  });
+
+  it('can complete a practice mode while keeping weak SRS',()=>{
+    const clock={
+      at:'2026-09-29T01:20:00.000Z',
+      dayKey:'2026-09-29',
+      dayNumber:20725
+    };
+    const next=buildPracticeActivityProgress(
+      emptyCourseProgress(),emptyStatsProgress(),'device-one','pattern.weak','drill',false,50,clock
+    );
+
+    expect(next.course.practice.drill['pattern.weak']).toMatchObject({
+      box:0,
+      due:20725,
+      completed:true
     });
   });
 

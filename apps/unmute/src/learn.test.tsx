@@ -522,7 +522,7 @@ describe('node activity runner',()=>{
     await waitFor(()=>expect(screen.getByText('0/2')).toBeTruthy());
     await user.click(screen.getByRole('button',{name:'Начать'}));
     await waitFor(()=>expect(screen.getByText('1/2')).toBeTruthy());
-    await user.click(screen.getByRole('button',{name:'Показать ответ'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     await user.click(screen.getByRole('button',{name:'Совпало'}));
     await waitFor(()=>expect(screen.getByText('2/2')).toBeTruthy());
 

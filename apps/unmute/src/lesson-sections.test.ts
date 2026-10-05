@@ -55,13 +55,13 @@ describe('lesson section states',()=>{
     progress.seen.theory={at:'2026-10-05T10:00:00Z'};
     progress.seen.choice={at:'2026-10-05T10:01:00Z'};
     progress.practice.drill.pattern={box:1,due:2,at:'2026-10-05T10:02:00Z'};
-    progress.practice.listening.pattern={box:0,due:1,at:'2026-10-05T10:03:00Z'};
+    progress.practice.listening.pattern={box:0,due:1,completed:true,at:'2026-10-05T10:03:00Z'};
 
     expect(lessonSectionStates(set,node,progress).map(section=>[section.id,section.complete,section.blocking])).toEqual([
       ['theory',true,false],
       ['tasks',true,false],
       ['drill',true,false],
-      ['listening',false,true],
+      ['listening',true,false],
       ['speaking',false,true]
     ]);
   });
