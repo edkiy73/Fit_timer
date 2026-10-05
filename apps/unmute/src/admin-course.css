@@ -22,6 +22,15 @@
 .ab-course-release[data-state="live"] .ab-course-release-state{color:var(--success,#15803d)}
 .ab-course-release[data-state="changed"] .ab-course-release-state{color:var(--accent-ink,#b45309)}
 .ab-course-release-row>button{flex:none;min-width:140px}
+.ab-release-flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:12px 0}
+.ab-release-step{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:6px;min-width:0;padding:8px 9px;border:1px solid var(--line,#e4e6eb);border-radius:10px;color:var(--muted,#6b7280);background:var(--surface,#f7f8fa)}
+.ab-release-step span{width:9px;height:9px;border-radius:50%;background:var(--line,#d1d5db)}
+.ab-release-step b{min-width:0;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ab-release-step[data-state="done"]{color:var(--success,#15803d)}
+.ab-release-step[data-state="done"] span{background:var(--success,#15803d)}
+.ab-release-step[data-state="current"]{border-color:color-mix(in srgb,var(--accent,#2f5fe0) 55%,var(--line,#e4e6eb));background:color-mix(in srgb,var(--accent,#2f5fe0) 9%,var(--card,#fff));color:var(--ink,#17181b)}
+.ab-release-step[data-state="current"] span{background:var(--accent,#2f5fe0)}
+.ab-course-release-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px}
 .ab-release-check{margin:10px 0 0;font-size:12.5px}
 .ab-release-check p{margin:0 0 6px}
 .ab-release-check b{font-weight:600;word-break:break-word}
@@ -104,6 +113,9 @@
 @media(max-width:760px){
   .ab-course-release-row{display:grid}
   .ab-admin .ab-course-release-row>button{width:100%;justify-self:stretch}
+  .ab-release-flow{grid-template-columns:1fr 1fr}
+  .ab-course-release-actions{display:grid;grid-template-columns:1fr 1fr}
+  .ab-course-release-actions button{width:100%}
   .ab-course-add,.ab-course-create-set,.ab-course-meta-grid{grid-template-columns:1fr}
   .ab-course-add button{width:100%}
   .ab-course-task-text b{white-space:normal}
