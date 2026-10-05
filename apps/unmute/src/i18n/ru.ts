@@ -336,6 +336,8 @@ export const ru = {
   'courseMap.sectionTodo': 'ещё нужно пройти',
   'courseMap.sectionOptional': 'необязательно',
   'courseMap.sectionStatus': '{section}: {status}',
+  'courseMap.remainingSections': 'Осталось: {sections}',
+  'courseMap.requiredSectionsDone': 'Все обязательные разделы пройдены',
   'learn.loadingTitle': 'Открываем урок',
   'learn.errorTitle': 'Урок не загрузился',
   'learn.unavailableTitle': 'Этот урок сейчас недоступен',
