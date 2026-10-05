@@ -158,6 +158,9 @@
   padding:13px;
 }
 .ab-admin-card{display:grid;gap:4px;min-height:72px}
+.ab-admin-panel>*{min-width:0;max-width:100%}
+.ab-admin-section-head>*{min-width:0}
+.ab-admin :is(code,pre){max-width:100%;overflow-wrap:anywhere;word-break:break-word}
 .ab-admin-card span{color:var(--muted,#6b7280);font-size:12px}
 .ab-admin-card strong{font-size:20px;line-height:1.25}
 
@@ -528,8 +531,8 @@
 .ab-admin-person > div{display:flex;gap:10px;align-items:baseline}
 .ab-admin-person dt{flex:0 0 92px}
 .ab-admin-person dt{color:var(--muted,#6b7280);font-size:12px}
-.ab-admin-person dd{margin:0;display:flex;flex-wrap:wrap;gap:6px;font-size:13px;color:var(--ink,#111)}
-.ab-admin-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;background:var(--card,#fff);border:1px solid var(--line,#e4e6eb)}
+.ab-admin-person dd{margin:0;min-width:0;display:flex;flex-wrap:wrap;gap:6px;font-size:13px;color:var(--ink,#111);overflow-wrap:anywhere}
+.ab-admin-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;min-width:0;padding:3px 8px;border-radius:999px;background:var(--card,#fff);border:1px solid var(--line,#e4e6eb);overflow-wrap:anywhere}
 /* Products style every <button>; a text link must stay a text link. */
 .ab-admin button.ab-admin-link,.ab-admin-link{background:none!important;box-shadow:none!important;border:0!important;padding:0!important;margin:0!important;min-height:0!important;width:auto!important;color:var(--accent-ink,var(--accent,#2f5fe0))!important}
 .ab-admin-chip .ab-admin-link{font-size:12px}
