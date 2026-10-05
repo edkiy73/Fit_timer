@@ -38,6 +38,7 @@ import { sentenceResponseStage, type SentenceResponseKind } from './engine/sente
 import { MOTION, prefersReducedMotion, withViewTransition } from './motion';
 import { SYSTEM_BACK_EVENT } from './native-back';
 import { lessonSectionStates, type LessonSectionId } from './lesson-sections';
+import { clearPracticeRunStatePrefix } from './practice-run-state';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -203,6 +204,7 @@ function writeLessonRun(snapshot:LessonRunSnapshot):void{
 function clearLessonRun(setId:string,nodeId:string):void{
   try{
     localStorage.removeItem(lessonRunKey(setId,nodeId));
+    clearPracticeRunStatePrefix('unmute.pattern-run:'+setId+':'+nodeId+':');
     notifyLessonRunChanged();
   }catch{}
 }
@@ -556,7 +558,7 @@ export function NodeRunnerView({
 
   useEffect(()=>{
     setPracticeProgress(null);
-  },[activity?.id,practiceMode]);
+  },[activity?.id]);
 
   useEffect(()=>{
     if(restoringRunRef.current!==null){
@@ -645,7 +647,7 @@ export function NodeRunnerView({
   };
 
   const exitSheet=(
-    <Sheet open={exitOpen} onClose={closeExitSheet} labelledBy="lesson-exit-title" closeLabel={t('learn.exitStay')} historyEntry={false}>
+    <Sheet open={exitOpen} onClose={closeExitSheet} labelledBy="lesson-exit-title" closeLabel={t('learn.exitStay')} historyEntry={false} className="lesson-exit-sheet">
       <div className="confirm-sheet confirm-sheet-compact">
         <h3 id="lesson-exit-title">{t('learn.exitTitle')}</h3>
         <p className="tile-text">{t('learn.exitText')}</p>
@@ -1269,6 +1271,7 @@ export function NodeRunnerView({
             {...(practiceMode?{initialMode:practiceMode}:{})}
             showModeNav={false}
             active={activity.type==='pattern-drill'}
+            sessionKey={'unmute.pattern-run:'+setId+':'+node.id+':'+runId+':'+persistentPatternEntry.item.id}
             onModeChange={setPracticeMode}
             onProgress={reportPracticeProgress}
             onDone={()=>{
