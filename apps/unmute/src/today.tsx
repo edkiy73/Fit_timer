@@ -140,6 +140,9 @@ export function TodayView({
   const allDays=withAllLearningDays(state.progress,learningDays);
   const streak=currentLearningStreak(allDays,todayDay);
   const week=lastWeekActivity(allDays,todayDay);
+  const coursePercent=state.roadmapProgress.requiredCount>0
+    ? Math.round(state.roadmapProgress.completedCount/state.roadmapProgress.requiredCount*100)
+    : 0;
   const hasReview=Boolean(review&&review.actionableCount>0);
   const courseProgress=(
     <span className="today-course" aria-label={t('today.courseProgress')}>
@@ -249,9 +252,11 @@ export function TodayView({
               aria-label={t('today.reviewStart')+': '+review.actionableCount}
             >
               <span className="tile-kicker tone-listen"><Icon name="review" size={18} />{t('nav.review')}</span>
-              <strong className="tile-number"><AnimatedNumber value={review.actionableCount} /></strong>
-              <span className="tile-caption">{t('today.reviewCaption')}</span>
-              <span className="tile-link">{t('today.reviewStart')} →</span>
+              <div className="tile-review-row">
+                <strong className="tile-number"><AnimatedNumber value={review.actionableCount} /></strong>
+                <span className="tile-caption">{t('today.reviewCaption')}</span>
+                <span className="tile-link">{t('today.reviewStart')} →</span>
+              </div>
               {review.waitingCount>0&&<span className="sr-only">{t('today.reviewWaiting',{count:review.waitingCount})}</span>}
             </button>
           </div>
@@ -272,6 +277,16 @@ export function TodayView({
                   {weekdayLabel.format(new Date((todayDay-6+day)*DAY_MS))}
                 </span>
               ))}
+            </div>
+          </Tile>
+
+          <Tile className="tile-course-mini" index={index++}>
+            <div className="tile-kicker tone-accent"><Icon name="progress" size={18} />{t('today.courseMini')}</div>
+            <div className="course-mini-body">
+              <div className="course-mini-ring" style={{'--p':coursePercent} as CSSProperties}>
+                <strong><AnimatedNumber value={coursePercent} suffix="%" /></strong>
+              </div>
+              <span className="tile-caption">{t('today.courseMiniCaption',{done:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})}</span>
             </div>
           </Tile>
 
