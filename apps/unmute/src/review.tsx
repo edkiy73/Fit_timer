@@ -709,7 +709,12 @@ export function ReviewView({
             <div className="learn-feedback learn-feedback-wrong learn-save-error" role="alert">
               <strong>{t('learn.saveError')}</strong>
               <span>{t('learn.saveErrorHint')}</span>
-              <button className="secondary-button" type="button" disabled={busy} onClick={item.activity.type==='choice'?()=>checkChoice(selected??-1):checkText}>
+              <button
+                className="secondary-button"
+                type="button"
+                disabled={busy||(item.activity.type==='choice'&&selected===null)}
+                onClick={item.activity.type==='choice'?()=>selected!==null&&checkChoice(selected):checkText}
+              >
                 {t('learn.retrySave')}
               </button>
             </div>
