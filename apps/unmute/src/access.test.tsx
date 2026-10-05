@@ -72,6 +72,10 @@ describe('course access and purchase',()=>{
     const user=userEvent.setup();
     const {onBuy}=renderView(runtime(),session());
     expect(screen.getByRole('heading',{name:'Открой весь курс'})).toBeTruthy();
+    expect(screen.getByRole('heading',{name:'Открыть этот курс'})).toBeTruthy();
+    expect(screen.getByText('Разовая покупка. Курс останется твоим навсегда.')).toBeTruthy();
+    expect(screen.getByRole('heading',{name:'Дополнительно: UnMute Plus'})).toBeTruthy();
+    expect(screen.getByText(/Plus не открывает этот курс/)).toBeTruthy();
     expect(screen.getByRole('radio',{name:/Весь курс навсегда/})).toBeTruthy();
     expect(screen.getByRole('radio',{name:/Plus на месяц/})).toBeTruthy();
     expect(screen.getByRole('radio',{name:/Plus на год/})).toBeTruthy();
@@ -131,6 +135,7 @@ describe('course access and purchase',()=>{
   it('leads with Plus when the learner came from the AI limits',()=>{
     renderView(runtime('full'),session(),{focus:'plus'});
     expect(screen.getByRole('heading',{name:'UnMute Plus'})).toBeTruthy();
+    expect(screen.queryByText(/Plus не открывает этот курс/)).toBeNull();
     expect(screen.queryByRole('radio',{name:/Весь курс навсегда/})).toBeNull();
     expect(screen.getByRole('radio',{name:/Plus на год/})).toHaveProperty('checked',true);
   });
