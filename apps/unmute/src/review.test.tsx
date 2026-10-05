@@ -303,6 +303,9 @@ describe('course review screen',()=>{
     expect(await screen.findByRole('heading',{name:'дом'})).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Показать слово'}));
     expect(await screen.findByText('home')).toBeTruthy();
+    const actions=screen.getByRole('button',{name:'Не помню'}).parentElement;
+    expect(actions?.classList.contains('review-word-actions')).toBe(true);
+    expect(Array.from(actions?.querySelectorAll('button')||[]).map(button=>button.textContent)).toEqual(['Не помню','Помню']);
     await user.click(screen.getByRole('button',{name:'Помню'}));
 
     expect(saveWord).toHaveBeenCalledWith('lex.home','noun',true);
