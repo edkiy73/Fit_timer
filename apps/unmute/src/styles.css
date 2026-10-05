@@ -235,6 +235,18 @@ select:active{transform:scale(.985)}
 .learn-back:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
 .learn-state,.learn-card{border:1px solid var(--line);border-radius:var(--radius-tile);background:var(--card);padding:20px}
 .learn-state{display:grid;gap:10px;justify-items:start}
+.learn-state,.today-state,.review-empty,.my-words-empty{position:relative;overflow:hidden}
+.learn-state::after,.today-state::after,.review-empty::after,.my-words-empty::after{content:"";position:absolute;right:-42px;bottom:-52px;width:136px;height:136px;border-radius:50%;background:color-mix(in srgb,var(--accent) 6%,transparent);pointer-events:none}
+.learn-state>* ,.today-state>* ,.review-empty>* ,.my-words-empty>*{position:relative;z-index:1}
+.learn-state[role="alert"],.today-state[role="alert"]{border-color:color-mix(in srgb,var(--danger) 22%,var(--line));background:
+  radial-gradient(circle at 100% 0,color-mix(in srgb,var(--danger) 8%,transparent),transparent 42%),
+  var(--card)}
+.learn-state[role="status"]{background:
+  radial-gradient(circle at 100% 0,color-mix(in srgb,var(--accent) 7%,transparent),transparent 42%),
+  var(--card)}
+.review-empty{border-color:color-mix(in srgb,var(--success) 18%,var(--line));background:
+  radial-gradient(circle at 50% 0,color-mix(in srgb,var(--success) 9%,transparent),transparent 42%),
+  var(--card)}
 .learn-summary{display:grid;gap:10px;justify-items:center;text-align:center;padding:32px 20px}
 .learn-summary h2{margin:0}
 .learn-summary-icon{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:color-mix(in srgb,var(--accent) 14%,var(--card));color:var(--accent)}
@@ -683,6 +695,12 @@ select:active{transform:scale(.985)}
 .stage-head:focus-visible,.station-body:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .stages{display:grid;gap:10px}
 .stage{border:1px solid var(--line);border-radius:var(--radius-tile);background:var(--card);overflow:hidden}
+.stage{transition:border-color var(--motion-base) ease,background-color var(--motion-base) ease,box-shadow var(--motion-base) ease}
+.stage.is-current-stage{border-color:color-mix(in srgb,var(--accent) 22%,var(--line));background:
+  radial-gradient(circle at 100% 0,color-mix(in srgb,var(--accent) 8%,transparent),transparent 42%),
+  var(--card)}
+.stage.is-current-stage.is-open{box-shadow:0 10px 28px color-mix(in srgb,var(--accent) 8%,transparent)}
+.stage.is-current-stage .stage-name{color:var(--accent-ink)}
 .stage-head{display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 14px 12px 10px;border:0;background:transparent;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
 .stage-head-text{display:grid;gap:2px;flex:1 1 auto;min-width:0}
 .stage-name{font-size:16px;font-weight:800}
@@ -719,6 +737,8 @@ select:active{transform:scale(.985)}
 .station.is-purchase-locked .station-marker{width:26px;height:26px;margin-top:17px;border:0;background:var(--locked);color:var(--card);box-shadow:none}
 .station.is-current .station-marker{width:26px;height:26px;margin-top:17px;border:5px solid var(--accent);background:var(--card);color:var(--accent-ink);box-shadow:none}
 .station.is-current .station-body{margin:6px 0;padding:10px 12px;border-radius:18px;background:color-mix(in srgb,var(--accent) 9%,var(--card))}
+.station.is-current .station-body{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 16%,transparent)}
+.station.is-current .station-go{box-shadow:0 8px 18px color-mix(in srgb,var(--accent) 14%,transparent)}
 .station.is-current .station-day{color:var(--accent-ink)}
 .station.is-current .station-title{font-size:17px}
 .station.is-current .station-marker::after{content:"";position:absolute;inset:-9px;border-radius:50%;background:color-mix(in srgb,var(--accent) 26%,transparent);z-index:-1;animation:here-pulse 2.2s ease-in-out infinite}
@@ -758,14 +778,24 @@ select:active{transform:scale(.985)}
 
 /* Bottom sheet: slides up with a spring; Back/Escape/scrim close it. */
 .sheet-scrim{position:fixed;inset:0;z-index:1200;display:flex;align-items:flex-end;justify-content:center;background:rgb(8 8 14/.45);animation:scrim-in var(--motion-fast) ease both}
-.sheet{position:relative;width:min(100%,620px);max-height:82vh;overflow:auto;display:grid;gap:12px;padding:12px 20px calc(24px + var(--safe-bottom));border-radius:32px 32px 0 0;background:var(--card);color:var(--ink);box-shadow:var(--elev-2);outline:none;animation:sheet-in var(--motion-sheet) var(--motion-spring-ease) both}
+.sheet{position:relative;width:min(100%,620px);max-height:82vh;overflow:auto;display:grid;gap:12px;padding:12px 20px calc(24px + var(--safe-bottom));border-radius:32px 32px 0 0;border-top:1px solid color-mix(in srgb,var(--line) 72%,white 28%);background:
+  radial-gradient(circle at 50% -20%,color-mix(in srgb,var(--accent) 7%,transparent),transparent 34%),
+  var(--card);color:var(--ink);box-shadow:0 -10px 40px rgb(0 0 0/.18);outline:none;animation:sheet-in var(--motion-sheet) var(--motion-spring-ease) both}
 .sheet-scrim.is-leaving{pointer-events:none;animation:scrim-out var(--motion-sheet-exit) ease both}
 .sheet.is-leaving{animation:sheet-out var(--motion-sheet-exit) var(--motion-exit-ease) both}
 .sheet > *{min-width:0}
 .sheet-grab{justify-self:center;width:40px;height:4px;border-radius:2px;background:var(--line)}
 .sheet-close{position:absolute;top:12px;right:12px;display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:22px;background:var(--surface);color:var(--ink);cursor:pointer}
+.sheet-close{box-shadow:inset 0 0 0 1px var(--line);transition:transform var(--dur-spring) var(--spring),background-color var(--motion-fast) ease}
+.sheet-close:active{transform:scale(.94)}
 .sheet-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .station-sheet{display:grid;gap:10px}
+.station-sheet{padding-top:4px}
+.station-sheet::before{content:"";width:48px;height:6px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);margin-bottom:2px}
+.station-sheet[data-status="current"]::before,.station-sheet[data-status="available"]::before{background:color-mix(in srgb,var(--accent) 18%,var(--surface))}
+.station-sheet[data-status="complete"]::before{background:color-mix(in srgb,var(--success) 22%,var(--surface))}
+.station-sheet[data-status$="locked"]::before{background:color-mix(in srgb,var(--locked) 20%,var(--surface))}
+.station-sheet h3{letter-spacing:-.02em}
 /* Only the heading rows make room for the sheet's close button; the buttons span the full width. */
 .station-sheet>.screen-kicker,.station-sheet>h3{padding-right:48px}
 .station-sheet h3{margin:0;font-size:22px;line-height:1.25}
@@ -776,6 +806,7 @@ select:active{transform:scale(.985)}
 @keyframes scrim-in{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){
   .station,.sheet,.sheet-scrim,.learn-card,.learn-feedback-head,.learn-feedback-actions,.station.is-reward .station-marker,.station.is-reward .station-body,.station.is-reward .here-pill,.completion-summary,.completion-summary .learn-summary-icon{animation:none!important}
+  .stage,.sheet-close{transition:none!important}
   ::view-transition-old(runner-activity),::view-transition-new(runner-activity){animation:none!important}
   .station.is-current .station-marker::after{animation:none}
   .stage-chevron{transition:none}
