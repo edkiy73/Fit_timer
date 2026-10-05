@@ -251,11 +251,17 @@ export function TodayView({
               onClick={onReview}
               aria-label={t('today.reviewStart')+': '+review.actionableCount}
             >
-              <span className="tile-kicker tone-listen"><Icon name="review" size={18} />{t('nav.review')}</span>
-              <div className="tile-review-row">
-                <strong className="tile-number"><AnimatedNumber value={review.actionableCount} /></strong>
-                <span className="tile-caption">{t('today.reviewCaption')}</span>
-              </div>
+              <span className="review-card-main">
+                <span className="review-card-icon" aria-hidden="true"><Icon name="review" size={22} /></span>
+                <span className="review-card-copy">
+                  <strong>{t('nav.review')}</strong>
+                  <span>{t('today.reviewReady')}</span>
+                </span>
+              </span>
+              <span className="review-card-count">
+                <strong><AnimatedNumber value={review.actionableCount} /></strong>
+                <span>{t('today.reviewCaption')}</span>
+              </span>
               {review.waitingCount>0&&<span className="sr-only">{t('today.reviewWaiting',{count:review.waitingCount})}</span>}
             </button>
           </div>
@@ -266,8 +272,11 @@ export function TodayView({
         <h3 id="today-extra-title" className="today-section-title">{t('today.extraTitle')}</h3>
         <div className="bento">
           <Tile className="tile-streak" index={index++}>
-            <div className="tile-kicker tone-streak"><Icon name="flame" size={18} />{t('today.streak')}</div>
-            <strong className="tile-number"><AnimatedNumber value={streak} /><span className="tile-unit">{countDays(t,locale,streak).replace(/^\S+\s/,'')}</span></strong>
+            <div className="mini-card-head">
+              <span className="mini-card-icon tone-streak" aria-hidden="true"><Icon name="flame" size={18} /></span>
+              <span className="tile-kicker tone-streak">{t('today.streak')}</span>
+            </div>
+            <strong className="tile-number streak-number"><AnimatedNumber value={streak} /><span className="tile-unit">{countDays(t,locale,streak).replace(/^\S+\s/,'')}</span></strong>
             <div className="week" aria-label={t('today.week',{count:week.filter(Boolean).length})}>
               {week.map((active,day)=>(
                 <span key={day} className={'week-day'+(active?' is-active':'')} aria-hidden="true">
@@ -279,12 +288,19 @@ export function TodayView({
           </Tile>
 
           <Tile className="tile-course-mini" index={index++}>
-            <div className="tile-kicker tone-accent"><Icon name="progress" size={18} />{t('today.courseMini')}</div>
+            <div className="mini-card-head">
+              <span className="mini-card-icon tone-accent" aria-hidden="true"><Icon name="progress" size={18} /></span>
+              <span className="tile-kicker tone-accent">{t('today.courseMini')}</span>
+            </div>
             <div className="course-mini-body">
               <div className="course-mini-ring" style={{'--p':coursePercent} as CSSProperties}>
+                <span className="course-mini-ring-track" aria-hidden="true" />
                 <strong><AnimatedNumber value={coursePercent} suffix="%" /></strong>
               </div>
-              <span className="tile-caption">{t('today.courseMiniCaption',{done:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})}</span>
+              <span className="course-mini-copy">
+                <strong>{t('today.courseMiniDone',{done:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})}</strong>
+                <span>{t('today.courseMiniPassed')}</span>
+              </span>
             </div>
           </Tile>
 
