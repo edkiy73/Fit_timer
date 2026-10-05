@@ -187,21 +187,54 @@ export function AccessOfferView({
         </article>
       ) : null}
 
-      <div className="access-plans" role="radiogroup" aria-label={t('access.choose')}>
-        {plans.map(item => (
-          <label key={item.id} className={'access-plan pressable' + (item.id === selected?.id ? ' is-on' : '')}>
-            <input type="radio" name="access-plan" value={item.id} checked={item.id === selected?.id} onChange={() => setPlan(item.id)} />
-            <span className="access-plan-radio" aria-hidden="true" />
-            <span className="access-plan-text">
-              <b>{item.title}{item.badge && <em className="access-plan-badge">{item.badge}</em>}</b>
-              <small>{item.note}</small>
-            </span>
-            <span className="access-plan-price">
-              {item.was && <s>{item.was}</s>}
-              <strong>{item.price}</strong>
-            </span>
-          </label>
-        ))}
+      <div className="access-offers" role="radiogroup" aria-label={t('access.choose')}>
+        {plans.some(item=>item.id==='course')&&(
+          <section className="access-offer-group" aria-labelledby="access-course-group">
+            <div className="access-offer-head">
+              <h3 id="access-course-group">{t('access.courseGroupTitle')}</h3>
+              <p>{t('access.courseGroupLead')}</p>
+            </div>
+            {plans.filter(item=>item.id==='course').map(item => (
+              <label key={item.id} className={'access-plan pressable' + (item.id === selected?.id ? ' is-on' : '')}>
+                <input type="radio" name="access-plan" value={item.id} checked={item.id === selected?.id} onChange={() => setPlan(item.id)} />
+                <span className="access-plan-radio" aria-hidden="true" />
+                <span className="access-plan-text">
+                  <b>{item.title}{item.badge && <em className="access-plan-badge">{item.badge}</em>}</b>
+                  <small>{item.note}</small>
+                </span>
+                <span className="access-plan-price">
+                  {item.was && <s>{item.was}</s>}
+                  <strong>{item.price}</strong>
+                </span>
+              </label>
+            ))}
+          </section>
+        )}
+
+        {plans.some(item=>item.id!=='course')&&(
+          <section className="access-offer-group" aria-labelledby="access-plus-group">
+            <div className="access-offer-head">
+              <h3 id="access-plus-group">{t(offerCourse?'access.plusGroupTitle':'access.plusHeading')}</h3>
+              <p>{t(offerCourse?'access.plusGroupLead':'access.plusLead')}</p>
+            </div>
+            <div className="access-plans">
+              {plans.filter(item=>item.id!=='course').map(item => (
+                <label key={item.id} className={'access-plan pressable' + (item.id === selected?.id ? ' is-on' : '')}>
+                  <input type="radio" name="access-plan" value={item.id} checked={item.id === selected?.id} onChange={() => setPlan(item.id)} />
+                  <span className="access-plan-radio" aria-hidden="true" />
+                  <span className="access-plan-text">
+                    <b>{item.title}{item.badge && <em className="access-plan-badge">{item.badge}</em>}</b>
+                    <small>{item.note}</small>
+                  </span>
+                  <span className="access-plan-price">
+                    {item.was && <s>{item.was}</s>}
+                    <strong>{item.price}</strong>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       <ul className="access-benefits">
