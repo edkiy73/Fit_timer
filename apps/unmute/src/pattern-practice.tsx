@@ -81,9 +81,11 @@ export function PatternPracticeView({
   },[active,mode,onModeChange]);
 
   useEffect(()=>{
-    if(!active||mode==='complete'||!onProgress)return;
+    if(!active||mode==='complete'||!onProgress||briefed.has(mode))return;
+    // Only an unstarted mode owns the default 1/N header value.
+    // Once the mode has started, its mounted child reports the real phrase position.
     onProgress(1,activity.items.length);
-  },[active,activity.items.length,mode,onProgress]);
+  },[active,activity.items.length,briefed,mode,onProgress]);
 
   // The lesson-level tabs can change initialMode while this component keeps the same key.
   // Mirror that prop into local state instead of getting stuck in the previously mounted mode.

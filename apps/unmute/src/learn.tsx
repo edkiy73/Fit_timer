@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity, RoadmapNode } from './content/schema';
@@ -339,6 +339,9 @@ export function NodeRunnerView({
   const [checking,setChecking]=useState(false);
   const [practiceMode,setPracticeMode]=useState<PracticeSrsKind|undefined>(startMode);
   const [practiceProgress,setPracticeProgress]=useState<{current:number;total:number}|null>(null);
+  const reportPracticeProgress=useCallback((current:number,total:number)=>{
+    setPracticeProgress(previous=>previous?.current===current&&previous.total===total?previous:{current,total});
+  },[]);
   const [practiceActivityIndex,setPracticeActivityIndex]=useState<number|null>(null);
   const [shuffleSeed,setShuffleSeed]=useState(()=>randomSeed());
   const [runHydrated,setRunHydrated]=useState(false);
@@ -1243,7 +1246,7 @@ export function NodeRunnerView({
             showModeNav={false}
             active={activity.type==='pattern-drill'}
             onModeChange={setPracticeMode}
-            onProgress={(current,total)=>setPracticeProgress({current,total})}
+            onProgress={reportPracticeProgress}
             onDone={()=>{
               setPracticeMode(undefined);
               void saveSeen(setId,persistentPatternEntry.item.id).catch(()=>undefined).then(()=>advance());
