@@ -278,6 +278,36 @@ export function missingForNode(node:RoadmapNode,progress:CourseProgressDocument)
   return {practice,unseen};
 }
 
+export interface MissingRequirementTarget {
+  index:number;
+  mode?:PracticeSrsKind;
+}
+
+/** First unresolved required activity in the lesson's actual order. */
+export function firstMissingRequirementTarget(
+  node:RoadmapNode,
+  steps:Activity[],
+  progress:CourseProgressDocument
+):MissingRequirementTarget|null{
+  const missing=missingForNode(node,progress);
+  const candidates:{index:number;sequence:number;mode?:PracticeSrsKind}[]=[];
+  let sequence=0;
+  for(const id of missing.unseen){
+    const index=steps.findIndex(item=>item.id===id);
+    if(index>=0)candidates.push({index,sequence:sequence++});
+  }
+  for(const item of missing.practice){
+    const index=steps.findIndex(step=>step.id===item.activityId);
+    if(index>=0)candidates.push({index,sequence:sequence++,mode:item.mode});
+  }
+  candidates.sort((a,b)=>a.index-b.index||a.sequence-b.sequence);
+  const target=candidates[0];
+  if(!target)return null;
+  return target.mode===undefined
+    ? {index:target.index}
+    : {index:target.index,mode:target.mode};
+}
+
 export function NodeRunnerView({
   runtime,
   nodeId,
@@ -576,6 +606,27 @@ export function NodeRunnerView({
   // Count completion from a durable candidate. It is written before refresh, so an app
   // kill between the final answer and the refreshed roadmap cannot lose the event.
   const nodeComplete=Boolean(nodeProgress?.complete);
+  useEffect(()=>{
+    if(!runHydrated||!finished||checking||nodeComplete||!state||!node)return;
+    const target=firstMissingRequirementTarget(node,steps,state.progress);
+    if(!target)return;
+
+    // A manually opened section may finish while another required section is still pending.
+    // Do not show the dead-end «day not counted» summary: continue the same canonical run.
+    clearCompletionCandidate(state.set.id,node.id);
+    setFinished(false);
+    begin(target.index);
+    setIntro(false);
+    setRunMode('resume');
+    if(target.mode){
+      setOrder([target.index]);
+      setFirstPass(1);
+      setPracticeMode(target.mode);
+    }else{
+      setPracticeMode(undefined);
+    }
+  },[checking,finished,node?.id,nodeComplete,runHydrated,state?.progress,stepSignature]);
+
   useEffect(()=>{
     if(!runHydrated||!state||!node)return;
     const candidate=readCompletionCandidate(state.set.id,node.id);
@@ -926,7 +977,8 @@ export function NodeRunnerView({
 
   if(!activity)return null;
   const retrying=pos>=firstPass;
-  // The counter names the lesson's tasks; the replayed mistakes are counted separately.
+  const retryRemaining=retrying?new Set(order.slice(pos)).size:0;
+  // The counter names the lesson's first pass. Correction uses its own remaining-error count.
   const shown=retrying?firstPass:pos+1;
   const position=t('learn.position',{current:shown,total:firstPass});
   // Only the first answer of a first run moves review intervals and stats: a replayed day and
@@ -1112,14 +1164,16 @@ export function NodeRunnerView({
         ) : (
           <>
             <RunnerProgress order={order} total={firstPass} pos={pos} results={firstPassResults} label={t('learn.activityProgress')} />
-            <span className="runner-count" aria-label={position}>{shown}/{firstPass}</span>
+            <span className="runner-count" aria-label={position}>
+              {retrying?retryRemaining:shown+'/'+firstPass}
+            </span>
           </>
         )}
       </div>
       {exitSheet}
 
       {header}
-      {retrying&&<p className="runner-retry" role="status">{t('learn.retryPhase',{current:pos-firstPass+1,total:order.length-firstPass})}</p>}
+      {retrying&&<p className="runner-retry" role="status">{t('learn.retryPhase',{count:retryRemaining})}</p>}
       {answerSaveError&&(
         <div className="learn-feedback learn-feedback-wrong learn-save-error" role="alert">
           <strong>{t('learn.saveError')}</strong>
