@@ -75,7 +75,9 @@ export function MyWordsView({
                   <strong lang="en">{word.lemma}</strong>
                   <span>{word.translation}</span>
                 </span>
-                <span className={'word-status is-'+word.status}>{t(STATUS_KEY[word.status])}</span>
+                {word.status!=='new'&&(
+                  <span className={'word-status is-'+word.status}>{t(STATUS_KEY[word.status])}</span>
+                )}
                 <button
                   className="word-remove pressable"
                   type="button"
