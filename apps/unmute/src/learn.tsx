@@ -568,14 +568,6 @@ export function NodeRunnerView({
     if(answeredStep!==undefined)setFirstPassResults(current=>({...current,[answeredStep]:correct}));
   };
 
-  const exitWithoutSaving=()=>{
-    if(state&&node){
-      clearLessonRun(state.set.id,node.id);
-      clearCompletionCandidate(state.set.id,node.id);
-    }
-    setExitOpen(false);
-    onExit();
-  };
   const exitSheet=(
     <Sheet open={exitOpen} onClose={()=>setExitOpen(false)} labelledBy="lesson-exit-title" closeLabel={t('learn.exitStay')}>
       <div className="confirm-sheet confirm-sheet-compact">
@@ -590,7 +582,6 @@ export function NodeRunnerView({
             onExit();
           }}
         >{t('learn.exitSave')}</button>
-        <button className="link-button danger-link" type="button" onClick={exitWithoutSaving}>{t('learn.exitDiscard')}</button>
       </div>
     </Sheet>
   );

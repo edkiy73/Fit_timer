@@ -183,7 +183,7 @@ describe('node activity runner',()=>{
     expect(await screen.findByText('Собери фразу из слов')).toBeTruthy();
     const pool=screen.getByLabelText('Слова');
     for(const word of ['I','am','here'])await user.click(within(pool).getByRole('button',{name:word}));
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     expect(saveGraded).toHaveBeenCalledWith('general-foundation','text.one',true,'build',expect.any(String));
 
     await user.click(screen.getByRole('button',{name:'Завершить'}));
@@ -206,7 +206,7 @@ describe('node activity runner',()=>{
 
     await user.click(screen.getByRole('button',{name:'Написать с клавиатуры'}));
     await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am herw');
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
 
     expect(await screen.findByText('Почти правильно')).toBeTruthy();
     expect(screen.getByText('Похоже на опечатку — ответ засчитан.')).toBeTruthy();
@@ -242,7 +242,7 @@ describe('node activity runner',()=>{
     expect(screen.getByText('2/2')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Написать с клавиатуры'}));
     await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am here');
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     await user.click(screen.getByRole('button',{name:'Далее'}));
     // The mistake returns: same question, now in «работа над ошибками».
     expect(await screen.findByText('Работа над ошибками: 1 из 1')).toBeTruthy();
@@ -350,7 +350,7 @@ describe('node activity runner',()=>{
     await user.click(await screen.findByRole('button',{name:'Написать с клавиатуры'}));
     const input=await screen.findByRole('textbox',{name:'Твой ответ'});
     await user.type(input,'I am here');
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     await user.click(screen.getByRole('button',{name:'Завершить'}));
 
     expect(onNodeCompleted).not.toHaveBeenCalled();
