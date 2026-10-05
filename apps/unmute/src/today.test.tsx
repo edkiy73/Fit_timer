@@ -82,7 +82,7 @@ function renderToday(value:LearnerCourseRuntimeValue,onStart=vi.fn(),onReview=vi
 }
 
 describe('Today learner shell',()=>{
-  it('shows current day, node and course progress',()=>{
+  it('shows current-day progress without mixing in the course-day counter',()=>{
     renderToday(runtime());
 
     expect(screen.getByRole('heading',{name:'Сегодня'})).toBeTruthy();
@@ -90,8 +90,18 @@ describe('Today learner shell',()=>{
     expect(screen.getByRole('heading',{name:'Настоящее время'})).toBeTruthy();
     expect(screen.getByText('0 из 2 заданий · ~1 мин')).toBeTruthy();
     expect(screen.getByText('Основа фразы')).toBeTruthy();
-    expect(screen.getByText('1/4')).toBeTruthy();
+    expect(screen.queryByText('1/4')).toBeNull();
+    expect(screen.getByText('1 из 4 дней')).toBeTruthy();
     expect(screen.getByRole('button',{name:'Начать'})).toBeTruthy();
+  });
+
+  it('does not offer replaying current-day tasks from the Today hero',()=>{
+    const progress=emptyCourseProgress();
+    progress.seen['card.one']={at:'2026-10-05T10:00:00Z'};
+    renderToday(runtime({state:{...state,progress}}));
+
+    expect(screen.getByRole('button',{name:'Продолжить'})).toBeTruthy();
+    expect(screen.queryByRole('button',{name:'Повторить задания'})).toBeNull();
   });
 
   it('opens the current node from Today',async()=>{
@@ -220,7 +230,8 @@ describe('Today learner shell',()=>{
     }));
 
     expect(screen.getByRole('heading',{name:'Курс пройден'})).toBeTruthy();
-    expect(screen.getByText('4/4')).toBeTruthy();
+    expect(screen.queryByText('4/4')).toBeNull();
+    expect(screen.getByText('4 из 4 дней')).toBeTruthy();
     expect(screen.queryByText('День 2')).toBeNull();
   });
 

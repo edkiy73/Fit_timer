@@ -74,7 +74,6 @@ export function TodayView({
   runtime,
   wordRuntime=null,
   onStart,
-  onReplayTasks=(nodeId:string)=>onStart(nodeId),
   onSpeak=(nodeId:string)=>onStart(nodeId),
   onReview,
   onMap,
@@ -86,8 +85,6 @@ export function TodayView({
   runtime:LearnerCourseRuntimeValue;
   wordRuntime?:WordReviewRuntimeValue|null;
   onStart:(nodeId:string)=>void;
-  /** Replay only the regular answer tasks of the current day. */
-  onReplayTasks?:(nodeId:string)=>void;
   /** «Скажи вслух»: the day's phrases in speaking mode, or the day itself when it has none. */
   onSpeak?:(nodeId:string,patternId:string|null)=>void;
   onReview:()=>void;
@@ -144,11 +141,6 @@ export function TodayView({
     ? Math.round(state.roadmapProgress.completedCount/state.roadmapProgress.requiredCount*100)
     : 0;
   const hasReview=Boolean(review&&review.actionableCount>0);
-  const courseProgress=(
-    <span className="today-course" aria-label={t('today.courseProgress')}>
-      {state.roadmapProgress.completedCount}/{state.roadmapProgress.requiredCount}
-    </span>
-  );
   let index=0;
 
   let hero:ReactNode;
@@ -157,7 +149,6 @@ export function TodayView({
       <Tile className="tile-hero today-hero" index={index++}>
         <div className="tile-top">
           <span className="chip"><LexiconText text={localizedText(state.set.title,locale)} /></span>
-          {courseProgress}
         </div>
         <h3>{t('today.completeTitle')}</h3>
         <p className="tile-text">{t('today.completeText')}</p>
@@ -174,7 +165,6 @@ export function TodayView({
             <span>{node.dayIndex?t('today.day',{day:node.dayIndex}):t('today.nextStep')}</span>
             {stage&&<span className="chip-soft">{t(stageNameKey(stage))}</span>}
           </span>
-          {courseProgress}
         </div>
         <h3><LexiconText text={nodeTopic(state.set,node,locale)} /></h3>
         <div
@@ -194,11 +184,6 @@ export function TodayView({
           <Icon name="play" size={18} />
           {done>0?t('today.continue'):t('today.start')}
         </button>
-        {done>0&&(
-          <button className="secondary-button today-replay-tasks" type="button" onClick={()=>onReplayTasks(node.id)}>
-            {t('today.replayTasks')}
-          </button>
-        )}
       </Tile>
     );
   }else{
@@ -207,7 +192,6 @@ export function TodayView({
       <Tile className="tile-hero today-hero" index={index++}>
         <div className="tile-top">
           <span className="chip"><Icon name="lock" size={16} />{t('today.locked')}</span>
-          {courseProgress}
         </div>
         <h3>{preview?t('today.previewCompleteTitle'):t('today.blockedTitle')}</h3>
         <p className="tile-text">{preview?t('today.previewCompleteText'):t('today.blockedText')}</p>
@@ -393,7 +377,6 @@ export function TodayScreen(){
       wordRuntime={useWordReviewRuntime()}
       learningDays={useAllLearningDays()}
       onStart={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId))}
-      onReplayTasks={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId)+'?tasks=1')}
       onSpeak={(nodeId,patternId)=>navigate('/learn/'+encodeURIComponent(nodeId)+(patternId?'?activity='+encodeURIComponent(patternId)+'&mode=speaking':''))}
       onReview={()=>navigate('/review')}
       onMap={()=>navigate('/course')}
