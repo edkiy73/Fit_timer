@@ -211,7 +211,7 @@ describe('progress screen summary',()=>{
 
     renderProgress(state);
 
-    expect(screen.getByText('К повтору')).toBeTruthy();
+    expect(screen.queryByText('К повтору')).toBeNull();
     expect(screen.getByText('Подробнее о практике')).toBeTruthy();
     expect(screen.queryByText('карточки')?.closest('.progress-course-kpis')).toBeNull();
   });

@@ -146,7 +146,6 @@ export const ru = {
   'progress.practiceCount': '{count} упражн.',
   'progress.practiceSpeedValue': '{count} упражн. · {percent}% вовремя',
   'progress.practiceDialogueValue': '{count} упражн. · {percent}% верно',
-  'progress.dueNow': 'К повтору',
   'progress.loadingTitle': 'Собираем прогресс',
   'progress.errorTitle': 'Прогресс не загрузился',
   'progress.emptyTitle': 'Здесь появится твой прогресс',
