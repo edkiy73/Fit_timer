@@ -382,7 +382,7 @@ export const ru = {
   'learn.introKicker': 'Прочитай перед заданиями',
   'learn.toTasks': 'К заданиям',
   'learn.willReturn': 'Это задание вернётся в конце урока.',
-  'learn.retryPhase': 'Работа над ошибками: {current} из {total}',
+  'learn.retryPhase': 'Работа над ошибками · осталось {count}',
   'learn.reviewDayTitle': 'День повторения',
   'learn.reviewDayText': 'Новых тем сегодня нет. Повтори то, что пора освежить: {count}. Когда закончишь, день засчитается.',
   'learn.reviewDayClear': 'На сегодня повторений нет. День можно засчитать.',
