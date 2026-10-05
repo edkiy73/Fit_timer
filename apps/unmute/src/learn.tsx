@@ -334,6 +334,7 @@ export function NodeRunnerView({
   const [result,setResult]=useState<boolean|null>(null);
   const [nearResult,setNearResult]=useState(false);
   const [busy,setBusy]=useState(false);
+  const [answerSaveError,setAnswerSaveError]=useState(false);
   const [theoryOpen,setTheoryOpen]=useState(false);
   const [score,setScore]=useState({correct:0,total:0});
   const [firstPassResults,setFirstPassResults]=useState<Record<number,boolean>>({});
@@ -367,6 +368,7 @@ export function NodeRunnerView({
     setPicked([]);
     setResult(null);
     setNearResult(false);
+    setAnswerSaveError(false);
     setScore({correct:0,total:0});
     setFirstPassResults({});
     setShuffleSeed(randomSeed());
@@ -497,6 +499,7 @@ export function NodeRunnerView({
     setTyping(false);
     setResult(null);
     setNearResult(false);
+    setAnswerSaveError(false);
     setBusy(false);
   },[activity?.id,pos]);
 
@@ -825,12 +828,15 @@ export function NodeRunnerView({
   const handleChoice=async(choice:number|null=selected)=>{
     if(activity.type!=='choice'||choice===null||busy||result!==null)return;
     setBusy(true);
+    setAnswerSaveError(false);
     try{
       const correct=choice===activity.correctIndex;
       await gradeAnswer(correct);
       countAnswer(correct);
       if(!correct)retryLater();
       setResult(correct);
+    }catch(_){
+      setAnswerSaveError(true);
     }finally{
       setBusy(false);
     }
@@ -859,6 +865,7 @@ export function NodeRunnerView({
     if((activity.type!=='text-input'&&activity.type!=='translation')||busy||result!==null)return;
     if(!input)return;
     setBusy(true);
+    setAnswerSaveError(false);
     try{
       const exactCorrect=activity.answer.caseSensitive
         ? activity.answer.accepted.some(candidate=>candidate.trim()===input)
@@ -874,6 +881,8 @@ export function NodeRunnerView({
       if(!correct)retryLater();
       setNearResult(typo);
       setResult(correct);
+    }catch(_){
+      setAnswerSaveError(true);
     }finally{
       setBusy(false);
     }
@@ -961,6 +970,20 @@ export function NodeRunnerView({
 
       {header}
       {retrying&&<p className="runner-retry" role="status">{t('learn.retryPhase',{current:pos-firstPass+1,total:order.length-firstPass})}</p>}
+      {answerSaveError&&(
+        <div className="learn-feedback learn-feedback-wrong learn-save-error" role="alert">
+          <strong>{t('learn.saveError')}</strong>
+          <span>{t('learn.saveErrorHint')}</span>
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={busy}
+            onClick={()=>activity.type==='choice'?void handleChoice():void handleText()}
+          >
+            {t('learn.retrySave')}
+          </button>
+        </div>
+      )}
 
       {/* The day's theory stays one tap away without moving the lesson back. */}
       <Sheet open={theoryOpen} onClose={()=>setTheoryOpen(false)} labelledBy="theory-sheet-title" closeLabel={t('learn.theoryClose')}>
