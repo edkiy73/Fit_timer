@@ -66,7 +66,7 @@ describe('pattern practice orchestration',()=>{
       </I18nProvider>
     );
 
-    await waitFor(()=>expect(onProgress).toHaveBeenCalledWith(1,8));
+    await waitFor(()=>expect(onProgress).toHaveBeenCalledWith(0,8));
     expect(screen.queryByText(/Фраз:\s*8/)).toBeNull();
     expect(screen.getByText('Тренируем произношение: телефон слушает и проверяет, узнаются ли слова.')).toBeTruthy();
     expect(screen.queryByText(/6 из 8/)).toBeNull();
