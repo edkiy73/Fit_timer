@@ -11,6 +11,7 @@ import { looseSpeechMatch } from './speech-match';
 import { ExerciseKind } from './exercise-kind';
 import { LexiconText } from './lexicon-ui';
 import { ENGLISH_SPEECH_LOCALE } from './speech-locale';
+import { AnswerFeedbackSheet } from './answer-feedback-sheet';
 
 type PatternDrillActivity=Extract<Activity,{type:'pattern-drill'}>;
 
@@ -288,11 +289,23 @@ export function PatternSpeakingView({
           </button>
         </>
       ) : (
-        <>
-          <div className={correct?'learn-feedback learn-feedback-ok':'learn-feedback learn-feedback-wrong'} role="status">
-            <strong>{correct?t('speaking.match'):t('speaking.noMatch')}</strong>
-            <span>{correct?t('speaking.matchHint'):t('speaking.noMatchHint')}</span>
-          </div>
+        <AnswerFeedbackSheet
+          tone={correct?'correct':'wrong'}
+          title={correct?t('speaking.match'):t('speaking.noMatch')}
+          subtitle={<span>{correct?t('speaking.matchHint'):t('speaking.noMatchHint')}</span>}
+          actions={
+            <>
+              {!correct&&(
+                <button className="secondary-button" type="button" onClick={acceptManually}>
+                  {t('speaking.acceptAnyway')}
+                </button>
+              )}
+              <button className="primary-button learn-feedback-next" type="button" onClick={next}>
+                {pos+1<items.length?t('learn.next'):t('learn.finish')}
+              </button>
+            </>
+          }
+        >
           <div className="drill-target"><LexiconText text={target} refs={activity.lexiconRefs} /></div>
           {item?.explanation&&(
             <p className="drill-explanation"><LexiconText text={localized(item.explanation,locale)} refs={activity.lexiconRefs} /></p>
@@ -301,17 +314,7 @@ export function PatternSpeakingView({
           <button className="link-button" type="button" onClick={()=>void speak(target,ENGLISH_SPEECH_LOCALE)}>
             {t('speaking.playReference')}
           </button>
-          {!correct&&(
-            <button className="link-button" type="button" onClick={acceptManually}>
-              {t('speaking.acceptAnyway')}
-            </button>
-          )}
-          <div className="runner-action">
-            <button className="primary-button" type="button" onClick={next}>
-              {pos+1<items.length?t('learn.next'):t('learn.finish')}
-            </button>
-          </div>
-        </>
+        </AnswerFeedbackSheet>
       )}
 
     </article>
