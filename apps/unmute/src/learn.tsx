@@ -379,6 +379,22 @@ export function NodeRunnerView({
     onExitCancelled();
   };
 
+  const leaveFromExitSheet=()=>{
+    if(state&&node)markLessonRunPaused(state.set.id,node.id);
+    // Sheet owns a same-URL history entry. If we leave while that marker is still current,
+    // Sheet cleanup calls history.back() and can bounce us straight back into the lesson.
+    try{
+      const current=window.history.state;
+      if(current?.unmuteSheet){
+        const next={...current};
+        delete next.unmuteSheet;
+        window.history.replaceState(next,'',window.location.href);
+      }
+    }catch{}
+    setExitOpen(false);
+    onExit();
+  };
+
   useEffect(()=>{
     if(exitRequest===lastExitRequestRef.current)return;
     lastExitRequestRef.current=exitRequest;
@@ -650,10 +666,7 @@ export function NodeRunnerView({
         <button
           className="secondary-button"
           type="button"
-          onClick={()=>{
-            if(state&&node)markLessonRunPaused(state.set.id,node.id);
-            onExit();
-          }}
+          onClick={leaveFromExitSheet}
         >{t('learn.exitSave')}</button>
       </div>
     </Sheet>
