@@ -10,6 +10,7 @@ import { Capacitor } from '@capacitor/core';
    «Нажми ещё раз, чтобы выйти», a second one within two seconds leaves the app. */
 
 export type BackAction = 'history' | 'today' | 'minimize';
+export const SYSTEM_BACK_EVENT='unmute:system-back';
 
 const TABS = new Set(['/course', '/review', '/account']);
 
@@ -48,6 +49,12 @@ export function NativeBackButton(){
     let cancelled = false;
     void import('@capacitor/app').then(({App}) => App.addListener('backButton', ({canGoBack}) => {
       const action = backAction(path.current, window.history.state, canGoBack);
+      if(action === 'history' && window.history.state?.unmuteSheet){
+        window.history.back();
+        return;
+      }
+      const event=new Event(SYSTEM_BACK_EVENT,{cancelable:true});
+      if(!window.dispatchEvent(event))return;
       if(action === 'history') window.history.back();
       else if(action === 'today') navigate('/', {replace:true});
       else if(secondExitPress(Date.now(), lastExitPress.current)){
