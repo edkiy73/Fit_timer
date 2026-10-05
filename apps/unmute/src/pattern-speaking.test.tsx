@@ -141,7 +141,7 @@ describe('pattern speaking',()=>{
     const {savePractice}=renderSpeaking(recognition.startRecognition);
 
     await user.click(screen.getByRole('button',{name:'Нажми и скажи'}));
-    recognition.result(['I walk at home']);
+    recognition.result(['work home']);
     expect(await screen.findByText('Не совпало')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Далее'}));
 
@@ -153,7 +153,7 @@ describe('pattern speaking',()=>{
     expect(await screen.findByText('Работа над ошибками · осталось 1')).toBeTruthy();
 
     await user.click(screen.getByRole('button',{name:'Нажми и скажи'}));
-    recognition.result(['I walk at home']);
+    recognition.result(['work home']);
     await user.click(screen.getByRole('button',{name:'Далее'}));
     expect(await screen.findByText('Работа над ошибками · осталось 1')).toBeTruthy();
 
