@@ -269,7 +269,7 @@ export function missingForNode(node:RoadmapNode,progress:CourseProgressDocument)
     if(requirement.kind==='practice-started'){
       for(const mode of requirement.modes){
         const record=state.practice[mode]?.[requirement.activityId];
-        if(!record||record.deleted||!practiceProgressComplete(record))practice.push({activityId:requirement.activityId,mode});
+        if(!record||!practiceProgressComplete(record))practice.push({activityId:requirement.activityId,mode});
       }
     }else if(requirement.kind==='activity-seen'){
       unseen.push(...requirement.activityIds.filter(id=>!state.seenActivityIds.has(id)));
