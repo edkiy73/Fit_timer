@@ -13,6 +13,16 @@ export interface ActivePracticeProgress {
   pendingCorrections?:number;
 }
 
+export interface ActiveTaskProgress {
+  attemptedSteps:number;
+  pendingCorrections:number;
+}
+
+export interface ActiveDayProgress {
+  practice?:readonly ActivePracticeProgress[];
+  tasks?:ActiveTaskProgress;
+}
+
 export interface DayProgressSection {
   id:DayProgressSectionId;
   activityId?:string;
@@ -41,7 +51,7 @@ function isLive(value:{deleted?:boolean}|undefined):boolean{
   return Boolean(value&&!value.deleted);
 }
 
-function activityStepCount(activity:Activity|undefined):number{
+export function dayActivityStepCount(activity:Activity|undefined):number{
   if(!activity)return 0;
   if(activity.type==='theory'||activity.type==='pattern-drill'||activity.type==='review')return 0;
   return 1;
@@ -67,26 +77,29 @@ function clamped(value:number,total:number):number{
 function taskSection(
   ids:string[],
   byId:Map<string,Activity>,
-  progress:CourseProgressDocument
+  progress:CourseProgressDocument,
+  active:ActiveTaskProgress|undefined
 ):DayProgressSection|null{
   let total=0;
   let completed=0;
   for(const id of ids){
     const activity=byId.get(id);
-    const count=activityStepCount(activity);
+    const count=dayActivityStepCount(activity);
     if(!count)continue;
     total+=count;
     if(isLive(progress.seen[id]))completed+=count;
   }
   if(!total)return null;
+  const attempted=Math.max(completed,clamped(active?.attemptedSteps??0,total));
+  const pending=Math.max(0,Math.min(total-completed,Math.floor(active?.pendingCorrections??0)));
   return {
     id:'tasks',
     required:true,
     totalSteps:total,
     completedSteps:completed,
-    attemptedSteps:completed,
-    pendingCorrections:0,
-    status:sectionStatus(completed,total,0,completed)
+    attemptedSteps:attempted,
+    pendingCorrections:pending,
+    status:sectionStatus(completed,total,pending,attempted)
   };
 }
 
@@ -134,7 +147,7 @@ function requirementSections(
   set:CourseSet,
   node:RoadmapNode,
   progress:CourseProgressDocument,
-  activePractice:readonly ActivePracticeProgress[]
+  active:ActiveDayProgress
 ):DayProgressSection[]{
   const byId=new Map(set.activities.map(activity=>[activity.id,activity] as const));
   const sections:DayProgressSection[]=[];
@@ -154,11 +167,11 @@ function requirementSections(
       const activity=byId.get(requirement.activityId);
       if(activity?.type!=='pattern-drill')continue;
       for(const mode of requirement.modes){
-        const active=activePractice.find(item=>item.activityId===activity.id&&item.mode===mode);
+        const active=active.practice?.find(item=>item.activityId===activity.id&&item.mode===mode);
         sections.push(practiceSection(activity,mode,progress,active));
       }
     }
-    const tasks=taskSection([...new Set(taskIds)],byId,progress);
+    const tasks=taskSection([...new Set(taskIds)],byId,progress,active.tasks);
     if(tasks)sections.unshift(tasks);
     return sections;
   }
@@ -170,7 +183,7 @@ function requirementSections(
     if(!activity)continue;
     if(activity.type==='pattern-drill'){
       for(const mode of activity.modes){
-        const active=activePractice.find(item=>item.activityId===activity.id&&item.mode===mode);
+        const active=active.practice?.find(item=>item.activityId===activity.id&&item.mode===mode);
         sections.push(practiceSection(activity,mode,progress,active));
       }
     }else if(activity.type==='review'){
@@ -179,7 +192,7 @@ function requirementSections(
       taskIds.push(id);
     }
   }
-  const tasks=taskSection(taskIds,byId,progress);
+  const tasks=taskSection(taskIds,byId,progress,active.tasks);
   if(tasks)sections.unshift(tasks);
   return sections;
 }
@@ -188,9 +201,9 @@ export function getDayProgress(
   set:CourseSet,
   node:RoadmapNode,
   progress:CourseProgressDocument,
-  activePractice:readonly ActivePracticeProgress[]=[]
+  active:ActiveDayProgress={}
 ):DayProgress{
-  const sections=requirementSections(set,node,progress,activePractice);
+  const sections=requirementSections(set,node,progress,active);
   const totalSteps=sections.reduce((sum,section)=>sum+section.totalSteps,0);
   const completedSteps=sections.reduce((sum,section)=>sum+section.completedSteps,0);
   const attemptedSteps=sections.reduce((sum,section)=>sum+section.attemptedSteps,0);
