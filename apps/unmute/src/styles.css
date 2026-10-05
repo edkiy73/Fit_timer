@@ -622,16 +622,66 @@ select:active{transform:scale(.985)}
 .today-hero::after{content:"";position:absolute;right:-42px;bottom:-54px;width:150px;height:150px;border-radius:50%;background:color-mix(in srgb,var(--accent) 7%,transparent);filter:blur(2px);pointer-events:none}
 .today-hero>*{position:relative;z-index:1}
 .today-hero h3{max-width:20ch;font-size:24px;letter-spacing:-.025em}
-.today-hero .today-meter{height:9px}
 .today-hero .today-start{min-height:52px;box-shadow:0 10px 24px color-mix(in srgb,var(--accent) 18%,transparent)}
+.today-hero-progress{
+  display:grid;
+  grid-template-columns:minmax(54px,1fr) auto minmax(54px,1fr);
+  align-items:center;
+  gap:14px;
+  min-height:126px;
+  margin:2px 0 0;
+}
+.today-progress-value{display:grid;justify-items:center;align-content:center;gap:2px;min-width:92px}
+.today-progress-value strong{font-size:52px;line-height:.92;font-weight:900;letter-spacing:-.055em;font-variant-numeric:tabular-nums}
+.today-progress-value>span{color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+.today-progress-dots{
+  display:grid;
+  grid-template-columns:repeat(2,10px);
+  grid-auto-rows:10px;
+  justify-content:center;
+  gap:7px 8px;
+  opacity:.98;
+}
+.today-progress-dots-left{justify-self:end}
+.today-progress-dots-right{justify-self:start}
+.today-progress-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:color-mix(in srgb,var(--line) 72%,transparent);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--muted) 14%,transparent);
+  transform:translateX(var(--dot-shift,0px)) scale(.72);
+  transition:background-color var(--motion-base) ease,box-shadow var(--motion-base) ease,transform var(--motion-sheet) var(--motion-spring-ease),opacity var(--motion-base) ease;
+}
+.today-progress-dots-left .today-progress-dot.is-active{
+  background:var(--accent);
+  box-shadow:0 0 14px color-mix(in srgb,var(--accent) 34%,transparent);
+  animation:today-progress-dot-left var(--motion-sheet) var(--motion-spring-ease) both;
+  animation-delay:calc(var(--dot-i,0) * 34ms);
+}
+.today-progress-dots-right .today-progress-dot.is-active{
+  background:var(--listen);
+  box-shadow:0 0 14px color-mix(in srgb,var(--listen) 30%,transparent);
+  animation:today-progress-dot-right var(--motion-sheet) var(--motion-spring-ease) both;
+  animation-delay:calc(var(--dot-i,0) * 34ms + 70ms);
+}
+.today-progress-meta{text-align:center}
+@keyframes today-progress-dot-left{
+  0%{opacity:.28;transform:translateX(var(--dot-shift,0px)) translateY(5px) scale(.35)}
+  70%{opacity:1;transform:translateX(var(--dot-shift,0px)) translateY(-1px) scale(1.12)}
+  100%{opacity:1;transform:translateX(var(--dot-shift,0px)) scale(1)}
+}
+@keyframes today-progress-dot-right{
+  0%{opacity:.28;transform:translateX(var(--dot-shift,0px)) translateY(5px) scale(.35)}
+  70%{opacity:1;transform:translateX(var(--dot-shift,0px)) translateY(-1px) scale(1.12)}
+  100%{opacity:1;transform:translateX(var(--dot-shift,0px)) scale(1)}
+}
 .tile-hero h3{margin:0;font-size:22px;line-height:1.25;font-weight:800}
 .tile-short{min-height:76px}
 .tile-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .chip{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:4px 10px;border-radius:999px;background:var(--surface);color:var(--muted);font-size:12px;font-weight:700}
 .chip-soft::before{content:"·";margin-right:6px}
 .today-course{color:var(--muted);font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
-.today-meter{height:8px;border-radius:4px;background:var(--surface);overflow:hidden}
-.today-meter>span{display:block;height:100%;border-radius:inherit;background:var(--accent);transform-origin:left center;transform:scaleX(var(--p,0));transition:transform var(--motion-progress) var(--motion-spring-ease)}
 .tile-meta,.tile-caption{margin:0;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
 .tile-text{margin:0;color:var(--muted);font-size:14px;line-height:1.45}
 .tile-title{font-size:16px;font-weight:800;line-height:1.3}
@@ -691,7 +741,7 @@ select:active{transform:scale(.985)}
   .tile{animation:none}
   .skeleton{animation:none}
   :is(.course-map-shell,.progress-shell,.review-shell).is-ready{animation:none!important}
-  .today-meter>span{transition:none}
+  .today-progress-dot.is-active{animation:none!important;transform:translateX(var(--dot-shift,0px)) scale(1)}
 }
 
 /* Route: the course as a metro line (docs/unmute-design-plan.md §4.2) */
@@ -1590,3 +1640,10 @@ select:active{transform:scale(.985)}
 /* Speed drill compare is one binary decision, so keep both actions on one row. */
 .drill-binary-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .drill-binary-actions :is(.primary-button,.secondary-button){width:100%;min-width:0}
+
+@media(max-width:390px){
+  .today-hero-progress{grid-template-columns:minmax(48px,1fr) auto minmax(48px,1fr);gap:10px;min-height:116px}
+  .today-progress-value strong{font-size:46px}
+  .today-progress-dots{grid-template-columns:repeat(2,9px);grid-auto-rows:9px;gap:6px 7px}
+  .today-progress-dot{width:9px;height:9px}
+}

@@ -35,6 +35,7 @@ export const ru = {
   'today.requiredTitle': 'Нужно сегодня',
   'today.extraTitle': 'Дополнительно',
   'today.dayProgress': 'Прогресс дня',
+  'today.heroProgressLabel': 'сегодня',
   'today.dayMeta': '{done} из {total} заданий · ~{minutes} мин',
   'today.locked': 'Дальше закрыто',
   'today.streak': 'Серия',
