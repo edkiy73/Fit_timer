@@ -17,6 +17,9 @@ describe('Android system Back', () => {
     expect(backAction('/reference', null, true)).toBe('history');
     expect(backAction('/progress', null, false)).toBe('today');
   });
+  it('keeps lesson routing classified as history while runtime handling owns the actual Android Back', () => {
+    expect(backAction('/learn/day-3', null, true)).toBe('history');
+  });
   it('leaves «Сегодня» only on a second Back within two seconds', () => {
     expect(secondExitPress(10_000, null)).toBe(false);
     expect(secondExitPress(11_500, 10_000)).toBe(true);
