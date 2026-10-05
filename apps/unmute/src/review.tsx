@@ -38,7 +38,6 @@ import { useOtherCourseReviews, type OtherCourseReviews } from './other-course-r
 import { MyWordsView } from './my-words';
 import { Icon } from './icons';
 import { Sheet } from './sheet';
-import { reviewDueCounts } from './review-count';
 import { randomSeed, shuffledIndices } from './shuffle';
 import { reviewSessionSeed } from './review-seed';
 import { WordChips, answerWords, buildChips, chipsText } from './word-chips';
@@ -364,7 +363,7 @@ export function ReviewView({
     );
   }
 
-  const kindCount=(match:(entry:CombinedReviewItem)=>boolean)=>queue.filter(match).length;
+    const kindCount=(match:(entry:CombinedReviewItem)=>boolean)=>queue.filter(match).length;
   const breakdown=[
     {key:'card',label:t('progress.cards'),count:kindCount(entry=>entry.kind==='card')},
     {key:'drill',label:t('progress.drill'),count:kindCount(entry=>entry.kind==='practice'&&entry.mode==='drill')},
@@ -378,6 +377,7 @@ export function ReviewView({
     const node=set?.roadmaps.flatMap(roadmap=>roadmap.nodes).find(candidate=>candidate.activityIds.includes(entry.activity.id));
     return set&&node?[nodeTopic(set,node,locale)]:[];
   }))].slice(0,5);
+  const estimateMinutes=Math.max(1,Math.ceil(total/3));
 
   if(completeDayId&&dayFinished){
     return (
@@ -407,13 +407,16 @@ export function ReviewView({
             <span className="review-ring" aria-hidden="true"><strong>{total}</strong></span>
             <div className="review-hero-text">
               <strong>{t('review.dueTitle',{count:total})}</strong>
-              {session.waiting>0&&<span className="tile-text">{t('review.waiting',{count:session.waiting})}</span>}
+              <span className="tile-text">{t('review.estimate',{minutes:estimateMinutes})}</span>
             </div>
-            {/* What exactly comes now: kinds with counts and the topics they are from. */}
-            <ul className="stat-list review-breakdown">
-              {breakdown.map(row=><li key={row.key} className="stat-row"><span>{row.label}</span><strong>{row.count}</strong></li>)}
-            </ul>
-            {topics.length>0&&<p className="tile-text review-topics">{t('review.topics',{topics:topics.join(', ')})}</p>}
+            <details className="review-details">
+              <summary>{t('review.contents')}</summary>
+              <ul className="stat-list review-breakdown">
+                {breakdown.map(row=><li key={row.key} className="stat-row"><span>{row.label}</span><strong>{row.count}</strong></li>)}
+              </ul>
+              {topics.length>0&&<p className="tile-text review-topics">{t('review.topics',{topics:topics.join(', ')})}</p>}
+              {session.waiting>0&&<p className="tile-text review-topics">{t('review.waiting',{count:session.waiting})}</p>}
+            </details>
             <button className="primary-button review-start" type="button" onClick={()=>setStarted(true)}>
               <Icon name="play" size={18} />
               {t('today.reviewStart')}
@@ -427,26 +430,27 @@ export function ReviewView({
   }
 
   if(!item){
-    const left=reviewDueCounts(state,wordRuntime,locale,todayDay,otherCourses.courses)?.actionableCount ?? 0;
     const moreDue=session.hiddenDue;
     return (
       <section className="review-shell is-ready" aria-labelledby="review-title">
-        <header className="screen-head">
+        <div className="learn-summary">
+          <span className="learn-summary-icon" aria-hidden="true"><Icon name="check" size={32} /></span>
           <div className="screen-kicker">{t('review.eyebrow')}</div>
           <h2 id="review-title">{t('review.doneTitle')}</h2>
-        </header>
-        <div className="learn-state">
-          <strong>{t('review.doneCount',{count:completed})}</strong>
-          <span>
+          <p className="learn-summary-score">{t('review.doneCount',{count:completed})}</p>
+          <p className="learn-hint">
             {moreDue>0
               ? t('review.dailyDoneText',{count:moreDue})
-              : left>0
-                ? t('review.moreDue',{count:left})
-                : session.waiting>0
-                  ? t('review.waiting',{count:session.waiting})
-                  : t('review.doneText')}
-          </span>
-          {(otherCourses.failed??0)>0&&<span role="status">{t('review.otherCourseFailed')}</span>}
+              : session.waiting>0
+                ? t('review.waiting',{count:session.waiting})
+                : t('review.doneText')}
+          </p>
+          {(otherCourses.failed??0)>0&&<p className="learn-hint" role="status">{t('review.otherCourseFailed')}</p>}
+        </div>
+        <div className="runner-action review-done-actions">
+          <button className="primary-button" type="button" onClick={onExit}>
+            {t('review.doneAction')}
+          </button>
           {moreDue>0&&(
             <button
               className="secondary-button"
@@ -459,16 +463,7 @@ export function ReviewView({
               {t('review.moreTen')}
             </button>
           )}
-          {left>0&&moreDue===0&&(
-            <button className="primary-button" type="button" onClick={restart}>
-              {t('review.again',{count:left})}
-            </button>
-          )}
-          <button className={(left>0||moreDue>0)?'secondary-button':'primary-button'} type="button" onClick={onExit}>
-            {t('review.backToday')}
-          </button>
         </div>
-        {mixedOffer}
       </section>
     );
   }
