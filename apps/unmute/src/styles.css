@@ -1443,9 +1443,9 @@ select:active{transform:scale(.985)}
 /* Deliberate two-tap selection: first tap selects, second confirms. */
 .learn-option.is-selected{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--card))}
 .learn-option-confirm{margin-left:auto;color:var(--muted);font-size:11px;font-weight:700;white-space:nowrap}
-.listening-option{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.listening-option{position:relative;display:block;padding-right:116px}
 .listening-option.is-selected{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--card))}
-.listening-option-confirm{color:var(--muted);font-size:11px;font-weight:700;white-space:nowrap}
+.listening-option-confirm{position:absolute;right:16px;top:50%;max-width:92px;color:var(--muted);font-size:11px;font-weight:700;line-height:1.15;text-align:right;white-space:normal;transform:translateY(-50%)}
 
 /* Feedback footer: one stable layout for correct, wrong, AI-expanded and AI-error states. */
 .learn-feedback-actions{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:stretch;margin-top:10px}
