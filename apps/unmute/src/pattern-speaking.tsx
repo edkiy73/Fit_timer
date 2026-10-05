@@ -279,8 +279,8 @@ export function PatternSpeakingView({
         <div className="eyebrow">{t('speaking.mode')}</div>
         <h3><LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} /></h3>
         <div className="drill-result">
-          <strong>{t('speaking.score',{correct:hits,total:items.length})}</strong>
-          <span>{passed?t('speaking.passed'):t('speaking.retryHint')}</span>
+          <strong>{t('speaking.score',{correct:hits,total:base})}</strong>
+          <span>{strongFirstPass?t('speaking.passed'):t('speaking.completed')}</span>
         </div>
         {saveError&&(
           <div className="learn-feedback learn-feedback-wrong learn-save-error" role="alert">
@@ -291,19 +291,9 @@ export function PatternSpeakingView({
             </button>
           </div>
         )}
-        <button className="primary-button" type="button" disabled={!saved} onClick={passed?onDone:reset}>
-          {passed?t('learn.next'):t('drill.again')}
+        <button className="primary-button" type="button" disabled={!saved} onClick={onDone}>
+          {t('learn.next')}
         </button>
-        {passed&&(
-          <button className="secondary-button" type="button" disabled={!saved} onClick={reset}>
-            {t('drill.again')}
-          </button>
-        )}
-        {!passed&&(
-          <button className="secondary-button" type="button" disabled={!saved} onClick={onDone}>
-            {t('drill.continueAnyway')}
-          </button>
-        )}
         {saving&&<span className="learn-hint" role="status">{t('drill.saving')}</span>}
       </article>
     );
@@ -317,7 +307,9 @@ export function PatternSpeakingView({
         <ExerciseKind kind="speaking" />
       <div className="drill-meta">
         <span><LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} /></span>
-        <span>{t('speaking.position',{current:pos+1,total:items.length})}</span>
+        <span>{correcting
+          ? t('drill.correctionRemaining',{count:correctionRemaining})
+          : t('speaking.position',{current:pos+1,total:base})}</span>
       </div>
       <h3><LexiconText text={prompt} refs={activity.lexiconRefs} /></h3>
 
@@ -338,26 +330,60 @@ export function PatternSpeakingView({
               {listening?t('speaking.listening'):t('speaking.start')}
             </button>
           </div>
+          {recognitionError&&(
+            <button className="secondary-button" type="button" onClick={beginManualCompare}>
+              {t('speaking.manualCheck')}
+            </button>
+          )}
           <button className="link-button" type="button" onClick={showAnswer}>
             {t('speaking.showAnswer')}
           </button>
         </>
       ) : (
         <AnswerFeedbackSheet
-          tone={correct?'correct':'wrong'}
-          title={correct?t('speaking.match'):t('speaking.noMatch')}
-          subtitle={<span>{correct?t('speaking.matchHint'):t('speaking.noMatchHint')}</span>}
+          tone={verification==='manual'?'near':correct?'correct':'wrong'}
+          title={
+            verification==='manual'
+              ? t('speaking.manualCompare')
+              : verification==='revealed'
+                ? t('speaking.gaveUp')
+                : correct?t('speaking.match'):t('speaking.noMatch')
+          }
+          subtitle={
+            <span>{
+              verification==='manual'
+                ? t('speaking.manualCompareHint')
+                : verification==='revealed'
+                  ? t('speaking.gaveUpHint')
+                  : correct?t('speaking.matchHint'):t('speaking.noMatchHint')
+            }</span>
+          }
           actions={
-            <>
-              {!correct&&(
-                <button className="secondary-button" type="button" onClick={acceptManually}>
-                  {t('speaking.acceptAnyway')}
+            verification==='manual' ? (
+              <>
+                <button className="secondary-button" type="button" onClick={()=>advanceAttempt(false)}>
+                  {t('drill.wrong')}
                 </button>
-              )}
-              <button className="primary-button learn-feedback-next" type="button" onClick={next}>
-                {pos+1<items.length?t('learn.next'):t('learn.finish')}
-              </button>
-            </>
+                <button className="primary-button learn-feedback-next" type="button" onClick={()=>advanceAttempt(true)}>
+                  {t('drill.same')}
+                </button>
+              </>
+            ) : (
+              <>
+                {verification==='recognition'&&!correct&&(
+                  <button className="secondary-button" type="button" onClick={()=>advanceAttempt(true)}>
+                    {t('speaking.acceptAnyway')}
+                  </button>
+                )}
+                <button
+                  className="primary-button learn-feedback-next"
+                  type="button"
+                  onClick={()=>advanceAttempt(verification==='recognition'&&correct===true)}
+                >
+                  {verification==='recognition'&&correct===true&&pos+1>=items.length?t('learn.finish'):t('learn.next')}
+                </button>
+              </>
+            )
           }
         >
           <div className="drill-target"><LexiconText text={target} refs={activity.lexiconRefs} /></div>
