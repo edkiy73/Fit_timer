@@ -193,7 +193,7 @@ export function TodayView({
               <span
                 key={'left-'+dot}
                 className={'today-progress-dot'+(dot<activeProgressDots?' is-active':'')}
-                style={{'--dot-i':dot} as CSSProperties}
+                style={{'--dot-i':dot,'--dot-shift':dot%4<2?'5px':'0px'} as CSSProperties}
               />
             ))}
           </span>
@@ -206,7 +206,7 @@ export function TodayView({
               <span
                 key={'right-'+dot}
                 className={'today-progress-dot'+(dot<activeProgressDots?' is-active':'')}
-                style={{'--dot-i':dot} as CSSProperties}
+                style={{'--dot-i':dot,'--dot-shift':dot%4>=2?'-5px':'0px'} as CSSProperties}
               />
             ))}
           </span>
