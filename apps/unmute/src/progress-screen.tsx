@@ -451,14 +451,6 @@ export function ProgressView({
               </div>
             </div>
 
-            {summary.dueNow>0&&(
-              <div className="progress-due-callout">
-                <span className="progress-kpi-icon is-review"><Icon name="review" size={18} /></span>
-                <span>{t('progress.dueNow')}</span>
-                <strong><AnimatedNumber value={summary.dueNow} /></strong>
-              </div>
-            )}
-
             <div className="progress-course-detail">
               <div className="progress-answer-title">{t('progress.answersTitle')}</div>
               {summary.answers.attempts>0 ? (
