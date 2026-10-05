@@ -10,9 +10,28 @@ import { PatternListeningView } from './pattern-listening';
 import { PatternSpeakingView } from './pattern-speaking';
 import { LexiconText } from './lexicon-ui';
 import { ExerciseKind } from './exercise-kind';
+import { practiceRunStateKey, readPracticeRunState, writePracticeRunState } from './practice-run-state';
 
 type PatternActivity=Extract<Activity,{type:'pattern-drill'}>;
 type PatternMode=PracticeSrsKind|'complete';
+
+interface PatternPracticeSession {
+  version:1;
+  activityRevision:number;
+  mode:PatternMode;
+  single:boolean;
+  briefed:PracticeSrsKind[];
+}
+
+function restoredPatternSession(activity:PatternActivity,key:string|undefined):PatternPracticeSession|null{
+  const saved=readPracticeRunState<PatternPracticeSession>(practiceRunStateKey(key,'meta'));
+  if(!saved||saved.version!==1||saved.activityRevision!==activity.revision)return null;
+  if(saved.mode!=='complete'&&!activity.modes.includes(saved.mode))return null;
+  return {
+    ...saved,
+    briefed:saved.briefed.filter(mode=>activity.modes.includes(mode))
+  };
+}
 
 export function firstPatternMode(
   activity:PatternActivity,
@@ -50,6 +69,8 @@ export interface PatternPracticeViewProps {
   onProgress?:(current:number,total:number)=>void;
   /** Keep the mounted session paused while another lesson section is visible. */
   active?:boolean;
+  /** Durable key for an unfinished lesson run. Omit outside the lesson. */
+  sessionKey?:string;
 }
 
 export function PatternPracticeView({
@@ -65,16 +86,28 @@ export function PatternPracticeView({
   showModeNav=true,
   onModeChange,
   onProgress,
-  active=true
+  active=true,
+  sessionKey
 }:PatternPracticeViewProps){
   const {t,locale}=useI18n();
+  const restored=restoredPatternSession(activity,sessionKey);
   const [mode,setMode]=useState<PatternMode>(()=>
-    initialMode&&activity.modes.includes(initialMode) ? initialMode : firstPatternMode(activity,progress)
+    restored?.mode??(initialMode&&activity.modes.includes(initialMode) ? initialMode : firstPatternMode(activity,progress))
   );
   // A training picked by hand from the finished state returns there, not to the next one.
-  const [single,setSingle]=useState(Boolean(initialMode));
+  const [single,setSingle]=useState(()=>restored?.single??Boolean(initialMode));
   // Each training starts with «what to do and how»; its timer or microphone waits for «Начать».
-  const [briefed,setBriefed]=useState<ReadonlySet<PracticeSrsKind>>(()=>new Set());
+  const [briefed,setBriefed]=useState<ReadonlySet<PracticeSrsKind>>(()=>new Set(restored?.briefed??[]));
+
+  useEffect(()=>{
+    writePracticeRunState(practiceRunStateKey(sessionKey,'meta'),{
+      version:1,
+      activityRevision:activity.revision,
+      mode,
+      single,
+      briefed:[...briefed]
+    } satisfies PatternPracticeSession);
+  },[activity.revision,briefed,mode,sessionKey,single]);
 
   useEffect(()=>{
     if(!active||mode==='complete')return;
@@ -183,6 +216,7 @@ export function PatternPracticeView({
             savePractice={savePractice}
             onDone={()=>nextMode('drill')}
             active={active&&mode==='drill'}
+            sessionKey={practiceRunStateKey(sessionKey,'drill')}
             {...(onProgress?{onProgress}:{})}
           />
         </div>
@@ -198,6 +232,7 @@ export function PatternPracticeView({
             speak={speak}
             onDone={()=>nextMode('listening')}
             active={active&&mode==='listening'}
+            sessionKey={practiceRunStateKey(sessionKey,'listening')}
             {...(onProgress?{onProgress}:{})}
           />
         </div>
@@ -213,6 +248,7 @@ export function PatternPracticeView({
             startRecognition={startRecognition}
             onDone={()=>nextMode('speaking')}
             active={active&&mode==='speaking'}
+            sessionKey={practiceRunStateKey(sessionKey,'speaking')}
             {...(onProgress?{onProgress}:{})}
           />
         </div>
