@@ -77,7 +77,7 @@ describe('pattern speaking',()=>{
     expect(speakingPassed(6,10)).toBe(false);
   });
 
-  it('uses recognition alternatives, manual fallback and saves speaking SRS',async()=>{
+  it('lets the learner override a bad ASR match without pretending it was recognized',async()=>{
     const user=userEvent.setup();
     const recognition=fakeRecognition();
     const {savePractice,onDone}=renderSpeaking(recognition.startRecognition);
@@ -90,24 +90,23 @@ describe('pattern speaking',()=>{
     await user.click(screen.getByRole('button',{name:'Нажми и скажи'}));
     recognition.result(['She walks here']);
     expect(await screen.findByText('Не совпало')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:'Всё же засчитать'}));
-    expect(await screen.findByText('Получилось')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:'Завершить'}));
+    await user.click(screen.getByRole('button',{name:'Я сказал правильно'}));
 
     await waitFor(()=>expect(savePractice).toHaveBeenCalledWith(
       'general-foundation',
       'pattern.present',
       'speaking',
-      true,
-      100
+      false,
+      50
     ));
-    expect(await screen.findByText('2 из 2 распознано')).toBeTruthy();
+    expect(await screen.findByText('1 из 2 распознано')).toBeTruthy();
+    expect(screen.getByText('Все фразы пройдены.')).toBeTruthy();
 
     await user.click(screen.getByRole('button',{name:'Далее'}));
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps show-answer fallback when Web Speech is unavailable',async()=>{
+  it('uses manual self-check when speech recognition is unavailable',async()=>{
     const user=userEvent.setup();
     const unavailable:StartRecognition=handlers=>{
       handlers.onError?.('unsupported');
@@ -118,8 +117,57 @@ describe('pattern speaking',()=>{
     await user.click(screen.getByRole('button',{name:'Нажми и скажи'}));
     expect(await screen.findByText(/не поддерживает распознавание речи/)).toBeTruthy();
 
+    await user.click(screen.getByRole('button',{name:'Готово — сверить'}));
+    expect(await screen.findByText('Сверь со своим вариантом')).toBeTruthy();
+    expect(screen.getByText('I work at home.')).toBeTruthy();
+    expect(screen.getByRole('button',{name:'Не совпало'})).toBeTruthy();
+    expect(screen.getByRole('button',{name:'Совпало'})).toBeTruthy();
+  });
+
+  it('does not allow manual pass after explicitly revealing the answer',async()=>{
+    const user=userEvent.setup();
+    const recognition=fakeRecognition();
+    renderSpeaking(recognition.startRecognition);
+
     await user.click(screen.getByRole('button',{name:'Показать ответ'}));
-    expect(await screen.findByText('I work at home.')).toBeTruthy();
-    expect(screen.getByRole('button',{name:'Всё же засчитать'})).toBeTruthy();
+    expect(await screen.findByText('Вот как правильно')).toBeTruthy();
+    expect(screen.getByText('I work at home.')).toBeTruthy();
+    expect(screen.queryByRole('button',{name:'Я сказал правильно'})).toBeNull();
+  });
+
+  it('keeps a speech mismatch in correction until it is resolved',async()=>{
+    const user=userEvent.setup();
+    const recognition=fakeRecognition();
+    const {savePractice}=renderSpeaking(recognition.startRecognition);
+
+    await user.click(screen.getByRole('button',{name:'Нажми и скажи'}));
+    recognition.result(['I walk at home']);
+    expect(await screen.findByText('Не совпало')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+
+    await user.click(screen.getByRole('button',{name:'Нажми и скажи'}));
+    recognition.result(['She works here']);
+    expect(await screen.findByText('Получилось')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+
+    expect(await screen.findByText('Работа над ошибками · осталось 1')).toBeTruthy();
+
+    await user.click(screen.getByRole('button',{name:'Нажми и скажи'}));
+    recognition.result(['I walk at home']);
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+    expect(await screen.findByText('Работа над ошибками · осталось 1')).toBeTruthy();
+
+    await user.click(screen.getByRole('button',{name:'Нажми и скажи'}));
+    recognition.result(['I work at home']);
+    await user.click(screen.getByRole('button',{name:'Завершить'}));
+
+    await waitFor(()=>expect(savePractice).toHaveBeenCalledWith(
+      'general-foundation',
+      'pattern.present',
+      'speaking',
+      false,
+      50
+    ));
+    expect(await screen.findByText('1 из 2 распознано')).toBeTruthy();
   });
 });
