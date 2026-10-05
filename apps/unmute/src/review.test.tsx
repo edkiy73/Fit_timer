@@ -122,7 +122,7 @@ describe('course review screen',()=>{
     other.progress.cards={'a1.card':{box:1,due:9,at:'2026-09-28T00:00:00Z'}};
     const {saveGraded}=renderReview(undefined,undefined,{status:'ready',courses:[{set:other.set,progress:other.progress}]});
 
-    expect(await screen.findByText('К повтору сегодня: 2')).toBeTruthy();
+    expect(await screen.findByText('На сегодня: 2')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Начать повтор'}));
     await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am home');
     await user.click(screen.getByRole('button',{name:'Готово'}));
@@ -136,7 +136,7 @@ describe('course review screen',()=>{
 
   it('waits for other courses before pinning the session',async()=>{
     renderReview(undefined,undefined,{status:'pending',courses:[]});
-    expect(screen.queryByText(/К повтору сегодня/)).toBeNull();
+    expect(screen.queryByText(/На сегодня:/)).toBeNull();
   });
 
   it('counts a keyboard typo as correct without returning the card',async()=>{
@@ -155,14 +155,14 @@ describe('course review screen',()=>{
     expect(screen.queryByRole('button',{name:'Повторить в конце'})).toBeNull();
 
     await user.click(screen.getByRole('button',{name:'Далее'}));
-    expect(await screen.findByRole('heading',{name:'Повтор завершён'})).toBeTruthy();
+    expect(await screen.findByRole('heading',{name:'На сегодня всё'})).toBeTruthy();
   });
 
   it('brings a wrong card back once and grades only its first answer',async()=>{
     const user=userEvent.setup();
     const {saveGraded,onExit}=renderReview();
 
-    expect(await screen.findByText('К повтору сегодня: 1')).toBeTruthy();
+    expect(await screen.findByText('На сегодня: 1')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Начать повтор'}));
     let input=await screen.findByRole('textbox',{name:'Твой ответ'});
     await user.type(input,'wrong');
@@ -177,10 +177,10 @@ describe('course review screen',()=>{
     expect(saveGraded).toHaveBeenCalledTimes(1);
 
     await user.click(screen.getByRole('button',{name:'Далее'}));
-    expect(await screen.findByRole('heading',{name:'Повтор завершён'})).toBeTruthy();
-    expect(screen.getByText('Готово: 1')).toBeTruthy();
+    expect(await screen.findByRole('heading',{name:'На сегодня всё'})).toBeTruthy();
+    expect(screen.getByText('Повторено: 1')).toBeTruthy();
 
-    await user.click(screen.getByRole('button',{name:'Вернуться в «Сегодня»'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     expect(onExit).toHaveBeenCalledTimes(1);
   });
 
@@ -205,24 +205,25 @@ describe('course review screen',()=>{
     await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'wrong again');
     await user.click(screen.getByRole('button',{name:'Готово'}));
     await user.click(screen.getByRole('button',{name:'Далее'}));
-    expect(await screen.findByRole('heading',{name:'Повтор завершён'})).toBeTruthy();
+    expect(await screen.findByRole('heading',{name:'На сегодня всё'})).toBeTruthy();
     expect(saveGraded).toHaveBeenCalledTimes(1);
   });
 
-  it('hides the bottom bar while reviewing and offers the still-due cards again at the end',async()=>{
+  it('hides the bottom bar while reviewing and ends with one clear Done action',async()=>{
     const user=userEvent.setup();
-    renderReview();
+    const {onExit}=renderReview();
+    expect(await screen.findByText('≈ 1 мин')).toBeTruthy();
+    expect(screen.getByText('Что внутри')).toBeTruthy();
     await user.click(await screen.findByRole('button',{name:'Начать повтор'}));
     expect(document.documentElement.dataset.focusRun).toBe('review');
     await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am home');
     await user.click(screen.getByRole('button',{name:'Готово'}));
     await user.click(screen.getByRole('button',{name:'Далее'}));
-    expect(await screen.findByRole('heading',{name:'Повтор завершён'})).toBeTruthy();
+    expect(await screen.findByRole('heading',{name:'На сегодня всё'})).toBeTruthy();
     expect(document.documentElement.dataset.focusRun).toBeUndefined();
-    // This runtime never refreshes, so the card still counts as due: the screen says so.
-    expect(screen.getByText('Ещё к повтору: 1. Лучше пройти их сейчас, пока всё свежо.')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:'Пройти ещё раз: 1'}));
-    expect(await screen.findByRole('textbox',{name:'Твой ответ'})).toBeTruthy();
+    expect(screen.queryByRole('button',{name:/Пройти ещё раз/})).toBeNull();
+    await user.click(screen.getByRole('button',{name:'Готово'}));
+    expect(onExit).toHaveBeenCalledTimes(1);
   });
 
   it('reviews a due personal word with the legacy reveal/self-grade flow',async()=>{
@@ -305,8 +306,8 @@ describe('course review screen',()=>{
     await user.click(screen.getByRole('button',{name:'Помню'}));
 
     expect(saveWord).toHaveBeenCalledWith('lex.home','noun',true);
-    expect(await screen.findByRole('heading',{name:'Повтор завершён'})).toBeTruthy();
-    expect(screen.getByText('Готово: 1')).toBeTruthy();
+    expect(await screen.findByRole('heading',{name:'На сегодня всё'})).toBeTruthy();
+    expect(screen.getByText('Повторено: 1')).toBeTruthy();
   });
 
   it('offers mixed drill after three learned patterns even when nothing is due',async()=>{
