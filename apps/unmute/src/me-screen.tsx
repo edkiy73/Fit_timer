@@ -90,13 +90,6 @@ export function MeScreen(){
         action={<Link className="me-settings pressable" to="/settings" aria-label={t('me.settings')}><Icon name="settings" size={22} /></Link>}
       />
 
-      {!auth.session && (
-        <div className="tile me-signin">
-          <p className="tile-text">{t('me.guest')}</p>
-          <button className="primary-button" type="button" onClick={() => setSignInOpen(true)}>{t('me.signIn')}</button>
-        </div>
-      )}
-
       <ProgressView
         embedded
         runtime={statsRuntime}
@@ -109,6 +102,16 @@ export function MeScreen(){
         selectedCourseId={selectedCourseId}
         onCourseChange={setStatsCourseId}
       />
+
+      {!auth.session && (
+        <section className="profile-account" aria-labelledby="profile-account-title">
+          <h3 id="profile-account-title">{t('me.accountTitle')}</h3>
+          <div className="tile me-signin">
+            <p className="tile-text">{t('me.guest')}</p>
+            <button className="primary-button" type="button" onClick={() => setSignInOpen(true)}>{t('me.signIn')}</button>
+          </div>
+        </section>
+      )}
 
       <Sheet open={signInOpen && !auth.session} onClose={() => setSignInOpen(false)} labelledBy="me-signin-title" closeLabel={t('access.signInClose')}>
         <div className="access-signin" id="me-signin-title">
