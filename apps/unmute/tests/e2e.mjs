@@ -298,14 +298,66 @@ try{
   await admin.getByRole('button',{name:/Hello|День 1/}).first().click();
   ok('Admin «Курсы»: a day opens with its tasks',await appears(admin.locator('.ab-course-task').first()));
   await admin.locator('.ab-course-task-main').first().click();
-  ok('Admin «Курсы»: a task opens right under it',await appears(admin.locator('.ab-course-task[data-open] .ab-course-editor')));
+  ok('Admin «Курсы»: a task opens on its own editor level',await appears(admin.locator('.ab-course-activity-level .ab-course-editor')));
+  await admin.getByRole('button',{name:'← К заданиям'}).click();
+  ok('Admin «Курсы»: task editor returns to the task list',await appears(admin.locator('.ab-course-tasks')));
   await admin.getByRole('button',{name:'← Все дни'}).click();
   ok('Admin «Курсы»: back to all days on a phone',await appears(admin.locator('.ab-course-days-pane')));
   await adminTab('Словарь');
   await admin.getByRole('searchbox',{name:'Слово или перевод'}).fill('hello');
   await admin.getByRole('button',{name:'Найти',exact:true}).click();
   ok('Admin word search answers',await appears(admin.getByText(/Ничего не нашлось|Изменить/).first()));
-  ok('Admin fits a 360 px phone',await admin.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1));
+
+  const adminOverflow=async()=>{
+    return admin.evaluate(()=>{
+      const root=document.documentElement;
+      const width=root.clientWidth;
+      const failures=[];
+      if(root.scrollWidth>width+1)failures.push('document '+root.scrollWidth+'>'+width);
+      const main=document.querySelector('.ab-admin');
+      if(!main)return ['missing .ab-admin'];
+      for(const element of main.querySelectorAll('*')){
+        const box=element.getBoundingClientRect();
+        if(!box.width||!box.height||box.right<=width+1||box.left>=width)continue;
+        if(element.closest('.ab-course-tabs'))continue; // intentional horizontal course picker
+        const style=getComputedStyle(element);
+        if(style.visibility==='hidden'||style.display==='none'||style.position==='fixed')continue;
+        failures.push((element.className&&typeof element.className==='string'?'.'+element.className.trim().split(/\s+/)[0]:element.tagName)+' → '+Math.round(box.right)+'px');
+        if(failures.length>=5)break;
+      }
+      return failures;
+    });
+  };
+
+  const ADMIN_TABS=[
+    'Состояние','Обзор','Пользователи','Платежи','Ошибки',
+    'ИИ','Способы оплаты','Владелец и контакты','Рассылки','Хранилище',
+    'Курсы','Словарь','Обновление приложения'
+  ];
+  const adminWide=[];
+  for(const name of ADMIN_TABS){
+    await adminTab(name);
+    await admin.waitForTimeout(80);
+    const failures=await adminOverflow();
+    if(failures.length)adminWide.push(name+': '+failures.join(', '));
+  }
+  ok('every Admin section fits a 360 px phone',adminWide.length===0);
+  if(adminWide.length)console.log(adminWide.join('\n'));
+
+  // Also exercise the two deepest product-admin states that previously caused sideways scroll.
+  await adminTab('Курсы');
+  await admin.getByRole('button',{name:/Hello|День 1/}).first().click();
+  await admin.locator('.ab-course-task-main').first().click();
+  const editorWide=await adminOverflow();
+  ok('Admin course activity editor fits a 360 px phone',editorWide.length===0);
+  if(editorWide.length)console.log('activity editor: '+editorWide.join(', '));
+
+  await adminTab('Словарь');
+  const bulkHeading=admin.getByRole('heading',{name:'Дополнить словарь через ИИ'});
+  await bulkHeading.scrollIntoViewIfNeeded();
+  const bulkWide=await adminOverflow();
+  ok('Admin bulk dictionary fits a 360 px phone',bulkWide.length===0);
+  if(bulkWide.length)console.log('bulk dictionary: '+bulkWide.join(', '));
 
   // Screen walk: every main screen on a small phone, light and dark — nothing sticks out
   // sideways and no screen throws. Catches layout breaks before anyone opens the app.
