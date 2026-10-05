@@ -101,6 +101,7 @@ function ScrollToTop(){
 // No global header: every screen owns its title; the bottom bar is the navigation.
 // Onboarding replaces the whole shell, bar included.
 function Shell(){
+  const {pathname}=useLocation();
   return (
     <main className="app">
       <ScrollToTop />
@@ -109,7 +110,7 @@ function Shell(){
       <NotificationDelivery />
       <AppUpdateProvider>
         <OnboardingGate>
-          <div className="app-screen"><Outlet /></div>
+          <div className="app-screen" key={pathname}><Outlet /></div>
           <TabBar />
         </OnboardingGate>
       </AppUpdateProvider>
