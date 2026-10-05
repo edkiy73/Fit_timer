@@ -403,13 +403,16 @@ export function NodeRunnerView({
 
   useEffect(()=>{
     const onSystemBack=(event:Event)=>{
-      if(finished)return;
       event.preventDefault();
+      if(finished){
+        onExit();
+        return;
+      }
       setExitOpen(true);
     };
     window.addEventListener(SYSTEM_BACK_EVENT,onSystemBack);
     return ()=>window.removeEventListener(SYSTEM_BACK_EVENT,onSystemBack);
-  },[finished]);
+  },[finished,onExit]);
 
   useEffect(()=>{
     // Completed nodes opened later are not new completions. A persisted completion candidate
