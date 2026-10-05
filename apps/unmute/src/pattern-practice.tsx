@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
 import type { CourseProgressDocument } from './progress';
@@ -42,6 +42,10 @@ export interface PatternPracticeViewProps {
   startRecognition?:StartRecognition;
   /** Open a specific training (e.g. «Скажи вслух» on «Сегодня» → speaking). */
   initialMode?:PracticeSrsKind;
+  /** The lesson can render one shared navigator instead of a second local mode bar. */
+  showModeNav?:boolean;
+  /** Keep the lesson-level navigator in sync with automatic/manual mode changes. */
+  onModeChange?:(mode:PracticeSrsKind)=>void;
 }
 
 export function PatternPracticeView({
@@ -53,7 +57,9 @@ export function PatternPracticeView({
   savePractice,
   speak,
   startRecognition=startSpeechRecognition,
-  initialMode
+  initialMode,
+  showModeNav=true,
+  onModeChange
 }:PatternPracticeViewProps){
   const {t,locale}=useI18n();
   const [mode,setMode]=useState<PatternMode>(()=>
@@ -63,6 +69,10 @@ export function PatternPracticeView({
   const [single,setSingle]=useState(Boolean(initialMode));
   // Each training starts with «what to do and how»; its timer or microphone waits for «Начать».
   const [briefed,setBriefed]=useState<ReadonlySet<PracticeSrsKind>>(()=>new Set());
+
+  useEffect(()=>{
+    if(mode!=='complete')onModeChange?.(mode);
+  },[mode,onModeChange]);
 
   const distractors=useMemo(
     ()=>courseActivities.flatMap(candidate=>
@@ -93,7 +103,7 @@ export function PatternPracticeView({
     listening:t('kind.listening'),
     speaking:t('kind.speaking')
   };
-  const modeNav=(
+  const modeNav=showModeNav?(
     <div className="practice-mode-nav" role="navigation" aria-label={t('practice.modeNav')}>
       {activity.modes.map(item=>(
         <button
@@ -111,7 +121,7 @@ export function PatternPracticeView({
         </button>
       ))}
     </div>
-  );
+  ):null;
 
   if(mode!=='complete'&&!briefed.has(mode)){
     const pattern=activity.pattern[locale]||activity.pattern.ru||activity.pattern.en||Object.values(activity.pattern)[0]||'';
