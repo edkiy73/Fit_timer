@@ -294,10 +294,23 @@ function failureText(error:unknown,what:string){
 type DayRow = CourseNode & {roadmapId:string};
 type DayGroup = {key:string;title:string;range:string;days:DayRow[]};
 
+type CourseAdminContext={setId:string;roadmapId?:string;nodeId?:string;activityId?:string};
+const COURSE_CONTEXT_KEY='unmute.admin.course.context';
+function readCourseAdminContext():CourseAdminContext{
+  try{
+    const parsed=JSON.parse(sessionStorage.getItem(COURSE_CONTEXT_KEY)||'{}') as Partial<CourseAdminContext>;
+    return {setId:String(parsed.setId||'general-foundation'),...(parsed.roadmapId?{roadmapId:String(parsed.roadmapId)}:{}),...(parsed.nodeId?{nodeId:String(parsed.nodeId)}:{}),...(parsed.activityId?{activityId:String(parsed.activityId)}:{})};
+  }catch{return {setId:'general-foundation'};}
+}
+function writeCourseAdminContext(next:CourseAdminContext){
+  try{sessionStorage.setItem(COURSE_CONTEXT_KEY,JSON.stringify(next));}catch{}
+}
+
 function CourseAdmin({client,adminKey}:AdminSectionContext){
   const {t}=useI18n();
+  const [initialContext]=useState(readCourseAdminContext);
   const [sets,setSets]=useState<CourseSetSummary[]>([]);
-  const [setId,setSetId]=useState('general-foundation');
+  const [setId,setSetId]=useState(initialContext.setId);
   const [structure,setStructure]=useState<CourseStructure|null>(null);
   const [openNode,setOpenNode]=useState<OpenNode|null>(null);
   const [editor,setEditor]=useState<EditableActivity|null>(null);
@@ -324,7 +337,11 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     const result=await client.action(adminKey,'content_sets_list');
     const list=Array.isArray(result.sets) ? result.sets as CourseSetSummary[] : [];
     setSets(list);
-    if(list.length && !list.some(item=>item.id===setId)) setSetId(list[0]!.id);
+    if(list.length && !list.some(item=>item.id===setId)){
+      const fallback=list[0]!.id;
+      writeCourseAdminContext({setId:fallback});
+      setSetId(fallback);
+    }
     return list;
   },[client,adminKey,setId]);
 
@@ -360,7 +377,19 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
   },[client,adminKey,setId]);
 
   useEffect(()=>{void loadSets().catch(error=>setMessage(failureText(error,'Список курсов не загрузился')));},[loadSets]);
-  useEffect(()=>{void loadStructure();setOpenNode(null);setEditor(null);setReleaseMessage('');setCheck(null);},[loadStructure]);
+  useEffect(()=>{
+    let live=true;
+    setOpenNode(null);setEditor(null);setReleaseMessage('');setCheck(null);
+    void (async()=>{
+      await loadStructure();
+      if(!live)return;
+      const saved=readCourseAdminContext();
+      if(saved.setId===setId&&saved.roadmapId&&saved.nodeId){
+        await open(saved.roadmapId,saved.nodeId,saved.activityId);
+      }
+    })();
+    return()=>{live=false;};
+  },[loadStructure,setId]);
 
   const current=sets.find(item=>item.id===setId) ?? null;
   const state=current ? courseState(current) : null;
@@ -389,29 +418,42 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     }finally{setBusy(false);}
   }
 
-  async function open(roadmapId:string,nodeId:string){
+  async function open(roadmapId:string,nodeId:string,activityId?:string){
     setBusy(true);setDayMessage('');setEditor(null);
     try{
       const result=await client.action(adminKey,'content_course_node',{setId,roadmapId,nodeId});
       setOpenNode({roadmapId,version:Number(result.version||1),node:result.node as OpenNode['node'],activities:result.activities as ActivitySummary[]});
+      writeCourseAdminContext({setId,roadmapId,nodeId,...(activityId?{activityId}:{})});
+      if(activityId){
+        const activityResult=await client.action(adminKey,'content_activity_get',{setId,activityId});
+        setEditor(activityResult.activity as EditableActivity);
+      }
     }catch(error){
+      writeCourseAdminContext({setId});
+      setOpenNode(null);setEditor(null);
       setDayMessage(failureText(error,'День не открылся'));
     }finally{setBusy(false);}
   }
 
   async function toggleActivity(id:string){
-    if(editor?.id===id){setEditor(null);return;}
+    if(editor?.id===id){
+      setEditor(null);
+      if(openNode)writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id});
+      return;
+    }
     setBusy(true);setDayMessage('');
     try{
       const result=await client.action(adminKey,'content_activity_get',{setId,activityId:id});
       setEditor(result.activity as EditableActivity);
+      if(openNode)writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityId:String((result.activity as EditableActivity).id)});
+      if(openNode)writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityId:id});
     }catch(error){
       setDayMessage(failureText(error,'Задание не открылось'));
     }finally{setBusy(false);}
   }
 
   async function reloadOpenNode(){
-    if(openNode) await open(openNode.roadmapId,openNode.node.id);
+    if(openNode) await open(openNode.roadmapId,openNode.node.id,editor?.id);
   }
 
   async function createActivity(){
@@ -432,7 +474,10 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     setBusy(true);setDayMessage('');
     try{
       await client.action(adminKey,'content_activity_detach',{setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityId:id});
-      if(editor?.id===id)setEditor(null);
+      if(editor?.id===id){
+        setEditor(null);
+        writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id});
+      }
       await Promise.all([reloadOpenNode(),refreshCourse()]);
     }catch(error){
       setDayMessage(failureText(error,'Задание не убралось'));
@@ -462,6 +507,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     try{
       await client.action(adminKey,'content_set_create',{id,title,accessMode:'entitlement',freeDays:0});
       await loadSets();
+      writeCourseAdminContext({setId:id});
       setSetId(id);
       setCreateId('');setCreateTitle('');setCreateOpen(false);
       setMessage('Курс создан. Добавь дни и задания, потом нажми «Выпустить».');
@@ -559,6 +605,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
     try{
       await client.action(adminKey,'content_node_delete',{setId,roadmapId,nodeId});
       setOpenNode(null);setEditor(null);
+      writeCourseAdminContext({setId});
       await refreshCourse();
     }catch(error){
       const code=String((error as {code?:string})?.code || '');
@@ -598,7 +645,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
       {sets.map(item=>{
         const itemState=courseState(item);
         return <button key={item.id} type="button" role="tab" aria-selected={item.id===setId} data-busy="off"
-          className="ab-course-tab" data-state={itemState.tone} onClick={()=>setSetId(item.id)}>
+          className="ab-course-tab" data-state={itemState.tone} onClick={()=>{writeCourseAdminContext({setId:item.id});setSetId(item.id);}}>
           <b>{textValue(item.title)||item.id}</b>
           <small>{itemState.tone==='live'?'на сайте':itemState.tone==='changed'?'есть правки':'не выпущен'}</small>
         </button>;
@@ -674,7 +721,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
 
       <section className="ab-admin-panel ab-course-day-pane" ref={dayPane} aria-label="Выбранный день">
         {!openNode ? <p className="ab-admin-empty">Выбери день в списке — здесь откроются его задания.</p> : <>
-          <button type="button" className="ab-admin-link ab-course-back" data-busy="off" onClick={()=>{setOpenNode(null);setEditor(null);}}>← Все дни</button>
+          <button type="button" className="ab-admin-link ab-course-back" data-busy="off" onClick={()=>{writeCourseAdminContext({setId});setOpenNode(null);setEditor(null);}}>← Все дни</button>
           <div className="ab-course-day-head">
             <span className="ab-course-day-num">{openNode.node.dayIndex ?? '·'}</span>
             <div>
