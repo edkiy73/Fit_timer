@@ -59,6 +59,15 @@ describe('UnMute: English for Expats starter', () => {
     expect(router.state.location.pathname).toBe('/course');
   });
 
+  it('switches directly from Review to Route from the bottom bar', async () => {
+    localStorage.setItem('unmute.onboarding.v1', '1');
+    const user = userEvent.setup();
+    const router = renderApp('/review');
+    const tabs = await screen.findByRole('navigation', {name:t['nav.tabs']});
+    await user.click(within(tabs).getByRole('link', {name:t['nav.route']}));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/course'));
+  });
+
   it('hides the bottom bar inside a lesson', async () => {
     localStorage.setItem('unmute.onboarding.v1', '1');
     renderApp('/learn/day-1');
