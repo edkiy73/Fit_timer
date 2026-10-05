@@ -8,6 +8,7 @@ import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { emptyCourseProgress } from './progress';
 import { firstIncompleteRequirementIndex, NodeRunnerView } from './learn';
 import { dictionaries } from './i18n';
+import { SYSTEM_BACK_EVENT } from './native-back';
 
 const node={
   id:'day-1',
@@ -277,6 +278,15 @@ describe('node activity runner',()=>{
     // The runtime here never marks the day complete: the summary says so honestly.
     expect(await screen.findByText('День пока не засчитан')).toBeTruthy();
     expect(screen.getByText('С первого раза верно: 1 из 2')).toBeTruthy();
+  });
+
+  it('opens exit confirmation on Android Back without exiting the lesson',async()=>{
+    const {onExit}=renderRunner();
+    const event=new Event(SYSTEM_BACK_EVENT,{cancelable:true});
+
+    expect(window.dispatchEvent(event)).toBe(false);
+    expect(screen.getByRole('heading',{name:'Выйти из урока?'})).toBeTruthy();
+    expect(onExit).not.toHaveBeenCalled();
   });
 
   it('restores an unfinished run with a wrong answer after closing the lesson',async()=>{
