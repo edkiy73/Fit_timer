@@ -476,7 +476,7 @@ export function CourseMapScreen(){
             ? '?mode='+encodeURIComponent(target)
             : '';
         navigate('/learn/'+encodeURIComponent(nodeId)+query,{replace:Boolean(fromSheet)});
-      }
+      }}
       onUnlock={(nodeId,fromSheet)=>navigate('/access?from=course&node='+encodeURIComponent(nodeId),{replace:Boolean(fromSheet)})}
       onReference={()=>navigate('/reference')}
     />
