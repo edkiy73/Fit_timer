@@ -348,6 +348,22 @@ export function NodeRunnerView({
   // The step a restored run lands on: its saved answer/feedback must survive the first render
   // of that step (the reset below would otherwise wipe it once the restored order arrives).
   const restoringRunRef=useRef<string|null>(null);
+  const taskSectionRef=useRef<{
+    order:number[];
+    firstPass:number;
+    pos:number;
+    selected:number|null;
+    answer:string;
+    typing:boolean;
+    picked:string[];
+    result:boolean|null;
+    nearResult:boolean;
+    score:{correct:number;total:number};
+    firstPassResults:Record<number,boolean>;
+    shuffleSeed:string;
+    runId:string;
+    runMode:LessonRunMode;
+  }|null>(null);
   const lastExitRequestRef=useRef(exitRequest);
 
   const closeExitSheet=()=>{
@@ -712,12 +728,57 @@ export function NodeRunnerView({
   const availablePracticeModes=(['drill','listening','speaking'] as PracticeSrsKind[])
     .filter(mode=>patternEntries.some(({item})=>item.modes.includes(mode)));
 
+  const captureTaskSection=()=>{
+    if(!activity||!(activity.type==='choice'||activity.type==='text-input'||activity.type==='translation'))return;
+    taskSectionRef.current={
+      order:[...order],
+      firstPass,
+      pos,
+      selected,
+      answer,
+      typing,
+      picked:[...picked],
+      result,
+      nearResult,
+      score:{...score},
+      firstPassResults:{...firstPassResults},
+      shuffleSeed,
+      runId,
+      runMode
+    };
+  };
+
+  const restoreTaskSection=()=>{
+    const saved=taskSectionRef.current;
+    if(!saved)return false;
+    setOrder(saved.order);
+    setFirstPass(saved.firstPass);
+    setPos(saved.pos);
+    setSelected(saved.selected);
+    setAnswer(saved.answer);
+    setTyping(saved.typing);
+    setPicked(saved.picked);
+    setResult(saved.result);
+    setNearResult(saved.nearResult);
+    setScore(saved.score);
+    setFirstPassResults(saved.firstPassResults);
+    setShuffleSeed(saved.shuffleSeed);
+    setRunId(saved.runId);
+    setRunMode(saved.runMode);
+    setIntro(false);
+    setPracticeMode(undefined);
+    setBusy(false);
+    setAnswerSaveError(false);
+    return true;
+  };
+
   const openTasks=()=>{
     if(!regularTaskIndices.length)return;
-    const firstIncomplete=regularTaskIndices.find(index=>!isSeen(state.progress,steps[index]!.id));
-    const start=firstIncomplete??regularTaskIndices[0]!;
-    const taskOrder=regularTaskIndices.filter(index=>index>=start);
     withViewTransition(()=>{
+      if(restoreTaskSection())return;
+      const firstIncomplete=regularTaskIndices.find(index=>!isSeen(state.progress,steps[index]!.id));
+      const start=firstIncomplete??regularTaskIndices[0]!;
+      const taskOrder=regularTaskIndices.filter(index=>index>=start);
       begin(start);
       setOrder(taskOrder.length?taskOrder:[start]);
       setFirstPass(taskOrder.length||1);
@@ -730,6 +791,7 @@ export function NodeRunnerView({
   const openPractice=(mode:PracticeSrsKind)=>{
     const target=patternEntries.find(({item})=>item.modes.includes(mode));
     if(!target)return;
+    captureTaskSection();
     withViewTransition(()=>{
       begin(target.index);
       setOrder([target.index]);
