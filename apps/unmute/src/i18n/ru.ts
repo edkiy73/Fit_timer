@@ -476,7 +476,7 @@ export const ru = {
   'speaking.noMatchHint': 'Послушай, как правильно, и сравни с тем, что услышал телефон.',
   'speaking.heard': 'Услышано: {heard}',
   'speaking.playReference': 'Послушать, как правильно',
-  'speaking.acceptAnyway': 'Я сказал правильно',
+  'speaking.acceptAnyway': 'Сказано правильно',
   'speaking.manualCheck': 'Готово — сверить',
   'speaking.manualCompare': 'Сверь со своим вариантом',
   'speaking.manualCompareHint': 'Выбери, совпало ли то, что ты сказал.',
