@@ -91,6 +91,10 @@ describe('Today learner shell',()=>{
     expect(screen.getByText('0 из 2 заданий · ~1 мин')).toBeTruthy();
     expect(screen.getByText('Основа фразы')).toBeTruthy();
     expect(screen.getByText('1/4')).toBeTruthy();
+    const dayProgress=screen.getByRole('progressbar',{name:'Прогресс дня'});
+    expect(dayProgress.getAttribute('aria-valuenow')).toBe('0');
+    expect(screen.getByLabelText('0%')).toBeTruthy();
+    expect(screen.getByText('сегодня')).toBeTruthy();
     expect(screen.getByRole('button',{name:'Начать'})).toBeTruthy();
   });
 
