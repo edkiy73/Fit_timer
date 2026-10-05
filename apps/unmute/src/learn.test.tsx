@@ -6,7 +6,7 @@ import { I18nProvider } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { emptyCourseProgress } from './progress';
-import { firstIncompleteRequirementIndex, NodeRunnerView } from './learn';
+import { firstIncompleteRequirementIndex, firstMissingRequirementTarget, NodeRunnerView } from './learn';
 import { dictionaries } from './i18n';
 import { SYSTEM_BACK_EVENT } from './native-back';
 
@@ -157,6 +157,41 @@ describe('node activity runner',()=>{
 
     expect(firstIncompleteRequirementIndex(practiceNode,activities,progress)).toBe(1);
   });
+  it('chooses the earliest unresolved required target in lesson order',()=>{
+    const practiceNode={
+      ...node,
+      activityIds:['choice.one','pattern.one','text.one'],
+      completion:{
+        mode:'all' as const,
+        requirements:[
+          {kind:'activity-seen' as const,activityIds:['choice.one','text.one']},
+          {kind:'practice-started' as const,activityId:'pattern.one',modes:['drill' as const,'listening' as const]}
+        ]
+      }
+    };
+    const pattern={
+      id:'pattern.one',revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],pattern:{ru:'Фразы'},modes:['drill' as const,'listening' as const],
+      items:[{id:'p1',prompt:{ru:'Я здесь'},answer:{accepted:['I am here'],nearMiss:true,caseSensitive:false}}]
+    };
+    const steps=[
+      state.set.activities.find(activity=>activity.id==='choice.one')!,
+      pattern,
+      state.set.activities.find(activity=>activity.id==='text.one')!
+    ];
+    const progress=emptyCourseProgress();
+    progress.seen['choice.one']={at:'2026-10-06T00:00:00Z'};
+    progress.practice.drill['pattern.one']={box:1,due:1,completed:true,at:'2026-10-06T00:01:00Z'};
+
+    expect(firstMissingRequirementTarget(practiceNode,steps,progress)).toEqual({
+      index:1,
+      mode:'listening'
+    });
+
+    progress.practice.listening['pattern.one']={box:1,due:1,completed:true,at:'2026-10-06T00:02:00Z'};
+    expect(firstMissingRequirementTarget(practiceNode,steps,progress)).toEqual({index:2});
+  });
+
   it('opens the exact practice mode requested from Route instead of falling back to tasks',async()=>{
     const routeNode={
       ...node,
@@ -327,15 +362,16 @@ describe('node activity runner',()=>{
     await user.click(screen.getByRole('button',{name:'Готово'}));
     await user.click(screen.getByRole('button',{name:'Далее'}));
     // The mistake returns: same question, now in «работа над ошибками».
-    expect(await screen.findByText('Работа над ошибками: 1 из 1')).toBeTruthy();
-    expect(screen.getByText('2/2')).toBeTruthy();
+    expect(await screen.findByText('Работа над ошибками · осталось 1')).toBeTruthy();
+    expect(screen.getByText('1')).toBeTruthy();
+    expect(screen.queryByText('2/2')).toBeNull();
     expect(screen.getByRole('heading',{name:'Выбери ответ'})).toBeTruthy();
 
     // A second mistake must not fall out of the queue after one retry.
     await chooseAnswer(user,'I is here');
     expect(saveSeen.mock.calls.filter(call=>call[1]==='choice.one')).toEqual([]);
     await user.click(await screen.findByRole('button',{name:'Далее'}));
-    expect(await screen.findByText('Работа над ошибками: 2 из 2')).toBeTruthy();
+    expect(await screen.findByText('Работа над ошибками · осталось 1')).toBeTruthy();
 
     await chooseAnswer(user,'I am here');
     // Correction resolves the lesson step but does not grade SRS/stats a second time.
