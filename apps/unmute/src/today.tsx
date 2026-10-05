@@ -255,7 +255,6 @@ export function TodayView({
               <div className="tile-review-row">
                 <strong className="tile-number"><AnimatedNumber value={review.actionableCount} /></strong>
                 <span className="tile-caption">{t('today.reviewCaption')}</span>
-                <span className="tile-link">{t('today.reviewStart')} →</span>
               </div>
               {review.waitingCount>0&&<span className="sr-only">{t('today.reviewWaiting',{count:review.waitingCount})}</span>}
             </button>
@@ -269,7 +268,6 @@ export function TodayView({
           <Tile className="tile-streak" index={index++}>
             <div className="tile-kicker tone-streak"><Icon name="flame" size={18} />{t('today.streak')}</div>
             <strong className="tile-number"><AnimatedNumber value={streak} /><span className="tile-unit">{countDays(t,locale,streak).replace(/^\S+\s/,'')}</span></strong>
-            {!streak&&<span className="tile-caption">{t('today.streakStart')}</span>}
             <div className="week" aria-label={t('today.week',{count:week.filter(Boolean).length})}>
               {week.map((active,day)=>(
                 <span key={day} className={'week-day'+(active?' is-active':'')} aria-hidden="true">
@@ -296,7 +294,6 @@ export function TodayView({
               <span className="tile-speak-body">
                 <span className="tile-title">{t('today.speakTitle')}</span>
                 <span className="tile-text">{t('today.speakFromLesson')}</span>
-                <span className="tile-link">{t('today.speakOpen')}</span>
               </span>
             </button>
           )}
@@ -330,7 +327,6 @@ export function TodayView({
                 </span>
                 <span className="tile-caption">{t('today.landmarkWhen',{day:landmark.dayIndex,days:countDays(t,locale,landmark.inDays)})}</span>
               </span>
-              <Icon name="chevron" size={20} className="landmark-chevron" />
             </button>
           )}
         </div>
