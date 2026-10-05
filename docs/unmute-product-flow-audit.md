@@ -36,7 +36,7 @@ UI → навигация → состояние урока → сохранен
 | Onboarding / Profile / Dictionary / Access UX | ✅ #533–#536 |
 | Admin state / overflow / bulk wizard / activity hierarchy | ✅ #537/#540–#543 |
 | Learner terminology cleanup | 🟡 текущая пачка |
-| Save/error wording contract | 🟡 осталось |
+| Save/error wording contract | ✅ #545 |
 | Real Android device QA | 🟡 осталось |
 | Motion / visual polish | P2/P3 следующий этап |
 
