@@ -45,8 +45,6 @@ export interface DayProgress {
   dayComplete:boolean;
 }
 
-const practiceModes:PracticeSrsKind[]=['drill','listening','speaking'];
-
 function isLive(value:{deleted?:boolean}|undefined):boolean{
   return Boolean(value&&!value.deleted);
 }
