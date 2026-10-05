@@ -644,6 +644,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
 
   // Review days have no theory: they are named by their kind («Повторение»), not «День 6».
   const dayTitle=(node:DayRow)=>node.topic || (node.kind!=='lesson' ? KIND_LABELS[node.kind] : '') || textValue(node.title) || node.id;
+  const editorSummary=editor ? openNode?.activities.find(item=>item.id===editor.id) ?? null : null;
 
   return <div className="ab-course">
     <div className="ab-course-tabs" role="tablist" aria-label="Курсы">
@@ -724,8 +725,27 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
         </section>)}
       </aside>
 
-      <section className="ab-admin-panel ab-course-day-pane" ref={dayPane} aria-label="Выбранный день">
-        {!openNode ? <p className="ab-admin-empty">Выбери день в списке — здесь откроются его задания.</p> : <>
+      <section className="ab-admin-panel ab-course-day-pane" ref={dayPane} aria-label={editor?'Редактор задания':'Выбранный день'} data-editor-open={editor?'' : undefined}>
+        {!openNode ? <p className="ab-admin-empty">Выбери день в списке — здесь откроются его задания.</p> : editor ? (
+          <div className="ab-course-activity-level">
+            <button type="button" className="ab-admin-link ab-course-activity-back" data-busy="off" onClick={()=>{setEditor(null);writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id});}}>← К заданиям</button>
+            <div className="ab-course-activity-head">
+              <div>
+                <span className="ab-course-level-kicker">День {openNode.node.dayIndex ?? '—'} · {openRow ? dayTitle(openRow) : textValue(openNode.node.title)}</span>
+                <h2>{editorSummary?.plan ? 'План дня' : editorSummary?.label || editor.id}</h2>
+                <p className="ab-admin-note">{editorSummary?.plan ? 'План' : typeLabel(editor.type)} · <code>{editor.id}</code></p>
+              </div>
+            </div>
+            <ActivityEditor
+              client={client}
+              adminKey={adminKey}
+              setId={setId}
+              activity={editor}
+              onClose={()=>{setEditor(null);writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id});}}
+              onSaved={next=>{setEditor(next);writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityId:next.id});void reloadOpenNode();void loadSets();}}
+            />
+          </div>
+        ) : <>
           <button type="button" className="ab-admin-link ab-course-back" data-busy="off" onClick={()=>{writeCourseAdminContext({setId});setOpenNode(null);setEditor(null);}}>← Все дни</button>
           <div className="ab-course-day-head">
             <span className="ab-course-day-num">{openNode.node.dayIndex ?? '·'}</span>
@@ -737,9 +757,9 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
           {dayMessage && <p className="ab-admin-feedback" role="status">{dayMessage}</p>}
 
           <ol className="ab-course-tasks">
-            {openNode.activities.map((activity,index)=><li key={activity.id} className="ab-course-task" data-open={editor?.id===activity.id || undefined}>
+            {openNode.activities.map((activity,index)=><li key={activity.id} className="ab-course-task">
               <div className="ab-course-task-row">
-                <button type="button" className="ab-course-task-main" aria-expanded={editor?.id===activity.id} onClick={()=>void toggleActivity(activity.id)}>
+                <button type="button" className="ab-course-task-main" aria-label={'Открыть задание '+(activity.plan?'План дня':activity.label||activity.id)} onClick={()=>void toggleActivity(activity.id)}>
                   <span className="ab-course-task-num">{index+1}</span>
                   <span className="ab-course-task-text">
                     <b>{activity.plan ? 'План дня' : activity.label || activity.id}</b>
@@ -752,9 +772,6 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
                   <button type="button" className="ab-admin-secondary" aria-label="Убрать из дня" title="Убрать из дня" disabled={busy} onClick={()=>void detach(activity.id)}>✕</button>
                 </span>
               </div>
-              {editor?.id===activity.id && <ActivityEditor client={client} adminKey={adminKey} setId={setId} activity={editor}
-                onClose={()=>{setEditor(null);writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id});}}
-                onSaved={next=>{setEditor(next);writeCourseAdminContext({setId,roadmapId:openNode.roadmapId,nodeId:openNode.node.id,activityId:next.id});void reloadOpenNode();void loadSets();}} />}
             </li>)}
           </ol>
           {!openNode.activities.length && <p className="ab-admin-empty">В этом дне пока нет заданий.</p>}
