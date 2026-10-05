@@ -293,7 +293,8 @@ describe('node activity runner',()=>{
     expect(screen.getByText('Похоже на опечатку — ответ засчитан.')).toBeTruthy();
     expect(screen.getByText('Подходящий ответ: I am here')).toBeTruthy();
     expect(screen.queryByText('Это задание вернётся в конце урока.')).toBeNull();
-    expect(saveGraded.mock.calls.filter(call=>call[1]==='text.one')).toEqual([]);
+    // Only the preceding exact choice was graded; the typo itself creates no SRS write.
+    expect(saveGraded).toHaveBeenCalledTimes(1);
     expect(saveSeen).toHaveBeenCalledWith('general-foundation','text.one');
   });
 
