@@ -28,6 +28,7 @@ export interface PatternSpeakingViewProps {
   speak:SpeakText;
   startRecognition:StartRecognition;
   random?:()=>number;
+  onProgress?:(current:number,total:number)=>void;
 }
 
 function localized(text:Record<string,string>,locale:string):string{
@@ -65,7 +66,8 @@ export function PatternSpeakingView({
   savePractice,
   speak,
   startRecognition,
-  random=Math.random
+  random=Math.random,
+  onProgress
 }:PatternSpeakingViewProps){
   const {t,locale}=useI18n();
   const [items,setItems]=useState(()=>pickSpeakingItems(activity,random));
@@ -87,6 +89,8 @@ export function PatternSpeakingView({
   const done=pos>=items.length;
   const score=speakingScore(hits,items.length);
   const passed=speakingPassed(hits,items.length);
+
+  useEffect(()=>{ onProgress?.(Math.min(pos+1,items.length),items.length); },[items.length,onProgress,pos]);
 
   useEffect(()=>{
     return ()=>{
@@ -310,7 +314,6 @@ export function PatternSpeakingView({
         </>
       )}
 
-      <div className="learn-hint">{t('speaking.sessionStats',{correct:hits,total:items.length})}</div>
     </article>
   );
 }
