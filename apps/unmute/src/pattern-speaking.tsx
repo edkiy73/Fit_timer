@@ -49,7 +49,7 @@ export function pickSpeakingItems(
   activity:PatternDrillActivity,
   random:()=>number=Math.random
 ):PatternDrillActivity['items']{
-  return shuffle(activity.items,random).slice(0,6);
+  return shuffle(activity.items,random);
 }
 
 export function speakingScore(correct:number,total:number):number{
