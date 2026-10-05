@@ -437,7 +437,7 @@ export function ReviewView({
     const moreDue=session.hiddenDue;
     return (
       <section className="review-shell is-ready" aria-labelledby="review-title">
-        <div className="learn-summary">
+        <div className="learn-summary completion-summary">
           <span className="learn-summary-icon" aria-hidden="true"><Icon name="check" size={32} /></span>
           <div className="screen-kicker">{t('review.eyebrow')}</div>
           <h2 id="review-title">{t('review.doneTitle')}</h2>
