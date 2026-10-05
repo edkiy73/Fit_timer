@@ -384,7 +384,7 @@ export const en: Record<keyof typeof ru, string> = {
   'learn.introKicker': 'Read before the tasks',
   'learn.toTasks': 'To the tasks',
   'learn.willReturn': 'This task comes back at the end of the lesson.',
-  'learn.retryPhase': 'Fixing mistakes: {current} of {total}',
+  'learn.retryPhase': 'Fix mistakes · {count} left',
   'learn.reviewDayTitle': 'Review day',
   'learn.reviewDayText': 'No new topics today. Review what is due: {count}. When you finish, the day counts.',
   'learn.reviewDayClear': 'Nothing is due today. You can count the day.',
