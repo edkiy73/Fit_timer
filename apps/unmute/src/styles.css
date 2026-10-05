@@ -1305,7 +1305,7 @@ select:active{transform:scale(.985)}
 /* «Собери фразу» */
 .chips-builder{display:grid;gap:7px}
 .chips-label{color:var(--muted);font-size:13px;font-weight:400}
-.chips-line{display:flex;flex-wrap:wrap;align-content:flex-start;align-items:center;gap:6px;min-height:56px;padding:10px 12px;border:1.5px solid var(--line);border-radius:var(--radius-btn);background:var(--surface)}
+.chips-line{display:flex;flex-wrap:wrap;align-content:center;align-items:center;gap:6px;min-height:56px;box-sizing:border-box;padding:10px 12px;border:1.5px solid var(--line);border-radius:var(--radius-btn);background:var(--surface)}
 .chips-placeholder{align-self:center;color:var(--muted);font-size:13px;font-weight:400}
 .chips-pool{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
 .word-chip{min-height:36px;padding:6px 11px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font:inherit;font-size:15px;font-weight:400;cursor:pointer;box-shadow:0 1px 0 var(--line);transform-origin:center;transition:transform var(--motion-fast) ease,box-shadow var(--motion-fast) ease,background-color var(--motion-fast) ease}
@@ -1313,7 +1313,6 @@ select:active{transform:scale(.985)}
 .word-chip.is-picked{animation:chip-settle var(--motion-base) var(--motion-spring-ease) both}
 @keyframes chip-settle{0%{filter:brightness(1.08)}100%{filter:none}}
 .word-chip.is-picked{background:var(--card)}
-.word-chip.is-used{visibility:hidden}
 .word-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .link-toggle{justify-self:center;border:0;background:none;color:var(--accent-ink);font:inherit;font-size:13px;font-weight:500;cursor:pointer;padding:8px}
 .runner-intro-label{flex:1;color:var(--muted);font-size:14px;font-weight:700;text-align:right}

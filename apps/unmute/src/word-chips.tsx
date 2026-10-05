@@ -96,10 +96,11 @@ export function WordChips({chips, picked, disabled, onChange}: {
       <div className="chips-pool" aria-label={t('chips.pool')}>
         {chips.map(chip => {
           const used = picked.includes(chip.id);
+          if(used)return null;
           return (
-            <button key={chip.id} type="button" className={'word-chip pressable' + (used ? ' is-used' : '')}
+            <button key={chip.id} type="button" className="word-chip pressable"
               ref={element=>{if(element)poolRefs.current.set(chip.id,element);else poolRefs.current.delete(chip.id);}}
-              disabled={disabled || used} aria-hidden={used || undefined} tabIndex={used ? -1 : undefined}
+              disabled={disabled}
               onClick={event=>move(chip.id,event.currentTarget,[...picked,chip.id])} lang="en">
               {chip.text}
             </button>
