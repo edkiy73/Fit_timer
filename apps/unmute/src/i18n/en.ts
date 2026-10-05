@@ -148,7 +148,6 @@ export const en: Record<keyof typeof ru, string> = {
   'progress.practiceCount': '{count} activities',
   'progress.practiceSpeedValue': '{count} activities · {percent}% on time',
   'progress.practiceDialogueValue': '{count} activities · {percent}% right',
-  'progress.dueNow': 'Due for review',
   'progress.loadingTitle': 'Loading progress',
   'progress.errorTitle': 'Could not load progress',
   'progress.emptyTitle': 'Your progress will appear here',
