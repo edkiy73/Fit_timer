@@ -296,7 +296,9 @@ export function NodeRunnerView({
   startActivityId,
   startMode,
   resumeSavedRun=false,
-  replayTasksOnly=false
+  replayTasksOnly=false,
+  exitRequest=0,
+  onExitCancelled=()=>{}
 }:NodeRunnerViewProps){
   const {t,locale}=useI18n();
   const state=runtime.state;
@@ -346,6 +348,28 @@ export function NodeRunnerView({
   // The step a restored run lands on: its saved answer/feedback must survive the first render
   // of that step (the reset below would otherwise wipe it once the restored order arrives).
   const restoringRunRef=useRef<string|null>(null);
+  const lastExitRequestRef=useRef(exitRequest);
+
+  const closeExitSheet=()=>{
+    setExitOpen(false);
+    onExitCancelled();
+  };
+
+  useEffect(()=>{
+    if(exitRequest===lastExitRequestRef.current)return;
+    lastExitRequestRef.current=exitRequest;
+    setExitOpen(true);
+  },[exitRequest]);
+
+  useEffect(()=>{
+    const onSystemBack=(event:Event)=>{
+      if(finished)return;
+      event.preventDefault();
+      setExitOpen(true);
+    };
+    window.addEventListener(SYSTEM_BACK_EVENT,onSystemBack);
+    return ()=>window.removeEventListener(SYSTEM_BACK_EVENT,onSystemBack);
+  },[finished]);
 
   useEffect(()=>{
     // Completed nodes opened later are not new completions. A persisted completion candidate
@@ -571,11 +595,11 @@ export function NodeRunnerView({
   };
 
   const exitSheet=(
-    <Sheet open={exitOpen} onClose={()=>setExitOpen(false)} labelledBy="lesson-exit-title" closeLabel={t('learn.exitStay')}>
+    <Sheet open={exitOpen} onClose={closeExitSheet} labelledBy="lesson-exit-title" closeLabel={t('learn.exitStay')}>
       <div className="confirm-sheet confirm-sheet-compact">
         <h3 id="lesson-exit-title">{t('learn.exitTitle')}</h3>
         <p className="tile-text">{t('learn.exitText')}</p>
-        <button className="primary-button" type="button" onClick={()=>setExitOpen(false)}>{t('learn.exitStay')}</button>
+        <button className="primary-button" type="button" onClick={closeExitSheet}>{t('learn.exitStay')}</button>
         <button
           className="secondary-button"
           type="button"
