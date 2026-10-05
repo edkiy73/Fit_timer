@@ -18,6 +18,7 @@ export interface PatternDrillViewProps {
     score:number
   )=>Promise<void>;
   variant?:'practice'|'mixed';
+  onProgress?:(current:number,total:number)=>void;
 }
 
 function localized(text:Record<string,string>,locale:string):string{
@@ -49,7 +50,8 @@ export function PatternDrillView({
   setId,
   onDone,
   savePractice,
-  variant='practice'
+  variant='practice',
+  onProgress
 }:PatternDrillViewProps){
   const {t,locale}=useI18n();
   // The drill has a fixed number of phrases; a missed one is replayed once at the end
@@ -71,6 +73,8 @@ export function PatternDrillView({
   const score=drillScore(fast,base);
   const passed=drillPassed(fast,base);
   const replaying=pos>=base;
+
+  useEffect(()=>{ onProgress?.(Math.min(pos+1,base),base); },[base,onProgress,pos]);
 
   useEffect(()=>{
     if(!item||phase!=='ask')return;
@@ -256,9 +260,6 @@ export function PatternDrillView({
         </>
       )}
 
-      <div className="learn-hint">
-        {t('drill.sessionStats',{fast,slow})}
-      </div>
     </article>
   );
 }
