@@ -213,10 +213,11 @@ export function DialogueView({
           <span>{passed?t('dialogue.passed'):t('dialogue.retryHint')}</span>
         </div>
         {saveError&&(
-          <div className="learn-feedback learn-feedback-wrong" role="alert">
+          <div className="learn-feedback learn-feedback-wrong learn-save-error" role="alert">
             <strong>{t('dialogue.saveError')}</strong>
+            <span>{t('learn.saveErrorHint')}</span>
             <button className="secondary-button" type="button" onClick={retrySave}>
-              {t('today.retry')}
+              {t('learn.retrySave')}
             </button>
           </div>
         )}
