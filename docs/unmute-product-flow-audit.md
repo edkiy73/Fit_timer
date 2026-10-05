@@ -35,11 +35,11 @@ UI → навигация → состояние урока → сохранен
 | Today / Route / Review UX hierarchy | ✅ #530–#532/#539 |
 | Onboarding / Profile / Dictionary / Access UX | ✅ #533–#536 |
 | Admin state / overflow / bulk wizard / activity hierarchy | ✅ #537/#540–#543 |
-| Learner terminology cleanup | 🟡 текущая пачка |
+| Learner terminology cleanup | ✅ #544 |
 | Save/error wording contract | ✅ #545 |
 | Admin release status flow | ✅ #546 |
 | Real Android device QA | 🟡 осталось |
-| Motion / visual polish | P2/P3 следующий этап |
+| Motion / visual polish | ✅ foundation #497–#505 · navigation polish #547 |
 
 CI/browser regression по learner screens и Admin 360 px есть; отдельные нативные сценарии остаются в phone QA.
 
