@@ -46,6 +46,8 @@ export interface PatternPracticeViewProps {
   showModeNav?:boolean;
   /** Keep the lesson-level navigator in sync with automatic/manual mode changes. */
   onModeChange?:(mode:PracticeSrsKind)=>void;
+  /** Report phrase-level progress to the lesson header. */
+  onProgress?:(current:number,total:number)=>void;
 }
 
 export function PatternPracticeView({
@@ -59,7 +61,8 @@ export function PatternPracticeView({
   startRecognition=startSpeechRecognition,
   initialMode,
   showModeNav=true,
-  onModeChange
+  onModeChange,
+  onProgress
 }:PatternPracticeViewProps){
   const {t,locale}=useI18n();
   const [mode,setMode]=useState<PatternMode>(()=>
@@ -73,6 +76,14 @@ export function PatternPracticeView({
   useEffect(()=>{
     if(mode!=='complete')onModeChange?.(mode);
   },[mode,onModeChange]);
+
+  // The lesson-level tabs can change initialMode while this component keeps the same key.
+  // Mirror that prop into local state instead of getting stuck in the previously mounted mode.
+  useEffect(()=>{
+    if(!initialMode||!activity.modes.includes(initialMode)||mode===initialMode)return;
+    setSingle(true);
+    setMode(initialMode);
+  },[activity.modes,initialMode,mode]);
 
   const distractors=useMemo(
     ()=>courseActivities.flatMap(candidate=>
@@ -158,6 +169,7 @@ export function PatternPracticeView({
         setId={setId}
         savePractice={savePractice}
         onDone={()=>nextMode('drill')}
+        onProgress={onProgress}
       />
       </>
     );
@@ -174,6 +186,7 @@ export function PatternPracticeView({
         savePractice={savePractice}
         speak={speak}
         onDone={()=>nextMode('listening')}
+        onProgress={onProgress}
       />
       </>
     );
@@ -190,6 +203,7 @@ export function PatternPracticeView({
         speak={speak}
         startRecognition={startRecognition}
         onDone={()=>nextMode('speaking')}
+        onProgress={onProgress}
       />
       </>
     );
