@@ -92,7 +92,7 @@ describe('dialogue runner',()=>{
 
     const input=screen.getByRole('textbox',{name:'Твой ответ'});
     await user.type(input,'No, I live here');
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     expect(await screen.findByText('Подходит')).toBeTruthy();
     expect(screen.getByText('No, I live here.')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Далее'}));
@@ -126,7 +126,7 @@ describe('dialogue runner',()=>{
 
     const input=screen.getByRole('textbox',{name:'Твой ответ'});
     await user.type(input,'I live here');
-    await user.click(screen.getByRole('button',{name:'Проверить'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
     expect(await screen.findByText('Подходит')).toBeTruthy();
   });
 });
