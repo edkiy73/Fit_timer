@@ -90,7 +90,7 @@ describe('pattern speaking',()=>{
     await user.click(screen.getByRole('button',{name:'Нажми и скажи'}));
     recognition.result(['She walks here']);
     expect(await screen.findByText('Не совпало')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:'Я сказал правильно'}));
+    await user.click(screen.getByRole('button',{name:'Сказано правильно'}));
 
     await waitFor(()=>expect(savePractice).toHaveBeenCalledWith(
       'general-foundation',
@@ -132,7 +132,7 @@ describe('pattern speaking',()=>{
     await user.click(screen.getByRole('button',{name:'Показать ответ'}));
     expect(await screen.findByText('Вот как правильно')).toBeTruthy();
     expect(screen.getByText('I work at home.')).toBeTruthy();
-    expect(screen.queryByRole('button',{name:'Я сказал правильно'})).toBeNull();
+    expect(screen.queryByRole('button',{name:'Сказано правильно'})).toBeNull();
   });
 
   it('keeps a speech mismatch in correction until it is resolved',async()=>{
