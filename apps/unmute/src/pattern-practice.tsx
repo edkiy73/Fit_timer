@@ -3,6 +3,7 @@ import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
 import type { CourseProgressDocument } from './progress';
 import type { PracticeSrsKind } from './engine/practice-srs';
+import { practiceProgressComplete } from './engine/course-progress';
 import type { SpeakText, StartRecognition } from './speech-runtime';
 import { startRecognition as startSpeechRecognition } from './speech-runtime';
 import { PatternDrillView } from './pattern-drill';
@@ -39,7 +40,7 @@ export function firstPatternMode(
 ):PatternMode{
   for(const mode of activity.modes){
     const state=progress.practice[mode][activity.id];
-    if(!state||state.deleted||state.box<=0)return mode;
+    if(!state||state.deleted||!practiceProgressComplete(state))return mode;
   }
   return 'complete';
 }
