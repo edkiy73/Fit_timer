@@ -650,13 +650,9 @@ select:active{transform:scale(.985)}
   border-radius:50%;
   background:color-mix(in srgb,var(--line) 72%,transparent);
   box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--muted) 14%,transparent);
-  transform:scale(.72);
+  transform:translateX(var(--dot-shift,0px)) scale(.72);
   transition:background-color var(--motion-base) ease,box-shadow var(--motion-base) ease,transform var(--motion-sheet) var(--motion-spring-ease),opacity var(--motion-base) ease;
 }
-.today-progress-dots-left .today-progress-dot:nth-child(4n+1),
-.today-progress-dots-left .today-progress-dot:nth-child(4n+2){transform:translateX(5px) scale(.72)}
-.today-progress-dots-right .today-progress-dot:nth-child(4n+3),
-.today-progress-dots-right .today-progress-dot:nth-child(4n+4){transform:translateX(-5px) scale(.72)}
 .today-progress-dots-left .today-progress-dot.is-active{
   background:var(--accent);
   box-shadow:0 0 14px color-mix(in srgb,var(--accent) 34%,transparent);
@@ -671,14 +667,14 @@ select:active{transform:scale(.985)}
 }
 .today-progress-meta{text-align:center}
 @keyframes today-progress-dot-left{
-  0%{opacity:.28;transform:translateY(5px) scale(.35)}
-  70%{opacity:1;transform:translateY(-1px) scale(1.12)}
-  100%{opacity:1;transform:scale(1)}
+  0%{opacity:.28;transform:translateX(var(--dot-shift,0px)) translateY(5px) scale(.35)}
+  70%{opacity:1;transform:translateX(var(--dot-shift,0px)) translateY(-1px) scale(1.12)}
+  100%{opacity:1;transform:translateX(var(--dot-shift,0px)) scale(1)}
 }
 @keyframes today-progress-dot-right{
-  0%{opacity:.28;transform:translateY(5px) scale(.35)}
-  70%{opacity:1;transform:translateY(-1px) scale(1.12)}
-  100%{opacity:1;transform:scale(1)}
+  0%{opacity:.28;transform:translateX(var(--dot-shift,0px)) translateY(5px) scale(.35)}
+  70%{opacity:1;transform:translateX(var(--dot-shift,0px)) translateY(-1px) scale(1.12)}
+  100%{opacity:1;transform:translateX(var(--dot-shift,0px)) scale(1)}
 }
 .tile-hero h3{margin:0;font-size:22px;line-height:1.25;font-weight:800}
 .tile-short{min-height:76px}
@@ -745,7 +741,7 @@ select:active{transform:scale(.985)}
   .tile{animation:none}
   .skeleton{animation:none}
   :is(.course-map-shell,.progress-shell,.review-shell).is-ready{animation:none!important}
-  .today-progress-dot.is-active{animation:none!important;transform:scale(1)}
+  .today-progress-dot.is-active{animation:none!important;transform:translateX(var(--dot-shift,0px)) scale(1)}
 }
 
 /* Route: the course as a metro line (docs/unmute-design-plan.md §4.2) */
