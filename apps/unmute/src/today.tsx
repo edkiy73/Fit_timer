@@ -255,7 +255,6 @@ export function TodayView({
                 <span className="review-card-icon" aria-hidden="true"><Icon name="review" size={22} /></span>
                 <span className="review-card-copy">
                   <strong>{t('nav.review')}</strong>
-                  <span>{t('today.reviewReady')}</span>
                 </span>
               </span>
               <span className="review-card-count">
