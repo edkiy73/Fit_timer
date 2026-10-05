@@ -53,7 +53,7 @@ export const ru = {
   'today.speakHow': 'Скажи это вслух, своими словами, 3–5 фраз. Можно тихо, можно в дороге. Ошибки не страшны: цель — чтобы английский начал звучать. Ниже — примеры, их можно послушать.',
   'today.speakExamples': 'Примеры фраз',
   'today.speakListen': 'Послушать: {text}',
-  'today.speakStart': 'Перейти к уроку дня',
+  'today.speakStart': 'Начать практику',
   'today.landmarkDialogue': 'Впереди: диалог «{title}»',
   'today.landmarkTalk': 'Впереди: разговор «{title}»',
   'today.landmarkReview': 'Впереди: день повторения',
