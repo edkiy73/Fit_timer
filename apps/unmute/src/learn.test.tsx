@@ -365,7 +365,8 @@ describe('node activity runner',()=>{
     expect(await screen.findByText('1 из 1 вовремя')).toBeTruthy();
 
     await user.click(screen.getByRole('button',{name:'Далее'}));
-    await user.click(await screen.findByRole('button',{name:'Далее'}));
+    expect(await screen.findByText('Паттерн пройден')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Далее'}));
 
     expect(await screen.findByText('Тренируем слух: понимать фразу с первого раза, без текста.')).toBeTruthy();
     expect(screen.queryByText('День пока не засчитан')).toBeNull();
