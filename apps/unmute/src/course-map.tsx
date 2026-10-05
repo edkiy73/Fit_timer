@@ -381,12 +381,16 @@ export function CourseMapView({
                             {sectionStates.map(section=>(
                               <button
                                 key={section.id}
-                                className={'station-section-chip pressable'+(section.complete?' is-complete':'')}
+                                className={'station-section-chip pressable'+(section.complete?' is-complete':'')+(!section.required?' is-optional':'')}
                                 type="button"
                                 onClick={()=>onOpen(station.node.id,false,section.id)}
                                 aria-label={t('courseMap.sectionStatus',{
                                   section:t(section.labelKey),
-                                  status:t(section.complete?'courseMap.sectionDone':'courseMap.sectionTodo')
+                                  status:t(section.complete
+                                    ? 'courseMap.sectionDone'
+                                    : section.required
+                                      ? 'courseMap.sectionTodo'
+                                      : 'courseMap.sectionOptional')
                                 })}
                               >
                                 {section.complete&&<Icon name="check" size={12} />}
