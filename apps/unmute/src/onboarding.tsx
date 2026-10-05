@@ -86,18 +86,6 @@ export function OnboardingView({
         <h2 id="onboarding-title">{t('onboarding.title')}</h2>
         <p className="onboarding-lead">{t('onboarding.lead')}</p>
 
-        <ul className="onboarding-points">
-          {points.map((point,index)=>(
-            <li key={point.icon} style={{'--i':index+1} as CSSProperties}>
-              <span className="onboarding-icon" aria-hidden="true"><Icon name={point.icon} size={22} /></span>
-              <div>
-                <strong>{point.title}</strong>
-                <p>{point.text}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-
         {courses.length>1&&onCourse&&(
           <div className="onboarding-courses">
             <h3 id="onboarding-courses-title">{t('onboarding.courseTitle')}</h3>
@@ -105,6 +93,21 @@ export function OnboardingView({
             <CourseOptionList sets={courses} currentId={courseId} busy={busy} onPick={onCourse} />
           </div>
         )}
+
+        <div className="onboarding-how">
+          <h3>{t('onboarding.howTitle')}</h3>
+          <ul className="onboarding-points">
+            {points.map((point,index)=>(
+              <li key={point.icon} style={{'--i':index+1} as CSSProperties}>
+                <span className="onboarding-icon" aria-hidden="true"><Icon name={point.icon} size={20} /></span>
+                <div>
+                  <strong>{point.title}</strong>
+                  <p>{point.text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
 
       <div className="onboarding-actions">
