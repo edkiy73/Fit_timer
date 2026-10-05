@@ -338,6 +338,7 @@ export const ru = {
   'learn.exitSave': 'Выйти',
   'learn.tapAgain': 'Нажми ещё раз',
   'learn.theory': 'Теория',
+  'learn.sectionNav': 'Разделы урока',
   'learn.tasks': 'Задания',
   'learn.theoryClose': 'Закрыть теорию',
   'learn.activityProgress': 'Прогресс занятия',

@@ -680,39 +680,80 @@ export function NodeRunnerView({
     .map((item,index)=>({item,index}))
     .filter(({item})=>item.type==='choice'||item.type==='text-input'||item.type==='translation')
     .map(({index})=>index);
-  const replayRegularTasks=()=>{
+  const patternEntries=steps
+    .map((item,index)=>({item,index}))
+    .filter((entry):entry is {item:Extract<Activity,{type:'pattern-drill'}>;index:number}=>entry.item.type==='pattern-drill');
+  const availablePracticeModes=(['drill','listening','speaking'] as PracticeSrsKind[])
+    .filter(mode=>patternEntries.some(({item})=>item.modes.includes(mode)));
+
+  const openTasks=()=>{
     if(!regularTaskIndices.length)return;
-    begin(0);
-    setOrder(regularTaskIndices);
-    setFirstPass(regularTaskIndices.length);
+    const firstIncomplete=regularTaskIndices.find(index=>!isSeen(state.progress,steps[index]!.id));
+    const start=firstIncomplete??regularTaskIndices[0]!;
+    const taskOrder=regularTaskIndices.filter(index=>index>=start);
+    begin(start);
+    setOrder(taskOrder.length?taskOrder:[start]);
+    setFirstPass(taskOrder.length||1);
     setIntro(false);
     setPracticeMode(undefined);
-    setRunMode('replay');
+    setRunMode(firstIncomplete===undefined?'replay':'resume');
+  };
+
+  const openPractice=(mode:PracticeSrsKind)=>{
+    const target=patternEntries.find(({item})=>item.modes.includes(mode));
+    if(!target)return;
+    begin(target.index);
+    setOrder([target.index]);
+    setFirstPass(1);
+    setIntro(false);
+    setPracticeMode(mode);
+    setRunMode(nodeProgress?.complete?'replay':'resume');
   };
 
   const setId=state.set.id;
   const stage=stageForDay(node.dayIndex,state.set.id);
+  const lessonNav=(
+    <nav className="lesson-section-nav" aria-label={t('learn.sectionNav')}>
+      {theoryCards.length>0&&(
+        <button
+          className={'chip-button pressable'+(intro?' is-active':'')}
+          type="button"
+          aria-current={intro?'page':undefined}
+          onClick={()=>{ if(!intro)setTheoryOpen(true); }}
+        >
+          {t('learn.theory')}
+        </button>
+      )}
+      {regularTaskIndices.length>0&&(
+        <button
+          className={'chip-button pressable'+(!intro&&activity&&(activity.type==='choice'||activity.type==='text-input'||activity.type==='translation')?' is-active':'')}
+          type="button"
+          aria-current={!intro&&activity&&(activity.type==='choice'||activity.type==='text-input'||activity.type==='translation')?'page':undefined}
+          onClick={openTasks}
+        >
+          {t('learn.tasks')}
+        </button>
+      )}
+      {availablePracticeModes.map(mode=>(
+        <button
+          key={mode}
+          className={'chip-button pressable'+(!intro&&activity?.type==='pattern-drill'&&practiceMode===mode?' is-active':'')}
+          type="button"
+          aria-current={!intro&&activity?.type==='pattern-drill'&&practiceMode===mode?'page':undefined}
+          onClick={()=>openPractice(mode)}
+        >
+          {t(MODE_KEY[mode])}
+        </button>
+      ))}
+    </nav>
+  );
   const header=(
     <div className="runner-heading">
       <div className="runner-heading-text">
         {stage&&<div className="screen-kicker">{t(stageNameKey(stage))}</div>}
         <h2 id="learn-title"><LexiconText text={localized(node.title,locale)} /></h2>
       </div>
-      {!intro&&(
-        <div className="runner-heading-actions">
-          {regularTaskIndices.length>0&&(
-            <button className="chip-button pressable" type="button" onClick={replayRegularTasks}>
-              {t('learn.tasks')}
-            </button>
-          )}
-          {theoryCards.length>0&&(
-            <button className="chip-button pressable" type="button" onClick={()=>setTheoryOpen(true)}>
-              <Icon name="book" size={18} />
-              {t('learn.theory')}
-            </button>
-          )}
-        </div>
-      )}
+      {lessonNav}
     </div>
   );
 
@@ -1046,7 +1087,7 @@ export function NodeRunnerView({
 
       {activity.type==='pattern-drill'&&(
         <PatternPracticeView
-          key={activity.id+'-'+pos+'-'+(practiceMode??'')}
+          key={activity.id+'-'+pos}
           activity={activity}
           courseActivities={state.set.activities}
           progress={state.progress}
@@ -1054,6 +1095,8 @@ export function NodeRunnerView({
           savePractice={practiceSave}
           speak={speak}
           {...(practiceMode?{initialMode:practiceMode}:{})}
+          showModeNav={false}
+          onModeChange={setPracticeMode}
           onDone={()=>{ setPracticeMode(undefined); void saveSeen(setId,activity.id).catch(()=>undefined).then(()=>advance()); }}
         />
       )}
