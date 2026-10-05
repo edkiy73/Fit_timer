@@ -122,6 +122,6 @@ describe('learner dictionary popup',()=>{
     await user.click(await screen.findByRole('button',{name:'Перевести: Unknownword'}));
 
     expect(await screen.findByText(/нет словарной статьи/)).toBeTruthy();
-    expect(screen.getByRole('button',{name:'Произнести'})).toBeTruthy();
+    expect(screen.getByRole('button',{name:'Послушать: Unknownword'})).toBeTruthy();
   });
 });
