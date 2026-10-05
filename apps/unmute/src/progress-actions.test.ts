@@ -19,6 +19,15 @@ describe('learner progress actions',()=>{
     expect(doc.learningDays['2026-09-28']).toBeTruthy();
   });
 
+  it('keeps a wrong first-pass card unresolved while still grading SRS',()=>{
+    let doc=emptyCourseProgress();
+    doc=gradeCourseCard(doc,'card.wrong',false,100,'2026-09-28','2026-09-28T10:00:00Z');
+
+    expect(doc.cards['card.wrong']).toMatchObject({box:0,due:100});
+    expect(doc.seen['card.wrong']).toBeUndefined();
+    expect(doc.learningDays['2026-09-28']).toBeTruthy();
+  });
+
   it('advances and rolls back the adaptive sentence stage without changing SRS semantics',()=>{
     let doc=emptyCourseProgress();
     doc=gradeCourseCard(doc,'sentence.a',false,100,'2026-09-28','2026-09-28T10:00:00Z','build');

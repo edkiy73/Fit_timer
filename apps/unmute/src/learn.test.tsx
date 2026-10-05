@@ -277,9 +277,9 @@ describe('node activity runner',()=>{
     expect(saveGraded.mock.calls[1]?.[4]).toBe(saveGraded.mock.calls[0]?.[4]);
   });
 
-  it('counts a keyboard typo as near miss instead of an SRS error',async()=>{
+  it('accepts a keyboard typo without creating SRS debt',async()=>{
     const user=userEvent.setup();
-    const {saveGraded}=renderRunner();
+    const {saveSeen,saveGraded}=renderRunner();
 
     await user.click(screen.getByRole('button',{name:'К заданиям'}));
     await chooseAnswer(user,'I am here');
@@ -293,15 +293,16 @@ describe('node activity runner',()=>{
     expect(screen.getByText('Похоже на опечатку — ответ засчитан.')).toBeTruthy();
     expect(screen.getByText('Подходящий ответ: I am here')).toBeTruthy();
     expect(screen.queryByText('Это задание вернётся в конце урока.')).toBeNull();
-    expect(saveGraded).toHaveBeenLastCalledWith(
-      'general-foundation','text.one',true,'write',expect.any(String)
-    );
+    // Only the preceding exact choice was graded; the typo itself creates no SRS write.
+    expect(saveGraded).toHaveBeenCalledTimes(1);
+    expect(saveSeen).toHaveBeenCalledWith('general-foundation','text.one');
   });
 
-  it('brings a wrong answer back at the end and does not call an unfinished day done',async()=>{
+  it('keeps a wrong answer in correction until it is actually resolved',async()=>{
     const user=userEvent.setup();
     const progress=emptyCourseProgress();
     progress.seen['theory.one']={at:'2026-09-29T01:00:00.000Z'};
+    const saveSeen=vi.fn(async(_setId:string,_activityId:string)=>{});
     const saveGraded=vi.fn(async(_setId:string,_activityId:string,_correct:boolean)=>{});
     render(
       <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="learn-retry.locale" systemLanguages={['ru']}>
@@ -309,7 +310,7 @@ describe('node activity runner',()=>{
           runtime={{...runtime,state:{...state,progress}}}
           nodeId="day-1"
           onExit={()=>{}}
-          saveSeen={async()=>{}}
+          saveSeen={saveSeen}
           saveGraded={saveGraded}
           savePractice={async()=>{}}
         />
@@ -329,15 +330,19 @@ describe('node activity runner',()=>{
     expect(await screen.findByText('Работа над ошибками: 1 из 1')).toBeTruthy();
     expect(screen.getByText('2/2')).toBeTruthy();
     expect(screen.getByRole('heading',{name:'Выбери ответ'})).toBeTruthy();
+
+    // A second mistake must not fall out of the queue after one retry.
+    await chooseAnswer(user,'I is here');
+    expect(saveSeen.mock.calls.filter(call=>call[1]==='choice.one')).toEqual([]);
+    await user.click(await screen.findByRole('button',{name:'Далее'}));
+    expect(await screen.findByText('Работа над ошибками: 2 из 2')).toBeTruthy();
+
     await chooseAnswer(user,'I am here');
-    // «Работа над ошибками» is practice: the review schedule keeps the first (wrong) answer only.
+    // Correction resolves the lesson step but does not grade SRS/stats a second time.
     expect(saveGraded.mock.calls.filter(call=>call[1]==='choice.one')).toEqual([
       ['general-foundation','choice.one',false,undefined,expect.any(String)]
     ]);
-    await user.click(screen.getByRole('button',{name:'Завершить'}));
-    // The runtime here never marks the day complete: the summary says so honestly.
-    expect(await screen.findByText('День пока не засчитан')).toBeTruthy();
-    expect(screen.getByText('С первого раза верно: 1 из 2')).toBeTruthy();
+    expect(saveSeen).toHaveBeenCalledWith('general-foundation','choice.one');
   });
 
   it('uses Android Back only to open and close the lesson exit confirmation',async()=>{
