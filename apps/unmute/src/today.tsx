@@ -97,7 +97,7 @@ export function TodayView({
   learningDays?:RecordMap<TimedFlag>|null;
   /** Studied courses other than the active one: their due items count toward review. */
   otherCourses?:OtherCourseReview[];
-  /** Same-device unfinished phrase progress, merged on top of durable course progress. */
+  /** Same-device unfinished task/practice state, merged on top of durable course progress. */
   activeDayProgress?:ActiveDayProgress;
 }){
   const {t,locale}=useI18n();
