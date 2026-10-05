@@ -339,6 +339,7 @@ export function NodeRunnerView({
   const [checking,setChecking]=useState(false);
   const [practiceMode,setPracticeMode]=useState<PracticeSrsKind|undefined>(startMode);
   const [practiceProgress,setPracticeProgress]=useState<{current:number;total:number}|null>(null);
+  const [practiceActivityIndex,setPracticeActivityIndex]=useState<number|null>(null);
   const [shuffleSeed,setShuffleSeed]=useState(()=>randomSeed());
   const [runHydrated,setRunHydrated]=useState(false);
   const [runId,setRunId]=useState(()=>randomSeed());
@@ -727,6 +728,12 @@ export function NodeRunnerView({
     .filter((entry):entry is {item:Extract<Activity,{type:'pattern-drill'}>;index:number}=>entry.item.type==='pattern-drill');
   const availablePracticeModes=(['drill','listening','speaking'] as PracticeSrsKind[])
     .filter(mode=>patternEntries.some(({item})=>item.modes.includes(mode)));
+  const visiblePatternIndex=activity?.type==='pattern-drill'&&stepIndex!==undefined
+    ? stepIndex
+    : practiceActivityIndex;
+  const persistentPatternEntry=visiblePatternIndex===null
+    ? null
+    : patternEntries.find(entry=>entry.index===visiblePatternIndex)??null;
 
   const captureTaskSection=()=>{
     if(!activity||!(activity.type==='choice'||activity.type==='text-input'||activity.type==='translation'))return;
@@ -792,6 +799,7 @@ export function NodeRunnerView({
     const target=patternEntries.find(({item})=>item.modes.includes(mode));
     if(!target)return;
     captureTaskSection();
+    setPracticeActivityIndex(target.index);
     withViewTransition(()=>{
       begin(target.index);
       setOrder([target.index]);
@@ -1217,21 +1225,27 @@ export function NodeRunnerView({
         </article>
       )}
 
-      {activity.type==='pattern-drill'&&(
-        <PatternPracticeView
-          key={activity.id+'-'+pos}
-          activity={activity}
-          courseActivities={state.set.activities}
-          progress={state.progress}
-          setId={setId}
-          savePractice={practiceSave}
-          speak={speak}
-          {...(practiceMode?{initialMode:practiceMode}:{})}
-          showModeNav={false}
-          onModeChange={setPracticeMode}
-          onProgress={(current,total)=>setPracticeProgress({current,total})}
-          onDone={()=>{ setPracticeMode(undefined); void saveSeen(setId,activity.id).catch(()=>undefined).then(()=>advance()); }}
-        />
+      {persistentPatternEntry&&(
+        <div hidden={activity.type!=='pattern-drill'}>
+          <PatternPracticeView
+            key={persistentPatternEntry.item.id}
+            activity={persistentPatternEntry.item}
+            courseActivities={state.set.activities}
+            progress={state.progress}
+            setId={setId}
+            savePractice={practiceSave}
+            speak={speak}
+            {...(practiceMode?{initialMode:practiceMode}:{})}
+            showModeNav={false}
+            active={activity.type==='pattern-drill'}
+            onModeChange={setPracticeMode}
+            onProgress={(current,total)=>setPracticeProgress({current,total})}
+            onDone={()=>{
+              setPracticeMode(undefined);
+              void saveSeen(setId,persistentPatternEntry.item.id).catch(()=>undefined).then(()=>advance());
+            }}
+          />
+        </div>
       )}
 
       {activity.type==='dialogue'&&(
