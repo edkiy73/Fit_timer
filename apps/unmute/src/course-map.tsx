@@ -377,18 +377,6 @@ export function CourseMapView({
                           )}
                         </button>
                         {station.status==='current'&&station.canOpen&&sectionStates.length>0&&(
-                          <div className="station-section-summary">
-                            {sectionStates.some(section=>section.blocking)
-                              ? t('courseMap.remainingSections',{
-                                  sections:sectionStates
-                                    .filter(section=>section.blocking)
-                                    .map(section=>t(section.labelKey))
-                                    .join(' · ')
-                                })
-                              : t('courseMap.requiredSectionsDone')}
-                          </div>
-                        )}
-                        {station.status==='current'&&station.canOpen&&sectionStates.length>0&&(
                           <div className="station-section-chips" aria-label={t('courseMap.daySections')}>
                             {sectionStates.map(section=>(
                               <button
@@ -410,12 +398,6 @@ export function CourseMapView({
                               </button>
                             ))}
                           </div>
-                        )}
-                        {station.status==='current'&&station.canOpen&&(
-                          <button className="primary-button station-go" type="button" onClick={()=>onOpen(station.node.id)}>
-                            <Icon name="play" size={16} />
-                            {t('courseMap.open')}
-                          </button>
                         )}
                       </li>
                       </Fragment>
