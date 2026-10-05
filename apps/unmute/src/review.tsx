@@ -736,12 +736,14 @@ export function ReviewView({
                   <span>{t('review.wordSaveError')}</span>
                 </div>
               )}
-              <button className="primary-button" type="button" disabled={busy} onClick={()=>void gradeWord(true)}>
-                {t('review.wordKnew')}
-              </button>
-              <button className="secondary-button" type="button" disabled={busy} onClick={()=>void gradeWord(false)}>
-                {t('review.wordForgot')}
-              </button>
+              <div className="review-word-actions">
+                <button className="secondary-button" type="button" disabled={busy} onClick={()=>void gradeWord(false)}>
+                  {t('review.wordForgot')}
+                </button>
+                <button className="primary-button" type="button" disabled={busy} onClick={()=>void gradeWord(true)}>
+                  {t('review.wordKnew')}
+                </button>
+              </div>
             </>
           )}
         </article>
