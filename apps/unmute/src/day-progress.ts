@@ -181,8 +181,8 @@ function requirementSections(
     if(!activity)continue;
     if(activity.type==='pattern-drill'){
       for(const mode of activity.modes){
-        const active=active.practice?.find(item=>item.activityId===activity.id&&item.mode===mode);
-        sections.push(practiceSection(activity,mode,progress,active));
+        const activeMode=active.practice?.find(item=>item.activityId===activity.id&&item.mode===mode);
+        sections.push(practiceSection(activity,mode,progress,activeMode));
       }
     }else if(activity.type==='review'){
       sections.push(manualSection(node,progress));
