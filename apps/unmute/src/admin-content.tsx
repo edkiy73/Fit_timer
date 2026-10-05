@@ -79,6 +79,30 @@ type BulkPreview = {
   coverage?:CoverageSummary;
 };
 
+type ContentAdminContext={
+  query:string;
+  lookup:string;
+  bulkSetId:string;
+  bulkMode:'missing'|'enrich';
+  editorId?:string;
+};
+const CONTENT_CONTEXT_KEY='unmute.admin.content.context';
+function readContentAdminContext():ContentAdminContext{
+  try{
+    const parsed=JSON.parse(sessionStorage.getItem(CONTENT_CONTEXT_KEY)||'{}') as Partial<ContentAdminContext>;
+    return {
+      query:String(parsed.query||''),
+      lookup:String(parsed.lookup||''),
+      bulkSetId:String(parsed.bulkSetId||'general-foundation'),
+      bulkMode:parsed.bulkMode==='enrich'?'enrich':'missing',
+      ...(parsed.editorId?{editorId:String(parsed.editorId)}:{})
+    };
+  }catch{return {query:'',lookup:'',bulkSetId:'general-foundation',bulkMode:'missing'};}
+}
+function writeContentAdminContext(next:ContentAdminContext){
+  try{sessionStorage.setItem(CONTENT_CONTEXT_KEY,JSON.stringify(next));}catch{}
+}
+
 // Plain-language reason for a failed Admin request; a timeout means nothing was saved.
 function failureText(error:unknown):string{
   const status=Number((error as {status?:number})?.status||0);
@@ -89,25 +113,26 @@ function failureText(error:unknown):string{
 }
 
 function ContentAdmin({client,adminKey}: AdminSectionContext){
+  const [initialContext]=useState(readContentAdminContext);
   const [status,setStatus]=useState<Status|null>(null);
   const [review,setReview]=useState<ReviewItem[]>([]);
   const [message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
-  const [query,setQuery]=useState('');
+  const [query,setQuery]=useState(initialContext.query);
   const [editor,setEditor]=useState<LexemeEditor|null>(null);
   const [editorMessage,setEditorMessage]=useState('');
   const [editorBusy,setEditorBusy]=useState(false);
   const [sets,setSets]=useState<ReleaseSet[]>([]);
-  const [bulkSetId,setBulkSetId]=useState('general-foundation');
+  const [bulkSetId,setBulkSetId]=useState(initialContext.bulkSetId);
   const [bulkLimit,setBulkLimit]=useState(50);
-  const [bulkMode,setBulkMode]=useState<'missing'|'enrich'>('missing');
+  const [bulkMode,setBulkMode]=useState<'missing'|'enrich'>(initialContext.bulkMode);
   const [bulkPrompt,setBulkPrompt]=useState('');
   const [bulkText,setBulkText]=useState('');
   const [bulkCoverage,setBulkCoverage]=useState<CoverageSummary|null>(null);
   const [bulkPreview,setBulkPreview]=useState<BulkPreview|null>(null);
   const [bulkMessage,setBulkMessage]=useState('');
   const [bulkBusy,setBulkBusy]=useState(false);
-  const [lookup,setLookup]=useState('');
+  const [lookup,setLookup]=useState(initialContext.lookup);
   const [lookupResults,setLookupResults]=useState<LookupItem[]|null>(null);
   const [lookupMessage,setLookupMessage]=useState('');
   const editorPanel=useRef<HTMLElement|null>(null);
@@ -140,6 +165,19 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
   },[client,adminKey]);
 
   useEffect(()=>{void load();},[load]);
+  useEffect(()=>{
+    writeContentAdminContext({
+      query,
+      lookup,
+      bulkSetId,
+      bulkMode,
+      ...(editor?.id?{editorId:editor.id}:{})
+    });
+  },[query,lookup,bulkSetId,bulkMode,editor?.id]);
+  useEffect(()=>{
+    if(!initialContext.editorId)return;
+    void openLexeme(initialContext.editorId);
+  },[initialContext.editorId]);
 
   async function findWord(event:FormEvent){
     event.preventDefault();
@@ -168,6 +206,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
     try{
       const result=await client.action(adminKey,'content_lexeme_get',{lexemeId:id});
       setEditor(result.lexeme as LexemeEditor);
+      writeContentAdminContext({query,lookup,bulkSetId,bulkMode,editorId:id});
     }catch(error){
       setEditorMessage('Не удалось открыть: '+String((error as {code?:string})?.code || 'request_failed'));
     }finally{
@@ -633,7 +672,7 @@ function ContentAdmin({client,adminKey}: AdminSectionContext){
               <h2>{editor.lemma}</h2>
               <p className="ab-admin-note"><code>{editor.id}</code> · версия {editor.revision}</p>
             </div>
-            <button type="button" className="ab-admin-secondary" onClick={()=>setEditor(null)}>Закрыть</button>
+            <button type="button" className="ab-admin-secondary" onClick={()=>{setEditor(null);writeContentAdminContext({query,lookup,bulkSetId,bulkMode});}}>Закрыть</button>
           </div>
 
           <div className="ab-admin-sense-list">
