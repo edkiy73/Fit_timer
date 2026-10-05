@@ -942,6 +942,9 @@ export function NodeRunnerView({
     );
   };
 
+  const patternHeaderProgress=activity.type==='pattern-drill'
+    ? (practiceProgress??{current:1,total:activity.items.length})
+    : null;
   const dueReview=activity.type==='review'?buildCourseReviewSession(state.set,state.progress,activitySaveClock().dayNumber).actionableCount:0;
   const completeReviewDay=async()=>{
     if(busy)return;
@@ -961,18 +964,18 @@ export function NodeRunnerView({
         <button className="runner-close pressable" type="button" onClick={()=>setExitOpen(true)} aria-label={t('learn.close')}>
           <Icon name="close" size={20} />
         </button>
-        {activity.type==='pattern-drill'&&practiceProgress ? (
+        {patternHeaderProgress ? (
           <>
-            <div className="runner-progress runner-progress-segmented" role="progressbar" aria-label={t('learn.activityProgress')} aria-valuemin={1} aria-valuemax={practiceProgress.total} aria-valuenow={practiceProgress.current}>
-              {Array.from({length:practiceProgress.total},(_,index)=>(
+            <div className="runner-progress runner-progress-segmented" role="progressbar" aria-label={t('learn.activityProgress')} aria-valuemin={1} aria-valuemax={patternHeaderProgress.total} aria-valuenow={patternHeaderProgress.current}>
+              {Array.from({length:patternHeaderProgress.total},(_,index)=>(
                 <span
                   key={index}
-                  className={'runner-progress-step '+(index<practiceProgress.current-1?'is-correct':index===practiceProgress.current-1?'is-current':'is-pending')}
+                  className={'runner-progress-step '+(index<patternHeaderProgress.current-1?'is-correct':index===patternHeaderProgress.current-1?'is-current':'is-pending')}
                   aria-hidden="true"
                 />
               ))}
             </div>
-            <span className="runner-count">{practiceProgress.current}/{practiceProgress.total}</span>
+            <span className="runner-count">{patternHeaderProgress.current}/{patternHeaderProgress.total}</span>
           </>
         ) : (
           <>
@@ -1211,7 +1214,7 @@ export function NodeRunnerScreen(){
       {...(startMode?{startMode}:{})}
       {...(resumeSavedRun?{resumeSavedRun:true}:{})}
       {...(replayTasksOnly?{replayTasksOnly:true}:{})}
-      onExit={()=>navigate('/')}
+      onExit={()=>navigate('/',{replace:true})}
       onSignIn={()=>navigate('/account?return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
       onAccess={()=>navigate('/access?from=answer&return='+encodeURIComponent('/learn/'+String(params.nodeId||'')+'?resume=1'))}
       onReviewDay={nodeId=>navigate('/review?day='+encodeURIComponent(nodeId))}
