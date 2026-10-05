@@ -165,8 +165,8 @@ function requirementSections(
       const activity=byId.get(requirement.activityId);
       if(activity?.type!=='pattern-drill')continue;
       for(const mode of requirement.modes){
-        const active=active.practice?.find(item=>item.activityId===activity.id&&item.mode===mode);
-        sections.push(practiceSection(activity,mode,progress,active));
+        const activeMode=active.practice?.find(item=>item.activityId===activity.id&&item.mode===mode);
+        sections.push(practiceSection(activity,mode,progress,activeMode));
       }
     }
     const tasks=taskSection([...new Set(taskIds)],byId,progress,active.tasks);
