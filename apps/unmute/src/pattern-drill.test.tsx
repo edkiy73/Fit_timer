@@ -129,7 +129,11 @@ describe('pattern drill',()=>{
       'pattern.present',
       'drill',
       true,
-      100
+      100,
+      {
+        'pattern.present.item-1':'strong',
+        'pattern.present.item-2':'strong'
+      }
     ));
     expect(await screen.findByText('2 из 2 вовремя')).toBeTruthy();
 
@@ -164,7 +168,11 @@ describe('pattern drill',()=>{
       'pattern.present',
       'drill',
       false,
-      50
+      50,
+      {
+        'pattern.present.item-1':'weak',
+        'pattern.present.item-2':'strong'
+      }
     ));
     expect(await screen.findByText('1 из 2 вовремя')).toBeTruthy();
   });
