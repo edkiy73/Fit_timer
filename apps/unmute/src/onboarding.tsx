@@ -34,6 +34,9 @@ export function hasExistingCourseProgress(progress:CourseProgressDocument):boole
     hasLiveRecord(progress.practice.drill)||
     hasLiveRecord(progress.practice.listening)||
     hasLiveRecord(progress.practice.speaking)||
+    hasLiveRecord(progress.practiceUnits.drill)||
+    hasLiveRecord(progress.practiceUnits.listening)||
+    hasLiveRecord(progress.practiceUnits.speaking)||
     hasLiveRecord(progress.manualNodes)||
     hasLiveRecord(progress.learningDays)||
     hasLiveRecord(progress.metrics)
