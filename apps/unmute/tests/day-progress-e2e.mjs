@@ -163,7 +163,10 @@ try{
     await option.click();
     await page.getByText('Нажми ещё раз',{exact:true}).waitFor({timeout:3000});
     await option.click();
-    const next=page.getByRole('button',{name:'Далее',exact:true});
+    const next=page.getByRole('button',{
+      name:index===18?'Завершить':'Далее',
+      exact:true
+    });
     await next.waitFor({timeout:5000});
     await next.click();
   }
