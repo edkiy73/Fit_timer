@@ -366,23 +366,32 @@ export function buildLessonSummaryQuality(
   steps:Activity[],
   taskResults:Record<number,boolean>,
   practiceQuality:PracticeQualityMap
-):{rows:LessonSummaryQualityRow[];corrected:number}{
+):{rows:LessonSummaryQualityRow[];corrected:number;complete:boolean}{
   const rows:LessonSummaryQualityRow[]=[];
+  let expectedSections=0;
   const taskIndices=steps
     .map((item,index)=>({item,index}))
     .filter(({item})=>item.type==='choice'||item.type==='text-input'||item.type==='translation')
     .map(({index})=>index);
   if(taskIndices.length){
-    rows.push({
-      id:'tasks',
-      correct:taskIndices.filter(index=>taskResults[index]===true).length,
-      total:taskIndices.length
-    });
+    expectedSections++;
+    if(taskIndices.every(index=>taskResults[index]!==undefined)){
+      rows.push({
+        id:'tasks',
+        correct:taskIndices.filter(index=>taskResults[index]===true).length,
+        total:taskIndices.length
+      });
+    }
   }
   for(const mode of ['drill','listening','speaking'] as PracticeSrsKind[]){
+    const expectedTotal=steps.reduce((sum,item)=>
+      item.type==='pattern-drill'&&item.modes.includes(mode)?sum+item.items.length:sum
+    ,0);
+    if(!expectedTotal)continue;
+    expectedSections++;
     const values=Object.values(practiceQuality).filter(item=>item.mode===mode);
     const total=values.reduce((sum,item)=>sum+item.total,0);
-    if(!total)continue;
+    if(total!==expectedTotal)continue;
     rows.push({
       id:mode,
       correct:values.reduce((sum,item)=>sum+item.correct,0),
@@ -391,7 +400,8 @@ export function buildLessonSummaryQuality(
   }
   return {
     rows,
-    corrected:rows.reduce((sum,row)=>sum+Math.max(0,row.total-row.correct),0)
+    corrected:rows.reduce((sum,row)=>sum+Math.max(0,row.total-row.correct),0),
+    complete:rows.length===expectedSections
   };
 }
 
@@ -880,6 +890,20 @@ export function NodeRunnerView({
 
   if(finished&&node&&state){
     const missing=missingForNode(node,state.progress);
+    const summaryTaskResults=taskSectionRef.current?.firstPassResults??firstPassResults;
+    const summaryQuality=buildLessonSummaryQuality(steps,summaryTaskResults,practiceQuality);
+    const qualityLabelKey:Record<LessonSummaryQualityRow['id'],string>={
+      tasks:'learn.summaryTasks',
+      drill:'learn.summaryDrill',
+      listening:'learn.summaryListening',
+      speaking:'learn.summarySpeaking'
+    };
+    const qualityValueKey:Record<LessonSummaryQualityRow['id'],string>={
+      tasks:'learn.summaryTasksValue',
+      drill:'learn.summaryDrillValue',
+      listening:'learn.summaryListeningValue',
+      speaking:'learn.summarySpeakingValue'
+    };
     const completedLessons=state.roadmapProgress.nodes.filter(item=>item.node.kind==='lesson'&&item.complete).length;
     const offerReminder=node.kind==='lesson'&&nodeComplete&&runMode==='first'&&completedLessons===1;
     const plan=activities.find(isPlan);
@@ -902,8 +926,19 @@ export function NodeRunnerView({
           <span className={'learn-summary-icon'+(nodeComplete?'':' is-pending')} aria-hidden="true"><Icon name={nodeComplete?'check':'review'} size={32} /></span>
           <div className="screen-kicker">{t(nodeComplete?'learn.summaryKicker':'learn.notCountedKicker')}</div>
           <h2 id="learn-summary-title"><LexiconText text={localized(node.title,locale)} /></h2>
-          {score.total>0&&(
-            <p className="learn-summary-score">{t(replay?'learn.replayScore':'learn.summaryScore',{correct:score.correct,total:score.total})}</p>
+          {nodeComplete&&summaryQuality.rows.length>0&&(
+            <div className="learn-summary-quality" aria-label={t(replay?'learn.replayQualityTitle':'learn.summaryQualityTitle')}>
+              <strong className="learn-summary-quality-title">{t(replay?'learn.replayQualityTitle':'learn.summaryQualityTitle')}</strong>
+              {summaryQuality.rows.map(row=>(
+                <div className="learn-summary-quality-row" key={row.id}>
+                  <span>{t(qualityLabelKey[row.id])}</span>
+                  <strong>{t(qualityValueKey[row.id],{correct:row.correct,total:row.total})}</strong>
+                </div>
+              ))}
+              {summaryQuality.complete&&summaryQuality.corrected>0&&(
+                <span className="learn-summary-corrected">{t('learn.summaryCorrected',{count:summaryQuality.corrected})}</span>
+              )}
+            </div>
           )}
           {nodeComplete
             ? <p className="learn-hint">{t(replay?'learn.replayNext':'learn.summaryNext')}</p>
