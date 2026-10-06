@@ -618,6 +618,175 @@ describe('node activity runner',()=>{
   });
 
 
+  it('finishes regular-task corrections before entering required practice',async()=>{
+    const user=userEvent.setup();
+    const patternActivity={
+      id:'pattern.section-order',revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],pattern:{ru:'Фразы'},modes:['drill' as const],
+      items:[{id:'p1',prompt:{ru:'Я здесь'},answer:{accepted:['I am here'],nearMiss:true,caseSensitive:false}}]
+    };
+    const sectionNode={
+      id:'day-section-order',
+      kind:'lesson' as const,
+      title:{ru:'Порядок разделов'},
+      dayIndex:2,
+      order:1,
+      prerequisites:[],
+      activityIds:['choice.one','text.one',patternActivity.id],
+      completion:{
+        mode:'all' as const,
+        requirements:[
+          {kind:'activity-seen' as const,activityIds:['choice.one','text.one']},
+          {kind:'practice-started' as const,activityId:patternActivity.id,modes:['drill' as const]}
+        ]
+      },
+      optional:false
+    };
+    const sectionState:LearnerCourseState={
+      ...state,
+      set:{
+        ...state.set,
+        roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[sectionNode]}],
+        activities:[
+          state.set.activities.find(activity=>activity.id==='choice.one')!,
+          state.set.activities.find(activity=>activity.id==='text.one')!,
+          patternActivity
+        ]
+      },
+      roadmap:{id:'main',title:{ru:'Путь'},nodes:[sectionNode]},
+      progress:emptyCourseProgress(),
+      roadmapProgress:{
+        nodes:[{node:sectionNode,complete:false,unlocked:true}],
+        currentNode:sectionNode,currentDayIndex:2,completedCount:0,requiredCount:1,courseComplete:false
+      },
+      currentNode:sectionNode,
+      currentDayIndex:2
+    };
+
+    render(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="learn-section-order.locale" systemLanguages={['ru']}>
+        <NodeRunnerView
+          runtime={{...runtime,state:sectionState}}
+          nodeId={sectionNode.id}
+          onExit={()=>{}}
+          saveSeen={async()=>{}}
+          saveGraded={async()=>{}}
+          savePractice={async()=>{}}
+        />
+      </I18nProvider>
+    );
+
+    expect(await screen.findByText('1/2')).toBeTruthy();
+    await chooseAnswer(user,'I is here');
+    await user.click(await screen.findByRole('button',{name:'Далее'}));
+
+    expect(screen.getByText('2/2')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Написать с клавиатуры'}));
+    await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am here');
+    await user.click(screen.getByRole('button',{name:'Готово'}));
+    await user.click(await screen.findByRole('button',{name:'Далее'}));
+
+    expect(await screen.findByText('Работа над ошибками · осталось 1')).toBeTruthy();
+    expect(screen.getByRole('heading',{name:'Выбери ответ'})).toBeTruthy();
+    expect(screen.queryByText('Тренируем скорость: фразы должны вылетать без раздумий.')).toBeNull();
+  });
+
+  it('keeps the exact task section and run id after switching to practice and killing the view',async()=>{
+    const user=userEvent.setup();
+    const patternActivity={
+      id:'pattern.section-resume',revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],pattern:{ru:'Фразы'},modes:['drill' as const],
+      items:[{id:'p1',prompt:{ru:'Я здесь'},answer:{accepted:['I am here'],nearMiss:true,caseSensitive:false}}]
+    };
+    const sectionNode={
+      id:'day-section-resume',
+      kind:'lesson' as const,
+      title:{ru:'Resume разделов'},
+      dayIndex:2,
+      order:1,
+      prerequisites:[],
+      activityIds:['choice.one','text.one',patternActivity.id],
+      completion:{
+        mode:'all' as const,
+        requirements:[
+          {kind:'activity-seen' as const,activityIds:['choice.one','text.one']},
+          {kind:'practice-started' as const,activityId:patternActivity.id,modes:['drill' as const]}
+        ]
+      },
+      optional:false
+    };
+    const sectionState:LearnerCourseState={
+      ...state,
+      set:{
+        ...state.set,
+        roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[sectionNode]}],
+        activities:[
+          state.set.activities.find(activity=>activity.id==='choice.one')!,
+          state.set.activities.find(activity=>activity.id==='text.one')!,
+          patternActivity
+        ]
+      },
+      roadmap:{id:'main',title:{ru:'Путь'},nodes:[sectionNode]},
+      progress:emptyCourseProgress(),
+      roadmapProgress:{
+        nodes:[{node:sectionNode,complete:false,unlocked:true}],
+        currentNode:sectionNode,currentDayIndex:2,completedCount:0,requiredCount:1,courseComplete:false
+      },
+      currentNode:sectionNode,
+      currentDayIndex:2
+    };
+    const sectionRuntime:LearnerCourseRuntimeValue={...runtime,state:sectionState};
+    const renderSection=()=>render(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="learn-section-resume.locale" systemLanguages={['ru']}>
+        <NodeRunnerView
+          runtime={sectionRuntime}
+          nodeId={sectionNode.id}
+          onExit={()=>{}}
+          saveSeen={async()=>{}}
+          saveGraded={async()=>{}}
+          savePractice={async()=>{}}
+        />
+      </I18nProvider>
+    );
+
+    const view=renderSection();
+    await chooseAnswer(user,'I is here');
+    await user.click(await screen.findByRole('button',{name:'Далее'}));
+    expect(await screen.findByRole('heading',{name:'Напиши: Я здесь'})).toBeTruthy();
+
+    await waitFor(()=>{
+      const raw=localStorage.getItem('unmute.lesson-run:general-foundation:day-section-resume');
+      expect(raw).toBeTruthy();
+    });
+    const beforeSwitch=JSON.parse(localStorage.getItem('unmute.lesson-run:general-foundation:day-section-resume')!);
+    const runId=String(beforeSwitch.runId);
+
+    await user.click(screen.getByRole('button',{name:'На скорость'}));
+    expect(await screen.findByText('Тренируем скорость: фразы должны вылетать без раздумий.')).toBeTruthy();
+    await waitFor(()=>{
+      const saved=JSON.parse(localStorage.getItem('unmute.lesson-run:general-foundation:day-section-resume')!);
+      expect(saved.runId).toBe(runId);
+      expect(saved.taskSection?.pos).toBe(1);
+      expect(saved.taskSection?.firstPassResults?.['0']).toBe(false);
+    });
+
+    view.unmount();
+    renderSection();
+    expect(await screen.findByText('Тренируем скорость: фразы должны вылетать без раздумий.')).toBeTruthy();
+
+    await user.click(screen.getByRole('button',{name:'Задания'}));
+    expect(await screen.findByRole('heading',{name:'Напиши: Я здесь'})).toBeTruthy();
+    expect(screen.getByText('2/2')).toBeTruthy();
+
+    await user.click(screen.getByRole('button',{name:'Написать с клавиатуры'}));
+    await user.type(await screen.findByRole('textbox',{name:'Твой ответ'}),'I am here');
+    await user.click(screen.getByRole('button',{name:'Готово'}));
+    await user.click(await screen.findByRole('button',{name:'Далее'}));
+
+    expect(await screen.findByText('Работа над ошибками · осталось 1')).toBeTruthy();
+    expect(screen.getByRole('heading',{name:'Выбери ответ'})).toBeTruthy();
+  });
+
   it('keeps the lesson header in sync with phrase progress inside speed practice',async()=>{
     const user=userEvent.setup();
     const patternActivity={
