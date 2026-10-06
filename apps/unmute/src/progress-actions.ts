@@ -1,8 +1,13 @@
 import { gradeCardSrs } from './engine/card-srs';
 import { gradeSentenceResponse, type SentenceResponseKind } from './engine/sentence-progression';
-import { gradePracticeSrs, type PracticeSrsKind } from './engine/practice-srs';
+import {
+  gradePracticeItemSrs,
+  gradePracticeSrs,
+  type PracticeItemGrade,
+  type PracticeSrsKind
+} from './engine/practice-srs';
 import type { LearningCalendarState, RoadmapProgressState } from './engine/course-progress';
-import type { CourseProgressDocument, TimedFlag } from './progress';
+import { practiceItemKey, type CourseProgressDocument, type TimedFlag } from './progress';
 
 function liveIds(records:Record<string,{deleted?:boolean}|undefined>):Set<string>{
   return new Set(Object.entries(records)
@@ -101,6 +106,49 @@ export function gradeCoursePractice(
       ? {...doc.answerOps,[operationId]:touchedFlag(at)}
       : doc.answerOps,
   },dayKey,at);
+}
+
+export function gradeCoursePracticeItem(
+  doc:CourseProgressDocument,
+  activityId:string,
+  itemId:string,
+  mode:PracticeSrsKind,
+  grade:PracticeItemGrade,
+  todayDay:number,
+  dayKey:string,
+  at:string,
+  operationId?:string
+):CourseProgressDocument{
+  if(operationId&&doc.answerOps[operationId]&&!doc.answerOps[operationId]?.deleted)return doc;
+
+  const base=withLearningDay(doc,dayKey,at);
+  if(grade==='neutral'){
+    return operationId
+      ? {...base,answerOps:{...base.answerOps,[operationId]:touchedFlag(at)}}
+      : base;
+  }
+
+  const key=practiceItemKey(activityId,itemId);
+  const previous=doc.practiceItems[mode][key];
+  const graded=gradePracticeItemSrs(
+    mode,
+    previous&&!previous.deleted?previous:undefined,
+    grade,
+    todayDay
+  );
+  return {
+    ...base,
+    practiceItems:{
+      ...base.practiceItems,
+      [mode]:{
+        ...base.practiceItems[mode],
+        [key]:{...graded,at},
+      },
+    },
+    answerOps:operationId
+      ? {...base.answerOps,[operationId]:touchedFlag(at)}
+      : base.answerOps,
+  };
 }
 
 export function completeManualNode(
