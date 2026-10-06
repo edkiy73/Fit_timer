@@ -1,4 +1,11 @@
+import groovy.json.JsonSlurper
+
 apply plugin: 'com.android.application'
+
+// Native branding is sourced from the same product metadata as the web app.
+def productConfig = new JsonSlurper().parse(rootProject.file('../config/product.json'))
+def unmuteBrandBackground = String(productConfig.brand.background)
+def generatedBrandResDir = file("$buildDir/generated/unmuteBrand/res")
 
 android {
     namespace = "app.unmute.english"
@@ -19,8 +26,13 @@ android {
         buildConfig true
     }
 
+    sourceSets {
+        main.res.srcDir generatedBrandResDir
+    }
+
     defaultConfig {
         applicationId "app.unmute.english"
+        resValue "color", "unmute_brand_background", unmuteBrandBackground
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode = Integer.parseInt(System.getenv("VERSION_CODE") ?: "1")
@@ -81,4 +93,41 @@ try {
     }
 } catch(Exception e) {
     logger.info("google-services.json not found, Google Services plugin not applied. Remote push won't work")
+}
+
+
+// Keep the supplied UnMute artwork, but give it ~15% more safe area so launcher masks never crop it.
+// The generated raster is a separate resource, so no adaptive-icon XML can shadow it on One UI.
+def generateUnMuteLauncherIcon = tasks.register("generateUnMuteLauncherIcon") {
+    def sourceIcon = file("src/main/res/mipmap-xxxhdpi/ic_launcher.png")
+    def outputIcon = file("$generatedBrandResDir/mipmap-xxxhdpi/unmute_launcher.png")
+    inputs.file sourceIcon
+    inputs.property("brandBackground", unmuteBrandBackground)
+    outputs.file outputIcon
+    doLast {
+        outputIcon.parentFile.mkdirs()
+        def source = javax.imageio.ImageIO.read(sourceIcon)
+        int width = source.width
+        int height = source.height
+        def canvas = new java.awt.image.BufferedImage(width, height, java.awt.image.BufferedImage.TYPE_INT_ARGB)
+        def graphics = canvas.createGraphics()
+        try {
+            graphics.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BICUBIC)
+            graphics.setRenderingHint(java.awt.RenderingHints.KEY_RENDERING, java.awt.RenderingHints.VALUE_RENDER_QUALITY)
+            graphics.setColor(java.awt.Color.decode(unmuteBrandBackground))
+            graphics.fillRect(0, 0, width, height)
+            int scaledWidth = Math.round(width * 0.85f)
+            int scaledHeight = Math.round(height * 0.85f)
+            int x = (width - scaledWidth) / 2
+            int y = (height - scaledHeight) / 2
+            graphics.drawImage(source, x, y, scaledWidth, scaledHeight, null)
+        } finally {
+            graphics.dispose()
+        }
+        javax.imageio.ImageIO.write(canvas, "png", outputIcon)
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn generateUnMuteLauncherIcon
 }
