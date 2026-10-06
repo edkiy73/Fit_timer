@@ -48,6 +48,11 @@ export function learnedActivityIdsFromProgress(progress:CourseProgressDocument):
   add(progress.practice.drill);
   add(progress.practice.listening);
   add(progress.practice.speaking);
+  for(const mode of ['drill','listening','speaking'] as const){
+    for(const record of Object.values(progress.practiceUnits[mode])){
+      if(record&&!record.deleted)ids.add(record.activityId);
+    }
+  }
   return [...ids].sort();
 }
 
