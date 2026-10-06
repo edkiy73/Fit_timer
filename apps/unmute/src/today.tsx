@@ -26,7 +26,7 @@ import { AnimatedNumber } from './animated-number';
 import type { CourseSet, RoadmapNode } from './content/schema';
 import { getDayProgress, type ActiveDayProgress } from './day-progress';
 import { readActiveDayProgress } from './day-progress-local';
-import { readRecentDayCompletion } from './recent-day-completion';
+import { clearRecentDayCompletion, readRecentDayCompletion } from './recent-day-completion';
 import {
   lastWeekActivity,
   localizedText,
@@ -423,6 +423,10 @@ export function TodayScreen(){
   const recentCompletion=runtime.state
     ? readRecentDayCompletion(runtime.state.set.id,todayDay)
     : null;
+  const markNodeStarted=(nodeId:string)=>{
+    const state=runtime.state;
+    if(state?.currentNode?.id===nodeId)clearRecentDayCompletion(state.set.id);
+  };
   return (
     <TodayView
       runtime={runtime}
@@ -432,8 +436,11 @@ export function TodayScreen(){
       recentCompletionNodeId={recentCompletion?.nodeId??null}
       wordRuntime={useWordReviewRuntime()}
       learningDays={useAllLearningDays()}
-      onStart={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId))}
-      onSpeak={(nodeId,patternId)=>navigate('/learn/'+encodeURIComponent(nodeId)+(patternId?'?activity='+encodeURIComponent(patternId)+'&mode=speaking':''))}
+      onStart={nodeId=>{ markNodeStarted(nodeId); navigate('/learn/'+encodeURIComponent(nodeId)); }}
+      onSpeak={(nodeId,patternId)=>{
+        markNodeStarted(nodeId);
+        navigate('/learn/'+encodeURIComponent(nodeId)+(patternId?'?activity='+encodeURIComponent(patternId)+'&mode=speaking':''));
+      }}
       onReview={()=>navigate('/review')}
       onMap={()=>navigate('/course')}
       onAccess={()=>navigate('/access?from=today')}
