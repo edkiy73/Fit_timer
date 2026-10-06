@@ -143,9 +143,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Draft releases are not addressable reliably by tag and can coexist with an older
-          # published release using the same tag. Remove every release record for this tag
-          # explicitly before recreating the canonical published release.
+          # GitHub CLI надёжнее публикует latest через явный draft -> upload -> publish.
+          # Сначала удаляем все старые release-записи с этим tag, включая зависшие draft.
           gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate \
             --jq '.[] | select(.tag_name=="unmute-latest") | .id' \
             | while read -r id; do
@@ -153,13 +152,14 @@ jobs:
               done
           git push origin :refs/tags/unmute-latest >/dev/null 2>&1 || true
 
-          # Create the published release together with its assets in one command, so there is
-          # never a draft whose tag lookup can resolve to a stale previous release.
-          gh release create unmute-latest UnMute-latest.apk UnMute-release.json \
+          gh release create unmute-latest \
             --target "$GITHUB_SHA" \
             --title "UnMute — последний APK" \
             --notes "Скачать и установить: UnMute-latest.apk. Версия $VERSION_NAME (versionCode $VERSION_CODE), commit $GITHUB_SHA" \
+            --draft \
             --latest=false
+          gh release upload unmute-latest UnMute-latest.apk UnMute-release.json --clobber
+          gh release edit unmute-latest --draft=false --latest=false
 
           RELEASE_JSON="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/unmute-latest")"
           test "$(printf '%s' "$RELEASE_JSON" | jq -r '.draft')" = "false"
