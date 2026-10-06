@@ -11,6 +11,8 @@ export interface PracticeSrsState{
   due:number;
 }
 
+export type PracticeItemGrade='strong'|'weak'|'neutral';
+
 export function initialPracticeSrsState():PracticeSrsState{
   return {box:0,due:0};
 }
@@ -32,4 +34,16 @@ export function gradePracticeSrs(
 
 export function isPracticeDue(state:PracticeSrsState|undefined,todayDay:number):boolean{
   return Boolean(state&&state.due<=todayDay);
+}
+
+
+export function gradePracticeItemSrs(
+  kind:PracticeSrsKind,
+  previous:PracticeSrsState|undefined,
+  grade:Exclude<PracticeItemGrade,'neutral'>,
+  todayDay:number
+):PracticeSrsState{
+  if(grade==='strong')return gradePracticeSrs(kind,previous,true,todayDay);
+  // Weak lesson/review results should not reappear in the same calendar day.
+  return {box:0,due:todayDay+1};
 }
