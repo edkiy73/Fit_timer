@@ -84,7 +84,7 @@ export function WeekEqualizer({levels,labels,label}:{levels:number[];labels:stri
   );
 }
 
-/** The course as a mosaic of days, ten per row: the day on screen glows. */
+/** The course as a mosaic of days, ten per row; static, the day on screen is outlined. */
 export function CourseMosaic({cells,caption}:{cells:CourseCell[];caption:string}){
   const rows=courseRows(cells.length);
   return (
@@ -94,8 +94,8 @@ export function CourseMosaic({cells,caption}:{cells:CourseCell[];caption:string}
         style={{'--cols':COURSE_MOSAIC_COLUMNS,'--rows':rows} as CSSProperties}
         aria-hidden="true"
       >
-        {cells.map((cell,index)=>(
-          <span key={cell.id} className={'course-cell is-'+cell.state} style={{'--b':index} as CSSProperties} />
+        {cells.map(cell=>(
+          <span key={cell.id} className={'course-cell is-'+cell.state} />
         ))}
       </div>
       <span className="course-mosaic-caption">{caption}</span>

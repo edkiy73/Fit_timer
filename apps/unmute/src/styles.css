@@ -1670,14 +1670,11 @@ span.legend-item{cursor:default}
 .course-mosaic{display:grid;gap:5px;margin-top:auto}
 .course-mosaic-grid{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-template-rows:repeat(var(--rows),minmax(0,1fr));gap:3px;height:36px}
 .course-mosaic-grid.is-dense{gap:2px}
-.course-cell{min-height:0;border-radius:3px;background:color-mix(in srgb,var(--ink) 8%,transparent);
-  animation:cell-in 420ms var(--motion-spring-ease) both;animation-delay:calc(var(--b) * 12ms + 150ms)}
+.course-cell{min-height:0;border-radius:3px;background:color-mix(in srgb,var(--ink) 8%,transparent)}
 .course-cell.is-done{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 60%,var(--streak)))}
-.course-cell.is-current{background:color-mix(in srgb,var(--accent) 22%,transparent);box-shadow:inset 0 0 0 1.5px var(--accent);
-  animation:cell-in 420ms var(--motion-spring-ease) both,cell-glow 1.3s ease-in-out 6 alternate;animation-delay:calc(var(--b) * 12ms + 150ms),calc(var(--b) * 12ms + 600ms)}
+/* Static on purpose: the day on screen is marked by an outline, without motion. */
+.course-cell.is-current{background:color-mix(in srgb,var(--accent) 22%,transparent);box-shadow:inset 0 0 0 1.5px var(--accent)}
 .course-mosaic-caption{color:var(--muted);font-size:10px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
-@keyframes cell-in{from{transform:scale(.2);opacity:0}}
-@keyframes cell-glow{to{transform:scale(.72)}}
 @media(prefers-reduced-motion:reduce){
-  .wave-bar,.wave-bar.is-current,.day-wave.is-celebrate .wave-bar,.week-eq-bar,.course-cell,.course-cell.is-current{animation:none!important}
+  .wave-bar,.wave-bar.is-current,.day-wave.is-celebrate .wave-bar,.week-eq-bar{animation:none!important}
 }
