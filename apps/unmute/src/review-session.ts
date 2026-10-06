@@ -1,8 +1,6 @@
 import type { Activity, CourseSet } from './content/schema';
 import { practiceItemKey, type CourseProgressDocument } from './progress';
 import type { PracticeSrsKind } from './engine/practice-srs';
-import { selectPracticeQueue } from './engine/practice-queue';
-import { selectCardReviewQueue } from './engine/review-summary';
 
 type CardActivity=Extract<Activity,{type:'choice'|'text-input'|'translation'}>;
 type PatternActivity=Extract<Activity,{type:'pattern-drill'}>;
@@ -28,15 +26,23 @@ export interface CourseReviewSession {
   waitingCount:number;
 }
 
-function livePractice(
+function dueCardIds(
+  cards:CardActivity[],
   progress:CourseProgressDocument,
-  mode:PracticeSrsKind,
-  allowed:Set<string>
-){
-  return Object.fromEntries(
-    Object.entries(progress.practice[mode])
-      .filter(([id,state])=>allowed.has(id)&&Boolean(state&&!state.deleted))
-  );
+  todayDay:number
+):string[]{
+  const sourceOrder=new Map(cards.map((activity,index)=>[activity.id,index]));
+  return cards
+    .filter(activity=>{
+      const state=progress.cards[activity.id];
+      return Boolean(state&&!state.deleted&&state.due<=todayDay);
+    })
+    .sort((a,b)=>{
+      const dueA=progress.cards[a.id]?.due??0;
+      const dueB=progress.cards[b.id]?.due??0;
+      return dueA-dueB||(sourceOrder.get(a.id)??0)-(sourceOrder.get(b.id)??0);
+    })
+    .map(activity=>activity.id);
 }
 
 interface DuePracticeEntry {
@@ -53,15 +59,14 @@ function duePracticeEntries(
 ):{items:Extract<ReviewSessionItem,{kind:'practice'}>[];waiting:number}{
   const legacyPatterns=patterns.filter(activity=>{
     const state=progress.practice[mode][activity.id];
-    return !state?.itemized;
+    return !state?.itemized&&Boolean(state&&!state.deleted&&state.due<=todayDay);
   });
-  const allowed=new Set(legacyPatterns.map(activity=>activity.id));
-  const legacy=selectPracticeQueue(
-    mode,
-    legacyPatterns.map(activity=>activity.id),
-    livePractice(progress,mode,allowed),
-    todayDay
-  );
+  const patternOrder=new Map(patterns.map((activity,index)=>[activity.id,index]));
+  legacyPatterns.sort((a,b)=>{
+    const dueA=progress.practice[mode][a.id]?.due??0;
+    const dueB=progress.practice[mode][b.id]?.due??0;
+    return dueA-dueB||(patternOrder.get(a.id)??0)-(patternOrder.get(b.id)??0);
+  });
   const byId=new Map(patterns.map(activity=>[activity.id,activity] as const));
   const order=new Map<string,number>();
   let position=0;
@@ -70,11 +75,11 @@ function duePracticeEntries(
   }
 
   const entries:DuePracticeEntry[]=[];
-  for(const legacyItem of legacy.due){
-    const activity=byId.get(legacyItem.id);
-    if(activity){
+  for(const activity of legacyPatterns){
+    const state=progress.practice[mode][activity.id];
+    if(state&&!state.deleted){
       entries.push({
-        due:legacyItem.state.due,
+        due:state.due,
         order:order.get(practiceItemKey(activity.id,activity.items[0]?.id??''))??position++,
         item:{kind:'practice',mode,activity}
       });
@@ -99,7 +104,7 @@ function duePracticeEntries(
   entries.sort((a,b)=>a.due-b.due||a.order-b.order);
   return {
     items:entries.map(entry=>entry.item),
-    waiting:legacy.waiting
+    waiting:0
   };
 }
 
@@ -117,11 +122,7 @@ export function buildCourseReviewSession(
   );
   const byId=new Map(set.activities.map(activity=>[activity.id,activity]));
 
-  const cardQueue=selectCardReviewQueue(
-    cards.map(activity=>activity.id),
-    progress.cards,
-    todayDay
-  );
+  const cardIds=dueCardIds(cards,progress,todayDay);
 
   const drillEntries=duePracticeEntries(
     'drill',
@@ -143,7 +144,7 @@ export function buildCourseReviewSession(
   );
 
   const items:ReviewSessionItem[]=[];
-  for(const id of cardQueue.dueIds){
+  for(const id of cardIds){
     const activity=byId.get(id);
     if(activity&&(activity.type==='choice'||activity.type==='text-input'||activity.type==='translation')){
       items.push({kind:'card',activity});
@@ -151,10 +152,10 @@ export function buildCourseReviewSession(
   }
   items.push(...drillEntries.items,...listeningEntries.items,...speakingEntries.items);
 
-  const waiting=cardQueue.waiting+drillEntries.waiting+listeningEntries.waiting+speakingEntries.waiting;
+  const waiting=drillEntries.waiting+listeningEntries.waiting+speakingEntries.waiting;
   return {
     items,
-    cards:{due:cardQueue.dueIds.length,waiting:cardQueue.waiting},
+    cards:{due:cardIds.length,waiting:0},
     practice:{
       drill:drillEntries.items.length,
       listening:listeningEntries.items.length,
