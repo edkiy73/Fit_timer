@@ -42,6 +42,11 @@ export function resetCourseProgress(doc:CourseProgressDocument,at:string):Course
       listening:tombstones(doc.practice.listening,at),
       speaking:tombstones(doc.practice.speaking,at),
     },
+    practiceUnits:{
+      drill:tombstones(doc.practiceUnits.drill,at),
+      listening:tombstones(doc.practiceUnits.listening,at),
+      speaking:tombstones(doc.practiceUnits.speaking,at),
+    },
     manualNodes:tombstones(doc.manualNodes,at),
     learningDays:tombstones(doc.learningDays,at),
     metrics:tombstones(doc.metrics,at),
