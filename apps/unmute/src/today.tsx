@@ -26,6 +26,7 @@ import { AnimatedNumber } from './animated-number';
 import type { CourseSet, RoadmapNode } from './content/schema';
 import { getDayProgress, type ActiveDayProgress } from './day-progress';
 import { readActiveDayProgress } from './day-progress-local';
+import { readRecentDayCompletion } from './recent-day-completion';
 import {
   lastWeekActivity,
   localizedText,
@@ -82,7 +83,8 @@ export function TodayView({
   todayDay=activitySaveClock().dayNumber,
   learningDays=null,
   otherCourses=[],
-  activeDayProgress={}
+  activeDayProgress={},
+  recentCompletionNodeId=null
 }:{
   runtime:LearnerCourseRuntimeValue;
   wordRuntime?:WordReviewRuntimeValue|null;
@@ -99,6 +101,8 @@ export function TodayView({
   otherCourses?:OtherCourseReview[];
   /** Same-device unfinished task/practice state, merged on top of durable course progress. */
   activeDayProgress?:ActiveDayProgress;
+  /** Just-completed lesson kept as the hero until the next day is explicitly opened. */
+  recentCompletionNodeId?:string|null;
 }){
   const {t,locale}=useI18n();
   const [speakOpen,setSpeakOpen]=useState(false);
@@ -145,6 +149,17 @@ export function TodayView({
     ? Math.round(state.roadmapProgress.completedCount/state.roadmapProgress.requiredCount*100)
     : 0;
   const hasReview=Boolean(review&&review.actionableCount>0);
+  const currentDayProgress=node?getDayProgress(state.set,node,state.progress,activeDayProgress):null;
+  const recentCompletedEntry=recentCompletionNodeId
+    ? state.roadmapProgress.nodes.find(item=>item.node.id===recentCompletionNodeId&&item.complete)??null
+    : null;
+  const showRecentCompletion=Boolean(
+    !complete&&
+    node&&
+    currentDayProgress?.status==='not_started'&&
+    recentCompletedEntry&&
+    recentCompletedEntry.node.id!==node.id
+  );
   let index=0;
 
   let hero:ReactNode;
@@ -158,8 +173,33 @@ export function TodayView({
         <p className="tile-text">{t('today.completeText')}</p>
       </Tile>
     );
-  }else if(node){
-    const dayProgress=getDayProgress(state.set,node,state.progress,activeDayProgress);
+  }else if(showRecentCompletion&&node&&recentCompletedEntry){
+    const completedNode=recentCompletedEntry.node;
+    const completedProgress=getDayProgress(state.set,completedNode,state.progress);
+    hero=(
+      <Tile className="tile-hero today-hero" index={index++}>
+        <div className="tile-top">
+          <span className="chip"><Icon name="check" size={16} />{t('today.dayCompletedTitle',{day:completedNode.dayIndex??''})}</span>
+        </div>
+        <h3>{t('today.dayCompletedTitle',{day:completedNode.dayIndex??''})}</h3>
+        <p className="tile-meta">{t('today.dayCompletedMeta',{
+          done:completedProgress.completedSteps,
+          total:completedProgress.totalSteps
+        })}</p>
+        <p className="tile-text">{t('today.dayCompletedHint')}</p>
+        <div className="today-state-actions">
+          <button className="primary-button" type="button" onClick={()=>onStart(node.id)}>
+            <Icon name="play" size={18} />
+            {node.dayIndex?t('today.startNextDay',{day:node.dayIndex}):t('today.startNextStep')}
+          </button>
+          <button className="secondary-button" type="button" onClick={()=>onStart(completedNode.id)}>
+            {t('today.replayDay')}
+          </button>
+        </div>
+      </Tile>
+    );
+  }else if(node&&currentDayProgress){
+    const dayProgress=currentDayProgress;
     const done=dayProgress.completedSteps;
     const total=dayProgress.totalSteps;
     const stage=stageForDay(node.dayIndex,state.set.id);
@@ -375,14 +415,20 @@ export function TodayScreen(){
   const navigate=useNavigate();
   const runtime=useLearnerCourseRuntime();
   const otherCourses=useOtherCourseReviews(runtime.state?.set.id??'');
+  const todayDay=activitySaveClock().dayNumber;
   const activeDayProgress=runtime.state?.currentNode
     ? readActiveDayProgress(runtime.state.set,runtime.state.currentNode,runtime.state.progress)
     : {};
+  const recentCompletion=runtime.state
+    ? readRecentDayCompletion(runtime.state.set.id,todayDay)
+    : null;
   return (
     <TodayView
       runtime={runtime}
       otherCourses={otherCourses.courses}
+      todayDay={todayDay}
       activeDayProgress={activeDayProgress}
+      recentCompletionNodeId={recentCompletion?.nodeId??null}
       wordRuntime={useWordReviewRuntime()}
       learningDays={useAllLearningDays()}
       onStart={nodeId=>navigate('/learn/'+encodeURIComponent(nodeId))}
