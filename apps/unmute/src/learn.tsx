@@ -862,11 +862,18 @@ export function NodeRunnerView({
     if(stepIndex===undefined)return;
     setOrder(current=>current.slice(pos+1).includes(stepIndex)?current:[...current,stepIndex]);
   };
-  const countAnswer=(correct:boolean)=>{
-    if(pos>=firstPass)return;
-    setScore(current=>({correct:current.correct+(correct?1:0),total:current.total+1}));
+  const countAnswer=(correct:boolean,record:boolean)=>{
+    if(!record||pos>=firstPass)return;
     const answeredStep=order[pos];
-    if(answeredStep!==undefined)setFirstPassResults(current=>({...current,[answeredStep]:correct}));
+    if(answeredStep===undefined)return;
+    setFirstPassResults(current=>{
+      if(current[answeredStep]!==undefined)return current;
+      setScore(scoreCurrent=>({
+        correct:scoreCurrent.correct+(correct?1:0),
+        total:scoreCurrent.total+1
+      }));
+      return {...current,[answeredStep]:correct};
+    });
   };
 
   const exitSheet=(
@@ -1195,12 +1202,18 @@ export function NodeRunnerView({
   const position=t('learn.position',{current:shown,total:firstPass});
   // Only the first answer of a first run moves review intervals and stats: a replayed day and
   // «Работа над ошибками» are practice, so a mistake plus its fix never reads as a right answer.
-  const recordsAnswers=!replay&&!retrying;
+  const regularAnswerActivity=
+    activity.type==='choice'||activity.type==='text-input'||activity.type==='translation';
+  const priorCard=regularAnswerActivity?state.progress.cards[activity.id]:undefined;
+  const alreadyGraded=Boolean(priorCard&&!priorCard.deleted);
+  const alreadySeen=isSeen(state.progress,activity.id);
+  const recordsAnswers=!replay&&!retrying&&(!regularAnswerActivity||(!alreadyGraded&&!alreadySeen));
   const answerOperationId=(kind:string)=>runId+'|'+activity.id+'|'+pos+'|'+kind;
   const gradeAnswer=(correct:boolean,responseKind?:SentenceResponseKind)=>{
     if(!recordsAnswers){
-      // Correction answers must resolve the lesson step without grading SRS/stats again.
-      if(!replay&&retrying&&correct)return saveSeen(setId,activity.id);
+      // Replayed/completed work never rewrites first-pass SRS. A previously failed unresolved
+      // task may still be resolved here once the learner finally answers correctly.
+      if(!replay&&regularAnswerActivity&&correct&&!alreadySeen)return saveSeen(setId,activity.id);
       return Promise.resolve();
     }
     const operationId=answerOperationId('card');
@@ -1257,7 +1270,7 @@ export function NodeRunnerView({
     try{
       const correct=choice===activity.correctIndex;
       await gradeAnswer(correct);
-      countAnswer(correct);
+      countAnswer(correct,recordsAnswers);
       if(!correct)retryLater();
       setResult(correct);
     }catch(_){
