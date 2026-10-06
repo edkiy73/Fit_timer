@@ -6,6 +6,7 @@ import type { SpeakText } from './speech-web';
 import { ExerciseKind } from './exercise-kind';
 import { LexiconText } from './lexicon-ui';
 import { ENGLISH_SPEECH_LOCALE } from './speech-locale';
+import type { PracticeItemGrade } from './engine/practice-srs';
 import { readPracticeRunState, writePracticeRunState } from './practice-run-state';
 
 type PatternDrillActivity=Extract<Activity,{type:'pattern-drill'}>;
@@ -21,6 +22,7 @@ interface ListeningRunSession {
   chosen:string|null;
   saved:boolean;
   saveError:boolean;
+  firstPassGrades?:Record<string,PracticeItemGrade>;
 }
 
 function restoredListeningSession(activity:PatternDrillActivity,key:string|undefined){
@@ -42,7 +44,8 @@ export interface PatternListeningViewProps {
     activityId:string,
     mode:'listening',
     correct:boolean,
-    score:number
+    score:number,
+    itemGrades?:Readonly<Record<string,PracticeItemGrade>>
   )=>Promise<void>;
   speak:SpeakText;
   random?:()=>number;
@@ -118,6 +121,9 @@ export function PatternListeningView({
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(()=>Boolean(restored?.saved));
   const [saveError,setSaveError]=useState(()=>Boolean(restored?.saveError));
+  const [firstPassGrades,setFirstPassGrades]=useState<Record<string,PracticeItemGrade>>(
+    ()=>restored?.firstPassGrades??{}
+  );
 
   const item=items[pos] ?? null;
   const done=pos>=items.length;
@@ -138,9 +144,10 @@ export function PatternListeningView({
       phase,
       chosen,
       saved,
-      saveError
+      saveError,
+      firstPassGrades
     } satisfies ListeningRunSession);
-  },[activity.revision,chosen,hits,items,phase,pos,saveError,saved,sessionKey]);
+  },[activity.revision,chosen,firstPassGrades,hits,items,phase,pos,saveError,saved,sessionKey]);
 
   useEffect(()=>{ if(active)onProgress?.(Math.min(pos+1,base),base); },[active,base,onProgress,pos]);
 
@@ -160,11 +167,11 @@ export function PatternListeningView({
     if(!done||saved||saving||saveError)return;
     setSaving(true);
     setSaveError(false);
-    void savePractice(setId,activity.id,'listening',strongFirstPass,score)
+    void savePractice(setId,activity.id,'listening',strongFirstPass,score,firstPassGrades)
       .then(()=>setSaved(true))
       .catch(()=>setSaveError(true))
       .finally(()=>setSaving(false));
-  },[activity.id,done,saveError,savePractice,saved,saving,score,setId,strongFirstPass]);
+  },[activity.id,done,firstPassGrades,saveError,savePractice,saved,saving,score,setId,strongFirstPass]);
 
   const choose=(option:string)=>{
     if(!item||phase!=='ask')return;
@@ -173,7 +180,13 @@ export function PatternListeningView({
       return;
     }
     const correct=option===localized(item.prompt,locale);
-    if(pos<base&&correct)setHits(value=>value+1);
+    if(pos<base){
+      if(correct)setHits(value=>value+1);
+      setFirstPassGrades(current=>({
+        ...current,
+        [item.id]:correct?'strong':'weak'
+      }));
+    }
     if(!correct)setItems(current=>[...current,item]);
     setPhase('show');
   };
@@ -188,7 +201,7 @@ export function PatternListeningView({
     if(saving)return;
     setSaving(true);
     setSaveError(false);
-    void savePractice(setId,activity.id,'listening',strongFirstPass,score)
+    void savePractice(setId,activity.id,'listening',strongFirstPass,score,firstPassGrades)
       .then(()=>setSaved(true))
       .catch(()=>setSaveError(true))
       .finally(()=>setSaving(false));
