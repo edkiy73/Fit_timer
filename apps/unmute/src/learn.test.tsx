@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
-import { emptyCourseProgress } from './progress';
-import { firstIncompleteRequirementIndex, NodeRunnerView } from './learn';
+import { emptyCourseProgress, type CourseProgressDocument } from './progress';
+import { firstIncompleteRequirementIndex, firstMissingRequirementTarget, NodeRunnerView } from './learn';
 import { dictionaries } from './i18n';
 import { SYSTEM_BACK_EVENT } from './native-back';
 
@@ -157,6 +157,41 @@ describe('node activity runner',()=>{
 
     expect(firstIncompleteRequirementIndex(practiceNode,activities,progress)).toBe(1);
   });
+  it('chooses the earliest unresolved required target in lesson order',()=>{
+    const practiceNode={
+      ...node,
+      activityIds:['choice.one','pattern.one','text.one'],
+      completion:{
+        mode:'all' as const,
+        requirements:[
+          {kind:'activity-seen' as const,activityIds:['choice.one','text.one']},
+          {kind:'practice-started' as const,activityId:'pattern.one',modes:['drill' as const,'listening' as const]}
+        ]
+      }
+    };
+    const pattern={
+      id:'pattern.one',revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],pattern:{ru:'Фразы'},modes:['drill' as const,'listening' as const],
+      items:[{id:'p1',prompt:{ru:'Я здесь'},answer:{accepted:['I am here'],nearMiss:true,caseSensitive:false}}]
+    };
+    const steps=[
+      state.set.activities.find(activity=>activity.id==='choice.one')!,
+      pattern,
+      state.set.activities.find(activity=>activity.id==='text.one')!
+    ];
+    const progress=emptyCourseProgress();
+    progress.seen['choice.one']={at:'2026-10-06T00:00:00Z'};
+    progress.practice.drill['pattern.one']={box:1,due:1,completed:true,at:'2026-10-06T00:01:00Z'};
+
+    expect(firstMissingRequirementTarget(practiceNode,steps,progress)).toEqual({
+      index:1,
+      mode:'listening'
+    });
+
+    progress.practice.listening['pattern.one']={box:1,due:1,completed:true,at:'2026-10-06T00:02:00Z'};
+    expect(firstMissingRequirementTarget(practiceNode,steps,progress)).toEqual({index:2});
+  });
+
   it('opens the exact practice mode requested from Route instead of falling back to tasks',async()=>{
     const routeNode={
       ...node,
@@ -214,6 +249,129 @@ describe('node activity runner',()=>{
     expect(await screen.findByText('Фразы')).toBeTruthy();
     expect(screen.getByRole('button',{name:'Начать'})).toBeTruthy();
     expect(screen.queryByRole('heading',{name:'Выбери ответ'})).toBeNull();
+  });
+
+  it('continues to the next required practice mode instead of showing an incomplete-day summary',async()=>{
+    const user=userEvent.setup();
+    const pattern={
+      id:'pattern.flow',
+      revision:1,
+      type:'pattern-drill' as const,
+      tags:[],
+      revisionProgress:'preserve' as const,
+      lexiconRefs:[],
+      pattern:{ru:'Фразы'},
+      modes:['drill' as const,'listening' as const],
+      items:[{
+        id:'flow.p1',
+        prompt:{ru:'Я здесь'},
+        answer:{accepted:['I am here'],nearMiss:true,caseSensitive:false}
+      }]
+    };
+    const flowNode={
+      id:'day-flow',
+      kind:'lesson' as const,
+      title:{ru:'День потока'},
+      dayIndex:2,
+      order:1,
+      prerequisites:[],
+      activityIds:[pattern.id],
+      completion:{
+        mode:'all' as const,
+        requirements:[{
+          kind:'practice-started' as const,
+          activityId:pattern.id,
+          modes:['drill' as const,'listening' as const]
+        }]
+      },
+      optional:false
+    };
+
+    function FlowHarness(){
+      const [progress,setProgress]=useState<CourseProgressDocument>(()=>emptyCourseProgress());
+      const complete=Boolean(
+        progress.practice.drill[pattern.id]?.completed&&
+        progress.practice.listening[pattern.id]?.completed
+      );
+      const flowState:LearnerCourseState={
+        ...state,
+        set:{
+          ...state.set,
+          roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[flowNode]}],
+          activities:[pattern]
+        },
+        roadmap:{id:'main',title:{ru:'Путь'},nodes:[flowNode]},
+        progress,
+        roadmapProgress:{
+          nodes:[{node:flowNode,complete,unlocked:true}],
+          currentNode:complete?null:flowNode,
+          currentDayIndex:complete?null:2,
+          completedCount:complete?1:0,
+          requiredCount:1,
+          courseComplete:complete
+        },
+        currentNode:complete?null:flowNode,
+        currentDayIndex:complete?null:2
+      };
+      const savePractice=async(
+        _setId:string,
+        activityId:string,
+        mode:'drill'|'listening'|'speaking',
+        correct:boolean
+      )=>{
+        setProgress(current=>({
+          ...current,
+          practice:{
+            ...current.practice,
+            [mode]:{
+              ...current.practice[mode],
+              [activityId]:{
+                box:correct?1:0,
+                due:0,
+                completed:true,
+                at:'2026-10-06T00:00:00Z'
+              }
+            }
+          }
+        }));
+      };
+      return (
+        <NodeRunnerView
+          runtime={{state:flowState,status:'ready',error:null,refresh:async()=>{}}}
+          nodeId={flowNode.id}
+          startMode="drill"
+          onExit={()=>{}}
+          saveSeen={async()=>{}}
+          saveGraded={async()=>{}}
+          savePractice={savePractice}
+        />
+      );
+    }
+
+    render(
+      <I18nProvider
+        dictionaries={dictionaries}
+        config={{locales:['ru'],default:'ru'}}
+        storageKey="learn-required-flow.locale"
+        systemLanguages={['ru']}
+      >
+        <FlowHarness />
+      </I18nProvider>
+    );
+
+    await user.click(await screen.findByRole('button',{name:'Начать'}));
+    await user.click(screen.getByRole('button',{name:'Готово'}));
+    await user.click(screen.getByRole('button',{name:'Совпало'}));
+    expect(await screen.findByText('1 из 1 вовремя')).toBeTruthy();
+
+    const drillNext=screen.getByRole('button',{name:'Далее'});
+    await waitFor(()=>expect(drillNext.hasAttribute('disabled')).toBe(false));
+    await user.click(drillNext);
+    expect(await screen.findByText('Паттерн пройден')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+
+    expect(await screen.findByText('Тренируем слух: понимать фразу с первого раза, без текста.')).toBeTruthy();
+    expect(screen.queryByText('День пока не засчитан')).toBeNull();
   });
 
   it('shows theory first, then the tasks; builds a new phrase from words; counts the day',async()=>{
@@ -327,15 +485,16 @@ describe('node activity runner',()=>{
     await user.click(screen.getByRole('button',{name:'Готово'}));
     await user.click(screen.getByRole('button',{name:'Далее'}));
     // The mistake returns: same question, now in «работа над ошибками».
-    expect(await screen.findByText('Работа над ошибками: 1 из 1')).toBeTruthy();
-    expect(screen.getByText('2/2')).toBeTruthy();
+    expect(await screen.findByText('Работа над ошибками · осталось 1')).toBeTruthy();
+    expect(screen.getByText('1')).toBeTruthy();
+    expect(screen.queryByText('2/2')).toBeNull();
     expect(screen.getByRole('heading',{name:'Выбери ответ'})).toBeTruthy();
 
     // A second mistake must not fall out of the queue after one retry.
     await chooseAnswer(user,'I is here');
     expect(saveSeen.mock.calls.filter(call=>call[1]==='choice.one')).toEqual([]);
     await user.click(await screen.findByRole('button',{name:'Далее'}));
-    expect(await screen.findByText('Работа над ошибками: 2 из 2')).toBeTruthy();
+    expect(await screen.findByText('Работа над ошибками · осталось 1')).toBeTruthy();
 
     await chooseAnswer(user,'I am here');
     // Correction resolves the lesson step but does not grade SRS/stats a second time.
