@@ -61,6 +61,43 @@ describe('course set content model', () => {
     expect(parsed.activities[1]?.type === 'text-input' && parsed.activities[1].responseMode).toBe('write');
   });
 
+  it('accepts practice-completed and keeps practice-started readable for old content', () => {
+    const pattern = {
+      id:'pattern.test',
+      revision:1,
+      type:'pattern-drill',
+      tags:[],
+      revisionProgress:'preserve',
+      lexiconRefs:[],
+      pattern:{ru:'Фразы'},
+      modes:['drill','listening','speaking'],
+      items:[{
+        id:'pattern.test.item',
+        prompt:{ru:'Я здесь'},
+        answer:{accepted:['I am here'],nearMiss:true,caseSensitive:false}
+      }]
+    };
+
+    const current = JSON.parse(JSON.stringify(sample));
+    current.activities.push(pattern);
+    current.roadmaps[0].nodes[0].activityIds.push(pattern.id);
+    current.roadmaps[0].nodes[0].completion = {
+      mode:'all',
+      requirements:[{
+        kind:'practice-completed',
+        activityId:pattern.id,
+        modes:['drill','listening','speaking']
+      }]
+    };
+    expect(validateCourseSet(current).roadmaps[0]!.nodes[0]!.completion?.requirements[0]?.kind)
+      .toBe('practice-completed');
+
+    const legacy = JSON.parse(JSON.stringify(current));
+    legacy.roadmaps[0].nodes[0].completion.requirements[0].kind='practice-started';
+    expect(validateCourseSet(legacy).roadmaps[0]!.nodes[0]!.completion?.requirements[0]?.kind)
+      .toBe('practice-started');
+  });
+
   it('rejects dangling activity references', () => {
     const raw = JSON.parse(JSON.stringify(sample));
     raw.roadmaps[0].nodes[0].activityIds = ['missing'];
