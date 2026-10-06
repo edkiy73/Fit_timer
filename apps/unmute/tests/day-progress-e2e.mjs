@@ -308,6 +308,94 @@ try{
   if(correctionErrors.length)console.log(correctionErrors.join('\n'));
 
   await correctionContext.close();
+
+  // A third fresh device checks the speed-specific rule from the contract:
+  // «Совпало», but too slow, is still unresolved and must return in correction.
+  const slowContext=await browser.newContext({
+    viewport:{width:390,height:800},
+    locale:'ru-RU'
+  });
+  await slowContext.addInitScript(()=>{
+    try{localStorage.setItem('unmute.onboarding.v1','1');}catch{}
+  });
+  const slow=await slowContext.newPage();
+  const slowErrors=[];
+  slow.on('pageerror',error=>slowErrors.push(String(error)));
+
+  await slow.goto(ROOT+'#/');
+  await slow.getByRole('button',{name:'Начать',exact:true}).click();
+  await slow.waitForURL(/#\/learn\/day-3/,{timeout:5000});
+  await slow.getByRole('heading',{name:'Задание 1'}).waitFor({timeout:8000});
+
+  for(let index=0;index<19;index++){
+    const next=await twoTapChoice(slow,'Верно');
+    await next.click();
+  }
+  await slow.getByText('Тренируем скорость: фразы должны вылетать без раздумий.').waitFor({timeout:8000});
+  await slow.getByRole('button',{name:'Начать',exact:true}).click();
+
+  // Do not press «Готово»: the timer reveals the answer after the nominal deadline
+  // plus the hidden 600 ms reaction grace. A matching phrase is still unresolved.
+  ok(
+    'a phrase that exceeds the speed deadline is marked slow',
+    await appears(slow.getByText('Медленно',{exact:true}),8000)
+  );
+  await slow.getByRole('button',{name:'Совпало',exact:true}).click();
+
+  for(let index=1;index<8;index++){
+    await slow.getByRole('button',{name:'Готово',exact:true}).click();
+    await slow.getByRole('button',{name:'Совпало',exact:true}).click();
+  }
+
+  ok(
+    'slow-but-matching phrase enters work on mistakes',
+    await appears(slow.getByText('Работа над ошибками · осталось 1',{exact:true}),8000)
+  );
+
+  await slow.goto(ROOT+'#/');
+  ok(
+    'seven fast phrases plus one slow phrase produce 26/43, not 27/43',
+    await appears(slow.getByText(/26 из 43 заданий/),8000)
+  );
+
+  await slow.reload();
+  ok(
+    'slow phrase remains unresolved after reload',
+    await appears(slow.getByText(/26 из 43 заданий/),8000)
+  );
+
+  await slow.getByRole('button',{name:'Продолжить',exact:true}).click();
+  await slow.waitForURL(/#\/learn\/day-3/,{timeout:5000});
+  ok(
+    'resume returns to the single slow speed correction',
+    await appears(slow.getByText('Работа над ошибками · осталось 1',{exact:true}),8000)
+  );
+
+  await slow.getByRole('button',{name:'Готово',exact:true}).click();
+  await slow.getByRole('button',{name:'Совпало',exact:true}).click();
+  await slow.getByText(/7 из 8 вовремя/).waitFor({timeout:8000});
+  await slow.getByRole('button',{name:'Далее',exact:true}).click();
+
+  ok(
+    'after correcting the slow phrase the lesson advances to listening',
+    await appears(slow.getByText('Тренируем слух: понимать фразу с первого раза, без текста.'),8000)
+  );
+
+  await slow.goto(ROOT+'#/');
+  ok(
+    'corrected speed mode closes all eight speed units: 27/43',
+    await appears(slow.getByText(/27 из 43 заданий/),8000)
+  );
+  await slow.goto(ROOT+'#/course');
+  ok(
+    'Route agrees with the corrected 27/43 speed state',
+    await appears(slow.getByText('27/43',{exact:true}),8000)
+  );
+
+  ok('slow-speed correction flow has no runtime errors',slowErrors.length===0);
+  if(slowErrors.length)console.log(slowErrors.join('\n'));
+
+  await slowContext.close();
 }catch(error){
   bad++;
   console.error(error);
