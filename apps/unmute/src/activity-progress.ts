@@ -1,12 +1,13 @@
 import { authClient } from './auth';
 import { dayNumberFromKey } from './engine/course-progress';
 import { recordAnswer } from './engine/learner-stats';
-import type { PracticeSrsKind } from './engine/practice-srs';
+import type { PracticeItemGrade, PracticeSrsKind } from './engine/practice-srs';
 import type { SentenceResponseKind } from './engine/sentence-progression';
 import {
   completeManualNode,
   gradeCourseCard,
   gradeCoursePractice,
+  gradeCoursePracticeItem,
   markActivitySeen
 } from './progress-actions';
 import type { CourseProgressDocument, StatsProgressDocument } from './progress';
@@ -112,6 +113,28 @@ export function buildPracticeActivityProgress(
   };
 }
 
+export function buildPracticeItemProgress(
+  course:CourseProgressDocument,
+  activityId:string,
+  itemId:string,
+  mode:PracticeSrsKind,
+  grade:PracticeItemGrade,
+  clock:ActivitySaveClock,
+  operationId?:string
+):CourseProgressDocument{
+  return gradeCoursePracticeItem(
+    course,
+    activityId,
+    itemId,
+    mode,
+    grade,
+    clock.dayNumber,
+    clock.dayKey,
+    clock.at,
+    operationId
+  );
+}
+
 export function buildDialogueActivityProgress(
   course:CourseProgressDocument,
   activityId:string,
@@ -129,6 +152,30 @@ export function buildDialogueActivityProgress(
       }
     }
   };
+}
+
+export async function savePracticeItemActivity(
+  setId:string,
+  activityId:string,
+  itemId:string,
+  mode:PracticeSrsKind,
+  grade:PracticeItemGrade,
+  operationId?:string,
+  now=new Date()
+):Promise<void>{
+  const course=await readCourseProgress(setId);
+  await writeCourseProgress(
+    setId,
+    buildPracticeItemProgress(
+      course,
+      activityId,
+      itemId,
+      mode,
+      grade,
+      activitySaveClock(now),
+      operationId
+    )
+  );
 }
 
 export async function saveDialogueActivity(
