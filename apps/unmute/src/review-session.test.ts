@@ -131,6 +131,46 @@ describe('course review session',()=>{
     expect(item&&item.kind==='practice'?item.itemId:undefined).toBeUndefined();
   });
 
+  it('exposes the whole 43-item backlog so only the global 20-item budget caps the session',()=>{
+    const activities:CourseSet['activities']=Array.from({length:43},(_,index)=>({
+      id:'backlog.'+index,
+      revision:1,
+      type:'text-input' as const,
+      tags:[],
+      revisionProgress:'preserve' as const,
+      lexiconRefs:[],
+      prompt:{ru:'Задание '+index},
+      answer:{accepted:['Answer '+index],nearMiss:true,caseSensitive:false}
+    }));
+    const backlogSet:CourseSet={
+      ...set,
+      roadmaps:[{
+        id:'main',
+        title:{ru:'Путь'},
+        nodes:[{
+          id:'backlog-day',
+          kind:'lesson',
+          title:{ru:'День'},
+          dayIndex:1,
+          order:0,
+          prerequisites:[],
+          activityIds:activities.map(activity=>activity.id),
+          optional:false
+        }]
+      }],
+      activities
+    };
+    const progress=emptyCourseProgress();
+    for(const activity of activities){
+      progress.cards[activity.id]={box:1,due:1,at:'2026-09-29T00:00:00Z'};
+    }
+
+    const session=buildCourseReviewSession(backlogSet,progress,10);
+    expect(session.actionableCount).toBe(43);
+    expect(session.cards.due).toBe(43);
+    expect(session.waitingCount).toBe(0);
+  });
+
   it('ignores deleted and future review states',()=>{
     const progress=emptyCourseProgress();
     progress.cards['card.a']={box:2,due:1,at:'2026-09-29T00:00:00Z',deleted:true};
