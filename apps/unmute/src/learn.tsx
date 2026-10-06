@@ -566,21 +566,37 @@ export function NodeRunnerView({
       const firstTask=forcedTasks
         ? (taskIndices.find(index=>!isSeen(state.progress,steps[index]!.id))??taskIndices[0]??-1)
         : -1;
+      const missingTarget=requested<0&&forcedPractice<0&&firstTask<0
+        ? firstMissingRequirementTarget(node,steps,state.progress)
+        : null;
       const startIndex=requested>=0
         ? requested
         : forcedPractice>=0
           ? forcedPractice
           : firstTask>=0
             ? firstTask
-            : firstIncompleteRequirementIndex(node,steps,state.progress);
+            : (missingTarget?.index??firstIncompleteRequirementIndex(node,steps,state.progress));
       begin(startIndex);
-      if(forcedTasks&&firstTask>=0){
-        const taskOrder=taskIndices.filter(index=>index>=firstTask);
-        setOrder(taskOrder.length?taskOrder:[firstTask]);
+      const startActivity=steps[startIndex];
+      const startsInTasks=Boolean(
+        startActivity&&(
+          startActivity.type==='choice'||
+          startActivity.type==='text-input'||
+          startActivity.type==='translation'
+        )
+      );
+      if((forcedTasks&&firstTask>=0)||startsInTasks){
+        const taskStart=forcedTasks&&firstTask>=0?firstTask:startIndex;
+        const taskOrder=taskIndices.filter(index=>index>=taskStart);
+        setOrder(taskOrder.length?taskOrder:[taskStart]);
         setFirstPass(taskOrder.length||1);
+      }else if(startActivity?.type==='pattern-drill'){
+        // Practice is its own required section. Regular-task corrections must be cleared first.
+        setOrder([startIndex]);
+        setFirstPass(1);
       }
       setIntro(forcedTheory||(!forcedTasks&&forcedPractice<0&&requested<0&&theoryCards.some(card=>!isSeen(state.progress,card.id))));
-      setPracticeMode(startMode);
+      setPracticeMode(startMode??missingTarget?.mode);
       // A completed day opened again is a replay. Otherwise continuing any existing
       // progress without a saved snapshot is an explicit resume, not a fresh first run.
       const hasExistingProgress=activities.some(item=>isSeen(state.progress,item.id))
