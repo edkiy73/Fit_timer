@@ -43,18 +43,23 @@ assert.match(read('android/app/src/main/res/xml/file_paths.xml'),/path="updates\
 assert.match(manifest,/android\.permission\.RECORD_AUDIO/);
 assert.match(manifest,/android\.permission\.POST_NOTIFICATIONS/);
 
-// Launcher icon: use the exact raster PNG supplied for UnMute. Do not let anydpi/adaptive
-// XML shadow it on Samsung/One UI; Android can scale the xxxhdpi raster for lower densities.
-assert.match(manifest,/android:icon="@mipmap\/ic_launcher"/);
-assert.match(manifest,/android:roundIcon="@mipmap\/ic_launcher_round"/);
-const launcherPng=path.join(ROOT,'android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png');
-const launcherRoundPng=path.join(ROOT,'android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png');
-assert.ok(fs.existsSync(launcherPng));
-assert.ok(fs.existsSync(launcherRoundPng));
-assert.ok(fs.statSync(launcherPng).size > 10000);
-assert.ok(fs.statSync(launcherRoundPng).size > 10000);
-assert.ok(!fs.existsSync(path.join(ROOT,'android/app/src/main/res/mipmap-anydpi/ic_launcher.xml')));
-assert.ok(!fs.existsSync(path.join(ROOT,'android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml')));
+// Launcher icon + native splash are generated from one brand source.
+assert.match(manifest,/android:icon="@mipmap\/unmute_launcher"/);
+assert.match(manifest,/android:roundIcon="@mipmap\/unmute_launcher"/);
+assert.match(manifest,/android:theme="@style\/AppTheme\.Splash"/);
+assert.match(activity,/SplashScreen\.installSplashScreen\(this\)/);
+const styles=read('android/app/src/main/res/values/styles.xml');
+const product=JSON.parse(read('config/product.json'));
+assert.equal(product.brand.background,'#12131C');
+assert.match(styles,/windowSplashScreenBackground">@color\/unmute_brand_background/);
+assert.match(styles,/windowSplashScreenAnimatedIcon">@drawable\/splash_transparent/);
+assert.match(styles,/postSplashScreenTheme">@style\/AppTheme\.NoActionBar/);
+assert.match(gradle,/new JsonSlurper\(\)\.parse\(rootProject\.file\('\.\.\/config\/product\.json'\)\)/);
+assert.match(gradle,/resValue "color", "unmute_brand_background", unmuteBrandBackground/);
+assert.match(gradle,/scaledWidth = Math\.round\(width \* 0\.85f\)/);
+assert.match(gradle,/mipmap-xxxhdpi\/unmute_launcher\.png/);
+assert.ok(fs.existsSync(path.join(ROOT,'android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png')));
+assert.ok(fs.existsSync(path.join(ROOT,'android/app/src/main/res/drawable/splash_transparent.xml')));
 assert.equal(pkg.dependencies['@capacitor/push-notifications'],'8.1.2');
 assert.match(rootGradle,/com\.google\.gms:google-services:4\.4\.4/);
 assert.match(gradle,/google-services\.json/);
