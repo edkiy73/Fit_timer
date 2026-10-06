@@ -1,10 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
-import { emptyCourseProgress } from './progress';
+import { emptyCourseProgress, practiceItemKey } from './progress';
 import { ReviewView } from './review';
 import { dictionaries } from './i18n';
 import type { OtherCourseReviews } from './other-course-review';
@@ -62,7 +62,8 @@ function renderReview(
   saveGraded=vi.fn(async()=>{}),
   savePractice=vi.fn(async()=>{}),
   otherCourses:OtherCourseReviews={status:'ready',courses:[]},
-  customState: LearnerCourseState = learnerState()
+  customState:LearnerCourseState=learnerState(),
+  savePracticeItem=vi.fn(async()=>{})
 ){
   const runtime:LearnerCourseRuntimeValue={
     state:customState,
@@ -84,13 +85,14 @@ function renderReview(
         todayDay={10}
         saveGraded={saveGraded}
         savePractice={savePractice}
+        savePracticeItem={savePracticeItem}
         speak={async()=>true}
         startRecognition={()=>null}
         otherCourses={otherCourses}
       />
     </I18nProvider>
   );
-  return {saveGraded,onExit};
+  return {saveGraded,savePractice,savePracticeItem,onExit};
 }
 
 describe('course review screen',()=>{
@@ -153,6 +155,72 @@ describe('course review screen',()=>{
     await user.type(screen.getByRole('textbox',{name:'Твой ответ'}),'Hi');
     await user.click(screen.getByRole('button',{name:'Готово'}));
     expect(saveGraded).toHaveBeenLastCalledWith('a1-starter','a1.card',true,'write',expect.any(String));
+  });
+
+  it('reviews only the due phrase and saves its phrase-level SRS',async()=>{
+    const user=userEvent.setup();
+    const state=learnerState();
+    state.progress.cards['card.one']={box:2,due:99,at:'2026-09-29T00:00:00Z'};
+    const pattern={
+      id:'pattern.atomic',
+      revision:1,
+      type:'pattern-drill' as const,
+      tags:[],
+      revisionProgress:'preserve' as const,
+      lexiconRefs:[],
+      pattern:{ru:'Работа'},
+      modes:['drill' as const],
+      items:[
+        {
+          id:'p.weak',
+          prompt:{ru:'Я работаю дома.'},
+          answer:{accepted:['I work at home.'],nearMiss:true,caseSensitive:false}
+        },
+        {
+          id:'p.later',
+          prompt:{ru:'Она работает здесь.'},
+          answer:{accepted:['She works here.'],nearMiss:true,caseSensitive:false}
+        }
+      ]
+    };
+    state.set={...state.set,activities:[pattern]};
+    state.progress.practice.drill[pattern.id]={
+      box:0,due:10,completed:true,itemized:true,at:'2026-10-05T00:00:00Z'
+    };
+    state.progress.practiceItems.drill[practiceItemKey(pattern.id,'p.weak')]={
+      box:0,due:10,at:'2026-10-05T00:00:01Z'
+    };
+    state.progress.practiceItems.drill[practiceItemKey(pattern.id,'p.later')]={
+      box:1,due:20,at:'2026-10-05T00:00:02Z'
+    };
+    const savePractice=vi.fn(async()=>{});
+    const savePracticeItem=vi.fn(async()=>{});
+    const result=renderReview(
+      vi.fn(async()=>{}),
+      savePractice,
+      {status:'ready',courses:[]},
+      state,
+      savePracticeItem
+    );
+
+    expect(await screen.findByText('На сегодня: 1')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Начать повтор'}));
+    expect(await screen.findByText('Я работаю дома.')).toBeTruthy();
+    expect(screen.queryByText('Она работает здесь.')).toBeNull();
+
+    await user.click(screen.getByRole('button',{name:'Готово'}));
+    await user.click(screen.getByRole('button',{name:'Совпало'}));
+
+    await waitFor(()=>expect(savePracticeItem).toHaveBeenCalledWith(
+      'general-foundation',
+      'pattern.atomic',
+      'p.weak',
+      'drill',
+      'strong',
+      expect.any(String)
+    ));
+    expect(savePractice).not.toHaveBeenCalled();
+    expect(result.savePracticeItem).toBe(savePracticeItem);
   });
 
   it('waits for other courses before pinning the session',async()=>{

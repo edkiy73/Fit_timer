@@ -12,6 +12,7 @@ import {
   saveGradedActivity,
   saveManualNode,
   savePracticeActivity,
+  savePracticeItemActivity,
   saveSeenActivity
 } from './activity-progress';
 import { nodeTopic } from './today-model';
@@ -79,6 +80,14 @@ export interface ReviewViewProps {
     operationId?:string,
     itemGrades?:Readonly<Record<string,PracticeItemGrade>>
   )=>Promise<void>;
+  savePracticeItem?:(
+    setId:string,
+    activityId:string,
+    itemId:string,
+    mode:PracticeSrsKind,
+    grade:PracticeItemGrade,
+    operationId?:string
+  )=>Promise<void>;
   wordRuntime?:WordReviewRuntimeValue|null;
   saveWord?:(lexemeId:string,senseId:string,correct:boolean)=>Promise<void>;
   onSignIn?:()=>void;
@@ -101,6 +110,7 @@ export function ReviewView({
   todayDay=activitySaveClock().dayNumber,
   saveGraded,
   savePractice,
+  savePracticeItem=savePracticeItemActivity,
   wordRuntime=null,
   saveWord=saveWordReview,
   onSignIn=()=>{},
@@ -206,6 +216,14 @@ export function ReviewView({
 
   const item=queue[index] ?? null;
   const total=session?.total ?? 0;
+  const practiceActivity=item?.kind==='practice'&&item.itemId
+    ? {
+        ...item.activity,
+        items:item.activity.items.filter(phrase=>phrase.id===item.itemId)
+      }
+    : item?.kind==='practice'
+      ? item.activity
+      : null;
 
   const reviewChips=useMemo(()=>{
     if(item?.kind!=='card'||(item.activity.type!=='text-input'&&item.activity.type!=='translation'))return null;
@@ -512,8 +530,20 @@ export function ReviewView({
     correct:boolean,
     score:number,
     itemGrades?:Readonly<Record<string,PracticeItemGrade>>
-  )=>
-    savePractice(
+  )=>{
+    const atomicItemId=item?.kind==='practice'?item.itemId:undefined;
+    if(atomicItemId){
+      const grade=itemGrades?.[atomicItemId]??(correct?'strong':'weak');
+      return savePracticeItem(
+        setIdArg,
+        activityId,
+        atomicItemId,
+        mode,
+        grade,
+        reviewRunId+'|'+setIdArg+'|'+activityId+'|'+atomicItemId+'|'+index+'|practice:'+mode
+      );
+    }
+    return savePractice(
       setIdArg,
       activityId,
       mode,
@@ -522,6 +552,7 @@ export function ReviewView({
       reviewRunId+'|'+setIdArg+'|'+activityId+'|'+index+'|practice:'+mode,
       itemGrades
     );
+  };
 
   const returnedCard=queue.indexOf(item)<index;
   const finishCard=async(correct:boolean,near=false)=>{
@@ -807,8 +838,8 @@ export function ReviewView({
 
       {item.kind==='practice'&&item.mode==='drill'&&(
         <PatternDrillView
-          key={'review-drill-'+setId+'-'+item.activity.id}
-          activity={item.activity}
+          key={'review-drill-'+setId+'-'+item.activity.id+'-'+(item.itemId??'legacy')}
+          activity={practiceActivity!}
           setId={setId}
           savePractice={reviewPracticeSave}
           onDone={completePractice}
@@ -817,8 +848,8 @@ export function ReviewView({
 
       {item.kind==='practice'&&item.mode==='listening'&&(
         <PatternListeningView
-          key={'review-listening-'+setId+'-'+item.activity.id}
-          activity={item.activity}
+          key={'review-listening-'+setId+'-'+item.activity.id+'-'+(item.itemId??'legacy')}
+          activity={practiceActivity!}
           setId={setId}
           distractors={distractors}
           savePractice={reviewPracticeSave}
@@ -829,8 +860,8 @@ export function ReviewView({
 
       {item.kind==='practice'&&item.mode==='speaking'&&(
         <PatternSpeakingView
-          key={'review-speaking-'+setId+'-'+item.activity.id}
-          activity={item.activity}
+          key={'review-speaking-'+setId+'-'+item.activity.id+'-'+(item.itemId??'legacy')}
+          activity={practiceActivity!}
           setId={setId}
           savePractice={reviewPracticeSave}
           speak={speak}
@@ -859,6 +890,7 @@ export function ReviewScreen(){
       onAccess={()=>navigate('/access?from=answer')}
       saveGraded={saveGradedActivity}
       savePractice={savePracticeActivity}
+      savePracticeItem={savePracticeItemActivity}
       saveWord={saveWordReview}
       otherCourses={otherCourses}
       {...(day?{completeDayId:day}:{})}
