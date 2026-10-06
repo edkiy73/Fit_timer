@@ -123,6 +123,7 @@ export function CourseMapView({
   onOpen,
   onUnlock,
   onReference,
+  onStartOver,
   activeDayProgress={}
 }:{
   runtime:LearnerCourseRuntimeValue;
@@ -130,6 +131,7 @@ export function CourseMapView({
   onReference?:()=>void;
   /** `fromSheet`: the station sheet is open; navigate with replace so Back skips it. */
   onOpen:(nodeId:string,fromSheet?:boolean,target?:LessonSectionId)=>void;
+  onStartOver?:(nodeId:string,fromSheet?:boolean)=>void;
   onUnlock:(nodeId:string,fromSheet?:boolean)=>void;
   /** Same-device unfinished state for the current day only. */
   activeDayProgress?:ActiveDayProgress;
@@ -477,6 +479,11 @@ export function CourseMapView({
                 {selected.status==='complete'?t('courseMap.reopen'):t('courseMap.open')}
               </button>
             )}
+            {selected.status==='current'&&selectedProgress&&selectedProgress.completedSteps>0&&onStartOver&&(
+              <button className="secondary-button" type="button" onClick={()=>onStartOver(selected.node.id,true)}>
+                {t('courseMap.startOver')}
+              </button>
+            )}
             {selected.status==='purchase-locked'&&(
               <button className="primary-button" type="button" onClick={()=>onUnlock(selected.node.id,true)}>
                 {t('courseMap.unlock')}
@@ -507,6 +514,7 @@ export function CourseMapScreen(){
             : '';
         navigate('/learn/'+encodeURIComponent(nodeId)+query,{replace:Boolean(fromSheet)});
       }}
+      onStartOver={(nodeId,fromSheet)=>navigate('/learn/'+encodeURIComponent(nodeId)+'?start=1',{replace:Boolean(fromSheet)})}
       onUnlock={(nodeId,fromSheet)=>navigate('/access?from=course&node='+encodeURIComponent(nodeId),{replace:Boolean(fromSheet)})}
       onReference={()=>navigate('/reference')}
     />
