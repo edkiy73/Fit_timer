@@ -1246,6 +1246,11 @@ export function NodeRunnerView({
             }
           });
     };
+    const existingMode=state.progress.practice[mode][activityId];
+    const modeAlreadyComplete=Boolean(
+      existingMode&&!existingMode.deleted&&practiceProgressComplete(existingMode)
+    );
+    if(replay||modeAlreadyComplete)return;
     if(!recordsAnswers){
       rememberQuality();
       return;
@@ -1316,11 +1321,11 @@ export function NodeRunnerView({
       const correct=exactCorrect||typo;
       // Near miss is accepted for the lesson, but it must not create or advance SRS debt.
       if(typo){
-        await saveSeen(setId,activity.id);
+        if(!replay&&!alreadySeen)await saveSeen(setId,activity.id);
       }else{
         await gradeAnswer(correct,chips?'build':'write');
       }
-      countAnswer(correct);
+      countAnswer(correct,recordsAnswers);
       if(!correct)retryLater();
       setNearResult(typo);
       setResult(correct);
