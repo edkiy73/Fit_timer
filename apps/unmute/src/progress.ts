@@ -28,6 +28,14 @@ export interface TimedPracticeState extends PracticeSrsState, RecordMeta {
   completed?:boolean;
 }
 
+/** Phrase-level SRS. The coarse practice map above remains the durable mode-completion record. */
+export interface TimedPracticeUnitState extends PracticeSrsState, RecordMeta {
+  at:string;
+  deleted?:boolean;
+  activityId:string;
+  itemId:string;
+}
+
 export interface TimedMetric extends RecordMeta {
   at:string;
   deleted?:boolean;
@@ -44,6 +52,12 @@ export interface CourseProgressDocument {
     drill:RecordMap<TimedPracticeState>;
     listening:RecordMap<TimedPracticeState>;
     speaking:RecordMap<TimedPracticeState>;
+  };
+  /** Review/SRS at the real phrase unit. Mode is the outer key; activity+item is stable inside it. */
+  practiceUnits:{
+    drill:RecordMap<TimedPracticeUnitState>;
+    listening:RecordMap<TimedPracticeUnitState>;
+    speaking:RecordMap<TimedPracticeUnitState>;
   };
   manualNodes:RecordMap<TimedFlag>;
   learningDays:RecordMap<TimedFlag>;
@@ -94,6 +108,7 @@ export function emptyCourseProgress():CourseProgressDocument{
     answerOps:{},
     cards:{},
     practice:{drill:{},listening:{},speaking:{}},
+    practiceUnits:{drill:{},listening:{},speaking:{}},
     manualNodes:{},
     learningDays:{},
     metrics:{},
@@ -114,6 +129,7 @@ export function parseCourseProgress(raw:string|null):CourseProgressDocument{
     const parsed=JSON.parse(raw) as unknown;
     if(!isObject(parsed)||parsed.schemaVersion!==1)return emptyCourseProgress();
     const practice=isObject(parsed.practice)?parsed.practice:{};
+    const practiceUnits=isObject(parsed.practiceUnits)?parsed.practiceUnits:{};
     return {
       schemaVersion:1,
       seen:asMap<TimedFlag>(parsed.seen),
@@ -123,6 +139,11 @@ export function parseCourseProgress(raw:string|null):CourseProgressDocument{
         drill:asMap<TimedPracticeState>(practice.drill),
         listening:asMap<TimedPracticeState>(practice.listening),
         speaking:asMap<TimedPracticeState>(practice.speaking),
+      },
+      practiceUnits:{
+        drill:asMap<TimedPracticeUnitState>(practiceUnits.drill),
+        listening:asMap<TimedPracticeUnitState>(practiceUnits.listening),
+        speaking:asMap<TimedPracticeUnitState>(practiceUnits.speaking),
       },
       manualNodes:asMap<TimedFlag>(parsed.manualNodes),
       learningDays:asMap<TimedFlag>(parsed.learningDays),
@@ -173,6 +194,11 @@ export function mergeCourseProgress(
       listening:mergeRecordMaps(local.practice.listening,remote.practice.listening),
       speaking:mergeRecordMaps(local.practice.speaking,remote.practice.speaking),
     },
+    practiceUnits:{
+      drill:mergeRecordMaps(local.practiceUnits.drill,remote.practiceUnits.drill),
+      listening:mergeRecordMaps(local.practiceUnits.listening,remote.practiceUnits.listening),
+      speaking:mergeRecordMaps(local.practiceUnits.speaking,remote.practiceUnits.speaking),
+    },
     manualNodes:mergeRecordMaps(local.manualNodes,remote.manualNodes),
     learningDays:mergeRecordMaps(local.learningDays,remote.learningDays),
     metrics:mergeRecordMaps(local.metrics,remote.metrics),
@@ -222,6 +248,10 @@ export function mergeUnMuteDocument(
 
 export function wordProgressKey(lexemeId:string,senseId:string):string{
   return lexemeId+'|'+senseId;
+}
+
+export function practiceUnitKey(activityId:string,itemId:string):string{
+  return activityId+'|'+itemId;
 }
 
 export function statsBucketKey(deviceId:string,activityId:string):string{
