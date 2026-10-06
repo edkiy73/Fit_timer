@@ -48,6 +48,9 @@ export function learnedActivityIdsFromProgress(progress:CourseProgressDocument):
   add(progress.practice.drill);
   add(progress.practice.listening);
   add(progress.practice.speaking);
+  add(progress.practiceItems.drill);
+  add(progress.practiceItems.listening);
+  add(progress.practiceItems.speaking);
   return [...ids].sort();
 }
 
