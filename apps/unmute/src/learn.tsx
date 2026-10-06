@@ -308,8 +308,9 @@ function remapLessonRun(snapshot:LessonRunSnapshot,steps:Activity[]):LessonRunSn
     }
   }
 
+  const {taskSection:_oldTaskSection,...snapshotWithoutTaskSection}=snapshot;
   return {
-    ...snapshot,
+    ...snapshotWithoutTaskSection,
     stepIds:steps.map(step=>step.id),
     order:mappedOrder,
     pos:mappedPos,
