@@ -43,20 +43,18 @@ assert.match(read('android/app/src/main/res/xml/file_paths.xml'),/path="updates\
 assert.match(manifest,/android\.permission\.RECORD_AUDIO/);
 assert.match(manifest,/android\.permission\.POST_NOTIFICATIONS/);
 
-// Launcher icon: adaptive icons must use a real foreground layer. A transparent foreground
-// makes some launchers (including Samsung One UI) fall back to the generic Android placeholder.
+// Launcher icon: use the exact raster PNG supplied for UnMute. Do not let anydpi/adaptive
+// XML shadow it on Samsung/One UI; Android can scale the xxxhdpi raster for lower densities.
 assert.match(manifest,/android:icon="@mipmap\/ic_launcher"/);
 assert.match(manifest,/android:roundIcon="@mipmap\/ic_launcher_round"/);
-const launcherAdaptive=read('android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml');
-const launcherRoundAdaptive=read('android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml');
-const launcherForeground=read('android/app/src/main/res/drawable/ic_launcher_adaptive_foreground.xml');
-const launcherColors=read('android/app/src/main/res/values/colors.xml');
-assert.match(launcherAdaptive,/@color\/ic_launcher_background/);
-assert.match(launcherAdaptive,/@drawable\/ic_launcher_adaptive_foreground/);
-assert.match(launcherRoundAdaptive,/@drawable\/ic_launcher_adaptive_foreground/);
-assert.doesNotMatch(launcherAdaptive,/@android:color\/transparent/);
-assert.match(launcherForeground,/@drawable\/ic_launcher_master/);
-assert.match(launcherColors,/#12131C/);
+const launcherPng=path.join(ROOT,'android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png');
+const launcherRoundPng=path.join(ROOT,'android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png');
+assert.ok(fs.existsSync(launcherPng));
+assert.ok(fs.existsSync(launcherRoundPng));
+assert.ok(fs.statSync(launcherPng).size > 10000);
+assert.ok(fs.statSync(launcherRoundPng).size > 10000);
+assert.ok(!fs.existsSync(path.join(ROOT,'android/app/src/main/res/mipmap-anydpi/ic_launcher.xml')));
+assert.ok(!fs.existsSync(path.join(ROOT,'android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml')));
 assert.equal(pkg.dependencies['@capacitor/push-notifications'],'8.1.2');
 assert.match(rootGradle,/com\.google\.gms:google-services:4\.4\.4/);
 assert.match(gradle,/google-services\.json/);
