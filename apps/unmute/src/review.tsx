@@ -6,7 +6,7 @@ import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
 import { checkAnswer } from './engine/answer-check';
 import { nearMiss } from './engine/answer-near-miss';
-import type { PracticeSrsKind } from './engine/practice-srs';
+import type { PracticeItemGrade, PracticeSrsKind } from './engine/practice-srs';
 import {
   activitySaveClock,
   saveGradedActivity,
@@ -76,7 +76,8 @@ export interface ReviewViewProps {
     mode:PracticeSrsKind,
     correct:boolean,
     score?:number,
-    operationId?:string
+    operationId?:string,
+    itemGrades?:Readonly<Record<string,PracticeItemGrade>>
   )=>Promise<void>;
   wordRuntime?:WordReviewRuntimeValue|null;
   saveWord?:(lexemeId:string,senseId:string,correct:boolean)=>Promise<void>;
@@ -504,14 +505,22 @@ export function ReviewView({
     setCompleted(value=>Math.min(total,value+1));
     setIndex(value=>value+1);
   };
-  const reviewPracticeSave:ReviewViewProps['savePractice']=(setIdArg,activityId,mode,correct,score)=>
+  const reviewPracticeSave=(
+    setIdArg:string,
+    activityId:string,
+    mode:PracticeSrsKind,
+    correct:boolean,
+    score:number,
+    itemGrades?:Readonly<Record<string,PracticeItemGrade>>
+  )=>
     savePractice(
       setIdArg,
       activityId,
       mode,
       correct,
       score,
-      reviewRunId+'|'+setIdArg+'|'+activityId+'|'+index+'|practice:'+mode
+      reviewRunId+'|'+setIdArg+'|'+activityId+'|'+index+'|practice:'+mode,
+      itemGrades
     );
 
   const returnedCard=queue.indexOf(item)<index;
