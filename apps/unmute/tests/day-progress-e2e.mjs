@@ -195,8 +195,8 @@ try{
 
   for(let index=0;index<3;index++){
     await page.getByRole('button',{name:'Готово',exact:true}).click();
+    // «Совпало» itself commits the phrase and advances to the next one.
     await page.getByRole('button',{name:'Совпало',exact:true}).click();
-    await page.getByRole('button',{name:'Далее',exact:true}).click();
   }
 
   await page.goto(ROOT+'#/');
