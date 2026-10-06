@@ -97,7 +97,11 @@ describe('pattern speaking',()=>{
       'pattern.present',
       'speaking',
       false,
-      50
+      50,
+      {
+        'p1':'strong',
+        'p2':'neutral'
+      }
     ));
     expect(await screen.findByText('1 из 2 распознано')).toBeTruthy();
     expect(screen.getByText('Все фразы пройдены.')).toBeTruthy();
@@ -168,7 +172,11 @@ describe('pattern speaking',()=>{
       'pattern.present',
       'speaking',
       false,
-      50
+      50,
+      {
+        'p1':'weak',
+        'p2':'strong'
+      }
     ));
     expect(await screen.findByText('1 из 2 распознано')).toBeTruthy();
   });

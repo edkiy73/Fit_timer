@@ -1,12 +1,13 @@
 import { authClient } from './auth';
 import { dayNumberFromKey } from './engine/course-progress';
 import { recordAnswer } from './engine/learner-stats';
-import type { PracticeSrsKind } from './engine/practice-srs';
+import type { PracticeItemGrade, PracticeSrsKind } from './engine/practice-srs';
 import type { SentenceResponseKind } from './engine/sentence-progression';
 import {
   completeManualNode,
   gradeCourseCard,
   gradeCoursePractice,
+  gradeCoursePracticeItem,
   markActivitySeen
 } from './progress-actions';
 import type { CourseProgressDocument, StatsProgressDocument } from './progress';
@@ -77,7 +78,8 @@ export function buildPracticeActivityProgress(
   correct:boolean,
   score:number|undefined,
   clock:ActivitySaveClock,
-  operationId?:string
+  operationId?:string,
+  itemGrades?:Readonly<Record<string,PracticeItemGrade>>
 ):{course:CourseProgressDocument;stats:StatsProgressDocument}{
   // Practising a pattern also counts as having done that step of the day.
   // A retried operation must not refresh seen/speed timestamps or move SRS again.
@@ -94,6 +96,33 @@ export function buildPracticeActivityProgress(
         clock.at,
         operationId
       );
+  if(!alreadyApplied&&itemGrades){
+    const modeState=nextCourse.practice[mode][activityId];
+    if(modeState&&!modeState.deleted){
+      nextCourse={
+        ...nextCourse,
+        practice:{
+          ...nextCourse.practice,
+          [mode]:{
+            ...nextCourse.practice[mode],
+            [activityId]:{...modeState,itemized:true}
+          }
+        }
+      };
+    }
+    for(const [itemId,grade] of Object.entries(itemGrades)){
+      nextCourse=gradeCoursePracticeItem(
+        nextCourse,
+        activityId,
+        itemId,
+        mode,
+        grade,
+        clock.dayNumber,
+        clock.dayKey,
+        clock.at
+      );
+    }
+  }
   if(!alreadyApplied&&mode==='drill'&&Number.isFinite(score)){
     nextCourse={
       ...nextCourse,
@@ -110,6 +139,28 @@ export function buildPracticeActivityProgress(
     course:nextCourse,
     stats:recordAnswer(stats,deviceId,activityId,correct,clock.at,operationId)
   };
+}
+
+export function buildPracticeItemProgress(
+  course:CourseProgressDocument,
+  activityId:string,
+  itemId:string,
+  mode:PracticeSrsKind,
+  grade:PracticeItemGrade,
+  clock:ActivitySaveClock,
+  operationId?:string
+):CourseProgressDocument{
+  return gradeCoursePracticeItem(
+    course,
+    activityId,
+    itemId,
+    mode,
+    grade,
+    clock.dayNumber,
+    clock.dayKey,
+    clock.at,
+    operationId
+  );
 }
 
 export function buildDialogueActivityProgress(
@@ -129,6 +180,30 @@ export function buildDialogueActivityProgress(
       }
     }
   };
+}
+
+export async function savePracticeItemActivity(
+  setId:string,
+  activityId:string,
+  itemId:string,
+  mode:PracticeSrsKind,
+  grade:PracticeItemGrade,
+  operationId?:string,
+  now=new Date()
+):Promise<void>{
+  const course=await readCourseProgress(setId);
+  await writeCourseProgress(
+    setId,
+    buildPracticeItemProgress(
+      course,
+      activityId,
+      itemId,
+      mode,
+      grade,
+      activitySaveClock(now),
+      operationId
+    )
+  );
 }
 
 export async function saveDialogueActivity(
@@ -151,6 +226,7 @@ export async function savePracticeActivity(
   correct:boolean,
   score?:number,
   operationId?:string,
+  itemGrades?:Readonly<Record<string,PracticeItemGrade>>,
   now=new Date()
 ):Promise<void>{
   const [course,stats,deviceId]=await Promise.all([
@@ -167,7 +243,8 @@ export async function savePracticeActivity(
     correct,
     score,
     activitySaveClock(now),
-    operationId
+    operationId,
+    itemGrades
   );
   await writeCourseProgress(setId,next.course);
   await writeStatsProgress(setId,next.stats);

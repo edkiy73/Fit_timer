@@ -4,6 +4,7 @@ import type { Activity } from './content/schema';
 import { ExerciseKind } from './exercise-kind';
 import { LexiconText } from './lexicon-ui';
 import { AnswerFeedbackSheet } from './answer-feedback-sheet';
+import type { PracticeItemGrade } from './engine/practice-srs';
 import { readPracticeRunState, writePracticeRunState } from './practice-run-state';
 
 type PatternDrillActivity=Extract<Activity,{type:'pattern-drill'}>;
@@ -19,6 +20,7 @@ interface DrillRunSession {
   lastFast:boolean|null;
   saved:boolean;
   saveError:boolean;
+  firstPassGrades?:Record<string,PracticeItemGrade>;
 }
 
 function restoredDrillSession(activity:PatternDrillActivity,key:string|undefined){
@@ -39,7 +41,8 @@ export interface PatternDrillViewProps {
     activityId:string,
     mode:'drill',
     correct:boolean,
-    score:number
+    score:number,
+    itemGrades?:Readonly<Record<string,PracticeItemGrade>>
   )=>Promise<void>;
   variant?:'practice'|'mixed';
   onProgress?:(current:number,total:number)=>void;
@@ -104,6 +107,9 @@ export function PatternDrillView({
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(()=>variant==='mixed'||Boolean(restored?.saved));
   const [saveError,setSaveError]=useState(()=>Boolean(restored?.saveError));
+  const [firstPassGrades,setFirstPassGrades]=useState<Record<string,PracticeItemGrade>>(
+    ()=>restored?.firstPassGrades??{}
+  );
   const deadlineRef=useRef(0);
   const activationRef=useRef<number|null>(null);
   const item=items[pos] ?? null;
@@ -128,9 +134,10 @@ export function PatternDrillView({
       phase,
       lastFast,
       saved,
-      saveError
+      saveError,
+      firstPassGrades
     } satisfies DrillRunSession);
-  },[activity.revision,fast,items,lastFast,phase,pos,saveError,saved,sessionKey,slow,variant]);
+  },[activity.revision,fast,firstPassGrades,items,lastFast,phase,pos,saveError,saved,sessionKey,slow,variant]);
 
   useEffect(()=>{ if(active)onProgress?.(Math.min(pos+1,base),base); },[active,base,onProgress,pos]);
 
@@ -159,11 +166,11 @@ export function PatternDrillView({
     if(variant==='mixed'||!done||saved||saving||saveError)return;
     setSaving(true);
     setSaveError(false);
-    void savePractice(setId,activity.id,'drill',strongFirstPass,score)
+    void savePractice(setId,activity.id,'drill',strongFirstPass,score,firstPassGrades)
       .then(()=>setSaved(true))
       .catch(()=>setSaveError(true))
       .finally(()=>setSaving(false));
-  },[activity.id,done,savePractice,saved,saving,score,setId,strongFirstPass,variant]);
+  },[activity.id,done,firstPassGrades,savePractice,saved,saving,score,setId,strongFirstPass,variant]);
 
   const captureActivation=()=>{
     if(phase!=='ask'||activationRef.current!==null)return;
@@ -188,6 +195,10 @@ export function PatternDrillView({
     if(pos<base){
       if(resolved)nextFast++;
       else nextSlow++;
+      setFirstPassGrades(current=>({
+        ...current,
+        [item.id]:resolved?'strong':'weak'
+      }));
     }
     // A slow-but-correct phrase is still unresolved for this mode, exactly like a mismatch.
     // During correction it keeps returning until it is both correct and on time.
@@ -211,13 +222,14 @@ export function PatternDrillView({
     setSaved(variant==='mixed');
     setSaving(false);
     setSaveError(false);
+    setFirstPassGrades({});
   };
 
   const retrySave=()=>{
     if(saving)return;
     setSaveError(false);
     setSaving(true);
-    void savePractice(setId,activity.id,'drill',strongFirstPass,score)
+    void savePractice(setId,activity.id,'drill',strongFirstPass,score,firstPassGrades)
       .then(()=>setSaved(true))
       .catch(()=>setSaveError(true))
       .finally(()=>setSaving(false));

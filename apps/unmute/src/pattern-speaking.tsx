@@ -12,6 +12,7 @@ import { ExerciseKind } from './exercise-kind';
 import { LexiconText } from './lexicon-ui';
 import { ENGLISH_SPEECH_LOCALE } from './speech-locale';
 import { AnswerFeedbackSheet } from './answer-feedback-sheet';
+import type { PracticeItemGrade } from './engine/practice-srs';
 import { readPracticeRunState, writePracticeRunState } from './practice-run-state';
 
 type PatternDrillActivity=Extract<Activity,{type:'pattern-drill'}>;
@@ -29,6 +30,7 @@ interface SpeakingRunSession {
   verification?:SpeakingVerification;
   saved:boolean;
   saveError:boolean;
+  firstPassGrades?:Record<string,PracticeItemGrade>;
 }
 
 function restoredSpeakingSession(activity:PatternDrillActivity,key:string|undefined){
@@ -49,7 +51,8 @@ export interface PatternSpeakingViewProps {
     activityId:string,
     mode:'speaking',
     correct:boolean,
-    score:number
+    score:number,
+    itemGrades?:Readonly<Record<string,PracticeItemGrade>>
   )=>Promise<void>;
   speak:SpeakText;
   startRecognition:StartRecognition;
@@ -114,6 +117,9 @@ export function PatternSpeakingView({
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(()=>Boolean(restored?.saved));
   const [saveError,setSaveError]=useState(()=>Boolean(restored?.saveError));
+  const [firstPassGrades,setFirstPassGrades]=useState<Record<string,PracticeItemGrade>>(
+    ()=>restored?.firstPassGrades??{}
+  );
   const handleRef=useRef<WebRecognitionHandle|null>(null);
   const receivedRef=useRef(false);
 
@@ -139,9 +145,10 @@ export function PatternSpeakingView({
       correct,
       verification,
       saved,
-      saveError
+      saveError,
+      firstPassGrades
     } satisfies SpeakingRunSession);
-  },[activity.revision,correct,heard,hits,items,phase,pos,saveError,saved,sessionKey,verification]);
+  },[activity.revision,correct,firstPassGrades,heard,hits,items,phase,pos,saveError,saved,sessionKey,verification]);
 
   useEffect(()=>{ if(active)onProgress?.(Math.min(pos+1,base),base); },[active,base,onProgress,pos]);
 
@@ -169,11 +176,11 @@ export function PatternSpeakingView({
     if(!done||saved||saving||saveError)return;
     setSaving(true);
     setSaveError(false);
-    void savePractice(setId,activity.id,'speaking',strongFirstPass,score)
+    void savePractice(setId,activity.id,'speaking',strongFirstPass,score,firstPassGrades)
       .then(()=>setSaved(true))
       .catch(()=>setSaveError(true))
       .finally(()=>setSaving(false));
-  },[activity.id,done,saveError,savePractice,saved,saving,score,setId,strongFirstPass]);
+  },[activity.id,done,firstPassGrades,saveError,savePractice,saved,saving,score,setId,strongFirstPass]);
 
   const stopCurrent=()=>{
     handleRef.current?.abort();
@@ -244,6 +251,12 @@ export function PatternSpeakingView({
 
   const advanceAttempt=(resolved:boolean)=>{
     stopCurrent();
+    if(item&&pos<base){
+      const grade:PracticeItemGrade=resolved
+        ? (verification==='recognition'&&correct===true?'strong':'neutral')
+        : 'weak';
+      setFirstPassGrades(current=>({...current,[item.id]:grade}));
+    }
     if(!resolved&&item)setItems(current=>[...current,item]);
     setPos(value=>value+1);
     setPhase('ask');
@@ -258,7 +271,7 @@ export function PatternSpeakingView({
     if(saving)return;
     setSaving(true);
     setSaveError(false);
-    void savePractice(setId,activity.id,'speaking',strongFirstPass,score)
+    void savePractice(setId,activity.id,'speaking',strongFirstPass,score,firstPassGrades)
       .then(()=>setSaved(true))
       .catch(()=>setSaveError(true))
       .finally(()=>setSaving(false));
