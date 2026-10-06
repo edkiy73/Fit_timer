@@ -109,6 +109,36 @@ describe('same-device active day progress',()=>{
     });
   });
 
+  it('uses the saved task section while practice is the active screen',()=>{
+    const task={
+      id:'card.one',revision:1,type:'choice' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],prompt:{ru:'Вопрос'},options:[{ru:'A'},{ru:'B'}],correctIndex:0
+    };
+    const taskNode:RoadmapNode={
+      ...node,
+      activityIds:[task.id,pattern.id],
+      completion:{mode:'all',requirements:[
+        {kind:'activity-seen',activityIds:[task.id]},
+        {kind:'practice-started',activityId:pattern.id,modes:['drill']}
+      ]}
+    };
+    const taskSet:CourseSet={...set,roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[taskNode]}],activities:[task,pattern]};
+    const progress=emptyCourseProgress();
+
+    localStorage.setItem('unmute.lesson-run:course:day-3',JSON.stringify({
+      version:1,setId:'course',nodeId:'day-3',runId:'stable-run',
+      stepIds:['card.one','pattern.day'],
+      practiceMode:'drill',
+      firstPassResults:{},
+      taskSection:{firstPassResults:{0:false}}
+    }));
+
+    expect(readActiveDayProgress(taskSet,taskNode,progress).tasks).toEqual({
+      attemptedSteps:1,
+      pendingCorrections:1
+    });
+  });
+
   it('ignores stale practice revisions and unrelated lesson runs',()=>{
     localStorage.setItem('unmute.lesson-run:course:day-3',JSON.stringify({
       version:1,setId:'course',nodeId:'day-3',runId:'run-1'

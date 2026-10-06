@@ -159,6 +159,24 @@ const range=(from:number,to:number)=>Array.from({length:Math.max(0,to-from)},(_,
 const MODE_KEY:Record<PracticeSrsKind,string>={drill:'kind.drill',listening:'kind.listening',speaking:'kind.speaking'};
 const LESSON_RUN_VERSION=1;
 export type LessonRunMode='first'|'resume'|'replay';
+
+interface TaskSectionSnapshot{
+  order:number[];
+  firstPass:number;
+  pos:number;
+  selected:number|null;
+  answer:string;
+  typing:boolean;
+  picked:string[];
+  result:boolean|null;
+  nearResult:boolean;
+  score:{correct:number;total:number};
+  firstPassResults:Record<number,boolean>;
+  shuffleSeed:string;
+  runId:string;
+  runMode:LessonRunMode;
+}
+
 interface LessonRunSnapshot{
   version:1;
   setId:string;
@@ -173,8 +191,11 @@ interface LessonRunSnapshot{
   typing:boolean;
   picked:string[];
   result:boolean|null;
+  nearResult?:boolean;
   score:{correct:number;total:number};
   firstPassResults:Record<number,boolean>;
+  /** Exact regular-task state kept while practice/theory is open. */
+  taskSection?:TaskSectionSnapshot;
   shuffleSeed?:string;
   practiceMode?:PracticeSrsKind;
   /** Stable id used to make answer writes idempotent across retries/resume. */
@@ -235,6 +256,17 @@ function clearCompletionCandidate(setId:string,nodeId:string):void{
 
 function remapLessonRun(snapshot:LessonRunSnapshot,steps:Activity[]):LessonRunSnapshot|null{
   const currentIndex=new Map(steps.map((step,index)=>[step.id,index] as const));
+  const remapResults=(results:Record<number,boolean>):Record<number,boolean>=>{
+    const next:Record<number,boolean>={};
+    for(const [rawIndex,value] of Object.entries(results)){
+      const oldIndex=Number(rawIndex);
+      const id=snapshot.stepIds[oldIndex];
+      if(!id)continue;
+      const newIndex=currentIndex.get(id);
+      if(newIndex!==undefined)next[newIndex]=value;
+    }
+    return next;
+  };
   const orderedIds=snapshot.order.map(index=>snapshot.stepIds[index]).filter((id):id is string=>Boolean(id));
   const mappedOrder:number[]=[];
   let mappedPos=0;
@@ -249,12 +281,43 @@ function remapLessonRun(snapshot:LessonRunSnapshot,steps:Activity[]):LessonRunSn
   if(mappedOrder.length===0)return null;
   mappedPos=Math.min(mappedPos,mappedOrder.length-1);
   mappedFirstPass=Math.min(mappedFirstPass,mappedOrder.length);
+
+  let taskSection:TaskSectionSnapshot|undefined;
+  if(snapshot.taskSection){
+    const taskIds=snapshot.taskSection.order
+      .map(index=>snapshot.stepIds[index])
+      .filter((id):id is string=>Boolean(id));
+    const taskOrder:number[]=[];
+    let taskPos=0;
+    let taskFirstPass=0;
+    for(let i=0;i<taskIds.length;i++){
+      const index=currentIndex.get(taskIds[i]!);
+      if(index===undefined)continue;
+      if(i<snapshot.taskSection.pos)taskPos++;
+      if(i<snapshot.taskSection.firstPass)taskFirstPass++;
+      taskOrder.push(index);
+    }
+    if(taskOrder.length){
+      taskSection={
+        ...snapshot.taskSection,
+        order:taskOrder,
+        pos:Math.min(taskPos,taskOrder.length-1),
+        firstPass:Math.min(taskFirstPass,taskOrder.length),
+        firstPassResults:remapResults(snapshot.taskSection.firstPassResults)
+      };
+    }
+  }
+
+  const snapshotWithoutTaskSection={...snapshot};
+  delete snapshotWithoutTaskSection.taskSection;
   return {
-    ...snapshot,
+    ...snapshotWithoutTaskSection,
     stepIds:steps.map(step=>step.id),
     order:mappedOrder,
     pos:mappedPos,
-    firstPass:mappedFirstPass
+    firstPass:mappedFirstPass,
+    firstPassResults:remapResults(snapshot.firstPassResults),
+    ...(taskSection?{taskSection}:{})
   };
 }
 
@@ -381,22 +444,7 @@ export function NodeRunnerView({
   // The step a restored run lands on: its saved answer/feedback must survive the first render
   // of that step (the reset below would otherwise wipe it once the restored order arrives).
   const restoringRunRef=useRef<string|null>(null);
-  const taskSectionRef=useRef<{
-    order:number[];
-    firstPass:number;
-    pos:number;
-    selected:number|null;
-    answer:string;
-    typing:boolean;
-    picked:string[];
-    result:boolean|null;
-    nearResult:boolean;
-    score:{correct:number;total:number};
-    firstPassResults:Record<number,boolean>;
-    shuffleSeed:string;
-    runId:string;
-    runMode:LessonRunMode;
-  }|null>(null);
+  const taskSectionRef=useRef<TaskSectionSnapshot|null>(null);
   const closeExitSheet=()=>setExitOpen(false);
 
   const leaveFromExitSheet=()=>{
@@ -428,7 +476,7 @@ export function NodeRunnerView({
     completionTrackedRef.current=false;
   },[node?.id]);
 
-  const begin=(startIndex:number)=>{
+  const begin=(startIndex:number,newRun=true)=>{
     setOrder(range(startIndex,steps.length));
     setFirstPass(steps.length-startIndex);
     setPos(0);
@@ -442,7 +490,10 @@ export function NodeRunnerView({
     setScore({correct:0,total:0});
     setFirstPassResults({});
     setShuffleSeed(randomSeed());
-    setRunId(randomSeed());
+    if(newRun){
+      taskSectionRef.current=null;
+      setRunId(randomSeed());
+    }
     setExitOpen(false);
     setFinished(false);
   };
@@ -492,10 +543,12 @@ export function NodeRunnerView({
       setTyping(restored.typing);
       setPicked(restored.picked);
       setResult(restored.result);
+      setNearResult(restored.nearResult??false);
       setScore(restored.score);
       setFirstPassResults(restored.firstPassResults);
       setShuffleSeed(restored.shuffleSeed??randomSeed());
       setRunId(restored.runId??randomSeed());
+      taskSectionRef.current=restored.taskSection??null;
       setPracticeMode(restored.practiceMode);
       setRunMode(
         restored.mode==='replay'||restored.replay
@@ -515,21 +568,37 @@ export function NodeRunnerView({
       const firstTask=forcedTasks
         ? (taskIndices.find(index=>!isSeen(state.progress,steps[index]!.id))??taskIndices[0]??-1)
         : -1;
+      const missingTarget=requested<0&&forcedPractice<0&&firstTask<0
+        ? firstMissingRequirementTarget(node,steps,state.progress)
+        : null;
       const startIndex=requested>=0
         ? requested
         : forcedPractice>=0
           ? forcedPractice
           : firstTask>=0
             ? firstTask
-            : firstIncompleteRequirementIndex(node,steps,state.progress);
+            : (missingTarget?.index??firstIncompleteRequirementIndex(node,steps,state.progress));
       begin(startIndex);
-      if(forcedTasks&&firstTask>=0){
-        const taskOrder=taskIndices.filter(index=>index>=firstTask);
-        setOrder(taskOrder.length?taskOrder:[firstTask]);
+      const startActivity=steps[startIndex];
+      const startsInTasks=Boolean(
+        startActivity&&(
+          startActivity.type==='choice'||
+          startActivity.type==='text-input'||
+          startActivity.type==='translation'
+        )
+      );
+      if((forcedTasks&&firstTask>=0)||startsInTasks){
+        const taskStart=forcedTasks&&firstTask>=0?firstTask:startIndex;
+        const taskOrder=taskIndices.filter(index=>index>=taskStart);
+        setOrder(taskOrder.length?taskOrder:[taskStart]);
         setFirstPass(taskOrder.length||1);
+      }else if(startActivity?.type==='pattern-drill'){
+        // Practice is its own required section. Regular-task corrections must be cleared first.
+        setOrder([startIndex]);
+        setFirstPass(1);
       }
       setIntro(forcedTheory||(!forcedTasks&&forcedPractice<0&&requested<0&&theoryCards.some(card=>!isSeen(state.progress,card.id))));
-      setPracticeMode(startMode);
+      setPracticeMode(startMode??missingTarget?.mode);
       // A completed day opened again is a replay. Otherwise continuing any existing
       // progress without a saved snapshot is an explicit resume, not a fresh first run.
       const hasExistingProgress=activities.some(item=>isSeen(state.progress,item.id))
@@ -568,15 +637,17 @@ export function NodeRunnerView({
       typing,
       picked,
       result,
+      nearResult,
       score,
       firstPassResults,
+      ...(taskSectionRef.current?{taskSection:taskSectionRef.current}:{}),
       shuffleSeed,
       runId,
       mode:runMode,
       ...(practiceMode?{practiceMode}:{}),
       ...(replay?{replay:true}:{})
     });
-  },[runHydrated,state?.set.id,node?.id,stepSignature,order,firstPass,pos,intro,selected,answer,typing,picked,result,score,firstPassResults,shuffleSeed,runId,runMode,practiceMode,finished,replay]);
+  },[runHydrated,state?.set.id,node?.id,stepSignature,order,firstPass,pos,intro,selected,answer,typing,picked,result,nearResult,score,firstPassResults,shuffleSeed,runId,runMode,practiceMode,finished,replay]);
 
   const stepIndex=order[pos];
   const activity=stepIndex===undefined?null:steps[stepIndex]??null;
@@ -613,11 +684,29 @@ export function NodeRunnerView({
 
     // A manually opened section may finish while another required section is still pending.
     // Do not show the dead-end «day not counted» summary: continue the same canonical run.
+    // Preserve the completed Tasks section before its top-level runner state is repurposed.
+    if(activity&&(activity.type==='choice'||activity.type==='text-input'||activity.type==='translation')){
+      taskSectionRef.current={
+        order:[...order],
+        firstPass,
+        pos,
+        selected,
+        answer,
+        typing,
+        picked:[...picked],
+        result,
+        nearResult,
+        score:{...score},
+        firstPassResults:{...firstPassResults},
+        shuffleSeed,
+        runId,
+        runMode
+      };
+    }
     clearCompletionCandidate(state.set.id,node.id);
     setFinished(false);
-    begin(target.index);
+    begin(target.index,false);
     setIntro(false);
-    setRunMode('resume');
     if(target.mode){
       setOrder([target.index]);
       setFirstPass(1);
@@ -868,12 +957,11 @@ export function NodeRunnerView({
       const firstIncomplete=regularTaskIndices.find(index=>!isSeen(state.progress,steps[index]!.id));
       const start=firstIncomplete??regularTaskIndices[0]!;
       const taskOrder=regularTaskIndices.filter(index=>index>=start);
-      begin(start);
+      begin(start,false);
       setOrder(taskOrder.length?taskOrder:[start]);
       setFirstPass(taskOrder.length||1);
       setIntro(false);
       setPracticeMode(undefined);
-      setRunMode(firstIncomplete===undefined?'replay':'resume');
     });
   };
 
@@ -883,12 +971,11 @@ export function NodeRunnerView({
     captureTaskSection();
     setPracticeActivityIndex(target.index);
     withViewTransition(()=>{
-      begin(target.index);
+      begin(target.index,false);
       setOrder([target.index]);
       setFirstPass(1);
       setIntro(false);
       setPracticeMode(mode);
-      setRunMode(nodeProgress?.complete?'replay':'resume');
     });
   };
 
