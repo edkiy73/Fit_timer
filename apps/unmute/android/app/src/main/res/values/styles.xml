@@ -4,7 +4,7 @@
         <item name="colorPrimary">#0F9E8E</item>
         <item name="colorPrimaryDark">#0B766A</item>
         <item name="colorAccent">#FF7A59</item>
-        <item name="android:windowBackground">#12131C</item>
+        <item name="android:windowBackground">@color/unmute_brand_background</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
@@ -12,5 +12,11 @@
     <style name="AppTheme.NoActionBar" parent="AppTheme">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="AppTheme.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/unmute_brand_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_transparent</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

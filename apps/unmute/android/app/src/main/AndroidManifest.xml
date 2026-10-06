@@ -12,9 +12,9 @@
 
     <application
         android:allowBackup="false"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/unmute_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/unmute_launcher"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
@@ -24,7 +24,7 @@
             android:label="@string/title_activity_main"
             android:launchMode="singleTask"
             android:screenOrientation="sensorPortrait"
-            android:theme="@style/AppTheme.NoActionBar">
+            android:theme="@style/AppTheme.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
