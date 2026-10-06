@@ -82,7 +82,7 @@ describe('pattern listening',()=>{
     await waitFor(()=>expect(speak).toHaveBeenCalledWith('She works here.','en-GB'));
     await user.click(screen.getByRole('button',{name:'Она работает здесь.'}));
     await user.click(screen.getByRole('button',{name:/^Она работает здесь\./}));
-    await user.click(screen.getByRole('button',{name:'Завершить'}));
+    await user.click(screen.getByRole('button',{name:'Далее'}));
 
     await waitFor(()=>expect(savePractice).toHaveBeenCalledWith(
       'general-foundation',
@@ -125,7 +125,7 @@ describe('pattern listening',()=>{
 
     await user.click(await screen.findByRole('button',{name:'Я работаю дома.'}));
     await user.click(screen.getByRole('button',{name:/^Я работаю дома\./}));
-    await user.click(screen.getByRole('button',{name:'Завершить'}));
+    await user.click(screen.getByRole('button',{name:'Далее'}));
 
     await waitFor(()=>expect(savePractice).toHaveBeenCalledWith(
       'general-foundation',

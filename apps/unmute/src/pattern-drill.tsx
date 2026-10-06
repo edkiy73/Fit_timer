@@ -269,11 +269,9 @@ export function PatternDrillView({
           </>
         ) : (
           <>
+            {/* Same ending as Listening/Speaking: one «Далее»; a day is replayed from Today. */}
             <button className="primary-button" type="button" disabled={!saved} onClick={onDone}>
               {t('learn.next')}
-            </button>
-            <button className="secondary-button" type="button" disabled={!saved} onClick={reset}>
-              {t('drill.again')}
             </button>
           </>
         )}
@@ -322,7 +320,7 @@ export function PatternDrillView({
             </button>
           </div>
         </>
-      ) : (
+      ) : active&&(
         <AnswerFeedbackSheet
           tone={lastFast?'correct':'near'}
           title={lastFast?t('drill.fast'):t('drill.slow')}

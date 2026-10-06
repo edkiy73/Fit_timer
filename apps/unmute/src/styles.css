@@ -854,10 +854,10 @@ select:active{transform:scale(.985)}
 .practice-mode-nav::-webkit-scrollbar{display:none}
 .practice-mode-nav .chip-button{min-height:40px;padding-inline:12px;color:var(--muted);white-space:nowrap}
 .practice-mode-nav .chip-button.is-active{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));background:color-mix(in srgb,var(--accent) 12%,var(--card));color:var(--ink)}
-.lesson-section-nav{display:flex;align-items:center;justify-content:flex-end;gap:7px;min-width:0;overflow-x:auto;padding:2px 0 3px;scrollbar-width:none}
+.lesson-section-nav{display:flex;align-items:center;justify-content:flex-end;gap:7px;min-width:0;overflow-x:auto;padding:2px 2px 9px;margin-bottom:-6px;scrollbar-width:none}
 .lesson-section-nav::-webkit-scrollbar{display:none}
 .lesson-section-nav .chip-button{min-height:38px;padding-inline:11px;color:var(--muted);font-size:13px;white-space:nowrap}
-.lesson-section-nav .chip-button.is-active{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));background:color-mix(in srgb,var(--accent) 12%,var(--card));color:var(--ink)}
+.lesson-section-nav .chip-button.is-active{border-color:var(--accent);background:var(--accent);color:var(--on-accent);box-shadow:0 3px 8px color-mix(in srgb,var(--accent) 26%,transparent)}
 .lesson-section-nav .chip-button.is-complete:not(.is-active){border-color:color-mix(in srgb,var(--success) 38%,var(--line));background:color-mix(in srgb,var(--success) 8%,var(--card));color:var(--ink)}
 @media(max-width:620px){
   .runner-heading{display:grid;align-items:start}
@@ -1604,3 +1604,79 @@ select:active{transform:scale(.985)}
 .drill-binary-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .drill-binary-actions :is(.primary-button,.secondary-button){width:100%;min-width:0}
 
+
+/* Today visuals: the day as a voice wave, the week as an equalizer, the course as a mosaic of days.
+   transform/opacity only — no blur — so they stay smooth on budget Android WebViews. */
+.today{--sec-tasks:var(--accent);--sec-drill:var(--streak);--sec-listening:var(--listen);--sec-speaking:var(--success);
+  --sky-a:color-mix(in srgb,var(--accent) 20%,transparent);--sky-b:color-mix(in srgb,var(--listen) 10%,transparent)}
+.today[data-daypart="morning"]{--sky-a:color-mix(in srgb,var(--accent) 24%,transparent);--sky-b:color-mix(in srgb,var(--streak) 16%,transparent)}
+.today[data-daypart="day"]{--sky-a:color-mix(in srgb,var(--accent) 18%,transparent);--sky-b:color-mix(in srgb,var(--listen) 12%,transparent)}
+.today[data-daypart="evening"]{--sky-a:color-mix(in srgb,color-mix(in srgb,var(--accent) 55%,var(--listen)) 26%,transparent);--sky-b:color-mix(in srgb,var(--accent) 12%,transparent)}
+.today[data-daypart="night"]{--sky-a:color-mix(in srgb,var(--listen) 22%,transparent);--sky-b:color-mix(in srgb,color-mix(in srgb,var(--accent) 40%,var(--listen)) 14%,transparent)}
+.today .today-hero{background:
+  radial-gradient(120% 90% at 100% -10%,var(--sky-a),transparent 55%),
+  radial-gradient(90% 70% at -10% 110%,var(--sky-b),transparent 60%),
+  var(--card)}
+.today .today-hero::after{display:none}
+
+.day-wave{display:grid;gap:10px}
+.day-wave-bars{display:flex;align-items:center;justify-content:space-between;gap:2px;height:64px;padding:2px 0}
+.wave-bar{flex:1 1 0;min-width:2px;max-width:7px;height:100%;border-radius:999px;background:color-mix(in srgb,var(--ink) 11%,transparent);
+  transform:scaleY(var(--h));transform-origin:center;animation:wave-in 620ms var(--motion-spring-ease) both;animation-delay:calc(var(--b) * 10ms)}
+.wave-bar.is-pending{transform:scaleY(calc(var(--h) * .55))}
+.wave-bar.is-done.is-tasks{background:var(--sec-tasks)}
+.wave-bar.is-done.is-drill{background:var(--sec-drill)}
+.wave-bar.is-done.is-listening{background:var(--sec-listening)}
+.wave-bar.is-done.is-speaking{background:var(--sec-speaking)}
+.wave-bar.is-done.is-manual{background:var(--accent)}
+.wave-bar.is-current{background:var(--accent);animation:wave-in 620ms var(--motion-spring-ease) both,wave-breathe 1.4s ease-in-out 700ms 6 alternate;animation-delay:calc(var(--b) * 12ms),calc(var(--b) * 12ms + 700ms)}
+@keyframes wave-in{from{transform:scaleY(.06);opacity:0}}
+@keyframes wave-breathe{to{transform:scaleY(calc(var(--h) * .45))}}
+.day-wave.is-celebrate .wave-bar{animation:wave-in 620ms var(--motion-spring-ease) both,wave-jump 760ms var(--motion-spring-ease) 1;animation-delay:calc(var(--b) * 10ms),calc(var(--b) * 22ms + 500ms)}
+@keyframes wave-jump{40%{transform:scaleY(1)}}
+
+.day-wave-legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.legend-item{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:4px 10px 4px 8px;border:0;border-radius:999px;background:color-mix(in srgb,var(--card) 70%,var(--surface));color:var(--ink);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+span.legend-item{cursor:default}
+.legend-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.legend-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.legend-count{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+@media(max-width:340px){.legend-item{padding:4px 8px 4px 7px;font-size:11px}}
+.legend-item.is-complete .legend-count{color:var(--success)}
+.legend-dot{display:inline-block;flex:none;width:8px;height:8px;border-radius:4px;background:var(--accent)}
+.legend-dot.is-drill{background:var(--sec-drill)}
+.legend-dot.is-listening{background:var(--sec-listening)}
+.legend-dot.is-speaking{background:var(--sec-speaking)}
+.legend-dot.is-strong{background:var(--success)}
+.legend-dot.is-growing{background:var(--listen)}
+.legend-dot.is-fresh{background:var(--accent)}
+
+.week-eq{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:auto}
+.week-eq-day{display:grid;justify-items:center;gap:5px}
+.week-eq-track{display:flex;align-items:flex-end;justify-content:center;width:100%;max-width:14px;height:36px;border-radius:7px;background:color-mix(in srgb,var(--ink) 6%,transparent);overflow:hidden}
+.week-eq-bar{display:block;width:100%;height:100%;border-radius:7px;background:color-mix(in srgb,var(--ink) 12%,transparent);transform:scaleY(var(--h));transform-origin:bottom;animation:eq-in 700ms var(--motion-spring-ease) both;animation-delay:calc(var(--b) * 45ms + 120ms)}
+.week-eq-day.is-active .week-eq-bar{background:linear-gradient(to top,var(--streak),color-mix(in srgb,var(--streak) 55%,var(--accent)))}
+.week-eq-day:not(.is-active) .week-eq-bar{transform:scaleY(.1)}
+.week-eq-label{color:var(--muted);font-size:10px;font-weight:700;text-transform:lowercase}
+.week-eq-day.is-today .week-eq-label{color:var(--ink)}
+.week-eq-day.is-today .week-eq-track{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--streak) 55%,transparent)}
+@keyframes eq-in{from{transform:scaleY(0)}}
+
+/* Course tile mirrors the Streak tile: head, big number, a visual block pinned to the bottom. */
+.tile-streak,.tile-course-mini{display:flex;flex-direction:column;align-items:stretch;gap:10px}
+.tile-course-mini{cursor:pointer}
+.tile-course-mini:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tile-course-mini .mini-card-head{display:flex;align-items:center;gap:8px}
+.course-mosaic{display:grid;gap:5px;margin-top:auto}
+.course-mosaic-grid{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-template-rows:repeat(var(--rows),minmax(0,1fr));gap:3px;height:36px}
+.course-mosaic-grid.is-dense{gap:2px}
+.course-cell{min-height:0;border-radius:3px;background:color-mix(in srgb,var(--ink) 8%,transparent);
+  animation:cell-in 420ms var(--motion-spring-ease) both;animation-delay:calc(var(--b) * 12ms + 150ms)}
+.course-cell.is-done{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 60%,var(--streak)))}
+/* The day on screen is marked by an outline only: it appears with the others and then stays still. */
+.course-cell.is-current{background:color-mix(in srgb,var(--accent) 22%,transparent);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.course-mosaic-caption{color:var(--muted);font-size:10px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
+@keyframes cell-in{from{transform:scale(.2);opacity:0}}
+@media(prefers-reduced-motion:reduce){
+  .wave-bar,.wave-bar.is-current,.day-wave.is-celebrate .wave-bar,.week-eq-bar,.course-cell{animation:none!important}
+}

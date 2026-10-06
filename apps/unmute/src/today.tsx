@@ -26,6 +26,9 @@ import { AnimatedNumber } from './animated-number';
 import type { CourseSet, RoadmapNode } from './content/schema';
 import { getDayProgress, type ActiveDayProgress } from './day-progress';
 import { readActiveDayProgress } from './day-progress-local';
+import type { DayProgressSectionId } from './day-progress';
+import { courseCells, dayPart, dayWave, weekLevels } from './today-visuals';
+import { CourseMosaic, DayWave, WeekEqualizer } from './today-visuals-ui';
 import { clearRecentDayCompletion, readRecentDayCompletion } from './recent-day-completion';
 import {
   lastWeekActivity,
@@ -77,6 +80,7 @@ export function TodayView({
   wordRuntime=null,
   onStart,
   onSpeak=(nodeId:string)=>onStart(nodeId),
+  onSection,
   onReview,
   onMap,
   onAccess,
@@ -91,6 +95,8 @@ export function TodayView({
   onStart:(nodeId:string)=>void;
   /** «Скажи вслух»: the day's phrases in speaking mode, or the day itself when it has none. */
   onSpeak?:(nodeId:string,patternId:string|null)=>void;
+  /** A section of the day's wave was tapped: open the lesson right in that section. */
+  onSection?:(nodeId:string,section:DayProgressSectionId,activityId?:string)=>void;
   onReview:()=>void;
   onMap:()=>void;
   onAccess:()=>void;
@@ -110,7 +116,8 @@ export function TodayView({
   const review=reviewDueCounts(state,wordRuntime,locale,todayDay,otherCourses);
   const dateLabel=new Intl.DateTimeFormat(locale,{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'})
     .format(new Date(todayDay*DAY_MS));
-  const weekdayLabel=new Intl.DateTimeFormat(locale,{weekday:'narrow',timeZone:'UTC'});
+  const weekdayLabel=new Intl.DateTimeFormat(locale,{weekday:'short',timeZone:'UTC'});
+  const part=dayPart();
 
   const heading=(
     <ScreenHeader
@@ -122,12 +129,12 @@ export function TodayView({
   );
 
   if(runtime.status==='pending'){
-    return <section className="today" aria-labelledby="today-title">{heading}<Skeleton /></section>;
+    return <section className="today" data-daypart={part} aria-labelledby="today-title">{heading}<Skeleton /></section>;
   }
 
   if(runtime.status==='error'||!state){
     return (
-      <section className="today" aria-labelledby="today-title">
+      <section className="today" data-daypart={part} aria-labelledby="today-title">
         {heading}
         <div className="tile today-state" role="alert">
           <strong>{t('today.errorTitle')}</strong>
@@ -145,6 +152,8 @@ export function TodayView({
   const allDays=withAllLearningDays(state.progress,learningDays);
   const streak=currentLearningStreak(allDays,todayDay);
   const week=lastWeekActivity(allDays,todayDay);
+  const levels=weekLevels(state.progress,allDays.learningDays,todayDay);
+  const cells=courseCells(state.roadmapProgress.nodes,state.roadmapProgress.courseComplete?null:(node?.id??null));
   const coursePercent=state.roadmapProgress.requiredCount>0
     ? Math.round(state.roadmapProgress.completedCount/state.roadmapProgress.requiredCount*100)
     : 0;
@@ -183,13 +192,14 @@ export function TodayView({
           <span className="chip"><LexiconText text={localizedText(state.set.title,locale)} /></span>
         </div>
         <h3>{t('today.dayCompletedTitle',{day:completedNode.dayIndex??''})}</h3>
+        <DayWave bars={dayWave(state.set,completedNode,completedProgress)} progress={completedProgress} celebrate />
         <p className="tile-meta">{t('today.dayCompletedMeta',{
           done:completedProgress.completedSteps,
           total:completedProgress.totalSteps
         })}</p>
         <p className="tile-text">{t('today.dayCompletedHint')}</p>
         <div className="today-state-actions">
-          <button className="primary-button" type="button" onClick={()=>onStart(node.id)}>
+          <button className="primary-button today-start" type="button" onClick={()=>onStart(node.id)}>
             <Icon name="play" size={18} />
             {node.dayIndex?t('today.startNextDay',{day:node.dayIndex}):t('today.startNextStep')}
           </button>
@@ -213,16 +223,11 @@ export function TodayView({
           </span>
         </div>
         <h3><LexiconText text={nodeTopic(state.set,node,locale)} /></h3>
-        <div
-          className="today-meter"
-          role="progressbar"
-          aria-label={t('today.dayProgress')}
-          aria-valuemin={0}
-          aria-valuemax={Math.max(1,total)}
-          aria-valuenow={done}
-        >
-          <span style={{'--p':total?done/total:0} as CSSProperties} />
-        </div>
+        <DayWave
+          bars={dayWave(state.set,node,dayProgress)}
+          progress={dayProgress}
+          {...(onSection?{onSection:(section:DayProgressSectionId)=>onSection(node.id,section,dayProgress.sections.find(item=>item.id===section)?.activityId)}:{})}
+        />
         <p className="tile-meta">
           {t('today.dayMeta',{done,total,minutes:nodeMinutes(state.set,node)})}
         </p>
@@ -260,7 +265,7 @@ export function TodayView({
   const word=wordNode?wordOfTheDay(state.set,wordNode,wordRuntime?.lexicon,todayDay,locale):null;
 
   return (
-    <section className="today" aria-labelledby="today-title">
+    <section className="today" data-daypart={part} aria-labelledby="today-title">
       {heading}
       <UpdateBanner />
 
@@ -305,39 +310,30 @@ export function TodayView({
               <span className="tile-kicker tone-streak">{t('today.streak')}</span>
             </div>
             <strong className="tile-number streak-number"><AnimatedNumber value={streak} /><span className="tile-unit">{countDays(t,locale,streak).replace(/^\S+\s/,'')}</span></strong>
-            <div className="week" aria-label={t('today.week',{count:week.filter(Boolean).length})}>
-              {week.map((active,day)=>(
-                <span key={day} className={'week-day'+(active?' is-active':'')} aria-hidden="true">
-                  <span className="week-dot" />
-                  {weekdayLabel.format(new Date((todayDay-6+day)*DAY_MS))}
-                </span>
-              ))}
-            </div>
+            <WeekEqualizer
+              levels={levels}
+              labels={week.map((_,day)=>weekdayLabel.format(new Date((todayDay-6+day)*DAY_MS)).replace('.',''))}
+              label={t('today.week',{count:week.filter(Boolean).length})}
+            />
           </Tile>
 
-          <Tile className="tile-course-mini" index={index++}>
-            <div className="course-progress-head">
-              <span className="course-progress-title">
-                <span className="mini-card-icon tone-accent" aria-hidden="true"><Icon name="progress" size={18} /></span>
-                <span className="tile-kicker tone-accent">{t('today.courseMini')}</span>
-              </span>
-              <strong className="course-progress-percent"><AnimatedNumber value={coursePercent} suffix="%" /></strong>
-            </div>
-            <div className="course-progress-copy">
-              <strong>{t('today.courseMiniDone',{done:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})}</strong>
-              <span>{t('today.courseMiniPassed')}</span>
-            </div>
-            <div
-              className="course-progress-bar"
-              role="progressbar"
-              aria-label={t('today.courseMiniCaption',{done:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={coursePercent}
-            >
-              <span className="course-progress-fill" style={{'--p':coursePercent/100} as CSSProperties} />
-            </div>
-          </Tile>
+          <button
+            className="tile tile-course-mini pressable"
+            style={{'--i':index++} as CSSProperties}
+            type="button"
+            onClick={onMap}
+            aria-label={t('today.courseMini')+': '+t('today.courseMiniCaption',{done:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})}
+          >
+            <span className="mini-card-head">
+              <span className="mini-card-icon tone-accent" aria-hidden="true"><Icon name="progress" size={18} /></span>
+              <span className="tile-kicker tone-accent">{t('today.courseMini')}</span>
+            </span>
+            <strong className="tile-number streak-number course-number"><AnimatedNumber value={coursePercent} suffix="%" /><span className="tile-unit">{t('today.courseUnit')}</span></strong>
+            <CourseMosaic
+              cells={cells}
+              caption={t('today.courseMiniDone',{done:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})}
+            />
+          </button>
 
           {speakTask&&node&&(
             <button className="tile tile-wide tile-speak pressable" style={{'--i':index++} as CSSProperties} type="button" onClick={()=>setSpeakOpen(true)}>
@@ -437,6 +433,15 @@ export function TodayScreen(){
       wordRuntime={useWordReviewRuntime()}
       learningDays={useAllLearningDays()}
       onStart={nodeId=>{ markNodeStarted(nodeId); navigate('/learn/'+encodeURIComponent(nodeId)); }}
+      onSection={(nodeId,section,activityId)=>{
+        markNodeStarted(nodeId);
+        const query=section==='tasks'
+          ? '?section=tasks'
+          : section==='manual'
+            ? ''
+            : '?mode='+section+(activityId?'&activity='+encodeURIComponent(activityId):'');
+        navigate('/learn/'+encodeURIComponent(nodeId)+query);
+      }}
       onSpeak={(nodeId,patternId)=>{
         markNodeStarted(nodeId);
         navigate('/learn/'+encodeURIComponent(nodeId)+(patternId?'?activity='+encodeURIComponent(patternId)+'&mode=speaking':''));

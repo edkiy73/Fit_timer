@@ -103,7 +103,8 @@ export function PatternPracticeView({
   const [mode,setMode]=useState<PatternMode>(()=>
     startFromBeginning
       ? (activity.modes[0]??'complete')
-      : restored?.mode??(initialMode&&activity.modes.includes(initialMode) ? initialMode : firstPatternMode(activity,progress))
+      // The lesson names the section to show; a saved local mode only fills in when it does not.
+      : (initialMode&&activity.modes.includes(initialMode) ? initialMode : restored?.mode??firstPatternMode(activity,progress))
   );
   // A training picked by hand from the finished state returns there, not to the next one.
   const [single,setSingle]=useState(()=>
@@ -160,18 +161,11 @@ export function PatternPracticeView({
     [courseActivities]
   );
 
-  const nextMode=(current:PracticeSrsKind)=>{
-    if(single){
-      setSingle(false);
-      setMode('complete');
-      return;
-    }
-    const index=activity.modes.indexOf(current);
-    const next=activity.modes[index+1];
-    if(next){
-      setMode(next);
-      return;
-    }
+  // A finished training always hands control back to the lesson: it alone picks the next
+  // unfinished part of the day (tasks first, then the trainings in order), so a training never
+  // chains into another while tasks are still open, and there is no «all done» stop here.
+  const nextMode=(_current:PracticeSrsKind)=>{
+    setSingle(false);
     onDone();
   };
 

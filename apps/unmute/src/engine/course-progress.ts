@@ -1,5 +1,6 @@
 import {
   isPracticeCompletionRequirement,
+  type Activity,
   type Roadmap,
   type RoadmapNode,
   type NodeCompletionRequirement,
@@ -118,13 +119,41 @@ export function isNodeRequirementComplete(
   return false;
 }
 
+/** What a day needs, explicit or derived. A node without a completion contract follows the
+ * same rule as the day counter: every task seen, every phrase training passed, a review day
+ * marked done. Theory is reading, not a step. Without the activities the old rule applies. */
+export function effectiveNodeRequirements(
+  node:RoadmapNode,
+  activities?:readonly Activity[]
+):NodeCompletionRequirement[]|null{
+  if(node.completion)return node.completion.requirements;
+  if(!activities)return null;
+  const byId=new Map(activities.map(activity=>[activity.id,activity] as const));
+  const seen:string[]=[];
+  const requirements:NodeCompletionRequirement[]=[];
+  for(const id of node.activityIds){
+    const activity=byId.get(id);
+    if(!activity||activity.type==='theory')continue;
+    if(activity.type==='pattern-drill'){
+      requirements.push({kind:'practice-completed',activityId:activity.id,modes:[...activity.modes]});
+    }else if(activity.type==='review'){
+      requirements.push({kind:'manual'});
+    }else{
+      seen.push(activity.id);
+    }
+  }
+  if(seen.length)requirements.unshift({kind:'activity-seen',activityIds:seen});
+  return requirements.length?requirements:null;
+}
+
 export function isRoadmapNodeComplete(
   node:RoadmapNode,
-  progress:RoadmapProgressState
+  progress:RoadmapProgressState,
+  activities?:readonly Activity[]
 ):boolean{
-  const completion=node.completion;
-  if(completion){
-    return completion.requirements.every(requirement=>
+  const requirements=effectiveNodeRequirements(node,activities);
+  if(requirements){
+    return requirements.every(requirement=>
       isNodeRequirementComplete(requirement,node.id,progress)
     );
   }
@@ -136,12 +165,13 @@ export function isRoadmapNodeComplete(
 
 export function buildRoadmapProgress(
   roadmap:Roadmap,
-  progress:RoadmapProgressState
+  progress:RoadmapProgressState,
+  activities?:readonly Activity[]
 ):RoadmapProgressSummary{
   const ordered=[...roadmap.nodes].sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));
   const byId=new Map(ordered.map(node=>[node.id,node]));
   const complete=new Map<string,boolean>();
-  for(const node of ordered) complete.set(node.id,isRoadmapNodeComplete(node,progress));
+  for(const node of ordered) complete.set(node.id,isRoadmapNodeComplete(node,progress,activities));
 
   const nodes=ordered.map(node=>{
     const unlocked=node.prerequisites.every(id=>Boolean(byId.get(id))&&complete.get(id)===true);

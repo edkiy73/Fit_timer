@@ -6,7 +6,7 @@ import { I18nProvider } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { emptyCourseProgress, type CourseProgressDocument } from './progress';
-import { buildLessonSummaryQuality, firstIncompleteRequirementIndex, firstMissingRequirementTarget, NodeRunnerView } from './learn';
+import { buildLessonSummaryQuality, firstIncompleteRequirementIndex, firstMissingRequirementTarget, NodeRunnerView, pruneTaskCursor } from './learn';
 import { dictionaries } from './i18n';
 import { SYSTEM_BACK_EVENT } from './native-back';
 
@@ -406,8 +406,7 @@ describe('node activity runner',()=>{
     const drillNext=screen.getByRole('button',{name:'Далее'});
     await waitFor(()=>expect(drillNext.hasAttribute('disabled')).toBe(false));
     await user.click(drillNext);
-    expect(await screen.findByText('Паттерн пройден')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:'Далее'}));
+    expect(screen.queryByText('Паттерн пройден')).toBeNull();
 
     expect(await screen.findByText('Тренируем слух: понимать фразу с первого раза, без текста.')).toBeTruthy();
     await waitFor(()=>{
@@ -771,6 +770,182 @@ describe('node activity runner',()=>{
     expect(screen.queryByText('Тренируем скорость: фразы должны вылетать без раздумий.')).toBeNull();
   });
 
+  it('comes back to a half-done day without re-asking resolved tasks and shows them as passed',async()=>{
+    const progress=emptyCourseProgress();
+    progress.seen['theory.one']={at:'2026-10-06T00:00:00Z'};
+    progress.seen['choice.one']={at:'2026-10-06T00:01:00Z'};
+    progress.cards['choice.one']={box:1,due:10,at:'2026-10-06T00:01:00Z'};
+    render(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="learn-half.locale" systemLanguages={['ru']}>
+        <NodeRunnerView
+          runtime={{...runtime,state:{...state,progress}}}
+          nodeId="day-1"
+          onExit={()=>{}}
+          saveSeen={async()=>{}}
+          saveGraded={async()=>{}}
+          savePractice={async()=>{}}
+        />
+      </I18nProvider>
+    );
+    expect(await screen.findByRole('heading',{name:'Напиши: Я здесь'})).toBeTruthy();
+    // The whole section is on the bar: task 1 already passed, task 2 is on screen.
+    expect(screen.getByText('2/2')).toBeTruthy();
+    const bar=screen.getByRole('progressbar',{name:'Прогресс урока'});
+    expect(bar.querySelectorAll('.runner-progress-step.is-correct')).toHaveLength(1);
+    expect(bar.querySelectorAll('.runner-progress-step.is-current')).toHaveLength(1);
+  });
+
+  it('keeps the parked tasks and the run when the day is reopened right in a practice mode',async()=>{
+    const user=userEvent.setup();
+    const patternActivity={
+      id:'pattern.reopen',revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],pattern:{ru:'Фразы'},modes:['drill' as const,'listening' as const],
+      items:[{id:'p1',prompt:{ru:'Я здесь'},answer:{accepted:['I am here'],nearMiss:true,caseSensitive:false}}]
+    };
+    const reopenNode={
+      id:'day-reopen',kind:'lesson' as const,title:{ru:'Повторный вход'},dayIndex:2,order:1,prerequisites:[],
+      activityIds:['choice.one','text.one',patternActivity.id],
+      completion:{mode:'all' as const,requirements:[
+        {kind:'activity-seen' as const,activityIds:['choice.one','text.one']},
+        {kind:'practice-started' as const,activityId:patternActivity.id,modes:['drill' as const,'listening' as const]}
+      ]},
+      optional:false
+    };
+    const reopenState:LearnerCourseState={
+      ...state,
+      set:{...state.set,roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[reopenNode]}],activities:[
+        state.set.activities.find(activity=>activity.id==='choice.one')!,
+        state.set.activities.find(activity=>activity.id==='text.one')!,
+        patternActivity
+      ]},
+      roadmap:{id:'main',title:{ru:'Путь'},nodes:[reopenNode]},
+      progress:emptyCourseProgress(),
+      roadmapProgress:{nodes:[{node:reopenNode,complete:false,unlocked:true}],currentNode:reopenNode,currentDayIndex:2,completedCount:0,requiredCount:1,courseComplete:false},
+      currentNode:reopenNode,
+      currentDayIndex:2
+    };
+    const renderReopen=(startMode?:'listening')=>render(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="learn-reopen.locale" systemLanguages={['ru']}>
+        <NodeRunnerView
+          runtime={{...runtime,state:reopenState}}
+          nodeId={reopenNode.id}
+          {...(startMode?{startMode}:{})}
+          onExit={()=>{}}
+          saveSeen={async()=>{}}
+          saveGraded={async()=>{}}
+          savePractice={async()=>{}}
+        />
+      </I18nProvider>
+    );
+    const key='unmute.lesson-run:general-foundation:day-reopen';
+
+    const view=renderReopen();
+    await chooseAnswer(user,'I is here');
+    await user.click(await screen.findByRole('button',{name:'Далее'}));
+    expect(await screen.findByRole('heading',{name:'Напиши: Я здесь'})).toBeTruthy();
+    await waitFor(()=>expect(localStorage.getItem(key)).toBeTruthy());
+    const runId=String(JSON.parse(localStorage.getItem(key)!).runId);
+    view.unmount();
+
+    // Today legend / Route / «Скажи вслух» open the same day straight in a practice mode.
+    renderReopen('listening');
+    expect(await screen.findByRole('button',{name:'Начать'})).toBeTruthy();
+    await waitFor(()=>{
+      const saved=JSON.parse(localStorage.getItem(key)!);
+      expect(saved.runId).toBe(runId);
+      expect(saved.taskSection?.firstPassResults?.['0']).toBe(false);
+    });
+
+    await user.click(screen.getByRole('button',{name:'Задания'}));
+    expect(await screen.findByRole('heading',{name:'Напиши: Я здесь'})).toBeTruthy();
+    expect(screen.getByText('2/2')).toBeTruthy();
+    const bar=screen.getByRole('progressbar',{name:'Прогресс урока'});
+    expect(bar.querySelectorAll('.runner-progress-step.is-wrong')).toHaveLength(1);
+  });
+
+  it('does not offer «Завершить» after the last task while practice is still ahead',async()=>{
+    const user=userEvent.setup();
+    const patternActivity={
+      id:'pattern.ahead',revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],pattern:{ru:'Фразы'},modes:['speaking' as const],
+      items:[{id:'p1',prompt:{ru:'Я здесь'},answer:{accepted:['I am here'],nearMiss:true,caseSensitive:false}}]
+    };
+    const aheadNode={
+      id:'day-ahead',kind:'lesson' as const,title:{ru:'Впереди практика'},dayIndex:2,order:1,prerequisites:[],
+      activityIds:['choice.one',patternActivity.id],
+      completion:{mode:'all' as const,requirements:[
+        {kind:'activity-seen' as const,activityIds:['choice.one']},
+        {kind:'practice-started' as const,activityId:patternActivity.id,modes:['speaking' as const]}
+      ]},
+      optional:false
+    };
+    const aheadState:LearnerCourseState={
+      ...state,
+      set:{...state.set,roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[aheadNode]}],activities:[
+        state.set.activities.find(activity=>activity.id==='choice.one')!,
+        patternActivity
+      ]},
+      roadmap:{id:'main',title:{ru:'Путь'},nodes:[aheadNode]},
+      progress:emptyCourseProgress(),
+      roadmapProgress:{nodes:[{node:aheadNode,complete:false,unlocked:true}],currentNode:aheadNode,currentDayIndex:2,completedCount:0,requiredCount:1,courseComplete:false},
+      currentNode:aheadNode,
+      currentDayIndex:2
+    };
+    render(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="learn-ahead.locale" systemLanguages={['ru']}>
+        <NodeRunnerView runtime={{...runtime,state:aheadState}} nodeId={aheadNode.id} onExit={()=>{}}
+          saveSeen={async()=>{}} saveGraded={async()=>{}} savePractice={async()=>{}} />
+      </I18nProvider>
+    );
+    await chooseAnswer(user,'I am here');
+    expect(await screen.findByRole('button',{name:'Далее'})).toBeTruthy();
+    expect(screen.queryByRole('button',{name:'Завершить'})).toBeNull();
+  });
+
+  it('replays a passed day section by section instead of ending after the first one',async()=>{
+    const user=userEvent.setup();
+    const pattern={
+      id:'pattern.replay',revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],pattern:{ru:'Фразы'},modes:['drill' as const],
+      items:[{id:'p1',prompt:{ru:'Я здесь'},answer:{accepted:['I am here'],nearMiss:true,caseSensitive:false}}]
+    };
+    const replayNode={
+      id:'day-replay',kind:'lesson' as const,title:{ru:'Повтор дня'},dayIndex:1,order:0,prerequisites:[],
+      activityIds:['choice.one',pattern.id],
+      completion:{mode:'all' as const,requirements:[
+        {kind:'activity-seen' as const,activityIds:['choice.one']},
+        {kind:'practice-completed' as const,activityId:pattern.id,modes:['drill' as const]}
+      ]},
+      optional:false
+    };
+    const progress=emptyCourseProgress();
+    progress.seen['choice.one']={at:'x'};
+    progress.seen[pattern.id]={at:'x'};
+    progress.cards['choice.one']={box:1,due:10,at:'x'};
+    progress.practice.drill[pattern.id]={box:1,due:10,completed:true,at:'x'};
+    const replayState:LearnerCourseState={
+      ...state,
+      set:{...state.set,roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[replayNode]}],activities:[
+        state.set.activities.find(activity=>activity.id==='choice.one')!,pattern
+      ]},
+      roadmap:{id:'main',title:{ru:'Путь'},nodes:[replayNode]},
+      progress,
+      roadmapProgress:{nodes:[{node:replayNode,complete:true,unlocked:true}],currentNode:null,currentDayIndex:null,completedCount:1,requiredCount:1,courseComplete:true},
+      currentNode:null,
+      currentDayIndex:null
+    };
+    render(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="learn-replay-walk.locale" systemLanguages={['ru']}>
+        <NodeRunnerView runtime={{...runtime,state:replayState}} nodeId={replayNode.id} onExit={()=>{}}
+          saveSeen={async()=>{}} saveGraded={async()=>{}} savePractice={async()=>{}} />
+      </I18nProvider>
+    );
+    await chooseAnswer(user,'I am here');
+    await user.click(await screen.findByRole('button',{name:'Далее'}));
+    expect(await screen.findByText('Тренируем скорость: фразы должны вылетать без раздумий.')).toBeTruthy();
+    expect(screen.queryByText('День пройден')).toBeNull();
+  });
+
   it('keeps the exact task section and run id after switching to practice and killing the view',async()=>{
     const user=userEvent.setup();
     const patternActivity={
@@ -1017,5 +1192,48 @@ describe('node activity runner',()=>{
 
     expect(screen.getByText('Этот урок сейчас недоступен')).toBeTruthy();
     expect(screen.queryByText('Короткая теория')).toBeNull();
+  });
+});
+
+describe('next section on a day without a completion contract',()=>{
+  it('points back to the unfinished tasks after a training, never to an empty «not counted» stop',()=>{
+    const pattern={
+      id:'pattern.free',revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],pattern:{ru:'Фразы'},modes:['drill' as const,'listening' as const],
+      items:[{id:'p1',prompt:{ru:'Я здесь'},answer:{accepted:['I am here'],nearMiss:true,caseSensitive:false}}]
+    };
+    const freeNode={...node,id:'day-free',activityIds:['theory.one','choice.one','text.one',pattern.id]};
+    const steps=[state.set.activities[1]!,state.set.activities[2]!,pattern];
+    const progress=emptyCourseProgress();
+    progress.seen['choice.one']={at:'x'};
+    progress.seen[pattern.id]={at:'x'};
+    progress.practice.drill[pattern.id]={box:1,due:2,completed:true,at:'x'};
+    expect(firstMissingRequirementTarget(freeNode,steps,progress)).toEqual({index:1});
+    progress.seen['text.one']={at:'x'};
+    expect(firstMissingRequirementTarget(freeNode,steps,progress)).toEqual({index:2,mode:'listening'});
+  });
+});
+
+describe('pruneTaskCursor',()=>{
+  const steps=state.set.activities;
+  const cursor={order:[1,2,1],firstPass:2,pos:1,selected:null,answer:'',typing:false,picked:[] as string[],result:null as boolean|null,nearResult:false};
+
+  it('drops tasks resolved elsewhere (Review, another device) from what is still ahead',()=>{
+    const progress=emptyCourseProgress();
+    progress.seen['text.one']={at:'x'};
+    const pruned=pruneTaskCursor(cursor,steps,progress,'skip');
+    expect(pruned).toMatchObject({order:[1,1],pos:1,firstPass:1});
+  });
+
+  it('moves past an already answered step when switching sections',()=>{
+    const pruned=pruneTaskCursor({...cursor,result:false},steps,emptyCourseProgress(),'skip');
+    expect(pruned).toMatchObject({order:[1,2,1],pos:2,result:null});
+  });
+
+  it('reports nothing left when every remaining task is resolved',()=>{
+    const progress=emptyCourseProgress();
+    progress.seen['choice.one']={at:'x'};
+    progress.seen['text.one']={at:'x'};
+    expect(pruneTaskCursor(cursor,steps,progress,'skip')).toBeNull();
   });
 });
