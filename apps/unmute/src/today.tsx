@@ -158,7 +158,8 @@ export function TodayView({
     node&&
     currentDayProgress?.status==='not_started'&&
     recentCompletedEntry&&
-    recentCompletedEntry.node.id!==node.id
+    recentCompletedEntry.node.id!==node.id&&
+    recentCompletedEntry.node.order<node.order
   );
   let index=0;
 
