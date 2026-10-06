@@ -39,10 +39,16 @@ const set:CourseSet={
     {
       id:'pattern.a',revision:1,type:'pattern-drill',tags:[],revisionProgress:'preserve',
       lexiconRefs:[],pattern:{ru:'Pattern'},modes:['drill','listening','speaking'],
-      items:[{
-        id:'pattern.a.item-1',prompt:{ru:'Фраза'},
-        answer:{accepted:['Phrase'],nearMiss:true,caseSensitive:false}
-      }]
+      items:[
+        {
+          id:'pattern.a.item-1',prompt:{ru:'Фраза 1'},
+          answer:{accepted:['Phrase one'],nearMiss:true,caseSensitive:false}
+        },
+        {
+          id:'pattern.a.item-2',prompt:{ru:'Фраза 2'},
+          answer:{accepted:['Phrase two'],nearMiss:true,caseSensitive:false}
+        }
+      ]
     }
   ],
   resources:[]
@@ -71,6 +77,58 @@ describe('course review session',()=>{
     ]);
     expect(session.actionableCount).toBe(5);
     expect(session.waitingCount).toBe(0);
+  });
+
+  it('queues only the concrete due phrase for an itemized practice mode',()=>{
+    const progress=emptyCourseProgress();
+    progress.practice.drill['pattern.a']={
+      box:0,
+      due:5,
+      completed:true,
+      itemized:true,
+      at:'2026-09-29T00:00:00Z'
+    };
+    progress.practiceItems.drill['pattern.a::pattern.a.item-1']={
+      box:0,
+      due:5,
+      at:'2026-09-29T00:01:00Z'
+    };
+    progress.practiceItems.drill['pattern.a::pattern.a.item-2']={
+      box:1,
+      due:9,
+      at:'2026-09-29T00:02:00Z'
+    };
+
+    const session=buildCourseReviewSession(set,progress,5);
+    const practice=session.items.filter(item=>item.kind==='practice');
+
+    expect(practice).toHaveLength(1);
+    expect(practice[0]).toMatchObject({
+      kind:'practice',
+      mode:'drill',
+      itemId:'pattern.a.item-1'
+    });
+    expect(session.practice.drill).toBe(1);
+    expect(session.actionableCount).toBe(1);
+  });
+
+  it('keeps legacy whole-pattern review until that mode is migrated',()=>{
+    const progress=emptyCourseProgress();
+    progress.practice.drill['pattern.a']={
+      box:1,
+      due:3,
+      completed:true,
+      at:'2026-09-29T00:00:00Z'
+    };
+
+    const session=buildCourseReviewSession(set,progress,5);
+    const item=session.items.find(entry=>entry.kind==='practice');
+
+    expect(item).toMatchObject({
+      kind:'practice',
+      mode:'drill'
+    });
+    expect(item&&item.kind==='practice'?item.itemId:undefined).toBeUndefined();
   });
 
   it('ignores deleted and future review states',()=>{
