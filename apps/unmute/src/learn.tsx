@@ -684,11 +684,29 @@ export function NodeRunnerView({
 
     // A manually opened section may finish while another required section is still pending.
     // Do not show the dead-end «day not counted» summary: continue the same canonical run.
+    // Preserve the completed Tasks section before its top-level runner state is repurposed.
+    if(activity&&(activity.type==='choice'||activity.type==='text-input'||activity.type==='translation')){
+      taskSectionRef.current={
+        order:[...order],
+        firstPass,
+        pos,
+        selected,
+        answer,
+        typing,
+        picked:[...picked],
+        result,
+        nearResult,
+        score:{...score},
+        firstPassResults:{...firstPassResults},
+        shuffleSeed,
+        runId,
+        runMode
+      };
+    }
     clearCompletionCandidate(state.set.id,node.id);
     setFinished(false);
     begin(target.index,false);
     setIntro(false);
-    setRunMode('resume');
     if(target.mode){
       setOrder([target.index]);
       setFirstPass(1);
@@ -944,7 +962,6 @@ export function NodeRunnerView({
       setFirstPass(taskOrder.length||1);
       setIntro(false);
       setPracticeMode(undefined);
-      setRunMode(firstIncomplete===undefined?'replay':'resume');
     });
   };
 
@@ -959,7 +976,6 @@ export function NodeRunnerView({
       setFirstPass(1);
       setIntro(false);
       setPracticeMode(mode);
-      setRunMode(nodeProgress?.complete?'replay':'resume');
     });
   };
 
