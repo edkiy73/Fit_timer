@@ -38,3 +38,13 @@ export function clearRecentDayCompletion(setId:string):void{
   if(typeof localStorage==='undefined')return;
   try{localStorage.removeItem(key(setId));}catch{}
 }
+
+
+export function clearRecentDayCompletionForStartedNode(
+  setId:string,
+  startedNodeId:string,
+  todayDay:number
+):void{
+  const recent=readRecentDayCompletion(setId,todayDay);
+  if(recent&&recent.nodeId!==startedNodeId)clearRecentDayCompletion(setId);
+}
