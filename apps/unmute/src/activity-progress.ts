@@ -97,6 +97,19 @@ export function buildPracticeActivityProgress(
         operationId
       );
   if(!alreadyApplied&&itemGrades){
+    const modeState=nextCourse.practice[mode][activityId];
+    if(modeState&&!modeState.deleted){
+      nextCourse={
+        ...nextCourse,
+        practice:{
+          ...nextCourse.practice,
+          [mode]:{
+            ...nextCourse.practice[mode],
+            [activityId]:{...modeState,itemized:true}
+          }
+        }
+      };
+    }
     for(const [itemId,grade] of Object.entries(itemGrades)){
       nextCourse=gradeCoursePracticeItem(
         nextCourse,
