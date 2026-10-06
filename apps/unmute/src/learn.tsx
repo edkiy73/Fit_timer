@@ -39,7 +39,7 @@ import { MOTION, prefersReducedMotion, withViewTransition } from './motion';
 import { SYSTEM_BACK_EVENT } from './native-back';
 import { lessonSectionStates, type LessonSectionId } from './lesson-sections';
 import { clearPracticeRunStatePrefix } from './practice-run-state';
-import { clearRecentDayCompletion, readRecentDayCompletion, rememberRecentDayCompletion } from './recent-day-completion';
+import { clearRecentDayCompletionForStartedNode, rememberRecentDayCompletion } from './recent-day-completion';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -1673,8 +1673,7 @@ export function NodeRunnerScreen(){
   useEffect(()=>{
     const state=runtime.state;
     if(!state||state.currentNode?.id!==nodeId)return;
-    const recent=readRecentDayCompletion(state.set.id,activitySaveClock().dayNumber);
-    if(recent&&recent.nodeId!==nodeId)clearRecentDayCompletion(state.set.id);
+    clearRecentDayCompletionForStartedNode(state.set.id,nodeId,activitySaveClock().dayNumber);
   },[nodeId,runtime.state?.currentNode?.id,runtime.state?.set.id]);
   const leaveLesson=()=>navigate('/',{replace:true});
 
