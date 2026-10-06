@@ -135,6 +135,193 @@ const ok=(name,value)=>{
 const appears=(locator,timeout=5000)=>
   locator.waitFor({timeout}).then(()=>true,()=>false);
 
+async function twoTapChoice(page,label){
+  const escaped=label.replace(/[.*+?^{}()|[\]\\]/g,'\\const appears=(locator,timeout=5000)=>
+  locator.waitFor({timeout}).then(()=>true,()=>false);
+');
+  const option=page.locator('label.learn-option',{
+    hasText:new RegExp('^'+escaped+'(?:Нажми ещё раз)?
+const browser=await chromium.launch(CHROME?{executablePath:CHROME}:{});
+try{
+  const context=await browser.newContext({
+    viewport:{width:390,height:800},
+    locale:'ru-RU'
+  });
+  await context.addInitScript(()=>{
+    try{localStorage.setItem('unmute.onboarding.v1','1');}catch{}
+  });
+  const page=await context.newPage();
+  const errors=[];
+  page.on('pageerror',error=>errors.push(String(error)));
+
+  await page.goto(ROOT+'#/');
+  await page.getByRole('heading',{name:'Сегодня'}).waitFor({timeout:8000});
+  ok('43-unit fixture is the current Day 3',await appears(page.getByText('День 3',{exact:true}).first(),3000));
+  await page.getByRole('button',{name:'Начать',exact:true}).click();
+  await page.waitForURL(/#\/learn\/day-3/,{timeout:5000});
+  ok(
+    '43-unit fixture opens its first regular task',
+    await appears(page.getByRole('heading',{name:'Задание 1'}),8000)
+  );
+
+  for(let index=0;index<19;index++){
+    const next=await twoTapChoice(page,'Верно');
+    await next.click();
+  }
+
+  ok(
+    'after 19 regular tasks the runner reaches speed practice',
+    await appears(page.getByText('Тренируем скорость: фразы должны вылетать без раздумий.'),8000)
+  );
+
+  await page.goto(ROOT+'#/');
+  ok(
+    'Today counts 19 of the real 43 required units before phrase practice',
+    await appears(page.getByText(/19 из 43 заданий/),8000)
+  );
+
+  await page.goto(ROOT+'#/course');
+  ok(
+    'Route uses the same 19/43 denominator',
+    await appears(page.getByText('19/43',{exact:true}),8000)
+  );
+
+  await page.goto(ROOT+'#/');
+  await page.getByRole('button',{name:'Продолжить',exact:true}).click();
+  await page.waitForURL(/#\/learn\/day-3/,{timeout:5000});
+  await page.getByText('Тренируем скорость: фразы должны вылетать без раздумий.').waitFor({timeout:8000});
+  await page.getByRole('button',{name:'Начать',exact:true}).click();
+
+  for(let index=0;index<3;index++){
+    await page.getByRole('button',{name:'Готово',exact:true}).click();
+    // «Совпало» itself commits the phrase and advances to the next one.
+    await page.getByRole('button',{name:'Совпало',exact:true}).click();
+  }
+
+  await page.goto(ROOT+'#/');
+  ok(
+    'leaving mid-speed practice exposes 22/43 on Today',
+    await appears(page.getByText(/22 из 43 заданий/),8000)
+  );
+
+  await page.reload();
+  ok(
+    'production reload keeps the same unfinished 22/43 progress',
+    await appears(page.getByText(/22 из 43 заданий/),8000)
+  );
+
+  await page.goto(ROOT+'#/course');
+  ok(
+    'Route still agrees with Today after reload',
+    await appears(page.getByText('22/43',{exact:true}),8000)
+  );
+
+  ok('focused progress flow has no runtime errors',errors.length===0);
+  if(errors.length)console.log(errors.join('\n'));
+
+  await context.close();
+
+  // A second fresh anonymous device checks the original failure mode:
+  // attempted-but-wrong regular tasks must not inflate the day counter.
+  const correctionContext=await browser.newContext({
+    viewport:{width:390,height:800},
+    locale:'ru-RU'
+  });
+  await correctionContext.addInitScript(()=>{
+    try{localStorage.setItem('unmute.onboarding.v1','1');}catch{}
+  });
+  const correction=await correctionContext.newPage();
+  const correctionErrors=[];
+  correction.on('pageerror',error=>correctionErrors.push(String(error)));
+
+  await correction.goto(ROOT+'#/');
+  await correction.getByRole('button',{name:'Начать',exact:true}).click();
+  await correction.waitForURL(/#\/learn\/day-3/,{timeout:5000});
+  await correction.getByRole('heading',{name:'Задание 1'}).waitFor({timeout:8000});
+
+  for(let index=0;index<19;index++){
+    const next=await twoTapChoice(correction,'Неверно');
+    await next.click();
+  }
+
+  ok(
+    'all 19 wrong regular first-pass answers enter correction with 19 still unresolved',
+    await appears(correction.getByText('Работа над ошибками · осталось 19',{exact:true}),8000)
+  );
+  await correction.waitForFunction(()=>{
+    const raw=localStorage.getItem('unmute.lesson-run:general-foundation:day-3');
+    if(!raw)return false;
+    try{
+      const run=JSON.parse(raw);
+      const results=run.taskSection?.firstPassResults??run.firstPassResults??{};
+      return Object.keys(results).length===19;
+    }catch{return false;}
+  });
+
+  await correction.goto(ROOT+'#/');
+  ok(
+    'wrong first-pass attempts do not count as completed day units',
+    await appears(correction.getByText(/0 из 43 заданий/),8000)
+  );
+  ok(
+    'Today still offers Continue because the unfinished run exists',
+    await appears(correction.getByRole('button',{name:'Продолжить',exact:true}),3000)
+  );
+
+  await correction.reload();
+  ok(
+    'reload preserves 0/43 plus the unresolved correction queue',
+    await appears(correction.getByText(/0 из 43 заданий/),8000)
+  );
+
+  await correction.getByRole('button',{name:'Продолжить',exact:true}).click();
+  await correction.waitForURL(/#\/learn\/day-3/,{timeout:5000});
+  ok(
+    'resume returns to the 19-item correction queue',
+    await appears(correction.getByText('Работа над ошибками · осталось 19',{exact:true}),8000)
+  );
+
+  const correctedNext=await twoTapChoice(correction,'Верно');
+  await correctedNext.click();
+  ok(
+    'one corrected task reduces the unresolved queue to 18',
+    await appears(correction.getByText('Работа над ошибками · осталось 18',{exact:true}),8000)
+  );
+
+  await correction.goto(ROOT+'#/');
+  ok(
+    'one resolved correction moves canonical progress from 0/43 to 1/43',
+    await appears(correction.getByText(/1 из 43 заданий/),8000)
+  );
+  await correction.goto(ROOT+'#/course');
+  ok(
+    'Route agrees with Today after the correction',
+    await appears(correction.getByText('1/43',{exact:true}),8000)
+  );
+
+  ok('wrong-first-pass flow has no runtime errors',correctionErrors.length===0);
+  if(correctionErrors.length)console.log(correctionErrors.join('\n'));
+
+  await correctionContext.close();
+}catch(error){
+  bad++;
+  console.error(error);
+}finally{
+  await browser.close();
+  server.close();
+}
+
+console.log(bad?'\nDay progress e2e failures: '+bad:'\nDay progress e2e passed');
+process.exit(bad?1:0);
+)
+  }).first();
+  await option.click();
+  await option.click();
+  const next=page.locator('.learn-feedback-next');
+  await next.waitFor({timeout:5000});
+  return next;
+}
+
 const browser=await chromium.launch(CHROME?{executablePath:CHROME}:{});
 try{
   const context=await browser.newContext({
