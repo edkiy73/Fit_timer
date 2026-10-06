@@ -452,4 +452,8 @@ try{
 }
 
 console.log(bad ? '\nUnMute e2e failures: '+bad : '\nUnMute e2e passed');
-process.exit(bad ? 1 : 0);
+if(bad)process.exit(1);
+
+// Keep the focused 43-unit regression in the same production-browser CI command without
+// changing package/native build inputs.
+await import('./day-progress-e2e.mjs');
