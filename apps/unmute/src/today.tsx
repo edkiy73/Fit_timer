@@ -179,7 +179,7 @@ export function TodayView({
     hero=(
       <Tile className="tile-hero today-hero" index={index++}>
         <div className="tile-top">
-          <span className="chip"><Icon name="check" size={16} />{t('today.dayCompletedTitle',{day:completedNode.dayIndex??''})}</span>
+          <span className="chip"><LexiconText text={localizedText(state.set.title,locale)} /></span>
         </div>
         <h3>{t('today.dayCompletedTitle',{day:completedNode.dayIndex??''})}</h3>
         <p className="tile-meta">{t('today.dayCompletedMeta',{
