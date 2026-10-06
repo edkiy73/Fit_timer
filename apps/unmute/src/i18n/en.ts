@@ -398,8 +398,6 @@ export const en: Record<keyof typeof ru, string> = {
   'learn.replayNext': 'This was practice: your Review schedule did not change.',
   'learn.summaryNext': 'New phrases come back in Review when it is time to refresh them.',
   'learn.summaryDone': 'Done',
-  'learn.checking': 'Checking the day',
-  'learn.continuingRequired': 'Opening the next section',
   'learn.notCountedKicker': 'Day not counted yet',
   'learn.notCountedText': 'To count the day, finish:',
   'learn.notCountedSteps': 'Steps left: {count}',

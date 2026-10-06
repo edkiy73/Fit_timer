@@ -396,8 +396,6 @@ export const ru = {
   'learn.replayNext': 'Это была тренировка: интервалы «Повтора» не изменились.',
   'learn.summaryNext': 'Новые фразы вернутся в «Повторе», когда их пора освежить.',
   'learn.summaryDone': 'Готово',
-  'learn.checking': 'Проверяем день',
-  'learn.continuingRequired': 'Открываем следующий раздел',
   'learn.notCountedKicker': 'День пока не засчитан',
   'learn.notCountedText': 'Чтобы день засчитался, осталось пройти:',
   'learn.notCountedSteps': 'Осталось заданий: {count}',

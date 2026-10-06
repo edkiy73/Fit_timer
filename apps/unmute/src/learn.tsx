@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import { isPracticeCompletionRequirement, type Activity, type RoadmapNode } from './content/schema';
@@ -35,7 +35,8 @@ import { buildCourseReviewSession } from './review-session';
 import { activitySaveClock } from './activity-progress';
 import { randomSeed, shuffledIndices } from './shuffle';
 import { sentenceResponseStage, type SentenceResponseKind } from './engine/sentence-progression';
-import { MOTION, prefersReducedMotion, withViewTransition } from './motion';
+import { MOTION, prefersReducedMotion } from './motion';
+import { promptForResponse } from './prompt-mode';
 import { SYSTEM_BACK_EVENT } from './native-back';
 import { lessonSectionStates, type LessonSectionId } from './lesson-sections';
 import { clearPracticeRunStatePrefix } from './practice-run-state';
@@ -600,6 +601,14 @@ export function NodeRunnerView({
   const restoringRunRef=useRef<string|null>(null);
   const taskSectionRef=useRef<TaskSectionSnapshot|null>(null);
   const closeExitSheet=()=>setExitOpen(false);
+  // The current section chip is always brought into view (Listening/Speaking sit off-screen
+  // on narrow phones), so moving on to the next section is visible in the chip row.
+  const centerActiveChip=useCallback((chip:HTMLButtonElement|null)=>{
+    const nav=chip?.parentElement;
+    if(!chip||!nav||nav.scrollWidth<=nav.clientWidth)return;
+    const left=Math.max(0,chip.offsetLeft-(nav.clientWidth-chip.offsetWidth)/2);
+    nav.scrollTo?.({left,behavior:prefersReducedMotion()?'auto':'smooth'});
+  },[]);
 
   const leaveFromExitSheet=()=>{
     if(state&&node)markLessonRunPaused(state.set.id,node.id);
@@ -922,7 +931,53 @@ export function NodeRunnerView({
   // Count completion from a durable candidate. It is written before refresh, so an app
   // kill between the final answer and the refreshed roadmap cannot lose the event.
   const nodeComplete=Boolean(nodeProgress?.complete);
-  useEffect(()=>{
+
+  // Replaying a passed day walks through every section of it (tasks, then each training),
+  // instead of ending on the day summary after the first one.
+  const replayDoneRef=useRef<Set<string>>(new Set());
+  const finishedSectionRef=useRef<string|null>(null);
+  useEffect(()=>{ replayDoneRef.current=new Set(); },[node?.id,runId]);
+  const replaySections=():{id:string;index:number;mode?:PracticeSrsKind}[]=>{
+    const out:{id:string;index:number;mode?:PracticeSrsKind}[]=[];
+    const tasks=regularTaskOrder(steps);
+    if(tasks.length)out.push({id:'tasks',index:tasks[0]!});
+    for(const mode of ['drill','listening','speaking'] as PracticeSrsKind[]){
+      const index=steps.findIndex(item=>item.type==='pattern-drill'&&item.modes.includes(mode));
+      if(index>=0)out.push({id:mode,index,mode});
+    }
+    return out;
+  };
+  const nextReplaySection=()=>{
+    const done=new Set(replayDoneRef.current);
+    if(finishedSectionRef.current)done.add(finishedSectionRef.current);
+    return replaySections().find(section=>!done.has(section.id))??null;
+  };
+  useLayoutEffect(()=>{
+    if(!runHydrated||!finished||checking||!replay||!nodeComplete||!state||!node)return;
+    if(finishedSectionRef.current)replayDoneRef.current.add(finishedSectionRef.current);
+    finishedSectionRef.current=null;
+    const next=replaySections().find(section=>!replayDoneRef.current.has(section.id));
+    if(!next)return;
+    setFinished(false);
+    if(next.mode){
+      begin(next.index,false);
+      setIntro(false);
+      setOrder([next.index]);
+      setFirstPass(1);
+      setPracticeMode(next.mode);
+      setPracticeModeIsolated(false);
+    }else{
+      const tasks=regularTaskOrder(steps);
+      begin(tasks[0]!,false);
+      setIntro(false);
+      setOrder(tasks);
+      setFirstPass(tasks.length);
+      setPracticeMode(undefined);
+      setPracticeModeIsolated(false);
+    }
+  },[checking,finished,node?.id,nodeComplete,replay,runHydrated,stepSignature]);
+
+  useLayoutEffect(()=>{
     if(!runHydrated||!finished||checking||nodeComplete||!state||!node)return;
     const target=firstMissingRequirementTarget(node,steps,state.progress);
     if(!target)return;
@@ -991,6 +1046,7 @@ export function NodeRunnerView({
   },[runHydrated,state?.set.id,node?.id,nodeComplete,checking,finished]);
 
   const finish=async()=>{
+    if(isRegularTask(activity??undefined))finishedSectionRef.current='tasks';
     if(state&&node){
       writeCompletionCandidate({
         version:1,
@@ -1006,15 +1062,15 @@ export function NodeRunnerView({
     setFinished(true);
   };
 
+  // No page-level transition between steps: only the new card fades in (.learn-card), so the
+  // header, progress and section chips stay still instead of the whole screen twitching.
   const advance=()=>{
-    withViewTransition(()=>{
-      if(pos+1<order.length){
-        setPos(current=>current+1);
-        return;
-      }
-      if(node)void finish();
-      else onExit();
-    });
+    if(pos+1<order.length){
+      setPos(current=>current+1);
+      return;
+    }
+    if(node)void finish();
+    else onExit();
   };
 
   // A wrong answer comes back at the end of the section until it is actually resolved.
@@ -1068,16 +1124,13 @@ export function NodeRunnerView({
     );
   }
 
-  if(checking){
-    return <section className="learn-shell"><Loader title={t('learn.checking')} /></section>;
-  }
-
   const pendingRequiredTarget=finished&&state&&node&&!nodeComplete
     ? firstMissingRequirementTarget(node,steps,state.progress)
     : null;
-  if(pendingRequiredTarget){
-    // The effect above immediately reopens this target. Avoid flashing an incomplete-day summary.
-    return <section className="learn-shell"><Loader title={t('learn.continuingRequired')} /></section>;
+  const replayNext=finished&&replay&&nodeComplete?nextReplaySection():null;
+  if(pendingRequiredTarget||replayNext){
+    // The layout effects above reopen the next section before paint: nothing to show here.
+    return <section className="learn-shell" aria-busy="true" />;
   }
 
   if(finished&&node&&state){
@@ -1222,7 +1275,7 @@ export function NodeRunnerView({
 
   const openTasks=()=>{
     if(!regularTaskIndices.length)return;
-    withViewTransition(()=>{ resumeTasks(state.progress); });
+    resumeTasks(state.progress);
   };
 
   const openPractice=(mode:PracticeSrsKind)=>{
@@ -1230,15 +1283,14 @@ export function NodeRunnerView({
     if(!target)return;
     captureTaskSection();
     setPracticeActivityIndex(target.index);
-    withViewTransition(()=>{
-      begin(target.index,false);
-      setOrder([target.index]);
-      setFirstPass(1);
-      setIntro(false);
-      setPracticeMode(mode);
-      setPracticeModeIsolated(true);
-    });
+    begin(target.index,false);
+    setOrder([target.index]);
+    setFirstPass(1);
+    setIntro(false);
+    setPracticeMode(mode);
+    setPracticeModeIsolated(true);
   };
+
 
   const setId=state.set.id;
   const stage=stageForDay(node.dayIndex,state.set.id);
@@ -1246,10 +1298,14 @@ export function NodeRunnerView({
   const sectionComplete=(id:LessonSectionId)=>sectionStates.find(section=>section.id===id)?.complete===true;
   // «Завершить» only when this section is the last unfinished part of the day; otherwise «Далее».
   const currentSectionId:LessonSectionId|null=isRegularTask(activity??undefined)?'tasks':activity?.type==='pattern-drill'&&practiceMode?practiceMode:null;
-  const otherSectionsPending=sectionStates.some(section=>section.id!=='theory'&&section.id!==currentSectionId&&!section.complete);
+  const otherSectionsPending=sectionStates.some(section=>section.id!=='theory'&&section.id!==currentSectionId&&!section.complete)
+    // A replay of a passed day still has its other sections ahead.
+    ||(replay&&replaySections().some(section=>section.id!==currentSectionId&&!replayDoneRef.current.has(section.id)));
   const navChip=(id:LessonSectionId,label:string,active:boolean,onClick:()=>void)=>(
     <button
-      key={id}
+      // Re-keyed when it becomes active so the scroll-into-view ref runs again.
+      key={id+(active?':active':'')}
+      ref={active?centerActiveChip:undefined}
       className={'chip-button pressable'+(active?' is-active':'')+(sectionComplete(id)?' is-complete':'')}
       type="button"
       aria-current={active?'page':undefined}
@@ -1655,7 +1711,7 @@ export function NodeRunnerView({
       {(activity.type==='text-input'||activity.type==='translation')&&(
         <article className="learn-card">
           <ExerciseKind kind={chips?'chips':'write'} />
-          <h3><LexiconText text={localized(activity.prompt,locale)} refs={activity.lexiconRefs} /></h3>
+          <h3><LexiconText text={promptForResponse(localized(activity.prompt,locale),Boolean(chips))} refs={activity.lexiconRefs} /></h3>
           {activity.type==='text-input'&&activity.source&&(
             <p className="learn-source"><LexiconText text={localized(activity.source,locale)} refs={activity.lexiconRefs} /></p>
           )}
@@ -1745,6 +1801,7 @@ export function NodeRunnerView({
             onModeChange={setPracticeMode}
             onProgress={reportPracticeProgress}
             onDone={()=>{
+              if(practiceMode)finishedSectionRef.current=practiceMode;
               setPracticeMode(undefined);
               setPracticeModeIsolated(false);
               void saveSeen(setId,persistentPatternEntry.item.id).catch(()=>undefined).then(()=>advance());

@@ -94,8 +94,8 @@ export function CourseMosaic({cells,caption}:{cells:CourseCell[];caption:string}
         style={{'--cols':COURSE_MOSAIC_COLUMNS,'--rows':rows} as CSSProperties}
         aria-hidden="true"
       >
-        {cells.map(cell=>(
-          <span key={cell.id} className={'course-cell is-'+cell.state} />
+        {cells.map((cell,index)=>(
+          <span key={cell.id} className={'course-cell is-'+cell.state} style={{'--b':index} as CSSProperties} />
         ))}
       </div>
       <span className="course-mosaic-caption">{caption}</span>

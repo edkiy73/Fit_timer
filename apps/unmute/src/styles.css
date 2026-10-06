@@ -854,10 +854,10 @@ select:active{transform:scale(.985)}
 .practice-mode-nav::-webkit-scrollbar{display:none}
 .practice-mode-nav .chip-button{min-height:40px;padding-inline:12px;color:var(--muted);white-space:nowrap}
 .practice-mode-nav .chip-button.is-active{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));background:color-mix(in srgb,var(--accent) 12%,var(--card));color:var(--ink)}
-.lesson-section-nav{display:flex;align-items:center;justify-content:flex-end;gap:7px;min-width:0;overflow-x:auto;padding:2px 0 3px;scrollbar-width:none}
+.lesson-section-nav{display:flex;align-items:center;justify-content:flex-end;gap:7px;min-width:0;overflow-x:auto;padding:2px 2px 9px;margin-bottom:-6px;scrollbar-width:none}
 .lesson-section-nav::-webkit-scrollbar{display:none}
 .lesson-section-nav .chip-button{min-height:38px;padding-inline:11px;color:var(--muted);font-size:13px;white-space:nowrap}
-.lesson-section-nav .chip-button.is-active{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));background:color-mix(in srgb,var(--accent) 12%,var(--card));color:var(--ink)}
+.lesson-section-nav .chip-button.is-active{border-color:var(--accent);background:var(--accent);color:var(--on-accent);box-shadow:0 3px 8px color-mix(in srgb,var(--accent) 26%,transparent)}
 .lesson-section-nav .chip-button.is-complete:not(.is-active){border-color:color-mix(in srgb,var(--success) 38%,var(--line));background:color-mix(in srgb,var(--success) 8%,var(--card));color:var(--ink)}
 @media(max-width:620px){
   .runner-heading{display:grid;align-items:start}
@@ -1670,11 +1670,13 @@ span.legend-item{cursor:default}
 .course-mosaic{display:grid;gap:5px;margin-top:auto}
 .course-mosaic-grid{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-template-rows:repeat(var(--rows),minmax(0,1fr));gap:3px;height:36px}
 .course-mosaic-grid.is-dense{gap:2px}
-.course-cell{min-height:0;border-radius:3px;background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.course-cell{min-height:0;border-radius:3px;background:color-mix(in srgb,var(--ink) 8%,transparent);
+  animation:cell-in 420ms var(--motion-spring-ease) both;animation-delay:calc(var(--b) * 12ms + 150ms)}
 .course-cell.is-done{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 60%,var(--streak)))}
-/* Static on purpose: the day on screen is marked by an outline, without motion. */
+/* The day on screen is marked by an outline only: it appears with the others and then stays still. */
 .course-cell.is-current{background:color-mix(in srgb,var(--accent) 22%,transparent);box-shadow:inset 0 0 0 1.5px var(--accent)}
 .course-mosaic-caption{color:var(--muted);font-size:10px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
+@keyframes cell-in{from{transform:scale(.2);opacity:0}}
 @media(prefers-reduced-motion:reduce){
-  .wave-bar,.wave-bar.is-current,.day-wave.is-celebrate .wave-bar,.week-eq-bar{animation:none!important}
+  .wave-bar,.wave-bar.is-current,.day-wave.is-celebrate .wave-bar,.week-eq-bar,.course-cell{animation:none!important}
 }

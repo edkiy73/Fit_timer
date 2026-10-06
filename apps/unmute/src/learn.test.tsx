@@ -902,6 +902,50 @@ describe('node activity runner',()=>{
     expect(screen.queryByRole('button',{name:'Завершить'})).toBeNull();
   });
 
+  it('replays a passed day section by section instead of ending after the first one',async()=>{
+    const user=userEvent.setup();
+    const pattern={
+      id:'pattern.replay',revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],pattern:{ru:'Фразы'},modes:['drill' as const],
+      items:[{id:'p1',prompt:{ru:'Я здесь'},answer:{accepted:['I am here'],nearMiss:true,caseSensitive:false}}]
+    };
+    const replayNode={
+      id:'day-replay',kind:'lesson' as const,title:{ru:'Повтор дня'},dayIndex:1,order:0,prerequisites:[],
+      activityIds:['choice.one',pattern.id],
+      completion:{mode:'all' as const,requirements:[
+        {kind:'activity-seen' as const,activityIds:['choice.one']},
+        {kind:'practice-completed' as const,activityId:pattern.id,modes:['drill' as const]}
+      ]},
+      optional:false
+    };
+    const progress=emptyCourseProgress();
+    progress.seen['choice.one']={at:'x'};
+    progress.seen[pattern.id]={at:'x'};
+    progress.cards['choice.one']={box:1,due:10,at:'x'};
+    progress.practice.drill[pattern.id]={box:1,due:10,completed:true,at:'x'};
+    const replayState:LearnerCourseState={
+      ...state,
+      set:{...state.set,roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[replayNode]}],activities:[
+        state.set.activities.find(activity=>activity.id==='choice.one')!,pattern
+      ]},
+      roadmap:{id:'main',title:{ru:'Путь'},nodes:[replayNode]},
+      progress,
+      roadmapProgress:{nodes:[{node:replayNode,complete:true,unlocked:true}],currentNode:null,currentDayIndex:null,completedCount:1,requiredCount:1,courseComplete:true},
+      currentNode:null,
+      currentDayIndex:null
+    };
+    render(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="learn-replay-walk.locale" systemLanguages={['ru']}>
+        <NodeRunnerView runtime={{...runtime,state:replayState}} nodeId={replayNode.id} onExit={()=>{}}
+          saveSeen={async()=>{}} saveGraded={async()=>{}} savePractice={async()=>{}} />
+      </I18nProvider>
+    );
+    await chooseAnswer(user,'I am here');
+    await user.click(await screen.findByRole('button',{name:'Далее'}));
+    expect(await screen.findByText('Тренируем скорость: фразы должны вылетать без раздумий.')).toBeTruthy();
+    expect(screen.queryByText('День пройден')).toBeNull();
+  });
+
   it('keeps the exact task section and run id after switching to practice and killing the view',async()=>{
     const user=userEvent.setup();
     const patternActivity={

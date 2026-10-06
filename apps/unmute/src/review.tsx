@@ -39,6 +39,7 @@ import { useOtherCourseReviews, type OtherCourseReviews } from './other-course-r
 import { MyWordsView } from './my-words';
 import { Icon } from './icons';
 import { Sheet } from './sheet';
+import { promptForResponse } from './prompt-mode';
 import { randomSeed, shuffledIndices } from './shuffle';
 import { reviewSessionSeed } from './review-seed';
 import { WordChips, answerWords, buildChips, chipsText } from './word-chips';
@@ -736,7 +737,7 @@ export function ReviewView({
       {item.kind==='card'&&(item.activity.type==='text-input'||item.activity.type==='translation')&&(
         <article className="learn-card review-card">
           <div className="review-kind">{t('review.card')}</div>
-          <h3><LexiconText text={localized(item.activity.prompt,locale)} refs={item.activity.lexiconRefs} /></h3>
+          <h3><LexiconText text={promptForResponse(localized(item.activity.prompt,locale),Boolean(reviewChips))} refs={item.activity.lexiconRefs} /></h3>
           {item.activity.type==='text-input'&&item.activity.source&&(
             <p className="learn-source"><LexiconText text={localized(item.activity.source,locale)} refs={item.activity.lexiconRefs} /></p>
           )}
