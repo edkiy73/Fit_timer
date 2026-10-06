@@ -338,6 +338,7 @@ export const en: Record<keyof typeof ru, string> = {
   'courseMap.prerequisiteHint': 'This day opens after the previous required day is complete.',
   'courseMap.open': 'Open',
   'courseMap.reopen': 'Do again',
+  'courseMap.startOver': 'Start from the beginning',
   'courseMap.daySections': 'Current day sections',
   'courseMap.sectionDone': 'complete',
   'courseMap.sectionTodo': 'still to do',
