@@ -99,8 +99,8 @@ describe('pattern speaking',()=>{
       false,
       50,
       {
-        'pattern.present.item-1':'strong',
-        'pattern.present.item-2':'neutral'
+        'p1':'strong',
+        'p2':'neutral'
       }
     ));
     expect(await screen.findByText('1 из 2 распознано')).toBeTruthy();
@@ -174,8 +174,8 @@ describe('pattern speaking',()=>{
       false,
       50,
       {
-        'pattern.present.item-1':'weak',
-        'pattern.present.item-2':'strong'
+        'p1':'weak',
+        'p2':'strong'
       }
     ));
     expect(await screen.findByText('1 из 2 распознано')).toBeTruthy();
