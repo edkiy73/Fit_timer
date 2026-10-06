@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { DayProgress, DayProgressSectionId } from './day-progress';
-import type { MemoryModel, WaveBar } from './today-visuals';
+import type { CourseCell, WaveBar } from './today-visuals';
 
 const SECTION_KEY:Record<DayProgressSectionId,string>={
   tasks:'learn.summaryTasks',
@@ -84,45 +84,16 @@ export function WeekEqualizer({levels,labels,label}:{levels:number[];labels:stri
   );
 }
 
-/** What the learner has met, as a constellation: fresh in the core, strong on the outer orbit. */
-export function MemoryConstellation({model}:{model:MemoryModel}){
-  const {t}=useI18n();
+/** The course as a mosaic of days, ten per row: the day on screen glows. */
+export function CourseMosaic({cells,columns,caption}:{cells:CourseCell[];columns:number;caption:string}){
   return (
-    <div className="memory">
-      <svg className="memory-sky" viewBox="0 0 120 120" role="img"
-        aria-label={t('today.memoryAria',{total:model.total,strong:model.strong,due:model.due})}>
-        <defs>
-          <radialGradient id="memory-core">
-            <stop offset="0" stopColor="var(--accent)" stopOpacity=".28" />
-            <stop offset="1" stopColor="var(--accent)" stopOpacity="0" />
-          </radialGradient>
-        </defs>
-        <circle cx="60" cy="60" r="24" fill="url(#memory-core)" />
-        <circle className="memory-orbit" cx="60" cy="60" r="32.5" />
-        <circle className="memory-orbit" cx="60" cy="60" r="50" />
-        <g className="memory-dots">
-          {model.dots.map((dot,index)=>(
-            <circle
-              key={dot.key}
-              className={'memory-dot is-'+dot.ring+(dot.due?' is-due':'')}
-              cx={dot.x.toFixed(2)}
-              cy={dot.y.toFixed(2)}
-              r={dot.ring==='strong'?3.4:dot.ring==='growing'?3:2.7}
-              style={{'--b':index} as CSSProperties}
-            />
-          ))}
-        </g>
-      </svg>
-      <div className="memory-copy">
-        <span className="tile-kicker tone-accent">{t('today.memoryTitle')}</span>
-        <strong className="memory-total">{model.total}</strong>
-        <span className="memory-caption">{t('today.memoryCaption')}</span>
-        <ul className="memory-legend">
-          <li><span className="legend-dot is-strong" aria-hidden="true" />{t('today.memoryStrong',{count:model.strong})}</li>
-          <li><span className="legend-dot is-growing" aria-hidden="true" />{t('today.memoryGrowing',{count:model.growing})}</li>
-          <li><span className="legend-dot is-fresh" aria-hidden="true" />{t('today.memoryFresh',{count:model.fresh})}</li>
-        </ul>
+    <div className="course-mosaic">
+      <div className="course-mosaic-grid" style={{'--cols':columns} as CSSProperties} aria-hidden="true">
+        {cells.map((cell,index)=>(
+          <span key={cell.id} className={'course-cell is-'+cell.state} style={{'--b':index} as CSSProperties} />
+        ))}
       </div>
+      <span className="course-mosaic-caption">{caption}</span>
     </div>
   );
 }

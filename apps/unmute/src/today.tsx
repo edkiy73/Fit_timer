@@ -27,8 +27,8 @@ import type { CourseSet, RoadmapNode } from './content/schema';
 import { getDayProgress, type ActiveDayProgress } from './day-progress';
 import { readActiveDayProgress } from './day-progress-local';
 import type { DayProgressSectionId } from './day-progress';
-import { dayPart, dayWave, memoryModel, weekLevels } from './today-visuals';
-import { DayWave, MemoryConstellation, WeekEqualizer } from './today-visuals-ui';
+import { courseCells, courseColumns, dayPart, dayWave, weekLevels } from './today-visuals';
+import { CourseMosaic, DayWave, WeekEqualizer } from './today-visuals-ui';
 import { clearRecentDayCompletion, readRecentDayCompletion } from './recent-day-completion';
 import {
   lastWeekActivity,
@@ -153,7 +153,7 @@ export function TodayView({
   const streak=currentLearningStreak(allDays,todayDay);
   const week=lastWeekActivity(allDays,todayDay);
   const levels=weekLevels(state.progress,allDays.learningDays,todayDay);
-  const memory=memoryModel(state.progress,todayDay);
+  const cells=courseCells(state.roadmapProgress.nodes,state.roadmapProgress.courseComplete?null:(node?.id??null));
   const coursePercent=state.roadmapProgress.requiredCount>0
     ? Math.round(state.roadmapProgress.completedCount/state.roadmapProgress.requiredCount*100)
     : 0;
@@ -317,35 +317,24 @@ export function TodayView({
             />
           </Tile>
 
-          <Tile className="tile-course-mini" index={index++}>
-            <div className="course-progress-head">
-              <span className="course-progress-title">
-                <span className="mini-card-icon tone-accent" aria-hidden="true"><Icon name="progress" size={18} /></span>
-                <span className="tile-kicker tone-accent">{t('today.courseMini')}</span>
-              </span>
-              <strong className="course-progress-percent"><AnimatedNumber value={coursePercent} suffix="%" /></strong>
-            </div>
-            <div className="course-progress-copy">
-              <strong>{t('today.courseMiniDone',{done:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})}</strong>
-              <span>{t('today.courseMiniPassed')}</span>
-            </div>
-            <div
-              className="course-progress-bar"
-              role="progressbar"
-              aria-label={t('today.courseMiniCaption',{done:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={coursePercent}
-            >
-              <span className="course-progress-fill" style={{'--p':coursePercent/100} as CSSProperties} />
-            </div>
-          </Tile>
-
-          {memory.total>0&&(
-            <Tile className="tile-wide tile-memory" index={index++}>
-              <MemoryConstellation model={memory} />
-            </Tile>
-          )}
+          <button
+            className="tile tile-course-mini pressable"
+            style={{'--i':index++} as CSSProperties}
+            type="button"
+            onClick={onMap}
+            aria-label={t('today.courseMini')+': '+t('today.courseMiniCaption',{done:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})}
+          >
+            <span className="mini-card-head">
+              <span className="mini-card-icon tone-accent" aria-hidden="true"><Icon name="progress" size={18} /></span>
+              <span className="tile-kicker tone-accent">{t('today.courseMini')}</span>
+            </span>
+            <strong className="tile-number streak-number course-number"><AnimatedNumber value={coursePercent} suffix="%" /><span className="tile-unit">{t('today.courseUnit')}</span></strong>
+            <CourseMosaic
+              cells={cells}
+              columns={courseColumns(cells.length)}
+              caption={t('today.courseMiniDone',{done:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})}
+            />
+          </button>
 
           {speakTask&&node&&(
             <button className="tile tile-wide tile-speak pressable" style={{'--i':index++} as CSSProperties} type="button" onClick={()=>setSpeakOpen(true)}>

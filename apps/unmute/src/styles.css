@@ -1605,7 +1605,7 @@ select:active{transform:scale(.985)}
 .drill-binary-actions :is(.primary-button,.secondary-button){width:100%;min-width:0}
 
 
-/* Today visuals: the day as a voice wave, the week as an equalizer, memory as a constellation.
+/* Today visuals: the day as a voice wave, the week as an equalizer, the course as a mosaic of days.
    transform/opacity only — no blur — so they stay smooth on budget Android WebViews. */
 .today{--sec-tasks:var(--accent);--sec-drill:var(--streak);--sec-listening:var(--listen);--sec-speaking:var(--success);
   --sky-a:color-mix(in srgb,var(--accent) 20%,transparent);--sky-b:color-mix(in srgb,var(--listen) 10%,transparent)}
@@ -1662,29 +1662,21 @@ span.legend-item{cursor:default}
 .week-eq-day.is-today .week-eq-track{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--streak) 55%,transparent)}
 @keyframes eq-in{from{transform:scaleY(0)}}
 
-.tile-memory{padding:14px 16px;background:
-  radial-gradient(80% 120% at 0% 50%,color-mix(in srgb,var(--accent) 9%,transparent),transparent 60%),var(--card)}
-.memory{display:grid;grid-template-columns:120px minmax(0,1fr);align-items:center;gap:14px}
-.memory-sky{width:120px;height:120px;overflow:visible}
-.memory-orbit{fill:none;stroke:var(--line);stroke-width:.6;stroke-dasharray:1.5 2.5}
-.memory-dots{transform-origin:60px 60px;animation:sky-settle 1.6s var(--motion-spring-ease) both}
-.memory-dot{transform-box:fill-box;transform-origin:center;animation:dot-in 520ms var(--motion-spring-ease) both;animation-delay:calc(var(--b) * 9ms + 150ms)}
-.memory-dot.is-strong{fill:var(--success)}
-.memory-dot.is-growing{fill:var(--listen)}
-.memory-dot.is-fresh{fill:var(--accent)}
-.memory-dot.is-due{animation:dot-in 520ms var(--motion-spring-ease) both,dot-twinkle 1.2s ease-in-out 4 alternate;animation-delay:calc(var(--b) * 9ms + 150ms),calc(var(--b) * 9ms + 700ms)}
-@keyframes dot-in{from{transform:scale(0);opacity:0}}
-@keyframes dot-twinkle{to{opacity:.35}}
-@keyframes sky-settle{from{transform:rotate(-24deg)}}
-.memory-copy{display:grid;gap:2px;min-width:0}
-.memory-total{font-size:34px;line-height:1.05;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.memory-caption{color:var(--muted);font-size:13px;line-height:1.3}
-.memory-legend{display:grid;gap:3px;margin:8px 0 0;padding:0;list-style:none;font-size:12px;font-weight:700;color:var(--ink)}
-.memory-legend li{display:flex;align-items:center;gap:7px}
-@media(max-width:340px){
-  .memory{grid-template-columns:96px minmax(0,1fr);gap:10px}
-  .memory-sky{width:96px;height:96px}
-}
+/* Course tile mirrors the Streak tile: head, big number, a visual block pinned to the bottom. */
+.tile-streak,.tile-course-mini{display:flex;flex-direction:column;align-items:stretch;gap:10px}
+.tile-course-mini{cursor:pointer}
+.tile-course-mini:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tile-course-mini .mini-card-head{display:flex;align-items:center;gap:8px}
+.course-mosaic{display:grid;gap:5px;margin-top:auto}
+.course-mosaic-grid{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:3px}
+.course-cell{aspect-ratio:1;border-radius:3px;background:color-mix(in srgb,var(--ink) 8%,transparent);
+  animation:cell-in 420ms var(--motion-spring-ease) both;animation-delay:calc(var(--b) * 12ms + 150ms)}
+.course-cell.is-done{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 60%,var(--streak)))}
+.course-cell.is-current{background:color-mix(in srgb,var(--accent) 22%,transparent);box-shadow:inset 0 0 0 1.5px var(--accent);
+  animation:cell-in 420ms var(--motion-spring-ease) both,cell-glow 1.3s ease-in-out 6 alternate;animation-delay:calc(var(--b) * 12ms + 150ms),calc(var(--b) * 12ms + 600ms)}
+.course-mosaic-caption{color:var(--muted);font-size:10px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
+@keyframes cell-in{from{transform:scale(.2);opacity:0}}
+@keyframes cell-glow{to{transform:scale(.72)}}
 @media(prefers-reduced-motion:reduce){
-  .wave-bar,.wave-bar.is-current,.day-wave.is-celebrate .wave-bar,.week-eq-bar,.memory-dots,.memory-dot,.memory-dot.is-due{animation:none!important}
+  .wave-bar,.wave-bar.is-current,.day-wave.is-celebrate .wave-bar,.week-eq-bar,.course-cell,.course-cell.is-current{animation:none!important}
 }

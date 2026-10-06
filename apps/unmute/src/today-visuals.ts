@@ -7,7 +7,7 @@ import { activitySaveClock } from './activity-progress';
 import { dayNumberFromKey } from './engine/course-progress';
 
 /* Pure models behind the Today visuals: the day as a voice wave, the week as an
-   equalizer and the learner's memory as a constellation. Real progress only. */
+   equalizer and the course as a mosaic of days. Real progress only. */
 
 export interface WaveBar {
   section:DayProgressSectionId;
@@ -119,67 +119,27 @@ export function weekLevels(
   return raw.map(value=>value===0?0:.28+.72*Math.sqrt(value/max));
 }
 
-export type MemoryRing='fresh'|'growing'|'strong';
-
-export interface MemoryDot {
-  key:string;
-  ring:MemoryRing;
-  /** Position in a 120×120 box, centre at 60,60. */
-  x:number;
-  y:number;
-  due:boolean;
+export interface CourseCell {
+  id:string;
+  state:'done'|'current'|'ahead';
 }
 
-export interface MemoryModel {
-  total:number;
-  strong:number;
-  growing:number;
-  fresh:number;
-  due:number;
-  dots:MemoryDot[];
+/** One cell per required day of the course: passed, today's, still ahead. */
+export function courseCells(
+  nodes:readonly {node:{id:string;optional?:boolean};complete:boolean}[],
+  currentNodeId:string|null
+):CourseCell[]{
+  return nodes
+    .filter(item=>!item.node.optional)
+    .map(item=>({
+      id:item.node.id,
+      state:item.complete?'done':item.node.id===currentNodeId?'current':'ahead'
+    }));
 }
 
-const RING_RADIUS:Record<MemoryRing,[number,number]>={fresh:[5,23],growing:[29,38],strong:[45,55]};
-const MAX_DOTS=96;
-
-/** Everything the learner has met, by how firmly it sits in memory: fresh in the core, strong on the outer orbit. */
-export function memoryModel(progress:CourseProgressDocument,todayDay:number):MemoryModel{
-  const entries:{key:string;ring:MemoryRing;due:boolean}[]=[];
-  for(const [key,card] of Object.entries(progress.cards)){
-    if(!card||card.deleted)continue;
-    entries.push({key:'c:'+key,ring:card.box>=3?'strong':card.box===2?'growing':'fresh',due:card.due<=todayDay});
-  }
-  for(const mode of ['drill','listening','speaking'] as const){
-    for(const [key,item] of Object.entries(progress.practiceItems[mode])){
-      if(!item||item.deleted)continue;
-      entries.push({key:mode+':'+key,ring:item.box>=3?'strong':item.box===2?'growing':'fresh',due:item.due<=todayDay});
-    }
-  }
-  const count=(ring:MemoryRing)=>entries.filter(entry=>entry.ring===ring).length;
-  const model:MemoryModel={
-    total:entries.length,
-    strong:count('strong'),
-    growing:count('growing'),
-    fresh:count('fresh'),
-    due:entries.filter(entry=>entry.due).length,
-    dots:[]
-  };
-  // Keep the picture readable: sample evenly when there are more entries than dots.
-  const step=Math.max(1,entries.length/MAX_DOTS);
-  const picked=entries.length<=MAX_DOTS?entries:Array.from({length:MAX_DOTS},(_,i)=>entries[Math.floor(i*step)]!);
-  const perRing:Record<MemoryRing,number>={fresh:0,growing:0,strong:0};
-  const golden=Math.PI*(3-Math.sqrt(5));
-  const ringTotal:Record<MemoryRing,number>={fresh:0,growing:0,strong:0};
-  for(const entry of picked)ringTotal[entry.ring]++;
-  for(const entry of picked){
-    const n=perRing[entry.ring]++;
-    const [inner,outer]=RING_RADIUS[entry.ring];
-    // Sunflower spread inside each ring: even coverage without overlaps, stable per item.
-    const r=inner+(outer-inner)*Math.sqrt((n+.5)/ringTotal[entry.ring]);
-    const angle=n*golden+hash(entry.key+'a')*.6;
-    model.dots.push({key:entry.key,ring:entry.ring,due:entry.due,x:60+r*Math.cos(angle),y:60+r*Math.sin(angle)});
-  }
-  return model;
+/** Columns for the mosaic: ten per row for a usual course, wider rows for very long ones. */
+export function courseColumns(count:number):number{
+  return count<=40?Math.min(10,Math.max(1,count)):Math.ceil(count/4);
 }
 
 export type DayPart='morning'|'day'|'evening'|'night';

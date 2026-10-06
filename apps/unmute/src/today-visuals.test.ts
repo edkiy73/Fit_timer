@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CourseSet, RoadmapNode } from './content/schema';
 import { emptyCourseProgress } from './progress';
 import type { DayProgress } from './day-progress';
-import { dayPart, dayWave, memoryModel, waveDensity, weekLevels } from './today-visuals';
+import { courseCells, courseColumns, dayPart, dayWave, waveDensity, weekLevels } from './today-visuals';
 import { activitySaveClock } from './activity-progress';
 
 const set={activities:[
@@ -44,19 +44,18 @@ describe('weekLevels',()=>{
   });
 });
 
-describe('memoryModel',()=>{
-  it('puts cards and phrases on rings by strength and counts due items',()=>{
-    const doc=emptyCourseProgress();
-    doc.cards={a:{box:0,due:5,at:'x'},b:{box:3,due:20,at:'x'},c:{box:2,due:9,at:'x',deleted:true}};
-    doc.practiceItems.drill={'p|1':{box:2,due:12,at:'x'}};
-    const model=memoryModel(doc,10);
-    expect(model).toMatchObject({total:3,strong:1,growing:1,fresh:1,due:1});
-    for(const dot of model.dots){
-      const r=Math.hypot(dot.x-60,dot.y-60);
-      expect(r).toBeLessThanOrEqual(56);
-      if(dot.ring==='fresh')expect(r).toBeLessThanOrEqual(23.01);
-      if(dot.ring==='strong')expect(r).toBeGreaterThanOrEqual(44.99);
-    }
+describe('courseCells',()=>{
+  it('marks passed days, the day on screen and the days ahead; optional nodes are not days',()=>{
+    const cells=courseCells([
+      {node:{id:'d1'},complete:true},
+      {node:{id:'d2'},complete:false},
+      {node:{id:'extra',optional:true},complete:false},
+      {node:{id:'d3'},complete:false}
+    ],'d2');
+    expect(cells.map(cell=>cell.state)).toEqual(['done','current','ahead']);
+    expect(courseColumns(40)).toBe(10);
+    expect(courseColumns(12)).toBe(10);
+    expect(courseColumns(60)).toBe(15);
   });
 });
 
