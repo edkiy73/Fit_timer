@@ -160,10 +160,9 @@ try{
 
   for(let index=0;index<19;index++){
     const option=page.locator('label.learn-option',{hasText:'Верно'}).first();
-    const radio=option.locator('input[type="radio"]');
-    await radio.click({force:true});
-    await page.getByText('Нажми ещё раз',{exact:true}).waitFor({timeout:3000});
-    await radio.click({force:true});
+    await option.click();
+    await option.getByText('Нажми ещё раз',{exact:true}).waitFor({timeout:3000});
+    await option.click();
     const next=page.locator('.learn-feedback-next');
     await next.waitFor({timeout:5000});
     await next.click();
