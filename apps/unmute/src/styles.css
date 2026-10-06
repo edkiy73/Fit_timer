@@ -1604,3 +1604,87 @@ select:active{transform:scale(.985)}
 .drill-binary-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .drill-binary-actions :is(.primary-button,.secondary-button){width:100%;min-width:0}
 
+
+/* Today visuals: the day as a voice wave, the week as an equalizer, memory as a constellation.
+   transform/opacity only — no blur — so they stay smooth on budget Android WebViews. */
+.today{--sec-tasks:var(--accent);--sec-drill:var(--streak);--sec-listening:var(--listen);--sec-speaking:var(--success);
+  --sky-a:color-mix(in srgb,var(--accent) 20%,transparent);--sky-b:color-mix(in srgb,var(--listen) 10%,transparent)}
+.today[data-daypart="morning"]{--sky-a:color-mix(in srgb,var(--accent) 24%,transparent);--sky-b:color-mix(in srgb,var(--streak) 16%,transparent)}
+.today[data-daypart="day"]{--sky-a:color-mix(in srgb,var(--accent) 18%,transparent);--sky-b:color-mix(in srgb,var(--listen) 12%,transparent)}
+.today[data-daypart="evening"]{--sky-a:color-mix(in srgb,color-mix(in srgb,var(--accent) 55%,var(--listen)) 26%,transparent);--sky-b:color-mix(in srgb,var(--accent) 12%,transparent)}
+.today[data-daypart="night"]{--sky-a:color-mix(in srgb,var(--listen) 22%,transparent);--sky-b:color-mix(in srgb,color-mix(in srgb,var(--accent) 40%,var(--listen)) 14%,transparent)}
+.today .today-hero{background:
+  radial-gradient(120% 90% at 100% -10%,var(--sky-a),transparent 55%),
+  radial-gradient(90% 70% at -10% 110%,var(--sky-b),transparent 60%),
+  var(--card)}
+.today .today-hero::after{display:none}
+
+.day-wave{display:grid;gap:10px}
+.day-wave-bars{display:flex;align-items:center;justify-content:space-between;gap:2px;height:64px;padding:2px 0}
+.wave-bar{flex:1 1 0;min-width:2px;max-width:7px;height:100%;border-radius:999px;background:color-mix(in srgb,var(--ink) 11%,transparent);
+  transform:scaleY(var(--h));transform-origin:center;animation:wave-in 620ms var(--motion-spring-ease) both;animation-delay:calc(var(--b) * 10ms)}
+.wave-bar.is-pending{transform:scaleY(calc(var(--h) * .55))}
+.wave-bar.is-done.is-tasks{background:var(--sec-tasks)}
+.wave-bar.is-done.is-drill{background:var(--sec-drill)}
+.wave-bar.is-done.is-listening{background:var(--sec-listening)}
+.wave-bar.is-done.is-speaking{background:var(--sec-speaking)}
+.wave-bar.is-done.is-manual{background:var(--accent)}
+.wave-bar.is-current{background:var(--accent);animation:wave-in 620ms var(--motion-spring-ease) both,wave-breathe 1.4s ease-in-out 700ms 6 alternate;animation-delay:calc(var(--b) * 12ms),calc(var(--b) * 12ms + 700ms)}
+@keyframes wave-in{from{transform:scaleY(.06);opacity:0}}
+@keyframes wave-breathe{to{transform:scaleY(calc(var(--h) * .45))}}
+.day-wave.is-celebrate .wave-bar{animation:wave-in 620ms var(--motion-spring-ease) both,wave-jump 760ms var(--motion-spring-ease) 1;animation-delay:calc(var(--b) * 10ms),calc(var(--b) * 22ms + 500ms)}
+@keyframes wave-jump{40%{transform:scaleY(1)}}
+
+.day-wave-legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.legend-item{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:4px 10px 4px 8px;border:0;border-radius:999px;background:color-mix(in srgb,var(--card) 70%,var(--surface));color:var(--ink);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+span.legend-item{cursor:default}
+.legend-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.legend-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.legend-count{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+@media(max-width:340px){.legend-item{padding:4px 8px 4px 7px;font-size:11px}}
+.legend-item.is-complete .legend-count{color:var(--success)}
+.legend-dot{display:inline-block;flex:none;width:8px;height:8px;border-radius:4px;background:var(--accent)}
+.legend-dot.is-drill{background:var(--sec-drill)}
+.legend-dot.is-listening{background:var(--sec-listening)}
+.legend-dot.is-speaking{background:var(--sec-speaking)}
+.legend-dot.is-strong{background:var(--success)}
+.legend-dot.is-growing{background:var(--listen)}
+.legend-dot.is-fresh{background:var(--accent)}
+
+.week-eq{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:auto}
+.week-eq-day{display:grid;justify-items:center;gap:5px}
+.week-eq-track{display:flex;align-items:flex-end;justify-content:center;width:100%;max-width:14px;height:36px;border-radius:7px;background:color-mix(in srgb,var(--ink) 6%,transparent);overflow:hidden}
+.week-eq-bar{display:block;width:100%;height:100%;border-radius:7px;background:color-mix(in srgb,var(--ink) 12%,transparent);transform:scaleY(var(--h));transform-origin:bottom;animation:eq-in 700ms var(--motion-spring-ease) both;animation-delay:calc(var(--b) * 45ms + 120ms)}
+.week-eq-day.is-active .week-eq-bar{background:linear-gradient(to top,var(--streak),color-mix(in srgb,var(--streak) 55%,var(--accent)))}
+.week-eq-day:not(.is-active) .week-eq-bar{transform:scaleY(.1)}
+.week-eq-label{color:var(--muted);font-size:10px;font-weight:700;text-transform:lowercase}
+.week-eq-day.is-today .week-eq-label{color:var(--ink)}
+.week-eq-day.is-today .week-eq-track{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--streak) 55%,transparent)}
+@keyframes eq-in{from{transform:scaleY(0)}}
+
+.tile-memory{padding:14px 16px;background:
+  radial-gradient(80% 120% at 0% 50%,color-mix(in srgb,var(--accent) 9%,transparent),transparent 60%),var(--card)}
+.memory{display:grid;grid-template-columns:120px minmax(0,1fr);align-items:center;gap:14px}
+.memory-sky{width:120px;height:120px;overflow:visible}
+.memory-orbit{fill:none;stroke:var(--line);stroke-width:.6;stroke-dasharray:1.5 2.5}
+.memory-dots{transform-origin:60px 60px;animation:sky-settle 1.6s var(--motion-spring-ease) both}
+.memory-dot{transform-box:fill-box;transform-origin:center;animation:dot-in 520ms var(--motion-spring-ease) both;animation-delay:calc(var(--b) * 9ms + 150ms)}
+.memory-dot.is-strong{fill:var(--success)}
+.memory-dot.is-growing{fill:var(--listen)}
+.memory-dot.is-fresh{fill:var(--accent)}
+.memory-dot.is-due{animation:dot-in 520ms var(--motion-spring-ease) both,dot-twinkle 1.2s ease-in-out 4 alternate;animation-delay:calc(var(--b) * 9ms + 150ms),calc(var(--b) * 9ms + 700ms)}
+@keyframes dot-in{from{transform:scale(0);opacity:0}}
+@keyframes dot-twinkle{to{opacity:.35}}
+@keyframes sky-settle{from{transform:rotate(-24deg)}}
+.memory-copy{display:grid;gap:2px;min-width:0}
+.memory-total{font-size:34px;line-height:1.05;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.memory-caption{color:var(--muted);font-size:13px;line-height:1.3}
+.memory-legend{display:grid;gap:3px;margin:8px 0 0;padding:0;list-style:none;font-size:12px;font-weight:700;color:var(--ink)}
+.memory-legend li{display:flex;align-items:center;gap:7px}
+@media(max-width:340px){
+  .memory{grid-template-columns:96px minmax(0,1fr);gap:10px}
+  .memory-sky{width:96px;height:96px}
+}
+@media(prefers-reduced-motion:reduce){
+  .wave-bar,.wave-bar.is-current,.day-wave.is-celebrate .wave-bar,.week-eq-bar,.memory-dots,.memory-dot,.memory-dot.is-due{animation:none!important}
+}
