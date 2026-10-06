@@ -160,13 +160,11 @@ try{
 
   for(let index=0;index<19;index++){
     const option=page.locator('label.learn-option',{hasText:'Верно'}).first();
-    await option.click();
+    const radio=option.locator('input[type="radio"]');
+    await radio.click({force:true});
     await page.getByText('Нажми ещё раз',{exact:true}).waitFor({timeout:3000});
-    await option.click();
-    const next=page.getByRole('button',{
-      name:index===18?'Завершить':'Далее',
-      exact:true
-    });
+    await radio.click({force:true});
+    const next=page.locator('.learn-feedback-next');
     await next.waitFor({timeout:5000});
     await next.click();
   }
