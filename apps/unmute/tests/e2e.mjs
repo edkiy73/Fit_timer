@@ -5,6 +5,7 @@ import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 
@@ -454,6 +455,11 @@ try{
 console.log(bad ? '\nUnMute e2e failures: '+bad : '\nUnMute e2e passed');
 if(bad)process.exit(1);
 
-// Keep the focused 43-unit regression in the same production-browser CI command without
-// changing package/native build inputs.
-await import('./day-progress-e2e.mjs');
+// Run the focused 43-unit regression in a fresh Node process so its memory-backed
+// content/release store cannot inherit this suite's tiny two-day fixture.
+const focused=spawnSync(
+  process.execPath,
+  [join(APP,'tests','day-progress-e2e.mjs')],
+  {stdio:'inherit',env:process.env}
+);
+process.exit(focused.status??1);
