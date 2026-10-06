@@ -136,11 +136,16 @@ const appears=(locator,timeout=5000)=>
   locator.waitFor({timeout}).then(()=>true,()=>false);
 
 async function twoTapChoice(page,label){
-  const escaped=label.replace(/[.*+?^{}()|[\]\\]/g,'\\const appears=(locator,timeout=5000)=>
-  locator.waitFor({timeout}).then(()=>true,()=>false);
-');
   const option=page.locator('label.learn-option',{
-    hasText:new RegExp('^'+escaped+'(?:Нажми ещё раз)?
+    hasText:new RegExp('^'+label+'(?:Нажми ещё раз)?$')
+  }).first();
+  await option.click();
+  await option.click();
+  const next=page.locator('.learn-feedback-next');
+  await next.waitFor({timeout:5000});
+  return next;
+}
+
 const browser=await chromium.launch(CHROME?{executablePath:CHROME}:{});
 try{
   const context=await browser.newContext({
