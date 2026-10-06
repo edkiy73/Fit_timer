@@ -83,7 +83,8 @@ function renderToday(
   onReview=vi.fn(),
   onMap=vi.fn(),
   onAccess=vi.fn(),
-  activeDayProgress:Parameters<typeof TodayView>[0]['activeDayProgress']={}
+  activeDayProgress:Parameters<typeof TodayView>[0]['activeDayProgress']={},
+  recentCompletionNodeId:Parameters<typeof TodayView>[0]['recentCompletionNodeId']=null
 ){
   render(
     <I18nProvider
@@ -92,7 +93,15 @@ function renderToday(
       storageKey="today-test.locale"
       systemLanguages={['ru']}
     >
-      <TodayView runtime={value} onStart={onStart} onReview={onReview} onMap={onMap} onAccess={onAccess} activeDayProgress={activeDayProgress} />
+      <TodayView
+        runtime={value}
+        onStart={onStart}
+        onReview={onReview}
+        onMap={onMap}
+        onAccess={onAccess}
+        activeDayProgress={activeDayProgress}
+        recentCompletionNodeId={recentCompletionNodeId}
+      />
     </I18nProvider>
   );
   return {onStart,onReview,onMap,onAccess};
@@ -159,6 +168,112 @@ describe('Today learner shell',()=>{
     );
 
     expect(screen.getByText('22 из 43 заданий · ~12 мин')).toBeTruthy();
+    expect(screen.getByRole('button',{name:'Продолжить'})).toBeTruthy();
+  });
+
+  it('keeps a completed 43/43 day on Today until the next day starts',async()=>{
+    const user=userEvent.setup();
+    const cards:Activity[]=Array.from({length:19},(_,index)=>({
+      id:'done.'+(index+1),revision:1,type:'choice' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],prompt:{ru:'Вопрос'},options:[{ru:'A'},{ru:'B'}],correctIndex:0
+    }));
+    const pattern:Extract<Activity,{type:'pattern-drill'}>={
+      id:'done.pattern',revision:1,type:'pattern-drill',tags:[],revisionProgress:'preserve',
+      lexiconRefs:[],pattern:{ru:'Привычки'},modes:['drill','listening','speaking'],
+      items:Array.from({length:8},(_,index)=>({
+        id:'done.p'+(index+1),prompt:{ru:'Фраза'},answer:{accepted:['Phrase'],nearMiss:true,caseSensitive:false}
+      }))
+    };
+    const completedNode:RoadmapNode={
+      id:'day-3',kind:'lesson',title:{ru:'День 3'},dayIndex:3,order:2,prerequisites:[],
+      activityIds:[...cards.map(card=>card.id),pattern.id],
+      completion:{mode:'all',requirements:[
+        {kind:'activity-seen',activityIds:cards.map(card=>card.id)},
+        {kind:'practice-started',activityId:pattern.id,modes:['drill','listening','speaking']}
+      ]},
+      optional:false
+    };
+    const nextActivity:Activity={
+      id:'next.one',revision:1,type:'choice',tags:[],revisionProgress:'preserve',
+      lexiconRefs:[],prompt:{ru:'Следующее'},options:[{ru:'A'},{ru:'B'}],correctIndex:0
+    };
+    const nextNode:RoadmapNode={
+      id:'day-4',kind:'lesson',title:{ru:'День 4'},dayIndex:4,order:3,prerequisites:['day-3'],
+      activityIds:[nextActivity.id],optional:false
+    };
+    const progress=emptyCourseProgress();
+    for(const card of cards)progress.seen[card.id]={at:'2026-10-06T00:00:00Z'};
+    for(const mode of ['drill','listening','speaking'] as const){
+      progress.practice[mode][pattern.id]={
+        box:0,due:1,completed:true,at:'2026-10-06T00:10:00Z'
+      };
+    }
+    const completedState:LearnerCourseState={
+      ...state,
+      set:{
+        ...state.set,
+        roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[completedNode,nextNode]}],
+        activities:[...cards,pattern,nextActivity]
+      },
+      roadmap:{id:'main',title:{ru:'Путь'},nodes:[completedNode,nextNode]},
+      progress,
+      roadmapProgress:{
+        nodes:[
+          {node:completedNode,complete:true,unlocked:true},
+          {node:nextNode,complete:false,unlocked:true}
+        ],
+        currentNode:nextNode,currentDayIndex:4,completedCount:3,requiredCount:40,courseComplete:false
+      },
+      currentNode:nextNode,
+      currentDayIndex:4
+    };
+    const onStart=vi.fn();
+
+    renderToday(
+      runtime({state:completedState}),
+      onStart,vi.fn(),vi.fn(),vi.fn(),{},
+      completedNode.id
+    );
+
+    expect(screen.getByRole('heading',{name:'День 3 завершён'})).toBeTruthy();
+    expect(screen.getByText('43 из 43')).toBeTruthy();
+    expect(screen.getByText('Слабые места появятся в «Повторе».')).toBeTruthy();
+
+    await user.click(screen.getByRole('button',{name:'Начать День 4'}));
+    expect(onStart).toHaveBeenCalledWith('day-4');
+
+    await user.click(screen.getByRole('button',{name:'Пройти ещё раз'}));
+    expect(onStart).toHaveBeenCalledWith('day-3');
+  });
+
+  it('stops showing the completed-day hero once the next day has progress',()=>{
+    const progress=emptyCourseProgress();
+    progress.seen['card.one']={at:'2026-10-06T00:00:00Z'};
+    const previousNode:RoadmapNode={
+      id:'day-1',kind:'lesson',title:{ru:'День 1'},dayIndex:1,order:0,prerequisites:[],
+      activityIds:[],optional:false
+    };
+    const startedState:LearnerCourseState={
+      ...state,
+      progress,
+      set:{
+        ...state.set,
+        roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[previousNode,node]}]
+      },
+      roadmap:{id:'main',title:{ru:'Путь'},nodes:[previousNode,node]},
+      roadmapProgress:{
+        ...state.roadmapProgress,
+        nodes:[
+          {node:previousNode,complete:true,unlocked:true},
+          {node,complete:false,unlocked:true}
+        ]
+      }
+    };
+
+    renderToday(runtime({state:startedState}),vi.fn(),vi.fn(),vi.fn(),vi.fn(),{},previousNode.id);
+
+    expect(screen.queryByRole('heading',{name:'День 1 завершён'})).toBeNull();
+    expect(screen.getByText('День 2')).toBeTruthy();
     expect(screen.getByRole('button',{name:'Продолжить'})).toBeTruthy();
   });
 

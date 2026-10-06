@@ -197,7 +197,9 @@ try{
   ok('first anonymous visit opens minimal onboarding',await appears(phone.page.getByRole('heading',{name:COPY.onboarding})));
   ok('onboarding starts day 1',await finishOnboarding(phone.page));
   ok('day 1 is completed locally before sign-in',await completeTheory(phone.page));
-  ok('anonymous phone advances to day 2',await appears(phone.page.getByRole('heading',{name:'День 2'})));
+  ok('completed day stays visible before the next day starts',await appears(phone.page.getByRole('heading',{name:'День 1 завершён'})));
+  await phone.page.getByRole('button',{name:'Начать День 2'}).click();
+  ok('anonymous phone advances to day 2',await phone.page.waitForURL(/#\/learn\/day-2/,{timeout:5000}).then(()=>true,()=>false));
 
   // Route map: the solid rail reaches the current day, and the day sheet's button spans the sheet.
   await phone.page.goto(URL_+'#/course');

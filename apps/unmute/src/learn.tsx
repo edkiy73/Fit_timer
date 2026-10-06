@@ -39,6 +39,7 @@ import { MOTION, prefersReducedMotion, withViewTransition } from './motion';
 import { SYSTEM_BACK_EVENT } from './native-back';
 import { lessonSectionStates, type LessonSectionId } from './lesson-sections';
 import { clearPracticeRunStatePrefix } from './practice-run-state';
+import { clearRecentDayCompletionForStartedNode, rememberRecentDayCompletion } from './recent-day-completion';
 
 function localized(text:Record<string,string>|undefined,locale:string):string{
   if(!text)return '';
@@ -815,6 +816,9 @@ export function NodeRunnerView({
       completionTrackedRef.current=true;
       if(node.kind==='lesson')trackLessonCompleted(candidate.runId,candidate.mode);
       if(node.dayIndex)trackDayCompleted(candidate.runId,candidate.mode);
+      if(candidate.mode!=='replay'&&node.kind==='lesson'&&node.dayIndex){
+        rememberRecentDayCompletion(state.set.id,node.id,activitySaveClock().dayNumber);
+      }
       clearCompletionCandidate(state.set.id,node.id);
       clearLessonRun(state.set.id,node.id);
       if(candidate.mode!=='replay')onNodeCompleted(node);
@@ -1665,12 +1669,18 @@ export function NodeRunnerScreen(){
   const resumeSavedRun=search.get('resume')==='1';
   const replayTasksOnly=search.get('tasks')==='1';
   const startFromBeginning=search.get('start')==='1';
+  const nodeId=String(params.nodeId||'');
+  useEffect(()=>{
+    const state=runtime.state;
+    if(!state||state.currentNode?.id!==nodeId)return;
+    clearRecentDayCompletionForStartedNode(state.set.id,nodeId,activitySaveClock().dayNumber);
+  },[nodeId,runtime.state?.currentNode?.id,runtime.state?.set.id]);
   const leaveLesson=()=>navigate('/',{replace:true});
 
   return (
     <NodeRunnerView
       runtime={runtime}
-      nodeId={String(params.nodeId||'')}
+      nodeId={nodeId}
       {...(startActivityId?{startActivityId}:{})}
       {...(startSection?{startSection}:{})}
       {...(startMode?{startMode}:{})}
