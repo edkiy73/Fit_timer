@@ -608,6 +608,37 @@ describe('node activity runner',()=>{
     expect(screen.getByText('1/2')).toBeTruthy();
   });
 
+  it('starts an unfinished day from the beginning without regrading completed work',async()=>{
+    const user=userEvent.setup();
+    const progress=emptyCourseProgress();
+    progress.seen['theory.one']={at:'2026-10-06T00:00:00Z'};
+    progress.seen['choice.one']={at:'2026-10-06T00:01:00Z'};
+    progress.cards['choice.one']={box:1,due:10,at:'2026-10-06T00:01:00Z'};
+    const saveGraded=vi.fn(async()=>{});
+
+    render(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="learn-start-over.locale" systemLanguages={['ru']}>
+        <NodeRunnerView
+          runtime={{...runtime,state:{...state,progress}}}
+          nodeId="day-1"
+          startFromBeginning
+          onExit={()=>{}}
+          saveSeen={async()=>{}}
+          saveGraded={saveGraded}
+          savePractice={async()=>{}}
+        />
+      </I18nProvider>
+    );
+
+    // Even already-read theory is shown because this is an explicit visual start-over.
+    expect(await screen.findByText('Короткая теория')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'К заданиям'}));
+    await chooseAnswer(user,'I am here');
+
+    expect(saveGraded).not.toHaveBeenCalled();
+    expect(await screen.findByRole('button',{name:'Далее'})).toBeTruthy();
+  });
+
   it('does not count a replay of an already completed node as a new completion',async()=>{
     const user=userEvent.setup();
     const completedRuntime:LearnerCourseRuntimeValue={

@@ -75,6 +75,34 @@ describe('pattern practice orchestration',()=>{
     expect(screen.queryByText(/6 из 8/)).toBeNull();
   });
 
+  it('starts from the first mode when replaying an unfinished day from the beginning',async()=>{
+    const progress=emptyCourseProgress();
+    progress.practice.drill[activity.id]={
+      box:1,
+      due:2,
+      completed:true,
+      at:'2026-09-29T00:00:00.000Z'
+    };
+
+    render(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="practice-start-over.locale" systemLanguages={['ru']}>
+        <PatternPracticeView
+          activity={activity}
+          courseActivities={[activity]}
+          progress={progress}
+          setId="general-foundation"
+          onDone={()=>{}}
+          savePractice={async()=>{}}
+          speak={async()=>true}
+          startFromBeginning
+        />
+      </I18nProvider>
+    );
+
+    expect(await screen.findByText('Тренируем скорость: фразы должны вылетать без раздумий.')).toBeTruthy();
+    expect(screen.queryByText('Тренируем слух: понимать фразу с первого раза, без текста.')).toBeNull();
+  });
+
   it('lets the lesson own the shared mode navigator',async()=>{
     const onModeChange=vi.fn();
     const view=render(

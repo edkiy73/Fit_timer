@@ -148,6 +148,8 @@ export interface NodeRunnerViewProps {
   resumeSavedRun?:boolean;
   /** Replay only the regular answer tasks without changing review/progression. */
   replayTasksOnly?:boolean;
+  /** Start an unfinished day visually from the beginning without erasing canonical progress. */
+  startFromBeginning?:boolean;
 }
 
 const isPlan=(activity:Activity)=>activity.type==='theory'&&(activity.tags??[]).includes('plan');
@@ -450,7 +452,8 @@ export function NodeRunnerView({
   startSection,
   startMode,
   resumeSavedRun=false,
-  replayTasksOnly=false
+  replayTasksOnly=false,
+  startFromBeginning=false
 }:NodeRunnerViewProps){
   const {t,locale}=useI18n();
   const state=runtime.state;
@@ -578,6 +581,31 @@ export function NodeRunnerView({
       setRunHydrated(true);
       return;
     }
+
+    if(startFromBeginning&&!nodeProgress?.complete){
+      const saved=readLessonRun(state.set.id,node.id);
+      const restored=saved?remapLessonRun(saved,steps):null;
+      const regular=steps
+        .map((item,index)=>({item,index}))
+        .filter(({item})=>item.type==='choice'||item.type==='text-input'||item.type==='translation')
+        .map(({index})=>index);
+      const firstIndex=regular[0]??0;
+      begin(firstIndex);
+      if(regular.length){
+        setOrder(regular);
+        setFirstPass(regular.length);
+      }
+      setIntro(theoryCards.length>0);
+      setPracticeMode(undefined);
+      setRunId(restored?.runId??randomSeed());
+      setRunMode(restored?'resume':'first');
+      setScore(restored?.taskSection?.score??restored?.score??{correct:0,total:0});
+      setFirstPassResults(restored?.taskSection?.firstPassResults??restored?.firstPassResults??{});
+      taskSectionRef.current=restored?.taskSection??null;
+      setPracticeQuality(restored?.practiceQuality??{});
+      setRunHydrated(true);
+      return;
+    }
     const requested=startActivityId?steps.findIndex(item=>item.id===startActivityId):-1;
     const forcedTheory=startSection==='theory';
     const forcedTasks=startSection==='tasks';
@@ -682,7 +710,7 @@ export function NodeRunnerView({
     for(const plan of activities.filter(isPlan)){
       if(!isSeen(state.progress,plan.id))void saveSeen(state.set.id,plan.id).catch(()=>undefined);
     }
-  },[node?.id,state?.set.id,startActivityId,startSection,startMode,stepSignature,resumeSavedRun,replayTasksOnly]);
+  },[node?.id,state?.set.id,startActivityId,startSection,startMode,stepSignature,resumeSavedRun,replayTasksOnly,startFromBeginning]);
 
   useEffect(()=>{
     if(!runHydrated||!state||!node||finished||order.length===0)return;
@@ -834,11 +862,14 @@ export function NodeRunnerView({
     if(stepIndex===undefined)return;
     setOrder(current=>current.slice(pos+1).includes(stepIndex)?current:[...current,stepIndex]);
   };
-  const countAnswer=(correct:boolean)=>{
-    if(pos>=firstPass)return;
-    setScore(current=>({correct:current.correct+(correct?1:0),total:current.total+1}));
+  const countAnswer=(correct:boolean,record:boolean)=>{
+    if(!record||pos>=firstPass)return;
     const answeredStep=order[pos];
-    if(answeredStep!==undefined)setFirstPassResults(current=>({...current,[answeredStep]:correct}));
+    if(answeredStep===undefined||firstPassResults[answeredStep]!==undefined)return;
+    setScore(current=>({correct:current.correct+(correct?1:0),total:current.total+1}));
+    setFirstPassResults(current=>current[answeredStep]!==undefined
+      ? current
+      : {...current,[answeredStep]:correct});
   };
 
   const exitSheet=(
@@ -1167,12 +1198,18 @@ export function NodeRunnerView({
   const position=t('learn.position',{current:shown,total:firstPass});
   // Only the first answer of a first run moves review intervals and stats: a replayed day and
   // «Работа над ошибками» are practice, so a mistake plus its fix never reads as a right answer.
-  const recordsAnswers=!replay&&!retrying;
+  const regularAnswerActivity=
+    activity.type==='choice'||activity.type==='text-input'||activity.type==='translation';
+  const priorCard=regularAnswerActivity?state.progress.cards[activity.id]:undefined;
+  const alreadyGraded=Boolean(priorCard&&!priorCard.deleted);
+  const alreadySeen=isSeen(state.progress,activity.id);
+  const recordsAnswers=!replay&&!retrying&&(!regularAnswerActivity||(!alreadyGraded&&!alreadySeen));
   const answerOperationId=(kind:string)=>runId+'|'+activity.id+'|'+pos+'|'+kind;
   const gradeAnswer=(correct:boolean,responseKind?:SentenceResponseKind)=>{
     if(!recordsAnswers){
-      // Correction answers must resolve the lesson step without grading SRS/stats again.
-      if(!replay&&retrying&&correct)return saveSeen(setId,activity.id);
+      // Replayed/completed work never rewrites first-pass SRS. A previously failed unresolved
+      // task may still be resolved here once the learner finally answers correctly.
+      if(!replay&&regularAnswerActivity&&correct&&!alreadySeen)return saveSeen(setId,activity.id);
       return Promise.resolve();
     }
     const operationId=answerOperationId('card');
@@ -1205,6 +1242,11 @@ export function NodeRunnerView({
             }
           });
     };
+    const existingMode=state.progress.practice[mode][activityId];
+    const modeAlreadyComplete=Boolean(
+      existingMode&&!existingMode.deleted&&practiceProgressComplete(existingMode)
+    );
+    if(replay||modeAlreadyComplete)return;
     if(!recordsAnswers){
       rememberQuality();
       return;
@@ -1229,7 +1271,7 @@ export function NodeRunnerView({
     try{
       const correct=choice===activity.correctIndex;
       await gradeAnswer(correct);
-      countAnswer(correct);
+      countAnswer(correct,recordsAnswers||replay);
       if(!correct)retryLater();
       setResult(correct);
     }catch(_){
@@ -1275,11 +1317,11 @@ export function NodeRunnerView({
       const correct=exactCorrect||typo;
       // Near miss is accepted for the lesson, but it must not create or advance SRS debt.
       if(typo){
-        await saveSeen(setId,activity.id);
+        if(!replay&&!alreadySeen)await saveSeen(setId,activity.id);
       }else{
         await gradeAnswer(correct,chips?'build':'write');
       }
-      countAnswer(correct);
+      countAnswer(correct,recordsAnswers||replay);
       if(!correct)retryLater();
       setNearResult(typo);
       setResult(correct);
@@ -1545,6 +1587,7 @@ export function NodeRunnerView({
             {...(practiceMode?{initialMode:practiceMode}:{})}
             showModeNav={false}
             active={activity.type==='pattern-drill'}
+            startFromBeginning={startFromBeginning}
             sessionKey={'unmute.pattern-run:'+setId+':'+node.id+':'+runId+':'+persistentPatternEntry.item.id}
             onModeChange={setPracticeMode}
             onProgress={reportPracticeProgress}
@@ -1621,6 +1664,7 @@ export function NodeRunnerScreen(){
   const startActivityId=search.get('activity')||undefined;
   const resumeSavedRun=search.get('resume')==='1';
   const replayTasksOnly=search.get('tasks')==='1';
+  const startFromBeginning=search.get('start')==='1';
   const leaveLesson=()=>navigate('/',{replace:true});
 
   return (
@@ -1632,6 +1676,7 @@ export function NodeRunnerScreen(){
       {...(startMode?{startMode}:{})}
       {...(resumeSavedRun?{resumeSavedRun:true}:{})}
       {...(replayTasksOnly?{replayTasksOnly:true}:{})}
+      {...(startFromBeginning?{startFromBeginning:true}:{})}
       onExit={leaveLesson}
       onSignIn={()=>navigate('/account?return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
       onAccess={()=>navigate('/access?from=answer&return='+encodeURIComponent('/learn/'+String(params.nodeId||'')+'?resume=1'))}

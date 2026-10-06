@@ -73,6 +73,8 @@ export interface PatternPracticeViewProps {
   active?:boolean;
   /** Durable key for an unfinished lesson run. Omit outside the lesson. */
   sessionKey?:string;
+  /** Replay completed modes from the first one, then continue unfinished modes canonically. */
+  startFromBeginning?:boolean;
 }
 
 export function PatternPracticeView({
@@ -89,27 +91,31 @@ export function PatternPracticeView({
   onModeChange,
   onProgress,
   active=true,
-  sessionKey
+  sessionKey,
+  startFromBeginning=false
 }:PatternPracticeViewProps){
   const {t,locale}=useI18n();
-  const restored=restoredPatternSession(activity,sessionKey);
+  const metaSessionKey=startFromBeginning?undefined:sessionKey;
+  const restored=restoredPatternSession(activity,metaSessionKey);
   const [mode,setMode]=useState<PatternMode>(()=>
-    restored?.mode??(initialMode&&activity.modes.includes(initialMode) ? initialMode : firstPatternMode(activity,progress))
+    startFromBeginning
+      ? (activity.modes[0]??'complete')
+      : restored?.mode??(initialMode&&activity.modes.includes(initialMode) ? initialMode : firstPatternMode(activity,progress))
   );
   // A training picked by hand from the finished state returns there, not to the next one.
-  const [single,setSingle]=useState(()=>restored?.single??Boolean(initialMode));
+  const [single,setSingle]=useState(()=>startFromBeginning?false:(restored?.single??Boolean(initialMode)));
   // Each training starts with «what to do and how»; its timer or microphone waits for «Начать».
   const [briefed,setBriefed]=useState<ReadonlySet<PracticeSrsKind>>(()=>new Set(restored?.briefed??[]));
 
   useEffect(()=>{
-    writePracticeRunState(practiceRunStateKey(sessionKey,'meta'),{
+    writePracticeRunState(practiceRunStateKey(metaSessionKey,'meta'),{
       version:1,
       activityRevision:activity.revision,
       mode,
       single,
       briefed:[...briefed]
     } satisfies PatternPracticeSession);
-  },[activity.revision,briefed,mode,sessionKey,single]);
+  },[activity.revision,briefed,metaSessionKey,mode,single]);
 
   useEffect(()=>{
     if(!active||mode==='complete')return;
@@ -189,9 +195,14 @@ export function PatternPracticeView({
 
   const pattern=activity.pattern[locale]||activity.pattern.ru||activity.pattern.en||Object.values(activity.pattern)[0]||'';
   const introMode=mode!=='complete'&&!briefed.has(mode)?mode:null;
-  const drillSessionKey=practiceRunStateKey(sessionKey,'drill');
-  const listeningSessionKey=practiceRunStateKey(sessionKey,'listening');
-  const speakingSessionKey=practiceRunStateKey(sessionKey,'speaking');
+  const canonicalSessionKey=(kind:PracticeSrsKind)=>{
+    const state=progress.practice[kind][activity.id];
+    const complete=Boolean(state&&!state.deleted&&practiceProgressComplete(state));
+    return startFromBeginning&&complete?undefined:practiceRunStateKey(sessionKey,kind);
+  };
+  const drillSessionKey=canonicalSessionKey('drill');
+  const listeningSessionKey=canonicalSessionKey('listening');
+  const speakingSessionKey=canonicalSessionKey('speaking');
 
   return (
     <>

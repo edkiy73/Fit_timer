@@ -336,6 +336,7 @@ export const ru = {
   'courseMap.prerequisiteHint': 'Этот день откроется после предыдущего обязательного дня.',
   'courseMap.open': 'Открыть',
   'courseMap.reopen': 'Пройти ещё раз',
+  'courseMap.startOver': 'Пройти с начала',
   'courseMap.daySections': 'Разделы текущего дня',
   'courseMap.sectionDone': 'пройдено',
   'courseMap.sectionTodo': 'ещё нужно пройти',
