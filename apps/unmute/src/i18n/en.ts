@@ -511,6 +511,7 @@ export const en: Record<keyof typeof ru, string> = {
   'speaking.gaveUp': 'Here is the answer',
   'speaking.gaveUpHint': 'This phrase will return in correction.',
   'speaking.sessionStats': 'Recognized: {correct} of {total}',
+  'speaking.scoreManual': 'Recognised {correct} of {total} · checked by hand {manual}',
   'speaking.score': '{correct} of {total} recognized',
   'speaking.passed': 'Great! Every phrase was recognized on the first try.',
   'speaking.completed': 'All phrases are complete.',

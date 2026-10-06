@@ -3,6 +3,7 @@ import type { Roadmap } from '../content/schema';
 import {
   buildRoadmapProgress,
   dayNumberFromKey,
+  effectiveNodeRequirements,
   emptyRoadmapProgress,
   isRoadmapNodeComplete,
   learningGapDays,
@@ -148,5 +149,33 @@ describe('course progress and streak',()=>{
     expect(summary.currentNode).toBeNull();
     expect(summary.completedCount).toBe(3);
     expect(summary.requiredCount).toBe(3);
+  });
+});
+
+describe('days without an explicit completion contract',()=>{
+  const node={id:'a1-day-1',kind:'lesson' as const,title:{ru:'День 1'},dayIndex:1,order:0,prerequisites:[],
+    activityIds:['plan','theory','ex.1','ex.2','pattern'],optional:false};
+  const activities=[
+    {id:'plan',type:'theory'},{id:'theory',type:'theory'},
+    {id:'ex.1',type:'choice'},{id:'ex.2',type:'text-input'},
+    {id:'pattern',type:'pattern-drill',modes:['drill','listening','speaking']}
+  ] as unknown as Parameters<typeof effectiveNodeRequirements>[1];
+
+  it('derive the day counter rule: tasks seen and every phrase training passed',()=>{
+    expect(effectiveNodeRequirements(node,activities)).toEqual([
+      {kind:'activity-seen',activityIds:['ex.1','ex.2']},
+      {kind:'practice-completed',activityId:'pattern',modes:['drill','listening','speaking']}
+    ]);
+  });
+
+  it('do not complete the day after one training just because the pattern was seen',()=>{
+    const progress={...emptyRoadmapProgress(),seenActivityIds:new Set(['plan','theory','ex.1','ex.2','pattern'])};
+    progress.practice.drill.pattern={box:1,due:2,completed:true};
+    expect(isRoadmapNodeComplete(node,progress,activities)).toBe(false);
+    progress.practice.listening.pattern={box:1,due:2,completed:true};
+    progress.practice.speaking.pattern={box:1,due:2,completed:true};
+    expect(isRoadmapNodeComplete(node,progress,activities)).toBe(true);
+    // Without the activities the historical rule stays (all activities seen).
+    expect(isRoadmapNodeComplete(node,emptyRoadmapProgress())).toBe(false);
   });
 });

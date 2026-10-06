@@ -1151,6 +1151,25 @@ describe('node activity runner',()=>{
   });
 });
 
+describe('next section on a day without a completion contract',()=>{
+  it('points back to the unfinished tasks after a training, never to an empty «not counted» stop',()=>{
+    const pattern={
+      id:'pattern.free',revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],pattern:{ru:'Фразы'},modes:['drill' as const,'listening' as const],
+      items:[{id:'p1',prompt:{ru:'Я здесь'},answer:{accepted:['I am here'],nearMiss:true,caseSensitive:false}}]
+    };
+    const freeNode={...node,id:'day-free',activityIds:['theory.one','choice.one','text.one',pattern.id]};
+    const steps=[state.set.activities[1]!,state.set.activities[2]!,pattern];
+    const progress=emptyCourseProgress();
+    progress.seen['choice.one']={at:'x'};
+    progress.seen[pattern.id]={at:'x'};
+    progress.practice.drill[pattern.id]={box:1,due:2,completed:true,at:'x'};
+    expect(firstMissingRequirementTarget(freeNode,steps,progress)).toEqual({index:1});
+    progress.seen['text.one']={at:'x'};
+    expect(firstMissingRequirementTarget(freeNode,steps,progress)).toEqual({index:2,mode:'listening'});
+  });
+});
+
 describe('pruneTaskCursor',()=>{
   const steps=state.set.activities;
   const cursor={order:[1,2,1],firstPass:2,pos:1,selected:null,answer:'',typing:false,picked:[] as string[],result:null as boolean|null,nearResult:false};

@@ -322,7 +322,7 @@ export function PatternDrillView({
             </button>
           </div>
         </>
-      ) : (
+      ) : active&&(
         <AnswerFeedbackSheet
           tone={lastFast?'correct':'near'}
           title={lastFast?t('drill.fast'):t('drill.slow')}

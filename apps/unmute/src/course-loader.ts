@@ -36,7 +36,8 @@ export function buildLearnerCourseState(
   const roadmap=defaultRoadmap(loaded.set);
   const roadmapProgress=buildRoadmapProgress(
     roadmap,
-    roadmapProgressFromDocument(progress)
+    roadmapProgressFromDocument(progress),
+    loaded.set.activities
   );
 
   const roadmapCurrent=roadmapProgress.currentNode;

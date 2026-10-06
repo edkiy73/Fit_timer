@@ -292,7 +292,10 @@ export function PatternSpeakingView({
         <div className="eyebrow">{t('speaking.mode')}</div>
         <h3><LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} /></h3>
         <div className="drill-result">
-          <strong>{t('speaking.score',{correct:hits,total:base})}</strong>
+          {/* Phrases checked by hand are said, not failed: do not report «0 recognised» for them. */}
+          <strong>{Object.values(firstPassGrades).some(grade=>grade==='neutral')
+            ? t('speaking.scoreManual',{correct:hits,total:base,manual:Object.values(firstPassGrades).filter(grade=>grade==='neutral').length})
+            : t('speaking.score',{correct:hits,total:base})}</strong>
           <span>{strongFirstPass?t('speaking.passed'):t('speaking.completed')}</span>
         </div>
         {saveError&&(
@@ -352,7 +355,7 @@ export function PatternSpeakingView({
             {t('speaking.showAnswer')}
           </button>
         </>
-      ) : (
+      ) : active&&(
         <AnswerFeedbackSheet
           tone={verification==='manual'?'near':correct?'correct':'wrong'}
           title={

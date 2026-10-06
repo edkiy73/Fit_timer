@@ -509,6 +509,7 @@ export const ru = {
   'speaking.gaveUp': 'Вот как правильно',
   'speaking.gaveUpHint': 'Фраза вернётся в работу над ошибками.',
   'speaking.sessionStats': 'Распознано: {correct} из {total}',
+  'speaking.scoreManual': 'Распознано {correct} из {total} · сверено вручную {manual}',
   'speaking.score': '{correct} из {total} распознано',
   'speaking.passed': 'Отлично! Все фразы распознаны с первого раза.',
   'speaking.completed': 'Все фразы пройдены.',

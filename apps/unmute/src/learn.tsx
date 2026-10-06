@@ -29,7 +29,7 @@ import { TheoryContent } from './theory-content';
 import { ExerciseKind } from './exercise-kind';
 import { WordChips, answerWords, buildChips, chipsText } from './word-chips';
 import { AnswerModeTransition } from './answer-mode-transition';
-import { isNodeRequirementComplete, practiceProgressComplete } from './engine/course-progress';
+import { effectiveNodeRequirements, isNodeRequirementComplete, practiceProgressComplete } from './engine/course-progress';
 import { roadmapProgressFromDocument } from './progress-actions';
 import { buildCourseReviewSession } from './review-session';
 import { activitySaveClock } from './activity-progress';
@@ -74,7 +74,7 @@ export function firstIncompleteRequirementIndex(
   activities:Activity[],
   progress:CourseProgressDocument
 ):number{
-  const missing=missingForNode(node,progress);
+  const missing=missingForNode(node,progress,activities);
   const missingIds=new Set([
     ...missing.unseen,
     ...missing.practice.map(item=>item.activityId)
@@ -422,12 +422,13 @@ function remapLessonRun(snapshot:LessonRunSnapshot,steps:Activity[]):LessonRunSn
 }
 
 
-/** What still keeps the day from counting: practice not passed yet, steps not done. */
-export function missingForNode(node:RoadmapNode,progress:CourseProgressDocument){
+/** What still keeps the day from counting: practice not passed yet, steps not done.
+ * Uses the same rule as day completion, also for days without an explicit contract. */
+export function missingForNode(node:RoadmapNode,progress:CourseProgressDocument,activities?:readonly Activity[]){
   const state=roadmapProgressFromDocument(progress);
   const practice:{activityId:string;mode:PracticeSrsKind}[]=[];
   const unseen:string[]=[];
-  for(const requirement of node.completion?.requirements??[]){
+  for(const requirement of effectiveNodeRequirements(node,activities)??[]){
     if(isNodeRequirementComplete(requirement,node.id,state))continue;
     if(isPracticeCompletionRequirement(requirement)){
       for(const mode of requirement.modes){
@@ -501,7 +502,7 @@ export function firstMissingRequirementTarget(
   steps:Activity[],
   progress:CourseProgressDocument
 ):MissingRequirementTarget|null{
-  const missing=missingForNode(node,progress);
+  const missing=missingForNode(node,progress,steps);
   const candidates:{index:number;sequence:number;mode?:PracticeSrsKind}[]=[];
   let sequence=0;
   for(const id of missing.unseen){
@@ -985,9 +986,8 @@ export function NodeRunnerView({
     if(candidate&&!nodeComplete&&!checking&&!finished){
       clearCompletionCandidate(state.set.id,node.id);
     }
-    if(finished&&!nodeComplete&&!checking){
-      clearLessonRun(state.set.id,node.id);
-    }
+    // A finished section that did not complete the day keeps its run: partial practice
+    // positions live in it, and the learner continues the same day.
   },[runHydrated,state?.set.id,node?.id,nodeComplete,checking,finished]);
 
   const finish=async()=>{
@@ -1081,7 +1081,7 @@ export function NodeRunnerView({
   }
 
   if(finished&&node&&state){
-    const missing=missingForNode(node,state.progress);
+    const missing=missingForNode(node,state.progress,state.set.activities);
     const summaryTaskResults=taskSectionRef.current?.firstPassResults??firstPassResults;
     const summaryQuality=buildLessonSummaryQuality(steps,summaryTaskResults,practiceQuality);
     const qualityLabelKey:Record<LessonSummaryQualityRow['id'],string>={

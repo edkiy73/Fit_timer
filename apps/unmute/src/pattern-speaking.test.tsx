@@ -103,7 +103,7 @@ describe('pattern speaking',()=>{
         'p2':'neutral'
       }
     ));
-    expect(await screen.findByText('1 из 2 распознано')).toBeTruthy();
+    expect(await screen.findByText('Распознано 1 из 2 · сверено вручную 1')).toBeTruthy();
     expect(screen.getByText('Все фразы пройдены.')).toBeTruthy();
 
     await user.click(screen.getByRole('button',{name:'Далее'}));

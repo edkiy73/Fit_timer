@@ -267,7 +267,7 @@ export function PatternListeningView({
             </button>
           ))}
         </div>
-      ) : (
+      ) : active&&(
         <AnswerFeedbackSheet
           tone={isCorrect?'correct':'wrong'}
           title={isCorrect?t('learn.correct'):t('listening.incorrect')}
