@@ -434,7 +434,7 @@ export function buildCourseSet(model,lexicon=null){
       }
       if(completion&&completion.patternId){
         completionRequirements.push({
-          kind:'practice-started',
+          kind:'practice-completed',
           activityId:completion.patternId,
           modes:['drill','listening','speaking']
         });
