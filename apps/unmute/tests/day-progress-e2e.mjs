@@ -159,9 +159,9 @@ try{
   );
 
   for(let index=0;index<19;index++){
-    const option=page.getByRole('radio',{name:/^Верно/}).first();
+    const option=page.locator('label.learn-option',{hasText:'Верно'}).first();
     await option.click();
-    await page.getByRole('radio',{name:/^Верно/}).first().click();
+    await option.click();
     const next=page.getByRole('button',{name:'Далее',exact:true});
     await next.waitFor({timeout:5000});
     await next.click();
