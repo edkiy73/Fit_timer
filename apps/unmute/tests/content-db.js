@@ -41,6 +41,21 @@ const sample={
 
 (async()=>{
   Content.validateSet(sample);
+
+  const practiceSet=JSON.parse(JSON.stringify(sample));
+  practiceSet.activities.push({
+    id:'pattern.test',revision:1,type:'pattern-drill',tags:[],revisionProgress:'preserve',lexiconRefs:[],
+    pattern:{ru:'Фразы'},modes:['drill','listening','speaking'],
+    items:[{id:'pattern.test.item',prompt:{ru:'Я здесь'},answer:{accepted:['I am here'],nearMiss:true,caseSensitive:false}}]
+  });
+  practiceSet.roadmaps[0].nodes[0].activityIds.push('pattern.test');
+  practiceSet.roadmaps[0].nodes[0].completion={
+    mode:'all',
+    requirements:[{kind:'practice-completed',activityId:'pattern.test',modes:['drill','listening','speaking']}]
+  };
+  Content.validateSet(practiceSet);
+  practiceSet.roadmaps[0].nodes[0].completion.requirements[0].kind='practice-started';
+  Content.validateSet(practiceSet);
   const put=await call({method:'POST',headers:{'x-admin-key':encodeURIComponent(process.env.ADMIN_KEY)},body:{action:'draft_put',set:sample}});
   assert.equal(put.status,200);
 

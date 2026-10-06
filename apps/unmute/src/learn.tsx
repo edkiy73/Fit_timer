@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
-import type { Activity, RoadmapNode } from './content/schema';
+import { isPracticeCompletionRequirement, type Activity, type RoadmapNode } from './content/schema';
 import type { CourseProgressDocument } from './progress';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
@@ -339,7 +339,7 @@ export function missingForNode(node:RoadmapNode,progress:CourseProgressDocument)
   const unseen:string[]=[];
   for(const requirement of node.completion?.requirements??[]){
     if(isNodeRequirementComplete(requirement,node.id,state))continue;
-    if(requirement.kind==='practice-started'){
+    if(isPracticeCompletionRequirement(requirement)){
       for(const mode of requirement.modes){
         const record=state.practice[mode]?.[requirement.activityId];
         if(!record||!practiceProgressComplete(record))practice.push({activityId:requirement.activityId,mode});

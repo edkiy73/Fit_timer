@@ -861,35 +861,35 @@ Merge не должен превращать completed mode с `box=0` обра�
 
 Чтобы не повторять историю с огромной правкой, делать последовательно.
 
-### PR A — semantics tests
+### PR A — semantics / blocking corrections — ✅ #590–#593
 
-Только тесты и минимальная правка `box=0 == completed run`.
+Regular tasks, speed, listening и speaking не выпускают ошибку из correction queue до успешного исправления. Completion practice отделён от силы SRS: слабый `box=0` допустим у завершённого режима.
 
-### PR B — DayProgress selector
+### PR B — DayProgress selector — ✅ #594
 
-Новый модуль + unit matrix, без UI.
+Добавлен единый `DayProgress` с реальными required units и матрицей 19 + 8 + 8 + 8 = 43. Today читает тот же resolved progress и active same-device state.
 
-### PR C — Today + Route
+### PR C — Today + Route — ✅ #594 · #595
 
-Перевести обе поверхности на selector.
+Today и Route переведены на один selector; raw `activityIds.length` больше не является learner progress.
 
-### PR D — Runner flow
+### PR D — Runner flow — ✅ #596
 
-Автопереход между required sections + единый final state.
+Default flow автоматически продолжает незакрытые required sections; обычные и practice corrections блокируют переход, верхний UI показывает оставшиеся ошибки.
 
-### PR E — resume integration
+### PR E — resume integration — ✅ #597
 
-DayProgress начинает читать active LessonRun; kill/reopen tests.
+Один run переживает section switching; Tasks и каждый practice mode сохраняют точную позицию/очередь. Kill/reopen на том же устройстве восстанавливает состояние, а Today читает active LessonRun.
 
-### PR F — summary metrics
+### PR F — summary metrics — ✅ #598
 
-Раздельная точность по section.
+Финальный экран разделяет first-pass quality по Tasks / Speed / Listening / Speaking и не смешивает разные метрики в один общий процент.
 
-### PR G — schema naming cleanup
+### PR G — schema naming cleanup — ✅ #599
 
-`practice-completed` + importer/admin compatibility.
+Новый/imported контент пишет `practice-completed`; старый `practice-started` остаётся полностью читаемым в schema/server/runner/section logic.
 
-Каждый PR должен проходить весь UnMute check до merge.
+Каждый PR проходит полный UnMute/AppBase check до merge.
 
 ---
 

@@ -79,7 +79,7 @@ function validateNode(node){
         if(!Array.isArray(requirement.activityIds)||!requirement.activityIds.length||requirement.activityIds.some(ref=>!cleanId(ref))){
           throw new Error(`bad_seen_requirement:${id}`);
         }
-      }else if(requirement.kind==='practice-started'){
+      }else if((requirement.kind==='practice-completed'||requirement.kind==='practice-started')){
         if(!cleanId(requirement.activityId)||!Array.isArray(requirement.modes)||!requirement.modes.length
           || requirement.modes.some(mode=>!['drill','listening','speaking'].includes(mode))){
           throw new Error(`bad_practice_requirement:${id}`);
@@ -288,7 +288,7 @@ function validateSet(input){
             if(!activities.has(activityId)) throw new Error(`unknown_completion_activity:${nodeId}:${activityRaw}`);
           }
         }
-        if(requirement.kind==='practice-started'){
+        if((requirement.kind==='practice-completed'||requirement.kind==='practice-started')){
           const activityId=cleanId(requirement.activityId);
           const activity=activities.get(activityId);
           if(!activity) throw new Error(`unknown_completion_practice:${nodeId}:${requirement.activityId}`);

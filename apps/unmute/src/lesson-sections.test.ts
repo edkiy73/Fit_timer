@@ -15,7 +15,7 @@ const node:RoadmapNode={
     mode:'all',
     requirements:[
       {kind:'activity-seen',activityIds:['theory','choice']},
-      {kind:'practice-started',activityId:'pattern',modes:['drill','listening','speaking']}
+      {kind:'practice-completed',activityId:'pattern',modes:['drill','listening','speaking']}
     ]
   },
   optional:false

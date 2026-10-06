@@ -16,7 +16,7 @@
 | Speed drill | ✅ #528 | одна самооценка после показа ответа; скорость считается автоматически |
 | Exit урока | ✅ #529 · #580 | подтверждение выхода всегда выше feedback; обещание «прогресс сохранён» теперь включает незавершённую позицию внутри speed/listening/speaking |
 | Review | ✅ #530/#539 · #580 | конечная дневная сессия; #580 убирает blocker, который при переходе из «Повтора» в другой dock-tab ошибочно отправлял на «Сегодня» |
-| Today / Route | ✅ #531/#532 · #555 · #580 | иерархия Today и единые статусы Route; CTA «Скажи вслух» теперь прямо говорит «Начать практику», потому что открывает speaking-упражнение, а не просто урок |
+| Today / Route | ✅ #531/#532 · #555 · #580 · #594/#595 | иерархия Today и единые статусы Route; обе поверхности используют canonical DayProgress (например 19 + 8 + 8 + 8 = 43), а CTA «Скажи вслух» открывает speaking-практику напрямую |
 | Onboarding / Profile / Dictionary / Paywall | ✅ #533–#536 | упрощены и приведены к общей системе |
 | Админка: tabs / nested state | ✅ #537/#540 | основной раздел и вложенный контекст переживают refresh |
 | Админка: bulk dictionary | ✅ #541 | 3-шаговый wizard |
@@ -25,7 +25,7 @@
 | Терминология learner UI | ✅ #544 | пользовательские тексты приведены к «день / урок / задание / практика / повтор» |
 | Save/error semantics | ✅ #545 | урок, Review и practice явно говорят, что результат не засчитан/не сохранён; retry повторяет именно сохранение |
 | Admin draft/review/release flow | ✅ #546 | курсы и словарь показывают единый путь «Черновик → Проверен → Готов к выпуску → Выпущен» и один release action area |
-| Practice progress | ✅ #555 · #580 | один верхний segmented progress по фразам; #580 убирает ложный 0/N при возврате к режиму и восстанавливает точную позицию незавершённой практики |
+| Practice progress | ✅ #555 · #580 · #590–#599 | один верхний segmented progress по фразам; ошибки блокируются до исправления; Today/Route считают реальные required units; section switching/reload сохраняет exact state; итог разделяет качество Tasks/Speed/Listening/Speaking; schema использует `practice-completed` с legacy compatibility |
 | Рассылки в настройках | ✅ #555 | пользователь управляет News/Offers отдельно для push и email; Core campaign delivery различает категории `news`/`offers` |
 | Word of the Day / Route complexity | P2 | продуктовый/polish вопрос, ключевые сценарии не блокирует |
 | Motion / premium polish | ✅ foundation #497–#505 · navigation #547 · core screens #548 · Route/sheets/states #549 · forms/settings/paywall #550 · final consistency #551 | финальный pass выровнял оставшиеся service surfaces в drill/listening/AI/dictionary/notifications; hardcoded малые радиусы остались только у компактных controls/chips/skeletons |

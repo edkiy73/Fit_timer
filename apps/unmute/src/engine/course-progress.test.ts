@@ -90,6 +90,29 @@ describe('course progress and streak',()=>{
     expect(isRoadmapNodeComplete(roadmap.nodes[0]!,progress)).toBe(false);
   });
 
+  it('uses the new practice-completed requirement with the same durable semantics',()=>{
+    const currentNode={
+      ...roadmap.nodes[0]!,
+      completion:{
+        mode:'all' as const,
+        requirements:[
+          {kind:'activity-seen' as const,activityIds:['card.a1','card.a2']},
+          {kind:'practice-completed' as const,activityId:'pattern.a',modes:['drill' as const,'listening' as const,'speaking' as const]}
+        ]
+      }
+    };
+    const progress=emptyRoadmapProgress();
+    progress.seenActivityIds=new Set(['card.a1','card.a2']);
+    progress.practice.drill['pattern.a']={box:0,due:0,completed:true};
+    progress.practice.listening['pattern.a']={box:0,due:0,completed:true};
+    progress.practice.speaking['pattern.a']={box:0,due:0,completed:true};
+
+    expect(isRoadmapNodeComplete(currentNode,progress)).toBe(true);
+
+    progress.practice.speaking['pattern.a']={box:0,due:0,completed:false};
+    expect(isRoadmapNodeComplete(currentNode,progress)).toBe(false);
+  });
+
   it('moves current day through lesson, manual review day and next lesson',()=>{
     const progress=emptyRoadmapProgress();
 

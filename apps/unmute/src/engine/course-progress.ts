@@ -1,4 +1,10 @@
-import type { Roadmap, RoadmapNode, NodeCompletionRequirement } from '../content/schema';
+import {
+  isPracticeCompletionRequirement,
+  type Roadmap,
+  type RoadmapNode,
+  type NodeCompletionRequirement,
+  type PracticeCompletionRequirement
+} from '../content/schema';
 import type { PracticeSrsKind, PracticeSrsState } from './practice-srs';
 
 export interface LearningCalendarState {
@@ -89,7 +95,7 @@ export function practiceProgressComplete(state:PracticeProgressState|undefined):
 }
 
 function practiceRequirementComplete(
-  requirement:Extract<NodeCompletionRequirement,{kind:'practice-started'}>,
+  requirement:PracticeCompletionRequirement,
   progress:RoadmapProgressState
 ):boolean{
   return requirement.modes.every(mode=>
@@ -106,7 +112,10 @@ export function isNodeRequirementComplete(
   if(requirement.kind==='activity-seen'){
     return requirement.activityIds.every(id=>progress.seenActivityIds.has(id));
   }
-  return practiceRequirementComplete(requirement,progress);
+  if(isPracticeCompletionRequirement(requirement)){
+    return practiceRequirementComplete(requirement,progress);
+  }
+  return false;
 }
 
 export function isRoadmapNodeComplete(

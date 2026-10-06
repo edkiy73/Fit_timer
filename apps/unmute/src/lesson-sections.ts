@@ -1,5 +1,10 @@
 import type { CourseProgressDocument } from './progress';
-import type { Activity, CourseSet, RoadmapNode } from './content/schema';
+import {
+  isPracticeCompletionRequirement,
+  type Activity,
+  type CourseSet,
+  type RoadmapNode
+} from './content/schema';
 import type { PracticeSrsKind } from './engine/practice-srs';
 import { practiceProgressComplete } from './engine/course-progress';
 
@@ -57,7 +62,7 @@ function practiceRequirementState(
   const complete=Boolean(record&&!record.deleted&&practiceProgressComplete(record));
   if(node.completion){
     const required=node.completion.requirements.some(requirement=>
-      requirement.kind==='practice-started'&&
+      isPracticeCompletionRequirement(requirement)&&
       requirement.activityId===activity.id&&
       requirement.modes.includes(mode)
     );

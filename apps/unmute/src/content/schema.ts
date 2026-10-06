@@ -127,6 +127,12 @@ export const nodeCompletionRequirementSchema = z.discriminatedUnion('kind', [
     activityIds: z.array(idSchema).min(1),
   }),
   z.object({
+    kind: z.literal('practice-completed'),
+    activityId: idSchema,
+    modes: z.array(z.enum(['drill','listening','speaking'])).min(1),
+  }),
+  // Legacy name kept readable for already-published/custom content.
+  z.object({
     kind: z.literal('practice-started'),
     activityId: idSchema,
     modes: z.array(z.enum(['drill','listening','speaking'])).min(1),
@@ -239,6 +245,16 @@ export type Roadmap = z.infer<typeof roadmapSchema>;
 export type RoadmapNode = z.infer<typeof roadmapNodeSchema>;
 export type NodeCompletion = z.infer<typeof nodeCompletionSchema>;
 export type NodeCompletionRequirement = z.infer<typeof nodeCompletionRequirementSchema>;
+export type PracticeCompletionRequirement =
+  | Extract<NodeCompletionRequirement,{kind:'practice-completed'}>
+  | Extract<NodeCompletionRequirement,{kind:'practice-started'}>;
+
+export function isPracticeCompletionRequirement(
+  requirement:NodeCompletionRequirement
+):requirement is PracticeCompletionRequirement{
+  return requirement.kind==='practice-completed'||requirement.kind==='practice-started';
+}
+
 export type SetResource = z.infer<typeof setResourceSchema>;
 export type PhraseCollectionResource = z.infer<typeof phraseCollectionResourceSchema>;
 export type VerbTableResource = z.infer<typeof verbTableResourceSchema>;
@@ -275,7 +291,7 @@ export function validateCourseSet(input: unknown): CourseSet {
             if (!activityIds.has(activityId)) throw new Error(`Unknown completion activity ${activityId} in ${node.id}`);
           }
         }
-        if (requirement.kind === 'practice-started' && !activityIds.has(requirement.activityId)) {
+        if (isPracticeCompletionRequirement(requirement) && !activityIds.has(requirement.activityId)) {
           throw new Error(`Unknown completion practice ${requirement.activityId} in ${node.id}`);
         }
       }

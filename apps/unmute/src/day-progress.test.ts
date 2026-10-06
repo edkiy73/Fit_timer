@@ -43,7 +43,7 @@ const node:RoadmapNode={
     mode:'all',
     requirements:[
       {kind:'activity-seen',activityIds:cards.map(card=>card.id)},
-      {kind:'practice-started',activityId:pattern.id,modes:['drill','listening','speaking']}
+      {kind:'practice-completed',activityId:pattern.id,modes:['drill','listening','speaking']}
     ]
   },
   optional:false
