@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CourseSet, RoadmapNode } from './content/schema';
 import { emptyCourseProgress } from './progress';
 import type { DayProgress } from './day-progress';
-import { courseCells, courseColumns, dayPart, dayWave, waveDensity, weekLevels } from './today-visuals';
+import { courseCells, courseRows, dayPart, dayWave, waveDensity, weekLevels } from './today-visuals';
 import { activitySaveClock } from './activity-progress';
 
 const set={activities:[
@@ -53,9 +53,10 @@ describe('courseCells',()=>{
       {node:{id:'d3'},complete:false}
     ],'d2');
     expect(cells.map(cell=>cell.state)).toEqual(['done','current','ahead']);
-    expect(courseColumns(40)).toBe(10);
-    expect(courseColumns(12)).toBe(10);
-    expect(courseColumns(60)).toBe(15);
+    expect(courseRows(6)).toBe(1);
+    expect(courseRows(13)).toBe(2);
+    expect(courseRows(40)).toBe(4);
+    expect(courseRows(52)).toBe(6);
   });
 });
 

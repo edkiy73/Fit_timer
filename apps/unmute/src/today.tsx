@@ -27,7 +27,7 @@ import type { CourseSet, RoadmapNode } from './content/schema';
 import { getDayProgress, type ActiveDayProgress } from './day-progress';
 import { readActiveDayProgress } from './day-progress-local';
 import type { DayProgressSectionId } from './day-progress';
-import { courseCells, courseColumns, dayPart, dayWave, weekLevels } from './today-visuals';
+import { courseCells, dayPart, dayWave, weekLevels } from './today-visuals';
 import { CourseMosaic, DayWave, WeekEqualizer } from './today-visuals-ui';
 import { clearRecentDayCompletion, readRecentDayCompletion } from './recent-day-completion';
 import {
@@ -331,7 +331,6 @@ export function TodayView({
             <strong className="tile-number streak-number course-number"><AnimatedNumber value={coursePercent} suffix="%" /><span className="tile-unit">{t('today.courseUnit')}</span></strong>
             <CourseMosaic
               cells={cells}
-              columns={courseColumns(cells.length)}
               caption={t('today.courseMiniDone',{done:state.roadmapProgress.completedCount,total:state.roadmapProgress.requiredCount})}
             />
           </button>

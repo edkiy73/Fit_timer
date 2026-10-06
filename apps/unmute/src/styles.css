@@ -1668,8 +1668,9 @@ span.legend-item{cursor:default}
 .tile-course-mini:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .tile-course-mini .mini-card-head{display:flex;align-items:center;gap:8px}
 .course-mosaic{display:grid;gap:5px;margin-top:auto}
-.course-mosaic-grid{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:3px}
-.course-cell{aspect-ratio:1;border-radius:3px;background:color-mix(in srgb,var(--ink) 8%,transparent);
+.course-mosaic-grid{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-template-rows:repeat(var(--rows),minmax(0,1fr));gap:3px;height:36px}
+.course-mosaic-grid.is-dense{gap:2px}
+.course-cell{min-height:0;border-radius:3px;background:color-mix(in srgb,var(--ink) 8%,transparent);
   animation:cell-in 420ms var(--motion-spring-ease) both;animation-delay:calc(var(--b) * 12ms + 150ms)}
 .course-cell.is-done{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 60%,var(--streak)))}
 .course-cell.is-current{background:color-mix(in srgb,var(--accent) 22%,transparent);box-shadow:inset 0 0 0 1.5px var(--accent);

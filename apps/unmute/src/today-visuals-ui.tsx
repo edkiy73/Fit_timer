@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { DayProgress, DayProgressSectionId } from './day-progress';
-import type { CourseCell, WaveBar } from './today-visuals';
+import { COURSE_MOSAIC_COLUMNS, courseRows, type CourseCell, type WaveBar } from './today-visuals';
 
 const SECTION_KEY:Record<DayProgressSectionId,string>={
   tasks:'learn.summaryTasks',
@@ -85,10 +85,15 @@ export function WeekEqualizer({levels,labels,label}:{levels:number[];labels:stri
 }
 
 /** The course as a mosaic of days, ten per row: the day on screen glows. */
-export function CourseMosaic({cells,columns,caption}:{cells:CourseCell[];columns:number;caption:string}){
+export function CourseMosaic({cells,caption}:{cells:CourseCell[];caption:string}){
+  const rows=courseRows(cells.length);
   return (
     <div className="course-mosaic">
-      <div className="course-mosaic-grid" style={{'--cols':columns} as CSSProperties} aria-hidden="true">
+      <div
+        className={'course-mosaic-grid'+(rows>4?' is-dense':'')}
+        style={{'--cols':COURSE_MOSAIC_COLUMNS,'--rows':rows} as CSSProperties}
+        aria-hidden="true"
+      >
         {cells.map((cell,index)=>(
           <span key={cell.id} className={'course-cell is-'+cell.state} style={{'--b':index} as CSSProperties} />
         ))}

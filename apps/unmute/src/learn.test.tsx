@@ -406,8 +406,7 @@ describe('node activity runner',()=>{
     const drillNext=screen.getByRole('button',{name:'Далее'});
     await waitFor(()=>expect(drillNext.hasAttribute('disabled')).toBe(false));
     await user.click(drillNext);
-    expect(await screen.findByText('Паттерн пройден')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:'Далее'}));
+    expect(screen.queryByText('Паттерн пройден')).toBeNull();
 
     expect(await screen.findByText('Тренируем слух: понимать фразу с первого раза, без текста.')).toBeTruthy();
     await waitFor(()=>{

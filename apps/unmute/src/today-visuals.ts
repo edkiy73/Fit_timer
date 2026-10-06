@@ -137,9 +137,11 @@ export function courseCells(
     }));
 }
 
-/** Columns for the mosaic: ten per row for a usual course, wider rows for very long ones. */
-export function courseColumns(count:number):number{
-  return count<=40?Math.min(10,Math.max(1,count)):Math.ceil(count/4);
+export const COURSE_MOSAIC_COLUMNS=10;
+
+/** Rows of the mosaic: always ten cells of the same width per row; rows share a fixed height. */
+export function courseRows(count:number):number{
+  return Math.max(1,Math.ceil(count/COURSE_MOSAIC_COLUMNS));
 }
 
 export type DayPart='morning'|'day'|'evening'|'night';

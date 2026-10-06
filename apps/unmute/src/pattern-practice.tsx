@@ -162,8 +162,10 @@ export function PatternPracticeView({
 
   const nextMode=(current:PracticeSrsKind)=>{
     if(single){
+      // A training opened on its own hands control back to the lesson, which routes to the
+      // next unfinished part of the day (tasks or another training) — no «all done» stop here.
       setSingle(false);
-      setMode('complete');
+      onDone();
       return;
     }
     const index=activity.modes.indexOf(current);
