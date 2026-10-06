@@ -135,6 +135,17 @@ const ok=(name,value)=>{
 const appears=(locator,timeout=5000)=>
   locator.waitFor({timeout}).then(()=>true,()=>false);
 
+async function twoTapChoice(page,label){
+  const option=page.locator('label.learn-option',{
+    hasText:new RegExp('^'+label+'(?:Нажми ещё раз)?$')
+  }).first();
+  await option.click();
+  await option.click();
+  const next=page.locator('.learn-feedback-next');
+  await next.waitFor({timeout:5000});
+  return next;
+}
+
 const browser=await chromium.launch(CHROME?{executablePath:CHROME}:{});
 try{
   const context=await browser.newContext({
@@ -159,14 +170,7 @@ try{
   );
 
   for(let index=0;index<19;index++){
-    const option=page.locator('label.learn-option',{hasText:/^Верно(?:Нажми ещё раз)?$/}).first();
-    // Real learner contract: first tap selects, second tap confirms. Waiting for the
-    // feedback action proves the second tap was accepted without coupling the e2e to
-    // the transient helper copy/animation between those two taps.
-    await option.click();
-    await option.click();
-    const next=page.locator('.learn-feedback-next');
-    await next.waitFor({timeout:5000});
+    const next=await twoTapChoice(page,'Верно');
     await next.click();
   }
 
@@ -221,6 +225,89 @@ try{
   if(errors.length)console.log(errors.join('\n'));
 
   await context.close();
+
+  // A second fresh anonymous device checks the original failure mode:
+  // attempted-but-wrong regular tasks must not inflate the day counter.
+  const correctionContext=await browser.newContext({
+    viewport:{width:390,height:800},
+    locale:'ru-RU'
+  });
+  await correctionContext.addInitScript(()=>{
+    try{localStorage.setItem('unmute.onboarding.v1','1');}catch{}
+  });
+  const correction=await correctionContext.newPage();
+  const correctionErrors=[];
+  correction.on('pageerror',error=>correctionErrors.push(String(error)));
+
+  await correction.goto(ROOT+'#/');
+  await correction.getByRole('button',{name:'Начать',exact:true}).click();
+  await correction.waitForURL(/#\/learn\/day-3/,{timeout:5000});
+  await correction.getByRole('heading',{name:'Задание 1'}).waitFor({timeout:8000});
+
+  for(let index=0;index<19;index++){
+    const next=await twoTapChoice(correction,'Неверно');
+    await next.click();
+  }
+
+  ok(
+    'all 19 wrong regular first-pass answers enter correction with 19 still unresolved',
+    await appears(correction.getByText('Работа над ошибками · осталось 19',{exact:true}),8000)
+  );
+  await correction.waitForFunction(()=>{
+    const raw=localStorage.getItem('unmute.lesson-run:general-foundation:day-3');
+    if(!raw)return false;
+    try{
+      const run=JSON.parse(raw);
+      const results=run.taskSection?.firstPassResults??run.firstPassResults??{};
+      return Object.keys(results).length===19;
+    }catch{return false;}
+  });
+
+  await correction.goto(ROOT+'#/');
+  ok(
+    'wrong first-pass attempts do not count as completed day units',
+    await appears(correction.getByText(/0 из 43 заданий/),8000)
+  );
+  ok(
+    'Today still offers Continue because the unfinished run exists',
+    await appears(correction.getByRole('button',{name:'Продолжить',exact:true}),3000)
+  );
+
+  await correction.reload();
+  ok(
+    'reload preserves 0/43 plus the unresolved correction queue',
+    await appears(correction.getByText(/0 из 43 заданий/),8000)
+  );
+
+  await correction.getByRole('button',{name:'Продолжить',exact:true}).click();
+  await correction.waitForURL(/#\/learn\/day-3/,{timeout:5000});
+  ok(
+    'resume returns to the 19-item correction queue',
+    await appears(correction.getByText('Работа над ошибками · осталось 19',{exact:true}),8000)
+  );
+
+  const correctedNext=await twoTapChoice(correction,'Верно');
+  await correctedNext.click();
+  ok(
+    'one corrected task reduces the unresolved queue to 18',
+    await appears(correction.getByText('Работа над ошибками · осталось 18',{exact:true}),8000)
+  );
+
+  await correction.goto(ROOT+'#/');
+  ok(
+    'one resolved correction moves canonical progress from 0/43 to 1/43',
+    await appears(correction.getByText(/1 из 43 заданий/),8000)
+  );
+  await correction.goto(ROOT+'#/course');
+  ok(
+    'Route agrees with Today after the correction',
+    await appears(correction.getByText('1/43',{exact:true}),8000)
+  );
+
+  ok('wrong-first-pass flow has no runtime errors',correctionErrors.length===0);
+  if(correctionErrors.length)console.log(correctionErrors.join('\n'));
+
+  await correctionContext.close();
 }catch(error){
   bad++;
   console.error(error);
