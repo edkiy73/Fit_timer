@@ -159,9 +159,11 @@ try{
   );
 
   for(let index=0;index<19;index++){
-    const option=page.locator('label.learn-option',{hasText:'Верно'}).first();
+    const option=page.locator('label.learn-option',{hasText:/^Верно(?:Нажми ещё раз)?$/}).first();
+    // Real learner contract: first tap selects, second tap confirms. Waiting for the
+    // feedback action proves the second tap was accepted without coupling the e2e to
+    // the transient helper copy/animation between those two taps.
     await option.click();
-    await option.getByText('Нажми ещё раз',{exact:true}).waitFor({timeout:3000});
     await option.click();
     const next=page.locator('.learn-feedback-next');
     await next.waitFor({timeout:5000});
