@@ -26,6 +26,8 @@ export interface TimedPracticeState extends PracticeSrsState, RecordMeta {
   deleted?:boolean;
   /** The learner finished this required practice mode. Independent from SRS box. */
   completed?:boolean;
+  /** This mode writes phrase-level SRS; do not fall back to whole-pattern Review. */
+  itemized?:boolean;
 }
 
 export interface TimedPracticeItemState extends PracticeSrsState, RecordMeta {
