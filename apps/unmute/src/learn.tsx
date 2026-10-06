@@ -160,6 +160,14 @@ const MODE_KEY:Record<PracticeSrsKind,string>={drill:'kind.drill',listening:'kin
 const LESSON_RUN_VERSION=1;
 export type LessonRunMode='first'|'resume'|'replay';
 
+interface PracticeRunQuality{
+  activityId:string;
+  mode:PracticeSrsKind;
+  correct:number;
+  total:number;
+}
+type PracticeQualityMap=Record<string,PracticeRunQuality>;
+
 interface TaskSectionSnapshot{
   order:number[];
   firstPass:number;
@@ -196,6 +204,8 @@ interface LessonRunSnapshot{
   firstPassResults:Record<number,boolean>;
   /** Exact regular-task state kept while practice/theory is open. */
   taskSection?:TaskSectionSnapshot;
+  /** First-pass quality of completed practice modes in this run. */
+  practiceQuality?:PracticeQualityMap;
   shuffleSeed?:string;
   practiceMode?:PracticeSrsKind;
   /** Stable id used to make answer writes idempotent across retries/resume. */
@@ -346,6 +356,45 @@ export interface MissingRequirementTarget {
   mode?:PracticeSrsKind;
 }
 
+export interface LessonSummaryQualityRow{
+  id:'tasks'|PracticeSrsKind;
+  correct:number;
+  total:number;
+}
+
+export function buildLessonSummaryQuality(
+  steps:Activity[],
+  taskResults:Record<number,boolean>,
+  practiceQuality:PracticeQualityMap
+):{rows:LessonSummaryQualityRow[];corrected:number}{
+  const rows:LessonSummaryQualityRow[]=[];
+  const taskIndices=steps
+    .map((item,index)=>({item,index}))
+    .filter(({item})=>item.type==='choice'||item.type==='text-input'||item.type==='translation')
+    .map(({index})=>index);
+  if(taskIndices.length){
+    rows.push({
+      id:'tasks',
+      correct:taskIndices.filter(index=>taskResults[index]===true).length,
+      total:taskIndices.length
+    });
+  }
+  for(const mode of ['drill','listening','speaking'] as PracticeSrsKind[]){
+    const values=Object.values(practiceQuality).filter(item=>item.mode===mode);
+    const total=values.reduce((sum,item)=>sum+item.total,0);
+    if(!total)continue;
+    rows.push({
+      id:mode,
+      correct:values.reduce((sum,item)=>sum+item.correct,0),
+      total
+    });
+  }
+  return {
+    rows,
+    corrected:rows.reduce((sum,row)=>sum+Math.max(0,row.total-row.correct),0)
+  };
+}
+
 /** First unresolved required activity in the lesson's actual order. */
 export function firstMissingRequirementTarget(
   node:RoadmapNode,
@@ -426,6 +475,7 @@ export function NodeRunnerView({
   const [theoryOpen,setTheoryOpen]=useState(false);
   const [score,setScore]=useState({correct:0,total:0});
   const [firstPassResults,setFirstPassResults]=useState<Record<number,boolean>>({});
+  const [practiceQuality,setPracticeQuality]=useState<PracticeQualityMap>({});
   const [exitOpen,setExitOpen]=useState(false);
   const [finished,setFinished]=useState(false);
   const [checking,setChecking]=useState(false);
@@ -492,6 +542,7 @@ export function NodeRunnerView({
     setShuffleSeed(randomSeed());
     if(newRun){
       taskSectionRef.current=null;
+      setPracticeQuality({});
       setRunId(randomSeed());
     }
     setExitOpen(false);
@@ -549,6 +600,7 @@ export function NodeRunnerView({
       setShuffleSeed(restored.shuffleSeed??randomSeed());
       setRunId(restored.runId??randomSeed());
       taskSectionRef.current=restored.taskSection??null;
+      setPracticeQuality(restored.practiceQuality??{});
       setPracticeMode(restored.practiceMode);
       setRunMode(
         restored.mode==='replay'||restored.replay
@@ -641,13 +693,14 @@ export function NodeRunnerView({
       score,
       firstPassResults,
       ...(taskSectionRef.current?{taskSection:taskSectionRef.current}:{}),
+      ...(Object.keys(practiceQuality).length?{practiceQuality}:{}),
       shuffleSeed,
       runId,
       mode:runMode,
       ...(practiceMode?{practiceMode}:{}),
       ...(replay?{replay:true}:{})
     });
-  },[runHydrated,state?.set.id,node?.id,stepSignature,order,firstPass,pos,intro,selected,answer,typing,picked,result,nearResult,score,firstPassResults,shuffleSeed,runId,runMode,practiceMode,finished,replay]);
+  },[runHydrated,state?.set.id,node?.id,stepSignature,order,firstPass,pos,intro,selected,answer,typing,picked,result,nearResult,score,firstPassResults,practiceQuality,shuffleSeed,runId,runMode,practiceMode,finished,replay]);
 
   const stepIndex=order[pos];
   const activity=stepIndex===undefined?null:steps[stepIndex]??null;
@@ -1091,10 +1144,31 @@ export function NodeRunnerView({
       ? saveGraded(setId,activity.id,correct,responseKind,operationId)
       : saveGraded(setId,activity.id,correct,undefined,operationId);
   };
-  const practiceSave:NodeRunnerViewProps['savePractice']=(setIdArg,activityId,mode,correct,score)=>
-    recordsAnswers
-      ? savePractice(setIdArg,activityId,mode,correct,score,runId+'|'+activityId+'|'+pos+'|practice:'+mode)
-      : Promise.resolve();
+  const practiceSave:NodeRunnerViewProps['savePractice']=async(setIdArg,activityId,mode,correct,practiceScore)=>{
+    const pattern=state.set.activities.find(item=>item.id===activityId);
+    const total=pattern?.type==='pattern-drill'?pattern.items.length:0;
+    const rememberQuality=()=>{
+      if(!total||typeof practiceScore!=='number')return;
+      const key=activityId+'|'+mode;
+      setPracticeQuality(current=>current[key]
+        ? current
+        : {
+            ...current,
+            [key]:{
+              activityId,
+              mode,
+              correct:Math.max(0,Math.min(total,Math.round(practiceScore*total/100))),
+              total
+            }
+          });
+    };
+    if(!recordsAnswers){
+      rememberQuality();
+      return;
+    }
+    await savePractice(setIdArg,activityId,mode,correct,practiceScore,runId+'|'+activityId+'|'+pos+'|practice:'+mode);
+    rememberQuality();
+  };
   const dialogueSave:typeof saveDialogue=(...args)=>recordsAnswers?saveDialogue(...args):Promise.resolve();
 
   const handleChoice=async(choice:number|null=selected)=>{
