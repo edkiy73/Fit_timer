@@ -363,6 +363,8 @@ describe('node activity runner',()=>{
     await user.click(screen.getByRole('button',{name:'Готово'}));
     await user.click(screen.getByRole('button',{name:'Совпало'}));
     expect(await screen.findByText('1 из 1 вовремя')).toBeTruthy();
+    await waitFor(()=>expect(localStorage.getItem('unmute.lesson-run:general-foundation:day-flow')).toBeTruthy());
+    const flowRunId=String(JSON.parse(localStorage.getItem('unmute.lesson-run:general-foundation:day-flow')!).runId);
 
     const drillNext=screen.getByRole('button',{name:'Далее'});
     await waitFor(()=>expect(drillNext.hasAttribute('disabled')).toBe(false));
@@ -371,6 +373,12 @@ describe('node activity runner',()=>{
     await user.click(screen.getByRole('button',{name:'Далее'}));
 
     expect(await screen.findByText('Тренируем слух: понимать фразу с первого раза, без текста.')).toBeTruthy();
+    await waitFor(()=>{
+      const saved=JSON.parse(localStorage.getItem('unmute.lesson-run:general-foundation:day-flow')!);
+      expect(saved.runId).toBe(flowRunId);
+      expect(saved.mode).toBe('first');
+      expect(saved.practiceMode).toBe('listening');
+    });
     expect(screen.queryByText('День пока не засчитан')).toBeNull();
   });
 
@@ -766,6 +774,7 @@ describe('node activity runner',()=>{
     await waitFor(()=>{
       const saved=JSON.parse(localStorage.getItem('unmute.lesson-run:general-foundation:day-section-resume')!);
       expect(saved.runId).toBe(runId);
+      expect(saved.mode).toBe(beforeSwitch.mode);
       expect(saved.taskSection?.pos).toBe(1);
       expect(saved.taskSection?.firstPassResults?.['0']).toBe(false);
     });
