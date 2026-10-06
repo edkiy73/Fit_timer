@@ -7,7 +7,7 @@ import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
 import { checkAnswer } from './engine/answer-check';
 import { nearMiss } from './engine/answer-near-miss';
-import type { PracticeSrsKind } from './engine/practice-srs';
+import type { PracticeItemGrade, PracticeSrsKind } from './engine/practice-srs';
 import { saveDialogueActivity, saveGradedActivity, saveManualNode, savePracticeActivity, saveSeenActivity } from './activity-progress';
 import type { SpeakText, StartRecognition } from './speech-runtime';
 import { speakText, startRecognition as startSpeechRecognition } from './speech-runtime';
@@ -132,7 +132,8 @@ export interface NodeRunnerViewProps {
     mode:PracticeSrsKind,
     correct:boolean,
     score?:number,
-    operationId?:string
+    operationId?:string,
+    itemGrades?:Readonly<Record<string,PracticeItemGrade>>
   )=>Promise<void>;
   saveDialogue?:(setId:string,activityId:string,score:number)=>Promise<void>;
   saveManual?:(setId:string,nodeId:string)=>Promise<void>;
@@ -1179,7 +1180,14 @@ export function NodeRunnerView({
       ? saveGraded(setId,activity.id,correct,responseKind,operationId)
       : saveGraded(setId,activity.id,correct,undefined,operationId);
   };
-  const practiceSave:NodeRunnerViewProps['savePractice']=async(setIdArg,activityId,mode,correct,practiceScore)=>{
+  const practiceSave=async(
+    setIdArg:string,
+    activityId:string,
+    mode:PracticeSrsKind,
+    correct:boolean,
+    practiceScore?:number,
+    itemGrades?:Readonly<Record<string,PracticeItemGrade>>
+  )=>{
     const pattern=state.set.activities.find(item=>item.id===activityId);
     const total=pattern?.type==='pattern-drill'?pattern.items.length:0;
     const rememberQuality=()=>{
@@ -1201,7 +1209,15 @@ export function NodeRunnerView({
       rememberQuality();
       return;
     }
-    await savePractice(setIdArg,activityId,mode,correct,practiceScore,runId+'|'+activityId+'|'+pos+'|practice:'+mode);
+    await savePractice(
+      setIdArg,
+      activityId,
+      mode,
+      correct,
+      practiceScore,
+      runId+'|'+activityId+'|'+pos+'|practice:'+mode,
+      itemGrades
+    );
     rememberQuality();
   };
   const dialogueSave:typeof saveDialogue=(...args)=>recordsAnswers?saveDialogue(...args):Promise.resolve();
