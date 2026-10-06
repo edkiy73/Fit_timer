@@ -161,6 +161,7 @@ try{
   for(let index=0;index<19;index++){
     const option=page.locator('label.learn-option',{hasText:'Верно'}).first();
     await option.click();
+    await page.getByText('Нажми ещё раз',{exact:true}).waitFor({timeout:3000});
     await option.click();
     const next=page.getByRole('button',{name:'Далее',exact:true});
     await next.waitFor({timeout:5000});
