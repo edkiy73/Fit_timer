@@ -43,6 +43,8 @@ export interface TimedMetric extends RecordMeta {
 
 export interface CourseProgressDocument {
   schemaVersion:1;
+  /** Monotonic reset generation. Legacy documents without it are generation 0. */
+  generation?:number;
   seen:RecordMap<TimedFlag>;
   /** Idempotency keys for graded answers/practice already applied to this document. */
   answerOps:RecordMap<TimedFlag>;
@@ -75,6 +77,8 @@ export interface StatsBucket extends RecordMeta {
 
 export interface StatsProgressDocument {
   schemaVersion:1;
+  /** Monotonic reset generation. Legacy documents without it are generation 0. */
+  generation?:number;
   buckets:RecordMap<StatsBucket>;
   /** Idempotency keys for answers already counted in aggregate stats. */
   answerOps:RecordMap<TimedFlag>;
@@ -103,6 +107,7 @@ const asMap=<T extends RecordMeta>(value:unknown):RecordMap<T> =>
 export function emptyCourseProgress():CourseProgressDocument{
   return {
     schemaVersion:1,
+    generation:0,
     seen:{},
     answerOps:{},
     cards:{},
@@ -115,7 +120,7 @@ export function emptyCourseProgress():CourseProgressDocument{
 }
 
 export function emptyStatsProgress():StatsProgressDocument{
-  return {schemaVersion:1,buckets:{},answerOps:{}};
+  return {schemaVersion:1,generation:0,buckets:{},answerOps:{}};
 }
 
 export function emptyWordsProgress():WordsProgressDocument{
@@ -131,6 +136,9 @@ export function parseCourseProgress(raw:string|null):CourseProgressDocument{
     const practiceItems=isObject(parsed.practiceItems)?parsed.practiceItems:{};
     return {
       schemaVersion:1,
+      generation:Number.isInteger(parsed.generation)&&Number(parsed.generation)>=0
+        ? Number(parsed.generation)
+        : 0,
       seen:asMap<TimedFlag>(parsed.seen),
       answerOps:asMap<TimedFlag>(parsed.answerOps),
       cards:asMap<TimedCardState>(parsed.cards),
@@ -160,6 +168,9 @@ export function parseStatsProgress(raw:string|null):StatsProgressDocument{
     if(!isObject(parsed)||parsed.schemaVersion!==1)return emptyStatsProgress();
     return {
       schemaVersion:1,
+      generation:Number.isInteger(parsed.generation)&&Number(parsed.generation)>=0
+        ? Number(parsed.generation)
+        : 0,
       buckets:asMap<StatsBucket>(parsed.buckets),
       answerOps:asMap<TimedFlag>(parsed.answerOps)
     };
@@ -183,8 +194,13 @@ export function mergeCourseProgress(
   local:CourseProgressDocument,
   remote:CourseProgressDocument
 ):CourseProgressDocument{
+  const localGeneration=local.generation??0;
+  const remoteGeneration=remote.generation??0;
+  if(localGeneration>remoteGeneration)return local;
+  if(remoteGeneration>localGeneration)return remote;
   return {
     schemaVersion:1,
+    generation:localGeneration,
     seen:mergeRecordMaps(local.seen,remote.seen),
     answerOps:mergeRecordMaps(local.answerOps,remote.answerOps),
     cards:mergeRecordMaps(local.cards,remote.cards),
@@ -208,8 +224,13 @@ export function mergeStatsProgress(
   local:StatsProgressDocument,
   remote:StatsProgressDocument
 ):StatsProgressDocument{
+  const localGeneration=local.generation??0;
+  const remoteGeneration=remote.generation??0;
+  if(localGeneration>remoteGeneration)return local;
+  if(remoteGeneration>localGeneration)return remote;
   return {
     schemaVersion:1,
+    generation:localGeneration,
     buckets:mergeRecordMaps(local.buckets,remote.buckets),
     answerOps:mergeRecordMaps(local.answerOps,remote.answerOps)
   };
