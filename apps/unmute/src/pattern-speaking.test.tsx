@@ -165,7 +165,7 @@ describe('pattern speaking',()=>{
     await user.click(screen.getByRole('button',{name:'Нажми и скажи'}));
     recognition.result(['I work at home']);
     expect(await screen.findByText('Получилось')).toBeTruthy();
-    await user.click(await screen.findByRole('button',{name:'Завершить'}));
+    await user.click(await screen.findByRole('button',{name:'Далее'}));
 
     await waitFor(()=>expect(savePractice).toHaveBeenCalledWith(
       'general-foundation',

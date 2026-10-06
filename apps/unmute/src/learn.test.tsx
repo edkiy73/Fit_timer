@@ -864,6 +864,45 @@ describe('node activity runner',()=>{
     expect(bar.querySelectorAll('.runner-progress-step.is-wrong')).toHaveLength(1);
   });
 
+  it('does not offer «Завершить» after the last task while practice is still ahead',async()=>{
+    const user=userEvent.setup();
+    const patternActivity={
+      id:'pattern.ahead',revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],pattern:{ru:'Фразы'},modes:['speaking' as const],
+      items:[{id:'p1',prompt:{ru:'Я здесь'},answer:{accepted:['I am here'],nearMiss:true,caseSensitive:false}}]
+    };
+    const aheadNode={
+      id:'day-ahead',kind:'lesson' as const,title:{ru:'Впереди практика'},dayIndex:2,order:1,prerequisites:[],
+      activityIds:['choice.one',patternActivity.id],
+      completion:{mode:'all' as const,requirements:[
+        {kind:'activity-seen' as const,activityIds:['choice.one']},
+        {kind:'practice-started' as const,activityId:patternActivity.id,modes:['speaking' as const]}
+      ]},
+      optional:false
+    };
+    const aheadState:LearnerCourseState={
+      ...state,
+      set:{...state.set,roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[aheadNode]}],activities:[
+        state.set.activities.find(activity=>activity.id==='choice.one')!,
+        patternActivity
+      ]},
+      roadmap:{id:'main',title:{ru:'Путь'},nodes:[aheadNode]},
+      progress:emptyCourseProgress(),
+      roadmapProgress:{nodes:[{node:aheadNode,complete:false,unlocked:true}],currentNode:aheadNode,currentDayIndex:2,completedCount:0,requiredCount:1,courseComplete:false},
+      currentNode:aheadNode,
+      currentDayIndex:2
+    };
+    render(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="learn-ahead.locale" systemLanguages={['ru']}>
+        <NodeRunnerView runtime={{...runtime,state:aheadState}} nodeId={aheadNode.id} onExit={()=>{}}
+          saveSeen={async()=>{}} saveGraded={async()=>{}} savePractice={async()=>{}} />
+      </I18nProvider>
+    );
+    await chooseAnswer(user,'I am here');
+    expect(await screen.findByRole('button',{name:'Далее'})).toBeTruthy();
+    expect(screen.queryByRole('button',{name:'Завершить'})).toBeNull();
+  });
+
   it('keeps the exact task section and run id after switching to practice and killing the view',async()=>{
     const user=userEvent.setup();
     const patternActivity={

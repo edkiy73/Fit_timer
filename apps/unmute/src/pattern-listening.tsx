@@ -273,7 +273,7 @@ export function PatternListeningView({
           title={isCorrect?t('learn.correct'):t('listening.incorrect')}
           actions={
             <button className="primary-button learn-feedback-next" type="button" onClick={next}>
-              {pos+1<items.length?t('learn.next'):t('learn.finish')}
+              {t('learn.next')}
             </button>
           }
         >

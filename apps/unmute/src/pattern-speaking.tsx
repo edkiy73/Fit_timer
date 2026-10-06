@@ -393,7 +393,7 @@ export function PatternSpeakingView({
                   type="button"
                   onClick={()=>advanceAttempt(verification==='recognition'&&correct===true)}
                 >
-                  {verification==='recognition'&&correct===true&&pos+1>=items.length?t('learn.finish'):t('learn.next')}
+                  {t('learn.next')}
                 </button>
               </>
             )

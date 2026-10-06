@@ -1244,6 +1244,9 @@ export function NodeRunnerView({
   const stage=stageForDay(node.dayIndex,state.set.id);
   const sectionStates=lessonSectionStates(state.set,node,state.progress);
   const sectionComplete=(id:LessonSectionId)=>sectionStates.find(section=>section.id===id)?.complete===true;
+  // «Завершить» only when this section is the last unfinished part of the day; otherwise «Далее».
+  const currentSectionId:LessonSectionId|null=isRegularTask(activity??undefined)?'tasks':activity?.type==='pattern-drill'&&practiceMode?practiceMode:null;
+  const otherSectionsPending=sectionStates.some(section=>section.id!=='theory'&&section.id!==currentSectionId&&!section.complete);
   const navChip=(id:LessonSectionId,label:string,active:boolean,onClick:()=>void)=>(
     <button
       key={id}
@@ -1522,7 +1525,7 @@ export function NodeRunnerView({
               />
             )}
             <button className="primary-button learn-feedback-next" type="button" onClick={()=>advance()}>
-              {pos+1<order.length?t('learn.next'):t('learn.finish')}
+              {pos+1<order.length||otherSectionsPending?t('learn.next'):t('learn.finish')}
             </button>
           </>
         }
