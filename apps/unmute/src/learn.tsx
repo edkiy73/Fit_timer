@@ -148,6 +148,8 @@ export interface NodeRunnerViewProps {
   resumeSavedRun?:boolean;
   /** Replay only the regular answer tasks without changing review/progression. */
   replayTasksOnly?:boolean;
+  /** Start an unfinished day visually from the beginning without erasing canonical progress. */
+  startFromBeginning?:boolean;
 }
 
 const isPlan=(activity:Activity)=>activity.type==='theory'&&(activity.tags??[]).includes('plan');
@@ -450,7 +452,8 @@ export function NodeRunnerView({
   startSection,
   startMode,
   resumeSavedRun=false,
-  replayTasksOnly=false
+  replayTasksOnly=false,
+  startFromBeginning=false
 }:NodeRunnerViewProps){
   const {t,locale}=useI18n();
   const state=runtime.state;
@@ -682,7 +685,7 @@ export function NodeRunnerView({
     for(const plan of activities.filter(isPlan)){
       if(!isSeen(state.progress,plan.id))void saveSeen(state.set.id,plan.id).catch(()=>undefined);
     }
-  },[node?.id,state?.set.id,startActivityId,startSection,startMode,stepSignature,resumeSavedRun,replayTasksOnly]);
+  },[node?.id,state?.set.id,startActivityId,startSection,startMode,stepSignature,resumeSavedRun,replayTasksOnly,startFromBeginning]);
 
   useEffect(()=>{
     if(!runHydrated||!state||!node||finished||order.length===0)return;
@@ -1545,6 +1548,7 @@ export function NodeRunnerView({
             {...(practiceMode?{initialMode:practiceMode}:{})}
             showModeNav={false}
             active={activity.type==='pattern-drill'}
+            startFromBeginning={startFromBeginning}
             sessionKey={'unmute.pattern-run:'+setId+':'+node.id+':'+runId+':'+persistentPatternEntry.item.id}
             onModeChange={setPracticeMode}
             onProgress={reportPracticeProgress}
@@ -1621,6 +1625,7 @@ export function NodeRunnerScreen(){
   const startActivityId=search.get('activity')||undefined;
   const resumeSavedRun=search.get('resume')==='1';
   const replayTasksOnly=search.get('tasks')==='1';
+  const startFromBeginning=search.get('start')==='1';
   const leaveLesson=()=>navigate('/',{replace:true});
 
   return (
@@ -1632,6 +1637,7 @@ export function NodeRunnerScreen(){
       {...(startMode?{startMode}:{})}
       {...(resumeSavedRun?{resumeSavedRun:true}:{})}
       {...(replayTasksOnly?{replayTasksOnly:true}:{})}
+      {...(startFromBeginning?{startFromBeginning:true}:{})}
       onExit={leaveLesson}
       onSignIn={()=>navigate('/account?return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
       onAccess={()=>navigate('/access?from=answer&return='+encodeURIComponent('/learn/'+String(params.nodeId||'')+'?resume=1'))}
