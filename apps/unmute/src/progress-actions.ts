@@ -1,8 +1,13 @@
 import { gradeCardSrs } from './engine/card-srs';
 import { gradeSentenceResponse, type SentenceResponseKind } from './engine/sentence-progression';
 import { gradePracticeSrs, type PracticeSrsKind } from './engine/practice-srs';
+import {
+  gradePracticeUnitSrs,
+  type PracticeUnitGrade,
+  type PracticeUnitGradeContext
+} from './engine/practice-unit-srs';
 import type { LearningCalendarState, RoadmapProgressState } from './engine/course-progress';
-import type { CourseProgressDocument, TimedFlag } from './progress';
+import { practiceUnitKey, type CourseProgressDocument, type TimedFlag } from './progress';
 
 function liveIds(records:Record<string,{deleted?:boolean}|undefined>):Set<string>{
   return new Set(Object.entries(records)
@@ -100,6 +105,55 @@ export function gradeCoursePractice(
     answerOps:operationId
       ? {...doc.answerOps,[operationId]:touchedFlag(at)}
       : doc.answerOps,
+  },dayKey,at);
+}
+
+export function gradeCoursePracticeUnit(
+  doc:CourseProgressDocument,
+  activityId:string,
+  itemId:string,
+  mode:PracticeSrsKind,
+  grade:PracticeUnitGrade,
+  context:PracticeUnitGradeContext,
+  todayDay:number,
+  dayKey:string,
+  at:string,
+  operationId?:string
+):CourseProgressDocument{
+  if(operationId&&doc.answerOps[operationId]&&!doc.answerOps[operationId]?.deleted)return doc;
+  const key=practiceUnitKey(activityId,itemId);
+  const previous=doc.practiceUnits[mode][key];
+  const next=gradePracticeUnitSrs(
+    mode,
+    previous&&!previous.deleted?previous:undefined,
+    grade,
+    todayDay,
+    context
+  );
+
+  // Neutral means "close the learning unit, but SRS truth is unknown". Do not create
+  // or touch an interval record; the surrounding lesson still records learning activity.
+  if(!next){
+    return operationId
+      ? {
+          ...withLearningDay(doc,dayKey,at),
+          answerOps:{...doc.answerOps,[operationId]:touchedFlag(at)}
+        }
+      : withLearningDay(doc,dayKey,at);
+  }
+
+  return withLearningDay({
+    ...doc,
+    practiceUnits:{
+      ...doc.practiceUnits,
+      [mode]:{
+        ...doc.practiceUnits[mode],
+        [key]:{...next,activityId,itemId,at}
+      }
+    },
+    answerOps:operationId
+      ? {...doc.answerOps,[operationId]:touchedFlag(at)}
+      : doc.answerOps
   },dayKey,at);
 }
 
