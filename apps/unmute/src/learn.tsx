@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
-import { Activity, RoadmapNode } from './content/schema';
+import { isPracticeCompletionRequirement, type Activity, type RoadmapNode } from './content/schema';
 import type { CourseProgressDocument } from './progress';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
