@@ -2063,9 +2063,19 @@ ASR сказал «не совпало», но пользователь нажа
 - **#600–602** — phrase-level SRS/Review и единый дневной лимит Review;
 - **#603** — «Сбросить статистику» отделён от «Начать курс заново»;
 - **#604** — «Пройти с начала» для незавершённого дня без сброса canonical progress;
-- **#605** — после завершения дня Today сохраняет hero вида «День N завершён · N/N» до явного старта следующего дня либо до следующего календарного дня.
+- **#605** — после завершения дня Today сохраняет hero вида «День N завершён · N/N» до явного старта следующего дня либо до следующего календарного дня;
+- **#606** — destructive course reset защищён monotonic generation: stale offline device с generation 0 не может воскресить прогресс после reset generation 1.
 
-Следующий отдельный этап:
-- защита destructive reset от возврата старого состояния после sync (generation/epoch);
-- затем финальная сквозная матрица регрессий для completion/resume/replay/reset.
+Финальная regression matrix:
+- canonical day total считается как реальные required units, в эталонном fixture — **43 = 19 + 8 + 8 + 8**;
+- все 43 first-pass ошибки дают **attempted 43 / resolved 0 / pending 43**, день не завершён;
+- после исправления всех 43 тех же units получаем **43/43**, pending 0 и day complete;
+- состояние **43/43 + day incomplete** запрещено самим `DayProgress`;
+- если не завершён только «На скорость», остаётся **35/43**, следующий required section = drill;
+- kill/reload восстанавливает regular correction и phrase-level correction из локального LessonRun;
+- Today и Route используют один `DayProgress` и имеют regression на одинаковое **22/43**;
+- «Пройти с начала» не переписывает first-pass/SRS завершённых units;
+- stale pre-reset course/stats generation не может победить reset даже с более новым timestamp.
+
+После #607 эту модель считать закрытой базовой семантикой. Следующие изменения могут расширять продукт, но не должны вводить второй независимый расчёт progress/completion.
 
