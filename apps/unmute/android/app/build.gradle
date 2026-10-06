@@ -4,7 +4,7 @@ apply plugin: 'com.android.application'
 
 // Native branding is sourced from the same product metadata as the web app.
 def productConfig = new JsonSlurper().parse(rootProject.file('../config/product.json'))
-def unmuteBrandBackground = String(productConfig.brand.background)
+def unmuteBrandBackground = productConfig.brand.background.toString()
 def generatedBrandResDir = file("$buildDir/generated/unmuteBrand/res")
 
 android {
