@@ -300,6 +300,7 @@ describe('course map',()=>{
       refresh:async()=>{}
     };
 
+    const onStartOver=vi.fn();
     render(
       <I18nProvider
         dictionaries={dictionaries}
@@ -317,6 +318,7 @@ describe('course map',()=>{
             pendingCorrections:1
           }]}}
           onOpen={()=>{}}
+          onStartOver={onStartOver}
           onUnlock={()=>{}}
         />
       </I18nProvider>
@@ -325,8 +327,11 @@ describe('course map',()=>{
     expect(await screen.findByText('22/43')).toBeTruthy();
 
     await user.click(screen.getByRole('button',{name:/День 3.*Сегодня/}));
-    expect(await screen.findByText('22 из 43 заданий · ~12 мин')).toBeTruthy();
+    const sheet=await screen.findByRole('dialog');
+    expect(within(sheet).getByText('22 из 43 заданий · ~12 мин')).toBeTruthy();
     expect(screen.queryByText('Заданий: 20')).toBeNull();
+    await user.click(within(sheet).getByRole('button',{name:'Пройти с начала'}));
+    expect(onStartOver).toHaveBeenCalledWith('day-3',true);
   });
 
   it('draws review days as transfers, dialogues and AI talks as landmarks, the last day as the finish',()=>{
