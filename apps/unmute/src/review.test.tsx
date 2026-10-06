@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@appbase/ui-react/i18n.js';
@@ -211,7 +211,7 @@ describe('course review screen',()=>{
     await user.click(screen.getByRole('button',{name:'Готово'}));
     await user.click(screen.getByRole('button',{name:'Совпало'}));
 
-    await vi.waitFor(()=>expect(savePracticeItem).toHaveBeenCalledWith(
+    await waitFor(()=>expect(savePracticeItem).toHaveBeenCalledWith(
       'general-foundation',
       'pattern.atomic',
       'p.weak',
