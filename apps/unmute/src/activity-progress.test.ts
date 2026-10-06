@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emptyCourseProgress, emptyStatsProgress } from './progress';
+import { emptyCourseProgress, emptyStatsProgress, practiceItemKey } from './progress';
 import {
   activitySaveClock,
   buildDialogueActivityProgress,
@@ -95,6 +95,44 @@ describe('activity progress writes',()=>{
     });
   });
 
+  it('stores phrase-level SRS from first pass and keeps manual speech neutral',()=>{
+    const clock={
+      at:'2026-09-29T01:20:00.000Z',
+      dayKey:'2026-09-29',
+      dayNumber:20725
+    };
+    const next=buildPracticeActivityProgress(
+      emptyCourseProgress(),
+      emptyStatsProgress(),
+      'device-one',
+      'pattern.items',
+      'drill',
+      false,
+      50,
+      clock,
+      'run|pattern.items|drill',
+      {
+        'phrase.fast':'strong',
+        'phrase.slow':'weak',
+        'phrase.manual':'neutral'
+      }
+    );
+
+    expect(next.course.practice.drill['pattern.items']).toMatchObject({
+      completed:true,
+      itemized:true
+    });
+    expect(next.course.practiceItems.drill[practiceItemKey('pattern.items','phrase.fast')]).toMatchObject({
+      box:1,
+      due:20727
+    });
+    expect(next.course.practiceItems.drill[practiceItemKey('pattern.items','phrase.slow')]).toMatchObject({
+      box:0,
+      due:20726
+    });
+    expect(next.course.practiceItems.drill[practiceItemKey('pattern.items','phrase.manual')]).toBeUndefined();
+  });
+
   it('retries a partially saved card operation without grading SRS twice',()=>{
     const clock={
       at:'2026-09-29T01:15:00.000Z',
@@ -150,15 +188,21 @@ describe('activity progress writes',()=>{
       dayNumber:20725
     };
     const operationId='run-one|pattern.one|1|practice:drill';
+    const grades={'phrase.one':'strong' as const};
     const first=buildPracticeActivityProgress(
-      emptyCourseProgress(),emptyStatsProgress(),'device-one','pattern.one','drill',true,75,clock,operationId
+      emptyCourseProgress(),emptyStatsProgress(),'device-one','pattern.one','drill',true,75,clock,operationId,grades
     );
     const retry=buildPracticeActivityProgress(
       first.course,emptyStatsProgress(),'device-one','pattern.one','drill',true,75,
-      {...clock,at:'2026-09-29T01:21:00.000Z'},operationId
+      {...clock,at:'2026-09-29T01:21:00.000Z'},operationId,grades
     );
     expect(retry.course.practice.drill['pattern.one']).toMatchObject({box:1,due:20727});
     expect(retry.course.metrics['speed:pattern.one']?.at).toBe(clock.at);
+    expect(retry.course.practiceItems.drill[practiceItemKey('pattern.one','phrase.one')]).toMatchObject({
+      box:1,
+      due:20727,
+      at:clock.at
+    });
     expect(retry.stats.buckets['device-one|pattern.one']).toMatchObject({attempts:1,correct:1,wrong:0});
   });
 
