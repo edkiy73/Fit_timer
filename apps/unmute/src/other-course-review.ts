@@ -26,7 +26,13 @@ const live=(records:Record<string,{deleted?:boolean}|undefined>)=>
 
 /** Something to review in this course: graded cards or practised patterns. */
 export function hasReviewProgress(progress:CourseProgressDocument):boolean{
-  return live(progress.cards)||live(progress.practice.drill)||live(progress.practice.listening)||live(progress.practice.speaking);
+  return live(progress.cards)
+    ||live(progress.practice.drill)
+    ||live(progress.practice.listening)
+    ||live(progress.practice.speaking)
+    ||live(progress.practiceItems.drill)
+    ||live(progress.practiceItems.listening)
+    ||live(progress.practiceItems.speaking);
 }
 
 /** Courses other than the active one that the learner has studied: switching courses must
