@@ -1271,7 +1271,7 @@ export function NodeRunnerView({
     try{
       const correct=choice===activity.correctIndex;
       await gradeAnswer(correct);
-      countAnswer(correct,recordsAnswers);
+      countAnswer(correct,recordsAnswers||replay);
       if(!correct)retryLater();
       setResult(correct);
     }catch(_){
@@ -1321,7 +1321,7 @@ export function NodeRunnerView({
       }else{
         await gradeAnswer(correct,chips?'build':'write');
       }
-      countAnswer(correct,recordsAnswers);
+      countAnswer(correct,recordsAnswers||replay);
       if(!correct)retryLater();
       setNearResult(typo);
       setResult(correct);
