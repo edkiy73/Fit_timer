@@ -35,6 +35,7 @@ export function tombstones<T extends Timed>(map:RecordMap<T>,at:string):RecordMa
 export function resetCourseProgress(doc:CourseProgressDocument,at:string):CourseProgressDocument{
   return {
     schemaVersion:1,
+    generation:(doc.generation??0)+1,
     seen:tombstones(doc.seen,at),
     answerOps:tombstones(doc.answerOps,at),
     cards:tombstones(doc.cards,at),
@@ -57,6 +58,7 @@ export function resetCourseProgress(doc:CourseProgressDocument,at:string):Course
 export function resetStatsProgress(doc:StatsProgressDocument,at:string):StatsProgressDocument{
   return {
     schemaVersion:1,
+    generation:(doc.generation??0)+1,
     buckets:tombstones(doc.buckets,at),
     answerOps:tombstones(doc.answerOps,at)
   };

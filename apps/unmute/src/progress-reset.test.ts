@@ -29,6 +29,40 @@ describe('progress reset contracts', () => {
     expect(activityDone(mergeCourseProgress(merged,reset),'a1')).toBe(true);
   });
 
+  it('rejects stale lower-generation course writes even when their record timestamp is newer', () => {
+    const studied=emptyCourseProgress();
+    studied.seen['a1']={at:OLD};
+
+    const reset=resetCourseProgress(studied,RESET);
+    expect(reset.generation).toBe(1);
+
+    // Another device stayed offline through the reset, then answered later with a newer clock time.
+    const staleDevice=emptyCourseProgress();
+    staleDevice.seen['a1']={at:'2026-10-02T10:00:00.000Z'};
+
+    const merged=mergeCourseProgress(reset,staleDevice);
+    expect(merged.generation).toBe(1);
+    expect(activityDone(merged,'a1')).toBe(false);
+  });
+
+  it('rejects stale lower-generation stats after a destructive reset', () => {
+    const studied=recordAnswer(emptyStatsProgress(),'phone','a1',false,OLD);
+    const reset=resetStatsProgress(studied,RESET);
+    expect(reset.generation).toBe(1);
+
+    const staleDevice=recordAnswer(
+      emptyStatsProgress(),
+      'tablet',
+      'a1',
+      true,
+      '2026-10-02T10:00:00.000Z'
+    );
+
+    const merged=mergeStatsProgress(reset,staleDevice);
+    expect(merged.generation).toBe(1);
+    expect(summarizeAnswerStats(merged).attempts).toBe(0);
+  });
+
   it('resets reporting statistics without closing or reopening course days', () => {
     const studied=emptyCourseProgress();
     studied.seen['a1']={at:OLD};
