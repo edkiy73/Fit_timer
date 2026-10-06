@@ -78,7 +78,8 @@ export function buildPracticeActivityProgress(
   correct:boolean,
   score:number|undefined,
   clock:ActivitySaveClock,
-  operationId?:string
+  operationId?:string,
+  itemGrades?:Readonly<Record<string,PracticeItemGrade>>
 ):{course:CourseProgressDocument;stats:StatsProgressDocument}{
   // Practising a pattern also counts as having done that step of the day.
   // A retried operation must not refresh seen/speed timestamps or move SRS again.
@@ -95,6 +96,20 @@ export function buildPracticeActivityProgress(
         clock.at,
         operationId
       );
+  if(!alreadyApplied&&itemGrades){
+    for(const [itemId,grade] of Object.entries(itemGrades)){
+      nextCourse=gradeCoursePracticeItem(
+        nextCourse,
+        activityId,
+        itemId,
+        mode,
+        grade,
+        clock.dayNumber,
+        clock.dayKey,
+        clock.at
+      );
+    }
+  }
   if(!alreadyApplied&&mode==='drill'&&Number.isFinite(score)){
     nextCourse={
       ...nextCourse,
@@ -198,7 +213,8 @@ export async function savePracticeActivity(
   correct:boolean,
   score?:number,
   operationId?:string,
-  now=new Date()
+  now=new Date(),
+  itemGrades?:Readonly<Record<string,PracticeItemGrade>>
 ):Promise<void>{
   const [course,stats,deviceId]=await Promise.all([
     readCourseProgress(setId),
@@ -214,7 +230,8 @@ export async function savePracticeActivity(
     correct,
     score,
     activitySaveClock(now),
-    operationId
+    operationId,
+    itemGrades
   );
   await writeCourseProgress(setId,next.course);
   await writeStatsProgress(setId,next.stats);
