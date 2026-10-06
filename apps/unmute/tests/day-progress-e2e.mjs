@@ -150,16 +150,18 @@ try{
 
   await page.goto(ROOT+'#/');
   await page.getByRole('heading',{name:'Сегодня'}).waitFor({timeout:8000});
-  ok('43-unit fixture is the current Day 3',await appears(page.getByText('День 3',{exact:true}),3000));
+  ok('43-unit fixture is the current Day 3',await appears(page.getByText('День 3',{exact:true}).first(),3000));
   await page.getByRole('button',{name:'Начать',exact:true}).click();
   await page.waitForURL(/#\/learn\/day-3/,{timeout:5000});
   ok(
     '43-unit fixture opens its first regular task',
-    await appears(page.getByRole('heading',{name:'Выбери ответ'}),8000)
+    await appears(page.getByRole('heading',{name:'Задание 1'}),8000)
   );
 
   for(let index=0;index<19;index++){
-    await page.getByRole('button',{name:'Верно',exact:true}).click();
+    const option=page.getByRole('radio',{name:/^Верно/}).first();
+    await option.click();
+    await page.getByRole('radio',{name:/^Верно/}).first().click();
     const next=page.getByRole('button',{name:'Далее',exact:true});
     await next.waitFor({timeout:5000});
     await next.click();
