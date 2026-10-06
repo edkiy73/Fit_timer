@@ -141,6 +141,62 @@ describe('canonical day progress',()=>{
     expect(state.sections.find(section=>section.id==='tasks')?.status).toBe('correcting');
   });
 
+  it('keeps an all-wrong 43-step first pass incomplete until every correction is resolved',()=>{
+    const progress=emptyCourseProgress();
+    const allWrong=getDayProgress(set,node,progress,{
+      tasks:{attemptedSteps:19,pendingCorrections:19},
+      practice:[
+        {activityId:pattern.id,mode:'drill',resolvedSteps:0,attemptedSteps:8,pendingCorrections:8},
+        {activityId:pattern.id,mode:'listening',resolvedSteps:0,attemptedSteps:8,pendingCorrections:8},
+        {activityId:pattern.id,mode:'speaking',resolvedSteps:0,attemptedSteps:8,pendingCorrections:8}
+      ]
+    });
+
+    expect(allWrong.totalSteps).toBe(43);
+    expect(allWrong.attemptedSteps).toBe(43);
+    expect(allWrong.completedSteps).toBe(0);
+    expect(allWrong.pendingCorrections).toBe(43);
+    expect(allWrong.dayComplete).toBe(false);
+    expect(allWrong.status).toBe('in_progress');
+
+    // After every correction is eventually passed, the exact same 43 required units are closed.
+    for(const card of cards)progress.seen[card.id]={at:'2026-10-06T01:00:00Z'};
+    for(const mode of ['drill','listening','speaking'] as const){
+      progress.practice[mode][pattern.id]={
+        box:0,
+        due:1,
+        completed:true,
+        at:'2026-10-06T01:10:00Z'
+      };
+    }
+
+    const corrected=getDayProgress(set,node,progress);
+    expect(corrected.totalSteps).toBe(43);
+    expect(corrected.completedSteps).toBe(43);
+    expect(corrected.pendingCorrections).toBe(0);
+    expect(corrected.dayComplete).toBe(true);
+    expect(corrected.status).toBe('complete');
+  });
+
+  it('cannot produce 43/43 while the day is incomplete',()=>{
+    const progress=emptyCourseProgress();
+    for(const card of cards)progress.seen[card.id]={at:'2026-10-06T00:00:00Z'};
+    for(const mode of ['drill','listening','speaking'] as const){
+      progress.practice[mode][pattern.id]={
+        box:0,
+        due:1,
+        completed:true,
+        at:'2026-10-06T00:10:00Z'
+      };
+    }
+
+    const state=getDayProgress(set,node,progress);
+    expect(state.completedSteps).toBe(state.totalSteps);
+    expect(state.completedSteps).toBe(43);
+    expect(state.dayComplete).toBe(true);
+    expect(state.nextRequiredSection).toBeNull();
+  });
+
   it('stays incomplete when only speed is missing',()=>{
     const progress=emptyCourseProgress();
     for(const card of cards)progress.seen[card.id]={at:'2026-10-06T00:00:00Z'};
