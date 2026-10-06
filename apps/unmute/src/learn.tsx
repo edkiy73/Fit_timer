@@ -256,6 +256,17 @@ function clearCompletionCandidate(setId:string,nodeId:string):void{
 
 function remapLessonRun(snapshot:LessonRunSnapshot,steps:Activity[]):LessonRunSnapshot|null{
   const currentIndex=new Map(steps.map((step,index)=>[step.id,index] as const));
+  const remapResults=(results:Record<number,boolean>):Record<number,boolean>=>{
+    const next:Record<number,boolean>={};
+    for(const [rawIndex,value] of Object.entries(results)){
+      const oldIndex=Number(rawIndex);
+      const id=snapshot.stepIds[oldIndex];
+      if(!id)continue;
+      const newIndex=currentIndex.get(id);
+      if(newIndex!==undefined)next[newIndex]=value;
+    }
+    return next;
+  };
   const orderedIds=snapshot.order.map(index=>snapshot.stepIds[index]).filter((id):id is string=>Boolean(id));
   const mappedOrder:number[]=[];
   let mappedPos=0;
@@ -291,7 +302,8 @@ function remapLessonRun(snapshot:LessonRunSnapshot,steps:Activity[]):LessonRunSn
         ...snapshot.taskSection,
         order:taskOrder,
         pos:Math.min(taskPos,taskOrder.length-1),
-        firstPass:Math.min(taskFirstPass,taskOrder.length)
+        firstPass:Math.min(taskFirstPass,taskOrder.length),
+        firstPassResults:remapResults(snapshot.taskSection.firstPassResults)
       };
     }
   }
@@ -302,6 +314,7 @@ function remapLessonRun(snapshot:LessonRunSnapshot,steps:Activity[]):LessonRunSn
     order:mappedOrder,
     pos:mappedPos,
     firstPass:mappedFirstPass,
+    firstPassResults:remapResults(snapshot.firstPassResults),
     ...(taskSection?{taskSection}:{})
   };
 }
