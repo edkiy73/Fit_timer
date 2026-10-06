@@ -136,8 +136,8 @@ export function parseCourseProgress(raw:string|null):CourseProgressDocument{
     const practiceItems=isObject(parsed.practiceItems)?parsed.practiceItems:{};
     return {
       schemaVersion:1,
-      generation:Number.isInteger(parsed.generation)&&Number(parsed.generation)>=0
-        ? Number(parsed.generation)
+      generation:typeof parsed.generation==='number'&&Number.isInteger(parsed.generation)&&parsed.generation>=0
+        ? parsed.generation
         : 0,
       seen:asMap<TimedFlag>(parsed.seen),
       answerOps:asMap<TimedFlag>(parsed.answerOps),
@@ -168,8 +168,8 @@ export function parseStatsProgress(raw:string|null):StatsProgressDocument{
     if(!isObject(parsed)||parsed.schemaVersion!==1)return emptyStatsProgress();
     return {
       schemaVersion:1,
-      generation:Number.isInteger(parsed.generation)&&Number(parsed.generation)>=0
-        ? Number(parsed.generation)
+      generation:typeof parsed.generation==='number'&&Number.isInteger(parsed.generation)&&parsed.generation>=0
+        ? parsed.generation
         : 0,
       buckets:asMap<StatsBucket>(parsed.buckets),
       answerOps:asMap<TimedFlag>(parsed.answerOps)
