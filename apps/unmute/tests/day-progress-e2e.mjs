@@ -148,7 +148,11 @@ try{
   const errors=[];
   page.on('pageerror',error=>errors.push(String(error)));
 
-  await page.goto(ROOT+'#/learn/day-3');
+  await page.goto(ROOT+'#/');
+  await page.getByRole('heading',{name:'Сегодня'}).waitFor({timeout:8000});
+  ok('43-unit fixture is the current Day 3',await appears(page.getByText('День 3',{exact:true}),3000));
+  await page.getByRole('button',{name:'Начать',exact:true}).click();
+  await page.waitForURL(/#\/learn\/day-3/,{timeout:5000});
   ok(
     '43-unit fixture opens its first regular task',
     await appears(page.getByRole('heading',{name:'Выбери ответ'}),8000)
@@ -178,7 +182,9 @@ try{
     await appears(page.getByText('19/43',{exact:true}),8000)
   );
 
-  await page.goto(ROOT+'#/learn/day-3');
+  await page.goto(ROOT+'#/');
+  await page.getByRole('button',{name:'Продолжить',exact:true}).click();
+  await page.waitForURL(/#\/learn\/day-3/,{timeout:5000});
   await page.getByText('Тренируем скорость: фразы должны вылетать без раздумий.').waitFor({timeout:8000});
   await page.getByRole('button',{name:'Начать',exact:true}).click();
 
