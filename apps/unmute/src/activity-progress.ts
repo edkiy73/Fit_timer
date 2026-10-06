@@ -213,8 +213,8 @@ export async function savePracticeActivity(
   correct:boolean,
   score?:number,
   operationId?:string,
-  now=new Date(),
-  itemGrades?:Readonly<Record<string,PracticeItemGrade>>
+  itemGrades?:Readonly<Record<string,PracticeItemGrade>>,
+  now=new Date()
 ):Promise<void>{
   const [course,stats,deviceId]=await Promise.all([
     readCourseProgress(setId),
