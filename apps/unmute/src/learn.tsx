@@ -495,6 +495,7 @@ export function NodeRunnerView({
   const [finished,setFinished]=useState(false);
   const [checking,setChecking]=useState(false);
   const [practiceMode,setPracticeMode]=useState<PracticeSrsKind|undefined>(startMode);
+  const [practiceModeIsolated,setPracticeModeIsolated]=useState(Boolean(startMode));
   const [practiceProgress,setPracticeProgress]=useState<{current:number;total:number}|null>(null);
   const reportPracticeProgress=useCallback((current:number,total:number)=>{
     setPracticeProgress(previous=>previous?.current===current&&previous.total===total?previous:{current,total});
@@ -598,6 +599,7 @@ export function NodeRunnerView({
       }
       setIntro(theoryCards.length>0);
       setPracticeMode(undefined);
+      setPracticeModeIsolated(false);
       setRunId(restored?.runId??randomSeed());
       setRunMode(restored?'resume':'first');
       setScore(restored?.taskSection?.score??restored?.score??{correct:0,total:0});
@@ -642,6 +644,7 @@ export function NodeRunnerView({
       taskSectionRef.current=restored.taskSection??null;
       setPracticeQuality(restored.practiceQuality??{});
       setPracticeMode(restored.practiceMode);
+      setPracticeModeIsolated(false);
       setRunMode(
         restored.mode==='replay'||restored.replay
           ? 'replay'
@@ -691,6 +694,7 @@ export function NodeRunnerView({
       }
       setIntro(forcedTheory||(!forcedTasks&&forcedPractice<0&&requested<0&&theoryCards.some(card=>!isSeen(state.progress,card.id))));
       setPracticeMode(startMode??missingTarget?.mode);
+      setPracticeModeIsolated(Boolean(startMode));
       // A completed day opened again is a replay. Otherwise continuing any existing
       // progress without a saved snapshot is an explicit resume, not a fresh first run.
       const hasExistingProgress=activities.some(item=>isSeen(state.progress,item.id))
@@ -804,8 +808,10 @@ export function NodeRunnerView({
       setOrder([target.index]);
       setFirstPass(1);
       setPracticeMode(target.mode);
+      setPracticeModeIsolated(false);
     }else{
       setPracticeMode(undefined);
+      setPracticeModeIsolated(false);
     }
   },[checking,finished,node?.id,nodeComplete,runHydrated,state?.progress,stepSignature]);
 
@@ -1086,6 +1092,7 @@ export function NodeRunnerView({
       setFirstPass(taskOrder.length||1);
       setIntro(false);
       setPracticeMode(undefined);
+      setPracticeModeIsolated(false);
     });
   };
 
@@ -1100,6 +1107,7 @@ export function NodeRunnerView({
       setFirstPass(1);
       setIntro(false);
       setPracticeMode(mode);
+      setPracticeModeIsolated(true);
     });
   };
 
@@ -1592,11 +1600,13 @@ export function NodeRunnerView({
             showModeNav={false}
             active={activity.type==='pattern-drill'}
             startFromBeginning={startFromBeginning}
+            isolateInitialMode={practiceModeIsolated}
             sessionKey={'unmute.pattern-run:'+setId+':'+node.id+':'+runId+':'+persistentPatternEntry.item.id}
             onModeChange={setPracticeMode}
             onProgress={reportPracticeProgress}
             onDone={()=>{
               setPracticeMode(undefined);
+              setPracticeModeIsolated(false);
               void saveSeen(setId,persistentPatternEntry.item.id).catch(()=>undefined).then(()=>advance());
             }}
           />

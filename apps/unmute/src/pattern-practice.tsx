@@ -75,6 +75,8 @@ export interface PatternPracticeViewProps {
   sessionKey?:string;
   /** Replay completed modes from the first one, then continue unfinished modes canonically. */
   startFromBeginning?:boolean;
+  /** Explicitly opened one mode (deep link/manual tab): finish that mode instead of chaining. */
+  isolateInitialMode?:boolean;
 }
 
 export function PatternPracticeView({
@@ -92,7 +94,8 @@ export function PatternPracticeView({
   onProgress,
   active=true,
   sessionKey,
-  startFromBeginning=false
+  startFromBeginning=false,
+  isolateInitialMode=true
 }:PatternPracticeViewProps){
   const {t,locale}=useI18n();
   const metaSessionKey=startFromBeginning?undefined:sessionKey;
@@ -103,7 +106,11 @@ export function PatternPracticeView({
       : restored?.mode??(initialMode&&activity.modes.includes(initialMode) ? initialMode : firstPatternMode(activity,progress))
   );
   // A training picked by hand from the finished state returns there, not to the next one.
-  const [single,setSingle]=useState(()=>startFromBeginning?false:(restored?.single??Boolean(initialMode)));
+  const [single,setSingle]=useState(()=>
+    startFromBeginning||!isolateInitialMode
+      ? false
+      : (restored?.single??Boolean(initialMode))
+  );
   // Each training starts with «what to do and how»; its timer or microphone waits for «Начать».
   const [briefed,setBriefed]=useState<ReadonlySet<PracticeSrsKind>>(()=>new Set(restored?.briefed??[]));
 
@@ -140,9 +147,9 @@ export function PatternPracticeView({
     const previous=initialModeRef.current;
     initialModeRef.current=initialMode;
     if(!initialMode||initialMode===previous||!activity.modes.includes(initialMode)||mode===initialMode)return;
-    setSingle(true);
+    setSingle(isolateInitialMode);
     setMode(initialMode);
-  },[activity.modes,initialMode,mode]);
+  },[activity.modes,initialMode,isolateInitialMode,mode]);
 
   const distractors=useMemo(
     ()=>courseActivities.flatMap(candidate=>
