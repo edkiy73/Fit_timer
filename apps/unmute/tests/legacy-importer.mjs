@@ -87,7 +87,7 @@ const day1=course.roadmaps[0].nodes[0];
 const day2=course.roadmaps[0].nodes[1];
 assert.equal(day1.completion.mode,'all');
 assert.equal(day1.completion.requirements.filter(r=>r.kind==='activity-seen').length,2);
-const practiceRequirement=day1.completion.requirements.find(r=>r.kind==='practice-started');
+const practiceRequirement=day1.completion.requirements.find(r=>r.kind==='practice-completed');
 assert.equal(practiceRequirement.activityId,'pattern.mech');
 assert.deepEqual(Array.from(practiceRequirement.modes),['drill','listening','speaking']);
 assert.ok(!day1.completion.requirements.some(r=>r.kind==='activity-seen'&&r.activityIds.includes('dialogue.d1')));
