@@ -256,6 +256,12 @@ select:active{transform:scale(.985)}
 .learn-summary h2{margin:0}
 .learn-summary-icon{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:color-mix(in srgb,var(--accent) 14%,var(--card));color:var(--accent)}
 .learn-summary-score{margin:0;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.learn-summary-quality{display:grid;gap:6px;width:min(100%,380px);margin-top:2px;text-align:left}
+.learn-summary-quality-title{padding:0 2px;font-size:12px;font-weight:600;color:var(--muted)}
+.learn-summary-quality-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 11px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:13px}
+.learn-summary-quality-row>span{color:var(--muted)}
+.learn-summary-quality-row>strong{font-size:13px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.learn-summary-corrected{padding:3px 2px 0;color:var(--muted);font-size:12px}
 .completion-summary{position:relative;overflow:hidden;min-height:300px;align-content:center;border:1px solid color-mix(in srgb,var(--success) 24%,var(--line));border-radius:32px;background:
   radial-gradient(circle at 50% 18%,color-mix(in srgb,var(--success) 14%,transparent),transparent 34%),
   linear-gradient(180deg,color-mix(in srgb,var(--card) 96%,var(--success) 4%),var(--card));animation:completion-enter var(--motion-ring) var(--motion-spring-ease) both}

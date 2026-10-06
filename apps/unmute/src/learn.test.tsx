@@ -6,7 +6,7 @@ import { I18nProvider } from '@appbase/ui-react/i18n.js';
 import type { LearnerCourseState } from './course-loader';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { emptyCourseProgress, type CourseProgressDocument } from './progress';
-import { firstIncompleteRequirementIndex, firstMissingRequirementTarget, NodeRunnerView } from './learn';
+import { buildLessonSummaryQuality, firstIncompleteRequirementIndex, firstMissingRequirementTarget, NodeRunnerView } from './learn';
 import { dictionaries } from './i18n';
 import { SYSTEM_BACK_EVENT } from './native-back';
 
@@ -127,6 +127,43 @@ async function chooseAnswer(user:ReturnType<typeof userEvent.setup>,name:string)
 
 describe('node activity runner',()=>{
   beforeEach(()=>localStorage.clear());
+
+  it('keeps first-pass quality separate for tasks, speed, listening and speaking',()=>{
+    const pattern={
+      id:'pattern.quality',
+      revision:1,
+      type:'pattern-drill' as const,
+      tags:[],
+      revisionProgress:'preserve' as const,
+      lexiconRefs:[],
+      pattern:{ru:'Фразы'},
+      modes:['drill' as const,'listening' as const,'speaking' as const],
+      items:Array.from({length:8},(_,index)=>({
+        id:'quality.'+index,
+        prompt:{ru:'Фраза'},
+        answer:{accepted:['Phrase'],nearMiss:true,caseSensitive:false}
+      }))
+    };
+    const task=state.set.activities.find(activity=>activity.id==='choice.one')!;
+    const quality=buildLessonSummaryQuality(
+      [task,pattern],
+      {0:false},
+      {
+        'pattern.quality|drill':{activityId:pattern.id,mode:'drill',correct:2,total:8},
+        'pattern.quality|listening':{activityId:pattern.id,mode:'listening',correct:3,total:8},
+        'pattern.quality|speaking':{activityId:pattern.id,mode:'speaking',correct:2,total:8}
+      }
+    );
+
+    expect(quality.rows).toEqual([
+      {id:'tasks',correct:0,total:1},
+      {id:'drill',correct:2,total:8},
+      {id:'listening',correct:3,total:8},
+      {id:'speaking',correct:2,total:8}
+    ]);
+    expect(quality.corrected).toBe(18);
+    expect(quality.complete).toBe(true);
+  });
 
   it('resumes at a seen pattern when a required practice mode is still missing',()=>{
     const practiceNode={
@@ -417,7 +454,9 @@ describe('node activity runner',()=>{
     expect(await screen.findByText('День пройден')).toBeTruthy();
     expect(onNodeCompleted).toHaveBeenCalledTimes(1);
     expect(onNodeCompleted).toHaveBeenCalledWith(node);
-    expect(screen.getByText('С первого раза верно: 2 из 2')).toBeTruthy();
+    expect(screen.getByText('С первого раза')).toBeTruthy();
+    expect(screen.getByText('Задания')).toBeTruthy();
+    expect(screen.getByText('2 из 2 верно')).toBeTruthy();
     expect(onExit).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button',{name:'Готово'}));
     expect(onExit).toHaveBeenCalledTimes(1);
@@ -621,7 +660,9 @@ describe('node activity runner',()=>{
     expect(onNodeCompleted).not.toHaveBeenCalled();
     // A replay is practice: review intervals and answer stats are left alone.
     expect(saveGraded).not.toHaveBeenCalled();
-    expect(await screen.findByText('Верно: 2 из 2')).toBeTruthy();
+    expect(await screen.findByText('Результат этого повтора')).toBeTruthy();
+    expect(screen.getByText('Задания')).toBeTruthy();
+    expect(screen.getByText('2 из 2 верно')).toBeTruthy();
     expect(screen.getByText('Это была тренировка: интервалы «Повтора» не изменились.')).toBeTruthy();
   });
 
