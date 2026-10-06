@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
 import type { CourseProgressDocument } from './progress';
@@ -126,9 +126,13 @@ export function PatternPracticeView({
   },[active,activity.items.length,briefed,mode,onProgress]);
 
   // The lesson-level tabs can change initialMode while this component keeps the same key.
-  // Mirror that prop into local state instead of getting stuck in the previously mounted mode.
+  // React only when the parent request itself changes. Local transitions (e.g. single mode ->
+  // complete) must not be bounced back into the old initialMode.
+  const initialModeRef=useRef<PracticeSrsKind|undefined>(initialMode);
   useEffect(()=>{
-    if(!initialMode||!activity.modes.includes(initialMode)||mode===initialMode)return;
+    const previous=initialModeRef.current;
+    initialModeRef.current=initialMode;
+    if(!initialMode||initialMode===previous||!activity.modes.includes(initialMode)||mode===initialMode)return;
     setSingle(true);
     setMode(initialMode);
   },[activity.modes,initialMode,mode]);
