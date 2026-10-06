@@ -8,6 +8,10 @@ import {
   type ActiveTaskProgress
 } from './day-progress';
 
+interface StoredTaskSection {
+  firstPassResults?:unknown;
+}
+
 interface StoredLessonRun {
   version?:number;
   setId?:string;
@@ -15,6 +19,8 @@ interface StoredLessonRun {
   runId?:string;
   stepIds?:unknown;
   firstPassResults?:unknown;
+  practiceMode?:unknown;
+  taskSection?:StoredTaskSection;
 }
 
 interface StoredPracticeRun {
@@ -77,12 +83,15 @@ function readActiveTasks(
   progress:CourseProgressDocument,
   run:StoredLessonRun
 ):ActiveTaskProgress|undefined{
-  if(!Array.isArray(run.stepIds)||!run.firstPassResults||typeof run.firstPassResults!=='object')return undefined;
+  const results=typeof run.practiceMode==='string'
+    ? run.taskSection?.firstPassResults
+    : run.firstPassResults;
+  if(!Array.isArray(run.stepIds)||!results||typeof results!=='object')return undefined;
   const stepIds=run.stepIds.filter((id):id is string=>typeof id==='string');
   const required=requiredTaskIds(set,node);
   const attempted=new Set<string>();
   const pending=new Set<string>();
-  for(const [rawIndex,value] of Object.entries(run.firstPassResults as Record<string,unknown>)){
+  for(const [rawIndex,value] of Object.entries(results as Record<string,unknown>)){
     if(value!==true&&value!==false)continue;
     const index=Number(rawIndex);
     if(!Number.isInteger(index)||index<0||index>=stepIds.length)continue;
