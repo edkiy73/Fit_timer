@@ -6,9 +6,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { appDocs } from './sync';
 import { NotificationSettingsPanel } from './notification-settings';
 import { readThemePreference, setThemePreference, type ThemePreference } from './theme';
-import { useCatalog } from './active-course';
+import { useActiveCourseId, useCatalog } from './active-course';
 import { DEFAULT_COURSE_ID } from './settings-data';
-import { resetAllProgress } from './progress-reset';
+import { resetAllStatistics, restartCourseProgress } from './progress-reset';
 import { Icon } from './icons';
 import { unregisterRemotePush } from './remote-push';
 
@@ -44,48 +44,91 @@ function ThemePicker(){
   );
 }
 
-/** Full reset of learning on this device and, when signed in, in the account. */
-function ResetProgress(){
+/** Statistics reset and course restart are deliberately separate product actions. */
+function ResetLearningData(){
   const {t} = useI18n();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const catalog = useCatalog();
-  const [confirm, setConfirm] = useState(false);
+  const activeCourseId = useActiveCourseId();
+  const [confirm, setConfirm] = useState<'stats'|'course'|null>(null);
   const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<'stats'|'course'|null>(null);
 
-  const reset = async () => {
+  const allKnownIds = () => [
+    DEFAULT_COURSE_ID,
+    ...(catalog.data?.sets ?? []).map(set => set.id)
+  ];
+
+  const resetStats = async () => {
     setBusy(true);
-    setFailed(false);
+    setFailed(null);
     try{
-      const ids = [DEFAULT_COURSE_ID, ...(catalog.data?.sets ?? []).map(set => set.id)];
-      await resetAllProgress(ids);
+      await resetAllStatistics(allKnownIds());
+      await queryClient.invalidateQueries();
+      setConfirm(null);
+    }catch{
+      setFailed('stats');
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  const restartCourse = async () => {
+    if(!activeCourseId)return;
+    setBusy(true);
+    setFailed(null);
+    try{
+      await restartCourseProgress(activeCourseId);
       await queryClient.invalidateQueries();
       navigate('/', {replace:true});
     }catch{
-      setFailed(true);
+      setFailed('course');
     }finally{
       setBusy(false);
     }
   };
 
   return (
-    <div className="tile settings-card settings-card-reset">
-      <div className="settings-label">{t('reset.title')}</div>
-      <p className="tile-text">{t('reset.text')}</p>
-      {confirm ? (
-        <div className="account-delete" role="alertdialog" aria-label={t('reset.title')}>
-          <p>{t('reset.confirm')}</p>
-          <div className="account-delete-actions">
-            <button className="secondary-button danger" type="button" disabled={busy || catalog.isPending} onClick={() => void reset()}>{t('reset.yes')}</button>
-            <button className="link-button" type="button" disabled={busy} onClick={() => setConfirm(false)}>{t('account.deleteCancel')}</button>
+    <>
+      <div className="tile settings-card settings-card-reset">
+        <div className="settings-label">{t('reset.statsTitle')}</div>
+        <p className="tile-text">{t('reset.statsText')}</p>
+        {confirm==='stats' ? (
+          <div className="account-delete" role="alertdialog" aria-label={t('reset.statsTitle')}>
+            <p>{t('reset.statsConfirm')}</p>
+            <div className="account-delete-actions">
+              <button className="secondary-button danger" type="button" disabled={busy||catalog.isPending} onClick={() => void resetStats()}>{t('reset.statsYes')}</button>
+              <button className="link-button" type="button" disabled={busy} onClick={() => setConfirm(null)}>{t('account.deleteCancel')}</button>
+            </div>
+            {failed==='stats'&&<p className="muted" role="alert">{t('reset.failed')}</p>}
           </div>
-          {failed && <p className="muted" role="alert">{t('reset.failed')}</p>}
-        </div>
-      ) : (
-        <button className="secondary-button" type="button" onClick={() => setConfirm(true)}>{t('reset.start')}</button>
-      )}
-    </div>
+        ) : (
+          <button className="secondary-button" type="button" disabled={busy} onClick={() => {setFailed(null);setConfirm('stats');}}>
+            {t('reset.statsStart')}
+          </button>
+        )}
+      </div>
+
+      <div className="tile settings-card settings-card-reset">
+        <div className="settings-label">{t('reset.courseTitle')}</div>
+        <p className="tile-text">{t('reset.courseText')}</p>
+        {confirm==='course' ? (
+          <div className="account-delete" role="alertdialog" aria-label={t('reset.courseTitle')}>
+            <p>{t('reset.courseConfirm')}</p>
+            <div className="account-delete-actions">
+              <button className="secondary-button danger" type="button" disabled={busy||catalog.isPending||!activeCourseId} onClick={() => void restartCourse()}>{t('reset.courseYes')}</button>
+              <button className="link-button" type="button" disabled={busy} onClick={() => setConfirm(null)}>{t('account.deleteCancel')}</button>
+            </div>
+            {failed==='course'&&<p className="muted" role="alert">{t('reset.failed')}</p>}
+          </div>
+        ) : (
+          <button className="secondary-button danger" type="button" disabled={busy||!activeCourseId} onClick={() => {setFailed(null);setConfirm('course');}}>
+            {t('reset.courseStart')}
+          </button>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -129,7 +172,7 @@ export function SettingsScreen(){
       <div className="tile settings-card settings-card-notifications">
         <NotificationSettingsPanel />
       </div>
-      <ResetProgress />
+      <ResetLearningData />
 
       {auth.session && (
         <div className="tile settings-card settings-card-account">

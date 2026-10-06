@@ -8,9 +8,12 @@ import { routes } from './app';
 import { authClient } from './auth';
 import { dictionaries, LOCALE_KEY } from './i18n';
 import product from '../config/product.json';
-import { resetAllProgress } from './progress-reset';
+import { resetAllStatistics, restartCourseProgress } from './progress-reset';
 
-vi.mock('./progress-reset', () => ({resetAllProgress:vi.fn(async () => undefined)}));
+vi.mock('./progress-reset', () => ({
+  resetAllStatistics:vi.fn(async () => undefined),
+  restartCourseProgress:vi.fn(async () => undefined)
+}));
 
 const t = dictionaries[product.i18n.default as keyof typeof dictionaries];
 
@@ -109,14 +112,25 @@ describe('UnMute: English for Expats starter', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/account'));
   });
 
-  it('resets all progress only after an explicit confirmation', async () => {
+  it('resets statistics only after confirmation and keeps the user in Settings', async () => {
     const user = userEvent.setup();
     const router = renderApp('/settings');
-    await user.click(await screen.findByRole('button', {name:t['reset.start']}));
-    expect(screen.getByText(t['reset.confirm'])).toBeTruthy();
-    expect(resetAllProgress).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('button', {name:t['reset.yes']}));
-    await waitFor(() => expect(resetAllProgress).toHaveBeenCalled());
+    await user.click(await screen.findByRole('button', {name:t['reset.statsStart']}));
+    expect(screen.getByText(t['reset.statsConfirm'])).toBeTruthy();
+    expect(resetAllStatistics).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', {name:t['reset.statsYes']}));
+    await waitFor(() => expect(resetAllStatistics).toHaveBeenCalled());
+    expect(router.state.location.pathname).toBe('/settings');
+  });
+
+  it('restarts only the selected course after a separate destructive confirmation', async () => {
+    const user = userEvent.setup();
+    const router = renderApp('/settings');
+    await user.click(await screen.findByRole('button', {name:t['reset.courseStart']}));
+    expect(screen.getByText(t['reset.courseConfirm'])).toBeTruthy();
+    expect(restartCourseProgress).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', {name:t['reset.courseYes']}));
+    await waitFor(() => expect(restartCourseProgress).toHaveBeenCalled());
     await waitFor(() => expect(router.state.location.pathname).toBe('/'));
   });
 

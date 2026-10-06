@@ -5,6 +5,7 @@ import {
   type WordsProgressDocument
 } from './progress';
 import { appDocs } from './sync';
+import { notifyLessonRunChanged } from './lesson-run-reminder';
 import {
   readCourseProgress,
   readStatsProgress,
@@ -61,6 +62,42 @@ export function resetStatsProgress(doc:StatsProgressDocument,at:string):StatsPro
   };
 }
 
+
+/** Clears reporting aggregates only. Learning route, SRS and streak history stay intact. */
+export function resetCourseStatistics(doc:CourseProgressDocument,at:string):CourseProgressDocument{
+  return {
+    ...doc,
+    metrics:tombstones(doc.metrics,at)
+  };
+}
+
+export interface ResetStorage {
+  readonly length:number;
+  key(index:number):string|null;
+  removeItem(key:string):void;
+}
+
+/** Active local lesson state is not canonical progress and must not survive a course restart. */
+export function clearCourseLocalRuns(
+  setId:string,
+  storage:ResetStorage=localStorage
+):void{
+  const prefixes=[
+    'unmute.lesson-run:'+setId+':',
+    'unmute.pattern-run:'+setId+':',
+    'unmute.lesson-completion:'+setId+':'
+  ];
+  try{
+    const keys:string[]=[];
+    for(let index=0;index<storage.length;index++){
+      const key=storage.key(index);
+      if(key&&prefixes.some(prefix=>key.startsWith(prefix)))keys.push(key);
+    }
+    for(const key of keys)storage.removeItem(key);
+    notifyLessonRunChanged();
+  }catch{}
+}
+
 export function resetWordsProgress(doc:WordsProgressDocument,at:string):WordsProgressDocument{
   return {schemaVersion:1,items:tombstones(doc.items,at)};
 }
@@ -75,6 +112,33 @@ export function progressSetIdsFromRefs(
     if(key.startsWith('progress:stats:'))ids.add(key.slice('progress:stats:'.length));
   }
   return [...ids].filter(Boolean);
+}
+
+/** Clears answer/quality statistics for every known course without touching route, SRS or streak. */
+export async function resetAllStatistics(setIds:readonly string[],now:Date=new Date()):Promise<void>{
+  await syncNow().catch(()=>undefined);
+  const historical=progressSetIdsFromRefs(await appDocs.refs());
+  const allSetIds=[...new Set([...setIds,...historical])];
+  const at=now.toISOString();
+  for(const setId of allSetIds){
+    await writeCourseProgress(setId,resetCourseStatistics(await readCourseProgress(setId),at));
+    await writeStatsProgress(setId,resetStatsProgress(await readStatsProgress(setId),at));
+  }
+  await syncNow().catch(()=>undefined);
+}
+
+/** Starts one selected course from zero. Global saved words and entitlements are intentionally untouched. */
+export async function restartCourseProgress(
+  setId:string,
+  now:Date=new Date(),
+  storage:ResetStorage=localStorage
+):Promise<void>{
+  await syncNow().catch(()=>undefined);
+  const at=now.toISOString();
+  await writeCourseProgress(setId,resetCourseProgress(await readCourseProgress(setId),at));
+  await writeStatsProgress(setId,resetStatsProgress(await readStatsProgress(setId),at));
+  clearCourseLocalRuns(setId,storage);
+  await syncNow().catch(()=>undefined);
 }
 
 /** Resets catalog courses plus every historical progress document already known to sync.
