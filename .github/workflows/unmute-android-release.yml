@@ -143,12 +143,25 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release delete unmute-latest --cleanup-tag -y 2>/dev/null || true
-          gh release create unmute-latest \
+          # Draft releases are not addressable reliably by tag and can coexist with an older
+          # published release using the same tag. Remove every release record for this tag
+          # explicitly before recreating the canonical published release.
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate \
+            --jq '.[] | select(.tag_name=="unmute-latest") | .id' \
+            | while read -r id; do
+                [ -z "$id" ] || gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
+              done
+          git push origin :refs/tags/unmute-latest >/dev/null 2>&1 || true
+
+          # Create the published release together with its assets in one command, so there is
+          # never a draft whose tag lookup can resolve to a stale previous release.
+          gh release create unmute-latest UnMute-latest.apk UnMute-release.json \
             --target "$GITHUB_SHA" \
             --title "UnMute — последний APK" \
             --notes "Скачать и установить: UnMute-latest.apk. Версия $VERSION_NAME (versionCode $VERSION_CODE), commit $GITHUB_SHA" \
-            --draft --latest=false
-          gh release upload unmute-latest UnMute-latest.apk UnMute-release.json --clobber
-          gh release edit unmute-latest --draft=false --latest=false
-          test "$(gh release view unmute-latest --json isDraft --jq '.isDraft')" = "false"
+            --latest=false
+
+          RELEASE_JSON="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/unmute-latest")"
+          test "$(printf '%s' "$RELEASE_JSON" | jq -r '.draft')" = "false"
+          test "$(printf '%s' "$RELEASE_JSON" | jq -r '.target_commitish')" = "$GITHUB_SHA"
+          printf '%s' "$RELEASE_JSON" | jq -e '.assets | map(.name) | sort == ["UnMute-latest.apk","UnMute-release.json"]' >/dev/null
