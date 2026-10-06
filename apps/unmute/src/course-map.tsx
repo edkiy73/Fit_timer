@@ -479,7 +479,7 @@ export function CourseMapView({
                 {selected.status==='complete'?t('courseMap.reopen'):t('courseMap.open')}
               </button>
             )}
-            {selected.status==='current'&&selectedProgress&&selectedProgress.completedSteps>0&&onStartOver&&(
+            {selected.status==='current'&&selectedProgress?.status==='in_progress'&&onStartOver&&(
               <button className="secondary-button" type="button" onClick={()=>onStartOver(selected.node.id,true)}>
                 {t('courseMap.startOver')}
               </button>
