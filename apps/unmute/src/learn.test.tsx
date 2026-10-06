@@ -636,7 +636,7 @@ describe('node activity runner',()=>{
     await chooseAnswer(user,'I am here');
 
     expect(saveGraded).not.toHaveBeenCalled();
-    expect(await screen.findByText('Ответ верный')).toBeTruthy();
+    expect(await screen.findByRole('button',{name:'Далее'})).toBeTruthy();
   });
 
   it('does not count a replay of an already completed node as a new completion',async()=>{
