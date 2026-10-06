@@ -865,15 +865,11 @@ export function NodeRunnerView({
   const countAnswer=(correct:boolean,record:boolean)=>{
     if(!record||pos>=firstPass)return;
     const answeredStep=order[pos];
-    if(answeredStep===undefined)return;
-    setFirstPassResults(current=>{
-      if(current[answeredStep]!==undefined)return current;
-      setScore(scoreCurrent=>({
-        correct:scoreCurrent.correct+(correct?1:0),
-        total:scoreCurrent.total+1
-      }));
-      return {...current,[answeredStep]:correct};
-    });
+    if(answeredStep===undefined||firstPassResults[answeredStep]!==undefined)return;
+    setScore(current=>({correct:current.correct+(correct?1:0),total:current.total+1}));
+    setFirstPassResults(current=>current[answeredStep]!==undefined
+      ? current
+      : {...current,[answeredStep]:correct});
   };
 
   const exitSheet=(
