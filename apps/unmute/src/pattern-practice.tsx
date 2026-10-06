@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
 import type { CourseProgressDocument } from './progress';
-import type { PracticeSrsKind } from './engine/practice-srs';
+import type { PracticeItemGrade, PracticeSrsKind } from './engine/practice-srs';
 import { practiceProgressComplete } from './engine/course-progress';
 import type { SpeakText, StartRecognition } from './speech-runtime';
 import { startRecognition as startSpeechRecognition } from './speech-runtime';
@@ -56,7 +56,8 @@ export interface PatternPracticeViewProps {
     activityId:string,
     mode:PracticeSrsKind,
     correct:boolean,
-    score?:number
+    score?:number,
+    itemGrades?:Readonly<Record<string,PracticeItemGrade>>
   )=>Promise<void>;
   speak:SpeakText;
   startRecognition?:StartRecognition;
