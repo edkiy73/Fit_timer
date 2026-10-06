@@ -364,7 +364,9 @@ describe('node activity runner',()=>{
     await user.click(screen.getByRole('button',{name:'Совпало'}));
     expect(await screen.findByText('1 из 1 вовремя')).toBeTruthy();
 
-    await user.click(screen.getByRole('button',{name:'Далее'}));
+    const drillNext=screen.getByRole('button',{name:'Далее'});
+    await waitFor(()=>expect(drillNext.hasAttribute('disabled')).toBe(false));
+    await user.click(drillNext);
     expect(await screen.findByText('Паттерн пройден')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Далее'}));
 
