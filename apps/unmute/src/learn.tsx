@@ -581,6 +581,31 @@ export function NodeRunnerView({
       setRunHydrated(true);
       return;
     }
+
+    if(startFromBeginning&&!nodeProgress?.complete){
+      const saved=readLessonRun(state.set.id,node.id);
+      const restored=saved?remapLessonRun(saved,steps):null;
+      const regular=steps
+        .map((item,index)=>({item,index}))
+        .filter(({item})=>item.type==='choice'||item.type==='text-input'||item.type==='translation')
+        .map(({index})=>index);
+      const firstIndex=regular[0]??0;
+      begin(firstIndex);
+      if(regular.length){
+        setOrder(regular);
+        setFirstPass(regular.length);
+      }
+      setIntro(theoryCards.length>0);
+      setPracticeMode(undefined);
+      setRunId(restored?.runId??randomSeed());
+      setRunMode(restored?'resume':'first');
+      setScore(restored?.taskSection?.score??restored?.score??{correct:0,total:0});
+      setFirstPassResults(restored?.taskSection?.firstPassResults??restored?.firstPassResults??{});
+      taskSectionRef.current=restored?.taskSection??null;
+      setPracticeQuality(restored?.practiceQuality??{});
+      setRunHydrated(true);
+      return;
+    }
     const requested=startActivityId?steps.findIndex(item=>item.id===startActivityId):-1;
     const forcedTheory=startSection==='theory';
     const forcedTasks=startSection==='tasks';
