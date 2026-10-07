@@ -78,9 +78,12 @@ final class FitSpeechCapture {
     }
 
     static double thresholdFor(int value) {
-        // Шкала интерфейса 0..10: слева телефон должен быть ближе, справа слышит
-        // тихую речь дальше. Уровень ниже — порог ниже — чувствительность выше.
-        return 70.0 - clampSensitivity(value) * 5.5;
+        // 5 сохраняет прежний рабочий диапазон: VoiceAutoGain считает речью сигнал
+        // примерно от -62 dBFS. 0 поднимает порог до ~-48 dBFS, 10 опускает его
+        // ниже -72 dBFS (практически без дополнительного отсечения).
+        double dbfs = -48.0 - clampSensitivity(value) * 2.8;
+        double normalized = (dbfs + 72.0) / 54.0 * 100.0;
+        return Math.max(0.0, Math.min(100.0, normalized));
     }
 
     private static int clampSensitivity(int value) {
