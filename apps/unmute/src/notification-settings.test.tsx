@@ -36,10 +36,10 @@ describe('notification settings',()=>{
         <NotificationSettingsPanel />
       </I18nProvider>
     );
-    const news=await screen.findByRole('checkbox',{name:'Новости — push'});
+    const news=await screen.findByRole('checkbox',{name:'Новости — Уведомления на телефон'});
     expect((news as HTMLInputElement).checked).toBe(true);
-    expect((screen.getByRole('checkbox',{name:'Предложения — push'}) as HTMLInputElement).checked).toBe(true);
-    expect((screen.getByRole('checkbox',{name:'Новости — email'}) as HTMLInputElement).checked).toBe(false);
+    expect((screen.getByRole('checkbox',{name:'Спецпредложения — Уведомления на телефон'}) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByRole('checkbox',{name:'Новости — Письма на почту'}) as HTMLInputElement).checked).toBe(false);
     await user.click(news);
     expect(patchCampaignPreferences).toHaveBeenCalledWith({news:false});
   });
