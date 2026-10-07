@@ -674,9 +674,17 @@ export function ReviewView({
         {(nearResult||!result)&&accepted&&(
           <span><LexiconText text={t('learn.accepted',{answer:accepted})} refs={activity.lexiconRefs} /></span>
         )}
-        {courseExplanation&&(
-          <p><LexiconText text={courseExplanation} refs={activity.lexiconRefs} /></p>
+        {!result&&!nearResult&&learnerAnswer&&(
+          <span className="learn-feedback-yours">{t('learn.yourAnswer',{answer:learnerAnswer})}</span>
         )}
+        {courseExplanation&&(result
+          ? <p><LexiconText text={courseExplanation} refs={activity.lexiconRefs} /></p>
+          : (
+            <details className="learn-feedback-why">
+              <summary>{t('learn.why')}</summary>
+              <p><LexiconText text={courseExplanation} refs={activity.lexiconRefs} /></p>
+            </details>
+          ))}
       </AnswerFeedbackSheet>
     );
   };
@@ -716,7 +724,8 @@ export function ReviewView({
             {shuffledIndices(activity.options.length,(session?.shuffleSeed??'')+'|review|'+activity.id+'|'+index).map(optionIndex=>{
               const option=activity.options[optionIndex]!;
               return (
-                <label className={'learn-option'+(selected===optionIndex&&result===null?' is-selected':'')} key={optionIndex}>
+                // Same marks as in the lesson: the right option green, a wrong pick red (audit 06.10, 2.7).
+                <label className={'learn-option'+(selected===optionIndex&&result===null?' is-selected':'')+(result!==null&&optionIndex===activity.correctIndex?' is-correct':'')+(result===false&&optionIndex===selected?' is-wrong':'')} key={optionIndex}>
                   <input
                     type="radio"
                     name={'review-'+activity.id+'-'+index}
@@ -728,6 +737,7 @@ export function ReviewView({
                   />
                   <span><LexiconText text={localized(option,locale)} refs={activity.lexiconRefs} interactive={result!==null} /></span>
                   {selected===optionIndex&&result===null&&<span className="learn-option-confirm">{t('learn.tapAgain')}</span>}
+                  {result!==null&&optionIndex===activity.correctIndex&&<Icon name="check" size={20} className="learn-option-mark" />}
                 </label>
               );
             })}

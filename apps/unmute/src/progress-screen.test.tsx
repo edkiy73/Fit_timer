@@ -211,6 +211,8 @@ describe('progress screen summary',()=>{
 
     renderProgress(state);
 
+    // One learning day reads «1 день занятий», not «1 дней» (audit 06.10, 2.2).
+    expect(screen.getByText('день занятий')).toBeTruthy();
     expect(screen.queryByText('К повтору')).toBeNull();
     expect(screen.getByText('Подробнее о практике')).toBeTruthy();
     expect(screen.queryByText('карточки')?.closest('.progress-course-kpis')).toBeNull();

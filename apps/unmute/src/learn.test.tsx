@@ -522,6 +522,8 @@ describe('node activity runner',()=>{
     );
     await chooseAnswer(user,'I is here');
     expect(await screen.findByText('Это задание вернётся в конце урока.')).toBeTruthy();
+    // The sheet covers the task, so it says what was answered (audit 06.10, 2.1).
+    expect(screen.getByText('Твой ответ: I is here')).toBeTruthy();
     // The mistake does not add a task to the count.
     expect(screen.getByText('1/2')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Далее'}));
