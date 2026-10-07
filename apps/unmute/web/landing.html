@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>UnMute — разговорный английский для жизни за границей</title>
+  <meta name="description" content="Короткие уроки на каждый день: фразы для магазина, врача, работы и соседей. Говоришь вслух — приложение слушает и подсказывает. Первые дни бесплатно.">
+  <link rel="icon" type="image/png" href="/icon.png">
+  <link rel="apple-touch-icon" href="/icon.png">
+  <meta name="theme-color" content="#FBF7F2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#12131C" media="(prefers-color-scheme: dark)">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="UnMute">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:title" content="UnMute — заговори по-английски в реальной жизни">
+  <meta property="og:description" content="Фразы для магазина, врача, работы и соседей. Говоришь вслух — приложение слушает и подсказывает. Первые дни бесплатно.">
+  <meta property="og:url" content="{{SITE}}/">
+  <meta property="og:image" content="{{SITE}}/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="{{SITE}}/">
+  <script>
+    // Old links to the app («/#/invite/…», «/#/admin») open the app, which now lives in /app.
+    if(location.hash.indexOf('#/')===0) location.replace('/app/'+location.hash);
+  </script>
+  <style>
+    :root{color-scheme:light dark;--bg:#FBF7F2;--card:#FFFFFF;--surface:#F3EDE5;--ink:#1B1A24;--muted:#625E70;--line:#E6DED3;--accent:#FF7A59;--accent-ink:#C2412A;--on-accent:#1A0F0B;--success:#137A56}
+    @media (prefers-color-scheme:dark){:root{--bg:#12131C;--card:#1C1D2A;--surface:#262738;--ink:#F4F1EC;--muted:#A9A5B6;--line:#2E2F42;--accent-ink:#FF7A59;--success:#4CC38A}}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Manrope,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+    a{color:inherit}
+    .wrap{width:min(100% - 32px,1040px);margin:0 auto}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 0}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;text-decoration:none}
+    .brand img{width:36px;height:36px;border-radius:10px}
+    .hero{display:grid;gap:32px;align-items:center;padding:24px 0 48px}
+    @media (min-width:860px){.hero{grid-template-columns:1.1fr .9fr;padding:48px 0 72px}}
+    h1{margin:0;font-size:clamp(32px,6vw,52px);line-height:1.08;letter-spacing:-.02em}
+    .lead{margin:16px 0 0;font-size:18px;color:var(--muted);max-width:34em}
+    .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+    .button{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 22px;border-radius:18px;font-weight:700;text-decoration:none;border:0;font:inherit;font-weight:700;cursor:pointer}
+    .button-primary{background:var(--accent);color:var(--on-accent)}
+    .button-secondary{background:var(--surface);color:var(--ink)}
+    .note{margin:12px 0 0;font-size:14px;color:var(--muted)}
+    .demo{background:var(--card);border:1px solid var(--line);border-radius:28px;padding:22px;box-shadow:0 18px 40px -24px rgba(27,26,36,.35)}
+    .demo-kicker{display:inline-block;padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent-ink);font-size:13px;font-weight:700}
+    .demo h2{margin:14px 0 6px;font-size:24px;line-height:1.25}
+    .demo p{margin:0;color:var(--muted)}
+    .demo-answer{margin-top:16px;padding:14px 16px;border-radius:18px;background:var(--surface)}
+    .demo-answer strong{display:block;font-size:20px}
+    .demo-answer span{font-size:14px;color:var(--muted)}
+    .demo .button{width:100%;margin-top:16px}
+    .demo-steps{display:flex;gap:6px;margin-bottom:16px}
+    .demo-steps i{flex:1;height:6px;border-radius:3px;background:var(--surface)}
+    .demo-steps i.on{background:var(--accent)}
+    section{padding:40px 0}
+    section h2{margin:0 0 20px;font-size:clamp(24px,4vw,32px);line-height:1.2}
+    .cards{display:grid;gap:14px}
+    @media (min-width:760px){.cards{grid-template-columns:repeat(3,1fr)}}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:20px}
+    .card h3{margin:0 0 6px;font-size:18px}
+    .card p{margin:0;color:var(--muted)}
+    ol.steps{display:grid;gap:12px;margin:0;padding:0;list-style:none;counter-reset:step}
+    ol.steps li{counter-increment:step;display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start}
+    ol.steps li::before{content:counter(step);display:grid;place-items:center;width:40px;height:40px;border-radius:20px;background:var(--surface);font-weight:800}
+    ol.steps strong{display:block}
+    ol.steps span{color:var(--muted)}
+    .cta{text-align:center;background:var(--card);border:1px solid var(--line);border-radius:28px;padding:32px 20px;margin:24px 0 40px}
+    .cta .actions{justify-content:center}
+    footer{display:flex;flex-wrap:wrap;gap:8px 20px;padding:24px 0 40px;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}
+    @media (prefers-reduced-motion:no-preference){.demo-answer{animation:in .3s ease both}@keyframes in{from{opacity:0;transform:translateY(6px)}}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="brand" href="/"><img src="/icon.png" alt="" width="36" height="36">UnMute</a>
+      <a class="button button-secondary" href="/app/">Открыть</a>
+    </header>
+
+    <main>
+      <div class="hero">
+        <div>
+          <h1>Заговори по&#8209;английски в реальной жизни</h1>
+          <p class="lead">Короткие уроки на каждый день для тех, кто живёт за границей: магазин, врач, работа, соседи. Говоришь вслух — приложение слушает и подсказывает.</p>
+          <div class="actions">
+            <a class="button button-primary" href="{{PLAY_URL}}">Скачать в Google Play</a>
+            <a class="button button-secondary" href="/app/">Открыть в браузере</a>
+          </div>
+          <p class="note">Первые дни бесплатно. Аккаунт не нужен, чтобы начать.</p>
+        </div>
+
+        <div class="demo" aria-label="Пример задания">
+          <div class="demo-steps" aria-hidden="true"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div>
+          <span class="demo-kicker">Скажи вслух</span>
+          <h2 id="demo-prompt">Я живу здесь два года.</h2>
+          <p>Скажи по-английски, а потом сверь с ответом.</p>
+          <div class="demo-answer" id="demo-answer" hidden>
+            <strong id="demo-text">I've lived here for two years.</strong>
+            <span id="demo-why">Для того, что началось раньше и длится до сих пор, — have + третья форма.</span>
+          </div>
+          <button class="button button-primary" type="button" id="demo-button">Показать ответ</button>
+        </div>
+      </div>
+
+      <section aria-labelledby="why">
+        <h2 id="why">Почему получается</h2>
+        <div class="cards">
+          <article class="card"><h3>Говори вслух</h3><p>Каждый день — фразы, которые нужно произнести вслух. Приложение слушает и показывает, что узнало.</p></article>
+          <article class="card"><h3>Фразы из жизни</h3><p>Не учебник ради учебника: заказать, спросить дорогу, объяснить врачу, договориться с соседом.</p></article>
+          <article class="card"><h3>Повторы приходят сами</h3><p>Ошибки и новые слова возвращаются в «Повтор» тогда, когда их пора освежить.</p></article>
+        </div>
+      </section>
+
+      <section aria-labelledby="how">
+        <h2 id="how">Как это работает</h2>
+        <ol class="steps">
+          <li><div><strong>Выбери курс</strong><span>С нуля или для тех, кто что-то помнит со школы.</span></div></li>
+          <li><div><strong>Один день — один короткий урок</strong><span>Немного теории, задания, практика на скорость, слушание и говорение.</span></div></li>
+          <li><div><strong>Разговор с ИИ</strong><span>В некоторые дни — живой разговор на тему урока: как в кафе, у врача или на собеседовании.</span></div></li>
+        </ol>
+      </section>
+
+      <div class="cta">
+        <h2>Начни сегодня — первые дни бесплатно</h2>
+        <div class="actions">
+          <a class="button button-primary" href="{{PLAY_URL}}">Скачать в Google Play</a>
+          <a class="button button-secondary" href="/app/">Открыть в браузере</a>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <span>UnMute: English for Expats</span>
+      <a href="/privacy.html">Политика конфиденциальности</a>
+      <a href="/app/#/legal/terms">Условия использования</a>
+      <a href="/delete-account.html">Удалить аккаунт</a>
+    </footer>
+  </div>
+
+  <script>
+    // A tiny demo of a lesson step: a few phrases, «Показать ответ» → «Следующая фраза».
+    (function(){
+      var items=[
+        ['Я живу здесь два года.',"I've lived here for two years.",'Для того, что началось раньше и длится до сих пор, — have + третья форма.'],
+        ['Можно счёт, пожалуйста?','Could I have the bill, please?','Could I have…? — вежливая просьба в кафе и магазине.'],
+        ['Мне нужно записаться к врачу.','I need to make an appointment with a doctor.','Make an appointment — записаться на приём.']
+      ];
+      var index=0, shown=false;
+      var prompt=document.getElementById('demo-prompt'), answer=document.getElementById('demo-answer');
+      var text=document.getElementById('demo-text'), why=document.getElementById('demo-why'), button=document.getElementById('demo-button');
+      var steps=document.querySelectorAll('.demo-steps i');
+      button.addEventListener('click',function(){
+        if(!shown){ answer.hidden=false; button.textContent='Следующая фраза'; shown=true; return; }
+        index=(index+1)%items.length; shown=false;
+        prompt.textContent=items[index][0]; text.textContent=items[index][1]; why.textContent=items[index][2];
+        answer.hidden=true; button.textContent='Показать ответ';
+        for(var i=0;i<steps.length;i++) steps[i].className=i<=index+1?'on':'';
+      });
+    })();
+  </script>
+</body>
+</html>
