@@ -1627,9 +1627,18 @@ export function NodeRunnerView({
         {(nearResult||!result)&&accepted&&(
           <span><LexiconText text={t('learn.accepted',{answer:accepted})} refs={activity.lexiconRefs} /></span>
         )}
-        {explanation&&(
-          <p><LexiconText text={localized(explanation,locale)} refs={activity.lexiconRefs} /></p>
+        {/* The task is under the sheet: say what was answered (audit 06.10, 2.1). */}
+        {!result&&!nearResult&&learnerAnswer.trim()&&(
+          <span className="learn-feedback-yours">{t('learn.yourAnswer',{answer:learnerAnswer.trim()})}</span>
         )}
+        {explanation&&(result
+          ? <p><LexiconText text={localized(explanation,locale)} refs={activity.lexiconRefs} /></p>
+          : (
+            <details className="learn-feedback-why">
+              <summary>{t('learn.why')}</summary>
+              <p><LexiconText text={localized(explanation,locale)} refs={activity.lexiconRefs} /></p>
+            </details>
+          ))}
       </AnswerFeedbackSheet>
     );
   };

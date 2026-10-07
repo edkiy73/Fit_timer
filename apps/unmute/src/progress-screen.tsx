@@ -24,6 +24,7 @@ import { Sheet } from './sheet';
 import { CourseOptionList } from './active-course';
 import type { ContentCatalogSet } from './content/client';
 import { AnimatedNumber } from './animated-number';
+import { pluralLabel } from './plural';
 import { AnimatedProgressFill, AnimatedProgressRing } from './animated-progress';
 
 const STATS_QUERY_KEY='progress-screen-stats';
@@ -326,7 +327,7 @@ export function ProgressView({
   selectedCourseId?:string;
   onCourseChange?:(id:string)=>void;
 }){
-  const {t}=useI18n();
+  const {t,locale}=useI18n();
   const [courseSheetOpen,setCourseSheetOpen]=useState(false);
   const back=embedded?null:<button className="learn-back" type="button" onClick={onExit}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>;
 
@@ -400,8 +401,8 @@ export function ProgressView({
             </div>
 
             <div className="progress-general-metrics">
-              <MetricCard value={summary.learningDays} label={t('progress.learningDays')} icon="book" tone="accent" />
-              <MetricCard value={summary.streak} label={t('progress.streak')} icon="flame" tone="success" />
+              <MetricCard value={summary.learningDays} label={pluralLabel(t,locale,'progress.learningDays',summary.learningDays)} icon="book" tone="accent" />
+              <MetricCard value={summary.streak} label={pluralLabel(t,locale,'progress.streak',summary.streak)} icon="flame" tone="success" />
             </div>
 
             <ActivityCalendar
