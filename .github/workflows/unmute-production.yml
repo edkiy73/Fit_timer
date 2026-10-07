@@ -23,4 +23,6 @@ jobs:
         with:
           node-version: '22'
       - name: Живой production
+        env:
+          ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
         run: node apps/unmute/scripts/check-production.mjs

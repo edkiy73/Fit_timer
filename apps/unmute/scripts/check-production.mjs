@@ -7,14 +7,17 @@ const API=(argIndex>0?process.argv[argIndex+1]:'https://unmute99.vercel.app').re
 const SET_ID='general-foundation';
 
 async function get(path){
-  const response=await fetch(API+path,{signal:AbortSignal.timeout(20000)});
+  // The health details (storage, mail, AI, push) are given only with the admin key (audit M5).
+  const headers=process.env.ADMIN_KEY?{'X-Admin-Key':encodeURIComponent(process.env.ADMIN_KEY)}:{};
+  const response=await fetch(API+path,{headers,signal:AbortSignal.timeout(20000)});
   const body=await response.json().catch(()=>({}));
   return {status:response.status,body};
 }
 
 const errors=[],warnings=[];
 const health=await get('/api/health');
-if(health.body?.storage?.mode!=='redis'||!health.body?.storage?.connected)errors.push('storage is not connected Redis');
+if(!health.body?.storage)warnings.push(health.body?.ok?'health details need ADMIN_KEY: storage, mail, AI and push were not checked':'health is not ok and ADMIN_KEY is not set');
+else if(health.body.storage.mode!=='redis'||!health.body.storage.connected)errors.push('storage is not connected Redis');
 if(health.body?.services?.mail?.testDomain)warnings.push('mail uses the Resend test sender: codes reach only the Resend account owner');
 if(!health.body?.services?.ai?.configured)warnings.push('no AI provider configured: AI conversation and answer explanations are unavailable');
 if(!health.body?.services?.push?.android)warnings.push('Android remote push is not configured: add Firebase service-account env to the UnMute Vercel project before device push QA');

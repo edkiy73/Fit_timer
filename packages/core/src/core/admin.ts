@@ -16,7 +16,8 @@ export interface AdminHealth {
 }
 
 export interface AdminClient {
-  health(): Promise<AdminHealth>;
+  /** Service status; with the admin key a product may return the details (providers, storage). */
+  health(adminKey?: string): Promise<AdminHealth>;
   action<T extends Record<string, unknown> = Record<string, unknown>>(
     adminKey: string,
     action: string,
@@ -55,9 +56,12 @@ export function createAdminClient(options: AdminClientOptions = {}): AdminClient
   }
 
   return {
-    async health() {
+    async health(adminKey?: string) {
       if(typeof fetchImpl !== 'function') throw new Error('fetch_unavailable');
-      const response = await fetchImpl(healthEndpoint, {headers:{Accept:'application/json'}});
+      const key = String(adminKey || '').trim();
+      const headers: Record<string, string> = {Accept:'application/json'};
+      if(key) headers['X-Admin-Key'] = encodeURIComponent(key);
+      const response = await fetchImpl(healthEndpoint, {headers});
       try {
         const payload = await response.json();
         if(payload && typeof payload === 'object') return payload as AdminHealth;
