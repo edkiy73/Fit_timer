@@ -38,7 +38,7 @@ import { AI_SOURCES, aiClientVerdict, aiSrc, aiUiText, apiPost, applyProgression
   callGemini, clProgs, clients, closeImages, coachPhotoDraft, dropExMedia, editAIProg, editAIPrompt,
   exImageItem, exaPrompt, exeIdx, exePrompt, flashDone, generateAllImagesViaAI,
   generateOneImageViaAI, generateSlotImageViaAI, imageSlots, imagesPromptText, imgTray,
-  importProgramCode, importProgramFile, importProgramLink, markAITab, normHandle, openAI,
+  copyProgramTextWithChoice, importProgramCode, importProgramFile, importProgramLink, markAITab, normHandle, openAI,
   openEditAI, openExAI, openExEdAI, openImages, openYouTube, premiumGate, programToText,
   pushProfile, refreshTrainerProfile, renderGreeting, renderSlots, renderToday, renderTray,
   clearActiveClient, removeClientById, saveClients, saveTrainer, useUploadedCoachPhoto,
@@ -355,13 +355,8 @@ function registerEventActions(){
     $('createModal').classList.remove('open');
     openYouTube();
   });
-  registerAction('copyEditedProgram', async () => {
-    const btn = $('aiCopyFull');
-    const text = programToText(editAIProg);
-    try{
-      await navigator.clipboard.writeText(text);
-      flashDone(btn);
-    }catch(e){ appAlert(t('common.copyFailedRetry')); }
+  registerAction('copyEditedProgram', () => {
+    if(editAIProg) copyProgramTextWithChoice(editAIProg);
   });
   registerAction('openSwapHint', () => openSwapHint());
   registerAction('closeSwapHint', () => closeSwapHint());

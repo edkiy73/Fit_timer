@@ -1103,12 +1103,13 @@ function openProgramExportChoice(p, mode){
   if($('programExportChoiceTitle')){
     $('programExportChoiceTitle').textContent = mode === 'file'
       ? t('share.exportFileTitle')
-      : t('share.exportLinkTitle');
+      : (mode === 'copy' ? t('share.copyProgramTitle') : t('share.exportLinkTitle'));
   }
   $('programExportChoiceModal').classList.add('open');
 }
 export function shareProgramWithChoice(p){ openProgramExportChoice(p, 'link'); }
 export function exportProgramFileWithChoice(p){ openProgramExportChoice(p, 'file'); }
+export function copyProgramTextWithChoice(p){ openProgramExportChoice(p, 'copy'); }
 
 async function runProgramExportChoice(includeProgress){
   const pending = pendingProgramExport;
@@ -1117,7 +1118,16 @@ async function runProgramExportChoice(includeProgress){
   if(!pending) return;
   const options = {includeProgress:!!includeProgress};
   if(pending.mode === 'file') await exportProgramFile(pending.p, options);
-  else await exportProgram(pending.p, options);
+  else if(pending.mode === 'copy'){
+    if(includeProgress) applyProgressionAll();
+    const text = programToText(pending.p, {currentLoad:!!includeProgress});
+    try{
+      await navigator.clipboard.writeText(text);
+      flashDone($('aiCopyFull'));
+    }catch(e){
+      appAlert(t('common.copyFailedRetry'));
+    }
+  }else await exportProgram(pending.p, options);
 }
 
 export async function exportProgram(p, options){
@@ -2399,7 +2409,11 @@ function exResistanceLines(ex, opts){
   const levels = builderProgramsHooks.exerciseLoadLevels(ex);
   if(levels.length < 2) return [];
   const locale = (opts && opts.locale) || (opts && opts.program && opts.program.locale) || appLocale;
-  const idx = Math.max(0, Math.min(levels.length - 1, Math.round(+ex.loadLevel || 0)));
+  const currentLoad = !!(opts && opts.currentLoad);
+  const liveState = currentLoad ? builderProgramsHooks.exerciseLoadLevelState(ex) : null;
+  const idx = currentLoad && liveState
+    ? Math.max(0, Math.min(levels.length - 1, Math.round(+liveState.level || 0)))
+    : Math.max(0, Math.min(levels.length - 1, Math.round(+ex.loadLevel || 0)));
   return [
     'НАГРУЗКА: сопротивление',
     'СОПРОТИВЛЕНИЕ: ' + protocolResistanceLabel(levels[idx], locale),
@@ -2837,8 +2851,13 @@ export let editAIProg = null; // программа-исходник
 // счётчиком прогрессии с нуля, поэтому если отдать ИИ базу, правка отбросит
 // пользователя к исходным цифрам — а если отдать текущее и принять его как
 // новую базу, продолжение идёт ровно с той точки, на которой человек остановился.
-function exCurrentValueText(p, ex){
+function exLiveValueText(p, ex){
   if(ex.type === 'time') return String(builderProgramsHooks.getExProgValue(p.id, ex, p, 'time'));
+  return builderProgramsHooks.progressedRepsRange(p.id, ex, p).replace('–', '-');
+}
+
+function exCurrentValueText(p, ex){
+  if(ex.type === 'time') return exLiveValueText(p, ex);
   // Двойная прогрессия хранит исходный диапазон как точку сброса после прибавки
   // веса. Поэтому при AI-правке отдаём исходную базу, а текущий выросший диапазон
   // переносится отдельно через ex.ps (carryExerciseProgress). Иначе безобидная
@@ -2857,6 +2876,7 @@ function exCurrentValueText(p, ex){
 // нагрузку вместо базовой, см. exCurrentValueText выше и exProgToLines(ex, opts)
 export function programToText(p, opts){
   const forEdit = !!(opts && opts.forEdit);
+  const currentLoad = !!(opts && opts.currentLoad);
   const L = [];
   L.push('ПРОГРАММА: ' + (p.name || ''));
   if((p.desc || '').trim()) L.push('ОПИСАНИЕ ПРОГРАММЫ: ' + p.desc.replace(/\s*\n+\s*/g, ' ').trim());
@@ -2888,14 +2908,20 @@ export function programToText(p, opts){
       if(mus.length) L.push('МЫШЦЫ: ' + mus.join(', '));
       if((ex.mistakes || '').trim()) L.push('ОШИБКИ: ' + ex.mistakes.replace(/\s*\n+\s*/g, ' ').trim());
       L.push(exFormatLine(ex));
-      L.push('ЗНАЧЕНИЕ: ' + (forEdit ? exCurrentValueText(p, ex) : builderProgramsHooks.valueText(ex.value).replace('–', '-')));
+      L.push('ЗНАЧЕНИЕ: ' + (currentLoad
+        ? exLiveValueText(p, ex)
+        : (forEdit ? exCurrentValueText(p, ex) : builderProgramsHooks.valueText(ex.value).replace('–', '-'))));
       // всегда, даже при 1 подходе: ИИ повторяет формат исходника, и без строки
       // возвращал программу без ПОДХОДЫ вовсе
       L.push('ПОДХОДЫ: ' + (parseInt(ex.sets) || 1));
       if(ex.perSide) L.push('СТОРОНА: да');
       if(ex.warmup) L.push('РАЗМИНКА: да');
       L.push(...exRestLines(ex));
-      L.push(...exProgToLines(ex, {program:forEdit ? p : null, locale:p.locale || appLocale}));
+      L.push(...exProgToLines(ex, {
+        program:(forEdit || currentLoad) ? p : null,
+        currentLoad,
+        locale:p.locale || appLocale
+      }));
       if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
     });
   });

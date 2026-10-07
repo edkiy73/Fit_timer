@@ -172,6 +172,27 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
        && transferWithProgress.src === undefined && transferWithProgress.progFrom === undefined,
      JSON.stringify(transferWithProgress));
 
+  const copiedProgressText = await page.evaluate(() => {
+    const p = customPrograms.find(x => x.id === 'src1');
+    return programToText(p, {currentLoad:true});
+  });
+  ok('текст программы с прогрессией содержит текущие повторы',
+     /ЗНАЧЕНИЕ:\s*16/.test(copiedProgressText), copiedProgressText);
+  ok('текст программы с прогрессией не содержит технический КОД',
+     !/^КОД:/m.test(copiedProgressText), copiedProgressText);
+
+  const copiedWeightText = await page.evaluate(() => programToText({
+    id:'copy-weight',name:'Весовая',progression:2,
+    plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[{
+      id:'weight-ex',name:'Жим',type:'reps',value:'8-10',sets:3,rest:60,
+      loadType:'weight',trackWeight:true,weight:5,progOn:true,progMode:'double_range',
+      dualProg:true,repsStep:1,repsMax:14,wStep:1,weightMax:20,
+      ps:{n:1,cur:{reps:'11-13',kg:12}}
+    }]}]
+  }, {currentLoad:true}));
+  ok('весовое упражнение при копировании с прогрессией получает текущий вес',
+     /ВЕС:\s*12/.test(copiedWeightText), copiedWeightText);
+
   // Resistance policy — часть шаблона, а ps.cur.level — личное состояние владельца.
   const resistanceTransfer = await page.evaluate(() => {
     const source = {

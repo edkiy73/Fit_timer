@@ -101,16 +101,32 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     }catch(e){
       navigator.clipboard.writeText = async text => { window.__copiedProgramText = text; };
     }
-    const expected = programToText(customPrograms.find(p => p.id === 'guard-edit'));
+    const p = customPrograms.find(p => p.id === 'guard-edit');
+    const expectedBase = programToText(p);
     $('aiCopyFull').click();
     await new Promise(r => setTimeout(r, 20));
-    return {expected, actual: window.__copiedProgramText};
+    const modalOpen = $('programExportChoiceModal').classList.contains('open');
+    const title = $('programExportChoiceTitle').textContent.trim();
+    document.querySelector('[data-act="exportProgramWithoutProgress"]').click();
+    await new Promise(r => setTimeout(r, 20));
+    const base = window.__copiedProgramText;
+
+    window.__copiedProgramText = '';
+    $('aiCopyFull').click();
+    document.querySelector('[data-act="exportProgramWithProgress"]').click();
+    await new Promise(r => setTimeout(r, 20));
+    const live = window.__copiedProgramText;
+    return {expectedBase, base, live, modalOpen, title};
   });
-  ok('«Скопировать саму программу» копирует только programToText',
-    copiedProgram.actual === copiedProgram.expected, copiedProgram.actual.slice(0,80));
-  ok('в копии программы нет системного AI-промта',
-    !copiedProgram.actual.includes('You are a fitness-program assistant') &&
-    !copiedProgram.actual.includes('=== TASK ==='));
+  ok('«Скопировать программу» сначала показывает выбор прогрессии',
+    copiedProgram.modalOpen && /Скопировать программу/.test(copiedProgram.title), copiedProgram.title);
+  ok('копирование без прогрессии оставляет исходный текст программы',
+    copiedProgram.base === copiedProgram.expectedBase, copiedProgram.base.slice(0,80));
+  ok('оба варианта копии остаются чистым протоколом без системного AI-промта',
+    !copiedProgram.base.includes('You are a fitness-program assistant')
+      && !copiedProgram.base.includes('=== TASK ===')
+      && !copiedProgram.live.includes('You are a fitness-program assistant')
+      && !copiedProgram.live.includes('=== TASK ==='));
 
   await page.evaluate(() => { openBuilder('guard-edit'); openExEdAI(0); });
   await page.waitForTimeout(100);

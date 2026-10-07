@@ -942,6 +942,7 @@ export const I18N_EN = {
   'share.exportTitle': "What to share",
   'share.exportFileTitle': "Save program",
   'share.exportLinkTitle': "Share program",
+  'share.copyProgramTitle': "Copy program",
   'share.exportProgressHint': "Choose whether the recipient should continue from your current reps, weight, time, or resistance level.",
   'share.withProgress': "With current progression",
   'share.withProgressSub': "Continues from the current load of each exercise",
