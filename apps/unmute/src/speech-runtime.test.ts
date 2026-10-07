@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   nativeSpeechAvailable,
+  requestMicrophone,
   speakText,
   startRecognition
 } from './speech-runtime';
@@ -20,6 +21,18 @@ afterEach(()=>{
 });
 
 describe('UnMute speech runtime',()=>{
+  it('asks the phone for the microphone every time (decision 13)',async()=>{
+    const ask=vi.fn().mockResolvedValueOnce({granted:false}).mockResolvedValueOnce({granted:true});
+    setCapacitor({requestMicrophone:ask});
+    expect(await requestMicrophone()).toBe('denied');
+    expect(await requestMicrophone()).toBe('granted');
+    expect(ask).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports a browser without speech recognition as unsupported',async()=>{
+    expect(await requestMicrophone()).toBe('unsupported');
+  });
+
   it('does not mistake FitTimer command audio for the UnMute dictation plugin',()=>{
     (globalThis as unknown as {Capacitor?:unknown}).Capacitor={
       isNativePlatform:()=>true,

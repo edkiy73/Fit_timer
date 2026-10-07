@@ -4,8 +4,10 @@ import {
   type SpeechTransport
 } from '@appbase/core/speech.js';
 import {
+  requestWebMicrophone,
   speakWebText,
   startWebRecognition,
+  type RequestMicrophone,
   type SpeakText,
   type StartRecognition,
   type WebRecognitionError,
@@ -72,6 +74,13 @@ export const speakText:SpeakText=async(text,locale=ENGLISH_SPEECH_LOCALE)=>{
   return speakWebText(text,locale);
 };
 
+/** Asked on every entry into «Говорение» (launch plan, decision 13): a refusal is not remembered. */
+export const requestMicrophone:RequestMicrophone=async()=>{
+  const native=nativeTransport();
+  if(!native)return requestWebMicrophone();
+  return (await native.requestMicrophone())?'granted':'denied';
+};
+
 export const startRecognition:StartRecognition=(handlers,locale=ENGLISH_SPEECH_LOCALE)=>{
   const native=nativeTransport();
   if(!native)return startWebRecognition(handlers,locale);
@@ -134,6 +143,8 @@ export const startRecognition:StartRecognition=(handlers,locale=ENGLISH_SPEECH_L
 };
 
 export type {
+  MicrophoneAccess,
+  RequestMicrophone,
   SpeakText,
   StartRecognition,
   WebRecognitionError,

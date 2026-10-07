@@ -2,11 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
 import type {
+  MicrophoneAccess,
+  RequestMicrophone,
   SpeakText,
   StartRecognition,
   WebRecognitionError,
   WebRecognitionHandle
 } from './speech-web';
+import { requestMicrophone as requestSpeechMicrophone, startRecognition as startSpeechRecognition } from './speech-runtime';
 import { looseSpeechMatch } from './speech-match';
 import { ExerciseKind } from './exercise-kind';
 import { LexiconText } from './lexicon-ui';
@@ -56,6 +59,8 @@ export interface PatternSpeakingViewProps {
   )=>Promise<void>;
   speak:SpeakText;
   startRecognition:StartRecognition;
+  /** Asked when «Говорение» opens; the real recognizer asks the phone by default. */
+  requestMicrophone?:RequestMicrophone;
   random?:()=>number;
   onProgress?:(current:number,total:number)=>void;
   active?:boolean;
@@ -90,6 +95,12 @@ export function speakingPassed(correct:number,total:number):boolean{
   return total>0&&correct/total>=0.7;
 }
 
+/** One answer for a whole session made of several speaking views (a review of single phrases). */
+export function onceMicrophone(request:RequestMicrophone):RequestMicrophone{
+  let answer:Promise<MicrophoneAccess>|null=null;
+  return ()=>(answer??=request());
+}
+
 export function PatternSpeakingView({
   activity,
   setId,
@@ -97,6 +108,7 @@ export function PatternSpeakingView({
   savePractice,
   speak,
   startRecognition,
+  requestMicrophone,
   random=Math.random,
   onProgress,
   active=true,
@@ -122,6 +134,27 @@ export function PatternSpeakingView({
   );
   const handleRef=useRef<WebRecognitionHandle|null>(null);
   const receivedRef=useRef(false);
+  // Decision 13: ask for the microphone on every entry; without it the phrases are checked by hand,
+  // with one note instead of an error on every phrase. A refusal is not remembered.
+  const askMicrophone=requestMicrophone ?? (startRecognition===startSpeechRecognition?requestSpeechMicrophone:null);
+  const [microphone,setMicrophone]=useState<'checking'|'on'|'denied'|'unsupported'>(askMicrophone?'checking':'on');
+  const askedRef=useRef(false);
+  const manualMode=microphone==='denied'||microphone==='unsupported';
+
+  const checkMicrophone=()=>{
+    if(!askMicrophone)return;
+    setMicrophone('checking');
+    void askMicrophone()
+      .then(access=>setMicrophone(access==='granted'?'on':access))
+      .catch(()=>setMicrophone('on'));
+  };
+
+  useEffect(()=>{
+    if(!active||askedRef.current)return;
+    askedRef.current=true;
+    checkMicrophone();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[active]);
 
   const item=items[pos] ?? null;
   const target=item?.answer.accepted[0] || '';
@@ -216,6 +249,12 @@ export function PatternSpeakingView({
       onError:error=>{
         handleRef.current=null;
         setListening(false);
+        // No microphone after all: switch to checking by hand for the rest of the session.
+        if(error==='permission'||error==='unsupported'){
+          setMicrophone(error==='permission'?'denied':'unsupported');
+          setRecognitionError(null);
+          return;
+        }
         if(error!=='aborted')setRecognitionError(error);
       },
       onEnd:()=>{
@@ -329,7 +368,27 @@ export function PatternSpeakingView({
       </div>
       <h3><LexiconText text={prompt} refs={activity.lexiconRefs} /></h3>
 
-      {phase==='ask' ? (
+      {phase==='ask' ? (manualMode ? (
+        <>
+          <p className="learn-hint">{t('speaking.manualPrompt')}</p>
+          <div className="learn-feedback learn-feedback-neutral" role="status">
+            <span>{t(microphone==='denied'?'speaking.manualNoPermission':'speaking.manualUnsupported')}</span>
+            {microphone==='denied'&&(
+              <button className="link-button" type="button" onClick={checkMicrophone}>
+                {t('speaking.askMicrophone')}
+              </button>
+            )}
+          </div>
+          <div className="runner-action">
+            <button className="primary-button" type="button" onClick={beginManualCompare}>
+              {t('speaking.manualCheck')}
+            </button>
+          </div>
+          <button className="link-button" type="button" onClick={showAnswer}>
+            {t('speaking.showAnswer')}
+          </button>
+        </>
+      ) : (
         <>
           <p className="learn-hint">{t('speaking.prompt')}</p>
           {recognitionError&&(
@@ -341,6 +400,7 @@ export function PatternSpeakingView({
             <button
               className={listening?'primary-button speaking-mic speaking-mic-on':'primary-button speaking-mic'}
               type="button"
+              disabled={microphone==='checking'}
               onClick={beginRecognition}
             >
               {listening?t('speaking.listening'):t('speaking.start')}
@@ -355,6 +415,7 @@ export function PatternSpeakingView({
             {t('speaking.showAnswer')}
           </button>
         </>
+      )
       ) : active&&(
         <AnswerFeedbackSheet
           tone={verification==='manual'?'near':correct?'correct':'wrong'}
