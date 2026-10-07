@@ -1839,7 +1839,7 @@ body.booting .app{visibility:hidden}
   .vt-meter-wrap{margin-top:16px}
   .vt-meter{height:8px;border-radius:99px;background:var(--line);position:relative;overflow:visible}
   .vt-meter i{display:block;height:100%;width:0;border-radius:99px;background:var(--work);transition:width .12s linear}
-  .vt-meter span{position:absolute;top:-4px;bottom:-4px;width:2px;border-radius:2px;background:var(--ink);opacity:.65;left:42.5%;transform:translateX(-1px)}
+  .vt-meter span{position:absolute;top:-4px;bottom:-4px;width:2px;border-radius:2px;background:var(--ink);opacity:.65;left:18.5%;transform:translateX(-1px)}
   .vt-sensitivity{margin:16px 0 10px}
   /* проверка распознавания: строки «что услышано → что сделает приложение»,
      свежая сверху; принятая команда — акцентом, остальное приглушено */
