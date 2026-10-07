@@ -117,7 +117,7 @@ public class UpdateDownloadWorker extends Worker {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_fittimer)
             .setContentTitle("Обновление Fit Timer")
             .setContentText(progress >= 0 ? "Скачиваем обновление · " + progress + "%" : "Скачиваем обновление…")
             .setContentIntent(pending)

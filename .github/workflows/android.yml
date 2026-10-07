@@ -120,6 +120,20 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew bundlePlayRelease assemblePlayRelease assembleDirectRelease --no-daemon
 
+      - name: Проверить launcher внутри APK
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            APK=$(find android/app/build/outputs/apk/direct/debug -name '*.apk' | head -1)
+          else
+            APK=$(find android/app/build/outputs/apk/direct/release -name '*.apk' | head -1)
+          fi
+          test -n "$APK"
+          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -Vr | head -1)
+          test -n "$AAPT"
+          "$AAPT" dump badging "$APK" | tee "$RUNNER_TEMP/fittimer-badging.txt"
+          grep -Eq "application:.*icon='[^']*fittimer_launcher[^']*'" "$RUNNER_TEMP/fittimer-badging.txt"
+          unzip -l "$APK" | grep -Eq 'res/.*/fittimer_launcher\.(webp|png)$'
+
       - name: Проверить подпись APK
         if: github.event_name != 'pull_request'
         run: |
