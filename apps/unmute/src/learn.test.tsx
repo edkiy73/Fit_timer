@@ -481,7 +481,7 @@ describe('node activity runner',()=>{
     expect(saveGraded.mock.calls[1]?.[4]).toBe(saveGraded.mock.calls[0]?.[4]);
   });
 
-  it('accepts a keyboard typo without creating SRS debt',async()=>{
+  it('accepts a keyboard typo and gives a new phrase its review card',async()=>{
     const user=userEvent.setup();
     const {saveSeen,saveGraded}=renderRunner();
 
@@ -497,9 +497,9 @@ describe('node activity runner',()=>{
     expect(screen.getByText('Похоже на опечатку — ответ засчитан.')).toBeTruthy();
     expect(screen.getByText('Подходящий ответ: I am here')).toBeTruthy();
     expect(screen.queryByText('Это задание вернётся в конце урока.')).toBeNull();
-    // Only the preceding exact choice was graded; the typo itself creates no SRS write.
-    expect(saveGraded).toHaveBeenCalledTimes(1);
-    expect(saveSeen).toHaveBeenCalledWith('general-foundation','text.one');
+    // The typo passes like a correct first answer, so the phrase reaches the review (decision 1.3).
+    expect(saveGraded).toHaveBeenCalledTimes(2);
+    expect(saveGraded).toHaveBeenLastCalledWith('general-foundation','text.one',true,'write',expect.any(String));
   });
 
   it('keeps a wrong answer in correction until it is actually resolved',async()=>{

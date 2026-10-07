@@ -600,7 +600,7 @@ export const ru = {
   'review.doneTitle': 'На сегодня всё',
   'review.doneCount': 'Повторено: {count}',
   'review.doneAction': 'Готово',
-  'review.doneText': 'На сегодня очередь разобрана.',
+  'review.doneText': 'На сегодня очередь разобрана. Трудные фразы вернутся завтра.',
   'review.dailyDoneTitle': 'На сегодня всё',
   'review.dailyDoneText': 'Дневная норма выполнена. Остальное спокойно останется в очереди.',
   'review.moreTen': 'Ещё 10',

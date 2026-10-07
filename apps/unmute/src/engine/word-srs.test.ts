@@ -21,13 +21,13 @@ describe('personal vocabulary SRS',()=>{
     expect(doc.items[wordProgressKey('lex.work','noun')]?.due).toBe(101);
   });
 
-  it('keeps the legacy word intervals and reset semantics',()=>{
+  it('keeps the legacy word intervals and reset semantics (a forgotten word is due tomorrow)',()=>{
     expect(Array.from(WORD_INTERVALS)).toEqual([0,2,6,16,35]);
     let doc=addWordToReview(emptyWordsProgress(),'lex.work','verb',100,'2026-09-28T10:00:00Z');
     doc=gradeWordReview(doc,'lex.work','verb',true,101,'2026-09-29T10:00:00Z');
     expect(doc.items[wordProgressKey('lex.work','verb')]).toMatchObject({box:1,due:103});
     doc=gradeWordReview(doc,'lex.work','verb',false,103,'2026-10-01T10:00:00Z');
-    expect(doc.items[wordProgressKey('lex.work','verb')]).toMatchObject({box:0,due:103});
+    expect(doc.items[wordProgressKey('lex.work','verb')]).toMatchObject({box:0,due:104});
   });
 
   it('keeps removals as tombstones',()=>{

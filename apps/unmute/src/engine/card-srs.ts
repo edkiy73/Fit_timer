@@ -16,9 +16,11 @@ export function gradeCardSrs(
 ):CardSrsState{
   const state=previous ?? initialCardSrsState();
   const box=correct ? Math.min(5,state.box+1) : 0;
+  // A mistake comes back tomorrow, not today: the lesson corrects it right away and the review
+  // has already retried it in the session, so «На сегодня всё» stays true (launch plan, decision 12).
   return {
     box,
-    due:todayDay + (CARD_INTERVALS[box] ?? 0),
+    due:todayDay + (correct ? (CARD_INTERVALS[box] ?? 1) : 1),
   };
 }
 

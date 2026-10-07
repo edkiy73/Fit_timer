@@ -60,7 +60,8 @@ export function gradeWordReview(
       [key]:{
         ...current,
         box,
-        due:todayDay+(WORD_INTERVALS[box]??0),
+        // A forgotten word comes back tomorrow, so the finished review stays finished (decision 12).
+        due:todayDay+(correct?(WORD_INTERVALS[box]??1):1),
         at,
       },
     },

@@ -31,10 +31,10 @@ describe('legacy card SRS parity',()=>{
     expect(state).toEqual({box:5,due:day+35});
   });
 
-  it('resets to box zero and due today after a wrong answer',()=>{
+  it('resets to box zero and brings a wrong answer back tomorrow, not today',()=>{
     const day=20000;
-    expect(gradeCardSrs({box:4,due:99999},false,day)).toEqual({box:0,due:day});
-    expect(gradeCardSrs(undefined,false,day)).toEqual({box:0,due:day});
+    expect(gradeCardSrs({box:4,due:99999},false,day)).toEqual({box:0,due:day+1});
+    expect(gradeCardSrs(undefined,false,day)).toEqual({box:0,due:day+1});
   });
 
   it('matches legacy due semantics',()=>{

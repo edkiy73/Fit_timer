@@ -1529,12 +1529,9 @@ export function NodeRunnerView({
         && activity.answer.nearMiss!==false
         && nearMiss(input,activity.answer.accepted);
       const correct=exactCorrect||typo;
-      // Near miss is accepted for the lesson, but it must not create or advance SRS debt.
-      if(typo){
-        if(!replay&&!alreadySeen)await saveSeen(setId,activity.id);
-      }else{
-        await gradeAnswer(correct,chips?'build':'write');
-      }
+      // A near miss passes like a correct answer: a new phrase gets its card (back tomorrow), but
+      // an existing card is never advanced by a typo — gradeAnswer only records first answers.
+      await gradeAnswer(correct,chips?'build':'write');
       countAnswer(correct,true);
       if(!correct)retryLater();
       setNearResult(typo);

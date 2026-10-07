@@ -23,7 +23,7 @@ describe('learner progress actions',()=>{
     let doc=emptyCourseProgress();
     doc=gradeCourseCard(doc,'card.wrong',false,100,'2026-09-28','2026-09-28T10:00:00Z');
 
-    expect(doc.cards['card.wrong']).toMatchObject({box:0,due:100});
+    expect(doc.cards['card.wrong']).toMatchObject({box:0,due:101});
     expect(doc.seen['card.wrong']).toBeUndefined();
     expect(doc.learningDays['2026-09-28']).toBeTruthy();
   });
