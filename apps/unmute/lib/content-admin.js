@@ -317,7 +317,18 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
             nodeCount:structure ? (structure.roadmaps||[]).reduce((sum,roadmap)=>sum+(roadmap.nodes||[]).length,0) : null
           });
         }
-        send(res,200,{ok:true,sets});
+        send(res,200,{ok:true,sets,defaultSetId:await Release.getDefaultSetId()});
+        return true;
+      }
+
+      // The course new learners see selected in onboarding; '' clears it (they choose themselves).
+      if(action === 'content_default_set'){
+        const id=Content.cleanId(body.setId);
+        if(id){
+          const [draft,released]=await Promise.all([Content.getDraft(id),Release.getReleasedSet(id)]);
+          if(!draft&&!released){ fail(res,404,'set_not_found'); return true; }
+        }
+        send(res,200,{ok:true,defaultSetId:await Release.setDefaultSetId(id)});
         return true;
       }
 

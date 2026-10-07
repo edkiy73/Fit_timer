@@ -196,6 +196,14 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   assert.equal(cleared.body.set.access.price,undefined);
   assert.equal(cleared.body.set.access.bundlePrice,undefined);
 
+  // The course onboarding preselects for new learners: set, listed, cleared; unknown → 404.
+  const madeDefault=await action(handler,'content_default_set',{setId:'b1-b2'});
+  assert.equal(madeDefault.status,200);
+  assert.equal(madeDefault.body.defaultSetId,'b1-b2');
+  assert.equal((await action(handler,'content_sets_list',{})).body.defaultSetId,'b1-b2');
+  assert.equal((await action(handler,'content_default_set',{setId:'nope-course'})).status,404);
+  assert.equal((await action(handler,'content_default_set',{setId:''})).body.defaultSetId,'');
+
   const staleSet=await action(handler,'content_set_save',{
     setId:'b1-b2',
     expectedDraftRevision:bStructure.body.draftRevision,

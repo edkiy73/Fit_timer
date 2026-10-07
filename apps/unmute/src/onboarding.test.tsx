@@ -66,9 +66,24 @@ describe('minimal onboarding',()=>{
     });
 
     expect(screen.getByRole('heading',{name:'Выбери курс'})).toBeTruthy();
-    expect(screen.getByRole('button',{name:/Общий английский/}).getAttribute('aria-pressed')).toBe('true');
+    const option=screen.getAllByRole('button',{name:/Общий английский/}).find(button=>button.hasAttribute('aria-pressed'));
+    expect(option?.getAttribute('aria-pressed')).toBe('true');
+    // The start button names the chosen course (decision 14).
+    expect(screen.getByRole('button',{name:'Начать: Общий английский'})).toBeTruthy();
     await user.click(screen.getByRole('button',{name:/A1: первые шаги/}));
     expect(onCourse).toHaveBeenCalledWith('a1-starter');
+  });
+
+  it('waits for a choice when Admin preselects no course, and offers sign-in and a look around',async()=>{
+    const user=userEvent.setup();
+    const onSignIn=vi.fn(), onBrowse=vi.fn();
+    const course=(id:string,title:string)=>({id,title:{ru:title},description:null,level:{},access:{mode:'free'}}) as never;
+    renderOnboarding(vi.fn(),{courses:[course('main','Общий английский'),course('a1-starter','A1: первые шаги')],courseId:'',onCourse:vi.fn(),onSignIn,onBrowse});
+    expect((screen.getByRole('button',{name:'Выбери курс, чтобы начать'}) as HTMLButtonElement).disabled).toBe(true);
+    await user.click(screen.getByRole('button',{name:'Войти в аккаунт'}));
+    await user.click(screen.getByRole('button',{name:'Сначала посмотреть приложение'}));
+    expect(onSignIn).toHaveBeenCalledTimes(1);
+    expect(onBrowse).toHaveBeenCalledTimes(1);
   });
 
   it('skips the course choice with a single course',()=>{
