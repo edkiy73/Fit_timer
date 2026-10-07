@@ -118,13 +118,36 @@ function cleanLink(v, max){
   return /^https?:\/\//i.test(s) ? s : 'https://' + s;
 }
 
+/* CORS. A product that lists `cors.origins` in config/product.json (plus CORS_ORIGINS, comma
+   separated, for a new domain) answers only those origins and its own host; the others keep «*». */
+function corsOrigins(){
+  let config = null;
+  try{ config = require('./product-core').productConfig(); }catch(_){ return null; }
+  const listed = config && config.cors && Array.isArray(config.cors.origins) ? config.cors.origins : null;
+  if(!listed) return null;
+  const extra = String(process.env.CORS_ORIGINS || '').split(',');
+  return [...listed, ...extra].map(origin => String(origin || '').trim().replace(/\/$/, '')).filter(Boolean);
+}
+
+function allowedOrigin(req){
+  const allowed = corsOrigins();
+  if(!allowed) return '*';
+  const origin = String(req.headers && req.headers.origin || '').replace(/\/$/, '');
+  if(!origin) return '';
+  const host = String(req.headers && (req.headers['x-forwarded-host'] || req.headers.host) || '');
+  if(host && origin === 'https://' + host) return origin;
+  return allowed.includes(origin) ? origin : '';
+}
+
 function cors(req, res){
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = allowedOrigin(req);
+  if(origin) res.setHeader('Access-Control-Allow-Origin', origin);
+  if(origin && origin !== '*') res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Fit-Email, X-Fit-Device, X-Fit-Token, X-Fit-Link-Key, X-Admin-Key');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   if(req.method === 'OPTIONS'){ res.statusCode = 204; res.end(); return true; }
   return false;
 }
 
-module.exports = { send, fail, readBody, rateOk, rateOkScoped, rndId, sameSecret, cors, ipHash, MAX_BODY,
+module.exports = { send, fail, readBody, rateOk, rateOkScoped, rndId, sameSecret, cors, allowedOrigin, ipHash, MAX_BODY,
                    clampText, clampLine, cleanPic, cleanLink };

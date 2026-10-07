@@ -3,6 +3,9 @@
   "name": "UnMute: English for Expats",
   "slug": "unmute",
   "defaultApiUrl": "https://unmute99.vercel.app",
+  "cors": {
+    "origins": ["https://unmute99.vercel.app", "https://localhost", "capacitor://localhost", "http://localhost"]
+  },
   "defaultPublicUrl": "https://unmute99.vercel.app",
   "brand": {
     "background": "#12131C",

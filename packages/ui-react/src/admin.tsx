@@ -427,11 +427,11 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
 
   const loadHealth = useCallback(async () => {
     try{
-      setHealth(await client.health());
+      setHealth(await client.health(key));
     }catch(_){
       setHealth({ok:false,status:'error',warnings:[copy.requestFailed]});
     }
-  }, [client, copy.requestFailed]);
+  }, [client, copy.requestFailed, key]);
 
   const loadProtected = useCallback(async (target: Tab, adminKey = key) => {
     // These tabs load their own data.

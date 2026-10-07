@@ -76,8 +76,19 @@ function fakeRes(){
   const health = require('../api/health');
   const healthRes = fakeRes();
   await health({method:'GET',headers:{},query:{}},healthRes);
-  const report = JSON.parse(healthRes.body || '{}');
+  const publicReport = JSON.parse(healthRes.body || '{}');
+  // Audit M5: outside only «works / does not»; the details need the admin key.
+  ok('public health shows only the status', typeof publicReport.ok === 'boolean' && !publicReport.probes && !publicReport.services && !publicReport.storage);
+  const adminHealthRes = fakeRes();
+  await health({method:'GET',headers:{'x-admin-key':encodeURIComponent(process.env.ADMIN_KEY)},query:{}},adminHealthRes);
+  const report = JSON.parse(adminHealthRes.body || '{}');
   ok('generic health endpoint is mounted', Array.isArray(report.probes));
+  // Audit M6: the API answers only its own sites and the app, not any origin.
+  const { allowedOrigin } = require('../../../packages/core/server/util');
+  ok('CORS answers the app and its own host', allowedOrigin({headers:{origin:'https://localhost'}}) === 'https://localhost'
+    && allowedOrigin({headers:{origin:'capacitor://localhost'}}) === 'capacitor://localhost'
+    && allowedOrigin({headers:{origin:'https://unmute-preview.vercel.app',host:'unmute-preview.vercel.app'}}) === 'https://unmute-preview.vercel.app');
+  ok('CORS does not answer other sites', allowedOrigin({headers:{origin:'https://evil.example'}}) === '');
 
   console.log(bad ? '\nStarter smoke failures: ' + bad : '\nStarter smoke passed');
   process.exit(bad ? 1 : 0);
