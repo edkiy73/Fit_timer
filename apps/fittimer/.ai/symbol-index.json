@@ -487,8 +487,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 3567,
-      "chars": 166486,
+      "lines": 3593,
+      "chars": 167538,
       "symbols": [
         "activateClientAt",
         "add",
@@ -527,6 +527,7 @@
         "clProgs",
         "coachLinkIds",
         "compactProgramAIContext",
+        "copyProgramTextWithChoice",
         "countTo",
         "coverImagePrompt",
         "createEditedProgram",
@@ -550,6 +551,7 @@
         "exFormatLine",
         "exImageItem",
         "exitExAI",
+        "exLiveValueText",
         "exportProgram",
         "exportProgramFile",
         "exportProgramFileWithChoice",
@@ -1096,8 +1098,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2724,
-      "chars": 112066,
+      "lines": 2719,
+      "chars": 111932,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
