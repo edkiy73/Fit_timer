@@ -130,9 +130,15 @@ jobs:
           test -n "$APK"
           AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -Vr | head -1)
           test -n "$AAPT"
+
           "$AAPT" dump badging "$APK" | tee "$RUNNER_TEMP/fittimer-badging.txt"
-          grep -Eq "application:.*icon='[^']*fittimer_launcher[^']*'" "$RUNNER_TEMP/fittimer-badging.txt"
-          unzip -l "$APK" | grep -Eq 'res/.*/fittimer_launcher\.(webp|png)$'
+          "$AAPT" dump resources "$APK" | tee "$RUNNER_TEMP/fittimer-resources.txt"
+          grep -q 'mipmap/fittimer_launcher' "$RUNNER_TEMP/fittimer-resources.txt"
+
+          ICON_PATH=$(sed -n "s/^application:.* icon='\([^']*\)'.*/\1/p" "$RUNNER_TEMP/fittimer-badging.txt" | head -1)
+          test -n "$ICON_PATH"
+          unzip -p "$APK" "$ICON_PATH" > "$RUNNER_TEMP/fittimer-packaged-launcher.webp"
+          cmp android/app/src/main/res/mipmap-xhdpi/fittimer_launcher.webp "$RUNNER_TEMP/fittimer-packaged-launcher.webp"
 
       - name: Проверить подпись APK
         if: github.event_name != 'pull_request'
