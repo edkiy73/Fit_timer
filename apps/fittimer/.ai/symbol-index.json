@@ -487,8 +487,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 3565,
-      "chars": 166396,
+      "lines": 3567,
+      "chars": 166486,
       "symbols": [
         "activateClientAt",
         "add",
