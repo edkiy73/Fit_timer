@@ -1,3 +1,4 @@
+import { appRestart } from './sign-out';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -85,7 +86,12 @@ describe('UnMute: English for Expats starter', () => {
     expect(await screen.findByText(/demo@example\.com/)).toBeTruthy();
     // Signing out lives in «Настройки» next to deleting the account.
     await user.click(screen.getByRole('link', {name:t['me.settings']}));
+    const restart = vi.spyOn(appRestart, 'reload').mockImplementation(() => {});
     await user.click(await screen.findByRole('button', {name:t['account.signOut']}));
+    // If progress could not be confirmed as sent, the app asks first.
+    const anyway = await screen.findByRole('button', {name:t['account.signOutAnyway']}, {timeout:800}).catch(() => null);
+    if(anyway) await user.click(anyway);
+    await waitFor(() => expect(restart).toHaveBeenCalled());
     await user.click(await screen.findByRole('link', {name:t['nav.me']}));
     expect(await screen.findByRole('button', {name:t['me.signIn']})).toBeTruthy();
   });

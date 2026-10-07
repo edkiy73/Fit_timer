@@ -8,7 +8,11 @@ import { installBusyButtons } from '@appbase/core/busy-buttons.js';
 import { applyProductTheme } from './theme';
 import { captureFatal, flushAnalyticsOutbox, installGlobalDiagnostics, trackInstallOnce } from './observability';
 import { startAppSync } from './sync';
+import { finishPendingSignOut } from './sign-out';
 import './styles.css';
+
+// A sign-out restarted the app: clear what the old page may have written in its last moment.
+finishPendingSignOut();
 
 applyProductTheme();
 // Every pressed button that waits for the server shows a spinner until the answer comes.

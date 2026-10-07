@@ -289,6 +289,27 @@ try{
   await phone.page.getByText('Hello.').first().waitFor({timeout:5000}).catch(()=>{});
   ok('lessons run without the bottom bar',await tabs.count()===0);
 
+  // «Выйти» on a shared phone: progress stays in the account, the phone starts clean (decision 20).
+  await phone.page.goto(URL_+'#/settings');
+  await phone.page.getByRole('button',{name:'Выйти',exact:true}).click();
+  // Either the phone restarts on onboarding, or — if progress could not be confirmed as sent —
+  // the app asks first; whichever shows up.
+  const onboardingHeading=phone.page.getByRole('heading',{name:COPY.onboarding});
+  const signOutAnyway=phone.page.getByRole('button',{name:'Всё равно выйти'});
+  await onboardingHeading.or(signOutAnyway).first().waitFor({timeout:10000}).catch(()=>{});
+  if(await signOutAnyway.isVisible().catch(()=>false))await signOutAnyway.click();
+  const cleanStart=await appears(phone.page.getByRole('heading',{name:COPY.onboarding}),10000);
+  if(!cleanStart)console.log('DEBUG sign-out:',phone.page.url(),(await phone.page.locator('body').innerText()).replace(/\s+/g,' ').slice(0,500));
+  ok('after sign-out the phone starts clean: onboarding again',cleanStart);
+  ok('no personal lesson state stays on the phone',await phone.page.evaluate(()=>
+    Object.keys(localStorage).filter(key=>key.startsWith('unmute.lesson-run:')||key==='unmute.onboarding.v1').length===0));
+  await phone.page.goto(URL_+'#/account');
+  const signedBack=await signIn(phone.page,'person@example.com');
+  await phone.page.goto(URL_+'#/');
+  // The fixture course has two days, both passed before: the account brings that back.
+  const back=await appears(phone.page.getByText('2 из 2 дней'),8000);
+  ok('signing in again brings the progress back',signedBack&&back);
+
   const adminContext=await browser.newContext({locale:'ru-RU'});
   const admin=await adminContext.newPage();
   admin.on('pageerror',error=>errors.push(String(error)));
