@@ -346,71 +346,108 @@ V2 хранит:
 
 ### 2.8. Persistent-схема v2 — единственный источник истины
 
-Раз данные не переносятся (1.9), устаревший слой нагрузки/прогрессии после cutover удаляется, а не оборачивается вечным адаптером.
+Раз данные не переносятся (1.9), устаревший слой нагрузки/прогрессии после перехода удаляется, а не оборачивается вечным адаптером.
 
 Удаляются из persistent-модели:
 - `prog`, `progOn`, `trackWeight`, `dualProg`, `dualRangeV`, `swapOn`, `swapName`, `swapDesc`;
-- корневые `loadType/progMode/wStep/repsStep/timeStep/*Max/progEvery` после перехода на сгруппированные V2-объекты;
+- корневые `loadType/progMode/wStep/repsStep/timeStep/*Max/progEvery`;
 - логика «поле отсутствует → угадать смысл из legacy».
+
+### Exercise slot и movement stages
+
+После третьего ревью разделяем:
+- **exercise slot** — стабильное место упражнения в программе;
+- **movement stage** — конкретный вариант движения внутри этого слота;
+- **prescription** — AI/user-owned параметры конкретного stage;
+- **progressState** — app-owned накопленный прогресс текущего stage.
 
 Целевая форма по смыслу:
 
 ```js
-ex.load = {
-  type: 'none' | 'weight' | 'level',
-  equipment: 'dumbbell' | 'barbell' | ... | 'custom' | null,
-  name: '',
-  count: 1,
-  unit: 'kg',
-  weight: 10,
-  levels: [...],
-  level: 0
-}
+exercise = {
+  id: 'ex_...',                 // app-owned, стабилен для логического слота
 
-ex.supportEquipment = ['bench']
+  currentStageId: 'mv_...',     // app-owned
 
-ex.progression = {
-  // ЕДИНСТВЕННЫЙ OFF — mode:'none'
-  mode: 'none' | 'reps' | 'weight' | 'double_range' | 'time' | 'level' | 'parallel',
+  stages: [                     // 1..4, порядок = лестница движения
+    {
+      stageId: 'mv_...',        // app-owned
+      prescription: {
+        name: '...',
+        desc: '...',
+        type: 'reps' | 'time',
+        value: '8-10',
+        sets: 3,
+        perSide: false,
+        warmup: false,
+        rest: 45,
+        restAfter: 60,
+        muscles: [],
+        mistakes: '',
+        video: '',
 
-  // null = наследовать program.progression.every
-  // число 1..15 = собственная частота; 0 не используется как второй OFF
-  every: null,
+        load: {
+          type: 'none' | 'weight' | 'level',
+          equipment: 'dumbbell' | 'barbell' | ... | 'custom' | null,
+          name: '',
+          count: 1,
+          unit: 'kg',
+          weight: 10,
+          levels: [...],
+          level: 0
+        },
 
-  reps:   {step: 1, max: 15},
-  weight: {step: 1, max: 12},
-  time:   {step: 5, max: 60}
+        supportEquipment: ['bench'],
+
+        progression: {
+          mode: 'none' | 'reps' | 'weight' | 'double_range' | 'time' | 'level' | 'parallel',
+          // null = наследовать program.progression.every
+          // число 1..15 = своё; 0 не используется как второй OFF
+          every: null,
+          reps:   {step: 1, max: 15},
+          weight: {step: 1, max: 12},
+          time:   {step: 5, max: 60}
+        }
+      },
+
+      // как переходить С ЭТОГО stage к следующему
+      advance: {
+        mode: 'ceiling' | 'manual'
+      },
+
+      // app-owned image identity; AI не пишет media/base64
+      mediaRef: null,
+      visualKey: ''
+    }
+  ],
+
+  progressState: {
+    count: 0,
+    current: {
+      reps: null,
+      weight: null,
+      time: null,
+      level: null
+    }
+  }
 }
 
 program.progression = {
   // общий default; null = общего default нет
   every: 4
 }
-
-
-ex.progressState = {
-  count: 0,
-  current: {
-    reps: null,
-    weight: null,
-    time: null,
-    level: null
-  }
-}
-
-ex.movementProgression = {
-  currentStageId: 'mv_...',   // app-owned
-  next: [                     // максимум 3 будущих этапа
-    {
-      stageId: 'mv_...',      // app-owned
-      prescription: { /* полный ExercisePrescription без id/state/media/next */ },
-      mediaRef: null          // app-owned, optional; НЕ base64
-    }
-  ]
-}
 ```
 
-Точную JSON Schema фиксируем в PR 1; неиспользуемые ветки нормализуются/не сериализуются по выбранным `load.type` и `progression.mode`.
+**Даже упражнение без цепочки хранит один stage.** Это сознательно убирает две параллельные формы «обычное упражнение» и «упражнение с chain».
+
+Runtime/UI получают активный prescription только через один helper по смыслу:
+```js
+activePrescription(exercise)
+```
+
+В остальных разделах документа для краткости записи вроде `load.weight` или `progression.mode` означают поля АКТИВНОГО `stage.prescription`, а не второй набор корневых persistent-полей.
+
+Точную JSON Schema фиксируем в PR 2; неиспользуемые ветки prescription нормализуются/не сериализуются по выбранным `load.type` и `progression.mode`.
 
 ### Строгое правило equipment
 
