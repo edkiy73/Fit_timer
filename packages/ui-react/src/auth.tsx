@@ -81,7 +81,7 @@ const COPY = {
     saving:'Сохраняю…',
     logout:'Выйти',
     loading:'Проверяю вход…',
-    badEmail:'Проверь адрес почты.',
+    badEmail:'Проверь почту — похоже, в адресе опечатка.',
     badCode:'Код не подошёл. Проверь цифры и попробуй ещё раз.',
     expired:'Срок действия кода истёк. Запроси новый.',
     handleTaken:'Этот ник уже занят.',
@@ -109,7 +109,7 @@ const COPY = {
     saving:'Saving…',
     logout:'Sign out',
     loading:'Checking sign-in…',
-    badEmail:'Check the email address.',
+    badEmail:'Check the email — it looks like a typo.',
     badCode:'That code did not work. Check it and try again.',
     expired:'The code expired. Request a new one.',
     handleTaken:'That handle is already taken.',
@@ -223,6 +223,11 @@ export function SignInForm({locale = 'ru', productName, askHandle = true, varian
   async function sendCode(event?: FormEvent){
     event?.preventDefault();
     setError('');
+    // The browser's own email check is silent in app WebViews: say what is wrong right under the field.
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email || '').trim())){
+      setError(copy.badEmail);
+      return;
+    }
     setBusy(true);
     try{
       const result = await client.sendCode(email, locale);
@@ -293,7 +298,7 @@ export function SignInForm({locale = 'ru', productName, askHandle = true, varian
       <h1 id="ab-auth-title">{title || copy.account}</h1>
 
       {step === 'email' && (
-        <form onSubmit={sendCode}>
+        <form onSubmit={sendCode} noValidate>
           <p className="ab-auth-lead">{lead || copy.intro}</p>
           <label className="ab-auth-field">
             <span>{copy.email}</span>
