@@ -12,6 +12,7 @@ import { useAllLearningDays } from './learning-days';
 import { useCatalog } from './active-course';
 import { localizedText } from './today-model';
 import { ScreenHeader } from './screen-header';
+import { MyPurchases } from './my-purchases';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
@@ -102,6 +103,11 @@ export function MeScreen(){
         selectedCourseId={selectedCourseId}
         onCourseChange={setStatsCourseId}
       />
+
+      {auth.session && (
+        <MyPurchases session={auth.session} sets={catalog.data?.sets ?? []}
+          onRestore={async () => { await auth.refresh(); await runtime.refresh(); }} />
+      )}
 
       {!auth.session && (
         <section className="profile-account" aria-labelledby="profile-account-title">

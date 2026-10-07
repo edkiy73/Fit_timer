@@ -240,6 +240,10 @@ try{
     'first sign-in keeps the phone local progress',
     phoneSignedIn&&await appears(phone.page.getByRole('heading',{name:'День 2'}))
   );
+  await phone.page.goto(URL_+'#/account');
+  ok('the profile shows «Мои покупки» to a signed-in learner',await appears(phone.page.getByRole('heading',{name:'Мои покупки'})));
+  if(process.env.E2E_SHOTS)await phone.page.locator('.my-purchases').screenshot({path:process.env.E2E_SHOTS+'/purchases.png'});
+  await phone.page.goto(URL_+'#/');
 
   const laptop=await openDevice(browser,errors);
   ok('second device starts with its own anonymous state',await finishOnboarding(laptop.page));
