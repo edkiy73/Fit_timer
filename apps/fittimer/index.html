@@ -1885,6 +1885,22 @@
       </div>
     </div>
 
+    <div class="modal" id="programExportChoiceModal" data-act="closeModalBackdrop">
+      <div class="modal-card">
+        <span class="mini-label" id="programExportChoiceTitle" data-i18n="share.exportTitle">Что передать</span>
+        <p class="field-hint" data-i18n="share.exportProgressHint">Выбери, должен ли получатель продолжить с твоих текущих повторов, веса, времени или уровня сопротивления.</p>
+        <button class="choice primary" data-act="exportProgramWithProgress">
+          <b data-i18n="share.withProgress">С текущей прогрессией</b>
+          <small data-i18n="share.withProgressSub">Продолжит с текущей нагрузки каждого упражнения</small>
+        </button>
+        <button class="choice" data-act="exportProgramWithoutProgress">
+          <b data-i18n="share.withoutProgress">Без прогрессии</b>
+          <small data-i18n="share.withoutProgressSub">Начнёт с исходных значений программы</small>
+        </button>
+        <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
+      </div>
+    </div>
+
     <div class="modal" id="hfModal" data-act="closeModalBackdrop">
       <div class="modal-card hf-modal-card">
         <div id="hfModalContent" class="hf-modal-scroll"></div>
