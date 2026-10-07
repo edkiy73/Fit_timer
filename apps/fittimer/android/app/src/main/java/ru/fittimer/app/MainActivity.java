@@ -3,10 +3,12 @@ package ru.fittimer.app;
 import android.os.Bundle;
 import android.content.res.Configuration;
 import com.getcapacitor.BridgeActivity;
+import androidx.core.splashscreen.SplashScreen;
 
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        SplashScreen.installSplashScreen(this);
         registerPlugin(FitAudioPlugin.class);
         registerPlugin(FitSystemPlugin.class);
         registerPlugin(FitBiometricPlugin.class);
