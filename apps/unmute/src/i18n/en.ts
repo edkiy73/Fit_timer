@@ -617,7 +617,7 @@ export const en: Record<keyof typeof ru, string> = {
   'review.estimate': '≈ {minutes} min',
   'review.how.title': 'How Review works',
   'review.how.mistake': 'A task you got wrong comes back tomorrow — from a lesson or from Review.',
-  'review.how.correct': 'A right answer makes it come back less often: in 1, 3, 7, 16 and 35 days.',
+  'review.how.correct': 'A right answer first comes back in 3 days, then less and less often: in 7, 16 and 35 days.',
   'review.how.phrases': 'In Speed, Listening and Speaking only the phrase you got wrong comes back — one at a time.',
   'review.how.words': 'Saved words come here too, by the same rules.',
   'review.how.limit': 'Up to 20 reviews a day; the rest waits. Want more? Add 10.',
