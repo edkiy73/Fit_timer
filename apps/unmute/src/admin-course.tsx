@@ -355,6 +355,8 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
   const [metaFreeDays,setMetaFreeDays]=useState('0');
   const [metaPriceRub,setMetaPriceRub]=useState('');
   const [metaPriceUsd,setMetaPriceUsd]=useState('');
+  const [metaBundleRub,setMetaBundleRub]=useState('');
+  const [metaBundleUsd,setMetaBundleUsd]=useState('');
   const dayPane=useRef<HTMLElement|null>(null);
 
   const loadSets=useCallback(async()=>{
@@ -386,6 +388,9 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
       const price=access.price && typeof access.price==='object' ? access.price as Record<string,unknown> : {};
       setMetaPriceRub(price.RUB ? String(price.RUB) : '');
       setMetaPriceUsd(price.USD ? String(price.USD) : '');
+      const bundle=access.bundlePrice && typeof access.bundlePrice==='object' ? access.bundlePrice as Record<string,unknown> : {};
+      setMetaBundleRub(bundle.RUB ? String(bundle.RUB) : '');
+      setMetaBundleUsd(bundle.USD ? String(bundle.USD) : '');
     }catch(error){
       setStructure(null);
       setMessage(failureText(error,'Курс не загрузился'));
@@ -561,7 +566,8 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
           levelTo:metaTo,
           accessMode:metaAccess,
           freeDays:Number(metaFreeDays)||0,
-          price:{RUB:Number(metaPriceRub)||0,USD:Number(metaPriceUsd)||0}
+          price:{RUB:Number(metaPriceRub)||0,USD:Number(metaPriceUsd)||0},
+          bundlePrice:{RUB:Number(metaBundleRub)||0,USD:Number(metaBundleUsd)||0}
         }
       });
       await refreshCourse();
@@ -728,6 +734,8 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
             <label><span>Бесплатных дней</span><input type="number" min={0} max={365} value={metaFreeDays} onChange={e=>setMetaFreeDays(e.target.value)} /></label>
             <label><span>Цена, ₽ (пусто — общая)</span><input type="number" min={0} inputMode="numeric" value={metaPriceRub} onChange={e=>setMetaPriceRub(e.target.value)} /></label>
             <label><span>Цена, $ (пусто — общая)</span><input type="number" min={0} inputMode="numeric" value={metaPriceUsd} onChange={e=>setMetaPriceUsd(e.target.value)} /></label>
+            <label><span>«Курс + Plus на год», ₽ (пусто — курс + год Plus со скидкой 30%)</span><input type="number" min={0} inputMode="numeric" value={metaBundleRub} onChange={e=>setMetaBundleRub(e.target.value)} /></label>
+            <label><span>«Курс + Plus на год», $ (пусто — курс + год Plus со скидкой 30%)</span><input type="number" min={0} inputMode="numeric" value={metaBundleUsd} onChange={e=>setMetaBundleUsd(e.target.value)} /></label>
           </>}
         </div>
         <div className="ab-admin-action-row">

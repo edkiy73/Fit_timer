@@ -37,9 +37,10 @@
     "course": {"RUB": 1490, "USD": 15},
     "plusMonthly": {"RUB": 399, "USD": 4},
     "plusYearly": {"RUB": 2990, "USD": 30},
-    "plusCourseDiscount": 30
+    "bundleDiscount": 30
   },
-  "skuPatterns": ["course.*"],
+  "skuPatterns": ["course.*", "bundle.course.*"],
+  "bundles": [{"pattern": "bundle.course.*", "includes": ["course.*", "plus.year"]}],
   "products": [
     {
       "sku": "course.general-foundation",

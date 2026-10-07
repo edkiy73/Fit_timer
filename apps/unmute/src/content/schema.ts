@@ -187,6 +187,11 @@ export const setAccessSchema = z.discriminatedUnion('mode', [
       RUB: z.number().positive().optional(),
       USD: z.number().positive().optional(),
     }).optional(),
+    /** Price of «курс + Plus на год», per currency; missing → course + a year of Plus minus the default discount. */
+    bundlePrice: z.object({
+      RUB: z.number().positive().optional(),
+      USD: z.number().positive().optional(),
+    }).optional(),
   }),
 ]);
 

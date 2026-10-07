@@ -20,10 +20,12 @@ const crypto = require('crypto');
 const {createAuthClient, hasEntitlement} = await import('../dist/core/auth.js');
 const {createBillingClient} = await import('../dist/core/billing.js');
 
-configureProduct({...productConfig(), skuPatterns:['course.*'], products:[
+configureProduct({...productConfig(), skuPatterns:['course.*','bundle.course.*'],
+  bundles:[{pattern:'bundle.course.*', includes:['course.*','plus.year']}], products:[
   {sku:'pack.a', title:'Pack A'},
   {sku:'pack.b', title:'Pack B'},
-  {sku:'plus.month', title:'Plus', kind:'subscription', days:30}
+  {sku:'plus.month', title:'Plus', kind:'subscription', days:30},
+  {sku:'plus.year', title:'Plus year', kind:'subscription', days:365}
 ]});
 const testAdapter = createTestBillingAdapter({secret:'s3cret'});
 const billingHandler = createBillingHandler({adapters:[testAdapter]});
@@ -71,6 +73,18 @@ ok('a pattern does not open other SKUs',
   await billing.checkout('test', 'coursex').then(() => false, e => e.code === 'unknown_sku'));
 ok('checkout requires a signed-in device',
   (await call(billingHandler, {action:'checkout', provider:'test', sku:'pack.a', email:'payer@example.com', deviceId:'x', syncToken:'y'})).status === 403);
+
+// 1b. A bundle: one purchase grants the course and a year of the subscription; refund takes both.
+const bundleBuy = await billing.checkout('test', 'bundle.course.c1');
+await auth.status();
+const afterBundle = await accountOf('payer@example.com');
+ok('a bundle grants every SKU it includes', bundleBuy.granted && afterBundle.owned['course.c1'] && afterBundle.sub && afterBundle.sub.plan === 'plus.year');
+ok('a bundle never grants its own SKU as a purchase', !afterBundle.owned['bundle.course.c1']);
+const bundleOrder = {orderId:'bundle-ord', email:'payer@example.com', sku:'bundle.course.c2', status:'paid'};
+ok('a bundle by webhook applies once', (await webhook([bundleOrder])).body.applied === 1 && (await webhook([bundleOrder])).body.applied === 0);
+await webhook([{...bundleOrder, status:'refunded'}]);
+const refundedBundle = await accountOf('payer@example.com');
+ok('refunding a bundle takes back each part', !refundedBundle.owned['course.c2'] && !(refundedBundle.sub && refundedBundle.sub.orderId === 'bundle-ord|plus.year'));
 
 // 2. Webhook: signed, idempotent, refund takes the right back.
 const paid = {orderId:'ord-1', email:'payer@example.com', sku:'pack.b', status:'paid'};

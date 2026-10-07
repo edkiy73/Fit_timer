@@ -1207,11 +1207,6 @@ select:active{transform:scale(.985)}
 
 /* Purchase (access.tsx): choose a plan → see what it gives → pay. */
 .access-offers{display:grid;gap:14px}
-.access-offer-group{display:grid;gap:9px}
-.access-offer-group+.access-offer-group{padding-top:14px;border-top:1px solid var(--line)}
-.access-offer-head{display:grid;gap:3px}
-.access-offer-head h3{margin:0;font-size:17px;line-height:1.3}
-.access-offer-head p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
 .access-plans{display:grid;gap:10px}
 .access-plan{position:relative;display:flex;align-items:center;gap:12px;min-height:76px;padding:15px 16px;border:1.5px solid var(--line);border-radius:var(--radius-tile);background:var(--card);cursor:pointer;transition:border-color var(--motion-fast) ease,background-color var(--motion-fast) ease,box-shadow var(--motion-base) ease,transform var(--motion-base) var(--motion-spring-ease)}
 .access-plan input{position:absolute;opacity:0;pointer-events:none}
@@ -1224,7 +1219,8 @@ select:active{transform:scale(.985)}
 .access-plan-text{display:grid;gap:3px;flex:1 1 auto;min-width:0}
 .access-plan-text b{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:16px}
 .access-plan-text small{color:var(--muted);font-size:13px}
-.access-plan-badge{padding:2px 8px;border-radius:999px;background:var(--success);color:var(--on-accent,#fff);font-size:11px;font-style:normal;font-weight:800}
+/* Soft tint + strong text: readable in both themes (a solid dark green with dark text was not). */
+.access-plan-badge{padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--success) 16%,var(--card));color:var(--success);font-size:11px;font-style:normal;font-weight:800;white-space:nowrap}
 .access-plan-price{display:grid;justify-items:end;flex:none;font-variant-numeric:tabular-nums}
 .access-plan-price strong{font-size:16px;white-space:nowrap}
 .access-plan-price s{color:var(--muted);font-size:12px}

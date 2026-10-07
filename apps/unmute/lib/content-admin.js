@@ -362,11 +362,15 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
             const price=Object.prototype.hasOwnProperty.call(changes,'price')
               ? cleanPrice(changes.price)
               : (next.access&&next.access.price) || null;
+            const bundlePrice=Object.prototype.hasOwnProperty.call(changes,'bundlePrice')
+              ? cleanPrice(changes.bundlePrice)
+              : (next.access&&next.access.bundlePrice) || null;
             next.access={
               mode:'entitlement',
               entitlement:String(changes.entitlement || (next.access&&next.access.entitlement) || ('course.'+setId)),
               ...(days>0?{freePreview:{kind:'first-days',days,learnedContentStaysAvailable:true}}:{}),
-              ...(price?{price}:{})
+              ...(price?{price}:{}),
+              ...(bundlePrice?{bundlePrice}:{})
             };
           }
           return next;

@@ -34,8 +34,8 @@ export function resolveCourseEntitlement(
   if(session?.owned?.includes(sku)){
     return {full:true,reason:'owned',sku};
   }
-  // UnMute Plus is a discount on courses (config/product.json → pricing.plusCourseDiscount),
-  // not access to them: only a purchased course is open in full.
+  // UnMute Plus is AI on top, not access to courses: only a purchased course (alone or in the
+  // «курс + Plus на год» bundle) is open in full.
   return {full:false,reason:'preview',sku};
 }
 

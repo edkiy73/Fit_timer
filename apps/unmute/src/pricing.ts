@@ -7,7 +7,7 @@ import type { CourseSet } from './content/schema';
 export type Currency = 'RUB' | 'USD';
 type Amounts = {[currency in Currency]?: number | undefined};
 
-const pricing = (product as {pricing?: {course?: Amounts; plusMonthly?: Amounts; plusYearly?: Amounts; plusCourseDiscount?: number}}).pricing ?? {};
+const pricing = (product as {pricing?: {course?: Amounts; plusMonthly?: Amounts; plusYearly?: Amounts; bundleDiscount?: number}}).pricing ?? {};
 
 export function currencyForLocale(locale: string): Currency {
   return locale.toLowerCase().startsWith('ru') ? 'RUB' : 'USD';
@@ -34,18 +34,27 @@ export function coursePrice(access: CourseSet['access'], locale: string): string
   return amount === null ? null : formatPrice(amount, currency, locale);
 }
 
-/** UnMute Plus does not open courses; it makes buying one cheaper (pricing.plusCourseDiscount, %). */
-export function plusCourseDiscount(): number {
-  const value = Math.round(Number(pricing.plusCourseDiscount) || 0);
+/** «Курс + Plus на год»: the course's own bundle price, else course + a year of Plus minus
+ *  pricing.bundleDiscount (%). `was` is what the two would cost separately. */
+export function bundleDiscount(): number {
+  const value = Math.round(Number(pricing.bundleDiscount) || 0);
   return value > 0 && value < 100 ? value : 0;
 }
 
-export function coursePriceWithPlus(access: CourseSet['access'], locale: string): string | null {
+export function coursePlusYearPrice(access: CourseSet['access'], locale: string): {price: string; was: string | null; saving: string | null} | null {
   const currency = currencyForLocale(locale);
-  const amount = courseAmount(access, currency);
-  const discount = plusCourseDiscount();
-  if(amount === null || !discount) return null;
-  return formatPrice(Math.round(amount * (100 - discount) / 100), currency, locale);
+  const course = courseAmount(access, currency);
+  const year = pick(pricing.plusYearly, currency);
+  if(course === null || year === null) return null;
+  const separate = course + year;
+  const own = access.mode === 'entitlement' ? pick(access.bundlePrice, currency) : null;
+  const amount = own ?? Math.round(separate * (100 - bundleDiscount()) / 100);
+  const cheaper = amount < separate;
+  return {
+    price:formatPrice(amount, currency, locale),
+    was:cheaper ? formatPrice(separate, currency, locale) : null,
+    saving:cheaper ? formatPrice(separate - amount, currency, locale) : null
+  };
 }
 
 export function plusPrices(locale: string): {monthly: string; yearly: string} | null {
