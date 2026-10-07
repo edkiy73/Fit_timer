@@ -31,7 +31,7 @@ export const ru = {
   'me.settings': 'Настройки',
   'me.accountTitle': 'Аккаунт',
   'me.theme': 'Тема',
-  'me.themeSystem': 'Как в системе',
+  'me.themeSystem': 'Системная',
   'me.themeLight': 'Светлая',
   'me.themeDark': 'Тёмная',
   'nav.exitHint': 'Нажми «Назад» ещё раз, чтобы выйти',

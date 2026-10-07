@@ -256,9 +256,10 @@ select:active{transform:scale(.985)}
 .learn-summary h2{margin:0}
 .learn-summary-icon{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:color-mix(in srgb,var(--accent) 14%,var(--card));color:var(--accent)}
 .learn-summary-score{margin:0;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
-.learn-summary-quality{display:grid;gap:6px;width:min(100%,380px);margin-top:2px;text-align:left}
-.learn-summary-quality-title{padding:0 2px;font-size:12px;font-weight:600;color:var(--muted)}
-.learn-summary-quality-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 11px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:13px}
+.learn-summary-quality{display:grid;gap:0;width:min(100%,380px);margin-top:2px;text-align:left}
+.learn-summary-quality-title{margin-bottom:6px}
+.learn-summary-quality-title{padding:0 2px;font-size:12px;font-weight:600;color:var(--muted);text-align:center}
+.learn-summary-quality-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 2px;border-top:1px solid var(--line);font-size:13px}
 .learn-summary-quality-row>span{color:var(--muted)}
 .learn-summary-quality-row>strong{font-size:13px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
 .learn-summary-corrected{padding:3px 2px 0;color:var(--muted);font-size:12px}
@@ -879,7 +880,8 @@ select:active{transform:scale(.985)}
 .theory-sheet h4{margin:0 0 6px;font-size:17px}
 .theory-sheet-card+.theory-sheet-card{padding-top:14px;border-top:1px solid var(--line)}
 .runner-heading h2{margin:0;font-size:26px;line-height:1.2}
-.runner-action{position:sticky;bottom:calc(12px + var(--safe-bottom));z-index:4;display:grid}
+/* A stuck button gets a backing: text scrolling under it fades out instead of showing around it (audit 06.10, 2.8). */
+.runner-action{position:sticky;bottom:0;z-index:4;display:grid;margin-top:-16px;padding:16px 0 calc(12px + var(--safe-bottom));background:linear-gradient(to bottom,transparent,var(--bg) 16px)}
 .runner-action .primary-button{width:100%;box-shadow:var(--elev-2)}
 .dictionary-sheet{border-radius:32px 32px 0 0;animation:sheet-in var(--motion-sheet) var(--motion-spring-ease) both}
 .dictionary-close{display:grid;place-items:center;width:44px;height:44px;flex-basis:44px;border:0;background:var(--surface)}
