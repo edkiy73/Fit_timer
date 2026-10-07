@@ -339,7 +339,18 @@ import { createCapabilities } from '@appbase/core/capabilities.js';
     try{ await fitAudio.stopMediaButtonControl(); return true; }catch(_){ return false; }
   }
 
-  async function startVoiceRecognition(onResult, onError, onStatus, language){
+  const VOICE_SENSITIVITY_KEY = 'fitVoiceSensitivityV1';
+  function savedVoiceSensitivity(){
+    try{
+      const value = Number(localStorage.getItem(VOICE_SENSITIVITY_KEY));
+      return Number.isFinite(value) ? Math.max(0, Math.min(10, Math.round(value))) : 5;
+    }catch(_){ return 5; }
+  }
+
+  async function startVoiceRecognition(onResult, onError, onStatus, language, sensitivity){
+    const level = Number.isFinite(Number(sensitivity))
+      ? Math.max(0, Math.min(10, Math.round(Number(sensitivity))))
+      : savedVoiceSensitivity();
     return speech.startRecognition({
       onResult,
       onError,
@@ -348,8 +359,19 @@ import { createCapabilities } from '@appbase/core/capabilities.js';
       // команда») — для проверки распознавания в настройках
       onHeard:event=>{
         try{ window.dispatchEvent(new CustomEvent('fitVoiceHeard', {detail:event})); }catch(_){}
+      },
+      // живой уровень нужен только диагностике/калибровке; команды его получают
+      // на нативной стороне и отсекаются тем же порогом до попадания в JS.
+      onLevel:event=>{
+        try{ window.dispatchEvent(new CustomEvent('fitVoiceLevel', {detail:event})); }catch(_){}
       }
-    }, language);
+    }, language, {sensitivity:level});
+  }
+
+  async function setVoiceSensitivity(value){
+    const level = Math.max(0, Math.min(10, Math.round(Number(value) || 0)));
+    try{ localStorage.setItem(VOICE_SENSITIVITY_KEY, String(level)); }catch(_){}
+    return speech.setRecognitionSensitivity(level);
   }
 
   function installNativeListeners(){
@@ -506,6 +528,7 @@ import { createCapabilities } from '@appbase/core/capabilities.js';
     speak:speech.speak,
     stopSpeaking:speech.stopSpeaking,
     startVoiceRecognition,
+    setVoiceSensitivity,
     stopVoiceRecognition:speech.stopRecognition,
     getVoiceModelStatus:speech.modelStatus,
     downloadVoiceModel:speech.downloadModel,
