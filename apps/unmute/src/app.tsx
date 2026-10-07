@@ -25,6 +25,7 @@ import { NativeBackButton } from './native-back';
 import { AppUpdateProvider } from './app-update';
 import { MeScreen } from './me-screen';
 import { RemotePushLifecycle } from './remote-push-lifecycle';
+import { NotFoundScreen, RouteErrorScreen } from './not-found';
 
 const PRODUCT_NAME = 'UnMute: English for Expats';
 
@@ -126,6 +127,8 @@ export const routes: RouteObject[] = [
   {
     path:'/',
     element:<Root />,
+    // Root's providers are gone when it fails itself, so the error screen brings its own language.
+    errorElement:<Localized><RouteErrorScreen /></Localized>,
     children:[{
       element:<Shell />,
       children:[
@@ -140,7 +143,8 @@ export const routes: RouteObject[] = [
         {path:'legal/:page', element:<LegalScreen />},
         {path:'settings', element:<SettingsScreen />},
         {path:'access', element:<AccessScreen />},
-        {path:'account', element:<MeScreen />}
+        {path:'account', element:<MeScreen />},
+        {path:'*', element:<NotFoundScreen />}
       ]
     }]
   },
