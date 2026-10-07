@@ -366,6 +366,7 @@ V2 хранит:
 ```js
 exercise = {
   id: 'ex_...',                 // app-owned, стабилен для логического слота
+  warmup: false,                // свойство СЛОТА: место в структуре тренировки
 
   currentStageId: 'mv_...',     // app-owned
 
@@ -379,7 +380,6 @@ exercise = {
         value: '8-10',
         sets: 3,
         perSide: false,
-        warmup: false,
         rest: 45,
         restAfter: 60,
         muscles: [],
@@ -440,7 +440,12 @@ program.progression = {
 
 **Даже упражнение без цепочки хранит один stage.** Это сознательно убирает две параллельные формы «обычное упражнение» и «упражнение с chain».
 
-Runtime/UI получают активный prescription только через один helper по смыслу:
+`warmup` хранится на уровне exercise slot, а НЕ stage:
+- разминка определяет место упражнения в структуре тренировки;
+- смена movement stage не может сама превратить основное упражнение в разминку или обратно;
+- переключатель «Разминка» в UI не зависит от выбранного stage.
+
+ Runtime/UI получают активный prescription только через один helper по смыслу:
 ```js
 activePrescription(exercise)
 ```
