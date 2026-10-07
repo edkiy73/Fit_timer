@@ -31,7 +31,7 @@ index.html + mobile.js + app.config.js
 | Файл | Назначение |
 |---|---|
 | `capacitor.config.json` | App ID, имя, `webDir`, splash и плагины |
-| `android/app/src/main/res/mipmap-xhdpi/fittimer_launcher.webp` | Каноническая Android launcher-иконка; хранится в Git и напрямую попадает в APK |
+| `android/app/src/main/res/mipmap-xxxhdpi/fittimer_launcher_20261007.webp` | Каноническая Android launcher-иконка; хранится в Git и напрямую попадает в APK |
 | `assets/icon.png` | Legacy/исходный графический asset; Android release-сборка его не использует для launcher-иконки |
 | `app.config.js` | Публичные runtime-настройки Web; без секретов |
 | `mobile.js` | Мост уведомлений, haptics, TTS, распознавания речи и микрофона |
@@ -56,8 +56,8 @@ npm run check:mobile
 
 `mobile:sync` собирает `dist/` и запускает Capacitor sync. Android launcher
 намеренно НЕ генерируется через `capacitor-assets`: источником истины является
-`android/app/src/main/res/mipmap-xhdpi/fittimer_launcher.webp`, а manifest напрямую
-ссылается на `@mipmap/fittimer_launcher`. Это защищает release APK от возврата
+`android/app/src/main/res/mipmap-xxxhdpi/fittimer_launcher_20261007.webp`, а manifest напрямую
+ссылается на `@mipmap/fittimer_launcher_20261007`. Это защищает release APK от возврата
 старой картинки из `assets/icon.png`. Splash использует фирменный фон из
 `config/product.json` и отдельную прозрачную splash-иконку. Генерация assets оставлена
 только для iOS через `npm run mobile:assets:ios`.
@@ -210,7 +210,7 @@ node --check scripts/build-web.mjs
 - После изменения frontend запускать `npm run mobile:sync` и проверки.
 - Не синхронизировать фото/аватары без отдельного продуктового решения.
 - Не класть секреты в JavaScript, Capacitor config или Git.
-- Не запускать `capacitor-assets generate --android` для FitTimer: это перезапишет launcher. Каноническая Android-иконка лежит в `android/app/src/main/res/mipmap-xhdpi/fittimer_launcher.webp`, а manifest должен ссылаться на `@mipmap/fittimer_launcher`.
+- Не запускать `capacitor-assets generate --android` для FitTimer: это перезапишет launcher. Каноническая Android-иконка лежит в `android/app/src/main/res/mipmap-xxxhdpi/fittimer_launcher_20261007.webp`, а manifest должен ссылаться на `@mipmap/fittimer_launcher_20261007`.
 
 
 ## Offline voice commands on Android
