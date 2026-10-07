@@ -42,9 +42,9 @@ export function setTrainerEventHooks(hooks = {}){
   eventTrainerHooks = {...eventTrainerHooks, ...hooks};
 }
 import { FILE_HINT, PUBLIC_APP_URL, apiFetch, apiPost, applyMedia, clProgs, clientIdx, clientSum,
-  clients, daysSince, duplicateProgram, exportProgram, exportProgramFile, humanDay, lastReport,
+  clients, daysSince, duplicateProgram, exportProgramFileWithChoice, humanDay, lastReport,
   lastSeen, linkFailNote, loadTrainer, normHandle, programLink, programMedia, programToText,
-  renderToday, activateClientAt, resetCoachPhotoDraft, saveClients, setProgramsTrainerHooks, trainer,
+  renderToday, activateClientAt, resetCoachPhotoDraft, saveClients, setProgramsTrainerHooks, shareProgramWithChoice, trainer,
   trainerAccountReady, trainerOn
 } from './40-programs-ai.js';
 
@@ -1978,13 +1978,13 @@ export function initTrainerCatalog(){
     if(wasOn) appAlert(t('programs.disabledAlert'));
   });
   registerAction('shareMineProgram', btn => {
-    closeAllMenus(); const p = mineProgram(btn); if(p) exportProgram(p);
+    closeAllMenus(); const p = mineProgram(btn); if(p) shareProgramWithChoice(p);
   });
   registerAction('sendMineProgramToClient', btn => {
     closeAllMenus(); const p = mineProgram(btn); if(p) pickClientFor(p);
   });
   registerAction('exportMineProgramFile', btn => {
-    closeAllMenus(); const p = mineProgram(btn); if(p) exportProgramFile(p);
+    closeAllMenus(); const p = mineProgram(btn); if(p) exportProgramFileWithChoice(p);
   });
   registerAction('deleteMineProgram', async btn => {
     closeAllMenus();
