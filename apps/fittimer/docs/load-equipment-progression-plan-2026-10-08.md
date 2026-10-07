@@ -1514,13 +1514,18 @@ Structured Output не означает «schema бесплатна»: JSON Sche
 ```js
 histEntry = {
   …,
-  planId,                              // вместо индекса plan
-  load: [{exId, cfgKey, reps, sec, weight, level, levelKey}], // вместо i + n
-  exercises: [exId, …]                 // вместо названий
+  planId,                               // вместо индекса plan
+  load: [{
+    exId,
+    cfgKey,
+    config: {type, equipment, name, count, unit, levels?},
+    reps, sec, weight, level, levelKey
+  }],
+  exercises: [exId, …]                  // вместо названий
 }
 ```
 
-«Сегмент конфигурации» не хранится отдельной сущностью: он вычисляется по смене `cfgKey` у одного `exId` в последовательности записей.
+«Сегмент конфигурации» не хранится отдельной сущностью: он вычисляется по смене `cfgKey` у одного `exId` в последовательности записей. Сам snapshot `config` хранится рядом, чтобы старую историю можно было корректно показать даже если алгоритм cfgKey позже изменится.
 
 История нужна для:
 - честного «было → сегодня»;
