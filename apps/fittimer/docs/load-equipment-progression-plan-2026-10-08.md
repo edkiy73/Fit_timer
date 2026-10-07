@@ -2879,6 +2879,52 @@ Core Structured Output не нужен раньше runtime/UI.
 
 ---
 
+## 14.9. Ответ на четвёртое ревью Клода — 2026-10-08
+
+Все два критичных замечания и четыре уточнения принимаем.
+
+### Принято
+
+1. **Stage refs внутри AI-edit.**  
+   При `movementChanged:false` stage list использует target state + `ref/replace/new/removedStageIds`. Current stage удалить нельзя. Это сохраняет stage identity/history/media при add/remove/reorder.
+
+2. **History storage надо проектировать по byte budget заранее.**  
+   Полное имя stage больше не повторяется в каждой строке. Persistent history использует compact DTO с omission defaults и коротким reversible cfgKey.
+
+3. **`stats.stageNames`.**  
+   Имя stage хранится один раз по глобально уникальному stageId. GC удаляет запись только если stageId отсутствует и в retained history, и в актуальных программах.
+
+4. **`warmup` перенесён на exercise slot.**  
+   Смена movement stage не меняет структуру тренировки.
+
+5. **Rollback начинает stage с базы.**  
+   Отдельный progressState на каждый stage не храним. UI до возврата показывает базовый старт.
+
+6. **Эвристический movement guard не добавляем.**  
+   При `movementChanged:false` identity определяется refs/contract. Подозрительное переименование явно видно в preview.
+
+7. **PR2 разделён на 2a/2b без второй persistent-схемы.**  
+   2a = schema/normalize/activePrescription.  
+   2b = progression/history/size budget.  
+   Stage transitions/UI = PR3.
+
+### Дополнительное уточнение
+
+Short storage keys используются ТОЛЬКО в persistent history DTO. Domain/AI schema остаются читаемыми и не превращаются в `e/s/c/r/w`. Encode/decode изолирован в одном adapter.
+
+### Финальная просьба Клоду
+
+Проверить только, не создали ли эти изменения новую критическую дыру:
+- stage refs contract при reorder/add/remove;
+- global uniqueness/lifecycle stageId + stageNames;
+- compact history и worst-case size budget;
+- warmup на slot;
+- PR2a/2b dependency.
+
+Если критических проблем нет — новых архитектурных раундов не открываем и начинаем PR1.
+
+---
+
 ## 15. Правила ведения этого файла
 
 После каждого завершённого PR/этапа:
@@ -3166,3 +3212,22 @@ Core Structured Output не нужен раньше runtime/UI.
 
 Следующий шаг:
 - короткий финальный adversarial review раздела 14.7; при отсутствии критических возражений начать PR 1.
+
+
+### 2026-10-08 — ответ на четвёртое ревью Клода
+
+Статус: ✅ решения 14.8 перенесены в основные разделы; код приложения не менялся.
+
+Изменено:
+- warmup → exercise slot;
+- stage refs target-state contract для AI edit;
+- compact history DTO + short cfgKey storage codes;
+- stageNames registry вместо повторения названия в каждой history row;
+- stageNames GC учитывает retained history + current programs;
+- rollback stage начинается с base prescription;
+- PR2 → PR2a schema/normalize + PR2b runtime/history;
+- worst-case byte-budget расчёт перенесён до фиксации history storage;
+- тестовая матрица дополнена refs/history/warmup/rollback cases.
+
+Следующий шаг:
+- последний короткий review 14.9; затем PR1.
