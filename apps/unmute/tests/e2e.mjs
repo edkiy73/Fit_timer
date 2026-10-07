@@ -229,6 +229,10 @@ try{
   await phone.page.keyboard.press('Escape');
   await phone.page.goto(URL_+'#/');
   ok('theme tokens are applied',(await phone.page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()))!=='');
+  await phone.page.goto(URL_+'#/no-such-screen');
+  ok('a broken link shows «Такой страницы нет», not a developer error',await appears(phone.page.getByText('Такой страницы нет')));
+  await phone.page.getByRole('button',{name:'На главную'}).click();
+  ok('«На главную» returns to Today',await phone.page.waitForURL(u=>/#\/$/.test(String(u)),{timeout:5000}).then(()=>true,()=>false));
 
   const phoneSignedIn=await signIn(phone.page,'person@example.com',{slowSend:true});
   await phone.page.goto(URL_+'#/');
