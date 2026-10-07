@@ -245,6 +245,9 @@ try{
   );
   await phone.page.goto(URL_+'#/account');
   ok('the profile shows «Мои покупки» to a signed-in learner',await appears(phone.page.getByRole('heading',{name:'Мои покупки'})));
+  ok('the profile shows «Пригласи друга» with the learner’s code',
+    await appears(phone.page.getByRole('heading',{name:'Пригласи друга'}))
+    &&/^[A-Z2-9]{8}$/.test(((await phone.page.locator('.invite-friend-code strong').textContent().catch(()=>''))||'').trim()));
   if(process.env.E2E_SHOTS)await phone.page.locator('.my-purchases').screenshot({path:process.env.E2E_SHOTS+'/purchases.png'});
   await phone.page.goto(URL_+'#/');
 

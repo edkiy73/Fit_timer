@@ -8,7 +8,7 @@ export const PERSONAL_PREFIXES = [
   'unmute.review-seed:', 'unmute.recent-day-completion:', 'unmute.course-map-reward:', 'unmute.aiTrial.',
   'unmute.pace-ack:'
 ];
-export const PERSONAL_KEYS = ['unmute.onboarding.v1'];
+export const PERSONAL_KEYS = ['unmute.onboarding.v1', 'unmute.referral.settled'];
 
 export function clearPersonalLocalState(storage: Pick<Storage, 'length' | 'key' | 'removeItem'> | null = safeLocalStorage()): number {
   if(!storage) return 0;
