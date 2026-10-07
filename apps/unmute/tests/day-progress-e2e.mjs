@@ -139,9 +139,13 @@ async function twoTapChoice(page,label){
   const option=page.locator('label.learn-option',{
     hasText:new RegExp('^'+label+'(?:Нажми ещё раз)?$')
   }).first();
-  await option.click();
-  await option.click();
   const next=page.locator('.learn-feedback-next');
+  await option.click();
+  // A resumed run may restore the selected option: then the first tap already confirms it.
+  if(!(await next.isVisible().catch(()=>false))&&!(await option.isDisabled().catch(()=>false))){
+    await page.waitForTimeout(150);
+    if(!(await next.isVisible().catch(()=>false)))await option.click({timeout:5000}).catch(()=>{});
+  }
   await next.waitFor({timeout:5000});
   return next;
 }
