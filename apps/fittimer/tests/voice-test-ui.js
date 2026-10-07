@@ -26,11 +26,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(800); }
 
   await page.evaluate(async () => {
-    window.__vt = {started: 0, stopped: 0};
+    window.__vt = {started: 0, stopped: 0, sensitivity: []};
     window.FitNative = Object.assign({}, window.FitNative, {
       offlineVoice: true,
       getVoiceModelStatus: async () => ({installed: true, language: 'ru'}),
       startVoiceRecognition: async () => { window.__vt.started++; return true; },
+      setVoiceSensitivity: async value => { window.__vt.sensitivity.push(value); return true; },
       stopVoiceRecognition: async () => { window.__vt.stopped++; }
     });
     await refreshVoicePackUI();
@@ -41,24 +42,41 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.waitForTimeout(100);
   ok('окно открылось и микрофон включён', await page.isVisible('#voiceTestModal') && await page.evaluate(() => window.__vt.started === 1));
 
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('fitVoiceLevel', {detail:{level:62, threshold:42.5, above:true}})));
+  ok('живой уровень микрофона отображается', await page.evaluate(() =>
+    parseFloat($('voiceTestLevel').style.width) === 62 && $('voiceTestLevelState').textContent === t('voicetest.heard')));
+
+  await page.evaluate(() => {
+    const slider=$('voiceTestSensitivity');
+    slider.value='8';
+    slider.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  await page.waitForTimeout(50);
+  ok('чувствительность сохраняется на устройстве и применяется сразу', await page.evaluate(() =>
+    localStorage.getItem('fitVoiceSensitivityV1') === '8'
+    && $('voiceSensitivity').value === '8'
+    && window.__vt.sensitivity.at(-1) === 8));
+
   await page.evaluate(() => {
     const heard = d => window.dispatchEvent(new CustomEvent('fitVoiceHeard', {detail: d}));
     heard({text: '[unk]', kind: '', accepted: false});
     heard({text: 'готово', kind: 'done', accepted: true, confidence: .9});
     heard({text: 'пропустить', kind: 'skip', accepted: true, confidence: .9});
     heard({text: 'пауза', kind: 'pause', accepted: false, confidence: .2});
+    heard({text: 'готово', kind: 'done', accepted: false, source: 'below_sensitivity', confidence: .9});
   });
-  const rows = await page.$$eval('#voiceTestList .vt-row', xs => xs.map(x => x.textContent + (x.classList.contains('ok') ? ' [ok]' : '')));
-  ok('свежая строка сверху, неуверенное помечено', /пауза.*не расслышал уверенно/.test(rows[0] || ''), rows[0]);
-  ok('Пропустить названо отдельно и выделено', /пропустить.*Пропустить.*\[ok\]/.test(rows[1] || ''), rows[1]);
-  ok('Готово названо отдельно и выделено', /готово.*Готово.*\[ok\]/.test(rows[2] || ''), rows[2]);
-  ok('посторонний звук — не команда', /посторонний звук.*не команда/.test(rows[3] || ''), rows[3]);
+  const rows = await page.$eval('#voiceTestList .vt-row', xs => xs.map(x => x.textContent + (x.classList.contains('ok') ? ' [ok]' : '')));
+  ok('слишком тихая команда объясняется порогом', /готово.*слишком тихо/.test(rows[0] || ''), rows[0]);
+  ok('неуверенное распознавание помечено', /пауза.*не расслышал уверенно/.test(rows[1] || ''), rows[1]);
+  ok('Пропустить названо отдельно и выделено', /пропустить.*Пропустить.*\[ok\]/.test(rows[2] || ''), rows[2]);
+  ok('Готово названо отдельно и выделено', /готово.*Готово.*\[ok\]/.test(rows[3] || ''), rows[3]);
+  ok('посторонний звук — не команда', /посторонний звук.*не команда/.test(rows[4] || ''), rows[4]);
 
   await page.click('#voiceTestModal .modal-btn');
   await page.waitForTimeout(150);
   ok('закрытие окна отпускает микрофон', await page.evaluate(() => window.__vt.stopped === 1));
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('fitVoiceHeard', {detail: {text: 'готово', kind: 'next', accepted: true}})));
-  ok('после закрытия строки не добавляются', await page.evaluate(() => $('voiceTestList').children.length === 4));
+  ok('после закрытия строки не добавляются', await page.evaluate(() => $('voiceTestList').children.length === 5));
 
   ok('без ошибок в консоли', !errs.length, errs.join(' | '));
   console.log(bad ? `ПРОВАЛЕНО: ${bad}` : 'всё сошлось');
