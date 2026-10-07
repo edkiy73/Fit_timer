@@ -139,7 +139,7 @@ jobs:
           test -n "$ICON_PATH"
           unzip -p "$APK" "$ICON_PATH" > "$RUNNER_TEMP/fittimer-packaged-launcher.webp"
           cmp android/app/src/main/res/mipmap-xxxhdpi/fittimer_launcher_20261007.webp "$RUNNER_TEMP/fittimer-packaged-launcher.webp"
-          file "$RUNNER_TEMP/fittimer-packaged-launcher.webp" | grep -q "192 x 192"
+          file "$RUNNER_TEMP/fittimer-packaged-launcher.webp" | grep -q "192x192"
 
       - name: Проверить подпись APK
         if: github.event_name != 'pull_request'
