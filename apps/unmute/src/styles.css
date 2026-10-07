@@ -1691,6 +1691,14 @@ span.legend-item{cursor:default}
 }
 /* «Мои покупки» in the profile */
 .my-purchases{display:grid;gap:12px}
+/* «Пригласи друга» in the profile. */
+.invite-friend{display:grid;gap:12px}
+.invite-friend-code{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.invite-friend-code span{color:var(--muted);font-size:13px}
+.invite-friend-code strong{font-size:20px;letter-spacing:.12em;font-variant-numeric:tabular-nums}
+.invite-friend-join summary{cursor:pointer;color:var(--accent-ink);font-weight:600}
+.invite-friend-join-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:10px}
+.invite-friend-join-row input{min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-field);background:var(--card);color:var(--ink);font:inherit;text-transform:uppercase;letter-spacing:.08em}
 .my-purchases-list{display:grid;gap:8px;margin:0;padding:0;list-style:none}
 .my-purchases-list li,.my-purchases-plus{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .my-purchases-list span{color:var(--success);font-size:13px;font-weight:700;white-space:nowrap}

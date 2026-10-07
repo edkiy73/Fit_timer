@@ -5,6 +5,7 @@ import { adminClient } from './admin';
 import { contentAdminSection } from './admin-content';
 import { courseAdminSection } from './admin-course';
 import { updateAdminSection } from './admin-update';
+import { referralAdminSection } from './admin-referral';
 
 /* Readable names of the analytics events (lib/app-analytics.js) for «Обзор». */
 const EVENT_LABELS = {
@@ -100,5 +101,5 @@ const EVENT_LABELS = {
 export function AdminScreen({productName}: {productName: string}){
   const {locale} = useI18n();
   const adminLocale = sharedUiLocale(locale);
-  return <AdminPanel client={adminClient} locale={adminLocale} productName={productName} eventLabels={EVENT_LABELS[adminLocale]} extraSections={[courseAdminSection,contentAdminSection,updateAdminSection]} defaultTerms={DEFAULT_TERMS} />;
+  return <AdminPanel client={adminClient} locale={adminLocale} productName={productName} eventLabels={EVENT_LABELS[adminLocale]} extraSections={[courseAdminSection,contentAdminSection,referralAdminSection,updateAdminSection]} defaultTerms={DEFAULT_TERMS} />;
 }

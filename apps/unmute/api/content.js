@@ -7,6 +7,7 @@ const { send, fail, rateOk, rateOkScoped, sameSecret, cors } = require('../../..
 const { hasOwned } = require('../../../packages/core/server/entitlements');
 const Content = require('../lib/content-store');
 const Release = require('../lib/content-release');
+const Referral = require('../lib/unmute-referral');
 
 const MAX_BODY = 6 * 1024 * 1024;
 const LEARNED_TTL = 5 * 365 * 24 * 3600;
@@ -128,6 +129,25 @@ module.exports = async function contentHandler(req,res){
     if(!keepLearned)return send(res,200,{ok:true,retained:0});
     const retained=await retainLearnedActivities(account.accountHash,set,body.activityIds);
     return send(res,200,{ok:true,retained:retained.length});
+  }
+
+  // «Пригласи друга»: the signed-in learner's code and counters, joining by a friend's code,
+  // and passed days that release the bonus (lib/unmute-referral.js).
+  const referralAction=String(body.action||'');
+  if(referralAction==='referral_info'||referralAction==='referral_claim'||referralAction==='referral_progress'){
+    if(!(await rateOk(req,'content-referral',60))) return fail(res,429,'rate_limited');
+    const account=await accountFromHeaders(req);
+    if(!account)return fail(res,401,'auth_required');
+    try{
+      if(referralAction==='referral_claim') await Referral.claimReferral(account.accountHash,account.acc,body.code);
+      if(referralAction==='referral_progress'){
+        const result=await Referral.referralProgress(account.accountHash,body.completedDays);
+        return send(res,200,{ok:true,...result,referral:await Referral.referralInfo(account.accountHash,account.acc)});
+      }
+      return send(res,200,{ok:true,referral:await Referral.referralInfo(account.accountHash,account.acc)});
+    }catch(error){
+      return fail(res,error&&error.status||500,error&&error.status?error.message:'referral_failed');
+    }
   }
 
   if(!(await rateOkScoped(req,'content-admin',120,'',3600,true))) return fail(res,429,'rate_limited');

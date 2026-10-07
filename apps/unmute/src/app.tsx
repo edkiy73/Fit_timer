@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation, type RouteObject } from 'react-router';
 import { AuthProvider, useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { activePremium } from './entitlements';
 import { setAnalyticsPaying, trackSignedIn } from './observability';
+import { InviteRoute, ReferralSync } from './invite-friend';
 import { I18nProvider, useI18n } from '@appbase/ui-react/i18n.js';
 import { authClient } from './auth';
 import { appDocs, syncNow } from './sync';
@@ -104,6 +105,7 @@ function Root(){
         <RemotePushLifecycle />
         <LexiconProvider>
           <ActiveCourse>
+            <ReferralSync />
             <Outlet />
           </ActiveCourse>
         </LexiconProvider>
@@ -159,6 +161,7 @@ export const routes: RouteObject[] = [
         // Results now live on «Я»; old links and reminders land there.
         {path:'progress', element:<Navigate to="/account" replace />},
         {path:'words', element:<MyWordsScreen />},
+        {path:'invite/:code', element:<InviteRoute />},
         {path:'reference', element:<ReferenceScreen />},
         {path:'legal/:page', element:<LegalScreen />},
         {path:'settings', element:<SettingsScreen />},
