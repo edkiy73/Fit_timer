@@ -3,6 +3,8 @@ import type { CourseSet } from './content/schema';
 import { emptyCourseProgress } from './progress';
 import { buildCourseReviewSession } from './review-session';
 import { gradeCourseCard } from './progress-actions';
+import { buildPracticeActivityProgress } from './activity-progress';
+import { emptyStatsProgress } from './progress';
 
 const set:CourseSet={
   schemaVersion:1,
@@ -111,6 +113,20 @@ describe('course review session',()=>{
     });
     expect(session.practice.drill).toBe(1);
     expect(session.actionableCount).toBe(1);
+  });
+
+  it('a lesson practice with one wrong phrase sends only that phrase to review, for every mode',()=>{
+    for(const mode of ['drill','listening','speaking'] as const){
+      const clock={at:'2026-10-07T10:00:00Z',dayKey:'2026-10-07',dayNumber:5};
+      const {course}=buildPracticeActivityProgress(
+        emptyCourseProgress(),emptyStatsProgress(),'device','pattern.a',mode,false,50,clock,'op-'+mode,
+        {'pattern.a.item-1':'strong','pattern.a.item-2':'weak'}
+      );
+      // Not owed today (decision 12); tomorrow only the wrong phrase, on its own.
+      expect(buildCourseReviewSession(set,course,5).items.filter(item=>item.kind==='practice')).toHaveLength(0);
+      const tomorrow=buildCourseReviewSession(set,course,6).items.filter(item=>item.kind==='practice');
+      expect(tomorrow).toEqual([expect.objectContaining({mode,itemId:'pattern.a.item-2'})]);
+    }
   });
 
   it('keeps legacy whole-pattern review until that mode is migrated',()=>{

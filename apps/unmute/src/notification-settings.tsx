@@ -180,19 +180,26 @@ export function NotificationSettingsPanel(){
       <div className="notification-group">
         <div className="settings-label">{t('notifications.campaignsTitle')}</div>
         <p className="notification-group-hint">{t('notifications.campaignsHint')}</p>
-        <div className="notification-kinds notification-kind-cards">
-          {(['news','offers','emailNews','emailOffers'] as const).map(kind=>(
-            <label key={kind} className="notification-kind-toggle">
-              <span>{t('notifications.'+kind)}</span>
-              <input
-                type="checkbox"
-                checked={campaigns[kind]}
-                disabled={campaignSaving}
-                onChange={event=>void setCampaignKind(kind,event.target.checked)}
-              />
-            </label>
-          ))}
-        </div>
+        {([
+          ['push',['news','offers']],
+          ['email',['emailNews','emailOffers']]
+        ] as const).map(([channel,kinds])=>(
+          <div key={channel} className="notification-channel" role="group" aria-labelledby={'notification-channel-'+channel}>
+            <div id={'notification-channel-'+channel} className="notification-channel-title">{t('notifications.channel.'+channel)}</div>
+            {kinds.map(kind=>(
+              <label key={kind} className="notification-channel-row">
+                <span>{t('notifications.'+kind)}</span>
+                <input
+                  type="checkbox"
+                  aria-label={t('notifications.'+kind)+' — '+t('notifications.channel.'+channel)}
+                  checked={campaigns[kind]}
+                  disabled={campaignSaving}
+                  onChange={event=>void setCampaignKind(kind,event.target.checked)}
+                />
+              </label>
+            ))}
+          </div>
+        ))}
       </div>
 
       {settings.enabled&&native&&permission!=='granted'&&(

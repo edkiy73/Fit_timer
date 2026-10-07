@@ -291,6 +291,16 @@ export function ReviewView({
     setCompleted(0);
     setStarted(true);
   };
+  // Leaving mid-review: what was answered is saved, so the summary is rebuilt from fresh progress
+  // (it used to keep the pinned count, e.g. «20» after nine answers).
+  const leave=()=>{
+    setExitOpen(false);
+    setSession(null);
+    setQueue([]);
+    setIndex(0);
+    setCompleted(0);
+    setStarted(false);
+  };
   const mixedPatterns=state?studiedPatternActivities(state.set.activities,state.progress):[];
   const mixedAvailable=mixedPatterns.length>=3;
 
@@ -716,7 +726,7 @@ export function ReviewView({
           <h3 id="review-exit-title">{t('review.exitTitle')}</h3>
           <p className="tile-text">{t('review.exitText')}</p>
           <button className="primary-button" type="button" onClick={()=>setExitOpen(false)}>{t('review.exitStay')}</button>
-          <button className="secondary-button" type="button" onClick={()=>{setExitOpen(false);setStarted(false);}}>{t('review.exitLeave')}</button>
+          <button className="secondary-button" type="button" onClick={leave}>{t('review.exitLeave')}</button>
         </div>
       </Sheet>
 
