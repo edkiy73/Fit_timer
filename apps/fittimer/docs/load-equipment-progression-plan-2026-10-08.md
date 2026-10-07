@@ -504,34 +504,68 @@ UI V1 всё равно работает только в kg. Но тогда `un
 
 ### История конфигурации
 
-После третьего ревью отдельный `stats.loadConfigs` УБИРАЕМ.
+Отдельного `stats.loadConfigs` нет.
 
-Physical cfgKey достаточно короткий, поэтому храним его прямо в history. Чтобы не зависеть от хрупкого ручного split по разделителям, cfgKey строится одним canonical helper из маленького tuple, например:
+Physical `cfgKey` хранится прямо в history, но storage representation должна быть компактной. Один canonical helper отвечает за encode/decode и использует короткие стабильные коды из equipment catalog, например по смыслу:
 
-```js
-cfgKey = JSON.stringify([
-  load.type,
-  load.equipment || '',
-  load.name || '',
-  load.count || 1
-])
+```text
+w|db||2
+l|band||1
 ```
 
 Требования:
 - deterministic: одинаковая конфигурация на двух устройствах даёт байт-в-байт одинаковый key;
-- reversible: из key можно восстановить equipment/count/custom name для старой истории;
-- unit не входит в physical cfgKey;
-- level scale не входит в physical cfgKey.
+- reversible через canonical catalog/helper;
+- type/equipment/custom name/count входят в key;
+- unit и level scale не входят;
+- delimiter/escaping для custom name определяются helper, UI/runtime строку вручную не разбирают.
 
-Почему без словаря:
-- нет GC;
-- нет merge-конфликтов dictionary IDs между устройствами;
-- нет ещё одного source of truth;
-- выигрыш словаря по размеру слишком мал по сравнению со сложностью.
+### Имена movement stages в истории
 
-В самой записи тренировки дополнительно сохраняем `movementStageName`: это маленький snapshot имени движения на момент тренировки и гарантирует корректный текст истории, даже если цепочку позже отредактировали или stage удалили.
+После четвёртого ревью НЕ дублируем полное `movementStageName` в каждой строке каждой тренировки.
 
-Долгосрочно history всё равно стоит вынести из одного sync-документа; V2 обязана отдельно проверить размер документа на 2000 записей против текущего server limit 3 МБ.
+Используем компактную карту:
+
+```js
+stats.stageNames = {
+  "mv_abc": "Румынская тяга с гантелями"
+}
+```
+
+History row хранит только stageId.
+
+Правила:
+- stageId глобально уникален в рамках пользовательских данных;
+- карта обновляется при обычном metadata rename stage;
+- history helper разрешает имя через stageNames;
+- если имя почему-либо отсутствует, UI использует безопасный fallback «Упражнение»/текущий известный label, а не ломает history;
+- при trimming history можно удалить stageNames, на которые больше нет ссылок НИ в retained history, НИ в актуальных программах.
+
+### Компактное storage-представление history
+
+Persistent stats history — storage DTO, а не UI/domain object. Поэтому разрешены короткие ключи и omission defaults.
+
+По смыслу:
+
+```js
+{e:"ex_abc", s:"mv_abc", c:"w|db||2", r:"8-10", w:10}
+```
+
+Не сохранять:
+- `unit`, если kg;
+- sec/weight/level поля, если они неприменимы;
+- пустые строки/нулевые optional поля;
+- дублируемое имя stage.
+
+На чтении один history adapter разворачивает storage DTO в нормальный domain view для UI.
+
+До реализации PR 1/2 обязательно сделать worst-case расчёт размера:
+- 2000 тренировок;
+- реалистичный верхний предел упражнений на тренировку;
+- длинные IDs/custom equipment/level labels;
+- partialExercises/notes и прочие реальные поля stats.
+
+Цель — не просто «< 3 МБ», а оставить разумный запас. Если compact DTO всё равно близок к лимиту, history выносится из монолитного stats document отдельным архитектурным решением ДО накопления реальных данных.
 
 ### Почему load/progression/state разделены
 
