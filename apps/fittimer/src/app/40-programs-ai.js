@@ -1067,6 +1067,7 @@ export async function wipeTrainerInfo(){
 
 export async function programLink(p, extra, options){
   const includeProgress = !!(options && options.includeProgress);
+  if(includeProgress) applyProgressionAll();
   const program = programPayload(p, {includeProgress});
   const r = await apiPost('/api/share', Object.assign(
     {program, includeProgress, by: program.by || '', byLink: program.byLink || '',
@@ -1140,6 +1141,7 @@ export async function exportProgram(p, options){
 // Экспорт программы файлом — со всем содержимым: обложка и фото упражнений
 export async function exportProgramFile(p, options){
   const includeProgress = !!(options && options.includeProgress);
+  if(includeProgress) applyProgressionAll();
   const copy = programTemplateCopy(p, {includeProgress});
   const payload = {app: 'fittimer', type: 'program', v: 1, includeProgress, program: copy};
   const json = JSON.stringify(payload);
