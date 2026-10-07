@@ -1028,7 +1028,13 @@ advance: {
 - меняется `currentStageId`;
 - прошлый prescription уже лежит в `stages[]`, ничего восстанавливать не нужно;
 - `progressState` сбрасывается;
+- stage начинает с БАЗОВОГО prescription, а не с того progressed state, на котором пользователь когда-то его покинул;
 - будущие stages НЕ удаляются.
+
+Это осознанное решение: отдельный progressState на каждый stage не храним ради редкого rollback-сценария.
+
+Перед подтверждением UI показывает базовый старт, например:
+> Вернуться к «Отжимания с колен»? Начнёшь с 2 × 10 повт.
 
 На финише тренировки при «тяжело» можно предложить возврат, если предыдущий stage существует, но не выполнять его автоматически.
 
@@ -2086,29 +2092,52 @@ AI не должен сам придумывать постоянный `canonic
 - не зависит от новой load-схемы;
 - уменьшает размер следующего breaking PR.
 
-### PR 2 — V2 schema + runtime + clean reset
+### PR 2a — V2 schema + normalization + clean reset
 
 Статус: ⬜ не начат
 
-- [ ] canonical exercise slot: `id + currentStageId + stages[1..4] + progressState`;
+- [ ] canonical exercise slot: `id + warmup + currentStageId + stages[1..4] + progressState`;
+- [ ] stage prescription/load/supportEquipment/progression;
 - [ ] удалить persistent legacy load/progression/swap поля;
-- [ ] equipment catalog с roles;
-- [ ] movement stages: максимум 4 total, каждый с полным prescription и `advance.mode`;
-- [ ] deterministic reversible `cfgKey` прямо в history, без config dictionary;
-- [ ] cfg level без полной шкалы; level remap по identity;
-- [ ] `exerciseLoadView`;
-- [ ] runtime weight/double/level progression;
-- [ ] movement-stage forward/back transition + reset state; `ceiling/manual` policy;
-- [ ] «только сегодня» vs «изменить рабочий вес»;
-- [ ] schema v2 sanitization/tests;
+- [ ] equipment catalog с roles и короткими stable storage codes;
+- [ ] normalize/sanitize/validation V2;
+- [ ] `activePrescription()` как единственный runtime read helper;
+- [ ] deterministic reversible cfgKey codec;
+- [ ] compact history DTO codec + `stageNames` registry shape;
+- [ ] schema/version tests;
+- [ ] runtime на этом этапе обязан хотя бы корректно читать single-stage V2; полноценная progression/history — PR2b;
 - [ ] после отдельного подтверждения владельца можно очистить текущие FitTimer-данные и работать только на V2.
 
-На время PR2–PR4 старые AI create/edit действия лучше явно отключить в UI, а не давать им писать legacy-ответ в новую persistent-схему.
+На время PR2a–PR4 старые AI create/edit действия лучше явно отключить в UI, а не давать им писать legacy-ответ в новую persistent-схему.
 
 Критерий:
-- вручную/fixture можно собрать V2-программу и полностью пройти тренировку;
+- V2 fixture нормализуется/валидируется;
+- single-stage exercise читается через activePrescription;
 - weight/level без equipment не сохраняется;
-- old legacy fields runtime больше не читает.
+- old legacy fields runtime больше не читает;
+- второй persistent exercise format не появился.
+
+### PR 2b — progression runtime + compact history
+
+Статус: ⬜ не начат
+
+- [ ] runtime weight/double/level progression на active stage;
+- [ ] level identity carry/reset rules;
+- [ ] progressState semantics;
+- [ ] physical cfgKey boundaries;
+- [ ] compact history write/read adapter;
+- [ ] stageNames update + GC rules;
+- [ ] before→today/history по `exId + movementStageId + cfgKey`;
+- [ ] worst-case size calculation ДО финального storage shape;
+- [ ] automated 2000-workout size test с запасом до 3 МБ;
+- [ ] «только сегодня» vs «изменить рабочий вес»;
+- [ ] resume unfinished workout tests.
+
+Критерий:
+- single-stage V2 полностью проходит workout/progression/history;
+- `2×5 → 2×6` = ordinary progression;
+- новый cfgKey/stageId не даёт ложной ↑/↓;
+- history storage имеет измеренный безопасный запас.
 
 ### PR 3 — V2 UI: оборудование + progression + movement chain
 
@@ -2120,7 +2149,9 @@ AI не должен сам придумывать постоянный `canonic
 - [ ] progression editor использует новый объект;
 - [ ] `mode:none` — единственный OFF;
 - [ ] `every:null` — наследовать program progression frequency;
-- [ ] movement stages UI: максимум 4 карточки с явным current stage;
+- [ ] movement stages runtime/UI: максимум 4 карточки с явным current stage;
+- [ ] forward/back transitions, reset progressState, rollback starts from stage base;
+- [ ] rollback confirmation показывает базовый старт;
 - [ ] add/remove/reorder stages; возврат к предыдущему stage;
 - [ ] `ceiling/manual`, «Перейти сейчас», preview ближайшего stage + картинка/placeholder;
 - [ ] все экраны через `exerciseLoadView`;
@@ -2282,6 +2313,11 @@ AI не должен сам придумывать постоянный `canonic
 - [ ] `exercise.replace` всегда movementChanged=true.
 - [ ] История старого stage показывает старое movementStageName после AI replacement.
 - [ ] Возврат к предыдущему stage сохраняет exercise.id, меняет currentStageId и сбрасывает progressState.
+- [ ] Возврат к предыдущему stage начинает с базового prescription, старый progressed state не восстанавливается.
+- [ ] warmup остаётся свойством exercise slot при переключении/reorder stages.
+- [ ] Stage AI-edit add/remove/reorder сохраняет stageId по refs; current stage нельзя удалить при movementChanged=false.
+- [ ] Compact history worst-case 2000 workouts имеет безопасный запас до 3 МБ.
+- [ ] stageNames GC не удаляет stage, если он ещё есть в retained history или актуальной программе.
 - [ ] OpenRouter/другой selectable route нельзя сохранить, если structured capability test не проходит.
 - [ ] Отсутствие подсчёта lifetime tonnage.
 - [ ] Смена дней варианта (пересортировка `plans`) не меняет, к какому варианту относится история.
