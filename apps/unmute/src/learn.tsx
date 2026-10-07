@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
+import { useOptionalAuth } from '@appbase/ui-react/auth.js';
+import { activePremium } from './entitlements';
 import { isPracticeCompletionRequirement, type Activity, type RoadmapNode } from './content/schema';
 import type { CourseProgressDocument } from './progress';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
@@ -126,6 +128,8 @@ export interface NodeRunnerViewProps {
   onExit:()=>void;
   onSignIn?:()=>void;
   onAccess?:()=>void;
+  /** Who runs the AI day: Plus talks in the app, others use their own AI (or the trial when signed in). */
+  talkAccess?:{signedIn:boolean;plus:boolean};
   /** A review day: run the regular review; it completes the day when finished. */
   onReviewDay?:(nodeId:string)=>void;
   onNodeCompleted?:(node:RoadmapNode)=>void;
@@ -528,6 +532,7 @@ export function NodeRunnerView({
   onExit,
   onSignIn=()=>{},
   onAccess=()=>{},
+  talkAccess={signedIn:false,plus:false},
   onReviewDay=()=>{},
   onNodeCompleted=()=>{},
   onOpenNode,
@@ -1831,6 +1836,8 @@ export function NodeRunnerView({
           onDone={advance}
           onSignIn={onSignIn}
           onAccess={onAccess}
+          signedIn={talkAccess.signedIn}
+          plus={talkAccess.plus}
           speak={speak}
           startRecognition={startRecognition}
         />
@@ -1865,6 +1872,8 @@ export function NodeRunnerView({
 
 export function NodeRunnerScreen(){
   const runtime=useLearnerCourseRuntime();
+  const auth=useOptionalAuth();
+  const talkAccess={signedIn:Boolean(auth.session),plus:activePremium(auth.session,Date.now())};
   const navigate=useNavigate();
   const params=useParams();
   const [search]=useSearchParams();
@@ -1895,6 +1904,7 @@ export function NodeRunnerScreen(){
       {...(replayTasksOnly?{replayTasksOnly:true}:{})}
       {...(startFromBeginning?{startFromBeginning:true}:{})}
       onExit={leaveLesson}
+      talkAccess={talkAccess}
       onSignIn={()=>navigate('/account?return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
       onAccess={()=>navigate('/access?from=answer&return='+encodeURIComponent('/learn/'+String(params.nodeId||'')+'?resume=1'))}
       onReviewDay={nodeId=>navigate('/review?day='+encodeURIComponent(nodeId))}

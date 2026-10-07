@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@appbase/ui-react/i18n.js';
 import { dictionaries } from './i18n';
 import { AIConversationView } from './ai-conversation';
+import { ownAITalkPrompt } from './ai-own-prompt';
 
 const activity={
   id:'talk.clinic',
@@ -67,6 +68,7 @@ describe('AI conversation runner',()=>{
 
     wrap(
       <AIConversationView
+        plus
         activity={activity}
         setId="general-foundation"
         saveSeen={saveSeen}
@@ -131,6 +133,7 @@ describe('AI conversation runner',()=>{
 
     wrap(
       <AIConversationView
+        plus
         activity={activity}
         setId="general-foundation"
         saveSeen={async()=>{}}
@@ -168,6 +171,7 @@ describe('AI conversation runner',()=>{
 
     wrap(
       <AIConversationView
+        plus
         activity={activity}
         setId="general-foundation"
         saveSeen={saveSeen}
@@ -202,6 +206,7 @@ describe('AI conversation runner',()=>{
 
     wrap(
       <AIConversationView
+        plus
         activity={activity}
         setId="general-foundation"
         saveSeen={saveSeen}
@@ -245,7 +250,7 @@ describe('AI conversation runner',()=>{
       />
     );
 
-    await user.click(screen.getByRole('button',{name:'Начать разговор'}));
+    await user.click(screen.getByRole('button',{name:'Попробовать в приложении'}));
     expect(await screen.findByText(/Пробная ИИ-беседа уже использована/)).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Открыть Plus'}));
     expect(onAccess).toHaveBeenCalledTimes(1);
@@ -270,7 +275,7 @@ describe('AI conversation runner',()=>{
       />
     );
 
-    await user.click(screen.getByRole('button',{name:'Начать разговор'}));
+    await user.click(screen.getByRole('button',{name:'Попробовать в приложении'}));
     expect(await screen.findByText('ИИ-разговоры доступны в UnMute Plus.')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:'Открыть Plus'}));
     expect(onAccess).toHaveBeenCalledTimes(1);
@@ -298,6 +303,7 @@ describe('AI conversation runner',()=>{
 
     wrap(
       <AIConversationView
+        plus
         activity={activity}
         setId="general-foundation"
         saveSeen={async()=>{}}
@@ -340,6 +346,7 @@ describe('AI conversation runner',()=>{
 
     wrap(
       <AIConversationView
+        plus
         activity={activity}
         setId="general-foundation"
         saveSeen={async()=>{}}
@@ -362,5 +369,87 @@ describe('AI conversation runner',()=>{
 
     expect(await screen.findByText(/распознавание речи недоступно/)).toBeTruthy();
     expect((screen.getByRole('textbox',{name:'Твой ответ'}) as HTMLInputElement).disabled).toBe(false);
+  });
+
+  it('without Plus gives a task for the learner’s own AI and completes the day on their word',async()=>{
+    const user=userEvent.setup();
+    const saveSeen=vi.fn(async()=>{});
+    const onDone=vi.fn();
+    const copyText=vi.fn(async()=>{});
+    const requestReply=vi.fn();
+
+    wrap(
+      <AIConversationView
+        activity={activity}
+        setId="general-foundation"
+        saveSeen={saveSeen}
+        onDone={onDone}
+        onSignIn={()=>{}}
+        onAccess={()=>{}}
+        signedIn={false}
+        copyText={copyText}
+        requestReply={requestReply}
+      />
+    );
+
+    expect(screen.getByRole('heading',{name:'Поговори в своём ИИ'})).toBeTruthy();
+    expect(screen.getByRole('button',{name:'Войти'})).toBeTruthy();
+    expect(screen.queryByRole('button',{name:'Попробовать в приложении'})).toBeNull();
+    await user.click(screen.getByRole('button',{name:'Скопировать задание'}));
+    expect(copyText).toHaveBeenCalledWith(ownAITalkPrompt({
+      topic:'В клинике',
+      scenario:'Act as a receptionist.',
+      focus:['appointments'],
+      locale:'ru'
+    }));
+    expect(await screen.findByRole('button',{name:'Задание скопировано'})).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Готово, урок пройден'}));
+    expect(saveSeen).toHaveBeenCalledWith('general-foundation','talk.clinic');
+    expect(onDone).toHaveBeenCalledTimes(1);
+    expect(requestReply).not.toHaveBeenCalled();
+  });
+
+  it('shows the task text when copying is refused',async()=>{
+    const user=userEvent.setup();
+    wrap(
+      <AIConversationView
+        activity={activity}
+        setId="general-foundation"
+        saveSeen={async()=>{}}
+        onDone={()=>{}}
+        onSignIn={()=>{}}
+        onAccess={()=>{}}
+        copyText={async()=>{throw new Error('denied');}}
+      />
+    );
+    await user.click(screen.getByRole('button',{name:'Скопировать задание'}));
+    expect(await screen.findByText(/Скопировать не вышло/)).toBeTruthy();
+    expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toContain('Тема: В клинике.');
+  });
+
+  it('with Plus talks in the app, and a failing AI still never blocks the day',async()=>{
+    const user=userEvent.setup();
+    const onDone=vi.fn();
+    const requestReply=vi.fn(async()=>{
+      throw Object.assign(new Error('ai_failed'),{code:'ai_failed'});
+    });
+    wrap(
+      <AIConversationView
+        plus
+        activity={activity}
+        setId="general-foundation"
+        saveSeen={async()=>{}}
+        onDone={onDone}
+        onSignIn={()=>{}}
+        onAccess={()=>{}}
+        requestReply={requestReply}
+      />
+    );
+    expect(screen.queryByRole('heading',{name:'Поговори в своём ИИ'})).toBeNull();
+    await user.click(screen.getByRole('button',{name:'Начать разговор'}));
+    expect(await screen.findByText('Не удалось получить ответ ИИ.')).toBeTruthy();
+    expect(screen.getByRole('heading',{name:'Поговори в своём ИИ'})).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Готово, урок пройден'}));
+    expect(onDone).toHaveBeenCalledTimes(1);
   });
 });

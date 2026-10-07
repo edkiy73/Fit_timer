@@ -27,6 +27,17 @@ function parseRecord(raw){
   }
 }
 
+// Undo a grant when the AI request then fails (Core calls release()), so a provider error
+// never burns the trial or a free explanation (owner decision 5). Only rolls back if nobody
+// changed the record since — a parallel successful call is kept.
+function releaser({store,lockKey,key,written,previous}){
+  return ()=>store.withLock(lockKey,async()=>{
+    if(await store.get(key)!==written)return;
+    if(previous==null)await store.del(key);
+    else await store.set(key,previous,TRIAL_RECORD_TTL);
+  });
+}
+
 function denied(code='premium_required',status=402){
   return {allowed:false,code,status};
 }
@@ -43,9 +54,12 @@ async function authorizeFreeExplain({accountHash,store}){
     const key=explainKey(accountHash);
     const used=Math.max(0,Math.floor(Number(await store.get(key))||0));
     if(used>=FREE_EXPLAIN_CALLS)return denied('free_explain_used');
-    await store.set(key,String(used+1),TRIAL_RECORD_TTL);
+    const previous=await store.get(key);
+    const written=String(used+1);
+    await store.set(key,written,TRIAL_RECORD_TTL);
     return {
       allowed:true,
+      release:releaser({store,lockKey:'lock:unmute-ai-explain:'+accountHash,key,written,previous}),
       meta:{mode:'free',remaining:FREE_EXPLAIN_CALLS-used-1,maxCalls:FREE_EXPLAIN_CALLS}
     };
   });
@@ -71,9 +85,11 @@ async function authorizeUnMuteAI({accountHash,body,store,now=Date.now()}){
     if(!existing){
       if(kind!=='talk.reply'||body.start!==true)return denied();
       const record={id,scope,startedAt:now,calls:1};
-      await store.set(key,JSON.stringify(record),TRIAL_RECORD_TTL);
+      const written=JSON.stringify(record);
+      await store.set(key,written,TRIAL_RECORD_TTL);
       return {
         allowed:true,
+        release:releaser({store,lockKey:'lock:unmute-ai-trial:'+accountHash,key,written,previous:null}),
         meta:{
           mode:'trial',
           remaining:TRIAL_MAX_CALLS-record.calls,
@@ -87,9 +103,11 @@ async function authorizeUnMuteAI({accountHash,body,store,now=Date.now()}){
     if(existing.calls>=TRIAL_MAX_CALLS)return denied('trial_limit',429);
 
     const next={...existing,calls:existing.calls+1};
-    await store.set(key,JSON.stringify(next),TRIAL_RECORD_TTL);
+    const written=JSON.stringify(next);
+    await store.set(key,written,TRIAL_RECORD_TTL);
     return {
       allowed:true,
+      release:releaser({store,lockKey:'lock:unmute-ai-trial:'+accountHash,key,written,previous:raw}),
       meta:{
         mode:'trial',
         remaining:TRIAL_MAX_CALLS-next.calls,

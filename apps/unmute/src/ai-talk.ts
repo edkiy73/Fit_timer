@@ -74,13 +74,13 @@ function randomTrialId():string{
   return 'trial_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
 }
 
-function sessionStore():Pick<Storage,'getItem'|'setItem'|'removeItem'>|null{
-  try{return globalThis.sessionStorage??null;}catch{return null;}
+function trialStore():Pick<Storage,'getItem'|'setItem'|'removeItem'>|null{
+  try{return globalThis.localStorage??null;}catch{return null;}
 }
 
 export function getTalkTrialContext(
   scope:string,
-  storage:Pick<Storage,'getItem'|'setItem'|'removeItem'>|null=sessionStore()
+  storage:Pick<Storage,'getItem'|'setItem'|'removeItem'>|null=trialStore()
 ):TalkTrialContext{
   const key=TRIAL_STORAGE_PREFIX+scope;
   let id='';
@@ -94,7 +94,7 @@ export function getTalkTrialContext(
 
 export function clearTalkTrialContext(
   scope:string,
-  storage:Pick<Storage,'removeItem'>|null=sessionStore()
+  storage:Pick<Storage,'removeItem'>|null=trialStore()
 ):void{
   try{storage?.removeItem(TRIAL_STORAGE_PREFIX+scope);}catch{}
 }

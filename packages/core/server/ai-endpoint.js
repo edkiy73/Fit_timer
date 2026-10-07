@@ -54,6 +54,13 @@ function createAIHandler(AI_ACTIONS, options = {}){
 
     const premium = (Date.parse(acc.sub && acc.sub.until) || 0) >= Date.now();
     let accessMeta = null;
+    // A product authorizer may hand back release(): it undoes the access it just granted
+    // (e.g. a free trial) when the request then fails, so a provider error never burns it.
+    let release = null;
+    const failReleased = async (...args) => {
+      if(release){ try{ await release(); }catch(_){} release = null; }
+      return fail(...args);
+    };
     if(!premium){
       if(!authorize) return fail(res, 402, 'premium_required');
       let decision;
@@ -76,22 +83,23 @@ function createAIHandler(AI_ACTIONS, options = {}){
         );
       }
       accessMeta = decision.meta || null;
+      if(typeof decision.release === 'function') release = decision.release;
     }
 
     const settings = await getSettings();
-    if(!settings.enabled) return fail(res, 503, 'ai_disabled');
+    if(!settings.enabled) return failReleased(res, 503, 'ai_disabled');
     const kind = String(body.kind || '');
     const action = AI_ACTIONS.get(kind);
-    if(!action) return fail(res, 400, 'bad_kind');
+    if(!action) return failReleased(res, 400, 'bad_kind');
     const type = action.type;
     const bucket = action.bucket;
     const prompt = String(body.prompt || '').trim();
-    if(!prompt || prompt.length > 120000) return fail(res, 400, 'bad_prompt');
+    if(!prompt || prompt.length > 120000) return failReleased(res, 400, 'bad_prompt');
 
     const month = new Date().toISOString().slice(0,7);
     const used = await store.incr(`ai:use:${month}:${mh}:${bucket}`, 70 * 86400);
     const limit = settings.limits[bucket];
-    if(limit === 0 || used > limit) return fail(res, 429, 'ai_limit', {bucket,used:Math.max(0,used-1),limit});
+    if(limit === 0 || used > limit) return failReleased(res, 429, 'ai_limit', {bucket,used:Math.max(0,used-1),limit});
 
     const at = new Date().toISOString();
     try{
@@ -115,15 +123,15 @@ function createAIHandler(AI_ACTIONS, options = {}){
       const log = {at,account:mh,kind,ok:false,error:String(e && e.message || e).slice(0,500),
         validation:validation ? {reason:validation.reason || '',missing:(validation.missing || []).slice(0,20)} : undefined};
       try{ await store.push(`ai:log:${at.slice(0,10)}`, JSON.stringify(log), settings.retentionDays * 86400); }catch(_){}
-      if(e && e.code === 'ai_timeout') return fail(res, 504, 'ai_timeout');
+      if(e && e.code === 'ai_timeout') return failReleased(res, 504, 'ai_timeout');
       if(action && typeof action.publicError === 'function'){
         const mapped = action.publicError(e);
-        if(mapped) return fail(res,mapped.status || 422,mapped.code || 'ai_failed',mapped.extra || {});
+        if(mapped) return failReleased(res,mapped.status || 422,mapped.code || 'ai_failed',mapped.extra || {});
       }
       const malformed = !!validation || AI_ACTIONS.isMalformed(e && e.message);
       // reason/missing — коды проверки протокола (не текст ответа и не секреты):
       // по ним и приложение, и человек видят, ЧЕГО не хватило в ответе ИИ
-      return fail(res, e.status && e.status < 500 ? e.status : 502, malformed ? 'ai_bad_response' : 'ai_failed', {
+      return failReleased(res, e.status && e.status < 500 ? e.status : 502, malformed ? 'ai_bad_response' : 'ai_failed', {
         detail: malformed ? 'AI returned an incomplete or invalid result' : String(e.message || e).slice(0,500),
         reason: malformed ? String((validation && validation.reason) || e.message || '').slice(0,60) : undefined,
         missing: malformed && validation ? (validation.missing || []).slice(0,8) : undefined

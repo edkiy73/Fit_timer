@@ -102,6 +102,28 @@ const {
   });
   assert.deepEqual(result,{allowed:false,code:'trial_limit',status:429});
 
+  // A failed AI request releases what it was granted: the first trial call leaves no record,
+  // a later call gives its slot back, a free explanation is returned (owner decision 5).
+  const releaseHash='trial-release-'+Date.now();
+  const releaseBase={...base,accountHash:releaseHash};
+  result=await authorizeUnMuteAI({...releaseBase,body:{kind:'talk.reply',trial,start:true}});
+  assert.equal(result.allowed,true);
+  await result.release();
+  assert.equal(await store.get(trialKey(releaseHash)),null);
+  result=await authorizeUnMuteAI({...releaseBase,body:{kind:'talk.reply',trial,start:true}});
+  assert.equal(result.meta.remaining,TRIAL_MAX_CALLS-1);
+  result=await authorizeUnMuteAI({...releaseBase,body:{kind:'talk.reply',trial,start:false}});
+  assert.equal(result.meta.remaining,TRIAL_MAX_CALLS-2);
+  await result.release();
+  result=await authorizeUnMuteAI({...releaseBase,body:{kind:'talk.reply',trial,start:false}});
+  assert.equal(result.meta.remaining,TRIAL_MAX_CALLS-2);
+  result=await authorizeUnMuteAI({...releaseBase,body:{kind:'answer.explain'}});
+  assert.equal(result.meta.remaining,FREE_EXPLAIN_CALLS-1);
+  await result.release();
+  result=await authorizeUnMuteAI({...releaseBase,body:{kind:'answer.explain'}});
+  assert.equal(result.meta.remaining,FREE_EXPLAIN_CALLS-1);
+  await store.del(trialKey(releaseHash));
+
   await Promise.all([
     store.del(trialKey(accountHash)),
     store.del(trialKey(expiredHash)),
