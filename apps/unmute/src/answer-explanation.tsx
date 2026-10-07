@@ -1,3 +1,4 @@
+import { reportAiError } from './observability';
 import { useState } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
@@ -61,6 +62,7 @@ export function AnswerExplanationView({
       setResult(await requestExplain(input));
     }catch(err:any){
       setError(String(err?.code||'ai_failed'));
+      reportAiError(err);
     }finally{
       setBusy(false);
     }

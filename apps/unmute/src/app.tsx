@@ -1,6 +1,8 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Navigate, Outlet, useLocation, type RouteObject } from 'react-router';
 import { AuthProvider, useOptionalAuth } from '@appbase/ui-react/auth.js';
+import { activePremium } from './entitlements';
+import { setAnalyticsPaying, trackSignedIn } from './observability';
 import { I18nProvider, useI18n } from '@appbase/ui-react/i18n.js';
 import { authClient } from './auth';
 import { appDocs, syncNow } from './sync';
@@ -76,11 +78,29 @@ function ActiveCourse({children}: {children: ReactNode}){
   return <LearnerCourseProvider setId={setId}>{children}</LearnerCourseProvider>;
 }
 
+/* Analytics knows whether the person pays (audit R1) and counts a real sign-in, not a session
+   restored at startup (audit R7). */
+function AnalyticsAccount(){
+  const auth = useOptionalAuth();
+  const session = auth.session;
+  const settled = useRef(false);
+  const signedIn = useRef(false);
+  useEffect(() => {
+    setAnalyticsPaying(activePremium(session, Date.now()) || Boolean(session?.owned?.length));
+    if(auth.loading) return;
+    if(settled.current && !signedIn.current && session) trackSignedIn();
+    settled.current = true;
+    signedIn.current = Boolean(session);
+  }, [auth.loading, session]);
+  return null;
+}
+
 function Root(){
   return (
     <Localized>
       <AuthProvider client={authClient}>
         <SettingsSync />
+        <AnalyticsAccount />
         <RemotePushLifecycle />
         <LexiconProvider>
           <ActiveCourse>

@@ -1,3 +1,4 @@
+import { trackReminderEnabled } from './observability';
 import { useEffect, useState } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import { Sheet } from './sheet';
@@ -54,6 +55,7 @@ export function FirstLessonNotificationOffer({
           changedAt:now
         }
       });
+      trackReminderEnabled();
       // Permission is requested only after the explicit opt-in action above.
       await requestNotificationPermission();
       await syncRemotePush(true);

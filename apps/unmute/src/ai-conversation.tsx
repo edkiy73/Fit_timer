@@ -1,3 +1,4 @@
+import { reportAiError } from './observability';
 import { useEffect, useRef, useState } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
@@ -174,6 +175,7 @@ export function AIConversationView({
       void speak(reply.reply,ENGLISH_SPEECH_LOCALE);
     }catch(err:any){
       setError(String(err?.code||'ai_failed'));
+      reportAiError(err);
     }finally{
       setBusy(false);
     }
@@ -207,6 +209,7 @@ export function AIConversationView({
       void speak(reply.reply,ENGLISH_SPEECH_LOCALE);
     }catch(err:any){
       setError(String(err?.code||'ai_failed'));
+      reportAiError(err);
     }finally{
       setBusy(false);
     }
@@ -306,6 +309,7 @@ export function AIConversationView({
       setTrialUsage(result.trial??trialUsage);
     }catch(err:any){
       setError(String(err?.code||'ai_failed'));
+      reportAiError(err);
     }finally{
       setBusy(false);
     }

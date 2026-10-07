@@ -2,9 +2,14 @@
 
 const crypto=require('crypto');
 
+const ACTIVE_DAYS_KEPT=60;
+const RETENTION_DAYS=Object.freeze([1,7,30]);
+
 function createAnalyticsEngine({
   store,
   events,
+  /** Product funnel: ordered steps, each reached by any of its events (first time per device). */
+  funnel=[],
   dayTtl=120*24*3600,
   deviceTtl=180*24*3600,
   uniqueTtl=45*24*3600,
@@ -12,6 +17,9 @@ function createAnalyticsEngine({
 }){
   const eventList=Object.freeze([...(events||[])].map(String));
   const eventSet=new Set(eventList);
+  const funnelSteps=Object.freeze((Array.isArray(funnel)?funnel:[])
+    .map(step=>({id:String(step&&step.id||''),events:(Array.isArray(step&&step.events)?step.events:[]).map(String).filter(e=>eventSet.has(e))}))
+    .filter(step=>step.id&&step.events.length));
   const cleanPlatform=v=>['android','ios','web'].includes(String(v||''))?String(v):'web';
   const cleanLocale=v=>String(v||'').toLowerCase()==='en'?'en':'ru';
   const deviceHash=v=>crypto.createHash('sha256').update(String(v||'')).digest('hex').slice(0,24);
@@ -59,6 +67,10 @@ function createAnalyticsEngine({
     rec.firstSeen=rec.firstSeen||now;
     rec.lastSeen=now; rec.platform=platform; rec.locale=locale;
     if(!rec.events[event])rec.events[event]=now;
+    // Days the device was active (UTC), for D1/D7/D30 retention; the newest are kept.
+    const activeDays=Array.isArray(rec.days)?rec.days.filter(value=>typeof value==='string'):[];
+    if(!activeDays.includes(day))activeDays.push(day);
+    rec.days=activeDays.sort().slice(-ACTIVE_DAYS_KEPT);
     await store.set(deviceKey,JSON.stringify(rec),deviceTtl);
     return {ok:true,event};
   }
@@ -84,13 +96,31 @@ function createAnalyticsEngine({
     }
 
     const start=new Date(); start.setUTCHours(0,0,0,0); start.setUTCDate(start.getUTCDate()-(days-1));
-    const startMs=start.getTime(), keys=await store.scan('analytics:device:*',50000), raws=await store.many(keys), devices=[];
-    raws.forEach(raw=>{if(!raw)return;try{const rec=JSON.parse(raw),first=Date.parse(rec&&rec.events&&rec.events.install||rec&&rec.firstSeen||'');if(Number.isFinite(first)&&first>=startMs)devices.push(rec);}catch(_){}});
+    const startMs=start.getTime(), keys=await store.scan('analytics:device:*',50000), raws=await store.many(keys), devices=[], all=[];
+    raws.forEach(raw=>{if(!raw)return;try{const rec=JSON.parse(raw),first=Date.parse(rec&&rec.events&&rec.events.install||rec&&rec.firstSeen||'');if(!Number.isFinite(first))return;all.push({rec,first});if(first>=startMs)devices.push(rec);}catch(_){}});
     const totals={};
     eventList.forEach(e=>{totals[e]={count:rows.reduce((n,r)=>n+(r.events[e].count||0),0),unique:devices.reduce((n,d)=>n+(d.events&&d.events[e]?1:0),0)};});
     const cohort={devices:devices.length,platform:{android:0,ios:0,web:0},locale:{ru:0,en:0}};
     devices.forEach(d=>{const p=cleanPlatform(d.platform),l=cleanLocale(d.locale);cohort.platform[p]=(cohort.platform[p]||0)+1;cohort.locale[l]=(cohort.locale[l]||0)+1;});
-    return {days,events:eventList,rows,totals,cohort};
+    // Funnel over the new devices of the period: how many reached each step.
+    const funnelRows=funnelSteps.map(step=>({id:step.id,devices:devices.reduce((n,d)=>n+(step.events.some(e=>d.events&&d.events[e])?1:0),0)}));
+    // Classic retention over every known device: active exactly N days after its first day.
+    // Only devices whose day N has already come count; older records without `days` use last activity.
+    const todayMs=Date.parse(new Date().toISOString().slice(0,10));
+    const retention={};
+    RETENTION_DAYS.forEach(n=>{retention['d'+n]={eligible:0,returned:0};});
+    all.forEach(({rec,first})=>{
+      const firstDay=Date.parse(new Date(first).toISOString().slice(0,10));
+      const active=new Set(Array.isArray(rec.days)?rec.days:[]);
+      if(!active.size&&rec.lastSeen)active.add(String(rec.lastSeen).slice(0,10));
+      RETENTION_DAYS.forEach(n=>{
+        const target=firstDay+n*86400000;
+        if(target>todayMs)return;
+        retention['d'+n].eligible++;
+        if(active.has(new Date(target).toISOString().slice(0,10)))retention['d'+n].returned++;
+      });
+    });
+    return {days,events:eventList,rows,totals,cohort,funnel:funnelRows,retention};
   }
 
   return {events:eventList,recordAnalytics,removeAnalyticsDevice,analyticsStats};
