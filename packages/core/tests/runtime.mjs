@@ -93,6 +93,7 @@ const fakeAudio = {
     return {remove: async () => { removedListeners++; audioListeners.delete(name); }};
   },
   startRecognition: async input => { audioCalls.push(['start', input]); return {started:true}; },
+  setRecognitionSensitivity: async input => { audioCalls.push(['sensitivity', input]); return input; },
   stopRecognition: async () => { audioCalls.push(['stop']); },
   prepareRecognitionModel: async input => { audioCalls.push(['prepare', input]); return {installed:false, sizeMb:40}; }
 };
@@ -108,20 +109,26 @@ ok('ESM speech uses product-supplied default locale',
   await speech.speak('hello')
   && audioCalls[0][1].locale === 'en-US' && audioCalls[0][1].text === 'hello');
 const heard = [];
+const levels = [];
 const results = [];
-ok('ESM speech starts recognition in product-supplied language',
+ok('ESM speech starts recognition in product-supplied language and sensitivity',
   await speech.startRecognition({
     onResult: text => results.push(text),
-    onHeard: event => heard.push(event)
-  })
-  && audioCalls.some(call => call[0] === 'start' && call[1].language === 'en'));
+    onHeard: event => heard.push(event),
+    onLevel: event => levels.push(event)
+  }, undefined, {sensitivity:8})
+  && audioCalls.some(call => call[0] === 'start' && call[1].language === 'en' && call[1].sensitivity === 8));
 audioListeners.get('speechResult')({text:'next'});
 audioListeners.get('speechHeard')({text:'mumble'});
-ok('ESM speech routes results and raw heard events to handlers',
-  results[0] === 'next' && heard[0].text === 'mumble');
+audioListeners.get('speechLevel')({level:61});
+ok('ESM speech routes results, heard diagnostics and live level',
+  results[0] === 'next' && heard[0].text === 'mumble' && levels[0].level === 61);
+ok('ESM speech updates sensitivity without restarting recognition',
+  await speech.setRecognitionSensitivity(3)
+  && audioCalls.some(call => call[0] === 'sensitivity' && call[1].sensitivity === 3));
 await speech.stopRecognition();
 ok('ESM speech removes recognition listeners on stop',
-  removedListeners === 4 && audioListeners.size === 0);
+  removedListeners === 5 && audioListeners.size === 0);
 const downloadStatuses = [];
 ok('ESM speech queues model download after product hook',
   await speech.downloadModel('de', status => downloadStatuses.push(status))
