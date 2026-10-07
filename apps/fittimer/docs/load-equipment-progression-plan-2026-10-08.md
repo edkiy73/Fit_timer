@@ -1808,7 +1808,7 @@ AI не должен сам придумывать постоянный `canonic
 
 Практическое правило уже сейчас:
 - media/base64 и progression state не входят в AI output;
-- image prompt берёт `loadEquipment + loadCount + supportEquipment` из структурированных данных;
+- image prompt берёт `load.equipment + load.count + supportEquipment` из структурированных данных;
 - после появления canonical catalog картинка кэшируется по каноническому движению + визуально значимой конфигурации оборудования, а не только по тексту названия.
 
 Перед массовой генерацией каталога/картинок этот пункт должен быть закрыт отдельным решением.
@@ -2032,13 +2032,13 @@ AI не должен сам придумывать постоянный `canonic
 - [ ] Переименование/перестановка упражнения не ломает «было → сегодня» (сопоставление по `exId`).
 - [ ] Документ с `schema` новее клиента не перезаписывается.
 - [ ] Импорт программы не-v2 отклоняется понятной ошибкой.
-- [ ] Экран старта: «только сегодня» не трогает `ps`, «новый рабочий вес» сбрасывает `progressState.count`.
+- [ ] Экран старта: «только сегодня» не трогает `progressState`, «новый рабочий вес» сбрасывает `progressState.count`.
 - [ ] Persistent weight/level без equipment отклоняется; null допустим только в UI-draft/none.
 - [ ] TRX/угол тела не превращается в load.level без load-equipment; используется movement progression/swap.
 - [ ] AI-edit: каждый существующий plan/exercise id либо упомянут ровно один раз, либо явно удалён.
 - [ ] AI-edit target state корректно выражает reorder/move/split/merge без operation DSL.
-- [ ] История хранит cfgKey + config snapshot.
-- [ ] Сервер после cutover отклоняет write старой schema от старого APK.
+- [ ] История ссылается на `configId`, а config snapshot хранится один раз в `stats.loadConfigs`.
+- [ ] До публичного релиза несовместимый старый APK не может писать старую schema/использовать несовместимые FitTimer API.
 - [ ] `progression` и `progressState` не смешиваются: AI не может записывать `progressState`.
 
 ---
@@ -2055,7 +2055,7 @@ AI не должен сам придумывать постоянный `canonic
 6. **JSON Schema не заменяет domain validation.** Фитнес-условия, inventory compatibility и progression semantics проверяются кодом.
 7. **Данные не переносятся вообще** (1.9): приложение стартует пустым, реальные программы пользователя/Светы генерируются заново и становятся regression fixtures.
 8. **Один вес на упражнение для всех подходов.** Пирамиды, разминочные подходы с меньшим весом, «основной + облегчённые» подходы модель не представляет.
-9. **Прогрессия через смену самого упражнения** (колени → полные отжимания, изменение высоты опоры/угла тела) остаётся movement progression/swap, а не `load.level` без снаряда.
+9. **Movement progression включён в V2, но ограничен 4 этапами всего** (current + 3 next). Более длинная лестница строится позже отдельной правкой, а не хранится как бесконечный список.
 
 ---
 
@@ -2075,15 +2075,17 @@ AI не должен сам придумывать постоянный `canonic
    И верно ли сбрасывать `progressState.count` при ручном изменении нагрузки/policy?
 5. **Load vs support equipment.** Есть ли распространённые предметы/упражнения, где двух категорий недостаточно или один и тот же предмет одновременно играет обе роли так, что модель становится неоднозначной?
 6. **Инвентарь пользователя.** Достаточно ли в V1 знать только тип доступного оборудования, или без `availableCount / availableWeights / increments` AI будет слишком часто выдавать физически невыполнимую прогрессию?
-7. **AI Contract V2.** Не переусложняем ли мы Structured Output + operation-based edit? Есть ли более простой контракт с той же надёжностью?
-8. **Program edit operations.** Закрывает ли предлагаемый ID-based operation set реальные запросы: перестановка, добавление/удаление, split/merge вариантов, смена расписания, массовая замена, изменение только части progression policy?
+7. **AI Contract V2.** Не переусложняем ли Structured Output + target-state refs? Есть ли более простой контракт с той же надёжностью?
+8. **Program edit target state.** Закрывают ли refs + plan patch + exercise replace/new реальные запросы: перестановка, добавление/удаление, split/merge, перенос, duplicate exercise, изменение только части progression policy?
 9. **Identity.** Достаточны ли `program.id / plan.id / exercise.id`, и где должна проходить граница с будущим `canonicalExerciseId`?
 10. **App-owned vs AI-owned state.** Не отдаём ли AI лишние поля? Достаточно ли жёстко защищены `ps`, history, media, sync/trainer metadata и persistent IDs?
 11. **Provider portability.** Реально ли выбранный общий JSON Schema subset одинаково проходит текущие Gemini/OpenAI/OpenRouter маршруты без provider-specific fork?
-12. **Порядок PR.** Можно ли безопасно реализовать domain → Core structured output → FitTimer V2 → UI → runtime/history, или какие-то зависимости стоят наоборот?
+12. **Порядок PR.** Корректно ли после решения «прод можно ломать» идти: stable IDs/history → V2 schema/runtime → UI → Core Structured Output → AI V2?
 13. **Все каналы.** Не пропущены ли import/export/share/sync/backup/catalog/trainer/session/video/image/admin/privacy/i18n.
 14. **Что вообще удалить.** Какие существующие legacy-поля/ветки после V2 становятся вторым source of truth и должны исчезнуть, а какие пока опасно трогать?
-15. **Стоимость сложности.** Где план решает гипотетическую проблему ценой слишком большой архитектуры для текущего масштаба FitTimer?
+15. **Movement chain.** Достаточно ли лимита current + 3 next? Какие распространённые progression chains требуют больше 4 этапов?
+16. **Movement images.** Правильно ли не хранить base64 future-stage media, делать cache lookup для ближайшего stage и генерировать только по preview/transition?
+17. **Стоимость сложности.** Где план решает гипотетическую проблему ценой слишком большой архитектуры для текущего масштаба FitTimer?
 
 Формат полезного внешнего ревью:
 - сначала критические ошибки/риски;
@@ -2218,6 +2220,102 @@ AI не должен сам придумывать постоянный `canonic
 - разделение `load / progression / progressState` достаточно (с правкой п.6);
 - target state + refs вместо операций (с правкой п.8);
 - `unit` в схеме сейчас — да.
+
+---
+
+## 14.5. Ответ после второго ревью Клода + решение по movement chain — 2026-10-08
+
+Второе ревью принято почти целиком. Ниже — что становится текущим решением документа.
+
+### Принимаем замечания Клода
+
+1. **Историю нельзя раздувать полным config на каждую тренировку.**  
+   Используем `stats.loadConfigs` + короткий `configId` в history. Это учитывает текущий server limit 3 МБ.
+
+2. **Полная level-шкала не входит в physical cfgKey.**  
+   Reorder/add/rename не должны автоматически создавать новую конфигурацию. Текущий level переносится по identity; если текущая identity исчезла — level state сбрасывается.
+
+3. **Один способ выключить прогрессию.**  
+   `progression.mode='none'` — OFF.  
+   `progression.every=null` — наследовать `program.progression.every`.  
+   `every:0` как второй OFF не используем.
+
+4. **Для `mode='level'` на reps явно используется `progression.reps.step/max`.**
+
+5. **Structured route проверяем при сохранении AI-настроек.**  
+   Если выбранная OpenRouter/model route не проходит реальный schema-constrained тест, её нельзя сохранить как рабочий V2 route.
+
+6. **Убираем двусмысленный `set` в AI-edit.**  
+   - `patch` = частичная правка plan/program metadata;  
+   - `replace` = полный новый prescription существующего упражнения;  
+   - `new` = полный новый prescription нового экземпляра.
+
+7. **PR 1 уменьшаем.**  
+   Stable plan/exercise identity, history-by-ID и tonnage cleanup идут отдельным первым PR до breaking V2.
+
+8. **После решения владельца не поддерживаем рабочий прод между PR.**  
+   Когда runtime переходит на V2, данные можно очищать после короткого подтверждения владельца. Временный V1↔V2 compatibility layer не строим.
+
+9. **Защита старых APK — pre-public hardening, не блокер V2 сейчас.**  
+   Перед публичным релизом понадобится FitTimer-specific minimum app/API compatibility, причём не только sync write. Это не должно становиться глобальным правилом shared Core для UnMute.
+
+10. **Старые разделы документа переписываем под V2**, а не полагаемся только на «новый раздел имеет приоритет».
+
+### Дополнительное решение владельца: movement chain включаем сразу
+
+Одиночный legacy swap заменяется ограниченной цепочкой.
+
+**Лимит: максимум 4 movement stages всего:**
+- current;
+- максимум 3 next.
+
+Почему:
+- покрывает типичные домашние progression ladders;
+- не превращает упражнение в мини-программу;
+- ограничивает AI output, UI и число потенциальных картинок;
+- после финального stage цепочку всегда можно продолжить новой AI/manual правкой.
+
+### Семантика chain
+
+Каждый future stage — полный `ExercisePrescription` без:
+- persistent exercise ID;
+- progressState/history;
+- media payload;
+- nested movement chain.
+
+При переходе:
+- `exercise.id` сохраняется;
+- меняется app-owned `movementStageId`;
+- текущий prescription заменяется;
+- `progressState` сбрасывается;
+- old/new movement stages не сравниваются как обычный рост нагрузки.
+
+Обычная reps/weight/time/level progression полностью отрабатывает ВНУТРИ stage. Chain используется только после terminal ceiling.
+
+### Картинки movement stages
+
+Решение:
+- current stage использует обычную картинку упражнения;
+- future stages НЕ хранят base64;
+- для ближайшего next stage разрешён дешёвый cache lookup;
+- генерация запускается только по явному preview или при подтверждении перехода;
+- отсутствие картинки не блокирует promotion;
+- при отсутствии сети показывается placeholder, картинка догружается позже;
+- все 3 будущих изображения заранее не генерируем;
+- старую картинку движения на новый stage не переносим.
+
+После появления canonical exercise library media cache должен использовать canonical movement identity + визуально значимое оборудование. До этого допускается deterministic visualKey из нормализованного stage prescription.
+
+### Что ещё просим Клода перепроверить
+
+1. Лимит 4 stages: есть ли массовые реальные кейсы, где это мало?
+2. Нужно ли future stage хранить полный prescription или можно безопасно сократить его ещё сильнее?
+3. Правильно ли сохранять один `exercise.id` на всю movement chain, различая stages через `movementStageId`?
+4. Достаточен ли `exId + movementStageId + configId` для истории и сравнений?
+5. Не нужен ли cache lookup для next image раньше, чем пользователь откроет preview/дойдёт до потолка?
+6. Есть ли риск, что `stats.loadConfigs` тоже начнёт бесконтрольно расти, и нужен ли простой GC configs, на которые больше не ссылается history?
+7. Для level-scale edit: достаточно ли правила «current identity сохранилась → state carry», или надо сравнивать ещё смысл направления сложности?
+8. Новый PR order после разрешения ломать production: есть ли зависимость, из-за которой Core Structured Output всё-таки должен идти раньше UI/runtime?
 
 ---
 
