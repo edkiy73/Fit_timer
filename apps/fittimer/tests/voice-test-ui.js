@@ -65,7 +65,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     heard({text: 'пауза', kind: 'pause', accepted: false, confidence: .2});
     heard({text: 'готово', kind: 'done', accepted: false, source: 'below_sensitivity', confidence: .9});
   });
-  const rows = await page.$eval('#voiceTestList .vt-row', xs => xs.map(x => x.textContent + (x.classList.contains('ok') ? ' [ok]' : '')));
+  const rows = await page.$$eval('#voiceTestList .vt-row', xs => xs.map(x => x.textContent + (x.classList.contains('ok') ? ' [ok]' : '')));
   ok('слишком тихая команда объясняется порогом', /готово.*слишком тихо/.test(rows[0] || ''), rows[0]);
   ok('неуверенное распознавание помечено', /пауза.*не расслышал уверенно/.test(rows[1] || ''), rows[1]);
   ok('Пропустить названо отдельно и выделено', /пропустить.*Пропустить.*\[ok\]/.test(rows[2] || ''), rows[2]);
