@@ -1586,11 +1586,12 @@ CREATE возвращает полный объект новой програм�
 
 Не посылать модели schema всей программы, когда нужно создать одно упражнение.
 
-Exercise output может опционально содержать `movementProgression.next` длиной 0..3:
+Exercise output может содержать 1..4 movement stage specifications:
 - только если у движения есть естественная лестница вариантов;
-- каждый next — полный ExercisePrescription без id/progressState/media/nested chain;
-- persistent `movementStageId` назначает приложение после validation;
-- AI не обязан строить chain для каждого упражнения.
+- каждый stage = полный ExercisePrescription + advance.mode;
+- AI НЕ возвращает stageId/currentStageId/progressState/media;
+- приложение после validation создаёт app-owned stageId и выбирает текущим первый stage;
+- если chain не нужна, AI возвращает ровно один stage.
 
 ### Редактирование программы: target state + ссылки — ПРИНЯТОЕ РЕШЕНИЕ
 
@@ -1610,8 +1611,18 @@ AI возвращает **целевую структуру программы �
       "patch": {"days": ["Tue"]},
       "exercises": [
         {"ref": "ex_1"},
-        {"ref": "ex_2", "replace": {"...": "ПОЛНЫЙ новый exercise prescription"}},
-        {"new": {"...": "полный новый exercise prescription"}}
+        {
+          "ref": "ex_2",
+          "replace": {
+            "movementChanged": false,
+            "stages": [{"...": "полный AI-owned stage spec"}]
+          }
+        },
+        {
+          "new": {
+            "stages": [{"...": "1..4 полных AI-owned stage specs"}]
+          }
+        }
       ]
     },
     {
@@ -1634,8 +1645,10 @@ AI возвращает **целевую структуру программы �
 - перенос упражнения = тот же `ref` находится в другом плане;
 - reorder = изменился порядок refs;
 - `patch` всегда означает ЧАСТИЧНУЮ правку существующей сущности (используем для plan/program metadata; `null` явно очищает nullable поле);
-- `replace` всегда означает ПОЛНЫЙ новый AI-owned prescription существующего упражнения;
-- новый объект = `new` с полным prescription, постоянный ID выдаёт приложение после validation;
+- `replace` всегда означает ПОЛНЫЙ новый AI-owned exercise spec существующего слота;
+- `replace.movementChanged` обязателен;
+- `replace.stages` содержит 1..4 полных stage specs БЕЗ app-owned IDs/state/media;
+- новый объект = `new` с 1..4 stage specs; постоянные exercise/stage IDs выдаёт приложение после validation;
 - удаление никогда не выводится из «пропажи» объекта — только явно;
 - AI не пишет `progressState`, history, media/base64, sync/trainer metadata и app-owned IDs.
 
@@ -1660,18 +1673,28 @@ AI возвращает **целевую структуру программы �
 ### Редактирование одного упражнения
 
 Отдельный `exercise_edit` schema:
-- ID исходного упражнения;
-- полный объект изменённого упражнения.
+- ID исходного exercise slot;
+- обязательный `movementChanged: true|false`;
+- полный AI-owned spec редактируемого slot/stages.
 
 Не использовать schema всей программы.
 
+Правила применения:
+- `movementChanged:false` → сохраняем текущий `movementStageId`; AI-owned prescription/chain обновляются, а перенос/сброс progressState решает domain layer по изменившимся полям;
+- `movementChanged:true` → приложение создаёт НОВЫЙ набор stageId, выбирает новый currentStageId и сбрасывает progressState; старая chain больше не активна, но history остаётся читаемой по старым movementStageId + movementStageName;
+- AI никогда не пишет app-owned stage IDs.
+
 ### Замена упражнения с тренировки
 
-`exercise.replace` — отдельная action, но может переиспользовать exercise output schema с более жёстким task-prompt:
-- сохранить общий movement pattern;
+`exercise.replace` — отдельная action и всегда трактуется как `movementChanged:true`.
+
+Она может переиспользовать exercise output schema с более жёстким task-prompt:
+- сохранить цель/pattern замены там, где это уместно;
 - не вводить недоступное оборудование;
-- выбрать новую базовую нагрузку/прогрессию;
-- приложение выдаёт новому варианту корректную identity и само решает, переносить ли какие-либо пользовательские данные.
+- вернуть 1..4 stage specs новой лестницы;
+- приложение выдаёт новый набор movementStageId и сбрасывает progressState.
+
+Перед применением UI явно сообщает: «Новое упражнение — прогресс начнётся заново».
 
 Нельзя оставить этот путь на старом строковом протоколе после удаления legacy parser.
 
