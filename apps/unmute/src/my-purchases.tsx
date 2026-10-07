@@ -39,6 +39,7 @@ export function MyPurchases({session, sets, onRestore, setRenewal=(autoRenew:boo
   const navigate = useNavigate();
   const [restoring, setRestoring] = useState(false);
   const [restoreFailed, setRestoreFailed] = useState(false);
+  const [restored, setRestored] = useState(false);
   const courses = courseTitles(session, sets, locale);
   const plus = activePremium(session, Date.now());
   const sub = session.sub as {until?:string; autoRenew?:boolean} | null | undefined;
@@ -62,7 +63,8 @@ export function MyPurchases({session, sets, onRestore, setRenewal=(autoRenew:boo
   const restore = async () => {
     setRestoring(true);
     setRestoreFailed(false);
-    try{ await onRestore(); }catch{ setRestoreFailed(true); }finally{ setRestoring(false); }
+    setRestored(false);
+    try{ await onRestore(); setRestored(true); }catch{ setRestoreFailed(true); }finally{ setRestoring(false); }
   };
 
   return (
@@ -100,6 +102,7 @@ export function MyPurchases({session, sets, onRestore, setRenewal=(autoRenew:boo
         )}
         {!courses.length && !plus && <p className="tile-text">{t('purchases.none')}</p>}
         {restoreFailed && <p className="tile-text" role="alert">{t('access.refreshError')}</p>}
+        {restored && !restoring && <p className="tile-text my-purchases-restored" role="status">{t(courses.length || plus ? 'purchases.restoreDone' : 'purchases.restoreNone')}</p>}
         <button className="link-button" type="button" disabled={restoring} onClick={() => void restore()}>
           {restoring ? t('access.refreshing') : t('purchases.restore')}
         </button>

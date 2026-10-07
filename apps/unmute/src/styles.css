@@ -1712,3 +1712,27 @@ span.legend-item{cursor:default}
 /* Onboarding: sign in or look around without starting a lesson */
 .onboarding-more{display:grid;gap:6px;justify-items:center}
 .onboarding-more .secondary-button{width:100%}
+
+.notification-channel{display:grid;border:1px solid var(--line);border-radius:18px;background:var(--surface);overflow:hidden}
+.notification-channel-title{padding:12px 14px 4px;color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.notification-channel-row{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:52px;padding:8px 14px;cursor:pointer}
+.notification-channel-row+.notification-channel-row{border-top:1px solid var(--line)}
+.notification-channel-row span{font-size:15px;line-height:1.35}
+.notification-channel-row input{flex:none;appearance:none;width:46px;height:28px;margin:0;border:0;border-radius:999px;background:var(--line);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ink) 6%,transparent);cursor:pointer;transition:background-color var(--motion-base) ease}
+.notification-channel-row input::before{content:"";display:block;width:22px;height:22px;margin:3px;border-radius:50%;background:var(--card);box-shadow:0 2px 6px rgb(0 0 0/.18);transition:transform var(--motion-spring) var(--motion-spring-ease)}
+.notification-channel-row input:checked{background:var(--accent)}
+.notification-channel-row input:checked::before{transform:translateX(18px)}
+.notification-channel-row input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Profile: secondary text actions sit centred under their card content. */
+.my-purchases>.link-button,.my-purchases-renewal .link-button,.settings-card-account>.danger-link{justify-self:center;text-align:center}
+.my-purchases-renewal{justify-items:center;text-align:center}
+.my-purchases-restored{text-align:center}
+.invite-friend-join summary{text-align:center;list-style-position:inside}
+.access-active{padding:16px;gap:4px}
+.access-active h3{margin:0}
+/* The current bar takes its section's colour, like the done bars of that section. */
+.wave-bar.is-current.is-tasks{background:var(--sec-tasks)}
+.wave-bar.is-current.is-drill{background:var(--sec-drill)}
+.wave-bar.is-current.is-listening{background:var(--sec-listening)}
+.wave-bar.is-current.is-speaking{background:var(--sec-speaking)}

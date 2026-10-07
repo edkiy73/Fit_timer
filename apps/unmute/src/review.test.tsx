@@ -247,6 +247,31 @@ describe('course review screen',()=>{
     expect(await screen.findByRole('heading',{name:'На сегодня всё'})).toBeTruthy();
   });
 
+  it('leaving mid-review shows what is still left, not the count it started with',async()=>{
+    const user=userEvent.setup();
+    const state=learnerState();
+    state.set.activities.push({
+      id:'card.two',revision:1,type:'text-input',tags:[],revisionProgress:'preserve',
+      lexiconRefs:[],prompt:{ru:'Напиши: Я тут'},
+      answer:{accepted:['I am here'],nearMiss:true,caseSensitive:false}
+    });
+    state.progress.cards['card.two']={box:2,due:10,at:'2026-09-29T00:00:00Z'};
+    // The saved answer moves the card forward, as the real save + progress refresh does.
+    const saveGraded=vi.fn(async(...args:unknown[])=>{ state.progress.cards[String(args[1])]={box:3,due:20,at:'2026-10-07T00:00:00Z'}; });
+    renderReview(saveGraded as unknown as Parameters<typeof renderReview>[0],undefined,undefined,state);
+
+    expect(await screen.findByText('На сегодня: 2')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Начать повтор'}));
+    const prompt=(await screen.findAllByText(/Напиши: Я (дома|тут)/))[0]!.textContent||'';
+    await user.type(screen.getByRole('textbox',{name:'Твой ответ'}),prompt.includes('дома')?'I am home':'I am here');
+    await user.click(screen.getByRole('button',{name:'Готово'}));
+    await user.click(screen.getByRole('button',{name:'Далее'}));
+
+    await user.click(screen.getByRole('button',{name:'Закрыть повтор'}));
+    await user.click(await screen.findByRole('button',{name:'Выйти'}));
+    expect(await screen.findByText('На сегодня: 1')).toBeTruthy();
+  });
+
   it('brings a wrong card back once and grades only its first answer',async()=>{
     const user=userEvent.setup();
     const {saveGraded,onExit}=renderReview();
