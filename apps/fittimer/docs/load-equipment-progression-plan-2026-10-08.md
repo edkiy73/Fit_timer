@@ -344,44 +344,93 @@ ex.loadEquipmentName
 
 ### 2.8. Persistent-схема v2 — единственный источник истины
 
-Раз данные не переносятся (1.9), устаревший слой прогрессии удаляется, а не обёртывается адаптером.
+Раз данные не переносятся (1.9), устаревший слой нагрузки/прогрессии после cutover удаляется, а не оборачивается вечным адаптером.
 
-Удаляются из модели и кода:
+Удаляются из persistent-модели:
 - `prog`, `progOn`, `trackWeight`, `dualProg`, `dualRangeV`;
-- логика «`loadType`/`progMode` = null → вывести смысл из legacy» (`hasWeight`, `progAxis`, `inferredProgressionMode` в нынешнем виде).
+- корневые `loadType/progMode/wStep/repsStep/timeStep/*Max/progEvery` после перехода на сгруппированные V2-объекты;
+- логика «поле отсутствует → угадать смысл из legacy».
 
-Обязательные поля:
-- `type` — `reps | time`;
-- `progMode` — способ прогрессии либо `none`;
-- нагрузка — одним объектом.
-
-Рабочее направление (точная форма утверждается в PR 1):
+Целевая форма по смыслу:
 
 ```js
 ex.load = {
   type: 'none' | 'weight' | 'level',
-  equipment: 'dumbbell' | … | 'custom' | null, // null = снаряд не указан
-  name: '',          // только для custom
-  count: 1,          // одновременно используемых одинаковых единиц
-  unit: 'kg',        // UI пока только kg; поле нужно, чтобы lb не стали миграцией
-  weight: 10,        // на ОДНУ единицу
-  levels: [...],     // для level
+  equipment: 'dumbbell' | 'barbell' | ... | 'custom' | null,
+  name: '',
+  count: 1,
+  unit: 'kg',
+  weight: 10,
+  levels: [...],
   level: 0
 }
+
 ex.supportEquipment = ['bench']
+
+ex.progression = {
+  mode: 'none' | 'reps' | 'weight' | 'double_range' | 'time' | 'level' | 'parallel',
+  every: 4,
+  reps:   {step: 1, max: 15},
+  weight: {step: 1, max: 12},
+  time:   {step: 5, max: 60}
+}
+
+ex.progressState = {
+  count: 0,
+  current: {
+    reps: null,
+    weight: null,
+    time: null,
+    level: null
+  }
+}
 ```
 
-Почему объект, а не плоские поля:
-- ключ конфигурации — это `load` без рабочего числа (`type + equipment + name + count + unit`);
-- AI DTO V2 отображается на него один к одному;
-- старые плоские поля физически не могут «просочиться» обратно.
+Точную JSON Schema фиксируем в PR 1; неиспользуемые ветки нормализуются/не сериализуются по выбранным `load.type` и `progression.mode`.
 
-`equipment: null` — законное состояние «снаряд не указан», по аналогии с существующим `weightPending`: UI показывает «10 кг» без количества и предлагает уточнить. Правило «AI обязан указать снаряд» проверяется валидатором AI-ответа, а не моделью хранения.
+### Строгое правило equipment
 
-Единицы: округление веса до 0,5 кг (`parseKg`, `progRound`, `sanitizeExercise`) применяется только при `unit: 'kg'`. Ввод в lb в V1 не делаем, но схема его не запрещает.
+`equipment: null` допустим только:
+- у `load.type = 'none'`;
+- во временном незавершённом UI-draft до Save.
 
-Шаг/потолок прогрессии (`wStep/repsStep/timeStep/*Max`) и `ps` остаются. Можно сгруппировать их в `ex.prog = {mode, every, steps, max}` в том же PR, если это не раздувает diff; решение принимается в PR 1, второй формы не держим.
+В persistent V2:
+- `load.type = 'weight'` → equipment обязателен;
+- `load.type = 'level'` → equipment обязателен;
+- нестандартный предмет → `equipment:'custom' + name`.
 
+Причина: хранить `weight:10, equipment:null` значит вернуть исходную неоднозначность «10 кг непонятно чего», ради устранения которой и делается эта схема.
+
+### Единицы измерения
+
+Если уже вводим `load.unit`, internal API тоже перестаёт кодировать kg в именах:
+- `ps.cur.kg` → `progressState.current.weight`;
+- `wStep` → `progression.weight.step`;
+- `weightMax` → `progression.weight.max`;
+- новые доменные helper/API не называются `parseKg/fmtKg`.
+
+UI V1 всё равно работает только в kg. Но тогда `unit:'kg'` действительно создаёт нормальную границу для будущего lb, а не декоративное поле рядом с kg-specific runtime.
+
+### Ключ конфигурации
+
+`cfgKey` вычисляется из структурной конфигурации нагрузки, но НЕ является единственным историческим источником:
+
+- weight: `type + equipment + customName + count + unit`;
+- level: `type + equipment + customName + count + ordered levels/scale identity`.
+
+Текущее число веса/уровня в cfgKey не входит.
+
+Если меняется сама level-шкала или её порядок — это новая конфигурация.
+
+История хранит и `cfgKey`, и маленький snapshot конфигурации (см. 10), чтобы старую запись можно было корректно показать даже если алгоритм ключа когда-нибудь изменится.
+
+### Почему load/progression/state разделены
+
+- `load` = что за физическая/дискретная нагрузка;
+- `progression` = политика, как её усложнять;
+- `progressState` = что уже накоплено конкретным пользователем.
+
+AI может предлагать/возвращать load + progression, но не имеет права писать persistent `progressState`.
 ---
 
 ## 3. Единый справочник оборудования и две категории
