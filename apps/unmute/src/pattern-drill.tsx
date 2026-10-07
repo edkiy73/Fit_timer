@@ -45,6 +45,8 @@ export interface PatternDrillViewProps {
     itemGrades?:Readonly<Record<string,PracticeItemGrade>>
   )=>Promise<void>;
   variant?:'practice'|'mixed';
+  /** Mixed phrases only: the label of the finishing button (a review day counts the day). */
+  doneLabel?:string;
   onProgress?:(current:number,total:number)=>void;
   active?:boolean;
   sessionKey?:string;
@@ -88,6 +90,7 @@ export function PatternDrillView({
   onDone,
   savePractice,
   variant='practice',
+  doneLabel,
   onProgress,
   active=true,
   sessionKey
@@ -264,7 +267,7 @@ export function PatternDrillView({
               {t('drill.again')}
             </button>
             <button className="secondary-button" type="button" onClick={onDone}>
-              {t('mixed.backReview')}
+              {doneLabel??t('mixed.backReview')}
             </button>
           </>
         ) : (

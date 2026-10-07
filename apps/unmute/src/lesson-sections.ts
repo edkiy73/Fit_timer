@@ -8,7 +8,18 @@ import {
 import type { PracticeSrsKind } from './engine/practice-srs';
 import { practiceProgressComplete } from './engine/course-progress';
 
-export type LessonSectionId='theory'|'tasks'|PracticeSrsKind;
+/** Conversation steps (a scripted dialogue, a talk with AI) are sections of their own (audit T11). */
+export type ConversationSectionId='dialogue'|'ai';
+export type LessonSectionId='theory'|'tasks'|PracticeSrsKind|ConversationSectionId;
+
+export const CONVERSATION_SECTION_TYPE:Record<ConversationSectionId,'dialogue'|'ai-conversation'>={
+  dialogue:'dialogue',
+  ai:'ai-conversation'
+};
+
+export function isConversationSection(value:unknown):value is ConversationSectionId{
+  return value==='dialogue'||value==='ai';
+}
 
 export interface LessonSectionState {
   id:LessonSectionId;
@@ -128,6 +139,20 @@ export function lessonSectionStates(
       required:requirement.required,
       blocking:requirement.blocking,
       activityId:pattern.id
+    });
+  }
+
+  for(const id of ['dialogue','ai'] as ConversationSectionId[]){
+    const steps=activities.filter(activity=>activity.type===CONVERSATION_SECTION_TYPE[id]);
+    if(!steps.length)continue;
+    const requirement=seenRequirementState(node,steps.map(activity=>activity.id),progress);
+    sections.push({
+      id,
+      labelKey:id==='dialogue'?'kind.dialogue':'kind.ai',
+      complete:steps.every(activity=>isSeen(progress,activity.id)),
+      required:requirement.required,
+      blocking:requirement.blocking,
+      activityId:steps[0]!.id
     });
   }
 
