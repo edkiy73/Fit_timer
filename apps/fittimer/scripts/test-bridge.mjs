@@ -152,6 +152,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "saveStats",
   "saveTrainer",
   "saveUsers",
+  "shareProgramWithChoice",
   "sendProgramToClient",
   "sessionForProgram",
   "setDataSyncPlatformHooks",
