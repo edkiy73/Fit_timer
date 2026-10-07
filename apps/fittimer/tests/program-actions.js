@@ -172,6 +172,16 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
        && transferWithProgress.src === undefined && transferWithProgress.progFrom === undefined,
      JSON.stringify(transferWithProgress));
 
+  const copiedProgressText = await page.evaluate(() => {
+    const p = customPrograms.find(x => x.id === 'src1');
+    return programToText(p, {currentLoad:true});
+  });
+  ok('текст программы с прогрессией содержит текущие повторы и вес',
+     /ЗНАЧЕНИЕ:\s*16/.test(copiedProgressText) && /ВЕС:\s*12/.test(copiedProgressText),
+     copiedProgressText);
+  ok('текст программы с прогрессией не содержит технический КОД',
+     !/^КОД:/m.test(copiedProgressText), copiedProgressText);
+
   // Resistance policy — часть шаблона, а ps.cur.level — личное состояние владельца.
   const resistanceTransfer = await page.evaluate(() => {
     const source = {
