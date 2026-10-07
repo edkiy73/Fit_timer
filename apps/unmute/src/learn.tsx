@@ -4,6 +4,7 @@ import { useI18n } from '@appbase/ui-react/i18n.js';
 import { useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { activePremium } from './entitlements';
 import { shownAnswer } from './shown-answer';
+import { acknowledgePace, paceAcknowledged, shouldSuggestPause } from './pace';
 import { isPracticeCompletionRequirement, type Activity, type RoadmapNode } from './content/schema';
 import type { CourseProgressDocument } from './progress';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
@@ -1868,6 +1869,20 @@ export function NodeRunnerView({
   );
 }
 
+function PaceNotice({onStop,onContinue}:{onStop:()=>void;onContinue:()=>void}){
+  const {t}=useI18n();
+  return (
+    <section className="review-shell">
+      <div className="learn-state" role="status">
+        <strong>{t('pace.title')}</strong>
+        <span>{t('pace.text')}</span>
+        <button className="primary-button" type="button" onClick={onStop}>{t('pace.stop')}</button>
+        <button className="link-button" type="button" onClick={onContinue}>{t('pace.continue')}</button>
+      </div>
+    </section>
+  );
+}
+
 export function NodeRunnerScreen(){
   const runtime=useLearnerCourseRuntime();
   const auth=useOptionalAuth();
@@ -1890,6 +1905,16 @@ export function NodeRunnerScreen(){
     clearRecentDayCompletionForStartedNode(state.set.id,nodeId,activitySaveClock().dayNumber);
   },[nodeId,runtime.state?.currentNode?.id,runtime.state?.set.id]);
   const leaveLesson=()=>navigate('/',{replace:true});
+  // A fourth new day of a bought course on the same calendar day: suggest stopping (decision 4).
+  // A lesson already started keeps going without asking.
+  const [paceContinue,setPaceContinue]=useState(false);
+  const paceState=runtime.state;
+  const paceNode=paceState?.roadmapProgress.nodes.find(item=>item.node.id===nodeId)?.node;
+  const askPause=Boolean(paceState&&paceNode&&!paceContinue&&!paceAcknowledged()
+    &&!readLessonRun(paceState.set.id,nodeId)&&shouldSuggestPause(paceState,paceNode));
+  if(askPause){
+    return <PaceNotice onStop={leaveLesson} onContinue={()=>{acknowledgePace();setPaceContinue(true);}} />;
+  }
 
   return (
     <NodeRunnerView
