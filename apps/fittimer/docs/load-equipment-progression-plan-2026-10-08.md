@@ -972,7 +972,7 @@ Stage НЕ содержит:
 exercise.id + movementStageId + cfgKey
 ```
 
-History entry также хранит `movementStageName` snapshot.
+History row хранит только `movementStageId`; имя разрешается через компактную `stats.stageNames[stageId]`.
 
 Поэтому:
 - «с колен → обычные» не выглядит как ↑ нагрузки;
@@ -1933,30 +1933,21 @@ Structured Output не означает «schema бесплатна»: JSON Sche
 
 V2 history стартует пустой; старый формат не читаем.
 
-Каждая запись нагрузки хранит достаточно данных для честного отображения БЕЗ обращения к текущему prescription:
+Каждая запись нагрузки хранит компактный storage DTO, достаточный для восстановления domain view через history adapter:
 
 ```js
 histEntry = {
   …,
   planId,
-  load: [{
-    exId,
-    movementStageId,
-    movementStageName, // snapshot имени на момент тренировки
-    cfgKey,            // canonical physical config tuple string
-
-    reps,
-    sec,
-    weight,
-    unit,
-    levelKey,
-    levelLabel
-  }],
-  exercises: [exId, …]
+  load: [
+    // по смыслу: e=exId, s=movementStageId, c=cfgKey,
+    // r=reps, t=sec, w=weight, l=levelKey/label only when needed
+    {e:"ex_abc", s:"mv_abc", c:"w|db||2", r:"8-10", w:10}
+  ]
 }
 ```
 
-`cfgKey` хранится прямо в history, отдельного `stats.loadConfigs/configId` нет.
+Имена stages лежат отдельно в `stats.stageNames`; пустые/default поля в row не сериализуются.
 
 History segment:
 
@@ -2329,7 +2320,7 @@ AI не должен сам придумывать постоянный `canonic
 - [ ] TRX/угол тела не превращается в load.level; используется movement stages.
 - [ ] AI-edit: каждый существующий plan/exercise id либо упомянут ровно один раз, либо явно удалён.
 - [ ] AI-edit target state корректно выражает reorder/move/split/merge без operation DSL.
-- [ ] History хранит direct deterministic cfgKey + movementStageName snapshot.
+- [ ] History хранит compact DTO + direct deterministic cfgKey; stage name разрешается через `stats.stageNames`.
 - [ ] До публичного релиза несовместимый старый APK не может писать старую schema/использовать несовместимые FitTimer API.
 - [ ] `progression` и `progressState` не смешиваются: AI не может записывать `progressState`.
 
