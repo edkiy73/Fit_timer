@@ -20,6 +20,8 @@ export interface ContentCatalog {
   schemaVersion: 1;
   updatedAt?: string;
   sets: ContentCatalogSet[];
+  /** The course onboarding offers first (Admin → «Курсы»); null — the learner chooses. */
+  defaultSetId?: string | null;
 }
 
 const storage=createStorage({dbName:'unmute/content',storeName:'published'});

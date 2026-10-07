@@ -1692,3 +1692,7 @@ span.legend-item{cursor:default}
 .my-purchases-plus .secondary-button{flex:none;width:auto;padding-inline:16px}
 .my-purchases .link-button{justify-self:start}
 .my-purchases-renewal{display:grid;gap:4px;justify-items:start}
+
+/* Onboarding: sign in or look around without starting a lesson */
+.onboarding-more{display:grid;gap:6px;justify-items:center}
+.onboarding-more .secondary-button{width:100%}

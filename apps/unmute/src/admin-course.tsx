@@ -358,11 +358,23 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
   const [metaBundleRub,setMetaBundleRub]=useState('');
   const [metaBundleUsd,setMetaBundleUsd]=useState('');
   const dayPane=useRef<HTMLElement|null>(null);
+  const [defaultSetId,setDefaultSetId]=useState('');
+  async function makeDefault(id:string){
+    setBusy(true);
+    try{
+      const result=await client.action(adminKey,'content_default_set',{setId:id});
+      setDefaultSetId(typeof result.defaultSetId==='string' ? result.defaultSetId : '');
+      setReleaseMessage(id ? 'Новые ученики увидят этот курс выбранным в начале.' : 'Курс по умолчанию снят: новые ученики выбирают сами.');
+    }catch(error){
+      setReleaseMessage(failureText(error,'Не сохранилось'));
+    }finally{setBusy(false);}
+  }
 
   const loadSets=useCallback(async()=>{
     const result=await client.action(adminKey,'content_sets_list');
     const list=Array.isArray(result.sets) ? result.sets as CourseSetSummary[] : [];
     setSets(list);
+    setDefaultSetId(typeof result.defaultSetId==='string' ? result.defaultSetId : '');
     if(list.length && !list.some(item=>item.id===setId)){
       const fallback=list[0]!.id;
       writeCourseAdminContext({setId:fallback});
@@ -715,6 +727,12 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
         {check.missingCount>0 && <p>Выпуск ждёт словаря — нет слов ({check.missingCount}): <b>{wordList(check.missing,check.missingCount)}</b>. Добавь их в разделе «Словарь» → «Дополнить словарь через ИИ».</p>}
         {check.ambiguousCount>0 && <p>У слов несколько записей в словаре ({check.ambiguousCount}): <b>{wordList(check.ambiguous,check.ambiguousCount)}</b>. Объедини их в разделе «Словарь».</p>}
       </div>}
+      <div className="ab-course-release-actions">
+        {defaultSetId===current.id
+          ? <><span className="ab-course-release-state">Курс по умолчанию для новых учеников</span>
+              <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void makeDefault('')}>Снять</button></>
+          : <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>void makeDefault(current.id)}>Сделать курсом по умолчанию</button>}
+      </div>
       {releaseMessage && <p className="ab-admin-feedback" role="status">{releaseMessage}</p>}
       {structure && <details className="ab-admin-details">
         <summary>Название, цена и бесплатные дни</summary>

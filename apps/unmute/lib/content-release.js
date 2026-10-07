@@ -5,6 +5,19 @@ const Content = require('./content-store');
 const Lexicon = require('./lexicon-store');
 
 const RELEASE_KEY = 'unmute:release:v1:published';
+// The course onboarding offers first (Admin → «Курсы»); a live setting, not part of a release.
+const DEFAULT_SET_KEY = 'unmute:content:default-set';
+
+async function getDefaultSetId(){
+  return Content.cleanId(await store.get(DEFAULT_SET_KEY)) || '';
+}
+
+async function setDefaultSetId(id){
+  const clean = Content.cleanId(id);
+  if(clean) await store.set(DEFAULT_SET_KEY, clean);
+  else await store.del(DEFAULT_SET_KEY);
+  return clean || '';
+}
 const RELEASE_COUNTER = 'unmute:release:v1:counter';
 
 function parse(raw){ try{return raw ? JSON.parse(raw) : null;}catch(_){return null;} }
@@ -133,7 +146,9 @@ async function getReleasedCatalog(){
     });
   }
   sets.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
-  return {schemaVersion:1,revision:release.revision,updatedAt:release.publishedAt,sets};
+  const defaultId=await getDefaultSetId();
+  return {schemaVersion:1,revision:release.revision,updatedAt:release.publishedAt,sets,
+    defaultSetId:sets.some(set=>set.id===defaultId)?defaultId:null};
 }
 
-module.exports={getRelease,publishDraftRelease,publishLexiconRelease,getReleasedSet,getReleasedLexicon,getReleasedCatalog,keys:{RELEASE_KEY,RELEASE_COUNTER}};
+module.exports={getRelease,publishDraftRelease,publishLexiconRelease,getReleasedSet,getReleasedLexicon,getReleasedCatalog,getDefaultSetId,setDefaultSetId,keys:{RELEASE_KEY,RELEASE_COUNTER,DEFAULT_SET_KEY}};

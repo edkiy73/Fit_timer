@@ -17,6 +17,7 @@ import { Icon, type IconName } from './icons';
 import { chooseCourse, CourseOptionList, useActiveCourseId, useCatalog } from './active-course';
 import { Loader } from './loader';
 import { Sheet } from './sheet';
+import { localizedText } from './today-model';
 import { TermsContent } from './legal-page';
 import type { ContentCatalogSet } from './content/client';
 
@@ -60,9 +61,15 @@ export function OnboardingView({
   error=false,
   courses=[],
   courseId='',
-  onCourse
+  onCourse,
+  onSignIn,
+  onBrowse
 }:{
   onDone:()=>void;
+  /** «Войти в аккаунт»: someone who already learns on another phone. */
+  onSignIn?:()=>void;
+  /** «Посмотреть приложение»: open Today without starting a lesson. */
+  onBrowse?:()=>void;
   busy?:boolean;
   /** Saving the choice failed: onboarding stays open so the person can try again. */
   error?:boolean;
@@ -71,7 +78,10 @@ export function OnboardingView({
   courseId?:string;
   onCourse?:(id:string)=>void;
 }){
-  const {t}=useI18n();
+  const {t,locale}=useI18n();
+  const picked=courses.find(set=>set.id===courseId);
+  // Nothing preselected (no default course in Admin) → the start button waits for a choice.
+  const needsChoice=courses.length>1&&!picked;
   // Onboarding replaces the whole shell, so the terms open in a sheet, not on their own route.
   const [termsOpen,setTermsOpen]=useState(false);
 
@@ -121,11 +131,23 @@ export function OnboardingView({
         <button
           className="primary-button onboarding-start"
           type="button"
-          disabled={busy}
+          disabled={busy||needsChoice}
           onClick={onDone}
         >
-          {busy?t('onboarding.starting'):t('onboarding.start')}
+          {busy
+            ? t('onboarding.starting')
+            : needsChoice
+              ? t('onboarding.pickFirst')
+              : picked&&courses.length>1
+                ? t('onboarding.startCourse',{course:localizedText(picked.title,locale)})
+                : t('onboarding.start')}
         </button>
+        {(onSignIn||onBrowse)&&(
+          <div className="onboarding-more">
+            {onSignIn&&<button className="secondary-button" type="button" disabled={busy} onClick={onSignIn}>{t('onboarding.signIn')}</button>}
+            {onBrowse&&<button className="link-button" type="button" disabled={busy} onClick={onBrowse}>{t('onboarding.browse')}</button>}
+          </div>
+        )}
         {error&&<p className="access-error" role="alert">{t('onboarding.saveError')}</p>}
         <p className="onboarding-account-note">{t('onboarding.accountLater')}</p>
         <p className="onboarding-account-note">
@@ -152,7 +174,19 @@ export function OnboardingGate({children}:{children:ReactNode}){
   const catalog=useCatalog();
   const activeCourseId=useActiveCourseId();
   const [pickedCourseId,setPickedCourseId]=useState<string|null>(null);
-  const courseId=pickedCourseId??activeCourseId;
+  // Preselected: the course chosen in Admin (or the only one); otherwise the learner picks.
+  const sets=catalog.data?.sets??[];
+  const adminDefault=catalog.data?.defaultSetId&&sets.some(set=>set.id===catalog.data?.defaultSetId)?catalog.data.defaultSetId:'';
+  const presetId=adminDefault||(sets.length===1?sets[0]!.id:'');
+  const courseId=pickedCourseId??presetId;
+  // After «Начать» with another course: open its day 1 once that course has loaded (audit T10).
+  const [openFirstDayOf,setOpenFirstDayOf]=useState<string|null>(null);
+  useEffect(()=>{
+    if(!openFirstDayOf||runtime.status!=='ready'||runtime.state?.set.id!==openFirstDayOf)return;
+    const nodeId=runtime.state.currentNode?.id;
+    setOpenFirstDayOf(null);
+    navigate(nodeId?'/learn/'+encodeURIComponent(nodeId):'/');
+  },[openFirstDayOf,runtime.status,runtime.state,navigate]);
 
   const settingsQuery=useQuery({
     queryKey:SETTINGS_QUERY_KEY,
@@ -210,16 +244,16 @@ export function OnboardingGate({children}:{children:ReactNode}){
     );
   }
 
-  const finish=async()=>{
+  const finish=async(startLesson=true)=>{
     if(busy)return;
     setBusy(true);
     setSaveError(false);
 
-    // Another course was picked: its day 1 opens from «Сегодня» once that course loads.
-    const switching=Boolean(pickedCourseId&&pickedCourseId!==activeCourseId);
+    // Another course than the loaded one: save it, then open its day 1 once it loads.
+    const switching=Boolean(courseId&&courseId!==activeCourseId);
     const nodeId=switching?null:runtime.state?.currentNode?.id??null;
     try{
-      if(switching&&pickedCourseId)await chooseCourse(pickedCourseId);
+      if(switching)await chooseCourse(courseId);
       await patchSettings({onboardingDoneAt:new Date().toISOString()});
       await queryClient.invalidateQueries({queryKey:SETTINGS_QUERY_KEY,exact:true});
       void trackOnboardingComplete();
@@ -232,11 +266,9 @@ export function OnboardingGate({children}:{children:ReactNode}){
     markOnboardingDone();
     setLocalDone(true);
 
-    if(nodeId){
-      navigate('/learn/'+encodeURIComponent(nodeId));
-    }else{
-      navigate('/');
-    }
+    if(!startLesson){ navigate('/'); return; }
+    if(switching){ setOpenFirstDayOf(courseId); return; }
+    navigate(nodeId?'/learn/'+encodeURIComponent(nodeId):'/');
   };
 
   return (
@@ -244,9 +276,11 @@ export function OnboardingGate({children}:{children:ReactNode}){
       busy={busy}
       error={saveError}
       onDone={()=>void finish()}
-      courses={catalog.data?.sets??[]}
+      courses={sets}
       courseId={courseId}
       onCourse={setPickedCourseId}
+      onSignIn={()=>navigate('/account?return='+encodeURIComponent('/'))}
+      onBrowse={()=>void finish(false)}
     />
   );
 }
