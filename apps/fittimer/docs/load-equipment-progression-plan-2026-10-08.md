@@ -1817,136 +1817,141 @@ AI не должен сам придумывать постоянный `canonic
 
 ## 13. План реализации по PR
 
-После ревью Клода и повторной сверки порядок уточнён.
+После второго ревью Клода учитываем решение владельца: во время переделки текущий production можно временно ломать/очищать, реальных пользователей сейчас нет. Поэтому не строим временную совместимость V1↔V2.
 
-Главный принцип:
-- persistent schema фиксируем первой;
-- destructive wipe НЕ активируем до полного cutover;
-- старый AI не должен сохранять неоднозначные V2 weight/level с `equipment:null`;
-- поэтому Structured Output + AI create V2 появляются ДО включения нового пользовательского потока;
-- production-данные очищаются только в финальном cutover после готовности всей цепочки.
-
-### PR 1 — domain schema V2 + identity + history foundation
+### PR 1 — stable IDs + исправление истории + удаление тоннажа
 
 Статус: ⬜ не начат
 
-- [ ] `load/supportEquipment/progression/progressState` по 2.8;
-- [ ] удалить из новой persistent-модели legacy load/progression поля;
-- [ ] единый equipment catalog с machine ids и roles;
-- [ ] стабильный `plan.id`, уникальность `plan.id/exercise.id`;
-- [ ] history V2: `planId/exId/cfgKey/config snapshot`;
-- [ ] `cfgKey` учитывает scale identity для level;
-- [ ] единый `exerciseLoadView`;
-- [ ] подготовить `SCHEMA_VERSION=2` guards, но НЕ делать destructive cutover;
-- [ ] unit-тесты schema/normalization/identity/history/formatter.
+Маленький самостоятельный PR ещё на текущей модели:
+- [ ] добавить стабильный `plan.id`;
+- [ ] history: `planId/exId` вместо plan index / exercise position+name;
+- [ ] «было → сегодня», estimated duration и trainer report перевести на IDs;
+- [ ] проверить reorder/смену days;
+- [ ] удалить `stats.totalKg`, расчёт тоннажа и «Десять тонн»;
+- [ ] тесты текущего приложения.
+
+Почему отдельно:
+- это реальные баги уже сегодня;
+- не зависит от новой load-схемы;
+- уменьшает размер следующего breaking PR.
+
+### PR 2 — V2 schema + runtime + clean reset
+
+Статус: ⬜ не начат
+
+- [ ] `load/supportEquipment/progression/progressState/movementProgression`;
+- [ ] удалить persistent legacy load/progression/swap поля;
+- [ ] equipment catalog с roles;
+- [ ] movement chain: максимум current + 3 next;
+- [ ] physical config dictionary `stats.loadConfigs` + `configId` в history;
+- [ ] cfg level без полной шкалы; level remap по identity;
+- [ ] `exerciseLoadView`;
+- [ ] runtime weight/double/level progression;
+- [ ] movement-stage transition + reset state;
+- [ ] «только сегодня» vs «изменить рабочий вес»;
+- [ ] schema v2 sanitization/tests;
+- [ ] после отдельного подтверждения владельца можно очистить текущие FitTimer-данные и работать только на V2.
+
+На время PR2–PR4 старые AI create/edit действия лучше явно отключить в UI, а не давать им писать legacy-ответ в новую persistent-схему.
 
 Критерий:
-- V2-модель полностью определена и тестируется независимо;
-- в сохранённом weight/level объекте equipment обязателен.
+- вручную/fixture можно собрать V2-программу и полностью пройти тренировку;
+- weight/level без equipment не сохраняется;
+- old legacy fields runtime больше не читает.
 
-### PR 2 — AppBase Core Structured Output
+### PR 3 — V2 UI: оборудование + progression + movement chain
+
+Статус: ⬜ не начат
+
+- [ ] создание/редактор: «Снаряды» и «Доп. оборудование»;
+- [ ] custom + обязательное имя;
+- [ ] load equipment/count/weight или level;
+- [ ] progression editor использует новый объект;
+- [ ] `mode:none` — единственный OFF;
+- [ ] `every:null` — наследовать program progression frequency;
+- [ ] movement chain UI: максимум 3 будущих карточки;
+- [ ] add/remove/reorder future stages;
+- [ ] preview ближайшего stage + картинка/placeholder;
+- [ ] все экраны через `exerciseLoadView`;
+- [ ] RU/EN/i18n/privacy/onboarding wording.
+
+Критерий:
+- две реальные программы можно руками собрать и прогнать без AI.
+
+### PR 4 — AppBase Core Structured Output
 
 Статус: ⬜ не начат
 
 - [ ] server-owned input/output schema metadata;
-- [ ] Structured Output adapters для всех providers, которые остаются selectable после cutover (Gemini/OpenAI/OpenRouter);
-- [ ] общий переносимый JSON Schema subset;
-- [ ] schema validation через один structural validator;
-- [ ] строгая fallback/refusal/incomplete policy;
+- [ ] Structured Output adapters для selectable providers (Gemini/OpenAI/OpenRouter);
+- [ ] portable JSON Schema subset;
+- [ ] local structural validation той же schema;
+- [ ] strict fallback/refusal/incomplete handling;
+- [ ] admin route capability test: structured-запрос перед сохранением модели/маршрута;
 - [ ] action-specific max output tokens;
 - [ ] provider tests.
 
-Критерий:
-- Core умеет schema-constrained JSON и не знает FitTimer domain.
-
-### PR 3 — FitTimer AI V2: create/replace + manual copy
+### PR 5 — FitTimer AI V2 create/replace + manual copy
 
 Статус: ⬜ не начат
 
-- [ ] `{kind, contractVersion, input}`, prompt/schema выбирает сервер;
+- [ ] `{kind, contractVersion, input}`, prompt/schema server-owned;
 - [ ] `program.create`, `exercise.create`, `exercise.replace`;
-- [ ] manual copy/paste использует тот же JSON V2;
+- [ ] manual copy/paste — тот же JSON V2;
 - [ ] equipment/support availability semantics;
-- [ ] AI не может вернуть persistent weight/level без equipment;
-- [ ] замеры tokens/latency/invalid rate.
-
-Критерий:
-- новый AI создаёт валидные V2-объекты без неоднозначного legacy-парсинга.
-
-### PR 4 — progression runtime + history
-
-Статус: ⬜ не начат
-
-- [ ] runtime использует `load/progression/progressState`;
-- [ ] semantics weight step/max = на одну load-unit;
-- [ ] weight/double/level progression;
-- [ ] assisted level order = рост сложности;
-- [ ] config change → новый history segment + reset state;
-- [ ] manual working-load/policy change → тот же segment, reset `progressState.count`;
-- [ ] metadata-only edit → state сохраняется;
-- [ ] экран старта: «только сегодня» vs «изменить рабочий вес»;
-- [ ] «было → сегодня» по `exId + cfgKey + config snapshot`;
-- [ ] resume незавершённой тренировки.
-
-### PR 5 — UI оборудования + единое отображение
-
-Статус: ⬜ не начат
-
-- [ ] создание программы/упражнения: «Снаряды» и «Доп. оборудование»;
-- [ ] отдельные «Без …», custom + обязательное имя;
-- [ ] ручной редактор load equipment/count/weight или level;
-- [ ] support equipment отдельно;
-- [ ] все экраны через `exerciseLoadView`;
-- [ ] UI-draft может временно иметь незаполненный equipment, Save — нет;
-- [ ] RU/EN/i18n/privacy/onboarding wording.
+- [ ] AI может предложить movement chain 0..3 next stages только когда это уместно;
+- [ ] future stage = full ExercisePrescription без state/media/nested chain;
+- [ ] app присваивает movementStageId;
+- [ ] token/latency/invalid measurements.
 
 ### PR 6 — AI V2 edit: target state + refs
 
 Статус: ⬜ не начат
 
 - [ ] `program.modify/exercise.modify`;
-- [ ] target state + refs по принятому решению 8.4;
+- [ ] target state + refs;
+- [ ] plan/program metadata: `patch` = partial;
+- [ ] exercise: `replace` = полный prescription;
+- [ ] `new` = полный новый prescription;
 - [ ] отдельные `removedPlanIds/removedExerciseIds`;
-- [ ] atomic apply к request snapshot;
+- [ ] один существующий ID нельзя использовать дважды;
+- [ ] atomic apply к immutable request snapshot;
 - [ ] AI не пишет progressState/media/app-owned IDs;
-- [ ] regression: reorder, move, add/remove, split/merge, массовая замена, частичная progression-правка.
+- [ ] regression: reorder/move/add/remove/split/merge/duplicate exercise/chain edit.
 
-Критерий:
-- узкая правка не переписывает неизменённые упражнения и не использует operation DSL.
-
-### PR 7 — video/catalog + channels + images + cleanup
+### PR 7 — video/catalog/channels/images
 
 Статус: ⬜ не начат
 
 - [ ] `video.parse` → Program DTO V2;
 - [ ] admin catalog AI → тот же V2;
 - [ ] export/import/share/link/sync/backup;
-- [ ] trainer send/reports/snapshots по stable IDs;
-- [ ] image prompt из structured equipment/count/support;
-- [ ] удалить старый line parser/serializer после последнего V2 consumer;
-- [ ] удалить lifetime tonnage и связанные ветки, если не удалено раньше;
+- [ ] trainer reports по stable IDs;
+- [ ] current-stage image prompt из structured movement/load/support;
+- [ ] movement future images: cache lookup + lazy generation, без base64 в chain;
+- [ ] nearest-next preview/prefetch policy;
+- [ ] media budgets/round-trip tests;
+- [ ] удалить последний старый line parser/serializer;
 - [ ] обновить соседние docs.
 
-### PR 8 — production cutover + чистый старт + реальные программы
+### PR 8 — final regression + pre-public hardening
 
 Статус: ⬜ не начат
 
-Выполняется только после отдельного подтверждения владельца.
-
-- [ ] server-side minimum schema write = V2;
-- [ ] при необходимости minimum supported FitTimer app version;
-- [ ] активировать client schema guard;
-- [ ] очистить старые FitTimer local/server/sync/catalog/link/cache данные;
-- [ ] импорт принимает только V2;
-- [ ] сгенерировать заново программу пользователя и Светы;
-- [ ] полный unit/browser/mobile regression;
-- [ ] проверить два устройства/старый APK: старый клиент не может затереть V2;
-- [ ] перед массовым каталогом закрыть canonical exercise identity.
+- [ ] заново создать программы пользователя и Светы;
+- [ ] полный unit/browser/mobile smoke;
+- [ ] два устройства/sync;
+- [ ] проверить 3 МБ stats limit на длинной истории;
+- [ ] перед публичным релизом: minimum app/API version policy для FitTimer;
+- [ ] старый APK не должен писать несовместимую schema;
+- [ ] при необходимости блокировать несовместимый клиент на всех FitTimer API, не глобально в shared Core;
+- [ ] canonical exercise/image identity — отдельное решение перед массовым каталогом.
 
 Критерий:
-- production не содержит двух persistent-схем;
-- старый APK не может записать V1 поверх V2;
-- новые реальные программы работают end-to-end.
+- V2 единственная рабочая модель;
+- реальный create/edit/workout/history/share flow проходит end-to-end;
+- движение по цепочке и картинки не блокируют тренировку.
 
 ---
 
@@ -2006,6 +2011,22 @@ AI не должен сам придумывать постоянный `canonic
 - [ ] Safety refusal не запускает fallback как «битый JSON».
 - [ ] Image prompt получает loadEquipment/loadCount/supportEquipment из данных.
 - [ ] Multi-load (два независимых внешних источника) не генерируется AI самопроизвольно в V1.
+- [ ] `mode:none` — единственный OFF; `every:0` отклоняется/нормализуется.
+- [ ] `progression.every:null` наследует program frequency.
+- [ ] Level scale: добавление/reorder уровня с сохранённым current identity НЕ создаёт новый physical config.
+- [ ] Level scale: current identity удалён → level progressState сброшен.
+- [ ] History с 2000 тренировок + config dictionary остаётся ниже server doc limit с запасом.
+- [ ] Movement chain: current + 3 next допустимо; 4 next отклоняется.
+- [ ] Movement chain: переход только после terminal ceiling + подтверждение.
+- [ ] Movement chain: exercise.id сохраняется, movementStageId меняется, progressState сбрасывается.
+- [ ] Movement chain: история разных movementStage не сравнивается как ↑/↓.
+- [ ] Future stage не содержит nested movementProgression.
+- [ ] Future stage media не хранит base64.
+- [ ] Promotion без картинки не блокируется; placeholder → lazy load.
+- [ ] Cache miss ближайшего stage не генерирует автоматически картинки всех оставшихся stages.
+- [ ] AI не создаёт movement chain там, где достаточно обычной weight/reps progression.
+- [ ] AI-edit duplicate exercise создаёт new ID, а не повторно использует один ref.
+- [ ] OpenRouter/другой selectable route нельзя сохранить, если structured capability test не проходит.
 - [ ] Отсутствие подсчёта lifetime tonnage.
 - [ ] Смена дней варианта (пересортировка `plans`) не меняет, к какому варианту относится история.
 - [ ] Переименование/перестановка упражнения не ломает «было → сегодня» (сопоставление по `exId`).
