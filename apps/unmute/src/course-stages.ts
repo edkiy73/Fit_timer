@@ -1,6 +1,6 @@
 // The 40-day course read as one move abroad: nine stages ("districts" on the route map).
-// Boundaries follow the course's own review days (6, 10, 15, 19, 23, 27, 31, 35) — see
-// docs/unmute-design-plan.md §4.2. Days outside the table simply have no stage.
+// Boundaries follow the course's own review days (6, 10, 15, 19, 23, 27, 31, 35).
+// Days outside the table simply have no stage.
 // The 12-day A1 course has three stages of four days. A course without a table shows «Все дни».
 import { DEFAULT_COURSE_ID } from './settings-data';
 

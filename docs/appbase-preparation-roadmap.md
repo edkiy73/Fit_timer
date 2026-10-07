@@ -716,7 +716,7 @@ The root app runner discovers every `apps/*/package.json`, requires `scripts.che
 
 A future Mini Language App remains useful as a third-domain stress test, but it is no longer a blocker for adding the next real application.
 
-**Next real product:** UnMute: English for Expats (`apps/unmute`), built from the logic of the `edkiy73/English` app — see [unmute-english-plan.md](./unmute-english-plan.md).
+**Next real product:** UnMute: English for Expats (`apps/unmute`), built from the logic of the `edkiy73/English` app — see [unmute-launch-plan.md](./unmute-launch-plan.md).
 
 ## Suggested task sequence
 
