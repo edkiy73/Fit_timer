@@ -1,4 +1,7 @@
 export const CARD_INTERVALS = [0,1,3,7,16,35] as const;
+/** A task answered right the first time (in the lesson) first comes to «Повтор» in 3 days;
+ *  only mistakes come back tomorrow (owner's decision 08.10). */
+export const FIRST_CORRECT_BOX = 2;
 
 export interface CardSrsState {
   box:number;
@@ -15,7 +18,7 @@ export function gradeCardSrs(
   todayDay:number
 ):CardSrsState{
   const state=previous ?? initialCardSrsState();
-  const box=correct ? Math.min(5,state.box+1) : 0;
+  const box=correct ? (previous ? Math.min(5,state.box+1) : FIRST_CORRECT_BOX) : 0;
   // A mistake comes back tomorrow, not today: the lesson corrects it right away and the review
   // has already retried it in the session, so «На сегодня всё» stays true (launch plan, decision 12).
   return {

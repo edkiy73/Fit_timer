@@ -1,4 +1,5 @@
 import { trackReviewCompleted } from './observability';
+import { RunnerProgress } from './runner-progress';
 import { shownAnswer } from './shown-answer';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
@@ -107,6 +108,25 @@ export interface ReviewViewProps {
 
 const NO_OTHER_COURSES:OtherCourseReviews={status:'ready',courses:[]};
 
+/** What gets into «Повтор» and when it comes back (owner's check 08.10): so it does not feel random. */
+function ReviewHowItWorks(){
+  const {t}=useI18n();
+  return (
+    <details className="review-details review-how">
+      <summary>{t('review.how.title')}</summary>
+      <ul className="review-how-list">
+        <li>{t('review.how.mistake')}</li>
+        <li>{t('review.how.correct')}</li>
+        <li>{t('review.how.phrases')}</li>
+        <li>{t('review.how.words')}</li>
+        <li>{t('review.how.limit')}</li>
+      </ul>
+    </details>
+  );
+}
+
+const NO_DONE_STEPS:ReadonlySet<number>=new Set();
+
 export function ReviewView({
   runtime,
   onExit,
@@ -131,6 +151,9 @@ export function ReviewView({
   const [queue,setQueue]=useState<CombinedReviewItem[]>([]);
   const [index,setIndex]=useState(0);
   const [completed,setCompleted]=useState(0);
+  // First answer of each review item, in order: the segments of the top bar (like a lesson).
+  const [outcomes,setOutcomes]=useState<boolean[]>([]);
+  const recordOutcome=(correct:boolean)=>setOutcomes(current=>[...current,correct]);
   const [selected,setSelected]=useState<number|null>(null);
   const [reviewRunId]=useState(()=>randomSeed());
   // One microphone question per review, not one per spoken phrase (decision 13).
@@ -289,6 +312,7 @@ export function ReviewView({
     setQueue([]);
     setIndex(0);
     setCompleted(0);
+    setOutcomes([]);
     setStarted(true);
   };
   // Leaving mid-review: what was answered is saved, so the summary is rebuilt from fresh progress
@@ -299,6 +323,7 @@ export function ReviewView({
     setQueue([]);
     setIndex(0);
     setCompleted(0);
+    setOutcomes([]);
     setStarted(false);
   };
   const mixedPatterns=state?studiedPatternActivities(state.set.activities,state.progress):[];
@@ -421,6 +446,7 @@ export function ReviewView({
               <strong>{t('review.emptyTitle')}</strong>
               <span className="tile-text">{t('review.emptyText')}</span>
               {(otherCourses.failed??0)>0&&<span className="tile-text" role="status">{t('review.otherCourseFailed')}</span>}
+              <ReviewHowItWorks />
             </div>
             {mixedOffer}
             <MyWordsView wordRuntime={wordRuntime} />
@@ -484,6 +510,7 @@ export function ReviewView({
               {topics.length>0&&<p className="tile-text review-topics">{t('review.topics',{topics:topics.join(', ')})}</p>}
               {session.waiting>0&&<p className="tile-text review-topics">{t('review.waiting',{count:session.waiting})}</p>}
             </details>
+            <ReviewHowItWorks />
             <button className="primary-button review-start" type="button" onClick={()=>setStarted(true)}>
               <Icon name="play" size={18} />
               {t('today.reviewStart')}
@@ -558,6 +585,7 @@ export function ReviewView({
     const atomicItemId=item?.kind==='practice'?item.itemId:undefined;
     if(atomicItemId){
       const grade=itemGrades?.[atomicItemId]??(correct?'strong':'weak');
+      recordOutcome(grade!=='weak');
       return savePracticeItem(
         setIdArg,
         activityId,
@@ -567,6 +595,7 @@ export function ReviewView({
         reviewRunId+'|'+setIdArg+'|'+activityId+'|'+atomicItemId+'|'+index+'|practice:'+mode
       );
     }
+    recordOutcome(correct);
     return savePractice(
       setIdArg,
       activityId,
@@ -590,6 +619,7 @@ export function ReviewView({
         if(item.activity.type==='choice')await saveGraded(setId,item.activity.id,correct,undefined,operationId);
         else await saveGraded(setId,item.activity.id,correct,reviewChips?'build':'write',operationId);
       }
+      if(!returnedCard)recordOutcome(correct);
       setNearResult(near);
       setResult(correct);
     }catch(_){
@@ -646,6 +676,7 @@ export function ReviewView({
     try{
       await saveWord(item.word.record.lexemeId,item.word.record.senseId,correct);
       setPendingWordGrade(null);
+      recordOutcome(correct);
       recordReviewCompletion(todayDay);
       setCompleted(value=>Math.min(total,value+1));
       setIndex(value=>value+1);
@@ -715,9 +746,19 @@ export function ReviewView({
         <button className="runner-close pressable" type="button" onClick={()=>setExitOpen(true)} aria-label={t('review.close')}>
           <Icon name="close" size={20} />
         </button>
-        <div className="runner-progress" role="progressbar" aria-label={t('review.progress')} aria-valuemin={0} aria-valuemax={Math.max(1,total)} aria-valuenow={completed}>
-          <span className="runner-bar" style={{transform:`scaleX(${total?completed/total:0})`}} />
-        </div>
+        {total<=40 ? (
+          <RunnerProgress
+            steps={Array.from({length:total},(_,step)=>step)}
+            current={Math.min(outcomes.length,total-1)}
+            results={Object.fromEntries(outcomes.slice(0,total).map((correct,step)=>[step,correct]))}
+            done={NO_DONE_STEPS}
+            label={t('review.progress')}
+          />
+        ) : (
+          <div className="runner-progress" role="progressbar" aria-label={t('review.progress')} aria-valuemin={0} aria-valuemax={Math.max(1,total)} aria-valuenow={completed}>
+            <span className="runner-bar" style={{transform:`scaleX(${total?completed/total:0})`}} />
+          </div>
+        )}
         <span className="runner-count">{position}</span>
       </div>
       <h2 id="review-title" className="sr-only">{t('review.title')}</h2>
@@ -876,6 +917,7 @@ export function ReviewView({
           activity={practiceActivity!}
           setId={setId}
           savePractice={reviewPracticeSave}
+          single
           onDone={completePractice}
         />
       )}
@@ -887,6 +929,7 @@ export function ReviewView({
           setId={setId}
           distractors={distractors}
           savePractice={reviewPracticeSave}
+          single
           speak={speak}
           onDone={completePractice}
         />
@@ -898,6 +941,7 @@ export function ReviewView({
           activity={practiceActivity!}
           setId={setId}
           savePractice={reviewPracticeSave}
+          single
           speak={speak}
           startRecognition={startRecognition}
           {...(reviewMicrophone?{requestMicrophone:reviewMicrophone}:{})}

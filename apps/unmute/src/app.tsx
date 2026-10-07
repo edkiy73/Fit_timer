@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { syncServerClock } from './clock';
 import { Navigate, Outlet, useLocation, type RouteObject } from 'react-router';
 import { AuthProvider, useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { activePremium } from './entitlements';
@@ -96,10 +97,22 @@ function AnalyticsAccount(){
   return null;
 }
 
+/** The learning day follows the server clock (src/clock.ts): ask at start and on every return. */
+function ServerClock(){
+  useEffect(() => {
+    void syncServerClock();
+    const onVisible = () => { if(document.visibilityState === 'visible') void syncServerClock(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+  return null;
+}
+
 function Root(){
   return (
     <Localized>
       <AuthProvider client={authClient}>
+        <ServerClock />
         <SettingsSync />
         <AnalyticsAccount />
         <RemotePushLifecycle />

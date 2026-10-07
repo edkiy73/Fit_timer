@@ -14,7 +14,7 @@ describe('learner progress actions',()=>{
     let doc=emptyCourseProgress();
     doc=gradeCourseCard(doc,'card.a',true,100,'2026-09-28','2026-09-28T10:00:00Z');
 
-    expect(doc.cards['card.a']).toMatchObject({box:1,due:101});
+    expect(doc.cards['card.a']).toMatchObject({box:2,due:103});
     expect(doc.seen['card.a']?.deleted).not.toBe(true);
     expect(doc.learningDays['2026-09-28']).toBeTruthy();
   });

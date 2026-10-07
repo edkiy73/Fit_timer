@@ -142,17 +142,16 @@ export function OnboardingView({
                 ? t('onboarding.startCourse',{course:localizedText(picked.title,locale)})
                 : t('onboarding.start')}
         </button>
-        {(onSignIn||onBrowse)&&(
-          <div className="onboarding-more">
-            {onSignIn&&<button className="secondary-button" type="button" disabled={busy} onClick={onSignIn}>{t('onboarding.signIn')}</button>}
-            {onBrowse&&<button className="link-button" type="button" disabled={busy} onClick={onBrowse}>{t('onboarding.browse')}</button>}
-          </div>
-        )}
         {error&&<p className="access-error" role="alert">{t('onboarding.saveError')}</p>}
-        <p className="onboarding-account-note">{t('onboarding.accountLater')}</p>
+      </div>
+      {/* Only «Начать» stays pinned; the other ways in sit below, so the course list stays visible. */}
+      <div className="onboarding-secondary">
+        {onSignIn&&<button className="secondary-button" type="button" disabled={busy} onClick={onSignIn}>{t('onboarding.signIn')}</button>}
+        {onBrowse&&<button className="link-button" type="button" disabled={busy} onClick={onBrowse}>{t('onboarding.browse')}</button>}
         <p className="onboarding-account-note">
+          {t('onboarding.accountLater')}{' '}
           {t('onboarding.termsLead')}{' '}
-          <button className="link-button" type="button" onClick={()=>setTermsOpen(true)}>{t('onboarding.termsLink')}</button>
+          <button className="onboarding-terms-link" type="button" onClick={()=>setTermsOpen(true)}>{t('onboarding.termsLink')}</button>
         </p>
       </div>
       <Sheet open={termsOpen} onClose={()=>setTermsOpen(false)} labelledBy="onboarding-terms" closeLabel={t('access.signInClose')}>

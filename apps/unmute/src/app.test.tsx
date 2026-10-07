@@ -88,6 +88,8 @@ describe('UnMute: English for Expats starter', () => {
     await user.click(screen.getByRole('link', {name:t['me.settings']}));
     const restart = vi.spyOn(appRestart, 'reload').mockImplementation(() => {});
     await user.click(await screen.findByRole('button', {name:t['account.signOut']}));
+    // Sign-out asks first (owner's check 08.10).
+    await user.click(await screen.findByRole('button', {name:t['account.signOutYes']}));
     // If progress could not be confirmed as sent, the app asks first.
     const anyway = await screen.findByRole('button', {name:t['account.signOutAnyway']}, {timeout:800}).catch(() => null);
     if(anyway) await user.click(anyway);

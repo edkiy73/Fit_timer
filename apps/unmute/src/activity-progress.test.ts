@@ -124,7 +124,7 @@ describe('activity progress writes',()=>{
     });
     expect(next.course.practiceItems.drill[practiceItemKey('pattern.items','phrase.fast')]).toMatchObject({
       box:1,
-      due:20727
+      due:20728
     });
     expect(next.course.practiceItems.drill[practiceItemKey('pattern.items','phrase.slow')]).toMatchObject({
       box:0,
@@ -150,7 +150,7 @@ describe('activity progress writes',()=>{
       undefined,
       operationId
     );
-    expect(first.course.cards['card.one']).toMatchObject({box:1,due:20726});
+    expect(first.course.cards['card.one']).toMatchObject({box:2,due:20728});
     expect(first.course.answerOps[operationId]).toBeTruthy();
 
     // Simulate: course write succeeded, stats write failed.
@@ -164,7 +164,7 @@ describe('activity progress writes',()=>{
       undefined,
       operationId
     );
-    expect(retry.course.cards['card.one']).toMatchObject({box:1,due:20726});
+    expect(retry.course.cards['card.one']).toMatchObject({box:2,due:20728});
     expect(retry.stats.buckets['device-one|card.one']).toMatchObject({attempts:1,correct:1,wrong:0});
 
     const duplicate=buildGradedActivityProgress(
@@ -177,7 +177,7 @@ describe('activity progress writes',()=>{
       undefined,
       operationId
     );
-    expect(duplicate.course.cards['card.one']).toMatchObject({box:1,due:20726});
+    expect(duplicate.course.cards['card.one']).toMatchObject({box:2,due:20728});
     expect(duplicate.stats.buckets['device-one|card.one']).toMatchObject({attempts:1,correct:1,wrong:0});
   });
 
@@ -200,7 +200,7 @@ describe('activity progress writes',()=>{
     expect(retry.course.metrics['speed:pattern.one']?.at).toBe(clock.at);
     expect(retry.course.practiceItems.drill[practiceItemKey('pattern.one','phrase.one')]).toMatchObject({
       box:1,
-      due:20727,
+      due:20728,
       at:clock.at
     });
     expect(retry.stats.buckets['device-one|pattern.one']).toMatchObject({attempts:1,correct:1,wrong:0});
@@ -222,7 +222,7 @@ describe('activity progress writes',()=>{
     );
 
     expect(next.course.seen['card.one']).toBeTruthy();
-    expect(next.course.cards['card.one']).toMatchObject({box:1,due:20726});
+    expect(next.course.cards['card.one']).toMatchObject({box:2,due:20728});
     expect(next.stats.buckets['device-one|card.one']).toMatchObject({
       attempts:1,
       correct:1,

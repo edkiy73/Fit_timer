@@ -221,6 +221,32 @@ describe('course review screen',()=>{
     ));
     expect(savePractice).not.toHaveBeenCalled();
     expect(result.savePracticeItem).toBe(savePracticeItem);
+    // One phrase is one question: no practice summary («0 из 1 вовремя»), the review simply ends.
+    expect(await screen.findByRole('heading',{name:'На сегодня всё'})).toBeTruthy();
+    expect(screen.queryByText(/вовремя/)).toBeNull();
+  });
+
+  it('a wrong review phrase is not replayed in a correction round',async()=>{
+    const user=userEvent.setup();
+    const state=learnerState();
+    state.progress.cards['card.one']={box:2,due:99,at:'2026-09-29T00:00:00Z'};
+    const pattern={
+      id:'pattern.atomic',revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,
+      lexiconRefs:[],pattern:{ru:'Работа'},modes:['drill' as const],
+      items:[{id:'p.weak',prompt:{ru:'Я работаю дома.'},answer:{accepted:['I work at home.'],nearMiss:true,caseSensitive:false}}]
+    };
+    state.set={...state.set,activities:[pattern]};
+    state.progress.practice.drill[pattern.id]={box:0,due:10,completed:true,itemized:true,at:'2026-10-05T00:00:00Z'};
+    state.progress.practiceItems.drill[practiceItemKey(pattern.id,'p.weak')]={box:0,due:10,at:'2026-10-05T00:00:01Z'};
+    const savePracticeItem=vi.fn(async()=>{});
+    renderReview(vi.fn(async()=>{}),vi.fn(async()=>{}),{status:'ready',courses:[]},state,savePracticeItem);
+
+    await user.click(await screen.findByRole('button',{name:'Начать повтор'}));
+    await user.click(await screen.findByRole('button',{name:'Готово'}));
+    await user.click(screen.getByRole('button',{name:'Не совпало'}));
+    await waitFor(()=>expect(savePracticeItem).toHaveBeenCalledWith('general-foundation','pattern.atomic','p.weak','drill','weak',expect.any(String)));
+    expect(await screen.findByRole('heading',{name:'На сегодня всё'})).toBeTruthy();
+    expect(screen.queryByText(/Работа над ошибками/)).toBeNull();
   });
 
   it('waits for other courses before pinning the session',async()=>{

@@ -1,3 +1,4 @@
+import { appNow } from './clock';
 import { authClient } from './auth';
 import { dayNumberFromKey } from './engine/course-progress';
 import { recordAnswer } from './engine/learner-stats';
@@ -24,7 +25,7 @@ export interface ActivitySaveClock {
   dayNumber:number;
 }
 
-export function activitySaveClock(now=new Date()):ActivitySaveClock{
+export function activitySaveClock(now=appNow()):ActivitySaveClock{
   const year=now.getFullYear();
   const month=String(now.getMonth()+1).padStart(2,'0');
   const day=String(now.getDate()).padStart(2,'0');
@@ -189,7 +190,7 @@ export async function savePracticeItemActivity(
   mode:PracticeSrsKind,
   grade:PracticeItemGrade,
   operationId?:string,
-  now=new Date()
+  now=appNow()
 ):Promise<void>{
   const course=await readCourseProgress(setId);
   await writeCourseProgress(
@@ -210,7 +211,7 @@ export async function saveDialogueActivity(
   setId:string,
   activityId:string,
   score:number,
-  now=new Date()
+  now=appNow()
 ):Promise<void>{
   const course=await readCourseProgress(setId);
   await writeCourseProgress(
@@ -227,7 +228,7 @@ export async function savePracticeActivity(
   score?:number,
   operationId?:string,
   itemGrades?:Readonly<Record<string,PracticeItemGrade>>,
-  now=new Date()
+  now=appNow()
 ):Promise<void>{
   const [course,stats,deviceId]=await Promise.all([
     readCourseProgress(setId),
@@ -253,7 +254,7 @@ export async function savePracticeActivity(
 export async function saveSeenActivity(
   setId:string,
   activityId:string,
-  now=new Date()
+  now=appNow()
 ):Promise<void>{
   const course=await readCourseProgress(setId);
   await writeCourseProgress(
@@ -266,7 +267,7 @@ export async function saveSeenActivity(
 export async function saveManualNode(
   setId:string,
   nodeId:string,
-  now=new Date()
+  now=appNow()
 ):Promise<void>{
   const clock=activitySaveClock(now);
   const course=await readCourseProgress(setId);
@@ -279,7 +280,7 @@ export async function saveGradedActivity(
   correct:boolean,
   responseKind?:SentenceResponseKind,
   operationId?:string,
-  now=new Date()
+  now=appNow()
 ):Promise<void>{
   const [course,stats,deviceId]=await Promise.all([
     readCourseProgress(setId),

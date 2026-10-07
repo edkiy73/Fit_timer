@@ -11,6 +11,8 @@ export interface PracticeSrsState{
   due:number;
 }
 
+export const FIRST_CORRECT_DAYS=3;
+
 export type PracticeItemGrade='strong'|'weak'|'neutral';
 
 export function initialPracticeSrsState():PracticeSrsState{
@@ -43,7 +45,11 @@ export function gradePracticeItemSrs(
   grade:Exclude<PracticeItemGrade,'neutral'>,
   todayDay:number
 ):PracticeSrsState{
-  if(grade==='strong')return gradePracticeSrs(kind,previous,true,todayDay);
+  if(grade==='strong'){
+    const graded=gradePracticeSrs(kind,previous,true,todayDay);
+    // First time right: the phrase first comes to «Повтор» in 3 days at the earliest (decision 08.10).
+    return previous ? graded : {...graded,due:Math.max(graded.due,todayDay+FIRST_CORRECT_DAYS)};
+  }
   // Weak lesson/review results should not reappear in the same calendar day.
   return {box:0,due:todayDay+1};
 }

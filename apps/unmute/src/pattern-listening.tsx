@@ -52,6 +52,8 @@ export interface PatternListeningViewProps {
   onProgress?:(current:number,total:number)=>void;
   active?:boolean;
   sessionKey?:string;
+  /** «Повтор»: one phrase is one question — no correction round, no summary; done goes straight on. */
+  single?:boolean;
 }
 
 function localized(text:LocalizedText,locale:string):string{
@@ -108,7 +110,8 @@ export function PatternListeningView({
   random=Math.random,
   onProgress,
   active=true,
-  sessionKey
+  sessionKey,
+  single=false
 }:PatternListeningViewProps){
   const {t,locale}=useI18n();
   const base=activity.items.length;
@@ -173,6 +176,9 @@ export function PatternListeningView({
       .finally(()=>setSaving(false));
   },[activity.id,done,firstPassGrades,saveError,savePractice,saved,saving,score,setId,strongFirstPass]);
 
+  // «Повтор»: once the one phrase is saved, go straight to the next review item.
+  useEffect(()=>{ if(single&&done&&saved)onDone(); },[single,done,saved]);
+
   const choose=(option:string)=>{
     if(!item||phase!=='ask')return;
     if(chosen!==option){
@@ -187,7 +193,7 @@ export function PatternListeningView({
         [item.id]:correct?'strong':'weak'
       }));
     }
-    if(!correct)setItems(current=>[...current,item]);
+    if(!correct&&!single)setItems(current=>[...current,item]);
     setPhase('show');
   };
 
@@ -207,6 +213,7 @@ export function PatternListeningView({
       .finally(()=>setSaving(false));
   };
 
+  if(done&&single&&!saveError)return <p className="learn-hint" role="status">{t('drill.saving')}</p>;
   if(done){
     return (
       <article className="learn-card listening-card">
@@ -243,9 +250,9 @@ export function PatternListeningView({
         <ExerciseKind kind="listening" />
       <div className="drill-meta">
         <span><LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} /></span>
-        <span>{correcting
+        {!single&&<span>{correcting
           ? t('drill.correctionRemaining',{count:correctionRemaining})
-          : t('listening.position',{current:pos+1,total:base})}</span>
+          : t('listening.position',{current:pos+1,total:base})}</span>}
       </div>
       <h3>{t('listening.prompt')}</h3>
       <button className="link-button listening-play" type="button" onClick={()=>void speak(target,ENGLISH_SPEECH_LOCALE)}>
