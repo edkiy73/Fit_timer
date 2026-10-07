@@ -1736,3 +1736,15 @@ span.legend-item{cursor:default}
 .wave-bar.is-current.is-drill{background:var(--sec-drill)}
 .wave-bar.is-current.is-listening{background:var(--sec-listening)}
 .wave-bar.is-current.is-speaking{background:var(--sec-speaking)}
+/* Inside a task card the sticky action needs no backing: a fade to the page colour showed as a dark box. */
+.learn-card .runner-action{background:none;margin-top:0;padding:4px 0 0}
+.review-how-list{display:grid;gap:8px;margin:10px 0 2px;padding-left:18px;color:var(--muted);font-size:14px;line-height:1.45}
+/* Confirm boxes (sign out, delete account, reset, restart course): actions stacked and centred. */
+.account-delete-actions{display:grid;justify-items:center;gap:6px}
+.account-delete-actions>.secondary-button{justify-self:stretch}
+.onboarding-actions{gap:0;padding-top:16px}
+.onboarding-secondary{display:grid;gap:8px;justify-items:center;padding:4px 0 calc(16px + var(--safe-bottom))}
+.onboarding-secondary .secondary-button{width:100%}
+.onboarding-account-note{max-width:34em}
+.onboarding-terms-link{display:inline;padding:0;border:0;background:none;color:var(--accent-ink,var(--accent));font:inherit;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.review-how{text-align:left}.review-how summary{text-align:left}

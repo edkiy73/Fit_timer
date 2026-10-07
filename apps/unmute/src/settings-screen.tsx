@@ -139,6 +139,7 @@ export function SettingsScreen(){
   const {t} = useI18n();
   const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
 
   const [signingOut, setSigningOut] = useState(false);
@@ -202,8 +203,18 @@ export function SettingsScreen(){
                 <button className="link-button danger-link" type="button" disabled={signingOut} onClick={() => void signOut(true)}>{t('account.signOutAnyway')}</button>
               </div>
             </div>
+          ) : confirmSignOut ? (
+            <div className="account-delete" role="alertdialog" aria-label={t('account.signOut')}>
+              <p>{t('account.signOutConfirm')}</p>
+              <div className="account-delete-actions">
+                <button className="secondary-button" type="button" disabled={signingOut} onClick={() => { setConfirmSignOut(false); void signOut(); }}>
+                  {signingOut ? t('account.signingOut') : t('account.signOutYes')}
+                </button>
+                <button className="link-button" type="button" disabled={signingOut} onClick={() => setConfirmSignOut(false)}>{t('account.deleteCancel')}</button>
+              </div>
+            </div>
           ) : (
-            <button className="secondary-button" type="button" disabled={signingOut} onClick={() => void signOut()}>
+            <button className="secondary-button" type="button" disabled={signingOut} onClick={() => setConfirmSignOut(true)}>
               {signingOut ? t('account.signingOut') : t('account.signOut')}
             </button>
           )}

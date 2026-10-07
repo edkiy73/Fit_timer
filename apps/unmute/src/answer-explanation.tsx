@@ -85,10 +85,11 @@ export function AnswerExplanationView({
             : <LexiconText text={result.tip} />
           }</p>
         </div>
-        {result.freeRemaining!==undefined
+        {/* A counter only when there is a real limit: no «0 из 0» for an unlimited or unknown one. */}
+        {result.freeRemaining!==undefined&&(result.freeLimit??0)>0
           ? <small>{t('answerExplain.freeLeft',{count:result.freeRemaining,limit:result.freeLimit??0})}</small>
-          : result.usage&&(
-            <small>{t('aiTalk.usage',{used:result.usage.used,limit:result.usage.limit})}</small>
+          : result.usage&&result.usage.limit>0&&(
+            <small>{t('answerExplain.usage',{used:result.usage.used,limit:result.usage.limit})}</small>
           )}
       </div>
     );

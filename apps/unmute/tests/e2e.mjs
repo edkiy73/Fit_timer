@@ -295,6 +295,7 @@ try{
   // «Выйти» on a shared phone: progress stays in the account, the phone starts clean (decision 20).
   await phone.page.goto(URL_+'#/settings');
   await phone.page.getByRole('button',{name:'Выйти',exact:true}).click();
+  await phone.page.getByRole('button',{name:'Да, выйти',exact:true}).click();
   // Either the phone restarts on onboarding, or — if progress could not be confirmed as sent —
   // the app asks first; whichever shows up.
   const onboardingHeading=phone.page.getByRole('heading',{name:COPY.onboarding});

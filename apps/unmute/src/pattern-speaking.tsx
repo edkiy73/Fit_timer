@@ -65,6 +65,8 @@ export interface PatternSpeakingViewProps {
   onProgress?:(current:number,total:number)=>void;
   active?:boolean;
   sessionKey?:string;
+  /** «Повтор»: one phrase is one question — no correction round, no summary; done goes straight on. */
+  single?:boolean;
 }
 
 function localized(text:Record<string,string>,locale:string):string{
@@ -112,7 +114,8 @@ export function PatternSpeakingView({
   random=Math.random,
   onProgress,
   active=true,
-  sessionKey
+  sessionKey,
+  single=false
 }:PatternSpeakingViewProps){
   const {t,locale}=useI18n();
   const base=activity.items.length;
@@ -296,7 +299,7 @@ export function PatternSpeakingView({
         : 'weak';
       setFirstPassGrades(current=>({...current,[item.id]:grade}));
     }
-    if(!resolved&&item)setItems(current=>[...current,item]);
+    if(!resolved&&item&&!single)setItems(current=>[...current,item]);
     setPos(value=>value+1);
     setPhase('ask');
     setHeard('');
@@ -305,6 +308,9 @@ export function PatternSpeakingView({
     setRecognitionError(null);
     receivedRef.current=false;
   };
+
+  // «Повтор»: once the one phrase is saved, go straight to the next review item.
+  useEffect(()=>{ if(single&&done&&saved)onDone(); },[single,done,saved]);
 
   const retrySave=()=>{
     if(saving)return;
@@ -324,6 +330,7 @@ export function PatternSpeakingView({
     return t('speaking.recognitionError');
   };
 
+  if(done&&single&&!saveError)return <p className="learn-hint" role="status">{t('drill.saving')}</p>;
   if(done){
     return (
       <article className="learn-card speaking-card">
@@ -362,9 +369,9 @@ export function PatternSpeakingView({
         <ExerciseKind kind="speaking" />
       <div className="drill-meta">
         <span><LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} /></span>
-        <span>{correcting
+        {!single&&<span>{correcting
           ? t('drill.correctionRemaining',{count:correctionRemaining})
-          : t('speaking.position',{current:pos+1,total:base})}</span>
+          : t('speaking.position',{current:pos+1,total:base})}</span>}
       </div>
       <h3><LexiconText text={prompt} refs={activity.lexiconRefs} /></h3>
 

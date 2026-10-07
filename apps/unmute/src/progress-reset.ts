@@ -1,3 +1,4 @@
+import { appNow } from './clock';
 import type { RecordMap } from '@appbase/core/document-sync.js';
 import {
   type CourseProgressDocument,
@@ -117,7 +118,7 @@ export function progressSetIdsFromRefs(
 }
 
 /** Clears answer/quality statistics for every known course without touching route, SRS or streak. */
-export async function resetAllStatistics(setIds:readonly string[],now:Date=new Date()):Promise<void>{
+export async function resetAllStatistics(setIds:readonly string[],now:Date=appNow()):Promise<void>{
   await syncNow().catch(()=>undefined);
   const historical=progressSetIdsFromRefs(await appDocs.refs());
   const allSetIds=[...new Set([...setIds,...historical])];
@@ -132,7 +133,7 @@ export async function resetAllStatistics(setIds:readonly string[],now:Date=new D
 /** Starts one selected course from zero. Global saved words and entitlements are intentionally untouched. */
 export async function restartCourseProgress(
   setId:string,
-  now:Date=new Date(),
+  now:Date=appNow(),
   storage:ResetStorage=localStorage
 ):Promise<void>{
   await syncNow().catch(()=>undefined);
@@ -145,7 +146,7 @@ export async function restartCourseProgress(
 
 /** Resets catalog courses plus every historical progress document already known to sync.
  * Pull first when possible so a retired course that only exists on the account is included. */
-export async function resetAllProgress(setIds:readonly string[],now:Date=new Date()):Promise<void>{
+export async function resetAllProgress(setIds:readonly string[],now:Date=appNow()):Promise<void>{
   await syncNow().catch(()=>undefined);
   const historical=progressSetIdsFromRefs(await appDocs.refs());
   const allSetIds=[...new Set([...setIds,...historical])];

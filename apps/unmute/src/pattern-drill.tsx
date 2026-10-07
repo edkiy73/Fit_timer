@@ -50,6 +50,8 @@ export interface PatternDrillViewProps {
   onProgress?:(current:number,total:number)=>void;
   active?:boolean;
   sessionKey?:string;
+  /** «Повтор»: one phrase is one question — no correction round, no summary; done goes straight on. */
+  single?:boolean;
 }
 
 function localized(text:Record<string,string>,locale:string):string{
@@ -93,7 +95,8 @@ export function PatternDrillView({
   doneLabel,
   onProgress,
   active=true,
-  sessionKey
+  sessionKey,
+  single=false
 }:PatternDrillViewProps){
   const {t,locale}=useI18n();
   // The admin controls the phrase count. Failed/slow phrases return in correction
@@ -175,6 +178,9 @@ export function PatternDrillView({
       .finally(()=>setSaving(false));
   },[activity.id,done,firstPassGrades,savePractice,saved,saving,score,setId,strongFirstPass,variant]);
 
+  // «Повтор»: once the one phrase is saved, go straight to the next review item.
+  useEffect(()=>{ if(single&&done&&saved)onDone(); },[single,done,saved]);
+
   const captureActivation=()=>{
     if(phase!=='ask'||activationRef.current!==null)return;
     activationRef.current=Date.now();
@@ -205,7 +211,7 @@ export function PatternDrillView({
     }
     // A slow-but-correct phrase is still unresolved for this mode, exactly like a mismatch.
     // During correction it keeps returning until it is both correct and on time.
-    if(!resolved)nextItems=[...items,item];
+    if(!resolved&&!single)nextItems=[...items,item];
     setItems(nextItems);
     setFast(nextFast);
     setSlow(nextSlow);
@@ -238,6 +244,7 @@ export function PatternDrillView({
       .finally(()=>setSaving(false));
   };
 
+  if(done&&single&&!saveError)return <p className="learn-hint" role="status">{t('drill.saving')}</p>;
   if(done){
     return (
       <article className="learn-card drill-card">
@@ -293,9 +300,9 @@ export function PatternDrillView({
         <ExerciseKind kind="drill" />
       <div className="drill-meta">
         <span>{variant==='mixed'?t('mixed.title'):<LexiconText text={localized(activity.pattern,locale)} refs={activity.lexiconRefs} />}</span>
-        <span>{replaying
+        {!single&&<span>{replaying
           ? t('drill.correctionRemaining',{count:correctionRemaining})
-          : t('drill.position',{current:pos+1,total:base})}</span>
+          : t('drill.position',{current:pos+1,total:base})}</span>}
       </div>
       <h3><LexiconText text={prompt} refs={activity.lexiconRefs} /></h3>
 
