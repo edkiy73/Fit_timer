@@ -1466,7 +1466,8 @@ function voiceSensitivity(){
   }catch(_){ return 5; }
 }
 function voiceSensitivityThreshold(value){
-  return 70 - Math.max(0, Math.min(10, Number(value) || 0)) * 5.5;
+  const dbfs=-48 - Math.max(0,Math.min(10,Number(value)||0)) * 2.8;
+  return Math.max(0,Math.min(100,(dbfs + 72) / 54 * 100));
 }
 function syncVoiceSensitivityControls(){
   const value = voiceSensitivity();
