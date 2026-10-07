@@ -1,7 +1,7 @@
 # FitTimer — модель снарядов, нагрузки и прогрессии
 
 Дата создания: 2026-10-08  
-Статус: второе ревью Клода разобрано, movement chain включён в V2, решения сведены в основные разделы; реализация не начата  
+Статус: третье ревью Клода разобрано; fixed movement stages, прямой cfgKey и movementChanged внесены в основные разделы; реализация не начата  
 Источник истины: этот файл должен актуализироваться после каждого завершённого этапа/PR.
 
 ## 0. Зачем этот план
@@ -1848,19 +1848,9 @@ Structured Output не означает «schema бесплатна»: JSON Sche
 
 ## 10. История и snapshot нагрузки
 
-Текущий snapshot уже хранит:
-- повторы;
-- секунды;
-- кг;
-- сопротивление.
+V2 history стартует пустой; старый формат не читаем.
 
-Добавить данные, достаточные для определения конфигурации:
-- тип нагрузки;
-- тип снаряда;
-- своё название;
-- количество.
-
-Запись истории v2 (история стартует пустой, старый формат не читаем):
+Каждая запись нагрузки хранит достаточно данных для честного отображения БЕЗ обращения к текущему prescription:
 
 ```js
 histEntry = {
@@ -1869,7 +1859,9 @@ histEntry = {
   load: [{
     exId,
     movementStageId,
-    configId,       // ссылка на stats.loadConfigs
+    movementStageName, // snapshot имени на момент тренировки
+    cfgKey,            // canonical physical config tuple string
+
     reps,
     sec,
     weight,
@@ -1881,33 +1873,51 @@ histEntry = {
 }
 ```
 
-«Сегмент» вычисляется по `exId + movementStageId + configId`. Полный config не дублируется в каждой записи — это защищает sync-документ от раздувания.
+`cfgKey` хранится прямо в history, отдельного `stats.loadConfigs/configId` нет.
 
-История нужна для:
-- честного «было → сегодня»;
-- будущей истории конкретного упражнения;
-- определения границы конфигурации.
+History segment:
+
+```text
+exId + movementStageId + cfgKey
+```
+
+Правила:
+- тот же stage + тот же cfgKey → можно показывать «было → сегодня»;
+- новый movementStageId → новый вариант движения, не сравнивать как ↑/↓ нагрузки;
+- новый cfgKey → новая физическая конфигурация, не сравнивать как ↑/↓;
+- `movementStageName` гарантирует правильное старое название даже после редактирования/сброса chain;
+- для level сохранять identity/label фактически использованного уровня, а не numeric index.
+
+Серверный лимит sync-документа сейчас 3 МБ, history ограничена 2000 записями. Отдельный regression обязан проверить worst-case 2000 тренировок; если документ приближается к лимиту, history надо вынести из одного stats-документа отдельной задачей, а не добавлять словарь конфигураций.
 
 ### Сравнение
 
-Если конфигурация одинаковая:
+Один stage/config:
 
 ```text
 Румынская тяга
 2 × 6 кг → 2 × 7 кг
 ```
 
-Если конфигурация изменилась:
+Новый stage:
+
+```text
+Отжимания
+Новый вариант: обычные отжимания
+```
+
+Новая физическая конфигурация:
 
 ```text
 Румынская тяга
 Новая конфигурация: 1 гантель 12 кг
 ```
 
-НЕ показывать:
+НЕ показывать между разными stage/config:
 - стрелку ↑/↓;
 - «нагрузка выросла»;
 - сравнение общего веса.
+
 
 ---
 
@@ -2003,15 +2013,15 @@ AI не должен сам придумывать постоянный `canonic
 
 Статус: ⬜ не начат
 
-- [ ] `load/supportEquipment/progression/progressState/movementProgression`;
+- [ ] canonical exercise slot: `id + currentStageId + stages[1..4] + progressState`;
 - [ ] удалить persistent legacy load/progression/swap поля;
 - [ ] equipment catalog с roles;
-- [ ] movement chain: максимум current + 3 next;
-- [ ] physical config dictionary `stats.loadConfigs` + `configId` в history;
+- [ ] movement stages: максимум 4 total, каждый с полным prescription и `advance.mode`;
+- [ ] deterministic reversible `cfgKey` прямо в history, без config dictionary;
 - [ ] cfg level без полной шкалы; level remap по identity;
 - [ ] `exerciseLoadView`;
 - [ ] runtime weight/double/level progression;
-- [ ] movement-stage transition + reset state;
+- [ ] movement-stage forward/back transition + reset state; `ceiling/manual` policy;
 - [ ] «только сегодня» vs «изменить рабочий вес»;
 - [ ] schema v2 sanitization/tests;
 - [ ] после отдельного подтверждения владельца можно очистить текущие FitTimer-данные и работать только на V2.
@@ -2033,9 +2043,9 @@ AI не должен сам придумывать постоянный `canonic
 - [ ] progression editor использует новый объект;
 - [ ] `mode:none` — единственный OFF;
 - [ ] `every:null` — наследовать program progression frequency;
-- [ ] movement chain UI: максимум 3 будущих карточки;
-- [ ] add/remove/reorder future stages;
-- [ ] preview ближайшего stage + картинка/placeholder;
+- [ ] movement stages UI: максимум 4 карточки с явным current stage;
+- [ ] add/remove/reorder stages; возврат к предыдущему stage;
+- [ ] `ceiling/manual`, «Перейти сейчас», preview ближайшего stage + картинка/placeholder;
 - [ ] все экраны через `exerciseLoadView`;
 - [ ] RU/EN/i18n/privacy/onboarding wording.
 
@@ -2063,9 +2073,9 @@ AI не должен сам придумывать постоянный `canonic
 - [ ] `program.create`, `exercise.create`, `exercise.replace`;
 - [ ] manual copy/paste — тот же JSON V2;
 - [ ] equipment/support availability semantics;
-- [ ] AI может предложить movement chain 0..3 next stages только когда это уместно;
-- [ ] future stage = full ExercisePrescription без state/media/nested chain;
-- [ ] app присваивает movementStageId;
+- [ ] AI возвращает 1..4 stage specs только когда это уместно;
+- [ ] каждый stage = full ExercisePrescription + advance mode, без IDs/state/media;
+- [ ] app присваивает exercise/stage IDs и currentStageId;
 - [ ] token/latency/invalid measurements.
 
 ### PR 6 — AI V2 edit: target state + refs
@@ -2075,13 +2085,13 @@ AI не должен сам придумывать постоянный `canonic
 - [ ] `program.modify/exercise.modify`;
 - [ ] target state + refs;
 - [ ] plan/program metadata: `patch` = partial;
-- [ ] exercise: `replace` = полный prescription;
+- [ ] exercise: `replace` = полный AI-owned exercise/stage spec + обязательный `movementChanged`;
 - [ ] `new` = полный новый prescription;
 - [ ] отдельные `removedPlanIds/removedExerciseIds`;
 - [ ] один существующий ID нельзя использовать дважды;
 - [ ] atomic apply к immutable request snapshot;
-- [ ] AI не пишет progressState/media/app-owned IDs;
-- [ ] regression: reorder/move/add/remove/split/merge/duplicate exercise/chain edit.
+- [ ] AI не пишет progressState/media/app-owned exercise/stage IDs;
+- [ ] regression: reorder/move/add/remove/split/merge/duplicate exercise/chain edit/movementChanged.
 
 ### PR 7 — video/catalog/channels/images
 
@@ -2092,8 +2102,8 @@ AI не должен сам придумывать постоянный `canonic
 - [ ] export/import/share/link/sync/backup;
 - [ ] trainer reports по stable IDs;
 - [ ] current-stage image prompt из structured movement/load/support;
-- [ ] movement future images: cache lookup + lazy generation, без base64 в chain;
-- [ ] nearest-next preview/prefetch policy;
+- [ ] stage images: `mediaRef/visualKey`, без AI/base64 payload;
+- [ ] nearest-next cache lookup + lazy generation; отсутствие картинки не блокирует transition;
 - [ ] media budgets/round-trip tests;
 - [ ] удалить последний старый line parser/serializer;
 - [ ] обновить соседние docs.
@@ -2178,19 +2188,23 @@ AI не должен сам придумывать постоянный `canonic
 - [ ] `progression.every:null` наследует program frequency.
 - [ ] Level scale: добавление/reorder уровня с сохранённым current identity НЕ создаёт новый physical config.
 - [ ] Level scale: current identity удалён → level progressState сброшен.
-- [ ] History с 2000 тренировок + config dictionary остаётся ниже server doc limit с запасом.
-- [ ] GC удаляет loadConfigs, на которые больше не ссылается retained history.
+- [ ] History с 2000 тренировок и прямым cfgKey остаётся ниже server doc limit с запасом.
 - [ ] Reorder level scale переносит current identity, но сбрасывает progression count.
-- [ ] Movement chain: current + 3 next допустимо; 4 next отклоняется.
-- [ ] Movement chain: переход только после terminal ceiling + подтверждение.
+- [ ] Movement stages: 1..4 допустимо; 5-й stage отклоняется.
+- [ ] Stage `ceiling`: auto-offer только при terminal ceiling; `manual`: без auto-offer; «Перейти сейчас» доступно всегда.
 - [ ] Movement chain: exercise.id сохраняется, movementStageId меняется, progressState сбрасывается.
 - [ ] Movement chain: история разных movementStage не сравнивается как ↑/↓.
-- [ ] Future stage не содержит nested movementProgression.
-- [ ] Future stage media не хранит base64.
+- [ ] Stage spec не содержит nested chain/state/app-owned IDs.
+- [ ] Stage spec от AI не содержит media/base64; persistent stage хранит только mediaRef/visualKey.
 - [ ] Promotion без картинки не блокируется; placeholder → lazy load.
 - [ ] Cache miss ближайшего stage не генерирует автоматически картинки всех оставшихся stages.
 - [ ] AI не создаёт movement chain там, где достаточно обычной weight/reps progression.
-- [ ] AI-edit duplicate exercise создаёт new ID, а не повторно использует один ref.
+- [ ] AI-edit duplicate exercise создаёт new exercise ID, а не повторно использует один ref.
+- [ ] AI modify с `movementChanged:false` сохраняет stage identity и применяет domain carry/reset rules.
+- [ ] AI modify с `movementChanged:true` создаёт новый stage set/IDs и сбрасывает progressState.
+- [ ] `exercise.replace` всегда movementChanged=true.
+- [ ] История старого stage показывает старое movementStageName после AI replacement.
+- [ ] Возврат к предыдущему stage сохраняет exercise.id, меняет currentStageId и сбрасывает progressState.
 - [ ] OpenRouter/другой selectable route нельзя сохранить, если structured capability test не проходит.
 - [ ] Отсутствие подсчёта lifetime tonnage.
 - [ ] Смена дней варианта (пересортировка `plans`) не меняет, к какому варианту относится история.
@@ -2199,10 +2213,10 @@ AI не должен сам придумывать постоянный `canonic
 - [ ] Импорт программы не-v2 отклоняется понятной ошибкой.
 - [ ] Экран старта: «только сегодня» не трогает `progressState`, «новый рабочий вес» сбрасывает `progressState.count`.
 - [ ] Persistent weight/level без equipment отклоняется; null допустим только в UI-draft/none.
-- [ ] TRX/угол тела не превращается в load.level без load-equipment; используется movement progression/swap.
+- [ ] TRX/угол тела не превращается в load.level; используется movement stages.
 - [ ] AI-edit: каждый существующий plan/exercise id либо упомянут ровно один раз, либо явно удалён.
 - [ ] AI-edit target state корректно выражает reorder/move/split/merge без operation DSL.
-- [ ] История ссылается на `configId`, а config snapshot хранится один раз в `stats.loadConfigs`.
+- [ ] History хранит direct deterministic cfgKey + movementStageName snapshot.
 - [ ] До публичного релиза несовместимый старый APK не может писать старую schema/использовать несовместимые FitTimer API.
 - [ ] `progression` и `progressState` не смешиваются: AI не может записывать `progressState`.
 
@@ -2220,7 +2234,7 @@ AI не должен сам придумывать постоянный `canonic
 6. **JSON Schema не заменяет domain validation.** Фитнес-условия, inventory compatibility и progression semantics проверяются кодом.
 7. **Данные не переносятся вообще** (1.9): приложение стартует пустым, реальные программы пользователя/Светы генерируются заново и становятся regression fixtures.
 8. **Один вес на упражнение для всех подходов.** Пирамиды, разминочные подходы с меньшим весом, «основной + облегчённые» подходы модель не представляет.
-9. **Movement progression включён в V2, но ограничен 4 этапами всего** (current + 3 next). Более длинная лестница строится позже отдельной правкой, а не хранится как бесконечный список.
+9. **Movement progression включён в V2 и ограничен 4 stages total.** Все stages сохраняются для возврата; более длинная лестница требует отдельного редактирования существующих 4 stages, а не бесконечного списка.
 
 ---
 
