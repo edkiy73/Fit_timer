@@ -2262,7 +2262,7 @@ AI не должен сам придумывать постоянный `canonic
 12. **Порядок PR.** Корректно ли после решения «прод можно ломать» идти: stable IDs/history → V2 schema/runtime → UI → Core Structured Output → AI V2?
 13. **Все каналы.** Не пропущены ли import/export/share/sync/backup/catalog/trainer/session/video/image/admin/privacy/i18n.
 14. **Что вообще удалить.** Какие существующие legacy-поля/ветки после V2 становятся вторым source of truth и должны исчезнуть, а какие пока опасно трогать?
-15. **Movement chain.** Достаточно ли лимита current + 3 next? Какие распространённые progression chains требуют больше 4 этапов?
+15. **Movement chain.** Достаточно ли лимита 4 stages total? Какие распространённые progression chains требуют больше 4 этапов?
 16. **Movement images.** Правильно ли не хранить base64 future-stage media, делать cache lookup для ближайшего stage и генерировать только по preview/transition?
 17. **Стоимость сложности.** Где план решает гипотетическую проблему ценой слишком большой архитектуры для текущего масштаба FitTimer?
 
@@ -2405,6 +2405,8 @@ AI не должен сам придумывать постоянный `canonic
 ---
 
 ## 14.5. Ответ после второго ревью Клода + решение по movement chain — 2026-10-08
+
+Историческая запись. Третье ревью Клода — 14.6, актуальный ответ на него — 14.7.
 
 Второе ревью принято почти целиком. Ниже — что становится текущим решением документа.
 
@@ -2575,6 +2577,112 @@ AI не должен сам придумывать постоянный `canonic
 - один `exercise.id` на цепочку + `movementStageId` — правильно, при условии пп. 1 и 3;
 - `exId + movementStageId + cfgKey` для истории достаточно, при условии п. 1 (имена прошлых этапов);
 - cache lookup картинки следующего этапа раньше preview не нужен; ленивая загрузка — правильно.
+
+---
+
+## 14.7. Ответ на третье ревью Клода — 2026-10-08
+
+Третье ревью принято по сути во всех четырёх найденных проблемах, но для первой проблемы выбрана более симметричная модель.
+
+### 1. Пройденные этапы — проблему принимаем, реализацию меняем
+
+Согласны: удалять stage после перехода нельзя — ломается история и невозможно нормально вернуться назад.
+
+**Не используем `done + current + next`.**
+
+Вместо этого canonical V2:
+- `stages[1..4]` хранит ВСЮ ограниченную лестницу;
+- `currentStageId` выбирает активный stage;
+- обычный переход вперёд/назад ничего не удаляет;
+- каждый stage хранит полный prescription;
+- `progressState` относится только к текущему stage и сбрасывается при смене stage.
+
+Почему лучше `done/next`:
+- одна форма данных для прошлого/текущего/будущего;
+- возврат не требует реконструкции prescription;
+- reorder/edit UI работает с одним массивом;
+- меньше специальных веток runtime/validator.
+
+History дополнительно хранит `movementStageName`, поэтому даже если chain позже полностью заменили AI-правкой, старая запись всё равно показывает правильное историческое название.
+
+### 2. Мёртвая chain без потолка — принимаем, но не запрещаем саму chain
+
+Добавлены два режима перехода на уровне stage:
+
+```text
+ceiling — приложение само предлагает следующий stage при terminal ceiling
+manual  — автоматического предложения нет
+```
+
+Для `ceiling` validator требует реальный terminal ceiling и включённую progression policy.
+
+Для `manual` потолок не обязателен.
+
+При наличии следующего stage действие **«Перейти сейчас» доступно всегда**. Поэтому chain не может стать недоступной только из-за отсутствия max.
+
+### 3. AI replace и movement identity — полностью принимаем
+
+AI-контракт получает обязательный `movementChanged: true|false`.
+
+Правила:
+- ручное переименование = metadata, stage identity не меняется;
+- AI modify с `movementChanged:false` сохраняет текущий stage identity; carry/reset progress решают обычные domain rules;
+- AI modify с `movementChanged:true` заменяет активную AI-owned movement chain новым набором 1..4 stage specs, приложение выдаёт новые stage IDs и сбрасывает progressState;
+- `exercise.replace` всегда `movementChanged:true`;
+- AI не выдаёт app-owned stage IDs.
+
+UI перед применением movementChanged показывает:
+> Новое упражнение — прогресс начнётся заново.
+
+Старая история не ломается: в ней остаются старые `movementStageId + movementStageName`.
+
+### 4. loadConfigs — принимаем и удаляем
+
+Отдельного `stats.loadConfigs` и GC больше нет.
+
+В history напрямую хранится deterministic reversible `cfgKey`, построенный canonical helper из:
+- load.type;
+- equipment;
+- custom name;
+- count.
+
+Плюсы:
+- нет merge-конфликтов IDs между устройствами;
+- нет dictionary lifecycle/GC;
+- меньше кода;
+- выигрыш словаря по размеру не оправдывает сложность.
+
+Worst-case history на 2000 тренировок всё равно обязана пройти отдельный size test против текущего лимита 3 МБ.
+
+### 5. Порядок PR — принимаем
+
+Core Structured Output не нужен раньше runtime/UI.
+
+Оставляем:
+1. stable IDs/history/tonnage;
+2. V2 schema + runtime;
+3. V2 UI;
+4. Core Structured Output;
+5. AI create;
+6. AI edit;
+7. остальные channels/images;
+8. regression/pre-public hardening.
+
+Это позволяет проверить реальную V2-модель руками до самой объёмной AI-части.
+
+### Что просим Клода проверить в последний раз
+
+Только новые решения, без повторного полного пересказа документа:
+
+1. **Canonical exercise wrapper:** разумно ли, что даже упражнение БЕЗ chain хранится как один `stage`, чтобы не иметь две persistent-формы?
+2. **AI movementChanged:** достаточно ли явного флага модели или нужен дополнительный deterministic guard приложения для подозрительных `movementChanged:false`?
+3. **Chain replacement:** при `movementChanged:true` правильно ли полностью заменять старый активный chain новым stage set, оставляя старое только в history?
+4. **Manual/ceiling:** есть ли реальный третий массовый тип перехода, который нельзя выразить этими двумя режимами?
+5. **Media:** достаточно ли `mediaRef/visualKey` на stage, если переход не блокируется отсутствием изображения?
+6. **History:** достаточно ли `exId + movementStageId + cfgKey + movementStageName` без отдельного stage/config registry?
+7. **Размер PR 2:** после появления canonical stage-wrapper не стал ли breaking runtime PR слишком большим; если да — как разделить его без временной второй persistent-схемы?
+
+Если здесь нет критического возражения, архитектуру считаем закрытой и начинаем реализацию.
 
 ---
 
@@ -2833,3 +2941,35 @@ AI не должен сам придумывать постоянный `canonic
 
 Следующий шаг:
 - ещё одно короткое adversarial review Клода только по вопросам 14.5; если критических возражений нет — архитектуру фиксируем и начинаем PR 1.
+
+
+### 2026-10-08 — ответ на третье ревью Клода
+
+Статус: ✅ третье ревью разобрано, код приложения не менялся.
+
+Принято:
+- не терять пройденные movement stages;
+- transition должен работать без обязательного ceiling;
+- AI movement replacement обязан явно менять movement identity;
+- отдельный loadConfigs dictionary не нужен;
+- текущий порядок PR можно оставить.
+
+Финальные решения:
+- один canonical `stages[1..4]` + `currentStageId`, а не done/current/next;
+- `advance.mode = ceiling | manual`;
+- «Перейти сейчас» доступно всегда при наличии следующего stage;
+- возврат к предыдущему stage штатный;
+- `movementChanged` обязателен в AI modify/replace;
+- `exercise.replace` всегда создаёт новое movement identity;
+- direct deterministic reversible cfgKey в history;
+- movementStageName snapshot в history;
+- future/current stage images через mediaRef/visualKey и lazy resolution.
+
+Причина:
+- одна симметричная stage-модель проще для history, возврата, UI и validation;
+- manual/ceiling покрывает автоматический и качественный переход;
+- direct cfgKey проще и устойчивее multi-device merge;
+- history остаётся читаемой даже после полной AI-замены chain.
+
+Следующий шаг:
+- короткий финальный adversarial review раздела 14.7; при отсутствии критических возражений начать PR 1.
