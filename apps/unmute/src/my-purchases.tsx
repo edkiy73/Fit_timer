@@ -38,7 +38,10 @@ export function MyPurchases({session, sets, onRestore}:{
   const [restoreFailed, setRestoreFailed] = useState(false);
   const courses = courseTitles(session, sets, locale);
   const plus = activePremium(session, Date.now());
-  const until = (session.sub as {until?:string} | null | undefined)?.until;
+  const sub = session.sub as {until?:string; autoRenew?:boolean} | null | undefined;
+  const until = sub?.until;
+  // Plus is an auto-renewing subscription (owner decision); renewal comes with the payment provider.
+  const renews = plus && sub?.autoRenew === true;
   const date = until ? new Intl.DateTimeFormat(locale, {day:'numeric', month:'long', year:'numeric'}).format(new Date(until)) : '';
 
   const restore = async () => {
@@ -61,13 +64,15 @@ export function MyPurchases({session, sets, onRestore}:{
         <div className="my-purchases-plus">
           <div>
             <strong>UnMute Plus</strong>
-            <span>{plus ? (date ? t('purchases.plusUntil', {date}) : t('purchases.plusActive')) : t('purchases.plusOff')}</span>
+            <span>{plus
+              ? (date ? t(renews ? 'purchases.plusRenewsOn' : 'purchases.plusUntil', {date}) : t('purchases.plusActive'))
+              : t('purchases.plusOff')}</span>
           </div>
           <button className="secondary-button" type="button" onClick={() => navigate('/access?from=me&return=' + encodeURIComponent('/account'))}>
             {plus ? t('purchases.plusExtend') : t('purchases.plusMore')}
           </button>
         </div>
-        {plus && <p className="tile-text">{t('purchases.plusRenew')}</p>}
+        {renews && <p className="tile-text">{t('purchases.plusRenewOff')}</p>}
         {!courses.length && !plus && <p className="tile-text">{t('purchases.none')}</p>}
         {restoreFailed && <p className="tile-text" role="alert">{t('access.refreshError')}</p>}
         <button className="link-button" type="button" disabled={restoring} onClick={() => void restore()}>

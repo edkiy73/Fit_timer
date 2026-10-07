@@ -32,6 +32,13 @@ describe('my purchases in the profile',()=>{
     expect(screen.getByRole('button',{name:'Продлить'})).toBeTruthy();
   });
 
+  it('an auto-renewing Plus says when it renews and that renewal can be turned off',()=>{
+    renderPurchases({premium:true,sub:{plan:'plus.month',until:'2026-11-07',autoRenew:true} as AuthSession['sub']});
+    expect(screen.getByText(/Продлится автоматически 7 ноября 2026/)).toBeTruthy();
+    expect(screen.getByText(/Автопродление можно отключить в любой момент/)).toBeTruthy();
+    expect(screen.queryByText(/не продлевается/)).toBeNull();
+  });
+
   it('says plainly when there is nothing yet and restores purchases',async()=>{
     const user=userEvent.setup();
     const onRestore=renderPurchases({});
