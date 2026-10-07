@@ -31,8 +31,8 @@ index.html + mobile.js + app.config.js
 | Файл | Назначение |
 |---|---|
 | `capacitor.config.json` | App ID, имя, `webDir`, splash и плагины |
-| `assets/icon.svg` | Редактируемый мастер новой иконки; плоский знак таймера без текста и персонажей |
-| `assets/icon.png` | Растровый мастер 1024×1024 для генератора Capacitor Assets |
+| `android/app/src/main/res/mipmap-xhdpi/fittimer_launcher.webp` | Каноническая Android launcher-иконка; хранится в Git и напрямую попадает в APK |
+| `assets/icon.png` | Legacy/исходный графический asset; Android release-сборка его не использует для launcher-иконки |
 | `app.config.js` | Публичные runtime-настройки Web; без секретов |
 | `mobile.js` | Мост уведомлений, haptics, TTS, распознавания речи и микрофона |
 | `android/.../FitAudioPlugin.java` | Android TTS, SpeechRecognizer и runtime-разрешение микрофона |
@@ -54,13 +54,15 @@ npm run mobile:sync
 npm run check:mobile
 ```
 
-`mobile:sync` собирает `dist/`, копирует frontend, обновляет нативные плагины и
-генерирует все размеры иконок/splash из `assets/icon.png`. Цвет фона иконки и
-splash должен оставаться одинаковым (`#0C0916`), чтобы холодный запуск выглядел
-как продолжение иконки. Если меняется знак, сначала править `assets/icon.svg`,
-затем экспортировать из него `assets/icon.png`. Производные нативные картинки намеренно
-не хранятся в Git.
-Запускать после каждого изменения `index.html`, `mobile.js`, иконок или Capacitor.
+`mobile:sync` собирает `dist/` и запускает Capacitor sync. Android launcher
+намеренно НЕ генерируется через `capacitor-assets`: источником истины является
+`android/app/src/main/res/mipmap-xhdpi/fittimer_launcher.webp`, а manifest напрямую
+ссылается на `@mipmap/fittimer_launcher`. Это защищает release APK от возврата
+старой картинки из `assets/icon.png`. Splash использует фирменный фон из
+`config/product.json` и отдельную прозрачную splash-иконку. Генерация assets оставлена
+только для iOS через `npm run mobile:assets:ios`.
+Запускать `npm run mobile:sync` после изменений frontend/Capacitor; Android launcher
+менять только заменой канонического файла в `res/mipmap-xhdpi`.
 
 Production-адреса по умолчанию:
 
@@ -208,8 +210,7 @@ node --check scripts/build-web.mjs
 - После изменения frontend запускать `npm run mobile:sync` и проверки.
 - Не синхронизировать фото/аватары без отдельного продуктового решения.
 - Не класть секреты в JavaScript, Capacitor config или Git.
-- Не возвращать старую иконку с человеком: текущий знак — кольцо таймера с
-  диагональным акцентом, мастер лежит в `assets/icon.svg`.
+- Не запускать `capacitor-assets generate --android` для FitTimer: это перезапишет launcher. Каноническая Android-иконка лежит в `android/app/src/main/res/mipmap-xhdpi/fittimer_launcher.webp`, а manifest должен ссылаться на `@mipmap/fittimer_launcher`.
 
 
 ## Offline voice commands on Android

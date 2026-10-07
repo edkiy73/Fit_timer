@@ -101,7 +101,7 @@ public class VoiceModelWorker extends Worker {
         if ("extracting".equals(status)) text = english ? "Preparing voice pack…" : "Готовим голосовой пакет…";
         else text = english ? "Downloading voice pack…" : "Скачиваем голосовой пакет…";
         NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(), CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_fittimer)
             .setContentTitle(english ? "Fit Timer voice commands" : "Голосовые команды Fit Timer")
             .setContentText(text)
             .setContentIntent(pending)
@@ -242,7 +242,7 @@ public class VoiceModelWorker extends Worker {
 
         boolean english = "en".equals(cleanLanguage(language));
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_fittimer)
             .setContentTitle(english ? "Voice commands are ready" : "Голосовые команды готовы")
             .setContentText(english
                 ? "The English pack is downloaded. You can use hands-free mode offline."
