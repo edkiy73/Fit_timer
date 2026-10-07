@@ -115,4 +115,17 @@ public class VoiceAutoGainTest {
         assertTrue("gain " + agc.gain() + " should stay small in noise", agc.gain() <= 1.6);
         assertTrue("speech out " + r[0] + " should not be reduced below input", r[0] >= 1400);
     }
+
+    @Test
+    public void sensitivityScaleKeepsDefaultInExistingSpeechRange() {
+        double low = FitSpeechCapture.thresholdFor(0);
+        double normal = FitSpeechCapture.thresholdFor(5);
+        double high = FitSpeechCapture.thresholdFor(10);
+        assertTrue("higher sensitivity must lower threshold", low > normal && normal > high);
+        // 5 ~= -62 dBFS: matches VoiceAutoGain.MIN_SPEECH_RMS and preserves
+        // the distance that worked before the user-facing sensitivity control.
+        assertTrue("default threshold " + normal, normal >= 17.0 && normal <= 20.0);
+        assertTrue("max sensitivity should be close to no extra gate", high <= 1.0);
+    }
+
 }
