@@ -16,6 +16,8 @@ import { trackOnboardingComplete } from './observability';
 import { Icon, type IconName } from './icons';
 import { chooseCourse, CourseOptionList, useActiveCourseId, useCatalog } from './active-course';
 import { Loader } from './loader';
+import { Sheet } from './sheet';
+import { TermsContent } from './legal-page';
 import type { ContentCatalogSet } from './content/client';
 
 export const ONBOARDING_KEY='unmute.onboarding.v1';
@@ -70,6 +72,8 @@ export function OnboardingView({
   onCourse?:(id:string)=>void;
 }){
   const {t}=useI18n();
+  // Onboarding replaces the whole shell, so the terms open in a sheet, not on their own route.
+  const [termsOpen,setTermsOpen]=useState(false);
 
   const points:{icon:IconName;title:string;text:string}[]=[
     {icon:'mic',title:t('onboarding.speakTitle'),text:t('onboarding.speakText')},
@@ -124,7 +128,14 @@ export function OnboardingView({
         </button>
         {error&&<p className="access-error" role="alert">{t('onboarding.saveError')}</p>}
         <p className="onboarding-account-note">{t('onboarding.accountLater')}</p>
+        <p className="onboarding-account-note">
+          {t('onboarding.termsLead')}{' '}
+          <button className="link-button" type="button" onClick={()=>setTermsOpen(true)}>{t('onboarding.termsLink')}</button>
+        </p>
       </div>
+      <Sheet open={termsOpen} onClose={()=>setTermsOpen(false)} labelledBy="onboarding-terms" closeLabel={t('access.signInClose')}>
+        <div id="onboarding-terms" className="legal-page"><TermsContent /></div>
+      </Sheet>
     </section>
   );
 }

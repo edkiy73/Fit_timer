@@ -229,6 +229,9 @@ try{
   await phone.page.keyboard.press('Escape');
   await phone.page.goto(URL_+'#/');
   ok('theme tokens are applied',(await phone.page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()))!=='');
+  await phone.page.goto(URL_+'#/legal/terms');
+  ok('the terms of use open inside the app',await appears(phone.page.getByRole('heading',{name:'Условия использования UnMute'})));
+  if(process.env.E2E_SHOTS)await phone.page.screenshot({path:process.env.E2E_SHOTS+'/terms.png'});
   await phone.page.goto(URL_+'#/no-such-screen');
   ok('a broken link shows «Такой страницы нет», not a developer error',await appears(phone.page.getByText('Такой страницы нет')));
   await phone.page.getByRole('button',{name:'На главную'}).click();

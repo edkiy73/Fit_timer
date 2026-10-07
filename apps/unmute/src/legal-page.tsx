@@ -5,6 +5,8 @@ import { applyLegalDetails, type LegalDetails } from '@appbase/core/legal.js';
 import { Icon } from './icons';
 import { Loader } from './loader';
 import { apiUrl } from './api-url';
+import { markdownToHtml } from './theory-content';
+import { DEFAULT_TERMS, fillTerms } from './legal-terms';
 
 /* Privacy policy and account deletion inside the app. They stay public pages
    (public/*.html, linked from the stores), but opening them as a separate page left no
@@ -27,6 +29,28 @@ export function extractLegalBody(html: string, legal?: LegalDetails | null): str
   return body ? body.innerHTML : '';
 }
 
+/** Terms of use: the owner's text from Admin, else the app's default; owner details filled in.
+ *  Without a connection the default text still shows, so the page never stays empty. */
+export function TermsContent(){
+  const {t} = useI18n();
+  const [html, setHtml] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetch(apiUrl('/api/config?terms=1'))
+      .then(response => response.ok ? response.json() as Promise<{terms?: string; legal?: LegalDetails}> : null)
+      .catch(() => null)
+      .then(config => {
+        if(!live) return;
+        const text = String(config?.terms || '').trim() || DEFAULT_TERMS;
+        setHtml(markdownToHtml(fillTerms(text, config?.legal)));
+      });
+    return () => { live = false; };
+  }, []);
+  return html === null
+    ? <Loader title={t('legal.loading')} />
+    : <article className="tile legal-body" dangerouslySetInnerHTML={{__html:html}} />;
+}
+
 export function LegalScreen(){
   const {t} = useI18n();
   const navigate = useNavigate();
@@ -47,6 +71,15 @@ export function LegalScreen(){
       .catch(() => { if(live) setFailed(true); });
     return () => { live = false; };
   }, [url]);
+
+  if(page === 'terms'){
+    return (
+      <section className="review-shell legal-page">
+        <button className="learn-back" type="button" onClick={() => navigate(-1)}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
+        <TermsContent />
+      </section>
+    );
+  }
 
   return (
     <section className="review-shell legal-page">

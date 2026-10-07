@@ -86,6 +86,22 @@ await webhook([{...bundleOrder, status:'refunded'}]);
 const refundedBundle = await accountOf('payer@example.com');
 ok('refunding a bundle takes back each part', !refundedBundle.owned['course.c2'] && !(refundedBundle.sub && refundedBundle.sub.orderId === 'bundle-ord|plus.year'));
 
+// 1c. Automatic renewal: on by default for a granted subscription, the learner can switch it.
+const plusBuy = await billing.checkout('test', 'plus.month');
+ok('a granted subscription renews automatically by default', plusBuy.granted && (await accountOf('payer@example.com')).sub.autoRenew === true);
+const off = await billing.setRenewal(false);
+const afterOff = await accountOf('payer@example.com');
+ok('the learner turns renewal off and the paid period stays', off.autoRenew === false && afterOff.sub.autoRenew === false && afterOff.sub.plan === 'plus.month' && !!afterOff.sub.until);
+ok('and turns it back on', (await billing.setRenewal(true)).autoRenew === true && (await accountOf('payer@example.com')).sub.autoRenew === true);
+ok('renewal needs a signed-in device',
+  (await call(billingHandler, {action:'renewal', autoRenew:false, email:'payer@example.com', deviceId:'x', syncToken:'y'})).status === 403);
+{ // the later subscription checks start without an active subscription
+  const key = 'a:' + crypto.createHash('sha256').update('payer@example.com').digest('hex').slice(0, 32);
+  const acc = JSON.parse(await store.get(key)); acc.sub = null; await store.set(key, JSON.stringify(acc));
+}
+ok('without an active subscription there is nothing to switch',
+  await billing.setRenewal(false).then(() => false, e => e.code === 'no_active_subscription'));
+
 // 2. Webhook: signed, idempotent, refund takes the right back.
 const paid = {orderId:'ord-1', email:'payer@example.com', sku:'pack.b', status:'paid'};
 ok('signed webhook grants a SKU', (await webhook([paid])).body.applied === 1 && (await accountOf('payer@example.com')).owned['pack.b']);

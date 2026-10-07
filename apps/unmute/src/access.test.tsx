@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -55,14 +56,16 @@ function renderView(
 ){
   const handlers={onBuy:vi.fn(),onRestore:vi.fn(),onCourse:vi.fn(),onContinue:vi.fn()};
   render(
-    <I18nProvider
-      dictionaries={dictionaries}
-      config={{locales:['ru'],default:'ru'}}
-      storageKey="access-test.locale"
-      systemLanguages={['ru']}
-    >
-      <AccessOfferView runtime={value} session={auth} authLoading={false} {...handlers} {...props} />
-    </I18nProvider>
+    <MemoryRouter>
+      <I18nProvider
+        dictionaries={dictionaries}
+        config={{locales:['ru'],default:'ru'}}
+        storageKey="access-test.locale"
+        systemLanguages={['ru']}
+      >
+        <AccessOfferView runtime={value} session={auth} authLoading={false} {...handlers} {...props} />
+      </I18nProvider>
+    </MemoryRouter>
   );
   return handlers;
 }
@@ -132,8 +135,13 @@ describe('course access and purchase',()=>{
 
   it('says plainly when purchases are unavailable and keeps the button off',()=>{
     renderView(runtime(),session(),{canBuy:false});
-    expect(screen.getByText('Покупка сейчас недоступна. Попробуй чуть позже.')).toBeTruthy();
+    expect(screen.getByText(/Покупка сейчас недоступна. Попробуй чуть позже./)).toBeTruthy();
     expect((screen.getByRole('button',{name:/Оплатить/}) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('links the terms of use next to the pay button',()=>{
+    renderView(runtime(),session());
+    expect(screen.getByRole('link',{name:'условия использования'}).getAttribute('href')).toBe('/legal/terms');
   });
 
   it('restores purchases',async()=>{

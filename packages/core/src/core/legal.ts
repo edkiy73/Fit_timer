@@ -10,6 +10,8 @@ export interface LegalDetails {
   country?: string;
   email?: string;
   ageFrom?: number;
+  /** Terms of use as Markdown (Admin → «Владелец и контакты»); empty → the app's own default. */
+  terms?: string;
 }
 
 export function applyLegalDetails(root: ParentNode, legal: LegalDetails | null | undefined): void {

@@ -33,7 +33,8 @@ const DEFAULTS = {
   payment: {provider:'not_connected', androidMonth:'', androidYear:'', iosMonth:'', iosYear:''},
   // Who runs the app, for the privacy policy and account-deletion pages (Admin → «Владелец и
   // контакты»). Public: the pages show it to everyone. Empty fields keep the page's own text.
-  legal: {owner:'', country:'', email:'', ageFrom:14},
+  // `terms`: the app's terms of use as Markdown, typed in Admin; empty → the app shows its own default.
+  legal: {owner:'', country:'', email:'', ageFrom:14, terms:''},
   update: {android:{
     latestCode:0, minimumCode:0, latestName:'', url:'', messageRu:'', messageEn:'',
     direct:{latestCode:0, minimumCode:0, latestName:'', url:'', messageRu:'', messageEn:''},
@@ -42,6 +43,8 @@ const DEFAULTS = {
 };
 
 const line = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, n);
+// Multi-line text (Markdown): keeps line breaks, drops other control characters.
+const multiline = (v, n) => String(v == null ? '' : v).replace(/\r/g, '').replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, '').trim().slice(0, n);
 const num = (v, d, lo, hi) => Number.isFinite(+v) ? Math.max(lo, Math.min(hi, +v)) : d;
 const endpoint = (v, allowed) => {
   const providers = Array.isArray(allowed) && allowed.length ? allowed : ['gemini','openai'];
@@ -129,7 +132,8 @@ function sanitizeSettings(src){
       owner: line(legal.owner, 160),
       country: line(legal.country, 80),
       email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(line(legal.email, 120)) ? line(legal.email, 120) : '',
-      ageFrom: Math.round(num(legal.ageFrom, 14, 0, 21))
+      ageFrom: Math.round(num(legal.ageFrom, 14, 0, 21)),
+      terms: multiline(legal.terms, 40000)
     },
     update: {
       android: {

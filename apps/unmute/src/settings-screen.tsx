@@ -195,6 +195,7 @@ export function SettingsScreen(){
       )}
 
       <p className="account-legal">
+        <Link to="/legal/terms">{t('account.terms')}</Link>
         <Link to="/legal/privacy">{t('account.privacy')}</Link>
         <Link to="/legal/delete-account">{t('account.deletionInfo')}</Link>
       </p>

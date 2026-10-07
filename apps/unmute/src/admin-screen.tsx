@@ -1,3 +1,4 @@
+import { DEFAULT_TERMS } from './legal-terms';
 import { AdminPanel } from '@appbase/ui-react/admin.js';
 import { sharedUiLocale, useI18n } from '@appbase/ui-react/i18n.js';
 import { adminClient } from './admin';
@@ -47,5 +48,5 @@ const EVENT_LABELS = {
 export function AdminScreen({productName}: {productName: string}){
   const {locale} = useI18n();
   const adminLocale = sharedUiLocale(locale);
-  return <AdminPanel client={adminClient} locale={adminLocale} productName={productName} eventLabels={EVENT_LABELS[adminLocale]} extraSections={[courseAdminSection,contentAdminSection,updateAdminSection]} />;
+  return <AdminPanel client={adminClient} locale={adminLocale} productName={productName} eventLabels={EVENT_LABELS[adminLocale]} extraSections={[courseAdminSection,contentAdminSection,updateAdminSection]} defaultTerms={DEFAULT_TERMS} />;
 }

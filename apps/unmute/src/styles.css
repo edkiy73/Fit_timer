@@ -1691,3 +1691,4 @@ span.legend-item{cursor:default}
 .my-purchases-plus span{color:var(--muted);font-size:13px;line-height:1.4}
 .my-purchases-plus .secondary-button{flex:none;width:auto;padding-inline:16px}
 .my-purchases .link-button{justify-self:start}
+.my-purchases-renewal{display:grid;gap:4px;justify-items:start}
