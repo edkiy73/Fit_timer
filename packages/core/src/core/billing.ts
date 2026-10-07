@@ -19,9 +19,18 @@ export interface BillingClientOptions {
   fetch?: typeof fetch;
 }
 
+export interface RenewalResult {
+  /** The provider manages renewal on its own page (a store's subscription settings). */
+  url?: string;
+  /** Renewal of the active subscription after the change. */
+  autoRenew: boolean;
+}
+
 export interface BillingClient {
   providers(): Promise<string[]>;
   checkout(provider: string, sku: string): Promise<CheckoutResult>;
+  /** Turn automatic renewal of the active subscription on or off; the paid period stays. */
+  setRenewal(autoRenew: boolean): Promise<RenewalResult>;
 }
 
 export interface BillingError extends Error {
@@ -81,6 +90,13 @@ export function createBillingClient(options: BillingClientOptions): BillingClien
       };
       if(typeof result.url === 'string' && result.url) out.url = result.url;
       return out;
+    },
+
+    async setRenewal(autoRenew){
+      const auth = await options.auth.authFields();
+      if(!auth) throw new Error('not_authenticated');
+      const result = await post({action:'renewal', autoRenew, email:auth.email, deviceId:auth.deviceId, syncToken:auth.syncToken});
+      return {...(result.url ? {url:String(result.url)} : {}), autoRenew:!!result.autoRenew};
     }
   };
 }

@@ -7,7 +7,8 @@
        testOnly?: true,                              // только при ALLOW_MEMORY_STORE=1
        available?(): Promise<boolean>,               // включён ли сейчас (например, настройкой в админке)
        checkout?({email, sku, product}) → {url} | {events},   // начать покупку
-       verifyWebhook({headers, body, query}) → {ok, events}   // подтвердить уведомление
+       verifyWebhook({headers, body, query}) → {ok, events},  // подтвердить уведомление
+       setRenewal?({email, sub, autoRenew}) → {url} | {}      // автопродление подписки у провайдера
      }
    Событие провайдера:
      {orderId, email, sku, status:'paid'|'refunded'|'canceled', until?, autoRenew?}
@@ -235,6 +236,37 @@ function createBillingHandler({adapters = []} = {}){
     }
 
     const action = String((body && body.action) || '');
+    // Automatic renewal of the active subscription: on or off, the paid period stays. A provider
+    // that manages it on its own page answers {url}; otherwise the account keeps the choice
+    // (instant grants, admin grants) and the provider's next webhook can update it.
+    if(action === 'renewal'){
+      const who = await signedInAccount(body);
+      if(!who) return fail(res, 403, 'bad_sync_token');
+      const autoRenew = !!body.autoRenew;
+      const mh = sha(who.email).slice(0, 32);
+      const current = who.acc && who.acc.sub;
+      if(!current || !((Date.parse(current.until) || 0) >= Date.now())) return fail(res, 409, 'no_active_subscription');
+      const adapter = list.find(a => a.id === current.provider);
+      if(adapter && typeof adapter.setRenewal === 'function'){
+        let answer;
+        try{ answer = await adapter.setRenewal({email: who.email, sub: current, autoRenew}); }
+        catch(e){ return fail(res, (e && e.status) || 502, String((e && e.message) || 'renewal_failed')); }
+        if(answer && answer.url) return send(res, 200, {ok: true, url: String(answer.url), autoRenew: !!current.autoRenew});
+      }
+      const saved = await store.withLock(`lock:bill:${mh}`, async () => {
+        let acc = null;
+        try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(_){}
+        if(!acc || !acc.sub) return null;
+        acc.sub.autoRenew = autoRenew;
+        await store.set(`a:${mh}`, JSON.stringify(acc));
+        return acc;
+      }, {ttl: 8, retries: 60, delay: 50});
+      if(!saved) return fail(res, 409, 'no_active_subscription');
+      await log({at: new Date().toISOString(), provider: String(saved.sub.provider || ''), status: autoRenew ? 'renewal_on' : 'renewal_off',
+        sku: String(saved.sub.plan || ''), kind: 'subscription', account: mh.slice(0, 12), order: ''});
+      return send(res, 200, {ok: true, autoRenew, ...entitlementsOf(saved)});
+    }
+
     if(action === 'checkout'){
       const adapter = await find(String(body.provider || ''));
       if(!adapter || typeof adapter.checkout !== 'function') return fail(res, 404, 'unknown_provider');
@@ -271,7 +303,9 @@ function createInstantBillingAdapter({isEnabled = async () => false} = {}){
     available: isEnabled,
     async checkout({email, sku}){
       if(!(await isEnabled())) throw Object.assign(new Error('provider_disabled'), {status: 409});
-      return {events: [{orderId: 'instant-' + crypto.randomBytes(10).toString('hex'), email, sku, status: 'paid'}]};
+      // A subscription granted this way is shown as auto-renewing, so the app's renewal switch is
+      // real before money is charged; owned SKUs ignore the flag.
+      return {events: [{orderId: 'instant-' + crypto.randomBytes(10).toString('hex'), email, sku, status: 'paid', autoRenew: true}]};
     }
   };
 }
@@ -285,7 +319,7 @@ function createTestBillingAdapter({secret = process.env.BILLING_TEST_SECRET || '
     testOnly: true,
     sign,
     async checkout({email, sku}){
-      return {events: [{orderId: 'test-' + crypto.randomBytes(8).toString('hex'), email, sku, status: 'paid'}]};
+      return {events: [{orderId: 'test-' + crypto.randomBytes(8).toString('hex'), email, sku, status: 'paid', autoRenew: true}]};
     },
     async verifyWebhook({headers, body}){
       const given = String(headers['x-billing-signature'] || '');
