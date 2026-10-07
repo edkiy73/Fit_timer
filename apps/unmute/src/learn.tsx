@@ -22,7 +22,7 @@ import { isNodeUnlockedByPurchase } from './content/access';
 import { AIConversationView } from './ai-conversation';
 import { AnswerExplanationView } from './answer-explanation';
 import { AnswerFeedbackSheet } from './answer-feedback-sheet';
-import { trackDayCompleted, trackLessonCompleted } from './observability';
+import { trackCourseDay, trackDayCompleted, trackDayStarted, trackLessonCompleted, trackSaveError, trackSectionCompleted } from './observability';
 import { Icon } from './icons';
 import { Sheet } from './sheet';
 import { FirstLessonNotificationOffer } from './first-lesson-notification-offer';
@@ -879,6 +879,7 @@ export function NodeRunnerView({
             ? 'resume'
             : 'first'
       );
+      if(!nodeProgress?.complete&&!hasExistingProgress&&node.dayIndex!==undefined)trackDayStarted(state.set.id,node.id);
     }
     setRunHydrated(true);
     // Old progress may still miss the day's plan card: it is part of the day, mark it quietly.
@@ -1034,6 +1035,23 @@ export function NodeRunnerView({
     }
   },[checking,finished,node?.id,nodeComplete,runHydrated,state?.progress,stepSignature]);
 
+  // Analytics: a section finished in this visit (not one that was already done when the day opened).
+  const sectionsDoneAtOpenRef=useRef<{nodeId:string;done:Set<string>}|null>(null);
+  useEffect(()=>{
+    if(!runHydrated||!state||!node)return;
+    const done=lessonSectionStates(state.set,node,state.progress).filter(section=>section.complete&&section.id!=='theory');
+    const atOpen=sectionsDoneAtOpenRef.current;
+    if(!atOpen||atOpen.nodeId!==node.id){
+      sectionsDoneAtOpenRef.current={nodeId:node.id,done:new Set(done.map(section=>section.id))};
+      return;
+    }
+    for(const section of done){
+      if(atOpen.done.has(section.id)||section.id==='theory')continue;
+      atOpen.done.add(section.id);
+      trackSectionCompleted(state.set.id,node.id,section.id);
+    }
+  },[runHydrated,node?.id,state?.progress]);
+
   useEffect(()=>{
     if(!runHydrated||!state||!node)return;
     const candidate=readCompletionCandidate(state.set.id,node.id);
@@ -1041,6 +1059,7 @@ export function NodeRunnerView({
       completionTrackedRef.current=true;
       if(node.kind==='lesson')trackLessonCompleted(candidate.runId,candidate.mode);
       if(node.dayIndex)trackDayCompleted(candidate.runId,candidate.mode);
+      if(node.dayIndex)trackCourseDay(state.set.id,node.dayIndex);
       if(candidate.mode!=='replay'&&node.kind==='lesson'&&node.dayIndex){
         rememberRecentDayCompletion(state.set.id,node.id,activitySaveClock().dayNumber);
       }
@@ -1525,6 +1544,7 @@ export function NodeRunnerView({
       setResult(correct);
     }catch(_){
       setAnswerSaveError(true);
+      trackSaveError();
     }finally{
       setBusy(false);
     }
@@ -1573,6 +1593,7 @@ export function NodeRunnerView({
       setResult(correct);
     }catch(_){
       setAnswerSaveError(true);
+      trackSaveError();
     }finally{
       setBusy(false);
     }

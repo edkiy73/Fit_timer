@@ -24,12 +24,42 @@ const EVENTS = Object.freeze([
   'purchase_started.other',
   'purchase_completed.course',
   'purchase_completed.plus',
-  'purchase_completed.other'
+  'purchase_completed.other',
+  'purchase_started.bundle',
+  'purchase_completed.bundle',
+  // Inside a day and the ways back (launch plan, stage 3, item 14; audit R7).
+  'day_started',
+  'course_day.1',
+  'course_day.3',
+  'course_day.7',
+  'section_completed.tasks',
+  'section_completed.drill',
+  'section_completed.listening',
+  'section_completed.speaking',
+  'section_completed.dialogue',
+  'section_completed.ai',
+  'review_completed',
+  'word_saved',
+  'reminder_enabled',
+  'signed_in',
+  'ai_error',
+  'save_error'
 ]);
-const engine = createAnalyticsEngine({store, events:EVENTS});
+/* Admin «Воронка»: installs → onboarding → day 1 → account → day 3 → paywall → purchase. */
+const FUNNEL = Object.freeze([
+  {id:'install', events:['install']},
+  {id:'onboarding_done', events:['onboarding_done']},
+  {id:'course_day.1', events:['course_day.1']},
+  {id:'signed_in', events:['signed_in']},
+  {id:'course_day.3', events:['course_day.3']},
+  {id:'paywall', events:['paywall_shown.course','paywall_shown.today','paywall_shown.talk','paywall_shown.other']},
+  {id:'purchase', events:['purchase_completed.course','purchase_completed.bundle','purchase_completed.plus','purchase_completed.other']}
+]);
+const engine = createAnalyticsEngine({store, events:EVENTS, funnel:FUNNEL});
 
 module.exports = {
   EVENTS,
+  FUNNEL,
   recordAnalytics: engine.recordAnalytics,
   removeAnalyticsDevice: engine.removeAnalyticsDevice,
   analyticsStats: engine.analyticsStats
