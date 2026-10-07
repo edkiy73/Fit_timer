@@ -11,6 +11,8 @@ import { DEFAULT_COURSE_ID } from './settings-data';
 import { resetAllStatistics, restartCourseProgress } from './progress-reset';
 import { Icon } from './icons';
 import { unregisterRemotePush } from './remote-push';
+import { appRestart, signOutAndClear } from './sign-out';
+import { clearContentCache } from './content/client';
 
 /* «Я» → «Настройки»: appearance, reminders, «Начать заново», account deletion and the
    legal pages. Kept off «Я» itself, which was one long screen of everything. */
@@ -139,12 +141,25 @@ export function SettingsScreen(){
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
 
-  // Local data stays on the device; the next sign-in merges it into that account.
-  const signOut = async () => {
-    await unregisterRemotePush();
-    await auth.logout();
-    await appDocs.detach();
-    navigate('/');
+  const [signingOut, setSigningOut] = useState(false);
+  const [unsent, setUnsent] = useState(false);
+  // The account's progress stays on the server; the phone starts clean for the next person
+  // (decision 20). Unsent progress is never wiped silently: the learner decides.
+  const signOut = async (force = false) => {
+    setSigningOut(true);
+    try{
+      const result = await signOutAndClear({
+        flush: async () => { await appDocs.sync(); return !(await appDocs.pending()); },
+        unregisterPush: async () => { await unregisterRemotePush(); },
+        logout: () => auth.logout(),
+        clearDocuments: () => appDocs.clear(),
+        clearContentCache
+      }, {force});
+      if(result === 'unsent'){ setUnsent(true); return; }
+      appRestart.reload();
+    }finally{
+      setSigningOut(false);
+    }
   };
 
   // Server data is removed; the device keeps its local copy (never wiped silently).
@@ -178,7 +193,20 @@ export function SettingsScreen(){
         <div className="tile settings-card settings-card-account">
           <div className="settings-label">{t('account.title')}</div>
           <p className="tile-text">{auth.session.email}</p>
-          <button className="secondary-button" type="button" onClick={() => void signOut()}>{t('account.signOut')}</button>
+          <p className="tile-text">{t('account.signOutHint')}</p>
+          {unsent ? (
+            <div className="account-delete" role="alertdialog" aria-label={t('account.signOut')}>
+              <p>{t('account.signOutUnsent')}</p>
+              <div className="account-delete-actions">
+                <button className="secondary-button" type="button" disabled={signingOut} onClick={() => { setUnsent(false); void signOut(); }}>{t('account.signOutRetry')}</button>
+                <button className="link-button danger-link" type="button" disabled={signingOut} onClick={() => void signOut(true)}>{t('account.signOutAnyway')}</button>
+              </div>
+            </div>
+          ) : (
+            <button className="secondary-button" type="button" disabled={signingOut} onClick={() => void signOut()}>
+              {signingOut ? t('account.signingOut') : t('account.signOut')}
+            </button>
+          )}
           {confirmDelete ? (
             <div className="account-delete" role="alertdialog" aria-label={t('account.delete')}>
               <p>{t('account.deleteConfirm')}</p>
