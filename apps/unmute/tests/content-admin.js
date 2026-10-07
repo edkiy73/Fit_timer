@@ -175,22 +175,26 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   const priced=await action(handler,'content_set_save',{
     setId:'b1-b2',
     expectedDraftRevision:bSaved.body.draftRevision,
-    changes:{accessMode:'entitlement',freeDays:5,price:{RUB:1490,USD:'19',EUR:5}}
+    changes:{accessMode:'entitlement',freeDays:5,price:{RUB:1490,USD:'19',EUR:5},bundlePrice:{RUB:2490}}
   });
   assert.equal(priced.status,200);
   assert.deepEqual(priced.body.set.access.price,{RUB:1490,USD:19});
+  // «Курс + Plus на год» has its own price per course, kept and cleared the same way.
+  assert.deepEqual(priced.body.set.access.bundlePrice,{RUB:2490});
   const kept=await action(handler,'content_set_save',{
     setId:'b1-b2',
     expectedDraftRevision:priced.body.draftRevision,
     changes:{accessMode:'entitlement',freeDays:2}
   });
   assert.deepEqual(kept.body.set.access.price,{RUB:1490,USD:19});
+  assert.deepEqual(kept.body.set.access.bundlePrice,{RUB:2490});
   const cleared=await action(handler,'content_set_save',{
     setId:'b1-b2',
     expectedDraftRevision:kept.body.draftRevision,
-    changes:{accessMode:'entitlement',freeDays:5,price:{}}
+    changes:{accessMode:'entitlement',freeDays:5,price:{},bundlePrice:{}}
   });
   assert.equal(cleared.body.set.access.price,undefined);
+  assert.equal(cleared.body.set.access.bundlePrice,undefined);
 
   const staleSet=await action(handler,'content_set_save',{
     setId:'b1-b2',

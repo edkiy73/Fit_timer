@@ -68,25 +68,24 @@ function renderView(
 }
 
 describe('course access and purchase',()=>{
-  it('offers the course and Plus with prices and a pay button, without placeholder wording',async()=>{
+  it('sells only the course on the course screen: whole course or course + a year of Plus (decision 2)',async()=>{
     const user=userEvent.setup();
     const {onBuy}=renderView(runtime(),session());
     expect(screen.getByRole('heading',{name:'Открой весь курс'})).toBeTruthy();
-    expect(screen.getByRole('heading',{name:'Открыть этот курс'})).toBeTruthy();
-    expect(screen.getByText('Разовая покупка. Курс останется твоим навсегда.')).toBeTruthy();
-    expect(screen.getByRole('heading',{name:'Дополнительно: UnMute Plus'})).toBeTruthy();
-    expect(screen.getByText(/Plus не открывает этот курс/)).toBeTruthy();
     expect(screen.getByRole('radio',{name:/Весь курс навсегда/})).toBeTruthy();
-    expect(screen.getByRole('radio',{name:/Plus на месяц/})).toBeTruthy();
-    expect(screen.getByRole('radio',{name:/Plus на год/})).toBeTruthy();
+    expect(screen.getByRole('radio',{name:/Курс \+ Plus на год/})).toBeTruthy();
+    expect(screen.queryByRole('radio',{name:/Plus на месяц/})).toBeNull();
+    expect(screen.queryByRole('radio',{name:/^Plus на год/})).toBeNull();
     expect(screen.queryByText(/администратор/)).toBeNull();
     expect(screen.getByText('Весь курс — 40 дней: уроки, практика, диалоги')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:/Оплатить 1\s490\s₽/}));
     expect(onBuy).toHaveBeenCalledWith('course');
-    await user.click(screen.getByRole('radio',{name:/Plus на год/}));
-    expect(screen.getByText('Расширенный доступ к разбору ошибок и разговорам с ИИ')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:/Оплатить 2\s990\s₽/}));
-    expect(onBuy).toHaveBeenLastCalledWith('plus.year');
+    await user.click(screen.getByRole('radio',{name:/Курс \+ Plus на год/}));
+    // Course 1 490 + a year of Plus 2 990 = 4 480, minus the default 30 % → 3 136.
+    expect(screen.getByText(/4\s480\s₽/)).toBeTruthy();
+    expect(screen.getByText('Год Plus: разговоры с ИИ прямо в приложении и разбор ошибок')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:/Оплатить 3\s136\s₽/}));
+    expect(onBuy).toHaveBeenLastCalledWith('course.plus');
   });
 
   it('shows a course its own price when it has one',()=>{
@@ -97,13 +96,23 @@ describe('course access and purchase',()=>{
     expect(screen.getByRole('button',{name:/Оплатить 990\s₽/})).toBeTruthy();
   });
 
-  it('gives a Plus member the discounted course price, with the full price struck out',()=>{
-    renderView(runtime(),session({premium:true,sub:{plan:'plus.month',until:'2099-01-01'} as AuthSession['sub']}));
-    expect(screen.getByRole('button',{name:/Оплатить 1\s043\s₽/})).toBeTruthy();
-    expect(screen.getByText('Цена со скидкой Plus −30%')).toBeTruthy();
-    // Plus is already theirs: the screen does not sell it again.
-    expect(screen.queryByText('Plus на месяц')).toBeNull();
-    expect(screen.queryByText('Plus на год')).toBeNull();
+  it('uses the bundle price set for the course in the admin',()=>{
+    const value=runtime();
+    const access=value.state!.set.access;
+    if(access.mode==='entitlement')access.bundlePrice={RUB:2490};
+    renderView(value,session());
+    expect(screen.getByRole('radio',{name:/Курс \+ Plus на год.*2\s490\s₽/})).toBeTruthy();
+  });
+
+  it('sells only Plus on the Plus screen: a month or a year',async()=>{
+    const user=userEvent.setup();
+    const {onBuy}=renderView(runtime(),session(),{focus:'plus'});
+    expect(screen.getByRole('radio',{name:/Plus на месяц/})).toBeTruthy();
+    expect(screen.getByRole('radio',{name:/Plus на год/})).toBeTruthy();
+    expect(screen.queryByRole('radio',{name:/Весь курс навсегда/})).toBeNull();
+    expect(screen.queryByRole('radio',{name:/Курс \+ Plus/})).toBeNull();
+    await user.click(screen.getByRole('button',{name:/Оплатить 2\s990\s₽/}));
+    expect(onBuy).toHaveBeenLastCalledWith('plus.year');
   });
 
   it('says plainly when purchases are unavailable and keeps the button off',()=>{

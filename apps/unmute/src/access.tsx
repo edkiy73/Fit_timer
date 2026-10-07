@@ -9,7 +9,7 @@ import type { LearnerCourseRuntimeValue } from './course-runtime';
 import { useLearnerCourseRuntime } from './course-runtime';
 import { resolveCourseEntitlement } from './entitlements';
 import { trackPaywallShown, trackPurchaseCompleted, trackPurchaseStarted } from './observability';
-import { coursePrice, coursePriceWithPlus, plusCourseDiscount, plusPrices, plusYearSaving } from './pricing';
+import { coursePlusYearPrice, coursePrice, plusPrices, plusYearSaving } from './pricing';
 import { billingClient } from './billing';
 import { authClient } from './auth';
 import { localizedText } from './today-model';
@@ -18,11 +18,13 @@ import { Loader } from './loader';
 import { Icon } from './icons';
 
 /* «Открыть весь курс» / UnMute Plus: choose what to buy, see what it gives, pay.
+   The course screen sells only the course: «курс целиком» or «курс + Plus на год»; the Plus
+   screen sells only Plus: a month or a year (launch plan, decision 2).
    The server decides the price and what a SKU opens; checkout goes through Core billing.
    Until a payment provider is connected, the «instant» provider grants the purchase at
    once (Admin → «Способы оплаты»); a provider that answers with a payment page is opened instead. */
 
-export type Plan = 'course' | 'plus.month' | 'plus.year';
+export type Plan = 'course' | 'course.plus' | 'plus.month' | 'plus.year';
 export type AccessFocus = 'course' | 'plus';
 export interface PurchaseDone { plan: Plan; until?: string | null }
 
@@ -67,7 +69,7 @@ export function AccessOfferView({
   const [plan, setPlan] = useState<Plan>(offerCourse ? 'course' : 'plus.year');
   // Only a loaded course that is already open drops the course plan (not a reload in between).
   const courseOpen = state?.access === 'full';
-  useEffect(() => { if(courseOpen && plan === 'course') setPlan('plus.year'); }, [courseOpen, plan]);
+  useEffect(() => { if(courseOpen && (plan === 'course' || plan === 'course.plus')) setPlan('plus.year'); }, [courseOpen, plan]);
 
   const back = <button className="learn-back" type="button" onClick={onCourse}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>;
 
@@ -90,15 +92,16 @@ export function AccessOfferView({
   const dateFormat = new Intl.DateTimeFormat(locale, {day:'numeric', month:'long', year:'numeric'});
 
   if(done){
-    const plus = done.plan !== 'course';
+    const course = done.plan === 'course' || done.plan === 'course.plus';
+    const plusUntil = done.until ? t('access.donePlusUntil', {date:dateFormat.format(new Date(done.until))}) : t('access.donePlusText');
     return (
       <section className="access-shell" aria-labelledby="access-title">
         <article className="access-done">
           <span className="access-done-mark" aria-hidden="true"><Icon name="check" size={34} /></span>
-          <h2 id="access-title">{t(plus ? 'access.donePlusTitle' : 'access.doneCourseTitle')}</h2>
-          <p>{plus
-            ? (done.until ? t('access.donePlusUntil', {date:dateFormat.format(new Date(done.until))}) : t('access.donePlusText'))
-            : t('access.doneCourseText', {course:courseTitle})}</p>
+          <h2 id="access-title">{t(course ? 'access.doneCourseTitle' : 'access.donePlusTitle')}</h2>
+          <p>{done.plan === 'course.plus'
+            ? t('access.doneCourseText', {course:courseTitle}) + ' ' + plusUntil
+            : course ? t('access.doneCourseText', {course:courseTitle}) : plusUntil}</p>
           <button className="primary-button" type="button" onClick={onContinue}>{t('access.continue')}</button>
         </article>
       </section>
@@ -139,24 +142,20 @@ export function AccessOfferView({
     );
   }
 
-  const discount = plusCourseDiscount();
   const fullPrice = coursePrice(state.set.access, locale);
-  const plusCoursePrice = coursePriceWithPlus(state.set.access, locale);
-  const coursePay = session?.premium && plusCoursePrice ? plusCoursePrice : fullPrice;
+  const bundle = coursePlusYearPrice(state.set.access, locale);
   const plus = plusPrices(locale);
   const saving = plusYearSaving(locale);
   const totalDays = state.roadmapProgress.requiredCount;
 
   const plans: Array<{id: Plan; title: string; price: string | null; note: string; was?: string | null; badge?: string}> = [];
   if(offerCourse){
-    plans.push({
-      id:'course', title:t('access.courseTitle'), price:coursePay,
-      was:coursePay !== fullPrice ? fullPrice : null,
-      note:session?.premium && discount ? t('access.courseNotePlus', {discount}) : t('access.courseNote')
-    });
-  }
-  // Plus already active: on the course screen it only lowers the course price, never sold twice.
-  if(plus && !(offerCourse && session?.premium)){
+    plans.push({id:'course', title:t('access.courseTitle'), price:fullPrice, note:t('access.courseNote')});
+    if(bundle){
+      plans.push({id:'course.plus', title:t('access.bundleTitle'), price:bundle.price, was:bundle.was, note:t('access.bundleNote'),
+        ...(bundle.was ? {badge:t('access.bundleBadge')} : {})});
+    }
+  }else if(plus){
     plans.push({id:'plus.month', title:t('access.plusMonthTitle'), price:t('access.perMonth', {price:plus.monthly}), note:t('access.plusMonthNote')});
     plans.push({
       id:'plus.year', title:t('access.plusYearTitle'), price:t('access.perYear', {price:plus.yearly}), note:t('access.plusYearNote'),
@@ -164,10 +163,15 @@ export function AccessOfferView({
     });
   }
   const selected = plans.find(item => item.id === plan) ?? plans[0];
+  const courseBenefits = [t('access.benefitDays', {days:countDays(t, locale, totalDays)}), t('access.benefitForever'), t('access.benefitReview')];
   const benefits = selected?.id === 'course'
-    ? [t('access.benefitDays', {days:countDays(t, locale, totalDays)}), t('access.benefitForever'), t('access.benefitReview'), t('access.benefitNoSub')]
-    : [t('access.benefitAi'), ...(discount ? [t('access.benefitDiscount', {discount})] : []), t('access.benefitAllCourses'), t('access.benefitCancel')];
-  const payPrice = selected?.id === 'course' ? coursePay : selected?.id === 'plus.month' ? plus?.monthly : plus?.yearly;
+    ? [...courseBenefits, t('access.benefitNoSub')]
+    : selected?.id === 'course.plus'
+      ? [...courseBenefits, t('access.benefitAiYear')]
+      : [t('access.benefitAi'), t('access.benefitAllCourses'), t('access.benefitCancel')];
+  const payPrice = selected?.id === 'course' ? fullPrice
+    : selected?.id === 'course.plus' ? bundle?.price
+      : selected?.id === 'plus.month' ? plus?.monthly : plus?.yearly;
 
   return (
     <section className="access-shell" aria-labelledby="access-title">
@@ -188,53 +192,22 @@ export function AccessOfferView({
       ) : null}
 
       <div className="access-offers" role="radiogroup" aria-label={t('access.choose')}>
-        {plans.some(item=>item.id==='course')&&(
-          <section className="access-offer-group" aria-labelledby="access-course-group">
-            <div className="access-offer-head">
-              <h3 id="access-course-group">{t('access.courseGroupTitle')}</h3>
-              <p>{t('access.courseGroupLead')}</p>
-            </div>
-            {plans.filter(item=>item.id==='course').map(item => (
-              <label key={item.id} className={'access-plan pressable' + (item.id === selected?.id ? ' is-on' : '')}>
-                <input type="radio" name="access-plan" value={item.id} checked={item.id === selected?.id} onChange={() => setPlan(item.id)} />
-                <span className="access-plan-radio" aria-hidden="true" />
-                <span className="access-plan-text">
-                  <b>{item.title}{item.badge && <em className="access-plan-badge">{item.badge}</em>}</b>
-                  <small>{item.note}</small>
-                </span>
-                <span className="access-plan-price">
-                  {item.was && <s>{item.was}</s>}
-                  <strong>{item.price}</strong>
-                </span>
-              </label>
-            ))}
-          </section>
-        )}
-
-        {plans.some(item=>item.id!=='course')&&(
-          <section className="access-offer-group" aria-labelledby="access-plus-group">
-            <div className="access-offer-head">
-              <h3 id="access-plus-group">{t(offerCourse?'access.plusGroupTitle':'access.plusHeading')}</h3>
-              <p>{t(offerCourse?'access.plusGroupLead':'access.plusLead')}</p>
-            </div>
-            <div className="access-plans">
-              {plans.filter(item=>item.id!=='course').map(item => (
-                <label key={item.id} className={'access-plan pressable' + (item.id === selected?.id ? ' is-on' : '')}>
-                  <input type="radio" name="access-plan" value={item.id} checked={item.id === selected?.id} onChange={() => setPlan(item.id)} />
-                  <span className="access-plan-radio" aria-hidden="true" />
-                  <span className="access-plan-text">
-                    <b>{item.title}{item.badge && <em className="access-plan-badge">{item.badge}</em>}</b>
-                    <small>{item.note}</small>
-                  </span>
-                  <span className="access-plan-price">
-                    {item.was && <s>{item.was}</s>}
-                    <strong>{item.price}</strong>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </section>
-        )}
+        <div className="access-plans">
+          {plans.map(item => (
+            <label key={item.id} className={'access-plan pressable' + (item.id === selected?.id ? ' is-on' : '')}>
+              <input type="radio" name="access-plan" value={item.id} checked={item.id === selected?.id} onChange={() => setPlan(item.id)} />
+              <span className="access-plan-radio" aria-hidden="true" />
+              <span className="access-plan-text">
+                <b>{item.title}{item.badge && <em className="access-plan-badge">{item.badge}</em>}</b>
+                <small>{item.note}</small>
+              </span>
+              <span className="access-plan-price">
+                {item.was && <s>{item.was}</s>}
+                <strong>{item.price}</strong>
+              </span>
+            </label>
+          ))}
+        </div>
       </div>
 
       <ul className="access-benefits">
@@ -326,7 +299,9 @@ export function AccessScreen(){
     setBuying(plan);
     setBuyError(null);
     try{
-      const sku = plan === 'course' ? runtime.state.set.access.mode === 'entitlement' ? runtime.state.set.access.entitlement : '' : plan;
+      const courseSku = runtime.state.set.access.mode === 'entitlement' ? runtime.state.set.access.entitlement : '';
+      // «Курс + Plus на год» is one purchase: the bundle SKU grants both (config/product.json → bundles).
+      const sku = plan === 'course' ? courseSku : plan === 'course.plus' ? (courseSku ? 'bundle.' + courseSku : '') : plan;
       if(!sku) throw Object.assign(new Error('unknown_sku'), {code:'unknown_sku'});
       trackPurchaseStarted(sku);
       const result = await billingClient.checkout(provider, sku);
@@ -375,7 +350,7 @@ export function AccessScreen(){
           else navigate('/course');
         }}
         onContinue={() => {
-          if(done?.plan !== 'course' && focus === 'plus') returnFromPlus();
+          if(done?.plan !== 'course' && done?.plan !== 'course.plus' && focus === 'plus') returnFromPlus();
           else navigate('/');
         }}
       />

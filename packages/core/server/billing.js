@@ -13,7 +13,7 @@
      {orderId, email, sku, status:'paid'|'refunded'|'canceled', until?, autoRenew?}
 
    Core проверяет SKU по каталогу продукта (config/product.json → products, у
-   подписки kind:'subscription' и days), применяет событие к записи аккаунта
+   подписки kind:'subscription' и days; комплект — config/product.json → bundles), применяет событие к записи аккаунта
    идемпотентно (повтор того же события ничего не меняет) и пишет журнал без
    платёжных данных. Что открывает SKU, по-прежнему решает продукт. */
 
@@ -42,6 +42,29 @@ function catalogItem(sku){
   return {sku, kind: 'subscription', days: Math.max(1, Math.min(3650, Math.round(+raw.days || 30)))};
 }
 
+/** config/product.json → bundles: [{pattern:'bundle.x.*', includes:['x.*','sub.year']}] — one
+ *  purchase that grants several SKUs. «*» in includes stands for what the pattern's «*» matched.
+ *  The bundle SKU itself must also pass checkSku (list it in skuPatterns or products). */
+function bundleParts(sku){
+  let list = [];
+  try{ list = Array.isArray(productConfig().bundles) ? productConfig().bundles : []; }catch(_){}
+  for(const bundle of list){
+    const pattern = String((bundle && bundle.pattern) || '').trim().toLowerCase();
+    if(!/^[a-z0-9][a-z0-9._:-]{0,62}\*?$/.test(pattern)) continue;
+    let rest = null;
+    if(pattern.endsWith('*')){
+      const head = pattern.slice(0, -1);
+      if(sku.length > head.length && sku.startsWith(head)) rest = sku.slice(head.length);
+    }else if(sku === pattern) rest = '';
+    if(rest === null) continue;
+    const parts = (Array.isArray(bundle.includes) ? bundle.includes : [])
+      .map(part => cleanSku(String(part || '').replace('*', rest)))
+      .filter(part => part && part !== sku);
+    return parts.length ? parts : null;
+  }
+  return null;
+}
+
 function normalizeEvent(provider, event){
   const e = event && typeof event === 'object' ? event : {};
   const out = {
@@ -68,9 +91,21 @@ async function log(entry){
 }
 
 /** Applies one confirmed provider event. Idempotent per provider + order + status. */
-async function applyBillingEvent(provider, rawEvent, now = new Date()){
+async function applyBillingEvent(provider, rawEvent, now = new Date(), {inBundle = false} = {}){
   const {event, error} = normalizeEvent(provider, rawEvent);
   if(error) return {ok: false, error};
+  // A bundle is applied part by part, each as its own order («<order>|<sku>»), so a refund
+  // or a repeated notification touches every part the same way. Bundles never nest.
+  const parts = inBundle ? null : bundleParts(event.sku);
+  if(parts){
+    let last = null, applied = false;
+    for(const sku of parts){
+      last = await applyBillingEvent(provider, {...rawEvent, sku, orderId: event.orderId + '|' + sku}, now, {inBundle: true});
+      if(!last.ok) return last;
+      applied = applied || !!last.applied;
+    }
+    return applied ? {ok: true, applied: true, bundle: true, entitlements: last.entitlements} : {ok: true, duplicate: true, bundle: true};
+  }
   const mh = sha(event.email).slice(0, 32);
   const orderKey = `bill:${event.provider}:${sha(event.orderId).slice(0, 40)}`;
   const item = catalogItem(event.sku);
