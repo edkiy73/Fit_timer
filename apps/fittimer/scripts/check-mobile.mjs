@@ -30,7 +30,7 @@ for(const file of required) await access(file);
 
 const launcherBytes = await readFile('android/app/src/main/res/mipmap-xxxhdpi/fittimer_launcher_20261007.webp');
 const launcherSha256 = createHash('sha256').update(launcherBytes).digest('hex');
-if(launcherSha256 !== '38d616c367ccbeba80b21bbcddbf6782e23020343b7211b0ba3847f0d5458045'){
+if(launcherSha256 !== 'bdbfbfbd1c5c9c307539d89703f3a7d1da2c405f268c11fd701bdbcab390a9c8'){
   throw new Error('FitTimer launcher artwork bytes changed unexpectedly');
 }
 
