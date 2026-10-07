@@ -3,11 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
-import type { StartRecognition, WebRecognitionHandlers } from './speech-web';
+import type { RequestMicrophone, StartRecognition, WebRecognitionHandlers } from './speech-web';
 import { dictionaries } from './i18n';
 import { looseSpeechMatch } from './speech-match';
 import {
   PatternSpeakingView,
+  onceMicrophone,
   speakingPassed
 } from './pattern-speaking';
 
@@ -45,7 +46,8 @@ function renderSpeaking(
   startRecognition:StartRecognition,
   savePractice=vi.fn(async()=>{}),
   onDone=vi.fn(),
-  speak=vi.fn(async()=>true)
+  speak=vi.fn(async()=>true),
+  requestMicrophone?:RequestMicrophone
 ){
   render(
     <I18nProvider
@@ -61,6 +63,7 @@ function renderSpeaking(
         onDone={onDone}
         speak={speak}
         startRecognition={startRecognition}
+        {...(requestMicrophone?{requestMicrophone}:{})}
         random={fixedRandom}
       />
     </I18nProvider>
@@ -119,13 +122,46 @@ describe('pattern speaking',()=>{
     renderSpeaking(unavailable);
 
     await user.click(screen.getByRole('button',{name:'Нажми и скажи'}));
-    expect(await screen.findByText(/не поддерживает распознавание речи/)).toBeTruthy();
+    // One note for the whole session instead of an error on every phrase (decision 13).
+    expect(await screen.findByText(/распознавание речи недоступно/)).toBeTruthy();
+    expect(screen.queryByRole('button',{name:'Нажми и скажи'})).toBeNull();
 
     await user.click(screen.getByRole('button',{name:'Готово — сверить'}));
     expect(await screen.findByText('Сверь со своим вариантом')).toBeTruthy();
     expect(screen.getByText('I work at home.')).toBeTruthy();
     expect(screen.getByRole('button',{name:'Не совпало'})).toBeTruthy();
     expect(screen.getByRole('button',{name:'Совпало'})).toBeTruthy();
+  });
+
+  it('asks for the microphone on entry and checks by hand when it is not allowed',async()=>{
+    const user=userEvent.setup();
+    const recognition=fakeRecognition();
+    const answers:Array<'granted'|'denied'>=['denied','granted'];
+    const requestMicrophone=vi.fn(async()=>answers.shift()!);
+    renderSpeaking(recognition.startRecognition,undefined,undefined,undefined,requestMicrophone);
+
+    expect(await screen.findByText(/Микрофон не разрешён/)).toBeTruthy();
+    expect(screen.getByText('Скажи фразу по-английски вслух, потом сверь с ответом.')).toBeTruthy();
+    expect(screen.queryByRole('button',{name:'Нажми и скажи'})).toBeNull();
+    expect(requestMicrophone).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button',{name:'Готово — сверить'}));
+    await user.click(await screen.findByRole('button',{name:'Совпало'}));
+    // The next phrase stays in manual mode without asking or showing an error again.
+    expect(await screen.findByText('Она работает здесь.')).toBeTruthy();
+    expect(screen.getByText(/Микрофон не разрешён/)).toBeTruthy();
+    expect(requestMicrophone).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button',{name:'Разрешить микрофон'}));
+    expect(await screen.findByRole('button',{name:'Нажми и скажи'})).toBeTruthy();
+    expect(requestMicrophone).toHaveBeenCalledTimes(2);
+  });
+
+  it('asks once per review even when every phrase is its own view',async()=>{
+    const request=vi.fn(async()=>'granted' as const);
+    const once=onceMicrophone(request);
+    await once(); await once();
+    expect(request).toHaveBeenCalledTimes(1);
   });
 
   it('does not allow manual pass after explicitly revealing the answer',async()=>{

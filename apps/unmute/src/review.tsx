@@ -23,11 +23,11 @@ import {
   type ReviewSessionItem
 } from './review-session';
 import type { SpeakText, StartRecognition } from './speech-runtime';
-import { speakText, startRecognition as startSpeechRecognition } from './speech-runtime';
+import { requestMicrophone as requestSpeechMicrophone, speakText, startRecognition as startSpeechRecognition } from './speech-runtime';
 import { ENGLISH_SPEECH_LOCALE } from './speech-locale';
 import { PatternDrillView } from './pattern-drill';
 import { PatternListeningView } from './pattern-listening';
-import { PatternSpeakingView } from './pattern-speaking';
+import { PatternSpeakingView, onceMicrophone } from './pattern-speaking';
 import { saveWordReview } from './word-progress';
 import type { WordReviewRuntimeValue } from './word-review-runtime';
 import { useWordReviewRuntime } from './word-review-runtime';
@@ -132,6 +132,8 @@ export function ReviewView({
   const [completed,setCompleted]=useState(0);
   const [selected,setSelected]=useState<number|null>(null);
   const [reviewRunId]=useState(()=>randomSeed());
+  // One microphone question per review, not one per spoken phrase (decision 13).
+  const [reviewMicrophone]=useState(()=>startRecognition===startSpeechRecognition?onceMicrophone(requestSpeechMicrophone):undefined);
   const [answer,setAnswer]=useState('');
   const [picked,setPicked]=useState<string[]>([]);
   const [result,setResult]=useState<boolean|null>(null);
@@ -868,6 +870,7 @@ export function ReviewView({
           savePractice={reviewPracticeSave}
           speak={speak}
           startRecognition={startRecognition}
+          {...(reviewMicrophone?{requestMicrophone:reviewMicrophone}:{})}
           onDone={completePractice}
         />
       )}

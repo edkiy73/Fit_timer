@@ -59,17 +59,39 @@ function recognitionError(value:string|undefined):WebRecognitionError{
   return 'recognition';
 }
 
-export const startWebRecognition:StartRecognition=(handlers,locale=ENGLISH_SPEECH_LOCALE)=>{
-  if(typeof window==='undefined'){
-    handlers.onError?.('unsupported');
-    return null;
-  }
+/** Whether this access to the microphone lets «Говорение» listen, ask manual checking, or fall back. */
+export type MicrophoneAccess='granted'|'denied'|'unsupported';
+export type RequestMicrophone=()=>Promise<MicrophoneAccess>;
 
+function recognitionConstructor():RecognitionConstructor|null{
+  if(typeof window==='undefined')return null;
   const scope=window as unknown as {
     SpeechRecognition?:RecognitionConstructor;
     webkitSpeechRecognition?:RecognitionConstructor;
   };
-  const Recognition=scope.SpeechRecognition||scope.webkitSpeechRecognition;
+  return scope.SpeechRecognition||scope.webkitSpeechRecognition||null;
+}
+
+/** Ask the browser for the microphone (the prompt shows only when it has not been answered yet). */
+export const requestWebMicrophone:RequestMicrophone=async()=>{
+  if(!recognitionConstructor())return 'unsupported';
+  const media=typeof navigator==='undefined'?null:navigator.mediaDevices;
+  if(!media?.getUserMedia)return 'granted';
+  try{
+    const stream=await media.getUserMedia({audio:true});
+    stream.getTracks().forEach(track=>track.stop());
+    return 'granted';
+  }catch(error){
+    const name=(error as {name?:string}|null)?.name;
+    if(name==='NotAllowedError'||name==='SecurityError')return 'denied';
+    if(name==='NotFoundError')return 'unsupported';
+    // Anything else: let recognition itself try and report.
+    return 'granted';
+  }
+};
+
+export const startWebRecognition:StartRecognition=(handlers,locale=ENGLISH_SPEECH_LOCALE)=>{
+  const Recognition=recognitionConstructor();
   if(!Recognition){
     handlers.onError?.('unsupported');
     return null;
