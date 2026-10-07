@@ -22,8 +22,33 @@ import {
 } from './ai-talk';
 import { ExerciseKind } from './exercise-kind';
 import { trackTalkStarted } from './observability';
+import { ownAITalkPrompt } from './ai-own-prompt';
 
 type AIActivity=Extract<Activity,{type:'ai-conversation'}>;
+
+export type CopyText=(text:string)=>Promise<void>;
+
+/** Clipboard with a fallback for WebViews where the async API is missing or refused. */
+export async function copyTextToClipboard(text:string):Promise<void>{
+  try{
+    if(globalThis.navigator?.clipboard?.writeText){
+      await globalThis.navigator.clipboard.writeText(text);
+      return;
+    }
+  }catch{}
+  const area=document.createElement('textarea');
+  area.value=text;
+  area.setAttribute('readonly','');
+  area.style.position='fixed';
+  area.style.opacity='0';
+  document.body.appendChild(area);
+  area.select();
+  try{
+    if(!document.execCommand('copy'))throw new Error('copy_failed');
+  }finally{
+    area.remove();
+  }
+}
 
 function localized(text:Record<string,string>,locale:string):string{
   return text[locale]||text.ru||text.en||Object.values(text)[0]||'';
@@ -47,6 +72,9 @@ export function AIConversationView({
   onDone,
   onSignIn,
   onAccess,
+  signedIn=true,
+  plus=false,
+  copyText=copyTextToClipboard,
   requestReply=requestTalkReply,
   requestReview=requestTalkReview,
   onStarted=trackTalkStarted,
@@ -59,6 +87,11 @@ export function AIConversationView({
   onDone:()=>void;
   onSignIn:()=>void;
   onAccess:()=>void;
+  /** Signed in: a free trial talk in the app is possible. */
+  signedIn?:boolean;
+  /** Plus: the talk runs in the app; without it the main path is the learner's own AI. */
+  plus?:boolean;
+  copyText?:CopyText;
   requestReply?:typeof requestTalkReply;
   requestReview?:typeof requestTalkReview;
   onStarted?:()=>void;
@@ -82,6 +115,22 @@ export function AIConversationView({
   const [recognitionError,setRecognitionError]=useState<WebRecognitionError|null>(null);
   const recognitionRef=useRef<WebRecognitionHandle|null>(null);
   const recognitionReceivedRef=useRef(false);
+  const [copyState,setCopyState]=useState<'idle'|'done'|'failed'>('idle');
+  const ownPrompt=ownAITalkPrompt({
+    topic:localized(activity.topic,locale),
+    scenario:activity.promptTemplate,
+    focus:activity.focus,
+    locale:locale==='en'?'en':'ru'
+  });
+
+  const copyOwnPrompt=async()=>{
+    try{
+      await copyText(ownPrompt);
+      setCopyState('done');
+    }catch{
+      setCopyState('failed');
+    }
+  };
 
   useEffect(()=>{
     return ()=>{
@@ -268,6 +317,10 @@ export function AIConversationView({
     error==='trial_used'||
     error==='trial_limit';
   const reviewError=reviewRequested&&!review&&Boolean(error);
+  const introState=!started&&messages.length===0&&!error;
+  // The AI step never blocks the course: without Plus, on an access wall or when the AI fails,
+  // the learner can always do the talk in their own AI and mark the step done.
+  const showOwn=!review&&((!plus&&!started)||accessError||(Boolean(error)&&!reviewRequested));
 
   return (
     <article className="learn-card ai-talk-card">
@@ -287,10 +340,9 @@ export function AIConversationView({
         </span>
       </div>
 
-      {!started&&messages.length===0&&!error&&(
+      {plus&&introState&&(
         <div className="ai-talk-intro">
           <p>{t('aiTalk.intro')}</p>
-          <p className="learn-hint">{t('aiTalk.trialIntro')}</p>
           <button
             className="primary-button"
             type="button"
@@ -433,6 +485,43 @@ export function AIConversationView({
           {reviewError&&(
             <button className="secondary-button" type="button" disabled={busy} onClick={()=>void complete()}>
               {t('aiTalk.finishWithoutReview')}
+            </button>
+          )}
+        </div>
+      )}
+
+
+      {showOwn&&(
+        <section className="ai-talk-own" aria-labelledby={'ai-talk-own-'+activity.id}>
+          <h4 id={'ai-talk-own-'+activity.id}>{t('aiTalk.ownTitle')}</h4>
+          <p>{t('aiTalk.ownText')}</p>
+          <button className="primary-button" type="button" onClick={()=>void copyOwnPrompt()}>
+            {copyState==='done'?t('aiTalk.ownCopied'):t('aiTalk.ownCopy')}
+          </button>
+          {copyState==='failed'&&(
+            <p className="learn-hint" role="status">{t('aiTalk.ownCopyFailed')}</p>
+          )}
+          <details className="ai-talk-own-prompt" open={copyState==='failed'}>
+            <summary>{t('aiTalk.ownShow')}</summary>
+            <textarea readOnly value={ownPrompt} rows={8} onFocus={event=>event.currentTarget.select()} />
+          </details>
+          <p className="learn-hint">{t('aiTalk.ownHonest')}</p>
+          <button className="secondary-button" type="button" disabled={busy} onClick={()=>void complete()}>
+            {busy?t('aiTalk.finishing'):t('aiTalk.ownDone')}
+          </button>
+        </section>
+      )}
+
+      {!plus&&introState&&(
+        <div className="ai-talk-intro ai-talk-trial">
+          <p className="learn-hint">{signedIn?t('aiTalk.ownTrialHint'):t('aiTalk.ownSignInHint')}</p>
+          {signedIn ? (
+            <button className="secondary-button" type="button" disabled={busy} onClick={()=>void start()}>
+              {busy?t('aiTalk.starting'):t('aiTalk.ownTrialStart')}
+            </button>
+          ) : (
+            <button className="secondary-button" type="button" onClick={onSignIn}>
+              {t('aiTalk.signIn')}
             </button>
           )}
         </div>

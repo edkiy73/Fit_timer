@@ -33,4 +33,18 @@ if(viaSyncToken.statusCode !== 404){ // 404 = AI capability off in this environm
   assert.equal(wrong.statusCode, 403, wrong.body);
   assert.equal(missing.statusCode, 401, missing.body);
 }
+
+// A product authorizer's release() runs when the granted request then fails (trial not burned).
+let released = 0;
+const failing = createAIHandler(
+  {get:() => ({type:'text', bucket:'light', run:async () => { throw new Error('provider down'); }}), isMalformed:() => false},
+  {authorize:async () => ({allowed:true, meta:{mode:'trial'}, release:async () => { released++; }})}
+);
+const failRes = {statusCode:0, headers:{}, body:'', setHeader(k, v){ this.headers[k] = v; }, end(b){ this.body = b || ''; }};
+await failing({method:'POST', headers:{'x-forwarded-for':'10.7.0.2'}, query:{}, body:{...base, syncToken:'secret-token'}}, failRes);
+if(failRes.statusCode !== 404){
+  assert.notEqual(failRes.statusCode, 200, failRes.body);
+  assert.equal(released, 1, 'release() must run once on a failed AI request');
+}
+
 console.log('AI endpoint auth OK' + (viaSyncToken.statusCode === 404 ? ' (AI capability off, skipped)' : ''));
