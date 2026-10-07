@@ -294,7 +294,7 @@ function `kv_exec`, pg_cron job `appbase-kv-expire`).
    «Перенести всё», затем «Сверить» (при расхождениях — «Сверить и починить») до нуля.
 2. Задать `APPBASE_STORE=supabase+redis` **вместе** с переносом функций Vercel в регион базы
    (`vercel.json → regions: ["hnd1"]` для Tokyo), Redeploy. Снова «Сверить»: теперь сверка идёт
-   от Supabase к Upstash. Откат — вернуть `redis+supabase` (и регион `fra1`): Upstash всё это время
+   от Supabase к Upstash. Откат — вернуть `redis+supabase` (и регион `sin1`): Upstash всё это время
    получал каждую запись.
 3. `APPBASE_STORE=supabase`, затем отключить интеграцию Upstash и удалить старую теневую синхронизацию
    (`SUPABASE_SHADOW_*`, `sync-shadow.js`, таблицу `appbase_documents`).
@@ -304,6 +304,8 @@ function `kv_exec`, pg_cron job `appbase-kv-expire`).
 админке («сбоев зеркала»); сверка находит и чинит такие ключи.
 
 Функции и база должны стоять в одном регионе: каждое обращение к базе через полмира стоит 0,2–0,3 с.
+Сейчас (до шага 2) функции стоят в `sin1` — там основная база Upstash (`store_wFmV0znaMbeQstpe`,
+`primaryRegion: sin1`); из `fra1` самопроверка хранилища занимала ≈1,2 с.
 Если основной рынок изменится, новый проект Supabase в нужном регионе переносится тем же способом
 (парный режим → перенос → сверка).
 

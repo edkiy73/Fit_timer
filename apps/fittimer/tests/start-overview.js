@@ -74,34 +74,46 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok("вес — отдельная метка-кнопка с карандашом", /\d+\s*кг/.test(kgChip.chip) && kgChip.icon, JSON.stringify(kgChip));
   ok('вес не дублируется в метке повторов', !/кг/.test(kgChip.reps), kgChip.reps);
 
+  // Сохранение правки асинхронное (savePrograms → renderStartOverview): ждём, пока строка
+  // перерисуется, а не читаем её сразу после клика.
+  const overviewRowText = async (n, expected) => {
+    const row = page.locator(`#startOverviewList .ex-row:nth-child(${n})`);
+    for(let i = 0; i < 40; i++){
+      const text = await row.textContent();
+      if(expected.test(text)) return text;
+      await page.waitForTimeout(50);
+    }
+    return row.textContent();
+  };
+
   // Каждый параметр меняется по своей метке, без открытия полного редактора.
   const weightChip = '#startOverviewList .ex-row:nth-child(3) [data-load-field="weight"]';
   await page.click(weightChip);
   ok('тап по весу открывает общий редактор параметра', await page.isVisible('#startLoadModal'));
   await page.fill('#startLoadInput', '9');
   await page.click('[data-act="commitStartLoadEdit"]');
-  const afterWeight = await page.locator('#startOverviewList .ex-row:nth-child(3)').textContent();
+  const afterWeight = await overviewRowText(3, /9\s*кг/);
   ok('правка веса сразу обновляет обзор', /9\s*кг/.test(afterWeight), afterWeight);
 
   const repsChip = '#startOverviewList .ex-row:nth-child(2) [data-load-field="reps"]';
   await page.click(repsChip);
   await page.fill('#startLoadInput', '9-11');
   await page.click('[data-act="commitStartLoadEdit"]');
-  const afterReps = await page.locator('#startOverviewList .ex-row:nth-child(2)').textContent();
+  const afterReps = await overviewRowText(2, /9[–-]11\s*повт/);
   ok('тап по повторам меняет только рабочие повторы', /9[–-]11\s*повт/.test(afterReps), afterReps);
 
   const setsChip = '#startOverviewList .ex-row:nth-child(2) [data-load-field="sets"]';
   await page.click(setsChip);
   await page.fill('#startLoadInput', '2');
   await page.click('[data-act="commitStartLoadEdit"]');
-  const afterSets = await page.locator('#startOverviewList .ex-row:nth-child(2)').textContent();
+  const afterSets = await overviewRowText(2, /2\s*подход/);
   ok('тап по подходам меняет число подходов', /2\s*подход/.test(afterSets), afterSets);
 
   const restChip = '#startOverviewList .ex-row:nth-child(2) [data-load-field="rest"]';
   await page.click(restChip);
   await page.fill('#startLoadInput', '75');
   await page.click('[data-act="commitStartLoadEdit"]');
-  const afterRest = await page.locator('#startOverviewList .ex-row:nth-child(2)').textContent();
+  const afterRest = await overviewRowText(2, /Отдых\s*75\s*сек/);
   ok('тап по отдыху меняет отдых', /Отдых\s*75\s*сек/.test(afterRest), afterRest);
 
   const legacy = await page.evaluate(async () => {
