@@ -876,12 +876,13 @@ export function applyMedia(p, media){
 // по связи, на которую он не соглашался.
 export function programTemplateCopy(p, options){
   const opts = options || {};
+  const includeProgress = !!opts.includeProgress;
   const copy = JSON.parse(JSON.stringify(p || {}));
   copy.plans = normPlans(copy).map(pl => ({
     ...pl,
     exercises: (pl.exercises || []).map(ex => {
       const clean = {...ex};
-      delete clean.ps;
+      if(!includeProgress) delete clean.ps;
       delete clean.progFrom;
       return clean;
     })
@@ -893,7 +894,8 @@ export function programTemplateCopy(p, options){
   delete copy.progSteps;
   delete copy.progStepsAdj;
   delete copy.progLast;
-  delete copy.psMigrated;
+  if(includeProgress) copy.psMigrated = true;
+  else delete copy.psMigrated;
   delete copy.src;
   delete copy.origEx;
   delete copy.pub;
@@ -907,8 +909,8 @@ export function programTemplateCopy(p, options){
 
 // Что уезжает получателю: только шаблон программы, без чужого прогресса,
 // локальных флагов и связи с предыдущим владельцем.
-function programPayload(p){
-  const copy = programTemplateCopy(p);
+function programPayload(p, options){
+  const copy = programTemplateCopy(p, {includeProgress:!!(options && options.includeProgress)});
   // Обложка и фото остаются. Лишний вес срезает programMedia — здесь только то,
   // что не влезло в общий предел.
   const media = programMedia(p);
@@ -1063,10 +1065,11 @@ export async function wipeTrainerInfo(){
   appAlert(t('trainer.removeInfoDone'));
 }
 
-export async function programLink(p, extra){
-  const program = programPayload(p);
+export async function programLink(p, extra, options){
+  const includeProgress = !!(options && options.includeProgress);
+  const program = programPayload(p, {includeProgress});
   const r = await apiPost('/api/share', Object.assign(
-    {program, by: program.by || '', byLink: program.byLink || '',
+    {program, includeProgress, by: program.by || '', byLink: program.byLink || '',
      trainer: trainerProfile(), trainerKey: trainer.key || ''}, extra || {}));
   // Ник закрепляется за первым, кто им воспользовался: ключ приходит один раз и
   // дальше подтверждает, что профиль правит его хозяин.
@@ -1092,9 +1095,33 @@ export function linkFailNote(e){
 }
 export const FILE_HINT = ()=> t('share.fileHint');
 
-export async function exportProgram(p){
+let pendingProgramExport = null;
+function openProgramExportChoice(p, mode){
+  if(!p) return;
+  pendingProgramExport = {p, mode};
+  if($('programExportChoiceTitle')){
+    $('programExportChoiceTitle').textContent = mode === 'file'
+      ? t('share.exportFileTitle')
+      : t('share.exportLinkTitle');
+  }
+  $('programExportChoiceModal').classList.add('open');
+}
+export function shareProgramWithChoice(p){ openProgramExportChoice(p, 'link'); }
+export function exportProgramFileWithChoice(p){ openProgramExportChoice(p, 'file'); }
+
+async function runProgramExportChoice(includeProgress){
+  const pending = pendingProgramExport;
+  pendingProgramExport = null;
+  $('programExportChoiceModal').classList.remove('open');
+  if(!pending) return;
+  const options = {includeProgress:!!includeProgress};
+  if(pending.mode === 'file') await exportProgramFile(pending.p, options);
+  else await exportProgram(pending.p, options);
+}
+
+export async function exportProgram(p, options){
   let link;
-  try{ link = await programLink(p); }
+  try{ link = await programLink(p, null, options); }
   catch(e){ appAlert(linkFailNote(e) + FILE_HINT()); return; }
 
   const text = t('share.programText',{name:p.name});
@@ -1111,9 +1138,10 @@ export async function exportProgram(p){
 }
 
 // Экспорт программы файлом — со всем содержимым: обложка и фото упражнений
-export async function exportProgramFile(p){
-  const copy = programTemplateCopy(p);
-  const payload = {app: 'fittimer', type: 'program', v: 1, program: copy};
+export async function exportProgramFile(p, options){
+  const includeProgress = !!(options && options.includeProgress);
+  const copy = programTemplateCopy(p, {includeProgress});
+  const payload = {app: 'fittimer', type: 'program', v: 1, includeProgress, program: copy};
   const json = JSON.stringify(payload);
   const safeName = (p.name || 'program').replace(/[^\wа-яёА-ЯЁ\- ]+/g, '').trim().slice(0, 40) || 'program';
   const fname = `fittimer-${safeName}.json`;
@@ -1145,14 +1173,16 @@ export async function importProgramFile(file){
     const text = await file.text();
     const data = JSON.parse(text);
     // поддерживаем и файл программы, и голый объект программы
-    const raw = (data && data.type === 'program' && data.program) ? data.program : data;
+    const wrapped = !!(data && data.type === 'program' && data.program);
+    const raw = wrapped ? data.program : data;
+    const includeProgress = wrapped && data.includeProgress === true;
     if(!raw || !raw.name || !Array.isArray(raw.plans)){
       appAlert(t('share.badFile'));
       return;
     }
     // Файл — всегда независимая копия. Даже вручную подложенный src не имеет права
     // включить скрытую отправку отчётов тренеру без предупреждения по App Link.
-    const prog = programTemplateCopy(raw);
+    const prog = programTemplateCopy(raw, {includeProgress});
     prog.id = 'p' + Date.now();
     prog.stats = {completions: 0};
     sanitizeProgram(prog);      // файл мог написать кто угодно и чем угодно
@@ -3139,7 +3169,7 @@ export async function importProgramLink(id){
   const existing = customPrograms.find(x => x && x.src === id);
   // Ссылка приносит ШАБЛОН. Даже если серверу подсунули чужой ex.ps/rotIdx,
   // получателю это состояние не принадлежит. Его собственное состояние вернём ниже.
-  const prog = programTemplateCopy(raw);
+  const prog = programTemplateCopy(raw, {includeProgress:!existing && d.includeProgress === true});
   prog.id = existing ? existing.id : ('p' + Date.now());
   prog.stats = existing && existing.stats ? JSON.parse(JSON.stringify(existing.stats)) : {completions: 0};
   prog.src = id;
@@ -3475,12 +3505,14 @@ export function initProgramsAi(){
     },
     applyProgressionAll,
     duplicateProgram,
-    exportProgram,
-    exportProgramFile,
+    exportProgram: shareProgramWithChoice,
+    exportProgramFile: exportProgramFileWithChoice,
     renderGreeting,
     renderToday,
     trainerOn
   });
+  registerAction('exportProgramWithProgress', () => runProgramExportChoice(true));
+  registerAction('exportProgramWithoutProgress', () => runProgramExportChoice(false));
   registerAction('showDynamicInfo', btn => {
     if(btn.dataset.info) appAlert(btn.dataset.info);
   });
