@@ -136,6 +136,8 @@ export interface NodeRunnerViewProps {
   talkAccess?:{signedIn:boolean;plus:boolean};
   /** A review day: run the regular review; it completes the day when finished. */
   onReviewDay?:(nodeId:string)=>void;
+  /** A day closed by the purchase (direct link, notification): open the course offer. */
+  onUnlock?:(nodeId:string)=>void;
   onNodeCompleted?:(node:RoadmapNode)=>void;
   /** «What next» after a finished day: open the next lesson right away. */
   onOpenNode?:(nodeId:string)=>void;
@@ -538,6 +540,7 @@ export function NodeRunnerView({
   onAccess=()=>{},
   talkAccess={signedIn:false,plus:false},
   onReviewDay=()=>{},
+  onUnlock,
   onNodeCompleted=()=>{},
   onOpenNode,
   saveSeen,
@@ -1258,6 +1261,20 @@ export function NodeRunnerView({
             </button>
           )}
           <button className={nodeComplete&&!nextNode?'primary-button':'secondary-button'} type="button" onClick={onExit}>{t('learn.summaryDone')}</button>
+        </div>
+      </section>
+    );
+  }
+
+  // Audit T4: a day of the paid part says so and offers the course, as on the course map.
+  if(state&&node&&!purchaseUnlocked&&onUnlock){
+    return (
+      <section className="learn-shell">
+        <button className="learn-back" type="button" onClick={onExit}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
+        <div className="learn-state" role="status">
+          <strong>{t('learn.lockedTitle')}</strong>
+          <span>{t('learn.lockedText')}</span>
+          <button className="primary-button" type="button" onClick={()=>onUnlock(node.id)}>{t('courseMap.unlock')}</button>
         </div>
       </section>
     );
@@ -2011,6 +2028,7 @@ export function NodeRunnerScreen(){
       onSignIn={()=>navigate('/account?return='+encodeURIComponent('/learn/'+String(params.nodeId||'')))}
       onAccess={()=>navigate('/access?from=answer&return='+encodeURIComponent('/learn/'+String(params.nodeId||'')+'?resume=1'))}
       onReviewDay={nodeId=>navigate('/review?day='+encodeURIComponent(nodeId))}
+      onUnlock={nodeId=>navigate('/access?from=course&node='+encodeURIComponent(nodeId),{replace:true})}
       onOpenNode={nextId=>navigate('/learn/'+encodeURIComponent(nextId),{replace:true})}
       saveSeen={saveSeenActivity}
       saveGraded={saveGradedActivity}
