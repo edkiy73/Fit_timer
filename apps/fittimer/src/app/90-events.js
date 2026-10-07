@@ -1461,7 +1461,9 @@ async function previewSelectedVoice(){
 const VOICE_SENSITIVITY_KEY = 'fitVoiceSensitivityV1';
 function voiceSensitivity(){
   try{
-    const value = Number(localStorage.getItem(VOICE_SENSITIVITY_KEY));
+    const raw=localStorage.getItem(VOICE_SENSITIVITY_KEY);
+    if(raw == null) return 5;
+    const value=Number(raw);
     return Number.isFinite(value) ? Math.max(0, Math.min(10, Math.round(value))) : 5;
   }catch(_){ return 5; }
 }
