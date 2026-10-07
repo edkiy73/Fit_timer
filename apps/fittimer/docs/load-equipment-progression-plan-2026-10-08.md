@@ -382,6 +382,12 @@ ex.progression = {
   time:   {step: 5, max: 60}
 }
 
+program.progression = {
+  // общий default; null = общего default нет
+  every: 4
+}
+
+
 ex.progressState = {
   count: 0,
   current: {
@@ -2323,6 +2329,11 @@ AI не должен сам придумывать постоянный `canonic
 
 После появления canonical exercise library media cache должен использовать canonical movement identity + визуально значимое оборудование. До этого допускается deterministic visualKey из нормализованного stage prescription.
 
+### Дополнительно закрыто после проверки кода
+
+- `stats.loadConfigs` получает простой GC: после trimming history удаляем configs без ссылок.
+- Reorder level-шкалы сохраняет current level по identity, но сбрасывает `progressState.count`, потому что порядок усложнения изменился.
+
 ### Что ещё просим Клода перепроверить
 
 1. Лимит 4 stages: есть ли массовые реальные кейсы, где это мало?
@@ -2330,9 +2341,8 @@ AI не должен сам придумывать постоянный `canonic
 3. Правильно ли сохранять один `exercise.id` на всю movement chain, различая stages через `movementStageId`?
 4. Достаточен ли `exId + movementStageId + configId` для истории и сравнений?
 5. Не нужен ли cache lookup для next image раньше, чем пользователь откроет preview/дойдёт до потолка?
-6. Есть ли риск, что `stats.loadConfigs` тоже начнёт бесконтрольно расти, и нужен ли простой GC configs, на которые больше не ссылается history?
-7. Для level-scale edit: достаточно ли правила «current identity сохранилась → state carry», или надо сравнивать ещё смысл направления сложности?
-8. Новый PR order после разрешения ломать production: есть ли зависимость, из-за которой Core Structured Output всё-таки должен идти раньше UI/runtime?
+6. Новый PR order после разрешения ломать production: есть ли зависимость, из-за которой Core Structured Output всё-таки должен идти раньше UI/runtime?
+7. Есть ли ещё массовый сценарий movement progression, который наша chain-модель не представляет без костылей?
 
 ---
 
@@ -2556,3 +2566,38 @@ AI не должен сам придумывать постоянный `canonic
 
 Следующий шаг:
 - повторный adversarial review Клода раздела 14.3; после согласования фиксируем план и начинаем PR 1.
+
+
+### 2026-10-08 — ответ на второе ревью Клода + movement chain
+
+Статус: ✅ план снова обновлён, код не менялся.
+
+Принято из второго ревью:
+- compact history через config dictionary вместо полного config на каждую тренировку;
+- level scale не входит в physical cfgKey;
+- current level переносится по identity;
+- `mode:none` — единственный OFF;
+- `every:null` — наследование program default;
+- structured route capability test в админке;
+- AI-edit: `patch` и `replace` имеют разные явные семантики;
+- stable IDs/history/tonnage вынесены в отдельный маленький первый PR;
+- после решения владельца V1↔V2 compatibility layer не строится, данные можно очищать при переключении runtime;
+- old APK hardening перенесён в pre-public этап.
+
+Дополнительно принято:
+- movement progression входит в V2 сразу;
+- максимум 4 stages total (current + 3 next);
+- stage хранит полный prescription без nested chain/state/media;
+- exercise.id сохраняется, movementStageId меняется;
+- future-stage base64 картинки не храним;
+- image cache lookup lazy, генерация только preview/transition, отсутствие картинки не блокирует переход;
+- config dictionary GC удаляет неиспользуемые configs;
+- reorder level-scale сбрасывает progression counter, но не physical history segment.
+
+Почему:
+- домашняя прогрессия часто идёт через смену варианта движения, и оставлять старый single-swap на фоне clean V2 бессмысленно;
+- лимит 4 удерживает модель/AI/UI контролируемыми;
+- lazy image strategy не тратит генерации и не раздувает program/sync payload.
+
+Следующий шаг:
+- ещё одно короткое adversarial review Клода только по вопросам 14.5; если критических возражений нет — архитектуру фиксируем и начинаем PR 1.
