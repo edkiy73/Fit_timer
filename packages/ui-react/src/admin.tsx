@@ -57,6 +57,9 @@ const COPY = {
     settingsGroup:'Настройки', ai:'ИИ', billingKeys:'Способы оплаты', legal:'Владелец и контакты', campaigns:'Рассылки',
     eventInstall:'Открыли приложение впервые', newDevices:'Новых устройств за 30 дней', activity:'Что делали за 30 дней', activityHint:'«Раз» — сколько всего, «Устройств» — у скольких разных телефонов и браузеров.',
     times:'Раз', devices:'Устройств', platforms:'Откуда приходят', platformAndroid:'Android', platformIos:'iPhone', platformWeb:'Сайт',
+    funnel:'Воронка', funnelHint:'Новые устройства за 30 дней: сколько дошло до каждого шага. Процент — от первого шага.',
+    retention:'Возвращаются', retentionHint:'Доля устройств, которые снова открыли приложение ровно через день, неделю и месяц после первого запуска. Считаются только устройства, у которых этот срок уже наступил.',
+    retentionD1:'Через день', retentionD7:'Через неделю', retentionD30:'Через месяц', retentionOf:'из',
     errorTimes:'раз', errorFirst:'впервые', errorLast:'последний раз', errorBuild:'версия',
     buyer:'Покупатель', product:'Покупка', statusPaid:'оплачено', statusRefunded:'возврат', statusCanceled:'продление отключено', statusRenewalOn:'продление включено (учеником)', statusRenewalOff:'продление отключено (учеником)',
     providerInstant:'без оплаты (выдано сразу)'
@@ -86,6 +89,9 @@ const COPY = {
     settingsGroup:'Settings', ai:'AI', billingKeys:'Payment methods', legal:'Owner and contacts', campaigns:'Campaigns',
     eventInstall:'Opened the app for the first time', newDevices:'New devices in 30 days', activity:'Activity in 30 days', activityHint:'“Times” is the total, “Devices” is how many different phones and browsers.',
     times:'Times', devices:'Devices', platforms:'Where people come from', platformAndroid:'Android', platformIos:'iPhone', platformWeb:'Web',
+    funnel:'Funnel', funnelHint:'New devices in 30 days: how many reached each step. The percentage is of the first step.',
+    retention:'Coming back', retentionHint:'Share of devices that opened the app again exactly one day, one week and one month after the first launch. Only devices whose day has already come are counted.',
+    retentionD1:'After a day', retentionD7:'After a week', retentionD30:'After a month', retentionOf:'of',
     errorTimes:'times', errorFirst:'first', errorLast:'last', errorBuild:'build',
     buyer:'Buyer', product:'Purchase', statusPaid:'paid', statusRefunded:'refunded', statusCanceled:'renewal off', statusRenewalOn:'renewal on (by the learner)', statusRenewalOff:'renewal off (by the learner)',
     providerInstant:'without payment (granted at once)'
@@ -261,7 +267,15 @@ type Platforms = {android?: number; ios?: number; web?: number};
 
 /* «Обзор»: plain numbers — people, new devices, what they did, where they come from. */
 function OverviewView({data, copy, eventLabels}: {data: Record<string, unknown>; copy: Copy; eventLabels: Readonly<Record<string, string>>}){
-  const stats = (data.analytics || {}) as {events?: string[]; totals?: EventTotals; cohort?: {devices?: number; platform?: Platforms}};
+  const stats = (data.analytics || {}) as {
+    events?: string[]; totals?: EventTotals; cohort?: {devices?: number; platform?: Platforms};
+    funnel?: Array<{id: string; devices?: number}>;
+    retention?: Record<'d1' | 'd7' | 'd30', {eligible?: number; returned?: number} | undefined>;
+  };
+  const funnel = Array.isArray(stats.funnel) ? stats.funnel : [];
+  const funnelBase = funnel[0]?.devices || 0;
+  const percent = (part: number, whole: number) => whole > 0 ? Math.round(part / whole * 100) + '%' : '—';
+  const retention = stats.retention;
   const totals = stats.totals || {};
   const events = Array.isArray(stats.events) ? stats.events : Object.keys(totals);
   const platform = stats.cohort?.platform || {};
@@ -282,6 +296,37 @@ function OverviewView({data, copy, eventLabels}: {data: Record<string, unknown>;
           <td className="ab-admin-num">{String(totals[event]?.unique || 0)}</td>
         </tr>)}</tbody></table></div>
       </article>
+      {funnel.length > 0 && (
+        <article className="ab-admin-panel">
+          <h2>{copy.funnel}</h2>
+          <p className="ab-admin-note">{copy.funnelHint}</p>
+          <div className="ab-admin-table-wrap"><table className="ab-admin-compact"><thead><tr><th></th><th className="ab-admin-num">{copy.devices}</th><th className="ab-admin-num">%</th></tr></thead>
+          <tbody>{funnel.map(step => <tr key={step.id} data-zero={step.devices ? undefined : ''}>
+            <td>{eventLabels[step.id] || (step.id === 'install' ? copy.eventInstall : step.id)}</td>
+            <td className="ab-admin-num">{String(step.devices || 0)}</td>
+            <td className="ab-admin-num">{percent(step.devices || 0, funnelBase)}</td>
+          </tr>)}</tbody></table></div>
+        </article>
+      )}
+      {retention && (
+        <article className="ab-admin-panel">
+          <h2>{copy.retention}</h2>
+          <p className="ab-admin-note">{copy.retentionHint}</p>
+          <div className="ab-admin-grid">
+            {(['d1', 'd7', 'd30'] as const).map(key => {
+              const row = retention[key] || {};
+              const label = key === 'd1' ? copy.retentionD1 : key === 'd7' ? copy.retentionD7 : copy.retentionD30;
+              return (
+                <article className="ab-admin-card" key={key}>
+                  <span>{label}</span>
+                  <strong>{percent(row.returned || 0, row.eligible || 0)}</strong>
+                  <span>{String(row.returned || 0)} {copy.retentionOf} {String(row.eligible || 0)}</span>
+                </article>
+              );
+            })}
+          </div>
+        </article>
+      )}
       <article className="ab-admin-panel">
         <h2>{copy.platforms}</h2>
         <div className="ab-admin-status-line">

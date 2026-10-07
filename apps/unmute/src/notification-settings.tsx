@@ -1,3 +1,4 @@
+import { trackReminderEnabled } from './observability';
 import { useEffect, useState } from 'react';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import { appDocs } from './sync';
@@ -116,6 +117,7 @@ export function NotificationSettingsPanel(){
       daily:nextKinds.daily
     });
     if(!saved)return;
+    if(enabled)trackReminderEnabled();
     if(!nextEnabled){
       await unregisterRemotePush();
       return;

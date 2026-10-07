@@ -20,12 +20,33 @@ const client = createClient({
   },
   deviceId: () => authClient.getOrCreateDeviceId(),
   context: () => ({
-    platform:'web',
-    locale:'ru',
+    platform:analyticsPlatform(),
+    locale:analyticsLocale(),
     build:__APP_BUILD_ID__,
-    premium:false
+    premium:analyticsPaying
   })
 });
+
+/* Every event says where it came from and whether the person pays (audit R1): otherwise web and
+   the app cannot be compared and conversion cannot be counted. */
+let analyticsPaying=false;
+
+export function analyticsPlatform():'android'|'ios'|'web'{
+  const cap=(globalThis as unknown as {Capacitor?:{isNativePlatform?():boolean;getPlatform?():string}}).Capacitor;
+  if(!cap?.isNativePlatform?.())return 'web';
+  const platform=cap.getPlatform?.();
+  return platform==='ios'?'ios':platform==='android'?'android':'web';
+}
+
+function analyticsLocale():string{
+  const lang=typeof document==='undefined'?'':document.documentElement.lang;
+  return lang==='en'?'en':'ru';
+}
+
+/** A paying learner: UnMute Plus is active or a course is bought. */
+export function setAnalyticsPaying(paying:boolean):void{
+  analyticsPaying=paying;
+}
 
 export type CompletionRunMode='first'|'resume'|'replay';
 export type CompletionKind='lesson'|'day';
@@ -131,7 +152,12 @@ export function purchaseEventName(
   phase:'purchase_started'|'purchase_completed',
   sku:string
 ):string{
-  return phase+'.'+(sku.startsWith('course.') ? 'course' : sku.startsWith('plus.') ? 'plus' : 'other');
+  return phase+'.'+(
+    sku.startsWith('course.') ? 'course'
+      : sku.startsWith('bundle.') ? 'bundle'
+        : sku.startsWith('plus.') ? 'plus'
+          : 'other'
+  );
 }
 
 export function trackLessonCompleted(runId:string,mode:CompletionRunMode):void{
@@ -156,4 +182,66 @@ export function trackPurchaseStarted(sku:string):void{
 
 export function trackPurchaseCompleted(sku:string):void{
   void client.track(purchaseEventName('purchase_completed',sku));
+}
+
+/* Inside a day and the ways back (audit R7). «Once» events go through the outbox with a stable id,
+   so a retry or a second visit does not count twice. */
+function trackOnce(event:string,id:string):void{
+  const items=readAnalyticsOutbox();
+  if(!items.some(item=>item.id===id)){
+    items.push({id,event});
+    writeAnalyticsOutbox(items);
+  }
+  void flushAnalyticsOutbox();
+}
+
+export const COURSE_DAY_MILESTONES=[1,3,7] as const;
+
+/** A new course day opened for the first time on this device. */
+export function trackDayStarted(setId:string,nodeId:string):void{
+  trackOnce('day_started','day-started:'+setId+':'+nodeId);
+}
+
+/** Day 1, 3 and 7 of a course passed — the funnel steps in Admin. */
+export function trackCourseDay(setId:string,dayIndex:number):void{
+  if(!(COURSE_DAY_MILESTONES as readonly number[]).includes(dayIndex))return;
+  trackOnce('course_day.'+dayIndex,'course-day:'+setId+':'+dayIndex);
+}
+
+export type AnalyticsSectionId='tasks'|'drill'|'listening'|'speaking'|'dialogue'|'ai';
+
+export function trackSectionCompleted(setId:string,nodeId:string,section:AnalyticsSectionId):void{
+  trackOnce('section_completed.'+section,'section:'+setId+':'+nodeId+':'+section);
+}
+
+export function trackReviewCompleted():void{
+  void client.track('review_completed');
+}
+
+export function trackWordSaved():void{
+  void client.track('word_saved');
+}
+
+export function trackReminderEnabled():void{
+  void client.track('reminder_enabled');
+}
+
+export function trackSignedIn():void{
+  void client.track('signed_in');
+}
+
+export function trackAiError():void{
+  void client.track('ai_error');
+}
+
+/* Access answers (sign in, Plus, the free try used) are part of the offer, not AI failures. */
+const AI_ACCESS_CODES=new Set(['auth_required','premium_required','free_explain_used','trial_used','trial_limit','ai_limit','rate_limited']);
+
+export function reportAiError(error:unknown):void{
+  const code=String((error as {code?:unknown}|null)?.code||'ai_failed');
+  if(!AI_ACCESS_CODES.has(code))trackAiError();
+}
+
+export function trackSaveError():void{
+  void client.track('save_error');
 }

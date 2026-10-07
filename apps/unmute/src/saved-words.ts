@@ -5,6 +5,7 @@ import type { WordProgressRecord, WordsProgressDocument } from './progress';
 import { readWordsProgress, writeWordsProgress } from './sync';
 import { addWordToReview, removeWordFromReview } from './engine/word-srs';
 import { activitySaveClock } from './activity-progress';
+import { trackWordSaved } from './observability';
 
 /** Query key of the local «Мои слова» document (shared with the word review runtime). */
 export const WORDS_KEY = 'word-review-progress';
@@ -18,7 +19,10 @@ export async function setWordSaved(lexemeId: string, senseId: string, save: bool
   const next = save
     ? addWordToReview(current, lexemeId, senseId, clock.dayNumber, clock.at)
     : removeWordFromReview(current, lexemeId, senseId, clock.at);
-  if(next !== current) await writeWordsProgress(next);
+  if(next !== current){
+    await writeWordsProgress(next);
+    if(save) trackWordSaved();
+  }
 }
 
 /** Drop a word from «Мои слова» with every meaning saved for it. */

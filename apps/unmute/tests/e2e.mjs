@@ -327,7 +327,11 @@ try{
     await admin.locator('.ab-admin-nav').getByRole('button',{name,exact:true}).click();
   };
   await adminTab('Обзор');
-  ok('Admin overview names events in Russian',await appears(admin.getByText('Открыли приложение впервые')));
+  ok('Admin overview names events in Russian',await appears(admin.getByText('Открыли приложение впервые').first()));
+  ok('Admin overview shows the funnel and D1/D7/D30 retention',
+    await appears(admin.getByRole('heading',{name:'Воронка'}))
+    &&await appears(admin.getByRole('heading',{name:'Возвращаются'}))
+    &&await appears(admin.getByText('Прошли день 1').first()));
   ok('Admin overview shows no raw JSON',await admin.locator('.ab-admin-json').count()===0);
   await adminTab('Ошибки');
   ok('Admin errors say how often and when',await appears(admin.getByText(/^1 раз · \d/)));

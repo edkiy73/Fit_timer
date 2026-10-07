@@ -1,5 +1,6 @@
+import { trackReviewCompleted } from './observability';
 import { shownAnswer } from './shown-answer';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import type { Activity } from './content/schema';
@@ -264,6 +265,15 @@ export function ReviewView({
       await runtime.refresh();
     })().catch(()=>setDayCounted(false));
   },[dayFinished,dayCounted,state?.set.id,reviewDayNode?.id]);
+
+  // Analytics: a review gone through to the end (audit R7).
+  const reviewDone=started&&Boolean(session)&&item===null&&completed>0;
+  const reviewTrackedRef=useRef(false);
+  useEffect(()=>{
+    if(!reviewDone||reviewTrackedRef.current)return;
+    reviewTrackedRef.current=true;
+    trackReviewCompleted();
+  },[reviewDone]);
 
   // A running review is a focused run, like a lesson: the bottom bar hides (styles.css).
   const running=started&&item!==null;
