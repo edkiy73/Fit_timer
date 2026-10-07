@@ -17,7 +17,8 @@ export function addWordToReview(
     lexemeId,
     senseId,
     box:0,
-    due:todayDay+1,
+    // A saved word is offered in «Повтор» the same day (audit T2): the words screen promises it.
+    due:todayDay,
     at,
   };
   return {schemaVersion:1,items:{...doc.items,[key]:record}};

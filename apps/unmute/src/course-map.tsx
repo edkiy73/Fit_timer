@@ -507,7 +507,7 @@ export function CourseMapScreen(){
       runtime={runtime}
       activeDayProgress={activeDayProgress}
       onOpen={(nodeId,fromSheet,target)=>{
-        const query=target==='theory'||target==='tasks'
+        const query=target==='theory'||target==='tasks'||target==='dialogue'||target==='ai'
           ? '?section='+encodeURIComponent(target)
           : target
             ? '?mode='+encodeURIComponent(target)

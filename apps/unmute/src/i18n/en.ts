@@ -445,6 +445,8 @@ export const en: Record<keyof typeof ru, string> = {
   'learn.reviewDayText': 'No new topics today. Review what is due: {count}. When you finish, the day counts.',
   'learn.reviewDayClear': 'Nothing is due today. You can count the day.',
   'learn.reviewDayDone': 'Count the day',
+  'learn.reviewDayMixed': 'Nothing is due today, so here are 10 familiar phrases from different topics mixed up. Finish them and the day counts.',
+  'learn.reviewDayMixedStart': 'Phrases mixed up',
   'kind.choice': 'Choose the answer',
   'kind.write': 'Write it in English',
   'kind.chips': 'Build the phrase',

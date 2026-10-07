@@ -1237,3 +1237,59 @@ describe('pruneTaskCursor',()=>{
     expect(pruneTaskCursor(cursor,steps,progress,'skip')).toBeNull();
   });
 });
+
+describe('conversation sections and the review day',()=>{
+  beforeEach(()=>localStorage.clear());
+
+  function renderState(custom:LearnerCourseState,nodeId:string){
+    render(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="learn-test.locale" systemLanguages={['ru']}>
+        <NodeRunnerView runtime={{...runtime,state:custom}} nodeId={nodeId} onExit={vi.fn()} saveSeen={vi.fn(async()=>{})} saveGraded={vi.fn(async()=>{})} savePractice={vi.fn(async()=>{})} />
+      </I18nProvider>
+    );
+  }
+
+  function withNode(extraNode:LearnerCourseState['roadmap']['nodes'][number],activities:LearnerCourseState['set']['activities'],progress=emptyCourseProgress()):LearnerCourseState{
+    return {
+      ...state,
+      set:{...state.set,activities:[...state.set.activities,...activities],roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[extraNode]}]},
+      roadmap:{id:'main',title:{ru:'Путь'},nodes:[extraNode]},
+      progress,
+      roadmapProgress:{...state.roadmapProgress,nodes:[{node:extraNode,complete:false,unlocked:true}],currentNode:extraNode},
+      currentNode:extraNode
+    };
+  }
+
+  it('shows a «Диалог» chip that opens the dialogue (audit T11)',async()=>{
+    const user=userEvent.setup();
+    const dayNine={...node,id:'day-9',dayIndex:9,activityIds:['choice.one','dialogue.one']};
+    renderState(withNode(dayNine,[{
+      id:'dialogue.one',revision:1,type:'dialogue',tags:[],revisionProgress:'preserve',lexiconRefs:[],scene:{ru:'Знакомство в кафе'},
+      lines:[{id:'l1',partner:{ru:'Hi!'},answer:{accepted:['hi'],nearMiss:true,caseSensitive:false}}]
+    }]),'day-9');
+    const nav=await screen.findByRole('navigation',{name:/раздел/i});
+    await user.click(within(nav).getByRole('button',{name:'Диалог'}));
+    expect(await screen.findByText('Hi!')).toBeTruthy();
+    expect(within(nav).getByRole('button',{name:'Диалог'}).getAttribute('aria-current')).toBe('page');
+  });
+
+  it('gives 10 mixed phrases on a review day with nothing due (decision 15)',async()=>{
+    const user=userEvent.setup();
+    const reviewDay={...node,id:'day-8',dayIndex:8,kind:'review' as const,activityIds:['review.day']};
+    const progress=emptyCourseProgress();
+    const patterns=['a','b','c'].map(key=>({
+      id:'pattern.'+key,revision:1,type:'pattern-drill' as const,tags:[],revisionProgress:'preserve' as const,lexiconRefs:[],
+      pattern:{ru:'Тема '+key},modes:['drill' as const],
+      items:[{id:'p.'+key,prompt:{ru:'Фраза '+key},answer:{accepted:['phrase '+key],nearMiss:true,caseSensitive:false}}]
+    }));
+    for(const pattern of patterns)progress.practice.drill[pattern.id]={box:1,due:999999,at:'2026-10-05T10:00:00Z'};
+    renderState(withNode(reviewDay,[
+      {id:'review.day',revision:1,type:'review',tags:[],revisionProgress:'preserve',lexiconRefs:[],source:{activityIds:[],tags:[],dueOnly:true}},
+      ...patterns
+    ],progress),'day-8');
+    expect(await screen.findByText(/Повторять сегодня нечего/)).toBeTruthy();
+    expect(screen.queryByRole('button',{name:'Засчитать день'})).toBeNull();
+    await user.click(screen.getByRole('button',{name:'Фразы вперемешку'}));
+    expect(await screen.findByText(/^Фраза [abc]$/)).toBeTruthy();
+  });
+});

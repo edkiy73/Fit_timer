@@ -65,4 +65,21 @@ describe('lesson section states',()=>{
       ['speaking',false,true]
     ]);
   });
+
+  it('gives a dialogue and a talk with AI their own sections (audit T11)',()=>{
+    const dialogueNode:RoadmapNode={...node,id:'day-9',dayIndex:9,activityIds:['choice','dialogue','talk'],completion:undefined};
+    const withDialogue:CourseSet={...set,activities:[
+      ...set.activities,
+      {id:'dialogue',revision:1,type:'dialogue',tags:[],revisionProgress:'preserve',lexiconRefs:[],scene:{ru:'Кафе'},
+        lines:[{id:'l1',partner:{ru:'Hi'},answer:{accepted:['hi'],nearMiss:true,caseSensitive:false}}]},
+      {id:'talk',revision:1,type:'ai-conversation',tags:[],revisionProgress:'preserve',lexiconRefs:[],scenario:{ru:'Кафе'}} as never
+    ]};
+    const progress=emptyCourseProgress();
+    progress.seen.dialogue={at:'2026-10-05T10:00:00Z'};
+    expect(lessonSectionStates(withDialogue,dialogueNode,progress).map(section=>[section.id,section.labelKey,section.complete,section.blocking])).toEqual([
+      ['tasks','learn.tasks',false,true],
+      ['dialogue','kind.dialogue',true,false],
+      ['ai','kind.ai',false,true]
+    ]);
+  });
 });

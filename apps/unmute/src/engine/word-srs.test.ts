@@ -11,14 +11,14 @@ import {
 } from './word-srs';
 
 describe('personal vocabulary SRS',()=>{
-  it('uses lexeme+sense identity and first schedules tomorrow',()=>{
+  it('uses lexeme+sense identity and first schedules today',()=>{
     let doc=emptyWordsProgress();
     doc=addWordToReview(doc,'lex.work','verb',100,'2026-09-28T10:00:00Z');
     doc=addWordToReview(doc,'lex.work','noun',100,'2026-09-28T10:01:00Z');
 
     expect(Object.keys(doc.items)).toHaveLength(2);
-    expect(doc.items[wordProgressKey('lex.work','verb')]?.due).toBe(101);
-    expect(doc.items[wordProgressKey('lex.work','noun')]?.due).toBe(101);
+    expect(doc.items[wordProgressKey('lex.work','verb')]?.due).toBe(100);
+    expect(doc.items[wordProgressKey('lex.work','noun')]?.due).toBe(100);
   });
 
   it('keeps the legacy word intervals and reset semantics (a forgotten word is due tomorrow)',()=>{

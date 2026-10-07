@@ -52,10 +52,12 @@ export function buildMixedDrillActivity(
 
 export function MixedDrillView({
   activity,
-  onDone
+  onDone,
+  doneLabel
 }:{
   activity:PatternActivity;
   onDone:()=>void;
+  doneLabel?:string;
 }){
   return (
     <PatternDrillView
@@ -64,6 +66,7 @@ export function MixedDrillView({
       savePractice={async()=>{}}
       variant="mixed"
       onDone={onDone}
+      {...(doneLabel?{doneLabel}:{})}
     />
   );
 }

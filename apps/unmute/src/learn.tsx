@@ -32,6 +32,7 @@ import { stageForDay, stageNameKey } from './course-stages';
 import { TheoryContent } from './theory-content';
 import { ExerciseKind } from './exercise-kind';
 import { WordChips, answerWords, buildChips, chipsText } from './word-chips';
+import { MixedDrillView, buildMixedDrillActivity, studiedPatternActivities } from './mixed-drill';
 import { AnswerModeTransition } from './answer-mode-transition';
 import { effectiveNodeRequirements, isNodeRequirementComplete, practiceProgressComplete } from './engine/course-progress';
 import { roadmapProgressFromDocument } from './progress-actions';
@@ -42,7 +43,7 @@ import { sentenceResponseStage, type SentenceResponseKind } from './engine/sente
 import { MOTION, prefersReducedMotion } from './motion';
 import { promptForResponse } from './prompt-mode';
 import { SYSTEM_BACK_EVENT } from './native-back';
-import { lessonSectionStates, type LessonSectionId } from './lesson-sections';
+import { CONVERSATION_SECTION_TYPE, isConversationSection, lessonSectionStates, type ConversationSectionId, type LessonSectionId } from './lesson-sections';
 import { clearPracticeRunStatePrefix } from './practice-run-state';
 import { clearRecentDayCompletionForStartedNode, rememberRecentDayCompletion } from './recent-day-completion';
 
@@ -155,7 +156,7 @@ export interface NodeRunnerViewProps {
   /** Open this step first (e.g. «Скажи вслух» → the day's phrases, speaking mode). */
   startActivityId?:string;
   /** Open a concrete lesson section from Route. */
-  startSection?:Extract<LessonSectionId,'theory'|'tasks'>;
+  startSection?:Extract<LessonSectionId,'theory'|'tasks'>|ConversationSectionId;
   startMode?:PracticeSrsKind;
   /** Explicit return to an already-running lesson (e.g. after Plus purchase). */
   resumeSavedRun?:boolean;
@@ -582,6 +583,7 @@ export function NodeRunnerView({
   const [result,setResult]=useState<boolean|null>(null);
   const [nearResult,setNearResult]=useState(false);
   const [busy,setBusy]=useState(false);
+  const [reviewMixed,setReviewMixed]=useState<Extract<Activity,{type:'pattern-drill'}>|null>(null);
   const [answerSaveError,setAnswerSaveError]=useState(false);
   const [theoryOpen,setTheoryOpen]=useState(false);
   const [score,setScore]=useState({correct:0,total:0});
@@ -757,7 +759,11 @@ export function NodeRunnerView({
       setRunHydrated(true);
       return;
     }
-    const requested=startActivityId?steps.findIndex(item=>item.id===startActivityId):-1;
+    const requested=startActivityId
+      ? steps.findIndex(item=>item.id===startActivityId)
+      : isConversationSection(startSection)
+        ? steps.findIndex(item=>item.type===CONVERSATION_SECTION_TYPE[startSection])
+        : -1;
     const forcedTheory=startSection==='theory';
     const forcedTasks=startSection==='tasks';
     const forcedPractice=startMode
@@ -1299,12 +1305,34 @@ export function NodeRunnerView({
   };
 
 
+  // A dialogue or a talk with AI is its own section: open it alone, the parked Tasks section waits.
+  const conversationIndex=(id:ConversationSectionId)=>steps.findIndex(item=>item.type===CONVERSATION_SECTION_TYPE[id]);
+  const openConversation=(id:ConversationSectionId)=>{
+    const index=conversationIndex(id);
+    if(index<0||stepIndex===index)return;
+    captureTaskSection();
+    begin(index,false);
+    setOrder([index]);
+    setFirstPass(1);
+    setIntro(false);
+    setPracticeMode(undefined);
+    setPracticeModeIsolated(false);
+  };
+
   const setId=state.set.id;
   const stage=stageForDay(node.dayIndex,state.set.id);
   const sectionStates=lessonSectionStates(state.set,node,state.progress);
   const sectionComplete=(id:LessonSectionId)=>sectionStates.find(section=>section.id===id)?.complete===true;
   // «Завершить» only when this section is the last unfinished part of the day; otherwise «Далее».
-  const currentSectionId:LessonSectionId|null=isRegularTask(activity??undefined)?'tasks':activity?.type==='pattern-drill'&&practiceMode?practiceMode:null;
+  const currentSectionId:LessonSectionId|null=isRegularTask(activity??undefined)
+    ? 'tasks'
+    : activity?.type==='pattern-drill'&&practiceMode
+      ? practiceMode
+      : activity?.type==='dialogue'
+        ? 'dialogue'
+        : activity?.type==='ai-conversation'
+          ? 'ai'
+          : null;
   const otherSectionsPending=sectionStates.some(section=>section.id!=='theory'&&section.id!==currentSectionId&&!section.complete)
     // A replay of a passed day still has its other sections ahead.
     ||(replay&&replaySections().some(section=>section.id!==currentSectionId&&!replayDoneRef.current.has(section.id)));
@@ -1341,6 +1369,12 @@ export function NodeRunnerView({
         t(MODE_KEY[mode]),
         !intro&&activity?.type==='pattern-drill'&&practiceMode===mode,
         ()=>openPractice(mode)
+      ))}
+      {(['dialogue','ai'] as ConversationSectionId[]).filter(id=>conversationIndex(id)>=0).map(id=>navChip(
+        id,
+        t(id==='dialogue'?'kind.dialogue':'kind.ai'),
+        !intro&&currentSectionId===id,
+        ()=>openConversation(id)
       ))}
     </nav>
   );
@@ -1604,6 +1638,8 @@ export function NodeRunnerView({
     ? (practiceProgress??{current:0,total:activity.items.length})
     : null;
   const dueReview=activity.type==='review'?buildCourseReviewSession(state.set,state.progress,activitySaveClock().dayNumber).actionableCount:0;
+  // Nothing due: the day gives 10 familiar phrases mixed up and counts after them (decision 15).
+  const reviewMixedAvailable=activity.type==='review'&&dueReview===0&&studiedPatternActivities(state.set.activities,state.progress).length>=3;
   const completeReviewDay=async()=>{
     if(busy)return;
     setBusy(true);
@@ -1842,15 +1878,23 @@ export function NodeRunnerView({
         />
       )}
 
-      {activity.type==='review'&&(
+      {activity.type==='review'&&reviewMixed&&(
+        <MixedDrillView activity={reviewMixed} doneLabel={t('learn.reviewDayDone')} onDone={()=>void completeReviewDay()} />
+      )}
+
+      {activity.type==='review'&&!reviewMixed&&(
         <article className="learn-card">
           <ExerciseKind kind="review" />
           <h3>{t('learn.reviewDayTitle')}</h3>
-          <p className="learn-hint">{dueReview>0?t('learn.reviewDayText',{count:dueReview}):t('learn.reviewDayClear')}</p>
+          <p className="learn-hint">{dueReview>0
+            ? t('learn.reviewDayText',{count:dueReview})
+            : reviewMixedAvailable?t('learn.reviewDayMixed'):t('learn.reviewDayClear')}</p>
           <div className="runner-action">
             {dueReview>0
               ? <button className="primary-button" type="button" onClick={()=>onReviewDay(node.id)}>{t('today.reviewStart')}</button>
-              : <button className="primary-button" type="button" disabled={busy} onClick={()=>void completeReviewDay()}>{t('learn.reviewDayDone')}</button>}
+              : reviewMixedAvailable
+                ? <button className="primary-button" type="button" onClick={()=>setReviewMixed(buildMixedDrillActivity(state.set.activities,state.progress))}>{t('learn.reviewDayMixedStart')}</button>
+                : <button className="primary-button" type="button" disabled={busy} onClick={()=>void completeReviewDay()}>{t('learn.reviewDayDone')}</button>}
           </div>
         </article>
       )}
@@ -1893,7 +1937,7 @@ export function NodeRunnerScreen(){
   const mode=search.get('mode');
   const startMode=mode==='drill'||mode==='listening'||mode==='speaking'?mode:undefined;
   const section=search.get('section');
-  const startSection=section==='theory'||section==='tasks'?section:undefined;
+  const startSection=section==='theory'||section==='tasks'||isConversationSection(section)?section:undefined;
   const startActivityId=search.get('activity')||undefined;
   const resumeSavedRun=search.get('resume')==='1';
   const replayTasksOnly=search.get('tasks')==='1';
