@@ -5,7 +5,8 @@
 /** Personal keys outside the synced documents: unfinished lessons, review session, trial, onboarding. */
 export const PERSONAL_PREFIXES = [
   'unmute.lesson-run:', 'unmute.pattern-run:', 'unmute.lesson-completion:', 'unmute.review-budget:',
-  'unmute.review-seed:', 'unmute.recent-day-completion:', 'unmute.course-map-reward:', 'unmute.aiTrial.'
+  'unmute.review-seed:', 'unmute.recent-day-completion:', 'unmute.course-map-reward:', 'unmute.aiTrial.',
+  'unmute.pace-ack:'
 ];
 export const PERSONAL_KEYS = ['unmute.onboarding.v1'];
 
