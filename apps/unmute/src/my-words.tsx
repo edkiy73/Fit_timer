@@ -16,10 +16,13 @@ const STATUS_KEY: Record<SavedWordStatus, string> = {
 /** «Мои слова»: words saved from the dictionary, with their review stage, search and removal. */
 export function MyWordsView({
   wordRuntime,
-  remove=lexemeId=>removeSavedWord(lexemeId)
+  remove=lexemeId=>removeSavedWord(lexemeId),
+  screen=false
 }:{
   wordRuntime:WordReviewRuntimeValue|null;
   remove?:(lexemeId:string,senseId:string)=>Promise<void>;
+  /** Its own screen: a screen title like Settings and Reference, not a section title. */
+  screen?:boolean;
 }){
   const {t,locale}=useI18n();
   const [query,setQuery]=useState('');
@@ -47,10 +50,14 @@ export function MyWordsView({
 
   return (
     <section className="my-words" aria-labelledby="my-words-title">
-      <div className="section-head">
-        <h3 id="my-words-title">{t('words.title')}</h3>
-        {words.length>0&&<span className="section-count">{words.length}</span>}
-      </div>
+      {screen ? (
+        <header className="screen-head"><h2 id="my-words-title">{t('words.title')}</h2></header>
+      ) : (
+        <div className="section-head">
+          <h3 id="my-words-title">{t('words.title')}</h3>
+          {words.length>0&&<span className="section-count">{words.length}</span>}
+        </div>
+      )}
       {words.length>0&&<p className="section-lead">{t('words.lead')}</p>}
 
       {words.length===0 ? (
@@ -116,7 +123,7 @@ export function MyWordsScreen(){
   return (
     <section className="review-shell" aria-label={t('words.title')}>
       <button className="learn-back" type="button" onClick={()=>navigate('/account')}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
-      <MyWordsView wordRuntime={useWordReviewRuntime()} />
+      <MyWordsView wordRuntime={useWordReviewRuntime()} screen />
     </section>
   );
 }
