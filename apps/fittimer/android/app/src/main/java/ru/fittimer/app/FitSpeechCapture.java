@@ -25,8 +25,14 @@ import org.vosk.android.RecognitionListener;
  * каждый перезапуск распознавания оставлял нативный Recognizer висеть в памяти.
  */
 final class FitSpeechCapture {
+    interface LevelListener {
+        void onLevel(double level);
+    }
+
     private final Recognizer recognizer;
     private final AudioRecord recorder;
+    private final LevelListener levelListener;
+    private volatile int sensitivity;
     private final Handler main = new Handler(Looper.getMainLooper());
     private Thread thread;
     private volatile boolean running = false;
@@ -36,8 +42,10 @@ final class FitSpeechCapture {
     // распознаватель не идёт: приложение само говорит (см. holdFor).
     private volatile long holdUntilMs = 0L;
 
-    FitSpeechCapture(Recognizer recognizer) throws IOException {
+    FitSpeechCapture(Recognizer recognizer, int sensitivity, LevelListener levelListener) throws IOException {
         this.recognizer = recognizer;
+        this.sensitivity = clampSensitivity(sensitivity);
+        this.levelListener = levelListener;
         int minBytes = AudioRecord.getMinBufferSize(VoiceAutoGain.SAMPLE_RATE,
             AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
         // запас в два кадра: чтение не должно терять звук, пока Vosk декодирует
@@ -59,6 +67,39 @@ final class FitSpeechCapture {
      */
     void holdFor(long ms) {
         holdUntilMs = System.currentTimeMillis() + Math.max(0L, ms);
+    }
+
+    void setSensitivity(int value) {
+        sensitivity = clampSensitivity(value);
+    }
+
+    int sensitivity() {
+        return sensitivity;
+    }
+
+    static double thresholdFor(int value) {
+        // Шкала интерфейса 0..10: слева телефон должен быть ближе, справа слышит
+        // тихую речь дальше. Уровень ниже — порог ниже — чувствительность выше.
+        return 70.0 - clampSensitivity(value) * 5.5;
+    }
+
+    private static int clampSensitivity(int value) {
+        return Math.max(0, Math.min(10, value));
+    }
+
+    private static double inputLevel(short[] buf, int len) {
+        if (len <= 0) return 0.0;
+        double sum = 0.0;
+        for (int i = 0; i < len; i++) {
+            double sample = buf[i];
+            sum += sample * sample;
+        }
+        double rms = Math.sqrt(sum / len);
+        if (rms <= 0.0) return 0.0;
+        double dbfs = 20.0 * Math.log10(rms / 32768.0);
+        // -72 dBFS = почти тишина, -18 dBFS = очень громкая речь рядом.
+        double normalized = (dbfs + 72.0) / 54.0 * 100.0;
+        return Math.max(0.0, Math.min(100.0, normalized));
     }
 
     void startListening(final RecognitionListener listener) {
@@ -115,6 +156,8 @@ final class FitSpeechCapture {
                 held = false;
                 recognizer.reset();
             }
+            final double level = inputLevel(buf, n);
+            if (levelListener != null) post(() -> levelListener.onLevel(level));
             agc.process(buf, n);
             if (recognizer.acceptWaveForm(buf, n)) {
                 final String result = recognizer.getResult();
