@@ -1654,7 +1654,12 @@ AI возвращает **целевую структуру программы �
           "ref": "ex_2",
           "replace": {
             "movementChanged": false,
-            "stages": [{"...": "полный AI-owned stage spec"}]
+            "stages": [
+              {"ref": "mv_1"},
+              {"ref": "mv_2", "replace": {"...": "полный prescription + advance"}},
+              {"new": {"...": "полный stage spec"}}
+            ],
+            "removedStageIds": []
           }
         },
         {
@@ -1686,8 +1691,15 @@ AI возвращает **целевую структуру программы �
 - `patch` всегда означает ЧАСТИЧНУЮ правку существующей сущности (используем для plan/program metadata; `null` явно очищает nullable поле);
 - `replace` всегда означает ПОЛНЫЙ новый AI-owned exercise spec существующего слота;
 - `replace.movementChanged` обязателен;
-- `replace.stages` содержит 1..4 полных stage specs БЕЗ app-owned IDs/state/media;
-- новый объект = `new` с 1..4 stage specs; постоянные exercise/stage IDs выдаёт приложение после validation;
+- если `replace.movementChanged:false`, stages используют тот же target-state + refs принцип:
+  - `{"ref":"mv_1"}` = stage без изменений;
+  - `{"ref":"mv_2","replace":{...}}` = полный новый AI-owned spec существующего stage;
+  - `{"new":{...}}` = новый stage;
+  - `removedStageIds` = явные удаления;
+  - каждый существующий stageId встречается ровно один раз либо находится в removedStageIds;
+  - текущий currentStageId нельзя удалить при movementChanged:false;
+- если `replace.movementChanged:true`, refs старых stages не используются: AI возвращает 1..4 новых stage specs, приложение выдаёт новый набор stage IDs;
+- новый exercise object = `new` с 1..4 stage specs; постоянные exercise/stage IDs выдаёт приложение после validation;
 - удаление никогда не выводится из «пропажи» объекта — только явно;
 - AI не пишет `progressState`, history, media/base64, sync/trainer metadata и app-owned IDs.
 
@@ -1714,14 +1726,40 @@ AI возвращает **целевую структуру программы �
 Отдельный `exercise_edit` schema:
 - ID исходного exercise slot;
 - обязательный `movementChanged: true|false`;
-- полный AI-owned spec редактируемого slot/stages.
+- target-state stage list.
 
-Не использовать schema всей программы.
+При `movementChanged:false` применяется тот же stage refs contract:
+- unchanged stage → `ref`;
+- changed stage → `ref + replace(full stage spec)`;
+- added stage → `new(full stage spec)`;
+- removed stage → явный `removedStageIds`;
+- каждый старый stageId либо упомянут ровно один раз, либо явно удалён;
+- текущий stageId удалять нельзя;
+- порядок массива = новый порядок chain.
 
-Правила применения:
-- `movementChanged:false` → сохраняем текущий `movementStageId`; AI-owned prescription/chain обновляются, а перенос/сброс progressState решает domain layer по изменившимся полям;
-- `movementChanged:true` → приложение создаёт НОВЫЙ набор stageId, выбирает новый currentStageId и сбрасывает progressState; старая chain больше не активна, но history остаётся читаемой по старым movementStageId + movementStageName;
-- AI никогда не пишет app-owned stage IDs.
+Так сохраняются stageId/history/mediaRef существующих stages даже при add/remove/reorder.
+
+При `movementChanged:true`:
+- refs старой chain запрещены;
+- AI возвращает новый набор 1..4 stage specs;
+- приложение создаёт новые stageId/currentStageId;
+- progressState сбрасывается.
+
+AI никогда не пишет app-owned exercise/stage IDs в новых specs и никогда не пишет progressState/media.
+
+### Preview AI-правки
+
+Перед применением показывать структурный diff:
+- добавлен stage;
+- изменён stage;
+- удалён stage;
+- перемещён stage;
+- какой stage сейчас current.
+
+Если `movementChanged:false`, но AI поменял название текущего stage, отдельно показать:
+> Название изменилось, прогресс сохранится.
+
+Не добавляем эвристический guard «похоже ли новое название на старое движение»: identity задаётся контрактом + refs, а физическая нагрузка/формат дополнительно проходят обычные domain validation/reset rules.
 
 ### Замена упражнения с тренировки
 
