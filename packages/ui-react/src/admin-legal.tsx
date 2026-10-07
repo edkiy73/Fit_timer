@@ -14,7 +14,9 @@ const COPY = {
     country:'Страна', email:'Почта для обращений', emailHint:'Сюда пишут о данных и просят удалить аккаунт',
     ageFrom:'Возраст, с которого можно пользоваться', save:'Сохранить', saving:'Сохраняю…', saved:'Сохранено. Страницы покажут новые данные сразу.',
     saveError:'Не сохранилось: ', badEmail:'Проверь адрес почты.', loading:'Загружаю…', loadError:'Не удалось загрузить настройки.',
-    preview:'Как будет на странице', previewEmpty:'(текст страницы)'
+    preview:'Как будет на странице', previewEmpty:'(текст страницы)',
+    terms:'Условия использования (оферта)', termsHint:'Видны в приложении на странице «Условия использования» и по ссылкам с экранов покупки, из Настроек и онбординга. Формат — Markdown: # заголовок, ## раздел, - пункт. {owner}, {country}, {email}, {ageFrom} подставятся из полей выше. Сверь текст с юристом.',
+    termsReset:'Вернуть текст по умолчанию', termsDefault:'Пока здесь текст по умолчанию — он и показывается в приложении.'
   },
   en: {
     title:'Owner and contacts',
@@ -23,17 +25,19 @@ const COPY = {
     country:'Country', email:'Contact email', emailHint:'People write here about their data and account deletion',
     ageFrom:'Minimum age', save:'Save', saving:'Saving…', saved:'Saved. The pages show the new details right away.',
     saveError:'Not saved: ', badEmail:'Check the email address.', loading:'Loading…', loadError:'Could not load settings.',
-    preview:'On the page', previewEmpty:'(page text)'
+    preview:'On the page', previewEmpty:'(page text)',
+    terms:'Terms of use', termsHint:'Shown in the app on the «Terms of use» page and linked from purchase screens, Settings and onboarding. Markdown: # title, ## section, - item. {owner}, {country}, {email}, {ageFrom} are filled from the fields above. Check the text with a lawyer.',
+    termsReset:'Restore the default text', termsDefault:'This is the default text; the app shows it as is.'
   }
 } as const;
 
 type Settings = {legal?: LegalDetails} & Record<string, unknown>;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function AdminLegal({client, adminKey, locale = 'ru'}: {client: AdminClient; adminKey: string; locale?: 'ru' | 'en'}){
+export function AdminLegal({client, adminKey, locale = 'ru', defaultTerms = ''}: {client: AdminClient; adminKey: string; locale?: 'ru' | 'en'; defaultTerms?: string}){
   const copy = COPY[locale];
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [legal, setLegal] = useState<Required<LegalDetails>>({owner:'', country:'', email:'', ageFrom:14});
+  const [legal, setLegal] = useState<Required<LegalDetails>>({owner:'', country:'', email:'', ageFrom:14, terms:''});
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -85,6 +89,16 @@ export function AdminLegal({client, adminKey, locale = 'ru'}: {client: AdminClie
         </label>
         <p className="ab-admin-empty">{copy.preview}: {operator}</p>
       </article>
+      {defaultTerms && <article className="ab-admin-panel">
+        <h2>{copy.terms}</h2>
+        <p className="ab-admin-empty">{copy.termsHint}</p>
+        {/* Empty in the settings = the product's default: the owner edits a copy of it. */}
+        <textarea rows={18} value={legal.terms || defaultTerms} maxLength={40000}
+          onChange={e => setLegal({...legal, terms:e.target.value === defaultTerms ? '' : e.target.value})} />
+        {legal.terms
+          ? <button type="button" className="ab-admin-secondary" onClick={() => setLegal({...legal, terms:''})}>{copy.termsReset}</button>
+          : <p className="ab-admin-empty">{copy.termsDefault}</p>}
+      </article>}
       <div className="ab-admin-savebar">
         <button type="button" disabled={busy} onClick={() => void save()}>{copy.save}</button>
         {note && <span role="status">{note}</span>}

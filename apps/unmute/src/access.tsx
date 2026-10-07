@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { SignInForm, useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { sharedUiLocale, useI18n } from '@appbase/ui-react/i18n.js';
@@ -233,6 +233,7 @@ export function AccessOfferView({
         </button>
         <p className="access-fineprint">
           {canBuy === false ? t('access.unavailable') : t('access.fineprint')}
+          {' '}{t('access.termsLead')} <Link to="/legal/terms">{t('access.termsLink')}</Link>.
         </p>
         <button className="link-button" type="button" disabled={refreshing} onClick={onRestore}>
           {refreshing ? t('access.refreshing') : t('access.restore')}

@@ -26,7 +26,10 @@ function createAIHandler(AI_ACTIONS, options = {}){
     // количества Serverless Functions на Vercel. /api/config переписывается сюда.
     if(req.method === 'GET' && req.query && req.query.public_config === '1'){
       const s = await getSettings();
-      return send(res, 200, {ai:{enabled:!!s.enabled && capabilities().enabled('ai')}, prices:s.prices, payment:s.payment, update:s.update, legal:s.legal});
+      const {terms = '', ...legal} = s.legal || {};
+      // The terms text is long: only the terms page asks for it (?terms=1), not every app start.
+      if(req.query.terms === '1') return send(res, 200, {terms, legal});
+      return send(res, 200, {ai:{enabled:!!s.enabled && capabilities().enabled('ai')}, prices:s.prices, payment:s.payment, update:s.update, legal});
     }
 
     if(req.method !== 'POST') return fail(res, 405, 'method_not_allowed');

@@ -27,6 +27,8 @@ export interface AdminPanelProps {
   extraSections?: readonly AdminSection[];
   /** Readable names of the product's analytics events, in the Admin language. */
   eventLabels?: Readonly<Record<string, string>>;
+  /** The product's own terms of use (Markdown), shown in the legal tab until the owner edits them. */
+  defaultTerms?: string;
 }
 
 const COPY = {
@@ -333,7 +335,7 @@ function paymentStatusLabel(status: unknown, copy: Copy){
   return status === 'paid' ? copy.statusPaid : status === 'refunded' ? copy.statusRefunded : status === 'canceled' ? copy.statusCanceled : String(status || '');
 }
 
-export function AdminPanel({client, productName, locale='ru', extraSections=NO_SECTIONS, eventLabels=NO_LABELS}: AdminPanelProps){
+export function AdminPanel({client, productName, locale='ru', extraSections=NO_SECTIONS, eventLabels=NO_LABELS, defaultTerms=''}: AdminPanelProps){
   const copy = COPY[locale];
   const [key, setKey] = useState(() => {
     try { return sessionStorage.getItem('appbase.admin.key') || ''; } catch (_) { return ''; }
@@ -598,7 +600,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
       {tab === 'campaigns' && key && <AdminCampaigns client={client} adminKey={key} locale={locale} />}
       {tab === 'ai' && key && <section className="ab-admin-stack"><AdminAiSettings client={client} adminKey={key} locale={locale} /></section>}
       {tab === 'billing-keys' && key && <section className="ab-admin-stack"><AdminBillingKeys client={client} adminKey={key} locale={locale} /></section>}
-      {tab === 'legal' && key && <section className="ab-admin-stack"><AdminLegal client={client} adminKey={key} locale={locale} /></section>}
+      {tab === 'legal' && key && <section className="ab-admin-stack"><AdminLegal client={client} adminKey={key} locale={locale} defaultTerms={defaultTerms} /></section>}
 
       {extraSections.map(section => tab === section.id && key ? (
         <section key={section.id} className="ab-admin-stack">
