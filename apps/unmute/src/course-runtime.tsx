@@ -129,7 +129,8 @@ export function LearnerCourseProvider({
   const learnedSignature=learnedIds.join('|');
 
   useEffect(()=>{
-    if(!auth.session||!setQuery.data||setQuery.data.access!=='full'||!learnedIds.length)return;
+    // Only a set the server just confirmed as full (audit T6): a cached copy may outlive the purchase.
+    if(!auth.session||!setQuery.data||setQuery.data.access!=='full'||setQuery.data.fromCache||!learnedIds.length)return;
     if(setQuery.data.set.access.mode!=='entitlement')return;
     void retainLearnedActivities(setQuery.data.set.id,learnedIds).catch(()=>undefined);
   },[auth.session,setQuery.data,learnedSignature]);

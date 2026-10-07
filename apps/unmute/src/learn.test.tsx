@@ -1295,3 +1295,27 @@ describe('conversation sections and the review day',()=>{
     expect(await screen.findByText(/^Фраза [abc]$/)).toBeTruthy();
   });
 });
+
+describe('a paid day opened by a direct link (audit T4)',()=>{
+  it('offers the course instead of a dead end',async()=>{
+    const user=userEvent.setup();
+    const onUnlock=vi.fn();
+    const paidDay={...node,id:'day-5',dayIndex:5};
+    const paid:LearnerCourseState={
+      ...state,
+      set:{...state.set,access:{mode:'entitlement',entitlement:'course.general',freePreview:{days:2}} as never,roadmaps:[{id:'main',title:{ru:'Путь'},nodes:[paidDay]}]},
+      roadmap:{id:'main',title:{ru:'Путь'},nodes:[paidDay]},
+      roadmapProgress:{...state.roadmapProgress,nodes:[{node:paidDay,complete:false,unlocked:true}],currentNode:paidDay},
+      currentNode:paidDay,
+      access:'preview'
+    };
+    render(
+      <I18nProvider dictionaries={dictionaries} config={{locales:['ru'],default:'ru'}} storageKey="learn-test.locale" systemLanguages={['ru']}>
+        <NodeRunnerView runtime={{...runtime,state:paid}} nodeId="day-5" onExit={vi.fn()} onUnlock={onUnlock} saveSeen={vi.fn(async()=>{})} saveGraded={vi.fn(async()=>{})} savePractice={vi.fn(async()=>{})} />
+      </I18nProvider>
+    );
+    expect(await screen.findByText('Этот день — в полном курсе')).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Открыть доступ'}));
+    expect(onUnlock).toHaveBeenCalledWith('day-5');
+  });
+});
