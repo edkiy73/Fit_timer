@@ -108,5 +108,5 @@ module.exports = async (req, res) => {
   if(rec.by) marks.push(['INCR', `t:${rec.by}:opens`]);
   await store.pipe(marks);
 
-  send(res, 200, {program: rec.program, by: rec.by, byLink: rec.byLink, at: rec.at});
+  send(res, 200, {program: rec.program, includeProgress:rec.includeProgress === true, by: rec.by, byLink: rec.byLink, at: rec.at});
 };

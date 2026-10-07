@@ -156,6 +156,22 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('обычная передача сохраняет только авторство, но не связь для отчётов',
      transfer.by === '@someone' && transfer.src === undefined, JSON.stringify(transfer));
 
+  const transferWithProgress = await page.evaluate(() => {
+    const p = customPrograms.find(x => x.id === 'src1');
+    const x = programTemplateCopy(p, {includeProgress:true});
+    const ex = normPlans(x)[0].exercises[0] || {};
+    return {ps:ex.ps, progFrom:ex.progFrom, stats:x.stats, rotIdx:x.rotIdx, src:x.src, migrated:x.psMigrated};
+  });
+  ok('передача с прогрессией сохраняет фактическую нагрузку упражнения',
+     transferWithProgress.ps && transferWithProgress.ps.n === 2
+       && transferWithProgress.ps.cur.reps === '16' && transferWithProgress.ps.cur.kg === 12
+       && transferWithProgress.migrated === true,
+     JSON.stringify(transferWithProgress));
+  ok('даже с прогрессией не передаются статистика, очередь и связь с тренером',
+     transferWithProgress.stats === undefined && transferWithProgress.rotIdx === undefined
+       && transferWithProgress.src === undefined && transferWithProgress.progFrom === undefined,
+     JSON.stringify(transferWithProgress));
+
   // Resistance policy — часть шаблона, а ps.cur.level — личное состояние владельца.
   const resistanceTransfer = await page.evaluate(() => {
     const source = {
@@ -209,6 +225,39 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('файловый импорт не переносит чужой прогресс',
      imported && imported.rotIdx === undefined && imported.completions === 0 && imported.ps === undefined,
      JSON.stringify(imported));
+
+  const importedProgress = await page.evaluate(async () => {
+    const source = customPrograms.find(x => x.id === 'src1');
+    const p = programTemplateCopy(source, {includeProgress:true});
+    p.name = 'Импорт с прогрессией';
+    const file = new File([JSON.stringify({app:'fittimer',type:'program',v:1,includeProgress:true,program:p})],
+      'program-progress.json',{type:'application/json'});
+    await importProgramFile(file);
+    const got = customPrograms.find(x => x.name === 'Импорт с прогрессией');
+    const ex = got && normPlans(got)[0].exercises[0];
+    return got && ex ? {ps:ex.ps, completions:got.stats && got.stats.completions, src:got.src, migrated:got.psMigrated} : null;
+  });
+  ok('явный файловый экспорт с прогрессией продолжает с текущей нагрузки',
+     importedProgress && importedProgress.ps && importedProgress.ps.n === 2
+       && importedProgress.ps.cur.reps === '16' && importedProgress.ps.cur.kg === 12
+       && importedProgress.migrated === true,
+     JSON.stringify(importedProgress));
+  ok('при переносе прогрессии история и тренерская связь всё равно не копируются',
+     importedProgress && importedProgress.completions === 0 && importedProgress.src === undefined,
+     JSON.stringify(importedProgress));
+
+  const exportChoice = await page.evaluate(() => {
+    const p = customPrograms.find(x => x.id === 'src1');
+    shareProgramWithChoice(p);
+    const modal = $('programExportChoiceModal');
+    const labels = [...modal.querySelectorAll('.choice b')].map(x => x.textContent.trim());
+    modal.classList.remove('open');
+    return {open:modal.classList.contains('open'), labels};
+  });
+  ok('обычная ссылка сначала предлагает выбрать перенос прогрессии',
+     exportChoice.labels.some(x => /текущей прогрессией/i.test(x))
+       && exportChoice.labels.some(x => /без прогрессии/i.test(x)),
+     JSON.stringify(exportChoice));
 
   // ---- обновление той же тренерской программы ----
   const trainerUpdate = await page.evaluate(() => {

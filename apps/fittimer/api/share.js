@@ -89,6 +89,7 @@ module.exports = async (req, res) => {
 
   const linkRec = Object.assign({}, previous || {}, {
     program: prog,
+    includeProgress: body && body.includeProgress === true,
     by,
     byLink: cleanLink(body.byLink, 120),
     to: clampLine(body.to, 40),
