@@ -79,6 +79,10 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
     private Runnable pendingPartialRunnable = null;
     // когда последний раз слышали постороннюю речь (телевизор, разговор) — см. VoiceCommands
     private long lastForeignSpeechMs = 0L;
+    // Чувствительность хранится на устройстве в JS, но нативная сторона держит
+    // актуальный порог прямо во время распознавания.
+    private volatile int recognitionSensitivity = 5;
+    private volatile double recentSignalPeak = 0.0;
 
     @Override
     public void load() {
@@ -91,6 +95,40 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
     private String cleanLanguage(String language) {
         String l = language == null ? "ru" : language.toLowerCase(Locale.ROOT);
         return l.startsWith("en") ? "en" : "ru";
+    }
+
+    private int cleanSensitivity(Integer value) {
+        int v = value == null ? 5 : value;
+        return Math.max(0, Math.min(10, v));
+    }
+
+    private double sensitivityThreshold() {
+        return FitSpeechCapture.thresholdFor(recognitionSensitivity);
+    }
+
+    private boolean signalPassesSensitivity() {
+        return recentSignalPeak >= sensitivityThreshold();
+    }
+
+    private void onMicrophoneLevel(double level) {
+        // Пик держим немного дольше одного кадра, чтобы итог Vosk после короткой
+        // паузы всё ещё относился к только что сказанной команде.
+        recentSignalPeak = Math.max(level, recentSignalPeak * 0.78);
+        JSObject event = new JSObject();
+        event.put("level", Math.round(level * 10.0) / 10.0);
+        event.put("threshold", Math.round(sensitivityThreshold() * 10.0) / 10.0);
+        event.put("sensitivity", recognitionSensitivity);
+        event.put("above", level >= sensitivityThreshold());
+        notifyListeners("speechLevel", event);
+    }
+
+    @PluginMethod
+    public void setRecognitionSensitivity(PluginCall call) {
+        recognitionSensitivity = cleanSensitivity(call.getInt("sensitivity", 5));
+        if (speechService != null) speechService.setSensitivity(recognitionSensitivity);
+        JSObject result = new JSObject();
+        result.put("sensitivity", recognitionSensitivity);
+        call.resolve(result);
     }
 
     @PluginMethod
@@ -380,6 +418,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         }
 
         final String language = cleanLanguage(call.getString("language", "ru"));
+        recognitionSensitivity = cleanSensitivity(call.getInt("sensitivity", recognitionSensitivity));
         if (!VoiceModelWorker.isModelReady(getContext(), language)) {
             JSObject result = new JSObject();
             result.put("started", false);
@@ -423,8 +462,9 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
                         // waits too long for trailing silence and makes "готово" feel laggy.
                         recognizer.setEndpointerMode(Recognizer.EndpointerMode.SHORT);
                         recognizer.setEndpointerDelays(4.0f, 0.28f, 8.0f);
-                        speechService = new FitSpeechCapture(recognizer);
+                        speechService = new FitSpeechCapture(recognizer, recognitionSensitivity, this::onMicrophoneLevel);
                         commandFiredForUtterance = false;
+                        recentSignalPeak = 0.0;
                         speechService.startListening(this);
                         JSObject result = new JSObject();
                         result.put("started", true);
@@ -594,7 +634,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         if (kind.equals(pendingPartialKind)) {
             pendingPartialHits++;
             pendingPartialText = normalized;
-            if (pendingPartialHits >= 2) {
+            if (pendingPartialHits >= 2 && signalPassesSensitivity()) {
                 emitCommand(normalized, kind, 0.0, "partial_fast");
             }
             return;
@@ -609,7 +649,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         // not require the user to pause or pronounce the command slowly.
         long delay = ("done".equals(kind) || "skip".equals(kind)) ? 110L : 70L;
         pendingPartialRunnable = () -> {
-            if (!commandFiredForUtterance && kind.equals(pendingPartialKind)) {
+            if (!commandFiredForUtterance && kind.equals(pendingPartialKind) && signalPassesSensitivity()) {
                 emitCommand(pendingPartialText, kind, 0.0, "partial_debounced");
             }
         };
@@ -646,6 +686,10 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
             emitHeard(text, kind, confidence, "final_low_confidence", false);
             return;
         }
+        if (!signalPassesSensitivity()) {
+            emitHeard(text, kind, confidence, "below_sensitivity", false);
+            return;
+        }
 
         emitCommand(text, kind, confidence, "final", VoiceCommands.spanSec(words));
     }
@@ -664,6 +708,7 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         }
         commandFiredForUtterance = false;
         lastForeignSpeechMs = 0L;
+        recentSignalPeak = 0.0;
         cancelPendingPartial();
     }
 
@@ -676,11 +721,13 @@ public class FitAudioPlugin extends Plugin implements RecognitionListener {
         cancelPendingPartial();
         emitFinalCommand(hypothesis);
         commandFiredForUtterance = false;
+        recentSignalPeak = 0.0;
     }
     @Override public void onFinalResult(String hypothesis) {
         cancelPendingPartial();
         emitFinalCommand(hypothesis);
         commandFiredForUtterance = false;
+        recentSignalPeak = 0.0;
     }
     @Override public void onError(Exception exception) {
         if (recognitionWanted) emitSpeechError("recognition");
