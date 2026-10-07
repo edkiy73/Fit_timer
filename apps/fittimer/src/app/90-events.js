@@ -1288,7 +1288,8 @@ function mountWorkoutSettingsBlocks(){
     voicePackBox:'hfVoicePackBox', voiceRecLang:'hfVoiceRecLang',
     voicePackStatus:'hfVoicePackStatus', voicePackProgress:'hfVoicePackProgress',
     voicePackProgressBar:'hfVoicePackProgressBar', btnVoicePack:'btnHfVoicePack',
-    btnVoiceTest:'btnHfVoiceTest'
+    voiceSensitivityField:'hfVoiceSensitivityField', voiceSensitivityVal:'hfVoiceSensitivityVal',
+    voiceSensitivity:'hfVoiceSensitivity', btnVoiceTest:'btnHfVoiceTest'
   });
   document.querySelectorAll('#hfModalSeg [data-hf]').forEach(btn => {
     btn.dataset.act = 'stageHandsFreeMode';
@@ -1355,6 +1356,7 @@ export async function refreshVoicePackUI(progressEvent){
   if(!native) return;
   if($('voiceRecLang')) $('voiceRecLang').value=recognitionLang;
   if($('hfVoiceRecLang')) $('hfVoiceRecLang').value=recognitionLang;
+  syncVoiceSensitivityControls();
 
   let status = null;
   if(progressEvent && progressEvent.language === recognitionLang) status=progressEvent;
@@ -1456,6 +1458,39 @@ async function previewSelectedVoice(){
    телефон → что сделает приложение». Так понятно, где рвётся: микрофон не
    слышит (строк нет), слышит, но не то слово («не команда»), или слышит
    неуверенно. Работает только вне тренировки: тот же микрофон занят ею. */
+const VOICE_SENSITIVITY_KEY = 'fitVoiceSensitivityV1';
+function voiceSensitivity(){
+  try{
+    const raw=localStorage.getItem(VOICE_SENSITIVITY_KEY);
+    if(raw == null) return 5;
+    const value=Number(raw);
+    return Number.isFinite(value) ? Math.max(0, Math.min(10, Math.round(value))) : 5;
+  }catch(_){ return 5; }
+}
+function voiceSensitivityThreshold(value){
+  const dbfs=-48 - Math.max(0,Math.min(10,Number(value)||0)) * 2.8;
+  return Math.max(0,Math.min(100,(dbfs + 72) / 54 * 100));
+}
+function syncVoiceSensitivityControls(){
+  const value = voiceSensitivity();
+  for(const [rangeId,valueId] of [
+    ['voiceSensitivity','voiceSensitivityVal'],
+    ['hfVoiceSensitivity','hfVoiceSensitivityVal'],
+    ['voiceTestSensitivity','voiceTestSensitivityVal']
+  ]){
+    const range=$(rangeId), label=$(valueId);
+    if(range) range.value=String(value);
+    if(label) label.textContent=String(value);
+  }
+  const threshold=$('voiceTestThreshold');
+  if(threshold) threshold.style.left=voiceSensitivityThreshold(value) + '%';
+}
+function setVoiceSensitivityValue(value){
+  const next=Math.max(0,Math.min(10,Math.round(Number(value)||0)));
+  try{ localStorage.setItem(VOICE_SENSITIVITY_KEY,String(next)); }catch(_){}
+  syncVoiceSensitivityControls();
+  appRuntimeCompat.setVoiceSensitivity(next).catch(()=>{});
+}
 let voiceTestOn = false;
 const VT_KIND = {
   next:'handsfree.commandDone', // совместимость со старыми APK
@@ -1473,18 +1508,34 @@ function voiceTestRow(d){
   row.querySelector('b').textContent = text ? `«${text}»` : t('voicetest.noise');
   row.querySelector('span').textContent = d.accepted && VT_KIND[d.kind] ? t(VT_KIND[d.kind])
     : d.kind && d.source === 'in_speech' ? t('voicetest.inSpeech')
+    : d.kind && d.source === 'below_sensitivity' ? t('voicetest.tooQuiet')
     : d.kind ? t('voicetest.unsure') : t('voicetest.notCommand');
   box.prepend(row);
   while(box.children.length > 8) box.lastChild.remove();
 }
 function onVoiceTestHeard(e){ if(voiceTestOn) voiceTestRow(e.detail || {}); }
+function onVoiceTestLevel(e){
+  if(!voiceTestOn) return;
+  const d=e.detail || {};
+  const level=Math.max(0,Math.min(100,Number(d.level)||0));
+  const threshold=Number.isFinite(Number(d.threshold))
+    ? Math.max(0,Math.min(100,Number(d.threshold)))
+    : voiceSensitivityThreshold(voiceSensitivity());
+  const bar=$('voiceTestLevel'), marker=$('voiceTestThreshold'), stateLabel=$('voiceTestLevelState');
+  if(bar) bar.style.width=level + '%';
+  if(marker) marker.style.left=threshold + '%';
+  if(stateLabel) stateLabel.textContent=t(level >= threshold ? 'voicetest.heard' : 'voicetest.quiet');
+}
 async function openVoiceTest(){
   if(state.live || !appRuntimeCompat.offlineVoice()) return;
   $('voiceTestList').innerHTML = '';
   $('voiceTestStatus').textContent = t('voicetest.listening');
+  if($('voiceTestLevel')) $('voiceTestLevel').style.width='0%';
+  if($('voiceTestLevelState')) $('voiceTestLevelState').textContent=t('voicetest.quiet');
+  syncVoiceSensitivityControls();
   $('voiceTestModal').classList.add('open');
   voiceTestOn = true;
-  const ok = await appRuntimeCompat.startVoiceRecognition(()=>{}, ()=>{ $('voiceTestStatus').textContent = t('voicetest.failed'); }, null, recognitionLang);
+  const ok = await appRuntimeCompat.startVoiceRecognition(()=>{}, ()=>{ $('voiceTestStatus').textContent = t('voicetest.failed'); }, null, recognitionLang, voiceSensitivity());
   if(!ok && voiceTestOn) $('voiceTestStatus').textContent = t('voicetest.failed');
   if(!voiceTestOn) appRuntimeCompat.stopVoiceRecognition(); // успели закрыть, пока микрофон поднимался
 }
@@ -2136,8 +2187,13 @@ export function initEvents(){
       await refreshVoicePackUI();
     };
   }
+  for(const id of ['voiceSensitivity','hfVoiceSensitivity','voiceTestSensitivity']){
+    if($(id)) $(id).oninput = e=>setVoiceSensitivityValue(e.target.value);
+  }
+  syncVoiceSensitivityControls();
   window.addEventListener('fitVoiceModelStatus', e=>refreshVoicePackUI(e.detail));
   window.addEventListener('fitVoiceHeard', onVoiceTestHeard);
+  window.addEventListener('fitVoiceLevel', onVoiceTestLevel);
   // окно закрывают кнопкой, тапом мимо и системным «назад» — микрофон
   // отпускаем в любом из этих случаев, следя за самим окном
   new MutationObserver(()=>{ if(!$('voiceTestModal').classList.contains('open')) stopVoiceTest(); })

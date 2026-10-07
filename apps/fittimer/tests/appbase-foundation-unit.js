@@ -323,7 +323,7 @@ ok('FitTimer owns native voice policy behind runtime compatibility',
   /appRuntimeCompat\.speak\(text/.test(fs.readFileSync('src/app/00-core.js','utf8'))
   && /handleNativeVoiceResult/.test(fs.readFileSync('src/app/80-platform.js','utf8'))
   && /startVoiceRecognition\([\s\S]*recognitionLang/.test(fs.readFileSync('src/app/80-platform.js','utf8'))
-  && /candidate\.startVoiceRecognition\(onResult, onError, onStatus, language\)/.test(runtimeCompatSource));
+  && /candidate\.startVoiceRecognition\(onResult, onError, onStatus, language, sensitivity\)/.test(runtimeCompatSource));
 
 const legacyDependencySource = fs.readFileSync('src/app/00-dependencies.js','utf8');
 const productSyncModuleSource = fs.readFileSync('src/app/sync-schema.ts', 'utf8');

@@ -73,7 +73,7 @@ describe('UnMute speech runtime',()=>{
     const onResult=vi.fn();
     const handle=startRecognition({onResult},'en-GB');
     expect(handle).not.toBeNull();
-    await vi.waitFor(()=>expect(startNative).toHaveBeenCalledWith({language:'en-GB'}));
+    await vi.waitFor(()=>expect(startNative).toHaveBeenCalledWith({language:'en-GB',sensitivity:5}));
     await vi.waitFor(()=>expect(resultListener).not.toBeNull());
     (resultListener as unknown as (event:Record<string,unknown>)=>void)({
       text:'I am home',

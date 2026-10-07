@@ -232,11 +232,19 @@ export const appRuntimeCompat = Object.freeze({
     onResult?: (...args: any[]) => unknown,
     onError?: (...args: any[]) => unknown,
     onStatus?: (...args: any[]) => unknown,
-    language?: string
+    language?: string,
+    sensitivity?: number
   ){
     const candidate = nativeBridge();
     if(!candidate || typeof candidate.startVoiceRecognition !== 'function') return false;
-    try{ return !!(await candidate.startVoiceRecognition(onResult, onError, onStatus, language)); }
+    try{ return !!(await candidate.startVoiceRecognition(onResult, onError, onStatus, language, sensitivity)); }
+    catch(_){ return false; }
+  },
+
+  async setVoiceSensitivity(value: number){
+    const candidate = nativeBridge();
+    if(!candidate || typeof candidate.setVoiceSensitivity !== 'function') return false;
+    try{ return !!(await candidate.setVoiceSensitivity(value)); }
     catch(_){ return false; }
   },
 

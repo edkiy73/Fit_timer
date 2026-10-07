@@ -27,7 +27,8 @@ export interface AudioPlugin {
     eventName: string,
     listener: (event: any) => void
   ): Promise<ListenerHandle> | ListenerHandle;
-  startRecognition?(input: {language: string}): Promise<{started?: boolean; missingModel?: boolean} | null>;
+  startRecognition?(input: {language: string; sensitivity?: number}): Promise<{started?: boolean; missingModel?: boolean} | null>;
+  setRecognitionSensitivity?(input: {sensitivity: number}): Promise<{sensitivity?: number} | null>;
   stopRecognition?(): Promise<unknown>;
   getRecognitionModelStatus?(input: {language: string}): Promise<RecognitionModelStatus>;
   prepareRecognitionModel?(input: {language: string}): Promise<{installed?: boolean; sizeMb?: unknown} | null>;
@@ -56,6 +57,12 @@ export interface RecognitionHandlers {
   onStatus?: (event: Record<string, unknown>) => void;
   /** Raw "what was heard" diagnostics, including utterances that produced no result. */
   onHeard?: (event: Record<string, unknown>) => void;
+  /** Live microphone level diagnostics (0..100) for calibration UI. */
+  onLevel?: (event: Record<string, unknown>) => void;
+}
+
+export interface RecognitionOptions {
+  sensitivity?: number;
 }
 
 export interface SpeechTransport {
@@ -64,7 +71,8 @@ export interface SpeechTransport {
   speak(text: string, options?: SpeakOptions): Promise<boolean>;
   stopSpeaking(): Promise<void>;
   listVoices(): Promise<unknown[]>;
-  startRecognition(handlers: RecognitionHandlers, language?: string): Promise<boolean>;
+  startRecognition(handlers: RecognitionHandlers, language?: string, options?: RecognitionOptions): Promise<boolean>;
+  setRecognitionSensitivity(sensitivity: number): Promise<boolean>;
   stopRecognition(): Promise<void>;
   modelStatus(language?: string): Promise<RecognitionModelStatus>;
   downloadModel(language?: string, onStatus?: (status: ModelDownloadStatus) => void): Promise<boolean>;
@@ -131,7 +139,7 @@ export function createSpeech(options: SpeechOptions): SpeechTransport {
       }catch(_){ return []; }
     },
 
-    async startRecognition(handlers, language){
+    async startRecognition(handlers, language, recognitionOptions = {}){
       if(!audio || !audio.startRecognition) return false;
       await stopRecognition();
       if(!(await requestMicrophone())){
@@ -151,7 +159,11 @@ export function createSpeech(options: SpeechOptions): SpeechTransport {
         await listen('speechHeard', event => {
           if(handlers.onHeard) handlers.onHeard(event || {});
         });
-        const started = await audio.startRecognition({language:lang(language)});
+        await listen('speechLevel', event => {
+          if(handlers.onLevel) handlers.onLevel(event || {});
+        });
+        const sensitivity = Math.max(0, Math.min(10, Number(recognitionOptions.sensitivity ?? 5) || 0));
+        const started = await audio.startRecognition({language:lang(language), sensitivity});
         if(started && started.missingModel){
           if(handlers.onError) handlers.onError('model_missing');
           return false;
@@ -161,6 +173,15 @@ export function createSpeech(options: SpeechOptions): SpeechTransport {
         if(handlers.onError) handlers.onError('recognition');
         return false;
       }
+    },
+
+    async setRecognitionSensitivity(sensitivity){
+      if(!audio || !audio.setRecognitionSensitivity) return false;
+      try{
+        const value = Math.max(0, Math.min(10, Number(sensitivity) || 0));
+        await audio.setRecognitionSensitivity({sensitivity:value});
+        return true;
+      }catch(_){ return false; }
     },
 
     stopRecognition,

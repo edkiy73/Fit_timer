@@ -1454,6 +1454,12 @@
               <div class="voice-pack-progress hidden" id="voicePackProgress"><i id="voicePackProgressBar"></i></div>
               <button type="button" class="btn-secondary voice-pack-btn" id="btnVoicePack" data-act="downloadVoicePack" data-i18n="common.download">Скачать</button>
             </div>
+            <div class="vol-field voice-sensitivity-field" id="voiceSensitivityField">
+              <div class="vol-label"><span data-i18n="voicetest.sensitivity">Чувствительность микрофона</span><b id="voiceSensitivityVal">5</b></div>
+              <input type="range" id="voiceSensitivity" min="0" max="10" step="1" value="5" class="vol-range">
+              <div class="vt-scale"><span data-i18n="voicetest.near">0 · Ближе</span><span data-i18n="voicetest.normal">5 · Обычно</span><span data-i18n="voicetest.far">10 · Дальше</span></div>
+              <p class="field-hint voice-sensitivity-hint" data-i18n="voicetest.sensitivityHint">Выше — слышит более тихую речь с большего расстояния. Ниже — меньше реагирует на звуки вокруг.</p>
+            </div>
             <!-- проверка без тренировки: сказать «готово» с привычного расстояния и увидеть, что услышал телефон -->
             <button type="button" class="hf-commands-link hidden" id="btnVoiceTest" data-act="openVoiceTest" data-i18n="voicetest.open">Проверить, как слышит</button>
           </div>
@@ -1893,6 +1899,15 @@
       <div class="modal-card">
         <span class="mini-label" data-i18n="voicetest.title">Проверка распознавания</span>
         <p class="field-hint" data-i18n="voicetest.hint">Скажи «готово», «пропустить», «пауза» или «продолжить» так, как на тренировке, — с привычного расстояния. Здесь видно, что услышал телефон и какое действие распознано.</p>
+        <div class="vt-meter-wrap">
+          <div class="vol-label"><span data-i18n="voicetest.level">Уровень микрофона</span><b id="voiceTestLevelState" data-i18n="voicetest.quiet">Тихо</b></div>
+          <div class="vt-meter"><i id="voiceTestLevel"></i><span id="voiceTestThreshold"></span></div>
+        </div>
+        <div class="vol-field vt-sensitivity">
+          <div class="vol-label"><span data-i18n="voicetest.sensitivity">Чувствительность микрофона</span><b id="voiceTestSensitivityVal">5</b></div>
+          <input type="range" id="voiceTestSensitivity" min="0" max="10" step="1" value="5" class="vol-range">
+          <div class="vt-scale"><span data-i18n="voicetest.near">0 · Ближе</span><span data-i18n="voicetest.normal">5 · Обычно</span><span data-i18n="voicetest.far">10 · Дальше</span></div>
+        </div>
         <p class="vt-status" id="voiceTestStatus" data-i18n="voicetest.listening">Слушаю…</p>
         <div class="vt-list" id="voiceTestList"></div>
         <button class="modal-btn" data-act="closeModal" data-i18n="common.close">Закрыть</button>

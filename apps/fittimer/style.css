@@ -1831,6 +1831,16 @@ body.booting .app{visibility:hidden}
   .voice-pack{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
   .voice-pack-status{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px;min-width:0}
   #btnVoiceTest{margin-top:10px}
+  .voice-sensitivity-field{margin:14px 0 4px;padding-top:12px;border-top:1px solid var(--line)}
+  .voice-sensitivity-hint{margin:8px 0 0}
+  .vt-scale{display:flex;justify-content:space-between;gap:8px;margin-top:7px;color:var(--muted);font-size:10.5px}
+  .vt-scale span:nth-child(2){text-align:center}
+  .vt-scale span:last-child{text-align:right}
+  .vt-meter-wrap{margin-top:16px}
+  .vt-meter{height:8px;border-radius:99px;background:var(--line);position:relative;overflow:visible}
+  .vt-meter i{display:block;height:100%;width:0;border-radius:99px;background:var(--work);transition:width .12s linear}
+  .vt-meter span{position:absolute;top:-4px;bottom:-4px;width:2px;border-radius:2px;background:var(--ink);opacity:.65;left:18.5%;transform:translateX(-1px)}
+  .vt-sensitivity{margin:16px 0 10px}
   /* проверка распознавания: строки «что услышано → что сделает приложение»,
      свежая сверху; принятая команда — акцентом, остальное приглушено */
   .vt-status{margin:6px 0 0;font-size:13px;color:var(--muted)}
