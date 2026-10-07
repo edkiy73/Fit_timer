@@ -133,12 +133,13 @@ jobs:
 
           "$AAPT" dump badging "$APK" | tee "$RUNNER_TEMP/fittimer-badging.txt"
           "$AAPT" dump resources "$APK" | tee "$RUNNER_TEMP/fittimer-resources.txt"
-          grep -q 'mipmap/fittimer_launcher' "$RUNNER_TEMP/fittimer-resources.txt"
+          grep -q 'mipmap/fittimer_launcher_20261007' "$RUNNER_TEMP/fittimer-resources.txt"
 
           ICON_PATH=$(sed -n "s/^application:.* icon='\([^']*\)'.*/\1/p" "$RUNNER_TEMP/fittimer-badging.txt" | head -1)
           test -n "$ICON_PATH"
           unzip -p "$APK" "$ICON_PATH" > "$RUNNER_TEMP/fittimer-packaged-launcher.webp"
-          cmp android/app/src/main/res/mipmap-xhdpi/fittimer_launcher.webp "$RUNNER_TEMP/fittimer-packaged-launcher.webp"
+          cmp android/app/src/main/res/mipmap-xxxhdpi/fittimer_launcher_20261007.webp "$RUNNER_TEMP/fittimer-packaged-launcher.webp"
+          file "$RUNNER_TEMP/fittimer-packaged-launcher.webp" | grep -q "192 x 192"
 
       - name: Проверить подпись APK
         if: github.event_name != 'pull_request'
