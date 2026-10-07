@@ -57,8 +57,8 @@ need(!events.includes("if(!item.name){ appAlert(t('images.needExerciseName'))"),
 
 const copyFullStart = events.indexOf("registerAction('copyEditedProgram'");
 const copyFullHandler = events.slice(copyFullStart, events.indexOf("\n  registerAction(", copyFullStart + 1));
-need(copyFullStart >= 0 && copyFullHandler.includes('const text = programToText(editAIProg);'),
-  'copy-program action exports the raw FitTimer program text');
+need(copyFullStart >= 0 && copyFullHandler.includes('copyProgramTextWithChoice(editAIProg)'),
+  'copy-program action opens the progression choice flow');
 need(!copyFullHandler.includes('aiPrompt(') && !copyFullHandler.includes('=== TASK ===') && !copyFullHandler.includes('CURRENT PROGRAM'),
   'copy-program action does not prepend AI protocol or hidden task');
 
