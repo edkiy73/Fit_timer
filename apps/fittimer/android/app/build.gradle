@@ -1,4 +1,9 @@
+import groovy.json.JsonSlurper
+
 apply plugin: 'com.android.application'
+
+def productConfig = new JsonSlurper().parse(rootProject.file('../config/product.json'))
+def fitTimerBrandBackground = productConfig.brand.background.toString()
 
 android {
     namespace = "ru.fittimer.app"
@@ -19,6 +24,7 @@ android {
     }
     defaultConfig {
         applicationId "ru.fittimer.app"
+        resValue "color", "fittimer_brand_background", fitTimerBrandBackground
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode = Integer.parseInt(System.getenv("VERSION_CODE") ?: "1")
