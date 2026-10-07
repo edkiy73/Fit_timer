@@ -18,5 +18,7 @@ module.exports = async (req, res) => {
   res.statusCode = report.ok ? 200 : 503;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
-  res.end(JSON.stringify(adminOk(req) ? report : {ok: report.ok, status: report.status, checkedAt: report.checkedAt}));
+  // The storage round trip is a number, not a secret: it is how the region choice is measured (plan, item 19).
+  const storageLatencyMs = report.storage ? report.storage.latencyMs : null;
+  res.end(JSON.stringify(adminOk(req) ? report : {ok: report.ok, status: report.status, checkedAt: report.checkedAt, storageLatencyMs}));
 };
