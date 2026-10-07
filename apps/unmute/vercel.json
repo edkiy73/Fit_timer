@@ -3,7 +3,7 @@
   "buildCommand": "npm run build && node scripts/web-layout.mjs",
   "outputDirectory": "dist",
   "regions": [
-    "fra1"
+    "hnd1"
   ],
   "functions": {
     "api/**/*.js": {
