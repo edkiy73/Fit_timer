@@ -1025,7 +1025,7 @@ Provider adapter преобразует общий schema option в нативн
 Официальные ссылки для повторной проверки перед кодом:
 - OpenAI Structured Outputs: https://developers.openai.com/api/docs/guides/structured-outputs
 - Gemini Structured Output: https://ai.google.dev/gemini-api/docs/structured-output
-- OpenRouter Structured Outputs: https://openrouter.ai/docs/structured-outputs
+- OpenRouter Structured Outputs: https://openrouter.ai/docs/guides/features/structured-outputs
 
 Даже при provider-side schema enforcement локальная validation остаётся обязательной, особенно для кросс-полевой фитнес-семантики.
 
