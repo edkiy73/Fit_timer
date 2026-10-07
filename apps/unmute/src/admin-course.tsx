@@ -143,7 +143,15 @@ function FriendlyFields({activity,onChange}:{activity:EditableActivity;onChange(
         <option value="to-target">в английский</option><option value="from-target">из английского</option>
       </select></label>}
       <label><span>Задание / фраза</span><textarea rows={3} value={textValue(activity.prompt)} onChange={e=>text('prompt',e.target.value)} /></label>
+      {activity.type==='text-input' && <label><span>Фраза на русском (что сказать)</span><textarea rows={2} value={textValue(activity.source)} onChange={e=>{
+        if(e.target.value.trim())text('source',e.target.value);
+        else{const {source:_,...rest}=activity;onChange(rest as EditableActivity);}
+      }} /></label>}
       <label><span>Допустимые ответы — один на строку</span><textarea rows={5} value={answers} onChange={e=>onChange(setAnswer(activity,e.target.value))} /></label>
+      <label><span>Как показывать ответ</span><input value={String(activity.displayAnswer||'')} placeholder={answerAccepted(activity.answer)[0]||''} onChange={e=>{
+        if(e.target.value.trim())update('displayAnswer',e.target.value);
+        else{const {displayAnswer:_,...rest}=activity;onChange(rest as EditableActivity);}
+      }} /></label>
       <label><span>Как отвечать</span><select value={String(activity.responseMode||'progressive')} onChange={e=>update('responseMode',e.target.value)}>
         <option value="build">Собрать из слов</option>
         <option value="progressive">Собрать → писать после успеха</option>

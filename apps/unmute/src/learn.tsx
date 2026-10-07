@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
 import { useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { activePremium } from './entitlements';
+import { shownAnswer } from './shown-answer';
 import { isPracticeCompletionRequirement, type Activity, type RoadmapNode } from './content/schema';
 import type { CourseProgressDocument } from './progress';
 import type { LearnerCourseRuntimeValue } from './course-runtime';
@@ -1494,7 +1495,7 @@ export function NodeRunnerView({
     }
   };
 
-  const textAnswer=(activity.type==='text-input'||activity.type==='translation')?activity.answer.accepted[0]??'':'';
+  const textAnswer=(activity.type==='text-input'||activity.type==='translation')?shownAnswer(activity):'';
   // Course content controls the learning ladder explicitly:
   // build → recognition/order, progressive → build until learned then recall by typing, write → recall only.
   const cardState=(activity.type==='text-input'||activity.type==='translation')?state.progress.cards[activity.id]:undefined;
@@ -1779,7 +1780,7 @@ export function NodeRunnerView({
           )}
           {feedback({
             question:localized(activity.prompt,locale),
-            accepted:activity.answer.accepted[0],
+            accepted:shownAnswer(activity),
             acceptedAnswers:activity.answer.accepted,
             learnerAnswer:input,
             explanation:activity.explanation

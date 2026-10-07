@@ -98,6 +98,13 @@ function isTextMap(value){
     && Object.values(value).some(item=>typeof item==='string' && item.trim());
 }
 
+function validateDisplayAnswer(activity,id){
+  if(activity.displayAnswer===undefined)return;
+  if(typeof activity.displayAnswer!=='string'||!activity.displayAnswer.trim()||activity.displayAnswer.length>400){
+    throw new Error(`bad_display_answer:${id}`);
+  }
+}
+
 function validateAnswer(answer,id){
   assertObject(answer,'answer');
   if(!Array.isArray(answer.accepted) || !answer.accepted.length || answer.accepted.some(value=>typeof value!=='string' || !value.trim())){
@@ -131,12 +138,14 @@ function validateActivity(activity){
       break;
     case 'text-input':
       if(!isTextMap(activity.prompt)) throw new Error(`bad_text_input_prompt:${id}`);
+      validateDisplayAnswer(activity,id);
       if(activity.responseMode!==undefined && !['build','progressive','write'].includes(activity.responseMode)) throw new Error(`bad_response_mode:${id}`);
       validateAnswer(activity.answer,id);
       break;
     case 'translation':
       if(!['to-target','from-target'].includes(activity.direction)) throw new Error(`bad_translation_direction:${id}`);
       if(!isTextMap(activity.prompt)) throw new Error(`bad_translation_prompt:${id}`);
+      validateDisplayAnswer(activity,id);
       if(activity.responseMode!==undefined && !['build','progressive','write'].includes(activity.responseMode)) throw new Error(`bad_response_mode:${id}`);
       validateAnswer(activity.answer,id);
       break;
