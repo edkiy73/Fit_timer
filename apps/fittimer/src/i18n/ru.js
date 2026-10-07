@@ -942,6 +942,7 @@ export const I18N_RU = {
   'share.exportTitle': "Что передать",
   'share.exportFileTitle': "Сохранить программу",
   'share.exportLinkTitle': "Поделиться программой",
+  'share.copyProgramTitle': "Скопировать программу",
   'share.exportProgressHint': "Выбери, должен ли получатель продолжить с твоих текущих повторов, веса, времени или уровня сопротивления.",
   'share.withProgress': "С текущей прогрессией",
   'share.withProgressSub': "Продолжит с текущей нагрузки каждого упражнения",
