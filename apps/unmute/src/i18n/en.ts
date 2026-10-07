@@ -602,7 +602,7 @@ export const en: Record<keyof typeof ru, string> = {
   'review.doneTitle': 'Done for today',
   'review.doneCount': 'Reviewed: {count}',
   'review.doneAction': 'Done',
-  'review.doneText': 'Today’s review queue is clear.',
+  'review.doneText': 'Today’s review queue is clear. Tricky phrases come back tomorrow.',
   'review.dailyDoneTitle': 'Done for today',
   'review.dailyDoneText': 'Today’s goal is complete. The rest can stay in the queue.',
   'review.moreTen': '10 more',

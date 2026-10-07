@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CourseSet } from './content/schema';
 import { emptyCourseProgress } from './progress';
 import { buildCourseReviewSession } from './review-session';
+import { gradeCourseCard } from './progress-actions';
 
 const set:CourseSet={
   schemaVersion:1,
@@ -181,5 +182,13 @@ describe('course review session',()=>{
 
     expect(session.items).toHaveLength(0);
     expect(session.actionableCount).toBe(0);
+  });
+
+  it('does not owe today what was just answered wrong: mistakes are due tomorrow (decision 12)',()=>{
+    let progress=emptyCourseProgress();
+    progress=gradeCourseCard(progress,'card.a',false,100,'2026-10-07','2026-10-07T10:00:00Z');
+    progress=gradeCourseCard(progress,'card.b',false,100,'2026-10-07','2026-10-07T10:01:00Z');
+    expect(buildCourseReviewSession(set,progress,100).actionableCount).toBe(0);
+    expect(buildCourseReviewSession(set,progress,101).actionableCount).toBe(2);
   });
 });

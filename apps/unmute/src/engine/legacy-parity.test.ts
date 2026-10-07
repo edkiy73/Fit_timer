@@ -238,7 +238,9 @@ describe('frozen legacy engine parity',()=>{
         legacy.grade('x',0,correct);
         const old=legacy.getS();
         const next=gradeCardSrs({box:startBox,due:0},correct,today);
-        expect(old.srs['x#0']).toEqual(next);
+        // Deliberate divergence (launch plan, decision 12): a mistake is due tomorrow, not today.
+        const legacyCard=old.srs['x#0']!;
+        expect(correct?legacyCard:{...legacyCard,due:legacyCard.due+1}).toEqual(next);
         expect(old.total).toBe(1);
         expect(old.right).toBe(correct?1:0);
         expect(old.err['x#0']).toEqual({t:1,w:correct?0:1});
