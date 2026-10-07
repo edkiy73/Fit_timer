@@ -4,6 +4,7 @@ apply plugin: 'com.android.application'
 
 def productConfig = new JsonSlurper().parse(rootProject.file('../config/product.json'))
 def fitTimerBrandBackground = productConfig.brand.background.toString()
+def generatedBrandResDir = file("$buildDir/generated/fittimerBrand/res")
 
 android {
     namespace = "ru.fittimer.app"
@@ -18,6 +19,9 @@ android {
             dimension "distribution"
             buildConfigField "boolean", "DIRECT_UPDATES", "false"
         }
+    }
+    sourceSets {
+        main.res.srcDir generatedBrandResDir
     }
     buildFeatures {
         buildConfig true
@@ -96,4 +100,29 @@ try {
     }
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
+
+
+// The GitHub connector used by this repo is text-safe but has corrupted direct binary
+// resource uploads before. Keep the user-supplied FitTimer artwork as Base64 text and
+// reconstruct the WebP byte-for-byte before Android resource compilation.
+def generateFitTimerLauncherIcon = tasks.register("generateFitTimerLauncherIcon") {
+    def encodedIcon = file("branding/fittimer_launcher_v6.webp.b64")
+    def outputIcon = file("$generatedBrandResDir/mipmap-xhdpi/fittimer_launcher_v6.webp")
+    inputs.file encodedIcon
+    outputs.file outputIcon
+    doLast {
+        byte[] bytes = java.util.Base64.getDecoder().decode(encodedIcon.getText("UTF-8").trim())
+        if (bytes.length < 12 ||
+            new String(bytes, 0, 4, java.nio.charset.StandardCharsets.US_ASCII) != "RIFF" ||
+            new String(bytes, 8, 4, java.nio.charset.StandardCharsets.US_ASCII) != "WEBP") {
+            throw new GradleException("FitTimer launcher source is not a valid WebP")
+        }
+        outputIcon.parentFile.mkdirs()
+        outputIcon.bytes = bytes
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn generateFitTimerLauncherIcon
 }
