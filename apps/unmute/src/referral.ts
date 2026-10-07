@@ -81,10 +81,11 @@ export function setReferralSettled(settled: boolean): void {
   }catch{}
 }
 
-/** The public address of the web app: an invite link opens it (the app's own origin is local). */
+/** The public address of the web app: an invite link opens it (the app's own origin is local).
+ *  On the site the app lives in /app (the root is the landing page, scripts/web-layout.mjs). */
 export function publicAppUrl(): string {
   const cap = (globalThis as unknown as {Capacitor?: {isNativePlatform?(): boolean}}).Capacitor;
-  if(cap?.isNativePlatform?.() || typeof window === 'undefined') return String(product.defaultApiUrl).replace(/\/$/, '') + '/';
+  if(cap?.isNativePlatform?.() || typeof window === 'undefined') return String(product.defaultApiUrl).replace(/\/$/, '') + '/app/';
   return window.location.origin + window.location.pathname;
 }
 
