@@ -1,0 +1,46 @@
+name: UnMute — точечная правка основного курса
+
+# Точечно правит опубликованный основной курс (general-foundation), не трогая правки из админки:
+# русские фразы 52 заданий, вид ответа (displayAnswer), голосовая практика в дне 1
+# (docs/unmute-launch-plan.md, решения 9, 10, 16). Повторный запуск ничего не меняет.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/unmute/scripts/patch-general-course.mjs'
+      - 'apps/unmute/lib/general-course-patches.mjs'
+      - 'apps/unmute/lib/display-answer.mjs'
+      - '.github/workflows/unmute-general-course-patch.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: unmute-general-course-release
+  cancel-in-progress: false
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/unmute
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Проверить правки
+        run: node tests/general-course-patches.mjs && node scripts/patch-general-course.mjs --dry-run
+
+      - name: Поправить и выпустить основной курс
+        env:
+          ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
+        run: |
+          if [ -z "$ADMIN_KEY" ]; then
+            echo "::notice::Секрет ADMIN_KEY не задан — курс не изменён."
+            exit 0
+          fi
+          node scripts/patch-general-course.mjs

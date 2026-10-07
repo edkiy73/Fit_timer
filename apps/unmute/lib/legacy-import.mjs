@@ -1,3 +1,4 @@
+import { applyDayOneVoice, fillDisplayAnswers } from './general-course-patches.mjs';
 import vm from 'node:vm';
 import { auditLexicalCoverage, buildLexiconFormIndex, compactCoverageReport, tokenizeEnglish } from './lexicon-coverage.mjs';
 import LEXICON_SUPPLEMENT from './legacy-lexicon-supplement.mjs';
@@ -160,7 +161,9 @@ function activityFromCard(lesson,card,index,used){
       correctIndex:Number(card.a)||0,explanation:card.ex?{ru:text(card.ex)}:undefined});
   }
   const prompt=text(card.task||card.q||card.ru||'');
-  const sourceText=card.q?text(card.q):undefined;
+  // The Russian phrase to say lives in `q`, or in `ru` when `task` is only the instruction
+  // («Задай вопрос» + ru «Как долго ты здесь?»); dropping it left 52 tasks without a phrase.
+  const sourceText=card.q?text(card.q):(card.task&&card.ru?text(card.ru):undefined);
   if(/перевед/i.test(text(card.task))&&card.ru){
     return Object.assign({},common,{type:'translation',direction:'to-target',prompt:{ru:text(card.ru)},
       answer:answerSpec(card.a),explanation:card.ex?{ru:text(card.ex)}:undefined});
@@ -461,6 +464,10 @@ export function buildCourseSet(model,lexicon=null){
   // and more tiring on mobile.
   const activityById=new Map(activities.map(activity=>[activity.id,activity]));
   for(const node of nodes)applyIntradayResponseModes(node,activityById);
+
+  const patched={activities,roadmaps:[{nodes}]};
+  applyDayOneVoice(patched);
+  fillDisplayAnswers(patched);
 
   if(lexicon)attachCourseExamples(activities,lexicon);
   // Learner-addressed past tense in both forms («работал(а)»), so a re-import keeps the fix.

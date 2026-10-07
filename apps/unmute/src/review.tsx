@@ -1,3 +1,4 @@
+import { shownAnswer } from './shown-answer';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useI18n } from '@appbase/ui-react/i18n.js';
@@ -235,7 +236,7 @@ export function ReviewView({
     const stage=sentenceResponseStage(itemProgress?.cards[item.activity.id]);
     const keepSubmittedBuilder=result!==null&&picked.length>0;
     if(responseMode==='write'||(responseMode==='progressive'&&stage==='write'&&!keepSubmittedBuilder))return null;
-    const target=item.activity.answer.accepted[0]??'';
+    const target=shownAnswer(item.activity);
     if(!answerWords(target))return null;
     const itemSet=item.setId
       ? otherCourses.courses.find(other=>other.set.id===item.setId)?.set
@@ -638,7 +639,7 @@ export function ReviewView({
     const acceptedAnswers=activity.type==='choice'
       ? [localized(activity.options[activity.correctIndex],locale)]
       : activity.answer.accepted;
-    const accepted=acceptedAnswers[0];
+    const accepted=activity.type==='choice'?acceptedAnswers[0]:shownAnswer(activity);
     const learnerAnswer=activity.type==='choice'
       ? (selected===null?'':localized(activity.options[selected],locale))
       : (reviewChips?chipsText(reviewChips,picked):answer.trim());
