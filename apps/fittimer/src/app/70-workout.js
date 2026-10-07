@@ -8,7 +8,7 @@ import { $, DUMBBELL_ICON, ILLO, announceExercise, announceRemaining, announceRe
   setCoreWorkoutHooks, setShown, show, soundOn, speak, state, tick, voiceIsEnglish, voiceVol, workoutLoadSnapshot
 } from './00-core.js';
 import { calcStreak, calcStreakInfo, clearSession, closeAllMenus, curUser, customPrograms,
-  customToProgram, localISO, newId, normPlans, progActive, renderStats, savePrograms, saveSession,
+  customToProgram, localISO, newId, normPlans, planIdAt, progActive, renderStats, savePrograms, saveSession,
   saveStats, setDataSyncWorkoutHooks, stats, streakWord, toggleMenu, trackProductEvent, users
 } from './10-data-sync.js';
 import { setAccountWorkoutHooks } from './20-account.js';
@@ -1081,7 +1081,9 @@ function commitFinish(ctx){
     // В истории перечисляем только упражнения, где был хотя бы один реально
     // выполненный подход. Пропущенное не выдаём за сделанное.
     exercises: summary.performedNames,
-    plan: (typeof state.planIdx === 'number') ? state.planIdx : 0,
+    // вариант — по стабильному id: номер варианта меняется, когда normPlans()
+    // пересортировывает варианты после смены дней
+    planId: srcProgram ? planIdAt(srcProgram, (typeof state.planIdx === 'number') ? state.planIdx : 0) : '',
     load: srcProgram
       ? (Array.isArray(state.startLoad) ? state.startLoad : workoutLoadSnapshot(srcProgram, state.planIdx || 0))
       : null,
@@ -1100,15 +1102,6 @@ function commitFinish(ctx){
   state.lastRecord = stk > 1 && stk > (stats.bestStreak || 0);
   if(stk > (stats.bestStreak || 0)) stats.bestStreak = stk;
 
-  // Поднятый вес считаем только по реально отмеченным «Готово» подходам.
-  let lifted = 0;
-  (state.steps || []).forEach((step, index) => {
-    if(step.phase !== 'work' || !(step.weight > 0)) return;
-    if((state.stepOutcomes || {})[workoutStepKey(step)] !== 'done') return;
-    const reps = parseInt(String(step.reps || '').split('-')[0], 10);
-    if(reps > 0) lifted += step.weight * reps;
-  });
-  if(lifted) stats.totalKg = Math.round((stats.totalKg || 0) + lifted);
   if(platformWorkoutHooks.getHfMode() && platformWorkoutHooks.getHfMode() !== 'off') stats.hfDone = (stats.hfDone || 0) + 1;
 
   trackProductEvent(partial ? 'workout_partial' : 'workout_completed').catch(()=>{});
@@ -1784,8 +1777,6 @@ export const BADGES = [
         normPlans(p).some(pl => (pl.exercises || []).some(ex => !ex.warmup && progAtCeiling(p.id, ex, p))));
     }catch(e){ return false; }
   }},
-  // тоннаж копится с этого обновления (stats.totalKg): по истории его не восстановить
-  {id: 'tons',  ico: 'weight',   name: 'Десять тонн',         desc: '10 000 кг поднято за всё время',     test: () => (stats.totalKg || 0) >= 10000},
   {id: 'h24',   ico: 'gem',      name: 'Сутки в движении',    desc: '24 часа тренировок в сумме',         test: () => (stats.totalSec || 0) >= 86400},
   {id: 's30',   ico: 'crown',    name: 'Месяц без пропусков', desc: '30 тренировок подряд по плану',      test: () => calcStreak() >= 30},
   {id: 't100',  ico: 'trophy',   name: 'Сотня',               desc: '100 тренировок',                     test: () => (stats.count || 0) >= 100}

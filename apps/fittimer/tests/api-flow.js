@@ -45,8 +45,8 @@ const ok = (name, cond, extra) => {
   ok('кривой id — 400', (await get('/api/p/!!')).s === 400);
 
   const rep = {who: 'Марина', name: 'Сила дома', n: 3, full: 2, partial: 1, sec: 4500, streak: 3,
-               log: [{d:'2026-09-27',p:0,sec:900,partial:1,done:2,all:4}],
-               plans: [{i:0,days:'Пн·Чт',n:2,partial:1,sec:1500}],
+               log: [{d:'2026-09-27',pl:'pmon',sec:900,partial:1,done:2,all:4}],
+               plans: [{id:'pmon',i:0,days:'Пн·Чт',n:2,partial:1,sec:1500}],
                ex: [{n: 'Приседания', a: '12-15', b: '14-17'}]};
   ok('отчёт принимается', (await post('/api/report', {link: id, report: rep})).s === 200);
   ok('отчёт в никуда — 404', (await post('/api/report', {link: 'zzzzzzzz', report: rep})).s === 404);
@@ -56,9 +56,12 @@ const ok = (name, cond, extra) => {
   ok('тренер видит открытия', st.s === 200 && st.j.opens === 2, st.j.opens);
   ok('тренер видит отчёт', st.j.reports.length === 1 && st.j.reports[0].ex[0].b === '14-17');
   ok('частичный статус дошёл до сервера',
-     st.j.reports[0].v === 3 && st.j.reports[0].partial === 1
+     st.j.reports[0].v === 4 && st.j.reports[0].partial === 1
      && st.j.reports[0].log[0].partial === 1
      && st.j.reports[0].log[0].done === 2 && st.j.reports[0].log[0].all === 4);
+  ok('вариант в отчёте адресуется стабильным id, а не номером',
+     st.j.reports[0].log[0].pl === 'pmon' && st.j.reports[0].plans[0].id === 'pmon'
+     && st.j.reports[0].log[0].p === undefined);
   ok('первое открытие отмечено', !!st.j.firstOpen);
 
   /* Адрес один, а видно по нему разное. Без ключа — программа (её и должен получить

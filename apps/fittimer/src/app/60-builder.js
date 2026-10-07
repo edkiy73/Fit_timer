@@ -6,7 +6,7 @@ import { registerAction } from './05-actions.js';
 import { $, appAlert, appDialog, goBackTo, goTab, icon, isChanged, plural, setCoreBuilderHooks, setShown, show, state,
   takeSnap
 } from './00-core.js';
-import { DAYS, closeAllMenus, customPrograms, normPlans, planDays, savePrograms,
+import { DAYS, closeAllMenus, customPrograms, newPlanId, normPlans, planDays, savePrograms,
   setDataSyncBuilderHooks, sortPlans, toggleMenu, trackProductEvent
 } from './10-data-sync.js';
 import { LIM, clampLine, clampText, cleanLink, cleanPic, requireWho, sanitizeProgram, setProgressBuilderHooks } from './30-progress-media.js';
@@ -1507,7 +1507,7 @@ export let planIdx = 0;
 // и человек видел строку, которой не заводил. Теперь виден пустой список с объяснением,
 // а первую строку создаёт «Добавить упражнение» — сразу с полем названия в фокусе.
 function blankPlan(){
-  return {days:[], rounds:3, roundRest:120, exercises:[]};
+  return {id:newPlanId(), days:[], rounds:3, roundRest:120, exercises:[]};
 }
 
 export function openBuilder(id=null){
@@ -2535,7 +2535,7 @@ export function parseProgramText(txt){
   const errors = [];
   const ensurePlan = ()=>{
     if(!plan){
-      plan = {days:[], rounds:3, roundRest:120, exercises:[]};
+      plan = {id:newPlanId(), days:[], rounds:3, roundRest:120, exercises:[]};
       p.plans.push(plan);
     }
     return plan;
@@ -2637,7 +2637,7 @@ export function parseProgramText(txt){
       case 'ДЕНЬ': {
         // новый вариант тренировки для указанных дней
         if(p.plans.length >= 7){ plan = null; cur = null; break; }
-        plan = {days: parseDays(val), rounds:3, roundRest:120, exercises:[]};
+        plan = {id:newPlanId(), days: parseDays(val), rounds:3, roundRest:120, exercises:[]};
         p.plans.push(plan);
         cur = null;
         break;

@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1821,
-      "chars": 85591,
+      "lines": 1824,
+      "chars": 85800,
       "symbols": [
         "$",
         "accountUserDirtyHook",
@@ -144,8 +144,8 @@
     },
     "src/app/10-data-sync.js": {
       "kind": "frontend-js",
-      "lines": 2755,
-      "chars": 127689,
+      "lines": 2768,
+      "chars": 128314,
       "symbols": [
         "accountAuth",
         "accountDocsSnapshot",
@@ -219,6 +219,7 @@
         "mkSideSwitch",
         "mkWork",
         "newId",
+        "newPlanId",
         "normalizeSessionOutcomeMap",
         "normalizeWorkoutSession",
         "normalizeWorkoutSnapshot",
@@ -234,6 +235,7 @@
         "placeMenu",
         "planDayRank",
         "planDays",
+        "planIdAt",
         "platformApplyThemeForHook",
         "platformSyncNativeNotificationsHook",
         "profileAge",
@@ -409,8 +411,8 @@
     },
     "src/app/30-progress-media.js": {
       "kind": "frontend-js",
-      "lines": 1059,
-      "chars": 47695,
+      "lines": 1067,
+      "chars": 48094,
       "symbols": [
         "addPhoto",
         "alpha",
@@ -478,7 +480,7 @@
         "shareWellLanes",
         "shortD",
         "startOnboarding",
-        "uniqueExerciseIds",
+        "uniqueProgramIds",
         "warmupProgram",
         "whoFinish",
         "whoSyncForm",
@@ -488,7 +490,7 @@
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
       "lines": 3593,
-      "chars": 167538,
+      "chars": 167535,
       "symbols": [
         "activateClientAt",
         "add",
@@ -674,7 +676,7 @@
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
       "lines": 2023,
-      "chars": 91483,
+      "chars": 91580,
       "symbols": [
         "add",
         "addClient",
@@ -759,7 +761,7 @@
     "src/app/60-builder.js": {
       "kind": "frontend-js",
       "lines": 3429,
-      "chars": 149004,
+      "chars": 149063,
       "symbols": [
         "advanceExerciseProgression",
         "aiChoiceEnglish",
@@ -945,8 +947,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1999,
-      "chars": 87817,
+      "lines": 1990,
+      "chars": 87290,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",

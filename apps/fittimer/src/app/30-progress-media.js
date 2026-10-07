@@ -7,7 +7,7 @@ import { $, appAlert, appConfirm, appDialog, icon, plural, setCoreProgressHooks,
 import { MONTH_OF, PROGRAM_DOC, createInitialProfile, curUser, currentUser, customPrograms, docMeta, kvGet, kvSet,
   loadData, loadIdentity, localISO, migrateUserAge, normPlans, pk, profileAge, recordConsent,
   isDefaultProfileName, renderStats, renderUsers, renderWeight, renderWellness, savePrograms, saveStats, saveUsers,
-  setDataSyncProgressMediaHooks, stats, users, validAge, wellList
+  newPlanId, setDataSyncProgressMediaHooks, stats, users, validAge, wellList
 } from './10-data-sync.js';
 import { GLOBAL_KEYS, PROFILE_KEYS, setAccountProgressHooks } from './20-account.js';
 
@@ -830,14 +830,22 @@ export function sanitizeProgram(p){
     (Array.isArray(pl.exercises) ? pl.exercises : []).forEach(sanitizeExercise);
   });
   (Array.isArray(p.exercises) ? p.exercises : []).forEach(sanitizeExercise);
-  uniqueExerciseIds(p);
+  uniqueProgramIds(p);
   return p;
 }
-// id упражнения обязан быть уникальным в программе: по нему сопоставляются
+// id варианта и упражнения обязаны быть уникальными в программе: по id варианта
+// живёт история (см. newPlanId в 10-data-sync.js), по id упражнения сопоставляются
 // AI-правки и проверка прогресса на финише. Раньше «дублировать упражнение»
 // копировало id вместе со всем остальным — такие копии получают свой.
-export function uniqueExerciseIds(p){
+export function uniqueProgramIds(p){
   let changed = false;
+  const seenPlans = new Set();
+  (Array.isArray(p.plans) ? p.plans : []).forEach(pl => {
+    if(!pl || typeof pl !== 'object') return;
+    const id = typeof pl.id === 'string' ? pl.id.trim() : '';
+    if(!id || seenPlans.has(id)){ pl.id = newPlanId(); changed = true; }
+    seenPlans.add(pl.id);
+  });
   const seen = new Set();
   (Array.isArray(p.plans) ? p.plans : []).concat([{exercises: p.exercises}]).forEach(pl => {
     (pl && Array.isArray(pl.exercises) ? pl.exercises : []).forEach(ex => {
@@ -1025,7 +1033,7 @@ export function initProgressMedia(){
     loadPhotos,
     renderPhotos,
     shortD,
-    uniqueExerciseIds
+    uniqueProgramIds
   });
   setCoreProgressHooks({
     renderPhotos

@@ -1223,8 +1223,6 @@ export const I18N_RU = {
   'badge.back.desc': "Снова в деле после перерыва в две недели",
   'badge.heavy.name': "Тяжелее",
   'badge.heavy.desc': "Упражнение доросло до потолка прогрессии",
-  'badge.tons.name': "Десять тонн",
-  'badge.tons.desc': "10 000 кг поднято за всё время",
   'badge.h24.name': "Сутки в движении",
   'badge.h24.desc': "24 часа тренировок в сумме",
   'badge.s30.name': "Месяц без пропусков",

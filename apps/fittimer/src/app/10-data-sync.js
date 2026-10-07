@@ -46,7 +46,7 @@ let progressMediaHooks = {
   loadPhotos: async () => {},
   renderPhotos: () => {},
   shortD: v => String(v == null ? '' : v),
-  uniqueExerciseIds: () => false
+  uniqueProgramIds: () => false
 };
 export function setDataSyncProgressMediaHooks(hooks = {}){
   progressMediaHooks = {...progressMediaHooks, ...hooks};
@@ -1200,7 +1200,7 @@ function mergeStatsDocs(local, remote, preferRemote){
   };
   out.history = unite(older.history, newerDoc.history, h => h && (h.id
     ? 'id:' + h.id
-    : [h.d||'',h.t??'',h.pid||'',h.sec||0,h.plan||0].join('|')))
+    : [h.d||'',h.t??'',h.pid||'',h.sec||0,h.planId||''].join('|')))
     .sort((x,y) => String(x.d||'').localeCompare(String(y.d||'')) || (+x.t||0)-(+y.t||0));
   out.weights = unite(older.weights, newerDoc.weights, x => x && (x.d || JSON.stringify(x)));
   out.wellness = unite(older.wellness, newerDoc.wellness, x => x && (x.d || JSON.stringify(x)));
@@ -1213,7 +1213,6 @@ function mergeStatsDocs(local, remote, preferRemote){
   ).length;
   out.count = out.history.length ? fullHistoryCount : Math.max(+a.count||0,+b.count||0);
   out.bestStreak = Math.max(+a.bestStreak||0,+b.bestStreak||0);
-  out.totalKg = Math.max(+a.totalKg||0,+b.totalKg||0);
   out.hfDone = Math.max(+a.hfDone||0,+b.hfDone||0);
   return out;
 }
@@ -1743,9 +1742,9 @@ export async function savePrograms(){
   // до первого await, чтобы последующее переключение профиля не подменило содержимое.
   const uid = currentUser;
   if(dataOwner !== uid) return;   // данные нового профиля ещё не загружены
-  // id упражнений уникальны в программе (см. uniqueExerciseIds) — чиним на месте,
-  // чтобы копия, заведённая старым способом, не жила с чужим id до перезапуска
-  customPrograms.forEach(p => { if(p && typeof p === 'object') progressMediaHooks.uniqueExerciseIds(p); });
+  // id вариантов и упражнений уникальны в программе (см. uniqueProgramIds) — чиним
+  // на месте, чтобы новый вариант или копия не жили без id/с чужим id до перезапуска
+  customPrograms.forEach(p => { if(p && typeof p === 'object') progressMediaHooks.uniqueProgramIds(p); });
   const programs = JSON.parse(JSON.stringify(customPrograms));
   let meta = docMeta;
   let queue = outbox.slice();
@@ -2427,12 +2426,26 @@ function planDayRank(pl){
 export function sortPlans(plans){
   return plans.sort((a, b) => planDayRank(a) - planDayRank(b));
 }
+// Вариант адресуется стабильным id, а не позицией в plans: normPlans() сортирует
+// варианты на месте по дню недели, и после смены дней номер варианта указывает уже
+// на другой. История, «было → сегодня», оценка длительности и отчёт тренеру ищут
+// вариант только по id. Программа без plans[] — один синтетический вариант с
+// постоянным id, иначе он получал бы новый id при каждом чтении.
+export const SINGLE_PLAN_ID = 'main';
+export function newPlanId(){
+  return 'p' + Math.random().toString(36).slice(2, 8);
+}
+export function planIdAt(p, idx){
+  const pl = p ? (normPlans(p)[idx] || null) : null;
+  return pl && pl.id ? String(pl.id) : '';
+}
 export function normPlans(p){
   if(Array.isArray(p.plans) && p.plans.length){
     if(!p.rotate) sortPlans(p.plans);
     return p.plans;
   }
   return [{
+    id: SINGLE_PLAN_ID,
     days: p.days || [],
     rounds: p.rounds || 3,
     roundRest: (p.roundRest === undefined) ? 120 : p.roundRest,

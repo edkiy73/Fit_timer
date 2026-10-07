@@ -31,17 +31,17 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     }, extra);
     const p = {
       id:'overview1', name:'Проверка обзора', active:true, progression:1,
-      stats:{completions:2}, plans:[{days:['Пн'], rounds:1, roundRest:60, exercises:[
+      stats:{completions:2}, plans:[{id:'ov-plan', days:['Пн'], rounds:1, roundRest:60, exercises:[
         ex('Суставная разминка', 8, {warmup:true, sets:1,
           media:{kind:'img', data:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='}}),
-        ex('Приседания', 10),
+        ex('Приседания', 10, {id:'ov-squat'}),
         ex('Жим гантелей', 8, {trackWeight:true, weight:6, wStep:1, repsStep:0}),
         ex('Тяга в наклоне', 10), ex('Планка', 30, {type:'time', timeStep:5}),
         ex('Скручивания', 12)
       ]}]
     };
-    const history = [...(stats.history || []), {pid:p.id, plan:0, sec:31 * 60, at:Date.now() - 86400000,
-      load:[{i:1, n:'Приседания', reps:'11', sec:0, kg:0}]}];
+    const history = [...(stats.history || []), {pid:p.id, planId:'ov-plan', sec:31 * 60, at:Date.now() - 86400000,
+      load:[{id:'ov-squat', reps:'11', sec:0, kg:0}]}];
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
     await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history})));
     await loadData();
@@ -120,7 +120,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const p = {
       id:'overview-legacy', name:'Старая история', active:true, progression:2,
       stats:{completions:9}, psMigrated:true,
-      plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[{
+      plans:[{id:'legacy-plan', days:['Пн'], rounds:1, roundRest:0, exercises:[{
         id:'legacy-ex', name:'Legacy reps', type:'reps', value:'8', sets:3, rest:45,
         progOn:true, trackWeight:false, repsStep:1,
         // Фактическая сегодняшняя нагрузка уже живёт в per-exercise state.
@@ -130,7 +130,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     // Старая запись знает, что тренировка была, но load snapshot в той версии
     // ещё не сохранялся.
     const history = [...(stats.history || []), {
-      id:'legacy-h', pid:p.id, plan:0, d:localISO(new Date(Date.now()-86400000)),
+      id:'legacy-h', pid:p.id, planId:'legacy-plan', d:localISO(new Date(Date.now()-86400000)),
       sec:900, status:'full', exercises:['Legacy reps']
     }];
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
@@ -165,7 +165,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const resistance = await page.evaluate(async () => {
     const p = {
       id:'overview-level', name:'Резинки', active:true, progression:2,
-      stats:{completions:2}, plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[{
+      stats:{completions:2}, plans:[{id:'level-plan', days:['Пн'], rounds:1, roundRest:0, exercises:[{
         id:'band-row', name:'Тяга резинки', type:'reps', value:'12-15', sets:3, rest:45,
         progOn:true, trackWeight:false, loadType:'level', progMode:'level',
         loadLevels:[{key:'light'},{key:'medium'},{key:'strong'}],
@@ -174,9 +174,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       }]}]
     };
     const history = [...(stats.history || []), {
-      id:'level-prev', pid:p.id, plan:0, d:localISO(new Date(Date.now()-86400000)),
+      id:'level-prev', pid:p.id, planId:'level-plan', d:localISO(new Date(Date.now()-86400000)),
       sec:900, status:'full', exercises:['Тяга резинки'],
-      load:[{i:0,n:'Тяга резинки',reps:'16-18',sec:0,kg:0,level:1,levelKey:'medium',levelLabel:'Medium stale'}]
+      load:[{id:'band-row',reps:'16-18',sec:0,kg:0,level:1,levelKey:'medium',levelLabel:'Medium stale'}]
     }];
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
     await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history})));
@@ -215,6 +215,47 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.click('[data-act="commitStartLoadEdit"]');
   const afterEffort = await page.locator('#startOverviewList .ex-row').textContent();
   ok('усилие меняется так же, как вес', /Лёгкое/.test(afterEffort) && !/Сильное/.test(afterEffort), afterEffort);
+
+  // Смена дней пересортировывает варианты (normPlans сортирует по дню недели).
+  // История и «было → сегодня» обязаны остаться у своего варианта: раньше они
+  // искали вариант по номеру и после пересортировки показывали чужую нагрузку.
+  const reorder = await page.evaluate(async () => {
+    const mkEx = (id, name) => ({id, name, type:'reps', value:'10', sets:1, rest:30,
+      progOn:true, repsStep:1, trackWeight:false});
+    const p = {
+      id:'overview-reorder', name:'Два варианта', active:true, progression:2,
+      stats:{completions:1}, plans:[
+        {id:'plan-wed', days:['Ср'], rounds:1, roundRest:0, exercises:[mkEx('wed-ex', 'Среда')]},
+        {id:'plan-fri', days:['Пт'], rounds:1, roundRest:0, exercises:[mkEx('fri-ex', 'Пятница')]}
+      ]
+    };
+    const history = [...(stats.history || []), {
+      id:'reorder-prev', pid:p.id, planId:'plan-fri', d:localISO(new Date(Date.now()-86400000)),
+      sec:600, status:'full', exercises:['Пятница'],
+      load:[{id:'fri-ex', reps:'8', sec:0, kg:0}]
+    }];
+    await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
+    await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history})));
+    await loadData();
+    const live = customPrograms.find(x => x.id === p.id);
+    const before = normPlans(live).map(pl => pl.id);
+    // пятничный вариант переезжает на понедельник и становится первым
+    normPlans(live)[1].days = ['Пн'];
+    const after = normPlans(live).map(pl => pl.id);
+    const friIdx = after.indexOf('plan-fri'), wedIdx = after.indexOf('plan-wed');
+    return {
+      before, after,
+      fri:previousWorkoutLoad(live, friIdx),
+      wed:previousWorkoutLoad(live, wedIdx)
+    };
+  });
+  ok('после смены дней варианты действительно пересортировались',
+    reorder.before.join() === 'plan-wed,plan-fri' && reorder.after.join() === 'plan-fri,plan-wed',
+    reorder.before.join() + ' → ' + reorder.after.join());
+  ok('история осталась у своего варианта после пересортировки',
+    reorder.fri.exact === true && reorder.fri.rows.length === 1 && reorder.fri.rows[0].id === 'fri-ex'
+      && reorder.wed.exact !== true && reorder.wed.rows.length === 0,
+    JSON.stringify({fri:reorder.fri, wed:reorder.wed}));
 
   // Полностью завершённая двойная прогрессия не должна обещать следующую
   // проверку нагрузки: повышать здесь уже нечего.

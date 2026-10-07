@@ -59,7 +59,7 @@ async function boot(browser, label, errors){
          ps:{n:2,cur:{reps:'16-18',level:2}}}
       ]}]
     }];
-    const seededStats = {totalSec:600,count:1,history:[{id:'h-a',d:'2026-09-17',t:8,pid:'sync-program',sec:600,plan:0}],
+    const seededStats = {totalSec:600,count:1,history:[{id:'h-a',d:'2026-09-17',t:8,pid:'sync-program',sec:600}],
                          weights:[{d:'2026-09-17',w:61.2,waist:70}],wellness:[],badges:['first']};
     const seededPhotos = [{d:'2026-09-17',img:'data:image/png;base64,cGhvdG8='}];
     // Сеем профиль так, как он реально лежит на диске, и даём приложению загрузить его.
@@ -217,7 +217,7 @@ async function boot(browser, label, errors){
 
   await two.evaluate(async()=>{
     const history = [...(stats.history || []), {
-      id:'h-b',d:'2026-09-18',t:8,pid:'sync-program',sec:720,plan:0,
+      id:'h-b',d:'2026-09-18',t:8,pid:'sync-program',sec:720,
       status:'partial',meaningful:true,doneExercises:2,plannedExercises:4,
       doneSteps:4,plannedSteps:8,exercises:['Присед','Жим']
     }];

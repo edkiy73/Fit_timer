@@ -117,7 +117,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const last = stats.history[stats.history.length - 1];
     const history = [...(stats.history || []), {
       id:'partial-test-full-override', d:last.d, pid:'partial-test', status:'full',
-      sec:600, plan:0, exercises:['Первое','Второе']
+      sec:600, exercises:['Первое','Второе']
     }];
     await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history})));
     await loadData();

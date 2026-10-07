@@ -103,7 +103,7 @@ export function setProgramsEventHooks(hooks = {}){
   eventProgramsHooks = {...eventProgramsHooks, ...hooks};
 }
 import { LIM, clampLine, clampNum, clampText, cleanLink, cleanPic, photos,
-  sanitizeProgram, setProgressProgramsHooks, shareGeneratedFile, uniqueExerciseIds
+  sanitizeProgram, setProgressProgramsHooks, shareGeneratedFile, uniqueProgramIds
 } from './30-progress-media.js';
 
 /* ================= ПРОГРЕССИЯ НАГРУЗКИ ================= */
@@ -144,7 +144,7 @@ export function applyProgressionAll(){
   // прочитает как верхнюю границу 20 и сократит цикл на ширину диапазона.
   if(applyDualRangeProgressionMigration()) changed = true;
   if(applyPerExerciseProgressionMigration()) changed = true;
-  customPrograms.forEach(p => { if(uniqueExerciseIds(p)) changed = true; });
+  customPrograms.forEach(p => { if(uniqueProgramIds(p)) changed = true; });
   if(changed) savePrograms();
 }
 
@@ -847,7 +847,7 @@ export function applyMedia(p, media){
     }));
     // Серверные данные не могут нарушать invariant программы: даже если в payload
     // случайно/вручную пришли повторные id, прогресс и будущие правки не склеятся.
-    uniqueExerciseIds(p);
+    uniqueProgramIds(p);
     return p;
   }
 

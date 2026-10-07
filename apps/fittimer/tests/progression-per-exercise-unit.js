@@ -47,6 +47,7 @@ global.customPrograms = [];
 global.normPlans = p => (Array.isArray(p.plans) && p.plans.length)
   ? p.plans
   : [{days:p.days||[], rounds:p.rounds||3, roundRest:(p.roundRest===undefined?120:p.roundRest), exercises:p.exercises||[]}];
+global.newPlanId = () => 'p' + Math.random().toString(36).slice(2, 8);
 global.sanitizeExercise = ex => { if(!ex.id) ex.id = newExId(); };
 global.sanitizeProgram = p => { (p.plans||[]).forEach(pl => (pl.exercises||[]).forEach(sanitizeExercise)); return p; };
 global.savePrograms = async () => {};

@@ -1,7 +1,7 @@
 import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
 import { appRuntimeCompat, appUi } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
-import { DAYS, closeAllMenus, curUser, customPrograms, normPlans, progActive, renderStats,
+import { DAYS, closeAllMenus, curUser, customPrograms, normPlans, planIdAt, progActive, renderStats,
   renderUsers, renderWeight, renderWellness, savePrograms, deleteCustomProgram, setDataSyncCoreHooks, stats
 } from './10-data-sync.js';
 
@@ -1112,12 +1112,14 @@ function exerciseLoad(p, ex){
 // восстанавливать их арифметикой из общего completions уже нельзя: каждое
 // упражнение могло прогрессировать в свой момент. Для legacy истории ниже
 // честно помечаем нагрузку как неизвестную, а не придумываем «предыдущую».
+// Строка снимка привязана к упражнению по exercise.id, а не по позиции/названию:
+// перестановка или переименование упражнения не должны ломать «было → сегодня».
 export function workoutLoadSnapshot(p, planIdx){
   const pl = normPlans(p)[planIdx] || normPlans(p)[0];
-  return ((pl && pl.exercises) || []).map((ex, i) => {
+  return ((pl && pl.exercises) || []).map(ex => {
     const v = exerciseLoad(p, ex);
     return {
-      i, n:ex.name || '',
+      id:String(ex.id || ''),
       reps:v.reps || '', sec:+v.sec || 0, kg:+v.kg || 0,
       level:v.level == null ? null : +v.level,
       levelKey:String(v.levelKey || ''),
@@ -1127,7 +1129,8 @@ export function workoutLoadSnapshot(p, planIdx){
 }
 
 export function previousWorkoutLoad(p, planIdx){
-  const hist = (stats.history || []).filter(h => h.pid === p.id && (+h.plan || 0) === planIdx);
+  const planId = planIdAt(p, planIdx);
+  const hist = planId ? (stats.history || []).filter(h => h.pid === p.id && h.planId === planId) : [];
   const last = hist[hist.length - 1];
   if(last && Array.isArray(last.load)) return {first:false, exact:true, legacy:false, rows:last.load};
 
@@ -1198,7 +1201,8 @@ export function loadDelta(a, b){
 }
 
 export function estimatedWorkoutMinutes(p, planIdx, rows){
-  const own = (stats.history || []).filter(h => h.pid === p.id && (+h.plan || 0) === planIdx
+  const planId = planIdAt(p, planIdx);
+  const own = (stats.history || []).filter(h => h.pid === p.id && planId && h.planId === planId
     && h.status !== 'partial' && +h.sec > 59 && +h.sec < 6 * 3600).slice(-5);
   if(own.length){
     const avg = own.reduce((n, h) => n + h.sec, 0) / own.length;
@@ -1229,11 +1233,10 @@ function renderStartOverview(){
   const exercises = pl.exercises || [];
   const current = workoutLoadSnapshot(p, state.planIdx);
   const previous = previousWorkoutLoad(p, state.planIdx);
-  const oldByIndex = new Map((previous.rows || []).map(x => [+x.i, x]));
+  const oldById = new Map((previous.rows || []).filter(x => x && x.id).map(x => [String(x.id), x]));
   const changes = [];
   exercises.forEach((ex, i) => {
-    const old = oldByIndex.get(i);
-    if(old && old.n && ex.name && old.n.trim().toLowerCase() !== ex.name.trim().toLowerCase()) return;
+    const old = ex.id ? oldById.get(String(ex.id)) : null;
     const delta = loadDelta(old, current[i]);
     if(delta.text) changes.push({i, text:delta.text, dir:delta.dir});
   });

@@ -1223,8 +1223,6 @@ export const I18N_EN = {
   'badge.back.desc': "Returned after a two-week break",
   'badge.heavy.name': "Level up",
   'badge.heavy.desc': "An exercise reached its progression ceiling",
-  'badge.tons.name': "Ten tons",
-  'badge.tons.desc': "Lifted 10,000 kg in total",
   'badge.h24.name': "24 hours moving",
   'badge.h24.desc': "24 hours of training in total",
   'badge.s30.name': "Month on track",

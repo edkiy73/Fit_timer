@@ -119,7 +119,7 @@ async function boot(b, label, errs, url){
     const day = i => localISO(new Date(Date.now() - i * 86400000));
     // четыре по первому варианту, один по второму
     const added = [[1,0],[4,0],[8,0],[11,0],[2,1]].map(([ago, pl]) =>
-      ({d: day(ago), t: 9, pid: current.id, sec: 1500, kcal: 120, plan: pl}));
+      ({d: day(ago), t: 9, pid: current.id, sec: 1500, kcal: 120, planId: normPlans(current)[pl].id}));
     await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {
       history:[...(stats.history || []), ...added],
       count:5
@@ -338,8 +338,8 @@ async function boot(b, label, errs, url){
 
     customPrograms.splice(0, customPrograms.length, target, other);
     stats.history = [
-      {id:'st-target',d:iso,pid:target.id,plan:0,status:'full',sec:600},
-      {id:'st-other',d:iso,pid:other.id,plan:0,status:'full',sec:600}
+      {id:'st-target',d:iso,pid:target.id,status:'full',sec:600},
+      {id:'st-other',d:iso,pid:other.id,status:'full',sec:600}
     ];
     stats.bestStreak = 99;
 

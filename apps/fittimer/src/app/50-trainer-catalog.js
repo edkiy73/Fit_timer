@@ -362,7 +362,7 @@ function renderReport(box, pr){
     // а не порядок дней. Список тренировок, идущий вразнобой, нельзя читать вовсе.
     const sorted = log.slice().sort((a2, b2) => String(b2.d).localeCompare(String(a2.d)));
     sorted.slice(0, 8).forEach(x => {
-      const pl = plans.find(y => y.i === x.p);
+      const pl = x.pl ? plans.find(y => y.id === x.pl) : null;
       let when = humanDay(x.d);
       try{ when += ', ' + new Intl.DateTimeFormat(localeTag(),{weekday:'short'}).format(new Date(x.d + 'T12:00:00')); }catch(e){}
       // Вариант в скобках, как у упражнений. Через точку он читался как второй день
@@ -394,7 +394,7 @@ function renderReport(box, pr){
     add('cls-label', t('report.growth'));
     const many = plans.length > 1;
     ex.forEach(e => {
-      const pl = plans.find(x => x.i === e.p);
+      const pl = e.pl ? plans.find(x => x.id === e.pl) : null;
       const tag = [e.w ? t('report.warmup') : '', many && pl && pl.days ? pl.days.split('·').map(x=>canonicalLabel(x)).join('·') : ''].filter(Boolean).join(' · ');
       change(e.n + (tag ? ` (${tag})` : ''), e.a, e.b, 'ok');
     });
@@ -667,7 +667,7 @@ function buildReport(p){
   // 1. Журнал: что и когда. Тридцати тренировок хватает на два месяца занятий —
   // дальше тренеру интересна не история, а то, что происходит сейчас.
   const log = mine.slice(-30).map(h => ({
-    d:h.d, p:+h.plan || 0, sec:h.sec || 0,
+    d:h.d, pl:String(h.planId || ''), sec:h.sec || 0,
     partial:h.status === 'partial' ? 1 : 0,
     done:Math.max(0, +h.doneExercises || 0),
     all:Math.max(0, +h.plannedExercises || 0)
@@ -675,7 +675,7 @@ function buildReport(p){
 
   // 2. Варианты: какие дни назначены и сколько раз каждый сделан.
   const planStats = plans.map((pl, i) => {
-    const own = mine.filter(h => (+h.plan || 0) === i);
+    const own = pl.id ? mine.filter(h => h.planId === pl.id) : [];
     const ownFull = own.filter(h => h.status !== 'partial');
     const ownPartial = own.filter(h => h.status === 'partial');
     // Сколько это занимает У ПОДОПЕЧНОГО. Тренер планировал одно, а человек делает
@@ -685,7 +685,7 @@ function buildReport(p){
     // Одна такая запись сдвигает среднее так, что число перестаёт что-то значить.
     const secs = ownFull.map(h => +h.sec || 0).filter(x => x > 0 && x < 6 * 3600);
     return {
-      i, days: (pl.days || []).join('·'), n: ownFull.length, partial: ownPartial.length,
+      id: String(pl.id || ''), i, days: (pl.days || []).join('·'), n: ownFull.length, partial: ownPartial.length,
       sec: secs.length ? Math.round(secs.reduce((a, b) => a + b, 0) / secs.length) : 0
     };
   });
@@ -739,7 +739,7 @@ function buildReport(p){
       rl:liveResistance ? String(liveResistance.label || '') : before.rl
     });
     ex.push({
-      p:pi, w:e.warmup ? 1 : 0, n:e.name || t('common.exerciseFallback'),
+      pl:String(pl.id || ''), w:e.warmup ? 1 : 0, n:e.name || t('common.exerciseFallback'),
       a:exVal(before), b:exVal(after)
     });
   }));

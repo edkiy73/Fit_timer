@@ -123,7 +123,7 @@ async function boot(b, label, errs, url){
   // клиент занимается
   await cp.evaluate(async () => {
     const current = customPrograms.find(x => x.name === 'Сила дома');
-    const history = [...(stats.history || []), {d: localISO(new Date()), t: 9, pid: current.id, sec: 900, kcal: 90, plan: 0}];
+    const history = [...(stats.history || []), {d: localISO(new Date()), t: 9, pid: current.id, sec: 900, kcal: 90, planId: normPlans(current)[0].id}];
     await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history, count:1})));
     await loadData();
     const p = customPrograms.find(x => x.name === 'Сила дома');

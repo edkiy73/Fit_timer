@@ -99,7 +99,7 @@ async function boot(b, label, errs, url){
   // ---- тренировка целиком, через настоящий финал ----
   await cp.evaluate(async () => {
     const current = customPrograms.find(x => x.name === 'Сила дома');
-    const history = [...(stats.history || []), {d: localISO(new Date()), t: 9, pid: current.id, sec: 900, kcal: 90, plan: 0}];
+    const history = [...(stats.history || []), {d: localISO(new Date()), t: 9, pid: current.id, sec: 900, kcal: 90, planId: normPlans(current)[0].id}];
     await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history, count:1})));
     await loadData();
     const p = customPrograms.find(x => x.name === 'Сила дома');
@@ -136,7 +136,7 @@ async function boot(b, label, errs, url){
   await cp.evaluate(async () => {
     const current = customPrograms.find(x => x.name === 'Сила дома');
     const history = [...(stats.history || []), {
-      id:'partial-report-test', d:localISO(new Date()), t:10, pid:current.id, sec:420, plan:0,
+      id:'partial-report-test', d:localISO(new Date()), t:10, pid:current.id, sec:420, planId:normPlans(current)[0].id,
       status:'partial', meaningful:true, doneExercises:1, plannedExercises:2,
       doneSteps:1, plannedSteps:2, exercises:['Приседания']
     }];
