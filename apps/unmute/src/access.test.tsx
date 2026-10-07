@@ -105,6 +105,20 @@ describe('course access and purchase',()=>{
     expect(screen.getByRole('radio',{name:/Курс \+ Plus на год.*2\s490\s₽/})).toBeTruthy();
   });
 
+  it('opened during the free days says how many are left, not «Бесплатная часть пройдена»',()=>{
+    const value=runtime();
+    const progress=value.state!.roadmapProgress;
+    value.state!.roadmapProgress={...progress,currentNode:{...progress.currentNode!,dayIndex:2}};
+    renderView(value,session());
+    expect(screen.getByText(/Первые 6 дней — бесплатно, попробуй без оплаты/)).toBeTruthy();
+    expect(screen.queryByText(/Бесплатная часть пройдена/)).toBeNull();
+  });
+
+  it('the Plus screen has one title, without a repeated eyebrow',()=>{
+    renderView(runtime(),session(),{focus:'plus'});
+    expect(screen.getAllByText('UnMute Plus')).toHaveLength(1);
+  });
+
   it('sells only Plus on the Plus screen: a month or a year',async()=>{
     const user=userEvent.setup();
     const {onBuy}=renderView(runtime(),session(),{focus:'plus'});

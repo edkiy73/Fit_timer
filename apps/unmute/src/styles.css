@@ -1682,3 +1682,12 @@ span.legend-item{cursor:default}
 @media(prefers-reduced-motion:reduce){
   .wave-bar,.wave-bar.is-current,.day-wave.is-celebrate .wave-bar,.week-eq-bar,.course-cell{animation:none!important}
 }
+/* «Мои покупки» in the profile */
+.my-purchases{display:grid;gap:12px}
+.my-purchases-list{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.my-purchases-list li,.my-purchases-plus{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.my-purchases-list span{color:var(--success);font-size:13px;font-weight:700;white-space:nowrap}
+.my-purchases-plus>div{display:grid;gap:2px;min-width:0}
+.my-purchases-plus span{color:var(--muted);font-size:13px;line-height:1.4}
+.my-purchases-plus .secondary-button{flex:none;width:auto;padding-inline:16px}
+.my-purchases .link-button{justify-self:start}

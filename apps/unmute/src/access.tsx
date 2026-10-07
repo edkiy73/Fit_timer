@@ -147,6 +147,10 @@ export function AccessOfferView({
   const plus = plusPrices(locale);
   const saving = plusYearSaving(locale);
   const totalDays = state.roadmapProgress.requiredCount;
+  // Opened before the free days are used up (from the route or Today): say so, not «пройдена».
+  const freeDays = state.set.access.mode === 'entitlement' ? state.set.access.freePreview?.days ?? 0 : 0;
+  const currentDay = state.roadmapProgress.currentNode?.dayIndex ?? Number.POSITIVE_INFINITY;
+  const freeLeft = currentDay <= freeDays ? freeDays - currentDay + 1 : 0;
 
   const plans: Array<{id: Plan; title: string; price: string | null; note: string; was?: string | null; badge?: string}> = [];
   if(offerCourse){
@@ -164,7 +168,8 @@ export function AccessOfferView({
       ...(saving ? {badge:t('access.saving', {percent:saving})} : {})
     });
   }
-  const selected = plans.find(item => item.id === plan) ?? plans[0];
+  // One deliberate default whatever the order of loading: the whole course, or a year of Plus.
+  const selected = plans.find(item => item.id === plan) ?? plans.find(item => item.id === 'course' || item.id === 'plus.year') ?? plans[0];
   const courseBenefits = [t('access.benefitDays', {days:countDays(t, locale, totalDays)}), t('access.benefitForever'), t('access.benefitReview')];
   const benefits = selected?.id === 'course'
     ? [...courseBenefits, t('access.benefitNoSub')]
@@ -179,10 +184,12 @@ export function AccessOfferView({
     <section className="access-shell" aria-labelledby="access-title">
       {back}
       <header className="access-heading">
-        <div className="eyebrow">{offerCourse ? courseTitle : 'UnMute Plus'}</div>
+        {offerCourse && <div className="eyebrow">{courseTitle}</div>}
         <h2 id="access-title">{t(offerCourse ? 'access.title' : 'access.plusHeading')}</h2>
         <p>{offerCourse
-          ? t('access.lead', {total:countDays(t, locale, totalDays)})
+          ? (freeLeft > 0
+            ? t('access.leadTrial', {free:countDays(t, locale, freeLeft), total:countDays(t, locale, totalDays)})
+            : t('access.lead', {total:countDays(t, locale, totalDays)}))
           : t('access.plusLead')}</p>
       </header>
 
@@ -259,10 +266,11 @@ export function AccessScreen(){
 
   const searchParams = new URLSearchParams(location.search);
   const rawPlace = searchParams.get('from') || 'other';
-  const place = rawPlace === 'course' || rawPlace === 'today' || rawPlace === 'talk' || rawPlace === 'answer' ? rawPlace : 'other';
+  const place = rawPlace === 'course' || rawPlace === 'today' || rawPlace === 'talk' || rawPlace === 'answer' || rawPlace === 'me' ? rawPlace : 'other';
   const requestedReturn = searchParams.get('return') || '';
   const returnTo = requestedReturn.startsWith('/') && !requestedReturn.startsWith('//') ? requestedReturn : '';
-  const focus: AccessFocus = place === 'talk' || place === 'answer' ? 'plus' : 'course';
+  // «Мои покупки» in the profile opens Plus, like the AI features do.
+  const focus: AccessFocus = place === 'talk' || place === 'answer' || place === 'me' ? 'plus' : 'course';
 
   const providers = useQuery({queryKey:['billing-providers'], queryFn:() => billingClient.providers(), staleTime:60_000, retry:1});
   const provider = providers.data?.[0] ?? null;
@@ -277,7 +285,7 @@ export function AccessScreen(){
     const isPaywall = place === 'talk' || runtime.state.access === 'preview';
     if(!isPaywall || trackedPlaceRef.current === place) return;
     trackedPlaceRef.current = place;
-    trackPaywallShown(place === 'answer' ? 'talk' : place);
+    trackPaywallShown(place === 'answer' ? 'talk' : place === 'me' ? 'other' : place);
   }, [place, runtime.status, runtime.state?.access]);
 
   const restore = async () => {
@@ -359,7 +367,8 @@ export function AccessScreen(){
       <Sheet open={pendingPlan !== null && !auth.session} onClose={() => setPendingPlan(null)} labelledBy="access-signin-title" closeLabel={t('access.signInClose')}>
         <div className="access-signin" id="access-signin-title">
           <SignInForm locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} askHandle={false} variant="inline"
-            title={t('access.signInTitle')} lead={t('access.signInText')} onSignedIn={() => undefined} />
+            title={t(pendingPlan === 'restore' ? 'access.restoreSignInTitle' : 'access.signInTitle')}
+            lead={t(pendingPlan === 'restore' ? 'access.restoreSignInText' : 'access.signInText')} onSignedIn={() => undefined} />
         </div>
       </Sheet>
     </>
