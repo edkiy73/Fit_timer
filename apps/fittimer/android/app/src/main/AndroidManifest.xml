@@ -3,9 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools">
     <application
         android:allowBackup="false"
-        android:icon="@mipmap/fittimer_launcher"
+        android:icon="@mipmap/fittimer_launcher_20261007"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/fittimer_launcher"
+        android:roundIcon="@mipmap/fittimer_launcher_20261007"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
