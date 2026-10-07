@@ -1,4 +1,5 @@
 import { access, readFile, readdir } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 
 const required = [
   'dist/index.html',
@@ -9,7 +10,7 @@ const required = [
   '.well-known/assetlinks.json',
   'android/app/src/main/AndroidManifest.xml',
   'android/app/src/direct/AndroidManifest.xml',
-  'android/app/src/main/res/mipmap-xhdpi/fittimer_launcher.webp',
+  'android/app/src/main/res/mipmap-xxxhdpi/fittimer_launcher_20261007.webp',
   'android/app/src/main/java/ru/fittimer/app/FitAudioPlugin.java',
   'android/app/src/main/java/ru/fittimer/app/VoiceModelWorker.java',
   'android/app/src/main/java/ru/fittimer/app/FitSystemPlugin.java',
@@ -26,6 +27,12 @@ const required = [
   'ios/App/App/Info.plist'
 ];
 for(const file of required) await access(file);
+
+const launcherBytes = await readFile('android/app/src/main/res/mipmap-xxxhdpi/fittimer_launcher_20261007.webp');
+const launcherSha256 = createHash('sha256').update(launcherBytes).digest('hex');
+if(launcherSha256 !== '263b875daf28ccaf07c8eabc07f1af8b952f6402feddf4d27050f8d434c3e877'){
+  throw new Error('FitTimer launcher artwork bytes changed unexpectedly');
+}
 
 const config = JSON.parse(await readFile('capacitor.config.json', 'utf8'));
 if(config.appId !== 'ru.fittimer.app') throw new Error('Unexpected appId');
@@ -82,8 +89,8 @@ const manifest = await readFile('android/app/src/main/AndroidManifest.xml', 'utf
 const directManifest = await readFile('android/app/src/direct/AndroidManifest.xml', 'utf8');
 if(manifest.includes('REQUEST_INSTALL_PACKAGES')) throw new Error('Play/store base manifest must not request package install permission');
 if(!directManifest.includes('REQUEST_INSTALL_PACKAGES')) throw new Error('Direct APK flavor must request package install permission');
-if(!manifest.includes('android:icon="@mipmap/fittimer_launcher"')
-  || !manifest.includes('android:roundIcon="@mipmap/fittimer_launcher"')){
+if(!manifest.includes('android:icon="@mipmap/fittimer_launcher_20261007"')
+  || !manifest.includes('android:roundIcon="@mipmap/fittimer_launcher_20261007"')){
   throw new Error('FitTimer manifest must use the stable checked-in launcher resource');
 }
 if(!manifest.includes('android:autoVerify="true"') || !manifest.includes('android:host="fittimer99.vercel.app"') || !manifest.includes('android:pathPrefix="/p/"')){
