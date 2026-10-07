@@ -79,6 +79,8 @@ dependencies {
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
     implementation 'androidx.work:work-runtime:2.10.1'
+    // Google Play in-app review after the third course day (UnMuteUpdatePlugin.requestReview).
+    implementation 'com.google.android.play:review:2.0.2'
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

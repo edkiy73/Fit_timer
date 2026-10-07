@@ -22,6 +22,7 @@ import { isNodeUnlockedByPurchase } from './content/access';
 import { AIConversationView } from './ai-conversation';
 import { AnswerExplanationView } from './answer-explanation';
 import { AnswerFeedbackSheet } from './answer-feedback-sheet';
+import { maybeAskStoreReview } from './store-review';
 import { trackCourseDay, trackDayCompleted, trackDayStarted, trackLessonCompleted, trackSaveError, trackSectionCompleted } from './observability';
 import { Icon } from './icons';
 import { Sheet } from './sheet';
@@ -1060,6 +1061,11 @@ export function NodeRunnerView({
       if(node.kind==='lesson')trackLessonCompleted(candidate.runId,candidate.mode);
       if(node.dayIndex)trackDayCompleted(candidate.runId,candidate.mode);
       if(node.dayIndex)trackCourseDay(state.set.id,node.dayIndex);
+      // Third course day done: ask the store for a rating once, after the summary is on screen.
+      if(candidate.mode!=='replay'&&node.dayIndex){
+        const completedDays=state.roadmapProgress.nodes.filter(item=>item.complete&&item.node.dayIndex!==undefined).length;
+        window.setTimeout(()=>{ void maybeAskStoreReview(completedDays); },1500);
+      }
       if(candidate.mode!=='replay'&&node.kind==='lesson'&&node.dayIndex){
         rememberRecentDayCompletion(state.set.id,node.id,activitySaveClock().dayNumber);
       }

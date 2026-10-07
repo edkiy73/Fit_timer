@@ -17,6 +17,10 @@ import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkInfo;
 import androidx.work.WorkManager;
 
+import com.google.android.play.core.review.ReviewInfo;
+import com.google.android.play.core.review.ReviewManager;
+import com.google.android.play.core.review.ReviewManagerFactory;
+
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -49,6 +53,34 @@ public class UnMuteUpdatePlugin extends Plugin {
         result.put("versionCode", BuildConfig.VERSION_CODE);
         result.put("versionName", BuildConfig.VERSION_NAME);
         call.resolve(result);
+    }
+
+    /**
+     * Google Play in-app review (launch plan, decision 17): the system rating sheet. Play decides
+     * whether it is actually shown; the result never says, so "requested" only means the flow ran.
+     * The direct APK is not from Play and does nothing.
+     */
+    @PluginMethod
+    public void requestReview(PluginCall call) {
+        JSObject result = new JSObject();
+        if (BuildConfig.DIRECT_UPDATES || getActivity() == null) {
+            result.put("requested", false);
+            call.resolve(result);
+            return;
+        }
+        ReviewManager manager = ReviewManagerFactory.create(getContext());
+        manager.requestReviewFlow().addOnCompleteListener(request -> {
+            if (!request.isSuccessful()) {
+                result.put("requested", false);
+                call.resolve(result);
+                return;
+            }
+            ReviewInfo info = request.getResult();
+            manager.launchReviewFlow(getActivity(), info).addOnCompleteListener(flow -> {
+                result.put("requested", true);
+                call.resolve(result);
+            });
+        });
     }
 
     @PluginMethod
