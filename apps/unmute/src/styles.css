@@ -1219,7 +1219,8 @@ select:active{transform:scale(.985)}
 .access-plan-text{display:grid;gap:3px;flex:1 1 auto;min-width:0}
 .access-plan-text b{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:16px}
 .access-plan-text small{color:var(--muted);font-size:13px}
-.access-plan-badge{padding:2px 8px;border-radius:999px;background:var(--success);color:var(--on-accent,#fff);font-size:11px;font-style:normal;font-weight:800}
+/* Soft tint + strong text: readable in both themes (a solid dark green with dark text was not). */
+.access-plan-badge{padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--success) 16%,var(--card));color:var(--success);font-size:11px;font-style:normal;font-weight:800;white-space:nowrap}
 .access-plan-price{display:grid;justify-items:end;flex:none;font-variant-numeric:tabular-nums}
 .access-plan-price strong{font-size:16px;white-space:nowrap}
 .access-plan-price s{color:var(--muted);font-size:12px}

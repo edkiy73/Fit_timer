@@ -41,7 +41,7 @@ export function bundleDiscount(): number {
   return value > 0 && value < 100 ? value : 0;
 }
 
-export function coursePlusYearPrice(access: CourseSet['access'], locale: string): {price: string; was: string | null} | null {
+export function coursePlusYearPrice(access: CourseSet['access'], locale: string): {price: string; was: string | null; saving: string | null} | null {
   const currency = currencyForLocale(locale);
   const course = courseAmount(access, currency);
   const year = pick(pricing.plusYearly, currency);
@@ -49,7 +49,12 @@ export function coursePlusYearPrice(access: CourseSet['access'], locale: string)
   const separate = course + year;
   const own = access.mode === 'entitlement' ? pick(access.bundlePrice, currency) : null;
   const amount = own ?? Math.round(separate * (100 - bundleDiscount()) / 100);
-  return {price:formatPrice(amount, currency, locale), was:amount < separate ? formatPrice(separate, currency, locale) : null};
+  const cheaper = amount < separate;
+  return {
+    price:formatPrice(amount, currency, locale),
+    was:cheaper ? formatPrice(separate, currency, locale) : null,
+    saving:cheaper ? formatPrice(separate - amount, currency, locale) : null
+  };
 }
 
 export function plusPrices(locale: string): {monthly: string; yearly: string} | null {

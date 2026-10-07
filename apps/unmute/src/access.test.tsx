@@ -81,8 +81,9 @@ describe('course access and purchase',()=>{
     await user.click(screen.getByRole('button',{name:/Оплатить 1\s490\s₽/}));
     expect(onBuy).toHaveBeenCalledWith('course');
     await user.click(screen.getByRole('radio',{name:/Курс \+ Plus на год/}));
-    // Course 1 490 + a year of Plus 2 990 = 4 480, minus the default 30 % → 3 136.
-    expect(screen.getByText(/4\s480\s₽/)).toBeTruthy();
+    // Course 1 490 + a year of Plus 2 990 = 4 480, minus the default 30 % → 3 136: the saving is spelled out.
+    expect(screen.getByText(/Отдельно 4\s480\s₽ — вместе всего 3\s136\s₽/)).toBeTruthy();
+    expect(screen.getByText(/Экономия 1\s344\s₽/)).toBeTruthy();
     expect(screen.getByText('Год Plus: разговоры с ИИ прямо в приложении и разбор ошибок')).toBeTruthy();
     await user.click(screen.getByRole('button',{name:/Оплатить 3\s136\s₽/}));
     expect(onBuy).toHaveBeenLastCalledWith('course.plus');

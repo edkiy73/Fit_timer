@@ -152,8 +152,10 @@ export function AccessOfferView({
   if(offerCourse){
     plans.push({id:'course', title:t('access.courseTitle'), price:fullPrice, note:t('access.courseNote')});
     if(bundle){
-      plans.push({id:'course.plus', title:t('access.bundleTitle'), price:bundle.price, was:bundle.was, note:t('access.bundleNote'),
-        ...(bundle.was ? {badge:t('access.bundleBadge')} : {})});
+      // Sell the saving, not just a sum: what the two cost apart, what they cost together.
+      plans.push({id:'course.plus', title:t('access.bundleTitle'), price:bundle.price, was:bundle.was,
+        note:bundle.was ? t('access.bundleNoteSaving', {was:bundle.was, price:bundle.price}) : t('access.bundleNote'),
+        ...(bundle.saving ? {badge:t('access.bundleBadge', {saving:bundle.saving})} : {})});
     }
   }else if(plus){
     plans.push({id:'plus.month', title:t('access.plusMonthTitle'), price:t('access.perMonth', {price:plus.monthly}), note:t('access.plusMonthNote')});
