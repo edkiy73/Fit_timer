@@ -361,11 +361,12 @@ This keeps Core unaware of programs/workouts while preserving the existing `wind
 
 Native voice transport is now Core in `src/core/speech.ts`:
 - microphone permission, native TTS and voice listing;
-- speech recognition start/stop with listener lifecycle (result/error/status/heard handlers);
+- speech recognition start/stop with listener lifecycle (result/error/status/heard/level handlers);
+- runtime recognition sensitivity as a generic 0..10 transport option;
 - offline recognition-model status/download/delete;
 - default recognition language/TTS locale and the pre-download hook are injected by the product.
 
-`mobile.js` still owns FitTimer policy: the `ru`/`ru-RU` defaults, the `fitVoiceHeard` diagnostics event, requesting notification permission before a model download, and everything voice commands mean during a workout. The `window.FitNative` voice surface is unchanged.
+`mobile.js` still owns FitTimer policy: the `ru`/`ru-RU` defaults, device-local sensitivity storage, `fitVoiceHeard` / `fitVoiceLevel` diagnostics events, requesting notification permission before a model download, and everything voice commands mean during a workout. `window.FitNative` now also exposes `setVoiceSensitivity` so calibration can change an active native capture without restarting it.
 
 ## Phase 10 — Infrastructure adapters: Supabase + OpenRouter
 
