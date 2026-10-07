@@ -550,9 +550,11 @@ l|band||1
 
 ```js
 stats.stageNames = {
-  "mv_abc": "Румынская тяга с гантелями"
+  "mv_abc": {n: "Румынская тяга с гантелями", e: "ex_abc"}
 }
 ```
+
+Уточнено при реализации (2026-10-08): запись реестра хранит и `e` = exercise.id слота. Этап принадлежит ровно одному слоту, поэтому строке истории не нужно повторять exId — см. «Компактное storage-представление history».
 
 History row хранит только stageId.
 
@@ -570,8 +572,14 @@ Persistent stats history — storage DTO, а не UI/domain object. Поэтом
 По смыслу:
 
 ```js
-{e:"ex_abc", s:"mv_abc", c:"w|db||2", r:"8-10", w:10}
+{s:"mv_abc", c:"w|db||2", r:"8-10", w:10}
 ```
+
+exId берётся из `stats.stageNames[s].e`. Выполненные упражнения в записи — номерами строк `load`, а не названиями/ID.
+
+Расчёт худшего случая (2000 тренировок × 10 упражнений, часть с подписями уровней, все поля записи) в `tests/exercise-v2-unit.js`:
+- с exId в каждой строке и списком выполненных по ID — 2,34 МБ из 3 МБ (запас меньше трети);
+- в текущей форме — 1,87 МБ (запас ~38%); тест падает, если запас станет меньше трети.
 
 Не сохранять:
 - `unit`, если kg;
@@ -2107,16 +2115,16 @@ AI не должен сам придумывать постоянный `canonic
 
 ### PR 2a — V2 schema + normalization + clean reset
 
-Статус: ⬜ не начат
+Статус: 🟡 доменная часть готова в ветке `ccr-1c455d3f-hdsme3` (`lib/fit-exercise-v2.js` + `tests/exercise-v2-unit.js`); переключение runtime на V2 и сброс данных — не начаты (нужно подтверждение владельца на очистку)
 
-- [ ] canonical exercise slot: `id + warmup + currentStageId + stages[1..4] + progressState`;
-- [ ] stage prescription/load/supportEquipment/progression;
+- [x] canonical exercise slot: `id + warmup + currentStageId + stages[1..4] + progressState`;
+- [x] stage prescription/load/supportEquipment/progression;
 - [ ] удалить persistent legacy load/progression/swap поля;
-- [ ] equipment catalog с roles и короткими stable storage codes;
-- [ ] normalize/sanitize/validation V2;
-- [ ] `activePrescription()` как единственный runtime read helper;
-- [ ] deterministic reversible cfgKey codec;
-- [ ] compact history DTO codec + `stageNames` registry shape;
+- [x] equipment catalog с roles и короткими stable storage codes;
+- [x] normalize/sanitize/validation V2 (доменная функция; подключение к sanitizeProgram — вместе с runtime);
+- [x] `activePrescription()` как единственный runtime read helper (в модуле; runtime ещё не переведён);
+- [x] deterministic reversible cfgKey codec;
+- [x] compact history DTO codec + `stageNames` registry shape;
 - [ ] schema/version tests;
 - [ ] runtime на этом этапе обязан хотя бы корректно читать single-stage V2; полноценная progression/history — PR2b;
 - [ ] после отдельного подтверждения владельца можно очистить текущие FitTimer-данные и работать только на V2.
@@ -3324,4 +3332,21 @@ Short storage keys используются ТОЛЬКО в persistent history D
 - полный браузерный прогон `scripts/run-browser-tests.mjs` — 37/37;
 - новый сценарий в `tests/start-overview.js`: смена дней пересортировывает варианты, история остаётся у своего варианта;
 - `tests/api-flow.js`: отчёт хранит id варианта, а не номер.
+
+
+### 2026-10-08 — PR 2a, доменная часть: `lib/fit-exercise-v2.js`
+
+Статус: 🟡 в ветке `ccr-1c455d3f-hdsme3`, runtime не переключён, в main не влито.
+
+Что сделали:
+- общий для клиента и сервера модуль без зависимостей (как `lib/ai-protocol.js`): справочник оборудования (machine id, короткий code, roles, допустимые типы нагрузки, count по умолчанию), нормализация + strict-проверка prescription/упражнения, `activeStage/activePrescription`, `cfgKey`/`parseCfgKey`, `regenerateExerciseIds` для любых копий, кодек компактной строки истории, реестр этапов и его GC;
+- strict-правила: weight/level без снаряда, снаряд не той роли или типа, «Другое» без имени, вес 0, несовместимый способ прогрессии, двойная прогрессия без потолка, `ceiling` без настоящего потолка, больше 4 этапов — ошибки; последний этап всегда `manual`; `every:0` → `null`;
+- `tests/exercise-v2-unit.js` — матрица раздела 14 для модели + расчёт размера истории.
+
+Отступления от плана (по результату расчёта размера):
+- `stats.stageNames[stageId] = {n, e}` вместо строки: exId хранится один раз, строка истории — `{s, c, r, w, …}`;
+- выполненные упражнения в записи истории — номерами строк `load`.
+
+Открыто:
+- перевод runtime/UI/AI-парсера на V2, удаление legacy-полей и сброс данных — следующий шаг, требует подтверждения владельца на очистку данных.
 

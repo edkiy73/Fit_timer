@@ -16,7 +16,7 @@ export const UNIT_TESTS = [
   'push-unit', 'analytics-unit', 'analytics-api', 'diagnostics-unit', 'health-unit', 'update-settings-unit',
   'onboarding-funnel-unit', 'ai-recovery-unit', 'ai-generation-guards-unit', 'ai-demographics-gate-unit', 'default-profile-name-unit', 'motivation-unit', 'partial-exit-unit', 'workout-controls-unit', 'notification-reschedule-unit',
   'accessibility-unit', 'release-ux-unit', 'admin-ui-unit', 'vercel-ignore-unit', 'ai-protocol-edit-unit',
-  'progression-per-exercise-unit', 'admin-ai-api'
+  'progression-per-exercise-unit', 'exercise-v2-unit', 'admin-ai-api'
 ];
 
 export const UNIT_TESTS_WITH_TEST_ENV = ['admin-ai-api'];
