@@ -1562,7 +1562,7 @@ function stopVoiceTest(){
       resumeVoiceListening();
     }
   });
-  if(restoreSettings && state.live && $('scrWork').classList.contains('on')){
+  if(restoreSettings){
     $('hfModal').classList.add('open');
   }
 }
