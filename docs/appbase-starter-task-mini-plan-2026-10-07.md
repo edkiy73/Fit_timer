@@ -1,6 +1,6 @@
 # AppBase Starter + Task Mini plan — 2026-10-07
 
-Status: **PR1–PR4 complete; PR5 final drift/documentation guard in progress**  
+Status: **complete — PR1–PR5 implemented; FitTimer migration gate not started**  
 Date: **2026-10-07**  
 Finalization review: **2026-10-09**  
 Repository baseline when this plan was written: `main` at `9222272013c55ea8a51860a876331c46c5cfd2d8`.
