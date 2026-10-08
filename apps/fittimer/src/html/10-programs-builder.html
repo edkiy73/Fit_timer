@@ -138,7 +138,7 @@
 
     <div class="note">
       <span class="n-ico" data-icon="image"></span>
-      <span data-i18n="builder.imagesIntro">У обложки и у каждого упражнения своя картинка. Загрузи пачкой и разложи по местам.</span>
+      <span data-i18n="builder.imagesIntro">У обложки и у каждого упражнения своя картинка. Обложка — 1:1, упражнения — 4:3. Фото с телефона автоматически кадрируются под нужный формат.</span>
     </div>
 
     <div class="card-block">
@@ -146,7 +146,7 @@
 
       <button type="button" class="hero-action" id="imgPick" data-act="pickImageFiles">
         <span class="ha-ico" data-icon="camera"></span>
-        <span class="ha-txt"><b data-i18n="builder.chooseFromPhone">Выбрать с телефона</b><small data-i18n="builder.uploadAndAssign">Загружаем и раскладываем</small></span>
+        <span class="ha-txt"><b data-i18n="builder.chooseFromPhone">Выбрать с телефона</b><small data-i18n="builder.uploadAndAssign">Обложка 1:1 · упражнения 4:3</small></span>
         <span class="ha-go" data-icon="chevR"></span>
       </button>
       <input type="file" id="imgFiles" accept="image/*" multiple class="hidden">
@@ -273,6 +273,7 @@
       <p class="field-hint hidden" id="slotEmptyHint" data-i18n="builder.noUploadedImages">Доступных картинок пока нет — выбери их с телефона или создай через ИИ.</p>
       <button class="btn-ghost" id="slotFromPhone" data-act="pickSlotImage" style="margin-top:10px" data-i18n="builder.chooseFromPhone">Выбрать с телефона</button>
       <button class="btn-ghost" id="slotGenerateAI" data-act="generateSlotImage" style="margin-top:8px" data-i18n="builder.generateOneAI">Сделать через ИИ</button>
+      <p class="field-hint" id="slotAspectHint"></p>
       <input type="file" id="slotFile" accept="image/*" class="hidden">
       <button type="button" class="modal-btn danger" id="slotRemove" data-act="removeImageSlot" data-i18n="builder.removeImage">Убрать картинку</button>
       <button class="modal-btn" data-act="closeModal" data-i18n="common.cancel">Отмена</button>
@@ -368,6 +369,7 @@
         <button type="button" id="bCoverNone" data-act="removeProgramCover" data-i18n="builder.noCover">Без обложки</button>
       </div>
       <input type="file" id="bCoverFile" accept="image/*" class="hidden">
+      <p class="field-hint" data-i18n="images.coverAspectHint">Формат 1:1. Фото с телефона автоматически кадрируется по центру.</p>
       <div class="media-preview" id="bCoverPrev"></div>
     </div>
     </div>
@@ -548,6 +550,7 @@
           <button type="button" id="exMediaNone" data-act="removeExerciseMedia" data-i18n="builder.remove">Убрать</button>
         </div>
         <input type="file" id="exMediaFile" accept="image/*" class="hidden">
+        <p class="field-hint" data-i18n="images.exerciseAspectHint">Формат 4:3. Фото с телефона автоматически кадрируется по центру.</p>
         <div class="media-preview" id="exMediaPrev"></div>
       </div>
     </div>
