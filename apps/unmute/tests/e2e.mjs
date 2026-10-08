@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 
@@ -135,6 +135,18 @@ const server = createServer(async (req, res) => {
   res.end(readFileSync(file));
 });
 await new Promise(resolve => server.listen(PORT, '127.0.0.1', resolve));
+
+// Independent regression runs in a separate process (isolated memory store and port 4176).
+// Start it alongside the main browser suite rather than after all main assertions.
+const focused = spawn(process.execPath, [join(APP, 'tests', 'day-progress-e2e.mjs')], {
+  stdio: 'inherit',
+  env: process.env
+});
+const focusedResult = new Promise(resolve => {
+  focused.once('error', error => { console.error('Day progress E2E failed to start:', error); resolve(1); });
+  focused.once('exit', (code, signal) => resolve(code ?? (signal ? 1 : 1)));
+});
+
 
 const suiteStartedAt = Date.now();
 const phaseTimes = [];
@@ -503,13 +515,6 @@ try{
 
 phase('main E2E finished');
 console.log(bad ? '\nUnMute e2e failures: '+bad : '\nUnMute e2e passed');
-if(bad)process.exit(1);
-
-// Run the focused 43-unit regression in a fresh Node process so its memory-backed
-// content/release store cannot inherit this suite's tiny two-day fixture.
-const focused=spawnSync(
-  process.execPath,
-  [join(APP,'tests','day-progress-e2e.mjs')],
-  {stdio:'inherit',env:process.env}
-);
-process.exit(focused.status??1);
+const focusedExit = await focusedResult;
+if(focusedExit !== 0) console.error('Day progress E2E exited with status', focusedExit);
+process.exit(bad || focusedExit !== 0 ? 1 : 0);
