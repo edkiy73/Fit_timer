@@ -142,6 +142,25 @@ ok('native purchase verification still requires a signed-in device',
     context:{platform:'android', distribution:'google_play'}
   })).status === 403);
 
+const notificationHandler = createBillingHandler({adapters:[{
+  id:'google_notice',
+  async available(){ return true; },
+  async verifyWebhook(){
+    return {ok:true, events:[{
+      orderId:'server-notice-1',
+      sku:'course.notification',
+      status:'paid',
+      autoRenew:false,
+      accountRef:{kind:'google', value:nativeContext.obfuscatedAccountId}
+    }]};
+  }
+}]});
+const notificationResult = await call(notificationHandler, {}, {query:{provider:'google_notice'}});
+ok('store notification resolves its AppBase account through the opaque reverse index',
+  notificationResult.status === 200 && notificationResult.body.applied === 1);
+ok('resolved store notification updates the intended account only',
+  !!(await accountOf('payer@example.com')).owned['course.notification']);
+
 // 1. Checkout through the provider: the right appears at once.
 const bought = await billing.checkout('test', 'pack.a');
 await auth.status();
