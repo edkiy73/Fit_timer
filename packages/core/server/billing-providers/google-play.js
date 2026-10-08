@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const { loadSecrets, secret } = require('../secrets');
 const { productConfig } = require('../product-core');
+const { billingProductByProviderId } = require('../billing-catalog');
 
 const API = 'https://androidpublisher.googleapis.com/androidpublisher/v3';
 const SCOPE = 'https://www.googleapis.com/auth/androidpublisher';
@@ -86,21 +87,8 @@ function configuredPackageName(){
   return clean(root.androidPackageName || root.id, 220);
 }
 
-function productByGoogleId(productId){
-  const id = String(productId || '');
-  const list = Array.isArray(productConfig().products) ? productConfig().products : [];
-  for(const raw of list){
-    const cfg = raw && raw.billing && raw.billing.google;
-    if(String(cfg && cfg.productId || '') !== id) continue;
-    return {
-      sku:String(raw.sku || ''),
-      title:String(raw.title || raw.sku || ''),
-      kind:raw.kind === 'subscription' ? 'subscription' : 'owned',
-      days:raw.kind === 'subscription' ? Math.max(1, Math.round(+raw.days || 30)) : 0,
-      billing:raw.billing || {}
-    };
-  }
-  return null;
+async function productByGoogleId(productId){
+  return billingProductByProviderId('google_play', productId);
 }
 
 function decodeRtdn(body){
@@ -315,7 +303,7 @@ function createGooglePlayBillingAdapter({
         const events = [];
         for(const line of Array.isArray(purchase.lineItems) ? purchase.lineItems : []){
           const productId = String(line && line.productId || '');
-          const product = productByGoogleId(productId);
+          const product = await productByGoogleId(productId);
           if(!product || product.kind !== 'subscription') continue;
           const event = subscriptionEvent(purchase, purchaseToken, productId);
           // RTDN type 12 is a server-side revocation. We only honor it after the
@@ -338,7 +326,7 @@ function createGooglePlayBillingAdapter({
         const events = [];
         for(const line of Array.isArray(purchase.productLineItem) ? purchase.productLineItem : []){
           const productId = String(line && line.productId || '');
-          const product = productByGoogleId(productId);
+          const product = await productByGoogleId(productId);
           if(!product || product.kind !== 'owned') continue;
           const forced = Number(oneTime.notificationType) === 2 ? 'canceled' : '';
           const event = ownedEvent(purchase, purchaseToken, productId, forced);
@@ -360,7 +348,7 @@ function createGooglePlayBillingAdapter({
           if(!account || !account.email) return {ok:true, events:[]};
           const events = [];
           for(const line of Array.isArray(purchase.lineItems) ? purchase.lineItems : []){
-            const product = productByGoogleId(line && line.productId);
+            const product = await productByGoogleId(line && line.productId);
             if(!product || product.kind !== 'subscription') continue;
             const event = subscriptionEvent(purchase, purchaseToken, String(line.productId));
             event.status = 'refunded';
@@ -375,7 +363,7 @@ function createGooglePlayBillingAdapter({
           if(!account || !account.email) return {ok:true, events:[]};
           const events = [];
           for(const line of Array.isArray(purchase.productLineItem) ? purchase.productLineItem : []){
-            const product = productByGoogleId(line && line.productId);
+            const product = await productByGoogleId(line && line.productId);
             if(!product || product.kind !== 'owned') continue;
             const details = line.productOfferDetails && typeof line.productOfferDetails === 'object'
               ? line.productOfferDetails : {};
