@@ -20,7 +20,7 @@
 
 const crypto = require('crypto');
 const { store } = require('./store');
-const { send, fail, readBody, cors, rateOk, sameSecret } = require('./util');
+const { send, fail, readBodyWithRaw, cors, rateOk, sameSecret } = require('./util');
 const { productCatalog, checkSku, cleanSku, grantOwned, revokeOwned, entitlementsOf } = require('./entitlements');
 const { productConfig } = require('./product-core');
 
@@ -73,6 +73,20 @@ function catalogItem(sku){
   const raw = list.find(item => cleanSku(item && item.sku) === sku) || {};
   if(raw.kind !== 'subscription') return {sku, kind: 'owned', days: 0};
   return {sku, kind: 'subscription', days: Math.max(1, Math.min(3650, Math.round(+raw.days || 30)))};
+}
+
+function providerProduct(sku){
+  let list = [];
+  try{ list = Array.isArray(productConfig().products) ? productConfig().products : []; }catch(_){}
+  const raw = list.find(item => cleanSku(item && item.sku) === sku);
+  if(!raw) return {sku, title:sku};
+  return {
+    sku,
+    title:line(raw.title, 120) || sku,
+    kind:raw.kind === 'subscription' ? 'subscription' : 'owned',
+    days:raw.kind === 'subscription' ? Math.max(1, Math.min(3650, Math.round(+raw.days || 30))) : 0,
+    billing:raw.billing && typeof raw.billing === 'object' ? raw.billing : {}
+  };
 }
 
 /** config/product.json → bundles: [{pattern:'bundle.x.*', includes:['x.*','sub.year']}] — one
@@ -253,8 +267,14 @@ function createBillingHandler({adapters = []} = {}){
     if(cors(req, res)) return;
     if(req.method !== 'POST') return fail(res, 405, 'method_not_allowed');
 
-    let body;
-    try{ body = await readBody(req); }catch(_){ return fail(res, 413, 'too_large'); }
+    let body, rawBody = '';
+    try{
+      const parsed = await readBodyWithRaw(req);
+      body = parsed.body;
+      rawBody = parsed.rawBody;
+    }catch(e){
+      return fail(res, String(e && e.message) === 'too_large' ? 413 : 400, String(e && e.message) === 'too_large' ? 'too_large' : 'bad_json');
+    }
     const query = req.query || Object.fromEntries(new URL(req.url || '/', 'http://local').searchParams);
 
     // Needs no storage: tells the app which buy buttons are legal/available for this context.
@@ -272,7 +292,7 @@ function createBillingHandler({adapters = []} = {}){
       const adapter = await findWebhook(String(query.provider));
       if(!adapter || typeof adapter.verifyWebhook !== 'function') return fail(res, 404, 'unknown_provider');
       let verified;
-      try{ verified = await adapter.verifyWebhook({headers: req.headers || {}, body, query}); }
+      try{ verified = await adapter.verifyWebhook({headers: req.headers || {}, body, rawBody, query}); }
       catch(_){ return fail(res, 401, 'bad_signature'); }
       if(!verified || !verified.ok) return fail(res, 401, 'bad_signature');
       const results = [];
@@ -325,7 +345,7 @@ function createBillingHandler({adapters = []} = {}){
       const sku = cleanSku(body.sku);
       const skuError = checkSku(sku);
       if(skuError) return fail(res, 400, skuError);
-      const product = productCatalog().find(item => item.sku === sku) || {sku, title: sku};
+      const product = providerProduct(sku);
       let started;
       try{ started = await adapter.checkout({email: who.email, sku, product}); }
       catch(e){ return fail(res, (e && e.status) || 502, String((e && e.message) || 'checkout_failed')); }
@@ -382,6 +402,23 @@ function createTestBillingAdapter({secret = process.env.BILLING_TEST_SECRET || '
   };
 }
 
+function createDefaultBillingAdapters({
+  instantEnabled,
+  includeTest = true,
+  stripe,
+  yookassa
+} = {}){
+  const { createStripeBillingAdapter } = require('./billing-providers/stripe');
+  const { createYooKassaBillingAdapter } = require('./billing-providers/yookassa');
+  const adapters = [
+    createYooKassaBillingAdapter(yookassa),
+    createStripeBillingAdapter(stripe)
+  ];
+  if(typeof instantEnabled === 'function') adapters.push(createInstantBillingAdapter({isEnabled:instantEnabled}));
+  if(includeTest) adapters.push(createTestBillingAdapter());
+  return adapters;
+}
+
 /* Admin: payment journal (mounted by the Core admin handler). */
 async function handleAdminBilling(action, body, res){
   if(action !== 'billing_log') return false;
@@ -389,4 +426,4 @@ async function handleAdminBilling(action, body, res){
   return true;
 }
 
-module.exports = { applyBillingEvent, billingLog, billingContext, createBillingHandler, createInstantBillingAdapter, createTestBillingAdapter, handleAdminBilling };
+module.exports = { applyBillingEvent, billingLog, billingContext, createBillingHandler, createInstantBillingAdapter, createTestBillingAdapter, createDefaultBillingAdapters, handleAdminBilling };
