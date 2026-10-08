@@ -59,6 +59,20 @@ export interface BillingClientOptions {
   context?: BillingContext | (() => BillingContext | Promise<BillingContext>);
 }
 
+export interface ReconcilePurchase {
+  sku: string;
+  proof: Record<string, unknown>;
+}
+
+export interface ReconcileResult {
+  verified: number;
+  failed: number;
+  results: Array<{sku: string; ok: boolean; applied?: boolean; error?: string}>;
+  owned: string[];
+  premium: boolean;
+  entitlements: BillingEntitlement[];
+}
+
 export interface RenewalResult {
   /** The provider manages renewal on its own page (a store's subscription settings). */
   url?: string;
@@ -76,6 +90,8 @@ export interface BillingClient {
   purchaseContext(provider: string, sku: string, context?: BillingContext): Promise<StorePurchaseContext>;
   /** Verify a native store purchase on the server before granting access. */
   verifyPurchase(provider: string, sku: string, proof: Record<string, unknown>, context?: BillingContext): Promise<CheckoutResult>;
+  /** Restore/reconcile store purchases discovered by StoreKit / Play Billing. */
+  reconcilePurchases(provider: string, purchases: ReconcilePurchase[], context?: BillingContext): Promise<ReconcileResult>;
   /** Turn automatic renewal of the active subscription on or off; the paid period stays. */
   setRenewal(autoRenew: boolean): Promise<RenewalResult>;
 }
@@ -221,6 +237,40 @@ export function createBillingClient(options: BillingClientOptions): BillingClien
         context:await resolveContext(context)
       });
       return checkoutResult(result);
+    },
+
+    async reconcilePurchases(provider, purchases, context){
+      const auth = await options.auth.authFields();
+      if(!auth) throw new Error('not_authenticated');
+      const result = await post({
+        action:'reconcile_purchases',
+        provider,
+        purchases:Array.isArray(purchases) ? purchases.slice(0, 50) : [],
+        email:auth.email,
+        deviceId:auth.deviceId,
+        syncToken:auth.syncToken,
+        context:await resolveContext(context)
+      });
+      const normalized = checkoutResult(result);
+      return {
+        verified:Number(result.verified) || 0,
+        failed:Number(result.failed) || 0,
+        results:Array.isArray(result.results) ? result.results.flatMap(value => {
+          if(!value || typeof value !== 'object') return [];
+          const item = value as Record<string, unknown>;
+          const sku = String(item.sku || '');
+          if(!sku) return [];
+          return [{
+            sku,
+            ok:!!item.ok,
+            ...(item.applied == null ? {} : {applied:!!item.applied}),
+            ...(item.error ? {error:String(item.error)} : {})
+          }];
+        }) : [],
+        owned:normalized.owned,
+        premium:normalized.premium,
+        entitlements:normalized.entitlements
+      };
     },
 
     async setRenewal(autoRenew){
