@@ -3,6 +3,10 @@ name: iOS — проверка сборки
 on:
   # macOS simulator is slow; web/Core-only changes use fast checks instead.
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/mobile-release.json'
   pull_request:
     paths:
       - 'apps/fittimer/ios/**'

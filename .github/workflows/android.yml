@@ -12,6 +12,10 @@ on:
         description: "Версия для пользователя"
         required: true
         default: "1.0.0"
+  push:
+    branches: [main]
+    paths:
+      - '.github/mobile-release.json'
   pull_request:
     paths:
       - 'apps/fittimer/android/**'
@@ -40,6 +44,21 @@ jobs:
       VERSION_NAME: ${{ inputs.version_name || '' }}
     steps:
       - uses: actions/checkout@v7
+
+      - name: Определить версию финального релиза
+        if: github.event_name == 'push'
+        run: |
+          node <<'NODE' >> "$GITHUB_ENV"
+          const fs = require('fs');
+          const marker = JSON.parse(fs.readFileSync('../../.github/mobile-release.json', 'utf8'));
+          const versionCode = Number(marker.androidVersionCode);
+          const versionName = String(marker.versionName || '');
+          if (!Number.isInteger(versionCode) || versionCode < 1 || !versionName) {
+            throw new Error('Invalid .github/mobile-release.json');
+          }
+          console.log('VERSION_CODE=' + versionCode);
+          console.log('VERSION_NAME=' + versionName);
+          NODE
 
       - name: Node.js 22
         uses: actions/setup-node@v7
@@ -76,7 +95,7 @@ jobs:
 
       - name: Разобрать ключ подписи
         id: keystore
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
@@ -93,7 +112,7 @@ jobs:
         run: ./gradlew assembleDirectDebug assemblePlayDebug testDirectDebugUnitTest --no-daemon
 
       - name: Release AAB и APK
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
         working-directory: apps/fittimer/android
         env:
           KEYSTORE_FILE: ${{ steps.keystore.outputs.path }}
@@ -124,7 +143,7 @@ jobs:
           file "$RUNNER_TEMP/fittimer-packaged-launcher.webp" | grep -q "192x192"
 
       - name: Проверить подпись APK
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
         run: |
           APK=$(find android/app/build/outputs/apk/direct/release -name '*.apk' | head -1)
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -Vr | head -1)
@@ -141,7 +160,7 @@ jobs:
           if-no-files-found: error
 
       - name: Выложить файлы для Google Play
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
         uses: actions/upload-artifact@v7
         with:
           name: fittimer-android-${{ env.VERSION_NAME }}
@@ -152,7 +171,7 @@ jobs:
           if-no-files-found: error
 
       - name: Подготовить постоянный APK
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
         run: |
           APK=$(find android/app/build/outputs/apk/direct/release -name '*.apk' | head -1)
           test -n "$APK"
@@ -181,7 +200,7 @@ jobs:
       # Раньше админка публиковала versionCode, а телефон качал latest-apk/FitTimer-latest.apk.
       # Следующий пуш в main подменял файл, и телефон отклонял его как version_mismatch.
       - name: Сохранить APK в архив версий
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -197,7 +216,7 @@ jobs:
             | while read -r name; do gh release delete-asset apk-archive "$name" -y; done
 
       - name: Обновить постоянный релиз latest-apk
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
