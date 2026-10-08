@@ -15,7 +15,7 @@ export function shouldDeployPath(path) {
   if (file.endsWith('.md') || file.startsWith('docs/') || file.startsWith('.ai/')) return false;
   if (file.startsWith('.github/')) return false; // CI changes do not change deployed app.
   if (file.startsWith('templates/')) return false; // Future-app starter only.
-  if (file.startsWith('scripts/')) return false; // root maintenance and CI scripts, not app runtime.
+  if (file.startsWith('scripts/')) return !/^scripts\/(?:test-|check-)/.test(file); // build tooling may affect apps
   if (file.startsWith('apps/')) {
     if (!file.startsWith(OWN)) return false;
     const local = file.slice(OWN.length);
