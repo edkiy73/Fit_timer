@@ -41,8 +41,10 @@ jobs:
             packages/core/package-lock.json
             apps/*/package-lock.json
 
-      - name: Install Core and every app
-        run: npm run setup
+      - name: Install only affected apps
+        run: node scripts/apps.mjs setup:affected "$BASE"
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
 
       - name: Test Vercel deployment filters
         run: node scripts/test-vercel-deployment-policy.mjs
