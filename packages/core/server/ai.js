@@ -457,10 +457,11 @@ async function generateGeminiVideo(settings, videoUrl, prompt, options){
 
 function billingProviderStatus(){
   return {
-    google: !!(process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON || process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_BASE64),
+    google: !!(secret('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON') || process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_BASE64),
     rustore: !!(process.env.RUSTORE_PAY_PRIVATE_KEY || process.env.RUSTORE_PAY_TOKEN || process.env.RUSTORE_API_TOKEN),
     yookassa: !!(secret('YOOKASSA_SHOP_ID') && secret('YOOKASSA_SECRET_KEY')),
-    stripe: !!secret('STRIPE_SECRET_KEY')
+    stripe: !!(secret('STRIPE_SECRET_KEY') && secret('STRIPE_WEBHOOK_SECRET')),
+    apple: !!(secret('APPSTORE_ISSUER_ID') && secret('APPSTORE_KEY_ID') && secret('APPSTORE_PRIVATE_KEY'))
   };
 }
 

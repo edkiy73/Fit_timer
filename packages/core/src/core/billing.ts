@@ -42,6 +42,15 @@ export interface BillingMethod {
   external: boolean;
 }
 
+export interface StorePurchaseContext {
+  provider: string;
+  sku: string;
+  productId?: string;
+  appAccountToken?: string;
+  obfuscatedAccountId?: string;
+  [key: string]: unknown;
+}
+
 export interface BillingClientOptions {
   auth: Pick<AuthClient, 'authFields'>;
   endpoint?: string;
@@ -63,6 +72,10 @@ export interface BillingClient {
   /** Allowed and configured payment methods for this platform/store context. */
   methods(context?: BillingContext): Promise<BillingMethod[]>;
   checkout(provider: string, sku: string, context?: BillingContext): Promise<CheckoutResult>;
+  /** Data the native store SDK needs before opening its purchase sheet. */
+  purchaseContext(provider: string, sku: string, context?: BillingContext): Promise<StorePurchaseContext>;
+  /** Verify a native store purchase on the server before granting access. */
+  verifyPurchase(provider: string, sku: string, proof: Record<string, unknown>, context?: BillingContext): Promise<CheckoutResult>;
   /** Turn automatic renewal of the active subscription on or off; the paid period stays. */
   setRenewal(autoRenew: boolean): Promise<RenewalResult>;
 }
@@ -92,6 +105,35 @@ export function createBillingClient(options: BillingClientOptions): BillingClien
     if(explicit) return explicit;
     if(typeof options.context === 'function') return (await options.context()) || runtimeBillingContext();
     return options.context || runtimeBillingContext();
+  }
+
+  function checkoutResult(result: Record<string, unknown>): CheckoutResult {
+    const entitlements: BillingEntitlement[] = Array.isArray(result.entitlements) ? result.entitlements.flatMap(value => {
+      if(!value || typeof value !== 'object') return [];
+      const item = value as Record<string, unknown>;
+      const kind = String(item.kind || '');
+      if(kind !== 'subscription' && kind !== 'owned') return [];
+      const key = String(item.key || '');
+      if(!key) return [];
+      return [{
+        key,
+        kind,
+        active:!!item.active,
+        provider:String(item.provider || ''),
+        source:String(item.source || ''),
+        since:String(item.since || ''),
+        expiresAt:String(item.expiresAt || ''),
+        autoRenew:!!item.autoRenew
+      }];
+    }) : [];
+    const out: CheckoutResult = {
+      granted:!!result.granted,
+      owned:Array.isArray(result.owned) ? result.owned.map(String) : [],
+      premium:!!result.premium,
+      entitlements
+    };
+    if(typeof result.url === 'string' && result.url) out.url = result.url;
+    return out;
   }
 
   async function post(body: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -147,32 +189,38 @@ export function createBillingClient(options: BillingClientOptions): BillingClien
         syncToken:auth.syncToken,
         context:await resolveContext(context)
       });
-      const entitlements: BillingEntitlement[] = Array.isArray(result.entitlements) ? result.entitlements.flatMap(value => {
-        if(!value || typeof value !== 'object') return [];
-        const item = value as Record<string, unknown>;
-        const kind = String(item.kind || '');
-        if(kind !== 'subscription' && kind !== 'owned') return [];
-        const key = String(item.key || '');
-        if(!key) return [];
-        return [{
-          key,
-          kind,
-          active:!!item.active,
-          provider:String(item.provider || ''),
-          source:String(item.source || ''),
-          since:String(item.since || ''),
-          expiresAt:String(item.expiresAt || ''),
-          autoRenew:!!item.autoRenew
-        }];
-      }) : [];
-      const out: CheckoutResult = {
-        granted:!!result.granted,
-        owned:Array.isArray(result.owned) ? result.owned.map(String) : [],
-        premium:!!result.premium,
-        entitlements
-      };
-      if(typeof result.url === 'string' && result.url) out.url = result.url;
-      return out;
+      return checkoutResult(result);
+    },
+
+    async purchaseContext(provider, sku, context){
+      const auth = await options.auth.authFields();
+      if(!auth) throw new Error('not_authenticated');
+      const result = await post({
+        action:'purchase_context',
+        provider,
+        sku,
+        email:auth.email,
+        deviceId:auth.deviceId,
+        syncToken:auth.syncToken,
+        context:await resolveContext(context)
+      });
+      return result as StorePurchaseContext;
+    },
+
+    async verifyPurchase(provider, sku, proof, context){
+      const auth = await options.auth.authFields();
+      if(!auth) throw new Error('not_authenticated');
+      const result = await post({
+        action:'verify_purchase',
+        provider,
+        sku,
+        proof,
+        email:auth.email,
+        deviceId:auth.deviceId,
+        syncToken:auth.syncToken,
+        context:await resolveContext(context)
+      });
+      return checkoutResult(result);
     },
 
     async setRenewal(autoRenew){
