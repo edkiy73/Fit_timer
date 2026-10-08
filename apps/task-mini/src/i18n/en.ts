@@ -30,5 +30,10 @@ export const en: Record<keyof typeof ru, string> = {
   'export.locked': 'Exporting tasks to a file is a separate purchase.',
   'export.lockedAdmin': 'Exporting tasks to a file is a separate purchase. For now it is granted in Admin.',
   'export.buy': 'Buy export',
-  'export.buyFailed': 'Could not complete the purchase. Try again.'
+  'export.buyFailed': 'Could not complete the purchase. Try again.',
+  'route.notFoundTitle': 'This page does not exist',
+  'route.notFoundText': 'The link is old or has a typo. Go back to tasks.',
+  'route.errorTitle': 'Something went wrong',
+  'route.errorText': 'This screen did not open. Go back to tasks and try again.',
+  'route.home': 'Back to tasks'
 };
