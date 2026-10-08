@@ -73,11 +73,54 @@ function linkedAccount(value, identity){
   if(!expected || !actual || actual !== expected) throw problem('store_account_mismatch', 403);
 }
 
+function accountIdOf(value){
+  return String(
+    (value && value.obfuscatedExternalAccountId)
+    || (value && value.externalAccountIdentifiers && value.externalAccountIdentifiers.obfuscatedExternalAccountId)
+    || ''
+  );
+}
+
+function configuredPackageName(){
+  const root = productConfig();
+  return clean(root.androidPackageName || root.id, 220);
+}
+
+function productByGoogleId(productId){
+  const id = String(productId || '');
+  const list = Array.isArray(productConfig().products) ? productConfig().products : [];
+  for(const raw of list){
+    const cfg = raw && raw.billing && raw.billing.google;
+    if(String(cfg && cfg.productId || '') !== id) continue;
+    return {
+      sku:String(raw.sku || ''),
+      title:String(raw.title || raw.sku || ''),
+      kind:raw.kind === 'subscription' ? 'subscription' : 'owned',
+      days:raw.kind === 'subscription' ? Math.max(1, Math.round(+raw.days || 30)) : 0,
+      billing:raw.billing || {}
+    };
+  }
+  return null;
+}
+
+function decodeRtdn(body){
+  const message = body && body.message && typeof body.message === 'object' ? body.message : null;
+  const encoded = String(message && message.data || '');
+  if(!encoded) return null;
+  try{
+    const parsed = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  }catch(_){
+    return null;
+  }
+}
+
 function createGooglePlayBillingAdapter({
   fetchImpl = globalThis.fetch,
   now = () => Date.now(),
   getServiceAccount,
-  getAccessToken
+  getAccessToken,
+  resolveObfuscatedAccountId
 } = {}){
   let cachedToken = '';
   let cachedUntil = 0;
@@ -152,6 +195,62 @@ function createGooglePlayBillingAdapter({
     );
   }
 
+  async function fetchSubscription(packageName, purchaseToken){
+    return request(
+      '/applications/' + encodeURIComponent(packageName)
+      + '/purchases/subscriptionsv2/tokens/' + encodeURIComponent(purchaseToken),
+      {method:'GET'}
+    );
+  }
+
+  async function fetchOwned(packageName, purchaseToken){
+    return request(
+      '/applications/' + encodeURIComponent(packageName)
+      + '/purchases/productsv2/tokens/' + encodeURIComponent(purchaseToken),
+      {method:'GET'}
+    );
+  }
+
+  function subscriptionEvent(purchase, purchaseToken, productId){
+    const lineItems = Array.isArray(purchase && purchase.lineItems) ? purchase.lineItems : [];
+    const line = lineItems.find(item => String(item && item.productId || '') === productId);
+    if(!line) throw problem('store_product_mismatch', 409);
+
+    const state = String(purchase.subscriptionState || '');
+    if(state.includes('PENDING')) throw problem('purchase_pending', 409);
+
+    const expiryTime = String(line.expiryTime || '');
+    const expiryMs = Date.parse(expiryTime) || 0;
+    const activeStates = new Set([
+      'SUBSCRIPTION_STATE_ACTIVE',
+      'SUBSCRIPTION_STATE_IN_GRACE_PERIOD',
+      'SUBSCRIPTION_STATE_CANCELED'
+    ]);
+    const paid = expiryMs > now() && activeStates.has(state);
+    const autoRenew = !!(line.autoRenewingPlan && line.autoRenewingPlan.autoRenewEnabled);
+    const orderId = clean(line.latestSuccessfulOrderId, 160)
+      || 'gp-sub-' + crypto.createHash('sha256').update(purchaseToken + '|' + productId + '|' + expiryTime).digest('hex').slice(0, 32);
+    return {orderId, status:paid ? 'paid' : 'canceled', until:expiryTime, autoRenew};
+  }
+
+  function ownedEvent(purchase, purchaseToken, productId, forcedStatus){
+    const items = Array.isArray(purchase && purchase.productLineItem) ? purchase.productLineItem : [];
+    const line = items.find(item => String(item && item.productId || '') === productId);
+    if(!line) throw problem('store_product_mismatch', 409);
+    const state = String(purchase.purchaseStateContext && purchase.purchaseStateContext.purchaseState || '');
+    if(state === 'PURCHASE_STATE_PENDING') throw problem('purchase_pending', 409);
+    const paid = state === 'PURCHASE_STATE_PURCHASED';
+    const orderId = clean(purchase.orderId, 160)
+      || 'gp-item-' + crypto.createHash('sha256').update(purchaseToken + '|' + productId).digest('hex').slice(0, 32);
+    return {orderId, status:forcedStatus || (paid ? 'paid' : 'canceled'), autoRenew:false};
+  }
+
+  async function accountForPurchase(purchase){
+    const accountId = accountIdOf(purchase);
+    if(!accountId || typeof resolveObfuscatedAccountId !== 'function') return null;
+    return resolveObfuscatedAccountId(accountId);
+  }
+
   return {
     id:'google_play',
     kind:'store',
@@ -176,60 +275,121 @@ function createGooglePlayBillingAdapter({
       const {productId, packageName} = googleProduct(product);
 
       if(product && product.kind === 'subscription'){
-        const purchase = await request(
-          '/applications/' + encodeURIComponent(packageName)
-          + '/purchases/subscriptionsv2/tokens/' + encodeURIComponent(purchaseToken),
-          {method:'GET'}
-        );
+        const purchase = await fetchSubscription(packageName, purchaseToken);
         linkedAccount(purchase, identity);
-
-        const lineItems = Array.isArray(purchase.lineItems) ? purchase.lineItems : [];
-        const line = lineItems.find(item => String(item && item.productId || '') === productId);
-        if(!line) throw problem('store_product_mismatch', 409);
-
-        const state = String(purchase.subscriptionState || '');
-        if(state.includes('PENDING')) throw problem('purchase_pending', 409);
-
-        const expiryTime = String(line.expiryTime || '');
-        const expiryMs = Date.parse(expiryTime) || 0;
-        const activeStates = new Set([
-          'SUBSCRIPTION_STATE_ACTIVE',
-          'SUBSCRIPTION_STATE_IN_GRACE_PERIOD',
-          'SUBSCRIPTION_STATE_CANCELED'
-        ]);
-        const revoked = state === 'SUBSCRIPTION_STATE_EXPIRED'
-          || state === 'SUBSCRIPTION_STATE_ON_HOLD'
-          || state === 'SUBSCRIPTION_STATE_PAUSED';
-        const paid = expiryMs > now() && activeStates.has(state);
-        const status = paid ? 'paid' : (revoked ? 'refunded' : 'canceled');
-        const autoRenew = !!(line.autoRenewingPlan && line.autoRenewingPlan.autoRenewEnabled);
-        const orderId = clean(line.latestSuccessfulOrderId, 160)
-          || 'gp-sub-' + crypto.createHash('sha256').update(purchaseToken + '|' + expiryTime).digest('hex').slice(0, 32);
-
-        if(paid && ackPending(purchase)) await acknowledgeSubscription(packageName, productId, purchaseToken);
-        return {events:[{orderId, status, until:expiryTime, autoRenew}]};
+        const event = subscriptionEvent(purchase, purchaseToken, productId);
+        if(event.status === 'paid' && ackPending(purchase)){
+          await acknowledgeSubscription(packageName, productId, purchaseToken);
+        }
+        return {events:[event]};
       }
 
-      const purchase = await request(
-        '/applications/' + encodeURIComponent(packageName)
-        + '/purchases/productsv2/tokens/' + encodeURIComponent(purchaseToken),
-        {method:'GET'}
-      );
+      const purchase = await fetchOwned(packageName, purchaseToken);
       linkedAccount(purchase, identity);
-
-      const items = Array.isArray(purchase.productLineItem) ? purchase.productLineItem : [];
-      if(!items.some(item => String(item && item.productId || '') === productId)){
-        throw problem('store_product_mismatch', 409);
+      const event = ownedEvent(purchase, purchaseToken, productId);
+      if(event.status === 'paid' && ackPending(purchase)){
+        await acknowledgeOwned(packageName, productId, purchaseToken);
       }
-      const state = String(purchase.purchaseStateContext && purchase.purchaseStateContext.purchaseState || '');
-      if(state === 'PURCHASE_STATE_PENDING') throw problem('purchase_pending', 409);
-      const paid = state === 'PURCHASE_STATE_PURCHASED';
-      const status = paid ? 'paid' : 'refunded';
-      const orderId = clean(purchase.orderId, 160)
-        || 'gp-item-' + crypto.createHash('sha256').update(purchaseToken).digest('hex').slice(0, 32);
+      return {events:[event]};
+    },
 
-      if(paid && ackPending(purchase)) await acknowledgeOwned(packageName, productId, purchaseToken);
-      return {events:[{orderId, status, autoRenew:false}]};
+    async verifyWebhook({body}){
+      const notification = decodeRtdn(body);
+      if(!notification) return {ok:false};
+
+      const packageName = configuredPackageName();
+      if(!packageName || String(notification.packageName || '') !== packageName){
+        return {ok:true, events:[]};
+      }
+      if(notification.testNotification || notification.pendingRefundReviewNotification){
+        return {ok:true, events:[]};
+      }
+
+      const subscription = notification.subscriptionNotification;
+      if(subscription && subscription.purchaseToken){
+        const purchaseToken = clean(subscription.purchaseToken, 4096);
+        const purchase = await fetchSubscription(packageName, purchaseToken);
+        const account = await accountForPurchase(purchase);
+        if(!account || !account.email) return {ok:true, events:[]};
+
+        const events = [];
+        for(const line of Array.isArray(purchase.lineItems) ? purchase.lineItems : []){
+          const productId = String(line && line.productId || '');
+          const product = productByGoogleId(productId);
+          if(!product || product.kind !== 'subscription') continue;
+          const event = subscriptionEvent(purchase, purchaseToken, productId);
+          // RTDN type 12 is a server-side revocation. We only honor it after the
+          // purchase token itself has been verified against this app/account.
+          if(Number(subscription.notificationType) === 12) event.status = 'refunded';
+          if(event.status === 'paid' && ackPending(purchase)){
+            await acknowledgeSubscription(packageName, productId, purchaseToken);
+          }
+          events.push({...event, email:String(account.email), sku:product.sku});
+        }
+        return {ok:true, events};
+      }
+
+      const oneTime = notification.oneTimeProductNotification;
+      if(oneTime && oneTime.purchaseToken){
+        const purchaseToken = clean(oneTime.purchaseToken, 4096);
+        const purchase = await fetchOwned(packageName, purchaseToken);
+        const account = await accountForPurchase(purchase);
+        if(!account || !account.email) return {ok:true, events:[]};
+        const events = [];
+        for(const line of Array.isArray(purchase.productLineItem) ? purchase.productLineItem : []){
+          const productId = String(line && line.productId || '');
+          const product = productByGoogleId(productId);
+          if(!product || product.kind !== 'owned') continue;
+          const forced = Number(oneTime.notificationType) === 2 ? 'canceled' : '';
+          const event = ownedEvent(purchase, purchaseToken, productId, forced);
+          if(event.status === 'paid' && ackPending(purchase)){
+            await acknowledgeOwned(packageName, productId, purchaseToken);
+          }
+          events.push({...event, email:String(account.email), sku:product.sku});
+        }
+        return {ok:true, events};
+      }
+
+      const voided = notification.voidedPurchaseNotification;
+      if(voided && voided.purchaseToken){
+        const purchaseToken = clean(voided.purchaseToken, 4096);
+        const productType = Number(voided.productType);
+        if(productType === 1){
+          const purchase = await fetchSubscription(packageName, purchaseToken);
+          const account = await accountForPurchase(purchase);
+          if(!account || !account.email) return {ok:true, events:[]};
+          const events = [];
+          for(const line of Array.isArray(purchase.lineItems) ? purchase.lineItems : []){
+            const product = productByGoogleId(line && line.productId);
+            if(!product || product.kind !== 'subscription') continue;
+            const event = subscriptionEvent(purchase, purchaseToken, String(line.productId));
+            event.status = 'refunded';
+            if(voided.orderId) event.orderId = clean(voided.orderId, 160);
+            events.push({...event, email:String(account.email), sku:product.sku});
+          }
+          return {ok:true, events};
+        }
+        if(productType === 2){
+          const purchase = await fetchOwned(packageName, purchaseToken);
+          const account = await accountForPurchase(purchase);
+          if(!account || !account.email) return {ok:true, events:[]};
+          const events = [];
+          for(const line of Array.isArray(purchase.productLineItem) ? purchase.productLineItem : []){
+            const product = productByGoogleId(line && line.productId);
+            if(!product || product.kind !== 'owned') continue;
+            const details = line.productOfferDetails && typeof line.productOfferDetails === 'object'
+              ? line.productOfferDetails : {};
+            const partial = Number(voided.refundType) === 2 && Number(details.refundableQuantity) > 0;
+            if(partial) continue;
+            const event = ownedEvent(purchase, purchaseToken, String(line.productId), 'refunded');
+            if(voided.orderId) event.orderId = clean(voided.orderId, 160);
+            events.push({...event, email:String(account.email), sku:product.sku});
+          }
+          return {ok:true, events};
+        }
+      }
+
+      return {ok:true, events:[]};
     }
   };
 }
