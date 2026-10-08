@@ -62,7 +62,8 @@ const COPY = {
     retentionD1:'Через день', retentionD7:'Через неделю', retentionD30:'Через месяц', retentionOf:'из',
     errorTimes:'раз', errorFirst:'впервые', errorLast:'последний раз', errorBuild:'версия',
     buyer:'Покупатель', product:'Покупка', statusPaid:'оплачено', statusRefunded:'возврат', statusCanceled:'продление отключено', statusRenewalOn:'продление включено (учеником)', statusRenewalOff:'продление отключено (учеником)',
-    providerInstant:'без оплаты (выдано сразу)'
+    statusManualGrant:'выдано вручную', statusManualRevoke:'забрано вручную',
+    providerInstant:'без оплаты (выдано сразу)', providerAdmin:'Администратор'
   },
   en: {
     title:'Admin', key:'ADMIN_KEY', connect:'Connect', disconnect:'Sign out',
@@ -375,13 +376,14 @@ function ErrorsView({errors, copy, locale, onClear}: {errors: Array<Record<strin
 }
 
 function providerLabel(provider: unknown, copy: Copy){
-  const names: Record<string, string> = {instant:copy.providerInstant, yookassa:'ЮKassa', stripe:'Stripe', google:'Google Play', apple:'App Store', test:'test'};
+  const names: Record<string, string> = {instant:copy.providerInstant, admin:copy.providerAdmin, yookassa:'ЮKassa', stripe:'Stripe', google:'Google Play', apple:'App Store', test:'test'};
   return names[String(provider || '')] || String(provider || '');
 }
 
 function paymentStatusLabel(status: unknown, copy: Copy){
   return status === 'paid' ? copy.statusPaid : status === 'refunded' ? copy.statusRefunded : status === 'canceled' ? copy.statusCanceled
-    : status === 'renewal_on' ? copy.statusRenewalOn : status === 'renewal_off' ? copy.statusRenewalOff : String(status || '');
+    : status === 'renewal_on' ? copy.statusRenewalOn : status === 'renewal_off' ? copy.statusRenewalOff
+    : status === 'manual_grant' ? copy.statusManualGrant : status === 'manual_revoke' ? copy.statusManualRevoke : String(status || '');
 }
 
 export function AdminPanel({client, productName, locale='ru', extraSections=NO_SECTIONS, eventLabels=NO_LABELS, defaultTerms=''}: AdminPanelProps){
