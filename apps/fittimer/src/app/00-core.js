@@ -330,15 +330,39 @@ export function roundDone(seconds, nxt){
 
 // обычный отдых — «Отдохните 45 секунд. Далее — скручивания лёжа»
 // описание следующего шага для озвучки: «Планка, подход 2 из 3, сторона 1 из 2»
+function exerciseLoadSpeech(step, english){
+  if(!step) return '';
+  if(step.weight > 0){
+    const count = Math.max(1, Math.round(+step.loadCount || 1));
+    const kg = english ? builderHooks.fmtKg(step.weight) : builderHooks.fmtKg(step.weight).replace('.', ',');
+    const unit = english
+      ? voicePlural(Math.round(step.weight),'килограмм','килограмма','килограммов','kilogram','kilograms')
+      : plural(Math.round(step.weight), 'килограмм', 'килограмма', 'килограммов');
+    if(count > 1){
+      return english
+        ? `${count} at ${kg} ${unit} each`
+        : `${count} по ${kg} ${unit}`;
+    }
+    return english ? `${kg} ${unit}` : `${kg} ${unit}`;
+  }
+  if(step.loadLabel){
+    return english ? `resistance ${step.loadLabel}` : `сопротивление ${step.loadLabel}`;
+  }
+  return '';
+}
+
 function nextStepSpeech(nxt){
   if(!nxt) return '';
+  const english = voiceIsEnglish();
   let out = nxt.title;
-  if(nxt.setsTotal > 1) out += voiceIsEnglish()
+  if(nxt.setsTotal > 1) out += english
     ? `, set ${nxt.setNo} of ${nxt.setsTotal}`
     : `, подход ${nxt.setNo} из ${nxt.setsTotal}`;
-  if(nxt.side) out += voiceIsEnglish()
+  if(nxt.side) out += english
     ? `, side ${nxt.side} of ${nxt.sidesTotal || 2}`
     : `, сторона ${nxt.side} из ${nxt.sidesTotal || 2}`;
+  const load = exerciseLoadSpeech(nxt, english);
+  if(load) out += english ? `, ${load}` : `, ${load}`;
   return out;
 }
 export function announceRest(seconds, nxt){
@@ -388,16 +412,8 @@ export function announceExercise(step, onDone){
         : (voiceIsEnglish() ? ', on each side' : ', на каждую сторону');
     }
   }
-  if(step.weight > 0){
-    const kg = voiceIsEnglish() ? builderHooks.fmtKg(step.weight) : builderHooks.fmtKg(step.weight).replace('.', ',');
-    text += voiceIsEnglish()
-      ? `, weight ${kg} ${voicePlural(Math.round(step.weight),'килограмм','килограмма','килограммов','kilogram','kilograms')}`
-      : `, вес ${kg} ${plural(Math.round(step.weight), 'килограмм', 'килограмма', 'килограммов')}`;
-  } else if(step.loadLabel){
-    text += voiceIsEnglish()
-      ? `, resistance ${step.loadLabel}`
-      : `, сопротивление ${step.loadLabel}`;
-  }
+  const load = exerciseLoadSpeech(step, voiceIsEnglish());
+  if(load) text += voiceIsEnglish() ? `, weight ${load}` : `, вес ${load}`;
   speak(text, null, onDone);
 }
 
