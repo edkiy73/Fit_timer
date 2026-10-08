@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1839,
-      "chars": 86523,
+      "lines": 1841,
+      "chars": 86697,
       "symbols": [
         "$",
         "accountUserDirtyHook",

@@ -2183,16 +2183,16 @@ AI не должен сам придумывать постоянный `canonic
 
 ### PR 4 — AppBase Core Structured Output
 
-Статус: ⬜ не начат
+Статус: ✅ в ветке `ccr-1c455d3f-hdsme3`, в main не влито
 
-- [ ] server-owned input/output schema metadata;
-- [ ] Structured Output adapters для selectable providers (Gemini/OpenAI/OpenRouter);
-- [ ] portable JSON Schema subset;
-- [ ] local structural validation той же schema;
-- [ ] strict fallback/refusal/incomplete handling;
-- [ ] admin route capability test: structured-запрос перед сохранением модели/маршрута;
-- [ ] action-specific max output tokens;
-- [ ] provider tests.
+- [x] server-owned input/output schema metadata;
+- [x] Structured Output adapters для selectable providers (Gemini/OpenAI/OpenRouter);
+- [x] portable JSON Schema subset;
+- [x] local structural validation той же schema;
+- [x] strict fallback/refusal/incomplete handling;
+- [x] admin route capability test: structured-запрос перед сохранением модели/маршрута;
+- [x] action-specific max output tokens;
+- [x] provider tests.
 
 ### PR 5 — FitTimer AI V2 create/replace + manual copy
 
@@ -3383,3 +3383,15 @@ Short storage keys используются ТОЛЬКО в persistent history D
 - тест `movement-chain-flow`.
 
 Открыто: «предпросмотр» ближайшего этапа с картинкой — вместе с картинками этапов (PR 7).
+
+### 2026-10-08 — PR 4: Structured Output в AppBase Core
+
+Статус: ✅ в ветке `ccr-1c455d3f-hdsme3`, в main не влито.
+
+Что сделали:
+- `packages/core/server/json-schema-lite.js` — переносимое подмножество JSON Schema (все поля required, `additionalProperties:false`, nullable через массив типов; anyOf/$ref/pattern/format запрещены) + локальная проверка ответа по той же схеме;
+- `generate(type, settings, prompt, {schema, maxOutputTokens})`: Gemini `responseJsonSchema`, OpenAI Responses `json_schema strict`, OpenRouter `response_format json_schema strict`; ответ всегда проверяется локально (`out.json`);
+- отказ модели → `ai_refused` (422), резервом не повторяется; обрезанный по лимиту ответ, невалидный JSON или несовпадение со схемой → резерв;
+- action может собирать prompt на сервере (`action.buildPrompt`) и задавать `schema`/`maxOutputTokens`: клиент присылает только структурированный input;
+- проверка маршрута в админке дополнительно делает structured-запрос и показывает «Нет JSON», если модель его не держит;
+- тест `packages/core/tests/ai-structured.mjs`; FitTimer, UnMute и task-mini — зелёные.

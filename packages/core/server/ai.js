@@ -8,6 +8,7 @@
 const { store } = require('./store');
 const OpenRouter = require('./ai-provider-openrouter');
 const { loadSecrets, secret } = require('./secrets');
+const SchemaLite = require('./json-schema-lite');
 
 const DEFAULT_PRICES = {
   RUB:{month:399,year:2990}, USD:{month:4.99,year:39.99},
@@ -214,14 +215,31 @@ async function jsonError(res){
   throw err;
 }
 
-async function geminiText(ep, prompt){
+/* Structured Output: отказ модели и обрезанный по лимиту ответ — разные ошибки.
+   Отказ (422) резервом не повторяем: другая модель на тот же запрос либо тоже
+   откажет, либо ответит на то, на что основная отвечать не стала. Обрезанный
+   ответ (502) — обычный сбой, резерв пробуем. */
+const refused = detail => Object.assign(new Error('ai_refused'), {status:422, code:'ai_refused', detail:line(detail, 200)});
+const incomplete = () => Object.assign(new Error('ai_incomplete'), {status:502, code:'ai_incomplete'});
+const outTokens = (opts, def) => Math.max(256, Math.min(65536, Math.round(+(opts && opts.maxOutputTokens) || def)));
+
+async function geminiText(ep, prompt, opts){
+  const structured = opts && opts.schema;
+  const generationConfig = {maxOutputTokens:outTokens(opts, 32768), temperature:.3};
+  if(structured){
+    generationConfig.responseMimeType = 'application/json';
+    generationConfig.responseJsonSchema = structured.schema;
+  }
   const res = await fetchTimed(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(ep.model)}:generateContent`, {
     method:'POST', headers:{'Content-Type':'application/json','X-goog-api-key':keyFor('gemini') || ''},
-    body:JSON.stringify({contents:[{parts:[{text:prompt}]}], generationConfig:{maxOutputTokens:32768,temperature:.3}})
+    body:JSON.stringify({contents:[{parts:[{text:prompt}]}], generationConfig})
   }, TEXT_TIMEOUT_MS);
   if(!res.ok) return jsonError(res);
   const j = await res.json();
+  if(j.promptFeedback && j.promptFeedback.blockReason) throw refused(j.promptFeedback.blockReason);
   const cand = (j.candidates || [])[0] || {};
+  if(/^(SAFETY|PROHIBITED_CONTENT|BLOCKLIST|SPII|RECITATION)$/.test(String(cand.finishReason || ''))) throw refused(cand.finishReason);
+  if(structured && cand.finishReason === 'MAX_TOKENS') throw incomplete();
   const text = (((cand.content || {}).parts) || []).map(x => x.text || '').join('').trim();
   if(!text) throw Object.assign(new Error('empty_response'), {status:502});
   return {text};
@@ -243,13 +261,20 @@ async function geminiVideoText(ep, videoUrl, prompt){
   return {text};
 }
 
-async function openaiText(ep, prompt){
+async function openaiText(ep, prompt, opts){
+  const structured = opts && opts.schema;
+  const body = {model:ep.model,input:prompt,max_output_tokens:outTokens(opts, 32768)};
+  if(structured) body.text = {format:{type:'json_schema', name:structured.name, schema:structured.schema, strict:true}};
   const res = await fetchTimed('https://api.openai.com/v1/responses', {
     method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${keyFor('openai') || ''}`},
-    body:JSON.stringify({model:ep.model,input:prompt,max_output_tokens:32768})
+    body:JSON.stringify(body)
   }, TEXT_TIMEOUT_MS);
   if(!res.ok) return jsonError(res);
   const j = await res.json();
+  const parts = (j.output || []).flatMap(x => x.content || []);
+  const refusal = parts.find(x => x && x.type === 'refusal');
+  if(refusal) throw refused(refusal.refusal);
+  if(structured && j.status === 'incomplete') throw incomplete();
   const text = (j.output_text || (j.output || []).flatMap(x => x.content || []).map(x => x.text || '').join('')).trim();
   if(!text) throw Object.assign(new Error('empty_response'), {status:502});
   return {text};
@@ -287,19 +312,19 @@ const testResponders = [];
 function registerTestResponder(fn){
   if(typeof fn === 'function' && !testResponders.includes(fn)) testResponders.push(fn);
 }
-function testFixture(type, prompt){
+function testFixture(type, prompt, opts){
   for(const fn of testResponders){
-    const out = fn(type, String(prompt || ''));
+    const out = fn(type, String(prompt || ''), opts || {});
     if(out) return out;
   }
   return null;
 }
 
-async function callOne(type, ep, prompt, imageSize, aspectRatio){
+async function callOne(type, ep, prompt, imageSize, aspectRatio, opts){
   if(!keyFor(ep.provider)) throw Object.assign(new Error('provider_not_configured'), {status:503});
   if(process.env.AI_TEST_MODE === '1'){
     if(type === 'image') return {image:'data:image/png;base64,iVBORw0KGgo='};
-    const fixture = testFixture(type, prompt);
+    const fixture = testFixture(type, prompt, opts);
     if(fixture) return fixture;
     return {text:'ТЕСТОВЫЙ ОТВЕТ ИИ'};
   }
@@ -308,15 +333,18 @@ async function callOne(type, ep, prompt, imageSize, aspectRatio){
     if(ep.provider === 'openai') return openaiImage(ep, prompt);
     throw Object.assign(new Error('provider_unsupported_for_image'), {status:400});
   }
-  if(ep.provider === 'gemini') return geminiText(ep, prompt);
-  if(ep.provider === 'openai') return openaiText(ep, prompt);
+  if(ep.provider === 'gemini') return geminiText(ep, prompt, opts);
+  if(ep.provider === 'openai') return openaiText(ep, prompt, opts);
   if(ep.provider === 'openrouter'){
     return OpenRouter.generateText({
       model:ep.model,
       prompt,
       timeoutMs:TEXT_TIMEOUT_MS,
-      maxTokens:32768,
+      maxTokens:outTokens(opts, 32768),
       temperature:.3,
+      schema:opts && opts.schema,
+      refused,
+      incomplete,
       fetchTimed,
       jsonError
     });
@@ -325,12 +353,44 @@ async function callOne(type, ep, prompt, imageSize, aspectRatio){
 }
 
 const mayFallback = e => !e.status || e.status === 404 || e.status === 408 || e.status === 429 || e.status >= 500;
+// options.schema = {name, schema}: ответ обязан быть JSON по этой схеме. Схема уходит
+// провайдеру как Structured Output и ВСЕГДА проверяется здесь же, локально.
+function schemaOption(options){
+  const sc = options && options.schema;
+  if(!sc) return null;
+  SchemaLite.assertPortable(sc.schema);
+  return {name:line(sc.name || 'result', 60).replace(/[^A-Za-z0-9_-]/g, '_') || 'result', schema:sc.schema};
+}
+function structuredJson(out, schema){
+  let value = out.json;
+  if(value === undefined){
+    try{ value = SchemaLite.parseJsonAnswer(out.text); }
+    catch(_){
+      const err = Object.assign(new Error('malformed_response'), {status:502});
+      err.validation = {ok:false, reason:'json_parse', missing:[]};
+      throw err;
+    }
+  }
+  const errors = SchemaLite.validate(schema.schema, value);
+  if(errors.length){
+    const err = Object.assign(new Error('malformed_response'), {status:502});
+    err.validation = {ok:false, reason:'schema_mismatch', missing:errors.slice(0, 20)};
+    throw err;
+  }
+  return value;
+}
 async function generate(type, settings, prompt, options){
   const route = settings[type];
   const aspectRatio = type === 'image' && options ? options.aspectRatio : null;
   const validate = options && typeof options.validate === 'function' ? options.validate : null;
+  const schema = type === 'text' ? schemaOption(options) : null;
+  const callOpts = {schema, maxOutputTokens:options && options.maxOutputTokens};
   const checked = async (ep, fallback) => {
-    const out = await callOne(type, ep, prompt, type === 'image' ? route.size : null, aspectRatio);
+    const out = await callOne(type, ep, prompt, type === 'image' ? route.size : null, aspectRatio, callOpts);
+    if(schema){
+      out.json = structuredJson(out, schema);
+      if(out.text === undefined) out.text = JSON.stringify(out.json);
+    }
     if(validate){
       const verdict = validate(out);
       if(!verdict || verdict.ok !== true){
@@ -404,4 +464,4 @@ function billingProviderStatus(){
   };
 }
 
-module.exports = { DEFAULTS, DEFAULT_PRICES, sanitizeSettings, getSettings, providerStatus, billingProviderStatus, generate, generateGeminiVideo, registerTestResponder };
+module.exports = { DEFAULTS, DEFAULT_PRICES, sanitizeSettings, getSettings, providerStatus, billingProviderStatus, generate, generateGeminiVideo, registerTestResponder, schemaOption };

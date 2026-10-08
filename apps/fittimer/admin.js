@@ -1087,7 +1087,15 @@ async function testAIAdmin(type){
   setActionFeedback('aiResult','Проверяю текущие поля без сохранения…','busy');
   try{
     const r=await api('test_ai',{type,settings});
-    setActionFeedback('aiResult','✓ '+r.provider+' / '+r.model+(r.fallback?' · сработал резерв':' · основной маршрут')+' · ничего не сохранено','ok');
+    // Генерация программ требует структурированного ответа (JSON по схеме):
+    // модель, которая его не держит, отвечает на простой текст, но программы не соберёт.
+    const sc=r.structured;
+    if(sc&&!sc.ok){
+      setActionFeedback('aiResult','Текст отвечает, но структурированный ответ (JSON) не работает: '+(sc.detail||'ответ не прошёл проверку')+' · ничего не сохранено','err');
+      flashActionButton(btn,'Нет JSON','err');
+      return;
+    }
+    setActionFeedback('aiResult','✓ '+r.provider+' / '+r.model+(r.fallback?' · сработал резерв':' · основной маршрут')+(sc?' · JSON ✓':'')+' · ничего не сохранено','ok');
     flashActionButton(btn,'✓ Работает','ok');
   }catch(e){
     setActionFeedback('aiResult','Ошибка: '+(e.detail||e.message)+' · настройки не сохранены','err');
