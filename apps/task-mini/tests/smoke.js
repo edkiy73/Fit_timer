@@ -1,6 +1,17 @@
 process.env.ALLOW_MEMORY_STORE = '1';
 process.env.ADMIN_KEY = 'task-mini-admin';
 const fs = require('fs');
+const path = require('path');
+
+function runtimeFiles(root){
+  const out = [];
+  for(const entry of fs.readdirSync(root, {withFileTypes:true})){
+    const full = path.join(root, entry.name);
+    if(entry.isDirectory()) out.push(...runtimeFiles(full));
+    else if(/\.(?:[cm]?js|tsx?|jsx)$/.test(entry.name)) out.push(full);
+  }
+  return out;
+}
 
 let bad = 0;
 const ok = (name, condition) => {
@@ -50,6 +61,20 @@ function fakeRes(){
     read('src/app.tsx').includes('taskBilling.methods()')
     && !read('src/app.tsx').includes('taskBilling.providers()')
     && !/stripe|yookassa|google_play|app_store/i.test(read('src/app.tsx')));
+
+  const runtimeRoots = ['src','api','lib'].map(name => path.join(__dirname, '..', name));
+  const providerBoundaryViolations = runtimeRoots.flatMap(runtimeFiles).flatMap(file => {
+    const text = fs.readFileSync(file, 'utf8');
+    const relative = path.relative(path.join(__dirname, '..'), file).replace(/\\/g, '/');
+    const directAdapter = /billing-providers\//i.test(text)
+      || /create(?:Stripe|YooKassa|GooglePlay|AppleStore)BillingAdapter/.test(text);
+    const hardcodedProviderId = /['"`](?:stripe|yookassa|google_play|apple)['"`]/i.test(text);
+    return directAdapter || hardcodedProviderId ? [relative] : [];
+  });
+  ok('Task Mini runtime stays provider-neutral across src/api/lib',
+    providerBoundaryViolations.length === 0);
+  if(providerBoundaryViolations.length) console.log('provider boundary violations: ' + providerBoundaryViolations.join(', '));
+
   ok('Core does not need a task-specific sync API', !registry.accepts('profile', 'project:1') && !registry.accepts('account', 'project'));
 
   const auth = require('../api/auth');
