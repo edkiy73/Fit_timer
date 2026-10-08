@@ -87,7 +87,7 @@ async function boot(b, label, errs, url){
     withPic: normPlans(draft)[0].exercises.filter(e => e.media && e.media.kind === 'img').length,
     total: normPlans(draft)[0].exercises.length
   }));
-  const promptRule=await tp.evaluate(()=>imagesPromptText());
+  const promptRule=await tp.evaluate((name)=>{ const p=customPrograms.find(x=>x.name===name); loadBuilderDraft(p); return imagesPromptText(); },NAME);
   ok('промпт приложения жёстко запрещает любой текст на картинках',
      promptRule.includes('ZERO text of any kind')
        &&promptRule.includes('Do not render the exercise or program name inside the image.'));
