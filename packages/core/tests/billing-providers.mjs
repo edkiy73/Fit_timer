@@ -9,7 +9,16 @@ const { createYooKassaBillingAdapter } = require('../server/billing-providers/yo
 const { createGooglePlayBillingAdapter } = require('../server/billing-providers/google-play');
 const { createAppleStoreBillingAdapter, createApiToken } = require('../server/billing-providers/apple-store');
 
-configureProduct({id:'test.billing', name:'Billing Test', slug:'billing-test', defaultPublicUrl:'https://app.example', products:[]});
+configureProduct({
+  id:'test.billing',
+  name:'Billing Test',
+  slug:'billing-test',
+  defaultPublicUrl:'https://app.example',
+  products:[
+    {sku:'pack.a', title:'Pack A', billing:{google:{productId:'pack_a'}, apple:{productId:'pack_a_ios'}}},
+    {sku:'plus.month', title:'Plus', kind:'subscription', days:30, billing:{google:{productId:'plus_month'}, apple:{productId:'plus_month_ios'}}}
+  ]
+});
 
 let bad = 0;
 const ok = (name, cond, detail = '') => {
@@ -226,6 +235,34 @@ ok('Google rejects a token linked to another AppBase account',
     identity:googleIdentity
   }).then(() => false, e => e.message === 'store_account_mismatch' && e.status === 403));
 
+const googleSubRtdn = Buffer.from(JSON.stringify({
+  packageName:'test.billing',
+  subscriptionNotification:{notificationType:2, purchaseToken:'sub-token'}
+})).toString('base64');
+const googleSubNotice = await google.verifyWebhook({body:{message:{data:googleSubRtdn}}});
+ok('Google RTDN re-fetches the subscription and maps it to AppBase',
+  googleSubNotice.ok
+  && googleSubNotice.events[0]?.sku === 'plus.month'
+  && googleSubNotice.events[0]?.status === 'paid'
+  && googleSubNotice.events[0]?.accountRef?.kind === 'google'
+  && googleSubNotice.events[0]?.accountRef?.value === googleIdentity.googleObfuscatedAccountId);
+
+const googleItemRtdn = Buffer.from(JSON.stringify({
+  packageName:'test.billing',
+  oneTimeProductNotification:{notificationType:1, purchaseToken:'item-token'}
+})).toString('base64');
+const googleItemNotice = await google.verifyWebhook({body:{message:{data:googleItemRtdn}}});
+ok('Google one-time RTDN re-fetches the purchase before granting',
+  googleItemNotice.ok
+  && googleItemNotice.events[0]?.sku === 'pack.a'
+  && googleItemNotice.events[0]?.orderId === 'GPA.item.1'
+  && googleItemNotice.events[0]?.accountRef?.value === googleIdentity.googleObfuscatedAccountId);
+ok('Google RTDN refuses a different package before any entitlement event',
+  !(await google.verifyWebhook({body:{message:{data:Buffer.from(JSON.stringify({
+    packageName:'other.app',
+    subscriptionNotification:{purchaseToken:'sub-token'}
+  })).toString('base64')}}})).ok);
+
 // App Store: the phone gives a transaction id; Core fetches the transaction from Apple itself.
 const appleIdentity = {appleAppAccountToken:'11111111-2222-4333-8444-555555555555'};
 const fakeJws = payload => [
@@ -296,6 +333,17 @@ const apple = createAppleStoreBillingAdapter({
   fetchImpl:async (url, init = {}) => {
     appleCalls.push({url, init});
     const id = decodeURIComponent(String(url).split('/').pop());
+    if(url.includes('/inApps/v1/subscriptions/')){
+      if(id !== 'tx-sub') return jsonResponse({}, 404);
+      return jsonResponse({
+        data:[{lastTransactions:[{
+          originalTransactionId:'tx-sub',
+          status:1,
+          signedTransactionInfo:fakeJws(appleTransactions['tx-sub']),
+          signedRenewalInfo:fakeJws({originalTransactionId:'tx-sub', autoRenewStatus:0})
+        }]}]
+      });
+    }
     if(id === 'tx-sandbox' && url.startsWith('https://api.storekit.apple.com')){
       return jsonResponse({}, 404);
     }
@@ -356,6 +404,34 @@ ok('App Store rejects a transaction linked to another AppBase account',
     proof:{transactionId:'tx-other-account'},
     identity:appleIdentity
   }).then(() => false, e => e.message === 'store_account_mismatch' && e.status === 403));
+
+const appleNoticeHint = fakeJws({
+  notificationType:'DID_CHANGE_RENEWAL_STATUS',
+  data:{signedTransactionInfo:fakeJws(appleTransactions['tx-sub'])}
+});
+const appleNotice = await apple.verifyWebhook({body:{signedPayload:appleNoticeHint}});
+ok('App Store notification re-fetches current subscription state',
+  appleNotice.ok
+  && appleNotice.events[0]?.sku === 'plus.month'
+  && appleNotice.events[0]?.status === 'paid'
+  && appleNotice.events[0]?.until === '2030-02-01T00:00:00.000Z');
+ok('App Store reconciliation reads current auto-renew state',
+  appleNotice.events[0]?.autoRenew === false);
+ok('App Store notification resolves the AppBase account only through appAccountToken',
+  appleNotice.events[0]?.accountRef?.kind === 'apple'
+  && appleNotice.events[0]?.accountRef?.value === appleIdentity.appleAppAccountToken);
+ok('App Store webhook body alone cannot create an event without a server transaction',
+  await apple.verifyWebhook({body:{signedPayload:fakeJws({
+    notificationType:'REFUND',
+    data:{signedTransactionInfo:fakeJws({
+      transactionId:'forged-missing',
+      bundleId:'test.billing',
+      productId:'pack_a_ios',
+      appAccountToken:appleIdentity.appleAppAccountToken,
+      revocationDate:Date.parse('2030-01-03T00:00:00Z')
+    })}
+  })}}).then(() => false, e => e.message === 'purchase_not_found')
+);
 
 console.log(bad ? `\nExternal billing provider failures: ${bad}` : '\nExternal billing providers behave correctly');
 process.exit(bad ? 1 : 0);
