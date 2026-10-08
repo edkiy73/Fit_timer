@@ -333,15 +333,18 @@ async function handleCatalogAdmin(action,body,res){
       {handle,since:now,seen:now,keyHash:'',years:null,links:''},t)));
   }
   const have=new Set(await store.list('c:approved'));
+  let added=0;
   for(const it of SEED_ITEMS){
+    // Never overwrite a program an administrator may have edited after seeding.
+    // A second click is intentionally idempotent.
+    if(have.has(it.id))continue;
     await store.set(`c:${it.id}`,JSON.stringify(Object.assign(
       {status:'approved',at:now,cover:null},it)));
-    if(!have.has(it.id)){
-      await store.push('c:approved',it.id);
-      if(it.by)await store.incr(`t:${it.by}:programs`);
-    }
+    await store.push('c:approved',it.id);
+    if(it.by)await store.incr(`t:${it.by}:programs`);
+    added++;
   }
-  send(res,200,{ok:true,items:SEED_ITEMS.length});
+  send(res,200,{ok:true,items:SEED_ITEMS.length,added});
   return true;
 }
 
