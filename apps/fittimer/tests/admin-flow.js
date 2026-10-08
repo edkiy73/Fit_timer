@@ -59,6 +59,10 @@ const PROGRAM = name => catalogProgram(name, ['Приседания', 'Отжи�
   ok('повторная публикация не дублирует и не перезаписывает программы', again.s===200 && again.j.added===0);
   const curated = await fetch(BASE+'/api/catalog').then(r=>r.json());
   ok('все эталоны опубликованы в витрине', refIds.length > 0 && refIds.every(id=>(curated.items||[]).some(x=>x.id===id)), refIds.join(','));
+  const canonicalDetail=await fetch(BASE+'/api/catalog?item=slim_toned_v2&lang=ru').then(async r=>({s:r.status,j:await r.json()}));
+  ok('детальный каталог принимает стабильный id эталона для загрузки фото упражнений',
+     canonicalDetail.s===200&&canonicalDetail.j.item&&canonicalDetail.j.item.id==='slim_toned_v2',
+     canonicalDetail.j.error||canonicalDetail.s);
   const TRAINER = '@adm.' + Math.random().toString(36).slice(2, 7);
   const tr = await makeTrainer(TRAINER);
   ok('тренер заведён через аккаунт', tr.ok === true, JSON.stringify(tr));
