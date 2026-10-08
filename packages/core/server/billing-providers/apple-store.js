@@ -138,6 +138,8 @@ function createAppleStoreBillingAdapter({
     return createApiToken({...value, bundleId}, Math.floor(now() / 1000));
   }
 
+  const decodeVerified = async jws => await verifySignedData(jws, {nowMs:now()});
+
   async function requestTransaction(transactionId, bundleId){
     if(typeof fetchImpl !== 'function') throw problem('fetch_unavailable', 503);
     const auth = await token(bundleId);
@@ -204,7 +206,7 @@ function createAppleStoreBillingAdapter({
     return {orderId:txId, status:revoked ? 'refunded' : 'paid', autoRenew:false};
   }
 
-  function subscriptionEvent(statusPayload, {productId, bundleId, identity}){
+  async function subscriptionEvent(statusPayload, {productId, bundleId, identity}){
     if(statusPayload && statusPayload.bundleId && String(statusPayload.bundleId) !== bundleId){
       throw problem('store_bundle_mismatch', 409);
     }
@@ -213,7 +215,7 @@ function createAppleStoreBillingAdapter({
     for(const group of Array.isArray(statusPayload && statusPayload.data) ? statusPayload.data : []){
       for(const item of Array.isArray(group && group.lastTransactions) ? group.lastTransactions : []){
         if(!item || !item.signedTransactionInfo) continue;
-        const tx = decodeJwsPayload(item.signedTransactionInfo);
+        const tx = await decodeVerified(item.signedTransactionInfo);
         if(String(tx.productId || '') !== productId) continue;
         if(String(tx.bundleId || '') !== bundleId) continue;
         if(String(tx.appAccountToken || '').toLowerCase() !== expectedAccount) continue;
@@ -225,7 +227,7 @@ function createAppleStoreBillingAdapter({
     }
     if(!best) throw problem('subscription_status_not_found', 409);
 
-    const renewal = best.item.signedRenewalInfo ? decodeJwsPayload(best.item.signedRenewalInfo) : {};
+    const renewal = best.item.signedRenewalInfo ? await decodeVerified(best.item.signedRenewalInfo) : {};
     if(renewal.productId && String(renewal.productId) !== productId){
       throw problem('store_product_mismatch', 409);
     }
@@ -270,7 +272,7 @@ function createAppleStoreBillingAdapter({
       const response = await requestTransaction(transactionId, mapped.bundleId);
       // Never trust JWS sent by the phone. The payload decoded here came from the
       // authenticated App Store Server API response for this exact transaction id.
-      const transaction = decodeJwsPayload(response.payload.signedTransactionInfo);
+      const transaction = await decodeVerified(response.payload.signedTransactionInfo);
       const baseEvent = normalize(transaction, {
         requestedId:transactionId,
         productId:mapped.productId,
@@ -284,7 +286,7 @@ function createAppleStoreBillingAdapter({
           mapped.bundleId,
           response.base
         );
-        return {events:[subscriptionEvent(status, {
+        return {events:[await subscriptionEvent(status, {
           productId:mapped.productId,
           bundleId:mapped.bundleId,
           identity
