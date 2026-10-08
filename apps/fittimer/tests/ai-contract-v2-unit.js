@@ -28,6 +28,21 @@ test('coach prompt requires useful program intro and executable exercise coachin
   assert.ok(C.outputSchema('program.modify').schema.properties.patch.properties.desc.maxLength === 1800);
 });
 
+test('beginner-comprehension guard is shared by all AI workflows', () => {
+  const kinds = ['program.create','exercise.create','program.modify','exercise.modify','exercise.replace'];
+  kinds.forEach(kind => {
+    const prompt = C.buildPrompt(kind, {language:'Russian',task:'Update technique instructions',profile:'',context:'',
+      availableLoadEquipment:[],availableSupportEquipment:[]});
+    assert.ok(prompt.includes('mentally simulate one complete repetition'),kind);
+    assert.ok(prompt.includes('beginners') || prompt.includes('beginner comprehension check'),kind);
+    assert.ok(prompt.includes('lower the dumbbells to either side of your chest'),kind);
+  });
+  const fixture=require('../catalog/etalon-v-silhouette-ru-v2.json');
+  const floor=fixture.program.plans.flatMap(p=>p.exercises.flatMap(e=>e.stages)).find(s=>s.name==='Жим двух гантелей лёжа на полу');
+  assert.ok(floor.desc.includes('к бокам груди'));
+  assert.ok(floor.desc.includes('верхней части рук'));
+});
+
 const created = {contractVersion:2, program:{name:'Сила', desc:'', progressionEvery:2, rotate:false, rotateDays:[], plans:[
   {days:['mon', 'thu'], rounds:1, roundRest:0, exercises:[
     {warmup:false, stages:[stage('Отжимания от стены', {advance:'ceiling'}), stage('Отжимания с колен')]},
