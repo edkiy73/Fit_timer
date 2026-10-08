@@ -54,6 +54,14 @@ describe('__APP_NAME__ starter', () => {
     expect(await screen.findByRole('link', {name:t['nav.signIn']})).toBeTruthy();
   });
 
+  it('shows a calm not-found screen for broken links', async () => {
+    const user = userEvent.setup();
+    const router = renderApp('/does-not-exist');
+    expect(await screen.findByRole('heading', {name:t['route.notFoundTitle']})).toBeTruthy();
+    await user.click(screen.getByRole('button', {name:t['route.home']}));
+    expect(router.state.location.pathname).toBe('/');
+  });
+
   it('keeps dictionaries in sync and offers a language switch only for several locales', async () => {
     expect(missingKeys(dictionaries)).toEqual({});
     renderApp('/account');
