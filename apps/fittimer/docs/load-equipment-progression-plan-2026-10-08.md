@@ -2246,8 +2246,8 @@ AI не должен сам придумывать постоянный `canonic
 - [ ] два устройства/sync;
 - [ ] проверить 3 МБ stats limit на длинной истории;
 - [ ] перед публичным релизом: minimum app/API version policy для FitTimer;
-- [ ] старый APK не должен писать несовместимую schema;
-- [ ] при необходимости блокировать несовместимый клиент на всех FitTimer API, не глобально в shared Core;
+- [x] старый APK не должен писать несовместимую schema (`minSchema` в sync-registry Core; FitTimer: stats/index/program: ≥ 2, тест `sync-schema-api`);
+- [x] при необходимости блокировать несовместимый клиент на всех FitTimer API, не глобально в shared Core (правило задаёт продукт, Core только применяет);
 - [ ] canonical exercise/image identity — отдельное решение перед массовым каталогом.
 
 Критерий:

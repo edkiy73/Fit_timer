@@ -134,6 +134,7 @@ function createSyncHandler({registry: SYNC_REGISTRY, accountProfile: ACCOUNT_PRO
 
       const shadowWriteResults = [];
       const stale = [];
+      const outdated = [];
       for(const d of docs){
         const pid = String(d && d.profileId || '');
         const key = String(d && d.key || '');
@@ -145,6 +146,7 @@ function createSyncHandler({registry: SYNC_REGISTRY, accountProfile: ACCOUNT_PRO
           const meta = {rev: base === null ? Math.max(1, +d.rev || 1) : base + 1, at: d.at || now,
                         schema: Math.max(1, +d.schema || 1), deviceId,
                         deleted: !!d.deleted};
+          if(meta.schema < SYNC_REGISTRY.minSchema('account', key)){ outdated.push({profileId: ACCOUNT_PROFILE, key}); continue; }
           const admit = admitDoc(meta, prev, base, deviceId);
           if(admit === 'stale') stale.push({profileId: ACCOUNT_PROFILE, key});
           if(admit !== 'write') continue;
@@ -170,6 +172,7 @@ function createSyncHandler({registry: SYNC_REGISTRY, accountProfile: ACCOUNT_PRO
         const meta = {rev: base === null ? Math.max(1, +d.rev || 1) : base + 1, at: d.at || now,
                       schema: Math.max(1, +d.schema || 1), deviceId,
                       deleted: !!d.deleted};
+        if(meta.schema < SYNC_REGISTRY.minSchema('profile', key)){ outdated.push({profileId: pid, key}); continue; }
         const admit = admitDoc(meta, prev, base, deviceId);
         if(admit === 'stale') stale.push({profileId: pid, key});
         if(admit !== 'write') continue;
@@ -187,7 +190,8 @@ function createSyncHandler({registry: SYNC_REGISTRY, accountProfile: ACCOUNT_PRO
       manifest.at = now;
       await store.set(manifestKey, JSON.stringify(manifest), YEAR);
       if(shadowWriteResults.length) await SyncShadow.recordWriteBatch(shadowWriteResults);
-      return send(res, 200, {ok: true, stale});
+      // outdated: документы отклонены как записанные старой схемой — клиенту пора обновиться
+      return send(res, 200, outdated.length ? {ok: true, stale, outdated, upgradeRequired: true} : {ok: true, stale});
     }
 
     if(body.action === 'pull'){

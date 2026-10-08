@@ -40,10 +40,13 @@ const sanitizeProfile = (u, base) => ({
 });
 
 
+// Модель упражнения V2 (docs/load-equipment-progression-plan-2026-10-08.md): программы и
+// статистика старой схемы несовместимы, поэтому приложение до V2 их больше не записывает.
+const DATA_SCHEMA = 2;
 const rules = [
-  {scope:'profile', key:'stats'},
-  {scope:'profile', key:'index'},
-  {scope:'profile', prefix:'program:', allowDeleted:true},
+  {scope:'profile', key:'stats', minSchema:DATA_SCHEMA},
+  {scope:'profile', key:'index', minSchema:DATA_SCHEMA},
+  {scope:'profile', prefix:'program:', allowDeleted:true, minSchema:DATA_SCHEMA},
   // Compatibility for clients that still know the old hidden weight-correction doc.
   {scope:'profile', key:'progWeights', legacy:true},
   {scope:'account', key:'trainer'},

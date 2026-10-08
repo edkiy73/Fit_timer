@@ -27,6 +27,7 @@
   "storage-idb": 5,
   "store-page": 6,
   "sync-flow": 7,
+  "sync-schema-api": 1,
   "tap-targets": 7,
   "trainer-feedback": 20,
   "trainer-page": 14,

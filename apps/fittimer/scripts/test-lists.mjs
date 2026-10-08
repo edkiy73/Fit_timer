@@ -29,7 +29,7 @@ export const STATIC_TESTS = ['appbase-foundation-unit', 'browser-shards-unit'];
 
 // Браузерные и сквозные тесты (scripts/run-browser-tests.mjs). Порядок — от быстрых к долгим.
 export const BROWSER_TESTS = [
-  'api-flow', 'ai-api', 'youtube-video',
+  'api-flow', 'ai-api', 'sync-schema-api', 'youtube-video',
   'csp', 'start-overview', 'notifications', 'workout-resume', 'partial-workout', 'profile-switch', 'quick-finish', 'update-banner',
   'storage-idb', 'movement-chain-flow', 'ai-image-buttons', 'ai-generation-guards', 'ai-contract-flow', 'program-actions', 'nav-flow', 'nav-transitions',
   'limits', 'link-length', 'tap-targets', 'stale-deploy', 'store-page', 'backup-flow', 'media-flow', 'catalog-flow',

@@ -22,7 +22,10 @@ function createSyncRegistry(rules){
     match,
     accepts(scope, key){ return !!match(scope, key); },
     allowsDeleted(scope, key){ const rule = match(scope, key); return !!(rule && rule.allowDeleted); },
-    isFree(scope, key){ const rule = match(scope, key); return !!(rule && rule.free); }
+    isFree(scope, key){ const rule = match(scope, key); return !!(rule && rule.free); },
+    // Продукт может запретить запись документа клиентам со старой схемой данных:
+    // устаревшее приложение не должно перезаписать (или удалить) документ новой формы.
+    minSchema(scope, key){ const rule = match(scope, key); return rule && +rule.minSchema > 0 ? Math.round(+rule.minSchema) : 1; }
   };
 }
 
