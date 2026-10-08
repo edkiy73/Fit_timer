@@ -75,7 +75,7 @@ async function createCatalogProgram(body, res){
     warmup === 'yes' ? 'Include a warm-up.' : (warmup === 'no' ? 'Do not include a warm-up.' : 'Decide whether a warm-up is appropriate.'),
     focus ? 'Extra focus: ' + focus + '.' : '',
     instruction ? 'Additional request: ' + instruction : '',
-    'program.desc is a short catalog description of what the program gives (one or two sentences).'
+    'program.desc is a detailed useful trainee guide, not a sales blurb. Explain suitability, training structure, technique priorities, progression, recovery, realistic expectations and how to track results. Keep the introductory sentence self-contained because the catalog has a separate short “what it gives” field.'
   ].filter(Boolean).join('\n');
   const norm = FitAIContract.normalizeInput('program.create', {
     language:LANGUAGE[lang], task, context:limitations,

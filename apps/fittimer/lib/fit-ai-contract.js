@@ -18,7 +18,7 @@
   else root.FitAIContract = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function(V2){
   const CONTRACT_VERSION = 2;
-  const PROMPT_VERSION = '2026-10-08.1';
+  const PROMPT_VERSION = '2026-10-09.1';
   const KINDS = ['program.create', 'program.modify', 'exercise.create', 'exercise.modify', 'exercise.replace'];
   const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
   const MUSCLE_IDS = ['ne', 'sh', 'ch', 'ar', 'co', 'ba', 'gl', 'le', 'hm', 'ca'];
@@ -89,7 +89,7 @@
     let schema = null;
     if(kind === 'program.create'){
       schema = obj(Object.assign(head, {program:obj({
-        name:str(60, 1), desc:str(1000),
+        name:str(60, 1), desc:str(1800),
         progressionEvery:nint(1, V2.PROG_EVERY_MAX),
         rotate:{type:'boolean'}, rotateDays:arr({type:'string', enum:DAY_KEYS}, 7),
         plans:arr(planSchema(), MAX_PLANS, 1)
@@ -105,7 +105,7 @@
         replace:Object.assign({}, exerciseReplaceSchema(), {type:['object', 'null']}),
         new:Object.assign({}, exerciseSchema(), {type:['object', 'null']})});
       schema = obj(Object.assign(head, {
-        patch:obj({name:{type:['string', 'null'], maxLength:60}, desc:{type:['string', 'null'], maxLength:1000},
+        patch:obj({name:{type:['string', 'null'], maxLength:60}, desc:{type:['string', 'null'], maxLength:1800},
           progressionEvery:nint(0, V2.PROG_EVERY_MAX), rotate:{type:['boolean', 'null']},
           rotateDays:{type:['array', 'null'], items:{type:'string', enum:DAY_KEYS}, maxItems:7}}),
         plans:arr(obj({
@@ -183,6 +183,13 @@
   const COACH = 'Act like a deeply experienced strength-and-conditioning coach: base decisions on exercise science, biomechanics, load management, technique, recovery and progression. Treat explicitly provided user data as authoritative constraints; do not make the whole program easier because unrelated details are unknown; be cautious only where it matters (unknown absolute loads, pain/medical risk, aggressive progression). Do not invent facts about the user.';
   const RULES = [
     'Do not target a fixed number of exercises: choose exercise count, sets and rounds from the goal, structure and time budget.',
+    'Program desc (up to 1800 characters) is a practical guide the trainee can read before starting, NOT promotional copy: state whom the plan suits, specific goals and realistic benefits, weekly structure and recovery spacing, intended workout effort (e.g. reps in reserve), how to use progression and what to do when technique or recovery deteriorates, and what to measure to judge progress. State realistic expectations without deadlines or guaranteed body changes. Include nutrition only as a brief optional general reminder when relevant; no meal plans or invented individual dietary prescriptions. Avoid fluff, hype, vague promises and repetitive warnings.',
+    'Individual exercise desc is an actionable compact coaching instruction (roughly 250-550 characters where needed, maximum 600): starting position and equipment/anchor, limb placement/grip/palm orientation if relevant, exact direction of movement, a clear end point, controlled return, and one useful cue for target muscle or stability. Write natural connected sentences; do not pad simple exercises to a fixed length.',
+    'Exercise mistakes (maximum 300 characters): select the 2-3 most plausible movement-specific observable errors AND immediately state how to correct each. Do not merely negate or repeat the description; do not fill with generic phrases like maintain proper form. Use pain or discomfort precautions where relevant, not as generic boilerplate.',
+    'For bands specify exactly where and how they are anchored, which hand holds which end, initial tension and direction of resistance. Never describe impossible band mechanics or ambiguously mix bilateral and single-arm setups.',
+    'Technique cues must be anatomically reasonable: do not prescribe mandatory thumb-down internally rotated lateral raises, forced permanently retracted scapulae, forced spinal flattening, guaranteed isolated muscle sensations or arbitrary joint angles. Prefer controlled comfortable ranges and truthful muscle involvement.',
+    'Choose a balanced program for the actual goals, equipment, recovery, weekly volume and time. Order competing exercises so the priority muscles receive quality work; avoid duplicating many near-identical moves while omitting fundamental patterns. Keep warm-up useful and brief. Do not imply spot reduction of fat, guaranteed posture correction or exact physique transformation deadlines.',
+    'Choose actual user-supplied weights and equipment counts where available; do not overwrite known working loads with zero or unsupported guesses. When loads are unknown, select conservative working starting values and explain adjustment by clean repetitions and 1-3 reps in reserve; do not present guesses as measured user performance. Choose progression weight steps the supplied adjustable equipment can actually make; when plate increments are unknown, do not falsely claim that exact step sizes are available.',
     'When a target duration is given, estimate the whole session: timed work = seconds × sides; rep work ≈ reps × 3 seconds × sides; × sets and rounds; plus rest between sets, rest after exercises, side switches and between rounds; warm-up runs once. For 5–20 minute targets stay within about ±5 minutes, for 30+ minutes within about ±20%; "45+" is a lower bound.',
     'Program progressionEvery = default check frequency: after N FULL completions of an exercise the app asks whether to raise its load (it is not +N reps or kg). Use 4 unless the program clearly needs another value.',
     'Resistance levels without user-given labels use the generic relative scale; never invent band colors. Preserve real colors/numbers the user gave, in order.',

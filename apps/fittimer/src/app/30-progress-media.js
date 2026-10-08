@@ -808,7 +808,7 @@ export async function saveWeightHist(){
    программы — в карточку, «о себе» — на страницу тренера, описание упражнения —
    в свёрнутый блок на экране упражнения. */
 export const LIM = {
-  progName: 60, progDesc: 1000,
+  progName: 60, progDesc: 1800,
   exName: 60, exDesc: 600, exMistakes: 300, exSwapName: 60, exSwapDesc: 600,
   exValue: 16,               // «12-15», «01:30» — больше там быть нечему
   link: 120, video: 300,

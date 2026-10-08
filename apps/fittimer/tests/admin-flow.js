@@ -50,9 +50,11 @@ const PROGRAM = name => catalogProgram(name, ['Приседания', 'Отжи�
   ok('ключ с кириллицей не роняет запрос, а отвергается',
      (await api('overview', {}, 'неверный')).s === 403);
 
-  // ---- стартовый набор: каталог начинается с чистого листа ----
+  // ---- curated V2 seed: one real bilingual reference program, no legacy demos ----
   const seeded = await api('seed');
-  ok('стартовый набор пуст — старые программы не заливаются', seeded.s === 200 && seeded.j.items === 0, seeded.j.items);
+  ok('загружается только эталонная программа V2', seeded.s === 200 && seeded.j.items === 1, seeded.j.items);
+  const curated = await fetch(BASE+'/api/catalog').then(r=>r.json());
+  ok('эталон опубликован в витрине', (curated.items||[]).some(x=>x.id==='vshape_v2'));
   const TRAINER = '@adm.' + Math.random().toString(36).slice(2, 7);
   const tr = await makeTrainer(TRAINER);
   ok('тренер заведён через аккаунт', tr.ok === true, JSON.stringify(tr));
