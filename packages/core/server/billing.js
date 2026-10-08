@@ -450,6 +450,7 @@ function createBillingHandler({adapters = []} = {}){
       }catch(_){}
       return send(res, 200, {
         ok:true,
+        granted:restored > 0,
         checked,
         restored,
         errors:errors.slice(0,100),
