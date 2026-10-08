@@ -136,6 +136,9 @@ const server = createServer(async (req, res) => {
 });
 await new Promise(resolve => server.listen(PORT, '127.0.0.1', resolve));
 
+const suiteStartedAt = Date.now();
+const phaseTimes = [];
+const phase = name => { const seconds = ((Date.now() - suiteStartedAt) / 1000).toFixed(1); phaseTimes.push(`${name}: ${seconds}s`); console.log(`[e2e timing] ${name}: ${seconds}s elapsed`); };
 let bad = 0;
 const ok = (name, value) => { if(!value) bad++; console.log((value ? '  ok  ' : ' FAIL ') + name); };
 const appears = (locator, timeout = 5000) => locator.waitFor({timeout}).then(() => true, () => false);
@@ -194,6 +197,7 @@ const browser = await chromium.launch(CHROME ? {executablePath:CHROME} : {});
 try{
   const errors=[];
 
+  phase('browser launched');
   const phone=await openDevice(browser,errors);
   ok('first anonymous visit opens minimal onboarding',await appears(phone.page.getByRole('heading',{name:COPY.onboarding})));
   ok('onboarding starts day 1',await finishOnboarding(phone.page));
@@ -251,6 +255,7 @@ try{
   if(process.env.E2E_SHOTS)await phone.page.locator('.my-purchases').screenshot({path:process.env.E2E_SHOTS+'/purchases.png'});
   await phone.page.goto(URL_+'#/');
 
+  phase('phone sign-in and initial progress');
   const laptop=await openDevice(browser,errors);
   ok('second device starts with its own anonymous state',await finishOnboarding(laptop.page));
   await laptop.page.goto(URL_+'#/learn/day-2');
@@ -314,6 +319,7 @@ try{
   const back=await appears(phone.page.getByText('2 из 2 дней'),8000);
   ok('signing in again brings the progress back',signedBack&&back);
 
+  phase('two-device sync and sign-out');
   const adminContext=await browser.newContext({locale:'ru-RU'});
   const admin=await adminContext.newPage();
   admin.on('pageerror',error=>errors.push(String(error)));
@@ -406,6 +412,7 @@ try{
   ok('Admin bulk dictionary fits a 360 px phone',bulkWide.length===0);
   if(bulkWide.length)console.log('bulk dictionary: '+bulkWide.join(', '));
 
+  phase('admin navigation and layout');
   // Screen walk: every main screen on a small phone, light and dark — nothing sticks out
   // sideways and no screen throws. Catches layout breaks before anyone opens the app.
   const ROUTES=['#/','#/course','#/review','#/account','#/settings','#/access?from=talk','#/legal/privacy','#/learn/day-1'];
@@ -441,6 +448,7 @@ try{
     await walkContext.close();
   }
 
+  phase('light/dark route sweep');
   // Motion/layout smoke at the edges of the supported phone range.
   // Reduced motion must remove decorative animation without changing geometry.
   for(const width of [320,412]){
@@ -478,6 +486,7 @@ try{
     await motionContext.close();
   }
 
+  phase('reduced-motion layouts');
   ok('no runtime errors',errors.length===0);
   if(errors.length)console.log(errors.join('\n'));
 
@@ -492,6 +501,7 @@ try{
   server.close();
 }
 
+phase('main E2E finished');
 console.log(bad ? '\nUnMute e2e failures: '+bad : '\nUnMute e2e passed');
 if(bad)process.exit(1);
 
