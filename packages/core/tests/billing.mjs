@@ -438,6 +438,19 @@ ok('a later successful operation returns provider to healthy',
   && stripeHealth?.health?.lastOperation === 'checkout'
   && !!stripeHealth?.health?.lastSuccessAt);
 
+const sameHealthAt = new Date().toISOString();
+await store.set('bill:health:stripe', JSON.stringify({
+  lastOperation:'webhook',
+  lastResult:'error',
+  lastAttemptAt:sameHealthAt,
+  lastSuccessAt:sameHealthAt,
+  lastErrorAt:sameHealthAt,
+  lastError:'bad_signature'
+}));
+let sameTimeHealth = await call(adminHandler, {action:'billing_status'}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
+ok('explicit last provider result wins when success and error timestamps are identical',
+  (sameTimeHealth.body.providers || []).find(x => x.id === 'stripe')?.state === 'unhealthy');
+
 stripeWebhookFailure = true;
 ok('failed webhook verification is rejected',
   (await call(stripeControlHandler, {events:[]}, {query:{provider:'stripe'}})).status === 401);
