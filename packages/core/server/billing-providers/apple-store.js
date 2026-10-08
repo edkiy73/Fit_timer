@@ -121,7 +121,8 @@ function createAppleStoreBillingAdapter({
   now = () => Date.now(),
   getCredentials,
   getApiToken,
-  verifySignedData = verifyAndDecodeAppleJws
+  verifySignedData = verifyAndDecodeAppleJws,
+  resolveAppAccountToken
 } = {}){
   const credentials = typeof getCredentials === 'function' ? getCredentials : async () => {
     await loadSecrets();
@@ -136,6 +137,25 @@ function createAppleStoreBillingAdapter({
     if(typeof getApiToken === 'function') return String(await getApiToken(bundleId));
     const value = await credentials();
     return createApiToken({...value, bundleId}, Math.floor(now() / 1000));
+  }
+
+  const decodeVerified = jws => verifySignedData(jws, {nowMs:now()});
+
+  function productByAppleId(productId){
+    const id = String(productId || '');
+    const list = Array.isArray(productConfig().products) ? productConfig().products : [];
+    for(const raw of list){
+      const cfg = raw && raw.billing && raw.billing.apple;
+      if(String(cfg && cfg.productId || '') !== id) continue;
+      return {
+        sku:String(raw.sku || ''),
+        title:String(raw.title || raw.sku || ''),
+        kind:raw.kind === 'subscription' ? 'subscription' : 'owned',
+        days:raw.kind === 'subscription' ? Math.max(1, Math.round(+raw.days || 30)) : 0,
+        billing:raw.billing || {}
+      };
+    }
+    return null;
   }
 
   async function requestTransaction(transactionId, bundleId){
@@ -213,7 +233,7 @@ function createAppleStoreBillingAdapter({
     for(const group of Array.isArray(statusPayload && statusPayload.data) ? statusPayload.data : []){
       for(const item of Array.isArray(group && group.lastTransactions) ? group.lastTransactions : []){
         if(!item || !item.signedTransactionInfo) continue;
-        const tx = decodeJwsPayload(item.signedTransactionInfo);
+        const tx = decodeVerified(item.signedTransactionInfo);
         if(String(tx.productId || '') !== productId) continue;
         if(String(tx.bundleId || '') !== bundleId) continue;
         if(String(tx.appAccountToken || '').toLowerCase() !== expectedAccount) continue;
@@ -225,7 +245,7 @@ function createAppleStoreBillingAdapter({
     }
     if(!best) throw problem('subscription_status_not_found', 409);
 
-    const renewal = best.item.signedRenewalInfo ? decodeJwsPayload(best.item.signedRenewalInfo) : {};
+    const renewal = best.item.signedRenewalInfo ? decodeVerified(best.item.signedRenewalInfo) : {};
     if(renewal.productId && String(renewal.productId) !== productId){
       throw problem('store_product_mismatch', 409);
     }
@@ -270,7 +290,7 @@ function createAppleStoreBillingAdapter({
       const response = await requestTransaction(transactionId, mapped.bundleId);
       // Never trust JWS sent by the phone. The payload decoded here came from the
       // authenticated App Store Server API response for this exact transaction id.
-      const transaction = decodeJwsPayload(response.payload.signedTransactionInfo);
+      const transaction = decodeVerified(response.payload.signedTransactionInfo);
       const baseEvent = normalize(transaction, {
         requestedId:transactionId,
         productId:mapped.productId,
@@ -291,6 +311,60 @@ function createAppleStoreBillingAdapter({
         })]};
       }
       return {events:[baseEvent]};
+    },
+
+    async verifyWebhook({body}){
+      const signedPayload = String(body && body.signedPayload || '');
+      if(!signedPayload) return {ok:false};
+
+      const notification = decodeVerified(signedPayload);
+      const data = notification && notification.data && typeof notification.data === 'object'
+        ? notification.data : {};
+      if(!data.signedTransactionInfo) return {ok:true, events:[]};
+
+      // The notification itself and its nested transaction are both Apple-signed.
+      // We still re-fetch from the App Store Server API so entitlement state is based
+      // on Apple's current server state, not on a possibly delayed notification.
+      const hinted = decodeVerified(data.signedTransactionInfo);
+      const transactionId = clean(hinted.transactionId, 200);
+      const bundleId = clean(hinted.bundleId, 220);
+      const product = productByAppleId(hinted.productId);
+      const appAccountToken = String(hinted.appAccountToken || '');
+      if(!transactionId || !bundleId || !product || !appAccountToken){
+        return {ok:true, events:[]};
+      }
+
+      const account = typeof resolveAppAccountToken === 'function'
+        ? await resolveAppAccountToken(appAccountToken) : null;
+      if(!account || !account.email) return {ok:true, events:[]};
+
+      const mapped = appleProduct(product);
+      if(mapped.bundleId !== bundleId) throw problem('store_bundle_mismatch', 409);
+      const response = await requestTransaction(transactionId, mapped.bundleId);
+      const transaction = decodeVerified(response.payload.signedTransactionInfo);
+      const identity = {appleAppAccountToken};
+      const baseEvent = normalize(transaction, {
+        requestedId:transactionId,
+        productId:mapped.productId,
+        bundleId:mapped.bundleId,
+        identity,
+        product
+      });
+
+      let event = baseEvent;
+      if(product.kind === 'subscription'){
+        const status = await requestSubscriptionStatus(
+          String(transaction.originalTransactionId || transactionId),
+          mapped.bundleId,
+          response.base
+        );
+        event = subscriptionEvent(status, {
+          productId:mapped.productId,
+          bundleId:mapped.bundleId,
+          identity
+        });
+      }
+      return {ok:true, events:[{...event, email:String(account.email), sku:product.sku}]};
     }
   };
 }
