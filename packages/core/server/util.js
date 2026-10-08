@@ -17,7 +17,8 @@ function send(res, code, obj){
 const fail = (res, code, error, extra) => send(res, code, Object.assign({error}, extra || {}));
 
 // Тело приходит уже разобранным у Vercel и сырым у локального сервера — умеем оба.
-async function readBodyWithRaw(req){
+async function readBodyWithRaw(req,maxBytes){
+  const maxBody=Math.max(1,Math.min(4*1024*1024,Math.round(+maxBytes||MAX_BODY)));
   const parse = raw => {
     if(!raw) return {};
     try{ return JSON.parse(raw); }
@@ -26,18 +27,18 @@ async function readBodyWithRaw(req){
 
   if(req && req.rawBody != null){
     const rawBody = Buffer.isBuffer(req.rawBody) ? req.rawBody.toString('utf8') : String(req.rawBody);
-    if(Buffer.byteLength(rawBody) > MAX_BODY) throw new Error('too_large');
+    if(Buffer.byteLength(rawBody) > maxBody) throw new Error('too_large');
     return {body:parse(rawBody), rawBody};
   }
 
   if(req && Buffer.isBuffer(req.body)){
-    if(req.body.length > MAX_BODY) throw new Error('too_large');
+    if(req.body.length > maxBody) throw new Error('too_large');
     const rawBody = req.body.toString('utf8');
     return {body:parse(rawBody), rawBody};
   }
 
   if(req && typeof req.body === 'string'){
-    if(Buffer.byteLength(req.body) > MAX_BODY) throw new Error('too_large');
+    if(Buffer.byteLength(req.body) > maxBody) throw new Error('too_large');
     return {body:parse(req.body), rawBody:req.body};
   }
 
@@ -52,15 +53,15 @@ async function readBodyWithRaw(req){
   let size = 0;
   for await (const chunk of req){
     size += chunk.length;
-    if(size > MAX_BODY) throw new Error('too_large');
+    if(size > maxBody) throw new Error('too_large');
     chunks.push(chunk);
   }
   const rawBody = chunks.length ? Buffer.concat(chunks).toString('utf8') : '';
   return {body:parse(rawBody), rawBody};
 }
 
-async function readBody(req){
-  return (await readBodyWithRaw(req)).body;
+async function readBody(req,maxBytes){
+  return (await readBodyWithRaw(req,maxBytes)).body;
 }
 
 // Адрес нужен только для ограничения частоты, поэтому храним ХЕШ, а не сам адрес:
