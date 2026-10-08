@@ -46,6 +46,18 @@ async function boot(b, label, errs, url){
   const tp = await boot(b, 'тренер', errs);
   await tp.evaluate(() => { curUser().name = 'Лена'; });
   await becomeTrainer(tp, {handle: NICK, trainer: {about: '', years: null, links: ''}});
+  // /api/share used to keep the generic 256 KiB body limit even though program links
+  // intentionally carry compressed media. A realistic image-bearing payload must pass.
+  const largeSharePayload={
+    program:{name:'Media body limit',plans:[{exercises:[{media:{kind:'img',data:'data:image/png;base64,'+'A'.repeat(320000)}}]}]},
+    includeProgress:false
+  };
+  const largeShare=await fetch(BASE+'/api/share',{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(largeSharePayload)
+  }).then(async r=>({s:r.status,j:await r.json()}));
+  ok('ссылка принимает media-payload больше старого лимита 256 КБ',largeShare.s===200&&!!largeShare.j.id,
+     largeShare.j.error||largeShare.s);
+
   const link = await tp.evaluate(async ({nick, name}) => {
     // Картинки подделываем маленькими — важно, что они ЕСТЬ и что доезжают.
     const pic = n => 'data:image/png;base64,' + btoa('pic-' + n).replace(/=/g, '');
@@ -75,6 +87,11 @@ async function boot(b, label, errs, url){
     withPic: normPlans(draft)[0].exercises.filter(e => e.media && e.media.kind === 'img').length,
     total: normPlans(draft)[0].exercises.length
   }));
+  const promptRule=await tp.evaluate(()=>imagesPromptText());
+  ok('промпт приложения жёстко запрещает любой текст на картинках',
+     promptRule.includes('ZERO text of any kind')
+       &&promptRule.includes('Do not render the exercise or program name inside the image.'));
+
   ok('обложка доехала до клиента', got.cover);
   ok('фото упражнений доехали', got.total === 3 && got.withPic === got.total, `${got.withPic} из ${got.total}`);
 
