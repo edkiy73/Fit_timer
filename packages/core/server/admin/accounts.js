@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const { store } = require('../store');
 const { send, fail } = require('../util');
 const { getSettings } = require('../ai');
-const { entitlementsOf, productCatalog, checkSku, grantOwned, revokeOwned } = require('../entitlements');
+const { entitlementsOf, productCatalog, checkSku, cleanSku, grantOwned, revokeOwned } = require('../entitlements');
 
 const ACCOUNT_EMAIL = /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/;
 const ACTIONS = new Set(['users_list','user_ai_reset','user_create','user_premium','user_owned','products_list','user_test_code']);
@@ -18,6 +18,21 @@ const adminDigits = n => {
   for(let i=0;i<n;i++) out += String(b[i] % 10);
   return out;
 };
+
+const BILLING_LOG_TTL = 400 * 24 * 3600;
+
+async function auditEntitlement(mh, status, sku, kind){
+  const at = new Date().toISOString();
+  await store.push(`bill:log:${at.slice(0,7)}`, JSON.stringify({
+    at,
+    provider:'admin',
+    status,
+    sku:String(sku || '').slice(0,80),
+    kind:kind === 'subscription' ? 'subscription' : 'owned',
+    account:String(mh || '').slice(0,12),
+    order:''
+  }), BILLING_LOG_TTL);
+}
 
 async function indexAccount(mh){
   if(!(await store.get(`a:indexed:${mh}`))){
@@ -152,6 +167,7 @@ async function handleAdminAccounts(action, body, res){
   }
 
   if(action === 'user_premium'){
+    const hadPremium=!!acc.sub;
     if(body&&body.revoke){
       acc.sub=null;
     }else{
@@ -168,22 +184,33 @@ async function handleAdminAccounts(action, body, res){
     acc.seen=acc.seen||new Date().toISOString();
     await store.set(`a:${mh}`,JSON.stringify(acc));
     await indexAccount(mh);
+    if(body&&body.revoke){
+      if(hadPremium) await auditEntitlement(mh,'manual_revoke','premium','subscription');
+    }else{
+      await auditEntitlement(mh,'manual_grant','premium','subscription');
+    }
     send(res,200,{ok:true,email,sub:acc.sub||null});
     return true;
   }
 
   // Покупка навсегда: выдать вручную (семья, промо, возврат) или забрать.
   if(action === 'user_owned'){
-    const skuError=checkSku(body&&body.sku);
+    const sku=cleanSku(body&&body.sku);
+    const skuError=checkSku(sku);
     if(skuError && !(body&&body.revoke)){
       fail(res,400,skuError);
       return true;
     }
-    if(body&&body.revoke) revokeOwned(acc,body.sku);
-    else grantOwned(acc,body.sku,{provider:'admin'});
+    const hadOwned=!!sku && entitlementsOf(acc).owned.includes(sku);
+    if(body&&body.revoke) revokeOwned(acc,sku);
+    else grantOwned(acc,sku,{provider:'admin'});
+    const hasOwned=!!sku && entitlementsOf(acc).owned.includes(sku);
     acc.seen=acc.seen||new Date().toISOString();
     await store.set(`a:${mh}`,JSON.stringify(acc));
     await indexAccount(mh);
+    if(hadOwned!==hasOwned){
+      await auditEntitlement(mh,hasOwned?'manual_grant':'manual_revoke',sku,'owned');
+    }
     send(res,200,{ok:true,email,owned:entitlementsOf(acc).owned});
     return true;
   }
