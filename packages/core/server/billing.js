@@ -203,6 +203,57 @@ async function billingLog(limit = 200, now = new Date()){
   return rows.sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, limit);
 }
 
+function safeHealthError(error){
+  const raw = String((error && error.message) || error || 'provider_error')
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/[^a-z0-9._:-]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return raw.slice(0, 100) || 'provider_error';
+}
+
+function healthStatus(value){
+  const lastSuccess = Date.parse(value && value.lastSuccessAt || '') || 0;
+  const lastError = Date.parse(value && value.lastErrorAt || '') || 0;
+  if(!lastSuccess && !lastError) return 'unknown';
+  return lastError > lastSuccess ? 'unhealthy' : 'healthy';
+}
+
+async function providerOperationalHealth(provider){
+  if(!PROVIDER.test(String(provider || ''))) return {status:'unknown'};
+  let value = {};
+  try{ value = JSON.parse(await store.get(`bill:health:${provider}`)) || {}; }catch(_){}
+  return {
+    status:healthStatus(value),
+    lastOperation:line(value.lastOperation,40),
+    lastAttemptAt:line(value.lastAttemptAt,40),
+    lastSuccessAt:line(value.lastSuccessAt,40),
+    lastErrorAt:line(value.lastErrorAt,40),
+    lastError:line(value.lastError,100)
+  };
+}
+
+async function recordProviderHealth(provider, operation, ok, error){
+  provider = String(provider || '');
+  operation = line(operation,40);
+  if(!PROVIDER.test(provider) || !operation || !store.configured()) return;
+  const at = new Date().toISOString();
+  const key = `bill:health:${provider}`;
+  await store.withLock(`lock:health:${provider}`, async () => {
+    let value = {};
+    try{ value = JSON.parse(await store.get(key)) || {}; }catch(_){}
+    value.lastOperation = operation;
+    value.lastAttemptAt = at;
+    if(ok){
+      value.lastSuccessAt = at;
+    }else{
+      value.lastErrorAt = at;
+      value.lastError = safeHealthError(error);
+    }
+    await store.set(key, JSON.stringify(value));
+  }, {ttl:5, retries:30, delay:25});
+}
+
 async function signedInAccount(body){
   const email = mail(body && body.email);
   if(!EMAIL.test(email)) return null;
