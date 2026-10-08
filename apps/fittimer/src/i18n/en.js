@@ -1580,7 +1580,7 @@ export const I18N_EN = {
   'share.offline': "Couldn’t create the link because the server is unreachable. Try again when you are online.",
   'share.fileHint': "\n\nYou can share the program as a file right now using “Save to file” in the same menu. The file includes everything, including images.",
   'share.programText': "Workout program “{name}” — open the link to add it to Fit Timer:",
-  'share.linkCopied': "Program link copied. Send it in any messenger; the recipient can open it to add the program.\n\nImages are not included in the link. Use “Save to file” to share everything.",
+  'share.linkCopied': "Program link copied. Send it in any messenger; the recipient can open it to add the program. The cover and exercise images are sent with the program.",
   'share.fileTitle': "Program “{name}”",
   'share.fileSaved': "Program file saved to Downloads ({size} KB).\n\nIt includes the cover and exercise images. The recipient can open it through Create → Upload program file.",
   'share.badFile': "This does not look like a Fit Timer program file.",
