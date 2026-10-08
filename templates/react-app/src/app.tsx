@@ -8,6 +8,7 @@ import { authClient } from './auth';
 import { adminClient } from './admin';
 import { appDocs, SETTINGS_DOC, syncNow } from './sync';
 import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
+import { NotFoundScreen, RouteErrorScreen } from './route-fallback';
 
 const PRODUCT_NAME = '__APP_NAME__';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
@@ -134,11 +135,13 @@ export const routes: RouteObject[] = [
   {
     path:'/',
     element:<Root />,
+    errorElement:<Localized><RouteErrorScreen /></Localized>,
     children:[{
       element:<Shell />,
       children:[
         {index:true, element:<Home />},
-        {path:'account', element:<Account />}
+        {path:'account', element:<Account />},
+        {path:'*', element:<NotFoundScreen />}
       ]
     }]
   },
