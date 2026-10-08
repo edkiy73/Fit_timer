@@ -34,11 +34,23 @@ function run(command, args, cwd=ROOT){
 }
 
 const [mode, scriptName] = process.argv.slice(2);
+function resolveAffected(base, names){
+  const diff = base && !/^0+$/.test(base)
+    ? spawnSync('git', ['diff', '--name-only', base + '...HEAD'], {cwd:ROOT, encoding:'utf8'})
+    : null;
+  return diff && diff.status === 0
+    ? affectedApps(diff.stdout.split('\n').filter(Boolean), names)
+    : (console.log('Не удалось вычислить изменения относительно ' + (base || '(нет base)') + ' — проверяю всё'),
+       {core:true, apps:names});
+}
 const all = await apps();
 if(!all.length) throw new Error('No apps with package.json found under apps/');
 
-if(mode === 'setup'){
-  for(const app of all){
+if(mode === 'setup' || mode === 'setup:affected'){
+  const target = mode === 'setup:affected' ? resolveAffected(scriptName, all.map(a=>a.name)) : null;
+  const selected = target ? all.filter(a=>target.apps.includes(a.name)) : all;
+  console.log('Установка зависимостей: ' + (selected.map(a=>a.name).join(', ') || 'нет приложений'));
+  for(const app of selected){
     const lock = path.join(app.dir, 'package-lock.json');
     const hasDeps = Object.keys(app.pkg.dependencies || {}).length || Object.keys(app.pkg.devDependencies || {}).length;
     if(await exists(lock)){
@@ -59,14 +71,7 @@ if(mode === 'setup'){
 }else if(mode === 'affected'){
   // CI: проверить только то, что затронуто изменениями с <base> (sha или ref).
   // Если diff посчитать нельзя (нет base, новая ветка, мелкий clone) — проверяем всё.
-  const base = scriptName;
-  const diff = base && !/^0+$/.test(base)
-    ? spawnSync('git', ['diff', '--name-only', base + '...HEAD'], {cwd:ROOT, encoding:'utf8'})
-    : null;
-  const names = all.map(a => a.name);
-  const target = diff && diff.status === 0
-    ? affectedApps(diff.stdout.split('\n').filter(Boolean), names)
-    : (console.log('Не удалось вычислить изменения относительно ' + (base || '(нет base)') + ' — проверяю всё'), {core:true, apps:names});
+  const target = resolveAffected(scriptName, all.map(a=>a.name));
   console.log('Core: ' + (target.core ? 'да' : 'нет') + '; приложения: ' + (target.apps.join(', ') || 'нет'));
   if(target.core){
     console.log('\n== check core ==');
@@ -85,5 +90,5 @@ if(mode === 'setup'){
     await run('npm', ['run', scriptName], app.dir);
   }
 }else{
-  throw new Error('Usage: node scripts/apps.mjs <setup|check|affected|run> [script|base]');
+  throw new Error('Usage: node scripts/apps.mjs <setup|setup:affected|check|affected|run> [script|base]');
 }
