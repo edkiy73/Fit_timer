@@ -204,6 +204,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     && await page.isVisible('#startLoadSelect'));
   await page.selectOption('#startLoadSelect', '0');
   await page.click('[data-act="commitStartLoadEdit"]');
+  await page.waitForFunction(() => {
+    const text = document.querySelector('#startOverviewList .ex-row')?.textContent || '';
+    return /Лёгкое/.test(text) && !/Сильное/.test(text);
+  }, null, {timeout:10000});
   const afterEffort = await page.locator('#startOverviewList .ex-row').textContent();
   ok('усилие меняется так же, как вес', /Лёгкое/.test(afterEffort) && !/Сильное/.test(afterEffort), afterEffort);
 
