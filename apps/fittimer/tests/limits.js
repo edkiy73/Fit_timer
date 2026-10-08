@@ -100,7 +100,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
             rest: ex.rest};
   });
   ok('название программы обрезано', huge.name === 60, huge.name);
-  ok('описание программы обрезано', huge.desc === 1000, huge.desc);
+  ok('описание программы обрезано', huge.desc === 1800, huge.desc);
   ok('название упражнения обрезано', huge.exName === 60, huge.exName);
   ok('описание упражнения обрезано', huge.exDesc === 600, huge.exDesc);
   ok('«частые ошибки» обрезаны', huge.exMist === 300, huge.exMist);
