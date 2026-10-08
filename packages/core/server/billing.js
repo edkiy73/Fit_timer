@@ -353,8 +353,16 @@ function createBillingHandler({adapters = []} = {}){
       const adapter = await findWebhook(String(query.provider));
       if(!adapter || typeof adapter.verifyWebhook !== 'function') return fail(res, 404, 'unknown_provider');
       let verified;
-      try{ verified = await adapter.verifyWebhook({headers: req.headers || {}, body, rawBody, query}); }
-      catch(_){ return fail(res, 401, 'bad_signature'); }
+      try{
+        verified = await adapter.verifyWebhook({headers: req.headers || {}, body, rawBody, query});
+      }catch(e){
+        const status = (e && e.status) || 502;
+        if(status >= 500){
+          await markProviderHealth(adapter.id, 'webhook', {ok:false, error:e, operational:true});
+          return fail(res, status, String((e && e.message) || 'provider_webhook_failed'));
+        }
+        return fail(res, 401, 'bad_signature');
+      }
       if(!verified || !verified.ok) return fail(res, 401, 'bad_signature');
       const results = [];
       for(const event of Array.isArray(verified.events) ? verified.events : []){
