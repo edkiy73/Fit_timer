@@ -123,6 +123,19 @@ try{
   await adminPage.goto(URL_ + '#/admin');
   await adminPage.getByLabel('Ключ администратора').fill(process.env.ADMIN_KEY);
   await adminPage.getByRole('button', {name: 'Войти'}).click();
+
+  await adminPage.getByRole('button', {name: 'Способы оплаты'}).click();
+  ok('shared Admin renders payment readiness without production provider secrets',
+    await appears(adminPage.getByRole('heading', {name:'App Store'}))
+    && await appears(adminPage.getByText('не настроен', {exact:true}).first()));
+
+  await adminPage.getByRole('button', {name: 'Task Mini'}).click();
+  ok('product Admin extension loads aggregate task stats through the Core handler',
+    await appears(adminPage.getByRole('heading', {name:'Статистика задач'}))
+    && await appears(adminPage.getByText(/Всего:\s*2/))
+    && await appears(adminPage.getByText(/Активных:\s*1/))
+    && await appears(adminPage.getByText(/Готовых:\s*1/)));
+
   await adminPage.getByRole('button', {name: 'Пользователи'}).click();
   await adminPage.getByRole('textbox', {name: 'Email'}).fill('person@example.com');
   // The product list arrives after the tab opens; until then the field is a plain text box.
