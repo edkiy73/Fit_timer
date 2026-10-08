@@ -1,0 +1,875 @@
+{
+  "contractVersion": 2,
+  "program": {
+    "name": "Стройное и подтянутое тело",
+    "desc": "Домашняя силовая программа для стройного, подтянутого и пропорционального тела: три занятия в неделю по чередующейся схеме А–Б–А / Б–А–Б. Упражнения укрепляют ноги, ягодицы, спину, грудь, руки и мышцы живота без специального акцента на расширение плеч или увеличение ягодиц. Разминка и упражнения на контроль корпуса помогают управлять положением рёбер, таза и поясницы, но не гарантируют изменение анатомического изгиба позвоночника. Выбирай комфортную глубину приседа, выпада и зашагивания; избегай суставной боли и принудительной растяжки. Начинай первое сложное движение с облегчённого подготовительного подхода. В рабочих подходах оставляй примерно 2–3 чистых повторения в запасе. Новые веса указаны ориентировочно и требуют подтверждения на первой тренировке. Предложение прогрессии появляется после четырёх полных выполнений конкретного упражнения; принимай повышение, только если все подходы выполнены уверенно. Для резинок сохраняй одинаковую точку крепления, дистанцию и амплитуду. Для снижения жировой массы дополнительно необходимы повседневная активность и умеренный дефицит калорий; тренировки сами по себе не сжигают жир локально. Если появляется суставная боль, прекрати упражнение и подбери комфортный вариант.",
+    "progressionEvery": 4,
+    "rotate": true,
+    "rotateDays": [
+      "mon",
+      "wed",
+      "fri"
+    ],
+    "plans": [
+      {
+        "days": [],
+        "rounds": 1,
+        "roundRest": 0,
+        "exercises": [
+          {
+            "warmup": true,
+            "stages": [
+              {
+                "name": "Дыхание лёжа, ноги на лавке",
+                "desc": "Ляг на спину и положи голени на устойчивую лавку; колени согнуты примерно под прямым углом. Спокойно вдохни носом, затем плавно выдохни, позволяя нижним рёбрам опуститься. Не втягивай живот силой и не пытайся прижать поясницу к полу через сильное напряжение.",
+                "mistakes": "Не задерживай дыхание, не поднимай плечи и не выгибай грудную клетку.",
+                "type": "reps",
+                "value": "5",
+                "sets": 1,
+                "perSide": false,
+                "rest": 10,
+                "restAfter": 10,
+                "muscles": [
+                  "co"
+                ],
+                "load": {
+                  "type": "none",
+                  "equipment": null,
+                  "equipmentName": "",
+                  "count": 1,
+                  "weight": 0,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [
+                  "mat",
+                  "bench"
+                ],
+                "progression": {
+                  "mode": "none",
+                  "every": null,
+                  "repsStep": null,
+                  "repsMax": null,
+                  "weightStep": null,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              }
+            ]
+          },
+          {
+            "warmup": true,
+            "stages": [
+              {
+                "name": "Кошка-корова",
+                "desc": "Встань на четвереньки, ладони под плечами, колени под тазом. Медленно округли спину, затем плавно вернись и немного прогнись в комфортной амплитуде. Двигайся без усилия через боль.",
+                "mistakes": "Не делай резких рывков и не пытайся максимально прогибать поясницу.",
+                "type": "reps",
+                "value": "8",
+                "sets": 1,
+                "perSide": false,
+                "rest": 10,
+                "restAfter": 10,
+                "muscles": [
+                  "ba",
+                  "co"
+                ],
+                "load": {
+                  "type": "none",
+                  "equipment": null,
+                  "equipmentName": "",
+                  "count": 1,
+                  "weight": 0,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [
+                  "mat"
+                ],
+                "progression": {
+                  "mode": "none",
+                  "every": null,
+                  "repsStep": null,
+                  "repsMax": null,
+                  "weightStep": null,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              }
+            ]
+          },
+          {
+            "warmup": true,
+            "stages": [
+              {
+                "name": "Ягодичный мостик без веса",
+                "desc": "Ляг на спину, согни колени, поставь стопы на ширине таза. Усилием ягодиц подними таз примерно до линии плечи–таз–колени, сделай небольшую паузу и плавно опусти. Разминка должна оставаться лёгкой.",
+                "mistakes": "Не добирай высоту за счёт прогиба поясницы и не поднимай рёбра.",
+                "type": "reps",
+                "value": "10",
+                "sets": 1,
+                "perSide": false,
+                "rest": 20,
+                "restAfter": 20,
+                "muscles": [
+                  "gl"
+                ],
+                "load": {
+                  "type": "none",
+                  "equipment": null,
+                  "equipmentName": "",
+                  "count": 1,
+                  "weight": 0,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [
+                  "mat"
+                ],
+                "progression": {
+                  "mode": "none",
+                  "every": null,
+                  "repsStep": null,
+                  "repsMax": null,
+                  "weightStep": null,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              }
+            ]
+          },
+          {
+            "warmup": false,
+            "stages": [
+              {
+                "name": "Присед с гантелью у груди",
+                "desc": "Встань, поставив стопы примерно на ширине плеч, носки слегка наружу. Держи одну гантель обеими руками у груди. Согни колени и тазобедренные суставы и присядь до удобной глубины, сохраняя опору на всю стопу. Колени веди примерно по линии носков. Поднимись без рывка и чрезмерного прогиба поясницы.",
+                "mistakes": "Не заваливай колени внутрь. Если пятки отрываются или чувствуется защемление спереди бедра, уменьши глубину. Выход коленей за носки сам по себе не ошибка.",
+                "type": "reps",
+                "value": "10-12",
+                "sets": 3,
+                "perSide": false,
+                "rest": 90,
+                "restAfter": 90,
+                "muscles": [
+                  "qu",
+                  "gl"
+                ],
+                "load": {
+                  "type": "weight",
+                  "equipment": "dumbbell",
+                  "equipmentName": "",
+                  "count": 1,
+                  "weight": 5,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [],
+                "progression": {
+                  "mode": "double_range",
+                  "every": null,
+                  "repsStep": 1,
+                  "repsMax": 16,
+                  "weightStep": 0.5,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              }
+            ]
+          },
+          {
+            "warmup": false,
+            "stages": [
+              {
+                "name": "Тяга резинки к животу",
+                "desc": "Надёжно закрепи длинную резинку перед собой примерно на уровне живота и проверь крепление. Сядь или встань устойчиво, возьми концы резинки. Из положения с вытянутыми руками потяни локти назад вдоль боков к нижним рёбрам. Коротко остановись и плавно выпрями руки, не раскачивая туловище.",
+                "mistakes": "Не отклоняйся назад для помощи, не поднимай плечи к ушам и не отпускай резинку рывком.",
+                "type": "reps",
+                "value": "12-15",
+                "sets": 3,
+                "perSide": false,
+                "rest": 75,
+                "restAfter": 75,
+                "muscles": [
+                  "ba",
+                  "bi"
+                ],
+                "load": {
+                  "type": "level",
+                  "equipment": "band",
+                  "equipmentName": "",
+                  "count": 1,
+                  "weight": 0,
+                  "levels": [
+                    "Лёгкая",
+                    "Средняя",
+                    "Сильная",
+                    "Очень сильная"
+                  ],
+                  "level": 1
+                },
+                "supportEquipment": [],
+                "progression": {
+                  "mode": "level",
+                  "every": null,
+                  "repsStep": 1,
+                  "repsMax": 18,
+                  "weightStep": null,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              }
+            ]
+          },
+          {
+            "warmup": false,
+            "stages": [
+              {
+                "name": "Румынская тяга с двумя гантелями",
+                "desc": "Встань на ширине таза, держи по гантели перед бёдрами. Слегка согни колени и отводи таз назад, наклоняясь из тазобедренных суставов. Держи гантели близко к ногам. Опускайся до натяжения задней поверхности бедра при ровной спине. Верни таз вперёд и выпрямись без прогиба назад.",
+                "mistakes": "Не превращай движение в присед, не округляй спину ради глубины и не делай рывков. При дискомфорте уменьши амплитуду.",
+                "type": "reps",
+                "value": "10-12",
+                "sets": 3,
+                "perSide": false,
+                "rest": 120,
+                "restAfter": 120,
+                "muscles": [
+                  "gl",
+                  "ha"
+                ],
+                "load": {
+                  "type": "weight",
+                  "equipment": "dumbbell",
+                  "equipmentName": "",
+                  "count": 2,
+                  "weight": 5,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [],
+                "progression": {
+                  "mode": "double_range",
+                  "every": null,
+                  "repsStep": 1,
+                  "repsMax": 16,
+                  "weightStep": 0.5,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              }
+            ]
+          },
+          {
+            "warmup": false,
+            "stages": [
+              {
+                "name": "Отжимания от лавки",
+                "desc": "Упрись ладонями в неподвижную устойчивую лавку чуть шире плеч. Отойди ногами назад, выстрой тело в одну линию. Медленно опусти грудь к опоре, ведя локти немного назад, затем выжми себя вверх. Держи живот и ягодицы под контролем, не провисай поясницей.",
+                "mistakes": "Не разводи локти строго в стороны, не провисай поясницей и не используй скользящую опору.",
+                "type": "reps",
+                "value": "8-12",
+                "sets": 2,
+                "perSide": false,
+                "rest": 90,
+                "restAfter": 90,
+                "muscles": [
+                  "ch",
+                  "tr",
+                  "sh"
+                ],
+                "load": {
+                  "type": "none",
+                  "equipment": null,
+                  "equipmentName": "",
+                  "count": 1,
+                  "weight": 0,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [
+                  "bench"
+                ],
+                "progression": {
+                  "mode": "reps",
+                  "every": null,
+                  "repsStep": 1,
+                  "repsMax": 16,
+                  "weightStep": null,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              },
+              {
+                "name": "Отжимания от пола",
+                "desc": "Поставь ладони на пол чуть шире плеч, держи тело прямой линией от головы до пяток. Медленно опусти грудь, сгибая локти назад и немного в стороны. Выжми себя вверх без прогиба поясницы; если техника теряется, вернись к опоре.",
+                "mistakes": "Не провисай тазом, не разводи локти строго в стороны и не делай повторения рывком.",
+                "type": "reps",
+                "value": "6-10",
+                "sets": 2,
+                "perSide": false,
+                "rest": 90,
+                "restAfter": 90,
+                "muscles": [
+                  "ch",
+                  "tr",
+                  "sh"
+                ],
+                "load": {
+                  "type": "none",
+                  "equipment": null,
+                  "equipmentName": "",
+                  "count": 1,
+                  "weight": 0,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [],
+                "progression": {
+                  "mode": "reps",
+                  "every": null,
+                  "repsStep": 1,
+                  "repsMax": 14,
+                  "weightStep": null,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              }
+            ]
+          },
+          {
+            "warmup": false,
+            "stages": [
+              {
+                "name": "Ягодичный мостик с весом на лавке",
+                "desc": "Обопрись нижним краем лопаток о устойчивую лавку, стопы поставь на ширине таза. Размести груз поперёк таза через полотенце и придерживай руками. Усилием ягодиц подними таз до линии туловища и бёдер, остановись на секунду и медленно опусти. Рёбра держи спокойно опущенными.",
+                "mistakes": "Не выгибай поясницу ради высоты, не используй неустойчивую лавку и не отпускай груз руками.",
+                "type": "reps",
+                "value": "12-15",
+                "sets": 2,
+                "perSide": false,
+                "rest": 90,
+                "restAfter": 90,
+                "muscles": [
+                  "gl"
+                ],
+                "load": {
+                  "type": "weight",
+                  "equipment": "dumbbell",
+                  "equipmentName": "",
+                  "count": 1,
+                  "weight": 10,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [
+                  "bench",
+                  "mat"
+                ],
+                "progression": {
+                  "mode": "double_range",
+                  "every": null,
+                  "repsStep": 1,
+                  "repsMax": 19,
+                  "weightStep": 0.5,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              }
+            ]
+          },
+          {
+            "warmup": false,
+            "stages": [
+              {
+                "name": "Мёртвый жук",
+                "desc": "Ляг на спину, подними руки над грудью, согни бёдра и колени примерно под прямым углом. На выдохе медленно вытяни правую руку за голову и левую ногу вперёд настолько, насколько можешь удержать таз и поясницу под контролем. Вернись и поменяй сторону.",
+                "mistakes": "Если поясница заметно прогибается или таз раскачивается, уменьши амплитуду движения ногой. Не задерживай дыхание.",
+                "type": "reps",
+                "value": "8",
+                "sets": 2,
+                "perSide": true,
+                "rest": 45,
+                "restAfter": 45,
+                "muscles": [
+                  "co"
+                ],
+                "load": {
+                  "type": "none",
+                  "equipment": null,
+                  "equipmentName": "",
+                  "count": 1,
+                  "weight": 0,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [
+                  "mat"
+                ],
+                "progression": {
+                  "mode": "reps",
+                  "every": null,
+                  "repsStep": 1,
+                  "repsMax": 12,
+                  "weightStep": null,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "days": [],
+        "rounds": 1,
+        "roundRest": 0,
+        "exercises": [
+          {
+            "warmup": true,
+            "stages": [
+              {
+                "name": "Дыхание лёжа, ноги на лавке",
+                "desc": "Ляг на спину и положи голени на устойчивую лавку; колени согнуты примерно под прямым углом. Спокойно вдохни носом, затем плавно выдохни, позволяя нижним рёбрам опуститься. Не втягивай живот силой и не пытайся прижать поясницу к полу через сильное напряжение.",
+                "mistakes": "Не задерживай дыхание, не поднимай плечи и не выгибай грудную клетку.",
+                "type": "reps",
+                "value": "5",
+                "sets": 1,
+                "perSide": false,
+                "rest": 10,
+                "restAfter": 10,
+                "muscles": [
+                  "co"
+                ],
+                "load": {
+                  "type": "none",
+                  "equipment": null,
+                  "equipmentName": "",
+                  "count": 1,
+                  "weight": 0,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [
+                  "mat",
+                  "bench"
+                ],
+                "progression": {
+                  "mode": "none",
+                  "every": null,
+                  "repsStep": null,
+                  "repsMax": null,
+                  "weightStep": null,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              }
+            ]
+          },
+          {
+            "warmup": true,
+            "stages": [
+              {
+                "name": "Кошка-корова",
+                "desc": "Встань на четвереньки, ладони под плечами, колени под тазом. Медленно округли спину, затем плавно вернись и немного прогнись в комфортной амплитуде. Двигайся без усилия через боль.",
+                "mistakes": "Не делай резких рывков и не пытайся максимально прогибать поясницу.",
+                "type": "reps",
+                "value": "8",
+                "sets": 1,
+                "perSide": false,
+                "rest": 10,
+                "restAfter": 10,
+                "muscles": [
+                  "ba",
+                  "co"
+                ],
+                "load": {
+                  "type": "none",
+                  "equipment": null,
+                  "equipmentName": "",
+                  "count": 1,
+                  "weight": 0,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [
+                  "mat"
+                ],
+                "progression": {
+                  "mode": "none",
+                  "every": null,
+                  "repsStep": null,
+                  "repsMax": null,
+                  "weightStep": null,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              }
+            ]
+          },
+          {
+            "warmup": true,
+            "stages": [
+              {
+                "name": "Ягодичный мостик без веса",
+                "desc": "Ляг на спину, согни колени, поставь стопы на ширине таза. Усилием ягодиц подними таз примерно до линии плечи–таз–колени, сделай небольшую паузу и плавно опусти. Разминка должна оставаться лёгкой.",
+                "mistakes": "Не добирай высоту за счёт прогиба поясницы и не поднимай рёбра.",
+                "type": "reps",
+                "value": "10",
+                "sets": 1,
+                "perSide": false,
+                "rest": 20,
+                "restAfter": 20,
+                "muscles": [
+                  "gl"
+                ],
+                "load": {
+                  "type": "none",
+                  "equipment": null,
+                  "equipmentName": "",
+                  "count": 1,
+                  "weight": 0,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [
+                  "mat"
+                ],
+                "progression": {
+                  "mode": "none",
+                  "every": null,
+                  "repsStep": null,
+                  "repsMax": null,
+                  "weightStep": null,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              }
+            ]
+          },
+          {
+            "warmup": false,
+            "stages": [
+              {
+                "name": "Зашагивания на платформу с гантелями",
+                "desc": "Полностью поставь стопу на устойчивую платформу привычной высоты. Поднимись преимущественно силой ноги наверху, без сильного отталкивания нижней ногой. Выпрямись без прогиба поясницы, плавно опустись. Выполни подход на одну ногу, затем на другую; держи гантели по бокам.",
+                "mistakes": "Не отталкивайся резко нижней ногой, не заваливай колено внутрь и не разворачивай резко таз. При потере равновесия уменьши нагрузку.",
+                "type": "reps",
+                "value": "8-10",
+                "sets": 3,
+                "perSide": true,
+                "rest": 120,
+                "restAfter": 120,
+                "muscles": [
+                  "qu",
+                  "gl"
+                ],
+                "load": {
+                  "type": "weight",
+                  "equipment": "dumbbell",
+                  "equipmentName": "",
+                  "count": 2,
+                  "weight": 5,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [
+                  "bench"
+                ],
+                "progression": {
+                  "mode": "double_range",
+                  "every": null,
+                  "repsStep": 1,
+                  "repsMax": 14,
+                  "weightStep": 0.5,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              }
+            ]
+          },
+          {
+            "warmup": false,
+            "stages": [
+              {
+                "name": "Тяга резинки сверху к груди",
+                "desc": "Надёжно закрепи длинную резинку высоко и проверь крепление. Сядь или опустись на колени лицом к нему, возьми концы и подними руки. Потяни локти вниз вдоль боков, приближая кисти к верхним рёбрам, затем плавно выпрями руки вверх. Туловище держи почти вертикально.",
+                "mistakes": "Не отклоняйся сильно назад, не дёргай резинку и не поднимай плечи к ушам.",
+                "type": "reps",
+                "value": "12-15",
+                "sets": 3,
+                "perSide": false,
+                "rest": 75,
+                "restAfter": 75,
+                "muscles": [
+                  "ba",
+                  "bi"
+                ],
+                "load": {
+                  "type": "level",
+                  "equipment": "band",
+                  "equipmentName": "",
+                  "count": 1,
+                  "weight": 0,
+                  "levels": [
+                    "Лёгкая",
+                    "Средняя",
+                    "Сильная",
+                    "Очень сильная"
+                  ],
+                  "level": 1
+                },
+                "supportEquipment": [],
+                "progression": {
+                  "mode": "level",
+                  "every": null,
+                  "repsStep": 1,
+                  "repsMax": 18,
+                  "weightStep": null,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              }
+            ]
+          },
+          {
+            "warmup": false,
+            "stages": [
+              {
+                "name": "Статичный выпад назад с гантелями",
+                "desc": "Возьми по гантели в каждую руку, сделай шаг назад и поставь стопы примерно на ширине таза, а не на одной линии. Не переставляя ноги между повторами, согни оба колена до удобной глубины, затем поднимись усилием передней ноги. Выполни повторы на одну сторону, затем поменяй ноги.",
+                "mistakes": "Не ставь ноги на одну линию, не заваливай переднее колено внутрь и не опускайся через боль в тазобедренном суставе.",
+                "type": "reps",
+                "value": "10-12",
+                "sets": 2,
+                "perSide": true,
+                "rest": 90,
+                "restAfter": 90,
+                "muscles": [
+                  "qu",
+                  "gl"
+                ],
+                "load": {
+                  "type": "weight",
+                  "equipment": "dumbbell",
+                  "equipmentName": "",
+                  "count": 2,
+                  "weight": 5,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [],
+                "progression": {
+                  "mode": "double_range",
+                  "every": null,
+                  "repsStep": 1,
+                  "repsMax": 16,
+                  "weightStep": 0.5,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              }
+            ]
+          },
+          {
+            "warmup": false,
+            "stages": [
+              {
+                "name": "Жим двух гантелей лёжа на полу",
+                "desc": "Сядь на пол с гантелями у бёдер, осторожно ляг на спину и выведи гантели к груди. Колени согни, стопы поставь на пол, ладони друг к другу. Выжми гантели над серединой груди, затем медленно опусти их по бокам груди до мягкого касания пола задней поверхностью плеч. Без отбива выжми снова. В конце прижми гантели к телу и поднимись через бок.",
+                "mistakes": "Не разводи локти строго в стороны, не отбивай плечи от пола, не заламывай запястья и не выгибай поясницу.",
+                "type": "reps",
+                "value": "10-12",
+                "sets": 3,
+                "perSide": false,
+                "rest": 90,
+                "restAfter": 90,
+                "muscles": [
+                  "ch",
+                  "tr"
+                ],
+                "load": {
+                  "type": "weight",
+                  "equipment": "dumbbell",
+                  "equipmentName": "",
+                  "count": 2,
+                  "weight": 3,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [
+                  "mat"
+                ],
+                "progression": {
+                  "mode": "double_range",
+                  "every": null,
+                  "repsStep": 1,
+                  "repsMax": 16,
+                  "weightStep": 0.5,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              }
+            ]
+          },
+          {
+            "warmup": false,
+            "stages": [
+              {
+                "name": "Птица-собака",
+                "desc": "Встань на четвереньки, ладони под плечами, колени под тазом. Медленно вытяни правую руку вперёд и левую ногу назад, не разворачивая таз. Задержись на секунду, вернись и поменяй сторону. Не нужно поднимать конечности выше уровня спины.",
+                "mistakes": "Не прогибай поясницу при подъёме ноги, не разворачивай таз и не делай рывков.",
+                "type": "reps",
+                "value": "8",
+                "sets": 2,
+                "perSide": true,
+                "rest": 45,
+                "restAfter": 45,
+                "muscles": [
+                  "co",
+                  "ba"
+                ],
+                "load": {
+                  "type": "none",
+                  "equipment": null,
+                  "equipmentName": "",
+                  "count": 1,
+                  "weight": 0,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [
+                  "mat"
+                ],
+                "progression": {
+                  "mode": "reps",
+                  "every": null,
+                  "repsStep": 1,
+                  "repsMax": 12,
+                  "weightStep": null,
+                  "weightMax": null,
+                  "timeStep": null,
+                  "timeMax": null
+                },
+                "advance": "manual"
+              }
+            ]
+          },
+          {
+            "warmup": false,
+            "stages": [
+              {
+                "name": "Боковая планка с колен",
+                "desc": "Ляг на бок и поставь локоть строго под плечом, предплечье на полу. Согни колени. Опираясь на предплечье и колени, подними таз до прямой линии плечи–таз–колени. Дыши спокойно, удерживай корпус без провисания, затем опустись и смени сторону.",
+                "mistakes": "Если таз провисает или плечо поднимается к уху, останови удержание. Не ставь локоть далеко от плеча.",
+                "type": "time",
+                "value": "25",
+                "sets": 2,
+                "perSide": true,
+                "rest": 45,
+                "restAfter": 45,
+                "muscles": [
+                  "co"
+                ],
+                "load": {
+                  "type": "none",
+                  "equipment": null,
+                  "equipmentName": "",
+                  "count": 1,
+                  "weight": 0,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [
+                  "mat"
+                ],
+                "progression": {
+                  "mode": "time",
+                  "every": null,
+                  "repsStep": null,
+                  "repsMax": null,
+                  "weightStep": null,
+                  "weightMax": null,
+                  "timeStep": 5,
+                  "timeMax": 40
+                },
+                "advance": "manual"
+              },
+              {
+                "name": "Боковая планка на прямых ногах",
+                "desc": "Ляг на бок, локоть под плечом, ноги выпрями. Стопы поставь одна на другую или верхнюю немного впереди для равновесия. Подними таз до прямой линии от головы до стоп и спокойно дыши. Опустись под контролем и повтори на другой стороне.",
+                "mistakes": "Не позволяй тазу провисать, не разворачивай грудь к полу и не поднимай плечо к уху.",
+                "type": "time",
+                "value": "20",
+                "sets": 2,
+                "perSide": true,
+                "rest": 45,
+                "restAfter": 45,
+                "muscles": [
+                  "co"
+                ],
+                "load": {
+                  "type": "none",
+                  "equipment": null,
+                  "equipmentName": "",
+                  "count": 1,
+                  "weight": 0,
+                  "levels": [],
+                  "level": 0
+                },
+                "supportEquipment": [
+                  "mat"
+                ],
+                "progression": {
+                  "mode": "time",
+                  "every": null,
+                  "repsStep": null,
+                  "repsMax": null,
+                  "weightStep": null,
+                  "weightMax": null,
+                  "timeStep": 5,
+                  "timeMax": 45
+                },
+                "advance": "manual"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
