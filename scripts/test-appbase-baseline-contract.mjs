@@ -70,3 +70,15 @@ console.log('ok  AppBase baseline contract tiers: required=' +
   BASELINE.filter(x=>x.tier===TIERS.REQUIRED).length + ', optional=' +
   BASELINE.filter(x=>x.tier===TIERS.OPTIONAL).length + ', product=' +
   BASELINE.filter(x=>x.tier===TIERS.PRODUCT).length);
+
+const taskMiniWorkflow = await readFile(path.join(ROOT, '.github/workflows/task-mini.yml'), 'utf8');
+for(const requiredPath of [
+  "'packages/core/**'",
+  "'packages/ui-react/**'",
+  "'templates/react-app/**'",
+  "'apps/task-mini/**'"
+]){
+  assert.ok(taskMiniWorkflow.includes(requiredPath),
+    'Task Mini e2e must run for shared/starter drift: missing workflow path ' + requiredPath);
+}
+console.log('ok  Task Mini e2e watches Core, shared UI, starter and Task Mini');
