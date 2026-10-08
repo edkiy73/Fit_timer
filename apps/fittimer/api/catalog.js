@@ -100,7 +100,9 @@ async function list(req, res){
      тогда за ними и идём. */
   const one = String((req.query && req.query.item) || '').trim();
   if(one){
-    if(!/^[ua][0-9a-z]{4,16}$/.test(one)) return fail(res, 400, 'bad_id');
+    // Published Admin drafts keep their d... id after publication. They are
+    // valid catalog records exactly like trainer u... and direct Admin a... records.
+    if(!/^[uad][0-9a-z]{4,16}$/.test(one)) return fail(res, 400, 'bad_id');
     const raw = await store.get(`c:${one}`);
     if(!raw) return fail(res, 404, 'not_found');
     let c;
