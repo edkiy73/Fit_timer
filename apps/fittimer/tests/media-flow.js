@@ -92,6 +92,27 @@ async function boot(b, label, errs, url){
      promptRule.includes('ZERO text of any kind')
        &&promptRule.includes('Do not render the exercise or program name inside the image.'));
 
+  const fittedRatios=await tp.evaluate(async ()=>{
+    const src=document.createElement('canvas');
+    src.width=300; src.height=600;
+    const ctx=src.getContext('2d');
+    ctx.fillRect(0,0,src.width,src.height);
+    const data=src.toDataURL('image/png');
+    const fit=kind=>new Promise(resolve=>fitImageToSlot(data,kind,resolve));
+    const dims=async url=>new Promise(resolve=>{
+      const img=new Image();
+      img.onload=()=>resolve([img.naturalWidth,img.naturalHeight]);
+      img.onerror=()=>resolve([0,0]);
+      img.src=url;
+    });
+    const cover=await fit('cover');
+    const ex=await fit('ex');
+    return {cover:await dims(cover),exercise:await dims(ex)};
+  });
+  ok('фото для обложки реально сохраняется в 1:1',fittedRatios.cover[0]===fittedRatios.cover[1],JSON.stringify(fittedRatios.cover));
+  ok('фото упражнения реально сохраняется в 4:3',
+     fittedRatios.exercise[0]*3===fittedRatios.exercise[1]*4,JSON.stringify(fittedRatios.exercise));
+
   ok('обложка доехала до клиента', got.cover);
   ok('фото упражнений доехали', got.total === 3 && got.withPic === got.total, `${got.withPic} из ${got.total}`);
 
