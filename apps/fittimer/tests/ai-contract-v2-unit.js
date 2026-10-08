@@ -16,6 +16,18 @@ const stage = (name, extra) => Object.assign({
   supportEquipment:[], progression:{mode:'reps', every:null, repsStep:1, repsMax:15, weightStep:null, weightMax:null,
     timeStep:null, timeMax:null}, advance:'manual'
 }, extra || {});
+
+test('coach prompt requires useful program intro and executable exercise coaching', () => {
+  const prompt = C.buildPrompt('program.create', {language:'Russian', task:'Create a home workout',
+    profile:'', context:'', availableLoadEquipment:[], availableSupportEquipment:[]});
+  assert.ok(prompt.includes('practical guide the trainee can read before starting'));
+  assert.ok(prompt.includes('starting position and equipment/anchor'));
+  assert.ok(prompt.includes('observable errors AND immediately state how to correct each'));
+  assert.ok(prompt.includes('For bands specify exactly where and how they are anchored'));
+  assert.ok(C.outputSchema('program.create').schema.properties.program.properties.desc.maxLength === 1800);
+  assert.ok(C.outputSchema('program.modify').schema.properties.patch.properties.desc.maxLength === 1800);
+});
+
 const created = {contractVersion:2, program:{name:'Сила', desc:'', progressionEvery:2, rotate:false, rotateDays:[], plans:[
   {days:['mon', 'thu'], rounds:1, roundRest:0, exercises:[
     {warmup:false, stages:[stage('Отжимания от стены', {advance:'ceiling'}), stage('Отжимания с колен')]},
