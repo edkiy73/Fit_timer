@@ -280,6 +280,46 @@ ok('admin billing status exposes only safe SKU mapping metadata',
   && !JSON.stringify(billingReady.body).includes('sk_test_admin_ready')
   && !JSON.stringify(billingReady.body).includes('whsec_admin_ready'));
 
+const mappedSave = await call(adminHandler, {
+  action:'billing_mapping_set',
+  sku:'course.admin-map',
+  provider:'stripe',
+  mapping:{priceId:'price_admin_live'}
+}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
+ok('admin can persist a provider mapping for a concrete SKU allowed by skuPatterns',
+  mappedSave.status === 200
+  && mappedSave.body.products?.some(x => x.sku === 'course.admin-map' && x.mappings?.stripe?.priceId === 'price_admin_live'));
+
+let mappedCheckoutProduct = null;
+const mappedAdapter = {
+  id:'mapped',
+  kind:'external',
+  platforms:['web'],
+  distributions:['web'],
+  async checkout({email, sku, product}){
+    mappedCheckoutProduct = product;
+    return {events:[{orderId:'mapped-order-1', email, sku, status:'paid'}]};
+  }
+};
+const mappedHandler = createBillingHandler({adapters:[mappedAdapter]});
+const mappedBilling = createBillingClient({auth, fetch:viaFetch(mappedHandler), context:{platform:'web', distribution:'web'}});
+const mappedBuy = await mappedBilling.checkout('mapped', 'course.admin-map');
+ok('next checkout uses the Admin mapping overlay without restart',
+  mappedBuy.granted
+  && mappedCheckoutProduct?.billing?.stripe?.priceId === 'price_admin_live');
+
+const badMapping = await call(adminHandler, {
+  action:'billing_mapping_set',
+  sku:'course.admin-map',
+  provider:'stripe',
+  mapping:{priceId:'not-a-stripe-price'}
+}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
+ok('malformed Admin mapping is rejected instead of silently clearing a valid one',
+  badMapping.status === 400 && badMapping.body.error === 'bad_mapping');
+const mappedAfterBad = await call(adminHandler, {action:'billing_status'}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
+ok('rejected mapping leaves the previous valid mapping intact',
+  mappedAfterBad.body.products?.some(x => x.sku === 'course.admin-map' && x.mappings?.stripe?.priceId === 'price_admin_live'));
+
 const logRes = await call(adminHandler, {action:'billing_log'}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
 const events = logRes.body.events || [];
 ok('admin sees the payment journal, newest first', events.length >= 7 && events[0].at >= events[events.length - 1].at);
