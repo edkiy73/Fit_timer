@@ -495,8 +495,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 3500,
-      "chars": 161416,
+      "lines": 3467,
+      "chars": 159932,
       "symbols": [
         "activateClientAt",
         "add",
@@ -685,8 +685,8 @@
     },
     "src/app/50-trainer-catalog.js": {
       "kind": "frontend-js",
-      "lines": 2036,
-      "chars": 92363,
+      "lines": 2027,
+      "chars": 92054,
       "symbols": [
         "add",
         "addClient",

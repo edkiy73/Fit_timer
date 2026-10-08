@@ -41,20 +41,27 @@ function imageCoverTone(category,context){
   return {tone:'Fit Timer violet and purple',mood:'balanced, premium, modern'};
 }
 
-function imageEquipment(name,description){
-  const s=(String(name||'')+' '+String(description||'')).toLowerCase();
+/* Оборудование для картинки — из структуры этапа (load + supportEquipment), а не
+   угадыванием по тексту: снаряд, количество и опора у упражнения уже заданы явно. */
+const EQUIPMENT_LABELS={
+  dumbbell:['dumbbell','dumbbells'],barbell:['barbell','barbell'],ez_bar:['EZ curl bar','EZ curl bar'],
+  kettlebell:['kettlebell','kettlebells'],plate:['weight plate','weight plates'],medball:['medicine ball','medicine balls'],
+  sandbag:['sandbag','sandbags'],vest:['weighted vest','weighted vest'],ankle_weight:['ankle weight','ankle weights'],
+  machine:['weight machine','weight machine'],cable:['cable machine','cable machine'],band:['resistance band','resistance bands'],
+  expander:['chest expander','chest expanders'],mat:['exercise mat','exercise mat'],bench:['workout bench','workout bench'],
+  chair:['sturdy chair','sturdy chair'],pullup_bar:['pull-up bar','pull-up bar'],step:['box or step platform','box or step platform'],
+  fitball:['exercise ball','exercise ball'],dip_bars:['parallel dip bars','parallel dip bars'],rack:['squat rack','squat rack']
+};
+function imageEquipment(list){
   const out=[];
-  const add=(re,label)=>{if(re.test(s)&&!out.includes(label))out.push(label);};
-  add(/гантел|dumbbell/,'dumbbells');
-  add(/штанг|barbell/,'barbell');
-  add(/гир(я|и|ей|ю|ь)?|kettlebell/,'kettlebell');
-  add(/резин|эспанд|resistance band|\bband\b/,'resistance band');
-  add(/скам(ья|ьи|ье|ью|ьей)|bench/,'workout bench');
-  add(/блок|кроссовер|трос|cable/,'cable machine');
-  add(/турник|перекладин|pull[- ]?up bar/,'pull-up bar');
-  add(/коврик|\bmat\b/,'exercise mat');
-  add(/фитбол|мяч|exercise ball|swiss ball/,'exercise ball');
-  add(/тумб|платформ|степ|plyo box|step platform/,'box or step platform');
+  (Array.isArray(list)?list:[]).slice(0,10).forEach(item=>{
+    const id=String(item&&item.id||item||'');
+    const count=Math.max(1,Math.min(20,Math.round(+(item&&item.count)||1)));
+    let label='';
+    if(id==='custom')label=clampLine(item&&item.name,40);
+    else if(EQUIPMENT_LABELS[id])label=count>1?count+' '+EQUIPMENT_LABELS[id][1]:EQUIPMENT_LABELS[id][0];
+    if(label&&!out.includes(label))out.push(label);
+  });
   return out;
 }
 
@@ -63,11 +70,14 @@ function imageStaticExercise(name,description){
   return /планк|удержан|статич|изометр|вис на|wall sit|dead hang|hollow hold|side plank|isometric|static hold/.test(s);
 }
 
+// Мышцы этапа приходят id модели (ne, sh, …): переводим в подписи, по которым ниже
+// выбираются анатомические области. Готовые подписи тоже принимаются.
+const MUSCLE_LABELS={ne:'neck',sh:'shoulders',ch:'chest',ar:'arms',co:'core',ba:'back',gl:'glutes',le:'quadriceps',hm:'hamstrings',ca:'calves'};
 function adminMuscleRegions(meta){
   const exercise=(String(meta.name||'')+' '+String(meta.description||'')).toLowerCase();
   const out=[];
   const add=text=>{if(text&&!out.includes(text))out.push(text);};
-  (meta.muscles||[]).forEach(label=>{
+  (meta.muscles||[]).map(m=>MUSCLE_LABELS[m]||m).forEach(label=>{
     const key=String(label||'').toLowerCase();
     if(/ягод|glute/.test(key))add('gluteus maximus on both sides');
     else if(/квадриц|quadriceps/.test(key))add('quadriceps on both legs');
@@ -102,7 +112,7 @@ function adminImageCharacterStyle(gender){
 }
 
 function adminExerciseImagePrompt(meta){
-  const equipment=imageEquipment(meta.name,meta.description);
+  const equipment=imageEquipment(meta.equipment);
   const isStatic=imageStaticExercise(meta.name,meta.description);
   const regions=adminMuscleRegions(meta);
   const muscles=regions.length?regions.join(', '):'only the primary working muscles required by this movement';
@@ -161,10 +171,11 @@ async function handleCatalogImageAI(action,body,res){
   const gender=body&&body.gender==='m'?'man':'woman';
   const muscles=Array.isArray(body&&body.muscles)?body.muscles.map(x=>clampLine(x,50)).filter(Boolean).slice(0,12):[];
   const format=clampLine(body&&body.format,80);
+  const equipment=Array.isArray(body&&body.equipment)?body.equipment.slice(0,10):[];
   const exerciseNames=Array.isArray(body&&body.exerciseNames)?body.exerciseNames.map(x=>clampLine(x,120)).filter(Boolean).slice(0,20):[];
   const prompt=kind==='cover'
     ?adminCoverImagePrompt({program,gives,category,gender,exerciseNames})
-    :adminExerciseImagePrompt({name,description,muscles,format,gender});
+    :adminExerciseImagePrompt({name,description,muscles,format,equipment,gender});
 
   try{
     const settings=await getSettings();

@@ -14,6 +14,7 @@
 const { becomeTrainer } = require('./helpers/trainer-account');
 
 const { installV2Fixtures } = require('./helpers/v2-fixtures');
+const { translated } = require('./helpers/catalog-program');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -25,29 +26,6 @@ const CHROME = process.env.FIT_CHROME || '/opt/pw-browsers/chromium-1194/chrome-
 let bad = 0;
 const ok = (name, cond, extra) => { if(!cond) bad++;
   console.log((cond ? '  ok  ' : ' ПЛОХО') + '  ' + name + (extra != null ? '  → ' + extra : '')); };
-
-const PROG = `ПРОГРАММА: С картинками
-ДНИ: Пн
-КРУГИ: 2
-ОТДЫХ МЕЖДУ КРУГАМИ: 60
-
-УПРАЖНЕНИЕ: Приседания
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 12
-ПОДХОДЫ: 3
-ОТДЫХ: 45
-
-УПРАЖНЕНИЕ: Планка
-ФОРМАТ: время
-ЗНАЧЕНИЕ: 40
-ПОДХОДЫ: 3
-ОТДЫХ: 30
-
-УПРАЖНЕНИЕ: Отжимания
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 8
-ПОДХОДЫ: 3
-ОТДЫХ: 60`;
 
 async function boot(b, label, errs, url){
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
@@ -115,15 +93,10 @@ async function boot(b, label, errs, url){
     rename(exact.plans[0].exercises[1], 'Переименованное');
     applyMedia(exact, packed);
 
-    // Каталог парсит переведённый текст и получает временные новые id.
-    // Position fallback должен вернуть ИСХОДНЫЕ id, а не привязывать фото по имени.
-    const translated = JSON.parse(JSON.stringify(p));
-    translated.plans[0].exercises.forEach((e, i) => {
-      delete e.media;
-      e.id = 'temporary-' + i;
-      rename(e, 'Same translated');
-    });
-    applyMedia(translated, packed);
+    // Чужие id: позиция и имя identity не являются — фото не угадываются
+    const foreign = JSON.parse(JSON.stringify(p));
+    foreign.plans[0].exercises.forEach((e, i) => { delete e.media; e.id = 'other-' + i; });
+    applyMedia(foreign, packed);
 
     const legacy = JSON.parse(JSON.stringify(p));
     legacy.plans[0].exercises.forEach(e => { delete e.media; });
@@ -133,7 +106,7 @@ async function boot(b, label, errs, url){
       version:packed.v,
       ids:(packed.items || []).map(x => x.id),
       exact:exact.plans[0].exercises.map(e => [e.id,FitExerciseV2.prescriptionOf(e).name,e.media && e.media.data]),
-      translated:translated.plans[0].exercises.map(e => [e.id,e.media && e.media.data]),
+      foreignPics:foreign.plans[0].exercises.filter(e => e.media).length,
       legacyPics:legacy.plans[0].exercises.filter(e => e.media).length
     };
   });
@@ -142,31 +115,26 @@ async function boot(b, label, errs, url){
        && mediaIdentity.ids.join(',') === 'media-a,media-b'
        && mediaIdentity.exact[0][2] !== mediaIdentity.exact[1][2],
      JSON.stringify(mediaIdentity));
-  ok('переименование не ломает картинку: exact exercise.id остаётся главным ключом',
+  ok('переименование не ломает картинку: exercise.id — единственный ключ',
      mediaIdentity.exact[1][0] === 'media-b'
        && mediaIdentity.exact[1][1] === 'Переименованное'
        && !!mediaIdentity.exact[1][2],
      JSON.stringify(mediaIdentity.exact[1]));
-  ok('каталожный position fallback возвращает исходные exercise.id и разные фото',
-     mediaIdentity.translated[0][0] === 'media-a'
-       && mediaIdentity.translated[1][0] === 'media-b'
-       && mediaIdentity.translated[0][1] !== mediaIdentity.translated[1][1],
-     JSON.stringify(mediaIdentity.translated));
-  ok('legacy карта по имени не угадывает между двумя одинаковыми упражнениями',
-     mediaIdentity.legacyPics === 0, mediaIdentity.legacyPics);
+  ok('по позиции фото чужим упражнениям не раздаются', mediaIdentity.foreignPics === 0, mediaIdentity.foreignPics);
+  ok('старая карта «имя → фото» не читается', mediaIdentity.legacyPics === 0, mediaIdentity.legacyPics);
 
-  // ---- в каталог ----
-  // Отправка из интерфейса (doPublish) отключена до V2-каталога; серверную обработку
-  // картинок проверяем, отправляя заявку прямо в API — той же формой, что строил doPublish.
-  await tp.evaluate(async ({name, txt}) => {
+  // ---- в каталог: из интерфейса, с фото и обложкой ----
+  await tp.evaluate(async ({name}) => {
     const p = customPrograms.find(x => x.name === name);
-    const r = await fetch('/api/catalog', {method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({by: normHandle(trainer.handle), trainerKey: trainer.key || '', item: {
-        sourceLocale:'ru', name, gives:'Три движения по кругу, у каждого своя картинка — видно, что делать.',
-        cat:'power', level:'Средний', min:20, exCount:3, text:txt,
-        cover:p.cover, media:programMedia(p)}})});
-    return r.status;
-  }, {name: NAME, txt: PROG.replace('ПРОГРАММА: С картинками', 'ПРОГРАММА: ' + NAME)});
+    openPublish(p);
+    pubDraft.cat = 'Сила и выносливость';
+    pubDraft.level = 'Средний';
+    pubDraft.gives = 'Три движения по кругу, у каждого своя картинка — видно, что делать.';
+    document.getElementById('pubGives').value = pubDraft.gives;
+    await doPublish();
+  }, {name: NAME});
+  await tp.waitForTimeout(800);
+  if(await tp.isVisible('#dlgOk')){ await tp.click('#dlgOk'); await tp.waitForTimeout(300); }
 
   const api = (action, extra) => fetch(BASE + '/api/admin', {
     method: 'POST', headers: {'Content-Type': 'application/json', 'X-Admin-Key': encodeURIComponent(ADMIN)},
@@ -176,22 +144,19 @@ async function boot(b, label, errs, url){
   const mine = queue.pending.find(x => x.name === NAME);
   const mineMedia = mine && mine.media && mine.media.v === 2 && Array.isArray(mine.media.items)
     ? mine.media.items : [];
+  const progIds = mine && mine.program ? mine.program.plans[0].exercises.map(e => e.id) : [];
   ok('заявка дошла с id-картинками', mine && mine.cover && mineMedia.length === 3
-       && mineMedia.every(x => x.id && x.data),
+       && mineMedia.every(x => x.data && progIds.includes(x.id)),
      mine ? mineMedia.length + ' фото' : 'нет заявки');
+  ok('а сама программа — без фото внутри', mine && mine.program.plans[0].exercises.every(e => !e.media));
   const enName = 'With pictures ' + NAME.split(' ').pop();
-  const enText = mine.text
-    .replace('ПРОГРАММА: ' + NAME, 'ПРОГРАММА: ' + enName)
-    .replace('УПРАЖНЕНИЕ: Приседания', 'УПРАЖНЕНИЕ: Squats')
-    .replace('УПРАЖНЕНИЕ: Планка', 'УПРАЖНЕНИЕ: Plank')
-    .replace('УПРАЖНЕНИЕ: Отжимания', 'УПРАЖНЕНИЕ: Push-ups');
-  await api('edit', {id:mine.id, item:{sourceLocale:'ru', locales:{
-    ru:{name:mine.name, gives:mine.gives, text:mine.text},
-    en:{name:enName, gives:'Three exercises in a circuit, each with its own technique image.', text:enText}
+  await api('edit', {id:mine.id, item:{locales:{
+    en:{name:enName, gives:'Three exercises in a circuit, each with its own technique image.',
+      texts:translated(mine.program, {'Приседания':'Squats', 'Планка':'Plank', 'Отжимания':'Push-ups'})}
   }}});
   await api('approve', {id: mine.id});
 
-  // ---- витрина лёгкая, фото приходят при добавлении ----
+  // ---- витрина лёгкая, фото приходят отдельно ----
   const list = await fetch(BASE + '/api/catalog').then(r => r.json());
   const row = list.items.find(x => x.name === NAME);
   ok('в списке каталога фото НЕТ', row && row.media === undefined && row.hasMedia === true);
@@ -203,10 +168,49 @@ async function boot(b, label, errs, url){
      fullItems.map(x => x.id).join(', '));
   const fullEn = await fetch(BASE + '/api/catalog?item=' + row.id + '&lang=en').then(r => r.json());
   const enItems = fullEn.item.media && fullEn.item.media.v === 2 ? (fullEn.item.media.items || []) : [];
-  ok('для английского сохраняются те же stable exercise.id — перевод имени больше не ключ',
+  ok('для английского те же stable exercise.id — перевод имени не ключ',
      enItems.length === 3
-       && enItems.map(x => x.id).join(',') === fullItems.map(x => x.id).join(','),
+       && enItems.map(x => x.id).join(',') === fullItems.map(x => x.id).join(',')
+       && fullEn.item.program.plans[0].exercises.map(e => e.id).join(',') === progIds.join(','),
      enItems.map(x => x.id).join(', '));
+
+  /* ---- страница программы в каталоге показывает фото ----
+     Их там нет в момент отрисовки: список каталога фото не несёт, и они доезжают
+     отдельным запросом уже после того, как страница открылась. Ждём. */
+  const onPage = await cp.evaluate(async (name) => {
+    await loadStoreServer();
+    const it = storeAll().find(x => x.name === name);
+    if(!it) return {found: false};
+    openStoreItem(it.id);
+    const count = () => document.querySelectorAll('#siList .ex-thumb img').length;
+    const atOnce = count();
+    for(let i = 0; i < 40 && count() < 3; i++) await new Promise(r => setTimeout(r, 100));
+    return {found: true, atOnce, later: count(),
+            rows: document.querySelectorAll('#siList .ex-row').length};
+  }, NAME);
+  ok('страница программы открывается сразу, не дожидаясь фото',
+     onPage.found && onPage.rows === 3 && onPage.atOnce === 0,
+     `${onPage.rows} строк, фото сразу ${onPage.atOnce}`);
+  ok('и фото доезжают на свои места', onPage.later === 3, onPage.later + ' из 3');
+
+  // ---- добавление себе возвращает фото на места ----
+  const added = await cp.evaluate(async (name) => {
+    await loadStoreServer();
+    const it = storeAll().find(x => x.name === name);
+    if(!it) return {found: false};
+    await addStoreItem(it.id);
+    const p = customPrograms.find(x => x.storeId === it.id);
+    if(!p) return {found: true, saved: false};
+    const pics = normPlans(p)[0].exercises.map(e => e.media && e.media.data);
+    return {found: true, saved: true, cover: !!p.cover, locale:p.locale,
+            withPic: pics.filter(Boolean).length, distinct: new Set(pics).size,
+            freshIds: normPlans(p)[0].exercises.every(e => !it.program.plans[0].exercises.some(s => s.id === e.id))};
+  }, NAME);
+  ok('программа из каталога добавляется', added.found && added.saved, JSON.stringify(added));
+  ok('и приносит фото упражнений — каждому своё', added.withPic === 3 && added.distinct === 3, added.withPic + '');
+  ok('у личной копии свои id, фото при этом на местах', added.freshIds === true);
+  ok('и обложку', added.cover === true);
+  ok('личная копия запоминает язык каталога', added.locale === 'ru', added.locale);
 
   console.log('\npageerror:', errs.length ? errs : 'нет');
   if(errs.length) bad++;

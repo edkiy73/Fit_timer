@@ -30,7 +30,10 @@ new vm.Script(adminJs,{filename:'admin.js'});
 need(!/localStorage\.setItem\('adminKey'/.test(adminJs),'admin key must not be persisted in localStorage');
 
 need(api.includes("'catalog_ai_create'"),'admin AI-create API is missing');
-need(api.includes('FitAIProtocol.validateProgramResponse(out.text,{requireWeightCeiling:true})'),'AI-created program must be protocol-validated, including the weight ceiling');
+need(api.includes("FitAIContract.checkOutput(kind, r.json, input)") && api.includes("FitAIContract.outputSchema(kind)"),'admin catalog AI must use the same AI Contract V2 schema and domain validator as the app');
+need(!api.includes('ai-protocol') && !html.includes('ПРОГРАММА:'),'catalog admin must not use the old text protocol');
+need(api.includes("'catalog_import_dto'") && html.includes("api('catalog_import_dto'"),'manual Program DTO import is missing');
+need(html.includes('id="fTextsRu"') && html.includes('id="fTextsEn"'),'per-language text overlays must be editable as JSON');
 need(html.includes('id="fAiCreate"'),'admin AI-create button is missing');
 need(html.includes('id="aiCreateDays"'),'admin AI-create form is incomplete');
 need(html.includes("api('translate_catalog',{from:lang,to:other"),'AI-create must prepare the second catalog language');

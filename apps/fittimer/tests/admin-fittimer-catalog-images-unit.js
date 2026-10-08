@@ -2,7 +2,7 @@
 let bad=0;
 function ok(name,cond){
   if(!cond) bad++;
-  console.log((cond?'  ok  ':' ПЛОХО')+'  '+name);
+  console.log((cond?'  ok  ':' ПЛОХО')+'  '+name+(arguments[2]!=null&&!cond?' → '+arguments[2]:''));
 }
 
 const aiPath=require.resolve('../../../packages/core/server/ai');
@@ -20,20 +20,24 @@ const mod=require('../lib/admin/fittimer/catalog-images');
   ok('FitTimer image module owns catalog image action',mod.ACTIONS.has('catalog_ai_image'));
   ok('FitTimer image module does not own Core action',!mod.ACTIONS.has('users_list'));
 
-  const equipment=mod.imageEquipment('Жим гантелей','Лежа на скамье');
-  ok('equipment parser stays FitTimer-specific',equipment.includes('dumbbells')&&equipment.includes('workout bench'));
+  const equipment=mod.imageEquipment([{id:'dumbbell',count:2},'bench',{id:'custom',name:'TRX straps'},'unknown']);
+  ok('equipment comes from structured stage data, with count',
+    equipment.join('|')==='2 dumbbells|workout bench|TRX straps',equipment.join('|'));
+  ok('no equipment in the stage means none on the picture',mod.imageEquipment([]).length===0);
 
   ok('static exercise detection preserved',mod.imageStaticExercise('Планка','удержание позиции')===true);
 
   const prompt=mod.adminExerciseImagePrompt({
     name:'Сгибание рук с гантелями',
     description:'Сгибайте руки контролируемо',
-    muscles:['руки'],
+    muscles:['ar'],
     format:'3x12',
+    equipment:[{id:'dumbbell',count:2}],
     gender:'man'
   });
   ok('exercise prompt keeps one-body constraint',
     prompt.includes('Exactly one solid')&&prompt.includes('biceps brachii'));
+  ok('exercise prompt names the structured equipment',prompt.includes('Equipment: 2 dumbbells.'));
 
   const res={statusCode:0,body:'',setHeader(){},end(v){this.body=String(v||'');}};
   const handled=await mod.handleCatalogImageAI('users_list',{},res);

@@ -5,9 +5,10 @@ const { send, fail, rndId, clampLine, clampText, cleanPic } = require('../../../
 const { getSettings, providerStatus, billingProviderStatus } = require('../../../../../packages/core/server/ai');
 const { sendPushToAccountHash } = require('../../../../../packages/core/server/push');
 const {
-  GOALS, LEVELS, LANGS, normLocale, normalizeCatalogText,
-  localeMiss, protocolShape, syncSourceFields
+  GOALS, LEVELS, LANGS, normLocale, normalizeCatalog,
+  localeMiss, programMiss, syncSourceFields
 } = require('./catalog-text');
+const FitExerciseV2 = require('../../fit-exercise-v2');
 
 const ACTIONS = new Set([
   'overview','approve','reject','pro','ban','unban',
@@ -17,37 +18,26 @@ const ACTIONS = new Set([
 
 const clean=(v,n)=>String(v==null?'':v).slice(0,n);
 
+// Фото упражнений: только v2 — по stable exercise.id (+ позиция plan/exercise).
 function pics(src){
   let budget=800*1024;
-  const items=src&&+src.v===2&&Array.isArray(src.items)?src.items:null;
-  if(items){
-    const out=[];
-    for(const item of items){
-      if(!item||typeof item!=='object')continue;
-      const val=cleanPic(item.data,budget);
-      if(!val)continue;
-      out.push({
-        id:clampLine(item.id,80),
-        p:Math.max(0,Math.min(99,Math.round(+item.p||0))),
-        i:Math.max(0,Math.min(199,Math.round(+item.i||0))),
-        n:clampLine(item.n,60),
-        data:val
-      });
-      budget-=val.length;
-      if(out.length>=30)break;
-    }
-    return {v:2,items:out};
-  }
-  const out={};
-  for(const [k,v] of Object.entries((src&&typeof src==='object')?src:{})){
-    const key=clampLine(k,60);
-    const val=cleanPic(v,budget);
-    if(!key||!val)continue;
-    out[key]=val;
+  const items=src&&+src.v===2&&Array.isArray(src.items)?src.items:[];
+  const out=[];
+  for(const item of items){
+    if(!item||typeof item!=='object')continue;
+    const val=cleanPic(item.data,budget);
+    if(!val)continue;
+    out.push({
+      id:clampLine(item.id,80),
+      p:Math.max(0,Math.min(99,Math.round(+item.p||0))),
+      i:Math.max(0,Math.min(199,Math.round(+item.i||0))),
+      n:clampLine(item.n,60),
+      data:val
+    });
     budget-=val.length;
-    if(Object.keys(out).length>=30)break;
+    if(out.length>=30)break;
   }
-  return out;
+  return {v:2,items:out};
 }
 
 async function readItems(listKey,want){
@@ -64,23 +54,27 @@ async function readItems(listKey,want){
   return out;
 }
 
+/* Готовность записи: цель, уровень, программа и языки. requireBoth — для публикации:
+   каталог показывает запись и по-русски, и по-английски. */
 function checkItem(it,opts){
   opts=opts||{};
-  const norm=normalizeCatalogText(it,opts.fallbackSource||'ru');
+  const norm=normalizeCatalog(it,opts.fallbackSource||'ru');
   const miss=[];
   if(!GOALS.includes(it.cat))miss.push('цель');
   if(!LEVELS.includes(it.level))miss.push('уровень');
+  miss.push(...programMiss(norm));
+  const sourceTexts=norm.locales[norm.sourceLocale]&&norm.locales[norm.sourceLocale].texts;
   const required=opts.requireBoth?LANGS:[norm.sourceLocale];
-  required.forEach(lang=>miss.push(...localeMiss(norm.locales[lang],lang.toUpperCase())));
-  const bothReady=LANGS.every(lang=>localeMiss(norm.locales[lang],lang.toUpperCase()).length===0);
-  if(bothReady){
-    const ruShape=protocolShape(norm.locales.ru.text);
-    const enShape=protocolShape(norm.locales.en.text);
-    if(!ruShape.length||JSON.stringify(ruShape)!==JSON.stringify(enShape)){
-      miss.push('RU/EN: структура программы должна совпадать');
-    }
-  }
-  return {miss,sourceLocale:norm.sourceLocale,locales:norm.locales};
+  required.forEach(lang=>miss.push(...localeMiss(norm.locales[lang],sourceTexts,lang.toUpperCase())));
+  return Object.assign(norm,{miss});
+}
+// Что видит список админки: готовность языков, посчитанная сервером
+function withReadiness(c){
+  const norm=normalizeCatalog(c,c.sourceLocale||'ru');
+  const sourceTexts=norm.locales[norm.sourceLocale]&&norm.locales[norm.sourceLocale].texts;
+  const ready={};
+  LANGS.forEach(lang=>{ready[lang]=!!norm.program&&localeMiss(norm.locales[lang],sourceTexts,'').length===0;});
+  return Object.assign({},c,{ready});
 }
 
 async function overview(res){
@@ -109,7 +103,10 @@ async function overview(res){
     }catch(_){}
   });
   send(res,200,{
-    pending,drafts,approved,trainers,settings,
+    pending:pending.map(withReadiness),drafts:drafts.map(withReadiness),approved:approved.map(withReadiness),
+    trainers,settings,
+    // один справочник оборудования на приложение, ИИ и админку (форма генерации)
+    equipment:FitExerciseV2.EQUIPMENT.filter(e=>e.id!=='custom').map(e=>({id:e.id,roles:e.roles.slice()})),
     providers:providerStatus(),
     billingProviders:billingProviderStatus()
   });
@@ -145,6 +142,28 @@ async function moderate(action,id,body,res){
     }
   }catch(_){}
   send(res,200,{ok:true,status:c.status,pro:!!c.pro});
+}
+
+/* Правка записи поверх сохранённой. Языки сливаются по одному: прислали только EN —
+   RU остаётся прежним. name/gives верхнего уровня — правка исходного языка. */
+function mergeIncoming(current,incoming){
+  const it=Object.assign({},current,incoming);
+  const src=normLocale(incoming.sourceLocale||current.sourceLocale);
+  it.locales=Object.assign({},current.locales||{},incoming.locales||{});
+  if(incoming.name!==undefined||incoming.gives!==undefined){
+    const block=Object.assign({},it.locales[src]||{});
+    if(incoming.name!==undefined)block.name=incoming.name;
+    if(incoming.gives!==undefined)block.gives=incoming.gives;
+    it.locales[src]=block;
+  }
+  // Новая программа приносит свои тексты исходного языка: старая накладка исходника
+  // не должна откатить их (например, переименование после правки через ИИ).
+  const sentSourceTexts=incoming.locales&&incoming.locales[src]&&incoming.locales[src].texts!==undefined;
+  if(incoming.program!==undefined&&!sentSourceTexts&&it.locales[src]){
+    it.locales[src]=Object.assign({},it.locales[src]);
+    delete it.locales[src].texts;
+  }
+  return it;
 }
 
 async function handleCatalogAdmin(action,body,res){
@@ -194,13 +213,9 @@ async function handleCatalogAdmin(action,body,res){
     }else{
       draftId='d'+rndId(7);
     }
-    const merged=Object.assign({},current||{},incoming);
-    if(incoming.locales!==undefined){
-      merged.locales=Object.assign({},(current&&current.locales)||{},incoming.locales||{});
-    }
-    const norm=normalizeCatalogText(merged,(current&&current.sourceLocale)||'ru');
-    const sourceLocale=norm.sourceLocale;
-    const src=norm.locales[sourceLocale]||{name:'',gives:'',text:''};
+    const merged=mergeIncoming(current||{},incoming);
+    // Черновик может быть неполным: программу и языки проверит публикация.
+    const norm=normalizeCatalog(merged,(current&&current.sourceLocale)||'ru');
     const now=new Date().toISOString();
     const c={
       id:draftId,
@@ -210,18 +225,13 @@ async function handleCatalogAdmin(action,body,res){
       min:Math.max(1,Math.min(180,Math.round(+merged.min||20))),
       cover:cleanPic(merged.cover,90000)||null,
       media:pics(merged.media),
-      exCount:Math.max(0,Math.round(+merged.exCount||0)),
       pro:!!merged.pro,
       status:'draft',
       at:(current&&current.at)||now,
       updatedAt:now,
-      mine:true,
-      sourceLocale,
-      locales:norm.locales,
-      name:src.name||'',
-      gives:src.gives||'',
-      text:src.text||''
+      mine:true
     };
+    syncSourceFields(c,norm);
     await store.set('c:'+draftId,JSON.stringify(c));
     if(!current)await store.push('c:drafts',draftId);
     send(res,200,{ok:true,id:draftId,status:'draft',updatedAt:now});
@@ -269,7 +279,6 @@ async function handleCatalogAdmin(action,body,res){
       id:newId,by:clean(it.by,40),cat:it.cat,level:it.level,
       min:Math.max(1,Math.min(180,Math.round(+it.min||20))),
       cover:cleanPic(it.cover,90000)||null,media:pics(it.media),
-      exCount:Math.max(0,Math.round(+it.exCount||0)),
       pro:!!it.pro,status:'approved',at:new Date().toISOString(),mine:true
     };
     syncSourceFields(c,checked);
@@ -284,33 +293,20 @@ async function handleCatalogAdmin(action,body,res){
     if(!raw){fail(res,404,'not_found');return true;}
     const c=JSON.parse(raw);
     const incoming=(body&&body.item)||{};
-    const it=Object.assign({},c,incoming);
-    if(incoming.locales!==undefined){
-      it.locales=Object.assign({},c.locales||{},incoming.locales||{});
-    }
-    const touchesLegacyText=incoming.name!==undefined||incoming.gives!==undefined||incoming.text!==undefined;
-    if(incoming.locales===undefined&&touchesLegacyText){
-      const base=normalizeCatalogText(c,c.sourceLocale||'ru');
-      const srcLang=normLocale(incoming.sourceLocale||base.sourceLocale);
-      it.sourceLocale=srcLang;
-      it.locales=Object.assign({},base.locales);
-      it.locales[srcLang]=Object.assign({},it.locales[srcLang]||{});
-      ['name','gives','text'].forEach(k=>{
-        if(incoming[k]!==undefined)it.locales[srcLang][k]=incoming[k];
-      });
-    }
-    const touchesText=incoming.locales!==undefined||incoming.sourceLocale!==undefined||touchesLegacyText;
+    const it=mergeIncoming(c,incoming);
+    const touchesText=['program','locales','sourceLocale','name','gives'].some(k=>incoming[k]!==undefined);
     const checked=checkItem(it,{
       requireBoth:c.status==='approved'&&touchesText,
       fallbackSource:c.sourceLocale||'ru'
     });
+    // Заявку правят по частям (сначала второй язык, потом картинки): блокирует только
+    // то, без чего запись не может жить, — программа и исходный язык.
     if(checked.miss.length){fail(res,400,'bad_item',{miss:checked.miss});return true;}
     if(touchesText)syncSourceFields(c,checked);
     if(it.by!=null)c.by=clampLine(it.by,40);
     ['cat','level'].forEach(k=>{if(it[k]!=null)c[k]=clean(it[k],40);});
     if(it.min!=null)c.min=Math.max(1,Math.min(180,Math.round(+it.min||20)));
     if(it.cover!==undefined)c.cover=cleanPic(it.cover,90000)||null;
-    if(it.exCount!=null)c.exCount=Math.max(0,Math.round(+it.exCount||0));
     if(it.pro!==undefined)c.pro=!!it.pro;
     if(it.media!==undefined)c.media=pics(it.media);
     await store.set(`c:${id}`,JSON.stringify(c));

@@ -9,6 +9,7 @@
   node tests/nav-transitions.js
 */
 
+const { catalogProgram } = require('./helpers/catalog-program');
 const { becomeTrainer } = require('./helpers/trainer-account');
 const { settle } = require('./helpers/settle');
 
@@ -242,7 +243,8 @@ async function scenario(ctx, name, fn, errs){
       id:'nav-store-item', by:'@nav.trainer', cat:'tone', level:'Средний', min:20,
       name:'Навигация каталога', gives:'Проверка возврата из карточки.',
       cover:null,
-      text:'ПРОГРАММА: Навигация каталога\\nДНИ: Пн\\nКРУГИ: 1\\n\\nУПРАЖНЕНИЕ: Планка\\nФОРМАТ: время\\nЗНАЧЕНИЕ: 30\\nПОДХОДЫ: 1\\nОТДЫХ: 20'
+      program:catalogProgram('Навигация каталога', [{name:'Планка', type:'time', value:'30', sets:1, rest:20}, 'Приседания', 'Выпады'],
+        {days:['mon'], rounds:1}), locale:'ru'
     };
     await page.route('**/api/catalog*', route => route.fulfill({
       status: 200, contentType: 'application/json', body: JSON.stringify({items:[item]})
