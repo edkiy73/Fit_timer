@@ -416,8 +416,8 @@
     },
     "src/app/30-progress-media.js": {
       "kind": "frontend-js",
-      "lines": 1057,
-      "chars": 47425,
+      "lines": 1101,
+      "chars": 50301,
       "symbols": [
         "addPhoto",
         "alpha",
