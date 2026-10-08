@@ -37,6 +37,7 @@ async function premiumCatalogAccess(req){
   return (Date.parse(acc.sub&&acc.sub.until)||0) > Date.now();
 }
 
+const REFERENCE_IDS = new Set(require('../lib/seed').SEED_ITEMS.map(item=>String(item.id)));
 const CP = require('../lib/fit-catalog-program');
 const LANGS = CP.LANGS;
 const normLocale = v => LANGS.includes(String(v || '').toLowerCase()) ? String(v).toLowerCase() : 'ru';
@@ -100,9 +101,10 @@ async function list(req, res){
      тогда за ними и идём. */
   const one = String((req.query && req.query.item) || '').trim();
   if(one){
-    // Published Admin drafts keep their d... id after publication. They are
-    // valid catalog records exactly like trainer u... and direct Admin a... records.
-    if(!/^[uad][0-9a-z]{4,16}$/.test(one)) return fail(res, 400, 'bad_id');
+    // Published Admin drafts keep their d... id after publication. Canonical
+    // reference programs use stable descriptive IDs such as slim_toned_v2.
+    // Accept only the legacy generated IDs or IDs present in the reference registry.
+    if(!/^[uad][0-9a-z]{4,16}$/.test(one) && !REFERENCE_IDS.has(one)) return fail(res, 400, 'bad_id');
     const raw = await store.get(`c:${one}`);
     if(!raw) return fail(res, 404, 'not_found');
     let c;
