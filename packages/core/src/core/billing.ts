@@ -13,6 +13,21 @@ export interface CheckoutResult {
   premium: boolean;
 }
 
+export interface BillingContext {
+  platform?: 'web' | 'android' | 'ios' | 'unknown';
+  distribution?: 'web' | 'google_play' | 'app_store' | 'direct' | 'unknown';
+  /** ISO 3166-1 alpha-2 country code when known. */
+  country?: string;
+  /** Store-specific storefront/region identifier when available. */
+  storefront?: string;
+}
+
+export interface BillingMethod {
+  id: string;
+  kind: 'store' | 'external' | 'direct' | 'test';
+  external: boolean;
+}
+
 export interface BillingClientOptions {
   auth: Pick<AuthClient, 'authFields'>;
   endpoint?: string;
@@ -27,8 +42,11 @@ export interface RenewalResult {
 }
 
 export interface BillingClient {
-  providers(): Promise<string[]>;
-  checkout(provider: string, sku: string): Promise<CheckoutResult>;
+  /** Legacy list of provider ids. Prefer methods() for new product UI. */
+  providers(context?: BillingContext): Promise<string[]>;
+  /** Allowed and configured payment methods for this platform/store context. */
+  methods(context?: BillingContext): Promise<BillingMethod[]>;
+  checkout(provider: string, sku: string, context?: BillingContext): Promise<CheckoutResult>;
   /** Turn automatic renewal of the active subscription on or off; the paid period stays. */
   setRenewal(autoRenew: boolean): Promise<RenewalResult>;
 }
@@ -67,12 +85,24 @@ export function createBillingClient(options: BillingClientOptions): BillingClien
   }
 
   return {
-    async providers(){
-      const result = await post({action:'providers'});
+    async providers(context){
+      const result = await post({action:'providers', ...(context ? {context} : {})});
       return Array.isArray(result.providers) ? result.providers.map(String) : [];
     },
 
-    async checkout(provider, sku){
+    async methods(context){
+      const result = await post({action:'methods', ...(context ? {context} : {})});
+      return Array.isArray(result.methods) ? result.methods.flatMap(value => {
+        if(!value || typeof value !== 'object') return [];
+        const method = value as Record<string, unknown>;
+        const id = String(method.id || '');
+        const kind = String(method.kind || '');
+        if(!id || !['store','external','direct','test'].includes(kind)) return [];
+        return [{id, kind:kind as BillingMethod['kind'], external:!!method.external}];
+      }) : [];
+    },
+
+    async checkout(provider, sku, context){
       const auth = await options.auth.authFields();
       if(!auth) throw new Error('not_authenticated');
       const result = await post({
@@ -81,7 +111,8 @@ export function createBillingClient(options: BillingClientOptions): BillingClien
         sku,
         email:auth.email,
         deviceId:auth.deviceId,
-        syncToken:auth.syncToken
+        syncToken:auth.syncToken,
+        ...(context ? {context} : {})
       });
       const out: CheckoutResult = {
         granted:!!result.granted,
