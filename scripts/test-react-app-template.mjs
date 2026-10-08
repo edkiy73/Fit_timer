@@ -9,7 +9,7 @@ const required = [
   'config/product.json','api/auth.js','api/sync.js','api/health.js','api/admin.js',
   'lib/product.js','lib/app-analytics.js','lib/app-sync-schema.js',
   'api/billing.js',
-  'src/main.tsx','src/app.tsx','src/auth.ts','src/admin.ts','src/sync.ts','src/billing.ts','src/theme.ts','src/observability.ts','src/styles.css','src/app.test.tsx','src/test-setup.ts',
+  'src/main.tsx','src/app.tsx','src/route-fallback.tsx','src/auth.ts','src/admin.ts','src/sync.ts','src/billing.ts','src/theme.ts','src/observability.ts','src/styles.css','src/app.test.tsx','src/test-setup.ts',
   'src/i18n/index.ts','src/i18n/ru.ts','src/i18n/en.ts',
   'tests/smoke.js','tests/e2e.mjs'
 ];
@@ -51,6 +51,8 @@ try{
   assert.match(app, /LanguagePicker/);
   assert.match(app, /AdminPanel/);
   assert.match(app, /path:'\/admin'/);
+  assert.match(app, /RouteErrorScreen/);
+  assert.match(app, /path:'\*'/);
   assert.match(app, /appDocs\.detach\(\)/);
   for(const file of required){
     const text = await readFile(path.join(target, file), 'utf8');
