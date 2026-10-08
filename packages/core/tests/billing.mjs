@@ -24,6 +24,8 @@ configureProduct({...productConfig(), skuPatterns:['course.*','bundle.course.*']
   bundles:[{pattern:'bundle.course.*', includes:['course.*','plus.year']}], products:[
   {sku:'pack.a', title:'Pack A'},
   {sku:'pack.b', title:'Pack B'},
+  {sku:'pack.restore.a', title:'Restore A'},
+  {sku:'pack.restore.b', title:'Restore B'},
   {sku:'plus.month', title:'Plus', kind:'subscription', days:30},
   {sku:'plus.year', title:'Plus year', kind:'subscription', days:365}
 ]});
@@ -111,7 +113,9 @@ const nativeStoreAdapter = {
   },
   async verifyPurchase({proof, identity}){
     verifiedNativeProof = {proof, identity};
-    return {events:[{orderId:'native-order-1', status:'paid', autoRenew:false}]};
+    const token = String(proof && proof.purchaseToken || '');
+    if(!token) throw Object.assign(new Error('purchase_token_missing'), {status:400});
+    return {events:[{orderId:'native-' + token, status:'paid', autoRenew:false}]};
   }
 };
 const nativeStoreHandler = createBillingHandler({adapters:[nativeStoreAdapter]});
@@ -147,6 +151,37 @@ ok('native billing identity is persisted on the account',
 ok('native purchase verification still requires a signed-in device',
   (await call(nativeStoreHandler, {
     action:'verify_purchase', provider:'google_native', sku:'pack.b', proof:{purchaseToken:'x'},
+    email:'payer@example.com', deviceId:'x', syncToken:'y',
+    context:{platform:'android', distribution:'google_play'}
+  })).status === 403);
+
+const restoredNative = await nativeBilling.restorePurchases('google_native', [
+  {sku:'pack.restore.a', proof:{purchaseToken:'restore-a'}},
+  {sku:'pack.restore.b', proof:{purchaseToken:'restore-b'}},
+  {sku:'pack.zzz', proof:{purchaseToken:'unknown'}}
+]);
+ok('restore re-verifies every valid native purchase on the server',
+  restoredNative.checked === 2
+  && restoredNative.restored === 2
+  && restoredNative.granted === true);
+ok('restore reports bad catalog items without discarding valid purchases',
+  restoredNative.errors.length === 1
+  && restoredNative.errors[0].sku === 'pack.zzz'
+  && restoredNative.errors[0].error === 'unknown_sku');
+ok('restore returns the fresh canonical entitlements',
+  restoredNative.owned.includes('pack.restore.a')
+  && restoredNative.owned.includes('pack.restore.b')
+  && restoredNative.entitlements.some(x => x.key === 'pack.restore.a' && x.kind === 'owned' && x.active));
+const repeatedRestore = await nativeBilling.restorePurchases('google_native', [
+  {sku:'pack.restore.a', proof:{purchaseToken:'restore-a'}},
+  {sku:'pack.restore.b', proof:{purchaseToken:'restore-b'}}
+]);
+ok('repeating the same restore is idempotent',
+  repeatedRestore.checked === 2 && repeatedRestore.restored === 0 && repeatedRestore.granted === false);
+ok('restore still requires a signed-in device',
+  (await call(nativeStoreHandler, {
+    action:'restore', provider:'google_native',
+    items:[{sku:'pack.restore.a', proof:{purchaseToken:'restore-x'}}],
     email:'payer@example.com', deviceId:'x', syncToken:'y',
     context:{platform:'android', distribution:'google_play'}
   })).status === 403);
