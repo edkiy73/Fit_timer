@@ -272,6 +272,21 @@ const PROGRAM = name => catalogProgram(name, ['Приседания', 'Отжи�
   await page.click('.nav-btn[data-tab="approved"]');
   await page.waitForTimeout(400);
   const listed = await page.textContent('#body');
+  const approvedCard=page.locator('.entity-card').filter({hasText:KEPT}).first();
+  await approvedCard.locator('details.row-menu summary').click();
+  await approvedCard.locator('[data-act="edit"]').click();
+  await page.waitForTimeout(150);
+  ok('опубликованная программа открывается как опубликованная, без кнопки публикации',
+     (await page.textContent('#fSave')).trim()==='Сохранить' && await page.locator('#fPublish').count()===0);
+  await page.fill('#fNameRu',(await page.inputValue('#fNameRu'))+' media');
+  await page.click('#fSave');
+  await page.waitForTimeout(250);
+  const samePublished=(await api('overview')).j.approved.filter(x=>x.id===kept.j.id);
+  ok('сохранение опубликованной программы обновляет тот же id без дубля',
+     samePublished.length===1 && /media$/.test(samePublished[0].name||''), samePublished.length);
+  await page.click('#navOpen');
+  await page.click('.nav-btn[data-tab="approved"]');
+  await page.waitForTimeout(200);
   ok('на вкладке «В каталоге» видны программы', listed.includes(KEPT), KEPT);
   ok('production UI не показывает seed тестовых программ',!/Залить пять тестовых программ/.test(listed));
   await page.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));
