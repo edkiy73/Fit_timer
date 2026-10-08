@@ -111,7 +111,11 @@ const nativeStoreAdapter = {
   },
   async verifyPurchase({proof, identity}){
     verifiedNativeProof = {proof, identity};
-    return {events:[{orderId:'native-order-1', status:'paid', autoRenew:false}]};
+    if(proof && proof.purchaseToken === 'bad-token'){
+      throw Object.assign(new Error('purchase_not_found'), {status:409});
+    }
+    const token = String(proof && proof.purchaseToken || 'unknown');
+    return {events:[{orderId:'native-' + token, status:'paid', autoRenew:false}]};
   }
 };
 const nativeStoreHandler = createBillingHandler({adapters:[nativeStoreAdapter]});
@@ -160,6 +164,27 @@ ok('store notification resolves its AppBase account through the opaque reverse i
   notificationResult.status === 200 && notificationResult.body.applied === 1);
 ok('resolved store notification updates the intended account only',
   !!(await accountOf('payer@example.com')).owned['course.notification']);
+
+const restored = await nativeBilling.reconcilePurchases('google_native', [
+  {sku:'course.restore', proof:{purchaseToken:'restore-token'}},
+  {sku:'course.bad', proof:{purchaseToken:'bad-token'}}
+]);
+ok('restore verifies good purchases without failing the whole batch',
+  restored.verified === 1 && restored.failed === 1
+  && restored.results.find(x => x.sku === 'course.restore')?.ok === true
+  && restored.results.find(x => x.sku === 'course.bad')?.error === 'purchase_not_found');
+ok('restore grants only the server-verified purchase',
+  restored.owned.includes('course.restore') && !restored.owned.includes('course.bad'));
+const restoredAgain = await nativeBilling.reconcilePurchases('google_native', [
+  {sku:'course.restore', proof:{purchaseToken:'restore-token'}}
+]);
+ok('repeated restore is idempotent but still returns current entitlements',
+  restoredAgain.verified === 1 && restoredAgain.failed === 0
+  && restoredAgain.results[0]?.applied === false
+  && restoredAgain.owned.includes('course.restore'));
+ok('restore requires at least one purchase proof',
+  await nativeBilling.reconcilePurchases('google_native', [])
+    .then(() => false, e => e.code === 'purchases_required'));
 
 // 1. Checkout through the provider: the right appears at once.
 const bought = await billing.checkout('test', 'pack.a');
