@@ -323,6 +323,8 @@ const mappedAfterBad = await call(adminHandler, {action:'billing_status'}, {head
 ok('rejected mapping leaves the previous valid mapping intact',
   mappedAfterBad.body.products?.some(x => x.sku === 'course.admin-map' && x.mappings?.stripe?.priceId === 'price_admin_live'));
 
+let stripeCheckoutFailure = '';
+let stripeWebhookFailure = false;
 const stripeControlAdapter = {
   id:'stripe',
   kind:'external',
@@ -330,12 +332,14 @@ const stripeControlAdapter = {
   distributions:['web'],
   async available(){ return true; },
   async checkout({email, sku}){
-    return {events:[{orderId:'stripe-control-checkout', email, sku, status:'paid'}]};
+    if(stripeCheckoutFailure) throw Object.assign(new Error(stripeCheckoutFailure), {status:502});
+    return {events:[{orderId:'stripe-control-checkout-' + sku, email, sku, status:'paid'}]};
   },
   async verifyPurchase({sku}){
     return {events:[{orderId:'stripe-control-verify-' + sku, sku, status:'paid'}]};
   },
   async verifyWebhook({body}){
+    if(stripeWebhookFailure) return {ok:false};
     return {ok:true, events:Array.isArray(body && body.events) ? body.events : []};
   }
 };
@@ -391,6 +395,61 @@ await call(adminHandler, {
 }, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
 ok('re-enabled provider returns to BillingRouter methods',
   (await stripeControlBilling.methods()).some(x => x.id === 'stripe'));
+
+stripeCheckoutFailure = 'sk_live_should_not_be_stored';
+ok('failed provider checkout is returned to the client',
+  (await call(stripeControlHandler, {
+    action:'checkout', provider:'stripe', sku:'course.health-fail',
+    ...(await auth.authFields()), context:{platform:'web', distribution:'web'}
+  })).status === 502);
+let healthState = await call(adminHandler, {action:'billing_status'}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
+let stripeHealth = (healthState.body.providers || []).find(x => x.id === 'stripe');
+ok('latest failed real operation marks provider unhealthy',
+  stripeHealth?.state === 'unhealthy'
+  && stripeHealth?.health?.status === 'unhealthy'
+  && stripeHealth?.health?.lastOperation === 'checkout'
+  && stripeHealth?.health?.lastError === 'provider_error'
+  && !!stripeHealth?.health?.lastErrorAt);
+ok('operational health never stores arbitrary provider error text',
+  !JSON.stringify(stripeHealth?.health || {}).includes('sk_live_should_not_be_stored'));
+
+stripeCheckoutFailure = '';
+const healthyCheckout = await stripeControlBilling.checkout('stripe', 'course.health-ok');
+ok('provider can recover after a failed checkout',
+  healthyCheckout.granted && healthyCheckout.owned.includes('course.health-ok'));
+healthState = await call(adminHandler, {action:'billing_status'}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
+stripeHealth = (healthState.body.providers || []).find(x => x.id === 'stripe');
+ok('a later successful operation returns provider to healthy',
+  stripeHealth?.state === 'healthy'
+  && stripeHealth?.health?.status === 'healthy'
+  && stripeHealth?.health?.lastOperation === 'checkout'
+  && !!stripeHealth?.health?.lastSuccessAt);
+
+stripeWebhookFailure = true;
+ok('failed webhook verification is rejected',
+  (await call(stripeControlHandler, {events:[]}, {query:{provider:'stripe'}})).status === 401);
+healthState = await call(adminHandler, {action:'billing_status'}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
+stripeHealth = (healthState.body.providers || []).find(x => x.id === 'stripe');
+ok('webhook failure is visible as latest provider health error',
+  stripeHealth?.state === 'unhealthy'
+  && stripeHealth?.health?.lastOperation === 'webhook'
+  && stripeHealth?.health?.lastError === 'bad_signature');
+
+stripeWebhookFailure = false;
+const recoveredWebhook = await call(stripeControlHandler, {
+  events:[{
+    orderId:'stripe-health-webhook-ok',
+    email:'payer@example.com',
+    sku:'course.health-webhook',
+    status:'paid'
+  }]
+}, {query:{provider:'stripe'}});
+healthState = await call(adminHandler, {action:'billing_status'}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
+stripeHealth = (healthState.body.providers || []).find(x => x.id === 'stripe');
+ok('next verified webhook returns operational health to healthy',
+  recoveredWebhook.status === 200
+  && stripeHealth?.state === 'healthy'
+  && stripeHealth?.health?.lastOperation === 'webhook');
 
 const logRes = await call(adminHandler, {action:'billing_log'}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
 const events = logRes.body.events || [];
