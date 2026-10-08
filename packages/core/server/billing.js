@@ -479,12 +479,15 @@ function createDefaultBillingAdapters({
   includeTest = true,
   stripe,
   yookassa,
-  googlePlay
+  googlePlay,
+  apple
 } = {}){
   const { createStripeBillingAdapter } = require('./billing-providers/stripe');
   const { createYooKassaBillingAdapter } = require('./billing-providers/yookassa');
   const { createGooglePlayBillingAdapter } = require('./billing-providers/google-play');
+  const { createAppleStoreBillingAdapter } = require('./billing-providers/apple-store');
   const adapters = [
+    createAppleStoreBillingAdapter(apple),
     createGooglePlayBillingAdapter(googlePlay),
     createYooKassaBillingAdapter(yookassa),
     createStripeBillingAdapter(stripe)
