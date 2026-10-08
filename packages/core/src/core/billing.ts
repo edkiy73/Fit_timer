@@ -46,6 +46,8 @@ export interface BillingClientOptions {
   auth: Pick<AuthClient, 'authFields'>;
   endpoint?: string;
   fetch?: typeof fetch;
+  /** Default platform/store context. Products may supply a build-channel resolver once. */
+  context?: BillingContext | (() => BillingContext | Promise<BillingContext>);
 }
 
 export interface RenewalResult {
@@ -70,12 +72,27 @@ export interface BillingError extends Error {
   code?: string;
 }
 
+function runtimeBillingContext(): BillingContext {
+  const cap = (globalThis as unknown as {Capacitor?: {getPlatform?: () => string}}).Capacitor;
+  const raw = typeof cap?.getPlatform === 'function' ? String(cap.getPlatform()) : '';
+  const platform: BillingContext['platform'] = raw === 'android' || raw === 'ios' ? raw : 'web';
+  return platform === 'web'
+    ? {platform:'web', distribution:'web'}
+    : {platform, distribution:'unknown'};
+}
+
 export function createBillingClient(options: BillingClientOptions): BillingClient {
   const endpoint = options.endpoint || '/api/billing';
   // globalThis.fetch is looked up per request, so a wrapper installed later (busy buttons) applies.
   const fetchImpl = options.fetch || (typeof globalThis.fetch === 'function'
     ? (input: RequestInfo | URL, init?: RequestInit) => globalThis.fetch(input, init)
     : undefined);
+
+  async function resolveContext(explicit?: BillingContext): Promise<BillingContext> {
+    if(explicit) return explicit;
+    if(typeof options.context === 'function') return (await options.context()) || runtimeBillingContext();
+    return options.context || runtimeBillingContext();
+  }
 
   async function post(body: Record<string, unknown>): Promise<Record<string, unknown>> {
     if(typeof fetchImpl !== 'function') throw new Error('fetch_unavailable');
@@ -100,12 +117,14 @@ export function createBillingClient(options: BillingClientOptions): BillingClien
 
   return {
     async providers(context){
-      const result = await post({action:'providers', ...(context ? {context} : {})});
+      const resolved = await resolveContext(context);
+      const result = await post({action:'providers', context:resolved});
       return Array.isArray(result.providers) ? result.providers.map(String) : [];
     },
 
     async methods(context){
-      const result = await post({action:'methods', ...(context ? {context} : {})});
+      const resolved = await resolveContext(context);
+      const result = await post({action:'methods', context:resolved});
       return Array.isArray(result.methods) ? result.methods.flatMap(value => {
         if(!value || typeof value !== 'object') return [];
         const method = value as Record<string, unknown>;
@@ -126,7 +145,7 @@ export function createBillingClient(options: BillingClientOptions): BillingClien
         email:auth.email,
         deviceId:auth.deviceId,
         syncToken:auth.syncToken,
-        ...(context ? {context} : {})
+        context:await resolveContext(context)
       });
       const entitlements: BillingEntitlement[] = Array.isArray(result.entitlements) ? result.entitlements.flatMap(value => {
         if(!value || typeof value !== 'object') return [];
