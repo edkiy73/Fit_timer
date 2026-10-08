@@ -125,6 +125,40 @@ async function log(entry){
   await store.push(`bill:log:${month}`, JSON.stringify(entry), LOG_TTL);
 }
 
+const healthErrorCode = value => {
+  const raw = String((value && (value.code || value.message)) || value || '').trim();
+  return /^[A-Za-z0-9_.:-]{1,80}$/.test(raw) ? raw : 'provider_error';
+};
+
+async function providerHealth(provider){
+  if(!PROVIDER.test(String(provider || ''))) return {};
+  try{
+    const raw = await store.get(`bill:health:${provider}`);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  }catch(_){
+    return {};
+  }
+}
+
+async function markProviderHealth(provider, channel, {ok, error = '', operational = false} = {}){
+  if(!PROVIDER.test(String(provider || '')) || !['webhook','reconcile'].includes(channel)) return;
+  const key = `bill:health:${provider}`;
+  await store.withLock(`lock:${key}`, async () => {
+    let current = {};
+    try{
+      const raw = await store.get(key);
+      if(raw) current = JSON.parse(raw);
+    }catch(_){}
+    current[channel] = {
+      at:new Date().toISOString(),
+      ok:!!ok,
+      ...(ok ? {} : {error:healthErrorCode(error), operational:!!operational})
+    };
+    await store.set(key, JSON.stringify(current), LOG_TTL);
+  }, {ttl:8, retries:30, delay:30});
+}
+
 /** Applies one confirmed provider event. Idempotent per provider + order + status. */
 async function applyBillingEvent(provider, rawEvent, now = new Date(), {inBundle = false} = {}){
   const {event, error} = normalizeEvent(provider, rawEvent);
@@ -327,8 +361,12 @@ function createBillingHandler({adapters = []} = {}){
         results.push(await applyBillingEvent(adapter.id, event));
       }
       const bad = results.find(r => !r.ok);
-      // Providers retry non-2xx: a malformed event is answered 400 so it shows up in their dashboard.
-      if(bad) return fail(res, 400, bad.error);
+      // Providers retry non-2xx: a malformed verified event is answered 400 so it shows up in their dashboard.
+      if(bad){
+        await markProviderHealth(adapter.id, 'webhook', {ok:false, error:bad.error, operational:false});
+        return fail(res, 400, bad.error);
+      }
+      await markProviderHealth(adapter.id, 'webhook', {ok:true});
       return send(res, 200, {ok: true, applied: results.filter(r => r.applied).length});
     }
 
@@ -373,14 +411,20 @@ function createBillingHandler({adapters = []} = {}){
           proof:body.proof && typeof body.proof === 'object' ? body.proof : {}
         });
       }catch(e){
-        return fail(res, (e && e.status) || 502, String((e && e.message) || 'purchase_verification_failed'));
+        const status = (e && e.status) || 502;
+        await markProviderHealth(adapter.id, 'reconcile', {ok:false, error:e, operational:status >= 500});
+        return fail(res, status, String((e && e.message) || 'purchase_verification_failed'));
       }
       const results = [];
       for(const raw of (verified && Array.isArray(verified.events)) ? verified.events : []){
         results.push(await applyBillingEvent(adapter.id, {...raw, email:who.email, sku}));
       }
       const bad = results.find(r => !r.ok);
-      if(bad) return fail(res, 400, bad.error);
+      if(bad){
+        await markProviderHealth(adapter.id, 'reconcile', {ok:false, error:bad.error, operational:false});
+        return fail(res, 400, bad.error);
+      }
+      await markProviderHealth(adapter.id, 'reconcile', {ok:true});
       const last = results[results.length - 1];
       return send(res, 200, {ok:true, granted:!!(last && last.applied), ...(last ? last.entitlements : entitlementsOf(who.acc))});
     }
@@ -397,6 +441,7 @@ function createBillingHandler({adapters = []} = {}){
       const errors = [];
       let checked = 0;
       let restored = 0;
+      let operationalError = false;
 
       for(const item of items){
         if(!item || typeof item !== 'object') continue;
@@ -418,7 +463,8 @@ function createBillingHandler({adapters = []} = {}){
             proof:item.proof && typeof item.proof === 'object' ? item.proof : {}
           });
         }catch(e){
-          errors.push({sku, error:String((e && e.message) || 'purchase_verification_failed').slice(0,120)});
+          errors.push({sku, error:healthErrorCode(e)});
+          operationalError = operationalError || ((e && e.status) || 502) >= 500;
           continue;
         }
 
@@ -433,6 +479,10 @@ function createBillingHandler({adapters = []} = {}){
         }
         if(itemApplied) restored++;
       }
+
+      await markProviderHealth(adapter.id, 'reconcile', errors.length
+        ? {ok:false, error:errors[0] && errors[0].error, operational:operationalError}
+        : {ok:true});
 
       let fresh = who.acc;
       try{
