@@ -23,6 +23,7 @@ const { store } = require('./store');
 const { send, fail, readBodyWithRaw, cors, rateOk, sameSecret } = require('./util');
 const { productCatalog, checkSku, cleanSku, grantOwned, revokeOwned, entitlementsOf } = require('./entitlements');
 const { productConfig } = require('./product-core');
+const { billingProduct, billingProducts, saveBillingMapping } = require('./billing-catalog');
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/;
 const PROVIDER = /^[a-z0-9_-]{1,32}$/;
@@ -75,19 +76,6 @@ function catalogItem(sku){
   return {sku, kind: 'subscription', days: Math.max(1, Math.min(3650, Math.round(+raw.days || 30)))};
 }
 
-function providerProduct(sku){
-  let list = [];
-  try{ list = Array.isArray(productConfig().products) ? productConfig().products : []; }catch(_){}
-  const raw = list.find(item => cleanSku(item && item.sku) === sku);
-  if(!raw) return {sku, title:sku};
-  return {
-    sku,
-    title:line(raw.title, 120) || sku,
-    kind:raw.kind === 'subscription' ? 'subscription' : 'owned',
-    days:raw.kind === 'subscription' ? Math.max(1, Math.min(3650, Math.round(+raw.days || 30))) : 0,
-    billing:raw.billing && typeof raw.billing === 'object' ? raw.billing : {}
-  };
-}
 
 /** config/product.json → bundles: [{pattern:'bundle.x.*', includes:['x.*','sub.year']}] — one
  *  purchase that grants several SKUs. «*» in includes stands for what the pattern's «*» matched.
@@ -352,7 +340,7 @@ function createBillingHandler({adapters = []} = {}){
       if(skuError) return fail(res, 400, skuError);
       const identity = await ensureBillingIdentity(who);
       if(!identity) return fail(res, 409, 'billing_identity_failed');
-      const product = providerProduct(sku);
+      const product = await billingProduct(sku);
       let prepared = {};
       if(typeof adapter.purchaseContext === 'function'){
         try{ prepared = await adapter.purchaseContext({email:who.email, sku, product, identity}) || {}; }
@@ -371,7 +359,7 @@ function createBillingHandler({adapters = []} = {}){
       if(skuError) return fail(res, 400, skuError);
       const identity = await ensureBillingIdentity(who);
       if(!identity) return fail(res, 409, 'billing_identity_failed');
-      const product = providerProduct(sku);
+      const product = await billingProduct(sku);
       let verified;
       try{
         verified = await adapter.verifyPurchase({
@@ -416,7 +404,7 @@ function createBillingHandler({adapters = []} = {}){
           continue;
         }
         checked++;
-        const product = providerProduct(sku);
+        const product = await billingProduct(sku);
         let verified;
         try{
           verified = await adapter.verifyPurchase({
@@ -497,7 +485,7 @@ function createBillingHandler({adapters = []} = {}){
       const sku = cleanSku(body.sku);
       const skuError = checkSku(sku);
       if(skuError) return fail(res, 400, skuError);
-      const product = providerProduct(sku);
+      const product = await billingProduct(sku);
       let started;
       try{ started = await adapter.checkout({email: who.email, sku, product}); }
       catch(e){ return fail(res, (e && e.status) || 502, String((e && e.message) || 'checkout_failed')); }
