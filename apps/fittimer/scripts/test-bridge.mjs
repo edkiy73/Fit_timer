@@ -117,7 +117,6 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "openUserEdit",
   "openVoiceTest",
   "outbox",
-  "parseProgramText",
   "pk",
   "pr",
   "previousWorkoutLoad",

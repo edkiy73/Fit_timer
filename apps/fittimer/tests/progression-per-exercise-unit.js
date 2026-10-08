@@ -15,7 +15,6 @@ function need(cond, msg){
   else console.log('ok:', msg);
 }
 
-global.FitAIProtocol = require(path.join(root, 'lib/ai-protocol.js'));
 global.FitExerciseV2 = require(path.join(root, 'lib/fit-exercise-v2.js'));
 global.clampLine = (s,n)=>String(s||'').slice(0,n||9999);
 global.clampText = (s,n)=>String(s||'').slice(0,n||9999);

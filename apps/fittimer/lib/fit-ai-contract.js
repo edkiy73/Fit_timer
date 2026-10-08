@@ -179,7 +179,15 @@
 
   /* ---------------- prompt ---------------- */
   // Правила, которые схема не выражает. Один факт — одна строка.
+  // Тренерская логика, которую схема не выражает (перенесена из прежнего протокола без правил формата)
+  const COACH = 'Act like a deeply experienced strength-and-conditioning coach: base decisions on exercise science, biomechanics, load management, technique, recovery and progression. Treat explicitly provided user data as authoritative constraints; do not make the whole program easier because unrelated details are unknown; be cautious only where it matters (unknown absolute loads, pain/medical risk, aggressive progression). Do not invent facts about the user.';
   const RULES = [
+    'Do not target a fixed number of exercises: choose exercise count, sets and rounds from the goal, structure and time budget.',
+    'When a target duration is given, estimate the whole session: timed work = seconds × sides; rep work ≈ reps × 3 seconds × sides; × sets and rounds; plus rest between sets, rest after exercises, side switches and between rounds; warm-up runs once. For 5–20 minute targets stay within about ±5 minutes, for 30+ minutes within about ±20%; "45+" is a lower bound.',
+    'Program progressionEvery = default check frequency: after N FULL completions of an exercise the app asks whether to raise its load (it is not +N reps or kg). Use 4 unless the program clearly needs another value.',
+    'Resistance levels without user-given labels use the generic relative scale; never invent band colors. Preserve real colors/numbers the user gave, in order.',
+    'Reps with resistance: default mode "level" (reps rise to repsMax, then the next level and reps reset). Do not choose "parallel" unless the user asks for both axes to rise together or an edited exercise already uses it.',
+    'Weighted reps: "weight" = fixed reps, weight grows; "reps" = reps grow; "double_range" = the whole range moves up by repsStep keeping its width (8-10 → 9-11 …) until repsMax caps its upper bound, then weight + weightStep and the range resets.',
     'Machine keys and enums stay in English exactly as in the schema; human-readable text (names, descriptions, mistakes, custom equipment names, level labels) is written in LANGUAGE.',
     'value: reps as "12" or a range "8-12"; time as seconds, e.g. "40". type "time" never uses a range.',
     'load.type "none": no external load (body weight is never stored as weight): equipment null, weight 0, levels [], level 0, count 1.',
@@ -215,7 +223,7 @@
   };
 
   function buildPrompt(kind, input){
-    const lines = ['You are FitTimer, a careful home-workout coach. ' + TASKS[kind],
+    const lines = ['You are FitTimer. ' + COACH, TASKS[kind],
       'LANGUAGE: ' + input.language + '. contractVersion: ' + CONTRACT_VERSION + '.', '', 'Rules:'];
     RULES.forEach(r => lines.push('- ' + r));
     if(kind === 'program.modify') MODIFY_RULES.forEach(r => lines.push('- ' + r));

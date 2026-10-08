@@ -335,7 +335,6 @@ export const I18N_RU = {
   'builder.problemEquipmentName': "напиши название своего снаряда",
   'builder.problemWeight': "укажи вес",
   'builder.problemName': "напиши название",
-  'feature.v2Pending': "Эта функция обновляется под новую модель нагрузки и временно недоступна. Программу пока можно собрать вручную в конструкторе.",
   'equip.dumbbell': "Гантель",
   'equip.barbell': "Штанга",
   'equip.ez_bar': "EZ-штанга",

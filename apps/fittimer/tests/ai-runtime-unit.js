@@ -1,7 +1,6 @@
 /* AI protocol/runtime regression without external providers. */
-const FitAIProtocol = require('../lib/ai-protocol');
 const {createAIActionRegistry} = require('../../../packages/core/server/ai-action-registry');
-const {registry: FitAIActions} = require('../lib/fit-ai-actions');
+const {registry: FitAIActions, validateImage} = require('../lib/fit-ai-actions');
 
 let bad = 0;
 const ok = (name, cond, extra) => {
@@ -20,29 +19,13 @@ ok('generic AI registry normalizes image actions without FitTimer knowledge',
 ok('FitTimer actions are registered outside generic registry',
   FitAIActions.has('program.create') && FitAIActions.has('video.parse') && FitAIActions.has('image.exercise'));
 
-const goodProgram = ['ПРОГРАММА: Тест','ДЕНЬ: Пн','КРУГИ: 1','ОТДЫХ МЕЖДУ КРУГАМИ: 10','','УПРАЖНЕНИЕ: Приседания','ФОРМАТ: повторения','ЗНАЧЕНИЕ: 10','ПОДХОДЫ: 2','ОТДЫХ: 30'].join('\n');
-const badProgram = ['ПРОГРАММА: Тест','ДЕНЬ: Пн','КРУГИ: 1','УПРАЖНЕНИЕ: Приседания'].join('\n');
-const goodExercise = ['УПРАЖНЕНИЕ: Планка','ФОРМАТ: время','ЗНАЧЕНИЕ: 30','ПОДХОДЫ: 1','ОТДЫХ: 20'].join('\n');
-const badExercise = ['УПРАЖНЕНИЕ: Планка','ФОРМАТ: время'].join('\n');
-
-const p1 = FitAIProtocol.validateResponse('program.create', goodProgram);
-ok('валидная программа проходит', p1.ok, JSON.stringify(p1));
-const p2 = FitAIProtocol.validateResponse('program.modify', badProgram);
-ok('обрезанная программа блокируется', !p2.ok && p2.missing.includes('ФОРМАТ'), JSON.stringify(p2));
-const e1 = FitAIProtocol.validateResponse('exercise.create', goodExercise);
-ok('валидное упражнение проходит', e1.ok, JSON.stringify(e1));
-const e2 = FitAIProtocol.validateResponse('exercise.modify', badExercise);
-ok('неполное упражнение блокируется', !e2.ok && e2.missing.some(x=>x.endsWith(':ЗНАЧЕНИЕ')), JSON.stringify(e2));
-const multiExercise = goodExercise + '\n\n' + goodExercise.replace('Планка','Боковая планка');
-const multiCreate = FitAIProtocol.validateResponse('exercise.create', multiExercise);
-ok('создание нескольких упражнений разрешено', multiCreate.ok && multiCreate.count === 2, JSON.stringify(multiCreate));
-const multiModify = FitAIProtocol.validateResponse('exercise.modify', multiExercise);
-ok('правка упражнения остаётся строго одиночной', !multiModify.ok && multiModify.reason === 'exercise_count', JSON.stringify(multiModify));
-const fenced = FitAIProtocol.validateResponse('exercise.replace', '```text\n' + goodExercise + '\n```');
-ok('markdown-обёртка снимается безопасно', fenced.ok && !fenced.text.startsWith('```'), fenced.text);
-const img = FitAIProtocol.validateResponse('image.exercise', 'data:image/png;base64,iVBORw0KGgo=');
+// Проверка ответа в generate — любая функция действия; здесь простой JSON-валидатор
+const goodProgram = JSON.stringify({contractVersion:2, program:{name:'Тест'}});
+const badProgram = JSON.stringify({contractVersion:2});
+const validProgram = text => { try{ const j = JSON.parse(text); return j && j.program ? {ok:true} : {ok:false, reason:'missing_fields', missing:['program']}; }catch(_){ return {ok:false, reason:'malformed_response', missing:[]}; } };
+const img = validateImage({image:'data:image/png;base64,iVBORw0KGgo='});
 ok('валидный data-url изображения проходит', img.ok, JSON.stringify(img));
-const badImg = FitAIProtocol.validateResponse('image.cover', 'https://example.com/x.png');
+const badImg = validateImage({image:'https://example.com/x.png'});
 ok('внешняя ссылка вместо изображения блокируется', !badImg.ok, JSON.stringify(badImg));
 
 (async()=>{
@@ -84,7 +67,7 @@ ok('внешняя ссылка вместо изображения блокир
       image:{primary:{provider:'gemini',model:'img-a'},backup:{provider:'openai',model:'img-b'},size:'1K'}
     };
     const out = await generate('text', settings, 'prompt', {
-      validate:x=>FitAIProtocol.validateResponse('program.create', x.text)
+      validate:x=>validProgram(x.text)
     });
     ok('невалидный HTTP 200 у primary уходит на backup',
        out.fallback === true && out.provider === 'openai' && out.text === goodProgram && calls === 2,
@@ -110,7 +93,7 @@ ok('внешняя ссылка вместо изображения блокир
     const out = await generate('text', {
       text:{primary:{provider:'openrouter',model:'demo/model'},backup:{provider:'openrouter',model:'demo/model'}},
       image:{primary:{provider:'gemini',model:'img-a'},backup:{provider:'openai',model:'img-b'},size:'1K'}
-    }, 'prompt', {validate:x=>FitAIProtocol.validateResponse('program.create', x.text)});
+    }, 'prompt', {validate:x=>validProgram(x.text)});
     ok('OpenRouter adapter работает через общий AI runtime',
       out.provider === 'openrouter' && out.text === goodProgram && calls === 1,
       JSON.stringify({provider:out.provider,calls}));

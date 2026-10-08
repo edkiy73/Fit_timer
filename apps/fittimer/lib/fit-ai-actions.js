@@ -2,11 +2,15 @@
 
 const {createAIActionRegistry}=require('../../../packages/core/server/ai-action-registry');
 const {buildYoutubeProgram}=require('./youtube-video');
-const FitAIProtocol=require('./ai-protocol');
 const FitAIContract=require('./fit-ai-contract');
 require('./fit-ai-test-fixtures');
 
-const validate = kind => out => FitAIProtocol.validateResponse(kind, kind.startsWith('image.') ? out.image : out.text);
+// Картинка от провайдера — только data URL растрового изображения, никаких внешних ссылок
+const IMAGE_DATA_URL = /^data:image\/(?:png|jpe?g|webp|gif|avif);base64,[A-Za-z0-9+/=]{8,}$/;
+const validateImage = out => {
+  const image = String(out && out.image || '').trim();
+  return {ok:IMAGE_DATA_URL.test(image), text:image, missing:[], reason:'bad_image'};
+};
 
 /* AI Contract V2: клиент присылает {contractVersion:2, input}; prompt и схему ответа
    собирает сервер. Ответ проверяется схемой (Core) и доменными правилами контракта. */
@@ -58,11 +62,11 @@ const registry=createAIActionRegistry([
   contractAction('exercise.create','light'),
   contractAction('exercise.modify','light'),
   contractAction('exercise.replace','light'),
-  {id:'image.cover',type:'image',bucket:'image',aspectRatio:'1:1',validate:validate('image.cover')},
-  {id:'image.exercise',type:'image',bucket:'image',aspectRatio:'4:3',validate:validate('image.exercise')}
+  {id:'image.cover',type:'image',bucket:'image',aspectRatio:'1:1',validate:validateImage},
+  {id:'image.exercise',type:'image',bucket:'image',aspectRatio:'4:3',validate:validateImage}
 ],{
   // FitTimer protocol validation codes that also mean "AI returned an unusable result".
   malformedPattern:/domain_invalid|contract_version|schema_mismatch|json_parse|exercise_count|no_exercises|no_days|video_.*_changed|video_exercise_count_mismatch/
 });
 
-module.exports={registry};
+module.exports={registry,validateImage};

@@ -335,7 +335,6 @@ export const I18N_EN = {
   'builder.problemEquipmentName': "name your equipment",
   'builder.problemWeight': "enter the weight",
   'builder.problemName': "enter a name",
-  'feature.v2Pending': "This feature is being updated for the new load model and is temporarily unavailable. For now you can build a program manually in the builder.",
   'equip.dumbbell': "Dumbbell",
   'equip.barbell': "Barbell",
   'equip.ez_bar': "EZ bar",

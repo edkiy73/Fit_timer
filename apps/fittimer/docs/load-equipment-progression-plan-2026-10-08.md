@@ -2224,18 +2224,18 @@ AI не должен сам придумывать постоянный `canonic
 
 ### PR 7 — video/catalog/channels/images
 
-Статус: ⬜ не начат
+Статус: ✅ в ветке `ccr-1c455d3f-hdsme3`, в main не влито (картинки этапов — упрощённо, см. журнал)
 
 - [x] `video.parse` → Program DTO V2;
-- [ ] admin catalog AI → тот же V2;
-- [ ] export/import/share/link/sync/backup;
-- [ ] trainer reports по stable IDs;
-- [ ] current-stage image prompt из structured movement/load/support;
+- [x] admin catalog AI → тот же V2;
+- [x] export/import/share/link/sync/backup;
+- [x] trainer reports по stable IDs;
+- [x] current-stage image prompt из structured movement/load/support;
 - [ ] stage images: `mediaRef/visualKey`, без AI/base64 payload;
 - [ ] nearest-next cache lookup + lazy generation; отсутствие картинки не блокирует transition;
 - [ ] media budgets/round-trip tests;
-- [ ] удалить последний старый line parser/serializer;
-- [ ] обновить соседние docs.
+- [x] удалить последний старый line parser/serializer;
+- [x] обновить соседние docs.
 
 ### PR 8 — final regression + pre-public hardening
 
@@ -3411,3 +3411,16 @@ Short storage keys используются ТОЛЬКО в persistent history D
 - тесты: `ai-contract-v2-unit`, `ai-contract-flow`, обновлены `ai-api`, `ai-generation-guards`, `ai-image-buttons`, `youtube-video`.
 
 Открыто (PR 7): каталог и админская генерация на Program DTO, удаление `lib/ai-protocol.js`; картинки этапов по `mediaRef` — отдельно.
+
+### 2026-10-08 — PR 7: каталог на Program DTO, старый протокол удалён
+
+Статус: ✅ в ветке `ccr-1c455d3f-hdsme3`, в main не влито.
+
+Что сделали:
+- каталог: одна механика `program` (модель V2 со стабильными ID, без прогресса и картинок) + текстовые наложения по языкам `locales[lang].texts` (название/описание программы, название/техника/ошибки каждого этапа); механика RU/EN одинакова по построению; старый формат `text` не читается нигде, сид пуст, миграций нет (решение владельца: старые программы каталога не нужны, новые напишем позже);
+- `lib/fit-catalog-program.js` — очистка программы для каталога, наложения, схема перевода; админская генерация, правка и перевод — через тот же AI Contract V2 и Structured Output; ручной путь — вставка Program DTO / JSON наложения;
+- заявка тренера, витрина и добавление себе работают по `program`; картинки сопоставляются по exercise.id;
+- `lib/ai-protocol.js` и весь строковый протокол удалены; тренерская логика промпта (длительность, частота проверки, резинки, двойная прогрессия) перенесена в правила контракта;
+- ошибки заявки в каталог показывают конкретные недостающие поля.
+
+Упрощение по картинкам этапов: картинка принадлежит текущему этапу слота; при смене этапа она не переносится и создаётся заново обычной кнопкой «Через ИИ». Отдельное хранилище картинок будущих этапов (`mediaRef`) не делали — по плану им base64 и так не положен; вернуться к этому при каноническом каталоге упражнений.

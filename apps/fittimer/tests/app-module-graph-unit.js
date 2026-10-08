@@ -262,7 +262,7 @@ for(const dep of ['50-trainer-catalog','60-builder','70-workout','90-events']){
   }
 }
 if(!/setProgramsTrainerHooks\(\{[\s\S]*renderMine[\s\S]*renderTrainerCard[\s\S]*snapshotEx[\s\S]*storeCountText/.test(trainerCatalogSource)) problems.push('programs/trainer hook boundary is missing or incomplete');
-if(!/setProgramsBuilderHooks\(\{[\s\S]*getMaxMain[\s\S]*getDraft[\s\S]*parseProgramText[\s\S]*valueText/.test(builderSource)) problems.push('programs/builder hook boundary is missing or incomplete');
+if(!/setProgramsBuilderHooks\(\{[\s\S]*getMaxMain[\s\S]*getDraft[\s\S]*valueText/.test(builderSource)) problems.push('programs/builder hook boundary is missing or incomplete');
 if(!/setProgramsWorkoutHooks\(\{[\s\S]*afterExChange[\s\S]*autoGrow[\s\S]*backToWorkout[\s\S]*esc[\s\S]*getExFromWork/.test(workoutSource)) problems.push('programs/workout hook boundary is missing or incomplete');
 if(!/setProgramsEventHooks\(\{[\s\S]*addExManual[\s\S]*getAiRunCtl[\s\S]*openPremium[\s\S]*ytGuard/.test(eventsCoreSource)) problems.push('programs/events hook boundary is missing or incomplete');
 

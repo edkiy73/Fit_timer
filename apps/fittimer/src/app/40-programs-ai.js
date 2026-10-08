@@ -135,10 +135,6 @@ export function applyProgressionAll(){
    этот протокол не описывает снаряд, количество и этапы движения, а AI Contract V2
    появится в PR 5 плана. Функции ниже остаются, пока их не заменит V2, но входы в них
    закрыты здесь — человек видит честное объяснение, а не сломанный результат. */
-export function legacyAiUnavailable(){
-  appAlert(t('feature.v2Pending'));
-  return true;
-}
 
 /* ================= ПРИВЕТСТВИЕ И БЛОК «СЕГОДНЯ» ================= */
 
@@ -2314,13 +2310,6 @@ export function trayAutoAssign(){
 /* ================= ПРАВКА УПРАЖНЕНИЯ ЧЕРЕЗ ИИ ================= */
 export let exeIdx = -1; // индекс правимого упражнения
 
-// «ФОРМАТ: …» — четыре сочетания: повторения/время × без веса/с весом
-// («время и вес» — удержание или перенос с утяжелением: фермерская прогулка,
-// планка с блином, вис с утяжелителем).
-function exFormatLine(ex){
-  const axis = ex.type === 'time' ? 'время' : 'повторения';
-  return 'ФОРМАТ: ' + (builderProgramsHooks.hasWeight(ex) ? axis + ' и вес' : axis);
-}
 function protocolResistanceLabel(level, locale){
   if(!level) return '';
   if(level.label) return String(level.label);
@@ -2346,79 +2335,6 @@ function exResistanceLines(ex, opts){
     'СОПРОТИВЛЕНИЕ: ' + protocolResistanceLabel(levels[idx], locale),
     'УРОВНИ СОПРОТИВЛЕНИЯ: ' + levels.map(level => protocolResistanceLabel(level, locale)).filter(Boolean).join(' | ')
   ];
-}
-// ОТДЫХ — между подходами (как раньше). Вторую строку, «после упражнения»,
-// пишем только когда она реально отличается: у большинства упражнений отдых
-// после — то же число, и не указанное явно поле само возьмёт его в качестве
-// запасного варианта (exRestAfter) — не нужно засорять текст повтором.
-function exRestLines(ex){
-  const L = ['ОТДЫХ: ' + (ex.rest || 0)];
-  const after = builderProgramsHooks.exRestAfter(ex);
-  if(after !== (+ex.rest || 0)) L.push('ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ: ' + after);
-  return L;
-}
-// строки УСЛОЖНЯТЬ/ВЕС/ШАГ/ПОТОЛОК/ЗАМЕНА — общие для сериализации упражнения
-// что в тексте одного упражнения (правка через ИИ), что в тексте всей программы.
-// Сериализуем только оси, которые реально что-то значат для этого формата: для
-// «…и вес» — обе независимо (0 = эта ось намеренно не растёт), для простых — одна.
-function exProgToLines(ex, opts){
-  // при forEdit (opts.program задан) показываем текущий прогрессированный вес,
-  // но resistance policy всегда сериализует БАЗОВЫЙ loadLevel: текущий ps.cur.level
-  // переносится carryExerciseProgress(), иначе обычная AI-правка сделает его новой базой.
-  const p = opts && opts.program;
-  const weightNow = p ? builderProgramsHooks.getExWeight(p.id, ex, p) : (+ex.weight || 0);
-  const loadType = builderProgramsHooks.progressionLoadType(ex);
-  const mode = builderProgramsHooks.editorProgressionMode(ex);
-  const L = ['УСЛОЖНЯТЬ: ' + (builderProgramsHooks.progAxis(ex) === 'none' ? 'нет' : 'да')];
-  if(ex.progEvery != null) L.push('ЧАСТОТА ПРОГРЕССИИ: ' + Math.max(0, Math.min(15, Math.round(+ex.progEvery || 0))));
-  L.push(...exResistanceLines(ex, opts));
-
-  // ВЕС: 0 — не «пустое место», а значимое «снаряд ещё не выбран».
-  if(builderProgramsHooks.hasWeight(ex)) L.push('ВЕС: ' + builderProgramsHooks.fmtKg(weightNow));
-
-  if(builderProgramsHooks.progAxis(ex) !== 'none'){
-    if(loadType === 'level'){
-      if(mode === 'level'){
-        if(ex.type !== 'time'){
-          // 0 = сразу переходить к следующему сопротивлению; >0 = сначала
-          // растить повторы до потолка, затем level и сброс диапазона.
-          L.push('ШАГ ПОВТОРОВ: ' + (ex.repsStep != null ? ex.repsStep : 0));
-          if(+ex.repsStep > 0 && +ex.repsMax > 0) L.push('ПОТОЛОК ПОВТОРОВ: ' + ex.repsMax);
-        }
-      }else if(mode === 'time'){
-        L.push('ШАГ: ' + (ex.timeStep != null ? ex.timeStep : 5));
-        if(+ex.timeMax > 0) L.push('ПОТОЛОК: ' + ex.timeMax);
-      }else{
-        // reps при фиксированном сопротивлении.
-        L.push('ШАГ: ' + (ex.repsStep != null ? ex.repsStep : 1));
-        if(+ex.repsMax > 0) L.push('ПОТОЛОК: ' + ex.repsMax);
-      }
-    }else if(builderProgramsHooks.hasWeight(ex)){
-      if(ex.type === 'time'){
-        L.push('ШАГ ВРЕМЕНИ: ' + (ex.timeStep != null ? ex.timeStep : 5));
-        L.push('ШАГ ВЕСА: ' + builderProgramsHooks.fmtKg(ex.wStep != null ? ex.wStep : 2));
-        if(+ex.timeMax > 0) L.push('ПОТОЛОК ВРЕМЕНИ: ' + ex.timeMax);
-        if(+ex.weightMax > 0) L.push('ПОТОЛОК ВЕСА: ' + builderProgramsHooks.fmtKg(ex.weightMax));
-      } else {
-        L.push('ШАГ ПОВТОРОВ: ' + (ex.repsStep != null ? ex.repsStep : 1));
-        L.push('ШАГ ВЕСА: ' + builderProgramsHooks.fmtKg(ex.wStep != null ? ex.wStep : 2));
-        if(+ex.repsMax > 0) L.push('ПОТОЛОК ПОВТОРОВ: ' + ex.repsMax);
-        if(+ex.weightMax > 0) L.push('ПОТОЛОК ВЕСА: ' + builderProgramsHooks.fmtKg(ex.weightMax));
-        if(ex.dualProg) L.push('ПРИ ПОТОЛКЕ: да');
-      }
-    } else if(ex.type === 'time'){
-      L.push('ШАГ: ' + (ex.timeStep != null ? ex.timeStep : 5));
-      if(+ex.timeMax > 0) L.push('ПОТОЛОК: ' + ex.timeMax);
-    } else {
-      L.push('ШАГ: ' + (ex.repsStep != null ? ex.repsStep : 1));
-      if(+ex.repsMax > 0) L.push('ПОТОЛОК: ' + ex.repsMax);
-    }
-    if(ex.swapOn && (ex.swapName || '').trim()){
-      L.push('ЗАМЕНА: ' + ex.swapName.trim());
-      if((ex.swapDesc || '').trim()) L.push('ОПИСАНИЕ ЗАМЕНЫ: ' + ex.swapDesc.replace(/\s*\n+\s*/g, ' ').trim());
-    }
-  }
-  return L;
 }
 
 
@@ -2655,89 +2571,6 @@ export function ytCheckUrl(){
 /* ================= ДОРАБОТКА ПРОГРАММЫ ЧЕРЕЗ ИИ ================= */
 export let editAIProg = null; // программа-исходник
 
-// текущее (уже прогрессированное) значение упражнения — то, что человек реально
-// делает сейчас, а не база из редактора. Используется только для AI-правки всей
-// программы (см. programToText forEdit): она создаёт НОВУЮ программу со своим
-// счётчиком прогрессии с нуля, поэтому если отдать ИИ базу, правка отбросит
-// пользователя к исходным цифрам — а если отдать текущее и принять его как
-// новую базу, продолжение идёт ровно с той точки, на которой человек остановился.
-function exLiveValueText(p, ex){
-  if(ex.type === 'time') return String(builderProgramsHooks.getExProgValue(p.id, ex, p, 'time'));
-  return builderProgramsHooks.progressedRepsRange(p.id, ex, p).replace('–', '-');
-}
-
-function exCurrentValueText(p, ex){
-  if(ex.type === 'time') return exLiveValueText(p, ex);
-  // Двойная прогрессия хранит исходный диапазон как точку сброса после прибавки
-  // веса. Поэтому при AI-правке отдаём исходную базу, а текущий выросший диапазон
-  // переносится отдельно через ex.ps (carryExerciseProgress). Иначе безобидная
-  // правка отдыха превратила бы текущие 12-14 в новый старт и после +веса уже не
-  // вернула бы пользователя к исходным 8-10.
-  const levelCycle = builderProgramsHooks.progressionLoadType(ex) === 'level'
-    && builderProgramsHooks.editorProgressionMode(ex) === 'level';
-  if(builderProgramsHooks.isDualProg(ex) || levelCycle) return builderProgramsHooks.valueText(ex.value).replace('–', '-');
-  return builderProgramsHooks.progressedRepsRange(p.id, ex, p).replace('–', '-');
-}
-
-// программа → текст того же формата, который понимает парсер
-// картинки и svg НЕ включаем: они длинные, а перенесём их сами по id (см. carryMedia)
-// opts.forEdit: для AI-правки всей программы — добавляет техническую метку КОД:
-// у каждого упражнения (не видна пользователю) и отдаёт текущую прогрессированную
-// нагрузку вместо базовой, см. exCurrentValueText выше и exProgToLines(ex, opts)
-export function programToText(p, opts){
-  const forEdit = !!(opts && opts.forEdit);
-  const currentLoad = !!(opts && opts.currentLoad);
-  const L = [];
-  L.push('ПРОГРАММА: ' + (p.name || ''));
-  if((p.desc || '').trim()) L.push('ОПИСАНИЕ ПРОГРАММЫ: ' + p.desc.replace(/\s*\n+\s*/g, ' ').trim());
-  if(p.time) L.push('ВРЕМЯ: ' + p.time);
-  if(p.progression){
-    L.push(`ПРОГРЕССИЯ: ${p.progression} — проверять нагрузку раз в ${p.progression} ${plural(p.progression, 'выполнение упражнения', 'выполнения упражнения', 'выполнений упражнения')}`);
-  } else {
-    // Важно писать "нет", а не просто опускать строку: отдельные упражнения
-    // могут иметь собственную положительную частоту поверх выключенного дефолта.
-    L.push('ПРОГРЕССИЯ: нет');
-  }
-  const plans = normPlans(p);
-  if(p.rotate && plans.length > 1){
-    L.push('ЧЕРЕДОВАНИЕ: да');
-    if((p.days || []).length) L.push('ДНИ ТРЕНИРОВОК: ' + p.days.join(', '));
-  }
-  plans.forEach(pl => {
-    L.push('');
-    L.push('ДЕНЬ: ' + ((!p.rotate && pl.days && pl.days.length) ? pl.days.join(', ') : ''));
-    L.push('КРУГИ: ' + (pl.rounds || 1));
-    L.push('ОТДЫХ МЕЖДУ КРУГАМИ: ' + (pl.roundRest || 0));
-    if(pl.time) L.push('ВРЕМЯ ВАРИАНТА: ' + pl.time);
-    (pl.exercises || []).forEach(ex => {
-      L.push('');
-      L.push('УПРАЖНЕНИЕ: ' + (ex.name || ''));
-      if(forEdit && ex.id) L.push('КОД: ' + ex.id);
-      if((ex.desc || '').trim()) L.push('ОПИСАНИЕ: ' + ex.desc.replace(/\s*\n+\s*/g, ' ').trim());
-      const mus = (ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean);
-      if(mus.length) L.push('МЫШЦЫ: ' + mus.join(', '));
-      if((ex.mistakes || '').trim()) L.push('ОШИБКИ: ' + ex.mistakes.replace(/\s*\n+\s*/g, ' ').trim());
-      L.push(exFormatLine(ex));
-      L.push('ЗНАЧЕНИЕ: ' + (currentLoad
-        ? exLiveValueText(p, ex)
-        : (forEdit ? exCurrentValueText(p, ex) : builderProgramsHooks.valueText(ex.value).replace('–', '-'))));
-      // всегда, даже при 1 подходе: ИИ повторяет формат исходника, и без строки
-      // возвращал программу без ПОДХОДЫ вовсе
-      L.push('ПОДХОДЫ: ' + (parseInt(ex.sets) || 1));
-      if(ex.perSide) L.push('СТОРОНА: да');
-      if(ex.warmup) L.push('РАЗМИНКА: да');
-      L.push(...exRestLines(ex));
-      L.push(...exProgToLines(ex, {
-        program:(forEdit || currentLoad) ? p : null,
-        currentLoad,
-        locale:p.locale || appLocale
-      }));
-      if((ex.video || '').trim()) L.push('ВИДЕО: ' + ex.video.trim());
-    });
-  });
-  return L.join('\n');
-}
-
 export function editAIInput(){
   return FitAIContract.normalizeInput('program.modify', {
     language:builderProgramsHooks.aiLanguage((editAIProg && editAIProg.locale) || appLocale),
@@ -2779,14 +2612,6 @@ export function versionedName(base){
 
 
 
-// расчётная (не по истории) длительность одного варианта — используется только
-// для сравнения «было / стало» при AI-правке, поэтому обеим сторонам нужна одна
-// и та же основа: реальная история новой программы всегда пуста (свежий id), а у
-// старой может быть — сравнение «средняя реальная» против «расчётная» было бы
-// нечестным. Подменяем id, чтобы estimatedWorkoutMinutes не подобрала историю.
-function structuralMinutes(p, planIdx){
-  return estimatedWorkoutMinutes(Object.assign({}, p, {id:'~diff~'}), planIdx || 0, []).n;
-}
 
 
 async function createEditedProgram(){
@@ -3007,6 +2832,8 @@ export async function apiFetch(path, opts){
     if(!res.ok){
       const err = new Error(data.error || ('http_' + res.status));
       err.code = data.error; err.status = res.status;
+      // что именно не прошло проверку сервера (например, поля заявки в каталог)
+      if(Array.isArray(data.miss)) err.miss = data.miss;
       throw err;
     }
     return data;

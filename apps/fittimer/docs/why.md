@@ -88,9 +88,10 @@ Manifest update сериализуется server-side lock, чтобы пара
 
 ## AI protocol — единая система
 
-Промты, `lib/ai-protocol.js`, клиентский parser и validators меняются согласованно.
-Встроенный AI проходит server validation и повторную client validation перед применением.
-`exercise.create` может вернуть несколько упражнений; `modify/replace` — строго одно.
+Обмен с ИИ — JSON по AI Contract V2 (`lib/fit-ai-contract.js`): схема ответа, input, prompt,
+доменная проверка и adapter в модель V2 живут в одном модуле для сервера и клиента.
+Встроенный AI: Structured Output + локальная проверка схемы и домена на сервере; клиент применяет
+ответ той же функцией, что и вставленный из чата. Правка — «target state + refs», целиком или никак.
 
 Причина: HTTP 200 от модели ещё не означает корректный результат. Обрезанный ответ не должен
 частично перезаписывать программу. Malformed primary response считается ошибкой и может уйти

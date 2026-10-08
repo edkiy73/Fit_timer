@@ -2678,7 +2678,6 @@ export function initBuilder(){
     hasWeight,
     loadLevelLabel,
     openBuilder,
-    parseProgramText: () => ({program:null, errors:[]}),
     parseValue,
     progressionLoadType,
     progShort,

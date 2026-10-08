@@ -1168,19 +1168,6 @@ export function previousWorkoutLoad(p, planIdx){
   return {first:!byStage.size, exact:byStage.size > 0, rows, today};
 }
 
-function loadTargetText(ex, v){
-  const bits = [];
-  if(pr(ex).type === 'time') bits.push(`${v.sec} ${t('store.secShort')}`);
-  else bits.push(`${v.reps} ${t('workout.repsShort')}`);
-  if(v.kg > 0) bits.push(`${builderHooks.fmtKg(v.kg)} ${t('progress.kg')}`);
-  const resistanceLabel = v.levelKey
-    ? builderHooks.loadLevelLabel({key:v.levelKey})
-    : String(v.levelLabel || '');
-  if(resistanceLabel) bits.push(resistanceLabel);
-  let out = bits.join(' × ');
-  if(pr(ex).perSide) out += ' ' + t('store.perSide');
-  return out;
-}
 
 export function loadDelta(a, b){
   if(!a) return {text:'', dir:'same'};
