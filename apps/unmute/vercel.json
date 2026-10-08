@@ -57,5 +57,6 @@
       "source": "/app/:path+",
       "destination": "/:path+"
     }
-  ]
+  ],
+  "ignoreCommand": "node scripts/vercel-ignore.mjs"
 }
