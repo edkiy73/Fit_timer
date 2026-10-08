@@ -7,7 +7,7 @@ const { configureProduct } = require('../server/product-core');
 const { createStripeBillingAdapter } = require('../server/billing-providers/stripe');
 const { createYooKassaBillingAdapter } = require('../server/billing-providers/yookassa');
 const { createGooglePlayBillingAdapter } = require('../server/billing-providers/google-play');
-const { createAppleStoreBillingAdapter, createApiToken } = require('../server/billing-providers/apple-store');
+const { createAppleStoreBillingAdapter, createApiToken, verifyAndDecodeAppleJws } = require('../server/billing-providers/apple-store');
 
 configureProduct({id:'test.billing', name:'Billing Test', slug:'billing-test', defaultPublicUrl:'https://app.example', products:[]});
 
@@ -252,6 +252,9 @@ ok('App Store API token signature is valid ES256',
   crypto.verify('sha256', Buffer.from(jwtParts[0] + '.' + jwtParts[1]), {
     key:applePublicKey, dsaEncoding:'ieee-p1363'
   }, Buffer.from(jwtParts[2], 'base64url')));
+ok('App Store rejects unsigned/untrusted transaction JWS by default',
+  Promise.resolve().then(() => verifyAndDecodeAppleJws(fakeJws({transactionId:'fake'})))
+    .then(() => false, e => e.message === 'apple_bad_certificate_chain'));
 
 const appleCalls = [];
 const appleTransactions = {
@@ -292,6 +295,7 @@ const appleTransactions = {
 const apple = createAppleStoreBillingAdapter({
   getCredentials:async () => ({issuerId:'issuer-1', keyId:'KEY123', privateKey:'present'}),
   getApiToken:async () => 'server-jwt',
+  verifySignedData:async jws => JSON.parse(Buffer.from(String(jws).split('.')[1], 'base64url').toString('utf8')),
   now:() => Date.parse('2030-01-15T00:00:00Z'),
   fetchImpl:async (url, init = {}) => {
     appleCalls.push({url, init});
