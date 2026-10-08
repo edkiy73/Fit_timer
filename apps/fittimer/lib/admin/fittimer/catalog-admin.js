@@ -186,7 +186,7 @@ async function handleCatalogAdmin(action,body,res){
     const {SEED_ITEMS}=require('../../seed');
     const approved=new Set(await store.list('c:approved'));
     const items=await Promise.all(SEED_ITEMS.map(async it=>{
-      const raw=approved.has(it.id)?await store.get('c:'+it.id):null;
+      const raw=await store.get('c:'+it.id);
       let current=null;
       try{current=raw?JSON.parse(raw):null;}catch(_){}
       return {id:it.id,name:it.name||it.program&&it.program.name||it.id,
@@ -383,10 +383,12 @@ async function handleCatalogAdmin(action,body,res){
   let added=0,updated=0;
   for(const it of requested){
     const exists=have.has(it.id);
-    if(exists&&!body.update)continue;
-    const oldRaw=exists?await store.get(`c:${it.id}`):null;
-    if(exists&&!oldRaw){fail(res,409,'reference_missing_record');return true;}
-    const old=oldRaw?JSON.parse(oldRaw):null;
+    const oldRaw=await store.get(`c:${it.id}`);
+    let old=null;
+    try{old=oldRaw?JSON.parse(oldRaw):null;}catch(_){fail(res,409,'reference_invalid_record');return true;}
+    // A removed reference retains its ID in c:approved. Do not mistake that for
+    // an active publication: allow republishing with the same stable ID.
+    if(old&&old.status==='approved'&&!body.update)continue;
     // Keep media and non-program catalog metadata; replace canonical exercise content.
     // User-installed copies and their workout history are stored separately.
     const next=Object.assign({},old||{},it,{
@@ -396,6 +398,7 @@ async function handleCatalogAdmin(action,body,res){
       pics:old&&old.pics||it.pics||null,
       referenceUpdatedAt:now
     });
+    delete next.removedAt;
     await store.set(`c:${it.id}`,JSON.stringify(next));
     if(!exists){
       await store.push('c:approved',it.id);
