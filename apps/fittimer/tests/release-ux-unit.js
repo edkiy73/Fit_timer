@@ -26,7 +26,7 @@ need(sync.includes("window.addEventListener('online'"), 'sync must recover when 
 
 need(gradle.includes('applicationId "ru.fittimer.app"'), 'Android package id must stay stable for updates');
 need(gradle.includes('versionCode = Integer.parseInt(System.getenv("VERSION_CODE")'), 'release versionCode must come from CI');
-need(workflow.includes('260000000 + GITHUB_RUN_NUMBER'), 'automatic Android versionCode must monotonically increase');
+need(workflow.includes('workflow_dispatch:') && workflow.includes('version_code:'), 'Android release must require an explicit version code');
 need(workflow.includes('KEYSTORE_BASE64'), 'release signing key must be required');
 need(workflow.includes('apksigner') && workflow.includes('verify --verbose --print-certs'), 'release APK signature must be verified');
 need(gradle.includes('productFlavors') && gradle.includes('DIRECT_UPDATES'), 'Android must have direct and store-safe build flavors');
