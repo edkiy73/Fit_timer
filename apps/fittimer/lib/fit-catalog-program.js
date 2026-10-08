@@ -21,7 +21,7 @@
   const LANGS = ['ru', 'en'];
   const MAX_PLANS = 7, MAX_EXERCISES = 30, MIN_EXERCISES = 3, MAX_JSON = 60000;
   const DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-  const LIMITS = {programName:60, programDesc:1000, name:60, desc:600, mistakes:300};
+  const LIMITS = {programName:60, programDesc:1800, name:60, desc:600, mistakes:300};
 
   const str = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
   const text = (v, max) => String(v == null ? '' : v).replace(/\r/g, '').trim().slice(0, max);
