@@ -79,6 +79,15 @@ ok('BillingRouter offers external web checkout on web',
   (await routeBilling.methods({platform:'web', distribution:'web', country:'DE'})).map(x=>x.id).join() === 'stripe');
 ok('BillingRouter applies country restrictions centrally',
   (await routeBilling.methods({platform:'android', distribution:'direct', country:'RU'})).map(x=>x.id).join() === 'yookassa');
+const webhookOnlyHandler = createBillingHandler({adapters:[{
+  id:'restricted',
+  kind:'external',
+  countries:['RU'],
+  async available(){ return true; },
+  async verifyWebhook(){ return {ok:true, events:[]}; }
+}]});
+ok('webhook intake does not depend on client country/platform context',
+  (await call(webhookOnlyHandler, {events:[]}, {query:{provider:'restricted'}})).status === 200);
 
 // 1. Checkout through the provider: the right appears at once.
 const bought = await billing.checkout('test', 'pack.a');
