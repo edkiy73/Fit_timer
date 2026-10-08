@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const { loadSecrets, secret } = require('../secrets');
 const { productConfig } = require('../product-core');
+const { billingProductByProviderId } = require('../billing-catalog');
 
 const PROD_API = 'https://api.storekit.apple.com';
 const SANDBOX_API = 'https://api.storekit-sandbox.apple.com';
@@ -141,21 +142,8 @@ function createAppleStoreBillingAdapter({
 
   const decodeVerified = async jws => await verifySignedData(jws, {nowMs:now()});
 
-  function productByAppleId(productId){
-    const id = String(productId || '');
-    const list = Array.isArray(productConfig().products) ? productConfig().products : [];
-    for(const raw of list){
-      const cfg = raw && raw.billing && raw.billing.apple;
-      if(String(cfg && cfg.productId || '') !== id) continue;
-      return {
-        sku:String(raw.sku || ''),
-        title:String(raw.title || raw.sku || ''),
-        kind:raw.kind === 'subscription' ? 'subscription' : 'owned',
-        days:raw.kind === 'subscription' ? Math.max(1, Math.round(+raw.days || 30)) : 0,
-        billing:raw.billing || {}
-      };
-    }
-    return null;
+  async function productByAppleId(productId){
+    return billingProductByProviderId('apple', productId);
   }
 
   async function requestTransaction(transactionId, bundleId){
@@ -328,7 +316,7 @@ function createAppleStoreBillingAdapter({
       const hinted = await decodeVerified(data.signedTransactionInfo);
       const transactionId = clean(hinted.transactionId, 200);
       const bundleId = clean(hinted.bundleId, 220);
-      const product = productByAppleId(hinted.productId);
+      const product = await productByAppleId(hinted.productId);
       const appAccountToken = String(hinted.appAccountToken || '');
       if(!transactionId || !bundleId || !product || !appAccountToken){
         return {ok:true, events:[]};
