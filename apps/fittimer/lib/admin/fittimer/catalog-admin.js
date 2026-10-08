@@ -9,6 +9,7 @@ const {
   localeMiss, programMiss, syncSourceFields
 } = require('./catalog-text');
 const FitExerciseV2 = require('../../fit-exercise-v2');
+const REFERENCE_IDS = new Set(require('../../seed').SEED_ITEMS.map(item=>String(item.id)));
 
 const ACTIONS = new Set([
   'overview','approve','reject','pro','ban','unban',
@@ -86,7 +87,7 @@ function withReadiness(c){
   const sourceTexts=norm.locales[norm.sourceLocale]&&norm.locales[norm.sourceLocale].texts;
   const ready={};
   LANGS.forEach(lang=>{ready[lang]=!!norm.program&&localeMiss(norm.locales[lang],sourceTexts,'').length===0;});
-  return Object.assign({},c,{ready});
+  return Object.assign({},c,{ready,reference:REFERENCE_IDS.has(String(c.id))});
 }
 
 async function overview(res){
