@@ -1,8 +1,22 @@
 # AppBase Starter + Task Mini plan — 2026-10-07
 
-Status: **in progress**  
+Status: **complete — PR1–PR5 implemented; FitTimer migration gate not started**  
 Date: **2026-10-07**  
+Finalization review: **2026-10-09**  
 Repository baseline when this plan was written: `main` at `9222272013c55ea8a51860a876331c46c5cfd2d8`.
+
+## Implementation result
+
+The architecture described below is now implemented, not merely proposed:
+
+- Starter has **17/17 required baseline capabilities** with no declared gaps.
+- Task Mini has the same **17/17 required baseline**, one small product Admin extension, browser coverage and an executable billing reference.
+- Billing is Core-owned: canonical entitlements/journal, BillingRouter, one regional/platform policy, Apple/Google/Stripe/YooKassa adapters, server verification, store notifications, restore/reconciliation, readiness, editable SKU mappings, provider controls, operational health and manual Admin audit.
+- Generated apps receive provider-neutral purchase/restore entry points and shared Admin billing infrastructure.
+- Task Mini proves one-time purchase, subscription, external checkout + webhook, failure/cancel, duplicate webhook, refund/revocation, expiry, restore, second-session visibility and manual Admin grant/revoke.
+- Shared CI checks Starter/Task Mini contracts on Core/UI/template changes; PR5 adds explicit CI-contract and provider-boundary drift guards.
+- Task Mini browser E2E runs the same API handlers under a local Node HTTP server, so the reference product is not coupled to the Vercel runtime.
+- **FitTimer migration remains outside this plan and has not been started automatically.** The migration gate at the end of this document still applies.
 
 ## Goal
 

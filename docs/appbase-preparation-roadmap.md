@@ -703,6 +703,54 @@ The previous Vercel build (`npm run build:sources`) never produced `esm/main.js`
 
 Status sections of earlier phases keep the historical pre-monorepo paths (`src/core/…`, `lib/*-core.js`); today those files live in `packages/core/`.
 
+## Final reference stack (2026-10-09)
+
+The reusable product path is now intentionally three-layered:
+
+```text
+templates/react-app
+= minimum mandatory scaffold and generator source of truth
+
+apps/task-mini
+= executable architecture reference + one deliberately small real domain
+
+apps/unmute
+= complex production consumer that proves the same contracts at product scale
+```
+
+Do **not** start a new product by copying FitTimer or UnMute. Generate it from `templates/react-app`, then use Task Mini to inspect a working implementation of domain storage/sync, shared Admin extension, billing/entitlements and browser tests.
+
+### Final billing contract
+
+Products declare logical SKUs and access rules. Core owns provider mechanics:
+
+```text
+product UI
+→ BillingClient / BillingRouter
+→ Core provider policy + readiness
+→ Apple / Google Play / Stripe / YooKassa adapter
+→ verified billing journal event
+→ canonical entitlement
+→ normal account refresh/sync
+```
+
+Product runtime code must not import provider adapters or own regional/provider routing. Task Mini CI scans its runtime boundary and its executable billing reference covers purchase, subscription, webhook, restore, refund/revocation, expiry, duplicate events, provider failure and second-session visibility.
+
+### Hosting boundary
+
+Vercel is the current production deployment target for several apps; it is **not** the AppBase architecture. Product/domain code composes AppBase handlers and provider-neutral services. Hosting-specific deployment configuration stays at the edge.
+
+Task Mini's browser test serves the production build and invokes the same `api/*` handlers through a local Node HTTP server. That is the current portability smoke: auth, sync, Admin, health and billing contracts execute without a Vercel request runtime. A future Cloudflare/other adapter should replace the deployment edge rather than product/domain code.
+
+### Drift protection
+
+- `scripts/appbase-baseline-contract.mjs` classifies required/optional/product-specific capabilities.
+- Starter and Task Mini currently have no required baseline gaps.
+- `source-consistency.yml` rechecks the generated Starter contract and affected apps for Core/UI/template changes.
+- `task-mini.yml` browser-checks the executable reference for Core/UI changes.
+- Task Mini's `check` includes its executable billing contract.
+- PR5 adds a machine-readable CI wiring contract and a whole-runtime provider-boundary scan so future drift fails early.
+
 ## Adding a product
 
 A new product does not fork FitTimer and does not delete fitness code. It is a new `apps/<name>/` folder on top of Core. Use `packages/core/template/` as the neutral server composition reference and `apps/task-mini/` as the executable domain example. For a real React product, create it from `templates/react-app/` with `npm run app:create -- <slug> "<Name>" <reverse.domain.id> [ru|en]`; the generator writes the app directly under `apps/<slug>/` with Core/Auth/theme/routing/Vercel/tests already wired. The product provides its own composition points: product config and capabilities, sync document registry, AI actions, analytics events, optional account extension/profile fields/health probes, and admin actions. Every app must define `scripts.check` so the root runner and CI include it automatically.
