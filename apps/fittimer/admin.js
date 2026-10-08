@@ -172,6 +172,7 @@ async function load(){
     data = await api('overview');
   }catch(e){
     if(e.message === 'bad_key') return showGate('Ключ не подошёл.');
+    if(e.message === 'rate_limited') return showGate('Слишком много попыток. Попробуй чуть позже.');
     if(e.message === 'no_admin_key') return showGate('На сервере не задана переменная ADMIN_KEY.');
     if(e.message === 'no_store') return showGate('Хранилище не подключено — см. /api/health');
     return showGate('Не получилось связаться с сервером.');
