@@ -16,13 +16,14 @@ const adminHandler = require('../template/api/admin');
 const { configureProduct, productConfig } = require('../server/product-core');
 const { createBillingHandler, createInstantBillingAdapter, createTestBillingAdapter } = require('../server/billing');
 const { store } = require('../server/store');
+const { setSecret } = require('../server/secrets');
 const crypto = require('crypto');
 const {createAuthClient, hasEntitlement} = await import('../dist/core/auth.js');
 const {createBillingClient} = await import('../dist/core/billing.js');
 
 configureProduct({...productConfig(), skuPatterns:['course.*','bundle.course.*'],
   bundles:[{pattern:'bundle.course.*', includes:['course.*','plus.year']}], products:[
-  {sku:'pack.a', title:'Pack A'},
+  {sku:'pack.a', title:'Pack A', billing:{stripe:{priceId:'price_pack_a'}}},
   {sku:'pack.b', title:'Pack B'},
   {sku:'pack.restore.a', title:'Restore A'},
   {sku:'pack.restore.b', title:'Restore B'},
@@ -263,7 +264,25 @@ await webhook([{orderId:'ord-new', email:'newbie@example.com', sku:'pack.a', sta
 const newbie = await accountOf('newbie@example.com');
 ok('webhook for an unknown address creates the account with the purchase', newbie && newbie.owned['pack.a']);
 
-// 5. Admin journal: events without emails or order ids.
+// 5. Admin billing readiness + journal.
+const billingBefore = await call(adminHandler, {action:'billing_status'}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
+const stripeBefore = (billingBefore.body.providers || []).find(x => x.id === 'stripe');
+ok('admin billing readiness sees mapped products but missing provider secrets',
+  billingBefore.status === 200 && stripeBefore?.state === 'not_configured' && stripeBefore?.mappedProducts === 1);
+await setSecret('STRIPE_SECRET_KEY', 'sk_test_admin_ready');
+await setSecret('STRIPE_WEBHOOK_SECRET', 'whsec_admin_ready');
+await setSecret('YOOKASSA_SHOP_ID', 'shop-admin-ready');
+await setSecret('YOOKASSA_SECRET_KEY', 'yoo-admin-ready');
+const billingReady = await call(adminHandler, {action:'billing_status'}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
+const stripeReady = (billingReady.body.providers || []).find(x => x.id === 'stripe');
+const yooNeedsMap = (billingReady.body.providers || []).find(x => x.id === 'yookassa');
+ok('admin billing readiness requires both credentials and a product mapping',
+  stripeReady?.state === 'ready' && yooNeedsMap?.state === 'mapping_missing');
+ok('admin billing status exposes only safe SKU mapping metadata',
+  billingReady.body.products?.some(x => x.sku === 'pack.a' && x.mappings?.stripe?.priceId === 'price_pack_a')
+  && !JSON.stringify(billingReady.body).includes('sk_test_admin_ready')
+  && !JSON.stringify(billingReady.body).includes('whsec_admin_ready'));
+
 const logRes = await call(adminHandler, {action:'billing_log'}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
 const events = logRes.body.events || [];
 ok('admin sees the payment journal, newest first', events.length >= 7 && events[0].at >= events[events.length - 1].at);
