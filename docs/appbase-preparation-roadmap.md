@@ -740,14 +740,14 @@ Product runtime code must not import provider adapters or own regional/provider 
 
 Vercel is the current production deployment target for several apps; it is **not** the AppBase architecture. Product/domain code composes AppBase handlers and provider-neutral services. Hosting-specific deployment configuration stays at the edge.
 
-Task Mini's browser test serves the production build and invokes the same `api/*` handlers through a local Node HTTP server. That is the current portability smoke: auth, sync, Admin, health and billing contracts execute without a Vercel request runtime. A future Cloudflare/other adapter should replace the deployment edge rather than product/domain code.
+Task Mini's browser test serves the production build through Core `packages/core/server/node-host.js` (`createNodeHostHandler`) and invokes the same `api/*` handlers used by the deployment wrappers. That is the current portability smoke: auth, sync, Admin, health, analytics and billing contracts execute without a Vercel request runtime. `packages/core/server/hosting.js` exposes provider-neutral host identity to health/Admin. A future Cloudflare/other adapter should replace the deployment edge rather than product/domain code.
 
 ### Drift protection
 
 - `scripts/appbase-baseline-contract.mjs` classifies required/optional/product-specific capabilities.
 - Starter and Task Mini currently have no required baseline gaps.
 - `source-consistency.yml` rechecks the generated Starter contract and affected apps for Core/UI/template changes.
-- `task-mini.yml` browser-checks the executable reference for Core/UI changes.
+- `task-mini.yml` browser-checks the executable reference for Core/UI/Starter-template changes.
 - Task Mini's `check` includes its executable billing contract.
 - PR5 adds a machine-readable CI wiring contract and a whole-runtime provider-boundary scan so future drift fails early.
 
