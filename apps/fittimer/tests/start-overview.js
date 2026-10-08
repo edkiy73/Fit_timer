@@ -43,7 +43,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       ]}]
     };
     const history = [...(stats.history || []), {pid:p.id, planId:'ov-plan', sec:31 * 60, at:Date.now() - 86400000,
-      load:[{id:'ov-squat', reps:'11', sec:0, kg:0}]}];
+      load:[{s:'ov-squat-s1', c:'n', r:'11'}]}];
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
     await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history})));
     await loadData();
@@ -146,17 +146,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       row:document.querySelector('#startOverviewList .ex-row')?.textContent || ''
     };
   });
-  ok('legacy история без snapshot не подделывает предыдущую нагрузку через completions',
-    legacy.previous.first === false
-      && legacy.previous.exact === false
-      && legacy.previous.legacy === true
-      && legacy.previous.rows.length === 0,
-    JSON.stringify(legacy.previous));
-  ok('для старой истории UI честно говорит, что сравнение недоступно',
-    /Предыдущая нагрузка не сохранена/.test(legacy.text)
-      && !/было\s*→\s*сегодня/.test(legacy.text)
-      && !/^Без изменений/.test(legacy.text),
-    legacy.text);
+  ok('запись истории без строк нагрузки не даёт выдуманного сравнения',
+    legacy.previous.exact === false && legacy.previous.rows[0] == null, JSON.stringify(legacy.previous));
   ok('сегодняшняя per-exercise нагрузка при этом показывается без отката',
     /15 повторений/.test(legacy.row), legacy.row);
 
@@ -176,14 +167,14 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const history = [...(stats.history || []), {
       id:'level-prev', pid:p.id, planId:'level-plan', d:localISO(new Date(Date.now()-86400000)),
       sec:900, status:'full', exercises:['Тяга резинки'],
-      load:[{id:'band-row',reps:'16-18',sec:0,kg:0,level:1,levelKey:'medium',levelLabel:'Medium stale'}]
+      load:[{s:'band-row-s1', c:FitExerciseV2.cfgKey({type:'level', equipment:'band', count:1}), r:'16-18', l:1, lk:'medium'}]
     }];
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
     await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history})));
     await loadData();
     const live = customPrograms.find(x => x.id === p.id);
     const current = workoutLoadSnapshot(live, 0);
-    const delta = loadDelta(history[history.length - 1].load[0], current[0]);
+    const delta = loadDelta(previousWorkoutLoad(live, 0).rows[0], current[0]);
     openStart(live);
     return {
       current:current[0],
@@ -231,7 +222,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const history = [...(stats.history || []), {
       id:'reorder-prev', pid:p.id, planId:'plan-fri', d:localISO(new Date(Date.now()-86400000)),
       sec:600, status:'full', exercises:['Пятница'],
-      load:[{id:'fri-ex', reps:'8', sec:0, kg:0}]
+      load:[{s:'fri-ex-s1', c:'n', r:'8'}]
     }];
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
     await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history})));
@@ -253,7 +244,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     reorder.before.join() + ' → ' + reorder.after.join());
   ok('история осталась у своего варианта после пересортировки',
     reorder.fri.exact === true && reorder.fri.rows.length === 1 && reorder.fri.rows[0].id === 'fri-ex'
-      && reorder.wed.exact !== true && reorder.wed.rows.length === 0,
+      && reorder.wed.exact !== true && reorder.wed.rows[0] == null,
     JSON.stringify({fri:reorder.fri, wed:reorder.wed}));
 
   // Полностью завершённая двойная прогрессия не должна обещать следующую

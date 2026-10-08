@@ -74,16 +74,19 @@ async function boot(b, label, errs, url){
   const made = await becomeTrainer(one, {email: MAIL, handle: NICK, trainer: {
     name: 'Лена', about: 'Домашний фитнес, только коврик.', years: 8, links: 't.me/' + NICK.slice(1)}});
   ok('страница тренера создана внутри аккаунта', made.ok && made.handle === NICK, made.err || made.handle);
-  await one.evaluate(async ({txt}) => {
-    const r = parseProgramText(txt);
-    const p = r.program || r; p.id = 'm1';
+  await one.evaluate(async ({name}) => {
+    const p = {id: 'm1', name, progression: 1, plans: [v2plan('m1-plan', [
+      v2ex('Приседания', {value: '12', sets: 1, rest: 5}),
+      v2ex('Отжимания', {value: '10', sets: 1, rest: 5}),
+      v2ex('Планка', {type: 'time', value: '30', sets: 1, rest: 5})
+    ], {days: ['Пн'], rounds: 1, roundRest: 10})]};
     customPrograms.push(p); await savePrograms();
     navigator.clipboard.writeText = async () => {};
     navigator.share = async () => {};
     const c = await addClient(); c.name = 'Марина';
     await saveClients(); activateClientAt(clients.indexOf(c));
     await sendProgramToClient(c, customPrograms.find(x => x.id === 'm1'));
-  }, {txt: PROG});
+  }, {name: PNAME});
   const key1 = await one.evaluate(() => trainer.key || '');
   ok('ник закреплён за аккаунтом, ключ страницы выдан', !!key1, key1.slice(0, 6) + '…');
 

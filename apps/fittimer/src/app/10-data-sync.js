@@ -1233,6 +1233,8 @@ function mergeStatsDocs(local, remote, preferRemote){
   out.weights = unite(older.weights, newerDoc.weights, x => x && (x.d || JSON.stringify(x)));
   out.wellness = unite(older.wellness, newerDoc.wellness, x => x && (x.d || JSON.stringify(x)));
   out.badges = [...new Set([].concat(b.badges || [], a.badges || []))];
+  // этапы выдаются уникальными id, поэтому реестр имён только объединяется
+  out.stageNames = Object.assign({}, older.stageNames || {}, newerDoc.stageNames || {});
   out.totalSec = out.history.length ? out.history.reduce((n,h)=>n+(+h.sec||0),0) : Math.max(+a.totalSec||0,+b.totalSec||0);
   // count — только полноценные завершения. Частичные и activity-only живут в
   // истории/времени, но после синхронизации не должны внезапно стать full.

@@ -1871,6 +1871,14 @@ body.booting .app{visibility:hidden}
   .hf-command b{display:block;font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:3px}
   .hf-command small{display:block;font-size:11.5px;line-height:1.45;color:var(--muted)}
   .hf-command-foot{margin:0 0 4px;font-size:11.5px;line-height:1.45;color:var(--muted)}
+
+/* Этапы движения в редакторе упражнения: строка = этап, выделен редактируемый */
+.stage-list{display:flex;flex-direction:column;gap:6px}
+.stage-row{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;
+  background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--ink);
+  font-family:var(--font-text);cursor:pointer}
+.stage-row.act{border-color:var(--accent-line)}
+.stage-row small{color:var(--muted);font-size:12px}
 /* ---------- приветствие на главной ---------- */
   .greet{margin:0}
   /* break-word, а не anywhere: anywhere рвал слово посреди («ВОЗВРАЩЕНИ / ЕМ»)

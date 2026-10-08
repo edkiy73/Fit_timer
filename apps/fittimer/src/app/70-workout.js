@@ -1,3 +1,4 @@
+import FitExerciseV2 from '../../lib/fit-exercise-v2.js';
 import { M_LABEL } from './options.js';
 import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
 import { appRuntimeCompat, appUi } from './00-dependencies.js';
@@ -5,7 +6,7 @@ import { registerAction } from './05-actions.js';
 import { $, DUMBBELL_ICON, ILLO, announceExercise, announceRemaining, announceRest, appAlert,
   appDialog, beep, endSignal, exerciseGong, fanfare, goBackTo, goTab, gong, haptic, hideReadyBar,
   icon, initAudio, keepAwake, plural, prepSec, readySec, releaseWake, roundDone, runReadyBar,
-  setCoreWorkoutHooks, setShown, show, soundOn, speak, state, tick, voiceIsEnglish, voiceVol, workoutLoadSnapshot
+  setCoreWorkoutHooks, setShown, show, soundOn, speak, state, tick, voiceIsEnglish, voiceVol, storedLoadRow, workoutLoadSnapshot
 } from './00-core.js';
 import { calcStreak, calcStreakInfo, clearSession, closeAllMenus, curUser, customPrograms,
   customToProgram, localISO, newId, normPlans, planIdAt, progActive, renderStats, savePrograms, saveSession,
@@ -40,7 +41,7 @@ let eventWorkoutHooks = {
 export function setWorkoutEventHooks(hooks = {}){
   eventWorkoutHooks = {...eventWorkoutHooks, ...hooks};
 }
-import { advanceExerciseProgression, commitExercise, curPlan, draft, ensureProgressState, exIdx, exerciseProgEvery, fmtKg,
+import { advanceExerciseProgression, promoteExerciseStage, stageOfferAtCeiling, commitExercise, curPlan, draft, ensureProgressState, exIdx, exerciseProgEvery, fmtKg,
   exP, liveExercise, openExercise, previewNextProgression, progressionStateLabel,
   progAtCeiling, progAxis, renderExList, setBuilderWorkoutHooks, loadBuilderDraft, clearExerciseDraft,
   selectPlanVariant, valueText
@@ -971,6 +972,20 @@ function commitFinish(ctx){
     else if(stats.count === 10) trackProductEvent('workout_10').catch(()=>{});
   }
 
+  const loadRows = srcProgram
+    ? (Array.isArray(state.startLoad) ? state.startLoad : workoutLoadSnapshot(srcProgram, state.planIdx || 0))
+    : null;
+  if(loadRows){
+    // имя этапа и exercise.id хранятся один раз на этап, а не в каждой строке истории
+    stats.stageNames = stats.stageNames || {};
+    const byStage = new Map();
+    normPlans(srcProgram).forEach(pl => (pl.exercises || []).forEach(ex =>
+      (ex.stages || []).forEach(st => byStage.set(st.stageId, {ex, st}))));
+    loadRows.forEach(r => {
+      const hit = byStage.get(r.stageId);
+      if(hit) FitExerciseV2.registerStage(stats.stageNames, r.stageId, hit.ex.id, hit.st.prescription && hit.st.prescription.name);
+    });
+  }
   const histEntry = {
     id: newId(),
     d: localISO(new Date(now)),
@@ -997,9 +1012,8 @@ function commitFinish(ctx){
     // вариант — по стабильному id: номер варианта меняется, когда normPlans()
     // пересортировывает варианты после смены дней
     planId: srcProgram ? planIdAt(srcProgram, (typeof state.planIdx === 'number') ? state.planIdx : 0) : '',
-    load: srcProgram
-      ? (Array.isArray(state.startLoad) ? state.startLoad : workoutLoadSnapshot(srcProgram, state.planIdx || 0))
-      : null,
+    // компактные строки {s,c,r,…}: история — один синхронизируемый документ с лимитом 3 МБ
+    load: loadRows ? loadRows.map(storedLoadRow) : null,
     planDays: (()=> {
       try{
         const pl = normPlans(state.raw)[state.planIdx];
@@ -1009,6 +1023,7 @@ function commitFinish(ctx){
   };
   stats.history.push(histEntry);
   if(stats.history.length > 2000) stats.history = stats.history.slice(-2000);
+  stats.stageNames = FitExerciseV2.gcStageNames(stats.stageNames, stats.history, customPrograms);
   state.lastHist = histEntry;
 
   const stk = calcStreakInfo().n;
@@ -1049,8 +1064,9 @@ function commitFinish(ctx){
         const every = exerciseProgEvery(ex, p);
         // у программы нет частоты по умолчанию, а у упражнения своей нет — проверять нечего
         if(every <= 0){ ensureProgressState(ex).count = 0; return; }
-        // Полностью завершённая прогрессия больше не копит счётчик.
-        if(progAtCeiling(p.id, ex, p)){
+        // Полностью завершённая прогрессия больше не копит счётчик — кроме случая,
+        // когда этап сам предлагает следующий: тогда тем же порогом спрашиваем о переходе.
+        if(progAtCeiling(p.id, ex, p) && !stageOfferAtCeiling(ex, p)){
           ensureProgressState(ex).count = 0;
           return;
         }
@@ -1103,8 +1119,9 @@ function renderProgCheck(){
   const p = chk && customPrograms.find(x => x.id === chk.pid);
   const rows = progCheckExercises(chk).map(ex => ({
     ex,
-    preview: previewNextProgression(ex, p)
-  })).filter(x => x.preview && x.preview.canAdvance);
+    preview: previewNextProgression(ex, p),
+    stage: stageOfferAtCeiling(ex, p)
+  })).filter(x => x.stage || (x.preview && x.preview.canAdvance));
 
   const on = rows.length > 0;
   setShown('finProgCheck', on);
@@ -1116,7 +1133,7 @@ function renderProgCheck(){
 
   const box = $('finProgCheckList');
   box.innerHTML = '';
-  rows.forEach(({ex, preview}) => {
+  rows.forEach(({ex, preview, stage}) => {
     const keep = chk.hard.has(ex.id);
     const card = document.createElement('button');
     card.type = 'button';
@@ -1132,12 +1149,13 @@ function renderProgCheck(){
     const change = document.createElement('div');
     change.className = 'fpc-change';
     const before = document.createElement('span');
-    before.textContent = progressionStateLabel(ex, preview.current);
+    // переход на следующий этап движения — это другое упражнение, а не рост цифр
+    before.textContent = stage ? exP(ex).name : progressionStateLabel(ex, preview.current);
     const arrow = document.createElement('span');
     arrow.className = 'fpc-arrow';
     arrow.textContent = '→';
     const after = document.createElement('span');
-    after.textContent = progressionStateLabel(ex, preview.next);
+    after.textContent = stage ? stage.prescription.name : progressionStateLabel(ex, preview.next);
     change.append(before, arrow, after);
 
     const action = document.createElement('span');
@@ -1166,6 +1184,12 @@ export async function applyProgCheck(){
   exercises.forEach(ex => {
     if(chk.hard.has(ex.id)){
       kept++;
+      return;
+    }
+    const stage = stageOfferAtCeiling(ex, p);
+    if(stage){
+      promoteExerciseStage(ex, stage.stageId);
+      raised++;
       return;
     }
     const preview = previewNextProgression(ex, p);

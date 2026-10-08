@@ -5,7 +5,7 @@
    - reps+weight предлагает double progression после явного включения;
    - частота упражнения сохраняется;
    - resistance использует понятные labels;
-   - смена resistance-шкалы не переносит старый numeric ps.cur.level в новую шкалу;
+   - смена resistance-шкалы не переносит старый numeric progressState.current.level в новую шкалу;
    - мобильный selector нагрузки не создаёт горизонтальный overflow.
 
    Запуск:
@@ -170,11 +170,12 @@ const ok = (name, cond, extra) => {
   await page.waitForTimeout(200);
 
   const savedWeight = await page.evaluate(() => {
-    const ex = draft.plans[0].exercises[0];
+    const p = FitExerciseV2.prescriptionOf(draft.plans[0].exercises[0]);
     return {
-      progOn:ex.progOn, loadType:ex.loadType, progMode:ex.progMode, progEvery:ex.progEvery,
-      value:ex.value, weight:ex.weight, repsStep:ex.repsStep, repsMax:ex.repsMax,
-      wStep:ex.wStep, weightMax:ex.weightMax
+      progOn:p.progression.mode !== 'none', loadType:p.load.type, equipment:p.load.equipment,
+      progMode:p.progression.mode, progEvery:p.progression.every,
+      value:p.value, weight:p.load.weight, repsStep:p.progression.reps.step, repsMax:p.progression.reps.max,
+      wStep:p.progression.weight.step, weightMax:p.progression.weight.max
     };
   });
   ok('весовая double progression сохраняется из обычного редактора',
@@ -216,11 +217,11 @@ const ok = (name, cond, extra) => {
   await page.waitForTimeout(200);
 
   const savedLevel = await page.evaluate(() => {
-    const ex = draft.plans[0].exercises[0];
+    const p = FitExerciseV2.prescriptionOf(draft.plans[0].exercises[0]);
     return {
-      loadType:ex.loadType, progMode:ex.progMode, loadLevel:ex.loadLevel,
-      levels:(ex.loadLevels||[]).map(x=>x.label||x.key),
-      value:ex.value, repsStep:ex.repsStep, repsMax:ex.repsMax, progEvery:ex.progEvery
+      loadType:p.load.type, progMode:p.progression.mode, loadLevel:p.load.level,
+      levels:(p.load.levels||[]).map(x=>x.label||x.key),
+      value:p.value, repsStep:p.progression.reps.step, repsMax:p.progression.reps.max, progEvery:p.progression.every
     };
   });
   ok('стандартная ручная resistance-шкала канонизируется и сохраняет текущую ступень',
@@ -241,7 +242,7 @@ const ok = (name, cond, extra) => {
   // Старый current level нельзя механически перенести в совершенно новую шкалу.
   await page.evaluate(() => {
     const ex = draft.plans[0].exercises[0];
-    ex.ps = {n:1,cur:{reps:'16-18',level:2}};
+    ex.progressState = {count:1, current:{reps:'16-18', weight:null, time:null, level:2}};
     openExercise(0);
   });
   await page.waitForTimeout(100);
@@ -254,17 +255,22 @@ const ok = (name, cond, extra) => {
 
   const carried = await page.evaluate(() => {
     const ex = draft.plans[0].exercises[0];
+    const p = FitExerciseV2.prescriptionOf(ex);
     return {
-      n:ex.ps && ex.ps.n,
-      cur:ex.ps && ex.ps.cur,
-      levels:(ex.loadLevels||[]).map(x=>x.label||x.key),
-      loadLevel:ex.loadLevel
+      n:ex.progressState && ex.progressState.count,
+      cur:ex.progressState && ex.progressState.current,
+      levels:(p.load.levels||[]).map(x=>x.label||x.key),
+      loadLevel:p.load.level
     };
   });
-  ok('смена resistance-шкалы сохраняет счётчик, но сбрасывает несовместимый current level',
-    carried.n === 1
+  // V2 (план, 2.8 и 5.5): identity текущей ступени исчезла — level-состояние
+  // несовместимо и сбрасывается; базовая ступень тоже стала другой (ручная смена
+  // назначения), поэтому и счётчик до проверки обнуляется.
+  ok('смена resistance-шкалы без прежних ступеней сбрасывает current level и счётчик',
+    carried.n === 0
       && carried.cur
       && carried.cur.level == null
+      && carried.cur.reps == null
       && carried.levels.join('|') === 'Лёгкая X|Средняя X|Тяжёлая X'
       && carried.loadLevel === 1,
     JSON.stringify(carried));
@@ -275,10 +281,11 @@ const ok = (name, cond, extra) => {
   const persisted = await page.evaluate(() => {
     const p = customPrograms.find(x=>x.id==='progress-editor-audit');
     const ex = p && p.plans[0] && p.plans[0].exercises[0];
+    const pr = ex && FitExerciseV2.prescriptionOf(ex);
     return ex ? {
-      loadType:ex.loadType, progMode:ex.progMode, progEvery:ex.progEvery,
-      loadLevel:ex.loadLevel, levels:(ex.loadLevels||[]).map(x=>x.label||x.key),
-      n:ex.ps && ex.ps.n, cur:ex.ps && ex.ps.cur
+      loadType:pr.load.type, progMode:pr.progression.mode, progEvery:pr.progression.every,
+      loadLevel:pr.load.level, levels:(pr.load.levels||[]).map(x=>x.label||x.key),
+      n:ex.progressState && ex.progressState.count, cur:ex.progressState && ex.progressState.current
     } : null;
   });
   ok('после сохранения программы resistance policy/state не теряются',
@@ -288,7 +295,7 @@ const ok = (name, cond, extra) => {
       && persisted.progEvery === 2
       && persisted.loadLevel === 1
       && persisted.levels.join('|') === 'Лёгкая X|Средняя X|Тяжёлая X'
-      && persisted.n === 1
+      && persisted.n === 0
       && persisted.cur
       && persisted.cur.level == null,
     JSON.stringify(persisted));

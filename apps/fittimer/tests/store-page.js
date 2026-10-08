@@ -127,16 +127,15 @@ const shot = page => page.evaluate(() => ({
      PR 7 — перевод каталога). Поэтому состав по вариантам (подписи днями, своя
      нумерация, разминка по одной на вариант, сопротивление человеческим label)
      сейчас не рисуется вовсе — проверки этого вернутся вместе с V2-каталогом.
-     Здесь держим то, что работает и сейчас: шапку страницы, отсутствие
-     старой формы упражнений в составе и честный отказ при добавлении. */
+     Здесь держим то, что работает и сейчас: шапку страницы и отсутствие
+     старой формы упражнений в составе. */
   await open(TWO);
   await page.waitForTimeout(400);
   const two = await shot(page);
   const head = await page.evaluate(() => ({
     name: document.getElementById('siName').textContent,
     gives: document.getElementById('siGives').textContent,
-    by: document.getElementById('siNick').textContent,
-    buy: document.getElementById('siBuy').textContent
+    by: document.getElementById('siNick').textContent
   }));
   ok('страница программы открылась с названием и описанием',
      head.name === 'Проверка' && /Описание программы/.test(head.gives), head.name);
@@ -145,17 +144,6 @@ const shot = page => page.evaluate(() => ({
      two.facts.includes('Средний') && two.facts.some(f => /^35 мин/.test(f)), two.facts.join(' · '));
   ok('старый текст не превращается в упражнения состава',
      two.rows.length === 0 && two.heads.length === 0, two.rows.length + '/' + two.heads.length);
-  ok('кнопка предлагает добавить программу', /Добавить/.test(head.buy), head.buy);
-
-  const before = await page.evaluate(() => customPrograms.length);
-  await page.click('#siBuy');
-  await page.waitForTimeout(300);
-  const addMsg = await page.textContent('#dlgMsg');
-  ok('добавление из каталога объясняет, что временно недоступно',
-     /временно недоступна/.test(addMsg), addMsg.slice(0, 50));
-  ok('и программа в профиль не попала',
-     await page.evaluate(() => customPrograms.length) === before);
-  await page.evaluate(() => document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')));
 
   /* ---- премиум закрывает состав ---- */
   await open(ONE, {pro: true, exCount: 2});

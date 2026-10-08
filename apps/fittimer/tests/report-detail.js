@@ -22,46 +22,23 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   console.log((cond ? '  ok  ' : ' ПЛОХО') + '  ' + name + (extra != null ? '  → ' + extra : '')); };
 
 // Два варианта по дням плюс разминка — то, чего прежний отчёт не видел вовсе.
-const PROG = `ПРОГРАММА: Сила дома
-ПРОГРЕССИЯ: 2
-
-ДЕНЬ: Пн
-КРУГИ: 3
-ОТДЫХ МЕЖДУ КРУГАМИ: 60
-УПРАЖНЕНИЕ: Суставная разминка
-РАЗМИНКА: да
-ФОРМАТ: время
-ЗНАЧЕНИЕ: 60
-ПОДХОДЫ: 1
-ОТДЫХ: 10
-
-УПРАЖНЕНИЕ: Приседания
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 12
-ПОДХОДЫ: 3
-ОТДЫХ: 45
-УСЛОЖНЯТЬ: да
-ШАГ: 1
-
-УПРАЖНЕНИЕ: Отжимания
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 8
-ПОДХОДЫ: 3
-ОТДЫХ: 60
-УСЛОЖНЯТЬ: да
-ШАГ: 1
-
-ДЕНЬ: Чт
-КРУГИ: 3
-ОТДЫХ МЕЖДУ КРУГАМИ: 60
-УПРАЖНЕНИЕ: Тяга в наклоне
-ФОРМАТ: повторения и вес
-ЗНАЧЕНИЕ: 10
-ВЕС: 12
-ПОДХОДЫ: 3
-ОТДЫХ: 60
-УСЛОЖНЯТЬ: да
-ШАГ ВЕСА: 2`;
+// Собирается в странице через v2ex/v2plan (модель V2).
+function buildProg(){
+  return {
+    id:'tp1', name:'Сила дома', progression:2,
+    plans:[
+      v2plan('tp1-mon', [
+        v2ex('Суставная разминка', {id:'tp1-warm', warmup:true, type:'time', value:'60', sets:1, rest:10}),
+        v2ex('Приседания', {id:'tp1-squat', value:'12', sets:3, rest:45, prog:{mode:'reps', reps:{step:1}}}),
+        v2ex('Отжимания', {id:'tp1-push', value:'8', sets:3, rest:60, prog:{mode:'reps', reps:{step:1}}})
+      ], {days:['Пн'], rounds:3, roundRest:60}),
+      v2plan('tp1-thu', [
+        v2ex('Тяга в наклоне', {id:'tp1-row', value:'10', sets:3, rest:60,
+          load:{type:'weight', equipment:'dumbbell', weight:12}, prog:{mode:'weight', weight:{step:2}}})
+      ], {days:['Чт'], rounds:3, roundRest:60})
+    ]
+  };
+}
 
 async function boot(b, label, errs, url){
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
@@ -81,9 +58,8 @@ async function boot(b, label, errs, url){
   const tp = await boot(b, 'тренер', errs);
   await tp.evaluate(() => { curUser().name = 'Лена'; });
   await becomeTrainer(tp, {handle: NICK, trainer: {about: '', years: null, links: ''}});
-  const link = await tp.evaluate(async ({txt, nick}) => {
-    const r = parseProgramText(txt);
-    const p = r.program || r; p.id = 'tp1';
+  const link = await tp.evaluate(async ({src, nick}) => {
+    const p = (0, eval)('(' + src + ')')();
     customPrograms.push(p); await savePrograms();
     let out = null;
     navigator.clipboard.writeText = async t => { out = t; };
@@ -92,7 +68,7 @@ async function boot(b, label, errs, url){
     await saveClients(); activateClientAt(clients.indexOf(c));
     await sendProgramToClient(c, customPrograms.find(x => x.id === 'tp1'));
     return out;
-  }, {txt: PROG, nick: NICK});
+  }, {src: buildProg.toString(), nick: NICK});
 
   const cp = await boot(b, 'клиент', errs, link);
   await cp.waitForTimeout(1300);
@@ -130,18 +106,19 @@ async function boot(b, label, errs, url){
     const p = customPrograms.find(x => x.name === 'Сила дома');
 
     const plans = normPlans(p);
-    plans[0].exercises = plans[0].exercises.filter(e => e.name !== 'Отжимания');  // выкинул
+    const pr = e => FitExerciseV2.prescriptionOf(e);
+    plans[0].exercises = plans[0].exercises.filter(e => pr(e).name !== 'Отжимания');  // выкинул
     plans[0].exercises.push(v2ex('Планка', {id:'client-added-plank', type:'time', value:'45', sets:3, rest:30})); // добавил своё
     // Переименование не меняет identity: тот же exercise.id должен остаться одной
     // mod-строкой, а не превратиться в ложные delete+add.
-    plans[1].exercises[0].name = 'Тяга одной рукой';
-    plans[1].exercises[0].value = '15';                                            // поменял руками
-    // Прогрессия — состояние у КАЖДОГО упражнения (ex.ps), не общий счётчик
+    pr(plans[1].exercises[0]).name = 'Тяга одной рукой';
+    pr(plans[1].exercises[0]).value = '15';                                            // поменял руками
+    // Прогрессия — состояние у КАЖДОГО упражнения (ex.progressState), не общий счётчик
     // программы: раньше один счётчик программы прибавлял шаг всем упражнениям
     // сразу, даже тем, что не участвовали в сегодняшней тренировке. Чтобы
     // отчёт показал рост по ВТОРОМУ варианту, у него должно реально вырасти
     // своё упражнение — задаём это явно, а не через общий completions.
-    ensurePs(plans[1].exercises[0]).cur.kg = 14; // Тяга в наклоне: было 12 кг
+    plans[1].exercises[0].progressState.current.weight = 14; // Тяга в наклоне: было 12 кг
     p.stats = {completions: 6};
     await savePrograms();
 
@@ -198,8 +175,8 @@ async function boot(b, label, errs, url){
 
   // Вторая программа тому же клиенту не должна затирать первую вместе с занятиями.
   const two = await tp.evaluate(async () => {
-    const r = parseProgramText('ПРОГРАММА: Растяжка\nДНИ: Сб\nКРУГИ: 1\n\nУПРАЖНЕНИЕ: Наклоны\nФОРМАТ: время\nЗНАЧЕНИЕ: 40\nПОДХОДЫ: 1\nОТДЫХ: 20');
-    const p2 = r.program || r; p2.id = 'tp2';
+    const p2 = {id:'tp2', name:'Растяжка', progression:0, plans:[v2plan('tp2-a',
+      [v2ex('Наклоны', {id:'tp2-bend', type:'time', value:'40', sets:1, rest:20})], {days:['Сб'], rounds:1, roundRest:0})]};
     customPrograms.push(p2); await savePrograms();
     await sendProgramToClient(clients[0], p2);
     return {progs: clients[0].progs.length,
@@ -220,8 +197,9 @@ async function boot(b, label, errs, url){
     // схлопывает диапазон в одно число уже на нулевом шаге.
     const p = {id: 'fresh1', name: 'Свежая', progression: 2, stats: {completions: 0},
       plans: [{days: ['Пн'], rounds: 1, roundRest: 60, exercises: [
-        {name: 'Двойная', type: 'reps', value: '12-15', sets: 3, weight: 6,
-         trackWeight: true, progOn: true, dualProg: true, repsCeil: 15, wStep: 2}]}]};
+        v2ex('Двойная', {id:'fresh-dual', type:'reps', value:'12-15', sets:3,
+          load:{type:'weight', equipment:'dumbbell', weight:6},
+          prog:{mode:'double_range', reps:{step:1, max:15}, weight:{step:2}}})]}]};
     const r = buildReport(p);
     return (r.ex || []).filter(x => x.n === 'Двойная');
   });
@@ -232,29 +210,19 @@ async function boot(b, label, errs, url){
     const p = {
       id:'report-progression-axes', name:'Все оси', progression:2,
       plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[
-        {
-          id:'time-axis',name:'Планка',type:'time',value:'30',sets:1,rest:30,
-          progOn:true,progMode:'time',timeStep:5,timeMax:60,
-          ps:{n:1,cur:{sec:45}}
-        },
-        {
-          id:'level-axis',name:'Тяга резинки',type:'reps',value:'12-15',sets:3,rest:45,
-          loadType:'level',progOn:true,progMode:'level',
-          loadLevels:[{label:'Лёгкая'},{label:'Средняя'},{label:'Сильная'}],
-          loadLevel:0,repsStep:2,repsMax:18,
-          ps:{n:1,cur:{reps:'12-15',level:1}}
-        },
-        {
-          id:'manual-level-axis',name:'Ручная резинка',type:'reps',value:'12',sets:2,rest:30,
-          loadType:'level',progOn:false,progMode:'level',
-          loadLevels:[{label:'Красная'},{label:'Чёрная'}],
-          loadLevel:0,repsStep:0
-        }
+        v2ex('Планка', {id:'time-axis', type:'time', value:'30', sets:1, rest:30,
+          prog:{mode:'time', time:{step:5, max:60}}, state:{count:1, current:{time:45}}}),
+        v2ex('Тяга резинки', {id:'level-axis', type:'reps', value:'12-15', sets:3, rest:45,
+          load:{type:'level', equipment:'band', levels:[{label:'Лёгкая'},{label:'Средняя'},{label:'Сильная'}], level:0},
+          prog:{mode:'level', reps:{step:2, max:18}}, state:{count:1, current:{reps:'12-15', level:1}}}),
+        v2ex('Ручная резинка', {id:'manual-level-axis', type:'reps', value:'12', sets:2, rest:30,
+          load:{type:'level', equipment:'band', levels:[{label:'Красная'},{label:'Чёрная'}], level:0},
+          prog:{mode:'none'}})
       ]}]
     };
     p.origEx = snapshotEx(p);
     // Это именно ручная правка базы, не progression state.
-    p.plans[0].exercises[2].loadLevel = 1;
+    FitExerciseV2.prescriptionOf(p.plans[0].exercises[2]).load.level = 1;
     const report = buildReport(p);
     return {ex:report.ex,diff:report.diff};
   });
@@ -275,10 +243,8 @@ async function boot(b, label, errs, url){
     JSON.stringify(levelManual));
 
   const identity = await cp.evaluate(() => {
-    const ex = (id, name, value) => ({
-      id, name, type:'reps', value:String(value), sets:3, rest:30,
-      progOn:false, trackWeight:false
-    });
+    const ex = (id, name, value) => v2ex(name, {id, type:'reps', value:String(value), sets:3, rest:30});
+    const pr = e => FitExerciseV2.prescriptionOf(e);
     const p = {
       id:'report-id-test', name:'ID diff', progression:0,
       plans:[{days:[],rounds:1,roundRest:0,exercises:[
@@ -290,7 +256,7 @@ async function boot(b, label, errs, url){
     p.origEx = snapshotEx(p);
 
     // Меняем только ВТОРОЕ из двух одинаково названных упражнений.
-    p.plans[0].exercises[1].value = '12';
+    pr(p.plans[0].exercises[1]).value = '12';
     const byId = buildReport(p).diff;
 
     // Имитируем старый origEx до появления id отдельно: уникальное имя всё ещё
@@ -303,7 +269,7 @@ async function boot(b, label, errs, url){
     };
     legacy.origEx = snapshotEx(legacy);
     legacy.origEx.forEach(x => { delete x.id; });
-    legacy.plans[0].exercises[0].value = '11';
+    pr(legacy.plans[0].exercises[0]).value = '11';
     const legacyDiff = buildReport(legacy).diff;
 
     return {byId, legacyDiff};

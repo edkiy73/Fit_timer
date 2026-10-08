@@ -2140,19 +2140,19 @@ AI не должен сам придумывать постоянный `canonic
 
 ### PR 2b — progression runtime + compact history
 
-Статус: 🟡 частично в ветке `ccr-1c455d3f-hdsme3`: прогрессия и carry на V2 работают; компактная история ещё не подключена
+Статус: ✅ в ветке `ccr-1c455d3f-hdsme3`, в main не влито
 
 - [x] runtime weight/double/level progression на active stage;
 - [x] level identity carry/reset rules;
 - [x] progressState semantics;
 - [x] physical cfgKey boundaries;
-- [ ] compact history write/read adapter;
-- [ ] stageNames update + GC rules;
-- [ ] before→today/history по `exId + movementStageId + cfgKey`;
+- [x] compact history write/read adapter;
+- [x] stageNames update + GC rules;
+- [x] before→today/history по `exId + movementStageId + cfgKey`;
 - [x] worst-case size calculation ДО финального storage shape (1.87 МБ из 3 МБ, `tests/exercise-v2-unit.js`);
 - [ ] automated 2000-workout size test с запасом до 3 МБ;
 - [ ] «только сегодня» vs «изменить рабочий вес»;
-- [ ] resume unfinished workout tests.
+- [x] resume unfinished workout tests.
 
 Критерий:
 - single-stage V2 полностью проходит workout/progression/history;
@@ -2162,21 +2162,21 @@ AI не должен сам придумывать постоянный `canonic
 
 ### PR 3 — V2 UI: оборудование + progression + movement chain
 
-Статус: ⬜ не начат
+Статус: 🟡 в ветке `ccr-1c455d3f-hdsme3`: снаряды, доп. оборудование, цепочка этапов в редакторе и предложение перехода на финале готовы; картинки этапов — PR 7
 
-- [ ] создание/редактор: «Снаряды» и «Доп. оборудование»;
-- [ ] custom + обязательное имя;
-- [ ] load equipment/count/weight или level;
-- [ ] progression editor использует новый объект;
-- [ ] `mode:none` — единственный OFF;
-- [ ] `every:null` — наследовать program progression frequency;
-- [ ] movement stages runtime/UI: максимум 4 карточки с явным current stage;
-- [ ] forward/back transitions, reset progressState, rollback starts from stage base;
-- [ ] rollback confirmation показывает базовый старт;
-- [ ] add/remove/reorder stages; возврат к предыдущему stage;
+- [x] создание/редактор: «Снаряды» и «Доп. оборудование»;
+- [x] custom + обязательное имя;
+- [x] load equipment/count/weight или level;
+- [x] progression editor использует новый объект;
+- [x] `mode:none` — единственный OFF;
+- [x] `every:null` — наследовать program progression frequency;
+- [x] movement stages runtime/UI: максимум 4 карточки с явным current stage;
+- [x] forward/back transitions, reset progressState, rollback starts from stage base;
+- [x] rollback confirmation показывает базовый старт;
+- [x] add/remove/reorder stages; возврат к предыдущему stage;
 - [ ] `ceiling/manual`, «Перейти сейчас», preview ближайшего stage + картинка/placeholder;
 - [ ] все экраны через `exerciseLoadView`;
-- [ ] RU/EN/i18n/privacy/onboarding wording.
+- [x] RU/EN/i18n/privacy/onboarding wording.
 
 Критерий:
 - две реальные программы можно руками собрать и прогнать без AI.
@@ -3369,3 +3369,17 @@ Short storage keys используются ТОЛЬКО в persistent history D
 Открыто:
 - компактная история (`encodeLoadRow` + `stageNames`) в runtime — PR 2b;
 - UI цепочки этапов и прогрессии — PR 3.
+
+### 2026-10-08 — PR 2b + PR 3 (основное): компактная история и цепочка этапов
+
+Статус: 🟡 в ветке `ccr-1c455d3f-hdsme3`, в main не влито.
+
+Что сделали:
+- история пишет строки нагрузки компактно (`{s, c, r, t, w, …}`), имя этапа и exercise.id — один раз в `stats.stageNames`; реестр объединяется при синхронизации и чистится после обрезки истории;
+- «было → сегодня» ищет прошлую нагрузку по stageId по всей истории профиля и сравнивает только при том же cfgKey: другой этап или снаряд — без ложной ↑/↓; старая ветка «нагрузка неизвестна» удалена;
+- редактор: блок «Этапы движения» (до 4): выбор редактируемого этапа, добавление (копия текущего с пустым названием), порядок, удаление, переход «предложить на потолке / только вручную», «Перейти сейчас» с подтверждением базового старта; прогресс при смене этапа начинается заново;
+- «Доп. оборудование» — чипы в «Деталях»; в списке упражнений метка «этап N из M»;
+- финал тренировки: на потолке этапа с переходом «на потолке» предлагает следующий этап (тот же порог проверки, решение за человеком);
+- тест `movement-chain-flow`.
+
+Открыто: «предпросмотр» ближайшего этапа с картинкой — вместе с картинками этапов (PR 7).

@@ -500,6 +500,34 @@
       </div>
     </div>
 
+    <!-- Этапы движения: лестница вариантов одного упражнения (до 4). Форма выше
+         редактирует выбранный здесь этап; «сейчас» — тот, что идёт на тренировке. -->
+    <div class="card-block">
+      <button type="button" class="collapse-head" id="exChainToggle" data-act="toggleExerciseChainBox">
+        <span data-i18n="builder.chainTitle">Этапы движения</span>
+        <span class="st-sum" id="exChainSum"></span>
+        <span class="st-chev" id="exChainChev"></span>
+      </button>
+      <div id="exChainBox" class="stack hidden">
+        <p class="field-hint" data-i18n="builder.chainHint">Варианты одного упражнения от простого к сложному. Когда текущий станет лёгким, переходишь к следующему.</p>
+        <div class="stage-list" id="exChainList"></div>
+        <div class="field hidden" id="exStageAdvanceRow">
+          <label data-i18n="builder.stageAdvance">Переход к следующему этапу</label>
+          <select id="exStageAdvance">
+            <option value="ceiling" data-i18n="builder.stageAdvanceCeiling">Предложить на потолке</option>
+            <option value="manual" data-i18n="builder.stageAdvanceManual">Только вручную</option>
+          </select>
+        </div>
+        <div class="media-row" id="exStageActions">
+          <button type="button" id="exStageCurrent" data-act="makeExerciseStageCurrent" data-i18n="builder.stageMakeCurrent">Перейти сейчас</button>
+          <button type="button" id="exStageUp" data-act="moveExerciseStageUp" data-i18n="builder.stageUp">Выше</button>
+          <button type="button" id="exStageDown" data-act="moveExerciseStageDown" data-i18n="builder.stageDown">Ниже</button>
+          <button type="button" id="exStageRemove" data-act="removeExerciseStage" data-i18n="builder.stageRemove">Удалить этап</button>
+        </div>
+        <button type="button" class="btn-secondary" id="exStageAdd" data-act="addExerciseStage" data-i18n="builder.stageAdd">Добавить этап</button>
+      </div>
+    </div>
+
     <div class="card-block">
     <button type="button" class="collapse-head" id="exDetailsToggle" data-act="toggleExerciseDetails">
       <span data-i18n="builder.details">Детали</span>
@@ -511,6 +539,7 @@
       <div class="field"><label data-i18n="builder.howTo">Как выполнять</label><textarea id="exDesc" maxlength="600" class="auto-grow" placeholder="Опиши технику: исходное положение, движение, дыхание" data-i18n-placeholder="builder.howToExample"></textarea></div>
       <div class="field"><label data-i18n="builder.mistakesOptional">Частые ошибки (необязательно)</label><textarea id="exMistakes" maxlength="300" class="auto-grow" placeholder="Чего избегать при выполнении" data-i18n-placeholder="builder.mistakesExample"></textarea></div>
       <div class="field"><label data-i18n="builder.muscles">Работающие мышцы</label><div class="days chips-wrap" id="exMuscles"></div></div>
+      <div class="field"><label data-i18n="builder.supportEquipment">Доп. оборудование</label><div class="days chips-wrap" id="exSupport"></div></div>
       <div class="field"><label data-i18n="builder.videoOptional">Ссылка на видео (необязательно)</label><input type="url" id="exVideo" maxlength="300" placeholder="https://youtube.com/..."></div>
       <div class="field"><label data-i18n="builder.image">Картинка</label>
         <div class="media-row">

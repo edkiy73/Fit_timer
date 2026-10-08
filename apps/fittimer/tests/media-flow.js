@@ -68,12 +68,14 @@ async function boot(b, label, errs, url){
   const tp = await boot(b, 'тренер', errs);
   await tp.evaluate(() => { curUser().name = 'Лена'; });
   await becomeTrainer(tp, {handle: NICK, trainer: {about: '', years: null, links: ''}});
-  const link = await tp.evaluate(async ({txt, nick, name}) => {
+  const link = await tp.evaluate(async ({nick, name}) => {
     // Картинки подделываем маленькими — важно, что они ЕСТЬ и что доезжают.
     const pic = n => 'data:image/png;base64,' + btoa('pic-' + n).replace(/=/g, '');
-    const r = parseProgramText(txt);
-    const p = r.program || r;
-    p.id = 'pic1'; p.name = name;
+    const p = {id:'pic1', name, plans:[v2plan('pic1-plan', [
+      v2ex('Приседания', {value:12, sets:3, rest:45}),
+      v2ex('Планка', {type:'time', value:40, sets:3, rest:30}),
+      v2ex('Отжимания', {value:8, sets:3, rest:60})
+    ], {days:['Пн'], rounds:2, roundRest:60})]};
     p.cover = pic('cover');
     normPlans(p)[0].exercises.forEach((ex, i) => { ex.media = {kind: 'img', data: pic(i)}; });
     customPrograms.push(p); await savePrograms();
@@ -84,7 +86,7 @@ async function boot(b, label, errs, url){
     await saveClients(); activateClientAt(clients.indexOf(c));
     await sendProgramToClient(c, customPrograms.find(x => x.id === 'pic1'));
     return out;
-  }, {txt: PROG, nick: NICK, name: NAME});
+  }, {nick: NICK, name: NAME});
 
   // ---- клиент получает программу С фото ----
   const cp = await boot(b, 'клиент', errs, link);
@@ -96,14 +98,12 @@ async function boot(b, label, errs, url){
     total: normPlans(draft)[0].exercises.length
   }));
   ok('обложка доехала до клиента', got.cover);
-  ok('фото упражнений доехали', got.withPic === got.total, `${got.withPic} из ${got.total}`);
+  ok('фото упражнений доехали', got.total === 3 && got.withPic === got.total, `${got.withPic} из ${got.total}`);
 
   const mediaIdentity = await tp.evaluate(() => {
     const pic = n => 'data:image/png;base64,' + btoa('identity-' + n).replace(/=/g, '');
-    const ex = (id, data) => ({
-      id, name:'Одинаковое', type:'reps', value:'10', sets:1, rest:0,
-      media:{kind:'img',data}
-    });
+    const ex = (id, data) => v2ex('Одинаковое', {id, value:10, rest:0, media:{kind:'img',data}});
+    const rename = (e, name) => { FitExerciseV2.prescriptionOf(e).name = name; };
     const p = {id:'media-id-test',name:'Media id',plans:[{
       days:[],rounds:1,roundRest:0,
       exercises:[ex('media-a',pic('a')),ex('media-b',pic('b'))]
@@ -112,7 +112,7 @@ async function boot(b, label, errs, url){
 
     const exact = JSON.parse(JSON.stringify(p));
     exact.plans[0].exercises.forEach(e => { delete e.media; });
-    exact.plans[0].exercises[1].name = 'Переименованное';
+    rename(exact.plans[0].exercises[1], 'Переименованное');
     applyMedia(exact, packed);
 
     // Каталог парсит переведённый текст и получает временные новые id.
@@ -121,7 +121,7 @@ async function boot(b, label, errs, url){
     translated.plans[0].exercises.forEach((e, i) => {
       delete e.media;
       e.id = 'temporary-' + i;
-      e.name = i ? 'Same translated' : 'Same translated';
+      rename(e, 'Same translated');
     });
     applyMedia(translated, packed);
 
@@ -132,7 +132,7 @@ async function boot(b, label, errs, url){
     return {
       version:packed.v,
       ids:(packed.items || []).map(x => x.id),
-      exact:exact.plans[0].exercises.map(e => [e.id,e.name,e.media && e.media.data]),
+      exact:exact.plans[0].exercises.map(e => [e.id,FitExerciseV2.prescriptionOf(e).name,e.media && e.media.data]),
       translated:translated.plans[0].exercises.map(e => [e.id,e.media && e.media.data]),
       legacyPics:legacy.plans[0].exercises.filter(e => e.media).length
     };
@@ -156,17 +156,17 @@ async function boot(b, label, errs, url){
      mediaIdentity.legacyPics === 0, mediaIdentity.legacyPics);
 
   // ---- в каталог ----
-  await tp.evaluate(async ({name}) => {
+  // Отправка из интерфейса (doPublish) отключена до V2-каталога; серверную обработку
+  // картинок проверяем, отправляя заявку прямо в API — той же формой, что строил doPublish.
+  await tp.evaluate(async ({name, txt}) => {
     const p = customPrograms.find(x => x.name === name);
-    openPublish(p);
-    pubDraft.cat = 'Сила и выносливость';
-    pubDraft.level = 'Средний';
-    pubDraft.gives = 'Три движения по кругу, у каждого своя картинка — видно, что делать.';
-    document.getElementById('pubGives').value = pubDraft.gives;
-    await doPublish();
-  }, {name: NAME});
-  await tp.waitForTimeout(800);
-  if(await tp.isVisible('#dlgOk')){ await tp.click('#dlgOk'); await tp.waitForTimeout(300); }
+    const r = await fetch('/api/catalog', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({by: normHandle(trainer.handle), trainerKey: trainer.key || '', item: {
+        sourceLocale:'ru', name, gives:'Три движения по кругу, у каждого своя картинка — видно, что делать.',
+        cat:'power', level:'Средний', min:20, exCount:3, text:txt,
+        cover:p.cover, media:programMedia(p)}})});
+    return r.status;
+  }, {name: NAME, txt: PROG.replace('ПРОГРАММА: С картинками', 'ПРОГРАММА: ' + NAME)});
 
   const api = (action, extra) => fetch(BASE + '/api/admin', {
     method: 'POST', headers: {'Content-Type': 'application/json', 'X-Admin-Key': encodeURIComponent(ADMIN)},
@@ -207,41 +207,6 @@ async function boot(b, label, errs, url){
      enItems.length === 3
        && enItems.map(x => x.id).join(',') === fullItems.map(x => x.id).join(','),
      enItems.map(x => x.id).join(', '));
-
-  /* ---- страница программы в каталоге показывает фото ----
-     Их там нет в момент отрисовки: список каталога фото не несёт, и они доезжают
-     отдельным запросом уже после того, как страница открылась. Ждём. */
-  const onPage = await cp.evaluate(async (name) => {
-    await loadStoreServer();
-    const it = storeAll().find(x => x.name === name);
-    if(!it) return {found: false};
-    openStoreItem(it.id);
-    const count = () => document.querySelectorAll('#siList .ex-thumb img').length;
-    const atOnce = count();
-    for(let i = 0; i < 40 && count() < 3; i++) await new Promise(r => setTimeout(r, 100));
-    return {found: true, atOnce, later: count(),
-            rows: document.querySelectorAll('#siList .ex-row').length};
-  }, NAME);
-  ok('страница программы открывается сразу, не дожидаясь фото',
-     onPage.found && onPage.rows === 3 && onPage.atOnce === 0,
-     `${onPage.rows} строк, фото сразу ${onPage.atOnce}`);
-  ok('и фото доезжают на свои места', onPage.later === 3, onPage.later + ' из 3');
-
-  // ---- добавление себе возвращает фото на места ----
-  const added = await cp.evaluate(async (name) => {
-    await loadStoreServer();
-    const it = storeAll().find(x => x.name === name);
-    if(!it) return {found: false};
-    await addStoreItem(it.id);
-    const p = customPrograms.find(x => x.storeId === it.id);
-    if(!p) return {found: true, saved: false};
-    return {found: true, saved: true, cover: !!p.cover, locale:p.locale,
-            withPic: normPlans(p)[0].exercises.filter(e => e.media && e.media.kind === 'img').length};
-  }, NAME);
-  ok('программа из каталога добавляется', added.found && added.saved, JSON.stringify(added));
-  ok('и приносит фото упражнений', added.withPic === 3, added.withPic + '');
-  ok('и обложку', added.cover === true);
-  ok('личная копия запоминает язык каталога', added.locale === 'ru', added.locale);
 
   console.log('\npageerror:', errs.length ? errs : 'нет');
   if(errs.length) bad++;

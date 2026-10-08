@@ -44,7 +44,7 @@ async function boot(browser, label, errors){
     const seededPrograms = [{
       id:'sync-program', name:'Синхронная сила', time:'08:30', progression:2,
       stats:{completions:1}, plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[
-        {name:'Приседания',type:'reps',value:'12',sets:2,rest:30,restAfter:45,weight:0}
+        v2ex('Приседания', {value:'12', sets:2, rest:30, restAfter:45})
       ]}]
     },{
       id:'sync-program-2', name:'Синхронная мобильность', time:'', progression:3,
@@ -53,12 +53,11 @@ async function boot(browser, label, errors){
       ]}]
     },{
       id:'sync-resistance', name:'Синхронные резинки', time:'', progression:2,
-      psMigrated:true, stats:{completions:2}, plans:[{days:['Пт'],rounds:1,roundRest:0,exercises:[
-        {id:'band-sync',name:'Тяга резинки',type:'reps',value:'12-15',sets:3,rest:45,
-         loadType:'level',progMode:'level',
-         loadLevels:[{label:'Лёгкая'},{label:'Средняя'},{label:'Сильная'}],
-         loadLevel:1,repsStep:2,repsMax:18,progEvery:2,
-         ps:{n:2,cur:{reps:'16-18',level:2}}}
+      stats:{completions:2}, plans:[{days:['Пт'],rounds:1,roundRest:0,exercises:[
+        v2ex('Тяга резинки', {id:'band-sync', value:'12-15', sets:3, rest:45,
+          load:{type:'level', equipment:'band', levels:[{label:'Лёгкая'},{label:'Средняя'},{label:'Сильная'}], level:1},
+          prog:{mode:'level', every:2, reps:{step:2, max:18}},
+          state:{count:2, current:{reps:'16-18', level:2}}})
       ]}]
     }];
     const seededStats = {totalSec:600,count:1,history:[{id:'h-a',d:'2026-09-17',t:8,pid:'sync-program',sec:600}],
@@ -112,13 +111,15 @@ async function boot(browser, label, errors){
       resistance:(() => {
         const p=customPrograms.find(x=>x.id==='sync-resistance');
         const ex=p && normPlans(p)[0] && normPlans(p)[0].exercises[0];
-        return ex ? {
-          loadType:ex.loadType, progMode:ex.progMode, loadLevel:ex.loadLevel,
-          levels:(ex.loadLevels||[]).map(x=>x.label||x.key),
-          n:ex.ps && ex.ps.n,
-          reps:ex.ps && ex.ps.cur && ex.ps.cur.reps,
-          level:ex.ps && ex.ps.cur && ex.ps.cur.level
-        } : null;
+        if(!ex) return null;
+        const pr = FitExerciseV2.prescriptionOf(ex), st = ex.progressState || {};
+        return {
+          loadType:pr.load.type, progMode:pr.progression.mode, loadLevel:pr.load.level,
+          levels:(pr.load.levels||[]).map(x=>x.label||x.key),
+          n:st.count,
+          reps:st.current && st.current.reps,
+          level:st.current && st.current.level
+        };
       })(),
       prog:Object.values(legacyWeights)[0], photos:localPhotos.length,
       state:$('accSync').textContent
@@ -156,12 +157,12 @@ async function boot(browser, label, errors){
     };
     const later = new Date(Date.now() + 5000).toISOString();
     const docs = originals.map(p => ({
-      key:'program:' + p.id, profileId:dupId, rev:1, at:later, schema:1,
+      key:'program:' + p.id, profileId:dupId, rev:1, at:later, schema:2,
       value:JSON.stringify(p)
     }));
-    docs.push({key:'program:' + unique.id, profileId:dupId, rev:1, at:later, schema:1,
+    docs.push({key:'program:' + unique.id, profileId:dupId, rev:1, at:later, schema:2,
       value:JSON.stringify(unique)});
-    docs.push({key:'index', profileId:dupId, rev:1, at:later, schema:1,
+    docs.push({key:'index', profileId:dupId, rev:1, at:later, schema:2,
       value:JSON.stringify({order:['sync-program','sync-program-2','sync-unique']})});
     await apiPost('/api/sync',{
       action:'push', email:account.email, deviceId:identity.deviceId, token:account.syncToken,

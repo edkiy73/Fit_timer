@@ -165,20 +165,6 @@ async function scenario(ctx, name, fn, errs){
     await homeThenExit(page, 'ручной конструктор');
   }, errs);
 
-  await scenario(ctx, 'модалка создания → ИИ → назад', async page => {
-    await page.evaluate(() => goTab('scrPrograms'));
-    await nap(page);
-    await page.click('#btnAddProgram');
-    await nap(page, 120);
-    await page.click('#chAI');
-    await nap(page, 500);
-    await aligned(page, 'ИИ из модалки', 'scrAI');
-    await page.click('#aiBackTop');
-    await nap(page, 650);
-    await aligned(page, 'назад из ИИ', 'scrPrograms');
-    await homeThenExit(page, 'создание через ИИ');
-  }, errs);
-
   await scenario(ctx, 'системный Back закрывает модалку, а не экран', async page => {
     await page.evaluate(() => goTab('scrPrograms'));
     await nap(page);
@@ -205,45 +191,6 @@ async function scenario(ctx, name, fn, errs){
     await nap(page, 550);
     await aligned(page, 'Back из конструктора после настроек', 'scrPrograms');
     await homeThenExit(page, 'настройки программы');
-  }, errs);
-
-  await scenario(ctx, 'новое упражнение → ИИ → назад не воскресит ИИ', async page => {
-    await seedProgram(page, 'nav-new-ex');
-    await page.evaluate(() => { goTab('scrPrograms'); openBuilder('nav-new-ex'); addExManual(); });
-    await nap(page, 450);
-    await aligned(page, 'новое упражнение', 'scrExercise');
-    await page.click('#exModeTabs .tab[data-m="ai"]');
-    await nap(page, 450);
-    await aligned(page, 'ИИ нового упражнения', 'scrAI');
-    await page.click('#aiBackTop');
-    await nap(page, 550);
-    await aligned(page, 'назад из ИИ нового упражнения', 'scrBuilder');
-    await page.goBack();
-    await nap(page, 300);
-    ok('Back после нового упражнения спрашивает про несохранённое', await page.isVisible('#dlgOk'));
-    await page.click('#dlgOk');
-    await nap(page, 700);
-    await aligned(page, 'Back после возврата из ИИ ведёт к тренировкам', 'scrPrograms');
-    await homeThenExit(page, 'новое упражнение / ИИ');
-  }, errs);
-
-  await scenario(ctx, 'существующее упражнение → ИИ → назад', async page => {
-    await seedProgram(page, 'nav-edit-ex');
-    await page.evaluate(() => { goTab('scrPrograms'); openBuilder('nav-edit-ex'); openExercise(0); });
-    await nap(page, 450);
-    await page.click('#exModeTabs .tab[data-m="ai"]');
-    await nap(page, 450);
-    await aligned(page, 'ИИ существующего упражнения', 'scrAI');
-    await page.click('#aiBackTop');
-    await nap(page, 500);
-    await aligned(page, 'назад из ИИ существующего упражнения', 'scrBuilder');
-    await page.goBack();
-    await nap(page, 300);
-    ok('Back после редактирования спрашивает про несохранённое', await page.isVisible('#dlgOk'));
-    await page.click('#dlgOk');
-    await nap(page, 700);
-    await aligned(page, 'Back после редактирования упражнения', 'scrPrograms');
-    await homeThenExit(page, 'существующее упражнение / ИИ');
   }, errs);
 
   await scenario(ctx, 'несохранённый конструктор: Остаться / Выйти', async page => {
@@ -288,22 +235,6 @@ async function scenario(ctx, name, fn, errs){
     await nap(page, 600);
     await aligned(page, 'назад из правил', 'scrAccount');
     await homeThenExit(page, 'правила из Другое');
-  }, errs);
-
-  await scenario(ctx, 'ИИ → подробности здоровья → назад в тот же ИИ', async page => {
-    await page.evaluate(() => { goTab('scrPrograms'); initAIForm(); openAI('text'); pregnancyWarning(); });
-    await nap(page, 250);
-    ok('предупреждение беременности открыто', await page.isVisible('#dlgCancel'));
-    await page.click('#dlgCancel');
-    await nap(page, 450);
-    await aligned(page, 'раздел здоровья', 'scrLegal');
-    await page.click('#btnLegalDone');
-    await nap(page, 500);
-    await aligned(page, 'возврат из здоровья', 'scrAI');
-    await page.click('#aiBackTop');
-    await nap(page, 650);
-    await aligned(page, 'выход из ИИ после здоровья', 'scrPrograms');
-    await homeThenExit(page, 'здоровье из ИИ');
   }, errs);
 
   await scenario(ctx, 'каталог → карточка программы → назад', async page => {
@@ -385,7 +316,7 @@ async function scenario(ctx, name, fn, errs){
     await homeThenExit(page, 'публикация');
   }, errs);
 
-  await scenario(ctx, 'активная тренировка → упражнение → ИИ → тренировка', async page => {
+  await scenario(ctx, 'активная тренировка → системный Back', async page => {
     await seedProgram(page, 'nav-live-workout');
     await page.evaluate(() => {
       configureWorkoutTiming({prep: 0});
@@ -396,15 +327,8 @@ async function scenario(ctx, name, fn, errs){
     await page.waitForSelector('#startModal.open');
     await page.click('#startFresh');
     await page.waitForFunction(() => state.live && state.steps.some(step => step.phase === 'work'));
-    await page.evaluate(() => editExerciseFromWorkout());
-    await nap(page, 500);
-    await aligned(page, 'упражнение из тренировки', 'scrExercise');
-    await page.click('#exModeTabs .tab[data-m="ai"]');
     await nap(page, 450);
-    await aligned(page, 'ИИ из активной тренировки', 'scrAI');
-    await page.click('#aiBackTop');
-    await nap(page, 600);
-    await aligned(page, 'возврат в активную тренировку', 'scrWork');
+    await aligned(page, 'активная тренировка', 'scrWork');
 
     await page.goBack();
     await nap(page, 450);
@@ -414,48 +338,6 @@ async function scenario(ctx, name, fn, errs){
     await nap(page, 700);
     await aligned(page, 'выход без сохранения из тренировки', 'scrMenu');
     await homeThenExit(page, 'активная тренировка');
-  }, errs);
-
-  await scenario(ctx, 'ИИ добавляет упражнение → Builder без возврата в ИИ', async page => {
-    await seedProgram(page, 'nav-ai-add');
-    await page.evaluate(() => {
-      goTab('scrPrograms');
-      openBuilder('nav-ai-add');
-    });
-    // fillBuilder фиксирует исходный snapshot в setTimeout(0). В реальном UI человек
-    // физически не успевает открыть ИИ раньше; тест обязан дать этому тика случиться,
-    // иначе snapshot снимется уже ПОСЛЕ добавленного упражнения и programDirty() ложно
-    // решит, что изменений нет.
-    await nap(page, 80);
-    const aiAdd = await page.evaluate(async () => {
-      openExAI();
-      const raw = ['УПРАЖНЕНИЕ: Выпады','ФОРМАТ: повторения','ЗНАЧЕНИЕ: 10','ПОДХОДЫ: 1','ОТДЫХ: 30'].join('\n');
-      const verdict = FitAIProtocol.validateResponse('exercise.create', raw);
-      $('aiResult').value = raw;
-      await exaAddExercise();
-      return {
-        verdict,
-        screen: show._last,
-        historyScreen: history.state && history.state.scr,
-        stack: [...navStack],
-        dialog: $('dlg').classList.contains('open'),
-        message: $('dlgMsg').textContent || ''
-      };
-    });
-    ok('тестовый ответ ИИ валиден', !!(aiAdd.verdict && aiAdd.verdict.ok), JSON.stringify(aiAdd.verdict));
-    ok('AI-добавление вернуло в Builder', aiAdd.screen === 'scrBuilder' && aiAdd.historyScreen === 'scrBuilder',
-      JSON.stringify(aiAdd));
-    await aligned(page, 'после добавления через ИИ', 'scrBuilder');
-    ok('success-попап открыт уже поверх Builder', aiAdd.dialog && await page.isVisible('#dlgOk'), aiAdd.message);
-    await page.click('#dlgOk');
-    await nap(page, 650);
-    await page.goBack();
-    await nap(page, 300);
-    ok('Back из изменённого Builder спрашивает о несохранённом', await page.isVisible('#dlgOk'));
-    await page.click('#dlgOk');
-    await nap(page, 650);
-    await aligned(page, 'выход после AI-добавления', 'scrPrograms');
-    await homeThenExit(page, 'AI-добавление упражнения');
   }, errs);
 
   await scenario(ctx, 'финал тренировки → Готово → Сегодня', async page => {

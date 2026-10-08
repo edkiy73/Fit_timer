@@ -77,36 +77,20 @@ const progEn = (name) => `ПРОГРАММА: ${name}
   await becomeTrainer(page, {handle: NICK, trainer: {about: 'Домашний фитнес.', years: 5, links: ''}});
   ok('ник закреплён', await page.evaluate(() => !!trainer.key));
 
-  const add = (name) => page.evaluate(async ({txt, name}) => {
-    const r = parseProgramText(txt);
-    const p = r.program || r; p.id = 'p' + Math.random().toString(36).slice(2, 8); p.name = name;
-    customPrograms.push(p); await savePrograms();
-    return p.id;
-  }, {txt: prog(name), name});
-
-  // ---- недобор полей ловится ДО отправки ----
-  const id1 = await add(NAME);
-  const miss = await page.evaluate(async (pid) => {
-    openPublish(customPrograms.find(p => p.id === pid));
-    await doPublish();                       // ничего не заполнено
-    return document.getElementById('dlgMsg').textContent;
-  }, id1);
-  ok('пустую заявку не пускает', /Не хватает/.test(miss), miss.slice(0, 52));
-  await page.click('#dlgOk'); await page.waitForTimeout(300);
-
-  // ---- нормальная отправка ----
-  const sent = await page.evaluate(async (name) => {
-    pubDraft.cat = 'Кардио и энергия';
-    pubDraft.level = 'Средний';
-    pubDraft.gives = 'Три базовых движения по кругу. Ничего, кроме коврика, не нужно.';
-    document.getElementById('pubGives').value = pubDraft.gives;
-    await doPublish();
-    const published = customPrograms.find(p => p.name === name);
-    return {status: published && published.pub && published.pub.status, msg: document.getElementById('dlgMsg').textContent};
-  }, NAME);
-  ok('заявка ушла и ждёт проверки', sent.status === 'pending', sent.status);
-  ok('человеку сказано, что заявка ушла на проверку', /на проверку/.test(sent.msg), sent.msg.slice(0, 60));
-  await page.click('#dlgOk'); await page.waitForTimeout(300);
+  // ---- отправка ----
+  // Отправка из интерфейса (doPublish) отключена до V2-каталога. Серверную модерацию
+  // проверяем, отправляя заявку прямо в API той же формой, что строил doPublish, и
+  // помечая личную программу так же, как он (p.pub), чтобы проверить обновление статуса.
+  const sent = await page.evaluate(async ({nick, name, txt}) => {
+    const r = await apiPost('/api/catalog', {by: nick, trainerKey: trainer.key, item: {
+      sourceLocale: 'ru', name, gives: 'Три базовых движения по кругу. Ничего, кроме коврика, не нужно.',
+      cat: 'cardio', level: 'Средний', min: 20, exCount: 3, text: txt, cover: null, media: null}});
+    customPrograms.push({id: 'pub1', name, plans: [v2plan('pub1-plan', [v2ex('Приседания'), v2ex('Отжимания'), v2ex('Планка')])],
+      pub: {id: r.id, status: r.status}});
+    await savePrograms();
+    return r.status;
+  }, {nick: NICK, name: NAME, txt: prog(NAME)});
+  ok('заявка ушла и ждёт проверки', sent === 'pending', sent);
 
   // ---- в каталоге её ещё нет ----
   const before = await page.evaluate(async (name) => {
@@ -195,6 +179,7 @@ const progEn = (name) => `ПРОГРАММА: ${name}
 
   // ---- статус у тренера обновился сам ----
   const st = await page.evaluate(async (name) => {
+    openPublish(customPrograms.find(p => p.name === name));
     await refreshPubStatus();
     const published = customPrograms.find(p => p.name === name);
     return published && published.pub && published.pub.status;

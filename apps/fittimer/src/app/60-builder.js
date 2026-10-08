@@ -4,7 +4,7 @@ import FitAIProtocol from '../../lib/ai-protocol.js';
 import FitExerciseV2 from '../../lib/fit-exercise-v2.js';
 import { appRuntimeCompat } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
-import { $, appAlert, appDialog, goBackTo, goTab, icon, isChanged, plural, setCoreBuilderHooks, setShown, show, state,
+import { $, appAlert, appConfirm, appDialog, goBackTo, goTab, icon, isChanged, plural, setCoreBuilderHooks, setShown, show, state,
   takeSnap
 } from './00-core.js';
 import { DAYS, closeAllMenus, customPrograms, newPlanId, normPlans, planDays, savePrograms,
@@ -1017,6 +1017,27 @@ export function advanceExerciseProgression(ex){
   if(result.changed.includes('level')) cur.level = result.next.level;
 }
 
+// Следующий этап движения. Предлагается сам только при advance:'ceiling' и
+// достигнутом конечном потолке текущего этапа; вручную перейти можно всегда.
+export function nextExerciseStage(ex){
+  const list = (ex && ex.stages) || [];
+  const i = list.findIndex(st => st.stageId === ex.currentStageId);
+  return i >= 0 ? list[i + 1] || null : null;
+}
+export function stageOfferAtCeiling(ex, program){
+  const st = FitExerciseV2.activeStage(ex);
+  const next = nextExerciseStage(ex);
+  if(!st || !next || !st.advance || st.advance.mode !== 'ceiling') return null;
+  return progAtCeiling(program && program.id, ex, program) ? next : null;
+}
+// Переход между этапами: тот же слот (exercise.id), другой stageId, прогресс заново
+export function promoteExerciseStage(ex, stageId){
+  if(!ex || !(ex.stages || []).some(st => st.stageId === stageId)) return false;
+  ex.currentStageId = stageId;
+  ex.progressState = {count:0, current:emptyProgressCurrent()};
+  return true;
+}
+
 /* ---- перенос прогресса при правке упражнения ----
    - другой этап движения или другая физическая конфигурация нагрузки (cfgKey) —
      новый период: прогресс начинается заново;
@@ -1357,12 +1378,17 @@ export function dropFreshEx(){
   exDraft = null; exIdx = -1; exOrig = '';
 }
 
-let exOrig = '';  // снимок упражнения на момент открытия — для проверки изменений
+let exOrig = '';
+// Этапы движения в редакторе: в черновике currentStageId = РЕДАКТИРУЕМЫЙ этап (так вся
+// форма читает exP(exDraft) без второй ветки), настоящий текущий этап хранится здесь
+// и возвращается в упражнение при сравнении и сохранении (exerciseEditResult).
+let exRealStageId = '';  // снимок упражнения на момент открытия — для проверки изменений
 export function openExercise(i, isNew){
   const list = curPlan().exercises;
   exIdx = i;
   exIsNew = !!isNew;
   exDraft = JSON.parse(JSON.stringify(list[i]));
+  exRealStageId = exDraft.currentStageId;
   // «отдых после упражнения» на первое открытие равен отдыху между подходами:
   // с этого момента он явный и сохранится тем же числом, даже если его не трогать
   const p = exP(exDraft);
@@ -1376,12 +1402,12 @@ export function openExercise(i, isNew){
   // Снимок для сравнения снимаем С ФОРМЫ тем же путём, каким потом сравниваем
   // (applyFormTo): иначе типы черновика и формы расходились и «назад» с нетронутого
   // упражнения спрашивало про несохранённые изменения.
-  exOrig = JSON.stringify(applyFormTo(JSON.parse(JSON.stringify(exDraft))));
+  exOrig = JSON.stringify(exerciseEditResult(JSON.parse(JSON.stringify(exDraft))));
   show('scrExercise');
   window.scrollTo(0, 0);
 }
 
-function fillExercise(){
+function fillExercise(keepOpen){
   const ex = exDraft;
   const p = exP(ex);
   // «тронутые» поля шага и потолка помечаются, чтобы renderProgControls не затирал ввод.
@@ -1406,9 +1432,15 @@ function fillExercise(){
   syncExType();
   syncExWarm();
   renderExMuscles();
+  renderExSupport();
   renderExRestChips();
   renderExMedia();
   syncExDetailsSum();
+  renderExerciseStages();
+  // переключение этапа перерисовывает форму, но не сворачивает то, где человек работает
+  if(keepOpen) return;
+  setShown('exChainBox', false);
+  $('exChainToggle').classList.remove('open');
   // обе раскрывашки по умолчанию свёрнуты: видно только то, без чего упражнения нет
   setShown('exDetailsBox', false);
   $('exDetailsToggle').classList.remove('open');
@@ -1527,6 +1559,137 @@ function renderExMuscles(){
     box.appendChild(b);
   });
 }
+// Доп. оборудование: на чём выполняется движение (скамья, турник), без нагрузки.
+// Своё «Другое» с названием сохраняется как есть, чипы — только каталог.
+function renderExSupport(){
+  const box = $('exSupport'); if(!box) return;
+  box.innerHTML = '';
+  const p = exP(exDraft);
+  const have = new Set((p.supportEquipment || []).filter(x => typeof x === 'string'));
+  FitExerciseV2.equipmentIds('support').filter(id => id !== 'custom').forEach(id => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'day-chip'; b.textContent = equipmentLabel(id);
+    b.classList.toggle('act', have.has(id));
+    b.dataset.act = 'toggleExerciseSupport';
+    b.dataset.equipmentId = id;
+    box.appendChild(b);
+  });
+}
+
+/* ---- этапы движения ---- */
+export function exerciseEditResult(target){
+  const out = applyFormTo(target);
+  if(exRealStageId && (out.stages || []).some(st => st.stageId === exRealStageId)) out.currentStageId = exRealStageId;
+  return out;
+}
+function stageIndex(ex, stageId){ return (ex.stages || []).findIndex(st => st.stageId === stageId); }
+function stageTitle(st, i){
+  return (st && st.prescription && st.prescription.name || '').trim() || t('builder.stageUnnamed',{n:i + 1});
+}
+// Чем начнётся этап после перехода: его база (прогресс этапа начинается заново)
+export function stageStartText(ex, stageId){
+  const st = (ex.stages || [])[stageIndex(ex, stageId)];
+  if(!st) return '';
+  return exSummary({id:ex.id, warmup:ex.warmup, currentStageId:st.stageId, stages:[st],
+    progressState:{count:0, current:emptyProgressCurrent()}});
+}
+export function renderExerciseStages(){
+  if(!exDraft || !$('exChainList')) return;
+  const ex = exDraft;
+  const stages = ex.stages || [];
+  const editIdx = Math.max(0, stageIndex(ex, ex.currentStageId));
+  const realIdx = Math.max(0, stageIndex(ex, exRealStageId));
+  const box = $('exChainList');
+  box.innerHTML = '';
+  stages.forEach((st, i) => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'stage-row' + (i === editIdx ? ' act' : '');
+    row.dataset.act = 'editExerciseStage';
+    row.dataset.stageId = st.stageId;
+    const name = document.createElement('b');
+    name.textContent = (i + 1) + '. ' + stageTitle(st, i);
+    const meta = document.createElement('small');
+    const bits = [];
+    if(i === realIdx) bits.push(t('builder.stageCurrent'));
+    if(i < stages.length - 1) bits.push(t(st.advance && st.advance.mode === 'ceiling' ? 'builder.stageAdvanceCeiling' : 'builder.stageAdvanceManual'));
+    meta.textContent = bits.join(' · ');
+    row.append(name, meta);
+    box.appendChild(row);
+  });
+  const multi = stages.length > 1;
+  const st = stages[editIdx];
+  setShown('exStageAdvanceRow', multi && editIdx < stages.length - 1);
+  if(st) $('exStageAdvance').value = st.advance && st.advance.mode === 'ceiling' ? 'ceiling' : 'manual';
+  setShown('exStageActions', multi);
+  setShown('exStageCurrent', multi && editIdx !== realIdx);
+  setShown('exStageUp', editIdx > 0);
+  setShown('exStageDown', editIdx < stages.length - 1);
+  setShown('exStageRemove', multi);
+  setShown('exStageAdd', stages.length < FitExerciseV2.MAX_STAGES);
+  $('exChainSum').textContent = multi ? t('builder.stageTag',{current:realIdx + 1, count:stages.length}) : '';
+}
+export function editExerciseStage(stageId){
+  if(!exDraft || stageIndex(exDraft, stageId) < 0 || exDraft.currentStageId === stageId) return;
+  applyFormTo(exDraft);
+  exDraft.currentStageId = stageId;
+  fillExercise(true);
+}
+// Новый этап начинается копией редактируемого: оборудование, подходы и отдых обычно
+// те же, а название человек даёт сам — пустое имя не даст сохранить.
+export function addExerciseStage(){
+  if(!exDraft || exDraft.stages.length >= FitExerciseV2.MAX_STAGES) return;
+  applyFormTo(exDraft);
+  const i = Math.max(0, stageIndex(exDraft, exDraft.currentStageId));
+  const prescription = JSON.parse(JSON.stringify(exDraft.stages[i].prescription));
+  prescription.name = '';
+  const stageId = newStageId();
+  exDraft.stages.splice(i + 1, 0, {stageId, prescription, advance:{mode:'manual'}, mediaRef:null, visualKey:''});
+  exDraft.currentStageId = stageId;
+  fillExercise(true);
+  $('exName').focus();
+}
+export function moveExerciseStage(dir){
+  if(!exDraft) return;
+  applyFormTo(exDraft);
+  const i = stageIndex(exDraft, exDraft.currentStageId), j = i + dir;
+  if(i < 0 || j < 0 || j >= exDraft.stages.length) return;
+  const list = exDraft.stages;
+  [list[i], list[j]] = [list[j], list[i]];
+  renderExerciseStages();
+}
+export function setExerciseStageAdvance(mode){
+  if(!exDraft) return;
+  const st = exDraft.stages[stageIndex(exDraft, exDraft.currentStageId)];
+  if(st) st.advance = {mode:mode === 'ceiling' ? 'ceiling' : 'manual'};
+  renderExerciseStages();
+}
+export async function removeExerciseStage(){
+  if(!exDraft || exDraft.stages.length < 2) return;
+  const i = stageIndex(exDraft, exDraft.currentStageId);
+  if(i < 0) return;
+  applyFormTo(exDraft);
+  if(!await appConfirm(t('builder.stageRemoveConfirm',{name:stageTitle(exDraft.stages[i], i)}))) return;
+  const removed = exDraft.stages.splice(i, 1)[0];
+  const next = exDraft.stages[Math.max(0, i - 1)];
+  if(removed.stageId === exRealStageId) exRealStageId = next.stageId;
+  exDraft.currentStageId = next.stageId;
+  fillExercise(true);
+}
+// «Перейти сейчас»: и вперёд, и назад. Прогресс этапа начинается с его базы —
+// подтверждение показывает, с чего именно.
+export async function makeExerciseStageCurrent(){
+  if(!exDraft || exDraft.currentStageId === exRealStageId) return;
+  applyFormTo(exDraft);
+  const i = stageIndex(exDraft, exDraft.currentStageId);
+  if(i < 0) return;
+  const ok = await appConfirm(t('builder.stageSwitchConfirm',{name:stageTitle(exDraft.stages[i], i),
+    start:stageStartText(exDraft, exDraft.currentStageId)}));
+  if(!ok) return;
+  exRealStageId = exDraft.currentStageId;
+  renderExerciseStages();
+}
+
 // «12,5» и «12.5» — одинаково допустимый ввод веса
 export function parseKg(v){
   const n = parseFloat(String(v || '').replace(',', '.'));
@@ -1807,13 +1970,13 @@ export function exDirty(){
     const initial = String($('exLoadLevels').dataset.initialValue || '').trim();
     if(raw !== initial) return true;
   }
-  const snapshot = applyFormTo(JSON.parse(JSON.stringify(exDraft)));
+  const snapshot = exerciseEditResult(JSON.parse(JSON.stringify(exDraft)));
   return JSON.stringify(snapshot) !== exOrig;
 }
 
 export function commitExercise(){
   const old = (curPlan().exercises || [])[exIdx];
-  const upd = applyFormTo(exDraft);
+  const upd = exerciseEditResult(exDraft);
   return old ? carryExerciseProgress(old, upd) : upd;
 }
 // Строгая проверка перед сохранением: весовая/сопротивляющая нагрузка без снаряда,
@@ -1822,7 +1985,7 @@ export function commitExercise(){
 export function exerciseDraftProblems(){
   if(!exDraft) return '';
   let probe;
-  try{ probe = applyFormTo(JSON.parse(JSON.stringify(exDraft))); }catch(_){ return ''; }
+  try{ probe = exerciseEditResult(JSON.parse(JSON.stringify(exDraft))); }catch(_){ return ''; }
   const errors = exerciseErrors(probe);
   const out = [];
   const add = key => { const txt = t(key); if(!out.includes(txt)) out.push(txt); };
@@ -1976,6 +2139,10 @@ function exRow(ex, i){
     meta.appendChild(el);
   };
   if(ex.warmup) tag(t('store.warmup'), 'wm');
+  if((ex.stages || []).length > 1){
+    const cur = ex.stages.findIndex(st => st.stageId === ex.currentStageId);
+    tag(t('builder.stageTag',{current:cur + 1, count:ex.stages.length}));
+  }
   exBits(ex).forEach(txt => tag(txt));
   const grow = progShort(ex);
   if(grow) tag(grow, 'grow');
@@ -2585,6 +2752,25 @@ export function initBuilder(){
     renderDays();
     renderPlanTabs();
   });
+  registerAction('toggleExerciseSupport', btn => {
+    const id = btn.dataset.equipmentId;
+    if(!id || !exDraft) return;
+    const p = exP(exDraft);
+    const list = p.supportEquipment || [];
+    p.supportEquipment = list.includes(id) ? list.filter(x => x !== id) : [...list, id];
+    renderExSupport();
+  });
+  registerAction('toggleExerciseChainBox', () => {
+    const box = $('exChainBox'), open = box.classList.contains('hidden');
+    setShown(box, open);
+    $('exChainToggle').classList.toggle('open', open);
+  });
+  registerAction('editExerciseStage', btn => editExerciseStage(btn.dataset.stageId));
+  registerAction('addExerciseStage', () => addExerciseStage());
+  registerAction('moveExerciseStageUp', () => moveExerciseStage(-1));
+  registerAction('moveExerciseStageDown', () => moveExerciseStage(1));
+  registerAction('removeExerciseStage', () => removeExerciseStage());
+  registerAction('makeExerciseStageCurrent', () => makeExerciseStageCurrent());
   registerAction('toggleExerciseMuscle', btn => {
     const id = btn.dataset.muscleId;
     if(!id || !exDraft) return;
@@ -2695,6 +2881,7 @@ export function initBuilder(){
     syncExNowHints();
   };
   $('exEquipName').oninput = ()=>{ exP(exDraft).load.name = $('exEquipName').value; };
+  $('exStageAdvance').onchange = ()=> setExerciseStageAdvance($('exStageAdvance').value);
   $('exProgMode').onchange = ()=>{
     const selected = $('exProgMode').value;
     if(selected === 'level_direct'){

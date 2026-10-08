@@ -1111,19 +1111,19 @@ function exerciseLoad(p, ex){
 }
 
 // Снимок нужен следующей тренировке для честного «было → сегодня».
-// Старые записи снимка не имеют. После перехода на per-exercise progression
-// восстанавливать их арифметикой из общего completions уже нельзя: каждое
-// упражнение могло прогрессировать в свой момент. Для legacy истории ниже
-// честно помечаем нагрузку как неизвестную, а не придумываем «предыдущую».
-// Строка снимка привязана к упражнению по exercise.id, а не по позиции/названию:
-// перестановка или переименование упражнения не должны ломать «было → сегодня».
+// Строка снимка привязана к упражнению по exercise.id и этапу движения (stageId),
+// а не по позиции/названию: перестановка или переименование не ломают сравнение.
 export function workoutLoadSnapshot(p, planIdx){
   const pl = normPlans(p)[planIdx] || normPlans(p)[0];
   return ((pl && pl.exercises) || []).map(ex => {
     const v = exerciseLoad(p, ex);
+    const load = pr(ex).load || {};
     return {
       id:String(ex.id || ''),
+      stageId:String(ex.currentStageId || ''),
+      cfgKey:FitExerciseV2.cfgKey(load),
       reps:v.reps || '', sec:+v.sec || 0, kg:+v.kg || 0,
+      unit:load.unit === 'lb' ? 'lb' : 'kg',
       level:v.level == null ? null : +v.level,
       levelKey:String(v.levelKey || ''),
       levelLabel:String(v.levelLabel || '')
@@ -1131,22 +1131,41 @@ export function workoutLoadSnapshot(p, planIdx){
   });
 }
 
+// Строка нагрузки в stats.history хранится компактно (FitExerciseV2.encodeLoadRow):
+// {s:stageId, c:cfgKey, r, t, w, …}. Экранам нужна читаемая строка snapshot.
+export function storedLoadRow(row){
+  const r = row || {};
+  return FitExerciseV2.encodeLoadRow({stageId:r.stageId, cfgKey:r.cfgKey, reps:r.reps, time:r.sec,
+    weight:r.kg, unit:r.unit, level:r.level, levelKey:r.levelKey, levelLabel:r.levelLabel});
+}
+export function readLoadRow(row){
+  const d = FitExerciseV2.decodeLoadRow(row, stats.stageNames || {});
+  return {id:d.exId, stageId:d.stageId, stageName:d.stageName, cfgKey:d.cfgKey, reps:d.reps, sec:d.time,
+    kg:d.weight, unit:d.unit, level:d.level, levelKey:d.levelKey, levelLabel:d.levelLabel};
+}
+
+// «Было → сегодня» сравнивает только одну и ту же физическую нагрузку: тот же этап
+// движения (stageId) и тот же cfgKey (тип, снаряд, количество). Другой этап или
+// другой снаряд — это новое упражнение, ложной ↑/↓ быть не должно.
+// stageId уникален в профиле, поэтому ищем по всей истории, а не только по варианту.
 export function previousWorkoutLoad(p, planIdx){
-  const planId = planIdAt(p, planIdx);
-  const hist = planId ? (stats.history || []).filter(h => h.pid === p.id && h.planId === planId) : [];
-  const last = hist[hist.length - 1];
-  if(last && Array.isArray(last.load)) return {first:false, exact:true, legacy:false, rows:last.load};
-
-  const done = Math.max(0, +((p.stats && p.stats.completions) || 0));
-  if(!hist.length && done <= 0) return {first:true, exact:false, legacy:false, rows:[]};
-
-  // До появления load snapshot старый движок мог приблизительно откатить
-  // программу через completions-1. Теперь фактическая нагрузка хранится в progressState:
-  // два упражнения одной программы могут иметь разные cur/n, а partial вообще
-  // двигает только полностью завершённые упражнения. Поэтому общий completions
-  // не содержит достаточно информации, чтобы восстановить прошлые reps/sec/kg.
-  // Возвращаем «история есть, точной нагрузки нет» и НЕ рисуем ложное сравнение.
-  return {first:false, exact:false, legacy:true, rows:[]};
+  const today = workoutLoadSnapshot(p, planIdx);
+  const want = new Set(today.map(r => r.stageId).filter(Boolean));
+  const byStage = new Map();
+  const hist = stats.history || [];
+  for(let i = hist.length - 1; i >= 0 && byStage.size < want.size; i--){
+    const rows = Array.isArray(hist[i] && hist[i].load) ? hist[i].load : [];
+    rows.forEach(row => {
+      if(row && row.s && want.has(row.s) && !byStage.has(row.s)) byStage.set(row.s, readLoadRow(row));
+    });
+  }
+  const rows = today.map(r => {
+    const before = byStage.get(r.stageId);
+    // этап принадлежит ровно одному слоту: exId берём из сегодняшней строки, если реестр
+    // имён ещё не доехал синхронизацией
+    return before && before.cfgKey === r.cfgKey ? Object.assign({}, before, {id:before.id || r.id}) : null;
+  });
+  return {first:!byStage.size, exact:byStage.size > 0, rows, today};
 }
 
 function loadTargetText(ex, v){
@@ -1234,13 +1253,11 @@ function renderStartOverview(){
   const pl = normPlans(p)[state.planIdx] || normPlans(p)[0];
   if(!p || !pl) return;
   const exercises = pl.exercises || [];
-  const current = workoutLoadSnapshot(p, state.planIdx);
   const previous = previousWorkoutLoad(p, state.planIdx);
-  const oldById = new Map((previous.rows || []).filter(x => x && x.id).map(x => [String(x.id), x]));
+  const current = previous.today;
   const changes = [];
   exercises.forEach((ex, i) => {
-    const old = ex.id ? oldById.get(String(ex.id)) : null;
-    const delta = loadDelta(old, current[i]);
+    const delta = loadDelta(previous.rows[i], current[i]);
     if(delta.text) changes.push({i, text:delta.text, dir:delta.dir});
   });
 
@@ -1275,9 +1292,6 @@ function renderStartOverview(){
   }
   if(previous.first){
     changeText(t('start.firstWorkout'));
-  } else if(previous.legacy){
-    const text = t('start.previousLoadUnknown');
-    changeText(nextText ? text + ' ' + nextText : text);
   } else if(changes.length){
     const direction = changes.every(x => x.dir === 'up') ? 'up'
       : changes.every(x => x.dir === 'down') ? 'down' : 'mixed';

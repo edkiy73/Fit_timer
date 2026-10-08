@@ -10,6 +10,7 @@
   "limits": 7,
   "link-length": 8,
   "media-flow": 12,
+  "movement-chain-flow": 11,
   "nav-flow": 10,
   "nav-transitions": 66,
   "notifications": 3,
