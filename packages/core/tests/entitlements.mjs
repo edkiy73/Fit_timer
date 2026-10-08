@@ -77,6 +77,18 @@ ok('catalog lists valid product SKUs only', catalog.body.products.length === 1 &
 ok('SKU outside the catalog is rejected', (await admin('user_owned', {email:'buyer@example.com', sku:'pack.grammar'})).body.error === 'unknown_sku');
 ok('SKU from the catalog is granted', (await admin('user_owned', {email:'buyer@example.com', sku:'pack.speech'})).body.owned[0] === 'pack.speech');
 
+const journal = await admin('billing_log');
+const manualEvents = (journal.body.events || []).filter(event => event.provider === 'admin');
+ok('manual grant/revoke actions are written to the shared billing journal',
+  manualEvents.filter(event => event.status === 'manual_grant').length === 3
+  && manualEvents.filter(event => event.status === 'manual_revoke').length === 2);
+ok('repeating the same manual owned grant does not duplicate the audit event',
+  manualEvents.filter(event => event.status === 'manual_grant' && event.sku === 'pack.grammar').length === 1);
+ok('manual entitlement audit carries no email or provider order id',
+  !JSON.stringify(manualEvents).includes('buyer@example.com')
+  && manualEvents.every(event => !event.order)
+  && manualEvents.every(event => /^[a-f0-9]{12}$/.test(String(event.account || ''))));
+
 // Server helpers for product endpoints.
 const acc = {sub:{until:'2099-01-01'}, owned:{'pack.a':{since:'x', provider:'store', orderId:'secret'}, 'BAD KEY':{}}};
 ok('server helpers read Premium and owned SKUs', E.hasPremium(acc) && E.hasOwned(acc, 'PACK.A') && !E.hasOwned(acc, 'bad key'));
