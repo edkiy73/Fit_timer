@@ -9,7 +9,16 @@ const { createYooKassaBillingAdapter } = require('../server/billing-providers/yo
 const { createGooglePlayBillingAdapter } = require('../server/billing-providers/google-play');
 const { createAppleStoreBillingAdapter, createApiToken, verifyAndDecodeAppleJws } = require('../server/billing-providers/apple-store');
 
-configureProduct({id:'test.billing', name:'Billing Test', slug:'billing-test', defaultPublicUrl:'https://app.example', products:[]});
+configureProduct({
+  id:'test.billing',
+  name:'Billing Test',
+  slug:'billing-test',
+  defaultPublicUrl:'https://app.example',
+  products:[
+    {sku:'pack.a', title:'Pack A', billing:{apple:{productId:'pack_a_ios'}}},
+    {sku:'plus.month', title:'Plus', kind:'subscription', days:30, billing:{apple:{productId:'plus_month_ios'}}}
+  ]
+});
 
 let bad = 0;
 const ok = (name, cond, detail = '') => {
@@ -296,6 +305,8 @@ const apple = createAppleStoreBillingAdapter({
   getCredentials:async () => ({issuerId:'issuer-1', keyId:'KEY123', privateKey:'present'}),
   getApiToken:async () => 'server-jwt',
   verifySignedData:async jws => JSON.parse(Buffer.from(String(jws).split('.')[1], 'base64url').toString('utf8')),
+  resolveAppAccountToken:async token => token === appleIdentity.appleAppAccountToken
+    ? {email:'payer@example.com'} : null,
   now:() => Date.parse('2030-01-15T00:00:00Z'),
   fetchImpl:async (url, init = {}) => {
     appleCalls.push({url, init});
@@ -387,6 +398,42 @@ ok('App Store rejects a transaction linked to another AppBase account',
     proof:{transactionId:'tx-other-account'},
     identity:appleIdentity
   }).then(() => false, e => e.message === 'store_account_mismatch' && e.status === 403));
+
+const refundNotification = await apple.verifyWebhook({body:{
+  signedPayload:fakeJws({
+    notificationType:'REFUND',
+    data:{signedTransactionInfo:fakeJws(appleTransactions['tx-refund'])}
+  })
+}});
+ok('App Store notification re-fetches and normalizes a refund',
+  refundNotification.ok
+  && refundNotification.events[0]?.status === 'refunded'
+  && refundNotification.events[0]?.email === 'payer@example.com'
+  && refundNotification.events[0]?.sku === 'pack.a');
+
+const renewalNotification = await apple.verifyWebhook({body:{
+  signedPayload:fakeJws({
+    notificationType:'DID_RENEW',
+    data:{signedTransactionInfo:fakeJws(appleTransactions['tx-sub'])}
+  })
+}});
+ok('App Store renewal notification resolves current status before changing access',
+  renewalNotification.ok
+  && renewalNotification.events[0]?.status === 'paid'
+  && renewalNotification.events[0]?.autoRenew === true
+  && renewalNotification.events[0]?.sku === 'plus.month');
+
+const foreignNotification = await apple.verifyWebhook({body:{
+  signedPayload:fakeJws({
+    notificationType:'REFUND',
+    data:{signedTransactionInfo:fakeJws(appleTransactions['tx-other-account'])}
+  })
+}});
+ok('App Store notification cannot affect an unlinked account',
+  foreignNotification.ok && foreignNotification.events.length === 0);
+
+ok('App Store rejects a webhook without a signed payload',
+  !(await apple.verifyWebhook({body:{}})).ok);
 
 console.log(bad ? `\nExternal billing provider failures: ${bad}` : '\nExternal billing providers behave correctly');
 process.exit(bad ? 1 : 0);
