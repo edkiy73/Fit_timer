@@ -19,7 +19,7 @@ const REFERENCES = [
     id:'slim_toned_v2', suffix:'slimtoned',
     dto:require('../catalog/etalon-slim-toned-ru-v2.json'),
     english:require('../catalog/etalon-slim-toned-en-v2.json'),
-    cat:'relief',level:'Начальный–средний',min:45,
+    cat:'relief',level:'Средний',min:45,
     gives:'Три силовые тренировки дома для стройного, подтянутого тела: ноги, ягодицы, спина, грудь, руки и контроль корпуса.',
     ruGives:'Три домашние тренировки в неделю для пропорционального укрепления всего тела и поддержки формы при снижении веса.',
     enGives:'Three balanced home strength sessions weekly for a leaner, toned body with full-body strength and core control.'
