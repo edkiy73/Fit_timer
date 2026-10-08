@@ -188,11 +188,29 @@ test('reference silhouette catalog DTO matches the V2 schema and is accepted by 
   const program = C.programFromCreate(fixture, ids());
   assert.deepStrictEqual(program.errors, []);
   assert.strictEqual(program.program.plans.length, 2);
-  assert.deepStrictEqual(program.program.plans.map(p=>p.exercises.length), [11,12]);
+  assert.deepStrictEqual(program.program.plans.map(p=>p.exercises.length), [10,11]);
   assert.strictEqual(program.program.plans[0].exercises[5].stages.length, 2);
-  assert.strictEqual(program.program.plans[1].exercises[11].stages.length, 2);
+  assert.strictEqual(program.program.plans[1].exercises[10].stages.length, 1);
   const strength = program.program.plans.flatMap(p=>p.exercises.filter(ex=>!ex.warmup));
-  assert.strictEqual(strength.length, 16);
+  assert.strictEqual(strength.length, 15);
+});
+
+test('updated V-shape priorities, equipment and beginner technique are consistent', () => {
+  const p=require('../catalog/etalon-v-silhouette-ru-v2.json').program;
+  const names=p.plans.map(x=>x.exercises.map(e=>e.stages[0].name));
+  assert.strictEqual(names[0][4], 'Подъёмы гантелей в стороны');
+  assert.strictEqual(names[1][4], 'Жим двух гантелей над головой');
+  assert.ok(names[1].includes('Статичный выпад назад с гантелями'));
+  assert.ok(!names[1].some(n=>n.includes('Ягодичный мостик')));
+  const stages=p.plans.flatMap(x=>x.exercises.flatMap(e=>e.stages));
+  const laterals=stages.filter(x=>x.name==='Подъёмы гантелей в стороны');
+  assert.strictEqual(laterals.length,2);
+  laterals.forEach(x=>{assert.strictEqual(x.load.weight,2.5);assert.strictEqual(x.value,'10-15');});
+  const side=stages.find(x=>x.name==='Боковая планка на прямых ногах');
+  assert.strictEqual(side.value,'30');
+  assert.strictEqual(side.sets,2);
+  assert.ok(stages.some(x=>x.name==='Разгибание гантели из-за головы'));
+  stages.forEach(x=>{assert.ok(x.desc.length>70, x.name);assert.ok(x.desc.length<=600,x.name);});
 });
 
 test('catalog seed has complete RU and EN descriptions for every movement stage', () => {
@@ -204,7 +222,7 @@ test('catalog seed has complete RU and EN descriptions for every movement stage'
   assert.deepStrictEqual(cleaned.errors, []);
   const source = CP.textsOf(cleaned.program);
   assert.strictEqual(CP.textsComplete(source,item.locales.en.texts), true);
-  assert.strictEqual(item.locales.en.texts.stages.length,25);
+  assert.strictEqual(item.locales.en.texts.stages.length,22);
   assert.ok(item.program.desc.length > 1000);
 });
 
