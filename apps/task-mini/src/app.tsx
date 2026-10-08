@@ -14,6 +14,7 @@ import { syncTasksNow } from './tasks/sync';
 import { taskDocs } from './tasks/repository';
 import { taskAuth } from './auth';
 import { taskAdmin } from './admin';
+import { taskAdminSection } from './admin-task';
 import { taskBilling } from './billing';
 import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
 import { NotFoundScreen, RouteErrorScreen } from './route-fallback';
@@ -174,7 +175,7 @@ const EVENT_LABELS = {
 function Admin(){
   const {locale} = useI18n();
   const adminLocale = sharedUiLocale(locale);
-  return <AdminPanel client={taskAdmin} locale={adminLocale} productName="Task Mini" eventLabels={EVENT_LABELS[adminLocale]} />;
+  return <AdminPanel client={taskAdmin} locale={adminLocale} productName="Task Mini" eventLabels={EVENT_LABELS[adminLocale]} extraSections={[taskAdminSection]} />;
 }
 
 function TaskList({filter}: {filter: TaskFilter}){
