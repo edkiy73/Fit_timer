@@ -284,13 +284,13 @@ function createAppleStoreBillingAdapter({
           mapped.bundleId,
           response.base
         );
-        return {events:[await subscriptionEvent(status, {
+        return {reference:{transactionId}, events:[await subscriptionEvent(status, {
           productId:mapped.productId,
           bundleId:mapped.bundleId,
           identity
         })]};
       }
-      return {events:[baseEvent]};
+      return {reference:{transactionId}, events:[baseEvent]};
     }
   };
 }
