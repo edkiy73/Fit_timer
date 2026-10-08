@@ -3,8 +3,10 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
 const core = (dir: string) => fileURLToPath(new URL('../../packages/core/src/' + dir, import.meta.url));
+const buildId = (process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || 'dev').slice(0, 12);
 
 export default defineConfig({
+  define: {'__APP_BUILD_ID__': JSON.stringify(buildId)},
   plugins: [react()],
   // Relative asset URLs: the same build works from a domain root, a sub-path or a Capacitor WebView.
   base: './',
