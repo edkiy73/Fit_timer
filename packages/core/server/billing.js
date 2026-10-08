@@ -370,16 +370,27 @@ function createBillingHandler({adapters = []} = {}){
       const adapter = await findWebhook(String(query.provider));
       if(!adapter || typeof adapter.verifyWebhook !== 'function') return fail(res, 404, 'unknown_provider');
       let verified;
-      try{ verified = await adapter.verifyWebhook({headers: req.headers || {}, body, rawBody, query}); }
-      catch(_){ return fail(res, 401, 'bad_signature'); }
-      if(!verified || !verified.ok) return fail(res, 401, 'bad_signature');
+      try{
+        verified = await adapter.verifyWebhook({headers: req.headers || {}, body, rawBody, query});
+      }catch(e){
+        await recordProviderHealth(adapter.id, 'webhook', false, e);
+        return fail(res, 401, 'bad_signature');
+      }
+      if(!verified || !verified.ok){
+        await recordProviderHealth(adapter.id, 'webhook', false, 'bad_signature');
+        return fail(res, 401, 'bad_signature');
+      }
       const results = [];
       for(const event of Array.isArray(verified.events) ? verified.events : []){
         results.push(await applyBillingEvent(adapter.id, event));
       }
       const bad = results.find(r => !r.ok);
       // Providers retry non-2xx: a malformed event is answered 400 so it shows up in their dashboard.
-      if(bad) return fail(res, 400, bad.error);
+      if(bad){
+        await recordProviderHealth(adapter.id, 'webhook', false, bad.error);
+        return fail(res, 400, bad.error);
+      }
+      await recordProviderHealth(adapter.id, 'webhook', true);
       return send(res, 200, {ok: true, applied: results.filter(r => r.applied).length});
     }
 
@@ -424,6 +435,7 @@ function createBillingHandler({adapters = []} = {}){
           proof:body.proof && typeof body.proof === 'object' ? body.proof : {}
         });
       }catch(e){
+        await recordProviderHealth(adapter.id, 'verify', false, e);
         return fail(res, (e && e.status) || 502, String((e && e.message) || 'purchase_verification_failed'));
       }
       const results = [];
@@ -431,7 +443,11 @@ function createBillingHandler({adapters = []} = {}){
         results.push(await applyBillingEvent(adapter.id, {...raw, email:who.email, sku}));
       }
       const bad = results.find(r => !r.ok);
-      if(bad) return fail(res, 400, bad.error);
+      if(bad){
+        await recordProviderHealth(adapter.id, 'verify', false, bad.error);
+        return fail(res, 400, bad.error);
+      }
+      await recordProviderHealth(adapter.id, 'verify', true);
       const last = results[results.length - 1];
       return send(res, 200, {ok:true, granted:!!(last && last.applied), ...(last ? last.entitlements : entitlementsOf(who.acc))});
     }
