@@ -186,12 +186,17 @@ async function load(){
   if(tab !== 'analytics') analyticsCache = null;
   $('pageTitle').textContent = PAGE_TITLES[tab] || 'Админка';
   document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
-  render();
+  let editItem=null;
   if(tab === 'add'){
     const editId=localStorage.getItem('adminEditingId');
-    const item=[...(data.pending||[]),...(data.drafts||[]),...(data.approved||[])].find(x=>String(x.id)===String(editId));
-    if(item) fillForm(item);
+    editItem=[...(data.pending||[]),...(data.drafts||[]),...(data.approved||[])].find(x=>String(x.id)===String(editId))||null;
+    if(editItem){
+      editing=editItem.id;
+      editingStatus=editItem.status||null;
+    }
   }
+  render();
+  if(editItem) fillForm(editItem);
 }
 
 function pageHead(title, text, right){
@@ -372,7 +377,7 @@ function renderDrafts(b){
       +'<div class="entity-meta"><div><b>'+(item.exCount||0)+'</b><span>упражнений</span></div><div><b>'+catalogMediaCount(item.media)+'</b><span>фото</span></div><div><b>'+esc(fmtDay(item.updatedAt||item.at))+'</b><span>обновлён</span></div></div>';
     card.querySelectorAll('[data-act]').forEach(btn=>btn.onclick=()=>{
       const a=btn.dataset.act;
-      if(a==='edit'){setTab('add');fillForm(item);return;}
+      if(a==='edit'){openProgramEditor(item);return;}
       if(a==='publish')return act('publish_draft',{id:item.id,pro:false},btn,'Черновик опубликован.');
       if(a==='publishPro')return act('publish_draft',{id:item.id,pro:true},btn,'Черновик опубликован в Premium.');
       if(a==='delete'&&confirm('Удалить этот черновик?'))return act('delete_draft',{id:item.id},btn,'Черновик удалён.');
@@ -384,6 +389,15 @@ function renderDrafts(b){
     const q=e.target.value.trim().toLowerCase();
     box.querySelectorAll('.entity-card').forEach(card=>card.hidden=!!q&&!card.dataset.search.includes(q));
   };
+}
+
+function openProgramEditor(item){
+  editing=item&&item.id||null;
+  editingStatus=item&&item.status||null;
+  if(editing)localStorage.setItem('adminEditingId',editing);
+  else localStorage.removeItem('adminEditingId');
+  setTab('add');
+  fillForm(item);
 }
 
 function renderCatalog(b){
@@ -491,7 +505,7 @@ function renderCatalog(b){
 
     card.querySelectorAll('[data-direct]').forEach(btn=>btn.onclick=()=>{
       const a=btn.dataset.direct;
-      if(a==='edit'){setTab('add');fillForm(item);return;}
+      if(a==='edit'){openProgramEditor(item);return;}
       if(a==='approve')return act('approve',{id:item.id,pro:false},btn,'Программа опубликована в каталоге.');
       if(a==='approvePro')return act('approve',{id:item.id,pro:true},btn,'Программа опубликована в Premium.');
       if(a==='reject'&&confirm('Отклонить «'+item.name+'»? Тренер получит уведомление.'))return act('reject',{id:item.id},btn,'Заявка отклонена.');
@@ -499,7 +513,7 @@ function renderCatalog(b){
 
     card.querySelectorAll('[data-act]').forEach(btn=>btn.onclick=()=>{
       const a=btn.dataset.act;
-      if(a==='edit'){setTab('add');fillForm(item);return;}
+      if(a==='edit'){openProgramEditor(item);return;}
       if(a==='togglePro')return act('pro',{id:item.id,pro:!item.pro},btn,item.pro?'Программа открыта всем.':'Программа переведена в Premium.');
       if(a==='remove'&&confirm('Убрать «'+item.name+'» из каталога?'))return act('remove',{id:item.id},btn,'Программа убрана из каталога.');
       if(a==='ban'&&confirm('Закрыть '+item.by+'? Его программы больше не будут приниматься.'))return act('ban',{handle:item.by},btn,'Приём программ от тренера закрыт.');
