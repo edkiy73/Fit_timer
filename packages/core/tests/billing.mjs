@@ -77,6 +77,16 @@ ok('BillingRouter keeps App Store on App Store iOS',
   (await routeBilling.methods({platform:'ios', distribution:'app_store', country:'US'})).map(x=>x.id).join() === 'apple');
 ok('BillingRouter offers external web checkout on web',
   (await routeBilling.methods({platform:'web', distribution:'web', country:'DE'})).map(x=>x.id).join() === 'stripe');
+ok('BillingClient supplies safe web/web context by default',
+  (await routeBilling.methods()).map(x=>x.id).join() === 'stripe');
+{
+  const previousCapacitor = globalThis.Capacitor;
+  globalThis.Capacitor = {getPlatform:() => 'android'};
+  ok('native runtime without a known distribution does not guess a store',
+    (await routeBilling.methods()).length === 0);
+  if(previousCapacitor === undefined) delete globalThis.Capacitor;
+  else globalThis.Capacitor = previousCapacitor;
+}
 ok('BillingRouter applies country restrictions centrally',
   (await routeBilling.methods({platform:'android', distribution:'direct', country:'RU'})).map(x=>x.id).join() === 'yookassa');
 const webhookOnlyHandler = createBillingHandler({adapters:[{
