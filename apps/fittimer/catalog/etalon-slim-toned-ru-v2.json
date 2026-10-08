@@ -158,7 +158,7 @@
                 "rest": 90,
                 "restAfter": 90,
                 "muscles": [
-                  "qu",
+                  "le",
                   "gl"
                 ],
                 "load": {
@@ -200,7 +200,7 @@
                 "restAfter": 75,
                 "muscles": [
                   "ba",
-                  "bi"
+                  "ar"
                 ],
                 "load": {
                   "type": "level",
@@ -246,7 +246,7 @@
                 "restAfter": 120,
                 "muscles": [
                   "gl",
-                  "ha"
+                  "hm"
                 ],
                 "load": {
                   "type": "weight",
@@ -287,7 +287,7 @@
                 "restAfter": 90,
                 "muscles": [
                   "ch",
-                  "tr",
+                  "ar",
                   "sh"
                 ],
                 "load": {
@@ -326,7 +326,7 @@
                 "restAfter": 90,
                 "muscles": [
                   "ch",
-                  "tr",
+                  "ar",
                   "sh"
                 ],
                 "load": {
@@ -587,7 +587,7 @@
                 "rest": 120,
                 "restAfter": 120,
                 "muscles": [
-                  "qu",
+                  "le",
                   "gl"
                 ],
                 "load": {
@@ -631,7 +631,7 @@
                 "restAfter": 75,
                 "muscles": [
                   "ba",
-                  "bi"
+                  "ar"
                 ],
                 "load": {
                   "type": "level",
@@ -676,7 +676,7 @@
                 "rest": 90,
                 "restAfter": 90,
                 "muscles": [
-                  "qu",
+                  "le",
                   "gl"
                 ],
                 "load": {
@@ -718,7 +718,7 @@
                 "restAfter": 90,
                 "muscles": [
                   "ch",
-                  "tr"
+                  "ar"
                 ],
                 "load": {
                   "type": "weight",
