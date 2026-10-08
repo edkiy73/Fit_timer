@@ -323,6 +323,7 @@ const mappedAfterBad = await call(adminHandler, {action:'billing_status'}, {head
 ok('rejected mapping leaves the previous valid mapping intact',
   mappedAfterBad.body.products?.some(x => x.sku === 'course.admin-map' && x.mappings?.stripe?.priceId === 'price_admin_live'));
 
+let stripeHealthFailure = false;
 const stripeControlAdapter = {
   id:'stripe',
   kind:'external',
@@ -332,7 +333,13 @@ const stripeControlAdapter = {
   async checkout({email, sku}){
     return {events:[{orderId:'stripe-control-checkout', email, sku, status:'paid'}]};
   },
-  async verifyPurchase({sku}){
+  async verifyPurchase({sku, proof}){
+    if(stripeHealthFailure){
+      throw Object.assign(new Error('provider_down'), {status:502});
+    }
+    if(proof && proof.purchaseToken === 'bad-user-proof'){
+      throw Object.assign(new Error('purchase_not_found'), {status:409});
+    }
     return {events:[{orderId:'stripe-control-verify-' + sku, sku, status:'paid'}]};
   },
   async verifyWebhook({body}){
@@ -391,6 +398,52 @@ await call(adminHandler, {
 }, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
 ok('re-enabled provider returns to BillingRouter methods',
   (await stripeControlBilling.methods()).some(x => x.id === 'stripe'));
+
+const healthAfterWebhook = await call(adminHandler, {action:'billing_status'}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
+const stripeWebhookHealth = (healthAfterWebhook.body.providers || []).find(x => x.id === 'stripe');
+ok('verified webhook updates provider health without leaking payment data',
+  stripeWebhookHealth?.health?.webhook?.ok === true
+  && !!stripeWebhookHealth?.health?.webhook?.at
+  && !JSON.stringify(stripeWebhookHealth.health).includes('payer@example.com')
+  && !JSON.stringify(stripeWebhookHealth.health).includes('stripe-control-webhook'));
+
+stripeHealthFailure = true;
+await stripeControlBilling.verifyPurchase(
+  'stripe', 'course.provider-health-fail', {purchaseToken:'secret-old-token'}
+).then(() => null, () => null);
+const unhealthyStatus = await call(adminHandler, {action:'billing_status'}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
+const unhealthyStripe = (unhealthyStatus.body.providers || []).find(x => x.id === 'stripe');
+ok('operational provider failure marks configured provider unhealthy',
+  unhealthyStripe?.state === 'unhealthy'
+  && unhealthyStripe?.health?.reconcile?.ok === false
+  && unhealthyStripe?.health?.reconcile?.operational === true
+  && unhealthyStripe?.health?.reconcile?.error === 'provider_down');
+ok('provider health stores no account, order or purchase proof',
+  !JSON.stringify(unhealthyStripe?.health || {}).includes('payer@example.com')
+  && !JSON.stringify(unhealthyStripe?.health || {}).includes('secret-old-token')
+  && !JSON.stringify(unhealthyStripe?.health || {}).includes('stripe-control'));
+
+stripeHealthFailure = false;
+const recovered = await stripeControlBilling.verifyPurchase(
+  'stripe', 'course.provider-health-ok', {purchaseToken:'fresh-token'}
+);
+const recoveredStatus = await call(adminHandler, {action:'billing_status'}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
+const recoveredStripe = (recoveredStatus.body.providers || []).find(x => x.id === 'stripe');
+ok('successful reconciliation clears unhealthy provider state',
+  recovered.granted
+  && recoveredStripe?.state === 'ready'
+  && recoveredStripe?.health?.reconcile?.ok === true);
+
+await stripeControlBilling.verifyPurchase(
+  'stripe', 'course.provider-user-error', {purchaseToken:'bad-user-proof'}
+).then(() => null, () => null);
+const userErrorStatus = await call(adminHandler, {action:'billing_status'}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
+const userErrorStripe = (userErrorStatus.body.providers || []).find(x => x.id === 'stripe');
+ok('user purchase error is visible but does not mark provider unhealthy',
+  userErrorStripe?.state === 'ready'
+  && userErrorStripe?.health?.reconcile?.ok === false
+  && userErrorStripe?.health?.reconcile?.operational === false
+  && userErrorStripe?.health?.reconcile?.error === 'purchase_not_found');
 
 const logRes = await call(adminHandler, {action:'billing_log'}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
 const events = logRes.body.events || [];
