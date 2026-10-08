@@ -76,6 +76,7 @@ async function adminUsers(){
           provider:String(sub.provider||sub.source||''), autoRenew:!!sub.autoRenew
         }:null,
         owned:entitlementsOf(a).owned,
+        entitlements:entitlementsOf(a).entitlements,
         devices:Object.keys(a.syncDevices||{}).length,
         pushDevices:Object.keys(a.pushDevices||{}).length,
         aiUsage:{
