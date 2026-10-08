@@ -444,6 +444,203 @@ Purpose:
 - Task Mini can be checked against the same required baseline;
 - future generic modules cannot silently appear in Starter while the reference app drifts.
 
+
+### A12. Billing is a first-class AppBase capability
+
+Billing must be implemented as a reusable Core capability, not separately inside FitTimer, UnMute, or future products.
+
+Target composition:
+
+```text
+Product
+    ↓
+AppBase Billing client / BillingRouter
+    ↓
+provider adapters
+    ├── Apple In-App Purchase
+    ├── Google Play Billing
+    ├── Stripe
+    └── YooKassa
+    ↓
+AppBase Entitlements
+```
+
+Product code should describe products and access rules. It must not contain provider-specific checkout, webhook, receipt-validation, subscription-state, or regional-policy logic.
+
+### A13. One canonical entitlement model
+
+Core owns the canonical access state regardless of where the payment happened.
+
+At minimum the normalized model must support:
+
+- user/account;
+- product/entitlement key;
+- active/inactive state;
+- source/provider;
+- purchase type: subscription or one-time;
+- start/expiry timestamps where applicable;
+- auto-renew state where available;
+- original provider transaction/order reference;
+- cancellation/refund/revocation state;
+- last verification timestamp.
+
+Provider examples:
+
+```text
+apple
+google
+stripe
+yookassa
+promo
+admin
+```
+
+Applications ask Core whether an entitlement is active. They do not infer Premium from local receipts.
+
+### A14. BillingRouter and regional/platform capability policy
+
+Core must expose one provider-neutral decision layer that determines which payment methods a product may offer for the current build/context.
+
+Inputs may include:
+
+- platform;
+- distribution channel;
+- store/storefront or country when reliably available;
+- product/SKU;
+- configured providers;
+- product billing policy.
+
+Output is a list of allowed/available payment methods plus readiness metadata.
+
+Example contract:
+
+```json
+{
+  "methods": ["google_play", "stripe"],
+  "product": "premium_monthly"
+}
+```
+
+Rules:
+
+- the client never hardcodes "show Stripe in country X";
+- regional/store rules live in one updateable Core policy layer;
+- a method that is forbidden, unavailable, or not configured is not rendered;
+- policy and provider readiness are separate concerns;
+- changing payment policy must not require changes to product screens.
+
+The first supported provider set should cover the broad default case:
+
+1. Apple IAP for Apple storefront purchases;
+2. Google Play Billing for Play-distributed Android purchases;
+3. Stripe for international direct/external card payments where allowed;
+4. YooKassa for Russian cards/SBP and other supported Russian payment methods where allowed.
+
+Do not add many country-specific gateways until a real market requires them.
+
+### A15. Provider adapter contract
+
+Each billing provider adapter should normalize the same operations where the provider supports them:
+
+- create/start checkout;
+- validate/verify purchase;
+- receive and verify webhook/server notification;
+- normalize payment/subscription events;
+- restore/reconcile purchases;
+- cancel/revoke/refund state ingestion;
+- health/readiness;
+- provider product/SKU mapping.
+
+Provider SDKs, secrets, signatures, receipt formats and webhook payloads stay inside adapters.
+
+### A16. Server-owned purchase state and reconciliation
+
+Every payment path must converge on the server:
+
+```text
+Apple / Google / Stripe / YooKassa
+        ↓
+verified provider event / receipt
+        ↓
+AppBase Billing journal
+        ↓
+canonical entitlement update
+        ↓
+account sync
+        ↓
+product sees access
+```
+
+Requirements:
+
+- webhook/server notifications are idempotent;
+- duplicate events do not duplicate grants;
+- refunds/revocations remove access according to product policy;
+- expired subscriptions stop access without requiring an app update;
+- purchases made on another device become visible after account sync;
+- provider outages can be reconciled later from the journal/provider state;
+- the billing journal is provider-neutral enough to survive provider/hosting migration.
+
+### A17. Billing configuration in shared Admin
+
+Shared Admin must make billing operational without product-specific billing screens.
+
+At minimum provide:
+
+- capability enabled/disabled;
+- provider enabled/disabled;
+- provider readiness;
+- write-only secret/key configuration where appropriate;
+- Apple/Google/Stripe/YooKassa configuration status;
+- AppBase product → provider SKU mapping;
+- prices/currency metadata used by the product;
+- payment journal;
+- entitlement lookup by account;
+- manual grant/revoke with audit trail;
+- webhook/server-notification health;
+- latest reconciliation/error state;
+- regional/provider policy summary.
+
+Admin should distinguish:
+
+```text
+disabled
+enabled but not configured
+configured but unhealthy
+healthy
+```
+
+Do not expose secret values after saving them.
+
+### A18. Starter billing contract
+
+Every generated app gets the billing integration points even if billing is disabled initially.
+
+Starter must include:
+
+- Core billing client;
+- entitlement client/state;
+- product billing config/manifest;
+- provider-neutral purchase entry point;
+- restore/reconcile entry point;
+- API composition for billing;
+- Admin billing/entitlement sections;
+- readiness/health integration.
+
+A new app should be able to enable billing mainly by configuration and product definitions rather than copying implementation from another app.
+
+Illustrative product config:
+
+```text
+billing: true
+products:
+  - premium_monthly
+  - premium_yearly
+```
+
+The exact config shape may differ; the requirement is that provider-specific code is not copied into the product.
+
+
 ## Part B — Task Mini
 
 ### B1. Preserve its role
@@ -546,6 +743,55 @@ Do not compare Task Mini and Starter byte-for-byte.
 
 Task Mini is a real app, so only baseline contracts should match.
 
+
+### B9. Task Mini is the executable billing reference
+
+Task Mini must prove the complete generic billing path with harmless test products.
+
+It should include at least:
+
+- one test subscription;
+- one test one-time purchase;
+- Premium/paid-state UI driven only by Core entitlements;
+- display of only the methods returned by BillingRouter;
+- successful purchase;
+- cancelled checkout;
+- failed purchase;
+- restore/reconcile;
+- expired subscription;
+- refund/revocation;
+- purchase on another device/session followed by account sync;
+- external/test checkout followed by webhook and entitlement activation.
+
+Provider-specific production credentials are not required for every CI run. Adapters may use deterministic test/fake modes where appropriate, but the same Core contracts must be exercised.
+
+### B10. Billing contract tests
+
+Add focused tests for:
+
+```text
+provider event/receipt
+→ verified normalized billing event
+→ billing journal
+→ entitlement transition
+→ account/client refresh
+→ Task Mini paid feature unlocked/locked
+```
+
+Also cover:
+
+- webhook idempotency;
+- duplicate events;
+- provider failure;
+- unknown SKU;
+- refund;
+- expiration;
+- manual Admin grant/revoke;
+- BillingRouter filtering of unavailable/disallowed methods.
+
+Task Mini should fail CI if it bypasses Core and starts depending directly on a payment provider.
+
+
 ## Part C — CI and documentation
 
 ### C1. CI rules
@@ -594,17 +840,32 @@ Do not tell developers to copy FitTimer or UnMute as the starting point for a ne
 - observability changes proven to be generic;
 - stronger generated-app acceptance checks.
 
-### PR 3 — Task Mini parity
+### PR 3 — Core billing foundation
+
+- canonical billing journal and entitlement model;
+- BillingRouter and regional/platform payment-method policy;
+- provider adapter contract;
+- Apple IAP and Google Play Billing adapters;
+- Stripe and YooKassa adapters;
+- verified webhook/server-notification ingestion;
+- restore/reconciliation;
+- shared Admin billing/provider/SKU/readiness management;
+- Starter billing composition and tests.
+
+### PR 4 — Task Mini parity + billing reference
 
 - migrate Task Mini to current required baseline;
 - reference Admin coverage;
 - one minimal product `extraSection`;
+- executable subscription and one-time-purchase reference flows;
+- entitlement, restore, refund, expiration and webhook test flows;
 - targeted unit/contract/browser tests.
 
-### PR 4 — Drift protection
+### PR 5 — Drift protection
 
 - wire baseline checks into CI;
 - make starter/reference divergence fail early;
+- include billing/provider-boundary checks;
 - update architecture/readiness docs with final contracts.
 
 ## Definition of done
@@ -621,6 +882,10 @@ The work is done when all of these are true:
 8. Adding a normal account-centric product should mainly require domain/UX work instead of rebuilding auth, sync, billing, diagnostics, Admin, health, legal, and analytics infrastructure.
 9. Product code is hosting-neutral: moving from Vercel to Cloudflare, Node, or another supported host primarily means swapping deployment/adapters rather than rewriting each app.
 10. Task Mini can run its core platform flows through a non-production/local alternate hosting adapter as a portability smoke.
+11. Apple, Google, Stripe and YooKassa payment paths converge on one provider-neutral billing journal and entitlement model.
+12. Product applications do not contain provider-specific payment logic or regional payment-policy tables.
+13. Task Mini proves subscription, one-time purchase, restore, refund/revocation, expiration and external-webhook entitlement flows end to end.
+14. A newly generated app can enable billing by product/configuration plus provider credentials rather than copying code from FitTimer, UnMute, or Task Mini.
 
 ## Scope boundary for future products
 
