@@ -6,6 +6,7 @@ const { loadSecrets } = require('./secrets');
 const Supabase = require('./supabase');
 const SyncShadow = require('./sync-shadow');
 const { productConfig } = require('./product-core');
+const { hostingInfo } = require('./hosting');
 
 function safeError(e){
   return String((e && e.message) || e || 'unknown_error').slice(0, 300);
@@ -30,6 +31,7 @@ async function collectHealth({probes: productProbes = []} = {}){
   const ai = providerStatus();
   const billing = billingProviderStatus();
   const product = productConfig();
+  const hosting = hostingInfo();
   const features = product.features && typeof product.features === 'object' ? product.features : {};
   const aiEnabled = features.ai === true;
   const pushEnabled = features.notifications === true;
@@ -94,6 +96,7 @@ async function collectHealth({probes: productProbes = []} = {}){
     status:criticalOk ? (optionalWarnings.length ? 'warning' : 'ok') : 'error',
     checkedAt:new Date().toISOString(),
     deployment:info.build,
+    infrastructure:{hosting},
     probes,
     storage:{
       status:storageProbe && storageProbe.ok ? 'ok' : 'error',
