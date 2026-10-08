@@ -1,52 +1,58 @@
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
-// Fail open: if Git history cannot be compared, build rather than miss an update.
+// AppBase deployment policy: only runtime-impacting changes deploy.
+// Unknown files or unavailable Git history always deploy (fail open).
 const APP = 'task-mini';
-const APP_PREFIX = `apps/${APP}/`;
-const ALWAYS_BUILD = [
-  'packages/', 'templates/', 'scripts/', '.github/', 'config/', 'shared/',
-];
-const ROOT_BUILD_FILES = new Set([
-  'package.json', 'package-lock.json', 'npm-shrinkwrap.json',
-  'vercel.json', '.npmrc', '.nvmrc', 'tsconfig.json',
-]);
-function requiresBuild(file) {
-  if (file.startsWith(APP_PREFIX)) {
-    const local = file.slice(APP_PREFIX.length);
-    if (local.endsWith('.md') || local.startsWith('docs/')) return false;
+const OWN = `apps/${APP}/`;
+const RUNTIME_SHARED = ['packages/', 'shared/', 'config/'];
+const ROOT_RUNTIME = new Set(['package.json','package-lock.json','npm-shrinkwrap.json','vercel.json','.npmrc','.nvmrc','tsconfig.json']);
+const TEST_FILE = /(?:^|\/)(?:__tests__|tests|test|e2e)\//;
+const TEST_SUFFIX = /(?:\.test|\.spec)\.[cm]?[jt]sx?$/;
+
+export function shouldDeployPath(path) {
+  const file = String(path).replaceAll('\\', '/');
+  if (file.endsWith('.md') || file.startsWith('docs/') || file.startsWith('.ai/')) return false;
+  if (file.startsWith('.github/')) return false; // CI changes do not change deployed app.
+  if (file.startsWith('templates/')) return false; // Future-app starter only.
+  if (file.startsWith('scripts/')) return !/^scripts\/(?:test-|check-)/.test(file); // build tooling may affect apps
+  if (file.startsWith('apps/')) {
+    if (!file.startsWith(OWN)) return false;
+    const local = file.slice(OWN.length);
+    if (/^(docs|tests|test|e2e|__tests__|android|ios)\//.test(local)) return false;
+    if (TEST_FILE.test(local) || TEST_SUFFIX.test(local)) return false;
     return true;
   }
-  if (/^apps\/[^/]+\//.test(file)) return false;
-  if (file.endsWith('.md')) return false;
-  if (file.startsWith('docs/') || file.startsWith('.ai/')) return false;
-  if (ROOT_BUILD_FILES.has(file)) return true;
-  if (ALWAYS_BUILD.some(prefix => file.startsWith(prefix))) return true;
-  // Unknown paths can contain runtime dependencies; prefer one extra build.
-  return true;
+  if (file.startsWith('packages/')) {
+    if (TEST_FILE.test(file) || TEST_SUFFIX.test(file)) return false;
+    return true;
+  }
+  if (RUNTIME_SHARED.some(prefix => file.startsWith(prefix))) return true;
+  if (ROOT_RUNTIME.has(file)) return true;
+  return true; // Unrecognized changes may affect deployment.
 }
+
 export function shouldSkip(files) {
-  return files.length > 0 && !files.some(requiresBuild);
+  return Array.isArray(files) && files.length > 0 && !files.some(shouldDeployPath);
 }
-function changedFiles() {
+
+function changes() {
   const head = process.env.VERCEL_GIT_COMMIT_SHA || 'HEAD';
   const previous = process.env.VERCEL_GIT_PREVIOUS_SHA;
-  const options = { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] };
-  // Vercel may omit the previous SHA or shallow-clone without its parent.
-  // Try the last successful deployment first, then the checked-out commit's parent.
-  const bases = previous && !/^0+$/.test(previous)
-    ? [previous, head + '^']
-    : [head + '^'];
-  for (const base of bases) {
-    try {
-      const output = execFileSync('git', ['diff', '--name-only', base, head], options);
-      return output.trim().split(/\r?\n/).filter(Boolean);
-    } catch { /* try a different base */ }
+  // A known previous deployment must be compared cumulatively, not against HEAD^.
+  // If missing from shallow clone, build rather than miss intermediate changes.
+  const base = previous && !/^0+$/.test(previous) ? previous : head + '^';
+  try {
+    const result = execFileSync('git', ['diff', '--name-only', base, head], {
+      encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    return result.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  } catch {
+    return null;
   }
-  return null; // Insufficient history: deploy for safety.
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const changed = changedFiles();
-  // Vercel ignores a deployment on exit code 0; exit 1 means build.
-  process.exit(changed && shouldSkip(changed) ? 0 : 1);
+  const files = changes();
+  // Vercel: exit 0 skips; exit 1 deploys.
+  process.exit(shouldSkip(files) ? 0 : 1);
 }

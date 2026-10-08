@@ -1,26 +1,20 @@
 name: iOS — проверка сборки
 
 on:
+  # macOS simulator is slow; web/Core-only changes use fast checks instead.
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: &mobile_paths
-      - 'packages/core/**'
+  pull_request:
+    paths:
       - 'apps/fittimer/ios/**'
-      - 'apps/fittimer/scripts/**'
-      - 'apps/fittimer/src/**'
-      - 'apps/fittimer/style.css'
-      - 'apps/fittimer/index.html'
-      - 'apps/fittimer/mobile.js'
-      - 'apps/fittimer/app.config.js'
       - 'apps/fittimer/capacitor.config.json'
-      - 'apps/fittimer/package.json'
-      - 'apps/fittimer/package-lock.json'
+      - 'apps/fittimer/scripts/check-mobile.mjs'
       - '.github/workflows/ios.yml'
       - '!**/*.md'
-  pull_request:
-    paths: *mobile_paths
 
+
+concurrency:
+  group: ios-native-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   simulator:

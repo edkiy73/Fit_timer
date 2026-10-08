@@ -122,7 +122,7 @@ need(html.includes("problems.push('Google Play:"),'payment settings must validat
 need(html.includes("el.className='admin-notice "),'admin actions need non-blocking feedback');
 need(html.includes('@media(max-width:520px)'),'mobile admin needs narrow-phone layout');
 need(vercelConfig.includes('"ignoreCommand": "node scripts/vercel-ignore.mjs"'),'Vercel ignored build step is not configured');
-need(vercelIgnore.includes('[skip vercel]') && vercelIgnore.includes('[deploy]'),'Vercel deploy markers are missing');
+need(vercelIgnore.includes('shouldDeployPath') && vercelIgnore.includes('shouldSkip'),'Vercel deploy path policy is missing');
 need(healthApi.includes("format === 'json'"),'health JSON mode is missing');
 need(healthLib.includes("store.selfTest()"),'health must actively exercise storage');
 need(healthApi.includes("store.list('c:approved')") && healthApi.includes('collectHealth({probes:FIT_HEALTH_PROBES})'),'health must probe catalog reads');
