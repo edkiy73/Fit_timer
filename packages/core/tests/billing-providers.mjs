@@ -3,11 +3,11 @@ import { createRequire } from 'node:module';
 import crypto from 'node:crypto';
 
 const require = createRequire(import.meta.url);
-const { configureProduct, productConfig } = require('../server/product-core');
+const { configureProduct } = require('../server/product-core');
 const { createStripeBillingAdapter } = require('../server/billing-providers/stripe');
 const { createYooKassaBillingAdapter } = require('../server/billing-providers/yookassa');
 
-configureProduct({...productConfig(), defaultPublicUrl:'https://app.example'});
+configureProduct({id:'test.billing', name:'Billing Test', slug:'billing-test', defaultPublicUrl:'https://app.example', products:[]});
 
 let bad = 0;
 const ok = (name, cond, detail = '') => {
