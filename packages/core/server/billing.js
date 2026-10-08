@@ -727,9 +727,12 @@ async function billingReadiness(){
     const configured = def.required.every(name => secrets[name] && secrets[name].set);
     const mappedProducts = mapped(def.id);
     const providerEnabled = await billingProviderEnabled(def.id);
+    const health = await providerOperationalHealth(def.id);
     const state = !billingEnabled || !providerEnabled ? 'disabled'
       : !configured ? 'not_configured'
       : mappedProducts < 1 ? 'mapping_missing'
+      : health.status === 'unhealthy' ? 'unhealthy'
+      : health.status === 'healthy' ? 'healthy'
       : 'ready';
     providers.push({
       id:def.id,
@@ -738,6 +741,7 @@ async function billingReadiness(){
       enabled:providerEnabled,
       configured,
       mappedProducts,
+      health,
       platforms:def.platforms,
       distributions:def.distributions,
       countries:def.countries
@@ -783,4 +787,4 @@ async function handleAdminBilling(action, body, res){
   return false;
 }
 
-module.exports = { applyBillingEvent, billingLog, billingContext, billingReadiness, createBillingHandler, createInstantBillingAdapter, createTestBillingAdapter, createDefaultBillingAdapters, handleAdminBilling };
+module.exports = { applyBillingEvent, billingLog, billingContext, billingReadiness, providerOperationalHealth, createBillingHandler, createInstantBillingAdapter, createTestBillingAdapter, createDefaultBillingAdapters, handleAdminBilling };
