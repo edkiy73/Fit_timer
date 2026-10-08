@@ -22,6 +22,8 @@ export default defineConfig({
   server: {fs: {allow: [root('')]}},
   test: {
     environment: 'jsdom',
+    // Pure learning-engine unit tests do not need DOM emulation.
+    environmentMatchGlobs: [['src/engine/**/*.test.ts', 'node']],
     setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.test.{ts,tsx}']
   }
