@@ -83,7 +83,7 @@ async function collectHealth({probes: productProbes = []} = {}){
     optionalWarnings.push('Supabase shadow migration требует внимания: '+shadow.readiness.reason);
   }
   if(pushEnabled && !push.android && !push.ios) optionalWarnings.push('Уведомления включены для продукта, но Android/iOS push не настроен.');
-  if(billingEnabled && !(billing.google || billing.rustore || billing.yookassa || billing.stripe)) optionalWarnings.push('Платные функции включены для продукта, но платёжный провайдер не настроен.');
+  if(billingEnabled && !(billing.google || billing.apple || billing.rustore || billing.yookassa || billing.stripe)) optionalWarnings.push('Платные функции включены для продукта, но платёжный провайдер не настроен.');
 
   const storageProbe = probes.find(x=>x.name==='storage') || null;
   const storageSteps = storageProbe && storageProbe.detail && Array.isArray(storageProbe.detail.steps)
@@ -125,7 +125,7 @@ async function collectHealth({probes: productProbes = []} = {}){
       mail:{configured:!!mail.ready,testDomain:!!mail.testDomain,from:mail.from || null,envSeen:mail.seen || []},
       push:{enabled:pushEnabled,configured:!!(push.android || push.ios),android:!!push.android,ios:!!push.ios,
         firebaseEnvSeen:push.firebaseVars || [],apnsEnvSeen:push.apnsVars || []},
-      billing:{enabled:billingEnabled,configured:!!(billing.google || billing.rustore || billing.yookassa || billing.stripe),providers:billing}
+      billing:{enabled:billingEnabled,configured:!!(billing.google || billing.apple || billing.rustore || billing.yookassa || billing.stripe),providers:billing}
     },
     warnings:optionalWarnings
   };
