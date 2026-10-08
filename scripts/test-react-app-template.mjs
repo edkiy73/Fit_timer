@@ -77,7 +77,7 @@ try{
 
   const billing = await readFile(path.join(target,'api/billing.js'),'utf8');
   assert.match(billing, /createBillingHandler/);
-  assert.match(billing, /createTestBillingAdapter/);
+  assert.match(billing, /createDefaultBillingAdapters/);
 
   const auth = await readFile(path.join(target,'src/auth.ts'),'utf8');
   assert.match(auth, /@appbase\/core\/auth\.js/);
