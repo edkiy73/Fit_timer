@@ -23,7 +23,7 @@ const { store } = require('./store');
 const { send, fail, readBodyWithRaw, cors, rateOk, sameSecret } = require('./util');
 const { productCatalog, checkSku, cleanSku, grantOwned, revokeOwned, entitlementsOf } = require('./entitlements');
 const { productConfig } = require('./product-core');
-const { billingProduct, billingProducts, saveBillingMapping } = require('./billing-catalog');
+const { billingProduct, billingProducts, billingProviderEnabled, setBillingProviderEnabled, saveBillingMapping } = require('./billing-catalog');
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/;
 const PROVIDER = /^[a-z0-9_-]{1,32}$/;
@@ -257,10 +257,11 @@ async function resolveBillingIdentity(provider, value){
    POST /api/billing?provider=<id>                                   → уведомление провайдера */
 function createBillingHandler({adapters = []} = {}){
   const list = (Array.isArray(adapters) ? adapters : []).filter(a => a && PROVIDER.test(String(a.id || '')));
-  const available = async () => {
+  const available = async ({includeDisabled = false} = {}) => {
     const out = [];
     for(const adapter of list){
       if(adapter.testOnly && process.env.ALLOW_MEMORY_STORE !== '1') continue;
+      if(!includeDisabled && !(await billingProviderEnabled(String(adapter.id || '')))) continue;
       if(typeof adapter.available === 'function'){
         let on = false;
         try{ on = !!(await adapter.available()); }catch(_){}
@@ -270,10 +271,10 @@ function createBillingHandler({adapters = []} = {}){
     }
     return out;
   };
-  const enabled = async (rawContext = {}) => {
+  const eligible = async (rawContext = {}, {includeDisabled = false} = {}) => {
     const context = billingContext(rawContext);
     const out = [];
-    for(const adapter of await available()){
+    for(const adapter of await available({includeDisabled})){
       if(!adapterSupports(adapter, context)) continue;
       if(typeof adapter.supports === 'function'){
         let supported = false;
@@ -284,8 +285,10 @@ function createBillingHandler({adapters = []} = {}){
     }
     return out;
   };
+  const enabled = rawContext => eligible(rawContext);
   const find = async (id, context) => (await enabled(context)).find(a => a.id === id) || null;
-  const findWebhook = async id => (await available()).find(a => a.id === id) || null;
+  const findOperational = async (id, context) => (await eligible(context, {includeDisabled:true})).find(a => a.id === id) || null;
+  const findWebhook = async id => (await available({includeDisabled:true})).find(a => a.id === id) || null;
 
   return async function billingHandler(req, res){
     if(cors(req, res)) return;
@@ -350,7 +353,7 @@ function createBillingHandler({adapters = []} = {}){
     }
 
     if(action === 'verify_purchase'){
-      const adapter = await find(String(body.provider || ''), billingContext(body && body.context));
+      const adapter = await findOperational(String(body.provider || ''), billingContext(body && body.context));
       if(!adapter || typeof adapter.verifyPurchase !== 'function') return fail(res, 404, 'unknown_provider');
       const who = await signedInAccount(body);
       if(!who) return fail(res, 403, 'bad_sync_token');
@@ -383,7 +386,7 @@ function createBillingHandler({adapters = []} = {}){
     }
 
     if(action === 'restore'){
-      const adapter = await find(String(body.provider || ''), billingContext(body && body.context));
+      const adapter = await findOperational(String(body.provider || ''), billingContext(body && body.context));
       if(!adapter || typeof adapter.verifyPurchase !== 'function') return fail(res, 404, 'unknown_provider');
       const who = await signedInAccount(body);
       if(!who) return fail(res, 403, 'bad_sync_token');
@@ -627,24 +630,27 @@ async function billingReadiness(){
     || (Array.isArray(config.skuPatterns) && config.skuPatterns.length)
   );
 
-  const providers = defs.map(def => {
+  const providers = [];
+  for(const def of defs){
     const configured = def.required.every(name => secrets[name] && secrets[name].set);
     const mappedProducts = mapped(def.id);
-    const state = !billingEnabled ? 'disabled'
+    const providerEnabled = await billingProviderEnabled(def.id);
+    const state = !billingEnabled || !providerEnabled ? 'disabled'
       : !configured ? 'not_configured'
       : mappedProducts < 1 ? 'mapping_missing'
       : 'ready';
-    return {
+    providers.push({
       id:def.id,
       label:def.label,
       state,
+      enabled:providerEnabled,
       configured,
       mappedProducts,
       platforms:def.platforms,
       distributions:def.distributions,
       countries:def.countries
-    };
-  });
+    });
+  }
 
   return {enabled:billingEnabled, providers, products};
 }
@@ -666,6 +672,17 @@ async function handleAdminBilling(action, body, res){
       await saveBillingMapping(sku, provider, body && body.mapping);
     }catch(e){
       fail(res, (e && e.status) || 400, String((e && e.message) || 'billing_mapping_failed'));
+      return true;
+    }
+    send(res, 200, {ok:true, ...(await billingReadiness())});
+    return true;
+  }
+  if(action === 'billing_provider_set'){
+    const provider = String(body && body.provider || '');
+    try{
+      await setBillingProviderEnabled(provider, !!(body && body.enabled));
+    }catch(e){
+      fail(res, (e && e.status) || 400, String((e && e.message) || 'billing_provider_failed'));
       return true;
     }
     send(res, 200, {ok:true, ...(await billingReadiness())});
