@@ -183,6 +183,57 @@ Hosting adapter: vercel
 
 Changing the hosting adapter must not require rewriting product Admin sections.
 
+
+### H9. Admin configures providers; deployment config chooses the host
+
+Shared Admin should be the **control plane for runtime services**, but not a button that migrates the whole application between hosting platforms.
+
+Admin may configure or select, where safe and supported:
+
+- AI providers/models/routes;
+- mail provider;
+- push provider/configuration;
+- billing providers and modes;
+- provider-neutral storage/backend options that are designed for runtime switching;
+- feature/capability flags;
+- legal settings;
+- limits, pricing and other server-owned operational settings;
+- primary/fallback providers where a module supports failover.
+
+Admin should also contain an **Infrastructure** view that shows at least:
+
+```text
+Hosting adapter: Vercel
+Storage: healthy
+Mail: configured
+Push: not configured
+Billing: configured
+AI: primary configured, fallback missing
+```
+
+The Infrastructure view must use generic AppBase readiness contracts so it keeps working when the active host/provider changes.
+
+The following remain **deployment-level concerns**, not normal Admin switches:
+
+- moving the application itself from Vercel to Cloudflare/Node/another host;
+- DNS/domain cutover;
+- build/runtime selection;
+- platform function/worker configuration;
+- platform environment/secrets wiring needed before the new deployment can boot;
+- infrastructure migration steps that cannot be made transactional/safe from inside the running app.
+
+Rule:
+
+```text
+Admin
+= configure and observe services inside the running AppBase deployment
+
+Deployment configuration
+= choose where/how AppBase itself runs
+```
+
+Changing hosting must not require changes to product-specific Admin sections.
+
 ### H8. Definition of portability
 
 A hosting migration is considered healthy when changing host primarily touches:
@@ -315,6 +366,7 @@ Target common modules:
 | Legal | owner/contact/legal settings |
 | Secrets | write-only configuration/status |
 | Product capabilities | enabled/disabled/readiness summary |
+| Infrastructure | active hosting adapter, active providers, readiness and next setup actions |
 
 ### A6. Capability-aware Admin
 
