@@ -1,9 +1,8 @@
-/* POST /api/billing — purchases.
-   «instant»: until a payment provider is connected, the pay button grants the purchase at
-   once; Admin → «Оплата» switches it off when real payments start. The test provider works
-   only on the memory store (local runs, tests), never in production. */
+/* POST /api/billing — provider-neutral AppBase purchases.
+   «instant» stays as the temporary no-money path until Admin switches it off.
+   Stripe / YooKassa are composed by Core and become available only when configured. */
 require('../lib/product');
-const { createBillingHandler, createInstantBillingAdapter, createTestBillingAdapter } = require('../../../packages/core/server/billing');
+const { createBillingHandler, createDefaultBillingAdapters } = require('../../../packages/core/server/billing');
 const { getSettings } = require('../../../packages/core/server/ai');
 
 const instantEnabled = async () => {
@@ -11,4 +10,6 @@ const instantEnabled = async () => {
   return !!(settings && settings.payment && settings.payment.instant);
 };
 
-module.exports = createBillingHandler({adapters:[createInstantBillingAdapter({isEnabled:instantEnabled}), createTestBillingAdapter()]});
+module.exports = createBillingHandler({
+  adapters:createDefaultBillingAdapters({instantEnabled})
+});
