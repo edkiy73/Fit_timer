@@ -38,16 +38,27 @@ jobs:
 
       - name: Зависимости и браузер
         run: |
+          start=$SECONDS
           npm ci --no-audit --no-fund
+          echo "npm ci: $((SECONDS - start)) s" >> "$GITHUB_STEP_SUMMARY"
+          start=$SECONDS
           npx playwright-core install --with-deps chromium
+          echo "Playwright install: $((SECONDS - start)) s" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Проверка реального legacy English
         run: |
+          start=$SECONDS
           npm run import:legacy -- --dry-run
+          echo "Legacy import: $((SECONDS - start)) s" >> "$GITHUB_STEP_SUMMARY"
+          start=$SECONDS
           npm run test:legacy-parity
+          echo "Legacy parity: $((SECONDS - start)) s" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Сборка и e2e
-        run: npm run test:browser
+        run: |
+          start=$SECONDS
+          npm run test:browser
+          echo "Production build + browser E2E: $((SECONDS - start)) s" >> "$GITHUB_STEP_SUMMARY"
 
 
   # Native shells are rebuilt on a PR only when something they are built from changed;
