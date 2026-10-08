@@ -64,8 +64,8 @@ const testMethods = await billing.methods({platform:'web', distribution:'web', c
 ok('new billing API returns normalized methods', testMethods.length === 1 && testMethods[0].id === 'test' && testMethods[0].kind === 'test' && testMethods[0].external === false);
 
 const routeAdapters = [
-  {id:'google', kind:'store', platforms:['android'], distributions:['google_play'], checkout:async()=>({events:[]})},
-  {id:'apple', kind:'store', platforms:['ios'], distributions:['app_store'], checkout:async()=>({events:[]})},
+  {id:'google', kind:'store', platforms:['android'], distributions:['google_play'], verifyPurchase:async()=>({events:[]})},
+  {id:'apple', kind:'store', platforms:['ios'], distributions:['app_store'], verifyPurchase:async()=>({events:[]})},
   {id:'stripe', kind:'external', external:true, platforms:['web'], distributions:['web','direct'], checkout:async()=>({url:'https://example.test'})},
   {id:'yookassa', kind:'external', external:true, countries:['RU'], checkout:async()=>({url:'https://example.test'})}
 ];
@@ -98,6 +98,49 @@ const webhookOnlyHandler = createBillingHandler({adapters:[{
 }]});
 ok('webhook intake does not depend on client country/platform context',
   (await call(webhookOnlyHandler, {events:[]}, {query:{provider:'restricted'}})).status === 200);
+
+// Native-store flow: Core issues an opaque account link, then grants only after server verification.
+let verifiedNativeProof = null;
+const nativeStoreAdapter = {
+  id:'google_native',
+  kind:'store',
+  platforms:['android'],
+  distributions:['google_play'],
+  async purchaseContext({identity}){
+    return {productId:'pack_a_store', obfuscatedAccountId:identity.googleObfuscatedAccountId};
+  },
+  async verifyPurchase({proof, identity}){
+    verifiedNativeProof = {proof, identity};
+    return {events:[{orderId:'native-order-1', status:'paid', autoRenew:false}]};
+  }
+};
+const nativeStoreHandler = createBillingHandler({adapters:[nativeStoreAdapter]});
+const nativeBilling = createBillingClient({
+  auth,
+  fetch:viaFetch(nativeStoreHandler),
+  context:{platform:'android', distribution:'google_play', country:'DE'}
+});
+const nativeContext = await nativeBilling.purchaseContext('google_native', 'pack.b');
+ok('native purchase context returns provider SKU and opaque account link',
+  nativeContext.productId === 'pack_a_store'
+  && typeof nativeContext.obfuscatedAccountId === 'string'
+  && nativeContext.obfuscatedAccountId.length >= 16);
+const nativeBuy = await nativeBilling.verifyPurchase('google_native', 'pack.b', {purchaseToken:'device-token'});
+ok('native proof reaches only the server verifier',
+  verifiedNativeProof?.proof?.purchaseToken === 'device-token'
+  && verifiedNativeProof?.identity?.googleObfuscatedAccountId === nativeContext.obfuscatedAccountId);
+ok('verified native purchase grants through the canonical entitlement path',
+  nativeBuy.granted && nativeBuy.owned.includes('pack.b'));
+const nativeAccount = await accountOf('payer@example.com');
+ok('native billing identity is persisted on the account',
+  nativeAccount.billingIdentity?.googleObfuscatedAccountId === nativeContext.obfuscatedAccountId
+  && /^[0-9a-f-]{36}$/i.test(nativeAccount.billingIdentity?.appleAppAccountToken || ''));
+ok('native purchase verification still requires a signed-in device',
+  (await call(nativeStoreHandler, {
+    action:'verify_purchase', provider:'google_native', sku:'pack.b', proof:{purchaseToken:'x'},
+    email:'payer@example.com', deviceId:'x', syncToken:'y',
+    context:{platform:'android', distribution:'google_play'}
+  })).status === 403);
 
 // 1. Checkout through the provider: the right appears at once.
 const bought = await billing.checkout('test', 'pack.a');
