@@ -19,14 +19,19 @@ const ACTIONS = new Set([
 const clean=(v,n)=>String(v==null?'':v).slice(0,n);
 
 // Фото упражнений: только v2 — по stable exercise.id (+ позиция plan/exercise).
-function pics(src){
+// Важно: сервер не должен молча сохранять только часть набора. Админка заранее
+// ужимает картинки под этот бюджет, а здесь любая потеря считается ошибкой запроса.
+function picsResult(src){
   let budget=800*1024;
   const items=src&&+src.v===2&&Array.isArray(src.items)?src.items:[];
   const out=[];
-  for(const item of items){
-    if(!item||typeof item!=='object')continue;
+  let rejected=false;
+  for(let index=0;index<items.length;index++){
+    const item=items[index];
+    if(!item||typeof item!=='object'){rejected=true;continue;}
+    if(out.length>=30){if(item.data)rejected=true;continue;}
     const val=cleanPic(item.data,budget);
-    if(!val)continue;
+    if(!val){if(item.data)rejected=true;continue;}
     out.push({
       id:clampLine(item.id,80),
       p:Math.max(0,Math.min(99,Math.round(+item.p||0))),
@@ -35,9 +40,16 @@ function pics(src){
       data:val
     });
     budget-=val.length;
-    if(out.length>=30)break;
   }
-  return {v:2,items:out};
+  return {media:{v:2,items:out},rejected};
+}
+function pics(src){
+  return picsResult(src).media;
+}
+function checkedCover(value){
+  if(value==null||value==='')return {value:null,rejected:false};
+  const cleaned=cleanPic(value,90000);
+  return {value:cleaned||null,rejected:!cleaned};
 }
 
 async function readItems(listKey,want){
@@ -216,6 +228,10 @@ async function handleCatalogAdmin(action,body,res){
     const merged=mergeIncoming(current||{},incoming);
     // Черновик может быть неполным: программу и языки проверит публикация.
     const norm=normalizeCatalog(merged,(current&&current.sourceLocale)||'ru');
+    const coverCheck=checkedCover(merged.cover);
+    const mediaCheck=picsResult(merged.media);
+    if(coverCheck.rejected){fail(res,400,'cover_too_large',{miss:['обложка слишком большая или повреждена']});return true;}
+    if(mediaCheck.rejected){fail(res,400,'media_too_large',{miss:['одно или несколько фото не помещаются в каталог']});return true;}
     const now=new Date().toISOString();
     const c={
       id:draftId,
@@ -223,8 +239,8 @@ async function handleCatalogAdmin(action,body,res){
       cat:GOALS.includes(merged.cat)?merged.cat:((current&&current.cat)||'tone'),
       level:LEVELS.includes(merged.level)?merged.level:((current&&current.level)||'Новичок'),
       min:Math.max(1,Math.min(180,Math.round(+merged.min||20))),
-      cover:cleanPic(merged.cover,90000)||null,
-      media:pics(merged.media),
+      cover:coverCheck.value,
+      media:mediaCheck.media,
       pro:!!merged.pro,
       status:'draft',
       at:(current&&current.at)||now,
@@ -274,11 +290,15 @@ async function handleCatalogAdmin(action,body,res){
     const it=(body&&body.item)||{};
     const checked=checkItem(it,{requireBoth:true,fallbackSource:it.sourceLocale||'ru'});
     if(checked.miss.length){fail(res,400,'bad_item',{miss:checked.miss});return true;}
+    const coverCheck=checkedCover(it.cover);
+    const mediaCheck=picsResult(it.media);
+    if(coverCheck.rejected){fail(res,400,'cover_too_large',{miss:['обложка слишком большая или повреждена']});return true;}
+    if(mediaCheck.rejected){fail(res,400,'media_too_large',{miss:['одно или несколько фото не помещаются в каталог']});return true;}
     const newId='a'+rndId(7);
     const c={
       id:newId,by:clean(it.by,40),cat:it.cat,level:it.level,
       min:Math.max(1,Math.min(180,Math.round(+it.min||20))),
-      cover:cleanPic(it.cover,90000)||null,media:pics(it.media),
+      cover:coverCheck.value,media:mediaCheck.media,
       pro:!!it.pro,status:'approved',at:new Date().toISOString(),mine:true
     };
     syncSourceFields(c,checked);
@@ -306,9 +326,17 @@ async function handleCatalogAdmin(action,body,res){
     if(it.by!=null)c.by=clampLine(it.by,40);
     ['cat','level'].forEach(k=>{if(it[k]!=null)c[k]=clean(it[k],40);});
     if(it.min!=null)c.min=Math.max(1,Math.min(180,Math.round(+it.min||20)));
-    if(it.cover!==undefined)c.cover=cleanPic(it.cover,90000)||null;
+    if(incoming.cover!==undefined){
+      const coverCheck=checkedCover(incoming.cover);
+      if(coverCheck.rejected){fail(res,400,'cover_too_large',{miss:['обложка слишком большая или повреждена']});return true;}
+      c.cover=coverCheck.value;
+    }
     if(it.pro!==undefined)c.pro=!!it.pro;
-    if(it.media!==undefined)c.media=pics(it.media);
+    if(incoming.media!==undefined){
+      const mediaCheck=picsResult(incoming.media);
+      if(mediaCheck.rejected){fail(res,400,'media_too_large',{miss:['одно или несколько фото не помещаются в каталог']});return true;}
+      c.media=mediaCheck.media;
+    }
     await store.set(`c:${id}`,JSON.stringify(c));
     send(res,200,{ok:true});
     return true;

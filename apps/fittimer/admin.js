@@ -1555,6 +1555,8 @@ let editingStatus = null;
 // Редактор записи каталога: программа V2 (механика + тексты исходного языка),
 // медиа по stable exercise.id и накладки языков в полях формы.
 const emptyForm = () => ({cover:null, media:{v:2, items:[]}, sourceLocale:'ru', imageGender:'f', program:null});
+const ADMIN_COVER_MAX_CHARS = 88000;
+const ADMIN_MEDIA_BUDGET_CHARS = 600 * 1024;
 let form = emptyForm();
 let aiEditTarget = null;
 
@@ -1637,6 +1639,52 @@ let adminCreateMode = 'ai';   // картинки живут отдельно о
    запись в хранилище не резиновая: три фотографии с телефона по четыре мегабайта
    не поместятся никуда, и отправлять их незачем — на экране они всё равно
    размером с ноготь. */
+function compressCatalogData(data,maxChars,maxSide){
+  const raw=String(data||'');
+  if(!raw)return Promise.resolve(null);
+  if(raw.length<=maxChars)return Promise.resolve(raw);
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      let side=Math.max(180,maxSide||640),quality=.82;
+      const render=()=>{
+        const k=Math.min(1,side/Math.max(img.width,img.height));
+        const c=document.createElement('canvas');
+        c.width=Math.max(1,Math.round(img.width*k));
+        c.height=Math.max(1,Math.round(img.height*k));
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        let out='';
+        try{out=c.toDataURL('image/jpeg',quality);}catch(_){}
+        if(out&&out.length<=maxChars)return resolve(out);
+        if(quality>.46){quality=Math.max(.46,quality-.08);return render();}
+        if(side>180){side=Math.max(180,side-60);quality=.74;return render();}
+        resolve(null);
+      };
+      render();
+    };
+    img.onerror=()=>resolve(null);
+    img.src=raw;
+  });
+}
+async function optimizeFormMediaForSave(){
+  const blocks=programExercises(programForSave());
+  reconcileFormMedia(blocks);
+  if(form.cover){
+    const cover=await compressCatalogData(form.cover,ADMIN_COVER_MAX_CHARS,640);
+    if(!cover)throw new Error('обложку не удалось ужать до допустимого размера');
+    form.cover=cover;
+  }
+  const items=mediaV2Items(form.media)||[];
+  if(!items.length)return;
+  const perImage=Math.floor(ADMIN_MEDIA_BUDGET_CHARS/items.length);
+  const optimized=[];
+  for(const item of items){
+    const data=await compressCatalogData(item.data,perImage,640);
+    if(!data)throw new Error('одно из фото упражнений не удалось ужать до допустимого размера');
+    optimized.push(Object.assign({},item,{data}));
+  }
+  form.media={v:2,items:optimized};
+}
 function shrinkPic(file, maxSide, cb){
   const img = new Image();
   img.onload = () => {
@@ -2411,6 +2459,8 @@ async function saveForm(mode){
   if(publishBtn)publishBtn.disabled=true;
   if(saveState){saveState.style.color='';saveState.textContent=mode==='publish'?'Сохраняю черновик перед публикацией…':'Сохраняю…';}
   try{
+    if(saveState)saveState.textContent='Оптимизирую изображения…';
+    await optimizeFormMediaForSave();
     const item=currentProgramItem();
     let backTo='approved';
     if(mode==='draft'||mode==='publish'){
