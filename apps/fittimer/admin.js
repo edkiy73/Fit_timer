@@ -483,6 +483,7 @@ function renderCatalog(b){
         +'<span class="status-chip">'+esc(item.level)+'</span>'
         +'<span class="status-chip">'+(item.min||0)+' мин</span>'
         +'<span class="status-chip '+(ready?'ok':'')+'">'+esc(localeMarks(item))+'</span>'
+        +(item.reference?'<span class="status-chip ok">Эталон</span>':'')
         +(item.pro?'<span class="pill pro">Premium</span>':'<span class="status-chip">Free</span>')
       +'</div>'
       +'<div class="entity-meta">'
