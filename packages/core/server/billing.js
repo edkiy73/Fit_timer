@@ -241,10 +241,27 @@ async function ensureBillingIdentity(who){
       ? String(current.googleObfuscatedAccountId) : crypto.randomBytes(24).toString('base64url');
     acc.billingIdentity = {appleAppAccountToken:apple, googleObfuscatedAccountId:google};
     await store.set(`a:${who.mh}`, JSON.stringify(acc));
+    // Reverse indexes contain only the hashed account id, never the email. They let
+    // store-server notifications find the AppBase account after the app is closed.
+    await store.set(`bill:id:apple:${sha(apple).slice(0, 40)}`, who.mh);
+    await store.set(`bill:id:google:${sha(google).slice(0, 40)}`, who.mh);
     return acc.billingIdentity;
   }, {ttl:8, retries:60, delay:50});
   if(saved) who.acc.billingIdentity = saved;
   return saved;
+}
+
+async function accountFromBillingRef(ref){
+  if(!ref || typeof ref !== 'object') return null;
+  const kind = String(ref.kind || '');
+  const value = String(ref.value || '').trim();
+  if(!['apple','google'].includes(kind) || !value) return null;
+  const mh = await store.get(`bill:id:${kind}:${sha(value).slice(0, 40)}`);
+  if(!mh) return null;
+  let acc = null;
+  try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(_){}
+  const email = mail(acc && acc.email);
+  return EMAIL.test(email) ? {email, acc, mh:String(mh)} : null;
 }
 
 /* POST /api/billing
@@ -316,7 +333,12 @@ function createBillingHandler({adapters = []} = {}){
       catch(_){ return fail(res, 401, 'bad_signature'); }
       if(!verified || !verified.ok) return fail(res, 401, 'bad_signature');
       const results = [];
-      for(const event of Array.isArray(verified.events) ? verified.events : []){
+      for(const rawEvent of Array.isArray(verified.events) ? verified.events : []){
+        let event = rawEvent;
+        if(!EMAIL.test(mail(event && event.email)) && event && event.accountRef){
+          const resolved = await accountFromBillingRef(event.accountRef);
+          if(resolved) event = {...event, email:resolved.email};
+        }
         results.push(await applyBillingEvent(adapter.id, event));
       }
       const bad = results.find(r => !r.ok);
