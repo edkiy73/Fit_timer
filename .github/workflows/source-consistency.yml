@@ -18,6 +18,11 @@ on:
     branches: [main]
     paths: *consistency_paths
 
+
+concurrency:
+  group: appbase-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check:
     runs-on: ubuntu-latest
