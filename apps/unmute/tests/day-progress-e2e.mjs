@@ -153,7 +153,9 @@ async function twoTapChoice(page,label){
     if(!(await live.isDisabled().catch(()=>true)))await live.evaluate(node=>node.click());
   }
   await next.waitFor({timeout:5000});
-  return next;
+  // The feedback button also transitions/re-mounts. Click the live DOM node before
+  // returning so callers never keep a locator across that transition.
+  await next.evaluate(node=>node.click());
 }
 
 const browser=await chromium.launch(CHROME?{executablePath:CHROME}:{});
@@ -180,8 +182,7 @@ try{
   );
 
   for(let index=0;index<19;index++){
-    const next=await twoTapChoice(page,'Верно');
-    await next.click();
+    await twoTapChoice(page,'Верно');
   }
 
   ok(
@@ -255,8 +256,7 @@ try{
   await correction.getByRole('heading',{name:'Задание 1'}).waitFor({timeout:8000});
 
   for(let index=0;index<19;index++){
-    const next=await twoTapChoice(correction,'Неверно');
-    await next.click();
+    await twoTapChoice(correction,'Неверно');
   }
 
   ok(
@@ -296,8 +296,7 @@ try{
     await appears(correction.getByText('Работа над ошибками · осталось 19',{exact:true}),8000)
   );
 
-  const correctedNext=await twoTapChoice(correction,'Верно');
-  await correctedNext.click();
+  await twoTapChoice(correction,'Верно');
   ok(
     'one corrected task reduces the unresolved queue to 18',
     await appears(correction.getByText('Работа над ошибками · осталось 18',{exact:true}),8000)
@@ -338,8 +337,7 @@ try{
   await slow.getByRole('heading',{name:'Задание 1'}).waitFor({timeout:8000});
 
   for(let index=0;index<19;index++){
-    const next=await twoTapChoice(slow,'Верно');
-    await next.click();
+    await twoTapChoice(slow,'Верно');
   }
   await slow.getByText('Тренируем скорость: фразы должны вылетать без раздумий.').waitFor({timeout:8000});
   await slow.getByRole('button',{name:'Начать',exact:true}).click();
