@@ -7,6 +7,7 @@ const { configureProduct } = require('../server/product-core');
 const { createStripeBillingAdapter } = require('../server/billing-providers/stripe');
 const { createYooKassaBillingAdapter } = require('../server/billing-providers/yookassa');
 const { createGooglePlayBillingAdapter } = require('../server/billing-providers/google-play');
+const { createAppleStoreBillingAdapter, createApiToken } = require('../server/billing-providers/apple-store');
 
 configureProduct({id:'test.billing', name:'Billing Test', slug:'billing-test', defaultPublicUrl:'https://app.example', products:[]});
 
@@ -223,6 +224,137 @@ ok('Google rejects a token linked to another AppBase account',
     product:{sku:'pack.a', kind:'owned', billing:{google:{productId:'pack_a'}}},
     proof:{purchaseToken:'wrong-account'},
     identity:googleIdentity
+  }).then(() => false, e => e.message === 'store_account_mismatch' && e.status === 403));
+
+// App Store: the phone gives a transaction id; Core fetches the transaction from Apple itself.
+const appleIdentity = {appleAppAccountToken:'11111111-2222-4333-8444-555555555555'};
+const fakeJws = payload => [
+  Buffer.from(JSON.stringify({alg:'ES256'})).toString('base64url'),
+  Buffer.from(JSON.stringify(payload)).toString('base64url'),
+  'signature'
+].join('.');
+
+const {privateKey:applePrivateKey, publicKey:applePublicKey} = crypto.generateKeyPairSync('ec', {namedCurve:'P-256'});
+const applePem = applePrivateKey.export({type:'pkcs8', format:'pem'});
+const appleJwt = createApiToken({
+  issuerId:'issuer-1',
+  keyId:'KEY123',
+  privateKey:applePem,
+  bundleId:'test.billing'
+}, 1_900_000_000);
+const jwtParts = appleJwt.split('.');
+const jwtHeader = JSON.parse(Buffer.from(jwtParts[0], 'base64url').toString('utf8'));
+const jwtPayload = JSON.parse(Buffer.from(jwtParts[1], 'base64url').toString('utf8'));
+ok('App Store API token uses ES256, key id and bundle id',
+  jwtHeader.alg === 'ES256' && jwtHeader.kid === 'KEY123'
+  && jwtPayload.aud === 'appstoreconnect-v1' && jwtPayload.bid === 'test.billing');
+ok('App Store API token signature is valid ES256',
+  crypto.verify('sha256', Buffer.from(jwtParts[0] + '.' + jwtParts[1]), {
+    key:applePublicKey, dsaEncoding:'ieee-p1363'
+  }, Buffer.from(jwtParts[2], 'base64url')));
+
+const appleCalls = [];
+const appleTransactions = {
+  'tx-owned':{
+    transactionId:'tx-owned',
+    originalTransactionId:'tx-owned',
+    bundleId:'test.billing',
+    productId:'pack_a_ios',
+    appAccountToken:appleIdentity.appleAppAccountToken,
+    purchaseDate:Date.parse('2030-01-01T00:00:00Z')
+  },
+  'tx-sub':{
+    transactionId:'tx-sub',
+    originalTransactionId:'tx-sub',
+    bundleId:'test.billing',
+    productId:'plus_month_ios',
+    appAccountToken:appleIdentity.appleAppAccountToken,
+    purchaseDate:Date.parse('2030-01-01T00:00:00Z'),
+    expiresDate:Date.parse('2030-02-01T00:00:00Z')
+  },
+  'tx-refund':{
+    transactionId:'tx-refund',
+    originalTransactionId:'tx-refund',
+    bundleId:'test.billing',
+    productId:'pack_a_ios',
+    appAccountToken:appleIdentity.appleAppAccountToken,
+    purchaseDate:Date.parse('2030-01-01T00:00:00Z'),
+    revocationDate:Date.parse('2030-01-02T00:00:00Z')
+  },
+  'tx-other-account':{
+    transactionId:'tx-other-account',
+    originalTransactionId:'tx-other-account',
+    bundleId:'test.billing',
+    productId:'pack_a_ios',
+    appAccountToken:'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
+  }
+};
+const apple = createAppleStoreBillingAdapter({
+  getCredentials:async () => ({issuerId:'issuer-1', keyId:'KEY123', privateKey:'present'}),
+  getApiToken:async () => 'server-jwt',
+  now:() => Date.parse('2030-01-15T00:00:00Z'),
+  fetchImpl:async (url, init = {}) => {
+    appleCalls.push({url, init});
+    const id = decodeURIComponent(String(url).split('/').pop());
+    if(id === 'tx-sandbox' && url.startsWith('https://api.storekit.apple.com')){
+      return jsonResponse({}, 404);
+    }
+    const tx = id === 'tx-sandbox'
+      ? {...appleTransactions['tx-owned'], transactionId:'tx-sandbox', originalTransactionId:'tx-sandbox'}
+      : appleTransactions[id];
+    if(!tx) return jsonResponse({}, 404);
+    return jsonResponse({signedTransactionInfo:fakeJws(tx)});
+  }
+});
+ok('App Store is ready with issuer, key id and private key', await apple.available());
+const appleContext = await apple.purchaseContext({
+  product:{sku:'pack.a', billing:{apple:{productId:'pack_a_ios'}}},
+  identity:appleIdentity
+});
+ok('App Store purchase context contains StoreKit product and appAccountToken',
+  appleContext.productId === 'pack_a_ios' && appleContext.appAccountToken === appleIdentity.appleAppAccountToken);
+
+const appleOwned = await apple.verifyPurchase({
+  product:{sku:'pack.a', kind:'owned', billing:{apple:{productId:'pack_a_ios'}}},
+  proof:{transactionId:'tx-owned'},
+  identity:appleIdentity
+});
+ok('App Store verifies one-time transaction through Server API',
+  appleOwned.events[0]?.status === 'paid' && appleOwned.events[0]?.orderId === 'tx-owned');
+ok('App Store request is authenticated server-side',
+  appleCalls.some(x => x.url.endsWith('/inApps/v1/transactions/tx-owned') && x.init.headers.Authorization === 'Bearer server-jwt'));
+
+const appleSub = await apple.verifyPurchase({
+  product:{sku:'plus.month', kind:'subscription', billing:{apple:{productId:'plus_month_ios'}}},
+  proof:{transactionId:'tx-sub'},
+  identity:appleIdentity
+});
+ok('App Store normalizes active subscription expiry',
+  appleSub.events[0]?.status === 'paid'
+  && appleSub.events[0]?.until === '2030-02-01T00:00:00.000Z'
+  && appleSub.events[0]?.autoRenew === true);
+
+const appleRefund = await apple.verifyPurchase({
+  product:{sku:'pack.a', kind:'owned', billing:{apple:{productId:'pack_a_ios'}}},
+  proof:{transactionId:'tx-refund'},
+  identity:appleIdentity
+});
+ok('App Store revocation becomes a refund event', appleRefund.events[0]?.status === 'refunded');
+
+await apple.verifyPurchase({
+  product:{sku:'pack.a', kind:'owned', billing:{apple:{productId:'pack_a_ios'}}},
+  proof:{transactionId:'tx-sandbox'},
+  identity:appleIdentity
+});
+ok('App Store falls back to sandbox only after production not-found',
+  appleCalls.some(x => x.url.startsWith('https://api.storekit.apple.com/') && x.url.endsWith('/tx-sandbox'))
+  && appleCalls.some(x => x.url.startsWith('https://api.storekit-sandbox.apple.com/') && x.url.endsWith('/tx-sandbox')));
+
+ok('App Store rejects a transaction linked to another AppBase account',
+  await apple.verifyPurchase({
+    product:{sku:'pack.a', kind:'owned', billing:{apple:{productId:'pack_a_ios'}}},
+    proof:{transactionId:'tx-other-account'},
+    identity:appleIdentity
   }).then(() => false, e => e.message === 'store_account_mismatch' && e.status === 403));
 
 console.log(bad ? `\nExternal billing provider failures: ${bad}` : '\nExternal billing providers behave correctly');
