@@ -46,12 +46,21 @@ const PROVIDERS = [
 ] as const;
 
 type Settings = {payment?: {instant?: boolean}} & Record<string, unknown>;
+type ProviderHealth = {
+  status: 'unknown' | 'healthy' | 'unhealthy' | string;
+  lastOperation?: string;
+  lastAttemptAt?: string;
+  lastSuccessAt?: string;
+  lastErrorAt?: string;
+  lastError?: string;
+};
 type ProviderReadiness = {
   id: string;
-  state: 'disabled' | 'not_configured' | 'mapping_missing' | 'ready' | string;
+  state: 'disabled' | 'not_configured' | 'mapping_missing' | 'ready' | 'healthy' | 'unhealthy' | string;
   enabled: boolean;
   configured: boolean;
   mappedProducts: number;
+  health?: ProviderHealth;
   platforms: string[];
   distributions: string[];
   countries: string[];
@@ -69,11 +78,52 @@ type BillingReadiness = {
 };
 
 function readinessLabel(state: string, ru: boolean){
-  if(state === 'ready') return ru ? 'готов' : 'ready';
+  if(state === 'healthy') return ru ? 'работает' : 'healthy';
+  if(state === 'unhealthy') return ru ? 'есть ошибка' : 'unhealthy';
+  if(state === 'ready') return ru ? 'готов, ждём первую проверку' : 'ready, no checks yet';
   if(state === 'mapping_missing') return ru ? 'ключи есть, товары не привязаны' : 'credentials set, products not mapped';
   if(state === 'not_configured') return ru ? 'не настроен' : 'not configured';
   if(state === 'disabled') return ru ? 'не используется' : 'disabled';
   return state || (ru ? 'неизвестно' : 'unknown');
+}
+
+function operationLabel(value: string, ru: boolean){
+  const labels: Record<string, [string, string]> = {
+    checkout:['оплата','checkout'],
+    webhook:['уведомление','webhook'],
+    verify:['проверка покупки','purchase verification'],
+    restore:['восстановление','restore'],
+    renewal:['автопродление','renewal']
+  };
+  const pair = labels[value];
+  return pair ? pair[ru ? 0 : 1] : value;
+}
+
+function timeLabel(value: string | undefined, locale: 'ru' | 'en'){
+  if(!value) return '';
+  const time = Date.parse(value);
+  if(!Number.isFinite(time)) return value;
+  try{ return new Date(time).toLocaleString(locale === 'ru' ? 'ru-RU' : 'en-US'); }
+  catch(_){ return value; }
+}
+
+function healthText(health: ProviderHealth | undefined, locale: 'ru' | 'en'){
+  const ru = locale === 'ru';
+  if(!health || health.status === 'unknown'){
+    return ru ? 'Реальных проверок этого провайдера ещё не было.' : 'No real provider checks yet.';
+  }
+  const operation = operationLabel(String(health.lastOperation || ''), ru);
+  if(health.status === 'unhealthy'){
+    const when = timeLabel(health.lastErrorAt, locale);
+    const error = String(health.lastError || 'provider_error');
+    return ru
+      ? `Последняя ошибка: ${operation || 'операция'} · ${error}${when ? ' · ' + when : ''}`
+      : `Last error: ${operation || 'operation'} · ${error}${when ? ' · ' + when : ''}`;
+  }
+  const when = timeLabel(health.lastSuccessAt, locale);
+  return ru
+    ? `Последняя успешная операция: ${operation || 'проверка'}${when ? ' · ' + when : ''}`
+    : `Last successful operation: ${operation || 'check'}${when ? ' · ' + when : ''}`;
 }
 
 function mappingText(provider: string, mapping: Record<string, unknown>){
@@ -276,6 +326,7 @@ export function AdminBillingKeys({client, adminKey, locale = 'ru'}: {client: Adm
                   <span>{ru ? 'товаров' : 'products'}: <b>{state.mappedProducts}</b></span>
                   <span>{[...(state.platforms || []), ...(state.distributions || []), ...(state.countries || [])].join(' · ')}</span>
                 </div>
+                <p className="ab-admin-empty">{healthText(state.health, locale)}</p>
                 <label className="ab-admin-check">
                   <input type="checkbox" checked={state.enabled !== false} disabled={busyProvider === provider.id}
                     onChange={e => void toggleProvider(provider.id, e.target.checked)} />
