@@ -39,8 +39,8 @@ test('beginner-comprehension guard is shared by all AI workflows', () => {
   });
   const fixture=require('../catalog/etalon-v-silhouette-ru-v2.json');
   const floor=fixture.program.plans.flatMap(p=>p.exercises.flatMap(e=>e.stages)).find(s=>s.name==='Жим двух гантелей лёжа на полу');
-  assert.ok(floor.desc.includes('к бокам груди'));
-  assert.ok(floor.desc.includes('верхней части рук'));
+  assert.ok(floor.desc.includes('по бокам груди'));
+  assert.ok(floor.desc.includes('задней стороной плеч'));
 });
 
 const created = {contractVersion:2, program:{name:'Сила', desc:'', progressionEvery:2, rotate:false, rotateDays:[], plans:[
