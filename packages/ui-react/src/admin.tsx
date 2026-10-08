@@ -40,7 +40,7 @@ const COPY = {
     status:'Статус', deployment:'Сборка', warnings:'Что стоит сделать', services:'Сервисы',
     statusOk:'Всё работает', statusWarning:'Работает, но не всё настроено', statusError:'Есть сбой — ученики могут не сохранить прогресс', statusLoading:'Проверяю…',
     serviceStorage:'Хранилище данных', serviceMail:'Вход по коду из письма', serviceAi:'ИИ (разбор ошибок, разговор)', servicePush:'Уведомления на телефон', serviceBilling:'Оплата',
-    serviceOn:'работает', serviceOff:'не настроено', serviceMemory:'только временная память — данные пропадут', serviceBroken:'сбой',
+    serviceOn:'работает', serviceOff:'не настроено', serviceDisabled:'не используется', serviceMemory:'только временная память — данные пропадут', serviceBroken:'сбой',
     buildLine:'Сейчас на сайте версия из изменения', details:'Подробности для разработчика',
     analytics:'Аналитика', accounts:'Аккаунты', totalErrors:'Ошибок в приложении',
     noErrors:'Ошибок в приложении нет.', noUsers:'Аккаунтов пока нет.', email:'Email',
@@ -72,7 +72,7 @@ const COPY = {
     status:'Status', deployment:'Build', warnings:'To do', services:'Services',
     statusOk:'Everything works', statusWarning:'Works, but not everything is set up', statusError:'Something is broken — learners may lose progress', statusLoading:'Checking…',
     serviceStorage:'Data storage', serviceMail:'Sign-in by email code', serviceAi:'AI (mistake explanations, talk)', servicePush:'Phone notifications', serviceBilling:'Payments',
-    serviceOn:'works', serviceOff:'not set up', serviceMemory:'temporary memory only — data will be lost', serviceBroken:'broken',
+    serviceOn:'works', serviceOff:'not set up', serviceDisabled:'not used', serviceMemory:'temporary memory only — data will be lost', serviceBroken:'broken',
     buildLine:'The site runs the version from change', details:'Details for developers',
     analytics:'Analytics', accounts:'Accounts', totalErrors:'App errors',
     noErrors:'No app errors.', noUsers:'No accounts yet.', email:'Email',
@@ -212,7 +212,7 @@ function JsonCard({value}: {value: unknown}){
   return <pre className="ab-admin-json">{JSON.stringify(value, null, 2)}</pre>;
 }
 
-type Service = {configured?: boolean};
+type Service = {configured?: boolean; enabled?: boolean};
 
 /* «Состояние»: one plain sentence, what works and what does not; raw data stays folded. */
 function HealthView({health, copy}: {health: AdminHealth | null; copy: Copy}){
@@ -225,12 +225,15 @@ function HealthView({health, copy}: {health: AdminHealth | null; copy: Copy}){
     : copy.statusError;
   const storageState = storage.mode === 'memory' ? copy.serviceMemory
     : storage.status === 'ok' ? copy.serviceOn : copy.serviceBroken;
+  const state = (service: Service | undefined) => service?.enabled === false
+    ? copy.serviceDisabled
+    : service?.configured ? copy.serviceOn : copy.serviceOff;
   const rows: Array<[string, boolean, string]> = [
     [copy.serviceStorage, storage.status === 'ok' && storage.mode !== 'memory', storageState],
     [copy.serviceMail, !!services.mail?.configured, services.mail?.configured ? copy.serviceOn : copy.serviceOff],
-    [copy.serviceAi, !!services.ai?.configured, services.ai?.configured ? copy.serviceOn : copy.serviceOff],
-    [copy.servicePush, !!services.push?.configured, services.push?.configured ? copy.serviceOn : copy.serviceOff],
-    [copy.serviceBilling, !!services.billing?.configured, services.billing?.configured ? copy.serviceOn : copy.serviceOff]
+    [copy.serviceAi, !!services.ai?.configured, state(services.ai)],
+    [copy.servicePush, !!services.push?.configured, state(services.push)],
+    [copy.serviceBilling, !!services.billing?.configured, state(services.billing)]
   ];
   return (
     <section className="ab-admin-stack">
