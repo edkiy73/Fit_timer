@@ -420,6 +420,14 @@ ok('native runtime does not poll browser workout schedules every 20 seconds',
 ok('foreground workout resources only resume for a live workout',
   /if\(state\.live && \$\('scrWork'\)\.classList\.contains\('on'\)\)/.test(platformRuntimeSource)
   && /const inWorkout = state\.live && \$\('scrWork'\)\.classList\.contains\('on'\);/.test(eventRuntimeSource));
+const voiceLoadSource = fs.readFileSync('src/app/00-core.js','utf8');
+ok('workout TTS speaks multiple load units as count × per-unit weight',
+  /const count = Math\.max\(1, Math\.round\(\+step\.loadCount \|\| 1\)\);/.test(voiceLoadSource)
+  && /\`${count} по ${kg} ${unit}\`/.test(voiceLoadSource)
+  && /\`${count} at ${kg} ${unit} each\`/.test(voiceLoadSource));
+ok('next exercise speech includes the same load description',
+  /const load = exerciseLoadSpeech\(nxt, english\);[\s\S]*if\(load\) out \+=/.test(voiceLoadSource));
+
 ok('wake lock requests are idempotent and never start while hidden',
   /if\(wakeLock \|\| document\.hidden\) return;/.test(coreRuntimeSource)
   && /if\(wakeLock === lock\) wakeLock = null;/.test(coreRuntimeSource));
