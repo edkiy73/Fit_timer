@@ -58,6 +58,28 @@ function fakeRes(){
   await admin({method:'POST', headers:{'x-admin-key':'wrong'}, body:{action:'users_list'}}, adminRes);
   ok('shared admin endpoint is mounted and protected', adminRes.statusCode === 403);
 
+  const productAdminRes = fakeRes();
+  await admin({method:'POST', headers:{'x-admin-key':process.env.ADMIN_KEY}, body:{action:'task_stats'}}, productAdminRes);
+  const productAdmin = JSON.parse(productAdminRes.body || '{}');
+  ok('product Admin action runs through the shared Core admin handler',
+    productAdminRes.statusCode === 200
+    && productAdmin.stats
+    && productAdmin.stats.total === 0
+    && productAdmin.stats.accounts === 0);
+  const { taskStatsFromDocuments } = require('../lib/task-admin');
+  const safeStats = taskStatsFromDocuments([
+    JSON.stringify({v:1,items:{
+      a:{id:'a',title:'secret title',done:false,created:'x',at:'x'},
+      b:{id:'b',title:'another secret',done:true,created:'x',at:'x'},
+      c:{deleted:true,at:'x'}
+    }}),
+    'not-json'
+  ]);
+  ok('Task Mini Admin stats expose only aggregates, not task titles',
+    safeStats.accounts === 1 && safeStats.total === 2 && safeStats.active === 1
+    && safeStats.done === 1 && safeStats.tombstones === 1
+    && !JSON.stringify(safeStats).includes('secret'));
+
   const billing = require('../api/billing');
   const billingRes = fakeRes();
   await billing({method:'POST', headers:{}, body:{action:'providers'}}, billingRes);
