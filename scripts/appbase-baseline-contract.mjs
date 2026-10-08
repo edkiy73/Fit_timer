@@ -38,6 +38,6 @@ export const BASELINE = Object.freeze([
 ]);
 
 export const CURRENT_GAPS = Object.freeze({
-  starter: Object.freeze(['genericFallbackUx']),
+  starter: Object.freeze([]),
   taskMini: Object.freeze(['installAnalytics','clientDiagnostics','fatalErrorBoundary','genericFallbackUx'])
 });

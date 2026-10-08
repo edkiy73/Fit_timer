@@ -26,3 +26,6 @@ h2{margin:0 0 8px}
 .link-button{text-decoration:none}
 .language{margin-top:18px}
 @media(max-width:480px){.app{margin:12px auto;padding:18px;border-radius:16px}}
+
+.route-fallback{display:grid;gap:12px;justify-items:start}
+.route-fallback .link-button{padding-left:0}
