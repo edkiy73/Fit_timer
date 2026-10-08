@@ -391,9 +391,14 @@ function renderCatalog(b){
   b.innerHTML=pageHead(
     pending?'На проверке':'Каталог',
     pending?'Сразу видно, что готово к публикации и чего не хватает.':'Опубликованные программы и доступ Premium.',
-    !pending?'<button class="b ok" id="catalogAdd">+ Добавить</button>':''
+    !pending?'<div class="action-row"><button class="b ok" id="catalogAdd">+ Добавить</button>'
+      +(!(data.approved||[]).some(x=>x.id==='vshape_v2')?'<button class="b" id="catalogSeedReference">Опубликовать эталонную программу</button>':'')+'</div>':''
   );
-  if(!pending)$('catalogAdd').onclick=()=>setTab('add');
+  if(!pending){
+    $('catalogAdd').onclick=()=>setTab('add');
+    const seedButton=$('catalogSeedReference');
+    if(seedButton)seedButton.onclick=()=>act('seed',{},seedButton,'Эталонная программа опубликована в каталоге.');
+  }
   if(!list.length){
     b.insertAdjacentHTML('beforeend',`<div class="empty">${pending?'Новых заявок нет.':'В каталоге пока ничего нет. Добавь первую программу кнопкой выше.'}</div>`);
     return;

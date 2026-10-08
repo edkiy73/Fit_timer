@@ -52,7 +52,9 @@ const PROGRAM = name => catalogProgram(name, ['Приседания', 'Отжи�
 
   // ---- curated V2 seed: one real bilingual reference program, no legacy demos ----
   const seeded = await api('seed');
-  ok('загружается только эталонная программа V2', seeded.s === 200 && seeded.j.items === 1, seeded.j.items);
+  ok('загружается только эталонная программа V2', seeded.s === 200 && seeded.j.items === 1 && seeded.j.added === 1, seeded.j.items);
+  const again=await api('seed');
+  ok('повторная публикация не дублирует и не перезаписывает программу', again.s===200 && again.j.added===0);
   const curated = await fetch(BASE+'/api/catalog').then(r=>r.json());
   ok('эталон опубликован в витрине', (curated.items||[]).some(x=>x.id==='vshape_v2'));
   const TRAINER = '@adm.' + Math.random().toString(36).slice(2, 7);
