@@ -217,6 +217,10 @@ function safeHealthError(error){
 }
 
 function healthStatus(value){
+  const result = String(value && value.lastResult || '');
+  if(result === 'error') return 'unhealthy';
+  if(result === 'success') return 'healthy';
+  // Backward compatibility for health records written before lastResult existed.
   const lastSuccess = Date.parse(value && value.lastSuccessAt || '') || 0;
   const lastError = Date.parse(value && value.lastErrorAt || '') || 0;
   if(!lastSuccess && !lastError) return 'unknown';
@@ -230,6 +234,7 @@ async function providerOperationalHealth(provider){
   return {
     status:healthStatus(value),
     lastOperation:line(value.lastOperation,40),
+    lastResult:line(value.lastResult,20),
     lastAttemptAt:line(value.lastAttemptAt,40),
     lastSuccessAt:line(value.lastSuccessAt,40),
     lastErrorAt:line(value.lastErrorAt,40),
@@ -247,6 +252,7 @@ async function recordProviderHealth(provider, operation, ok, error){
     let value = {};
     try{ value = JSON.parse(await store.get(key)) || {}; }catch(_){}
     value.lastOperation = operation;
+    value.lastResult = ok ? 'success' : 'error';
     value.lastAttemptAt = at;
     if(ok){
       value.lastSuccessAt = at;
