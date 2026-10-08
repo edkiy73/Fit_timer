@@ -46,6 +46,10 @@ function fakeRes(){
   ok('UI uses shared React admin panel and Core admin client',
     read('src/app.tsx').includes('@appbase/ui-react/admin.js')
     && read('src/admin.ts').includes('@appbase/core/admin.js'));
+  ok('product billing UI uses BillingRouter methods and contains no provider-specific routing',
+    read('src/app.tsx').includes('taskBilling.methods()')
+    && !read('src/app.tsx').includes('taskBilling.providers()')
+    && !/stripe|yookassa|google_play|app_store/i.test(read('src/app.tsx')));
   ok('Core does not need a task-specific sync API', !registry.accepts('profile', 'project:1') && !registry.accepts('account', 'project'));
 
   const auth = require('../api/auth');
