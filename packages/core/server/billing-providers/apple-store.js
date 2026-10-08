@@ -91,13 +91,34 @@ function createAppleStoreBillingAdapter({
       });
       let payload = {};
       try{ payload = await response.json(); }catch(_){}
-      if(response.ok && payload.signedTransactionInfo) return payload;
+      if(response.ok && payload.signedTransactionInfo) return {payload, base};
       if(response.status === 404 && index === 0) continue;
       if(response.status === 404) throw problem('purchase_not_found', 409);
       if(response.status === 401) throw problem('apple_auth_failed', 502);
       throw problem('apple_store_error', 502);
     }
     throw problem('purchase_not_found', 409);
+  }
+
+  async function requestSubscriptionStatus(transactionId, bundleId, preferredBase){
+    if(typeof fetchImpl !== 'function') throw problem('fetch_unavailable', 503);
+    const auth = await token(bundleId);
+    const path = '/inApps/v1/subscriptions/' + encodeURIComponent(transactionId);
+    const bases = preferredBase === SANDBOX_API ? [SANDBOX_API, PROD_API] : [PROD_API, SANDBOX_API];
+    for(const [index, base] of bases.entries()){
+      const response = await fetchImpl(base + path, {
+        method:'GET',
+        headers:{Authorization:'Bearer ' + auth}
+      });
+      let payload = {};
+      try{ payload = await response.json(); }catch(_){}
+      if(response.ok && Array.isArray(payload.data)) return payload;
+      if(response.status === 404 && index === 0) continue;
+      if(response.status === 404) throw problem('subscription_status_not_found', 409);
+      if(response.status === 401) throw problem('apple_auth_failed', 502);
+      throw problem('apple_store_error', 502);
+    }
+    throw problem('subscription_status_not_found', 409);
   }
 
   function normalize(transaction, {requestedId, productId, bundleId, identity, product}){
@@ -115,17 +136,54 @@ function createAppleStoreBillingAdapter({
     const revoked = millis(transaction.revocationDate) > 0;
     if(product && product.kind === 'subscription'){
       const expiryMs = millis(transaction.expiresDate);
-      const active = !revoked && expiryMs > now();
       return {
         orderId:txId,
-        status:active ? 'paid' : (revoked ? 'refunded' : 'canceled'),
+        status:revoked ? 'refunded' : (expiryMs > now() ? 'paid' : 'canceled'),
         until:expiryMs ? new Date(expiryMs).toISOString() : '',
-        // Transaction info does not include the renewal preference. Server notifications
-        // will refine this later; a currently active auto-renewable purchase starts true.
-        autoRenew:active
+        autoRenew:false
       };
     }
     return {orderId:txId, status:revoked ? 'refunded' : 'paid', autoRenew:false};
+  }
+
+  function subscriptionEvent(statusPayload, {productId, bundleId, identity}){
+    if(statusPayload && statusPayload.bundleId && String(statusPayload.bundleId) !== bundleId){
+      throw problem('store_bundle_mismatch', 409);
+    }
+    const expectedAccount = String(identity && identity.appleAppAccountToken || '').toLowerCase();
+    let best = null;
+    for(const group of Array.isArray(statusPayload && statusPayload.data) ? statusPayload.data : []){
+      for(const item of Array.isArray(group && group.lastTransactions) ? group.lastTransactions : []){
+        if(!item || !item.signedTransactionInfo) continue;
+        const tx = decodeJwsPayload(item.signedTransactionInfo);
+        if(String(tx.productId || '') !== productId) continue;
+        if(String(tx.bundleId || '') !== bundleId) continue;
+        if(String(tx.appAccountToken || '').toLowerCase() !== expectedAccount) continue;
+        const expiryMs = millis(tx.expiresDate);
+        if(!best || expiryMs > best.expiryMs){
+          best = {item, tx, expiryMs};
+        }
+      }
+    }
+    if(!best) throw problem('subscription_status_not_found', 409);
+
+    const renewal = best.item.signedRenewalInfo ? decodeJwsPayload(best.item.signedRenewalInfo) : {};
+    if(renewal.productId && String(renewal.productId) !== productId){
+      throw problem('store_product_mismatch', 409);
+    }
+    if(renewal.appAccountToken && String(renewal.appAccountToken).toLowerCase() !== expectedAccount){
+      throw problem('store_account_mismatch', 403);
+    }
+
+    const statusCode = Number(best.item.status) || 0;
+    const active = statusCode === 1 || statusCode === 4;
+    const refunded = statusCode === 5 || millis(best.tx.revocationDate) > 0;
+    return {
+      orderId:clean(best.tx.transactionId, 200),
+      status:refunded ? 'refunded' : (active ? 'paid' : 'canceled'),
+      until:best.expiryMs ? new Date(best.expiryMs).toISOString() : '',
+      autoRenew:Number(renewal.autoRenewStatus) === 1
+    };
   }
 
   return {
@@ -154,14 +212,27 @@ function createAppleStoreBillingAdapter({
       const response = await requestTransaction(transactionId, mapped.bundleId);
       // Never trust JWS sent by the phone. The payload decoded here came from the
       // authenticated App Store Server API response for this exact transaction id.
-      const transaction = decodeJwsPayload(response.signedTransactionInfo);
-      return {events:[normalize(transaction, {
+      const transaction = decodeJwsPayload(response.payload.signedTransactionInfo);
+      const baseEvent = normalize(transaction, {
         requestedId:transactionId,
         productId:mapped.productId,
         bundleId:mapped.bundleId,
         identity,
         product
-      })]};
+      });
+      if(product && product.kind === 'subscription'){
+        const status = await requestSubscriptionStatus(
+          String(transaction.originalTransactionId || transactionId),
+          mapped.bundleId,
+          response.base
+        );
+        return {events:[subscriptionEvent(status, {
+          productId:mapped.productId,
+          bundleId:mapped.bundleId,
+          identity
+        })]};
+      }
+      return {events:[baseEvent]};
     }
   };
 }
