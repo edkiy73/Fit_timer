@@ -36,6 +36,10 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            packages/core/package-lock.json
+            apps/*/package-lock.json
 
       - name: Install Core and every app
         run: npm run setup
