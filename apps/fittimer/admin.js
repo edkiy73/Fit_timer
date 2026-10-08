@@ -1556,7 +1556,7 @@ let editingStatus = null;
 // медиа по stable exercise.id и накладки языков в полях формы.
 const emptyForm = () => ({cover:null, media:{v:2, items:[]}, sourceLocale:'ru', imageGender:'f', program:null});
 const ADMIN_COVER_MAX_CHARS = 88000;
-const ADMIN_MEDIA_BUDGET_CHARS = 780 * 1024;
+const ADMIN_MEDIA_BUDGET_CHARS = 600 * 1024;
 let form = emptyForm();
 let aiEditTarget = null;
 
