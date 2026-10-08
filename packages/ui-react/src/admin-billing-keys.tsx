@@ -75,7 +75,7 @@ function readinessLabel(state: string, ru: boolean){
   return state || (ru ? 'неизвестно' : 'unknown');
 }
 
-function mappingText(provider: string, mapping: Record<string, unknown>, ru: boolean){
+function mappingText(provider: string, mapping: Record<string, unknown>){
   if(provider === 'stripe') return String(mapping.priceId || '');
   if(provider === 'yookassa'){
     const amount = Number(mapping.amount) || 0;
@@ -158,7 +158,7 @@ export function AdminBillingKeys({client, adminKey, locale = 'ru'}: {client: Adm
         const state = readiness?.providers?.find(item => item.id === provider.id);
         const mappings = (readiness?.products || []).flatMap(product => {
           const value = product.mappings?.[provider.id] || {};
-          const text = mappingText(provider.id, value, ru);
+          const text = mappingText(provider.id, value);
           return text ? [{...product, text}] : [];
         });
         return (
