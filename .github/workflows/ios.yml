@@ -11,6 +11,11 @@ on:
       - '.github/workflows/ios.yml'
       - '!**/*.md'
 
+
+concurrency:
+  group: ios-native-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   simulator:
     runs-on: macos-15
