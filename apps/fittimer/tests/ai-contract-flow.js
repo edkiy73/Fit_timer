@@ -84,9 +84,9 @@ const post = async (path, body) => {
     openEditAI(p);
   }, pid);
   await page.evaluate(v => { $('eaWish').value = v; }, 'добавь планку');
-  await page.evaluate(() => $('aiSelf').click());
   const nBefore = await page.evaluate(() => customPrograms.length);
-  await page.waitForFunction(n => customPrograms.length > n, nBefore, {timeout:30000});
+  await page.evaluate(() => $('aiSelf').click());
+  await page.waitForFunction(n => customPrograms.length > n, nBefore, {timeout:15000});
   // createEditedProgram persists the new copy before showing its summary dialog.
   // Do not sample the dialog immediately after the in-memory push: on a slower CI
   // runner savePrograms() is still in flight at that point.
