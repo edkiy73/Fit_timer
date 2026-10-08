@@ -1,8 +1,22 @@
 # AppBase Starter + Task Mini plan — 2026-10-07
 
-Status: **in progress**  
+Status: **PR1–PR4 complete; PR5 final drift/docs verification**  
 Date: **2026-10-07**  
+Last implementation review: **2026-10-09**  
 Repository baseline when this plan was written: `main` at `9222272013c55ea8a51860a876331c46c5cfd2d8`.
+
+### Implementation status
+
+- baseline contract + Starter hardening: complete;
+- Core billing foundation and shared Admin billing control plane: complete;
+- Task Mini required-baseline parity: complete, with no documented required gaps;
+- Task Mini shared Admin reference + one product `extraSection`: complete;
+- Task Mini executable one-time/subscription billing reference and contract tests: complete;
+- final CI drift protection + role/readiness documentation: this PR5 slice.
+
+Key merged slices include billing reconciliation/Admin work through #729 and Task Mini parity/reference work #726, #730 and #732.
+
+After PR5 is green, this plan stops at the existing **FitTimer migration gate** below. FitTimer migration must not start automatically; it requires an explicit new decision.
 
 ## Goal
 
