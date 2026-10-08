@@ -3,11 +3,21 @@
 One repository for AppBase Core and every app built on it.
 
 ```text
-packages/core/     AppBase Core — shared client (TypeScript) + server (Node) foundation
-apps/fittimer/     Fit Timer — production web/API/Android/iOS app
-apps/task-mini/    Reference app on the standard stack (React + TS + Vite) — start new apps from it
-docs/              repository-level plans
+packages/core/       AppBase Core — shared client (TypeScript) + server (Node) foundation
+templates/react-app/ Minimum mandatory React + TypeScript + Vite starter scaffold
+apps/task-mini/      Executable architecture reference + one small real product domain
+apps/fittimer/       Fit Timer — production web/API/Android/iOS app
+apps/unmute/         Complex production consumer of the same AppBase contracts
+docs/                repository-level plans
 ```
+
+Create a real new product from the neutral starter, not by copying Task Mini, FitTimer or UnMute:
+
+```bash
+npm run app:create -- <slug> "<Name>" <reverse.domain.id> [ru|en]
+```
+
+Use Task Mini to inspect a working domain/Admin/billing example after generation.
 
 - Architecture and roadmap: `docs/appbase-preparation-roadmap.md`
 - Agent instructions: `AGENTS.md`, `CLAUDE.md`
