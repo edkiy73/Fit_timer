@@ -64,6 +64,8 @@ type ProviderReadiness = {
   platforms: string[];
   distributions: string[];
   countries: string[];
+  excludeCountries?: string[];
+  external?: boolean;
 };
 type ProductMapping = {
   sku: string;
@@ -124,6 +126,27 @@ function healthText(health: ProviderHealth | undefined, locale: 'ru' | 'en'){
   return ru
     ? `Последняя успешная операция: ${operation || 'проверка'}${when ? ' · ' + when : ''}`
     : `Last successful operation: ${operation || 'check'}${when ? ' · ' + when : ''}`;
+}
+
+function policyText(state: ProviderReadiness, locale: 'ru' | 'en'){
+  const ru = locale === 'ru';
+  const platformNames: Record<string, string> = {
+    web:'Web', android:'Android', ios:'iOS'
+  };
+  const distributionNames: Record<string, string> = {
+    web:'Web', direct:ru ? 'напрямую' : 'direct', google_play:'Google Play', app_store:'App Store'
+  };
+  const platforms = (state.platforms || []).map(value => platformNames[value] || value);
+  const distributions = (state.distributions || []).map(value => distributionNames[value] || value);
+  const countries = (state.countries || []);
+  const excluded = (state.excludeCountries || []);
+  const parts: string[] = [];
+  if(platforms.length) parts.push((ru ? 'платформы: ' : 'platforms: ') + platforms.join(', '));
+  if(distributions.length) parts.push((ru ? 'каналы: ' : 'channels: ') + distributions.join(', '));
+  if(countries.length) parts.push((ru ? 'страны: ' : 'countries: ') + countries.join(', '));
+  if(excluded.length) parts.push((ru ? 'кроме: ' : 'except: ') + excluded.join(', '));
+  if(state.external) parts.push(ru ? 'внешняя оплата' : 'external payment');
+  return parts.join(' · ');
 }
 
 function mappingText(provider: string, mapping: Record<string, unknown>){
@@ -324,7 +347,7 @@ export function AdminBillingKeys({client, adminKey, locale = 'ru'}: {client: Adm
                 <div className="ab-admin-status-line">
                   <span><b>{readinessLabel(state.state, ru)}</b></span>
                   <span>{ru ? 'товаров' : 'products'}: <b>{state.mappedProducts}</b></span>
-                  <span>{[...(state.platforms || []), ...(state.distributions || []), ...(state.countries || [])].join(' · ')}</span>
+                  <span>{(ru ? 'Политика: ' : 'Policy: ') + policyText(state, locale)}</span>
                 </div>
                 <p className="ab-admin-empty">{healthText(state.health, locale)}</p>
                 <label className="ab-admin-check">
