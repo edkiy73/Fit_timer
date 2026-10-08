@@ -79,6 +79,15 @@ try{
   assert.match(billing, /createBillingHandler/);
   assert.match(billing, /createDefaultBillingAdapters/);
 
+  const billingClient = await readFile(path.join(target,'src/billing.ts'),'utf8');
+  assert.match(billingClient, /createBillingClient/);
+  assert.match(billingClient, /paymentMethods/);
+  assert.match(billingClient, /startCheckout/);
+  assert.match(billingClient, /prepareNativePurchase/);
+  assert.match(billingClient, /verifyNativePurchase/);
+  assert.match(billingClient, /restoreNativePurchases/);
+  assert.match(billingClient, /restorePurchases/);
+
   const auth = await readFile(path.join(target,'src/auth.ts'),'utf8');
   assert.match(auth, /@appbase\/core\/auth\.js/);
   assert.match(auth, /demo-app\.auth\.session/);
