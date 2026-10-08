@@ -62,6 +62,145 @@ The app team should then spend most of its time on:
 - optional native capabilities;
 - product-specific Admin sections.
 
+
+## Hosting independence — architectural requirement
+
+AppBase Core must be **hosting-neutral**. Product code must not depend on Vercel, Cloudflare, Supabase hosting conventions, or another specific deployment platform.
+
+The target is:
+
+```text
+Product app
+    ↓
+AppBase Core contracts
+    ↓
+hosting/provider adapters
+    ↓
+Vercel / Cloudflare / another host
+```
+
+A hosting migration should primarily replace infrastructure adapters and deployment configuration, not require changes across every product.
+
+### H1. Core must not depend on hosting-specific request/runtime APIs
+
+Shared server modules should use AppBase-owned contracts for:
+
+- request/response handling;
+- environment/config access;
+- persistent key/value or database storage;
+- object/file storage when needed;
+- scheduled/background jobs where supported;
+- email delivery;
+- push delivery;
+- AI providers;
+- billing providers;
+- logging/observability.
+
+Hosting-specific APIs belong behind adapters.
+
+### H2. Product APIs must stay portable
+
+Product API code should express product behavior and compose Core services.
+
+Avoid product code that directly imports or assumes:
+
+- Vercel request/response types;
+- Vercel KV/Blob/Storage APIs;
+- Cloudflare Workers bindings;
+- Supabase-specific client behavior;
+- platform-specific cron/event objects;
+- provider-specific secret/config lookup.
+
+Where a platform needs a thin entry wrapper, keep it at the deployment edge.
+
+### H3. Deployment adapters are replaceable
+
+The same app should be able to have adapters such as:
+
+```text
+server/adapters/vercel/*
+server/adapters/cloudflare/*
+server/adapters/node/*
+```
+
+without changing product domain code.
+
+The exact folder structure can differ; the requirement is the boundary, not these names.
+
+### H4. Data portability is separate from hosting portability
+
+Do not tie product data format to one storage provider.
+
+Core should define provider-neutral storage contracts and explicit migration/export paths so moving from one platform/provider does not force product rewrites.
+
+This applies especially to:
+
+- account/session data;
+- sync documents;
+- analytics;
+- billing journal;
+- admin settings;
+- secrets metadata;
+- push registrations.
+
+### H5. Starter must prove hosting-neutral composition
+
+Starter should not encode Vercel as the architecture.
+
+It may ship a Vercel deployment target initially, but the product/runtime composition must be separable from that target.
+
+Acceptance criteria should include:
+
+- product code does not import hosting-specific SDKs directly;
+- Core contracts can be instantiated with a different adapter;
+- hosting configuration lives outside product domain logic;
+- a second host adapter can be added without changing product screens/domain modules.
+
+### H6. Task Mini becomes the portability smoke app
+
+Task Mini should be the smallest app used to prove host independence.
+
+Long-term portability smoke:
+
+1. run the same Task Mini product code against the default hosting adapter;
+2. run it against at least one alternate/local Node-compatible adapter;
+3. verify auth, sync, Admin, health, analytics and billing test flows keep the same product contracts.
+
+A full second production deployment is not required in the first pass; the architecture and automated smoke should make that deployment possible without product rewrites.
+
+### H7. Admin and health must expose platform readiness without leaking platform coupling
+
+Shared Admin may show which infrastructure adapter/provider is active and whether it is healthy, but product code should consume generic readiness states.
+
+Example:
+
+```text
+Storage: healthy
+Mail: configured
+Push: not configured
+Hosting adapter: vercel
+```
+
+Changing the hosting adapter must not require rewriting product Admin sections.
+
+### H8. Definition of portability
+
+A hosting migration is considered healthy when changing host primarily touches:
+
+- deployment config;
+- platform entry wrappers;
+- infrastructure adapters;
+- environment/secrets wiring;
+
+and does **not** require changing:
+
+- product domain schemas;
+- product screens;
+- product repositories/merge rules;
+- product analytics taxonomy;
+- product-specific Admin sections.
+
+
 ## Part A — Starter baseline
 
 ### A1. Define the baseline contract
@@ -428,6 +567,8 @@ The work is done when all of these are true:
 6. Task Mini demonstrates one real domain and one product Admin extension without product logic leaking into Core.
 7. CI proves a clean generated app and Task Mini whenever shared platform contracts change.
 8. Adding a normal account-centric product should mainly require domain/UX work instead of rebuilding auth, sync, billing, diagnostics, Admin, health, legal, and analytics infrastructure.
+9. Product code is hosting-neutral: moving from Vercel to Cloudflare, Node, or another supported host primarily means swapping deployment/adapters rather than rewriting each app.
+10. Task Mini can run its core platform flows through a non-production/local alternate hosting adapter as a portability smoke.
 
 ## Scope boundary for future products
 
