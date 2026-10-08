@@ -46,12 +46,14 @@ const PROVIDERS = [
 ] as const;
 
 type Settings = {payment?: {instant?: boolean}} & Record<string, unknown>;
+type ProviderHealthPoint = {at?: string; ok?: boolean; error?: string; operational?: boolean};
 type ProviderReadiness = {
   id: string;
-  state: 'disabled' | 'not_configured' | 'mapping_missing' | 'ready' | string;
+  state: 'disabled' | 'not_configured' | 'mapping_missing' | 'unhealthy' | 'ready' | string;
   enabled: boolean;
   configured: boolean;
   mappedProducts: number;
+  health?: {webhook?: ProviderHealthPoint; reconcile?: ProviderHealthPoint};
   platforms: string[];
   distributions: string[];
   countries: string[];
@@ -71,9 +73,17 @@ type BillingReadiness = {
 function readinessLabel(state: string, ru: boolean){
   if(state === 'ready') return ru ? 'готов' : 'ready';
   if(state === 'mapping_missing') return ru ? 'ключи есть, товары не привязаны' : 'credentials set, products not mapped';
+  if(state === 'unhealthy') return ru ? 'настроен, но есть сбой' : 'configured, but unhealthy';
   if(state === 'not_configured') return ru ? 'не настроен' : 'not configured';
   if(state === 'disabled') return ru ? 'не используется' : 'disabled';
   return state || (ru ? 'неизвестно' : 'unknown');
+}
+
+function healthText(point: ProviderHealthPoint | undefined, locale: 'ru' | 'en'){
+  if(!point?.at) return '';
+  const date = new Date(point.at);
+  const when = Number.isNaN(date.getTime()) ? String(point.at) : date.toLocaleString(locale === 'ru' ? 'ru-RU' : 'en-US');
+  return when + ' · ' + (point.ok ? 'ok' : String(point.error || 'error'));
 }
 
 function mappingText(provider: string, mapping: Record<string, unknown>){
@@ -281,6 +291,16 @@ export function AdminBillingKeys({client, adminKey, locale = 'ru'}: {client: Adm
                     onChange={e => void toggleProvider(provider.id, e.target.checked)} />
                   <span>{ru ? 'Разрешать новые покупки этим способом' : 'Allow new purchases with this provider'}</span>
                 </label>
+                {(state.health?.webhook?.at || state.health?.reconcile?.at) && (
+                  <ul className="ab-admin-services">
+                    {state.health?.webhook?.at && (
+                      <li><span>{ru ? 'Последний webhook' : 'Latest webhook'}</span><b>{healthText(state.health.webhook, locale)}</b></li>
+                    )}
+                    {state.health?.reconcile?.at && (
+                      <li><span>{ru ? 'Последняя сверка' : 'Latest reconciliation'}</span><b>{healthText(state.health.reconcile, locale)}</b></li>
+                    )}
+                  </ul>
+                )}
               </>
             )}
             <p className="ab-admin-empty">{provider.hint[locale]}</p>
