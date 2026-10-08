@@ -207,7 +207,7 @@ function createGooglePlayBillingAdapter({
           || 'gp-sub-' + crypto.createHash('sha256').update(purchaseToken + '|' + expiryTime).digest('hex').slice(0, 32);
 
         if(paid && ackPending(purchase)) await acknowledgeSubscription(packageName, productId, purchaseToken);
-        return {events:[{orderId, status, until:expiryTime, autoRenew}]};
+        return {reference:{purchaseToken}, events:[{orderId, status, until:expiryTime, autoRenew}]};
       }
 
       const purchase = await request(
@@ -229,7 +229,7 @@ function createGooglePlayBillingAdapter({
         || 'gp-item-' + crypto.createHash('sha256').update(purchaseToken).digest('hex').slice(0, 32);
 
       if(paid && ackPending(purchase)) await acknowledgeOwned(packageName, productId, purchaseToken);
-      return {events:[{orderId, status, autoRenew:false}]};
+      return {reference:{purchaseToken}, events:[{orderId, status, autoRenew:false}]};
     }
   };
 }
