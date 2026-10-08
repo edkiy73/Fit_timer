@@ -219,27 +219,35 @@ async function signedInAccount(body){
    POST /api/billing?provider=<id>                                   → уведомление провайдера */
 function createBillingHandler({adapters = []} = {}){
   const list = (Array.isArray(adapters) ? adapters : []).filter(a => a && PROVIDER.test(String(a.id || '')));
-  const enabled = async (rawContext = {}) => {
-    const context = billingContext(rawContext);
+  const available = async () => {
     const out = [];
     for(const adapter of list){
       if(adapter.testOnly && process.env.ALLOW_MEMORY_STORE !== '1') continue;
-      if(!adapterSupports(adapter, context)) continue;
-      if(typeof adapter.supports === 'function'){
-        let supported = false;
-        try{ supported = !!(await adapter.supports(context)); }catch(_){}
-        if(!supported) continue;
-      }
       if(typeof adapter.available === 'function'){
         let on = false;
-        try{ on = !!(await adapter.available(context)); }catch(_){}
+        try{ on = !!(await adapter.available()); }catch(_){}
         if(!on) continue;
       }
       out.push(adapter);
     }
     return out;
   };
+  const enabled = async (rawContext = {}) => {
+    const context = billingContext(rawContext);
+    const out = [];
+    for(const adapter of await available()){
+      if(!adapterSupports(adapter, context)) continue;
+      if(typeof adapter.supports === 'function'){
+        let supported = false;
+        try{ supported = !!(await adapter.supports(context)); }catch(_){}
+        if(!supported) continue;
+      }
+      out.push(adapter);
+    }
+    return out;
+  };
   const find = async (id, context) => (await enabled(context)).find(a => a.id === id) || null;
+  const findWebhook = async id => (await available()).find(a => a.id === id) || null;
 
   return async function billingHandler(req, res){
     if(cors(req, res)) return;
@@ -261,7 +269,7 @@ function createBillingHandler({adapters = []} = {}){
     if(!(await rateOk(req, 'billing', 240))) return fail(res, 429, 'rate_limited');
 
     if(query.provider){
-      const adapter = await find(String(query.provider), billingContext(body && body.context));
+      const adapter = await findWebhook(String(query.provider));
       if(!adapter || typeof adapter.verifyWebhook !== 'function') return fail(res, 404, 'unknown_provider');
       let verified;
       try{ verified = await adapter.verifyWebhook({headers: req.headers || {}, body, query}); }
