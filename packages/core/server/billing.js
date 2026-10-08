@@ -464,6 +464,7 @@ function createBillingHandler({adapters = []} = {}){
       const errors = [];
       let checked = 0;
       let restored = 0;
+      let providerFailures = 0;
 
       for(const item of items){
         if(!item || typeof item !== 'object') continue;
@@ -485,6 +486,7 @@ function createBillingHandler({adapters = []} = {}){
             proof:item.proof && typeof item.proof === 'object' ? item.proof : {}
           });
         }catch(e){
+          providerFailures++;
           errors.push({sku, error:String((e && e.message) || 'purchase_verification_failed').slice(0,120)});
           continue;
         }
@@ -493,6 +495,7 @@ function createBillingHandler({adapters = []} = {}){
         for(const raw of (verified && Array.isArray(verified.events)) ? verified.events : []){
           const result = await applyBillingEvent(adapter.id, {...raw, email:who.email, sku});
           if(!result.ok){
+            providerFailures++;
             errors.push({sku, error:String(result.error || 'billing_event_failed').slice(0,120)});
             continue;
           }
@@ -506,6 +509,12 @@ function createBillingHandler({adapters = []} = {}){
         const raw = await store.get(`a:${who.mh}`);
         if(raw) fresh = JSON.parse(raw);
       }catch(_){}
+      await recordProviderHealth(
+        adapter.id,
+        'restore',
+        providerFailures === 0,
+        providerFailures ? 'restore_partial_failure' : ''
+      );
       return send(res, 200, {
         ok:true,
         granted:restored > 0,
@@ -529,8 +538,13 @@ function createBillingHandler({adapters = []} = {}){
       const adapter = list.find(a => a.id === current.provider);
       if(adapter && typeof adapter.setRenewal === 'function'){
         let answer;
-        try{ answer = await adapter.setRenewal({email: who.email, sub: current, autoRenew}); }
-        catch(e){ return fail(res, (e && e.status) || 502, String((e && e.message) || 'renewal_failed')); }
+        try{
+          answer = await adapter.setRenewal({email: who.email, sub: current, autoRenew});
+        }catch(e){
+          await recordProviderHealth(adapter.id, 'renewal', false, e);
+          return fail(res, (e && e.status) || 502, String((e && e.message) || 'renewal_failed'));
+        }
+        await recordProviderHealth(adapter.id, 'renewal', true);
         if(answer && answer.url) return send(res, 200, {ok: true, url: String(answer.url), autoRenew: !!current.autoRenew});
       }
       const saved = await store.withLock(`lock:bill:${mh}`, async () => {
@@ -557,15 +571,26 @@ function createBillingHandler({adapters = []} = {}){
       if(skuError) return fail(res, 400, skuError);
       const product = await billingProduct(sku);
       let started;
-      try{ started = await adapter.checkout({email: who.email, sku, product}); }
-      catch(e){ return fail(res, (e && e.status) || 502, String((e && e.message) || 'checkout_failed')); }
-      if(started && started.url) return send(res, 200, {ok: true, url: String(started.url)});
+      try{
+        started = await adapter.checkout({email: who.email, sku, product});
+      }catch(e){
+        await recordProviderHealth(adapter.id, 'checkout', false, e);
+        return fail(res, (e && e.status) || 502, String((e && e.message) || 'checkout_failed'));
+      }
+      if(started && started.url){
+        await recordProviderHealth(adapter.id, 'checkout', true);
+        return send(res, 200, {ok: true, url: String(started.url)});
+      }
       const results = [];
       for(const event of (started && Array.isArray(started.events)) ? started.events : []){
         results.push(await applyBillingEvent(adapter.id, event));
       }
       const bad = results.find(r => !r.ok);
-      if(bad) return fail(res, 400, bad.error);
+      if(bad){
+        await recordProviderHealth(adapter.id, 'checkout', false, bad.error);
+        return fail(res, 400, bad.error);
+      }
+      await recordProviderHealth(adapter.id, 'checkout', true);
       const last = results[results.length - 1];
       return send(res, 200, {ok: true, granted: !!last, ...(last ? last.entitlements : {})});
     }
