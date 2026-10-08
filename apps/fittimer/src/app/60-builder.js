@@ -2,6 +2,7 @@ import { MUSCLES, OPT_EQUIP, OPT_GOAL, OPT_LEVEL, OPT_NONE } from './options.js'
 import { appLocale, canonicalDescription, canonicalLabel, t } from '../i18n/index.js';
 import FitAIProtocol from '../../lib/ai-protocol.js';
 import FitExerciseV2 from '../../lib/fit-exercise-v2.js';
+import FitAIContract from '../../lib/fit-ai-contract.js';
 import { appRuntimeCompat } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
 import { $, appAlert, appConfirm, appDialog, goBackTo, goTab, icon, isChanged, plural, setCoreBuilderHooks, setShown, show, state,
@@ -1035,6 +1036,8 @@ export function promoteExerciseStage(ex, stageId){
   if(!ex || !(ex.stages || []).some(st => st.stageId === stageId)) return false;
   ex.currentStageId = stageId;
   ex.progressState = {count:0, current:emptyProgressCurrent()};
+  // картинка показывала прежнее движение — на новый этап её не переносим (план, «Картинки stages»)
+  ex.media = null;
   return true;
 }
 
@@ -1977,6 +1980,7 @@ export function exDirty(){
 export function commitExercise(){
   const old = (curPlan().exercises || [])[exIdx];
   const upd = exerciseEditResult(exDraft);
+  if(old && old.currentStageId !== upd.currentStageId) upd.media = null;
   return old ? carryExerciseProgress(old, upd) : upd;
 }
 // Строгая проверка перед сохранением: весовая/сопротивляющая нагрузка без снаряда,
@@ -2426,7 +2430,7 @@ function composeRequest(){
   if(q.level && q.level !== AI_DEFAULT_LEVEL) parts.push(`Explicitly selected level: ${aiChoiceEnglish(q.level)}.`);
   else parts.push('Fitness level: infer from authoritative self-reported context and recorded training history when available; if neither gives useful evidence, use a conservative beginner baseline.');
 
-  if(q.days.length) parts.push(`Training weekdays (canonical tokens): ${q.days.join(', ')}.`);
+  if(q.days.length) parts.push(`Training weekdays: ${FitAIContract.daysToKeys(q.days).join(', ')}.`);
   else free.push('training days and weekly frequency');
 
   if(q.dur) parts.push(`Target duration: ${aiDurationEnglish(q.dur)}.`);
@@ -2434,23 +2438,23 @@ function composeRequest(){
 
   if(q.focus.length) parts.push(`Extra focus: ${aiListEnglish(q.focus)}.`);
 
-  if(q.equip.length) parts.push(`Available equipment: ${aiListEnglish(q.equip)}.`);
-  else free.push('equipment; assume a normal home setting if unspecified');
+  if(!q.equip.length) free.push('equipment; assume a normal home setting if unspecified');
+  else if(q.equip.includes('Без инвентаря') && q.equip.length === 1) parts.push('No equipment.');
 
   if(q.limit.length) parts.push(`Limitations/preferences: ${aiListEnglish(q.limit)}.`);
 
   if(q.style === 'Круговая'){
-    parts.push('Structure: circuit. Repeat the whole exercise list; use КРУГИ 2-5 and usually ПОДХОДЫ 1.');
+    parts.push('Structure: circuit. Repeat the whole exercise list: rounds 2-5 and usually sets 1.');
   } else if(q.style === 'Силовая'){
-    parts.push('Structure: strength. Complete all sets of one exercise before moving on; use КРУГИ: 1 and usually ПОДХОДЫ 3-4.');
+    parts.push('Structure: strength. Complete all sets of one exercise before moving on: rounds 1 and usually sets 3-4.');
   } else if(q.style === 'Смешанная'){
-    parts.push('Structure: mixed. A block with multiple sets repeats for multiple rounds; usually КРУГИ 2-3 and ПОДХОДЫ 2-3, while keeping total volume sensible.');
+    parts.push('Structure: mixed. A block with multiple sets repeats for multiple rounds: usually rounds 2-3 and sets 2-3, keeping total volume sensible.');
   } else {
     free.push('workout structure: circuit, strength, or mixed');
   }
 
   if(q.warm === 'С разминкой'){
-    parts.push('Include warm-up exercises at the beginning and mark each with РАЗМИНКА: да. They run once before the rounds.');
+    parts.push('Include warm-up exercises (warmup true) at the beginning.');
   } else if(q.warm === 'Без разминки'){
     parts.push('Do not add warm-up exercises.');
   } else {
@@ -2459,8 +2463,8 @@ function composeRequest(){
 
   if(q.split){
     parts.push('Use different exercise sets on different workout days, split logically by muscle groups or training focus.');
-    if(q.rotate) parts.push('Use ЧЕРЕДОВАНИЕ: да, leave ДЕНЬ values empty for variants, and put the shared schedule in ДНИ ТРЕНИРОВОК.');
-    else parts.push('Use ЧЕРЕДОВАНИЕ: нет and assign canonical weekday tokens to each variant.');
+    if(q.rotate) parts.push('Use rotate true: plans alternate, plan days stay empty, the shared schedule goes to rotateDays.');
+    else parts.push('Use rotate false and assign weekdays to each plan.');
   } else {
     free.push('whether to split into different day variants or keep one repeating workout');
   }
@@ -2469,12 +2473,50 @@ function composeRequest(){
   if(free.length) out += ` Decide these unspecified items yourself using sensible training logic: ${free.join('; ')}.`;
   const context = clampText(($('qContext') && $('qContext').value) || '', AI_CONTEXT_MAX).trim();
   if(context){
-    out += ` USER CAPABILITIES / LIMITATIONS CONTEXT: ${context}. Treat this as authoritative self-reported context for exercise selection, starting load, volume, range of motion, impact and progression. Known numeric performance and working-load data are evidence: preserve/reuse them for the same movement and use them to choose conservative positive loads for comparable movements instead of defaulting to ВЕС: 0. Do not diagnose from it. If it describes an injury, pain, or other health limitation, avoid choices that clearly conflict with it and do not claim medical clearance.`;
+    out += ` USER CAPABILITIES / LIMITATIONS CONTEXT: ${context}. Treat this as authoritative self-reported context for exercise selection, starting load, volume, range of motion, impact and progression. Known numeric performance and working-load data are evidence: preserve/reuse them for the same movement and use them to choose conservative positive loads for comparable movements instead of a zero weight. Do not diagnose from it. If it describes an injury, pain, or other health limitation, avoid choices that clearly conflict with it and do not claim medical clearance.`;
   }
   if(q.note && q.note.trim()) out += ` Additional user request: ${q.note.trim()}`;
   return out.trim();
 }
-export const fullAIPrompt = ()=> aiPrompt() + '\n\n=== TASK: CREATE PROGRAM ===\n' + composeRequest();
+/* ---- AI Contract V2 на клиенте ----
+   Встроенный ИИ получает только структурированный input (prompt собирает сервер),
+   ручной режим «скопировать в чат» — тот же prompt + схему текстом. Ответ в обоих
+   случаях — JSON, разбирается здесь одной функцией. */
+// Чипы инвентаря в форме ИИ → каталог снарядов и доп. оборудования
+const AI_EQUIP_IDS = {'Коврик':'mat', 'Гантели':'dumbbell', 'Резинки':'band', 'Стул':'chair', 'Фитбол':'fitball',
+  'Утяжелители':'ankle_weight', 'Турник':'pullup_bar'};
+export function aiEquipmentInput(labels){
+  const idsList = (labels || []).map(x => AI_EQUIP_IDS[x]).filter(Boolean);
+  return {
+    availableLoadEquipment:idsList.filter(id => FitExerciseV2.equipment(id).roles.includes('load')),
+    availableSupportEquipment:idsList.filter(id => FitExerciseV2.equipment(id).roles.includes('support'))
+  };
+}
+export function aiLanguage(locale){
+  const outLocale = (locale === 'ru' || locale === 'en') ? locale : appLocale;
+  return outLocale === 'ru' ? 'Russian' : 'English';
+}
+export function contractIds(prefix){
+  return prefix === 'e' ? newExId() : prefix === 'mv' ? newStageId() : newPlanId();
+}
+// Текст ответа (из чата или от сервера) → проверенный JSON. Ошибки — человеческим списком путей.
+export function parseContractAnswer(kind, raw, input){
+  let s = String(raw || '').trim();
+  const fence = s.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if(fence) s = fence[1].trim();
+  else if(s.indexOf('{') > 0) s = s.slice(s.indexOf('{'), s.lastIndexOf('}') + 1);
+  let json;
+  try{ json = JSON.parse(s); }catch(_){ return {json:null, errors:[t('ai.notJson')]}; }
+  const verdict = FitAIContract.checkOutput(kind, json, input || {});
+  return verdict.ok ? {json, errors:[]} : {json:null, errors:(verdict.missing.length ? verdict.missing : [verdict.reason]).slice(0, 8)};
+}
+export function aiCreateInput(){
+  return FitAIContract.normalizeInput('program.create', Object.assign({
+    language:aiLanguage(),
+    task:composeRequest()   // composeRequest уже включает контекст возможностей/ограничений
+  }, aiEquipmentInput(q.equip))).input;
+}
+export const fullAIPrompt = ()=> FitAIContract.manualPrompt('program.create', aiCreateInput());
 
 // отправка: системное меню «Поделиться» само покажет ChatGPT/Gemini/Claude — нам не нужно знать, что установлено
 export async function copyPrompt(){
@@ -2498,11 +2540,15 @@ export const MSG_AI_NOEX = ()=> t('ai.noExerciseResponse');
 export function importFromText(){
   const txt = ($('aiResult').value || '').trim();
   if(!txt){ appAlert(t('ai.pasteProgram')); return; }
-  const {program, errors} = parseProgramText(txt);
+  const parsed = parseContractAnswer('program.create', txt);
+  const built = parsed.json ? FitAIContract.programFromCreate(parsed.json, contractIds) : null;
+  const errors = parsed.json ? built.errors : parsed.errors;
   if(errors.length){
     appAlert(MSG_AI_PARSE() + '\n\n' + t('ai.problemList') + '\n— ' + errors.join('\n— '));
     return;
   }
+  // id и служебные поля новой программы выдаёт приложение, как у «Новая программа» вручную
+  const program = sanitizeProgram(Object.assign({id:'p' + Date.now(), time:'', cover:null}, built.program));
   // открываем распознанное в конструкторе — можно проверить, поправить и сохранить
   draft = program;
   planIdx = 0;
@@ -2606,6 +2652,12 @@ export function selectPlanVariant(value){
    after every product module is evaluated, in the original part order. */
 export function initBuilder(){
   setProgramsBuilderHooks({
+    aiLanguage,
+    aiCreateInput,
+    aiEquipmentInput,
+    contractIds,
+    parseContractAnswer,
+    normalizeExercise,
     getMaxMain: () => MAX_MAIN,
     getMaxWarm: () => MAX_WARM,
     msgAiEmpty: MSG_AI_EMPTY,

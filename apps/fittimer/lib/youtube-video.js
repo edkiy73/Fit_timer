@@ -3,7 +3,7 @@
 const { store } = require('../../../packages/core/server/store');
 const { generate, generateGeminiVideo } = require('../../../packages/core/server/ai');
 require('./fit-ai-test-fixtures');
-const FitAIProtocol = require('./ai-protocol');
+const FitAIContract = require('./fit-ai-contract');
 
 const CACHE_TTL = 7 * 86400;
 const WATCH_HEADERS = {
@@ -284,86 +284,36 @@ function sourceFacts(id,title,source,data){
     programDescription:cleanCoachText(data.programDescription,1000),rounds:data.rounds==null?1:data.rounds,
     roundRestSec:data.roundRestSec==null?0:data.roundRestSec,exercises};
 }
-function protocolLineText(v,max){
+function oneLine(v,max){
   return String(v||'').replace(/[\r\n]+/g,' ').replace(/\s+/g,' ').trim().slice(0,max||300);
 }
-function factsToProtocol(facts,locale){
+// подписи мышц в фактах (как в evidence-prompt) → машинные id контракта
+const MUSCLE_ID = {'Шея':'ne','Плечи':'sh','Грудь':'ch','Руки':'ar','Пресс':'co','Спина':'ba','Ягодицы':'gl','Квадрицепс':'le','Задняя бедра':'hm','Икры':'ca'};
+const NO_PROGRESSION = {mode:'none', every:null, repsStep:null, repsMax:null, weightStep:null, weightMax:null, timeStep:null, timeMax:null};
+/* Подтверждённые факты видео → тот же Program DTO V2, что у создания через ИИ.
+   Механика (порядок, повторы/время, подходы, отдых, разминка, круги) копируется из фактов
+   без участия модели; прогрессию видео не придумывает; снаряды не угадываются. */
+function factsToContract(facts,locale){
   const ru=String(locale||'').toLowerCase().startsWith('ru');
-  const title=protocolLineText(facts.title,100);
-  const name=(ru?'Тренировка из видео':'Workout from video')+(title?': '+title:'');
+  const title=oneLine(facts.title,100);
+  const name=oneLine((ru?'Тренировка из видео':'Workout from video')+(title?': '+title:''),60);
   const fallbackDesc=(ru?'Собрано по подтверждённым данным из видео. Источник: ':'Built from verified details in the video. Source: ')+facts.url;
   const desc=cleanCoachText(facts.programDescription,900);
-  const fullDesc=(desc?desc+' ':'')+fallbackDesc;
-  const lines=[
-    'ПРОГРАММА: '+name,
-    'ОПИСАНИЕ ПРОГРАММЫ: '+protocolLineText(fullDesc,1000),
-    'ПРОГРЕССИЯ: нет',
-    'ЧЕРЕДОВАНИЕ: нет',
-    '',
-    'ДЕНЬ:',
-    'КРУГИ: '+facts.rounds,
-    'ОТДЫХ МЕЖДУ КРУГАМИ: '+facts.roundRestSec
-  ];
-  for(const ex of facts.exercises){
-    lines.push('','УПРАЖНЕНИЕ: '+protocolLineText(ex.name,120));
-    if(ex.description)lines.push('ОПИСАНИЕ: '+protocolLineText(ex.description,600));
-    if(ex.muscles&&ex.muscles.length)lines.push('МЫШЦЫ: '+ex.muscles.join(', '));
-    if(ex.mistakes)lines.push('ОШИБКИ: '+protocolLineText(ex.mistakes,300));
-    lines.push('ФОРМАТ: '+(ex.format==='time'?'время':'повторения'));
-    lines.push('ЗНАЧЕНИЕ: '+ex.value);
-    lines.push('ПОДХОДЫ: '+ex.sets);
-    if(ex.warmup)lines.push('РАЗМИНКА: да');
-    lines.push('ОТДЫХ: '+ex.restSec);
-    // Видео импортирует исходную тренировку, а не придумывает будущую прогрессию.
-    // Без этой строки старый fallback парсера автоматически включал +5 секунд/+1 повтор.
-    lines.push('УСЛОЖНЯТЬ: нет');
-    lines.push('ВИДЕО: '+ex.video);
-  }
-  return lines.join('\n');
-}
-function finalPrompt(clientPrompt,facts){
-  return String(clientPrompt||'')+'\n\n'+[
-    '=== VERIFIED VIDEO FACTS — SERVER GROUND TRUTH ===',
-    'Do NOT analyze the URL again. Do NOT add, remove, reorder, merge, split, or substitute exercises.',
-    'There must be exactly '+facts.exercises.length+' exercise blocks, in this exact order.',
-    'For every exercise copy format, value, sets, rest and warm-up exactly from VERIFIED_FACTS.',
-    'Neutral defaults sets=1, restSec=0 and rounds=1 only mean the source did not specify repetition of that container.',
-    'Use the exact video URL supplied for each exercise. It already contains a verified start timestamp.',
-    'Do not add weights, progression, extra rounds, extra rest, or extra repetitions not present below.',
-    'You may write concise names/descriptions in the requested UI language, but descriptions must not change mechanics.',
-    'Use КРУГИ: '+facts.rounds+' and ОТДЫХ МЕЖДУ КРУГАМИ: '+facts.roundRestSec+'.',
-    'VERIFIED_FACTS:',JSON.stringify(facts)
-  ].join('\n');
-}
-function lineValue(block,label){
-  const m=String(block||'').match(new RegExp('(?:^|\\n)'+label+':\\s*([^\\n]*)','m'));
-  return m?m[1].trim():'';
-}
-function normalizedValue(v){return String(v||'').replace(/[–—]/g,'-').replace(/\s+/g,'');}
-function timestampFromUrl(v){const m=String(v||'').match(/[?&]t=(\d+)(?:s)?(?:&|$)/i);return m?+m[1]:null;}
-function validateFinalProgram(raw,facts){
-  const base=FitAIProtocol.validateResponse('video.parse',raw);
-  if(!base.ok)return base;
-  const text=base.text;
-  const blocks=text.split(/(?=^УПРАЖНЕНИЕ:\s*\S)/gm).filter(x=>/^УПРАЖНЕНИЕ:/m.test(x));
-  if(blocks.length!==facts.exercises.length)return {ok:false,text,missing:[],reason:'video_exercise_count_mismatch'};
-  if(parseInt(lineValue(text,'КРУГИ'),10)!==facts.rounds||parseInt(lineValue(text,'ОТДЫХ МЕЖДУ КРУГАМИ'),10)!==facts.roundRestSec)
-    return {ok:false,text,missing:[],reason:'video_rounds_changed'};
-  for(let i=0;i<blocks.length;i++){
-    const block=blocks[i],expected=facts.exercises[i],fmt=lineValue(block,'ФОРМАТ').toLowerCase();
-    const isTime=/врем|сек|time/.test(fmt);
-    if((expected.format==='time')!==isTime)return {ok:false,text,missing:[],reason:'video_format_changed'};
-    if(normalizedValue(lineValue(block,'ЗНАЧЕНИЕ'))!==normalizedValue(expected.value))return {ok:false,text,missing:[],reason:'video_value_changed'};
-    if(parseInt(lineValue(block,'ПОДХОДЫ'),10)!==expected.sets)return {ok:false,text,missing:[],reason:'video_sets_changed'};
-    if(parseInt(lineValue(block,'ОТДЫХ'),10)!==expected.restSec)return {ok:false,text,missing:[],reason:'video_rest_changed'};
-    const warm=/^(?:да|yes|true|1)$/i.test(lineValue(block,'РАЗМИНКА'));
-    if(warm!==expected.warmup)return {ok:false,text,missing:[],reason:'video_warmup_changed'};
-    const video=lineValue(block,'ВИДЕО');
-    if(videoIdFromUrl(video)!==facts.id)return {ok:false,text,missing:[],reason:'video_source_changed'};
-    const ts=timestampFromUrl(video);
-    if(ts==null||Math.abs(ts-expected.startSec)>3)return {ok:false,text,missing:[],reason:'video_timestamp_changed'};
-  }
-  return {ok:true,text,missing:[],reason:''};
+  return {contractVersion:FitAIContract.CONTRACT_VERSION, program:{
+    name, desc:oneLine((desc?desc+' ':'')+fallbackDesc,1000), progressionEvery:null, rotate:false, rotateDays:[],
+    plans:[{days:[], rounds:facts.rounds, roundRest:facts.roundRestSec, exercises:facts.exercises.map(ex=>({
+      warmup:!!ex.warmup,
+      stages:[{
+        name:oneLine(ex.name,60), desc:oneLine(ex.description,600), mistakes:oneLine(ex.mistakes,300),
+        type:ex.format==='time'?'time':'reps', value:String(ex.value).replace(/[–—]/g,'-').replace(/\s+/g,''),
+        sets:ex.sets, perSide:false, rest:ex.restSec, restAfter:null,
+        muscles:(ex.muscles||[]).map(m=>MUSCLE_ID[m]).filter(Boolean).slice(0,5),
+        load:{type:'none', equipment:null, equipmentName:'', count:1, weight:0, levels:[], level:0},
+        supportEquipment:[], progression:NO_PROGRESSION, advance:'manual',
+        video:ex.video
+      }]
+    }))}]
+  }};
 }
 function videoError(code,status){const e=new Error(code);e.code=code;e.status=status||422;return e;}
 
@@ -400,11 +350,11 @@ async function buildYoutubeProgram(settings,opts){
     throw videoError(transcript?'video_insufficient':'video_no_transcript',422);
   }
 
-  const text=factsToProtocol(facts,locale);
-  const verdict=validateFinalProgram(text,facts);
-  if(!verdict.ok)throw Object.assign(new Error(verdict.reason||'video_protocol_invalid'),{status:502,validation:verdict});
-  return {text:verdict.text,provider:facts.source==='visual'?'gemini':'grounded',model:facts.source,fallback:false,
+  const json=factsToContract(facts,locale);
+  const verdict=FitAIContract.checkOutput('program.create',json,{});
+  if(!verdict.ok)throw Object.assign(new Error(verdict.reason||'video_contract_invalid'),{status:502,validation:verdict});
+  return {json,text:JSON.stringify(json),contractVersion:FitAIContract.CONTRACT_VERSION,provider:facts.source==='visual'?'gemini':'grounded',model:facts.source,fallback:false,
     video:{id,title:facts.title,source:facts.source,transcript:!!transcript,exercises:facts.exercises.length}};
 }
 
-module.exports={buildYoutubeProgram,videoIdFromUrl,_test:{transcriptFromPayload,groundEvidence,visualFacts,validateFinalProgram,sourceFacts,factsToProtocol,parseJsonObject}};
+module.exports={buildYoutubeProgram,videoIdFromUrl,_test:{transcriptFromPayload,groundEvidence,visualFacts,sourceFacts,factsToContract,parseJsonObject}};

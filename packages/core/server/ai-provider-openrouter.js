@@ -46,7 +46,8 @@ async function generateText({model,prompt,timeoutMs=48000,maxTokens=32768,temper
       messages:[{role:'user',content:String(prompt||'')}],
       max_tokens:Math.max(1,Math.min(65536,Math.round(+maxTokens||32768))),
       temperature:Number.isFinite(+temperature)?+temperature:.3,
-      ...(schema?{response_format:{type:'json_schema',json_schema:{name:schema.name,strict:true,schema:schema.schema}}}:{})
+      // require_parameters: маршрут без поддержки схемы не молчит, а отказывает — тогда сработает резерв
+      ...(schema?{response_format:{type:'json_schema',json_schema:{name:schema.name,strict:true,schema:schema.schema}},provider:{require_parameters:true}}:{})
     })
   },timeoutMs);
 

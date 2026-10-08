@@ -37,15 +37,27 @@ const ok = (name, value) => { if(!value) bad++; console.log((value ? '  ok  ' : 
   ok('лимиты сохраняются', saved.status === 200 && saved.body.settings.limits.heavy === 1);
 
   const auth = {email:MAIL,token:login.body.syncToken,deviceId:'ai-device'};
-  // Сервер проверяет ответ нейросети по протоколу, поэтому заглушка должна быть
-  // настоящей программой: маркер заставляет тестовый режим lib/ai.js вернуть её.
-  const one = await post('/api/ai',Object.assign({kind:'program.create',prompt:'Собери тестовую программу\n=== ADMIN CATALOG REQUEST ==='},auth));
-  ok('серверная генерация отвечает', one.status === 200 && /ПРОГРАММА: Тестовая программа/.test(one.body.text || ''));
+  // AI Contract V2: клиент присылает структурированный input, prompt и схему собирает сервер
+  const legacy = await post('/api/ai',Object.assign({kind:'program.create',prompt:'Собери программу'},auth));
+  ok('старый текстовый запрос отклоняется и не тратит лимит', legacy.status === 400 && legacy.body.error === 'contract_version_required');
+  const input = {language:'Russian', task:'Тестовая программа на 2 дня', availableLoadEquipment:['dumbbell']};
+  const one = await post('/api/ai',Object.assign({kind:'program.create',contractVersion:2,input},auth));
+  ok('серверная генерация отвечает JSON по контракту', one.status === 200 && one.body.json
+    && one.body.json.contractVersion === 2 && one.body.json.program.name === 'Тестовая программа');
   ok('ответ сообщает расход лимита', one.body.usage && one.body.usage.used === 1 && one.body.usage.limit === 1);
-  const two = await post('/api/ai',Object.assign({kind:'program.create',prompt:'Ещё одна'},auth));
+  const two = await post('/api/ai',Object.assign({kind:'program.create',contractVersion:2,input},auth));
   ok('месячный лимит защищает бюджет', two.status === 429 && two.body.error === 'ai_limit');
-  const stranger = await post('/api/ai',{kind:'exercise.create',prompt:'Упражнение',email:MAIL,token:'wrong',deviceId:'ai-device'});
+  const ex = {id:'ex_1', warmup:false, currentStageId:'mv_1', currentLoadReadOnly:{}, stages:[Object.assign({stageId:'mv_1'},
+    one.body.json.program.plans[0].exercises[1].stages[0])]};
+  const mod = await post('/api/ai',Object.assign({kind:'exercise.modify',contractVersion:2,
+    input:{language:'Russian', task:'больше повторов', exercise:ex}},auth));
+  ok('правка упражнения ссылается на этап по id', mod.status === 200
+    && mod.body.json.exercise.stages[0].ref === 'mv_1' && mod.body.json.exercise.stages[0].replace.value === '15');
+  const stranger = await post('/api/ai',{kind:'exercise.create',contractVersion:2,input:{task:'Упражнение'},email:MAIL,token:'wrong',deviceId:'ai-device'});
   ok('одной почты недостаточно', stranger.status === 403 && stranger.body.error === 'bad_sync_token');
 
+  // настройки общие для тестового сервера: возвращаем лимит, чтобы следующие сценарии не упирались в 1/1
+  settings.limits.heavy = 30;
+  await post('/api/admin',{action:'save_settings',settings},{'x-admin-key':encodeURIComponent(ADMIN)});
   process.exit(bad ? 1 : 0);
 })().catch(e=>{ console.error(e); process.exit(1); });

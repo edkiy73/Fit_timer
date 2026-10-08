@@ -102,6 +102,7 @@ assert.deepEqual(out.json, good);
 assert.equal(calls[0].body.response_format.type, 'json_schema');
 assert.equal(calls[0].body.response_format.json_schema.strict, true);
 assert.equal(calls[0].body.max_tokens, 900);
+assert.equal(calls[0].body.provider.require_parameters, true, 'OpenRouter must not silently drop the schema');
 
 // a non-portable schema is a programming error, not a provider call
 calls = [];

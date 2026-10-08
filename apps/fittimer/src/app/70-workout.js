@@ -1,10 +1,11 @@
 import FitExerciseV2 from '../../lib/fit-exercise-v2.js';
+import FitAIContract from '../../lib/fit-ai-contract.js';
 import { M_LABEL } from './options.js';
 import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
 import { appRuntimeCompat, appUi } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
 import { $, DUMBBELL_ICON, ILLO, announceExercise, announceRemaining, announceRest, appAlert,
-  appDialog, beep, endSignal, exerciseGong, fanfare, goBackTo, goTab, gong, haptic, hideReadyBar,
+  appConfirm, appDialog, beep, endSignal, exerciseGong, fanfare, goBackTo, goTab, gong, haptic, hideReadyBar,
   icon, initAudio, keepAwake, plural, prepSec, readySec, releaseWake, roundDone, runReadyBar,
   setCoreWorkoutHooks, setShown, show, soundOn, speak, state, tick, voiceIsEnglish, voiceVol, storedLoadRow, workoutLoadSnapshot
 } from './00-core.js';
@@ -41,7 +42,7 @@ let eventWorkoutHooks = {
 export function setWorkoutEventHooks(hooks = {}){
   eventWorkoutHooks = {...eventWorkoutHooks, ...hooks};
 }
-import { advanceExerciseProgression, promoteExerciseStage, stageOfferAtCeiling, commitExercise, curPlan, draft, ensureProgressState, exIdx, exerciseProgEvery, fmtKg,
+import { advanceExerciseProgression, newExId, newStageId, normalizeExercise, promoteExerciseStage, stageOfferAtCeiling, commitExercise, curPlan, draft, ensureProgressState, exIdx, exerciseProgEvery, fmtKg,
   exP, liveExercise, openExercise, previewNextProgression, progressionStateLabel,
   progAtCeiling, progAxis, renderExList, setBuilderWorkoutHooks, loadBuilderDraft, clearExerciseDraft,
   selectPlanVariant, valueText
@@ -783,12 +784,52 @@ export function openSwapHint(){
 export function closeSwapHint(){ appUi.closeModal($('swapModal')); }
 
 // ---- замена упражнения через ИИ прямо на тренировке ----
-// Одиночную «замену при потолке» заменяет цепочка этапов движения (PR 3 плана),
-// а замену через ИИ — AI Contract V2 (PR 5). До этого действие честно недоступно.
-export async function swapViaAI(){
+// exercise.replace — всегда новое движение в том же слоте: id упражнения сохраняется,
+// этапы и прогресс новые. Человек подтверждает это до запроса.
+export async function swapViaAI(retrying){
   closeSwapHint();
-  appAlert(t('feature.v2Pending'));
+  if(!premiumGate()) return;
+  const step = state.steps[state.stepIdx];
+  const src = step && liveExercise(step.exId, step.exName);
+  if(!src){ appAlert(t('workout.editUnavailable')); return; }
+  setPause(true);
+  if(!retrying && !await appConfirm(t('ai.replaceConfirm'))) return;
+  const p = src.p;
+  const load = exP(src.ex).load || {};
+  const parsed = FitAIContract.normalizeInput('exercise.replace', {
+    language:appLocale === 'ru' ? 'Russian' : 'English',
+    task:'Replace this exercise during a workout; keep the training purpose and a similar difficulty.',
+    profile:userForAI(p && p.locale),
+    exercise:FitAIContract.exerciseView(src.ex),
+    availableLoadEquipment:load.equipment && load.equipment !== 'custom' ? [load.equipment] : [],
+    availableSupportEquipment:(exP(src.ex).supportEquipment || []).filter(x => typeof x === 'string')
+  });
+  eventWorkoutHooks.aiRunOpen(t('ai.changingExercise'));
+  let res;
+  try{
+    const ctl = eventWorkoutHooks.getAiRunCtl();
+    const text = await callGemini({input:parsed.input}, ctl ? ctl.signal : undefined, 'exercise.replace');
+    const json = JSON.parse(text);
+    res = FitAIContract.applyExerciseReplacement(src.ex, json, contractIdsForWorkout);
+  }catch(e){
+    eventWorkoutHooks.aiRunClose();
+    const retry = await appDialog(t('ai.runFailed',{error:(e && e.message) || t('common.unknownError')}) + '\n\n' + t('ai.retryQuestion'),
+      {confirm:true, okText:t('ai.retry'), cancelText:t('common.cancel')});
+    if(retry) return swapViaAI(true);
+    return;
+  }
+  eventWorkoutHooks.aiRunClose();
+  if(res.errors.length || !res.exercise){ appAlert(t('ai.parseProgramFailed')); return; }
+  const program = customPrograms.find(x => x.id === p.id);
+  const plan = program && normPlans(program).find(pl => pl.id === src.plan.id);
+  if(!plan || !plan.exercises[src.idx]){ appAlert(t('workout.editUnavailable')); return; }
+  plan.exercises[src.idx] = normalizeExercise(res.exercise);
+  await savePrograms();
+  renderMine();
+  backToWorkout(true);
+  appAlert(t('ai.exerciseUpdated',{name:exP(plan.exercises[src.idx]).name}) + '\n\n' + t('ai.newMovementProgress'));
 }
+const contractIdsForWorkout = prefix => prefix === 'e' ? newExId() : newStageId();
 
 // шаг назад — если пропустил случайно или хочешь переделать подход
 export function prevStep(){

@@ -2533,6 +2533,12 @@ export const planDays = p => progActive(p) ? programDaysUnion(p) : [];
 // превращает выбранный план программы в тренировочный цикл
 export function customToProgram(p, planIdx = 0){
   const pr = ex => FitExerciseV2.prescriptionOf(ex);
+  const nextStageAtCeiling = ex => {
+    const list = ex.stages || [];
+    const next = list[list.findIndex(st => st.stageId === ex.currentStageId) + 1];
+    if(!next || ex.warmup || !builderDataHooks.progAtCeiling(p.id, ex, p)) return null;
+    return {name:next.prescription.name, desc:next.prescription.desc || ''};
+  };
   const plans = normPlans(p);
   const plan = plans[planIdx] || plans[0];
 
@@ -2571,7 +2577,9 @@ export function customToProgram(p, planIdx = 0){
       // а замена «Красная» на «Чёрная» на том же numeric index считается новой нагрузкой.
       loadKey: levelState ? String(levelState.identity || '') : '',
       exName: pr(ex).name,
-      exId: ex.id || ''  // по id проверка прогресса узнаёт, до каких упражнений дошла тренировка
+      exId: ex.id || '',  // по id проверка прогресса узнаёт, до каких упражнений дошла тренировка
+      // «можно усложнить»: этап дорос до потолка, а в цепочке есть следующий
+      swap: nextStageAtCeiling(ex)
     };
     if(setsTotal > 1){ step.setNo = setNo; step.setsTotal = setsTotal; }
     if(side){ step.side = side; step.sidesTotal = 2; }

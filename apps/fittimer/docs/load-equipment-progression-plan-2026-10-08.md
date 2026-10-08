@@ -2196,37 +2196,37 @@ AI не должен сам придумывать постоянный `canonic
 
 ### PR 5 — FitTimer AI V2 create/replace + manual copy
 
-Статус: ⬜ не начат
+Статус: ✅ в ветке `ccr-1c455d3f-hdsme3`, в main не влито
 
-- [ ] `{kind, contractVersion, input}`, prompt/schema server-owned;
-- [ ] `program.create`, `exercise.create`, `exercise.replace`;
-- [ ] manual copy/paste — тот же JSON V2;
-- [ ] equipment/support availability semantics;
-- [ ] AI возвращает 1..4 stage specs только когда это уместно;
-- [ ] каждый stage = full ExercisePrescription + advance mode, без IDs/state/media;
-- [ ] app присваивает exercise/stage IDs и currentStageId;
+- [x] `{kind, contractVersion, input}`, prompt/schema server-owned;
+- [x] `program.create`, `exercise.create`, `exercise.replace`;
+- [x] manual copy/paste — тот же JSON V2;
+- [x] equipment/support availability semantics;
+- [x] AI возвращает 1..4 stage specs только когда это уместно;
+- [x] каждый stage = full ExercisePrescription + advance mode, без IDs/state/media;
+- [x] app присваивает exercise/stage IDs и currentStageId;
 - [ ] token/latency/invalid measurements.
 
 ### PR 6 — AI V2 edit: target state + refs
 
-Статус: ⬜ не начат
+Статус: ✅ в ветке `ccr-1c455d3f-hdsme3`, в main не влито
 
-- [ ] `program.modify/exercise.modify`;
-- [ ] target state + refs;
-- [ ] plan/program metadata: `patch` = partial;
-- [ ] exercise: `replace` = полный AI-owned exercise/stage spec + обязательный `movementChanged`;
-- [ ] `new` = полный новый prescription;
-- [ ] отдельные `removedPlanIds/removedExerciseIds`;
-- [ ] один существующий ID нельзя использовать дважды;
-- [ ] atomic apply к immutable request snapshot;
-- [ ] AI не пишет progressState/media/app-owned exercise/stage IDs;
+- [x] `program.modify/exercise.modify`;
+- [x] target state + refs;
+- [x] plan/program metadata: `patch` = partial;
+- [x] exercise: `replace` = полный AI-owned exercise/stage spec + обязательный `movementChanged`;
+- [x] `new` = полный новый prescription;
+- [x] отдельные `removedPlanIds/removedExerciseIds`;
+- [x] один существующий ID нельзя использовать дважды;
+- [x] atomic apply к immutable request snapshot;
+- [x] AI не пишет progressState/media/app-owned exercise/stage IDs;
 - [ ] regression: reorder/move/add/remove/split/merge/duplicate exercise/chain edit/movementChanged.
 
 ### PR 7 — video/catalog/channels/images
 
 Статус: ⬜ не начат
 
-- [ ] `video.parse` → Program DTO V2;
+- [x] `video.parse` → Program DTO V2;
 - [ ] admin catalog AI → тот же V2;
 - [ ] export/import/share/link/sync/backup;
 - [ ] trainer reports по stable IDs;
@@ -3395,3 +3395,19 @@ Short storage keys используются ТОЛЬКО в persistent history D
 - action может собирать prompt на сервере (`action.buildPrompt`) и задавать `schema`/`maxOutputTokens`: клиент присылает только структурированный input;
 - проверка маршрута в админке дополнительно делает structured-запрос и показывает «Нет JSON», если модель его не держит;
 - тест `packages/core/tests/ai-structured.mjs`; FitTimer, UnMute и task-mini — зелёные.
+
+### 2026-10-08 — PR 5–6: AI Contract V2 (JSON), видео на том же DTO
+
+Статус: ✅ в ветке `ccr-1c455d3f-hdsme3`, в main не влито.
+
+Что сделали:
+- `lib/fit-ai-contract.js` — один модуль для сервера и клиента: схемы ответа по задаче (переносимое подмножество), input, prompt (сервер) и manual prompt со схемой (чат), доменная проверка, adapter DTO → модель V2 (ID выдаёт приложение), правка «target state + refs» (`patch`/`replace`/`new`, `removed*Ids`, `movementChanged`), атомарное применение;
+- `/api/ai`: для program.create/modify, exercise.create/modify/replace клиент шлёт `{kind, contractVersion:2, input}`; prompt и схему собирает сервер; старый текстовый запрос отклоняется (`contract_version_required`) без расхода лимита; лимиты ответа по задаче;
+- клиент: «за меня» шлёт input, ручной режим — тот же prompt + схема, вставленный JSON разбирается тем же контрактом; правка программы — изменённая копия, прогресс и картинки неизменённых упражнений сохраняются; замена с тренировки — exercise.replace (тот же слот, новое движение, прогресс заново, повтор при ошибке);
+- импорт видео: подтверждённые факты собираются в тот же Program DTO без второго вызова ИИ (ссылка с таймкодом сохраняется у упражнения);
+- копирование программы «текстом» — тот же Program DTO (по желанию с текущей нагрузкой);
+- смена этапа не переносит картинку прежнего движения;
+- найден и исправлен баг: созданная ИИ программа сохранялась без id;
+- тесты: `ai-contract-v2-unit`, `ai-contract-flow`, обновлены `ai-api`, `ai-generation-guards`, `ai-image-buttons`, `youtube-video`.
+
+Открыто (PR 7): каталог и админская генерация на Program DTO, удаление `lib/ai-protocol.js`; картинки этапов по `mediaRef` — отдельно.

@@ -4,6 +4,7 @@ import { appLocale, canonicalLabel, loadAppLocale, localeTag, normalizeLocalePre
 import { createRemotePushClient } from '@appbase/core/remote-push.js';
 import { appNotifications, appRuntimeCompat, appUi } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
+import FitAIContract from '../../lib/fit-ai-contract.js';
 import { $, ICONS, ROOT_TABS, aiScreenDirty, appAlert, appConfirm, appDialog, asTab, audioCtx, beep,
   clearSnap, commitWeightModal, configureAudioRuntime, configureWorkoutTiming, fxVol, goBackTo, goTab,
   guardNum, icon, initAudio, keepAwake, leaveGuard, masterGain, musicMode, numFieldsOk, openStart,
@@ -29,7 +30,7 @@ import { account, bioDisable, bioEnable, bioSupported, bumpAccountMeta, complete
   signOut, syncAccountLocale,
   setAccountEventHooks, syncUserForm, tryUnlock, uDraft, userCurrency, userDirty, wipeAccount, writeAccountBucket
 } from './20-account.js';
-import { LIM, addPhoto, clampLine, clampText, cleanLink, delCmpPhoto, deleteAllPhotos, ensureWarmup,
+import { LIM, sanitizeProgram, addPhoto, clampLine, clampText, cleanLink, delCmpPhoto, deleteAllPhotos, ensureWarmup,
   exportAllData, finishOnboardingCreate, importAllData, loadPhotos, openCompare, openWeightHist,
   renderCmp, renderPhotos, saveWeightHist, shareCompare, shareWeightChart, shareWellChart,
   startOnboarding, whoDraft, whoFinish, whoSyncForm
@@ -51,7 +52,7 @@ import { addClient, curClient, doPublish, loadStoreServer, openClient, openMyCat
   renderStoreFilters, renderTrainerCard, sendProgramToClient, setTrainerEventHooks, siItem, storeCountText, storeFilter,
   storeFrom, tpFrom
 } from './50-trainer-catalog.js';
-import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExerciseAsNew,
+import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExerciseAsNew, contractIds, parseContractAnswer,
   commitExercise, commitPlanFields, curPlan, delExerciseAt, draft, dropFreshEx, dupExerciseAt,
   clearExerciseDraft, exDirty, exDraft, exIdx, exIsNew, exP, exerciseDraftProblems, exerciseProgressionConfigOk, exerciseResistanceScaleOk, fillPlanFields, markExerciseExisting, hasWeight, initAIForm, normValue, openBuilder, programHasProgression,
   openExercise, parseProgramText, parseStepNum, parseValue, planIdx, programDirty, renderExList, renderExMedia,
@@ -387,7 +388,8 @@ function registerEventActions(){
     const cfg = AI_SOURCES[aiSrc];
     if(!cfg) return;
     if(cfg.guard && !(await cfg.guard())) return;
-    runSelfAI(cfg.prompt, 'aiResult', cfg.apply, aiUiText(cfg.selfTitle), cfg.kind);
+    // Contract V2: встроенному ИИ уходит структурированный input, а не текст prompt'а
+    runSelfAI(cfg.input ? () => ({input:cfg.input()}) : cfg.prompt, 'aiResult', cfg.apply, aiUiText(cfg.selfTitle), cfg.kind);
   });
   registerAction('copyAiRequest', async () => {
     const cfg = AI_SOURCES[aiSrc];
@@ -1690,14 +1692,15 @@ export async function ytCopyPrompt(){
 export async function ytApplyResult(){
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(MSG_AI_EMPTY()); return; }
-  const kind = aiSrc === 'video' ? 'video.parse' : 'program.create';
-  const checked = aiClientVerdict(kind, raw);
-  if(!checked) return;
-  const {program, errors} = parseProgramText(checked);
+  // и сервер (подтверждённые факты видео), и чат отвечают тем же Program DTO V2
+  const parsed = parseContractAnswer('program.create', raw);
+  const built = parsed.json ? FitAIContract.programFromCreate(parsed.json, contractIds) : null;
+  const errors = parsed.json ? built.errors : parsed.errors;
   if(errors.length){
     appAlert(MSG_AI_PARSE() + '\n\n' + t('video.parseProblems') + '\n— ' + errors.join('\n— '));
     return;
   }
+  const program = sanitizeProgram(built.program);
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
   program.locale = appLocale === 'ru' ? 'ru' : 'en';

@@ -85,8 +85,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     .map(el => el.scrollWidth <= el.clientWidth + 1));
   ok('на 360 px подписи кнопок не обрезаются', rows.every(Boolean), JSON.stringify(rows));
 
-  // ИИ-правка временно недоступна до AI Contract V2 (docs/load-equipment-progression-plan-2026-10-08.md, PR 6):
-  // человек видит понятное объяснение, а не код
+  // пустой ответ ИИ-правки: человек видит понятное объяснение, а не код
   const msg = await page.evaluate(async () => {
     document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
     $('aiResult').value = '';
@@ -94,7 +93,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await new Promise(r => setTimeout(r, 100));
     return $('dlgMsg').textContent;
   });
-  ok('ИИ-правка объясняет, что временно недоступна', !/=>|t\(/.test(msg) && /временно недоступна/.test(msg), msg.slice(0, 50));
+  ok('пустой ответ ИИ-правки объясняется словами', !/=>|t\(/.test(msg) && /пустое/.test(msg), msg.slice(0, 50));
 
   ok('без ошибок в консоли', !errs.length, errs.join(' | '));
   await b.close();

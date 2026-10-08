@@ -4,6 +4,7 @@ import FitAIProtocol from '../../lib/ai-protocol.js';
 import { appRuntimeCompat } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
 import FitExerciseV2 from '../../lib/fit-exercise-v2.js';
+import FitAIContract from '../../lib/fit-ai-contract.js';
 import { $, DUMBBELL_ICON, appAlert, appDialog, asTab, defaultPlanIdx, estimatedWorkoutMinutes,
   goBackTo, goTab, icon, openStart, plural, renderPlanRow, renderStartInfo, setCoreProgramsAiHooks, setShown, show, state
 } from './00-core.js';
@@ -25,6 +26,12 @@ export function setProgramsTrainerHooks(hooks = {}){
 }
 
 let builderProgramsHooks = {
+  aiLanguage: () => 'English',
+  aiCreateInput: () => null,
+  aiEquipmentInput: () => ({availableLoadEquipment:[], availableSupportEquipment:[]}),
+  contractIds: prefix => prefix + Math.random().toString(36).slice(2, 8),
+  parseContractAnswer: () => ({json:null, errors:['unavailable']}),
+  normalizeExercise: ex => ex,
   getMaxMain: () => 20,
   getMaxWarm: () => 20,
   msgAiEmpty: () => t('ai.emptyAnswer'),
@@ -1039,7 +1046,6 @@ function openProgramExportChoice(p, mode){
 export function shareProgramWithChoice(p){ openProgramExportChoice(p, 'link'); }
 export function exportProgramFileWithChoice(p){ openProgramExportChoice(p, 'file'); }
 export function copyProgramTextWithChoice(p){
-  if(legacyAiUnavailable()) return;
   openProgramExportChoice(p, 'copy');
 }
 
@@ -1052,7 +1058,8 @@ async function runProgramExportChoice(includeProgress){
   if(pending.mode === 'file') await exportProgramFile(pending.p, options);
   else if(pending.mode === 'copy'){
     if(includeProgress) applyProgressionAll();
-    const text = programToText(pending.p, {currentLoad:!!includeProgress});
+    // тот же Program DTO V2, что принимает «Вставить ответ нейросети» при создании
+    const text = JSON.stringify(FitAIContract.programToContract(pending.p, !!includeProgress), null, 1);
     try{
       await navigator.clipboard.writeText(text);
       flashDone($('aiCopyFull'));
@@ -1349,6 +1356,8 @@ function aiAuth(){
   return {email:(account && account.email) || '', token:(account && account.syncToken) || '',
           deviceId:(identity && identity.deviceId) || ''};
 }
+// prompt — строка (старые действия: картинки, видео) или {input} для AI Contract V2:
+// тогда prompt и схему ответа собирает сервер, а клиент получает проверенный JSON.
 async function callServerAI(prompt, signal, kind){
   const auth = aiAuth();
   if(!auth.email || !auth.token || !auth.deviceId)
@@ -1360,7 +1369,9 @@ async function callServerAI(prompt, signal, kind){
     userContext:userForAI()
   } : {};
   const res = await fetch(API_BASE + '/api/ai', {method:'POST',headers:{'Content-Type':'application/json'},signal,
-    body:JSON.stringify(Object.assign({prompt,kind}, extra, auth))});
+    body:JSON.stringify(Object.assign(prompt && typeof prompt === 'object'
+      ? {kind, contractVersion:FitAIContract.CONTRACT_VERSION, input:prompt.input}
+      : {prompt, kind}, extra, auth))});
   const j = await res.json().catch(()=> ({}));
   if(!res.ok){
     if(j.error === 'ai_limit') throw new Error(t('ai.limitReached',{used:j.used,limit:j.limit}));
@@ -1373,6 +1384,7 @@ async function callServerAI(prompt, signal, kind){
     if(j.error === 'video_analysis_timeout') throw new Error(t('video.analysisTimeout'));
     if(j.error === 'video_bad_url') throw new Error(t('video.badUrl'));
     if(j.error === 'ai_timeout') throw new Error(t('ai.timeout'));
+    if(j.error === 'ai_refused') throw new Error(t('ai.refused'));
     if(j.error === 'ai_bad_response'){
       const miss = Array.isArray(j.missing) ? j.missing.filter(Boolean).slice(0,6).join(', ') : '';
       throw new Error(t('ai.badResponse') + (miss ? ' ' + t('ai.badResponseMissing',{fields:miss}) : ''));
@@ -1482,6 +1494,7 @@ export const AI_SOURCES = {
     chatNote: ['chat', 'Приложение подготовит задание для нейросети. Передай его в чат, ответ вставь сюда. Дольше, зато бесплатно.'],
     answerHint: 'Вставь ответ нейросети целиком — программа откроется в конструкторе.',
     action: 'Собрать программу из ответа',
+    input: ()=> builderProgramsHooks.aiCreateInput(),
     prompt: ()=> builderProgramsHooks.fullAIPrompt(),
     copy:   ()=> builderProgramsHooks.copyPrompt(),
     apply:  ()=> builderProgramsHooks.importFromText(),
@@ -1526,6 +1539,7 @@ export const AI_SOURCES = {
     copyFull: true,
     answerHint: 'Вставь ответ нейросети целиком — получится изменённая копия. Старая программа останется.',
     action: 'Создать изменённую программу',
+    input: ()=> editAIInput(),
     prompt: ()=> editAIPrompt(),
     copy:   ()=> eventProgramsHooks.copyEditPrompt(),
     apply:  ()=> createEditedProgram(),
@@ -1547,6 +1561,7 @@ export const AI_SOURCES = {
     chatNote: ['chat', 'Приложение подготовит задание. Передай его в чат, ответ вставь сюда.'],
     answerHint: 'Вставь ответ нейросети целиком — упражнение добавится в конец программы.',
     action: 'Добавить в программу',
+    input: ()=> exaInput(),
     prompt: ()=> exaPrompt(),
     copy:   ()=> eventProgramsHooks.exaCopyPrompt(),
     apply:  ()=> exaAddExercise(),
@@ -1568,6 +1583,7 @@ export const AI_SOURCES = {
     selfNote: ['image', 'Картинка упражнения останется на месте.'],
     answerHint: 'Вставь ответ нейросети целиком — приложение возьмёт из него всё, что нашлось.',
     action: 'Применить изменения',
+    input: ()=> exeInput(),
     prompt: ()=> exePrompt(),
     copy:   ()=> eventProgramsHooks.exeCopyPrompt(),
     apply:  ()=> applyExEdit(),
@@ -1602,7 +1618,6 @@ function aiEditRequestGuard(fieldId){
 
 // собирает экран под источник и показывает его
 export function openAI(key){
-  if(legacyAiUnavailable()) return;
   const c = AI_SOURCES[key];
   if(!c) return;
   aiSrc = key;
@@ -2463,11 +2478,10 @@ export function exerciseToText(ex, opts){
 }
 
 export function openExEdAI(i){
-  if(legacyAiUnavailable()) return;
   const ex = builderProgramsHooks.curPlan().exercises[i];
   if(!ex) return;
   exeIdx = i;
-  $('aiSubjName').textContent = (ex.name || '').trim() || t('common.exerciseFallback');
+  $('aiSubjName').textContent = (FitExerciseV2.prescriptionOf(ex).name || '').trim() || t('common.exerciseFallback');
   $('aiSubjSum').textContent = builderProgramsHooks.exSummary(ex);
   $('exeWish').value = '';
   workoutProgramsHooks.autoGrow($('exeWish'));
@@ -2535,21 +2549,19 @@ function compactProgramAIContext(p){
   return lines.join('\n');
 }
 
+// Встроенный ИИ получает input (prompt собирает сервер); ручной режим — тот же prompt + схему
+export function exeInput(){
+  const p = builderDraft();
+  const ex = builderProgramsHooks.curPlan().exercises[exeIdx];
+  return FitAIContract.normalizeInput('exercise.modify', {
+    language:builderProgramsHooks.aiLanguage(p && p.locale),
+    task:clampText($('exeWish').value, LIM.wish),
+    profile:userForAI(p && p.locale),
+    exercise:FitAIContract.exerciseView(ex)
+  }).input;
+}
 export function exePrompt(){
-  const p=builderDraft();
-  const ex=builderProgramsHooks.curPlan().exercises[exeIdx];
-  const wish=clampText($('exeWish').value,LIM.wish);
-  return [
-    'Edit exactly ONE home-workout exercise.',
-    'Return exactly ONE complete exercise block and nothing else: no Markdown and no explanation.',
-    FitAIProtocol.editRules(),
-    'USER: '+userForAI(p&&p.locale),
-    'REQUEST: '+wish,
-    '=== CURRENT EXERCISE ===\n'+exerciseToText(ex,{program:p,locale:p&&p.locale}),
-    '=== CURRENT WORKING STATE ===\n'+exerciseWorkingContext(p, ex)+
-      '\nTreat positive current weight/resistance above as authoritative. Do not replace it with 0/unknown unless the request explicitly requires resetting or changing the load.',
-    exAnswerFormat(p&&p.locale)
-  ].join('\n\n');
+  return FitAIContract.manualPrompt('exercise.modify', exeInput());
 }
 
 function requestAllowsUnknownWeight(text){
@@ -2570,44 +2582,34 @@ function preserveKnownWeightIfPlaceholder(oldEx, newEx, p, request){
 }
 
 async function applyExEdit(){
-  if(legacyAiUnavailable()) return;
-  const raw=($('aiResult').value||'').trim();
-  if(!raw){appAlert(builderProgramsHooks.msgAiEmpty());return;}
-  const list=builderProgramsHooks.curPlan().exercises;
-  const oldEx=list[exeIdx];
-  if(!oldEx){goBackTo('scrBuilder');return;}
-  // ровно один блок — правка не имеет права тихо расплодиться в два упражнения
-  const candidateBlocks=builderProgramsHooks.aiExerciseBlocks(raw);
-  if(candidateBlocks.length!==1){appAlert(builderProgramsHooks.msgAiNoEx());return;}
-  // Ответ ИИ используется как есть; carryExerciseFields лишь подставляет описание/
-  // мышцы/ошибки/видео из старого блока, если ИИ их не вернул — раньше здесь был
-  // позиционный merge всех полей, который не давал ИИ ни убрать, ни переставить строку.
-  const merged=FitAIProtocol.carryExerciseFields(exerciseToText(oldEx),candidateBlocks[0].lines.join('\n'));
-  if(!aiClientVerdict('exercise.modify', merged, {expectedCount:1})) return;
-  const wrapped='ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n'+merged;
-  const {program}=builderProgramsHooks.parseProgramText(wrapped);
-  const got=(program.plans&&program.plans[0]&&program.plans[0].exercises)||[];
-  if(got.length!==1){appAlert(builderProgramsHooks.msgAiNoEx());return;}
-  const upd=got[0];
-  if(!upd.media&&oldEx.media)upd.media=oldEx.media;
-  preserveKnownWeightIfPlaceholder(oldEx, upd, builderDraft(), $('exeWish').value);
-  // это правка, а не замена: то же самое упражнение сохраняет свой id, а
-  // прогресс — если ИИ не менял его базовые числа (см. carryExerciseProgress)
-  upd.id=oldEx.id;
-  builderProgramsHooks.carryExerciseProgress(oldEx, upd);
-  list[exeIdx]=upd;
-  // запрос тоже очищаем: пока в нём был текст, экран считался несохранённым,
-  // и возврат назад молча не срабатывал — человек оставался на «Через ИИ»
-  $('aiResult').value='';
-  $('exeWish').value='';
+  const raw = ($('aiResult').value || '').trim();
+  if(!raw){ appAlert(builderProgramsHooks.msgAiEmpty()); return; }
+  const list = builderProgramsHooks.curPlan().exercises;
+  const oldEx = list[exeIdx];
+  if(!oldEx){ goBackTo('scrBuilder'); return; }
+  const input = exeInput();
+  const parsed = builderProgramsHooks.parseContractAnswer('exercise.modify', raw, input);
+  const res = parsed.json ? FitAIContract.applyExerciseModify(oldEx, parsed.json, builderProgramsHooks.contractIds) : null;
+  const errors = parsed.json ? res.errors : parsed.errors;
+  if(errors.length || !res.exercise){
+    appAlert(builderProgramsHooks.msgAiParse() + '\n\n' + t('ai.parseProblems') + '\n— ' + errors.join('\n— '));
+    return;
+  }
+  const upd = builderProgramsHooks.normalizeExercise(res.exercise);
+  // То же движение: прогресс переносится по общим правилам (изменилась нагрузка — счётчик
+  // с нуля). Новое движение — новые этапы и прогресс с нуля уже в контракте.
+  if(!res.movementChanged) builderProgramsHooks.carryExerciseProgress(oldEx, upd);
+  list[exeIdx] = upd;
+  $('aiResult').value = '';
+  $('exeWish').value = '';
   if(workoutProgramsHooks.getExFromWork()) await workoutProgramsHooks.afterExChange();
   else{
-    // показываем результат там, где его видно и можно сразу поправить руками
     builderProgramsHooks.renderExList();
-    const keep=exeIdx;
+    const keep = exeIdx;
     asTab(()=> builderProgramsHooks.openExercise(keep));
   }
-  appAlert(t('ai.exerciseUpdated',{name:upd.name||t('common.exerciseFallback')}));
+  appAlert(t('ai.exerciseUpdated',{name:FitExerciseV2.prescriptionOf(upd).name || t('common.exerciseFallback')})
+    + (res.movementChanged ? '\n\n' + t('ai.newMovementProgress') : ''));
 }
 
 /* ================= УПРАЖНЕНИЕ ЧЕРЕЗ ИИ ================= */
@@ -2651,7 +2653,6 @@ function exaChips(){
 }
 
 export function openExAI(){
-  if(legacyAiUnavailable()) return;
   exa.count = 1; exa.format = ''; exa.level = ''; exa.muscles = []; exa.equip = [];
   $('exaWish').value = '';
   $('exaContext').value = '';
@@ -2678,54 +2679,49 @@ function aiCreateExerciseGuard(){
   return false;
 }
 
-export function exaPrompt(){
-  const wish=clampText($('exaWish').value,LIM.wish);
-  const given=[],free=[];
-  const fmtMap={'Повторения':'unweighted reps','С весом':'weighted reps','Время':'time'};
-  if(exa.format)given.push(`Preferred format: ${fmtMap[exa.format]||aiCanonicalEnglish(exa.format)}.`);
-  else free.push('choose the most natural format: reps, weighted reps, time, or weighted time');
-  if(exa.level)given.push(`Difficulty: ${aiCanonicalEnglish(exa.level)}.`);
+export function exaInput(){
+  const wish = clampText($('exaWish').value, LIM.wish);
+  const given = [], free = [];
+  const fmtMap = {'Повторения':'reps without external load', 'С весом':'reps with weight', 'Время':'time'};
+  if(exa.format) given.push(`Preferred format: ${fmtMap[exa.format] || aiCanonicalEnglish(exa.format)}.`);
+  else free.push('the most natural format');
+  if(exa.level) given.push(`Difficulty: ${aiCanonicalEnglish(exa.level)}.`);
   else free.push('difficulty level');
-  if(exa.muscles.length)given.push(`Target muscles: ${exa.muscles.map(aiCanonicalEnglish).join(', ')}.`);
+  if(exa.muscles.length) given.push(`Target muscles: ${exa.muscles.map(aiCanonicalEnglish).join(', ')}.`);
   else free.push('working muscles');
-  if(exa.equip.length)given.push(`Available equipment: ${exa.equip.map(aiCanonicalEnglish).join(', ')}.`);
-  else free.push('equipment; assume no special home equipment unless the exercise needs it');
-
-  const cnt=Math.max(1,Math.min(10,parseInt(exa.count)||1));
-  const many=cnt>1;
-  const task=many
-    ? `Create exactly ${cnt} different home-workout exercises. Return exactly ${cnt} separate exercise blocks, each beginning with "УПРАЖНЕНИЕ:", separated by a blank line. Do not duplicate exercises. Return nothing else.`
-    : 'Create exactly one home-workout exercise. Return exactly one exercise block and nothing else.';
-  let req='USER: '+userForAI(builderDraft()&&builderDraft().locale)+'\nREQUEST: '+(wish||'(No specific request. Suggest a useful exercise that fits the user.)');
-  const context=clampText(($('exaContext')&&$('exaContext').value)||'',3000).trim();
-  if(context){
-    req+='\nUSER CAPABILITIES / LIMITATIONS CONTEXT: '+context+
-      '. Treat this as authoritative self-reported context for exercise selection, starting load, range of motion, impact and progression. Known numeric performance/load data are evidence: reuse them instead of falling back to ВЕС: 0 when they support a conservative positive load. Do not diagnose from it. If it describes an injury, pain, or other health limitation, avoid exercise choices that clearly conflict with it and do not claim medical clearance.';
-  }
-  const currentProgram = compactProgramAIContext(builderDraft());
-  if(currentProgram){
-    req+='\n=== CURRENT PROGRAM CONTEXT ===\n'+currentProgram+
-      '\nChoose additions that complement this program, avoid pointless duplicates, and use its known working loads as evidence for conservative starting loads on comparable weighted movements.';
-  }
-  if(given.length)req+='\n'+given.join(' ');
-  if(free.length)req+='\nDecide these unspecified items yourself using sensible training logic: '+free.join('; ')+'.';
-  return [task,req,exAnswerFormat(builderDraft()&&builderDraft().locale)].join('\n\n');
+  if(!exa.equip.length) free.push('equipment; assume no special home equipment unless the exercise needs it');
+  const cnt = Math.max(1, Math.min(10, parseInt(exa.count) || 1));
+  let task = cnt > 1 ? `Create exactly ${cnt} different exercises, no duplicates.` : 'Create exactly one exercise.';
+  task += ' ' + (wish ? 'Request: ' + wish : 'No specific request: suggest a useful exercise that fits the user and complements the program.');
+  if(given.length) task += ' ' + given.join(' ');
+  if(free.length) task += ' Decide yourself: ' + free.join('; ') + '.';
+  const p = builderDraft();
+  const hasProgram = p && normPlans(p).some(pl => (pl.exercises || []).length);
+  return FitAIContract.normalizeInput('exercise.create', Object.assign({
+    language:builderProgramsHooks.aiLanguage(p && p.locale),
+    task,
+    profile:userForAI(p && p.locale),
+    context:clampText(($('exaContext') && $('exaContext').value) || '', 3000).trim(),
+    // программа — контекст: дополнять её и опираться на известные рабочие нагрузки
+    program:hasProgram ? FitAIContract.programView(p) : null
+  }, builderProgramsHooks.aiEquipmentInput(exa.equip))).input;
+}
+export function exaPrompt(){
+  return FitAIContract.manualPrompt('exercise.create', exaInput());
 }
 
 async function exaAddExercise(){
-  if(legacyAiUnavailable()) return;
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(builderProgramsHooks.msgAiEmpty()); return; }
-  const checkedRaw = aiClientVerdict('exercise.create', raw);
-  if(!checkedRaw) return;
-  // оборачиваем в минимальную программу, чтобы переиспользовать основной парсер
-  const wrapped = 'ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + checkedRaw;
-  const {program, errors} = builderProgramsHooks.parseProgramText(wrapped);
-  const list = (program.plans && program.plans[0] && program.plans[0].exercises) || [];
-  if(!list.length){
-    appAlert(builderProgramsHooks.msgAiNoEx());
+  const parsed = builderProgramsHooks.parseContractAnswer('exercise.create', raw);
+  const built = parsed.json ? FitAIContract.exercisesFromCreate(parsed.json, builderProgramsHooks.contractIds) : null;
+  const errors = parsed.json ? built.errors : parsed.errors;
+  if(errors.length){
+    appAlert(builderProgramsHooks.msgAiParse() + '\n\n' + t('ai.parseProblems') + '\n— ' + errors.join('\n— '));
     return;
   }
+  const list = built.exercises.map(ex => builderProgramsHooks.normalizeExercise(ex));
+  if(!list.length){ appAlert(builderProgramsHooks.msgAiNoEx()); return; }
   const target = builderProgramsHooks.curPlan().exercises;
   const nWarm = target.filter(e => e.warmup).length;
   let nMain = target.length - nWarm;
@@ -2740,12 +2736,9 @@ async function exaAddExercise(){
   $('aiResult').value = '';
   if($('exaContext')) $('exaContext').value = '';
   builderProgramsHooks.renderExList();
-  // Успешное применение завершает режим ИИ. Builder уже лежит под экраном ИИ,
-  // поэтому именно ВОЗВРАЩАЕМСЯ к нему и ждём popstate. Простая замена текущей
-  // записи делала два Builder подряд, из-за чего следующий Back оставался в Builder.
   await goBackTo('scrBuilder');
   appAlert(added === 1
-    ? t('exercise.addedOne',{name:list[0].name})
+    ? t('exercise.addedOne',{name:FitExerciseV2.prescriptionOf(list[0]).name})
     : t('exercise.addedMany',{count:added}));
 }
 
@@ -2763,25 +2756,15 @@ export function youtubePrompt(){
   const yt = parseYouTubeUrl($('ytUrl').value);
   const wish = clampText($('ytWish').value, LIM.wish);
   const link = yt ? yt.url : ($('ytUrl').value || '').trim();
-  return builderProgramsHooks.aiPrompt() +
-    '\n\n=== TASK: BUILD A PROGRAM FROM A VIDEO ===\n' +
-    'Analyze the workout at the link and convert it into the protocol above.\n' +
-    'VIDEO URL: ' + link + '\n' +
-    'USER: ' + userForAI() + '\n\n' +
-    'Requirements:\n' +
-    '- Keep exercises in the same order as the video, with the same reps/durations and rest when they can be determined.\n' +
-    '- Mark warm-up exercises with the exact token "РАЗМИНКА: да".\n' +
-    '- If the video repeats the whole exercise list, represent that with КРУГИ. If one exercise is repeated in consecutive sets, use ПОДХОДЫ.\n' +
-    '- Write user-visible exercise names and descriptions in ' + aiOutputLanguage() + '.\n' +
-    '- For ВИДЕО on EACH exercise, use the same video URL with a timestamp for the moment that exercise starts. Prefer an approximate timestamp over linking to the beginning when exact timing is uncertain.\n' +
-    '- Describe technique in your own words; do not quote the creator verbatim.\n' +
-    '- In ОПИСАНИЕ ПРОГРАММЫ mention the source video and what type of workout it is.\n' +
-    '- If the video is unavailable or is not a workout, say so instead of inventing a program.\n' +
-    (wish ? ('\nADDITIONAL USER REQUEST: ' + wish + '\n') : '');
+  return FitAIContract.manualPrompt('program.create', FitAIContract.normalizeInput('program.create', {
+    language:builderProgramsHooks.aiLanguage(),
+    profile:userForAI(),
+    task:'Convert the workout in this video into a program: ' + link + '. Keep exercises in the video order with the same reps/durations, sets and rest when they can be determined; the whole repeated list = rounds, consecutive sets of one exercise = sets. Mark warm-up exercises. No progression unless the video states it. Describe technique in your own words. Mention the source video in the program description. If the video is unavailable or is not a workout, say so instead of inventing a program.'
+      + (wish ? ' Additional request: ' + wish : '')
+  }).input);
 }
 
 export function openYouTube(){
-  if(legacyAiUnavailable()) return;
   $('ytUrl').value = '';
   $('ytWish').value = '';
   workoutProgramsHooks.autoGrow($('ytWish'));
@@ -2882,28 +2865,19 @@ export function programToText(p, opts){
   return L.join('\n');
 }
 
+export function editAIInput(){
+  return FitAIContract.normalizeInput('program.modify', {
+    language:builderProgramsHooks.aiLanguage((editAIProg && editAIProg.locale) || appLocale),
+    task:clampText($('eaWish').value, LIM.wish),
+    profile:userForAI((editAIProg && editAIProg.locale) || appLocale),
+    program:FitAIContract.programView(editAIProg)
+  }).input;
+}
 export function editAIPrompt(){
-  const wish=clampText($('eaWish').value,LIM.wish);
-  return builderProgramsHooks.aiPrompt((editAIProg&&editAIProg.locale)||appLocale)+
-    '\n\n=== TASK: EDIT AN EXISTING PROGRAM ===\n'+
-    'Apply the requested changes and return the COMPLETE program in the same machine-readable protocol.\n'+
-    FitAIProtocol.editRules()+'\n'+
-    // КОД — только для сопоставления «то же упражнение / новое», сюда не входит в
-    // обычный протокол и не должна попасть в пользовательский текст (ОПИСАНИЕ и т.п.)
-    'Each УПРАЖНЕНИЕ line may be followed by a КОД: <code> line — an internal reference tag, never user-visible text. Repeat the SAME КОД for the same movement even if you rename it, move it, or change its format; give a genuinely new exercise no КОД line at all; never move a КОД onto a different exercise.\n'+
-    // Длинная программа (20+ упражнений) переписывалась целиком вместе с
-    // описаниями техники по 600 знаков и не успевала за время ответа сервера.
-    // Описания неизменных упражнений приложение подставит само (carryExerciseText).
-    'Keep the answer short: for an exercise you keep (it has a КОД) whose ОПИСАНИЕ, МЫШЦЫ and ОШИБКИ stay accurate after the change, OMIT those three lines — the app keeps the existing text. Write them in full for new exercises and whenever the movement, equipment or technique changes.\n'+
-    'USER: '+userForAI((editAIProg&&editAIProg.locale)||appLocale)+'\n'+
-    'USER REQUEST: '+wish+'\n\n'+
-    '=== CURRENT PROGRAM ===\n'+
-    'Values shown are the CURRENT working load, except genuine double progression and reps→resistance cycles: their ЗНАЧЕНИЕ (and base resistance policy) remains the original reset/start state because current progressed state is preserved internally by the app. Do not reinterpret that reset state as the user having lost progress.\n'+
-    programToText(editAIProg, {forEdit:true});
+  return FitAIContract.manualPrompt('program.modify', editAIInput());
 }
 
 export function openEditAI(p){
-  if(legacyAiUnavailable()) return;
   editAIProg = p;
   $('aiSubjName').textContent = p.name || t('program.fallback');
   const plans = normPlans(p);
@@ -3016,57 +2990,35 @@ function editSummaryText(diff, oldProg, newProg){
 }
 
 async function createEditedProgram(){
-  if(legacyAiUnavailable()) return;
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(builderProgramsHooks.msgAiEmpty()); return; }
-  // Ответ ИИ принимается как есть — свобода добавлять/убирать/переставлять
-  // упражнения теперь в промте (FitAIProtocol.editRules), а не в клиенте через
-  // regex-угадайку «structural» и принудительный merge старой структуры.
-  const checkedRaw = aiClientVerdict('program.modify', raw);
-  if(!checkedRaw) return;
-  const {program, errors} = builderProgramsHooks.parseProgramText(checkedRaw);
-  if(errors.length){
+  // target state + refs применяется к снимку программы, которая ушла в запрос; любая
+  // ошибка ссылок — ничего не сохраняем
+  const parsed = builderProgramsHooks.parseContractAnswer('program.modify', raw, editAIInput());
+  const res = parsed.json ? FitAIContract.applyProgramModify(editAIProg, parsed.json, builderProgramsHooks.contractIds) : null;
+  const errors = parsed.json ? res.errors : parsed.errors;
+  if(errors.length || !res.program){
     appAlert(builderProgramsHooks.msgAiParse() + '\n\n' + t('ai.parseProblems') + '\n— ' + errors.join('\n— '));
     return;
   }
-  // жёсткая проверка итога: программа не развалилась на пустые варианты — иначе
-  // за «улучшением» на деле нет тренировки
-  const newPlans = normPlans(program);
-  if(!newPlans.length || newPlans.some(pl => !(pl.exercises || []).length)){
-    appAlert(builderProgramsHooks.msgAiParse());
-    return;
-  }
-  const diff = FitAIProtocol.diffPrograms({plans: normPlans(editAIProg)}, {plans: newPlans});
-  diff.matches.forEach(({oldEx,newEx}) => preserveKnownWeightIfPlaceholder(oldEx, newEx, editAIProg, $('eaWish').value));
-  // КОД — техническая метка сопоставления, в сохранённой программе ей делать нечего
-  newPlans.forEach(pl => (pl.exercises || []).forEach(ex => { delete ex._code; }));
-
+  const program = res.program;
+  // Изменённая копия: старая программа остаётся. Упражнения, которые ИИ не трогал или
+  // правил без смены движения, сохраняют прогресс и картинки.
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
   program.locale = (editAIProg && (editAIProg.locale === 'ru' || editAIProg.locale === 'en'))
     ? editAIProg.locale : (appLocale === 'ru' ? 'ru' : 'en');
-  delete program.rotIdx; delete program.progLast;
-  // имя: если не изменилось — добавляем версию
+  delete program.rotIdx; delete program.progLast; delete program.pub; delete program.from;
   program.name = versionedName(program.name || editAIProg.name);
-  const carriedImages = carryMedia(editAIProg, program, diff);
-  carryExerciseText(diff);
-  carryProgressCounters(diff);
-  // настройки, которые ИИ мог не вернуть, берём из исходника
-  if(!program.time && editAIProg.time) program.time = editAIProg.time;
-  if(program.load == null && editAIProg.load != null) program.load = editAIProg.load;
-
+  sanitizeProgram(program);
   customPrograms.push(program);
+  uniqueProfileIds(customPrograms);
   await savePrograms();
   trainerProgramsHooks.renderMine();
   $('aiResult').value = '';
   goTab('scrPrograms');
-  const missingNewImages = newExercisesWithoutImages(diff);
-  appAlert(
-    t('program.createdEdited',{name:program.name}) +
-    editSummaryText(diff, editAIProg, program) +
-    (carriedImages ? t('program.imagesCarried',{count:carriedImages}) : '') +
-    (missingNewImages.length ? t('program.newExercisesNoImages',{names:missingNewImages.join(', ')}) : '')
-  );
+  const c = res.changes;
+  appAlert(t('program.createdEdited',{name:program.name}) + '\n' + t('ai.editChanges',{added:c.added, changed:c.changed, removed:c.removed}));
 }
 
 /* Короткая ссылка /p/<id>: программу забираем с сервера. Метка src остаётся в

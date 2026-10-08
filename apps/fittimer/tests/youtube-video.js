@@ -16,14 +16,13 @@ const facts=yt._test.sourceFacts('dQw4w9WgXcQ','Test','transcript',{programDescr
   {name:'Приседания',description:'Встань устойчиво. Отведи таз назад и присядь. Держи корпус собранным и выдыхай на подъёме. Не своди колени внутрь.',
    muscles:['Квадрицепс','Ягодицы'],mistakes:'Не округляй спину и не своди колени.',startSec:12,format:'reps',value:'10',sets:3,restSec:30,warmup:false}
 ]});
-const protocol=['ПРОГРАММА: Test','ДЕНЬ:','КРУГИ: 1','ОТДЫХ МЕЖДУ КРУГАМИ: 0','','УПРАЖНЕНИЕ: Приседания',
-'ФОРМАТ: повторения','ЗНАЧЕНИЕ: 10','ПОДХОДЫ: 3','ОТДЫХ: 30','ВИДЕО: https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=12s'].join('\n');
-ok('неизменная механика проходит',yt._test.validateFinalProgram(protocol,facts).ok===true);
-ok('изменённые повторы блокируются',yt._test.validateFinalProgram(protocol.replace('ЗНАЧЕНИЕ: 10','ЗНАЧЕНИЕ: 15'),facts).ok===false);
-const built=yt._test.factsToProtocol(facts,'ru');
-ok('протокол собирается без второго вызова ИИ',yt._test.validateFinalProgram(built,facts).ok===true);
-ok('в протоколе есть техника',/ОПИСАНИЕ: Встань устойчиво/.test(built));
-ok('в протоколе есть мышцы',/МЫШЦЫ: Квадрицепс, Ягодицы/.test(built));
-ok('в протоколе есть ошибки',/ОШИБКИ: Не округляй спину/.test(built));
-ok('импорт видео не включает выдуманную прогрессию',/УСЛОЖНЯТЬ: нет/.test(built)&&!/ШАГ:/.test(built));
+const C=require('../lib/fit-ai-contract');
+const built=yt._test.factsToContract(facts,'ru');
+const st=built.program.plans[0].exercises[0].stages[0];
+ok('факты собираются в Program DTO V2 без второго вызова ИИ',C.checkOutput('program.create',built,{}).ok===true);
+ok('механика скопирована из фактов',st.type==='reps'&&st.value==='10'&&st.sets===3&&st.rest===30&&built.program.plans[0].rounds===1);
+ok('есть техника, мышцы и ошибки',/Встань устойчиво/.test(st.desc)&&st.muscles.join()==='le,gl'&&/Не округляй спину/.test(st.mistakes));
+ok('импорт видео не включает выдуманную прогрессию',st.progression.mode==='none'&&built.program.progressionEvery===null);
+const prog=C.programFromCreate(built,p=>p+Math.random().toString(36).slice(2,6)).program;
+ok('ссылка с таймкодом доходит до упражнения',require('../lib/fit-exercise-v2').activePrescription(prog.plans[0].exercises[0]).video==='https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=12s');
 process.exit(bad?1:0);

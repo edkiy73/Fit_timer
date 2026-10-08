@@ -396,7 +396,10 @@ async function scenario(ctx, name, fn, errs){
   await nap(obPage, 450);
   await aligned(obPage, 'возврат в онбординг', 'scrOnboard');
   await obPage.click('#obStart');
-  await nap(obPage, 900);
+  // завершение онбординга асинхронное (создание профиля) и само ведёт на «Программы»:
+  // ждём именно этот переход, а не фиксированную паузу
+  await obPage.waitForSelector('#scrPrograms', {state:'visible', timeout:10000});
+  await nap(obPage, 300);
   await obPage.evaluate(() => goTab('scrMenu'));
   await nap(obPage, 450);
   await aligned(obPage, 'после завершения онбординга', 'scrMenu');
