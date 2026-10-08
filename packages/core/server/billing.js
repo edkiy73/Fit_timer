@@ -215,6 +215,29 @@ async function billingLog(limit = 200, now = new Date()){
   return rows.sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, limit);
 }
 
+const PURCHASE_REF_TTL = YEAR * 5;
+
+function purchaseRefKey(provider, accountHash, sku){
+  return `billref:${provider}:${accountHash}:${sha(sku).slice(0, 32)}`;
+}
+
+async function savePurchaseReference(provider, accountHash, sku, reference){
+  if(!provider || !accountHash || !sku || !reference || typeof reference !== 'object') return;
+  const raw = JSON.stringify(reference);
+  if(Buffer.byteLength(raw) > 8192) throw Object.assign(new Error('purchase_reference_too_large'), {status:400});
+  await store.set(purchaseRefKey(provider, accountHash, sku), raw, PURCHASE_REF_TTL);
+}
+
+async function readPurchaseReference(provider, accountHash, sku){
+  try{
+    const raw = await store.get(purchaseRefKey(provider, accountHash, sku));
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  }catch(_){
+    return null;
+  }
+}
+
 async function signedInAccount(body){
   const email = mail(body && body.email);
   if(!EMAIL.test(email)) return null;
@@ -374,8 +397,62 @@ function createBillingHandler({adapters = []} = {}){
       }
       const bad = results.find(r => !r.ok);
       if(bad) return fail(res, 400, bad.error);
+      if(verified && verified.reference && typeof verified.reference === 'object'){
+        try{ await savePurchaseReference(adapter.id, who.mh, sku, verified.reference); }
+        catch(e){ return fail(res, (e && e.status) || 500, String((e && e.message) || 'purchase_reference_failed')); }
+      }
       const last = results[results.length - 1];
       return send(res, 200, {ok:true, granted:!!(last && last.applied), ...(last ? last.entitlements : entitlementsOf(who.acc))});
+    }
+
+    if(action === 'reconcile'){
+      const who = await signedInAccount(body);
+      if(!who) return fail(res, 403, 'bad_sync_token');
+      const identity = await ensureBillingIdentity(who);
+      if(!identity) return fail(res, 409, 'billing_identity_failed');
+
+      const candidates = [];
+      const owned = who.acc && who.acc.owned && typeof who.acc.owned === 'object' ? who.acc.owned : {};
+      for(const [sku, value] of Object.entries(owned)){
+        if(value && value.provider) candidates.push({sku:cleanSku(sku), provider:String(value.provider)});
+      }
+      if(who.acc && who.acc.sub && who.acc.sub.plan && who.acc.sub.provider){
+        candidates.push({sku:cleanSku(who.acc.sub.plan), provider:String(who.acc.sub.provider)});
+      }
+
+      let checked = 0, changed = 0;
+      for(const item of candidates.slice(0, 50)){
+        if(!item.sku || !PROVIDER.test(item.provider)) continue;
+        const adapter = list.find(a => a.id === item.provider);
+        if(!adapter || typeof adapter.verifyPurchase !== 'function') continue;
+        const reference = await readPurchaseReference(item.provider, who.mh, item.sku);
+        if(!reference) continue;
+        const product = providerProduct(item.sku);
+        let verified;
+        try{
+          verified = await adapter.verifyPurchase({
+            email:who.email,
+            sku:item.sku,
+            product,
+            identity,
+            proof:reference
+          });
+        }catch(_){
+          continue;
+        }
+        checked++;
+        for(const raw of (verified && Array.isArray(verified.events)) ? verified.events : []){
+          const result = await applyBillingEvent(adapter.id, {...raw, email:who.email, sku:item.sku});
+          if(result && result.applied) changed++;
+        }
+        if(verified && verified.reference && typeof verified.reference === 'object'){
+          await savePurchaseReference(adapter.id, who.mh, item.sku, verified.reference);
+        }
+      }
+
+      let latest = null;
+      try{ latest = JSON.parse(await store.get(`a:${who.mh}`)); }catch(_){}
+      return send(res, 200, {ok:true, checked, changed, ...entitlementsOf(latest || who.acc)});
     }
 
     // Automatic renewal of the active subscription: on or off, the paid period stays. A provider
