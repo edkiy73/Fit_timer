@@ -141,6 +141,17 @@ function createAppleStoreBillingAdapter({
   }
 
   const decodeVerified = async jws => await verifySignedData(jws, {nowMs:now()});
+  const decodeIncoming = async jws => {
+    try{
+      return await decodeVerified(jws);
+    }catch(e){
+      const code = String((e && e.message) || '');
+      if(code.startsWith('apple_bad_')){
+        throw Object.assign(new Error(code), {status:401});
+      }
+      throw e;
+    }
+  };
 
   async function productByAppleId(productId){
     return billingProductByProviderId('apple', productId);
@@ -305,7 +316,7 @@ function createAppleStoreBillingAdapter({
       const signedPayload = String(body && body.signedPayload || '');
       if(!signedPayload) return {ok:false};
 
-      const notification = await decodeVerified(signedPayload);
+      const notification = await decodeIncoming(signedPayload);
       const data = notification && notification.data && typeof notification.data === 'object'
         ? notification.data : {};
       if(!data.signedTransactionInfo) return {ok:true, events:[]};
@@ -313,7 +324,7 @@ function createAppleStoreBillingAdapter({
       // The notification itself and its nested transaction are both Apple-signed.
       // We still re-fetch from the App Store Server API so entitlement state is based
       // on Apple's current server state, not on a possibly delayed notification.
-      const hinted = await decodeVerified(data.signedTransactionInfo);
+      const hinted = await decodeIncoming(data.signedTransactionInfo);
       const transactionId = clean(hinted.transactionId, 200);
       const bundleId = clean(hinted.bundleId, 220);
       const product = await productByAppleId(hinted.productId);
