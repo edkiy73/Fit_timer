@@ -173,7 +173,7 @@ if(!/setDataSyncPlatformHooks/.test(dataSyncSource) || !/setDataSyncPlatformHook
 if(/from ['"]\.\/30-progress-media\.js['"]/.test(dataSyncSource)){
   problems.push('src/app/10-data-sync.js must not import 30-progress-media.js; inject progress-media-facing hooks instead');
 }
-if(!/setDataSyncProgressMediaHooks/.test(dataSyncSource) || !/setDataSyncProgressMediaHooks\(\{[\s\S]*ensureWarmup[\s\S]*loadPhotos[\s\S]*renderPhotos[\s\S]*shortD[\s\S]*uniqueProgramIds/.test(progressSource)){
+if(!/setDataSyncProgressMediaHooks/.test(dataSyncSource) || !/setDataSyncProgressMediaHooks\(\{[\s\S]*ensureWarmup[\s\S]*loadPhotos[\s\S]*renderPhotos[\s\S]*shortD[\s\S]*uniqueProfileIds/.test(progressSource)){
   problems.push('data-sync/progress-media hook boundary is missing or incomplete');
 }
 

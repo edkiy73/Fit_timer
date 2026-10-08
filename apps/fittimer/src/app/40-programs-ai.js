@@ -3,6 +3,7 @@ import { aiCanonicalEnglish, aiOutputLanguage, appLocale, canonicalLabel, t } fr
 import FitAIProtocol from '../../lib/ai-protocol.js';
 import { appRuntimeCompat } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
+import FitExerciseV2 from '../../lib/fit-exercise-v2.js';
 import { $, DUMBBELL_ICON, appAlert, appDialog, asTab, defaultPlanIdx, estimatedWorkoutMinutes,
   goBackTo, goTab, icon, openStart, plural, renderPlanRow, renderStartInfo, setCoreProgramsAiHooks, setShown, show, state
 } from './00-core.js';
@@ -37,7 +38,6 @@ let builderProgramsHooks = {
   copyPrompt: async () => {},
   curPlan: () => null,
   getDraft: () => null,
-  ensurePs: ex => ex,
   exRestAfter: () => 0,
   exSummary: () => '',
   fillBuilder: () => {},
@@ -53,7 +53,6 @@ let builderProgramsHooks = {
   editorProgressionMode: () => null,
   importFromText: () => {},
   isDualProg: () => false,
-  migrateLegacyDualRangeExercise: () => false,
   openBuilder: () => {},
   openExercise: () => {},
   parseProgramText: () => null,
@@ -103,13 +102,13 @@ export function setProgramsEventHooks(hooks = {}){
   eventProgramsHooks = {...eventProgramsHooks, ...hooks};
 }
 import { LIM, clampLine, clampNum, clampText, cleanLink, cleanPic, photos,
-  sanitizeProgram, setProgressProgramsHooks, shareGeneratedFile, uniqueProgramIds
+  isLegacyProgram, sanitizeProgram, setProgressProgramsHooks, shareGeneratedFile, uniqueProfileIds, uniqueProgramIds
 } from './30-progress-media.js';
 
 /* ================= ПРОГРЕССИЯ НАГРУЗКИ ================= */
 // Раз в progression ТРЕНИРОВОК ЭТОГО УПРАЖНЕНИЯ рабочая нагрузка растёт на свой
-// шаг — см. ensurePs/advanceExerciseProgression в 60-builder.js и инкремент
-// ex.ps.n в commitFinish (70-workout.js). Раньше был один счётчик на программу
+// шаг — см. ensureProgressState/advanceExerciseProgression в 60-builder.js и инкремент
+// progressState.count в commitFinish (70-workout.js). Раньше был один счётчик на программу
 // (p.progSteps, потом progStepsAdj поверх floor(completions/progression)):
 // удобно для отката, но при чередовании вариантов A/Б каждое упражнение
 // получало +1 шаг за КАЖДУЮ тренировку программы, включая дни, где его вообще
@@ -119,87 +118,23 @@ import { LIM, clampLine, clampNum, clampText, cleanLink, cleanPic, photos,
 // календарю: раньше вес рос просто оттого, что прошло время (отпуск на месяц —
 // и программа подняла нагрузку на четыре шага без единой тренировки), что и
 // демотивирует, и травмоопасно.
-// applyProgressionAll() здесь — не про сам расчёт (он в ensurePs/getExProgValue),
-// а только про одноразовую миграцию старых программ на эту модель.
+// Модель упражнения V2 стартует с чистых данных (см. docs/load-equipment-progression-plan-2026-10-08.md, 1.9):
+// старых миграций прогрессии больше нет. При загрузке остаётся только гарантия
+// уникальных id вариантов, упражнений и этапов.
 export function applyProgressionAll(){
   let changed = false;
-  customPrograms.forEach(p => {
-    // у программ, живших на календарной прогрессии, уже накоплен progSteps — превращаем его
-    // в ручную поправку, чтобы прогресс не обнулился при переходе на счёт по тренировкам
-    if(p.progLast != null && p.progStepsAdj == null){
-      // переносим только реально накопленный календарём счётчик. Если его нет, программа
-      // на календарной прогрессии не жила и переносить нечего: поправка «0 минус авто»
-      // ушла бы в минус и навсегда обнулила бы весь будущий рост
-      if(p.progSteps != null){
-        const done = (p.stats && p.stats.completions) || 0;
-        const auto = p.progression ? Math.floor(done / p.progression) : 0;
-        p.progStepsAdj = Math.max(0, Math.round(+p.progSteps || 0)) - auto;
-      }
-      delete p.progLast; // календарь больше не используется
-      changed = true;
-    }
-  });
-  // Сначала переводим старую семантику двойной прогрессии, потом уже считаем
-  // накопленные шаги per-exercise. Иначе старое «8-10, потолок 20» новый движок
-  // прочитает как верхнюю границу 20 и сократит цикл на ширину диапазона.
-  if(applyDualRangeProgressionMigration()) changed = true;
-  if(applyPerExerciseProgressionMigration()) changed = true;
-  customPrograms.forEach(p => { if(uniqueProgramIds(p)) changed = true; });
+  if(uniqueProfileIds(customPrograms)) changed = true;
   if(changed) savePrograms();
 }
 
-// Переход с одного счётчика шагов на программу (progSteps = floor(completions/
-// progression) + progStepsAdj, читался на лету) на состояние у каждого
-// упражнения (ex.ps.cur) — см. docs/ai-edit-progression-plan.md, пачка 3.
-// Работает один раз на программу (p.psMigrated): текущая нагрузка КАЖДОГО
-// упражнения прогоняется через builderProgramsHooks.advanceExerciseProgression() ровно столько раз,
-// сколько шагов у него уже фактически накопилось по СТАРОЙ формуле — так все
-// ограничения (потолок, двойная прогрессия) применяются как всегда, а не
-// переносятся смещением. ex.value/ex.weight (база) не трогаем: если человек ещё
-// не обновил мобильное приложение, оно продолжит показывать те же числа, что и
-// раньше — база и общий счётчик программы у него по-прежнему на месте, ex.ps
-// он просто не знает. Дрейф возможен, только если тренировки на старом
-// приложении продолжаются ПОСЛЕ того, как программа уже росла на новом —
-// тот же класс риска, что и у любого другого различия версий приложения.
-function applyPerExerciseProgressionMigration(){
-  let changed = false;
-  customPrograms.forEach(p => {
-    if(p.psMigrated) return;
-    p.psMigrated = true;
-    changed = true;
-    if(!p.progression) return;
-    const done = Math.max(0, +((p.stats && p.stats.completions) || 0));
-    const oldProgramSteps = Math.max(0, Math.floor(done / p.progression) + Math.round(+p.progStepsAdj || 0));
-    normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
-      const progFrom = Math.max(0, Math.round(+ex.progFrom || 0));
-      delete ex.progFrom;
-      if(ex.warmup || builderProgramsHooks.progAxis(ex) === 'none') return;
-      builderProgramsHooks.ensurePs(ex).n = done % p.progression;
-      const exSteps = Math.max(0, oldProgramSteps - progFrom);
-      for(let i = 0; i < exSteps; i++) builderProgramsHooks.advanceExerciseProgression(ex);
-    }));
-  });
-  return changed;
-}
-
-// До перехода диапазон в double progression был только подписью старта: движок
-// фактически шёл одним числом min → min+1 → … → repsMax, потом добавлял вес.
-// Теперь сам диапазон — нагрузка: 8-10 → 9-11 → …, поэтому старый потолок надо
-// сдвинуть на ширину диапазона, иначе вес прибавится раньше, чем раньше.
-//
-// ex.dualRangeV=2 — маркер новой семантики. Новые упражнения получают его сразу
-// в blankExercise(). Для старых без маркера используем состояние ps как подсказку:
-// одиночное текущее число — однозначно старая модель; диапазон в ps — уже новая.
-// Если ps ещё нет, считаем конфигурацию старой: именно такие данные массово лежат
-// у существующих пользователей до этого перехода.
-function applyDualRangeProgressionMigration(){
-  let changed = false;
-  customPrograms.forEach(p => {
-    normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
-      if(builderProgramsHooks.migrateLegacyDualRangeExercise(ex)) changed = true;
-    }));
-  });
-  return changed;
+/* Создание и правка программ/упражнений через ИИ, вставка ответа из чата, импорт
+   из видео и копирование программы старым текстовым протоколом временно отключены:
+   этот протокол не описывает снаряд, количество и этапы движения, а AI Contract V2
+   появится в PR 5 плана. Функции ниже остаются, пока их не заменит V2, но входы в них
+   закрыты здесь — человек видит честное объяснение, а не сломанный результат. */
+export function legacyAiUnavailable(){
+  appAlert(t('feature.v2Pending'));
+  return true;
 }
 
 /* ================= ПРИВЕТСТВИЕ И БЛОК «СЕГОДНЯ» ================= */
@@ -664,7 +599,7 @@ export function renderToday(){
 
   if(scheduled.length){
     scheduled.forEach(({p, plan, done, partial, rot}) => {
-      const setsTotal = (plan.exercises || []).reduce((n, e) => n + (e.warmup ? 0 : (parseInt(e.sets) || 1)), 0);
+      const setsTotal = (plan.exercises || []).reduce((n, e) => n + (e.warmup ? 0 : (parseInt(FitExerciseV2.prescriptionOf(e).sets) || 1)), 0);
       const bits = [];
       if(rot){
         const plansR = normPlans(p);
@@ -806,7 +741,7 @@ export function programMedia(p){
       id: String(ex.id || '').trim(),
       p: pi,
       i: ei,
-      n: String(ex.name || '').trim(),
+      n: String(FitExerciseV2.prescriptionOf(ex).name || '').trim(),
       data: d
     });
     left -= d.length;
@@ -856,11 +791,11 @@ export function applyMedia(p, media){
   // нельзя угадывать, какому именно упражнению принадлежала старая картинка.
   const counts = {};
   normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
-    const key = String(ex.name || '').trim();
+    const key = String(FitExerciseV2.prescriptionOf(ex).name || '').trim();
     if(key) counts[key] = (counts[key] || 0) + 1;
   }));
   normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
-    const key = String(ex.name || '').trim();
+    const key = String(FitExerciseV2.prescriptionOf(ex).name || '').trim();
     if(!key || counts[key] !== 1) return;
     const d = cleanPic(media[key]);
     if(d) ex.media = {kind: 'img', data: d};
@@ -882,8 +817,7 @@ export function programTemplateCopy(p, options){
     ...pl,
     exercises: (pl.exercises || []).map(ex => {
       const clean = {...ex};
-      if(!includeProgress) delete clean.ps;
-      delete clean.progFrom;
+      if(!includeProgress) clean.progressState = {count:0, current:{reps:null, weight:null, time:null, level:null}};
       return clean;
     })
   }));
@@ -891,11 +825,6 @@ export function programTemplateCopy(p, options){
   delete copy.stats;
   delete copy.active;
   delete copy.rotIdx;
-  delete copy.progSteps;
-  delete copy.progStepsAdj;
-  delete copy.progLast;
-  if(includeProgress) copy.psMigrated = true;
-  else delete copy.psMigrated;
   delete copy.src;
   delete copy.origEx;
   delete copy.pub;
@@ -1109,7 +1038,10 @@ function openProgramExportChoice(p, mode){
 }
 export function shareProgramWithChoice(p){ openProgramExportChoice(p, 'link'); }
 export function exportProgramFileWithChoice(p){ openProgramExportChoice(p, 'file'); }
-export function copyProgramTextWithChoice(p){ openProgramExportChoice(p, 'copy'); }
+export function copyProgramTextWithChoice(p){
+  if(legacyAiUnavailable()) return;
+  openProgramExportChoice(p, 'copy');
+}
 
 async function runProgramExportChoice(includeProgress){
   const pending = pendingProgramExport;
@@ -1198,6 +1130,7 @@ export async function importProgramFile(file){
     prog.id = 'p' + Date.now();
     prog.stats = {completions: 0};
     sanitizeProgram(prog);      // файл мог написать кто угодно и чем угодно
+    if(isLegacyProgram(prog)){ appAlert(t('import.legacyFormat')); return; }
     customPrograms.push(prog);
     await savePrograms();
     trainerProgramsHooks.renderMine();
@@ -1669,6 +1602,7 @@ function aiEditRequestGuard(fieldId){
 
 // собирает экран под источник и показывает его
 export function openAI(key){
+  if(legacyAiUnavailable()) return;
   const c = AI_SOURCES[key];
   if(!c) return;
   aiSrc = key;
@@ -1829,22 +1763,33 @@ function shrinkDataUrl(dataUrl, maxSide, cb){
   img.src = dataUrl;
 }
 
+// Оборудование на картинке — из структурированных данных упражнения (снаряд нагрузки,
+// количество, доп. оборудование), а не угадывание по названию: «2 гантели» и «1 гантель»
+// рисуются по-разному, и скамья в жиме не должна зависеть от формулировки описания.
+const IMAGE_EQUIPMENT = {
+  dumbbell:'dumbbell', barbell:'barbell', ez_bar:'EZ curl bar', kettlebell:'kettlebell', plate:'weight plate',
+  medball:'medicine ball', sandbag:'sandbag', vest:'weighted vest', ankle_weight:'ankle weight', machine:'gym machine',
+  cable:'cable machine', band:'resistance band', expander:'hand expander', mat:'exercise mat', bench:'workout bench',
+  chair:'sturdy chair', pullup_bar:'pull-up bar', step:'box or step platform', fitball:'exercise ball',
+  dip_bars:'parallel dip bars', rack:'squat rack'
+};
+function imagePrescriptionEquipment(p){
+  const out = [];
+  const label = (id, name) => id === 'custom' ? String(name || '').trim() : (IMAGE_EQUIPMENT[id] || '');
+  const load = p && p.load;
+  if(load && load.type !== 'none' && load.equipment){
+    const l = label(load.equipment, load.name);
+    if(l) out.push(load.count > 1 ? `${load.count} × ${l}` : l);
+  }
+  ((p && p.supportEquipment) || []).forEach(item => {
+    const l = typeof item === 'string' ? label(item) : label(item && item.id, item && item.name);
+    if(l && !out.includes(l)) out.push(l);
+  });
+  return out;
+}
 // промт под ОДНО конкретное изображение (в отличие от промта для копирования — там просят весь набор разом)
 function imageEquipment(item){
-  const s = `${item && item.name || ''} ${item && item.desc || ''}`.toLowerCase();
-  const out = [];
-  const add = (re, label) => { if(re.test(s) && !out.includes(label)) out.push(label); };
-  add(/гантел|dumbbell/, 'dumbbells');
-  add(/штанг|barbell/, 'barbell');
-  add(/гир(я|и|ей|ю|ь)?|kettlebell/, 'kettlebell');
-  add(/резин|эспанд|resistance band|\bband\b/, 'resistance band');
-  add(/скам(ья|ьи|ью)|bench/, 'workout bench');
-  add(/блок|кроссовер|трос|cable/, 'cable machine');
-  add(/турник|перекладин|pull[- ]?up bar/, 'pull-up bar');
-  add(/коврик|\bmat\b/, 'exercise mat');
-  add(/фитбол|мяч|exercise ball|swiss ball/, 'exercise ball');
-  add(/тумб|платформ|степ|plyo box|step platform/, 'box or step platform');
-  return out;
+  return Array.isArray(item && item.equipment) ? item.equipment : [];
 }
 
 function imageStaticExercise(item){
@@ -1984,7 +1929,7 @@ function imageProgramName(){
 function unnamedImageExerciseCount(){
   let count = 0;
   ((builderDraft() && builderDraft().plans) || []).forEach(pl => (pl.exercises || []).forEach(ex => {
-    if(!String(ex && ex.name || '').trim()) count++;
+    if(!String(FitExerciseV2.prescriptionOf(ex).name || '').trim()) count++;
   }));
   return count;
 }
@@ -2041,7 +1986,7 @@ export async function generateAllImagesViaAI(scope){
     if(scope !== 'missing') return true;
     const key = ex.name.toLowerCase();
     return !(builderDraft().plans || []).some(pl => (pl.exercises || []).some(e2 =>
-      (e2.name || '').trim().toLowerCase() === key &&
+      (FitExerciseV2.prescriptionOf(e2).name || '').trim().toLowerCase() === key &&
       e2.media && e2.media.kind === 'img' && e2.media.data
     ));
   });
@@ -2095,7 +2040,7 @@ export async function generateAllImagesViaAI(scope){
     const go = await runOne('ex', ex, data => {
       // применяем ко всем упражнениям с этим именем во всех вариантах — не платим за копию дважды
       (builderDraft().plans || []).forEach(pl => (pl.exercises || []).forEach(e2 => {
-        if((e2.name || '').trim().toLowerCase() === ex.name.toLowerCase()) setExImg(e2, data);
+        if((FitExerciseV2.prescriptionOf(e2).name || '').trim().toLowerCase() === ex.name.toLowerCase()) setExImg(e2, data);
       }));
     });
     if(!go) break;
@@ -2106,10 +2051,12 @@ export async function generateAllImagesViaAI(scope){
 
 // Что рисовать для упражнения: название, техника и мышцы.
 export function exImageItem(ex){
+  const p = FitExerciseV2.prescriptionOf(ex);
   return {
-    name:(ex && ex.name || '').trim(),
-    desc:(ex && ex.desc || '').trim(),
-    muscles:((ex && ex.muscles) || []).map(id => M_LABEL[id]).filter(Boolean)
+    name:(p.name || '').trim(),
+    desc:(p.desc || '').trim(),
+    muscles:(p.muscles || []).map(id => M_LABEL[id]).filter(Boolean),
+    equipment:imagePrescriptionEquipment(p)
   };
 }
 
@@ -2188,16 +2135,18 @@ async function finishImgGen(done, total, failed){
 function uniqueProgramExercises(){
   const seen = new Map(); // ключ — имя в нижнем регистре
   (builderDraft().plans || []).forEach(pl => (pl.exercises || []).forEach(ex => {
-    const name = (ex.name || '').trim();
+    const p = FitExerciseV2.prescriptionOf(ex);
+    const name = (p.name || '').trim();
     if(!name) return;
     const key = name.toLowerCase();
     if(seen.has(key)) return;
     seen.set(key, {
       name,
-      desc: (ex.desc || '').trim(),
-      muscles: (ex.muscles || []).map(id => M_LABEL[id]).filter(Boolean),
-      format: ex.type || '',
-      weight: +ex.weight || 0
+      desc: (p.desc || '').trim(),
+      muscles: (p.muscles || []).map(id => M_LABEL[id]).filter(Boolean),
+      format: p.type || '',
+      weight: +p.load.weight || 0,
+      equipment: imagePrescriptionEquipment(p)
     });
   }));
   return [...seen.values()];
@@ -2310,7 +2259,7 @@ export function imageSlots(){
       slots.push({
         kind: 'ex', plan: pi, idx: ei,
         group: plans.length > 1 ? `${t('builder.variant')} ${pi + 1}` : t('images.exerciseGroup'),
-        title: (ex.name || '').trim() || t('store.untitled'),
+        title: (FitExerciseV2.prescriptionOf(ex).name || '').trim() || t('store.untitled'),
         get: ()=> (ex.media && ex.media.kind === 'img') ? ex.media.data : null,
         set: v => { if(v) setExImg(ex, v); else dropExMedia(ex); }
       });
@@ -2514,6 +2463,7 @@ export function exerciseToText(ex, opts){
 }
 
 export function openExEdAI(i){
+  if(legacyAiUnavailable()) return;
   const ex = builderProgramsHooks.curPlan().exercises[i];
   if(!ex) return;
   exeIdx = i;
@@ -2620,6 +2570,7 @@ function preserveKnownWeightIfPlaceholder(oldEx, newEx, p, request){
 }
 
 async function applyExEdit(){
+  if(legacyAiUnavailable()) return;
   const raw=($('aiResult').value||'').trim();
   if(!raw){appAlert(builderProgramsHooks.msgAiEmpty());return;}
   const list=builderProgramsHooks.curPlan().exercises;
@@ -2700,6 +2651,7 @@ function exaChips(){
 }
 
 export function openExAI(){
+  if(legacyAiUnavailable()) return;
   exa.count = 1; exa.format = ''; exa.level = ''; exa.muscles = []; exa.equip = [];
   $('exaWish').value = '';
   $('exaContext').value = '';
@@ -2761,6 +2713,7 @@ export function exaPrompt(){
 }
 
 async function exaAddExercise(){
+  if(legacyAiUnavailable()) return;
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(builderProgramsHooks.msgAiEmpty()); return; }
   const checkedRaw = aiClientVerdict('exercise.create', raw);
@@ -2828,6 +2781,7 @@ export function youtubePrompt(){
 }
 
 export function openYouTube(){
+  if(legacyAiUnavailable()) return;
   $('ytUrl').value = '';
   $('ytWish').value = '';
   workoutProgramsHooks.autoGrow($('ytWish'));
@@ -2949,6 +2903,7 @@ export function editAIPrompt(){
 }
 
 export function openEditAI(p){
+  if(legacyAiUnavailable()) return;
   editAIProg = p;
   $('aiSubjName').textContent = p.name || t('program.fallback');
   const plans = normPlans(p);
@@ -3061,6 +3016,7 @@ function editSummaryText(diff, oldProg, newProg){
 }
 
 async function createEditedProgram(){
+  if(legacyAiUnavailable()) return;
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(builderProgramsHooks.msgAiEmpty()); return; }
   // Ответ ИИ принимается как есть — свобода добавлять/убирать/переставлять
@@ -3136,13 +3092,13 @@ function linkedRotationIndex(oldP, newP){
   const oldIdx = ((Math.round(+oldP.rotIdx || 0) % oldPlans.length) + oldPlans.length) % oldPlans.length;
   const oldEx = (oldPlans[oldIdx] && oldPlans[oldIdx].exercises) || [];
   const ids = new Set(oldEx.map(ex => ex && ex.id).filter(Boolean));
-  const names = new Set(oldEx.map(ex => String((ex && ex.name) || '').trim().toLowerCase()).filter(Boolean));
+  const names = new Set(oldEx.map(ex => String(FitExerciseV2.prescriptionOf(ex).name || '').trim().toLowerCase()).filter(Boolean));
   let best = -1, bestScore = 0;
   newPlans.forEach((pl, i) => {
     let score = 0;
     (pl.exercises || []).forEach(ex => {
       if(ex && ex.id && ids.has(ex.id)) score += 100;
-      else if(names.has(String((ex && ex.name) || '').trim().toLowerCase())) score += 1;
+      else if(names.has(String(FitExerciseV2.prescriptionOf(ex).name || '').trim().toLowerCase())) score += 1;
     });
     if(score > bestScore){ bestScore = score; best = i; }
   });
@@ -3154,16 +3110,13 @@ function linkedRotationIndex(oldP, newP){
 // ротации и фактическая прогрессия принадлежат подопечному. Структура, расписание,
 // шаги/потолки и новые упражнения — тренеру.
 //
-// carryExerciseProgress дополнительно защищает от странного переноса: если тренер
-// изменил базовые повторы/вес упражнения, старый ps.cur очищается, но счётчик ps.n
-// сохраняется. Если база не менялась — сохраняется вся достигнутая нагрузка.
+// carryExerciseProgress решает, что переносится: другой этап или снаряд — прогресс
+// заново; изменённое назначение — тот же период, счётчик с нуля; иначе — всё как было.
 export function carryLinkedProgramState(existing, incoming){
   if(!existing || !incoming) return incoming;
   incoming.id = existing.id;
   incoming.stats = existing.stats ? JSON.parse(JSON.stringify(existing.stats)) : {completions:0};
   if(existing.active !== undefined) incoming.active = existing.active;
-  if(existing.progStepsAdj != null) incoming.progStepsAdj = existing.progStepsAdj;
-  if(existing.psMigrated != null) incoming.psMigrated = existing.psMigrated;
 
   const rot = linkedRotationIndex(existing, incoming);
   if(rot == null) delete incoming.rotIdx;
@@ -3195,7 +3148,7 @@ export async function importProgramLink(id){
   const raw = d.program;
   if(!raw || !raw.name){ appAlert(t('import.noProgram')); return; }
   const existing = customPrograms.find(x => x && x.src === id);
-  // Ссылка приносит ШАБЛОН. Даже если серверу подсунули чужой ex.ps/rotIdx,
+  // Ссылка приносит ШАБЛОН. Даже если серверу подсунули чужой progressState/rotIdx,
   // получателю это состояние не принадлежит. Его собственное состояние вернём ниже.
   const prog = programTemplateCopy(raw, {includeProgress:!existing && d.includeProgress === true});
   prog.id = existing ? existing.id : ('p' + Date.now());
@@ -3204,6 +3157,7 @@ export async function importProgramLink(id){
   prog.plans = normPlans(prog);
   if(existing) carryLinkedProgramState(existing, prog);
   sanitizeProgram(prog);        // пришло по сети — значит, могло прийти любым
+  if(isLegacyProgram(prog)){ appAlert(t('import.legacyFormat')); return; }
   // Снимок присланного — чтобы потом было видно, что подопечный в нём поменял.
   prog.origEx = trainerProgramsHooks.snapshotEx(prog);
   if(d.by) prog.by = d.by;
@@ -3260,6 +3214,7 @@ export function importProgramCode(code){
   prog.id = 'p' + Date.now();
   prog.stats = {completions: 0};
   sanitizeProgram(prog);        // код можно собрать руками, и собирают
+  if(isLegacyProgram(prog)){ appAlert(t('import.legacyFormat')); return; }
   builderProgramsHooks.loadBuilderDraft(prog);
   builderDraft().plans = JSON.parse(JSON.stringify(normPlans(builderDraft())));
   delete builderDraft().exercises; delete builderDraft().rounds; delete builderDraft().roundRest; delete builderDraft().days;

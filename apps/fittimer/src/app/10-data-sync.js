@@ -1,6 +1,7 @@
 import { appLocale, canonicalLabel, localeTag, profileLocalePreference, setAppLocale, t } from '../i18n/index.js';
 import { appInfrastructure, appRuntimeCompat, appSync, appUi } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
+import FitExerciseV2 from '../../lib/fit-exercise-v2.js';
 
 let coreDollarHook = id => document.getElementById(id);
 let coreAlertHook = () => {};
@@ -46,7 +47,7 @@ let progressMediaHooks = {
   loadPhotos: async () => {},
   renderPhotos: () => {},
   shortD: v => String(v == null ? '' : v),
-  uniqueProgramIds: () => false
+  uniqueProfileIds: () => false
 };
 export function setDataSyncProgressMediaHooks(hooks = {}){
   progressMediaHooks = {...progressMediaHooks, ...hooks};
@@ -225,7 +226,29 @@ async function reportClientError(kind, error, fallbackMessage){
   return appObservability.capture(kind === 'rejection' ? 'rejection' : 'error', error, fallbackMessage);
 }
 
+/* Чистый старт модели упражнения V2 (docs/load-equipment-progression-plan-2026-10-08.md, 1.9).
+   Один раз на устройство стираем тренировочные данные старого формата: программы,
+   историю и статистику, незавершённые тренировки, очередь синхронизации и её
+   редакции, список подопечных с отчётами по старым программам. Аккаунт, профили,
+   фото прогресса и настройки остаются. Серверные документы старого формата
+   перезаписываются при следующей синхронизации (см. applyRemoteSyncNow). */
+const DATA_MODEL = '2';
+const LEGACY_PROFILE_DATA = ['customPrograms', 'stats', 'workoutSession', 'workoutSessionsV2',
+  'docMeta', 'outbox', 'warmupAdded', 'clients'];
+async function resetLegacyDataModel(){
+  if((await kvGet('dataModel')) === DATA_MODEL) return;
+  for(const u of (Array.isArray(users) ? users : [])){
+    if(!u || !u.id) continue;
+    for(const k of LEGACY_PROFILE_DATA) await kvDel(k + '_' + u.id);
+  }
+  await kvDel('customPrograms');
+  await kvDel('stats');
+  await kvSet('migrated', '1');
+  await kvSet('dataModel', DATA_MODEL);
+}
+
 export async function loadData(ownerId = currentUser){
+  await resetLegacyDataModel();
   // Все чтения привязываем к профилю, который начал загрузку. Раньше pk() вычислялся
   // заново после каждого await: если в этот момент фоновая синхронизация и ручное
   // переключение профиля пересекались, данные могли приехать уже от другого профиля.
@@ -248,7 +271,7 @@ export async function loadData(ownerId = currentUser){
   nextPrograms.forEach(p => {
     if(!p || p.id === 'warmup' || p.locale === 'ru' || p.locale === 'en') return;
     const plans = Array.isArray(p.plans) ? p.plans : [];
-    const sample = [p.name, p.desc].concat(plans.flatMap(pl => (pl.exercises || []).flatMap(ex => [ex.name, ex.desc, ex.mistakes, ex.swapName, ex.swapDesc]))).join(' ');
+    const sample = [p.name, p.desc].concat(plans.flatMap(pl => (pl.exercises || []).flatMap(ex => { const x = FitExerciseV2.prescriptionOf(ex); return [x.name, x.desc, x.mistakes]; }))).join(' ');
     p.locale = /[А-Яа-яЁё]/.test(sample) ? 'ru' : 'en';
   });
   try{ nextStats = JSON.parse(statRaw) || {totalSec:0}; }catch(e){ nextStats = {totalSec:0}; }
@@ -730,7 +753,9 @@ export async function saveWellHist(){
 
    Фотографии в синхронизацию не входят намеренно: самые чувствительные данные,
    самый дорогой трафик и наименьшая польза от переноса между устройствами. */
-export const SCHEMA_VERSION = 1;
+/* Версия формата данных. 2 — модель упражнения V2 (этапы, снаряд, количество):
+   документы версии 1 не читаются, документы новее текущей не перезаписываются. */
+export const SCHEMA_VERSION = 2;
 /* Документы, которые поедут на сервер; всё остальное — настройки устройства.
 
    Единица синхронизации — ОДНА ПРОГРАММА, а не весь их список. Иначе два устройства,
@@ -764,6 +789,7 @@ let outbox   = [];     // [{key, rev, at}] — что ждёт отправки 
 // там годами; переименовать до первого запроса — правка в десять строк, после — миграция
 // с данными у всех.
 export async function loadIdentity(ownerId = currentUser){
+  await resetLegacyDataModel();
   const ownerKey = key => key + '_' + ownerId;
   let dev = await kvGet('deviceId');
   if(!dev){ dev = newId(); await kvSet('deviceId', dev); }
@@ -898,6 +924,8 @@ export const SYNC = {
     const batch = outbox.slice();
     const payload = [];
     for(const o of batch){
+      // документ более новой версии приложения не перезаписываем
+      if(+((docMeta[o.key]||{}).schema) > SCHEMA_VERSION) continue;
       const value = await docValue(o.key, uid);
       const gone = value === null && appSync.registry.allowsDeleted('profile', o.key);
       if(value === null && !gone) continue;
@@ -1312,6 +1340,26 @@ async function applyRemoteSyncNow(result){
 
     for(const d of (rp.docs || [])){
       if(!isSyncKey(d.key)) continue;
+      const docSchema = Math.max(1, +d.schema || 1);
+      if(docSchema > SCHEMA_VERSION){
+        // Документ записан более новой версией приложения: не применяем то, чего не
+        // понимаем, и не перезаписываем его своей версией (см. pushDocs).
+        meta[d.key] = {rev:+d.rev||1, at:d.at, schema:docSchema, deviceId:d.deviceId||'',
+                       gone:!!d.deleted, h:''};
+        queue = queue.filter(o => o.key !== d.key);
+        continue;
+      }
+      if(docSchema < SCHEMA_VERSION){
+        // Старый формат данных (до модели упражнения V2) не читаем. Принимаем его
+        // ревизию, чтобы следующая отправка перезаписала документ текущими данными;
+        // старая программа уходит на сервер надгробием.
+        const at = new Date().toISOString();
+        const rev = (+d.rev || 1) + 1;
+        meta[d.key] = {rev, at, schema:SCHEMA_VERSION, deviceId:'',
+                       gone:d.key.startsWith('program:') && !byId.has(d.key.slice(8)), h:''};
+        queue = queue.filter(o => o.key !== d.key).concat([{key:d.key, rev, at}]);
+        continue;
+      }
       if(d.key === 'stats'){
         const incoming = parsed(d.value, {totalSec:0});
         if(stat && JSON.stringify(stat) !== JSON.stringify(incoming)){
@@ -1543,6 +1591,8 @@ async function pendingProfileSnapshot(uid){
   for(const o of Array.isArray(queue) ? queue : []){
     const key = String(o.key || '');
     if(!isSyncKey(key)) continue;
+    // документ более новой версии приложения не перезаписываем
+    if(+((meta[key]||{}).schema) > SCHEMA_VERSION) continue;
     let value = null;
     if(key === 'stats') value = await kvGet('stats_' + uid);
     else if(key === 'index') value = JSON.stringify({order:(Array.isArray(programs) ? programs : []).map(p => p.id)});
@@ -1742,9 +1792,9 @@ export async function savePrograms(){
   // до первого await, чтобы последующее переключение профиля не подменило содержимое.
   const uid = currentUser;
   if(dataOwner !== uid) return;   // данные нового профиля ещё не загружены
-  // id вариантов и упражнений уникальны в программе (см. uniqueProgramIds) — чиним
+  // id вариантов, упражнений и этапов уникальны (см. uniqueProgramIds) — чиним
   // на месте, чтобы новый вариант или копия не жили без id/с чужим id до перезапуска
-  customPrograms.forEach(p => { if(p && typeof p === 'object') progressMediaHooks.uniqueProgramIds(p); });
+  progressMediaHooks.uniqueProfileIds(customPrograms);
   const programs = JSON.parse(JSON.stringify(customPrograms));
   let meta = docMeta;
   let queue = outbox.slice();
@@ -2480,6 +2530,7 @@ export const planDays = p => progActive(p) ? programDaysUnion(p) : [];
 
 // превращает выбранный план программы в тренировочный цикл
 export function customToProgram(p, planIdx = 0){
+  const pr = ex => FitExerciseV2.prescriptionOf(ex);
   const plans = normPlans(p);
   const plan = plans[planIdx] || plans[0];
 
@@ -2489,7 +2540,7 @@ export function customToProgram(p, planIdx = 0){
     const isWeight = builderDataHooks.hasWeight(ex);     // формат включает вес — независимо от того, растёт ли он
     const loadType = builderDataHooks.progressionLoadType(ex);
     const levelState = loadType === 'level' ? (builderDataHooks.exerciseLoadLevelState(ex) || {}) : null;
-    const isTimeFmt = ex.type === 'time';
+    const isTimeFmt = pr(ex).type === 'time';
     // «повторения и вес» — особый случай: вес и повторы растут НЕЗАВИСИМО друг от друга.
     // Явный 0 в шаге означает «эта конкретная ось у этого упражнения не растёт» — так ИИ
     // или сам человек может решить «поднимаем только вес» или «поднимаем только повторы».
@@ -2498,16 +2549,18 @@ export function customToProgram(p, planIdx = 0){
     const tGrows = on && isTimeFmt && builderDataHooks.progStepSize(ex, 'time') > 0;
 
     const step = {
-      phase:'work', title:ex.name, instruction:ex.desc || '', media:ex.media || null,
-      video:ex.video || null, muscles:ex.muscles || [], mistakes:ex.mistakes || '',
-      perSide: !!ex.perSide,
+      phase:'work', title:pr(ex).name, instruction:pr(ex).desc || '', media:ex.media || null,
+      video:pr(ex).video || null, muscles:pr(ex).muscles || [], mistakes:pr(ex).mistakes || '',
+      perSide: !!pr(ex).perSide,
       progAxis: axis,
       // рабочий вес: сохранённая ручная поправка + текущие шаги программы поверх базы упражнения.
       // Если формат включает вес, но конкретно вес не растёт (растут только повторы) —
       // показываем зафиксированную базу: цифра всё равно нужна, просто она не меняется сама.
       weight: isWeight ? (wGrows ? builderDataHooks.getExProgValue(p.id, ex, p, 'weight') : builderDataHooks.progBaseValue(ex, 'weight')) : 0,
-      weightBase: +ex.weight || 0,   // база упражнения (без прогрессии) — для справки в шаге тренировки
-      wStep: ex.wStep != null ? +ex.wStep : 2, // != null — иначе явный 0 (не растим вес) подменится дефолтом
+      weightBase: +pr(ex).load.weight || 0,   // база упражнения (без прогрессии) — для справки в шаге тренировки
+      wStep: builderDataHooks.progStepSize(ex, 'weight'),
+      // вес — на ОДНУ единицу снаряда; количество нужно, чтобы показать «2 × 10 кг»
+      loadCount: Math.max(1, +pr(ex).load.count || 1),
       loadType,
       loadLevel: levelState && Number.isFinite(+levelState.level) ? Math.max(0, Math.round(+levelState.level)) : null,
       loadLabel: levelState ? String(levelState.label || '') : '',
@@ -2515,23 +2568,19 @@ export function customToProgram(p, planIdx = 0){
       // стабильный key, custom scale — физический label. Так RU↔EN не ломает resume,
       // а замена «Красная» на «Чёрная» на том же numeric index считается новой нагрузкой.
       loadKey: levelState ? String(levelState.identity || '') : '',
-      exName: ex.name,
+      exName: pr(ex).name,
       exId: ex.id || ''  // по id проверка прогресса узнаёт, до каких упражнений дошла тренировка
     };
-    // расти дальше некуда, а более сложный вариант задан — на тренировке покажем подсказку
-    if(on && ex.swapOn && (ex.swapName || '').trim() && builderDataHooks.progAtCeiling(p.id, ex, p)){
-      step.swap = {name: ex.swapName.trim(), desc: (ex.swapDesc || '').trim()};
-    }
     if(setsTotal > 1){ step.setNo = setNo; step.setsTotal = setsTotal; }
     if(side){ step.side = side; step.sidesTotal = 2; }
     if(isTimeFmt){
       step.kind = 'timer';
-      step.seconds = tGrows ? builderDataHooks.getExProgValue(p.id, ex, p, 'time') : builderDataHooks.parseValue(ex.value).min;
+      step.seconds = tGrows ? builderDataHooks.getExProgValue(p.id, ex, p, 'time') : builderDataHooks.parseValue(pr(ex).value).min;
     } else {
       step.kind = 'click'; step.repsNote = t('workout.repsShort');
       // диапазон повторов сдвигается целиком (и низ, и верх), если повторы растут —
       // не зависит от того, растёт ли ОДНОВРЕМЕННО вес у этого же упражнения
-      step.reps = rGrows ? builderDataHooks.progressedRepsRange(p.id, ex, p) : builderDataHooks.normValue(ex.value, 'reps');
+      step.reps = rGrows ? builderDataHooks.progressedRepsRange(p.id, ex, p) : builderDataHooks.normValue(pr(ex).value, 'reps');
     }
     return step;
   };
@@ -2551,8 +2600,8 @@ export function customToProgram(p, planIdx = 0){
   // один подход, и заданные у разминочного упражнения подходы молча терялись.
   const warmup = [];
   warmEx.forEach(ex =>{
-    const sets = Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
-    const twoSides = ex.type === 'time' && ex.perSide;
+    const sets = Math.max(1, Math.min(10, parseInt(pr(ex).sets) || 1));
+    const twoSides = pr(ex).type === 'time' && pr(ex).perSide;
     const restAfter = builderDataHooks.exRestAfter(ex);
     for(let n = 1; n <= sets; n++){
       const add = st => { st.isWarmup = true; warmup.push(st); };
@@ -2563,9 +2612,9 @@ export function customToProgram(p, planIdx = 0){
       } else {
         add(mkWork(ex, n, sets));
       }
-      // между подходами одного упражнения — ex.rest, после последнего (следующее
+      // между подходами одного упражнения — pr(ex).rest, после последнего (следующее
       // упражнение или конец разминки) — свой отдых «после упражнения»
-      const restSec = n === sets ? restAfter : (+ex.rest || 0);
+      const restSec = n === sets ? restAfter : (+pr(ex).rest || 0);
       if(restSec > 0) warmup.push(mkRest(restSec));
     }
   });
@@ -2573,9 +2622,9 @@ export function customToProgram(p, planIdx = 0){
   // основная часть: у каждого упражнения свои подходы
   const cycle = [];
   mainEx.forEach((ex, i)=>{
-    const sets = Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
+    const sets = Math.max(1, Math.min(10, parseInt(pr(ex).sets) || 1));
     const isLastEx = i === mainEx.length - 1;
-    const twoSides = ex.type === 'time' && ex.perSide; // на время и на каждую сторону
+    const twoSides = pr(ex).type === 'time' && pr(ex).perSide; // на время и на каждую сторону
     const restAfter = builderDataHooks.exRestAfter(ex);
     for(let s = 1; s <= sets; s++){
       if(twoSides){
@@ -2589,10 +2638,10 @@ export function customToProgram(p, planIdx = 0){
       const isLastSet = s === sets;
       // после самого последнего подхода самого последнего упражнения личный отдых
       // не ставим — там сработает отдых между кругами. Между подходами одного
-      // упражнения — ex.rest, после последнего подхода (переход к следующему
+      // упражнения — pr(ex).rest, после последнего подхода (переход к следующему
       // упражнению) — свой отдых «после упражнения».
       if(isLastEx && isLastSet) continue;
-      const restSec = isLastSet ? restAfter : (+ex.rest || 0);
+      const restSec = isLastSet ? restAfter : (+pr(ex).rest || 0);
       if(restSec > 0) cycle.push(mkRest(restSec));
     }
   });

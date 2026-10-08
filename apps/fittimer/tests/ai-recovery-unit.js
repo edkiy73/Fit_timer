@@ -14,7 +14,9 @@ need(events.includes("cancelText:t('ai.editRequest')"), 'text AI failure must of
 need(programs.includes("if(retry) return generateOneImageViaAI(kind, item, title, apply);"), 'single-image retry is missing');
 need(programs.includes("if(retry) return generateAllImagesViaAI('missing');"), 'batch image retry must regenerate only missing images');
 need(programs.includes("await finishImgGen(done, total, failed);"), 'batch image recovery must be awaited');
-need(workout.includes("if(retry) return swapViaAI();"), 'workout exercise replacement retry is missing');
+// Замена упражнения через ИИ на тренировке временно недоступна до AI Contract V2
+// (docs/load-equipment-progression-plan-2026-10-08.md, PR 5): вернуть проверку повтора вместе с ней.
+need(workout.includes("appAlert(t('feature.v2Pending'))"), 'workout exercise replacement must explain that it is temporarily unavailable');
 need(ru.includes("'ai.retry': \"Повторить\""), 'RU retry copy is missing');
 need(ru.includes("'ai.editRequest': \"Изменить запрос\""), 'RU edit-request copy is missing');
 need(en.includes("'ai.retry': \"Retry\""), 'EN retry copy is missing');

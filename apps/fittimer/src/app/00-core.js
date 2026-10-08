@@ -1,6 +1,7 @@
 import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
 import { appRuntimeCompat, appUi } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
+import FitExerciseV2 from '../../lib/fit-exercise-v2.js';
 import { DAYS, closeAllMenus, curUser, customPrograms, normPlans, planIdAt, progActive, renderStats,
   renderUsers, renderWeight, renderWellness, savePrograms, deleteCustomProgram, setDataSyncCoreHooks, stats
 } from './10-data-sync.js';
@@ -83,7 +84,8 @@ let builderHooks = {
   exRestAfter: () => 0,
   exerciseLoadLevelState: () => ({level:0,key:'',label:'',identity:''}),
   exerciseLoadLevels: () => [],
-  ensurePs: ex => ex && ex.ps,
+  ensureProgressState: ex => ex && ex.progressState,
+  exerciseWeightText: (ex, kg) => String(kg),
   loadLevelLabel: level => String((level && level.label) || ''),
   exerciseProgEvery: () => 0,
   fmtKg: v => String(v == null ? '' : v),
@@ -1080,9 +1082,10 @@ export function renderPlanRow(){
 
 // Нагрузка одного упражнения в том же виде, в каком она появится на тренировке.
 // Отдельная функция не даёт обзору и таймеру разойтись в формулах прогрессии.
+const pr = ex => FitExerciseV2.prescriptionOf(ex);
 function exerciseLoad(p, ex){
   const on = builderHooks.progAxis(ex) !== 'none';
-  const timed = ex.type === 'time';
+  const timed = pr(ex).type === 'time';
   const load = {reps:'', sec:0, kg:0, level:null, levelKey:'', levelLabel:''};
   if(timed){
     load.sec = on && builderHooks.progStepSize(ex, 'time') > 0
@@ -1091,7 +1094,7 @@ function exerciseLoad(p, ex){
   } else {
     load.reps = on && builderHooks.progStepSize(ex, 'reps') > 0
       ? builderHooks.progressedRepsRange(p.id, ex, p)
-      : builderHooks.normValue(ex.value, 'reps');
+      : builderHooks.normValue(pr(ex).value, 'reps');
   }
   if(builderHooks.hasWeight(ex)){
     load.kg = on && builderHooks.progStepSize(ex, 'weight') > 0
@@ -1138,7 +1141,7 @@ export function previousWorkoutLoad(p, planIdx){
   if(!hist.length && done <= 0) return {first:true, exact:false, legacy:false, rows:[]};
 
   // До появления load snapshot старый движок мог приблизительно откатить
-  // программу через completions-1. Теперь фактическая нагрузка хранится в ex.ps:
+  // программу через completions-1. Теперь фактическая нагрузка хранится в progressState:
   // два упражнения одной программы могут иметь разные cur/n, а partial вообще
   // двигает только полностью завершённые упражнения. Поэтому общий completions
   // не содержит достаточно информации, чтобы восстановить прошлые reps/sec/kg.
@@ -1148,7 +1151,7 @@ export function previousWorkoutLoad(p, planIdx){
 
 function loadTargetText(ex, v){
   const bits = [];
-  if(ex.type === 'time') bits.push(`${v.sec} ${t('store.secShort')}`);
+  if(pr(ex).type === 'time') bits.push(`${v.sec} ${t('store.secShort')}`);
   else bits.push(`${v.reps} ${t('workout.repsShort')}`);
   if(v.kg > 0) bits.push(`${builderHooks.fmtKg(v.kg)} ${t('progress.kg')}`);
   const resistanceLabel = v.levelKey
@@ -1156,7 +1159,7 @@ function loadTargetText(ex, v){
     : String(v.levelLabel || '');
   if(resistanceLabel) bits.push(resistanceLabel);
   let out = bits.join(' × ');
-  if(ex.perSide) out += ' ' + t('store.perSide');
+  if(pr(ex).perSide) out += ' ' + t('store.perSide');
   return out;
 }
 
@@ -1213,14 +1216,14 @@ export function estimatedWorkoutMinutes(p, planIdx, rows){
   const lastMain = ((pl && pl.exercises) || []).map((ex, i) => ex.warmup ? -1 : i).filter(i => i >= 0).pop();
   ((pl && pl.exercises) || []).forEach((ex, i) => {
     const v = rows[i] || exerciseLoad(p, ex);
-    const sets = Math.max(1, parseInt(ex.sets) || 1);
+    const sets = Math.max(1, parseInt(pr(ex).sets) || 1);
     const rounds = ex.warmup ? 1 : Math.max(1, +pl.rounds || 1);
-    const sides = ex.perSide ? 2 : 1;
-    const work = ex.type === 'time' ? (+v.sec || 1) * sides : Math.max(1, builderHooks.parseValue(v.reps).min) * 3 * sides;
+    const sides = pr(ex).perSide ? 2 : 1;
+    const work = pr(ex).type === 'time' ? (+v.sec || 1) * sides : Math.max(1, builderHooks.parseValue(v.reps).min) * 3 * sides;
     sec += work * sets * rounds;
-    sec += Math.max(0, sets - 1) * (+ex.rest || 0) * rounds;
+    sec += Math.max(0, sets - 1) * (+pr(ex).rest || 0) * rounds;
     if(ex.warmup || i !== lastMain) sec += builderHooks.exRestAfter(ex) * rounds;
-    if(ex.perSide && ex.type === 'time') sec += sideSec * sets * rounds;
+    if(pr(ex).perSide && pr(ex).type === 'time') sec += sideSec * sets * rounds;
   });
   sec += Math.max(0, (+pl.rounds || 1) - 1) * (+pl.roundRest || 0);
   return {n:Math.max(5, Math.round(sec / 300) * 5), history:false, samples:0};
@@ -1241,7 +1244,7 @@ function renderStartOverview(){
     if(delta.text) changes.push({i, text:delta.text, dir:delta.dir});
   });
 
-  const workSets = exercises.reduce((n, ex) => n + Math.max(1, parseInt(ex.sets) || 1)
+  const workSets = exercises.reduce((n, ex) => n + Math.max(1, parseInt(pr(ex).sets) || 1)
     * (ex.warmup ? 1 : Math.max(1, +pl.rounds || 1)), 0);
   const dur = estimatedWorkoutMinutes(p, state.planIdx, current);
   $('startOverviewSummary').textContent = trainerCatalogHooks.storeCountText(exercises.length,'exercise') + ' · ' + trainerCatalogHooks.storeCountText(workSets,'set') + ' · ' + (dur.samples === 1 ? t('start.lastTime',{minutes:dur.n}) : dur.history ? t('start.usualTime',{minutes:dur.n}) : t('start.approxTime',{minutes:dur.n}));
@@ -1249,7 +1252,7 @@ function renderStartOverview(){
   const change = $('startLoadChange');
   const changeText = text => { change.textContent = text; };
   // через сколько тренировок приложение спросит о повышении: прогрессия у каждого
-  // упражнения своя (ex.ps.n) — берём ближайшее к порогу упражнение варианта.
+  // упражнения своя (progressState.count) — берём ближайшее к порогу упражнение варианта.
   // Показываем и тогда, когда нагрузка уже изменилась, — иначе после первого
   // повышения человек терял из виду, когда будет следующее.
   let nextText = '';
@@ -1259,7 +1262,7 @@ function renderStartOverview(){
       .map(ex => {
         const every = builderHooks.exerciseProgEvery(ex, p);
         if(every <= 0) return null;
-        const done = Math.max(0, Math.round(+(ex.ps && ex.ps.n) || 0));
+        const done = Math.max(0, Math.round(+(ex.progressState && ex.progressState.count) || 0));
         return Math.max(1, every - done);
       })
       .filter(x => x != null);
@@ -1292,7 +1295,7 @@ function renderStartOverview(){
   let mainNo = 0;
   exercises.forEach((ex, i) => {
     if(!ex.warmup) mainNo++;
-    const sets = Math.max(1, parseInt(ex.sets) || 1);
+    const sets = Math.max(1, parseInt(pr(ex).sets) || 1);
     const rounds = ex.warmup ? 1 : Math.max(1, +pl.rounds || 1);
     const row = document.createElement('div');
     row.className = 'ex-row static' + (ex.warmup ? ' warm' : '');
@@ -1300,7 +1303,7 @@ function renderStartOverview(){
       ? `<img src="${workoutHooks.esc(ex.media.data)}" alt="">`
       : (ex.warmup ? icon('flame') : mainNo);
     row.innerHTML = `<div class="ex-thumb">${thumb}</div><div class="ex-info"><b></b><div class="ex-meta"></div></div>`;
-    row.querySelector('b').textContent = ex.name || t('common.exerciseFallback');
+    row.querySelector('b').textContent = pr(ex).name || t('common.exerciseFallback');
     const tags = row.querySelector('.ex-meta');
 
     const tag = (text, cls, field) => {
@@ -1325,16 +1328,16 @@ function renderStartOverview(){
     // На экране перед стартом каждый параметр редактируется отдельно: тап по
     // конкретной метке меняет именно её, без открытия полного редактора упражнения.
     const target = current[i] || {};
-    if(ex.type === 'time'){
+    if(pr(ex).type === 'time'){
       tag(`${target.sec} ${t('store.secShort')}`, '', 'time');
     }else{
-      const reps = `${target.reps} ${t('workout.repsShort')}` + (ex.perSide ? ' ' + t('store.perSide') : '');
+      const reps = `${target.reps} ${t('workout.repsShort')}` + (pr(ex).perSide ? ' ' + t('store.perSide') : '');
       tag(reps, '', 'reps');
     }
 
     if(builderHooks.hasWeight(ex)){
       const pending = builderHooks.weightPending(ex) || !(+target.kg > 0);
-      tag(pending ? t('start.weightPending') : `${builderHooks.fmtKg(target.kg)} ${t('progress.kg')}`,
+      tag(pending ? t('start.weightPending') : builderHooks.exerciseWeightText(ex, target.kg),
         pending ? 'weight-pending' : '', 'weight');
     }
 
@@ -1349,7 +1352,7 @@ function renderStartOverview(){
       ? (sets > 1 ? `${sets} ${t('start.setShort')} × ${rounds} ${t('start.roundShort')}` : trainerCatalogHooks.storeCountText(rounds,'round'))
       : trainerCatalogHooks.storeCountText(sets,'set');
     tag(setsText, '', 'sets');
-    if(+ex.rest > 0) tag(`${t('workout.rest')} ${ex.rest} ${t('store.secShort')}`, '', 'rest');
+    if(+pr(ex).rest > 0) tag(`${t('workout.rest')} ${pr(ex).rest} ${t('store.secShort')}`, '', 'rest');
 
     const delta = changes.find(x => x.i === i);
     if(delta) tag(delta.text, 'grow');
@@ -1362,11 +1365,11 @@ let startLoadEditField = '';
 
 function startLoadEditConfig(ex, p, field){
   const load = exerciseLoad(p, ex);
-  if(field === 'reps') return {title:t('start.editReps'), value:load.reps || ex.value || '', inputMode:'numeric', hint:t('start.editValueHint')};
-  if(field === 'time') return {title:t('start.editTime'), value:String(load.sec || builderHooks.parseValue(ex.value).min || ''), inputMode:'numeric', hint:t('start.editValueHint')};
+  if(field === 'reps') return {title:t('start.editReps'), value:load.reps || pr(ex).value || '', inputMode:'numeric', hint:t('start.editValueHint')};
+  if(field === 'time') return {title:t('start.editTime'), value:String(load.sec || builderHooks.parseValue(pr(ex).value).min || ''), inputMode:'numeric', hint:t('start.editValueHint')};
   if(field === 'weight') return {title:t('start.editWeight'), value:load.kg > 0 ? builderHooks.fmtKg(load.kg) : '', inputMode:'decimal', hint:t('start.pickWeightHint')};
-  if(field === 'sets') return {title:t('start.editSets'), value:String(Math.max(1, parseInt(ex.sets) || 1)), inputMode:'numeric', hint:t('start.editStructureHint')};
-  if(field === 'rest') return {title:t('start.editRest'), value:String(Math.max(0, parseInt(ex.rest) || 0)), inputMode:'numeric', hint:t('start.editStructureHint')};
+  if(field === 'sets') return {title:t('start.editSets'), value:String(Math.max(1, parseInt(pr(ex).sets) || 1)), inputMode:'numeric', hint:t('start.editStructureHint')};
+  if(field === 'rest') return {title:t('start.editRest'), value:String(Math.max(0, parseInt(pr(ex).rest) || 0)), inputMode:'numeric', hint:t('start.editStructureHint')};
   if(field === 'level') return {title:t('start.editResistance'), select:true, hint:t('start.editResistanceHint')};
   return null;
 }
@@ -1379,7 +1382,7 @@ function openStartLoadEditor(i, field){
   if(!cfg) return;
   startLoadEditIdx = i;
   startLoadEditField = field;
-  $('startLoadModalTitle').textContent = cfg.title + ' · ' + (ex.name || t('common.exerciseFallback'));
+  $('startLoadModalTitle').textContent = cfg.title + ' · ' + (pr(ex).name || t('common.exerciseFallback'));
   $('startLoadHint').textContent = cfg.hint || '';
   setShown('startLoadInputWrap', !cfg.select);
   setShown('startLoadSelectWrap', !!cfg.select);
@@ -1418,29 +1421,29 @@ export async function commitStartLoadEdit(){
   if(field === 'level'){
     const levels = builderHooks.exerciseLoadLevels(ex);
     const level = Math.max(0, Math.min(Math.max(0, levels.length - 1), parseInt($('startLoadSelect').value, 10) || 0));
-    builderHooks.ensurePs(ex).cur.level = level;
+    builderHooks.ensureProgressState(ex).current.level = level;
   }else{
     const raw = String($('startLoadInput').value || '').trim();
     if(!raw && field !== 'rest') return;
     if(field === 'reps'){
       const value = builderHooks.normValue(raw, 'reps');
-      if(builderHooks.progAxis(ex) !== 'none' && builderHooks.progStepSize(ex, 'reps') > 0) builderHooks.ensurePs(ex).cur.reps = value;
-      else ex.value = value;
+      if(builderHooks.progAxis(ex) !== 'none' && builderHooks.progStepSize(ex, 'reps') > 0) builderHooks.ensureProgressState(ex).current.reps = value;
+      else pr(ex).value = value;
     }else if(field === 'time'){
       const value = builderHooks.normValue(raw, 'time');
-      if(builderHooks.progAxis(ex) !== 'none' && builderHooks.progStepSize(ex, 'time') > 0) builderHooks.ensurePs(ex).cur.sec = builderHooks.parseValue(value).min;
-      else ex.value = value;
+      if(builderHooks.progAxis(ex) !== 'none' && builderHooks.progStepSize(ex, 'time') > 0) builderHooks.ensureProgressState(ex).current.time = builderHooks.parseValue(value).min;
+      else pr(ex).value = value;
     }else if(field === 'weight'){
       const kg = builderHooks.parseKg(raw);
       if(!(kg > 0)) return;
       if(builderHooks.weightPending(ex) || builderHooks.progAxis(ex) === 'none' || builderHooks.progStepSize(ex, 'weight') <= 0){
-        ex.weight = kg;
-        if(ex.ps && ex.ps.cur) delete ex.ps.cur.kg;
+        pr(ex).load.weight = kg;
+        if(ex.progressState && ex.progressState.current) ex.progressState.current.weight = null;
       }else builderHooks.setExWeight(ex, kg);
     }else if(field === 'sets'){
-      ex.sets = Math.max(1, Math.min(10, parseInt(raw, 10) || 1));
+      pr(ex).sets = Math.max(1, Math.min(10, parseInt(raw, 10) || 1));
     }else if(field === 'rest'){
-      ex.rest = Math.max(0, Math.min(600, parseInt(raw, 10) || 0));
+      pr(ex).rest = Math.max(0, Math.min(600, parseInt(raw, 10) || 0));
     }
   }
   await savePrograms();
@@ -1523,7 +1526,7 @@ export function renderStartInfo(){
   $('startDesc').textContent = schedule ? t('start.schedule',{schedule}) : '';
   // объём: круги для круговых, подходы для силовых
   const mainEx = (pl.exercises || []).filter(e => !e.warmup);
-  const setsTotal = mainEx.reduce((n, e) => n + (parseInt(e.sets) || 1), 0);
+  const setsTotal = mainEx.reduce((n, e) => n + (parseInt(pr(e).sets) || 1), 0);
   if(pl.rounds > 1 || setsTotal <= mainEx.length){
     $('startVolLabel').textContent = trainerCatalogHooks.storeCountText(pl.rounds,'round').replace(/^\d+\s+/,'');
     $('startRounds').textContent = pl.rounds;

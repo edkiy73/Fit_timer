@@ -621,7 +621,16 @@
         <div class="field"><label id="exValLabel" data-i18n="builder.repsCount">Повторений</label><input type="text" id="exValue" maxlength="16" inputmode="numeric" placeholder="Например: 12-15" data-i18n-placeholder="builder.repsExample"></div>
         <div class="field" id="exSetsField"><label data-i18n="builder.sets">Подходов подряд</label><input type="number" id="exSets" min="1" max="10" inputmode="numeric" placeholder="Например: 3" data-i18n-placeholder="builder.setsExample"></div>
       </div>
-      <div class="field hidden" id="exWeightRow"><label data-i18n="builder.weightKg">Вес, кг</label><input type="text" id="exWeight" maxlength="7" inputmode="decimal" placeholder="Например: 8" data-i18n-placeholder="builder.weightExample"></div>
+      <!-- Снаряд нагрузки: вес всегда на ОДНУ единицу, количество — сколько одинаковых
+           единиц используется одновременно (две гантели в румынской тяге — 2). -->
+      <div class="stack hidden" id="exEquipRow">
+        <div class="row2">
+          <div class="field"><label for="exEquip" data-i18n="builder.equipment">Снаряд</label><select id="exEquip"></select></div>
+          <div class="field"><label for="exEquipCount" data-i18n="builder.equipmentCount">Сколько одновременно</label><input type="number" id="exEquipCount" min="1" max="20" inputmode="numeric"></div>
+        </div>
+        <div class="field hidden" id="exEquipNameField"><label for="exEquipName" data-i18n="builder.equipmentName">Название снаряда</label><input type="text" id="exEquipName" maxlength="40" placeholder="Например: канистра с водой" data-i18n-placeholder="builder.equipmentNameExample"></div>
+      </div>
+      <div class="field hidden" id="exWeightRow"><label id="exWeightLabel" data-i18n="builder.weightKg">Вес, кг</label><input type="text" id="exWeight" maxlength="7" inputmode="decimal" placeholder="Например: 8" data-i18n-placeholder="builder.weightExample"></div>
       <div class="stack hidden" id="exLevelRow">
         <div class="field">
           <label data-i18n="builder.resistanceCurrent">Сопротивление</label>
@@ -694,12 +703,6 @@
         </div>
         <p class="field-hint hidden" id="exStepBothHint" data-i18n="builder.stepHint">Для диапазона «прибавка» сдвигает обе границы, а «максимум» задаёт потолок верхней границы.</p>
         <p class="field-hint hidden" id="exCeilingHint" data-i18n="builder.ceilingOptionalHint">Максимум можно оставить пустым — тогда конечного потолка нет, и автоматическая подсказка более сложного упражнения не появится.</p>
-        <div class="pref-row hidden" id="exSwapRow"><span><span data-i18n="builder.swapTitle">Есть упражнение посложнее</span><small data-i18n="builder.swapSub">подскажем на тренировке, когда дорастёшь до максимума</small></span><button type="button" class="switch" id="exSwapOn" data-act="toggleExerciseSwap"></button></div>
-        <div class="stack hidden" id="exSwapBox">
-          <div class="field"><label data-i18n="builder.swapWith">Чем заменить</label><input type="text" id="exSwapName" maxlength="60" placeholder="Например: отжимания с ногами на возвышении" data-i18n-placeholder="builder.swapNameExample"></div>
-          <div class="field"><label data-i18n="builder.swapHow">Как выполнять замену</label><textarea id="exSwapDesc" class="auto-grow" maxlength="600" placeholder="Техника более сложного варианта: исходное положение, движение, на что следить" data-i18n-placeholder="builder.swapDescExample"></textarea></div>
-          <p class="field-hint" data-i18n="builder.swapHint">Дойдёт до максимума — на тренировке появится значок «можно усложнить».</p>
-        </div>
       </div>
     </div>
 

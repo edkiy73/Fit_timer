@@ -197,7 +197,7 @@ export const PROFILE_KEYS = ['customPrograms', 'stats', 'progWeights', 'photos',
 export const GLOBAL_KEYS = ['account', 'accountData', 'knownAccounts', 'users', 'currentUser', 'profile', 'seenHelp', 'migrated', 'deviceId',
                      'customPrograms', 'stats', 'hfMode', 'musicMode', 'soundOff', 'voiceCtl',
                      'recognitionLang', 'recognitionLangManual', 'voiceLang', 'voiceLangManual',
-                     'voiceHint', 'voiceURI', 'analyticsInstallSent',
+                     'voiceHint', 'voiceURI', 'analyticsInstallSent', 'dataModel',
                      'wantSvg']; // wantSvg больше не пишется — строка нужна, чтобы стереть его у тех, кто успел его сохранить
 
 // Полное удаление аккаунта. Требование и сторов, и 152-ФЗ: человек должен уметь

@@ -232,8 +232,8 @@
     const type = r.type === 'time' ? 'time' : 'reps';
     const muscles = Array.isArray(o.muscles) ? o.muscles : null;
     const p = {
-      name:str(r.name, 80),
-      desc:text(r.desc, 2000),
+      name:str(r.name, 60),
+      desc:text(r.desc, 600),
       type,
       value:normValue(r.value, type),
       sets:int(r.sets, 1, 10, 1),
@@ -241,7 +241,7 @@
       rest:int(r.rest, 0, 600, 0),
       restAfter:r.restAfter == null || r.restAfter === '' ? null : int(r.restAfter, 0, 600, 0),
       muscles:(Array.isArray(r.muscles) ? r.muscles : []).filter(m => typeof m === 'string' && (!muscles || muscles.includes(m))).slice(0, 12),
-      mistakes:text(r.mistakes, 1000),
+      mistakes:text(r.mistakes, 300),
       video:str(r.video, 300)
     };
     if(!p.name) errors.push('prescription.name_required');
@@ -275,7 +275,9 @@
     return axes.every(a => a === 'level' ? true : !!(p.progression[a] && p.progression[a].max));
   }
 
-  /* ---- слот упражнения ---- */
+  /* ---- слот упражнения ----
+     media — картинка ТЕКУЩЕГО этапа (как раньше у упражнения). Будущие этапы base64
+     не хранят: только mediaRef/visualKey. Содержимое картинки чистит приложение (cleanPic). */
   const normalizeState = raw => {
     const r = raw && typeof raw === 'object' ? raw : {};
     const c = r.current && typeof r.current === 'object' ? r.current : {};
@@ -301,7 +303,9 @@
       warmup:!!r.warmup,
       currentStageId:'',
       stages:[],
-      progressState:normalizeState(r.progressState)
+      progressState:normalizeState(r.progressState),
+      media:r.media && r.media.kind === 'img' && typeof r.media.data === 'string' && r.media.data
+        ? {kind:'img', data:r.media.data} : null
     };
     const rawStages = Array.isArray(r.stages) ? r.stages : [];
     if(!rawStages.length) errors.push('stages.required');
@@ -349,6 +353,10 @@
     : null;
   // ЕДИНСТВЕННЫЙ read-helper для runtime/UI: поля активного варианта движения
   const activePrescription = ex => { const s = activeStage(ex); return s ? s.prescription : null; };
+  // То же, но для пустого/битого слота — нейтральная заглушка: чтение не падает
+  let emptyPrescription = null;
+  const prescriptionOf = ex => activePrescription(ex)
+    || emptyPrescription || (emptyPrescription = Object.freeze(normalizePrescription({name:'—'}).prescription));
 
   /* ---- копирование ----
      stageId — app-owned identity экземпляра, не переносимый контент: любая копия
@@ -401,7 +409,7 @@
      переименование этапа обновляет n (это тот же этап, история показывает новое имя). */
   function registerStage(stageNames, stageId, exId, name){
     if(!stageNames || !stageId) return stageNames;
-    stageNames[String(stageId)] = {n:str(name, 80), e:String(exId || '')};
+    stageNames[String(stageId)] = {n:str(name, 60), e:String(exId || '')};
     return stageNames;
   }
   // Очистка удаляет запись, только если этапа нет НИ в сохранённой истории, НИ в текущих программах.
@@ -424,7 +432,7 @@
     equipment, equipmentIds, allowedModes, growingAxes, hasTerminalCeiling,
     normValue, cleanLevels, levelIdentity,
     cfgKey, parseCfgKey,
-    normalizePrescription, normalizeExercise, activeStage, activePrescription,
+    normalizePrescription, normalizeExercise, activeStage, activePrescription, prescriptionOf,
     regenerateExerciseIds,
     encodeLoadRow, decodeLoadRow, registerStage, gcStageNames
   };

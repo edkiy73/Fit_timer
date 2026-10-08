@@ -1,6 +1,7 @@
 import { MUSCLES, OPT_EQUIP, OPT_GOAL, OPT_LEVEL, OPT_NONE } from './options.js';
 import { appLocale, canonicalDescription, canonicalLabel, t } from '../i18n/index.js';
 import FitAIProtocol from '../../lib/ai-protocol.js';
+import FitExerciseV2 from '../../lib/fit-exercise-v2.js';
 import { appRuntimeCompat } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
 import { $, appAlert, appDialog, goBackTo, goTab, icon, isChanged, plural, setCoreBuilderHooks, setShown, show, state,
@@ -133,61 +134,41 @@ export function newExId(){
   return 'e' + Math.random().toString(36).slice(2, 8);
 }
 
-const BUILTIN_LOAD_LEVEL_KEYS = new Set(['light','medium','strong','veryStrong']);
-const DEFAULT_LOAD_LEVELS = [
-  {key:'light'},
-  {key:'medium'},
-  {key:'strong'},
-  {key:'veryStrong'}
-];
+/* ================= МОДЕЛЬ УПРАЖНЕНИЯ V2 =================
+   Упражнение — слот программы: {id, warmup, currentStageId, stages[1..4], progressState, media}.
+   Всё, что задают человек или ИИ (название, повторы, нагрузка, способ прогрессии), лежит в
+   prescription АКТИВНОГО этапа; runtime и UI читают его только через activePrescription().
+   Правила модели — lib/fit-exercise-v2.js, смысл — docs/load-equipment-progression-plan-2026-10-08.md. */
+// Активный prescription; для отсутствующего упражнения — нейтральная заглушка
+export function exP(ex){
+  return FitExerciseV2.prescriptionOf(ex);
+}
+const BUILTIN_LOAD_LEVEL_KEYS = new Set(FitExerciseV2.BUILTIN_LEVEL_KEYS);
+const DEFAULT_LOAD_LEVELS = FitExerciseV2.BUILTIN_LEVEL_KEYS.map(key => ({key}));
 
 function cleanLoadLevelLabel(raw){
-  // "|" — машинный разделитель УРОВНИ СОПРОТИВЛЕНИЯ в AI-протоколе.
-  // В пользовательском label заменяем его заранее, иначе один физический
-  // уровень после round-trip может превратиться в два.
+  // "|" — машинный разделитель уровней в старом текстовом протоколе; в label не пускаем
   return clampLine(raw, 60).replace(/\|+/g, ' / ').replace(/\s+/g, ' ').trim();
 }
 function cleanLoadLevels(raw, withDefault=false){
-  const out = [], seen = new Set();
-  const list = Array.isArray(raw) ? raw : [];
-  const push = level => {
-    if(!level || out.length >= 12) return;
-    const key = level.key
-      ? 'k:' + level.key
-      : 'l:' + String(level.label || '').trim().toLocaleLowerCase();
-    if(!key || seen.has(key)) return;
-    seen.add(key);
-    out.push(level);
-  };
-  for(const item of list){
-    if(out.length >= 12) break;
-    if(typeof item === 'string'){
-      const label = cleanLoadLevelLabel(item);
-      if(label) push({label});
-      continue;
-    }
-    if(!item || typeof item !== 'object') continue;
-    if(BUILTIN_LOAD_LEVEL_KEYS.has(item.key)){
-      push({key:item.key});
-      continue;
-    }
-    const label = cleanLoadLevelLabel(item.label);
-    if(label) push({label});
-  }
+  const list = (Array.isArray(raw) ? raw : []).map(item => typeof item === 'string'
+    ? cleanLoadLevelLabel(item)
+    : item && !BUILTIN_LOAD_LEVEL_KEYS.has(item.key) && item.label ? {label:cleanLoadLevelLabel(item.label)} : item);
+  const out = FitExerciseV2.cleanLevels(list);
   if(out.length >= 2) return out;
   return withDefault ? DEFAULT_LOAD_LEVELS.map(x=>({...x})) : out;
 }
 
 export function exerciseLoadLevels(ex){
-  return cleanLoadLevels(ex && ex.loadLevels, progressionLoadType(ex) === 'level');
+  const load = exP(ex).load;
+  return load.type === 'level' ? load.levels : [];
 }
 
 export function exerciseLoadLevel(ex){
   const levels = exerciseLoadLevels(ex);
   if(!levels.length) return 0;
-  const raw = ex && ex.ps && ex.ps.cur && ex.ps.cur.level != null
-    ? ex.ps.cur.level
-    : (ex && ex.loadLevel != null ? ex.loadLevel : 0);
+  const cur = ex && ex.progressState && ex.progressState.current;
+  const raw = cur && cur.level != null ? cur.level : exP(ex).load.level;
   return Math.max(0, Math.min(levels.length - 1, Math.round(+raw || 0)));
 }
 
@@ -222,12 +203,6 @@ export function exerciseLoadLevelState(ex){
 function resistanceScaleText(ex){
   return exerciseLoadLevels(ex).map(loadLevelLabel).filter(Boolean).join('\n');
 }
-function parsedResistanceScaleText(raw){
-  const rows = String(raw || '').split(/\r?\n/)
-    .map(x=>clampLine(x.trim(),60)).filter(Boolean)
-    .map(protocolLoadLevelItem).filter(Boolean);
-  return cleanLoadLevels(rows, false);
-}
 function protocolLevelNorm(raw){
   return String(raw || '').trim().toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ');
 }
@@ -240,23 +215,11 @@ function protocolLoadLevelItem(raw){
   if(v === 'очень сильное' || v === 'very strong') return {key:'veryStrong'};
   return label ? {label} : null;
 }
-function parseProtocolLoadLevels(raw){
-  return cleanLoadLevels(String(raw || '').split('|').map(protocolLoadLevelItem).filter(Boolean), false);
-}
-function protocolLoadLevelIndex(levels, raw){
-  const wanted = protocolLevelNorm(raw);
-  if(!wanted || !Array.isArray(levels)) return 0;
-  const aliases = {
-    light:['легкое','light'],
-    medium:['среднее','medium'],
-    strong:['сильное','strong'],
-    veryStrong:['очень сильное','very strong']
-  };
-  const i = levels.findIndex(level => {
-    if(level && level.label) return protocolLevelNorm(level.label) === wanted;
-    return !!(level && level.key && (aliases[level.key] || []).includes(wanted));
-  });
-  return i >= 0 ? i : 0;
+function parsedResistanceScaleText(raw){
+  const rows = String(raw || '').split(/\r?\n/)
+    .map(x=>clampLine(x.trim(),60)).filter(Boolean)
+    .map(protocolLoadLevelItem).filter(Boolean);
+  return cleanLoadLevels(rows, false);
 }
 export function exerciseResistanceScaleOk(showError=true){
   if(!exDraft || progressionLoadType(exDraft) !== 'level') return true;
@@ -271,31 +234,27 @@ export function exerciseResistanceScaleOk(showError=true){
     return false;
   }
 
-  // Numeric index сам по себе не описывает физическую резинку. При редактировании
-  // шкалы сначала пытаемся найти ТУ ЖЕ ступень по стабильному key/custom label.
-  // Если её больше нет, старый current level переносить нельзя: иначе «Красная»
-  // может молча превратиться в «Чёрную» только потому, что обе были index=1.
+  // Индекс сам по себе не описывает физическую резинку: при правке шкалы ищем ТУ ЖЕ
+  // ступень по key/label. Пропала — текущий уровень переносить нельзя, иначе «Красная»
+  // молча превратилась бы в «Чёрную» только потому, что обе были index=1.
+  const load = exP(exDraft).load;
   const oldLevels = exerciseLoadLevels(exDraft);
-  const oldBaseIndex = Math.max(0, Math.min(Math.max(0, oldLevels.length - 1), Math.round(+exDraft.loadLevel || 0)));
-  const oldBaseId = loadLevelIdentity(oldLevels[oldBaseIndex]);
-  const rawCurrent = exDraft.ps && exDraft.ps.cur && exDraft.ps.cur.level != null
-    ? Math.max(0, Math.min(Math.max(0, oldLevels.length - 1), Math.round(+exDraft.ps.cur.level || 0)))
+  const oldBaseId = loadLevelIdentity(oldLevels[Math.max(0, Math.min(oldLevels.length - 1, load.level || 0))]);
+  const state = ensureProgressState(exDraft);
+  const rawCurrent = state.current.level != null
+    ? Math.max(0, Math.min(Math.max(0, oldLevels.length - 1), Math.round(+state.current.level || 0)))
     : null;
   const oldCurrentId = rawCurrent == null ? '' : loadLevelIdentity(oldLevels[rawCurrent]);
   const findIdentity = id => id ? levels.findIndex(x => loadLevelIdentity(x) === id) : -1;
 
-  exDraft.loadLevels = levels;
+  load.levels = levels;
   const mappedBase = findIdentity(oldBaseId);
-  exDraft.loadLevel = mappedBase >= 0 ? mappedBase : 0;
+  load.level = mappedBase >= 0 ? mappedBase : 0;
 
-  if(rawCurrent != null && exDraft.ps && exDraft.ps.cur){
+  if(rawCurrent != null){
     const mappedCurrent = findIdentity(oldCurrentId);
-    if(mappedCurrent >= 0){
-      exDraft.ps.cur.level = mappedCurrent;
-    }else{
-      // Счётчик выполнений ps.n сохраняем, а текущую нагрузку сбрасываем к новой базе.
-      exDraft.ps.cur = {};
-    }
+    if(mappedCurrent >= 0) state.current.level = mappedCurrent;
+    else state.current = emptyProgressCurrent();
   }
 
   // После успешного применения новая шкала становится сохранённой базой формы.
@@ -303,130 +262,60 @@ export function exerciseResistanceScaleOk(showError=true){
   delete field.dataset.initialValue;
   renderExerciseLevelControls();
   syncExNowHints();
-  syncExSwapAvailability();
   return true;
 }
 
+/* ---- новое упражнение ----
+   Один этап, без нагрузки, растут повторы с частотой программы. */
+export function blankPrescription(){
+  return {
+    name:'', desc:'', type:'reps', value:'10', sets:1, perSide:false, rest:45, restAfter:null,
+    muscles:[], mistakes:'', video:'',
+    load:{type:'none', equipment:null, name:'', count:1, unit:'kg', weight:0, levels:[], level:0},
+    supportEquipment:[],
+    progression:{mode:'reps', every:null,
+      reps:{step:1, max:null}, weight:{step:null, max:null}, time:{step:null, max:null}}
+  };
+}
+function emptyProgressCurrent(){ return {reps:null, weight:null, time:null, level:null}; }
+export function newStageId(){
+  return 'mv' + Math.random().toString(36).slice(2, 8);
+}
 export function blankExercise(){
-  return {id:newExId(), name:'', desc:'', video:'', type:'reps', value:10, sets:1, perSide:false, warmup:false,
-          rest:45, restAfter:null, media:null, muscles:[], mistakes:'',
-          // ось прогрессии: reps | weight | time | none.
-          // Каждая ось — свой шаг на одно повышение: вес в кг, повторы числом, время в секундах.
-          prog:'', weight:0, wStep:2, repsStep:1, timeStep:5, progEvery:null,
-          // Нормализованная модель новой прогрессии вводится постепенно.
-          // null = старые/текущие данные, strategy adapter выводит смысл из legacy-полей.
-          // UI начнёт записывать эти поля отдельной пачкой — пока поведение не меняем.
-          loadType:null, progMode:null, loadLevels:null, loadLevel:null,
-          // Потолок: выше него прогрессия не поднимает. Без него линейный рост за год
-          // доводит до нереальных значений (60 кг гантель, 60 повторений, 5 минут планки).
-          repsMax:0, weightMax:0, timeMax:0,
-          // Двойная прогрессия: дошли до потолка повторов → +шаг веса, повторы падают в начало.
-          // Так растёт вес, а не бесконечное число повторений (классическая силовая схема).
-          dualProg:false, dualRangeV:2,
-          // Чем заменить упражнение, когда потолок достигнут и расти дальше некуда:
-          // название и техника более сложного варианта того же движения.
-          swapOn:false, swapName:'', swapDesc:''};
+  const stageId = newStageId();
+  return {id:newExId(), warmup:false, currentStageId:stageId,
+    stages:[{stageId, prescription:blankPrescription(), advance:{mode:'manual'}, mediaRef:null, visualKey:''}],
+    progressState:{count:0, current:emptyProgressCurrent()}, media:null};
 }
 
-// приводит поля упражнения к валидным значениям: и после ручного ввода, и после ответа ИИ,
-// который может прислать что угодно. Меняет объект на месте и возвращает его же.
+// Приводит упражнение к валидной V2-форме на месте и возвращает его же: через эту
+// функцию проходит и набранное руками, и пришедшее извне. Строгие ошибки модели
+// (например, вес без снаряда) возвращаются в ex._errors для редактора/импорта —
+// нормализация их не «чинит» молча.
 export function normalizeExercise(ex){
-  /* Пределы полей — здесь же. Эта функция и есть место, где «что угодно»
-     становится упражнением: через неё проходит и набранное руками, и ответ
-     нейросети, и чужая программа. Раньше длина названия и описаний тут не
-     проверялась вовсе, и название в мегабайт доезжало до карточки как есть. */
-  // упражнения из старых данных (созданы до id) или пришедшие по сети без него
-  if(!ex.id) ex.id = newExId();
-  ex.name  = clampLine(ex.name, LIM.exName);
-  ex.desc  = clampText(ex.desc, LIM.exDesc);
-  ex.mistakes = clampText(ex.mistakes, LIM.exMistakes);
-  // Мышцы — только известные: чужой список уезжает в подписи и в промт к ИИ.
-  ex.muscles = (Array.isArray(ex.muscles) ? ex.muscles : [])
-    .filter(id => MUSCLES.some(([m]) => m === id)).slice(0, MUSCLES.length);
-  const pic = ex.media && ex.media.kind === 'img' ? cleanPic(ex.media.data) : null;
-  ex.media = pic ? {kind: 'img', data: pic} : null;
-  ex.value = normValue(ex.value, ex.type);
-  // Подходы у разминки принудительно сбрасывались в единицу, а поле в форме пряталось.
-  // Разминка отличается от обычного упражнения ровно одним — она идёт в начале,
-  // один раз, до кругов. Подходы и стороны у неё такие же.
-  ex.sets  = Math.max(1, Math.min(10, parseInt(ex.sets) || 1));
-  ex.perSide = !!ex.perSide;
-  ex.warmup  = !!ex.warmup;
-  // Верхняя граница была только у отдыха ПОСЛЕ упражнения, а у этого не было
-  // вовсе: «ОТДЫХ: 99999» из ответа ИИ давал шаг тренировки на сутки.
-  ex.rest  = Math.max(0, Math.min(600, parseInt(ex.rest) || 0));
-  // отдых после ВСЕГО упражнения (перед следующим) — своё число, независимое от
-  // отдыха между подходами. null = не задан явно: кто читает это поле, берёт
-  // rest как запасной вариант (см. exRestAfter() и paint в buildSteps)
-  ex.restAfter = ex.restAfter == null ? null : Math.max(0, Math.min(600, parseInt(ex.restAfter) || 0));
-  // ось усложнения и вес: приводим к валидным значениям, чтобы кривой ответ ИИ не ломал показ
-  if(ex.prog && !['reps','weight','time','none'].includes(ex.prog)) ex.prog = '';
-  // Новые поля пока только описывают смысл старой модели. Они не должны ломать
-  // существующие программы: null = читать legacy trackWeight/dualProg/steps.
-  if(ex.loadType != null && !['none','weight','level'].includes(ex.loadType)) delete ex.loadType;
-  if(ex.progMode != null && !['reps','weight','double_range','time','level','parallel'].includes(ex.progMode)) delete ex.progMode;
-  if(ex.loadLevels != null) ex.loadLevels = cleanLoadLevels(ex.loadLevels, ex.loadType === 'level');
-  if(ex.loadType === 'level'){
-    if(!Array.isArray(ex.loadLevels) || ex.loadLevels.length < 2) ex.loadLevels = cleanLoadLevels(null, true);
-    ex.loadLevel = Math.max(0, Math.min(ex.loadLevels.length - 1, Math.round(+ex.loadLevel || 0)));
-    ex.trackWeight = false;
-    if(ex.ps && ex.ps.cur && ex.ps.cur.level != null){
-      ex.ps.cur.level = Math.max(0, Math.min(ex.loadLevels.length - 1, Math.round(+ex.ps.cur.level || 0)));
-    }
-  }else if(ex.loadLevel != null){
-    ex.loadLevel = Math.max(0, Math.round(+ex.loadLevel || 0));
-  }
-  ex.weight = parseKg(ex.weight);
-  // Частота проверки конкретного упражнения:
-  // null/пусто = наследовать программу; 0 = полностью отключить прогрессию;
-  // 1..15 = собственный порог выполнений.
-  if(ex.progEvery == null || String(ex.progEvery).trim() === '') ex.progEvery = null;
-  else ex.progEvery = Math.max(0, Math.min(PROG_EVERY_MAX, Math.round(+ex.progEvery || 0)));
-  // Шаг 0 — законное значение: «эта ось у этого упражнения не растёт», и именно на
-  // нём держится независимая прогрессия формата «повторения и вес» (progStepSize
-  // и подсказка «можно усложнить» уже понимают его так). Раньше здесь стоял
-  // Math.max(1, …), и явный ноль молча превращался в единицу: программа, где ИИ
-  // прислал одну «ШАГ ВЕСА» — как и просит промт, когда растёт только вес, — всё
-  // равно прибавляла по повторению за тренировку.
-  // Дефолт подставляем только там, где шага нет вовсе, и он зависит от формата.
-  const stepNum = (v, def, hi, round) => {
-    const n = parseStepNum(v);
-    return n == null ? def : Math.max(0, Math.min(hi, round(n)));
-  };
-  ex.wStep  = stepNum(ex.wStep, 2, 100, v => Math.round(v * 2) / 2);
-  ex.repsStep = stepNum(ex.repsStep, hasWeight(ex) ? 0 : 1, 20, Math.round);
-  ex.timeStep = stepNum(ex.timeStep, 5, 120, Math.round);
-  // потолки: 0 = без потолка. У повторов потолок никогда не может быть ниже
-  // стартовой верхней границы диапазона — иначе «8-10, максимум 9» превращалось
-  // в искусственное 7-9 ещё до первой тренировки.
-  const baseReps = parseValue(ex.value);
-  ex.repsMax = Math.max(0, Math.min(200, parseInt(ex.repsMax) || 0));
-  if(ex.type !== 'time' && ex.repsMax > 0) ex.repsMax = Math.max(baseReps.max, ex.repsMax);
-  ex.weightMax = parseKg(ex.weightMax);
-  ex.timeMax = Math.max(0, Math.min(3600, parseInt(ex.timeMax) || 0));
-
-  // Настоящая двойная прогрессия обязана двигать ОБЕ стадии цикла:
-  // сначала диапазон повторов, затем вес. Нулевой шаг здесь не «выключенная ось»,
-  // а сломанный цикл, поэтому восстанавливаем безопасные дефолты.
-  const wantsDual = !!ex.dualProg && hasWeight(ex) && ex.type !== 'time';
-  // Старые упражнения без dualRangeV сначала проходят одноразовую миграцию:
-  // не переписываем им шаги/потолок здесь, иначе потеряем исходные числа,
-  // нужные для точного пересчёта старой семантики.
-  if(wantsDual && ex.dualRangeV === 2){
-    if(!(ex.repsStep > 0)) ex.repsStep = 1;
-    if(!(ex.wStep > 0)) ex.wStep = 2;
-    // Для диапазона потолок — именно верхняя граница. Он должен быть ВЫШЕ старта,
-    // иначе цикл сразу прыгает к весу, не повышая повторения ни разу.
-    ex.repsMax = Math.min(200, Math.max(baseReps.max + ex.repsStep, ex.repsMax || 0));
-  }
-  ex.dualProg = wantsDual && ex.repsMax > 0;
-  ex.swapName = clampLine(ex.swapName, LIM.exSwapName);
-  ex.swapDesc = clampText(ex.swapDesc, LIM.exSwapDesc);
-  ex.swapOn = !!ex.swapName;
-  // Тот же разбор, что у ссылки тренера: схему дописываем сами, а непохожее на
-  // адрес не сохраняем. Кнопка «смотреть» на непонятной строке ведёт в никуда.
-  ex.video = cleanLink(ex.video, LIM.video) || '';
+  const res = FitExerciseV2.normalizeExercise(ex, {
+    muscles: MUSCLES.map(([m]) => m),
+    newId: prefix => prefix === 'e' ? newExId() : newStageId()
+  });
+  const out = res.exercise;
+  out.stages.forEach(st => {
+    const p = st.prescription;
+    p.name = clampLine(p.name, LIM.exName);
+    p.desc = clampText(p.desc, LIM.exDesc);
+    p.mistakes = clampText(p.mistakes, LIM.exMistakes);
+    // Тот же разбор, что у ссылки тренера: схему дописываем сами, а непохожее на
+    // адрес не сохраняем. Кнопка «смотреть» на непонятной строке ведёт в никуда.
+    p.video = cleanLink(p.video, LIM.video) || '';
+  });
+  const pic = out.media && out.media.kind === 'img' ? cleanPic(out.media.data) : null;
+  out.media = pic ? {kind:'img', data:pic} : null;
+  Object.keys(ex).forEach(k => { delete ex[k]; });
+  Object.assign(ex, out);
+  if(res.errors.length) Object.defineProperty(ex, '_errors', {value:res.errors, enumerable:false, configurable:true});
   return ex;
+}
+export function exerciseErrors(ex){
+  return FitExerciseV2.normalizeExercise(JSON.parse(JSON.stringify(ex || {}))).errors;
 }
 
 // Упражнение-источник в самой программе: шаг тренировки — только копия,
@@ -451,7 +340,7 @@ export function liveExercise(exId, fallbackName){
   if(!key) return null;
   const matches = [];
   list.forEach((e, idx) => {
-    if(String((e && e.name) || '').trim().toLowerCase() === key) matches.push(idx);
+    if(String(exP(e).name || '').trim().toLowerCase() === key) matches.push(idx);
   });
   if(matches.length !== 1) return null;
   const idx = matches[0];
@@ -459,73 +348,33 @@ export function liveExercise(exId, fallbackName){
 }
 
 /* ---- прогрессия по упражнению ----
-   Ось усложнения у разных упражнений разная: гантельные растут по весу (дискретно,
-   шагами реальных гантелей), упражнения со своим весом — по повторениям,
-   удержания — по времени, а разминка и техника не усложняются вовсе. */
-const PROG_AXES = [
-  {id:'reps',   label:'Повторения'},
-  {id:'weight', label:'Вес'},
-  {id:'time',   label:'Время'},
-  {id:'none',   label:'Не усложнять'}
-];
-// ось по умолчанию, если не задана явно: разминку не трогаем, время — по времени, иначе повторы
-// Ось прогрессии определяется по-разному у старых и новых упражнений — специально совместимо:
-//   новые (после этого обновления): формат («повторения» / «повторения и вес» / «время»,
-//     через ex.type + ex.trackWeight) и отдельный тумблер ex.progOn — «усложнять со временем?».
-//     Это то, что видно и редактируется в интерфейсе: два простых вопроса вместо одной
-//     абстрактной оси из четырёх вариантов.
-//   старые (созданы до этого обновления, у них нет ex.progOn вовсе): ось читается из
-//     явно сохранённого ex.prog, как раньше. Апгрейд происходит сам собой в момент,
-//     когда упражнение открывают в редакторе и сохраняют — тогда оно уже пишет новые поля.
+   Ось усложнения: разминка и выключенная прогрессия (mode 'none') не растут,
+   время — по времени, весовая нагрузка — по весу, остальное — по повторам. */
 export function progAxis(ex){
-  if(!ex) return 'none';
-  if(ex.warmup) return 'none';
-  if(ex.progOn != null){
-    if(!ex.progOn) return 'none';
-    if(ex.type === 'time') return 'time';
-    return ex.trackWeight ? 'weight' : 'reps';
-  }
-  if(ex.prog) return ex.prog;
-  return ex.type === 'time' ? 'time' : 'reps';
+  if(!ex || ex.warmup) return 'none';
+  const p = exP(ex);
+  if(p.progression.mode === 'none') return 'none';
+  if(p.type === 'time') return 'time';
+  return p.load.type === 'weight' ? 'weight' : 'reps';
 }
-// «формат включает вес» — не зависит от того, усложняется ли упражнение сейчас:
-// вес может быть просто зафиксирован (тумблер выключен) и не расти, но оставаться видимым
+// «нагрузка — вес» не зависит от того, растёт ли он сейчас
 export function hasWeight(ex){
-  if(!ex) return false;
-  // trackWeight и есть «формат включает вес», и от тумблера прогрессии он не зависит.
-  // Раньше ему верили только вместе с progOn — и программа, разобранная из текста без
-  // строки «УСЛОЖНЯТЬ», теряла вес полностью: разборщик ставил trackWeight и число кг,
-  // а тренировка их не показывала, потому что progOn оставался пустым.
-  if(ex.trackWeight != null) return !!ex.trackWeight;
-  if(ex.progOn != null) return false;          // новая модель, но формат без веса
-  return progAxis(ex) === 'weight'; // старые данные: раньше это было одно и то же понятие
+  return !!ex && exP(ex).load.type === 'weight';
 }
-// формат включает вес, но снаряд ещё не выбран (0 — не «нулевой вес», а «неизвестный»,
-// см. getExProgValue): прогрессия по весу не копится, экран старта предлагает выбрать
+// весовая нагрузка без числа — только в незавершённом черновике
 export function weightPending(ex){
-  return hasWeight(ex) && !(+ex.weight > 0);
+  return hasWeight(ex) && !(+exP(ex).load.weight > 0);
 }
-// отдых после ВСЕГО упражнения (перед следующим), а не между его подходами.
-// У старых упражнений (и когда явно не задан) поле пустое — запасной вариант
-// тогда тот же, что и между подходами: разное число нужно не всем, и лучше
-// молча унаследовать разумное значение, чем ломать программу или писать 0.
+// отдых после ВСЕГО упражнения (перед следующим); не задан — как между подходами
 export function exRestAfter(ex){
   if(!ex) return 0;
-  return ex.restAfter != null ? +ex.restAfter : (+ex.rest || 0);
+  const p = exP(ex);
+  return p.restAfter != null ? +p.restAfter : (+p.rest || 0);
 }
-// для редактора: текущее состояние упражнения в терминах простого интерфейса —
-// какой формат выбран и включён ли тумблер «усложнять со временем»
-function exFormatState(ex){
-  const format = ex.type === 'time' ? 'time' : (hasWeight(ex) ? 'reps_weight' : 'reps');
-  return {format, progOn: progAxis(ex) !== 'none'};
-}
-// Частота прогрессии — это число ПОЛНЫХ ВЫПОЛНЕНИЙ КОНКРЕТНОГО УПРАЖНЕНИЯ,
-// а не число тренировок программы. У программы хранится общий дефолт; каждое
-// упражнение может переопределить его своим значением или отключить прогрессию.
+// Частота прогрессии — число ПОЛНЫХ ВЫПОЛНЕНИЙ КОНКРЕТНОГО УПРАЖНЕНИЯ. У программы
+// общий default; упражнение может задать своё. Выключение — только progression.mode 'none'.
 const PROG_EVERY_DEFAULT = 4;
-const PROG_EVERY_MAX = 15;
-// у старых программ здесь мог лежать календарный/тренировочный период: оставляем
-// значение в допустимом диапазоне, но для нового/пустого значения используем 4.
+const PROG_EVERY_MAX = FitExerciseV2.PROG_EVERY_MAX;
 function clampProgEvery(n){
   return Math.max(1, Math.min(PROG_EVERY_MAX, Math.round(+n || 0) || PROG_EVERY_DEFAULT));
 }
@@ -560,10 +409,9 @@ function programProgEvery(n){
 
 export function exerciseProgEvery(ex, program){
   if(!ex) return 0;
-  if(ex.progEvery != null && String(ex.progEvery).trim() !== ''){
-    return Math.max(0, Math.min(PROG_EVERY_MAX, Math.round(+ex.progEvery || 0)));
-  }
-  return Math.max(0, Math.min(PROG_EVERY_MAX, Math.round(+((program && program.progression) || 0) || 0)));
+  const every = exP(ex).progression.every;
+  if(every != null) return Math.max(1, Math.min(PROG_EVERY_MAX, Math.round(+every)));
+  return programProgEvery(program && program.progression);
 }
 
 export function programHasProgression(program){
@@ -572,220 +420,158 @@ export function programHasProgression(program){
   ));
 }
 
-
-// Нормализованный semantic adapter для новой progression architecture.
-// ВАЖНО: это пока READ-слой. Он не меняет advanceExerciseProgression() и не
-// переписывает старые программы — только однозначно описывает уже существующую
-// конфигурацию, чтобы следующая пачка могла перевести движок без скрытой смены поведения.
-const EX_LOAD_TYPES = new Set(['none','weight','level']);
-const EX_PROG_MODES = new Set(['reps','weight','double_range','time','level','parallel']);
-
 export function progressionLoadType(ex){
-  if(!ex) return 'none';
-  if(EX_LOAD_TYPES.has(ex.loadType)) return ex.loadType;
-  return hasWeight(ex) ? 'weight' : 'none';
-}
-
-function inferredProgressionMode(ex){
-  if(!ex || ex.warmup || progAxis(ex) === 'none') return null;
-
-  const loadType = progressionLoadType(ex);
-  if(loadType === 'level') return 'level';
-  if(isDualProg(ex)) return 'double_range';
-
-  const weightStep = loadType === 'weight' ? progStepSize(ex, 'weight') : 0;
-  if(ex.type === 'time'){
-    const timeStep = progStepSize(ex, 'time');
-    if(timeStep > 0 && weightStep > 0) return 'parallel';
-    if(weightStep > 0) return 'weight';
-    return 'time';
-  }
-
-  const repsStep = progStepSize(ex, 'reps');
-  if(repsStep > 0 && weightStep > 0) return 'parallel';
-  if(weightStep > 0) return 'weight';
-  return 'reps';
+  return ex ? exP(ex).load.type : 'none';
 }
 
 export function getProgressionStrategy(ex, program){
+  const p = exP(ex);
   const every = exerciseProgEvery(ex, program);
-  const metric = ex && ex.type === 'time' ? 'time' : 'reps';
-  const loadType = progressionLoadType(ex);
-  const explicitMode = ex && EX_PROG_MODES.has(ex.progMode) ? ex.progMode : null;
-  const mode = explicitMode || inferredProgressionMode(ex);
-  const switchedOn = !!ex && !ex.warmup && progAxis(ex) !== 'none';
-
+  const loadType = p.load.type;
+  const mode = p.progression.mode === 'none' ? null : p.progression.mode;
+  const switchedOn = !!ex && !ex.warmup && !!mode;
   return {
-    enabled: switchedOn && every > 0 && mode != null,
+    enabled: switchedOn && every > 0,
     every,
     mode,
-    metric,
+    metric: p.type === 'time' ? 'time' : 'reps',
     loadType,
-    reps: {
-      step: ex ? Math.max(0, +progStepSize(ex, 'reps') || 0) : 0,
-      max: ex ? progCeil(ex, 'reps') : null
-    },
-    time: {
-      step: ex ? Math.max(0, +progStepSize(ex, 'time') || 0) : 0,
-      max: ex ? progCeil(ex, 'time') : null
-    },
+    reps: {step: progStepSize(ex, 'reps'), max: progCeil(ex, 'reps')},
+    time: {step: progStepSize(ex, 'time'), max: progCeil(ex, 'time')},
     weight: {
-      step: ex && loadType === 'weight' ? Math.max(0, +progStepSize(ex, 'weight') || 0) : 0,
-      max: ex && loadType === 'weight' ? progCeil(ex, 'weight') : null
+      step: loadType === 'weight' ? progStepSize(ex, 'weight') : 0,
+      max: loadType === 'weight' ? progCeil(ex, 'weight') : null
     },
     level: {
-      current: ex && loadType === 'level' ? exerciseLoadLevel(ex) : 0,
-      max: ex && loadType === 'level' ? Math.max(0, exerciseLoadLevels(ex).length - 1) : null,
-      levels: ex && loadType === 'level' ? exerciseLoadLevels(ex) : []
+      current: loadType === 'level' ? exerciseLoadLevel(ex) : 0,
+      max: loadType === 'level' ? Math.max(0, exerciseLoadLevels(ex).length - 1) : null,
+      levels: exerciseLoadLevels(ex)
     }
   };
 }
 
-
 /* ---- модель ручного редактора прогрессии ----
-   AI и ручной редактор должны писать одну и ту же семантику. Эти функции не зависят
-   от названия упражнения: только от «как считаем» (reps/time) и типа нагрузки.
-   UI следующей пачки использует их для списка вариантов и разумного default. */
+   AI и ручной редактор пишут одну и ту же семантику: допустимые способы зависят
+   только от «как считаем» (reps/time) и типа нагрузки. */
 export function progressionModeOptions(ex){
-  const isTime = !!ex && ex.type === 'time';
-  const loadType = progressionLoadType(ex);
-
-  if(loadType === 'level'){
-    // level появится отдельной пачкой. Уже фиксируем совместимую матрицу, чтобы UI
-    // не пришлось потом придумывать другую семантику.
-    return isTime ? ['time','level'] : ['level','reps'];
-  }
-  if(loadType === 'weight'){
-    return isTime
-      ? ['time','weight','parallel']
-      : ['double_range','weight','reps','parallel'];
-  }
-  return isTime ? ['time'] : ['reps'];
+  const p = exP(ex);
+  return FitExerciseV2.allowedModes(p.type, p.load.type).filter(m => m !== 'none');
 }
 
 export function recommendedProgressionMode(ex){
-  const isTime = !!ex && ex.type === 'time';
-  const loadType = progressionLoadType(ex);
-  if(loadType === 'level') return isTime ? 'time' : 'level';
-  if(loadType === 'weight') return isTime ? 'time' : 'double_range';
+  const p = exP(ex);
+  const isTime = p.type === 'time';
+  if(p.load.type === 'level') return isTime ? 'time' : 'level';
+  if(p.load.type === 'weight') return isTime ? 'time' : 'double_range';
   return isTime ? 'time' : 'reps';
 }
 
+// способ, который показывает редактор: выключенная прогрессия показывает рекомендуемый
 export function editorProgressionMode(ex){
   if(!ex) return null;
-  const allowed = progressionModeOptions(ex);
-  const explicit = EX_PROG_MODES.has(ex.progMode) ? ex.progMode : null;
-  const inferred = explicit || inferredProgressionMode(ex);
-  return allowed.includes(inferred) ? inferred : recommendedProgressionMode(ex);
+  const mode = exP(ex).progression.mode;
+  return mode !== 'none' && progressionModeOptions(ex).includes(mode) ? mode : recommendedProgressionMode(ex);
 }
 
-// Применяет выбранный пользователем способ прогрессии и синхронизирует legacy-поля,
-// которыми пока пользуются parser/workout/старые сохранения. Потолки не стираем:
-// переключиться туда-обратно должно быть безопасно.
+// Применяет выбранный способ и подставляет безопасные шаги/потолки там, где без них
+// способ не работает. Потолки не стираем: переключиться туда-обратно должно быть безопасно.
 export function setExerciseProgressionMode(ex, mode){
   if(!ex) return ex;
+  const p = exP(ex);
+  const pr = p.progression;
   const allowed = progressionModeOptions(ex);
   const nextMode = allowed.includes(mode) ? mode : recommendedProgressionMode(ex);
-  ex.progMode = nextMode;
-  ex.progOn = true;
-
-  const weighted = progressionLoadType(ex) === 'weight';
-  ex.trackWeight = weighted;
-  ex.dualProg = nextMode === 'double_range';
-
+  pr.mode = nextMode;
+  const base = parseValue(p.value);
   if(nextMode === 'double_range'){
-    if(!(ex.repsStep > 0)) ex.repsStep = 1;
-    if(!(ex.wStep > 0)) ex.wStep = 2;
-    const base = parseValue(ex.value);
-    ex.repsMax = Math.max(base.max + ex.repsStep, +ex.repsMax || 0);
-    ex.dualRangeV = 2;
+    if(!(pr.reps.step > 0)) pr.reps.step = 1;
+    if(!(pr.weight.step > 0)) pr.weight.step = 2;
+    pr.reps.max = Math.max(base.max + pr.reps.step, +pr.reps.max || 0);
   } else if(nextMode === 'reps'){
-    if(!(ex.repsStep > 0)) ex.repsStep = 1;
-    if(weighted) ex.wStep = 0;
+    if(!(pr.reps.step > 0)) pr.reps.step = 1;
   } else if(nextMode === 'weight'){
-    if(!(ex.wStep > 0)) ex.wStep = 2;
-    if(ex.type === 'time') ex.timeStep = 0;
-    else ex.repsStep = 0;
+    if(!(pr.weight.step > 0)) pr.weight.step = 2;
   } else if(nextMode === 'time'){
-    if(!(ex.timeStep > 0)) ex.timeStep = 5;
-    if(weighted) ex.wStep = 0;
+    if(!(pr.time.step > 0)) pr.time.step = 5;
   } else if(nextMode === 'parallel'){
-    if(ex.type === 'time'){
-      if(!(ex.timeStep > 0)) ex.timeStep = 5;
-    }else if(!(ex.repsStep > 0)) ex.repsStep = 1;
-    if(!(ex.wStep > 0)) ex.wStep = 2;
+    if(p.type === 'time'){ if(!(pr.time.step > 0)) pr.time.step = 5; }
+    else if(!(pr.reps.step > 0)) pr.reps.step = 1;
+    if(!(pr.weight.step > 0)) pr.weight.step = 2;
   } else if(nextMode === 'level'){
-    ex.trackWeight = false;
-    ex.loadLevels = cleanLoadLevels(ex.loadLevels, true);
-    ex.loadLevel = Math.max(0, Math.min(ex.loadLevels.length - 1, Math.round(+ex.loadLevel || 0)));
-    ex.wStep = 0;
-    if(ex.type === 'time'){
-      // level-mode для времени держит время фиксированным и меняет сопротивление.
-      ex.timeStep = 0;
-    }else{
-      // Для повторов default — сначала два небольших шага повторов, потом следующий level.
-      if(!(ex.repsStep > 0)) ex.repsStep = 2;
-      const base = parseValue(ex.value);
-      if(!(ex.repsMax > base.max)) ex.repsMax = Math.min(200, base.max + ex.repsStep * 2);
+    p.load.levels = cleanLoadLevels(p.load.levels, true);
+    p.load.level = Math.max(0, Math.min(p.load.levels.length - 1, Math.round(+p.load.level || 0)));
+    if(p.type !== 'time'){
+      // по умолчанию — сначала два небольших шага повторов, потом следующий уровень
+      if(!(pr.reps.step > 0)) pr.reps.step = 2;
+      if(!(pr.reps.max > base.max)) pr.reps.max = Math.min(200, base.max + pr.reps.step * 2);
     }
   }
   return ex;
 }
+// «Со временем сложнее» включает/выключает прогрессию: выключение — единственное
+// значение mode 'none', включение возвращает рекомендуемый способ
+export function setExerciseProgressionOn(ex, on){
+  if(!ex) return ex;
+  if(!on){ exP(ex).progression.mode = 'none'; return ex; }
+  if(exP(ex).progression.mode === 'none') setExerciseProgressionMode(ex, recommendedProgressionMode(ex));
+  return ex;
+}
 
-// Явное изменение типа нагрузки для ручного редактора.
-// preferRecommended=true используется для НОВОГО упражнения: пользователь добавил вес,
-// значит нормальный default меняется reps→double_range. Для уже настроенного упражнения
-// false сохраняет текущий способ, пока он совместим.
+// Явная смена типа нагрузки в редакторе. Снаряд и шкала получают разумные
+// значения по умолчанию, чтобы черновик сразу описывал реальную конфигурацию.
+// preferRecommended=true — для НОВОГО упражнения: добавили вес, значит default reps→double_range.
 export function setExerciseLoadType(ex, loadType, preferRecommended=false){
   if(!ex) return ex;
-  // Формат нагрузки и ON/OFF прогрессии — независимые настройки. В частности,
-  // редактирование упражнения с явно выключенной прогрессией не должно молча
-  // включать её только потому, что человек добавил вес или резинку.
-  const progressionWasOn = ex.progOn != null ? !!ex.progOn : progAxis(ex) !== 'none';
+  const p = exP(ex);
+  const wasOn = p.progression.mode !== 'none';
   const next = loadType === 'weight' ? 'weight' : loadType === 'level' ? 'level' : 'none';
-  ex.loadType = next;
-  ex.trackWeight = next === 'weight';
-  if(next === 'level'){
-    ex.loadLevels = cleanLoadLevels(ex.loadLevels, true);
-    ex.loadLevel = Math.max(0, Math.min(ex.loadLevels.length - 1, Math.round(+ex.loadLevel || 0)));
+  const load = p.load;
+  load.type = next;
+  if(next === 'none'){
+    load.equipment = null; load.name = ''; load.count = 1; load.weight = 0;
+  } else {
+    const eq = FitExerciseV2.equipment(load.equipment);
+    if(!eq || !eq.roles.includes('load') || !eq.loadTypes.includes(next)){
+      const def = FitExerciseV2.equipment(next === 'weight' ? 'dumbbell' : 'band');
+      load.equipment = def.id;
+      load.count = def.count;
+      load.name = '';
+    }
+    if(next === 'level'){
+      load.levels = cleanLoadLevels(load.levels, true);
+      load.level = Math.max(0, Math.min(load.levels.length - 1, Math.round(+load.level || 0)));
+    }
   }
-
   const current = editorProgressionMode(ex);
-  const allowed = progressionModeOptions(ex);
-  const target = preferRecommended || !allowed.includes(current)
-    ? recommendedProgressionMode(ex)
-    : current;
+  const target = preferRecommended || !progressionModeOptions(ex).includes(current)
+    ? recommendedProgressionMode(ex) : current;
   setExerciseProgressionMode(ex, target);
-  ex.progOn = progressionWasOn;
+  if(!wasOn) p.progression.mode = 'none';
   return ex;
 }
 
-// То же для «Повторения / Время»: новый черновик получает default нового формата,
-// существующая ручная настройка сохраняется, если такой mode всё ещё имеет смысл.
+// То же для «Повторения / Время»
 export function setExerciseMetric(ex, type, preferRecommended=false){
   if(!ex) return ex;
-  const progressionWasOn = ex.progOn != null ? !!ex.progOn : progAxis(ex) !== 'none';
-  ex.type = type === 'time' ? 'time' : 'reps';
+  const p = exP(ex);
+  const wasOn = p.progression.mode !== 'none';
+  p.type = type === 'time' ? 'time' : 'reps';
+  p.value = normValue(p.value, p.type);
   const current = editorProgressionMode(ex);
-  const allowed = progressionModeOptions(ex);
-  const target = preferRecommended || !allowed.includes(current)
-    ? recommendedProgressionMode(ex)
-    : current;
+  const target = preferRecommended || !progressionModeOptions(ex).includes(current)
+    ? recommendedProgressionMode(ex) : current;
   setExerciseProgressionMode(ex, target);
-  ex.progOn = progressionWasOn;
+  if(!wasOn) p.progression.mode = 'none';
   return ex;
 }
 
+const levelWithReps = ex => exP(ex).type !== 'time' && progStepSize(ex, 'reps') > 0;
 export function progressionModeLabel(ex, mode){
   if(mode === 'double_range') return t('builder.progModeDouble');
   if(mode === 'weight') return t('builder.progModeWeight');
   if(mode === 'time') return t('builder.progModeTime');
-  if(mode === 'parallel') return t(ex && ex.type === 'time' ? 'builder.progModeParallelTime' : 'builder.progModeParallelReps');
-  if(mode === 'level'){
-    return ex && ex.type !== 'time' && ex.repsStep > 0
-      ? t('builder.progModeLevelReps')
-      : t('builder.progModeLevel');
-  }
+  if(mode === 'parallel') return t(exP(ex).type === 'time' ? 'builder.progModeParallelTime' : 'builder.progModeParallelReps');
+  if(mode === 'level') return levelWithReps(ex) ? t('builder.progModeLevelReps') : t('builder.progModeLevel');
   return t('builder.progModeReps');
 }
 
@@ -793,10 +579,10 @@ function progressionModeHintKey(ex, mode){
   if(mode === 'double_range') return 'builder.progModeHintDouble';
   if(mode === 'weight') return 'builder.progModeHintWeight';
   if(mode === 'time') return 'builder.progModeHintTime';
-  if(mode === 'parallel') return ex && ex.type === 'time'
+  if(mode === 'parallel') return exP(ex).type === 'time'
     ? 'builder.progModeHintParallelTime'
     : 'builder.progModeHintParallelReps';
-  if(mode === 'level') return ex && ex.type !== 'time' && ex.repsStep > 0
+  if(mode === 'level') return levelWithReps(ex)
     ? 'builder.progModeHintLevelReps'
     : 'builder.progModeHintLevel';
   return 'builder.progModeHintReps';
@@ -804,21 +590,17 @@ function progressionModeHintKey(ex, mode){
 
 function progressionCeilingHintKey(ex, mode){
   if(mode === 'double_range') return 'builder.ceilingRequiredDoubleHint';
-  if(mode === 'level' && ex && ex.type !== 'time' && ex.repsStep > 0){
-    return 'builder.ceilingRequiredLevelHint';
-  }
+  if(mode === 'level' && levelWithReps(ex)) return 'builder.ceilingRequiredLevelHint';
   return 'builder.ceilingOptionalHint';
 }
 
 export function progressionConfigIssue(ex){
-  if(!ex || !ex.progOn || ex.warmup) return '';
+  if(!ex || ex.warmup || exP(ex).progression.mode === 'none') return '';
   const mode = editorProgressionMode(ex);
-  const needsRepTransition = mode === 'double_range'
-    || (mode === 'level' && ex.type !== 'time' && +ex.repsStep > 0);
+  const needsRepTransition = mode === 'double_range' || (mode === 'level' && levelWithReps(ex));
   if(!needsRepTransition) return '';
-
-  const base = parseValue(ex.value);
-  const ceil = Math.round(+ex.repsMax || 0);
+  const base = parseValue(exP(ex).value);
+  const ceil = Math.round(+progCeil(ex, 'reps') || 0);
   if(ceil > base.max) return '';
   return mode === 'double_range'
     ? 'builder.ceilingRequiredDoubleError'
@@ -845,10 +627,11 @@ function fillExerciseProgModeOptions(){
   const sel = $('exProgMode');
   if(!sel || !exDraft) return;
   const current = editorProgressionMode(exDraft);
-  const levelLoad = progressionLoadType(exDraft) === 'level';
+  const p = exP(exDraft);
+  const levelLoad = p.load.type === 'level';
   sel.innerHTML = '';
   progressionModeOptions(exDraft).forEach(mode=>{
-    if(mode === 'level' && levelLoad && exDraft.type !== 'time'){
+    if(mode === 'level' && levelLoad && p.type !== 'time'){
       const seq = document.createElement('option');
       seq.value = 'level';
       seq.textContent = t('builder.progModeLevelReps');
@@ -864,7 +647,7 @@ function fillExerciseProgModeOptions(){
     o.textContent = progressionModeLabel(exDraft, mode);
     sel.appendChild(o);
   });
-  sel.value = current === 'level' && levelLoad && exDraft.type !== 'time' && !(exDraft.repsStep > 0)
+  sel.value = current === 'level' && levelLoad && p.type !== 'time' && !(progStepSize(exDraft, 'reps') > 0)
     ? 'level_direct'
     : (current || recommendedProgressionMode(exDraft));
 }
@@ -893,35 +676,22 @@ export function fmtKg(kg){
   return Number.isInteger(n) ? String(n) : String(n).replace('.', ',');
 }
 
-/* ================= ПРОГРЕССИЯ: единая модель для веса, повторов и времени =================
-   У каждого упражнения собственное состояние ex.ps: счётчик полных выполнений и текущая
-   фактическая нагрузка. После достижения его порога приложение предлагает следующий шаг;
-   подтверждённый шаг меняет только это упражнение. База в редакторе остаётся стартовой
-   точкой цикла, а текущие reps/sec/kg/level хранятся отдельно в ex.ps.cur.
-   Program progression — только общий default частоты; progEvery упражнения может его
-   переопределить или значением 0 полностью отключить проверки для этого упражнения. */
+/* ================= ПРОГРЕССИЯ: единая модель для веса, повторов, времени и уровня =================
+   Политика (как растёт) — exP(ex).progression; накопленное состояние слота —
+   ex.progressState {count, current:{reps, weight, time, level}}. Отсутствующее значение
+   current означает «равно базе этапа». Вес — всегда на ОДНУ единицу снаряда.
+   После порога выполнений приложение предлагает следующий шаг; подтверждённый шаг
+   меняет только это упражнение. */
 
-// Все функции ниже принимают НЕОБЯЗАТЕЛЬНЫЙ параметр axis. Если не передать — берётся
-// progAxis(ex), как и раньше (для веса-only, повторы-only, время-only упражнений ничего
-// не меняется). Явный axis нужен для формата «повторения и вес»: там ОДНОВРЕМЕННО могут
-// расти и вес, и повторы — это уже не одна ось, а две, и prog-функциям нужно вызываться
-// дважды с разным axis для одного и того же упражнения.
-
-// значение упражнения «с нуля», без какой-либо прогрессии
+// значение упражнения «с нуля», без прогрессии
 export function progBaseValue(ex, axis){
   axis = axis || progAxis(ex);
-  if(axis === 'weight') return +ex.weight || 0;
-  return parseValue(ex.value).min; // повторы, время и «не усложнять» — читают минимум из value
+  const p = exP(ex);
+  if(axis === 'weight') return +p.load.weight || 0;
+  return parseValue(p.value).min; // повторы, время и «не усложнять» — минимум из value
 }
-// на сколько сдвигается значение за один шаг прогрессии.
-// ВАЖНО: используем ex.field != null, а не ex.field || default — иначе явный 0
-// (значит «эту ось для этого упражнения не растим») JS посчитает «не задано» и
-// молча подставит дефолт вместо нуля, полностью ломая независимую прогрессию
-// в формате «повторения и вес» (где именно 0 отключает конкретную ось).
 // Что именно растёт у упражнения, одной строкой: «+2 кг», «+1 повт. и +2 кг»,
-// «+5 сек». Пусто — значит не растёт, и тогда НЕ ПОКАЗЫВАЕМ НИЧЕГО: отсутствие
-// роста — обычное дело, сообщать о нём незачем, а метка «не растёт» у каждого
-// второго упражнения только зашумляет список и экран тренировки.
+// «+5 сек». Пусто — не растёт, и тогда не показываем ничего.
 export function progShort(ex){
   if(!ex || ex.warmup || progAxis(ex) === 'none') return '';
   if(isDualProg(ex)){
@@ -933,15 +703,13 @@ export function progShort(ex){
     }
   }
   const bits = [];
-  if(ex.type === 'time'){
+  if(exP(ex).type === 'time'){
     const st = progStepSize(ex, 'time');
     if(st > 0) bits.push(`+${fmtKg(st)} ${t('store.secShort')}`);
   } else {
     const r = progStepSize(ex, 'reps');
     if(r > 0) bits.push(`+${fmtKg(r)} ${t('store.repShort')}`);
   }
-  // вес — независимая ось что при повторениях, что при времени («время и вес»:
-  // фермерская прогулка, планка с блином)
   if(hasWeight(ex)){
     const w = progStepSize(ex, 'weight');
     if(w > 0) bits.push(`+${fmtKg(w)} ${t('progress.kg')}`);
@@ -949,128 +717,58 @@ export function progShort(ex){
   return bits.length ? bits.join(appLocale === 'ru' ? ' и ' : ' & ') : t('builder.progressionAuto');
 }
 
+// шаг оси за одно повышение; не задан — ось не растёт
 export function progStepSize(ex, axis){
   axis = axis || progAxis(ex);
-  if(axis === 'weight') return ex.wStep != null ? +ex.wStep : 2;
-  if(axis === 'reps') return ex.repsStep != null ? +ex.repsStep : 1;
-  if(axis === 'time') return ex.timeStep != null ? +ex.timeStep : 5;
-  return 0;
+  const a = exP(ex).progression[axis];
+  return a && +a.step > 0 ? +a.step : 0;
 }
-// нижняя граница, ниже которой значение не опускается (вес — 0, повторы и время — хотя бы 1)
-function progFloor(axis){ return axis === 'weight' ? 0 : 1; }
 // округление под ось: вес — до 0,5, повторы и время — целые
 function progRound(axis, v){
   return axis === 'weight' ? Math.round(v * 2) / 2 : Math.round(v);
 }
 
-/* ---- состояние прогрессии У КАЖДОГО УПРАЖНЕНИЯ (ex.ps) ----
-   Раньше был один счётчик шагов на программу (progSteps), вычисленный на лету
-   из floor(пройденных тренировок / progression) — и все упражнения программы
-   получали одно и то же число шагов. Это ломалось на чередовании A/Б: упражнение
-   варианта А получало +1 шаг за КАЖДУЮ тренировку программы, в том числе за дни
-   варианта Б, и росло вдвое быстрее задуманного.
-   Теперь у каждого упражнения своё состояние ex.ps:
-     n    — сколько раз это упражнение выполнено с последней проверки прогресса
-     cur  — фактическая текущая нагрузка {reps, sec, kg}; отсутствующее поле
-            означает «ещё равна базе» (ex.value/ex.weight)
-   Состояние живёт внутри упражнения и синхронизируется вместе с программой —
-   отдельного места хранения не нужно. advanceExerciseProgression() сдвигает
-   cur на один шаг; вызывающий код (commitFinish в 70-workout.js) решает, когда
-   это делать — см. также docs/ai-edit-progression-plan.md, пачка 4. */
-export function ensurePs(ex){
-  if(!ex.ps || typeof ex.ps !== 'object') ex.ps = {n:0, cur:{}};
-  else{
-    ex.ps.n = Math.max(0, Math.round(+ex.ps.n || 0));
-    if(!ex.ps.cur || typeof ex.ps.cur !== 'object') ex.ps.cur = {};
+// Состояние прогрессии хранится в слоте и синхронизируется вместе с программой.
+export function ensureProgressState(ex){
+  const s = ex.progressState;
+  if(!s || typeof s !== 'object'){
+    ex.progressState = {count:0, current:emptyProgressCurrent()};
+  } else {
+    s.count = Math.max(0, Math.round(+s.count || 0));
+    if(!s.current || typeof s.current !== 'object') s.current = emptyProgressCurrent();
   }
-  return ex.ps;
+  return ex.progressState;
 }
-// текущий диапазон повторов: из ex.ps.cur.reps, если прогрессия уже сдвигала его,
-// иначе — база из ex.value (та же строка «12» / «8-12», что хранится в редакторе)
+const curOf = ex => (ex && ex.progressState && ex.progressState.current) || {};
 function psReps(ex){
-  const ps = ensurePs(ex);
-  return parseValue(ps.cur.reps != null ? ps.cur.reps : ex.value);
+  const c = curOf(ex);
+  return parseValue(c.reps != null ? c.reps : exP(ex).value);
 }
 function psSec(ex){
-  const ps = ensurePs(ex);
-  return ps.cur.sec != null ? +ps.cur.sec : parseValue(ex.value).min;
+  const c = curOf(ex);
+  return c.time != null ? +c.time : parseValue(exP(ex).value).min;
 }
 function psKg(ex){
-  const ps = ensurePs(ex);
-  return ps.cur.kg != null ? +ps.cur.kg : (+ex.weight || 0);
+  const c = curOf(ex);
+  return c.weight != null ? +c.weight : (+exP(ex).load.weight || 0);
 }
 
-// текущий рабочий вес упражнения: то, что человек поднимает сейчас (растёт от тренировки к тренировке)
-function exWeightKey(pid, name){
-  return 'w_' + pid + '_' + String(name || '').trim().toLowerCase();
-}
-
-// потолок оси: 0 или пусто = потолка нет (растём без ограничения, как раньше)
+// потолок оси: не задан = растём без ограничения
 function progCeil(ex, axis){
-  const v = axis === 'weight' ? ex.weightMax : axis === 'time' ? ex.timeMax : ex.repsMax;
-  return (+v > 0) ? +v : null;
+  const a = exP(ex).progression[axis];
+  return a && +a.max > 0 ? +a.max : null;
 }
-// двойная прогрессия возможна, только когда есть и вес, и потолок повторов:
-// без потолка неизвестно, когда сбрасывать повторы и добавлять вес
+// двойная прогрессия возможна, только когда есть и вес, и потолок повторов
 export function isDualProg(ex){
-  return !!ex.dualProg && hasWeight(ex) && progCeil(ex, 'reps') != null;
+  return exP(ex).progression.mode === 'double_range' && hasWeight(ex) && progCeil(ex, 'reps') != null;
 }
 
-// Одно упражнение старой double-progression → новая модель диапазона.
-// Возвращает true, если объект был помечен/изменён. Вынесено сюда, рядом с самим
-// движком, чтобы миграция и unit-тесты использовали ровно одну формулу.
-export function migrateLegacyDualRangeExercise(ex){
-  if(!ex || !ex.dualProg || !hasWeight(ex) || ex.type === 'time' || ex.dualRangeV === 2) return false;
-  const base = parseValue(ex.value);
-  const width = Math.max(0, base.max - base.min);
-
-  if(width > 0){
-    const rawCur = ex.ps && ex.ps.cur ? ex.ps.cur.reps : null;
-    const cur = rawCur != null ? parseValue(rawCur) : null;
-    const alreadyRangeState = !!(cur && cur.min !== cur.max);
-
-    if(!alreadyRangeState){
-      const oldCeil = Math.max(0, Math.round(+ex.repsMax || 0));
-      if(oldCeil > 0){
-        // Старые 8→…→20 = 12 шагов. Новые 8-10→…→20-22 — те же 12.
-        ex.repsMax = Math.min(200, Math.max(base.max, oldCeil + width));
-      }
-      if(cur){
-        let min = Math.max(1, cur.min);
-        let max = min + width;
-        if(ex.repsMax > 0 && max > ex.repsMax){
-          max = ex.repsMax;
-          min = Math.max(1, max - width);
-        }
-        ex.ps.cur.reps = min === max ? String(min) : min + '-' + max;
-      }
-    }
-  }
-
-  // После перевода double progression всегда имеет две реальные стадии.
-  if(!(ex.repsStep > 0)) ex.repsStep = 1;
-  if(!(ex.wStep > 0)) ex.wStep = 2;
-  if(ex.repsMax > 0){
-    ex.repsMax = Math.min(200, Math.max(base.max + ex.repsStep, ex.repsMax));
-  }
-  ex.dualRangeV = 2;
-  return true;
-}
-
-// итоговое значение упражнения сейчас — читает фактическое состояние (ex.ps),
-// а не вычисляет его из числа шагов программы. pid/program больше не нужны для
-// самого чтения (совместимость со старыми вызовами — аргументы просто игнорируются),
-// но getExWeight/exBits/exerciseLoad и т.п. по-прежнему передают их, поэтому сигнатура
-// сохранена, чтобы не переписывать десятки мест вызова.
+// итоговое значение упражнения сейчас — из фактического состояния (progressState).
+// pid/program не нужны для чтения, сигнатура сохранена ради мест вызова.
 export function getExProgValue(pid, ex, program, axis){
   axis = axis || progAxis(ex);
   if(axis === 'none') return progBaseValue(ex, axis);
   if(axis === 'weight'){
-    // вес 0 — это «снаряд ещё не выбран», а не «стартуем с нуля кг»: пока он не
-    // выбран, прогрессия не копится поверх несуществующей базы (иначе вес сначала
-    // не показывается вовсе, а после пары тренировок вдруг появляется «4 кг» из
-    // воздуха). Как только человек выберет вес на экране старта, психология та же:
-    // это станет новой базой, и прогрессия пойдёт от неё.
     const kg = psKg(ex);
     if(kg <= 0) return 0;
     const ceil = progCeil(ex, 'weight');
@@ -1081,7 +779,7 @@ export function getExProgValue(pid, ex, program, axis){
     const v = psSec(ex);
     return Math.max(1, progRound('time', ceil != null ? Math.min(ceil, v) : v));
   }
-  // reps: одно число — минимум текущего диапазона (см. progressedRepsRange для диапазона целиком)
+  // reps: одно число — минимум текущего диапазона (см. progressedRepsRange)
   const ceil = progCeil(ex, 'reps');
   const v = psReps(ex).min;
   return Math.max(1, progRound('reps', ceil != null ? Math.min(ceil, v) : v));
@@ -1092,16 +790,9 @@ export function getExProgValue(pid, ex, program, axis){
 export function progressedRepsRange(pid, ex, program){
   const r = psReps(ex);
   const ceil = progCeil(ex, 'reps');
-  const base = parseValue(ex.value);
+  const base = parseValue(exP(ex).value);
   const baseWidth = Math.max(0, base.max - base.min);
-
   let min = r.min, max = r.max;
-  // Совместимость с состоянием старой двойной прогрессии, где cur.reps хранился
-  // одним числом. Не теряем достигнутую нижнюю границу, а восстанавливаем ширину
-  // исходного диапазона.
-  if(isDualProg(ex) && baseWidth > 0 && min === max && ex.ps && ex.ps.cur && ex.ps.cur.reps != null){
-    max = min + baseWidth;
-  }
   if(ceil != null && max > ceil){
     max = ceil;
     if(isDualProg(ex) && baseWidth > 0) min = Math.max(1, max - baseWidth);
@@ -1111,22 +802,17 @@ export function progressedRepsRange(pid, ex, program){
   max = Math.max(min, max);
   return min === max ? String(min) : min + '-' + max;
 }
-// Чистое чтение текущей нагрузки: НЕ создаёт ex.ps и не меняет упражнение.
-// Это принципиально для preview: просто открыть экран проверки прогрессии не должно
-// материализовать состояние или пачкать sync-данные.
+// Чистое чтение текущей нагрузки: НЕ создаёт progressState и не меняет упражнение —
+// просто открыть экран проверки прогрессии не должно пачкать sync-данные.
 function progressionCurrentState(ex, mode){
-  const baseReps = parseValue(ex && ex.value);
-  const rawReps = ex && ex.ps && ex.ps.cur && ex.ps.cur.reps != null
-    ? parseValue(ex.ps.cur.reps)
-    : baseReps;
+  const p = exP(ex);
+  const c = curOf(ex);
+  const baseReps = parseValue(p.value);
+  const rawReps = c.reps != null ? parseValue(c.reps) : baseReps;
   const repsCeil = ex ? progCeil(ex, 'reps') : null;
   const baseWidth = Math.max(0, baseReps.max - baseReps.min);
 
   let min = rawReps.min, max = rawReps.max;
-  if(mode === 'double_range' && baseWidth > 0 && min === max &&
-      ex && ex.ps && ex.ps.cur && ex.ps.cur.reps != null){
-    max = min + baseWidth;
-  }
   if(repsCeil != null && max > repsCeil){
     max = repsCeil;
     if(mode === 'double_range' && baseWidth > 0) min = Math.max(1, max - baseWidth);
@@ -1135,12 +821,12 @@ function progressionCurrentState(ex, mode){
   min = Math.max(1, min);
   max = Math.max(min, max);
 
-  const baseSec = parseValue(ex && ex.value).min;
-  const rawSec = ex && ex.ps && ex.ps.cur && ex.ps.cur.sec != null ? +ex.ps.cur.sec : baseSec;
+  const baseSec = parseValue(p.value).min;
+  const rawSec = c.time != null ? +c.time : baseSec;
   const timeCeil = ex ? progCeil(ex, 'time') : null;
   const sec = Math.max(1, progRound('time', timeCeil != null ? Math.min(timeCeil, rawSec) : rawSec));
 
-  const rawKg = ex && ex.ps && ex.ps.cur && ex.ps.cur.kg != null ? +ex.ps.cur.kg : +(ex && ex.weight || 0);
+  const rawKg = c.weight != null ? +c.weight : +(p.load.weight || 0);
   const weightCeil = ex ? progCeil(ex, 'weight') : null;
   const kg = rawKg > 0
     ? Math.max(0, progRound('weight', weightCeil != null ? Math.min(weightCeil, rawKg) : rawKg))
@@ -1189,25 +875,24 @@ function computeTimeStep(ex, current, next){
 
 function computeWeightStep(ex, current, next){
   const step = progStepSize(ex, 'weight');
-  if(!(step > 0) || !(current.kg > 0)) return; // 0 = вес ещё не выбран
+  if(!(step > 0) || !(current.kg > 0)) return;
   const ceil = progCeil(ex, 'weight');
   const value = current.kg + step;
   next.kg = progRound('weight', ceil != null ? Math.min(ceil, value) : value);
 }
 
 function computeDoubleRangeStep(ex, current, next){
-  const base = parseValue(ex.value);
+  const base = parseValue(exP(ex).value);
   const width = Math.max(0, base.max - base.min);
   const repsCeil = progCeil(ex, 'reps');
   if(repsCeil == null) return; // invalid double_range: нет точки перехода к весу
 
   const repsStep = progStepSize(ex, 'reps') || 1;
   const stored = parseValue(current.reps);
-  let curMin = stored.min;
-  let curMax = stored.max;
+  const curMax = stored.max;
 
   if(curMax >= repsCeil){
-    if(!(current.kg > 0)) return; // weight pending: не создаём кг из воздуха
+    if(!(current.kg > 0)) return;
 
     const weightCeil = progCeil(ex, 'weight');
     if(weightCeil != null && current.kg >= weightCeil) return; // полный потолок
@@ -1216,7 +901,7 @@ function computeDoubleRangeStep(ex, current, next){
     if(!(step > 0)) return;
     const nextKg = current.kg + step;
     next.kg = progRound('weight', weightCeil != null ? Math.min(weightCeil, nextKg) : nextKg);
-    next.reps = normValue(ex.value, 'reps');
+    next.reps = normValue(exP(ex).value, 'reps');
     return;
   }
 
@@ -1230,7 +915,7 @@ function computeLevelStep(ex, strategy, current, next){
 
   // reps+level по умолчанию работает как double progression без килограммов:
   // сначала растёт диапазон повторов, затем сопротивление и диапазон сбрасывается.
-  if(ex.type !== 'time' && strategy.reps.step > 0){
+  if(exP(ex).type !== 'time' && strategy.reps.step > 0){
     const ceil = strategy.reps.max;
     const r = parseValue(current.reps);
     if(ceil == null || r.max < ceil){
@@ -1241,8 +926,8 @@ function computeLevelStep(ex, strategy, current, next){
 
   if(current.level >= strategy.level.max) return;
   next.level = current.level + 1;
-  if(ex.type !== 'time' && strategy.reps.step > 0 && strategy.reps.max != null){
-    next.reps = normValue(ex.value, 'reps');
+  if(exP(ex).type !== 'time' && strategy.reps.step > 0 && strategy.reps.max != null){
+    next.reps = normValue(exP(ex).value, 'reps');
   }
 }
 
@@ -1267,7 +952,7 @@ export function computeNextProgression(ex, program){
   } else if(mode === 'weight'){
     computeWeightStep(ex, current, next);
   } else if(mode === 'parallel'){
-    if(ex.type === 'time') computeTimeStep(ex, current, next);
+    if(exP(ex).type === 'time') computeTimeStep(ex, current, next);
     else computeRepsStep(ex, current, next);
     computeWeightStep(ex, current, next);
   } else if(mode === 'level'){
@@ -1282,19 +967,18 @@ export function previewNextProgression(ex, program){
   return computeNextProgression(ex, program);
 }
 
-// Один formatter для всех экранов, где человек должен понимать фактическую
-// нагрузку. Preview финальной проверки и реально применённый шаг используют
-// один compute, а здесь только переводим его state в человекочитаемый текст.
+// Один formatter для всех экранов, где человек должен понимать фактическую нагрузку.
 export function progressionStateLabel(ex, value){
   const v = value || {};
+  const p = exP(ex);
   const bits = [];
-  if(ex && ex.type === 'time'){
+  if(p.type === 'time'){
     bits.push(`${Math.max(0, Math.round(+v.sec || 0))} ${t('store.secShort')}`);
   }else{
-    const reps = String(v.reps != null ? v.reps : normValue(ex && ex.value, 'reps')).replace('-', '–');
+    const reps = String(v.reps != null ? v.reps : normValue(p.value, 'reps')).replace('-', '–');
     bits.push(`${reps} ${t('workout.repsShort')}`);
   }
-  const loadType = progressionLoadType(ex);
+  const loadType = p.load.type;
   if(loadType === 'weight' && +v.kg > 0){
     bits.push(`${fmtKg(v.kg)} ${t('progress.kg')}`);
   }else if(loadType === 'level'){
@@ -1306,45 +990,17 @@ export function progressionStateLabel(ex, value){
   return bits.join(' · ');
 }
 
-// Потолок теперь определяется тем же расчётом, что preview/apply:
-// если следующий подтверждённый шаг ничего не может изменить — автоматический рост закончен.
-// Для осей БЕЗ потолка compute всегда сможет дать следующий шаг, поэтому false сохраняется.
+// Потолок определяется тем же расчётом, что preview/apply: если следующий шаг ничего
+// не может изменить — автоматический рост закончен. Оси без потолка растут всегда.
 export function progAtCeiling(pid, ex, program){
   if(!ex || progAxis(ex) === 'none') return false;
   const strategy = getProgressionStrategy(ex, program);
   if(!strategy.mode) return false;
-
-  // Историческая семантика «без потолка = не показывать замену» сохраняется.
-  const axes = strategy.mode === 'double_range'
-    ? ['reps','weight']
-    : strategy.mode === 'parallel'
-      ? (ex.type === 'time' ? ['time','weight'] : ['reps','weight'])
-      : strategy.mode === 'level'
-        ? (ex.type !== 'time' && strategy.reps.step > 0 ? ['reps','level'] : ['level'])
-        : [strategy.mode];
-
-  const growing = axes.filter(axis => {
-    if(axis === 'reps') return strategy.reps.step > 0;
-    if(axis === 'time') return strategy.time.step > 0;
-    if(axis === 'weight') return strategy.weight.step > 0;
-    if(axis === 'level') return strategy.level.max != null;
-    return false;
-  });
+  const growing = FitExerciseV2.growingAxes(exP(ex));
   if(!growing.length) return false;
-
-  // Неизвестный вес (0) — это «снаряд ещё не выбран», а не достигнутый потолок.
-  // Старый progAtCeiling() в этом случае тоже возвращал false.
   if(growing.includes('weight') && weightPending(ex)) return false;
-
-  const allBounded = growing.every(axis => {
-    if(axis === 'reps') return strategy.reps.max != null;
-    if(axis === 'time') return strategy.time.max != null;
-    if(axis === 'weight') return strategy.weight.max != null;
-    if(axis === 'level') return strategy.level.max != null;
-    return false;
-  });
+  const allBounded = growing.every(axis => axis === 'level' ? strategy.level.max != null : progCeil(ex, axis) != null);
   if(!allBounded) return false;
-
   return !computeNextProgression(ex, program).canAdvance;
 }
 
@@ -1354,120 +1010,74 @@ export function advanceExerciseProgression(ex){
   const result = computeNextProgression(ex, null);
   if(!result.canAdvance) return;
 
-  const ps = ensurePs(ex);
-  if(result.changed.includes('reps')) ps.cur.reps = result.next.reps;
-  if(result.changed.includes('time')) ps.cur.sec = result.next.sec;
-  if(result.changed.includes('weight')) ps.cur.kg = result.next.kg;
-  if(result.changed.includes('level')) ps.cur.level = result.next.level;
+  const cur = ensureProgressState(ex).current;
+  if(result.changed.includes('reps')) cur.reps = result.next.reps;
+  if(result.changed.includes('time')) cur.time = result.next.sec;
+  if(result.changed.includes('weight')) cur.weight = result.next.kg;
+  if(result.changed.includes('level')) cur.level = result.next.level;
 }
 
-// База упражнения (числа, которые задают человек в конструкторе или ИИ) поменялась —
-// прежняя фактическая нагрузка ex.ps.cur к ней больше не относится: новые числа и
-// есть текущая нагрузка, иначе правка значения/веса в конструкторе просто не
-// действовала бы, пока прогрессия уже сдвинула cur. Счётчик до проверки (n)
-// сохраняем — упражнение то же. База не менялась (правили описание, отдых,
-// подходы, название) — прогресс переносится целиком.
-function progBaseKey(ex){
-  const loadType = progressionLoadType(ex);
-  const mode = editorProgressionMode(ex) || inferredProgressionMode(ex) || '';
-  const levelKey = loadType === 'level'
-    ? JSON.stringify({levels:exerciseLoadLevels(ex), base:Math.max(0, Math.round(+ex.loadLevel || 0))})
-    : '';
-  return [
-    ex.type === 'time' ? 'time' : 'reps',
-    loadType,
-    normValue(ex.value, ex.type),
-    loadType === 'weight' ? (+ex.weight || 0) : 0,
-    mode,
-    levelKey
-  ].join('|');
+/* ---- перенос прогресса при правке упражнения ----
+   - другой этап движения или другая физическая конфигурация нагрузки (cfgKey) —
+     новый период: прогресс начинается заново;
+   - тот же этап и конфигурация, но изменено назначение (повторы/время, рабочий вес,
+     уровень, подходы, способ/шаг/потолок/частота прогрессии) — счётчик до проверки
+     обнуляется, текущая нагрузка равна новой базе;
+   - правка только текста/картинки — прогресс переносится целиком;
+   - шкалу уровней можно переставлять и дополнять: текущий уровень переносится по
+     identity, но при смене порядка счётчик обнуляется. */
+function workloadKey(ex){
+  const p = exP(ex);
+  const pr = p.progression;
+  return JSON.stringify([
+    p.type, normValue(p.value, p.type), p.sets, p.load.type === 'weight' ? +p.load.weight || 0 : 0,
+    p.load.type === 'level' ? loadLevelIdentity(p.load.levels[p.load.level]) : '',
+    pr.mode, pr.every, pr.reps, pr.weight, pr.time
+  ]);
 }
-function carriedProgressCounter(oldEx, newEx){
-  let n = Math.max(0, Math.round(+((oldEx && oldEx.ps && oldEx.ps.n) || 0)));
-  if(newEx && newEx.progEvery != null){
-    const every = Math.max(0, Math.min(PROG_EVERY_MAX, Math.round(+newEx.progEvery || 0)));
-    if(every <= 0) return 0;
-    n = Math.min(n, every);
-  }
-  return n;
-}
-
-function levelIdentityList(ex){
-  return exerciseLoadLevels(ex).map(loadLevelIdentity).filter(Boolean);
-}
-function samePhysicalLevelScale(oldEx, newEx){
-  if(progressionLoadType(oldEx) !== 'level' || progressionLoadType(newEx) !== 'level') return false;
-  if((oldEx.type === 'time' ? 'time' : 'reps') !== (newEx.type === 'time' ? 'time' : 'reps')) return false;
-  if(normValue(oldEx.value, oldEx.type) !== normValue(newEx.value, newEx.type)) return false;
-  const oldMode = editorProgressionMode(oldEx) || inferredProgressionMode(oldEx) || '';
-  const newMode = editorProgressionMode(newEx) || inferredProgressionMode(newEx) || '';
-  if(oldMode !== newMode) return false;
-
-  const oldIds = levelIdentityList(oldEx);
-  const newIds = levelIdentityList(newEx);
-  // Дубликаты физически неоднозначны: безопаснее сбросить current, чем угадать не ту резинку.
-  if(oldIds.length < 2 || newIds.length !== oldIds.length) return false;
-  if(new Set(oldIds).size !== oldIds.length || new Set(newIds).size !== newIds.length) return false;
-  if(JSON.stringify(oldIds.slice().sort()) !== JSON.stringify(newIds.slice().sort())) return false;
-
-  const oldBase = Math.max(0, Math.min(oldIds.length - 1, Math.round(+oldEx.loadLevel || 0)));
-  const newBase = Math.max(0, Math.min(newIds.length - 1, Math.round(+newEx.loadLevel || 0)));
-  return oldIds[oldBase] === newIds[newBase];
-}
-function carryReorderedLevelProgress(oldEx, newEx, n){
-  if(!samePhysicalLevelScale(oldEx, newEx)) return false;
-  newEx.ps = JSON.parse(JSON.stringify(oldEx.ps || {n:0,cur:{}}));
-  newEx.ps.n = n;
-  if(!newEx.ps.cur) newEx.ps.cur = {};
-
-  if(oldEx.ps && oldEx.ps.cur && oldEx.ps.cur.level != null){
-    const oldLevels = exerciseLoadLevels(oldEx);
-    const newLevels = exerciseLoadLevels(newEx);
-    const oldIndex = Math.max(0, Math.min(oldLevels.length - 1, Math.round(+oldEx.ps.cur.level || 0)));
-    const currentId = loadLevelIdentity(oldLevels[oldIndex]);
-    const mapped = newLevels.findIndex(level => loadLevelIdentity(level) === currentId);
-    if(mapped < 0) return false;
-    newEx.ps.cur.level = mapped;
-  }
-  return true;
-}
+function levelIdentities(ex){ return exerciseLoadLevels(ex).map(loadLevelIdentity); }
 export function carryExerciseProgress(oldEx, newEx){
   if(!newEx) return newEx;
-  if(!oldEx || !oldEx.ps){ delete newEx.ps; return newEx; }
-  const n = carriedProgressCounter(oldEx, newEx);
-  if(progBaseKey(oldEx) === progBaseKey(newEx)){
-    newEx.ps = JSON.parse(JSON.stringify(oldEx.ps));
-    newEx.ps.n = n;
-  }else if(carryReorderedLevelProgress(oldEx, newEx, n)){
-    // Та же физическая шкала может быть переставлена. Индекс — не identity:
-    // переносим current level по key/custom label, а reps/time state сохраняем.
-  }else{
-    // Несовместимая база/тип/шкала: счётчик можно сохранить, фактическое
-    // значение нельзя. В частности level-index никогда не переезжает в другую шкалу.
-    newEx.ps = {n, cur:{}};
+  const fresh = () => { newEx.progressState = {count:0, current:emptyProgressCurrent()}; return newEx; };
+  if(!oldEx || !oldEx.progressState) return fresh();
+  if(oldEx.currentStageId !== newEx.currentStageId) return fresh();
+  if(FitExerciseV2.cfgKey(exP(oldEx).load) !== FitExerciseV2.cfgKey(exP(newEx).load)) return fresh();
+
+  const old = JSON.parse(JSON.stringify(oldEx.progressState));
+  if(workloadKey(oldEx) !== workloadKey(newEx)){
+    newEx.progressState = {count:0, current:emptyProgressCurrent()};
+    return newEx;
+  }
+  newEx.progressState = old;
+  if(progressionLoadType(newEx) === 'level'){
+    const oldIds = levelIdentities(oldEx), newIds = levelIdentities(newEx);
+    if(old.current && old.current.level != null){
+      const mapped = newIds.indexOf(oldIds[old.current.level]);
+      if(mapped < 0){ newEx.progressState = {count:0, current:emptyProgressCurrent()}; return newEx; }
+      newEx.progressState.current.level = mapped;
+    }
+    const common = oldIds.filter(id => newIds.includes(id));
+    const order = ids => ids.filter(id => common.includes(id)).join('\n');
+    if(order(oldIds) !== order(newIds)) newEx.progressState.count = 0;
   }
   return newEx;
 }
-// копия упражнения — отдельное упражнение: свой id (по нему сопоставляются
-// правки ИИ и отметки «тяжело» на экране финала) и прогресс с нуля
+// Копия упражнения — отдельный экземпляр: новые exercise.id и stageId (по ним живут
+// история и правки ИИ) и прогресс с нуля.
 export function cloneExerciseAsNew(ex){
   const c = JSON.parse(JSON.stringify(ex));
-  c.id = newExId();
-  delete c.ps;
+  FitExerciseV2.regenerateExerciseIds(c, prefix => prefix === 'e' ? newExId() : newStageId());
+  c.progressState = {count:0, current:emptyProgressCurrent()};
   return c;
 }
 
-// вес отдельно — то же самое, но только для оси «вес» (используется в старых местах интерфейса).
-// Для формата «повторения и вес» вес растёт независимо от того, что там с повторами,
-// поэтому явно просим axis='weight', а не полагаемся на progAxis(ex) (которая для этого
-// формата тоже вернёт 'weight' — здесь совпадает, но так честнее читается)
+// текущий рабочий вес (растёт от тренировки к тренировке)
 export function getExWeight(pid, ex, program){
   return hasWeight(ex) ? getExProgValue(pid, ex, program, 'weight') : 0;
 }
-// прямая правка текущего веса (нажатие на строку экрана старта, см. 00-core.js) —
-// пишет в ex.ps.cur.kg напрямую, база (ex.weight) не трогается
+// прямая правка текущего веса (экран старта): пишет в progressState, база этапа не меняется
 export function setExWeight(ex, kg){
-  ensurePs(ex).cur.kg = Math.max(0, progRound('weight', +kg || 0));
+  ensureProgressState(ex).current.weight = Math.max(0, progRound('weight', +kg || 0));
 }
 
 /* ---- ЗНАЧЕНИЕ может быть числом или диапазоном «12-15» ---- */
@@ -1497,9 +1107,7 @@ function scaleValue(v, k){
 }
 // нормализация значения для хранения
 export function normValue(v, type){
-  const r = parseValue(v);
-  if(type === 'time') return String(r.min); // время — всегда одно число
-  return r.min === r.max ? String(r.min) : (r.min + '-' + r.max);
+  return FitExerciseV2.normValue(v, type);
 }
 
 export let planIdx = 0;
@@ -1691,7 +1299,7 @@ function syncVolHint(){
   // берётся, по экрану понять было нельзя, а человеку это слово ничего не даёт.
   // Говорим то же самое числами: сколько всего подходов выйдет за тренировку.
   if(!main.length){ el.textContent = ''; return; }
-  const sets = main.map(e => Math.max(1, parseInt(e.sets) || 1));
+  const sets = main.map(e => Math.max(1, parseInt(exP(e).sets) || 1));
   const total = sets.reduce((a, b) => a + b, 0) * R;
   const exText = storeCountText(main.length,'exercise');
   const roundsText = R > 1 ? ' × ' + storeCountText(R,'round') : '';
@@ -1730,7 +1338,9 @@ function renderDays(){
   });
 }
 
-/* ================= РЕДАКТОР ОДНОГО УПРАЖНЕНИЯ ================= */
+/* ================= РЕДАКТОР ОДНОГО УПРАЖНЕНИЯ =================
+   Черновик — копия V2-слота; форма правит prescription АКТИВНОГО этапа (exP(exDraft)).
+   Цепочка этапов движения появится в редакторе отдельно (PR 3 плана). */
 export let exIdx = -1;      // индекс редактируемого упражнения в текущем варианте
 export let exDraft = null;  // копия для правки
 export let exIsNew = false; // упражнение только что заведено и в списке его держит сам редактор
@@ -1753,40 +1363,19 @@ export function openExercise(i, isNew){
   exIdx = i;
   exIsNew = !!isNew;
   exDraft = JSON.parse(JSON.stringify(list[i]));
-  // «материализуем» новую модель один раз при открытии: считаем progOn/trackWeight из того,
-  // что фактически было (через старый совместимый путь), и с этого момента редактор работает
-  // только с явными полями — без этого клики по табам/тумблеру ничего не меняли (progOn
-  // оставался null, и hasWeight()/progAxis() продолжали читать по старому пути в обход правки)
-  if(exDraft.progOn == null){
-    exDraft.progOn = progAxis(exDraft) !== 'none';
-    exDraft.trackWeight = hasWeight(exDraft);
-  }
-  // Старый технический progEvery=0 больше не показываем как второй способ
-  // выключить прогрессию: в редакторе это обычный OFF тумблера.
-  if(exDraft.progEvery === 0){
-    exDraft.progOn = false;
-    exDraft.progEvery = null;
-  }
-  if(exDraft.loadType == null) exDraft.loadType = progressionLoadType(exDraft);
-  if(exDraft.progMode == null && exDraft.progOn) exDraft.progMode = editorProgressionMode(exDraft);
-  // старые упражнения (и только что заведённые) не знают «отдых после упражнения»
-  // отдельно от «между подходами» — на первое открытие подставляем то же число,
-  // что и в rest, тем же приёмом, что и progOn/trackWeight выше. С этого момента
-  // оно явное: сохранится тем же числом, даже если человек его не тронет.
-  if(exDraft.restAfter == null) exDraft.restAfter = exDraft.rest;
+  // «отдых после упражнения» на первое открытие равен отдыху между подходами:
+  // с этого момента он явный и сохранится тем же числом, даже если его не трогать
+  const p = exP(exDraft);
+  if(p.restAfter == null) p.restAfter = p.rest;
   fillExercise();
   eventBuilderHooks.buildExMenu();
   // Пока упражнение только ЗАВОДЯТ, дублировать и удалять нечего: в списке оно
-  // держится самим редактором и уйдёт само, если уйти без сохранения. Меню с
-  // двумя действиями над пустой строкой только путало.
+  // держится самим редактором и уйдёт само, если уйти без сохранения.
   setShown('exMoreWrap', !exIsNew);
   document.querySelectorAll('#exModeTabs .tab').forEach(x => x.classList.toggle('act', x.dataset.m === 'manual'));
-  // Снимок для сравнения снимаем С ФОРМЫ, тем же путём, каким потом сравниваем
-  // (applyFormTo), и уже ПОСЛЕ материализации progOn/trackWeight. Раньше снимок
-  // брали прямо с черновика — и он не совпадал с формой по типам: в черновике
-  // «значение» лежит числом (10), из поля читается строкой ("10"). Строки JSON
-  // расходились всегда, поэтому «назад» с упражнения, которого даже не коснулись,
-  // каждый раз спрашивало про несохранённые изменения.
+  // Снимок для сравнения снимаем С ФОРМЫ тем же путём, каким потом сравниваем
+  // (applyFormTo): иначе типы черновика и формы расходились и «назад» с нетронутого
+  // упражнения спрашивало про несохранённые изменения.
   exOrig = JSON.stringify(applyFormTo(JSON.parse(JSON.stringify(exDraft))));
   show('scrExercise');
   window.scrollTo(0, 0);
@@ -1794,38 +1383,80 @@ export function openExercise(i, isNew){
 
 function fillExercise(){
   const ex = exDraft;
+  const p = exP(ex);
   // «тронутые» поля шага и потолка помечаются, чтобы renderProgControls не затирал ввод.
-  // При открытии ДРУГОГО упражнения метка должна сбрасываться, иначе в полях остаются
-  // цифры предыдущего — и уходят в него при сохранении
+  // При открытии ДРУГОГО упражнения метка сбрасывается, иначе цифры предыдущего уйдут в него.
   ['exStepReps','exStepWeight','exStepTime','exMaxReps','exMaxWeight','exMaxTime'].forEach(id => delete $(id).dataset.touched);
   if($('exLoadLevels')) delete $('exLoadLevels').dataset.initialValue;
-  $('exName').value = ex.name || '';
-  $('exValue').value = valueText(ex.value).replace('–', '-');
-  $('exSets').value = ex.sets || 1;
-  $('exDesc').value = ex.desc || '';
-  $('exMistakes').value = ex.mistakes || '';
-  $('exVideo').value = ex.video || '';
-  $('exWeight').value = ex.weight ? fmtKg(ex.weight) : '';
+  $('exName').value = p.name || '';
+  $('exValue').value = valueText(p.value).replace('–', '-');
+  $('exSets').value = p.sets || 1;
+  $('exDesc').value = p.desc || '';
+  $('exMistakes').value = p.mistakes || '';
+  $('exVideo').value = p.video || '';
+  $('exWeight').value = p.load.weight ? fmtKg(p.load.weight) : '';
   fillExerciseProgEveryOptions();
   fillExerciseProgModeOptions();
-  $('exProgEvery').value = ex.progEvery == null ? '' : String(ex.progEvery);
+  $('exProgEvery').value = p.progression.every == null ? '' : String(p.progression.every);
+  renderExerciseEquipment();
   renderExerciseLevelControls();
   renderProgControls();
   $('exWarm').classList.toggle('on', !!ex.warmup);
-  $('exSide').classList.toggle('on', !!ex.perSide);
+  $('exSide').classList.toggle('on', !!p.perSide);
   syncExType();
   syncExWarm();
   renderExMuscles();
   renderExRestChips();
   renderExMedia();
   syncExDetailsSum();
-  // обе раскрывашки по умолчанию свёрнуты: при открытии упражнения видно только то,
-  // без чего упражнения не существует
+  // обе раскрывашки по умолчанию свёрнуты: видно только то, без чего упражнения нет
   setShown('exDetailsBox', false);
   $('exDetailsToggle').classList.remove('open');
   setShown('exProgBox', false);
   $('exProgToggle').classList.remove('open');
   setShown('exLevelScaleBox', false);
+}
+
+// Название снаряда для людей: «Другое» показывает своё имя
+export function equipmentLabel(id, customName){
+  if(id === 'custom') return String(customName || '').trim() || t('equip.custom');
+  return id ? t('equip.' + id) : '';
+}
+// Снаряд нагрузки: выбирается из того же каталога, что и в AI-форме. Список зависит
+// от типа нагрузки (гантель не бывает сопротивлением, резинка — весом).
+export function renderExerciseEquipment(){
+  if(!exDraft) return;
+  const load = exP(exDraft).load;
+  const active = load.type !== 'none';
+  setShown('exEquipRow', active);
+  if(!active) return;
+  const sel = $('exEquip');
+  sel.innerHTML = '';
+  FitExerciseV2.EQUIPMENT
+    .filter(e => e.roles.includes('load') && e.loadTypes.includes(load.type))
+    .forEach(e => {
+      const o = document.createElement('option');
+      o.value = e.id;
+      o.textContent = equipmentLabel(e.id);
+      sel.appendChild(o);
+    });
+  sel.value = load.equipment || '';
+  $('exEquipName').value = load.name || '';
+  setShown('exEquipNameField', load.equipment === 'custom');
+  $('exEquipCount').value = load.count || 1;
+  $('exWeightLabel').textContent = (load.count || 1) > 1 ? t('builder.weightPerUnit') : t('builder.weightKg');
+}
+// смена снаряда в списке: количество по умолчанию — у самого снаряда
+export function setExerciseEquipment(id){
+  if(!exDraft) return;
+  const load = exP(exDraft).load;
+  const eq = FitExerciseV2.equipment(id);
+  if(!eq) return;
+  load.equipment = eq.id;
+  load.count = eq.count;
+  if(eq.id !== 'custom') load.name = '';
+  renderExerciseEquipment();
+  syncExNowHints();
 }
 
 // «Как считать» и «Нагрузка» независимы: время/повторы сочетаются с весом,
@@ -1835,9 +1466,10 @@ export function renderExerciseLevelControls(){
   const active = progressionLoadType(exDraft) === 'level';
   setShown('exLevelRow', active);
   if(!active) return;
+  const load = exP(exDraft).load;
   const levels = exerciseLoadLevels(exDraft);
-  const baseLevel = Math.max(0, Math.min(levels.length - 1, Math.round(+exDraft.loadLevel || 0)));
-  exDraft.loadLevel = baseLevel;
+  const baseLevel = Math.max(0, Math.min(levels.length - 1, Math.round(+load.level || 0)));
+  load.level = baseLevel;
   const sel = $('exLoadLevel');
   sel.innerHTML = '';
   levels.forEach((level, index)=>{
@@ -1856,8 +1488,9 @@ export function renderExerciseLevelControls(){
 }
 
 export function syncExType(){
-  const reps = exDraft.type !== 'time';
-  const loadType = progressionLoadType(exDraft);
+  const p = exP(exDraft);
+  const reps = p.type !== 'time';
+  const loadType = p.load.type;
   const withWeight = loadType === 'weight';
   const withLevel = loadType === 'level';
   $('exTypeReps').classList.toggle('act', reps);
@@ -1874,6 +1507,7 @@ export function syncExType(){
       : withLevel ? 'builder.loadHintLevel' : 'builder.loadHintNone');
   }
   setShown('exWeightRow', withWeight);
+  renderExerciseEquipment();
   renderExerciseLevelControls();
   renderProgControls();
 }
@@ -1882,11 +1516,12 @@ export function syncExWarm(){
 }
 function renderExMuscles(){
   const box = $('exMuscles'); box.innerHTML = '';
-  if(!Array.isArray(exDraft.muscles)) exDraft.muscles = [];
+  const p = exP(exDraft);
+  if(!Array.isArray(p.muscles)) p.muscles = [];
   MUSCLES.forEach(([id, label])=>{
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'day-chip'; b.textContent = label;
-    b.classList.toggle('act', exDraft.muscles.includes(id));
+    b.classList.toggle('act', p.muscles.includes(id));
     b.dataset.act = 'toggleExerciseMuscle';
     b.dataset.muscleId = id;
     box.appendChild(b);
@@ -1898,53 +1533,12 @@ export function parseKg(v){
   return isFinite(n) && n > 0 ? Math.round(n * 2) / 2 : 0;
 }
 
-
-function progressionHasTerminalCeiling(ex){
-  if(!ex || progAxis(ex) === 'none') return false;
-  const strategy = getProgressionStrategy(ex, draft || null);
-  const mode = strategy.mode;
-  if(!mode) return false;
-
-  const base = parseValue(ex.value);
-  const repsBounded = strategy.reps.max != null && strategy.reps.max >= base.max;
-  const timeBounded = strategy.time.max != null && strategy.time.max >= base.min;
-  const baseKg = +ex.weight || 0;
-  const weightBounded = baseKg > 0 && strategy.weight.max != null && strategy.weight.max >= baseKg;
-
-  if(mode === 'reps') return repsBounded;
-  if(mode === 'time') return timeBounded;
-  if(mode === 'weight') return weightBounded;
-  if(mode === 'double_range') return repsBounded && weightBounded;
-  if(mode === 'parallel'){
-    return (ex.type === 'time' ? timeBounded : repsBounded) && weightBounded;
-  }
-  if(mode === 'level'){
-    const hasScaleEnd = exerciseLoadLevels(ex).length >= 2;
-    if(!hasScaleEnd) return false;
-    if(ex.type !== 'time' && strategy.reps.step > 0) return repsBounded;
-    return true; // direct level progression ends at the last physical resistance step
-  }
-  return false;
-}
-
-export function syncExSwapAvailability(){
-  if(!exDraft) return;
-  let probe = exDraft;
-  try{ probe = applyFormTo(JSON.parse(JSON.stringify(exDraft))); }catch(_){}
-  const available = progressionHasTerminalCeiling(probe);
-  setShown('exSwapRow', available);
-  $('exSwapOn').classList.toggle('on', !!exDraft.swapOn);
-  setShown('exSwapBox', available && !!exDraft.swapOn);
-}
-
 // подпись шага и плейсхолдер зависят от текущего формата — одно и то же поле,
-// разный смысл: прибавка кг / повторений / секунд
-// тумблер «усложнять со временем» + поля шага. Для «повторения и вес» полей ДВА сразу —
-// вес и повторы растут независимо друг от друга (0 в одном из них = эта ось не растёт,
-// решает либо сам человек, либо ИИ по промту). Для простых форматов — одно поле.
+// разный смысл: прибавка кг / повторений / секунд. Тумблер «усложнять со временем»
+// + поля шага и потолка только для осей выбранного способа.
 export function renderProgControls(){
   const hideControls = ()=>{
-    ['exProgModeRow','exProgEveryRow','exStepRow','exStepBothHint','exCeilingHint','exSwapRow','exSwapBox']
+    ['exProgModeRow','exProgEveryRow','exStepRow','exStepBothHint','exCeilingHint']
       .forEach(id => setShown(id, false));
   };
 
@@ -1979,13 +1573,7 @@ export function renderProgControls(){
 
   const mode = editorProgressionMode(exDraft);
   if($('exProgModeHint')) $('exProgModeHint').textContent = t(progressionModeHintKey(exDraft, mode));
-  const isTime = exDraft.type === 'time';
-  const withWeight = progressionLoadType(exDraft) === 'weight';
-  const growReps = mode === 'reps' || mode === 'double_range' ||
-    (mode === 'parallel' && !isTime) ||
-    (mode === 'level' && !isTime && exDraft.repsStep > 0);
-  const growTime = mode === 'time' || (mode === 'parallel' && isTime);
-  const growWeight = withWeight && (mode === 'weight' || mode === 'double_range' || mode === 'parallel');
+  const {growReps, growTime, growWeight} = growingInForm(exDraft, mode);
 
   setShown('exStepRow', growReps || growTime || growWeight);
   setShown('exStepRepsRow', growReps);
@@ -1994,57 +1582,58 @@ export function renderProgControls(){
   setShown('exStepMaxWeightRow', growWeight);
   setShown('exStepTimeRow', growTime);
   setShown('exStepMaxTimeRow', growTime);
-  // dualProg остаётся compatibility-полем данных, но отдельного UI для него больше нет:
-  // пользователь выбирает тот же смысл через «Как усложнять → Повторы → вес».
   setShown('exStepBothHint', growReps);
   const ceilingHint = $('exCeilingHint');
   setShown(ceilingHint, growReps || growTime || growWeight);
   if(ceilingHint) ceilingHint.textContent = t(progressionCeilingHintKey(exDraft, mode));
 
-  $('exSwapName').value = exDraft.swapName || '';
-  $('exSwapDesc').value = exDraft.swapDesc || '';
-
+  const pr = exP(exDraft).progression;
   const set = (id, val) => { if(!$(id).dataset.touched) $(id).value = val; };
   if(growReps){
-    set('exStepReps', exDraft.repsStep != null ? exDraft.repsStep : 1);
-    set('exMaxReps', exDraft.repsMax > 0 ? exDraft.repsMax : '');
+    set('exStepReps', pr.reps.step > 0 ? pr.reps.step : 1);
+    set('exMaxReps', pr.reps.max > 0 ? pr.reps.max : '');
   }
   if(growWeight){
-    set('exStepWeight', fmtKg(exDraft.wStep != null ? exDraft.wStep : 2));
-    set('exMaxWeight', exDraft.weightMax > 0 ? fmtKg(exDraft.weightMax) : '');
+    set('exStepWeight', fmtKg(pr.weight.step > 0 ? pr.weight.step : 2));
+    set('exMaxWeight', pr.weight.max > 0 ? fmtKg(pr.weight.max) : '');
   }
   if(growTime){
-    set('exStepTime', exDraft.timeStep != null ? exDraft.timeStep : 5);
-    set('exMaxTime', exDraft.timeMax > 0 ? exDraft.timeMax : '');
+    set('exStepTime', pr.time.step > 0 ? pr.time.step : 5);
+    set('exMaxTime', pr.time.max > 0 ? pr.time.max : '');
   }
-  syncExSwapAvailability();
   syncExProgSum(); syncExNowHints();
 }
+// какие оси показывает форма при выбранном способе
+function growingInForm(ex, mode){
+  const isTime = exP(ex).type === 'time';
+  return {
+    growReps: mode === 'reps' || mode === 'double_range' || (mode === 'parallel' && !isTime) ||
+      (mode === 'level' && levelWithReps(ex)),
+    growTime: mode === 'time' || (mode === 'parallel' && isTime),
+    growWeight: hasWeight(ex) && (mode === 'weight' || mode === 'double_range' || mode === 'parallel')
+  };
+}
 
-// В полях редактора лежит БАЗА упражнения — то, с чего всё начиналось. Сколько
-// человек поднимает и делает СЕЙЧАС, считается само: база + пройденные повышения
-// программы + ручная правка с тренировки. Без этой строки правка выглядела сломанной:
-// в списке 18 кг, в поле 12, и непонятно, какое из двух чисел ты меняешь.
-// Считаем по ФОРМЕ (applyFormTo), а не по черновику: вписанная только что прибавка
-// должна отражаться в подсказке сразу, а не после сохранения.
+// В полях редактора лежит БАЗА этапа — то, с чего всё начиналось. Сколько человек
+// поднимает и делает СЕЙЧАС, считается само: база + подтверждённые повышения +
+// ручная правка с тренировки. Считаем по ФОРМЕ (applyFormTo), а не по черновику:
+// вписанная только что прибавка должна отражаться в подсказке сразу.
 export function syncExNowHints(){
   const el = $('exNowHint');
   const p = (typeof draft !== 'undefined' && draft && draft.id) ? draft : null;
   if(!exDraft || !p || exDraft.warmup){ setShown(el, false); return; }
   let probe;
   try{ probe = applyFormTo(JSON.parse(JSON.stringify(exDraft))); }catch(_){ setShown(el, false); return; }
-  // Только итог — без разбора «откуда цифра»: пример решения тут не нужен,
-  // важно само значение. Диапазон считает progressedRepsRange (растит min и max порознь,
-  // режет по потолку), при двойной прогрессии min===max — уже готовое число.
+  const pp = exP(probe);
   const parts = [];
   let loadChanged = false;
   if(hasWeight(probe)){
     const base = progBaseValue(probe, 'weight'), now = getExWeight(p.id, probe, p);
     loadChanged = now > 0 && Math.abs(now - base) > 0.01;
-    if(loadChanged) parts.push(`${fmtKg(now)} ${t('progress.kg')}`);
+    if(loadChanged) parts.push(exerciseWeightText(probe, now));
   }else if(progressionLoadType(probe) === 'level'){
     const levels = exerciseLoadLevels(probe);
-    const baseLevel = Math.max(0, Math.min(Math.max(0, levels.length - 1), Math.round(+probe.loadLevel || 0)));
+    const baseLevel = Math.max(0, Math.min(Math.max(0, levels.length - 1), Math.round(+pp.load.level || 0)));
     const nowLevel = exerciseLoadLevel(probe);
     loadChanged = nowLevel !== baseLevel;
     if(loadChanged && levels[nowLevel]){
@@ -2052,13 +1641,12 @@ export function syncExNowHints(){
     }
   }
   // Если меняется внешняя нагрузка, показываем рядом и «сколько делать», даже когда
-  // сама метрика не выросла: иначе «Сейчас: Сильное сопротивление» не отвечает,
-  // сколько повторов/секунд осталось в назначении.
-  if(probe.type === 'time'){
-    const base = parseValue(probe.value).min, now = getExProgValue(p.id, probe, p, 'time');
+  // сама метрика не выросла.
+  if(pp.type === 'time'){
+    const base = parseValue(pp.value).min, now = getExProgValue(p.id, probe, p, 'time');
     if(now !== base || loadChanged) parts.push(`${now} ${t('store.secShort')}`);
   } else {
-    const base = valueText(probe.value), now = progressedRepsRange(p.id, probe, p).replace('-', '–');
+    const base = valueText(pp.value), now = progressedRepsRange(p.id, probe, p).replace('-', '–');
     if(now !== base || loadChanged) parts.push(`${now} ${t('store.repShort')}`);
   }
   if(!parts.length){ setShown(el, false); return; }
@@ -2068,10 +1656,14 @@ export function syncExNowHints(){
   el.textContent = sentence + '. ' + t('builder.startValuesHint');
   setShown(el, true);
 }
+// «2 × 10 кг» или «10 кг»: вес всегда на одну единицу, количество показываем явно
+export function exerciseWeightText(ex, kg){
+  const count = Math.max(1, Math.round(+exP(ex).load.count || 1));
+  const w = `${fmtKg(kg)} ${t('progress.kg')}`;
+  return count > 1 ? `${count} × ${w}` : w;
+}
 
-// Сводка в заголовке свёрнутого блока: человек должен понимать, что внутри, не
-// открывая его. Читаем поля формы, а не exDraft: вписанное только что число ещё
-// не перенесено в черновик (перенос делает applyFormTo при сохранении).
+// Сводка в заголовке свёрнутого блока: человек должен понимать, что внутри, не открывая его.
 export function syncExProgSum(){
   if(exDraft.warmup){ $('exProgSum').textContent = t('builder.warmupNoGrowth'); return; }
   if(progAxis(exDraft) === 'none'){ $('exProgSum').textContent = t('builder.noGrowth'); return; }
@@ -2080,7 +1672,7 @@ export function syncExProgSum(){
   const modeText = progressionModeLabel(exDraft, mode);
   const rawEvery = $('exProgEvery') ? $('exProgEvery').value : '';
   const effectiveEvery = rawEvery === ''
-    ? exerciseProgEvery({...exDraft, progEvery:null}, draft)
+    ? programProgEvery(draft && draft.progression)
     : Math.max(0, +rawEvery || 0);
 
   let frequencyText;
@@ -2094,16 +1686,13 @@ export function syncExProgSum(){
   $('exProgSum').textContent = modeText + ' · ' + frequencyText;
 }
 
-// Одно значение — один видимый контрол. Раньше рядом с чипами стояло числовое
-// поле, нужное только тем, кому не подходит ни один чип, — и висело в разметке
-// всегда. Теперь свой отдых вводится в попапе #restModal, а в самом экране
-// остаются только чипы. Два независимых ряда — «между подходами» и «после
-// упражнения» — используют одни и те же чипы и один и тот же попап; какой ряд
-// сейчас редактируют, помнит restModalKey.
+// Одно значение — один видимый контрол: свой отдых вводится в попапе #restModal,
+// в самом экране — только чипы. Два независимых ряда — «между подходами» и «после
+// упражнения»; какой ряд сейчас редактируют, помнит restModalKey.
 const REST_CHIPS = [0, 15, 30, 45, 60];
 const restCustom = {rest: false, restAfter: false};
 function renderRestChipsInto(boxId, key){
-  const cur = parseInt(exDraft[key]) || 0;
+  const cur = parseInt(exP(exDraft)[key]) || 0;
   if(!REST_CHIPS.includes(cur)) restCustom[key] = true;
   const box = $(boxId); box.innerHTML = '';
   REST_CHIPS.forEach(v=>{
@@ -2134,7 +1723,7 @@ let restModalKey = null, restModalBoxId = null;
 function openRestModal(key, boxId){
   restModalKey = key; restModalBoxId = boxId;
   $('restModalTitle').textContent = key === 'rest' ? t('builder.customRestSets') : t('builder.customRestAfter');
-  $('restModalInput').value = parseInt(exDraft[key]) || '';
+  $('restModalInput').value = parseInt(exP(exDraft)[key]) || '';
   $('restModal').classList.add('open');
   $('restModalInput').focus();
 }
@@ -2145,75 +1734,71 @@ export function renderExMedia(){
   else box.innerHTML = `<span class="mp-empty">${workoutBuilderHooks.esc(t('builder.noImage'))}</span>`;
 }
 export function syncExDetailsSum(){
+  const p = exP(exDraft);
   const bits = [];
-  if((exDraft.desc || '').trim()) bits.push(t('builder.detailDescription'));
-  if((exDraft.mistakes || '').trim()) bits.push(t('builder.detailMistakes'));
-  if((exDraft.muscles || []).length) bits.push(t('builder.detailMuscles'));
+  if((p.desc || '').trim()) bits.push(t('builder.detailDescription'));
+  if((p.mistakes || '').trim()) bits.push(t('builder.detailMistakes'));
+  if((p.muscles || []).length) bits.push(t('builder.detailMuscles'));
   if(exDraft.media) bits.push(t('builder.detailImage'));
-  if((exDraft.video || '').trim()) bits.push(t('builder.detailVideo'));
+  if((p.video || '').trim()) bits.push(t('builder.detailVideo'));
   $('exDetailsSum').textContent = bits.length ? bits.join(', ') : t('builder.notFilled');
 }
 
-// переносит текущее состояние формы в объект упражнения (черновик или его снимок) —
-// общая логика для exDirty (сравнение) и commitExercise (сохранение), чтобы не дублировать
+// переносит текущее состояние формы в слот (черновик или его снимок) —
+// общая логика для exDirty (сравнение) и commitExercise (сохранение)
 function applyFormTo(target){
-  target.name = $('exName').value.trim();
-  target.value = normValue($('exValue').value, target.type);
-  target.sets = target.warmup ? 1 : Math.max(1, Math.min(10, parseInt($('exSets').value) || 1));
-  // rest/restAfter не читаем из формы — чипы и попап #restModal пишут прямо в
-  // exDraft при клике, а target уже клон exDraft на момент вызова
-  target.desc = $('exDesc').value.trim();
-  target.mistakes = $('exMistakes').value.trim();
-  target.video = $('exVideo').value.trim();
-  target.weight = parseKg($('exWeight').value);
-  target.loadType = progressionLoadType(target);
-  target.trackWeight = target.loadType === 'weight';
-  if(target.loadType === 'level'){
-    target.loadLevels = cleanLoadLevels(target.loadLevels, true);
-    const selectedLevel = $('exLoadLevel') ? Math.round(+$('exLoadLevel').value || 0) : (+target.loadLevel || 0);
-    target.loadLevel = Math.max(0, Math.min(target.loadLevels.length - 1, selectedLevel));
+  const p = exP(target);
+  p.name = $('exName').value.trim();
+  p.value = normValue($('exValue').value, p.type);
+  p.sets = target.warmup ? 1 : Math.max(1, Math.min(10, parseInt($('exSets').value) || 1));
+  // rest/restAfter/perSide/мышцы пишут сами чипы и тумблеры прямо в черновик
+  p.desc = $('exDesc').value.trim();
+  p.mistakes = $('exMistakes').value.trim();
+  p.video = $('exVideo').value.trim();
+  const load = p.load;
+  if(load.type === 'none'){
+    load.equipment = null; load.name = ''; load.count = 1; load.weight = 0;
+  } else {
+    if($('exEquip') && $('exEquip').value) load.equipment = $('exEquip').value;
+    load.name = load.equipment === 'custom' ? $('exEquipName').value.trim().slice(0, 40) : '';
+    load.count = Math.max(1, Math.min(20, parseInt($('exEquipCount').value) || 1));
   }
-  if(target.progOn){
-    target.progMode = editorProgressionMode(target);
-    target.dualProg = target.progMode === 'double_range';
+  load.weight = load.type === 'weight' ? parseKg($('exWeight').value) : 0;
+  if(load.type === 'level'){
+    load.levels = cleanLoadLevels(load.levels, true);
+    const selectedLevel = $('exLoadLevel') ? Math.round(+$('exLoadLevel').value || 0) : (+load.level || 0);
+    load.level = Math.max(0, Math.min(load.levels.length - 1, selectedLevel));
   }
+  const pr = p.progression;
   const rawProgEvery = $('exProgEvery') ? $('exProgEvery').value : '';
-  target.progEvery = rawProgEvery === '' ? null : Math.max(0, Math.min(PROG_EVERY_MAX, Math.round(+rawProgEvery || 0)));
-  // Читаем только оси выбранной стратегии. Скрытая ось получает шаг 0,
-  // но её максимум оставляем — при переключении режима туда-обратно настройка не теряется.
-  if(target.progOn){
+  pr.every = rawProgEvery === '' ? null : Math.max(1, Math.min(PROG_EVERY_MAX, Math.round(+rawProgEvery || 1)));
+  // Читаем только оси выбранного способа: скрытая ось не растёт, её потолок
+  // сохраняем — при переключении способа туда-обратно настройка не теряется.
+  if(pr.mode !== 'none' && !target.warmup){
     const num = (id, def, round) => {
       const n = parseStepNum($(id).value);
       return n != null ? round(n) : def;
     };
     const mode = editorProgressionMode(target);
-    target.progMode = mode;
-    target.dualProg = mode === 'double_range';
-    const isTime = target.type === 'time';
-    const growReps = mode === 'reps' || mode === 'double_range' ||
-      (mode === 'parallel' && !isTime) ||
-      (mode === 'level' && !isTime && target.repsStep > 0);
-    const growTime = mode === 'time' || (mode === 'parallel' && isTime);
-    const growWeight = hasWeight(target) && (mode === 'weight' || mode === 'double_range' || mode === 'parallel');
-
-    if(!isTime){
-      target.repsStep = growReps ? num('exStepReps', 1, Math.round) : 0;
-      if(growReps) target.repsMax = num('exMaxReps', 0, Math.round);
+    pr.mode = mode;
+    const {growReps, growTime, growWeight} = growingInForm(target, mode);
+    const positive = v => v > 0 ? v : null;
+    if(p.type !== 'time'){
+      pr.reps.step = growReps ? positive(num('exStepReps', 1, Math.round)) : null;
+      if(growReps) pr.reps.max = positive(num('exMaxReps', 0, Math.round));
     }
     if(hasWeight(target)){
-      target.wStep = growWeight ? num('exStepWeight', 2, v => Math.round(v * 2) / 2) : 0;
-      if(growWeight) target.weightMax = num('exMaxWeight', 0, v => Math.round(v * 2) / 2);
+      pr.weight.step = growWeight ? positive(num('exStepWeight', 2, v => Math.round(v * 2) / 2)) : null;
+      if(growWeight) pr.weight.max = positive(num('exMaxWeight', 0, v => Math.round(v * 2) / 2));
     }
-    if(isTime){
-      target.timeStep = growTime ? num('exStepTime', 5, Math.round) : 0;
-      if(growTime) target.timeMax = num('exMaxTime', 0, Math.round);
+    if(p.type === 'time'){
+      pr.time.step = growTime ? positive(num('exStepTime', 5, Math.round)) : null;
+      if(growTime) pr.time.max = positive(num('exMaxTime', 0, Math.round));
     }
-    target.swapName = $('exSwapName').value.trim().slice(0, 60);
-    target.swapDesc = $('exSwapDesc').value.trim().slice(0, 600);
-    target.swapOn = !!(target.swapOn && target.swapName);
   }
   return target;
 }
+
 // есть ли несохранённые правки
 export function exDirty(){
   if(!exDraft || exIdx < 0) return false;
@@ -2230,6 +1815,24 @@ export function commitExercise(){
   const old = (curPlan().exercises || [])[exIdx];
   const upd = applyFormTo(exDraft);
   return old ? carryExerciseProgress(old, upd) : upd;
+}
+// Строгая проверка перед сохранением: весовая/сопротивляющая нагрузка без снаряда,
+// «Другое» без названия, вес 0 — это неполное упражнение, а не повод молча что-то угадать.
+// Возвращает человеческий текст проблем или пустую строку.
+export function exerciseDraftProblems(){
+  if(!exDraft) return '';
+  let probe;
+  try{ probe = applyFormTo(JSON.parse(JSON.stringify(exDraft))); }catch(_){ return ''; }
+  const errors = exerciseErrors(probe);
+  const out = [];
+  const add = key => { const txt = t(key); if(!out.includes(txt)) out.push(txt); };
+  errors.forEach(e => {
+    if(/name_required/.test(e) && !/custom_name/.test(e)) add('builder.problemName');
+    else if(/equipment_required|equipment_not_load|equipment_type_mismatch/.test(e)) add('builder.problemEquipment');
+    else if(/custom_name_required/.test(e)) add('builder.problemEquipmentName');
+    else if(/weight_required/.test(e)) add('builder.problemWeight');
+  });
+  return out.length ? t('builder.exerciseInvalid',{problems:out.join(', ')}) : '';
 }
 
 // Разминка выполняется один раз ДО кругов, где бы она ни лежала в списке
@@ -2296,21 +1899,22 @@ function exBits(ex){
   // сломанной. Раньше вес считался без программы (getExWeight без третьего
   // аргумента), а значит без её шагов — то есть всегда по базе.
   const p = (typeof draft !== 'undefined' && draft && draft.id) ? draft : null;
-  bits.push(ex.type === 'time'
-    ? `${p ? getExProgValue(p.id, ex, p, 'time') : parseValue(ex.value).min} ${t('store.secShort')}`
-    : `${(p ? progressedRepsRange(p.id, ex, p) : valueText(ex.value)).replace('-', '–')} ${t('store.repShort')}`);
-  const sets = Math.max(1, parseInt(ex.sets) || 1);
+  const pr = exP(ex);
+  bits.push(pr.type === 'time'
+    ? `${p ? getExProgValue(p.id, ex, p, 'time') : parseValue(pr.value).min} ${t('store.secShort')}`
+    : `${(p ? progressedRepsRange(p.id, ex, p) : valueText(pr.value)).replace('-', '–')} ${t('store.repShort')}`);
+  const sets = Math.max(1, parseInt(pr.sets) || 1);
   if(sets > 1) bits.push(storeCountText(sets,'set'));
   if(hasWeight(ex)){
-    const w = p ? getExWeight(p.id, ex, p) : (+ex.weight || 0);
-    if(w) bits.push(`${fmtKg(w)} ${t('progress.kg')}`);
+    const w = p ? getExWeight(p.id, ex, p) : (+pr.load.weight || 0);
+    if(w) bits.push(exerciseWeightText(ex, w));
   }
   if(progressionLoadType(ex) === 'level'){
     const level = exerciseLoadLevelState(ex);
     if(level && level.label) bits.push(level.label);
   }
-  if(ex.perSide) bits.push(t('store.perSide'));
-  if(+ex.rest > 0) bits.push(`${t('workout.rest')} ${ex.rest} ${t('store.secShort')}`);
+  if(pr.perSide) bits.push(t('store.perSide'));
+  if(+pr.rest > 0) bits.push(`${t('workout.rest')} ${pr.rest} ${t('store.secShort')}`);
   return bits;
 }
 export function exSummary(ex){ return exBits(ex).join(' · '); }
@@ -2344,7 +1948,7 @@ export async function delExerciseAt(i){
   const list = curPlan().exercises;
   const ex = list[i];
   if(!ex) return;
-  const nameTxt = (ex.name || '').trim() || t('exercise.this');
+  const nameTxt = (exP(ex).name || '').trim() || t('exercise.this');
   if(!(await appDialog(t('exercise.deleteQuestion',{name:nameTxt}), {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
   list.splice(i, 1);
   renderExList();
@@ -2362,7 +1966,7 @@ function exRow(ex, i){
   const info = document.createElement('div');
   info.className = 'ex-info';
   const name = document.createElement('b');
-  name.textContent = (ex.name || '').trim() || t('store.untitled');
+  name.textContent = (exP(ex).name || '').trim() || t('store.untitled');
   const meta = document.createElement('div');
   meta.className = 'ex-meta';
   const tag = (txt, cls) => {
@@ -2480,341 +2084,14 @@ const DAY_ALIASES = {
   'вс':'Вс','воскресенье':'Вс'
 };
 
-/* Все ключи, которые понимает парсер. Берём их ИЗ САМОГО ПАРСЕРА, а не списком
-   рядом: список пришлось бы помнить, а расходятся такие пары тихо — новый ключ
-   заработал бы в разборе и не заработал бы в починке ниже. Сборка (esbuild) не
-   минифицирует код и сохраняет UTF-8 (charset: 'utf8' в scripts/build-esm.mjs), так что
-   ключи в исходнике остаются как написаны и читать их оттуда безопасно. */
-let PARSE_KEYS = null;
-function parseKeys(){
-  if(PARSE_KEYS) return PARSE_KEYS;
-  const out = [];
-  const src = String(parseProgramText);
-  // Кавычки любые: сборщик может переписать 'КЛЮЧ' в "КЛЮЧ".
-  const re = /case\s*['"]([А-ЯЁ][А-ЯЁ\s]*)['"]/g;
-  let m;
-  while((m = re.exec(src))) out.push(m[1].trim());
-  // Длинные вперёд: иначе «ОТДЫХ» срабатывает раньше «ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ»
-  // и режет строку посередине ключа.
-  PARSE_KEYS = [...new Set(out)].sort((a, b) => b.length - a.length);
-  return PARSE_KEYS;
-}
-
-/* Починка текста, у которого пропали переносы строк.
-
-   Некоторые чаты с ИИ отдают ответ так, что при копировании переносы теряются, и
-   вся программа приезжает одной строкой: «ПРОГРАММА: Сила дома ДНИ: Пн КРУГИ: 3…».
-   Разбор на этом ломался молча и целиком: первая строка съедала всё, программа
-   получалась из одного названия без единого упражнения.
-
-   Просить ИИ ставить особый символ — не выход: во-первых, его теряют ровно так же,
-   во-вторых, весь уже написанный текст (каталог, сохранённые программы, чужие
-   ссылки) этого символа не знает, и формат пришлось бы менять дважды. Чинить надо
-   то, что пришло, а не требовать другого.
-
-   Ключи известны наперёд, и ключ в середине строки — это всегда начало новой:
-   в значении «ДНИ:» с двоеточием взяться неоткуда. Ставим перенос перед каждым
-   таким ключом. Уже целый текст правило не трогает: там перед ключом и так
-   перенос. */
-function repairLines(txt){
-  const keys = parseKeys();
-  if(!keys.length) return txt;   // не вышло прочитать ключи — не трогаем текст вовсе
-  const alt = keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-  return txt
-    // ключ посреди строки: перед ним пробел, а не начало строки
-    .replace(new RegExp('([^\\n])[ \\t]+(' + alt + ')[ \\t]*:', 'g'), '$1\n$2:')
-    // хвостовые маркеры списка: «УПРАЖНЕНИЕ: Приседания -» после разреза остаётся
-    // от «- ФОРМАТ:», и дефис прилипал бы к названию
-    .replace(/[ \t]*[•*\u2013-]+[ \t]*$/gm, '');
-}
-
-export function parseProgramText(txt){
-  const p = {id:'p'+Date.now(), name:'', time:'', cover:null, stats:{completions:0}, progression:0, plans:[]};
-  let plan = null;
-  let cur = null;
-  const errors = [];
-  const ensurePlan = ()=>{
-    if(!plan){
-      plan = {id:newPlanId(), days:[], rounds:3, roundRest:120, exercises:[]};
-      p.plans.push(plan);
-    }
-    return plan;
-  };
-  // раскладывает накопленный «сырой» ШАГ в нужное поле (вес/повторы/время) по итоговому
-  // формату упражнения — вызывается, когда упражнение точно больше не изменится
-  const finalizeExercise = ex => {
-    if(!ex) return;
-    if(ex._rawStep != null){
-      const n = ex._rawStep; // уже прошёл parseStepNum — либо валидное число (включая 0), либо сюда не попал бы
-      if(ex.type === 'time') ex.timeStep = Math.round(n);
-      else if(ex.trackWeight) ex.wStep = Math.round(n * 2) / 2;
-      else ex.repsStep = Math.round(n);
-      delete ex._rawStep;
-    }
-    // ПОТОЛОК раскладываем так же, как ШАГ: смысл числа задаёт формат упражнения,
-    // а строка ФОРМАТ могла встретиться в тексте и позже
-    if(ex._rawMax != null){
-      const n = ex._rawMax;
-      if(ex.type === 'time') ex.timeMax = Math.round(n);
-      else if(ex.trackWeight) ex.weightMax = Math.round(n * 2) / 2;
-      else ex.repsMax = Math.round(n);
-      delete ex._rawMax;
-    }
-    // «Повторения и вес»: повторения растут, только если про них сказали явно.
-    // Промт так и просит — когда растёт только вес (обычное дело), в ответе одна
-    // строка «ШАГ ВЕСА». Раньше упражнение всё равно получало шаг повторений из
-    // заготовки пустого упражнения, и тренировка прибавляла по повторению за раз
-    // вопреки ответу: «10 повторений × 8 кг» через три повышения превращалось
-    // в «13 повторений × 14 кг».
-    if(ex.trackWeight && ex.type !== 'time' && !ex._gotRepsStep) ex.repsStep = 0;
-    // Новые protocol labels превращаем в ту же semantic model, которую пишет
-    // ручной редактор. Порядок строк не важен: current label резолвим только здесь.
-    if(ex.loadType === 'level'){
-      ex.trackWeight = false;
-      ex.dualProg = false;
-      ex.wStep = 0;
-      ex.loadLevels = cleanLoadLevels(ex.loadLevels, true);
-      if(ex._rawLoadLevel != null) ex.loadLevel = protocolLoadLevelIndex(ex.loadLevels, ex._rawLoadLevel);
-      else ex.loadLevel = Math.max(0, Math.min(ex.loadLevels.length - 1, Math.round(+ex.loadLevel || 0)));
-      // Для reps+level раздельный ШАГ ПОВТОРОВ описывает цикл
-      // «повторы → сопротивление». Обычный ШАГ — только рост повторов при
-      // фиксированном сопротивлении. Для time аналогично: ШАГ = рост времени.
-      if(ex.type === 'time'){
-        ex.progMode = ex._gotGenericStep || ex._gotTimeStep ? 'time' : 'level';
-        if(ex.progMode === 'level') ex.timeStep = 0;
-      }else{
-        ex.progMode = ex._gotGenericStep ? 'reps' : 'level';
-        // Без строки ШАГ ПОВТОРОВ не придумываем скрытый рост повторов.
-        // AI-default обязан прислать её явно; отсутствие означает прямой переход resistance.
-        if(ex.progMode === 'level' && !ex._gotRepsStep) ex.repsStep = 0;
-      }
-    }else{
-      if(ex.loadType == null) ex.loadType = ex.trackWeight ? 'weight' : 'none';
-      // двойная прогрессия имеет смысл только с весом и потолком повторов —
-      // иначе неоткуда взяться моменту «повторы упёрлись, добавляем вес»
-      if(ex.dualProg && !(ex.trackWeight && ex.repsMax > 0)) ex.dualProg = false;
-      if(ex.type === 'time'){
-        if(ex.loadType === 'weight'){
-          const tGrow = ex.timeStep > 0, wGrow = ex.wStep > 0;
-          ex.progMode = tGrow && wGrow ? 'parallel' : (wGrow ? 'weight' : 'time');
-        }else ex.progMode = 'time';
-      }else if(ex.loadType === 'weight'){
-        const rGrow = ex.repsStep > 0, wGrow = ex.wStep > 0;
-        ex.progMode = ex.dualProg ? 'double_range' : (rGrow && wGrow ? 'parallel' : (wGrow ? 'weight' : 'reps'));
-      }else ex.progMode = 'reps';
-    }
-    delete ex._rawLoadLevel;
-    delete ex._gotGenericStep;
-    delete ex._gotTimeStep;
-    delete ex._gotRepsStep;
-    // замена без названия — это просто пустой флаг, он ничего не покажет
-    if(!(ex.swapName || '').trim()){ ex.swapOn = false; ex.swapName = ''; ex.swapDesc = ''; }
-    else ex.swapOn = true;
-  };
-  const parseDays = val => {
-    const list = val.split(/[,;]/).map(d => DAY_ALIASES[d.trim().toLowerCase()]).filter(Boolean);
-    return DAYS.filter(d => list.includes(d));
-  };
-  const lines = repairLines(txt.replace(/\*\*/g,'')).split(/\r?\n/);
-  for(let raw of lines){
-    const line = raw.replace(/^[\s#>*•\-–]+/,'').trim();
-    if(!line) continue;
-    const m = line.match(/^([А-ЯЁA-Zа-яёa-z\s]+?)\s*:\s*(.*)$/);
-    if(!m) continue;
-    const key = m[1].trim().toUpperCase();
-    const val = m[2].trim();
-    switch(key){
-      case 'ПРОГРАММА': case 'НАЗВАНИЕ ПРОГРАММЫ': p.name = val; break;
-      case 'ОПИСАНИЕ ПРОГРАММЫ': case 'О ПРОГРАММЕ': p.desc = val.slice(0, 1000); break;
-      case 'ВРЕМЯ': {
-        const t = val.match(/^(\d{1,2}):(\d{2})/);
-        if(t){
-          const h = +t[1], mn = +t[2];
-          if(h >= 0 && h <= 23 && mn >= 0 && mn <= 59) p.time = String(h).padStart(2,'0') + ':' + String(mn).padStart(2,'0');
-        }
-        break;
-      }
-      case 'ДЕНЬ': {
-        // новый вариант тренировки для указанных дней
-        if(p.plans.length >= 7){ plan = null; cur = null; break; }
-        plan = {id:newPlanId(), days: parseDays(val), rounds:3, roundRest:120, exercises:[]};
-        p.plans.push(plan);
-        cur = null;
-        break;
-      }
-      case 'ДНИ': ensurePlan().days = parseDays(val); break;
-      case 'КРУГИ': case 'КРУГОВ': ensurePlan().rounds = Math.max(1, Math.min(10, parseInt(val)||3)); break;
-      case 'ОТДЫХ МЕЖДУ КРУГАМИ': ensurePlan().roundRest = Math.max(0, Math.min(600, parseInt(val)||0)); break;
-      case 'ВРЕМЯ ВАРИАНТА': {
-        const t = val.match(/^(\d{1,2}):(\d{2})/);
-        if(t){
-          const h = +t[1], mn = +t[2];
-          if(h >= 0 && h <= 23 && mn >= 0 && mn <= 59) ensurePlan().time = String(h).padStart(2,'0') + ':' + String(mn).padStart(2,'0');
-        }
-        break;
-      }
-      case 'ЧЕРЕДОВАНИЕ': case 'РОТАЦИЯ':
-        p.rotate = !/нет|off|false|0/i.test(val);
-        break;
-      case 'ДНИ ТРЕНИРОВОК': case 'ДНИ НЕДЕЛИ':
-        p.days = parseDays(val); // общее расписание программы (используется при чередовании)
-        break;
-      case 'УПРАЖНЕНИЕ': {
-        finalizeExercise(cur); // предыдущее упражнение точно готово — раскладываем его ШАГ
-        ensurePlan();
-        if(plan.exercises.length >= MAX_EX){ cur = null; break; }
-        cur = blankExercise();
-        cur.name = val;
-        cur.rest = 0;
-        cur.sets = 1;
-        plan.exercises.push(cur);
-        break;
-      }
-      // техническая метка сопоставления при AI-правке (см. programToText(…,{forEdit:true}));
-      // человеку не показывается и никогда не сохраняется — см. createEditedProgram
-      case 'КОД': if(cur) cur._code = val.trim().slice(0, 20); break;
-      case 'ОПИСАНИЕ': if(cur) cur.desc = val.slice(0,600); break;
-      case 'ФОРМАТ':
-        if(cur){
-          const v = val.toLowerCase();
-          cur.type = /врем|сек|time/.test(v) ? 'time' : 'reps';
-          // «и вес» — отдельно от простого формата, у обеих осей (повторения и
-          // время): удержание с утяжелением, фермерская прогулка на время.
-          if(/вес/.test(v)){ cur.trackWeight = true; if(cur.loadType == null) cur.loadType = 'weight'; }
-        }
-        break;
-      case 'НАГРУЗКА':
-        if(cur){
-          const v = val.toLowerCase();
-          if(/сопротив|resistance|резин|band/.test(v)){ cur.loadType = 'level'; cur.trackWeight = false; }
-          else if(/вес|weight|кг|kg/.test(v)){ cur.loadType = 'weight'; cur.trackWeight = true; }
-          else if(/нет|none|без/.test(v)){ cur.loadType = 'none'; cur.trackWeight = false; }
-        }
-        break;
-      case 'СОПРОТИВЛЕНИЕ':
-        if(cur) cur._rawLoadLevel = val;
-        break;
-      case 'УРОВНИ СОПРОТИВЛЕНИЯ':
-        if(cur){
-          const levels = parseProtocolLoadLevels(val);
-          if(levels.length >= 2) cur.loadLevels = levels;
-        }
-        break;
-      case 'ЗНАЧЕНИЕ': case 'ПОВТОРЕНИЯ': case 'СЕКУНДЫ':
-        if(cur){
-          cur.value = normValue(val, cur.type);
-          // «по 10 на каждую ногу» прямо в значении
-          if(/кажд|сторон|ногу|руку|на бок/i.test(val)) cur.perSide = true;
-        }
-        break;
-      case 'ПОДХОДЫ': case 'ПОДХОДОВ': case 'СЕТЫ':
-        if(cur) cur.sets = Math.max(1, Math.min(10, parseInt(val) || 1));
-        break;
-      case 'СТОРОНА': case 'НА КАЖДУЮ СТОРОНУ':
-        if(cur) cur.perSide = !/нет|no|false|0/i.test(val);
-        break;
-      case 'РАЗМИНКА':
-        if(cur){
-          const wantWarm = !/нет|no|false|0/i.test(val);
-          // не больше MAX_WARM разминочных на вариант
-          const warmCount = plan.exercises.filter(e => e.warmup && e !== cur).length;
-          cur.warmup = wantWarm && warmCount < MAX_WARM;
-          // подходы у разминки больше не сбрасываются: она отличается от обычного
-          // упражнения только тем, что идёт в начале и один раз, до кругов
-        }
-        break;
-      case 'ОТДЫХ': if(cur) cur.rest = Math.max(0, Math.min(600, parseInt(val)||0)); break;
-      case 'ОТДЫХ ПОСЛЕ УПРАЖНЕНИЯ': if(cur) cur.restAfter = Math.max(0, Math.min(600, parseInt(val)||0)); break;
-      case 'МЫШЦЫ': {
-        if(cur){
-          const labels = val.split(/[,;]/).map(s => s.trim().toLowerCase());
-          cur.muscles = MUSCLES.filter(([id, l]) => labels.includes(l.toLowerCase())).map(([id]) => id);
-        }
-        break;
-      }
-      case 'ОШИБКИ': if(cur) cur.mistakes = val.slice(0, 300); break;
-      case 'ПРОГРЕССИЯ': {
-        // если ИИ написал это внутри упражнения и имел в виду ось усложнения — трактуем так
-        if(cur && /вес|повтор|врем|нет/i.test(val) && !/недел/i.test(val)){
-          const v = val.toLowerCase();
-          if(/вес|кг|гантел|штанг|гир/.test(v)) cur.prog = 'weight';
-          else if(/врем|секунд|удержан/.test(v)) cur.prog = 'time';
-          else if(/повтор/.test(v)) cur.prog = 'reps';
-          else if(/нет|не усложн/.test(v)) cur.prog = 'none';
-          break;
-        }
-        if(/нет|no|выкл|без/i.test(val)){ p.progression = 0; break; }
-        const num = parseInt(String(val).match(/\d+/));
-        if(isFinite(num) && num > 0){ p.progression = clampProgEvery(num); break; }
-        // прежние формулировки в неделях: переводим в тренировки из расчёта ~3 занятия в неделю
-        if(/недел/i.test(val)) p.progression = /2|две/i.test(val) ? 6 : 3;
-        else p.progression = 0;
-        break;
-      }
-      case 'ЧАСТОТА ПРОГРЕССИИ': {
-        if(!cur) break;
-        const v = String(val || '').trim().toLowerCase();
-        if(!v || /по умолчанию|inherit|program/.test(v)) cur.progEvery = null;
-        else{
-          const n = parseInt(v.match(/\d+/));
-          if(Number.isFinite(n)) cur.progEvery = Math.max(0, Math.min(PROG_EVERY_MAX, n));
-        }
-        break;
-      }
-      case 'ВИДЕО': if(cur && val) cur.video = val; break;
-      case 'УСЛОЖНЯТЬ': case 'КАК УСЛОЖНЯТЬ': {
-        // новая форма — просто да/нет, ось решает уже распарсенный ФОРМАТ этого же упражнения.
-        // старая форма (одно из четырёх слов: повторения/вес/время/нет) распознаётся тоже —
-        // на случай ручной вставки текста, собранного по прежней версии промта.
-        if(!cur) break;
-        const v = val.toLowerCase();
-        // \b (граница слова) в JS не распознаёт кириллицу — используем явный конец строки/пробел
-        if(/^да(\s|$)|^yes(\s|$)/.test(v)) cur.progOn = true;
-        else if(/нет|не усложн|^no(\s|$)/.test(v)) cur.progOn = false;
-        else if(/вес|кг|гантел|штанг|гир/.test(v)){ cur.progOn = true; cur.trackWeight = true; }
-        else if(/врем|секунд|удержан/.test(v)){ cur.progOn = true; cur.type = 'time'; }
-        else if(/повтор/.test(v)){ cur.progOn = true; cur.trackWeight = false; }
-        break;
-      }
-      case 'ВЕС': if(cur) cur.weight = parseKg(val); break;
-      // единый ключ ШАГ: что именно он значит — зависит от формата этого упражнения,
-      // распарсенного строкой раньше (ФОРМАТ идёт в спецификации перед УСЛОЖНЯТЬ и ШАГ)
-      // не резолвим сразу: ШАГ мог встретиться в тексте РАНЬШЕ строки ФОРМАТ, а его смысл
-      // (кг / повторы / секунды) зависит именно от формата. Копим «сырым» и решаем один раз
-      // при завершении упражнения — см. finalizeExercise ниже. Так порядок строк не важен.
-      case 'ШАГ': if(cur){ const n = parseStepNum(val); if(n != null){ cur._rawStep = n; cur._gotGenericStep = true; } } break;
-      // старые раздельные ключи шага — поддержаны для устойчивости к прежнему формату текста
-      case 'ШАГ ВЕСА': if(cur){ const n = parseStepNum(val); cur.wStep = n != null ? Math.round(n * 2) / 2 : 2; } break;
-      case 'ШАГ ПОВТОРОВ': if(cur){ const n = parseStepNum(val); cur.repsStep = n != null ? Math.round(n) : 1; cur._gotRepsStep = true; } break;
-      case 'ШАГ ВРЕМЕНИ': if(cur){ const n = parseStepNum(val); cur.timeStep = n != null ? Math.round(n) : 5; cur._gotTimeStep = true; } break;
-      // потолок роста: выше него прогрессия не поднимает. Единый ключ ПОТОЛОК разбирается
-      // по формату упражнения в finalizeExercise, раздельные — сразу
-      case 'ПОТОЛОК': if(cur){ const n = parseStepNum(val); if(n != null) cur._rawMax = n; } break;
-      case 'ПОТОЛОК ПОВТОРОВ': if(cur){ const n = parseStepNum(val); if(n != null) cur.repsMax = Math.round(n); } break;
-      case 'ПОТОЛОК ВЕСА': if(cur){ const n = parseStepNum(val); if(n != null) cur.weightMax = Math.round(n * 2) / 2; } break;
-      case 'ПОТОЛОК ВРЕМЕНИ': if(cur){ const n = parseStepNum(val); if(n != null) cur.timeMax = Math.round(n); } break;
-      case 'ПРИ ПОТОЛКЕ': case 'ДВОЙНАЯ ПРОГРЕССИЯ':
-        if(cur) cur.dualProg = !/нет|no|false|0/i.test(val);
-        break;
-      case 'ЗАМЕНА': if(cur) cur.swapName = val.slice(0, 60); break;
-      case 'ОПИСАНИЕ ЗАМЕНЫ': case 'ЗАМЕНА ОПИСАНИЕ': if(cur) cur.swapDesc = val.slice(0, 600); break;
-    }
-  }
-  finalizeExercise(cur); // последнее упражнение в тексте — цикл закончился, но раскладку сделать нужно
-  // выбрасываем пустые варианты
-  p.plans = p.plans.filter(pl => pl.exercises.length);
-  // Ошибки — человеческим языком, без ключей формата. Ключи («ПРОГРАММА:»,
-  // «УПРАЖНЕНИЕ:») жили в тексте ошибки нарочно, чтобы человек понял, чего не
-  // хватило; на деле они только пугали. Теперь объясняем смысл, а не синтаксис.
-  if(!p.name) errors.push(t('parser.noName'));
-  if(!p.plans.length) errors.push(t('parser.noExercises'));
-  /* Пределы полей — здесь, а не в каждом разборе отдельно. Через эту функцию
-     проходит ВСЁ, что становится программой из текста: ответ нейросети, позиция
-     каталога, обмен через programToText. Название в мегабайт приезжает ровно так
-     же, как приезжает нормальное, и обрезать его надо там, где текст становится
-     программой. */
-  sanitizeProgram(p);
-  return {program:p, errors};
+/* Старый строковый протокол «ПРОГРАММА:/УПРАЖНЕНИЕ:…» больше не превращается в
+   программу: модель упражнения теперь V2 (снаряд, количество, этапы движения), а
+   строки протокола её не описывают. Все пути, которые сохраняли такой текст как
+   программу (ИИ, вставка ответа, каталог, видео), временно отключены до AI Contract V2 —
+   docs/load-equipment-progression-plan-2026-10-08.md, PR 5. Заглушка отвечает честной
+   ошибкой, чтобы случайный вызов не записал в хранилище старую форму упражнения. */
+export function parseProgramText(_txt){
+  return {program:null, errors:[t('feature.v2Pending')]};
 }
 
 /* ================= ЗАПРОС К ИИ В ОДНО КАСАНИЕ ================= */
@@ -3102,7 +2379,9 @@ export async function saveProgram(){
     let badNames = 0;
     for(let i=0; i<pl.exercises.length; i++){
       const ex = normalizeExercise(pl.exercises[i]);
-      if(!ex.name) badNames++;
+      if(!exP(ex).name) badNames++;
+      // Неполная нагрузка (вес без снаряда и т. п.) в сохранённую программу не попадает.
+      else if((ex._errors || []).length) miss.push(t('builder.exerciseIncomplete',{name:exP(ex).name}));
     }
     if(badNames){
       miss.push(many
@@ -3173,7 +2452,7 @@ export function initBuilder(){
     copyPrompt,
     curPlan,
     getDraft: () => draft,
-    ensurePs,
+    ensureProgressState,
     exRestAfter,
     exSummary,
     fillBuilder,
@@ -3189,7 +2468,6 @@ export function initBuilder(){
     editorProgressionMode,
     importFromText,
     isDualProg,
-    migrateLegacyDualRangeExercise,
     openBuilder,
     openExercise,
     parseProgramText,
@@ -3203,6 +2481,7 @@ export function initBuilder(){
     valueText
   });
   setTrainerBuilderHooks({
+    exerciseWeightText,
     enableDrag,
     exRestAfter,
     exerciseLoadLevels,
@@ -3224,6 +2503,8 @@ export function initBuilder(){
   });
   setProgressBuilderHooks({
     newExId,
+    newStageId,
+    normalizeExercise,
     shrinkImage
   });
   setDataSyncBuilderHooks({
@@ -3241,12 +2522,13 @@ export function initBuilder(){
     progressedRepsRange
   });
   setCoreBuilderHooks({
+    exerciseWeightText,
     dropFreshEx,
     exDirty,
     exRestAfter,
     exerciseLoadLevelState,
     exerciseLoadLevels,
-    ensurePs,
+    ensureProgressState,
     loadLevelLabel,
     exerciseProgEvery,
     fmtKg,
@@ -3306,9 +2588,10 @@ export function initBuilder(){
   registerAction('toggleExerciseMuscle', btn => {
     const id = btn.dataset.muscleId;
     if(!id || !exDraft) return;
-    exDraft.muscles = exDraft.muscles.includes(id)
-      ? exDraft.muscles.filter(x => x !== id)
-      : [...exDraft.muscles, id];
+    const pr = exP(exDraft);
+    pr.muscles = pr.muscles.includes(id)
+      ? pr.muscles.filter(x => x !== id)
+      : [...pr.muscles, id];
     renderExMuscles();
     syncExDetailsSum();
   });
@@ -3318,7 +2601,7 @@ export function initBuilder(){
     const v = parseInt(btn.dataset.restValue, 10);
     if(!key || !boxId || !Number.isFinite(v) || !exDraft) return;
     restCustom[key] = false;
-    exDraft[key] = v;
+    exP(exDraft)[key] = v;
     renderRestChipsInto(boxId, key);
   });
   registerAction('openCustomRest', btn => {
@@ -3386,7 +2669,7 @@ export function initBuilder(){
   });
   registerAction('applyCustomRest', () => {
     if(!restModalKey) return;
-    exDraft[restModalKey] = Math.max(0, Math.min(600, parseInt($('restModalInput').value) || 0));
+    exP(exDraft)[restModalKey] = Math.max(0, Math.min(600, parseInt($('restModalInput').value) || 0));
     restCustom[restModalKey] = true;
     $('restModal').classList.remove('open');
     renderRestChipsInto(restModalBoxId, restModalKey);
@@ -3402,14 +2685,21 @@ export function initBuilder(){
     $('qRotate').classList.toggle('on', q.rotate);
   });
   $('exLoadLevel').onchange = ()=>{
-    exDraft.loadLevel = Math.max(0, Math.min(exerciseLoadLevels(exDraft).length - 1, Math.round(+$('exLoadLevel').value || 0)));
+    exP(exDraft).load.level = Math.max(0, Math.min(exerciseLoadLevels(exDraft).length - 1, Math.round(+$('exLoadLevel').value || 0)));
   };
   $('exLoadLevels').onchange = ()=>{ exerciseResistanceScaleOk(true); };
+  $('exEquip').onchange = ()=>{ setExerciseEquipment($('exEquip').value); };
+  $('exEquipCount').oninput = ()=>{
+    exP(exDraft).load.count = Math.max(1, Math.min(20, parseInt($('exEquipCount').value) || 1));
+    $('exWeightLabel').textContent = exP(exDraft).load.count > 1 ? t('builder.weightPerUnit') : t('builder.weightKg');
+    syncExNowHints();
+  };
+  $('exEquipName').oninput = ()=>{ exP(exDraft).load.name = $('exEquipName').value; };
   $('exProgMode').onchange = ()=>{
     const selected = $('exProgMode').value;
     if(selected === 'level_direct'){
       setExerciseProgressionMode(exDraft, 'level');
-      exDraft.repsStep = 0;
+      exP(exDraft).progression.reps.step = null;
     }else{
       setExerciseProgressionMode(exDraft, selected);
     }
@@ -3417,7 +2707,7 @@ export function initBuilder(){
     renderProgControls();
   };
   $('exProgEvery').onchange = ()=>{
-    exDraft.progEvery = $('exProgEvery').value === '' ? null : Math.max(1, Math.min(PROG_EVERY_MAX, Math.round(+$('exProgEvery').value || 1)));
+    exP(exDraft).progression.every = $('exProgEvery').value === '' ? null : Math.max(1, Math.min(PROG_EVERY_MAX, Math.round(+$('exProgEvery').value || 1)));
     renderProgControls();
   };
   $('bProgEvery').onchange = ()=>{

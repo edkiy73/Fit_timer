@@ -1,6 +1,7 @@
 import { OPT_GOAL, OPT_LEVEL } from './options.js';
 import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
 import { registerAction } from './05-actions.js';
+import FitExerciseV2 from '../../lib/fit-exercise-v2.js';
 import { $, DUMBBELL_ICON, ICONS, appAlert, appDialog, goBackTo, goTab, icon, openStart, plural,
   setCoreTrainerCatalogHooks, setShown, openStartFrom, show, syncDockTabs
 } from './00-core.js';
@@ -12,6 +13,7 @@ import { account, isPremium, refreshServerSubscription, setAccountTrainerCatalog
 import { LIM, clampText, sanitizeProgram, setProgressTrainerHooks } from './30-progress-media.js';
 
 let builderTrainerHooks = {
+  exerciseWeightText: (_ex, kg) => String(kg),
   enableDrag: () => {},
   exRestAfter: () => 0,
   exerciseLoadLevels: () => [],
@@ -42,7 +44,7 @@ export function setTrainerEventHooks(hooks = {}){
   eventTrainerHooks = {...eventTrainerHooks, ...hooks};
 }
 import { FILE_HINT, PUBLIC_APP_URL, apiFetch, apiPost, applyMedia, clProgs, clientIdx, clientSum,
-  clients, daysSince, duplicateProgram, exportProgramFileWithChoice, humanDay, lastReport,
+  clients, daysSince, duplicateProgram, exportProgramFileWithChoice, humanDay, lastReport, legacyAiUnavailable,
   lastSeen, linkFailNote, loadTrainer, normHandle, programLink, programMedia, programToText,
   renderToday, activateClientAt, resetCoachPhotoDraft, saveClients, setProgramsTrainerHooks, shareProgramWithChoice, trainer,
   trainerAccountReady, trainerOn
@@ -566,6 +568,7 @@ export function pickClientFor(p){
    Отчёт по-прежнему НАКОПИТЕЛЬНЫЙ: всё состояние целиком, поэтому неудачная
    отправка ничего не теряет. */
 
+const pr = ex => FitExerciseV2.prescriptionOf(ex);
 // Снимок присланного: с чем сравнивать правки подопечного. Снимается один раз, при
 // получении программы, и живёт в ней же — сравнивать «сейчас» не с чем иначе.
 function resistanceSnapshot(e){
@@ -573,7 +576,7 @@ function resistanceSnapshot(e){
   if(loadType !== 'level') return {lt:loadType};
   const levels = builderTrainerHooks.exerciseLoadLevels(e);
   const max = Math.max(0, levels.length - 1);
-  const level = Math.max(0, Math.min(max, Math.round(+e.loadLevel || 0)));
+  const level = Math.max(0, Math.min(max, Math.round(+pr(e).load.level || 0)));
   const scale = levels.map(item => {
     if(item && item.key) return 'k:' + item.key;
     return 'l:' + String((item && item.label) || '');
@@ -589,11 +592,12 @@ function resistanceSnapshot(e){
 
 function snapshotExercise(e, pi){
   return Object.assign({
-    id:String(e.id || ''), p:pi, w:e.warmup ? 1 : 0, n:e.name || '',
-    ty:e.type === 'time' ? 'time' : 'reps',
-    v:String(e.value == null ? '' : e.value),
-    s:+e.sets || 1,
-    kg:+e.weight || 0
+    id:String(e.id || ''), p:pi, w:e.warmup ? 1 : 0, n:pr(e).name || '',
+    ty:pr(e).type === 'time' ? 'time' : 'reps',
+    v:String(pr(e).value == null ? '' : pr(e).value),
+    s:+pr(e).sets || 1,
+    kg:+pr(e).load.weight || 0,
+    cfg:FitExerciseV2.cfgKey(pr(e).load)
   }, resistanceSnapshot(e));
 }
 
@@ -700,15 +704,15 @@ function buildReport(p){
   const ex = [];
   plans.forEach((pl, pi) => (pl.exercises || []).forEach(e => {
     if(ex.length >= 40) return;
-    const was = String(e.value == null ? '' : e.value);
-    const isTime = e.type === 'time';
+    const was = String(pr(e).value == null ? '' : pr(e).value);
+    const isTime = pr(e).type === 'time';
     const now = e.warmup
       ? was
       : (isTime
         ? String(builderTrainerHooks.getExProgValue(p.id, e, p, 'time'))
         : builderTrainerHooks.progressedRepsRange(p.id, e, p));
 
-    const kgWas = builderTrainerHooks.hasWeight(e) ? (+e.weight || 0) : 0;
+    const kgWas = builderTrainerHooks.hasWeight(e) ? (+pr(e).load.weight || 0) : 0;
     const kgNow = builderTrainerHooks.hasWeight(e) ? builderTrainerHooks.getExWeight(p.id, e, p) : 0;
 
     const loadType = builderTrainerHooks.progressionLoadType(e);
@@ -739,7 +743,7 @@ function buildReport(p){
       rl:liveResistance ? String(liveResistance.label || '') : before.rl
     });
     ex.push({
-      pl:String(pl.id || ''), w:e.warmup ? 1 : 0, n:e.name || t('common.exerciseFallback'),
+      pl:String(pl.id || ''), w:e.warmup ? 1 : 0, n:pr(e).name || t('common.exerciseFallback'),
       a:exVal(before), b:exVal(after)
     });
   }));
@@ -761,7 +765,9 @@ function buildReport(p){
         (o.ty != null && cur.ty !== o.ty)
         || (o.lt != null && cur.lt !== o.lt)
         || (o.lv != null && cur.lv !== o.lv)
-        || (o.ls != null && cur.ls !== o.ls);
+        || (o.ls != null && cur.ls !== o.ls)
+        // сменился снаряд или количество — это другая конфигурация нагрузки
+        || (o.cfg != null && cur.cfg !== o.cfg);
       if(cur.v !== o.v || cur.s !== o.s || cur.kg !== o.kg || policyChanged){
         if(diff.mod.length < 12){
           let a = exVal(o), b = exVal(cur);
@@ -1124,15 +1130,16 @@ export let siItem = null;
 // рабочий вес чужой программы — здесь нужен состав ровно такой, как в тексте.
 function siBits(ex){
   const b = [];
-  b.push(ex.type === 'time' ? `${builderTrainerHooks.parseValue(ex.value).min} ${t('store.secShort')}` : `${builderTrainerHooks.valueText(ex.value)} ${t('store.repShort')}`);
-  const sets = Math.max(1, parseInt(ex.sets) || 1);
+  const p = pr(ex);
+  b.push(p.type === 'time' ? `${builderTrainerHooks.parseValue(p.value).min} ${t('store.secShort')}` : `${builderTrainerHooks.valueText(p.value)} ${t('store.repShort')}`);
+  const sets = Math.max(1, parseInt(p.sets) || 1);
   if(sets > 1) b.push(storeCountText(sets, 'set'));
-  if(+ex.weight > 0) b.push(`${builderTrainerHooks.fmtKg(ex.weight)} ${t('progress.kg')}`);
+  if(+p.load.weight > 0) b.push(builderTrainerHooks.exerciseWeightText(ex, p.load.weight));
   if(builderTrainerHooks.progressionLoadType(ex) === 'level'){
     const state = builderTrainerHooks.exerciseLoadLevelState(ex) || {};
     if(state.label) b.push(String(state.label));
   }
-  if(ex.perSide) b.push(t('store.perSide'));
+  if(p.perSide) b.push(t('store.perSide'));
   return b;
 }
 export async function openStoreItem(id){
@@ -1238,11 +1245,11 @@ export async function openStoreItem(id){
         siBits(ex).map(t => `<span>${t}</span>`).join('') +
         (builderTrainerHooks.progShort(ex) ? `<span class="grow">${builderTrainerHooks.progShort(ex)}</span>` : '') +
         `</div></div>`;
-      row.querySelector('b').textContent = (ex.name || '').trim() || t('store.untitled');
+      row.querySelector('b').textContent = (pr(ex).name || '').trim() || t('store.untitled');
       // v2 media привязана к source plan/exercise position и stable id. Текст
       // каталога после перевода получает новые временные id, поэтому для страницы
       // храним именно исходную позицию ДО builderTrainerHooks.sortWarmFirst().
-      row.dataset.ex = (ex.name || '').trim();       // legacy catalog fallback
+      row.dataset.ex = (pr(ex).name || '').trim();       // legacy catalog fallback
       row.dataset.plan = String(pi);
       row.dataset.index = String(Math.max(0, sourceList.indexOf(ex)));
       box.appendChild(row);
@@ -1313,6 +1320,9 @@ async function addStoreItem(id){
     openStartFrom(own, storeFrom);
     return;
   }
+  // Каталог хранит программы старым текстовым протоколом; до перевода каталога на V2
+  // (PR 7 плана) установка недоступна — иначе в профиль попала бы старая форма упражнений.
+  if(legacyAiUnavailable()) return;
   // Локальная проверка — только UX. Сам текст Premium-программы всё равно
   // выдаёт только сервер после проверки аккаунта и подписки.
   if(it.pro && !isPremium()){ eventTrainerHooks.openPremium(); return; }
@@ -1478,10 +1488,11 @@ function estimateMinutes(p){
   const plans = normPlans(p);
   const pl = plans[0] || {exercises: []};
   (pl.exercises || []).forEach(ex => {
-    const sets = Math.max(1, +ex.sets || 1);
-    const one = ex.type === 'time' ? (+builderTrainerHooks.parseValue(ex.value).max || 30)
-                                   : (builderTrainerHooks.parseValue(ex.value).max || 12) * 3;
-    sec += sets * one + (sets - 1) * (+ex.rest || 30) + builderTrainerHooks.exRestAfter(ex);
+    const p = pr(ex);
+    const sets = Math.max(1, +p.sets || 1);
+    const one = p.type === 'time' ? (+builderTrainerHooks.parseValue(p.value).max || 30)
+                                  : (builderTrainerHooks.parseValue(p.value).max || 12) * 3;
+    sec += sets * one + (sets - 1) * (+p.rest || 30) + builderTrainerHooks.exRestAfter(ex);
   });
   const rounds = Math.max(1, +pl.rounds || 1);
   sec = sec * rounds + (rounds - 1) * (+pl.roundRest || 60);
@@ -1639,6 +1650,8 @@ async function catalogCoverData(src){
 }
 
 export async function doPublish(){
+  // публикация отдаёт программу текстом старого протокола — до V2-каталога недоступна
+  if(legacyAiUnavailable()) return;
   const p = pubProg;
   if(!p) return;
   pubDraft.gives = clampText($('pubGives').value, LIM.gives);
@@ -1773,7 +1786,7 @@ export function renderMine(){
     const rotates = p.rotate && plans.length > 1;
     const done = (p.stats && p.stats.completions) || 0;
     const cover = p.cover ? `<img src="${workoutTrainerHooks.esc(p.cover)}" alt="">` : DUMBBELL_ICON;
-    const setsOne = (plans[0].exercises || []).reduce((n, e) => n + (e.warmup ? 0 : (parseInt(e.sets) || 1)), 0);
+    const setsOne = (plans[0].exercises || []).reduce((n, e) => n + (e.warmup ? 0 : (parseInt(pr(e).sets) || 1)), 0);
     const volOne = (plans[0].rounds > 1 || setsOne <= plans[0].exercises.length)
       ? storeCountText(plans[0].rounds,'round')
       : storeCountText(setsOne,'set');
