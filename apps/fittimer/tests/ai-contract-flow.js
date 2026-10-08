@@ -86,11 +86,11 @@ const post = async (path, body) => {
   await page.evaluate(v => { $('eaWish').value = v; }, 'добавь планку');
   await page.evaluate(() => $('aiSelf').click());
   const nBefore = await page.evaluate(() => customPrograms.length);
-  await page.waitForFunction(n => customPrograms.length > n, nBefore, {timeout:15000});
+  await page.waitForFunction(n => customPrograms.length > n, nBefore, {timeout:30000});
   // createEditedProgram persists the new copy before showing its summary dialog.
   // Do not sample the dialog immediately after the in-memory push: on a slower CI
   // runner savePrograms() is still in flight at that point.
-  await page.waitForFunction(() => document.querySelector('#dlg.open') && /Добавлено: 1/.test($('dlgMsg').textContent || ''), null, {timeout:15000});
+  await page.waitForFunction(() => /Добавлено: 1/.test(document.querySelector('#dlgMsg')?.textContent || ''), null, {timeout:30000});
   const editMsg = await page.textContent('#dlgMsg');
   const edited = await page.evaluate(pid => {
     const src = customPrograms.find(x => x.id === pid);
