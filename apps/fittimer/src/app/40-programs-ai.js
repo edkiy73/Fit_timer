@@ -1737,6 +1737,49 @@ function shrinkDataUrl(dataUrl, maxSide, cb){
   img.src = dataUrl;
 }
 
+
+/* Любое пользовательское изображение, уже превращённое в data URL, приводим к
+   реальному формату слота. CSS object-fit недостаточно: иначе в файле/ссылке/каталоге
+   продолжает жить вертикальный исходник, а разные экраны кадрируют его по-разному.
+   Обложка = 1:1 до 320×320, упражнение = 4:3 до 640×480. Маленькие фото не растягиваем. */
+export function fitImageToSlot(dataUrl, kind, cb){
+  const cover = kind === 'cover';
+  const ratio = cover ? 1 : (4 / 3);
+  const maxW = cover ? 320 : 640;
+  const img = new Image();
+  img.onload = ()=>{
+    const sw = Math.max(1, img.naturalWidth || img.width || 1);
+    const sh = Math.max(1, img.naturalHeight || img.height || 1);
+    let sx = 0, sy = 0, cw = sw, ch = sh;
+    const srcRatio = sw / sh;
+    if(srcRatio > ratio){
+      cw = sh * ratio;
+      sx = (sw - cw) / 2;
+    }else if(srcRatio < ratio){
+      ch = sw / ratio;
+      sy = (sh - ch) / 2;
+    }
+    const outW = Math.max(1, Math.round(Math.min(maxW, cw)));
+    const outH = Math.max(1, Math.round(outW / ratio));
+    const canvas = document.createElement('canvas');
+    canvas.width = outW;
+    canvas.height = outH;
+    canvas.getContext('2d').drawImage(img, sx, sy, cw, ch, 0, 0, outW, outH);
+    try{ cb(canvas.toDataURL('image/jpeg', .84)); }catch(e){ cb(null); }
+  };
+  img.onerror = ()=> cb(null);
+  img.src = dataUrl;
+}
+
+function fitImageToSlotAsync(dataUrl, kind){
+  return new Promise(resolve => fitImageToSlot(dataUrl, kind, resolve));
+}
+
+// Пока экран картинок открыт, помним, из какого загруженного исходника получилась
+// кадрированная версия в слоте. Это позволяет корректно подсветить «использовано»,
+// даже если один исходник дал квадратную обложку и отдельную 4:3 картинку упражнения.
+const slotImageSources = new Map();
+
 // Оборудование на картинке — из структурированных данных упражнения (снаряд нагрузки,
 // количество, доп. оборудование), а не угадывание по названию: «2 гантели» и «1 гантель»
 // рисуются по-разному, и скамья в жиме не должна зависеть от формулировки описания.
@@ -2197,7 +2240,11 @@ export function closeImages(){
 // лоток — просто то, что загружено.
 export function trayUsed(){
   const set = new Set();
-  imageSlots().forEach(s0 => { const v = s0.get(); if(v) set.add(v); });
+  imageSlots().forEach(s0 => {
+    const v = s0.get();
+    if(!v) return;
+    set.add(slotImageSources.get(v) || v);
+  });
   return set;
 }
 export function renderTray(){
@@ -2274,6 +2321,7 @@ function openSlotPicker(i){
   slotTarget = i;
   const s = slots[i];
   $('slotTitle').textContent = s.title;
+  if($('slotAspectHint')) $('slotAspectHint').textContent = t(s.kind === 'cover' ? 'images.coverAspectHint' : 'images.exerciseAspectHint');
   const box = $('slotTray'); box.innerHTML = '';
   setShown('slotEmptyHint', !(imgTray.length));
   const cur = s.get();
@@ -2291,7 +2339,7 @@ function openSlotPicker(i){
 }
 
 // раскладывает лоток по местам без картинок, по порядку
-export function trayAutoAssign(){
+export async function trayAutoAssign(){
   if(!imgTray.length){ appAlert(t('images.pickFirst')); return; }
   const already = trayUsed();
   const free = imgTray.filter(d => !already.has(d));   // раскладываем ещё не пристроенные
@@ -2300,7 +2348,12 @@ export function trayAutoAssign(){
   for(const s of imageSlots()){
     if(n >= free.length) break;
     if(s.get()) continue;          // тут уже есть картинка — не трогаем
-    s.set(free[n++]);
+    const source = free[n];
+    const fitted = await fitImageToSlotAsync(source, s.kind);
+    if(!fitted) continue;
+    s.set(fitted);
+    slotImageSources.set(fitted, source);
+    n++;
   }
   renderTray(); renderSlots();
   const rest = free.length - n;
@@ -3103,12 +3156,15 @@ export function initProgramsAi(){
     const i = parseInt(btn.dataset.slotIdx, 10);
     if(Number.isFinite(i)) openSlotPicker(i);
   });
-  registerAction('assignTrayImageToSlot', btn => {
+  registerAction('assignTrayImageToSlot', async btn => {
     const i = parseInt(btn.dataset.trayIdx, 10);
     const data = imgTray[i];
     const slot = imageSlots()[slotTarget];
     if(!data || !slot) return;
-    slot.set(data);
+    const fitted = await fitImageToSlotAsync(data, slot.kind);
+    if(!fitted){ appAlert(t('images.loadFailed')); return; }
+    slot.set(fitted);
+    slotImageSources.set(fitted, data);
     $('slotModal').classList.remove('open');
     renderTray();
     renderSlots();

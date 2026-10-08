@@ -60,6 +60,7 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "fillTrainerPage",
   "finishWorkout",
   "fitStorage",
+  "fitImageToSlot",
   "forgetMe",
   "fullAIPrompt",
   "generateOneImageViaAI",

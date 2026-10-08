@@ -43,7 +43,7 @@ import { AI_SOURCES, aiSrc, aiUiText, apiPost, applyProgressionAll, btnBusy,
   openEditAI, openExAI, openExEdAI, openImages, openYouTube, premiumGate,
   pushProfile, refreshTrainerProfile, renderGreeting, renderSlots, renderToday, renderTray,
   clearActiveClient, removeClientById, saveClients, saveTrainer, useUploadedCoachPhoto,
-  appendImagesToTray, clearUnusedImageTray, ensureImageInTray, setExImg, setProgramsEventHooks, updateTrainerProfile, setupAIAnswer, shrinkAll, slotTarget, trainer,
+  appendImagesToTray, clearUnusedImageTray, ensureImageInTray, fitImageToSlot, setExImg, setProgramsEventHooks, updateTrainerProfile, setupAIAnswer, shrinkAll, slotTarget, trainer,
   trainerAccountReady, trainerOn, trayAutoAssign, trayUsed, versionedName, wipeTrainerInfo,
   youtubePrompt, ytCheckUrl
 } from './40-programs-ai.js';
@@ -2355,10 +2355,14 @@ export function initEvents(){
     shrinkImage(f, 640, data => {
       if(!data){ appAlert(t('images.loadFailed')); return; }
       const s = imageSlots()[slotTarget];
-      if(s) s.set(data);
-      ensureImageInTray(data);
-      $('slotModal').classList.remove('open');
-      renderTray(); renderSlots();
+      if(!s) return;
+      fitImageToSlot(data, s.kind, fitted => {
+        if(!fitted){ appAlert(t('images.loadFailed')); return; }
+        s.set(fitted);
+        ensureImageInTray(fitted);
+        $('slotModal').classList.remove('open');
+        renderTray(); renderSlots();
+      });
     });
   };
   /* ---- переключение способа прямо на экране ---- */
@@ -2418,8 +2422,11 @@ export function initEvents(){
     if(!file) return;
     shrinkImage(file, 640, data => {
       if(!data){ appAlert(t('images.loadFailed')); return; }
-      setExImg(exDraft, data);
-      renderExMedia(); syncExDetailsSum();
+      fitImageToSlot(data, 'ex', fitted => {
+        if(!fitted){ appAlert(t('images.loadFailed')); return; }
+        setExImg(exDraft, fitted);
+        renderExMedia(); syncExDetailsSum();
+      });
     });
   };
   /* ---- сворачивание настроек программы ---- */
@@ -2432,7 +2439,14 @@ export function initEvents(){
   $('bCoverFile').onchange = e=>{
     const file = e.target.files && e.target.files[0];
     if(!file) return;
-    shrinkImage(file, 320, dataUrl => { draft.cover = dataUrl; syncCover(); });
+    shrinkImage(file, 320, dataUrl => {
+      if(!dataUrl){ appAlert(t('images.loadFailed')); return; }
+      fitImageToSlot(dataUrl, 'cover', fitted => {
+        if(!fitted){ appAlert(t('images.loadFailed')); return; }
+        draft.cover = fitted;
+        syncCover();
+      });
+    });
   };
   // сброс счётчика прохождений (в редактировании программы)
   // сброс общего времени тренировок
