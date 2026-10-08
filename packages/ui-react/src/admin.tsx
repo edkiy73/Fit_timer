@@ -95,7 +95,8 @@ const COPY = {
     retentionD1:'After a day', retentionD7:'After a week', retentionD30:'After a month', retentionOf:'of',
     errorTimes:'times', errorFirst:'first', errorLast:'last', errorBuild:'build',
     buyer:'Buyer', product:'Purchase', statusPaid:'paid', statusRefunded:'refunded', statusCanceled:'renewal off', statusRenewalOn:'renewal on (by the learner)', statusRenewalOff:'renewal off (by the learner)',
-    providerInstant:'without payment (granted at once)'
+    statusManualGrant:'granted manually', statusManualRevoke:'revoked manually',
+    providerInstant:'without payment (granted at once)', providerAdmin:'Administrator'
   }
 } as const;
 
