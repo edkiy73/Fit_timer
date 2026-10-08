@@ -15,7 +15,7 @@ import { calcStreak, calcStreakInfo, clearSession, closeAllMenus, curUser, custo
 } from './10-data-sync.js';
 import { setAccountWorkoutHooks } from './20-account.js';
 import { LIM, clampText, photos, setProgressWorkoutHooks, shareGeneratedFile } from './30-progress-media.js';
-import { aiClientVerdict, callGemini, exAnswerFormat, exerciseToText, premiumGate, setProgramsWorkoutHooks, userForAI,
+import { callGemini, premiumGate, setProgramsWorkoutHooks, userForAI,
   weekPlanInfo
 } from './40-programs-ai.js';
 import { autoReport, renderMine, setTrainerWorkoutHooks, storeCountText } from './50-trainer-catalog.js';

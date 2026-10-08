@@ -1,6 +1,5 @@
 import { MUSCLES, OPT_EQUIP, OPT_GOAL, OPT_LEVEL, OPT_NONE } from './options.js';
 import { appLocale, canonicalDescription, canonicalLabel, t } from '../i18n/index.js';
-import FitAIProtocol from '../../lib/ai-protocol.js';
 import FitExerciseV2 from '../../lib/fit-exercise-v2.js';
 import FitAIContract from '../../lib/fit-ai-contract.js';
 import { appRuntimeCompat } from './00-dependencies.js';
@@ -2211,33 +2210,6 @@ export function shrinkImage(file, maxSide, cb){
 }
 
 /* ================= СОЗДАНИЕ ИЗ ТЕКСТА ================= */
-export function aiPrompt(locale){
-  const outLocale=(locale==='ru'||locale==='en')?locale:appLocale;
-  const lang=outLocale==='ru'?'Russian':'English';
-  return FitAIProtocol.programPrompt(lang);
-}
-
-function aiProtocolLine(line){
-  const m=String(line||'').match(/^([А-ЯЁ][А-ЯЁ ]{1,40}):\s*(.*)$/);
-  return m?{key:m[1],value:m[2]}:null;
-}
-export function aiExerciseBlocks(text){
-  const lines=String(text||'').split(/\r?\n/),out=[];
-  for(let i=0;i<lines.length;i++){
-    if(!/^УПРАЖНЕНИЕ:\s*/i.test(lines[i])) continue;
-    let end=i+1;
-    while(end<lines.length&&!/^УПРАЖНЕНИЕ:\s*/i.test(lines[end])&&!/^ДЕНЬ:\s*/i.test(lines[end]))end++;
-    out.push({start:i,end,lines:lines.slice(i,end),name:(aiProtocolLine(lines[i])||{}).value||''});
-    i=end-1;
-  }
-  return out;
-}
-// Раньше здесь жили aiMergeExerciseBlock/aiMergeProgramEdit — они принудительно
-// возвращали старую структуру (порядок, число упражнений) и подставляли от ИИ
-// только значения полей. Простые запросы вроде «поменяй порядок» или «добавь
-// упражнение» либо тихо ничего не меняли, либо ловили ошибку разбора. Теперь
-// ответ ИИ принимается как есть (см. createEditedProgram/applyExEdit), а его
-// итог проверяется парсингом и FitAIProtocol.diffPrograms — не запрещается заранее.
 
 // В отличие от parseKg (там 0 бессмысленный стартовый вес — трактуем как «не задано»),
 // здесь 0 — ЗНАЧИМОЕ значение: «эту ось для этого упражнения не растим». Отличаем
@@ -2261,9 +2233,6 @@ const DAY_ALIASES = {
    программу (ИИ, вставка ответа, каталог, видео), временно отключены до AI Contract V2 —
    docs/load-equipment-progression-plan-2026-10-08.md, PR 5. Заглушка отвечает честной
    ошибкой, чтобы случайный вызов не записал в хранилище старую форму упражнения. */
-export function parseProgramText(_txt){
-  return {program:null, errors:[t('feature.v2Pending')]};
-}
 
 /* ================= ЗАПРОС К ИИ В ОДНО КАСАНИЕ ================= */
 // Отметка «Беременность» уходит в запрос к нейросети как обычное ограничение, а
@@ -2665,8 +2634,6 @@ export function initBuilder(){
     msgAiParse: MSG_AI_PARSE,
     advanceExerciseProgression,
     aiCreateProgramGuard,
-    aiExerciseBlocks,
-    aiPrompt,
     carryExerciseProgress,
     copyPrompt,
     curPlan,
@@ -2689,7 +2656,6 @@ export function initBuilder(){
     isDualProg,
     openBuilder,
     openExercise,
-    parseProgramText,
     progAxis,
     progressedRepsRange,
     qChips,
@@ -2712,7 +2678,7 @@ export function initBuilder(){
     hasWeight,
     loadLevelLabel,
     openBuilder,
-    parseProgramText,
+    parseProgramText: () => ({program:null, errors:[]}),
     parseValue,
     progressionLoadType,
     progShort,

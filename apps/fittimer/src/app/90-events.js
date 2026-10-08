@@ -35,7 +35,7 @@ import { LIM, sanitizeProgram, addPhoto, clampLine, clampText, cleanLink, delCmp
   renderCmp, renderPhotos, saveWeightHist, shareCompare, shareWeightChart, shareWellChart,
   startOnboarding, whoDraft, whoFinish, whoSyncForm
 } from './30-progress-media.js';
-import { AI_SOURCES, aiClientVerdict, aiSrc, aiUiText, apiPost, applyProgressionAll, btnBusy,
+import { AI_SOURCES, aiSrc, aiUiText, apiPost, applyProgressionAll, btnBusy,
   callGemini, clProgs, clients, closeImages, coachPhotoDraft, dropExMedia, editAIProg, editAIPrompt,
   exImageItem, exaPrompt, exeIdx, exePrompt, flashDone, generateAllImagesViaAI,
   generateOneImageViaAI, generateSlotImageViaAI, imageSlots, imagesPromptText, imgTray,
@@ -55,7 +55,7 @@ import { addClient, curClient, doPublish, loadStoreServer, openClient, openMyCat
 import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExerciseAsNew, contractIds, parseContractAnswer,
   commitExercise, commitPlanFields, curPlan, delExerciseAt, draft, dropFreshEx, dupExerciseAt,
   clearExerciseDraft, exDirty, exDraft, exIdx, exIsNew, exP, exerciseDraftProblems, exerciseProgressionConfigOk, exerciseResistanceScaleOk, fillPlanFields, markExerciseExisting, hasWeight, initAIForm, normValue, openBuilder, programHasProgression,
-  openExercise, parseProgramText, parseStepNum, parseValue, planIdx, programDirty, renderExList, renderExMedia,
+  openExercise, parseStepNum, parseValue, planIdx, programDirty, renderExList, renderExMedia,
   renderProgControls, saveProgram, selectPlanVariant, setExerciseLoadType, setExerciseMetric, setExerciseProgressionOn, shrinkImage, syncCover, syncExDetailsSum, syncExNowHints,
   syncExProgSum, syncExType, syncExWarm, syncRotateUI
 , setBuilderEventHooks } from './60-builder.js';
