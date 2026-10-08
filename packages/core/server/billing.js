@@ -203,6 +203,57 @@ async function billingLog(limit = 200, now = new Date()){
   return rows.sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, limit);
 }
 
+function safeHealthError(error){
+  const raw = String((error && error.message) || error || 'provider_error')
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/[^a-z0-9._:-]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return raw.slice(0, 100) || 'provider_error';
+}
+
+function healthStatus(value){
+  const lastSuccess = Date.parse(value && value.lastSuccessAt || '') || 0;
+  const lastError = Date.parse(value && value.lastErrorAt || '') || 0;
+  if(!lastSuccess && !lastError) return 'unknown';
+  return lastError > lastSuccess ? 'unhealthy' : 'healthy';
+}
+
+async function providerOperationalHealth(provider){
+  if(!PROVIDER.test(String(provider || ''))) return {status:'unknown'};
+  let value = {};
+  try{ value = JSON.parse(await store.get(`bill:health:${provider}`)) || {}; }catch(_){}
+  return {
+    status:healthStatus(value),
+    lastOperation:line(value.lastOperation,40),
+    lastAttemptAt:line(value.lastAttemptAt,40),
+    lastSuccessAt:line(value.lastSuccessAt,40),
+    lastErrorAt:line(value.lastErrorAt,40),
+    lastError:line(value.lastError,100)
+  };
+}
+
+async function recordProviderHealth(provider, operation, ok, error){
+  provider = String(provider || '');
+  operation = line(operation,40);
+  if(!PROVIDER.test(provider) || !operation || !store.configured()) return;
+  const at = new Date().toISOString();
+  const key = `bill:health:${provider}`;
+  await store.withLock(`lock:health:${provider}`, async () => {
+    let value = {};
+    try{ value = JSON.parse(await store.get(key)) || {}; }catch(_){}
+    value.lastOperation = operation;
+    value.lastAttemptAt = at;
+    if(ok){
+      value.lastSuccessAt = at;
+    }else{
+      value.lastErrorAt = at;
+      value.lastError = safeHealthError(error);
+    }
+    await store.set(key, JSON.stringify(value));
+  }, {ttl:5, retries:30, delay:25});
+}
+
 async function signedInAccount(body){
   const email = mail(body && body.email);
   if(!EMAIL.test(email)) return null;
@@ -319,16 +370,27 @@ function createBillingHandler({adapters = []} = {}){
       const adapter = await findWebhook(String(query.provider));
       if(!adapter || typeof adapter.verifyWebhook !== 'function') return fail(res, 404, 'unknown_provider');
       let verified;
-      try{ verified = await adapter.verifyWebhook({headers: req.headers || {}, body, rawBody, query}); }
-      catch(_){ return fail(res, 401, 'bad_signature'); }
-      if(!verified || !verified.ok) return fail(res, 401, 'bad_signature');
+      try{
+        verified = await adapter.verifyWebhook({headers: req.headers || {}, body, rawBody, query});
+      }catch(e){
+        await recordProviderHealth(adapter.id, 'webhook', false, e);
+        return fail(res, 401, 'bad_signature');
+      }
+      if(!verified || !verified.ok){
+        await recordProviderHealth(adapter.id, 'webhook', false, 'bad_signature');
+        return fail(res, 401, 'bad_signature');
+      }
       const results = [];
       for(const event of Array.isArray(verified.events) ? verified.events : []){
         results.push(await applyBillingEvent(adapter.id, event));
       }
       const bad = results.find(r => !r.ok);
       // Providers retry non-2xx: a malformed event is answered 400 so it shows up in their dashboard.
-      if(bad) return fail(res, 400, bad.error);
+      if(bad){
+        await recordProviderHealth(adapter.id, 'webhook', false, bad.error);
+        return fail(res, 400, bad.error);
+      }
+      await recordProviderHealth(adapter.id, 'webhook', true);
       return send(res, 200, {ok: true, applied: results.filter(r => r.applied).length});
     }
 
@@ -373,6 +435,7 @@ function createBillingHandler({adapters = []} = {}){
           proof:body.proof && typeof body.proof === 'object' ? body.proof : {}
         });
       }catch(e){
+        await recordProviderHealth(adapter.id, 'verify', false, e);
         return fail(res, (e && e.status) || 502, String((e && e.message) || 'purchase_verification_failed'));
       }
       const results = [];
@@ -380,7 +443,11 @@ function createBillingHandler({adapters = []} = {}){
         results.push(await applyBillingEvent(adapter.id, {...raw, email:who.email, sku}));
       }
       const bad = results.find(r => !r.ok);
-      if(bad) return fail(res, 400, bad.error);
+      if(bad){
+        await recordProviderHealth(adapter.id, 'verify', false, bad.error);
+        return fail(res, 400, bad.error);
+      }
+      await recordProviderHealth(adapter.id, 'verify', true);
       const last = results[results.length - 1];
       return send(res, 200, {ok:true, granted:!!(last && last.applied), ...(last ? last.entitlements : entitlementsOf(who.acc))});
     }
@@ -397,6 +464,7 @@ function createBillingHandler({adapters = []} = {}){
       const errors = [];
       let checked = 0;
       let restored = 0;
+      let providerFailures = 0;
 
       for(const item of items){
         if(!item || typeof item !== 'object') continue;
@@ -418,6 +486,7 @@ function createBillingHandler({adapters = []} = {}){
             proof:item.proof && typeof item.proof === 'object' ? item.proof : {}
           });
         }catch(e){
+          providerFailures++;
           errors.push({sku, error:String((e && e.message) || 'purchase_verification_failed').slice(0,120)});
           continue;
         }
@@ -426,6 +495,7 @@ function createBillingHandler({adapters = []} = {}){
         for(const raw of (verified && Array.isArray(verified.events)) ? verified.events : []){
           const result = await applyBillingEvent(adapter.id, {...raw, email:who.email, sku});
           if(!result.ok){
+            providerFailures++;
             errors.push({sku, error:String(result.error || 'billing_event_failed').slice(0,120)});
             continue;
           }
@@ -439,6 +509,12 @@ function createBillingHandler({adapters = []} = {}){
         const raw = await store.get(`a:${who.mh}`);
         if(raw) fresh = JSON.parse(raw);
       }catch(_){}
+      await recordProviderHealth(
+        adapter.id,
+        'restore',
+        providerFailures === 0,
+        providerFailures ? 'restore_partial_failure' : ''
+      );
       return send(res, 200, {
         ok:true,
         granted:restored > 0,
@@ -462,8 +538,13 @@ function createBillingHandler({adapters = []} = {}){
       const adapter = list.find(a => a.id === current.provider);
       if(adapter && typeof adapter.setRenewal === 'function'){
         let answer;
-        try{ answer = await adapter.setRenewal({email: who.email, sub: current, autoRenew}); }
-        catch(e){ return fail(res, (e && e.status) || 502, String((e && e.message) || 'renewal_failed')); }
+        try{
+          answer = await adapter.setRenewal({email: who.email, sub: current, autoRenew});
+        }catch(e){
+          await recordProviderHealth(adapter.id, 'renewal', false, e);
+          return fail(res, (e && e.status) || 502, String((e && e.message) || 'renewal_failed'));
+        }
+        await recordProviderHealth(adapter.id, 'renewal', true);
         if(answer && answer.url) return send(res, 200, {ok: true, url: String(answer.url), autoRenew: !!current.autoRenew});
       }
       const saved = await store.withLock(`lock:bill:${mh}`, async () => {
@@ -490,15 +571,26 @@ function createBillingHandler({adapters = []} = {}){
       if(skuError) return fail(res, 400, skuError);
       const product = await billingProduct(sku);
       let started;
-      try{ started = await adapter.checkout({email: who.email, sku, product}); }
-      catch(e){ return fail(res, (e && e.status) || 502, String((e && e.message) || 'checkout_failed')); }
-      if(started && started.url) return send(res, 200, {ok: true, url: String(started.url)});
+      try{
+        started = await adapter.checkout({email: who.email, sku, product});
+      }catch(e){
+        await recordProviderHealth(adapter.id, 'checkout', false, e);
+        return fail(res, (e && e.status) || 502, String((e && e.message) || 'checkout_failed'));
+      }
+      if(started && started.url){
+        await recordProviderHealth(adapter.id, 'checkout', true);
+        return send(res, 200, {ok: true, url: String(started.url)});
+      }
       const results = [];
       for(const event of (started && Array.isArray(started.events)) ? started.events : []){
         results.push(await applyBillingEvent(adapter.id, event));
       }
       const bad = results.find(r => !r.ok);
-      if(bad) return fail(res, 400, bad.error);
+      if(bad){
+        await recordProviderHealth(adapter.id, 'checkout', false, bad.error);
+        return fail(res, 400, bad.error);
+      }
+      await recordProviderHealth(adapter.id, 'checkout', true);
       const last = results[results.length - 1];
       return send(res, 200, {ok: true, granted: !!last, ...(last ? last.entitlements : {})});
     }
@@ -635,9 +727,12 @@ async function billingReadiness(){
     const configured = def.required.every(name => secrets[name] && secrets[name].set);
     const mappedProducts = mapped(def.id);
     const providerEnabled = await billingProviderEnabled(def.id);
+    const health = await providerOperationalHealth(def.id);
     const state = !billingEnabled || !providerEnabled ? 'disabled'
       : !configured ? 'not_configured'
       : mappedProducts < 1 ? 'mapping_missing'
+      : health.status === 'unhealthy' ? 'unhealthy'
+      : health.status === 'healthy' ? 'healthy'
       : 'ready';
     providers.push({
       id:def.id,
@@ -646,6 +741,7 @@ async function billingReadiness(){
       enabled:providerEnabled,
       configured,
       mappedProducts,
+      health,
       platforms:def.platforms,
       distributions:def.distributions,
       countries:def.countries
@@ -691,4 +787,4 @@ async function handleAdminBilling(action, body, res){
   return false;
 }
 
-module.exports = { applyBillingEvent, billingLog, billingContext, billingReadiness, createBillingHandler, createInstantBillingAdapter, createTestBillingAdapter, createDefaultBillingAdapters, handleAdminBilling };
+module.exports = { applyBillingEvent, billingLog, billingContext, billingReadiness, providerOperationalHealth, createBillingHandler, createInstantBillingAdapter, createTestBillingAdapter, createDefaultBillingAdapters, handleAdminBilling };
