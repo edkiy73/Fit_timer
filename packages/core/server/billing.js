@@ -24,6 +24,7 @@ const { send, fail, readBodyWithRaw, cors, rateOk, sameSecret } = require('./uti
 const { productCatalog, checkSku, cleanSku, grantOwned, revokeOwned, entitlementsOf } = require('./entitlements');
 const { productConfig } = require('./product-core');
 const { billingProduct, billingProducts, billingProviderEnabled, setBillingProviderEnabled, saveBillingMapping } = require('./billing-catalog');
+const { billingProviderPolicy, billingPolicySupports } = require('./billing-policy');
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/;
 const PROVIDER = /^[a-z0-9_-]{1,32}$/;
@@ -51,6 +52,9 @@ function billingContext(raw){
 }
 
 function adapterSupports(adapter, context){
+  // Core policy is the canonical upper bound. Adapter fields may only narrow it further
+  // (custom/test adapters without a Core policy still use their own capabilities).
+  if(!billingPolicySupports(String(adapter && adapter.id || ''), context)) return false;
   const inList = (value, list) => !Array.isArray(list) || !list.length || list.includes(value);
   if(!inList(context.platform, adapter.platforms)) return false;
   if(!inList(context.distribution, adapter.distributions)) return false;
@@ -706,14 +710,10 @@ async function billingReadiness(){
   }).length;
 
   const defs = [
-    {id:'apple', label:'App Store', required:['APPSTORE_ISSUER_ID','APPSTORE_KEY_ID','APPSTORE_PRIVATE_KEY'],
-      platforms:['ios'], distributions:['app_store'], countries:[]},
-    {id:'google_play', label:'Google Play', required:['GOOGLE_PLAY_SERVICE_ACCOUNT_JSON'],
-      platforms:['android'], distributions:['google_play'], countries:[]},
-    {id:'stripe', label:'Stripe', required:['STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET'],
-      platforms:['web','android','ios'], distributions:['web','direct'], countries:[]},
-    {id:'yookassa', label:'YooKassa', required:['YOOKASSA_SHOP_ID','YOOKASSA_SECRET_KEY'],
-      platforms:['web','android','ios'], distributions:['web','direct'], countries:['RU']}
+    {id:'apple', label:'App Store', required:['APPSTORE_ISSUER_ID','APPSTORE_KEY_ID','APPSTORE_PRIVATE_KEY']},
+    {id:'google_play', label:'Google Play', required:['GOOGLE_PLAY_SERVICE_ACCOUNT_JSON']},
+    {id:'stripe', label:'Stripe', required:['STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET']},
+    {id:'yookassa', label:'YooKassa', required:['YOOKASSA_SHOP_ID','YOOKASSA_SECRET_KEY']}
   ];
 
   const billingEnabled = !!(
@@ -728,6 +728,9 @@ async function billingReadiness(){
     const mappedProducts = mapped(def.id);
     const providerEnabled = await billingProviderEnabled(def.id);
     const health = await providerOperationalHealth(def.id);
+    const policy = billingProviderPolicy(def.id) || {
+      platforms:[], distributions:[], countries:[], excludeCountries:[], external:false
+    };
     const state = !billingEnabled || !providerEnabled ? 'disabled'
       : !configured ? 'not_configured'
       : mappedProducts < 1 ? 'mapping_missing'
@@ -742,9 +745,11 @@ async function billingReadiness(){
       configured,
       mappedProducts,
       health,
-      platforms:def.platforms,
-      distributions:def.distributions,
-      countries:def.countries
+      platforms:policy.platforms,
+      distributions:policy.distributions,
+      countries:policy.countries,
+      excludeCountries:policy.excludeCountries,
+      external:policy.external
     });
   }
 
