@@ -402,6 +402,23 @@ function createTestBillingAdapter({secret = process.env.BILLING_TEST_SECRET || '
   };
 }
 
+function createDefaultBillingAdapters({
+  instantEnabled,
+  includeTest = true,
+  stripe,
+  yookassa
+} = {}){
+  const { createStripeBillingAdapter } = require('./billing-providers/stripe');
+  const { createYooKassaBillingAdapter } = require('./billing-providers/yookassa');
+  const adapters = [
+    createYooKassaBillingAdapter(yookassa),
+    createStripeBillingAdapter(stripe)
+  ];
+  if(typeof instantEnabled === 'function') adapters.push(createInstantBillingAdapter({isEnabled:instantEnabled}));
+  if(includeTest) adapters.push(createTestBillingAdapter());
+  return adapters;
+}
+
 /* Admin: payment journal (mounted by the Core admin handler). */
 async function handleAdminBilling(action, body, res){
   if(action !== 'billing_log') return false;
@@ -409,4 +426,4 @@ async function handleAdminBilling(action, body, res){
   return true;
 }
 
-module.exports = { applyBillingEvent, billingLog, billingContext, createBillingHandler, createInstantBillingAdapter, createTestBillingAdapter, handleAdminBilling };
+module.exports = { applyBillingEvent, billingLog, billingContext, createBillingHandler, createInstantBillingAdapter, createTestBillingAdapter, createDefaultBillingAdapters, handleAdminBilling };
