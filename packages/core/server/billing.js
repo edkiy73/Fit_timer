@@ -220,11 +220,31 @@ async function signedInAccount(body){
   if(!EMAIL.test(email)) return null;
   const deviceId = line(body && body.deviceId, 80);
   const token = String((body && body.syncToken) || '');
+  const mh = sha(email).slice(0, 32);
   let acc = null;
-  try{ acc = JSON.parse(await store.get(`a:${sha(email).slice(0, 32)}`)); }catch(_){}
+  try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(_){}
   const device = acc && acc.syncDevices && acc.syncDevices[deviceId];
   if(!device || !sameSecret(sha(token), device.h || '')) return null;
-  return {email, acc};
+  return {email, acc, mh};
+}
+
+async function ensureBillingIdentity(who){
+  if(!who || !who.mh) return null;
+  const saved = await store.withLock(`lock:billid:${who.mh}`, async () => {
+    let acc = null;
+    try{ acc = JSON.parse(await store.get(`a:${who.mh}`)); }catch(_){}
+    if(!acc) return null;
+    const current = acc.billingIdentity && typeof acc.billingIdentity === 'object' ? acc.billingIdentity : {};
+    const apple = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(current.appleAppAccountToken || ''))
+      ? String(current.appleAppAccountToken) : crypto.randomUUID();
+    const google = /^[A-Za-z0-9_-]{16,64}$/.test(String(current.googleObfuscatedAccountId || ''))
+      ? String(current.googleObfuscatedAccountId) : crypto.randomBytes(24).toString('base64url');
+    acc.billingIdentity = {appleAppAccountToken:apple, googleObfuscatedAccountId:google};
+    await store.set(`a:${who.mh}`, JSON.stringify(acc));
+    return acc.billingIdentity;
+  }, {ttl:8, retries:60, delay:50});
+  if(saved) who.acc.billingIdentity = saved;
+  return saved;
 }
 
 /* POST /api/billing
@@ -280,7 +300,7 @@ function createBillingHandler({adapters = []} = {}){
     // Needs no storage: tells the app which buy buttons are legal/available for this context.
     if(!query.provider && body && (body.action === 'providers' || body.action === 'methods')){
       const context = billingContext(body.context);
-      const methods = (await enabled(context)).filter(a => typeof a.checkout === 'function').map(methodInfo);
+      const methods = (await enabled(context)).filter(a => typeof a.checkout === 'function' || typeof a.verifyPurchase === 'function').map(methodInfo);
       if(body.action === 'providers') return send(res, 200, {ok: true, providers: methods.map(x => x.id)});
       return send(res, 200, {ok: true, context, methods});
     }
@@ -306,6 +326,58 @@ function createBillingHandler({adapters = []} = {}){
     }
 
     const action = String((body && body.action) || '');
+    if(action === 'purchase_context'){
+      const adapter = await find(String(body.provider || ''), billingContext(body && body.context));
+      if(!adapter || typeof adapter.verifyPurchase !== 'function') return fail(res, 404, 'unknown_provider');
+      const who = await signedInAccount(body);
+      if(!who) return fail(res, 403, 'bad_sync_token');
+      const sku = cleanSku(body.sku);
+      const skuError = checkSku(sku);
+      if(skuError) return fail(res, 400, skuError);
+      const identity = await ensureBillingIdentity(who);
+      if(!identity) return fail(res, 409, 'billing_identity_failed');
+      const product = providerProduct(sku);
+      let prepared = {};
+      if(typeof adapter.purchaseContext === 'function'){
+        try{ prepared = await adapter.purchaseContext({email:who.email, sku, product, identity}) || {}; }
+        catch(e){ return fail(res, (e && e.status) || 502, String((e && e.message) || 'purchase_context_failed')); }
+      }
+      return send(res, 200, {ok:true, provider:adapter.id, sku, ...prepared});
+    }
+
+    if(action === 'verify_purchase'){
+      const adapter = await find(String(body.provider || ''), billingContext(body && body.context));
+      if(!adapter || typeof adapter.verifyPurchase !== 'function') return fail(res, 404, 'unknown_provider');
+      const who = await signedInAccount(body);
+      if(!who) return fail(res, 403, 'bad_sync_token');
+      const sku = cleanSku(body.sku);
+      const skuError = checkSku(sku);
+      if(skuError) return fail(res, 400, skuError);
+      const identity = await ensureBillingIdentity(who);
+      if(!identity) return fail(res, 409, 'billing_identity_failed');
+      const product = providerProduct(sku);
+      let verified;
+      try{
+        verified = await adapter.verifyPurchase({
+          email:who.email,
+          sku,
+          product,
+          identity,
+          proof:body.proof && typeof body.proof === 'object' ? body.proof : {}
+        });
+      }catch(e){
+        return fail(res, (e && e.status) || 502, String((e && e.message) || 'purchase_verification_failed'));
+      }
+      const results = [];
+      for(const raw of (verified && Array.isArray(verified.events)) ? verified.events : []){
+        results.push(await applyBillingEvent(adapter.id, {...raw, email:who.email, sku}));
+      }
+      const bad = results.find(r => !r.ok);
+      if(bad) return fail(res, 400, bad.error);
+      const last = results[results.length - 1];
+      return send(res, 200, {ok:true, granted:!!(last && last.applied), ...(last ? last.entitlements : entitlementsOf(who.acc))});
+    }
+
     // Automatic renewal of the active subscription: on or off, the paid period stays. A provider
     // that manages it on its own page answers {url}; otherwise the account keeps the choice
     // (instant grants, admin grants) and the provider's next webhook can update it.
@@ -406,11 +478,14 @@ function createDefaultBillingAdapters({
   instantEnabled,
   includeTest = true,
   stripe,
-  yookassa
+  yookassa,
+  googlePlay
 } = {}){
   const { createStripeBillingAdapter } = require('./billing-providers/stripe');
   const { createYooKassaBillingAdapter } = require('./billing-providers/yookassa');
+  const { createGooglePlayBillingAdapter } = require('./billing-providers/google-play');
   const adapters = [
+    createGooglePlayBillingAdapter(googlePlay),
     createYooKassaBillingAdapter(yookassa),
     createStripeBillingAdapter(stripe)
   ];
