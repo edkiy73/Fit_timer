@@ -382,7 +382,7 @@ export function startListening(){
       if(document.hidden) return;
       // ОС сама останавливает распознавание после каждой фразы/паузы тишины.
       // перезапускаем СРАЗУ, иначе в промежутке команды не слышны.
-      if(voiceWanted && !stopRequested && $('scrWork').classList.contains('on')){
+      if(state.live && voiceWanted && !stopRequested && $('scrWork').classList.contains('on')){
         // защита от бесконечного мгновенного цикла при ошибке (если onend летит < 300мс подряд много раз)
         const now = Date.now();
         if(now - lastRecogStart < 300){ recogFails++; } else { recogFails = 0; }
@@ -855,7 +855,7 @@ export function initPlatform(){
       resetVoiceDedup();
       return;
     }
-    if(hfMode === 'voice' && voiceWanted && $('scrWork').classList.contains('on') && !voiceActive){
+    if(state.live && hfMode === 'voice' && voiceWanted && $('scrWork').classList.contains('on') && !voiceActive){
       recogFails = 0;              // счётчик срывов относится к прошлой сессии микрофона
       setTimeout(startListening, 300); // даём вкладке дорисоваться, иначе браузер снова оборвёт
     }
@@ -870,12 +870,17 @@ export function initPlatform(){
     try{ if(audioCtx && audioCtx.state === 'running') audioCtx.suspend(); }catch(_){}
   });
   window.addEventListener('fitAppForeground', ()=>{
-    if($('scrWork').classList.contains('on')){
+    if(state.live && $('scrWork').classList.contains('on')){
       keepAwake();
       startHandsFree();
+    }else{
+      stopHandsFree();
+      releaseWake();
     }
   });
-  setInterval(checkSchedules, 20000);
+  // Native notifications are scheduled by the OS. A 20-second JS poll on Android/iOS
+  // only wakes the WebView to immediately return, so keep polling browser-only.
+  if(!appRuntimeCompat.isNative()) setInterval(checkSchedules, 20000);
   window.addEventListener('fitAppForeground', ()=>{
     syncNativeNotifications().catch(()=>{});
   });
