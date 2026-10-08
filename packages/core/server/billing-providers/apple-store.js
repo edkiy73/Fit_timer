@@ -204,7 +204,7 @@ function createAppleStoreBillingAdapter({
     return {orderId:txId, status:revoked ? 'refunded' : 'paid', autoRenew:false};
   }
 
-  function subscriptionEvent(statusPayload, {productId, bundleId, identity}){
+  async function subscriptionEvent(statusPayload, {productId, bundleId, identity}){
     if(statusPayload && statusPayload.bundleId && String(statusPayload.bundleId) !== bundleId){
       throw problem('store_bundle_mismatch', 409);
     }
@@ -213,7 +213,7 @@ function createAppleStoreBillingAdapter({
     for(const group of Array.isArray(statusPayload && statusPayload.data) ? statusPayload.data : []){
       for(const item of Array.isArray(group && group.lastTransactions) ? group.lastTransactions : []){
         if(!item || !item.signedTransactionInfo) continue;
-        const tx = decodeJwsPayload(item.signedTransactionInfo);
+        const tx = await verifySignedData(item.signedTransactionInfo, {nowMs:now()});
         if(String(tx.productId || '') !== productId) continue;
         if(String(tx.bundleId || '') !== bundleId) continue;
         if(String(tx.appAccountToken || '').toLowerCase() !== expectedAccount) continue;
@@ -225,7 +225,7 @@ function createAppleStoreBillingAdapter({
     }
     if(!best) throw problem('subscription_status_not_found', 409);
 
-    const renewal = best.item.signedRenewalInfo ? decodeJwsPayload(best.item.signedRenewalInfo) : {};
+    const renewal = best.item.signedRenewalInfo ? await verifySignedData(best.item.signedRenewalInfo, {nowMs:now()}) : {};
     if(renewal.productId && String(renewal.productId) !== productId){
       throw problem('store_product_mismatch', 409);
     }
@@ -268,9 +268,9 @@ function createAppleStoreBillingAdapter({
       if(!/^[A-Za-z0-9.-]{1,200}$/.test(transactionId)) throw problem('transaction_id_missing', 400);
       const mapped = appleProduct(product);
       const response = await requestTransaction(transactionId, mapped.bundleId);
-      // Never trust JWS sent by the phone. The payload decoded here came from the
-      // authenticated App Store Server API response for this exact transaction id.
-      const transaction = decodeJwsPayload(response.payload.signedTransactionInfo);
+      // Never trust JWS sent by the phone. Verify the signed transaction returned
+      // by App Store Server API before comparing account/product/bundle fields.
+      const transaction = await verifySignedData(response.payload.signedTransactionInfo, {nowMs:now()});
       const baseEvent = normalize(transaction, {
         requestedId:transactionId,
         productId:mapped.productId,
@@ -284,7 +284,7 @@ function createAppleStoreBillingAdapter({
           mapped.bundleId,
           response.base
         );
-        return {events:[subscriptionEvent(status, {
+        return {events:[await subscriptionEvent(status, {
           productId:mapped.productId,
           bundleId:mapped.bundleId,
           identity
