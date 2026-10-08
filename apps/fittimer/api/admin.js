@@ -51,7 +51,9 @@ module.exports = async (req, res) => {
 
   let body;
   try{
-    body = await readBody(req);
+    // Auth already passed above. Catalog editor can legitimately send a compressed
+    // cover + exercise media; the generic public API limit remains unchanged.
+    body = await readBody(req, 1024 * 1024);
   }catch(_){
     return fail(res, 413, 'too_large');
   }
