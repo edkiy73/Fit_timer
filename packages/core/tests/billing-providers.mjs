@@ -6,6 +6,7 @@ const require = createRequire(import.meta.url);
 const { configureProduct } = require('../server/product-core');
 const { createStripeBillingAdapter } = require('../server/billing-providers/stripe');
 const { createYooKassaBillingAdapter } = require('../server/billing-providers/yookassa');
+const { createGooglePlayBillingAdapter } = require('../server/billing-providers/google-play');
 
 configureProduct({id:'test.billing', name:'Billing Test', slug:'billing-test', defaultPublicUrl:'https://app.example', products:[]});
 
@@ -143,6 +144,86 @@ ok('YooKassa verifies refund and maps it to the original AppBase order',
 ok('YooKassa refuses a product without amount/currency mapping',
   await yookassa.checkout({email:'payer@example.com', sku:'pack.b', product:{sku:'pack.b'}})
     .then(() => false, e => e.message === 'provider_sku_unconfigured'));
+
+// Google Play: device gives only a purchase token; Core verifies it with Android Publisher.
+const googleCalls = [];
+const googleIdentity = {googleObfuscatedAccountId:'acct_1234567890abcdef'};
+const google = createGooglePlayBillingAdapter({
+  getServiceAccount:async () => ({clientEmail:'svc@example.test', privateKey:'unused', tokenUri:'https://oauth.test/token'}),
+  getAccessToken:async () => 'access-token',
+  now:() => Date.parse('2030-01-01T00:00:00Z'),
+  fetchImpl:async (url, init = {}) => {
+    googleCalls.push({url, init});
+    if(url.includes('/purchases/productsv2/tokens/item-token')){
+      return jsonResponse({
+        purchaseStateContext:{purchaseState:'PURCHASE_STATE_PURCHASED'},
+        acknowledgementState:'ACKNOWLEDGEMENT_STATE_PENDING',
+        obfuscatedExternalAccountId:googleIdentity.googleObfuscatedAccountId,
+        orderId:'GPA.item.1',
+        productLineItem:[{productId:'pack_a'}]
+      });
+    }
+    if(url.includes('/purchases/subscriptionsv2/tokens/sub-token')){
+      return jsonResponse({
+        subscriptionState:'SUBSCRIPTION_STATE_ACTIVE',
+        acknowledgementState:'ACKNOWLEDGEMENT_STATE_PENDING',
+        externalAccountIdentifiers:{obfuscatedExternalAccountId:googleIdentity.googleObfuscatedAccountId},
+        lineItems:[{
+          productId:'plus_month',
+          expiryTime:'2030-02-01T00:00:00Z',
+          latestSuccessfulOrderId:'GPA.sub.1',
+          autoRenewingPlan:{autoRenewEnabled:true}
+        }]
+      });
+    }
+    if(url.includes('/purchases/productsv2/tokens/wrong-account')){
+      return jsonResponse({
+        purchaseStateContext:{purchaseState:'PURCHASE_STATE_PURCHASED'},
+        acknowledgementState:'ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED',
+        obfuscatedExternalAccountId:'someone_else',
+        orderId:'GPA.item.bad',
+        productLineItem:[{productId:'pack_a'}]
+      });
+    }
+    if(url.endsWith(':acknowledge')) return jsonResponse({});
+    return jsonResponse({}, 404);
+  }
+});
+ok('Google Play is ready with a service account', await google.available());
+const googleContext = await google.purchaseContext({
+  product:{sku:'pack.a', billing:{google:{productId:'pack_a'}}},
+  identity:googleIdentity
+});
+ok('Google purchase context keeps store SKU and opaque account id',
+  googleContext.productId === 'pack_a' && googleContext.obfuscatedAccountId === googleIdentity.googleObfuscatedAccountId);
+
+const googleItem = await google.verifyPurchase({
+  product:{sku:'pack.a', kind:'owned', billing:{google:{productId:'pack_a'}}},
+  proof:{purchaseToken:'item-token'},
+  identity:googleIdentity
+});
+ok('Google verifies and normalizes one-time purchase',
+  googleItem.events[0]?.status === 'paid' && googleItem.events[0]?.orderId === 'GPA.item.1');
+ok('Google acknowledges a verified one-time purchase',
+  googleCalls.some(x => x.url.includes('/purchases/products/pack_a/tokens/item-token:acknowledge') && x.init.method === 'POST'));
+
+const googleSub = await google.verifyPurchase({
+  product:{sku:'plus.month', kind:'subscription', billing:{google:{productId:'plus_month'}}},
+  proof:{purchaseToken:'sub-token'},
+  identity:googleIdentity
+});
+ok('Google verifies subscription expiry and renewal state',
+  googleSub.events[0]?.status === 'paid'
+  && googleSub.events[0]?.until === '2030-02-01T00:00:00Z'
+  && googleSub.events[0]?.autoRenew === true);
+ok('Google acknowledges a verified subscription',
+  googleCalls.some(x => x.url.includes('/purchases/subscriptions/plus_month/tokens/sub-token:acknowledge') && x.init.method === 'POST'));
+ok('Google rejects a token linked to another AppBase account',
+  await google.verifyPurchase({
+    product:{sku:'pack.a', kind:'owned', billing:{google:{productId:'pack_a'}}},
+    proof:{purchaseToken:'wrong-account'},
+    identity:googleIdentity
+  }).then(() => false, e => e.message === 'store_account_mismatch' && e.status === 403));
 
 console.log(bad ? `\nExternal billing provider failures: ${bad}` : '\nExternal billing providers behave correctly');
 process.exit(bad ? 1 : 0);
