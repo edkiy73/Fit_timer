@@ -165,4 +165,32 @@ test('ответ без contractVersion отклоняется', () => {
   assert.strictEqual(C.checkOutput('program.create', Object.assign({}, created, {contractVersion:1}), {}).reason, 'contract_version');
 });
 
+
+test('reference silhouette catalog DTO matches the V2 schema and is accepted by the model', () => {
+  const fixture = require('../catalog/etalon-v-silhouette-ru-v2.json');
+  assert.deepStrictEqual(S.validate(C.outputSchema('program.create').schema, fixture), []);
+  assert.strictEqual(C.checkOutput('program.create', fixture, {}).ok, true);
+  const program = C.programFromCreate(fixture, ids());
+  assert.deepStrictEqual(program.errors, []);
+  assert.strictEqual(program.program.plans.length, 2);
+  assert.deepStrictEqual(program.program.plans.map(p=>p.exercises.length), [11,12]);
+  assert.strictEqual(program.program.plans[0].exercises[5].stages.length, 2);
+  assert.strictEqual(program.program.plans[1].exercises[11].stages.length, 2);
+  const strength = program.program.plans.flatMap(p=>p.exercises.filter(ex=>!ex.warmup));
+  assert.strictEqual(strength.length, 16);
+});
+
+test('catalog seed has complete RU and EN descriptions for every movement stage', () => {
+  const CP = require('../lib/fit-catalog-program');
+  const seed = require('../lib/seed');
+  const item = seed.SEED_ITEMS.find(p=>p.id==='vshape_v2');
+  assert.ok(item);
+  const cleaned = CP.cleanCatalogProgram(item.program);
+  assert.deepStrictEqual(cleaned.errors, []);
+  const source = CP.textsOf(cleaned.program);
+  assert.strictEqual(CP.textsComplete(source,item.locales.en.texts), true);
+  assert.strictEqual(item.locales.en.texts.stages.length,25);
+  assert.ok(item.program.desc.length > 1000);
+});
+
 console.log(`\nai-contract-v2: ${n} ok`);
