@@ -417,6 +417,50 @@ export async function importAllData(file){
   let dump;
   try{ dump = JSON.parse(await file.text()); }
   catch(e){ appAlert(t('backup.readFailed')); return; }
+  // Разовый перенос ТОЛЬКО календарной истории из старой модели: без программ,
+  // body-metrics, картинок и прогрессии. Отдельный файл, не обычный полный backup.
+  // Целевой профиль определяем по immutable profileId, никогда по имени.
+  if(dump && dump.app === 'fittimer-history-transfer' && dump.version === 1){
+    const sourceId = String(dump.profileId || '');
+    const storedUsers = JSON.parse(await kvGet('users') || '[]');
+    const target = (Array.isArray(storedUsers) ? storedUsers : []).find(u => u && u.id === currentUser);
+    if(!sourceId || !target || !target.profileId || sourceId !== String(target.profileId)){
+      appAlert('История принадлежит другому профилю. Войдите в исходный профиль и повторите импорт. Ничего не изменено.');
+      return;
+    }
+    // Не позволяем файлу подменять sync identity даже при совпадении имени.
+    const incoming = Array.isArray(dump.history) ? dump.history : [];
+    if(!incoming.length || incoming.length > 10000){
+      appAlert('В файле нет допустимой истории занятий.'); return;
+    }
+    const valid = incoming.every(h => h && typeof h === 'object'
+      && /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(h.d)
+      && Number.isInteger(h.sec) && h.sec >= 0 && h.sec <= 86400
+      && typeof h.id === 'string' && /^legacy-[a-zA-Z0-9_-]{1,90}$/.test(h.id));
+    if(!valid){ appAlert('Файл истории повреждён. Ничего не изменено.'); return; }
+    if(!(await appConfirm('Добавить ' + incoming.length + ' записей о занятиях в профиль «'
+      + String(target.name || '').slice(0,30) + '»? Существующие тренировки не удаляются.'))) return;
+    // История idempotent: повторный импорт не создаёт дубли.
+    const existing = Array.isArray(stats.history) ? stats.history : [];
+    const ids = new Set(existing.map(h => h && h.id).filter(Boolean));
+    const additions = [];
+    for(const h of incoming){
+      if(ids.has(h.id)) continue;
+      ids.add(h.id);
+      additions.push({id:h.id, d:h.d, t:Number.isInteger(h.t) ? Math.max(0,Math.min(23,h.t)) : 12,
+        pid:'legacy-history', sec:h.sec, kcal:Number.isFinite(h.kcal) ? Math.max(0,Math.min(5000,h.kcal)) : 0,
+        status:'full', activityOnly:h.activityOnly === true, note:'', legacyHistory:true});
+    }
+    if(currentUser !== target.id){ appAlert('Активный профиль изменился. Повторите импорт.'); return; }
+    if(!additions.length){ appAlert('Эти занятия уже были восстановлены.'); return; }
+    stats.history = existing.concat(additions).sort((a,b) => String(a.d).localeCompare(String(b.d)) || (+a.t||0)-(+b.t||0));
+    stats.totalSec = stats.history.reduce((n,h) => n + (Number(h.sec)||0), 0);
+    stats.count = stats.history.filter(h => h && h.status !== 'partial' && h.activityOnly !== true).length;
+    await saveStats();
+    appAlert('Восстановлено занятий: ' + additions.length + '. Данные сохранены в выбранном профиле.');
+    location.reload();
+    return;
+  }
   if(!dump || dump.app !== 'fittimer' || !Array.isArray(dump.users)){
     appAlert(t('backup.invalid')); return;
   }
