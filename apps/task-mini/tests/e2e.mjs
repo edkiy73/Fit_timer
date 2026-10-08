@@ -181,7 +181,7 @@ try{
 
   await adminPage.getByRole('button', {name: 'Платежи'}).click();
   ok('both provider purchases appear in the shared Admin journal',
-    (await adminPage.getByRole('cell', {name: 'оплачено'}).count()) >= 2);
+    await appears(adminPage.getByRole('cell', {name: 'оплачено'}).nth(1), 8000));
 
   await phone.getByRole('link', {name: /Готовые/}).click();
   await phone.waitForURL(/#\/done$/);
