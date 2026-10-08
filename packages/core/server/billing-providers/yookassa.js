@@ -26,9 +26,10 @@ function yookassaProduct(product){
 
 function createYooKassaBillingAdapter({
   fetchImpl = globalThis.fetch,
-  returnUrl
+  returnUrl,
+  getCredentials
 } = {}){
-  const credentials = async () => {
+  const credentials = typeof getCredentials === 'function' ? getCredentials : async () => {
     await loadSecrets();
     return {
       shopId:secret('YOOKASSA_SHOP_ID'),
