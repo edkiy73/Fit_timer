@@ -1,54 +1,61 @@
-/* Curated FitTimer V2 catalog seed.
-   Published only by the authenticated admin 'seed' action; importing this module
-   does not modify production catalog data. Deterministic IDs preserve overlay refs. */
+/* Curated FitTimer V2 reference catalog.
+   Available through authenticated admin actions only; imports have no side effects.
+   Stable IDs and deterministic stage IDs preserve catalog overlays. */
 'use strict';
-
 const C = require('./fit-ai-contract');
 const CP = require('./fit-catalog-program');
-const dto = require('../catalog/etalon-v-silhouette-ru-v2.json');
-const english = require('../catalog/etalon-v-silhouette-en-v2.json');
 
-function referenceItem(){
-  const validated = C.checkOutput('program.create', dto);
-  if(!validated.ok) throw new Error('etalon_v2_invalid:' + (validated.missing || []).join(','));
-  let seq = 0;
-  const created = C.programFromCreate(dto, prefix => prefix + '_vshape_' + (++seq));
-  if(created.errors.length) throw new Error('etalon_v2_invalid:' + created.errors.join(','));
-  const program = created.program;
-  const ru = CP.textsOf(program);
-  const translated = [];
-  program.plans.forEach((pl, pi) => {
-    const expected = pl.exercises.reduce((n, ex) => n + ex.stages.length, 0);
-    const rows = english.plans[pi] || [];
-    if(rows.length !== expected) throw new Error('etalon_english_stage_count:' + pi);
-    let i = 0;
-    pl.exercises.forEach(ex => ex.stages.forEach(st => {
-      const [name, desc, mistakes] = rows[i++];
-      translated.push({stageId:st.stageId, name, desc, mistakes});
+const REFERENCES = [
+  {
+    id:'vshape_v2', suffix:'vshape',
+    dto:require('../catalog/etalon-v-silhouette-ru-v2.json'),
+    english:require('../catalog/etalon-v-silhouette-en-v2.json'),
+    cat:'relief',level:'Средний',min:65,
+    gives:'Две силовые тренировки дома: приоритет широчайших и дельт, пропорциональная нагрузка на грудь, ноги и руки, работа над контролем корпуса.',
+    ruGives:'Две домашние силовые в неделю с приоритетом широчайших и плеч, работой на всё тело и понятной прогрессией.',
+    enGives:'Two balanced home strength sessions each week, emphasizing back width and delts while developing chest, legs and core.'
+  },
+  {
+    id:'slim_toned_v2', suffix:'slimtoned',
+    dto:require('../catalog/etalon-slim-toned-ru-v2.json'),
+    english:require('../catalog/etalon-slim-toned-en-v2.json'),
+    cat:'relief',level:'Начальный–средний',min:45,
+    gives:'Три силовые тренировки дома для стройного, подтянутого тела: ноги, ягодицы, спина, грудь, руки и контроль корпуса.',
+    ruGives:'Три домашние тренировки в неделю для пропорционального укрепления всего тела и поддержки формы при снижении веса.',
+    enGives:'Three balanced home strength sessions weekly for a leaner, toned body with full-body strength and core control.'
+  }
+];
+
+function referenceItem(ref){
+  const validated=C.checkOutput('program.create',ref.dto);
+  if(!validated.ok) throw new Error(ref.id+'_invalid:'+(validated.missing||[]).join(','));
+  let seq=0;
+  const created=C.programFromCreate(ref.dto,prefix=>prefix+'_'+ref.suffix+'_'+(++seq));
+  if(created.errors.length)throw new Error(ref.id+'_invalid:'+created.errors.join(','));
+  const program=created.program;
+  const ru=CP.textsOf(program);
+  const translated=[];
+  program.plans.forEach((pl,pi)=>{
+    const expected=pl.exercises.reduce((n,ex)=>n+ex.stages.length,0);
+    const rows=ref.english.plans[pi]||[];
+    if(rows.length!==expected)throw new Error(ref.id+'_english_stage_count:'+pi);
+    let i=0;
+    pl.exercises.forEach(ex=>ex.stages.forEach(st=>{
+      const [name,desc,mistakes]=rows[i++];
+      translated.push({stageId:st.stageId,name,desc,mistakes});
     }));
   });
-  const en = {programName:english.programName,programDesc:english.programDesc,stages:translated};
-  if(!CP.textsComplete(ru,en)) throw new Error('etalon_english_incomplete');
+  const en={programName:ref.english.programName,programDesc:ref.english.programDesc,stages:translated};
+  if(!CP.textsComplete(ru,en))throw new Error(ref.id+'_english_incomplete');
   return {
-    id:'vshape_v2',
-    by:'',
-    cat:'relief',
-    level:'Средний',
-    min:65,
-    sourceLocale:'ru',
-    name:'Плечи шире, талия уже — V-силуэт',
-    gives:'Две силовые тренировки дома: приоритет широчайших и дельт, пропорциональная нагрузка на грудь, ноги и руки, работа над контролем корпуса.',
-    program,
+    id:ref.id,by:'',cat:ref.cat,level:ref.level,min:ref.min,sourceLocale:'ru',
+    name:ref.dto.program.name,gives:ref.gives,program,
     locales:{
-      ru:{name:'Плечи шире, талия уже — V-силуэт',
-        gives:'Две домашние силовые в неделю с приоритетом широчайших и плеч, работой на всё тело и понятной прогрессией.',
-        texts:ru},
-      en:{name:'Wider Shoulders, Narrower Waist — V Shape',
-        gives:'Two balanced home strength sessions each week, emphasizing back width and delts while developing chest, legs and core.',
-        texts:en}
+      ru:{name:ref.dto.program.name,gives:ref.ruGives,texts:ru},
+      en:{name:ref.english.programName,gives:ref.enGives,texts:en}
     }
   };
 }
-const SEED_TRAINERS = {};
-const SEED_ITEMS = [referenceItem()];
-module.exports = {SEED_ITEMS, SEED_TRAINERS};
+const SEED_TRAINERS={};
+const SEED_ITEMS=REFERENCES.map(referenceItem);
+module.exports={SEED_ITEMS,SEED_TRAINERS};

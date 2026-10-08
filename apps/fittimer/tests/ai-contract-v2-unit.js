@@ -226,4 +226,34 @@ test('catalog seed has complete RU and EN descriptions for every movement stage'
   assert.ok(item.program.desc.length > 1000);
 });
 
+test('Slim & Toned reference is complete, rotated and V2-valid', () => {
+  const dto=require('../catalog/etalon-slim-toned-ru-v2.json');
+  const CP=require('../lib/fit-catalog-program');
+  const seed=require('../lib/seed').SEED_ITEMS;
+  assert.deepStrictEqual(S.validate(C.outputSchema('program.create').schema,dto),[]);
+  assert.strictEqual(C.checkOutput('program.create',dto).ok,true);
+  assert.strictEqual(dto.program.progressionEvery,4);
+  assert.strictEqual(dto.program.rotate,true);
+  assert.deepStrictEqual(dto.program.rotateDays,['mon','wed','fri']);
+  const slim=seed.find(x=>x.id==='slim_toned_v2');
+  assert.ok(slim);
+  assert.strictEqual(slim.program.rotate,true);
+  assert.deepStrictEqual(slim.program.days,['Пн','Ср','Пт']);
+  assert.deepStrictEqual(slim.program.plans.map(p=>p.exercises.length),[9,9]);
+  assert.deepStrictEqual(CP.cleanCatalogProgram(slim.program).errors,[]);
+  assert.strictEqual(CP.textsComplete(CP.textsOf(slim.program),slim.locales.en.texts),true);
+  assert.strictEqual(slim.locales.en.texts.stages.length,20);
+  const stages=dto.program.plans.flatMap(p=>p.exercises.flatMap(e=>e.stages));
+  const find=n=>stages.find(s=>s.name===n);
+  assert.strictEqual(find('Румынская тяга с двумя гантелями').load.weight,5);
+  assert.strictEqual(find('Румынская тяга с двумя гантелями').load.count,2);
+  assert.strictEqual(find('Зашагивания на платформу с гантелями').load.weight,5);
+  assert.strictEqual(find('Ягодичный мостик с весом на лавке').load.weight,10);
+  assert.strictEqual(find('Боковая планка с колен').progression.mode,'time');
+  assert.strictEqual(dto.program.plans[1].exercises.at(-1).stages.length,2);
+  assert.ok(!stages.some(st=>st.name.includes('Одноногий мостик')));
+  stages.forEach(st=>{assert.ok(st.desc.length>70,st.name);assert.ok(st.mistakes.length>30,st.name);});
+  assert.deepStrictEqual(seed.map(x=>x.id),['vshape_v2','slim_toned_v2']);
+});
+
 console.log(`\nai-contract-v2: ${n} ok`);
