@@ -51,6 +51,22 @@ export interface StorePurchaseContext {
   [key: string]: unknown;
 }
 
+export interface StoreRestoreItem {
+  sku: string;
+  proof: Record<string, unknown>;
+}
+
+export interface RestoreError {
+  sku: string;
+  error: string;
+}
+
+export interface RestoreResult extends CheckoutResult {
+  checked: number;
+  restored: number;
+  errors: RestoreError[];
+}
+
 export interface BillingClientOptions {
   auth: Pick<AuthClient, 'authFields'>;
   endpoint?: string;
@@ -76,6 +92,8 @@ export interface BillingClient {
   purchaseContext(provider: string, sku: string, context?: BillingContext): Promise<StorePurchaseContext>;
   /** Verify a native store purchase on the server before granting access. */
   verifyPurchase(provider: string, sku: string, proof: Record<string, unknown>, context?: BillingContext): Promise<CheckoutResult>;
+  /** Re-verify purchases enumerated by the native store SDK and restore account access. */
+  restorePurchases(provider: string, items: StoreRestoreItem[], context?: BillingContext): Promise<RestoreResult>;
   /** Turn automatic renewal of the active subscription on or off; the paid period stays. */
   setRenewal(autoRenew: boolean): Promise<RenewalResult>;
 }
@@ -221,6 +239,38 @@ export function createBillingClient(options: BillingClientOptions): BillingClien
         context:await resolveContext(context)
       });
       return checkoutResult(result);
+    },
+
+    async restorePurchases(provider, items, context){
+      const auth = await options.auth.authFields();
+      if(!auth) throw new Error('not_authenticated');
+      const safeItems = Array.isArray(items) ? items.slice(0,100).map(item => ({
+        sku:String(item && item.sku || ''),
+        proof:item && item.proof && typeof item.proof === 'object' ? item.proof : {}
+      })) : [];
+      const result = await post({
+        action:'restore',
+        provider,
+        items:safeItems,
+        email:auth.email,
+        deviceId:auth.deviceId,
+        syncToken:auth.syncToken,
+        context:await resolveContext(context)
+      });
+      const base = checkoutResult(result);
+      const errors: RestoreError[] = Array.isArray(result.errors) ? result.errors.flatMap(value => {
+        if(!value || typeof value !== 'object') return [];
+        const item = value as Record<string, unknown>;
+        const sku = String(item.sku || '');
+        const error = String(item.error || '');
+        return sku || error ? [{sku, error}] : [];
+      }) : [];
+      return {
+        ...base,
+        checked:Math.max(0, Number(result.checked) || 0),
+        restored:Math.max(0, Number(result.restored) || 0),
+        errors
+      };
     },
 
     async setRenewal(autoRenew){
