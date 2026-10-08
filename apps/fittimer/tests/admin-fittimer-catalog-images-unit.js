@@ -38,6 +38,12 @@ const mod=require('../lib/admin/fittimer/catalog-images');
   ok('exercise prompt keeps one-body constraint',
     prompt.includes('Exactly one solid')&&prompt.includes('biceps brachii'));
   ok('exercise prompt names the structured equipment',prompt.includes('Equipment: 2 dumbbells.'));
+  ok('exercise prompt absolutely forbids any text inside the image',
+    prompt.includes('ZERO text of any kind')&&prompt.includes('Do not render the exercise or program name inside the image.'));
+
+  const coverPrompt=mod.adminCoverImagePrompt({program:'Сильная спина',gives:'Сила и осанка',category:'strength',gender:'woman',exerciseNames:['Тяга']});
+  ok('cover prompt absolutely forbids any text inside the image',
+    coverPrompt.includes('ZERO text of any kind')&&coverPrompt.includes('Do not render the exercise or program name inside the image.'));
 
   const res={statusCode:0,body:'',setHeader(){},end(v){this.body=String(v||'');}};
   const handled=await mod.handleCatalogImageAI('users_list',{},res);

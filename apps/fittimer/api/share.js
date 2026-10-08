@@ -33,7 +33,9 @@ module.exports = async (req, res) => {
   if(!(await rateOk(req, 'share', 60))) return fail(res, 429, 'rate_limited');
 
   let body;
-  try{ body = await readBody(req); }
+  // Program links intentionally carry the compressed cover and exercise images.
+  // Keep this endpoint-specific: generic public API requests still use the 256 KiB default.
+  try{ body = await readBody(req, 2 * 1024 * 1024); }
   catch(e){ return fail(res, 413, 'too_large'); }
 
   const prog = body && body.program;
