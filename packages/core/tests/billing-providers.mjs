@@ -7,7 +7,7 @@ const { configureProduct } = require('../server/product-core');
 const { createStripeBillingAdapter } = require('../server/billing-providers/stripe');
 const { createYooKassaBillingAdapter } = require('../server/billing-providers/yookassa');
 const { createGooglePlayBillingAdapter } = require('../server/billing-providers/google-play');
-const { createAppleStoreBillingAdapter, createApiToken } = require('../server/billing-providers/apple-store');
+const { createAppleStoreBillingAdapter, createApiToken, verifyAndDecodeAppleJws } = require('../server/billing-providers/apple-store');
 
 configureProduct({id:'test.billing', name:'Billing Test', slug:'billing-test', defaultPublicUrl:'https://app.example', products:[]});
 
@@ -252,6 +252,9 @@ ok('App Store API token signature is valid ES256',
   crypto.verify('sha256', Buffer.from(jwtParts[0] + '.' + jwtParts[1]), {
     key:applePublicKey, dsaEncoding:'ieee-p1363'
   }, Buffer.from(jwtParts[2], 'base64url')));
+ok('App Store rejects unsigned/untrusted transaction JWS by default',
+  Promise.resolve().then(() => verifyAndDecodeAppleJws(fakeJws({transactionId:'fake'})))
+    .then(() => false, e => e.message === 'apple_bad_certificate_chain'));
 
 const appleCalls = [];
 const appleTransactions = {
@@ -292,11 +295,37 @@ const appleTransactions = {
 const apple = createAppleStoreBillingAdapter({
   getCredentials:async () => ({issuerId:'issuer-1', keyId:'KEY123', privateKey:'present'}),
   getApiToken:async () => 'server-jwt',
+  verifySignedData:async jws => JSON.parse(Buffer.from(String(jws).split('.')[1], 'base64url').toString('utf8')),
   now:() => Date.parse('2030-01-15T00:00:00Z'),
   fetchImpl:async (url, init = {}) => {
     appleCalls.push({url, init});
-    const id = decodeURIComponent(String(url).split('/').pop());
-    if(id === 'tx-sandbox' && url.startsWith('https://api.storekit.apple.com')){
+    const href = String(url);
+    const id = decodeURIComponent(href.split('/').pop());
+
+    if(href.includes('/inApps/v1/subscriptions/')){
+      if(id !== 'tx-sub') return jsonResponse({}, 404);
+      return jsonResponse({
+        environment:'Production',
+        bundleId:'test.billing',
+        data:[{
+          subscriptionGroupIdentifier:'group-1',
+          lastTransactions:[{
+            originalTransactionId:'tx-sub',
+            status:1,
+            signedTransactionInfo:fakeJws(appleTransactions['tx-sub']),
+            signedRenewalInfo:fakeJws({
+              productId:'plus_month_ios',
+              autoRenewProductId:'plus_month_ios',
+              autoRenewStatus:1,
+              renewalDate:Date.parse('2030-02-01T00:00:00Z'),
+              appAccountToken:appleIdentity.appleAppAccountToken
+            })
+          }]
+        }]
+      });
+    }
+
+    if(id === 'tx-sandbox' && href.startsWith('https://api.storekit.apple.com')){
       return jsonResponse({}, 404);
     }
     const tx = id === 'tx-sandbox'
@@ -329,10 +358,12 @@ const appleSub = await apple.verifyPurchase({
   proof:{transactionId:'tx-sub'},
   identity:appleIdentity
 });
-ok('App Store normalizes active subscription expiry',
+ok('App Store resolves current subscription status and renewal preference',
   appleSub.events[0]?.status === 'paid'
   && appleSub.events[0]?.until === '2030-02-01T00:00:00.000Z'
   && appleSub.events[0]?.autoRenew === true);
+ok('App Store subscription verification uses the current-status endpoint',
+  appleCalls.some(x => x.url.endsWith('/inApps/v1/subscriptions/tx-sub')));
 
 const appleRefund = await apple.verifyPurchase({
   product:{sku:'pack.a', kind:'owned', billing:{apple:{productId:'pack_a_ios'}}},
