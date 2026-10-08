@@ -35,6 +35,9 @@ jobs:
       - name: Install Core and every app
         run: npm run setup
 
+      - name: Test Vercel deployment filters
+        run: node scripts/test-vercel-deployment-policy.mjs
+
       - name: Check Core and affected apps
         run: npm run check:affected -- "$BASE"
         env:
