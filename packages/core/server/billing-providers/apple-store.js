@@ -41,16 +41,73 @@ function createApiToken({issuerId, keyId, privateKey, bundleId}, nowSec){
   return input + '.' + signature;
 }
 
-function decodeJwsPayload(jws){
+const APPLE_ROOT_SHA256 = new Set([
+  'C2B9B042DD57830E7D117DAC55AC8AE19407D38E41D88F3215BC3A890444A050',
+  '63343ABFB89A6A03EBB57E9B3F5FA7BE7C4F5C756F3017B3A8C488C3653E9179',
+  'B0B1730ECBC7FF4505142C49F1295E6EDA6BCAED7E2C68C5BE91B5A11001F024',
+  '0D83B611B648A1A75EB8558400795375CAD92E264ED8E9D7A757C1F5EE2BB22D'
+]);
+const APPLE_LEAF_OID = Buffer.from('060a2a864886f76364060b01', 'hex');
+const APPLE_INTERMEDIATE_OID = Buffer.from('060a2a864886f76364060201', 'hex');
+
+function validAt(cert, at){
+  const from = Date.parse(cert.validFrom) || 0;
+  const to = Date.parse(cert.validTo) || 0;
+  return from <= at && at <= to;
+}
+
+function hasOid(cert, oid){
+  return Buffer.from(cert.raw).includes(oid);
+}
+
+function verifyAndDecodeAppleJws(jws, {nowMs = Date.now()} = {}){
   const parts = String(jws || '').split('.');
   if(parts.length !== 3) throw problem('apple_bad_jws', 502);
+
+  let header, payload;
   try{
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
-    if(!payload || typeof payload !== 'object') throw new Error('bad');
-    return payload;
+    header = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+    payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
   }catch(_){
     throw problem('apple_bad_jws', 502);
   }
+  if(!header || header.alg !== 'ES256' || !Array.isArray(header.x5c) || header.x5c.length !== 3){
+    throw problem('apple_bad_certificate_chain', 502);
+  }
+
+  let leaf, intermediate, root;
+  try{
+    leaf = new crypto.X509Certificate(Buffer.from(String(header.x5c[0]), 'base64'));
+    intermediate = new crypto.X509Certificate(Buffer.from(String(header.x5c[1]), 'base64'));
+    root = new crypto.X509Certificate(Buffer.from(String(header.x5c[2]), 'base64'));
+  }catch(_){
+    throw problem('apple_bad_certificate_chain', 502);
+  }
+
+  const rootFingerprint = String(root.fingerprint256 || '').replace(/:/g, '').toUpperCase();
+  const chainOk = APPLE_ROOT_SHA256.has(rootFingerprint)
+    && intermediate.ca
+    && leaf.issuer === intermediate.subject
+    && intermediate.issuer === root.subject
+    && leaf.verify(intermediate.publicKey)
+    && intermediate.verify(root.publicKey)
+    && hasOid(leaf, APPLE_LEAF_OID)
+    && hasOid(intermediate, APPLE_INTERMEDIATE_OID)
+    && validAt(leaf, nowMs)
+    && validAt(intermediate, nowMs)
+    && validAt(root, nowMs);
+  if(!chainOk) throw problem('apple_bad_certificate_chain', 502);
+
+  const signature = Buffer.from(parts[2], 'base64url');
+  const valid = crypto.verify(
+    'sha256',
+    Buffer.from(parts[0] + '.' + parts[1]),
+    {key:leaf.publicKey, dsaEncoding:'ieee-p1363'},
+    signature
+  );
+  if(!valid) throw problem('apple_bad_signature', 502);
+  if(!payload || typeof payload !== 'object') throw problem('apple_bad_jws', 502);
+  return payload;
 }
 
 function millis(value){
@@ -63,7 +120,8 @@ function createAppleStoreBillingAdapter({
   fetchImpl = globalThis.fetch,
   now = () => Date.now(),
   getCredentials,
-  getApiToken
+  getApiToken,
+  verifySignedData = verifyAndDecodeAppleJws
 } = {}){
   const credentials = typeof getCredentials === 'function' ? getCredentials : async () => {
     await loadSecrets();
@@ -240,5 +298,5 @@ function createAppleStoreBillingAdapter({
 module.exports = {
   createAppleStoreBillingAdapter,
   createApiToken,
-  decodeJwsPayload
+  verifyAndDecodeAppleJws
 };
