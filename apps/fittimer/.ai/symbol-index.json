@@ -494,8 +494,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 3125,
-      "chars": 142210,
+      "lines": 3181,
+      "chars": 144498,
       "symbols": [
         "activateClientAt",
         "add",
@@ -554,6 +554,8 @@
         "exResistanceLines",
         "FILE_HINT",
         "finishImgGen",
+        "fitImageToSlot",
+        "fitImageToSlotAsync",
         "flashDone",
         "forgetMe",
         "geminiFetch",
@@ -1298,8 +1300,8 @@
     },
     "src/html/10-programs-builder.html": {
       "kind": "frontend-html",
-      "lines": 712,
-      "chars": 48816,
+      "lines": 715,
+      "chars": 49200,
       "ids": [
         "aiActions",
         "aiAnswer",
@@ -1526,6 +1528,7 @@
         "scrPrograms",
         "scrProgSettings",
         "scrStart",
+        "slotAspectHint",
         "slotEmptyHint",
         "slotFile",
         "slotFromPhone",
