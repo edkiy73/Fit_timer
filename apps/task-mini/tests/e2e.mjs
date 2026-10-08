@@ -163,6 +163,13 @@ try{
   ok('route and task survive a reload (Core storage + hash router)',
     await appears(phone.getByRole('checkbox', {name: 'С телефона', checked: true})) && phone.url().endsWith('#/done'));
 
+  await phone.goto(URL_ + '#/missing-reference-route');
+  ok('unknown route shows the shared recoverable fallback',
+    await appears(phone.getByRole('heading', {name: 'Такой страницы нет'})));
+  await phone.getByRole('button', {name:'К задачам'}).click();
+  await phone.waitForURL(url => url.hash === '#/' || url.hash === '');
+  ok('fallback returns to the reference app home', phone.url().includes('#/'));
+
   ok('shared Admin loads data once per action, not in a loop', adminCalls > 0 && adminCalls < 30);
   ok('no runtime errors', errors.length === 0);
   if(errors.length) console.log(errors.join('\n'));
