@@ -241,10 +241,26 @@ async function ensureBillingIdentity(who){
       ? String(current.googleObfuscatedAccountId) : crypto.randomBytes(24).toString('base64url');
     acc.billingIdentity = {appleAppAccountToken:apple, googleObfuscatedAccountId:google};
     await store.set(`a:${who.mh}`, JSON.stringify(acc));
+    // Store only an opaque account hash in the reverse index. It lets verified store
+    // notifications find the account without putting email addresses into provider keys.
+    await store.set(`billid:apple:${sha(apple).slice(0,40)}`, who.mh);
+    await store.set(`billid:google:${sha(google).slice(0,40)}`, who.mh);
     return acc.billingIdentity;
   }, {ttl:8, retries:60, delay:50});
   if(saved) who.acc.billingIdentity = saved;
   return saved;
+}
+
+async function resolveBillingIdentity(provider, value){
+  const token = String(value || '').trim();
+  if(!token || !['apple','google'].includes(provider)) return null;
+  const mh = String(await store.get(`billid:${provider}:${sha(token).slice(0,40)}`) || '');
+  if(!/^[a-f0-9]{32}$/.test(mh)) return null;
+  let acc = null;
+  try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(_){}
+  const email = mail(acc && acc.email);
+  if(!acc || !EMAIL.test(email)) return null;
+  return {email, mh, acc};
 }
 
 /* POST /api/billing
@@ -486,8 +502,14 @@ function createDefaultBillingAdapters({
   const { createYooKassaBillingAdapter } = require('./billing-providers/yookassa');
   const { createGooglePlayBillingAdapter } = require('./billing-providers/google-play');
   const { createAppleStoreBillingAdapter } = require('./billing-providers/apple-store');
+  const appleOptions = {
+    ...(apple && typeof apple === 'object' ? apple : {}),
+    resolveAppAccountToken:apple && typeof apple.resolveAppAccountToken === 'function'
+      ? apple.resolveAppAccountToken
+      : token => resolveBillingIdentity('apple', token)
+  };
   const adapters = [
-    createAppleStoreBillingAdapter(apple),
+    createAppleStoreBillingAdapter(appleOptions),
     createGooglePlayBillingAdapter(googlePlay),
     createYooKassaBillingAdapter(yookassa),
     createStripeBillingAdapter(stripe)
