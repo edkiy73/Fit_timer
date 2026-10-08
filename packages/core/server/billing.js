@@ -596,15 +596,12 @@ async function billingReadiness(){
   await loadSecrets().catch(()=>null);
   const secrets = secretsStatus();
   const config = productConfig();
-  const products = (Array.isArray(config.products) ? config.products : []).map(raw => {
-    const sku = cleanSku(raw && raw.sku);
-    return {
-      sku,
-      title:line(raw && raw.title,120) || sku,
-      kind:raw && raw.kind === 'subscription' ? 'subscription' : 'owned',
-      mappings:safeBillingMapping(raw)
-    };
-  }).filter(item => item.sku);
+  const products = (await billingProducts()).map(raw => ({
+    sku:cleanSku(raw && raw.sku),
+    title:line(raw && raw.title,120) || cleanSku(raw && raw.sku),
+    kind:raw && raw.kind === 'subscription' ? 'subscription' : 'owned',
+    mappings:safeBillingMapping(raw)
+  })).filter(item => item.sku);
 
   const mapped = id => products.filter(item => {
     const value = item.mappings[id];
@@ -659,6 +656,18 @@ async function handleAdminBilling(action, body, res){
     return true;
   }
   if(action === 'billing_status'){
+    send(res, 200, {ok:true, ...(await billingReadiness())});
+    return true;
+  }
+  if(action === 'billing_mapping_set'){
+    const sku = cleanSku(body && body.sku);
+    const provider = String(body && body.provider || '');
+    try{
+      await saveBillingMapping(sku, provider, body && body.mapping);
+    }catch(e){
+      fail(res, (e && e.status) || 400, String((e && e.message) || 'billing_mapping_failed'));
+      return true;
+    }
     send(res, 200, {ok:true, ...(await billingReadiness())});
     return true;
   }
