@@ -88,6 +88,91 @@ function mappingText(provider: string, mapping: Record<string, unknown>){
   return scope ? productId + ' · ' + scope : productId;
 }
 
+function mappingDraft(provider: string, mapping: Record<string, unknown>){
+  if(provider === 'stripe') return {priceId:String(mapping.priceId || '')};
+  if(provider === 'yookassa') return {
+    amount:String(mapping.amount || ''),
+    currency:String(mapping.currency || '')
+  };
+  if(provider === 'google_play') return {
+    productId:String(mapping.productId || ''),
+    packageName:String(mapping.packageName || '')
+  };
+  return {
+    productId:String(mapping.productId || ''),
+    bundleId:String(mapping.bundleId || '')
+  };
+}
+
+function MappingEditor({client, adminKey, locale, provider, product, onSaved}: {
+  client: AdminClient;
+  adminKey: string;
+  locale: 'ru' | 'en';
+  provider: string;
+  product: ProductMapping;
+  onSaved(next: BillingReadiness): void;
+}){
+  const ru = locale === 'ru';
+  const [draft, setDraft] = useState<Record<string, string>>(() => mappingDraft(provider, product.mappings?.[provider] || {}));
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState('');
+
+  useEffect(() => {
+    setDraft(mappingDraft(provider, product.mappings?.[provider] || {}));
+  }, [provider, product]);
+
+  const field = (name: string, label: string, type: 'text' | 'number' = 'text') => (
+    <label>
+      <span>{label}</span>
+      <input type={type} min={type === 'number' ? 0 : undefined} value={draft[name] || ''}
+        onChange={e => setDraft(current => ({...current, [name]:e.target.value}))} />
+    </label>
+  );
+
+  async function save(){
+    setBusy(true);
+    setNote('');
+    try{
+      const mapping: Record<string, unknown> = {...draft};
+      if(provider === 'yookassa') mapping.amount = Number(draft.amount) || 0;
+      const result = await client.action(adminKey, 'billing_mapping_set', {
+        sku:product.sku,
+        provider,
+        mapping
+      });
+      onSaved(result as unknown as BillingReadiness);
+      setNote(ru ? 'Сохранено.' : 'Saved.');
+    }catch(error){
+      setNote((ru ? 'Не сохранилось: ' : 'Not saved: ')
+        + String((error as {code?: string})?.code || 'error'));
+    }finally{
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="ab-admin-fieldset">
+      <div className="ab-admin-row">
+        <div>
+          <strong>{product.title || product.sku}</strong>
+          <div className="ab-admin-empty">{product.sku}</div>
+        </div>
+        {provider === 'stripe' && field('priceId', 'priceId')}
+        {provider === 'yookassa' && field('amount', ru ? 'Сумма' : 'Amount', 'number')}
+        {provider === 'yookassa' && field('currency', ru ? 'Валюта' : 'Currency')}
+        {provider === 'google_play' && field('productId', 'productId')}
+        {provider === 'google_play' && field('packageName', 'packageName')}
+        {provider === 'apple' && field('productId', 'productId')}
+        {provider === 'apple' && field('bundleId', 'bundleId')}
+        <button type="button" className="ab-admin-secondary" disabled={busy} onClick={() => void save()}>
+          {busy ? (ru ? 'Сохраняю…' : 'Saving…') : (ru ? 'Сохранить' : 'Save')}
+        </button>
+      </div>
+      {note && <p className="ab-admin-empty" role="status">{note}</p>}
+    </div>
+  );
+}
+
 function InstantSwitch({client, adminKey, locale}: {client: AdminClient; adminKey: string; locale: 'ru' | 'en'}){
   const [settings, setSettings] = useState<Settings | null>(null);
   const [busy, setBusy] = useState(false);
@@ -176,16 +261,13 @@ export function AdminBillingKeys({client, adminKey, locale = 'ru'}: {client: Adm
               <SecretField key={key.name} name={key.name} label={key.label[locale]} state={keys.secrets?.[key.name]}
                 onSave={keys.save} locale={locale} multiline={'multiline' in key && key.multiline} />
             ))}
-            {mappings.length ? (
-              <ul className="ab-admin-services">
-                {mappings.map(product => (
-                  <li key={product.sku}>
-                    <span>{product.title || product.sku}</span>
-                    <b>{product.text}</b>
-                  </li>
-                ))}
-              </ul>
-            ) : state?.configured ? (
+            <div className="ab-admin-stack">
+              {(readiness?.products || []).map(product => (
+                <MappingEditor key={product.sku} client={client} adminKey={adminKey} locale={locale}
+                  provider={provider.id} product={product} onSaved={setReadiness} />
+              ))}
+            </div>
+            {!mappings.length && state?.configured ? (
               <p className="ab-admin-empty">
                 {ru ? 'Ключи заданы, но ни один товар ещё не привязан к этому провайдеру.' : 'Credentials are set, but no product is mapped to this provider yet.'}
               </p>
