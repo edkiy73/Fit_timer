@@ -361,18 +361,32 @@ async function handleCatalogAdmin(action,body,res){
       {handle,since:now,seen:now,keyHash:'',years:null,links:''},t)));
   }
   const have=new Set(await store.list('c:approved'));
-  let added=0;
-  for(const it of SEED_ITEMS){
-    // Never overwrite a program an administrator may have edited after seeding.
-    // A second click is intentionally idempotent.
-    if(have.has(it.id))continue;
-    await store.set(`c:${it.id}`,JSON.stringify(Object.assign(
-      {status:'approved',at:now,cover:null},it)));
-    await store.push('c:approved',it.id);
-    if(it.by)await store.incr(`t:${it.by}:programs`);
-    added++;
+  const referenceId=clean(body.referenceId,100);
+  const requested=referenceId?SEED_ITEMS.filter(it=>it.id===referenceId):SEED_ITEMS;
+  if(referenceId&&!requested.length){fail(res,404,'reference_not_found');return true;}
+  let added=0,updated=0;
+  for(const it of requested){
+    const exists=have.has(it.id);
+    if(exists&&!body.update)continue;
+    const oldRaw=exists?await store.get(`c:${it.id}`):null;
+    if(exists&&!oldRaw){fail(res,409,'reference_missing_record');return true;}
+    const old=oldRaw?JSON.parse(oldRaw):null;
+    // Keep media and non-program catalog metadata; replace canonical exercise content.
+    // User-installed copies and their workout history are stored separately.
+    const next=Object.assign({},old||{},it,{
+      status:'approved',
+      at:old&&old.at||now,
+      cover:old&&old.cover||null,
+      pics:old&&old.pics||it.pics||null
+    });
+    await store.set(`c:${it.id}`,JSON.stringify(next));
+    if(!exists){
+      await store.push('c:approved',it.id);
+      if(it.by)await store.incr(`t:${it.by}:programs`);
+      added++;
+    }else updated++;
   }
-  send(res,200,{ok:true,items:SEED_ITEMS.length,added});
+  send(res,200,{ok:true,items:requested.length,added,updated});
   return true;
 }
 
