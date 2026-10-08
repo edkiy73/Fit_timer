@@ -29,16 +29,21 @@ export function shouldSkip(files) {
   return files.length > 0 && !files.some(requiresBuild);
 }
 function changedFiles() {
-  const head = process.env.VERCEL_GIT_COMMIT_SHA;
-  const base = process.env.VERCEL_GIT_PREVIOUS_SHA;
-  if (!head || !base || /^0+$/.test(base)) return null;
-  try {
-    return execFileSync('git', ['diff', '--name-only', base, head], {
-      encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim().split(/\r?\n/).filter(Boolean);
-  } catch {
-    return null;
+  const head = process.env.VERCEL_GIT_COMMIT_SHA || 'HEAD';
+  const previous = process.env.VERCEL_GIT_PREVIOUS_SHA;
+  const options = { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] };
+  // Vercel may omit the previous SHA or shallow-clone without its parent.
+  // Try the last successful deployment first, then the checked-out commit's parent.
+  const bases = previous && !/^0+$/.test(previous)
+    ? [previous, head + '^']
+    : [head + '^'];
+  for (const base of bases) {
+    try {
+      const output = execFileSync('git', ['diff', '--name-only', base, head], options);
+      return output.trim().split(/\r?\n/).filter(Boolean);
+    } catch { /* try a different base */ }
   }
+  return null; // Insufficient history: deploy for safety.
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const changed = changedFiles();
