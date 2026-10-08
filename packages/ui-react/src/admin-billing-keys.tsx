@@ -124,8 +124,8 @@ function MappingEditor({client, adminKey, locale, provider, product, onSaved}: {
   const field = (name: string, label: string, type: 'text' | 'number' = 'text') => (
     <label>
       <span>{label}</span>
-      <input type={type} min={type === 'number' ? 0 : undefined} value={draft[name] || ''}
-        onChange={e => setDraft(current => ({...current, [name]:e.target.value}))} />
+      <input type={type} min={type === 'number' ? 0 : undefined} step={type === 'number' ? '0.01' : undefined}
+        value={draft[name] || ''} onChange={e => setDraft(current => ({...current, [name]:e.target.value}))} />
     </label>
   );
 
