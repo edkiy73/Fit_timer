@@ -5,6 +5,7 @@ const { providerStatus, billingProviderStatus } = require('./ai');
 const { loadSecrets } = require('./secrets');
 const Supabase = require('./supabase');
 const SyncShadow = require('./sync-shadow');
+const { productConfig } = require('./product-core');
 
 function safeError(e){
   return String((e && e.message) || e || 'unknown_error').slice(0, 300);
@@ -28,6 +29,11 @@ async function collectHealth({probes: productProbes = []} = {}){
   const push = pushInfo();
   const ai = providerStatus();
   const billing = billingProviderStatus();
+  const product = productConfig();
+  const features = product.features && typeof product.features === 'object' ? product.features : {};
+  const aiEnabled = features.ai === true;
+  const pushEnabled = features.notifications === true;
+  const billingEnabled = features.premium === true || (Array.isArray(product.products) && product.products.length > 0);
   const supabase = Supabase.info();
   const shadow = await SyncShadow.migrationStatus();
   const probes = [];
@@ -71,12 +77,13 @@ async function collectHealth({probes: productProbes = []} = {}){
   if(!info.modeValid) optionalWarnings.push('APPBASE_STORE содержит неизвестный режим: '+info.mode+'.');
   if(info.mirrorMissing) optionalWarnings.push('Режим '+info.mode+' требует зеркало, но его ключи не заданы — записи не дублируются.');
   if(!mail.ready) optionalWarnings.push('Почта не настроена — вход по коду из письма не работает.');
-  if(!ai.gemini && !ai.openai && !ai.openrouter) optionalWarnings.push('Не подключён ни один ИИ — разбор ошибок и разговор не работают.');
+  if(aiEnabled && !ai.gemini && !ai.openai && !ai.openrouter) optionalWarnings.push('ИИ включён для продукта, но не подключён ни один провайдер.');
   if(supabase.configured && supabaseProbe && !supabaseProbe.ok) optionalWarnings.push('Supabase настроен, но connection health не проходит.');
   if(shadow && shadow.readiness && ['investigate','parity_issue'].includes(shadow.readiness.stage)){
     optionalWarnings.push('Supabase shadow migration требует внимания: '+shadow.readiness.reason);
   }
-  if(!push.android && !push.ios) optionalWarnings.push('Уведомления на телефон не настроены.');
+  if(pushEnabled && !push.android && !push.ios) optionalWarnings.push('Уведомления включены для продукта, но Android/iOS push не настроен.');
+  if(billingEnabled && !(billing.google || billing.rustore || billing.yookassa || billing.stripe)) optionalWarnings.push('Платные функции включены для продукта, но платёжный провайдер не настроен.');
 
   const storageProbe = probes.find(x=>x.name==='storage') || null;
   const storageSteps = storageProbe && storageProbe.detail && Array.isArray(storageProbe.detail.steps)
@@ -99,7 +106,7 @@ async function collectHealth({probes: productProbes = []} = {}){
       vars:info.vars || []
     },
     services:{
-      ai:{configured:!!(ai.gemini || ai.openai || ai.openrouter),providers:ai},
+      ai:{enabled:aiEnabled,configured:!!(ai.gemini || ai.openai || ai.openrouter),providers:ai},
       supabase:{
         configured:!!supabase.configured,
         connected:!!(supabaseProbe && supabaseProbe.ok),
@@ -116,9 +123,9 @@ async function collectHealth({probes: productProbes = []} = {}){
         }
       },
       mail:{configured:!!mail.ready,testDomain:!!mail.testDomain,from:mail.from || null,envSeen:mail.seen || []},
-      push:{configured:!!(push.android || push.ios),android:!!push.android,ios:!!push.ios,
+      push:{enabled:pushEnabled,configured:!!(push.android || push.ios),android:!!push.android,ios:!!push.ios,
         firebaseEnvSeen:push.firebaseVars || [],apnsEnvSeen:push.apnsVars || []},
-      billing:{configured:!!(billing.google || billing.rustore || billing.yookassa || billing.stripe),providers:billing}
+      billing:{enabled:billingEnabled,configured:!!(billing.google || billing.rustore || billing.yookassa || billing.stripe),providers:billing}
     },
     warnings:optionalWarnings
   };
