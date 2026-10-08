@@ -264,6 +264,32 @@ async function accountFromBillingRef(ref){
   return EMAIL.test(email) ? {email, acc, mh:String(mh)} : null;
 }
 
+async function currentEntitlements(mh){
+  let acc = null;
+  try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(_){}
+  return entitlementsOf(acc || null);
+}
+
+async function verifyStorePurchase(adapter, who, sku, proof, identity){
+  const skuError = checkSku(sku);
+  if(skuError) throw Object.assign(new Error(skuError), {status:400});
+  const product = providerProduct(sku);
+  const verified = await adapter.verifyPurchase({
+    email:who.email,
+    sku,
+    product,
+    identity,
+    proof:proof && typeof proof === 'object' ? proof : {}
+  });
+  const results = [];
+  for(const raw of (verified && Array.isArray(verified.events)) ? verified.events : []){
+    results.push(await applyBillingEvent(adapter.id, {...raw, email:who.email, sku}));
+  }
+  const bad = results.find(r => !r.ok);
+  if(bad) throw Object.assign(new Error(bad.error), {status:400});
+  return results;
+}
+
 /* POST /api/billing
      {action:'providers'}                                            → доступные провайдеры
      {action:'checkout', provider, sku, email, deviceId, syncToken}  → {url} или право сразу
@@ -372,32 +398,49 @@ function createBillingHandler({adapters = []} = {}){
       if(!adapter || typeof adapter.verifyPurchase !== 'function') return fail(res, 404, 'unknown_provider');
       const who = await signedInAccount(body);
       if(!who) return fail(res, 403, 'bad_sync_token');
-      const sku = cleanSku(body.sku);
-      const skuError = checkSku(sku);
-      if(skuError) return fail(res, 400, skuError);
       const identity = await ensureBillingIdentity(who);
       if(!identity) return fail(res, 409, 'billing_identity_failed');
-      const product = providerProduct(sku);
-      let verified;
+      const sku = cleanSku(body.sku);
+      let results;
       try{
-        verified = await adapter.verifyPurchase({
-          email:who.email,
-          sku,
-          product,
-          identity,
-          proof:body.proof && typeof body.proof === 'object' ? body.proof : {}
-        });
+        results = await verifyStorePurchase(adapter, who, sku, body.proof, identity);
       }catch(e){
         return fail(res, (e && e.status) || 502, String((e && e.message) || 'purchase_verification_failed'));
       }
+      return send(res, 200, {
+        ok:true,
+        granted:results.some(r => r && r.applied),
+        ...(await currentEntitlements(who.mh))
+      });
+    }
+
+    if(action === 'reconcile_purchases'){
+      const adapter = await find(String(body.provider || ''), billingContext(body && body.context));
+      if(!adapter || typeof adapter.verifyPurchase !== 'function') return fail(res, 404, 'unknown_provider');
+      const who = await signedInAccount(body);
+      if(!who) return fail(res, 403, 'bad_sync_token');
+      const identity = await ensureBillingIdentity(who);
+      if(!identity) return fail(res, 409, 'billing_identity_failed');
+      const purchases = Array.isArray(body.purchases) ? body.purchases.slice(0, 50) : [];
+      if(!purchases.length) return fail(res, 400, 'purchases_required');
+
       const results = [];
-      for(const raw of (verified && Array.isArray(verified.events)) ? verified.events : []){
-        results.push(await applyBillingEvent(adapter.id, {...raw, email:who.email, sku}));
+      for(const item of purchases){
+        const sku = cleanSku(item && item.sku);
+        try{
+          const applied = await verifyStorePurchase(adapter, who, sku, item && item.proof, identity);
+          results.push({sku, ok:true, applied:applied.some(r => r && r.applied)});
+        }catch(e){
+          results.push({sku, ok:false, error:String((e && e.message) || 'purchase_verification_failed').slice(0, 120)});
+        }
       }
-      const bad = results.find(r => !r.ok);
-      if(bad) return fail(res, 400, bad.error);
-      const last = results[results.length - 1];
-      return send(res, 200, {ok:true, granted:!!(last && last.applied), ...(last ? last.entitlements : entitlementsOf(who.acc))});
+      return send(res, 200, {
+        ok:true,
+        verified:results.filter(x => x.ok).length,
+        failed:results.filter(x => !x.ok).length,
+        results,
+        ...(await currentEntitlements(who.mh))
+      });
     }
 
     // Automatic renewal of the active subscription: on or off, the paid period stays. A provider
