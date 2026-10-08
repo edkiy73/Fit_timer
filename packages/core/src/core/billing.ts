@@ -76,6 +76,8 @@ export interface BillingClient {
   purchaseContext(provider: string, sku: string, context?: BillingContext): Promise<StorePurchaseContext>;
   /** Verify a native store purchase on the server before granting access. */
   verifyPurchase(provider: string, sku: string, proof: Record<string, unknown>, context?: BillingContext): Promise<CheckoutResult>;
+  /** Re-check server-side provider references and refresh canonical access. */
+  reconcile(): Promise<CheckoutResult & {checked: number; changed: number}>;
   /** Turn automatic renewal of the active subscription on or off; the paid period stays. */
   setRenewal(autoRenew: boolean): Promise<RenewalResult>;
 }
@@ -221,6 +223,22 @@ export function createBillingClient(options: BillingClientOptions): BillingClien
         context:await resolveContext(context)
       });
       return checkoutResult(result);
+    },
+
+    async reconcile(){
+      const auth = await options.auth.authFields();
+      if(!auth) throw new Error('not_authenticated');
+      const result = await post({
+        action:'reconcile',
+        email:auth.email,
+        deviceId:auth.deviceId,
+        syncToken:auth.syncToken
+      });
+      return {
+        ...checkoutResult(result),
+        checked:Number(result.checked) || 0,
+        changed:Number(result.changed) || 0
+      };
     },
 
     async setRenewal(autoRenew){
