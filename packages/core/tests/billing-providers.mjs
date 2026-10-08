@@ -15,8 +15,14 @@ configureProduct({
   slug:'billing-test',
   defaultPublicUrl:'https://app.example',
   products:[
-    {sku:'pack.a', title:'Pack A', billing:{apple:{productId:'pack_a_ios'}}},
-    {sku:'plus.month', title:'Plus', kind:'subscription', days:30, billing:{apple:{productId:'plus_month_ios'}}}
+    {sku:'pack.a', title:'Pack A', billing:{
+      apple:{productId:'pack_a_ios'},
+      google:{productId:'pack_a'}
+    }},
+    {sku:'plus.month', title:'Plus', kind:'subscription', days:30, billing:{
+      apple:{productId:'plus_month_ios'},
+      google:{productId:'plus_month'}
+    }}
   ]
 });
 
@@ -161,6 +167,8 @@ const googleIdentity = {googleObfuscatedAccountId:'acct_1234567890abcdef'};
 const google = createGooglePlayBillingAdapter({
   getServiceAccount:async () => ({clientEmail:'svc@example.test', privateKey:'unused', tokenUri:'https://oauth.test/token'}),
   getAccessToken:async () => 'access-token',
+  resolveObfuscatedAccountId:async value => value === googleIdentity.googleObfuscatedAccountId
+    ? {email:'payer@example.com'} : null,
   now:() => Date.parse('2030-01-01T00:00:00Z'),
   fetchImpl:async (url, init = {}) => {
     googleCalls.push({url, init});
@@ -170,7 +178,7 @@ const google = createGooglePlayBillingAdapter({
         acknowledgementState:'ACKNOWLEDGEMENT_STATE_PENDING',
         obfuscatedExternalAccountId:googleIdentity.googleObfuscatedAccountId,
         orderId:'GPA.item.1',
-        productLineItem:[{productId:'pack_a'}]
+        productLineItem:[{productId:'pack_a', productOfferDetails:{quantity:1, refundableQuantity:1}}]
       });
     }
     if(url.includes('/purchases/subscriptionsv2/tokens/sub-token')){
@@ -193,6 +201,28 @@ const google = createGooglePlayBillingAdapter({
         obfuscatedExternalAccountId:'someone_else',
         orderId:'GPA.item.bad',
         productLineItem:[{productId:'pack_a'}]
+      });
+    }
+    if(url.includes('/purchases/productsv2/tokens/item-refunded')){
+      return jsonResponse({
+        purchaseStateContext:{purchaseState:'PURCHASE_STATE_PURCHASED'},
+        acknowledgementState:'ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED',
+        obfuscatedExternalAccountId:googleIdentity.googleObfuscatedAccountId,
+        orderId:'GPA.item.refund',
+        productLineItem:[{productId:'pack_a', productOfferDetails:{quantity:1, refundableQuantity:0}}]
+      });
+    }
+    if(url.includes('/purchases/subscriptionsv2/tokens/sub-expired')){
+      return jsonResponse({
+        subscriptionState:'SUBSCRIPTION_STATE_EXPIRED',
+        acknowledgementState:'ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED',
+        externalAccountIdentifiers:{obfuscatedExternalAccountId:googleIdentity.googleObfuscatedAccountId},
+        lineItems:[{
+          productId:'plus_month',
+          expiryTime:'2029-12-01T00:00:00Z',
+          latestSuccessfulOrderId:'GPA.sub.expired',
+          autoRenewingPlan:{autoRenewEnabled:false}
+        }]
       });
     }
     if(url.endsWith(':acknowledge')) return jsonResponse({});
@@ -234,6 +264,86 @@ ok('Google rejects a token linked to another AppBase account',
     proof:{purchaseToken:'wrong-account'},
     identity:googleIdentity
   }).then(() => false, e => e.message === 'store_account_mismatch' && e.status === 403));
+
+const googleExpired = await google.verifyPurchase({
+  product:{sku:'plus.month', kind:'subscription', billing:{google:{productId:'plus_month'}}},
+  proof:{purchaseToken:'sub-expired'},
+  identity:googleIdentity
+});
+ok('Google expired subscription is canceled, not mislabeled as a refund',
+  googleExpired.events[0]?.status === 'canceled');
+
+const pubsub = payload => ({message:{data:Buffer.from(JSON.stringify(payload)).toString('base64')}});
+
+const googleRenewal = await google.verifyWebhook({body:pubsub({
+  version:'1.0',
+  packageName:'test.billing',
+  subscriptionNotification:{version:'1.0', notificationType:2, purchaseToken:'sub-token'}
+})});
+ok('Google RTDN re-fetches a subscription before granting renewal',
+  googleRenewal.ok
+  && googleRenewal.events[0]?.status === 'paid'
+  && googleRenewal.events[0]?.email === 'payer@example.com'
+  && googleRenewal.events[0]?.sku === 'plus.month');
+
+const googleRevoke = await google.verifyWebhook({body:pubsub({
+  version:'1.0',
+  packageName:'test.billing',
+  subscriptionNotification:{version:'1.0', notificationType:12, purchaseToken:'sub-token'}
+})});
+ok('Google RTDN verified revocation becomes a refund event',
+  googleRevoke.ok && googleRevoke.events[0]?.status === 'refunded');
+
+const googleItemRtdn = await google.verifyWebhook({body:pubsub({
+  version:'1.0',
+  packageName:'test.billing',
+  oneTimeProductNotification:{version:'1.0', notificationType:1, purchaseToken:'item-token', sku:'pack_a'}
+})});
+ok('Google RTDN re-fetches one-time purchase before granting',
+  googleItemRtdn.ok
+  && googleItemRtdn.events[0]?.status === 'paid'
+  && googleItemRtdn.events[0]?.sku === 'pack.a');
+
+const partialVoid = await google.verifyWebhook({body:pubsub({
+  version:'1.0',
+  packageName:'test.billing',
+  voidedPurchaseNotification:{
+    purchaseToken:'item-token', orderId:'GPA.item.1', productType:2, refundType:2
+  }
+})});
+ok('Google partial quantity refund keeps entitlement while refundable quantity remains',
+  partialVoid.ok && partialVoid.events.length === 0);
+
+const fullVoid = await google.verifyWebhook({body:pubsub({
+  version:'1.0',
+  packageName:'test.billing',
+  voidedPurchaseNotification:{
+    purchaseToken:'item-refunded', orderId:'GPA.item.refund', productType:2, refundType:1
+  }
+})});
+ok('Google full voided purchase revokes the mapped one-time product',
+  fullVoid.ok
+  && fullVoid.events[0]?.status === 'refunded'
+  && fullVoid.events[0]?.sku === 'pack.a');
+
+const foreignRtdn = await google.verifyWebhook({body:pubsub({
+  version:'1.0',
+  packageName:'test.billing',
+  oneTimeProductNotification:{version:'1.0', notificationType:1, purchaseToken:'wrong-account', sku:'pack_a'}
+})});
+ok('Google RTDN cannot affect an unlinked account',
+  foreignRtdn.ok && foreignRtdn.events.length === 0);
+
+const wrongPackageRtdn = await google.verifyWebhook({body:pubsub({
+  version:'1.0',
+  packageName:'other.app',
+  oneTimeProductNotification:{version:'1.0', notificationType:1, purchaseToken:'item-token', sku:'pack_a'}
+})});
+ok('Google RTDN ignores another package',
+  wrongPackageRtdn.ok && wrongPackageRtdn.events.length === 0);
+
+ok('Google RTDN rejects malformed Pub/Sub envelope',
+  !(await google.verifyWebhook({body:{message:{data:'not-base64-json'}}})).ok);
 
 // App Store: the phone gives a transaction id; Core fetches the transaction from Apple itself.
 const appleIdentity = {appleAppAccountToken:'11111111-2222-4333-8444-555555555555'};
