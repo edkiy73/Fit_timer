@@ -101,6 +101,7 @@ ok('webhook intake does not depend on client country/platform context',
 
 // Native-store flow: Core issues an opaque account link, then grants only after server verification.
 let verifiedNativeProof = null;
+let nativeStoreState = 'paid';
 const nativeStoreAdapter = {
   id:'google_native',
   kind:'store',
@@ -111,7 +112,10 @@ const nativeStoreAdapter = {
   },
   async verifyPurchase({proof, identity}){
     verifiedNativeProof = {proof, identity};
-    return {events:[{orderId:'native-order-1', status:'paid', autoRenew:false}]};
+    return {
+      reference:{purchaseToken:String(proof.purchaseToken || '')},
+      events:[{orderId:'native-order-1', status:nativeStoreState, autoRenew:false}]
+    };
   }
 };
 const nativeStoreHandler = createBillingHandler({adapters:[nativeStoreAdapter]});
@@ -131,6 +135,15 @@ ok('native proof reaches only the server verifier',
   && verifiedNativeProof?.identity?.googleObfuscatedAccountId === nativeContext.obfuscatedAccountId);
 ok('verified native purchase grants through the canonical entitlement path',
   nativeBuy.granted && nativeBuy.owned.includes('pack.b'));
+ok('provider purchase reference never returns to the client',
+  !JSON.stringify(nativeBuy).includes('device-token'));
+nativeStoreState = 'refunded';
+const reconciledNative = await nativeBilling.reconcile();
+ok('reconcile re-verifies the server-only provider reference',
+  reconciledNative.checked === 1
+  && verifiedNativeProof?.proof?.purchaseToken === 'device-token');
+ok('reconcile applies a provider refund to canonical access',
+  reconciledNative.changed === 1 && !reconciledNative.owned.includes('pack.b'));
 const nativeAccount = await accountOf('payer@example.com');
 ok('native billing identity is persisted on the account',
   nativeAccount.billingIdentity?.googleObfuscatedAccountId === nativeContext.obfuscatedAccountId
