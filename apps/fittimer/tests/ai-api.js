@@ -23,14 +23,15 @@ const ok = (name, value) => { if(!value) bad++; console.log((value ? '  ok  ' : 
 
   const adminCreate = await post('/api/admin',{
     action:'catalog_ai_create',lang:'ru',cat:'power',level:'Средний',min:30,days:3,
-    equipment:'гантели',limitations:'без прыжков',focus:'спина',style:'strength',warmup:'yes',
+    availableLoadEquipment:['dumbbell'],limitations:'без прыжков',focus:'спина',style:'strength',warmup:'yes',
     instruction:'тестовая программа'
   },{'x-admin-key':encodeURIComponent(ADMIN)});
-  ok('админка создаёт полную программу через ИИ',
+  ok('админка создаёт полную программу через ИИ (тот же контракт V2)',
     adminCreate.status === 200
     && adminCreate.body.locale
     && adminCreate.body.locale.name === 'Тестовая программа'
-    && /УПРАЖНЕНИЕ: Приседания/.test(adminCreate.body.locale.text || ''));
+    && adminCreate.body.program && adminCreate.body.program.plans[0].exercises.length === 4
+    && adminCreate.body.locale.texts.stages.some(s => s.name === 'Приседания'));
 
   settings.limits.heavy = 1;
   const saved = await post('/api/admin',{action:'save_settings',settings},{'x-admin-key':encodeURIComponent(ADMIN)});

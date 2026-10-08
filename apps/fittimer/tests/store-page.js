@@ -20,64 +20,34 @@ let bad = 0;
 const ok = (name, cond, extra) => { if(!cond) bad++;
   console.log((cond ? '  ok  ' : ' ПЛОХО') + '  ' + name + (extra != null ? '  → ' + extra : '')); };
 
-const warm = `УПРАЖНЕНИЕ: Суставная разминка
-ФОРМАТ: время
-ЗНАЧЕНИЕ: 60
-ПОДХОДЫ: 1
-РАЗМИНКА: да
-ОТДЫХ: 20`;
+const { catalogProgram } = require('./helpers/catalog-program');
+const warm = {name:'Суставная разминка', warmup:true, type:'time', value:'60', sets:1, rest:20};
 
-const TWO = `ПРОГРАММА: Верх и низ
-ПРОГРЕССИЯ: 4
+// Каталог отдаёт программу V2 уже на языке витрины
+const TWO = catalogProgram('Верх и низ', [], {progressionEvery:4, plans:[
+  {days:['mon', 'thu'], rounds:3, roundRest:90, exercises:[warm,
+    {name:'Отжимания', value:'10', sets:3, rest:60},
+    {name:'Тяга гантели', value:'12', sets:3, rest:60,
+      load:{type:'weight', equipment:'dumbbell', equipmentName:'', count:1, weight:8, levels:[], level:0},
+      progression:{mode:'weight', every:null, repsStep:null, repsMax:null, weightStep:2, weightMax:null, timeStep:null, timeMax:null}}]},
+  {days:['tue', 'fri'], rounds:2, roundRest:60, exercises:[warm, {name:'Приседания', value:'15', sets:4, rest:45}]}
+]});
 
-ДЕНЬ: Пн, Чт
-КРУГИ: 3
-ОТДЫХ МЕЖДУ КРУГАМИ: 90
+const ONE = catalogProgram('Просто круг', [
+  {name:'Приседания', value:'12', sets:3, rest:45},
+  {name:'Планка', type:'time', value:'40', sets:3, rest:40},
+  {name:'Выпады', value:'10', sets:3, rest:45}
+], {days:['wed'], rounds:3});
+// Состав «два упражнения» — проверка нумерации одного варианта без подписей
+ONE.plans[0].exercises.pop();
 
-${warm}
-
-УПРАЖНЕНИЕ: Отжимания
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 10
-ПОДХОДЫ: 3
-ОТДЫХ: 60
-
-УПРАЖНЕНИЕ: Тяга гантели
-ФОРМАТ: повторения и вес
-ЗНАЧЕНИЕ: 12
-ВЕС: 8
-ПОДХОДЫ: 3
-ОТДЫХ: 60
-ШАГ ВЕСА: 2
-
-ДЕНЬ: Вт, Пт
-КРУГИ: 2
-ОТДЫХ МЕЖДУ КРУГАМИ: 60
-
-${warm}
-
-УПРАЖНЕНИЕ: Приседания
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 15
-ПОДХОДЫ: 4
-ОТДЫХ: 45`;
-
-const ONE = `ПРОГРАММА: Просто круг
-ДНИ: Ср
-КРУГИ: 3
-ОТДЫХ МЕЖДУ КРУГАМИ: 60
-
-УПРАЖНЕНИЕ: Приседания
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 12
-ПОДХОДЫ: 3
-ОТДЫХ: 45
-
-УПРАЖНЕНИЕ: Планка
-ФОРМАТ: время
-ЗНАЧЕНИЕ: 40
-ПОДХОДЫ: 3
-ОТДЫХ: 40`;
+const BAND = catalogProgram('Резинки', [
+  {name:'Тяга резинки сверху', value:'12-15', sets:3, rest:60,
+    load:{type:'level', equipment:'band', equipmentName:'', count:1, weight:0, levels:['light', 'medium', 'strong', 'veryStrong'], level:1},
+    progression:{mode:'level', every:null, repsStep:2, repsMax:18, weightStep:null, weightMax:null, timeStep:null, timeMax:null}},
+  'Приседания', 'Планка'
+], {days:['wed'], rounds:1});
+BAND.plans[0].exercises = BAND.plans[0].exercises.slice(0, 1);
 
 const shot = page => page.evaluate(() => ({
   heads: [...document.querySelectorAll('#siList .si-plan')].map(h => ({
@@ -112,23 +82,17 @@ const shot = page => page.evaluate(() => ({
   await page.waitForTimeout(2000);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(1500); }
 
-  const open = async (txt, extra) => {
+  const open = async (program, extra) => {
     catalogItem = Object.assign({id: 'utest01', by: '@lena.doma', cat: 'tone', level: 'Средний',
       min: 35, name: 'Проверка', gives: 'Описание программы для проверки состава.',
-      text: txt, cover: null}, extra || {});
+      program, locale: 'ru', exCount: 0, cover: null}, extra || {});
     await page.evaluate(async () => {
       await loadStoreServer();
       await openStoreItem('utest01');
     });
   };
 
-  /* Каталог пока хранит программы старым текстовым протоколом, а он больше не
-     превращается в программу (модель упражнения V2; docs/load-equipment-progression-plan-2026-10-08.md,
-     PR 7 — перевод каталога). Поэтому состав по вариантам (подписи днями, своя
-     нумерация, разминка по одной на вариант, сопротивление человеческим label)
-     сейчас не рисуется вовсе — проверки этого вернутся вместе с V2-каталогом.
-     Здесь держим то, что работает и сейчас: шапку страницы и отсутствие
-     старой формы упражнений в составе. */
+  /* ---- два варианта ---- */
   await open(TWO);
   await page.waitForTimeout(400);
   const two = await shot(page);
@@ -142,8 +106,50 @@ const shot = page => page.evaluate(() => ({
   ok('автор подписан', head.by === '@lena.doma', head.by);
   ok('в шапке уровень и длительность',
      two.facts.includes('Средний') && two.facts.some(f => /^35 мин/.test(f)), two.facts.join(' · '));
-  ok('старый текст не превращается в упражнения состава',
-     two.rows.length === 0 && two.heads.length === 0, two.rows.length + '/' + two.heads.length);
+
+  ok('варианты подписаны днями', two.heads.length === 2
+     && two.heads[0].title === 'Пн, Чт' && two.heads[1].title === 'Вт, Пт',
+     two.heads.map(h => h.title).join(' | '));
+  ok('у варианта сказано, сколько в нём и сколько кругов',
+     /3 упражнения/.test(two.heads[0].sub) && /3 круга/.test(two.heads[0].sub),
+     two.heads[0].sub);
+
+  const warms = two.rows.filter(r => r.warm);
+  ok('разминка по одной на вариант, а не подряд', warms.length === 2, warms.length);
+  ok('и стоит первой в своём варианте',
+     two.rows[0].warm && two.rows[3].warm && !two.rows[1].warm,
+     two.rows.map(r => r.warm ? 'р' : '·').join(''));
+
+  ok('нумерация СВОЯ у каждого варианта',
+     two.rows.map(r => r.num).join(',') === ',1,2,,1',
+     two.rows.map(r => r.num || '(разминка)').join(','));
+  ok('вес снаряда виден в составе', /8 кг/.test(two.rows[2].meta), two.rows[2].meta);
+
+  ok('в шапке дни всей программы, а не первого варианта',
+     two.facts.some(f => f === 'Пн, Вт, Чт, Пт'), two.facts.join(' · '));
+  ok('и сказано, что вариантов два', two.facts.some(f => /2 варианта/.test(f)),
+     two.facts.join(' · '));
+  ok('в заголовке состава — варианты, а не сумма упражнений',
+     two.count === '2 варианта', two.count);
+
+  /* ---- один вариант: заголовков нет ---- */
+  await open(ONE);
+  await page.waitForTimeout(400);
+  const one = await shot(page);
+  ok('у одного варианта подписи нет вовсе', one.heads.length === 0, one.heads.length);
+  ok('и в заголовке снова упражнения', one.count === '2 упражнения', one.count);
+  ok('нумерация сквозная', one.rows.map(r => r.num).join(',') === '1,2',
+     one.rows.map(r => r.num).join(','));
+
+  /* ---- resistance видно в каталоге человеческим label ---- */
+  await open(BAND);
+  await page.waitForTimeout(400);
+  const band = await shot(page);
+  ok('каталог показывает базовое сопротивление, а не номер уровня',
+    band.rows.length === 1
+      && /Среднее/.test(band.rows[0].meta)
+      && !/level\s*1/i.test(band.rows[0].meta),
+    band.rows[0] && band.rows[0].meta);
 
   /* ---- премиум закрывает состав ---- */
   await open(ONE, {pro: true, exCount: 2});
@@ -174,8 +180,7 @@ const shot = page => page.evaluate(() => ({
     lock: !document.getElementById('siLock').classList.contains('hidden'),
     rows: document.querySelectorAll('#siList .ex-row').length
   }));
-  // Сам состав пока не рисуется (старый текстовый протокол, см. выше) — но замка нет.
-  ok('с подпиской состав не закрыт заглушкой', unlocked.list && !unlocked.lock, unlocked.rows);
+  ok('с подпиской состав открыт', unlocked.list && !unlocked.lock && unlocked.rows === 2, unlocked.rows);
 
   console.log('\npageerror: ' + (errs.length ? errs.join(' | ') : 'нет'));
   if(errs.length) bad += errs.length;

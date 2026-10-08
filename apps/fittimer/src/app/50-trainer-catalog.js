@@ -2,15 +2,16 @@ import { OPT_GOAL, OPT_LEVEL } from './options.js';
 import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
 import { registerAction } from './05-actions.js';
 import FitExerciseV2 from '../../lib/fit-exercise-v2.js';
+import FitCatalogProgram from '../../lib/fit-catalog-program.js';
 import { $, DUMBBELL_ICON, ICONS, appAlert, appDialog, goBackTo, goTab, icon, openStart, plural,
   setCoreTrainerCatalogHooks, setShown, openStartFrom, show, syncDockTabs
 } from './00-core.js';
 import { DAYS, accountAuth, calcStreakInfo, closeAllMenus, currentUser, customPrograms, kvGet,
-  localISO, normPlans, progActive, programDaysUnion, savePrograms, deleteCustomProgram,
+  localISO, newPlanId, normPlans, progActive, programDaysUnion, savePrograms, deleteCustomProgram,
   setDataSyncTrainerCatalogHooks, stats, toggleMenu, trackProductEvent, users
 } from './10-data-sync.js';
 import { account, isPremium, refreshServerSubscription, setAccountTrainerCatalogHooks } from './20-account.js';
-import { LIM, clampText, sanitizeProgram, setProgressTrainerHooks } from './30-progress-media.js';
+import { LIM, clampText, sanitizeProgram, setProgressTrainerHooks, uniqueProfileIds } from './30-progress-media.js';
 
 let builderTrainerHooks = {
   exerciseWeightText: (_ex, kg) => String(kg),
@@ -24,7 +25,6 @@ let builderTrainerHooks = {
   hasWeight: () => false,
   loadLevelLabel: level => String((level && (level.label || level.key)) || ''),
   openBuilder: async () => {},
-  parseProgramText: () => null,
   parseValue: v => ({min:+v || 0,max:+v || 0}),
   progressionLoadType: () => 'none',
   progShort: () => '',
@@ -44,8 +44,8 @@ export function setTrainerEventHooks(hooks = {}){
   eventTrainerHooks = {...eventTrainerHooks, ...hooks};
 }
 import { FILE_HINT, PUBLIC_APP_URL, apiFetch, apiPost, applyMedia, clProgs, clientIdx, clientSum,
-  clients, daysSince, duplicateProgram, exportProgramFileWithChoice, humanDay, lastReport, legacyAiUnavailable,
-  lastSeen, linkFailNote, loadTrainer, normHandle, programLink, programMedia, programToText,
+  clients, daysSince, duplicateProgram, exportProgramFileWithChoice, humanDay, lastReport,
+  lastSeen, linkFailNote, loadTrainer, normHandle, programLink, programMedia,
   renderToday, activateClientAt, resetCoachPhotoDraft, saveClients, setProgramsTrainerHooks, shareProgramWithChoice, trainer,
   trainerAccountReady, trainerOn
 } from './40-programs-ai.js';
@@ -823,14 +823,11 @@ export function autoReport(p){
    Готовые программы от тренеров. Оплаты нет: программу добавляют в библиотеку,
    а не покупают, и слова «купить», «цена», «бесплатно» на экране не встречаются
    вовсе — иначе новичок читает «бесплатно» как «пока бесплатно».
-   Каталог лежит прямо здесь; поле by — ник тренера, составившего программу.
-   Каждая программа описана ровно тем же текстовым форматом, что и
-   ответ нейросети, и при добавлении проходит через тот же parseProgramText —
-   поэтому программа из каталога неотличима от собранной руками: те же круги,
-   подходы, прогрессия с потолком и замены. Когда появится база, поменяется
-   только источник каталога, а всё остальное останется как есть.
-   Метка storeId у добавленной программы прежняя — библиотеки старых пользователей
-   продолжают узнаваться. */
+   Поле by — ник тренера, составившего программу. Позиция каталога несёт программу
+   модели V2 (lib/fit-catalog-program.js): сервер отдаёт её уже на языке витрины, а при
+   добавлении она становится обычной личной копией с новыми id — неотличимой от
+   собранной руками: те же круги, подходы, нагрузка, прогрессия и цепочки этапов.
+   По метке storeId у добавленной программы узнаётся «уже у вас». */
 // Направление программы в каталоге — ЭТО ТА ЖЕ ЦЕЛЬ, которую спрашивают при
 // создании программы: список один (OPT_GOAL), здесь к каждой цели добавлены
 // только короткий ключ, значок и пара цветов обложки. Ключ уходит в поле cat
@@ -877,14 +874,14 @@ function storeVariant(it){
    у кого: `photo` останется пустым до реального наполнения, и тогда в попапе рисуется
    заглушка из набора иконок. Описание — обычный текст, в нём же могут быть контакты:
    ссылками ник специально не делаем, чтобы карточка каталога не уводила из приложения. */
-/* Каталог — это зашитые программы ПЛЮС принятые с сервера. Серверная позиция
-   складывается в том же виде (id, by, cat, level, min, name, gives, text), поэтому
+/* Каталог — принятые на сервере программы. Позиция приходит в одном виде
+   (id, by, cat, level, min, name, gives, program), поэтому
    ни витрина, ни страница программы, ни добавление в библиотеку не знают, откуда
    она взялась, — и знать не должны. */
 let storeServer = [];
 /* Каталог живёт ТОЛЬКО в базе. Раньше десяток программ был вшит сюда и ехал в
    загрузке к каждому человеку, хотя нужен ровно однажды — чтобы витрине было чем
-   открыться. Теперь стартовый набор заливается из админки (api/_seed.js), а
+   открыться. Теперь каталог наполняется из админки, а
    приложение знает то, что пришло с сервера, плюс последний ответ на случай без
    сети. Каталога без сети у того, кто его ни разу не открывал, не будет — и это
    честно: пустая витрина лучше вечно устаревшей. */
@@ -908,7 +905,7 @@ async function catalogItemFull(it){
 }
 
 async function ensureCatalogBody(it){
-  if(!it || !it.pro || it.text) return it;
+  if(!it || !it.pro || it.program) return it;
   try{
     const full = await catalogItemFull(it);
     if(full) Object.assign(it, full, {locked:false});
@@ -927,13 +924,13 @@ export async function loadStoreServer(){
   storeLoading = true;
   try{
     const d = await apiFetch('/api/catalog?lang=' + encodeURIComponent(locale));
-    storeServer = Array.isArray(d.items) ? d.items.map(it => it && it.pro ? Object.assign({},it,{text:''}) : it) : [];
+    storeServer = Array.isArray(d.items) ? d.items.map(it => it && it.pro ? Object.assign({},it,{program:null}) : it) : [];
     lastSeen(cacheKey, storeServer);
   }catch(e){
     // Кэш тоже языковой: после переключения профиля русская витрина не должна
     // внезапно подменять английскую и наоборот.
     storeServer = lastSeen(cacheKey) || [];
-    storeServer = storeServer.map(it => it && it.pro ? Object.assign({},it,{text:''}) : it);
+    storeServer = storeServer.map(it => it && it.pro ? Object.assign({},it,{program:null}) : it);
   } finally { storeLoading = false; }
 }
 
@@ -1127,7 +1124,7 @@ export function renderStore(){
 /* ---- страница программы каталога ---- */
 export let siItem = null;
 // объём упражнения для превью. НЕ exSummary: тот смотрит в draft и подставил бы
-// рабочий вес чужой программы — здесь нужен состав ровно такой, как в тексте.
+// рабочий вес чужой программы — здесь нужен состав ровно такой, как в каталоге.
 function siBits(ex){
   const b = [];
   const p = pr(ex);
@@ -1145,7 +1142,7 @@ function siBits(ex){
 export async function openStoreItem(id){
   const it = storeAll().find(x => x.id === id);
   if(!it) return;
-  if(it.pro && isPremium() && !it.text){
+  if(it.pro && isPremium() && !it.program){
     try{ await ensureCatalogBody(it); }
     catch(e){
       if(e && e.code === 'premium_required'){ eventTrainerHooks.openPremium(); return; }
@@ -1160,7 +1157,8 @@ export async function openStoreItem(id){
   $('siNick').textContent = it.by || '';
   setShown('siBy', !!it.by);
 
-  const {program} = builderTrainerHooks.parseProgramText(it.text);
+  // Программа уже на языке витрины; чистим так же, как сервер: это внешний источник.
+  const program = it.program ? FitCatalogProgram.cleanCatalogProgram(it.program).program : null;
   const plans = (program && program.plans) || [];
   const exs = plans.reduce((a, pl) => a.concat(pl.exercises || []), []);
   const rounds = (plans[0] && +plans[0].rounds) || 1;
@@ -1246,10 +1244,8 @@ export async function openStoreItem(id){
         (builderTrainerHooks.progShort(ex) ? `<span class="grow">${builderTrainerHooks.progShort(ex)}</span>` : '') +
         `</div></div>`;
       row.querySelector('b').textContent = (pr(ex).name || '').trim() || t('store.untitled');
-      // v2 media привязана к source plan/exercise position и stable id. Текст
-      // каталога после перевода получает новые временные id, поэтому для страницы
-      // храним именно исходную позицию ДО builderTrainerHooks.sortWarmFirst().
-      row.dataset.ex = (pr(ex).name || '').trim();       // legacy catalog fallback
+      // Фото находятся по stable exercise.id; позиция ДО sortWarmFirst() — запасной мост.
+      row.dataset.exId = String(ex.id || '');
       row.dataset.plan = String(pi);
       row.dataset.index = String(Math.max(0, sourceList.indexOf(ex)));
       box.appendChild(row);
@@ -1286,24 +1282,12 @@ async function siPaintMedia(it){
   // открыта всё та же.
   if(!siItem || siItem.id !== it.id) return;
   const rows = [...$('siList').querySelectorAll('.ex-row')];
-  const v2 = media && +media.v === 2 && Array.isArray(media.items) ? media.items : null;
-  const legacyCounts = {};
-  if(!v2) rows.forEach(row => {
-    const name = row.dataset.ex || '';
-    if(name) legacyCounts[name] = (legacyCounts[name] || 0) + 1;
-  });
+  const v2 = media && +media.v === 2 && Array.isArray(media.items) ? media.items : [];
   rows.forEach(row => {
-    let pic = null;
-    if(v2){
-      const pi = +row.dataset.plan || 0, ei = +row.dataset.index || 0;
-      const hit = v2.find(x => +x.p === pi && +x.i === ei);
-      pic = hit && hit.data;
-    }else{
-      const name = row.dataset.ex || '';
-      // У старой карты identity была только по имени. При дублях безопаснее не
-      // показывать фото, чем поставить одну и ту же технику не тому упражнению.
-      if(name && legacyCounts[name] === 1) pic = media[name];
-    }
+    const id = row.dataset.exId || '';
+    const pi = +row.dataset.plan || 0, ei = +row.dataset.index || 0;
+    const hit = (id && v2.find(x => String(x.id || '') === id)) || v2.find(x => +x.p === pi && +x.i === ei);
+    const pic = hit && hit.data;
     if(!pic) return;
     const thumb = row.querySelector('.ex-thumb');
     if(thumb) thumb.innerHTML = `<img src="${workoutTrainerHooks.esc(pic)}" alt="">`;
@@ -1320,25 +1304,20 @@ async function addStoreItem(id){
     openStartFrom(own, storeFrom);
     return;
   }
-  // Каталог хранит программы старым текстовым протоколом; до перевода каталога на V2
-  // (PR 7 плана) установка недоступна — иначе в профиль попала бы старая форма упражнений.
-  if(legacyAiUnavailable()) return;
-  // Локальная проверка — только UX. Сам текст Premium-программы всё равно
+  // Локальная проверка — только UX. Саму Premium-программу всё равно
   // выдаёт только сервер после проверки аккаунта и подписки.
   if(it.pro && !isPremium()){ eventTrainerHooks.openPremium(); return; }
-  if(it.pro && !it.text){
+  if(it.pro && !it.program){
     try{ await ensureCatalogBody(it); }
     catch(e){ eventTrainerHooks.openPremium(); return; }
   }
 
-  const {program, errors} = builderTrainerHooks.parseProgramText(it.text);
-  if(errors.length || !program.plans.length){
+  // Каталог — внешний источник так же, как ссылка или файл: та же чистка, что на сервере.
+  const {program, errors} = FitCatalogProgram.cleanCatalogProgram(it.program);
+  if(!program || errors.length){
     appAlert(t('store.addFailed'));
     return;
   }
-  // Каталог — внешний источник так же, как ссылка или файл. Parser проверяет
-  // протокол, sanitizer дополнительно ограничивает persisted labels/state.
-  sanitizeProgram(program);
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
   // После добавления это обычная личная одноязычная копия. Язык нужен ИИ-правкам,
@@ -1354,8 +1333,16 @@ async function addStoreItem(id){
     }
     applyMedia(program, media);
   }
-  if(it.cover) program.cover = it.cover;
-  program.storeId = it.id;             // метка каталога: по ней узнаём, что уже добавлено
+  /* Личная копия получает свои id: вариант, упражнение и КАЖДЫЙ этап. Иначе повторная
+     установка той же программы (в другой профиль, после удаления) делила бы с первой
+     историю и stageNames. Фото уже разложены по id каталога — поэтому перевыдаём после. */
+  program.plans.forEach(pl => {
+    pl.id = newPlanId();
+    pl.exercises.forEach(ex => FitExerciseV2.regenerateExerciseIds(ex));
+  });
+  sanitizeProgram(program);
+  uniqueProfileIds(customPrograms.concat([program]));
+  program.storeId = it.id;            // метка каталога: по ней узнаём, что уже добавлено
   program.cover = storeCoverData(it);
   customPrograms.push(program);
   await savePrograms();
@@ -1373,7 +1360,7 @@ async function addStoreItem(id){
   }
   renderToday();
   /* Про дни здесь БОЛЬШЕ НЕ СПРАШИВАЕМ. Дни у программы из каталога уже есть — они
-     записаны в её тексте, — и попап предлагал переделать их человеку, который
+     записаны в самой программе, — и попап предлагал переделать их человеку, который
      секунду назад решал совсем другой вопрос: брать программу или нет. Захочет
      иначе — поменяет в самой программе, туда за этим и ходят. */
   appAlert(t('store.added',{name:it.name || t('store.untitled')}));
@@ -1650,8 +1637,6 @@ async function catalogCoverData(src){
 }
 
 export async function doPublish(){
-  // публикация отдаёт программу текстом старого протокола — до V2-каталога недоступна
-  if(legacyAiUnavailable()) return;
   const p = pubProg;
   if(!p) return;
   pubDraft.gives = clampText($('pubGives').value, LIM.gives);
@@ -1659,10 +1644,16 @@ export async function doPublish(){
   if(!pubDraft.cat) miss.push(t('publish.needGoal'));
   if(!pubDraft.level) miss.push(t('publish.needLevel'));
   if(pubDraft.gives.length < 20) miss.push(t('publish.needGives'));
-  const ex = (normPlans(p)[0].exercises || []).length;
-  if(ex < 3) miss.push(t('publish.needExercises'));
+  // В каталог уходит шаблон: без прогресса, фото, статистики и личных полей —
+  // та же чистка, которую повторит сервер.
+  const catalog = FitCatalogProgram.cleanCatalogProgram(p);
+  if(catalog.exCount < FitCatalogProgram.MIN_EXERCISES) miss.push(t('publish.needExercises'));
   if(miss.length){
     appAlert(t('publish.missing',{items:miss.join(', ')}));
+    return;
+  }
+  if(!catalog.program || catalog.errors.length){
+    appAlert(t('publish.errBad',{items:t('publish.checkFields')}));
     return;
   }
   try{
@@ -1677,10 +1668,10 @@ export async function doPublish(){
         // и работают фильтры витрины. С названием обложка бралась первая попавшаяся.
         cat: (STORE_LOOK[pubDraft.cat] || {}).id || '',
         level: pubDraft.level,
-        min: estimateMinutes(p), exCount: ex, text: programToText(p),
+        min: estimateMinutes(p), program: catalog.program,
         // Своя обложка, если тренер её задал. Рисованная по цели остаётся запасной.
         cover: catalogCover,
-        // Фото упражнений — отдельной картой: в тексте программы им места нет.
+        // Фото упражнений — отдельной картой по stable exercise.id: программа едет без них.
         media: programMedia(p)
       }
     });

@@ -731,9 +731,7 @@ const MEDIA_BUDGET = 700 * 1024;
 
 // Фото передаём по stable exercise.id. Название — редактируемое поле и не может
 // быть identity: два упражнения могут называться одинаково, а одно и то же упражнение
-// можно переименовать. p/i остаются только транспортным fallback для каталога:
-// каталог хранит программу текстом, после перевода parser создаёт новые временные id,
-// поэтому по позиции возвращаем исходный id вместе с фото.
+// можно переименовать. p/i/n — только подсказка для админки каталога (порядок и подпись).
 export function programMedia(p){
   const items = [];
   let left = MEDIA_BUDGET;
@@ -756,51 +754,20 @@ function mediaItems(media){
   return media && +media.v === 2 && Array.isArray(media.items) ? media.items : null;
 }
 
-function mediaForExercise(media, ex, pi, ei){
+function mediaForExercise(media, ex){
   const items = mediaItems(media);
-  if(!items) return null;
   const id = String(ex && ex.id || '').trim();
-  if(id){
-    const exact = items.find(x => String(x && x.id || '').trim() === id);
-    if(exact) return exact;
-  }
-  // Каталожный текст не хранит id. Структура RU/EN проверяется отдельно, поэтому
-  // plan/exercise position — однозначный мост от переведённого текста к source id.
-  return items.find(x => +x.p === pi && +x.i === ei) || null;
+  if(!items || !id) return null;
+  return items.find(x => String(x && x.id || '').trim() === id) || null;
 }
 
-// Вернуть фото на места после разбора текста программы.
+// Вернуть фото на места: только по exercise.id (каталог, ссылка, файл несут те же id).
 export function applyMedia(p, media){
-  if(!media) return p;
-  const items = mediaItems(media);
-  if(items){
-    normPlans(p).forEach((pl, pi) => (pl.exercises || []).forEach((ex, ei) => {
-      const hit = mediaForExercise(media, ex, pi, ei);
-      if(!hit) return;
-      // cleanPic, а не «есть значит есть»: payload приходит с сервера обычным JSON.
-      const d = cleanPic(hit.data);
-      if(!d) return;
-      if(hit.id) ex.id = String(hit.id);
-      ex.media = {kind: 'img', data: d};
-    }));
-    // Серверные данные не могут нарушать invariant программы: даже если в payload
-    // случайно/вручную пришли повторные id, прогресс и будущие правки не склеятся.
-    uniqueProgramIds(p);
-    return p;
-  }
-
-  // Совместимость со старыми каталогами: legacy media была картой «имя → фото».
-  // Fallback используем только для УНИКАЛЬНОГО имени. При двух одинаковых названиях
-  // нельзя угадывать, какому именно упражнению принадлежала старая картинка.
-  const counts = {};
+  if(!mediaItems(media)) return p;
   normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
-    const key = String(FitExerciseV2.prescriptionOf(ex).name || '').trim();
-    if(key) counts[key] = (counts[key] || 0) + 1;
-  }));
-  normPlans(p).forEach(pl => (pl.exercises || []).forEach(ex => {
-    const key = String(FitExerciseV2.prescriptionOf(ex).name || '').trim();
-    if(!key || counts[key] !== 1) return;
-    const d = cleanPic(media[key]);
+    const hit = mediaForExercise(media, ex);
+    // cleanPic, а не «есть значит есть»: payload приходит с сервера обычным JSON.
+    const d = hit && cleanPic(hit.data);
     if(d) ex.media = {kind: 'img', data: d};
   }));
   return p;
@@ -846,10 +813,10 @@ function programPayload(p, options){
   // Обложка и фото остаются. Лишний вес срезает programMedia — здесь только то,
   // что не влезло в общий предел.
   const media = programMedia(p);
-  copy.plans = normPlans(copy).map((pl, pi) => ({
+  copy.plans = normPlans(copy).map(pl => ({
     ...pl,
-    exercises: pl.exercises.map((ex, ei) => {
-      const hit = mediaForExercise(media, ex, pi, ei);
+    exercises: pl.exercises.map(ex => {
+      const hit = mediaForExercise(media, ex);
       const keep = hit && hit.data;
       return {...ex, media: keep ? {kind: 'img', data: keep} : null};
     })
