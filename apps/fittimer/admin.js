@@ -2472,7 +2472,7 @@ function fillForm(c){
   form={cover:c.cover||null,media:cloneCatalogMedia(c.media),sourceLocale:sourceLocaleOf(c),imageGender:'f',program:cloneJson(c.program)};
   editorLang=form.sourceLocale;
   $('fCat').value=c.cat||'tone';
-  $('fLevel').value=c.level||'Новичок';
+  $('fLevel').value=LEVELS.includes(c.level)?c.level:(String(c.level||'').includes('средний')?'Средний':'Новичок');
   $('fMin').value=c.min||20;
   $('fBy').value=c.by||'';
   $('fPro').checked=!!c.pro;
