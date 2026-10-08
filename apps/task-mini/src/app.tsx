@@ -73,64 +73,16 @@ function TaskLayout(){
   );
 }
 
-// Two harmless reference products from config/product.json: one owned feature and one subscription.
+// Paid feature of the reference app: bought once (SKU "export", config/product.json → products).
 export const EXPORT_SKU = 'export';
-export const PREMIUM_SKU = 'plus.month';
-
-function PurchaseMethods({sku,lockedText,noMethodsText,buyLabel,failedText}: {
-  sku:string;
-  lockedText:string;
-  noMethodsText:string;
-  buyLabel:string;
-  failedText:string;
-}){
-  const auth = useOptionalAuth();
-  const {data: methods = []} = useQuery({
-    queryKey:['billing-methods'],
-    queryFn:() => taskBilling.methods(),
-    retry:false
-  });
-  const [busy,setBusy] = useState('');
-  const [error,setError] = useState('');
-
-  const buy = async (methodId:string) => {
-    setBusy(methodId);
-    setError('');
-    try{
-      const result = await taskBilling.checkout(methodId, sku);
-      if(result.url){ window.location.assign(result.url); return; }
-      await auth.refresh();
-    }catch{
-      setError(failedText);
-    }finally{
-      setBusy('');
-    }
-  };
-
-  return (
-    <div className="buy">
-      <p className="muted">{methods.length ? lockedText : noMethodsText}</p>
-      {methods.map(method => (
-        <button key={method.id} type="button" className="text-button"
-          disabled={!!busy} onClick={() => void buy(method.id)}>
-          {buyLabel} · {method.id}
-        </button>
-      ))}
-      {error && <p className="error" role="alert">{error}</p>}
-    </div>
-  );
-}
 
 function ExportTasks(){
   const auth = useOptionalAuth();
   const {t} = useI18n();
   const {data: tasks = []} = useTasks();
-  if(!hasEntitlement(auth.session, EXPORT_SKU)){
-    return <PurchaseMethods sku={EXPORT_SKU} lockedText={t('export.locked')}
-      noMethodsText={t('export.lockedAdmin')} buyLabel={t('export.buy')} failedText={t('export.buyFailed')} />;
-  }
+  if(!hasEntitlement(auth.session, EXPORT_SKU)) return <BuyExport />;
   const download = () => {
-    const blob = new Blob([JSON.stringify(tasks, null, 2)], {type:'application/json'});
+    const blob = new Blob([JSON.stringify(tasks, null, 2)], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -138,26 +90,37 @@ function ExportTasks(){
     link.click();
     URL.revokeObjectURL(url);
   };
-  return <button type="button" className="text-button" onClick={download}>{t('export.download',{count:tasks.length})}</button>;
+  return <button type="button" className="text-button" onClick={download}>{t('export.download', {count: tasks.length})}</button>;
 }
 
-function ReferencePremium(){
+// Offered only when the server has a payment provider for this build (the test provider
+// exists only on the memory store, so production shows the note instead of a button).
+function BuyExport(){
   const auth = useOptionalAuth();
   const {t} = useI18n();
-  if(auth.session?.premium){
-    const until = String((auth.session.sub as {until?:unknown} | null)?.until || '—');
-    return (
-      <div className="buy">
-        <strong>{t('premium.title')}</strong>
-        <p className="muted">{t('premium.active',{until})}</p>
-      </div>
-    );
-  }
+  const {data: providers = []} = useQuery({queryKey: ['billing-providers'], queryFn: () => taskBilling.providers(), retry: false});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const provider = providers[0];
+  const buy = async () => {
+    if(!provider) return;
+    setBusy(true);
+    setError('');
+    try{
+      const result = await taskBilling.checkout(provider, EXPORT_SKU);
+      if(result.url){ window.location.assign(result.url); return; }
+      await auth.refresh();
+    }catch{
+      setError(t('export.buyFailed'));
+    }finally{
+      setBusy(false);
+    }
+  };
   return (
     <div className="buy">
-      <strong>{t('premium.title')}</strong>
-      <PurchaseMethods sku={PREMIUM_SKU} lockedText={t('premium.locked')}
-        noMethodsText={t('premium.lockedAdmin')} buyLabel={t('premium.buy')} failedText={t('premium.buyFailed')} />
+      <p className="muted">{t(provider ? 'export.locked' : 'export.lockedAdmin')}</p>
+      {provider && <button type="button" className="text-button" disabled={busy} onClick={() => void buy()}>{t('export.buy')}</button>}
+      {error && <p className="error" role="alert">{error}</p>}
     </div>
   );
 }
@@ -181,7 +144,6 @@ function AccountPage(){
           <h1>{t('account.title')}</h1>
           <p>{auth.session.email}{auth.session.handle ? ' · ' + auth.session.handle : ''}</p>
           <p className="muted">{t('account.synced')}</p>
-          <ReferencePremium />
           <ExportTasks />
           <button type="button" className="text-button" onClick={() => void signOut()}>{t('account.signOut')}</button>
         </section>
