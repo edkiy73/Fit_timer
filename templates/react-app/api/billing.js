@@ -1,6 +1,6 @@
-/* POST /api/billing — purchases. Add real provider adapters here; the test provider works
-   only on the memory store (local runs, tests), never in production. */
+/* POST /api/billing — provider-neutral AppBase purchases. Real provider keys live in
+   Admin → «Способы оплаты»; the local test provider only exists on the memory store. */
 require('../lib/product');
-const { createBillingHandler, createTestBillingAdapter } = require('../../../packages/core/server/billing');
+const { createBillingHandler, createDefaultBillingAdapters } = require('../../../packages/core/server/billing');
 
-module.exports = createBillingHandler({adapters:[createTestBillingAdapter()]});
+module.exports = createBillingHandler({adapters:createDefaultBillingAdapters()});
