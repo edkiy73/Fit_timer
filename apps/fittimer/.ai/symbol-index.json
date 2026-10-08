@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1842,
-      "chars": 86405,
+      "lines": 1858,
+      "chars": 86915,
       "symbols": [
         "$",
         "accountUserDirtyHook",
@@ -44,6 +44,7 @@
         "eventSyncSettingsFormHook",
         "exerciseGong",
         "exerciseLoad",
+        "exerciseLoadSpeech",
         "fanfare",
         "finishDialog",
         "freezeSticky",
