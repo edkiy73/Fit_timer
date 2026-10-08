@@ -7,6 +7,7 @@ on:
     paths: &task_mini_paths
       - 'packages/core/**'
       - 'packages/ui-react/**'
+      - 'templates/react-app/**'
       - 'apps/task-mini/**'
       - '.github/workflows/task-mini.yml'
       - '!**/*.md'
