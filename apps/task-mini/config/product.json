@@ -37,6 +37,12 @@
     {
       "sku": "export",
       "title": "Экспорт задач"
+    },
+    {
+      "sku": "plus.month",
+      "title": "Reference Premium",
+      "kind": "subscription",
+      "days": 30
     }
   ],
   "i18n": {
