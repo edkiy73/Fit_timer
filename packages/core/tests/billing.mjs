@@ -135,6 +135,15 @@ const nativeAccount = await accountOf('payer@example.com');
 ok('native billing identity is persisted on the account',
   nativeAccount.billingIdentity?.googleObfuscatedAccountId === nativeContext.obfuscatedAccountId
   && /^[0-9a-f-]{36}$/i.test(nativeAccount.billingIdentity?.appleAppAccountToken || ''));
+{
+  const mh = crypto.createHash('sha256').update('payer@example.com').digest('hex').slice(0, 32);
+  const appleIndex = await store.get('billid:apple:' + crypto.createHash('sha256')
+    .update(nativeAccount.billingIdentity.appleAppAccountToken).digest('hex').slice(0, 40));
+  const googleIndex = await store.get('billid:google:' + crypto.createHash('sha256')
+    .update(nativeAccount.billingIdentity.googleObfuscatedAccountId).digest('hex').slice(0, 40));
+  ok('native billing identities have reverse indexes for server notifications',
+    appleIndex === mh && googleIndex === mh);
+}
 ok('native purchase verification still requires a signed-in device',
   (await call(nativeStoreHandler, {
     action:'verify_purchase', provider:'google_native', sku:'pack.b', proof:{purchaseToken:'x'},
