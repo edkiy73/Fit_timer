@@ -1,24 +1,7 @@
 name: Android — проверка и сборка
 
 on:
-  push:
-    branches: [main]
-    paths: &mobile_paths
-      - 'packages/core/**'
-      - 'apps/fittimer/android/**'
-      - 'apps/fittimer/scripts/build-web.mjs'
-      - 'apps/fittimer/scripts/check-mobile.mjs'
-      - 'apps/fittimer/src/**'
-      - 'apps/fittimer/style.css'
-      - 'apps/fittimer/index.html'
-      - 'apps/fittimer/mobile.js'
-      - 'apps/fittimer/app.config.js'
-      - 'apps/fittimer/assets/**'
-      - 'apps/fittimer/capacitor.config.json'
-      - 'apps/fittimer/package.json'
-      - 'apps/fittimer/package-lock.json'
-      - '.github/workflows/android.yml'
-      - '!**/*.md'
+  # Signed Android releases are an explicit action, not a side effect of every merge.
   workflow_dispatch:
     inputs:
       version_code:
@@ -30,8 +13,13 @@ on:
         required: true
         default: "1.0.0"
   pull_request:
-    paths: *mobile_paths
-
+    paths:
+      - 'apps/fittimer/android/**'
+      - 'apps/fittimer/capacitor.config.json'
+      - 'apps/fittimer/scripts/check-mobile.mjs'
+      - 'apps/fittimer/scripts/build-web.mjs'
+      - '.github/workflows/android.yml'
+      - '!**/*.md'
 permissions:
   contents: write
 
@@ -52,12 +40,6 @@ jobs:
       VERSION_NAME: ${{ inputs.version_name || '' }}
     steps:
       - uses: actions/checkout@v7
-
-      - name: Версия обычной push-сборки
-        if: github.event_name != 'workflow_dispatch'
-        run: |
-          echo "VERSION_CODE=$((260000000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
-          echo "VERSION_NAME=1.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
 
       - name: Node.js 22
         uses: actions/setup-node@v7
@@ -94,7 +76,7 @@ jobs:
 
       - name: Разобрать ключ подписи
         id: keystore
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
@@ -111,7 +93,7 @@ jobs:
         run: ./gradlew assembleDirectDebug assemblePlayDebug testDirectDebugUnitTest --no-daemon
 
       - name: Release AAB и APK
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         working-directory: apps/fittimer/android
         env:
           KEYSTORE_FILE: ${{ steps.keystore.outputs.path }}
@@ -142,7 +124,7 @@ jobs:
           file "$RUNNER_TEMP/fittimer-packaged-launcher.webp" | grep -q "192x192"
 
       - name: Проверить подпись APK
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         run: |
           APK=$(find android/app/build/outputs/apk/direct/release -name '*.apk' | head -1)
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -Vr | head -1)
@@ -159,7 +141,7 @@ jobs:
           if-no-files-found: error
 
       - name: Выложить файлы для Google Play
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v7
         with:
           name: fittimer-android-${{ env.VERSION_NAME }}
@@ -170,7 +152,7 @@ jobs:
           if-no-files-found: error
 
       - name: Подготовить постоянный APK
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_dispatch'
         run: |
           APK=$(find android/app/build/outputs/apk/direct/release -name '*.apk' | head -1)
           test -n "$APK"
@@ -199,7 +181,7 @@ jobs:
       # Раньше админка публиковала versionCode, а телефон качал latest-apk/FitTimer-latest.apk.
       # Следующий пуш в main подменял файл, и телефон отклонял его как version_mismatch.
       - name: Сохранить APK в архив версий
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -215,7 +197,7 @@ jobs:
             | while read -r name; do gh release delete-asset apk-archive "$name" -y; done
 
       - name: Обновить постоянный релиз latest-apk
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
