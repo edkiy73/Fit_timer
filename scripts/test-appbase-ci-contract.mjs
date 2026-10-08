@@ -14,7 +14,7 @@ assert.ok(source.includes('npm run check:affected'), 'source-consistency must ru
 assert.ok(source.includes('Generate and compile clean React starter'), 'source-consistency must compile a generated starter when required');
 assert.ok(source.includes('npm run app:create'), 'starter compilation must use the real generator');
 
-for(const watched of ["'packages/core/**'", "'packages/ui-react/**'", "'apps/task-mini/**'"]){
+for(const watched of ["'packages/core/**'", "'packages/ui-react/**'", "'templates/react-app/**'", "'apps/task-mini/**'"]){
   assert.ok(task.includes(watched), 'Task Mini e2e must watch ' + watched);
 }
 assert.ok(task.includes('npm run test:browser'), 'Task Mini workflow must run the real browser reference');
