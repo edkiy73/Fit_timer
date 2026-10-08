@@ -28,7 +28,7 @@ Core owns sync, storage, auth transport, server store, AI runtime, notification 
 
 Why these: mainstream, well-typed, no forced visual identity, good touch handling inside a Capacitor WebView. Versions are pinned in the app's `package.json` when the app is created, not here.
 
-**Reference implementation: `apps/task-mini`.** For a real new product, generate the clean starter with `npm run app:create -- <slug> "<Name>" <reverse.domain.id> [ru|en]`; use Task Mini to inspect a working domain example. Do not copy FitTimer.
+**Three roles are fixed.** `templates/react-app` is the mandatory scaffold/source of truth; `apps/task-mini` is the executable architecture reference with one small real domain; `apps/unmute` is a complex production consumer. For a real new product, generate the clean starter with `npm run app:create -- <slug> "<Name>" <reverse.domain.id> [ru|en]`; use Task Mini to inspect a working domain example. Do not copy FitTimer or UnMute as a starter.
 
 | Piece | Where in `apps/task-mini` |
 |---|---|
@@ -45,7 +45,7 @@ Why these: mainstream, well-typed, no forced visual identity, good touch handlin
 
 The whole stack costs ~150 KB gzip of JavaScript for Task Mini; watch this budget as apps grow.
 
-Each app deploys as its own Vercel project with Root Directory `apps/<name>` and "Include files outside the root directory" enabled (server functions import `packages/core/server`). Apps never build each other.
+The current production target may be a separate Vercel project per app with Root Directory `apps/<name>` and "Include files outside the root directory" enabled. This is a deployment choice, not a product/Core contract. Product code must remain hosting-neutral; Task Mini's E2E serves the production build and the same API handlers through a local Node HTTP server as the portability smoke. Apps never build each other.
 
 Revisit only if: the stack blocks a concrete product requirement that another option solves materially better.
 
@@ -70,13 +70,17 @@ Semantic tokens are CSS custom properties. Products declare them in `config/prod
 
 `packages/ui-react` contains only UI that is platform-level infrastructure rather than product UI: the auth flow (`AuthProvider`/`useOptionalAuth`/`SignInForm`/`AuthGate`), the shared Admin, the fatal error boundary and the interface-language layer (`I18nProvider`/`useI18n`/`LanguagePicker`; dictionaries stay in each app). They are consumed by Task Mini and the generated React app starter. Product-specific components stay inside each app; new shared primitives move here only after reuse is concrete.
 
-## D5. Backend unchanged
+## D5. Backend runtime and hosting boundary
 
-Keep Node.js on Vercel functions, server Core in `packages/core/server`, provider-neutral store/AI adapters and product-owned AI actions/schemas. No NestJS/Express/Fastify.
+Keep server Core in `packages/core/server`, provider-neutral storage/AI/billing adapters and product-owned actions/schemas. No NestJS/Express/Fastify is required by the architecture.
 
-Conventions for new server code: Zod validation at every untrusted boundary; stable machine-readable error codes; product tables/documents/events stay outside Core; secrets never enter client bundles or APKs; data migrations are explicit versioned scripts.
+Vercel Functions are a current deployment edge, not a dependency direction. Shared handlers use AppBase-owned request/response/service contracts and product domain code must not import hosting-specific SDKs. A different Node/serverless/edge target should replace or wrap the deployment edge rather than rewrite product behavior.
 
-Revisit only if: route composition or middleware becomes repetitive across apps, or a workload does not fit the serverless model.
+Task Mini provides the non-production portability smoke today: its Playwright E2E runs the production frontend and routes the same `api/*` handlers through a local Node HTTP server, exercising auth, sync, Admin, health and billing outside the Vercel request runtime.
+
+Conventions for new server code: runtime validation at every untrusted boundary; stable machine-readable error codes; product tables/documents/events stay outside Core; secrets never enter client bundles or APKs; data migrations are explicit versioned scripts.
+
+Revisit only if: a concrete host requires an adapter contract Core does not yet expose, route composition becomes repetitive across apps, or a workload does not fit the current serverless model.
 
 ---
 
@@ -88,10 +92,10 @@ Rules:
 1. **Browser tests run sharded** across parallel jobs, each with its own dev server and static server, so tests never share server state between shards. The runner balances shards by recorded per-test durations (`apps/fittimer/tests/browser-timings.json`) and prints a timing summary.
 2. **Tests wait for conditions, not for time.** New browser tests must not add fixed `waitForTimeout` sleeps; existing ones are removed as the tests are touched.
 3. **Path filters decide which apps are checked:**
-   - `packages/core/**`, root `package.json`, `scripts/apps.mjs` → every app;
+   - `packages/core/**`, `packages/ui-react/**`, `templates/**`, root config and shared scripts → Core + every app through the consistency runner;
    - `apps/<name>/**` → that app only;
    - Markdown and `apps/*/docs/**` never trigger builds or tests.
-   Every app with a browser suite has its own workflow filtered to its paths + `packages/core/**` (FitTimer: `browser-tests.yml`, Task Mini: `task-mini.yml`).
+   Core/UI/template changes also re-run the Starter baseline contract; changes that can alter the generated Starter compile a fresh generated app. Task Mini's browser workflow watches Core/UI/Task Mini paths. The CI wiring itself is contract-tested so these guarantees cannot silently disappear.
 4. **Android/iOS builds** keep their own path filters (FitTimer client/native/build paths + `packages/core/**`) and run in parallel with the rest; they are not on the critical path.
 5. **Releases** (manual Android dispatch, `main` push builds) keep the full signed native pipeline.
 
