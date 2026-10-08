@@ -49,6 +49,9 @@ jobs:
       - name: Test Vercel deployment filters
         run: node scripts/test-vercel-deployment-policy.mjs
 
+      - name: Verify FitTimer check plan
+        run: node scripts/test-fittimer-check-plan.mjs
+
       - name: Check Core and affected apps
         run: npm run check:affected -- "$BASE"
         env:
