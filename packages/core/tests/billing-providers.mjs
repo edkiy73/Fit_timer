@@ -421,7 +421,7 @@ ok('App Store notification resolves the AppBase account only through appAccountT
   appleNotice.events[0]?.accountRef?.kind === 'apple'
   && appleNotice.events[0]?.accountRef?.value === appleIdentity.appleAppAccountToken);
 ok('App Store webhook body alone cannot create an event without a server transaction',
-  (await apple.verifyWebhook({body:{signedPayload:fakeJws({
+  await apple.verifyWebhook({body:{signedPayload:fakeJws({
     notificationType:'REFUND',
     data:{signedTransactionInfo:fakeJws({
       transactionId:'forged-missing',
@@ -430,7 +430,7 @@ ok('App Store webhook body alone cannot create an event without a server transac
       appAccountToken:appleIdentity.appleAppAccountToken,
       revocationDate:Date.parse('2030-01-03T00:00:00Z')
     })}
-  })}})).events?.length === 0
+  })}}).then(() => false, e => e.message === 'purchase_not_found')
 );
 
 console.log(bad ? `\nExternal billing provider failures: ${bad}` : '\nExternal billing providers behave correctly');
