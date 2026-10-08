@@ -26,7 +26,12 @@ need(sync.includes("window.addEventListener('online'"), 'sync must recover when 
 
 need(gradle.includes('applicationId "ru.fittimer.app"'), 'Android package id must stay stable for updates');
 need(gradle.includes('versionCode = Integer.parseInt(System.getenv("VERSION_CODE")'), 'release versionCode must come from CI');
-need(workflow.includes('workflow_dispatch:') && workflow.includes('version_code:'), 'Android release must require an explicit version code');
+// Workflow policy is a release safety contract, not a function-name or comment match.
+const androidTriggers = workflow.slice(workflow.indexOf('on:'), workflow.indexOf('\npermissions:'));
+need(/^  workflow_dispatch:$/m.test(androidTriggers), 'Android release must support explicit manual dispatch');
+need(/^      version_code:$/m.test(androidTriggers), 'manual release must request versionCode');
+need(!/^  push:$/m.test(androidTriggers), 'merging to main must not publish a signed APK automatically');
+need(/^        if: github.event_name == 'workflow_dispatch'$/m.test(workflow), 'signed release steps must be manual-only');
 need(workflow.includes('KEYSTORE_BASE64'), 'release signing key must be required');
 need(workflow.includes('apksigner') && workflow.includes('verify --verbose --print-certs'), 'release APK signature must be verified');
 need(gradle.includes('productFlavors') && gradle.includes('DIRECT_UPDATES'), 'Android must have direct and store-safe build flavors');
@@ -35,7 +40,7 @@ need(workflow.includes('outputs/apk/direct/release'), 'latest APK must come from
 need(workflow.includes('FitTimer-release.json'), 'latest APK release must publish machine-readable metadata');
 need(workflow.includes('const versionCode = Number(process.env.VERSION_CODE)'), 'release metadata must use the exact CI versionCode');
 need(workflow.includes('FitTimer-latest.apk FitTimer-release.json'), 'latest release must upload APK and metadata together');
-// latest-apk перезаписывается каждым пушем в main: опубликованная версия должна
+// latest-apk updates only during a manual release: the published version must
 // вести на свой неизменяемый файл, иначе телефон отклоняет его (version_mismatch).
 need(workflow.includes('releases/download/apk-archive/FitTimer-${versionCode}.apk'), 'release metadata must point to the immutable per-version APK');
 need(workflow.indexOf('gh release upload apk-archive') > 0 && workflow.indexOf('gh release upload apk-archive') < workflow.indexOf('gh release upload latest-apk'), 'archive APK must be uploaded before metadata references it');
