@@ -295,8 +295,33 @@ const apple = createAppleStoreBillingAdapter({
   now:() => Date.parse('2030-01-15T00:00:00Z'),
   fetchImpl:async (url, init = {}) => {
     appleCalls.push({url, init});
-    const id = decodeURIComponent(String(url).split('/').pop());
-    if(id === 'tx-sandbox' && url.startsWith('https://api.storekit.apple.com')){
+    const href = String(url);
+    const id = decodeURIComponent(href.split('/').pop());
+
+    if(href.includes('/inApps/v1/subscriptions/')){
+      if(id !== 'tx-sub') return jsonResponse({}, 404);
+      return jsonResponse({
+        environment:'Production',
+        bundleId:'test.billing',
+        data:[{
+          subscriptionGroupIdentifier:'group-1',
+          lastTransactions:[{
+            originalTransactionId:'tx-sub',
+            status:1,
+            signedTransactionInfo:fakeJws(appleTransactions['tx-sub']),
+            signedRenewalInfo:fakeJws({
+              productId:'plus_month_ios',
+              autoRenewProductId:'plus_month_ios',
+              autoRenewStatus:1,
+              renewalDate:Date.parse('2030-02-01T00:00:00Z'),
+              appAccountToken:appleIdentity.appleAppAccountToken
+            })
+          }]
+        }]
+      });
+    }
+
+    if(id === 'tx-sandbox' && href.startsWith('https://api.storekit.apple.com')){
       return jsonResponse({}, 404);
     }
     const tx = id === 'tx-sandbox'
@@ -329,10 +354,12 @@ const appleSub = await apple.verifyPurchase({
   proof:{transactionId:'tx-sub'},
   identity:appleIdentity
 });
-ok('App Store normalizes active subscription expiry',
+ok('App Store resolves current subscription status and renewal preference',
   appleSub.events[0]?.status === 'paid'
   && appleSub.events[0]?.until === '2030-02-01T00:00:00.000Z'
   && appleSub.events[0]?.autoRenew === true);
+ok('App Store subscription verification uses the current-status endpoint',
+  appleCalls.some(x => x.url.endsWith('/inApps/v1/subscriptions/tx-sub')));
 
 const appleRefund = await apple.verifyPurchase({
   product:{sku:'pack.a', kind:'owned', billing:{apple:{productId:'pack_a_ios'}}},
