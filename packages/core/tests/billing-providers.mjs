@@ -2,12 +2,14 @@
 import { createRequire } from 'node:module';
 import crypto from 'node:crypto';
 
+process.env.ALLOW_MEMORY_STORE = '1';
 const require = createRequire(import.meta.url);
 const { configureProduct } = require('../server/product-core');
 const { createStripeBillingAdapter } = require('../server/billing-providers/stripe');
 const { createYooKassaBillingAdapter } = require('../server/billing-providers/yookassa');
 const { createGooglePlayBillingAdapter } = require('../server/billing-providers/google-play');
 const { createAppleStoreBillingAdapter, createApiToken, verifyAndDecodeAppleJws } = require('../server/billing-providers/apple-store');
+const { saveBillingMapping } = require('../server/billing-catalog');
 
 configureProduct({
   id:'test.billing',
@@ -201,6 +203,15 @@ const google = createGooglePlayBillingAdapter({
         obfuscatedExternalAccountId:'someone_else',
         orderId:'GPA.item.bad',
         productLineItem:[{productId:'pack_a'}]
+      });
+    }
+    if(url.includes('/purchases/productsv2/tokens/item-overlay')){
+      return jsonResponse({
+        purchaseStateContext:{purchaseState:'PURCHASE_STATE_PURCHASED'},
+        acknowledgementState:'ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED',
+        obfuscatedExternalAccountId:googleIdentity.googleObfuscatedAccountId,
+        orderId:'GPA.item.overlay',
+        productLineItem:[{productId:'pack_a_admin', productOfferDetails:{quantity:1, refundableQuantity:1}}]
       });
     }
     if(url.includes('/purchases/productsv2/tokens/item-refunded')){
@@ -409,6 +420,14 @@ const appleTransactions = {
     bundleId:'test.billing',
     productId:'pack_a_ios',
     appAccountToken:'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
+  },
+  'tx-overlay':{
+    transactionId:'tx-overlay',
+    originalTransactionId:'tx-overlay',
+    bundleId:'test.billing',
+    productId:'pack_a_ios_admin',
+    appAccountToken:appleIdentity.appleAppAccountToken,
+    purchaseDate:Date.parse('2030-01-03T00:00:00Z')
   }
 };
 const apple = createAppleStoreBillingAdapter({
@@ -544,6 +563,30 @@ ok('App Store notification cannot affect an unlinked account',
 
 ok('App Store rejects a webhook without a signed payload',
   !(await apple.verifyWebhook({body:{}})).ok);
+
+// Admin mapping overlay must affect already-created provider adapters and notification lookup.
+await saveBillingMapping('pack.a', 'google_play', {productId:'pack_a_admin'});
+const googleOverlayEvent = await google.verifyWebhook({body:pubsub({
+  version:'1.0',
+  packageName:'test.billing',
+  oneTimeProductNotification:{version:'1.0', notificationType:1, purchaseToken:'item-overlay', sku:'pack_a_admin'}
+})});
+ok('Google RTDN resolves a product through the latest Admin mapping overlay',
+  googleOverlayEvent.ok
+  && googleOverlayEvent.events[0]?.sku === 'pack.a'
+  && googleOverlayEvent.events[0]?.status === 'paid');
+
+await saveBillingMapping('pack.a', 'apple', {productId:'pack_a_ios_admin'});
+const appleOverlayEvent = await apple.verifyWebhook({body:{
+  signedPayload:fakeJws({
+    notificationType:'DID_RENEW',
+    data:{signedTransactionInfo:fakeJws(appleTransactions['tx-overlay'])}
+  })
+}});
+ok('App Store notification resolves a product through the latest Admin mapping overlay',
+  appleOverlayEvent.ok
+  && appleOverlayEvent.events[0]?.sku === 'pack.a'
+  && appleOverlayEvent.events[0]?.status === 'paid');
 
 console.log(bad ? `\nExternal billing provider failures: ${bad}` : '\nExternal billing providers behave correctly');
 process.exit(bad ? 1 : 0);
