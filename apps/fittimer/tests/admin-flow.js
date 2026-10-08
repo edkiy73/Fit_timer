@@ -288,6 +288,10 @@ const PROGRAM = name => catalogProgram(name, ['Приседания', 'Отжи�
   await page.click('.nav-btn[data-tab="approved"]');
   await page.waitForTimeout(200);
   ok('на вкладке «В каталоге» видны программы', listed.includes(KEPT), KEPT);
+  const referenceCard=page.locator('.entity-card').filter({hasText:'Тело V-силуэт'}).first();
+  ok('каноническая эталонная программа помечена в каталоге',/Эталон/.test(await referenceCard.textContent()));
+  const ordinaryCard=page.locator('.entity-card').filter({hasText:KEPT}).first();
+  ok('обычная опубликованная программа не получает метку эталона',!/Эталон/.test(await ordinaryCard.textContent()));
   ok('production UI не показывает seed тестовых программ',!/Залить пять тестовых программ/.test(listed));
   await page.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));
   await page.click('#navOpen');
