@@ -5,7 +5,7 @@
 require('../lib/product');
 
 const { store } = require('../../../packages/core/server/store');
-const { fail, readBody, rateOkScoped, sameSecret, cors } = require('../../../packages/core/server/util');
+const { fail, readBody, rateOkScoped, sameSecret, cors, ipHash } = require('../../../packages/core/server/util');
 const { createAIHandler } = require('../../../packages/core/server/ai-endpoint');
 const { registry: fitAIActions } = require('../lib/fit-ai-actions');
 const handleAI = createAIHandler(fitAIActions);
@@ -23,6 +23,24 @@ const { handleCatalogTextAI } = require('../lib/admin/fittimer/catalog-ai');
 const { handleCatalogImageAI } = require('../lib/admin/fittimer/catalog-images');
 const { handleCatalogAdmin } = require('../lib/admin/fittimer/catalog-admin');
 
+const BAD_KEY_LIMIT = 30;
+const REQUEST_LIMIT = 600;
+const WINDOW_SEC = 3600;
+
+function badKeyBucket(req){
+  return `rl:admin-bad-key:${ipHash(req)}:${Math.floor(Date.now() / (WINDOW_SEC * 1000))}`;
+}
+
+async function badKeyBlocked(req){
+  const limit = process.env.ALLOW_MEMORY_STORE === '1' ? BAD_KEY_LIMIT * 50 : BAD_KEY_LIMIT;
+  try{ return (+(await store.get(badKeyBucket(req))) || 0) >= limit; }
+  catch(_){ return true; }
+}
+
+async function chargeBadKey(req){
+  try{ await store.incr(badKeyBucket(req), WINDOW_SEC + 5); }catch(_){}
+}
+
 const ANDROID_RELEASE_REPO = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(process.env.ANDROID_RELEASE_REPO || '')
   ? process.env.ANDROID_RELEASE_REPO : 'edkiy73/Fit_timer';
 
@@ -37,17 +55,20 @@ module.exports = async (req, res) => {
   const admin = process.env.ADMIN_KEY || '';
   if(!admin) return fail(res, 503, 'no_admin_key');
 
-  if(!(await rateOkScoped(req, 'admin-auth', 30, '', 3600, true))){
+  // Неверный ключ ограничиваем строго, но нормальная работа админки не должна
+  // съедать тот же лимит: один экран делает несколько API-запросов подряд.
+  if(await badKeyBlocked(req)) return fail(res, 429, 'rate_limited');
+  if(!(await rateOkScoped(req, 'admin-request', REQUEST_LIMIT, '', WINDOW_SEC, true))){
     return fail(res, 429, 'rate_limited');
   }
 
   let given = String(req.headers['x-admin-key'] || '');
-  try{
-    given = decodeURIComponent(given);
-  }catch(_){
+  try{ given = decodeURIComponent(given); }
+  catch(_){ given = ''; }
+  if(!sameSecret(given, admin)){
+    await chargeBadKey(req);
     return fail(res, 403, 'bad_key');
   }
-  if(!sameSecret(given, admin)) return fail(res, 403, 'bad_key');
 
   let body;
   try{
