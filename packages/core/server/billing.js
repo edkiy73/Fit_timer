@@ -204,12 +204,12 @@ async function billingLog(limit = 200, now = new Date()){
 }
 
 function safeHealthError(error){
-  const raw = String((error && error.message) || error || 'provider_error')
-    .toLowerCase()
-    .replace(/https?:\/\/\S+/g, '')
-    .replace(/[^a-z0-9._:-]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-  return raw.slice(0, 100) || 'provider_error';
+  const raw = String((error && error.message) || error || '').trim().toLowerCase();
+  if(!/^[a-z0-9._:-]{1,80}$/.test(raw)) return 'provider_error';
+  if(!/(error|failed|failure|missing|unconfigured|unavailable|not_found|mismatch|pending|disabled|declined|signature|invalid)/.test(raw)){
+    return 'provider_error';
+  }
+  return raw;
 }
 
 function healthStatus(value){
