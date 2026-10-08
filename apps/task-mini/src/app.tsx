@@ -16,6 +16,7 @@ import { taskAuth } from './auth';
 import { taskAdmin } from './admin';
 import { taskBilling } from './billing';
 import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
+import { NotFoundScreen, RouteErrorScreen } from './route-fallback';
 
 const EMPTY: Record<TaskFilter, string> = {
   all: 'tasks.emptyAll',
@@ -195,6 +196,7 @@ export const routes: RouteObject[] = [
   {
     path: '/',
     element: <Localized><Root /></Localized>,
+    errorElement: <Localized><RouteErrorScreen /></Localized>,
     children: [
       {
         element: <TaskLayout />,
@@ -204,7 +206,8 @@ export const routes: RouteObject[] = [
           {path: 'done', element: <TaskList filter="done" />}
         ]
       },
-      {path: 'account', element: <AccountPage />}
+      {path: 'account', element: <AccountPage />},
+      {path: '*', element: <NotFoundScreen />}
     ]
   },
   {
