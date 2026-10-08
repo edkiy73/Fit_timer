@@ -282,6 +282,19 @@ ok('admin billing status exposes only safe SKU mapping metadata',
   billingReady.body.products?.some(x => x.sku === 'pack.a' && x.mappings?.stripe?.priceId === 'price_pack_a')
   && !JSON.stringify(billingReady.body).includes('sk_test_admin_ready')
   && !JSON.stringify(billingReady.body).includes('whsec_admin_ready'));
+{
+  const applePolicy = (billingReady.body.providers || []).find(x => x.id === 'apple');
+  const stripePolicy = (billingReady.body.providers || []).find(x => x.id === 'stripe');
+  const yooPolicy = (billingReady.body.providers || []).find(x => x.id === 'yookassa');
+  ok('Admin receives the same canonical store/direct policy used by BillingRouter',
+    applePolicy?.platforms?.join() === 'ios'
+    && applePolicy?.distributions?.join() === 'app_store'
+    && stripePolicy?.distributions?.join() === 'web,direct'
+    && stripePolicy?.external === true
+    && yooPolicy?.countries?.join() === 'RU'
+    && yooPolicy?.distributions?.join() === 'web,direct'
+    && Array.isArray(yooPolicy?.excludeCountries));
+}
 
 const mappedSave = await call(adminHandler, {
   action:'billing_mapping_set',
