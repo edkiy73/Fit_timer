@@ -104,7 +104,32 @@ const PROGRAM = name => catalogProgram(name, ['Приседания', 'Отжи�
   ok('черновик публикуется только отдельным действием',draftPublished.s===200&&draftPublished.j.status==='approved');
   const draftVisible=await fetch(BASE+'/api/catalog').then(r=>r.json());
   ok('после публикации программа появилась в каталоге',(draftVisible.items||[]).some(x=>x.id===draftSaved.j.id));
+  const publishedDraftFull=await fetch(BASE+'/api/catalog?item='+draftSaved.j.id).then(async r=>({s:r.status,j:await r.json()}));
+  ok('опубликованный admin draft с d-id читается как полноценная программа',
+     publishedDraftFull.s===200&&publishedDraftFull.j.item&&publishedDraftFull.j.item.id===draftSaved.j.id,
+     publishedDraftFull.j.error||publishedDraftFull.s);
   await api('remove',{id:draftSaved.j.id});
+
+  const draftMediaProgram=PROGRAM(NAME+' draft media');
+  const draftMediaEx=draftMediaProgram.plans[0].exercises[0];
+  const draftWithMedia=await api('save_draft',{item:{
+    sourceLocale:'ru',cat:'tone',level:'Новичок',min:20,program:draftMediaProgram,
+    locales:{
+      ru:{name:NAME+' draft media',gives:'Проверка картинок опубликованной программы из админки.'},
+      en:{name:'Admin draft media',gives:'Checks images on a published Admin-created catalog program.',texts:translated(draftMediaProgram,{})}
+    },
+    cover:'data:image/png;base64,QUFBQQ',
+    media:{v:2,items:[{id:draftMediaEx.id,p:0,i:0,n:'Приседания',data:'data:image/png;base64,QkJCQg'}]}
+  }});
+  ok('admin draft с фото сохраняется',draftWithMedia.s===200,draftWithMedia.j.id);
+  ok('admin draft с фото публикуется',(await api('publish_draft',{id:draftWithMedia.j.id,pro:false})).s===200);
+  const draftMediaFull=await fetch(BASE+'/api/catalog?item='+draftWithMedia.j.id).then(async r=>({s:r.status,j:await r.json()}));
+  ok('приложение может получить фото упражнения у опубликованного d-id',
+     draftMediaFull.s===200&&draftMediaFull.j.item&&draftMediaFull.j.item.media
+       &&draftMediaFull.j.item.media.items&&draftMediaFull.j.item.media.items[0]
+       &&draftMediaFull.j.item.media.items[0].id===draftMediaEx.id,
+     draftMediaFull.j.error||draftMediaFull.s);
+  await api('remove',{id:draftWithMedia.j.id});
 
   const incomplete=await api('save_draft',{item:{
     sourceLocale:'ru',cat:'tone',level:'Новичок',min:20,
