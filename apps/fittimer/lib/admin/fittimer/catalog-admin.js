@@ -13,7 +13,7 @@ const FitExerciseV2 = require('../../fit-exercise-v2');
 const ACTIONS = new Set([
   'overview','approve','reject','pro','ban','unban',
   'save_draft','publish_draft','delete_draft',
-  'add','edit','remove','seed'
+  'add','edit','remove','seed','reference_list'
 ]);
 
 const clean=(v,n)=>String(v==null?'':v).slice(0,n);
@@ -181,6 +181,22 @@ function mergeIncoming(current,incoming){
 async function handleCatalogAdmin(action,body,res){
   if(!ACTIONS.has(action))return false;
   const id=clean(body&&body.id,20);
+
+  if(action==='reference_list'){
+    const {SEED_ITEMS}=require('../../seed');
+    const approved=new Set(await store.list('c:approved'));
+    const items=await Promise.all(SEED_ITEMS.map(async it=>{
+      const raw=approved.has(it.id)?await store.get('c:'+it.id):null;
+      let current=null;
+      try{current=raw?JSON.parse(raw):null;}catch(_){}
+      return {id:it.id,name:it.name||it.program&&it.program.name||it.id,
+        published:!!(current&&current.status==='approved'),
+        status:current&&current.status||'unpublished',
+        updatedAt:current&&current.referenceUpdatedAt||null};
+    }));
+    send(res,200,{ok:true,items});
+    return true;
+  }
 
   if(action==='overview'){
     await overview(res);
@@ -377,7 +393,8 @@ async function handleCatalogAdmin(action,body,res){
       status:'approved',
       at:old&&old.at||now,
       cover:old&&old.cover||null,
-      pics:old&&old.pics||it.pics||null
+      pics:old&&old.pics||it.pics||null,
+      referenceUpdatedAt:now
     });
     await store.set(`c:${it.id}`,JSON.stringify(next));
     if(!exists){
