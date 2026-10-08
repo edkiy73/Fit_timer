@@ -1265,6 +1265,7 @@ function finishWorkout(options){
   const finishedProgramId = String((state.raw && state.raw.id) || '');
 
   state.live = false;
+  state.stepToken = (state.stepToken || 0) + 1;
   state.workoutSessionId = '';
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = 0;
@@ -1835,6 +1836,7 @@ export function exitWorkout(){
 // общая часть выхода: гасим всё, что работает во время тренировки
 export function tearDownWorkout(){
   state.live = false;
+  state.stepToken = (state.stepToken || 0) + 1;
   state.workoutSessionId = '';
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = 0;
