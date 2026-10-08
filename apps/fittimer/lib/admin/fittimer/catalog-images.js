@@ -124,6 +124,7 @@ function adminExerciseImagePrompt(meta){
     'Style: premium stylized-realistic 3D, '+adminImageCharacterStyle(meta.gender)+', realistic dark sportswear, polished high-end rendering.',
     'Background: premium modern gym with depth and good lighting, softly blurred and secondary; avoid flat gray studio backgrounds.',
     'Brand accents: Fit Timer violet (#7C56F5) and light lavender (#B7A0FF) only for arrows, subtle rim light and small environmental accents.',
+    'ABSOLUTE RULE: The generated image must contain ZERO text of any kind — no words, letters, numbers, captions, labels, typography, symbols that resemble writing, logos, brand names, UI text or watermarks. Do not render the exercise or program name inside the image.',
     meta.description?'Technique: '+meta.description:null,
     equipment.length?'Equipment: '+equipment.join(', ')+'. Show correct quantity, scale, grip/contact and position.':'Do not invent equipment that the exercise does not require.',
     motion,
@@ -142,6 +143,7 @@ function adminCoverImagePrompt(meta){
   return [
     'Create a square 1:1 premium catalog cover for the fitness program "'+meta.program+'".',
     'This is a PROGRAM COVER, not an exercise instruction. Create one bold, simple hero image that reads instantly at small thumbnail size.',
+    'ABSOLUTE RULE: The generated image must contain ZERO text of any kind — no words, letters, numbers, captions, labels, typography, symbols that resemble writing, logos, brand names, UI text or watermarks. Do not render the exercise or program name inside the image.',
     'COMPOSITION: full-bleed edge-to-edge artwork. Absolutely no inset square, inner card, picture frame, border, outline, vignette frame or mockup-within-a-mockup. The artwork itself must fill the entire 1:1 canvas.',
     'Use one large hero athlete as the dominant subject, occupying roughly 65-80% of the frame. Prefer a close or medium-wide athletic composition over a distant full gym scene. Keep only one or two large supporting elements; avoid tiny weights, racks, plates and decorative detail that disappears in the catalog.',
     'VISUAL STYLE: premium cinematic stylized-realistic 3D, natural skin tone, realistic sportswear, polished directional lighting, subtle depth and a modern gym atmosphere. Avoid gray mannequin/anatomy-model styling.',
