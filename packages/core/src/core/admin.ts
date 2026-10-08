@@ -8,7 +8,8 @@ export interface AdminHealth {
   ok: boolean;
   status: 'ok' | 'warning' | 'error' | string;
   checkedAt?: string;
-  deployment?: string;
+  deployment?: string | Record<string, unknown>;
+  infrastructure?: {hosting?: {adapter?: string; source?: string; runtime?: string}};
   probes?: Array<Record<string, unknown>>;
   storage?: Record<string, unknown>;
   services?: Record<string, unknown>;
