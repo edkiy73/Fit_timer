@@ -342,7 +342,7 @@ function createAppleStoreBillingAdapter({
       if(mapped.bundleId !== bundleId) throw problem('store_bundle_mismatch', 409);
       const response = await requestTransaction(transactionId, mapped.bundleId);
       const transaction = await decodeVerified(response.payload.signedTransactionInfo);
-      const identity = {appleAppAccountToken};
+      const identity = {appleAppAccountToken:appAccountToken};
       const baseEvent = normalize(transaction, {
         requestedId:transactionId,
         productId:mapped.productId,
