@@ -50,13 +50,15 @@ const PROGRAM = name => catalogProgram(name, ['Приседания', 'Отжи�
   ok('ключ с кириллицей не роняет запрос, а отвергается',
      (await api('overview', {}, 'неверный')).s === 403);
 
-  // ---- curated V2 seed: one real bilingual reference program, no legacy demos ----
+  // ---- curated V2 references: every canonical reference publishes, no legacy demos ----
+  const refs = await api('reference_list');
+  const refIds = (refs.j.items || []).map(x=>x.id);
   const seeded = await api('seed');
-  ok('загружается только эталонная программа V2', seeded.s === 200 && seeded.j.items === 1 && seeded.j.added === 1, seeded.j.items);
+  ok('загружаются все эталонные программы V2', seeded.s === 200 && seeded.j.items === refIds.length && seeded.j.added === refIds.length, seeded.j.items);
   const again=await api('seed');
-  ok('повторная публикация не дублирует и не перезаписывает программу', again.s===200 && again.j.added===0);
+  ok('повторная публикация не дублирует и не перезаписывает программы', again.s===200 && again.j.added===0);
   const curated = await fetch(BASE+'/api/catalog').then(r=>r.json());
-  ok('эталон опубликован в витрине', (curated.items||[]).some(x=>x.id==='vshape_v2'));
+  ok('все эталоны опубликованы в витрине', refIds.length > 0 && refIds.every(id=>(curated.items||[]).some(x=>x.id===id)), refIds.join(','));
   const TRAINER = '@adm.' + Math.random().toString(36).slice(2, 7);
   const tr = await makeTrainer(TRAINER);
   ok('тренер заведён через аккаунт', tr.ok === true, JSON.stringify(tr));
