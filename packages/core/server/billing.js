@@ -508,9 +508,15 @@ function createDefaultBillingAdapters({
       ? apple.resolveAppAccountToken
       : token => resolveBillingIdentity('apple', token)
   };
+  const googleOptions = {
+    ...(googlePlay && typeof googlePlay === 'object' ? googlePlay : {}),
+    resolveObfuscatedAccountId:googlePlay && typeof googlePlay.resolveObfuscatedAccountId === 'function'
+      ? googlePlay.resolveObfuscatedAccountId
+      : value => resolveBillingIdentity('google', value)
+  };
   const adapters = [
     createAppleStoreBillingAdapter(appleOptions),
-    createGooglePlayBillingAdapter(googlePlay),
+    createGooglePlayBillingAdapter(googleOptions),
     createYooKassaBillingAdapter(yookassa),
     createStripeBillingAdapter(stripe)
   ];
