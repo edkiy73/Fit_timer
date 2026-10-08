@@ -392,12 +392,18 @@ function renderCatalog(b){
     pending?'На проверке':'Каталог',
     pending?'Сразу видно, что готово к публикации и чего не хватает.':'Опубликованные программы и доступ Premium.',
     !pending?'<div class="action-row"><button class="b ok" id="catalogAdd">+ Добавить</button>'
-      +(!(data.approved||[]).some(x=>x.id==='vshape_v2')?'<button class="b" id="catalogSeedReference">Опубликовать эталонную программу</button>':'')+'</div>':''
+      +'<button class="b" id="catalogSeedReference">Эталонные программы</button></div>':''
   );
   if(!pending){
     $('catalogAdd').onclick=()=>setTab('add');
     const seedButton=$('catalogSeedReference');
-    if(seedButton)seedButton.onclick=()=>act('seed',{},seedButton,'Эталонная программа опубликована в каталоге.');
+    if(seedButton)seedButton.onclick=()=>{
+      const existing=(data.approved||[]).find(x=>x.id==='vshape_v2');
+      const title='Плечи шире, талия уже — V-силуэт';
+      const choice=confirm(existing?'Обновить эталонную программу «'+title+'» из репозитория?\\n\\nСохранённые обложка и изображения упражнений останутся. Изменения админа в тексте программы будут заменены.':'Опубликовать эталонную программу «'+title+'»?');
+      if(!choice)return;
+      act('seed',{referenceId:'vshape_v2',update:!!existing},seedButton,existing?'Эталонная программа обновлена.':'Эталонная программа опубликована.');
+    };
   }
   if(!list.length){
     b.insertAdjacentHTML('beforeend',`<div class="empty">${pending?'Новых заявок нет.':'В каталоге пока ничего нет. Добавь первую программу кнопкой выше.'}</div>`);
