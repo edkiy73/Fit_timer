@@ -35,6 +35,9 @@ need(api.includes('await chargeBadKey(req)'),'only bad keys should consume the b
 need(!api.includes("rateOkScoped(req, 'admin-auth', 30"),'valid admin requests must not share the old 30/hour auth bucket');
 need(html.includes("e.message === 'rate_limited'"),'admin UI must explain rate limiting instead of reporting a fake connection failure');
 
+need(api.includes('REFERENCE_IDS') && api.includes('reference:REFERENCE_IDS.has(String(c.id))'),'admin overview must identify canonical reference programs by registry id');
+need(html.includes("item.reference?'<span class=\"status-chip ok\">Эталон</span>'"),'catalog cards must visibly mark canonical reference programs');
+
 need(api.includes("'catalog_ai_create'"),'admin AI-create API is missing');
 need(api.includes("FitAIContract.checkOutput(kind, r.json, input)") && api.includes("FitAIContract.outputSchema(kind)"),'admin catalog AI must use the same AI Contract V2 schema and domain validator as the app');
 need(!api.includes('ai-protocol') && !html.includes('ПРОГРАММА:'),'catalog admin must not use the old text protocol');
