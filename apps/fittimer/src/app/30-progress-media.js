@@ -443,12 +443,15 @@ export async function importAllData(file){
     // История idempotent: повторный импорт не создаёт дубли.
     const existing = Array.isArray(stats.history) ? stats.history : [];
     const ids = new Set(existing.map(h => h && h.id).filter(Boolean));
-    const additions = incoming.filter(h => !ids.has(h.id)).map(h => {
+    const additions = [];
+    for(const h of incoming){
+      if(ids.has(h.id)) continue;
       ids.add(h.id);
-      return {id:h.id, d:h.d, t:Number.isInteger(h.t) ? Math.max(0,Math.min(23,h.t)) : 12,
+      additions.push({id:h.id, d:h.d, t:Number.isInteger(h.t) ? Math.max(0,Math.min(23,h.t)) : 12,
         pid:'legacy-history', sec:h.sec, kcal:Number.isFinite(h.kcal) ? Math.max(0,Math.min(5000,h.kcal)) : 0,
-        status:'full', activityOnly:h.activityOnly === true, note:'', legacyHistory:true};
-    });
+        status:'full', activityOnly:h.activityOnly === true, note:'', legacyHistory:true});
+    }
+    if(currentUser !== target.id){ appAlert('Активный профиль изменился. Повторите импорт.'); return; }
     if(!additions.length){ appAlert('Эти занятия уже были восстановлены.'); return; }
     stats.history = existing.concat(additions).sort((a,b) => String(a.d).localeCompare(String(b.d)) || (+a.t||0)-(+b.t||0));
     stats.totalSec = stats.history.reduce((n,h) => n + (Number(h.sec)||0), 0);
