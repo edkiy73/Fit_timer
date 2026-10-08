@@ -73,11 +73,54 @@ function linkedAccount(value, identity){
   if(!expected || !actual || actual !== expected) throw problem('store_account_mismatch', 403);
 }
 
+function accountIdOf(value){
+  return String(
+    (value && value.obfuscatedExternalAccountId)
+    || (value && value.externalAccountIdentifiers && value.externalAccountIdentifiers.obfuscatedExternalAccountId)
+    || ''
+  );
+}
+
+function configuredPackageName(){
+  const root = productConfig();
+  return clean(root.androidPackageName || root.id, 220);
+}
+
+function productByGoogleId(productId){
+  const id = String(productId || '');
+  const list = Array.isArray(productConfig().products) ? productConfig().products : [];
+  for(const raw of list){
+    const cfg = raw && raw.billing && raw.billing.google;
+    if(String(cfg && cfg.productId || '') !== id) continue;
+    return {
+      sku:String(raw.sku || ''),
+      title:String(raw.title || raw.sku || ''),
+      kind:raw.kind === 'subscription' ? 'subscription' : 'owned',
+      days:raw.kind === 'subscription' ? Math.max(1, Math.round(+raw.days || 30)) : 0,
+      billing:raw.billing || {}
+    };
+  }
+  return null;
+}
+
+function decodeRtdn(body){
+  const message = body && body.message && typeof body.message === 'object' ? body.message : null;
+  const encoded = String(message && message.data || '');
+  if(!encoded) return null;
+  try{
+    const parsed = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  }catch(_){
+    return null;
+  }
+}
+
 function createGooglePlayBillingAdapter({
   fetchImpl = globalThis.fetch,
   now = () => Date.now(),
   getServiceAccount,
-  getAccessToken
+  getAccessToken,
+  resolveObfuscatedAccountId
 } = {}){
   let cachedToken = '';
   let cachedUntil = 0;
