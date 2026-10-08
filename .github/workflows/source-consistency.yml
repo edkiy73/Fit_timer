@@ -54,7 +54,17 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
 
+      - name: Test starter build path filter
+        run: node scripts/test-should-build-starter.mjs
+
+      - name: Decide whether to compile generated starter
+        id: starter
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: echo "build=$(node scripts/should-build-starter.mjs "$BASE")" >> "$GITHUB_OUTPUT"
+
       - name: Generate and compile clean React starter
+        if: steps.starter.outputs.build == 'true'
         run: |
           npm run app:create -- starter-check "Starter Check" com.example.startercheck en
           npm ci --prefix apps/starter-check --no-audit --no-fund
