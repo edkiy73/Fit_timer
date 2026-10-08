@@ -22,6 +22,8 @@ export default defineConfig({
   server: {fs: {allow: [root('')]}},
   test: {
     environment: 'jsdom',
+    // Bound parallelism to avoid many costly jsdom workers on 2-core CI runners.
+    maxWorkers: 4,
     setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.test.{ts,tsx}']
   }
