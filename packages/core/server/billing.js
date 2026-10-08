@@ -26,6 +26,8 @@ const { productConfig } = require('./product-core');
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/;
 const PROVIDER = /^[a-z0-9_-]{1,32}$/;
+const PLATFORM = new Set(['web','android','ios','unknown']);
+const DISTRIBUTION = new Set(['web','google_play','app_store','direct','unknown']);
 const STATUSES = new Set(['paid', 'refunded', 'canceled']);
 const YEAR = 365 * 24 * 3600;
 const LOG_TTL = 400 * 24 * 3600;
@@ -33,6 +35,36 @@ const LOG_TTL = 400 * 24 * 3600;
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 const mail = v => String(v || '').trim().toLowerCase().slice(0, 120);
 const line = (v, max) => String(v || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, max);
+
+function billingContext(raw){
+  raw = raw && typeof raw === 'object' ? raw : {};
+  const platformRaw = String(raw.platform || 'unknown').toLowerCase();
+  const distributionRaw = String(raw.distribution || 'unknown').toLowerCase();
+  const country = String(raw.country || '').trim().toUpperCase();
+  return {
+    platform: PLATFORM.has(platformRaw) ? platformRaw : 'unknown',
+    distribution: DISTRIBUTION.has(distributionRaw) ? distributionRaw : 'unknown',
+    country: /^[A-Z]{2}$/.test(country) ? country : '',
+    storefront: line(raw.storefront, 80)
+  };
+}
+
+function adapterSupports(adapter, context){
+  const inList = (value, list) => !Array.isArray(list) || !list.length || list.includes(value);
+  if(!inList(context.platform, adapter.platforms)) return false;
+  if(!inList(context.distribution, adapter.distributions)) return false;
+  if(Array.isArray(adapter.countries) && adapter.countries.length && (!context.country || !adapter.countries.includes(context.country))) return false;
+  if(Array.isArray(adapter.excludeCountries) && context.country && adapter.excludeCountries.includes(context.country)) return false;
+  return true;
+}
+
+function methodInfo(adapter){
+  return {
+    id:String(adapter.id),
+    kind:['store','external','direct','test'].includes(adapter.kind) ? adapter.kind : 'external',
+    external:!!adapter.external
+  };
+}
 
 /** Catalog item with its kind; subscriptions carry a period in days. */
 function catalogItem(sku){
@@ -187,20 +219,27 @@ async function signedInAccount(body){
    POST /api/billing?provider=<id>                                   → уведомление провайдера */
 function createBillingHandler({adapters = []} = {}){
   const list = (Array.isArray(adapters) ? adapters : []).filter(a => a && PROVIDER.test(String(a.id || '')));
-  const enabled = async () => {
+  const enabled = async (rawContext = {}) => {
+    const context = billingContext(rawContext);
     const out = [];
     for(const adapter of list){
       if(adapter.testOnly && process.env.ALLOW_MEMORY_STORE !== '1') continue;
+      if(!adapterSupports(adapter, context)) continue;
+      if(typeof adapter.supports === 'function'){
+        let supported = false;
+        try{ supported = !!(await adapter.supports(context)); }catch(_){}
+        if(!supported) continue;
+      }
       if(typeof adapter.available === 'function'){
         let on = false;
-        try{ on = !!(await adapter.available()); }catch(_){}
+        try{ on = !!(await adapter.available(context)); }catch(_){}
         if(!on) continue;
       }
       out.push(adapter);
     }
     return out;
   };
-  const find = async id => (await enabled()).find(a => a.id === id) || null;
+  const find = async (id, context) => (await enabled(context)).find(a => a.id === id) || null;
 
   return async function billingHandler(req, res){
     if(cors(req, res)) return;
@@ -210,16 +249,19 @@ function createBillingHandler({adapters = []} = {}){
     try{ body = await readBody(req); }catch(_){ return fail(res, 413, 'too_large'); }
     const query = req.query || Object.fromEntries(new URL(req.url || '/', 'http://local').searchParams);
 
-    // Needs no storage: tells the app which buy buttons to show.
-    if(!query.provider && body && body.action === 'providers'){
-      return send(res, 200, {ok: true, providers: (await enabled()).filter(a => typeof a.checkout === 'function').map(a => a.id)});
+    // Needs no storage: tells the app which buy buttons are legal/available for this context.
+    if(!query.provider && body && (body.action === 'providers' || body.action === 'methods')){
+      const context = billingContext(body.context);
+      const methods = (await enabled(context)).filter(a => typeof a.checkout === 'function').map(methodInfo);
+      if(body.action === 'providers') return send(res, 200, {ok: true, providers: methods.map(x => x.id)});
+      return send(res, 200, {ok: true, context, methods});
     }
 
     if(!store.configured()) return fail(res, 503, 'no_store');
     if(!(await rateOk(req, 'billing', 240))) return fail(res, 429, 'rate_limited');
 
     if(query.provider){
-      const adapter = await find(String(query.provider));
+      const adapter = await find(String(query.provider), billingContext(body && body.context));
       if(!adapter || typeof adapter.verifyWebhook !== 'function') return fail(res, 404, 'unknown_provider');
       let verified;
       try{ verified = await adapter.verifyWebhook({headers: req.headers || {}, body, query}); }
@@ -268,7 +310,7 @@ function createBillingHandler({adapters = []} = {}){
     }
 
     if(action === 'checkout'){
-      const adapter = await find(String(body.provider || ''));
+      const adapter = await find(String(body.provider || ''), billingContext(body && body.context));
       if(!adapter || typeof adapter.checkout !== 'function') return fail(res, 404, 'unknown_provider');
       const who = await signedInAccount(body);
       if(!who) return fail(res, 403, 'bad_sync_token');
@@ -335,4 +377,4 @@ async function handleAdminBilling(action, body, res){
   return true;
 }
 
-module.exports = { applyBillingEvent, billingLog, createBillingHandler, createInstantBillingAdapter, createTestBillingAdapter, handleAdminBilling };
+module.exports = { applyBillingEvent, billingLog, billingContext, createBillingHandler, createInstantBillingAdapter, createTestBillingAdapter, handleAdminBilling };
