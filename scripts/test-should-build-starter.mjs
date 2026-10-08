@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { requiresStarterBuild } from './should-build-starter.mjs';
+assert.equal(requiresStarterBuild(null), true);
+assert.equal(requiresStarterBuild(['apps/unmute/src/app.tsx']), false);
+assert.equal(requiresStarterBuild(['apps/fittimer/tests/workout.js']), false);
+assert.equal(requiresStarterBuild(['docs/roadmap.md']), false);
+assert.equal(requiresStarterBuild(['templates/react-app/src/main.tsx']), true);
+assert.equal(requiresStarterBuild(['packages/core/src/core/ui.ts']), true);
+assert.equal(requiresStarterBuild(['packages/ui-react/src/index.ts']), true);
+assert.equal(requiresStarterBuild(['scripts/create-app.mjs']), true);
+assert.equal(requiresStarterBuild(['scripts/apps.mjs']), true);
+assert.equal(requiresStarterBuild(['package.json']), true);
+assert.equal(requiresStarterBuild(['unknown-runtime-path']), true);
+assert.equal(requiresStarterBuild(['apps/unmute/src/app.tsx','packages/core/src/core/ui.ts']),true);
+console.log('starter build path filter ok');
