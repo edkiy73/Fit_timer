@@ -136,15 +136,21 @@ const appears=(locator,timeout=5000)=>
   locator.waitFor({timeout}).then(()=>true,()=>false);
 
 async function twoTapChoice(page,label){
-  const option=page.locator('label.learn-option',{
+  const option=()=>page.locator('label.learn-option',{
     hasText:new RegExp('^'+label+'(?:Нажми ещё раз)?$')
   }).first();
   const next=page.locator('.learn-feedback-next');
-  await option.click();
-  // A resumed run may restore the selected option: then the first tap already confirms it.
-  if(!(await next.isVisible().catch(()=>false))&&!(await option.isDisabled().catch(()=>false))){
+
+  // The option animates/re-renders between selected and confirmed states. Re-acquire
+  // the live node for each tap so Playwright cannot wait on a stale disabled label.
+  if(!(await next.isVisible().catch(()=>false))){
+    await option().waitFor({state:'visible',timeout:5000});
+    await option().evaluate(node=>node.click());
+  }
+  if(!(await next.isVisible().catch(()=>false))){
     await page.waitForTimeout(150);
-    if(!(await next.isVisible().catch(()=>false)))await option.click({timeout:5000}).catch(()=>{});
+    const live=option();
+    if(!(await live.isDisabled().catch(()=>true)))await live.evaluate(node=>node.click());
   }
   await next.waitFor({timeout:5000});
   return next;
