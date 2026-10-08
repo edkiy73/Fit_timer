@@ -195,6 +195,62 @@ function createGooglePlayBillingAdapter({
     );
   }
 
+  async function fetchSubscription(packageName, purchaseToken){
+    return request(
+      '/applications/' + encodeURIComponent(packageName)
+      + '/purchases/subscriptionsv2/tokens/' + encodeURIComponent(purchaseToken),
+      {method:'GET'}
+    );
+  }
+
+  async function fetchOwned(packageName, purchaseToken){
+    return request(
+      '/applications/' + encodeURIComponent(packageName)
+      + '/purchases/productsv2/tokens/' + encodeURIComponent(purchaseToken),
+      {method:'GET'}
+    );
+  }
+
+  function subscriptionEvent(purchase, purchaseToken, productId){
+    const lineItems = Array.isArray(purchase && purchase.lineItems) ? purchase.lineItems : [];
+    const line = lineItems.find(item => String(item && item.productId || '') === productId);
+    if(!line) throw problem('store_product_mismatch', 409);
+
+    const state = String(purchase.subscriptionState || '');
+    if(state.includes('PENDING')) throw problem('purchase_pending', 409);
+
+    const expiryTime = String(line.expiryTime || '');
+    const expiryMs = Date.parse(expiryTime) || 0;
+    const activeStates = new Set([
+      'SUBSCRIPTION_STATE_ACTIVE',
+      'SUBSCRIPTION_STATE_IN_GRACE_PERIOD',
+      'SUBSCRIPTION_STATE_CANCELED'
+    ]);
+    const paid = expiryMs > now() && activeStates.has(state);
+    const autoRenew = !!(line.autoRenewingPlan && line.autoRenewingPlan.autoRenewEnabled);
+    const orderId = clean(line.latestSuccessfulOrderId, 160)
+      || 'gp-sub-' + crypto.createHash('sha256').update(purchaseToken + '|' + productId + '|' + expiryTime).digest('hex').slice(0, 32);
+    return {orderId, status:paid ? 'paid' : 'canceled', until:expiryTime, autoRenew};
+  }
+
+  function ownedEvent(purchase, purchaseToken, productId, forcedStatus){
+    const items = Array.isArray(purchase && purchase.productLineItem) ? purchase.productLineItem : [];
+    const line = items.find(item => String(item && item.productId || '') === productId);
+    if(!line) throw problem('store_product_mismatch', 409);
+    const state = String(purchase.purchaseStateContext && purchase.purchaseStateContext.purchaseState || '');
+    if(state === 'PURCHASE_STATE_PENDING') throw problem('purchase_pending', 409);
+    const paid = state === 'PURCHASE_STATE_PURCHASED';
+    const orderId = clean(purchase.orderId, 160)
+      || 'gp-item-' + crypto.createHash('sha256').update(purchaseToken + '|' + productId).digest('hex').slice(0, 32);
+    return {orderId, status:forcedStatus || (paid ? 'paid' : 'canceled'), autoRenew:false};
+  }
+
+  async function accountForPurchase(purchase){
+    const accountId = accountIdOf(purchase);
+    if(!accountId || typeof resolveObfuscatedAccountId !== 'function') return null;
+    return resolveObfuscatedAccountId(accountId);
+  }
+
   return {
     id:'google_play',
     kind:'store',
