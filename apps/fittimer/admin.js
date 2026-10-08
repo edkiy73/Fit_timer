@@ -19,28 +19,41 @@ function sourceLocaleOf(c){
   if(c && c.locales && c.locales.en && !c.locales.ru) return 'en';
   return 'ru';
 }
+/* Запись каталога: одна программа V2 (механика + тексты исходного языка) и накладки
+   языков locales[lang] = {name, gives, texts}. texts = {programName, programDesc,
+   stages:[{stageId, name, desc, mistakes}]} — только человекочитаемое, механика одна. */
 function localeBlock(c, lang){
   const hit = c && c.locales && c.locales[lang];
-  if(hit) return {name:hit.name || '', gives:hit.gives || '', text:hit.text || ''};
-  const source = sourceLocaleOf(c);
-  if(c && lang === source) return {name:c.name || '', gives:c.gives || '', text:c.text || ''};
-  if(c && !c.locales && lang === 'ru') return {name:c.name || '', gives:c.gives || '', text:c.text || ''};
-  return {name:'', gives:'', text:''};
+  return {name:(hit && hit.name) || '', gives:(hit && hit.gives) || '', texts:(hit && hit.texts) || null};
 }
+// Готовность языков сохранённой записи считает сервер (overview → item.ready)
 function localeReady(c, lang){
-  const x = localeBlock(c, lang);
-  return x.name.trim().length >= 3 && x.gives.trim().length >= 20 && x.text.length >= 60;
+  return !!(c && c.ready && c.ready[lang]);
 }
 function localeMarks(c){
   return LANGS.map(lang => langName(lang) + ' ' + (localeReady(c, lang) ? '✓' : '—')).join(' · ');
 }
-function translationPrompt(source, from, to){
-  const names = {ru:'Russian', en:'English'};
-  return 'Translate this Fit Timer catalog entry from ' + names[from] + ' to ' + names[to] + '.\n'
-    + 'Return ONLY valid JSON with exactly the keys name, gives, text.\n'
-    + 'Inside text keep every protocol label before the colon exactly unchanged (ПРОГРАММА, ДНИ, КРУГИ, УПРАЖНЕНИЕ, ОПИСАНИЕ, ФОРМАТ, ЗНАЧЕНИЕ, ПОДХОДЫ, ОТДЫХ, ШАГ, ПОТОЛОК and the other service labels).\n'
-    + 'Keep line order, blank lines, numbers, day tokens, boolean/control values and format values unchanged. Translate only human-readable names and prose. Do not add/remove/reorder exercises or change workout mechanics.\n\nSOURCE JSON:\n'
-    + JSON.stringify(source, null, 2);
+// Тексты программы на исходном языке — с неё самой
+function textsOfProgram(p){
+  const stages = [];
+  ((p && p.plans) || []).forEach(pl => (pl.exercises || []).forEach(ex => (ex.stages || []).forEach(st => {
+    const x = st.prescription || {};
+    stages.push({stageId:st.stageId, name:x.name || '', desc:x.desc || '', mistakes:x.mistakes || ''});
+  })));
+  return {programName:(p && p.name) || '', programDesc:(p && p.desc) || '', stages};
+}
+// Та же проверка полноты, что на сервере (lib/fit-catalog-program.js textsComplete)
+function textsComplete(src, t){
+  if(!t || !String(t.programName || '').trim()) return false;
+  if(String(src.programDesc || '').trim() && !String(t.programDesc || '').trim()) return false;
+  const by = new Map((Array.isArray(t.stages) ? t.stages : []).filter(s => s && s.stageId).map(s => [String(s.stageId), s]));
+  return (src.stages || []).every(a => {
+    const b = by.get(String(a.stageId));
+    if(!b || !String(b.name || '').trim()) return false;
+    if(String(a.desc || '').trim() && !String(b.desc || '').trim()) return false;
+    if(String(a.mistakes || '').trim() && !String(b.mistakes || '').trim()) return false;
+    return true;
+  });
 }
 
 // Ключ админки живёт только в этой вкладке (sessionStorage) и пропадает при её
@@ -1087,7 +1100,15 @@ async function testAIAdmin(type){
   setActionFeedback('aiResult','Проверяю текущие поля без сохранения…','busy');
   try{
     const r=await api('test_ai',{type,settings});
-    setActionFeedback('aiResult','✓ '+r.provider+' / '+r.model+(r.fallback?' · сработал резерв':' · основной маршрут')+' · ничего не сохранено','ok');
+    // Генерация программ требует структурированного ответа (JSON по схеме):
+    // модель, которая его не держит, отвечает на простой текст, но программы не соберёт.
+    const sc=r.structured;
+    if(sc&&!sc.ok){
+      setActionFeedback('aiResult','Текст отвечает, но структурированный ответ (JSON) не работает: '+(sc.detail||'ответ не прошёл проверку')+' · ничего не сохранено','err');
+      flashActionButton(btn,'Нет JSON','err');
+      return;
+    }
+    setActionFeedback('aiResult','✓ '+r.provider+' / '+r.model+(r.fallback?' · сработал резерв':' · основной маршрут')+(sc?' · JSON ✓':'')+' · ничего не сохранено','ok');
     flashActionButton(btn,'✓ Работает','ok');
   }catch(e){
     setActionFeedback('aiResult','Ошибка: '+(e.detail||e.message)+' · настройки не сохранены','err');
@@ -1526,7 +1547,10 @@ async function saveReleaseSettings(){
 
 let editing = null;
 let editingStatus = null;
-let form = {cover: null, media: {}, sourceLocale:'ru', imageGender:'f'};
+// Редактор записи каталога: программа V2 (механика + тексты исходного языка),
+// медиа по stable exercise.id и накладки языков в полях формы.
+const emptyForm = () => ({cover:null, media:{v:2, items:[]}, sourceLocale:'ru', imageGender:'f', program:null});
+let form = emptyForm();
 let aiEditTarget = null;
 
 function mediaV2Items(media){
@@ -1534,73 +1558,72 @@ function mediaV2Items(media){
 }
 function catalogMediaCount(media){
   const items=mediaV2Items(media);
-  return items ? items.length : Object.keys((media&&typeof media==='object')?media:{}).length;
+  return items ? items.length : 0;
 }
 function cloneCatalogMedia(media){
-  try{return JSON.parse(JSON.stringify(media||{}));}catch(_){return {};}
-}
-function adminMediaId(){
-  return 'e'+Math.random().toString(36).slice(2,10);
-}
-function mediaBlockHit(media,ex){
   const items=mediaV2Items(media);
-  if(items){
-    return items.find(x=>+x.p===+ex.p&&+x.i===+ex.i)||null;
-  }
-  return ex&&ex.name ? {data:media&&media[ex.name]} : null;
+  return {v:2,items:items?JSON.parse(JSON.stringify(items)):[]};
 }
-function mediaBlockData(media,ex){
-  const hit=mediaBlockHit(media,ex);
+function cloneJson(v){
+  return v==null?null:JSON.parse(JSON.stringify(v));
+}
+
+/* Упражнения программы: активный этап каждого слота + структура для картинок.
+   Фото привязаны к exercise.id; позиция plan/exercise нужна только как мост. */
+function stageEquipment(p){
+  const out=[],l=p.load||{};
+  if(l.type&&l.type!=='none'&&l.equipment)out.push({id:l.equipment,count:l.count||1,name:l.name||''});
+  (p.supportEquipment||[]).forEach(s=>out.push(typeof s==='string'?{id:s,count:1}:{id:s.id,count:1,name:s.name||''}));
+  return out;
+}
+function programExercises(program){
+  const out=[];
+  ((program&&program.plans)||[]).forEach((pl,pi)=>(pl.exercises||[]).forEach((ex,ei)=>{
+    const st=(ex.stages||[]).find(s=>s.stageId===ex.currentStageId)||(ex.stages||[])[0]||{};
+    const p=st.prescription||{};
+    out.push({id:ex.id,p:pi,i:ei,warmup:!!ex.warmup,stages:(ex.stages||[]).length,
+      name:p.name||'',description:p.desc||'',muscles:p.muscles||[],type:p.type,value:p.value,sets:p.sets,
+      load:p.load||{},equipment:stageEquipment(p)});
+  }));
+  return out;
+}
+function imageFormat(x){
+  const sets=+x.sets>1?' × '+x.sets+' sets':'';
+  return x.type==='time'?x.value+' seconds'+sets:x.value+' reps'+sets;
+}
+// Тексты накладки поверх программы — для показа состава на выбранном языке
+function applyTextsLocal(program,texts){
+  const out=cloneJson(program);
+  if(!out||!texts)return out;
+  if(String(texts.programName||'').trim())out.name=texts.programName;
+  if(String(texts.programDesc||'').trim())out.desc=texts.programDesc;
+  const by=new Map((texts.stages||[]).filter(s=>s&&s.stageId).map(s=>[String(s.stageId),s]));
+  (out.plans||[]).forEach(pl=>(pl.exercises||[]).forEach(ex=>(ex.stages||[]).forEach(st=>{
+    const s=by.get(String(st.stageId));if(!s||!st.prescription)return;
+    if(String(s.name||'').trim())st.prescription.name=s.name;
+    if(String(s.desc||'').trim())st.prescription.desc=s.desc;
+    if(String(s.mistakes||'').trim())st.prescription.mistakes=s.mistakes;
+  })));
+  return out;
+}
+function mediaBlockData(ex){
+  const hit=(mediaV2Items(form.media)||[]).find(x=>String(x.id||'')===String(ex.id));
   return hit&&hit.data||'';
 }
-function ensureFormMediaV2(blocks){
-  if(mediaV2Items(form.media))return;
-  const old=(form.media&&typeof form.media==='object')?form.media:{};
-  const counts={};
-  blocks.forEach(ex=>{if(ex.name)counts[ex.name]=(counts[ex.name]||0)+1;});
-  const items=[];
-  blocks.forEach(ex=>{
-    // Legacy «имя → фото» переносим только при однозначном имени. Дубликат уже
-    // не содержит enough identity, поэтому не приписываем его случайному блоку.
-    const data=ex.name&&counts[ex.name]===1?old[ex.name]:null;
-    if(data)items.push({id:adminMediaId(),p:ex.p,i:ex.i,n:ex.name,data});
-  });
-  form.media={v:2,items};
-}
 function setMediaBlock(ex,data){
-  const blocks=exerciseBlocks(form.sourceLocale);
-  ensureFormMediaV2(blocks);
-  const items=form.media.items;
-  let hit=items.find(x=>+x.p===+ex.p&&+x.i===+ex.i);
-  if(!data){
-    form.media.items=items.filter(x=>!(+x.p===+ex.p&&+x.i===+ex.i));
-    return;
-  }
-  if(!hit){
-    hit={id:adminMediaId(),p:ex.p,i:ex.i,n:ex.name,data};
-    items.push(hit);
-  }else{
-    hit.n=ex.name;hit.data=data;
-  }
+  if(!mediaV2Items(form.media))form.media={v:2,items:[]};
+  form.media.items=form.media.items.filter(x=>String(x.id||'')!==String(ex.id));
+  if(data)form.media.items.push({id:ex.id,p:ex.p,i:ex.i,n:ex.name,data});
 }
+// После правки программы фото остаются у своих exercise.id; позиции обновляются,
+// фото удалённых упражнений уходят.
 function reconcileFormMedia(blocks){
-  const items=mediaV2Items(form.media);
-  if(!items)return;
-  const byName={};
-  blocks.forEach(ex=>{
-    const k=String(ex.name||'');
-    if(k)(byName[k]||(byName[k]=[])).push(ex);
-  });
-  const valid=new Set(blocks.map(ex=>ex.p+'|'+ex.i));
-  items.forEach(item=>{
-    // При перестановке уникальное source-name переносит stable id вместе с фото.
-    // При rename/duplicate name сохраняем позицию: угадывать между дублями нельзя.
-    const named=byName[String(item.n||'')]||[];
-    if(named.length===1){
-      item.p=named[0].p;item.i=named[0].i;item.n=named[0].name;
-    }
-  });
-  form.media.items=items.filter(x=>valid.has((+x.p||0)+'|'+(+x.i||0)));
+  const items=mediaV2Items(form.media)||[];
+  const byId=new Map(blocks.map(b=>[String(b.id),b]));
+  form.media={v:2,items:items.map(x=>{
+    const b=byId.get(String(x.id||''));
+    return b?Object.assign({},x,{p:b.p,i:b.i,n:b.name}):null;
+  }).filter(Boolean)};
 }
 let failedMediaJobs = [];
 let adminCreateMode = 'ai';   // картинки живут отдельно от полей ввода
@@ -1633,62 +1656,51 @@ function pickPic(fn){
   f.click();
 }
 
-// Упражнения из текстового протокола. Для медиа важна не только подпись, но и
-// source position (plan/exercise): она переживает перевод имени и даёт мост к stable id.
-function exerciseBlocks(lang){
-  const field=lang==='en' ? $('fTextEn') : $('fTextRu');
-  const text=field?field.value:'';
-  const lines=text.split(/\r?\n/);
-  const starts=[];
-  let plan=0,exInPlan=0,seenDay=false,hadExercise=false;
-  lines.forEach((line,lineNo)=>{
-    if(/^ДЕНЬ:\s*/i.test(line)){
-      if(seenDay||hadExercise)plan++;
-      else plan=0;
-      exInPlan=0;seenDay=true;
-      return;
-    }
-    if(/^УПРАЖНЕНИЕ:\s*/i.test(line)){
-      starts.push({line:lineNo,p:plan,i:exInPlan++});
-      hadExercise=true;
-    }
-  });
-  return starts.map((meta,idx)=>{
-    const start=meta.line;
-    const end=idx+1<starts.length?starts[idx+1].line:lines.length;
-    const chunk=lines.slice(start,end);
-    const value=key=>{
-      const row=chunk.find(x=>new RegExp('^'+key+':\\s*','i').test(x));
-      return row?row.replace(new RegExp('^'+key+':\\s*','i'),'').trim():'';
-    };
-    return {
-      name:value('УПРАЖНЕНИЕ'),
-      description:value('ОПИСАНИЕ'),
-      muscles:value('МЫШЦЫ').split(/[,;]/).map(x=>x.trim()).filter(Boolean),
-      format:value('ФОРМАТ'),
-      value:value('ЗНАЧЕНИЕ'),
-      p:meta.p,i:meta.i,start,end
-    };
-  }).filter(x=>x.name);
-}
-function exNames(){
-  return exerciseBlocks(form.sourceLocale).map(x=>x.name);
-}
-
+/* ---- накладки языков в форме ---- */
 function localeFromForm(lang){
   const suf=lang==='en'?'En':'Ru';
-  return {name:$('fName'+suf).value.trim(),gives:$('fGives'+suf).value.trim(),text:$('fText'+suf).value};
+  const raw=$('fTexts'+suf).value.trim();
+  let texts=null,bad=false;
+  if(raw){try{texts=JSON.parse(raw);}catch(_){bad=true;}}
+  return {name:$('fName'+suf).value.trim(),gives:$('fGives'+suf).value.trim(),texts,bad};
 }
 function setLocaleForm(lang,x){
   const suf=lang==='en'?'En':'Ru';x=x||{};
-  $('fName'+suf).value=x.name||'';
-  $('fGives'+suf).value=x.gives||'';
-  $('fText'+suf).value=x.text||'';
+  if(x.name!==undefined)$('fName'+suf).value=x.name||'';
+  if(x.gives!==undefined)$('fGives'+suf).value=x.gives||'';
+  if(x.texts!==undefined)$('fTexts'+suf).value=x.texts?JSON.stringify(x.texts,null,2):'';
+}
+// Программа с правками текстов исходного языка из формы — то, что уйдёт на сервер
+function programForSave(){
+  if(!form.program)return null;
+  const src=localeFromForm(form.sourceLocale);
+  return src.bad?cloneJson(form.program):applyTextsLocal(form.program,src.texts);
+}
+function sourceTextsNow(){
+  return textsOfProgram(programForSave());
+}
+// Второй язык без своих текстов получает копию исходника — переводить прямо в поле
+function prefillOtherTexts(){
+  if(!form.program)return;
+  const other=form.sourceLocale==='ru'?'en':'ru';
+  const x=localeFromForm(other);
+  if(!x.texts&&!x.bad)setLocaleForm(other,{texts:sourceTextsNow()});
+}
+function formLocaleReady(lang){
+  if(!form.program)return false;
+  const x=localeFromForm(lang);
+  if(x.bad||x.name.length<3||x.gives.length<20)return false;
+  const src=sourceTextsNow();
+  return textsComplete(src,lang===form.sourceLocale?src:x.texts);
+}
+function localeForRequest(lang){
+  const x=localeFromForm(lang);
+  if(x.bad)return null;
+  return {name:x.name,gives:x.gives,texts:lang===form.sourceLocale?sourceTextsNow():x.texts};
 }
 function updateLocaleStates(){
   LANGS.forEach(lang=>{
-    const x=localeFromForm(lang);
-    const ok=x.name.length>=3&&x.gives.length>=20&&x.text.length>=60;
+    const ok=formLocaleReady(lang);
     const el=$('fState'+(lang==='en'?'En':'Ru'));
     el.textContent=ok?'✓':'—';
     el.className='lang-state'+(ok?' ok':'');
@@ -1699,12 +1711,13 @@ let pasteDirection={from:'ru',to:'en'};
 async function translateCatalogForm(from,to){
   pasteDirection={from,to};
   const btn=$(from==='ru'?'fTranslateRuEn':'fTranslateEnRu');
+  const locale=localeForRequest(from);
+  if(!locale||!locale.texts){setActionFeedback('editorToolsState','Нет текстов '+langName(from)+' или JSON не читается.','err');return;}
   actionButtonState(btn,true,'Перевожу…');
   setActionFeedback('editorToolsState','Перевожу '+langName(from)+' → '+langName(to)+'…','busy');
   try{
-    const r=await api('translate_catalog',{from,to,locale:localeFromForm(from)});
-    setLocaleForm(to,r.locale||{});
-    markEditorDirty();updateLocaleStates();renderExerciseCards();renderPics();
+    const r=await api('translate_catalog',{from,to,locale});
+    applyTranslatedLocale(to,r.locale||{});
     setActionFeedback('editorToolsState','✓ Перевод '+langName(from)+' → '+langName(to)+' готов. Проверь перед сохранением.','ok');
     flashActionButton(btn,'✓ Готово','ok');
   }catch(e){
@@ -1712,10 +1725,23 @@ async function translateCatalogForm(from,to){
     flashActionButton(btn,'Ошибка','err');
   }finally{if(btn.disabled)actionButtonState(btn,false);}
 }
+// Перевод в исходный язык правит тексты самой программы — механика не меняется
+function applyTranslatedLocale(lang,x){
+  setLocaleForm(lang,{name:x.name||'',gives:x.gives||'',texts:x.texts||null});
+  if(lang===form.sourceLocale&&form.program&&x.texts){
+    form.program=applyTextsLocal(form.program,x.texts);
+    setLocaleForm(lang,{texts:textsOfProgram(form.program)});
+  }
+  markEditorDirty();updateLocaleStates();renderExerciseCards();renderPics();
+}
 async function copyTranslationSource(){
   const from=editorLang,to=editorLang==='ru'?'en':'ru',btn=$('fCopyTranslate');
   pasteDirection={from,to};
-  const txt=translationPrompt(localeFromForm(from),from,to);
+  const locale=localeForRequest(from);
+  if(!locale||!locale.texts){setActionFeedback('editorToolsState','Нет текстов '+langName(from)+' или JSON не читается.','err');return;}
+  let txt='';
+  try{txt=(await api('translate_catalog',{from,to,locale,promptOnly:true})).prompt||'';}
+  catch(e){setActionFeedback('editorToolsState','Промпт не собрался: '+(e.miss&&e.miss.join(', ')||e.message),'err');return;}
   try{
     await navigator.clipboard.writeText(txt);
     setActionFeedback('editorToolsState','✓ Промпт '+langName(from)+' → '+langName(to)+' скопирован.','ok');
@@ -1730,23 +1756,24 @@ function applyPastedTranslation(){
   let raw=$('fPasteJson').value.trim().replace(/^\`\`\`(?:json)?\s*/i,'').replace(/\s*\`\`\`$/,'');
   try{
     const x=JSON.parse(raw);
-    setLocaleForm(d.to,x);
-    markEditorDirty();
+    if(!x||typeof x!=='object'||!x.texts)throw new Error('shape');
+    applyTranslatedLocale(d.to,x);
     $('fPasteWrap').hidden=true;$('fPasteJson').value='';
-    updateLocaleStates();renderExerciseCards();renderPics();
     setActionFeedback('editorToolsState','✓ Перевод вставлен в '+langName(d.to)+'. Проверь перед сохранением.','ok');
     flashActionButton(btn,'✓ Применено','ok');
   }catch(e){
-    setActionFeedback('editorToolsState','Не получилось прочитать JSON. Нужны поля name, gives и text.','err');
+    setActionFeedback('editorToolsState','Не получилось прочитать JSON. Нужны поля name, gives и texts.','err');
     flashActionButton(btn,'Ошибка JSON','err');
   }
 }
 
-function openAiEditProgram(lang,exercise){
-  aiEditTarget={lang:lang==='en'?'en':'ru',exercise:exercise||''};
+/* ---- правка программы через ИИ: тот же контракт V2, что в приложении ---- */
+function openAiEditProgram(exercise){
+  if(!form.program){setActionFeedback('editorToolsState','Сначала создай или загрузи программу.','err');return;}
+  aiEditTarget={exerciseId:exercise?exercise.id:'',name:exercise?exercise.name:''};
   const box=$('fAiEditBox'),title=$('fAiEditTitle'),input=$('fAiInstruction');
   if(!box||!input)return;
-  title.textContent=exercise?'Изменить упражнение «'+exercise+'» через ИИ':'Изменить программу '+langName(aiEditTarget.lang)+' через ИИ';
+  title.textContent=exercise?'Изменить упражнение «'+exercise.name+'» через ИИ':'Изменить программу через ИИ ('+langName(form.sourceLocale)+')';
   input.value='';
   input.placeholder=exercise?'Например: замени на вариант без прыжков и сохрани ту же нагрузку':'Например: добавь ещё один тренировочный день на спину и плечи';
   box.hidden=false;
@@ -1761,43 +1788,66 @@ function closeAiEditProgram(){
 }
 async function aiEditProgram(){
   if(!aiEditTarget)return;
-  const lang=aiEditTarget.lang,exercise=aiEditTarget.exercise;
+  const exerciseId=aiEditTarget.exerciseId;
   const instruction=($('fAiInstruction').value||'').trim();
   if(!instruction){setActionFeedback('fAiEditState','Опиши, что нужно изменить.','err');return;}
   const btn=$('fAiEditApply');
   actionButtonState(btn,true,'Изменяю…');
-  setActionFeedback('fAiEditState',exercise?'ИИ редактирует упражнение…':'ИИ редактирует программу…','busy');
+  setActionFeedback('fAiEditState',exerciseId?'ИИ редактирует упражнение…':'ИИ редактирует программу…','busy');
   try{
     const r=await api('catalog_ai_edit',{
-      mode:exercise?'exercise':'program',
-      lang,
-      locale:localeFromForm(lang),
-      exercise:exercise||'',
+      mode:exerciseId?'exercise':'program',
+      lang:form.sourceLocale,
+      program:programForSave(),
+      exerciseId,
       instruction
     });
-    setLocaleForm(lang,r.locale||{});
+    form.program=r.program;
+    setLocaleForm(form.sourceLocale,{texts:textsOfProgram(form.program)});
     markEditorDirty();updateLocaleStates();renderExerciseCards();renderPics();
     closeAiEditProgram();
-    setActionFeedback('editorToolsState','✓ Изменения ИИ применены к '+langName(lang)+'. Проверь и сохрани.','ok');
+    setActionFeedback('editorToolsState','✓ Изменения ИИ применены. Второй язык проверь или переведи заново.','ok');
   }catch(e){
     setActionFeedback('fAiEditState','ИИ не изменил: '+(e.detail||e.message),'err');
     flashActionButton(btn,'Ошибка','err');
   }finally{if(btn.disabled)actionButtonState(btn,false);}
 }
+
+/* ---- состав программы: только чтение, на выбранном языке ---- */
+function loadText(load){
+  if(!load||!load.type||load.type==='none')return '';
+  const eq=load.equipment==='custom'?(load.name||'custom'):(load.equipment||'');
+  if(load.type==='weight')return (load.count>1?load.count+' × ':'')+load.weight+' кг · '+eq;
+  const lv=(load.levels||[])[load.level||0]||{};
+  return eq+' · '+(lv.label||lv.key||'уровень '+((load.level||0)+1));
+}
 function renderExerciseCards(){
   const box=$('exerciseCards');if(!box)return;
-  const list=exerciseBlocks(editorLang);
   box.innerHTML='';
-  if(!list.length){box.innerHTML='<div class="compact-note">Упражнения появятся здесь после заполнения протокола.</div>';return;}
-  list.forEach(ex=>{
-    const card=document.createElement('div');
-    card.className='exercise-card';
-    card.innerHTML=`
-      <div class="exercise-card-head"><div class="exercise-card-title">${esc(ex.name)}</div><button class="b quiet" type="button">Изменить через ИИ</button></div>
-      ${ex.description?`<p>${esc(ex.description)}</p>`:''}
-      ${ex.format||ex.value?`<div class="entity-tags"><span class="status-chip">${esc(ex.format||'формат')}</span>${ex.value?`<span class="status-chip">${esc(ex.value)}</span>`:''}</div>`:''}`;
-    card.querySelector('button').onclick=()=>openAiEditProgram(editorLang,ex.name);
-    box.appendChild(card);
+  if(!form.program){box.innerHTML='<div class="compact-note">Программы пока нет: создай её через ИИ или загрузи Program DTO V2 вручную.</div>';return;}
+  const x=localeFromForm(editorLang);
+  const view=editorLang===form.sourceLocale?programForSave():applyTextsLocal(form.program,x.bad?null:x.texts);
+  const plans=view.plans||[];
+  plans.forEach((pl,pi)=>{
+    if(plans.length>1||(pl.days||[]).length){
+      const head=document.createElement('div');
+      head.className='compact-note';
+      head.textContent='Вариант '+(pi+1)+((pl.days||[]).length?' · '+pl.days.join(', '):'')+' · кругов: '+(pl.rounds||1);
+      box.appendChild(head);
+    }
+    programExercises({plans:[pl]}).forEach(ex=>{
+      const src=programExercises(form.program).find(b=>b.id===ex.id)||ex;
+      const card=document.createElement('div');
+      card.className='exercise-card';
+      const chips=[ex.warmup?'разминка':'',ex.type==='time'?ex.value+' сек':ex.value+' повт.',(ex.sets||1)+' подх.',loadText(ex.load),ex.stages>1?'этапов: '+ex.stages:'']
+        .filter(Boolean).map(c=>'<span class="status-chip">'+esc(c)+'</span>').join('');
+      card.innerHTML=`
+        <div class="exercise-card-head"><div class="exercise-card-title">${esc(ex.name||'Без названия')}</div><button class="b quiet" type="button">Изменить через ИИ</button></div>
+        ${ex.description?`<p>${esc(ex.description)}</p>`:''}
+        <div class="entity-tags">${chips}</div>`;
+      card.querySelector('button').onclick=()=>openAiEditProgram(src);
+      box.appendChild(card);
+    });
   });
 }
 function shrinkGeneratedPic(data,cb){
@@ -1811,31 +1861,31 @@ function shrinkGeneratedPic(data,cb){
   };
   img.onerror=()=>cb(data);img.src=data;
 }
-function catalogImagePayload(kind,name,description){
-  const source=form.sourceLocale;
-  const locale=localeFromForm(source);
-  const blocks=exerciseBlocks(source);
-  const ex=blocks.find(x=>x.name===name)||{};
+// Картинка строится по структуре этапа: снаряд, опора, мышцы и формат — не по тексту
+function catalogImagePayload(kind,ex){
+  const locale=localeFromForm(form.sourceLocale);
+  const blocks=programExercises(programForSave());
   return {
     kind,
-    name,
-    description,
-    muscles:ex.muscles||[],
-    format:ex.format||'',
-    program:locale.name,
+    name:ex?ex.name:'',
+    description:ex?ex.description:'',
+    muscles:ex?ex.muscles:[],
+    format:ex?imageFormat(ex):'',
+    equipment:ex?ex.equipment:[],
+    program:locale.name||(form.program&&form.program.name)||'',
     gives:locale.gives,
     category:$('fCat')?$('fCat').value:'',
     exerciseNames:blocks.map(x=>x.name).slice(0,20),
     gender:form.imageGender||'f'
   };
 }
-async function generateCatalogPic(kind,name,description,set,el){
+async function generateCatalogPic(kind,ex,set,el){
   const ph=el&&el.querySelector('.ph'),btn=el&&el.querySelector('[data-generate]'),state=$('mediaProgressText');
   if(ph)ph.classList.add('generating');
   actionButtonState(btn,true,'…');
-  if(state){state.className='muted busy';state.textContent='Генерирую '+(kind==='cover'?'обложку':'«'+name+'»')+'…';}
+  if(state){state.className='muted busy';state.textContent='Генерирую '+(kind==='cover'?'обложку':'«'+ex.name+'»')+'…';}
   try{
-    const r=await api('catalog_ai_image',catalogImagePayload(kind,name,description));
+    const r=await api('catalog_ai_image',catalogImagePayload(kind,ex));
     await new Promise(resolve=>shrinkGeneratedPic(r.image,pic=>{set(pic);renderPics();resolve();}));
     if(state){state.className='muted ok';state.textContent='✓ Картинка готова. Не забудь сохранить программу.';}
   }catch(e){
@@ -1846,17 +1896,16 @@ async function generateCatalogPic(kind,name,description,set,el){
 }
 
 async function generateMedia(mode){
-  const source=form.sourceLocale;
-  const exercises=exerciseBlocks(source);
+  const exercises=programExercises(programForSave());
   reconcileFormMedia(exercises);
   let jobs=[];
   if(mode==='retry'){
     jobs=failedMediaJobs.slice();
   }else{
-    if(mode==='all'||!form.cover)jobs.push({kind:'cover',name:'',description:'',set:d=>{form.cover=d;}});
+    if(mode==='all'||!form.cover)jobs.push({kind:'cover',ex:null,set:d=>{form.cover=d;}});
     exercises.forEach(ex=>{
-      if(mode==='all'||!mediaBlockData(form.media,ex)){
-        jobs.push({kind:'exercise',name:ex.name,description:ex.description,set:d=>setMediaBlock(ex,d)});
+      if(mode==='all'||!mediaBlockData(ex)){
+        jobs.push({kind:'exercise',ex,set:d=>setMediaBlock(ex,d)});
       }
     });
   }
@@ -1870,9 +1919,9 @@ async function generateMedia(mode){
   const retry=$('retryFailedMedia');if(retry)retry.hidden=true;
   for(let i=0;i<jobs.length;i++){
     const j=jobs[i],state=$('mediaProgressText');
-    if(state){state.className='muted busy';state.textContent='Генерация '+(i+1)+' / '+jobs.length+' · '+(j.kind==='cover'?'обложка':j.name);}
+    if(state){state.className='muted busy';state.textContent='Генерация '+(i+1)+' / '+jobs.length+' · '+(j.kind==='cover'?'обложка':j.ex.name);}
     try{
-      const r=await api('catalog_ai_image',catalogImagePayload(j.kind,j.name,j.description));
+      const r=await api('catalog_ai_image',catalogImagePayload(j.kind,j.ex));
       await new Promise(resolve=>shrinkGeneratedPic(r.image,pic=>{j.set(pic);markEditorDirty();renderPics();resolve();}));
     }catch(e){
       failed.push(j);
@@ -1892,31 +1941,22 @@ async function generateMedia(mode){
 function renderPics(){
   const cover=$('fCoverBox');if(!cover)return;
   cover.innerHTML='';
-  cover.appendChild(picBox('Обложка',form.cover,d=>{form.cover=d;markEditorDirty();renderPics();},'cover',''));
+  cover.appendChild(picBox('Обложка',form.cover,d=>{form.cover=d;markEditorDirty();renderPics();},'cover',null));
 
-  const blocks=exerciseBlocks(form.sourceLocale),names=blocks.map(x=>x.name);
+  const blocks=programExercises(programForSave());
   reconcileFormMedia(blocks);
   const box=$('fPics');box.innerHTML='';
-  $('fPicsHint').textContent=names.length?'Для каждой картинки отдельно: «ИИ» генерирует, «Загрузить» ставит своё фото. Клик по превью ничего не запускает.':'Добавь упражнения в протокол — здесь появятся карточки фото.';
+  $('fPicsHint').textContent=blocks.length?'Для каждой картинки отдельно: «ИИ» генерирует, «Загрузить» ставит своё фото. Клик по превью ничего не запускает.':'Здесь появятся карточки фото, когда в программе будут упражнения.';
   blocks.forEach(ex=>box.appendChild(picBox(
     ex.name,
-    mediaBlockData(form.media,ex),
+    mediaBlockData(ex),
     d=>{setMediaBlock(ex,d);markEditorDirty();renderPics();},
     'exercise',
-    ex.description
+    ex
   )));
-  // Legacy media остаётся читаемой до первой правки картинки. v2 чистится через
-  // reconcileFormMedia и не теряет stable id при открытии/сохранении редактора.
-  if(!mediaV2Items(form.media)){
-    const counts={};
-    blocks.forEach(ex=>{if(ex.name)counts[ex.name]=(counts[ex.name]||0)+1;});
-    Object.keys(form.media).forEach(k=>{
-      if(!names.includes(k)||counts[k]!==1)delete form.media[k];
-    });
-  }
   updateEditorModeration();
 }
-function picBox(label,data,set,kind,description){
+function picBox(label,data,set,kind,ex){
   const el=document.createElement('div');el.className='pic '+(kind==='cover'?'cover-pic':'exercise-pic');
   el.innerHTML=`<div class="ph">${data?`<img src="${esc(data)}" alt="">`:'нет фото'}</div>
     <small>${esc(label)}</small>
@@ -1925,7 +1965,7 @@ function picBox(label,data,set,kind,description){
       <button type="button" data-upload>Загрузить</button>
       ${data?'<button type="button" data-remove>✕</button>':''}
     </div>`;
-  el.querySelector('[data-generate]').onclick=()=>generateCatalogPic(kind,label,description,set,el);
+  el.querySelector('[data-generate]').onclick=()=>generateCatalogPic(kind,ex,set,el);
   el.querySelector('[data-upload]').onclick=()=>pickPic(set);
   const rm=el.querySelector('[data-remove]');if(rm)rm.onclick=()=>set(null);
   return el;
@@ -1943,7 +1983,7 @@ function setEditorLang(lang){
 function cancelProgramEdit(){
   if(editorDirty&&!confirm('Отменить редактирование и потерять несохранённые изменения?'))return;
   const back=editingStatus==='pending'?'pending':editingStatus==='draft'?'drafts':'approved';
-  editing=null;editingStatus=null;form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'};editorLang='ru';
+  editing=null;editingStatus=null;form=emptyForm();editorLang='ru';
   resetEditorDirty();
   localStorage.removeItem('adminEditingId');
   allowEditorLeave=true;
@@ -1954,6 +1994,26 @@ function setAdminCreateMode(mode){
   adminCreateMode=mode==='manual'?'manual':'ai';
   document.querySelectorAll('[data-create-mode]').forEach(x=>x.classList.toggle('on',x.dataset.createMode===adminCreateMode));
   const fields=$('aiCreateFields');if(fields)fields.hidden=adminCreateMode!=='ai';
+  const manual=$('manualCreateFields');if(manual)manual.hidden=adminCreateMode!=='manual';
+}
+// Новая программа в форме: исходный язык — с программы, второй язык — заново
+function takeProgram(lang,r){
+  const other=lang==='ru'?'en':'ru';
+  form.program=r.program;
+  form.sourceLocale=lang;
+  form.cover=null;
+  form.media={v:2,items:[]};
+  failedMediaJobs=[];
+  setLocaleForm(lang,r.locale||{});
+  setLocaleForm(other,{name:'',gives:'',texts:null});
+  prefillOtherTexts();
+  markEditorDirty();
+  setEditorLang(lang);
+  updateLocaleStates();renderExerciseCards();renderPics();
+  $('fSourceHint').textContent='Исходник: '+langName(form.sourceLocale)+' · механика одна, второй язык — текстами поверх неё';
+}
+function selectedEquipment(role){
+  return [...document.querySelectorAll('[data-equip-role="'+role+'"]:checked')].map(x=>x.value);
 }
 async function generateAdminProgram(){
   const btn=$('fAiCreate'),state=$('fAiCreateState');
@@ -1967,7 +2027,8 @@ async function generateAdminProgram(){
       level:$('fLevel').value,
       min:+$('fMin').value||20,
       days:+$('aiCreateDays').value||3,
-      equipment:$('aiCreateEquipment').value.trim(),
+      availableLoadEquipment:selectedEquipment('load'),
+      availableSupportEquipment:selectedEquipment('support'),
       limitations:$('aiCreateLimitations').value.trim(),
       focus:$('aiCreateFocus').value.trim(),
       style:$('aiCreateStyle').value,
@@ -1975,21 +2036,12 @@ async function generateAdminProgram(){
       instruction:$('aiCreateWish').value.trim()
     });
     const other=lang==='ru'?'en':'ru';
-    setLocaleForm(lang,r.locale||{});
-    setLocaleForm(other,{});
-    form.sourceLocale=lang;
-    markEditorDirty();
-    form.cover=null;
-    form.media={};
-    failedMediaJobs=[];
-    setEditorLang(lang);
-    updateLocaleStates();renderExerciseCards();renderPics();
-    $('fSourceHint').textContent='Исходник: '+langName(form.sourceLocale)+' · второй язык создаётся автоматически';
+    takeProgram(lang,r);
     state.textContent='Программа готова. Перевожу '+langName(lang)+' → '+langName(other)+'…';
     try{
       const tr=await api('translate_catalog',{from:lang,to:other,locale:r.locale||{}});
       setLocaleForm(other,tr.locale||{});
-      updateLocaleStates();
+      updateLocaleStates();renderExerciseCards();
       setActionFeedback('fAiCreateState','✓ Программа и оба языка готовы. Проверь тексты, затем сделай изображения и сохрани.','ok');
     }catch(trErr){
       setActionFeedback('fAiCreateState','Исходник готов, но второй язык не перевёлся: '+(trErr.detail||trErr.message)+'. Используй кнопку '+langName(lang)+' → '+langName(other)+' ниже.','err');
@@ -1997,27 +2049,33 @@ async function generateAdminProgram(){
     const textCard=$('fName'+(lang==='en'?'En':'Ru'));
     if(textCard)textCard.scrollIntoView({behavior:'smooth',block:'center'});
   }catch(e){
-    setActionFeedback('fAiCreateState','Не получилось сгенерировать: '+(e.detail||e.message),'err');
+    setActionFeedback('fAiCreateState','Не получилось сгенерировать: '+(e.detail||(e.miss&&e.miss.join(', '))||e.message),'err');
+    flashActionButton(btn,'Ошибка','err');
+  }finally{if(btn.disabled)actionButtonState(btn,false);}
+}
+// Ручной путь: Program DTO V2 («Скопировать программу» в приложении или ответ чата)
+async function importAdminProgram(){
+  const btn=$('fDtoImport');
+  const lang=$('manualLang').value==='en'?'en':'ru';
+  const json=$('fDtoJson').value.trim();
+  if(!json){setActionFeedback('fDtoState','Вставь Program DTO V2 (JSON).','err');return;}
+  actionButtonState(btn,true,'Проверяю…');
+  try{
+    const r=await api('catalog_import_dto',{lang,json});
+    takeProgram(lang,r);
+    setActionFeedback('fDtoState','✓ Программа загружена: '+r.exCount+' упр. Заполни «что даёт» и второй язык.','ok');
+  }catch(e){
+    setActionFeedback('fDtoState','Не подходит: '+((e.miss&&e.miss.join(', '))||e.message),'err');
     flashActionButton(btn,'Ошибка','err');
   }finally{if(btn.disabled)actionButtonState(btn,false);}
 }
 
-function formLocaleReady(lang){
-  const x=localeFromForm(lang);
-  return x.name.length>=3&&x.gives.length>=20&&x.text.length>=60;
-}
 function editorReadiness(){
-  const exercises=exerciseBlocks(form.sourceLocale);
+  const exercises=programExercises(programForSave());
   reconcileFormMedia(exercises);
-  const mediaCount=exercises.filter(ex=>!!mediaBlockData(form.media,ex)).length;
-  return {
-    ru:formLocaleReady('ru'),
-    en:formLocaleReady('en'),
-    cover:!!form.cover,
-    exercises:exercises.length,
-    media:mediaCount,
-    publishable:formLocaleReady('ru')&&formLocaleReady('en')
-  };
+  const mediaCount=exercises.filter(ex=>!!mediaBlockData(ex)).length;
+  const ru=formLocaleReady('ru'),en=formLocaleReady('en');
+  return {ru,en,cover:!!form.cover,exercises:exercises.length,media:mediaCount,publishable:ru&&en};
 }
 function updateEditorModeration(){
   const card=$('editorReviewCard');
@@ -2028,11 +2086,11 @@ function updateEditorModeration(){
   const st=editorReadiness(),rows=$('editorReviewRows'),note=$('editorReviewNote');
   const item=(title,ok,text)=>'<div class="editor-review-item '+(ok?'ok':'')+'"><b>'+(ok?'✓ ':'— ')+esc(title)+'</b><span>'+esc(text)+'</span></div>';
   rows.innerHTML=
-    item('Русский',st.ru,st.ru?'готов к публикации':'нужно заполнить название, описание и протокол')
-    +item('English',st.en,st.en?'готов к публикации':'нужно заполнить название, описание и протокол')
+    item('Русский',st.ru,st.ru?'готов к публикации':'нужно заполнить название, описание и тексты программы')
+    +item('English',st.en,st.en?'готов к публикации':'нужно заполнить название, описание и тексты программы')
     +item('Обложка',st.cover,st.cover?'есть':'не блокирует публикацию, но каталог будет слабее')
     +item('Фото упражнений',st.exercises>0&&st.media===st.exercises,
-      st.exercises?st.media+' из '+st.exercises+(st.media===st.exercises?' готовы':' — можно догенерировать'):'упражнения ещё не разобраны');
+      st.exercises?st.media+' из '+st.exercises+(st.media===st.exercises?' готовы':' — можно догенерировать'):'в программе пока нет упражнений');
   if(note)note.textContent=st.publishable
     ? 'Тексты готовы. Обложка и фото не блокируют публикацию, но лучше закрыть медиа до выпуска.'
     : 'Публикация заблокирована, пока RU и EN не проходят обязательную проверку.';
@@ -2042,14 +2100,18 @@ function updateEditorModeration(){
 }
 function currentProgramItem(){
   const source=form.sourceLocale==='en'?'en':'ru';
-  const locales={ru:localeFromForm('ru'),en:localeFromForm('en')};
-  const src=locales[source];
+  const locales={};
+  LANGS.forEach(lang=>{
+    const x=localeFromForm(lang);
+    if(x.bad)throw new Error('JSON текстов '+langName(lang)+' не читается');
+    locales[lang]={name:x.name,gives:x.gives,texts:lang===source?sourceTextsNow():x.texts};
+  });
   return {
-    sourceLocale:source,locales,
-    name:src.name,gives:src.gives,text:src.text,
+    sourceLocale:source,locales,program:programForSave(),
+    name:locales[source].name,gives:locales[source].gives,
     cat:$('fCat').value,level:$('fLevel').value,
     min:+$('fMin').value,by:$('fBy').value.trim(),
-    exCount:exNames().length,pro:$('fPro').checked,
+    pro:$('fPro').checked,
     cover:form.cover,media:form.media
   };
 }
@@ -2057,7 +2119,7 @@ function closeEditorTo(target){
   editing=null;editingStatus=null;
   resetEditorDirty();
   localStorage.removeItem('adminEditingId');
-  form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'};
+  form=emptyForm();
   tab=target;
   localStorage.setItem('adminTab',tab);
 }
@@ -2103,6 +2165,11 @@ async function rejectPendingFromEditor(){
   }
 }
 
+// Оборудование для генерации — из общего справочника приложения (overview.equipment)
+function equipmentChecks(role){
+  return (data.equipment||[]).filter(e=>e.roles.includes(role)).map(e=>
+    '<label class="inline-switch"><input type="checkbox" data-equip-role="'+role+'" value="'+esc(e.id)+'"><span>'+esc(e.id)+'</span></label>').join('');
+}
 function renderAdd(b){
   const editorTitle=editingStatus==='draft'?'Черновик программы':editing?'Редактирование программы':'Новая программа';
   b.innerHTML=pageHead(editorTitle,'Параметры, тексты, упражнения и медиа в одном рабочем экране.')+`
@@ -2150,12 +2217,20 @@ function renderAdd(b){
           <div><label>Тренировок в неделю</label><input id="aiCreateDays" type="number" min="1" max="7" value="3"></div>
           <div><label>Структура</label><select id="aiCreateStyle"><option value="auto">На усмотрение ИИ</option><option value="circuit">Круговая</option><option value="strength">Силовая</option><option value="mixed">Смешанная</option></select></div>
           <div><label>Разминка</label><select id="aiCreateWarmup"><option value="auto">На усмотрение ИИ</option><option value="yes">Добавить</option><option value="no">Без разминки</option></select></div>
-          <div class="wide"><label>Оборудование</label><input id="aiCreateEquipment" maxlength="500" placeholder="Например: гантели 5–20 кг, скамья, резинки"></div>
+          <div class="wide"><label>Снаряды для нагрузки</label><div class="entity-tags">${equipmentChecks('load')}</div></div>
+          <div class="wide"><label>Опора и инвентарь</label><div class="entity-tags">${equipmentChecks('support')}</div></div>
           <div class="wide"><label>Акцент</label><input id="aiCreateFocus" maxlength="500" placeholder="Например: больше спины и плеч, без лишнего кардио"></div>
           <div class="wide"><label>Ограничения</label><textarea id="aiCreateLimitations" class="compact-text" maxlength="700" placeholder="Например: без прыжков, беречь колени"></textarea></div>
           <div class="wide"><label>Дополнительное пожелание</label><textarea id="aiCreateWish" class="compact-text" maxlength="1200" placeholder="Что ещё важно учесть"></textarea></div>
         </div>
-        <div class="action-row"><button class="b ok" type="button" id="fAiCreate">Сгенерировать программу</button><span class="action-feedback" id="fAiCreateState">ИИ заполнит исходный язык. После этого проверь программу и переведи второй язык.</span></div>
+        <div class="action-row"><button class="b ok" type="button" id="fAiCreate">Сгенерировать программу</button><span class="action-feedback" id="fAiCreateState">ИИ соберёт программу на исходном языке и сразу переведёт второй язык.</span></div>
+      </div>
+      <div class="form-card-body" id="manualCreateFields"${adminCreateMode==='manual'?'':' hidden'}>
+        <div class="field-grid">
+          <div><label>Язык программы</label><select id="manualLang"><option value="ru">Русский</option><option value="en">English</option></select></div>
+          <div class="wide"><label>Program DTO V2 (JSON)</label><textarea id="fDtoJson" class="program-text" placeholder='{"contractVersion":2,"program":{…}} — «Скопировать программу» в приложении или ответ чата'></textarea></div>
+        </div>
+        <div class="action-row"><button class="b ok" type="button" id="fDtoImport">Загрузить программу</button><span class="action-feedback" id="fDtoState">Программа проходит ту же проверку, что ответ ИИ.</span></div>
       </div>
     </div>
 
@@ -2172,14 +2247,14 @@ function renderAdd(b){
           <div class="field-grid">
             <div class="wide"><label>Название</label><input id="fNameRu" maxlength="60"></div>
             <div class="wide"><label>Что даёт программа</label><textarea id="fGivesRu" class="compact-text" maxlength="300"></textarea></div>
-            <div class="wide"><label>Протокол программы</label><textarea id="fTextRu" class="program-text" maxlength="60000" placeholder="ПРОГРАММА: …&#10;ДНИ: Пн, Чт&#10;КРУГИ: 3&#10;&#10;УПРАЖНЕНИЕ: …"></textarea></div>
+            <div class="wide"><label>Тексты программы (JSON)</label><textarea id="fTextsRu" class="program-text" maxlength="60000" placeholder='{"programName":"…","programDesc":"…","stages":[{"stageId":"…","name":"…","desc":"…","mistakes":"…"}]}'></textarea></div>
           </div>
         </div>
         <div id="editorEn" class="lang-pane"${editorLang==='en'?'':' hidden'}>
           <div class="field-grid">
             <div class="wide"><label>Name</label><input id="fNameEn" maxlength="60"></div>
             <div class="wide"><label>What it gives</label><textarea id="fGivesEn" class="compact-text" maxlength="300"></textarea></div>
-            <div class="wide"><label>Program protocol</label><textarea id="fTextEn" class="program-text" maxlength="60000"></textarea></div>
+            <div class="wide"><label>Program texts (JSON)</label><textarea id="fTextsEn" class="program-text" maxlength="60000" placeholder='{"programName":"…","programDesc":"…","stages":[{"stageId":"…","name":"…","desc":"…","mistakes":"…"}]}'></textarea></div>
           </div>
         </div>
 
@@ -2193,7 +2268,7 @@ function renderAdd(b){
           </div>
           <span class="action-feedback editor-tools-feedback" id="editorToolsState"></span>
           <div class="translate-box" id="fPasteWrap" hidden>
-            <textarea id="fPasteJson" class="compact-text" placeholder='{"name":"...","gives":"...","text":"..."}'></textarea>
+            <textarea id="fPasteJson" class="compact-text" placeholder='{"name":"...","gives":"...","texts":{...}}'></textarea>
             <div class="acts"><button class="b ok" id="fPasteApply">Применить</button></div>
           </div>
           <div class="ai-inline-box" id="fAiEditBox" hidden>
@@ -2210,7 +2285,7 @@ function renderAdd(b){
     </div>
 
     <div class="form-card">
-      <div class="form-card-head"><div><h3>Упражнения</h3><div class="cell-sub">Разобраны из протокола активного языка</div></div></div>
+      <div class="form-card-head"><div><h3>Упражнения</h3><div class="cell-sub">Состав программы на выбранном языке · механика одна для RU и EN</div></div></div>
       <div class="form-card-body"><div class="exercise-grid" id="exerciseCards"></div></div>
     </div>
 
@@ -2260,6 +2335,7 @@ function renderAdd(b){
   $('editorReject').onclick=rejectPendingFromEditor;
   document.querySelectorAll('[data-create-mode]').forEach(x=>x.onclick=()=>setAdminCreateMode(x.dataset.createMode));
   if($('fAiCreate'))$('fAiCreate').onclick=generateAdminProgram;
+  if($('fDtoImport'))$('fDtoImport').onclick=importAdminProgram;
   setAdminCreateMode(adminCreateMode);
   if(editing==null)$('fPro').checked=false;
   $('fPro').onchange=()=>{
@@ -2269,13 +2345,13 @@ function renderAdd(b){
     updateEditorModeration();
   };
   document.querySelectorAll('[data-editor-lang]').forEach(x=>x.onclick=()=>setEditorLang(x.dataset.editorLang));
-  ['fNameRu','fGivesRu','fTextRu','fNameEn','fGivesEn','fTextEn'].forEach(id=>{
+  ['fNameRu','fGivesRu','fTextsRu','fNameEn','fGivesEn','fTextsEn'].forEach(id=>{
     $(id).oninput=()=>{markEditorDirty();updateLocaleStates();renderExerciseCards();renderPics();};
   });
   ['fCat','fLevel','fMin','fBy'].forEach(id=>$(id).addEventListener('input',markEditorDirty));
   $('fTranslateRuEn').onclick=()=>translateCatalogForm('ru','en');
   $('fTranslateEnRu').onclick=()=>translateCatalogForm('en','ru');
-  $('fAiProgram').onclick=()=>openAiEditProgram(editorLang,'');
+  $('fAiProgram').onclick=()=>openAiEditProgram(null);
   $('fAiEditApply').onclick=aiEditProgram;
   $('fAiEditCancel').onclick=closeAiEditProgram;
   $('fCopyTranslate').onclick=copyTranslationSource;
@@ -2291,7 +2367,7 @@ function renderAdd(b){
     if(!file||!pickTo)return;
     shrinkPic(file,640,pic=>{pickTo(pic);pickTo=null;});
   };
-  $('fSourceHint').textContent='Исходник: '+langName(form.sourceLocale)+' · RU и EN можно переводить в обе стороны';
+  $('fSourceHint').textContent='Исходник: '+langName(form.sourceLocale)+' · механика одна, второй язык — текстами поверх неё';
   updateLocaleStates();setEditorLang(editorLang);renderPics();updateEditorModeration();
   if(editing==null)resetEditorDirty();
 }
@@ -2304,7 +2380,7 @@ function fillForm(c){
   if(reviewActions)reviewActions.hidden=editingStatus!=='pending';
   if(reviewStatus)reviewStatus.textContent=editingStatus==='pending'?'На модерации':editingStatus==='draft'?'Черновик':'Опубликовано';
   if(reviewTitle)reviewTitle.textContent=editingStatus==='pending'?'Модерация перед публикацией':'Готовность к публикации';
-  form={cover:c.cover||null,media:cloneCatalogMedia(c.media),sourceLocale:sourceLocaleOf(c),imageGender:'f'};
+  form={cover:c.cover||null,media:cloneCatalogMedia(c.media),sourceLocale:sourceLocaleOf(c),imageGender:'f',program:cloneJson(c.program)};
   editorLang=form.sourceLocale;
   $('fCat').value=c.cat||'tone';
   $('fLevel').value=c.level||'Новичок';
@@ -2315,7 +2391,10 @@ function fillForm(c){
   $('programAccessState').className='status-chip'+(c.pro?' ok':'');
   setLocaleForm('ru',localeBlock(c,'ru'));
   setLocaleForm('en',localeBlock(c,'en'));
-  $('fSourceHint').textContent='Исходник заявки: '+langName(form.sourceLocale)+' · RU и EN можно переводить в обе стороны';
+  // тексты исходного языка — всегда с самой программы
+  if(form.program)setLocaleForm(form.sourceLocale,{texts:textsOfProgram(form.program)});
+  prefillOtherTexts();
+  $('fSourceHint').textContent='Исходник заявки: '+langName(form.sourceLocale)+' · механика одна, второй язык — текстами поверх неё';
   updateLocaleStates();setEditorLang(editorLang);renderPics();updateEditorModeration();
   resetEditorDirty();
 }
@@ -2326,8 +2405,8 @@ async function saveForm(mode){
   if(saveBtn)saveBtn.disabled=true;
   if(publishBtn)publishBtn.disabled=true;
   if(saveState){saveState.style.color='';saveState.textContent=mode==='publish'?'Сохраняю черновик перед публикацией…':'Сохраняю…';}
-  const item=currentProgramItem();
   try{
+    const item=currentProgramItem();
     let backTo='approved';
     if(mode==='draft'||mode==='publish'){
       const draftId=editingStatus==='draft'?editing:null;
@@ -2350,7 +2429,7 @@ async function saveForm(mode){
     editing=null;editingStatus=null;
     resetEditorDirty();
     localStorage.removeItem('adminEditingId');
-    form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'};
+    form=emptyForm();
     tab=backTo;
     localStorage.setItem('adminTab',tab);
     await load();
@@ -2404,7 +2483,7 @@ document.querySelectorAll('[data-tab]').forEach(t => {
   t.onclick = () => {
     if(t.dataset.tab==='add'){
       editing=null;editingStatus=null;localStorage.removeItem('adminEditingId');
-      form={cover:null,media:{},sourceLocale:'ru',imageGender:'f'};editorLang='ru';
+      form=emptyForm();editorLang='ru';
     }
     setTab(t.dataset.tab);
   };

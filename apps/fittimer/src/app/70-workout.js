@@ -1,19 +1,21 @@
+import FitExerciseV2 from '../../lib/fit-exercise-v2.js';
+import FitAIContract from '../../lib/fit-ai-contract.js';
 import { M_LABEL } from './options.js';
 import { appLocale, canonicalLabel, localeTag, t } from '../i18n/index.js';
 import { appRuntimeCompat, appUi } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
 import { $, DUMBBELL_ICON, ILLO, announceExercise, announceRemaining, announceRest, appAlert,
-  appDialog, beep, endSignal, exerciseGong, fanfare, goBackTo, goTab, gong, haptic, hideReadyBar,
+  appConfirm, appDialog, beep, endSignal, exerciseGong, fanfare, goBackTo, goTab, gong, haptic, hideReadyBar,
   icon, initAudio, keepAwake, plural, prepSec, readySec, releaseWake, roundDone, runReadyBar,
-  setCoreWorkoutHooks, setShown, show, soundOn, speak, state, tick, voiceIsEnglish, voiceVol, workoutLoadSnapshot
+  setCoreWorkoutHooks, setShown, show, soundOn, speak, state, tick, voiceIsEnglish, voiceVol, storedLoadRow, workoutLoadSnapshot
 } from './00-core.js';
 import { calcStreak, calcStreakInfo, clearSession, closeAllMenus, curUser, customPrograms,
-  customToProgram, localISO, newId, normPlans, progActive, renderStats, savePrograms, saveSession,
+  customToProgram, localISO, newId, normPlans, planIdAt, progActive, renderStats, savePrograms, saveSession,
   saveStats, setDataSyncWorkoutHooks, stats, streakWord, toggleMenu, trackProductEvent, users
 } from './10-data-sync.js';
 import { setAccountWorkoutHooks } from './20-account.js';
 import { LIM, clampText, photos, setProgressWorkoutHooks, shareGeneratedFile } from './30-progress-media.js';
-import { aiClientVerdict, callGemini, exAnswerFormat, exerciseToText, premiumGate, setProgramsWorkoutHooks, userForAI,
+import { callGemini, premiumGate, setProgramsWorkoutHooks, userForAI,
   weekPlanInfo
 } from './40-programs-ai.js';
 import { autoReport, renderMine, setTrainerWorkoutHooks, storeCountText } from './50-trainer-catalog.js';
@@ -40,8 +42,8 @@ let eventWorkoutHooks = {
 export function setWorkoutEventHooks(hooks = {}){
   eventWorkoutHooks = {...eventWorkoutHooks, ...hooks};
 }
-import { advanceExerciseProgression, commitExercise, curPlan, draft, ensurePs, exIdx, exerciseProgEvery, fmtKg,
-  liveExercise, normalizeExercise, openExercise, parseProgramText, previewNextProgression, progressionStateLabel,
+import { advanceExerciseProgression, newExId, newStageId, normalizeExercise, promoteExerciseStage, stageOfferAtCeiling, commitExercise, curPlan, draft, ensureProgressState, exIdx, exerciseProgEvery, fmtKg,
+  exP, liveExercise, openExercise, previewNextProgression, progressionStateLabel,
   progAtCeiling, progAxis, renderExList, setBuilderWorkoutHooks, loadBuilderDraft, clearExerciseDraft,
   selectPlanVariant, valueText
 } from './60-builder.js';
@@ -550,7 +552,7 @@ function renderStep(){
     // база. По старому условию (progAxis === 'weight') такой вес не показывался вовсе —
     // человек вписал 12 кг, а на тренировке их не видел.
     const loadTxt = step.weight > 0
-      ? `<span class="v-unit v-kg">× ${fmtKg(step.weight)} ${appLocale === 'ru' ? 'кг' : 'kg'}</span>`
+      ? `<span class="v-unit v-kg">× ${esc(stepWeightText(step))}</span>`
       : (step.loadLabel ? `<span class="v-unit v-kg">× ${esc(step.loadLabel)}</span>` : '');
     // здесь у строки есть своя цифра: слот главной цифры нужен целиком, а место
     // справа от неё ничем не занято — кольцу подготовки на этом шаге и не нужно
@@ -577,7 +579,7 @@ function renderStep(){
     const withLoad = step.phase === 'work' && (step.weight > 0 || !!step.loadLabel);
     if(withLoad){
       $('stepReps').innerHTML = step.weight > 0
-        ? `<span class="v-unit v-kg">× ${fmtKg(step.weight)} ${appLocale === 'ru' ? 'кг' : 'kg'}</span>`
+        ? `<span class="v-unit v-kg">× ${esc(stepWeightText(step))}</span>`
         : `<span class="v-unit v-kg">× ${esc(step.loadLabel)}</span>`;
     }
     $('stepReps').classList.toggle('kg-side', withLoad);
@@ -782,107 +784,52 @@ export function openSwapHint(){
 export function closeSwapHint(){ appUi.closeModal($('swapModal')); }
 
 // ---- замена упражнения через ИИ прямо на тренировке ----
-// находим упражнение-исходник в самой программе: шаг тренировки — это только копия
-function swapSourceExercise(){
-  const step = state.steps[state.stepIdx];
-  if(!step) return null;
-  const src = liveExercise(step.exId, step.exName);
-  return src ? {...src, step} : null;
-}
-
-function swapAIPrompt(ex,swap,locale){
-  return [
-    'Replace this home-workout exercise with the specified harder progression.',
-    'Return exactly ONE complete NEW exercise block and nothing else: no Markdown and no explanation.',
-    'The replacement must remain the same general movement pattern and preserve unilateral/bilateral nature when appropriate.',
-    'Do not introduce new equipment unless it is explicitly implied by TARGET REPLACEMENT or already used by the current exercise.',
-    'Choose fresh starting values appropriate for the harder exercise; usually use fewer reps/seconds than the old ceiling, then define a sensible progression and ceiling.',
-    'Keep set count and rest reasonably close unless the harder movement genuinely requires a change.',
-    'If the new exercise itself has a clear later progression that cannot be handled by reps/time/weight alone, you may include ЗАМЕНА and ОПИСАНИЕ ЗАМЕНЫ.',
-    'USER: '+userForAI(locale),
-    'TARGET REPLACEMENT: '+swap.name+(swap.desc?' — '+swap.desc:''),
-    'WHY: the current exercise reached its useful progression ceiling.',
-    '=== CURRENT EXERCISE ===\n'+exerciseToText(ex,{locale}),
-    exAnswerFormat(locale)
-  ].join('\n\n');
-}
-
-// переносим содержимое нового упражнения в оставшиеся шаги текущей тренировки.
-// Структура занятия (сколько подходов и в каком порядке) остаётся прежней до конца
-// тренировки — меняется только то, ЧТО делать; новое расписание вступит в силу со следующей.
-function refreshLiveSteps(oldId, oldName, ex){
-  const fresh = customToProgram(state.raw, (typeof state.planIdx === 'number') ? state.planIdx : 0);
-  const freshWork = [...fresh.warmup, ...fresh.cycle].filter(s => s.phase === 'work');
-  let model = ex.id ? freshWork.find(s => s.exId === ex.id) : null;
-  if(!model){
-    const byName = freshWork.filter(s => s.exName === ex.name);
-    if(byName.length === 1) model = byName[0];
-  }
-  if(!model) return false;
-
-  const KEEP = ['setNo', 'setsTotal', 'side', 'sidesTotal', 'round', 'isWarmup'];
-  let touchedCurrent = false;
-  state.steps.forEach((s, i) => {
-    if(i < state.stepIdx || s.phase !== 'work') return;
-    const sameExercise = oldId ? s.exId === oldId : s.exName === oldName;
-    if(!sameExercise) return;
-    const kept = {};
-    KEEP.forEach(k => { if(s[k] !== undefined) kept[k] = s[k]; });
-    Object.keys(s).forEach(k => delete s[k]);
-    Object.assign(s, JSON.parse(JSON.stringify(model)), kept);
-    if(i === state.stepIdx) touchedCurrent = true;
-  });
-  return touchedCurrent;
-}
-
-export async function swapViaAI(){
-  if(!premiumGate()) return;
-  const src = swapSourceExercise();
-  if(!src || !src.step.swap){
-    appAlert(t('workout.swapNotFound'));
-    return;
-  }
-  const oldId = String(src.ex.id || src.step.exId || '');
-  const oldName = src.ex.name;
+// exercise.replace — всегда новое движение в том же слоте: id упражнения сохраняется,
+// этапы и прогресс новые. Человек подтверждает это до запроса.
+export async function swapViaAI(retrying){
   closeSwapHint();
-  eventWorkoutHooks.aiRunOpen(t('workout.swapPicking'));
-  let text;
+  if(!premiumGate()) return;
+  const step = state.steps[state.stepIdx];
+  const src = step && liveExercise(step.exId, step.exName);
+  if(!src){ appAlert(t('workout.editUnavailable')); return; }
+  setPause(true);
+  if(!retrying && !await appConfirm(t('ai.replaceConfirm'))) return;
+  const p = src.p;
+  const load = exP(src.ex).load || {};
+  const parsed = FitAIContract.normalizeInput('exercise.replace', {
+    language:appLocale === 'ru' ? 'Russian' : 'English',
+    task:'Replace this exercise during a workout; keep the training purpose and a similar difficulty.',
+    profile:userForAI(p && p.locale),
+    exercise:FitAIContract.exerciseView(src.ex),
+    availableLoadEquipment:load.equipment && load.equipment !== 'custom' ? [load.equipment] : [],
+    availableSupportEquipment:(exP(src.ex).supportEquipment || []).filter(x => typeof x === 'string')
+  });
+  eventWorkoutHooks.aiRunOpen(t('ai.changingExercise'));
+  let res;
   try{
-    text = await callGemini(swapAIPrompt(src.ex, src.step.swap, src.p && src.p.locale), eventWorkoutHooks.getAiRunCtl() ? eventWorkoutHooks.getAiRunCtl().signal : undefined, 'exercise.replace');
+    const ctl = eventWorkoutHooks.getAiRunCtl();
+    const text = await callGemini({input:parsed.input}, ctl ? ctl.signal : undefined, 'exercise.replace');
+    const json = JSON.parse(text);
+    res = FitAIContract.applyExerciseReplacement(src.ex, json, contractIdsForWorkout);
   }catch(e){
     eventWorkoutHooks.aiRunClose();
-    if(e && (e.name === 'AbortError' || /abort/i.test(e.message || ''))) return; // отменили — молча
-    const retry = await appDialog(
-      t('workout.aiNoResponse',{error:(e && e.message ? e.message : t('common.unknownError'))}) + '\n\n' + t('ai.retryQuestion'),
-      {confirm:true,okText:t('ai.retry'),cancelText:t('ai.notNow')}
-    );
-    if(retry) return swapViaAI();
+    const retry = await appDialog(t('ai.runFailed',{error:(e && e.message) || t('common.unknownError')}) + '\n\n' + t('ai.retryQuestion'),
+      {confirm:true, okText:t('ai.retry'), cancelText:t('common.cancel')});
+    if(retry) return swapViaAI(true);
     return;
   }
   eventWorkoutHooks.aiRunClose();
-  const checked = aiClientVerdict('exercise.replace', text, {expectedCount:1});
-  if(!checked) return;
-  // разбираем ответ тем же парсером, что и обычный импорт — обёртка даёт ему минимальную программу
-  const {program} = parseProgramText('ПРОГРАММА: temp\nДЕНЬ:\nКРУГИ: 1\n\n' + checked);
-  const got = (program.plans[0] && program.plans[0].exercises[0]) || null;
-  if(!got || !(got.name || '').trim()){
-    appAlert(t('workout.aiNoExercise'));
-    return;
-  }
-  got.warmup = src.ex.warmup;               // разминочное остаётся разминочным
-  normalizeExercise(got);
-  // новое упражнение начинает с собственной базы: у него свежий id (см. blankExercise)
-  // и нет ex.ps — состояние прогрессии читается как «ещё на базе», ничего переносить не нужно
-  if(!got.media) got.media = null;          // картинка от прежнего движения только запутает
-  src.plan.exercises[src.idx] = got;
+  if(res.errors.length || !res.exercise){ appAlert(t('ai.parseProgramFailed')); return; }
+  const program = customPrograms.find(x => x.id === p.id);
+  const plan = program && normPlans(program).find(pl => pl.id === src.plan.id);
+  if(!plan || !plan.exercises[src.idx]){ appAlert(t('workout.editUnavailable')); return; }
+  plan.exercises[src.idx] = normalizeExercise(res.exercise);
   await savePrograms();
   renderMine();
-
-  const onCurrent = refreshLiveSteps(oldId, oldName, got);
-  if(onCurrent) renderStep();               // это же упражнение прямо сейчас — показываем новое
-  else renderNextUp(state.steps[state.stepIdx]);
-  appAlert(t('workout.swapReplaced',{name:got.name}));
+  backToWorkout(true);
+  appAlert(t('ai.exerciseUpdated',{name:exP(plan.exercises[src.idx]).name}) + '\n\n' + t('ai.newMovementProgress'));
 }
+const contractIdsForWorkout = prefix => prefix === 'e' ? newExId() : newStageId();
 
 // шаг назад — если пропустил случайно или хочешь переделать подход
 export function prevStep(){
@@ -890,6 +837,14 @@ export function prevStep(){
   clearStepTimer();
   state.stepIdx--;
   renderStep();
+}
+
+// Вес в шаге — на ОДНУ единицу снаряда: при двух гантелях показываем «2 по 10 кг»,
+// иначе «10 кг» читалось бы по-разному.
+function stepWeightText(step){
+  const count = Math.max(1, +step.loadCount || 1);
+  const weight = fmtKg(step.weight);
+  return count > 1 ? t('workout.weightUnits',{count, weight}) : `${weight} ${t('progress.kg')}`;
 }
 
 /* ================= ПРЕВЬЮ СЛЕДУЮЩЕГО УПРАЖНЕНИЯ ================= */
@@ -906,7 +861,7 @@ function renderNextUp(step){
     ? `<img src="${esc(nxt.media.data)}" alt="">`
     : DUMBBELL_ICON;
   // рабочий вес — часть задания: на отдыхе по нему решают, что нести к коврику
-  const kg = nxt.weight > 0 ? ` × ${fmtKg(nxt.weight)} ${appLocale === 'ru' ? 'кг' : 'kg'}` : '';
+  const kg = nxt.weight > 0 ? ` × ${stepWeightText(nxt)}` : '';
   let val = nxt.kind === 'click'
     ? `${esc(valueText(nxt.reps))} ${esc(nxt.repsNote || t('workout.repsShort'))}${kg}${nxt.perSide ? ' ' + t('workout.eachSide') : ''}`.trim()
     : `${nxt.seconds} ${t('workout.secShort')}${kg}${nxt.perSide ? ' ' + t('workout.eachSide') : ''}`;
@@ -1058,6 +1013,20 @@ function commitFinish(ctx){
     else if(stats.count === 10) trackProductEvent('workout_10').catch(()=>{});
   }
 
+  const loadRows = srcProgram
+    ? (Array.isArray(state.startLoad) ? state.startLoad : workoutLoadSnapshot(srcProgram, state.planIdx || 0))
+    : null;
+  if(loadRows){
+    // имя этапа и exercise.id хранятся один раз на этап, а не в каждой строке истории
+    stats.stageNames = stats.stageNames || {};
+    const byStage = new Map();
+    normPlans(srcProgram).forEach(pl => (pl.exercises || []).forEach(ex =>
+      (ex.stages || []).forEach(st => byStage.set(st.stageId, {ex, st}))));
+    loadRows.forEach(r => {
+      const hit = byStage.get(r.stageId);
+      if(hit) FitExerciseV2.registerStage(stats.stageNames, r.stageId, hit.ex.id, hit.st.prescription && hit.st.prescription.name);
+    });
+  }
   const histEntry = {
     id: newId(),
     d: localISO(new Date(now)),
@@ -1081,10 +1050,11 @@ function commitFinish(ctx){
     // В истории перечисляем только упражнения, где был хотя бы один реально
     // выполненный подход. Пропущенное не выдаём за сделанное.
     exercises: summary.performedNames,
-    plan: (typeof state.planIdx === 'number') ? state.planIdx : 0,
-    load: srcProgram
-      ? (Array.isArray(state.startLoad) ? state.startLoad : workoutLoadSnapshot(srcProgram, state.planIdx || 0))
-      : null,
+    // вариант — по стабильному id: номер варианта меняется, когда normPlans()
+    // пересортировывает варианты после смены дней
+    planId: srcProgram ? planIdAt(srcProgram, (typeof state.planIdx === 'number') ? state.planIdx : 0) : '',
+    // компактные строки {s,c,r,…}: история — один синхронизируемый документ с лимитом 3 МБ
+    load: loadRows ? loadRows.map(storedLoadRow) : null,
     planDays: (()=> {
       try{
         const pl = normPlans(state.raw)[state.planIdx];
@@ -1094,21 +1064,13 @@ function commitFinish(ctx){
   };
   stats.history.push(histEntry);
   if(stats.history.length > 2000) stats.history = stats.history.slice(-2000);
+  stats.stageNames = FitExerciseV2.gcStageNames(stats.stageNames, stats.history, customPrograms);
   state.lastHist = histEntry;
 
   const stk = calcStreakInfo().n;
   state.lastRecord = stk > 1 && stk > (stats.bestStreak || 0);
   if(stk > (stats.bestStreak || 0)) stats.bestStreak = stk;
 
-  // Поднятый вес считаем только по реально отмеченным «Готово» подходам.
-  let lifted = 0;
-  (state.steps || []).forEach((step, index) => {
-    if(step.phase !== 'work' || !(step.weight > 0)) return;
-    if((state.stepOutcomes || {})[workoutStepKey(step)] !== 'done') return;
-    const reps = parseInt(String(step.reps || '').split('-')[0], 10);
-    if(reps > 0) lifted += step.weight * reps;
-  });
-  if(lifted) stats.totalKg = Math.round((stats.totalKg || 0) + lifted);
   if(platformWorkoutHooks.getHfMode() && platformWorkoutHooks.getHfMode() !== 'off') stats.hfDone = (stats.hfDone || 0) + 1;
 
   trackProductEvent(partial ? 'workout_partial' : 'workout_completed').catch(()=>{});
@@ -1139,22 +1101,23 @@ function commitFinish(ctx){
       const eligible = [];
       ((pl && pl.exercises) || []).forEach(ex => {
         if(ex.warmup || progAxis(ex) === 'none') return;
-        if(!completed.has(String(ex.id || '')) && !completed.has(String(ex.name || ''))) return;
+        if(!completed.has(String(ex.id || '')) && !completed.has(String(exP(ex).name || ''))) return;
         const every = exerciseProgEvery(ex, p);
-        // 0 на упражнении отключает его прогрессию; пусто наследует программу.
-        if(every <= 0){ ensurePs(ex).n = 0; return; }
-        // Полностью завершённая прогрессия больше не копит счётчик.
-        if(progAtCeiling(p.id, ex, p)){
-          ensurePs(ex).n = 0;
+        // у программы нет частоты по умолчанию, а у упражнения своей нет — проверять нечего
+        if(every <= 0){ ensureProgressState(ex).count = 0; return; }
+        // Полностью завершённая прогрессия больше не копит счётчик — кроме случая,
+        // когда этап сам предлагает следующий: тогда тем же порогом спрашиваем о переходе.
+        if(progAtCeiling(p.id, ex, p) && !stageOfferAtCeiling(ex, p)){
+          ensureProgressState(ex).count = 0;
           return;
         }
-        const ps = ensurePs(ex);
-        ps.n++;
-        if(ps.n >= every) eligible.push(ex.id);
+        const ps = ensureProgressState(ex);
+        ps.count++;
+        if(ps.count >= every) eligible.push(ex.id);
       });
       if(eligible.length) state.progCheck = {
         pid:p.id,
-        plan:normPlans(p).indexOf(pl),
+        planId:String(pl.id || ''),
         ids:eligible,
         hard:new Set()
       };
@@ -1188,7 +1151,7 @@ function progCheckExercises(chk){
   const p = chk && customPrograms.find(x => x.id === chk.pid);
   if(!p) return [];
   const plans = normPlans(p);
-  const pl = plans[chk.plan] || plans[0];
+  const pl = plans.find(x => x.id === chk.planId) || plans[0];
   const pool = ((pl && pl.exercises) || []).filter(ex => !ex.warmup);
   return chk.ids.map(id => pool.find(ex => ex.id === id)).filter(Boolean);
 }
@@ -1197,8 +1160,9 @@ function renderProgCheck(){
   const p = chk && customPrograms.find(x => x.id === chk.pid);
   const rows = progCheckExercises(chk).map(ex => ({
     ex,
-    preview: previewNextProgression(ex, p)
-  })).filter(x => x.preview && x.preview.canAdvance);
+    preview: previewNextProgression(ex, p),
+    stage: stageOfferAtCeiling(ex, p)
+  })).filter(x => x.stage || (x.preview && x.preview.canAdvance));
 
   const on = rows.length > 0;
   setShown('finProgCheck', on);
@@ -1210,7 +1174,7 @@ function renderProgCheck(){
 
   const box = $('finProgCheckList');
   box.innerHTML = '';
-  rows.forEach(({ex, preview}) => {
+  rows.forEach(({ex, preview, stage}) => {
     const keep = chk.hard.has(ex.id);
     const card = document.createElement('button');
     card.type = 'button';
@@ -1221,17 +1185,18 @@ function renderProgCheck(){
 
     const name = document.createElement('b');
     name.className = 'fpc-name';
-    name.textContent = ex.name || t('common.exerciseFallback');
+    name.textContent = exP(ex).name || t('common.exerciseFallback');
 
     const change = document.createElement('div');
     change.className = 'fpc-change';
     const before = document.createElement('span');
-    before.textContent = progressionStateLabel(ex, preview.current);
+    // переход на следующий этап движения — это другое упражнение, а не рост цифр
+    before.textContent = stage ? exP(ex).name : progressionStateLabel(ex, preview.current);
     const arrow = document.createElement('span');
     arrow.className = 'fpc-arrow';
     arrow.textContent = '→';
     const after = document.createElement('span');
-    after.textContent = progressionStateLabel(ex, preview.next);
+    after.textContent = stage ? stage.prescription.name : progressionStateLabel(ex, preview.next);
     change.append(before, arrow, after);
 
     const action = document.createElement('span');
@@ -1262,12 +1227,18 @@ export async function applyProgCheck(){
       kept++;
       return;
     }
+    const stage = stageOfferAtCeiling(ex, p);
+    if(stage){
+      promoteExerciseStage(ex, stage.stageId);
+      raised++;
+      return;
+    }
     const preview = previewNextProgression(ex, p);
     if(preview && preview.canAdvance){
       advanceExerciseProgression(ex);
       raised++;
     }
-    ensurePs(ex).n = 0;
+    ensureProgressState(ex).count = 0;
   });
 
   $('finProgCheckDone').textContent = t('finish.progCheckAppliedSummary',{raised,kept});
@@ -1784,8 +1755,6 @@ export const BADGES = [
         normPlans(p).some(pl => (pl.exercises || []).some(ex => !ex.warmup && progAtCeiling(p.id, ex, p))));
     }catch(e){ return false; }
   }},
-  // тоннаж копится с этого обновления (stats.totalKg): по истории его не восстановить
-  {id: 'tons',  ico: 'weight',   name: 'Десять тонн',         desc: '10 000 кг поднято за всё время',     test: () => (stats.totalKg || 0) >= 10000},
   {id: 'h24',   ico: 'gem',      name: 'Сутки в движении',    desc: '24 часа тренировок в сумме',         test: () => (stats.totalSec || 0) >= 86400},
   {id: 's30',   ico: 'crown',    name: 'Месяц без пропусков', desc: '30 тренировок подряд по плану',      test: () => calcStreak() >= 30},
   {id: 't100',  ico: 'trophy',   name: 'Сотня',               desc: '100 тренировок',                     test: () => (stats.count || 0) >= 100}

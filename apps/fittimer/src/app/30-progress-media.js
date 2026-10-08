@@ -3,11 +3,12 @@ import { I18N_RU } from '../i18n/ru.js';
 import { I18N_EN } from '../i18n/en.js';
 import { appRuntimeCompat, appUi } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
+import FitExerciseV2 from '../../lib/fit-exercise-v2.js';
 import { $, appAlert, appConfirm, appDialog, icon, plural, setCoreProgressHooks, setShown, show } from './00-core.js';
 import { MONTH_OF, PROGRAM_DOC, createInitialProfile, curUser, currentUser, customPrograms, docMeta, kvGet, kvSet,
   loadData, loadIdentity, localISO, migrateUserAge, normPlans, pk, profileAge, recordConsent,
   isDefaultProfileName, renderStats, renderUsers, renderWeight, renderWellness, savePrograms, saveStats, saveUsers,
-  setDataSyncProgressMediaHooks, stats, users, validAge, wellList
+  newPlanId, setDataSyncProgressMediaHooks, stats, users, validAge, wellList
 } from './10-data-sync.js';
 import { GLOBAL_KEYS, PROFILE_KEYS, setAccountProgressHooks } from './20-account.js';
 
@@ -21,6 +22,8 @@ export function setProgressTrainerHooks(hooks = {}){
 }
 let builderProgressHooks = {
   newExId: () => 'ex_' + Date.now().toString(36),
+  newStageId: () => 'mv' + Date.now().toString(36),
+  normalizeExercise: ex => ex,
   shrinkImage: (_file, _maxSide, cb) => { if(cb) cb(null); }
 };
 export function setProgressBuilderHooks(hooks = {}){
@@ -55,27 +58,39 @@ const WARMUP_SPEC = [
   {k:10,m:['ba','le'],type:'time',value:40,rest:0}
 ];
 function warmupProgram(){
-  const exercises = WARMUP_SPEC.map(x => ({
-    name:t('warmup.'+x.k+'.name'), desc:t('warmup.'+x.k+'.desc'), video:'',
-    type:x.type, value:x.value, rest:x.rest, media:null, muscles:x.m, mistakes:''
-  }));
+  const exercises = WARMUP_SPEC.map(x => {
+    const stageId = builderProgressHooks.newStageId();
+    return {
+      id:builderProgressHooks.newExId(), warmup:false, currentStageId:stageId, media:null,
+      stages:[{stageId, advance:{mode:'manual'}, mediaRef:null, visualKey:'', prescription:{
+        name:t('warmup.'+x.k+'.name'), desc:t('warmup.'+x.k+'.desc'), video:'',
+        type:x.type, value:String(x.value), sets:1, perSide:false, rest:x.rest, restAfter:null,
+        muscles:x.m, mistakes:'',
+        load:{type:'none', equipment:null, name:'', count:1, unit:'kg', weight:0, levels:[], level:0},
+        supportEquipment:[],
+        progression:{mode:'none', every:null, reps:{step:null, max:null}, weight:{step:null, max:null}, time:{step:null, max:null}}
+      }}],
+      progressState:{count:0, current:{reps:null, weight:null, time:null, level:null}}
+    };
+  });
   return {id:'warmup',name:t('warmup.programName'),time:'',cover:null,stats:{completions:0},
-    plans:[{days:[],rounds:1,roundRest:0,exercises}]};
+    plans:[{id:newPlanId(),days:[],rounds:1,roundRest:0,exercises}]};
 }
+const presc = ex => FitExerciseV2.prescriptionOf(ex);
 function localizeBuiltinWarmup(p){
   if(!p || p.id !== 'warmup') return false;
   const pl = normPlans(p)[0], list = (pl && pl.exercises) || [];
   if(list.length !== WARMUP_SPEC.length) return false;
   const untouched = WARMUP_SPEC.every((x,i)=>{
     const ex=list[i], nk='warmup.'+x.k+'.name', dk='warmup.'+x.k+'.desc';
-    return ex && [I18N_RU[nk],I18N_EN[nk]].includes(ex.name)
-      && [I18N_RU[dk],I18N_EN[dk]].includes(ex.desc);
+    return ex && [I18N_RU[nk],I18N_EN[nk]].includes(presc(ex).name)
+      && [I18N_RU[dk],I18N_EN[dk]].includes(presc(ex).desc);
   });
   if(!untouched) return false;
   let changed = p.name !== t('warmup.programName');
   p.name = t('warmup.programName');
   WARMUP_SPEC.forEach((x,i)=>{
-    const ex=list[i], name=t('warmup.'+x.k+'.name'), desc=t('warmup.'+x.k+'.desc');
+    const ex=presc(list[i]), name=t('warmup.'+x.k+'.name'), desc=t('warmup.'+x.k+'.desc');
     if(ex.name !== name || ex.desc !== desc) changed = true;
     ex.name=name; ex.desc=desc;
   });
@@ -825,95 +840,77 @@ export function sanitizeProgram(p){
   p.cover = cleanPic(p.cover);
   if(p.by != null) p.by = clampLine(p.by, 40);
   if(p.byLink != null) p.byLink = cleanLink(p.byLink) || '';
+  // Программа без plans[] (форма до вариантов) — тоже старая модель
+  let legacy = !Array.isArray(p.plans) || Array.isArray(p.exercises);
   (Array.isArray(p.plans) ? p.plans : []).forEach(pl => {
     if(!pl || typeof pl !== 'object') return;
-    (Array.isArray(pl.exercises) ? pl.exercises : []).forEach(sanitizeExercise);
+    if(!Array.isArray(pl.exercises)) pl.exercises = [];
+    // Упражнение старой модели (без этапов) не «чинится» угадыванием: такая программа
+    // целиком помечается как устаревшая, и место импорта отказывает с объяснением.
+    pl.exercises = pl.exercises.filter(ex => {
+      if(isV2Exercise(ex)) return true;
+      legacy = true;
+      return false;
+    });
+    pl.exercises.forEach(ex => builderProgressHooks.normalizeExercise(ex));
   });
-  (Array.isArray(p.exercises) ? p.exercises : []).forEach(sanitizeExercise);
-  uniqueExerciseIds(p);
+  delete p.exercises;
+  uniqueProgramIds(p);
+  Object.defineProperty(p, '_legacy', {value:legacy, enumerable:false, configurable:true});
   return p;
 }
-// id упражнения обязан быть уникальным в программе: по нему сопоставляются
-// AI-правки и проверка прогресса на финише. Раньше «дублировать упражнение»
-// копировало id вместе со всем остальным — такие копии получают свой.
-export function uniqueExerciseIds(p){
+// V2: слот упражнения с 1..4 этапами. Старые программы (плоское упражнение с
+// ВЕС/trackWeight/ps) после перехода не читаются — данные начинаются с чистого листа.
+export function isV2Exercise(ex){
+  return !!ex && typeof ex === 'object' && Array.isArray(ex.stages) && ex.stages.length > 0;
+}
+// Импорт (файл, ссылка, код, каталог, тренер) принимает только V2.
+export function isLegacyProgram(p){
+  return !!(p && p._legacy);
+}
+// id варианта, упражнения и этапа обязаны быть уникальными: по id варианта живёт
+// история (см. newPlanId в 10-data-sync.js), по id упражнения сопоставляются
+// правки и проверка прогресса на финише, по id этапа — имена в истории
+// (stats.stageNames). Копия упражнения или вторая установка той же программы
+// получают свои id. seenStages общий для всего профиля, если его передали.
+export function uniqueProgramIds(p, seenStages){
   let changed = false;
+  const seenPlans = new Set();
+  (Array.isArray(p.plans) ? p.plans : []).forEach(pl => {
+    if(!pl || typeof pl !== 'object') return;
+    const id = typeof pl.id === 'string' ? pl.id.trim() : '';
+    if(!id || seenPlans.has(id)){ pl.id = newPlanId(); changed = true; }
+    seenPlans.add(pl.id);
+  });
   const seen = new Set();
-  (Array.isArray(p.plans) ? p.plans : []).concat([{exercises: p.exercises}]).forEach(pl => {
+  const stages = seenStages || new Set();
+  (Array.isArray(p.plans) ? p.plans : []).forEach(pl => {
     (pl && Array.isArray(pl.exercises) ? pl.exercises : []).forEach(ex => {
       if(!ex || typeof ex !== 'object') return;
       if(!ex.id || seen.has(ex.id)){ ex.id = builderProgressHooks.newExId(); changed = true; }
       seen.add(ex.id);
+      (Array.isArray(ex.stages) ? ex.stages : []).forEach(st => {
+        if(!st || typeof st !== 'object') return;
+        if(!st.stageId || stages.has(st.stageId)){
+          const fresh = builderProgressHooks.newStageId();
+          if(ex.currentStageId === st.stageId) ex.currentStageId = fresh;
+          st.stageId = fresh;
+          changed = true;
+        }
+        stages.add(st.stageId);
+      });
     });
   });
   return changed;
 }
-const SAFE_LOAD_LEVEL_KEYS = new Set(['light','medium','strong','veryStrong']);
-function sanitizeLoadLevels(raw){
-  const out = [], seen = new Set();
-  const cleanLabel = value => clampLine(value, 60).replace(/\|+/g, ' / ').replace(/\s+/g, ' ').trim();
-  const push = level => {
-    if(!level || out.length >= 12) return;
-    const key = level.key
-      ? 'k:' + level.key
-      : 'l:' + String(level.label || '').trim().toLocaleLowerCase();
-    if(!key || seen.has(key)) return;
-    seen.add(key);
-    out.push(level);
-  };
-  (Array.isArray(raw) ? raw : []).forEach(item => {
-    if(out.length >= 12) return;
-    if(typeof item === 'string'){
-      const label = cleanLabel(item);
-      if(label) push({label});
-      return;
-    }
-    if(!item || typeof item !== 'object') return;
-    if(SAFE_LOAD_LEVEL_KEYS.has(item.key)){ push({key:item.key}); return; }
-    const label = cleanLabel(item.label);
-    if(label) push({label});
+// То же по всем программам профиля: этап не может принадлежать двум слотам
+export function uniqueProfileIds(programs){
+  const stages = new Set();
+  let changed = false;
+  (Array.isArray(programs) ? programs : []).forEach(p => {
+    if(p && typeof p === 'object' && uniqueProgramIds(p, stages)) changed = true;
   });
-  return out;
-}
-function sanitizeExercise(ex){
-  if(!ex || typeof ex !== 'object') return;
-  // упражнения из старых данных (созданы до появления id) или пришедшие по
-  // сети без него — см. builderProgressHooks.newExId() в 60-builder.js
-  if(!ex.id) ex.id = builderProgressHooks.newExId();
-  ex.name = clampLine(ex.name, LIM.exName);
-  if(ex.desc != null)     ex.desc = clampText(ex.desc, LIM.exDesc);
-  if(ex.mistakes != null) ex.mistakes = clampText(ex.mistakes, LIM.exMistakes);
-  if(ex.swapName != null) ex.swapName = clampLine(ex.swapName, LIM.exSwapName);
-  if(ex.swapDesc != null) ex.swapDesc = clampText(ex.swapDesc, LIM.exSwapDesc);
-  if(ex.video != null)    ex.video = cleanLink(ex.video, LIM.video) || '';
-  if(ex.value != null && typeof ex.value === 'string') ex.value = clampLine(ex.value, LIM.exValue);
-  if(ex.loadType != null && !['none','weight','level'].includes(ex.loadType)) delete ex.loadType;
-  if(ex.progMode != null && !['reps','weight','double_range','time','level','parallel'].includes(ex.progMode)) delete ex.progMode;
-  if(ex.loadType === 'level'){
-    let levels = sanitizeLoadLevels(ex.loadLevels);
-    if(levels.length < 2) levels = [{key:'light'},{key:'medium'},{key:'strong'},{key:'veryStrong'}];
-    ex.loadLevels = levels;
-    ex.loadLevel = Math.max(0, Math.min(levels.length - 1, Math.round(+ex.loadLevel || 0)));
-    ex.trackWeight = false;
-  } else if(ex.loadLevels != null){
-    ex.loadLevels = sanitizeLoadLevels(ex.loadLevels);
-  }
-  const pic = ex.media && ex.media.kind === 'img' ? cleanPic(ex.media.data) : null;
-  ex.media = pic ? {kind: 'img', data: pic} : null;
-  // ex.ps — фактическая прогрессия (см. 60-builder.js), сюда же может прийти
-  // что угодно из чужой ссылки/синка — те же ограничения, что у остальных полей
-  if(ex.ps && typeof ex.ps === 'object'){
-    ex.ps.n = Math.max(0, Math.min(9999, Math.round(+ex.ps.n || 0)));
-    const cur = ex.ps.cur;
-    ex.ps.cur = (cur && typeof cur === 'object') ? {
-      reps: cur.reps != null ? clampLine(String(cur.reps), LIM.exValue) : undefined,
-      sec: cur.sec != null ? Math.max(0, Math.min(3600, Math.round(+cur.sec || 0))) : undefined,
-      kg: cur.kg != null ? Math.max(0, Math.min(500, Math.round((+cur.kg || 0) * 2) / 2)) : undefined,
-      level: cur.level != null && ex.loadType === 'level'
-        ? Math.max(0, Math.min((ex.loadLevels || []).length - 1, Math.round(+cur.level || 0)))
-        : undefined
-    } : {};
-  } else delete ex.ps;
+  return changed;
 }
 
 // Имя профиля. На старте его не спрашивают, но называться профиль как-то должен.
@@ -1025,7 +1022,8 @@ export function initProgressMedia(){
     loadPhotos,
     renderPhotos,
     shortD,
-    uniqueExerciseIds
+    uniqueProgramIds,
+    uniqueProfileIds
   });
   setCoreProgressHooks({
     renderPhotos

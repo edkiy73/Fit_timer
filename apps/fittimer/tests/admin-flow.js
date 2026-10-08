@@ -1,13 +1,14 @@
-/* Админка каталога: очередь, правка, удаление, тренеры, стартовый набор.
+/* Админка каталога: очередь, правка, удаление, тренеры.
 
    Каталог целиком живёт в базе — в приложении не осталось ни одной зашитой
    программы. Значит, единственный способ им управлять — эта страница, и она
-   обязана уметь всё: залить стартовый набор, взять или отклонить заявку, поправить
-   уже лежащее, убрать из каталога и закрыть автора.
+   обязана уметь всё: взять или отклонить заявку, поправить уже лежащее, убрать
+   из каталога и закрыть автора. Запись — программа V2 + накладки языков.
 
    Запуск:  ADMIN_KEY=testadminkey123456 node tests/dev-server.js 8124
             node tests/admin-flow.js */
 
+const { catalogProgram, translated } = require('./helpers/catalog-program');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -26,6 +27,18 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
             'X-Admin-Key': encodeURIComponent(key || ADMIN)},
   body: JSON.stringify(Object.assign({action}, extra || {}))
 }).then(async r => ({s: r.status, j: await r.json().catch(() => ({}))}));
+const post = (path, body) => fetch(BASE + path, {method: 'POST', headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify(body)}).then(r => r.json());
+
+// Тренер — только через аккаунт: вход по коду → страница тренера (как в приложении)
+async function makeTrainer(handle){
+  const email = 'adm.' + Math.random().toString(36).slice(2, 8) + '@example.com', deviceId = 'adm-dev';
+  const sent = await post('/api/auth', {action: 'send', email});
+  const v = await post('/api/auth', {action: 'verify', email, code: sent.devCode, deviceId});
+  return post('/api/trainer/' + encodeURIComponent(handle), {email, deviceId, token: v.syncToken,
+    trainer: {name: 'Админ-тест', about: 'Тренер для проверки админки.'}});
+}
+const PROGRAM = name => catalogProgram(name, ['Приседания', 'Отжимания', 'Планка']);
 
 (async () => {
   const b = await chromium.launch(CHROME ? {executablePath: CHROME} : {});
@@ -37,17 +50,14 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   ok('ключ с кириллицей не роняет запрос, а отвергается',
      (await api('overview', {}, 'неверный')).s === 403);
 
-  // ---- стартовый набор ----
+  // ---- стартовый набор: каталог начинается с чистого листа ----
   const seeded = await api('seed');
-  ok('стартовый набор заливается', seeded.s === 200 && seeded.j.items === 5, seeded.j.items);
-  const again = await api('seed');
-  ok('повторная заливка не двоит', again.s === 200);
-  const cat1 = await fetch(BASE + '/api/catalog').then(r => r.json());
-  const names = cat1.items.map(x => x.name);
-  ok('в каталоге нет повторов', new Set(names).size === names.length, names.length + ' программ');
-  const lena = (await api('overview')).j.trainers.find(t => t.handle === '@lena.doma');
-  ok('тренеры стартового набора заведены', !!lena);
-  ok('и у них посчитаны программы', lena && lena.programs > 0, lena && lena.programs);
+  ok('стартовый набор пуст — старые программы не заливаются', seeded.s === 200 && seeded.j.items === 0, seeded.j.items);
+  const TRAINER = '@adm.' + Math.random().toString(36).slice(2, 7);
+  const tr = await makeTrainer(TRAINER);
+  ok('тренер заведён через аккаунт', tr.ok === true, JSON.stringify(tr));
+  const listedTrainer = (await api('overview')).j.trainers.find(t => t.handle === TRAINER);
+  ok('и виден в админке', !!listedTrainer);
 
   const adminUser='admin-smoke@example.com';
   ok('тестовый пользователь создаётся',(await api('user_create',{email:adminUser})).s===200);
@@ -57,31 +67,27 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   // ---- добавить своими руками ----
   const NAME = 'От нас ' + Math.random().toString(36).slice(2, 6);
   const добавь = (over) => {
+    const o = over || {};
+    const program = o.program || PROGRAM(o.name || NAME);
     const item = Object.assign({
       name: NAME, cat: 'power', level: 'Средний', min: 25,
-      gives: 'Программа, добавленная прямо из админки, а не присланная тренером.',
-      text: 'ПРОГРАММА: ' + NAME + '\nДНИ: Пн\nКРУГИ: 2\n\nУПРАЖНЕНИЕ: Приседания\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\nПОДХОДЫ: 3\nОТДЫХ: 45',
-      exCount: 1
-    }, over || {});
+      gives: 'Программа, добавленная прямо из админки, а не присланная тренером.'
+    }, o, {program});
     item.sourceLocale = 'ru';
-    item.locales = {
-      ru: {name:item.name, gives:item.gives, text:item.text},
-      en: {name:'EN ' + item.name, gives:'English version. ' + item.gives, text:item.text}
+    item.locales = o.locales || {
+      ru: {name:item.name, gives:item.gives},
+      en: {name:'EN ' + item.name, gives:'English version. ' + item.gives, texts:translated(program, {})}
     };
-    if(over && over.locales) item.locales = over.locales;
     return api('add', {item});
   };
 
   // ---- серверный черновик -> явная публикация ----
-  const draftText = 'ПРОГРАММА: Черновик для публикации\nДНИ: Пн\nКРУГИ: 2\n\nУПРАЖНЕНИЕ: Приседания\nОПИСАНИЕ: Контролируемое движение.\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\nПОДХОДЫ: 3\nОТДЫХ: 45';
+  const draftProgram = PROGRAM('Черновик для публикации');
   const draftItem = {
-    sourceLocale:'ru',cat:'power',level:'Средний',min:25,by:'',exCount:1,pro:false,
-    name:'Черновик для публикации',
-    gives:'Полная программа для проверки безопасного цикла черновик и публикация.',
-    text:draftText,
+    sourceLocale:'ru',cat:'power',level:'Средний',min:25,by:'',pro:false,program:draftProgram,
     locales:{
-      ru:{name:'Черновик для публикации',gives:'Полная программа для проверки безопасного цикла черновик и публикация.',text:draftText},
-      en:{name:'Publish draft test',gives:'Complete program for testing the safe draft and publish workflow.',text:draftText}
+      ru:{name:'Черновик для публикации',gives:'Полная программа для проверки безопасного цикла черновик и публикация.'},
+      en:{name:'Publish draft test',gives:'Complete program for testing the safe draft and publish workflow.',texts:translated(draftProgram,{})}
     }
   };
   const draftSaved=await api('save_draft',{item:draftItem});
@@ -98,7 +104,7 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
 
   const incomplete=await api('save_draft',{item:{
     sourceLocale:'ru',cat:'tone',level:'Новичок',min:20,
-    locales:{ru:{name:'Проба',gives:'',text:''}}
+    locales:{ru:{name:'Проба',gives:''}}
   }});
   ok('незавершённый черновик тоже сохраняется',incomplete.s===200,incomplete.j.id);
   const blocked=await api('publish_draft',{id:incomplete.j.id,pro:false});
@@ -110,6 +116,15 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
      (bad1.j.miss || []).join(', '));
   const bad2 = await добавь({cat: 'Сила и выносливость'});
   ok('цель названием, а не ключом, не проходит', bad2.s === 400, (bad2.j.miss || []).join(', '));
+  const short = PROGRAM(NAME + ' мало');
+  short.plans[0].exercises = short.plans[0].exercises.slice(0, 2);
+  const bad3 = await добавь({name: NAME + ' мало', program: short});
+  ok('меньше трёх упражнений не проходит', bad3.s === 400 && (bad3.j.miss || []).includes('хотя бы три упражнения'),
+     (bad3.j.miss || []).join(', '));
+  const bad4 = await добавь({name: NAME + ' пол', locales: {ru: {name: NAME + ' пол', gives: 'Программа, добавленная прямо из админки, а не присланная тренером.'},
+    en: {name: 'Half', gives: 'English version, long enough to pass.', texts: Object.assign(translated(PROGRAM('x'), {}), {stages: []})}}});
+  ok('без текстов этапов второго языка не проходит', bad4.s === 400 && (bad4.j.miss || []).some(x => /EN: тексты/.test(x)),
+     (bad4.j.miss || []).join(', '));
 
   const added = await добавь();
   ok('добавляется и сразу в каталоге', added.s === 200 && !!added.j.id, added.j.id);
@@ -131,35 +146,43 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   const cat4 = await fetch(BASE + '/api/catalog').then(r => r.json());
   ok('и пропала с витрины', !cat4.items.some(x => x.id === added.j.id));
 
-  // ---- картинки: обложка и фото упражнений ----
+  // ---- картинки: обложка и фото упражнений (v2: по exercise.id) ----
   const pic = t => 'data:image/png;base64,' + btoa('pic-' + t).replace(/=/g, '');
+  const picProgram = PROGRAM(NAME + ' с фото');
+  const [exA, , exC] = picProgram.plans[0].exercises;
   const withPics = await добавь({
-    name: NAME + ' с фото',
+    name: NAME + ' с фото', program: picProgram,
     cover: pic('cover'),
-    media: {'Приседания': pic('sq'), 'Планка': pic('pl')}
+    media: {v:2, items:[{id:exA.id, p:0, i:0, n:'Приседания', data:pic('sq')}, {id:exC.id, p:0, i:2, n:'Планка', data:pic('pl')}]}
   });
   ok('программа добавляется с картинками', withPics.s === 200, withPics.j.id);
+  const mediaIds = item => ((item && item.media && item.media.items) || []).map(x => x.id).join();
   const one = await fetch(BASE + '/api/catalog?item=' + withPics.j.id).then(r => r.json());
   ok('обложка сохранилась', !!(one.item && one.item.cover));
-  ok('фото упражнений сохранились', Object.keys(one.item.media || {}).length === 2,
-     Object.keys(one.item.media || {}).join(', '));
+  ok('фото упражнений сохранились по id', mediaIds(one.item) === exA.id + ',' + exC.id, mediaIds(one.item));
 
   // правкой картинку можно и заменить, и убрать
-  await api('edit', {id: withPics.j.id, item: {cover: '', media: {'Планка': pic('pl2')}}});
+  await api('edit', {id: withPics.j.id, item: {cover: '', media: {v:2, items:[{id:exC.id, p:0, i:2, data:pic('pl2')}]}}});
   const one2 = await fetch(BASE + '/api/catalog?item=' + withPics.j.id).then(r => r.json());
   ok('обложку можно убрать правкой', !one2.item.cover);
-  ok('карта фото заменяется целиком', Object.keys(one2.item.media || {}).join() === 'Планка',
-     Object.keys(one2.item.media || {}).join(', '));
+  ok('карта фото заменяется целиком', mediaIds(one2.item) === exC.id, mediaIds(one2.item));
+  await api('edit', {id: withPics.j.id, item: {media: {v:2, items:[{id:exC.id, data:'не-картинка'}]}}});
   ok('мусор вместо картинки не принимается',
-     (await api('edit', {id: withPics.j.id, item: {media: {'Планка': 'не-картинка'}}})).s === 200
-     && Object.keys((await fetch(BASE + '/api/catalog?item=' + withPics.j.id).then(r => r.json())).item.media || {}).length === 0);
+     !(await fetch(BASE + '/api/catalog?item=' + withPics.j.id).then(r => r.json())).item.media);
+  await api('edit', {id: withPics.j.id, item: {media: {'Планка': pic('legacy')}}});
+  ok('старая карта «имя → фото» не принимается',
+     !(await fetch(BASE + '/api/catalog?item=' + withPics.j.id).then(r => r.json())).item.media);
   await api('remove', {id: withPics.j.id});
 
   // ---- закрыть и вернуть тренера ----
-  ok('тренер закрывается', (await api('ban', {handle: '@lena.doma'})).s === 200);
-  const banned = (await api('overview')).j.trainers.find(t => t.handle === '@lena.doma');
+  ok('тренер закрывается', (await api('ban', {handle: TRAINER})).s === 200);
+  const banned = (await api('overview')).j.trainers.find(t => t.handle === TRAINER);
   ok('это видно в списке', banned && banned.banned === true);
-  ok('и возвращается', (await api('unban', {handle: '@lena.doma'})).s === 200);
+  ok('и возвращается', (await api('unban', {handle: TRAINER})).s === 200);
+
+  const KEPT = NAME + ' витрина';
+  const kept = await добавь({name: KEPT});
+  ok('программа для витрины админки добавлена', kept.s === 200, kept.j.id || kept.j.error);
 
   const mobileDraft=await api('save_draft',{item:draftItem});
   ok('для mobile smoke создан черновик редактора',mobileDraft.s===200,mobileDraft.j.id);
@@ -202,7 +225,7 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   await page.click('.nav-btn[data-tab="approved"]');
   await page.waitForTimeout(400);
   const listed = await page.textContent('#body');
-  ok('на вкладке «В каталоге» видны программы', /Кардио без прыжков/.test(listed));
+  ok('на вкладке «В каталоге» видны программы', listed.includes(KEPT), KEPT);
   ok('production UI не показывает seed тестовых программ',!/Залить пять тестовых программ/.test(listed));
   await page.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));
   await page.click('#navOpen');
@@ -320,18 +343,41 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   ok('новая программа сначала предлагает черновик и отдельную публикацию',
      /черновик/i.test(await page.textContent('#fSave')) && await page.isVisible('#fPublish'));
   await page.fill('#aiCreateWish','Собери тестовую силовую программу');
+  await page.check('input[data-equip-role="load"][value="dumbbell"]');
   await page.click('#fAiCreate');
   await page.waitForFunction(() => document.querySelector('#fNameRu')?.value === 'Тестовая программа'
-    && document.querySelector('#fNameEn')?.value === 'EN Test Program');
-  ok('AI-create заполняет редактор валидной программой и вторым языком',
-     (await page.inputValue('#fNameRu')) === 'Тестовая программа'
-     && (await page.inputValue('#fNameEn')) === 'EN Test Program'
-     && /УПРАЖНЕНИЕ: Приседания/.test(await page.inputValue('#fTextRu')));
-  await page.fill('#fTextRu', 'ПРОГРАММА: Проба\nДНИ: Пн\n\nУПРАЖНЕНИЕ: Приседания\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\n\nУПРАЖНЕНИЕ: Планка\nФОРМАТ: время\nЗНАЧЕНИЕ: 40');
-  await page.waitForTimeout(300);
-  const slots = await page.evaluate(() => [...document.querySelectorAll('#fPics .pic small')].map(x => x.textContent));
-  ok('места под фото берутся из текста программы',
-     slots.join(',') === 'Приседания,Планка', slots.join(', '));
+    && document.querySelector('#fNameEn')?.value === 'EN Тестовая программа', null, {timeout: 15000});
+  const ruTexts = JSON.parse(await page.inputValue('#fTextsRu'));
+  const enTexts = JSON.parse(await page.inputValue('#fTextsEn'));
+  ok('AI-create заполняет редактор программой V2 и вторым языком',
+     ruTexts.stages.some(x => x.name === 'Приседания')
+     && enTexts.stages.length === ruTexts.stages.length && enTexts.stages[1].name === 'EN Приседания',
+     ruTexts.stages.map(x => x.name).join(', '));
+  ok('состав программы виден карточками', (await page.locator('#exerciseCards .exercise-card').count()) === 4);
+  let slots = await page.evaluate(() => [...document.querySelectorAll('#fPics .pic small')].map(x => x.textContent));
+  ok('места под фото берутся из программы',
+     slots.join(',') === 'Разминка суставов,Приседания,Отжимания от стены,Тяга гантели', slots.join(', '));
+  // правка текстов исходного языка в JSON меняет подписи состава и фото
+  ruTexts.stages[1].name = 'Глубокие приседания';
+  await page.fill('#fTextsRu', JSON.stringify(ruTexts, null, 2));
+  await page.waitForTimeout(200);
+  slots = await page.evaluate(() => [...document.querySelectorAll('#fPics .pic small')].map(x => x.textContent));
+  ok('правка текстов исходника видна сразу', slots[1] === 'Глубокие приседания', slots.join(', '));
+
+  // ручной путь: Program DTO V2 без ИИ
+  const dto = {contractVersion:2, program:{name:'Из чата', desc:'Ручной импорт.', progressionEvery:null, rotate:false, rotateDays:[],
+    plans:[{days:['wed'], rounds:2, roundRest:60, exercises:['Выпады', 'Планка', 'Мост'].map(name => ({warmup:false, stages:[{
+      name, desc:'', mistakes:'', type:'reps', value:'10', sets:2, perSide:false, rest:30, restAfter:null, muscles:['gl'],
+      load:{type:'none', equipment:null, equipmentName:'', count:1, weight:0, levels:[], level:0}, supportEquipment:[],
+      progression:{mode:'none', every:null, repsStep:null, repsMax:null, weightStep:null, weightMax:null, timeStep:null, timeMax:null},
+      advance:'manual'}]}))}]}};
+  await page.click('[data-create-mode="manual"]');
+  await page.fill('#fDtoJson', JSON.stringify(dto));
+  await page.click('#fDtoImport');
+  await page.waitForFunction(() => document.querySelector('#fNameRu')?.value === 'Из чата');
+  slots = await page.evaluate(() => [...document.querySelectorAll('#fPics .pic small')].map(x => x.textContent));
+  ok('Program DTO V2 загружается вручную', slots.join(',') === 'Выпады,Планка,Мост', slots.join(', '));
+  ok('второй язык подготовлен для ручного перевода', JSON.parse(await page.inputValue('#fTextsEn')).stages.length === 3);
   ok('обложке тоже есть место', await page.isVisible('#fCoverBox .ph'));
   ok('в админке есть отдельные RU и EN поля',
      await page.locator('#fNameRu').count() === 1 && await page.locator('#fNameEn').count() === 1);
@@ -342,8 +388,7 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   const made = await добавь({
     name: 'Платная ' + Math.random().toString(36).slice(2, 6),
     gives: 'Программа для проверки доступа по подписке, двадцать символов есть.',
-    cat: 'power', level: 'Средний', min: 30, exCount: 3,
-    text: 'ПРОГРАММА: Платная\nДНИ: Пн\nКРУГИ: 3\n\nУПРАЖНЕНИЕ: Приседания\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 12\nПОДХОДЫ: 3\nОТДЫХ: 45',
+    cat: 'power', level: 'Средний', min: 30,
     pro: true
   });
   ok('программа добавляется сразу премиумной', made.s === 200, made.j.id || made.j.error);
@@ -363,6 +408,9 @@ const api = (action, extra, key) => fetch(BASE + '/api/admin', {
   ok('правкой тоже переключается', edited.s === 200);
   const solo = await fetch(BASE + '/api/catalog?item=' + made.j.id).then(r => r.json());
   ok('и по одной программе метка приезжает', solo.item.pro === true, String(solo.item.pro));
+  ok('без подписки премиум-программа не отдаётся', solo.item.locked === true && solo.item.program === null);
+  const list = await fetch(BASE + '/api/catalog').then(r => r.json());
+  ok('и в списке её состава нет', (list.items || []).find(x => x.id === made.j.id).program === null);
   await api('delete_draft',{id:mobileDraft.j.id});
 
   console.log('\npageerror:', errs.length ? errs : 'нет');

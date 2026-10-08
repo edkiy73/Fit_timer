@@ -15,8 +15,8 @@ export const UNIT_TESTS = [
   'appbase-ui-states-unit', 'appbase-core-bundle-unit', 'capabilities-unit', 'app-module-graph-unit',
   'push-unit', 'analytics-unit', 'analytics-api', 'diagnostics-unit', 'health-unit', 'update-settings-unit',
   'onboarding-funnel-unit', 'ai-recovery-unit', 'ai-generation-guards-unit', 'ai-demographics-gate-unit', 'default-profile-name-unit', 'motivation-unit', 'partial-exit-unit', 'workout-controls-unit', 'notification-reschedule-unit',
-  'accessibility-unit', 'release-ux-unit', 'admin-ui-unit', 'vercel-ignore-unit', 'ai-protocol-edit-unit',
-  'progression-per-exercise-unit', 'admin-ai-api'
+  'accessibility-unit', 'release-ux-unit', 'admin-ui-unit', 'vercel-ignore-unit',
+  'progression-per-exercise-unit', 'exercise-v2-unit', 'ai-contract-v2-unit', 'fit-catalog-program-unit', 'admin-ai-api'
 ];
 
 export const UNIT_TESTS_WITH_TEST_ENV = ['admin-ai-api'];
@@ -29,10 +29,10 @@ export const STATIC_TESTS = ['appbase-foundation-unit', 'browser-shards-unit'];
 
 // Браузерные и сквозные тесты (scripts/run-browser-tests.mjs). Порядок — от быстрых к долгим.
 export const BROWSER_TESTS = [
-  'api-flow', 'ai-api', 'youtube-video',
-  'csp', 'parse-flat', 'start-overview', 'notifications', 'workout-resume', 'partial-workout', 'profile-switch', 'quick-finish', 'update-banner',
-  'storage-idb', 'ai-image-buttons', 'ai-generation-guards', 'program-actions', 'nav-flow', 'nav-transitions',
+  'api-flow', 'ai-api', 'sync-schema-api', 'youtube-video',
+  'csp', 'start-overview', 'notifications', 'workout-resume', 'partial-workout', 'profile-switch', 'quick-finish', 'update-banner',
+  'storage-idb', 'movement-chain-flow', 'ai-image-buttons', 'ai-generation-guards', 'ai-contract-flow', 'program-actions', 'nav-flow', 'nav-transitions',
   'limits', 'link-length', 'tap-targets', 'stale-deploy', 'store-page', 'backup-flow', 'media-flow', 'catalog-flow',
-  'report-auto', 'report-detail', 'prog-check-flow', 'progression-editor-flow', 'progression-migration-flow', 'ai-edit-carry', 'voice-test-ui', 'trainer-page', 'trainer-feedback', 'sync-flow', 'account-flow'
+  'report-auto', 'report-detail', 'prog-check-flow', 'progression-editor-flow', 'voice-test-ui', 'trainer-page', 'trainer-feedback', 'sync-flow', 'account-flow'
 ];
 

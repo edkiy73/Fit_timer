@@ -28,7 +28,7 @@ ok('product runtime imports its dependencies as ES modules',
   /import \* as appbaseNotifications from '@appbase\/core\/notifications\.js'/.test(deps)
   && /import \* as appbaseUi from '@appbase\/core\/ui\.js'/.test(deps)
   && /import \* as fitInfrastructure from '\.\/infrastructure\.js'/.test(deps)
-  && /import FitAIProtocol from '\.\.\/\.\.\/lib\/ai-protocol\.js'/.test(app)
+  && /import FitAIContract from '\.\.\/\.\.\/lib\/fit-ai-contract\.js'/.test(app)
   && /export const appInfrastructure = /.test(deps) && /export const appUi = /.test(deps));
 ok('product runtime contains no AppBase Core references',
   !/AppBase(?:Storage|Identity|Sync|Observability|Notifications|UI)/.test(app)

@@ -11,6 +11,7 @@
 
 const { becomeTrainer } = require('./helpers/trainer-account');
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -31,6 +32,7 @@ const screen = page => page.evaluate(() => (document.querySelector('.screen.on')
   const b = await chromium.launch({executablePath: CHROME});
   const errs = [];
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(String(e)));
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);
@@ -81,8 +83,8 @@ const screen = page => page.evaluate(() => (document.querySelector('.screen.on')
   await page.waitForTimeout(400);
   ok('без заявок строки нет даже у тренера', !(await page.isVisible('#btnMyCatalog')));
   await page.evaluate(async () => {
-    const r = parseProgramText('ПРОГРАММА: Проба\nДНИ: Пн\nКРУГИ: 1\n\nУПРАЖНЕНИЕ: Планка\nФОРМАТ: время\nЗНАЧЕНИЕ: 40\nПОДХОДЫ: 1\nОТДЫХ: 20');
-    const p = r.program || r; p.id = 'navp1'; p.pub = {id: 'u1', status: 'pending'};
+    const p = {id:'navp1', name:'Проба', pub:{id:'u1', status:'pending'},
+      plans:[v2plan('navp1-plan', [v2ex('Планка', {type:'time', value:40, rest:20})], {days:['Пн']})]};
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
     await loadData();
     await savePrograms();

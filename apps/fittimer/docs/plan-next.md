@@ -20,7 +20,7 @@
    - sensitive expensive actions fail-closed при недоступном rate-limit storage.
 
 3. ✅ **AI stability — базовый слой**
-   - общий server validator в `lib/ai-protocol.js`;
+   - общий server validator — сейчас `lib/fit-ai-contract.js` (`checkOutput`);
    - malformed HTTP 200 может переключить запрос на backup provider;
    - client повторно валидирует program/exercise перед применением;
    - non-structural program edits не могут молча менять shape;

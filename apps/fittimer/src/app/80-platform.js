@@ -3,7 +3,7 @@ import { appNotifications, appRuntimeCompat, appUi } from './00-dependencies.js'
 import { ACTIONS, registerAction } from './05-actions.js';
 import { $, appAlert, audioCtx, beep, blockVoiceCommandsFor, dismissTopModal, fxVol, icon, keepAwake,
   loadDelta, musicMode, plural, previousWorkoutLoad, releaseWake, soundOn, setCorePlatformHooks,
-  state, syncSoundCascade, voiceCommandsBlockedAt, voiceVol, workoutLoadSnapshot
+  state, syncSoundCascade, voiceCommandsBlockedAt, voiceVol
 } from './00-core.js';
 import { DAYS, curUser, customPrograms, kvSet, loadSession, loadSessions, localISO, normPlans, planDays,
   progActive, setDataSyncPlatformHooks, stats
@@ -502,11 +502,7 @@ function notifyProgressionChanged(p, scheduledPlan){
   const idx = Math.max(0, normPlans(p).indexOf(pl));
   const prev = previousWorkoutLoad(p, idx);
   if(!prev.exact) return false;
-  const byIdx = new Map(prev.rows.map(r => [r.i, r]));
-  return workoutLoadSnapshot(p, idx).some(row => {
-    const before = byIdx.get(row.i);
-    return !!before && before.n === row.n && loadDelta(before, row).dir === 'up';
-  });
+  return prev.today.some((row, i) => !!prev.rows[i] && loadDelta(prev.rows[i], row).dir === 'up');
 }
 function notifyWorkoutCount(n){
   n = Math.max(0, Math.round(+n || 0));

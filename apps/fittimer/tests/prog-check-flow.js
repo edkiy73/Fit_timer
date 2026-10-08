@@ -6,6 +6,7 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/prog-check-flow.js */
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -21,6 +22,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const b = await chromium.launch({executablePath: CHROME, args: ['--no-sandbox']});
   const errs = [];
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(String(e)));
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(1000);
@@ -31,7 +33,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     configureWorkoutTiming({prep: 0});
     const p = {id: 'pc', name: 'Проверка прогресса', progression: 1, stats: {completions: 0},
       plans: [{days: ['Пн'], rounds: 1, roundRest: 0, exercises: [
-        {name: 'Присед', type: 'reps', value: '10', sets: 1, rest: 5, progOn: true, trackWeight: false, repsStep: 1}
+        v2ex('Присед', {id: 'pc-ex', value: '10', sets: 1, rest: 5, prog: {mode: 'reps', reps: {step: 1}}})
       ]}]};
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
     await loadData();
@@ -67,7 +69,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await run(false);
   ok('недостигнутое упражнение не попадает в проверку', !(await page.isVisible('#finProgCheck')));
   ok('счётчик недостигнутого упражнения не растёт', (await page.evaluate(() =>
-    +((normPlans(customPrograms.find(x => x.id === 'pc'))[0].exercises[0].ps || {}).n || 0))) === 0);
+    +((normPlans(customPrograms.find(x => x.id === 'pc'))[0].exercises[0].progressState || {}).count || 0))) === 0);
 
   // ---- тренировка 1: порог достигнут (progression=1), нагрузка НЕ растёт сама ----
   await run();
@@ -115,7 +117,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.evaluate(async () => {
     const p = customPrograms.find(x => x.id === 'pc');
     p.progression = 3;
-    normPlans(p)[0].exercises[0].ps.n = 0;
+    normPlans(p)[0].exercises[0].progressState.count = 0;
     await savePrograms();
   });
   await run();
@@ -124,11 +126,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   // ---- полностью пройденная двойная прогрессия больше не спрашивает «повышаем?» ----
   await page.evaluate(async () => {
     const p = {id:'pc-terminal', name:'Финальный потолок', progression:1, stats:{completions:1},
-      plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[{
-        id:'term1', name:'Финальный жим', type:'reps', value:'8-10', sets:1, rest:5,
-        progOn:true, trackWeight:true, weight:20, weightMax:20, wStep:2,
-        repsStep:1, repsMax:20, dualProg:true, ps:{n:0, cur:{kg:20, reps:'18-20'}}
-      }]}]};
+      plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[
+        v2ex('Финальный жим', {id:'term1', value:'8-10', sets:1, rest:5,
+          load:{type:'weight', equipment:'dumbbell', weight:20},
+          prog:{mode:'double_range', reps:{step:1, max:20}, weight:{step:2, max:20}},
+          state:{count:0, current:{weight:20, reps:'18-20'}}})
+      ]}]};
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
     await loadData();
     await savePrograms();
@@ -150,7 +153,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.waitForTimeout(1000);
   const terminalState = await page.evaluate(() => {
     const ex = normPlans(customPrograms.find(x => x.id === 'pc-terminal'))[0].exercises[0];
-    return {n:+((ex.ps || {}).n || 0), reps:progressedRepsRange('pc-terminal', ex, null), kg:getExWeight('pc-terminal', ex, null)};
+    return {n:+((ex.progressState || {}).count || 0), reps:progressedRepsRange('pc-terminal', ex, null), kg:getExWeight('pc-terminal', ex, null)};
   });
   ok('после полного потолка вопрос о повышении больше не появляется', !(await page.isVisible('#finProgCheck')));
   ok('после полного потолка счётчик проверки не копится',
@@ -160,13 +163,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   // ---- resistance: финальный review показывает физические labels, а не level-index ----
   await page.evaluate(async () => {
     const p = {id:'pc-level', name:'Резинки', progression:1, stats:{completions:0},
-      plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[{
-        id:'band1', name:'Тяга резинки', type:'reps', value:'12-15', sets:1, rest:5,
-        progOn:true, trackWeight:false, loadType:'level', progMode:'level',
-        loadLevels:[{label:'Лёгкое'},{label:'Среднее'},{label:'Сильное'}],
-        loadLevel:1, repsStep:2, repsMax:18,
-        ps:{n:0,cur:{reps:'16-18',level:1}}
-      }]}]};
+      plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[
+        v2ex('Тяга резинки', {id:'band1', value:'12-15', sets:1, rest:5,
+          load:{type:'level', equipment:'band', levels:[{label:'Лёгкое'},{label:'Среднее'},{label:'Сильное'}], level:1},
+          prog:{mode:'level', reps:{step:2, max:18}},
+          state:{count:0, current:{reps:'16-18', level:1}}})
+      ]}]};
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
     await loadData();
     await savePrograms();
@@ -196,7 +198,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   await page.waitForTimeout(250);
   const resistanceApplied = await page.evaluate(() => {
     const ex = normPlans(customPrograms.find(x => x.id === 'pc-level'))[0].exercises[0];
-    return {reps:ex.ps && ex.ps.cur && ex.ps.cur.reps, level:ex.ps && ex.ps.cur && ex.ps.cur.level};
+    const cur = (ex.progressState && ex.progressState.current) || {};
+    return {reps:cur.reps, level:cur.level};
   });
   ok('после подтверждения resistance реально переходит на следующий уровень и сбрасывает диапазон',
     resistanceApplied.level === 2 && resistanceApplied.reps === '12-15',
@@ -205,12 +208,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   // ---- находки с устройства: разминка с тем же id, два чипа подряд,
   //      тренировка короче 30 секунд ----
   await page.evaluate(async () => {
-    const ex = (id, name, extra) => Object.assign({id, name, type:'reps', value:'10', sets:1, rest:5,
-      progOn:true, trackWeight:false, repsStep:1}, extra || {});
+    const ex = (id, name, extra) => v2ex(name, Object.assign({id, value:'10', sets:1, rest:5,
+      prog:{mode:'reps', reps:{step:1}}}, extra || {}));
     const p = {id:'pc2', name:'Два варианта', progression:1, stats:{completions:0}, plans:[
       {days:['Пн'], rounds:1, roundRest:0, exercises:[
         // старая копия: разминка унаследовала id основного упражнения
-        ex('dup', 'Махи руками', {warmup:true, progOn:false}),
+        ex('dup', 'Махи руками', {warmup:true, prog:{mode:'none'}}),
         ex('dup', 'Присед'), ex('e2', 'Отжимания')
       ]},
       {days:['Чт'], rounds:1, roundRest:0, exercises:[ex('e3', 'Выпады')]}

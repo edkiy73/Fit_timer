@@ -10,6 +10,7 @@
 
 const { becomeTrainer } = require('./helpers/trainer-account');
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -21,22 +22,14 @@ let bad = 0;
 const ok = (name, cond, extra) => { if(!cond) bad++;
   console.log((cond ? '  ok  ' : ' ПЛОХО') + '  ' + name + (extra != null ? '  → ' + extra : '')); };
 
-const PROG = `ПРОГРАММА: Сила дома
-ДНИ: Пн, Чт
-КРУГИ: 1
-ОТДЫХ МЕЖДУ КРУГАМИ: 10
-ПРОГРЕССИЯ: 1
-
-УПРАЖНЕНИЕ: Приседания
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 12-15
-ПОДХОДЫ: 1
-ОТДЫХ: 5
-УСЛОЖНЯТЬ: да
-ШАГ: 1`;
+// Программа «Сила дома»: одно упражнение на повторы с автопрогрессией (модель V2).
+const PROG = {name:'Сила дома', days:['Пн', 'Чт'], rounds:1, roundRest:10, progression:1,
+  ex:{name:'Приседания', spec:{id:'tp1-squat', type:'reps', value:'12-15', sets:1, rest:5,
+    prog:{mode:'reps', reps:{step:1}}}}};
 
 async function boot(b, label, errs, url){
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(label + ': ' + e));
   await page.goto(url || BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);
@@ -51,9 +44,9 @@ async function boot(b, label, errs, url){
   // ---- тренер отправляет ----
   const tp = await boot(b, 'тренер', errs);
   await becomeTrainer(tp, {handle: '@lena.' + Math.random().toString(36).slice(2, 8)});
-  const link = await tp.evaluate(async (txt) => {
-    const r = parseProgramText(txt);
-    const p = r.program || r; p.id = 'tp1';
+  const link = await tp.evaluate(async (def) => {
+    const p = {id:'tp1', name:def.name, progression:def.progression,
+      plans:[v2plan('tp1-a', [v2ex(def.ex.name, def.ex.spec)], {days:def.days, rounds:def.rounds, roundRest:def.roundRest})]};
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
     await loadData();
     await savePrograms();
@@ -99,7 +92,7 @@ async function boot(b, label, errs, url){
   // ---- тренировка целиком, через настоящий финал ----
   await cp.evaluate(async () => {
     const current = customPrograms.find(x => x.name === 'Сила дома');
-    const history = [...(stats.history || []), {d: localISO(new Date()), t: 9, pid: current.id, sec: 900, kcal: 90, plan: 0}];
+    const history = [...(stats.history || []), {d: localISO(new Date()), t: 9, pid: current.id, sec: 900, kcal: 90, planId: normPlans(current)[0].id}];
     await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history, count:1})));
     await loadData();
     const p = customPrograms.find(x => x.name === 'Сила дома');
@@ -136,7 +129,7 @@ async function boot(b, label, errs, url){
   await cp.evaluate(async () => {
     const current = customPrograms.find(x => x.name === 'Сила дома');
     const history = [...(stats.history || []), {
-      id:'partial-report-test', d:localISO(new Date()), t:10, pid:current.id, sec:420, plan:0,
+      id:'partial-report-test', d:localISO(new Date()), t:10, pid:current.id, sec:420, planId:normPlans(current)[0].id,
       status:'partial', meaningful:true, doneExercises:1, plannedExercises:2,
       doneSteps:1, plannedSteps:2, exercises:['Приседания']
     }];

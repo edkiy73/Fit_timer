@@ -96,7 +96,13 @@ function createAIHandler(AI_ACTIONS, options = {}){
     if(!action) return failReleased(res, 400, 'bad_kind');
     const type = action.type;
     const bucket = action.bucket;
-    const prompt = String(body.prompt || '').trim();
+    // Действие со своим контрактом собирает prompt на сервере из структурированного
+    // input: клиент не присылает текст prompt'а и не может подменить инструкции/схему.
+    let prompt;
+    if(typeof action.buildPrompt === 'function'){
+      try{ prompt = String(action.buildPrompt({body, settings}) || '').trim(); }
+      catch(e){ return failReleased(res, 400, String(e && e.code || 'bad_input'), {detail:String(e && e.message || '').slice(0,200)}); }
+    }else prompt = String(body.prompt || '').trim();
     if(!prompt || prompt.length > 120000) return failReleased(res, 400, 'bad_prompt');
 
     const month = new Date().toISOString().slice(0,7);
@@ -110,7 +116,9 @@ function createAIHandler(AI_ACTIONS, options = {}){
         ? await action.run({settings,body,prompt,generate})
         : await generate(type, settings, prompt, {
             aspectRatio:action.aspectRatio || null,
-            validate:action.validate || null
+            validate:action.validate || null,
+            schema:action.schema || null,
+            maxOutputTokens:action.maxOutputTokens || null
           });
       const log = {at,account:mh,kind,provider:result.provider,model:result.model,
         fallback:result.fallback,prompt:prompt.slice(0,120000),
@@ -127,6 +135,7 @@ function createAIHandler(AI_ACTIONS, options = {}){
         validation:validation ? {reason:validation.reason || '',missing:(validation.missing || []).slice(0,20)} : undefined};
       try{ await store.push(`ai:log:${at.slice(0,10)}`, JSON.stringify(log), settings.retentionDays * 86400); }catch(_){}
       if(e && e.code === 'ai_timeout') return failReleased(res, 504, 'ai_timeout');
+      if(e && e.code === 'ai_refused') return failReleased(res, 422, 'ai_refused');
       if(action && typeof action.publicError === 'function'){
         const mapped = action.publicError(e);
         if(mapped) return failReleased(res,mapped.status || 422,mapped.code || 'ai_failed',mapped.extra || {});

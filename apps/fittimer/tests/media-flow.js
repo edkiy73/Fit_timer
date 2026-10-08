@@ -13,6 +13,8 @@
 
 const { becomeTrainer } = require('./helpers/trainer-account');
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
+const { translated } = require('./helpers/catalog-program');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -25,31 +27,9 @@ let bad = 0;
 const ok = (name, cond, extra) => { if(!cond) bad++;
   console.log((cond ? '  ok  ' : ' ПЛОХО') + '  ' + name + (extra != null ? '  → ' + extra : '')); };
 
-const PROG = `ПРОГРАММА: С картинками
-ДНИ: Пн
-КРУГИ: 2
-ОТДЫХ МЕЖДУ КРУГАМИ: 60
-
-УПРАЖНЕНИЕ: Приседания
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 12
-ПОДХОДЫ: 3
-ОТДЫХ: 45
-
-УПРАЖНЕНИЕ: Планка
-ФОРМАТ: время
-ЗНАЧЕНИЕ: 40
-ПОДХОДЫ: 3
-ОТДЫХ: 30
-
-УПРАЖНЕНИЕ: Отжимания
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 8
-ПОДХОДЫ: 3
-ОТДЫХ: 60`;
-
 async function boot(b, label, errs, url){
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(label + ': ' + e));
   await page.goto(url || BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);
@@ -66,12 +46,14 @@ async function boot(b, label, errs, url){
   const tp = await boot(b, 'тренер', errs);
   await tp.evaluate(() => { curUser().name = 'Лена'; });
   await becomeTrainer(tp, {handle: NICK, trainer: {about: '', years: null, links: ''}});
-  const link = await tp.evaluate(async ({txt, nick, name}) => {
+  const link = await tp.evaluate(async ({nick, name}) => {
     // Картинки подделываем маленькими — важно, что они ЕСТЬ и что доезжают.
     const pic = n => 'data:image/png;base64,' + btoa('pic-' + n).replace(/=/g, '');
-    const r = parseProgramText(txt);
-    const p = r.program || r;
-    p.id = 'pic1'; p.name = name;
+    const p = {id:'pic1', name, plans:[v2plan('pic1-plan', [
+      v2ex('Приседания', {value:12, sets:3, rest:45}),
+      v2ex('Планка', {type:'time', value:40, sets:3, rest:30}),
+      v2ex('Отжимания', {value:8, sets:3, rest:60})
+    ], {days:['Пн'], rounds:2, roundRest:60})]};
     p.cover = pic('cover');
     normPlans(p)[0].exercises.forEach((ex, i) => { ex.media = {kind: 'img', data: pic(i)}; });
     customPrograms.push(p); await savePrograms();
@@ -82,7 +64,7 @@ async function boot(b, label, errs, url){
     await saveClients(); activateClientAt(clients.indexOf(c));
     await sendProgramToClient(c, customPrograms.find(x => x.id === 'pic1'));
     return out;
-  }, {txt: PROG, nick: NICK, name: NAME});
+  }, {nick: NICK, name: NAME});
 
   // ---- клиент получает программу С фото ----
   const cp = await boot(b, 'клиент', errs, link);
@@ -94,14 +76,12 @@ async function boot(b, label, errs, url){
     total: normPlans(draft)[0].exercises.length
   }));
   ok('обложка доехала до клиента', got.cover);
-  ok('фото упражнений доехали', got.withPic === got.total, `${got.withPic} из ${got.total}`);
+  ok('фото упражнений доехали', got.total === 3 && got.withPic === got.total, `${got.withPic} из ${got.total}`);
 
   const mediaIdentity = await tp.evaluate(() => {
     const pic = n => 'data:image/png;base64,' + btoa('identity-' + n).replace(/=/g, '');
-    const ex = (id, data) => ({
-      id, name:'Одинаковое', type:'reps', value:'10', sets:1, rest:0,
-      media:{kind:'img',data}
-    });
+    const ex = (id, data) => v2ex('Одинаковое', {id, value:10, rest:0, media:{kind:'img',data}});
+    const rename = (e, name) => { FitExerciseV2.prescriptionOf(e).name = name; };
     const p = {id:'media-id-test',name:'Media id',plans:[{
       days:[],rounds:1,roundRest:0,
       exercises:[ex('media-a',pic('a')),ex('media-b',pic('b'))]
@@ -110,18 +90,13 @@ async function boot(b, label, errs, url){
 
     const exact = JSON.parse(JSON.stringify(p));
     exact.plans[0].exercises.forEach(e => { delete e.media; });
-    exact.plans[0].exercises[1].name = 'Переименованное';
+    rename(exact.plans[0].exercises[1], 'Переименованное');
     applyMedia(exact, packed);
 
-    // Каталог парсит переведённый текст и получает временные новые id.
-    // Position fallback должен вернуть ИСХОДНЫЕ id, а не привязывать фото по имени.
-    const translated = JSON.parse(JSON.stringify(p));
-    translated.plans[0].exercises.forEach((e, i) => {
-      delete e.media;
-      e.id = 'temporary-' + i;
-      e.name = i ? 'Same translated' : 'Same translated';
-    });
-    applyMedia(translated, packed);
+    // Чужие id: позиция и имя identity не являются — фото не угадываются
+    const foreign = JSON.parse(JSON.stringify(p));
+    foreign.plans[0].exercises.forEach((e, i) => { delete e.media; e.id = 'other-' + i; });
+    applyMedia(foreign, packed);
 
     const legacy = JSON.parse(JSON.stringify(p));
     legacy.plans[0].exercises.forEach(e => { delete e.media; });
@@ -130,8 +105,8 @@ async function boot(b, label, errs, url){
     return {
       version:packed.v,
       ids:(packed.items || []).map(x => x.id),
-      exact:exact.plans[0].exercises.map(e => [e.id,e.name,e.media && e.media.data]),
-      translated:translated.plans[0].exercises.map(e => [e.id,e.media && e.media.data]),
+      exact:exact.plans[0].exercises.map(e => [e.id,FitExerciseV2.prescriptionOf(e).name,e.media && e.media.data]),
+      foreignPics:foreign.plans[0].exercises.filter(e => e.media).length,
       legacyPics:legacy.plans[0].exercises.filter(e => e.media).length
     };
   });
@@ -140,20 +115,15 @@ async function boot(b, label, errs, url){
        && mediaIdentity.ids.join(',') === 'media-a,media-b'
        && mediaIdentity.exact[0][2] !== mediaIdentity.exact[1][2],
      JSON.stringify(mediaIdentity));
-  ok('переименование не ломает картинку: exact exercise.id остаётся главным ключом',
+  ok('переименование не ломает картинку: exercise.id — единственный ключ',
      mediaIdentity.exact[1][0] === 'media-b'
        && mediaIdentity.exact[1][1] === 'Переименованное'
        && !!mediaIdentity.exact[1][2],
      JSON.stringify(mediaIdentity.exact[1]));
-  ok('каталожный position fallback возвращает исходные exercise.id и разные фото',
-     mediaIdentity.translated[0][0] === 'media-a'
-       && mediaIdentity.translated[1][0] === 'media-b'
-       && mediaIdentity.translated[0][1] !== mediaIdentity.translated[1][1],
-     JSON.stringify(mediaIdentity.translated));
-  ok('legacy карта по имени не угадывает между двумя одинаковыми упражнениями',
-     mediaIdentity.legacyPics === 0, mediaIdentity.legacyPics);
+  ok('по позиции фото чужим упражнениям не раздаются', mediaIdentity.foreignPics === 0, mediaIdentity.foreignPics);
+  ok('старая карта «имя → фото» не читается', mediaIdentity.legacyPics === 0, mediaIdentity.legacyPics);
 
-  // ---- в каталог ----
+  // ---- в каталог: из интерфейса, с фото и обложкой ----
   await tp.evaluate(async ({name}) => {
     const p = customPrograms.find(x => x.name === name);
     openPublish(p);
@@ -174,22 +144,19 @@ async function boot(b, label, errs, url){
   const mine = queue.pending.find(x => x.name === NAME);
   const mineMedia = mine && mine.media && mine.media.v === 2 && Array.isArray(mine.media.items)
     ? mine.media.items : [];
+  const progIds = mine && mine.program ? mine.program.plans[0].exercises.map(e => e.id) : [];
   ok('заявка дошла с id-картинками', mine && mine.cover && mineMedia.length === 3
-       && mineMedia.every(x => x.id && x.data),
+       && mineMedia.every(x => x.data && progIds.includes(x.id)),
      mine ? mineMedia.length + ' фото' : 'нет заявки');
+  ok('а сама программа — без фото внутри', mine && mine.program.plans[0].exercises.every(e => !e.media));
   const enName = 'With pictures ' + NAME.split(' ').pop();
-  const enText = mine.text
-    .replace('ПРОГРАММА: ' + NAME, 'ПРОГРАММА: ' + enName)
-    .replace('УПРАЖНЕНИЕ: Приседания', 'УПРАЖНЕНИЕ: Squats')
-    .replace('УПРАЖНЕНИЕ: Планка', 'УПРАЖНЕНИЕ: Plank')
-    .replace('УПРАЖНЕНИЕ: Отжимания', 'УПРАЖНЕНИЕ: Push-ups');
-  await api('edit', {id:mine.id, item:{sourceLocale:'ru', locales:{
-    ru:{name:mine.name, gives:mine.gives, text:mine.text},
-    en:{name:enName, gives:'Three exercises in a circuit, each with its own technique image.', text:enText}
+  await api('edit', {id:mine.id, item:{locales:{
+    en:{name:enName, gives:'Three exercises in a circuit, each with its own technique image.',
+      texts:translated(mine.program, {'Приседания':'Squats', 'Планка':'Plank', 'Отжимания':'Push-ups'})}
   }}});
   await api('approve', {id: mine.id});
 
-  // ---- витрина лёгкая, фото приходят при добавлении ----
+  // ---- витрина лёгкая, фото приходят отдельно ----
   const list = await fetch(BASE + '/api/catalog').then(r => r.json());
   const row = list.items.find(x => x.name === NAME);
   ok('в списке каталога фото НЕТ', row && row.media === undefined && row.hasMedia === true);
@@ -201,9 +168,10 @@ async function boot(b, label, errs, url){
      fullItems.map(x => x.id).join(', '));
   const fullEn = await fetch(BASE + '/api/catalog?item=' + row.id + '&lang=en').then(r => r.json());
   const enItems = fullEn.item.media && fullEn.item.media.v === 2 ? (fullEn.item.media.items || []) : [];
-  ok('для английского сохраняются те же stable exercise.id — перевод имени больше не ключ',
+  ok('для английского те же stable exercise.id — перевод имени не ключ',
      enItems.length === 3
-       && enItems.map(x => x.id).join(',') === fullItems.map(x => x.id).join(','),
+       && enItems.map(x => x.id).join(',') === fullItems.map(x => x.id).join(',')
+       && fullEn.item.program.plans[0].exercises.map(e => e.id).join(',') === progIds.join(','),
      enItems.map(x => x.id).join(', '));
 
   /* ---- страница программы в каталоге показывает фото ----
@@ -233,11 +201,14 @@ async function boot(b, label, errs, url){
     await addStoreItem(it.id);
     const p = customPrograms.find(x => x.storeId === it.id);
     if(!p) return {found: true, saved: false};
+    const pics = normPlans(p)[0].exercises.map(e => e.media && e.media.data);
     return {found: true, saved: true, cover: !!p.cover, locale:p.locale,
-            withPic: normPlans(p)[0].exercises.filter(e => e.media && e.media.kind === 'img').length};
+            withPic: pics.filter(Boolean).length, distinct: new Set(pics).size,
+            freshIds: normPlans(p)[0].exercises.every(e => !it.program.plans[0].exercises.some(s => s.id === e.id))};
   }, NAME);
   ok('программа из каталога добавляется', added.found && added.saved, JSON.stringify(added));
-  ok('и приносит фото упражнений', added.withPic === 3, added.withPic + '');
+  ok('и приносит фото упражнений — каждому своё', added.withPic === 3 && added.distinct === 3, added.withPic + '');
+  ok('у личной копии свои id, фото при этом на местах', added.freshIds === true);
   ok('и обложку', added.cover === true);
   ok('личная копия запоминает язык каталога', added.locale === 'ru', added.locale);
 

@@ -198,8 +198,7 @@
         "admin.html"
       ],
       "tests": [
-        "tests/ai-api.js",
-        "tests/parse-flat.js"
+        "tests/ai-api.js"
       ],
       "docs": [
         "docs/ai-runtime.md",
@@ -232,7 +231,6 @@
       ],
       "tests": [
         "tests/program-actions.js",
-        "tests/parse-flat.js",
         "tests/start-overview.js"
       ],
       "docs": [

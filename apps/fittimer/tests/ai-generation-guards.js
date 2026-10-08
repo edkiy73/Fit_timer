@@ -8,6 +8,7 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/ai-generation-guards.js */
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -23,6 +24,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const b = await chromium.launch({executablePath: CHROME, args: ['--no-sandbox']});
   const errs = [];
   const page = await (await b.newContext({viewport: {width: 360, height: 800}, locale: 'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(String(e)));
   let imageCalls = 0;
   await page.route('**/api/ai', async route => {
@@ -35,107 +37,27 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   // Без пола и возраста экран ИИ сначала спрашивает анкету («Кто ты») — заполняем, как в остальных тестах.
   await page.evaluate(async () => { const u = curUser(); u.gender = 'f'; u.age = 30; await saveUsers(); });
-  await page.evaluate(() => { initAIForm(); openAI('text'); });   // как кнопка «Через ИИ»
-  await page.waitForTimeout(150);
-
-  const initialDuration = await page.evaluate(() => {
-    const active = document.querySelector('#qDur .day-chip.act');
-    return active ? active.textContent.trim() : '';
-  });
-  ok('время по умолчанию — 10 минут', initialDuration === '10 мин', initialDuration);
-
-  await page.click('#qDur .day-chip.act');
-  const durationAfterRepeat = await page.evaluate(() => {
-    const active = document.querySelector('#qDur .day-chip.act');
-    return active ? active.textContent.trim() : '';
-  });
-  ok('обязательное время нельзя снять повторным нажатием', durationAfterRepeat === '10 мин', durationAfterRepeat);
-  ok('есть короткий вариант 5 минут', await page.evaluate(() =>
-    [...document.querySelectorAll('#qDur .day-chip')].some(x => x.textContent.trim() === '5 мин')));
-
-  const emptyProgram = await page.evaluate(() => aiCreateProgramGuard());
-  ok('дефолтные значения не считаются заполненным запросом программы', emptyProgram === false);
-  ok('пустой запрос программы объясняется пользователю',
-    /хотя бы одно пожелание/.test(await page.textContent('#dlgMsg')));
-  await page.evaluate(() => document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')));
-
-  await page.click('#qGoal .day-chip');
-  ok('одной выбранной цели достаточно для генерации программы',
-    await page.evaluate(() => aiCreateProgramGuard()) === true);
-
-  await page.evaluate(() => openExAI());
-  await page.waitForTimeout(150);
-  const emptyExercise = await page.evaluate(() => aiCreateExerciseGuard());
-  ok('пустой запрос нового упражнения блокируется', emptyExercise === false);
-  ok('пустой запрос упражнения объясняется пользователю',
-    /хотя бы одно пожелание/.test(await page.textContent('#dlgMsg')));
-  await page.evaluate(() => document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')));
-
-  await page.click('#exaMuscles .day-chip');
-  ok('одного условия упражнения достаточно',
-    await page.evaluate(() => aiCreateExerciseGuard()) === true);
-
+  // Создание и правка через ИИ работают на AI Contract V2; без запроса человека ИИ не вызывается.
   await page.evaluate(async () => {
-    customPrograms.push({id:'guard-edit', name:'Тестовая программа', plans:[{days:['Пн'], rounds:1, roundRest:0,
-      exercises:[{name:'Присед', type:'reps', value:10, rest:30}]}]});
+    customPrograms.push({id:'guard-edit', name:'Тестовая программа', plans:[{id:'guard-plan', days:['Пн'], rounds:1, roundRest:0,
+      exercises:[v2ex('Присед', {value:10, rest:30})]}]});
     await savePrograms();
-    openEditAI(customPrograms.find(p => p.id === 'guard-edit'));
   });
-  await page.waitForTimeout(100);
-  ok('пустое изменение программы блокируется общим guard',
-    await page.evaluate(() => aiEditRequestGuard('eaWish')) === false);
-  ok('для изменения просит явно написать задачу',
-    /что нужно изменить/.test(await page.textContent('#dlgMsg')));
-  await page.evaluate(() => document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')));
-  await page.evaluate(() => { $('eaWish').value = 'Сделай тренировку короче'; });
-  ok('явный запрос изменения программы проходит',
-    await page.evaluate(() => aiEditRequestGuard('eaWish')) === true);
-
-  const copiedProgram = await page.evaluate(async () => {
-    window.__copiedProgramText = '';
-    try{
-      Object.defineProperty(navigator, 'clipboard', {
-        configurable: true,
-        value: {writeText: async text => { window.__copiedProgramText = text; }}
-      });
-    }catch(e){
-      navigator.clipboard.writeText = async text => { window.__copiedProgramText = text; };
-    }
-    const p = customPrograms.find(p => p.id === 'guard-edit');
-    const expectedBase = programToText(p);
-    $('aiCopyFull').click();
-    await new Promise(r => setTimeout(r, 20));
-    const modalOpen = $('programExportChoiceModal').classList.contains('open');
-    const title = $('programExportChoiceTitle').textContent.trim();
-    document.querySelector('[data-act="exportProgramWithoutProgress"]').click();
-    await new Promise(r => setTimeout(r, 20));
-    const base = window.__copiedProgramText;
-
-    window.__copiedProgramText = '';
-    $('aiCopyFull').click();
-    document.querySelector('[data-act="exportProgramWithProgress"]').click();
-    await new Promise(r => setTimeout(r, 20));
-    const live = window.__copiedProgramText;
-    return {expectedBase, base, live, modalOpen, title};
-  });
-  ok('«Скопировать программу» сначала показывает выбор прогрессии',
-    copiedProgram.modalOpen && /Скопировать программу/.test(copiedProgram.title), copiedProgram.title);
-  ok('копирование без прогрессии оставляет исходный текст программы',
-    copiedProgram.base === copiedProgram.expectedBase, copiedProgram.base.slice(0,80));
-  ok('оба варианта копии остаются чистым протоколом без системного AI-промта',
-    !copiedProgram.base.includes('You are a fitness-program assistant')
-      && !copiedProgram.base.includes('=== TASK ===')
-      && !copiedProgram.live.includes('You are a fitness-program assistant')
-      && !copiedProgram.live.includes('=== TASK ==='));
-
-  await page.evaluate(() => { openBuilder('guard-edit'); openExEdAI(0); });
-  await page.waitForTimeout(100);
-  ok('пустое изменение упражнения блокируется общим guard',
-    await page.evaluate(() => aiEditRequestGuard('exeWish')) === false);
-  await page.evaluate(() => document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')));
-  await page.evaluate(() => { $('exeWish').value = 'Сделай мягче для коленей'; });
-  ok('явный запрос изменения упражнения проходит',
-    await page.evaluate(() => aiEditRequestGuard('exeWish')) === true);
+  const closeModals = () => page.evaluate(() => document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')));
+  // Пустой запрос не тратит ИИ: «за меня» без условий просит описать задачу
+  const guarded = async (name, open, re) => {
+    await closeModals();
+    await page.evaluate(open);
+    await page.evaluate(() => $('aiSelf').click());
+    await page.waitForTimeout(80);
+    ok(name, re.test(await page.textContent('#dlgMsg')), await page.textContent('#dlgMsg'));
+  };
+  await guarded('программа без условий не генерируется', () => { initAIForm(); openAI('text'); }, /Выбери|Укажи|Расскажи|Опиши/);
+  await guarded('упражнение без условий не генерируется', () => openExAI(), /Выбери|Укажи|Расскажи|Опиши/);
+  await guarded('правка программы без задания не уходит', () => openEditAI(customPrograms.find(p => p.id === 'guard-edit')), /Напиши|Опиши|задани/);
+  await guarded('правка упражнения без задания не уходит', () => { openBuilder('guard-edit'); openExEdAI(0); }, /Напиши|Опиши|задани/);
+  await closeModals();
+  ok('ни один из этих входов не обратился к ИИ', imageCalls === 0, imageCalls);
 
   await page.evaluate(async () => {
     await kvSet('account', JSON.stringify(Object.assign({}, account, {
@@ -146,7 +68,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await loadAccount();
     await kvSet('deviceId', 'guard-test-device'); await loadIdentity();
     customPrograms.push({id:'guard-images', name:'', plans:[{days:['Пн'], rounds:1, roundRest:0,
-      exercises:[{name:'Присед', type:'reps', value:10, rest:30}]}]});
+      exercises:[v2ex('Присед', {value:10, rest:30})]}]});
     await savePrograms();
     openBuilder('guard-images');
   });
@@ -162,7 +84,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     $('bName').value = 'Тест';
     const next = JSON.parse(JSON.stringify(draft));
     next.name = 'Тест';
-    next.plans[0].exercises[0].name = '';
+    FitExerciseV2.prescriptionOf(next.plans[0].exercises[0]).name = '';
     loadBuilderDraft(next, 0);
   });
   const unnamedExerciseWorkspace = await page.evaluate(() => openImages());
@@ -173,7 +95,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   await page.evaluate(() => {
     const next = JSON.parse(JSON.stringify(draft));
-    next.plans[0].exercises[0].name = 'Присед';
+    FitExerciseV2.prescriptionOf(next.plans[0].exercises[0]).name = 'Присед';
     loadBuilderDraft(next, 0);
   });
   ok('после названий раздел картинок открывается', await page.evaluate(() => openImages()) !== false);

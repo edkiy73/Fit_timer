@@ -5,6 +5,7 @@
    Запуск: node tests/dev-server.js 8124
            node tests/sync-flow.js */
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core'); process.exit(1); }
@@ -18,6 +19,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
 async function boot(browser, label, errors){
   const page = await (await browser.newContext({viewport:{width:412,height:900},locale:'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errors.push(label + ': ' + e));
   await page.goto(BASE + '/index.html', {waitUntil:'load'});
   await page.waitForTimeout(700);
@@ -42,24 +44,23 @@ async function boot(browser, label, errors){
     const seededPrograms = [{
       id:'sync-program', name:'Синхронная сила', time:'08:30', progression:2,
       stats:{completions:1}, plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[
-        {name:'Приседания',type:'reps',value:'12',sets:2,rest:30,restAfter:45,weight:0}
+        v2ex('Приседания', {value:'12', sets:2, rest:30, restAfter:45})
       ]}]
     },{
       id:'sync-program-2', name:'Синхронная мобильность', time:'', progression:3,
       stats:{completions:0}, plans:[{days:['Ср'],rounds:1,roundRest:0,exercises:[
-        {name:'Наклоны',type:'reps',value:'10',sets:1,rest:20}
+        v2ex('Наклоны', {value:'10', sets:1, rest:20})
       ]}]
     },{
       id:'sync-resistance', name:'Синхронные резинки', time:'', progression:2,
-      psMigrated:true, stats:{completions:2}, plans:[{days:['Пт'],rounds:1,roundRest:0,exercises:[
-        {id:'band-sync',name:'Тяга резинки',type:'reps',value:'12-15',sets:3,rest:45,
-         loadType:'level',progMode:'level',
-         loadLevels:[{label:'Лёгкая'},{label:'Средняя'},{label:'Сильная'}],
-         loadLevel:1,repsStep:2,repsMax:18,progEvery:2,
-         ps:{n:2,cur:{reps:'16-18',level:2}}}
+      stats:{completions:2}, plans:[{days:['Пт'],rounds:1,roundRest:0,exercises:[
+        v2ex('Тяга резинки', {id:'band-sync', value:'12-15', sets:3, rest:45,
+          load:{type:'level', equipment:'band', levels:[{label:'Лёгкая'},{label:'Средняя'},{label:'Сильная'}], level:1},
+          prog:{mode:'level', every:2, reps:{step:2, max:18}},
+          state:{count:2, current:{reps:'16-18', level:2}}})
       ]}]
     }];
-    const seededStats = {totalSec:600,count:1,history:[{id:'h-a',d:'2026-09-17',t:8,pid:'sync-program',sec:600,plan:0}],
+    const seededStats = {totalSec:600,count:1,history:[{id:'h-a',d:'2026-09-17',t:8,pid:'sync-program',sec:600}],
                          weights:[{d:'2026-09-17',w:61.2,waist:70}],wellness:[],badges:['first']};
     const seededPhotos = [{d:'2026-09-17',img:'data:image/png;base64,cGhvdG8='}];
     // Сеем профиль так, как он реально лежит на диске, и даём приложению загрузить его.
@@ -110,13 +111,15 @@ async function boot(browser, label, errors){
       resistance:(() => {
         const p=customPrograms.find(x=>x.id==='sync-resistance');
         const ex=p && normPlans(p)[0] && normPlans(p)[0].exercises[0];
-        return ex ? {
-          loadType:ex.loadType, progMode:ex.progMode, loadLevel:ex.loadLevel,
-          levels:(ex.loadLevels||[]).map(x=>x.label||x.key),
-          n:ex.ps && ex.ps.n,
-          reps:ex.ps && ex.ps.cur && ex.ps.cur.reps,
-          level:ex.ps && ex.ps.cur && ex.ps.cur.level
-        } : null;
+        if(!ex) return null;
+        const pr = FitExerciseV2.prescriptionOf(ex), st = ex.progressState || {};
+        return {
+          loadType:pr.load.type, progMode:pr.progression.mode, loadLevel:pr.load.level,
+          levels:(pr.load.levels||[]).map(x=>x.label||x.key),
+          n:st.count,
+          reps:st.current && st.current.reps,
+          level:st.current && st.current.level
+        };
       })(),
       prog:Object.values(legacyWeights)[0], photos:localPhotos.length,
       state:$('accSync').textContent
@@ -149,17 +152,17 @@ async function boot(browser, label, errors){
     const originals = customPrograms.filter(p => p.id === 'sync-program' || p.id === 'sync-program-2');
     const unique = {
       id:'sync-unique', name:'Только второй профиль', plans:[{days:['Пт'],rounds:1,roundRest:0,exercises:[
-        {name:'Планка',type:'time',value:30,sets:1,rest:20}
+        v2ex('Планка', {type:'time', value:30, sets:1, rest:20})
       ]}]
     };
     const later = new Date(Date.now() + 5000).toISOString();
     const docs = originals.map(p => ({
-      key:'program:' + p.id, profileId:dupId, rev:1, at:later, schema:1,
+      key:'program:' + p.id, profileId:dupId, rev:1, at:later, schema:2,
       value:JSON.stringify(p)
     }));
-    docs.push({key:'program:' + unique.id, profileId:dupId, rev:1, at:later, schema:1,
+    docs.push({key:'program:' + unique.id, profileId:dupId, rev:1, at:later, schema:2,
       value:JSON.stringify(unique)});
-    docs.push({key:'index', profileId:dupId, rev:1, at:later, schema:1,
+    docs.push({key:'index', profileId:dupId, rev:1, at:later, schema:2,
       value:JSON.stringify({order:['sync-program','sync-program-2','sync-unique']})});
     await apiPost('/api/sync',{
       action:'push', email:account.email, deviceId:identity.deviceId, token:account.syncToken,
@@ -217,7 +220,7 @@ async function boot(browser, label, errors){
 
   await two.evaluate(async()=>{
     const history = [...(stats.history || []), {
-      id:'h-b',d:'2026-09-18',t:8,pid:'sync-program',sec:720,plan:0,
+      id:'h-b',d:'2026-09-18',t:8,pid:'sync-program',sec:720,
       status:'partial',meaningful:true,doneExercises:2,plannedExercises:4,
       doneSteps:4,plannedSteps:8,exercises:['Присед','Жим']
     }];

@@ -5,6 +5,7 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/ai-image-buttons.js */
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -20,6 +21,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const b = await chromium.launch({executablePath: CHROME, args: ['--no-sandbox']});
   const errs = [];
   const page = await (await b.newContext({viewport: {width: 360, height: 800}, locale: 'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(String(e)));
   const imageKinds = [];
   const imageUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
@@ -41,7 +43,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await loadAccount();
     await kvSet('deviceId', 'image-test-device'); await loadIdentity();
     const p = {id: 'pd', name: 'Силовая', plans: [{days: ['Пн'], rounds: 1, roundRest: 0,
-      exercises: [{name: 'Присед', type: 'reps', value: 10, rest: 30}]}]};
+      exercises: [v2ex('Присед', {value:10, rest:30})]}]};
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
     await loadData();
     await savePrograms(); openBuilder('pd');
@@ -83,7 +85,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     .map(el => el.scrollWidth <= el.clientWidth + 1));
   ok('на 360 px подписи кнопок не обрезаются', rows.every(Boolean), JSON.stringify(rows));
 
-  // пустой ответ при ИИ-правке — текст, а не код
+  // пустой ответ ИИ-правки: человек видит понятное объяснение, а не код
   const msg = await page.evaluate(async () => {
     document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
     $('aiResult').value = '';
@@ -91,7 +93,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await new Promise(r => setTimeout(r, 100));
     return $('dlgMsg').textContent;
   });
-  ok('ошибка ИИ-правки — понятный текст, а не код', !/=>|t\(/.test(msg) && /пустое/.test(msg), msg.slice(0, 50));
+  ok('пустой ответ ИИ-правки объясняется словами', !/=>|t\(/.test(msg) && /пустое/.test(msg), msg.slice(0, 50));
 
   ok('без ошибок в консоли', !errs.length, errs.join(' | '));
   await b.close();

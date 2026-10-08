@@ -14,7 +14,7 @@ need(events.includes("cancelText:t('ai.editRequest')"), 'text AI failure must of
 need(programs.includes("if(retry) return generateOneImageViaAI(kind, item, title, apply);"), 'single-image retry is missing');
 need(programs.includes("if(retry) return generateAllImagesViaAI('missing');"), 'batch image retry must regenerate only missing images');
 need(programs.includes("await finishImgGen(done, total, failed);"), 'batch image recovery must be awaited');
-need(workout.includes("if(retry) return swapViaAI();"), 'workout exercise replacement retry is missing');
+need(workout.includes("if(retry) return swapViaAI(true);"), 'workout exercise replacement retry must rerun the same request');
 need(ru.includes("'ai.retry': \"Повторить\""), 'RU retry copy is missing');
 need(ru.includes("'ai.editRequest': \"Изменить запрос\""), 'RU edit-request copy is missing');
 need(en.includes("'ai.retry': \"Retry\""), 'EN retry copy is missing');

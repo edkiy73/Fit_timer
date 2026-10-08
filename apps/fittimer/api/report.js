@@ -66,7 +66,7 @@ module.exports = async (req, res) => {
 
   await store.push(`p:${id}:reports`, JSON.stringify({
     at: new Date().toISOString(),
-    v: 3,
+    v: 4,
     _account: accountHash || undefined,
     who: str(r.who, 40),
     name: str(r.name, 80),
@@ -77,20 +77,20 @@ module.exports = async (req, res) => {
     streak: num(r.streak, 999),
     first: str(r.first, 10),
     last: str(r.last, 10),
-    // журнал тренировок: дата, вариант, длительность и честный статус
+    // журнал тренировок: дата, вариант (стабильный id), длительность и честный статус
     log: arr(r.log, 30).map(x => ({
-      d: str(x.d, 10), p: num(x.p, 20), sec: num(x.sec, 99999),
+      d: str(x.d, 10), pl: str(x.pl, 16), sec: num(x.sec, 99999),
       partial: x.partial ? 1 : 0,
       done: num(x.done, 99), all: num(x.all, 99)
     })),
     // варианты программы: полные и частичные отдельно
     plans: arr(r.plans, 10).map(x => ({
-      i: num(x.i, 20), days: str(x.days, 40),
+      id: str(x.id, 16), i: num(x.i, 20), days: str(x.days, 40),
       n: num(x.n, 9999), partial: num(x.partial, 9999), sec: num(x.sec, 99999)
     })),
     // рост нагрузки по всем вариантам, разминка помечена
     ex: arr(r.ex, 40).map(e => ({
-      p: num(e.p, 20), w: e.w ? 1 : 0,
+      pl: str(e.pl, 16), w: e.w ? 1 : 0,
       n: str(e.n, 60), a: str(e.a, 32), b: str(e.b, 32)
     })),
     // что клиент поменял в присланном

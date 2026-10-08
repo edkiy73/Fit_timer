@@ -147,9 +147,9 @@ async function login(deviceId, sub, email = MAIL){
     photo:'data:image/png;base64,bm8='};
   const legacyProfile = {id:'profile-legacy',name:'Старый',gender:'m',birth:'1990-05-01',theme:'light'};
   const docs = [
-    {profileId:profile.id,key:'stats',rev:1,at:'2026-09-17T10:00:00.000Z',schema:1,value:JSON.stringify({count:1,history:[{id:'h1',d:'2026-09-17',sec:600}]})},
-    {profileId:profile.id,key:'program:p1',rev:1,at:'2026-09-17T10:00:00.000Z',schema:1,value:JSON.stringify({id:'p1',name:'Сила'})},
-    {profileId:profile.id,key:'index',rev:1,at:'2026-09-17T10:00:00.000Z',schema:1,value:JSON.stringify({order:['p1']})},
+    {profileId:profile.id,key:'stats',rev:1,at:'2026-09-17T10:00:00.000Z',schema:2,value:JSON.stringify({count:1,history:[{id:'h1',d:'2026-09-17',sec:600}]})},
+    {profileId:profile.id,key:'program:p1',rev:1,at:'2026-09-17T10:00:00.000Z',schema:2,value:JSON.stringify({id:'p1',name:'Сила'})},
+    {profileId:profile.id,key:'index',rev:1,at:'2026-09-17T10:00:00.000Z',schema:2,value:JSON.stringify({order:['p1']})},
     {profileId:'__account__',key:'trainer',rev:1,at:'2026-09-17T10:00:00.000Z',schema:1,
       value:JSON.stringify({on:true,handle:'@lena',name:'Лена'})},
     {profileId:'__account__',key:'clients',rev:1,at:'2026-09-17T10:00:00.000Z',schema:1,
@@ -189,11 +189,11 @@ async function login(deviceId, sub, email = MAIL){
   const raceAt = '2026-09-17T13:00:00.000Z';
   await Promise.all([
     post('/api/sync',{action:'push',email:MAIL,deviceId:'device-a',token:a.syncToken,profiles:[],docs:[
-      {profileId:profile.id,key:'program:race-a',rev:1,at:raceAt,schema:1,
+      {profileId:profile.id,key:'program:race-a',rev:1,at:raceAt,schema:2,
        value:JSON.stringify({id:'race-a',name:'Параллельная A'})}
     ]}),
     post('/api/sync',{action:'push',email:MAIL,deviceId:'device-b',token:b.syncToken,profiles:[],docs:[
-      {profileId:profile.id,key:'program:race-b',rev:1,at:raceAt,schema:1,
+      {profileId:profile.id,key:'program:race-b',rev:1,at:raceAt,schema:2,
        value:JSON.stringify({id:'race-b',name:'Параллельная B'})}
     ]})
   ]);
@@ -207,11 +207,11 @@ async function login(deviceId, sub, email = MAIL){
   // Часы устройства не определяют победителя. Более высокая ревизия должна принятьcя,
   // даже если её timestamp выглядит намного старше уже сохранённой.
   await post('/api/sync',{action:'push',email:MAIL,deviceId:'device-a',token:a.syncToken,profiles:[],docs:[
-    {profileId:profile.id,key:'program:clock',rev:2,at:'2035-01-01T00:00:00.000Z',schema:1,
+    {profileId:profile.id,key:'program:clock',rev:2,at:'2035-01-01T00:00:00.000Z',schema:2,
      value:JSON.stringify({id:'clock',name:'Старшая дата'})}
   ]});
   await post('/api/sync',{action:'push',email:MAIL,deviceId:'device-b',token:b.syncToken,profiles:[],docs:[
-    {profileId:profile.id,key:'program:clock',rev:3,at:'2020-01-01T00:00:00.000Z',schema:1,
+    {profileId:profile.id,key:'program:clock',rev:3,at:'2020-01-01T00:00:00.000Z',schema:2,
      value:JSON.stringify({id:'clock',name:'Новая ревизия'})}
   ]});
   const afterClock = await post('/api/sync',{action:'pull',email:MAIL,deviceId:'device-a',token:a.syncToken});

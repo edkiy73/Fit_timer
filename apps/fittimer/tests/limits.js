@@ -10,6 +10,7 @@
 
 const { becomeTrainer } = require('./helpers/trainer-account');
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -25,6 +26,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const b = await chromium.launch({executablePath: CHROME});
   const errs = [];
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(String(e)));
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);
@@ -74,18 +76,25 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
      await page.inputValue('#coachLinks'));
 
   /* ---- миллион символов из чужой программы ---- */
+  // Слот V2 «как приехал снаружи» — без предварительной нормализации (v2ex её делает),
+  // чтобы обрезать его пришлось именно sanitizeProgram.
+  await page.evaluate(() => {
+    window.__rawSlot = (id, prescription, extra) => Object.assign({
+      id, warmup: false, currentStageId: id + '-s1',
+      stages: [{stageId: id + '-s1', prescription, advance: {mode: 'manual'}}],
+      progressState: {count: 0, current: {}}, media: null
+    }, extra || {});
+  });
   const huge = await page.evaluate(() => {
     const p = {
       name: 'Ы'.repeat(1000000),
       desc: 'О'.repeat(1000000),
-      plans: [{days: ['Пн'], rounds: 3, roundRest: 60, exercises: [{
-        name: 'П'.repeat(1000000), desc: 'Т'.repeat(1000000),
-        mistakes: 'М'.repeat(1000000), type: 'reps', value: 10, sets: 3, rest: 99999
-      }]}]
+      plans: [{days: ['Пн'], rounds: 3, roundRest: 60, exercises: [__rawSlot('huge', {
+        name: 'П'.repeat(1000000), desc: 'Т'.repeat(1000000), mistakes: 'М'.repeat(1000000),
+        type: 'reps', value: 10, sets: 3, rest: 99999})]}]
     };
     sanitizeProgram(p);
-    normalizeExercise(p.plans[0].exercises[0]);
-    const ex = p.plans[0].exercises[0];
+    const ex = p.plans[0].exercises[0].stages[0].prescription;
     return {name: p.name.length, desc: p.desc.length,
             exName: ex.name.length, exDesc: ex.desc.length, exMist: ex.mistakes.length,
             rest: ex.rest};
@@ -100,42 +109,36 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   /* ---- resistance state из чужой программы тоже проходит единый sanitizer ---- */
   const levelSafe = await page.evaluate(() => {
     const p = {
-      name:'Резинки', plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[{
-        id:'evil-level', name:'Тяга резинки', type:'reps', value:'12-15', sets:3, rest:45,
-        loadType:'level', progMode:'level',
-        loadLevels:[
+      name:'Резинки', plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[__rawSlot('evil-level', {
+        name:'Тяга резинки', type:'reps', value:'12-15', sets:3, rest:45,
+        load:{type:'level', equipment:'band', levels:[
           {label:'A'.repeat(500)},
           {key:'medium'},
           {key:'javascript'},
           '<img src=x onerror=alert(1)>',
-          {label:'Red|15 lb'},
-          {label:'red / 15 lb'}
-        ],
-        loadLevel:999,
-        ps:{n:999999,cur:{reps:'12-15',level:999,kg:999999}}
-      }]}]
+          {label:'Red 15 lb'},
+          {label:'  red   15 LB '}
+        ], level:999},
+        progression:{mode:'level'}
+      }, {progressState:{count:999999, current:{reps:'12-15', level:999, weight:999999}}})]}]
     };
     sanitizeProgram(p);
     const ex=p.plans[0].exercises[0];
-    return {
-      levels:ex.loadLevels,
-      loadLevel:ex.loadLevel,
-      ps:ex.ps
-    };
+    return {load:ex.stages[0].prescription.load, state:ex.progressState};
   });
   ok('чужая шкала сопротивления очищается и ограничивается',
-    levelSafe.levels.length === 4
-      && levelSafe.levels[0].label.length === 60
-      && levelSafe.levels[1].key === 'medium'
-      && levelSafe.levels[2].label === '<img src=x onerror=alert(1)>'
-      && levelSafe.levels[3].label === 'Red / 15 lb',
-    JSON.stringify(levelSafe.levels));
-  ok('индекс resistance и ps.cur.level не выходят за границы шкалы',
-    levelSafe.loadLevel === 3 && levelSafe.ps.cur.level === 3 && levelSafe.ps.n === 9999,
+    levelSafe.load.levels.length === 4
+      && levelSafe.load.levels[0].label.length === 60
+      && levelSafe.load.levels[1].key === 'medium'
+      && levelSafe.load.levels[2].label === '<img src=x onerror=alert(1)>'
+      && levelSafe.load.levels[3].label === 'Red 15 lb',
+    JSON.stringify(levelSafe.load.levels));
+  ok('индекс уровня не выходит за границы шкалы, счётчик ограничен',
+    levelSafe.load.level === 3 && levelSafe.state.count === 9999,
     JSON.stringify(levelSafe));
-  ok('лишний kg в level-state не влияет на сохранность уровня',
-    levelSafe.ps.cur.kg === 500 && levelSafe.ps.cur.level === 3,
-    JSON.stringify(levelSafe.ps.cur));
+  ok('уровень прогресса вне шкалы отбрасывается, вес в состоянии ограничен',
+    levelSafe.state.current.level === null && levelSafe.state.current.weight === 1000,
+    JSON.stringify(levelSafe.state.current));
 
   /* ---- картинка обязана быть картинкой ---- */
   const pics = await page.evaluate(() => ({
@@ -156,10 +159,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   /* ---- и то же самое, но целой программой: в разметку ничего не вылезает ---- */
   const attack = await page.evaluate(() => {
     const p = {
-      name: 'Обычная', plans: [{days: ['Пн'], rounds: 1, roundRest: 30, exercises: [{
-        name: 'Приседания', type: 'reps', value: 10, sets: 1, rest: 30,
-        media: {kind: 'img', data: 'x" onerror="window.__hit=true" data-x="'}
-      }]}]
+      name: 'Обычная', plans: [{days: ['Пн'], rounds: 1, roundRest: 30, exercises: [__rawSlot('pic', {
+        name: 'Приседания', type: 'reps', value: 10, sets: 1, rest: 30
+      }, {media: {kind: 'img', data: 'x" onerror="window.__hit=true" data-x="'}})]}]
     };
     sanitizeProgram(p);
     return {media: p.plans[0].exercises[0].media};
@@ -189,16 +191,6 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   }));
   ok('управляющие символы вычищены', ctrl.line === 'Приседания тут', JSON.stringify(ctrl.line));
   ok('а перенос строки в описании остаётся', ctrl.text === 'строка\nвторая', JSON.stringify(ctrl.text));
-
-  /* ---- разбор текста тоже обрезает ---- */
-  const parsed = await page.evaluate(() => {
-    const txt = 'ПРОГРАММА: ' + 'Я'.repeat(500) + '\nДНИ: Пн\nКРУГИ: 1\nОТДЫХ МЕЖДУ КРУГАМИ: 10\n\n'
-      + 'УПРАЖНЕНИЕ: ' + 'Э'.repeat(500) + '\nФОРМАТ: повторения\nЗНАЧЕНИЕ: 10\nПОДХОДЫ: 1\nОТДЫХ: 5';
-    const {program} = parseProgramText(txt);
-    return {n: program.name.length, e: program.plans[0].exercises[0].name.length};
-  });
-  ok('разбор текста режет название программы', parsed.n === 60, parsed.n);
-  ok('и название упражнения', parsed.e === 60, parsed.e);
 
   /* ---- все поля формы ограничены в разметке ---- */
   const loose = await page.evaluate(() => {

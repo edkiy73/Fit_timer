@@ -7,6 +7,7 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/storage-idb.js */
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -24,15 +25,44 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
   page.on('pageerror', e => errs.push(String(e)));
 
+  // 0) Чистый старт модели V2: тренировочные данные старого формата стираются один раз,
+  //    аккаунт и профили остаются (docs/load-equipment-progression-plan-2026-10-08.md, 1.9)
+  const page0 = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+  page0.on('pageerror', e => errs.push(String(e)));
+  await page0.goto(BASE + '/index.html', {waitUntil: 'load'});
+  await page0.evaluate(() => {
+    localStorage.clear();
+    localStorage.setItem('users', JSON.stringify([{id: 'u1', name: 'Лена', gender: 'f', age: 30, theme: 'system', locale: 'system'}]));
+    localStorage.setItem('currentUser', 'u1');
+    localStorage.setItem('customPrograms_u1', JSON.stringify([{id: 'legacy', name: 'Старый формат',
+      plans: [{days: ['Пн'], rounds: 1, roundRest: 0, exercises: [{name: 'Жим', type: 'reps', value: 10, weight: 10, trackWeight: true}]}]}]));
+    localStorage.setItem('stats_u1', JSON.stringify({totalSec: 600, count: 1, history: [{d: '2026-10-01', pid: 'legacy', sec: 600, plan: 0}]}));
+    localStorage.setItem('account', JSON.stringify({email: '', biometry: null}));
+  });
+  await page0.reload({waitUntil: 'load'});
+  await page0.waitForTimeout(1500);
+  const wiped = await page0.evaluate(async () => ({
+    legacy: customPrograms.some(p => p.id === 'legacy'),
+    history: (stats.history || []).length,
+    model: await kvGet('dataModel'),
+    user: users.some(u => u.id === 'u1' && u.name === 'Лена')
+  }));
+  ok('программы и история старого формата стёрты при первом запуске V2',
+    !wiped.legacy && wiped.history === 0 && wiped.model === '2', JSON.stringify(wiped));
+  ok('профиль при этом остался', wiped.user, JSON.stringify(wiped));
+
   // 1) «старая версия»: данные только в localStorage
+  await installV2Fixtures(page);
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.evaluate(() => {
     localStorage.clear();
     const u = {id: 'u1', name: 'Лена', gender: 'f', age: 30, theme: 'system', locale: 'system'};
     localStorage.setItem('users', JSON.stringify([u]));
     localStorage.setItem('currentUser', 'u1');
+    // данные уже в модели V2: перенос localStorage → IndexedDB не должен их потерять
+    localStorage.setItem('dataModel', '2');
     localStorage.setItem('customPrograms_u1', JSON.stringify([{id: 'old', name: 'Старая программа',
-      plans: [{days: ['Пн'], rounds: 1, roundRest: 0, exercises: [{name: 'Планка', type: 'time', value: 30, rest: 10}]}]}]));
+      plans: [{id: 'old-plan', days: ['Пн'], rounds: 1, roundRest: 0, exercises: [v2ex('Планка', {type: 'time', value: 30, rest: 10})]}]}]));
     localStorage.setItem('account', JSON.stringify({email: '', biometry: null}));
   });
   await page.reload({waitUntil: 'load'});
@@ -54,7 +84,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const added = Array.from({length:12}, (_, n) => ({
       id: 'big' + n, name: 'Большая ' + n, cover: pic,
       plans: [{days: ['Вт'], rounds: 1, roundRest: 0, exercises: Array.from({length: 10}, (_, i) =>
-        ({name: 'У' + i, type: 'reps', value: 10, rest: 10, media: {kind: 'img', data: pic}}))}]
+        v2ex('У' + i, {value: 10, rest: 10, media: {kind: 'img', data: pic}}))}]
     }));
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, ...added]));
     await loadData();

@@ -13,7 +13,7 @@ const builder = read('src/app/60-builder.js');
 const events = read('src/app/90-events.js');
 const ru = read('src/i18n/ru.js');
 const en = read('src/i18n/en.js');
-const FitAIProtocol = require('../lib/ai-protocol');
+const FitAIContract = require('../lib/fit-ai-contract');
 
 need(builder.includes("dur: ['5 мин', '10 мин', '15 мин', '20 мин', '30 мин', '40 мин', '45+ мин']"),
   '5-minute duration option is present');
@@ -62,12 +62,12 @@ need(copyFullStart >= 0 && copyFullHandler.includes('copyProgramTextWithChoice(e
 need(!copyFullHandler.includes('aiPrompt(') && !copyFullHandler.includes('=== TASK ===') && !copyFullHandler.includes('CURRENT PROGRAM'),
   'copy-program action does not prepend AI protocol or hidden task');
 
-const prompt = FitAIProtocol.programPrompt('Russian');
+const prompt = FitAIContract.buildPrompt('program.create', FitAIContract.normalizeInput('program.create', {language:'Russian', task:'test'}).input);
 need(prompt.includes('Do not target a fixed number of exercises'),
-  'AI protocol does not target a fixed exercise count');
-need(prompt.includes('rep-based work ≈ reps × 3 seconds × sides'),
+  'AI contract does not target a fixed exercise count');
+need(prompt.includes('rep work ≈ reps × 3 seconds × sides'),
   'AI protocol estimates rep work with the same 3-sec baseline as the app');
-need(prompt.includes('5 to 20 minutes, aim to stay within about ±5 minutes'),
+need(prompt.includes('5–20 minute targets stay within about ±5 minutes'),
   'short workouts use the ±5-minute planning tolerance');
 
 for(const key of ['ai.needProgramInput','ai.needExerciseInput','ai.needEditRequest','images.needProgramName','images.needExerciseName','images.needAllExerciseNames']){

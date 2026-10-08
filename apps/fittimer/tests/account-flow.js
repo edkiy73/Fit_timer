@@ -13,6 +13,8 @@
 
 const { becomeTrainer } = require('./helpers/trainer-account');
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
+const { catalogProgram, translated } = require('./helpers/catalog-program');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -28,32 +30,16 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 // Название своё на каждый прогон: хранилище между запусками не чистится, а
 // одобренная программа остаётся в каталоге — два прогона давали в нём двойника.
 const PNAME = 'Сила дома ' + Math.random().toString(36).slice(2, 6);
-const PROG = `ПРОГРАММА: ${PNAME}
-ДНИ: Пн
-КРУГИ: 1
-ОТДЫХ МЕЖДУ КРУГАМИ: 10
-ПРОГРЕССИЯ: 1
-
-УПРАЖНЕНИЕ: Приседания
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 12
-ПОДХОДЫ: 1
-ОТДЫХ: 5
-
-УПРАЖНЕНИЕ: Отжимания
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 10
-ПОДХОДЫ: 1
-ОТДЫХ: 5
-
-УПРАЖНЕНИЕ: Планка
-ФОРМАТ: время
-ЗНАЧЕНИЕ: 30
-ПОДХОДЫ: 1
-ОТДЫХ: 5`;
+// Та же программа в каталожной форме V2 (заявка уходит прямо в API)
+const PROG = catalogProgram(PNAME, [
+  {name:'Приседания', value:'12', sets:1, rest:5},
+  {name:'Отжимания', value:'10', sets:1, rest:5},
+  {name:'Планка', type:'time', value:'30', sets:1, rest:5}
+], {days:['mon'], rounds:1});
 
 async function boot(b, label, errs, url){
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(label + ': ' + e));
   await page.goto(url || BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);
@@ -72,16 +58,19 @@ async function boot(b, label, errs, url){
   const made = await becomeTrainer(one, {email: MAIL, handle: NICK, trainer: {
     name: 'Лена', about: 'Домашний фитнес, только коврик.', years: 8, links: 't.me/' + NICK.slice(1)}});
   ok('страница тренера создана внутри аккаунта', made.ok && made.handle === NICK, made.err || made.handle);
-  await one.evaluate(async ({txt}) => {
-    const r = parseProgramText(txt);
-    const p = r.program || r; p.id = 'm1';
+  await one.evaluate(async ({name}) => {
+    const p = {id: 'm1', name, progression: 1, plans: [v2plan('m1-plan', [
+      v2ex('Приседания', {value: '12', sets: 1, rest: 5}),
+      v2ex('Отжимания', {value: '10', sets: 1, rest: 5}),
+      v2ex('Планка', {type: 'time', value: '30', sets: 1, rest: 5})
+    ], {days: ['Пн'], rounds: 1, roundRest: 10})]};
     customPrograms.push(p); await savePrograms();
     navigator.clipboard.writeText = async () => {};
     navigator.share = async () => {};
     const c = await addClient(); c.name = 'Марина';
     await saveClients(); activateClientAt(clients.indexOf(c));
     await sendProgramToClient(c, customPrograms.find(x => x.id === 'm1'));
-  }, {txt: PROG});
+  }, {name: PNAME});
   const key1 = await one.evaluate(() => trainer.key || '');
   ok('ник закреплён за аккаунтом, ключ страницы выдан', !!key1, key1.slice(0, 6) + '…');
 
@@ -89,29 +78,24 @@ async function boot(b, label, errs, url){
   ok('ссылка подопечному создана', !!linkId, linkId);
 
   // Заявка в каталог — чтобы проверить, что удаление уносит и её.
-  const sub = await one.evaluate(async () => {
+  const sub = await one.evaluate(async (program) => {
     const p = customPrograms.find(x => x.id === 'm1');
     return await apiPost('/api/catalog', {
       by: normHandle(trainer.handle), trainerKey: trainer.key,
       item: {name: p.name, gives: 'Короткая программа на каждый день без инвентаря.',
-             cat: 'tone', level: 'Новичок', min: 20, exCount: 3, text: programToText(p)}
+             cat: 'tone', level: 'Новичок', min: 20, program}
     });
-  });
+  }, PROG);
   ok('заявка в каталог ушла', sub.status === 'pending', sub.status);
 
   // На модерации добавляем второй язык вручную: отправка тренером сама ИИ не запускает.
   const engName = 'Home Strength ' + PNAME.split(' ').pop();
-  const engText = PROG
-    .replace('ПРОГРАММА: ' + PNAME, 'ПРОГРАММА: ' + engName)
-    .replace('УПРАЖНЕНИЕ: Приседания', 'УПРАЖНЕНИЕ: Squats')
-    .replace('УПРАЖНЕНИЕ: Отжимания', 'УПРАЖНЕНИЕ: Push-ups')
-    .replace('УПРАЖНЕНИЕ: Планка', 'УПРАЖНЕНИЕ: Plank');
   await fetch(BASE + '/api/admin', {
     method: 'POST',
     headers: {'Content-Type': 'application/json', 'X-Admin-Key': encodeURIComponent(ADMIN)},
-    body: JSON.stringify({action: 'edit', id: sub.id, item: {sourceLocale:'ru', locales:{
-      ru:{name:PNAME, gives:'Короткая программа на каждый день без инвентаря.', text:PROG},
-      en:{name:engName, gives:'A short everyday home workout without equipment.', text:engText}
+    body: JSON.stringify({action: 'edit', id: sub.id, item: {locales:{
+      en:{name:engName, gives:'A short everyday home workout without equipment.',
+        texts:translated(PROG, {'Приседания':'Squats', 'Отжимания':'Push-ups', 'Планка':'Plank'}, {programName:engName})}
     }}})
   });
   // Берём её в каталог: удаление проверяем на том, что в каталоге УЖЕ лежит, —

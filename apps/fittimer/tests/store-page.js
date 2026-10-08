@@ -8,6 +8,7 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/store-page.js */
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -19,83 +20,34 @@ let bad = 0;
 const ok = (name, cond, extra) => { if(!cond) bad++;
   console.log((cond ? '  ok  ' : ' ПЛОХО') + '  ' + name + (extra != null ? '  → ' + extra : '')); };
 
-const warm = `УПРАЖНЕНИЕ: Суставная разминка
-ФОРМАТ: время
-ЗНАЧЕНИЕ: 60
-ПОДХОДЫ: 1
-РАЗМИНКА: да
-ОТДЫХ: 20`;
+const { catalogProgram } = require('./helpers/catalog-program');
+const warm = {name:'Суставная разминка', warmup:true, type:'time', value:'60', sets:1, rest:20};
 
-const TWO = `ПРОГРАММА: Верх и низ
-ПРОГРЕССИЯ: 4
+// Каталог отдаёт программу V2 уже на языке витрины
+const TWO = catalogProgram('Верх и низ', [], {progressionEvery:4, plans:[
+  {days:['mon', 'thu'], rounds:3, roundRest:90, exercises:[warm,
+    {name:'Отжимания', value:'10', sets:3, rest:60},
+    {name:'Тяга гантели', value:'12', sets:3, rest:60,
+      load:{type:'weight', equipment:'dumbbell', equipmentName:'', count:1, weight:8, levels:[], level:0},
+      progression:{mode:'weight', every:null, repsStep:null, repsMax:null, weightStep:2, weightMax:null, timeStep:null, timeMax:null}}]},
+  {days:['tue', 'fri'], rounds:2, roundRest:60, exercises:[warm, {name:'Приседания', value:'15', sets:4, rest:45}]}
+]});
 
-ДЕНЬ: Пн, Чт
-КРУГИ: 3
-ОТДЫХ МЕЖДУ КРУГАМИ: 90
+const ONE = catalogProgram('Просто круг', [
+  {name:'Приседания', value:'12', sets:3, rest:45},
+  {name:'Планка', type:'time', value:'40', sets:3, rest:40},
+  {name:'Выпады', value:'10', sets:3, rest:45}
+], {days:['wed'], rounds:3});
+// Состав «два упражнения» — проверка нумерации одного варианта без подписей
+ONE.plans[0].exercises.pop();
 
-${warm}
-
-УПРАЖНЕНИЕ: Отжимания
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 10
-ПОДХОДЫ: 3
-ОТДЫХ: 60
-
-УПРАЖНЕНИЕ: Тяга гантели
-ФОРМАТ: повторения и вес
-ЗНАЧЕНИЕ: 12
-ВЕС: 8
-ПОДХОДЫ: 3
-ОТДЫХ: 60
-ШАГ ВЕСА: 2
-
-ДЕНЬ: Вт, Пт
-КРУГИ: 2
-ОТДЫХ МЕЖДУ КРУГАМИ: 60
-
-${warm}
-
-УПРАЖНЕНИЕ: Приседания
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 15
-ПОДХОДЫ: 4
-ОТДЫХ: 45`;
-
-const ONE = `ПРОГРАММА: Просто круг
-ДНИ: Ср
-КРУГИ: 3
-ОТДЫХ МЕЖДУ КРУГАМИ: 60
-
-УПРАЖНЕНИЕ: Приседания
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 12
-ПОДХОДЫ: 3
-ОТДЫХ: 45
-
-УПРАЖНЕНИЕ: Планка
-ФОРМАТ: время
-ЗНАЧЕНИЕ: 40
-ПОДХОДЫ: 3
-ОТДЫХ: 40`;
-
-const BAND = `ПРОГРАММА: Резинки
-ПРОГРЕССИЯ: 2
-
-ДЕНЬ: Ср
-КРУГИ: 1
-ОТДЫХ МЕЖДУ КРУГАМИ: 0
-
-УПРАЖНЕНИЕ: Тяга резинки сверху
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 12-15
-НАГРУЗКА: сопротивление
-СОПРОТИВЛЕНИЕ: Среднее
-УРОВНИ СОПРОТИВЛЕНИЯ: Лёгкое | Среднее | Сильное | Очень сильное
-ПОДХОДЫ: 3
-ОТДЫХ: 60
-УСЛОЖНЯТЬ: да
-ШАГ ПОВТОРОВ: 2
-ПОТОЛОК ПОВТОРОВ: 18`;
+const BAND = catalogProgram('Резинки', [
+  {name:'Тяга резинки сверху', value:'12-15', sets:3, rest:60,
+    load:{type:'level', equipment:'band', equipmentName:'', count:1, weight:0, levels:['light', 'medium', 'strong', 'veryStrong'], level:1},
+    progression:{mode:'level', every:null, repsStep:2, repsMax:18, weightStep:null, weightMax:null, timeStep:null, timeMax:null}},
+  'Приседания', 'Планка'
+], {days:['wed'], rounds:1});
+BAND.plans[0].exercises = BAND.plans[0].exercises.slice(0, 1);
 
 const shot = page => page.evaluate(() => ({
   heads: [...document.querySelectorAll('#siList .si-plan')].map(h => ({
@@ -116,6 +68,7 @@ const shot = page => page.evaluate(() => ({
   const b = await chromium.launch({executablePath: CHROME});
   const errs = [];
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(String(e)));
   let catalogItem = null;
   await page.route('**/api/catalog*', async route => {
@@ -129,10 +82,10 @@ const shot = page => page.evaluate(() => ({
   await page.waitForTimeout(2000);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(1500); }
 
-  const open = async (txt, extra) => {
+  const open = async (program, extra) => {
     catalogItem = Object.assign({id: 'utest01', by: '@lena.doma', cat: 'tone', level: 'Средний',
       min: 35, name: 'Проверка', gives: 'Описание программы для проверки состава.',
-      text: txt, cover: null}, extra || {});
+      program, locale: 'ru', exCount: 0, cover: null}, extra || {});
     await page.evaluate(async () => {
       await loadStoreServer();
       await openStoreItem('utest01');
@@ -143,6 +96,16 @@ const shot = page => page.evaluate(() => ({
   await open(TWO);
   await page.waitForTimeout(400);
   const two = await shot(page);
+  const head = await page.evaluate(() => ({
+    name: document.getElementById('siName').textContent,
+    gives: document.getElementById('siGives').textContent,
+    by: document.getElementById('siNick').textContent
+  }));
+  ok('страница программы открылась с названием и описанием',
+     head.name === 'Проверка' && /Описание программы/.test(head.gives), head.name);
+  ok('автор подписан', head.by === '@lena.doma', head.by);
+  ok('в шапке уровень и длительность',
+     two.facts.includes('Средний') && two.facts.some(f => /^35 мин/.test(f)), two.facts.join(' · '));
 
   ok('варианты подписаны днями', two.heads.length === 2
      && two.heads[0].title === 'Пн, Чт' && two.heads[1].title === 'Вт, Пт',
@@ -160,6 +123,7 @@ const shot = page => page.evaluate(() => ({
   ok('нумерация СВОЯ у каждого варианта',
      two.rows.map(r => r.num).join(',') === ',1,2,,1',
      two.rows.map(r => r.num || '(разминка)').join(','));
+  ok('вес снаряда виден в составе', /8 кг/.test(two.rows[2].meta), two.rows[2].meta);
 
   ok('в шапке дни всей программы, а не первого варианта',
      two.facts.some(f => f === 'Пн, Вт, Чт, Пт'), two.facts.join(' · '));
@@ -213,9 +177,10 @@ const shot = page => page.evaluate(() => ({
   await page.waitForTimeout(400);
   const unlocked = await page.evaluate(() => ({
     list: !document.getElementById('siList').classList.contains('hidden'),
+    lock: !document.getElementById('siLock').classList.contains('hidden'),
     rows: document.querySelectorAll('#siList .ex-row').length
   }));
-  ok('с подпиской состав открыт', unlocked.list && unlocked.rows === 2, unlocked.rows);
+  ok('с подпиской состав открыт', unlocked.list && !unlocked.lock && unlocked.rows === 2, unlocked.rows);
 
   console.log('\npageerror: ' + (errs.length ? errs.join(' | ') : 'нет'));
   if(errs.length) bad += errs.length;

@@ -5,6 +5,9 @@ const { send, fail } = require('../util');
 const { getSettings, sanitizeSettings, generate } = require('../ai');
 const { loadSecrets, secretsStatus, setSecret } = require('../secrets');
 
+const STRUCTURED_PROBE = {type:'object', additionalProperties:false, required:['status','days'],
+  properties:{status:{type:'string', enum:['ok']}, days:{type:'integer', minimum:1, maximum:31}}};
+
 const ACTIONS = new Set(['settings_get','save_settings','test_ai','secrets_status','secret_set']);
 
 async function handleAdminAISettings(action, body, res){
@@ -50,12 +53,27 @@ async function handleAdminAISettings(action, body, res){
         ? 'Minimal flat app icon on dark background, no text'
         : 'Ответь ровно одним словом: работает'
     );
+    // Действия с контрактом требуют Structured Output: маршрут, который его не держит,
+    // нельзя молча ставить основным — проверяем той же схемой и тем же локальным валидатором.
+    let structured = null;
+    if(type === 'text'){
+      try{
+        const probe = await generate('text', settings, 'Return JSON: status "ok" and the number of days in a week.', {
+          schema:{name:'route_check', schema:STRUCTURED_PROBE}, maxOutputTokens:256
+        });
+        structured = {ok:probe.json && probe.json.status === 'ok' && probe.json.days === 7,
+          provider:probe.provider, model:probe.model, fallback:probe.fallback};
+      }catch(e){
+        structured = {ok:false, detail:String(e.message || e).slice(0,300)};
+      }
+    }
     send(res,200,{
       ok:true,
       provider:out.provider,
       model:out.model,
       fallback:out.fallback,
-      result:type === 'text' ? out.text.slice(0,100) : 'image'
+      result:type === 'text' ? out.text.slice(0,100) : 'image',
+      structured
     });
   }catch(e){
     fail(res,502,'ai_test_failed',{detail:String(e.message || e).slice(0,500)});

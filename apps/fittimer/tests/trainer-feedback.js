@@ -11,6 +11,7 @@
 
 const { becomeTrainer } = require('./helpers/trainer-account');
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -22,20 +23,9 @@ let bad = 0;
 const ok = (name, cond, extra) => { if(!cond) bad++;
   console.log((cond ? '  ok  ' : ' ПЛОХО') + '  ' + name + (extra != null ? '  → ' + extra : '')); };
 
-const PROG = `ПРОГРАММА: Сила дома
-ДНИ: Пн
-КРУГИ: 1
-ОТДЫХ МЕЖДУ КРУГАМИ: 10
-ПРОГРЕССИЯ: 1
-
-УПРАЖНЕНИЕ: Приседания
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 12
-ПОДХОДЫ: 1
-ОТДЫХ: 5`;
-
 async function boot(b, label, errs, url){
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(label + ': ' + e));
   await page.goto(url || BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);
@@ -83,9 +73,9 @@ async function boot(b, label, errs, url){
   ok('про старую ссылку сказано прямо', /старой версией/.test(staleMsg), staleMsg.slice(0, 48) + '…');
 
   // ---- живой круг ----
-  const link = await tp.evaluate(async (txt) => {
-    const r = parseProgramText(txt);
-    const p = r.program || r; p.id = 'tp1';
+  const link = await tp.evaluate(async () => {
+    const p = {id: 'tp1', name: 'Сила дома', progression: 1, plans: [v2plan('tp1-plan',
+      [v2ex('Приседания', {value: '12', sets: 1, rest: 5})], {days: ['Пн'], rounds: 1, roundRest: 10})]};
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
     await loadData();
     await savePrograms();
@@ -96,7 +86,7 @@ async function boot(b, label, errs, url){
     await saveClients(); activateClientAt(clients.indexOf(c));
     await sendProgramToClient(c, customPrograms.find(x => x.id === 'tp1'));
     return out;
-  }, PROG);
+  });
 
   const cp = await boot(b, 'клиент', errs, link);
   await cp.waitForTimeout(1300);
@@ -123,7 +113,7 @@ async function boot(b, label, errs, url){
   // клиент занимается
   await cp.evaluate(async () => {
     const current = customPrograms.find(x => x.name === 'Сила дома');
-    const history = [...(stats.history || []), {d: localISO(new Date()), t: 9, pid: current.id, sec: 900, kcal: 90, plan: 0}];
+    const history = [...(stats.history || []), {d: localISO(new Date()), t: 9, pid: current.id, sec: 900, kcal: 90, planId: normPlans(current)[0].id}];
     await kvSet(pk('stats'), JSON.stringify(Object.assign({}, stats, {history, count:1})));
     await loadData();
     const p = customPrograms.find(x => x.name === 'Сила дома');

@@ -4,6 +4,7 @@ import { appLocale, canonicalLabel, loadAppLocale, localeTag, normalizeLocalePre
 import { createRemotePushClient } from '@appbase/core/remote-push.js';
 import { appNotifications, appRuntimeCompat, appUi } from './00-dependencies.js';
 import { registerAction } from './05-actions.js';
+import FitAIContract from '../../lib/fit-ai-contract.js';
 import { $, ICONS, ROOT_TABS, aiScreenDirty, appAlert, appConfirm, appDialog, asTab, audioCtx, beep,
   clearSnap, commitWeightModal, configureAudioRuntime, configureWorkoutTiming, fxVol, goBackTo, goTab,
   guardNum, icon, initAudio, keepAwake, leaveGuard, masterGain, musicMode, numFieldsOk, openStart,
@@ -29,17 +30,17 @@ import { account, bioDisable, bioEnable, bioSupported, bumpAccountMeta, complete
   signOut, syncAccountLocale,
   setAccountEventHooks, syncUserForm, tryUnlock, uDraft, userCurrency, userDirty, wipeAccount, writeAccountBucket
 } from './20-account.js';
-import { LIM, addPhoto, clampLine, clampText, cleanLink, delCmpPhoto, deleteAllPhotos, ensureWarmup,
+import { LIM, sanitizeProgram, addPhoto, clampLine, clampText, cleanLink, delCmpPhoto, deleteAllPhotos, ensureWarmup,
   exportAllData, finishOnboardingCreate, importAllData, loadPhotos, openCompare, openWeightHist,
   renderCmp, renderPhotos, saveWeightHist, shareCompare, shareWeightChart, shareWellChart,
   startOnboarding, whoDraft, whoFinish, whoSyncForm
 } from './30-progress-media.js';
-import { AI_SOURCES, aiClientVerdict, aiSrc, aiUiText, apiPost, applyProgressionAll, btnBusy,
+import { AI_SOURCES, aiSrc, aiUiText, apiPost, applyProgressionAll, btnBusy,
   callGemini, clProgs, clients, closeImages, coachPhotoDraft, dropExMedia, editAIProg, editAIPrompt,
   exImageItem, exaPrompt, exeIdx, exePrompt, flashDone, generateAllImagesViaAI,
   generateOneImageViaAI, generateSlotImageViaAI, imageSlots, imagesPromptText, imgTray,
   copyProgramTextWithChoice, importProgramCode, importProgramFile, importProgramLink, markAITab, normHandle, openAI,
-  openEditAI, openExAI, openExEdAI, openImages, openYouTube, premiumGate, programToText,
+  openEditAI, openExAI, openExEdAI, openImages, openYouTube, premiumGate,
   pushProfile, refreshTrainerProfile, renderGreeting, renderSlots, renderToday, renderTray,
   clearActiveClient, removeClientById, saveClients, saveTrainer, useUploadedCoachPhoto,
   appendImagesToTray, clearUnusedImageTray, ensureImageInTray, setExImg, setProgramsEventHooks, updateTrainerProfile, setupAIAnswer, shrinkAll, slotTarget, trainer,
@@ -51,12 +52,12 @@ import { addClient, curClient, doPublish, loadStoreServer, openClient, openMyCat
   renderStoreFilters, renderTrainerCard, sendProgramToClient, setTrainerEventHooks, siItem, storeCountText, storeFilter,
   storeFrom, tpFrom
 } from './50-trainer-catalog.js';
-import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExerciseAsNew,
+import { MAX_MAIN, MAX_WARM, MSG_AI_EMPTY, MSG_AI_PARSE, blankExercise, cloneExerciseAsNew, contractIds, parseContractAnswer,
   commitExercise, commitPlanFields, curPlan, delExerciseAt, draft, dropFreshEx, dupExerciseAt,
-  clearExerciseDraft, exDirty, exDraft, exIdx, exIsNew, exerciseProgressionConfigOk, exerciseResistanceScaleOk, fillPlanFields, markExerciseExisting, hasWeight, initAIForm, normValue, openBuilder, programHasProgression,
-  openExercise, parseProgramText, parseStepNum, parseValue, planIdx, programDirty, renderExList, renderExMedia,
-  renderProgControls, saveProgram, selectPlanVariant, setExerciseLoadType, setExerciseMetric, shrinkImage, syncCover, syncExDetailsSum, syncExNowHints,
-  syncExProgSum, syncExSwapAvailability, syncExType, syncExWarm, syncRotateUI
+  clearExerciseDraft, exDirty, exDraft, exIdx, exIsNew, exP, exerciseDraftProblems, exerciseProgressionConfigOk, exerciseResistanceScaleOk, fillPlanFields, markExerciseExisting, hasWeight, initAIForm, normValue, openBuilder, programHasProgression,
+  openExercise, parseStepNum, parseValue, planIdx, programDirty, renderExList, renderExMedia,
+  renderProgControls, saveProgram, selectPlanVariant, setExerciseLoadType, setExerciseMetric, setExerciseProgressionOn, shrinkImage, syncCover, syncExDetailsSum, syncExNowHints,
+  syncExProgSum, syncExType, syncExWarm, syncRotateUI
 , setBuilderEventHooks } from './60-builder.js';
 import { afterExChange, applyProgCheck, autoGrow, backToWorkout, buildSteps, closeSwapHint, esc,
   completeStep, exFromWork, finishPartialWorkout, nextStep, openSwapHint, prevStep, refreshDetailsFade, saveExToWorkout,
@@ -218,7 +219,7 @@ function registerEventActions(){
   registerAction('backFromExercise', () => leaveExercise());
   registerAction('saveExercise', () => {
     if(numFieldsOk('scrExercise') && exNameOk()
-      && exerciseResistanceScaleOk(true) && exerciseProgressionConfigOk(true)) saveExAndBack();
+      && exerciseResistanceScaleOk(true) && exerciseProgressionConfigOk(true) && exerciseLoadOk()) saveExAndBack();
   });
   registerAction('setExerciseType', btn => {
     setExerciseMetric(exDraft, btn.dataset.exType === 'time' ? 'time' : 'reps', exIsNew);
@@ -245,21 +246,10 @@ function registerEventActions(){
   });
   registerAction('toggleExerciseProgression', () => {
     const on = !$('exProgOn').classList.contains('on');
-    exDraft.progOn = on;
-    if(on){
-      if(hasWeight(exDraft) && exDraft.wStep == null) exDraft.wStep = 2;
-      if(exDraft.type !== 'time' && exDraft.repsStep == null) exDraft.repsStep = hasWeight(exDraft) ? 0 : 1;
-      if(exDraft.type === 'time' && exDraft.timeStep == null) exDraft.timeStep = 5;
-    }
+    setExerciseProgressionOn(exDraft, on);
     ['exStepReps','exStepWeight','exStepTime','exMaxReps','exMaxWeight','exMaxTime'].forEach(id => delete $(id).dataset.touched);
     renderProgControls();
     syncExDetailsSum();
-  });
-  registerAction('toggleExerciseSwap', () => {
-    exDraft.swapOn = !exDraft.swapOn;
-    $('exSwapOn').classList.toggle('on', exDraft.swapOn);
-    setShown('exSwapBox', exDraft.swapOn);
-    if(exDraft.swapOn) autoGrow($('exSwapDesc'));
   });
   registerAction('toggleExerciseWarmup', () => {
     const list = curPlan().exercises;
@@ -269,13 +259,14 @@ function registerEventActions(){
     if(exDraft.warmup && nMain >= MAX_MAIN){ appAlert(t('exercise.mainMax',{count:MAX_MAIN})); return; }
     exDraft.warmup = !exDraft.warmup;
     $('exWarm').classList.toggle('on', exDraft.warmup);
-    if(exDraft.warmup) exDraft.sets = 1;
+    if(exDraft.warmup) exP(exDraft).sets = 1;
     syncExWarm();
     renderProgControls();
   });
   registerAction('toggleExercisePerSide', () => {
-    exDraft.perSide = !exDraft.perSide;
-    $('exSide').classList.toggle('on', exDraft.perSide);
+    const pr = exP(exDraft);
+    pr.perSide = !pr.perSide;
+    $('exSide').classList.toggle('on', pr.perSide);
   });
   registerAction('toggleExerciseDetails', () => {
     const box = $('exDetailsBox'), open = box.classList.contains('hidden');
@@ -294,10 +285,10 @@ function registerEventActions(){
     syncExDetailsSum();
   });
   registerAction('generateExerciseMedia', () => {
-    const item = exImageItem(Object.assign({}, exDraft, {
-      name:$('exName').value,
-      desc:$('exDesc').value
-    }));
+    const item = Object.assign(exImageItem(exDraft), {
+      name:$('exName').value.trim(),
+      desc:$('exDesc').value.trim()
+    });
     generateOneImageViaAI('ex', item, item.name, data => {
       setExImg(exDraft, data);
       renderExMedia();
@@ -397,7 +388,8 @@ function registerEventActions(){
     const cfg = AI_SOURCES[aiSrc];
     if(!cfg) return;
     if(cfg.guard && !(await cfg.guard())) return;
-    runSelfAI(cfg.prompt, 'aiResult', cfg.apply, aiUiText(cfg.selfTitle), cfg.kind);
+    // Contract V2: встроенному ИИ уходит структурированный input, а не текст prompt'а
+    runSelfAI(cfg.input ? () => ({input:cfg.input()}) : cfg.prompt, 'aiResult', cfg.apply, aiUiText(cfg.selfTitle), cfg.kind);
   });
   registerAction('copyAiRequest', async () => {
     const cfg = AI_SOURCES[aiSrc];
@@ -1700,14 +1692,15 @@ export async function ytCopyPrompt(){
 export async function ytApplyResult(){
   const raw = ($('aiResult').value || '').trim();
   if(!raw){ appAlert(MSG_AI_EMPTY()); return; }
-  const kind = aiSrc === 'video' ? 'video.parse' : 'program.create';
-  const checked = aiClientVerdict(kind, raw);
-  if(!checked) return;
-  const {program, errors} = parseProgramText(checked);
+  // и сервер (подтверждённые факты видео), и чат отвечают тем же Program DTO V2
+  const parsed = parseContractAnswer('program.create', raw);
+  const built = parsed.json ? FitAIContract.programFromCreate(parsed.json, contractIds) : null;
+  const errors = parsed.json ? built.errors : parsed.errors;
   if(errors.length){
     appAlert(MSG_AI_PARSE() + '\n\n' + t('video.parseProblems') + '\n— ' + errors.join('\n— '));
     return;
   }
+  const program = sanitizeProgram(built.program);
   program.id = 'p' + Date.now();
   program.stats = {completions: 0};
   program.locale = appLocale === 'ru' ? 'ru' : 'en';
@@ -1871,15 +1864,15 @@ export function addExManual(){
   const nWarm = list.filter(e => e.warmup).length;
   if(list.length - nWarm >= MAX_MAIN){ appAlert(t('exercise.mainLimitAdd',{count:MAX_MAIN})); return; }
   const ex = blankExercise();
-  // В ручном редакторе прогрессия — осознанный opt-in. blankExercise хранит
-  // compatibility-дефолты для parser/legacy, поэтому выключаем её именно здесь,
-  // не меняя семантику старых и AI-созданных упражнений.
-  ex.progOn = false;
-  ex.loadType = 'none';
-  ex.trackWeight = false;
+  const pr = exP(ex);
+  // В ручном редакторе прогрессия — осознанный opt-in: новое упражнение без неё
+  pr.progression.mode = 'none';
   // наследуем формат, подходы и отдых у предыдущего — при сборке они обычно одинаковые
   const prev = list.filter(e => !e.warmup).slice(-1)[0];
-  if(prev){ ex.type = prev.type; ex.sets = prev.sets || 1; ex.rest = prev.rest; ex.value = prev.value; }
+  if(prev){
+    const pp = exP(prev);
+    pr.type = pp.type; pr.sets = pp.sets || 1; pr.rest = pp.rest; pr.value = pp.value;
+  }
   list.push(ex);
   renderExList();
   openExercise(list.length - 1, true);
@@ -1896,6 +1889,14 @@ function exNameOk(){
   return false;
 }
 
+// вес без снаряда, «Другое» без названия и т. п. — не сохраняем, а объясняем, что дописать
+function exerciseLoadOk(){
+  const problems = exerciseDraftProblems();
+  if(!problems) return true;
+  appAlert(problems);
+  return false;
+}
+
 // дублируем то, что видно сейчас, вместе с несохранёнными правками формы
 function dupExercise(){
   if(!exDraft || exIdx < 0) return;
@@ -1909,7 +1910,7 @@ function dupExercise(){
     return;
   }
   if(!numFieldsOk('scrExercise') || !exNameOk()
-    || !exerciseResistanceScaleOk(true) || !exerciseProgressionConfigOk(true)) return;
+    || !exerciseResistanceScaleOk(true) || !exerciseProgressionConfigOk(true) || !exerciseLoadOk()) return;
   if(list[exIdx]) list[exIdx] = commitExercise();
   list.splice(exIdx + 1, 0, cloneExerciseAsNew(list[exIdx]));
   clearExerciseDraft();
@@ -1917,7 +1918,7 @@ function dupExercise(){
 }
 async function delExercise(){
   if(!exDraft || exIdx < 0) return;
-  const nameTxt = (exDraft.name || '').trim() || t('exercise.this');
+  const nameTxt = (exP(exDraft).name || '').trim() || t('exercise.this');
   if(!(await appDialog(t('exercise.deleteQuestion',{name:nameTxt}), {confirm: true, okText: t('common.delete'), cancelText: t('common.keep')}))) return;
   markExerciseExisting();
   curPlan().exercises.splice(exIdx, 1);
@@ -2392,7 +2393,7 @@ export function initEvents(){
    ['exStepReps','int'],['exMaxReps','int'],['exStepWeight','dec'],['exMaxWeight','dec'],
    ['exStepTime','int'],['exMaxTime','int']].forEach(([id,k,req])=> guardNum(id,k,req));
   ['bRoundRest','uePrepSec','ueReadySec','ueSideSec'].forEach(id => guardNum(id,'int'));
-  $('exName').oninput = e => { exDraft.name = e.target.value; };
+  $('exName').oninput = e => { exP(exDraft).name = e.target.value; };
   // «Как считать» (повторения/время) и вес — независимы: переключение одного не
   // трогает другое. != null везде вместо простой проверки на «истинность» — иначе
   // явный 0 в шаге (значит «эта ось не растёт») JS воспримет как «не задано» и
@@ -2402,19 +2403,15 @@ export function initEvents(){
       $(id).dataset.touched = '1';
       syncExProgSum();
       syncExNowHints();
-      syncExSwapAvailability();
     };
   });
-  // база поменялась — итог и достижимость потолка пересчитываются тут же
+  // база поменялась — итог пересчитывается тут же
   ['exValue','exWeight'].forEach(id => $(id).addEventListener('input', ()=>{
     syncExNowHints();
-    syncExSwapAvailability();
   }));
-  $('exSwapName').oninput = e => { exDraft.swapName = e.target.value; };
-  $('exSwapDesc').oninput = e => { exDraft.swapDesc = e.target.value; };
-  $('exDesc').oninput = e => { exDraft.desc = e.target.value; syncExDetailsSum(); };
-  $('exMistakes').oninput = e => { exDraft.mistakes = e.target.value; syncExDetailsSum(); };
-  $('exVideo').oninput = e => { exDraft.video = e.target.value; syncExDetailsSum(); };
+  $('exDesc').oninput = e => { exP(exDraft).desc = e.target.value; syncExDetailsSum(); };
+  $('exMistakes').oninput = e => { exP(exDraft).mistakes = e.target.value; syncExDetailsSum(); };
+  $('exVideo').oninput = e => { exP(exDraft).video = e.target.value; syncExDetailsSum(); };
   // картинка упражнения через ИИ — по тому, что уже набрано в форме
   $('exMediaFile').onchange = e => {
     const file = e.target.files && e.target.files[0];

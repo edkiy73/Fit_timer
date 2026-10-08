@@ -11,6 +11,7 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/backup-flow.js */
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -22,39 +23,9 @@ let bad = 0;
 const ok = (name, cond, extra) => { if(!cond) bad++;
   console.log((cond ? '  ok  ' : ' ПЛОХО') + '  ' + name + (extra != null ? '  → ' + extra : '')); };
 
-const PROG = `ПРОГРАММА: Сила дома
-ДНИ: Пн, Чт
-КРУГИ: 3
-ОТДЫХ МЕЖДУ КРУГАМИ: 90
-
-УПРАЖНЕНИЕ: Приседания
-ФОРМАТ: повторения и вес
-ЗНАЧЕНИЕ: 12
-ВЕС: 10
-ПОДХОДЫ: 3
-ОТДЫХ: 60
-ШАГ ВЕСА: 2`;
-
-const BAND = `ПРОГРАММА: Резинки
-ПРОГРЕССИЯ: 2
-ДНИ: Вт
-КРУГИ: 1
-ОТДЫХ МЕЖДУ КРУГАМИ: 0
-
-УПРАЖНЕНИЕ: Тяга резинки
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 12-15
-НАГРУЗКА: сопротивление
-СОПРОТИВЛЕНИЕ: Средняя
-УРОВНИ СОПРОТИВЛЕНИЯ: Лёгкая | Средняя | Сильная
-ПОДХОДЫ: 3
-ОТДЫХ: 45
-УСЛОЖНЯТЬ: да
-ШАГ ПОВТОРОВ: 2
-ПОТОЛОК ПОВТОРОВ: 18`;
-
 const boot = async (b, errs, label) => {
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(label + ': ' + e));
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);
@@ -84,7 +55,7 @@ async function restore(page, dump){
   const page = await boot(b, errs, 'телефон 1');
 
   /* ---- набиваем телефон всем, что бывает ---- */
-  await page.evaluate(async ({progTxt, bandTxt}) => {
+  await page.evaluate(async () => {
     const me = curUser();
     me.name = 'Лена';
     me.theme = 'light';
@@ -97,17 +68,18 @@ async function restore(page, dump){
     me.age = 36;
     await saveUsers();
 
-    const r = parseProgramText(progTxt);
-    const p = r.program || r; p.id = 'bk1';
-
-    const rb = parseProgramText(bandTxt);
-    const band = rb.program || rb; band.id = 'bk-band';
-    // Это современная программа с уже materialized per-exercise state.
-    // Без marker loadData законно прогонит legacy migration и пересчитает ps.n.
-    band.psMigrated = true;
-    const bx = normPlans(band)[0].exercises[0];
+    const p = {id:'bk1', name:'Сила дома', plans:[v2plan('bk1-plan', [
+      v2ex('Приседания', {type:'reps', value:12, sets:3, rest:60,
+        load:{type:'weight', equipment:'dumbbell', count:2, weight:10},
+        prog:{mode:'weight', every:1, weight:{step:2}}})
+    ], {days:['Пн', 'Чт'], rounds:3, roundRest:90})]};
     // Моделируем не просто шаблон, а реальный пользовательский прогресс к моменту бэкапа.
-    bx.ps = {n:2,cur:{reps:'16-18',level:2}};
+    const band = {id:'bk-band', name:'Резинки', plans:[v2plan('bk-band-plan', [
+      v2ex('Тяга резинки', {type:'reps', value:'12-15', sets:3, rest:45,
+        load:{type:'level', equipment:'band', levels:['Лёгкая', 'Средняя', 'Сильная'], level:1},
+        prog:{mode:'level', every:2, reps:{step:2, max:18}},
+        state:{count:2, current:{reps:'16-18', level:2}}})
+    ], {days:['Вт']})]};
 
     customPrograms.push(p, band); await savePrograms();
 
@@ -148,7 +120,7 @@ async function restore(page, dump){
 
     await kvSet('hfMode', 'voice');
     await kvSet('soundOff', '0');
-  }, {progTxt:PROG, bandTxt:BAND});
+  });
 
   /* ---- снимаем копию тем же кодом, каким её снимает кнопка ---- */
   const dump = await page.evaluate(async () => {
@@ -213,17 +185,19 @@ async function restore(page, dump){
       prog: (customPrograms.find(p => p.name === 'Сила дома') || {}).name,
       weightStep: (() => {
         const p = customPrograms.find(p => p.name === 'Сила дома');
-        return p ? normPlans(p)[0].exercises[0].wStep : null;
+        return p ? FitExerciseV2.prescriptionOf(normPlans(p)[0].exercises[0]).progression.weight.step : null;
       })(),
       resistance:(() => {
         const p = customPrograms.find(p => p.id === 'bk-band');
         const ex = p && normPlans(p)[0] && normPlans(p)[0].exercises[0];
+        const rx = ex && FitExerciseV2.prescriptionOf(ex);
+        const st = ex && ex.progressState;
         return ex ? {
-          loadType:ex.loadType, progMode:ex.progMode, loadLevel:ex.loadLevel,
-          levels:(ex.loadLevels||[]).map(x=>x.label||x.key),
-          n:ex.ps && ex.ps.n,
-          reps:ex.ps && ex.ps.cur && ex.ps.cur.reps,
-          level:ex.ps && ex.ps.cur && ex.ps.cur.level
+          loadType:rx.load.type, progMode:rx.progression.mode, loadLevel:rx.load.level,
+          levels:(rx.load.levels||[]).map(x=>x.label||x.key),
+          n:st && st.count,
+          reps:st && st.current && st.current.reps,
+          level:st && st.current && st.current.level
         } : null;
       })(),
       count: stats.count, body: (stats.weights || []).length,
@@ -277,11 +251,13 @@ async function restore(page, dump){
 
   /* ---- старый файл первой версии продолжает открываться ---- */
   const three = await boot(b, errs, 'телефон 3');
+  // Упражнение собираем в странице: v2ex живёт там (helpers/v2-fixtures).
+  const plank = await three.evaluate(() => v2ex('Планка', {type:'time', value:40, sets:2, rest:30}));
   await restore(three, {app: 'fittimer', version: 1,
     users: [{id: 'u1', name: 'Старый', birth: '1990-05-01'}], currentUser: 'u1',
     data: {u1: {
       programs: [{id: 'old1', name: 'Из старой копии', plans: [{days: ['Ср'], rounds: 2,
-        roundRest: 60, exercises: [{name: 'Планка', type: 'time', value: 40, sets: 2, rest: 30}]}]}],
+        roundRest: 60, exercises: [plank]}]}],
       stats: {count: 5, weights: []},
       photos: [],
       warmupAdded: true
