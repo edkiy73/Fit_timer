@@ -93,6 +93,8 @@ ok('webhook intake does not depend on client country/platform context',
 const bought = await billing.checkout('test', 'pack.a');
 await auth.status();
 ok('checkout grants the purchased SKU', bought.granted && bought.owned.includes('pack.a') && hasEntitlement(await auth.getSession(), 'pack.a'));
+ok('checkout returns canonical provider-neutral entitlement records',
+  bought.entitlements.some(x => x.key === 'pack.a' && x.kind === 'owned' && x.active && x.provider === 'test'));
 ok('checkout rejects a SKU outside the catalog',
   await billing.checkout('test', 'pack.zzz').then(() => false, e => e.code === 'unknown_sku'));
 ok('a SKU matching skuPatterns (a course published from Admin) can be bought',
@@ -117,6 +119,8 @@ ok('refunding a bundle takes back each part', !refundedBundle.owned['course.c2']
 // 1c. Automatic renewal: on by default for a granted subscription, the learner can switch it.
 const plusBuy = await billing.checkout('test', 'plus.month');
 ok('a granted subscription renews automatically by default', plusBuy.granted && (await accountOf('payer@example.com')).sub.autoRenew === true);
+ok('subscription checkout returns the same canonical entitlement shape',
+  plusBuy.entitlements.some(x => x.key === 'plus.month' && x.kind === 'subscription' && x.active && x.autoRenew && x.provider === 'test'));
 const off = await billing.setRenewal(false);
 const afterOff = await accountOf('payer@example.com');
 ok('the learner turns renewal off and the paid period stays', off.autoRenew === false && afterOff.sub.autoRenew === false && afterOff.sub.plan === 'plus.month' && !!afterOff.sub.until);
