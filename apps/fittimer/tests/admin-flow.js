@@ -170,9 +170,25 @@ const PROGRAM = name => catalogProgram(name, ['Приседания', 'Отжи�
   const one2 = await fetch(BASE + '/api/catalog?item=' + withPics.j.id).then(r => r.json());
   ok('обложку можно убрать правкой', !one2.item.cover);
   ok('карта фото заменяется целиком', mediaIds(one2.item) === exC.id, mediaIds(one2.item));
-  await api('edit', {id: withPics.j.id, item: {media: {v:2, items:[{id:exC.id, data:'не-картинка'}]}}});
-  ok('мусор вместо картинки не принимается',
-     !(await fetch(BASE + '/api/catalog?item=' + withPics.j.id).then(r => r.json())).item.media);
+  const badMediaEdit=await api('edit', {id: withPics.j.id, item: {media: {v:2, items:[{id:exC.id, data:'не-картинка'}]}}});
+  ok('мусор вместо картинки отклоняет сохранение, а не стирает медиа молча',
+     badMediaEdit.s===400&&badMediaEdit.j.error==='media_too_large',badMediaEdit.j.error);
+  const afterBadMedia=await fetch(BASE + '/api/catalog?item=' + withPics.j.id).then(r => r.json());
+  ok('после ошибочной картинки прежнее фото остаётся',mediaIds(afterBadMedia.item)===exC.id,mediaIds(afterBadMedia.item));
+
+  const hugeCover='data:image/png;base64,'+'A'.repeat(90001);
+  const hugeCoverEdit=await api('edit',{id:withPics.j.id,item:{cover:hugeCover}});
+  ok('слишком большая обложка не исчезает молча',hugeCoverEdit.s===400&&hugeCoverEdit.j.error==='cover_too_large',hugeCoverEdit.j.error);
+
+  const hugeA='data:image/png;base64,'+'A'.repeat(420000);
+  const hugeB='data:image/png;base64,'+'B'.repeat(420000);
+  const hugeMediaEdit=await api('edit',{id:withPics.j.id,item:{media:{v:2,items:[
+    {id:exA.id,p:0,i:0,data:hugeA},{id:exC.id,p:0,i:2,data:hugeB}
+  ]}}});
+  ok('набор фото больше общего бюджета отклоняется целиком',hugeMediaEdit.s===400&&hugeMediaEdit.j.error==='media_too_large',hugeMediaEdit.j.error);
+  const afterHugeMedia=await fetch(BASE + '/api/catalog?item=' + withPics.j.id).then(r => r.json());
+  ok('переполненный набор не заменяет сохранённые фото частично',mediaIds(afterHugeMedia.item)===exC.id,mediaIds(afterHugeMedia.item));
+
   await api('edit', {id: withPics.j.id, item: {media: {'Планка': pic('legacy')}}});
   ok('старая карта «имя → фото» не принимается',
      !(await fetch(BASE + '/api/catalog?item=' + withPics.j.id).then(r => r.json())).item.media);
