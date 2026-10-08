@@ -18,7 +18,7 @@
   else root.FitAIContract = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function(V2){
   const CONTRACT_VERSION = 2;
-  const PROMPT_VERSION = '2026-10-09.1';
+  const PROMPT_VERSION = '2026-10-09.2';
   const KINDS = ['program.create', 'program.modify', 'exercise.create', 'exercise.modify', 'exercise.replace'];
   const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
   const MUSCLE_IDS = ['ne', 'sh', 'ch', 'ar', 'co', 'ba', 'gl', 'le', 'hm', 'ca'];
@@ -185,6 +185,11 @@
     'Do not target a fixed number of exercises: choose exercise count, sets and rounds from the goal, structure and time budget.',
     'Program desc (up to 1800 characters) is a practical guide the trainee can read before starting, NOT promotional copy: state whom the plan suits, specific goals and realistic benefits, weekly structure and recovery spacing, intended workout effort (e.g. reps in reserve), how to use progression and what to do when technique or recovery deteriorates, and what to measure to judge progress. State realistic expectations without deadlines or guaranteed body changes. Include nutrition only as a brief optional general reminder when relevant; no meal plans or invented individual dietary prescriptions. Avoid fluff, hype, vague promises and repetitive warnings.',
     'Individual exercise desc is an actionable compact coaching instruction (roughly 250-550 characters where needed, maximum 600): starting position and equipment/anchor, limb placement/grip/palm orientation if relevant, exact direction of movement, a clear end point, controlled return, and one useful cue for target muscle or stability. Write natural connected sentences; do not pad simple exercises to a fixed length.',
+    'Write for a person who has NEVER SEEN the exercise. Use everyday language. Translate anatomical shorthand into visible positions of hands, weights and body.',
+    'For every exercise, mentally simulate one complete repetition: start position; path of weight or limbs; visible end point or contact; controlled return. Resolve ambiguous movements. Include a safe setup cue when needed.',
+    'Describe movement in the trainee\'s perspective, not abstract anatomy. Say "bend your elbows and lower the dumbbells to either side of your chest until the backs of your upper arms lightly touch the floor" rather than just "lower elbows"; say "push dumbbells back above your chest" rather than "press up" when the destination is ambiguous. Identify which part of the arm touches the floor.',
+    'Use landmarks (beside chest, near hips, above shoulders, toward anchor) and clarify palms and elbows when necessary; angles alone are not instructions.',
+    'Before finalizing, run a beginner comprehension check: can a user perform ONE rep without a video, knowing start and end positions? If not, rewrite.',
     'Exercise mistakes (maximum 300 characters): select the 2-3 most plausible movement-specific observable errors AND immediately state how to correct each. Do not merely negate or repeat the description; do not fill with generic phrases like maintain proper form. Use pain or discomfort precautions where relevant, not as generic boilerplate.',
     'For bands specify exactly where and how they are anchored, which hand holds which end, initial tension and direction of resistance. Never describe impossible band mechanics or ambiguously mix bilateral and single-arm setups.',
     'Technique cues must be anatomically reasonable: do not prescribe mandatory thumb-down internally rotated lateral raises, forced permanently retracted scapulae, forced spinal flattening, guaranteed isolated muscle sensations or arbitrary joint angles. Prefer controlled comfortable ranges and truthful muscle involvement.',
