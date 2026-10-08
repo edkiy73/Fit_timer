@@ -161,13 +161,27 @@ try{
   await adminPage.getByText('Готово.').waitFor();
   await laptop.goto(URL_ + '#/account');
   await laptop.reload();
-  ok('revoked purchase is locked again and can be bought',
-    await appears(laptop.getByRole('button', {name: 'Купить экспорт'}), 8000));
-  await laptop.getByRole('button', {name: 'Купить экспорт'}).click();
-  ok('purchase through the payment provider opens the feature at once',
+  ok('revoked purchase is locked again and can be bought through a Router method',
+    await appears(laptop.getByRole('button', {name: /Купить экспорт · test/}), 8000));
+  await laptop.getByRole('button', {name: /Купить экспорт · test/}).click();
+  ok('one-time purchase through the Router method opens the feature at once',
     await appears(laptop.getByRole('button', {name: /Скачать задачи/}), 8000));
+
+  ok('reference subscription is offered through the same Router method',
+    await appears(laptop.getByRole('button', {name: /Купить Premium · test/}), 8000));
+  await laptop.getByRole('button', {name: /Купить Premium · test/}).click();
+  ok('subscription purchase updates Premium UI on the purchasing device',
+    await appears(laptop.getByText(/Подписка активна до/), 8000));
+
+  await phone.goto(URL_ + '#/account');
+  await phone.reload();
+  ok('purchase on another device/session appears after normal account refresh',
+    await appears(phone.getByText(/Подписка активна до/), 8000));
+  await phone.getByRole('link', {name: /К задачам/}).click();
+
   await adminPage.getByRole('button', {name: 'Платежи'}).click();
-  ok('payment appears in the Admin journal', await appears(adminPage.getByRole('cell', {name: 'оплачено'})));
+  ok('both provider purchases appear in the shared Admin journal',
+    await appears(adminPage.getByRole('cell', {name: 'оплачено'}).nth(1), 8000));
 
   await phone.getByRole('link', {name: /Готовые/}).click();
   await phone.waitForURL(/#\/done$/);
