@@ -1,6 +1,6 @@
 {
-  "versionName": "1.0.1452",
-  "androidVersionCode": 260001452,
-  "reason": "Final FitTimer release: stop stale workout background work",
+  "versionName": "1.0.1453",
+  "androidVersionCode": 260001453,
+  "reason": "Final FitTimer release: speak per-unit workout load count",
   "requestedAt": "2026-10-09"
 }
