@@ -72,7 +72,14 @@ function validatedMapping(provider, raw){
 
 function sanitizeOverrides(raw){
   const products = raw && raw.products && typeof raw.products === 'object' ? raw.products : {};
-  const out = {version:1, products:{}};
+  const providerSettings = raw && raw.providers && typeof raw.providers === 'object' ? raw.providers : {};
+  const out = {version:1, providers:{}, products:{}};
+  for(const provider of PROVIDERS){
+    const value = providerSettings[provider];
+    if(value && typeof value === 'object' && typeof value.enabled === 'boolean'){
+      out.providers[provider] = {enabled:value.enabled};
+    }
+  }
   for(const [rawSku, rawProviders] of Object.entries(products)){
     const sku = cleanSku(rawSku);
     if(!sku || checkSku(sku)) continue;
@@ -153,6 +160,27 @@ async function billingProductByProviderId(provider, externalId){
   return products.find(product => String(product.billing && product.billing[key] && product.billing[key][field] || '') === id) || null;
 }
 
+async function billingProviderEnabled(provider){
+  if(!PROVIDERS.has(provider)) return true;
+  const saved = await getBillingOverrides();
+  return !saved.providers[provider] || saved.providers[provider].enabled !== false;
+}
+
+async function setBillingProviderEnabled(provider, enabled){
+  if(!PROVIDERS.has(provider)) throw Object.assign(new Error('bad_provider'), {status:400});
+  const saved = await getBillingOverrides();
+  const next = {
+    version:1,
+    providers:{
+      ...saved.providers,
+      [provider]:{enabled:!!enabled}
+    },
+    products:saved.products
+  };
+  await store.set(KEY, JSON.stringify(next));
+  return !!enabled;
+}
+
 async function saveBillingMapping(skuValue, provider, mapping){
   const sku = cleanSku(skuValue);
   if(!sku || checkSku(sku)) throw Object.assign(new Error('unknown_sku'), {status:400});
@@ -160,6 +188,7 @@ async function saveBillingMapping(skuValue, provider, mapping){
   const saved = await getBillingOverrides();
   const next = {
     version:1,
+    providers:saved.providers,
     products:{
       ...saved.products,
       [sku]:{
@@ -178,5 +207,7 @@ module.exports = {
   billingProduct,
   billingProducts,
   billingProductByProviderId,
+  billingProviderEnabled,
+  setBillingProviderEnabled,
   saveBillingMapping
 };
