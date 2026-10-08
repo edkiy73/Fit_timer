@@ -394,6 +394,69 @@ function createBillingHandler({adapters = []} = {}){
       return send(res, 200, {ok:true, granted:!!(last && last.applied), ...(last ? last.entitlements : entitlementsOf(who.acc))});
     }
 
+    if(action === 'restore'){
+      const adapter = await find(String(body.provider || ''), billingContext(body && body.context));
+      if(!adapter || typeof adapter.verifyPurchase !== 'function') return fail(res, 404, 'unknown_provider');
+      const who = await signedInAccount(body);
+      if(!who) return fail(res, 403, 'bad_sync_token');
+      const identity = await ensureBillingIdentity(who);
+      if(!identity) return fail(res, 409, 'billing_identity_failed');
+
+      const items = Array.isArray(body.items) ? body.items.slice(0, 100) : [];
+      const errors = [];
+      let checked = 0;
+      let restored = 0;
+
+      for(const item of items){
+        if(!item || typeof item !== 'object') continue;
+        const sku = cleanSku(item.sku);
+        const skuError = checkSku(sku);
+        if(skuError){
+          errors.push({sku, error:skuError});
+          continue;
+        }
+        checked++;
+        const product = providerProduct(sku);
+        let verified;
+        try{
+          verified = await adapter.verifyPurchase({
+            email:who.email,
+            sku,
+            product,
+            identity,
+            proof:item.proof && typeof item.proof === 'object' ? item.proof : {}
+          });
+        }catch(e){
+          errors.push({sku, error:String((e && e.message) || 'purchase_verification_failed').slice(0,120)});
+          continue;
+        }
+
+        let itemApplied = false;
+        for(const raw of (verified && Array.isArray(verified.events)) ? verified.events : []){
+          const result = await applyBillingEvent(adapter.id, {...raw, email:who.email, sku});
+          if(!result.ok){
+            errors.push({sku, error:String(result.error || 'billing_event_failed').slice(0,120)});
+            continue;
+          }
+          itemApplied = itemApplied || !!result.applied;
+        }
+        if(itemApplied) restored++;
+      }
+
+      let fresh = who.acc;
+      try{
+        const raw = await store.get(`a:${who.mh}`);
+        if(raw) fresh = JSON.parse(raw);
+      }catch(_){}
+      return send(res, 200, {
+        ok:true,
+        checked,
+        restored,
+        errors:errors.slice(0,100),
+        ...entitlementsOf(fresh)
+      });
+    }
+
     // Automatic renewal of the active subscription: on or off, the paid period stays. A provider
     // that manages it on its own page answers {url}; otherwise the account keeps the choice
     // (instant grants, admin grants) and the provider's next webhook can update it.
