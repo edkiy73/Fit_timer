@@ -1,6 +1,6 @@
 # AppBase Starter + Task Mini plan — 2026-10-07
 
-Status: **planned**  
+Status: **in progress**  
 Date: **2026-10-07**  
 Repository baseline when this plan was written: `main` at `9222272013c55ea8a51860a876331c46c5cfd2d8`.
 
@@ -905,3 +905,17 @@ A social/multi-user network product (for example Tinder-like matching) would reu
 Do **not** pre-build that entire layer now.
 
 When the first real product requires it, extract only the reusable primitives proven by that product, following the same Core → Starter → reference-app discipline.
+
+
+## After this plan — FitTimer migration gate
+
+FitTimer migration to the final AppBase reference stack is deliberately **not part of PR1–PR5**.
+
+After PR1–PR5 are complete and the final Core/Starter/Task Mini contracts are verified:
+
+1. stop;
+2. review the resulting reference stack and migration impact on FitTimer;
+3. ask the product owner explicitly whether to start the FitTimer migration;
+4. do not begin that migration automatically.
+
+If approved later, create a separate FitTimer migration plan based on the finished AppBase contracts rather than assumptions made before PR1–PR5.
