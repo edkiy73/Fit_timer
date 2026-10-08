@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1828,
-      "chars": 86164,
+      "lines": 1842,
+      "chars": 86405,
       "symbols": [
         "$",
         "accountUserDirtyHook",
@@ -954,8 +954,8 @@
     },
     "src/app/70-workout.js": {
       "kind": "frontend-js",
-      "lines": 1968,
-      "chars": 86483,
+      "lines": 1975,
+      "chars": 86824,
       "symbols": [
         "activeWeekStreak",
         "afterExChange",
@@ -1046,8 +1046,8 @@
     },
     "src/app/80-platform.js": {
       "kind": "frontend-js",
-      "lines": 891,
-      "chars": 38270,
+      "lines": 896,
+      "chars": 38567,
       "symbols": [
         "add",
         "advanceFromHeadset",
@@ -1107,7 +1107,7 @@
     "src/app/90-events.js": {
       "kind": "frontend-js",
       "lines": 2730,
-      "chars": 112267,
+      "chars": 112323,
       "symbols": [
         "addExManual",
         "aiRetryDialog",

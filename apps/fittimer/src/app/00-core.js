@@ -450,9 +450,23 @@ function startSignal(){
 /* ================= WAKE LOCK ================= */
 let wakeLock = null;
 export async function keepAwake(){
-  try{ if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){}
+  if(wakeLock || document.hidden) return;
+  try{
+    if(!('wakeLock' in navigator)) return;
+    const lock = await navigator.wakeLock.request('screen');
+    wakeLock = lock;
+    lock.addEventListener && lock.addEventListener('release', ()=>{
+      if(wakeLock === lock) wakeLock = null;
+    });
+  }catch(e){}
 }
-export function releaseWake(){ try{ wakeLock && wakeLock.release(); wakeLock=null; }catch(e){} }
+export function releaseWake(){
+  try{
+    const lock = wakeLock;
+    wakeLock = null;
+    if(lock) lock.release();
+  }catch(e){}
+}
 
 /* ================= СОСТОЯНИЕ ================= */
 export let state = {

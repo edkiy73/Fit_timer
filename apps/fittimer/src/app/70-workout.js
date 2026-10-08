@@ -107,7 +107,8 @@ function startGlobal(){
   }, 1000);
 }
 function stopGlobal(){
-  clearInterval(state.globalInterval);
+  if(state.globalInterval) clearInterval(state.globalInterval);
+  state.globalInterval = null;
   $('globalClock').classList.remove('on');
   const total = globalElapsed();
   state.paused = false;
@@ -1264,6 +1265,7 @@ function finishWorkout(options){
   const finishedProgramId = String((state.raw && state.raw.id) || '');
 
   state.live = false;
+  state.stepToken = (state.stepToken || 0) + 1;
   state.workoutSessionId = '';
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = 0;
@@ -1271,6 +1273,10 @@ function finishWorkout(options){
   setPause(false);
   platformWorkoutHooks.stopHandsFree();
   stopSpeech();
+  if(state.prepTimer){ clearInterval(state.prepTimer); state.prepTimer = null; }
+  document.body.classList.remove('prep-on');
+  $('prepOverlay').classList.remove('on');
+  clearStepTimer();
   clearSession(finishedSessionId, finishedProgramId);
 
   state.lastHist = null;
@@ -1830,6 +1836,7 @@ export function exitWorkout(){
 // общая часть выхода: гасим всё, что работает во время тренировки
 export function tearDownWorkout(){
   state.live = false;
+  state.stepToken = (state.stepToken || 0) + 1;
   state.workoutSessionId = '';
   clearTimeout(nativeSessionSaveT);
   nativeSessionSaveT = 0;

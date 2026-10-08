@@ -30,8 +30,10 @@ need(gradle.includes('versionCode = Integer.parseInt(System.getenv("VERSION_CODE
 const androidTriggers = workflow.slice(workflow.indexOf('on:'), workflow.indexOf('\npermissions:'));
 need(/^  workflow_dispatch:$/m.test(androidTriggers), 'Android release must support explicit manual dispatch');
 need(/^      version_code:$/m.test(androidTriggers), 'manual release must request versionCode');
-need(!/^  push:$/m.test(androidTriggers), 'merging to main must not publish a signed APK automatically');
-need(/^        if: github.event_name == 'workflow_dispatch'$/m.test(workflow), 'signed release steps must be manual-only');
+need(/^  push:$/m.test(androidTriggers), 'final release marker push trigger is missing');
+need(/^    branches: \[main\]$/m.test(androidTriggers), 'final release marker must target main only');
+need(/^      - '\.github\/mobile-release\.json'$/m.test(androidTriggers), 'ordinary merges must not publish a signed APK; push trigger must be marker-only');
+need(/if: github\.event_name == 'workflow_dispatch' \|\| github\.event_name == 'push'/.test(workflow), 'signed release steps must require manual dispatch or the explicit final-release marker');
 need(workflow.includes('KEYSTORE_BASE64'), 'release signing key must be required');
 need(workflow.includes('apksigner') && workflow.includes('verify --verbose --print-certs'), 'release APK signature must be verified');
 need(gradle.includes('productFlavors') && gradle.includes('DIRECT_UPDATES'), 'Android must have direct and store-safe build flavors');

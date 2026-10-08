@@ -406,5 +406,23 @@ ok('FitTimer account extension implements every auth hook',
   ['wipePublicIdentity','purgeAccountData','purgeOwnedContent','claimHandle','onVerify']
     .every(name => typeof fitAccountExtension[name] === 'function'));
 
+const workoutRuntimeSource = fs.readFileSync('src/app/70-workout.js','utf8');
+const platformRuntimeSource = fs.readFileSync('src/app/80-platform.js','utf8');
+const eventRuntimeSource = fs.readFileSync('src/app/90-events.js','utf8');
+const coreRuntimeSource = fs.readFileSync('src/app/00-core.js','utf8');
+ok('finished and abandoned workouts invalidate delayed callbacks and clear active timers',
+  /function finishWorkout[\s\S]*state\.live = false;[\s\S]*state\.stepToken = \(state\.stepToken \|\| 0\) \+ 1;[\s\S]*clearStepTimer\(\);/.test(workoutRuntimeSource)
+  && /export function tearDownWorkout[\s\S]*state\.stepToken = \(state\.stepToken \|\| 0\) \+ 1;[\s\S]*clearStepTimer\(\); stopGlobal\(\); releaseWake\(\);/.test(workoutRuntimeSource));
+ok('global workout interval is nulled after shutdown',
+  /function stopGlobal\(\)[\s\S]*state\.globalInterval = null;/.test(workoutRuntimeSource));
+ok('native runtime does not poll browser workout schedules every 20 seconds',
+  /if\(!appRuntimeCompat\.isNative\(\)\) setInterval\(checkSchedules, 20000\);/.test(platformRuntimeSource));
+ok('foreground workout resources only resume for a live workout',
+  /if\(state\.live && \$\('scrWork'\)\.classList\.contains\('on'\)\)/.test(platformRuntimeSource)
+  && /const inWorkout = state\.live && \$\('scrWork'\)\.classList\.contains\('on'\);/.test(eventRuntimeSource));
+ok('wake lock requests are idempotent and never start while hidden',
+  /if\(wakeLock \|\| document\.hidden\) return;/.test(coreRuntimeSource)
+  && /if\(wakeLock === lock\) wakeLock = null;/.test(coreRuntimeSource));
+
 console.log(bad ? `\nFailed: ${bad}` : '\nAppBase foundation checks passed');
 process.exit(bad ? 1 : 0);

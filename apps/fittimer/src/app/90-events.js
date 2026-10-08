@@ -1388,7 +1388,7 @@ export async function refreshVoicePackUI(progressEvent){
   if(status && ['queued','downloading','extracting'].includes(status.status)){
     voicePackPollTimer = setTimeout(()=>refreshVoicePackUI(), 800);
   }else if(status && status.installed && hfMode === 'voice'
-    && $('scrWork').classList.contains('on')){
+    && state.live && $('scrWork').classList.contains('on')){
     // Пользователь мог выбрать «Голос» до загрузки. Как только пакет готов,
     // распознавание поднимается само — повторно включать режим не нужно.
     startListening();
@@ -1426,7 +1426,7 @@ function openHfModal(){
 }
 
 async function previewSelectedVoice(){
-  const resumeRecognition = hfMode === 'voice' && $('scrWork').classList.contains('on');
+  const resumeRecognition = state.live && hfMode === 'voice' && $('scrWork').classList.contains('on');
   if(resumeRecognition){
     try{ await Promise.resolve(stopListening()); }catch(_){}
     await new Promise(resolve=>setTimeout(resolve, 100));
@@ -1434,7 +1434,7 @@ async function previewSelectedVoice(){
   speak(t('audio.voiceSelected'), null, ()=>{
     if(!resumeRecognition) return;
     setTimeout(()=>{
-      if(hfMode === 'voice' && $('scrWork').classList.contains('on')){
+      if(state.live && hfMode === 'voice' && $('scrWork').classList.contains('on')){
         resumeVoiceListening();
       }
     }, 160);
@@ -2454,7 +2454,7 @@ export function initEvents(){
   // вместе с календарём, неделями, сериями и достижениями. Теперь говорит правду
   // и требует набрать фразу: восстановить это неоткуда.
   document.addEventListener('visibilitychange', ()=>{
-    const inWorkout = $('scrWork').classList.contains('on');
+    const inWorkout = state.live && $('scrWork').classList.contains('on');
     if(document.visibilityState !== 'visible'){
       releaseWake();
       stopHandsFree();
