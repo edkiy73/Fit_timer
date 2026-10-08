@@ -43,6 +43,33 @@ function sanitizeMapping(provider, raw){
   throw Object.assign(new Error('bad_provider'), {status:400});
 }
 
+function validatedMapping(provider, raw){
+  raw = raw && typeof raw === 'object' ? raw : {};
+  const clean = sanitizeMapping(provider, raw);
+  const bad = () => { throw Object.assign(new Error('bad_mapping'), {status:400}); };
+
+  if(provider === 'stripe'){
+    const entered = line(raw.priceId,160);
+    if(entered && !clean.priceId) bad();
+  }else if(provider === 'yookassa'){
+    const amountEntered = String(raw.amount == null ? '' : raw.amount).trim();
+    const currencyEntered = line(raw.currency,3);
+    const clearing = !amountEntered && !currencyEntered;
+    if(!clearing && (!(clean.amount > 0) || !clean.currency)) bad();
+  }else if(provider === 'google_play'){
+    const productEntered = line(raw.productId,200);
+    const packageEntered = line(raw.packageName,220);
+    if((productEntered && !clean.productId) || (packageEntered && !clean.packageName)) bad();
+    if(!productEntered && packageEntered) bad();
+  }else if(provider === 'apple'){
+    const productEntered = line(raw.productId,200);
+    const bundleEntered = line(raw.bundleId,220);
+    if((productEntered && !clean.productId) || (bundleEntered && !clean.bundleId)) bad();
+    if(!productEntered && bundleEntered) bad();
+  }
+  return clean;
+}
+
 function sanitizeOverrides(raw){
   const products = raw && raw.products && typeof raw.products === 'object' ? raw.products : {};
   const out = {version:1, products:{}};
@@ -137,7 +164,7 @@ async function saveBillingMapping(skuValue, provider, mapping){
       ...saved.products,
       [sku]:{
         ...(saved.products[sku] || {}),
-        [provider]:sanitizeMapping(provider, mapping)
+        [provider]:validatedMapping(provider, mapping)
       }
     }
   };
