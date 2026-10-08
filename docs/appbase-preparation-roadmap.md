@@ -45,6 +45,23 @@ How changes reach users: the web app redeploys from `main`; Android/iOS builds o
 
 Revisit a separate Core repository only if Core gets external consumers, a separate team or an independent release cycle.
 
+## Starter / reference / production roles
+
+These three roles are intentionally different:
+
+```text
+templates/react-app
+= minimum mandatory scaffold generated for every normal new product
+
+apps/task-mini
+= executable architecture reference + small domain used to prove the contracts
+
+apps/unmute
+= complex production consumer that proves the contracts survive real product complexity
+```
+
+New products are generated from `templates/react-app` with `npm run app:create`. Task Mini is inspected as a working example; it is not copied as the starter. FitTimer and UnMute are production consumers, not templates.
+
 ## Coupling points already identified
 
 - `src/app/10-data-sync.js` mixes generic storage/profiles/analytics/sync with fitness programs, stats and progression state.
