@@ -4,6 +4,7 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/partial-workout.js */
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -20,6 +21,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const errs = [];
   const page = await (await b.newContext({viewport:{width:412,height:900}, locale:'ru-RU'})).newPage();
   page.on('pageerror', e => errs.push(String(e)));
+  await installV2Fixtures(page);
   await page.goto(BASE + '/index.html', {waitUntil:'load'});
   await page.waitForTimeout(900);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(700); }
@@ -31,8 +33,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       id:'partial-test', name:'Частичная проверка', active:true, progression:1,
       stats:{completions:0},
       plans:[{days:[today], rounds:1, roundRest:0, exercises:[
-        {name:'Первое', type:'reps', value:'10', sets:1, rest:0, restAfter:0, progOn:true, repsStep:1},
-        {name:'Второе', type:'reps', value:'10', sets:1, rest:0, restAfter:0, progOn:true, repsStep:1}
+        v2ex('Первое', {value:'10', sets:1, rest:0, restAfter:0, prog:{mode:'reps', reps:{step:1}}}),
+        v2ex('Второе', {value:'10', sets:1, rest:0, restAfter:0, prog:{mode:'reps', reps:{step:1}}})
       ]}]
     };
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));

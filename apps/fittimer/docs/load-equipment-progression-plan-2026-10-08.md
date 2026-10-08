@@ -1,7 +1,7 @@
 # FitTimer — модель снарядов, нагрузки и прогрессии
 
 Дата создания: 2026-10-08  
-Статус: третье ревью Клода разобрано; fixed movement stages, прямой cfgKey и movementChanged внесены в основные разделы; реализация не начата  
+Статус: третье ревью Клода разобрано; fixed movement stages, прямой cfgKey и movementChanged внесены в основные разделы; реализация идёт в ветке `ccr-1c455d3f-hdsme3` (PR 1 и PR 2a готовы, в main не влиты)  
 Источник истины: этот файл должен актуализироваться после каждого завершённого этапа/PR.
 
 ## 0. Зачем этот план
@@ -2115,19 +2115,19 @@ AI не должен сам придумывать постоянный `canonic
 
 ### PR 2a — V2 schema + normalization + clean reset
 
-Статус: 🟡 доменная часть готова в ветке `ccr-1c455d3f-hdsme3` (`lib/fit-exercise-v2.js` + `tests/exercise-v2-unit.js`); переключение runtime на V2 и сброс данных — не начаты (нужно подтверждение владельца на очистку)
+Статус: ✅ сделано в ветке `ccr-1c455d3f-hdsme3` (домен + runtime на V2 + чистый старт), НЕ влито в main; владелец подтвердил очистку данных (резервные копии сделаны)
 
 - [x] canonical exercise slot: `id + warmup + currentStageId + stages[1..4] + progressState`;
 - [x] stage prescription/load/supportEquipment/progression;
-- [ ] удалить persistent legacy load/progression/swap поля;
+- [x] удалить persistent legacy load/progression/swap поля;
 - [x] equipment catalog с roles и короткими stable storage codes;
-- [x] normalize/sanitize/validation V2 (доменная функция; подключение к sanitizeProgram — вместе с runtime);
-- [x] `activePrescription()` как единственный runtime read helper (в модуле; runtime ещё не переведён);
+- [x] normalize/sanitize/validation V2 (подключено к sanitizeProgram);
+- [x] `activePrescription()` как единственный runtime read helper (runtime читает только через него);
 - [x] deterministic reversible cfgKey codec;
 - [x] compact history DTO codec + `stageNames` registry shape;
-- [ ] schema/version tests;
-- [ ] runtime на этом этапе обязан хотя бы корректно читать single-stage V2; полноценная progression/history — PR2b;
-- [ ] после отдельного подтверждения владельца можно очистить текущие FitTimer-данные и работать только на V2.
+- [x] schema/version tests;
+- [x] runtime на этом этапе обязан хотя бы корректно читать single-stage V2; полноценная progression/history — PR2b;
+- [x] после отдельного подтверждения владельца можно очистить текущие FitTimer-данные и работать только на V2.
 
 На время PR2a–PR4 старые AI create/edit действия лучше явно отключить в UI, а не давать им писать legacy-ответ в новую persistent-схему.
 
@@ -2140,16 +2140,16 @@ AI не должен сам придумывать постоянный `canonic
 
 ### PR 2b — progression runtime + compact history
 
-Статус: ⬜ не начат
+Статус: 🟡 частично в ветке `ccr-1c455d3f-hdsme3`: прогрессия и carry на V2 работают; компактная история ещё не подключена
 
-- [ ] runtime weight/double/level progression на active stage;
-- [ ] level identity carry/reset rules;
-- [ ] progressState semantics;
-- [ ] physical cfgKey boundaries;
+- [x] runtime weight/double/level progression на active stage;
+- [x] level identity carry/reset rules;
+- [x] progressState semantics;
+- [x] physical cfgKey boundaries;
 - [ ] compact history write/read adapter;
 - [ ] stageNames update + GC rules;
 - [ ] before→today/history по `exId + movementStageId + cfgKey`;
-- [ ] worst-case size calculation ДО финального storage shape;
+- [x] worst-case size calculation ДО финального storage shape (1.87 МБ из 3 МБ, `tests/exercise-v2-unit.js`);
 - [ ] automated 2000-workout size test с запасом до 3 МБ;
 - [ ] «только сегодня» vs «изменить рабочий вес»;
 - [ ] resume unfinished workout tests.
@@ -3350,3 +3350,22 @@ Short storage keys используются ТОЛЬКО в persistent history D
 Открыто:
 - перевод runtime/UI/AI-парсера на V2, удаление legacy-полей и сброс данных — следующий шаг, требует подтверждения владельца на очистку данных.
 
+### 2026-10-08 — PR 2a: runtime переключён на V2, чистый старт
+
+Статус: 🟡 в ветке `ccr-1c455d3f-hdsme3`, в main НЕ влито (владелец сделал резервные копии и подтвердил очистку).
+
+Что сделали:
+- `SCHEMA_VERSION=2`: при первом запуске локальные программы, статистика, сессии, outbox и подопечные стираются один раз (`dataModel='2'`); sync игнорирует и перезаписывает документы схемы < 2 (программы → tombstone), документы схемы > 2 никогда не перезаписываются;
+- `sanitizeProgram` пропускает только V2-упражнения; весь runtime читает упражнение через `pr(ex)` / `activePrescription`; прогрессия — `ensureProgressState` + новые правила carry; копии перевыдают id упражнений и этапов (`uniqueProfileIds`);
+- редактор упражнения: выбор снаряда, количество, «Другое» с названием, вес за одну единицу («2 × 10 кг»); сохранение блокируется, пока упражнение неполное; swap удалён;
+- отчёт тренеру v4 (`pl`, `plans[].id`), история по `planId`.
+
+Временно отключено до AI Contract V2 (PR 5–6), с сообщением «временно недоступна»: создание и правка программ/упражнений через ИИ, импорт из видео, копирование программы текстом, замена упражнения через ИИ, отправка в каталог и добавление в витрину; импорт старых файлов отклоняется.
+
+Тесты:
+- браузерные тесты переведены на V2-фикстуры (`tests/helpers/v2-fixtures.js`);
+- удалены тесты убранных функций: `parse-flat` (текстовый парсер), `progression-migration-flow` (миграция legacy-прогрессии), `ai-edit-carry` (carry через старый AI-протокол) — вернутся в новом виде вместе с AI Contract V2.
+
+Открыто:
+- компактная история (`encodeLoadRow` + `stageNames`) в runtime — PR 2b;
+- UI цепочки этапов и прогрессии — PR 3.

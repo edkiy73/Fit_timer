@@ -10,6 +10,7 @@
 
 const { becomeTrainer } = require('./helpers/trainer-account');
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -25,6 +26,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const b = await chromium.launch({executablePath: CHROME});
   const errs = [];
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(String(e)));
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);
@@ -32,27 +34,18 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   await becomeTrainer(page, {handle: '@act.' + Math.random().toString(36).slice(2, 8)});
   await page.evaluate(async () => {
-    const r = parseProgramText(`ПРОГРАММА: Проба
-ДНИ: Пн
-КРУГИ: 2
-ОТДЫХ МЕЖДУ КРУГАМИ: 60
-
-УПРАЖНЕНИЕ: Приседания
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 12
-ПОДХОДЫ: 3
-ОТДЫХ: 45`);
-    const p = r.program || r;
-    p.id = 'src1';
+    const p = {
+      id:'src1', name:'Проба', progression:0,
+      plans:[{id:'src1-plan', days:['Пн'], rounds:2, roundRest:60, exercises:[
+        v2ex('Приседания', {id:'src1-ex', value:'12', sets:3, rest:45, prog:{mode:'reps', reps:{step:2}},
+          state:{count:2, current:{reps:'16'}}})
+      ]}]
+    };
     p.stats = {completions: 7};
     p.storeId = 'slim-tiho';        // как будто взята из каталога
     p.src = 'abcd1234';             // и пришла от тренера по ссылке
     p.by = '@someone';
     p.rotIdx = 1;                   // личная позиция очереди вариантов
-    p.progStepsAdj = 3;             // старое локальное состояние прогрессии
-    const ex = normPlans(p)[0].exercises[0];
-    ex.ps = {n:2, cur:{reps:'16',kg:12}};
-    ex.progFrom = 4;
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
     await loadData();
     await savePrograms();
@@ -69,8 +62,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   // ---- меню в СПИСКЕ ----
   const inList = await page.evaluate(async () => {
     // Своя программа, не из каталога: у взятой из каталога предлагать нечего.
-    const r = parseProgramText('ПРОГРАММА: Своя\nДНИ: Пн\nКРУГИ: 1\n\nУПРАЖНЕНИЕ: Планка\nФОРМАТ: время\nЗНАЧЕНИЕ: 40\nПОДХОДЫ: 1\nОТДЫХ: 20');
-    const own = r.program || r; own.id = 'own1';
+    const own = {id:'own1', name:'Своя', plans:[{id:'own1-plan', days:['Пн'], rounds:1, roundRest:0,
+      exercises:[v2ex('Планка', {type:'time', value:'40', sets:1, rest:20})]}]};
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, own]));
     await loadData();
     await savePrograms();
@@ -119,13 +112,17 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('у программы из каталога пункта «в каталог» нет', !store.some(t => /каталог/.test(t)));
 
   // ---- копия ----
+  const emptyState = st => !!st && st.count === 0
+    && ['reps','weight','time','level'].every(k => st.current[k] === null);
   const copy = await page.evaluate(async () => {
     const p = customPrograms.find(x => x.id === 'src1');
     const c = await duplicateProgram(p);
     const ex = normPlans(c)[0].exercises[0] || {};
+    const srcEx = normPlans(p)[0].exercises[0];
     return {name: c.name, ex: (normPlans(c)[0].exercises || []).length,
             completions: c.stats.completions, storeId: c.storeId, src: c.src, by: c.by,
-            rotIdx:c.rotIdx, progStepsAdj:c.progStepsAdj, ps:ex.ps, progFrom:ex.progFrom,
+            rotIdx:c.rotIdx, state:ex.progressState,
+            sameStage: ex.stages && srcEx.stages && ex.stages[0].stageId === srcEx.stages[0].stageId,
             sameId: c.id === p.id, total: customPrograms.length};
   });
   ok('копия создана и названа понятно', /копия/.test(copy.name) && !copy.sameId, copy.name);
@@ -134,8 +131,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('метка каталога не унаследована', copy.storeId === undefined);
   ok('чужая ссылка и тренер не унаследованы', copy.src === undefined && copy.by === undefined);
   ok('очередь и прогресс копии начинаются с нуля',
-     copy.rotIdx === undefined && copy.progStepsAdj === undefined && copy.ps === undefined && copy.progFrom === undefined,
-     JSON.stringify(copy));
+     copy.rotIdx === undefined && emptyState(copy.state), JSON.stringify(copy));
+  ok('копия получает свои id этапов: история и имена этапов не пересекаются с оригиналом',
+     copy.sameStage === false, JSON.stringify(copy));
 
   // ---- граница передачи ----
   const transfer = await page.evaluate(() => {
@@ -144,14 +142,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const ex = normPlans(x)[0].exercises[0] || {};
     return {
       stats:x.stats, active:x.active, rotIdx:x.rotIdx, src:x.src, origEx:x.origEx,
-      pub:x.pub, storeId:x.storeId, progStepsAdj:x.progStepsAdj, psMigrated:x.psMigrated,
-      ps:ex.ps, progFrom:ex.progFrom, by:x.by
+      pub:x.pub, storeId:x.storeId, state:ex.progressState, by:x.by
     };
   });
   ok('шаблон для передачи не содержит состояния владельца',
      transfer.stats === undefined && transfer.rotIdx === undefined && transfer.src === undefined
-       && transfer.storeId === undefined && transfer.progStepsAdj === undefined
-       && transfer.ps === undefined && transfer.progFrom === undefined,
+       && transfer.storeId === undefined && emptyState(transfer.state),
      JSON.stringify(transfer));
   ok('обычная передача сохраняет только авторство, но не связь для отчётов',
      transfer.by === '@someone' && transfer.src === undefined, JSON.stringify(transfer));
@@ -160,65 +156,39 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const p = customPrograms.find(x => x.id === 'src1');
     const x = programTemplateCopy(p, {includeProgress:true});
     const ex = normPlans(x)[0].exercises[0] || {};
-    return {ps:ex.ps, progFrom:ex.progFrom, stats:x.stats, rotIdx:x.rotIdx, src:x.src, migrated:x.psMigrated};
+    return {state:ex.progressState, stats:x.stats, rotIdx:x.rotIdx, src:x.src};
   });
   ok('передача с прогрессией сохраняет фактическую нагрузку упражнения',
-     transferWithProgress.ps && transferWithProgress.ps.n === 2
-       && transferWithProgress.ps.cur.reps === '16' && transferWithProgress.ps.cur.kg === 12
-       && transferWithProgress.migrated === true,
+     transferWithProgress.state && transferWithProgress.state.count === 2
+       && transferWithProgress.state.current.reps === '16',
      JSON.stringify(transferWithProgress));
   ok('даже с прогрессией не передаются статистика, очередь и связь с тренером',
      transferWithProgress.stats === undefined && transferWithProgress.rotIdx === undefined
-       && transferWithProgress.src === undefined && transferWithProgress.progFrom === undefined,
+       && transferWithProgress.src === undefined,
      JSON.stringify(transferWithProgress));
 
-  const copiedProgressText = await page.evaluate(() => {
-    const p = customPrograms.find(x => x.id === 'src1');
-    return programToText(p, {currentLoad:true});
-  });
-  ok('текст программы с прогрессией содержит текущие повторы',
-     /ЗНАЧЕНИЕ:\s*16/.test(copiedProgressText), copiedProgressText);
-  ok('текст программы с прогрессией не содержит технический КОД',
-     !/^КОД:/m.test(copiedProgressText), copiedProgressText);
-
-  const copiedWeightText = await page.evaluate(() => programToText({
-    id:'copy-weight',name:'Весовая',progression:2,
-    plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[{
-      id:'weight-ex',name:'Жим',type:'reps',value:'8-10',sets:3,rest:60,
-      loadType:'weight',trackWeight:true,weight:5,progOn:true,progMode:'double_range',
-      dualProg:true,repsStep:1,repsMax:14,wStep:1,weightMax:20,
-      ps:{n:1,cur:{reps:'11-13',kg:12}}
-    }]}]
-  }, {currentLoad:true}));
-  ok('весовое упражнение при копировании с прогрессией получает текущий вес',
-     /ВЕС:\s*12/.test(copiedWeightText), copiedWeightText);
-
-  // Resistance policy — часть шаблона, а ps.cur.level — личное состояние владельца.
+  // Нагрузка и шкала сопротивления — часть шаблона, текущая ступень — личное состояние владельца.
   const resistanceTransfer = await page.evaluate(() => {
     const source = {
-      name:'Резинки', plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[{
-        id:'band-1',name:'Тяга резинки',type:'reps',value:'12-15',
-        loadType:'level',progMode:'level',
-        loadLevels:[{label:'Лёгкая'},{label:'Средняя'},{label:'Сильная'}],
-        loadLevel:1,repsStep:2,repsMax:18,
-        ps:{n:2,cur:{reps:'16-18',level:2}}
-      }]}]
+      name:'Резинки', plans:[{id:'band-plan', days:['Пн'],rounds:1,roundRest:0,exercises:[
+        v2ex('Тяга резинки', {id:'band-1', value:'12-15',
+          load:{type:'level', equipment:'band', levels:[{label:'Лёгкая'},{label:'Средняя'},{label:'Сильная'}], level:1},
+          prog:{mode:'level', reps:{step:2, max:18}},
+          state:{count:2, current:{reps:'16-18', level:2}}})
+      ]}]
     };
     const copy = programTemplateCopy(source);
     const ex = normPlans(copy)[0].exercises[0];
-    return {
-      loadType:ex.loadType, progMode:ex.progMode,
-      levels:ex.loadLevels, loadLevel:ex.loadLevel, ps:ex.ps
-    };
+    const p = FitExerciseV2.prescriptionOf(ex);
+    return {load:p.load, mode:p.progression.mode, state:ex.progressState};
   });
-  ok('шаблон сохраняет resistance policy и базовую ступень',
-    resistanceTransfer.loadType === 'level'
-      && resistanceTransfer.progMode === 'level'
-      && resistanceTransfer.loadLevel === 1
-      && resistanceTransfer.levels.map(x=>x.label).join('|') === 'Лёгкая|Средняя|Сильная',
+  ok('шаблон сохраняет снаряд, шкалу сопротивления и базовую ступень',
+    resistanceTransfer.load.type === 'level' && resistanceTransfer.load.equipment === 'band'
+      && resistanceTransfer.mode === 'level' && resistanceTransfer.load.level === 1
+      && resistanceTransfer.load.levels.map(x=>x.label).join('|') === 'Лёгкая|Средняя|Сильная',
     JSON.stringify(resistanceTransfer));
-  ok('шаблон не передаёт чужую текущую resistance-ступень',
-    resistanceTransfer.ps === undefined, JSON.stringify(resistanceTransfer.ps));
+  ok('шаблон не передаёт чужую текущую ступень сопротивления',
+    emptyState(resistanceTransfer.state), JSON.stringify(resistanceTransfer.state));
 
   // Файл может быть собран кем угодно. Даже если в него вручную положили src и
   // прогресс другого человека, импорт обязан превратить его в независимую копию.
@@ -230,7 +200,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     p.rotIdx = 9;
     p.stats = {completions:99};
     const ex = normPlans(p)[0].exercises[0];
-    ex.ps = {n:9,cur:{reps:'99'}};
+    ex.progressState = {count:9, current:{reps:'99', weight:null, time:null, level:null}};
     const file = new File([JSON.stringify({app:'fittimer',type:'program',v:1,program:p})],
       'program.json',{type:'application/json'});
     await importProgramFile(file);
@@ -238,13 +208,13 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const gx = got && normPlans(got)[0].exercises[0];
     return got ? {
       src:got.src, origEx:got.origEx, rotIdx:got.rotIdx, completions:got.stats && got.stats.completions,
-      ps:gx && gx.ps, by:got.by
+      state:gx && gx.progressState, by:got.by
     } : null;
   });
   ok('файловый импорт не может тайно включить отчёты тренеру',
      imported && imported.src === undefined && imported.origEx === undefined, JSON.stringify(imported));
   ok('файловый импорт не переносит чужой прогресс',
-     imported && imported.rotIdx === undefined && imported.completions === 0 && imported.ps === undefined,
+     imported && imported.rotIdx === undefined && imported.completions === 0 && emptyState(imported.state),
      JSON.stringify(imported));
 
   const importedProgress = await page.evaluate(async () => {
@@ -256,16 +226,29 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     await importProgramFile(file);
     const got = customPrograms.find(x => x.name === 'Импорт с прогрессией');
     const ex = got && normPlans(got)[0].exercises[0];
-    return got && ex ? {ps:ex.ps, completions:got.stats && got.stats.completions, src:got.src, migrated:got.psMigrated} : null;
+    return got && ex ? {state:ex.progressState, completions:got.stats && got.stats.completions, src:got.src} : null;
   });
   ok('явный файловый экспорт с прогрессией продолжает с текущей нагрузки',
-     importedProgress && importedProgress.ps && importedProgress.ps.n === 2
-       && importedProgress.ps.cur.reps === '16' && importedProgress.ps.cur.kg === 12
-       && importedProgress.migrated === true,
+     importedProgress && importedProgress.state && importedProgress.state.count === 2
+       && importedProgress.state.current.reps === '16',
      JSON.stringify(importedProgress));
   ok('при переносе прогрессии история и тренерская связь всё равно не копируются',
      importedProgress && importedProgress.completions === 0 && importedProgress.src === undefined,
      JSON.stringify(importedProgress));
+
+  // Файл старого формата (плоское упражнение с ВЕС/trackWeight) после перехода на V2 не читается
+  const legacyFile = await page.evaluate(async () => {
+    document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
+    const before = customPrograms.length;
+    const p = {name:'Старый файл', plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[
+      {name:'Жим', type:'reps', value:'10', weight:10, trackWeight:true}]}]};
+    const file = new File([JSON.stringify({app:'fittimer',type:'program',v:1,program:p})],
+      'old.json',{type:'application/json'});
+    await importProgramFile(file);
+    return {added:customPrograms.length - before, msg:$('dlgMsg').textContent};
+  });
+  ok('файл старого формата не импортируется и объясняет почему',
+    legacyFile.added === 0 && /старом формате/.test(legacyFile.msg), JSON.stringify(legacyFile));
 
   const exportChoice = await page.evaluate(() => {
     const p = customPrograms.find(x => x.id === 'src1');
@@ -282,34 +265,29 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
   // ---- обновление той же тренерской программы ----
   const trainerUpdate = await page.evaluate(() => {
+    const press = (state) => v2ex('Жим', {id:'ex-a', value:'8-10',
+      load:{type:'weight', equipment:'dumbbell', count:2, weight:20},
+      prog:{mode:'double_range', reps:{step:1, max:14}, weight:{step:2}}, state});
     const existing = {
-      id:'client-program', src:'same-link', rotate:true, rotIdx:1, active:false,
-      psMigrated:true, progStepsAdj:2, stats:{completions:7},
+      id:'client-program', src:'same-link', rotate:true, rotIdx:1, active:false, stats:{completions:7},
       plans:[
-        {days:[],rounds:1,roundRest:0,exercises:[
-          {id:'ex-a',name:'Жим',type:'reps',value:'8-10',weight:20,dualProg:true,
-           ps:{n:2,cur:{reps:'12-14',kg:22}}}
-        ]},
-        {days:[],rounds:1,roundRest:0,exercises:[
-          {id:'ex-b',name:'Тяга',type:'reps',value:'10',weight:0,
-           ps:{n:1,cur:{reps:'12'}}}
+        {id:'plan-a', days:[],rounds:1,roundRest:0,exercises:[press({count:2, current:{reps:'12-14', weight:22}})]},
+        {id:'plan-b', days:[],rounds:1,roundRest:0,exercises:[
+          v2ex('Тяга', {id:'ex-b', value:'10', prog:{mode:'reps', reps:{step:1}}, state:{count:1, current:{reps:'12'}}})
         ]}
       ]
     };
     // Тренер переставил варианты, изменил базу Тяги и добавил новое упражнение.
-    // Даже если в сетевом JSON у нового упражнения есть чужой ps, template-copy
+    // Даже если в сетевом JSON у упражнений есть чужой progressState, template-copy
     // обязан выбросить его до переноса локального состояния клиента.
     const raw = {
-      id:'trainer-copy', rotate:true, rotIdx:99, stats:{completions:999}, psMigrated:false,
+      id:'trainer-copy', rotate:true, rotIdx:99, stats:{completions:999},
       plans:[
-        {days:[],rounds:1,roundRest:0,exercises:[
-          {id:'ex-b',name:'Тяга',type:'reps',value:'8',weight:0,ps:{n:99,cur:{reps:'99'}}},
-          {id:'ex-c',name:'Планка',type:'time',value:'30',ps:{n:99,cur:{sec:999}}}
+        {id:'plan-b', days:[],rounds:1,roundRest:0,exercises:[
+          v2ex('Тяга', {id:'ex-b', value:'8', prog:{mode:'reps', reps:{step:1}}, state:{count:99, current:{reps:'99'}}}),
+          v2ex('Планка', {id:'ex-c', type:'time', value:'30', state:{count:99, current:{time:999}}})
         ]},
-        {days:[],rounds:1,roundRest:0,exercises:[
-          {id:'ex-a',name:'Жим',type:'reps',value:'8-10',weight:20,dualProg:true,
-           ps:{n:99,cur:{reps:'99',kg:99}}}
-        ]}
+        {id:'plan-a', days:[],rounds:1,roundRest:0,exercises:[press({count:99, current:{reps:'99', weight:99}})]}
       ]
     };
     const incoming = programTemplateCopy(raw);
@@ -318,114 +296,60 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const b = plans[0].exercises.find(x=>x.id==='ex-b');
     const fresh = plans[0].exercises.find(x=>x.id==='ex-c');
     const a = plans[1].exercises.find(x=>x.id==='ex-a');
-
-    // Legacy link: сервер ещё не хранил exercise.id. Совпавшему по имени
-    // упражнению возвращаем локальный стабильный id.
-    const legacyOld = {
-      id:'legacy-program', stats:{completions:2}, plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[
-        {id:'legacy-local-id',name:'Приседания',type:'reps',value:'12',ps:{n:2,cur:{reps:'14'}}}
-      ]}]
-    };
-    const legacyIncoming = programTemplateCopy({
-      plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[
-        {name:'Приседания',type:'reps',value:'12'}
-      ]}]
-    });
-    carryLinkedProgramState(legacyOld, legacyIncoming);
-    const legacyEx = normPlans(legacyIncoming)[0].exercises[0];
-
     return {
-      id:incoming.id, completions:incoming.stats.completions, active:incoming.active,
-      migrated:incoming.psMigrated, adj:incoming.progStepsAdj, rotIdx:incoming.rotIdx,
-      aPs:a && a.ps, bPs:b && b.ps, freshPs:fresh && fresh.ps,
-      legacyId:legacyEx && legacyEx.id, legacyPs:legacyEx && legacyEx.ps
+      id:incoming.id, completions:incoming.stats.completions, active:incoming.active, rotIdx:incoming.rotIdx,
+      aState:a && a.progressState, bState:b && b.progressState, freshState:fresh && fresh.progressState
     };
   });
   ok('обновление тренера сохраняет статистику и локальные флаги клиента',
-     trainerUpdate.id === 'client-program' && trainerUpdate.completions === 7
-       && trainerUpdate.active === false && trainerUpdate.migrated === true && trainerUpdate.adj === 2,
+     trainerUpdate.id === 'client-program' && trainerUpdate.completions === 7 && trainerUpdate.active === false,
      JSON.stringify(trainerUpdate));
   ok('очередь ротации следует за тем же вариантом после перестановки',
      trainerUpdate.rotIdx === 0, JSON.stringify(trainerUpdate));
   ok('неизменённое упражнение сохраняет достигнутый диапазон и вес',
-     trainerUpdate.aPs && trainerUpdate.aPs.n === 2
-       && trainerUpdate.aPs.cur.reps === '12-14' && trainerUpdate.aPs.cur.kg === 22,
-     JSON.stringify(trainerUpdate.aPs));
-  ok('изменённая тренером база сохраняет счётчик, но сбрасывает старую текущую нагрузку',
-     trainerUpdate.bPs && trainerUpdate.bPs.n === 1
-       && Object.keys(trainerUpdate.bPs.cur || {}).length === 0,
-     JSON.stringify(trainerUpdate.bPs));
+     trainerUpdate.aState && trainerUpdate.aState.count === 2
+       && trainerUpdate.aState.current.reps === '12-14' && trainerUpdate.aState.current.weight === 22,
+     JSON.stringify(trainerUpdate.aState));
+  ok('изменённая тренером база — то же упражнение, но счётчик и текущая нагрузка начинаются заново',
+     emptyState(trainerUpdate.bState), JSON.stringify(trainerUpdate.bState));
   ok('новое упражнение не наследует сетевой чужой прогресс',
-     trainerUpdate.freshPs === undefined, JSON.stringify(trainerUpdate));
-  ok('legacy-обновление без exercise.id сохраняет локальный id и прогресс',
-     trainerUpdate.legacyId === 'legacy-local-id'
-       && trainerUpdate.legacyPs && trainerUpdate.legacyPs.cur.reps === '14',
-     JSON.stringify(trainerUpdate));
+     emptyState(trainerUpdate.freshState), JSON.stringify(trainerUpdate));
 
   const resistanceUpdate = await page.evaluate(() => {
-    const existing = {
-      id:'res-client',stats:{completions:3},plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[{
-        id:'band-1',name:'Тяга резинки',type:'reps',value:'12-15',
-        loadType:'level',progMode:'level',
-        loadLevels:[{label:'A'},{label:'B'},{label:'C'}],loadLevel:0,
-        repsStep:2,repsMax:18,progEvery:2,
-        ps:{n:2,cur:{reps:'16-18',level:1}}
-      }]}]
-    };
-    const same = programTemplateCopy({
-      plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[{
-        id:'band-1',name:'Тяга резинки',type:'reps',value:'12-15',
-        loadType:'level',progMode:'level',
-        loadLevels:[{label:'A'},{label:'B'},{label:'C'}],loadLevel:0,
-        repsStep:2,repsMax:18,progEvery:2
-      }]}]
-    });
+    const band = (levels, state) => v2ex('Тяга резинки', {id:'band-1', value:'12-15',
+      load:{type:'level', equipment:'band', levels, level:0},
+      prog:{mode:'level', every:2, reps:{step:2, max:18}}, state});
+    const existing = {id:'res-client', stats:{completions:3}, plans:[{id:'res-plan', days:['Пн'],rounds:1,roundRest:0,exercises:[
+      band([{label:'A'},{label:'B'},{label:'C'}], {count:2, current:{reps:'16-18', level:1}})
+    ]}]};
+    const same = programTemplateCopy({plans:[{id:'res-plan', days:['Пн'],rounds:1,roundRest:0,exercises:[
+      band([{label:'A'},{label:'B'},{label:'C'}])]}]});
     carryLinkedProgramState(existing, same);
-    const sameEx = normPlans(same)[0].exercises[0];
-
-    const changed = programTemplateCopy({
-      plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[{
-        id:'band-1',name:'Тяга резинки',type:'reps',value:'12-15',
-        loadType:'level',progMode:'level',
-        loadLevels:[{label:'A'},{label:'X'},{label:'C'}],loadLevel:0,
-        repsStep:2,repsMax:18,progEvery:2
-      }]}]
-    });
+    const changed = programTemplateCopy({plans:[{id:'res-plan', days:['Пн'],rounds:1,roundRest:0,exercises:[
+      band([{label:'A'},{label:'X'},{label:'C'}])]}]});
     carryLinkedProgramState(existing, changed);
-    const changedEx = normPlans(changed)[0].exercises[0];
-    return {same:sameEx.ps, changed:changedEx.ps};
+    return {same:normPlans(same)[0].exercises[0].progressState, changed:normPlans(changed)[0].exercises[0].progressState};
   });
-  ok('обновление той же resistance-шкалы сохраняет текущий level и reps',
-    resistanceUpdate.same && resistanceUpdate.same.n === 2
-      && resistanceUpdate.same.cur.level === 1
-      && resistanceUpdate.same.cur.reps === '16-18',
+  ok('обновление той же шкалы сопротивления сохраняет текущую ступень и повторы',
+    resistanceUpdate.same && resistanceUpdate.same.count === 2
+      && resistanceUpdate.same.current.level === 1 && resistanceUpdate.same.current.reps === '16-18',
     JSON.stringify(resistanceUpdate.same));
-  ok('смена resistance-шкалы сохраняет счётчик, но сбрасывает старый numeric level',
-    resistanceUpdate.changed && resistanceUpdate.changed.n === 2
-      && Object.keys(resistanceUpdate.changed.cur || {}).length === 0,
-    JSON.stringify(resistanceUpdate.changed));
+  ok('если текущей резинки больше нет в шкале, состояние уровня сбрасывается',
+    emptyState(resistanceUpdate.changed), JSON.stringify(resistanceUpdate.changed));
 
   // ---- UX ручного редактора прогрессии ----
   const progressionEditor = await page.evaluate(async () => {
     const program = {
       id:'progression-editor-audit', name:'Редактор прогрессии', progression:0,
-      plans:[{days:['Пн'],rounds:1,roundRest:0,exercises:[
-        {
-          id:'double-audit',name:'Махи',type:'reps',value:'8-10',sets:3,rest:45,
-          loadType:'weight',trackWeight:true,weight:5,progOn:true,progMode:'double_range',
-          dualProg:true,repsStep:1,repsMax:14,wStep:1,weightMax:12,progEvery:null
-        },
-        {
-          id:'level-audit',name:'Тяга резинки',type:'reps',value:'12-15',sets:3,rest:45,
-          loadType:'level',progOn:true,progMode:'level',
-          loadLevels:[{key:'light'},{key:'medium'},{key:'strong'},{key:'veryStrong'}],
-          loadLevel:1,repsStep:2,repsMax:18,progEvery:2,
-          ps:{n:1,cur:{reps:'12-15',level:2}}
-        },
-        {
-          id:'off-audit',name:'Без автопрогрессии',type:'reps',value:'10',sets:2,rest:45,
-          loadType:'none',progOn:false,progMode:'reps',repsStep:1,progEvery:null
-        }
+      plans:[{id:'audit-plan', days:['Пн'],rounds:1,roundRest:0,exercises:[
+        v2ex('Махи', {id:'double-audit', value:'8-10', sets:3, rest:45,
+          load:{type:'weight', equipment:'dumbbell', count:2, weight:5},
+          prog:{mode:'double_range', reps:{step:1, max:14}, weight:{step:1, max:12}}}),
+        v2ex('Тяга резинки', {id:'level-audit', value:'12-15', sets:3, rest:45,
+          load:{type:'level', equipment:'band', levels:[{key:'light'},{key:'medium'},{key:'strong'},{key:'veryStrong'}], level:1},
+          prog:{mode:'level', every:2, reps:{step:2, max:18}},
+          state:{count:1, current:{reps:'12-15', level:2}}}),
+        v2ex('Без автопрогрессии', {id:'off-audit', value:'10', sets:2, rest:45, prog:{mode:'none'}})
       ]}]
     };
     customPrograms.push(program);
@@ -449,11 +373,11 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       seg3:$('exLoadNone').parentElement.classList.contains('seg3'),
       loadButtonHeight:$('exLoadNone').getBoundingClientRect().height,
       ceilingHint:$('exCeilingHint').textContent.trim(),
-      swapVisible:!$('exSwapRow').classList.contains('hidden')
+      equipVisible:!$('exEquipRow').classList.contains('hidden'),
+      equip:$('exEquip').value,
+      count:$('exEquipCount').value,
+      weightLabel:$('exWeightLabel').textContent.trim()
     };
-    $('exMaxWeight').value = '';
-    $('exMaxWeight').dispatchEvent(new Event('input',{bubbles:true}));
-    weighted.swapWithoutWeightMax = !$('exSwapRow').classList.contains('hidden');
 
     openExercise(1);
     const resistance = {
@@ -510,11 +434,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   ok('mobile selector нагрузки сохраняет нормальный touch-target',
     progressionEditor.weighted.loadButtonHeight >= 44,
     JSON.stringify(progressionEditor.weighted));
-  ok('замена более сложным упражнением доступна только при достижимом потолке',
-    progressionEditor.weighted.swapVisible
-      && !progressionEditor.weighted.swapWithoutWeightMax
-      && /пуст/i.test(progressionEditor.weighted.ceilingHint)
-      && /(потол|предел)/i.test(progressionEditor.weighted.ceilingHint),
+  ok('редактор показывает снаряд, количество и вес одной единицы',
+    progressionEditor.weighted.equipVisible && progressionEditor.weighted.equip === 'dumbbell'
+      && progressionEditor.weighted.count === '2' && /одной/i.test(progressionEditor.weighted.weightLabel),
     JSON.stringify(progressionEditor.weighted));
   ok('редактор resistance показывает базовую ступень отдельно от текущей',
     progressionEditor.resistance.baseValue === '1'

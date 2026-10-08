@@ -5,6 +5,7 @@
    Запуск: node tests/dev-server.js 8124
            node tests/sync-flow.js */
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core'); process.exit(1); }
@@ -18,6 +19,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
 
 async function boot(browser, label, errors){
   const page = await (await browser.newContext({viewport:{width:412,height:900},locale:'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errors.push(label + ': ' + e));
   await page.goto(BASE + '/index.html', {waitUntil:'load'});
   await page.waitForTimeout(700);
@@ -47,7 +49,7 @@ async function boot(browser, label, errors){
     },{
       id:'sync-program-2', name:'Синхронная мобильность', time:'', progression:3,
       stats:{completions:0}, plans:[{days:['Ср'],rounds:1,roundRest:0,exercises:[
-        {name:'Наклоны',type:'reps',value:'10',sets:1,rest:20}
+        v2ex('Наклоны', {value:'10', sets:1, rest:20})
       ]}]
     },{
       id:'sync-resistance', name:'Синхронные резинки', time:'', progression:2,
@@ -149,7 +151,7 @@ async function boot(browser, label, errors){
     const originals = customPrograms.filter(p => p.id === 'sync-program' || p.id === 'sync-program-2');
     const unique = {
       id:'sync-unique', name:'Только второй профиль', plans:[{days:['Пт'],rounds:1,roundRest:0,exercises:[
-        {name:'Планка',type:'time',value:30,sets:1,rest:20}
+        v2ex('Планка', {type:'time', value:30, sets:1, rest:20})
       ]}]
     };
     const later = new Date(Date.now() + 5000).toISOString();

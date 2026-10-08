@@ -13,6 +13,7 @@
      node tests/progression-editor-flow.js
 */
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -30,6 +31,7 @@ const ok = (name, cond, extra) => {
   const browser = await chromium.launch({executablePath:CHROME, args:['--no-sandbox']});
   const errs = [];
   const page = await (await browser.newContext({viewport:{width:360,height:800}, locale:'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(String(e)));
 
   await page.goto(BASE + '/index.html', {waitUntil:'load'});

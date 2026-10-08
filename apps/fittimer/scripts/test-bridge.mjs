@@ -107,6 +107,8 @@ export const TEST_BRIDGE_ALLOWLIST = new Set([
   "openClient",
   "openClients",
   "openEditAI",
+  "openYouTube",
+  "copyProgramTextWithChoice",
   "openExAI",
   "openExEdAI",
   "openExercise",

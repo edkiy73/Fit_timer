@@ -12,6 +12,7 @@
 const { becomeTrainer } = require('./helpers/trainer-account');
 const { settle } = require('./helpers/settle');
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -48,7 +49,7 @@ async function seedProgram(page, id='nav-matrix'){
     const p = {
       id, name:'Навигация', desc:'', progression:0, stats:{completions:0},
       plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[
-        {id:id+'-e1', name:'Присед', type:'reps', value:'10', sets:1, rest:30}
+        v2ex('Присед', {id:id+'-e1', value:'10', sets:1, rest:30})
       ]}]
     };
     const programs = customPrograms.some(x => x.id === id)
@@ -62,6 +63,7 @@ async function seedProgram(page, id='nav-matrix'){
 }
 async function newAppPage(ctx, opts={}){
   const page = await ctx.newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => opts.errs && opts.errs.push(String(e)));
   await page.goto('data:text/html,<title>nav-sentinel</title>');
   await page.goto(BASE + '/index.html', {waitUntil:'load'});

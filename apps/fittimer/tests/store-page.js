@@ -8,6 +8,7 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/store-page.js */
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -78,25 +79,6 @@ const ONE = `ПРОГРАММА: Просто круг
 ПОДХОДЫ: 3
 ОТДЫХ: 40`;
 
-const BAND = `ПРОГРАММА: Резинки
-ПРОГРЕССИЯ: 2
-
-ДЕНЬ: Ср
-КРУГИ: 1
-ОТДЫХ МЕЖДУ КРУГАМИ: 0
-
-УПРАЖНЕНИЕ: Тяга резинки сверху
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 12-15
-НАГРУЗКА: сопротивление
-СОПРОТИВЛЕНИЕ: Среднее
-УРОВНИ СОПРОТИВЛЕНИЯ: Лёгкое | Среднее | Сильное | Очень сильное
-ПОДХОДЫ: 3
-ОТДЫХ: 60
-УСЛОЖНЯТЬ: да
-ШАГ ПОВТОРОВ: 2
-ПОТОЛОК ПОВТОРОВ: 18`;
-
 const shot = page => page.evaluate(() => ({
   heads: [...document.querySelectorAll('#siList .si-plan')].map(h => ({
     title: h.childNodes[0].textContent.trim(),
@@ -116,6 +98,7 @@ const shot = page => page.evaluate(() => ({
   const b = await chromium.launch({executablePath: CHROME});
   const errs = [];
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(String(e)));
   let catalogItem = null;
   await page.route('**/api/catalog*', async route => {
@@ -139,53 +122,40 @@ const shot = page => page.evaluate(() => ({
     });
   };
 
-  /* ---- два варианта ---- */
+  /* Каталог пока хранит программы старым текстовым протоколом, а он больше не
+     превращается в программу (модель упражнения V2; docs/load-equipment-progression-plan-2026-10-08.md,
+     PR 7 — перевод каталога). Поэтому состав по вариантам (подписи днями, своя
+     нумерация, разминка по одной на вариант, сопротивление человеческим label)
+     сейчас не рисуется вовсе — проверки этого вернутся вместе с V2-каталогом.
+     Здесь держим то, что работает и сейчас: шапку страницы, отсутствие
+     старой формы упражнений в составе и честный отказ при добавлении. */
   await open(TWO);
   await page.waitForTimeout(400);
   const two = await shot(page);
+  const head = await page.evaluate(() => ({
+    name: document.getElementById('siName').textContent,
+    gives: document.getElementById('siGives').textContent,
+    by: document.getElementById('siNick').textContent,
+    buy: document.getElementById('siBuy').textContent
+  }));
+  ok('страница программы открылась с названием и описанием',
+     head.name === 'Проверка' && /Описание программы/.test(head.gives), head.name);
+  ok('автор подписан', head.by === '@lena.doma', head.by);
+  ok('в шапке уровень и длительность',
+     two.facts.includes('Средний') && two.facts.some(f => /^35 мин/.test(f)), two.facts.join(' · '));
+  ok('старый текст не превращается в упражнения состава',
+     two.rows.length === 0 && two.heads.length === 0, two.rows.length + '/' + two.heads.length);
+  ok('кнопка предлагает добавить программу', /Добавить/.test(head.buy), head.buy);
 
-  ok('варианты подписаны днями', two.heads.length === 2
-     && two.heads[0].title === 'Пн, Чт' && two.heads[1].title === 'Вт, Пт',
-     two.heads.map(h => h.title).join(' | '));
-  ok('у варианта сказано, сколько в нём и сколько кругов',
-     /3 упражнения/.test(two.heads[0].sub) && /3 круга/.test(two.heads[0].sub),
-     two.heads[0].sub);
-
-  const warms = two.rows.filter(r => r.warm);
-  ok('разминка по одной на вариант, а не подряд', warms.length === 2, warms.length);
-  ok('и стоит первой в своём варианте',
-     two.rows[0].warm && two.rows[3].warm && !two.rows[1].warm,
-     two.rows.map(r => r.warm ? 'р' : '·').join(''));
-
-  ok('нумерация СВОЯ у каждого варианта',
-     two.rows.map(r => r.num).join(',') === ',1,2,,1',
-     two.rows.map(r => r.num || '(разминка)').join(','));
-
-  ok('в шапке дни всей программы, а не первого варианта',
-     two.facts.some(f => f === 'Пн, Вт, Чт, Пт'), two.facts.join(' · '));
-  ok('и сказано, что вариантов два', two.facts.some(f => /2 варианта/.test(f)),
-     two.facts.join(' · '));
-  ok('в заголовке состава — варианты, а не сумма упражнений',
-     two.count === '2 варианта', two.count);
-
-  /* ---- один вариант: заголовков нет ---- */
-  await open(ONE);
-  await page.waitForTimeout(400);
-  const one = await shot(page);
-  ok('у одного варианта подписи нет вовсе', one.heads.length === 0, one.heads.length);
-  ok('и в заголовке снова упражнения', one.count === '2 упражнения', one.count);
-  ok('нумерация сквозная', one.rows.map(r => r.num).join(',') === '1,2',
-     one.rows.map(r => r.num).join(','));
-
-  /* ---- resistance видно в каталоге человеческим label ---- */
-  await open(BAND);
-  await page.waitForTimeout(400);
-  const band = await shot(page);
-  ok('каталог показывает базовое сопротивление, а не номер уровня',
-    band.rows.length === 1
-      && /Среднее/.test(band.rows[0].meta)
-      && !/level\s*1/i.test(band.rows[0].meta),
-    band.rows[0] && band.rows[0].meta);
+  const before = await page.evaluate(() => customPrograms.length);
+  await page.click('#siBuy');
+  await page.waitForTimeout(300);
+  const addMsg = await page.textContent('#dlgMsg');
+  ok('добавление из каталога объясняет, что временно недоступно',
+     /временно недоступна/.test(addMsg), addMsg.slice(0, 50));
+  ok('и программа в профиль не попала',
+     await page.evaluate(() => customPrograms.length) === before);
+  await page.evaluate(() => document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')));
 
   /* ---- премиум закрывает состав ---- */
   await open(ONE, {pro: true, exCount: 2});
@@ -213,9 +183,11 @@ const shot = page => page.evaluate(() => ({
   await page.waitForTimeout(400);
   const unlocked = await page.evaluate(() => ({
     list: !document.getElementById('siList').classList.contains('hidden'),
+    lock: !document.getElementById('siLock').classList.contains('hidden'),
     rows: document.querySelectorAll('#siList .ex-row').length
   }));
-  ok('с подпиской состав открыт', unlocked.list && unlocked.rows === 2, unlocked.rows);
+  // Сам состав пока не рисуется (старый текстовый протокол, см. выше) — но замка нет.
+  ok('с подпиской состав не закрыт заглушкой', unlocked.list && !unlocked.lock, unlocked.rows);
 
   console.log('\npageerror: ' + (errs.length ? errs.join(' | ') : 'нет'));
   if(errs.length) bad += errs.length;

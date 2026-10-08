@@ -5,6 +5,7 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/workout-resume.js */
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -21,12 +22,13 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const errs = [];
   const page = await (await b.newContext({viewport:{width:412,height:900}, locale:'ru-RU'})).newPage();
   page.on('pageerror', e => errs.push(String(e)));
+  await installV2Fixtures(page);
   await page.goto(BASE + '/index.html', {waitUntil:'load'});
   await page.waitForTimeout(700);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(500); }
 
   await page.evaluate(async () => {
-    const ex = (name, sets = 1) => ({name, type:'reps', value:'10', sets, rest:0, restAfter:0});
+    const ex = (name, sets = 1) => v2ex(name, {value:'10', sets, rest:0, restAfter:0});
     const p = {
       id:'resume-variant-test', name:'Проверка продолжения', active:true, progression:0,
       plans:[
@@ -170,9 +172,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const p = {
       id:'resume-structure-test', name:'Версия тренировки', active:true, progression:0,
       plans:[{days:['Ср'], rounds:1, roundRest:0, exercises:[
-        {id:'snap-a',name:'Старое A',type:'reps',value:'8',sets:1,rest:0,restAfter:0},
-        {id:'snap-b',name:'Старое B',type:'reps',value:'9',sets:1,rest:0,restAfter:0},
-        {id:'snap-c',name:'Старое C',type:'reps',value:'10',sets:1,rest:0,restAfter:0}
+        v2ex('Старое A', {id:'snap-a', value:'8', sets:1, rest:0, restAfter:0}),
+        v2ex('Старое B', {id:'snap-b', value:'9', sets:1, rest:0, restAfter:0}),
+        v2ex('Старое C', {id:'snap-c', value:'10', sets:1, rest:0, restAfter:0})
       ]}]
     };
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
@@ -205,9 +207,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
       : [];
 
     p.plans[0].exercises = [
-      {id:'snap-c',name:'Новое C',type:'reps',value:'20',sets:2,rest:0,restAfter:0},
-      {id:'snap-x',name:'Новое X',type:'reps',value:'30',sets:1,rest:0,restAfter:0},
-      {id:'snap-a',name:'Новое A',type:'reps',value:'40',sets:1,rest:0,restAfter:0}
+      v2ex('Новое C', {id:'snap-c', value:'20', sets:2, rest:0, restAfter:0}),
+      v2ex('Новое X', {id:'snap-x', value:'30', sets:1, rest:0, restAfter:0}),
+      v2ex('Новое A', {id:'snap-a', value:'40', sets:1, rest:0, restAfter:0})
     ];
     await savePrograms();
     openStart(p);
@@ -276,11 +278,10 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     tearDownWorkout();
     const p = {
       id:'resume-resistance-test',name:'Resume resistance',active:true,progression:0,
-      plans:[{days:[],rounds:1,roundRest:0,exercises:[{
-        id:'resume-band',name:'Тяга резинки',type:'reps',value:'12',sets:1,rest:0,restAfter:0,
-        loadType:'level',progOn:false,progMode:'level',
-        loadLevels:[{label:'Красная'},{label:'Чёрная'}],loadLevel:0,repsStep:0
-      }]}]
+      plans:[{days:[],rounds:1,roundRest:0,exercises:[
+        v2ex('Тяга резинки', {id:'resume-band', value:'12', sets:1, rest:0, restAfter:0,
+          load:{type:'level', equipment:'band', levels:[{label:'Красная'},{label:'Чёрная'}], level:0}})
+      ]}]
     };
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
     await loadData();
@@ -301,7 +302,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const oldStep = saved && saved.workout
       ? [...saved.workout.warmup,...saved.workout.cycle].find(s => s.phase === 'work')
       : null;
-    p.plans[0].exercises[0].loadLevels[0].label = 'Зелёная';
+    FitExerciseV2.prescriptionOf(p.plans[0].exercises[0]).load.levels[0].label = 'Зелёная';
     await savePrograms();
     tearDownWorkout();
     openStart(p);
@@ -362,8 +363,8 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const p = {
       id:'duplicate-name-live-test', name:'Одинаковые названия', active:true, progression:0,
       plans:[{days:[],rounds:1,roundRest:0,exercises:[
-        {id:'dup-a',name:'Одинаковое',type:'reps',value:'8',sets:1,rest:0,restAfter:0},
-        {id:'dup-b',name:'Одинаковое',type:'reps',value:'15',sets:1,rest:0,restAfter:0}
+        v2ex('Одинаковое', {id:'dup-a', value:'8', sets:1, rest:0, restAfter:0}),
+        v2ex('Одинаковое', {id:'dup-b', value:'15', sets:1, rest:0, restAfter:0})
       ]}]
     };
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
@@ -383,21 +384,9 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const byId = liveExercise(step.exId, step.exName);
     const ambiguousLegacy = liveExercise('', step.exName);
 
-    const p = customPrograms.find(x => x.id === 'duplicate-name-live-test');
-    const replacement = {
-      id:'dup-b-new',name:'Заменённое второе',type:'reps',value:'6',sets:1,rest:0,restAfter:0
-    };
-    p.plans[0].exercises[1] = replacement;
-    const touched = refreshLiveSteps('dup-b', 'Одинаковое', replacement);
-    const work = state.steps.filter(s => s.phase === 'work').map(s => ({
-      id:s.exId,name:s.exName,reps:s.reps
-    }));
-
     return {
-      byId:byId && {idx:byId.idx,id:byId.ex.id,value:byId.ex.value},
-      ambiguousLegacy:!!ambiguousLegacy,
-      touched,
-      work
+      byId:byId && {idx:byId.idx,id:byId.ex.id,value:FitExerciseV2.prescriptionOf(byId.ex).value},
+      ambiguousLegacy:!!ambiguousLegacy
     };
   });
   ok('редактирование выбирает нужное из одинаково названных упражнений по exercise.id',
@@ -406,20 +395,14 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     JSON.stringify(duplicateNames));
   ok('legacy поиск по одному названию не выбирает случайное упражнение при дубле',
     duplicateNames.ambiguousLegacy === false, JSON.stringify(duplicateNames));
-  ok('AI-замена обновляет только упражнение с нужным id',
-    duplicateNames.touched
-      && duplicateNames.work.length === 2
-      && duplicateNames.work[0].id === 'dup-a'
-      && duplicateNames.work[0].name === 'Одинаковое'
-      && duplicateNames.work[1].id === 'dup-b-new'
-      && duplicateNames.work[1].name === 'Заменённое второе',
-    JSON.stringify(duplicateNames.work));
+  // AI-замена упражнения на тренировке вернётся вместе с AI Contract V2 и этапами
+  // движения (docs/load-equipment-progression-plan-2026-10-08.md, PR 3/5) — её проверка тоже.
 
   await page.evaluate(async () => {
     tearDownWorkout();
     const b = {
       id:'resume-other-test', name:'Другая тренировка', active:true, progression:0,
-      plans:[{days:['Ср'], rounds:1, roundRest:0, exercises:[{name:'Другое',type:'reps',value:'10',sets:1,rest:0,restAfter:0}]}]
+      plans:[{days:['Ср'], rounds:1, roundRest:0, exercises:[v2ex('Другое', {value:'10', sets:1, rest:0, restAfter:0})]}]
     };
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, b]));
     await loadData();

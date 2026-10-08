@@ -6,6 +6,7 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/prog-check-flow.js */
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -21,6 +22,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const b = await chromium.launch({executablePath: CHROME, args: ['--no-sandbox']});
   const errs = [];
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(String(e)));
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(1000);

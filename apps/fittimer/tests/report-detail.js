@@ -9,6 +9,7 @@
 
 const { becomeTrainer } = require('./helpers/trainer-account');
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -64,6 +65,7 @@ const PROG = `ПРОГРАММА: Сила дома
 
 async function boot(b, label, errs, url){
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(label + ': ' + e));
   await page.goto(url || BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);
@@ -129,7 +131,7 @@ async function boot(b, label, errs, url){
 
     const plans = normPlans(p);
     plans[0].exercises = plans[0].exercises.filter(e => e.name !== 'Отжимания');  // выкинул
-    plans[0].exercises.push({id:'client-added-plank', name: 'Планка', type: 'time', value: '45', sets: 3, rest: 30}); // добавил своё
+    plans[0].exercises.push(v2ex('Планка', {id:'client-added-plank', type:'time', value:'45', sets:3, rest:30})); // добавил своё
     // Переименование не меняет identity: тот же exercise.id должен остаться одной
     // mod-строкой, а не превратиться в ложные delete+add.
     plans[1].exercises[0].name = 'Тяга одной рукой';
@@ -330,7 +332,7 @@ async function boot(b, label, errs, url){
     const mk = (id, name) => ({
       id, name, active:true, progression:0,
       plans:[{days:[day],rounds:1,roundRest:0,exercises:[
-        {id:id+'-ex',name:'Тест',type:'reps',value:'10',sets:1,rest:0}
+        v2ex('Тест', {id:id+'-ex', value:'10', sets:1, rest:0})
       ]}]
     });
     const target = mk('trainer-streak-target','Программа тренера');

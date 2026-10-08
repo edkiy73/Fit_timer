@@ -9,6 +9,7 @@
 
 const { becomeTrainer } = require('./helpers/trainer-account');
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -64,6 +65,8 @@ const progEn = (name) => `ПРОГРАММА: ${name}
   }).catch(()=>{});
 
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(String(e)));
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);
@@ -249,6 +252,7 @@ const progEn = (name) => `ПРОГРАММА: ${name}
      Проверяем в самом конце, чтобы не ломать порядок остального сценария. */
   // Свой ник и свой аккаунт: у прежнего уже выбран суточный предел проверкой выше.
   const rej = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+  await installV2Fixtures(rej);
   rej.on('pageerror', e => errs.push(String(e)));
   await rej.goto(BASE + '/index.html', {waitUntil: 'load'});
   await rej.waitForTimeout(1500);

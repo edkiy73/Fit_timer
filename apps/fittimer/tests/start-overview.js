@@ -4,6 +4,7 @@
    Запуск:  node tests/dev-server.js 8124
             node tests/start-overview.js */
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -20,23 +21,24 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const errs = [];
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
   page.on('pageerror', e => errs.push(String(e)));
+  await installV2Fixtures(page);
   await page.goto(BASE + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(1500); }
 
   await page.evaluate(async () => {
-    const ex = (name, value, extra = {}) => Object.assign({
-      name, type:'reps', value:String(value), sets:3, rest:45, restAfter:30,
-      progOn:true, repsStep:1, trackWeight:false
-    }, extra);
+    const ex = (name, value, extra = {}) => v2ex(name, Object.assign({
+      value, sets:3, rest:45, restAfter:30, prog:{mode:'reps', reps:{step:1}}
+    }, extra));
     const p = {
       id:'overview1', name:'Проверка обзора', active:true, progression:1,
       stats:{completions:2}, plans:[{id:'ov-plan', days:['Пн'], rounds:1, roundRest:60, exercises:[
-        ex('Суставная разминка', 8, {warmup:true, sets:1,
+        ex('Суставная разминка', 8, {warmup:true, sets:1, prog:{mode:'none'},
           media:{kind:'img', data:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='}}),
-        ex('Приседания', 10, {id:'ov-squat'}),
-        ex('Жим гантелей', 8, {trackWeight:true, weight:6, wStep:1, repsStep:0}),
-        ex('Тяга в наклоне', 10), ex('Планка', 30, {type:'time', timeStep:5}),
+        // сегодняшняя нагрузка уже выросла на два шага — живёт в progressState упражнения
+        ex('Приседания', 10, {id:'ov-squat', state:{count:0, current:{reps:'12'}}}),
+        ex('Жим гантелей', 8, {load:{type:'weight', equipment:'dumbbell', count:2, weight:6}, prog:{mode:'weight', weight:{step:1}}}),
+        ex('Тяга в наклоне', 10), ex('Планка', 30, {type:'time', prog:{mode:'time', time:{step:5}}}),
         ex('Скручивания', 12)
       ]}]
     };
@@ -120,12 +122,11 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
     const p = {
       id:'overview-legacy', name:'Старая история', active:true, progression:2,
       stats:{completions:9}, psMigrated:true,
-      plans:[{id:'legacy-plan', days:['Пн'], rounds:1, roundRest:0, exercises:[{
-        id:'legacy-ex', name:'Legacy reps', type:'reps', value:'8', sets:3, rest:45,
-        progOn:true, trackWeight:false, repsStep:1,
+      plans:[{id:'legacy-plan', days:['Пн'], rounds:1, roundRest:0, exercises:[
         // Фактическая сегодняшняя нагрузка уже живёт в per-exercise state.
-        ps:{n:1,cur:{reps:'15'}}
-      }]}]
+        v2ex('Legacy reps', {id:'legacy-ex', value:'8', sets:3, rest:45, prog:{mode:'reps', reps:{step:1}},
+          state:{count:1, current:{reps:'15'}}})
+      ]}]
     };
     // Старая запись знает, что тренировка была, но load snapshot в той версии
     // ещё не сохранялся.
@@ -165,13 +166,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const resistance = await page.evaluate(async () => {
     const p = {
       id:'overview-level', name:'Резинки', active:true, progression:2,
-      stats:{completions:2}, plans:[{id:'level-plan', days:['Пн'], rounds:1, roundRest:0, exercises:[{
-        id:'band-row', name:'Тяга резинки', type:'reps', value:'12-15', sets:3, rest:45,
-        progOn:true, trackWeight:false, loadType:'level', progMode:'level',
-        loadLevels:[{key:'light'},{key:'medium'},{key:'strong'}],
-        loadLevel:1, repsStep:2, repsMax:18,
-        ps:{n:0,cur:{reps:'12-15',level:2}}
-      }]}]
+      stats:{completions:2}, plans:[{id:'level-plan', days:['Пн'], rounds:1, roundRest:0, exercises:[
+        v2ex('Тяга резинки', {id:'band-row', value:'12-15', sets:3, rest:45,
+          load:{type:'level', equipment:'band', levels:[{key:'light'},{key:'medium'},{key:'strong'}], level:1},
+          prog:{mode:'level', reps:{step:2, max:18}},
+          state:{count:0, current:{reps:'12-15', level:2}}})
+      ]}]
     };
     const history = [...(stats.history || []), {
       id:'level-prev', pid:p.id, planId:'level-plan', d:localISO(new Date(Date.now()-86400000)),
@@ -220,8 +220,7 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   // История и «было → сегодня» обязаны остаться у своего варианта: раньше они
   // искали вариант по номеру и после пересортировки показывали чужую нагрузку.
   const reorder = await page.evaluate(async () => {
-    const mkEx = (id, name) => ({id, name, type:'reps', value:'10', sets:1, rest:30,
-      progOn:true, repsStep:1, trackWeight:false});
+    const mkEx = (id, name) => v2ex(name, {id, value:'10', sets:1, rest:30, prog:{mode:'reps', reps:{step:1}}});
     const p = {
       id:'overview-reorder', name:'Два варианта', active:true, progression:2,
       stats:{completions:1}, plans:[
@@ -262,11 +261,12 @@ const ok = (name, cond, extra) => { if(!cond) bad++;
   const terminalText = await page.evaluate(async () => {
     const p = {
       id:'overview-terminal', name:'Финальный потолок', active:true, progression:1,
-      stats:{completions:1}, plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[{
-        id:'term-overview', name:'Финальный жим', type:'reps', value:'8-10', sets:3, rest:45,
-        progOn:true, trackWeight:true, weight:20, weightMax:20, wStep:2,
-        repsStep:1, repsMax:20, dualProg:true, ps:{n:1, cur:{kg:20, reps:'18-20'}}
-      }]}]
+      stats:{completions:1}, plans:[{days:['Пн'], rounds:1, roundRest:0, exercises:[
+        v2ex('Финальный жим', {id:'term-overview', value:'8-10', sets:3, rest:45,
+          load:{type:'weight', equipment:'barbell', count:1, weight:20},
+          prog:{mode:'double_range', reps:{step:1, max:20}, weight:{step:2, max:20}},
+          state:{count:1, current:{weight:20, reps:'18-20'}}})
+      ]}]
     };
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
     await loadData();

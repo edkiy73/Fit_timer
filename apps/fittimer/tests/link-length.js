@@ -11,6 +11,7 @@
 
 const { becomeTrainer } = require('./helpers/trainer-account');
 
+const { installV2Fixtures } = require('./helpers/v2-fixtures');
 let chromium;
 try{ chromium = require('playwright-core').chromium; }
 catch(e){ console.error('Нужен playwright-core: npm i playwright-core'); process.exit(1); }
@@ -24,47 +25,37 @@ let bad = 0;
 const ok = (name, cond, extra) => { if(!cond) bad++;
   console.log((cond ? '  ok  ' : ' ПЛОХО') + '  ' + name + (extra != null ? '  → ' + extra : '')); };
 
-// Программа такого размера, какую реально собирает тренер: разминка, десять
-// упражнений с описаниями, ошибками и заменами, два варианта по дням.
-const BIG = `ПРОГРАММА: Силовая база
-ДНИ: Пн, Чт
-КРУГИ: 4
-ОТДЫХ МЕЖДУ КРУГАМИ: 90
-ПРОГРЕССИЯ: 3
-` + Array.from({length: 10}, (_, i) => `
-УПРАЖНЕНИЕ: Упражнение номер ${i + 1}
-ОПИСАНИЕ: Встань ровно, стопы на ширине таза, носки чуть в стороны. Уходи тазом назад и вниз, колени идут по направлению носков, спина прямая, взгляд вперёд. Из нижней точки поднимись усилием ягодиц, в верхней не переразгибай поясницу. Опускайся медленно, вниз на два счёта, вверх на один.
-МЫШЦЫ: Ягодицы, Квадрицепс, Икры
-ОШИБКИ: Колени заваливаются внутрь — разводи их в стороны усилием ягодиц, а не доворотом стопы.
-ФОРМАТ: повторения
-ЗНАЧЕНИЕ: 10-12
-ПОДХОДЫ: 4
-ОТДЫХ: 60
-УСЛОЖНЯТЬ: да
-ШАГ: 1
-ПОТОЛОК: 20
-ЗАМЕНА: Упражнение номер ${i + 1}, усложнённый вариант
-ОПИСАНИЕ ЗАМЕНЫ: То же движение, но из нижней точки мягко выталкивайся вверх, отрывая пятки от пола. Приземляйся беззвучно, сначала на носок, потом опускай пятку.
-`).join('');
+// Программа такого размера, какую реально собирает тренер: десять упражнений
+// с описаниями, ошибками, мышцами, прогрессией и вторым этапом (усложнённый вариант).
+const DESC = 'Встань ровно, стопы на ширине таза, носки чуть в стороны. Уходи тазом назад и вниз, колени идут по направлению носков, спина прямая, взгляд вперёд. Из нижней точки поднимись усилием ягодиц, в верхней не переразгибай поясницу. Опускайся медленно, вниз на два счёта, вверх на один.';
+const STAGE_DESC = 'То же движение, но из нижней точки мягко выталкивайся вверх, отрывая пятки от пола. Приземляйся беззвучно, сначала на носок, потом опускай пятку.';
+const MISTAKES = 'Колени заваливаются внутрь — разводи их в стороны усилием ягодиц, а не доворотом стопы.';
 
 const NICK = '@lena.' + Math.random().toString(36).slice(2, 8);
 
 // withTrainer — тренер существует только внутри аккаунта, а вход требует сервера.
 async function boot(b, url, errs, withTrainer){
   const page = await (await b.newContext({viewport: {width: 412, height: 900}, locale: 'ru-RU'})).newPage();
+  await installV2Fixtures(page);
   page.on('pageerror', e => errs.push(e + ''));
   await page.goto(url + '/index.html', {waitUntil: 'load'});
   await page.waitForTimeout(2000);
   if(await page.isVisible('#obStart')){ await page.click('#obStart'); await page.waitForTimeout(1500); }
   if(withTrainer) await becomeTrainer(page, {handle: NICK, trainer: {links: ''}});
-  await page.evaluate(async (txt) => {
-    const r = parseProgramText(txt);
-    const p = r.program || r;
-    p.id = 'big';
+  await page.evaluate(async ({DESC, STAGE_DESC, MISTAKES}) => {
+    const exercises = Array.from({length: 10}, (_, i) => v2ex('Упражнение номер ' + (i + 1), {
+      desc: DESC, mistakes: MISTAKES, muscles: ['gl', 'le', 'ca'],
+      type: 'reps', value: '10-12', sets: 4, rest: 60,
+      prog: {mode: 'reps', every: 3, reps: {step: 1, max: 20}},
+      stages: [{name: 'Упражнение номер ' + (i + 1) + ', усложнённый вариант', desc: STAGE_DESC,
+                type: 'reps', value: '10-12', sets: 4, rest: 60}]
+    }));
+    const p = {id: 'big', name: 'Силовая база', days: ['Пн', 'Чт'],
+               plans: [v2plan('p1', exercises, {days: ['Пн', 'Чт'], rounds: 4, roundRest: 90})]};
     await kvSet(pk('customPrograms'), JSON.stringify([...customPrograms, p]));
     await loadData();
     await savePrograms();
-  }, BIG);
+  }, {DESC, STAGE_DESC, MISTAKES});
   return page;
 }
 
