@@ -685,9 +685,13 @@ async function billingReadiness(){
     const configured = def.required.every(name => secrets[name] && secrets[name].set);
     const mappedProducts = mapped(def.id);
     const providerEnabled = await billingProviderEnabled(def.id);
+    const health = await providerHealth(def.id);
+    const unhealthy = ['webhook','reconcile'].some(channel =>
+      health[channel] && health[channel].ok === false && health[channel].operational === true);
     const state = !billingEnabled || !providerEnabled ? 'disabled'
       : !configured ? 'not_configured'
       : mappedProducts < 1 ? 'mapping_missing'
+      : unhealthy ? 'unhealthy'
       : 'ready';
     providers.push({
       id:def.id,
@@ -696,6 +700,7 @@ async function billingReadiness(){
       enabled:providerEnabled,
       configured,
       mappedProducts,
+      health,
       platforms:def.platforms,
       distributions:def.distributions,
       countries:def.countries
