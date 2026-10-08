@@ -323,6 +323,75 @@ const mappedAfterBad = await call(adminHandler, {action:'billing_status'}, {head
 ok('rejected mapping leaves the previous valid mapping intact',
   mappedAfterBad.body.products?.some(x => x.sku === 'course.admin-map' && x.mappings?.stripe?.priceId === 'price_admin_live'));
 
+const stripeControlAdapter = {
+  id:'stripe',
+  kind:'external',
+  platforms:['web'],
+  distributions:['web'],
+  async available(){ return true; },
+  async checkout({email, sku}){
+    return {events:[{orderId:'stripe-control-checkout', email, sku, status:'paid'}]};
+  },
+  async verifyPurchase({sku}){
+    return {events:[{orderId:'stripe-control-verify-' + sku, sku, status:'paid'}]};
+  },
+  async verifyWebhook({body}){
+    return {ok:true, events:Array.isArray(body && body.events) ? body.events : []};
+  }
+};
+const stripeControlHandler = createBillingHandler({adapters:[stripeControlAdapter]});
+const stripeControlBilling = createBillingClient({
+  auth,
+  fetch:viaFetch(stripeControlHandler),
+  context:{platform:'web', distribution:'web'}
+});
+ok('enabled provider is offered for new purchases',
+  (await stripeControlBilling.methods()).some(x => x.id === 'stripe'));
+
+const stripeOff = await call(adminHandler, {
+  action:'billing_provider_set', provider:'stripe', enabled:false
+}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
+const stripeOffState = (stripeOff.body.providers || []).find(x => x.id === 'stripe');
+ok('admin can disable a provider for new purchases',
+  stripeOff.status === 200 && stripeOffState?.enabled === false && stripeOffState?.state === 'disabled');
+ok('disabled provider disappears from BillingRouter methods',
+  !(await stripeControlBilling.methods()).some(x => x.id === 'stripe'));
+ok('disabled provider cannot start a new checkout',
+  (await call(stripeControlHandler, {
+    action:'checkout', provider:'stripe', sku:'course.provider-checkout',
+    ...(await auth.authFields()), context:{platform:'web', distribution:'web'}
+  })).status === 404);
+
+const verifiedWhileOff = await stripeControlBilling.verifyPurchase(
+  'stripe', 'course.provider-verify', {purchaseToken:'old-purchase'}
+);
+ok('disabled provider still verifies an already-made purchase',
+  verifiedWhileOff.granted && verifiedWhileOff.owned.includes('course.provider-verify'));
+
+const restoredWhileOff = await stripeControlBilling.restorePurchases('stripe', [
+  {sku:'course.provider-restore', proof:{purchaseToken:'old-restore'}}
+]);
+ok('disabled provider still restores old purchases',
+  restoredWhileOff.granted && restoredWhileOff.owned.includes('course.provider-restore'));
+
+const webhookWhileOff = await call(stripeControlHandler, {
+  events:[{
+    orderId:'stripe-control-webhook',
+    email:'payer@example.com',
+    sku:'course.provider-webhook',
+    status:'paid'
+  }]
+}, {query:{provider:'stripe'}});
+ok('disabled provider still ingests verified server notifications',
+  webhookWhileOff.status === 200
+  && !!(await accountOf('payer@example.com')).owned['course.provider-webhook']);
+
+await call(adminHandler, {
+  action:'billing_provider_set', provider:'stripe', enabled:true
+}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
+ok('re-enabled provider returns to BillingRouter methods',
+  (await stripeControlBilling.methods()).some(x => x.id === 'stripe'));
+
 const logRes = await call(adminHandler, {action:'billing_log'}, {headers:{'x-admin-key':process.env.ADMIN_KEY}});
 const events = logRes.body.events || [];
 ok('admin sees the payment journal, newest first', events.length >= 7 && events[0].at >= events[events.length - 1].at);
