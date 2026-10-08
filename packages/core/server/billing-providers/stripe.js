@@ -83,9 +83,10 @@ function createStripeBillingAdapter({
   now = () => Date.now(),
   toleranceSec = 300,
   successUrl,
-  cancelUrl
+  cancelUrl,
+  getCredentials
 } = {}){
-  const credentials = async () => {
+  const credentials = typeof getCredentials === 'function' ? getCredentials : async () => {
     await loadSecrets();
     return {
       key:secret('STRIPE_SECRET_KEY'),
