@@ -3,50 +3,34 @@
    local-first use without an account, sign-in, sync between two devices, reload persistence. */
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { extname, join, normalize } from 'node:path';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 
 process.env.ALLOW_MEMORY_STORE = '1';
 process.env.ADMIN_KEY ||= 'task-mini-e2e';
+process.env.APPBASE_HOST_ADAPTER = 'node';
 const require = createRequire(import.meta.url);
+const { createNodeHostHandler } = require('../../../packages/core/server/node-host');
 const APP = fileURLToPath(new URL('..', import.meta.url));
 const DIST = join(APP, 'dist');
+// Admin requests are rate-limited: count them to catch accidental refetch loops.
+let adminCalls = 0;
+const adminApi = require(join(APP, 'api/admin.js'));
 const API = {
   auth: require(join(APP, 'api/auth.js')),
   sync: require(join(APP, 'api/sync.js')),
   health: require(join(APP, 'api/health.js')),
-  admin: require(join(APP, 'api/admin.js')),
+  admin: async (req, res) => { adminCalls++; return adminApi(req, res); },
   billing: require(join(APP, 'api/billing.js'))
 };
-const TYPES = {'.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.svg':'image/svg+xml', '.png':'image/png', '.json':'application/json'};
 
 const PORT = 4174;
 const URL_ = `http://127.0.0.1:${PORT}/`;
 const CHROME = process.env.FIT_CHROME || (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 
-// Admin requests are rate-limited (30/hour): a refetch loop in the Admin UI would lock it.
-let adminCalls = 0;
-
-const server = createServer(async (req, res) => {
-  const path = decodeURIComponent(new URL(req.url || '/', URL_).pathname);
-  const api = /^\/api\/([a-z]+)$/.exec(path);
-  if(api){
-    const handler = API[api[1]];
-    if(!handler){ res.statusCode = 404; res.end(); return; }
-    const chunks = [];
-    for await (const chunk of req) chunks.push(chunk);
-    req.body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString('utf8')) : {};
-    if(api[1] === 'admin') adminCalls++;
-    await handler(req, res);
-    return;
-  }
-  const file = normalize(join(DIST, path === '/' ? 'index.html' : path));
-  if(!file.startsWith(DIST) || !existsSync(file) || !statSync(file).isFile()){ res.statusCode = 404; res.end(); return; }
-  res.setHeader('Content-Type', TYPES[extname(file)] || 'application/octet-stream');
-  res.end(readFileSync(file));
-});
+const server = createServer(createNodeHostHandler({api:API, staticDir:DIST}));
 await new Promise(resolve => server.listen(PORT, '127.0.0.1', resolve));
 
 let bad = 0;
@@ -123,6 +107,14 @@ try{
   await adminPage.goto(URL_ + '#/admin');
   await adminPage.getByLabel('Ключ администратора').fill(process.env.ADMIN_KEY);
   await adminPage.getByRole('button', {name: 'Войти'}).click();
+
+  const hostRow = adminPage.locator('.ab-admin-services li').filter({hasText:'Хостинг'});
+  ok('same Task Mini product runs through the Core Node host adapter',
+    await appears(hostRow) && /node/i.test(String(await hostRow.textContent())));
+
+  await adminPage.getByRole('button', {name: 'Обзор'}).click();
+  ok('analytics/Admin contract works through the alternate Node host',
+    await appears(adminPage.getByText('Новых устройств за 30 дней', {exact:true})));
 
   await adminPage.getByRole('button', {name: 'Способы оплаты'}).click();
   ok('shared Admin renders payment readiness without production provider secrets',

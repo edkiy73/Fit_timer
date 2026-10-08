@@ -39,7 +39,7 @@ const COPY = {
     badKey:'Ключ не подошёл. Проверь его и попробуй ещё раз.', requestFailed:'Не удалось получить данные.',
     status:'Статус', deployment:'Сборка', warnings:'Что стоит сделать', services:'Сервисы',
     statusOk:'Всё работает', statusWarning:'Работает, но не всё настроено', statusError:'Есть сбой — ученики могут не сохранить прогресс', statusLoading:'Проверяю…',
-    serviceStorage:'Хранилище данных', serviceMail:'Вход по коду из письма', serviceAi:'ИИ (разбор ошибок, разговор)', servicePush:'Уведомления на телефон', serviceBilling:'Оплата',
+    serviceHosting:'Хостинг', serviceStorage:'Хранилище данных', serviceMail:'Вход по коду из письма', serviceAi:'ИИ (разбор ошибок, разговор)', servicePush:'Уведомления на телефон', serviceBilling:'Оплата',
     serviceOn:'работает', serviceOff:'не настроено', serviceDisabled:'не используется', serviceMemory:'только временная память — данные пропадут', serviceBroken:'сбой',
     buildLine:'Сейчас на сайте версия из изменения', details:'Подробности для разработчика',
     analytics:'Аналитика', accounts:'Аккаунты', totalErrors:'Ошибок в приложении',
@@ -72,7 +72,7 @@ const COPY = {
     badKey:'Wrong ADMIN_KEY or access denied.', requestFailed:'Could not load data.',
     status:'Status', deployment:'Build', warnings:'To do', services:'Services',
     statusOk:'Everything works', statusWarning:'Works, but not everything is set up', statusError:'Something is broken — learners may lose progress', statusLoading:'Checking…',
-    serviceStorage:'Data storage', serviceMail:'Sign-in by email code', serviceAi:'AI (mistake explanations, talk)', servicePush:'Phone notifications', serviceBilling:'Payments',
+    serviceHosting:'Hosting', serviceStorage:'Data storage', serviceMail:'Sign-in by email code', serviceAi:'AI (mistake explanations, talk)', servicePush:'Phone notifications', serviceBilling:'Payments',
     serviceOn:'works', serviceOff:'not set up', serviceDisabled:'not used', serviceMemory:'temporary memory only — data will be lost', serviceBroken:'broken',
     buildLine:'The site runs the version from change', details:'Details for developers',
     analytics:'Analytics', accounts:'Accounts', totalErrors:'App errors',
@@ -220,6 +220,7 @@ type Service = {configured?: boolean; enabled?: boolean};
 function HealthView({health, copy}: {health: AdminHealth | null; copy: Copy}){
   const services = (health?.services || {}) as Record<string, Service>;
   const storage = (health?.storage || {}) as {status?: string; mode?: string};
+  const hosting = health?.infrastructure?.hosting;
   const build = (health?.deployment || {}) as unknown as {commit?: string | null; env?: string | null};
   const title = !health ? copy.statusLoading
     : health.status === 'ok' ? copy.statusOk
@@ -231,6 +232,7 @@ function HealthView({health, copy}: {health: AdminHealth | null; copy: Copy}){
     ? copy.serviceDisabled
     : service?.configured ? copy.serviceOn : copy.serviceOff;
   const rows: Array<[string, boolean, string]> = [
+    [copy.serviceHosting, !!hosting?.adapter, hosting?.adapter || copy.serviceOff],
     [copy.serviceStorage, storage.status === 'ok' && storage.mode !== 'memory', storageState],
     [copy.serviceMail, !!services.mail?.configured, services.mail?.configured ? copy.serviceOn : copy.serviceOff],
     [copy.serviceAi, !!services.ai?.configured, state(services.ai)],
@@ -255,7 +257,7 @@ function HealthView({health, copy}: {health: AdminHealth | null; copy: Copy}){
       )}
       <details className="ab-admin-panel ab-admin-details">
         <summary>{copy.details}</summary>
-        <JsonCard value={{deployment:health?.deployment, services:health?.services, probes:health?.probes}} />
+        <JsonCard value={{deployment:health?.deployment, infrastructure:health?.infrastructure, services:health?.services, probes:health?.probes}} />
       </details>
     </section>
   );

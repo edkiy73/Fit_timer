@@ -15,7 +15,7 @@ The architecture described below is now implemented, not merely proposed:
 - Generated apps receive provider-neutral purchase/restore entry points and shared Admin billing infrastructure.
 - Task Mini proves one-time purchase, subscription, external checkout + webhook, failure/cancel, duplicate webhook, refund/revocation, expiry, restore, second-session visibility and manual Admin grant/revoke.
 - Shared CI checks Starter/Task Mini contracts on Core/UI/template changes; PR5 adds explicit CI-contract and provider-boundary drift guards.
-- Task Mini browser E2E runs the same API handlers under a local Node HTTP server, so the reference product is not coupled to the Vercel runtime.
+- Task Mini browser E2E runs the same API handlers through Core `createNodeHostHandler`; health/Admin expose the active hosting adapter, so the reference product is not coupled to the Vercel runtime.
 - **FitTimer migration remains outside this plan and has not been started automatically.** The migration gate at the end of this document still applies.
 
 ## Goal

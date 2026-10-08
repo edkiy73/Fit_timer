@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
+process.env.APPBASE_HOST_ADAPTER='health-test-host';
 const require=createRequire(import.meta.url);
 const {configureProduct}=require('../server/product-core');
 const {collectHealth}=require('../server/health');
@@ -31,5 +32,7 @@ const enabled=await collectHealth();
 assert.equal(enabled.services.ai.enabled,true);
 assert.equal(enabled.services.push.enabled,true);
 assert.equal(enabled.services.billing.enabled,true);
+assert.equal(enabled.infrastructure.hosting.adapter,'health-test-host');
+assert.equal(enabled.infrastructure.hosting.runtime,'node');
 
-console.log('ok  health distinguishes disabled product capabilities from unconfigured services');
+console.log('ok  health distinguishes product capabilities and exposes provider-neutral hosting readiness');
