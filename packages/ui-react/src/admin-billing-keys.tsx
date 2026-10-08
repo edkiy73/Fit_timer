@@ -49,6 +49,7 @@ type Settings = {payment?: {instant?: boolean}} & Record<string, unknown>;
 type ProviderReadiness = {
   id: string;
   state: 'disabled' | 'not_configured' | 'mapping_missing' | 'ready' | string;
+  enabled: boolean;
   configured: boolean;
   mappedProducts: number;
   platforms: string[];
@@ -223,6 +224,8 @@ function InstantSwitch({client, adminKey, locale}: {client: AdminClient; adminKe
 export function AdminBillingKeys({client, adminKey, locale = 'ru'}: {client: AdminClient; adminKey: string; locale?: 'ru' | 'en'}){
   const keys = useSecrets(client, adminKey);
   const [readiness, setReadiness] = useState<BillingReadiness | null>(null);
+  const [busyProvider, setBusyProvider] = useState('');
+  const [providerNote, setProviderNote] = useState('');
   const ru = locale === 'ru';
 
   useEffect(() => {
@@ -230,6 +233,22 @@ export function AdminBillingKeys({client, adminKey, locale = 'ru'}: {client: Adm
       .then(result => setReadiness(result as unknown as BillingReadiness))
       .catch(() => setReadiness(null));
   }, [client, adminKey, keys.secrets]);
+
+  async function toggleProvider(provider: string, enabled: boolean){
+    setBusyProvider(provider);
+    setProviderNote('');
+    try{
+      const result = await client.action(adminKey, 'billing_provider_set', {provider, enabled});
+      setReadiness(result as unknown as BillingReadiness);
+      setProviderNote(enabled
+        ? (ru ? 'Новые покупки этим способом включены.' : 'New purchases with this provider are enabled.')
+        : (ru ? 'Новые покупки отключены. Возвраты, продления и восстановление продолжают обрабатываться.' : 'New purchases are disabled. Refunds, renewals and restore still reconcile.'));
+    }catch(error){
+      setProviderNote((ru ? 'Не сохранилось: ' : 'Not saved: ') + String((error as {code?: string})?.code || 'error'));
+    }finally{
+      setBusyProvider('');
+    }
+  }
 
   return (
     <>
@@ -239,6 +258,7 @@ export function AdminBillingKeys({client, adminKey, locale = 'ru'}: {client: Adm
           ? 'Ключи хранятся на сервере и сюда не возвращаются — видно только, задан ли ключ. «Готов» означает, что обязательные ключи заданы и хотя бы один товар привязан к этому способу оплаты.'
           : 'Keys are stored on the server and never shown again. “Ready” means the required credentials are set and at least one product is mapped to this payment method.'}
       </p>
+      {providerNote && <p className="ab-admin-empty" role="status">{providerNote}</p>}
       {PROVIDERS.map(provider => {
         const state = readiness?.providers?.find(item => item.id === provider.id);
         const mappings = (readiness?.products || []).flatMap(product => {
@@ -250,11 +270,18 @@ export function AdminBillingKeys({client, adminKey, locale = 'ru'}: {client: Adm
           <article className="ab-admin-panel" key={provider.id}>
             <h2>{provider.title[locale]}</h2>
             {state && (
-              <div className="ab-admin-status-line">
-                <span><b>{readinessLabel(state.state, ru)}</b></span>
-                <span>{ru ? 'товаров' : 'products'}: <b>{state.mappedProducts}</b></span>
-                <span>{[...(state.platforms || []), ...(state.distributions || []), ...(state.countries || [])].join(' · ')}</span>
-              </div>
+              <>
+                <div className="ab-admin-status-line">
+                  <span><b>{readinessLabel(state.state, ru)}</b></span>
+                  <span>{ru ? 'товаров' : 'products'}: <b>{state.mappedProducts}</b></span>
+                  <span>{[...(state.platforms || []), ...(state.distributions || []), ...(state.countries || [])].join(' · ')}</span>
+                </div>
+                <label className="ab-admin-check">
+                  <input type="checkbox" checked={state.enabled !== false} disabled={busyProvider === provider.id}
+                    onChange={e => void toggleProvider(provider.id, e.target.checked)} />
+                  <span>{ru ? 'Разрешать новые покупки этим способом' : 'Allow new purchases with this provider'}</span>
+                </label>
+              </>
             )}
             <p className="ab-admin-empty">{provider.hint[locale]}</p>
             {provider.keys.map(key => (
