@@ -29,6 +29,12 @@ need(!/<script>[\s\S]*?<\/script>/.test(markup) && !/ on[a-z]+="/i.test(markup),
 new vm.Script(adminJs,{filename:'admin.js'});
 need(!/localStorage\.setItem\('adminKey'/.test(adminJs),'admin key must not be persisted in localStorage');
 
+need(api.includes("rateOkScoped(req, 'admin-request', REQUEST_LIMIT"),'valid admin work must use a separate high request ceiling');
+need(api.includes("rl:admin-bad-key:"),'bad admin keys need their own brute-force bucket');
+need(api.includes('await chargeBadKey(req)'),'only bad keys should consume the brute-force budget');
+need(!api.includes("rateOkScoped(req, 'admin-auth', 30"),'valid admin requests must not share the old 30/hour auth bucket');
+need(html.includes("e.message === 'rate_limited'"),'admin UI must explain rate limiting instead of reporting a fake connection failure');
+
 need(api.includes("'catalog_ai_create'"),'admin AI-create API is missing');
 need(api.includes("FitAIContract.checkOutput(kind, r.json, input)") && api.includes("FitAIContract.outputSchema(kind)"),'admin catalog AI must use the same AI Contract V2 schema and domain validator as the app');
 need(!api.includes('ai-protocol') && !html.includes('ПРОГРАММА:'),'catalog admin must not use the old text protocol');
