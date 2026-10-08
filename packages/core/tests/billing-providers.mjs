@@ -205,6 +205,8 @@ const googleItem = await google.verifyPurchase({
 });
 ok('Google verifies and normalizes one-time purchase',
   googleItem.events[0]?.status === 'paid' && googleItem.events[0]?.orderId === 'GPA.item.1');
+ok('Google keeps a server-side purchase token reference for reconciliation',
+  googleItem.reference?.purchaseToken === 'item-token');
 ok('Google acknowledges a verified one-time purchase',
   googleCalls.some(x => x.url.includes('/purchases/products/pack_a/tokens/item-token:acknowledge') && x.init.method === 'POST'));
 
@@ -350,6 +352,8 @@ const appleOwned = await apple.verifyPurchase({
 });
 ok('App Store verifies one-time transaction through Server API',
   appleOwned.events[0]?.status === 'paid' && appleOwned.events[0]?.orderId === 'tx-owned');
+ok('App Store keeps transaction id as its server-side reconcile reference',
+  appleOwned.reference?.transactionId === 'tx-owned');
 ok('App Store request is authenticated server-side',
   appleCalls.some(x => x.url.endsWith('/inApps/v1/transactions/tx-owned') && x.init.headers.Authorization === 'Bearer server-jwt'));
 
