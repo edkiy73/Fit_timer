@@ -1,6 +1,6 @@
 {
   "programName": "Wider Shoulders, Narrower Waist — V Shape",
-  "programDesc": "A two-day home strength program for an intermediate trainee who wants a more athletic V-shaped silhouette: wider-looking upper back, fuller shoulders and balanced development of the chest, arms, legs and core. Do workout A on Tuesday and B on Thursday, allowing at least one recovery day between strength sessions. Begin with the short warm-up and a light preparation set before the first demanding lift. Finish most working sets with about 1–3 technically sound repetitions still possible. With dumbbells, first improve repetitions inside the prescribed range and only then increase weight; with bands, build repetitions before moving to a stronger resistance level. FitTimer suggests increases after completed exercises, but you decide whether the technique and recovery justify them. The displayed weights are starting reference values, not universal requirements: adjust them to real equipment and the remaining clean repetitions. Meaningful physique changes normally take months of consistent effort. Check performance, waist measurements and photos under similar conditions every four weeks. Training cannot remove fat from the waist alone. Recovery, regular activity, sleep and sensible nutrition all support results. If a joint hurts during a movement, reduce or stop that exercise and find an appropriate alternative.",
+  "programDesc": "Home strength program for an athletic V-taper: build lats, side and rear delts, chest and arms while maintaining strong legs and a stable core. Two sessions weekly: Tuesday prioritizes horizontal rowing and lateral raises, Thursday vertical pulling, pressing and single-leg work. Exercise order distributes local fatigue: priority upper-body movements come first, demanding leg work follows. Warm up briefly and use one or two light preparation sets before your first heavy pull or press. Keep roughly 1–3 clean reps in reserve on most working sets. Lateral raises start at 2.5 kg per hand: add weight only when all sets are controlled; 0.5 kg increases require suitable plates. For bands, use the same anchor, distance and range of motion to make progression meaningful. Raise resistance only after completing the top of the rep range with good form. Other dumbbell weights are starting references, not mandatory targets. The weighted glute bridge was removed because RDLs and split squats already train the glutes; split squats remain useful for hard leg training with limited weights. Track quality reps and recovery consistently over 6–8 weeks; do not chase failure. Stop or adjust any movement causing joint pain. Exercise cannot selectively reduce waist fat.",
   "plans": [
     [
       [
@@ -14,19 +14,19 @@
         "If you shrug or lean backward, reduce resistance or widen the starting grip. This is a warm-up, not a maximal effort."
       ],
       [
-        "Bodyweight glute bridge",
-        "Lie on your back, bend your knees and place feet about hip-width apart beneath the knees. Exhale and lift your hips through the glutes until shoulders, hips and knees are aligned. Pause briefly, then lower with control without overextending the low back.",
-        "If your low back dominates, lift a little less. If the hamstrings cramp, move feet slightly closer to the hips."
-      ],
-      [
         "Dead bug",
         "Lie on your back with both arms above the chest and hips and knees bent about 90 degrees. Exhale while slowly lowering the right arm behind the head and the left leg away from you. Stop before the pelvis or low back loses control, return and alternate sides.",
         "If the low back visibly lifts or the pelvis rocks, shorten the leg movement. Keep breathing rather than bracing with a breath hold."
       ],
       [
         "Supported one-arm dumbbell row",
-        "Support your free hand on a firm sofa or bench and hinge forward with a neutral spine. Let the dumbbell hang with the palm facing the thigh. Pull the elbow back toward the hip until the hand approaches the waist, then lower slowly and allow a small forward reach of the shoulder blade. Complete both sides.",
+        "Brace your free hand on a stable support, place your feet for balance, lean forward and keep your back neutral. Let the dumbbell hang in the other hand, palm facing the thigh. Move that elbow backward toward the hip until the dumbbell approaches your waist. Lower under control without rotating your torso. Complete one side, then switch.",
         "Do not rotate the torso to lift the weight. If you need to jerk the upper body, reduce the dumbbell load."
+      ],
+      [
+        "Dumbbell lateral raise",
+        "Stand tall with a light dumbbell near the outside of each thigh, palms toward the legs. Keep elbows slightly bent. Raise both arms outward and a little forward to shoulder height or slightly below. Lower over 2–3 seconds without swinging. Use a load you can control for every rep; 2.5 kg per hand is a valid working weight.",
+        "Do not swing the weights or shrug your shoulders. If you cannot control the motion, lower the load; do not jump directly from 2.5 to 5 kg."
       ],
       [
         "Incline push-up",
@@ -44,13 +44,8 @@
         "If it looks like a squat, reduce forward knee movement. If the back rounds, stop higher. Avoid overextending the back at the top."
       ],
       [
-        "Dumbbell lateral raise",
-        "Stand tall with dumbbells beside the outer thighs, palms facing inward and elbows slightly bent. Raise the arms out to the sides and a little forward to a comfortable height no higher than the shoulders. Do not deliberately turn thumbs downward. Lower under control for two to three seconds.",
-        "If you sway or shrug, reduce the weight. If the upper range creates shoulder discomfort, limit the height and reassess the load."
-      ],
-      [
         "Straight-arm band pulldown",
-        "Secure the band to a solid high anchor in front of you. Face it, hold both ends, step back to light tension and hinge forward slightly. With elbows only softly bent, pull the hands down in an arc toward the front of the thighs. Keep the torso still and return slowly to a comfortable overhead height.",
+        "Secure a band to a reliable high anchor in front of you and check that it cannot slip. Hold both ends, step back to create tension and hinge forward slightly. With arms nearly straight, pull your hands in an arc from around face height or higher down to your thighs. Keep elbows almost unchanged; do not turn this into a row. Return slowly, keeping your torso still.",
         "If you bend elbows to bring hands to the chest, this becomes a different row. If you arch the back, use less band tension."
       ],
       [
@@ -82,12 +77,17 @@
       ],
       [
         "High-anchored band lat pulldown",
-        "Attach the band securely above the head. Kneel or sit facing the anchor and take one end in each hand, arms reaching upward and forward, palms toward one another. Pull elbows down toward the sides until hands reach the upper ribs. Return slowly to an overhead reach without swinging the torso backward.",
+        "Secure a band overhead and check the anchor. Kneel or sit facing it with both hands holding the ends and arms reaching upward. Pull elbows down alongside the ribs until the hands approach upper chest or rib height. Keep your torso nearly upright, then straighten arms slowly. Choose enough resistance that the last few reps are challenging without rocking backward.",
         "If the entire trunk falls backward, reduce band tension. If shoulders shoot toward the ears, decrease resistance and start more smoothly."
       ],
       [
+        "Standing dumbbell overhead press",
+        "Stand hip-width with a dumbbell near each shoulder, palms slightly turned toward each other and elbows a little forward. Brace gently through the abdomen and glutes, press upward along a comfortable path until arms are nearly straight, then lower to shoulder level. Keep the torso upright.",
+        "If the low back arches strongly or you lean back, lower the weight. If the movement produces shoulder discomfort, stop and use a comfortable option."
+      ],
+      [
         "Neutral-grip dumbbell floor press",
-        "Lie on your back with bent knees and feet on the floor. Hold two dumbbells above the chest, palms facing each other and wrists straight. Lower the elbows beside the torso until the backs of the upper arms lightly touch the floor. Without bouncing, press back up over the chest.",
+        "Sit on the floor with dumbbells near your thighs; carefully lie on your back and bring them next to your chest. Bend your knees and place feet flat. Keep palms facing each other. Press dumbbells above mid-chest. Slowly bend elbows to lower weights beside your chest until the backs of your upper arms lightly touch the floor. Without bouncing, press up again. At the end, bring weights close to the torso and roll onto your side before sitting up.",
         "If elbows flare directly to the sides or wrists bend backward, reset your grip. If you have to arch hard, reduce the load."
       ],
       [
@@ -96,39 +96,24 @@
         "If the front knee collapses inward, track it over the toes. If balance is shaky, widen the stance or reduce load."
       ],
       [
-        "Standing dumbbell overhead press",
-        "Stand hip-width with a dumbbell near each shoulder, palms slightly turned toward each other and elbows a little forward. Brace gently through the abdomen and glutes, press upward along a comfortable path until arms are nearly straight, then lower to shoulder level. Keep the torso upright.",
-        "If the low back arches strongly or you lean back, lower the weight. If the movement produces shoulder discomfort, stop and use a comfortable option."
-      ],
-      [
         "Dumbbell lateral raise",
-        "Stand tall with dumbbells beside the outer thighs, palms facing inward and elbows slightly bent. Raise the arms out to the sides and a little forward to a comfortable height no higher than the shoulders. Do not deliberately turn thumbs downward. Lower under control for two to three seconds.",
-        "If you sway or shrug, reduce the weight. If the upper range creates shoulder discomfort, limit the height and reassess the load."
+        "Stand tall with a light dumbbell near the outside of each thigh, palms toward the legs. Keep elbows slightly bent. Raise both arms outward and a little forward to shoulder height or slightly below. Lower over 2–3 seconds without swinging. Use a load you can control for every rep; 2.5 kg per hand is a valid working weight.",
+        "Do not swing the weights or shrug your shoulders. If you cannot control the motion, lower the load; do not jump directly from 2.5 to 5 kg."
       ],
       [
         "Band face pull",
-        "Anchor the band around eye level, face the anchor and hold one end in each hand with palms facing inward. Step back to light tension and reach arms forward. Pull hands toward the temples while opening the elbows to roughly shoulder height, pause briefly and return smoothly. Keep the torso still.",
+        "Secure a band at eye height and test the anchor. Face it, hold both ends and step back until lightly taut. With arms extended forward, pull hands toward your temples and elbows outward. Pause briefly, then straighten arms slowly. Keep torso upright and shoulders away from the ears.",
         "If you lean back, use less resistance. If elbows head down toward the waist, this becomes a standard row rather than a rear-shoulder exercise."
       ],
       [
-        "Single-dumbbell weighted glute bridge",
-        "Lie on your back with knees bent and feet hip-width apart. Place one dumbbell across the hips on a folded towel and hold it with both hands. Exhale and lift the hips using the glutes until shoulders, hips and knees align. Pause one second and lower smoothly without overextending the low back.",
-        "If the low back works more than the glutes, lift less and keep ribs controlled. If hamstrings cramp, bring feet slightly closer."
-      ],
-      [
-        "Band triceps pushdown",
-        "Attach the band securely overhead. Face the anchor, take an end in each hand, elbows tucked near the sides, forearms bent and palms facing inward. Straighten the elbows, bringing hands toward the thighs, then return the forearms upward slowly without moving the upper arms.",
-        "If elbows drift forward and back, reduce resistance. If you need to lean your whole body into the band, it is too heavy."
-      ],
-      [
-        "Kneeling side plank",
-        "Lie on one side with elbow under the shoulder and knees bent roughly 90 degrees. Press through the forearm and knees to lift hips into a line from shoulder to hip to knee. Put the free hand on the waist and breathe normally. Lower under control, then repeat on the other side.",
-        "If hips sag or drift backward, end the hold. If the shoulder shrugs up, reposition the elbow and shorten the duration."
+        "Overhead dumbbell triceps extension",
+        "Stand stable, hold one dumbbell by its upper head with both hands and lift it overhead. Keep elbows pointed upward near your ears. Slowly bend the elbows to lower the dumbbell behind the head as far as comfortable, without moving the shoulders or arching your lower back. Straighten elbows and return the weight overhead. Start with a load you can control for 10–15 smooth repetitions.",
+        "Do not flare elbows excessively or lean backward. If you have to use your back or lose control of the weight, lower the load and shorten the range."
       ],
       [
         "Straight-leg side plank",
-        "Lie on one side with elbow below shoulder and legs straight, feet stacked or top foot slightly in front. Raise the hips until shoulder, pelvis and feet form one line, free hand on the waist. Breathe and keep hips steady, then lower with control and switch sides.",
-        "If hips sag or the trunk rotates toward the floor, shorten the hold. If the shoulder fatigues first, check the forearm position."
+        "Lie on your side with your elbow directly under your shoulder, forearm on the floor. Straighten your legs, stack the feet or place the top foot slightly in front. Lift your hips until head, torso and legs form one line. Put the free hand on your waist. Breathe calmly without turning the chest toward the floor. Hold 30 seconds, lower slowly and repeat on the other side.",
+        "If the hips sag or the torso rotates, shorten the hold. Keep the supporting elbow under the shoulder, not far out to the side."
       ]
     ]
   ]
