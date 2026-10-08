@@ -545,10 +545,7 @@ function registerEventActions(){
     hfModalDraft = btn.dataset.hf;
     renderHfModalDraft();
   });
-  registerAction('openHandsFreeVoiceTest', () => {
-    $('hfModal').classList.remove('open');
-    openVoiceTest();
-  });
+  registerAction('openHandsFreeVoiceTest', () => openVoiceTest({returnToHandsFree:true}));
   registerAction('completeWorkoutStep', () => {
     resetSkipConfirm();
     initAudio();
@@ -1513,23 +1510,61 @@ function onVoiceTestLevel(e){
   if(marker) marker.style.left=threshold + '%';
   if(stateLabel) stateLabel.textContent=t(level >= threshold ? 'voicetest.heard' : 'voicetest.quiet');
 }
-async function openVoiceTest(){
-  if(state.live || !appRuntimeCompat.offlineVoice()) return;
+let voiceTestReturnToHandsFree = false;
+let voiceTestResumeWorkout = false;
+let voiceTestGeneration = 0;
+async function openVoiceTest({returnToHandsFree=false} = {}){
+  if(voiceTestOn) return;
+  const modal=$('voiceTestModal');
+  if(!modal) return;
+  voiceTestReturnToHandsFree = returnToHandsFree && $('hfModal').classList.contains('open');
+  voiceTestResumeWorkout = state.live && hfMode === 'voice' && $('scrWork').classList.contains('on');
+  const generation=++voiceTestGeneration;
+  if(voiceTestReturnToHandsFree) $('hfModal').classList.remove('open');
   $('voiceTestList').innerHTML = '';
   $('voiceTestStatus').textContent = t('voicetest.listening');
   if($('voiceTestLevel')) $('voiceTestLevel').style.width='0%';
   if($('voiceTestLevelState')) $('voiceTestLevelState').textContent=t('voicetest.quiet');
   syncVoiceSensitivityControls();
-  $('voiceTestModal').classList.add('open');
+  modal.classList.add('open');
   voiceTestOn = true;
-  const ok = await appRuntimeCompat.startVoiceRecognition(()=>{}, ()=>{ $('voiceTestStatus').textContent = t('voicetest.failed'); }, null, recognitionLang, voiceSensitivity());
-  if(!ok && voiceTestOn) $('voiceTestStatus').textContent = t('voicetest.failed');
-  if(!voiceTestOn) appRuntimeCompat.stopVoiceRecognition(); // успели закрыть, пока микрофон поднимался
+  if(!appRuntimeCompat.offlineVoice()){
+    $('voiceTestStatus').textContent = t('voicetest.failed');
+    return;
+  }
+  // Active workout recognition and the test cannot own the microphone simultaneously.
+  if(voiceTestResumeWorkout){
+    try{ await Promise.resolve(stopListening()); }catch(_){}
+    await new Promise(resolve=>setTimeout(resolve,100));
+  }
+  if(!voiceTestOn || generation !== voiceTestGeneration) return;
+  const ok = await appRuntimeCompat.startVoiceRecognition(
+    ()=>{},
+    ()=>{ if(voiceTestOn && generation === voiceTestGeneration) $('voiceTestStatus').textContent=t('voicetest.failed'); },
+    null, recognitionLang, voiceSensitivity()
+  );
+  if(generation !== voiceTestGeneration || !voiceTestOn){
+    // A newer recognition session may have started after the test was dismissed.
+    return;
+  }
+  if(!ok) $('voiceTestStatus').textContent=t('voicetest.failed');
 }
 function stopVoiceTest(){
   if(!voiceTestOn) return;
   voiceTestOn = false;
-  appRuntimeCompat.stopVoiceRecognition();
+  ++voiceTestGeneration;
+  const restoreSettings=voiceTestReturnToHandsFree;
+  const restoreWorkout=voiceTestResumeWorkout;
+  voiceTestReturnToHandsFree=false;
+  voiceTestResumeWorkout=false;
+  Promise.resolve(appRuntimeCompat.stopVoiceRecognition()).catch(()=>{}).finally(()=>{
+    if(restoreWorkout && state.live && hfMode === 'voice' && $('scrWork').classList.contains('on') && !$('voiceTestModal').classList.contains('open')){
+      resumeVoiceListening();
+    }
+  });
+  if(restoreSettings && state.live && $('scrWork').classList.contains('on')){
+    $('hfModal').classList.add('open');
+  }
 }
 
 /* ---- тренер: карточка на аккаунте, картотека, карточка подопечного ---- */
