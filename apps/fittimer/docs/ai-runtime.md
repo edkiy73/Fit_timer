@@ -6,16 +6,27 @@
 
 ## Поток запроса
 
-1. `index.html` собирает существующий текстовый prompt и вызывает `POST /api/ai`.
-2. Клиент передаёт `email`, отдельный `syncToken` устройства, `deviceId`, `kind`
-   и prompt. Ключей Gemini/OpenAI в HTML и APK нет.
-3. `/api/ai` через rewrite попадает в `api/admin.js` → `lib/ai-endpoint.js`, где проверяются токен аккаунта, Premium и лимиты. Action metadata берётся из `lib/fit-ai-actions.js` через generic `lib/ai-action-registry.js`, поэтому endpoint не знает FitTimer action taxonomy напрямую.
-4. `lib/ai.js` читает `settings:ai`, вызывает основной маршрут и при transport/provider error или структурно невалидном HTTP 200 пробует резервный маршрут.
-5. Для `video.parse` действует отдельный grounded pipeline: сервер сначала получает таймкодированные субтитры YouTube, затем извлекает только факты с дословным evidence. Жёсткая механика (порядок, повторы/время, подходы, отдых, таймкоды) остаётся source-grounded; техника выполнения, мышцы и типовые ошибки добавляются как coaching metadata только для уже подтверждённого упражнения и не имеют права менять механику. Автопрогрессия для импортированного видео выключена, если её явно нет в источнике. Если субтитров нет, Gemini может посмотреть публичный YouTube URL через официальный video input; видео, не являющееся тренировкой, отклоняется без генерации программы.
-6. Обычный текстовый ответ проходит общий `lib/ai-protocol.js` на сервере, затем повторную client-side проверку перед применением. Картинки уменьшаются клиентом перед сохранением.
-7. Обезличенная запись запроса и результата лежит в дневном Redis-списке
-   `ai:log:YYYY-MM-DD` с TTL не больше 30 дней. Почта в журнал не пишется — только
-   необратимый hash аккаунта.
+1. Действия с программами и упражнениями (`program.create`, `program.modify`,
+   `exercise.create`, `exercise.modify`, `exercise.replace`) работают по **AI Contract V2**
+   (`lib/fit-ai-contract.js`): клиент отправляет `POST /api/ai` с `{kind, contractVersion:2, input}`
+   — структурированный input (язык, задача, профиль, доступные снаряды/доп. оборудование,
+   программа/упражнение со стабильными ID). Текст prompt'а клиент не присылает.
+2. Вместе с input приходят `email`, отдельный `syncToken` устройства и `deviceId`. Ключей Gemini/OpenAI в HTML и APK нет.
+3. `/api/ai` через rewrite попадает в `api/admin.js` → Core `ai-endpoint`: токен, Premium, лимиты.
+   Action metadata — `lib/fit-ai-actions.js`; для контрактных действий prompt собирает сервер
+   (`buildPrompt`), схема ответа — `FitAIContract.outputSchema(kind)`.
+4. Core `generate(..., {schema, maxOutputTokens, validate})` вызывает провайдера в режиме Structured Output
+   (Gemini `responseJsonSchema`, OpenAI `json_schema strict`, OpenRouter `response_format` + `require_parameters`),
+   локально проверяет JSON той же схемой (`packages/core/server/json-schema-lite.js`) и доменными правилами
+   контракта (`checkOutput`). Отказ модели → `ai_refused` без резерва; обрезанный/невалидный ответ → резерв.
+5. Клиент применяет JSON детерминированно: ID упражнений/этапов выдаёт приложение; правка — «target state + refs»
+   к снимку программы, ушедшей в запрос, целиком или никак.
+6. Ручной режим «скопировать в чат» использует тот же prompt + схему текстом; вставленный JSON
+   разбирается той же функцией.
+7. `video.parse`: сервер получает таймкодированные субтитры YouTube (или Gemini video input), извлекает
+   только подтверждённые факты и собирает из них тот же Program DTO V2 без второго вызова ИИ.
+8. Обезличенная запись запроса и результата лежит в дневном Redis-списке `ai:log:YYYY-MM-DD`
+   с TTL не больше 30 дней. Почта в журнал не пишется — только необратимый hash аккаунта.
 
 Типы `kind`: `program.create`, `program.modify`, `video.parse`,
 `exercise.create`, `exercise.modify`, `exercise.replace`, `image.cover`,
@@ -33,7 +44,7 @@
 - отображаемые цены по валютам;
 - будущие product ID Google Play и App Store.
 
-Кнопки проверки выполняют настоящий тест через сервер. Админка видит только факт
+Кнопки проверки выполняют настоящий тест через сервер; для текста дополнительно проверяется structured-ответ (JSON по схеме) — маршрут без него помечается «Нет JSON». Админка видит только факт
 наличия ключа, но не его значение. Секреты задаются в окружении Vercel:
 
 ```text
@@ -50,10 +61,6 @@ OPENAI_API_KEY=...
 - Оплата пока не списывает деньги через Google Play/App Store. Админка уже
   хранит цены и product ID, но entitlement нужно связать с проверенным store
   receipt/webhook до публичного платного запуска.
-- Core умеет Structured Output (`generate(..., {schema})`, `packages/core/server/json-schema-lite.js`):
-  схема уходит провайдеру и всегда проверяется локально. Действия FitTimer переходят на
-  AI Contract V2 (JSON по схеме, prompt собирается на сервере) — см.
-  `docs/load-equipment-progression-plan-2026-10-08.md`, PR 5–6.
 - Кэш картинок и общий каталог канонических упражнений ещё не добавлены.
 - Материал проверяет создавший его пользователь. Если тренер отправляет программу
   в каталог, действует существующая очередь и ручной approve администратора.
