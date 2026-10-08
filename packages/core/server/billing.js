@@ -589,11 +589,92 @@ function createDefaultBillingAdapters({
   return adapters;
 }
 
-/* Admin: payment journal (mounted by the Core admin handler). */
-async function handleAdminBilling(action, body, res){
-  if(action !== 'billing_log') return false;
-  send(res, 200, {ok: true, events: await billingLog(Math.max(1, Math.min(500, Math.round(+(body && body.limit) || 200))))});
-  return true;
+function safeBillingMapping(raw){
+  const billing = raw && raw.billing && typeof raw.billing === 'object' ? raw.billing : {};
+  const stripe = billing.stripe && typeof billing.stripe === 'object' ? billing.stripe : {};
+  const yoo = billing.yookassa && typeof billing.yookassa === 'object' ? billing.yookassa : {};
+  const google = billing.google && typeof billing.google === 'object' ? billing.google : {};
+  const apple = billing.apple && typeof billing.apple === 'object' ? billing.apple : {};
+  return {
+    stripe:{priceId:line(stripe.priceId,160)},
+    yookassa:{amount:Number(yoo.amount) > 0 ? Number(yoo.amount) : 0, currency:line(yoo.currency,3).toUpperCase()},
+    google_play:{productId:line(google.productId,200), packageName:line(google.packageName,220)},
+    apple:{productId:line(apple.productId,200), bundleId:line(apple.bundleId,220)}
+  };
 }
 
-module.exports = { applyBillingEvent, billingLog, billingContext, createBillingHandler, createInstantBillingAdapter, createTestBillingAdapter, createDefaultBillingAdapters, handleAdminBilling };
+async function billingReadiness(){
+  const { loadSecrets, secretsStatus } = require('./secrets');
+  await loadSecrets().catch(()=>null);
+  const secrets = secretsStatus();
+  const config = productConfig();
+  const products = (Array.isArray(config.products) ? config.products : []).map(raw => {
+    const sku = cleanSku(raw && raw.sku);
+    return {
+      sku,
+      title:line(raw && raw.title,120) || sku,
+      kind:raw && raw.kind === 'subscription' ? 'subscription' : 'owned',
+      mappings:safeBillingMapping(raw)
+    };
+  }).filter(item => item.sku);
+
+  const mapped = id => products.filter(item => {
+    const value = item.mappings[id];
+    if(id === 'stripe') return !!value.priceId;
+    if(id === 'yookassa') return value.amount > 0 && /^[A-Z]{3}$/.test(value.currency);
+    return !!value.productId;
+  }).length;
+
+  const defs = [
+    {id:'apple', label:'App Store', required:['APPSTORE_ISSUER_ID','APPSTORE_KEY_ID','APPSTORE_PRIVATE_KEY'],
+      platforms:['ios'], distributions:['app_store'], countries:[]},
+    {id:'google_play', label:'Google Play', required:['GOOGLE_PLAY_SERVICE_ACCOUNT_JSON'],
+      platforms:['android'], distributions:['google_play'], countries:[]},
+    {id:'stripe', label:'Stripe', required:['STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET'],
+      platforms:['web','android','ios'], distributions:['web','direct'], countries:[]},
+    {id:'yookassa', label:'YooKassa', required:['YOOKASSA_SHOP_ID','YOOKASSA_SECRET_KEY'],
+      platforms:['web','android','ios'], distributions:['web','direct'], countries:['RU']}
+  ];
+
+  const billingEnabled = !!(
+    config.features && config.features.premium === true
+    || products.length
+    || (Array.isArray(config.skuPatterns) && config.skuPatterns.length)
+  );
+
+  const providers = defs.map(def => {
+    const configured = def.required.every(name => secrets[name] && secrets[name].set);
+    const mappedProducts = mapped(def.id);
+    const state = !billingEnabled ? 'disabled'
+      : !configured ? 'not_configured'
+      : mappedProducts < 1 ? 'mapping_missing'
+      : 'ready';
+    return {
+      id:def.id,
+      label:def.label,
+      state,
+      configured,
+      mappedProducts,
+      platforms:def.platforms,
+      distributions:def.distributions,
+      countries:def.countries
+    };
+  });
+
+  return {enabled:billingEnabled, providers, products};
+}
+
+/* Admin: payment journal and provider readiness (mounted by the Core admin handler). */
+async function handleAdminBilling(action, body, res){
+  if(action === 'billing_log'){
+    send(res, 200, {ok: true, events: await billingLog(Math.max(1, Math.min(500, Math.round(+(body && body.limit) || 200))))});
+    return true;
+  }
+  if(action === 'billing_status'){
+    send(res, 200, {ok:true, ...(await billingReadiness())});
+    return true;
+  }
+  return false;
+}
+
+module.exports = { applyBillingEvent, billingLog, billingContext, billingReadiness, createBillingHandler, createInstantBillingAdapter, createTestBillingAdapter, createDefaultBillingAdapters, handleAdminBilling };
