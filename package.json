@@ -9,7 +9,7 @@
     "apps:browser": "node scripts/apps.mjs run test:browser",
     "fittimer:build": "npm --prefix apps/fittimer run build",
     "fittimer:check": "npm --prefix apps/fittimer run check",
-    "baseline:check": "node scripts/test-appbase-baseline-contract.mjs",
+    "baseline:check": "node scripts/test-appbase-baseline-contract.mjs && node scripts/test-appbase-ci-contract.mjs",
     "check": "npm run starter:check && npm run core:check && npm run apps:check",
     "check:affected": "npm run starter:check && node scripts/test-affected-apps.mjs && node scripts/apps.mjs affected",
     "app:create": "node scripts/create-app.mjs",
