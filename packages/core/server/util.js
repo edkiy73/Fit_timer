@@ -17,17 +17,50 @@ function send(res, code, obj){
 const fail = (res, code, error, extra) => send(res, code, Object.assign({error}, extra || {}));
 
 // Тело приходит уже разобранным у Vercel и сырым у локального сервера — умеем оба.
-async function readBody(req){
-  if(req.body && typeof req.body === 'object') return req.body;
+async function readBodyWithRaw(req){
+  const parse = raw => {
+    if(!raw) return {};
+    try{ return JSON.parse(raw); }
+    catch(_){ throw new Error('bad_json'); }
+  };
+
+  if(req && req.rawBody != null){
+    const rawBody = Buffer.isBuffer(req.rawBody) ? req.rawBody.toString('utf8') : String(req.rawBody);
+    if(Buffer.byteLength(rawBody) > MAX_BODY) throw new Error('too_large');
+    return {body:parse(rawBody), rawBody};
+  }
+
+  if(req && Buffer.isBuffer(req.body)){
+    if(req.body.length > MAX_BODY) throw new Error('too_large');
+    const rawBody = req.body.toString('utf8');
+    return {body:parse(rawBody), rawBody};
+  }
+
+  if(req && typeof req.body === 'string'){
+    if(Buffer.byteLength(req.body) > MAX_BODY) throw new Error('too_large');
+    return {body:parse(req.body), rawBody:req.body};
+  }
+
+  if(req && req.body && typeof req.body === 'object'){
+    // Some hosts eagerly parse JSON. This is fine for normal API actions and providers
+    // that verify by re-fetching the remote object. Signature schemes such as Stripe
+    // must receive req.rawBody (or an unparsed string/buffer) from the host adapter.
+    return {body:req.body, rawBody:''};
+  }
+
   const chunks = [];
   let size = 0;
-  for await (const c of req){
-    size += c.length;
+  for await (const chunk of req){
+    size += chunk.length;
     if(size > MAX_BODY) throw new Error('too_large');
-    chunks.push(c);
+    chunks.push(chunk);
   }
-  if(!chunks.length) return {};
-  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  const rawBody = chunks.length ? Buffer.concat(chunks).toString('utf8') : '';
+  return {body:parse(rawBody), rawBody};
+}
+
+async function readBody(req){
+  return (await readBodyWithRaw(req)).body;
 }
 
 // Адрес нужен только для ограничения частоты, поэтому храним ХЕШ, а не сам адрес:
@@ -149,5 +182,5 @@ function cors(req, res){
   return false;
 }
 
-module.exports = { send, fail, readBody, rateOk, rateOkScoped, rndId, sameSecret, cors, allowedOrigin, ipHash, MAX_BODY,
+module.exports = { send, fail, readBody, readBodyWithRaw, rateOk, rateOkScoped, rndId, sameSecret, cors, allowedOrigin, ipHash, MAX_BODY,
                    clampText, clampLine, cleanPic, cleanLink };
