@@ -5,7 +5,7 @@ const app = p => 'apps/fittimer/' + p;
 
 need(shouldSkip([app('docs/setup.md'),app('tests/a.js')]),'docs/tests should skip Vercel');
 need(shouldSkip([app('android/app/a.java')]),'Android-only change should skip Vercel');
-need(shouldSkip(['CLAUDE.md','docs/appbase-preparation-roadmap.md','../../.github/workflows/x.yml']),'repository docs/CI should skip Vercel');
+need(shouldSkip(['CLAUDE.md','docs/appbase-preparation-roadmap.md','.github/workflows/x.yml']),'repository docs/CI should skip Vercel');
 need(shouldSkip(['apps/other-app/index.html']),'another app must not deploy FitTimer');
 need(shouldSkip(['packages/core/tests/runtime.mjs']),'Core tests should skip Vercel');
 need(!shouldSkip([app('api/admin.js')]),'API change must deploy');
