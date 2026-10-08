@@ -397,12 +397,41 @@ function renderCatalog(b){
   if(!pending){
     $('catalogAdd').onclick=()=>setTab('add');
     const seedButton=$('catalogSeedReference');
-    if(seedButton)seedButton.onclick=()=>{
-      const existing=(data.approved||[]).find(x=>x.id==='vshape_v2');
-      const title='Плечи шире, талия уже — V-силуэт';
-      const choice=confirm(existing?'Обновить эталонную программу «'+title+'» из репозитория?\\n\\nСохранённые обложка и изображения упражнений останутся. Изменения админа в тексте программы будут заменены.':'Опубликовать эталонную программу «'+title+'»?');
-      if(!choice)return;
-      act('seed',{referenceId:'vshape_v2',update:!!existing},seedButton,existing?'Эталонная программа обновлена.':'Эталонная программа опубликована.');
+    if(seedButton)seedButton.onclick=async()=>{
+      seedButton.disabled=true;
+      try{
+        const result=await api('reference_list',{});
+        const items=Array.isArray(result.items)?result.items:[];
+        let panel=$('referenceProgramPanel');
+        if(panel){panel.remove();return;}
+        panel=document.createElement('section');
+        panel.id='referenceProgramPanel';
+        panel.className='entity-card';
+        panel.style.marginBottom='20px';
+        panel.innerHTML='<h3>Эталонные программы</h3><p>Список формируется автоматически из эталонов приложения. Опубликованные программы можно обновлять без создания дублей.</p>';
+        if(!items.length)panel.insertAdjacentHTML('beforeend','<p>Эталонных программ пока нет.</p>');
+        items.forEach(item=>{
+          const row=document.createElement('div');
+          row.className='action-row';
+          row.style.cssText='align-items:center;justify-content:space-between;gap:12px;margin-top:12px;flex-wrap:wrap';
+          const info=document.createElement('div');
+          const name=document.createElement('strong');name.textContent=item.name;
+          const status=document.createElement('div');status.className='muted';
+          status.textContent=item.published?'Опубликована':'Не опубликована';
+          info.append(name,status);
+          const button=document.createElement('button');button.className='b'+(item.published?'':' ok');
+          button.textContent=item.published?'Обновить':'Опубликовать';
+          button.onclick=()=>{
+            const message=item.published?'Обновить «'+item.name+'» из эталона?\\nИзменения текста в каталоге будут заменены. Обложка и изображения сохранятся.':'Опубликовать «'+item.name+'» в каталоге?';
+            if(!confirm(message))return;
+            act('seed',{referenceId:item.id,update:item.published},button,item.published?'Эталон обновлён.':'Эталон опубликован.');
+          };
+          row.append(info,button);panel.appendChild(row);
+        });
+        const head=b.querySelector('.page-head');
+        if(head)head.insertAdjacentElement('afterend',panel);
+      }catch(e){adminNotice('Не удалось загрузить эталоны: '+e.message,'err');}
+      finally{seedButton.disabled=false;}
     };
   }
   if(!list.length){
