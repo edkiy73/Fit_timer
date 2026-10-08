@@ -46,11 +46,43 @@ function hasOwned(acc, sku){
 }
 
 /** What the client receives: never order ids or payment details. */
+function entitlementRecordsOf(acc, now = new Date()){
+  const out = [];
+  const sub = acc && acc.sub && typeof acc.sub === 'object' ? acc.sub : null;
+  if(sub){
+    const expiresAt = line(sub.until, 40);
+    out.push({
+      key: cleanSku(sub.plan) || 'premium',
+      kind: 'subscription',
+      active: !!expiresAt && (Date.parse(expiresAt) || 0) > now.getTime(),
+      provider: line(sub.provider || sub.source, 40) || 'unknown',
+      source: line(sub.source || sub.provider, 40) || 'unknown',
+      since: line(sub.since || sub.grantedAt, 40),
+      expiresAt,
+      autoRenew: !!sub.autoRenew
+    });
+  }
+  for(const [sku, value] of Object.entries(ownedOf(acc))){
+    out.push({
+      key: sku,
+      kind: 'owned',
+      active: true,
+      provider: line(value.provider, 40) || 'unknown',
+      source: line(value.provider, 40) || 'unknown',
+      since: line(value.since, 40),
+      expiresAt: '',
+      autoRenew: false
+    });
+  }
+  return out.sort((a,b) => a.key.localeCompare(b.key));
+}
+
 function entitlementsOf(acc){
   return {
     sub: (acc && acc.sub) || null,
     premium: hasPremium(acc),
-    owned: Object.keys(ownedOf(acc)).sort()
+    owned: Object.keys(ownedOf(acc)).sort(),
+    entitlements: entitlementRecordsOf(acc)
   };
 }
 
@@ -108,6 +140,6 @@ function revokeOwned(acc, sku){
 }
 
 module.exports = {
-  hasPremium, hasOwned, ownedOf, entitlementsOf, productCatalog, checkSku,
+  hasPremium, hasOwned, ownedOf, entitlementRecordsOf, entitlementsOf, productCatalog, checkSku,
   grantOwned, revokeOwned, cleanSku
 };
