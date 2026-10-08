@@ -342,6 +342,8 @@ function createBillingHandler({adapters = []} = {}){
 function createInstantBillingAdapter({isEnabled = async () => false} = {}){
   return {
     id: 'instant',
+    kind: 'direct',
+    external: false,
     available: isEnabled,
     async checkout({email, sku}){
       if(!(await isEnabled())) throw Object.assign(new Error('provider_disabled'), {status: 409});
@@ -358,6 +360,8 @@ function createTestBillingAdapter({secret = process.env.BILLING_TEST_SECRET || '
   const sign = body => crypto.createHmac('sha256', secret).update(JSON.stringify(body)).digest('hex');
   return {
     id: 'test',
+    kind: 'test',
+    external: false,
     testOnly: true,
     sign,
     async checkout({email, sku}){
