@@ -258,7 +258,7 @@ async function geminiText(ep, prompt, opts){
       // Google may reject a *valid but deeply nested* schema with HTTP 400.
       // JSON-only mode is a recovery path; server-side schema/domain validation
       // remains mandatory and prevents saving an incomplete workout.
-      userPrompt += '\\n\\nAnswer with ONE JSON object only, exactly matching this JSON Schema:\\n'
+      userPrompt += '\n\nAnswer with ONE JSON object only, exactly matching this JSON Schema:\n'
         + JSON.stringify(structured.schema);
     }
     return fetchTimed(url, {
