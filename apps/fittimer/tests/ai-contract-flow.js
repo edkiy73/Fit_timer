@@ -77,8 +77,8 @@ const post = async (path, body) => {
     $('qNote').dispatchEvent(new Event('input', {bubbles:true}));
   });
   await page.evaluate(() => {
-    const dayButtons = Array.from(document.querySelectorAll('#qDays button'));
-    for(const i of [0,1,3,5]) dayButtons[i].click();
+    // Each selection re-renders the day chips: resolve fresh nodes every time.
+    for(const i of [0,1,3,5]) document.querySelectorAll('#qDays button')[i].click();
     document.querySelector('#qSplit').click();
     const longDuration = Array.from(document.querySelectorAll('#qDur button'))
       .find(b => (b.dataset.value || '').includes('45+'));
