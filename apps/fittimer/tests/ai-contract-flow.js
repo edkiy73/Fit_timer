@@ -69,7 +69,10 @@ const post = async (path, body) => {
 
   // ---- длинная программа: четыре разных дня, один месячный AI-расход ----
   await page.evaluate(() => { initAIForm(); openAI('text'); });
-  await page.fill('#qNote', 'Четыре разных тренировочных дня по 45+ минут с разминкой');
+  await page.evaluate(() => {
+    $('qNote').value = 'Четыре разных тренировочных дня по 45+ минут с разминкой';
+    $('qNote').dispatchEvent(new Event('input', {bubbles:true}));
+  });
   await page.evaluate(() => {
     const dayButtons = Array.from(document.querySelectorAll('#qDays button'));
     for(const i of [0,1,3,5]) dayButtons[i].click();
@@ -87,7 +90,7 @@ const post = async (path, body) => {
     catch(_){}
   };
   page.on('response', readAIResponse);
-  await page.click('#aiSelf');
+  await page.evaluate(() => $('aiSelf').click());
   await page.waitForFunction(() => !document.querySelector('#aiRunModal.open')
     && draft && draft.plans && draft.plans.length === 4, null, {timeout:30000});
   page.off('response', readAIResponse);
