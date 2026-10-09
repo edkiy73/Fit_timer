@@ -8,8 +8,8 @@
   "files": {
     "src/app/00-core.js": {
       "kind": "frontend-js",
-      "lines": 1858,
-      "chars": 86915,
+      "lines": 1879,
+      "chars": 87836,
       "symbols": [
         "$",
         "accountUserDirtyHook",
@@ -1107,8 +1107,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2799,
-      "chars": 115437,
+      "lines": 2807,
+      "chars": 115708,
       "symbols": [
         "addExManual",
         "aiRetryDialog",

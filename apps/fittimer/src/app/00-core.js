@@ -709,6 +709,7 @@ export function syncSoundCascade(p){
 let modalHistoryWaiters = [];
 let dialogClickCtl = null;
 let dialogResolve = null;
+let dialogBusy = false; // only one confirmation owns #dlg until its history entry is cleared
 let dialogConfirm = false;
 let dialogTypedInput = null;
 
@@ -724,11 +725,24 @@ function finishDialog(v){
   $('dlgOk').disabled = false;
   setShown('dlgTypeBox', false);
   typed.oninput = null;
-  if(waitHistory) modalHistoryWaiters.push(()=> res(v));
-  else res(v);
+  const done = () => { dialogBusy = false; res(v); };
+  if(waitHistory) modalHistoryWaiters.push(done);
+  else done();
 }
 
 export function appDialog(msg, opts = {}){
+  // Two taps/back events must not replace the live resolver and make one dialog
+  // silently disappear (or leave its caller waiting forever).
+  if(dialogBusy){
+    if(dialogResolve && !$('dlg').classList.contains('open')){
+      // An old caller may have hidden the dialog directly, without finishDialog.
+      const abandoned = dialogResolve;
+      dialogResolve = null;
+      dialogBusy = false;
+      abandoned(false);
+    }else return Promise.resolve(false);
+  }
+  dialogBusy = true;
   return new Promise(res => {
     dialogResolve = res;
     dialogConfirm = !!opts.confirm;
@@ -796,9 +810,10 @@ const LEAVE_GUARDS = {
   scrBuilder:  ()=> builderHooks.programDirty() ? {what:t('builder.programChanges'), clean:()=> clearSnap('program')} : null,
   scrExercise: ()=> builderHooks.exDirty() ? {what:t('exercise.changes'), clean:()=>{ builderHooks.dropFreshEx(); builderHooks.clearExerciseDraft(); workoutHooks.clearExerciseWorkoutOrigin(); }} : null,
   scrUserEdit: ()=> accountUserDirtyHook() ? {what:t('profile.changes')} : null,
-  scrAI:       ()=> { const dirty = programsAiDirtyHook(); return dirty && aiScreenDirty(dirty) ? {what:t('ai.filledRequest')} : null; }
+  scrAI:       ()=> { const dirty = programsAiDirtyHook(); return dirty && aiScreenDirty(dirty) ? {message:t('ai.unsavedRequest')} : null; }
 };
 let guardBypass = false; // второй заход после подтверждения — уже не спрашиваем
+let leavePromptPending = false; // second popstate must not start another confirmation
 // Жест «назад» и системная кнопка закрывают открытый попап, а не уводят с экрана.
 // Закрываем ровно тем же путём, что и собственная кнопка отмены: на ней у части
 // попапов висит возврат состояния, и простое снятие класса его бы потеряло.
@@ -1741,6 +1756,7 @@ export function initCore(){
       }
       return;
     }
+    if(leavePromptPending) return; // first guard still awaits the user's choice
     if($('scrWork').classList.contains('on')){
       // назад во время тренировки — спрашиваем, а не выбрасываем
       try{ history.pushState({scr:'scrWork'}, ''); }catch(_){}
@@ -1764,20 +1780,25 @@ export function initCore(){
       let g = null;
       try{ g = cur && LEAVE_GUARDS[cur] ? LEAVE_GUARDS[cur]() : null; }catch(_){ g = null; }
       if(g){
-        // Возвращаем и browser history, и логический navStack на экран, с которого
-        // человек попытался уйти. Раньше history снова был Builder, а navStack уже
-        // успевал обрезаться до Programs — после «Остаться» два источника расходились.
+        // Restore screen history before asking, and serialize repeat Back events.
+        // A second event while this promise is unresolved must not open #dlg
+        // again or override the answer to the original confirmation.
+        leavePromptPending = true;
         navDepth++;
         if(navStack[navStack.length - 1] !== cur) navStack.push(cur);
         try{ history.pushState({scr: cur, d: navDepth}, ''); }catch(_){}
-        const ok = await appDialog(
-          t('common.unsaved',{what:g.what}),
-          {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')}
-        );
-        if(!ok) return;
-        if(g.clean) g.clean();
-        guardBypass = true;
-        history.back();
+        try{
+          const ok = await appDialog(
+            g.message || t('common.unsaved',{what:g.what}),
+            {confirm: true, okText: t('common.leaveWithoutSaving'), cancelText: t('common.stay')}
+          );
+          if(!ok) return;
+          if(g.clean) g.clean();
+          guardBypass = true;
+          history.back();
+        }finally{
+          leavePromptPending = false;
+        }
         return;
       }
     }
