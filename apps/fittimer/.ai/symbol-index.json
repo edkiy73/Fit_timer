@@ -495,8 +495,8 @@
     },
     "src/app/40-programs-ai.js": {
       "kind": "frontend-js",
-      "lines": 3181,
-      "chars": 144498,
+      "lines": 3182,
+      "chars": 144561,
       "symbols": [
         "activateClientAt",
         "add",
@@ -753,8 +753,8 @@
     },
     "src/app/60-builder.js": {
       "kind": "frontend-js",
-      "lines": 2923,
-      "chars": 121580,
+      "lines": 2925,
+      "chars": 121692,
       "symbols": [
         "add",
         "addExerciseStage",
@@ -1107,8 +1107,8 @@
     },
     "src/app/90-events.js": {
       "kind": "frontend-js",
-      "lines": 2765,
-      "chars": 113766,
+      "lines": 2799,
+      "chars": 115437,
       "symbols": [
         "addExManual",
         "aiRetryDialog",
@@ -1148,6 +1148,7 @@
         "markBuilderTab",
         "mk",
         "mountWorkoutSettingsBlocks",
+        "multiDayProgramText",
         "nativeVoiceReady",
         "num",
         "onVoiceTestHeard",
@@ -1162,6 +1163,7 @@
         "persistNotificationPrefs",
         "pickProgramForClient",
         "previewSelectedVoice",
+        "programBatchId",
         "readTimings",
         "refreshAfterForeground",
         "refreshVoicePackUI",
