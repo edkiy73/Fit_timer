@@ -131,6 +131,46 @@ const screen = page => page.evaluate(() => (document.querySelector('.screen.on')
 
   await page.evaluate(() => goTab('scrPrograms'));
   await page.waitForTimeout(400);
+  // ---- Unsaved AI request: exactly one confirmation for tap and system Back ----
+  await page.evaluate(async () => {
+    const u = curUser(); u.age = 30; u.gender = 'f'; await saveUsers();
+    initAIForm(); openAI('text');
+    $('qNote').value = 'Поменяй технику упражнения';
+  });
+  await page.evaluate(() => { $('aiBackTop').click(); $('aiBackTop').click(); });
+  await page.waitForFunction(() => document.querySelector('#dlg.open'));
+  ok('double-tap Back leaves one AI confirmation visible',
+    /Заполненный запрос ещё не сохранён/.test(await page.textContent('#dlgMsg')));
+  await page.click('#dlgCancel');
+  await page.waitForFunction(() => !document.querySelector('#dlg.open'));
+  ok('Stay preserves AI draft and keeps editing screen',
+    await screen(page) === 'scrAI'
+    && (await page.inputValue('#qNote')) === 'Поменяй технику упражнения');
+  await page.evaluate(() => $('aiBackTop').click());
+  await page.waitForFunction(() => document.querySelector('#dlg.open'));
+  await page.click('#dlgOk');
+  await page.waitForFunction(() => !document.querySelector('#dlg.open') && !document.querySelector('#scrAI.on'));
+  await page.waitForTimeout(250);
+  ok('confirmed top Back leaves without another prompt',
+    !(await page.isVisible('#dlg')) && (await screen(page)) === 'scrPrograms');
+
+  await page.evaluate(() => { initAIForm(); openAI('text'); $('qNote').value = 'Другой запрос'; });
+  await page.evaluate(() => history.back());
+  await page.waitForFunction(() => document.querySelector('#dlg.open'));
+  ok('system Back uses a single grammatically correct AI guard',
+    (await page.textContent('#dlgMsg')).trim()
+      === 'Заполненный запрос ещё не сохранён. Если выйти сейчас, он пропадёт.');
+  await page.click('#dlgCancel');
+  await page.waitForFunction(() => !document.querySelector('#dlg.open'));
+  ok('system Back Stay does not erase typed request',
+    (await screen(page)) === 'scrAI' && (await page.inputValue('#qNote')) === 'Другой запрос');
+  await page.evaluate(() => history.back());
+  await page.waitForFunction(() => document.querySelector('#dlg.open'));
+  await page.click('#dlgOk');
+  await page.waitForFunction(() => !document.querySelector('#dlg.open') && !document.querySelector('#scrAI.on'));
+  await page.waitForTimeout(250);
+  ok('system Back confirm navigates exactly once', !(await page.isVisible('#dlg')));
+
   await page.screenshot({path: __dirname + '/shot-nav.png'});
 
   console.log('\npageerror:', errs.length ? errs : 'нет');
