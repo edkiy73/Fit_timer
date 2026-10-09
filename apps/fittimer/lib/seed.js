@@ -4,6 +4,7 @@
 'use strict';
 const C = require('./fit-ai-contract');
 const CP = require('./fit-catalog-program');
+const { GOALS, LEVELS } = require('./admin/fittimer/catalog-text');
 
 const REFERENCES = [
   {
@@ -26,7 +27,18 @@ const REFERENCES = [
   }
 ];
 
+function validateReferenceMetadata(ref){
+  if(!ref || !/^[a-z][a-z0-9_]*$/.test(String(ref.id||''))) throw new Error('etalon_invalid_id');
+  if(!GOALS.includes(ref.cat)) throw new Error(ref.id+'_invalid_category:'+ref.cat);
+  if(!LEVELS.includes(ref.level)) throw new Error(ref.id+'_invalid_level:'+ref.level);
+  if(!Number.isInteger(ref.min) || ref.min<1 || ref.min>180) throw new Error(ref.id+'_invalid_duration:'+ref.min);
+  if(typeof ref.gives!=='string' || ref.gives.trim().length<20) throw new Error(ref.id+'_missing_gives');
+  if(typeof ref.ruGives!=='string' || ref.ruGives.trim().length<20) throw new Error(ref.id+'_missing_ru_gives');
+  if(typeof ref.enGives!=='string' || ref.enGives.trim().length<20) throw new Error(ref.id+'_missing_en_gives');
+}
+
 function referenceItem(ref){
+  validateReferenceMetadata(ref);
   const validated=C.checkOutput('program.create',ref.dto);
   if(!validated.ok) throw new Error(ref.id+'_invalid:'+(validated.missing||[]).join(','));
   let seq=0;
@@ -57,5 +69,7 @@ function referenceItem(ref){
   };
 }
 const SEED_TRAINERS={};
+const refIds = REFERENCES.map(r=>r.id);
+if(new Set(refIds).size!==refIds.length) throw new Error('etalon_duplicate_reference_id');
 const SEED_ITEMS=REFERENCES.map(referenceItem);
-module.exports={SEED_ITEMS,SEED_TRAINERS};
+module.exports={SEED_ITEMS,SEED_TRAINERS,validateReferenceMetadata};
