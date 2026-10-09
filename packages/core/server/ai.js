@@ -223,17 +223,57 @@ const refused = detail => Object.assign(new Error('ai_refused'), {status:422, co
 const incomplete = () => Object.assign(new Error('ai_incomplete'), {status:502, code:'ai_incomplete'});
 const outTokens = (opts, def) => Math.max(256, Math.min(65536, Math.round(+(opts && opts.maxOutputTokens) || def)));
 
+// Gemini's JSON Schema subset excludes string minLength/maxLength. Keep the
+// original contract untouched: structuredJson() still validates all bounds locally.
+function geminiOutputSchema(value){
+  if(Array.isArray(value)) return value.map(geminiOutputSchema);
+  if(value && typeof value === 'object'){
+    return Object.fromEntries(Object.entries(value)
+      .filter(([key]) => key !== 'minLength' && key !== 'maxLength')
+      .map(([key, item]) => [key, geminiOutputSchema(item)]));
+  }
+  return value;
+}
+
 async function geminiText(ep, prompt, opts){
   const structured = opts && opts.schema;
-  const generationConfig = {maxOutputTokens:outTokens(opts, 32768), temperature:.3};
+  const isGemini3 = /^gemini-3[.-]/i.test(ep.model);
+  const generationConfig = {maxOutputTokens:outTokens(opts, 32768)};
+  // Gemini 3 ignores explicit temperature; omit it rather than relying on
+  // provider-specific leniency.
+  if(!isGemini3) generationConfig.temperature = .3;
+  if(isGemini3 && opts && opts.thinkingLevel){
+    generationConfig.thinkingConfig = {thinkingLevel:opts.thinkingLevel};
+  }
   if(structured){
     generationConfig.responseMimeType = 'application/json';
-    generationConfig.responseJsonSchema = structured.schema;
+    generationConfig.responseJsonSchema = geminiOutputSchema(structured.schema);
   }
-  const res = await fetchTimed(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(ep.model)}:generateContent`, {
-    method:'POST', headers:{'Content-Type':'application/json','X-goog-api-key':keyFor('gemini') || ''},
-    body:JSON.stringify({contents:[{parts:[{text:prompt}]}], generationConfig})
-  }, TEXT_TIMEOUT_MS);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(ep.model)}:generateContent`;
+  const request = withoutSchema => {
+    const config = Object.assign({}, generationConfig);
+    let userPrompt = prompt;
+    if(withoutSchema){
+      delete config.responseJsonSchema;
+      // Google may reject a *valid but deeply nested* schema with HTTP 400.
+      // JSON-only mode is a recovery path; server-side schema/domain validation
+      // remains mandatory and prevents saving an incomplete workout.
+      userPrompt += '\\n\\nAnswer with ONE JSON object only, exactly matching this JSON Schema:\\n'
+        + JSON.stringify(structured.schema);
+    }
+    return fetchTimed(url, {
+      method:'POST', headers:{'Content-Type':'application/json','X-goog-api-key':keyFor('gemini') || ''},
+      body:JSON.stringify({contents:[{parts:[{text:userPrompt}]}], generationConfig:config})
+    }, TEXT_TIMEOUT_MS);
+  };
+  let res = await request(false);
+  if(!res.ok && structured && res.status === 400){
+    let error;
+    try{ await jsonError(res); }catch(e){ error = e; }
+    // Do not retry unrelated 400s (bad keys, invalid model or prompt).
+    if(!/invalid argument|schema|complexity/i.test(String(error && error.message || ''))) throw error;
+    res = await request(true);
+  }
   if(!res.ok) return jsonError(res);
   const j = await res.json();
   if(j.promptFeedback && j.promptFeedback.blockReason) throw refused(j.promptFeedback.blockReason);
@@ -384,7 +424,8 @@ async function generate(type, settings, prompt, options){
   const aspectRatio = type === 'image' && options ? options.aspectRatio : null;
   const validate = options && typeof options.validate === 'function' ? options.validate : null;
   const schema = type === 'text' ? schemaOption(options) : null;
-  const callOpts = {schema, maxOutputTokens:options && options.maxOutputTokens};
+  const callOpts = {schema, maxOutputTokens:options && options.maxOutputTokens,
+    thinkingLevel:options && options.thinkingLevel};
   const checked = async (ep, fallback) => {
     const out = await callOne(type, ep, prompt, type === 'image' ? route.size : null, aspectRatio, callOpts);
     if(schema){
