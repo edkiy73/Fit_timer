@@ -377,6 +377,7 @@ function registerEventActions(){
     openExAI();
   });
   registerAction('cancelAiRun', () => {
+    pendingProgramAI = null;
     aiRunCancelled = true;
     try{ if(aiRunCtl) aiRunCtl.abort(); }catch(e){}
     aiRunCtl = null;
@@ -1801,7 +1802,37 @@ async function aiRetryDialog(error){
   );
 }
 
-// собрать ответ через Gemini, сразу применить и вернуться туда, откуда пришли
+// The user can retry a failed day without regenerating already verified days.
+// A changed request begins a new batch; nothing is applied until all days pass.
+let pendingProgramAI = null;
+function programBatchId(){
+  if(globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function')
+    return globalThis.crypto.randomUUID().replace(/-/g, '');
+  return Date.now().toString(36) + Math.random().toString(36).slice(2)
+    + Math.random().toString(36).slice(2);
+}
+async function multiDayProgramText(input, signal){
+  const fingerprint = JSON.stringify(input);
+  const days = input.scheduleDays;
+  if(!pendingProgramAI || pendingProgramAI.fingerprint !== fingerprint)
+    pendingProgramAI = {id:programBatchId(), fingerprint, parts:[]};
+  const job = pendingProgramAI;
+  for(let index=job.parts.length;index<days.length;index++){
+    if((signal && signal.aborted) || aiRunCancelled)
+      throw Object.assign(new Error('cancelled'), {name:'AbortError'});
+    aiRunNote(t('ai.generatingDay', {current:index + 1, total:days.length}));
+    const text = await callGemini({input, segment:{id:job.id,index}}, signal, 'program.create');
+    const part = JSON.parse(text);
+    const valid = FitAIContract.checkSegment(part, days[index]);
+    if(!valid.ok) throw new Error(t('ai.badResponse') + ' ' + valid.reason);
+    job.parts.push(part);
+  }
+  const assembled = FitAIContract.mergeSegments(job.parts, days);
+  if(assembled.errors.length) throw new Error(t('ai.badResponse') + ' ' + assembled.errors.join(', '));
+  return JSON.stringify(assembled.json);
+}
+
+// собрать ответ через ИИ, сразу применить и вернуться туда, откуда пришли
 async function runSelfAI(promptFn, targetId, applyFn, title, kind){
   if(!premiumGate()) return;
   let prompt;
@@ -1809,19 +1840,22 @@ async function runSelfAI(promptFn, targetId, applyFn, title, kind){
   aiRunOpen(title);
   if(kind === 'video.parse') aiRunNote(t('video.processingSafe'));
   try{
-    const text = await callGemini(prompt, aiRunCtl ? aiRunCtl.signal : undefined, kind);
+    const split = kind === 'program.create' && prompt && prompt.input
+      && prompt.input.splitByDays && Array.isArray(prompt.input.scheduleDays)
+      && prompt.input.scheduleDays.length >= 2;
+    const text = split
+      ? await multiDayProgramText(prompt.input, aiRunCtl ? aiRunCtl.signal : undefined)
+      : await callGemini(prompt, aiRunCtl ? aiRunCtl.signal : undefined, kind);
     aiRunClose();
     if($(targetId)){ $(targetId).value = text; autoGrow($(targetId)); }
     await applyFn(); // сам разберёт ответ, покажет итог и вернёт на нужный экран
+    if(split) pendingProgramAI = null;
   }catch(e){
     aiRunClose();
     if(aiRunCancelled) return; // пользователь сам нажал «Отмена» — тогда молча
-    // AbortError от сети/серверного таймаута — это ошибка, а не пользовательская
-    // отмена. Раньше такой сбой выглядел ровно как «спиннер исчез и ничего нет».
     const retry = await aiRetryDialog(e);
     if(retry) return runSelfAI(promptFn, targetId, applyFn, title, kind);
-    // «Изменить запрос» ничего не закрывает и ничего не очищает: человек остаётся
-    // на том же AI-экране со всеми выбранными параметрами и текстом запроса.
+    // «Изменить запрос» ничего не очищает: пользователь остаётся на экране.
   }
 }
 export function buildAiMenu(){
