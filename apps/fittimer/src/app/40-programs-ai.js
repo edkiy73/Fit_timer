@@ -1329,7 +1329,8 @@ async function callServerAI(prompt, signal, kind){
   } : {};
   const res = await fetch(API_BASE + '/api/ai', {method:'POST',headers:{'Content-Type':'application/json'},signal,
     body:JSON.stringify(Object.assign(prompt && typeof prompt === 'object'
-      ? {kind, contractVersion:FitAIContract.CONTRACT_VERSION, input:prompt.input}
+      ? {kind, contractVersion:FitAIContract.CONTRACT_VERSION, input:prompt.input,
+          ...(prompt.segment ? {segment:prompt.segment} : {})}
       : {prompt, kind}, extra, auth))});
   const j = await res.json().catch(()=> ({}));
   if(!res.ok){
