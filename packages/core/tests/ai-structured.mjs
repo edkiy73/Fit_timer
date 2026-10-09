@@ -45,7 +45,11 @@ globalThis.fetch = async (url, opts) => {
   const body = JSON.parse(opts.body);
   calls.push({url:String(url), body});
   const next = replies.shift();
-  return {ok:true, status:200, json:async () => next(body)};
+  const response = next(body);
+  if(response && response.__httpStatus){
+    return {ok:false, status:response.__httpStatus, json:async () => ({error:{message:response.message}})};
+  }
+  return {ok:true, status:200, json:async () => response};
 };
 const gemini = text => () => ({candidates:[{finishReason:'STOP', content:{parts:[{text}]}}]});
 const openai = text => () => ({status:'completed', output:[{content:[{type:'output_text', text}]}]});
@@ -56,8 +60,44 @@ let out = await generate('text', settings, 'prompt', opts);
 assert.deepEqual(out.json, good);
 assert.equal(out.provider, 'gemini');
 assert.equal(calls[0].body.generationConfig.responseMimeType, 'application/json');
-assert.deepEqual(calls[0].body.generationConfig.responseJsonSchema, SCHEMA);
+// Gemini's published schema subset does not support minLength/maxLength;
+ // only the *provider* shape is relaxed, while local validation stays strict.
+const geminiSchema = JSON.parse(JSON.stringify(SCHEMA));
+delete geminiSchema.properties.name.minLength;
+delete geminiSchema.properties.name.maxLength;
+assert.deepEqual(calls[0].body.generationConfig.responseJsonSchema, geminiSchema);
+assert.equal(SCHEMA.properties.name.minLength, 1, 'do not mutate original contract');
 assert.equal(calls[0].body.generationConfig.maxOutputTokens, 900, 'action-specific output budget');
+
+// Gemini 3 probe may request low thinking without leaking it to older models.
+const modern = sanitizeSettings({text:{primary:{provider:'gemini',model:'gemini-3.6-flash'},backup:{provider:'gemini',model:'gemini-3.6-flash'}}});
+calls = []; replies = [gemini(JSON.stringify(good))];
+out = await generate('text', modern, 'prompt', {...opts, thinkingLevel:'low'});
+assert.equal(calls[0].body.generationConfig.thinkingConfig.thinkingLevel, 'low');
+assert.equal(calls[0].body.generationConfig.temperature, undefined);
+
+// String length limits remain enforced locally even though Gemini never sees them.
+calls = []; replies = [gemini(JSON.stringify({...good, name:'x'.repeat(21)})), openai(JSON.stringify(good))];
+out = await generate('text', settings, 'prompt', opts);
+assert.equal(out.provider, 'openai');
+
+// A deeply nested schema can still produce a generic 400; retry once with
+// JSON-only mode and the exact schema in the prompt, always validate locally.
+const invalidArgument = () => ({__httpStatus:400, message:'Request contains an invalid argument.'});
+calls = []; replies = [invalidArgument, gemini(JSON.stringify(good))];
+out = await generate('text', settings, 'prompt', opts);
+assert.equal(out.provider, 'gemini');
+assert.equal(calls.length, 2);
+assert.equal(calls[1].body.generationConfig.responseMimeType, 'application/json');
+assert.equal(calls[1].body.generationConfig.responseJsonSchema, undefined);
+assert.ok(calls[1].body.contents[0].parts[0].text.includes('exactly matching this JSON Schema'));
+calls = []; replies = [invalidArgument, gemini(JSON.stringify({...good, sets:'3'})), openai(JSON.stringify(good))];
+out = await generate('text', settings, 'prompt', opts);
+assert.equal(out.provider, 'openai', 'invalid JSON-only result must not bypass validation');
+assert.equal(calls.length, 3);
+calls = []; replies = [() => ({__httpStatus:400, message:'Invalid API credentials'})];
+await assert.rejects(generate('text', settings, 'prompt', opts), e => e.status === 400);
+assert.equal(calls.length, 1, 'unrelated 400 is not retried');
 
 // schema mismatch on primary → backup (OpenAI strict json_schema)
 calls = []; replies = [gemini(JSON.stringify({...good, sets:'3'})), openai(JSON.stringify(good))];
@@ -122,6 +162,7 @@ calls = []; replies = [gemini('работает'), gemini(JSON.stringify({status
 await handleAdminAISettings('test_ai', {type:'text', settings}, res);
 const probe = JSON.parse(res.body);
 assert.equal(probe.structured.ok, true, res.body);
+assert.equal(calls[1].body.generationConfig.maxOutputTokens, 2048, 'probe must leave room for thinking');
 const res2 = {statusCode:0, body:'', setHeader(){}, end(value){ this.body = String(value || ''); }};
 const same = sanitizeSettings({text:{primary:{provider:'gemini', model:'g-1'}, backup:{provider:'gemini', model:'g-1'}}});
 calls = []; replies = [gemini('работает'), gemini('просто текст')];

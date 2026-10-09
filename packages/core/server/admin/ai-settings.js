@@ -59,7 +59,8 @@ async function handleAdminAISettings(action, body, res){
     if(type === 'text'){
       try{
         const probe = await generate('text', settings, 'Return JSON: status "ok" and the number of days in a week.', {
-          schema:{name:'route_check', schema:STRUCTURED_PROBE}, maxOutputTokens:256
+          // 256 tokens can be exhausted by Gemini 3 thinking before JSON starts.
+          schema:{name:'route_check', schema:STRUCTURED_PROBE}, maxOutputTokens:2048, thinkingLevel:'low'
         });
         structured = {ok:probe.json && probe.json.status === 'ok' && probe.json.days === 7,
           provider:probe.provider, model:probe.model, fallback:probe.fallback};
