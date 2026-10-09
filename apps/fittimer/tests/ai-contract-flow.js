@@ -68,9 +68,6 @@ const post = async (path, body) => {
   const pid = await page.evaluate(() => customPrograms[customPrograms.length - 1].id);
 
   // ---- длинная программа: четыре разных дня, один месячный AI-расход ----
-  // Re-enter from a clean app state after the previous save/navigation.
-  await page.reload({waitUntil:'load'});
-  await page.waitForTimeout(500);
   await page.evaluate(() => { initAIForm(); openAI('text'); });
   await page.evaluate(() => {
     $('qNote').value = 'Четыре разных тренировочных дня по 45+ минут с разминкой';
