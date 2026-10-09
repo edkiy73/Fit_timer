@@ -67,6 +67,47 @@ const post = async (path, body) => {
   await closeModals();
   const pid = await page.evaluate(() => customPrograms[customPrograms.length - 1].id);
 
+  // ---- длинная программа: четыре разных дня, один месячный AI-расход ----
+  await page.evaluate(() => { initAIForm(); openAI('text'); });
+  await page.fill('#qNote', 'Четыре разных тренировочных дня по 45+ минут с разминкой');
+  await page.evaluate(() => {
+    const dayButtons = Array.from(document.querySelectorAll('#qDays button'));
+    for(const i of [0,1,3,5]) dayButtons[i].click();
+    document.querySelector('#qSplit').click();
+    const longDuration = Array.from(document.querySelectorAll('#qDur button'))
+      .find(b => (b.dataset.value || '').includes('45+'));
+    if(!longDuration) throw new Error('45+ duration not found');
+    longDuration.click();
+  });
+  const beforeParts = bodies.length;
+  const quotaReplies = [];
+  const readAIResponse = async response => {
+    if(!/\/api\/ai$/.test(response.url())) return;
+    try{ const json=await response.json(); if(json.usage) quotaReplies.push(json.usage.used); }
+    catch(_){}
+  };
+  page.on('response', readAIResponse);
+  await page.click('#aiSelf');
+  await page.waitForFunction(() => !document.querySelector('#aiRunModal.open')
+    && draft && draft.plans && draft.plans.length === 4, null, {timeout:30000});
+  page.off('response', readAIResponse);
+  const segmentedRequests = bodies.slice(beforeParts).filter(x => x.kind === 'program.create' && x.segment);
+  ok('four selected days produce four sequential server requests',
+    segmentedRequests.length === 4
+    && segmentedRequests.every((r,i) => r.segment.index === i
+      && r.segment.id === segmentedRequests[0].segment.id
+      && r.input.scheduleDays.length === 4 && r.input.splitByDays === true));
+  const splitDraft = await page.evaluate(() => ({
+    days:draft.plans.map(p=>p.days.join(',')),
+    names:draft.plans.map(p=>p.exercises[1].stages[0].prescription.name)
+  }));
+  ok('four distinct days assembled with individual exercises',
+    splitDraft.days.length === 4 && new Set(splitDraft.days).size === 4
+    && new Set(splitDraft.names).size === 4, JSON.stringify(splitDraft));
+  ok('multi-part generation is one Premium heavy use', quotaReplies.length === 4
+    && quotaReplies.every(n => n === quotaReplies[0]), JSON.stringify(quotaReplies));
+  await closeModals();
+
   // ---- ручной режим: prompt со схемой, вставленный ответ разбирается тем же контрактом ----
   await page.evaluate(() => { initAIForm(); openAI('text'); });
   const manual = await page.evaluate(() => { $('qNote').value = 'что угодно'; return fullAIPrompt(); });
