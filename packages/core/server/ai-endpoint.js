@@ -105,10 +105,43 @@ function createAIHandler(AI_ACTIONS, options = {}){
     }else prompt = String(body.prompt || '').trim();
     if(!prompt || prompt.length > 120000) return failReleased(res, 400, 'bad_prompt');
 
+    // A product can opt into small sequential AI parts. The server remembers
+    // completed responses per authenticated account and charges the first part
+    // once; clients cannot mint uncharged continuations or change the input.
+    let batch = null, batchKey = '', batchRecord = null, batchHash = '';
+    if(typeof action.batch === 'function'){
+      try{ batch = action.batch(body); }
+      catch(e){ return failReleased(res, 400, String(e.code || 'bad_batch')); }
+    }
+    if(batch){
+      batchKey = `ai:batch:${mh}:${kind}:${batch.id}`;
+      batchHash = sha(JSON.stringify({kind, input:body.input, days:batch.days}));
+      try{
+        const raw = await store.get(batchKey);
+        batchRecord = raw ? JSON.parse(raw) : null;
+      }catch(_){ return failReleased(res, 503, 'ai_batch_store_unavailable'); }
+      if(batchRecord && (batchRecord.hash !== batchHash
+        || batchRecord.total !== batch.days.length
+        || !Array.isArray(batchRecord.parts))){
+        return failReleased(res, 409, 'ai_batch_mismatch');
+      }
+      if(batch.index > 0 && !batchRecord) return failReleased(res, 409, 'ai_batch_missing');
+      if(batchRecord && batch.index > batchRecord.parts.length)
+        return failReleased(res, 409, 'ai_batch_out_of_order');
+    }
+
     const month = new Date().toISOString().slice(0,7);
-    const used = await store.incr(`ai:use:${month}:${mh}:${bucket}`, 70 * 86400);
     const limit = settings.limits[bucket];
-    if(limit === 0 || used > limit) return failReleased(res, 429, 'ai_limit', {bucket,used:Math.max(0,used-1),limit});
+    // Replaying a successful part is free and returns the exact same verified JSON.
+    if(batchRecord && batch.index < batchRecord.parts.length){
+      return send(res, 200, {ok:true, kind, usage:{bucket,used:batchRecord.used,limit},
+        result:batchRecord.parts[batch.index]});
+    }
+    const continuing = !!(batchRecord && batch.index > 0);
+    const used = continuing ? batchRecord.used
+      : await store.incr(`ai:use:${month}:${mh}:${bucket}`, 70 * 86400);
+    if(!continuing && (limit === 0 || used > limit))
+      return failReleased(res, 429, 'ai_limit', {bucket,used:Math.max(0,used-1),limit});
 
     const at = new Date().toISOString();
     try{
@@ -120,6 +153,14 @@ function createAIHandler(AI_ACTIONS, options = {}){
             schema:action.schema || null,
             maxOutputTokens:action.maxOutputTokens || null
           });
+      if(batch){
+        // Store the verified response *before* acknowledging the part, so a lost
+        // mobile connection can replay instead of wasting another model call.
+        const record = batchRecord || {hash:batchHash,total:batch.days.length,used,parts:[]};
+        if(batch.index !== record.parts.length) throw new Error('ai_batch_out_of_order');
+        record.parts.push(result);
+        await store.set(batchKey, JSON.stringify(record), 60 * 60);
+      }
       const log = {at,account:mh,kind,provider:result.provider,model:result.model,
         fallback:result.fallback,prompt:prompt.slice(0,120000),
         result:(result.text || '[изображение]').slice(0,120000),ok:true};

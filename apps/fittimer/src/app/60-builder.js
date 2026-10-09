@@ -2482,7 +2482,9 @@ export function parseContractAnswer(kind, raw, input){
 export function aiCreateInput(){
   return FitAIContract.normalizeInput('program.create', Object.assign({
     language:aiLanguage(),
-    task:composeRequest()   // composeRequest уже включает контекст возможностей/ограничений
+    task:composeRequest(),  // composeRequest уже включает контекст возможностей/ограничений
+    scheduleDays:FitAIContract.daysToKeys(q.days),
+    splitByDays:!!q.split && !q.rotate && q.days.length >= 2
   }, aiEquipmentInput(q.equip))).input;
 }
 export const fullAIPrompt = ()=> FitAIContract.manualPrompt('program.create', aiCreateInput());

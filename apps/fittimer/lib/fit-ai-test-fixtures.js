@@ -16,7 +16,18 @@ const jsonAfter = (prompt, label) => {
   return line ? JSON.parse(line.slice(label.length)) : null;
 };
 function contractFixture(kind, prompt){
-  if(kind === 'program_create_v2') return {contractVersion:2, program:{name:'Тестовая программа', desc:'Тест V2.',
+  if(kind === 'program_create_v2'){
+    const segment = prompt.match(/This is day (\d+) of (\d+): (mon|tue|wed|thu|fri|sat|sun)\./);
+    if(segment){
+      const day = segment[3];
+      return {contractVersion:2, program:{
+        name:'Тестовая программа', desc:'Тест V2.', progressionEvery:4,
+        rotate:false, rotateDays:[], plans:[{days:[day], rounds:1, roundRest:60,
+          exercises:[{warmup:true, stages:[STAGE('Разминка '+day)]},
+            {warmup:false, stages:[STAGE('Упражнение '+day)]}]}]
+      }};
+    }
+    return {contractVersion:2, program:{name:'Тестовая программа', desc:'Тест V2.',
     progressionEvery:2, rotate:false, rotateDays:[], plans:[{days:['mon', 'thu'], rounds:2, roundRest:60, exercises:[
       {warmup:true, stages:[STAGE('Разминка суставов', {sets:1, progression:{mode:'none', every:null, repsStep:null,
         repsMax:null, weightStep:null, weightMax:null, timeStep:null, timeMax:null}})]},
@@ -26,6 +37,7 @@ function contractFixture(kind, prompt){
         weight:8, levels:[], level:0}, progression:{mode:'weight', every:null, repsStep:null, repsMax:null, weightStep:2,
         weightMax:null, timeStep:null, timeMax:null}})]}
     ]}]}};
+  }
   if(kind === 'exercise_create_v2') return {contractVersion:2, exercises:[{warmup:false, stages:[STAGE('Выпады', {perSide:true})]}]};
   if(kind === 'exercise_replace_v2') return {contractVersion:2, exercise:{warmup:false, stages:[STAGE('Ягодичный мост')]}};
   if(kind === 'exercise_modify_v2'){

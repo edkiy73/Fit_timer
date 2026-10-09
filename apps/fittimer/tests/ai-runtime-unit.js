@@ -19,6 +19,38 @@ ok('generic AI registry normalizes image actions without FitTimer knowledge',
 ok('FitTimer actions are registered outside generic registry',
   FitAIActions.has('program.create') && FitAIActions.has('video.parse') && FitAIActions.has('image.exercise'));
 
+// Four long, different workout days are independent, short provider responses.
+const Contract = require('../lib/fit-ai-contract');
+const fixture = require('../lib/fit-ai-test-fixtures').fitTestResponder;
+const splitInput = Contract.normalizeInput('program.create', {
+  language:'Russian', task:'Build four different 45+ minute days, with warmups.',
+  scheduleDays:['mon','tue','thu','sat'], splitByDays:true
+}).input;
+const splitAction = FitAIActions.get('program.create');
+const splitParts = [];
+for(let index=0; index<splitInput.scheduleDays.length; index++){
+  const body = {contractVersion:2,input:splitInput,segment:{id:'abcdefghijklmnop-123',index}};
+  const batch = splitAction.batch(body);
+  const prompt = splitAction.buildPrompt({body});
+  const mocked = fixture('text', prompt, {schema:splitAction.schema});
+  const part = mocked && JSON.parse(mocked.text);
+  ok('day '+(index+1)+' has a valid standalone contract and expected day',
+    batch.index === index && batch.days.length === 4
+    && !!part && Contract.checkSegment(part,splitInput.scheduleDays[index]).ok);
+  splitParts.push(part);
+}
+const combined = Contract.mergeSegments(splitParts,splitInput.scheduleDays);
+ok('four segments merge into four distinct scheduled daily workouts',
+  !combined.errors.length && combined.json.program.plans.length === 4
+  && combined.json.program.plans.every((p,i)=>p.days[0]===splitInput.scheduleDays[i])
+  && new Set(combined.json.program.plans.map(p=>p.exercises[1].stages[0].name)).size===4);
+const missingDay = Contract.mergeSegments(splitParts.slice(0,3),splitInput.scheduleDays);
+ok('incomplete weekly program cannot be saved', missingDay.errors.length > 0);
+ok('invalid continuation index rejected before provider call', (() => {
+  try{ splitAction.batch({contractVersion:2,input:splitInput,
+    segment:{id:'abcdefghijklmnop-123',index:4}}); return false; }catch(_){return true;}
+})());
+
 // Проверка ответа в generate — любая функция действия; здесь простой JSON-валидатор
 const goodProgram = JSON.stringify({contractVersion:2, program:{name:'Тест'}});
 const badProgram = JSON.stringify({contractVersion:2});

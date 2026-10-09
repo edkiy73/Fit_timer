@@ -22,17 +22,44 @@ function contractInput(kind, body){
   if(res.error) throw Object.assign(new Error(res.error), {code:'bad_input'});
   return res.input;
 }
+// Continuation metadata is product-owned. Core checks authentication, account scope,
+// quotas and replay cache; untrusted clients cannot skip a charged first segment.
+function programSegment(body){
+  if(!body || !body.segment) return null;
+  const input = contractInput('program.create', body);
+  const segment = body.segment;
+  const days = input.scheduleDays;
+  const index = Number(segment.index);
+  const id = String(segment.id || '');
+  if(!input.splitByDays || days.length < 2 || days.length > 7
+    || new Set(days).size !== days.length || !/^[A-Za-z0-9_-]{16,64}$/.test(id)
+    || !Number.isInteger(index) || index < 0 || index >= days.length){
+    throw Object.assign(new Error('invalid_program_segment'), {code:'bad_segment'});
+  }
+  return {id, index, days};
+}
 const contractAction = (id, bucket) => ({
   id, type:'text', bucket,
+  batch: id === 'program.create' ? programSegment : null,
   schema:FitAIContract.outputSchema(id),
   maxOutputTokens:FitAIContract.MAX_OUTPUT_TOKENS[id],
-  buildPrompt:({body}) => FitAIContract.buildPrompt(id, contractInput(id, body)),
+  buildPrompt:({body}) => {
+    const input = contractInput(id, body);
+    const segment = id === 'program.create' ? programSegment(body) : null;
+    return segment
+      ? FitAIContract.segmentPrompt(input, segment.days[segment.index], segment.index)
+      : FitAIContract.buildPrompt(id, input);
+  },
   async run({settings, body, prompt, generate}){
     const input = contractInput(id, body);
+    const segment = id === 'program.create' ? programSegment(body) : null;
     const out = await generate('text', settings, prompt, {
       schema:FitAIContract.outputSchema(id),
-      maxOutputTokens:FitAIContract.MAX_OUTPUT_TOKENS[id],
-      validate:res => FitAIContract.checkOutput(id, res.json, input)
+      maxOutputTokens:segment ? 9000 : FitAIContract.MAX_OUTPUT_TOKENS[id],
+      thinkingLevel:segment ? 'low' : undefined,
+      validate:res => segment
+        ? FitAIContract.checkSegment(res.json, segment.days[segment.index])
+        : FitAIContract.checkOutput(id, res.json, input)
     });
     return Object.assign(out, {contractVersion:FitAIContract.CONTRACT_VERSION, promptVersion:FitAIContract.PROMPT_VERSION});
   }
