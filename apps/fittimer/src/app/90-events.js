@@ -406,15 +406,23 @@ function registerEventActions(){
     event.stopPropagation();
     toggleMenu($('aiMenu'));
   });
+  // An impatient double-tap on Back must never open the leave prompt twice.
+  let aiBackPending = false;
   registerAction('backFromAi', async () => {
+    if(aiBackPending || $('dlg').classList.contains('open')) return;
     const cfg = AI_SOURCES[aiSrc];
     if(!cfg) return;
-    if(aiScreenDirty(cfg.dirty)){
-      const ok = await appDialog(t('ai.unsavedRequest'),
-        {confirm:true, okText:t('common.leaveWithoutSaving'), cancelText:t('common.stay')});
-      if(!ok) return;
+    aiBackPending = true;
+    try{
+      if(aiScreenDirty(cfg.dirty)){
+        const ok = await appDialog(t('ai.unsavedRequest'),
+          {confirm:true, okText:t('common.leaveWithoutSaving'), cancelText:t('common.stay')});
+        if(!ok) return;
+      }
+      cfg.back();
+    }finally{
+      aiBackPending = false;
     }
-    cfg.back();
   });
   registerAction('closeImages', () => closeImages());
   registerAction('openImageGenerationScope', () => $('imgGenScopeModal').classList.add('open'));
