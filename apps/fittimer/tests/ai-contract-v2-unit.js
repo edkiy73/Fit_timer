@@ -256,4 +256,16 @@ test('Slim & Toned reference is complete, rotated and V2-valid', () => {
   assert.deepStrictEqual(seed.map(x=>x.id),['vshape_v2','slim_toned_v2']);
 });
 
+test('reference catalog seed metadata rejects unsupported AI-generated fields', () => {
+  const seed=require('../lib/seed');
+  const valid={id:'future_reference_v2',cat:'tone',level:'Средний',min:45,
+    gives:'Полноценная силовая программа',ruGives:'Домашние тренировки для всего тела',
+    enGives:'Balanced home strength workout routine'};
+  assert.doesNotThrow(()=>seed.validateReferenceMetadata(valid));
+  assert.throws(()=>seed.validateReferenceMetadata({...valid,level:'Начальный–средний'}),/invalid_level/);
+  assert.throws(()=>seed.validateReferenceMetadata({...valid,cat:'slim-and-toned'}),/invalid_category/);
+  assert.throws(()=>seed.validateReferenceMetadata({...valid,min:0}),/invalid_duration/);
+  assert.throws(()=>seed.validateReferenceMetadata({...valid,id:'Bad ID'}),/invalid_id/);
+});
+
 console.log(`\nai-contract-v2: ${n} ok`);
