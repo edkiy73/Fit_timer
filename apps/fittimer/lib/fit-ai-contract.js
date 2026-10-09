@@ -262,7 +262,7 @@
       throw new Error('invalid_segment_input');
     }
     return buildPrompt('program.create', input)
-      + '\\n\\nSEGMENTED GENERATION: Generate ONE complete day variant, not the full week.'
+      + '\n\nSEGMENTED GENERATION: Generate ONE complete day variant, not the full week.'
       + ' Weekdays in order: ' + input.scheduleDays.join(', ') + '.'
       + ' This is day ' + (index + 1) + ' of ' + input.scheduleDays.length + ': ' + day + '.'
       + ' Coordinate training goals and recovery across all listed days; specialize this day'
