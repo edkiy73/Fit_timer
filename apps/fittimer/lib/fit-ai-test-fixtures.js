@@ -17,7 +17,7 @@ const jsonAfter = (prompt, label) => {
 };
 function contractFixture(kind, prompt){
   if(kind === 'program_create_v2'){
-    const segment = prompt.match(/This is day (\\d+) of (\\d+): (mon|tue|wed|thu|fri|sat|sun)\\./);
+    const segment = prompt.match(/This is day (\d+) of (\d+): (mon|tue|wed|thu|fri|sat|sun)\./);
     if(segment){
       const day = segment[3];
       return {contractVersion:2, program:{
