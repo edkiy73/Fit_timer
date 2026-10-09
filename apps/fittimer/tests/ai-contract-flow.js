@@ -103,8 +103,7 @@ const post = async (path, body) => {
       aiRun:document.querySelector('#aiRunModal')?.className,
       aiMessage:document.querySelector('#aiRunText')?.textContent,
       dialog:document.querySelector('#dlgMsg')?.textContent,
-      planCount:typeof draft !== 'undefined' && draft?.plans?.length,
-      input:typeof aiCreateInput === 'function' ? aiCreateInput() : null
+      planCount:typeof draft !== 'undefined' && draft?.plans?.length
     }));
     console.log('four-day AI flow debug', JSON.stringify({debug,
       requests:bodies.slice(beforeParts).map(x=>({kind:x.kind,segment:x.segment,input:x.input?.scheduleDays}))}));
