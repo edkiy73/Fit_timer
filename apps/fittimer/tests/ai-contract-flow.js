@@ -68,6 +68,9 @@ const post = async (path, body) => {
   const pid = await page.evaluate(() => customPrograms[customPrograms.length - 1].id);
 
   // ---- длинная программа: четыре разных дня, один месячный AI-расход ----
+  // Re-enter from a clean app state after the previous save/navigation.
+  await page.reload({waitUntil:'load'});
+  await page.waitForTimeout(500);
   await page.evaluate(() => { initAIForm(); openAI('text'); });
   await page.evaluate(() => {
     $('qNote').value = 'Четыре разных тренировочных дня по 45+ минут с разминкой';
@@ -91,8 +94,22 @@ const post = async (path, body) => {
   };
   page.on('response', readAIResponse);
   await page.evaluate(() => $('aiSelf').click());
-  await page.waitForFunction(() => !document.querySelector('#aiRunModal.open')
-    && draft && draft.plans && draft.plans.length === 4, null, {timeout:30000});
+  try{
+    await page.waitForFunction(() => !document.querySelector('#aiRunModal.open')
+      && draft && draft.plans && draft.plans.length === 4, null, {timeout:15000});
+  }catch(e){
+    const debug = await page.evaluate(() => ({
+      screen:document.querySelector('#scrAI')?.className,
+      aiRun:document.querySelector('#aiRunModal')?.className,
+      aiMessage:document.querySelector('#aiRunText')?.textContent,
+      dialog:document.querySelector('#dlgMsg')?.textContent,
+      planCount:typeof draft !== 'undefined' && draft?.plans?.length,
+      input:typeof aiCreateInput === 'function' ? aiCreateInput() : null
+    }));
+    console.log('four-day AI flow debug', JSON.stringify({debug,
+      requests:bodies.slice(beforeParts).map(x=>({kind:x.kind,segment:x.segment,input:x.input?.scheduleDays}))}));
+    throw e;
+  }
   page.off('response', readAIResponse);
   const segmentedRequests = bodies.slice(beforeParts).filter(x => x.kind === 'program.create' && x.segment);
   ok('four selected days produce four sequential server requests',
