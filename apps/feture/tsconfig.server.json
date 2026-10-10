@@ -16,6 +16,6 @@
   "include": [
     "lib/feture/**/*.js",
     "lib/feture/**/*.d.ts",
-    "tools/seed-dry-run.mjs"
+    "tools/seed-*.mjs"
   ]
 }
