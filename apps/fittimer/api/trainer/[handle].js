@@ -16,7 +16,7 @@
 require('../../lib/product');
 
 const { store } = require('../../../../packages/core/server/store');
-const { send, fail, readBody, rateOk, rndId, sameSecret, cors,
+const { validSession, send, fail, readBody, rateOk, rndId, sameSecret, cors,
         clampText, clampLine, cleanPic, cleanLink } = require('../../../../packages/core/server/util');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
@@ -82,7 +82,7 @@ module.exports = async (req, res) => {
   let account = null;
   try{ account = JSON.parse(await store.get(`a:${mailHash}`)); }catch(e){}
   const device = account && account.syncDevices && account.syncDevices[deviceId];
-  if(!device || !sameSecret(sha(token), device.h || '')) return fail(res, 403, 'bad_sync_token');
+  if(!(await validSession(device, token))) return fail(res, 403, 'bad_sync_token');
   if(account.handle && account.handle !== handle) return fail(res, 403, 'not_yours');
 
   /* Поля чистим ЗДЕСЬ, а не полагаемся на приложение: запрос приходит не только

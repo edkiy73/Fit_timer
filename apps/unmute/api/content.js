@@ -3,7 +3,7 @@
 require('../lib/product');
 const crypto = require('crypto');
 const { store } = require('../../../packages/core/server/store');
-const { send, fail, rateOk, rateOkScoped, sameSecret, cors } = require('../../../packages/core/server/util');
+const { validSession, send, fail, rateOk, rateOkScoped, sameSecret, cors } = require('../../../packages/core/server/util');
 const { hasOwned } = require('../../../packages/core/server/entitlements');
 const Content = require('../lib/content-store');
 const Release = require('../lib/content-release');
@@ -36,7 +36,7 @@ async function accountFromHeaders(req){
   let acc=null;
   try{ acc=JSON.parse(raw); }catch(_){}
   const dev = acc && acc.syncDevices && acc.syncDevices[deviceId];
-  if(!dev || !sameSecret(sha(token), dev.h || '')) return null;
+  if(!(await validSession(dev, token))) return null;
   return {acc,accountHash};
 }
 

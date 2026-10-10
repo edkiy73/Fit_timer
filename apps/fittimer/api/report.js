@@ -10,7 +10,7 @@
 require('../lib/product');
 
 const { store } = require('../../../packages/core/server/store');
-const { send, fail, readBody, rateOk, cors, sameSecret } = require('../../../packages/core/server/util');
+const { validSession, send, fail, readBody, rateOk, cors, sameSecret } = require('../../../packages/core/server/util');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
@@ -45,7 +45,7 @@ module.exports = async (req, res) => {
     let acc = null;
     try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(_){}
     const device = acc && acc.syncDevices && acc.syncDevices[deviceId];
-    if(device && sameSecret(sha(token), device.h || '')) accountHash = mh;
+    if(await validSession(device, token)) accountHash = mh;
   }
 
   // ID ссылки публичный, поэтому одним знанием адреса нельзя позволять забить

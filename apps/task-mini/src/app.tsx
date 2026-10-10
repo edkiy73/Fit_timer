@@ -166,11 +166,20 @@ function AccountPage(){
   const auth = useOptionalAuth();
   const {t, locale} = useI18n();
   const navigate = useNavigate();
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState('');
   // Tasks stay on the device; the next sign-in merges them into that account.
   const signOut = async () => {
-    await auth.logout();
-    await taskDocs().detach();
-    navigate('/');
+    if(signingOut) return;
+    setSigningOut(true);
+    setSignOutError('');
+    try {
+      await auth.logout();
+      await taskDocs().detach();
+      navigate('/');
+    } catch {
+      setSignOutError(locale === 'en' ? 'Could not sign out. Check your connection and try again.' : 'Не удалось выйти. Проверь соединение и попробуй ещё раз.');
+    } finally {setSigningOut(false);}
   };
   if(auth.loading) return null;
   return (
@@ -183,7 +192,8 @@ function AccountPage(){
           <p className="muted">{t('account.synced')}</p>
           <ReferencePremium />
           <ExportTasks />
-          <button type="button" className="text-button" onClick={() => void signOut()}>{t('account.signOut')}</button>
+          <button type="button" className="text-button" disabled={signingOut} onClick={() => void signOut()}>{t('account.signOut')}</button>
+          {signOutError && <p role="alert">{signOutError}</p>}
         </section>
       ) : (
         <>

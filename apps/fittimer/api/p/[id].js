@@ -17,7 +17,7 @@
 require('../../lib/product');
 
 const { store } = require('../../../../packages/core/server/store');
-const { send, fail, rateOk, rateOkScoped, sameSecret, cors, readBody } = require('../../../../packages/core/server/util');
+const { validSession, send, fail, rateOk, rateOkScoped, sameSecret, cors, readBody } = require('../../../../packages/core/server/util');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 
@@ -55,7 +55,7 @@ module.exports = async (req, res) => {
     const mh=sha(email).slice(0,32);
     let acc=null;try{acc=JSON.parse(await store.get(`a:${mh}`));}catch(_){}
     const device=acc&&acc.syncDevices&&acc.syncDevices[deviceId];
-    if(!device||!sameSecret(sha(token),device.h||'')) return fail(res,403,'bad_sync_token');
+    if(!(await validSession(device, token))) return fail(res,403,'bad_sync_token');
     rec.clientMailHash=mh;
     rec.claimedAt=new Date().toISOString();
     await store.set(`p:${id}`,JSON.stringify(rec));

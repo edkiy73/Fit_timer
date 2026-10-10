@@ -6,7 +6,7 @@
    с планшета. */
 
 const { store } = require('./store');
-const { send, fail, rateOk, sameSecret, cors } = require('./util');
+const { validSession, send, fail, rateOk, cors } = require('./util');
 const SyncShadow = require('./sync-shadow');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
@@ -89,7 +89,7 @@ function createSyncHandler({registry: SYNC_REGISTRY, accountProfile: ACCOUNT_PRO
     let acc = null;
     try{ acc = JSON.parse(araw); }catch(e){}
     const dev = acc && acc.syncDevices && acc.syncDevices[deviceId];
-    if(!dev || !sameSecret(sha(token), dev.h || '')) return fail(res, 403, 'bad_sync_token');
+    if(!(await validSession(dev, token))) return fail(res, 403, 'bad_sync_token');
     const paidUntil = Date.parse((acc.sub && acc.sub.until) || '') || 0;
     const premium = paidUntil >= Date.now();
 

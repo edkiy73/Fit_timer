@@ -300,3 +300,46 @@ project/Resend sandbox/memory bypass, отсутствие секретов в �
 изменением этих контрактов. Внешний блокер: задать FetUre server secret, Resend
 key, verified-domain sender и store config. Для доставки нужны два явно
 указанных владельцем контролируемых адреса; не выбирать получателей из БД.
+
+
+**2026-10-10 — A01, high срез серверных сессий.** База `5ed91239` (после #772).
+Core OTP выдаёт серверный `expiresAt`: 90 дней, абсолютный срок без продления
+по активности. `logout` отзывает конкретный token hash; другие устройства
+остаются авторизованы. Отзыв хранится отдельно от account row, чтобы поздняя
+запись account snapshot не восстановила доступ. Проверку используют Core
+auth/sync/AI/billing, FetUre domain, account-token API FitTimer/UnMute;
+push dispatch пропускает отозванные/истёкшие сессии. Новую identity не создавали.
+
+Core client выполняет серверный выход, сохраняет credentials для повторения
+при network/503, очищает при подтверждённом отказе авторизации. Отложенные
+ответы не восстанавливают завершённую сессию и не стирают новый вход;
+асинхронная запись storage завершается перед logout. FetUre показывает
+ошибку выхода и блокирует повторное нажатие на время запроса. Старый
+локальный signOut FitTimer не переделывали; это отдельная интеграция продукта.
+
+Доказательства: focused `packages/core/tests/auth-sessions.mjs` проверяет
+logout/rotation/expiry/две сессии, старую account запись после отзыва,
+store outage/сетевой отказ, гонки поздних ответов и async storage, push suppression.
+`apps/feture/tests/domain-security.js` проверяет expiry/revocation до доступа
+к доменной БД. Общие account fixtures приведены к фактическому серверному at.
+
+A01 остаётся `[ ]`: production store/mail/secrets не настроены, реальные
+письма и вход двумя контролируемыми аккаунтами не проверены. Окружение,
+production БД и APK/IPA не менялись. Серверный JS сохранён из-за существующего
+CommonJS deployment без server TS build; typed helper contract — util.d.ts.
+
+**Следующий срез — medium: завершение A01 service setup и живая приёмка,**
+когда доступны настройки и два контролируемых адреса. Если внешний блокер
+остаётся, выбрать независимую карточку по правилам плана; A02 нельзя
+выдавать за готовую до выполнения зависимости A01. После публикации этого
+high среза остановиться для возврата на medium.
+
+Приёмка этого среза: `npm run check` Core, FetUre, FitTimer и Task Mini —
+пройдены; `TZ=UTC npm run check` UnMute — пройден (456 unit tests,
+существующие smoke и build). `npm run starter:check`, `git diff --check` —
+пройдены. Auth lifecycle дополнен проверкой неподтверждённого HTTP 200: выход
+не объявляется успешным без `ok:true`. Независимая Security/QA/Architect
+проверка одобрила контракт. React UI/reference template адаптированы к
+сетевым ошибкам выхода; обычный responsive layout не менялся.
+Ручной живой вход, браузер/устройство и production storage не проверялись.
+Ветка публикации: `feat/feture-core-session-lifecycle`; PR записывается после открытия.

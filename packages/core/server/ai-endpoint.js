@@ -1,7 +1,7 @@
 /* Premium AI: авторизация, месячные лимиты и 30-дневный журнал качества. */
 const crypto = require('crypto');
 const { store } = require('./store');
-const { send, fail, sameSecret, cors, rateOkScoped } = require('./util');
+const { validSession, send, fail, cors, rateOkScoped } = require('./util');
 const { getSettings, generate } = require('./ai');
 const { capabilities } = require('./capabilities-core');
 
@@ -53,7 +53,7 @@ function createAIHandler(AI_ACTIONS, options = {}){
     let acc = null;
     try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(e){}
     const dev = acc && acc.syncDevices && acc.syncDevices[deviceId];
-    if(!dev || !sameSecret(sha(token), dev.h || '')) return fail(res, 403, 'bad_sync_token');
+    if(!(await validSession(dev, token))) return fail(res, 403, 'bad_sync_token');
 
     const premium = (Date.parse(acc.sub && acc.sub.until) || 0) >= Date.now();
     let accessMeta = null;

@@ -18,7 +18,7 @@
 require('../lib/product');
 
 const { store } = require('../../../packages/core/server/store');
-const { send, fail, readBody, rateOk, rndId, sameSecret, cors,
+const { validSession, send, fail, readBody, rateOk, rndId, sameSecret, cors,
         clampText, clampLine, cleanPic } = require('../../../packages/core/server/util');
 const crypto = require('crypto');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
@@ -33,7 +33,7 @@ async function premiumCatalogAccess(req){
   let acc=null;
   try{acc=JSON.parse(await store.get(`a:${mh}`));}catch(_){}
   const dev=acc&&acc.syncDevices&&acc.syncDevices[deviceId];
-  if(!dev||!sameSecret(sha(token),dev.h||'')) return false;
+  if(!(await validSession(dev, token))) return false;
   return (Date.parse(acc.sub&&acc.sub.until)||0) > Date.now();
 }
 

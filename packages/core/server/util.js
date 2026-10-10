@@ -113,6 +113,29 @@ function sameSecret(a, b){
   return require('crypto').timingSafeEqual(A, B);
 }
 
+// Absolute lifetime. Existing records derive it from their original server-issued at.
+const SESSION_TTL = 90 * 24 * 3600;
+function sessionExpiresAt(device){
+  if(!device || typeof device !== 'object') return 0;
+  const issued = Date.parse(device.at || '');
+  const explicit = device.expiresAt == null ? issued + SESSION_TTL * 1000 : Date.parse(device.expiresAt);
+  return Number.isFinite(issued) && Number.isFinite(explicit) && explicit > issued
+    ? Math.min(explicit, issued + SESSION_TTL * 1000) : 0;
+}
+// A separate token tombstone prevents concurrent account writes from resurrecting logout.
+async function activeSession(device, accountStore = store){
+  if(!device || typeof device.h !== 'string' || !/^[a-f0-9]{64}$/.test(device.h) || sessionExpiresAt(device) <= Date.now()) return false;
+  return !(await accountStore.get('session:revoked:' + device.h));
+}
+async function validSession(device, token, accountStore = store){
+  if(!token || !device || !sameSecret(require('crypto').createHash('sha256').update(String(token)).digest('hex'), device.h || '')) return false;
+  return activeSession(device, accountStore);
+}
+async function revokeSession(device){
+  const ttl = Math.max(1, Math.ceil((sessionExpiresAt(device) - Date.now()) / 1000));
+  await store.set('session:revoked:' + device.h, '1', ttl);
+}
+
 /* ---- пределы полей на сервере ----
 
    То же самое, что делает приложение у себя, но здесь это обязательно: запрос
@@ -183,5 +206,5 @@ function cors(req, res){
   return false;
 }
 
-module.exports = { send, fail, readBody, readBodyWithRaw, rateOk, rateOkScoped, rndId, sameSecret, cors, allowedOrigin, ipHash, MAX_BODY,
+module.exports = { SESSION_TTL, sessionExpiresAt, activeSession, validSession, revokeSession, send, fail, readBody, readBodyWithRaw, rateOk, rateOkScoped, rndId, sameSecret, cors, allowedOrigin, ipHash, MAX_BODY,
                    clampText, clampLine, cleanPic, cleanLink };

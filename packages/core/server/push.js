@@ -1,6 +1,7 @@
 const crypto=require('crypto');
 const http2=require('http2');
 const {store}=require('./store');
+const {activeSession}=require('./util');
 const { productIdentity } = require('./product-core');
 const b64url=v=>Buffer.from(v).toString('base64').replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
 const json64=v=>b64url(JSON.stringify(v));
@@ -67,6 +68,7 @@ async function sendPushToAccountHash(mh,message){
   const prefs=await notificationPrefs(mh),cat=String(message.category||'general'); if(prefs[cat]===false)return{sent:0,skipped:true};
   const entries=Object.entries(acc.pushDevices||{}).filter(([,d])=>d&&d.token);let sent=0,failed=0,removed=0,dirty=false;
   for(const [deviceId,d] of entries){
+    if(!(await activeSession(acc.syncDevices && acc.syncDevices[deviceId]))) continue;
     try{d.platform==='ios'?await sendIos(d.token,message):await sendAndroid(d.token,message);sent++;}
     catch(e){
       failed++;

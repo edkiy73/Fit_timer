@@ -125,8 +125,8 @@ async function billingCall(body, extra = {}){
     sub:null,
     owned:{},
     syncDevices:{
-      [deviceA]:{h:sha(tokenA)},
-      [deviceB]:{h:sha(tokenB)}
+      [deviceA]:{h:sha(tokenA),at:new Date().toISOString()},
+      [deviceB]:{h:sha(tokenB),at:new Date().toISOString()}
     }
   }));
 

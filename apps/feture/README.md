@@ -62,7 +62,7 @@ F01 deployment discipline: `vercel.json` uses `scripts/vercel-ignore.mjs`; docum
 ## Private domain API foundation (F04)
 `POST /api/domain` verifies Core device-token headers and reads only the caller's profile through a fixed server query. Owner hashes, roles and age flags in payloads are rejected. Map reads remain gated until trusted age verification (A04); cloud persistence and real sharing are not active. See [API contract and limits](docs/domain-api-contract.md). Production still lacks Core store/mail/server-secret configuration; missing services yield explicit errors. No live database or environment changes were made.
 
-Server CommonJS modules are checked with strict TypeScript/JSDoc contracts, and `npm run check` includes the focused `npm run test:security` boundary check. Core local logout does not currently revoke its server device token; A01 must handle that lifecycle.
+Server CommonJS modules are checked with strict TypeScript/JSDoc contracts, and `npm run check` includes the focused `npm run test:security` boundary check. Core logout now revokes the server token. Authenticated requests and push dispatch enforce an absolute 90-day session deadline; network failures retain local credentials for retry. A01 live email acceptance remains blocked by production configuration.
 
 
 ## Seed operations (F05)
@@ -74,5 +74,5 @@ See [required configuration and sign-in acceptance](docs/auth-service-setup.md).
 `npm run check:auth-env` performs an offline, value-redacted configuration check;
 it never sends email, accesses the database or proves a live sign-in. Existing
 Vercel Secret values cannot be retrieved for transfer via the connector. Production
-FetUre still needs server storage/mail configuration. A01 remains incomplete;
-server session revocation requires the next high-effort slice.
+FetUre still needs server storage/mail configuration. A01 remains incomplete: server logout/expiry are implemented and checked locally,
+but real OTP delivery, two controlled production accounts and live recovery are pending.
