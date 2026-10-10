@@ -19,6 +19,7 @@ FetUre is an independent app within the AppBase monorepo (React + TypeScript + V
 - Private interests are stored in AppBase Core's IndexedDB-based local-first document mirror (`interest-map`, free document in sync registry). Per-interest timestamps merge changes when the standard authenticated AppBase sync backend is configured; FetUre production still lacks that server environment, so **cloud persistence is not yet active**. Sensitive local documents are cleared on confirmed sign-out to prevent cross-account disclosure.
 - `/#/catalog`: AppBase React route reading public catalogue from Supabase through `/api/catalog`.
 - `/#/account`: AppBase email sign-in shell. **Account storage and verification still require separately configured AppBase server backend**.
+  The code form explains the 15-minute lifetime, supports correcting the email address, clears the previous code after a successful resend, and distinguishes request/day limits from other failures.
 - `/#/admin`: AppBase admin shell.
 
 ## Next stages

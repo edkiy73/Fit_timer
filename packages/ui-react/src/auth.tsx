@@ -74,6 +74,10 @@ const COPY = {
     verify:'Войти',
     checking:'Проверяю…',
     resend:'Отправить код ещё раз',
+    changeEmail:'Изменить адрес',
+    codeHint:'Код действует 15 минут. После повторной отправки используй код из нового письма.',
+    rateLimited:'Слишком много попыток. Подожди и попробуй позже.',
+    dailyLimit:'На этот адрес сегодня уже отправлено слишком много кодов. Попробуй завтра.',
     sent:'Код отправлен на',
     chooseHandle:'Придумай ник для аккаунта.',
     handleHint:'От 2 до 29 символов после @: буквы, цифры, точка, дефис.',
@@ -102,6 +106,10 @@ const COPY = {
     verify:'Sign in',
     checking:'Checking…',
     resend:'Send another code',
+    changeEmail:'Change email',
+    codeHint:'The code is valid for 15 minutes. After resending, use the code from the newest email.',
+    rateLimited:'Too many attempts. Wait and try again later.',
+    dailyLimit:'Too many codes have been sent to this address today. Try again tomorrow.',
     sent:'Code sent to',
     chooseHandle:'Choose a handle for your account.',
     handleHint:'2–29 characters after @: letters, numbers, dot, hyphen.',
@@ -126,6 +134,8 @@ function errorText(error: unknown, locale: 'ru' | 'en'): string {
   const code = String((error as AuthResponseError | undefined)?.code || (error as Error | undefined)?.message || '');
   if(code === 'bad_email') return copy.badEmail;
   if(code === 'bad_code') return copy.badCode;
+  if(code === 'rate_limited') return copy.rateLimited;
+  if(code === 'too_many_today') return copy.dailyLimit;
   if(code === 'expired_code' || code === 'code_expired') return copy.expired;
   if(code === 'handle_taken') return copy.handleTaken;
   if(code === 'bad_handle') return copy.badHandle;
@@ -233,7 +243,7 @@ export function SignInForm({locale = 'ru', productName, askHandle = true, varian
       const result = await client.sendCode(email, locale);
       setEmail(String(email || '').trim().toLowerCase());
       setDevCode(typeof result.devCode === 'string' ? result.devCode : '');
-      if(typeof result.devCode === 'string') setCode(result.devCode);
+      setCode(typeof result.devCode === 'string' ? result.devCode : '');
       setSent(true);
       setStep('code');
     }catch(e){
@@ -250,6 +260,14 @@ export function SignInForm({locale = 'ru', productName, askHandle = true, varian
     setEmail(String(email || '').trim().toLowerCase());
     setSent(false);
     setStep('code');
+  }
+
+  function changeEmail(){
+    setCode('');
+    setDevCode('');
+    setError('');
+    setSent(false);
+    setStep('email');
   }
 
   async function verify(event: FormEvent){
@@ -332,9 +350,11 @@ export function SignInForm({locale = 'ru', productName, askHandle = true, varian
             />
           </label>
           {devCode && <p className="ab-auth-dev">DEV: {devCode}</p>}
+          <p className="ab-auth-hint">{copy.codeHint}</p>
           {error && <p className="ab-auth-error" role="alert">{error}</p>}
           <button className="ab-auth-primary" type="submit" disabled={busy || !code}>{busy ? copy.checking : copy.verify}</button>
           <button className="ab-auth-secondary" type="button" disabled={busy} onClick={() => void sendCode()}>{copy.resend}</button>
+          <button className="ab-auth-secondary" type="button" disabled={busy} onClick={changeEmail}>{copy.changeEmail}</button>
         </form>
       )}
 
