@@ -8,7 +8,7 @@ import { motionTokens } from './motion';
 import { useExperienceNavigation } from './navigation';
 import { apiUrl } from '../api-url';
 import fallbackCatalog from '../../data/concept-catalog.json';
-import { catalogSchema, categoryProgress, hasIntensity, matchesCategory, matchesCategoryName, matchesInterest, STATUSES, type Catalog, type InterestRecord, type InterestStatus, type Visibility } from './model';
+import { catalogSchema, categoryProgress, hasIntensity, matchesCategory, matchesCategoryName, matchesInterest, STANCES, EXPERIENCES, BOUNDARIES, isExplored, interestSummary, type Catalog, type InterestRecord, type InterestStance, type Experience, type Boundary, type Visibility } from './model';
 import { useInterestMap } from './use-interest-map';
 
 type Tab = 'world'|'explore'|'community'|'dating';
@@ -16,7 +16,6 @@ const NAV:{id:Tab;title:string;icon:IconName}[]=[
   {id:'world',title:'Мой мир',icon:'world'}, {id:'explore',title:'Исследовать',icon:'compass'},
   {id:'community',title:'Сообщество',icon:'users'}, {id:'dating',title:'Знакомства',icon:'heart'}
 ];
-const STATUS_LABEL:Record<InterestStatus,string>=Object.fromEntries(STATUSES.map(s=>[s.id,s.label])) as Record<InterestStatus,string>;
 const VIEWS:{id:Visibility;label:string}[]=[{id:'private',label:'Только мне'},{id:'granted',label:'По разрешению'},{id:'public',label:'Открыто'}];
 type Edit = {id:string; title:string;category:string;definition:string;synonyms:string[];relatedTitles:string[]};
 function useCatalog(){
@@ -123,9 +122,9 @@ export function FetureExperience(){
             {query.trim()&&<p className="ft-muted">Поиск: «{query.trim()}» <button type="button" className="ft-back" onClick={()=>setQuery('')}>Показать все темы</button></p>}
             <div className="ft-topic-list">{selectedCategory.interests.filter(i=>matchesInterest(i,query)||matchesCategoryName(selectedCategory,query)).map(i=>{
               const state=map[i.id];return <button key={i.id} className="ft-topic" onClick={()=>openInterest(i.id)}>
-                <span className={`ft-topic-dot ${state?.status==='hard_limit'?'boundary':''}`} style={{background:!state||state.status==='unknown'?'#e2dbe1':state.status==='hard_limit'?'#f4dbe2':selectedCategory.color}}>
-                  {state?.status&&state.status!=='unknown'?<Icon name={state.status==='hard_limit'?'shield':'check'} size={15}/>:<Icon name="plus" size={15}/>}
-                </span><span><strong>{i.title}</strong><small>{state&&state.status!=='unknown'?STATUS_LABEL[state.status]:'Не исследовано'}{state?.visibility==='public'?' · открыто':state?.visibility==='granted'?' · по разрешению':''}</small></span>
+                <span className={`ft-topic-dot ${state?.boundary==='hard'?'boundary':''}`} style={{background:!isExplored(state)?'#e2dbe1':state?.boundary==='hard'?'#f4dbe2':selectedCategory.color}}>
+                  {isExplored(state)?<Icon name={state?.boundary==='hard'?'shield':'check'} size={15}/>:<Icon name="plus" size={15}/>}
+                </span><span><strong>{i.title}</strong><small>{interestSummary(state)}{state?.visibility==='public'?' · открыто':state?.visibility==='granted'?' · по разрешению':''}</small></span>
                 <Icon name="arrow" size={17}/></button>})}</div>
           </>:<><SectionTitle eyebrow="Исследование" title="Открой новые грани" description="Большая карта интересов, границ и вопросов. Здесь нет правильных или неправильных ответов."/>
           <div className="ft-explore-art"><Icon name="compass" size={36}/><div><strong>Начни с любопытства</strong><p>{allIds.length} темы в {data.categories.length} направлениях. Отмечай только то, что считаешь своим.</p></div></div>
@@ -181,17 +180,28 @@ export function FetureExperience(){
  function nextPerson(){setPerson((person+1)%PROFILES.length);setPhoto(0)}
 }
 function InterestDialog({interest,current,onClose,onSave}:{interest:Edit;current:InterestRecord|undefined;onClose:()=>void;onSave:(v:Omit<InterestRecord,'at'>)=>void}){
- const [status,setStatus]=useState<InterestStatus>(current?.status||'unknown');
- const [intensity,setIntensity]=useState(current?.intensity??50);
+ const [stance,setStance]=useState<InterestStance>(current?.stance||'unknown');
+ const [experience,setExperience]=useState<Experience>(current?.experience||'unspecified');
+ const [boundary,setBoundary]=useState<Boundary>(current?.boundary||'none');
+ const [boundaryNote,setBoundaryNote]=useState(current?.boundaryNote??'');
+ const [intensity,setIntensity]=useState<number|null>(current?.intensity??null);
  const [visibility,setVisibility]=useState<Visibility>(current?.visibility||'private');
+ const canScore=hasIntensity(stance,boundary);
  return <AppDialog title={interest.title} eyebrow={interest.category} onClose={onClose}>
-   <p className="ft-muted">{interest.definition}</p>
-   {interest.synonyms.length>0&&<p className="ft-muted"><small>Также ищут: {interest.synonyms.join(', ')}.</small></p>}
-   {interest.relatedTitles.length>0&&<p className="ft-muted"><small>Связанные темы: {interest.relatedTitles.join(', ')}.</small></p>}
-   <p className="ft-muted">Как ты относишься к этой теме прямо сейчас?</p>
-   <div className="ft-statuses">{STATUSES.map(item=><button key={item.id} className={`ft-status ${status===item.id?'active':''} ${item.id==='hard_limit'?'ft-hard':''}`} aria-pressed={status===item.id} onClick={()=>setStatus(item.id)}><span>{item.label}<small>{item.description}</small></span>{status===item.id&&<Icon name="check" size={18}/>}</button>)}</div>
-   {hasIntensity(status)&&<div className="ft-intensity"><label htmlFor="ft-intensity">Насколько тебе интересно? <strong>{intensity}/100</strong></label><input id="ft-intensity" type="range" min="0" max="100" step="5" value={intensity} onChange={e=>setIntensity(Number(e.target.value))}/><small>Это личная оценка, не процент совместимости.</small></div>}
-   <div className="ft-visibility"><strong>Кто может видеть отметку?</strong><div className="ft-visibility-options">{VIEWS.map(v=><button key={v.id} className={visibility===v.id?'active':''} aria-pressed={visibility===v.id} onClick={()=>setVisibility(v.id)}>{v.label}</button>)}</div><small>Пока отметки хранятся локально и никому не передаются. Выбранная видимость пригодится для будущего профиля.</small></div>
-   <ActionButton className="ft-save" onClick={()=>onSave({status,intensity,visibility})}>Сохранить <Icon name="check" size={18}/></ActionButton>
+  <p className="ft-muted">{interest.definition}</p>
+  {interest.synonyms.length>0&&<p className="ft-muted"><small>Также ищут: {interest.synonyms.join(', ')}.</small></p>}
+  {interest.relatedTitles.length>0&&<p className="ft-muted"><small>Связанные темы: {interest.relatedTitles.join(', ')}.</small></p>}
+  <fieldset className="ft-editor-group"><legend>Моё желание</legend><div className="ft-statuses">{STANCES.map(item=><button type="button" key={item.id} className={`ft-status ${stance===item.id?'active':''}`} aria-pressed={stance===item.id} onClick={()=>{setStance(item.id);if(!hasIntensity(item.id,boundary))setIntensity(null);}}><span>{item.label}<small>{item.description}</small></span>{stance===item.id&&<Icon name="check" size={18}/>}</button>)}</div></fieldset>
+  {canScore&&<div className="ft-intensity"><label htmlFor={intensity===null?undefined:'ft-intensity'}>Сила интереса <strong>{intensity===null?'Не указана':`${intensity}/5`}</strong></label>
+   <button type="button" className="ft-textbtn" onClick={()=>setIntensity(intensity===null?3:null)}>{intensity===null?'Указать силу':'Оставить без оценки'}</button>
+   {intensity!==null&&<input id="ft-intensity" type="range" min="1" max="5" step="1" value={intensity} onChange={e=>setIntensity(Number(e.target.value))}/>}
+   <small>1 — слабый интерес, 5 — сильный. Оценка не означает согласие.</small></div>}
+  <fieldset className="ft-editor-group"><legend>Мой опыт</legend><div className="ft-visibility-options">{EXPERIENCES.map(item=><button type="button" key={item.id} className={experience===item.id?'active':''} aria-pressed={experience===item.id} onClick={()=>setExperience(item.id)}>{item.label}</button>)}</div><p className="ft-muted">Прошлый опыт не означает желание повторить.</p></fieldset>
+  <fieldset className="ft-editor-group"><legend>Моя граница</legend><div className="ft-statuses">{BOUNDARIES.map(item=><button type="button" key={item.id} className={`ft-status ${boundary===item.id?'active':''} ${item.id==='hard'?'ft-hard':''}`} aria-pressed={boundary===item.id} onClick={()=>{setBoundary(item.id);if(item.id==='hard')setIntensity(null);if(item.id!=='conditional')setBoundaryNote('');}}><span>{item.label}</span>{boundary===item.id&&<Icon name="check" size={18}/>}</button>)}</div>
+   <p className="ft-muted">Жёсткая граница означает «нет», независимо от желания и опыта. Неотмеченная граница не означает согласие.</p>
+   {boundary==='conditional'&&<div className="ft-conditions"><label htmlFor="ft-boundary-note">Условия — только для меня</label><textarea id="ft-boundary-note" maxLength={1000} rows={3} value={boundaryNote} onChange={e=>setBoundaryNote(e.target.value)} placeholder="Что важно для моего комфорта?"/><small>{boundaryNote.length}/1000 · Текст условий не публикуется.</small></div>}
+  </fieldset>
+  <div className="ft-visibility"><strong>Кто может видеть отметку?</strong><div className="ft-visibility-options">{VIEWS.map(v=><button type="button" key={v.id} className={visibility===v.id?'active':''} aria-pressed={visibility===v.id} onClick={()=>setVisibility(v.id)}>{v.label}</button>)}</div><small>Пока отметки хранятся локально и никому не передаются. Выбранная видимость пригодится для будущего профиля. Условия всегда остаются приватными.</small></div>
+  <ActionButton className="ft-save" onClick={()=>onSave({stance,experience,boundary,boundaryNote:boundary==='conditional'?(boundaryNote||null):null,intensity:canScore?intensity:null,visibility,useForDiscovery:current?.useForDiscovery??false})}>Сохранить <Icon name="check" size={18}/></ActionButton>
  </AppDialog>;
 }
