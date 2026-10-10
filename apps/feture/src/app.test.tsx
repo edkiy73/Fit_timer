@@ -64,6 +64,6 @@ describe('FetUre starter', () => {
     expect(missingKeys(dictionaries)).toEqual({});
     renderApp('/account');
     await screen.findByRole('textbox', {name:'Email'});
-    expect(!!screen.queryByRole('combobox')).toBe(product.i18n.locales.length > 1);
+    expect(!!screen.queryByRole('combobox', {name: /язык|language/i})).toBe(product.i18n.locales.length > 1);
   });
 });

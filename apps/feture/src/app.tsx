@@ -11,6 +11,9 @@ import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
 import { NotFoundScreen, RouteErrorScreen } from './route-fallback';
 import { FetureCatalog } from './catalog';
 import { FetureExperience } from './feture/experience';
+import { NativeNavigation } from './feture/native-navigation';
+import { isExperiencePath } from './feture/navigation';
+import { ThemePicker } from './feture/components/ThemePicker';
 
 const PRODUCT_NAME = 'FetUre';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
@@ -63,6 +66,7 @@ function Root(){
     <Localized>
       <AuthProvider client={authClient}>
         <SettingsSync />
+        <NativeNavigation />
         <Outlet />
       </AuthProvider>
     </Localized>
@@ -71,7 +75,7 @@ function Root(){
 
 function Shell(){
   const auth=useOptionalAuth(); const {t}=useI18n(); const location=useLocation();
-  if(location.pathname==='/') return <Outlet />;
+  if(isExperiencePath(location.pathname)) return <Outlet />;
   return <main className="app"><header className="app-header">
     <div><div className="eyebrow">{t('app.eyebrow')}</div><h1>{PRODUCT_NAME}</h1></div>
     {!auth.loading && <Link className="link-button" to="/account">{auth.session?t('nav.account'):t('nav.signIn')}</Link>}
@@ -110,6 +114,7 @@ function Account(){
           <SignInForm locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} askHandle={ASK_HANDLE} variant="inline" onSignedIn={() => navigate('/')} />
         </>
       )}
+      <ThemePicker />
       <div className="language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')} /></div>
     </section>
   );
@@ -129,6 +134,9 @@ export const routes: RouteObject[] = [
       element:<Shell />,
       children:[
         {index:true, element:<Home />},
+        {path:'explore/:categoryId?', element:<Home />},
+        {path:'community', element:<Home />},
+        {path:'dating', element:<Home />},
         {path:'account', element:<Account />},
         {path:'catalog', element:<FetureCatalog />},
         {path:'*', element:<NotFoundScreen />}
