@@ -33,7 +33,7 @@ function createDocumentsRepository(transport) {
  async function rpc(name,body) {
   if(!transport.configured())reject(503,'documents_unavailable');
   try {const response=await transport.request('/rest/v1/rpc/'+name,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),timeoutMs:8000});const result=await response.json();
-   if(!object(result))reject(503,'documents_unavailable');
+   if(!response.ok||!object(result))reject(503,'documents_unavailable');
    if(result.ok!==true){if(result.error==='document_changed'||result.error==='revision_conflict')reject(409,String(result.error));if(result.error==='invalid_request'||result.error==='review_required')reject(422,String(result.error));reject(503,'documents_unavailable');}
    return /** @type {Record<string,unknown>} */(result);
   }catch(error){if(error instanceof DomainError)throw error;return reject(503,'documents_unavailable');}

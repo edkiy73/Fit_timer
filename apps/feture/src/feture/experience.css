@@ -130,3 +130,11 @@
 .ft-profile label {display:grid;gap:.5rem;max-width:72ch}
 .ft-profile input,.ft-profile textarea {min-height:44px;max-width:100%;box-sizing:border-box;padding:.7rem;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:inherit;font:inherit}
 .ft-profile [aria-current="step"] {outline:2px solid var(--accent);outline-offset:2px}
+.ft-access input:not([type=checkbox]),.ft-access select {font:inherit;max-width:100%;width:100%;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:.7rem;background:var(--surface);color:inherit}
+.ft-access label:not(.ft-consent-choice) {display:grid;gap:.5rem;margin:14px 0}
+.ft-visibility-row {grid-template-columns:minmax(90px,1fr) minmax(0,1fr);align-items:center}
+.ft-access button,.ft-profile button {min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:inherit;padding:.6rem .8rem;font:inherit;cursor:pointer}
+.ft-permission,.ft-profile-projection {border:1px solid var(--line);border-radius:12px;margin:16px 0;padding:16px;overflow-wrap:anywhere}
+.ft-profile-projection dd {margin:0 0 14px;white-space:pre-wrap}
+.ft-profile-projection dt {font-weight:700}
+.ft-access h3 {margin-top:24px}
