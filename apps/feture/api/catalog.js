@@ -1,6 +1,7 @@
 'use strict';
 require('../lib/product');
 const {cors}=require('../../../packages/core/server/util');
+const editorial=require('../data/catalog-editorial.json');
 
 /** Public, read-only taxonomy endpoint. Does not access any FetUre user data.
  * Uses the Supabase publishable (anon) key and 3 explicitly allowlisted RLS tables.
@@ -51,6 +52,7 @@ module.exports = async function catalog(req, res) {
     ]);
     const data = {
       version: 1,
+      editorialVersion: editorial.version,
       source: 'supabase',
       categories: categories.map((category) => ({
         id: category.id,
@@ -58,9 +60,9 @@ module.exports = async function catalog(req, res) {
         short: category.short_title,
         icon: category.icon,
         color: category.accent_color,
-        interests: interests.filter(i => i.category_id === category.id)
+        interests: interests.filter(i => i.category_id === category.id && editorial.editorialStatus === 'published' && Object.hasOwn(editorial.interests,i.id))
           .sort((a, b) => a.position - b.position)
-          .map(i => ({id: i.id, title: i.title}))
+          .map(i => ({id: i.id, title: i.title, ...editorial.interests[i.id], editorialVersion:editorial.version}))
       })),
       tests: tests.map(t => ({
         id: t.id,

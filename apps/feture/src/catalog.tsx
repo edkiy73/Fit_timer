@@ -1,22 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { z } from 'zod';
 import { apiUrl } from './api-url';
+import { catalogSchema, type Catalog } from './feture/model';
 
-const interest = z.object({id: z.string(), title: z.string()});
-const category = z.object({
-  id:z.string(), title:z.string(), short:z.string(), icon:z.string(),
-  color:z.string(), interests:z.array(interest)
-});
-const test = z.object({
-  id:z.string(), title:z.string(), description:z.string(),
-  category:z.number().int(), questions:z.number().int()
-});
-const catalogSchema = z.object({
-  version:z.number(), source:z.literal('supabase'),
-  categories:z.array(category), tests:z.array(test)
-});
-type Catalog = z.infer<typeof catalogSchema>;
 type LoadState = {status:'loading'} | {status:'error'} | {status:'ready', data:Catalog};
 
 export function FetureCatalog(){
@@ -49,7 +35,7 @@ export function FetureCatalog(){
         {state.data.categories.map(item=><details key={item.id} className="feture-catalog-category">
           <summary><span className="feture-dot" style={{background:item.color}}></span>
             <strong>{item.title}</strong> <span className="muted">{item.interests.length}</span></summary>
-          <ul>{item.interests.map(x=><li key={x.id}>{x.title}</li>)}</ul>
+          <ul>{item.interests.map(x=><li key={x.id}><strong>{x.title}</strong><p className="muted">{x.definition}</p></li>)}</ul>
         </details>)}
       </div>
       <h3>Тесты</h3>

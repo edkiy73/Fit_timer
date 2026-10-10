@@ -42,6 +42,30 @@ function fakeRes(){
   const report = JSON.parse(healthRes.body || '{}');
   ok('generic health endpoint is mounted', Array.isArray(report.probes));
 
+  // Public taxonomy projection: no network and no private database rows.
+  const oldFetch=global.fetch;
+  const oldUrl=process.env.SUPABASE_URL, oldKey=process.env.SUPABASE_PUBLISHABLE_KEY;
+  try {
+    process.env.SUPABASE_URL='https://catalog-check.supabase.co';
+    process.env.SUPABASE_PUBLISHABLE_KEY='sb_publishable_catalog_check';
+    const paths=[];
+    global.fetch=async url=>{
+      const table=new URL(url).pathname.split('/').at(-1);paths.push(table);
+      const rows=table==='feture_categories'?[{id:'category-1',title:'Роли',short_title:'Роли',icon:'layers',accent_color:'#7156cb',position:1}]
+        :table==='feture_interests'?[{id:'interest-1-3',category_id:'category-1',title:'Свитч',position:1},{id:'unpublished',category_id:'category-1',title:'Hidden',position:2}]:[];
+      return {ok:true,json:async()=>rows};
+    };
+    const catalog=require('../api/catalog');
+    const result=fakeRes();await catalog({method:'GET',headers:{}},result);
+    const payload=JSON.parse(result.body);
+    const topics=payload.categories[0].interests;
+    ok('public catalog exposes only released definitions and three taxonomy tables', result.statusCode===200 && topics.length===1 && topics[0].definition && topics[0].synonyms.includes('switch') && payload.editorialVersion===1 && paths.sort().join() === 'feture_categories,feture_interests,feture_tests');
+  } finally {
+    global.fetch=oldFetch;
+    if(oldUrl===undefined)delete process.env.SUPABASE_URL;else process.env.SUPABASE_URL=oldUrl;
+    if(oldKey===undefined)delete process.env.SUPABASE_PUBLISHABLE_KEY;else process.env.SUPABASE_PUBLISHABLE_KEY=oldKey;
+  }
+
   console.log(bad ? '\nStarter smoke failures: ' + bad : '\nStarter smoke passed');
   process.exit(bad ? 1 : 0);
 })().catch(error => { console.error(error); process.exit(1); });
