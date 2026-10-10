@@ -7,13 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.server.json",
     "test:smoke": "node tests/smoke.js",
     "test:unit": "vitest run",
     "test:browser": "npm run build && node tests/e2e.mjs",
-    "check": "npm run typecheck && npm run test:smoke && npm run test:unit && npm run build",
+    "check": "npm run typecheck && npm run test:smoke && npm run test:unit && npm run test:security && npm run build",
     "mobile:prepare:android": "node scripts/mobile.mjs android",
-    "mobile:prepare:ios": "node scripts/mobile.mjs ios"
+    "mobile:prepare:ios": "node scripts/mobile.mjs ios",
+    "test:security": "node --test tests/domain-security.js"
   },
   "dependencies": {
     "@capacitor/android": "8.5.2",
@@ -32,6 +33,7 @@
     "@capacitor/cli": "8.5.2",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.7",
+    "@types/node": "26.6.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.1",

@@ -46,7 +46,7 @@ Vercel root: `apps/feture`; build `npm run build`; output `dist`.
 - Do not introduce extra UI test suites during rapid iteration: typecheck, build and minimal existing checks; only new high-risk data/privacy/auth regressions warrant focused tests.
 
 ## MVP implementation handoff (2026-10-10)
-The authoritative dependency-ordered backlog is [the SOL 6.1 MVP plan](docs/launch-mvp-plan-2026-10-10.md). Read [the audit and sources](docs/mvp-audit-2026-10-10.md) for verified repository facts, source conflicts and decisions. **F01–F03 web foundations** are complete; the next slice is **F04** (server identity/permissions), requiring high reasoning effort under the owner’s batching rule. Native hardware acceptance remains O05. See [the environment readiness snapshot](docs/environment-readiness-2026-10-10.md) for live service blockers. The domain-storage design in the plan is a target, not an already deployed migration.
+The authoritative dependency-ordered backlog is [the SOL 6.1 MVP plan](docs/launch-mvp-plan-2026-10-10.md). Read [the audit and sources](docs/mvp-audit-2026-10-10.md) for verified repository facts, source conflicts and decisions. **F01–F03 web foundations** are complete; **F04 restrictive server foundation** is implemented; the next slice is **F05.1** (read-only seed inventory/manifest/dry-run, medium effort). F05.2 schema/transaction work requires high effort again. Native hardware acceptance remains O05. See [the environment readiness snapshot](docs/environment-readiness-2026-10-10.md) for live service blockers. The domain-storage design in the plan is a target, not an already deployed migration.
 
 F01 deployment discipline: `vercel.json` uses `scripts/vercel-ignore.mjs`; documentation/tests and other product changes skip FetUre builds, own/shared runtime changes deploy, missing Git history deploys. Actual Vercel skip status remains to be observed after a documentation-only push.
 
@@ -57,3 +57,9 @@ F01 deployment discipline: `vercel.json` uses `scripts/vercel-ignore.mjs`; docum
 - Account settings offer system/light/dark appearance; only the appearance preference is stored in localStorage. Interest records remain in the existing IndexedDB store.
 - `src/feture/native-navigation.tsx` adds a native back adapter and root exit confirmation. Real Android/iOS acceptance is pending O05; no signed binaries were built.
 - Nonfunctional social actions and fake like were removed. The remaining fixtures are read-only pre-launch content until server domains replace them.
+
+
+## Private domain API foundation (F04)
+`POST /api/domain` verifies Core device-token headers and reads only the caller's profile through a fixed server query. Owner hashes, roles and age flags in payloads are rejected. Map reads remain gated until trusted age verification (A04); cloud persistence and real sharing are not active. See [API contract and limits](docs/domain-api-contract.md). Production still lacks Core store/mail/server-secret configuration; missing services yield explicit errors. No live database or environment changes were made.
+
+Server CommonJS modules are checked with strict TypeScript/JSDoc contracts, and `npm run check` includes the focused `npm run test:security` boundary check. Core local logout does not currently revoke its server device token; A01 must handle that lifecycle.
