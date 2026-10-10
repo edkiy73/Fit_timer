@@ -3,5 +3,7 @@ const { createAdminHandler } = require('../../../packages/core/server/admin-hand
 const { analyticsStats } = require('../lib/app-analytics');
 const Supabase = require('../../../packages/core/server/supabase');
 const {createDocumentsAdmin}=require('../lib/feture/documents-admin');
+const {createModerationAdmin}=require('../lib/feture/moderation-admin');
+const {store}=require('../../../packages/core/server/store');
 
-module.exports = createAdminHandler({analyticsStats,handlers:[createDocumentsAdmin(Supabase)]});
+module.exports = createAdminHandler({analyticsStats,handlers:[createDocumentsAdmin(Supabase),createModerationAdmin(Supabase,store)]});

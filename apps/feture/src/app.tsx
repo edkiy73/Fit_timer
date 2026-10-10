@@ -21,8 +21,10 @@ import {DocumentsPage} from './feture/documents-page';
 import {DocumentsAdmin} from './feture/documents-admin';
 import {ProfilePage} from './feture/profile-page';
 import {AccessPage,PeerProfilePage} from './feture/access-page';
+import {ModerationPage} from './feture/moderation-page';
+import {ModerationAdmin} from './feture/moderation-admin';
 import type {AdminSection} from '@appbase/ui-react/admin.js';
-const productAdminSections:readonly AdminSection[]=[{id:'feture-documents',label:'Документы FetUre',group:'FetUre',render:context=><DocumentsAdmin {...context}/>}];
+const productAdminSections:readonly AdminSection[]=[{id:'feture-documents',label:'Документы FetUre',group:'FetUre',render:context=><DocumentsAdmin {...context}/>},{id:'feture-moderation',label:'Модерация FetUre',group:'FetUre',render:context=><ModerationAdmin {...context}/>}];
 
 const PRODUCT_NAME = 'FetUre';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
@@ -135,6 +137,7 @@ function Account(){
           <p><Link to="/verification">{t('verification.title')}</Link></p>
           <p><Link to="/profile">Мой профиль</Link></p>
           <p><Link to="/access">Видимость и доступ</Link></p>
+          <p><Link to="/safety">Безопасность и обращения</Link></p>
           <button className="link-button" type="button" disabled={signingOut} onClick={() => void signOut()}>{t('account.signOut')}</button>
           {signOutError && <p role="alert">{signOutError}</p>}
         </>
@@ -174,6 +177,8 @@ export const routes: RouteObject[] = [
         {path:'profile', element:<ProfilePage />},
         {path:'access', element:<AccessPage />},
         {path:'people/:id', element:<PeerProfilePage />},
+        {path:'safety', element:<ModerationPage />},
+        {path:'report/:targetId', element:<ModerationPage />},
         {path:'catalog', element:<FetureCatalog />},
         {path:'*', element:<NotFoundScreen />}
       ]
