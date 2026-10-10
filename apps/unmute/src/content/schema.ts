@@ -242,6 +242,8 @@ export const courseSetSchema = z.object({
     labels: z.array(z.string()).default([]),
   }),
   access: setAccessSchema,
+  /** Free exploration by default; sequential progression may be restored per course. */
+  navigationMode: z.enum(['free','sequential']).optional(),
   defaultRoadmapId: idSchema,
   roadmaps: z.array(roadmapSchema).min(1),
   activities: z.array(activitySchema),
