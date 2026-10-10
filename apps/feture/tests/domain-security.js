@@ -164,3 +164,17 @@ test('settings sync cannot return or overwrite obsolete sensitive documents, inc
   assert.equal(await store.get(oldKey),secret);
   const denied=response();await handler(req(null,{...body('pull'),token:'foreign-token'}),denied);assert.equal(denied.statusCode,403);
 });
+
+test('verification status is authenticated, read-only and cannot grant adult access',async()=>{
+ const s=await setup();
+ const result=await s.invoke(req(identities.alice,{action:'verification.status'}));
+ assert.equal(result.statusCode,200);
+ assert.deepEqual(result.json.status,{state:'unavailable',verifiedAdult:false,validUntil:null,reason:'provider_not_configured'});
+ assert.equal(result.headers['Cache-Control'],'no-store');
+ assert.equal((await s.invoke(req(null,{action:'verification.status'}))).statusCode,401);
+ for(const extra of [{verifiedAdult:true},{ownerHash:identities.bob.hash},{role:'admin'}])assert.equal((await s.invoke(req(identities.alice,{action:'verification.status',...extra}))).statusCode,422);
+ assert.equal((await s.invoke(req(identities.alice,{action:'verification.verify'}))).statusCode,422);
+ assert.equal((await s.invoke(req(identities.alice,{action:'interests.list'}))).json.error,'verification_required');
+ assert.throws(()=>require('../lib/feture/verification').verificationStatus({accountHash:identities.alice.hash,verifiedAdult:true}),error=>error.status===401);
+ assert.equal(s.calls.length,0);
+});

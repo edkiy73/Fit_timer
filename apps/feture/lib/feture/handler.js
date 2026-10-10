@@ -2,6 +2,7 @@
 'use strict';
 const { randomUUID } = require('node:crypto');
 const { authenticate } = require('./identity');
+const { verificationStatus } = require('./verification');
 const { requireAdult } = require('./permissions');
 const { DomainError } = require('./errors');
 const { readBody,command } = require('./validation');
@@ -27,6 +28,9 @@ function createHandler({store,repository,cors,quota,audit}) {
       const input=command(await readBody(req));action=input.action;
       if(input.action==='profile.get') {
         const profile=await repository.getProfile(actor);record('ok');return send(200,{ok:true,profile,requestId});
+      }
+      if(input.action==='verification.status') {
+        const status=verificationStatus(actor);record('ok');return send(200,{ok:true,status,requestId});
       }
       requireAdult(actor); // Also enforced by repository: alternate callers cannot bypass.
       if(input.action==='interests.set'||input.action==='interests.delete') {

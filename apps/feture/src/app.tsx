@@ -15,6 +15,7 @@ import { InterestLifecycle, interestQueue } from './feture/use-interest-map';
 import { FetureExperience } from './feture/experience';
 import { NativeNavigation } from './feture/native-navigation';
 import { isExperiencePath } from './feture/navigation';
+import { VerificationPage } from './feture/verification-page';
 import { ThemePicker } from './feture/components/ThemePicker';
 
 const PRODUCT_NAME = 'FetUre';
@@ -125,6 +126,7 @@ function Account(){
           <h2>{t('account.title')}</h2>
           <p>{auth.session.email}{auth.session.handle ? ' · ' + auth.session.handle : ''}</p>
           <p className="muted">{t('account.synced')}</p>
+          <p><Link to="/verification">{t('verification.title')}</Link></p>
           <button className="link-button" type="button" disabled={signingOut} onClick={() => void signOut()}>{t('account.signOut')}</button>
           {signOutError && <p role="alert">{signOutError}</p>}
         </>
@@ -158,6 +160,7 @@ export const routes: RouteObject[] = [
         {path:'community', element:<Home />},
         {path:'dating', element:<Home />},
         {path:'account', element:<Account />},
+        {path:'verification', element:<VerificationPage />},
         {path:'catalog', element:<FetureCatalog />},
         {path:'*', element:<NotFoundScreen />}
       ]
