@@ -12,9 +12,11 @@ function text(value,max) {if(typeof value!=='string'||value.length>max)reject(50
 function timestamp(value) {const date=text(value,40);if(!Number.isFinite(Date.parse(date)))reject(503,'domain_unavailable');return date;}
 /** Fixed tables/columns, parameterized owner equality, no generic SQL/table/query API.
  * Mutations use a single owner-scoped RPC transaction. No browser database access.
- * @param {import('./contracts').Transport} transport @returns {import('./contracts').Repository}
+ * @param {import('./contracts').Transport} transport @param {import('./documents').DocumentsRepository|null} [documents] @returns {import('./contracts').Repository}
  */
-function createRepository(transport) {
+function createRepository(transport,documents=null) {
+  /** @param {import('./contracts').Actor} actor */
+  async function requireSensitive(actor) {requireAdult(actor);if(!documents)reject(503,'documents_unavailable');await documents.requireCurrent(actor);}
   /** @param {string} path @returns {Promise<Record<string,unknown>[]>} */
   async function rows(path) {
     if(!transport.configured())reject(503,'domain_unavailable');
@@ -49,7 +51,7 @@ function createRepository(transport) {
       return {displayName:text(row.display_name,80),about:text(row.about,4000),createdAt:timestamp(row.created_at),updatedAt:timestamp(row.updated_at)};
     },
     async listInterests(actor,page) {
-      requireAdult(actor);
+      await requireSensitive(actor);
       if(!Number.isInteger(page.limit)||page.limit<1||page.limit>50||page.after!==null&&!/^interest-[1-9]\d{0,2}-[1-9]\d{0,2}$/.test(page.after))reject(422,'invalid_request');
       const query=new URLSearchParams({select:'account_hash,interest_id,stance,experience,boundary,boundary_note,intensity,visibility,use_for_discovery,revision,source,test_version,deleted,updated_at',account_hash:'eq.'+actor.accountHash,order:'interest_id.asc',limit:String(page.limit+1)});
       if(page.after)query.append('interest_id','gt.'+page.after);
@@ -59,7 +61,7 @@ function createRepository(transport) {
       return {items,nextCursor:data.length>page.limit?cursorFor(items[items.length-1].interestId):null};
     },
     async mutateInterest(actor,input) {
-      requireAdult(actor);
+      await requireSensitive(actor);
       const checked=command(input);
       if(checked.action!=='interests.set'&&checked.action!=='interests.delete')reject(422,'invalid_request');
       if(!transport.configured())reject(503,'domain_unavailable');

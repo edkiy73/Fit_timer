@@ -4,12 +4,12 @@ FetUre is an independent app within the AppBase monorepo (React + TypeScript + V
 
 ## Database co-location (2026-10-10)
 - FetUre shares the **FitT Supabase project** (`anrhayozrhrmiwexmbhw`, Tokyo / `ap-northeast-1` verified 2026-10-11), not FitTimer's application tables.
-- Ten strictly `public.feture_*`-prefixed tables are deployed. `supabase/migrations/20261010_001_feture_domain.sql` is the initial domain/schema seed; later CLI migrations include scoped seed and interest transactions. Never reapply the initial migration to the same database without reviewing existing tables.
+- Strictly `public.feture_*`-prefixed domain tables are deployed. `supabase/migrations/20261010_001_feture_domain.sql` is the initial domain/schema seed; later CLI migrations include scoped seed and interest transactions. Never reapply the initial migration to the same database without reviewing existing tables.
 - 12 interest categories, 144 interests, and 18 *demonstration test descriptors* seeded from `data/concept-catalog.json`. Real questionnaires/scoring are NOT yet implemented.
 - `supabase/migrations/20261010_002_catalog_read.sql` allows **anonymous SELECT** for ONLY the three public taxonomy tables; all six private tables have RLS enabled and NO anon/authenticated grants or policies.
 - AppBase server sessions are authoritative. The database uses server-derived opaque `account_hash` (NOT `auth.users` IDs, and never a client-supplied email). Private features must require server-side identity verification before any service-role request.
 - A shared Supabase project shares quota/availability and privileged project credentials. Prefixes/RLS protect from ordinary access, but **not** from compromised service-role credentials; never put such credentials in browser code.
-- `api/catalog.js` is a narrow public server proxy with a publishable (anon) key, **not service-role**. It returns only the public taxonomy. No client direct DB calls. Vercel variables: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`.
+- `api/catalog.js` is a narrow public server proxy with a publishable (anon) key, **not service-role**. It returns public taxonomy and reviewed legal publications only. No client direct DB calls. Vercel variables: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`.
 
 ## Interfaces
 - `/`: **native React** experience. Tabs «Мой мир», «Исследовать», «Сообщество», «Знакомства» are React components; no iframe. Interest editing, per-category jars and privacy choices are functional.
@@ -19,7 +19,8 @@ FetUre is an independent app within the AppBase monorepo (React + TypeScript + V
 - Community posts and dating profiles still use hardcoded fixtures in the inspected React source, not working social services. Any legacy demonstration labels are implementation debt: current owner policy requires seed provenance in database/admin only and no technical badges in consumer UI during pre-launch development.
 - Private interests use a dedicated owner-scoped IndexedDB cache/outbox and `/api/domain` list/set/delete. UUIDs and expected revisions survive retries/restarts; conflicts require an explicit choice. Guest records are imported only by confirmation and stay private. Confirmed logout fences all tabs and clears only the captured owner. [Queue contract and verification](docs/interest-queue.md).
 - A02.1 server foundation is deployed in PostgreSQL: independent stance/experience/boundary, intensity 1–5, revisions, operation receipts and deletion tombstones. A02.2 editor and A02.3/A03 client transport now use this model. **Live cloud saving is not yet accepted/enabled**: A01 server auth/mail environment and the trusted A04 adult gate are still blockers. No age bypass was added. [Server contract](docs/interest-transactions.md).
-- A04.2 adds an isolated checked server verification engine and test-only signed-event sandbox: normalization, policy/expiry, terminal rejection/revocation and replay rules. No production provider, persistent verification store, webhook route or adult authorization is connected. [Verification contract](docs/verification-contract.md).
+- A04.2/A04.3 add a checked verification engine and persistent denied-by-default PostgreSQL attempts/global receipts: policy/expiry, terminal rejection/revocation and replay rules. The schema is deployed with **zero enabled policies**. No production provider, webhook route or adult authorization is connected. [Verification contract](docs/verification-contract.md).
+- A05 supplies a product Admin document editor, nine starting drafts, immutable reviewed versions and exact-version account consent. Public documents remain readable without age/auth; sensitive repositories require current canonical RU consent. No draft is automatically published. Legal review and live authenticated acceptance remain open. [Document contract](docs/documents-consent.md).
 - Core document sync now contains settings only. The old prototype interest-map path and timestamp merge are removed; the old local mirror is discarded without legacy conversion (pre-launch disposable data). Settings sync responses exclude obsolete private documents even for premium accounts.
 - `/#/catalog`: AppBase React route reading public catalogue from Supabase through `/api/catalog`.
 - `/#/account`: AppBase email sign-in shell. **Account storage and verification still require separately configured AppBase server backend**.
@@ -65,7 +66,7 @@ F01 deployment discipline: `vercel.json` uses `scripts/vercel-ignore.mjs`; docum
 
 
 ## Private domain API foundation (F04)
-`POST /api/domain` verifies Core device-token headers and reads only the caller's profile through a fixed server query. Owner hashes, roles and age flags in payloads are rejected. Map reads remain gated until trusted age verification (A04); cloud persistence and real sharing are not active. See [API contract and limits](docs/domain-api-contract.md). Production still lacks Core store/mail/server-secret configuration; missing services yield explicit errors. No live database or environment changes were made.
+`POST /api/domain` verifies Core device-token headers and reads only the caller's profile through a fixed server query. Owner hashes, roles and age flags in payloads are rejected. Map reads remain gated until trusted age verification (A04); cloud persistence and real sharing are not active. See [API contract and limits](docs/domain-api-contract.md). Production still lacks Core store/mail/server-secret configuration; missing services yield explicit errors. See the current migration evidence below; production auth/mail environment remains unconfigured.
 
 Server CommonJS modules are checked with strict TypeScript/JSDoc contracts, and `npm run check` includes the focused `npm run test:security` boundary check. Core logout now revokes the server token. Authenticated requests and push dispatch enforce an absolute 90-day session deadline; network failures retain local credentials for retry. A01 live email acceptance remains blocked by production configuration.
 
@@ -81,3 +82,6 @@ it never sends email, accesses the database or proves a live sign-in. Existing
 Vercel Secret values cannot be retrieved for transfer via the connector. Production
 FetUre still needs server storage/mail configuration. A01 remains incomplete: server logout/expiry are implemented and checked locally,
 but real OTP delivery, two controlled production accounts and live recovery are pending.
+
+## Continued high-effort implementation (2026-10-11)
+A04.3 persistent attempts/receipts, A05 reviewed document versions/consent, and A06 private profile schema are applied. The verification policies and published legal documents are empty by design. [Private profile contract](docs/private-profile.md). External production OTP/age/legal acceptance remains open; development continues with scoped permissions next. Earlier handoff/stop notes describe historical slices and are superseded by the owner override in AGENTS.md.

@@ -2,6 +2,7 @@
 require('../lib/product');
 const {cors}=require('../../../packages/core/server/util');
 const editorial=require('../data/catalog-editorial.json');
+const {publicDocuments}=require('../lib/feture/public-documents');
 
 /** Public, read-only taxonomy endpoint. Does not access any FetUre user data.
  * Uses the Supabase publishable (anon) key and 3 explicitly allowlisted RLS tables.
@@ -45,6 +46,10 @@ module.exports = async function catalog(req, res) {
     return res.end(JSON.stringify({error: 'catalog_not_configured'}));
   }
   try {
+    const query=new URL(req.url||'/api/catalog','https://feture.invalid').searchParams;
+    if(query.get('resource')==='documents'){
+      const result=await publicDocuments(BASE,KEY,query);res.setHeader('Cache-Control','no-store');res.statusCode=result.status;return res.end(JSON.stringify(result.body));
+    }
     const [categories, interests, tests] = await Promise.all([
       list('feture_categories', 'id,title,short_title,icon,accent_color,position', 'position.asc', 100),
       list('feture_interests', 'id,category_id,title,position', 'position.asc', 500),
