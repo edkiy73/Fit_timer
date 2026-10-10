@@ -48,7 +48,7 @@ CommonJS is retained to match the existing checked server deployment without int
 a second TS emit/build path. The new module is strict checkJS with exported typed contracts.
 
 The ingestor accepts only a bounded raw Buffer (64 KiB), verifies it through the adapter
-before normalization/store access, and discards unknown or private normalized fields.
+before normalization/store access, and rejects unknown or private normalized fields.
 Issuer, environment, policy, adult threshold 18, UUID attempt and provider reference must
 match server configuration/stored attempt. Event freshness is bounded to 5 minutes past
 and 30 seconds future. The provider must ALSO verify its delivery timestamp, signature,

@@ -39,6 +39,9 @@ test('verification raw signatures, malformed/private events, issuer/environment 
  await assert.rejects(s.ingest(Buffer.alloc(65537),{}),e=>e.status===413);
  for(const patch of [{issuer:'foreign'},{environment:'production'},{policyVersion:'new'},{threshold:21},{occurredAt:time-300001},{occurredAt:time+30001},{adult:false},{outcome:'redirect'},{accountHash:'b'.repeat(32)},{dateOfBirth:'2000-01-01'},{documents:[]},{identity:'true'},{attemptId:'not-uuid'}])await assert.rejects(s.send(makeEvent(patch)),e=>e.status===422);
  assert.equal(s.calls,0);assert.equal(s.receipts,0);assert.equal(s.current.proof,null);
+ const coercible={...makeEvent(),outcome:{toString:()=> 'rejected',documents:['private']},adult:false};
+ const ingest=createVerificationIngestor({provider:{verify:async()=>coercible},store:{apply:async()=>{throw Error('must not write');}},policy,now:()=>time});
+ await assert.rejects(ingest(Buffer.from('signed fixture'),{}),e=>e.status===422);
 });
 test('sandbox atomic receipt handles simultaneous retries, conflict and replay after revocation without renewal',async()=>{
  const s=sandbox();const results=await Promise.all([s.send(makeEvent()),s.send(makeEvent())]);
