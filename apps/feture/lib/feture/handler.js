@@ -29,6 +29,10 @@ function createHandler({store,repository,cors,quota,audit}) {
         const profile=await repository.getProfile(actor);record('ok');return send(200,{ok:true,profile,requestId});
       }
       requireAdult(actor); // Also enforced by repository: alternate callers cannot bypass.
+      if(input.action==='interests.set'||input.action==='interests.delete') {
+        const result=await repository.mutateInterest(actor,input);record(result.ok?'ok':result.error);
+        return send(result.ok?200:409,{...result,requestId});
+      }
       const page=await repository.listInterests(actor,input);record('ok');return send(200,{ok:true,...page,requestId});
     } catch(error) {
       const safe=error instanceof DomainError?error:new DomainError(503,'domain_unavailable');record(safe.code);return send(safe.status,{error:safe.code,requestId});

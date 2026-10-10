@@ -1,6 +1,7 @@
 // @ts-check
 'use strict';
 const { reject } = require('./errors');
+const { interestState,INTEREST_ID,UUID } = require('./interest-model');
 const MAX_BODY=4096;
 /** @param {import('./contracts').Request} req @returns {Promise<unknown>} */
 async function readBody(req) {
@@ -26,9 +27,16 @@ function command(input) {
   if(!input||typeof input!=='object'||Array.isArray(input)||Object.getPrototypeOf(input)!==Object.prototype)reject(422,'invalid_request');
   const value=/** @type {Record<string,unknown>} */(input);
   const action=value.action;
-  const allowed=action==='profile.get'?['action']:action==='interests.list'?['action','limit','cursor']:[];
+  const mutation=action==='interests.set'||action==='interests.delete';
+  const allowed=action==='profile.get'?['action']:action==='interests.list'?['action','limit','cursor']:mutation?['action','interestId','operationId','expectedRevision',...(action==='interests.set'?['state']:[])]:[];
   if(!allowed.length||Object.keys(value).some(key=>!allowed.includes(key)))reject(422,'invalid_request');
   if(action==='profile.get')return {action};
+  if(mutation) {
+    const {interestId,operationId,expectedRevision}=value;
+    if(typeof interestId!=='string'||!INTEREST_ID.test(interestId)||typeof operationId!=='string'||!UUID.test(operationId)||typeof expectedRevision!=='number'||!Number.isSafeInteger(expectedRevision)||expectedRevision<0||expectedRevision>=Number.MAX_SAFE_INTEGER)reject(422,'invalid_request');
+    const base={interestId:/** @type {string} */(interestId),operationId:/** @type {string} */(operationId),expectedRevision:/** @type {number} */(expectedRevision)};
+    return action==='interests.set'?{action,...base,state:interestState(value.state)}:{action:'interests.delete',...base};
+  }
   const limit=value.limit===undefined?30:value.limit;
   if(typeof limit!=='number'||!Number.isInteger(limit)||limit<1||limit>50)reject(422,'invalid_request');
   let after=null;

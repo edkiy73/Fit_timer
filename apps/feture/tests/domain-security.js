@@ -92,6 +92,11 @@ test('age gate rejects sensitive map reads regardless of caller age flags',async
   assert.throws(()=>requireAdult(actor),error=>error.status===403);
   const result=await s.invoke(req(identities.alice,{action:'interests.list'}));assert.equal(result.statusCode,403);assert.equal(result.json.error,'verification_required');assert.equal(s.calls.length,0);
   await assert.rejects(s.repository.listInterests(actor,{limit:30,after:null}),error=>error.status===403);
+  const mutation={action:'interests.set',interestId:'interest-1-1',operationId:'00000000-0000-4000-8000-000000000001',expectedRevision:0,state:{stance:'curious',experience:'none',boundary:'none',intensity:2}};
+  assert.equal((await s.invoke(req(identities.alice,mutation))).statusCode,403);
+  await assert.rejects(s.repository.mutateInterest(actor,mutation),error=>error.status===403);
+  await assert.rejects(s.repository.mutateInterest({accountHash:identities.alice.hash,verifiedAdult:true},mutation),error=>error.status===401);
+  assert.equal(s.calls.length,0);
 });
 test('body/page limits and cursor grammar cannot inject PostgREST filters',async()=>{
   const s=await setup();
