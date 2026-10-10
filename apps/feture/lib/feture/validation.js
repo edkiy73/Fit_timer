@@ -28,9 +28,9 @@ function command(input) {
   const value=/** @type {Record<string,unknown>} */(input);
   const action=value.action;
   const mutation=action==='interests.set'||action==='interests.delete';
-  const allowed=action==='profile.get'?['action']:action==='interests.list'?['action','limit','cursor']:mutation?['action','interestId','operationId','expectedRevision',...(action==='interests.set'?['state']:[])]:[];
+  const allowed=(action==='profile.get'||action==='verification.status')?['action']:action==='interests.list'?['action','limit','cursor']:mutation?['action','interestId','operationId','expectedRevision',...(action==='interests.set'?['state']:[])]:[];
   if(!allowed.length||Object.keys(value).some(key=>!allowed.includes(key)))reject(422,'invalid_request');
-  if(action==='profile.get')return {action};
+  if(action==='profile.get'||action==='verification.status')return {action};
   if(mutation) {
     const {interestId,operationId,expectedRevision}=value;
     if(typeof interestId!=='string'||!INTEREST_ID.test(interestId)||typeof operationId!=='string'||!UUID.test(operationId)||typeof expectedRevision!=='number'||!Number.isSafeInteger(expectedRevision)||expectedRevision<0||expectedRevision>=Number.MAX_SAFE_INTEGER)reject(422,'invalid_request');

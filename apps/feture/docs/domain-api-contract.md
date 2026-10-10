@@ -46,3 +46,7 @@ New server modules remain CommonJS JS, as required by the existing Vercel/Core r
 On 2026-10-10, Vercel `feture-mvp` still lists only `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`, production targets. Values were not decrypted. Missing Core account store, server secret and mail configuration remain blockers; no environment variables or database schema/data were changed in F04.
 
 Read-only live SQL inspection confirmed nine `feture_*` tables with RLS enabled; only three taxonomy tables grant client SELECT, all six private tables grant none to anon/authenticated/PUBLIC. The secret/server key bypasses RLS, so application ownership checks are mandatory. Current documentation: [Supabase API keys](https://supabase.com/docs/guides/getting-started/api-keys), [changelog](https://supabase.com/changelog.md). Existing Core transport is reused; no new Supabase client dependency.
+
+## Verification status (A04.1)
+
+Authenticated read-only `verification.status` is available before the adult gate. Its current minimal DTO reports `unavailable`, `verifiedAdult:false`, `validUntil:null`, `reason:provider_not_configured`. It cannot grant access or accept client claims. See [verification-contract.md](verification-contract.md) for the current endpoint and the next provider adapter contract.

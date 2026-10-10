@@ -10,6 +10,7 @@ export type InterestDTO = InterestState & {interestId:string;revision:number;upd
 export type Mutation = {action:'interests.set';interestId:string;operationId:string;expectedRevision:number;state:InterestState}|{action:'interests.delete';interestId:string;operationId:string;expectedRevision:number};
 export type MutationResult = {ok:true;replayed:boolean;appliedRevision:number;appliedAt:string;entry:InterestDTO}|{ok:false;error:'operation_conflict'|'revision_conflict';entry:InterestDTO|null};
 export type Page = {limit:number;after:string|null};
-export type Command = {action:'profile.get'} | ({action:'interests.list'} & Page) | Mutation;
+export type VerificationStatusDTO = {state:'unavailable';verifiedAdult:false;validUntil:null;reason:'provider_not_configured'};
+export type Command = {action:'verification.status'} | {action:'profile.get'} | ({action:'interests.list'} & Page) | Mutation;
 export interface Repository { getProfile(actor:Actor):Promise<ProfileDTO|null>; listInterests(actor:Actor,page:Page):Promise<{items:InterestDTO[];nextCursor:string|null}>; mutateInterest(actor:Actor,input:Mutation):Promise<MutationResult> }
 export type AuditEvent = Readonly<{requestId:string; action:Command['action']|'unknown';outcome:string}>;
