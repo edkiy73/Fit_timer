@@ -19,8 +19,8 @@ export function shouldDeployPath(path) {
   if (file.startsWith('apps/')) {
     if (!file.startsWith(OWN)) return false;
     const local = file.slice(OWN.length);
-    // Offline seed review inputs/tools never enter the deployed runtime.
-    if(local.startsWith('seed/') || local === 'tools/seed-dry-run.mjs' || local === 'tsconfig.server.json') return false;
+    // Operator seed tooling and manual SQL migrations never enter the deployed runtime.
+    if(local.startsWith('seed/') || local.startsWith('supabase/') || /^tools\/seed-[a-z-]+\.mjs$/.test(local) || local === 'tsconfig.server.json') return false;
     if (/^(docs|tests|test|e2e|__tests__|android|ios)\//.test(local)) return false;
     if (TEST_FILE.test(local) || TEST_SUFFIX.test(local)) return false;
     return true;

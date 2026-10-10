@@ -32,21 +32,27 @@ const fail=message=>{throw new Error(message);};
 function read(path){const file=realpathSync(resolve(APP,path));const local=relative(APP,file);if(local.startsWith('..')||isAbsolute(local))fail('source_outside_feture');const value=readFileSync(file,'utf8');if(Buffer.byteLength(value)>1024*1024)fail('source_too_large');return value;}
 /** @param {unknown[]} ids */
 function unique(ids){if(new Set(ids).size!==ids.length)fail('duplicate_seed_id');}
-/** @param {{manifestPath:string;inventoryPath:string;projectRef:string;stage:string}} options */
-export function dryRun({manifestPath,inventoryPath,projectRef,stage}){
+/** @param {{manifestPath:string;projectRef:string;stage:string}} options */
+export function loadSeed({manifestPath,projectRef,stage}){
   const manifestRaw=read(manifestPath),manifest=manifestSchema.parse(JSON.parse(manifestRaw));
   if(projectRef!==manifest.expectedProjectRef)fail('project_mismatch');
   if(stage!==manifest.expectedStage)fail('stage_mismatch');
-  const inventoryRaw=read(inventoryPath);
-  const inventory=inventorySchema.parse(JSON.parse(inventoryRaw));
-  if(inventory.projectRef!==projectRef)fail('inventory_project_mismatch');
-  unique(inventory.tables.map(t=>t.table));
   const catalogRaw=read(manifest.catalog.path);
   const digest=createHash('sha256').update(catalogRaw).digest('hex');
   if(digest!==manifest.catalog.sha256)fail('catalog_digest_mismatch');
   const catalog=catalogSchema.parse(JSON.parse(catalogRaw));
   unique(catalog.categories.map(c=>c.id));unique(catalog.categories.flatMap(c=>c.interests.map(i=>i.id)));unique(manifest.profiles.map(p=>p.seedKey));
   for(const category of catalog.categories)for(const interest of category.interests)if(!interest.id.startsWith('interest-'+category.id.slice(9)+'-'))fail('interest_category_mismatch');
+  return {manifest,catalog,manifestRaw,catalogRaw,digest};
+}
+/** @param {{manifestPath:string;inventoryPath:string;projectRef:string;stage:string}} options */
+export function dryRun(options){
+  const {projectRef,stage,inventoryPath}=options;
+  const {manifest,catalog,manifestRaw,digest}=loadSeed(options);
+  const inventoryRaw=read(inventoryPath);
+  const inventory=inventorySchema.parse(JSON.parse(inventoryRaw));
+  if(inventory.projectRef!==projectRef)fail('inventory_project_mismatch');
+  unique(inventory.tables.map(t=>t.table));
   const targetTables=['feture_categories','feture_interests','feture_profiles'];
   const proposed=[catalog.categories.length,catalog.categories.reduce((sum,c)=>sum+c.interests.length,0),manifest.profiles.length];
   const blockers=new Set(['apply_not_implemented']);
