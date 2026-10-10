@@ -8,7 +8,7 @@ import { motionTokens } from './motion';
 import { useExperienceNavigation } from './navigation';
 import { apiUrl } from '../api-url';
 import fallbackCatalog from '../../data/concept-catalog.json';
-import { catalogSchema, categoryProgress, hasIntensity, STATUSES, type Catalog, type InterestRecord, type InterestStatus, type Visibility } from './model';
+import { catalogSchema, categoryProgress, hasIntensity, matchesCategory, matchesCategoryName, matchesInterest, STATUSES, type Catalog, type InterestRecord, type InterestStatus, type Visibility } from './model';
 import { useInterestMap } from './use-interest-map';
 
 type Tab = 'world'|'explore'|'community'|'dating';
@@ -18,7 +18,7 @@ const NAV:{id:Tab;title:string;icon:IconName}[]=[
 ];
 const STATUS_LABEL:Record<InterestStatus,string>=Object.fromEntries(STATUSES.map(s=>[s.id,s.label])) as Record<InterestStatus,string>;
 const VIEWS:{id:Visibility;label:string}[]=[{id:'private',label:'Только мне'},{id:'granted',label:'По разрешению'},{id:'public',label:'Открыто'}];
-type Edit = {id:string; title:string;category:string};
+type Edit = {id:string; title:string;category:string;definition:string;synonyms:string[];relatedTitles:string[]};
 function useCatalog(){
  const [data,setData]=useState<Catalog>(()=>catalogSchema.parse(fallbackCatalog));
  const [source,setSource]=useState<'live'|'offline'|'loading'>('loading');
@@ -65,7 +65,8 @@ export function FetureExperience(){
  const overall=categoryProgress(allIds,map);
  const selectedCategory=data.categories.find(c=>c.id===selected);
  const selectedInterest=selectedCategory?.interests.find(i=>i.id===interestId);
- const edit:Edit|null=selectedInterest&&selectedCategory?{id:selectedInterest.id,title:selectedInterest.title,category:selectedCategory.title}:null;
+ const edit:Edit|null=selectedInterest&&selectedCategory?{...selectedInterest,category:selectedCategory.title,
+  relatedTitles:selectedInterest.relatedIds.flatMap(id=>data.categories.flatMap(c=>c.interests).filter(i=>i.id===id).map(i=>i.title))}:null;
  useEffect(()=>{restoreScroll(area.current);},[location.pathname,restoreScroll]);
  return <LazyMotion features={domAnimation}><MotionConfig reducedMotion="user" transition={motionTokens.panel}><div className="ft-shell">
   <a className="ft-skip-link" href="#ft-main" onClick={e=>{e.preventDefault();area.current?.focus()}}>К содержимому</a>
@@ -111,7 +112,7 @@ export function FetureExperience(){
           </div>}
           <div className="ft-note"><Icon name="lock" size={18}/><div><strong>Только для тебя</strong><p>По умолчанию карта приватна. Твои отметки сохраняются на этом устройстве.</p></div></div>
           <div className="ft-section-head"><div><h2>Продолжить знакомство с собой</h2><p>Необязательно проходить всё сразу.</p></div></div>
-          <div className="ft-recommend">{data.categories.slice(0,3).map((c,i)=><button onClick={()=>openCategory(c.id)} key={c.id} className="ft-recommend-card" style={{'--accent':c.color} as CSSProperties}><span className="ft-recommend-index">0{i+1}</span><strong>{c.title}</strong><small>12 тем для исследования</small><Icon name="arrow" size={17}/></button>)}</div>
+          <div className="ft-recommend">{data.categories.slice(0,3).map((c,i)=><button onClick={()=>openCategory(c.id)} key={c.id} className="ft-recommend-card" style={{'--accent':c.color} as CSSProperties}><span className="ft-recommend-index">0{i+1}</span><strong>{c.title}</strong><small>{c.interests.length} тем для исследования</small><Icon name="arrow" size={17}/></button>)}</div>
         </>}
         {tab==='explore'&&<>
           {selected&&!selectedCategory?<StateCard title="Направление не найдено" description="Вернись к карте и выбери другую тему." action={<ActionButton onClick={()=>go('explore')}>Все направления</ActionButton>}/>:selectedCategory?<><button className="ft-back" onClick={()=>go('explore')}><Icon name="back" size={18}/> Все направления</button>
@@ -119,18 +120,19 @@ export function FetureExperience(){
               <p>Направление / {selectedCategory.short}</p><h1>{selectedCategory.title}</h1>
               <span>{categoryProgress(selectedCategory.interests.map(i=>i.id),map).known} из {selectedCategory.interests.length} исследовано</span>
             </div><div className="ft-section-head"><div><h2>Темы направления</h2><p>Нажми на интерес, чтобы сохранить своё отношение и видимость.</p></div></div>
-            <div className="ft-topic-list">{selectedCategory.interests.map(i=>{
+            {query.trim()&&<p className="ft-muted">Поиск: «{query.trim()}» <button type="button" className="ft-back" onClick={()=>setQuery('')}>Показать все темы</button></p>}
+            <div className="ft-topic-list">{selectedCategory.interests.filter(i=>matchesInterest(i,query)||matchesCategoryName(selectedCategory,query)).map(i=>{
               const state=map[i.id];return <button key={i.id} className="ft-topic" onClick={()=>openInterest(i.id)}>
                 <span className={`ft-topic-dot ${state?.status==='hard_limit'?'boundary':''}`} style={{background:!state||state.status==='unknown'?'#e2dbe1':state.status==='hard_limit'?'#f4dbe2':selectedCategory.color}}>
                   {state?.status&&state.status!=='unknown'?<Icon name={state.status==='hard_limit'?'shield':'check'} size={15}/>:<Icon name="plus" size={15}/>}
                 </span><span><strong>{i.title}</strong><small>{state&&state.status!=='unknown'?STATUS_LABEL[state.status]:'Не исследовано'}{state?.visibility==='public'?' · открыто':state?.visibility==='granted'?' · по разрешению':''}</small></span>
                 <Icon name="arrow" size={17}/></button>})}</div>
           </>:<><SectionTitle eyebrow="Исследование" title="Открой новые грани" description="Большая карта интересов, границ и вопросов. Здесь нет правильных или неправильных ответов."/>
-          <div className="ft-explore-art"><Icon name="compass" size={36}/><div><strong>Начни с любопытства</strong><p>144 темы в 12 направлениях. Отмечай только то, что считаешь своим.</p></div></div>
+          <div className="ft-explore-art"><Icon name="compass" size={36}/><div><strong>Начни с любопытства</strong><p>{allIds.length} темы в {data.categories.length} направлениях. Отмечай только то, что считаешь своим.</p></div></div>
           <label className="ft-search"><Icon name="search" size={20}/><input placeholder="Найти интерес или направление" value={query} onChange={e=>setQuery(e.target.value)} aria-label="Поиск интересов"/></label>
           <div className="ft-section-head"><div><h2>Направления</h2><p>У каждого своя карта и история.</p></div></div>
-          {query&&!data.categories.some(c=>`${c.title} ${c.interests.map(i=>i.title).join(' ')}`.toLowerCase().includes(query.toLowerCase()))&&<StateCard title="Ничего не найдено" description="Попробуй другое название или более короткий запрос."/>}
-          <div className="ft-category-grid">{data.categories.filter(c=>!query||`${c.title} ${c.interests.map(i=>i.title).join(' ')}`.toLowerCase().includes(query.toLowerCase())).map(c=>{
+          {query&&!data.categories.some(c=>matchesCategory(c,query))&&<StateCard title="Ничего не найдено" description="Попробуй другое название или более короткий запрос."/>}
+          <div className="ft-category-grid">{data.categories.filter(c=>matchesCategory(c,query)).map(c=>{
             const p=categoryProgress(c.interests.map(i=>i.id),map);
             return <button key={c.id} className="ft-category-card" onClick={()=>openCategory(c.id)}>
               <span className="ft-category-symbol" style={{background:`${c.color}20`,color:c.color}}><Icon name="spark" size={23}/></span>
@@ -183,6 +185,9 @@ function InterestDialog({interest,current,onClose,onSave}:{interest:Edit;current
  const [intensity,setIntensity]=useState(current?.intensity??50);
  const [visibility,setVisibility]=useState<Visibility>(current?.visibility||'private');
  return <AppDialog title={interest.title} eyebrow={interest.category} onClose={onClose}>
+   <p className="ft-muted">{interest.definition}</p>
+   {interest.synonyms.length>0&&<p className="ft-muted"><small>Также ищут: {interest.synonyms.join(', ')}.</small></p>}
+   {interest.relatedTitles.length>0&&<p className="ft-muted"><small>Связанные темы: {interest.relatedTitles.join(', ')}.</small></p>}
    <p className="ft-muted">Как ты относишься к этой теме прямо сейчас?</p>
    <div className="ft-statuses">{STATUSES.map(item=><button key={item.id} className={`ft-status ${status===item.id?'active':''} ${item.id==='hard_limit'?'ft-hard':''}`} aria-pressed={status===item.id} onClick={()=>setStatus(item.id)}><span>{item.label}<small>{item.description}</small></span>{status===item.id&&<Icon name="check" size={18}/>}</button>)}</div>
    {hasIntensity(status)&&<div className="ft-intensity"><label htmlFor="ft-intensity">Насколько тебе интересно? <strong>{intensity}/100</strong></label><input id="ft-intensity" type="range" min="0" max="100" step="5" value={intensity} onChange={e=>setIntensity(Number(e.target.value))}/><small>Это личная оценка, не процент совместимости.</small></div>}

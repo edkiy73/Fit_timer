@@ -42,8 +42,9 @@ export function useExperienceNavigation(){
     element.scrollTo({top:navigationRef.current==='POP'?(scrollPositions.get(path)||0):0,behavior:'instant'});
   },[path]);
   const rememberScroll=(top:number)=>scrollPositions.set(path,top);
-  const go=(next:ExperienceTab)=>navigate(next==='world'?'/':'/'+next);
-  const openCategory=(id:string)=>navigate('/explore/'+encodeURIComponent(id));
+  const search=query?new URLSearchParams({q:query}).toString():'';
+  const go=(next:ExperienceTab)=>navigate({pathname:next==='world'?'/':'/'+next,search:next==='explore'&&tab==='explore'?search:''});
+  const openCategory=(id:string)=>navigate({pathname:'/explore/'+encodeURIComponent(id),search});
   const setQuery=(value:string)=>{
     const next=new URLSearchParams(location.search);
     if(value)next.set('q',value);else next.delete('q');

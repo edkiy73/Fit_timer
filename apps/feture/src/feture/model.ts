@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { mergeRecordMaps, type RecordMap } from '@appbase/core/document-sync.js';
+import editorial from '../../data/catalog-editorial.json';
 
 export const interestStatus = z.enum([
   'unknown','curious','fantasy','want_to_try','experienced','soft_limit','hard_limit','not_interested'
@@ -50,11 +51,26 @@ export function categoryProgress(ids:string[],map:InterestMap){
   return {known,total:ids.length,percent:ids.length?Math.round(100*known/ids.length):0,interests:interests.length,boundaries,conditional};
 }
 export type Catalog = z.infer<typeof catalogSchema>;
-const catalogInterest=z.object({id:z.string(),title:z.string()});
+const definitions:Readonly<Record<string,{definition:string;synonyms:string[];relatedIds:string[]}>>=editorial.interests;
+const catalogInterest=z.object({id:z.string(),title:z.string()}).transform(item=>({
+ ...item,definition:definitions[item.id]?.definition??'',synonyms:definitions[item.id]?.synonyms??[],
+ relatedIds:definitions[item.id]?.relatedIds??[],editorialVersion:editorial.version
+}));
 const catalogCategory=z.object({
  id:z.string(),title:z.string(),short:z.string(),icon:z.string(),color:z.string(),interests:z.array(catalogInterest)
-});
+}).transform(category=>({...category,interests:editorial.editorialStatus==='published'?category.interests.filter(i=>i.definition):[]}));
 const catalogTest=z.object({
  id:z.string(),title:z.string(),description:z.string(),category:z.number().int(),questions:z.number().int()
 });
 export const catalogSchema=z.object({version:z.number(),categories:z.array(catalogCategory),tests:z.array(catalogTest)});
+
+const searchKey=(text:string)=>text.normalize('NFKC').toLocaleLowerCase('ru').replace(/ё/g,'е').trim();
+export function matchesInterest(item:Catalog['categories'][number]['interests'][number],query:string):boolean {
+ return searchKey([item.title,item.definition,...item.synonyms].join(' ')).includes(searchKey(query));
+}
+export function matchesCategory(category:Catalog['categories'][number],query:string):boolean {
+ return matchesCategoryName(category,query)||category.interests.some(i=>matchesInterest(i,query));
+}
+export function matchesCategoryName(category:Catalog['categories'][number],query:string):boolean {
+ return searchKey(`${category.title} ${category.short}`).includes(searchKey(query));
+}
