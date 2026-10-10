@@ -4,6 +4,7 @@
   "private": true,
   "description": "FetUre — AppBase React application.",
   "scripts": {
+    "check:auth-env": "node tools/check-auth-env.mjs",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",

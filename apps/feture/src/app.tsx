@@ -90,14 +90,14 @@ function Account(){
   const auth = useOptionalAuth();
   const {t, locale} = useI18n();
   const navigate = useNavigate();
-  // Local data stays on the device; the next sign-in merges it into that account.
+  // Clear private local records on sign-out; server revocation is pending A01.
   const signOut = async () => {
     if(await appDocs.pending() && !window.confirm('Есть данные, не перенесённые в аккаунт. При выходе локальные записи будут удалены. Продолжить?')) return;
     await auth.logout();
     await appDocs.clear(); // Privacy: never carry this device's sensitive interests into another account.
     navigate('/');
   };
-  if(auth.loading) return null;
+  if(auth.loading) return <section className="card" role="status">{t('account.loading')}</section>;
   return (
     <section className="card">
       <p><Link to="/">{t('nav.back')}</Link></p>
