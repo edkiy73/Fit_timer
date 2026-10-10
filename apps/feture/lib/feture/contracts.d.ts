@@ -12,6 +12,6 @@ export type MutationResult = {ok:true;replayed:boolean;appliedRevision:number;ap
 export type Page = {limit:number;after:string|null};
 export type VerificationStatusDTO = {state:'unavailable';verifiedAdult:false;validUntil:null;reason:'provider_not_configured'};
 export type DocumentCommand={action:'documents.status';locale:'ru'|'en'}|{action:'documents.accept';locale:'ru'|'en';documentIds:string[]};
-export type Command = {action:'verification.status'} | {action:'profile.get'} | ({action:'interests.list'} & Page) | Mutation | DocumentCommand | import('./profile').ProfileCommand;
+export type Command = {action:'verification.status'} | {action:'profile.get'} | ({action:'interests.list'} & Page) | Mutation | DocumentCommand | import('./profile').ProfileCommand | import('./access').AccessCommand;
 export interface Repository { getProfile(actor:Actor):Promise<ProfileDTO|null>; listInterests(actor:Actor,page:Page):Promise<{items:InterestDTO[];nextCursor:string|null}>; mutateInterest(actor:Actor,input:Mutation):Promise<MutationResult> }
 export type AuditEvent = Readonly<{requestId:string; action:Command['action']|'unknown';outcome:string}>;

@@ -85,3 +85,5 @@ but real OTP delivery, two controlled production accounts and live recovery are 
 
 ## Continued high-effort implementation (2026-10-11)
 A04.3 persistent attempts/receipts, A05 reviewed document versions/consent, and A06 private profile schema are applied. The verification policies and published legal documents are empty by design. [Private profile contract](docs/private-profile.md). External production OTP/age/legal acceptance remains open; development continues with scoped permissions next. Earlier handoff/stop notes describe historical slices and are superseded by the owner override in AGENTS.md.
+
+P01.1/P04.1 add server-filtered profile/map projections, optional field visibility, partial expiring grants, explicit contact permission, revoke/block, cursor permission management and audience preview. [Scope contract](docs/scoped-access.md). Albums, live adult accounts and chat are still separate acceptance criteria.

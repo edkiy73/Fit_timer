@@ -19,7 +19,7 @@ function createDocumentsAdmin(transport) {
     if(!transport.configured())reject(503,'documents_unavailable');
     const query=new URLSearchParams({select:'document_key,locale,title,blocks,requires_accept,revision,updated_at',locale:'eq.'+body.locale,order:'document_key.asc',limit:'9'});
     const response=await transport.request('/rest/v1/feture_document_drafts?'+query,{timeoutMs:8000});const rows=await response.json();
-    if(!Array.isArray(rows)||rows.length>9)reject(503,'documents_unavailable');
+    if(!response.ok||!Array.isArray(rows)||rows.length>9)reject(503,'documents_unavailable');
     const drafts=/** @type {Record<string,unknown>[]} */(rows).map(r=>{
      if(!r||typeof r.document_key!=='string'||!KEYS.includes(/** @type {import('./documents').DocumentKey} */(r.document_key))||r.locale!==body.locale||typeof r.title!=='string'||r.title.length>160||typeof r.requires_accept!=='boolean'||typeof r.revision!=='number'||!Number.isSafeInteger(r.revision)||r.revision<1)reject(503,'documents_unavailable');
      return {key:r.document_key,locale:r.locale,title:r.title,blocks:blocks(r.blocks),requiresAccept:r.requires_accept,revision:r.revision};
