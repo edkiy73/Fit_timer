@@ -41,6 +41,7 @@ type CourseSetSummary = {
 
 type CourseStructure = {
   draftRevision:number;
+  navigationMode?:'free'|'sequential';
   draftUpdatedAt?:string;
   set:{
     id:string;
@@ -48,6 +49,7 @@ type CourseStructure = {
     description?:TextMap;
     level?:Record<string,unknown>;
     access?:Record<string,unknown>;
+    navigationMode?:'free'|'sequential';
   };
   roadmaps:Array<{id:string;title:TextMap;nodes:CourseNode[]}>;
 };
@@ -352,6 +354,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
   const [metaFrom,setMetaFrom]=useState('');
   const [metaTo,setMetaTo]=useState('');
   const [metaAccess,setMetaAccess]=useState<'free'|'entitlement'>('entitlement');
+  const [metaNavigation,setMetaNavigation]=useState<'free'|'sequential'>('free');
   const [metaFreeDays,setMetaFreeDays]=useState('0');
   const [metaPriceRub,setMetaPriceRub]=useState('');
   const [metaPriceUsd,setMetaPriceUsd]=useState('');
@@ -389,6 +392,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
       const result=await client.action(adminKey,'content_course_structure',{setId});
       const next=result as unknown as CourseStructure;
       setStructure(next);
+      setMetaNavigation(next.set.navigationMode==='sequential'?'sequential':'free');
       setMetaTitle(textValue(next.set.title));
       setMetaDescription(textValue(next.set.description));
       setMetaFrom(String(next.set.level?.from || ''));
@@ -577,6 +581,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
           levelFrom:metaFrom,
           levelTo:metaTo,
           accessMode:metaAccess,
+          navigationMode:metaNavigation,
           freeDays:Number(metaFreeDays)||0,
           price:{RUB:Number(metaPriceRub)||0,USD:Number(metaPriceUsd)||0},
           bundlePrice:{RUB:Number(metaBundleRub)||0,USD:Number(metaBundleUsd)||0}
@@ -735,7 +740,7 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
       </div>
       {releaseMessage && <p className="ab-admin-feedback" role="status">{releaseMessage}</p>}
       {structure && <details className="ab-admin-details">
-        <summary>Название, цена и бесплатные дни</summary>
+        <summary>Название, порядок прохождения, цена и бесплатные дни</summary>
         <div className="ab-course-meta-grid">
           <label><span>Название</span><input value={metaTitle} onChange={e=>setMetaTitle(e.target.value)} /></label>
           <label><span>Описание</span><input value={metaDescription} onChange={e=>setMetaDescription(e.target.value)} /></label>
@@ -744,6 +749,9 @@ function CourseAdmin({client,adminKey}:AdminSectionContext){
           </select></label>
           <label><span>Уровень до</span><select value={metaTo} onChange={e=>setMetaTo(e.target.value)}>
             <option value="">—</option><option value="pre-a1">Pre-A1</option><option value="a1">A1</option><option value="a2">A2</option><option value="b1">B1</option><option value="b2">B2</option><option value="c1">C1</option><option value="c2">C2</option>
+          </select></label>
+          <label><span>Порядок прохождения дней</span><select value={metaNavigation} onChange={e=>setMetaNavigation(e.target.value as 'free'|'sequential')}>
+            <option value="free">Любой день доступен сразу</option><option value="sequential">По порядку — после завершения предыдущего</option>
           </select></label>
           <label><span>Доступ</span><select value={metaAccess} onChange={e=>setMetaAccess(e.target.value as 'free'|'entitlement')}>
             <option value="entitlement">Платный, первые дни бесплатно</option><option value="free">Полностью бесплатный</option>
