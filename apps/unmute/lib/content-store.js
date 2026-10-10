@@ -37,6 +37,7 @@ function validateSetMeta(meta){
   if(level.from!==undefined && !CEFR.has(String(level.from))) throw new Error('bad_level_from');
   if(level.to!==undefined && !CEFR.has(String(level.to))) throw new Error('bad_level_to');
   if(!Array.isArray(level.labels)) throw new Error('bad_level_labels');
+  if(meta.navigationMode!==undefined && !['free','sequential'].includes(meta.navigationMode)) throw new Error('bad_navigation_mode');
   const access=assertObject(meta.access,'access');
   if(access.mode==='entitlement'){
     if(!SKU.test(String(access.entitlement||'').trim().toLowerCase())) throw new Error('bad_entitlement');
