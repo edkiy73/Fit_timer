@@ -164,11 +164,12 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
   const bSaved=await action(handler,'content_set_save',{
     setId:'b1-b2',
     expectedDraftRevision:bStructure.body.draftRevision,
-    changes:{title:'B1 to B2',description:'Second set',levelFrom:'b1',levelTo:'b2',accessMode:'entitlement',freeDays:5}
+    changes:{title:'B1 to B2',description:'Second set',levelFrom:'b1',levelTo:'b2',accessMode:'entitlement',freeDays:5,navigationMode:'sequential'}
   });
   assert.equal(bSaved.status,200);
   assert.equal(bSaved.body.set.title.ru,'B1 to B2');
   assert.equal(bSaved.body.set.access.freePreview.days,5);
+  assert.equal(bSaved.body.set.navigationMode,'sequential');
   assert.equal(bSaved.body.set.access.price,undefined);
 
   // A course's own price is set, kept by a save that does not send it, and cleared by {}.
@@ -187,6 +188,7 @@ const report={lessons:32,cards:452,planDays:40,dictionaryEntries:577};
     changes:{accessMode:'entitlement',freeDays:2}
   });
   assert.deepEqual(kept.body.set.access.price,{RUB:1490,USD:19});
+  assert.equal(kept.body.set.navigationMode,'sequential');
   assert.deepEqual(kept.body.set.access.bundlePrice,{RUB:2490});
   const cleared=await action(handler,'content_set_save',{
     setId:'b1-b2',
