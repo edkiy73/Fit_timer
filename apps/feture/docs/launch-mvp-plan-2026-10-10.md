@@ -153,6 +153,7 @@ Moderation: pending → assigned → actioned/dismissed → appeal → final. О
 - [x] **A02.1. Серверный фундамент (high).** Подготовительный срез при blocker A01: новая SQL-модель, owner-locked mutation/receipt/tombstone, закрытые роли. Не является завершённой A02/cloud saving. См. [контракт](interest-transactions.md).
 - [x] **A02.2. Редактор новой модели (medium).** Независимые stance/experience/boundary, nullable сила 1–5 и private условия; не включает RPC до A02.3/A03.
 - [ ] **A02.3/A03. Полное переключение (high).** Owner cache/queue, revision/opId/retry/conflict, guest import, смена аккаунта и удаление прежней document sync вместе. Живая приёмка требует A01 и trusted A04, без age bypass.
+- [ ] **A04.1. Контракт и экран статуса (medium).** Следующий подготовительный срез: provider-independent состояния/сроки/ошибки, минимальные server DTO и понятный маршрут проверки, без записи verified по клиентскому флагу. Выбор production провайдера и webhook подключение — отдельный high срез; отсутствие провайдера не означает пройденный возраст.
 - [ ] **A04. Возраст/identity adapter.** После A01/F04. Создать server verification provider interface + webhook handler + status screen. До выбора провайдера закончить контракт/тестовый sandbox вне публичного bypass. Готово: spoofed/replayed webhook rejected; verified привязан к аккаунту/политике/сроку; отказ/retry/support понятны; документ/биометрия не в логах/БД. Подключённый production provider — внешний blocker, не «готово» по mock.
 - [ ] **A05. Документы и согласия.** После A01/F02. Расширить AppBase admin через продуктовый модуль: draft, version, locale, preview, publish/effectiveAt, immutable receipt, rollback как новая публикация. Стартовые тексты: Terms, Privacy, Community, взрослый контент/согласие, жалобы/апелляции, age, retention/deletion, cookies, copyright. Safe rich text, без произвольных script/HTML. Готово: пользователь принимает конкретную версию; существенное обновление требует нужного повторного согласия; приватный контент не выдаётся в обход gate. Юридическая редактура — внешний gate.
 - [ ] **A06. Приватный профиль/onboarding.** После A02/F02. Создать profile feature. Первое объяснение отличий без названий конкурентов; быстрый вход в карту, пошагово ник/описание/местоимения/идентичность/ориентация/отношения/город, поля можно пропустить. «Кого ищу» только при включении dating. Готово: нет длинной обязательной анкеты, профиль редактируется/восстанавливается; дата рождения не публичное поле, место — город/район без точных координат.
@@ -444,3 +445,30 @@ retry, guest import, logout/account switching и удаление прежнег
 Проверки: полный `npm run check` FetUre (types, smoke, существующие unit/security,
 seed/interest PostgreSQL checks, build); финальные types/build после CSS правки.
 Браузерная визуальная проверка и native сборки в этом срезе не выполнялись.
+
+
+**2026-10-11 — A02.3/A03, high клиентское переключение.** База `0a785061` (#777).
+Реализованы `interest-api.ts`, атомарный IndexedDB `interest-store.ts`, owner/session
+`interest-queue.ts`, root lifecycle и hook подписки. Клиент вызывает только domain
+list/set/delete, сохраняет opId/expectedRevision между повтором и перезапуском,
+имеет lease/backoff, conflicts и tombstones. Нет auto-rebase или timestamp merge.
+Гостевая карта переносится только по подтверждению в private/discovery=false.
+Выход сначала ставит долговременный fence и фиксирует pending count; отказ/ошибка
+выхода сохраняет очередь, подтверждённый выход очищает только captured owner.
+Late response и callback старого редактора не показывают/не досылают A в B.
+401/expiry закрывают просмотр старой сессией; новый вход того же owner может
+восстановить очередь, если не было подтверждённого logout с её очисткой.
+Старые interest-map registration/merge удалены вместе; settings mirror выделен,
+старый локальный mirror очищается без legacy import. Сервер settings sync выдаёт
+только settings даже при premium manifest с прежними приватными документами.
+В редакторе есть удаление, ошибки локального сохранения; карта показывает реальные
+local/pending/confirmed/age/auth/offline состояния и выбор версии при конфликте.
+Полный FetUre check прошёл; focused очередь — 8 тестов с реальными IndexedDB
+транзакциями, включая 2 вкладки, restart/lost response и old retry after delete.
+Security — 14 проверок, включая старый premium manifest. Финальные types/build
+после правок также прошли. Browser visual/native/live two-device не проверены.
+БД/другие приложения/Core не изменялись; age bypass отсутствует.
+**A02/A03 и общая A02.3/A03 карточка остаются `[ ]` до живой приёмки A01/A04.**
+Код переключения готов; детали и ограничения: [interest-queue.md](interest-queue.md).
+Следующая работа — **A04.1 medium**. По правилу high-среза закончить публикацию
+и остановиться перед ней; не продолжать high на подготовительной простой работе.

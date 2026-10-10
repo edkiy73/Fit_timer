@@ -1,45 +1,38 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { appDocs } from '../sync';
-import { parseInterestMap, normalizeRecord, type InterestMap, type InterestRecord } from './model';
+import { useEffect, useSyncExternalStore } from 'react';
+import { useOptionalAuth } from '@appbase/ui-react/auth.js';
+import { authClient } from '../auth';
+import { apiUrl } from '../api-url';
+import { createInterestAPI } from './interest-api';
+import { createInterestStore } from './interest-store';
+import { createInterestQueue } from './interest-queue';
 
-export const INTEREST_DOC = 'interest-map';
+let channel:BroadcastChannel|undefined;
+export const interestQueue=createInterestQueue({
+ store:createInterestStore(),api:createInterestAPI(apiUrl('/api/domain'),()=>authClient.getSession()),
+ getSession:()=>authClient.getSession(),changed:()=>channel?.postMessage('changed')
+});
+export function InterestLifecycle(){
+ const auth=useOptionalAuth();
+ useEffect(()=>{
+  const wake=()=>{void interestQueue.select().then(()=>interestQueue.sync());};
+  const storage=(event:StorageEvent)=>{if(event.key==='feture.auth.session'||event.key===null)wake();};
+  const visible=()=>{if(document.visibilityState==='visible')wake();};
+  try{channel=new BroadcastChannel('feture/interests');channel.onmessage=()=>{void interestQueue.reload();};}catch{}
+  window.addEventListener('storage',storage);window.addEventListener('online',wake);window.addEventListener('focus',wake);
+  document.addEventListener('visibilitychange',visible);
+  const clock=setInterval(()=>{void interestQueue.select();},10000);
+  wake();
+  return ()=>{clearInterval(clock);channel?.close();channel=undefined;window.removeEventListener('storage',storage);window.removeEventListener('online',wake);window.removeEventListener('focus',wake);document.removeEventListener('visibilitychange',visible);};
+ },[]);
+ useEffect(()=>{void interestQueue.select().then(()=>interestQueue.sync());},[auth.loading,auth.session?.email,auth.session?.deviceId,auth.session?.syncToken]);
+ return null;
+}
 export function useInterestMap(){
-  const [map,setMap]=useState<InterestMap>({});
-  const [loading,setLoading]=useState(true);
-  const [error,setError]=useState(false);
-  const [saving,setSaving]=useState(false);
-  const state=useRef<InterestMap>({});
-  const alive=useRef(true);
-  const queue=useRef(Promise.resolve());
-  useEffect(()=>{
-    alive.current=true;
-    const reload=async()=>{
-      try{
-        const parsed=parseInterestMap(await appDocs.read(INTEREST_DOC));
-        if(!alive.current)return;
-        state.current=parsed;
-        setMap(parsed);
-        setError(false);
-      }catch{if(alive.current)setError(true);}
-      finally{if(alive.current)setLoading(false);}
-    };
-    void reload();
-    const stop=appDocs.subscribe(change=>{
-      if(change.source==='remote' && change.keys.some(k=>k.key===INTEREST_DOC))void reload();
-    });
-    return ()=>{alive.current=false;stop();};
-  },[]);
-  const save=useCallback((id:string,input:Omit<InterestRecord,'at'>)=>{
-    const next={...state.current,[id]:normalizeRecord(input)};
-    state.current=next;
-    setMap(next);
-    setSaving(true);
-    queue.current=queue.current.then(async()=>{
-      await appDocs.write(INTEREST_DOC,JSON.stringify(next));
-      if(alive.current){setError(false);setSaving(false);}
-    }).catch(()=>{
-      if(alive.current){setError(true);setSaving(false);}
-    });
-  },[]);
-  return {map,loading,error,saving,save};
+ const snapshot=useSyncExternalStore(interestQueue.subscribe,interestQueue.getSnapshot);
+ return {...snapshot,loading:snapshot.phase==='loading',saving:snapshot.phase==='syncing',
+  save:(id:string,state:Parameters<typeof interestQueue.save>[1])=>interestQueue.save(id,state,snapshot.scope),
+  remove:(id:string)=>interestQueue.remove(id,snapshot.scope),
+  resolve:(id:string,keepLocal:boolean)=>interestQueue.resolve(id,keepLocal,snapshot.scope),
+  importGuest:()=>interestQueue.importGuest(snapshot.scope),retry:()=>interestQueue.sync()
+ };
 }

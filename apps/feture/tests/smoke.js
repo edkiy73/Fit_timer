@@ -13,7 +13,7 @@ function fakeRes(){
   const { productIdentity } = require('../../../packages/core/server/product-core');
   const { registry } = require('../lib/app-sync-schema');
   ok('product identity is registered', productIdentity().name === 'FetUre');
-  ok('starter owns only neutral account sync doc', registry.accepts('account','settings') && !registry.accepts('profile','task:1'));
+  ok('starter owns only neutral account sync doc', registry.accepts('account','settings') && !registry.accepts('profile','task:1') && !registry.accepts('account','interest-map'));
 
   const app = fs.readFileSync(require('path').join(__dirname,'../src/app.tsx'),'utf8');
   ok('shared auth UI is wired (optional sign-in)', app.includes('@appbase/ui-react/auth.js') && app.includes('AuthProvider'));

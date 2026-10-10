@@ -10,6 +10,8 @@ import { appDocs, SETTINGS_DOC, syncNow } from './sync';
 import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
 import { NotFoundScreen, RouteErrorScreen } from './route-fallback';
 import { FetureCatalog } from './catalog';
+import { sameSession } from './feture/interest-api';
+import { InterestLifecycle, interestQueue } from './feture/use-interest-map';
 import { FetureExperience } from './feture/experience';
 import { NativeNavigation } from './feture/native-navigation';
 import { isExperiencePath } from './feture/navigation';
@@ -66,6 +68,7 @@ function Root(){
     <Localized>
       <AuthProvider client={authClient}>
         <SettingsSync />
+        <InterestLifecycle />
         <NativeNavigation />
         <Outlet />
       </AuthProvider>
@@ -94,15 +97,22 @@ function Account(){
   const [signOutError, setSignOutError] = useState('');
   // Server logout must succeed before clearing account-bound local records.
   const signOut = async () => {
-    if(await appDocs.pending() && !window.confirm('Есть данные, не перенесённые в аккаунт. При выходе локальные записи будут удалены. Продолжить?')) return;
+    if(!sameSession(await authClient.getSession(),auth.session)){setSignOutError('Аккаунт изменился. Обнови экран и повтори действие.');return;}
     if(signingOut) return;
     setSigningOut(true);
     setSignOutError('');
+    const fence=await interestQueue.prepareLogout(auth.session).catch(()=>undefined);
+    if(fence===undefined){setSignOutError('Не удалось остановить сохранение. Попробуй ещё раз.');setSigningOut(false);return;}
+    let loggedOut=false;
     try {
-      await auth.logout();
-      await appDocs.clear(); // Never carry sensitive interests into another account.
+      if((fence?.pending||await appDocs.pending())&&!window.confirm('Есть изменения, сохранённые только на этом устройстве. При выходе они будут удалены. Продолжить?')){await interestQueue.finishLogout(fence,false);return;}
+      if(fence&&!sameSession(await authClient.getSession(),fence.session))throw new Error('account_changed');
+      await auth.logout();loggedOut=true;
+      await interestQueue.finishLogout(fence,true);
+      await appDocs.clear(); // Settings only; private map has its own owner-scoped cleanup.
       navigate('/');
     } catch {
+      if(!loggedOut)await interestQueue.finishLogout(fence,false).catch(()=>{});
       setSignOutError(locale === 'en' ? 'Could not sign out. Check your connection and try again.' : 'Не удалось выйти. Проверь соединение и попробуй ещё раз.');
     } finally {setSigningOut(false);}
   };

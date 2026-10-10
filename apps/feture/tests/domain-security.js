@@ -147,3 +147,20 @@ test('expired and tombstoned Core sessions cannot read FetUre even after stale a
     assert.equal(s.calls.length,0);
   } finally {await store.del(revokedKey);}
 });
+
+test('settings sync cannot return or overwrite obsolete sensitive documents, including premium pulls',async()=>{
+  const handler=require('../api/sync'),identity=identities.alice;
+  await seed(identity);
+  const key='a:'+identity.hash,account=JSON.parse(await store.get(key));account.sub={until:'2099-01-01T00:00:00Z'};await store.set(key,JSON.stringify(account));
+  const secret='private obsolete condition text',settingsKey='sa:'+identity.hash+':settings',oldKey='sa:'+identity.hash+':interest-map';
+  const meta=storeKey=>({rev:1,at:new Date().toISOString(),schema:1,deviceId:identity.device,deleted:false,storeKey});
+  await store.set(settingsKey,'{"locale":"ru"}');await store.set(oldKey,secret);
+  await store.set('s:'+identity.hash,JSON.stringify({v:2,profiles:{old:{user:{id:'old',name:'obsolete private profile'},docs:{map:meta(oldKey)}}},accountDocs:{settings:meta(settingsKey),'interest-map':meta(oldKey)}}));
+  const body=action=>({action,email:identity.email,deviceId:identity.device,token:identity.token});
+  const pulled=response();await handler(req(identity,body('pull')),pulled);
+  assert.equal(pulled.statusCode,200);const data=JSON.parse(pulled.body);
+  assert.deepEqual(data.profiles,[]);assert.deepEqual(data.accountDocs.map(d=>d.key),['settings']);assert.ok(!pulled.body.includes(secret));
+  const pushed=response();await handler(req(identity,{...body('push'),docs:[{profileId:'__account__',key:'interest-map',baseRev:1,rev:2,value:'new forbidden value'}]}),pushed);
+  assert.equal(await store.get(oldKey),secret);
+  const denied=response();await handler(req(null,{...body('pull'),token:'foreign-token'}),denied);assert.equal(denied.statusCode,403);
+});

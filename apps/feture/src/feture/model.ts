@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { mergeRecordMaps } from '@appbase/core/document-sync.js';
 import type { InterestState } from '../../lib/feture/contracts';
 import editorial from '../../data/catalog-editorial.json';
 
@@ -7,11 +6,12 @@ export const stance=z.enum(['unknown','curious','fantasy','want_to_try','not_int
 export const experience=z.enum(['unspecified','none','tried','ongoing']);
 export const boundary=z.enum(['none','conditional','hard']);
 export const visibility=z.enum(['private','public','granted']);
-export const interestRecord=z.object({
+export const interestStateSchema=z.object({
  stance,experience,boundary,boundaryNote:z.string().max(1000).nullable(),
- intensity:z.number().int().min(1).max(5).nullable(),visibility,useForDiscovery:z.boolean(),at:z.string().datetime()
+ intensity:z.number().int().min(1).max(5).nullable(),visibility,useForDiscovery:z.boolean()
 }).strict().refine(r=>r.intensity===null||hasIntensity(r.stance,r.boundary))
  .refine(r=>r.boundary==='conditional'||r.boundaryNote===null);
+export const interestRecord=interestStateSchema.safeExtend({at:z.string().datetime({offset:true})});
 export const interestMap=z.record(z.string().regex(/^interest-[1-9]\d{0,2}-[1-9]\d{0,2}$/),interestRecord);
 export type InterestRecord=z.infer<typeof interestRecord>;
 export type InterestMap=z.infer<typeof interestMap>;
@@ -52,9 +52,6 @@ export function normalizeRecord(record:InterestState,at=new Date().toISOString()
 export function parseInterestMap(raw:string|null):InterestMap {
  if(!raw)return {};
  try{return interestMap.parse(JSON.parse(raw));}catch{return {};}
-}
-export function mergeInterestMaps(local:string|null,remote:string|null):string {
- return JSON.stringify(mergeRecordMaps<InterestRecord>(parseInterestMap(local),parseInterestMap(remote)));
 }
 export function categoryProgress(ids:string[],map:InterestMap){
  const known=ids.filter(id=>isExplored(map[id])).length;
