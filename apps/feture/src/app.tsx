@@ -9,6 +9,7 @@ import { adminClient } from './admin';
 import { appDocs, SETTINGS_DOC, syncNow } from './sync';
 import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
 import { NotFoundScreen, RouteErrorScreen } from './route-fallback';
+import { FetureCatalog } from './catalog';
 
 const PRODUCT_NAME = 'FetUre';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
@@ -127,6 +128,7 @@ export const routes: RouteObject[] = [
       children:[
         {index:true, element:<Home />},
         {path:'account', element:<Account />},
+        {path:'catalog', element:<FetureCatalog />},
         {path:'*', element:<NotFoundScreen />}
       ]
     }]

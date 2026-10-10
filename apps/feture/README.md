@@ -1,18 +1,27 @@
-# FetUre — AppBase application
+# FetUre — AppBase product
 
-This app is bootstrapped from `templates/react-app`, using React 19, TypeScript 6, Vite 8 and AppBase Core/Shared UI, with Task Mini as architectural example.
+FetUre is an independent app within the AppBase monorepo (React + TypeScript + Vite, with Task Mini as architectural reference). Production site: https://feture-mvp.vercel.app.
 
-## Current status
-- `/`: offline-capable **HTML MVP concept 3.1** in a full-viewport iframe at `public/concept.html`. Its UX is **demo-only**: tests/likes/profiles are not persisted to server and no real members exist.
-- `/#/account`: shared AppBase account UI (requires configured server).
-- `/#/admin`: shared AppBase Admin UI.
-- `data/concept-catalog.json`: 12 directions, 144 interests, 18 demonstration test cards extracted from concept.
-- `supabase/migrations/20261010_001_feture_domain.sql`: reviewed candidate domain schema with RLS, not yet deployed. Run only in a dedicated FetUre Supabase project.
+## Database co-location (2026-10-10)
+- FetUre shares the **FitT Supabase project** (`anrhayozrhrmiwexmbhw`, Singapore), not FitTimer's application tables.
+- Nine strictly `public.feture_*`-prefixed tables are deployed. `supabase/migrations/20261010_001_feture_domain.sql` is the authoritative domain/schema seed. Never reapply it to the same database without reviewing existing tables.
+- 12 interest categories, 144 interests, and 18 *demonstration test descriptors* seeded from `data/concept-catalog.json`. Real questionnaires/scoring are NOT yet implemented.
+- `supabase/migrations/20261010_002_catalog_read.sql` allows **anonymous SELECT** for ONLY the three public taxonomy tables; all six private tables have RLS enabled and NO anon/authenticated grants or policies.
+- AppBase server sessions are authoritative. The database uses server-derived opaque `account_hash` (NOT `auth.users` IDs, and never a client-supplied email). Private features must require server-side identity verification before any service-role request.
+- A shared Supabase project shares quota/availability and privileged project credentials. Prefixes/RLS protect from ordinary access, but **not** from compromised service-role credentials; never put such credentials in browser code.
+- `api/catalog.js` is a narrow public server proxy with a publishable (anon) key, **not service-role**. It returns only the public taxonomy. No client direct DB calls. Vercel variables: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`.
 
-## Architecture next
-Replace iframe with React domain screens gradually, introduce typed repositories using AppBase adapters, apply migration to **FetUre-only** Supabase, authenticate users, save private answers and map, implement moderation and audience-gated feed, then implement opt-in dating/profile-embedded swipe UI. Never seed fake prototype people as production users or store sensitive answers without RLS.
+## Interfaces
+- `/`: self-contained HTML prototype 3.1 in an iframe (offline-ready demo, with fake people/posts and local-only interactions).
+- `/#/catalog`: AppBase React route reading public catalogue from Supabase through `/api/catalog`.
+- `/#/account`: AppBase email sign-in shell. **Account storage and verification still require separately configured AppBase server backend**.
+- `/#/admin`: AppBase admin shell.
 
-Commands: `npm ci --prefix apps/feture`, `npm --prefix apps/feture run check`.
-Vercel Root Directory `apps/feture`, framework Vite, output `dist`. Shared workspace files outside the root are required.
+## Next stages
+1. Replace the HTML iframe screen by screen with typed React components without losing visual/interaction parity.
+2. Integrate AppBase authenticated server-side storage for profile and private interest/test state; do not enable direct browser writes.
+3. Only after verified identity and moderation, add community publishing, profile disclosure rules and optional dating.
+4. When the product grows, consider moving prefixed tables to a separate database; namespace isolation does not imply independent quotas or service-role boundaries.
 
-The scaffold is not a completed migration of the HTML prototype to the app database.
+Run `npm ci --prefix apps/feture` and `npm --prefix apps/feture run check`.
+Vercel root: `apps/feture`; build `npm run build`; output `dist`.

@@ -31,3 +31,15 @@ h2{margin:0 0 8px}
 .route-fallback .link-button{padding-left:0}
 
 .feture-preview{position:fixed;inset:0;width:100vw;height:100dvh;border:0;background:#1a111c;display:block}
+
+/* FetUre live catalogue: scoped styles, no impact on the iframe concept. */
+.feture-catalog{display:grid;gap:12px;line-height:1.45}
+.feture-catalog h2,.feture-catalog h3{margin:8px 0 0}
+.feture-catalog a{color:var(--accent-ink,#d74b78)}
+.feture-catalog-list{display:grid;gap:9px}
+.feture-catalog-category{padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface,#f7f5f8)}
+.feture-catalog-category summary{display:flex;align-items:center;gap:10px;cursor:pointer}
+.feture-dot{width:10px;height:10px;flex:0 0 10px;border-radius:50%}
+.feture-catalog-category ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:13px 0 0;padding:0;list-style:none}
+.feture-catalog-category li{padding:8px;background:var(--card,#fff);border-radius:9px}
+.feture-catalog-category p{margin:8px 0 0}
