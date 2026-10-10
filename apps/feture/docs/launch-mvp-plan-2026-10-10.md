@@ -149,6 +149,10 @@ Moderation: pending → assigned → actioned/dismissed → appeal → final. О
 - [ ] **A01. Живой email-вход (начать на medium).** После F04/F05. `src/auth.ts`, `api/auth.js`, `src/app.tsx`, Core composition. OTP request/verify/resend, срок/лимит, refresh, повторный вход, ошибки доставки и неверный код. Готово: два контролируемых аккаунта различаются сервером, logout/expired session работают; нельзя отправить actor в payload и получить его данные.
 - [ ] **A02. Каноническая карта и новая модель.** После A01. `model.ts`, migrations, новый domain repository, `src/sync.ts`, `lib/app-sync-schema.js`. Реализовать §3.1–3.2; удалить дублирующую interest-map синхронизацию после переключения. Готово: записанное сервером читается вторым устройством, таблица и UI согласованы; одно поле experience не уничтожает stance/boundary; приватность default private.
 - [ ] **A03. Очередь, offline и owner isolation.** После A02. `use-interest-map.ts`, storage/query adapters. Revision/opId, retry/backoff, conflict UI, guest import confirmation, tombstones, cleanup sign-out. Готово: offline правки не теряются; A→logout→B не показывает/не досылает A; старая вкладка не расширяет права и не воскрешает удалённое. Один focused suite на эти опасные сценарии.
+
+- [x] **A02.1. Серверный фундамент (high).** Подготовительный срез при blocker A01: новая SQL-модель, owner-locked mutation/receipt/tombstone, закрытые роли. Не является завершённой A02/cloud saving. См. [контракт](interest-transactions.md).
+- [ ] **A02.2. Редактор новой модели (medium).** Независимые stance/experience/boundary, nullable сила 1–5 и private условия; не включает RPC до A02.3/A03.
+- [ ] **A02.3/A03. Полное переключение (high).** Owner cache/queue, revision/opId/retry/conflict, guest import, смена аккаунта и удаление прежней document sync вместе. Живая приёмка требует A01 и trusted A04, без age bypass.
 - [ ] **A04. Возраст/identity adapter.** После A01/F04. Создать server verification provider interface + webhook handler + status screen. До выбора провайдера закончить контракт/тестовый sandbox вне публичного bypass. Готово: spoofed/replayed webhook rejected; verified привязан к аккаунту/политике/сроку; отказ/retry/support понятны; документ/биометрия не в логах/БД. Подключённый production provider — внешний blocker, не «готово» по mock.
 - [ ] **A05. Документы и согласия.** После A01/F02. Расширить AppBase admin через продуктовый модуль: draft, version, locale, preview, publish/effectiveAt, immutable receipt, rollback как новая публикация. Стартовые тексты: Terms, Privacy, Community, взрослый контент/согласие, жалобы/апелляции, age, retention/deletion, cookies, copyright. Safe rich text, без произвольных script/HTML. Готово: пользователь принимает конкретную версию; существенное обновление требует нужного повторного согласия; приватный контент не выдаётся в обход gate. Юридическая редактура — внешний gate.
 - [ ] **A06. Приватный профиль/onboarding.** После A02/F02. Создать profile feature. Первое объяснение отличий без названий конкурентов; быстрый вход в карту, пошагово ник/описание/местоимения/идентичность/ориентация/отношения/город, поля можно пропустить. «Кого ищу» только при включении dating. Готово: нет длинной обязательной анкеты, профиль редактируется/восстанавливается; дата рождения не публичное поле, место — город/район без точных координат.
@@ -394,3 +398,29 @@ W01 остаётся `[ ]`: нет admin draft/publish, immutable test versions 
 канонический PostgreSQL store, атомарные revision/opId, owner-scoped очередь
 и удаление прежней document sync в одном законченном переключении. Остановиться
 перед этим переходом; внешнюю зависимость A01 не считать пройденной.
+
+**2026-10-11 — A02.1, high серверный срез.** База `a30f376c` (#775).
+В текущей interest_states убраны единичный status/шкала 0–100, добавлены
+независимые stance/experience/boundary, nullable intensity 1–5, private условия,
+default private/discovery off, серверные revision/time/source и очищаемый
+tombstone. Receipt table не копирует значения/заметки. Owner lock + одна RPC
+транзакция связывают запись и receipt. Retry возвращает стабильный receipt
+операции и актуальную entry (уточнение §3.4), не старые значения поверх tombstone.
+
+Domain set/delete/list используют новую server DTO; actor определяется Core,
+подстановка owner/source/time запрещена. Quota/audit/no-store и adult gate
+сохранены: A04 attestation отсутствует, API честно отказывает. Локальный UI/Core
+interest-map sync пока не переключены, в новую RPC не пишут. A02/A03 остаются `[ ]`.
+CLI migration `20261010164924_feture_interest_transactions.sql`, live history
+`20261010165456 feture_interest_transactions`. Preflight: FitT/prelaunch/0 states;
+guard блокирует live/nonempty replacement. Live service_role контракт прошёл
+в ROLLBACK; states/operations 0/0, profiles 3, Core documents 90, KV/auth/buckets 0
+не изменились. RLS/grants/RPC privileges проверены; ожидаемые INFO advisor
+задокументированы. Полный FetUre check пройден; focused PostgreSQL suite
+зарегистрирован. После финального уточнения runtime validation повторены
+server/client types и transaction suite; CI сверяется перед merge.
+
+Ветка `feat/feture-interest-transactions`; [контракт и ограничения](interest-transactions.md).
+Положительный authenticated API/почта/две реальные сессии/browser/native не
+проверены. **Следующая A02.2 — medium**: редактор без cloud queue. После неё
+A02.3/A03 — high. Завершить публикацию A02.1 и остановиться перед средним срезом.
