@@ -16,7 +16,7 @@
     "check": "npm run check:catalog && npm run typecheck && npm run test:smoke && npm run test:unit && npm run test:security && npm run test:seed && npm run test:interests && npm run build",
     "mobile:prepare:android": "node scripts/mobile.mjs android",
     "mobile:prepare:ios": "node scripts/mobile.mjs ios",
-    "test:security": "node --test tests/domain-security.js",
+    "test:security": "node --test tests/domain-security.js tests/verification-engine.js",
     "test:interests": "node --test tests/interest-transactions.mjs",
     "test:seed": "node --test tests/seed-postgres.mjs"
   },
