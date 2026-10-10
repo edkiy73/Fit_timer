@@ -174,15 +174,15 @@ export function FetureExperience(){
              <small>Демо не включает профиль в настоящих знакомствах.</small></div>:<>
              <div className="ft-preview-badge"><Icon name="eye" size={17}/> Демо профили: все люди и данные вымышлены. Нет реальных лайков и мэтчей.</div>
              <div className="ft-dating-container"><div className="ft-dating-card">
-               <div className="ft-dating-scroll" key={person} onTouchStart={e=>{touch.current={x:e.touches[0].clientX,y:e.touches[0].clientY}}} onTouchEnd={e=>{
-                 const dx=e.changedTouches[0].clientX-touch.current.x,dy=e.changedTouches[0].clientY-touch.current.y;
+               <div className="ft-dating-scroll" key={person} onTouchStart={e=>{touch.current={x:(e.touches[0]?.clientX ?? 0),y:(e.touches[0]?.clientY ?? 0)}}} onTouchEnd={e=>{
+                 const dx=(e.changedTouches[0]?.clientX ?? 0)-touch.current.x,dy=(e.changedTouches[0]?.clientY ?? 0)-touch.current.y;
                  if(Math.abs(dx)>90&&Math.abs(dx)>Math.abs(dy)*1.5)nextPerson();
                }}>
-                 <div className="ft-dating-photo" style={{backgroundImage:`linear-gradient(180deg, transparent 55%,rgba(24,12,28,.9) 100%),url(/images/profile-${PROFILES[person].photos[photo]}.webp)`}}>
-                   <div className="ft-photo-dots">{PROFILES[person].photos.map((n,i)=><button key={n} className={photo===i?'selected':''} onClick={()=>setPhoto(i)} aria-label={`Фото ${i+1}`}/>)}</div>
-                   <div className="ft-photo-caption"><span>Демо профиль · {PROFILES[person].city}</span><h2>{PROFILES[person].name}, {PROFILES[person].age}</h2><p>{PROFILES[person].handle} <span>· Пример анкеты</span></p><button onClick={()=>profileRef.current?.scrollIntoView({behavior:'smooth',block:'start'})}>Подробнее о человеке ↓</button></div>
+                 <div className="ft-dating-photo" style={{backgroundImage:`linear-gradient(180deg, transparent 55%,rgba(24,12,28,.9) 100%),url(/images/profile-${PROFILES[person]!.photos[photo]}.webp)`}}>
+                   <div className="ft-photo-dots">{PROFILES[person]!.photos.map((n,i)=><button key={n} className={photo===i?'selected':''} onClick={()=>setPhoto(i)} aria-label={`Фото ${i+1}`}/>)}</div>
+                   <div className="ft-photo-caption"><span>Демо профиль · {PROFILES[person]!.city}</span><h2>{PROFILES[person]!.name}, {PROFILES[person]!.age}</h2><p>{PROFILES[person]!.handle} <span>· Пример анкеты</span></p><button onClick={()=>profileRef.current?.scrollIntoView({behavior:'smooth',block:'start'})}>Подробнее о человеке ↓</button></div>
                  </div>
-                 <div className="ft-dating-info" ref={profileRef}><p className="ft-eyebrow">О человеке</p><h3>Моя история</h3><p>{PROFILES[person].about}</p><h3>Что интересно</h3><div className="ft-post-tags">{PROFILES[person].interests.map(t=><span key={t}>{t}</span>)}</div><h3>Намерения</h3><p>{PROFILES[person].looking}</p><div className="ft-note"><Icon name="shield" size={18}/><p>Личные интересы и границы доступны только с разрешения владельца.</p></div></div>
+                 <div className="ft-dating-info" ref={profileRef}><p className="ft-eyebrow">О человеке</p><h3>Моя история</h3><p>{PROFILES[person]!.about}</p><h3>Что интересно</h3><div className="ft-post-tags">{PROFILES[person]!.interests.map(t=><span key={t}>{t}</span>)}</div><h3>Намерения</h3><p>{PROFILES[person]!.looking}</p><div className="ft-note"><Icon name="shield" size={18}/><p>Личные интересы и границы доступны только с разрешения владельца.</p></div></div>
                </div>
                <div className="ft-dating-actions"><button onClick={nextPerson} aria-label="Следующий профиль"><Icon name="close" size={23}/></button><button className="ft-dating-like" onClick={nextPerson} aria-label="Следующий демонстрационный профиль"><Icon name="heart" size={23}/></button></div>
              </div></div>
@@ -200,7 +200,7 @@ export function FetureExperience(){
  </div>;
  function nextPerson(){setPerson((person+1)%PROFILES.length);setPhoto(0)}
 }
-function InterestDialog({interest,current,onClose,onSave}:{interest:Edit;current?:InterestRecord;onClose:()=>void;onSave:(v:Omit<InterestRecord,'at'>)=>void}){
+function InterestDialog({interest,current,onClose,onSave}:{interest:Edit;current:InterestRecord|undefined;onClose:()=>void;onSave:(v:Omit<InterestRecord,'at'>)=>void}){
  const [status,setStatus]=useState<InterestStatus>(current?.status||'unknown');
  const [intensity,setIntensity]=useState(current?.intensity??50);
  const [visibility,setVisibility]=useState<Visibility>(current?.visibility||'private');
