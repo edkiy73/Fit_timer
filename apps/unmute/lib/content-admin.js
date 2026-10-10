@@ -365,6 +365,7 @@ function createContentAdminHandler({loadLegacySource=defaultLoadLegacySource, lo
             if(changes.levelTo) level.to=String(changes.levelTo); else delete level.to;
           }
           next.level=level;
+          if(changes.navigationMode==='free'||changes.navigationMode==='sequential') next.navigationMode=changes.navigationMode;
 
           if(changes.accessMode==='free') next.access={mode:'free'};
           if(changes.accessMode==='entitlement'){
