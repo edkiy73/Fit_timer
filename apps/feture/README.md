@@ -17,8 +17,9 @@ FetUre is an independent app within the AppBase monorepo (React + TypeScript + V
 - React uses the live public taxonomy from `/api/catalog` with an explicit bundled offline fallback.
 - All 144 topics have Russian definitions and searchable synonyms from the same public editorial release, with selected related topics. The interest editor explains the term before asking for a personal response. `npm run check:catalog` validates this release during checks and builds; draft publishing/admin editing are not implemented yet. See [editorial contract](docs/catalog-editorial.md).
 - Community posts and dating profiles still use hardcoded fixtures in the inspected React source, not working social services. Any legacy demonstration labels are implementation debt: current owner policy requires seed provenance in database/admin only and no technical badges in consumer UI during pre-launch development.
-- Private interests are stored in AppBase Core's IndexedDB-based local-first document mirror (`interest-map`, free document in sync registry). The current local record matches the new independent interest fields; obsolete prototype status/0–100 documents are discarded on read without a legacy converter (pre-launch disposable data). Per-interest timestamps merge changes when the standard authenticated AppBase sync backend is configured; FetUre production still lacks that server environment, so **cloud persistence is not yet active**. Sensitive local documents are cleared on confirmed sign-out to prevent cross-account disclosure.
-- A02.1 server foundation is deployed in PostgreSQL: independent stance/experience/boundary, intensity 1–5, revisions, operation receipts and deletion tombstones. Product API supports atomic set/delete but preserves the adult-attestation gate (A04); A02.2 editor now uses these independent fields, nullable strength 1–5 and a private conditional note; the local queue has not switched to this API. This does not yet enable cloud saving. [Contract and verification](docs/interest-transactions.md).
+- Private interests use a dedicated owner-scoped IndexedDB cache/outbox and `/api/domain` list/set/delete. UUIDs and expected revisions survive retries/restarts; conflicts require an explicit choice. Guest records are imported only by confirmation and stay private. Confirmed logout fences all tabs and clears only the captured owner. [Queue contract and verification](docs/interest-queue.md).
+- A02.1 server foundation is deployed in PostgreSQL: independent stance/experience/boundary, intensity 1–5, revisions, operation receipts and deletion tombstones. A02.2 editor and A02.3/A03 client transport now use this model. **Live cloud saving is not yet accepted/enabled**: A01 server auth/mail environment and the trusted A04 adult gate are still blockers. No age bypass was added. [Server contract](docs/interest-transactions.md).
+- Core document sync now contains settings only. The old prototype interest-map path and timestamp merge are removed; the old local mirror is discarded without legacy conversion (pre-launch disposable data). Settings sync responses exclude obsolete private documents even for premium accounts.
 - `/#/catalog`: AppBase React route reading public catalogue from Supabase through `/api/catalog`.
 - `/#/account`: AppBase email sign-in shell. **Account storage and verification still require separately configured AppBase server backend**.
   The code form explains the 15-minute lifetime, supports correcting the email address, clears the previous code after a successful resend, and distinguishes request/day limits from other failures.
@@ -26,7 +27,7 @@ FetUre is an independent app within the AppBase monorepo (React + TypeScript + V
 
 ## Next stages
 1. Complete visual parity and accessibility verification for React screens, and migrate remaining demonstrative interactions to working product domains.
-2. Integrate AppBase authenticated server-side storage for profile and private interest/test state; do not enable direct browser writes.
+2. Complete A01/A04 and live acceptance of the domain queue on two devices, then add profile/test features; no direct browser private writes.
 3. Only after verified identity and moderation, add community publishing, profile disclosure rules and optional dating.
 4. When the product grows, consider moving prefixed tables to a separate database; namespace isolation does not imply independent quotas or service-role boundaries.
 
@@ -34,8 +35,8 @@ Run `npm ci --prefix apps/feture` and `npm --prefix apps/feture run check`.
 Vercel root: `apps/feture`; build `npm run build`; output `dist`.
 
 ## React migration step (2026-10-10)
-- `src/feture/model.ts`: strongly typed private state and per-record timestamp merge.
-- `src/feture/use-interest-map.ts`: local-first AppBase document store hook; no client Supabase secrets.
+- `src/feture/model.ts`: strongly typed independent private state, with no record-clock merge.
+- `src/feture/use-interest-map.ts`: React subscription to the owner-scoped domain cache/queue; no client Supabase secrets.
 - `src/feture/experience.tsx`: real React app shell, topics, per-topic editor with boundary/intensity separation, community/dating previews.
 - `public/images/profile-*.webp`: portraits extracted from prior self-contained concept.
 - The next blocker for real account sync is dedicated FetUre AppBase **server auth/store** environment and server account verification; do not route private writes through anonymous Supabase keys.

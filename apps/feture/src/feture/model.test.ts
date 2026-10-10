@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { categoryProgress, mergeInterestMaps, normalizeRecord, parseInterestMap, type InterestRecord } from './model';
+import { categoryProgress, normalizeRecord, parseInterestMap, type InterestRecord } from './model';
 const at='2026-10-10T06:00:00.000Z';
 const empty:Omit<InterestRecord,'at'>={stance:'unknown',experience:'unspecified',boundary:'none',boundaryNote:null,intensity:null,visibility:'private',useForDiscovery:false};
 describe('FetUre interest map',()=>{
@@ -15,22 +15,6 @@ describe('FetUre interest map',()=>{
   const progress=categoryProgress(['interest-1-1','interest-1-2','interest-1-3'],{'interest-1-1':hard,'interest-1-2':conditional,'interest-1-3':experienced});
   expect(progress).toEqual({known:3,total:3,percent:100,interests:0,boundaries:1,conditional:1});
   expect(normalizeRecord({...empty,stance:'curious'},at).intensity).toBeNull();
- });
- it('merges unrelated interests across devices',()=>{
-  const first={'interest-1-1':normalizeRecord({...empty,stance:'curious',intensity:4},at)};
-  const second={'interest-1-2':normalizeRecord({...empty,experience:'tried',visibility:'granted'},at)};
-  const result=parseInterestMap(mergeInterestMaps(JSON.stringify(first),JSON.stringify(second)));
-  expect(Object.keys(result)).toHaveLength(2);
-  expect(result['interest-1-2']!.visibility).toBe('granted');
- });
- it('newer edits win for the same interest, including boundaries',()=>{
-  const older={'interest-1-1':normalizeRecord({...empty,stance:'curious',intensity:4,visibility:'public'},at)};
-  const newer={'interest-1-1':normalizeRecord({...empty,stance:'curious',experience:'tried',boundary:'hard',intensity:5},'2026-10-10T07:00:00.000Z')};
-  const result=parseInterestMap(mergeInterestMaps(JSON.stringify(older),JSON.stringify(newer)));
-  expect(result['interest-1-1']!.boundary).toBe('hard');
-  expect(result['interest-1-1']!.experience).toBe('tried');
-  expect(result['interest-1-1']!.intensity).toBeNull();
-  expect(result['interest-1-1']!.visibility).toBe('private');
  });
  it('rejects malformed and obsolete prototype documents',()=>{
   expect(parseInterestMap('{"bad":"data"}')).toEqual({});

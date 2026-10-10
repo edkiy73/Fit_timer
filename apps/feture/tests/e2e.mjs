@@ -12,7 +12,7 @@ process.env.ADMIN_KEY ||= 'starter-e2e';
 const require = createRequire(import.meta.url);
 const APP = fileURLToPath(new URL('..', import.meta.url));
 const DIST = join(APP, 'dist');
-const API = Object.fromEntries(['auth', 'sync', 'health', 'admin', 'billing'].map(name => [name, require(join(APP, 'api', name + '.js'))]));
+const API = Object.fromEntries(['auth', 'sync', 'health', 'admin', 'billing', 'domain'].map(name => [name, require(join(APP, 'api', name + '.js'))]));
 const TYPES = {'.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.svg':'image/svg+xml', '.png':'image/png', '.json':'application/json'};
 
 const PORT = 4175;

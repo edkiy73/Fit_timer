@@ -59,7 +59,7 @@ export function FetureExperience(){
  const touch=useRef({x:0,y:0});
  const profileRef=useRef<HTMLDivElement|null>(null);
  const {data,source,retry}=useCatalog();
- const {map,loading:mapLoading,error:mapError,saving,save}=useInterestMap();
+ const {map,loading:mapLoading,saving,save,remove,scope,phase,pending,guestCount,conflicts,server,resolve,importGuest,retry:retryMap}=useInterestMap();
  const allIds=useMemo(()=>data.categories.flatMap(c=>c.interests.map(i=>i.id)),[data]);
  const overall=categoryProgress(allIds,map);
  const selectedCategory=data.categories.find(c=>c.id===selected);
@@ -87,6 +87,20 @@ export function FetureExperience(){
     </nav>
     <main className="ft-main" id="ft-main" tabIndex={-1} ref={area} onScroll={e=>rememberScroll(e.currentTarget.scrollTop)}>
       <m.div className="ft-content" key={location.pathname} initial={reduceMotion?false:{opacity:0,y:6}} animate={{opacity:1,y:0}}>
+        {(tab==='world'||tab==='explore')&&<>
+         <div className="ft-interest-status" role="status">
+          {phase==='local'?'Карта сохранена на этом устройстве.':phase==='loading'?'Открываем твою карту…':phase==='synced'?'Карта сохранена в аккаунте.':phase==='syncing'?'Переносим изменения в аккаунт…':phase==='adult_verification_required'?'Отметки сохранены на устройстве. Для переноса в аккаунт нужно подтвердить совершеннолетие.':phase==='auth_required'?'Для доступа к карте аккаунта войди снова.':phase==='storage_error'?'Не удалось сохранить на устройстве. Не закрывай редактор и попробуй ещё раз.':phase==='invalid_request'?'Изменения не приняты. Они остаются на устройстве.':phase==='rate_limited'?'Сохранение в аккаунт приостановлено. Повторим позже.':phase==='offline'||phase==='unavailable'?'Нет связи с аккаунтом. Изменения остаются на этом устройстве.':pending?'Изменения сохранены на устройстве и ждут переноса в аккаунт.':'Проверяем карту аккаунта…'}
+          {pending>0&&<span> Ожидает сохранения: {pending}.</span>}
+          {['offline','unavailable','adult_verification_required','rate_limited','storage_error'].includes(phase)&&<button type="button" className="ft-textbtn" onClick={()=>void retryMap()}>Повторить</button>}
+          {phase==='auth_required'&&<Link to="/account">Войти</Link>}
+         </div>
+         {scope!=='guest'&&scope!=='loading'&&guestCount>0&&<StateCard title="На устройстве есть гостевая карта" description={`${guestCount} отметок. Перенести их в этот аккаунт? При переносе все отметки будут приватными.`} action={<ActionButton onClick={()=>{if(window.confirm('Перенести гостевые отметки в этот аккаунт? Совпадающие темы заменят твои текущие отметки; разногласия с аккаунтом потребуют отдельного решения.'))void importGuest();}}>Перенести</ActionButton>}/>}
+         {conflicts.map(id=><div className="ft-interest-conflict" key={id} role="alert"><strong>{data.categories.flatMap(c=>c.interests).find(i=>i.id===id)?.title??'Тема'} изменилась на другом устройстве</strong>
+          <p>Моя версия: {map[id]?interestSummary(map[id]):'Удалить отметку'}{map[id]?` · ${VIEWS.find(v=>v.id===map[id]!.visibility)?.label}`:''}.</p>
+          <p>В аккаунте: {server[id]&&!server[id]!.deleted?`${interestSummary({...server[id]!,at:server[id]!.updatedAt})} · ${VIEWS.find(v=>v.id===server[id]!.visibility)?.label}`:'Отметка удалена или отсутствует'}.</p>
+          <div className="ft-conflict-actions"><button type="button" onClick={()=>void resolve(id,false)}>Оставить версию аккаунта</button><button type="button" onClick={()=>{if(window.confirm('Применить мою версию целиком, включая желание, опыт, границу и видимость? Это может восстановить удалённую тему или изменить границу.'))void resolve(id,true);}}>Применить мою версию</button></div>
+         </div>)}
+        </>}
         {source!=='live'&&<div className="ft-network-hint" role="status"><Icon name={source==='loading'?'clock':'shield'} size={16}/>{source==='loading'?'Подключаем каталог…':'Нет соединения. Можно продолжить исследование.'}{source==='offline'&&<button onClick={retry}>Обновить</button>}</div>}
         {tab==='world'&&<>
           <div className="ft-hero">
@@ -109,7 +123,7 @@ export function FetureExperience(){
               </button>;
             })}
           </div>}
-          <div className="ft-note"><Icon name="lock" size={18}/><div><strong>Только для тебя</strong><p>По умолчанию карта приватна. Твои отметки сохраняются на этом устройстве.</p></div></div>
+          <div className="ft-note"><Icon name="lock" size={18}/><div><strong>Только для тебя</strong><p>По умолчанию карта приватна. Видимость и раскрытие каждой темы выбираешь ты.</p></div></div>
           <div className="ft-section-head"><div><h2>Продолжить знакомство с собой</h2><p>Необязательно проходить всё сразу.</p></div></div>
           <div className="ft-recommend">{data.categories.slice(0,3).map((c,i)=><button onClick={()=>openCategory(c.id)} key={c.id} className="ft-recommend-card" style={{'--accent':c.color} as CSSProperties}><span className="ft-recommend-index">0{i+1}</span><strong>{c.title}</strong><small>{c.interests.length} тем для исследования</small><Icon name="arrow" size={17}/></button>)}</div>
         </>}
@@ -173,13 +187,14 @@ export function FetureExperience(){
     </main>
     <nav className="ft-mobile-nav" aria-label="Основная навигация">{NAV.map(x=><Link key={x.id} className={tab===x.id?'active':''} aria-current={tab===x.id?'page':undefined} to={x.id==='world'?'/':'/'+x.id}><Icon name={x.icon} size={22}/><span>{x.title}</span></Link>)}</nav>
   </div>
-  {mapError&&<StatusToast tone="error" title="Не удалось прочитать или сохранить карту" description="Проверь свободное место и повтори действие."/>}
   {saving&&<StatusToast tone="loading" title="Сохраняем изменения…"/>}
-  {edit&&<InterestDialog key={edit.id} interest={edit} current={map[edit.id]} onClose={closeInterest} onSave={v=>{save(edit.id,v);closeInterest()}}/>}
+  {edit&&scope!=='loading'&&<InterestDialog key={`${scope}:${edit.id}`} interest={edit} current={map[edit.id]} onClose={closeInterest} onSave={async v=>{const ok=await save(edit.id,v);if(ok)closeInterest();return ok;}} onDelete={async()=>{const ok=await remove(edit.id);if(ok)closeInterest();return ok;}}/>}
  </div></MotionConfig></LazyMotion>;
  function nextPerson(){setPerson((person+1)%PROFILES.length);setPhoto(0)}
 }
-function InterestDialog({interest,current,onClose,onSave}:{interest:Edit;current:InterestRecord|undefined;onClose:()=>void;onSave:(v:Omit<InterestRecord,'at'>)=>void}){
+function InterestDialog({interest,current,onClose,onSave,onDelete}:{interest:Edit;current:InterestRecord|undefined;onClose:()=>void;onSave:(v:Omit<InterestRecord,'at'>)=>Promise<boolean>;onDelete:()=>Promise<boolean>}){
+ const [busy,setBusy]=useState(false);
+ const [saveError,setSaveError]=useState(false);
  const [stance,setStance]=useState<InterestStance>(current?.stance||'unknown');
  const [experience,setExperience]=useState<Experience>(current?.experience||'unspecified');
  const [boundary,setBoundary]=useState<Boundary>(current?.boundary||'none');
@@ -201,7 +216,9 @@ function InterestDialog({interest,current,onClose,onSave}:{interest:Edit;current
    <p className="ft-muted">Жёсткая граница означает «нет», независимо от желания и опыта. Неотмеченная граница не означает согласие.</p>
    {boundary==='conditional'&&<div className="ft-conditions"><label htmlFor="ft-boundary-note">Условия — только для меня</label><textarea id="ft-boundary-note" maxLength={1000} rows={3} value={boundaryNote} onChange={e=>setBoundaryNote(e.target.value)} placeholder="Что важно для моего комфорта?"/><small>{boundaryNote.length}/1000 · Текст условий не публикуется.</small></div>}
   </fieldset>
-  <div className="ft-visibility"><strong>Кто может видеть отметку?</strong><div className="ft-visibility-options">{VIEWS.map(v=><button type="button" key={v.id} className={visibility===v.id?'active':''} aria-pressed={visibility===v.id} onClick={()=>setVisibility(v.id)}>{v.label}</button>)}</div><small>Пока отметки хранятся локально и никому не передаются. Выбранная видимость пригодится для будущего профиля. Условия всегда остаются приватными.</small></div>
-  <ActionButton className="ft-save" onClick={()=>onSave({stance,experience,boundary,boundaryNote:boundary==='conditional'?(boundaryNote||null):null,intensity:canScore?intensity:null,visibility,useForDiscovery:current?.useForDiscovery??false})}>Сохранить <Icon name="check" size={18}/></ActionButton>
+  <div className="ft-visibility"><strong>Кто может видеть отметку?</strong><div className="ft-visibility-options">{VIEWS.map(v=><button type="button" key={v.id} className={visibility===v.id?'active':''} aria-pressed={visibility===v.id} onClick={()=>setVisibility(v.id)}>{v.label}</button>)}</div><small>Отметки видны только тебе. Выбранная видимость будет действовать при раскрытии профиля; условия всегда остаются приватными.</small></div>
+  {saveError&&<p className="ft-save-warning" role="alert">Отметка не сохранена. Проверь свободное место или вернись к карте, если аккаунт изменился. Твой ввод остаётся здесь.</p>}
+  <ActionButton className="ft-save" disabled={busy} onClick={async()=>{setBusy(true);try{const ok=await onSave({stance,experience,boundary,boundaryNote:boundary==='conditional'?(boundaryNote||null):null,intensity:canScore?intensity:null,visibility,useForDiscovery:current?.useForDiscovery??false});setSaveError(!ok);}finally{setBusy(false);}}}>{busy?'Сохраняем…':'Сохранить'} <Icon name="check" size={18}/></ActionButton>
+  {current&&<button type="button" className="ft-delete-interest" disabled={busy} onClick={async()=>{if(!window.confirm('Удалить эту отметку? Старые правки с других устройств не восстановят её автоматически.'))return;setBusy(true);try{setSaveError(!await onDelete());}finally{setBusy(false);}}}>Удалить отметку</button>}
  </AppDialog>;
 }

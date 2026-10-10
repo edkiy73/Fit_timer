@@ -62,8 +62,7 @@ db pull не использовался: migration создана CLI, пров�
 Живой email-вход, положительный authenticated API с A04, два устройства,
 browser/native и multi-connection load не проверены.
 
-Следующий **A02.2 medium** — редактор новой модели без cloud transport.
-Затем **A02.3/A03 high** — owner cache/queue, revisions/opIds/retry/conflict,
-guest import и смена аккаунта; вместе убрать прежнюю interest-map document sync.
-Пока UI/src/sync.ts не переключены, в новую RPC не идут фоновые дублирующие записи.
+A02.2 редактор и A02.3/A03 клиентское переключение теперь реализованы:
+см. [очередь и доказательства](interest-queue.md). Прежняя interest-map document sync
+удалена; новый клиент использует этот RPC через `/api/domain`, с неизменным age gate.
 A01 setup/mail и trusted A04 остаются gates; A02/A03 целиком ещё не завершены.
