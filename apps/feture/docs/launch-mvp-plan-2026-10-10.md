@@ -345,3 +345,7 @@ high среза остановиться для возврата на medium.
 Публикация: [PR #773](https://github.com/edkiy73/Fit_timer/pull/773),
 кодовый commit `a01c6ae0`; ветка `feat/feture-core-session-lifecycle`.
 Статус CI/слияния сверять по PR; локальные проверки выше подтверждены.
+
+Дополнительная проверка: создание чистого `starter-check` из React template,
+`npm ci` и полный `npm run check` нового приложения — пройдены. Обновлён
+существующий шаблонный тест выхода под серверный logout.
