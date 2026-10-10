@@ -62,6 +62,35 @@ describe('FetUre starter', () => {
     expect(router.state.location.pathname).toBe('/');
   });
 
+  it('recovers the email-code form after resend and lets the address be corrected', async () => {
+    const fetchMock=vi.spyOn(globalThis,'fetch').mockResolvedValue(new Response(JSON.stringify({ok:true}),{status:200}));
+    try {
+      const user=userEvent.setup();
+      renderApp('/account');
+      await user.type(await screen.findByRole('textbox',{name:'Email'}),'owner@example.com');
+      await user.click(screen.getByRole('button',{name:'Прислать код'}));
+      const code=await screen.findByRole('textbox',{name:'Код из письма'});
+      expect(screen.getByText(/Код действует 15 минут/)).toBeTruthy();
+      await user.type(code,'123456');
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ok:true}),{status:200}));
+      await user.click(screen.getByRole('button',{name:'Отправить код ещё раз'}));
+      expect((code as HTMLInputElement).value).toBe('');
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({error:'rate_limited'}),{status:429}));
+      await user.click(screen.getByRole('button',{name:'Отправить код ещё раз'}));
+      expect(await screen.findByRole('alert')).toHaveProperty('textContent','Слишком много попыток. Подожди и попробуй позже.');
+      await user.click(screen.getByRole('button',{name:'Изменить адрес'}));
+      expect(screen.queryByRole('alert')).toBeNull();
+      const email=screen.getByRole('textbox',{name:'Email'});
+      await user.clear(email);
+      await user.type(email,'second@example.com');
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ok:true}),{status:200}));
+      await user.click(screen.getByRole('button',{name:'Прислать код'}));
+      expect(await screen.findByText('second@example.com')).toBeTruthy();
+      const last=fetchMock.mock.calls.at(-1);
+      expect(JSON.parse(String(last?.[1]?.body))).toMatchObject({action:'send',email:'second@example.com'});
+    } finally {vi.restoreAllMocks();}
+  });
+
   it('keeps dictionaries in sync and offers a language switch only for several locales', async () => {
     expect(missingKeys(dictionaries)).toEqual({});
     renderApp('/account');
