@@ -15,7 +15,7 @@ FetUre is an independent app within the AppBase monorepo (React + TypeScript + V
 - `/`: **native React** experience. Tabs «Мой мир», «Исследовать», «Сообщество», «Знакомства» are React components; no iframe. Interest editing, per-category jars and privacy choices are functional.
 - `/concept.html`: archived clickable 3.1 reference, not production UI.
 - React uses the live public taxonomy from `/api/catalog` with an explicit bundled offline fallback.
-- Community posts, groups and dating profiles are clearly labeled **fictional demonstrations**, not live services.
+- Community posts and dating profiles still use hardcoded fixtures in the inspected React source, not working social services. Any legacy demonstration labels are implementation debt: current owner policy requires seed provenance in database/admin only and no technical badges in consumer UI during pre-launch development.
 - Private interests are stored in AppBase Core's IndexedDB-based local-first document mirror (`interest-map`, free document in sync registry). Per-interest timestamps merge changes when the standard authenticated AppBase sync backend is configured; FetUre production still lacks that server environment, so **cloud persistence is not yet active**. Sensitive local documents are cleared on confirmed sign-out to prevent cross-account disclosure.
 - `/#/catalog`: AppBase React route reading public catalogue from Supabase through `/api/catalog`.
 - `/#/account`: AppBase email sign-in shell. **Account storage and verification still require separately configured AppBase server backend**.
@@ -44,3 +44,8 @@ Vercel root: `apps/feture`; build `npm run build`; output `dist`.
 - `capacitor.config.json` and `scripts/mobile.mjs`: Capacitor 8.5.2 shell setup in parity with UnMute. `npm run mobile:prepare:android` and `npm run mobile:prepare:ios` (macOS/Xcode) build the web bundle and sync native shells, but **do not compile/sign APK or IPA**.
 - Native API requests use `src/api-url.ts` so `capacitor://localhost` or `https://localhost` sends requests to `https://feture-mvp.vercel.app`; browsers keep same-origin requests. The mobile shell is not production-auth ready until its dedicated backend secrets are configured.
 - Do not introduce extra UI test suites during rapid iteration: typecheck, build and minimal existing checks; only new high-risk data/privacy/auth regressions warrant focused tests.
+
+## MVP implementation handoff (2026-10-10)
+The authoritative dependency-ordered backlog is [the SOL 6.1 MVP plan](docs/launch-mvp-plan-2026-10-10.md). Read [the audit and sources](docs/mvp-audit-2026-10-10.md) for verified repository facts, source conflicts and decisions. **F01** is complete; start the next slice at **F02**. See [the environment readiness snapshot](docs/environment-readiness-2026-10-10.md) for live service blockers. The domain-storage design in the plan is a target, not an already deployed migration.
+
+F01 deployment discipline: `vercel.json` uses `scripts/vercel-ignore.mjs`; documentation/tests and other product changes skip FetUre builds, own/shared runtime changes deploy, missing Git history deploys. Actual Vercel skip status remains to be observed after a documentation-only push.
