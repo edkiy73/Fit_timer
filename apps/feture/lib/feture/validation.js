@@ -4,6 +4,7 @@ const { reject } = require('./errors');
 const { interestState,INTEREST_ID,UUID } = require('./interest-model');
 const {profileCommand}=require('./profile');
 const {accessCommand}=require('./access');
+const {moderationCommand}=require('./moderation');
 const MAX_BODY=16384;
 /** @param {import('./contracts').Request} req @returns {Promise<unknown>} */
 async function readBody(req) {
@@ -29,6 +30,7 @@ function command(input) {
   if(!input||typeof input!=='object'||Array.isArray(input)||Object.getPrototypeOf(input)!==Object.prototype)reject(422,'invalid_request');
   const value=/** @type {Record<string,unknown>} */(input);
   const action=value.action;
+  if(typeof action==='string'&&action.startsWith('moderation.'))return moderationCommand(value);
   if(typeof action==='string'&&action.startsWith('access.'))return accessCommand(value);
   if(action==='profile.read'||action==='profile.save')return profileCommand(value);
   if(action==='documents.status'||action==='documents.accept'){

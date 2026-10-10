@@ -9,9 +9,10 @@ const { createRepository } = require('../lib/feture/repository');
 const { createDocumentsRepository } = require('../lib/feture/documents');
 const {createProfileRepository}=require('../lib/feture/profile');
 const {createAccessRepository}=require('../lib/feture/access');
+const {createModerationRepository}=require('../lib/feture/moderation');
 const documents=createDocumentsRepository(Supabase);
 module.exports=createHandler({
-  store,repository:createRepository(Supabase,documents),documents,profiles:createProfileRepository(Supabase,documents),access:createAccessRepository(Supabase,documents,store),cors,
+  store,repository:createRepository(Supabase,documents),documents,profiles:createProfileRepository(Supabase,documents),access:createAccessRepository(Supabase,documents,store),moderation:createModerationRepository(Supabase,store),cors,
   quota:async(req,accountHash)=>{
     // Global account quota: changing devices/IP does not reset it. Core stores ephemeral rl:* keys.
     const window=Math.floor(Date.now()/60000);
