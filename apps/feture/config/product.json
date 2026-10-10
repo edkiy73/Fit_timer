@@ -1,0 +1,46 @@
+{
+  "id": "ru.feture.app",
+  "name": "FetUre",
+  "slug": "feture",
+  "defaultApiUrl": "http://localhost",
+  "defaultPublicUrl": "http://localhost",
+  "brand": {
+    "background": "#1a111c",
+    "notificationAccent": "#e72c58",
+    "ui": {
+      "dark": {
+        "background": "#1a111c",
+        "card": "#261a29",
+        "surface": "#342138",
+        "accent": "#e72c58",
+        "accentInk": "#ff809d"
+      },
+      "light": {
+        "background": "#f5f0f3",
+        "card": "#ffffff",
+        "surface": "#faf6f9",
+        "accent": "#e72c58",
+        "accentInk": "#c91948"
+      }
+    }
+  },
+  "i18n": {
+    "locales": [
+      "ru"
+    ],
+    "default": "ru"
+  },
+  "auth": {
+    "askHandle": true
+  },
+  "products": [],
+  "features": {
+    "profiles": false,
+    "premium": false,
+    "ai": false,
+    "notifications": false,
+    "biometrics": false,
+    "sharing": false,
+    "voice": false
+  }
+}

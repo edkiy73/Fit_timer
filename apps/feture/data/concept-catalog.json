@@ -1,0 +1,818 @@
+{
+  "version": 1,
+  "origin": "MVP concept 3.1 demo only",
+  "categories": [
+    {
+      "id": "category-1",
+      "title": "Роли и динамика",
+      "short": "Роли",
+      "icon": "layers",
+      "color": "#7156cb",
+      "interests": [
+        {
+          "id": "interest-1-1",
+          "title": "Ведущая роль"
+        },
+        {
+          "id": "interest-1-2",
+          "title": "Принимающая роль"
+        },
+        {
+          "id": "interest-1-3",
+          "title": "Свитч"
+        },
+        {
+          "id": "interest-1-4",
+          "title": "Передача инициативы"
+        },
+        {
+          "id": "interest-1-5",
+          "title": "Контроль"
+        },
+        {
+          "id": "interest-1-6",
+          "title": "Доверие"
+        },
+        {
+          "id": "interest-1-7",
+          "title": "Партнёрская динамика"
+        },
+        {
+          "id": "interest-1-8",
+          "title": "Ролевой обмен"
+        },
+        {
+          "id": "interest-1-9",
+          "title": "Сервис"
+        },
+        {
+          "id": "interest-1-10",
+          "title": "Наставничество"
+        },
+        {
+          "id": "interest-1-11",
+          "title": "Равноправие"
+        },
+        {
+          "id": "interest-1-12",
+          "title": "Договорённости"
+        }
+      ]
+    },
+    {
+      "id": "category-2",
+      "title": "Близость и контакт",
+      "short": "Близость",
+      "icon": "heart",
+      "color": "#e35278",
+      "interests": [
+        {
+          "id": "interest-2-1",
+          "title": "Телесная близость"
+        },
+        {
+          "id": "interest-2-2",
+          "title": "Объятия"
+        },
+        {
+          "id": "interest-2-3",
+          "title": "Нежность"
+        },
+        {
+          "id": "interest-2-4",
+          "title": "Поцелуи"
+        },
+        {
+          "id": "interest-2-5",
+          "title": "Массаж"
+        },
+        {
+          "id": "interest-2-6",
+          "title": "Медленный темп"
+        },
+        {
+          "id": "interest-2-7",
+          "title": "Совместный отдых"
+        },
+        {
+          "id": "interest-2-8",
+          "title": "Тактильность"
+        },
+        {
+          "id": "interest-2-9",
+          "title": "Зрительный контакт"
+        },
+        {
+          "id": "interest-2-10",
+          "title": "Сенсорное внимание"
+        },
+        {
+          "id": "interest-2-11",
+          "title": "Игра с дистанцией"
+        },
+        {
+          "id": "interest-2-12",
+          "title": "Послеобсуждение"
+        }
+      ]
+    },
+    {
+      "id": "category-3",
+      "title": "Сенсорика и ощущения",
+      "short": "Ощущения",
+      "icon": "spark",
+      "color": "#bf765b",
+      "interests": [
+        {
+          "id": "interest-3-1",
+          "title": "Мягкие текстуры"
+        },
+        {
+          "id": "interest-3-2",
+          "title": "Шёлк"
+        },
+        {
+          "id": "interest-3-3",
+          "title": "Кожа"
+        },
+        {
+          "id": "interest-3-4",
+          "title": "Температура"
+        },
+        {
+          "id": "interest-3-5",
+          "title": "Ароматы"
+        },
+        {
+          "id": "interest-3-6",
+          "title": "Звуки"
+        },
+        {
+          "id": "interest-3-7",
+          "title": "Тишина"
+        },
+        {
+          "id": "interest-3-8",
+          "title": "Прикосновения"
+        },
+        {
+          "id": "interest-3-9",
+          "title": "Контраст ощущений"
+        },
+        {
+          "id": "interest-3-10",
+          "title": "Повязка на глаза"
+        },
+        {
+          "id": "interest-3-11",
+          "title": "Свет и тень"
+        },
+        {
+          "id": "interest-3-12",
+          "title": "Сенсорные ритуалы"
+        }
+      ]
+    },
+    {
+      "id": "category-4",
+      "title": "Романтика и эмоции",
+      "short": "Эмоции",
+      "icon": "heart",
+      "color": "#aa5f93",
+      "interests": [
+        {
+          "id": "interest-4-1",
+          "title": "Забота"
+        },
+        {
+          "id": "interest-4-2",
+          "title": "Открытость"
+        },
+        {
+          "id": "interest-4-3",
+          "title": "Комплименты"
+        },
+        {
+          "id": "interest-4-4",
+          "title": "Романтика"
+        },
+        {
+          "id": "interest-4-5",
+          "title": "Поддержка"
+        },
+        {
+          "id": "interest-4-6",
+          "title": "Внимательность"
+        },
+        {
+          "id": "interest-4-7",
+          "title": "Публичное проявление чувств"
+        },
+        {
+          "id": "interest-4-8",
+          "title": "Интеллектуальная связь"
+        },
+        {
+          "id": "interest-4-9",
+          "title": "Уязвимость"
+        },
+        {
+          "id": "interest-4-10",
+          "title": "Нежная инициатива"
+        },
+        {
+          "id": "interest-4-11",
+          "title": "Письма"
+        },
+        {
+          "id": "interest-4-12",
+          "title": "Эмоциональная безопасность"
+        }
+      ]
+    },
+    {
+      "id": "category-5",
+      "title": "Фантазии и сценарии",
+      "short": "Фантазии",
+      "icon": "sparkle",
+      "color": "#7563ce",
+      "interests": [
+        {
+          "id": "interest-5-1",
+          "title": "Ролевые сценарии"
+        },
+        {
+          "id": "interest-5-2",
+          "title": "Театральность"
+        },
+        {
+          "id": "interest-5-3",
+          "title": "Костюмы"
+        },
+        {
+          "id": "interest-5-4",
+          "title": "Воображаемые сюжеты"
+        },
+        {
+          "id": "interest-5-5",
+          "title": "Смена контекста"
+        },
+        {
+          "id": "interest-5-6",
+          "title": "Игра образов"
+        },
+        {
+          "id": "interest-5-7",
+          "title": "Спонтанность"
+        },
+        {
+          "id": "interest-5-8",
+          "title": "Планирование"
+        },
+        {
+          "id": "interest-5-9",
+          "title": "Фантазии в переписке"
+        },
+        {
+          "id": "interest-5-10",
+          "title": "Эксперименты"
+        },
+        {
+          "id": "interest-5-11",
+          "title": "Импровизация"
+        },
+        {
+          "id": "interest-5-12",
+          "title": "Фантазия без реализации"
+        }
+      ]
+    },
+    {
+      "id": "category-6",
+      "title": "Эстетика и стиль",
+      "short": "Эстетика",
+      "icon": "eye",
+      "color": "#b16c8b",
+      "interests": [
+        {
+          "id": "interest-6-1",
+          "title": "Фотография"
+        },
+        {
+          "id": "interest-6-2",
+          "title": "Стиль одежды"
+        },
+        {
+          "id": "interest-6-3",
+          "title": "Латекс"
+        },
+        {
+          "id": "interest-6-4",
+          "title": "Кружево"
+        },
+        {
+          "id": "interest-6-5",
+          "title": "Минимализм"
+        },
+        {
+          "id": "interest-6-6",
+          "title": "Готика"
+        },
+        {
+          "id": "interest-6-7",
+          "title": "Украшения"
+        },
+        {
+          "id": "interest-6-8",
+          "title": "Маски"
+        },
+        {
+          "id": "interest-6-9",
+          "title": "Макияж"
+        },
+        {
+          "id": "interest-6-10",
+          "title": "Перформанс"
+        },
+        {
+          "id": "interest-6-11",
+          "title": "Портреты"
+        },
+        {
+          "id": "interest-6-12",
+          "title": "Визуальные образы"
+        }
+      ]
+    },
+    {
+      "id": "category-7",
+      "title": "Практики и исследования",
+      "short": "Практики",
+      "icon": "compass",
+      "color": "#278e84",
+      "interests": [
+        {
+          "id": "interest-7-1",
+          "title": "Шибари"
+        },
+        {
+          "id": "interest-7-2",
+          "title": "Связывание"
+        },
+        {
+          "id": "interest-7-3",
+          "title": "Ролевые игры"
+        },
+        {
+          "id": "interest-7-4",
+          "title": "Договорённости"
+        },
+        {
+          "id": "interest-7-5",
+          "title": "Совместное изучение"
+        },
+        {
+          "id": "interest-7-6",
+          "title": "Обучающие встречи"
+        },
+        {
+          "id": "interest-7-7",
+          "title": "Мягкие эксперименты"
+        },
+        {
+          "id": "interest-7-8",
+          "title": "Партнёрские ритуалы"
+        },
+        {
+          "id": "interest-7-9",
+          "title": "Сенсорные упражнения"
+        },
+        {
+          "id": "interest-7-10",
+          "title": "Безопасные практики"
+        },
+        {
+          "id": "interest-7-11",
+          "title": "Обмен опытом"
+        },
+        {
+          "id": "interest-7-12",
+          "title": "Осознанность"
+        }
+      ]
+    },
+    {
+      "id": "category-8",
+      "title": "Форматы отношений",
+      "short": "Отношения",
+      "icon": "users",
+      "color": "#c1774f",
+      "interests": [
+        {
+          "id": "interest-8-1",
+          "title": "Моногамия"
+        },
+        {
+          "id": "interest-8-2",
+          "title": "Открытые отношения"
+        },
+        {
+          "id": "interest-8-3",
+          "title": "Полиамория"
+        },
+        {
+          "id": "interest-8-4",
+          "title": "Свинг"
+        },
+        {
+          "id": "interest-8-5",
+          "title": "Анархия отношений"
+        },
+        {
+          "id": "interest-8-6",
+          "title": "Партнёрство без романтики"
+        },
+        {
+          "id": "interest-8-7",
+          "title": "Дружба"
+        },
+        {
+          "id": "interest-8-8",
+          "title": "Долгосрочная связь"
+        },
+        {
+          "id": "interest-8-9",
+          "title": "Неформальные отношения"
+        },
+        {
+          "id": "interest-8-10",
+          "title": "Профиль пары"
+        },
+        {
+          "id": "interest-8-11",
+          "title": "Совместное общение"
+        },
+        {
+          "id": "interest-8-12",
+          "title": "Личная автономия"
+        }
+      ]
+    },
+    {
+      "id": "category-9",
+      "title": "Общение и социальность",
+      "short": "Общение",
+      "icon": "chat",
+      "color": "#597fba",
+      "interests": [
+        {
+          "id": "interest-9-1",
+          "title": "Личные сообщения"
+        },
+        {
+          "id": "interest-9-2",
+          "title": "Групповые обсуждения"
+        },
+        {
+          "id": "interest-9-3",
+          "title": "Камерные встречи"
+        },
+        {
+          "id": "interest-9-4",
+          "title": "Вечеринки"
+        },
+        {
+          "id": "interest-9-5",
+          "title": "Мастер-классы"
+        },
+        {
+          "id": "interest-9-6",
+          "title": "События"
+        },
+        {
+          "id": "interest-9-7",
+          "title": "Онлайн-знакомства"
+        },
+        {
+          "id": "interest-9-8",
+          "title": "Новые друзья"
+        },
+        {
+          "id": "interest-9-9",
+          "title": "Большие сообщества"
+        },
+        {
+          "id": "interest-9-10",
+          "title": "Анонимные вопросы"
+        },
+        {
+          "id": "interest-9-11",
+          "title": "Обмен историями"
+        },
+        {
+          "id": "interest-9-12",
+          "title": "Тематические клубы"
+        }
+      ]
+    },
+    {
+      "id": "category-10",
+      "title": "Границы и безопасность",
+      "short": "Границы",
+      "icon": "shield",
+      "color": "#258d71",
+      "interests": [
+        {
+          "id": "interest-10-1",
+          "title": "Согласие"
+        },
+        {
+          "id": "interest-10-2",
+          "title": "Стоп-слово"
+        },
+        {
+          "id": "interest-10-3",
+          "title": "Чёткие границы"
+        },
+        {
+          "id": "interest-10-4",
+          "title": "Мягкие границы"
+        },
+        {
+          "id": "interest-10-5",
+          "title": "Приватность"
+        },
+        {
+          "id": "interest-10-6",
+          "title": "Конфиденциальность"
+        },
+        {
+          "id": "interest-10-7",
+          "title": "Aftercare"
+        },
+        {
+          "id": "interest-10-8",
+          "title": "Обсуждение ожиданий"
+        },
+        {
+          "id": "interest-10-9",
+          "title": "Проверка самочувствия"
+        },
+        {
+          "id": "interest-10-10",
+          "title": "Личные правила"
+        },
+        {
+          "id": "interest-10-11",
+          "title": "Право передумать"
+        },
+        {
+          "id": "interest-10-12",
+          "title": "Безопасность встреч"
+        }
+      ]
+    },
+    {
+      "id": "category-11",
+      "title": "Самовыражение и идентичность",
+      "short": "Идентичность",
+      "icon": "user",
+      "color": "#ab648a",
+      "interests": [
+        {
+          "id": "interest-11-1",
+          "title": "Самовыражение"
+        },
+        {
+          "id": "interest-11-2",
+          "title": "Самоопределение"
+        },
+        {
+          "id": "interest-11-3",
+          "title": "Ориентация"
+        },
+        {
+          "id": "interest-11-4",
+          "title": "Гендерная идентичность"
+        },
+        {
+          "id": "interest-11-5",
+          "title": "Местоимения"
+        },
+        {
+          "id": "interest-11-6",
+          "title": "Личный стиль"
+        },
+        {
+          "id": "interest-11-7",
+          "title": "Принятие себя"
+        },
+        {
+          "id": "interest-11-8",
+          "title": "Видимость"
+        },
+        {
+          "id": "interest-11-9",
+          "title": "Неоднозначность"
+        },
+        {
+          "id": "interest-11-10",
+          "title": "Любопытство"
+        },
+        {
+          "id": "interest-11-11",
+          "title": "Личные ценности"
+        },
+        {
+          "id": "interest-11-12",
+          "title": "Изменения со временем"
+        }
+      ]
+    },
+    {
+      "id": "category-12",
+      "title": "Ритм и образ жизни",
+      "short": "Образ жизни",
+      "icon": "clock",
+      "color": "#a67637",
+      "interests": [
+        {
+          "id": "interest-12-1",
+          "title": "Спонтанность"
+        },
+        {
+          "id": "interest-12-2",
+          "title": "Планирование встреч"
+        },
+        {
+          "id": "interest-12-3",
+          "title": "Уединение"
+        },
+        {
+          "id": "interest-12-4",
+          "title": "Общительность"
+        },
+        {
+          "id": "interest-12-5",
+          "title": "Путешествия"
+        },
+        {
+          "id": "interest-12-6",
+          "title": "Медленное знакомство"
+        },
+        {
+          "id": "interest-12-7",
+          "title": "Активный отдых"
+        },
+        {
+          "id": "interest-12-8",
+          "title": "Домашний уют"
+        },
+        {
+          "id": "interest-12-9",
+          "title": "Городские события"
+        },
+        {
+          "id": "interest-12-10",
+          "title": "Баланс времени"
+        },
+        {
+          "id": "interest-12-11",
+          "title": "Свободный график"
+        },
+        {
+          "id": "interest-12-12",
+          "title": "Уютные пространства"
+        }
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "id": "test-1",
+      "title": "Твои роли и динамика",
+      "description": "Как тебе комфортнее распределять инициативу",
+      "category": 0,
+      "questions": 8
+    },
+    {
+      "id": "test-2",
+      "title": "Язык близости",
+      "description": "Что создаёт ощущение контакта",
+      "category": 1,
+      "questions": 8
+    },
+    {
+      "id": "test-3",
+      "title": "Карта ощущений",
+      "description": "Какие ощущения интересны тебе",
+      "category": 2,
+      "questions": 8
+    },
+    {
+      "id": "test-4",
+      "title": "Эмоциональная связь",
+      "description": "Как проявляются доверие и забота",
+      "category": 3,
+      "questions": 8
+    },
+    {
+      "id": "test-5",
+      "title": "Фантазия или опыт",
+      "description": "Чего хочется только в воображении",
+      "category": 4,
+      "questions": 8
+    },
+    {
+      "id": "test-6",
+      "title": "Эстетика и самовыражение",
+      "description": "Как образы отражают твои желания",
+      "category": 5,
+      "questions": 8
+    },
+    {
+      "id": "test-7",
+      "title": "Исследовать новое",
+      "description": "Про любопытство и темп",
+      "category": 6,
+      "questions": 8
+    },
+    {
+      "id": "test-8",
+      "title": "Формат отношений",
+      "description": "Комфортные договорённости с партнёром",
+      "category": 7,
+      "questions": 8
+    },
+    {
+      "id": "test-9",
+      "title": "Социальная энергия",
+      "description": "Общение, группы и встречи",
+      "category": 8,
+      "questions": 8
+    },
+    {
+      "id": "test-10",
+      "title": "Твои границы",
+      "description": "Что обязательно учитывать другим",
+      "category": 9,
+      "questions": 8
+    },
+    {
+      "id": "test-11",
+      "title": "Быть собой",
+      "description": "Что важно для идентичности",
+      "category": 10,
+      "questions": 8
+    },
+    {
+      "id": "test-12",
+      "title": "Твой ритм",
+      "description": "Как ты любишь развивать близость",
+      "category": 11,
+      "questions": 8
+    },
+    {
+      "id": "test-13",
+      "title": "Сила доверия",
+      "description": "Доверие, правила и открытость",
+      "category": 9,
+      "questions": 8
+    },
+    {
+      "id": "test-14",
+      "title": "Комфорт в сообществе",
+      "description": "Где тебе легко быть собой",
+      "category": 8,
+      "questions": 8
+    },
+    {
+      "id": "test-15",
+      "title": "Новое без давления",
+      "description": "Твой темп открытий",
+      "category": 6,
+      "questions": 8
+    },
+    {
+      "id": "test-16",
+      "title": "Моя приватность",
+      "description": "Что и кому комфортно показывать",
+      "category": 9,
+      "questions": 8
+    },
+    {
+      "id": "test-17",
+      "title": "Способы заботиться",
+      "description": "Поддержка и бережность",
+      "category": 3,
+      "questions": 8
+    },
+    {
+      "id": "test-18",
+      "title": "Общий язык",
+      "description": "Как обсуждать ожидания",
+      "category": 7,
+      "questions": 8
+    }
+  ]
+}
