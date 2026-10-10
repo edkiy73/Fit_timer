@@ -54,9 +54,11 @@ try{
   const errors = [];
   page.on('pageerror', e => errors.push(String(e)));
   await page.goto(URL_);
-  ok('concept iframe boots without an account', await appears(page.locator('iframe[title="FetUre MVP concept"]')));
+  ok('native React home boots without an account', await appears(page.getByRole('heading', {name:/Твой мир/i})));
   ok('theme tokens are applied', (await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim())) !== '');
 
+  await page.getByRole('button', {name:'Исследовать'}).first().click();
+  ok('native interest explorer opens', await appears(page.getByRole('heading',{name:'Открой новые грани'})));
   await page.goto(URL_ + '#/account');
   await page.getByRole('textbox', {name:'Email'}).fill('person@example.com');
   await page.getByRole('button', {name:COPY.send}).click();

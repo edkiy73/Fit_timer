@@ -2,6 +2,7 @@ import { createSyncClient } from '@appbase/core/sync-client.js';
 import { createDocumentSync, startAutoSync, type AutoSync, type DocumentSync } from '@appbase/core/document-sync.js';
 import { createStorage } from '@appbase/core/storage.js';
 import { authClient } from './auth';
+import { mergeInterestMaps } from './feture/model';
 
 /* Local-first data: documents are written on the device first and sync to the account
    after sign-in. Every synced key must be registered in lib/app-sync-schema.js; data that
@@ -17,7 +18,7 @@ export const appDocs: DocumentSync = createDocumentSync({
   storage: createStorage({dbName:'feture/kv', storeName:'kv'}),
   storageKey: 'sync.mirror',
   // Settings are small: the newer whole document wins. Collections use mergeRecordMaps().
-  merge: ({local}) => local
+  merge: ({key,local,remote}) => key === 'interest-map' ? mergeInterestMaps(local,remote) : local
 });
 
 let auto: AutoSync | null = null;

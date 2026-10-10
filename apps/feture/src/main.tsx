@@ -9,6 +9,7 @@ import { applyProductTheme } from './theme';
 import { captureFatal, installGlobalDiagnostics, trackInstallOnce } from './observability';
 import { startAppSync } from './sync';
 import './styles.css';
+import './feture/experience.css';
 
 applyProductTheme();
 // Every pressed button that waits for the server shows a spinner until the answer comes.

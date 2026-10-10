@@ -6,6 +6,7 @@ const ACCOUNT_PROFILE = '__account__';
 module.exports = {
   ACCOUNT_PROFILE,
   registry: createSyncRegistry([
-    {scope:'account', key:'settings', free:true}
+    {scope:'account', key:'settings', free:true},
+    {scope:'account', key:'interest-map', free:true}
   ])
 };
