@@ -6,7 +6,7 @@
 FetUre is a product for learning about yourself, building a meaningful private/public profile, and participating in a community. Dating is **third**, optional, and disabled by default. The app must be useful without dating, a local user base, or a romantic partner.
 - "Мой мир": deep, evolving personal profile, interest map/jars, tests, history and privacy controls.
 - "Исследовать": large, editorially reviewed taxonomy, meaningful questions, interpretations and content, not arbitrary scores masquerading as science.
-- "Сообщество": real discussions, groups and moderation; demo people must always be labeled demo until live content exists.
+- "Сообщество": discussions, groups and moderation. During pre-launch development, realistic seed content has provenance in database/admin only, without consumer demo badges; remove/exclude synthetic participants before serving real users.
 - "Знакомства": opt-in large photo cards, swipe, a **full profile scrolling inside the card**, profile-layer access requests and explainable compatibility. Never show someone's hard boundaries as high attraction or leak private data.
 
 ## 2. ALL four form factors are first-class (non-negotiable)
@@ -30,7 +30,7 @@ FetUre is **one responsive website AND native Android + iOS applications from th
 FetUre may contain highly sensitive personal information.
 - Explicit consent and visibility, private by default. The classifications `private`, `granted`, `public` must be enforced server-side **before real sharing**.
 - Hard/soft limits are NOT percentages of desire. A boundary excludes unsafe compatibility rather than subtracting arbitrary points.
-- Anonymous public taxonomy is permitted, private profile/test/interest data is not. Validate authentication and record ownership on server. No fictitious profiles as live accounts. Avoid sexualized images in common screens/marketing and plan moderation and 18+ handling.
+- Anonymous public taxonomy is permitted, private profile/test/interest data is not. Validate authentication and record ownership on server. Seed profiles may support the pre-launch experience under section 6; never represent them as real participants after launch. Avoid sexualized images in common screens/marketing and plan moderation and 18+ handling.
 - Local data, account switching and deletion must not expose one person's private map to another. Preserve data on sync failure.
 
 ## 5. RAPID MVP DEVELOPMENT: MINIMAL TESTING (explicit owner preference)
@@ -54,3 +54,9 @@ There will be **hundreds of UX and product revisions**. Prioritize correct UX an
 - Distinguish fully working features from demo stubs and unpublished native shells. Do not claim "APK/iOS ready", "cloud saved", "moderated community" or "functional dating" until independently verified.
 - Limit Vercel deployment noise; prefer one merged chunk after checks rather than a chain of tiny main commits.
 - Keep the product README and this file current when architectural assumptions or releases change.
+
+## 8. Authoritative MVP execution plan
+- Follow `docs/launch-mvp-plan-2026-10-10.md` and its dependency-ordered task cards; rationale and source verification: `docs/mvp-audit-2026-10-10.md`.
+- The plan describes target behavior, not implemented capabilities. Start with F01 and record evidence before checking off tasks.
+- PostgreSQL is the planned canonical FetUre domain store; current Core document-backed interest-map is transitional. Remove that duplicate path only as part of the complete A02/A03 switch. Core remains canonical for authentication and shared services.
+- Interest strength, exploration progress, experience and boundaries are distinct. Never infer consent from a score or a match.
