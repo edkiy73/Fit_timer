@@ -57,7 +57,7 @@ try{
   ok('native React home boots without an account', await appears(page.getByRole('heading', {name:/Твой мир/i})));
   ok('theme tokens are applied', (await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim())) !== '');
 
-  await page.getByRole('button', {name:'Исследовать'}).first().click();
+  await page.getByRole('link', {name:'Исследовать'}).first().click();
   ok('native interest explorer opens', await appears(page.getByRole('heading',{name:'Открой новые грани'})));
   await page.goto(URL_ + '#/account');
   await page.getByRole('textbox', {name:'Email'}).fill('person@example.com');

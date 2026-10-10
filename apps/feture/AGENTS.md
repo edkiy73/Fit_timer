@@ -39,6 +39,7 @@ There will be **hundreds of UX and product revisions**. Prioritize correct UX an
 - Write **new** automated tests only for genuinely high-risk stable logic: authentication/authorization, private data disclosure, irreversible deletion, schema migration, lost data, billing, complex merge, and severe regressions. One small focused test is better than a suite.
 - For rapidly changing UI: a quick manual responsive/interaction check is usually sufficient; no additional test file is expected. No "tests for coverage percentages" and no duplicated E2E/unit scenarios without reason.
 - Never disable existing security/auth protection to save a test. Fix actual compile/build failures. CI remains a guardrail, not the feature.
+- Batch several small related task cards when practical. **Stop before a task that needs reasoning effort above medium for a good result**, explain the concrete complexity and the recommended effort, and wait for the owner to switch/authorize that effort. Do not start such a task just because adjacent small cards are done.
 - Scope tasks into small/medium chunks; prioritize the next user-visible improvement and avoid large unrelated refactors.
 
 ## 6. Public development URL, disposable data, no legacy compatibility
