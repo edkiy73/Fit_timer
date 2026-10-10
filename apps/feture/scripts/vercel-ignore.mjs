@@ -20,7 +20,7 @@ export function shouldDeployPath(path) {
     if (!file.startsWith(OWN)) return false;
     const local = file.slice(OWN.length);
     // Operator seed tooling and manual SQL migrations never enter the deployed runtime.
-    if(local.startsWith('seed/') || local.startsWith('supabase/') || /^tools\/seed-[a-z-]+\.mjs$/.test(local) || local === 'tsconfig.server.json') return false;
+    if(local.startsWith('seed/') || local.startsWith('supabase/') || /^tools\/(?:seed-[a-z-]+|check-auth-env)\.mjs$/.test(local) || local === 'tsconfig.server.json') return false;
     if (/^(docs|tests|test|e2e|__tests__|android|ios)\//.test(local)) return false;
     if (TEST_FILE.test(local) || TEST_SUFFIX.test(local)) return false;
     return true;

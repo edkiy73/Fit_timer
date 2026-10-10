@@ -67,3 +67,12 @@ Server CommonJS modules are checked with strict TypeScript/JSDoc contracts, and 
 
 ## Seed operations (F05)
 See [operator contract and commands](seed/README.md) and [verification evidence](seed/verification-2026-10-10.md). F05.1 offline inputs are a historical baseline. The current SQL generator previews live rows before reviewed atomic apply/cleanup through the Supabase operator workflow. Private sidecar provenance separates the 156 reference catalog records from 3 synthetic profiles; no Core accounts are created. Synthetic cleanup preserves the reference catalog and refuses dependent records. Runtime UI/API behavior has not changed.
+
+## A01 service setup
+
+See [required configuration and sign-in acceptance](docs/auth-service-setup.md).
+`npm run check:auth-env` performs an offline, value-redacted configuration check;
+it never sends email, accesses the database or proves a live sign-in. Existing
+Vercel Secret values cannot be retrieved for transfer via the connector. Production
+FetUre still needs server storage/mail configuration. A01 remains incomplete;
+server session revocation requires the next high-effort slice.

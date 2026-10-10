@@ -281,3 +281,22 @@ Motion 14.1.0 закреплён вместе с lockfile: общий feedback/p
 Проверки: общая команда check, один focused PostgreSQL integration test (PGlite), live preview/adoption/apply/no-op и cleanup в ROLLBACK. RLS на всех FetUre таблицах включена; anon/authenticated не имеют доступа к профилям/sidecar, service_role не вызывает seed functions. Счётчики Core documents/KV/buckets/auth неизменны; подробности и advisor rationale: [evidence](../seed/verification-2026-10-10.md). SQL migration file создан Supabase CLI; live migration history `20261010091229 feture_scoped_seed`. F05 теперь `[x]`. Нет web UI/native сборок изменений и нет отправок почты.
 
 **Граница усилия после F05.** Следующая **A01 начинается на medium**: auth handler/client уже подключены к Core, поэтому не строить новую идентификацию. Проверить текущие provider/store/mail контракты и metadata, подключить существующие общие сервисы через server-only конфигурацию, проверить health и состояния формы входа. При необходимости новых решений для server sessions/межпродуктовой идентичности или сложного восстановления остановиться до них и выделить high. Доставленный OTP/вход двумя контролируемыми аккаунтами и истечение/logout нужны перед `[x]` A01; подготовку конфигурации не выдавать за рабочий вход. По правилу владельца завершить публикацию F05 и остановиться для возврата на medium.
+
+**2026-10-10 — A01, подготовительный medium срез.** База обновлена до `e397d3a`;
+параллельные изменения касались только UnMute. Повторно проверены metadata
+FetUre/FitTimer/UnMute, Core auth/store/mail. У FetUre только public catalog env;
+нужные ключи FitTimer типа Secret/sensitive не возвращаются `get_project_env`
+(metadata без значения). Перенос не выполнен, окружения и БД не изменялись,
+писем не отправляли. Конкретные настройки и критерии: [auth-service-setup.md](auth-service-setup.md).
+
+Добавлен `check:auth-env`: проверка FitT project/store/mail и запрет публичного
+memory bypass, без сети/записи/печати значений. Проверены missing/complete/wrong
+project/Resend sandbox/memory bypass, отсутствие секретов в выводе. Общий
+`npm run check` пройден. В аккаунте добавлено состояние загрузки и убраны
+неподтверждённые утверждения об облачной карте. A01 остаётся `[ ]`.
+
+**Следующая граница — high.** Сессии Core: серверный logout/expiry, повторный
+вход и межпродуктовая identity затрагивают все приложения. Остановиться перед
+изменением этих контрактов. Внешний блокер: задать FetUre server secret, Resend
+key, verified-domain sender и store config. Для доставки нужны два явно
+указанных владельцем контролируемых адреса; не выбирать получателей из БД.
