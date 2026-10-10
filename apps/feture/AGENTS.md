@@ -41,7 +41,15 @@ There will be **hundreds of UX and product revisions**. Prioritize correct UX an
 - Never disable existing security/auth protection to save a test. Fix actual compile/build failures. CI remains a guardrail, not the feature.
 - Scope tasks into small/medium chunks; prioritize the next user-visible improvement and avoid large unrelated refactors.
 
-## 6. Workflow and status honesty
+## 6. Public development URL, disposable data, no legacy compatibility
+- The FetUre website at `https://feture-mvp.vercel.app` intentionally stays accessible. **Do not add production access restrictions, password/SSO gates, or global allowlists without a separate explicit request.** Accessible by link does not mean the product has started serving real users.
+- Until the owner explicitly declares a launch with real users, **all FetUre development accounts, seed profiles, posts, media and schemas may be reset or replaced**. Do NOT add backward-compatibility shims, legacy profile readers, dual schema versions, long migration paths or dead code to preserve historic prototype/seed data. Prefer the correct current schema over a compatibility workaround.
+- This freedom is strictly limited to FetUre-owned data and resources; never drop shared AppBase infrastructure or other product data in the shared FitT Supabase database. Destructive schema/data edits should be deliberate, scoped and visibly documented.
+- Build a natural, well-populated UI without user-facing `demo`, `test data`, `under development` badges. Keep seed provenance in database/admin, not in the consumer UI. The site is publicly reachable: use licensed/generated media and **no real persons' sensitive data without permission**.
+- Public access to the landing page must not bypass identity/age verification for 18+ content or server-side privacy permissions. Admin and restricted media stay protected.
+- **When real users are explicitly supported**, switch to durability mode: versioned migrations, safe updates, retention/erasure policy, real backups and user-data guarantees. This pre-launch rule no longer applies to them.
+
+## 7. Workflow and status honesty
 - Preserve UI direction and useful behaviors from MVP 3.1, but production interface is React (`/concept.html` is reference only).
 - Distinguish fully working features from demo stubs and unpublished native shells. Do not claim "APK/iOS ready", "cloud saved", "moderated community" or "functional dating" until independently verified.
 - Limit Vercel deployment noise; prefer one merged chunk after checks rather than a chain of tiny main commits.
