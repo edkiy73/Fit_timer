@@ -1,0 +1,55 @@
+{
+  "mode": "offline-dry-run",
+  "schemaVersion": 1,
+  "datasetId": "feture-development-2026-10",
+  "generationVersion": "1",
+  "projectRef": "anrhayozrhrmiwexmbhw",
+  "stage": "prelaunch",
+  "inventoryCapturedOn": "2026-10-10",
+  "inventoryIsSnapshot": true,
+  "inventorySha256": "085b09e4d580cfe6de3a58200d9fba38b67a00c97bab88b2de16ea8429cca104",
+  "manifestSha256": "6de13991300e6937e28b59cf22e914c56399ee292e84c8ead27f1531cc7131d1",
+  "catalogSha256": "7a06214b13e2c459f6a0577d75d9f42511ebc3b3064bcd3ea4733ae07f354d5d",
+  "canApply": false,
+  "writes": 0,
+  "blockers": [
+    "apply_not_implemented",
+    "existing_rows_not_classified",
+    "provenance_schema_missing"
+  ],
+  "tables": [
+    {
+      "table": "feture_categories",
+      "proposedRows": 12,
+      "observedRows": 12,
+      "operation": "review-only",
+      "insertCount": null,
+      "updateCount": null,
+      "deleteCount": null
+    },
+    {
+      "table": "feture_interests",
+      "proposedRows": 144,
+      "observedRows": 144,
+      "operation": "review-only",
+      "insertCount": null,
+      "updateCount": null,
+      "deleteCount": null
+    },
+    {
+      "table": "feture_profiles",
+      "proposedRows": 3,
+      "observedRows": 0,
+      "operation": "review-only",
+      "insertCount": null,
+      "updateCount": null,
+      "deleteCount": null
+    }
+  ],
+  "excludedTestDescriptors": 18,
+  "notes": [
+    "Proposed rows are candidates, not inserts. Existing rows are not inferred to belong to this dataset.",
+    "No Core accounts, posts, grants, media or test questionnaires are included.",
+    "Fresh server environment/schema/ownership checks and an atomic scoped transaction are required in F05.2."
+  ]
+}

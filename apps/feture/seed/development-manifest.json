@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "datasetId": "feture-development-2026-10",
+  "generationVersion": "1",
+  "expectedProjectRef": "anrhayozrhrmiwexmbhw",
+  "expectedStage": "prelaunch",
+  "provenance": {
+    "kind": "synthetic-development",
+    "source": "FetUre concept catalog and fictional profile copy; no real accounts or media"
+  },
+  "catalog": {
+    "path": "data/concept-catalog.json",
+    "sha256": "7a06214b13e2c459f6a0577d75d9f42511ebc3b3064bcd3ea4733ae07f354d5d"
+  },
+  "profiles": [
+    {
+      "seedKey": "maya",
+      "displayName": "Майя",
+      "about": "Люблю долгие разговоры, путешествия и людей, которые не боятся быть собой."
+    },
+    {
+      "seedKey": "alex",
+      "displayName": "Алекс",
+      "about": "Сначала хороший разговор. Уважаю личное пространство и люблю открытые вопросы."
+    },
+    {
+      "seedKey": "nika",
+      "displayName": "Ника",
+      "about": "Искренность, самоирония, музыка и любопытство к миру."
+    }
+  ]
+}
