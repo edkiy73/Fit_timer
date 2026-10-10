@@ -23,15 +23,15 @@ describe('FetUre interest map',()=>{
   const second={'interest-1-2':normalizeRecord({status:'experienced',intensity:80,visibility:'granted'},at)};
   const result=parseInterestMap(mergeInterestMaps(JSON.stringify(first),JSON.stringify(second)));
   expect(Object.keys(result)).toHaveLength(2);
-  expect(result['interest-1-2'].visibility).toBe('granted');
+  expect(result['interest-1-2']!.visibility).toBe('granted');
  });
  it('newer edits win for the same interest, including boundaries',()=>{
   const older={'interest-1-1':normalizeRecord({status:'curious',intensity:45,visibility:'public'},at)};
   const newer={'interest-1-1':normalizeRecord({status:'hard_limit',intensity:85,visibility:'private'},'2026-10-10T07:00:00.000Z')};
   const result=parseInterestMap(mergeInterestMaps(JSON.stringify(older),JSON.stringify(newer)));
-  expect(result['interest-1-1'].status).toBe('hard_limit');
-  expect(result['interest-1-1'].intensity).toBeNull();
-  expect(result['interest-1-1'].visibility).toBe('private');
+  expect(result['interest-1-1']!.status).toBe('hard_limit');
+  expect(result['interest-1-1']!.intensity).toBeNull();
+  expect(result['interest-1-1']!.visibility).toBe('private');
  });
  it('rejects malformed document payloads instead of rendering unexpected data',()=>{
   expect(parseInterestMap('{"bad":"data"}')).toEqual({});
