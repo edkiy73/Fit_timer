@@ -36,3 +36,11 @@ Vercel root: `apps/feture`; build `npm run build`; output `dist`.
 - `src/feture/experience.tsx`: real React app shell, topics, per-topic editor with boundary/intensity separation, community/dating previews.
 - `public/images/profile-*.webp`: portraits extracted from prior self-contained concept.
 - The next blocker for real account sync is dedicated FetUre AppBase **server auth/store** environment and server account verification; do not route private writes through anonymous Supabase keys.
+
+## Cross-platform and test policy
+- Read `AGENTS.md` in this directory: mandatory website and Android/iOS coverage, lean testing.
+- Desktop ≥1100px: sidebar; tablet 768–1099px: horizontal tab bar; phone <768px: safe-area bottom dock. Same React code on all sizes.
+- `public/site.webmanifest` and `public/icon.svg`: installable web metadata. No service worker that could cache stale private data.
+- `capacitor.config.json` and `scripts/mobile.mjs`: Capacitor 8.5.2 shell setup in parity with UnMute. `npm run mobile:prepare:android` and `npm run mobile:prepare:ios` (macOS/Xcode) build the web bundle and sync native shells, but **do not compile/sign APK or IPA**.
+- Native API requests use `src/api-url.ts` so `capacitor://localhost` or `https://localhost` sends requests to `https://feture-mvp.vercel.app`; browsers keep same-origin requests. The mobile shell is not production-auth ready until its dedicated backend secrets are configured.
+- Do not introduce extra UI test suites during rapid iteration: typecheck, build and minimal existing checks; only new high-risk data/privacy/auth regressions warrant focused tests.

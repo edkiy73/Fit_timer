@@ -1,0 +1,24 @@
+{
+  "name": "FetUre — исследуй себя",
+  "short_name": "FetUre",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "browser"
+  ],
+  "background_color": "#241628",
+  "theme_color": "#241628",
+  "description": "Самопознание, личная карта интересов и сообщество",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

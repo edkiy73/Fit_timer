@@ -46,3 +46,37 @@
 @media(max-width:520px){.ft-topline{display:none}.ft-hero{padding:27px 23px;min-height:280px}.ft-hero h1{font-size:40px}.ft-hero>div:first-child{max-width:330px}.ft-statbar>div{padding:14px 10px;border-radius:14px}.ft-statbar strong{font-size:23px}.ft-statbar small{font-size:10px;line-height:1.3}.ft-jars{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.ft-jar-card{min-height:191px;border-radius:17px;padding:13px 5px 11px}.ft-jar{width:min(67px,91%);height:110px}.ft-jar-card strong{font-size:11px}.ft-jar-card>span{font-size:9px}.ft-category-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.ft-category-card{min-height:153px;padding:13px;border-radius:15px}.ft-category-card strong{font-size:12px}.ft-recommend{grid-template-columns:1fr}.ft-recommend-card{min-height:95px}.ft-tests{grid-template-columns:1fr}.ft-section-head h2{font-size:19px}.ft-section-head p{font-size:11px}.ft-textbtn{font-size:11px}.ft-group-grid{gap:9px}.ft-group{padding:14px}.ft-dialog{padding:23px 18px;border-radius:20px}.ft-dialog h2{font-size:21px}.ft-status{padding:10px 11px}.ft-dating-card{border-radius:21px}.ft-dating-photo{min-height:390px}.ft-dating-off{padding:42px 20px}.ft-network-hint{font-size:10px}}
 @media(max-width:360px){.ft-mobile-nav span{font-size:9px}.ft-content{padding-left:13px;padding-right:13px}.ft-hero h1{font-size:34px}.ft-statbar{gap:6px}.ft-statbar strong{font-size:20px}.ft-jar-card strong{font-size:10px}.ft-category-card{padding:12px}}
 @media(prefers-reduced-motion:reduce){.ft-shell *, .ft-shell *:before, .ft-shell *:after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+
+/* Cross-device layout contract: desktop ≥1100, tablet 768–1099, phone <768. */
+.ft-shell{height:100dvh;min-height:0;overflow:hidden}
+.ft-frame{height:100%;min-height:0}
+.ft-main{min-height:0;overflow-x:hidden;overscroll-behavior-y:contain}
+.ft-rail{height:100%;min-height:0;overflow-y:auto}
+.ft-tablet-nav{display:none}
+.ft-shell .ft-dialog{overscroll-behavior-y:contain}
+.ft-shell .ft-hero,.ft-shell .ft-post,.ft-shell .ft-jar-card{min-width:0}
+@media (min-width:768px) and (max-width:1099px){
+ .ft-shell .ft-rail{display:none}
+ .ft-shell .ft-toplogo{display:block}
+ .ft-shell .ft-frame{width:100%}
+ .ft-tablet-nav{display:flex;align-items:center;justify-content:center;gap:6px;background:#fff;padding:8px 20px;border-bottom:1px solid #eee2e8}
+ .ft-tablet-nav button{display:flex;align-items:center;gap:8px;min-height:45px;border-radius:12px;padding:9px clamp(10px,2vw,22px);background:transparent;color:#836b7d;font-weight:700;white-space:nowrap}
+ .ft-tablet-nav button.active{background:#faedf4;color:#cb3163}
+ .ft-mobile-nav{display:none!important}
+ .ft-content{max-width:940px;padding:26px clamp(24px,5vw,60px) 60px}
+ .ft-jars{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .ft-category-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .ft-hero-art{opacity:.7}
+}
+@media(max-width:767px){
+ .ft-shell .ft-rail{display:none}
+ .ft-shell .ft-toplogo{display:block}
+ .ft-tablet-nav{display:none}
+ .ft-mobile-nav{display:grid}
+ .ft-content{padding-bottom:calc(112px + env(safe-area-inset-bottom, 0px))}
+ .ft-mobile-nav button{min-height:48px}
+ .ft-dialog{max-height:calc(100dvh - 32px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+ .ft-overlay{padding:calc(12px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px))}
+ .ft-dating-card{height:min(68dvh,620px)}
+}
+@media (hover:none) and (pointer:coarse){.ft-topic,.ft-navlink,.ft-recommend-card{min-height:44px}}

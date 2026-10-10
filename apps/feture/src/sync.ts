@@ -2,6 +2,7 @@ import { createSyncClient } from '@appbase/core/sync-client.js';
 import { createDocumentSync, startAutoSync, type AutoSync, type DocumentSync } from '@appbase/core/document-sync.js';
 import { createStorage } from '@appbase/core/storage.js';
 import { authClient } from './auth';
+import { apiUrl } from './api-url';
 import { mergeInterestMaps } from './feture/model';
 
 /* Local-first data: documents are written on the device first and sync to the account
@@ -10,7 +11,7 @@ import { mergeInterestMaps } from './feture/model';
 
 export const SETTINGS_DOC = 'settings';
 
-export const syncClient = createSyncClient({endpoint:'/api/sync', auth:authClient});
+export const syncClient = createSyncClient({endpoint:apiUrl('/api/sync'), auth:authClient});
 
 export const appDocs: DocumentSync = createDocumentSync({
   client: syncClient,
