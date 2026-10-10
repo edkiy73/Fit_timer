@@ -17,6 +17,11 @@ import { NativeNavigation } from './feture/native-navigation';
 import { isExperiencePath } from './feture/navigation';
 import { VerificationPage } from './feture/verification-page';
 import { ThemePicker } from './feture/components/ThemePicker';
+import {DocumentsPage} from './feture/documents-page';
+import {DocumentsAdmin} from './feture/documents-admin';
+import {ProfilePage} from './feture/profile-page';
+import type {AdminSection} from '@appbase/ui-react/admin.js';
+const productAdminSections:readonly AdminSection[]=[{id:'feture-documents',label:'Документы FetUre',group:'FetUre',render:context=><DocumentsAdmin {...context}/>}];
 
 const PRODUCT_NAME = 'FetUre';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
@@ -127,6 +132,7 @@ function Account(){
           <p>{auth.session.email}{auth.session.handle ? ' · ' + auth.session.handle : ''}</p>
           <p className="muted">{t('account.synced')}</p>
           <p><Link to="/verification">{t('verification.title')}</Link></p>
+          <p><Link to="/profile">Мой профиль</Link></p>
           <button className="link-button" type="button" disabled={signingOut} onClick={() => void signOut()}>{t('account.signOut')}</button>
           {signOutError && <p role="alert">{signOutError}</p>}
         </>
@@ -137,6 +143,7 @@ function Account(){
         </>
       )}
       <ThemePicker />
+      <p><Link to="/documents">Правила и согласия</Link></p>
       <div className="language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')} /></div>
     </section>
   );
@@ -144,7 +151,7 @@ function Account(){
 
 function Admin(){
   const {locale} = useI18n();
-  return <AdminPanel client={adminClient} locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} />;
+  return <AdminPanel client={adminClient} locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} extraSections={productAdminSections} />;
 }
 
 export const routes: RouteObject[] = [
@@ -161,6 +168,8 @@ export const routes: RouteObject[] = [
         {path:'dating', element:<Home />},
         {path:'account', element:<Account />},
         {path:'verification', element:<VerificationPage />},
+        {path:'documents', element:<DocumentsPage />},
+        {path:'profile', element:<ProfilePage />},
         {path:'catalog', element:<FetureCatalog />},
         {path:'*', element:<NotFoundScreen />}
       ]

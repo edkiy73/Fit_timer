@@ -1,4 +1,12 @@
-# Age verification contract — A04.1 / A04.2
+# Age verification contract — A04.1 / A04.2 / A04.3
+
+## Persistent store (A04.3)
+
+CLI migration `20261010225100_feture_verification_store.sql` and checked `verification-store.js` persist server-owned attempts and globally unique event receipts. Advisory event/attempt locks and profile row locks bind receipt/proof atomically. DB time determines freshness and expiry; current enabled policy determines status. New pending attempts cannot erase an existing valid proof. Provider reference is bound separately; account existence is rechecked before event application. Retention purge is operator-only, with no public/server-role execution permission.
+
+Schema is applied to prelaunch FitT; **zero enabled policies, attempts and receipts** remain after a live reserve/bind/approve/replay/revoke transaction was rolled back. PGlite checks parallel retry, global event collision across owners, expiry, disabled policies, superseded attempts, deletion and forbidden client roles. Security advisors report only INFO for deliberate denied-by-default RLS tables, no WARNING/ERROR. See [linter explanation](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy).
+
+The store is isolated from public routes and authenticated Actor issuance. Sandbox status cannot authorize production. Provider signature/delivery checks, actual policy provisioning, credentials and live authenticated acceptance remain external blockers. Existing status UI still honestly reports provider unavailable.
 
 ## Implemented read boundary
 

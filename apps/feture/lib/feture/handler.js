@@ -4,12 +4,12 @@ const { randomUUID } = require('node:crypto');
 const { authenticate } = require('./identity');
 const { verificationStatus } = require('./verification');
 const { requireAdult } = require('./permissions');
-const { DomainError } = require('./errors');
+const { DomainError,reject } = require('./errors');
 const { readBody,command } = require('./validation');
 /** @typedef {import('./contracts').Request} Request */
 /** @typedef {import('./contracts').Response} Response */
-/** @param {{store:import('./contracts').AccountStore;repository:import('./contracts').Repository;cors:(req:Request,res:Response)=>boolean;quota:(req:Request,scope:string)=>Promise<boolean>;audit:(event:import('./contracts').AuditEvent)=>void}} deps */
-function createHandler({store,repository,cors,quota,audit}) {
+/** @param {{store:import('./contracts').AccountStore;repository:import('./contracts').Repository;documents?:import('./documents').DocumentsRepository;profiles?:import('./profile').ProfileRepository;cors:(req:Request,res:Response)=>boolean;quota:(req:Request,scope:string)=>Promise<boolean>;audit:(event:import('./contracts').AuditEvent)=>void}} deps */
+function createHandler({store,repository,documents,profiles,cors,quota,audit}) {
   /** @param {Request} req @param {Response} res */
   return async function handler(req,res) {
     const requestId=randomUUID();
@@ -26,6 +26,11 @@ function createHandler({store,repository,cors,quota,audit}) {
       const actor=await authenticate(req,store);
       if(!(await quota(req,actor.accountHash))){res.setHeader('Retry-After','60');record('rate_limited');return send(429,{error:'rate_limited',requestId});}
       const input=command(await readBody(req));action=input.action;
+      if(input.action==='documents.status'||input.action==='documents.accept'){
+        if(!documents)reject(503,'documents_unavailable');
+        const consents=input.action==='documents.status'?await documents.status(actor,input.locale):await documents.accept(actor,input.locale,input.documentIds);
+        record('ok');return send(200,{ok:true,consents,requestId});
+      }
       if(input.action==='profile.get') {
         const profile=await repository.getProfile(actor);record('ok');return send(200,{ok:true,profile,requestId});
       }
@@ -33,6 +38,10 @@ function createHandler({store,repository,cors,quota,audit}) {
         const status=verificationStatus(actor);record('ok');return send(200,{ok:true,status,requestId});
       }
       requireAdult(actor); // Also enforced by repository: alternate callers cannot bypass.
+      if(documents)await documents.requireCurrent(actor);
+      if(input.action==='profile.read'||input.action==='profile.save'){
+        if(!profiles)reject(503,'domain_unavailable');const result=input.action==='profile.read'?{profile:await profiles.read(actor)}:await profiles.save(actor,input);record('ok');return send(200,{ok:true,...result,requestId});
+      }
       if(input.action==='interests.set'||input.action==='interests.delete') {
         const result=await repository.mutateInterest(actor,input);record(result.ok?'ok':result.error);
         return send(result.ok?200:409,{...result,requestId});
