@@ -112,3 +112,5 @@
 :root[data-theme=dark] .ft-network-hint button{color:#ffb5cf}
 :root[data-theme=dark] :is(.ft-status small,.ft-intensity small,.ft-visibility small){color:var(--ft-muted)}
 .ft-shell .ft-network-hint button,.ft-toplogo,.ft-brand,.ft-dating-links button{min-height:44px}
+
+.ft-editor-group{border:0;padding:0;margin:20px 0;min-width:0}.ft-editor-group legend,.ft-conditions label{font-size:13px;font-weight:750;margin-bottom:10px}.ft-editor-group>.ft-muted{margin:10px 0 0}.ft-editor-group .ft-visibility-options button{min-height:44px}.ft-conditions{margin-top:14px}.ft-conditions label{display:block}.ft-conditions textarea{box-sizing:border-box;width:100%;max-width:100%;resize:vertical;min-height:88px;border:1px solid var(--ft-border);border-radius:12px;background:var(--ft-surface);color:var(--ft-ink);padding:12px;font:inherit;font-size:13px}.ft-conditions small{display:block;margin-top:6px;font-size:11px;color:var(--ft-muted)}.ft-intensity>.ft-textbtn{min-height:44px;margin-top:8px}.ft-topic strong,.ft-topic small{overflow-wrap:anywhere}
