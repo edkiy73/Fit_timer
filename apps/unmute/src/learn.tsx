@@ -1245,7 +1245,7 @@ export function NodeRunnerView({
     );
   }
 
-  if(!state||!node||!nodeProgress?.unlocked||!purchaseUnlocked||(!activity&&!intro)){
+  if(!state||!node||!(state.set.navigationMode!=='sequential'||nodeProgress?.unlocked)||!purchaseUnlocked||(!activity&&!intro)){
     return (
       <section className="learn-shell">
         <button className="learn-back" type="button" onClick={onExit}><Icon name="back" size={20} /><span>{t('nav.back')}</span></button>
