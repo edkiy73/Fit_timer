@@ -155,6 +155,7 @@ Moderation: pending → assigned → actioned/dismissed → appeal → final. О
 - [ ] **A02.3/A03. Полное переключение (high).** Owner cache/queue, revision/opId/retry/conflict, guest import, смена аккаунта и удаление прежней document sync вместе. Живая приёмка требует A01 и trusted A04, без age bypass.
 - [x] **A04.1. Контракт и экран статуса (medium).** Выполненный подготовительный срез: provider-independent состояния/сроки/ошибки, минимальные server DTO и понятный маршрут проверки, без записи verified по клиентскому флагу. Выбор production провайдера и webhook подключение — отдельный high срез; отсутствие провайдера не означает пройденный возраст.
   - Реализован read-only `verification.status` и публичный экран `/#/verification`: только текущий серверный статус `unavailable`, без выдачи подтверждения. Контракт переходов, срока действия и webhook описан в `verification-contract.md`; провайдер и доверенная аттестация остаются A04.
+- [x] **A04.2. Изолированный серверный engine/sandbox (high).** Типизированные provider/store интерфейсы, raw-body boundary, проверка минимального события, expiry/rejection/revocation и receipt replay. Только локальный стенд; постоянное хранилище, реальный provider/webhook и выдача authenticated adult остаются A04.
 - [ ] **A04. Возраст/identity adapter.** После A01/F04. Создать server verification provider interface + webhook handler + status screen. До выбора провайдера закончить контракт/тестовый sandbox вне публичного bypass. Готово: spoofed/replayed webhook rejected; verified привязан к аккаунту/политике/сроку; отказ/retry/support понятны; документ/биометрия не в логах/БД. Подключённый production provider — внешний blocker, не «готово» по mock.
 - [ ] **A05. Документы и согласия.** После A01/F02. Расширить AppBase admin через продуктовый модуль: draft, version, locale, preview, publish/effectiveAt, immutable receipt, rollback как новая публикация. Стартовые тексты: Terms, Privacy, Community, взрослый контент/согласие, жалобы/апелляции, age, retention/deletion, cookies, copyright. Safe rich text, без произвольных script/HTML. Готово: пользователь принимает конкретную версию; существенное обновление требует нужного повторного согласия; приватный контент не выдаётся в обход gate. Юридическая редактура — внешний gate.
 - [ ] **A06. Приватный профиль/onboarding.** После A02/F02. Создать profile feature. Первое объяснение отличий без названий конкурентов; быстрый вход в карту, пошагово ник/описание/местоимения/идентичность/ориентация/отношения/город, поля можно пропустить. «Кого ищу» только при включении dating. Готово: нет длинной обязательной анкеты, профиль редактируется/восстанавливается; дата рождения не публичное поле, место — город/район без точных координат.
@@ -473,3 +474,34 @@ Security — 14 проверок, включая старый premium manifest. 
 Код переключения готов; детали и ограничения: [interest-queue.md](interest-queue.md).
 Следующая работа — **A04.1 medium**. По правилу high-среза закончить публикацию
 и остановиться перед ней; не продолжать high на подготовительной простой работе.
+
+**2026-10-11 — A04.2, high изолированный серверный sandbox.** База `d9c04729`
+(#779, A04.1). Добавлены checked CommonJS engine и typed provider/store interface:
+raw Buffer до 64 KiB, signature verification adapter до нормализации/записи,
+минимальный DTO без DOB/документов/биометрии, issuer/environment/policy/threshold,
+сроки attempt/proof, independent adult/identity, terminal rejection/revocation,
+receipt digest/replay/conflict и запрет старому событию восстановить подтверждение.
+Прямой production endpoint не добавлен: `verification.status` всё ещё unavailable,
+actor.verifiedAdult false, чувствительная карта закрыта. CommonJS оставлен из-за
+существующего server deployment без TS emit; новый контракт проверяется strict checkJS.
+
+Пять focused тестов используют только test-only HMAC и сериализованное in-memory
+хранилище. Они проверяют raw-body spoof, freshness/foreign issuer/policy, concurrent
+retry/conflict, revocation/expiry/old replay, foreign reference/deleted/superseded
+attempt, независимость identity. Это **не** проверка PostgreSQL атомарности или
+реального provider protocol. Persistent EventStore должен отдельно реализовать
+одну транзакцию account/current-attempt + global issuer/environment/event receipt.
+Production wiring/attempt creation/retention/vendor retry policy остаются открытыми.
+
+Полный `npm run check` FetUre пройден: types, каталог, 10 smoke, 15 unit,
+20 security, существующие PostgreSQL seed/interest tests и build. Новых live
+DDL/DML, environment, писем, APK/IPA и browser/native изменений нет. Отдельный
+runtime deploy не нужен: engine не импортируется production API; commit skip vercel.
+Подробности: [verification-contract.md](verification-contract.md).
+
+**Следующий high срез A04.3:** постоянные scoped attempts/receipts/attestations,
+атомарность/retention и повторная проверка proof перед приватными операциями.
+Реальный provider, его credentials/protocol/policy и A01 store/mail остаются внешними
+blockers. A01/A02/A03/A04 не закрывать до соответствующей живой приёмки;
+не подменять provider production sandbox-ключом и не выдавать engine за рабочую
+возрастную проверку. После публикации законченного среза продолжать отдельной задачей.
