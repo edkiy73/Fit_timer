@@ -40,6 +40,7 @@ There will be **hundreds of UX and product revisions**. Prioritize correct UX an
 - For rapidly changing UI: a quick manual responsive/interaction check is usually sufficient; no additional test file is expected. No "tests for coverage percentages" and no duplicated E2E/unit scenarios without reason.
 - Never disable existing security/auth protection to save a test. Fix actual compile/build failures. CI remains a guardrail, not the feature.
 - Batch several small related task cards when practical. **Stop before a task that needs reasoning effort above medium for a good result**, explain the concrete complexity and the recommended effort, and wait for the owner to switch/authorize that effort. Do not start such a task just because adjacent small cards are done.
+- If the owner explicitly selects high effort, complete the authorized high-effort slice and its checks/publication, then stop before the next slice that can be done at medium effort. Record the next effort level; do not spend high effort on unrelated straightforward work.
 - Scope tasks into small/medium chunks; prioritize the next user-visible improvement and avoid large unrelated refactors.
 
 ## 6. Public development URL, disposable data, no legacy compatibility
