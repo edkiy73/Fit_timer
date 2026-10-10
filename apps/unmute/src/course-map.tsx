@@ -53,12 +53,13 @@ export function buildCourseMapItems(state:LearnerCourseState):CourseMapItem[]{
       progress.node,
       {owned:state.access==='full'}
     );
-    const canOpen=purchaseUnlocked&&progress.unlocked&&progress.node.activityIds.length>0;
+    const sequenceUnlocked=state.set.navigationMode!=='sequential'||progress.unlocked;
+    const canOpen=purchaseUnlocked&&sequenceUnlocked&&progress.node.activityIds.length>0;
 
     let status:CourseMapStatus;
     if(progress.complete)status='complete';
     else if(!purchaseUnlocked)status='purchase-locked';
-    else if(!progress.unlocked)status='prerequisite-locked';
+    else if(!sequenceUnlocked)status='prerequisite-locked';
     else if(state.currentNode?.id===progress.node.id)status='current';
     else status='available';
 
