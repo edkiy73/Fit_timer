@@ -36,9 +36,9 @@ beforeEach(() => {
 });
 
 describe('FetUre starter', () => {
-  it('renders the concept and keeps the shared account accessible', async () => {
+  it('renders the native React experience and keeps account accessible', async () => {
     const router=renderApp();
-    expect(await screen.findByTitle('FetUre MVP concept')).toBeTruthy();
+    expect(await screen.findByRole('heading',{name:/Твой мир/i})).toBeTruthy();
     await router.navigate('/account');
     expect(await screen.findByRole('textbox',{name:'Email'})).toBeTruthy();
   });
@@ -49,7 +49,7 @@ describe('FetUre starter', () => {
     renderApp('/account');
     expect(await screen.findByText(/demo@example\.com/)).toBeTruthy();
     await user.click(screen.getByRole('button', {name:t['account.signOut']}));
-    expect(await screen.findByTitle('FetUre MVP concept')).toBeTruthy();
+    expect(await screen.findByRole('heading',{name:/Твой мир/i})).toBeTruthy();
   });
 
   it('shows a calm not-found screen for broken links', async () => {

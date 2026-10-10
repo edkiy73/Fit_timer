@@ -10,6 +10,7 @@ import { appDocs, SETTINGS_DOC, syncNow } from './sync';
 import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
 import { NotFoundScreen, RouteErrorScreen } from './route-fallback';
 import { FetureCatalog } from './catalog';
+import { FetureExperience } from './feture/experience';
 
 const PRODUCT_NAME = 'FetUre';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
@@ -78,7 +79,7 @@ function Shell(){
 }
 
 function Home(){
-  return <iframe className="feture-preview" title="FetUre MVP concept" src="/concept.html" aria-label="FetUre interactive prototype" />;
+  return <FetureExperience />;
 }
 
 function Account(){
@@ -87,8 +88,9 @@ function Account(){
   const navigate = useNavigate();
   // Local data stays on the device; the next sign-in merges it into that account.
   const signOut = async () => {
+    if(await appDocs.pending() && !window.confirm('Есть данные, не перенесённые в аккаунт. При выходе локальные записи будут удалены. Продолжить?')) return;
     await auth.logout();
-    await appDocs.detach();
+    await appDocs.clear(); // Privacy: never carry this device's sensitive interests into another account.
     navigate('/');
   };
   if(auth.loading) return null;
