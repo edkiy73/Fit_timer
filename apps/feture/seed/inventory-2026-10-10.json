@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "projectRef": "anrhayozrhrmiwexmbhw",
+  "source": "read-only Supabase metadata and aggregate counts; not execution authorization",
+  "tables": [
+    {
+      "table": "feture_categories",
+      "rls": true,
+      "columns": [
+        "id",
+        "title",
+        "short_title",
+        "icon",
+        "accent_color",
+        "position"
+      ],
+      "clientGrants": [
+        "anon:SELECT",
+        "authenticated:SELECT"
+      ],
+      "rows": 12
+    },
+    {
+      "table": "feture_dating_preferences",
+      "rls": true,
+      "columns": [
+        "account_hash",
+        "enabled",
+        "preferences",
+        "updated_at"
+      ],
+      "clientGrants": [],
+      "rows": null
+    },
+    {
+      "table": "feture_interest_states",
+      "rls": true,
+      "columns": [
+        "account_hash",
+        "interest_id",
+        "status",
+        "intensity",
+        "visibility",
+        "updated_at"
+      ],
+      "clientGrants": [],
+      "rows": null
+    },
+    {
+      "table": "feture_interests",
+      "rls": true,
+      "columns": [
+        "id",
+        "category_id",
+        "title",
+        "position"
+      ],
+      "clientGrants": [
+        "anon:SELECT",
+        "authenticated:SELECT"
+      ],
+      "rows": 144
+    },
+    {
+      "table": "feture_posts",
+      "rls": true,
+      "columns": [
+        "id",
+        "author_hash",
+        "body",
+        "audience",
+        "created_at"
+      ],
+      "clientGrants": [],
+      "rows": null
+    },
+    {
+      "table": "feture_profile_access",
+      "rls": true,
+      "columns": [
+        "owner_hash",
+        "viewer_hash",
+        "scope",
+        "expires_at",
+        "revoked_at",
+        "granted_at"
+      ],
+      "clientGrants": [],
+      "rows": null
+    },
+    {
+      "table": "feture_profiles",
+      "rls": true,
+      "columns": [
+        "account_hash",
+        "display_name",
+        "about",
+        "dating_enabled",
+        "created_at",
+        "updated_at"
+      ],
+      "clientGrants": [],
+      "rows": 0
+    },
+    {
+      "table": "feture_test_responses",
+      "rls": true,
+      "columns": [
+        "account_hash",
+        "test_id",
+        "answers",
+        "taken_at"
+      ],
+      "clientGrants": [],
+      "rows": null
+    },
+    {
+      "table": "feture_tests",
+      "rls": true,
+      "columns": [
+        "id",
+        "title",
+        "description",
+        "category_id",
+        "question_count"
+      ],
+      "clientGrants": [
+        "anon:SELECT",
+        "authenticated:SELECT"
+      ],
+      "rows": 18
+    }
+  ],
+  "capturedOn": "2026-10-10"
+}
