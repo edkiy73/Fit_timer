@@ -342,4 +342,6 @@ high среза остановиться для возврата на medium.
 проверка одобрила контракт. React UI/reference template адаптированы к
 сетевым ошибкам выхода; обычный responsive layout не менялся.
 Ручной живой вход, браузер/устройство и production storage не проверялись.
-Ветка публикации: `feat/feture-core-session-lifecycle`; PR записывается после открытия.
+Публикация: [PR #773](https://github.com/edkiy73/Fit_timer/pull/773),
+кодовый commit `a01c6ae0`; ветка `feat/feture-core-session-lifecycle`.
+Статус CI/слияния сверять по PR; локальные проверки выше подтверждены.
