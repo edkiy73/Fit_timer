@@ -20,7 +20,7 @@
 
 const crypto = require('crypto');
 const { store } = require('./store');
-const { send, fail, readBodyWithRaw, cors, rateOk, sameSecret } = require('./util');
+const { validSession, send, fail, readBodyWithRaw, cors, rateOk, sameSecret } = require('./util');
 const { productCatalog, checkSku, cleanSku, grantOwned, revokeOwned, entitlementsOf } = require('./entitlements');
 const { productConfig } = require('./product-core');
 const { billingProduct, billingProducts, billingProviderEnabled, setBillingProviderEnabled, saveBillingMapping } = require('./billing-catalog');
@@ -273,7 +273,7 @@ async function signedInAccount(body){
   let acc = null;
   try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(_){}
   const device = acc && acc.syncDevices && acc.syncDevices[deviceId];
-  if(!device || !sameSecret(sha(token), device.h || '')) return null;
+  if(!(await validSession(device, token))) return null;
   return {email, acc, mh};
 }
 

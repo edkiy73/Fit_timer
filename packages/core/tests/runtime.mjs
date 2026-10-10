@@ -160,6 +160,7 @@ const authCalls = [];
 const authFetch = async (_url, init) => {
   const body = JSON.parse(init.body);
   authCalls.push(body);
+  if(body.action === 'logout') return {ok:true,status:200,json:async()=>({ok:true})};
   if(body.action === 'send') return {ok:true,status:200,json:async()=>({ok:true,sent:true})};
   if(body.action === 'verify') return {ok:true,status:200,json:async()=>({
     ok:true,email:body.email,syncToken:'sync-demo',handle:'@demo',locale:'en',

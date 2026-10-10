@@ -1,7 +1,8 @@
 // @ts-check
 'use strict';
-const { createHash, timingSafeEqual } = require('node:crypto');
+const { createHash } = require('node:crypto');
 const { reject } = require('./errors');
+const { validSession } = require('../../../../packages/core/server/util');
 const authenticatedActors = new WeakSet();
 const EMAIL = /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/;
 /** @param {string} value */
@@ -29,9 +30,9 @@ async function authenticate(req,store) {
   try {account=JSON.parse(raw||'null');} catch {reject(503,'identity_unavailable');}
   const devices=account && account.syncDevices;
   const device=devices && Object.hasOwn(devices,deviceId) ? devices[deviceId] : null;
-  const hash=device && typeof device.h==='string' && /^[a-f0-9]{64}$/.test(device.h) ? device.h : '0'.repeat(64);
-  const matches=timingSafeEqual(Buffer.from(sha(token),'hex'),Buffer.from(hash,'hex'));
-  if(!device||!matches||typeof account.email!=='string'||account.email.trim().toLowerCase()!==email)reject(401,'auth_required');
+  let valid=false;
+  try {valid=await validSession(device,token,store);} catch {reject(503,'identity_unavailable');}
+  if(!valid||typeof account.email!=='string'||account.email.trim().toLowerCase()!==email)reject(401,'auth_required');
   // No trusted FetUre attestation exists yet. Core account metadata/client flags are NOT age proof.
   const actor=Object.freeze({accountHash,verifiedAdult:false});
   authenticatedActors.add(actor);

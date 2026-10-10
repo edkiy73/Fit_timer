@@ -83,7 +83,7 @@ const sample={
   const email='owner@example.com', deviceId='device-1', token='secret-token';
   const hash=v=>crypto.createHash('sha256').update(String(v)).digest('hex');
   await store.pipe([['SET',`a:${hash(email).slice(0,32)}`,JSON.stringify({
-    syncDevices:{[deviceId]:{h:hash(token)}},
+    syncDevices:{[deviceId]:{h:hash(token),at:new Date().toISOString()}},
     owned:{'course.general-foundation':{since:new Date().toISOString(),provider:'test'}}
   })]]);
   const full=await call({method:'GET',headers:{'x-fit-email':email,'x-fit-device':deviceId,'x-fit-token':token},query:{action:'set',id:'general-foundation'}});
@@ -94,7 +94,7 @@ const sample={
   // Active Plus is a discount on courses, not the course: without the owned SKU it stays a preview.
   const plusEmail='plus@example.com', plusDevice='device-plus', plusToken='plus-token';
   await store.pipe([['SET',`a:${hash(plusEmail).slice(0,32)}`,JSON.stringify({
-    syncDevices:{[plusDevice]:{h:hash(plusToken)}},
+    syncDevices:{[plusDevice]:{h:hash(plusToken),at:new Date().toISOString()}},
     sub:{until:new Date(Date.now()+24*3600*1000).toISOString()}
   })]]);
   const plus=await call({method:'GET',headers:{'x-fit-email':plusEmail,'x-fit-device':plusDevice,'x-fit-token':plusToken},query:{action:'set',id:'general-foundation'}});
@@ -114,7 +114,7 @@ const sample={
 
   const ownerHash=hash(email).slice(0,32);
   await store.pipe([['SET',`a:${ownerHash}`,JSON.stringify({
-    syncDevices:{[deviceId]:{h:hash(token)}},
+    syncDevices:{[deviceId]:{h:hash(token),at:new Date().toISOString()}},
     owned:{}
   })]]);
   const learnedPreview=await call({
@@ -130,7 +130,7 @@ const sample={
 
   const freeEmail='free@example.com', freeDevice='device-free', freeToken='free-token';
   await store.pipe([['SET',`a:${hash(freeEmail).slice(0,32)}`,JSON.stringify({
-    syncDevices:{[freeDevice]:{h:hash(freeToken)}},
+    syncDevices:{[freeDevice]:{h:hash(freeToken),at:new Date().toISOString()}},
     owned:{}
   })]]);
   const deniedRetain=await call({

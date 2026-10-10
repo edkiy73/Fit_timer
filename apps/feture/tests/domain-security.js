@@ -126,3 +126,19 @@ test('global account quota survives IP/device changes; counter outage fails clos
   try {const unavailable=response();await handler(req(identities.alice),unavailable);assert.equal(unavailable.statusCode,503);assert.equal(JSON.parse(unavailable.body).error,'quota_unavailable');}
   finally {store.incr=original;}
 });
+
+test('expired and tombstoned Core sessions cannot read FetUre even after stale account write',async()=>{
+  const s=await setup(),identity=identities.alice,key='a:'+identity.hash;
+  const snapshot=await store.get(key),account=JSON.parse(snapshot);
+  account.syncDevices[identity.device].at=new Date(Date.now()-91*24*3600*1000).toISOString();
+  await store.set(key,JSON.stringify(account));
+  assert.equal((await s.invoke(req(identity))).statusCode,401);
+  await store.set(key,snapshot);
+  const revokedKey='session:revoked:'+sha(identity.token);
+  await store.set(revokedKey,'1',60);
+  try {
+    await store.set(key,snapshot);
+    assert.equal((await s.invoke(req(identity))).statusCode,401);
+    assert.equal(s.calls.length,0);
+  } finally {await store.del(revokedKey);}
+});

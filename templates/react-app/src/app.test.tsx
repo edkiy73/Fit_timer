@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -46,12 +46,14 @@ describe('__APP_NAME__ starter', () => {
   });
 
   it('shows the signed-in account and signs out', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ok:true}),{status:200,headers:{'Content-Type':'application/json'}}));
     signIn();
     const user = userEvent.setup();
     renderApp('/account');
     expect(await screen.findByText(/demo@example\.com/)).toBeTruthy();
     await user.click(screen.getByRole('button', {name:t['account.signOut']}));
     expect(await screen.findByRole('link', {name:t['nav.signIn']})).toBeTruthy();
+    vi.restoreAllMocks();
   });
 
   it('shows a calm not-found screen for broken links', async () => {

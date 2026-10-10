@@ -12,7 +12,7 @@ const { createAIHandler } = require('../server/ai-endpoint');
 const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 const email = 'ai-auth@example.com';
 const hash = sha(email).slice(0, 32);
-await store.set('a:' + hash, JSON.stringify({syncDevices:{dev1:{h:sha('secret-token')}}}));
+await store.set('a:' + hash, JSON.stringify({syncDevices:{dev1:{h:sha('secret-token'),at:new Date().toISOString()}}}));
 
 const handler = createAIHandler({get:() => null});
 async function call(body){

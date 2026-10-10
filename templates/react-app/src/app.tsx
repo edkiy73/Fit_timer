@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, Outlet, useNavigate, type RouteObject } from 'react-router';
 import { AuthProvider, SignInForm, useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { AdminPanel } from '@appbase/ui-react/admin.js';
@@ -98,11 +98,20 @@ function Account(){
   const auth = useOptionalAuth();
   const {t, locale} = useI18n();
   const navigate = useNavigate();
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState('');
   // Local data stays on the device; the next sign-in merges it into that account.
   const signOut = async () => {
-    await auth.logout();
-    await appDocs.detach();
-    navigate('/');
+    if(signingOut) return;
+    setSigningOut(true);
+    setSignOutError('');
+    try {
+      await auth.logout();
+      await appDocs.detach();
+      navigate('/');
+    } catch {
+      setSignOutError(locale === 'en' ? 'Could not sign out. Check your connection and try again.' : 'Не удалось выйти. Проверь соединение и попробуй ещё раз.');
+    } finally {setSigningOut(false);}
   };
   if(auth.loading) return null;
   return (
@@ -113,7 +122,8 @@ function Account(){
           <h2>{t('account.title')}</h2>
           <p>{auth.session.email}{auth.session.handle ? ' · ' + auth.session.handle : ''}</p>
           <p className="muted">{t('account.synced')}</p>
-          <button className="link-button" type="button" onClick={() => void signOut()}>{t('account.signOut')}</button>
+          <button className="link-button" type="button" disabled={signingOut} onClick={() => void signOut()}>{t('account.signOut')}</button>
+          {signOutError && <p role="alert">{signOutError}</p>}
         </>
       ) : (
         <>

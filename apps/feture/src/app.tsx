@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, Outlet, useNavigate, useLocation, type RouteObject } from 'react-router';
 import { AuthProvider, SignInForm, useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { AdminPanel } from '@appbase/ui-react/admin.js';
@@ -90,12 +90,21 @@ function Account(){
   const auth = useOptionalAuth();
   const {t, locale} = useI18n();
   const navigate = useNavigate();
-  // Clear private local records on sign-out; server revocation is pending A01.
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState('');
+  // Server logout must succeed before clearing account-bound local records.
   const signOut = async () => {
     if(await appDocs.pending() && !window.confirm('Есть данные, не перенесённые в аккаунт. При выходе локальные записи будут удалены. Продолжить?')) return;
-    await auth.logout();
-    await appDocs.clear(); // Privacy: never carry this device's sensitive interests into another account.
-    navigate('/');
+    if(signingOut) return;
+    setSigningOut(true);
+    setSignOutError('');
+    try {
+      await auth.logout();
+      await appDocs.clear(); // Never carry sensitive interests into another account.
+      navigate('/');
+    } catch {
+      setSignOutError(locale === 'en' ? 'Could not sign out. Check your connection and try again.' : 'Не удалось выйти. Проверь соединение и попробуй ещё раз.');
+    } finally {setSigningOut(false);}
   };
   if(auth.loading) return <section className="card" role="status">{t('account.loading')}</section>;
   return (
@@ -106,7 +115,8 @@ function Account(){
           <h2>{t('account.title')}</h2>
           <p>{auth.session.email}{auth.session.handle ? ' · ' + auth.session.handle : ''}</p>
           <p className="muted">{t('account.synced')}</p>
-          <button className="link-button" type="button" onClick={() => void signOut()}>{t('account.signOut')}</button>
+          <button className="link-button" type="button" disabled={signingOut} onClick={() => void signOut()}>{t('account.signOut')}</button>
+          {signOutError && <p role="alert">{signOutError}</p>}
         </>
       ) : (
         <>

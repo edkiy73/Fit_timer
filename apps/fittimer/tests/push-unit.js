@@ -19,6 +19,7 @@ const ok=(name,cond,extra)=>{if(!cond)bad++;console.log((cond?'  ok  ':' ПЛО�
   const mh='push-test-account';
   await store.set('a:'+mh, JSON.stringify({
     email:'x@example.com',
+    syncDevices:{good:{h:'a'.repeat(64),at:new Date().toISOString()},dead:{h:'b'.repeat(64),at:new Date().toISOString()}},
     pushDevices:{
       good:{platform:'android',token:'good-token'},
       dead:{platform:'android',token:'dead-token'}

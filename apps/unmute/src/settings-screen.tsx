@@ -136,18 +136,21 @@ function ResetLearningData(){
 
 export function SettingsScreen(){
   const auth = useOptionalAuth();
-  const {t} = useI18n();
+  const {t, locale} = useI18n();
   const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
 
   const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState(false);
   const [unsent, setUnsent] = useState(false);
   // The account's progress stays on the server; the phone starts clean for the next person
   // (decision 20). Unsent progress is never wiped silently: the learner decides.
   const signOut = async (force = false) => {
+    if(signingOut) return;
     setSigningOut(true);
+    setSignOutError(false);
     try{
       const result = await signOutAndClear({
         flush: async () => { await appDocs.sync(); return !(await appDocs.pending()); },
@@ -158,6 +161,8 @@ export function SettingsScreen(){
       }, {force});
       if(result === 'unsent'){ setUnsent(true); return; }
       appRestart.reload();
+    }catch{
+      setSignOutError(true);
     }finally{
       setSigningOut(false);
     }
@@ -218,6 +223,7 @@ export function SettingsScreen(){
               {signingOut ? t('account.signingOut') : t('account.signOut')}
             </button>
           )}
+          {signOutError && <p role="alert">{locale === 'en' ? 'Could not sign out. Check your connection and try again.' : 'Не удалось выйти. Проверь соединение и попробуй ещё раз.'}</p>}
           {confirmDelete ? (
             <div className="account-delete" role="alertdialog" aria-label={t('account.delete')}>
               <p>{t('account.deleteConfirm')}</p>

@@ -21,7 +21,7 @@
    расширению аккаунта продукта (хуки передаются в createAuthHandler). */
 
 const { store } = require('./store');
-const { send, fail, readBody, rateOk, rateOkScoped, rndId, sameSecret, cors } = require('./util');
+const { SESSION_TTL, sessionExpiresAt, revokeSession, validSession, send, fail, readBody, rateOk, rateOkScoped, rndId, sameSecret, cors } = require('./util');
 const { sendMail } = require('./mail');
 const { recordClientError } = require('./diagnostics');
 const SyncShadow = require('./sync-shadow');
@@ -103,7 +103,7 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics} 
         if(acc && acc.handle && !wiped) return fail(res, 403, 'not_yours');
         const deviceId = String((body && body.deviceId) || '').slice(0, 80);
         const dev = acc && acc.syncDevices && acc.syncDevices[deviceId];
-        const tokenOk = dev && sameSecret(sha((body && body.syncToken) || ''), dev.h || '');
+        const tokenOk = await validSession(dev, (body && body.syncToken) || '');
         if(!wiped && !tokenOk) return fail(res, 403, 'not_yours');
         const shadowPurge = await SyncShadow.purgeAccount(mh);
         if(shadowPurge.enabled && !shadowPurge.ok) return fail(res,503,'shadow_delete_failed');
@@ -198,6 +198,18 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics} 
     if(!EMAIL.test(email)) return fail(res, 400, 'bad_email');
     const mh = sha(email).slice(0, 32);   // по хешу ищем, сам адрес лежит в записи
 
+    if(act === 'logout'){
+      const deviceId = String(body.deviceId || '').trim().slice(0, 80);
+      const token = String(body.syncToken || '');
+      let acc = null;
+      try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(_){return fail(res,503,'identity_unavailable');}
+      const device = acc && acc.syncDevices && Object.hasOwn(acc.syncDevices, deviceId) ? acc.syncDevices[deviceId] : null;
+      // Already revoked/expired credentials cannot access anything; repeated logout is harmless.
+      if(!token || !device || !sameSecret(sha(token), device.h || '')) return fail(res,403,'bad_sync_token');
+      if(sessionExpiresAt(device) > Date.now()) await revokeSession(device);
+      return send(res,200,{ok:true});
+    }
+
     /* Ник принадлежит основному аккаунту и задаётся один раз после подтверждения
        почты. Тренерского аккаунта не существует: режим тренера лишь использует
        этот же ник и при первом сохранении создаёт публичную страницу. */
@@ -205,9 +217,9 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics} 
       const deviceId = String((body && body.deviceId) || '').trim().slice(0, 80);
       const token = String((body && body.syncToken) || '');
       let acc = null;
-      try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(e){}
+      try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(e){return fail(res,503,'identity_unavailable');}
       const device = acc && acc.syncDevices && acc.syncDevices[deviceId];
-      if(!device || !sameSecret(sha(token), device.h || '')) return fail(res, 403, 'bad_sync_token');
+      if(!(await validSession(device, token))) return fail(res, 403, 'bad_sync_token');
       if(acc.handle) return send(res, 200, {ok:true, handle:acc.handle});
 
       const handle = normHandle(body && body.handle);
@@ -226,10 +238,10 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics} 
       const deviceId = String((body && body.deviceId) || '').trim().slice(0,80);
       const token = String((body && body.syncToken) || '');
       let acc = null;
-      try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(e){}
+      try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(e){return fail(res,503,'identity_unavailable');}
       const device = acc && acc.syncDevices && acc.syncDevices[deviceId];
-      if(!device || !sameSecret(sha(token), device.h || '')) return fail(res,403,'bad_sync_token');
-      return send(res,200,{ok:true, ...entitlementsOf(acc)});
+      if(!(await validSession(device, token))) return fail(res,403,'bad_sync_token');
+      return send(res,200,{ok:true, expiresAt:new Date(sessionExpiresAt(device)).toISOString(), ...entitlementsOf(acc)});
     }
 
     if(act === 'set_locale'){
@@ -237,9 +249,9 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics} 
       const token = String((body && body.syncToken) || '');
       const locale = (body && body.locale) === 'en' ? 'en' : 'ru';
       let acc = null;
-      try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(e){}
+      try{ acc = JSON.parse(await store.get(`a:${mh}`)); }catch(e){return fail(res,503,'identity_unavailable');}
       const device = acc && acc.syncDevices && acc.syncDevices[deviceId];
-      if(!device || !sameSecret(sha(token), device.h || '')) return fail(res, 403, 'bad_sync_token');
+      if(!(await validSession(device, token))) return fail(res, 403, 'bad_sync_token');
       acc.locale = locale;
       await store.set(`a:${mh}`, JSON.stringify(acc));
       return send(res, 200, {ok:true, locale});
@@ -251,7 +263,7 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics} 
       const deviceId=String((body&&body.deviceId)||'').trim().slice(0,80), token=String((body&&body.syncToken)||'');
       let acc=null;try{acc=JSON.parse(await store.get(`a:${mh}`));}catch(e){}
       const device=acc&&acc.syncDevices&&acc.syncDevices[deviceId];
-      if(!device||!sameSecret(sha(token),device.h||''))return fail(res,403,'bad_sync_token');
+      if(!(await validSession(device, token)))return fail(res,403,'bad_sync_token');
       if(!acc.pushDevices||typeof acc.pushDevices!=='object')acc.pushDevices={};
       if(body&&body.enabled===false)delete acc.pushDevices[deviceId];
       else{
@@ -273,7 +285,7 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics} 
       const deviceId=String((body&&body.deviceId)||'').trim().slice(0,80), token=String((body&&body.syncToken)||'');
       let acc=null;try{acc=JSON.parse(await store.get(`a:${mh}`));}catch(e){}
       const device=acc&&acc.syncDevices&&acc.syncDevices[deviceId];
-      if(!device||!sameSecret(sha(token),device.h||''))return fail(res,403,'bad_sync_token');
+      if(!(await validSession(device, token)))return fail(res,403,'bad_sync_token');
       const event=String((body&&body.event)||'open').replace(/[^a-z_-]/gi,'').slice(0,30)||'open';
       const stage=String((body&&body.stage)||'unknown').replace(/[^a-z0-9_-]/gi,'').slice(0,50)||'unknown';
       const day=new Date().toISOString().slice(0,10);
@@ -369,7 +381,7 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics} 
       const syncToken = rndId(32);
       if(!acc.syncDevices || typeof acc.syncDevices !== 'object') acc.syncDevices = {};
       if(deviceId){
-        acc.syncDevices[deviceId] = {h: sha(syncToken), at: now};
+        acc.syncDevices[deviceId] = {h: sha(syncToken), at: now, expiresAt: new Date(Date.parse(now) + SESSION_TTL * 1000).toISOString()};
         const old = Object.entries(acc.syncDevices)
           .sort((a, b) => String(b[1].at || '').localeCompare(String(a[1].at || '')))
           .slice(8);
@@ -420,7 +432,8 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics} 
         needsHandle: !acc.handle,
         ...extension.fields,
         locale: acc.locale || 'ru',
-        syncToken: deviceId ? syncToken : null
+        syncToken: deviceId ? syncToken : null,
+        expiresAt: deviceId ? acc.syncDevices[deviceId].expiresAt : null
       });
     }
 

@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryRouter, RouterProvider } from 'react-router';
@@ -148,6 +148,7 @@ describe('Task Mini UI', () => {
   });
 
   it('shows the signed-in account and signs out without losing local tasks', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ok:true}),{status:200,headers:{'Content-Type':'application/json'}}));
     signIn();
     await saveTasks([createTask('Моя задача', '1')]);
     const user = userEvent.setup();
@@ -155,9 +156,10 @@ describe('Task Mini UI', () => {
     expect(await screen.findByText('demo@example.com')).toBeTruthy();
     await user.click(screen.getByRole('link', {name: 'Аккаунт'}));
     await user.click(await screen.findByRole('button', {name: 'Выйти'}));
-    expect(router.state.location.pathname).toBe('/');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
     expect(await screen.findByRole('link', {name: 'Войти'})).toBeTruthy();
     expect(await screen.findByText('Моя задача')).toBeTruthy();
+    vi.restoreAllMocks();
   });
 
   it('adds, completes, filters and removes a task, persisting through Core storage', async () => {

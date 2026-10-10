@@ -80,6 +80,11 @@ describe('UnMute: English for Expats starter', () => {
   });
 
   it('shows the signed-in account and signs out', async () => {
+    const realFetch = globalThis.fetch;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      if(String(input).endsWith('/api/auth') && JSON.parse(String(init?.body || '{}')).action === 'logout') return new Response(JSON.stringify({ok:true}),{status:200,headers:{'Content-Type':'application/json'}});
+      return realFetch(input, init);
+    });
     signIn();
     const user = userEvent.setup();
     renderApp('/account');

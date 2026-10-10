@@ -11,6 +11,8 @@ export interface AuthSession {
   /** SKUs bought for good (course packs, one-time features). What a SKU unlocks is product logic. */
   owned: string[];
   fresh: boolean;
+  /** Absolute server-issued session deadline; older clients may omit it. */
+  expiresAt?: string;
 }
 
 export interface AuthStorage {
@@ -130,7 +132,8 @@ function toSession(raw: unknown): AuthSession | null {
     sub: v.sub ?? null,
     premium: typeof v.premium === 'boolean' ? v.premium : premiumFrom(v.sub),
     owned: ownedFrom(v.owned),
-    fresh: !!v.fresh
+    fresh: !!v.fresh,
+    ...(typeof v.expiresAt === 'string' ? {expiresAt:v.expiresAt} : {})
   };
 }
 
@@ -166,8 +169,22 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
     try { return toSession(JSON.parse(raw)); } catch (_) { return null; }
   }
 
-  async function saveSession(session: AuthSession): Promise<void> {
-    await write(sessionKey, JSON.stringify(session));
+  // Serialize storage commits, and compare credentials after responses arrive.
+  // Late status/logout responses must never restore or erase a different account.
+  let sessionGeneration = 0;
+  let sessionWrites: Promise<void> = Promise.resolve();
+  function commitSession(next: AuthSession | null, expected?: AuthSession, generation?: number): Promise<void> {
+    const pending = sessionWrites.then(async () => {
+      if(generation !== undefined && generation !== sessionGeneration) return;
+      if(expected){
+        const current = await getSession();
+        if(!current || current.email !== expected.email || current.deviceId !== expected.deviceId || current.syncToken !== expected.syncToken) return;
+      }
+      if(next) await write(sessionKey, JSON.stringify(next));
+      else await remove(sessionKey);
+    });
+    sessionWrites = pending.catch(() => undefined);
+    return pending;
   }
 
   async function post(body: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -217,10 +234,11 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
       deviceId:session.deviceId,
       syncToken:session.syncToken
     });
+    if(typeof result.expiresAt === 'string') session.expiresAt = result.expiresAt;
     if('sub' in result) session.sub = result.sub ?? null;
     session.premium = typeof result.premium === 'boolean' ? result.premium : premiumFrom(session.sub);
     if('owned' in result) session.owned = ownedFrom(result.owned);
-    await saveSession(session);
+    await commitSession(session, session);
     return result;
   }
 
@@ -232,6 +250,7 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
     },
 
     async verifyCode(input) {
+      const generation = ++sessionGeneration;
       const email = normalizeEmail(input.email);
       if(!validEmail(email)) throw new Error('bad_email');
       const deviceId = await getOrCreateDeviceId();
@@ -258,9 +277,10 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
         sub:result.sub ?? null,
         premium:typeof result.premium === 'boolean' ? result.premium : premiumFrom(result.sub),
         owned:ownedFrom(result.owned),
-        fresh:!!result.fresh
+        fresh:!!result.fresh,
+        ...(typeof result.expiresAt === 'string' ? {expiresAt:result.expiresAt} : {})
       };
-      await saveSession(session);
+      await commitSession(session, undefined, generation);
       return Object.assign({}, result, session);
     },
 
@@ -276,7 +296,7 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
         handle:String(input.handle || '').trim()
       });
       session.handle = String(result.handle || input.handle || '').slice(0, 40);
-      await saveSession(session);
+      await commitSession(session, session);
       return result;
     },
 
@@ -288,7 +308,9 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
       try {
         await readStatus();
         return await getSession();
-      } catch (_) {
+      } catch (error) {
+        const status = (error as AuthResponseError).status;
+        if(status === 401 || status === 403) await commitSession(null, session);
         return null;
       }
     },
@@ -309,7 +331,7 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
         locale:normalized
       });
       session.locale = normalized;
-      await saveSession(session);
+      await commitSession(session, session);
       return result;
     },
 
@@ -325,12 +347,24 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
         handle:session.handle,
         scope
       });
-      if(scope === 'all') await remove(sessionKey);
+      if(scope === 'all') await commitSession(null, session);
       return result;
     },
 
     async logout() {
-      await remove(sessionKey);
+      ++sessionGeneration;
+      await sessionWrites; // An asynchronous verification commit may already be in progress.
+      const session = await getSession();
+      if(session){
+        try {
+          const result = await post({action:'logout', email:session.email, deviceId:session.deviceId, syncToken:session.syncToken});
+          if(result.ok !== true) throw new Error('logout_unconfirmed');
+        } catch (error) {
+          const status = (error as AuthResponseError).status;
+          if(status !== 401 && status !== 403) throw error;
+        }
+      }
+      if(session) await commitSession(null, session);
     },
 
     authFields
