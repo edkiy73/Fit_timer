@@ -2,8 +2,8 @@
   "id": "ru.feture.app",
   "name": "FetUre",
   "slug": "feture",
-  "defaultApiUrl": "http://localhost",
-  "defaultPublicUrl": "http://localhost",
+  "defaultApiUrl": "https://feture-mvp.vercel.app",
+  "defaultPublicUrl": "https://feture-mvp.vercel.app",
   "brand": {
     "background": "#1a111c",
     "notificationAccent": "#e72c58",
@@ -42,5 +42,13 @@
     "biometrics": false,
     "sharing": false,
     "voice": false
+  },
+  "cors": {
+    "origins": [
+      "https://feture-mvp.vercel.app",
+      "https://localhost",
+      "capacitor://localhost",
+      "http://localhost"
+    ]
   }
 }

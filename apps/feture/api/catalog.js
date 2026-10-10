@@ -1,5 +1,6 @@
 'use strict';
 require('../lib/product');
+const {cors}=require('../../../packages/core/server/util');
 
 /** Public, read-only taxonomy endpoint. Does not access any FetUre user data.
  * Uses the Supabase publishable (anon) key and 3 explicitly allowlisted RLS tables.
@@ -29,6 +30,7 @@ async function list(table, fields, order, limit) {
 }
 
 module.exports = async function catalog(req, res) {
+  if(cors(req, res)) return;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   if (req.method !== 'GET') {

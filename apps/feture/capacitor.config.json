@@ -1,0 +1,15 @@
+{
+  "appId": "ru.feture.app",
+  "appName": "FetUre",
+  "webDir": "dist",
+  "backgroundColor": "#241628",
+  "android": {
+    "backgroundColor": "#241628",
+    "allowMixedContent": false
+  },
+  "ios": {
+    "backgroundColor": "#241628",
+    "contentInset": "automatic",
+    "scrollEnabled": true
+  }
+}

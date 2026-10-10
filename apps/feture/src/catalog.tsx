@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { z } from 'zod';
+import { apiUrl } from './api-url';
 
 const interest = z.object({id: z.string(), title: z.string()});
 const category = z.object({
@@ -24,7 +25,7 @@ export function FetureCatalog(){
   useEffect(() => {
     const abort=new AbortController();
     setState({status:'loading'});
-    fetch('/api/catalog',{signal:abort.signal})
+    fetch(apiUrl('/api/catalog'),{signal:abort.signal})
       .then(async response => {
         if(!response.ok) throw new Error('catalog_request_failed');
         return catalogSchema.parse(await response.json());

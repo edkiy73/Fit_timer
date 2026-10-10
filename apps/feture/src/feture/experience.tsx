@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { Link } from 'react-router';
+import { apiUrl } from '../api-url';
 import fallbackCatalog from '../../data/concept-catalog.json';
 import { catalogSchema, categoryProgress, hasIntensity, STATUSES, type Catalog, type InterestRecord, type InterestStatus, type Visibility } from './model';
 import { useInterestMap } from './use-interest-map';
@@ -39,7 +40,7 @@ function useCatalog(){
  const [refresh,setRefresh]=useState(0);
  useEffect(()=>{
    const controller=new AbortController();
-   fetch('/api/catalog',{signal:controller.signal})
+   fetch(apiUrl('/api/catalog'),{signal:controller.signal})
     .then(async response=>{if(!response.ok)throw new Error('catalog_unavailable');return catalogSchema.parse(await response.json());})
     .then(json=>{if(!controller.signal.aborted){setData(json);setSource('live');}})
     .catch(()=>{if(!controller.signal.aborted)setSource('offline');});
@@ -97,6 +98,11 @@ export function FetureExperience(){
       <span className="ft-topline">Открывай себя. Исследуй других.</span>
       <Link className="ft-account" to="/account" aria-label="Аккаунт"><Icon name="settings" size={19}/></Link>
     </header>
+    <nav className="ft-tablet-nav" aria-label="Основные разделы FetUre">
+      {NAV.map(item=><button key={item.id} className={tab===item.id?'active':''}
+        aria-current={tab===item.id?'page':undefined}
+        onClick={()=>go(item.id)}><Icon name={item.icon} size={19}/>{item.title}</button>)}
+    </nav>
     <main className="ft-main" ref={area}>
       <div className="ft-content">
         {source!=='live'&&<div className="ft-network-hint" role="status"><Icon name={source==='loading'?'clock':'shield'} size={16}/>{source==='loading'?'Подключаем каталог…':'Каталог доступен из локальной копии: сервер временно недоступен.'}{source==='offline'&&<button onClick={retry}>Обновить</button>}</div>}
@@ -193,7 +199,7 @@ export function FetureExperience(){
         {saving&&<p role="status" className="ft-save-status">Сохраняем изменения…</p>}
       </div>
     </main>
-    <nav className="ft-mobile-nav" aria-label="Основная навигация">{NAV.map(x=><button key={x.id} className={tab===x.id?'active':''} onClick={()=>go(x.id)}><Icon name={x.icon} size={22}/><span>{x.title}</span></button>)}</nav>
+    <nav className="ft-mobile-nav" aria-label="Основная навигация">{NAV.map(x=><button key={x.id} className={tab===x.id?'active':''} aria-current={tab===x.id?'page':undefined} onClick={()=>go(x.id)}><Icon name={x.icon} size={22}/><span>{x.title}</span></button>)}</nav>
   </div>
   {edit&&<InterestDialog key={edit.id} interest={edit} current={map[edit.id]} onClose={()=>setEdit(null)} onSave={v=>{save(edit.id,v);setEdit(null)}}/>}
   {dialog&&<div className="ft-overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setDialog(null)}}><div className="ft-dialog ft-message-dialog" role="dialog" aria-modal="true" aria-label="Информация"><button className="ft-dialog-close" onClick={()=>setDialog(null)} aria-label="Закрыть"><Icon name="close"/></button><Icon name="spark" size={27}/><h2>В разработке</h2><p>{dialog}</p><button className="ft-primary" onClick={()=>setDialog(null)}>Понятно</button></div></div>}
