@@ -208,9 +208,9 @@ test('C01 posts API: trusted actor, adult guard, forged publish and private DTO 
  const actor=await authenticate(req(identities.alice),store,async()=>new Date(Date.now()+3600000).toISOString());
  const unverified=await authenticate(req(identities.alice),store),calls=[];
  const id='00000000-0000-4000-8000-000000000005';
- let entry={id,text:'Текст',kind:'text',authorLabel:'Имя',audience:'private',state:'draft',revision:1,createdAt:'2026-10-11T00:00:00Z',updatedAt:'2026-10-11T00:00:00Z',publishedAt:null,mine:true};
+ let entry={id,text:'Текст',kind:'text',authorLabel:'Имя',audience:'private',plannedAudience:'public',recipientCodes:[],state:'draft',revision:1,createdAt:'2026-10-11T00:00:00Z',updatedAt:'2026-10-11T00:00:00Z',publishedAt:null,mine:true};
  const repository=createPostsRepository({configured:()=>true,request:async(path,opts)=>{calls.push(JSON.parse(opts.body));return new Response(JSON.stringify({ok:true,entry,replayed:false}));}},{requireCurrent:async()=>{}});
- const save={action:'posts.save',id,operationId:id,expectedRevision:0,text:'Текст',kind:'text',authorLabel:'Имя'};
+ const save={action:'posts.save',id,operationId:id,expectedRevision:0,text:'Текст',kind:'text',authorLabel:'Имя',plannedAudience:'public',recipientCodes:[]};
  await assert.rejects(repository.execute(unverified,save),e=>e.code==='verification_required');assert.equal(calls.length,0);
  for(const extra of [{authorHash:'secret'},{state:'published'},{audience:'granted'},{testAnswers:[]}])assert.throws(()=>command({...save,...extra}),e=>e.status===422);
  assert.throws(()=>command({action:'posts.publish',id}),e=>e.status===422);
@@ -229,4 +229,19 @@ test('C01 post reports: authenticated identity, adult submit and metadata-only o
  reply={ok:true,items:[report],nextCursor:null};assert.equal((await repository.execute(unverified,{action:'posts.reports',cursor:null})).items.length,1);
  reply={ok:true,items:[{...report,text:'HIDDEN PARENT'}],nextCursor:null};await assert.rejects(repository.execute(actor,{action:'posts.reports',cursor:null}),e=>e.status===503);
  await assert.rejects(repository.execute({accountHash:identities.alice.hash,verifiedAdult:true},cmd),e=>e.status===401);
+});
+
+
+test('C01 selected audience: strict codes, owner-only recipient projection and authenticated revocation without adult proof',async()=>{
+ const {createPostsRepository}=require('../lib/feture/posts');await seed(identities.alice);
+ const actor=await authenticate(req(identities.alice),store),id='00000000-0000-4000-8000-000000000015',code='00000000-0000-4000-8000-000000000016';
+ let reply={ok:true,code,replayed:false};const calls=[];
+ const repository=createPostsRepository({configured:()=>true,request:async(path,opts)=>{calls.push({path,body:JSON.parse(opts.body)});return new Response(JSON.stringify(reply));}},{requireCurrent:async()=>{throw new Error('guard_must_not_block_revocation');}});
+ assert.equal((await repository.execute(actor,{action:'posts.address'})).code,code);
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_post_address_command');assert.equal(calls[0].body.p_actor,identities.alice.hash);
+ for(const cmd of [{action:'posts.address',accountHash:'secret'},{action:'posts.rotateAddress',operationId:id,recipientHash:'secret'},{action:'posts.save',id,operationId:id,expectedRevision:0,text:'Text',kind:'text',authorLabel:'Name',plannedAudience:'granted',recipientCodes:[code,code]}])assert.throws(()=>command(cmd),e=>e.status===422);
+ const entry={id,text:'Text',kind:'text',authorLabel:'Name',audience:'granted',plannedAudience:'granted',recipientCodes:[],state:'published',revision:4,createdAt:'2026-10-11T00:00:00Z',updatedAt:'2026-10-11T00:00:00Z',publishedAt:'2026-10-11T00:00:00Z',mine:true};
+ reply={ok:true,entry,replayed:false};assert.equal((await repository.execute(actor,{action:'posts.revokeRecipient',id,operationId:id,expectedRevision:3,code})).entry.revision,4);
+ reply={ok:true,entry:{...entry,mine:false,recipientCodes:[code]}};await assert.rejects(repository.execute(actor,{action:'posts.read',id}),e=>e.status===503);
+ await assert.rejects(repository.execute({accountHash:identities.alice.hash},{action:'posts.rotateAddress',operationId:id}),e=>e.status===401);
 });

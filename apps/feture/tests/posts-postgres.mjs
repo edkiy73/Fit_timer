@@ -7,7 +7,7 @@ const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
 test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and irreversible text removal',async()=>{
  const db=new PGlite();try{
  await db.exec('create role anon;create role authenticated;create role service_role bypassrls;');
- for(const file of ['20261010_001_feture_domain.sql','20261010_002_catalog_read.sql','20261010090405_feture_scoped_seed.sql','20261010164924_feture_interest_transactions.sql','20261010225100_feture_verification_store.sql','20261010225653_feture_documents.sql','20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql','20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql','20261011083303_feture_qa_adult_access.sql','20261011113717_feture_qa_any_account_audit.sql','20261011120139_feture_operator_roles.sql','20261011121629_feture_operator_account_binding.sql','20261011133134_feture_community_posts.sql','20261011134257_feture_post_review.sql','20261011140051_feture_post_reports.sql','20261011140835_feture_post_report_author_privacy.sql'])await db.exec(sql(file));
+ for(const file of ['20261010_001_feture_domain.sql','20261010_002_catalog_read.sql','20261010090405_feture_scoped_seed.sql','20261010164924_feture_interest_transactions.sql','20261010225100_feture_verification_store.sql','20261010225653_feture_documents.sql','20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql','20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql','20261011083303_feture_qa_adult_access.sql','20261011113717_feture_qa_any_account_audit.sql','20261011120139_feture_operator_roles.sql','20261011121629_feture_operator_account_binding.sql','20261011133134_feture_community_posts.sql','20261011134257_feture_post_review.sql','20261011140051_feture_post_reports.sql','20261011140835_feture_post_report_author_privacy.sql','20261011141800_feture_post_recipients.sql'])await db.exec(sql(file));
  const rpc=async(name,args)=>(await db.query('select public.'+name+'('+args.map((_,i)=>'$'+(i+1)).join(',')+') result',args)).rows[0].result;
  const op=(actor,command)=>rpc('feture_post_command',[actor,JSON.stringify(command)]);
  const [a,b,c]=['a','b','c'].map(x=>x.repeat(32));for(const owner of [a,b,c])await db.query('insert into public.feture_profiles(account_hash) values($1)',[owner]);
@@ -15,7 +15,7 @@ test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and ir
  await db.exec('set role service_role');const docs=[];
  for(const key of ['privacy','adult-content','community','terms']){await rpc('feture_document_save',[key,'ru',0,'Правила',JSON.stringify([{type:'paragraph',text:'Правила для проверок'}]),true]);docs.push((await rpc('feture_document_publish',[key,'ru',1,true,new Date().toISOString()])).document.id);}
  for(const [n,owner] of [a,b,c].entries()){await rpc('feture_consent_accept',[owner,'ru',docs]);await db.query("insert into public.feture_verification_attempts(id,account_hash,issuer,environment,policy_version,state,created_at,expires_at,proof_issued_at,proof_expires_at) values($1,$2,'fixture','production','v1','verified',clock_timestamp()-interval '1 minute',clock_timestamp()+interval '1 hour',clock_timestamp(),clock_timestamp()+interval '1 hour')",[id(n+1),owner]);}
- const create={action:'posts.save',id:id(10),operationId:id(11),expectedRevision:0,text:'Мой личный текст',kind:'question',authorLabel:'Открытое имя'};
+ const create={action:'posts.save',id:id(10),operationId:id(11),expectedRevision:0,text:'Мой личный текст',kind:'question',authorLabel:'Открытое имя',plannedAudience:'public',recipientCodes:[]};
  assert.equal((await op(a,{...create,author_hash:b})).error,'invalid_request');
  const draft=await op(a,create);assert.equal(draft.entry.state,'draft');assert.equal(draft.entry.audience,'private');assert.equal((await op(a,create)).replayed,true);
  assert.equal((await db.query('select count(*) n from public.feture_posts')).rows[0].n,1);
@@ -75,6 +75,48 @@ test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and ir
  const reportAudit=await reportReview(auditor,{action:'reportAudit',cursor:null});assert.equal(reportAudit.items.length,2);for(const secret of ['CONFIDENTIAL','Second private','Мой личный текст','reporter_hash'])assert.equal(JSON.stringify(reportAudit).includes(secret),false);
  const feed=await op(b,{action:'posts.feed',cursor:null});assert.equal(feed.items.length,1);assert.equal(feed.items[0].mine,false);
  for(const secret of ['author_hash','account_hash','email','nickname','boundary','granted'])assert.equal(JSON.stringify(feed).includes(secret),false);
+
+ // C01.3: account-bound recipient codes never grant profile permissions.
+ const address=actor=>rpc('feture_post_address_command',[actor,JSON.stringify({action:'posts.address'})]);
+ const bCode=(await address(b)).code,cCode=(await address(c)).code;
+ assert.equal((await address(b)).code,bCode);
+ const selected={...create,id:id(200),operationId:id(201),plannedAudience:'granted',recipientCodes:[bCode],text:'SELECTED PRIVATE POST'};
+ assert.equal((await op(a,{...selected,recipientCodes:[id(999)]})).error,'recipient_unavailable');
+ assert.equal((await op(a,{...selected,recipientCodes:[bCode,bCode]})).error,'invalid_request');
+ const selectedDraft=await op(a,selected);assert.deepEqual(selectedDraft.entry.recipientCodes,[bCode]);
+ const selectedSubmit={action:'posts.submit',id:id(200),operationId:id(202),expectedRevision:1};
+ assert.equal((await op(a,selectedSubmit)).entry.audience,'granted');
+ assert.equal((await op(b,{action:'posts.read',id:id(200)})).error,'resource_not_found');
+ const queue=await review(manager,{action:'queue',cursor:null});assert.equal(queue.items.find(v=>v.id===id(200)).audience,'granted');
+ assert.equal(JSON.stringify(queue).includes(bCode),false);
+ assert.equal((await review(manager,{...approve,id:id(200),operationId:id(203),expectedRevision:2})).ok,true);
+ const permitted=await op(b,{action:'posts.read',id:id(200)});assert.equal(permitted.entry.text,selected.text);assert.deepEqual(permitted.entry.recipientCodes,[]);
+ assert.equal((await op(c,{action:'posts.read',id:id(200)})).error,'resource_not_found');
+ assert.equal((await op(b,{action:'posts.feed',cursor:null})).items.some(v=>v.id===id(200)),true);
+ assert.equal((await op(c,{action:'posts.feed',cursor:null})).items.some(v=>v.id===id(200)),false);
+ const selectedReport={action:'posts.report',id:id(200),reportId:id(204),expectedRevision:3,reason:'privacy',note:'SELECTED REPORT NOTE'};
+ assert.equal((await reportOp(c,selectedReport)).error,'resource_not_found');assert.equal((await reportOp(b,selectedReport)).ok,true);
+ assert.equal((await reportReview(manager,{action:'reports',cursor:null})).items.find(v=>v.id===id(204)).context.text,selected.text);
+ const revoke={action:'posts.revokeRecipient',id:id(200),operationId:id(205),expectedRevision:3,code:bCode};
+ assert.equal((await op(c,revoke)).error,'resource_not_found');assert.equal((await op(a,{...revoke,expectedRevision:2})).error,'revision_conflict');
+ assert.equal((await op(a,revoke)).entry.state,'published');assert.equal((await op(a,revoke)).replayed,true);
+ assert.equal((await op(b,{action:'posts.read',id:id(200)})).error,'resource_not_found');
+ assert.equal((await reportReview(manager,{action:'reports',cursor:null})).items.find(v=>v.id===id(204)).context,null);
+ assert.equal((await reportReview(manager,{...resolve,id:id(204),operationId:id(206)})).error,'revision_conflict');
+ assert.deepEqual((await op(a,selected)).entry.recipientCodes,[]); // Retry never restores old permission.
+ const expanded={...selected,operationId:id(207),expectedRevision:4,recipientCodes:[cCode]};
+ assert.equal((await op(a,expanded)).entry.state,'draft');assert.equal((await op(c,{action:'posts.read',id:id(200)})).error,'resource_not_found');
+ await op(a,{...selectedSubmit,operationId:id(208),expectedRevision:5});await review(manager,{...approve,id:id(200),operationId:id(209),expectedRevision:6});
+ assert.equal((await op(c,{action:'posts.read',id:id(200)})).ok,true);
+ const rotate={action:'posts.rotateAddress',operationId:id(210)};
+ const rotated=await rpc('feture_post_address_command',[c,JSON.stringify(rotate)]);assert.notEqual(rotated.code,cCode);
+ assert.equal((await rpc('feture_post_address_command',[c,JSON.stringify(rotate)])).code,rotated.code);
+ assert.equal((await op(c,{action:'posts.read',id:id(200)})).error,'resource_not_found');
+ assert.deepEqual((await op(a,expanded)).entry.recipientCodes,[]);
+ assert.equal((await op(a,{...expanded,operationId:id(211),expectedRevision:7})).error,'recipient_unavailable');
+ assert.equal((await db.query('select count(*) n from public.feture_scoped_grants')).rows[0].n,0);
+ await reportReview(manager,{...resolve,id:id(204),operationId:id(212),decision:'dismiss',reason:'reviewed'});
+ await op(a,{action:'posts.delete',id:id(200),operationId:id(213),expectedRevision:7});
  await db.query('insert into public.feture_blocks(blocker_hash,blocked_hash) values($1,$2)',[c,a]);
  assert.equal((await op(c,{action:'posts.feed',cursor:null})).items.length,0);assert.equal((await op(c,{action:'posts.read',id:id(10)})).error,'resource_not_found');
  await db.query('update public.feture_verification_attempts set proof_expires_at=clock_timestamp() where account_hash=$1',[b]);assert.equal((await op(b,{action:'posts.feed',cursor:null})).error,'resource_not_found');
@@ -84,6 +126,6 @@ test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and ir
  const deleted=await op(a,remove);assert.equal(deleted.entry.state,'deleted');assert.equal(deleted.entry.text,'');assert.equal(deleted.entry.authorLabel,'');assert.equal((await op(a,remove)).replayed,true);assert.equal((await op(a,create)).entry.state,'deleted');assert.equal((await op(a,submit)).entry.state,'deleted');assert.equal((await review(manager,approve)).post.state,'deleted');assert.equal((await review(manager,{action:'queue',cursor:null})).items.length,0);assert.equal(JSON.stringify(await review(auditor,{action:'audit',cursor:null})).includes('Мой личный текст'),false);
  assert.equal((await op(a,{action:'posts.read',id:id(10)})).error,'resource_not_found');
  assert.equal((await op(a,{action:'posts.mine',cursor:null})).items.length,0);assert.equal((await reportOp(b,{action:'posts.reports',cursor:null})).items[0].state,'resolved');assert.equal((await reportReview(manager,{action:'reports',cursor:null})).items.length,0);
- for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(db.query('select * from public.feture_posts'));await assert.rejects(db.query('select * from public.feture_post_operations'));await assert.rejects(op(a,{action:'posts.mine',cursor:null}));await assert.rejects(review(manager,{action:'queue',cursor:null}));await assert.rejects(db.query('select * from public.feture_post_reviews'));await assert.rejects(db.query('select * from public.feture_post_reports'));await assert.rejects(reportOp(b,{action:'posts.reports',cursor:null}));await assert.rejects(reportReview(manager,{action:'reports',cursor:null}));}
+ for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(db.query('select * from public.feture_posts'));await assert.rejects(db.query('select * from public.feture_post_operations'));await assert.rejects(db.query('select * from public.feture_post_addresses'));await assert.rejects(db.query('select * from public.feture_post_recipients'));await assert.rejects(address(b));await assert.rejects(op(a,{action:'posts.mine',cursor:null}));await assert.rejects(review(manager,{action:'queue',cursor:null}));await assert.rejects(db.query('select * from public.feture_post_reviews'));await assert.rejects(db.query('select * from public.feture_post_reports'));await assert.rejects(reportOp(b,{action:'posts.reports',cursor:null}));await assert.rejects(reportReview(manager,{action:'reports',cursor:null}));}
  }finally{await db.close();}
 });
