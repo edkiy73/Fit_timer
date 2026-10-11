@@ -28,14 +28,6 @@ const client = createClient({
   })
 });
 
-export async function trackInstallOnce(): Promise<void> {
-  const key = 'feture.analytics.install';
-  try{
-    if(localStorage.getItem(key)) return;
-    if(await client.track('install')) localStorage.setItem(key, '1');
-  }catch(_){}
-}
-
 export function installGlobalDiagnostics(): () => void {
   const onError = (event: ErrorEvent) => {
     void client.capture('error', event.error || new Error(event.message || 'window_error'));
