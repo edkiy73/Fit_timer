@@ -259,3 +259,35 @@ test('selected questionnaire copy rejects private/client-derived fields and clos
  reply={...reply,preview:{...reply.preview,answers:{private:['choice']}}};await assert.rejects(repository.execute(actor,preview),e=>e.status===503);
  await assert.rejects(repository.execute({accountHash:identities.alice.hash},preview),e=>e.status===401);
 });
+
+test('private photo upload strips metadata, freezes retries, checks access twice and never returns paths',async()=>{
+ const sharp=require('sharp');const {normalizePhoto,createPhotoRepository,photoCommand,cleanupPhotoObjects}=require('../lib/feture/post-photos');
+ const {readBody,MAX_BODY}=require('../lib/feture/validation');
+ const original=await sharp({create:{width:1200,height:600,channels:3,background:'#cc3366'}}).withMetadata().jpeg().toBuffer();
+ const normalized=await normalizePhoto(original.toString('base64')),meta=await sharp(normalized.data).metadata();
+ assert.equal(meta.width,1024);assert.equal(meta.height,512);assert.equal(meta.exif,undefined);assert.equal(meta.icc,undefined);
+ await assert.rejects(normalizePhoto(Buffer.from('<svg/>').toString('base64')),e=>e.code==='invalid_image');
+ const id='00000000-0000-4000-8000-000000004000',operationId='00000000-0000-4000-8000-000000004002',cmd={action:'photo.put',id,operationId,expectedRevision:1,image:original.toString('base64'),consent:true};
+ for(const changed of [{...cmd,consent:false},{...cmd,url:'https://foreign'},{...cmd,image:'not a base64 file'},{...cmd,accountHash:identities.bob.hash}])assert.throws(()=>photoCommand(changed),e=>e.status===422);
+ await assert.rejects(readBody(req(identities.alice,{action:'profile.get',extra:'a'.repeat(MAX_BODY)})),e=>e.status===413);
+ assert.equal((await readBody(req(identities.alice,{...cmd,image:'A'.repeat(20000)}))).action,'photo.put');
+ await seed(identities.alice);const actor=await authenticate(req(identities.alice),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const entry={id,text:'Текст',kind:'text',authorLabel:'Имя',audience:'private',state:'draft',revision:2,createdAt:'2026-10-11T00:00:00Z',updatedAt:'2026-10-11T00:00:00Z',publishedAt:null,mine:true,plannedAudience:'public',recipientCodes:[]};
+ const objectPath=id+'/'+operationId+'.jpg',descriptor={path:objectPath,hash:sha(normalized.data),bytes:normalized.data.length,width:1024,height:512};
+ const calls=[];let replay=false,revoked=false,reads=0;
+ const transport={configured:()=>true,request:async(path,options={})=>{calls.push({path,body:options.body});
+  if(path==='/rest/v1/rpc/feture_post_photo_command'){const c=JSON.parse(options.body).p_command;if(c.action==='prepare')return new Response(JSON.stringify(replay?{ok:true,upload:false,entry}:{ok:true,upload:true,path:objectPath}));if(c.action==='attach'){replay=true;return new Response(JSON.stringify({ok:true,entry,replayed:false}));}if(c.action==='read'){reads++;return new Response(JSON.stringify(revoked&&reads===2?{ok:false,error:'resource_not_found'}:{ok:true,photo:descriptor}));}}
+  if(path.includes('/storage/v1/object/authenticated/'))return new Response(normalized.data);
+  if(path.startsWith('/storage/v1/object/')){assert.deepEqual(Buffer.from(options.body),normalized.data);return new Response('{}');}
+  if(path.includes('feture_photo_gc'))return new Response('[]');return new Response('{}');
+ }};
+ const repository=createPhotoRepository(transport,{requireCurrent:async()=>{}});
+ assert.equal((await repository.execute(actor,cmd)).entry.revision,2);const uploads=calls.filter(x=>x.path.startsWith('/storage/v1/object/')&&!x.path.includes('authenticated')).length;
+ assert.equal((await repository.execute(actor,cmd)).replayed,true);assert.equal(calls.filter(x=>x.path.startsWith('/storage/v1/object/')&&!x.path.includes('authenticated')).length,uploads);
+ const result=await repository.execute(actor,{action:'photo.read',id,revision:2});assert.equal(result.photo.mime,'image/jpeg');assert.equal(JSON.stringify(result).includes(objectPath),false);assert.equal(reads,2);
+ reads=0;revoked=true;await assert.rejects(repository.execute(actor,{action:'photo.read',id,revision:2}),e=>e.status===404);
+ await assert.rejects(repository.execute({...actor},cmd),e=>e.status===401);
+ // A failed object erasure must retain its durable outbox item.
+ const gcCalls=[];await cleanupPhotoObjects({configured:()=>true,request:async(path)=>{gcCalls.push(path);if(path.includes('?select='))return new Response(JSON.stringify([{object_path:objectPath}]));if(path.startsWith('/storage/'))return new Response('{}',{status:503});return new Response('{}');}});
+ assert.equal(gcCalls.some(x=>x.startsWith('/rest/v1/feture_photo_gc?object_path=')),false);
+});

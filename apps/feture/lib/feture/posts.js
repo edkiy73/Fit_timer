@@ -50,7 +50,7 @@ function createPostsRepository(transport,documents){const guard=createAccessGuar
    if(c.action==='posts.address'||c.action==='posts.rotateAddress'){if(!shape(r,['ok','code','replayed'])||!uuid(r.code)||typeof r.replayed!=='boolean')reject(503,'domain_unavailable');return {code:r.code,replayed:r.replayed};}
    if(c.action==='posts.mine'||c.action==='posts.feed'){if(!Array.isArray(r.items)||r.items.length>20||!cursor(r.nextCursor))reject(503,'domain_unavailable');const items=r.items.map(dto);if(c.action==='posts.mine'&&items.some(x=>!x.mine)||c.action==='posts.feed'&&items.some(x=>x.state!=='published'||!['public','granted'].includes(x.audience)))reject(503,'domain_unavailable');return {items,nextCursor:r.nextCursor};}
    const entry=dto(r.entry);if(entry.id!==c.id||c.action!=='posts.read'&&!entry.mine)reject(503,'domain_unavailable');
-   if(c.action==='posts.read')return {entry};if(typeof r.replayed!=='boolean')reject(503,'domain_unavailable');return {entry,replayed:r.replayed};
+   if(c.action==='posts.read')return {entry};if(typeof r.replayed!=='boolean')reject(503,'domain_unavailable');if(c.action==='posts.delete')await require('./post-photos').cleanupPhotoObjects(transport);return {entry,replayed:r.replayed};
   }catch(e){if(e instanceof DomainError)throw e;return reject(503,'domain_unavailable');}
  }};}
-module.exports={postCommand,isPostCommand,createPostsRepository};
+module.exports={postDto:dto,postCommand,isPostCommand,createPostsRepository};

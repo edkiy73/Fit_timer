@@ -8,3 +8,5 @@ export interface PostsRepository{execute(actor:Actor,input:PostCommand):Promise<
 export function postCommand(input:unknown):PostCommand;
 export function isPostCommand(input:Command):input is PostCommand;
 export function createPostsRepository(transport:Transport,documents:DocumentsRepository):PostsRepository;
+
+export function postDto(value:unknown):PostEntry;
