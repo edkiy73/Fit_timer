@@ -29,6 +29,7 @@ import {CatalogAdmin} from './feture/catalog-admin';
 import {ModerationAdmin} from './feture/moderation-admin';
 import {OperatorsAdmin} from './feture/operators-admin';
 import {QaAdultAdmin} from './feture/qa-adult-admin';
+import {OperatorPage} from './feture/operator-page';
 import {ShareLinksPage,SharedCardPage} from './feture/share-links-page';
 import type {AdminSection} from '@appbase/ui-react/admin.js';
 const productAdminSections:readonly AdminSection[]=[{id:'feture-operators',label:'Операторы QA',group:'FetUre',render:context=><OperatorsAdmin {...context}/>},{id:'feture-catalog',label:'Каталог FetUre',group:'FetUre',render:context=><CatalogAdmin {...context}/>},{id:'feture-tests',label:'Опросники FetUre',group:'FetUre',render:context=><QuestionnairesAdmin {...context}/>},{id:'feture-documents',label:'Документы FetUre',group:'FetUre',render:context=><DocumentsAdmin {...context}/>},{id:'feture-moderation',label:'Модерация FetUre',group:'FetUre',render:context=><ModerationAdmin {...context}/>},{id:'feture-qa-adult',label:'QA-доступ 18+',group:'FetUre',render:context=><QaAdultAdmin {...context}/>}];
@@ -147,6 +148,7 @@ function Account(){
           <p><Link to="/share-links">Мои ссылки на темы</Link></p>
           <p><Link to="/access">Видимость и доступ</Link></p>
           <p><Link to="/safety">Безопасность и обращения</Link></p>
+          <p><Link to="/operator">Рабочий экран QA</Link></p>
           <button className="link-button" type="button" disabled={signingOut} onClick={() => void signOut()}>{t('account.signOut')}</button>
           {signOutError && <p role="alert">{signOutError}</p>}
         </>
@@ -181,6 +183,7 @@ export const routes: RouteObject[] = [
         {path:'community', element:<Home />},
         {path:'dating', element:<Home />},
         {path:'account', element:<Account />},
+        {path:'operator', element:<OperatorPage />},
         {path:'verification', element:<VerificationPage />},
         {path:'documents', element:<DocumentsPage />},
         {path:'profile', element:<ProfilePage />},
