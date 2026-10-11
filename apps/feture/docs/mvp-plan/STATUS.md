@@ -39,7 +39,7 @@
 
 | C01.4 | **PR #825 слит (`8555c02`), AppBase CI `38167212430` success.** Реализовано: whitelist четырёх exact immutable версий, selected summary без answers/score/границ, отдельное согласие, точный preview/hash, private draft с обычной модерацией. SQL `20261011190651` applied. Full check, API/PostgreSQL, Chromium fixture 320–1440 и live rollback under service_role прошли. Два реальных аккаунта, native и независимый privacy audit не проверены. Photo backend — C01.5a; пользовательский и staff UI — C01.5b. |
 
-| C01.5a | Сервер photo.put/read/remove, private Storage JPEG, re-encode без EXIF/GPS, ownership/revision, immutable retry и durable erasure outbox. SQL `20261011193939` applied. Полный check + live metadata rollback прошли. UI ещё не подключён; text-only approval фото запрещён. C01.5b: picker/preview + staff photo review; затем live Storage и независимый cleanup schedule. |
+| C01.5a | **PR #831 слит (`24839357`), AppBase CI `38169259605` success.** Сервер photo.put/read/remove, private Storage JPEG, re-encode без EXIF/GPS, ownership/revision, immutable retry и durable erasure outbox. SQL `20261011193939` applied. Полный check + live metadata rollback прошли. UI ещё не подключён; text-only approval фото запрещён. C01.5b: picker/preview + staff photo review; затем live Storage и независимый cleanup schedule. |
 
 ## Очередь следующих независимых работ
 1. **O02/A04:** O02.1/O02.2 реализованы для QA: персональные роли, аудит и отдельный рабочий экран `/#/operator`. Далее browser приёмка реальных staff аккаунтов и распространение ролей на moderation/editorial по мере готовности. Реальный adult proof — только через подтверждённый метод, отдельно от QA. Не использовать самодекларацию и не переносить QA в live.
@@ -53,7 +53,7 @@
 ## Формат handoff (перезаписывай, не накапливай)
 `ID | последний merged PR/SHA | что проверено | что НЕ проверено | следующий ID и 2–5 файлов`
 
-Текущий срез C01.5a | private photo server lifecycle, SQL `20261011193939` applied | full check/API/PostgreSQL/live metadata rollback passed | UI/deployed Storage/independent audit/native/cleanup schedule не проверены | далее C01.5b: `post-photos.js`, `community.tsx`, private/staff image UI, `post-review.js`, `posts-postgres.mjs`.
+Текущий срез C01.5a | PR #831, main `24839357`, CI `38169259605` success | private photo server lifecycle, SQL `20261011193939` applied | full check/API/PostgreSQL/live metadata rollback passed | UI/deployed Storage/independent audit/native/cleanup schedule не проверены | далее C01.5b: `post-photos.js`, `community.tsx`, private/staff image UI, `post-review.js`, `posts-postgres.mjs`.
 
 **Срезы O03.1–O03.2 (PR #810/#811; CI всех 5 приложений success):** `lib/feture/private-metrics.js`, `private-metrics-admin.js`, `src/feture/metrics-admin.tsx`, `tests/private-metrics.js`, `docs/private-metrics.md`. Только серверные allowlist action counts, bounded TTL, totals <5 masked; O03.2 расширен нагрузкой и недельным предупреждением, но реальные счета и browser/native/privacy acceptance pending. После объединения записать PR и тесты здесь, не архив.
 
