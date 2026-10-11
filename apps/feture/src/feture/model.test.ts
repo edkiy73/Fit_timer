@@ -13,7 +13,10 @@ describe('FetUre interest map',()=>{
   expect(hard.experience).toBe('ongoing');
   expect(conditional.boundaryNote).toBe('private conditions');
   const progress=categoryProgress(['interest-1-1','interest-1-2','interest-1-3'],{'interest-1-1':hard,'interest-1-2':conditional,'interest-1-3':experienced});
-  expect(progress).toEqual({known:3,total:3,percent:100,interests:0,boundaries:1,conditional:1});
+  expect(progress).toEqual({known:3,total:3,percent:100,interests:0,measured:0,experienced:2,boundaries:1,conditional:1});
+  const curiosity=normalizeRecord({...empty,stance:'curious',intensity:4},at);
+  const separate=categoryProgress(['interest-1-1','interest-1-2'],{'interest-1-1':curiosity,'interest-1-2':hard});
+  expect(separate).toEqual({known:2,total:2,percent:100,interests:1,measured:1,experienced:1,boundaries:1,conditional:0});
   expect(normalizeRecord({...empty,stance:'curious'},at).intensity).toBeNull();
  });
  it('rejects malformed and obsolete prototype documents',()=>{
