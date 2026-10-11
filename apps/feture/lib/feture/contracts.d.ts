@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 export type Request = IncomingMessage & { body?: unknown; rawBody?: unknown };
 export type Response = Pick<ServerResponse, 'setHeader' | 'end' | 'statusCode'>;
-export type Actor = Readonly<{accountHash:string; verifiedAdult:boolean;qaUntil?:string|null}>;
+export type Actor = Readonly<{accountHash:string; verifiedAdult:boolean;qaUntil?:string|null;accountGeneration?:string}>;
 export interface AccountStore { configured():boolean; get(key:string):Promise<string|null> }
 export interface Transport { configured():boolean; request(path:string,options?:{timeoutMs?:number;method?:string;headers?:Record<string,string>;body?:string}):Promise<globalThis.Response> }
 export type ProfileDTO = {displayName:string; about:string; createdAt:string; updatedAt:string};
