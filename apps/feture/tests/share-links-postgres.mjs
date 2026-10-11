@@ -28,7 +28,8 @@ test('W07 share links: private source projection, atomic replay, expiry, revoke 
    await rpc('feture_consent_accept',[owner,'ru',docs]);
    await db.query("insert into public.feture_verification_attempts(id,account_hash,issuer,environment,policy_version,state,created_at,expires_at,proof_issued_at,proof_expires_at) values($1,$2,'fixture','production','v1','verified',clock_timestamp()-interval '1 minute',clock_timestamp()+interval '1 hour',clock_timestamp(),clock_timestamp()+interval '1 hour')",[id(10+i),owner]);
   }
-  await db.query("insert into public.feture_interest_states(account_hash,interest_id,stance,experience,boundary,boundary_note,intensity,visibility,use_for_discovery,revision,source,test_version,deleted) values($1,'interest-1-1','curious','ongoing','none','TOP SECRET CONDITIONS',4,'private',false,1,'manual',null,false)",[alice]);
+  await db.query("insert into public.feture_interest_states(account_hash,interest_id,stance,experience,boundary,boundary_note,intensity,visibility,use_for_discovery,revision,source,test_version,deleted) values($1,'interest-1-1','curious','ongoing','none',null,4,'private',false,1,'manual',null,false)",[alice]);
+  await db.query("insert into public.feture_interest_states(account_hash,interest_id,stance,experience,boundary,boundary_note,intensity,visibility,use_for_discovery,revision,source,test_version,deleted) values($1,'interest-1-2','not_interested','unspecified','conditional','TOP SECRET CONDITIONS',null,'private',false,1,'manual',null,false)",[alice]);
   const link=id(100);
   const selected=[{interestId:'interest-1-1',expectedRevision:1}];
   const create={action:'share.create',linkId:link,days:3,reviewed:true,selected};
