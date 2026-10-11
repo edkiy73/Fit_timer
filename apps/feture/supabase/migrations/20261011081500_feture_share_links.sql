@@ -26,7 +26,7 @@ declare
  act text;link_uuid uuid;owner_id text;desired jsonb;row_data jsonb:='[]'::jsonb;item jsonb;
  selected_count integer;revision_value bigint;current_row public.feture_interest_states%rowtype;
  existing public.feture_share_links%rowtype;days_value integer;payload text;expiry timestamptz;
- current_time timestamptz:=clock_timestamp();card_rows jsonb;bad boolean;
+ checked_at timestamptz:=clock_timestamp();card_rows jsonb;bad boolean;
 begin
  if p_actor is null or p_actor !~ '^[a-f0-9]{32}$' or jsonb_typeof(p_command) is distinct from 'object' then
   return jsonb_build_object('ok',false,'error','invalid_request');end if;
@@ -61,7 +61,7 @@ begin
  link_uuid:=(p_command->>'linkId')::uuid;
  if act='share.read' then
   select * into existing from public.feture_share_links where id=link_uuid;
-  if existing.id is null or existing.revoked_at is not null or existing.expires_at<=current_time
+  if existing.id is null or existing.revoked_at is not null or existing.expires_at<=checked_at
      or not public.feture_peer_eligible(p_actor)
      or not public.feture_peer_eligible(existing.account_hash)
      or (p_actor<>existing.account_hash and public.feture_pair_blocked(p_actor,existing.account_hash))
@@ -84,7 +84,7 @@ begin
  if act='share.revoke' then
   if existing.id is null or existing.account_hash<>p_actor
   then return jsonb_build_object('ok',false,'error','resource_not_found');end if;
-  update public.feture_share_links set revoked_at=coalesce(revoked_at,current_time) where id=link_uuid and account_hash=p_actor;
+  update public.feture_share_links set revoked_at=coalesce(revoked_at,checked_at) where id=link_uuid and account_hash=p_actor;
   return jsonb_build_object('ok',true,'revoked',true);
  end if;
  desired:=p_command->'selected';selected_count:=jsonb_array_length(desired);days_value:=(p_command->>'days')::int;
@@ -97,7 +97,7 @@ begin
    'expiresAt',existing.expires_at,'revoked',existing.revoked_at is not null));
  end if;
  if (select count(*) from public.feture_share_links
-     where account_hash=p_actor and revoked_at is null and expires_at>current_time)>=10
+     where account_hash=p_actor and revoked_at is null and expires_at>checked_at)>=10
  then return jsonb_build_object('ok',false,'error','rate_limited');end if;
  if (select count(distinct v->>'interestId') from jsonb_array_elements(desired) v)<>selected_count
  then return jsonb_build_object('ok',false,'error','invalid_request');end if;
@@ -122,7 +122,7 @@ begin
    'title',owner_id,'stance',current_row.stance,'revision',current_row.revision));
  end loop;
  insert into public.feture_share_links(id,account_hash,snapshot,payload_hash,expires_at)
- values(link_uuid,p_actor,row_data,payload,current_time+days_value*interval '1 day')
+ values(link_uuid,p_actor,row_data,payload,checked_at+days_value*interval '1 day')
  returning expires_at into expiry;
  return jsonb_build_object('ok',true,'replayed',false,'link',
   jsonb_build_object('id',link_uuid,'expiresAt',expiry,'revoked',false));
