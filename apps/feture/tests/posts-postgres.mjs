@@ -7,7 +7,7 @@ const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
 test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and irreversible text removal',async()=>{
  const db=new PGlite();try{
  await db.exec('create role anon;create role authenticated;create role service_role bypassrls;');
- for(const file of ['20261010_001_feture_domain.sql','20261010_002_catalog_read.sql','20261010090405_feture_scoped_seed.sql','20261010164924_feture_interest_transactions.sql','20261010225100_feture_verification_store.sql','20261010225653_feture_documents.sql','20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql','20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql','20261011083303_feture_qa_adult_access.sql','20261011113717_feture_qa_any_account_audit.sql','20261011120139_feture_operator_roles.sql','20261011121629_feture_operator_account_binding.sql','20261011133134_feture_community_posts.sql','20261011134257_feture_post_review.sql'])await db.exec(sql(file));
+ for(const file of ['20261010_001_feture_domain.sql','20261010_002_catalog_read.sql','20261010090405_feture_scoped_seed.sql','20261010164924_feture_interest_transactions.sql','20261010225100_feture_verification_store.sql','20261010225653_feture_documents.sql','20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql','20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql','20261011083303_feture_qa_adult_access.sql','20261011113717_feture_qa_any_account_audit.sql','20261011120139_feture_operator_roles.sql','20261011121629_feture_operator_account_binding.sql','20261011133134_feture_community_posts.sql','20261011134257_feture_post_review.sql','20261011140051_feture_post_reports.sql','20261011140835_feture_post_report_author_privacy.sql'])await db.exec(sql(file));
  const rpc=async(name,args)=>(await db.query('select public.'+name+'('+args.map((_,i)=>'$'+(i+1)).join(',')+') result',args)).rows[0].result;
  const op=(actor,command)=>rpc('feture_post_command',[actor,JSON.stringify(command)]);
  const [a,b,c]=['a','b','c'].map(x=>x.repeat(32));for(const owner of [a,b,c])await db.query('insert into public.feture_profiles(account_hash) values($1)',[owner]);
@@ -45,17 +45,45 @@ test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and ir
  const reapprove={...approve,operationId:id(93),expectedRevision:5};assert.equal((await review(manager,reapprove)).post.state,'published');
  await db.exec('reset role');await db.query("update public.feture_operators set role=null where account_hash=$1",[manager]);await db.exec('set role service_role');assert.equal((await review(manager,reapprove)).error,'forbidden');await db.exec('reset role');await db.query("update public.feture_operators set role='manager' where account_hash=$1",[manager]);await db.exec('set role service_role');
 
+ const reportOp=(actor,cmd)=>rpc('feture_post_report_command',[actor,JSON.stringify(cmd)]);
+ const reportReview=(actor,cmd,gen=generation)=>rpc('feture_post_report_review',[actor,gen,JSON.stringify(cmd)]);
+ const complaint={action:'posts.report',id:id(10),reportId:id(100),expectedRevision:6,reason:'privacy',note:'CONFIDENTIAL REPORTER NOTE'};
+ assert.equal((await reportOp(a,complaint)).error,'resource_not_found');
+ assert.equal((await reportOp(b,{...complaint,expectedRevision:5})).error,'revision_conflict');
+ assert.equal((await reportOp(b,{...complaint,state:'resolved'})).error,'invalid_request');
+ const report=await reportOp(b,complaint);assert.equal(report.report.state,'open');assert.equal((await reportOp(b,complaint)).replayed,true);
+ assert.equal((await reportOp(b,{...complaint,note:'Changed retry'})).error,'operation_conflict');
+ assert.equal((await reportOp(b,{...complaint,reportId:id(101)})).error,'report_pending');
+ assert.equal((await reportOp(c,complaint)).error,'resource_not_found');
+ const complaint2={...complaint,reportId:id(102),note:'Second private explanation'};assert.equal((await reportOp(c,complaint2)).ok,true);
+ assert.equal((await reportOp(a,{action:'posts.reports',cursor:null})).items.length,0);
+ const mine=await reportOp(b,{action:'posts.reports',cursor:null});assert.equal(mine.items.length,1);assert.equal(JSON.stringify(mine).includes('CONFIDENTIAL'),false);assert.equal(JSON.stringify(mine).includes('Мой личный текст'),false);
+ assert.equal((await reportReview(auditor,{action:'reports',cursor:null})).error,'forbidden');assert.equal((await reportReview(qa,{action:'reports',cursor:null})).error,'forbidden');
+ const staffReports=await reportReview(manager,{action:'reports',cursor:null});assert.equal(staffReports.items.length,2);assert.equal(staffReports.items[0].context.revision,6);assert.equal(JSON.stringify(staffReports).includes('reporter_hash'),false);
+ assert.equal((await reportReview(a,{action:'reports',cursor:null})).items.length,0);
+ const resolve={action:'resolveReport',id:id(100),operationId:id(103),expectedRevision:1,decision:'hide',reason:'privacy'};
+ assert.equal((await reportReview(a,resolve)).error,'resource_not_found');
+ assert.equal((await reportReview(manager,resolve,'2'.repeat(64))).error,'forbidden');assert.equal((await reportReview(auditor,resolve)).error,'forbidden');
+ assert.equal((await reportReview(manager,resolve)).report.resolution,'hide');assert.equal((await reportReview(manager,resolve)).replayed,true);assert.equal((await reportReview(manager,{...resolve,decision:'dismiss',reason:'reviewed'})).error,'operation_conflict');
+ assert.equal((await op(b,{action:'posts.read',id:id(10)})).error,'resource_not_found');assert.equal((await reportOp(b,complaint)).report.state,'resolved');
+ assert.equal((await reportOp(b,{...complaint,reportId:id(104),expectedRevision:7})).error,'resource_not_found');
+ const hiddenReports=await reportReview(manager,{action:'reports',cursor:null});assert.equal(hiddenReports.items.length,1);assert.equal(hiddenReports.items[0].context,null);
+ assert.equal((await review(manager,{...reopen,operationId:id(105),expectedRevision:7})).post.state,'pending');assert.equal((await review(manager,{...approve,operationId:id(106),expectedRevision:8})).post.state,'published');
+ const changed=await reportReview(manager,{action:'reports',cursor:null});assert.equal(changed.items[0].context,null);
+ assert.equal((await reportReview(manager,{...resolve,id:id(102),operationId:id(107)})).error,'revision_conflict');
+ assert.equal((await reportReview(manager,{...resolve,id:id(102),operationId:id(108),decision:'dismiss',reason:'reviewed'})).report.state,'resolved');
+ const reportAudit=await reportReview(auditor,{action:'reportAudit',cursor:null});assert.equal(reportAudit.items.length,2);for(const secret of ['CONFIDENTIAL','Second private','Мой личный текст','reporter_hash'])assert.equal(JSON.stringify(reportAudit).includes(secret),false);
  const feed=await op(b,{action:'posts.feed',cursor:null});assert.equal(feed.items.length,1);assert.equal(feed.items[0].mine,false);
  for(const secret of ['author_hash','account_hash','email','nickname','boundary','granted'])assert.equal(JSON.stringify(feed).includes(secret),false);
  await db.query('insert into public.feture_blocks(blocker_hash,blocked_hash) values($1,$2)',[c,a]);
  assert.equal((await op(c,{action:'posts.feed',cursor:null})).items.length,0);assert.equal((await op(c,{action:'posts.read',id:id(10)})).error,'resource_not_found');
  await db.query('update public.feture_verification_attempts set proof_expires_at=clock_timestamp() where account_hash=$1',[b]);assert.equal((await op(b,{action:'posts.feed',cursor:null})).error,'resource_not_found');
- const edit={...create,operationId:id(15),expectedRevision:6,text:'Исправленный текст'};assert.equal((await op(a,edit)).entry.state,'draft');assert.equal((await op(c,{action:'posts.read',id:id(10)})).error,'resource_not_found');
+ const edit={...create,operationId:id(15),expectedRevision:9,text:'Исправленный текст'};assert.equal((await op(a,edit)).entry.state,'draft');assert.equal((await op(c,{action:'posts.read',id:id(10)})).error,'resource_not_found');
  assert.equal((await op(a,{...edit,text:'другой повтор'})).error,'operation_conflict');
- const remove={action:'posts.delete',id:id(10),operationId:id(16),expectedRevision:7};await db.query('update public.feture_verification_attempts set proof_expires_at=clock_timestamp() where account_hash=$1',[a]);
+ const remove={action:'posts.delete',id:id(10),operationId:id(16),expectedRevision:10};await db.query('update public.feture_verification_attempts set proof_expires_at=clock_timestamp() where account_hash=$1',[a]);
  const deleted=await op(a,remove);assert.equal(deleted.entry.state,'deleted');assert.equal(deleted.entry.text,'');assert.equal(deleted.entry.authorLabel,'');assert.equal((await op(a,remove)).replayed,true);assert.equal((await op(a,create)).entry.state,'deleted');assert.equal((await op(a,submit)).entry.state,'deleted');assert.equal((await review(manager,approve)).post.state,'deleted');assert.equal((await review(manager,{action:'queue',cursor:null})).items.length,0);assert.equal(JSON.stringify(await review(auditor,{action:'audit',cursor:null})).includes('Мой личный текст'),false);
  assert.equal((await op(a,{action:'posts.read',id:id(10)})).error,'resource_not_found');
- assert.equal((await op(a,{action:'posts.mine',cursor:null})).items.length,0);
- for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(db.query('select * from public.feture_posts'));await assert.rejects(db.query('select * from public.feture_post_operations'));await assert.rejects(op(a,{action:'posts.mine',cursor:null}));await assert.rejects(review(manager,{action:'queue',cursor:null}));await assert.rejects(db.query('select * from public.feture_post_reviews'));}
+ assert.equal((await op(a,{action:'posts.mine',cursor:null})).items.length,0);assert.equal((await reportOp(b,{action:'posts.reports',cursor:null})).items[0].state,'resolved');assert.equal((await reportReview(manager,{action:'reports',cursor:null})).items.length,0);
+ for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(db.query('select * from public.feture_posts'));await assert.rejects(db.query('select * from public.feture_post_operations'));await assert.rejects(op(a,{action:'posts.mine',cursor:null}));await assert.rejects(review(manager,{action:'queue',cursor:null}));await assert.rejects(db.query('select * from public.feture_post_reviews'));await assert.rejects(db.query('select * from public.feture_post_reports'));await assert.rejects(reportOp(b,{action:'posts.reports',cursor:null}));await assert.rejects(reportReview(manager,{action:'reports',cursor:null}));}
  }finally{await db.close();}
 });

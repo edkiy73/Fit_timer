@@ -1,6 +1,7 @@
 // @ts-check
 'use strict';
 const {reject}=require('./errors');
+const {reportReview}=require('./post-reports');
 const {uuid}=require('./documents');
 const {requireOwner}=require('./permissions');
 /** @param {unknown} v @returns {v is Record<string,unknown>} */
@@ -15,6 +16,7 @@ const decisions=['approve','reject','hide','reopen'],reasons=['reviewed','policy
 /** @param {import('./contracts').Transport} transport @param {import('./contracts').Actor} actor @param {Record<string,unknown>} body */
 async function postReview(transport,actor,body){requireOwner(actor,actor.accountHash);if(!actor.accountGeneration)reject(403,'forbidden');
  const action=body.action;if(typeof action!=='string')reject(422,'invalid_request');const name=action.replace('feture.posts.','');
+ if(['reports','resolveReport','reportAudit'].includes(name))return reportReview(transport,actor,body);
  if(name==='queue'||name==='audit'){if(!shape(body,['action','cursor'])||!cursor(body.cursor))reject(422,'invalid_request');}
  else if(name==='decide'){if(!shape(body,['action','decision','expectedRevision','id','operationId','reason'])||!uuid(body.id)||!uuid(body.operationId)||typeof body.expectedRevision!=='number'||!Number.isSafeInteger(body.expectedRevision)||body.expectedRevision<1||body.expectedRevision>999999999999999||!decisions.includes(String(body.decision))||!reasons.includes(String(body.reason)))reject(422,'invalid_request');}
  else reject(422,'invalid_request');

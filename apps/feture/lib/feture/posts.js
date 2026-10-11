@@ -1,6 +1,7 @@
 // @ts-check
 'use strict';
 const {reject,DomainError}=require('./errors');
+const {reportCommand,createPostReportsRepository}=require('./post-reports');
 const {uuid}=require('./documents');
 const {requireOwner}=require('./permissions');
 const {createAccessGuard}=require('./access-guard');
@@ -14,6 +15,7 @@ const date=v=>typeof v==='string'&&v.length<=40&&/^\d{4}-\d\d-\d\dT/.test(v)&&Nu
 const cursor=v=>v===null||object(v)&&shape(v,['at','id'])&&date(v.at)&&uuid(v.id);
 /** @param {unknown} input @returns {import('./posts').PostCommand} */
 function postCommand(input){if(!object(input))reject(422,'invalid_request');const c=/** @type {Record<string,unknown>} */(input);
+ if(c.action==='posts.report'||c.action==='posts.reports')return reportCommand(c);
  if((c.action==='posts.feed'||c.action==='posts.mine')&&shape(c,['action','cursor'])&&cursor(c.cursor))return /** @type {import('./posts').PostCommand} */(c);
  if(c.action==='posts.read'&&shape(c,['action','id'])&&uuid(c.id))return /** @type {import('./posts').PostCommand} */(c);
  if(!uuid(c.id)||!uuid(c.operationId)||typeof c.expectedRevision!=='number'||!Number.isSafeInteger(c.expectedRevision)||c.expectedRevision<0||c.expectedRevision>999999999999999)reject(422,'invalid_request');
@@ -28,9 +30,10 @@ function dto(v){if(!object(v)||!shape(v,['id','text','kind','authorLabel','audie
  if(v.state==='deleted'&&(v.text!==''||v.authorLabel!==''||v.audience!=='private'||v.publishedAt!==null))reject(503,'domain_unavailable');
  return /** @type {import('./posts').PostEntry} */(v);}
 /** @param {import('./contracts').Transport} transport @param {import('./documents').DocumentsRepository} documents */
-function createPostsRepository(transport,documents){const guard=createAccessGuard(documents);
+function createPostsRepository(transport,documents){const guard=createAccessGuard(documents),reports=createPostReportsRepository(transport,documents);
  return {/** @param {import('./contracts').Actor} actor @param {import('./posts').PostCommand} input */
  async execute(actor,input){requireOwner(actor,actor.accountHash);const c=postCommand(input);
+  if(c.action==='posts.report'||c.action==='posts.reports')return reports.execute(actor,c);
   if(!['posts.mine','posts.delete','posts.read'].includes(c.action))await guard(actor);
   if(!transport.configured())reject(503,'domain_unavailable');
   try{const response=await transport.request('/rest/v1/rpc/feture_post_command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({p_actor:actor.accountHash,p_command:c}),timeoutMs:8000});const r=await response.json();

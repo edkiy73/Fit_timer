@@ -219,3 +219,14 @@ test('C01 posts API: trusted actor, adult guard, forged publish and private DTO 
  entry={...entry,mine:false};await assert.rejects(repository.execute(actor,{action:'posts.read',id}),e=>e.status===503);
  await assert.rejects(repository.execute({accountHash:identities.alice.hash,verifiedAdult:true},save),e=>e.status===401);
 });
+
+test('C01 post reports: authenticated identity, adult submit and metadata-only own status',async()=>{
+ const {createPostsRepository}=require('../lib/feture/posts');await seed(identities.alice);const actor=await authenticate(req(identities.alice),store,async()=>new Date(Date.now()+3600000).toISOString()),unverified=await authenticate(req(identities.alice),store);
+ const id='00000000-0000-4000-8000-000000000008',report={id,postId:id,postRevision:3,reason:'privacy',state:'open',revision:1,createdAt:'2026-10-11T00:00:00Z',resolvedAt:null,resolution:null};let reply={ok:true,report,replayed:false};const calls=[];
+ const repository=createPostsRepository({configured:()=>true,request:async(path,opts)=>{calls.push({path,body:JSON.parse(opts.body)});return new Response(JSON.stringify(reply));}},{requireCurrent:async()=>{}}),cmd={action:'posts.report',id,reportId:id,expectedRevision:3,reason:'privacy',note:'Private explanation'};
+ await assert.rejects(repository.execute(unverified,cmd),e=>e.code==='verification_required');assert.equal(calls.length,0);for(const extra of [{reporterHash:identities.alice.hash},{snapshot:'PRIVATE'},{state:'resolved'}])assert.throws(()=>command({...cmd,...extra}),e=>e.status===422);
+ assert.equal((await repository.execute(actor,cmd)).report.state,'open');assert.equal(calls[0].body.p_actor,identities.alice.hash);assert.equal(calls[0].path,'/rest/v1/rpc/feture_post_report_command');
+ reply={ok:true,items:[report],nextCursor:null};assert.equal((await repository.execute(unverified,{action:'posts.reports',cursor:null})).items.length,1);
+ reply={ok:true,items:[{...report,text:'HIDDEN PARENT'}],nextCursor:null};await assert.rejects(repository.execute(actor,{action:'posts.reports',cursor:null}),e=>e.status===503);
+ await assert.rejects(repository.execute({accountHash:identities.alice.hash,verifiedAdult:true},cmd),e=>e.status===401);
+});

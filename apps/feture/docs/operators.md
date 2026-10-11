@@ -18,3 +18,5 @@ O02.2: отдельный экран `/#/operator` показывает QA-до�
 Проверки: стандартный FetUre check; O02.2: keyless transport allowlist/session fences и UI regression чтения аудитора/очистки после отзыва; focused Core-session/actor/forged token/revoked session test; PostgreSQL bootstrap, роли, CAS, last-manager, audit actor, revoke, запрет прямого доступа, QA/consent/share/live regression. SQL live проверка выполнялась в rollback-транзакции, реальные роли не назначались. Browser/native приёмка и независимый security audit не заменяются этими тестами.
 
 C01.2a: «Публикации» в `/#/operator` — проверка отправленных текстов для управляющего с актуальными 18+/согласиями, журнал без текста для аудитора; QA оператор доступа не получает. Подробности: [community-posts.md](community-posts.md).
+
+C01.2b: там же — очередь жалоб с пояснением, решение dismiss/hide конкретной версии; автор-управляющий не читает и не решает жалобы на собственный пост. Аудит без пояснений/текста/заявителя, QA доступа нет.

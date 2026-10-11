@@ -86,3 +86,5 @@ h2{margin:0 0 8px}
 .ft-post-review{min-width:0}.ft-review-text{white-space:pre-wrap;overflow-wrap:anywhere}.ft-review-id{overflow-wrap:anywhere}.ft-post-review select{max-width:100%;min-height:44px}.ft-post-review button{min-height:44px}.ft-post-review .ft-form-actions{display:flex;flex-wrap:wrap;gap:10px}
 
 .ft-post-review .ft-review-consent{display:flex;align-items:flex-start;gap:12px;min-height:44px}.ft-post-review .ft-review-consent input{width:auto;margin:4px 0 0;flex-shrink:0}
+
+.ft-post-report-admin label.ft-review-consent{display:flex;align-items:flex-start;gap:12px;min-height:44px}.ft-post-report-admin label.ft-review-consent input{width:auto;margin:4px 0 0;flex-shrink:0}
