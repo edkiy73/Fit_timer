@@ -138,3 +138,14 @@
 .ft-profile-projection dd {margin:0 0 14px;white-space:pre-wrap}
 .ft-profile-projection dt {font-weight:700}
 .ft-access h3 {margin-top:24px}
+
+/* W02: explored topics fill jars; optional strength, experience and limits are separate counts. */
+.ft-statbar{grid-template-columns:repeat(4,minmax(0,1fr))}
+.ft-jar-card{min-height:233px}
+.ft-jar-meta{display:grid;gap:2px;width:100%;font-size:10px;line-height:1.28;color:#806e80;text-align:center;overflow-wrap:anywhere}
+.ft-map-explainer{color:var(--ft-muted);font-size:12px;line-height:1.5;margin:13px 0 3px}
+@media(max-width:520px){
+ .ft-statbar{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .ft-jar-card{min-height:225px}
+ .ft-jar-meta{font-size:9px}
+}
