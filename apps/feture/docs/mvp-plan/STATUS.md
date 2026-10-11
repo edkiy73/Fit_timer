@@ -20,7 +20,7 @@
 | O02.1 | PR #803 в main. Личная Core сессия + server-side роли для QA, отзыв на следующем запросе, CAS назначений, привязка к созданию аккаунта, защита последнего управляющего, аудит ролей/допусков без email. SQL применён; browser приёмка и независимый аудит открыты. |
 | O02.2 | Отдельный `/#/operator` без admin key, только личная сессия и QA роли; код выполнен GPT-6 High, требуется независимая Sol 6.1 и реальная staff browser приёмка. |
 | QA | Связка QA grant/consent/private share: PostgreSQL regression #800. Это не browser/native acceptance. |
-| O03.1 | Серверные агрегаты только allowlist успешных действий, без private payload, два честно обозначенных сегмента и admin сводка за 7/30 дней; **код PR pending, CI и privacy review ещё не пройдены**. Не D1/D7 и не количество людей. |
+| O03.1 | Серверные агрегаты только allowlist успешных действий, без private payload, два честно обозначенных сегмента и admin сводка за 7/30 дней; **PR #810 объединён, CI `38150184323` success; независимая privacy/device review ещё не пройдена**. Не D1/D7 и не количество людей. |
 
 ## Очередь следующих независимых работ
 1. **O02/A04:** O02.1/O02.2 реализованы для QA: персональные роли, аудит и отдельный рабочий экран `/#/operator`. Далее browser приёмка реальных staff аккаунтов и распространение ролей на moderation/editorial по мере готовности. Реальный adult proof — только через подтверждённый метод, отдельно от QA. Не использовать самодекларацию и не переносить QA в live.
@@ -29,14 +29,14 @@
 4. **O03/O04/O05/O06:** безопасная аналитика, восстановление, responsive/native и выпуск. Без преждевременного APK/IPA.
 5. **Внешние блокеры:** Yoti/альтернативный provider, юридические тексты, контент-политика и устройства; делать независимые срезы без подмены success-заглушками.
 
-**Следующий заход:** проверь текущий main и открытые PR, особенно Sol C01.4; O03.1 отдельный безопасный срез PR pending без изменения SQL. C01.1/C01.2a/C01.2b/C01.3 реализованы. Ориентир C01.4 — выбранный результат теста через отдельный whitelist и явное согласие без raw answers/границ. Прочитай **ТОЛЬКО** [карточку C](cards/C.md), `docs/community-posts.md` и 2–5 source/test файлов. Photo uploads отдельно. O02/W07 реальная browser/privacy acceptance отдельно; GPT-6 High, небольшие связанные PR.
+**Следующий заход:** проверь текущий main и открытые PR, особенно Sol C01.4; O03.1 слит в main, без изменения SQL. C01.1/C01.2a/C01.2b/C01.3 реализованы. Ориентир C01.4 — выбранный результат теста через отдельный whitelist и явное согласие без raw answers/границ. Прочитай **ТОЛЬКО** [карточку C](cards/C.md), `docs/community-posts.md` и 2–5 source/test файлов. Photo uploads отдельно. O02/W07 реальная browser/privacy acceptance отдельно; GPT-6 High, небольшие связанные PR.
 
 ## Формат handoff (перезаписывай, не накапливай)
 `ID | последний merged PR/SHA | что проверено | что НЕ проверено | следующий ID и 2–5 файлов`
 
 Предыдущий срез Sol: **C01.3 | PR #809 (`feat/feture-post-recipients`, head `486b740`; предыдущий merged #808) | полный check: 23 UI/unit, 27 security, seed и 14 PostgreSQL contracts; typecheck/build**. Явные account-bound коды до 20 получателей; серверный отзыв одного и смена собственного кода со снятием всех выбранных доступов; CAS/replay не восстанавливает старые права. SQL `20261011141800` applied, live rollback/grants, block/adult revoke/owner revoke/review-on-expansion. Chromium fixture с Core memory auth + Posts API/PGlite на 320/390/768/1024/1440, save/consent/submit/review/revoke/rotate. Не проверены: real accounts/native, независимый Sol 6.1 audit; browser actor adult gate был fixture. **Следующий C01.4:** `src/feture/community.tsx`, `lib/feture/posts.js`, `lib/feture/questionnaires.js`, `tests/posts-postgres.mjs`, `docs/community-posts.md`; безопасный selected-result whitelist, затем photo. C01 открыт; реальные документы/production proof не настроены.
 
-**Параллельный GPT-6 High срез O03.1:** `lib/feture/private-metrics.js`, `private-metrics-admin.js`, `src/feture/metrics-admin.tsx`, `tests/private-metrics.js`, `docs/private-metrics.md`. Только серверные allowlist action counts, bounded TTL, totals <5 masked; независимая проверка и CI pending. После объединения записать PR и тесты здесь, не архив.
+**Завершённый кодовый срез O03.1 (PR #810, main `24d458b`, CI `38150184323` success):** `lib/feture/private-metrics.js`, `private-metrics-admin.js`, `src/feture/metrics-admin.tsx`, `tests/private-metrics.js`, `docs/private-metrics.md`. Только серверные allowlist action counts, bounded TTL, totals <5 masked; независимая проверка и browser/native acceptance pending. После объединения записать PR и тесты здесь, не архив.
 
 ## Где подробности
 [Маршрутизатор](README.md) → соответствующая карточка; [персональные QA роли](../operators.md). Архив только для исторических вопросов.
