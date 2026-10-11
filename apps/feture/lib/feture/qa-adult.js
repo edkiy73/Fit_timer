@@ -2,6 +2,7 @@
 'use strict';
 const {createHash}=require('node:crypto');
 const {DomainError,reject}=require('./errors');
+const {isAuthenticatedActor}=require('./identity');
 const EMAIL=/^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/;
 const HASH=/^[a-f0-9]{32}$/;
 const hashEmail=email=>createHash('sha256').update(email).digest('hex').slice(0,32);
@@ -26,21 +27,22 @@ function createQaAdultResolver(transport){
   }catch{return null;} // SQL or network failure never grants access.
  };
 }
-/** Core-admin-only routes. Operator must manually confirm tester is 18+.
+/** Authenticated, role-checked QA routes. Operator must manually confirm tester is 18+.
  * Admin account/email lookup remains private; only the hash goes to Supabase.
- * @param {import('./contracts').Transport} transport @param {import('./contracts').AccountStore} accounts */
-function createQaAdultAdmin(transport,accounts){
+ * @param {import('./contracts').Transport} transport @param {import('./contracts').AccountStore} accounts @param {import('./contracts').Actor} actor */
+function createQaAdultAdmin(transport,accounts,actor){
  /** @param {Record<string,unknown>} cmd */
  async function rpc(cmd){
   if(!transport.configured())reject(503,'verification_unavailable');
   try{
-   const r=await transport.request('/rest/v1/rpc/feture_qa_adult_admin',{
+   const r=await transport.request('/rest/v1/rpc/feture_qa_adult_bound_admin',{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({p_command:cmd}),timeoutMs:8000});
+    body:JSON.stringify({p_actor:actor.accountHash,p_generation:actor.accountGeneration,p_command:cmd}),timeoutMs:8000});
    if(!r.ok)reject(503,'verification_unavailable');
    const body=await r.json();
    if(!body||typeof body!=='object'||Array.isArray(body))reject(503,'verification_unavailable');
    if(body.ok!==true){
+    if(body.error==='forbidden')reject(403,'forbidden');
     if(body.error==='not_prelaunch')reject(403,'not_prelaunch');
     if(body.error==='account_not_found')reject(404,'account_not_found');
     if(body.error==='capacity')reject(429,'rate_limited');
@@ -55,26 +57,21 @@ function createQaAdultAdmin(transport,accounts){
   if(!['feture.qa.list','feture.qa.grant','feture.qa.revoke','feture.qa.lookup','feture.qa.audit'].includes(action))return false;
   res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/json; charset=utf-8');
   try{
+   if(!isAuthenticatedActor(actor))reject(401,'auth_required');
    let output;
    if(action==='feture.qa.audit'){
     if(Object.keys(body).sort().join(',')!=='action')reject(422,'invalid_request');
-    if(!transport.configured())reject(503,'verification_unavailable');
-    let rows;
-    try{
-     const response=await transport.request('/rest/v1/feture_qa_adult_events?'+new URLSearchParams({
-       select:'account_hash,event_type,expires_at,created_at,actor_label',order:'created_at.desc',limit:'25'
-     }),{timeoutMs:8000});
-     if(!response.ok)reject(503,'verification_unavailable');
-     rows=await response.json();
-    }catch(e){if(e instanceof DomainError)throw e;reject(503,'verification_unavailable');}
+    const data=await rpc({action:'audit'});
+    const rows=data.items;
     if(!Array.isArray(rows)||rows.length>25||!rows.every(item=>
       item&&typeof item==='object'&&!Array.isArray(item)&&HASH.test(item.account_hash)
       &&['grant','revoke'].includes(item.event_type)&&item.actor_label==='core-admin'
+      &&(item.actor_hash===null||HASH.test(item.actor_hash))
       &&typeof item.created_at==='string'&&Number.isFinite(Date.parse(item.created_at))
       &&(item.expires_at===null||(typeof item.expires_at==='string'&&Number.isFinite(Date.parse(item.expires_at))))))
       reject(503,'verification_unavailable');
     output={ok:true,items:rows.map(item=>({
-     accountHash:item.account_hash,action:item.event_type,at:item.created_at,expiresAt:item.expires_at,actor:'core-admin'
+     accountHash:item.account_hash,action:item.event_type,at:item.created_at,expiresAt:item.expires_at,actor:item.actor_hash||'core-admin'
     }))};
    }else if(action==='feture.qa.list'){
     if(Object.keys(body).sort().join(',')!=='action')reject(422,'invalid_request');

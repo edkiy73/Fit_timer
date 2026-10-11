@@ -7,7 +7,7 @@ const alice='a'.repeat(32),bob='b'.repeat(32);
 test('A04 QA: prelaunch-only, Core-admin-only grants expire/revoke, no bypass of consent',async()=>{
  const db=new PGlite();
  const sql=async(s,a=[])=>db.query(s,a).then(r=>r.rows);
- const admin=c=>sql('select public.feture_qa_adult_admin($1::jsonb) result',[JSON.stringify(c)]).then(r=>r[0].result);
+ const admin=c=>sql('select public.feture_qa_adult_bound_admin($1,$2,$3::jsonb) result',['c'.repeat(32),'1'.repeat(64),JSON.stringify(c)]).then(r=>r[0].result);
  const until=o=>sql('select public.feture_qa_adult_until($1::text) t',[o]).then(r=>r[0].t);
  try{
   await db.exec('create role anon;create role authenticated;create role service_role bypassrls;');
@@ -17,8 +17,35 @@ test('A04 QA: prelaunch-only, Core-admin-only grants expire/revoke, no bypass of
    '20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql',
    '20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql',
    '20261011083303_feture_qa_adult_access.sql',
-   '20261011113717_feture_qa_any_account_audit.sql'])await db.exec(load(filename));
+   '20261011113717_feture_qa_any_account_audit.sql','20261011120139_feture_operator_roles.sql','20261011121629_feture_operator_account_binding.sql'])await db.exec(load(filename));
   await db.exec('set role service_role');
+  const manager='c'.repeat(32),operator='d'.repeat(32),auditor='e'.repeat(32);
+  const staff=(actor,cmd,bootstrap=false)=>sql('select public.feture_operator_bound_command($1,$2,$3,$4,$5::jsonb) result',[actor,'1'.repeat(64),'1'.repeat(64),bootstrap,JSON.stringify(cmd)]).then(x=>x[0].result);
+  const decision=(actor,cmd)=>sql('select public.feture_qa_adult_bound_admin($1,$2,$3::jsonb) result',[actor,'1'.repeat(64),JSON.stringify(cmd)]).then(x=>x[0].result);
+  assert.equal((await decision(manager,{action:'list'})).error,'forbidden');
+  assert.equal((await staff(manager,{action:'bootstrap'})).error,'forbidden');
+  assert.equal((await staff(manager,{action:'bootstrap'},true)).role,'manager');
+  assert.equal((await staff(operator,{action:'bootstrap'},true)).error,'already_initialized');
+  assert.equal((await staff(operator,{action:'set',accountHash:operator,role:'manager',expectedRevision:0})).error,'forbidden');
+  assert.equal((await staff(manager,{action:'set',accountHash:manager,role:null,expectedRevision:1})).error,'last_manager');
+  assert.equal((await staff(manager,{action:'set',accountHash:operator,role:'qa_operator',expectedRevision:0})).ok,true);
+  assert.equal((await staff(manager,{action:'set',accountHash:auditor,role:'auditor',expectedRevision:0})).ok,true);
+  const reviewed={action:'grant',accountHash:alice,days:1,reviewed:true};
+  assert.equal((await decision(auditor,reviewed)).error,'forbidden');
+  assert.equal((await decision(operator,reviewed)).ok,true);
+  assert.equal((await decision(auditor,{action:'audit'})).items[0].actor_hash,operator);
+  assert.deepEqual((await staff(auditor,{action:'status'})).items,[]);
+  assert.equal((await staff(manager,{action:'set',accountHash:operator,role:null,expectedRevision:0})).error,'revision_conflict');
+  assert.equal((await staff(manager,{action:'set',accountHash:operator,role:null,expectedRevision:1})).ok,true);
+  assert.equal((await decision(operator,reviewed)).error,'forbidden');
+  assert.equal((await decision(operator,{action:'audit'})).error,'forbidden');
+  await assert.rejects(sql('select * from public.feture_operator_events'),/permission denied/);
+  await assert.rejects(sql('select * from public.feture_qa_adult_events'),/permission denied/);
+  await assert.rejects(sql('select public.feture_qa_adult_admin($1::jsonb)',[JSON.stringify(reviewed)]),/does not exist/);
+  assert.equal((await sql('select public.feture_qa_adult_bound_admin($1,$2,$3::jsonb) result',[manager,'2'.repeat(64),JSON.stringify({action:'audit'})]))[0].result.error,'forbidden','recreated email must not recover old role');
+  await assert.rejects(sql('select public.feture_qa_adult_admin($1,$2::jsonb)',[manager,JSON.stringify(reviewed)]),/permission denied/);
+  // Clear fixture permission only as database owner; now test the complete consent flow.
+  await db.exec('reset role;truncate public.feture_qa_adult_access,public.feture_qa_adult_events;set role service_role');
   const grant={action:'grant',accountHash:alice,days:1,reviewed:true};
   assert.equal((await until(alice)),null);
   assert.equal((await admin({...grant,reviewed:false})).error,'invalid_request');
@@ -30,7 +57,7 @@ test('A04 QA: prelaunch-only, Core-admin-only grants expire/revoke, no bypass of
   // Admin can approve any existing Core account; no global 12-person QA cap.
   for(let i=1;i<=14;i++)assert.equal((await admin({action:'grant',accountHash:i.toString(16).padStart(32,'0'),days:1,reviewed:true})).ok,true);
   assert.equal((await admin({action:'list'})).activeCount,15);
-  assert.equal((await sql("select count(*)::int n from public.feture_qa_adult_events where event_type='grant'"))[0].n,15);
+  assert.equal((await admin({action:'audit'})).items.filter(x=>x.event_type==='grant').length,15);
 
   assert.ok(Date.parse(await until(alice))>Date.now());
   assert.equal((await sql('select public.feture_peer_eligible($1) eligible',[alice]))[0].eligible,false,
@@ -61,7 +88,7 @@ test('A04 QA: prelaunch-only, Core-admin-only grants expire/revoke, no bypass of
   assert.equal((await admin({action:'revoke',accountHash:bob})).revoked,true);
   assert.equal((await admin({action:'lookup',accountHash:bob})).entry.revoked,true);
   assert.equal((await admin({action:'revoke',accountHash:bob})).revoked,true);
-  assert.equal((await sql("select count(*)::int n from public.feture_qa_adult_events where account_hash=$1 and event_type='revoke'",[bob]))[0].n,1,'repeat revoke must not add misleading audit events');
+  assert.equal((await admin({action:'audit'})).items.filter(x=>x.account_hash===bob&&x.event_type==='revoke').length,1,'repeat revoke must not add misleading audit events');
   assert.equal((await share(bob,{action:'share.read',linkId})).error,'resource_not_found','revoked viewer QA access');
 
   assert.equal(await until(bob),null);
@@ -75,6 +102,8 @@ test('A04 QA: prelaunch-only, Core-admin-only grants expire/revoke, no bypass of
    await db.exec('set role '+role);
    await assert.rejects(sql('select * from public.feture_qa_adult_access'),/permission denied/);
    await assert.rejects(sql('select * from public.feture_qa_adult_events'),/permission denied/);
+   await assert.rejects(staff(manager,{action:'status'}),/permission denied/);
+   await assert.rejects(sql('select * from public.feture_operators'),/permission denied/);
    await assert.rejects(until(alice),/permission denied/);
    await assert.rejects(admin(grant),/permission denied/);
    await db.exec('reset role');

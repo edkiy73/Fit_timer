@@ -37,7 +37,7 @@ async function authenticate(req,store,qaResolver) {
   // QA access is a server-only, live prelaunch entitlement, NOT proof of identity or age.
   // No client flag or self-declared DOB can ever grant it.
   const qaUntil=qaResolver?await qaResolver(accountHash):null;
-  const actor=Object.freeze({accountHash,verifiedAdult:!!qaUntil,qaUntil});
+  const actor=Object.freeze({accountHash,verifiedAdult:!!qaUntil,qaUntil,accountGeneration:typeof account.since==='string'&&Number.isFinite(Date.parse(account.since))?sha(accountHash+':'+account.since):undefined});
   authenticatedActors.add(actor);
   return actor;
 }
