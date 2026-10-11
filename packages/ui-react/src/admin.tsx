@@ -40,8 +40,8 @@ const COPY = {
     errors:'Ошибки', storage:'Хранилище', noKey:'Введи ключ администратора.',
     badKey:'Ключ не подошёл. Проверь его и попробуй ещё раз.', requestFailed:'Не удалось получить данные.',
     status:'Статус', deployment:'Сборка', warnings:'Что стоит сделать', services:'Сервисы',
-    statusOk:'Всё работает', statusWarning:'Работает, но не всё настроено', statusError:'Есть сбой — ученики могут не сохранить прогресс', statusLoading:'Проверяю…',
-    serviceHosting:'Хостинг', serviceStorage:'Хранилище данных', serviceMail:'Вход по коду из письма', serviceAi:'ИИ (разбор ошибок, разговор)', servicePush:'Уведомления на телефон', serviceBilling:'Оплата',
+    statusOk:'Всё работает', statusWarning:'Работает, но не всё настроено', statusError:'Хранилище недоступно — вход и сохранение могут не работать', statusLoading:'Проверяю…',
+    serviceSupabase:'Supabase API', serviceConfigured:'настроено, работа не проверена', servicePending:'ещё не проверено', serviceHosting:'Хостинг', serviceStorage:'Хранилище данных', serviceMail:'Вход по коду из письма', serviceAi:'ИИ (разбор ошибок, разговор)', servicePush:'Уведомления на телефон', serviceBilling:'Оплата',
     serviceOn:'работает', serviceOff:'не настроено', serviceDisabled:'не используется', serviceMemory:'только временная память — данные пропадут', serviceBroken:'сбой',
     buildLine:'Сейчас на сайте версия из изменения', details:'Подробности для разработчика',
     analytics:'Аналитика', accounts:'Аккаунты', totalErrors:'Ошибок в приложении',
@@ -73,8 +73,8 @@ const COPY = {
     errors:'Errors', storage:'Storage', noKey:'Enter ADMIN_KEY for protected data.',
     badKey:'Wrong ADMIN_KEY or access denied.', requestFailed:'Could not load data.',
     status:'Status', deployment:'Build', warnings:'To do', services:'Services',
-    statusOk:'Everything works', statusWarning:'Works, but not everything is set up', statusError:'Something is broken — learners may lose progress', statusLoading:'Checking…',
-    serviceHosting:'Hosting', serviceStorage:'Data storage', serviceMail:'Sign-in by email code', serviceAi:'AI (mistake explanations, talk)', servicePush:'Phone notifications', serviceBilling:'Payments',
+    statusOk:'Everything works', statusWarning:'Works, but not everything is set up', statusError:'Storage is unavailable — sign-in and saving may not work', statusLoading:'Checking…',
+    serviceSupabase:'Supabase API', serviceConfigured:'configured, operation not verified', servicePending:'not checked yet', serviceHosting:'Hosting', serviceStorage:'Data storage', serviceMail:'Sign-in by email code', serviceAi:'AI (mistake explanations, talk)', servicePush:'Phone notifications', serviceBilling:'Payments',
     serviceOn:'works', serviceOff:'not set up', serviceDisabled:'not used', serviceMemory:'temporary memory only — data will be lost', serviceBroken:'broken',
     buildLine:'The site runs the version from change', details:'Details for developers',
     analytics:'Analytics', accounts:'Accounts', totalErrors:'App errors',
@@ -216,7 +216,7 @@ function JsonCard({value}: {value: unknown}){
   return <pre className="ab-admin-json">{JSON.stringify(value, null, 2)}</pre>;
 }
 
-type Service = {configured?: boolean; enabled?: boolean};
+type Service = {configured?: boolean; enabled?: boolean; connected?: boolean};
 
 /* «Состояние»: one plain sentence, what works and what does not; raw data stays folded. */
 function HealthView({health, copy}: {health: AdminHealth | null; copy: Copy}){
@@ -228,18 +228,21 @@ function HealthView({health, copy}: {health: AdminHealth | null; copy: Copy}){
     : health.status === 'ok' ? copy.statusOk
     : health.status === 'warning' ? copy.statusWarning
     : copy.statusError;
-  const storageState = storage.mode === 'memory' ? copy.serviceMemory
+  const storageState = !health ? copy.servicePending
+    : storage.mode === 'memory' ? copy.serviceMemory
+    : storage.mode === 'none' ? copy.serviceOff
     : storage.status === 'ok' ? copy.serviceOn : copy.serviceBroken;
-  const state = (service: Service | undefined) => service?.enabled === false
-    ? copy.serviceDisabled
-    : service?.configured ? copy.serviceOn : copy.serviceOff;
+  const state = (service: Service | undefined) => !health ? copy.servicePending
+    : service?.enabled === false ? copy.serviceDisabled
+    : service?.configured ? copy.serviceConfigured : copy.serviceOff;
   const rows: Array<[string, boolean, string]> = [
-    [copy.serviceHosting, !!hosting?.adapter, hosting?.adapter || copy.serviceOff],
+    [copy.serviceHosting, !!hosting?.adapter, hosting?.adapter || (!health?copy.servicePending:copy.serviceOff)],
     [copy.serviceStorage, storage.status === 'ok' && storage.mode !== 'memory', storageState],
-    [copy.serviceMail, !!services.mail?.configured, services.mail?.configured ? copy.serviceOn : copy.serviceOff],
-    [copy.serviceAi, !!services.ai?.configured, state(services.ai)],
-    [copy.servicePush, !!services.push?.configured, state(services.push)],
-    [copy.serviceBilling, !!services.billing?.configured, state(services.billing)]
+    [copy.serviceSupabase, !!services.supabase?.connected, !health?copy.servicePending:!services.supabase?.configured?copy.serviceOff:services.supabase.connected?copy.serviceOn:copy.serviceBroken],
+    [copy.serviceMail, false, state(services.mail)],
+    [copy.serviceAi, false, state(services.ai)],
+    [copy.servicePush, false, state(services.push)],
+    [copy.serviceBilling, false, state(services.billing)]
   ];
   return (
     <section className="ab-admin-stack">
