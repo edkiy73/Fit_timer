@@ -7,10 +7,12 @@ const {createModerationAdmin}=require('../lib/feture/moderation-admin');
 const {createTestsAdmin}=require('../lib/feture/questionnaires-admin');
 const {createCatalogAdmin}=require('../lib/feture/catalog-admin');
 const {store}=require('../../../packages/core/server/store');
+const {createPrivateMetrics}=require('../lib/feture/private-metrics');
+const {createMetricsAdmin}=require('../lib/feture/private-metrics-admin');
 const {createOperatorEndpoint}=require('../lib/feture/operators');
 const {cors,rateOkScoped,readBody}=require('../../../packages/core/server/util');
 
-const coreAdmin = createAdminHandler({analyticsStats,handlers:[createCatalogAdmin(Supabase),createTestsAdmin(Supabase),createDocumentsAdmin(Supabase),createModerationAdmin(Supabase,store)]});
+const coreAdmin = createAdminHandler({analyticsStats,handlers:[createCatalogAdmin(Supabase),createTestsAdmin(Supabase),createDocumentsAdmin(Supabase),createModerationAdmin(Supabase,store),createMetricsAdmin(createPrivateMetrics(store))]});
 
 const operators=createOperatorEndpoint({transport:Supabase,accounts:store,cors,quota:(req,owner)=>rateOkScoped(req,'feture-operators',120,owner,60,true)});
 module.exports=async(req,res)=>{

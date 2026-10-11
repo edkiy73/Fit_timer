@@ -14,8 +14,8 @@ const {isPostCommand}=require('./posts');
 const {isShareCommand}=require('./shares');
 /** @typedef {import('./contracts').Request} Request */
 /** @typedef {import('./contracts').Response} Response */
-/** @param {{store:import('./contracts').AccountStore;repository:import('./contracts').Repository;documents?:import('./documents').DocumentsRepository;profiles?:import('./profile').ProfileRepository;access?:import('./access').AccessRepository;moderation?:import('./moderation').ModerationRepository;tests?:import('./questionnaires').TestsRepository;journal?:import('./journal').JournalRepository;shares?:import('./shares').ShareRepository;posts?:import('./posts').PostsRepository;cors:(req:Request,res:Response)=>boolean;quota:(req:Request,scope:string)=>Promise<boolean>;qaResolver?:(accountHash:string)=>Promise<string|null>;audit:(event:import('./contracts').AuditEvent)=>void}} deps */
-function createHandler({store,repository,documents,profiles,access,moderation,tests,journal,shares,posts,cors,quota,audit,qaResolver}) {
+/** @param {{store:import('./contracts').AccountStore;repository:import('./contracts').Repository;documents?:import('./documents').DocumentsRepository;profiles?:import('./profile').ProfileRepository;access?:import('./access').AccessRepository;moderation?:import('./moderation').ModerationRepository;tests?:import('./questionnaires').TestsRepository;journal?:import('./journal').JournalRepository;shares?:import('./shares').ShareRepository;posts?:import('./posts').PostsRepository;cors:(req:Request,res:Response)=>boolean;quota:(req:Request,scope:string)=>Promise<boolean>;qaResolver?:(accountHash:string)=>Promise<string|null>;metrics?:ReturnType<typeof import('./private-metrics').createPrivateMetrics>;audit:(event:import('./contracts').AuditEvent)=>void}} deps */
+function createHandler({store,repository,documents,profiles,access,moderation,tests,journal,shares,posts,cors,quota,audit,qaResolver,metrics}) {
   /** @param {Request} req @param {Response} res */
   return async function handler(req,res) {
     const requestId=randomUUID();
@@ -32,9 +32,10 @@ function createHandler({store,repository,documents,profiles,access,moderation,te
       const actor=await authenticate(req,store,qaResolver);
       if(!(await quota(req,actor.accountHash))){res.setHeader('Retry-After','60');record('rate_limited');return send(429,{error:'rate_limited',requestId});}
       const input=command(await readBody(req));action=input.action;
-      if(isPostCommand(input)){if(!posts)reject(503,'domain_unavailable');const result=await posts.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
-      if(isShareCommand(input)){if(!shares)reject(503,'domain_unavailable');const result=await shares.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
-      if(isTestsCommand(input)){if(!tests)reject(503,'domain_unavailable');const result=await tests.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
+      const metric=/** @param {unknown} result */async result=>{if(metrics)await metrics.record(action,actor,result);};
+      if(isPostCommand(input)){if(!posts)reject(503,'domain_unavailable');const result=await posts.execute(actor,input);await metric(result);record('ok');return send(200,{ok:true,...result,requestId});}
+      if(isShareCommand(input)){if(!shares)reject(503,'domain_unavailable');const result=await shares.execute(actor,input);await metric(result);record('ok');return send(200,{ok:true,...result,requestId});}
+      if(isTestsCommand(input)){if(!tests)reject(503,'domain_unavailable');const result=await tests.execute(actor,input);await metric(result);record('ok');return send(200,{ok:true,...result,requestId});}
       if(isJournalCommand(input)){if(!journal)reject(503,'domain_unavailable');const result=await journal.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
       if(isModerationCommand(input)){if(!moderation)reject(503,'moderation_unavailable');const result=await moderation.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
       if(isAccessCommand(input)){if(!access)reject(503,'domain_unavailable');const result=await access.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
@@ -55,7 +56,7 @@ function createHandler({store,repository,documents,profiles,access,moderation,te
         if(!profiles)reject(503,'domain_unavailable');const result=input.action==='profile.read'?{profile:await profiles.read(actor)}:await profiles.save(actor,input);record('ok');return send(200,{ok:true,...result,requestId});
       }
       if(input.action==='interests.set'||input.action==='interests.delete') {
-        const result=await repository.mutateInterest(actor,input);record(result.ok?'ok':result.error);
+        const result=await repository.mutateInterest(actor,input);if(result.ok)await metric(result);record(result.ok?'ok':result.error);
         return send(result.ok?200:409,{...result,requestId});
       }
       const page=await repository.listInterests(actor,input);record('ok');return send(200,{ok:true,...page,requestId});
