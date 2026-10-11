@@ -27,13 +27,13 @@ jobs:
       issues: read
       pull-requests: read
     outputs:
-      issue: \${{ steps.select.outputs.issue }}
+      issue: ${{ steps.select.outputs.issue }}
     steps:
       - name: Select one trusted issue; avoid duplicate agent PRs
         id: select
         uses: actions/github-script@v7
         env:
-          REQUESTED_ISSUE: \${{ inputs.issue_number || '' }}
+          REQUESTED_ISSUE: ${{ inputs.issue_number || '' }}
         with:
           script: |
             const {owner, repo} = context.repo;
@@ -83,7 +83,7 @@ jobs:
       - name: Prepare narrow task prompt
         uses: actions/github-script@v7
         env:
-          ISSUE_NUMBER: \${{ needs.pick.outputs.issue }}
+          ISSUE_NUMBER: ${{ needs.pick.outputs.issue }}
         with:
           script: |
             const fs = require('fs');
@@ -111,11 +111,11 @@ jobs:
       - name: Implement with scoped Codex
         uses: openai/codex-action@v1
         with:
-          openai-api-key: \${{ secrets.OPENAI_API_KEY }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           permission-profile: ':workspace'
           safety-strategy: drop-sudo
           effort: high
-          model: \${{ vars.FETURE_AGENT_MODEL }}
+          model: ${{ vars.FETURE_AGENT_MODEL }}
           prompt-file: .feture-agent-task.md
       - name: Bound patch and reject edits outside FetUre
         shell: bash
@@ -147,7 +147,7 @@ jobs:
       pull-requests: write
       issues: write
     outputs:
-      pr: \${{ steps.cpr.outputs.pull-request-number }}
+      pr: ${{ steps.cpr.outputs.pull-request-number }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -173,14 +173,14 @@ jobs:
         id: cpr
         uses: peter-evans/create-pull-request@v7
         with:
-          token: \${{ secrets.GITHUB_TOKEN }}
-          branch: feture/agent-\${{ needs.pick.outputs.issue }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: feture/agent-${{ needs.pick.outputs.issue }}
           base: main
-          title: 'feat(feture): queue issue #\${{ needs.pick.outputs.issue }}'
-          commit-message: 'feat(feture): implement queued issue #\${{ needs.pick.outputs.issue }}'
+          title: 'feat(feture): queue issue #${{ needs.pick.outputs.issue }}'
+          commit-message: 'feat(feture): implement queued issue #${{ needs.pick.outputs.issue }}'
           body: |
-            Automated bounded FetUre change for #\${{ needs.pick.outputs.issue }}.
-            Closes #\${{ needs.pick.outputs.issue }}
+            Automated bounded FetUre change for #${{ needs.pick.outputs.issue }}.
+            Closes #${{ needs.pick.outputs.issue }}
 
             - Scope: apps/feture only, at most 12 files / 120 KB diff.
             - FetUre check passed in publishing runner.
@@ -192,8 +192,8 @@ jobs:
         if: steps.cpr.outputs.pull-request-number != ''
         uses: actions/github-script@v7
         env:
-          ISSUE_NUMBER: \${{ needs.pick.outputs.issue }}
-          PR_NUMBER: \${{ steps.cpr.outputs.pull-request-number }}
+          ISSUE_NUMBER: ${{ needs.pick.outputs.issue }}
+          PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number }}
         with:
           script: |
             await github.rest.issues.createComment({
