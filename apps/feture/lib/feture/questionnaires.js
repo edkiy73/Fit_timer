@@ -4,6 +4,7 @@ const {reject,DomainError}=require('./errors');
 const {uuid}=require('./documents');
 const {createAccessGuard}=require('./access-guard');
 const {requireOwner}=require('./permissions');
+const {INTEREST_ID}=require('./interest-model');
 /** @param {unknown} v @returns {v is Record<string,unknown>} */
 const object=v=>!!v&&typeof v==='object'&&!Array.isArray(v)&&Object.getPrototypeOf(v)===Object.prototype;
 /** @param {unknown} v @param {string[]} keys */
@@ -37,7 +38,7 @@ function testsCommand(input){if(!object(input))reject(422,'invalid_request');con
  if(action==='tests.map.apply'){
    shape(v,['action','attemptId','operationId','interestIds']);
    if(!uuid(v.attemptId)||!uuid(v.operationId)||!Array.isArray(v.interestIds)||v.interestIds.length<1||v.interestIds.length>3
-    ||new Set(v.interestIds).size!==v.interestIds.length||!v.interestIds.every(id=>typeof id==='string'&&/^interest-[1-9]\\d{0,2}-[1-9]\\d{0,2}$/.test(id)))reject(422,'invalid_request');
+    ||new Set(v.interestIds).size!==v.interestIds.length||!v.interestIds.every(id=>typeof id==='string'&&INTEREST_ID.test(id)))reject(422,'invalid_request');
    return /** @type {import('./questionnaires').TestsCommand} */(v);
   }
  if(action!=='tests.save'&&action!=='tests.complete'&&action!=='tests.delete')reject(422,'invalid_request');
