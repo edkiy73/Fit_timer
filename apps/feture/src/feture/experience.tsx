@@ -197,7 +197,7 @@ export function FetureExperience(){
     <nav className="ft-mobile-nav" aria-label="Основная навигация">{NAV.map(x=><Link key={x.id} className={tab===x.id?'active':''} aria-current={tab===x.id?'page':undefined} to={x.id==='world'?'/':'/'+x.id}><Icon name={x.icon} size={22}/><span>{x.title}</span></Link>)}</nav>
   </div>
   {saving&&<StatusToast tone="loading" title="Сохраняем изменения…"/>}
-  {shareOpen&&scope!=='loading'&&<ShareCardDialog key={scope} categories={data.categories} map={map} onClose={()=>setShareOpen(false)}/>}
+  {shareOpen&&scope!=='loading'&&<ShareCardDialog key={scope} categories={data.categories} map={map} server={server} phase={phase} pending={pending} conflicts={conflicts} onClose={()=>setShareOpen(false)}/>}
   {edit&&scope!=='loading'&&<InterestDialog key={`${scope}:${edit.id}`} interest={edit} current={map[edit.id]} onClose={closeInterest} onSave={async v=>{const ok=await save(edit.id,v);if(ok)closeInterest();return ok;}} onDelete={async()=>{const ok=await remove(edit.id);if(ok)closeInterest();return ok;}}/>}
  </div></MotionConfig></LazyMotion>;
  function nextPerson(){setPerson((person+1)%PROFILES.length);setPhoto(0)}
