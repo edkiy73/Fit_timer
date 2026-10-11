@@ -91,6 +91,40 @@ describe('FetUre starter', () => {
     } finally {vi.restoreAllMocks();}
   });
 
+  it('keeps a journal draft after a lost response, blocks navigation and retries the same operation', async () => {
+    signIn();
+    const calls:Record<string,unknown>[]=[];
+    let failures=1;
+    const requestId='00000000-0000-4000-8000-000000000001';
+    vi.spyOn(globalThis,'fetch').mockImplementation(async (_url,options) => {
+      const c=JSON.parse(String(options?.body||'{}')) as Record<string,unknown>;
+      if(c.action==='journal.list')return new Response(JSON.stringify({ok:true,items:[],nextCursor:null,requestId}));
+      if(c.action==='journal.save'){
+        calls.push(c);
+        if(failures--)return new Response(JSON.stringify({error:'domain_unavailable'}),{status:503});
+        return new Response(JSON.stringify({ok:true,replayed:true,requestId,entry:{id:c.id,title:c.title,text:c.text,topicId:c.topicId,deleted:false,revision:1,createdAt:'2026-10-11T00:00:00Z',updatedAt:'2026-10-11T00:00:00Z'}}));
+      }
+      return new Response('{}',{status:503});
+    });
+    try {
+      const user=userEvent.setup();renderApp('/journal');
+      const text=await screen.findByRole('textbox',{name:'Твои мысли'});
+      await user.type(text,'Мысль, которую нельзя потерять');
+      await user.click(screen.getByRole('button',{name:'Сохранить запись'}));
+      await screen.findByRole('alert');
+      expect(text).toHaveProperty('value','Мысль, которую нельзя потерять');
+      await user.click(screen.getByRole('link',{name:'← Мой мир'}));
+      await screen.findByRole('dialog',{name:'Запись ещё не сохранена'});
+      await user.click(screen.getByRole('button',{name:'Остаться'}));
+      expect(text).toHaveProperty('value','Мысль, которую нельзя потерять');
+      await user.click(screen.getByRole('button',{name:'Сохранить запись'}));
+      await screen.findByText('Запись сохранена. Её видишь только ты.');
+      expect(calls).toHaveLength(2);expect(calls[1]).toEqual(calls[0]);
+      await user.click(screen.getByRole('link',{name:'← Мой мир'}));
+      expect(await screen.findByRole('heading',{name:/Твой мир/i})).toBeTruthy();
+    } finally {vi.restoreAllMocks();}
+  });
+
   it('keeps dictionaries in sync and offers a language switch only for several locales', async () => {
     expect(missingKeys(dictionaries)).toEqual({});
     renderApp('/account');

@@ -21,6 +21,7 @@ import {DocumentsPage} from './feture/documents-page';
 import {DocumentsAdmin} from './feture/documents-admin';
 import {ProfilePage} from './feture/profile-page';
 import {AccessPage,PeerProfilePage} from './feture/access-page';
+import {JournalPage} from './feture/journal-page';
 import {ModerationPage} from './feture/moderation-page';
 import {ModerationAdmin} from './feture/moderation-admin';
 import type {AdminSection} from '@appbase/ui-react/admin.js';
@@ -136,6 +137,7 @@ function Account(){
           <p className="muted">{t('account.synced')}</p>
           <p><Link to="/verification">{t('verification.title')}</Link></p>
           <p><Link to="/profile">Мой профиль</Link></p>
+          <p><Link to="/journal">Личный дневник и история</Link></p>
           <p><Link to="/access">Видимость и доступ</Link></p>
           <p><Link to="/safety">Безопасность и обращения</Link></p>
           <button className="link-button" type="button" disabled={signingOut} onClick={() => void signOut()}>{t('account.signOut')}</button>
@@ -175,6 +177,7 @@ export const routes: RouteObject[] = [
         {path:'verification', element:<VerificationPage />},
         {path:'documents', element:<DocumentsPage />},
         {path:'profile', element:<ProfilePage />},
+        {path:'journal', element:<JournalPage />},
         {path:'access', element:<AccessPage />},
         {path:'people/:id', element:<PeerProfilePage />},
         {path:'safety', element:<ModerationPage />},

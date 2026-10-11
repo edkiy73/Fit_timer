@@ -526,3 +526,11 @@ blockers. A01/A02/A03/A04 не закрывать до соответствую�
 **2026-10-11 — P03.1.** Профильные жалобы не дают automatic global ban; очередь видит только явно выбранный доступный контекст. Санкции атомарны и повторяемы, appeals только subject account, старое restore не снимает более новую санкцию. Common Admin key отражён как core-admin, персональные роли не подделаны. Automatic label adapter при timeout/invalid response оставляет manual_required и не вводит санкции. Остальные UGC типы не включены до своих adapters.
 
 Полный check и focused PostgreSQL пройдены; live service-role report/no-auto-ban/hide/retry/appeal/restore с assertions откатан. Все case/policy/publication таблицы после rollback пусты, Core documents 90. Production auth/adult/legal/operator/vendor и native приёмка открыты. Далее W03/W04/W06; P02/V01 медиа остаётся отдельной обязательной веткой, не исключён из scope.
+
+
+**2026-10-11 — W06.1: дневник и история карты.** Owner-only CRUD, связь с темой, CAS/op receipt, пустая tombstone против повторного сохранения удалённого; история карты атомарно создаётся существующей mutation, cursor 30 и отдельная idempotent очистка. Нет grants/публикации/admin-чтения дневника. После смены аккаунта форма/ответ старой сессии не используются. При ошибке текст остаётся в форме, переход требует решения. [Контракт и приёмка](private-journal.md).
+
+Полный check, один PostgreSQL privacy/erase/concurrency contract и один компонентный lost-response/navigation/retry сценарий прошли. Живая миграция применена в FetUre namespace; service-role rollback assertions прошли, diary/history пусты, Core documents 90. Браузерная проверка заблокирована окружением и не считается успешной; native и production A01/A04 по-прежнему открыты. W06 целиком не закрыта: требуется history результатов W03 и живая приёмка. Продолжать независимые W03/W04/W05 и P02, без остановки для смены усилия.
+
+
+**Публикация W06.1 (2026-10-11).** Владелец явно разрешил публикацию готового блока в публичный `edkiy73/Fit_timer` и слияние после CI ответом «Да, продолжай». Предыдущее отклонение автоматической проверки разрешения устранено этим подтверждением. Схема БД уже применена без личных записей и без включения age policy; публикация кода и CI выполняются в ветке `feat/feture-private-journal`.

@@ -7,11 +7,12 @@ const { requireAdult } = require('./permissions');
 const { DomainError,reject } = require('./errors');
 const { readBody,command } = require('./validation');
 const {isAccessCommand}=require('./access');
+const {isJournalCommand}=require('./journal');
 const {isModerationCommand}=require('./moderation');
 /** @typedef {import('./contracts').Request} Request */
 /** @typedef {import('./contracts').Response} Response */
-/** @param {{store:import('./contracts').AccountStore;repository:import('./contracts').Repository;documents?:import('./documents').DocumentsRepository;profiles?:import('./profile').ProfileRepository;access?:import('./access').AccessRepository;moderation?:import('./moderation').ModerationRepository;cors:(req:Request,res:Response)=>boolean;quota:(req:Request,scope:string)=>Promise<boolean>;audit:(event:import('./contracts').AuditEvent)=>void}} deps */
-function createHandler({store,repository,documents,profiles,access,moderation,cors,quota,audit}) {
+/** @param {{store:import('./contracts').AccountStore;repository:import('./contracts').Repository;documents?:import('./documents').DocumentsRepository;profiles?:import('./profile').ProfileRepository;access?:import('./access').AccessRepository;moderation?:import('./moderation').ModerationRepository;journal?:import('./journal').JournalRepository;cors:(req:Request,res:Response)=>boolean;quota:(req:Request,scope:string)=>Promise<boolean>;audit:(event:import('./contracts').AuditEvent)=>void}} deps */
+function createHandler({store,repository,documents,profiles,access,moderation,journal,cors,quota,audit}) {
   /** @param {Request} req @param {Response} res */
   return async function handler(req,res) {
     const requestId=randomUUID();
@@ -28,6 +29,7 @@ function createHandler({store,repository,documents,profiles,access,moderation,co
       const actor=await authenticate(req,store);
       if(!(await quota(req,actor.accountHash))){res.setHeader('Retry-After','60');record('rate_limited');return send(429,{error:'rate_limited',requestId});}
       const input=command(await readBody(req));action=input.action;
+      if(isJournalCommand(input)){if(!journal)reject(503,'domain_unavailable');const result=await journal.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
       if(isModerationCommand(input)){if(!moderation)reject(503,'moderation_unavailable');const result=await moderation.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
       if(isAccessCommand(input)){if(!access)reject(503,'domain_unavailable');const result=await access.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
       if(input.action==='documents.status'||input.action==='documents.accept'){

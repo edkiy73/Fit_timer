@@ -89,3 +89,5 @@ A04.3 persistent attempts/receipts, A05 reviewed document versions/consent, and 
 P01.1/P04.1 add server-filtered profile/map projections, optional field visibility, partial expiring grants, explicit contact permission, revoke/block, cursor permission management and audience preview. [Scope contract](docs/scoped-access.md). Albums, live adult accounts and chat are still separate acceptance criteria.
 
 P03.1 adds profile reports, own status/appeals and a manual Admin case queue with selected permitted snapshots, immutable decision audit and revocable sanctions. Automatic label adapter is isolated and falls back to manual review; no provider or worker is connected. [Moderation contract](docs/moderation.md). Individual staff roles and other UGC types remain later integrations.
+
+W06.1 добавляет личный дневник и историю карты в `/journal`: owner-only записи, привязка к теме, CAS/retry, удаление без восстановления старым запросом, atomically recorded map history и отдельная очистка. [Контракт и границы проверки](docs/private-journal.md). Браузерная/native приёмка и живой доступ после A01/A04 остаются открыты.
