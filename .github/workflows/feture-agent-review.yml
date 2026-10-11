@@ -28,13 +28,13 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
-      pr: \${{ steps.select.outputs.pr }}
-      sha: \${{ steps.select.outputs.sha }}
+      pr: ${{ steps.select.outputs.pr }}
+      sha: ${{ steps.select.outputs.sha }}
     steps:
       - uses: actions/github-script@v7
         id: select
         env:
-          REQUESTED_PR: \${{ inputs.pr_number || '' }}
+          REQUESTED_PR: ${{ inputs.pr_number || '' }}
         with:
           script: |
             const {owner, repo} = context.repo;
@@ -64,16 +64,16 @@ jobs:
     permissions:
       contents: read
     outputs:
-      report: \${{ steps.codex.outputs.final-message }}
+      report: ${{ steps.codex.outputs.final-message }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: \${{ needs.pick.outputs.sha }}
+          ref: ${{ needs.pick.outputs.sha }}
           persist-credentials: false
           fetch-depth: 0
       - name: Prepare scoped review prompt
         env:
-          PR_NUMBER: \${{ needs.pick.outputs.pr }}
+          PR_NUMBER: ${{ needs.pick.outputs.pr }}
         run: |
           cat > .feture-review-task.md <<'PROMPT'
           Independent FetUre code/security/UX review. Read-only. Do NOT write files or run production/network operations.
@@ -88,10 +88,10 @@ jobs:
       - uses: openai/codex-action@v1
         id: codex
         with:
-          openai-api-key: \${{ secrets.OPENAI_API_KEY }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           permission-profile: ':read-only'
           safety-strategy: drop-sudo
-          model: \${{ vars.FETURE_REVIEW_MODEL }}
+          model: ${{ vars.FETURE_REVIEW_MODEL }}
           effort: high
           prompt-file: .feture-review-task.md
           allow-bots: 'true'
@@ -107,8 +107,8 @@ jobs:
     steps:
       - uses: actions/github-script@v7
         env:
-          PR_NUMBER: \${{ needs.pick.outputs.pr }}
-          REVIEW: \${{ needs.review.outputs.report }}
+          PR_NUMBER: ${{ needs.pick.outputs.pr }}
+          REVIEW: ${{ needs.review.outputs.report }}
         with:
           script: |
             await github.rest.issues.createComment({
