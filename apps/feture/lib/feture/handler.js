@@ -10,10 +10,11 @@ const {isAccessCommand}=require('./access');
 const {isTestsCommand}=require('./questionnaires');
 const {isJournalCommand}=require('./journal');
 const {isModerationCommand}=require('./moderation');
+const {isShareCommand}=require('./shares');
 /** @typedef {import('./contracts').Request} Request */
 /** @typedef {import('./contracts').Response} Response */
-/** @param {{store:import('./contracts').AccountStore;repository:import('./contracts').Repository;documents?:import('./documents').DocumentsRepository;profiles?:import('./profile').ProfileRepository;access?:import('./access').AccessRepository;moderation?:import('./moderation').ModerationRepository;tests?:import('./questionnaires').TestsRepository;journal?:import('./journal').JournalRepository;cors:(req:Request,res:Response)=>boolean;quota:(req:Request,scope:string)=>Promise<boolean>;audit:(event:import('./contracts').AuditEvent)=>void}} deps */
-function createHandler({store,repository,documents,profiles,access,moderation,tests,journal,cors,quota,audit}) {
+/** @param {{store:import('./contracts').AccountStore;repository:import('./contracts').Repository;documents?:import('./documents').DocumentsRepository;profiles?:import('./profile').ProfileRepository;access?:import('./access').AccessRepository;moderation?:import('./moderation').ModerationRepository;tests?:import('./questionnaires').TestsRepository;journal?:import('./journal').JournalRepository;shares?:import('./shares').ShareRepository;cors:(req:Request,res:Response)=>boolean;quota:(req:Request,scope:string)=>Promise<boolean>;audit:(event:import('./contracts').AuditEvent)=>void}} deps */
+function createHandler({store,repository,documents,profiles,access,moderation,tests,journal,shares,cors,quota,audit}) {
   /** @param {Request} req @param {Response} res */
   return async function handler(req,res) {
     const requestId=randomUUID();
@@ -30,6 +31,7 @@ function createHandler({store,repository,documents,profiles,access,moderation,te
       const actor=await authenticate(req,store);
       if(!(await quota(req,actor.accountHash))){res.setHeader('Retry-After','60');record('rate_limited');return send(429,{error:'rate_limited',requestId});}
       const input=command(await readBody(req));action=input.action;
+      if(isShareCommand(input)){if(!shares)reject(503,'domain_unavailable');const result=await shares.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
       if(isTestsCommand(input)){if(!tests)reject(503,'domain_unavailable');const result=await tests.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
       if(isJournalCommand(input)){if(!journal)reject(503,'domain_unavailable');const result=await journal.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
       if(isModerationCommand(input)){if(!moderation)reject(503,'moderation_unavailable');const result=await moderation.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
