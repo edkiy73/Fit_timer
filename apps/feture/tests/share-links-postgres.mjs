@@ -53,6 +53,17 @@ test('W07 share links: private source projection, atomic replay, expiry, revoke 
   assert.equal((await op(bob,{action:'share.read',linkId:link})).error,'resource_not_found');
   await db.query("delete from public.feture_blocks where blocker_hash=$1 and blocked_hash=$2",[bob,alice]);
   assert.equal((await op(bob,{action:'share.read',linkId:link})).ok,true);
+  // An active moderation restriction immediately invalidates previously shared
+  // material, for the OWNER and for the VIEWER independently.
+  await db.query("insert into public.feture_moderation_restrictions(account_hash,state,reason,expires_at) values($1,'hidden','policy',clock_timestamp()+interval '2 days')",[alice]);
+  assert.equal((await op(bob,{action:'share.read',linkId:link})).error,'resource_not_found');
+  assert.equal((await op(alice,{...create,linkId:id(94)})).error,'resource_not_found');
+  await db.query("update public.feture_moderation_restrictions set lifted_at=clock_timestamp() where account_hash=$1",[alice]);
+  assert.equal((await op(bob,{action:'share.read',linkId:link})).ok,true);
+  await db.query("insert into public.feture_moderation_restrictions(account_hash,state,reason,expires_at) values($1,'suspended','policy',clock_timestamp()+interval '2 days')",[bob]);
+  assert.equal((await op(bob,{action:'share.read',linkId:link})).error,'resource_not_found');
+  await db.query("update public.feture_moderation_restrictions set lifted_at=clock_timestamp() where account_hash=$1",[bob]);
+  assert.equal((await op(bob,{action:'share.read',linkId:link})).ok,true);
   const list=await op(alice,{action:'share.list'});assert.equal(list.items.length,1);assert.equal(list.items[0].id,link);
   assert.equal((await op(bob,{action:'share.list'})).items.length,0);
   // Losing the owner's verified status invalidates existing links immediately,
