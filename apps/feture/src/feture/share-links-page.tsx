@@ -8,7 +8,7 @@ import {listedSchema,readSchema,revokedSchema,shareLinkUrl,STANCE_LABELS} from '
 export function ShareLinksPage(){
  const auth=useOptionalAuth();
  if(auth.loading)return <section className="card" role="status">Загружаем аккаунт…</section>;
- if(!auth.session)return <section className="card"><h2>Мои ссылки</h2><p>Управление ссылками доступно после входа и подтверждения совершеннолетия.</p><Link to="/account">Войти</Link></section>;
+ if(!auth.session)return <section className="card"><h2>Мои ссылки</h2><p>Чтобы управлять и отзывать ранее созданные ссылки, достаточно войти. Для создания и просмотра содержимого требуется подтверждение совершеннолетия и действующие согласия.</p><Link to="/account">Войти</Link></section>;
  return <OwnLinks key={auth.session.email+auth.session.deviceId+auth.session.syncToken} session={auth.session}/>;
 }
 function OwnLinks({session}:{session:AuthSession}){
