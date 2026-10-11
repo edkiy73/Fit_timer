@@ -15,7 +15,7 @@ Core account/KV хранится через готовый Supabase adapter в �
 | `SUPABASE_URL` | URL существующего FitT `anrhayozrhrmiwexmbhw`; уже настроен |
 | `SUPABASE_SECRET_KEY` | Серверный secret существующего FitT; Secret, без `VITE_` |
 | `RESEND_API_KEY` | Ключ отправки Resend; Secret, без `VITE_` |
-| `MAIL_FROM` | Адрес на подтверждённом домене отправки с именем FetUre |
+| `MAIL_FROM` | Для разработки: `FetUre <onboarding@resend.dev>`. Для запуска: адрес на своём подтверждённом домене |
 
 `SUPABASE_PUBLISHABLE_KEY` остаётся только для каталога. Не включать
 `ALLOW_MEMORY_STORE`, не публиковать секреты в git/клиенте. Preview не получает
@@ -28,6 +28,13 @@ production credentials автоматически. Не менять конфи�
 Команда не загружает `.env` автоматически; в локальном Node с приватным
 файлом используйте `node --env-file=.env.local tools/check-auth-env.mjs`.
 Успех означает только полноту конфигурации, не доставку письма или рабочий вход.
+
+До выбора домена разрешён `npm run check:auth-env -- --development-mail`.
+Он допускает отправителя `FetUre <onboarding@resend.dev>` и явно показывает
+`mailMode=resend-owner-only`, `launchMailReady=false`. Письма доступны только
+владельцу аккаунта Resend; получатель — его адрес, отправитель — адрес Resend.
+Без флага проверка сохраняет запрет тестового домена для запуска.
+Проверка своего домена всё равно требует Resend и реальной доставки.
 
 После настройки выполнить один deployment актуального main. Проверить
 `/api/health`: store connected, Supabase configured, mail ready; каталог
@@ -86,3 +93,12 @@ CommonJS: deployment загружает их без TypeScript server build. П�
 ## Перепроверка 2026-10-12
 
 На production `5ee3e84` health вернул 503: store none, Supabase server configured=false, mail configured=false. Metadata Vercel повторно показала только SUPABASE_URL/SUPABASE_PUBLISHABLE_KEY. Production APPBASE_STORE=supabase установлен через Vercel API; ключи/отправитель не доступны и не установлены. Режим заработает только с серверным ключом, почта — с Resend key и подтверждённым MAIL_FROM. После их настройки нужен один новый deployment и реальный тест доставки на разрешённый владельцем ящик. Отключённые AI/push/billing не являются причиной этого отказа.
+
+## Подключение 2026-10-12
+
+Владелец установил server secret и Resend key. Production `565ef7d` вернул
+health 200: Supabase connected, все пять операций store успешны. Ошибочный
+Gmail в MAIL_FROM заменён только в FetUre production на
+`FetUre <onboarding@resend.dev>`; запущен один redeployment. Наличие ключа
+не доказывает доставку, тест реального входа и двух аккаунтов остаётся открыт.
+Секреты не читались и не копировались.
