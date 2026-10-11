@@ -32,7 +32,7 @@ function createHandler({store,repository,documents,profiles,access,moderation,te
       const actor=await authenticate(req,store,qaResolver);
       if(!(await quota(req,actor.accountHash))){res.setHeader('Retry-After','60');record('rate_limited');return send(429,{error:'rate_limited',requestId});}
       const input=command(await readBody(req));action=input.action;
-      const metric=async result=>{if(metrics)await metrics.record(action,actor,result);};
+      const metric=/** @param {unknown} result */async result=>{if(metrics)await metrics.record(action,actor,result);};
       if(isPostCommand(input)){if(!posts)reject(503,'domain_unavailable');const result=await posts.execute(actor,input);await metric(result);record('ok');return send(200,{ok:true,...result,requestId});}
       if(isShareCommand(input)){if(!shares)reject(503,'domain_unavailable');const result=await shares.execute(actor,input);await metric(result);record('ok');return send(200,{ok:true,...result,requestId});}
       if(isTestsCommand(input)){if(!tests)reject(503,'domain_unavailable');const result=await tests.execute(actor,input);await metric(result);record('ok');return send(200,{ok:true,...result,requestId});}
