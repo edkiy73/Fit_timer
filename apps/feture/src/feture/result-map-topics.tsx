@@ -61,8 +61,20 @@ export function ResultMapTopics({attempt,session}:{attempt:TestAttempt;session:A
   <div className="ft-questionnaire-grid">{items.map(item=><div className="card" key={item.id}>
     <strong>{item.title}</strong>
     <p className="muted">{canRead?(map[item.id]?interestSummary(map[item.id]):'Пока не исследовано'):'Текущее значение увидишь в редакторе карты'}</p>
+    {ready&&!review&&eligible.has(item.id)&&<label className="ft-consent-choice"><input type="checkbox" checked={selected.includes(item.id)} disabled={busy||!!command.current} onChange={()=>{setSelected(ids=>ids.includes(item.id)?ids.filter(id=>id!==item.id):[...ids,item.id]);setAck(false);}}/> Добавить как «Интересно»</label>}
+    {canRead&&!eligible.has(item.id)&&<p className="muted">Существующие или удалённые отметки не перезаписываются.</p>}
     <Link to={`/explore/${encodeURIComponent(item.category)}?interest=${encodeURIComponent(item.id)}`}>Открыть тему и выбрать вручную</Link>
    </div>)}</div>
-  <p className="muted">Твои жёсткие границы, приватность и выбор для знакомств не меняются от прохождения теста. Отметки сохраняются только после твоего отдельного подтверждения в редакторе.</p>
+  {canRead&&!ready&&!command.current&&<p className="muted">Добавить темы можно после синхронизации карты и разрешения её конфликтов.</p>}
+  {ready&&!review&&selected.length>0&&<button type="button" disabled={!canReview||busy} onClick={()=>{setReview(true);setAck(false);}}>Просмотреть изменения ({selected.length})</button>}
+  {review&&<div className="card"><h4>Проверь, что изменится</h4><p>Только новые темы, выбранные тобой. Ответы и баллы не копируются.</p>
+   <ul>{items.filter(x=>selected.includes(x.id)).map(x=><li key={x.id}>{x.title}: не исследовано → «Интересно»; опыт не указан; границы не отмечены; видимость «Только мне»; поиск знакомств выключен.</li>)}</ul>
+   <label className="ft-consent-choice"><input type="checkbox" checked={ack} disabled={busy} onChange={e=>setAck(e.target.checked)}/> Подтверждаю именно эти темы. Это не согласие на действия и не публикация.</label>
+   <div className="ft-form-actions"><button type="button" disabled={busy||!!command.current} onClick={()=>{setReview(false);setAck(false);setSelected([]);}}>Отменить</button><button type="button" disabled={!ack||busy||(!ready&&!command.current)} onClick={()=>void apply()}>Подтвердить и добавить</button></div>
+  </div>}
+  {error&&<p role="alert">{error}</p>}
+  {error&&command.current&&<div className="ft-form-actions"><button type="button" disabled={busy} onClick={()=>void apply()}>Повторить то же действие</button><button type="button" disabled={busy} onClick={()=>{if(window.confirm('Предыдущее действие могло сохраниться. Проверить карту, не повторяя запрос?')){command.current=null;setReview(false);setAck(false);setSelected([]);setError('');void retry();}}}>Проверить карту</button></div>}
+  {notice&&<p role="status">{notice}</p>}
+  <p className="muted">Тест не меняет существующие границы или видимость. При сохранении новых тем источник будет отмечен как опросник.</p>
  </section>;
 }
