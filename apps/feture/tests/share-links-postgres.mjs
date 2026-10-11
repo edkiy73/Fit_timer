@@ -55,6 +55,17 @@ test('W07 share links: private source projection, atomic replay, expiry, revoke 
   assert.equal((await op(bob,{action:'share.read',linkId:link})).ok,true);
   const list=await op(alice,{action:'share.list'});assert.equal(list.items.length,1);assert.equal(list.items[0].id,link);
   assert.equal((await op(bob,{action:'share.list'})).items.length,0);
+  // Losing the owner's verified status invalidates existing links immediately,
+  // even when the viewer still has a valid proof and the link has not expired.
+  await db.query('update public.feture_verification_attempts set current=false where account_hash=$1',[alice]);
+  assert.equal((await op(bob,{action:'share.read',linkId:link})).error,'resource_not_found');
+  await db.query('update public.feture_verification_attempts set current=true where account_hash=$1',[alice]);
+  assert.equal((await op(bob,{action:'share.read',linkId:link})).ok,true);
+  // An expired link is inaccessible regardless of knowledge of its UUID.
+  const expiring=id(103);
+  assert.equal((await op(alice,{...create,linkId:expiring,days:1})).ok,true);
+  await db.query("update public.feture_share_links set created_at=clock_timestamp()-interval '2 days',expires_at=clock_timestamp()-interval '1 day' where id=$1",[expiring]);
+  assert.equal((await op(bob,{action:'share.read',linkId:expiring})).error,'resource_not_found');
   assert.equal((await op(alice,{action:'share.create',linkId:id(101),days:1,reviewed:true,selected:[...selected,...selected]})).error,'invalid_request');
   assert.equal((await op(alice,{action:'share.create',linkId:id(102),days:1,reviewed:false,selected})).error,'invalid_request');
   await db.query("update public.feture_interest_states set boundary='hard',intensity=null,revision=2 where account_hash=$1 and interest_id='interest-1-1'",[alice]);
