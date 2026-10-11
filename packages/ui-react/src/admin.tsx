@@ -55,7 +55,7 @@ const COPY = {
     accessDone:'Готово.', accessHint:'Для семьи, промо или возврата. Курс открывается навсегда, подписка — на выбранное число дней. Если человек ещё не заходил, аккаунт создастся сам.',
     loginCode:'Код для входа', loginCodeDone:'Одноразовый код для', loginCodeHint:'действует 15 минут. На экране входа: email → «У меня есть код».',
     payments:'Платежи', noPayments:'Платежей пока нет.', when:'Когда', provider:'Провайдер', event:'Событие', account:'Аккаунт',
-    mainGroup:'Главное', accountsGroup:'Аккаунты', systemGroup:'Система', productGroup:'Продукт', menu:'Меню',
+    mainGroup:'Главное', accountsGroup:'Аккаунты', systemGroup:'Система', productGroup:'Продукт', menu:'Меню', navSearch:'Найти раздел', noNavMatches:'Разделы не найдены',
     settingsGroup:'Настройки', ai:'ИИ', billingKeys:'Способы оплаты', legal:'Владелец и контакты', campaigns:'Рассылки',
     eventInstall:'Открыли приложение впервые', newDevices:'Новых устройств за 30 дней', activity:'Что делали за 30 дней', activityHint:'«Раз» — сколько всего, «Устройств» — у скольких разных телефонов и браузеров.',
     times:'Раз', devices:'Устройств', platforms:'Откуда приходят', platformAndroid:'Android', platformIos:'iPhone', platformWeb:'Сайт',
@@ -88,7 +88,7 @@ const COPY = {
     accessDone:'Done.', accessHint:'Manual access: family, promo, refund. Purchases are permanent, Premium lasts for a period. The account is created if it does not exist yet.',
     loginCode:'Sign-in code', loginCodeDone:'One-time code for', loginCodeHint:'valid for 15 minutes. On the sign-in screen: email → “I have a code”.',
     payments:'Payments', noPayments:'No payments yet.', when:'When', provider:'Provider', event:'Event', account:'Account',
-    mainGroup:'Main', accountsGroup:'Accounts', systemGroup:'System', productGroup:'Product', menu:'Menu',
+    mainGroup:'Main', accountsGroup:'Accounts', systemGroup:'System', productGroup:'Product', menu:'Menu', navSearch:'Find section', noNavMatches:'No matching sections',
     settingsGroup:'Settings', ai:'AI', billingKeys:'Payment methods', legal:'Owner and contacts', campaigns:'Campaigns',
     eventInstall:'Opened the app for the first time', newDevices:'New devices in 30 days', activity:'Activity in 30 days', activityHint:'“Times” is the total, “Devices” is how many different phones and browsers.',
     times:'Times', devices:'Devices', platforms:'Where people come from', platformAndroid:'Android', platformIos:'iPhone', platformWeb:'Web',
@@ -409,6 +409,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [navOpen, setNavOpen] = useState(false);
+  const [navSearch, setNavSearch] = useState('');
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const navigationRef = useRef<HTMLElement>(null);
   const [accessEmail, setAccessEmail] = useState('');
@@ -440,6 +441,15 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
       ...Array.from(extras, ([label,ids]) => ({label,ids}))
     ];
   }, [copy, extraSections]);
+
+  const visibleNavGroups = useMemo(() => {
+    const search = navSearch.trim().toLocaleLowerCase();
+    if(!search) return navGroups;
+    return navGroups.map(group => ({...group, ids:group.ids.filter(id =>
+      group.label.toLocaleLowerCase().includes(search)
+      || (tabs.find(([tabId]) => tabId === id)?.[1] || '').toLocaleLowerCase().includes(search)
+    )})).filter(group => group.ids.length);
+  }, [navGroups, navSearch, tabs]);
 
   const currentLabel = tabs.find(([id]) => id === tab)?.[1] || copy.title;
 
@@ -543,6 +553,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
     setTab(next);
     try{ sessionStorage.setItem('appbase.admin.tab', String(next)); }catch(_){}
     setNavOpen(false);
+    setNavSearch('');
     window.scrollTo({top:0,left:0,behavior:'auto'});
   }
 
@@ -601,8 +612,9 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
           </div>
           <button type="button" className="ab-admin-signout" onClick={disconnect}>{copy.disconnect}</button>
         </div>
+        <label className="ab-admin-nav-search"><span>{copy.navSearch}</span><input type="search" value={navSearch} placeholder={copy.navSearch} onChange={e => setNavSearch(e.target.value)} /></label>
         <nav className="ab-admin-nav">
-          {navGroups.map(group => (
+          {visibleNavGroups.map(group => (
             <div className="ab-admin-nav-group" key={group.label}>
               <div className="ab-admin-nav-label">{group.label}</div>
               {group.ids.map(id => {
@@ -616,6 +628,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
               })}
             </div>
           ))}
+          {!visibleNavGroups.length && <p className="ab-admin-nav-empty">{copy.noNavMatches}</p>}
         </nav>
       </aside>
       <button className="ab-admin-shade" aria-label={copy.menu} tabIndex={navOpen ? 0 : -1} type="button" onClick={() => { setNavOpen(false); menuButtonRef.current?.focus(); }} />
