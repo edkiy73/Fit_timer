@@ -164,3 +164,13 @@
 .ft-share-preview>div span,.ft-share-preview>small{color:#806a82;font-size:11px}
 .ft-share-composer .ft-share-warning{color:#69506a;font-size:12px}
 @media(max-width:620px){.ft-share-entry{align-items:flex-start;flex-direction:column}.ft-share-choices{grid-template-columns:1fr;max-height:200px}}
+
+/* W07.2 — owner-only share-link controls, privacy guard and a minimal viewer. */
+.ft-share-link-control{margin-top:16px;border-top:1px solid var(--ft-border);padding-top:14px;display:grid;gap:10px}
+.ft-share-link-control h3{margin:0;font-size:16px}
+.ft-share-link-control p{font-size:12px;color:var(--ft-muted);line-height:1.5;margin:0}
+.ft-share-link-control input[type="text"]{max-width:100%;width:100%;min-width:0;font-size:12px;padding:10px;border:1px solid var(--ft-border);border-radius:10px}
+.ft-share-link-control .ft-form-actions{display:flex;gap:9px;flex-wrap:wrap}
+.ft-share-history{list-style:none;margin:12px 0;padding:0;display:grid;gap:12px}
+.ft-share-history li{padding:14px;border:1px solid var(--line);border-radius:12px;display:grid;gap:6px;overflow-wrap:anywhere}
+.ft-share-history li small{color:var(--ft-muted)}
