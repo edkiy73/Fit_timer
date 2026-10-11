@@ -78,8 +78,9 @@ begin
    where account_hash=owner;
   return jsonb_build_object('ok',true,'revoked',true);
  end if;
- if not exists(select 1 from public.feture_profiles where account_hash=owner)
- then return jsonb_build_object('ok',false,'error','account_not_found');end if;
+ -- The Core-admin adapter already checked the canonical account/device record.
+ -- Provision the FetUre owner row only for this specifically authorized account.
+ insert into public.feture_profiles(account_hash) values(owner) on conflict(account_hash) do nothing;
  if (select count(*) from public.feture_qa_adult_access where revoked_at is null and expires_at>now_at
       and account_hash<>owner)>=12
  then return jsonb_build_object('ok',false,'error','capacity');end if;
