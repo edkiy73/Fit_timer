@@ -206,8 +206,18 @@ function InterestDialog({interest,current,onClose,onSave,onDelete}:{interest:Edi
  const [boundaryNote,setBoundaryNote]=useState(current?.boundaryNote??'');
  const [intensity,setIntensity]=useState<number|null>(current?.intensity??null);
  const [visibility,setVisibility]=useState<Visibility>(current?.visibility||'private');
+ const initial=useRef({stance:current?.stance??'unknown',experience:current?.experience??'unspecified',
+  boundary:current?.boundary??'none',boundaryNote:current?.boundaryNote??'',
+  intensity:current?.intensity??null,visibility:current?.visibility??'private'});
  const canScore=hasIntensity(stance,boundary);
- return <AppDialog title={interest.title} eyebrow={interest.category} onClose={onClose}>
+ const unsaved=stance!==initial.current.stance||experience!==initial.current.experience||
+  boundary!==initial.current.boundary||boundaryNote!==initial.current.boundaryNote||
+  intensity!==initial.current.intensity||visibility!==initial.current.visibility;
+ const safeClose=()=>{if(busy)return;
+  if(unsaved&&!window.confirm('Несохранённые изменения будут потеряны. Закрыть редактор?'))return;
+  onClose();
+ };
+ return <AppDialog title={interest.title} eyebrow={interest.category} onClose={safeClose}>
   <p className="ft-muted">{interest.definition}</p>
   {interest.synonyms.length>0&&<p className="ft-muted"><small>Также ищут: {interest.synonyms.join(', ')}.</small></p>}
   {interest.relatedTitles.length>0&&<p className="ft-muted"><small>Связанные темы: {interest.relatedTitles.join(', ')}.</small></p>}
@@ -222,8 +232,9 @@ function InterestDialog({interest,current,onClose,onSave,onDelete}:{interest:Edi
    {boundary==='conditional'&&<div className="ft-conditions"><label htmlFor="ft-boundary-note">Условия — только для меня</label><textarea id="ft-boundary-note" maxLength={1000} rows={3} value={boundaryNote} onChange={e=>setBoundaryNote(e.target.value)} placeholder="Что важно для моего комфорта?"/><small>{boundaryNote.length}/1000 · Текст условий не публикуется.</small></div>}
   </fieldset>
   <div className="ft-visibility"><strong>Кто может видеть отметку?</strong><div className="ft-visibility-options">{VIEWS.map(v=><button type="button" key={v.id} className={visibility===v.id?'active':''} aria-pressed={visibility===v.id} onClick={()=>setVisibility(v.id)}>{v.label}</button>)}</div><small>Отметки видны только тебе. Выбранная видимость будет действовать при раскрытии профиля; условия всегда остаются приватными.</small></div>
+  {unsaved&&<p className="ft-muted"><small>Есть несохранённые изменения. При закрытии редактор попросит подтверждение.</small></p>}
   {saveError&&<p className="ft-save-warning" role="alert">Отметка не сохранена. Проверь свободное место или вернись к карте, если аккаунт изменился. Твой ввод остаётся здесь.</p>}
-  <ActionButton className="ft-save" disabled={busy} onClick={async()=>{setBusy(true);try{const ok=await onSave({stance,experience,boundary,boundaryNote:boundary==='conditional'?(boundaryNote||null):null,intensity:canScore?intensity:null,visibility,useForDiscovery:current?.useForDiscovery??false});setSaveError(!ok);}finally{setBusy(false);}}}>{busy?'Сохраняем…':'Сохранить'} <Icon name="check" size={18}/></ActionButton>
-  {current&&<button type="button" className="ft-delete-interest" disabled={busy} onClick={async()=>{if(!window.confirm('Удалить эту отметку? Старые правки с других устройств не восстановят её автоматически.'))return;setBusy(true);try{setSaveError(!await onDelete());}finally{setBusy(false);}}}>Удалить отметку</button>}
+  <ActionButton className="ft-save" disabled={busy} onClick={async()=>{setBusy(true);try{const ok=await onSave({stance,experience,boundary,boundaryNote:boundary==='conditional'?(boundaryNote||null):null,intensity:canScore?intensity:null,visibility,useForDiscovery:current?.useForDiscovery??false});setSaveError(!ok);}catch{setSaveError(true);}finally{setBusy(false);}}}>{busy?'Сохраняем…':'Сохранить'} <Icon name="check" size={18}/></ActionButton>
+  {current&&<button type="button" className="ft-delete-interest" disabled={busy} onClick={async()=>{if(!window.confirm('Удалить эту отметку? Старые правки с других устройств не восстановят её автоматически.'))return;setBusy(true);try{setSaveError(!await onDelete());}catch{setSaveError(true);}finally{setBusy(false);}}}>Удалить отметку</button>}
  </AppDialog>;
 }
