@@ -16,7 +16,7 @@ revoke all on public.feture_qa_adult_access from public,anon,authenticated,servi
 grant select,insert,update,delete on public.feture_qa_adult_access to service_role;
 
 create function public.feture_qa_adult_until(p_owner text)
-returns timestamptz language sql volatile security invoker set search_path=pg_catalog,public as $$
+returns timestamptz language sql volatile security definer set search_path=pg_catalog,public as $$
  select max(a.expires_at) from public.feture_qa_adult_access a
  where a.account_hash=p_owner and a.revoked_at is null and a.expires_at>clock_timestamp()
  and exists(select 1 from feture_seed.environment e
@@ -42,7 +42,7 @@ $$;
 -- Restricted Core-admin RPC: operator must use authenticated Core admin API,
 -- never a client key. Scoped to prelaunch, max 12 live entitlements and 3 days.
 create function public.feture_qa_adult_admin(p_command jsonb)
-returns jsonb language plpgsql security invoker set search_path=pg_catalog,public as $$
+returns jsonb language plpgsql security definer set search_path=pg_catalog,public as $$
 declare act text;owner text;duration integer;now_at timestamptz:=clock_timestamp();expires timestamptz;
 begin
  if not exists(select 1 from feture_seed.environment where singleton and project_ref='anrhayozrhrmiwexmbhw' and stage='prelaunch')
