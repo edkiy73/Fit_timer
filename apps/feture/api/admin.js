@@ -10,7 +10,7 @@ const {store}=require('../../../packages/core/server/store');
 const {createPrivateMetrics}=require('../lib/feture/private-metrics');
 const {createMetricsAdmin}=require('../lib/feture/private-metrics-admin');
 const {createOperatorEndpoint}=require('../lib/feture/operators');
-const {cors,rateOkScoped,readBody}=require('../../../packages/core/server/util');
+const {cors,fail,rateOkScoped,readBody}=require('../../../packages/core/server/util');
 
 const coreAdmin = createAdminHandler({analyticsStats,handlers:[createCatalogAdmin(Supabase),createTestsAdmin(Supabase),createDocumentsAdmin(Supabase),createModerationAdmin(Supabase,store),createMetricsAdmin(createPrivateMetrics(store))]});
 
@@ -22,6 +22,14 @@ module.exports=async(req,res)=>{
  let body;try{body=await readBody(req);}catch{return require('../../../packages/core/server/util').fail(res,413,'too_large');}
  req.body=body;req.rawBody=undefined;
  const action=body&&body.action;
+ // O03.4: Core diagnostics and device analytics are global to AppBase's
+ // shared store. They are not scoped to FetUre: exposing them here would
+ // disclose other products' error text, device aggregates, or let this admin
+ // delete their diagnostic groups. Use FetUre's bounded metrics view instead.
+ if(action==='analytics_stats'||action==='client_errors'||action==='client_error_clear'){
+  res.setHeader('Cache-Control','no-store');
+  return fail(res,404,'unsupported_feture_observability');
+ }
  if(typeof action==='string'&&(action.startsWith('feture.qa.')||action.startsWith('feture.operators.')||action.startsWith('feture.posts.')))return operators(req,res);
  return coreAdmin(req,res);
 };

@@ -25,6 +25,8 @@ export interface AdminPanelProps {
   productName: string;
   locale?: 'ru' | 'en';
   extraSections?: readonly AdminSection[];
+  /** Optional product-local opt-out for globally shared Core observability tabs. */
+  hiddenCoreTabs?: readonly ('overview' | 'errors')[];
   /** Readable names of the product's analytics events, in the Admin language. */
   eventLabels?: Readonly<Record<string, string>>;
   /** The product's own terms of use (Markdown), shown in the legal tab until the owner edits them. */
@@ -268,6 +270,7 @@ function HealthView({health, copy}: {health: AdminHealth | null; copy: Copy}){
 const NO_SECTIONS: readonly AdminSection[] = [];
 
 const NO_LABELS: Readonly<Record<string, string>> = {};
+const NO_HIDDEN_CORE_TABS: readonly ('overview' | 'errors')[] = [];
 
 type EventTotals = Record<string, {count?: number; unique?: number}>;
 type Platforms = {android?: number; ios?: number; web?: number};
@@ -389,13 +392,18 @@ function paymentStatusLabel(status: unknown, copy: Copy){
     : status === 'manual_grant' ? copy.statusManualGrant : status === 'manual_revoke' ? copy.statusManualRevoke : String(status || '');
 }
 
-export function AdminPanel({client, productName, locale='ru', extraSections=NO_SECTIONS, eventLabels=NO_LABELS, defaultTerms=''}: AdminPanelProps){
+export function AdminPanel({client, productName, locale='ru', extraSections=NO_SECTIONS, hiddenCoreTabs=NO_HIDDEN_CORE_TABS, eventLabels=NO_LABELS, defaultTerms=''}: AdminPanelProps){
   const copy = COPY[locale];
   const [key, setKey] = useState(() => {
     try { return sessionStorage.getItem('appbase.admin.key') || ''; } catch (_) { return ''; }
   });
   const [draftKey, setDraftKey] = useState(key);
-  const [tab, setTab] = useState<Tab>(() => sessionStorage.getItem('appbase.admin.tab') || 'health');
+  const [tab, setTab] = useState<Tab>(() => {
+    try{
+      const stored = sessionStorage.getItem('appbase.admin.tab') || 'health';
+      return hiddenCoreTabs.includes(stored as 'overview' | 'errors') ? 'health' : stored;
+    }catch(_){ return 'health'; }
+  });
   const [health, setHealth] = useState<AdminHealth | null>(null);
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [busy, setBusy] = useState(false);
@@ -409,7 +417,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
     ['health', copy.health], ['overview', copy.overview], ['users', copy.users], ['payments', copy.payments],
     ['errors', copy.errors], ['storage', copy.storage], ['campaigns', copy.campaigns], ['ai', copy.ai], ['billing-keys', copy.billingKeys], ['legal', copy.legal],
     ...extraSections.map(section => [section.id, section.label] as const)
-  ] as ReadonlyArray<readonly [string,string]>, [copy, extraSections]);
+  ].filter(([id]) => !hiddenCoreTabs.includes(id as 'overview' | 'errors')) as ReadonlyArray<readonly [string,string]>, [copy, extraSections, hiddenCoreTabs]);
 
   const navGroups = useMemo(() => {
     const core = [
@@ -443,6 +451,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
 
   const loadProtected = useCallback(async (target: Tab, adminKey = key) => {
     // These tabs load their own data.
+    if(hiddenCoreTabs.includes(target as 'overview' | 'errors')) return;
     if(target === 'health' || target === 'campaigns' || target === 'ai' || target === 'billing-keys' || target === 'legal' || extraSections.some(section => section.id === target)) return;
     if(!adminKey){ setData(null); return; }
     setBusy(true);
@@ -477,7 +486,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
     }finally{
       setBusy(false);
     }
-  }, [client, copy.badKey, copy.requestFailed, extraSections, key]);
+  }, [client, copy.badKey, copy.requestFailed, extraSections, hiddenCoreTabs, key]);
 
   useEffect(() => { void loadHealth(); }, [loadHealth]);
   useEffect(() => { void loadProtected(tab); }, [tab, key, loadProtected]);
