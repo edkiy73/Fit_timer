@@ -12,7 +12,7 @@ export function ShareCardDialog({categories,map,server,phase,pending,conflicts,o
  const auth=useOptionalAuth();
  const [selected,setSelected]=useState<string[]>([]);
  const [approvedPreview,setApprovedPreview]=useState<string|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
- const [linkApproved,setLinkApproved]=useState(false),[linkDays,setLinkDays]=useState<1|3|7>(3);
+ const [linkApprovalKey,setLinkApprovalKey]=useState<string|null>(null),[linkDays,setLinkDays]=useState<1|3|7>(3);
  const [createdLink,setCreatedLink]=useState<string|null>(null),[linkError,setLinkError]=useState(''),[linkNotice,setLinkNotice]=useState('');
  const [linkBusy,setLinkBusy]=useState(false);
  const pendingLink=useRef<{action:'share.create';linkId:string;days:1|3|7;reviewed:true;selected:{interestId:string;expectedRevision:number}[]}|null>(null);
@@ -26,9 +26,11 @@ export function ShareCardDialog({categories,map,server,phase,pending,conflicts,o
  const approved=approvedPreview!==null&&approvedPreview===fingerprint;
  const canLink=!!auth.session&&phase==='synced'&&pending===0&&conflicts.length===0&&valid
   &&selected.every(id=>!!server[id]&&!server[id].deleted&&server[id].revision>=1);
+ const linkFingerprint=JSON.stringify({selected:selected.map(id=>({id,revision:server[id]?.revision,title:preview.find(v=>v.title===categories.flatMap(c=>c.interests).find(x=>x.id===id)?.title)?.title,stance:map[id]?.stance})),days:linkDays});
+ const linkApproved=linkApprovalKey!==null&&linkApprovalKey===linkFingerprint;
  const linkUrl=createdLink?shareLinkUrl(createdLink):null;
  const createLink=async()=>{
-  if(linkBusy||!auth.session||!linkApproved||(!canLink&&!pendingLink.current))return;
+  if(linkBusy||!auth.session||(!pendingLink.current&&(!linkApproved||!canLink)))return;
   const command=pendingLink.current??{action:'share.create' as const,linkId:crypto.randomUUID(),days:linkDays,
    reviewed:true as const,selected:selected.map(interestId=>({interestId,expectedRevision:server[interestId]!.revision}))};
   pendingLink.current=command;setLinkBusy(true);setLinkError('');setLinkNotice('');
@@ -45,14 +47,14 @@ export function ShareCardDialog({categories,map,server,phase,pending,conflicts,o
   if(!createdLink||!auth.session||linkBusy||!window.confirm('Отозвать ссылку? Сохранённые получателем снимки это не удалит.'))return;
   setLinkBusy(true);setLinkError('');try{
    await domainRequest(auth.session,{action:'share.revoke',linkId:createdLink},revokedSchema);
-   if(alive.current){setCreatedLink(null);setLinkApproved(false);setLinkNotice('Ссылка отозвана.');}
+   if(alive.current){setCreatedLink(null);setLinkApprovalKey(null);setLinkNotice('Ссылка отозвана.');}
   }catch(e){if(alive.current)setLinkError(domainErrorMessage(e));}
   finally{if(alive.current)setLinkBusy(false);}
  };
  
  const toggle=(id:string,checked:boolean)=>{
   setSelected(prev=>checked?(prev.length<6?[...prev,id]:prev):prev.filter(item=>item!==id));
-  setApprovedPreview(null);setLinkApproved(false);setNotice('');setError('');
+  setApprovedPreview(null);setLinkApprovalKey(null);setNotice('');setError('');
  };
  const exportImage=async()=>{
   if(busy||!valid||!approved)return;
@@ -98,7 +100,7 @@ export function ShareCardDialog({categories,map,server,phase,pending,conflicts,o
   <div className="ft-share-composer">
    <p>Выбери от 1 до 6 тем. Отметки из карты не становятся публичными: изображение создаётся только после подтверждения на этом устройстве. Границы, условия, опыт и личные заметки не экспортируются.</p>
    {available.length===0?<p>Пока нет тем для карточки. Сначала отметь интерес в своей карте.</p>:<div className="ft-share-choices" role="group" aria-label="Темы для карточки">
-    {available.map(item=><label key={item.id} className="ft-share-choice"><input type="checkbox" checked={selected.includes(item.id)} disabled={busy||(!selected.includes(item.id)&&selected.length>=6)} onChange={e=>toggle(item.id,e.target.checked)}/><span>{item.title}</span></label>)}
+    {available.map(item=><label key={item.id} className="ft-share-choice"><input type="checkbox" checked={selected.includes(item.id)} disabled={busy||linkBusy||!!pendingLink.current||!!createdLink||(!selected.includes(item.id)&&selected.length>=6)} onChange={e=>toggle(item.id,e.target.checked)}/><span>{item.title}</span></label>)}
    </div>}
    <h3>Предпросмотр ({selected.length}/6)</h3>
    <div className="ft-share-preview" aria-label="Содержимое будущей карточки">
@@ -116,7 +118,7 @@ export function ShareCardDialog({categories,map,server,phase,pending,conflicts,o
     {auth.session?<><label>Срок действия <select value={linkDays} disabled={linkBusy||!!pendingLink.current||!!createdLink} onChange={e=>{setLinkDays(Number(e.target.value) as 1|3|7);setLinkApproved(false);}}>
       <option value={1}>1 день</option><option value={3}>3 дня</option><option value={7}>7 дней</option>
      </select></label>
-     <label className="ft-consent-choice"><input type="checkbox" checked={linkApproved} disabled={!canLink||linkBusy||!!pendingLink.current||!!createdLink} onChange={e=>setLinkApproved(e.target.checked)}/>
+     <label className="ft-consent-choice"><input type="checkbox" checked={linkApproved} disabled={!canLink||linkBusy||!!pendingLink.current||!!createdLink} onChange={e=>setLinkApprovalKey(e.target.checked?linkFingerprint:null)}/>
       Я проверил выбранные темы и отдельно разрешаю показывать их обладателю ссылки до её отзыва или истечения срока.</label>
      {createdLink&&linkUrl?<div><p>Ссылка создана:</p><input type="text" readOnly value={linkUrl} aria-label="Ссылка на карточку" onFocus={e=>e.target.select()}/>
        <div className="ft-form-actions"><button type="button" disabled={linkBusy} onClick={()=>void navigator.clipboard.writeText(linkUrl).then(()=>setLinkNotice('Ссылка скопирована.')).catch(()=>setLinkError('Скопировать не удалось. Выдели ссылку вручную.'))}>Копировать</button>
