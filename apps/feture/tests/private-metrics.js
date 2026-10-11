@@ -39,7 +39,11 @@ test('O03 summary: aggregated counts only, small values suppressed, QA not mixed
  assert.equal(v.counts.other_verified.share_created,null);
  assert.equal(JSON.stringify(v).includes('accountHash'),false);
  assert.equal(JSON.stringify(v).includes('2026-10'),false); // no individual dates
- assert.equal(Object.keys(v).sort().join(','),'cohorts,counts,days,events');
+ assert.equal(Object.keys(v).sort().join(','),'cohorts,counts,days,events,operations');
+ assert.deepEqual(v.operations,{
+  windowCount:7,weekCount:7,observedWindowDays:7,retentionDays:35,
+  maxActiveCounterKeys:432,readKeys:84,maxReadKeys:360,threshold:null,status:'not_configured'
+ });
 });
 test('O03 missing/failed Redis counters cannot break user mutations, admin summary fails closed',async()=>{
  const failed=createPrivateMetrics({incr:async()=>{throw Error('secret store failure');},many:async()=>{throw Error('secret store failure');}});
@@ -51,4 +55,35 @@ test('O03 missing/failed Redis counters cannot break user mutations, admin summa
  assert.equal(res.statusCode,503);assert.deepEqual(res.body,{error:'metrics_unavailable'});
  const invalid=response();await fn('feture.metrics.summary',{...req,accountHash:'leak'},invalid);
  assert.equal(invalid.statusCode,422);
+});
+
+test('O03 load threshold never leaks account details, rejects invalid configuration and only fires when crossed',async()=>{
+ const {metrics}=fixture();
+ const original=process.env.FETURE_O03_WARN_WEEKLY_EVENTS;
+ try{
+  process.env.FETURE_O03_WARN_WEEKLY_EVENTS='invalid';
+  let summary=await metrics.summary(30);
+  assert.equal(summary.operations.status,'invalid_configuration');
+  assert.equal(summary.operations.threshold,null);
+  assert.equal(summary.operations.readKeys,360);
+  process.env.FETURE_O03_WARN_WEEKLY_EVENTS='99';
+  assert.equal((await metrics.summary(7)).operations.status,'invalid_configuration');
+  process.env.FETURE_O03_WARN_WEEKLY_EVENTS='100';
+  assert.equal((await metrics.summary(7)).operations.status,'within_threshold');
+  for(let n=0;n<100;n++)await metrics.record('tests.start',actor,{replayed:false});
+  summary=await metrics.summary(7);
+  assert.equal(summary.operations.status,'warning');
+  assert.equal(summary.operations.weekCount,100);
+  assert.equal(summary.operations.threshold,100);
+  assert.ok(!JSON.stringify(summary).includes(actor.accountHash));
+ }finally{
+  if(original===undefined)delete process.env.FETURE_O03_WARN_WEEKLY_EVENTS;
+  else process.env.FETURE_O03_WARN_WEEKLY_EVENTS=original;
+ }
+});
+test('O03 fails closed on overflow, negative or malformed storage counters',async()=>{
+ for(const bad of [-1,'NaN',Number.MAX_SAFE_INTEGER+1]){
+  const metrics=createPrivateMetrics({incr:async()=>1,many:async keys=>keys.map((_,i)=>i===0?bad:null)});
+  await assert.rejects(metrics.summary(7),/metrics_unavailable/);
+ }
 });
