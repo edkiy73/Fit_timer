@@ -14,6 +14,7 @@ export const readSchema=z.object({ok:z.literal(true),card:z.object({
 export function shareLinkUrl(id:string):string{
  const base=new URL(String(product.defaultPublicUrl));
  if(base.protocol!=='https:')throw Error('public_url_invalid');
- return new URL(base.pathname.replace(/\\/$/,'')+'/#/share/'+encodeURIComponent(id),base.origin).toString();
+ const prefix=base.pathname.endsWith('/')?base.pathname.slice(0,-1):base.pathname;
+ return new URL(prefix+'/#/share/'+encodeURIComponent(id),base.origin).toString();
 }
 export const STANCE_LABELS:Record<string,string>={curious:'Интересно',fantasy:'Фантазия',want_to_try:'Хочу попробовать',not_interested:'Не интересно'};
