@@ -6,7 +6,7 @@ import { routes } from './app';
 import { AppErrorBoundary } from '@appbase/ui-react/error-boundary.js';
 import { installBusyButtons } from '@appbase/core/busy-buttons.js';
 import { applyProductTheme } from './theme';
-import { captureFatal, installGlobalDiagnostics, trackInstallOnce } from './observability';
+import { captureFatal, installGlobalDiagnostics } from './observability';
 import { startAppSync } from './sync';
 import './styles.css';
 import './feture/experience.css';
@@ -15,7 +15,6 @@ applyProductTheme();
 // Every pressed button that waits for the server shows a spinner until the answer comes.
 installBusyButtons();
 installGlobalDiagnostics();
-void trackInstallOnce();
 startAppSync();
 
 const router = createHashRouter(routes);
