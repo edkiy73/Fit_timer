@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {z} from 'zod';
 import type {AdminSectionContext} from '@appbase/ui-react/admin.js';
+import {AdminWorkspace} from '@appbase/ui-react/admin-workspace.js';
 import {REPORT_REASONS,PROFILE_FIELDS} from './moderation-page';
 const rowSchema=z.object({id:z.uuid(),caseId:z.uuid(),targetId:z.uuid(),reason:z.enum(Object.keys(REPORT_REASONS) as [keyof typeof REPORT_REASONS,...(keyof typeof REPORT_REASONS)[]]),note:z.string().max(1000),state:z.enum(['open','reviewing','resolved']),revision:z.number().int().positive(),snapshot:z.union([z.object({}).strict(),z.object({field:z.enum(Object.keys(PROFILE_FIELDS) as [keyof typeof PROFILE_FIELDS,...(keyof typeof PROFILE_FIELDS)[]]),text:z.string().max(2000)}).strict()]),priority:z.number().int().min(1).max(3),createdAt:z.iso.datetime({offset:true}),appealText:z.string().max(1000).nullable()}).strict();
 const queueSchema=z.object({ok:z.literal(true),items:z.array(rowSchema).max(30),nextCursor:z.uuid().nullable()}).strict();
@@ -8,6 +9,8 @@ type Row=z.infer<typeof rowSchema>;
 type Decision={operationId:string;caseId:string;expectedRevision:number;decision:string;reason:string;days:number};
 export function ModerationAdmin({client,adminKey}:AdminSectionContext){
  const [kind,setKind]=useState<'cases'|'appeals'>('cases'),[cursor,setCursor]=useState<string|null>(null),[rows,setRows]=useState<Row[]>([]),[next,setNext]=useState<string|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[refresh,setRefresh]=useState(0);
+ const [selected,setSelected]=useState<Row|null>(null),[decisionPending,setDecisionPending]=useState(false),[visibleCount,setVisibleCount]=useState(10),[search,setSearch]=useState('');
+ const [previousCursors,setPreviousCursors]=useState<Array<string|null>>([]);
  useEffect(()=>{let live=true;setBusy(true);setRows([]);setNext(null);setError('');client.action(adminKey,'feture.moderation.queue',{kind,cursor}).then(raw=>{const r=queueSchema.parse(raw);if(live){setRows(r.items);setNext(r.nextCursor);}}).catch(()=>{if(live)setError('Очередь недоступна. Проверь хранилище и обнови страницу.');}).finally(()=>{if(live)setBusy(false);});return ()=>{live=false;};},[client,adminKey,kind,cursor,refresh]);
  const decide=async(body:Decision)=>{if(busy)return false;setBusy(true);setError('');setNotice('');try{
   const result=await client.action(adminKey,'feture.moderation.decide',body);
@@ -29,13 +32,64 @@ export function ModerationAdmin({client,adminKey}:AdminSectionContext){
   return false;
  }catch{setError('Не удалось проверить запись. Сохрани тот же номер операции и повтори проверку или запрос.');return false;}
  finally{setBusy(false);}};
- return <section className="ft-access"><h2>Модерация FetUre</h2><p>Ручной разбор выбранного контекста профиля. Жалоба не доказывает нарушение. Автоматическая проверка не подключена. Доступ защищён общим ключом администратора; аудит отмечает решения как core-admin. Персональные роли ещё не настроены.</p><div className="ft-form-actions"><button type="button" disabled={busy} onClick={()=>{setKind('cases');setCursor(null);}}>Жалобы</button><button type="button" disabled={busy} onClick={()=>{setKind('appeals');setCursor(null);}}>Апелляции</button><button type="button" disabled={busy} onClick={()=>{setCursor(null);setRefresh(n=>n+1);}}>Обновить очередь</button></div>
-  {!busy&&!error&&!rows.length&&<p>Очередь пуста.</p>}{rows.map(row=><CaseCard key={row.id+':'+row.revision} row={row} busy={busy} decide={decide} check={check}/>)}{next&&<button type="button" disabled={busy} onClick={()=>setCursor(next)}>Следующая страница</button>}{error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
+ const closeDetail=()=>{
+  if(busy||decisionPending){
+   setError('Решение ещё выполняется или его результат неизвестен. Не закрывай карточку, пока не проверишь запись или не повторишь ту же операцию.');
+   return;
+  }
+  setSelected(null);
+  setError('');
+ };
+ const changeKind=(nextKind:'cases'|'appeals')=>{
+  if(busy)return;
+  setKind(nextKind);
+  setCursor(null);setPreviousCursors([]);setVisibleCount(10);setSearch('');setNotice('');
+ };
+ const query=search.trim().toLocaleLowerCase();
+ const filtered=rows.filter(row=>!query
+  ||REPORT_REASONS[row.reason].toLocaleLowerCase().includes(query)
+  ||row.caseId.toLowerCase().includes(query)
+  ||row.id.toLowerCase().includes(query));
+ const shown=filtered.slice(0,visibleCount);
+ return <section className="ft-access">
+  <h2>Очередь модерации</h2>
+  <p className="muted">Жалобы и апелляции рассматриваются отдельно. В очереди — только краткая информация; текст обращения и решение открываются в карточке случая. Решения фиксируются сервером.</p>
+  <div className="ft-form-actions" role="group" aria-label="Тип обращений">
+   <button type="button" aria-pressed={kind==='cases'} disabled={busy} onClick={()=>changeKind('cases')}>Жалобы</button>
+   <button type="button" aria-pressed={kind==='appeals'} disabled={busy} onClick={()=>changeKind('appeals')}>Апелляции</button>
+   <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>{setRefresh(n=>n+1);}}>Обновить</button>
+  </div>
+  <label>Поиск на текущей странице<input type="search" value={search} onChange={e=>{setSearch(e.target.value);setVisibleCount(10);}} placeholder="Причина или номер случая"/></label>
+  {busy&&<p role="status">Обновляю очередь…</p>}
+  {!busy&&!rows.length&&!error&&<p className="muted">В этой очереди пока нет обращений.</p>}
+  <div className="ab-admin-item-list">
+   {shown.map(row=><button type="button" key={row.id+':'+row.revision} onClick={()=>{setError('');setSelected(row);}} disabled={busy}>
+    <span>
+     <strong>{REPORT_REASONS[row.reason]}{row.appealText?' · апелляция':''}</strong>
+     <small>Приоритет {row.priority} · {new Date(row.createdAt).toLocaleString('ru')} · {row.state==='resolved'?'Закрыто':row.state==='reviewing'?'В работе':'Ожидает решения'}</small>
+    </span>
+    <span aria-hidden="true">→</span>
+   </button>)}
+  </div>
+  {!busy&&rows.length>0&&filtered.length===0&&<p className="muted">На этой странице совпадений нет.</p>}
+  <div className="ft-form-actions">
+   {filtered.length>visibleCount&&<button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>setVisibleCount(n=>n+10)}>Показать ещё ({filtered.length-visibleCount})</button>}
+   {previousCursors.length>0&&<button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>{const previous=previousCursors[previousCursors.length-1]??null;setPreviousCursors(list=>list.slice(0,-1));setCursor(previous);setVisibleCount(10);setSearch('');}}>Назад</button>}
+   {next&&<button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>{setPreviousCursors(list=>[...list,cursor]);setCursor(next);setVisibleCount(10);setSearch('');}}>Следующая страница</button>}
+  </div>
+  {!selected&&error&&<p role="alert">{error}</p>}{!selected&&notice&&<p role="status">{notice}</p>}
+  {selected&&<AdminWorkspace title={REPORT_REASONS[selected.reason]} subtitle={'Приоритет '+selected.priority+' · '+new Date(selected.createdAt).toLocaleString('ru')} onClose={closeDetail}
+   footer={<button type="button" className="ab-admin-secondary" disabled={busy||decisionPending} onClick={closeDetail}>Вернуться к очереди</button>}>
+    <CaseCard key={selected.caseId+':'+selected.revision} row={selected} busy={busy} decide={decide} check={check} onPendingChange={setDecisionPending}/>
+    {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
+    <p className="muted">Внутренние действия пока защищены общим ключом администратора. Личные роли модератора потребуют отдельного серверного разграничения доступа.</p>
+   </AdminWorkspace>}
  </section>;
 }
-function CaseCard({row,busy,decide,check}:{row:Row;busy:boolean;decide:(body:Decision)=>Promise<boolean>;check:(body:Decision)=>Promise<boolean>}){
+function CaseCard({row,busy,decide,check,onPendingChange}:{row:Row;busy:boolean;decide:(body:Decision)=>Promise<boolean>;check:(body:Decision)=>Promise<boolean>;onPendingChange:(pending:boolean)=>void}){
  const [action,setAction]=useState('dismiss'),[reason,setReason]=useState('insufficient'),[days,setDays]=useState(7),[reviewed,setReviewed]=useState(false),[pending,setPending]=useState<Decision|null>(null);
  const inFlight=useRef(false);
+ useEffect(()=>{onPendingChange(!!pending);return()=>onPendingChange(false);},[pending,onPendingChange]);
  const reset=()=>{if(!pending)setReviewed(false);};
  const run=async()=>{if(busy||inFlight.current||(!pending&&!reviewed))return;
   const command=pending??{operationId:crypto.randomUUID(),caseId:row.caseId,expectedRevision:row.revision,decision:action,reason,days};
