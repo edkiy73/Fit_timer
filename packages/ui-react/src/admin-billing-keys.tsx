@@ -280,8 +280,8 @@ function InstantSwitch({client, adminKey, locale}: {client: AdminClient; adminKe
     <article className="ab-admin-panel">
       <h2>{ru ? 'Покупки без оплаты' : 'Purchases without payment'}</h2>
       <p className="ab-admin-empty">{ru
-        ? 'Пока оплата не подключена, кнопка «Оплатить» сразу открывает выбранный курс или Plus. Выключи, когда подключишь ЮKassa или магазин приложений.'
-        : 'Until payments are connected, the pay button unlocks the chosen course or Plus at once. Turn it off once YooKassa or an app store is connected.'}</p>
+        ? 'Пока оплата не подключена, кнопка «Оплатить» сразу открывает выбранную покупку или подписку. Выключи, когда подключишь ЮKassa или магазин приложений.'
+        : 'Until payments are connected, the pay button unlocks the chosen purchase or subscription at once. Turn it off once YooKassa or an app store is connected.'}</p>
       {settings && (
         <label className="ab-admin-check">
           <input type="checkbox" checked={settings.payment?.instant !== false} disabled={busy}
