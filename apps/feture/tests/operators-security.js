@@ -11,11 +11,11 @@ test('O02 operators: live Core session, server actor, key only bootstrap, revoke
  const email='staff@example.com',token='staff-device-token',owner=sha(email).slice(0,32);
  const account={email,since:'2026-10-10T00:00:00Z',syncDevices:{device:{h:sha(token),at:new Date().toISOString()}}};
  await store.set('a:'+owner,JSON.stringify(account));
- let allowed=true;const calls=[];
+ let allowed=true,staffRole='manager';const calls=[];
  const transport={configured:()=>true,request:async(path,opts)=>{
   const input=JSON.parse(opts.body);calls.push({path,input});
   if(path.endsWith('feture_qa_adult_bound_admin'))return new Response(JSON.stringify(allowed?{ok:true,items:[],activeCount:0}:{ok:false,error:'forbidden'}));
-  return new Response(JSON.stringify({ok:true,role:'manager',initialized:true,items:[],events:[]}));
+  return new Response(JSON.stringify({ok:true,role:staffRole,initialized:true,items:[],events:[]}));
  }};
  const handler=createOperatorEndpoint({transport,accounts:store,cors:()=>false,quota:async()=>true});
  const run=async(body,headers={'x-fit-email':email,'x-fit-device':'device','x-fit-token':token})=>{
@@ -38,6 +38,10 @@ test('O02 operators: live Core session, server actor, key only bootstrap, revoke
  assert.equal(calls.at(-1).input.p_bootstrap,true);
  assert.equal((await run({action:'feture.operators.status'})).statusCode,200);
  assert.equal(calls.at(-1).input.p_bootstrap,false);
+ staffRole=null;
+ assert.equal((await run({action:'feture.qa.grant',email:'missing@example.com',days:1,reviewed:true})).statusCode,403);
+ assert.equal((await run({action:'feture.qa.grant',email,days:1,reviewed:true})).statusCode,403);
+ assert.equal((await run({action:'feture.operators.set',email:'missing@example.com',role:'manager',expectedRevision:0})).statusCode,403);
  const count=calls.length;account.syncDevices={};await store.set('a:'+owner,JSON.stringify(account));
  assert.equal((await run({action:'feture.qa.list'})).statusCode,401);assert.equal(calls.length,count);
 });

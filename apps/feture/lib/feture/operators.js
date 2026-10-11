@@ -26,6 +26,18 @@ function createOperatorEndpoint({transport,accounts,cors,quota}){
    const body=/** @type {Record<string,unknown>} */(input);
    const action=body.action;
    if(typeof action!=='string')reject(422,'invalid_request');
+   // Check staff role BEFORE any email lookup: ordinary accounts must not
+   // distinguish existing Core accounts by different lookup/grant errors.
+   if(action.startsWith('feture.qa.')||action==='feture.operators.set'){
+    if(!transport.configured())reject(503,'operators_unavailable');
+    const check=await transport.request('/rest/v1/rpc/feture_operator_bound_command',{
+     method:'POST',headers:{'Content-Type':'application/json'},timeoutMs:8000,
+     body:JSON.stringify({p_actor:actor.accountHash,p_generation:actor.accountGeneration,p_target_generation:null,p_bootstrap:false,p_command:{action:'status'}})});
+    const permission=await check.json();
+    if(!check.ok||!permission||permission.ok!==true)reject(503,'operators_unavailable');
+    const allowed=action==='feture.operators.set'?['manager']:['feture.qa.grant','feture.qa.revoke'].includes(action)?['manager','qa_operator']:['manager','qa_operator','auditor'];
+    if(!allowed.includes(permission.role))reject(403,'forbidden');
+   }
    if(action.startsWith('feture.qa.')){
     if(!await createQaAdultAdmin(transport,accounts,actor)(action,body,res))reject(400,'unknown_action');
     return;
