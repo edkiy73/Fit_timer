@@ -11,7 +11,7 @@ test('W05: owner-scoped reviewed private map import, CAS, retry and tombstones',
   for(const name of ['20261010_001_feture_domain.sql','20261010090405_feture_scoped_seed.sql','20261010164924_feture_interest_transactions.sql','20261011043127_feture_questionnaires.sql','20261011045829_feture_questionnaires_release.sql','20261011054100_feture_test_map_apply.sql'])await db.exec(file(name));
   const rpc=async(name,...args)=>(await db.query('select public.'+name+'('+args.map((_,i)=>'$'+(i+1)).join(',')+') result',args.map(v=>typeof v==='object'?JSON.stringify(v):v))).rows[0].result;
   const run=(owner,c)=>rpc('feture_test_command',owner,c);
-  const apply=async(owner,attempt,op,ids)=>(await db.query('select public.feture_test_map_apply($1::text,$2::uuid,$3::uuid,ARRAY['+ids.map((_,i)=>'
+  const apply=async(owner,attempt,op,ids)=>(await db.query("select public.feture_test_map_apply($1::text,$2::uuid,$3::uuid,string_to_array($4::text, ',')) result",[owner,attempt,op,ids.join(',')])).rows[0].result;
   await db.exec('set role service_role');
   const draft=(await run(alice,{action:'tests.start',testId:'dynamics',operationId:uid(1)})).attempt;
   const answers=Object.fromEntries(draft.version.definition.questions.map(q=>[q.id,null]));
