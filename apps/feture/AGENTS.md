@@ -57,8 +57,14 @@ There will be **hundreds of UX and product revisions**. Prioritize correct UX an
 - Limit Vercel deployment noise; prefer one merged chunk after checks rather than a chain of tiny main commits.
 - Keep the product README and this file current when architectural assumptions or releases change.
 
-## 8. Authoritative MVP execution plan
-- Follow `docs/launch-mvp-plan-2026-10-10.md` and its dependency-ordered task cards; rationale and source verification: `docs/mvp-audit-2026-10-10.md`.
-- The plan describes target behavior, not implemented capabilities. Start with F01 and record evidence before checking off tasks.
-- PostgreSQL is the planned canonical FetUre domain store; current Core document-backed interest-map is transitional. Remove that duplicate path only as part of the complete A02/A03 switch. Core remains canonical for authentication and shared services.
-- Interest strength, exploration progress, experience and boundaries are distinct. Never infer consent from a score or a match.
+## 8. Authoritative MVP execution plan — token-aware routing
+
+**DO NOT READ the original full plan by default.** The old path `docs/launch-mvp-plan-2026-10-10.md` is now a tiny redirect, not the original 97 KB document.
+
+1. Read [current status and next task](docs/mvp-plan/STATUS.md) (~a few KB) before choosing work; verify `main` HEAD and task dependencies.
+2. Use [task-card router](docs/mvp-plan/README.md) to read **only** the selected domain file (`cards/F.md`, `A.md`, `P.md`, `W.md`, `C.md`, `R.md`, `D.md`, `V-O.md`). Then read 2–5 relevant code/test files.
+3. The archived full plan (`docs/mvp-plan/archive/full-original-2026-10-11.md`) and historical execution journal (`docs/mvp-plan/history/2026-10-10-to-11.md`) are **opt-in historical references only**; search narrowly for a given decision/date. Never load them end-to-end for ordinary work.
+4. For each merged work increment, **update/replace** the relevant lines in `docs/mvp-plan/STATUS.md`, including next action and short handoff; do not append daily entries to the entrypoint, domain cards, or archived original. Record full milestone details in a separate, dated `history/` file only if they materially matter.
+5. The task cards remain requirements, not claims of live acceptance. Preserve all privacy/consent, age-gate and device checks. Code + CI does not prove production acceptance. Read specialist docs only for a task that needs them.
+
+Canonical Core auth and PostgreSQL-owned FetUre domain data remain the architecture; no second auth or client service-role secrets. No unrelated app changes.
