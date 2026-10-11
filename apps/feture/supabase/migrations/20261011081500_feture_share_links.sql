@@ -78,6 +78,10 @@ begin
     into card_rows from jsonb_array_elements(existing.snapshot) with ordinality as t(elem,ord);
   return jsonb_build_object('ok',true,'card',jsonb_build_object('items',card_rows,'expiresAt',existing.expires_at));
  end if;
+ -- Only an eligible adult owner may create a new snapshot. Check inside SQL too:
+ -- the API check must not be the only protection if an adapter is called incorrectly.
+ if act='share.create' and not public.feture_peer_eligible(p_actor) then
+  return jsonb_build_object('ok',false,'error','resource_not_found');end if;
  -- Revoke and create share the same owner lock and verify the owner rather than a client label.
  perform 1 from public.feture_profiles where account_hash=p_actor for update;
  select * into existing from public.feture_share_links where id=link_uuid;
