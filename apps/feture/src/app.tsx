@@ -31,6 +31,7 @@ import {OperatorsAdmin} from './feture/operators-admin';
 import {QaAdultAdmin} from './feture/qa-adult-admin';
 import {OperatorPage} from './feture/operator-page';
 import {ShareLinksPage,SharedCardPage} from './feture/share-links-page';
+import {ComparisonPage} from './feture/comparison-page';
 import type {AdminSection} from '@appbase/ui-react/admin.js';
 const productAdminSections:readonly AdminSection[]=[{id:'feture-operators',label:'Операторы QA',group:'FetUre',render:context=><OperatorsAdmin {...context}/>},{id:'feture-catalog',label:'Каталог FetUre',group:'FetUre',render:context=><CatalogAdmin {...context}/>},{id:'feture-tests',label:'Опросники FetUre',group:'FetUre',render:context=><QuestionnairesAdmin {...context}/>},{id:'feture-documents',label:'Документы FetUre',group:'FetUre',render:context=><DocumentsAdmin {...context}/>},{id:'feture-moderation',label:'Модерация FetUre',group:'FetUre',render:context=><ModerationAdmin {...context}/>},{id:'feture-qa-adult',label:'QA-доступ 18+',group:'FetUre',render:context=><QaAdultAdmin {...context}/>}];
 
@@ -146,6 +147,7 @@ function Account(){
           <p><Link to="/profile">Мой профиль</Link></p>
           <p><Link to="/journal">Личный дневник и история</Link></p>
           <p><Link to="/share-links">Мои ссылки на темы</Link></p>
+          <p><Link to="/comparisons">Сравнения по согласию</Link></p>
           <p><Link to="/access">Видимость и доступ</Link></p>
           <p><Link to="/safety">Безопасность и обращения</Link></p>
           <p><Link to="/operator">Рабочий экран QA</Link></p>
@@ -189,6 +191,9 @@ export const routes: RouteObject[] = [
         {path:'profile', element:<ProfilePage />},
         {path:'journal', element:<JournalPage />},
         {path:'share-links', element:<ShareLinksPage />},
+        {path:'comparisons',element:<ComparisonPage/>},
+        {path:'compare/new/:linkId',element:<ComparisonPage/>},
+        {path:'compare/:comparisonId',element:<ComparisonPage/>},
         {path:'share/:linkId', element:<SharedCardPage />},
         {path:'access', element:<AccessPage />},
         {path:'people/:id', element:<PeerProfilePage />},

@@ -178,3 +178,27 @@ test('verification status is authenticated, read-only and cannot grant adult acc
  assert.throws(()=>require('../lib/feture/verification').verificationStatus({accountHash:identities.alice.hash,verifiedAdult:true}),error=>error.status===401);
  assert.equal(s.calls.length,0);
 });
+
+test('W07 comparison API: adult guard, forged consent rejection and closed pending/active DTO',async()=>{
+ const {createShareRepository}=require('../lib/feture/shares');
+ const identity=identities.alice;await seed(identity);
+ const actor=await authenticate(req(identity),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const unverified=await authenticate(req(identity),store);
+ const id='00000000-0000-4000-8000-000000000001';
+ const meta={id,linkId:id,role:'owner',state:'pending',revision:1,expiresAt:new Date(Date.now()+3600000).toISOString()};
+ let reply={ok:true,comparison:meta,myItems:[{title:'Тема',stance:'curious'}],items:null};
+ const calls=[];
+ const repository=createShareRepository({configured:()=>true,request:async(path,options)=>{calls.push({path,body:JSON.parse(options.body)});return new Response(JSON.stringify(reply));}},{requireCurrent:async()=>{}});
+ const read={action:'share.compare.read',comparisonId:id};
+ await assert.rejects(repository.execute(unverified,read),e=>e.code==='verification_required');assert.equal(calls.length,0);
+ for(const extra of [{ownerHash:identity.hash},{reviewed:true},{guestSnapshot:[{title:'SECRET'}]}])assert.throws(()=>command({...read,...extra}),e=>e.status===422);
+ assert.equal((await repository.execute(actor,read)).items,null);
+ assert.equal(calls.at(-1).body.p_actor,identity.hash);
+ reply={...reply,items:[{title:'SECRET',mine:'curious',theirs:'fantasy'}]};
+ await assert.rejects(repository.execute(actor,read),e=>e.status===503);
+ reply={...reply,comparison:{...meta,state:'active',revision:2}};
+ assert.deepEqual((await repository.execute(actor,read)).items,reply.items);
+ reply={...reply,items:[{title:'SECRET',mine:'curious',theirs:'fantasy',boundaryNote:'PRIVATE'}]};
+ await assert.rejects(repository.execute(actor,read),e=>e.status===503);
+ await assert.rejects(repository.execute({accountHash:identity.hash,verifiedAdult:true},read),e=>e.status===401);
+});

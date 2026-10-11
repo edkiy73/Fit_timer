@@ -5,6 +5,7 @@ const {createAccessGuard}=require('./access-guard');
 const {requireOwner}=require('./permissions');
 const {INTEREST_ID}=require('./interest-model');
 const {uuid}=require('./documents');
+const {comparisonCommand,isComparisonCommand,createComparisonRepository}=require('./comparisons');
 /** @param {unknown} v @returns {v is Record<string,unknown>} */
 const object=v=>!!v&&typeof v==='object'&&!Array.isArray(v)&&Object.getPrototypeOf(v)===Object.prototype;
 /** @param {Record<string,unknown>} v @param {string[]} keys */
@@ -13,6 +14,7 @@ const exact=(v,keys)=>Object.keys(v).sort().join(',')===keys.sort().join(',');
 function shareCommand(input){
  if(!object(input)||typeof input.action!=='string')reject(422,'invalid_request');
  const v=/** @type {Record<string,unknown>} */(input);
+ if(v.action.startsWith('share.compare.'))return comparisonCommand(v);
  if(v.action==='share.list'&&exact(v,['action']))return {action:'share.list'};
  if(v.action==='share.read'||v.action==='share.revoke'){
   if(!exact(v,['action','linkId'])||!uuid(v.linkId))reject(422,'invalid_request');
@@ -54,10 +56,11 @@ function cardDTO(value){
 }
 /** @param {import('./contracts').Transport} transport @param {import('./documents').DocumentsRepository} documents @returns {import('./shares').ShareRepository} */
 function createShareRepository(transport,documents){
- const guard=createAccessGuard(documents);
+ const guard=createAccessGuard(documents),comparisons=createComparisonRepository(transport,documents);
  return {async execute(actor,input){
   requireOwner(actor,actor.accountHash);
   const c=shareCommand(input);
+  if(isComparisonCommand(c))return comparisons.execute(actor,c);
   if(c.action==='share.create'||c.action==='share.read')await guard(actor); // Viewing/creating require 18+; a signed-in owner may revoke even after consent expires.
   if(!transport.configured())reject(503,'domain_unavailable');
   let value;
