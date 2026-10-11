@@ -10,6 +10,7 @@ import { apiUrl } from '../api-url';
 import fallbackCatalog from '../../data/concept-catalog.json';
 import { catalogSchema, categoryProgress, hasIntensity, matchesCategory, matchesCategoryName, matchesInterest, STANCES, EXPERIENCES, BOUNDARIES, isExplored, interestSummary, type Catalog, type InterestRecord, type InterestStance, type Experience, type Boundary, type Visibility } from './model';
 import { useInterestMap } from './use-interest-map';
+import {ShareCardDialog} from './share-card';
 
 type Tab = 'world'|'explore'|'community'|'dating';
 const NAV:{id:Tab;title:string;icon:IconName}[]=[
@@ -55,6 +56,7 @@ export function FetureExperience(){
  const [person,setPerson]=useState(0);
  const [photo,setPhoto]=useState(0);
  const [datingEnabled,setDatingEnabled]=useState(false);
+ const [shareOpen,setShareOpen]=useState(false);
  const area=useRef<HTMLElement|null>(null);
  const touch=useRef({x:0,y:0});
  const profileRef=useRef<HTMLDivElement|null>(null);
@@ -127,6 +129,8 @@ export function FetureExperience(){
           </div>}
           <p className="ft-map-explainer">Наполнение показывает изученные темы, а не силу желания. Сила, опыт и границы считаются отдельно и не образуют оценку человека.</p>
           <div className="ft-note"><Icon name="lock" size={18}/><div><strong>Только для тебя</strong><p>По умолчанию карта приватна. Видимость и раскрытие каждой темы выбираешь ты.</p></div></div>
+          <div className="ft-share-entry"><div><strong>Карточка моих тем</strong><p>Выбери до шести тем и сам реши, что показать в PNG. Личные заметки и условия не входят в карточку.</p></div>
+            <button type="button" className="ft-textbtn" disabled={mapLoading} onClick={()=>setShareOpen(true)}>Создать карточку <Icon name="arrow" size={17}/></button></div>
           <p><Link className="ft-textbtn" to="/journal">Личный дневник и история карты</Link></p>
           <div className="ft-section-head"><div><h2>Продолжить знакомство с собой</h2><p>Необязательно проходить всё сразу.</p></div></div>
           <div className="ft-recommend">{data.categories.slice(0,3).map((c,i)=><button onClick={()=>openCategory(c.id)} key={c.id} className="ft-recommend-card" style={{'--accent':c.color} as CSSProperties}><span className="ft-recommend-index">0{i+1}</span><strong>{c.title}</strong><small>{c.interests.length} тем для исследования</small><Icon name="arrow" size={17}/></button>)}</div>
@@ -193,6 +197,7 @@ export function FetureExperience(){
     <nav className="ft-mobile-nav" aria-label="Основная навигация">{NAV.map(x=><Link key={x.id} className={tab===x.id?'active':''} aria-current={tab===x.id?'page':undefined} to={x.id==='world'?'/':'/'+x.id}><Icon name={x.icon} size={22}/><span>{x.title}</span></Link>)}</nav>
   </div>
   {saving&&<StatusToast tone="loading" title="Сохраняем изменения…"/>}
+  {shareOpen&&scope!=='loading'&&<ShareCardDialog key={scope} categories={data.categories} map={map} onClose={()=>setShareOpen(false)}/>}
   {edit&&scope!=='loading'&&<InterestDialog key={`${scope}:${edit.id}`} interest={edit} current={map[edit.id]} onClose={closeInterest} onSave={async v=>{const ok=await save(edit.id,v);if(ok)closeInterest();return ok;}} onDelete={async()=>{const ok=await remove(edit.id);if(ok)closeInterest();return ok;}}/>}
  </div></MotionConfig></LazyMotion>;
  function nextPerson(){setPerson((person+1)%PROFILES.length);setPhoto(0)}
