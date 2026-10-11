@@ -21,16 +21,16 @@ export function FetureCatalog(){
     return () => abort.abort();
   },[refresh]);
   return <section className="feture-catalog">
-    <p><Link to="/">← К концепции</Link></p>
+    <p><Link to="/">← Мой мир</Link></p>
     <h2>Каталог интересов</h2>
-    <p className="muted">Живые справочники FetUre из общей базы AppBase / FitT. Личные данные в каталоге не хранятся.</p>
+    <p className="muted">Исследуй направления и узнай, что означает каждая тема. Личные ответы остаются в твоей карте.</p>
     {state.status==='loading' && <p role="status">Загружаем направления…</p>}
     {state.status==='error' && <div role="alert">
       <p>Не удалось получить каталог с сервера.</p>
       <button type="button" onClick={() => setRefresh(n=>n+1)}>Повторить</button>
     </div>}
     {state.status==='ready' && <>
-      <p className="muted">{state.data.categories.length} направлений · {state.data.categories.reduce((n,c)=>n+c.interests.length,0)} интереса · {state.data.tests.length} тестов</p>
+      <p className="muted">{state.data.categories.length} направлений · {state.data.categories.reduce((n,c)=>n+c.interests.length,0)} интереса</p>
       <div className="feture-catalog-list">
         {state.data.categories.map(item=><details key={item.id} className="feture-catalog-category">
           <summary><span className="feture-dot" style={{background:item.color}}></span>
@@ -38,14 +38,7 @@ export function FetureCatalog(){
           <ul>{item.interests.map(x=><li key={x.id}><strong>{x.title}</strong><p className="muted">{x.definition}</p></li>)}</ul>
         </details>)}
       </div>
-      <h3>Тесты</h3>
-      <p className="muted">Пока доступны описания тестов, без опубликованного банка вопросов.</p>
-      <div className="feture-catalog-list">
-        {state.data.tests.map(item=><div key={item.id} className="feture-catalog-category">
-          <strong>{item.title}</strong> <span className="muted">· {item.questions} вопросов (план)</span>
-          <p className="muted">{item.description}</p>
-        </div>)}
-      </div>
+      <p><Link to="/tests">Опросники для знакомства с собой →</Link></p>
     </>}
   </section>;
 }

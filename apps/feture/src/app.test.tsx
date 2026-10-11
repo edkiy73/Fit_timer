@@ -7,6 +7,7 @@ import { missingKeys } from '@appbase/ui-react/i18n.js';
 import { routes } from './app';
 import { dictionaries, LOCALE_KEY } from './i18n';
 import product from '../config/product.json';
+import questionnaires from '../data/questionnaires.json';
 
 const t = dictionaries[product.i18n.default as keyof typeof dictionaries];
 
@@ -122,6 +123,35 @@ describe('FetUre starter', () => {
       expect(calls).toHaveLength(2);expect(calls[1]).toEqual(calls[0]);
       await user.click(screen.getByRole('link',{name:'← Мой мир'}));
       expect(await screen.findByRole('heading',{name:/Твой мир/i})).toBeTruthy();
+    } finally {vi.restoreAllMocks();}
+  });
+
+  it('preserves questionnaire answers after a lost response and retries the exact save', async () => {
+    signIn();
+    const user=userEvent.setup(),calls:Record<string,unknown>[]=[];
+    const requestId='00000000-0000-4000-8000-000000000001',attemptId='00000000-0000-4000-8000-000000000002';
+    const definition=questionnaires[0]!;
+    const attempt={id:attemptId,version:{id:requestId,testId:definition.id,revision:1,definition,publishedAt:'2026-10-11T00:00:00Z'},status:'draft',answers:{},position:0,revision:1,result:null,updatedAt:'2026-10-11T00:00:00Z'};
+    vi.spyOn(globalThis,'fetch').mockImplementation(async (_url,options)=>{
+      const c=JSON.parse(String(options?.body||'{}')) as Record<string,unknown>;
+      if(c.action==='tests.read')return new Response(JSON.stringify({ok:true,attempt,requestId}));
+      if(c.action==='tests.save'){calls.push(c);if(calls.length===1)return new Response(JSON.stringify({error:'domain_unavailable'}),{status:503});return new Response(JSON.stringify({ok:true,replayed:true,requestId,attempt:{...attempt,answers:c.answers,position:c.position,revision:2}}));}
+      return new Response('{}',{status:503});
+    });
+    try {
+      renderApp('/tests/'+attemptId);
+      const choice=await screen.findByRole('radio',{name:'Сейчас подходит'});
+      await user.click(choice);
+      await user.click(screen.getByRole('button',{name:'Сохранить и продолжить позже'}));
+      await screen.findByRole('alert');expect(choice).toHaveProperty('checked',true);
+      await user.click(screen.getByRole('link',{name:'← Исследовать'}));
+      await screen.findByRole('dialog',{name:'Сохранить ответы перед выходом?'});
+      await user.click(screen.getByRole('button',{name:'Остаться'}));expect(choice).toHaveProperty('checked',true);
+      await user.click(screen.getByRole('button',{name:'Повторить то же действие'}));
+      await screen.findByText('Ответы сохранены. Можно продолжить позже.');
+      expect(calls).toHaveLength(2);expect(calls[1]).toEqual(calls[0]);
+      await user.click(screen.getByRole('link',{name:'← Исследовать'}));
+      expect(await screen.findByRole('heading',{name:'Открой новые грани'})).toBeTruthy();
     } finally {vi.restoreAllMocks();}
   });
 

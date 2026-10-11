@@ -5,13 +5,14 @@ FetUre is an independent app within the AppBase monorepo (React + TypeScript + V
 ## Database co-location (2026-10-10)
 - FetUre shares the **FitT Supabase project** (`anrhayozrhrmiwexmbhw`, Tokyo / `ap-northeast-1` verified 2026-10-11), not FitTimer's application tables.
 - Strictly `public.feture_*`-prefixed domain tables are deployed. `supabase/migrations/20261010_001_feture_domain.sql` is the initial domain/schema seed; later CLI migrations include scoped seed and interest transactions. Never reapply the initial migration to the same database without reviewing existing tables.
-- 12 interest categories, 144 interests, and 18 *demonstration test descriptors* seeded from `data/concept-catalog.json`. Real questionnaires/scoring are NOT yet implemented.
+- 12 interest categories, 144 interests, and 18 *demonstration test descriptors* seeded from `data/concept-catalog.json`. The old descriptors are hidden from the catalogue; the W03.1 questionnaire engine and six editorial drafts now use immutable versions and server scoring. No questionnaire is published automatically.
 - `supabase/migrations/20261010_002_catalog_read.sql` allows **anonymous SELECT** for ONLY the three public taxonomy tables; all six private tables have RLS enabled and NO anon/authenticated grants or policies.
 - AppBase server sessions are authoritative. The database uses server-derived opaque `account_hash` (NOT `auth.users` IDs, and never a client-supplied email). Private features must require server-side identity verification before any service-role request.
 - A shared Supabase project shares quota/availability and privileged project credentials. Prefixes/RLS protect from ordinary access, but **not** from compromised service-role credentials; never put such credentials in browser code.
 - `api/catalog.js` is a narrow public server proxy with a publishable (anon) key, **not service-role**. It returns public taxonomy and reviewed legal publications only. No client direct DB calls. Vercel variables: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`.
 
 ## Interfaces
+- `/#/tests`: private saved questionnaire attempts, resume, explicit skips, separate retakes and explainable results. The product admin edits data-only definitions and explicitly publishes reviewed immutable versions. Six starting drafts remain unpublished; production adult/auth acceptance remains open. [Questionnaire contract](docs/questionnaires.md).
 - `/`: **native React** experience. Tabs «Мой мир», «Исследовать», «Сообщество», «Знакомства» are React components; no iframe. Interest editing, per-category jars and privacy choices are functional.
 - `/concept.html`: archived clickable 3.1 reference, not production UI.
 - React uses the live public taxonomy from `/api/catalog` with an explicit bundled offline fallback.

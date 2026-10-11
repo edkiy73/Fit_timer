@@ -23,9 +23,11 @@ import {ProfilePage} from './feture/profile-page';
 import {AccessPage,PeerProfilePage} from './feture/access-page';
 import {JournalPage} from './feture/journal-page';
 import {ModerationPage} from './feture/moderation-page';
+import {QuestionnairesPage} from './feture/questionnaire-page';
+import {QuestionnairesAdmin} from './feture/questionnaire-admin';
 import {ModerationAdmin} from './feture/moderation-admin';
 import type {AdminSection} from '@appbase/ui-react/admin.js';
-const productAdminSections:readonly AdminSection[]=[{id:'feture-documents',label:'Документы FetUre',group:'FetUre',render:context=><DocumentsAdmin {...context}/>},{id:'feture-moderation',label:'Модерация FetUre',group:'FetUre',render:context=><ModerationAdmin {...context}/>}];
+const productAdminSections:readonly AdminSection[]=[{id:'feture-tests',label:'Опросники FetUre',group:'FetUre',render:context=><QuestionnairesAdmin {...context}/>},{id:'feture-documents',label:'Документы FetUre',group:'FetUre',render:context=><DocumentsAdmin {...context}/>},{id:'feture-moderation',label:'Модерация FetUre',group:'FetUre',render:context=><ModerationAdmin {...context}/>}];
 
 const PRODUCT_NAME = 'FetUre';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
@@ -180,6 +182,8 @@ export const routes: RouteObject[] = [
         {path:'journal', element:<JournalPage />},
         {path:'access', element:<AccessPage />},
         {path:'people/:id', element:<PeerProfilePage />},
+        {path:'tests',element:<QuestionnairesPage/>},
+        {path:'tests/:attemptId',element:<QuestionnairesPage/>},
         {path:'safety', element:<ModerationPage />},
         {path:'report/:targetId', element:<ModerationPage />},
         {path:'catalog', element:<FetureCatalog />},
