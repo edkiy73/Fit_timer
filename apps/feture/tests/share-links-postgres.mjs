@@ -17,8 +17,8 @@ test('W07 share links: private source projection, atomic replay, expiry, revoke 
   const op=(actor,command)=>db.query('select public.feture_share_command($1::text,$2::jsonb) result',[actor,JSON.stringify(command)]).then(v=>v.rows[0].result);
   const [alice,bob,third]=['a','b','c'].map(x=>x.repeat(32));
   for(const owner of [alice,bob,third])await db.query('insert into public.feture_profiles(account_hash) values($1)',[owner]);
-  await db.exec('set role service_role');
   await db.query("insert into public.feture_verification_policies values('fixture','production','v1',18,86400000,60000,90,true)");
+  await db.exec('set role service_role');
   const docs=[];
   for(const key of ['terms','privacy','community','adult-content']){
    await rpc('feture_document_save',[key,'ru',0,key,JSON.stringify([{type:'paragraph',text:'Fixture'}]),true]);
