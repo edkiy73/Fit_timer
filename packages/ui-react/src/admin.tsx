@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AdminClient, AdminHealth } from '@appbase/core/admin.js';
 import './admin.css';
 import { AdminAiSettings } from './admin-ai';
@@ -409,6 +409,8 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [navOpen, setNavOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const navigationRef = useRef<HTMLElement>(null);
   const [accessEmail, setAccessEmail] = useState('');
   const [userQuery, setUserQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
@@ -440,6 +442,26 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
   }, [copy, extraSections]);
 
   const currentLabel = tabs.find(([id]) => id === tab)?.[1] || copy.title;
+
+  // A removed product tab must never leave a blank admin workbench.
+  useEffect(() => {
+    if(tabs.some(([id]) => id === tab)) return;
+    setTab('health');
+    try{ sessionStorage.setItem('appbase.admin.tab', 'health'); }catch(_){}
+  }, [tab, tabs]);
+
+  // Off-canvas navigation behaves like a keyboard-accessible drawer on phones.
+  useEffect(() => {
+    if(!navOpen) return;
+    navigationRef.current?.querySelector<HTMLButtonElement>('.ab-admin-nav button')?.focus();
+    const onEscape = (event: KeyboardEvent) => {
+      if(event.key !== 'Escape') return;
+      setNavOpen(false);
+      menuButtonRef.current?.focus();
+    };
+    document.addEventListener('keydown', onEscape);
+    return () => document.removeEventListener('keydown', onEscape);
+  }, [navOpen]);
 
   const loadHealth = useCallback(async () => {
     try{
@@ -519,7 +541,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
 
   function selectTab(next: Tab){
     setTab(next);
-    sessionStorage.setItem('appbase.admin.tab', String(next));
+    try{ sessionStorage.setItem('appbase.admin.tab', String(next)); }catch(_){}
     setNavOpen(false);
     window.scrollTo({top:0,left:0,behavior:'auto'});
   }
@@ -571,7 +593,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
 
   return (
     <div className="ab-admin-shell" data-nav-open={navOpen || undefined}>
-      <aside className="ab-admin-side" aria-label={copy.title}>
+      <aside ref={navigationRef} id="ab-admin-navigation" className="ab-admin-side" aria-label={copy.title}>
         <div className="ab-admin-brand">
           <div>
             <strong>{productName}</strong>
@@ -596,12 +618,12 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
           ))}
         </nav>
       </aside>
-      <button className="ab-admin-shade" aria-label={copy.menu} type="button" onClick={() => setNavOpen(false)} />
+      <button className="ab-admin-shade" aria-label={copy.menu} tabIndex={navOpen ? 0 : -1} type="button" onClick={() => { setNavOpen(false); menuButtonRef.current?.focus(); }} />
 
       <div className="ab-admin-main">
         <header className="ab-admin-topbar">
           <div className="ab-admin-topbar-inner">
-            <button className="ab-admin-menu" aria-label={copy.menu} type="button" onClick={() => setNavOpen(true)}>☰</button>
+            <button ref={menuButtonRef} className="ab-admin-menu" aria-label={copy.menu} aria-controls="ab-admin-navigation" aria-expanded={navOpen} type="button" onClick={() => setNavOpen(true)}>☰</button>
             <div>
               <h1>{currentLabel}</h1>
               <small>{productName} · {copy.title}</small>
@@ -627,7 +649,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
             <p className="ab-admin-empty">{copy.pick}</p>
             {users.length && !shownUsers.length ? <p className="ab-admin-empty">{copy.nobody}</p> : null}
             {shownUsers.length ? (
-              <div className="ab-admin-table-wrap"><table><thead><tr><th>{copy.email}</th><th>{copy.premium}</th><th>{copy.owned}</th><th>{copy.seen}</th></tr></thead>
+              <div className="ab-admin-table-wrap"><table className="ab-admin-card-table"><thead><tr><th>{copy.email}</th><th>{copy.premium}</th><th>{copy.owned}</th><th>{copy.seen}</th></tr></thead>
               <tbody>{shownUsers.map(user => <tr key={String(user.id || user.email)}>
                 <td><button type="button" className="ab-admin-link" onClick={() => { setAccessEmail(String(user.email || '')); window.scrollTo({top:0, behavior:'smooth'}); }}>{String(user.email || '—')}</button></td>
                 <td data-label={copy.premium}>{user.premium ? copy.cardUntil + ' ' + formatAdminDate((user.sub as {until?: string} | null)?.until, locale, false) : '—'}</td>
@@ -642,7 +664,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
       {tab === 'payments' && key && data && (
         <section className="ab-admin-panel">
           {payments.length ? (
-            <div className="ab-admin-table-wrap"><table><thead><tr><th>{copy.when}</th><th>{copy.product}</th><th>{copy.event}</th><th>{copy.provider}</th><th>{copy.buyer}</th></tr></thead>
+            <div className="ab-admin-table-wrap"><table className="ab-admin-card-table"><thead><tr><th>{copy.when}</th><th>{copy.product}</th><th>{copy.event}</th><th>{copy.provider}</th><th>{copy.buyer}</th></tr></thead>
             <tbody>{payments.map((row, i) => <tr key={i}>
               <td>{formatAdminDate(row.at, locale)}</td>
               <td data-label={copy.product}>{productTitle(products, row.sku)}</td>
