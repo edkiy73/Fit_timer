@@ -17,7 +17,7 @@ test('A04 QA: prelaunch-only, Core-admin-only grants expire/revoke, no bypass of
    '20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql',
    '20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql',
    '20261011083303_feture_qa_adult_access.sql',
-   '20261011122000_feture_qa_any_account_audit.sql'])await db.exec(load(filename));
+   '20261011113717_feture_qa_any_account_audit.sql'])await db.exec(load(filename));
   await db.exec('set role service_role');
   const grant={action:'grant',accountHash:alice,days:1,reviewed:true};
   assert.equal((await until(alice)),null);
