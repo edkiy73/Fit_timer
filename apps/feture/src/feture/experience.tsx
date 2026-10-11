@@ -111,19 +111,21 @@ export function FetureExperience(){
             <div className="ft-hero-art" aria-hidden="true"><span className="ft-orbit one"/><span className="ft-orbit two"/><span className="ft-orbit three"/><span className="ft-orb-center"><Icon name="spark" size={32}/></span></div>
           </div>
           <div className="ft-statbar"><div><strong>{overall.known}<span> / {overall.total}</span></strong><small>тем исследовано</small></div>
-             <div><strong>{overall.interests}</strong><small>отмечено интересов</small></div>
+             <div><strong>{overall.interests}</strong><small>интересных тем</small></div>
+             <div><strong>{overall.measured}</strong><small>тем с оценкой силы</small></div>
              <div><strong>{overall.boundaries}</strong><small>жёстких границ</small></div></div>
           <div className="ft-section-head"><div><h2>Карта моего мира</h2><p>12 направлений. Каждое раскрывается постепенно.</p></div><button className="ft-textbtn" onClick={()=>go('explore')}>Все темы <Icon name="arrow" size={17}/></button></div>
           {mapLoading?<StateCard tone="loading" title="Загружаем личную карту…"/>:<div className="ft-jars">
             {data.categories.map(category=>{
               const progress=categoryProgress(category.interests.map(i=>i.id),map);
-              return <button key={category.id} className="ft-jar-card" onClick={()=>openCategory(category.id)} aria-label={`${category.title}, исследовано ${progress.known} из ${progress.total}`}>
+              return <button key={category.id} className="ft-jar-card" onClick={()=>openCategory(category.id)} aria-label={`${category.title}: исследовано ${progress.known} из ${progress.total}; сила отмечена у ${progress.measured}; опыт отмечен у ${progress.experienced}; жёстких границ ${progress.boundaries}`}>
                 <Jar color={category.color} percent={progress.percent} known={progress.known} total={progress.total}/>
                 <strong>{category.short}</strong>
-                <span>{progress.boundaries? `${progress.boundaries} границ${progress.boundaries===1?'а':''}` : progress.known ? `${progress.known} тем`:'Не исследовано'}</span>
+                <span className="ft-jar-meta"><span>Сила: {progress.measured} тем</span><span>Опыт: {progress.experienced} · границы: {progress.boundaries}</span></span>
               </button>;
             })}
           </div>}
+          <p className="ft-map-explainer">Наполнение показывает изученные темы, а не силу желания. Сила, опыт и границы считаются отдельно и не образуют оценку человека.</p>
           <div className="ft-note"><Icon name="lock" size={18}/><div><strong>Только для тебя</strong><p>По умолчанию карта приватна. Видимость и раскрытие каждой темы выбираешь ты.</p></div></div>
           <p><Link className="ft-textbtn" to="/journal">Личный дневник и история карты</Link></p>
           <div className="ft-section-head"><div><h2>Продолжить знакомство с собой</h2><p>Необязательно проходить всё сразу.</p></div></div>
@@ -133,7 +135,7 @@ export function FetureExperience(){
           {selected&&!selectedCategory?<StateCard title="Направление не найдено" description="Вернись к карте и выбери другую тему." action={<ActionButton onClick={()=>go('explore')}>Все направления</ActionButton>}/>:selectedCategory?<><button className="ft-back" onClick={()=>go('explore')}><Icon name="back" size={18}/> Все направления</button>
             <div className="ft-category-banner" style={{'--accent':selectedCategory.color} as CSSProperties}>
               <p>Направление / {selectedCategory.short}</p><h1>{selectedCategory.title}</h1>
-              <span>{categoryProgress(selectedCategory.interests.map(i=>i.id),map).known} из {selectedCategory.interests.length} исследовано</span>
+              <span>{categoryProgress(selectedCategory.interests.map(i=>i.id),map).known} из {selectedCategory.interests.length} исследовано · оценок силы: {categoryProgress(selectedCategory.interests.map(i=>i.id),map).measured} · опыт указан: {categoryProgress(selectedCategory.interests.map(i=>i.id),map).experienced} · жёстких границ: {categoryProgress(selectedCategory.interests.map(i=>i.id),map).boundaries}</span>
             </div><div className="ft-section-head"><div><h2>Темы направления</h2><p>Нажми на интерес, чтобы сохранить своё отношение и видимость.</p></div></div>
             {query.trim()&&<p className="ft-muted">Поиск: «{query.trim()}» <button type="button" className="ft-back" onClick={()=>setQuery('')}>Показать все темы</button></p>}
             <div className="ft-topic-list">{selectedCategory.interests.filter(i=>matchesInterest(i,query)||matchesCategoryName(selectedCategory,query)).map(i=>{
