@@ -82,3 +82,7 @@ h2{margin:0 0 8px}
 .ft-comparisons .ft-consent-choice input{flex-shrink:0;margin-top:4px}
 .ft-comparison-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
 @media(max-width:360px){.ft-comparison-pair{grid-template-columns:1fr}}
+
+.ft-post-review{min-width:0}.ft-review-text{white-space:pre-wrap;overflow-wrap:anywhere}.ft-review-id{overflow-wrap:anywhere}.ft-post-review select{max-width:100%;min-height:44px}.ft-post-review button{min-height:44px}.ft-post-review .ft-form-actions{display:flex;flex-wrap:wrap;gap:10px}
+
+.ft-post-review .ft-review-consent{display:flex;align-items:flex-start;gap:12px;min-height:44px}.ft-post-review .ft-review-consent input{width:auto;margin:4px 0 0;flex-shrink:0}

@@ -20,6 +20,6 @@ module.exports=async(req,res)=>{
  let body;try{body=await readBody(req);}catch{return require('../../../packages/core/server/util').fail(res,413,'too_large');}
  req.body=body;req.rawBody=undefined;
  const action=body&&body.action;
- if(typeof action==='string'&&(action.startsWith('feture.qa.')||action.startsWith('feture.operators.')))return operators(req,res);
+ if(typeof action==='string'&&(action.startsWith('feture.qa.')||action.startsWith('feture.operators.')||action.startsWith('feture.posts.')))return operators(req,res);
  return coreAdmin(req,res);
 };
