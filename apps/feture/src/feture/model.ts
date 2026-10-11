@@ -56,9 +56,12 @@ export function parseInterestMap(raw:string|null):InterestMap {
 export function categoryProgress(ids:string[],map:InterestMap){
  const known=ids.filter(id=>isExplored(map[id])).length;
  const interests=ids.filter(id=>map[id]&&hasIntensity(map[id]!.stance,map[id]!.boundary)).length;
+ // Strength is an optional per-topic input, not a category average or attraction score.
+ const measured=ids.filter(id=>map[id]?.intensity!==null&&map[id]?.intensity!==undefined&&hasIntensity(map[id]!.stance,map[id]!.boundary)).length;
+ const experienced=ids.filter(id=>map[id]&&map[id]!.experience!=='unspecified').length;
  const boundaries=ids.filter(id=>map[id]?.boundary==='hard').length;
  const conditional=ids.filter(id=>map[id]?.boundary==='conditional').length;
- return {known,total:ids.length,percent:ids.length?Math.round(100*known/ids.length):0,interests,boundaries,conditional};
+ return {known,total:ids.length,percent:ids.length?Math.round(100*known/ids.length):0,interests,measured,experienced,boundaries,conditional};
 }
 export type Catalog = z.infer<typeof catalogSchema>;
 const definitions:Readonly<Record<string,{definition:string;synonyms:string[];relatedIds:string[]}>>=editorial.interests;
