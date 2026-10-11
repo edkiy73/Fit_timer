@@ -74,7 +74,7 @@ export function ModerationAdmin({client,adminKey}:AdminSectionContext){
   {!busy&&rows.length>0&&filtered.length===0&&<p className="muted">На этой странице совпадений нет.</p>}
   <div className="ft-form-actions">
    {filtered.length>visibleCount&&<button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>setVisibleCount(n=>n+10)}>Показать ещё ({filtered.length-visibleCount})</button>}
-   {previousCursors.length>0&&<button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>{const previous=previousCursors[previousCursors.length-1];setPreviousCursors(list=>list.slice(0,-1));setCursor(previous);setVisibleCount(10);setSearch('');}}>Назад</button>}
+   {previousCursors.length>0&&<button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>{const previous=previousCursors[previousCursors.length-1]??null;setPreviousCursors(list=>list.slice(0,-1));setCursor(previous);setVisibleCount(10);setSearch('');}}>Назад</button>}
    {next&&<button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>{setPreviousCursors(list=>[...list,cursor]);setCursor(next);setVisibleCount(10);setSearch('');}}>Следующая страница</button>}
   </div>
   {!selected&&error&&<p role="alert">{error}</p>}{!selected&&notice&&<p role="status">{notice}</p>}
