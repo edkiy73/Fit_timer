@@ -8,9 +8,6 @@ on:
         description: 'Optional FetUre agent PR number (otherwise newest open agent PR)'
         type: string
         required: false
-  workflow_run:
-    workflows: ['FetUre — guarded coding queue']
-    types: [completed]
 
 permissions:
   contents: read
@@ -21,9 +18,7 @@ concurrency:
 
 jobs:
   pick:
-    if: >-
-      vars.FETURE_AGENT_REVIEW_ENABLED == 'true' &&
-      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    if: vars.FETURE_AGENT_REVIEW_ENABLED == 'true'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
