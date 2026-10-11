@@ -46,7 +46,7 @@ test('W07 share links: private source projection, atomic replay, expiry, revoke 
   assert.equal((await op(bob,{action:'share.list'})).items.length,0);
   assert.equal((await op(alice,{action:'share.create',linkId:id(101),days:1,reviewed:true,selected:[...selected,...selected]})).error,'invalid_request');
   assert.equal((await op(alice,{action:'share.create',linkId:id(102),days:1,reviewed:false,selected})).error,'invalid_request');
-  await db.query("update public.feture_interest_states set boundary='hard',revision=2 where account_hash=$1 and interest_id='interest-1-1'",[alice]);
+  await db.query("update public.feture_interest_states set boundary='hard',intensity=null,revision=2 where account_hash=$1 and interest_id='interest-1-1'",[alice]);
   assert.equal((await op(bob,{action:'share.read',linkId:link})).error,'resource_not_found');
   assert.equal((await op(alice,{action:'share.revoke',linkId:link})).ok,true);
   assert.equal((await op(alice,{action:'share.revoke',linkId:link})).revoked,true);
