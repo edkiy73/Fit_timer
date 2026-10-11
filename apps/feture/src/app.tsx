@@ -170,7 +170,7 @@ function Account(){
 
 function Admin(){
   const {locale} = useI18n();
-  return <AdminPanel client={adminClient} locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} extraSections={productAdminSections} />;
+  return <AdminPanel client={adminClient} locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} extraSections={productAdminSections} hiddenCoreTabs={['overview','errors']} />;
 }
 
 export const routes: RouteObject[] = [
