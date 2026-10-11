@@ -16,7 +16,7 @@ The store is isolated from public routes and authenticated Actor issuance. Sandb
 {"ok":true,"status":{"state":"unavailable","verifiedAdult":false,"validUntil":null,"reason":"provider_not_configured"},"requestId":"<uuid>"}
 ```
 
-This is the only supported status today. There is no start/complete endpoint, attestation storage or positive verification path. This action requires authenticated identity but does not require adult verification; it cannot change the actor or unblock interest reads/writes. Guests receive 401, extra/unknown commands 422, quota exhaustion 429, unavailable identity storage 503. An unavailable provider is a successful status read, not an identity-storage outage.
+This is the only supported **production-provider** status today. A04.qa adds a separate prelaunch-only `test_access` state with `qaAccessUntil` for owner-approved accounts; it explicitly retains `verifiedAdult:false` in the displayed DTO, because QA authorization is not evidence of age. There is no real provider start/complete endpoint or production attestation issuance. This action requires authenticated identity but does not require adult verification; it cannot change the actor or unblock interest reads/writes. Guests receive 401, extra/unknown commands 422, quota exhaustion 429, unavailable identity storage 503. An unavailable provider is a successful status read, not an identity-storage outage.
 
 `/#/verification` is public. Guests see a sign-in link; authenticated users request their own status with current device credentials. No proof is persisted in the browser. The page clears on session changes, aborts old requests and checks credentials before and after a response. Failed requests offer retry; expired sessions lead back to the account. Account and paused-map links expose this screen.
 
@@ -87,3 +87,9 @@ superseded/deleted account and independent identity. This verifies the sandbox c
 not a vendor signature, PostgreSQL transaction, delivery retry, native device or production
 age verification. New receipt/transition failures are deliberately mapped to redacted 503;
 the selected vendor's HTTP retry/ack policy must be designed when its protocol is known.
+
+## 2026-10-11 — A04.qa, prelaunch-only controlled test authorization
+
+PR #799 merged as `main@4b347b8` after CI `38125337032` success. The QA access table and two private RPCs are installed as migration `20261011083303_feture_qa_adult_access`, with zero grants when verified. Public `anon`/`authenticated` table access and RPC execute rights are disabled; only `service_role` may query. `feture_seed.environment` must equal `prelaunch` for the correct project on **every** access. Switching to `live` invalidates all QA permissions, even without deleting rows. A reviewer with Core-admin credentials must manually confirm a test user's adulthood, then grant one named Core account 1–3 days of temporary access. At most 12 grants may remain active. Revoke is available immediately. The adult check additionally requires a valid Core device token and the legal consent check; profile/private data remains owner-scoped.
+
+The verification status page truthfully reports `test_access` and its expiry, **not** a provider-issued proof. No age/DOB/selfie/document or ID evidence is stored for these QA grants, and there is no client input that can self-authorize. The existing unavailable DTO remains for users without a grant. Real production A04 remains unimplemented; Yoti Age Verification is the primary candidate, Persona Relay the fallback. Product choice, flow, privacy, and external contracts: [age-assurance-decision.md](age-assurance-decision.md). Independent security and real two-account/device QA remain open.
