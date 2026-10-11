@@ -43,7 +43,7 @@ export function QaAdultAdmin({client,adminKey,readOnly=false}:AdminSectionContex
   <div className="ab-admin-section-head"><div><h2>QA-доступ 18+</h2><p className="muted">Только prelaunch. Это не проверка возраста через провайдера. Все разрешения действуют не более 72 часов и автоматически отключаются в live.</p></div></div>
   <div className="ft-form-actions">
    {!readOnly&&<button type="button" disabled={busy} onClick={()=>{setError('');setNotice('');setWorkspace(true);}}>Проверить / выдать / отозвать по email</button>}
-   <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>setRefresh(n=>n+1)}>Обновить данные</button>
+   <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>setRefresh(n=>n+1)}>{readOnly?'Обновить журнал':'Обновить данные'}</button>
   </div>
   <p role="status">Активных QA-допусков: <strong>{activeCount}</strong>.</p>
   {readOnly&&<p className="muted">Доступ только для чтения: выдавать и отзывать разрешения нельзя.</p>}
