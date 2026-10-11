@@ -1,5 +1,5 @@
 import {useEffect,useId,useRef,useState} from 'react';
-import {Link,useBlocker} from 'react-router';
+import {Link,useBlocker,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import type {AuthSession} from '@appbase/core/auth.js';
@@ -18,9 +18,9 @@ const kinds={text:'Мысль',story:'История',question:'Вопрос'};
 const states={draft:'Только тебе',pending:'На проверке',published:'В сообществе',rejected:'Не опубликовано',hidden:'Скрыто',deleted:'Удалено'};
 export function Community(){const auth=useOptionalAuth();if(auth.loading)return <p role="status">Загружаем аккаунт…</p>;if(!auth.session)return <div className="ft-note"><p>Войди в аккаунт, чтобы читать обсуждения и делиться своими историями.</p><Link to="/account">Войти</Link></div>;return <CommunityAccount key={auth.session.email+':'+auth.session.deviceId+':'+auth.session.syncToken} session={auth.session}/>;}
 function CommunityAccount({session}:{session:AuthSession}){
- const textId=useId();const [recipientInput,setRecipientInput]=useState('');
+ const [params]=useSearchParams();const textId=useId();const [recipientInput,setRecipientInput]=useState('');
  const [reportTarget,setReportTarget]=useState<{id:string;revision:number}|null>(null);
- const [view,setView]=useState<'feed'|'mine'|'reports'>('feed'),[items,setItems]=useState<Post[]>([]),[cursor,setCursor]=useState<Cursor|null>(null),[draft,setDraft]=useState<Draft>(empty),[dirty,setDirty]=useState(false),[reviewed,setReviewed]=useState(false),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState(''),[reload,setReload]=useState(0);
+ const [view,setView]=useState<'feed'|'mine'|'reports'>(params.get('view')==='mine'?'mine':'feed'),[items,setItems]=useState<Post[]>([]),[cursor,setCursor]=useState<Cursor|null>(null),[draft,setDraft]=useState<Draft>(empty),[dirty,setDirty]=useState(false),[reviewed,setReviewed]=useState(false),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState(''),[reload,setReload]=useState(0);
  const active=useRef(true),pending=useRef<Record<string,unknown>|null>(null),[uncertain,setUncertain]=useState(false);
  const blocker=useBlocker(({currentLocation,nextLocation})=>(dirty||uncertain||reportTarget!==null)&&currentLocation.pathname!==nextLocation.pathname);
  useEffect(()=>{active.current=true;return()=>{active.current=false;};},[]);
