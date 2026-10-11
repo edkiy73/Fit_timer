@@ -17,19 +17,30 @@ function validateEntry(entry){
 function createCatalogAdmin(transport){
  /** @param {string} action @param {Record<string,unknown>} body @param {import('./contracts').Response} res */
  return async(action,body,res)=>{
-  if(action!=='feture.catalog.list'&&action!=='feture.catalog.save')return false;
+  if(!['feture.catalog.list','feture.catalog.save','feture.catalog.status','feture.catalog.publish'].includes(action))return false;
   res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/json; charset=utf-8');
   try{
-   const allowed=action.endsWith('.list')?['action']:['action','interestId','expectedRevision','entry'];
+   const allowed=action.endsWith('.list')||action.endsWith('.status')?['action']:action.endsWith('.publish')?['action','expectedVersion','reviewed','selected']:['action','interestId','expectedRevision','entry'];
    if(Object.keys(body).sort().join(',')!==allowed.sort().join(','))reject(422,'invalid_request');
    if(!transport.configured())reject(503,'domain_unavailable');
    let command;
    if(action.endsWith('.list'))command={action:'list'};
-   else{
+   else if(action.endsWith('.status'))command={action:'status'};
+   else if(action.endsWith('.publish')){
+    if(body.reviewed!==true||typeof body.expectedVersion!=='number'||!Number.isSafeInteger(body.expectedVersion)||body.expectedVersion<1||body.expectedVersion>=1000000||!Array.isArray(body.selected)||body.selected.length<1||body.selected.length>144)reject(422,'invalid_request');
+    const ids=new Set();
+    for(const input of body.selected){
+     if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).sort().join(',')!=='interestId,revision')reject(422,'invalid_request');
+     const v=/** @type {Record<string,unknown>} */(input);
+     if(typeof v.interestId!=='string'||!INTEREST_ID.test(v.interestId)||ids.has(v.interestId)||typeof v.revision!=='number'||!Number.isSafeInteger(v.revision)||v.revision<1||v.revision>=9007199254740991)reject(422,'invalid_request');
+     ids.add(v.interestId);
+    }
+    command={action:'publish',expectedVersion:body.expectedVersion,reviewed:true,selected:body.selected};
+   }else{
     if(typeof body.interestId!=='string'||!INTEREST_ID.test(body.interestId)||typeof body.expectedRevision!=='number'||!Number.isSafeInteger(body.expectedRevision)||body.expectedRevision<0)reject(422,'invalid_request');
     command={action:'save',interestId:body.interestId,expectedRevision:body.expectedRevision,entry:validateEntry(body.entry)};
    }
-   const response=await transport.request('/rest/v1/rpc/feture_catalog_editorial_admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({p_command:command}),timeoutMs:8000});
+   const response=await transport.request(action.endsWith('.publish')||action.endsWith('.status')?'/rest/v1/rpc/feture_catalog_publish':'/rest/v1/rpc/feture_catalog_editorial_admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({p_command:command}),timeoutMs:8000});
    if(!response.ok)reject(503,'domain_unavailable');
    const data=await response.json();if(!data||typeof data!=='object')reject(503,'domain_unavailable');
    if(data.ok!==true){if(data.error==='revision_conflict')throw new DomainError(409,'revision_conflict');if(data.error==='invalid_request')reject(422,'invalid_request');reject(503,'domain_unavailable');}
@@ -37,6 +48,10 @@ function createCatalogAdmin(transport){
     if(!Array.isArray(data.drafts)||data.drafts.length>144)reject(503,'domain_unavailable');
     const drafts=/** @type {unknown[]} */(data.drafts).map(raw=>{if(!raw||typeof raw!=='object'||Array.isArray(raw))reject(503,'domain_unavailable');const d=/** @type {Record<string,unknown>} */(raw);if(typeof d.interestId!=='string'||!INTEREST_ID.test(d.interestId)||typeof d.revision!=='number'||!Number.isSafeInteger(d.revision)||d.revision<1)reject(503,'domain_unavailable');return {interestId:d.interestId,revision:d.revision,entry:validateEntry(d.entry)};});
     res.statusCode=200;res.end(JSON.stringify({ok:true,drafts}));
+   }else if(action.endsWith('.status')||action.endsWith('.publish')){
+    if(typeof data.version!=='number'||!Number.isSafeInteger(data.version)||data.version<1)reject(503,'domain_unavailable');
+    if(action.endsWith('.publish')&&(typeof data.published!=='number'||!Number.isSafeInteger(data.published)||data.published<1))reject(503,'domain_unavailable');
+    res.statusCode=200;res.end(JSON.stringify({ok:true,version:data.version,...(action.endsWith('.publish')?{published:data.published}:{})}));
    }else{
     if(typeof data.revision!=='number'||!Number.isSafeInteger(data.revision)||data.revision<1)reject(503,'domain_unavailable');
     res.statusCode=200;res.end(JSON.stringify({ok:true,revision:data.revision}));
