@@ -11,7 +11,7 @@ test('W01.2 immutable reviewed catalog publications, strict ownership and no dra
  const db=new PGlite();
  try{
   await db.exec('create role anon;create role authenticated;create role service_role bypassrls;');
-  for(const name of ['20261010_001_feture_domain.sql','20261010090405_feture_scoped_seed.sql','20261011060000_feture_catalog_editorial_drafts.sql','20261011065000_feture_catalog_publications.sql'])await db.exec(load(name));
+  for(const name of ['20261010_001_feture_domain.sql','20261010090405_feture_scoped_seed.sql','20261011060000_feture_catalog_editorial_drafts.sql','20261011062357_feture_catalog_publications.sql'])await db.exec(load(name));
   const draft=async command=>(await db.query('select public.feture_catalog_editorial_admin($1::jsonb) result',[JSON.stringify(command)])).rows[0].result;
   const publish=async command=>(await db.query('select public.feture_catalog_publish($1::jsonb) result',[JSON.stringify(command)])).rows[0].result;
   const first={interestId:'interest-1-1',entry:{definition:'Уважение и согласование важных решений.',synonyms:['инициатива'],relatedIds:['interest-1-2']},expectedRevision:0,action:'save'};
