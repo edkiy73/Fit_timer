@@ -18,7 +18,7 @@ Save/complete/delete используют operationId и expectedRevision. Owner
 
 ## Проверка и границы
 
-Полный check: unit 17, security 20, PostgreSQL 8, TypeScript и build. Один focused UI сценарий проверяет потерянный ответ, блокировку перехода и точный retry; один PostgreSQL contract — версии, scoring/skip/extremes, CAS/replay, owner isolation/role denial, erasure. Live service-role assertions выполнены в rollback: тестовая публикация/ответы не сохранены. Live после W04.1 — шесть опубликованных versions, ноль attempts/receipts. Это не production adult access и не пользовательская browser/native приёмка; A01/A04/A05 остаются внешними зависимостями. W04.1 редактура и публикация выполнены; W04 целиком требует пользовательской приёмки с production доступом; W05 перенос результата в карту ещё не реализован.
+Полный check: unit 17, security 20, PostgreSQL 8, TypeScript и build. Один focused UI сценарий проверяет потерянный ответ, блокировку перехода и точный retry; один PostgreSQL contract — версии, scoring/skip/extremes, CAS/replay, owner isolation/role denial, erasure. Live service-role assertions выполнены в rollback: тестовая публикация/ответы не сохранены. Live после W04.1 — шесть опубликованных versions, ноль attempts/receipts. Это не production adult access и не пользовательская browser/native приёмка; A01/A04/A05 остаются внешними зависимостями. W04.1 редактура и публикация выполнены; W04 целиком требует пользовательской приёмки с production доступом; W05.1: явный перенос выбранных приватных тем теперь реализован, см. [result-map contract](result-map.md).
 
 ## Редакторский выпуск W04.1 (2026-10-11)
 

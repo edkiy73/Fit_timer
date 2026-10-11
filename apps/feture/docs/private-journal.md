@@ -29,3 +29,5 @@
 - Живая миграция FitT применена. Service-role save/retry/foreign-read denial/delete/old-save retry/history assertions выполнены в ROLLBACK. После проверки дневник и история пусты, Core documents = 90.
 - Security advisor: только INFO `rls_enabled_no_policy` для намеренно закрытых серверных таблиц; доступ не расширен ради удаления INFO.
 - Браузер Chromium не запустился в sandbox; Cloud Browser не открыл локальный стенд. Responsive/browser interactions, две production сессии и native устройства **не проверены**. Полная W06 остаётся открыта до A01/A04 и включения истории результатов тестов W03.
+
+W06.2: вкладка «Результаты опросников» показывает только свои завершённые прохождения и ведёт к объяснению/удалению каждого. Локальный Chromium memory/PGlite fixture теперь проверил сохранение/возврат/редактирование/удаление, навигационную защиту, обе истории и пять ширин; это не две production сессии или native приёмка.

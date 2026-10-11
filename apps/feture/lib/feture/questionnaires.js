@@ -4,6 +4,7 @@ const {reject,DomainError}=require('./errors');
 const {uuid}=require('./documents');
 const {createAccessGuard}=require('./access-guard');
 const {requireOwner}=require('./permissions');
+const {interestState,INTEREST_ID}=require('./interest-model');
 /** @param {unknown} v @returns {v is Record<string,unknown>} */
 const object=v=>!!v&&typeof v==='object'&&!Array.isArray(v)&&Object.getPrototypeOf(v)===Object.prototype;
 /** @param {unknown} v @param {string[]} keys */
@@ -31,6 +32,8 @@ function definition(input){
 function answers(input){if(!object(input)||Object.keys(input).length>12)reject(422,'invalid_request');for(const [k,v] of Object.entries(input)){slug(k);if(v!==null&&(!Array.isArray(v)||v.length<1||v.length>6||new Set(v).size!==v.length||!v.every(x=>typeof x==='string'&&/^[a-z][a-z0-9-]{0,47}$/.test(x))))reject(422,'invalid_request');}return /** @type {import('./questionnaires').Answers} */(input);}
 /** @param {unknown} input @returns {import('./questionnaires').TestsCommand} */
 function testsCommand(input){if(!object(input))reject(422,'invalid_request');const v=/** @type {Record<string,unknown>} */(input),action=v.action;
+ if(action==='tests.mapPreview'){shape(v,['action','attemptId']);if(!uuid(v.attemptId))reject(422,'invalid_request');return /** @type {import('./questionnaires').TestsCommand} */(v);}
+ if(action==='tests.mapApply'){shape(v,['action','attemptId','operationId','selected']);if(!uuid(v.attemptId)||!uuid(v.operationId)||!Array.isArray(v.selected)||v.selected.length<1||v.selected.length>6)reject(422,'invalid_request');const ids=/** @type {unknown[]} */(v.selected).map(s=>{const item=shape(s,['interestId','expectedRevision']);if(typeof item.interestId!=='string'||!INTEREST_ID.test(item.interestId)||item.expectedRevision!==0)reject(422,'invalid_request');return item.interestId;});if(new Set(ids).size!==ids.length)reject(422,'invalid_request');return /** @type {import('./questionnaires').TestsCommand} */(v);}
  if(action==='tests.list'){shape(v,['action']);return {action};}
  if(action==='tests.start'){shape(v,['action','testId','operationId']);slug(v.testId);if(!uuid(v.operationId))reject(422,'invalid_request');return /** @type {import('./questionnaires').TestsCommand} */(v);}
  if(action==='tests.read'){shape(v,['action','attemptId']);if(!uuid(v.attemptId))reject(422,'invalid_request');return /** @type {import('./questionnaires').TestsCommand} */(v);}
@@ -43,7 +46,7 @@ function testsCommand(input){if(!object(input))reject(422,'invalid_request');con
 /** @param {import('./contracts').Command} c @returns {c is import('./questionnaires').TestsCommand} */
 const isTestsCommand=c=>c.action.startsWith('tests.');
 /** @param {import('./contracts').Transport} transport @param {import('./documents').DocumentsRepository} documents @returns {import('./questionnaires').TestsRepository} */
-function createTestsRepository(transport,documents){const guard=createAccessGuard(documents);return {async execute(actor,input){requireOwner(actor,actor.accountHash);const c=testsCommand(input);if(c.action!=='tests.delete')await guard(actor);const result=await testRPC(transport,'feture_test_command',{p_owner:actor.accountHash,p_command:c});return testsDTO(c,result);}};}
+function createTestsRepository(transport,documents){const guard=createAccessGuard(documents);return {async execute(actor,input){requireOwner(actor,actor.accountHash);const c=testsCommand(input);if(c.action!=='tests.delete')await guard(actor);const result=await testRPC(transport,c.action==='tests.mapPreview'||c.action==='tests.mapApply'?'feture_test_map_command':'feture_test_command',{p_owner:actor.accountHash,p_command:c});return testsDTO(c,result);}};}
 /** Whitelist transport output, including nested objects. Never forward owner or future columns.
  * @param {unknown} input @param {string[]} keys @returns {Record<string,unknown>} */
 function pick(input,keys){if(!object(input)||keys.some(k=>!Object.hasOwn(input,k)))reject(503,'domain_unavailable');return Object.fromEntries(keys.map(k=>[k,input[k]]));}
@@ -61,12 +64,15 @@ function attemptDTO(input){const a=pick(input,['id','version','status','answers'
  if(a.result!==null){const r=pick(a.result,['answered','total','dimensions']);if(!Array.isArray(r.dimensions)||r.dimensions.length>4)reject(503,'domain_unavailable');r.dimensions=r.dimensions.map(x=>pick(x,['id','answered','total','average','level','interpretation','questionIds']));a.result=r;}if((a.status==='completed')!==(a.result!==null))reject(503,'domain_unavailable');return a;
 }
 /** @param {import('./questionnaires').TestsCommand} c @param {Record<string,unknown>} result */
-function testsDTO(c,result){if(c.action==='tests.delete'){if(result.deleted!==true)reject(503,'domain_unavailable');return {deleted:true};}
+function testsDTO(c,result){
+ if(c.action==='tests.mapApply'){if(typeof result.replayed!=='boolean'||typeof result.applied!=='number'||!Number.isInteger(result.applied)||result.applied<1||result.applied>6)reject(503,'domain_unavailable');return {replayed:result.replayed,applied:result.applied};}
+ if(c.action==='tests.mapPreview'){if(result.attemptId!==c.attemptId||!uuid(result.versionId)||!Array.isArray(result.items)||result.items.length>6)reject(503,'domain_unavailable');const items=result.items.map(v=>{const x=pick(v,['interestId','title','reason','dimensionId','available','blockedReason','next']);if(typeof x.interestId!=='string'||!INTEREST_ID.test(x.interestId)||typeof x.title!=='string'||x.title.length>160||typeof x.reason!=='string'||x.reason.length>600||typeof x.dimensionId!=='string'||typeof x.available!=='boolean'||x.blockedReason!==(x.available?null:'existing_choice'))reject(503,'domain_unavailable');let state;try{state=interestState(pick(x.next,['stance','experience','boundary','boundaryNote','intensity','visibility','useForDiscovery']));}catch{return reject(503,'domain_unavailable');}if(state.stance!=='curious'||state.experience!=='unspecified'||state.boundary!=='none'||state.boundaryNote!==null||state.intensity!==null||state.visibility!=='private'||state.useForDiscovery)reject(503,'domain_unavailable');return {...x,next:state};});if(new Set(items.map(x=>x.interestId)).size!==items.length)reject(503,'domain_unavailable');return {attemptId:result.attemptId,versionId:result.versionId,items};}
+ if(c.action==='tests.delete'){if(result.deleted!==true)reject(503,'domain_unavailable');return {deleted:true};}
  if(c.action==='tests.list'){if(!Array.isArray(result.versions)||result.versions.length>30||!Array.isArray(result.attempts)||result.attempts.length>100)reject(503,'domain_unavailable');return {versions:result.versions.map(versionDTO),attempts:result.attempts.map(x=>pick(x,['id','testId','title','status','revision','updatedAt']))};}
  const attempt=attemptDTO(result.attempt);if(c.action!=='tests.start'&&attempt.id!==c.attemptId)reject(503,'domain_unavailable');if(result.replayed!==undefined&&typeof result.replayed!=='boolean')reject(503,'domain_unavailable');return {attempt,...(result.replayed===undefined?{}:{replayed:result.replayed})};
 }
 /** @param {import('./contracts').Transport} transport @param {string} name @param {Record<string,unknown>} body @returns {Promise<Record<string,unknown>>} */
 async function testRPC(transport,name,body){if(!transport.configured())reject(503,'domain_unavailable');let result;try{const r=await transport.request('/rest/v1/rpc/'+name,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),timeoutMs:8000});if(!r.ok)reject(503,'domain_unavailable');result=await r.json();}catch{return reject(503,'domain_unavailable');}
- if(!object(result))reject(503,'domain_unavailable');if(result.ok!==true){const e=result.error;if(e==='resource_not_found')reject(404,e);if(e==='revision_conflict'||e==='operation_conflict'||e==='attempt_completed')throw new DomainError(409,e);if(e==='invalid_request'||e==='answers_incomplete'||e==='review_required')reject(422,String(e));if(e==='test_limit')reject(429,e);reject(503,'domain_unavailable');}const {ok,...value}=result;return value;
+ if(!object(result))reject(503,'domain_unavailable');if(result.ok!==true){const e=result.error;if(e==='resource_not_found')reject(404,e);if(e==='revision_conflict'||e==='operation_conflict'||e==='attempt_completed'||e==='map_changed')throw new DomainError(409,e);if(e==='invalid_request'||e==='answers_incomplete'||e==='review_required')reject(422,String(e));if(e==='test_limit')reject(429,e);reject(503,'domain_unavailable');}const {ok,...value}=result;return value;
 }
 module.exports={definition,answers,testsCommand,isTestsCommand,createTestsRepository,testRPC};

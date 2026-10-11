@@ -57,3 +57,11 @@ h2{margin:0 0 8px}
 .ft-test-option label:first-child{flex:1 1 240px}
 .ft-test-option label:nth-child(2){flex:0 1 110px}
 .ft-questionnaires-admin input,.ft-questionnaires-admin textarea,.ft-questionnaires-admin select{max-width:100%;box-sizing:border-box}
+
+.ft-map-proposal{margin:16px 0;padding:14px;border:1px solid var(--line);border-radius:12px;overflow-wrap:anywhere}
+.ft-map-proposal p{margin:8px 0;line-height:1.5}
+
+.ft-map-preview .ft-form-actions button{min-height:44px;padding:10px 14px;border-radius:10px;background:var(--ft-surface);border:1px solid var(--ft-border)}
+.ft-map-preview .ft-form-actions button:first-child{background:var(--ft-rose);color:white}
+.ft-map-preview .ft-consent-choice{min-height:44px;align-items:center}
+.ft-map-preview button:disabled{opacity:.55;cursor:default}
