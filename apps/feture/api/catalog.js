@@ -3,6 +3,7 @@ require('../lib/product');
 const {cors}=require('../../../packages/core/server/util');
 const editorial=require('../data/catalog-editorial.json');
 const {publicDocuments}=require('../lib/feture/public-documents');
+const {publishedRelease}=require('../lib/feture/catalog-public');
 
 /** Public, read-only taxonomy endpoint. Does not access any FetUre user data.
  * Uses the Supabase publishable (anon) key and 3 explicitly allowlisted RLS tables.
@@ -50,13 +51,17 @@ module.exports = async function catalog(req, res) {
     if(query.get('resource')==='documents'){
       const result=await publicDocuments(BASE,KEY,query);res.setHeader('Cache-Control','no-store');res.statusCode=result.status;return res.end(JSON.stringify(result.body));
     }
-    const [categories, interests] = await Promise.all([
+    const [categories, interests, publications] = await Promise.all([
       list('feture_categories', 'id,title,short_title,icon,accent_color,position', 'position.asc', 100),
-      list('feture_interests', 'id,category_id,title,position', 'position.asc', 500)
+      list('feture_interests', 'id,category_id,title,position', 'position.asc', 500),
+      list('feture_catalog_publications', 'version,entries', 'version.desc', 1)
     ]);
+    if(publications.length>1)throw Error('catalog_publication_invalid');
+    const ids=new Set(interests.map(item=>item.id));
+    const release=publishedRelease(publications[0]??null,ids);
     const data = {
       version: 1,
-      editorialVersion: editorial.version,
+      editorialVersion: release.version,
       source: 'supabase',
       categories: categories.map((category) => ({
         id: category.id,
@@ -66,7 +71,7 @@ module.exports = async function catalog(req, res) {
         color: category.accent_color,
         interests: interests.filter(i => i.category_id === category.id && editorial.editorialStatus === 'published' && Object.hasOwn(editorial.interests,i.id))
           .sort((a, b) => a.position - b.position)
-          .map(i => ({id: i.id, title: i.title, ...editorial.interests[i.id], editorialVersion:editorial.version}))
+          .map(i => ({id: i.id, title: i.title, ...editorial.interests[i.id], ...(release.entries[i.id]??{}), editorialVersion:release.version}))
       })),
       tests: [] // Old taxonomy descriptors are not published questionnaires.
 
