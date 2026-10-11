@@ -9,7 +9,7 @@ import { sameSession } from './interest-api';
 import type { AuthSession } from '@appbase/core/auth.js';
 const statusSchema=z.discriminatedUnion('state',[z.object({state:z.literal('unavailable'),verifiedAdult:z.literal(false),validUntil:z.null(),reason:z.literal('provider_not_configured')}).strict(),z.object({state:z.literal('test_access'),verifiedAdult:z.literal(false),validUntil:z.null(),qaAccessUntil:z.iso.datetime({offset:true})}).strict()]);
 const responseSchema=z.object({ok:z.literal(true),status:statusSchema,requestId:z.string().uuid()}).strict();
-type Result={session:AuthSession;state:'unavailable'|'test_access'|'error'|'auth';qaUntil?:string};
+type Result={session:AuthSession;state:'unavailable'|'test_access'|'error'|'auth';qaUntil:string|undefined};
 export function VerificationPage(){
  const auth=useOptionalAuth();const {t}=useI18n();
  const [result,setResult]=useState<Result|null>(null);const [attempt,setAttempt]=useState(0);
