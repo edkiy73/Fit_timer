@@ -96,7 +96,7 @@ export function ShareCardDialog({categories,map,server,phase,pending,conflicts,o
   }catch{setError('Не удалось создать PNG на этом устройстве. Выбор тем сохранился в открытом окне.');}
   finally{setBusy(false);}
  };
- return <AppDialog title="Карточка моих тем" eyebrow="Поделиться по выбору" onClose={()=>{if(!busy)onClose();}}>
+ return <AppDialog title="Карточка моих тем" eyebrow="Поделиться по выбору" onClose={()=>{if(!busy&&!linkBusy)onClose();}}>
   <div className="ft-share-composer">
    <p>Выбери от 1 до 6 тем. Отметки из карты не становятся публичными: изображение создаётся только после подтверждения на этом устройстве. Границы, условия, опыт и личные заметки не экспортируются.</p>
    {available.length===0?<p>Пока нет тем для карточки. Сначала отметь интерес в своей карте.</p>:<div className="ft-share-choices" role="group" aria-label="Темы для карточки">
