@@ -75,3 +75,10 @@ h2{margin:0 0 8px}
 .ft-operator-page .ft-form-actions{display:flex;flex-wrap:wrap;gap:10px}
 .ft-operator-page button[aria-pressed=true]{border-color:var(--accent);font-weight:700}
 .ft-operator-page ul{padding-left:20px}
+
+.ft-comparisons{min-width:0;overflow-wrap:anywhere}
+.ft-comparisons .ft-form-actions{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}
+.ft-comparisons .ft-consent-choice{display:flex;align-items:flex-start;gap:10px;min-height:44px;margin:12px 0}
+.ft-comparisons .ft-consent-choice input{flex-shrink:0;margin-top:4px}
+.ft-comparison-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+@media(max-width:360px){.ft-comparison-pair{grid-template-columns:1fr}}

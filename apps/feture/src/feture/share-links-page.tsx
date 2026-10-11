@@ -31,6 +31,7 @@ function OwnLinks({session}:{session:AuthSession}){
  return <section className="card ft-share-links">
   <p><Link to="/">← Мой мир</Link></p>
   <h2>Мои ссылки на выбранные темы</h2>
+  <p><Link to="/comparisons">Сравнения и входящие приглашения</Link></p>
   <p>Доступ есть только у вошедших взрослых пользователей с актуальными согласиями. Ссылка не показывает полную карту или дневник. Любую ссылку можно отозвать.</p>
   <button type="button" disabled={loading||!!busy} onClick={()=>setRefresh(n=>n+1)}>Обновить</button>
   {loading?<p role="status">Загружаем…</p>:list.length===0?<p>Активных и ранее созданных ссылок пока нет.</p>:<ul className="ft-share-history">
@@ -68,6 +69,7 @@ function SharedCard({session,linkId}:{session:AuthSession;linkId:string}){
   {loading?<p role="status">Проверяем право доступа…</p>:card?<><p>Действует до {new Date(card.expiresAt).toLocaleString('ru')}. Это только выбранные человеком темы — не приглашение к действиям и не согласие.</p>
    <div className="ft-share-preview">{card.items.map((r,i)=><div key={i}><strong>{r.title}</strong><span>{STANCE_LABELS[r.stance]}</span></div>)}</div>
   </>:<p role="alert">{error||'Карточка недоступна.'}</p>}
+  <p>{card&&<Link to={'/compare/new/'+linkId}>Предложить сравнение выбранных тем</Link>}</p>
   <p>Не пытайся делать выводы об опыте, предпочтениях или границах: они здесь не раскрываются.</p>
  </section>;
 }

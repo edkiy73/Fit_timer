@@ -1,4 +1,4 @@
-export type ShareCommand=
+export type ShareCommand=import('./comparisons').ComparisonCommand
  |{action:'share.list'}
  |{action:'share.read';linkId:string}
  |{action:'share.revoke';linkId:string}

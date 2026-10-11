@@ -6,9 +6,8 @@ import { SectionTitle } from './components/SectionTitle';
 import { ActionButton, AppDialog, HintChip, Jar, StateCard, StatusToast } from './components/primitives';
 import { motionTokens } from './motion';
 import { useExperienceNavigation } from './navigation';
-import { apiUrl } from '../api-url';
-import fallbackCatalog from '../../data/concept-catalog.json';
-import { catalogSchema, categoryProgress, hasIntensity, matchesCategory, matchesCategoryName, matchesInterest, STANCES, EXPERIENCES, BOUNDARIES, isExplored, interestSummary, type Catalog, type InterestRecord, type InterestStance, type Experience, type Boundary, type Visibility } from './model';
+import {useCatalog} from './use-catalog';
+import { categoryProgress, hasIntensity, matchesCategory, matchesCategoryName, matchesInterest, STANCES, EXPERIENCES, BOUNDARIES, isExplored, interestSummary, type InterestRecord, type InterestStance, type Experience, type Boundary, type Visibility } from './model';
 import { useInterestMap } from './use-interest-map';
 import {ShareCardDialog} from './share-card';
 
@@ -19,20 +18,6 @@ const NAV:{id:Tab;title:string;icon:IconName}[]=[
 ];
 const VIEWS:{id:Visibility;label:string}[]=[{id:'private',label:'Только мне'},{id:'granted',label:'По разрешению'},{id:'public',label:'Открыто'}];
 type Edit = {id:string; title:string;category:string;definition:string;synonyms:string[];relatedTitles:string[]};
-function useCatalog(){
- const [data,setData]=useState<Catalog>(()=>catalogSchema.parse(fallbackCatalog));
- const [source,setSource]=useState<'live'|'offline'|'loading'>('loading');
- const [refresh,setRefresh]=useState(0);
- useEffect(()=>{
-   const controller=new AbortController();
-   fetch(apiUrl('/api/catalog'),{signal:controller.signal})
-    .then(async response=>{if(!response.ok)throw new Error('catalog_unavailable');return catalogSchema.parse(await response.json());})
-    .then(json=>{if(!controller.signal.aborted){setData(json);setSource('live');}})
-    .catch(()=>{if(!controller.signal.aborted)setSource('offline');});
-   return ()=>controller.abort();
- },[refresh]);
- return {data,source,retry:()=>{setSource('loading');setRefresh(n=>n+1);}};
-}
 const DEMO_POSTS=[
  {name:'Лена',handle:'@lenexplores',place:'Вопрос сообществу',time:'2 часа назад',photo:1,
   text:'Как вы понимаете, что новый интерес — действительно ваш, а не навязанный окружающими? Мне помогает записывать мысли и возвращаться к ним через несколько дней.',tags:['Самопознание','Личный опыт'],reactions:48},
