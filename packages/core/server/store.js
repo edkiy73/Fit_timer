@@ -49,7 +49,9 @@ const WRITE_OPS = new Set(['SET', 'INCR', 'EXPIRE', 'RPUSH', 'LREM', 'DEL', 'UNL
 const MIRROR_FAIL_KEY = 'appbase:store:mirror-failed';
 // Короткоживущие ключи (окна rate-limit, проверки здоровья, locks) зеркалить и переносить
 // незачем: через минуты они истекут сами, а зеркало удвоило бы цену каждого запроса.
-const EPHEMERAL = /^(rl:|healthcheck:|lock:)/;
+// FetUre aggregate activity counters have a fixed 35-day TTL and are not
+// authoritative product data; avoid duplicate provider writes in dual-store mode.
+const EPHEMERAL = /^(rl:|healthcheck:|lock:|feture:metrics:v1:)/;
 
 const redisLive = () => !!(URL_ && TOKEN);
 // Память процесса на serverless живёт до конца холодного старта, то есть молча

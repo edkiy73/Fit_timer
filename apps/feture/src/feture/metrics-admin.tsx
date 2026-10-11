@@ -7,7 +7,14 @@ const schema=z.object({
  ok:z.literal(true),days:z.union([z.literal(7),z.literal(30)]),
  events:z.array(z.enum(events)).length(events.length),
  cohorts:z.array(z.enum(['qa','other_verified'])).length(2),
- counts:z.record(z.string(),z.record(z.string(),z.number().int().nonnegative().nullable()))
+ counts:z.record(z.string(),z.record(z.string(),z.number().int().nonnegative().nullable())),
+ operations:z.object({
+  windowCount:z.number().int().nonnegative().nullable(),weekCount:z.number().int().nonnegative().nullable(),
+  observedWindowDays:z.union([z.literal(7),z.literal(30)]),retentionDays:z.literal(35),
+  maxActiveCounterKeys:z.number().int().positive(),readKeys:z.number().int().nonnegative(),
+  maxReadKeys:z.number().int().positive(),threshold:z.number().int().positive().nullable(),
+  status:z.enum(['not_configured','invalid_configuration','warning','within_threshold'])
+ }).strict()
 }).strict();
 const names:Record<typeof events[number],string>={
  test_started:'Начаты опросники',test_completed:'Завершены опросники',
@@ -35,6 +42,15 @@ export function MetricsAdmin({client,adminKey}:AdminSectionContext){
     <tbody>{events.map(event=><tr key={event}><th scope="row">{names[event]}</th>
       {result.cohorts.map(c=><td key={c}>{result.counts[c]?.[event]===null?'Меньше 5':result.counts[c]?.[event]??'—'}</td>)}
     </tr>)}</tbody></table>}
+  {result&&<section aria-labelledby="ft-metrics-load"><h3 id="ft-metrics-load">Нагрузка и хранение</h3>
+   <p>Учитываемые операции за {result.days} дн.: <strong>{result.operations.windowCount===null?'меньше 5':result.operations.windowCount}</strong>. За последние 7 дней: <strong>{result.operations.weekCount===null?'меньше 5':result.operations.weekCount}</strong>.</p>
+   <p>Хранение счётчиков — {result.operations.retentionDays} дней. Максимум {result.operations.maxActiveCounterKeys} возможных ключа для фиксированных типов событий и групп. Чтение отчёта — {result.operations.readKeys} из максимальных {result.operations.maxReadKeys} ключей.</p>
+   {result.operations.status==='not_configured'?<p role="status">Порог предупреждения о нагрузке ещё не настроен.</p>:
+    result.operations.status==='invalid_configuration'?<p role="alert">Порог предупреждения задан некорректно — исправь настройку сервера.</p>:
+    result.operations.status==='warning'?<p role="alert">За 7 дней число учитываемых действий достигло порога {result.operations.threshold}. Проверь расходы и нагрузку у поставщиков.</p>:
+    <p role="status">Число учитываемых действий ниже настроенного порога {result.operations.threshold} за 7 дней.</p>}
+   <p>Это не фактический счёт за Redis, Supabase или Vercel: внешние запросы, зеркальное хранение, остальные приложения и тарификация провайдеров здесь не учитываются.</p>
+  </section>}
   <p>Это количество успешных действий, а не уникальных людей, конверсия или D1/D7. Временная QA-когорта выделена отдельно. Системные логи и другие продукты AppBase не смешиваются с этими числами. Метрики без доказанной базы не считаются KPI.</p>
  </section>;
 }

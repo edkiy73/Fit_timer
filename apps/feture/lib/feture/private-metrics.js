@@ -16,6 +16,22 @@ const EVENTS=Object.freeze([...new Set(Object.values(METRICS))]);
 const TTL=35*86400;
 const KEY_PREFIX='feture:metrics:v1';
 const TYPES=Object.freeze(['qa','other_verified']);
+// 35 days TTL can overlap 36 UTC calendar dates at a time. Fixed allowlists
+// guarantee predictable key cardinality even if traffic grows sharply.
+const MAX_ACTIVE_KEYS=(Math.ceil(TTL/86400)+1)*TYPES.length*EVENTS.length;
+const MAX_READ_KEYS=30*TYPES.length*EVENTS.length;
+const THRESHOLD_KEY='FETURE_O03_WARN_WEEKLY_EVENTS';
+/** Server-managed configuration, never accepted from the browser.
+ * Invalid configuration must be visible as invalid, not silently ignored. */
+function weeklyThreshold(){
+ const raw=process.env[THRESHOLD_KEY];
+ if(raw===undefined||raw==='')return {status:'not_configured',threshold:null};
+ if(!/^[1-9]\d{0,8}$/.test(raw))return {status:'invalid_configuration',threshold:null};
+ const value=Number(raw);if(value<100)return {status:'invalid_configuration',threshold:null};
+ return {status:'configured',threshold:value};
+}
+/** @param {number} n */
+const hideSmall=n=>n===0?0:n<5?null:n;
 /** @param {string} day @param {string} cohort @param {string} event */
 function key(day,cohort,event){return KEY_PREFIX+':'+day+':'+cohort+':'+event;}
 /** @param {{incr:(key:string,ttl:number)=>Promise<unknown>;many:(keys:string[])=>Promise<unknown[]>}} store */
@@ -46,12 +62,23 @@ function createPrivateMetrics(store){
    const raw=await store.many(keys);
    if(!Array.isArray(raw)||raw.length!==keys.length)throw new Error('metrics_unavailable');
    const output=Object.fromEntries(TYPES.map(v=>[v,Object.fromEntries(EVENTS.map(e=>[e,0]))]));
-   let i=0;for(let d=0;d<days;d++)for(const cohort of TYPES)for(const event of EVENTS){
+   let i=0,weekActions=0,windowActions=0;
+   for(let d=0;d<days;d++)for(const cohort of TYPES)for(const event of EVENTS){
     const rawNumber=raw[i++];const n=rawNumber===null||rawNumber===undefined?0:Number(rawNumber);
     if(!Number.isSafeInteger(n)||n<0)throw new Error('metrics_unavailable');
     output[cohort][event]+=n;
+    windowActions+=n;
+    if(d>=days-7)weekActions+=n;
+    if(!Number.isSafeInteger(output[cohort][event])||!Number.isSafeInteger(windowActions)||!Number.isSafeInteger(weekActions))throw new Error('metrics_unavailable');
    }
-   return {days,events:EVENTS,cohorts:TYPES,counts:Object.fromEntries(TYPES.map(c=>[c,Object.fromEntries(EVENTS.map(e=>[e,output[c][e]===0?0:output[c][e]<5?null:output[c][e]]))]))};
+   const setting=weeklyThreshold();
+   const status=setting.status==='configured'
+    ?weekActions>=/** @type {number} */(setting.threshold)?'warning':'within_threshold':setting.status;
+   return {days,events:EVENTS,cohorts:TYPES,
+    counts:Object.fromEntries(TYPES.map(c=>[c,Object.fromEntries(EVENTS.map(e=>[e,hideSmall(output[c][e])]))])),
+    operations:{windowCount:hideSmall(windowActions),weekCount:hideSmall(weekActions),
+     observedWindowDays:days,retentionDays:35,maxActiveCounterKeys:MAX_ACTIVE_KEYS,readKeys:keys.length,maxReadKeys:MAX_READ_KEYS,
+     threshold:setting.threshold,status}};
   }
  };
 }
