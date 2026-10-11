@@ -30,6 +30,12 @@ test('W07 share links: private source projection, atomic replay, expiry, revoke 
   }
   await db.query("insert into public.feture_interest_states(account_hash,interest_id,stance,experience,boundary,boundary_note,intensity,visibility,use_for_discovery,revision,source,test_version,deleted) values($1,'interest-1-1','curious','ongoing','none',null,4,'private',false,1,'manual',null,false)",[alice]);
   await db.query("insert into public.feture_interest_states(account_hash,interest_id,stance,experience,boundary,boundary_note,intensity,visibility,use_for_discovery,revision,source,test_version,deleted) values($1,'interest-1-2','not_interested','unspecified','conditional','TOP SECRET CONDITIONS',null,'private',false,1,'manual',null,false)",[alice]);
+  // The SQL boundary must reject a non-verified owner even if a privileged caller
+  // passes that owner's hash directly (defense in depth beyond Core guard).
+  await db.query("insert into public.feture_interest_states(account_hash,interest_id,stance,experience,boundary,boundary_note,intensity,visibility,use_for_discovery,revision,source,test_version,deleted) values($1,'interest-1-1','curious','unspecified','none',null,null,'private',false,1,'manual',null,false)",[third]);
+  const thirdCreate=await op(third,{action:'share.create',linkId:id(96),days:1,reviewed:true,
+   selected:[{interestId:'interest-1-1',expectedRevision:1}]});
+  assert.equal(thirdCreate.error,'resource_not_found');
   const link=id(100);
   const selected=[{interestId:'interest-1-1',expectedRevision:1}];
   const create={action:'share.create',linkId:link,days:3,reviewed:true,selected};
@@ -42,6 +48,11 @@ test('W07 share links: private source projection, atomic replay, expiry, revoke 
   assert.deepEqual(read.card.items,[{title:'Ведущая роль',stance:'curious'}]);
   for(const secret of ['TOP SECRET','ongoing','private','intensity','account_hash','email'])assert.equal(JSON.stringify(read).includes(secret),false);
   assert.equal((await op(third,{action:'share.read',linkId:link})).error,'resource_not_found');
+  // A block on either side immediately prevents reading a previously valid card.
+  await db.query("insert into public.feture_blocks(blocker_hash,blocked_hash) values($1,$2)",[bob,alice]);
+  assert.equal((await op(bob,{action:'share.read',linkId:link})).error,'resource_not_found');
+  await db.query("delete from public.feture_blocks where blocker_hash=$1 and blocked_hash=$2",[bob,alice]);
+  assert.equal((await op(bob,{action:'share.read',linkId:link})).ok,true);
   const list=await op(alice,{action:'share.list'});assert.equal(list.items.length,1);assert.equal(list.items[0].id,link);
   assert.equal((await op(bob,{action:'share.list'})).items.length,0);
   assert.equal((await op(alice,{action:'share.create',linkId:id(101),days:1,reviewed:true,selected:[...selected,...selected]})).error,'invalid_request');
@@ -50,6 +61,10 @@ test('W07 share links: private source projection, atomic replay, expiry, revoke 
   assert.equal((await op(bob,{action:'share.read',linkId:link})).error,'resource_not_found');
   assert.equal((await op(alice,{action:'share.revoke',linkId:link})).ok,true);
   assert.equal((await op(alice,{action:'share.revoke',linkId:link})).revoked,true);
+  // Replaying the exact create must not resurrect the revoked capability.
+  const revokedReplay=await op(alice,create);
+  assert.equal(revokedReplay.replayed,true);
+  assert.equal(revokedReplay.link.revoked,true);
   assert.equal((await op(bob,{action:'share.read',linkId:link})).error,'resource_not_found');
   const r=await db.query('select snapshot from public.feture_share_links where id=$1',[link]);
   assert.equal(JSON.stringify(r.rows[0].snapshot).includes('TOP SECRET'),false);
