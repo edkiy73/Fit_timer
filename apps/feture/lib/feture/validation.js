@@ -8,6 +8,7 @@ const {moderationCommand}=require('./moderation');
 const {testsCommand}=require('./questionnaires');
 const {journalCommand}=require('./journal');
 const {shareCommand}=require('./shares');
+const {postCommand}=require('./posts');
 const MAX_BODY=16384;
 /** @param {import('./contracts').Request} req @returns {Promise<unknown>} */
 async function readBody(req) {
@@ -33,6 +34,7 @@ function command(input) {
   if(!input||typeof input!=='object'||Array.isArray(input)||Object.getPrototypeOf(input)!==Object.prototype)reject(422,'invalid_request');
   const value=/** @type {Record<string,unknown>} */(input);
   const action=value.action;
+  if(typeof action==='string'&&action.startsWith('posts.'))return postCommand(value);
   if(typeof action==='string'&&action.startsWith('share.'))return shareCommand(value);
   if(typeof action==='string'&&action.startsWith('tests.'))return testsCommand(value);
   if(typeof action==='string'&&(action.startsWith('journal.')||action.startsWith('history.')))return journalCommand(value);

@@ -9,6 +9,7 @@ import { useExperienceNavigation } from './navigation';
 import {useCatalog} from './use-catalog';
 import { categoryProgress, hasIntensity, matchesCategory, matchesCategoryName, matchesInterest, STANCES, EXPERIENCES, BOUNDARIES, isExplored, interestSummary, type InterestRecord, type InterestStance, type Experience, type Boundary, type Visibility } from './model';
 import { useInterestMap } from './use-interest-map';
+import {Community} from './community';
 import {ShareCardDialog} from './share-card';
 
 type Tab = 'world'|'explore'|'community'|'dating';
@@ -18,14 +19,6 @@ const NAV:{id:Tab;title:string;icon:IconName}[]=[
 ];
 const VIEWS:{id:Visibility;label:string}[]=[{id:'private',label:'Только мне'},{id:'granted',label:'По разрешению'},{id:'public',label:'Открыто'}];
 type Edit = {id:string; title:string;category:string;definition:string;synonyms:string[];relatedTitles:string[]};
-const DEMO_POSTS=[
- {name:'Лена',handle:'@lenexplores',place:'Вопрос сообществу',time:'2 часа назад',photo:1,
-  text:'Как вы понимаете, что новый интерес — действительно ваш, а не навязанный окружающими? Мне помогает записывать мысли и возвращаться к ним через несколько дней.',tags:['Самопознание','Личный опыт'],reactions:48},
- {name:'Алекс',handle:'@alex.notes',place:'Разговор о границах',time:'Сегодня',photo:3,
-  text:'Умение сказать «нет» — такой же важный навык, как способность честно рассказать о том, что тебе нравится.',tags:['Доверие','Границы'],reactions:71},
- {name:'Майя',handle:'@maya.open',place:'Исследуем вместе',time:'Вчера',photo:5,
-  text:'Составила список вопросов, которые помогают знакомиться с собой без спешки. Какие вопросы добавили бы вы?',tags:['Тесты','Разговор'],reactions:36}
-];
 const PROFILES=[
  {name:'Майя',age:29,city:'Бали',handle:'@maya.open',photos:[5,6],about:'Люблю долгие разговоры, путешествия и людей, которые не боятся быть собой. Исследую новые темы без спешки.',interests:['Доверие','Исследование себя','Путешествия'],looking:'Общение и единомышленники'},
  {name:'Алекс',age:32,city:'Берлин',handle:'@alex.notes',photos:[3,4],about:'Сначала хороший разговор, потом всё остальное. Уважаю личное пространство и люблю открытые вопросы.',interests:['Свидания','Открытость','Культура'],looking:'Новые знакомства'},
@@ -148,12 +141,7 @@ export function FetureExperience(){
           </>}
         </>}
         {tab==='community'&&<><SectionTitle eyebrow="Люди и истории" title="Сообщество" description="Исследовать себя интереснее, когда можно услышать разные взгляды."/>
-          <div className="ft-posts">{DEMO_POSTS.map(post=><article className="ft-post" key={post.handle}>
-            <div className="ft-post-author"><Photo n={post.photo} alt="" /><div><strong>{post.name} <small>{post.handle}</small></strong><p>{post.place} · {post.time}</p></div></div>
-            <p className="ft-post-copy">{post.text}</p><div className="ft-post-tags">{post.tags.map(tag=><HintChip key={tag} title={tag} description="Объединяет публикации по теме. Можно исследовать её, не раскрывая свои личные ответы.">#{tag}</HintChip>)}</div>
-          </article>)}</div>
-          <div className="ft-section-head"><div><h2>Тематические пространства</h2><p>Разговоры о том, что тебе близко.</p></div></div>
-          <div className="ft-group-grid">{['Знакомство с собой','Границы и доверие','Истории и опыт','Вопросы новичков'].map((g,i)=><article className="ft-group" key={g}><span className="ft-group-emoji"><Icon name={i===1?'shield':i===2?'book':i===3?'message':'spark'} size={23}/></span><strong>{g}</strong><small>Тематическое пространство</small></article>)}</div>
+          <Community/>
         </>}
         {tab==='dating'&&<><SectionTitle eyebrow="Необязательная часть FetUre" title="Знакомства" description="Ты решаешь, когда хочешь знакомиться, а когда — побыть в своём мире."/>
            {!datingEnabled?<div className="ft-dating-off"><div className="ft-dating-halo"><Icon name="heart" size={38}/></div><h2>Только если захочешь</h2>

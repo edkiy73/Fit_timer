@@ -202,3 +202,20 @@ test('W07 comparison API: adult guard, forged consent rejection and closed pendi
  await assert.rejects(repository.execute(actor,read),e=>e.status===503);
  await assert.rejects(repository.execute({accountHash:identity.hash,verifiedAdult:true},read),e=>e.status===401);
 });
+
+test('C01 posts API: trusted actor, adult guard, forged publish and private DTO rejection',async()=>{
+ const {createPostsRepository}=require('../lib/feture/posts');await seed(identities.alice);
+ const actor=await authenticate(req(identities.alice),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const unverified=await authenticate(req(identities.alice),store),calls=[];
+ const id='00000000-0000-4000-8000-000000000005';
+ let entry={id,text:'Текст',kind:'text',authorLabel:'Имя',audience:'private',state:'draft',revision:1,createdAt:'2026-10-11T00:00:00Z',updatedAt:'2026-10-11T00:00:00Z',publishedAt:null,mine:true};
+ const repository=createPostsRepository({configured:()=>true,request:async(path,opts)=>{calls.push(JSON.parse(opts.body));return new Response(JSON.stringify({ok:true,entry,replayed:false}));}},{requireCurrent:async()=>{}});
+ const save={action:'posts.save',id,operationId:id,expectedRevision:0,text:'Текст',kind:'text',authorLabel:'Имя'};
+ await assert.rejects(repository.execute(unverified,save),e=>e.code==='verification_required');assert.equal(calls.length,0);
+ for(const extra of [{authorHash:'secret'},{state:'published'},{audience:'granted'},{testAnswers:[]}])assert.throws(()=>command({...save,...extra}),e=>e.status===422);
+ assert.throws(()=>command({action:'posts.publish',id}),e=>e.status===422);
+ assert.equal((await repository.execute(actor,save)).entry.mine,true);assert.equal(calls[0].p_actor,identities.alice.hash);
+ entry={...entry,account_hash:'SECRET'};await assert.rejects(repository.execute(actor,save),e=>e.status===503);delete entry.account_hash;
+ entry={...entry,mine:false};await assert.rejects(repository.execute(actor,{action:'posts.read',id}),e=>e.status===503);
+ await assert.rejects(repository.execute({accountHash:identities.alice.hash,verifiedAdult:true},save),e=>e.status===401);
+});

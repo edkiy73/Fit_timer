@@ -97,3 +97,5 @@ P03.1 adds profile reports, own status/appeals and a manual Admin case queue wit
 W06.1 добавляет личный дневник и историю карты в `/journal`: owner-only записи, привязка к теме, CAS/retry, удаление без восстановления старым запросом, atomically recorded map history и отдельная очистка. [Контракт и границы проверки](docs/private-journal.md). Браузерная/native приёмка и живой доступ после A01/A04 остаются открыты.
 
 Персональные роли QA-операторов и их ограничения: [docs/operators.md](docs/operators.md).
+
+Текстовые обсуждения: [контракт C01.1](docs/community-posts.md), приватные черновики и отправка на проверку через вкладку «Сообщество».
