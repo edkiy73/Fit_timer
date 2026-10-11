@@ -2,6 +2,7 @@ import { apiUrl } from './api-url';
 import { createClient } from '@appbase/core/observability.js';
 import { untrackedFetch } from '@appbase/core/busy-buttons.js';
 import { authClient } from './auth';
+import {safeFetureDiagnostic} from '../lib/feture/diagnostic-policy.js';
 
 declare const __APP_BUILD_ID__: string;
 
@@ -11,7 +12,7 @@ const client = createClient({
       const response = await untrackedFetch(apiUrl('/api/auth'), {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(body)
+        body:JSON.stringify(body.action==='client_error'?safeFetureDiagnostic(body):body)
       });
       return response.ok;
     }catch(_){
