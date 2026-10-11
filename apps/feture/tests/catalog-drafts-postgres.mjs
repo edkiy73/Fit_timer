@@ -28,7 +28,8 @@ test('W01 drafts are private, revision-locked, checked and never published',asyn
    {...entry,relatedIds:['interest-1-1']},{...entry,relatedIds:['missing']},
    {...entry,extra:'fake'}, {...entry,synonyms:[]}
   ]){
-   assert.throws(()=>validateEntry(bad));
+   // Client validator checks format; server additionally forbids self-links for the selected interest.
+   if(!bad.relatedIds.includes('interest-1-1'))assert.throws(()=>validateEntry(bad));
    assert.equal((await send({action:'save',interestId:'interest-1-1',entry:bad,expectedRevision:2})).error,'invalid_request');
   }
   assert.equal((await send({action:'save',interestId:'interest-999-999',entry,expectedRevision:0})).error,'invalid_request');
