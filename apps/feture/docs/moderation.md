@@ -13,3 +13,7 @@ AppBase product Admin предлагает приоритетную очеред
 Проверены полный FetUre check, focused PostgreSQL roles/ownership/snapshot/CAS/replay/appeal/newer-case protection/daily quota и timeout fixture. Schema применена в prelaunch FitT. Live service-role assertions report→no-auto-ban→manual hide/retry→own appeal→restore выполнены внутри rollback; reports/decisions/restrictions/appeals/policies/publications пусты, Core documents 90. Advisors только INFO для намеренно закрытых RLS таблиц: [описание](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy).
 
 Открыто: production auth/adult/legal setup, реальные люди/ответственный оператор и контакты, индивидуальные staff roles, автоматический moderation/media vendor, integration всех будущих UGC queries, согласованные retention/purge. Это работающий проверенный контракт ручной профильной модерации, не заявление о полной готовности сообщества или production launch.
+
+## P03.2: повтор решения после обрыва сети
+
+Пока исход решения неизвестен, админка фиксирует его UUID и параметры в открытой карточке. Повтор отправляет ту же команду, а закрытый запрос статуса проверяет факт записи без доступа к содержимому профиля. `unknown` не означает, что исходный запрос уже не выполнится: изменять команду до подтверждения нельзя. После перезагрузки страницы оператор должен проверить очередь и прежнюю операцию. Индивидуальные роли, внешняя автомодерация и тестирование на реальных аккаунтах остаются отдельными задачами.
