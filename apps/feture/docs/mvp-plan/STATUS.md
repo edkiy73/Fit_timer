@@ -21,6 +21,7 @@
 | O02.2 | Отдельный `/#/operator` без admin key, только личная сессия и QA роли; код выполнен GPT-6 High, требуется независимая Sol 6.1 и реальная staff browser приёмка. |
 | QA | Связка QA grant/consent/private share: PostgreSQL regression #800. Это не browser/native acceptance. |
 | O03.1 | Серверные агрегаты только allowlist успешных действий, без private payload, два честно обозначенных сегмента и admin сводка за 7/30 дней; **PR #810 объединён, CI `38150184323` success; независимая privacy/device review ещё не пройдена**. Не D1/D7 и не количество людей. |
+| O03.2 | **PR #811 слит** (`main@1dedbb7`), все 5 CI зелёные: 38151062831/849/882/866/917. В админке агрегированные 7/30-дневные нагрузки, фиксированный предел 432 ключа с TTL 35 дней, до 360 чтений на отчёт, optional серверный порог предупреждения `FETURE_O03_WARN_WEEKLY_EVENTS` (>=100), 1–4 скрыты; временные счётчики не дублируются в mirror AppBase. Фактические счета Redis/Vercel/Supabase, alerts от провайдеров и privacy/device приёмка не сделаны. |
 
 ## Очередь следующих независимых работ
 1. **O02/A04:** O02.1/O02.2 реализованы для QA: персональные роли, аудит и отдельный рабочий экран `/#/operator`. Далее browser приёмка реальных staff аккаунтов и распространение ролей на moderation/editorial по мере готовности. Реальный adult proof — только через подтверждённый метод, отдельно от QA. Не использовать самодекларацию и не переносить QA в live.
@@ -36,7 +37,9 @@
 
 Предыдущий срез Sol: **C01.3 | PR #809 (`feat/feture-post-recipients`, head `486b740`; предыдущий merged #808) | полный check: 23 UI/unit, 27 security, seed и 14 PostgreSQL contracts; typecheck/build**. Явные account-bound коды до 20 получателей; серверный отзыв одного и смена собственного кода со снятием всех выбранных доступов; CAS/replay не восстанавливает старые права. SQL `20261011141800` applied, live rollback/grants, block/adult revoke/owner revoke/review-on-expansion. Chromium fixture с Core memory auth + Posts API/PGlite на 320/390/768/1024/1440, save/consent/submit/review/revoke/rotate. Не проверены: real accounts/native, независимый Sol 6.1 audit; browser actor adult gate был fixture. **Следующий C01.4:** `src/feture/community.tsx`, `lib/feture/posts.js`, `lib/feture/questionnaires.js`, `tests/posts-postgres.mjs`, `docs/community-posts.md`; безопасный selected-result whitelist, затем photo. C01 открыт; реальные документы/production proof не настроены.
 
-**Завершённый кодовый срез O03.1 (PR #810, main `24d458b`, CI `38150184323` success):** `lib/feture/private-metrics.js`, `private-metrics-admin.js`, `src/feture/metrics-admin.tsx`, `tests/private-metrics.js`, `docs/private-metrics.md`. Только серверные allowlist action counts, bounded TTL, totals <5 masked; независимая проверка и browser/native acceptance pending. После объединения записать PR и тесты здесь, не архив.
+**Срезы O03.1–O03.2 (PR #810/#811; CI всех 5 приложений success):** `lib/feture/private-metrics.js`, `private-metrics-admin.js`, `src/feture/metrics-admin.tsx`, `tests/private-metrics.js`, `docs/private-metrics.md`. Только серверные allowlist action counts, bounded TTL, totals <5 masked; O03.2 расширен нагрузкой и недельным предупреждением, но реальные счета и browser/native/privacy acceptance pending. После объединения записать PR и тесты здесь, не архив.
+
+**O03 следующий:** независимый privacy review счётчиков и существующего Core observability, сведение расходов по реальным провайдерам после открытия биллинга/бюджетов. Для Sol C01.4 не открывать заново O03.2. [Точный контракт O03](../private-metrics.md).
 
 ## Где подробности
 [Маршрутизатор](README.md) → соответствующая карточка; [персональные QA роли](../operators.md). Архив только для исторических вопросов.
