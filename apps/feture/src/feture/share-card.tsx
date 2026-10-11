@@ -37,8 +37,15 @@ export function ShareCardDialog({categories,map,server,phase,pending,conflicts,o
   try{
    const r=await domainRequest(auth.session,command,createdSchema);
    if(!alive.current)return;
-   if(r.link.id!==command.linkId||r.link.revoked)throw Error('invalid_response');
-   setCreatedLink(r.link.id);pendingLink.current=null;
+   if(r.link.id!==command.linkId)throw Error('invalid_response');
+   pendingLink.current=null;
+   if(r.link.revoked){
+    // The operation was already applied and later revoked. Never restore it by retry.
+    setCreatedLink(null);setLinkApprovalKey(null);
+    setLinkNotice('Эта операция уже была выполнена, но ссылка отозвана. Она не восстановлена.');
+    return;
+   }
+   setCreatedLink(r.link.id);
    setLinkNotice('Ссылка создана. Открыть её смогут только взрослые пользователи, прошедшие проверку и принявшие правила.');
   }catch(e){if(alive.current)setLinkError(domainErrorMessage(e));}
   finally{if(alive.current)setLinkBusy(false);}
