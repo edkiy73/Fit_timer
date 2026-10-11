@@ -58,7 +58,7 @@ function createShareRepository(transport,documents){
  return {async execute(actor,input){
   requireOwner(actor,actor.accountHash);
   const c=shareCommand(input);
-  await guard(actor); // Both owner and recipient must have trusted 18+ and current legal consent.
+  if(c.action==='share.create'||c.action==='share.read')await guard(actor); // Viewing/creating require 18+; a signed-in owner may revoke even after consent expires.
   if(!transport.configured())reject(503,'domain_unavailable');
   let value;
   try{
