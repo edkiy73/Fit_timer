@@ -61,7 +61,7 @@ const NO_ACCOUNT_EXTENSION = Object.freeze({
   async onVerify(){ return {fields:{}}; }
 });
 
-function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics} = {}){
+function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics, sanitizeClientDiagnostic} = {}){
   if(!analytics || typeof analytics.recordAnalytics !== 'function' || typeof analytics.removeAnalyticsDevice !== 'function'){
     throw new Error('analytics_required');
   }
@@ -188,7 +188,9 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics} 
     if(act === 'client_error'){
       if(!(await rateOkScoped(req,'client-error',120,'',3600,true))) return fail(res,429,'rate_limited');
       try{
-        return send(res,200,await recordClientError(body||{}));
+        // Optional product-owned privacy boundary. No raw diagnostic text reaches storage.
+        const diagnostic=typeof sanitizeClientDiagnostic==='function'?sanitizeClientDiagnostic(body):body;
+        return send(res,200,await recordClientError(diagnostic||{}));
       }catch(e){
         return fail(res,400,'bad_client_error');
       }
