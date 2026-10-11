@@ -2,7 +2,9 @@
 const { store } = require('../../../packages/core/server/store');
 const { createAnalyticsEngine } = require('../../../packages/core/server/analytics-core');
 
-const EVENTS = Object.freeze(['install']);
+// FetUre does not collect anonymous per-device install/retention history.
+// O03 product activity is server-derived with no device or account keys.
+const EVENTS = Object.freeze([]);
 const engine = createAnalyticsEngine({store, events:EVENTS});
 
 module.exports = {
