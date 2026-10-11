@@ -27,6 +27,7 @@ import {QuestionnairesPage} from './feture/questionnaire-page';
 import {QuestionnairesAdmin} from './feture/questionnaire-admin';
 import {CatalogAdmin} from './feture/catalog-admin';
 import {ModerationAdmin} from './feture/moderation-admin';
+import {ShareLinksPage,SharedCardPage} from './feture/share-links-page';
 import type {AdminSection} from '@appbase/ui-react/admin.js';
 const productAdminSections:readonly AdminSection[]=[{id:'feture-catalog',label:'Каталог FetUre',group:'FetUre',render:context=><CatalogAdmin {...context}/>},{id:'feture-tests',label:'Опросники FetUre',group:'FetUre',render:context=><QuestionnairesAdmin {...context}/>},{id:'feture-documents',label:'Документы FetUre',group:'FetUre',render:context=><DocumentsAdmin {...context}/>},{id:'feture-moderation',label:'Модерация FetUre',group:'FetUre',render:context=><ModerationAdmin {...context}/>}];
 
@@ -141,6 +142,7 @@ function Account(){
           <p><Link to="/verification">{t('verification.title')}</Link></p>
           <p><Link to="/profile">Мой профиль</Link></p>
           <p><Link to="/journal">Личный дневник и история</Link></p>
+          <p><Link to="/share-links">Мои ссылки на темы</Link></p>
           <p><Link to="/access">Видимость и доступ</Link></p>
           <p><Link to="/safety">Безопасность и обращения</Link></p>
           <button className="link-button" type="button" disabled={signingOut} onClick={() => void signOut()}>{t('account.signOut')}</button>
@@ -181,6 +183,8 @@ export const routes: RouteObject[] = [
         {path:'documents', element:<DocumentsPage />},
         {path:'profile', element:<ProfilePage />},
         {path:'journal', element:<JournalPage />},
+        {path:'share-links', element:<ShareLinksPage />},
+        {path:'share/:linkId', element:<SharedCardPage />},
         {path:'access', element:<AccessPage />},
         {path:'people/:id', element:<PeerProfilePage />},
         {path:'tests',element:<QuestionnairesPage/>},
