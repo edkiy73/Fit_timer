@@ -87,3 +87,11 @@ test('O03 fails closed on overflow, negative or malformed storage counters',asyn
   await assert.rejects(metrics.summary(7),/metrics_unavailable/);
  }
 });
+
+test('O03 fixed ephemeral keys cannot mirror into another AppBase provider',()=>{
+ const {store}=require('../../../packages/core/server/store');
+ assert.equal(store.EPHEMERAL.test('feture:metrics:v1:2026-10-11:qa:test_started'),true);
+ assert.equal(store.EPHEMERAL.test('feture:metrics:v1:2026-10-11:other_verified:share_opened'),true);
+ assert.equal(store.EPHEMERAL.test('feture:private:accountHash'),false);
+ assert.equal(store.EPHEMERAL.test('feture_posts'),false);
+});
