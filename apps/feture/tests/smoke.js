@@ -52,14 +52,15 @@ function fakeRes(){
     global.fetch=async url=>{
       const table=new URL(url).pathname.split('/').at(-1);paths.push(table);
       const rows=table==='feture_categories'?[{id:'category-1',title:'Роли',short_title:'Роли',icon:'layers',accent_color:'#7156cb',position:1}]
-        :table==='feture_interests'?[{id:'interest-1-3',category_id:'category-1',title:'Свитч',position:1},{id:'unpublished',category_id:'category-1',title:'Hidden',position:2}]:[];
+        :table==='feture_interests'?[{id:'interest-1-3',category_id:'category-1',title:'Свитч',position:1},{id:'unpublished',category_id:'category-1',title:'Hidden',position:2}]
+        :table==='feture_catalog_publications'?[{version:2,entries:{'interest-1-3':{definition:'Свитч — выбранная и опубликованная новая редакция.',synonyms:['switch','переключение роли'],relatedIds:['interest-1-1']}}}]:[];
       return {ok:true,json:async()=>rows};
     };
     const catalog=require('../api/catalog');
     const result=fakeRes();await catalog({method:'GET',headers:{}},result);
     const payload=JSON.parse(result.body);
     const topics=payload.categories[0].interests;
-    ok('public catalog exposes only released definitions and two taxonomy tables and no unpublished questionnaires', result.statusCode===200 && topics.length===1 && topics[0].definition && topics[0].synonyms.includes('switch') && payload.editorialVersion===1 && payload.tests.length===0 && paths.sort().join() === 'feture_categories,feture_interests');
+    ok('public catalog exposes published revisions from three public-only sources; no drafts or questionnaires', result.statusCode===200 && topics.length===1 && topics[0].definition.includes('новая редакция') && topics[0].synonyms.includes('switch') && payload.editorialVersion===2 && payload.tests.length===0 && paths.sort().join() === 'feture_catalog_publications,feture_categories,feture_interests');
   } finally {
     global.fetch=oldFetch;
     if(oldUrl===undefined)delete process.env.SUPABASE_URL;else process.env.SUPABASE_URL=oldUrl;
