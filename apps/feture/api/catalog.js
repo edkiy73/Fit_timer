@@ -50,10 +50,9 @@ module.exports = async function catalog(req, res) {
     if(query.get('resource')==='documents'){
       const result=await publicDocuments(BASE,KEY,query);res.setHeader('Cache-Control','no-store');res.statusCode=result.status;return res.end(JSON.stringify(result.body));
     }
-    const [categories, interests, tests] = await Promise.all([
+    const [categories, interests] = await Promise.all([
       list('feture_categories', 'id,title,short_title,icon,accent_color,position', 'position.asc', 100),
-      list('feture_interests', 'id,category_id,title,position', 'position.asc', 500),
-      list('feture_tests', 'id,title,description,category_id,question_count', 'id.asc', 100)
+      list('feture_interests', 'id,category_id,title,position', 'position.asc', 500)
     ]);
     const data = {
       version: 1,
@@ -69,13 +68,8 @@ module.exports = async function catalog(req, res) {
           .sort((a, b) => a.position - b.position)
           .map(i => ({id: i.id, title: i.title, ...editorial.interests[i.id], editorialVersion:editorial.version}))
       })),
-      tests: tests.map(t => ({
-        id: t.id,
-        title: t.title,
-        description: t.description,
-        category: categories.findIndex(c => c.id === t.category_id),
-        questions: t.question_count
-      }))
+      tests: [] // Old taxonomy descriptors are not published questionnaires.
+
     };
     res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300');
     res.statusCode = 200;

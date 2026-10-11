@@ -1,0 +1,72 @@
+// @ts-check
+'use strict';
+const {reject,DomainError}=require('./errors');
+const {uuid}=require('./documents');
+const {createAccessGuard}=require('./access-guard');
+const {requireOwner}=require('./permissions');
+/** @param {unknown} v @returns {v is Record<string,unknown>} */
+const object=v=>!!v&&typeof v==='object'&&!Array.isArray(v)&&Object.getPrototypeOf(v)===Object.prototype;
+/** @param {unknown} v @param {string[]} keys */
+function shape(v,keys){if(!object(v)||Object.keys(v).length!==keys.length||Object.keys(v).some(k=>!keys.includes(k)))reject(422,'invalid_request');return v;}
+/** @param {unknown} v @param {number} max @returns {string} */
+function plain(v,max){if(typeof v!=='string'||!v.trim()||v.length>max||/[\x00-\x1f\x7f]/.test(v))reject(422,'invalid_request');return /** @type {string} */(v);}
+/** @param {unknown} v @returns {string} */
+function slug(v){const s=plain(v,48);if(!/^[a-z][a-z0-9-]{0,47}$/.test(s))reject(422,'invalid_request');return s;}
+/** Admin-defined JSON is data only. Uniform bounded 0..4 weights, no expressions/eval.
+ * @param {unknown} input @returns {import('./questionnaires').TestDefinition} */
+function definition(input){
+ const v=shape(input,['id','title','description','dimensions','questions']);slug(v.id);plain(v.title,160);plain(v.description,1200);
+ if(!Array.isArray(v.dimensions)||v.dimensions.length<1||v.dimensions.length>4||!Array.isArray(v.questions)||v.questions.length<6||v.questions.length>12)reject(422,'invalid_request');
+ const dimensions=/** @type {unknown[]} */(v.dimensions).map(d=>{const r=shape(d,['id','title','low','mid','high']);slug(r.id);plain(r.title,120);for(const k of ['low','mid','high'])plain(r[k],800);return r;});
+ const ids=dimensions.map(d=>d.id);if(new Set(ids).size!==ids.length)reject(422,'invalid_request');
+ const questions=/** @type {unknown[]} */(v.questions).map(q=>{const r=shape(q,['id','prompt','dimension','kind','options']);slug(r.id);plain(r.prompt,600);
+  if(!ids.includes(r.dimension)||!['single','multi','scale'].includes(String(r.kind))||!Array.isArray(r.options)||r.options.length<2||r.options.length>6||r.kind==='scale'&&r.options.length!==5)reject(422,'invalid_request');
+  const options=/** @type {unknown[]} */(r.options).map(o=>{const s=shape(o,['id','label','score']);slug(s.id);plain(s.label,240);if(typeof s.score!=='number'||!Number.isInteger(s.score)||s.score<0||s.score>4)reject(422,'invalid_request');return s;});
+  if(new Set(options.map(o=>o.id)).size!==options.length||r.kind==='scale'&&options.some((o,i)=>o.score!==i))reject(422,'invalid_request');return r;
+ });
+ if(new Set(questions.map(q=>q.id)).size!==questions.length||ids.some(id=>questions.filter(q=>q.dimension===id).length<2)||Buffer.byteLength(JSON.stringify(v))>24000)reject(422,'invalid_request');
+ return /** @type {import('./questionnaires').TestDefinition} */(v);
+}
+/** @param {unknown} input @returns {import('./questionnaires').Answers} */
+function answers(input){if(!object(input)||Object.keys(input).length>12)reject(422,'invalid_request');for(const [k,v] of Object.entries(input)){slug(k);if(v!==null&&(!Array.isArray(v)||v.length<1||v.length>6||new Set(v).size!==v.length||!v.every(x=>typeof x==='string'&&/^[a-z][a-z0-9-]{0,47}$/.test(x))))reject(422,'invalid_request');}return /** @type {import('./questionnaires').Answers} */(input);}
+/** @param {unknown} input @returns {import('./questionnaires').TestsCommand} */
+function testsCommand(input){if(!object(input))reject(422,'invalid_request');const v=/** @type {Record<string,unknown>} */(input),action=v.action;
+ if(action==='tests.list'){shape(v,['action']);return {action};}
+ if(action==='tests.start'){shape(v,['action','testId','operationId']);slug(v.testId);if(!uuid(v.operationId))reject(422,'invalid_request');return /** @type {import('./questionnaires').TestsCommand} */(v);}
+ if(action==='tests.read'){shape(v,['action','attemptId']);if(!uuid(v.attemptId))reject(422,'invalid_request');return /** @type {import('./questionnaires').TestsCommand} */(v);}
+ if(action!=='tests.save'&&action!=='tests.complete'&&action!=='tests.delete')reject(422,'invalid_request');
+ shape(v,action==='tests.delete'?['action','attemptId','operationId','expectedRevision']:['action','attemptId','operationId','expectedRevision','answers','position']);
+ if(!uuid(v.attemptId)||!uuid(v.operationId)||typeof v.expectedRevision!=='number'||!Number.isSafeInteger(v.expectedRevision)||v.expectedRevision<1||v.expectedRevision>=Number.MAX_SAFE_INTEGER)reject(422,'invalid_request');
+ if(action!=='tests.delete'){answers(v.answers);if(typeof v.position!=='number'||!Number.isInteger(v.position)||v.position<0||v.position>11)reject(422,'invalid_request');}
+ return /** @type {import('./questionnaires').TestsCommand} */(v);
+}
+/** @param {import('./contracts').Command} c @returns {c is import('./questionnaires').TestsCommand} */
+const isTestsCommand=c=>c.action.startsWith('tests.');
+/** @param {import('./contracts').Transport} transport @param {import('./documents').DocumentsRepository} documents @returns {import('./questionnaires').TestsRepository} */
+function createTestsRepository(transport,documents){const guard=createAccessGuard(documents);return {async execute(actor,input){requireOwner(actor,actor.accountHash);const c=testsCommand(input);if(c.action!=='tests.delete')await guard(actor);const result=await testRPC(transport,'feture_test_command',{p_owner:actor.accountHash,p_command:c});return testsDTO(c,result);}};}
+/** Whitelist transport output, including nested objects. Never forward owner or future columns.
+ * @param {unknown} input @param {string[]} keys @returns {Record<string,unknown>} */
+function pick(input,keys){if(!object(input)||keys.some(k=>!Object.hasOwn(input,k)))reject(503,'domain_unavailable');return Object.fromEntries(keys.map(k=>[k,input[k]]));}
+/** @param {unknown} input */
+function versionDTO(input){const v=pick(input,['id','testId','revision','definition','publishedAt']);
+ if(!uuid(v.id)||typeof v.revision!=='number'||!Number.isSafeInteger(v.revision)||v.revision<1||typeof v.publishedAt!=='string'||!Number.isFinite(Date.parse(v.publishedAt)))reject(503,'domain_unavailable');
+ const d=pick(v.definition,['id','title','description','dimensions','questions']);if(!Array.isArray(d.dimensions)||!Array.isArray(d.questions))reject(503,'domain_unavailable');
+ d.dimensions=d.dimensions.map(x=>pick(x,['id','title','low','mid','high']));d.questions=d.questions.map(x=>{const q=pick(x,['id','prompt','dimension','kind','options']);if(!Array.isArray(q.options))reject(503,'domain_unavailable');q.options=q.options.map(o=>pick(o,['id','label','score']));return q;});
+ try{v.definition=definition(d);}catch{return reject(503,'domain_unavailable');}if(v.testId!==d.id)reject(503,'domain_unavailable');return v;
+}
+/** @param {unknown} input */
+function attemptDTO(input){const a=pick(input,['id','version','status','answers','position','revision','result','updatedAt']);
+ if(!uuid(a.id)||!['draft','completed'].includes(String(a.status))||typeof a.revision!=='number'||!Number.isSafeInteger(a.revision)||a.revision<1||typeof a.position!=='number'||!Number.isInteger(a.position)||a.position<0||a.position>11||typeof a.updatedAt!=='string'||!Number.isFinite(Date.parse(a.updatedAt)))reject(503,'domain_unavailable');a.version=versionDTO(a.version);
+ try{a.answers=answers(a.answers);}catch{return reject(503,'domain_unavailable');}
+ if(a.result!==null){const r=pick(a.result,['answered','total','dimensions']);if(!Array.isArray(r.dimensions)||r.dimensions.length>4)reject(503,'domain_unavailable');r.dimensions=r.dimensions.map(x=>pick(x,['id','answered','total','average','level','interpretation','questionIds']));a.result=r;}if((a.status==='completed')!==(a.result!==null))reject(503,'domain_unavailable');return a;
+}
+/** @param {import('./questionnaires').TestsCommand} c @param {Record<string,unknown>} result */
+function testsDTO(c,result){if(c.action==='tests.delete'){if(result.deleted!==true)reject(503,'domain_unavailable');return {deleted:true};}
+ if(c.action==='tests.list'){if(!Array.isArray(result.versions)||result.versions.length>30||!Array.isArray(result.attempts)||result.attempts.length>100)reject(503,'domain_unavailable');return {versions:result.versions.map(versionDTO),attempts:result.attempts.map(x=>pick(x,['id','testId','title','status','revision','updatedAt']))};}
+ const attempt=attemptDTO(result.attempt);if(c.action!=='tests.start'&&attempt.id!==c.attemptId)reject(503,'domain_unavailable');if(result.replayed!==undefined&&typeof result.replayed!=='boolean')reject(503,'domain_unavailable');return {attempt,...(result.replayed===undefined?{}:{replayed:result.replayed})};
+}
+/** @param {import('./contracts').Transport} transport @param {string} name @param {Record<string,unknown>} body @returns {Promise<Record<string,unknown>>} */
+async function testRPC(transport,name,body){if(!transport.configured())reject(503,'domain_unavailable');let result;try{const r=await transport.request('/rest/v1/rpc/'+name,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),timeoutMs:8000});if(!r.ok)reject(503,'domain_unavailable');result=await r.json();}catch{return reject(503,'domain_unavailable');}
+ if(!object(result))reject(503,'domain_unavailable');if(result.ok!==true){const e=result.error;if(e==='resource_not_found')reject(404,e);if(e==='revision_conflict'||e==='operation_conflict'||e==='attempt_completed')throw new DomainError(409,e);if(e==='invalid_request'||e==='answers_incomplete'||e==='review_required')reject(422,String(e));if(e==='test_limit')reject(429,e);reject(503,'domain_unavailable');}const {ok,...value}=result;return value;
+}
+module.exports={definition,answers,testsCommand,isTestsCommand,createTestsRepository,testRPC};

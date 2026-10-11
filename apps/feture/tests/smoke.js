@@ -59,7 +59,7 @@ function fakeRes(){
     const result=fakeRes();await catalog({method:'GET',headers:{}},result);
     const payload=JSON.parse(result.body);
     const topics=payload.categories[0].interests;
-    ok('public catalog exposes only released definitions and three taxonomy tables', result.statusCode===200 && topics.length===1 && topics[0].definition && topics[0].synonyms.includes('switch') && payload.editorialVersion===1 && paths.sort().join() === 'feture_categories,feture_interests,feture_tests');
+    ok('public catalog exposes only released definitions and two taxonomy tables and no unpublished questionnaires', result.statusCode===200 && topics.length===1 && topics[0].definition && topics[0].synonyms.includes('switch') && payload.editorialVersion===1 && payload.tests.length===0 && paths.sort().join() === 'feture_categories,feture_interests');
   } finally {
     global.fetch=oldFetch;
     if(oldUrl===undefined)delete process.env.SUPABASE_URL;else process.env.SUPABASE_URL=oldUrl;

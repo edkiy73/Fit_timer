@@ -143,6 +143,7 @@ export function FetureExperience(){
                 </span><span><strong>{i.title}</strong><small>{interestSummary(state)}{state?.visibility==='public'?' · открыто':state?.visibility==='granted'?' · по разрешению':''}</small></span>
                 <Icon name="arrow" size={17}/></button>})}</div>
           </>:<><SectionTitle eyebrow="Исследование" title="Открой новые грани" description="Большая карта интересов, границ и вопросов. Здесь нет правильных или неправильных ответов."/>
+          <p><Link className="ft-back" to="/tests">Вопросы к себе →</Link></p>
           <div className="ft-explore-art"><Icon name="compass" size={36}/><div><strong>Начни с любопытства</strong><p>{allIds.length} темы в {data.categories.length} направлениях. Отмечай только то, что считаешь своим.</p></div></div>
           <label className="ft-search"><Icon name="search" size={20}/><input placeholder="Найти интерес или направление" value={query} onChange={e=>setQuery(e.target.value)} aria-label="Поиск интересов"/></label>
           <div className="ft-section-head"><div><h2>Направления</h2><p>У каждого своя карта и история.</p></div></div>

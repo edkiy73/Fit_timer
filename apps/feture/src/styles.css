@@ -43,3 +43,17 @@ h2{margin:0 0 8px}
 .feture-catalog-category ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:13px 0 0;padding:0;list-style:none}
 .feture-catalog-category li{padding:8px;background:var(--card,#fff);border-radius:9px}
 .feture-catalog-category p{margin:8px 0 0}
+
+.ft-questionnaire-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px}
+.ft-questionnaire-grid .card{margin:0}
+.ft-question-choice{border:0;padding:0;margin:24px 0;min-width:0}
+.ft-question-choice legend{font-size:1.15rem;font-weight:650}
+.ft-question-choice .ft-consent-choice{padding:12px;border:1px solid var(--line);border-radius:12px;min-height:44px}
+.ft-questionnaires progress{width:100%;accent-color:var(--accent)}
+.ft-questionnaires details,.ft-test-editor details{margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:12px;overflow-wrap:anywhere}
+.ft-test-editor{border:0;padding:0;min-width:0}
+.ft-test-editor summary{cursor:pointer;min-height:44px;align-content:center}
+.ft-test-option{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:12px 0}
+.ft-test-option label:first-child{flex:1 1 240px}
+.ft-test-option label:nth-child(2){flex:0 1 110px}
+.ft-questionnaires-admin input,.ft-questionnaires-admin textarea,.ft-questionnaires-admin select{max-width:100%;box-sizing:border-box}

@@ -11,6 +11,7 @@ export default defineConfig({
   define: {'__APP_BUILD_ID__': JSON.stringify(buildId)},
   base: './',
   resolve: {
+    dedupe:['react','react-dom'],
     alias: {
       '@appbase/core': root('packages/core/src/core'),
       '@appbase/types': root('packages/core/src/types'),
@@ -22,6 +23,7 @@ export default defineConfig({
   server: {fs: {allow: [root('')]}},
   test: {
     environment: 'jsdom',
+    server:{deps:{inline:[/react/,/@tanstack\/react-query/,/motion/]}},
     setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.test.{ts,tsx}']
   }
