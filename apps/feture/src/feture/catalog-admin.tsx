@@ -1,6 +1,7 @@
 import {useEffect,useMemo,useState} from 'react';
 import {z} from 'zod';
 import type {AdminSectionContext} from '@appbase/ui-react/admin.js';
+import {AdminWorkspace} from '@appbase/ui-react/admin-workspace.js';
 import catalog from '../../data/concept-catalog.json';
 import published from '../../data/catalog-editorial.json';
 
@@ -25,6 +26,7 @@ const baseline=(id:string):Entry=>{
 };
 export function CatalogAdmin({client,adminKey}:AdminSectionContext){
  const [id,setId]=useState(initialId);
+ const [workspace,setWorkspace]=useState<'edit'|'publish'|null>(null),[listQuery,setListQuery]=useState(''),[publicationQuery,setPublicationQuery]=useState('');
  const [drafts,setDrafts]=useState<z.infer<typeof draft>[]>([]);
  const [entry,setEntry]=useState<Entry>(()=>baseline(initialId));
  const [revision,setRevision]=useState(0),[dirty,setDirty]=useState(false),[loading,setLoading]=useState(false);
@@ -71,33 +73,59 @@ export function CatalogAdmin({client,adminKey}:AdminSectionContext){
   finally{setPublishing(false);}
  };
  const current=topics.find(t=>t.id===id);
- return <section className="ft-catalog-admin"><h2>Каталог интересов</h2>
-  <p>Редакционные черновики скрыты от пользователей. Сейчас можно подготовить определения, синонимы и связанные темы. Для опубликования новых редакций выбери проверенные черновики в разделе ниже.</p>
-  <label>Тема<select disabled={loading} value={id} onChange={e=>choose(e.target.value)}>
-    {catalog.categories.map(c=><optgroup key={c.id} label={c.title}>{c.interests.map(i=><option key={i.id} value={i.id}>{i.title}{drafts.some(d=>d.interestId===i.id)?' · черновик':''}</option>)}</optgroup>)}
-  </select></label>
-  <p className="muted">{current?.category} · Редакция {revision||'ещё не сохранена'} · Публичная версия {publishedVersion}</p>
-  <label>Определение<textarea disabled={loading} value={entry.definition} maxLength={400} rows={4} onChange={e=>patch(v=>({...v,definition:e.target.value}))}/></label>
-  <label>Поисковые синонимы (каждый с новой строки)<textarea disabled={loading} value={entry.synonyms.join('\n')} rows={4}
-   onChange={e=>patch(v=>({...v,synonyms:e.target.value.split('\n').map(x=>x.trim()).filter(Boolean)}))}/></label>
-  <h3>Связанные темы</h3>
-  <div>{entry.relatedIds.map(related=>{const t=topics.find(x=>x.id===related);return <span key={related} className="ft-textbtn">{t?.title??related} <button type="button" disabled={loading} aria-label={'Убрать '+(t?.title??related)} onClick={()=>patch(v=>({...v,relatedIds:v.relatedIds.filter(x=>x!==related)}))}>×</button> </span>;})}</div>
-  {entry.relatedIds.length<8&&<><label>Найти связанную тему<input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Название или категория"/></label>
-   <label>Выбрать тему<select value={nextRelated} onChange={e=>setNextRelated(e.target.value)}><option value="">Выбери тему</option>{relatedOptions.map(t=><option key={t.id} value={t.id}>{t.title} · {t.category}</option>)}</select></label>
-   <button type="button" disabled={!nextRelated||loading} onClick={()=>{if(nextRelated&&relatedOptions.some(t=>t.id===nextRelated))patch(v=>({...v,relatedIds:[...v.relatedIds,nextRelated]}));setNextRelated('');}}>Добавить связь</button></>}
-  <section className="card ft-catalog-publish"><h3>Публикация справочника · версия {publishedVersion}</h3>
-   <p>Выбери только проверенные редактором черновики. Из них будет собрана новая неизменяемая версия поверх текущей. Неотмеченные темы сохранят прежние публичные определения.</p>
-   {drafts.length===0?<p className="muted">Сохранённых черновиков пока нет.</p>:<div>{drafts.map(d=><label key={d.interestId} className="ft-consent-choice">
-     <input type="checkbox" disabled={loading||publishing||dirty} checked={publishSelected.includes(d.interestId)}
-       onChange={e=>setPublishSelected(current=>e.target.checked?[...current,d.interestId]:current.filter(i=>i!==d.interestId))}/>
-     {topics.find(t=>t.id===d.interestId)?.title??d.interestId} · черновик {d.revision}
-    </label>)}</div>}
-   <p className="muted">Перед публикацией проверь определения, синонимы и связанные темы. Пользователи увидят новую редакцию только после публикации; старые результаты опросников не изменятся.</p>
-   <button type="button" disabled={loading||publishing||dirty||publishSelected.length===0} onClick={()=>void publish()}>{publishing?'Публикуем…':`Проверил и опубликовать (${publishSelected.length})`}</button>
-  </section>
-  <div className="ft-form-actions"><button type="button" disabled={!dirty||loading} onClick={()=>void save()}>{loading?'Сохраняем…':'Сохранить черновик'}</button>
-   <button type="button" disabled={loading} onClick={()=>{if(!dirty||window.confirm('Текущие изменения будут потеряны. Обновить черновики?'))setRefresh(n=>n+1);}}>Обновить данные</button></div>
-  {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
-  <p className="muted">Новые версии публикуются только после явного выбора и подтверждения. Неопубликованные черновики не входят в публичный API и не меняют личную карту.</p>
+ const close=()=>{
+  if(loading||publishing)return;
+  if(workspace==='edit'&&dirty&&!window.confirm('Закрыть редактор? Несохранённые изменения будут потеряны.'))return;
+  setWorkspace(null);
+  if(dirty)setRefresh(n=>n+1);
+ };
+ const filteredTopics=topics.filter(topic=>[topic.title,topic.category,...(baseline(topic.id).synonyms)].join(' ').toLowerCase().includes(listQuery.trim().toLowerCase()));
+ const filteredDrafts=drafts.filter(d=>{const t=topics.find(item=>item.id===d.interestId);return [t?.title,t?.category].join(' ').toLowerCase().includes(publicationQuery.trim().toLowerCase());});
+ return <section className="ft-catalog-admin">
+  <div className="ab-admin-section-head"><div><h2>Каталог интересов</h2><p className="muted">{topics.length} тем · {drafts.length} черновиков · опубликована версия {publishedVersion}</p></div></div>
+  <div className="ft-form-actions"><button type="button" disabled={loading||publishing} onClick={()=>setWorkspace('publish')}>Публикация {publishSelected.length?('· '+publishSelected.length):''}</button>
+   <button type="button" className="ab-admin-secondary" disabled={loading||publishing} onClick={()=>setRefresh(n=>n+1)}>Обновить</button></div>
+  <label>Поиск тем<input type="search" value={listQuery} onChange={e=>setListQuery(e.target.value)} placeholder="Название или категория"/></label>
+  <div className="ab-admin-item-list">
+   {filteredTopics.slice(0,80).map(topic=>{
+    const d=drafts.find(x=>x.interestId===topic.id);
+    return <button type="button" key={topic.id} disabled={loading||publishing} onClick={()=>{choose(topic.id);setWorkspace('edit');}}>
+     <span><strong>{topic.title}</strong><small>{topic.category} · {d?'Черновик '+d.revision:'Нет черновика'}</small></span><span aria-hidden="true">→</span>
+    </button>;
+   })}
+  </div>
+  {filteredTopics.length>80&&<p className="muted">Показано 80 из {filteredTopics.length}. Уточни поиск.</p>}
+  {filteredTopics.length===0&&<p className="muted">По этому запросу тем нет.</p>}
+  {error&&<p role="alert">{error}</p>}{!workspace&&notice&&<p role="status">{notice}</p>}
+  {workspace==='edit'&&<AdminWorkspace title={current?.title||'Редактирование темы'} subtitle={(current?.category||'')+' · редакция '+(revision||'не сохранена')} onClose={close}
+    footer={<><button type="button" className="ab-admin-secondary" onClick={close}>Закрыть</button>
+     <button type="button" disabled={!dirty||loading} onClick={()=>void save()}>{loading?'Сохраняем…':'Сохранить черновик'}</button>
+    </>}>
+   <p className="muted">Изменения в черновике скрыты от пользователей до отдельной публикации.</p>
+   <label>Определение<textarea disabled={loading} value={entry.definition} maxLength={400} rows={4} onChange={e=>patch(v=>({...v,definition:e.target.value}))}/></label>
+   <label>Поисковые синонимы (каждый с новой строки)<textarea disabled={loading} value={entry.synonyms.join('\n')} rows={4}
+     onChange={e=>patch(v=>({...v,synonyms:e.target.value.split('\n').map(x=>x.trim()).filter(Boolean)}))}/></label>
+   <h3>Связанные темы</h3>
+   <div>{entry.relatedIds.map(related=>{const t=topics.find(x=>x.id===related);return <span key={related} className="ft-textbtn">{t?.title??related} <button type="button" disabled={loading} aria-label={'Убрать '+(t?.title??related)} onClick={()=>patch(v=>({...v,relatedIds:v.relatedIds.filter(x=>x!==related)}))}>×</button> </span>;})}</div>
+   {entry.relatedIds.length<8&&<><label>Найти связанную тему<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Название или категория"/></label>
+    <label>Выбрать тему<select value={nextRelated} onChange={e=>setNextRelated(e.target.value)}><option value="">Выбери тему</option>{relatedOptions.map(t=><option key={t.id} value={t.id}>{t.title} · {t.category}</option>)}</select></label>
+    <button type="button" disabled={!nextRelated||loading} onClick={()=>{if(nextRelated&&relatedOptions.some(t=>t.id===nextRelated))patch(v=>({...v,relatedIds:[...v.relatedIds,nextRelated]}));setNextRelated('');}}>Добавить связь</button></>}
+   {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
+  </AdminWorkspace>}
+  {workspace==='publish'&&<AdminWorkspace title="Публикация справочника" subtitle={'Версия '+publishedVersion+' · '+drafts.length+' доступных черновиков'} onClose={close}
+    footer={<><button type="button" className="ab-admin-secondary" onClick={close}>Закрыть</button><button type="button" disabled={loading||publishing||dirty||publishSelected.length===0} onClick={()=>void publish()}>{publishing?'Публикуем…':('Опубликовать · '+publishSelected.length)}</button></>}>
+   <p>Выбери только проверенные определения: опубликованные версии неизменяемы, а невыбранные темы не изменятся. Решение подтверждается отдельно.</p>
+   <label>Найти черновик<input type="search" value={publicationQuery} onChange={e=>setPublicationQuery(e.target.value)} placeholder="Название темы"/></label>
+   <div className="ft-form-actions"><button type="button" className="ab-admin-secondary" disabled={publishing} onClick={()=>setPublishSelected([])}>Снять выбор ({publishSelected.length})</button></div>
+   <div className="ab-admin-item-list">
+    {filteredDrafts.map(d=><label key={d.interestId} className="ft-consent-choice">
+      <input type="checkbox" disabled={loading||publishing||dirty} checked={publishSelected.includes(d.interestId)}
+       onChange={e=>setPublishSelected(items=>e.target.checked?[...items,d.interestId]:items.filter(v=>v!==d.interestId))}/>
+      {topics.find(t=>t.id===d.interestId)?.title??d.interestId} · редакция {d.revision}
+     </label>)}
+    {filteredDrafts.length===0&&<p className="muted">Нет подходящих черновиков.</p>}
+   </div>
+   {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
+  </AdminWorkspace>}
  </section>;
 }
