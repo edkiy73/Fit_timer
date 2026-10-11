@@ -17,6 +17,19 @@ test('questionnaires: version pinning, private attempts, authoritative scoring, 
   const admin=c=>rpc('feture_test_admin',c),alice='a'.repeat(32),bob='b'.repeat(32),run=(owner,c)=>rpc('feture_test_command',owner,c);
   const seeds=JSON.parse(readFileSync(new URL('../data/questionnaires.json',import.meta.url),'utf8'));
   for(const seed of seeds){definition(seed);assert.equal(await rpc('feture_test_definition_valid',seed),true);for(const choice of [0,4,null]){const answers=Object.fromEntries(seed.questions.map(q=>[q.id,choice===null?null:[q.options[choice].id]]));const score=await rpc('feture_test_score',seed,answers);assert.equal(score.answered,choice===null?0:8);for(const dim of score.dimensions){assert.equal(dim.average,choice);assert.equal(dim.level,choice===null?'insufficient':choice===0?'low':'high');}}}
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261011045829_feture_questionnaires_release.sql',import.meta.url),'utf8'));
+  assert.equal((await db.query('select count(*)::int n from public.feture_test_versions')).rows[0].n,6);
+  await db.exec('set role service_role');
+  for(const [index,seed] of seeds.entries()){
+   const v=(await run(alice,{action:'tests.start',testId:seed.id,operationId:id(1000+index)})).attempt;
+   assert.deepEqual(v.version.definition,seed);
+   const all=Object.fromEntries(seed.questions.map(q=>[q.id,[q.options[4].id]]));
+   const completed=(await run(alice,{action:'tests.complete',attemptId:v.id,operationId:id(1100+index),expectedRevision:1,answers:all,position:7})).attempt;
+   assert.equal(completed.result.answered,8);assert.equal(completed.result.dimensions.every(d=>d.level==='high'),true);
+   await run(alice,{action:'tests.delete',attemptId:v.id,operationId:id(1200+index),expectedRevision:2});
+   await admin({action:'feture.tests.retire',testId:seed.id,revision:v.version.revision});
+  }
+  await db.exec('reset role');
   const def=make();assert.deepEqual(definition(def),def);
   for(const bad of [{...def,formula:'eval'}, {...def,dimensions:[{...def.dimensions[0],high:''}]},{...def,questions:def.questions.map((q,i)=>i===1?{...q,dimension:null}:q)},{...def,questions:def.questions.map((q,i)=>i===1?{...q,options:[{id:'a',label:'A',score:-1},{id:'b',label:'B',score:5}]}:q)}]){assert.throws(()=>definition(bad));assert.equal((await rpc('feture_test_definition_valid',bad)),false);}
   assert.throws(()=>testsCommand({action:'tests.start',testId:'closeness',operationId:id(1),owner:bob}));
