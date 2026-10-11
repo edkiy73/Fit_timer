@@ -65,3 +65,7 @@ h2{margin:0 0 8px}
 .ft-map-preview .ft-form-actions button:first-child{background:var(--ft-rose);color:white}
 .ft-map-preview .ft-consent-choice{min-height:44px;align-items:center}
 .ft-map-preview button:disabled{opacity:.55;cursor:default}
+
+/* P03: long UUIDs must not expand narrow moderation cards. */
+.ft-moderation-recovery{padding:12px;margin-top:10px;border:1px solid var(--line);border-radius:12px}
+.ft-moderation-recovery code{overflow-wrap:anywhere;word-break:break-word}
