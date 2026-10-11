@@ -10,7 +10,7 @@ export function ModerationAdmin({client,adminKey}:AdminSectionContext){
  const [kind,setKind]=useState<'cases'|'appeals'>('cases'),[cursor,setCursor]=useState<string|null>(null),[rows,setRows]=useState<Row[]>([]),[next,setNext]=useState<string|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[refresh,setRefresh]=useState(0);
  useEffect(()=>{let live=true;setBusy(true);setRows([]);setNext(null);setError('');client.action(adminKey,'feture.moderation.queue',{kind,cursor}).then(raw=>{const r=queueSchema.parse(raw);if(live){setRows(r.items);setNext(r.nextCursor);}}).catch(()=>{if(live)setError('Очередь недоступна. Проверь хранилище и обнови страницу.');}).finally(()=>{if(live)setBusy(false);});return ()=>{live=false;};},[client,adminKey,kind,cursor,refresh]);
  const decide=async(body:Decision)=>{if(busy)return false;setBusy(true);setError('');setNotice('');try{
-  const result=await client.action(adminKey,'feture.moderation.decide',{action:'feture.moderation.decide',...body});
+  const result=await client.action(adminKey,'feture.moderation.decide',body);
   z.object({ok:z.literal(true)}).strict().parse(result);
   setNotice('Решение подтверждено сервером. Повтор с тем же номером не продлит санкцию.');
   setRefresh(n=>n+1);return true;
@@ -20,7 +20,7 @@ export function ModerationAdmin({client,adminKey}:AdminSectionContext){
  }finally{setBusy(false);}};
  const check=async(body:Decision)=>{if(busy)return false;setBusy(true);setError('');setNotice('');try{
   const result=z.object({ok:z.literal(true),state:z.enum(['applied','unknown'])}).strict().parse(
-   await client.action(adminKey,'feture.moderation.decisionStatus',{action:'feture.moderation.decisionStatus',operationId:body.operationId,caseId:body.caseId}));
+   await client.action(adminKey,'feture.moderation.decisionStatus',{operationId:body.operationId,caseId:body.caseId}));
   if(result.state==='applied'){
    setNotice('Сервер подтвердил: это решение уже записано. Повторно применять его не нужно.');
    setRefresh(n=>n+1);return true;
