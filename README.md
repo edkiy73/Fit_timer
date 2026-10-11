@@ -8,6 +8,7 @@ templates/react-app/  Minimum mandatory React + TypeScript + Vite starter scaffo
 apps/task-mini/       Executable architecture reference + one small real product domain
 apps/fittimer/        Fit Timer — production web/API/Android/iOS app
 apps/unmute/          Complex production consumer of the same AppBase contracts
+apps/feture/          FetUre — privacy-first social/discovery product, independent React/AppBase app
 docs/                 repository-level plans
 ```
 
