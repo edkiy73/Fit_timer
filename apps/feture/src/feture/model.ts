@@ -62,9 +62,17 @@ export function categoryProgress(ids:string[],map:InterestMap){
 }
 export type Catalog = z.infer<typeof catalogSchema>;
 const definitions:Readonly<Record<string,{definition:string;synonyms:string[];relatedIds:string[]}>>=editorial.interests;
-const catalogInterest=z.object({id:z.string(),title:z.string()}).transform(item=>({
- ...item,definition:definitions[item.id]?.definition??'',synonyms:definitions[item.id]?.synonyms??[],
- relatedIds:definitions[item.id]?.relatedIds??[],editorialVersion:editorial.version
+// Live API carries the reviewed published release. Offline bundle is only a version-1 fallback.
+const catalogInterest=z.object({id:z.string(),title:z.string(),
+ definition:z.string().min(1).max(400).optional(),
+ synonyms:z.array(z.string().min(1).max(80)).max(8).optional(),
+ relatedIds:z.array(z.string()).max(8).optional(),
+ editorialVersion:z.number().int().positive().optional()
+}).transform(item=>({
+ ...item,definition:item.definition??definitions[item.id]?.definition??'',
+ synonyms:item.synonyms??definitions[item.id]?.synonyms??[],
+ relatedIds:item.relatedIds??definitions[item.id]?.relatedIds??[],
+ editorialVersion:item.editorialVersion??editorial.version
 }));
 const catalogCategory=z.object({
  id:z.string(),title:z.string(),short:z.string(),icon:z.string(),color:z.string(),interests:z.array(catalogInterest)
