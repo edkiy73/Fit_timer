@@ -131,8 +131,8 @@ try{
   await adminPage.getByRole('button', {name: 'Пользователи'}).click();
   await adminPage.getByRole('textbox', {name: 'Email'}).fill('person@example.com');
   // The product list arrives after the tab opens; until then the field is a plain text box.
-  await adminPage.locator('label:has-text("Курс или покупка") select').waitFor();
-  await adminPage.getByLabel('Курс или покупка').selectOption('export');
+  await adminPage.locator('label:has-text("Покупка") select').waitFor();
+  await adminPage.getByLabel('Покупка').selectOption('export');
   await adminPage.getByRole('button', {name: 'Выдать', exact: true}).click();
   ok('admin grants the purchase from the shared Admin UI',
     await appears(adminPage.getByRole('cell', {name: 'Экспорт задач', exact: true})));
