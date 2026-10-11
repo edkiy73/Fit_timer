@@ -28,6 +28,7 @@ FetUre is an independent app within the AppBase monorepo (React + TypeScript + V
 - `/#/account`: AppBase email sign-in shell. **Account storage and verification still require separately configured AppBase server backend**.
   The code form explains the 15-minute lifetime, supports correcting the email address, clears the previous code after a successful resend, and distinguishes request/day limits from other failures.
 - `/#/admin`: AppBase admin shell.
+- `/#/operator`: personal Core sign-in for QA operators/managers/auditors, no shared admin key; temporary adult QA grants and audited roles only. Production verification remains separate. [Operator permissions](docs/operators.md).
 
 ## Next stages
 1. Complete visual parity and accessibility verification for React screens, and migrate remaining demonstrative interactions to working product domains.

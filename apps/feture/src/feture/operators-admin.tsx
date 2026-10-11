@@ -1,8 +1,7 @@
 import {useEffect,useState} from 'react';
 import {z} from 'zod';
 import type {AdminSectionContext} from '@appbase/ui-react/admin.js';
-const role=z.enum(['manager','qa_operator','auditor']).nullable();
-const schema=z.object({ok:z.literal(true),role,initialized:z.boolean(),events:z.array(z.object({actor:z.string().regex(/^[a-f0-9]{32}$/),accountHash:z.string().regex(/^[a-f0-9]{32}$/),action:z.enum(['bootstrap','role_set']),role,revision:z.number().int().positive(),at:z.iso.datetime({offset:true})}).strict()).max(25),items:z.array(z.object({accountHash:z.string().regex(/^[a-f0-9]{32}$/),role,revision:z.number().int().positive()}).strict()).max(100)}).strict();
+import {operatorRole as role,operatorStatus as schema} from './operator-api';
 const labels={manager:'Управление операторами',qa_operator:'Выдача и отзыв QA-доступа',auditor:'Чтение журнала QA'};
 export function OperatorsAdmin({client,adminKey}:AdminSectionContext){
  const [data,setData]=useState<z.infer<typeof schema>|null>(null),[email,setEmail]=useState(''),[selected,setSelected]=useState(''),[nextRole,setNextRole]=useState<z.infer<typeof role>>('qa_operator'),[busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -13,7 +12,7 @@ export function OperatorsAdmin({client,adminKey}:AdminSectionContext){
  return <section className="ft-access"><h2>Операторы QA</h2>
  <p>Войди в личный аккаунт: каждое решение о временном доступе будет связано с ним. Эти роли действуют только для QA-доступа и его журнала, без доступа к личным картам, ответам и дневникам.</p>
  {data&&<p>Твоя роль: {data.role?labels[data.role]:'не назначена'}.</p>}
- {data&&!data.initialized&&<><p>Владелец с админ-ключом один раз назначает свой текущий аккаунт управляющим. После этого ключ сам по себе не позволяет выдавать QA-доступ или назначать роли.</p><button disabled={busy} onClick={()=>{if(window.confirm('Назначить текущий личный аккаунт первым управляющим операторами?'))void run('feture.operators.bootstrap',{});}}>Назначить мой аккаунт управляющим</button></>}
+ {data&&!data.initialized&&!!adminKey&&<><p>Владелец с админ-ключом один раз назначает свой текущий аккаунт управляющим. После этого ключ сам по себе не позволяет выдавать QA-доступ или назначать роли.</p><button disabled={busy} onClick={()=>{if(window.confirm('Назначить текущий личный аккаунт первым управляющим операторами?'))void run('feture.operators.bootstrap',{});}}>Назначить мой аккаунт управляющим</button></>}
  {data?.role==='manager'&&<><h3>Назначить или изменить роль</h3>
  <label>Запись<select disabled={busy} value={selected} onChange={e=>{setSelected(e.target.value);setEmail('');}}><option value="">Новый оператор</option>{data.items.map(x=><option key={x.accountHash} value={x.accountHash}>{x.accountHash} · {x.role?labels[x.role]:'отозвана'} · версия {x.revision}</option>)}</select></label>
  <label>Email существующего аккаунта<input disabled={busy} type="email" autoComplete="off" value={email} onChange={e=>setEmail(e.target.value)}/></label><p>Для изменения выбери запись и введи email этого аккаунта.</p>
