@@ -15,8 +15,8 @@
 | W05 | Серверная preview/apply предложений теста #787; независимый аудит и реальные аккаунты открыты. |
 | W06 | Приватный дневник/история; сохранение черновика при смене вкладки #798. Live и device QA открыты. |
 | W07 | Локальная PNG-карточка #796; отзывные ссылки #797, SQL `20261011080915`; двустороннее добровольное сравнение W07.3 и security/device QA открыты. |
-| A04.qa/O02 | Admin QA grant #799, снятие искусственного лимита, поиск email и аудит #801; SQL уже применён. Реальная производственная верификация и персональные роли не готовы. |
-| O02.1 | Личная Core сессия + server-side роли для QA, отзыв на следующем запросе, CAS назначений, привязка к созданию аккаунта, защита последнего управляющего, аудит ролей/допусков без email. SQL применён; browser приёмка и независимый аудит открыты. |
+| A04.qa/O02 | Admin QA grant #799, снятие искусственного лимита, поиск email и аудит #801; SQL уже применён. Реальная production верификация не готова; персональные QA-роли добавлены в #803. |
+| O02.1 | PR #803 в main. Личная Core сессия + server-side роли для QA, отзыв на следующем запросе, CAS назначений, привязка к созданию аккаунта, защита последнего управляющего, аудит ролей/допусков без email. SQL применён; browser приёмка и независимый аудит открыты. |
 | QA | Связка QA grant/consent/private share: PostgreSQL regression #800. Это не browser/native acceptance. |
 
 ## Очередь следующих независимых работ
@@ -31,7 +31,7 @@
 ## Формат handoff (перезаписывай, не накапливай)
 `ID | последний merged PR/SHA | что проверено | что НЕ проверено | следующий ID и 2–5 файлов`
 
-Последний факт: O02.1 на базе `main@e27aa631`; typecheck/build, 18 UI unit, 21 security, 13 PostgreSQL contracts прошли; SQL `feture_operator_roles` applied, live rollback проверил назначение/автора/отзыв. Ролей и решений в live после проверки 0. Не проверены: два настоящих staff аккаунта в браузере, независимый Sol 6.1 privacy audit. Следующий O02.2: `src/feture/operators-admin.tsx`, `src/feture/qa-adult-admin.tsx`, `src/admin.ts`, `lib/feture/operators.js`, `api/admin.js`.
+Последний факт: **O02.1 | merged PR #803 / `110fd903` | CI `38138911731` success**; typecheck/build, 18 UI unit, 21 security, 13 PostgreSQL contracts прошли; SQL `feture_operator_roles` и `feture_operator_account_binding` applied; live rollback проверил назначение/автора/отзыв и запрет прав после повторной регистрации. Роль проверяется до email lookup; общий ключ без Core-сессии не допускает к QA. Ролей и решений в live после проверки 0. Не проверены: два настоящих staff аккаунта в браузере, независимый Sol 6.1 privacy audit. Следующий O02.2: `src/feture/operators-admin.tsx`, `src/feture/qa-adult-admin.tsx`, `src/admin.ts`, `lib/feture/operators.js`, `api/admin.js`.
 
 ## Где подробности
 [Маршрутизатор](README.md) → соответствующая карточка; [персональные QA роли](../operators.md). Архив только для исторических вопросов.
