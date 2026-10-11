@@ -12,6 +12,7 @@ FetUre is an independent app within the AppBase monorepo (React + TypeScript + V
 - `api/catalog.js` is a narrow public server proxy with a publishable (anon) key, **not service-role**. It returns public taxonomy and reviewed legal publications only. No client direct DB calls. Vercel variables: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`.
 
 ## Interfaces
+- W05.1 adds an explicit result-to-map preview: select new related topics as curious, private and excluded from discovery. Existing map records and deletion tombstones are never replaced. Exact definition fingerprints bind reviewed suggestions; result completion changes nothing. [Result-to-map contract](docs/result-map.md).
 - `/#/tests`: private saved questionnaire attempts, resume, explicit skips, separate retakes and explainable results. The product admin edits data-only definitions and explicitly publishes reviewed immutable versions. Six starting questionnaires are published after exact-revision editorial review; production adult/auth acceptance remains open. [Questionnaire contract](docs/questionnaires.md).
 - `/`: **native React** experience. Tabs «Мой мир», «Исследовать», «Сообщество», «Знакомства» are React components; no iframe. Interest editing, per-category jars and privacy choices are functional.
 - `/concept.html`: archived clickable 3.1 reference, not production UI.

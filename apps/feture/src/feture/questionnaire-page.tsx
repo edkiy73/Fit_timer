@@ -6,6 +6,7 @@ import type {AuthSession} from '@appbase/core/auth.js';
 import {domainRequest,domainErrorMessage} from './domain-api';
 import {attemptResponse,testsResponse,type Answers,type TestAttempt,type TestQuestion} from './questionnaire-model';
 import type {TestsCommand} from '../../lib/feture/questionnaires';
+import {ResultMap} from './result-map';
 import {AppDialog} from './components/primitives';
 export function QuestionChoice({question,value,onChange,disabled=false}:{question:TestQuestion;value:string[]|null|undefined;onChange:(next:string[]|null)=>void;disabled?:boolean}){
  return <fieldset className="ft-question-choice" disabled={disabled}><legend>{question.prompt}</legend><p className="muted">{question.kind==='multi'?'Можно выбрать несколько вариантов.':'Выбери один вариант.'} Любой вопрос можно пропустить.</p>
@@ -49,6 +50,7 @@ function TestsAccount({session,attemptId}:{session:AuthSession;attemptId:string|
    <p className="muted">Перед завершением ответь или выбери «Пропустить» у каждого вопроса.</p>
   </>}
   {attempt?.status==='completed'&&attempt.result&&<><p>Результат описывает твои ответы сейчас. Это не диагноз, обещание поведения или согласие на конкретный опыт.</p>{attempt.result.dimensions.map(dim=>{const label=def!.dimensions.find(d=>d.id===dim.id)?.title;return <article className="card" key={dim.id}><h3>{label}</h3><p>{dim.interpretation}</p><p className="muted">Учтено {dim.answered} из {dim.total} ответов. Пропуски не считаются отказом.</p><details><summary>Почему такой вывод</summary>{dim.questionIds.map(id=>{const question=def!.questions.find(q=>q.id===id)!;return <p key={id}><strong>{question.prompt}</strong><br/>{question.options.filter(o=>attempt.answers[id]?.includes(o.id)).map(o=>o.label).join(', ')}</p>;})}{dim.questionIds.length===0&&<p>В этом направлении все вопросы пропущены.</p>}</details></article>;})}<button type="button" disabled={busy||!!operation.current} onClick={()=>void start(attempt.version.testId)}>Пройти заново</button><p className="muted">Новое прохождение сохранится отдельно. Старый результат останется прежним.</p></>}
+  {attempt?.status==='completed'&&<ResultMap key={attempt.id} session={session} attemptId={attempt.id}/>}
   {attempt&&<p><button type="button" disabled={busy||!!operation.current} onClick={()=>void remove()}>Удалить прохождение</button></p>}
   {busy&&<p role="status">Сохраняем или загружаем…</p>}{error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
   {error&&<div className="ft-form-actions">{operation.current&&<button type="button" disabled={busy} onClick={()=>{const c=operation.current;if(c?.action==='tests.start')void start(c.testId);else if(c?.action==='tests.delete')void remove();else void save(c?.action==='tests.complete');}}>Повторить то же действие</button>}<button type="button" disabled={busy} onClick={()=>{if(!dirty&&!operation.current||window.confirm('Загрузить сохранённые ответы? Несохранённые изменения в форме будут потеряны.')){operation.current=null;setRefresh(n=>n+1);}}}>Загрузить сохранённое</button><Link to="/verification">Подтвердить совершеннолетие</Link><Link to="/documents">Правила и согласия</Link></div>}
