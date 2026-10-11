@@ -58,3 +58,15 @@ test('C01 review endpoint: personal session/generation, exact action and closed 
  reply={ok:true,items:[{id:'00000000-0000-4000-8000-000000000001',text:'Открытый текст',authorLabel:'Имя',kind:'text',state:'pending',revision:1,submittedAt:since,privateAnswers:['SECRET']}],nextCursor:null};assert.equal((await run(queue)).statusCode,503);
  await store.del('a:'+owner);const n=calls.length;assert.equal((await run(queue)).statusCode,401);assert.equal(calls.length,n);
 });
+
+test('C01 report review: closed staff context/audit and personal generation',async()=>{
+ const email='complaint-reviewer@example.com',token='complaint-token',owner=sha(email).slice(0,32),since='2026-10-11T00:00:00Z';await store.set('a:'+owner,JSON.stringify({email,since,syncDevices:{device:{h:sha(token),at:since}}}));
+ const id='00000000-0000-4000-8000-000000000009',report={id,postId:id,postRevision:3,reason:'privacy',state:'open',revision:1,createdAt:since,resolvedAt:null,resolution:null,note:'CONFIDENTIAL',context:null};let reply={ok:true,items:[report],nextCursor:null};const calls=[];
+ const endpoint=createOperatorEndpoint({accounts:store,transport:{configured:()=>true,request:async(path,opts)=>{calls.push({path,body:JSON.parse(opts.body)});return new Response(JSON.stringify(reply));}},cors:()=>false,quota:async()=>true});
+ const run=async(body)=>{const req=Readable.from([]);req.method='POST';req.body=body;req.headers={'x-fit-email':email,'x-fit-device':'device','x-fit-token':token};const res={statusCode:0,setHeader(){},end(x){this.data=JSON.parse(x);}};await endpoint(req,res);return res;};
+ const queue={action:'feture.posts.reports',cursor:null};assert.equal((await run(queue)).statusCode,200);assert.equal(calls[0].body.p_generation,sha(owner+':'+since));assert.equal(calls[0].path,'/rest/v1/rpc/feture_post_report_review');
+ reply={ok:true,items:[{...report,reporter_hash:owner}],nextCursor:null};assert.equal((await run(queue)).statusCode,503);
+ reply={ok:true,items:[{...report,context:{text:'Text',authorLabel:'Name',revision:4}}],nextCursor:null};assert.equal((await run(queue)).statusCode,503);
+ reply={ok:true,items:[{id,reportId:id,action:'hide',reason:'privacy',revision:2,at:since,note:'CONFIDENTIAL'}],nextCursor:null};assert.equal((await run({action:'feture.posts.reportAudit',cursor:null})).statusCode,503);
+ reply={ok:false,error:'forbidden'};assert.equal((await run(queue)).statusCode,403);
+});
