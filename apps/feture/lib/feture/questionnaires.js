@@ -34,6 +34,12 @@ function testsCommand(input){if(!object(input))reject(422,'invalid_request');con
  if(action==='tests.list'){shape(v,['action']);return {action};}
  if(action==='tests.start'){shape(v,['action','testId','operationId']);slug(v.testId);if(!uuid(v.operationId))reject(422,'invalid_request');return /** @type {import('./questionnaires').TestsCommand} */(v);}
  if(action==='tests.read'){shape(v,['action','attemptId']);if(!uuid(v.attemptId))reject(422,'invalid_request');return /** @type {import('./questionnaires').TestsCommand} */(v);}
+ if(action==='tests.map.apply'){
+   shape(v,['action','attemptId','operationId','interestIds']);
+   if(!uuid(v.attemptId)||!uuid(v.operationId)||!Array.isArray(v.interestIds)||v.interestIds.length<1||v.interestIds.length>3
+    ||new Set(v.interestIds).size!==v.interestIds.length||!v.interestIds.every(id=>typeof id==='string'&&/^interest-[1-9]\\d{0,2}-[1-9]\\d{0,2}$/.test(id)))reject(422,'invalid_request');
+   return /** @type {import('./questionnaires').TestsCommand} */(v);
+  }
  if(action!=='tests.save'&&action!=='tests.complete'&&action!=='tests.delete')reject(422,'invalid_request');
  shape(v,action==='tests.delete'?['action','attemptId','operationId','expectedRevision']:['action','attemptId','operationId','expectedRevision','answers','position']);
  if(!uuid(v.attemptId)||!uuid(v.operationId)||typeof v.expectedRevision!=='number'||!Number.isSafeInteger(v.expectedRevision)||v.expectedRevision<1||v.expectedRevision>=Number.MAX_SAFE_INTEGER)reject(422,'invalid_request');
@@ -43,7 +49,13 @@ function testsCommand(input){if(!object(input))reject(422,'invalid_request');con
 /** @param {import('./contracts').Command} c @returns {c is import('./questionnaires').TestsCommand} */
 const isTestsCommand=c=>c.action.startsWith('tests.');
 /** @param {import('./contracts').Transport} transport @param {import('./documents').DocumentsRepository} documents @returns {import('./questionnaires').TestsRepository} */
-function createTestsRepository(transport,documents){const guard=createAccessGuard(documents);return {async execute(actor,input){requireOwner(actor,actor.accountHash);const c=testsCommand(input);if(c.action!=='tests.delete')await guard(actor);const result=await testRPC(transport,'feture_test_command',{p_owner:actor.accountHash,p_command:c});return testsDTO(c,result);}};}
+function createTestsRepository(transport,documents){const guard=createAccessGuard(documents);return {async execute(actor,input){requireOwner(actor,actor.accountHash);const c=testsCommand(input);if(c.action!=='tests.delete')await guard(actor);if(c.action==='tests.map.apply'){
+   const result=await testRPC(transport,'feture_test_map_apply',{p_owner:actor.accountHash,p_attempt:c.attemptId,p_operation:c.operationId,p_interest_ids:c.interestIds});
+   const wanted=[...c.interestIds].sort();
+   if(typeof result.replayed!=='boolean'||!Array.isArray(result.interestIds)||result.interestIds.length!==wanted.length||!result.interestIds.every((id,i)=>id===wanted[i]))reject(503,'domain_unavailable');
+   return {replayed:result.replayed,interestIds:wanted};
+  }
+  const result=await testRPC(transport,'feture_test_command',{p_owner:actor.accountHash,p_command:c});return testsDTO(c,result);}};}
 /** Whitelist transport output, including nested objects. Never forward owner or future columns.
  * @param {unknown} input @param {string[]} keys @returns {Record<string,unknown>} */
 function pick(input,keys){if(!object(input)||keys.some(k=>!Object.hasOwn(input,k)))reject(503,'domain_unavailable');return Object.fromEntries(keys.map(k=>[k,input[k]]));}
