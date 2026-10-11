@@ -25,9 +25,10 @@ import {JournalPage} from './feture/journal-page';
 import {ModerationPage} from './feture/moderation-page';
 import {QuestionnairesPage} from './feture/questionnaire-page';
 import {QuestionnairesAdmin} from './feture/questionnaire-admin';
+import {CatalogAdmin} from './feture/catalog-admin';
 import {ModerationAdmin} from './feture/moderation-admin';
 import type {AdminSection} from '@appbase/ui-react/admin.js';
-const productAdminSections:readonly AdminSection[]=[{id:'feture-tests',label:'Опросники FetUre',group:'FetUre',render:context=><QuestionnairesAdmin {...context}/>},{id:'feture-documents',label:'Документы FetUre',group:'FetUre',render:context=><DocumentsAdmin {...context}/>},{id:'feture-moderation',label:'Модерация FetUre',group:'FetUre',render:context=><ModerationAdmin {...context}/>}];
+const productAdminSections:readonly AdminSection[]=[{id:'feture-catalog',label:'Каталог FetUre',group:'FetUre',render:context=><CatalogAdmin {...context}/>},{id:'feture-tests',label:'Опросники FetUre',group:'FetUre',render:context=><QuestionnairesAdmin {...context}/>},{id:'feture-documents',label:'Документы FetUre',group:'FetUre',render:context=><DocumentsAdmin {...context}/>},{id:'feture-moderation',label:'Модерация FetUre',group:'FetUre',render:context=><ModerationAdmin {...context}/>}];
 
 const PRODUCT_NAME = 'FetUre';
 // Handle step at first sign-in: config/product.json → auth.askHandle.
