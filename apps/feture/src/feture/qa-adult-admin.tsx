@@ -4,13 +4,17 @@ import type {AdminSectionContext} from '@appbase/ui-react/admin.js';
 const row=z.object({accountHash:z.string().regex(/^[a-f0-9]{32}$/),expiresAt:z.iso.datetime({offset:true}),revoked:z.boolean()}).strict();
 const list=z.object({ok:z.literal(true),items:z.array(row).max(25),activeCount:z.number().int().min(0)}).strict();
 const lookup=z.object({ok:z.literal(true),entry:z.object({expiresAt:z.iso.datetime({offset:true}),revoked:z.boolean()}).strict().nullable()}).strict();
+const audit=z.object({ok:z.literal(true),items:z.array(z.object({
+ accountHash:z.string().regex(/^[a-f0-9]{32}$/),action:z.enum(['grant','revoke']),
+ at:z.iso.datetime({offset:true}),expiresAt:z.iso.datetime({offset:true}).nullable(),actor:z.literal('core-admin')
+}).strict()).max(25)}).strict();
 const granted=z.object({ok:z.literal(true),expiresAt:z.iso.datetime({offset:true})}).strict();
 const revoked=z.object({ok:z.literal(true),revoked:z.literal(true)}).strict();
 export function QaAdultAdmin({client,adminKey}:AdminSectionContext){
  const [email,setEmail]=useState(''),[days,setDays]=useState<1|2|3>(1),[reviewed,setReviewed]=useState(false);
- const [items,setItems]=useState<z.infer<typeof row>[]>([]),[activeCount,setActiveCount]=useState(0),[lookupResult,setLookupResult]=useState<z.infer<typeof lookup>['entry']|undefined>(undefined),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[refresh,setRefresh]=useState(0);
+ const [events,setEvents]=useState<z.infer<typeof audit>['items']>([]),[items,setItems]=useState<z.infer<typeof row>[]>([]),[activeCount,setActiveCount]=useState(0),[lookupResult,setLookupResult]=useState<z.infer<typeof lookup>['entry']|undefined>(undefined),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[refresh,setRefresh]=useState(0);
  useEffect(()=>{let live=true;setBusy(true);setError('');
-  void client.action(adminKey,'feture.qa.list',{}).then(x=>{if(live){const result=list.parse(x);setItems(result.items);setActiveCount(result.activeCount);}})
+  void Promise.all([client.action(adminKey,'feture.qa.list',{}),client.action(adminKey,'feture.qa.audit',{})]).then(([x,y])=>{if(live){const result=list.parse(x);setItems(result.items);setActiveCount(result.activeCount);setEvents(audit.parse(y).items);}})
    .catch(()=>{if(live)setError('Доступ к QA-настройкам отсутствует. Проверь prelaunch среду и админ-ключ.');})
    .finally(()=>{if(live)setBusy(false);});
   return()=>{live=false;};
@@ -42,6 +46,11 @@ export function QaAdultAdmin({client,adminKey}:AdminSectionContext){
   <div className="ft-form-actions"><button type="button" disabled={busy||!reviewed} onClick={()=>void mutate('grant')}>Выдать QA-доступ</button><button type="button" disabled={busy} onClick={()=>void mutate('revoke')}>Отозвать по email</button><button type="button" disabled={busy} onClick={()=>setRefresh(n=>n+1)}>Обновить</button></div>
   <h3>Выданные разрешения · активных {activeCount}</h3><p>Показаны 25 последних записей: конкретного пользователя можно проверить по email выше. Список содержит только отпечатки аккаунтов, без адресов и личных данных. Выдача/отзыв также записываются в закрытом аудите как core-admin; персональные роли ещё не подключены.</p>
   <ul>{items.map(x=><li key={x.accountHash}>{x.accountHash.slice(0,6)}…{x.accountHash.slice(-6)} — {x.revoked?'отозвано':Date.parse(x.expiresAt)>Date.now()?'действует':'истекло'} до {new Date(x.expiresAt).toLocaleString('ru')}</li>)}</ul>
+  <h3>История решений администратора</h3>
+  <p>Последние 25 выдач и отзывов без email или личных данных. Пока используется общий ключ, поэтому действующий оператор обозначен как core-admin; персональные роли добавятся в O02.</p>
+  {events.length===0?<p>Пока нет записанных решений.</p>:<ul>{events.map((v,i)=><li key={v.accountHash+':'+v.at+':'+i}>
+   {new Date(v.at).toLocaleString('ru')} · {v.action==='grant'?'Выдан':'Отозван'} · {v.accountHash.slice(0,6)}…{v.accountHash.slice(-6)} · {v.actor}
+  </li>)}</ul>}
   {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
  </section>;
 }
