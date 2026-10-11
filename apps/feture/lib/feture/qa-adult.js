@@ -52,17 +52,37 @@ function createQaAdultAdmin(transport,accounts){
  }
  /** @param {string} action @param {Record<string,unknown>} body @param {import('./contracts').Response} res */
  return async(action,body,res)=>{
-  if(!['feture.qa.list','feture.qa.grant','feture.qa.revoke'].includes(action))return false;
+  if(!['feture.qa.list','feture.qa.grant','feture.qa.revoke','feture.qa.lookup','feture.qa.audit'].includes(action))return false;
   res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/json; charset=utf-8');
   try{
    let output;
-   if(action==='feture.qa.list'){
+   if(action==='feture.qa.audit'){
+    if(Object.keys(body).sort().join(',')!=='action')reject(422,'invalid_request');
+    if(!transport.configured())reject(503,'verification_unavailable');
+    let rows;
+    try{
+     const response=await transport.request('/rest/v1/feture_qa_adult_events?'+new URLSearchParams({
+       select:'account_hash,event_type,expires_at,created_at,actor_label',order:'created_at.desc',limit:'25'
+     }),{timeoutMs:8000});
+     if(!response.ok)reject(503,'verification_unavailable');
+     rows=await response.json();
+    }catch(e){if(e instanceof DomainError)throw e;reject(503,'verification_unavailable');}
+    if(!Array.isArray(rows)||rows.length>25||!rows.every(item=>
+      item&&typeof item==='object'&&!Array.isArray(item)&&HASH.test(item.account_hash)
+      &&['grant','revoke'].includes(item.event_type)&&item.actor_label==='core-admin'
+      &&typeof item.created_at==='string'&&Number.isFinite(Date.parse(item.created_at))
+      &&(item.expires_at===null||(typeof item.expires_at==='string'&&Number.isFinite(Date.parse(item.expires_at))))))
+      reject(503,'verification_unavailable');
+    output={ok:true,items:rows.map(item=>({
+     accountHash:item.account_hash,action:item.event_type,at:item.created_at,expiresAt:item.expires_at,actor:'core-admin'
+    }))};
+   }else if(action==='feture.qa.list'){
     if(Object.keys(body).sort().join(',')!=='action')reject(422,'invalid_request');
     const data=await rpc({action:'list'});
-    if(!Array.isArray(data.items)||data.items.length>25||!data.items.every(item=>
+    if(typeof data.activeCount!=='number'||!Number.isSafeInteger(data.activeCount)||data.activeCount<0||!Array.isArray(data.items)||data.items.length>25||!data.items.every(item=>
      item&&typeof item==='object'&&HASH.test(item.accountHash)&&typeof item.expiresAt==='string'
      &&Number.isFinite(Date.parse(item.expiresAt))&&typeof item.revoked==='boolean'))reject(503,'verification_unavailable');
-    output={ok:true,items:data.items};
+    output={ok:true,items:data.items,activeCount:data.activeCount};
    }else{
     const names=action==='feture.qa.grant'?'action,days,email,reviewed':'action,email';
     if(Object.keys(body).sort().join(',')!==names||typeof body.email!=='string')reject(422,'invalid_request');
@@ -76,7 +96,17 @@ function createQaAdultAdmin(transport,accounts){
      try{data=JSON.parse(await accounts.get('a:'+hash)||'null');}catch{reject(503,'identity_unavailable');}
      if(!data||typeof data.email!=='string'||data.email.trim().toLowerCase()!==email)reject(404,'account_not_found');
     }
-    const answer=await rpc(action==='feture.qa.grant'?{action:'grant',accountHash:hash,days:body.days,reviewed:true}:{action:'revoke',accountHash:hash});
+    const answer=await rpc(action==='feture.qa.grant'
+     ?{action:'grant',accountHash:hash,days:body.days,reviewed:true}
+     :{action:action==='feture.qa.lookup'?'lookup':'revoke',accountHash:hash});
+    if(action==='feture.qa.lookup'){
+     const entry=answer.entry;
+     if(entry!==null&&(!entry||typeof entry!=='object'||Array.isArray(entry)
+       ||entry.accountHash!==hash||typeof entry.expiresAt!=='string'
+       ||!Number.isFinite(Date.parse(entry.expiresAt))||typeof entry.revoked!=='boolean'))
+       reject(503,'verification_unavailable');
+     output={ok:true,entry:entry===null?null:{expiresAt:entry.expiresAt,revoked:entry.revoked}};
+    }else
     if(action==='feture.qa.grant'){
      if(typeof answer.expiresAt!=='string'||!Number.isFinite(Date.parse(answer.expiresAt)))reject(503,'verification_unavailable');
      output={ok:true,expiresAt:answer.expiresAt};
