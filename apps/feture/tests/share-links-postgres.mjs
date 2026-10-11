@@ -12,7 +12,7 @@ test('W07 share links: private source projection, atomic replay, expiry, revoke 
    '20261010090405_feture_scoped_seed.sql','20261010164924_feture_interest_transactions.sql',
    '20261010225100_feture_verification_store.sql','20261010225653_feture_documents.sql',
    '20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql',
-   '20261010233014_feture_moderation.sql','20261011081500_feture_share_links.sql'])await db.exec(sql(file));
+   '20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql'])await db.exec(sql(file));
   const rpc=async(name,args)=>(await db.query('select public.'+name+'('+args.map((_,i)=>'$'+(i+1)).join(',')+') result',args)).rows[0].result;
   const op=(actor,command)=>db.query('select public.feture_share_command($1::text,$2::jsonb) result',[actor,JSON.stringify(command)]).then(v=>v.rows[0].result);
   const [alice,bob,third]=['a','b','c'].map(x=>x.repeat(32));
