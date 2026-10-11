@@ -1,18 +1,22 @@
-import {useMemo,useState} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import {AppDialog} from './components/primitives';
 import {shareCardRows} from './share-card-model';
 import type {Catalog,InterestMap} from './model';
 
 export function ShareCardDialog({categories,map,onClose}:{categories:Catalog['categories'];map:InterestMap;onClose:()=>void}){
  const [selected,setSelected]=useState<string[]>([]);
- const [approved,setApproved]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+ const [approvedPreview,setApprovedPreview]=useState<string|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+ const alive=useRef(true);
+ useEffect(()=>{alive.current=true;return ()=>{alive.current=false;};},[]);
  const available=useMemo(()=>categories.flatMap(c=>c.interests).filter(i=>map[i.id]&&map[i.id]!.stance!=='unknown'&&map[i.id]!.boundary==='none'),[categories,map]);
  const choices=new Set(available.map(i=>i.id));
  const valid=selected.length>=1&&selected.length<=6&&selected.every(id=>choices.has(id));
  const preview=valid?shareCardRows(selected,categories,map):[];
+ const fingerprint=JSON.stringify(preview);
+ const approved=approvedPreview!==null&&approvedPreview===fingerprint;
  const toggle=(id:string,checked:boolean)=>{
   setSelected(prev=>checked?(prev.length<6?[...prev,id]:prev):prev.filter(item=>item!==id));
-  setApproved(false);setNotice('');setError('');
+  setApprovedPreview(null);setNotice('');setError('');
  };
  const exportImage=async()=>{
   if(busy||!valid||!approved)return;
@@ -41,6 +45,8 @@ export function ShareCardDialog({categories,map,onClose}:{categories:Catalog['ca
    ctx.fillStyle='#756779';ctx.font='19px system-ui';ctx.fillText('Личные ответы, условия и границы не входят в карточку.',66,855);
    const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,'image/png'));
    if(!blob)throw Error('png_unavailable');
+   // Switching accounts or leaving the page must not export the previous account's card.
+   if(!alive.current)return;
    const file=new File([blob],'feture-topics.png',{type:'image/png'});
    if(typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&navigator.canShare({files:[file]})){
     try{await navigator.share({files:[file],title:'Темы FetUre'});setNotice('Карточка передана в системное меню.');return;}
@@ -65,7 +71,7 @@ export function ShareCardDialog({categories,map,onClose}:{categories:Catalog['ca
     <small>Личные ответы, условия и границы не входят в карточку.</small>
    </div>
    <p className="ft-share-warning"><strong>Важно:</strong> получатель сможет сохранить и переслать PNG. После отправки картинку нельзя отозвать, даже если изменить приватность в приложении.</p>
-   <label className="ft-consent-choice"><input type="checkbox" checked={approved} disabled={!valid||busy} onChange={e=>setApproved(e.target.checked)}/>Я проверил, что именно раскрывает карточка, и понимаю, что изображение нельзя отозвать.</label>
+   <label className="ft-consent-choice"><input type="checkbox" checked={approved} disabled={!valid||busy} onChange={e=>setApprovedPreview(e.target.checked?fingerprint:null)}/>Я проверил, что именно раскрывает карточка, и понимаю, что изображение нельзя отозвать.</label>
    <div className="ft-form-actions"><button type="button" disabled={!valid||!approved||busy} onClick={()=>void exportImage()}>{busy?'Создаём…':'Создать PNG'}</button><button type="button" disabled={busy} onClick={onClose}>Закрыть</button></div>
    {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
   </div>
