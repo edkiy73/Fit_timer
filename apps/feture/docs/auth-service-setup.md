@@ -82,3 +82,7 @@ FetUre показывает ошибку выхода с возможность�
 CommonJS: deployment загружает их без TypeScript server build. Проверяемый
 контракт session helpers добавлен в `packages/core/server/util.d.ts`;
 полная конверсия серверной сборки не входит в этот срез.
+
+## Перепроверка 2026-10-12
+
+На production `5ee3e84` health вернул 503: store none, Supabase server configured=false, mail configured=false. Metadata Vercel повторно показала только SUPABASE_URL/SUPABASE_PUBLISHABLE_KEY. Production APPBASE_STORE=supabase установлен через Vercel API; ключи/отправитель не доступны и не установлены. Режим заработает только с серверным ключом, почта — с Resend key и подтверждённым MAIL_FROM. После их настройки нужен один новый deployment и реальный тест доставки на разрешённый владельцем ящик. Отключённые AI/push/billing не являются причиной этого отказа.
