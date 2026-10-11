@@ -115,7 +115,7 @@ export function ShareCardDialog({categories,map,server,phase,pending,conflicts,o
    <section className="ft-share-link-control">
     <h3>Ссылка с возможностью отзыва</h3>
     <p>Это отдельный способ поделиться теми же выбранными темами. Приглашённому нужно войти, подтвердить возраст 18+ и принять правила. Ссылка действует ограниченный срок и может быть отозвана. Создание невозможно при несохранённых изменениях или конфликте карты.</p>
-    {auth.session?<><label>Срок действия <select value={linkDays} disabled={linkBusy||!!pendingLink.current||!!createdLink} onChange={e=>{setLinkDays(Number(e.target.value) as 1|3|7);setLinkApproved(false);}}>
+    {auth.session?<><label>Срок действия <select value={linkDays} disabled={linkBusy||!!pendingLink.current||!!createdLink} onChange={e=>{setLinkDays(Number(e.target.value) as 1|3|7);setLinkApprovalKey(null);}}>
       <option value={1}>1 день</option><option value={3}>3 дня</option><option value={7}>7 дней</option>
      </select></label>
      <label className="ft-consent-choice"><input type="checkbox" checked={linkApproved} disabled={!canLink||linkBusy||!!pendingLink.current||!!createdLink} onChange={e=>setLinkApprovalKey(e.target.checked?linkFingerprint:null)}/>
