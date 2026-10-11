@@ -15,9 +15,10 @@ const {createJournalRepository}=require('../lib/feture/journal');
 const {createShareRepository}=require('../lib/feture/shares');
 const {createQaAdultResolver}=require('../lib/feture/qa-adult');
 const {createPostsRepository}=require('../lib/feture/posts');
+const {createPrivateMetrics}=require('../lib/feture/private-metrics');
 const documents=createDocumentsRepository(Supabase);
 module.exports=createHandler({
-  store,posts:createPostsRepository(Supabase,documents),qaResolver:createQaAdultResolver(Supabase),tests:createTestsRepository(Supabase,documents),journal:createJournalRepository(Supabase,documents),shares:createShareRepository(Supabase,documents),repository:createRepository(Supabase,documents),documents,profiles:createProfileRepository(Supabase,documents),access:createAccessRepository(Supabase,documents,store),moderation:createModerationRepository(Supabase,store),cors,
+  store,metrics:createPrivateMetrics(store),posts:createPostsRepository(Supabase,documents),qaResolver:createQaAdultResolver(Supabase),tests:createTestsRepository(Supabase,documents),journal:createJournalRepository(Supabase,documents),shares:createShareRepository(Supabase,documents),repository:createRepository(Supabase,documents),documents,profiles:createProfileRepository(Supabase,documents),access:createAccessRepository(Supabase,documents,store),moderation:createModerationRepository(Supabase,store),cors,
   quota:async(req,accountHash)=>{
     // Global account quota: changing devices/IP does not reset it. Core stores ephemeral rl:* keys.
     const window=Math.floor(Date.now()/60000);
