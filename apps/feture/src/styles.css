@@ -88,3 +88,75 @@ h2{margin:0 0 8px}
 .ft-post-review .ft-review-consent{display:flex;align-items:flex-start;gap:12px;min-height:44px}.ft-post-review .ft-review-consent input{width:auto;margin:4px 0 0;flex-shrink:0}
 
 .ft-post-report-admin label.ft-review-consent{display:flex;align-items:flex-start;gap:12px;min-height:44px}.ft-post-report-admin label.ft-review-consent input{width:auto;margin:4px 0 0;flex-shrink:0}
+
+/*
+ * FetUre admin and account pages use AppBase's global color tokens.
+ * Explicit theme choice must override OS media queries: --bg/--card were
+ * switched by theme.ts, but --ink/--muted/--line were not.
+ */
+:root[data-theme="light"]{
+  --ink:#17181b;
+  --muted:#626976;
+  --line:#e4e6eb;
+  --border:#e4e6eb;
+  --danger:#c2410c;
+  --success:#16803f;
+}
+:root[data-theme="dark"]{
+  --ink:#f1eef4;
+  --muted:#c6b7c9;
+  --line:#58465f;
+  --border:#58465f;
+  --danger:#ff9d80;
+  --success:#4ade80;
+}
+
+/* Product editors are nested inside the shared AppBase Admin workbench. */
+.ab-admin :is(.ft-catalog-admin,.ft-questionnaires-admin,.ft-documents-admin,.ft-access){
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.ab-admin :is(.ft-catalog-admin,.ft-questionnaires-admin,.ft-documents-admin,.ft-access) > label:not(.ft-consent-choice),
+.ab-admin .ft-test-editor > label,
+.ab-admin .ft-test-editor details > label{
+  display:grid;
+  gap:6px;
+  min-width:0;
+  margin:12px 0;
+}
+.ab-admin :is(.ft-catalog-admin,.ft-questionnaires-admin,.ft-documents-admin,.ft-access) :is(fieldset,section,article,details){
+  min-width:0;
+  max-width:100%;
+}
+.ab-admin :is(.ft-catalog-admin,.ft-questionnaires-admin,.ft-documents-admin,.ft-access) :is(input:not([type="checkbox"]),textarea,select){
+  box-sizing:border-box;
+  display:block;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+}
+.ab-admin :is(.ft-catalog-admin,.ft-questionnaires-admin,.ft-documents-admin,.ft-access) input[type="checkbox"]{
+  flex:0 0 20px;
+  width:20px;
+  height:20px;
+  margin:0;
+}
+.ab-admin :is(.ft-catalog-admin,.ft-questionnaires-admin,.ft-documents-admin,.ft-access) .ft-form-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:9px;
+  min-width:0;
+}
+@media(max-width:760px){
+  .ab-admin :is(.ft-catalog-admin,.ft-questionnaires-admin,.ft-documents-admin,.ft-access) .ft-form-grid{
+    grid-template-columns:minmax(0,1fr);
+  }
+  .ab-admin :is(.ft-catalog-admin,.ft-questionnaires-admin,.ft-documents-admin,.ft-access) .ft-form-actions button{
+    min-height:44px;
+    max-width:100%;
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+}
