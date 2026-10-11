@@ -68,3 +68,9 @@ There will be **hundreds of UX and product revisions**. Prioritize correct UX an
 5. The task cards remain requirements, not claims of live acceptance. Preserve all privacy/consent, age-gate and device checks. Code + CI does not prove production acceptance. Read specialist docs only for a task that needs them.
 
 Canonical Core auth and PostgreSQL-owned FetUre domain data remain the architecture; no second auth or client service-role secrets. No unrelated app changes.
+
+## 9. Optional GitHub Actions agent queue (owner opt-in only)
+- [Workflow and mobile activation](docs/agent-queue.md); [FetUre UI acceptance](docs/ui-quality.md).
+- GitHub Issues named `[FetUre Queue NN] ...` are tiny execution tickets, NOT an alternate full MVP roadmap. STATUS and one domain card remain authoritative.
+- The autonomous runner is **disabled** unless `FETURE_AGENT_ENABLED=true` and a separately billed OpenAI API secret is installed. It creates review-only PRs for `apps/feture/**`, never auto-merges; shared Core, migrations and high-risk privacy changes stay on human-reviewed lanes.
+- Never mark an agent PR as checked/accepted on the basis of its own run. Review diff, AppBase/CI dependencies, actual browser behavior and live permissions as appropriate.
