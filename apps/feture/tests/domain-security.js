@@ -245,3 +245,17 @@ test('C01 selected audience: strict codes, owner-only recipient projection and a
  reply={ok:true,entry:{...entry,mine:false,recipientCodes:[code]}};await assert.rejects(repository.execute(actor,{action:'posts.read',id}),e=>e.status===503);
  await assert.rejects(repository.execute({accountHash:identities.alice.hash},{action:'posts.rotateAddress',operationId:id}),e=>e.status===401);
 });
+
+test('selected questionnaire copy rejects private/client-derived fields and closed server preview',async()=>{
+ const {postCommand,createPostsRepository}=require('../lib/feture/posts');
+ await seed(identities.alice);const actor=await authenticate(req(identities.alice),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const id='00000000-0000-4000-8000-000000003000';
+ const base={action:'posts.fromTest',attemptId:id,versionId:id,expectedAttemptRevision:2,projectionHash:'a'.repeat(64),id,operationId:id,selected:['connection'],authorLabel:'Имя',plannedAudience:'public',recipientCodes:[],consent:true};
+ assert.deepEqual(postCommand(base),base);
+ for(const invalid of [{...base,consent:false},{...base,answers:{}},{...base,text:'raw'},{...base,selected:[]},{...base,selected:['connection','connection']},{...base,expectedAttemptRevision:0},{...base,recipientCodes:[id]},{...base,plannedAudience:'granted'}])assert.throws(()=>postCommand(invalid),e=>e.status===422);
+ let reply={ok:true,preview:{attemptId:id,attemptRevision:2,versionId:id,projectionHash:'a'.repeat(64),items:[{id:'connection',title:'Связь',summary:'Выбранный вывод.'}]}};const paths=[];
+ const repository=createPostsRepository({configured:()=>true,request:async(path)=>{paths.push(path);return new Response(JSON.stringify(reply));}},{requireCurrent:async()=>{}});
+ const preview={action:'posts.testPreview',attemptId:id};assert.deepEqual((await repository.execute(actor,preview)).preview,reply.preview);assert.equal(paths[0],'/rest/v1/rpc/feture_test_share_command');
+ reply={...reply,preview:{...reply.preview,answers:{private:['choice']}}};await assert.rejects(repository.execute(actor,preview),e=>e.status===503);
+ await assert.rejects(repository.execute({accountHash:identities.alice.hash},preview),e=>e.status===401);
+});
