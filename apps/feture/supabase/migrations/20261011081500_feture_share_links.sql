@@ -65,6 +65,9 @@ begin
      or not public.feture_peer_eligible(p_actor)
      or not public.feture_peer_eligible(existing.account_hash)
      or (p_actor<>existing.account_hash and public.feture_pair_blocked(p_actor,existing.account_hash))
+     or exists(select 1 from public.feture_moderation_restrictions r
+        where r.account_hash in (p_actor,existing.account_hash)
+          and r.lifted_at is null and r.expires_at>checked_at)
   then return jsonb_build_object('ok',false,'error','resource_not_found');end if;
   -- Fail closed on edits, deletion, hard/conditional boundary or changed ownership.
   select exists (
@@ -80,7 +83,9 @@ begin
  end if;
  -- Only an eligible adult owner may create a new snapshot. Check inside SQL too:
  -- the API check must not be the only protection if an adapter is called incorrectly.
- if act='share.create' and not public.feture_peer_eligible(p_actor) then
+ if act='share.create' and (not public.feture_peer_eligible(p_actor)
+     or exists(select 1 from public.feture_moderation_restrictions r
+        where r.account_hash=p_actor and r.lifted_at is null and r.expires_at>checked_at)) then
   return jsonb_build_object('ok',false,'error','resource_not_found');end if;
  -- Revoke and create share the same owner lock and verify the owner rather than a client label.
  perform 1 from public.feture_profiles where account_hash=p_actor for update;
