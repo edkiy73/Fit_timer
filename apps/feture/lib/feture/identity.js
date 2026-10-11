@@ -15,9 +15,10 @@ function header(req,name,max) {
 /** Core's account/device-token contract. Client identity is only a lookup, never proof.
  * Re-read the server account on every request: removed/rotated device tokens stop working.
  * @param {import('./contracts').Request} req @param {import('./contracts').AccountStore} store
+ * @param {(accountHash:string)=>Promise<string|null>} [qaResolver]
  * @returns {Promise<import('./contracts').Actor>}
  */
-async function authenticate(req,store) {
+async function authenticate(req,store,qaResolver) {
   const email=header(req,'x-fit-email',120).trim().toLowerCase();
   const deviceId=header(req,'x-fit-device',80).trim();
   const token=header(req,'x-fit-token',256);
@@ -33,8 +34,10 @@ async function authenticate(req,store) {
   let valid=false;
   try {valid=await validSession(device,token,store);} catch {reject(503,'identity_unavailable');}
   if(!valid||typeof account.email!=='string'||account.email.trim().toLowerCase()!==email)reject(401,'auth_required');
-  // No trusted FetUre attestation exists yet. Core account metadata/client flags are NOT age proof.
-  const actor=Object.freeze({accountHash,verifiedAdult:false});
+  // QA access is a server-only, live prelaunch entitlement, NOT proof of identity or age.
+  // No client flag or self-declared DOB can ever grant it.
+  const qaUntil=qaResolver?await qaResolver(accountHash):null;
+  const actor=Object.freeze({accountHash,verifiedAdult:!!qaUntil,qaUntil});
   authenticatedActors.add(actor);
   return actor;
 }

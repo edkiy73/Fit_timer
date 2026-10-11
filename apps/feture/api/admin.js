@@ -7,5 +7,6 @@ const {createModerationAdmin}=require('../lib/feture/moderation-admin');
 const {createTestsAdmin}=require('../lib/feture/questionnaires-admin');
 const {createCatalogAdmin}=require('../lib/feture/catalog-admin');
 const {store}=require('../../../packages/core/server/store');
+const {createQaAdultAdmin}=require('../lib/feture/qa-adult');
 
-module.exports = createAdminHandler({analyticsStats,handlers:[createCatalogAdmin(Supabase),createTestsAdmin(Supabase),createDocumentsAdmin(Supabase),createModerationAdmin(Supabase,store)]});
+module.exports = createAdminHandler({analyticsStats,handlers:[createCatalogAdmin(Supabase),createTestsAdmin(Supabase),createDocumentsAdmin(Supabase),createModerationAdmin(Supabase,store),createQaAdultAdmin(Supabase,store)]});

@@ -13,8 +13,8 @@ const {isModerationCommand}=require('./moderation');
 const {isShareCommand}=require('./shares');
 /** @typedef {import('./contracts').Request} Request */
 /** @typedef {import('./contracts').Response} Response */
-/** @param {{store:import('./contracts').AccountStore;repository:import('./contracts').Repository;documents?:import('./documents').DocumentsRepository;profiles?:import('./profile').ProfileRepository;access?:import('./access').AccessRepository;moderation?:import('./moderation').ModerationRepository;tests?:import('./questionnaires').TestsRepository;journal?:import('./journal').JournalRepository;shares?:import('./shares').ShareRepository;cors:(req:Request,res:Response)=>boolean;quota:(req:Request,scope:string)=>Promise<boolean>;audit:(event:import('./contracts').AuditEvent)=>void}} deps */
-function createHandler({store,repository,documents,profiles,access,moderation,tests,journal,shares,cors,quota,audit}) {
+/** @param {{store:import('./contracts').AccountStore;repository:import('./contracts').Repository;documents?:import('./documents').DocumentsRepository;profiles?:import('./profile').ProfileRepository;access?:import('./access').AccessRepository;moderation?:import('./moderation').ModerationRepository;tests?:import('./questionnaires').TestsRepository;journal?:import('./journal').JournalRepository;shares?:import('./shares').ShareRepository;cors:(req:Request,res:Response)=>boolean;quota:(req:Request,scope:string)=>Promise<boolean>;qaResolver?:(accountHash:string)=>Promise<string|null>;audit:(event:import('./contracts').AuditEvent)=>void}} deps */
+function createHandler({store,repository,documents,profiles,access,moderation,tests,journal,shares,cors,quota,audit,qaResolver}) {
   /** @param {Request} req @param {Response} res */
   return async function handler(req,res) {
     const requestId=randomUUID();
@@ -28,7 +28,7 @@ function createHandler({store,repository,documents,profiles,access,moderation,te
     const send=(status,value)=>{res.statusCode=status;res.end(JSON.stringify(value));};
     try {
       if(req.method!=='POST'){res.setHeader('Allow','POST, OPTIONS');record('method_not_allowed');return send(405,{error:'method_not_allowed',requestId});}
-      const actor=await authenticate(req,store);
+      const actor=await authenticate(req,store,qaResolver);
       if(!(await quota(req,actor.accountHash))){res.setHeader('Retry-After','60');record('rate_limited');return send(429,{error:'rate_limited',requestId});}
       const input=command(await readBody(req));action=input.action;
       if(isShareCommand(input)){if(!shares)reject(503,'domain_unavailable');const result=await shares.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}

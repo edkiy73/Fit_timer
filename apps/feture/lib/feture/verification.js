@@ -6,6 +6,7 @@ const { requireOwner } = require('./permissions');
  * @returns {import('./contracts').VerificationStatusDTO} */
 function verificationStatus(actor) {
   requireOwner(actor,actor.accountHash);
+  if(actor.qaUntil)return {state:'test_access',verifiedAdult:false,validUntil:null,qaAccessUntil:actor.qaUntil};
   return {state:'unavailable',verifiedAdult:false,validUntil:null,reason:'provider_not_configured'};
 }
 module.exports={verificationStatus};
