@@ -1,4 +1,6 @@
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
+import {z} from 'zod';
+import {domainRequest,domainErrorMessage} from './domain-api';
 import {Link} from 'react-router';
 import type {AuthSession} from '@appbase/core/auth.js';
 import fallbackCatalog from '../../data/concept-catalog.json';
@@ -20,7 +22,10 @@ const categoryByInterest=new Map(fallbackCatalog.categories.flatMap(category=>
  category.interests.map(topic=>[topic.id,{category:category.id,title:topic.title}] as const)));
 
 export function ResultMapTopics({attempt,session}:{attempt:TestAttempt;session:AuthSession}){
- const {map,scope,phase}=useInterestMap();
+ const {map,scope,phase,server,pending,conflicts,retry}=useInterestMap();
+ const [selected,setSelected]=useState<string[]>([]),[review,setReview]=useState(false),[ack,setAck]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+ const command=useRef<{action:'tests.map.apply';attemptId:string;operationId:string;interestIds:string[]}|null>(null),alive=useRef(true);
+ useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
  const [expectedScope,setExpectedScope]=useState<string|null>(null);
  useEffect(()=>{
   let live=true;setExpectedScope(null);
@@ -35,6 +40,21 @@ export function ResultMapTopics({attempt,session}:{attempt:TestAttempt;session:A
  const items=ids.flatMap(id=>{const topic=categoryByInterest.get(id);return topic?[{id,...topic}]:[];});
  if(!items.length)return null;
  const canRead=expectedScope!==null&&scope===expectedScope&&phase!=='auth_required'&&phase!=='loading';
+ const ready=canRead&&phase==='synced'&&pending===0&&conflicts.length===0;
+ const available=items.filter(x=>!Object.hasOwn(map,x.id)&&!Object.hasOwn(server,x.id));
+ const eligible=new Set(available.map(x=>x.id));
+ const canReview=ready&&selected.length>0&&selected.every(id=>eligible.has(id));
+ const apply=async()=>{
+  if(!review||!ack||busy||!canRead||(!ready&&!command.current)||(!command.current&&!canReview))return;
+  const operation=command.current??{action:'tests.map.apply' as const,attemptId:attempt.id,operationId:crypto.randomUUID(),interestIds:[...selected].sort()};
+  command.current=operation;setBusy(true);setError('');
+  try{
+   const response=await domainRequest(session,operation,z.object({ok:z.literal(true),replayed:z.boolean(),interestIds:z.array(z.string()).min(1).max(3),requestId:z.uuid()}).strict());
+   if(!alive.current)return;
+   if(JSON.stringify(response.interestIds)!==JSON.stringify(operation.interestIds))throw Error('invalid_response');
+   command.current=null;setReview(false);setAck(false);setSelected([]);setNotice('Выбранные темы добавлены приватно. Обновляем карту.');void retry();
+  }catch(e){if(alive.current)setError(domainErrorMessage(e));}finally{if(alive.current)setBusy(false);}
+ };
  return <section className="card ft-result-map-topics" aria-labelledby="ft-result-map-title">
   <h3 id="ft-result-map-title">Темы для твоей карты</h3>
   <p>Это темы по направлению опросника, а не вывод о твоих желаниях, опыте или согласии. Ни один ответ и результат не переносится автоматически.</p>
