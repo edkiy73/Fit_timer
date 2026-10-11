@@ -7,7 +7,8 @@ export type Answers=Record<string,string[]|null>;
 export type TestResult={answered:number;total:number;dimensions:{id:string;answered:number;total:number;average:number|null;level:'low'|'mid'|'high'|'insufficient';interpretation:string;questionIds:string[]}[]};
 export type TestVersion={id:string;testId:string;revision:number;definition:TestDefinition;publishedAt:string};
 export type TestAttempt={id:string;version:TestVersion;status:'draft'|'completed';answers:Answers;position:number;revision:number;result:TestResult|null;updatedAt:string};
-export type TestsCommand={action:'tests.list'}|{action:'tests.start';testId:string;operationId:string}|{action:'tests.read';attemptId:string}|{action:'tests.save'|'tests.complete';attemptId:string;operationId:string;expectedRevision:number;answers:Answers;position:number}|{action:'tests.delete';attemptId:string;operationId:string;expectedRevision:number};
+export type TestMapCommand={action:'tests.mapPreview';attemptId:string}|{action:'tests.mapApply';attemptId:string;operationId:string;selected:{interestId:string;expectedRevision:0}[]};
+export type TestsCommand={action:'tests.list'}|{action:'tests.start';testId:string;operationId:string}|{action:'tests.read';attemptId:string}|{action:'tests.save'|'tests.complete';attemptId:string;operationId:string;expectedRevision:number;answers:Answers;position:number}|{action:'tests.delete';attemptId:string;operationId:string;expectedRevision:number}|TestMapCommand;
 export interface TestsRepository{execute(actor:Actor,input:TestsCommand):Promise<Record<string,unknown>>}
 export function definition(input:unknown):TestDefinition;
 export function answers(input:unknown):Answers;
