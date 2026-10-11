@@ -53,7 +53,7 @@ function fakeRes(){
       const table=new URL(url).pathname.split('/').at(-1);paths.push(table);
       const rows=table==='feture_categories'?[{id:'category-1',title:'Роли',short_title:'Роли',icon:'layers',accent_color:'#7156cb',position:1}]
         :table==='feture_interests'?[{id:'interest-1-3',category_id:'category-1',title:'Свитч',position:1},{id:'unpublished',category_id:'category-1',title:'Hidden',position:2}]
-        :table==='feture_catalog_publications'?[{version:2,entries:{'interest-1-3':{definition:'Свитч — выбранная и опубликованная новая редакция.',synonyms:['switch','переключение роли'],relatedIds:['interest-1-1']}}}]:[];
+        :table==='feture_catalog_publications'?[{version:2,entries:{'interest-1-3':{definition:'Свитч — выбранная и опубликованная новая редакция.',synonyms:['switch','переключение роли'],relatedIds:[]}}}]:[];
       return {ok:true,json:async()=>rows};
     };
     const catalog=require('../api/catalog');
