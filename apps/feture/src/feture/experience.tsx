@@ -125,6 +125,7 @@ export function FetureExperience(){
             })}
           </div>}
           <div className="ft-note"><Icon name="lock" size={18}/><div><strong>Только для тебя</strong><p>По умолчанию карта приватна. Видимость и раскрытие каждой темы выбираешь ты.</p></div></div>
+          <p><Link className="ft-textbtn" to="/journal">Личный дневник и история карты</Link></p>
           <div className="ft-section-head"><div><h2>Продолжить знакомство с собой</h2><p>Необязательно проходить всё сразу.</p></div></div>
           <div className="ft-recommend">{data.categories.slice(0,3).map((c,i)=><button onClick={()=>openCategory(c.id)} key={c.id} className="ft-recommend-card" style={{'--accent':c.color} as CSSProperties}><span className="ft-recommend-index">0{i+1}</span><strong>{c.title}</strong><small>{c.interests.length} тем для исследования</small><Icon name="arrow" size={17}/></button>)}</div>
         </>}
