@@ -26,7 +26,7 @@ const baseline=(id:string):Entry=>{
 };
 export function CatalogAdmin({client,adminKey}:AdminSectionContext){
  const [id,setId]=useState(initialId);
- const [workspace,setWorkspace]=useState<'edit'|'publish'|null>(null),[listQuery,setListQuery]=useState(''),[publicationQuery,setPublicationQuery]=useState('');
+ const [workspace,setWorkspace]=useState<'edit'|'publish'|null>(null),[listQuery,setListQuery]=useState(''),[publicationQuery,setPublicationQuery]=useState(''),[page,setPage]=useState(0);
  const [drafts,setDrafts]=useState<z.infer<typeof draft>[]>([]);
  const [entry,setEntry]=useState<Entry>(()=>baseline(initialId));
  const [revision,setRevision]=useState(0),[dirty,setDirty]=useState(false),[loading,setLoading]=useState(false);
@@ -85,16 +85,16 @@ export function CatalogAdmin({client,adminKey}:AdminSectionContext){
   <div className="ab-admin-section-head"><div><h2>Каталог интересов</h2><p className="muted">{topics.length} тем · {drafts.length} черновиков · опубликована версия {publishedVersion}</p></div></div>
   <div className="ft-form-actions"><button type="button" disabled={loading||publishing} onClick={()=>setWorkspace('publish')}>Публикация {publishSelected.length?('· '+publishSelected.length):''}</button>
    <button type="button" className="ab-admin-secondary" disabled={loading||publishing} onClick={()=>setRefresh(n=>n+1)}>Обновить</button></div>
-  <label>Поиск тем<input type="search" value={listQuery} onChange={e=>setListQuery(e.target.value)} placeholder="Название или категория"/></label>
+  <label>Поиск тем<input type="search" value={listQuery} onChange={e=>{setListQuery(e.target.value);setPage(0);}} placeholder="Название или категория"/></label>
   <div className="ab-admin-item-list">
-   {filteredTopics.slice(0,80).map(topic=>{
+   {filteredTopics.slice(page*16,(page+1)*16).map(topic=>{
     const d=drafts.find(x=>x.interestId===topic.id);
     return <button type="button" key={topic.id} disabled={loading||publishing} onClick={()=>{choose(topic.id);setWorkspace('edit');}}>
      <span><strong>{topic.title}</strong><small>{topic.category} · {d?'Черновик '+d.revision:'Нет черновика'}</small></span><span aria-hidden="true">→</span>
     </button>;
    })}
   </div>
-  {filteredTopics.length>80&&<p className="muted">Показано 80 из {filteredTopics.length}. Уточни поиск.</p>}
+  {filteredTopics.length>16&&<div className="ft-form-actions"><button className="ab-admin-secondary" type="button" disabled={page===0} onClick={()=>setPage(p=>p-1)}>Назад</button><span className="muted">Страница {page+1} из {Math.ceil(filteredTopics.length/16)}</span><button className="ab-admin-secondary" type="button" disabled={(page+1)*16>=filteredTopics.length} onClick={()=>setPage(p=>p+1)}>Дальше</button></div>}
   {filteredTopics.length===0&&<p className="muted">По этому запросу тем нет.</p>}
   {error&&<p role="alert">{error}</p>}{!workspace&&notice&&<p role="status">{notice}</p>}
   {workspace==='edit'&&<AdminWorkspace title={current?.title||'Редактирование темы'} subtitle={(current?.category||'')+' · редакция '+(revision||'не сохранена')} onClose={close}
