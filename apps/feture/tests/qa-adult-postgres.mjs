@@ -16,7 +16,8 @@ test('A04 QA: prelaunch-only, Core-admin-only grants expire/revoke, no bypass of
    '20261010225100_feture_verification_store.sql','20261010225653_feture_documents.sql',
    '20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql',
    '20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql',
-   '20261011083303_feture_qa_adult_access.sql'])await db.exec(load(filename));
+   '20261011083303_feture_qa_adult_access.sql',
+   '20261011122000_feture_qa_any_account_audit.sql'])await db.exec(load(filename));
   await db.exec('set role service_role');
   const grant={action:'grant',accountHash:alice,days:1,reviewed:true};
   assert.equal((await until(alice)),null);
@@ -24,6 +25,13 @@ test('A04 QA: prelaunch-only, Core-admin-only grants expire/revoke, no bypass of
   assert.equal((await admin({...grant,days:7})).error,'invalid_request');
   assert.equal((await admin({...grant,accountHash:'seed:feture-x:y'})).error,'invalid_request');
   assert.equal((await admin(grant)).ok,true);
+  assert.equal((await admin({action:'lookup',accountHash:alice})).entry.accountHash,alice);
+  assert.equal((await admin({action:'lookup',accountHash:'f'.repeat(32)})).entry,null);
+  // Admin can approve any existing Core account; no global 12-person QA cap.
+  for(let i=1;i<=14;i++)assert.equal((await admin({action:'grant',accountHash:i.toString(16).padStart(32,'0'),days:1,reviewed:true})).ok,true);
+  assert.equal((await admin({action:'list'})).activeCount,15);
+  assert.equal((await sql("select count(*)::int n from public.feture_qa_adult_events where event_type='grant'"))[0].n,15);
+
   assert.ok(Date.parse(await until(alice))>Date.now());
   assert.equal((await sql('select public.feture_peer_eligible($1) eligible',[alice]))[0].eligible,false,
    'QA access cannot skip current legal consent');
@@ -51,6 +59,9 @@ test('A04 QA: prelaunch-only, Core-admin-only grants expire/revoke, no bypass of
   assert.equal(card.ok,true);
   assert.deepEqual(card.card.items,[{title:'Ведущая роль',stance:'curious'}]);
   assert.equal((await admin({action:'revoke',accountHash:bob})).revoked,true);
+  assert.equal((await admin({action:'lookup',accountHash:bob})).entry.revoked,true);
+  assert.equal((await admin({action:'revoke',accountHash:bob})).revoked,true);
+  assert.equal((await sql("select count(*)::int n from public.feture_qa_adult_events where account_hash=$1 and event_type='revoke'",[bob]))[0].n,1,'repeat revoke must not add misleading audit events');
   assert.equal((await share(bob,{action:'share.read',linkId})).error,'resource_not_found','revoked viewer QA access');
 
   assert.equal(await until(bob),null);
@@ -63,6 +74,7 @@ test('A04 QA: prelaunch-only, Core-admin-only grants expire/revoke, no bypass of
   for(const role of ['anon','authenticated']){
    await db.exec('set role '+role);
    await assert.rejects(sql('select * from public.feture_qa_adult_access'),/permission denied/);
+   await assert.rejects(sql('select * from public.feture_qa_adult_events'),/permission denied/);
    await assert.rejects(until(alice),/permission denied/);
    await assert.rejects(admin(grant),/permission denied/);
    await db.exec('reset role');
