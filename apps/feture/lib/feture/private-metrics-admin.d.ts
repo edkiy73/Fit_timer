@@ -1,0 +1,1 @@
+export function createMetricsAdmin(metrics:ReturnType<typeof import('./private-metrics').createPrivateMetrics>):(action:string,body:Record<string,unknown>,res:import('./contracts').Response)=>Promise<boolean>;
