@@ -46,7 +46,7 @@ export function QaAdultAdmin({client,adminKey,readOnly=false}:AdminSectionContex
    <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>setRefresh(n=>n+1)}>Обновить данные</button>
   </div>
   <p role="status">Активных QA-допусков: <strong>{activeCount}</strong>.</p>
-  {readOnly&&<p className="muted">Режим аудитора: только чтение. Выдача и отзыв не доступны.</p>}
+  {readOnly&&<p className="muted">Доступ только для чтения: выдавать и отзывать разрешения нельзя.</p>}
   <div className="ab-admin-workspace-tabs" role="group" aria-label="Раздел QA">
    <button type="button" aria-pressed={listView==='grants'} onClick={()=>{setListView('grants');setShown(10);setFilter('');}}>Разрешения ({items.length})</button>
    <button type="button" aria-pressed={listView==='audit'} onClick={()=>{setListView('audit');setShown(10);setFilter('');}}>История решений ({events.length})</button>
