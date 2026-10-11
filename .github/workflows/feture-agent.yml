@@ -146,6 +146,7 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
+      actions: write
     outputs:
       pr: ${{ steps.cpr.outputs.pull-request-number }}
     steps:
@@ -199,4 +200,15 @@ jobs:
             await github.rest.issues.createComment({
               ...context.repo, issue_number: Number(process.env.ISSUE_NUMBER),
               body: 'Agent opened PR #' + process.env.PR_NUMBER + '. Human review required; issue closes on merge.'
+            });
+      - name: Request independent review for created PR
+        if: steps.cpr.outputs.pull-request-number != '' && vars.FETURE_AGENT_REVIEW_ENABLED == 'true'
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number }}
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              ...context.repo, workflow_id: 'feture-agent-review.yml', ref: 'main',
+              inputs: {pr_number: String(process.env.PR_NUMBER)}
             });
