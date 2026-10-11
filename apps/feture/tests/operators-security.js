@@ -45,3 +45,16 @@ test('O02 operators: live Core session, server actor, key only bootstrap, revoke
  const count=calls.length;account.syncDevices={};await store.set('a:'+owner,JSON.stringify(account));
  assert.equal((await run({action:'feture.qa.list'})).statusCode,401);assert.equal(calls.length,count);
 });
+
+test('C01 review endpoint: personal session/generation, exact action and closed review DTO',async()=>{
+ const email='reviewer@example.com',token='review-token',owner=sha(email).slice(0,32),since='2026-10-11T00:00:00Z';await store.set('a:'+owner,JSON.stringify({email,since,syncDevices:{device:{h:sha(token),at:since}}}));
+ let reply={ok:true,items:[],nextCursor:null};const calls=[];
+ const endpoint=createOperatorEndpoint({accounts:store,transport:{configured:()=>true,request:async(path,opts)=>{calls.push({path,body:JSON.parse(opts.body)});return new Response(JSON.stringify(reply));}},cors:()=>false,quota:async()=>true});
+ const run=async(body,headers={'x-fit-email':email,'x-fit-device':'device','x-fit-token':token})=>{const req=Readable.from([]);req.method='POST';req.body=body;req.headers=headers;const res={statusCode:0,setHeader(){},end(x){this.data=JSON.parse(x);}};await endpoint(req,res);return res;};
+ const queue={action:'feture.posts.queue',cursor:null};assert.equal((await run(queue,{'x-admin-key':'bootstrap-secret'})).statusCode,401);assert.equal(calls.length,0);
+ assert.equal((await run({...queue,p_actor:owner})).statusCode,422);assert.equal(calls.length,0);
+ assert.equal((await run(queue)).statusCode,200);assert.equal(calls[0].path,'/rest/v1/rpc/feture_post_review_command');assert.equal(calls[0].body.p_actor,owner);assert.equal(calls[0].body.p_generation,sha(owner+':'+since));
+ reply={ok:false,error:'forbidden'};assert.equal((await run(queue)).statusCode,403);
+ reply={ok:true,items:[{id:'00000000-0000-4000-8000-000000000001',text:'Открытый текст',authorLabel:'Имя',kind:'text',state:'pending',revision:1,submittedAt:since,privateAnswers:['SECRET']}],nextCursor:null};assert.equal((await run(queue)).statusCode,503);
+ await store.del('a:'+owner);const n=calls.length;assert.equal((await run(queue)).statusCode,401);assert.equal(calls.length,n);
+});
