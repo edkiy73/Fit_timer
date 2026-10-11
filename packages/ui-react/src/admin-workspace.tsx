@@ -1,4 +1,4 @@
-import {useEffect, useId, useRef, type ReactNode} from 'react';
+import {useLayoutEffect, useId, useRef, type ReactNode} from 'react';
 import './admin-workspace.css';
 
 /** Shared AppBase modal workbench. Native dialog provides focus trapping,
@@ -13,10 +13,12 @@ export function AdminWorkspace({title, subtitle, children, footer, onClose}:{
   const ref=useRef<HTMLDialogElement>(null);
   const titleId=useId();
   const subtitleId=useId();
-  useEffect(()=>{
+  useLayoutEffect(()=>{
     const dialog=ref.current;
     if(!dialog)return;
     dialog.showModal();
+    // Close while the dialog is still connected, so native focus restoration
+    // can return to the list button before React removes the editor.
     return()=>{if(dialog.open)dialog.close();};
   },[]);
   return <dialog ref={ref} className="ab-admin-workspace" aria-labelledby={titleId}
