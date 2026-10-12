@@ -270,8 +270,8 @@ export async function runEventOwnersPostgres(){
   await db.query('insert into public.feture_blocks(blocker_hash,blocked_hash) values($1,$2)',[a,b]);
   assert.equal((await statusReq(b)).error,'resource_not_found');
   assert.equal((await attendance(b,attendCmd('events.attendanceRequest',40,4705))).error,'resource_not_found');
-  const withdrawn=await attendance(b,attendCmd('events.attendanceWithdraw',40,4706));
-  assert.deepEqual(withdrawn,{ok:true,state:'withdrawn',replayed:false});
+  const withdrawnAttendance=await attendance(b,attendCmd('events.attendanceWithdraw',40,4706));
+  assert.deepEqual(withdrawnAttendance,{ok:true,state:'withdrawn',replayed:false});
   assert.deepEqual(await attendance(b,attendCmd('events.attendanceWithdraw',40,4706)),{ok:true,state:'withdrawn',replayed:true});
   assert.equal((await attendance(b,attendCmd('events.attendanceRequest',40,4707))).error,'resource_not_found');
 
