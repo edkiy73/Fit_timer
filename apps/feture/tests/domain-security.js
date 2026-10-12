@@ -250,10 +250,11 @@ test('C02 comment API: protected reads, owner-bound pending writes, safe deletio
  const unverified=await authenticate(req(identities.alice),store);
  const id='00000000-0000-4000-8000-000000000011',postId='00000000-0000-4000-8000-000000000012';
  let row={id,postId,parentId:null,text:'Привет',state:'pending',revision:1,mine:true,createdAt:'2026-10-12T09:00:00Z',updatedAt:'2026-10-12T09:00:00Z'};
+ let reply=null;
  const calls=[];
  const repository=createPostsRepository({configured:()=>true,request:async(path,options)=>{
   calls.push({path,command:JSON.parse(options.body)});
-  return new Response(JSON.stringify({ok:true,entry:row,replayed:false}));
+  return new Response(JSON.stringify(reply??{ok:true,entry:row,replayed:false}));
  }},{requireCurrent:async()=>{}});
  const create={action:'comments.create',id,postId,parentId:null,operationId:id,text:'Привет'};
  for(const extra of [{accountHash:identities.bob.hash},{state:'published'},{parentId:postId,depth:2},{text:'\u0000SECRET'}])
@@ -270,6 +271,16 @@ test('C02 comment API: protected reads, owner-bound pending writes, safe deletio
  row={...row,text:'',state:'deleted',revision:2};
  assert.deepEqual((await repository.execute(unverified,{action:'comments.delete',id,operationId:postId,expectedRevision:1})).entry.text,'');
  await assert.rejects(repository.execute({accountHash:identities.alice.hash,verifiedAdult:true},{action:'comments.delete',id,operationId:postId,expectedRevision:1}),e=>e.status===401);
+ // Owner-only archive uses an authenticated Core session without an active adult proof.
+ reply={ok:true,items:[{...row,state:'pending',text:'Свой комментарий'}],nextCursor:null};
+ const personal=await repository.execute(unverified,{action:'comments.mine',postId,cursor:null});
+ assert.equal(personal.items.length,1);
+ assert.equal(personal.items[0].text,'Свой комментарий');
+ assert.equal(calls.at(-1).path,'/rest/v1/rpc/feture_post_comment_mine');
+ assert.equal(calls.at(-1).command.p_actor,identities.alice.hash);
+ reply={ok:true,items:[{...row,mine:false,text:'Чужой комментарий'}],nextCursor:null};
+ await assert.rejects(repository.execute(unverified,{action:'comments.mine',postId,cursor:null}),e=>e.status===503);
+
 });
 
 test('C01 post reports: authenticated identity, adult submit and metadata-only own status',async()=>{
