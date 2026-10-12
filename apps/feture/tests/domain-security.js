@@ -696,3 +696,42 @@ test('E04a RSVP: strict actor-derived intent, private status and withdrawal afte
  response={ok:false,error:'resource_not_found'};
  await assert.rejects(repository.execute(adult,command),err=>err.status===404);
 });
+
+
+test('E03a public event catalogue: strict DTO, Core age/consent and safe deep-link',async()=>{
+ const {createEventsRepository,publicCardDto}=require('../lib/feture/events');
+ const user=identities.alice;await seed(user);
+ const adult=await authenticate(req(user),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const unverified=await authenticate(req(user),store);
+ const id='00000000-0000-4000-8000-000000000081';
+ const entry={id,revision:1,title:'Public workshop',summary:'Online learning',
+  description:'Detailed session',conditions:'Adults and mutual respect',
+  format:'online',startsAt:'2026-11-01T18:00:00+08:00',
+  endsAt:'2026-11-01T20:00:00+08:00',
+  timeZone:'Asia/Makassar',language:'ru',city:'',publicLocation:'',
+  price:null,hasExternalTickets:true};
+ let response={ok:true,items:[entry],nextCursor:null};
+ const calls=[];
+ const repository=createEventsRepository({configured:()=>true,request:async(path,options)=>{
+  calls.push({path,body:JSON.parse(options.body)});
+  return new Response(JSON.stringify(response));
+ }},{requireCurrent:async()=>{}});
+ const list={action:'events.catalog',cursor:null},preview={action:'events.preview',id};
+ assert.deepEqual((await repository.execute(adult,list)).items,[entry]);
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_event_catalog_command');
+ assert.equal(calls[0].body.p_actor,user.hash);
+ response={ok:true,entry};
+ assert.deepEqual((await repository.execute(adult,preview)).entry,entry);
+ for(const bad of [{action:'events.preview',id,ownerHash:identities.bob.hash},
+  {action:'events.catalog',cursor:null,privateVenue:true},
+  {action:'events.preview',id:'not-uuid'}])
+  await assert.rejects(repository.execute(adult,bad),e=>e.status===422);
+ const n=calls.length;
+ await assert.rejects(repository.execute(unverified,list),e=>e.status===403);
+ assert.equal(calls.length,n);
+ response={ok:true,entry:{...entry,privateJoinUrl:'https://example.org/secret'}};
+ await assert.rejects(repository.execute(adult,preview),e=>e.status===503);
+ assert.throws(()=>publicCardDto({...entry,ownerHash:'private'}),e=>e.status===503);
+ response={ok:false,error:'resource_not_found'};
+ await assert.rejects(repository.execute(adult,preview),e=>e.status===404);
+});
