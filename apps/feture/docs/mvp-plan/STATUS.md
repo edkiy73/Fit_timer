@@ -9,7 +9,7 @@
 - **Supabase:** shared FitT project, таблицы только `feture_*`, `feture_seed.environment=prelaunch` (последняя read-only проверка). Доступ service_role через сервер; anon/authenticated напрямую приватное не читают.
 - **18+:** prelaunch QA разрешение любому существующему Core аккаунту через admin, 24–72 часа, отзыв, consent отдельно; при `stage=live` недействительно. PR #799 + #801 в main, SQL `20261011083303` и `20261011113717`. **Не является production proof**. Yoti — кандидат на реальную верификацию, договор/ключи/законы ещё не подтверждены. O02.1/O02.2: персональные роли управляющего, QA-оператора и аудитора и отдельный рабочий экран без общего ключа реализованы для допуска/журнала; остальные разделы ещё используют Core admin key.
 
-## Выполненные срезы (код/SQL в main, независимая приёмка остаётся)
+## Выполненные срезы (main либо явно указанный PR; независимая приёмка остаётся)
 | Направление | Факты |
 | --- | --- |
 | F/A/P | Core email identity, документы/согласия, приватные профиль/доступ/модерация: частично реализованы; real-provider 18+, staff identity и privacy QA открыты. P03.2 PR #794. |
@@ -41,6 +41,8 @@
 
 | C01.5a | **PR #831 слит (`24839357`), AppBase CI `38169259605` success.** Сервер photo.put/read/remove, private Storage JPEG, re-encode без EXIF/GPS, ownership/revision, immutable retry и durable erasure outbox. SQL `20261011193939` applied. Полный check + live metadata rollback прошли. UI ещё не подключён; text-only approval фото запрещён. C01.5b: picker/preview + staff photo review; затем live Storage и независимый cleanup schedule. |
 
+| C01.5b1 | **PR #832, Issue #853, не объединён:** пользовательское окно личного фото: выбор/уменьшение/preview, отдельное согласие, read/replace/remove, exact retry и блокировка перехода при неизвестном результате. Наличие фото блокирует text-only submit. Chromium fixture реальных компонентов 320–1440, light/dark/200%/Tab/Escape и сценарий Community прошли; API подставлен. Независимое read-only review исправления удаления при отказе чтения выполнено; 4 component regression tests passed. Staff review/image consent — C01.5b2; реальный Storage, аккаунты/native, независимый privacy audit и cleanup schedule открыты. |
+
 ## Очередь следующих независимых работ
 1. **O02/A04:** O02.1/O02.2 реализованы для QA: персональные роли, аудит и отдельный рабочий экран `/#/operator`. Далее browser приёмка реальных staff аккаунтов и распространение ролей на moderation/editorial по мере готовности. Реальный adult proof — только через подтверждённый метод, отдельно от QA. Не использовать самодекларацию и не переносить QA в live.
 2. **W07.3:** код/SQL двух согласий готов, независимый privacy review и приёмка двух реальных аккаунтов остаются. Сырые ответы тестов автоматически не сравниваются.
@@ -48,7 +50,7 @@
 4. **O03/O04/O05/O06:** безопасная аналитика, восстановление, общая AppBase админка + FetUre продуктовые стили, responsive/native и выпуск. Не заменять реальную браузерную/устройственную приёмку успешной CI сборкой. Без преждевременного APK/IPA.
 5. **Внешние блокеры:** Yoti/альтернативный provider, юридические тексты, контент-политика и устройства; делать независимые срезы без подмены success-заглушками.
 
-**Следующий заход:** проверь свежий main/PR; C01.5a сервер фото реализован, далее C01.5b — выбор/просмотр фото в существующих публикациях и отдельный просмотр управляющим до разрешения approve. Прочитай карточку C, `docs/community-posts.md`, `lib/feture/post-photos.js`, `src/feture/community.tsx`, `src/feture/post-review-admin.tsx`, `tests/posts-postgres.mjs`. UI, реальный Storage, два аккаунта/native, независимый privacy audit и независимое расписание уборки остаются. Не открывать bucket/public URL и не снимать publication guard до просмотра фото управляющим.
+**Следующий заход:** проверь свежий main/PR; C01.5b1 пользовательский выбор/просмотр/удаление личного фото реализован в PR #832 (CI первого head success), ещё не объединён. Проверить независимое review и решение владельца о выпуске. Далее C01.5b2 — отдельный просмотр управляющим и явное image consent перед публикацией. Прочитай карточку C, `docs/community-posts.md`, `lib/feture/post-photos.js`, `src/feture/post-photo.tsx`, `src/feture/post-review-admin.tsx`, `tests/posts-postgres.mjs`. Реальный Storage, два аккаунта/native, независимый privacy audit и независимое расписание уборки остаются. Не открывать bucket/public URL и не снимать publication guard до просмотра фото управляющим.
 
 ## Формат handoff (перезаписывай, не накапливай)
 `ID | последний merged PR/SHA | что проверено | что НЕ проверено | следующий ID и 2–5 файлов`
