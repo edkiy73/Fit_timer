@@ -72,7 +72,7 @@ function eventCommand(v){
  * @param {unknown} row @returns {import('./event-contract').PublicEvent}
  */
 function publicEventDto(row){
- if(!record(row)||!keys(row,['id','revision','state','draft'])||typeof row.id!=='string'||!uuid.test(row.id)||
+ if(!record(row)||typeof row.id!=='string'||!uuid.test(row.id)||
    row.state!=='published'||!Number.isSafeInteger(row.revision)||Number(row.revision)<1)reject(503,'domain_unavailable');
  let draft;
  try{draft=eventDraft(row.draft);}catch{return reject(503,'domain_unavailable');}
