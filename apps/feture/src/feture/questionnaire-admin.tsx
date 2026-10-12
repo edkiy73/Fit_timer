@@ -17,7 +17,11 @@ export function QuestionnairesAdmin({client,adminKey}:AdminSectionContext){
  useEffect(()=>{let live=true;setBusy(true);setError('');void client.action(adminKey,'feture.tests.list',{}).then(raw=>{if(live)setDrafts(listSchema.parse(raw).drafts);}).catch(()=>{if(live)setError('Не удалось загрузить опросники.');}).finally(()=>{if(live)setBusy(false);});return ()=>{live=false;};},[client,adminKey,refresh]);
  useEffect(()=>{const draft=drafts.find(d=>d.testId===selected),seed=[...initial,...localDefinitions].find(d=>d.id===selected);if(draft||seed){setData(draft?.definition||seed!);setRevision(draft?.revision||0);setDirty(false);setReviewed(false);setPreviewPosition(0);setPreviewAnswers({});}},[drafts,selected,localDefinitions]);
  const edit=(fn:(current:TestDefinition)=>TestDefinition)=>{setData(fn);setDirty(true);setReviewed(false);setNotice('');};
- const select=(id:string)=>{if(!dirty||window.confirm('Несохранённые изменения будут потеряны. Продолжить?'))setSelected(id);};
+ const select=(id:string)=>{
+  if(id!==selected&&dirty&&!window.confirm('Несохранённые изменения будут потеряны. Продолжить?'))return false;
+  setSelected(id);
+  return true;
+ };
  const save=async()=>{if(busy)return;setBusy(true);setError('');setNotice('');try{const checked=definitionSchema.parse(data);const raw=await client.action(adminKey,'feture.tests.save',{definition:checked,expectedRevision:revision});const result=z.object({ok:z.literal(true),revision:z.number().int().positive()}).strict().parse(raw);setRevision(result.revision);setDirty(false);setReviewed(false);setNotice('Черновик сохранён. Перед публикацией проверь вопросы и выводы.');setRefresh(n=>n+1);}catch(e){setError(e instanceof z.ZodError?e.issues.map(i=>i.message).slice(0,3).join(' · '):'Сохранить не удалось. Возможно, редакция изменилась; обнови черновик.');}finally{setBusy(false);}};
  const publish=async()=>{if(busy||dirty||!reviewed||!revision)return;setBusy(true);setError('');try{await client.action(adminKey,'feture.tests.publish',{testId:data.id,revision,reviewed:true});setReviewed(false);setNotice('Опубликована неизменяемая версия. Старые прохождения сохранят свои вопросы и правила расчёта.');setRefresh(n=>n+1);}catch{setError('Опубликовать не удалось. Проверь сохранённую редакцию.');}finally{setBusy(false);}};
  const retire=async()=>{if(busy||dirty||!revision||!window.confirm('Скрыть опросник для новых прохождений? Сохранённые результаты и черновики останутся доступны владельцам.'))return;setBusy(true);setError('');try{await client.action(adminKey,'feture.tests.retire',{testId:data.id,revision});setNotice('Опросник скрыт для новых прохождений.');setRefresh(n=>n+1);}catch{setError('Скрыть опросник не удалось.');}finally{setBusy(false);}};
@@ -27,9 +31,9 @@ export function QuestionnairesAdmin({client,adminKey}:AdminSectionContext){
  const displayed=[...initial,...localDefinitions,...drafts.map(d=>d.definition)];
  return <section className="ft-questionnaires-admin"><div className="ab-admin-section-head"><div><h2>Опросники FetUre</h2><p className="muted">Редактирование, предпросмотр и публикация — в отдельном рабочем окне. Черновики не видны пользователям.</p></div></div>
   <div className="ft-form-actions"><button type="button" disabled={busy} onClick={()=>{if(!dirty||window.confirm('Создать новый опросник? Несохранённые изменения будут потеряны.')){const id='questionnaire-'+crypto.randomUUID().slice(0,8);const dim=newDimension('reflection');const next:TestDefinition={id,title:'Новый опросник',description:'Опиши цель исследования и напомни, что вопросы можно пропускать.',dimensions:[dim],questions:Array.from({length:6},(_,i)=>newQuestion('question-'+(i+1),dim.id))};setLocalDefinitions(items=>[...items,next]);setSelected(id);setEditorTab('details');setWorkspace(true);}}}>+ Создать опросник</button>
-   <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>setRefresh(n=>n+1)}>Обновить</button></div>
+   <button type="button" className="ab-admin-secondary" disabled={busy} onClick={()=>{if(!dirty||window.confirm('Обновить список? Несохранённые изменения в редакторе будут потеряны.'))setRefresh(n=>n+1);}}>Обновить</button></div>
   <div className="ab-admin-item-list">{options.map(id=>{const item=displayed.find(d=>d.id===id);const draft=drafts.find(d=>d.testId===id);
-   return <button type="button" key={id} disabled={busy} onClick={()=>{select(id);setEditorTab('details');setWorkspace(true);}}>
+   return <button type="button" key={id} disabled={busy} onClick={()=>{if(!select(id))return;setEditorTab('details');setWorkspace(true);}}>
     <span><strong>{draft?.definition.title||item?.title||id}</strong><small>{draft?'Черновик · редакция '+draft.revision:'Черновик не сохранён'} · {draft?.definition.questions.length||item?.questions.length||0} вопросов</small></span><span aria-hidden="true">→</span>
    </button>;})}</div>
   {error&&<p role="alert">{error}</p>}{!workspace&&notice&&<p role="status">{notice}</p>}
