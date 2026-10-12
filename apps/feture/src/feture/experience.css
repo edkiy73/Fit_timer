@@ -250,7 +250,7 @@
 
 /* DUX02: readable facts, compact containers; all map counts remain visible. */
 .ft-shell .ft-jar-card{min-height:224px;gap:6px;padding:16px 8px;border-radius:var(--ft-radius-card)}
-.ft-shell .ft-jar-card strong{font-size:13px;line-height:1.35}
+.ft-shell .ft-jar-card strong{font-size:13px;line-height:1.35;overflow-wrap:anywhere}
 .ft-shell .ft-jar{height:104px}
 .ft-shell .ft-jar-meta{font-size:11px;line-height:1.4;color:var(--ft-muted)}
 .ft-shell :is(.ft-map-explainer,.ft-statbar small){font-size:12px;line-height:1.5;color:var(--ft-muted)}
