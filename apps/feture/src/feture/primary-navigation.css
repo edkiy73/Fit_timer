@@ -6,3 +6,10 @@
 .app.ft-account-shell{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}}
 @media(max-width:350px){.ft-product-dock{left:calc(7px + env(safe-area-inset-left,0px));right:calc(7px + env(safe-area-inset-right,0px))}.ft-product-dock span{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.ft-product-dock a{transition:none}.ft-product-dock a:active{transform:none}}
+/* Account keeps the same five destinations across tablet/fold widths. */
+@media(min-width:768px) and (max-width:1119px){
+ .ft-product-dock.ft-product-dock-account{position:sticky;top:0;z-index:60;display:flex;justify-content:center;align-items:stretch;gap:5px;min-height:58px;padding:7px 20px;background:var(--ft-nav);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--ft-border);box-shadow:0 6px 24px #23112415;font-family:var(--ft-font)}
+ .ft-product-dock.ft-product-dock-account a{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:9px clamp(11px,2vw,23px);min-height:44px;min-width:0;border-radius:13px;color:var(--ft-muted);text-decoration:none;font-weight:700;font-size:13px}
+ .ft-product-dock.ft-product-dock-account a.active{background:var(--ft-accent-soft);color:var(--ft-accent-ink)}
+ .ft-product-dock.ft-product-dock-account a:focus-visible{outline:3px solid var(--ft-violet);outline-offset:1px}
+}
