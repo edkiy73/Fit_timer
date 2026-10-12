@@ -34,7 +34,7 @@ export function PublicAuthorSettings({session}:{session:AuthSession}){
   }catch(e){
    if(!alive.current)return;
    setError(domainErrorMessage(e));
-   const known=e instanceof DomainClientError&&[400,401,403,404,409,422,429].includes(e.status);
+   const known=e instanceof DomainClientError&&['invalid_request','auth_required','verification_required','consent_required','resource_not_found','operation_conflict','rate_limited'].includes(e.code);
    if(known){pending.current=null;setUncertain(false);}else setUncertain(true);
   }finally{if(alive.current)setBusy(false);}
  };
@@ -51,11 +51,11 @@ export function PublicAuthorSettings({session}:{session:AuthSession}){
    <p>Публичная связь помогает подписываться на твои открытые публикации. Она не открывает закрытый профиль, фотографии и публикации для выбранных людей.</p>
    {loading&&<p role="status">Проверяем настройки…</p>}
    {enabled===true&&<><p role="status">Публичная связь включена.</p><div className="ft-form-actions">
-    <button type="button" disabled={busy||uncertain||loading} onClick={()=>change('rotate')}>Сменить публичный ID</button>
-    <button type="button" disabled={busy||uncertain||loading} onClick={()=>change('disable')}>Выключить</button>
+    <button type="button" disabled={busy||uncertain||loading} onClick={()=>change('authors.rotate')}>Сменить публичный ID</button>
+    <button type="button" disabled={busy||uncertain||loading} onClick={()=>change('authors.disable')}>Выключить</button>
    </div></>}
    {enabled===false&&<><label className="ft-community-consent"><input type="checkbox" checked={consent} disabled={busy||uncertain} onChange={e=>setConsent(e.target.checked)}/> Разрешаю участникам подписываться на мои открытые публикации после проверки доступности. Могу отозвать разрешение в любой момент.</label>
-    <button type="button" disabled={busy||uncertain||loading||!consent} onClick={()=>change('enable')}>Включить публичную связь</button></>}
+    <button type="button" disabled={busy||uncertain||loading||!consent} onClick={()=>change('authors.enable')}>Включить публичную связь</button></>}
    {uncertain&&pending.current&&<div role="status"><p>Ответ не подтверждён. Повтор не создаст вторую операцию.</p><button type="button" disabled={busy} onClick={()=>void execute(pending.current!)}>Повторить то же действие</button></div>}
    {error&&<p role="alert">{error}</p>}
    {notice&&<p role="status">{notice}</p>}
