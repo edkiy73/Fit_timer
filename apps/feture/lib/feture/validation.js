@@ -10,6 +10,7 @@ const {journalCommand}=require('./journal');
 const {shareCommand}=require('./shares');
 const {postCommand}=require('./posts');
 const {photoCommand}=require('./post-photos');
+const {groupCommand}=require('./groups');
 const MAX_BODY=16384,MAX_PHOTO_BODY=1400000;
 /** @param {import('./contracts').Request} req @returns {Promise<unknown>} */
 async function readBody(req) {
@@ -38,6 +39,7 @@ function command(input) {
   const action=value.action;
   if(typeof action==='string'&&action.startsWith('photo.'))return photoCommand(value);
   if(typeof action==='string'&&action.startsWith('posts.'))return postCommand(value);
+  if(typeof action==='string'&&action.startsWith('groups.'))return groupCommand(value);
   if(typeof action==='string'&&action.startsWith('comments.'))return postCommand(value);
   if(typeof action==='string'&&action.startsWith('authors.'))return postCommand(value);
   if(typeof action==='string'&&action.startsWith('relationships.'))return postCommand(value);
