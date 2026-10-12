@@ -172,7 +172,10 @@ export async function runEventOwnersPostgres(){
     [who,gen,JSON.stringify(command)])).rows[0].result;
   const pubCmd=(n,revision,operation)=>({action:'publish',id:id(n),
     operationId:id(operation),expectedRevision:revision});
-  assert.equal((await publish(manager,pubCmd(3,4,9700))).error,'review_required'); // approved but private
+  const pubRequest=pubCmd(3,4,9700);
+  const pubGuard=(await db.query("select (select count(*) from jsonb_object_keys($1::jsonb)) as num, $1::jsonb ? 'action' as act, $1::jsonb ? 'expectedRevision' as rev, $1::jsonb ? 'id' as evt, $1::jsonb ? 'operationId' as op, jsonb_typeof($1::jsonb->'id') as idtype, jsonb_typeof($1::jsonb->'operationId') as optype, jsonb_typeof($1::jsonb->'expectedRevision') as revtype",[JSON.stringify(pubRequest)])).rows[0];
+  const pubResult=await publish(manager,pubRequest);
+  assert.equal(pubResult.error,'review_required',JSON.stringify({pubGuard,pubResult})); // approved but private
   const cleanPublic={...clean,visibility:'public'};
   assert.equal((await rpc(a,cmd(43,0,cleanPublic))).entry.state,'draft');
   assert.equal((await rpc(a,{action:'events.submit',id:id(43),operationId:id(9701),expectedRevision:1})).entry.state,'pending');
