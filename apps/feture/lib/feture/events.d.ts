@@ -1,7 +1,7 @@
 import type {Actor,Transport} from './contracts';
 import type {DocumentsRepository} from './documents';
 import type {EventDraft,EventCursor,EventCommand} from './event-contract';
-export type EventOwnerEntry={id:string;revision:number;state:'draft'|'pending'|'approved'|'rejected'|'cancelled';draft:EventDraft;createdAt:string;updatedAt:string};
+export type EventOwnerEntry={id:string;revision:number;state:'draft'|'pending'|'approved'|'rejected'|'cancelled'|'published';draft:EventDraft;createdAt:string;updatedAt:string};
 export function ownerDto(value:unknown):EventOwnerEntry;
 export function publicCardDto(value:unknown):import('./event-contract').PublicEvent;
 export function requestQueueDto(value:unknown):{requestId:string;requestedAt:string;state:'pending'};
