@@ -63,12 +63,27 @@ function attemptDTO(input){const a=pick(input,['id','version','status','answers'
  try{a.answers=answers(a.answers);}catch{return reject(503,'domain_unavailable');}
  if(a.result!==null){const r=pick(a.result,['answered','total','dimensions']);if(!Array.isArray(r.dimensions)||r.dimensions.length>4)reject(503,'domain_unavailable');r.dimensions=r.dimensions.map(x=>pick(x,['id','answered','total','average','level','interpretation','questionIds']));a.result=r;}if((a.status==='completed')!==(a.result!==null))reject(503,'domain_unavailable');return a;
 }
+/** Strict server projection for private attempt history. A malformed storage
+ * response must fail closed instead of shipping an invalid 200 JSON payload.
+ * Keep the metadata-only allowlist: no answers or owner identifiers in list.
+ * @param {unknown} input */
+function attemptSummaryDTO(input){
+ const a=pick(input,['id','testId','title','status','revision','updatedAt']);
+ if(!uuid(a.id)||typeof a.testId!=='string'||!/^[a-z][a-z0-9-]{0,47}$/.test(a.testId)
+  ||typeof a.title!=='string'||!a.title.trim()||a.title.length>160||/[\x00-\x1f\x7f]/.test(a.title)
+  ||!['draft','completed'].includes(a.status)
+  ||typeof a.revision!=='number'||!Number.isSafeInteger(a.revision)||a.revision<1
+  ||typeof a.updatedAt!=='string'||!Number.isFinite(Date.parse(a.updatedAt))
+  ||!/^(?:\d{4}-\d\d-\d\d)T\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)$/.test(a.updatedAt))
+  reject(503,'domain_unavailable');
+ return a;
+}
 /** @param {import('./questionnaires').TestsCommand} c @param {Record<string,unknown>} result */
 function testsDTO(c,result){
  if(c.action==='tests.mapApply'){if(typeof result.replayed!=='boolean'||typeof result.applied!=='number'||!Number.isInteger(result.applied)||result.applied<1||result.applied>6)reject(503,'domain_unavailable');return {replayed:result.replayed,applied:result.applied};}
  if(c.action==='tests.mapPreview'){if(result.attemptId!==c.attemptId||!uuid(result.versionId)||!Array.isArray(result.items)||result.items.length>6)reject(503,'domain_unavailable');const items=result.items.map(v=>{const x=pick(v,['interestId','title','reason','dimensionId','available','blockedReason','next']);if(typeof x.interestId!=='string'||!INTEREST_ID.test(x.interestId)||typeof x.title!=='string'||x.title.length>160||typeof x.reason!=='string'||x.reason.length>600||typeof x.dimensionId!=='string'||typeof x.available!=='boolean'||x.blockedReason!==(x.available?null:'existing_choice'))reject(503,'domain_unavailable');let state;try{state=interestState(pick(x.next,['stance','experience','boundary','boundaryNote','intensity','visibility','useForDiscovery']));}catch{return reject(503,'domain_unavailable');}if(state.stance!=='curious'||state.experience!=='unspecified'||state.boundary!=='none'||state.boundaryNote!==null||state.intensity!==null||state.visibility!=='private'||state.useForDiscovery)reject(503,'domain_unavailable');return {...x,next:state};});if(new Set(items.map(x=>x.interestId)).size!==items.length)reject(503,'domain_unavailable');return {attemptId:result.attemptId,versionId:result.versionId,items};}
  if(c.action==='tests.delete'){if(result.deleted!==true)reject(503,'domain_unavailable');return {deleted:true};}
- if(c.action==='tests.list'){if(!Array.isArray(result.versions)||result.versions.length>30||!Array.isArray(result.attempts)||result.attempts.length>100)reject(503,'domain_unavailable');return {versions:result.versions.map(versionDTO),attempts:result.attempts.map(x=>pick(x,['id','testId','title','status','revision','updatedAt']))};}
+ if(c.action==='tests.list'){if(!Array.isArray(result.versions)||result.versions.length>30||!Array.isArray(result.attempts)||result.attempts.length>100)reject(503,'domain_unavailable');const attempts=result.attempts.map(attemptSummaryDTO);if(new Set(attempts.map(a=>a.id)).size!==attempts.length)reject(503,'domain_unavailable');return {versions:result.versions.map(versionDTO),attempts};}
  const attempt=attemptDTO(result.attempt);if(c.action!=='tests.start'&&attempt.id!==c.attemptId)reject(503,'domain_unavailable');if(result.replayed!==undefined&&typeof result.replayed!=='boolean')reject(503,'domain_unavailable');return {attempt,...(result.replayed===undefined?{}:{replayed:result.replayed})};
 }
 /** @param {import('./contracts').Transport} transport @param {string} name @param {Record<string,unknown>} body @returns {Promise<Record<string,unknown>>} */
