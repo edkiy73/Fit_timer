@@ -311,6 +311,15 @@ test('C02.4 public identity: Core ownership, explicit consent, revoke without ad
  assert.equal(calls.at(-1).params.p_actor,identities.alice.hash);
  reply={...reply,account_hash:'SECRET'};
  await assert.rejects(repo.execute(expired,{action:'authors.status'}),e=>e.status===503);
+ assert.throws(()=>command({action:'authors.resolve',postId:id,accountHash:identities.bob.hash}),e=>e.status===422);
+ await assert.rejects(repo.execute(expired,{action:'authors.resolve',postId:id}),e=>e.code==='verification_required');
+ reply={ok:true,publicAuthorId:null};
+ assert.deepEqual(await repo.execute(verified,{action:'authors.resolve',postId:id}),{publicAuthorId:null});
+ assert.equal(calls.at(-1).path,'/rest/v1/rpc/feture_public_author_resolve');
+ assert.equal(calls.at(-1).params.p_actor,identities.alice.hash);
+ assert.equal(calls.at(-1).params.p_post_id,id);
+ reply={ok:true,publicAuthorId:id,account_hash:'SECRET'};
+ await assert.rejects(repo.execute(verified,{action:'authors.resolve',postId:id}),e=>e.status===503);
  await assert.rejects(repo.execute({accountHash:identities.alice.hash,verifiedAdult:true},{action:'authors.status'}),e=>e.status===401);
 });
 
