@@ -1,5 +1,5 @@
 import {act,render,screen} from '@testing-library/react';
-import {MemoryRouter,Route,Routes} from 'react-router';
+import {createMemoryRouter,RouterProvider} from 'react-router';
 import {expect,it,vi} from 'vitest';
 import {PeerProfilePage} from './access-page';
 
@@ -27,9 +27,8 @@ it('removes stale private profile fields on return and keeps them hidden after a
   });
   return new Promise((_resolve,reject)=>{denyAccess=reject;});
  });
- render(<MemoryRouter initialEntries={['/people/'+id]}>
-  <Routes><Route path="/people/:id" element={<PeerProfilePage/>}/></Routes>
- </MemoryRouter>);
+ const router=createMemoryRouter([{path:'/people/:id',element:<PeerProfilePage/>}],{initialEntries:['/people/'+id]});
+ render(<RouterProvider router={router}/>);
  expect(await screen.findByText('Секретное описание')).toBeTruthy();
  await act(async()=>{window.dispatchEvent(new Event('focus'));});
  expect(screen.queryByText('Секретное описание')).toBeNull();
