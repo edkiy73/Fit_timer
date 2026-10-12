@@ -11,6 +11,8 @@ export type EventCommand=
  | {action:'events.read';id:string}
  | {action:'events.preview';id:string}
  | {action:'events.rsvpStatus';id:string}
+ | {action:'events.attendanceStatus';id:string}
+ | {action:'events.attendanceRequest'|'events.attendanceWithdraw';id:string;operationId:string}
  | {action:'events.rsvpSet';id:string;operationId:string;status:'interested'|'going'|'declined'|'withdrawn';visibleToAttendees:boolean}
  | {action:'events.save';id:string;operationId:string;expectedRevision:number;draft:EventDraft}
  | {action:'events.submit'|'events.cancel';id:string;operationId:string;expectedRevision:number};
