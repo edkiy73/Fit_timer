@@ -26,7 +26,7 @@ export async function runEventOwnersPostgres(){
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002300_feture_event_staff_decisions.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002500_feture_event_owner_cancel.sql',import.meta.url),'utf8'));
   await db.exec("create table public.feture_blocks(blocker_hash text,blocked_hash text,primary key(blocker_hash,blocked_hash));grant select,insert,delete on public.feture_blocks to service_role;");
-  await db.exec("create function public.feture_pair_blocked(a text,b text) returns boolean language sql stable security invoker as $ select exists(select 1 from public.feture_blocks where (blocker_hash=a and blocked_hash=b) or (blocker_hash=b and blocked_hash=a)) $;");
+  await db.exec("create function public.feture_pair_blocked(a text,b text) returns boolean language sql stable security invoker as 'select exists(select 1 from public.feture_blocks where (blocker_hash=a and blocked_hash=b) or (blocker_hash=b and blocked_hash=a))';");
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002600_feture_event_rsvp_intents.sql',import.meta.url),'utf8'))
   const a='a'.repeat(32),b='b'.repeat(32),guest='c'.repeat(32),manager='d'.repeat(32),qa='e'.repeat(32),auditor='f'.repeat(32),generation='1'.repeat(64);
   await db.query('insert into public.feture_profiles(account_hash) values ($1),($2),($3),($4),($5),($6)',[a,b,guest,manager,qa,auditor]);
