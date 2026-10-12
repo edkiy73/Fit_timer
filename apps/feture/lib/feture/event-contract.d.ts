@@ -14,6 +14,7 @@ export type EventCommand=
  | {action:'events.attendanceStatus';id:string}
  | {action:'events.attendanceRequests';id:string;cursor:EventCursor|null}
  | {action:'events.attendees';id:string;cursor:EventCursor|null}
+ | {action:'events.peers';id:string;cursor:EventCursor|null}
  | {action:'events.attendanceDecide';id:string;requestId:string;operationId:string;expectedRevision:number;decision:'approve'|'decline';reason:'reviewed'|'capacity'|'policy'|'safety'|'other'}
  | {action:'events.attendanceRequest'|'events.attendanceWithdraw';id:string;operationId:string}
  | {action:'events.rsvpSet';id:string;operationId:string;status:'interested'|'going'|'declined'|'withdrawn';visibleToAttendees:boolean}

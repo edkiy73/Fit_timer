@@ -88,6 +88,20 @@ function attendeeCountsDto(value){
   requestsDeclined:value.requestsDeclined};
 }
 
+
+/** Strict peer-visible projection: never pass account hash, private profile or RSVP visibility.
+ * @param {unknown} value */
+function peerDto(value){
+ if(!object(value)||!shape(value,['participationId','status','displayName','updatedAt'])||
+    typeof value.participationId!=='string'||!uuid.test(value.participationId)||
+    !['interested','going'].includes(String(value.status))||
+    typeof value.displayName!=='string'||value.displayName.trim().length===0||
+    value.displayName.length>80||!stamp(value.updatedAt))
+  reject(503,'domain_unavailable');
+ return {participationId:value.participationId,status:value.status,
+  displayName:value.displayName,updatedAt:value.updatedAt};
+}
+
 /** @param {unknown} value @returns {value is import('./event-contract').EventCursor|null} */
 function cursor(value){return value===null||object(value)&&shape(value,['at','id'])&&typeof value.at==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d{1,6})?)?(?:Z|[+-]\d\d:\d\d)$/.test(value.at)&&Number.isFinite(Date.parse(value.at))&&typeof value.id==='string'&&uuid.test(value.id);}
 /** @param {import('./contracts').Command} input @returns {input is import('./event-contract').EventCommand} */
@@ -100,13 +114,13 @@ function createEventsRepository(transport,documents){
   async execute(actor,request){
    requireOwner(actor,actor.accountHash);
    const command=eventCommand(request);
-   if(!['events.save','events.read','events.mine','events.submit','events.cancel','events.rsvpStatus','events.rsvpSet','events.catalog','events.preview','events.attendanceStatus','events.attendanceRequest','events.attendanceWithdraw','events.attendanceRequests','events.attendanceDecide','events.attendees'].includes(command.action))reject(422,'invalid_request');
+   if(!['events.save','events.read','events.mine','events.submit','events.cancel','events.rsvpStatus','events.rsvpSet','events.catalog','events.preview','events.attendanceStatus','events.attendanceRequest','events.attendanceWithdraw','events.attendanceRequests','events.attendanceDecide','events.attendees','events.peers'].includes(command.action))reject(422,'invalid_request');
    if(command.action!=='events.cancel'&&!(command.action==='events.rsvpSet'&&command.status==='withdrawn')&&command.action!=='events.attendanceWithdraw')
     await guard(actor); // Withdrawal must stay possible after loss of event/18+/consent access.
    if(command.action==='events.attendanceDecide'&&(!actor.accountGeneration||!/^[a-f0-9]{64}$/.test(actor.accountGeneration)))reject(403,'forbidden');
    if(!transport.configured())reject(503,'domain_unavailable');
    try{
-    const response=await transport.request('/rest/v1/rpc/'+(command.action==='events.submit'?'feture_event_submit_command':command.action==='events.cancel'?'feture_event_cancel_command':command.action==='events.rsvpSet'||command.action==='events.rsvpStatus'?'feture_event_rsvp_command':command.action==='events.catalog'||command.action==='events.preview'?'feture_event_catalog_command':command.action==='events.attendees'?'feture_event_owner_attendees':command.action==='events.attendanceDecide'?'feture_event_attendance_owner_decide':command.action==='events.attendanceRequests'?'feture_event_attendance_owner_queue':command.action==='events.attendanceStatus'||command.action==='events.attendanceRequest'||command.action==='events.attendanceWithdraw'?'feture_event_attendance_command':'feture_event_owner_command'),{
+    const response=await transport.request('/rest/v1/rpc/'+(command.action==='events.submit'?'feture_event_submit_command':command.action==='events.cancel'?'feture_event_cancel_command':command.action==='events.rsvpSet'||command.action==='events.rsvpStatus'?'feture_event_rsvp_command':command.action==='events.catalog'||command.action==='events.preview'?'feture_event_catalog_command':command.action==='events.peers'?'feture_event_attendee_peers':command.action==='events.attendees'?'feture_event_owner_attendees':command.action==='events.attendanceDecide'?'feture_event_attendance_owner_decide':command.action==='events.attendanceRequests'?'feture_event_attendance_owner_queue':command.action==='events.attendanceStatus'||command.action==='events.attendanceRequest'||command.action==='events.attendanceWithdraw'?'feture_event_attendance_command':'feture_event_owner_command'),{
      method:'POST',headers:{'Content-Type':'application/json'},timeoutMs:8000,
      body:JSON.stringify({p_actor:actor.accountHash,...(command.action==='events.attendanceDecide'?{p_generation:actor.accountGeneration}:{}),p_command:command})
     });
@@ -118,6 +132,12 @@ function createEventsRepository(transport,documents){
      if(data.error==='revision_conflict'||data.error==='operation_conflict')reject(409,String(data.error));
      if(data.error==='rate_limited')reject(429,'rate_limited');
      reject(503,'domain_unavailable');
+    }
+    if(command.action==='events.peers'){
+     if(!shape(data,['ok','items','nextCursor'])||
+       !Array.isArray(data.items)||data.items.length>20||!cursor(data.nextCursor))
+       reject(503,'domain_unavailable');
+     return {items:data.items.map(peerDto),nextCursor:data.nextCursor};
     }
     if(command.action==='events.attendees'){
      if(!shape(data,['ok','items','nextCursor','counts'])||
@@ -200,4 +220,4 @@ function createEventsRepository(transport,documents){
   }
  };
 }
-module.exports={ownerDto,publicCardDto,requestQueueDto,attendeeDto,attendeeCountsDto,isEventsCommand,createEventsRepository};
+module.exports={ownerDto,publicCardDto,requestQueueDto,attendeeDto,attendeeCountsDto,peerDto,isEventsCommand,createEventsRepository};
