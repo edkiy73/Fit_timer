@@ -157,5 +157,11 @@ describe('owner interest outbox',()=>{
   await expect(api.mutate(a,op,new AbortController().signal)).rejects.toMatchObject({code:'adult_verification_required'});
   send.mockImplementation(async()=>new Response('<html>unavailable</html>',{status:503}));
   await expect(api.mutate(a,op,new AbortController().signal)).rejects.toMatchObject({code:'unavailable'});
+  // A proxy can return a non-JSON conflict page or a broken success body.
+  // Neither is evidence of lost connectivity, and neither confirms the write.
+  send.mockImplementation(async()=>new Response('<html>conflict</html>',{status:409}));
+  await expect(api.mutate(a,op,new AbortController().signal)).rejects.toMatchObject({code:'unavailable'});
+  send.mockImplementation(async()=>new Response('invalid success body',{status:200}));
+  await expect(api.list(a,new AbortController().signal)).rejects.toMatchObject({code:'unavailable'});
  });
 });
