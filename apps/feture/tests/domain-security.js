@@ -651,3 +651,48 @@ test('E02b cancellation is owner-only, private DTO and available after consent e
  result={ok:false,error:'resource_not_found'};
  await assert.rejects(events.execute(actor,command),e=>e.status===404);
 });
+
+
+test('E04a RSVP: strict actor-derived intent, private status and withdrawal after expiry',async()=>{
+ const {createEventsRepository}=require('../lib/feture/events');
+ const user=identities.alice;await seed(user);
+ const adult=await authenticate(req(user),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const unverified=await authenticate(req(user),store);
+ const id='00000000-0000-4000-8000-000000000073';
+ const command={action:'events.rsvpSet',id,operationId:'00000000-0000-4000-8000-000000000074',
+  status:'going',visibleToAttendees:false};
+ let response={ok:true,status:'going',visibleToAttendees:false,
+  counts:{interested:null,going:null},replayed:false};
+ const calls=[],guard=[];
+ const transport={configured:()=>true,request:async(path,opts)=>{
+  calls.push({path,body:JSON.parse(opts.body)});
+  return new Response(JSON.stringify(response));
+ }};
+ const repository=createEventsRepository(transport,{requireCurrent:async actor=>{guard.push(actor.accountHash)}});
+ assert.deepEqual(await repository.execute(adult,command),
+  {status:'going',visibleToAttendees:false,counts:{interested:null,going:null},replayed:false});
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_event_rsvp_command');
+ assert.deepEqual(calls[0].body,{p_actor:user.hash,p_command:command});
+ assert.equal(guard.length,1);
+ const status={action:'events.rsvpStatus',id};
+ response={ok:true,status:'none',visibleToAttendees:false,counts:{interested:null,going:null},replayed:false};
+ assert.equal((await repository.execute(adult,status)).status,'none');
+ const baseline=calls.length;
+ for(const payload of [{...command,ownerHash:identities.bob.hash},
+   {...command,visibleToAttendees:'true'},{...command,status:'declined',visibleToAttendees:true},
+   {...status,accountHash:user.hash}])
+  await assert.rejects(repository.execute(adult,payload),err=>err.status===422);
+ await assert.rejects(repository.execute(unverified,command),err=>err.status===403);
+ assert.equal(calls.length,baseline);
+ response={ok:true,status:'withdrawn',visibleToAttendees:false,counts:{interested:null,going:null},replayed:false};
+ const withdraw={...command,operationId:'00000000-0000-4000-8000-000000000075',status:'withdrawn'};
+ const withoutCurrent=createEventsRepository(transport,{requireCurrent:async()=>{throw new Error('expired consent')}});
+ assert.equal((await withoutCurrent.execute(unverified,withdraw)).status,'withdrawn');
+ response={ok:true,status:'going',visibleToAttendees:true,
+  counts:{interested:2,going:4},replayed:false};
+ await assert.rejects(repository.execute(adult,command),err=>err.status===503);
+ response={...response,counts:{interested:5,going:5},privateLocation:'do not show'};
+ await assert.rejects(repository.execute(adult,command),err=>err.status===503);
+ response={ok:false,error:'resource_not_found'};
+ await assert.rejects(repository.execute(adult,command),err=>err.status===404);
+});
