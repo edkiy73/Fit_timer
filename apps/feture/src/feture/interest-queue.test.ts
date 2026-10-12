@@ -80,6 +80,17 @@ describe('owner interest outbox',()=>{
   expect(q.getSnapshot().map).toEqual({});
   expect(await s.store.change(db=>db.owners['hash:'+a.email]!.pending.length)).toBe(1);
  });
+ it('does not reject background sync when an authorization failure also makes session storage unreadable',async()=>{
+  const s=setup();let readable=true;
+  const q=createInterestQueue({store:s.store,api:s.api,getSession:async()=>{if(!readable)throw Error('keychain unavailable');return a;},hash:async v=>'hash:'+v,uuid});
+  queues.push(q);
+  s.api.mutate=async()=>{readable=false;throw new InterestError('auth_required');};
+  await q.select();
+  await q.save('interest-1-1',state,q.getSnapshot().scope);
+  await vi.waitFor(()=>expect(q.getSnapshot().phase).toBe('auth_required'));
+  expect(q.getSnapshot().map).toEqual({});
+  expect(await s.store.change(db=>db.owners['hash:'+a.email]!.pending.length)).toBe(1);
+ });
  it('manual Retry does not wait for stale offline backoff and replays the same operation',async()=>{
   const s=setup(),q=s.make();await q.select();s.setMode('offline');
   await q.save('interest-1-1',state,q.getSnapshot().scope);await idle(q,s.store,'offline');
