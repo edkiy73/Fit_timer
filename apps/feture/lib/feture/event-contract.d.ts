@@ -9,6 +9,7 @@ export type EventCursor={at:string;id:string};
 export type EventCommand=
  | {action:'events.mine'|'events.catalog';cursor:EventCursor|null}
  | {action:'events.read';id:string}
+ | {action:'events.preview';id:string}
  | {action:'events.rsvpStatus';id:string}
  | {action:'events.rsvpSet';id:string;operationId:string;status:'interested'|'going'|'declined'|'withdrawn';visibleToAttendees:boolean}
  | {action:'events.save';id:string;operationId:string;expectedRevision:number;draft:EventDraft}

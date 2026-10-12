@@ -21,8 +21,37 @@ function ownerDto(value){
   id:value.id,revision:value.revision,state:/** @type {'draft'|'pending'|'approved'|'rejected'|'cancelled'} */(value.state),draft:value.draft,createdAt:value.createdAt,updatedAt:value.updatedAt
  });
 }
+
+/** SQL must check live ACL before projecting this strict public whitelist.
+ * @param {unknown} value @returns {import('./event-contract').PublicEvent} */
+function publicCardDto(value){
+ if(!object(value)||!shape(value,['id','revision','title','summary','description','conditions',
+  'format','startsAt','endsAt','timeZone','language','city','publicLocation','price','hasExternalTickets'])||
+  typeof value.id!=='string'||!uuid.test(value.id)||!Number.isSafeInteger(value.revision)||
+  Number(value.revision)<1||typeof value.title!=='string'||value.title.trim().length<2||
+  value.title.length>120||typeof value.summary!=='string'||value.summary.length>500||
+  typeof value.description!=='string'||value.description.length>6000||
+  typeof value.conditions!=='string'||value.conditions.length>3000||
+  !['online','offline'].includes(String(value.format))||
+  typeof value.startsAt!=='string'||!/^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d{1,3})?)?(?:Z|[+-]\d\d:\d\d)$/.test(value.startsAt)||
+  typeof value.endsAt!=='string'||!/^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d{1,3})?)?(?:Z|[+-]\d\d:\d\d)$/.test(value.endsAt)||
+  !Number.isFinite(Date.parse(value.startsAt))||!Number.isFinite(Date.parse(value.endsAt))||
+  Date.parse(value.endsAt)<=Date.parse(value.startsAt)||
+  typeof value.timeZone!=='string'||value.timeZone.length>64||
+  typeof value.language!=='string'||!/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(value.language)||
+  typeof value.city!=='string'||value.city.length>120||
+  typeof value.publicLocation!=='string'||value.publicLocation.length>200||
+  (value.price!==null&&(!object(value.price)||
+    !shape(value.price,['amountMinor','currency'])||!Number.isSafeInteger(value.price.amountMinor)||
+    Number(value.price.amountMinor)<1||Number(value.price.amountMinor)>100000000000||
+    typeof value.price.currency!=='string'||!/^[A-Z]{3}$/.test(value.price.currency)))||
+  typeof value.hasExternalTickets!=='boolean')
+  reject(503,'domain_unavailable');
+ return /** @type {import('./event-contract').PublicEvent} */(value);
+}
+
 /** @param {unknown} value @returns {value is import('./event-contract').EventCursor|null} */
-function cursor(value){return value===null||object(value)&&shape(value,['at','id'])&&stamp(value.at)&&typeof value.id==='string'&&uuid.test(value.id);}
+function cursor(value){return value===null||object(value)&&shape(value,['at','id'])&&typeof value.at==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d{1,6})?)?(?:Z|[+-]\d\d:\d\d)$/.test(value.at)&&Number.isFinite(Date.parse(value.at))&&typeof value.id==='string'&&uuid.test(value.id);}
 /** @param {import('./contracts').Command} input @returns {input is import('./event-contract').EventCommand} */
 const isEventsCommand=input=>input.action.startsWith('events.');
 /** @param {import('./contracts').Transport} transport @param {import('./documents').DocumentsRepository|null} documents */
@@ -33,12 +62,12 @@ function createEventsRepository(transport,documents){
   async execute(actor,request){
    requireOwner(actor,actor.accountHash);
    const command=eventCommand(request);
-   if(!['events.save','events.read','events.mine','events.submit','events.cancel','events.rsvpStatus','events.rsvpSet'].includes(command.action))reject(422,'invalid_request');
+   if(!['events.save','events.read','events.mine','events.submit','events.cancel','events.rsvpStatus','events.rsvpSet','events.catalog','events.preview'].includes(command.action))reject(422,'invalid_request');
    if(command.action!=='events.cancel'&&!(command.action==='events.rsvpSet'&&command.status==='withdrawn'))
     await guard(actor); // Withdrawal must stay possible after loss of event/18+/consent access.
    if(!transport.configured())reject(503,'domain_unavailable');
    try{
-    const response=await transport.request('/rest/v1/rpc/'+(command.action==='events.submit'?'feture_event_submit_command':command.action==='events.cancel'?'feture_event_cancel_command':command.action==='events.rsvpSet'||command.action==='events.rsvpStatus'?'feture_event_rsvp_command':'feture_event_owner_command'),{
+    const response=await transport.request('/rest/v1/rpc/'+(command.action==='events.submit'?'feture_event_submit_command':command.action==='events.cancel'?'feture_event_cancel_command':command.action==='events.rsvpSet'||command.action==='events.rsvpStatus'?'feture_event_rsvp_command':command.action==='events.catalog'||command.action==='events.preview'?'feture_event_catalog_command':'feture_event_owner_command'),{
      method:'POST',headers:{'Content-Type':'application/json'},timeoutMs:8000,
      body:JSON.stringify({p_actor:actor.accountHash,p_command:command})
     });
@@ -72,6 +101,18 @@ function createEventsRepository(transport,documents){
        reject(503,'domain_unavailable');
      return {event:{id:data.event.id,state:'cancelled',revision:data.event.revision},replayed:data.replayed};
     }
+    if(command.action==='events.preview'){
+     if(!shape(data,['ok','entry']))reject(503,'domain_unavailable');
+     const entry=publicCardDto(data.entry);
+     if(entry.id!==command.id)reject(503,'domain_unavailable');
+     return {entry};
+    }
+    if(command.action==='events.catalog'){
+     if(!shape(data,['ok','items','nextCursor'])||
+       !Array.isArray(data.items)||data.items.length>20||!cursor(data.nextCursor))
+      reject(503,'domain_unavailable');
+     return {items:data.items.map(publicCardDto),nextCursor:data.nextCursor};
+    }
     if(command.action==='events.mine'){
      if(!shape(data,['ok','items','nextCursor'])||!Array.isArray(data.items)||data.items.length>20||!cursor(data.nextCursor))reject(503,'domain_unavailable');
      return {items:data.items.map(ownerDto),nextCursor:data.nextCursor};
@@ -89,4 +130,4 @@ function createEventsRepository(transport,documents){
   }
  };
 }
-module.exports={ownerDto,isEventsCommand,createEventsRepository};
+module.exports={ownerDto,publicCardDto,isEventsCommand,createEventsRepository};
