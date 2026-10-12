@@ -2,6 +2,8 @@
 
 **Canonical product contracts:** [task router](../mvp-plan/README.md), domain cards and [STATUS](../mvp-plan/STATUS.md). This is a short map of **dependency stages and release gates**, not a replacement for requirements or an alternate checkbox history. GitHub [Issues](https://github.com/edkiy73/Fit_timer/issues?q=is%3Aissue+is%3Aopen+FetUre) are working tickets; Issues should link to original card ID and never claim unchecked live acceptance.
 
+**Active visual stream:** [Issue #908](https://github.com/edkiy73/Fit_timer/issues/908), [design kickoff + Sol/Astra prompt](DESIGN-START.md). Visual work runs **in parallel** with backend/media in non-overlapping files; DUX01 #909 → existing account/profile #841/#874/#875 → DUX02 #910 → DUX03 #911 → existing admin #842. Already-merged UX is audited, not rebuilt. Real browser screenshots and user QA remain explicit gates.
+
 ## Work order / dependency gates
 | Stage | Domain cards | Must be genuinely demonstrable before next gated experience |
 |---|---|---|
