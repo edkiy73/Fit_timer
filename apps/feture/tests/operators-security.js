@@ -14,7 +14,9 @@ test('O02 operators: live Core session, server actor, key only bootstrap, revoke
  let allowed=true,staffRole='manager';const calls=[];
  const transport={configured:()=>true,request:async(path,opts)=>{
   const input=JSON.parse(opts.body);calls.push({path,input});
-  if(path.endsWith('feture_qa_adult_bound_admin'))return new Response(JSON.stringify(allowed?{ok:true,items:[],activeCount:0}:{ok:false,error:'forbidden'}));
+  if(path.endsWith('feture_qa_adult_bound_admin'))return new Response(JSON.stringify(allowed?{
+   ok:true,items:[{accountHash:'b'.repeat(32),expiresAt:'2026-10-13T12:00:00.000Z',revoked:false,internalSecret:'never-forward',email:'private@example.com'}],activeCount:1
+  }:{ok:false,error:'forbidden'}));
   return new Response(JSON.stringify({ok:true,role:staffRole,initialized:true,items:[],events:[]}));
  }};
  const handler=createOperatorEndpoint({transport,accounts:store,cors:()=>false,quota:async()=>true});
@@ -29,7 +31,13 @@ test('O02 operators: live Core session, server actor, key only bootstrap, revoke
  assert.equal((await run({action:'feture.qa.list'},{'x-fit-email':email,'x-fit-device':'device','x-fit-token':'forged'})).statusCode,401);
  assert.equal((await run({action:'feture.operators.bootstrap'})).statusCode,403);
  assert.equal((await run({action:'feture.qa.list',actor:'a'.repeat(32)})).statusCode,422);
- assert.equal((await run({action:'feture.qa.list'})).statusCode,200);
+ const list=await run({action:'feture.qa.list'});
+ assert.equal(list.statusCode,200);
+ assert.deepEqual(list.body,{ok:true,items:[{
+  accountHash:'b'.repeat(32),expiresAt:'2026-10-13T12:00:00.000Z',revoked:false
+ }],activeCount:1});
+ assert.ok(!JSON.stringify(list.body).includes('never-forward'));
+ assert.ok(!JSON.stringify(list.body).includes('private@example.com'));
  assert.equal(calls.at(-1).input.p_actor,owner);
  assert.equal(calls.at(-1).input.p_generation,sha(owner+':'+account.since));
  allowed=false;
