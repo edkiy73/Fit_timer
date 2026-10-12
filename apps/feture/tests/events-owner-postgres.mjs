@@ -172,7 +172,8 @@ export async function runEventOwnersPostgres(){
     [who,gen,JSON.stringify(command)])).rows[0].result;
   const pubCmd=(n,revision,operation)=>({action:'publish',id:id(n),
     operationId:id(operation),expectedRevision:revision});
-  const verifyPublishInput=(await db.query("select (select array_agg(k order by k) from jsonb_object_keys($1::jsonb) k) as keys, jsonb_typeof($1::jsonb->'id') as idtype, jsonb_typeof($1::jsonb->'operationId') as optype, jsonb_typeof($1::jsonb->'expectedRevision') as revtype, ($1::jsonb->>'id' !~* '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}
+  const checkKeys=(await db.query("select array_agg(k order by k) as keys from jsonb_object_keys($1::jsonb) k",[JSON.stringify(pubCmd(3,4,9700))])).rows[0];
+  assert.equal((await publish(manager,pubCmd(3,4,9700))).error,'review_required',JSON.stringify(checkKeys));
   const cleanPublic={...clean,visibility:'public'};
   assert.equal((await rpc(a,cmd(43,0,cleanPublic))).entry.state,'draft');
   assert.equal((await rpc(a,{action:'events.submit',id:id(43),operationId:id(9701),expectedRevision:1})).entry.state,'pending');
