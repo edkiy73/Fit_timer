@@ -147,5 +147,19 @@ export const en: Record<keyof typeof ru, string> = {
   "verification.qaAccessUntil": "Temporary QA access for this account is enabled until {until}.",
   "verification.qaUntilUnknown": "the permission expires",
   "verification.qaAccessInfo": "This is a temporary administrator permission for prelaunch testing, not proof of age or identity. Current terms still require separate consent. Access ends when the permission expires or is revoked.",
-  "verification.qaConsents": "Review consents"
+  "verification.qaConsents": "Review consents",
+  "catalog.back": "← My world",
+  "catalog.heading": "Interest catalog",
+  "catalog.intro": "Explore different areas and learn what each topic means. Your personal answers stay in your own map.",
+  "catalog.loading": "Refreshing the catalog. Built-in topics are already available.",
+  "catalog.offline": "Couldn't refresh the catalog from the server. You can keep using the built-in topics.",
+  "catalog.retry": "Retry",
+  "catalog.searchLabel": "Find a topic",
+  "catalog.placeholder": "Name, description or synonym",
+  "catalog.reset": "Clear",
+  "catalog.found": "Found: {count} topics in {categories} categories",
+  "catalog.count": "{count} topics in {categories} categories",
+  "catalog.noResults": "Nothing found. Try a different term or clear your search.",
+  "catalog.showAll": "Show all topics",
+  "catalog.questionnaires": "Self-discovery questionnaires →"
 };

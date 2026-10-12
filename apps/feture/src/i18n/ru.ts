@@ -145,5 +145,19 @@ export const ru = {
   "verification.qaAccessUntil": "Для этого аккаунта временно открыт QA-доступ до {until}.",
   "verification.qaUntilUnknown": "окончания разрешения",
   "verification.qaAccessInfo": "Это разрешение администратора для тестирования prelaunch, а не удостоверение возраста или личности. Действующие правила необходимо принять отдельно. Доступ автоматически закроется по сроку или после отзыва.",
-  "verification.qaConsents": "Проверить согласия"
+  "verification.qaConsents": "Проверить согласия",
+  "catalog.back": "← Мой мир",
+  "catalog.heading": "Каталог интересов",
+  "catalog.intro": "Исследуй направления и узнай, что означает каждая тема. Личные ответы остаются в твоей карте.",
+  "catalog.loading": "Обновляем каталог. Встроенные темы уже доступны.",
+  "catalog.offline": "Не удалось обновить каталог с сервера. Можно продолжить со встроенными темами.",
+  "catalog.retry": "Повторить",
+  "catalog.searchLabel": "Найти тему",
+  "catalog.placeholder": "Название, описание или синоним",
+  "catalog.reset": "Сбросить",
+  "catalog.found": "Найдено: {count} тем в {categories} направлениях",
+  "catalog.count": "{count} тем в {categories} направлениях",
+  "catalog.noResults": "Ничего не найдено. Попробуй другое слово или сбрось поиск.",
+  "catalog.showAll": "Показать все темы",
+  "catalog.questionnaires": "Опросники для знакомства с собой →"
 } as const;
