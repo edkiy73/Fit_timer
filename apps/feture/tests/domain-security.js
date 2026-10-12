@@ -220,6 +220,27 @@ test('C01 posts API: trusted actor, adult guard, forged publish and private DTO 
  await assert.rejects(repository.execute({accountHash:identities.alice.hash,verifiedAdult:true},save),e=>e.status===401);
 });
 
+test('C02 muted feed: server-side prefiltered RPC with strict public DTO',async()=>{
+ const {createPostsRepository}=require('../lib/feture/posts');
+ await seed(identities.alice);
+ const actor=await authenticate(req(identities.alice),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const unverified=await authenticate(req(identities.alice),store);
+ const id='00000000-0000-4000-8000-000000000005',at='2026-10-12T09:00:00Z';
+ let entry={id,text:'Публичная история',kind:'text',authorLabel:'Автор',audience:'public',plannedAudience:'public',
+  recipientCodes:[],state:'published',revision:1,createdAt:at,updatedAt:at,publishedAt:at,mine:false};
+ let result={ok:true,items:[entry],nextCursor:null},calls=[];
+ const repository=createPostsRepository({configured:()=>true,request:async(path,options)=>{
+  calls.push({path,body:JSON.parse(options.body)});return new Response(JSON.stringify(result));
+ }},{requireCurrent:async()=>{}});
+ await assert.rejects(repository.execute(unverified,{action:'posts.feed',cursor:null}),e=>e.code==='verification_required');
+ assert.equal(calls.length,0);
+ assert.equal((await repository.execute(actor,{action:'posts.feed',cursor:null})).items[0].id,id);
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_post_feed_command');
+ assert.equal(calls[0].body.p_actor,identities.alice.hash);
+ result={...result,items:[{...entry,account_hash:'PRIVATE'}]};
+ await assert.rejects(repository.execute(actor,{action:'posts.feed',cursor:null}),e=>e.status===503);
+});
+
 test('C02 reaction API: actor-derived ownership and adult/consent guard',async()=>{
  const {createPostsRepository}=require('../lib/feture/posts');
  await seed(identities.alice);
