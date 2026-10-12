@@ -110,7 +110,8 @@ function Root(){
 function Shell(){
   const auth=useOptionalAuth(); const {t}=useI18n(); const location=useLocation();
   if(isExperiencePath(location.pathname)) return <Outlet />;
-  return <main className={(location.pathname==='/account'||location.pathname==='/profile')?'app ft-account-shell':'app'}><header className="app-header">
+  const study=location.pathname==='/tests'||location.pathname.startsWith('/tests/');
+  return <main className={study?'app ft-study-shell':(location.pathname==='/account'||location.pathname==='/profile')?'app ft-account-shell':'app'}><header className="app-header">
     <div><div className="eyebrow">{t('app.eyebrow')}</div><h1>{PRODUCT_NAME}</h1></div>
     {!auth.loading && <Link className="link-button" to="/account">{auth.session?t('nav.account'):t('nav.signIn')}</Link>}
   </header><Outlet /></main>;

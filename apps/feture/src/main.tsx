@@ -12,6 +12,7 @@ import './styles.css';
 import './feture/experience.css';
 import './feture/account.css';
 import './feture/profile.css';
+import './feture/study.css';
 
 applyProductTheme();
 // Every pressed button that waits for the server shows a spinner until the answer comes.

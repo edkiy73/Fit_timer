@@ -6,7 +6,8 @@ import type {AuthSession} from '@appbase/core/auth.js';
 import {domainRequest,domainErrorMessage,DomainClientError} from './domain-api';
 import {attemptResponse,testsResponse,type Answers,type TestAttempt,type TestQuestion} from './questionnaire-model';
 import type {TestsCommand} from '../../lib/feture/questionnaires';
-import {AppDialog} from './components/primitives';
+import {AppDialog,StateCard} from './components/primitives';
+import {Icon} from './components/Icon';
 import {TestSharePreview} from './test-share-preview';
 import {TestMapPreview} from './test-map-preview';
 // Confirmed terminal server responses can release an operation; timeouts must not.
@@ -20,9 +21,16 @@ export function QuestionChoice({question,value,onChange,disabled=false}:{questio
   <button type="button" onClick={()=>onChange(null)} aria-pressed={value===null}>Пропустить вопрос</button>
  </fieldset>;
 }
+function StudyHeading({title,description,attempt=false}:{title:string;description:string;attempt?:boolean}){
+ return <><div className="ft-study-bar"><Link className="ft-study-brand" to="/">Fet<span>Ure.</span></Link><Link className="ft-study-account" to="/account" aria-label="Аккаунт"><Icon name="settings"/></Link></div>
+  <nav className="ft-study-breadcrumbs" aria-label="Навигация опросников"><Link to="/explore"><Icon name="back" size={17}/> Исследовать</Link>{attempt&&<Link to="/tests">Все опросники</Link>}</nav>
+  <header className="ft-study-heading"><p className="ft-eyebrow">В своём темпе</p><h1>{title}</h1>{attempt?<details className="ft-study-context"><summary>Об этом опроснике</summary><p>{description}</p></details>:<p>{description}</p>}</header></>;
+}
 export function QuestionnairesPage(){const auth=useOptionalAuth(),{attemptId}=useParams();
- if(auth.loading)return <p role="status">Загружаем аккаунт…</p>;
- if(!auth.session)return <section className="card"><p><Link to="/explore">← Исследовать</Link></p><h2>Вопросы к себе</h2><p>Короткие опросники помогают заметить, что тебе подходит сейчас. Здесь нет правильных ответов: можно пропускать вопросы, сохранять прохождение и возвращаться позже.</p><p>Ответы и результаты остаются только у тебя. Они не означают согласия на какие-либо действия.</p><Link to="/account">Войти и сохранить ответы</Link></section>;
+ if(auth.loading)return <section className="ft-study"><StateCard tone="loading" title="Загружаем аккаунт…"/></section>;
+ if(!auth.session)return <section className="ft-study ft-questionnaires"><StudyHeading title="Вопросы к себе" description="Короткие опросники помогают заметить, что тебе подходит сейчас."/>
+  <div className="ft-study-welcome"><span className="ft-study-symbol"><Icon name="book" size={28}/></span><h2>Знакомство с собой без спешки</h2><p>Здесь нет правильных ответов: можно пропускать вопросы, сохранять прохождение и возвращаться позже.</p><Link className="ft-primary" to="/account">Войти и сохранить ответы <Icon name="arrow" size={18}/></Link></div>
+  <div className="ft-study-privacy"><Icon name="lock"/><p>Ответы и результаты остаются только у тебя. Они не означают согласия на какие-либо действия.</p></div></section>;
  return <TestsAccount key={auth.session.email+auth.session.deviceId+auth.session.syncToken+(attemptId||'')} session={auth.session} attemptId={attemptId}/>;
 }
 function TestsAccount({session,attemptId}:{session:AuthSession;attemptId:string|undefined}){
@@ -48,15 +56,15 @@ function TestsAccount({session,attemptId}:{session:AuthSession;attemptId:string|
  const update=(value:string[]|null)=>{if(!attempt||pending)return;const q=attempt.version.definition.questions[position]!;setAnswers(a=>({...a,[q.id]:value}));setDirty(true);setNotice('');};
  const move=(step:number)=>{if(pending)return;setPosition(step);setDirty(true);setNotice('');};
  const def=attempt?.version.definition,q=def?.questions[position];
- return <section className="card ft-questionnaires"><p><Link to="/explore">← Исследовать</Link>{attemptId&&<> · <Link to="/tests">Все опросники</Link></>}</p><h2>{def?.title||'Вопросы к себе'}</h2><p>{def?.description||'Исследуй желания, условия комфорта и темп. Ответы приватны; результат не меняет карту и не заменяет разговор о согласии.'}</p>
-  {list&&!attemptId&&<><div className="ft-questionnaire-grid">{list.versions.map(v=><article className="card" key={v.id}><h3>{v.definition.title}</h3><p>{v.definition.description}</p><p className="muted">{v.definition.questions.length} вопросов · Можно пропускать</p><button type="button" disabled={busy||!!pending} onClick={()=>void start(v.testId)}>{list.attempts.some(a=>a.testId===v.testId&&a.status==='draft')?'Продолжить':'Начать'}</button></article>)}</div>{list.versions.length===0&&<p>Пока нет опубликованных опросников.</p>}
-   {list.attempts.length>0&&<><h3>Мои прохождения</h3><ul>{list.attempts.map(a=><li key={a.id}><Link to={'/tests/'+a.id}>{a.title}</Link> · {a.status==='draft'?'Можно продолжить':'Результат'} · {new Date(a.updatedAt).toLocaleDateString('ru')}</li>)}</ul></>}
+ return <section className="ft-study ft-questionnaires"><StudyHeading title={def?.title||'Вопросы к себе'} description={def?.description||'Исследуй желания, условия комфорта и темп. Ответы приватны; результат не меняет карту и не заменяет разговор о согласии.'} attempt={!!attemptId}/>
+  {list&&!attemptId&&<><div className="ft-questionnaire-grid">{list.versions.map(v=><article className="ft-questionnaire-card" key={v.id}><span className="ft-study-symbol"><Icon name="book"/></span><h3>{v.definition.title}</h3><p>{v.definition.description}</p><p className="muted">{v.definition.questions.length} вопросов · Можно пропускать</p><button type="button" className="ft-primary" disabled={busy||!!pending} onClick={()=>void start(v.testId)}>{list.attempts.some(a=>a.testId===v.testId&&a.status==='draft')?'Продолжить':'Начать'}</button></article>)}</div>{list.versions.length===0&&<p>Пока нет опубликованных опросников.</p>}
+   {list.attempts.length>0&&<><h2 className="ft-study-section-title">Мои прохождения</h2><ul className="ft-study-attempts">{list.attempts.map(a=><li key={a.id}><Link to={'/tests/'+a.id}><span><strong>{a.title}</strong><small>{a.status==='draft'?'Можно продолжить':'Результат'} · {new Date(a.updatedAt).toLocaleDateString('ru')}</small></span><Icon name="arrow" size={18}/></Link></li>)}</ul></>}
   </>}
-  {attempt?.status==='draft'&&q&&<><p className="muted">Вопрос {position+1} из {def!.questions.length} · Рассмотрено {Object.keys(answers).length}</p><progress value={Object.keys(answers).length} max={def!.questions.length} aria-label="Рассмотренные вопросы"/>
+  {attempt?.status==='draft'&&q&&<div className="ft-question-workspace"><p className="ft-study-progress-copy">Вопрос {position+1} из {def!.questions.length} · Рассмотрено {Object.keys(answers).length}</p><progress value={Object.keys(answers).length} max={def!.questions.length} aria-label="Рассмотренные вопросы"/>
    <QuestionChoice key={q.id} question={q} value={answers[q.id]} disabled={busy||!!pending} onChange={update}/>
-   <div className="ft-form-actions"><button type="button" disabled={busy||!!pending||position===0} onClick={()=>move(position-1)}>Назад</button>{position<def!.questions.length-1&&<button type="button" disabled={busy||!!pending} onClick={()=>move(position+1)}>Дальше</button>}<button type="button" disabled={busy||!!pending||!dirty} onClick={()=>void save()}>Сохранить и продолжить позже</button><button type="button" disabled={busy||!!pending||def!.questions.some(q=>!Object.hasOwn(answers,q.id))} onClick={()=>void save(true)}>Завершить</button></div>
+   <div className="ft-form-actions"><button type="button" disabled={busy||!!pending||position===0} onClick={()=>move(position-1)}>Назад</button>{position<def!.questions.length-1&&<button type="button" disabled={busy||!!pending} className="ft-primary" onClick={()=>move(position+1)}>Дальше</button>}<button type="button" disabled={busy||!!pending||!dirty} className="ft-study-save-later" onClick={()=>void save()}>Сохранить и продолжить позже</button><button type="button" disabled={busy||!!pending||def!.questions.some(q=>!Object.hasOwn(answers,q.id))} className={position===def!.questions.length-1?'ft-primary':undefined} onClick={()=>void save(true)}>Завершить</button></div>
    <p className="muted">Перед завершением ответь или выбери «Пропустить» у каждого вопроса.</p>
-  </>}
+  </div>}
   {attempt?.status==='completed'&&attempt.result&&<><p>Результат описывает твои ответы сейчас. Это не диагноз, обещание поведения или согласие на конкретный опыт.</p>{attempt.result.dimensions.map(dim=>{const label=def!.dimensions.find(d=>d.id===dim.id)?.title;return <article className="card" key={dim.id}><h3>{label}</h3><p>{dim.interpretation}</p><p className="muted">Учтено {dim.answered} из {dim.total} ответов. Пропуски не считаются отказом.</p><details><summary>Почему такой вывод</summary>{dim.questionIds.map(id=>{const question=def!.questions.find(q=>q.id===id)!;return <p key={id}><strong>{question.prompt}</strong><br/>{question.options.filter(o=>attempt.answers[id]?.includes(o.id)).map(o=>o.label).join(', ')}</p>;})}{dim.questionIds.length===0&&<p>В этом направлении все вопросы пропущены.</p>}</details></article>;})}<div className="ft-form-actions"><button type="button" disabled={busy||!!pending} onClick={()=>setMapPreview(true)}>Выбрать темы для карты</button><button type="button" disabled={busy||!!pending} onClick={()=>setSharePreview(true)}>Выбрать вывод для публикации</button><button type="button" disabled={busy||!!pending} onClick={()=>void start(attempt.version.testId)}>Пройти заново</button></div><p className="muted">Новое прохождение сохранится отдельно. Старый результат останется прежним.</p></>}
   {sharePreview&&attempt?.status==='completed'&&<TestSharePreview key={attempt.id} session={session} attemptId={attempt.id} onClose={()=>setSharePreview(false)} onPendingChange={setSharePending}/> }
   {mapPreview&&attempt?.status==='completed'&&<TestMapPreview session={session} attemptId={attempt.id} onClose={()=>setMapPreview(false)} onPendingChange={setMapPending}/> }
