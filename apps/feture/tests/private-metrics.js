@@ -111,11 +111,16 @@ test('O03 load threshold never leaks account details, rejects invalid configurat
   else process.env.FETURE_O03_WARN_WEEKLY_EVENTS=original;
  }
 });
-test('O03 fails closed on overflow, negative or malformed storage counters',async()=>{
- for(const bad of [-1,'NaN',Number.MAX_SAFE_INTEGER+1]){
+test('O03 rejects malformed counters instead of coercing blanks, booleans or objects into counts',async()=>{
+ for(const bad of [-1,'NaN',Number.MAX_SAFE_INTEGER+1,'9007199254740992','', ' ',false,true,[],{},'01','1e2','1.0',1.5,-0.5]){
   const metrics=createPrivateMetrics({incr:async()=>1,many:async keys=>keys.map((_,i)=>i===0?bad:null)});
-  await assert.rejects(metrics.summary(7),/metrics_unavailable/);
+  await assert.rejects(metrics.summary(7),/metrics_unavailable/,String(bad));
  }
+ // Both Redis string replies and direct numeric memory-provider replies remain supported.
+ const metrics=createPrivateMetrics({incr:async()=>1,many:async keys=>keys.map((_,i)=>i===0?'7':i===1?5:null)});
+ const result=await metrics.summary(7);
+ assert.equal(result.operations.windowCount,12);
+ assert.equal(result.operations.weekCount,12);
 });
 
 test('O03 fixed ephemeral keys cannot mirror into another AppBase provider',()=>{
