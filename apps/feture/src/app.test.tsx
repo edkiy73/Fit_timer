@@ -55,6 +55,17 @@ describe('FetUre starter', () => {
     expect(router.state.location.pathname).toBe('/world');
     expect(await screen.findByRole('heading',{name:/Твой мир/i})).toBeTruthy();
   });
+  it('distinguishes the editorial Explore from a personal map', async () => {
+    const router=renderApp('/explore');
+    const user=userEvent.setup();
+    expect(await screen.findByRole('heading',{name:/Новое начинается с любопытства/i})).toBeTruthy();
+    const covers=await screen.findAllByRole('button',{name:/Открыть направление/i});
+    expect(covers.length).toBeGreaterThan(0);
+    await user.click(covers[0]!);
+    expect(router.state.location.pathname).toMatch(/^\/explore\//);
+    expect(await screen.findByRole('button',{name:/Все направления/i})).toBeTruthy();
+  });
+
   it('keeps the intended shared-card route in account sign-in navigation state', async () => {
     const id='91e9ee01-e4e2-4900-a7ad-144c46442390';
     const router=renderApp('/share/'+id);

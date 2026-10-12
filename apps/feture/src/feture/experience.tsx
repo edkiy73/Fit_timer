@@ -109,29 +109,32 @@ export function FetureExperience(){
              <div><strong>{overall.measured}</strong><small>тем с оценкой силы</small></div>
              <div><strong>{overall.boundaries}</strong><small>жёстких границ</small></div></div>
           <div className="ft-section-head"><div><h2>Карта моего мира</h2><p>Направлений: {data.categories.length}. Каждое раскрывается постепенно.</p></div><button className="ft-textbtn" onClick={()=>go('explore')}>Все темы <Icon name="arrow" size={17}/></button></div>
-          {mapLoading?<StateCard tone="loading" title="Загружаем личную карту…"/>:<div className="ft-jars">
-            {data.categories.map(category=>{
+          {mapLoading?<StateCard tone="loading" title="Загружаем личную карту…"/>:overall.known===0?
+           <section className="ft-world-empty" aria-labelledby="ft-world-empty-title">
+             <div className="ft-world-empty-art" aria-hidden="true"><span className="ft-world-empty-ring"/><span className="ft-world-empty-ring inner"/><span className="ft-world-empty-core"><Icon name="spark" size={32}/></span></div>
+             <div className="ft-world-empty-text"><span>ПЕРВАЯ ГРАНЬ</span><h3 id="ft-world-empty-title">Твой мир начинается с первого открытия.</h3><p>Выбери любую интересную тему. Когда ты отметишь своё отношение, она появится здесь — в твоей личной карте.</p><button type="button" onClick={()=>go('explore')}>Найти первую тему <Icon name="arrow" size={18}/></button></div>
+           </section>:
+           <div className="ft-jars ft-personal-jars">
+            {data.categories.filter(c=>categoryProgress(c.interests.map(i=>i.id),map).known>0).map(category=>{
               const progress=categoryProgress(category.interests.map(i=>i.id),map);
               return <button key={category.id} className="ft-jar-card" onClick={()=>openCategory(category.id)} aria-label={`${category.title}: исследовано ${progress.known} из ${progress.total}; сила отмечена у ${progress.measured}; опыт отмечен у ${progress.experienced}; жёстких границ ${progress.boundaries}`}>
                 <Jar color={category.color} percent={progress.percent} known={progress.known} total={progress.total}/>
-                <strong>{category.short}</strong>
-                <span className="ft-jar-meta"><span>Сила: {progress.measured} тем</span><span>Опыт: {progress.experienced}</span><span>Границы: {progress.boundaries}</span></span>
+                <strong>{category.short}</strong><span className="ft-jar-meta"><span>Сила: {progress.measured} тем</span><span>Опыт: {progress.experienced}</span><span>Границы: {progress.boundaries}</span></span>
               </button>;
             })}
-          </div>}
+           </div>}
           <p className="ft-map-explainer">Наполнение показывает изученные темы, а не силу желания. Сила, опыт и границы считаются отдельно и не образуют оценку человека.</p>
           <div className="ft-note"><Icon name="lock" size={18}/><div><strong>Только для тебя</strong><p>По умолчанию карта приватна. Видимость и раскрытие каждой темы выбираешь ты.</p></div></div>
           <div className="ft-share-entry"><div><strong>Карточка моих тем</strong><p>Выбери до шести тем и сам реши, что показать в PNG. Личные заметки и условия не входят в карточку.</p></div>
             <button type="button" className="ft-textbtn" disabled={mapLoading} onClick={()=>setShareOpen(true)}>Создать карточку <Icon name="arrow" size={17}/></button></div>
           <p><Link className="ft-textbtn" to="/journal">Личный дневник и история карты</Link></p>
-          <div className="ft-section-head"><div><h2>Продолжить знакомство с собой</h2><p>Необязательно проходить всё сразу.</p></div></div>
-          <div className="ft-recommend">{data.categories.slice(0,3).map((c,i)=><button onClick={()=>openCategory(c.id)} key={c.id} className="ft-recommend-card" style={{'--accent':c.color} as CSSProperties}><span className="ft-recommend-index">0{i+1}</span><strong>{c.title}</strong><small>{c.interests.length} тем для исследования</small><Icon name="arrow" size={17}/></button>)}</div>
+          <section className="ft-world-next"><div><span>ТВОЙ РИТМ</span><h2>Продолжай узнавать себя.</h2><p>Возвращайся к своим заметкам или открывай новые направления. Все решения — в твоих руках.</p></div><div className="ft-world-next-links"><Link to="/journal"><Icon name="book" size={20}/> Личный дневник <Icon name="arrow" size={17}/></Link><Link to="/explore"><Icon name="compass" size={20}/> Новые темы <Icon name="arrow" size={17}/></Link></div></section>
         </>}
         {tab==='explore'&&<>
           {selected&&!selectedCategory?<StateCard title="Направление не найдено" description="Вернись к карте и выбери другую тему." action={<ActionButton onClick={()=>go('explore')}>Все направления</ActionButton>}/>:selectedCategory?<><button className="ft-back" onClick={()=>go('explore')}><Icon name="back" size={18}/> Все направления</button>
             <div className="ft-category-banner" style={{'--accent':selectedCategory.color} as CSSProperties}>
               <p>Направление / {selectedCategory.short}</p><h1>{selectedCategory.title}</h1>
-              <span>{categoryProgress(selectedCategory.interests.map(i=>i.id),map).known} из {selectedCategory.interests.length} исследовано · оценок силы: {categoryProgress(selectedCategory.interests.map(i=>i.id),map).measured} · опыт указан: {categoryProgress(selectedCategory.interests.map(i=>i.id),map).experienced} · жёстких границ: {categoryProgress(selectedCategory.interests.map(i=>i.id),map).boundaries}</span>
+              <span>{selectedCategory.interests.length} тем для исследования · Отмечай только то, что подходит тебе.</span>
             </div><div className="ft-section-head"><div><h2>Темы направления</h2><p>Нажми на интерес, чтобы сохранить своё отношение и видимость.</p></div></div>
             {query.trim()&&<p className="ft-muted">Поиск: «{query.trim()}» <button type="button" className="ft-back" onClick={()=>setQuery('')}>Показать все темы</button></p>}
             {query.trim()&&!selectedCategory.interests.some(i=>matchesInterest(i,query)||matchesCategoryName(selectedCategory,query))&&<div className="ft-explore-empty"><StateCard title="В этом направлении ничего не найдено" description="Сбрось поиск, чтобы увидеть все темы направления." action={<ActionButton onClick={()=>setQuery('')}>Сбросить поиск</ActionButton>}/></div>}
@@ -141,18 +144,20 @@ export function FetureExperience(){
                   {isExplored(state)?<Icon name={state?.boundary==='hard'?'shield':'check'} size={15}/>:<Icon name="plus" size={15}/>}
                 </span><span><strong>{i.title}</strong><small>{interestSummary(state)}{state?.visibility==='public'?' · открыто':state?.visibility==='granted'?' · по разрешению':''}</small></span>
                 <Icon name="arrow" size={17}/></button>})}</div>
-          </>:<><SectionTitle eyebrow="Исследование" title="Открой новые грани" description="Большая карта интересов, границ и вопросов. Здесь нет правильных или неправильных ответов."/>
-          <p><Link className="ft-back" to="/tests">Вопросы к себе →</Link></p>
-          <details className="ft-explore-guide"><summary><Icon name="compass" size={22}/><span><strong>Начни с любопытства</strong><small>{allIds.length} темы · {data.categories.length} направлений</small></span></summary><p>Отмечай только то, что считаешь своим. Любую тему можно пропустить и вернуться к ней позже.</p></details>
-          <label className="ft-search"><Icon name="search" size={20}/><input placeholder="Найти интерес или направление" value={query} onChange={e=>setQuery(e.target.value)} aria-label="Поиск интересов"/></label>
-          <div className="ft-section-head"><div><h2>Направления</h2><p>У каждого своя карта и история.</p></div></div>
+          </>:<>
+          <section className="ft-discover-hero" aria-labelledby="ft-discover-title">
+           <div className="ft-discover-hero-copy"><span className="ft-discover-eyebrow"><Icon name="spark" size={17}/> ПРОСТРАНСТВО ОТКРЫТИЙ</span><h1 id="ft-discover-title">Новое начинается с <em>любопытства.</em></h1><p>Здесь можно узнавать темы, чувства и взгляды без правильных или неправильных ответов. Выбирай то, что тебе интересно, а в личную карту добавляй только своё.</p><Link to="/tests">Вопросы к себе <Icon name="arrow" size={18}/></Link></div>
+           <div className="ft-discover-art" aria-hidden="true"><span className="ring outer"/><span className="ring middle"/><span className="ring inner"/><span className="core"><Icon name="spark" size={34}/></span></div>
+          </section>
+          <div className="ft-discover-intro"><div><span className="ft-discover-label">КАТАЛОГ ТЕМ</span><h2>Выбери направление</h2><p>{data.categories.length} направлений · {allIds.length} тем. Начать можно с любой.</p></div><details className="ft-explore-guide"><summary><Icon name="compass" size={20}/><span><strong>Как это работает?</strong></span></summary><p>Открой тему, прочитай описание и отметь своё отношение, если захочешь. Личные отметки не публикуются автоматически.</p></details></div>
+          <label className="ft-search ft-discover-search"><Icon name="search" size={20}/><input placeholder="Что тебе интересно?" value={query} onChange={e=>setQuery(e.target.value)} aria-label="Поиск интересов"/></label>
           {query&&!data.categories.some(c=>matchesCategory(c,query))&&<div className="ft-explore-empty"><StateCard title="Ничего не найдено" description="Попробуй другое название или более короткий запрос." action={<ActionButton onClick={()=>setQuery('')}>Сбросить поиск</ActionButton>}/></div>}
-          <div className="ft-category-grid">{data.categories.filter(c=>matchesCategory(c,query)).map(c=>{
-            const p=categoryProgress(c.interests.map(i=>i.id),map);
-            return <button key={c.id} className="ft-category-card" onClick={()=>openCategory(c.id)}>
-              <span className="ft-category-symbol" style={{background:`${c.color}20`,color:c.color}}><Icon name="spark" size={23}/></span>
-              <strong>{c.title}</strong><small>{p.known} / {p.total} исследовано</small><div className="ft-mini-progress"><span style={{width:`${p.percent}%`,background:c.color}}/></div></button>;
-          })}</div>
+          <div className="ft-discover-grid">{data.categories.filter(c=>matchesCategory(c,query)).map((c,index)=><button key={c.id} type="button" className="ft-discover-card" style={{'--ft-discover-color':c.color} as CSSProperties} onClick={()=>openCategory(c.id)} aria-label={`Открыть направление «${c.title}»`}>
+           <span className="ft-discover-card-art" aria-hidden="true"><span className="arc a"/><span className="arc b"/><span className="arc c"/></span>
+           <span className="ft-discover-card-top"><span>{String(index+1).padStart(2,'0')}</span><span className="ft-discover-card-icon"><Icon name="spark" size={18}/></span></span>
+           <span className="ft-discover-card-title"><strong>{c.title}</strong><small>{c.interests.length} тем{c.interests.length>0?` · ${c.interests.slice(0,2).map(i=>i.title).join(' · ')}`:''}</small></span>
+           <span className="ft-discover-card-link">Открыть темы <Icon name="arrow" size={17}/></span>
+          </button>)}</div>
           </>}
         </>}
         {tab==='community'&&<><SectionTitle eyebrow="Люди и истории" title="Сообщество" description="Исследовать себя интереснее, когда можно услышать разные взгляды."/>
