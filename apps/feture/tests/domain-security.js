@@ -805,3 +805,37 @@ test('E04b2 owner attendance queue: trusted actor, cursor and strict request pro
  response={ok:false,error:'resource_not_found'};
  await assert.rejects(repository.execute(adult,command),e=>e.status===404);
 });
+
+
+test('E04b2b attendee decisions: Core actor, strict opaque response, no bypass',async()=>{
+ const {createEventsRepository}=require('../lib/feture/events');
+ const person=identities.alice;await seed(person);
+ const adult=await authenticate(req(person),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const unverified=await authenticate(req(person),store);
+ const id='00000000-0000-4000-8000-000000000181';
+ const requestId='00000000-0000-4000-8000-000000000182';
+ const command={action:'events.attendanceDecide',id,requestId,
+  operationId:'00000000-0000-4000-8000-000000000183',expectedRevision:1,decision:'approve'};
+ let result={ok:true,request:{requestId,state:'approved',revision:2},replayed:false};
+ const calls=[],guard=[];
+ const repository=createEventsRepository({configured:()=>true,request:async(path,opts)=>{
+  calls.push({path,body:JSON.parse(opts.body)});
+  return new Response(JSON.stringify(result));
+ }},{requireCurrent:async actor=>{guard.push(actor.accountHash)}});
+ assert.deepEqual(await repository.execute(adult,command),
+  {request:{requestId,state:'approved',revision:2},replayed:false});
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_event_attendance_owner_decide');
+ assert.deepEqual(calls[0].body,{p_actor:person.hash,p_command:command});
+ assert.equal(guard.length,1);
+ const count=calls.length;
+ for(const bad of [{...command,ownerHash:identities.bob.hash},
+  {...command,requestId:'bad'},{...command,decision:'admit'},
+  {...command,expectedRevision:-1}])
+  await assert.rejects(repository.execute(adult,bad),e=>e.status===422);
+ await assert.rejects(repository.execute(unverified,command),e=>e.status===403);
+ assert.equal(calls.length,count);
+ result={ok:true,request:{requestId,state:'approved',revision:2,email:'secret'},replayed:false};
+ await assert.rejects(repository.execute(adult,command),e=>e.status===503);
+ result={ok:false,error:'resource_not_found'};
+ await assert.rejects(repository.execute(adult,command),e=>e.status===404);
+});
