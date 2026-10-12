@@ -44,7 +44,6 @@ export function PostEngagement({session,id,savedView,onUnsaved}:{session:AuthSes
   try{
    const cmd:Command=pending.current??{action:saved?'posts.bookmarkRemove':'posts.bookmarkSave',id,operationId:crypto.randomUUID()};
    pending.current=cmd;
-   if(cmd.action==='posts.reactionSet')return;
    const result=await domainRequest(session,cmd,bookmarkSet);
    if(!alive.current)return;
    pending.current=null;setUncertain(false);setSaved(result.saved);
