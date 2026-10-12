@@ -7,7 +7,7 @@ const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
 test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and irreversible text removal',async()=>{
  const db=new PGlite();try{
  await db.exec('create role anon;create role authenticated;create role service_role bypassrls;');
- for(const file of ['20261010_001_feture_domain.sql','20261010_002_catalog_read.sql','20261010090405_feture_scoped_seed.sql','20261010164924_feture_interest_transactions.sql','20261010225100_feture_verification_store.sql','20261010225653_feture_documents.sql','20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql','20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql','20261011083303_feture_qa_adult_access.sql','20261011113717_feture_qa_any_account_audit.sql','20261011120139_feture_operator_roles.sql','20261011121629_feture_operator_account_binding.sql','20261011133134_feture_community_posts.sql','20261011134257_feture_post_review.sql','20261011140051_feture_post_reports.sql','20261011140835_feture_post_report_author_privacy.sql','20261011141800_feture_post_recipients.sql','20261011043127_feture_questionnaires.sql','20261011045829_feture_questionnaires_release.sql','20261011190651_feture_test_result_posts.sql','20261011193939_feture_post_photos.sql','20261012050032_feture_photo_review_consent.sql','20261012073357_feture_staff_photo_read.sql'])await db.exec(sql(file));
+ for(const file of ['20261010_001_feture_domain.sql','20261010_002_catalog_read.sql','20261010090405_feture_scoped_seed.sql','20261010164924_feture_interest_transactions.sql','20261010225100_feture_verification_store.sql','20261010225653_feture_documents.sql','20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql','20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql','20261011083303_feture_qa_adult_access.sql','20261011113717_feture_qa_any_account_audit.sql','20261011120139_feture_operator_roles.sql','20261011121629_feture_operator_account_binding.sql','20261011133134_feture_community_posts.sql','20261011134257_feture_post_review.sql','20261011140051_feture_post_reports.sql','20261011140835_feture_post_report_author_privacy.sql','20261011141800_feture_post_recipients.sql','20261011043127_feture_questionnaires.sql','20261011045829_feture_questionnaires_release.sql','20261011190651_feture_test_result_posts.sql','20261011193939_feture_post_photos.sql','20261012050032_feture_photo_review_consent.sql','20261012073357_feture_staff_photo_read.sql','20261012170000_feture_post_bookmarks.sql'])await db.exec(sql(file));
  const rpc=async(name,args)=>(await db.query('select public.'+name+'('+args.map((_,i)=>'$'+(i+1)).join(',')+') result',args)).rows[0].result;
  const op=(actor,command)=>rpc('feture_post_command',[actor,JSON.stringify(command)]);
  const [a,b,c]=['a','b','c'].map(x=>x.repeat(32));for(const owner of [a,b,c])await db.query('insert into public.feture_profiles(account_hash) values($1)',[owner]);
@@ -128,6 +128,19 @@ test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and ir
  assert.equal((await review(manager,{...approve,id:id(200),operationId:id(203),expectedRevision:2})).ok,true);
  const permitted=await op(b,{action:'posts.read',id:id(200)});assert.equal(permitted.entry.text,selected.text);assert.deepEqual(permitted.entry.recipientCodes,[]);
  assert.equal((await op(c,{action:'posts.read',id:id(200)})).error,'resource_not_found');
+ // C02.1: saved posts never outlive the post's current visibility.
+ const bookmark=(actor,command)=>rpc('feture_post_bookmark_command',[actor,JSON.stringify(command)]);
+ const savedList={action:'posts.bookmarks',cursor:null};
+ const bookmarkSave={action:'posts.bookmarkSave',id:id(200),operationId:id(7000)};
+ assert.deepEqual((await bookmark(b,savedList)).items,[]);
+ assert.equal((await bookmark(c,bookmarkSave)).error,'resource_not_found');
+ assert.equal((await bookmark(b,{...bookmarkSave,accountHash:b})).error,'invalid_request');
+ assert.deepEqual(await bookmark(b,bookmarkSave),{ok:true,saved:true,replayed:false});
+ assert.deepEqual(await bookmark(b,bookmarkSave),{ok:true,saved:true,replayed:true});
+ assert.equal((await bookmark(b,{...bookmarkSave,id:id(201)})).error,'operation_conflict');
+ assert.equal((await bookmark(b,savedList)).items[0].id,id(200));
+ assert.equal((await bookmark(b,savedList)).items[0].recipientCodes.length,0);
+ assert.equal((await bookmark(b,{action:'posts.bookmarks',cursor:{at:'bad',id:id(200)}})).error,'invalid_cursor');
  assert.equal((await op(b,{action:'posts.feed',cursor:null})).items.some(v=>v.id===id(200)),true);
  assert.equal((await op(c,{action:'posts.feed',cursor:null})).items.some(v=>v.id===id(200)),false);
  const selectedReport={action:'posts.report',id:id(200),reportId:id(204),expectedRevision:3,reason:'privacy',note:'SELECTED REPORT NOTE'};
@@ -137,6 +150,10 @@ test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and ir
  assert.equal((await op(c,revoke)).error,'resource_not_found');assert.equal((await op(a,{...revoke,expectedRevision:2})).error,'revision_conflict');
  assert.equal((await op(a,revoke)).entry.state,'published');assert.equal((await op(a,revoke)).replayed,true);
  assert.equal((await op(b,{action:'posts.read',id:id(200)})).error,'resource_not_found');
+ assert.deepEqual((await bookmark(b,savedList)).items,[]);
+ assert.equal((await bookmark(b,bookmarkSave)).error,'resource_not_found');
+ assert.equal((await bookmark(b,{action:'posts.bookmarkRemove',id:id(200),operationId:id(7001)})).error,'resource_not_found');
+ assert.equal((await db.query('select count(*)::int n from public.feture_post_bookmarks where account_hash=$1',[b])).rows[0].n,1); // Stored privately, never projected.
  assert.equal((await reportReview(manager,{action:'reports',cursor:null})).items.find(v=>v.id===id(204)).context,null);
  assert.equal((await reportReview(manager,{...resolve,id:id(204),operationId:id(206)})).error,'revision_conflict');
  assert.deepEqual((await op(a,selected)).entry.recipientCodes,[]); // Retry never restores old permission.
@@ -162,7 +179,7 @@ test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and ir
  const deleted=await op(a,remove);assert.equal(deleted.entry.state,'deleted');assert.equal(deleted.entry.text,'');assert.equal(deleted.entry.authorLabel,'');assert.equal((await op(a,remove)).replayed,true);assert.equal((await op(a,create)).entry.state,'deleted');assert.equal((await op(a,submit)).entry.state,'deleted');assert.equal((await review(manager,approve)).post.state,'deleted');assert.equal((await review(manager,{action:'queue',cursor:null})).items.length,0);assert.equal(JSON.stringify(await review(auditor,{action:'audit',cursor:null})).includes('Мой личный текст'),false);
  assert.equal((await op(a,{action:'posts.read',id:id(10)})).error,'resource_not_found');
  assert.equal((await op(a,{action:'posts.mine',cursor:null})).items.length,0);assert.equal((await reportOp(b,{action:'posts.reports',cursor:null})).items[0].state,'resolved');assert.equal((await reportReview(manager,{action:'reports',cursor:null})).items.length,0);
- for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(db.query('select * from public.feture_posts'));await assert.rejects(db.query('select * from public.feture_post_operations'));await assert.rejects(db.query('select * from public.feture_post_addresses'));await assert.rejects(db.query('select * from public.feture_post_recipients'));await assert.rejects(address(b));await assert.rejects(op(a,{action:'posts.mine',cursor:null}));await assert.rejects(review(manager,{action:'queue',cursor:null}));await assert.rejects(db.query('select * from public.feture_post_reviews'));await assert.rejects(db.query('select * from public.feture_post_reports'));await assert.rejects(reportOp(b,{action:'posts.reports',cursor:null}));await assert.rejects(reportReview(manager,{action:'reports',cursor:null}));}
+ for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(db.query('select * from public.feture_posts'));await assert.rejects(db.query('select * from public.feture_post_operations'));await assert.rejects(db.query('select * from public.feture_post_addresses'));await assert.rejects(db.query('select * from public.feture_post_recipients'));await assert.rejects(db.query('select * from public.feture_post_bookmarks'));await assert.rejects(db.query('select * from public.feture_post_bookmark_operations'));await assert.rejects(bookmark(b,savedList));await assert.rejects(address(b));await assert.rejects(op(a,{action:'posts.mine',cursor:null}));await assert.rejects(review(manager,{action:'queue',cursor:null}));await assert.rejects(db.query('select * from public.feture_post_reviews'));await assert.rejects(db.query('select * from public.feture_post_reports'));await assert.rejects(reportOp(b,{action:'posts.reports',cursor:null}));await assert.rejects(reportReview(manager,{action:'reports',cursor:null}));}
 
  // C01.5a: storage metadata never grants direct access or bypasses photo review.
  await db.exec('set role service_role');
