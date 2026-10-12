@@ -30,7 +30,7 @@ create function public.feture_post_bookmark_command(p_actor text,p_command jsonb
 returns jsonb language plpgsql security invoker set search_path=pg_catalog,public as $$
 declare
  act text:=p_command->>'action'; keys text[]; pid uuid; op uuid;
- cur jsonb;cursor_at timestamptz;cursor_id uuid; page jsonb; p public.feture_posts%rowtype;
+ cur jsonb;cursor_at timestamptz;cursor_id uuid; page jsonb; post_record public.feture_posts%rowtype;
  receipt public.feture_post_bookmark_operations%rowtype; saved boolean;
 begin
  if p_actor is null or p_actor !~ '^[a-f0-9]{32}$' or jsonb_typeof(p_command) is distinct from 'object' then
@@ -89,8 +89,8 @@ begin
  -- One owner lock serializes concurrent saves/removals and the operation receipt.
  perform 1 from public.feture_profiles where account_hash=p_actor for update;
  if not found then return jsonb_build_object('ok',false,'error','resource_not_found');end if;
- select * into p from public.feture_posts where id=pid;
- if not found or not public.feture_post_visible(p,p_actor) then
+ select * into post_record from public.feture_posts where id=pid;
+ if not found or not public.feture_post_visible(post_record,p_actor) then
   return jsonb_build_object('ok',false,'error','resource_not_found');
  end if;
  select * into receipt from public.feture_post_bookmark_operations
