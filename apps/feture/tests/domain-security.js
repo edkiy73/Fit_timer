@@ -624,3 +624,30 @@ test('M01 detail opens: Core verified actor, no client owner or upstream details
  payload={ok:false,error:'resource_not_found'};
  await assert.rejects(views.execute(actor,request),e=>e.status===404);
 });
+
+
+test('E02b cancellation is owner-only, private DTO and available after consent expiry',async()=>{
+ const {createEventsRepository}=require('../lib/feture/events');
+ const identity=identities.alice;await seed(identity);
+ const actor=await authenticate(req(identity),store);
+ const id='00000000-0000-4000-8000-000000000071';
+ const command={action:'events.cancel',id,operationId:'00000000-0000-4000-8000-000000000072',expectedRevision:3};
+ const calls=[];
+ let result={ok:true,event:{id,state:'cancelled',revision:4},replayed:false};
+ const transport={configured:()=>true,request:async(path,opts)=>{
+  calls.push({path,body:JSON.parse(opts.body)});return new Response(JSON.stringify(result));
+ }};
+ const events=createEventsRepository(transport,{requireCurrent:async()=>{throw new Error('expired consent must not prevent cancellation')}});
+ assert.deepEqual(await events.execute(actor,command),{event:{id,state:'cancelled',revision:4},replayed:false});
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_event_cancel_command');
+ assert.deepEqual(calls[0].body,{p_actor:identity.hash,p_command:command});
+ assert.equal(calls.length,1);
+ const n=calls.length;
+ await assert.rejects(events.execute({accountHash:identity.hash},command),e=>e.status===401);
+ await assert.rejects(events.execute(actor,{...command,ownerHash:identities.bob.hash}),e=>e.status===422);
+ assert.equal(calls.length,n);
+ result={ok:true,event:{id,state:'cancelled',revision:4},replayed:true,privateJoinUrl:'https://unsafe.example'};
+ await assert.rejects(events.execute(actor,command),e=>e.status===503);
+ result={ok:false,error:'resource_not_found'};
+ await assert.rejects(events.execute(actor,command),e=>e.status===404);
+});
