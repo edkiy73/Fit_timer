@@ -32,6 +32,19 @@ function weeklyThreshold(){
 }
 /** @param {number} n */
 const hideSmall=n=>n===0?0:n<5?null:n;
+/** Redis INCR counters are canonical decimal integers. Reject coercible objects,
+ * booleans, blanks and noncanonical strings rather than reporting false zeroes
+ * or incorrect suppressed counts after malformed storage/provider responses.
+ * @param {unknown} value */
+function counter(value){
+ if(value===null||value===undefined)return 0;
+ if(typeof value==='number'&&Number.isSafeInteger(value)&&value>=0)return value;
+ if(typeof value==='string'&&/^(0|[1-9][0-9]*)$/.test(value)){
+  const parsed=Number(value);
+  if(Number.isSafeInteger(parsed))return parsed;
+ }
+ throw new Error('metrics_unavailable');
+}
 /** @param {string} day @param {string} cohort @param {string} event */
 function key(day,cohort,event){return KEY_PREFIX+':'+day+':'+cohort+':'+event;}
 /** @param {{incr:(key:string,ttl:number)=>Promise<unknown>;many:(keys:string[])=>Promise<unknown[]>}} store */
@@ -65,8 +78,7 @@ function createPrivateMetrics(store){
    const output=emptyGroups(),weekOutput=emptyGroups();
    let i=0,weekActions=0,windowActions=0;
    for(let d=0;d<days;d++)for(const cohort of TYPES)for(const event of EVENTS){
-    const rawNumber=raw[i++];const n=rawNumber===null||rawNumber===undefined?0:Number(rawNumber);
-    if(!Number.isSafeInteger(n)||n<0)throw new Error('metrics_unavailable');
+    const n=counter(raw[i++]);
     output[cohort][event]+=n;
     windowActions+=n;
     if(d>=days-7){weekActions+=n;weekOutput[cohort][event]+=n;}
