@@ -182,6 +182,29 @@ describe('owner interest outbox',()=>{
   fail=true;expect(await other.save('interest-1-2',state,other.getSnapshot().scope)).toBe(false);
   expect(await s.store.change(db=>Object.values(db.owners)[0]!.pending.length)).toBe(1);
  });
+ it('does not send or trust a map request when the Core session cannot be read',async()=>{
+  const op:Mutation={action:'interests.set',interestId:'interest-1-1',operationId:uuid(),expectedRevision:0,state};
+  const accepted={ok:true,replayed:false,appliedRevision:1,appliedAt:at,entry:entry(1)};
+  let unavailable=true;
+  const send=vi.fn(async()=>new Response(JSON.stringify(accepted),{status:200}));
+  const api=createInterestAPI('/api/domain',async()=>{if(unavailable)throw Error('keychain unavailable');return a;},send);
+  await expect(api.mutate(a,op,new AbortController().signal)).rejects.toMatchObject({code:'auth_required'});
+  expect(send).not.toHaveBeenCalled();
+  unavailable=false;
+  const reply=vi.fn(async()=>{unavailable=true;return new Response(JSON.stringify(accepted),{status:200});});
+  const late=createInterestAPI('/api/domain',async()=>{if(unavailable)throw Error('keychain unavailable');return a;},reply);
+  await expect(late.mutate(a,op,new AbortController().signal)).rejects.toMatchObject({code:'auth_required'});
+  expect(reply).toHaveBeenCalledTimes(1);
+  unavailable=false;
+  const parsed=vi.fn(async()=>{
+   const response=new Response(JSON.stringify(accepted),{status:200});
+   response.json=async()=>{unavailable=true;return accepted;};
+   return response;
+  });
+  const afterParse=createInterestAPI('/api/domain',async()=>{if(unavailable)throw Error('keychain unavailable');return a;},parsed);
+  await expect(afterParse.mutate(a,op,new AbortController().signal)).rejects.toMatchObject({code:'auth_required'});
+  expect(parsed).toHaveBeenCalledTimes(1);
+ });
  it('guards request credentials and rejects invalid success envelopes instead of acknowledging writes',async()=>{
   let current:AuthSession|null=a;
   const send=vi.fn(async()=>new Response(JSON.stringify({ok:true,replayed:false,appliedRevision:1,appliedAt:at,entry:entry(1)}),{status:200}));

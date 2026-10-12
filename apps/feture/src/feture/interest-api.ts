@@ -25,12 +25,18 @@ export function sameSession(a:AuthSession|null,b:AuthSession|null){
  return a===b||!!a&&!!b&&a.email===b.email&&a.deviceId===b.deviceId&&a.syncToken===b.syncToken;
 }
 export function createInterestAPI(endpoint:string,getSession:()=>Promise<AuthSession|null>,send:typeof fetch=globalThis.fetch):InterestAPI {
+ // Credential-storage failures must never be mistaken for an offline request:
+ // no response may be accepted when the active owner session is unreadable.
+ async function checkedSession():Promise<AuthSession|null>{
+  try{return await getSession();}
+  catch{throw new InterestError('auth_required');}
+ }
  async function post(session:AuthSession,body:object,signal:AbortSignal){
-  if(!sameSession(await getSession(),session)||session.expiresAt&&Date.parse(session.expiresAt)<=Date.now())throw new InterestError('auth_required');
+  if(!sameSession(await checkedSession(),session)||session.expiresAt&&Date.parse(session.expiresAt)<=Date.now())throw new InterestError('auth_required');
   try {
    const response=await send(endpoint,{method:'POST',cache:'no-store',signal:AbortSignal.any([signal,AbortSignal.timeout(12000)]),
     headers:{'Content-Type':'application/json','x-fit-email':session.email,'x-fit-device':session.deviceId,'x-fit-token':session.syncToken},body:JSON.stringify(body)});
-   if(!sameSession(await getSession(),session)||signal.aborted)throw new InterestError('auth_required');
+   if(!sameSession(await checkedSession(),session)||signal.aborted)throw new InterestError('auth_required');
    // Proxy/provider error pages are not guaranteed to be JSON.
    // Respect the HTTP status (particularly 429 Retry-After) before parsing a body.
    if(!response.ok&&response.status!==409){
@@ -44,7 +50,7 @@ export function createInterestAPI(endpoint:string,getSession:()=>Promise<AuthSes
    let data:unknown;
    try{data=await response.json();}
    catch{throw new InterestError(signal.aborted?'auth_required':'unavailable');}
-   if(!sameSession(await getSession(),session)||signal.aborted)throw new InterestError('auth_required');
+   if(!sameSession(await checkedSession(),session)||signal.aborted)throw new InterestError('auth_required');
    return data;
   }catch(error){if(error instanceof InterestError)throw error;throw new InterestError(signal.aborted?'auth_required':'offline');}
  }
