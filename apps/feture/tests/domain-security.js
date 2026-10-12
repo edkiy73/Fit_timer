@@ -547,3 +547,48 @@ test('staff response bodies have finite deadlines, byte limits and cancellation'
  const oversized=new Response(new ReadableStream({start(controller){controller.enqueue(new Uint8Array(17));},cancel(){cancelled++;}}));
  await assert.rejects(readBoundedBody(oversized,16,100),e=>e.status===503);assert.equal(cancelled,2);
 });
+
+
+test('E01b owner-only event RPC uses authenticated Core actor and strict DTO',async()=>{
+ const {createEventsRepository,ownerDto}=require('../lib/feture/events');
+ const {eventCommand}=require('../lib/feture/event-contract');
+ const identity=identities.alice;await seed(identity);
+ const actor=await authenticate(req(identity),store,async()=>new Date(Date.now()+86400000).toISOString());
+ const draft={
+  title:'Private workshop',summary:'',description:'Discussion',conditions:'18+',
+  format:'online',visibility:'private',startsAt:'2026-11-01T18:00:00+08:00',
+  endsAt:'2026-11-01T20:00:00+08:00',timeZone:'Asia/Makassar',
+  language:'ru',city:'',publicLocation:'',privateLocation:null,
+  privateJoinUrl:'https://meet.example.org/secret',ticketUrl:null,price:null
+ };
+ const id='00000000-0000-4000-8000-000000000001';
+ const input={action:'events.save',id,operationId:'00000000-0000-4000-8000-000000000002',expectedRevision:0,draft};
+ const entry={id,revision:1,state:'draft',draft,createdAt:'2026-10-12T13:00:00.123456+00:00',updatedAt:'2026-10-12T13:00:00.123456+00:00'};
+ const calls=[],consents=[];
+ const transport={configured:()=>true,request:async(path,opts)=>{
+  calls.push({path,body:JSON.parse(opts.body)});
+  return new Response(JSON.stringify({ok:true,entry,replayed:false}));
+ }};
+ const documents={requireCurrent:async(a)=>{consents.push(a.accountHash);}};
+ const events=createEventsRepository(transport,documents);
+ assert.deepEqual((await events.execute(actor,input)).entry,entry);
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_event_owner_command');
+ assert.equal(calls[0].body.p_actor,identity.hash);
+ assert.deepEqual(calls[0].body.p_command,input);
+ assert.equal(consents.length,1);
+ assert.deepEqual(Object.keys(ownerDto({...entry,ownerHash:'other'})).sort(),['createdAt','draft','id','revision','state','updatedAt']);
+ await assert.rejects(events.execute({accountHash:identity.hash,verifiedAdult:true},input),e=>e.status===401);
+ await assert.rejects(events.execute(actor,{...input,ownerHash:identities.bob.hash}),e=>e.status===422);
+ await assert.rejects(events.execute(actor,{action:'events.catalog',cursor:null}),e=>e.status===422);
+ assert.equal(calls.length,1);
+ const unverified=await authenticate(req(identity),store);
+ await assert.rejects(events.execute(unverified,input),e=>e.status===403);
+ const denied=createEventsRepository(transport,{requireCurrent:async()=>{throw Object.assign(new Error('consent_required'),{status:403,code:'consent_required'});}});
+ await assert.rejects(denied.execute(actor,input),e=>e.status===403);
+ assert.equal(calls.length,1);
+ assert.equal(eventCommand(input).action,'events.save');
+});
+test('E01b PostgreSQL owner/ACL/CAS contract (isolated PGlite)',async()=>{
+ await (await import('./events-owner-postgres.mjs')).runEventOwnersPostgres();
+});
