@@ -45,6 +45,16 @@ describe('FetUre starter', () => {
     expect(await screen.findByRole('textbox',{name:'Email'})).toBeTruthy();
   });
 
+  it('separates Home from the personal World and renders five primary destinations', async () => {
+    signIn();
+    const user=userEvent.setup();
+    const router=renderApp('/');
+    expect(await screen.findByRole('heading',{name:/Продолжим с тебя/i})).toBeTruthy();
+    expect(screen.getByRole('navigation',{name:'Основная навигация FetUre'}).querySelectorAll('a')).toHaveLength(5);
+    await user.click(screen.getByRole('link',{name:/Мой мир/i,selector:'.ft-product-dock a'}));
+    expect(router.state.location.pathname).toBe('/world');
+    expect(await screen.findByRole('heading',{name:/Твой мир/i})).toBeTruthy();
+  });
   it('keeps the intended shared-card route in account sign-in navigation state', async () => {
     const id='91e9ee01-e4e2-4900-a7ad-144c46442390';
     const router=renderApp('/share/'+id);
@@ -134,7 +144,7 @@ describe('FetUre starter', () => {
       await screen.findByText('Запись сохранена. Её видишь только ты.');
       expect(calls).toHaveLength(2);expect(calls[1]).toEqual(calls[0]);
       await user.click(screen.getByRole('link',{name:'← Мой мир'}));
-      expect(await screen.findByRole('heading',{name:/Твой мир/i})).toBeTruthy();
+      expect(await screen.findByRole('heading',{name:/Продолжим с тебя/i})).toBeTruthy();
     } finally {vi.restoreAllMocks();}
   });
 

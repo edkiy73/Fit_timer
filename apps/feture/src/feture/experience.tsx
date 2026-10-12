@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link, useLocation } from 'react-router';
 import { LazyMotion, domAnimation, MotionConfig, m, useReducedMotion } from 'motion/react';
-import { Icon, type IconName } from './components/Icon';
+import { Icon } from './components/Icon';
+import { PRIMARY_TABS } from './primary-navigation';
 import { SectionTitle } from './components/SectionTitle';
 import { ActionButton, AppDialog, HintChip, Jar, StateCard, StatusToast } from './components/primitives';
 import { motionTokens } from './motion';
@@ -12,11 +13,6 @@ import { useInterestMap } from './use-interest-map';
 import {Community} from './community';
 import {ShareCardDialog} from './share-card';
 
-type Tab = 'world'|'explore'|'community'|'dating';
-const NAV:{id:Tab;title:string;icon:IconName}[]=[
-  {id:'world',title:'Мой мир',icon:'world'}, {id:'explore',title:'Исследовать',icon:'compass'},
-  {id:'community',title:'Сообщество',icon:'users'}, {id:'dating',title:'Знакомства',icon:'heart'}
-];
 const VIEWS:{id:Visibility;label:string}[]=[{id:'private',label:'Только мне'},{id:'granted',label:'По разрешению'},{id:'public',label:'Открыто'}];
 type Edit = {id:string; title:string;category:string;definition:string;synonyms:string[];relatedTitles:string[]};
 const PROFILES=[
@@ -50,20 +46,20 @@ export function FetureExperience(){
  return <LazyMotion features={domAnimation}><MotionConfig reducedMotion="user" transition={motionTokens.panel}><div className="ft-shell">
   <a className="ft-skip-link" href="#ft-main" onClick={e=>{e.preventDefault();area.current?.focus()}}>К содержимому</a>
   <aside className="ft-rail">
-    <button className="ft-brand" onClick={()=>go('world')} aria-label="На главную"><span>Fet</span>Ure<span className="ft-brand-dot">.</span></button>
+    <button className="ft-brand" onClick={()=>go('home')} aria-label="На главную"><span>Fet</span>Ure<span className="ft-brand-dot">.</span></button>
     <p className="ft-rail-caption">Пространство, где интересно быть собой.</p>
-    <nav className="ft-rail-links" aria-label="Основная навигация">{NAV.map(item=><Link key={item.id} className={`ft-navlink ${tab===item.id?'active':''}`} aria-current={tab===item.id?'page':undefined} to={item.id==='world'?'/':'/'+item.id}><Icon name={item.icon}/>{item.title}</Link>)}</nav>
+    <nav className="ft-rail-links" aria-label="Основная навигация">{PRIMARY_TABS.map(item=><Link key={item.id} className={`ft-navlink ${tab===item.id?'active':''}`} aria-current={tab===item.id?'page':undefined} to={item.to}><Icon name={item.icon}/>{item.title}</Link>)}</nav>
     <div className="ft-rail-bottom"><p>Твой путь, твои правила</p><Link to="/account"><Icon name="settings" size={18}/> Аккаунт и настройки</Link></div>
   </aside>
   <div className="ft-frame">
-    <header className="ft-topbar"><button className="ft-toplogo" onClick={()=>go('world')}>Fet<span>Ure</span></button>
+    <header className="ft-topbar"><button className="ft-toplogo" onClick={()=>go('home')}>Fet<span>Ure</span></button>
       <span className="ft-topline">Открывай себя. Исследуй других.</span>
       <Link className="ft-account" to="/account" aria-label="Аккаунт"><Icon name="settings" size={19}/></Link>
     </header>
     <nav className="ft-tablet-nav" aria-label="Основные разделы FetUre">
-      {NAV.map(item=><Link key={item.id} className={tab===item.id?'active':''}
+      {PRIMARY_TABS.map(item=><Link key={item.id} className={tab===item.id?'active':''}
         aria-current={tab===item.id?'page':undefined}
-        to={item.id==='world'?'/':'/'+item.id}><Icon name={item.icon} size={19}/>{item.title}</Link>)}
+        to={item.to}><Icon name={item.icon} size={19}/>{item.title}</Link>)}
     </nav>
     <main className="ft-main" id="ft-main" tabIndex={-1} ref={area} onScroll={e=>rememberScroll(e.currentTarget.scrollTop)}>
       <m.div className="ft-content" key={location.pathname} initial={reduceMotion?false:{opacity:0,y:6}} animate={{opacity:1,y:0}}>
@@ -83,6 +79,24 @@ export function FetureExperience(){
          </div>)}
         </>}
         {source!=='live'&&<div className="ft-network-hint" role="status"><Icon name={source==='loading'?'clock':'shield'} size={16}/>{source==='loading'?'Подключаем каталог…':'Не удалось обновить каталог. Доступные темы остаются на экране.'}{source==='offline'&&<button onClick={retry}>Обновить</button>}</div>}
+        {tab==='home'&&<section className="ft-home" aria-label="Главная">
+          <div className="ft-home-hero">
+            <span className="ft-home-kicker"><Icon name="spark" size={16}/> Твоё пространство открытий</span>
+            <h1>Продолжим <em>с тебя.</em></h1>
+            <p>Знакомься с новыми темами, исследуй свои интересы и находи людей, с которыми можно поговорить об этом.</p>
+            <div className="ft-home-actions"><Link to="/explore" className="ft-home-primary">Открыть новые темы <Icon name="arrow" size={20}/></Link><Link to="/world" className="ft-home-secondary">Мой мир <Icon name="arrow" size={17}/></Link></div>
+          </div>
+          <div className="ft-home-overview">
+            <div><span className="ft-home-overline">ТВОЁ ЛИЧНОЕ</span><h2>Карта твоего мира</h2><p>{mapLoading?'Загружаем твою карту…':overall.known>0?'Ты уже исследовал '+overall.known+' тем. Продолжай, когда захочешь.':'Пока здесь чистый лист. Выбери первую тему, и она станет частью твоей карты.'}</p><Link to="/world">Посмотреть мою карту <Icon name="arrow" size={17}/></Link></div>
+            <div className="ft-home-counter"><strong>{mapLoading?'—':overall.known}</strong><span>тем исследовано</span></div>
+          </div>
+          <div className="ft-home-quick" aria-label="Полезные разделы">
+            <Link to="/tests"><span className="ft-home-quick-icon lilac"><Icon name="book" size={24}/></span><strong>Вопросы к себе</strong><small>Ответь в своём темпе</small><Icon name="arrow" size={17}/></Link>
+            <Link to="/journal"><span className="ft-home-quick-icon rose"><Icon name="book" size={24}/></span><strong>Личный дневник</strong><small>Мысли, к которым можно вернуться</small><Icon name="arrow" size={17}/></Link>
+            <Link to="/community"><span className="ft-home-quick-icon gold"><Icon name="users" size={24}/></span><strong>Сообщество</strong><small>Истории и обсуждения</small><Icon name="arrow" size={17}/></Link>
+          </div>
+          {data.categories.length>0&&<div className="ft-home-feature"><div><span className="ft-home-overline">НЕСКОЛЬКО НАПРАВЛЕНИЙ</span><h2>Что хочется открыть?</h2><p>Начни с тем, которые вызывают любопытство.</p></div><div>{data.categories.slice(0,2).map(category=><button key={category.id} onClick={()=>openCategory(category.id)}><span style={{background:category.color}}/><strong>{category.title}</strong><Icon name="arrow" size={17}/></button>)}</div></div>}
+        </section>}
         {tab==='world'&&<>
           <div className="ft-hero">
             <div><p className="ft-hero-kicker">Личное пространство</p><h1>Твой мир.<br/><span>Твои грани.</span></h1>
@@ -168,7 +182,8 @@ export function FetureExperience(){
 
       </m.div>
     </main>
-    <nav className="ft-mobile-nav" aria-label="Основная навигация">{NAV.map(x=><Link key={x.id} className={tab===x.id?'active':''} aria-current={tab===x.id?'page':undefined} to={x.id==='world'?'/':'/'+x.id}><Icon name={x.icon} size={22}/><span>{x.title}</span></Link>)}</nav>
+
+
   </div>
   {saving&&<StatusToast tone="loading" title="Сохраняем изменения…"/>}
   {shareOpen&&scope!=='loading'&&<ShareCardDialog key={scope} categories={data.categories} map={map} server={server} phase={phase} pending={pending} conflicts={conflicts} onClose={()=>setShareOpen(false)}/>}
