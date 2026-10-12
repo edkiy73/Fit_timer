@@ -1,6 +1,7 @@
+@import "./tokens.css";
 
 /* FetUre native React experience. Scoped: no cross-product selectors. */
-.ft-shell{display:flex;min-height:100dvh;width:100%;background:var(--ft-bg);color:var(--ft-ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.45}
+.ft-shell{display:flex;min-height:100dvh;width:100%;background:var(--ft-bg);color:var(--ft-ink);font-family:var(--ft-font);font-size:14px;line-height:1.45}
 .ft-shell *{box-sizing:border-box}.ft-shell :where(button,input){font:inherit}.ft-shell button{border:0;cursor:pointer;color:inherit}.ft-shell button:focus-visible,.ft-shell a:focus-visible{outline:3px solid #9475e8;outline-offset:3px}.ft-shell a{color:inherit;text-decoration:none}
 .ft-rail{background:#241628;color:#fff;width:244px;flex-shrink:0;min-height:100vh;padding:30px 20px 24px;display:flex;flex-direction:column;gap:16px}
 .ft-brand{background:none;font-size:28px;font-weight:900;letter-spacing:-1.6px;text-align:left;color:#fff!important;line-height:1.15;padding:0}.ft-brand span:first-child{color:#ff7898}.ft-brand-dot{color:#d0bbff}
@@ -82,10 +83,8 @@
 @media (hover:none) and (pointer:coarse){.ft-topic,.ft-navlink,.ft-recommend-card{min-height:44px}}
 
 /* Shared tokens also reach React Aria's portal. */
-:root{--ft-ink:#281c29;--ft-muted:#71616f;--ft-rose:#e72c58;--ft-violet:#6b4ac7;--ft-border:#ece1e9;--ft-bg:#f7f2f6;--ft-white:#fff;--ft-surface:#f5eef3}
-:root[data-theme=dark]{--ft-ink:#f3eaf3;--ft-muted:#c6b6c6;--ft-border:#554354;--ft-bg:#211b24;--ft-white:#302635;--ft-surface:#403144}
 .ft-modal{width:min(100%,520px);min-width:0;outline:none}
-.ft-dialog{width:100%;color:var(--ft-ink);font:14px/1.45 Inter,system-ui,sans-serif;box-sizing:border-box;overscroll-behavior:contain}
+.ft-dialog{width:100%;color:var(--ft-ink);font:14px/1.5 var(--ft-font);box-sizing:border-box;overscroll-behavior:contain}
 .ft-dialog *{box-sizing:border-box}.ft-dialog button,.ft-dialog input{font:inherit;color:inherit}.ft-dialog button{cursor:pointer;border:0}.ft-dialog button:focus-visible,.ft-dialog input:focus-visible{outline:3px solid #9475e8;outline-offset:3px}
 .ft-dialog-close,.ft-account{width:44px;height:44px}.ft-dialog-close,.ft-status,.ft-visibility-options button{background:var(--ft-surface)}
 .ft-dialog-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}.ft-back,.ft-textbtn{min-height:44px}
@@ -97,9 +96,9 @@
 .ft-photo-dots button{height:44px;background:transparent;position:relative}.ft-photo-dots button:after{content:'';position:absolute;top:2px;left:0;right:0;height:3px;background:#ffffff75;border-radius:9px}.ft-photo-dots button.selected{background:transparent}.ft-photo-dots button.selected:after{background:white}
 .ft-overlay[data-entering]{animation:ft-fade .16s ease-out}.ft-modal[data-entering]{animation:ft-dialog-in .2s ease-out}
 @keyframes ft-spin{to{transform:rotate(360deg)}}@keyframes ft-fade{from{opacity:0}to{opacity:1}}@keyframes ft-dialog-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-:root[data-theme=dark] :is(.ft-tablet-nav,.ft-mobile-nav,.ft-network-hint,.ft-explore-art,.ft-note){background:var(--ft-white);border-color:var(--ft-border)}
+:root[data-theme=dark] :is(.ft-network-hint,.ft-explore-art,.ft-note){background:var(--ft-white);border-color:var(--ft-border)}
 :root[data-theme=dark] :is(.ft-post-copy,.ft-note,.ft-note p,.ft-dating-info>p:not(.ft-eyebrow),.ft-explore-art p,.ft-topline,.ft-topic small,.ft-jar-card>span,.ft-statbar small){color:var(--ft-muted)}
-:root[data-theme=dark] :is(.ft-mobile-nav a.active,.ft-tablet-nav a.active,.ft-status.active,.ft-status.ft-hard.active,.ft-visibility-options button.active){background:#513447;color:#ffb5cf;border-color:#b882a2!important}
+:root[data-theme=dark] :is(.ft-status.active,.ft-status.ft-hard.active,.ft-visibility-options button.active){background:#513447;color:#ffb5cf;border-color:#b882a2!important}
 :root[data-theme=dark] .ft-textbtn{color:#ffb5cf!important}
 @media(max-width:767px){.ft-topbar{height:calc(56px + env(safe-area-inset-top,0px))}.ft-mobile-nav{left:env(safe-area-inset-left,0px);right:env(safe-area-inset-right,0px)}}
 @media(max-height:500px) and (orientation:landscape){.ft-content{padding-top:16px}.ft-dating-card{min-height:300px}.ft-dialog{max-height:calc(100dvh - 24px)}}
@@ -185,5 +184,43 @@
 .ft-explore-guide[open] summary::after{content:'−'}
 .ft-explore-guide summary:focus-visible{outline:3px solid var(--accent-ink);outline-offset:3px;border-radius:16px}
 .ft-explore-guide p{margin:0;padding:0 14px 14px;font-size:13px;line-height:1.5;color:var(--ft-muted)}
+
+/* DUX01: the same shell vocabulary on desktop, tablet and phone. */
+.ft-rail{background:var(--ft-white);color:var(--ft-ink);border-right:1px solid var(--ft-border);padding:var(--ft-space-4);gap:var(--ft-space-3)}
+.ft-rail .ft-brand{color:var(--ft-ink)!important}
+.ft-brand span:first-child,.ft-toplogo span{color:var(--ft-rose)}
+.ft-brand-dot{color:var(--ft-violet)}
+.ft-rail-caption{color:var(--ft-muted);margin-bottom:var(--ft-space-4)}
+.ft-rail-bottom,.ft-rail-bottom a,.ft-rail-bottom a:last-child{color:var(--ft-muted)}
+.ft-navlink{border-radius:var(--ft-radius-control);color:var(--ft-muted)!important;min-height:48px;transition:background-color var(--ft-motion-press) var(--ft-ease),color var(--ft-motion-press) var(--ft-ease)}
+.ft-navlink.active,.ft-navlink.active svg{background:var(--ft-accent-soft);color:var(--ft-accent-ink)!important}
+.ft-topbar{border-color:var(--ft-border)}
+.ft-topline{color:var(--ft-muted)}
+.ft-account{background:var(--ft-surface);border-color:var(--ft-border);border-radius:var(--ft-radius-control)}
+.ft-shell :is(button,a):focus-visible,.ft-dialog :is(button,input,a,textarea):focus-visible{outline-color:var(--ft-violet)}
+.ft-heading{margin-bottom:var(--ft-space-4)}
+.ft-heading .ft-muted{font-size:15px;line-height:1.6}
+.ft-shell .ft-eyebrow{color:var(--ft-accent-ink)}
+.ft-shell .ft-primary{border-radius:var(--ft-radius-control);background:var(--ft-action-fill);transition:filter var(--ft-motion-press) var(--ft-ease),transform var(--ft-motion-press) var(--ft-ease)}
+.ft-shell .ft-hero-cta{background:#fff}
+.ft-shell .ft-primary:hover{filter:brightness(.96)}
+.ft-shell :is(.ft-jar-card,.ft-category-card,.ft-recommend-card){box-shadow:var(--ft-shadow);transition:transform var(--ft-motion-press) var(--ft-ease),border-color var(--ft-motion-press) var(--ft-ease)}
+.ft-shell :is(.ft-jar-card,.ft-category-card,.ft-recommend-card):active{transform:scale(.985)}
+.ft-shell .ft-tablet-nav{border-color:var(--ft-border)}
+.ft-shell :is(.ft-tablet-nav,.ft-mobile-nav) a{color:var(--ft-muted);transition:background-color var(--ft-motion-press) var(--ft-ease),color var(--ft-motion-press) var(--ft-ease)}
+.ft-shell :is(.ft-tablet-nav,.ft-mobile-nav) a.active{background:var(--ft-accent-soft);color:var(--ft-accent-ink)}
+@media(hover:hover){
+ .ft-navlink:hover{background:var(--ft-surface);color:var(--ft-ink)!important}
+ .ft-navlink.active:hover{background:var(--ft-accent-soft);color:var(--ft-accent-ink)!important}
+ .ft-shell :is(.ft-jar-card,.ft-category-card,.ft-recommend-card):hover{transform:translateY(-2px);border-color:var(--ft-violet)!important}
+}
+@media(max-width:767px){
+ .ft-shell .ft-mobile-nav{left:calc(12px + env(safe-area-inset-left,0px));right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));padding:6px;border:1px solid var(--ft-border);border-radius:var(--ft-radius-card);background:var(--ft-nav);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:var(--ft-shadow);gap:2px}
+ .ft-mobile-nav a{border-radius:18px;min-width:0;min-height:52px;gap:4px}
+ .ft-mobile-nav span{font-size:10px;white-space:normal;overflow-wrap:anywhere;text-align:center;line-height:1.3}
+}
+@media(prefers-reduced-motion:reduce){
+ .ft-shell :is(.ft-jar-card,.ft-category-card,.ft-recommend-card):is(:hover,:active){transform:none}
+}
 
 .ft-explore-empty .ft-state{flex-wrap:wrap;align-items:flex-start}.ft-explore-empty .ft-state>div{flex:1 1 200px;min-width:0}.ft-explore-empty button{max-width:100%;white-space:normal}
