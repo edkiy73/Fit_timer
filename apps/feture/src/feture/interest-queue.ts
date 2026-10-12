@@ -34,6 +34,18 @@ export function createInterestQueue(deps:{store:InterestStore;api:InterestAPI;ge
  const listeners=new Set<()=>void>();
  function publish(value:InterestSnapshot){snapshot=value;for(const listener of listeners)listener();}
  const signalChange=()=>deps.changed?.();
+ // A failed Core session read is not permission to keep a previous owner's
+ // cached map on screen. Fence active work, but leave the durable outbox intact.
+ async function checkedSession():Promise<AuthSession|null>{
+  try{return await getSession();}
+  catch{
+   if(!disposed){
+    ++generation;controller?.abort();controller=null;running=null;
+    clearTimeout(timer);context=null;publish(blank('auth_required'));
+   }
+   throw new InterestError('auth_required');
+  }
+ }
  const valid=(db:InterestDatabase,c:Context)=>context===c&&!db.blocked[c.stamp]&&db.owners[c.owner]?.session===c.stamp;
  async function identity(session:AuthSession):Promise<Context>{return {owner:await hash(session.email.trim().toLowerCase()),stamp:await hash(JSON.stringify([session.email,session.deviceId,session.syncToken])),session};}
  async function show(phase:InterestPhase=snapshot.phase){
@@ -48,7 +60,8 @@ export function createInterestQueue(deps:{store:InterestStore;api:InterestAPI;ge
   if(g===generation&&!disposed)publish(value);
  }
  async function select(){
-  const session=await getSession();
+  let session:AuthSession|null;
+  try{session=await checkedSession();}catch{return;}
   const expired=!!session?.expiresAt&&Date.parse(session.expiresAt)<=now();
   if(!expired&&sameSession(context?.session??null,session)&&snapshot.scope!=='loading')return;
   const g=++generation;controller?.abort();controller=null;running=null;clearTimeout(timer);context=null;publish(blank());
@@ -62,7 +75,7 @@ export function createInterestQueue(deps:{store:InterestStore;api:InterestAPI;ge
     return true;
    });
    if(g!==generation||disposed)return;
-   if(!sameSession(await getSession(),session)){if(g===generation)await select();return;}
+   if(!sameSession(await checkedSession(),session)){if(g===generation)await select();return;}
    if(!allowed){publish(blank('auth_required'));return;}
    context=c;await show(c?'pending':'local');
   }catch{if(g===generation)publish(blank('storage_error'));}
@@ -71,7 +84,7 @@ export function createInterestQueue(deps:{store:InterestStore;api:InterestAPI;ge
   await select();
   if(scope!==snapshot.scope||scope==='loading')throw new InterestError('auth_required');
   const c=context;
-  if(c&&!sameSession(await getSession(),c.session))throw new InterestError('auth_required');
+  if(c&&!sameSession(await checkedSession(),c.session))throw new InterestError('auth_required');
   return c;
  }
  function schedule(delay:number){clearTimeout(timer);if(!disposed)timer=setTimeout(()=>{void sync();},Math.max(1000,delay));}
@@ -89,7 +102,7 @@ export function createInterestQueue(deps:{store:InterestStore;api:InterestAPI;ge
    if(wait){schedule(wait);return;}
    await show('syncing');
    for(let n=0;n<512;n++){
-    if(!sameSession(await getSession(),c.session)||context!==c||abort.signal.aborted)throw new InterestError('auth_required');
+    if(!sameSession(await checkedSession(),c.session)||context!==c||abort.signal.aborted)throw new InterestError('auth_required');
     const op=await store.change(db=>{
      if(!valid(db,c))throw new InterestError('auth_required');const cache=db.owners[c.owner]!;
      if(cache.lease?.id!==leaseId)throw new InterestError('unavailable');
@@ -97,7 +110,7 @@ export function createInterestQueue(deps:{store:InterestStore;api:InterestAPI;ge
     });
     if(!op)break;
     const result=await api.mutate(c.session,op,abort.signal);
-    if(!sameSession(await getSession(),c.session)||context!==c||abort.signal.aborted)throw new InterestError('auth_required');
+    if(!sameSession(await checkedSession(),c.session)||context!==c||abort.signal.aborted)throw new InterestError('auth_required');
     await store.change(db=>{
      if(!valid(db,c))return;const cache=db.owners[c.owner]!;
      if(cache.lease?.id!==leaseId||!cache.pending.some(p=>p.operationId===op.operationId))return;
@@ -112,7 +125,7 @@ export function createInterestQueue(deps:{store:InterestStore;api:InterestAPI;ge
     });signalChange();await show('syncing');
    }
    const entries=await api.list(c.session,abort.signal);
-   if(!sameSession(await getSession(),c.session)||context!==c||abort.signal.aborted)throw new InterestError('auth_required');
+   if(!sameSession(await checkedSession(),c.session)||context!==c||abort.signal.aborted)throw new InterestError('auth_required');
    const ready=await store.change(db=>{if(!valid(db,c))return false;const cache=db.owners[c.owner]!;for(const entry of entries)putEntry(cache,entry);return cache.pending.some(p=>!cache.conflicts[p.interestId]);});
    signalChange();await show(snapshot.pending?'pending':'synced');
    if(ready)schedule(1000);
@@ -120,7 +133,9 @@ export function createInterestQueue(deps:{store:InterestStore;api:InterestAPI;ge
    if(context!==c)return;
    const code=error instanceof InterestError?error.code:'storage_error';
    if(code==='auth_required'){
-    if(!sameSession(await getSession(),c.session)){await select();return;}
+    let fresh:AuthSession|null;
+    try{fresh=await checkedSession();}catch{return;} // Already fenced: do not reject background sync.
+    if(!sameSession(fresh,c.session)){await select();return;}
     await store.change(db=>{db.blocked[c.stamp]=true;}).catch(()=>{});signalChange();
    }
    if(['offline','unavailable','rate_limited'].includes(code)){
@@ -196,8 +211,8 @@ export function createInterestQueue(deps:{store:InterestStore;api:InterestAPI;ge
    }catch{await show('storage_error').catch(()=>{});return false;}
   },
   async prepareLogout(expected?:AuthSession|null){
-   const session=await getSession();if(expected!==undefined&&!sameSession(session,expected))throw new InterestError('auth_required');if(!session)return null;const c=await identity(session);
-   if(!sameSession(await getSession(),session))throw new InterestError('auth_required');
+   const session=await checkedSession();if(expected!==undefined&&!sameSession(session,expected))throw new InterestError('auth_required');if(!session)return null;const c=await identity(session);
+   if(!sameSession(await checkedSession(),session))throw new InterestError('auth_required');
    const pending=await store.change(db=>{db.blocked[c.stamp]=true;return db.owners[c.owner]?.pending.length??0;});
    controller?.abort();generation++;context=null;running=null;clearTimeout(timer);publish(blank('auth_required'));signalChange();return {...c,pending};
   },
