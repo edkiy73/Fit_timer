@@ -888,3 +888,38 @@ test('E04c owner roster: Core actor and strict no-account no-private-nickname pr
  reply={ok:false,error:'resource_not_found'};
  await assert.rejects(api.execute(adult,action),e=>e.status===404);
 });
+
+
+test('E04c2 peer roster: Core consent, no client actor, strict opted-in public identity',async()=>{
+ const {createEventsRepository,peerDto}=require('../lib/feture/events');
+ const who=identities.alice;await seed(who);
+ const adult=await authenticate(req(who),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const unverified=await authenticate(req(who),store);
+ const event='00000000-0000-4000-8000-000000000093',participationId='00000000-0000-4000-8000-000000000094';
+ const cmd={action:'events.peers',id:event,cursor:null};
+ const item={participationId,status:'going',updatedAt:'2026-10-12T16:00:00.123456+00:00',
+   displayName:'Public nick'};
+ let data={ok:true,items:[item],nextCursor:null};const calls=[];
+ const repo=createEventsRepository({configured:()=>true,request:async(path,opts)=>{
+  calls.push({path,body:JSON.parse(opts.body)});return new Response(JSON.stringify(data));
+ }},{requireCurrent:async()=>{}});
+ assert.deepEqual((await repo.execute(adult,cmd)).items,[item]);
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_event_attendee_peers');
+ assert.deepEqual(calls[0].body,{p_actor:who.hash,p_command:cmd});
+ assert.deepEqual(peerDto(item),item);
+ const n=calls.length;
+ for(const payload of [{...cmd,ownerHash:identities.bob.hash},
+   {...cmd,visibleToAttendees:true},
+   {...cmd,cursor:{at:'not-a-date',id:event}}])
+  await assert.rejects(repo.execute(adult,payload),e=>e.status===422);
+ await assert.rejects(repo.execute(unverified,cmd),e=>e.status===403);
+ assert.equal(calls.length,n);
+ data={ok:true,items:[{...item,accountHash:'secret'}],nextCursor:null};
+ await assert.rejects(repo.execute(adult,cmd),e=>e.status===503);
+ data={ok:true,items:[{...item,status:'declined'}],nextCursor:null};
+ await assert.rejects(repo.execute(adult,cmd),e=>e.status===503);
+ data={ok:true,items:[{...item,displayName:null}],nextCursor:null};
+ await assert.rejects(repo.execute(adult,cmd),e=>e.status===503);
+ data={ok:false,error:'resource_not_found'};
+ await assert.rejects(repo.execute(adult,cmd),e=>e.status===404);
+});
