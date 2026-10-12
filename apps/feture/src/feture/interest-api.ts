@@ -49,12 +49,17 @@ export function createInterestAPI(endpoint:string,getSession:()=>Promise<AuthSes
   try{return await getSession();}
   catch{throw new InterestError('auth_required');}
  }
+ async function requireCurrentSession(session:AuthSession,signal:AbortSignal){
+  if(signal.aborted||!sameSession(await checkedSession(),session)
+   ||typeof session.expiresAt==='string'&&!(Date.parse(session.expiresAt)>Date.now()))
+   throw new InterestError('auth_required');
+ }
  async function post(session:AuthSession,body:object,signal:AbortSignal){
-  if(!sameSession(await checkedSession(),session)||session.expiresAt&&Date.parse(session.expiresAt)<=Date.now())throw new InterestError('auth_required');
+  await requireCurrentSession(session,signal);
   try {
    const response=await send(endpoint,{method:'POST',cache:'no-store',signal:AbortSignal.any([signal,AbortSignal.timeout(12000)]),
     headers:{'Content-Type':'application/json','x-fit-email':session.email,'x-fit-device':session.deviceId,'x-fit-token':session.syncToken},body:JSON.stringify(body)});
-   if(!sameSession(await checkedSession(),session)||signal.aborted)throw new InterestError('auth_required');
+   await requireCurrentSession(session,signal);
    // Proxy/provider error pages are not guaranteed to be JSON.
    // Respect the HTTP status (particularly 429 Retry-After) before parsing a body.
    if(!response.ok&&response.status!==409){
@@ -67,7 +72,7 @@ export function createInterestAPI(endpoint:string,getSession:()=>Promise<AuthSes
    let data:unknown;
    try{data=await response.json();}
    catch{throw new InterestError(signal.aborted?'auth_required':'unavailable');}
-   if(!sameSession(await checkedSession(),session)||signal.aborted)throw new InterestError('auth_required');
+   await requireCurrentSession(session,signal);
    return data;
   }catch(error){if(error instanceof InterestError)throw error;throw new InterestError(signal.aborted?'auth_required':'offline');}
  }
