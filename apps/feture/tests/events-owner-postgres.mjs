@@ -32,7 +32,9 @@ export async function runEventOwnersPostgres(){
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002800_feture_event_attendance_requests.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002900_feture_event_owner_request_queue.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013003100_feture_event_staff_publication.sql',import.meta.url),'utf8'));
-  await db.exec(readFileSync(new URL('../supabase/migrations/20261013003200_feture_event_attendance_owner_decisions.sql',import.meta.url),'utf8'))
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261013003200_feture_event_attendance_owner_decisions.sql',import.meta.url),'utf8'));
+  await db.exec("create table public.feture_profile_details(account_hash text primary key,data jsonb not null,public_fields text[] not null default '{}');grant select,insert,update on public.feture_profile_details to service_role;");
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261013003300_feture_event_owner_attendees.sql',import.meta.url),'utf8'));
   const a='a'.repeat(32),b='b'.repeat(32),guest='c'.repeat(32),manager='d'.repeat(32),qa='e'.repeat(32),auditor='f'.repeat(32),generation='1'.repeat(64);
   await db.query('insert into public.feture_profiles(account_hash) values ($1),($2),($3),($4),($5),($6)',[a,b,guest,manager,qa,auditor]);
   for(const [who,role] of [[manager,'manager'],[qa,'qa_operator'],[auditor,'auditor'],[a,'manager']])await db.query('insert into public.fixture_staff_role values ($1,$2,$3)',[who,generation,role]);
@@ -462,6 +464,47 @@ export async function runEventOwnersPostgres(){
    assert.equal(JSON.stringify(audit.response).includes('privateLocation'),false);
   }
 
+
+  // E04c organizer-only, currently-public nickname, no individual declined list.
+  const attendees=async(who,eventId=44,cursor=null)=>(await db.query(
+   'select public.feture_event_owner_attendees($1,$2::jsonb) result',
+   [who,JSON.stringify({action:'events.attendees',id:id(eventId),cursor})])).rows[0].result;
+  assert.equal((await attendees(b)).error,'resource_not_found');
+  assert.equal((await attendees(a,41)).error,'resource_not_found');
+  assert.equal((await attendees(a,42)).error,'resource_not_found');
+  // Earlier RSVP test intentionally blocked b; clear that fixture before testing active audience.
+  await db.query('delete from public.feture_blocks where blocker_hash=$1 and blocked_hash=$2',[a,b]);
+  await db.query("insert into public.feture_profile_details(account_hash,data,public_fields) values($1,$2::jsonb,$3::text[]),($4,$5::jsonb,$6::text[])",
+   [guest,JSON.stringify({nickname:'Public attendee',about:'secret'}),['nickname'],
+    b,JSON.stringify({nickname:'HIDDEN_NAME',about:'secret'}),[]]);
+  await db.query("update public.feture_event_attendance_requests set state='approved' where event_id=$1 and actor_hash=$2",
+   [id(44),'00000000000000000000000000000001']);
+  await db.query("insert into public.feture_event_rsvps(event_id,actor_hash,status,visible_to_attendees) values($1,$2,'interested',false),($1,$3,'going',false),($1,$4,'declined',false)",
+   [id(44),guest,b,manager]);
+  const attendeePage=await attendees(a);
+  assert.equal(attendeePage.items.length,3);
+  assert.deepEqual(attendeePage.counts,{
+   interested:1,going:1,rsvpDeclined:1,requestsPending:20,
+   requestsApproved:1,requestsDeclined:0
+  });
+  assert.equal(attendeePage.items.some(x=>x.status==='interested'&&x.displayName==='Public attendee'),true);
+  assert.equal(attendeePage.items.some(x=>x.status==='going'&&x.displayName===null),true);
+  assert.equal(attendeePage.items.some(x=>x.kind==='request'&&x.status==='approved'),true);
+  assert.equal(attendeePage.items.some(x=>x.status==='declined'||x.status==='withdrawn'),false);
+  assert.equal(JSON.stringify(attendeePage).includes('HIDDEN_NAME'),false);
+  assert.equal(JSON.stringify(attendeePage).includes(manager),false);
+  assert.equal(JSON.stringify(attendeePage).includes(guest),false);
+  await db.query("update public.feture_profile_details set public_fields='{}' where account_hash=$1",[guest]);
+  assert.equal((await attendees(a)).items.some(x=>x.displayName==='Public attendee'),false);
+  await db.query("insert into public.feture_blocks(blocker_hash,blocked_hash) values($1,$2)",[a,guest]);
+  assert.equal((await attendees(a)).counts.interested,0);
+  await db.query("update public.feture_profiles set adult_allowed=false where account_hash=$1",[b]);
+  assert.equal((await attendees(a)).counts.going,0);
+  await db.query("update public.feture_profiles set adult_allowed=true where account_hash=$1",[b]);
+  assert.equal((await attendees(a,44,{at:'bad',id:id(1)})).error,'invalid_cursor');
+  await db.query("update public.feture_events set state='cancelled',published_at=null where id=$1",[id(44)]);
+  assert.equal((await attendees(a)).error,'resource_not_found');
+
   await db.query('update public.feture_profiles set adult_allowed=false where account_hash=$1',[manager]);
   assert.equal((await decide(manager,rejectOne)).error,'forbidden');
   assert.equal((await staffRpc(manager)).error,'forbidden');
@@ -493,6 +536,7 @@ export async function runEventOwnersPostgres(){
    await assert.rejects(eventPreview(guest,50),/permission denied/);
    await assert.rejects(db.query('select * from public.feture_event_attendance_requests'),/permission denied/);
    await assert.rejects(db.query('select * from public.feture_event_attendance_decisions'),/permission denied/);
+   await assert.rejects(attendees(a,44),/permission denied/);
    await assert.rejects(attendanceDecision(a,decision(guestId,1,4999)),/permission denied/);
    await assert.rejects(requestQueue(a,44),/permission denied/);
    await assert.rejects(db.query('select * from public.feture_event_attendance_operations'),/permission denied/);

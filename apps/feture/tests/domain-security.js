@@ -849,3 +849,42 @@ test('E04b2b owner decision: trusted Core generation and minimal approve/decline
  response={ok:false,error:'resource_not_found'};
  await assert.rejects(events.execute(actor,action),err=>err.status===404);
 });
+
+
+test('E04c owner roster: Core actor and strict no-account no-private-nickname projection',async()=>{
+ const {createEventsRepository,attendeeDto,attendeeCountsDto}=require('../lib/feture/events');
+ const identity=identities.alice;await seed(identity);
+ const adult=await authenticate(req(identity),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const unverified=await authenticate(req(identity),store);
+ const eid='00000000-0000-4000-8000-000000000091';
+ const item={participationId:'00000000-0000-4000-8000-000000000092',
+  kind:'rsvp',status:'going',updatedAt:'2026-10-12T15:00:00.123456+00:00',
+  displayName:null};
+ const counts={interested:0,going:1,rsvpDeclined:1,
+  requestsPending:2,requestsApproved:0,requestsDeclined:3};
+ const action={action:'events.attendees',id:eid,cursor:null};
+ const calls=[];let reply={ok:true,items:[item],counts,nextCursor:null};
+ const api=createEventsRepository({configured:()=>true,request:async(path,opts)=>{
+  calls.push({path,body:JSON.parse(opts.body)});return new Response(JSON.stringify(reply));
+ }},{requireCurrent:async()=>{}});
+ assert.deepEqual(await api.execute(adult,action),{items:[item],counts,nextCursor:null});
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_event_owner_attendees');
+ assert.deepEqual(calls[0].body,{p_actor:identity.hash,p_command:action});
+ assert.deepEqual(attendeeDto(item),item);
+ assert.deepEqual(attendeeCountsDto(counts),counts);
+ const before=calls.length;
+ for(const bad of [{...action,ownerHash:identities.bob.hash},
+   {...action,cursor:{at:'yesterday',id:eid}},
+   {...action,viewerId:'private'}])
+  await assert.rejects(api.execute(adult,bad),e=>e.status===422);
+ await assert.rejects(api.execute(unverified,action),e=>e.status===403);
+ assert.equal(calls.length,before);
+ reply={ok:true,items:[{...item,actorHash:identity.hash}],counts,nextCursor:null};
+ await assert.rejects(api.execute(adult,action),e=>e.status===503);
+ reply={ok:true,items:[{...item,status:'declined'}],counts,nextCursor:null};
+ await assert.rejects(api.execute(adult,action),e=>e.status===503);
+ reply={ok:true,items:[item],counts:{...counts,going:-1},nextCursor:null};
+ await assert.rejects(api.execute(adult,action),e=>e.status===503);
+ reply={ok:false,error:'resource_not_found'};
+ await assert.rejects(api.execute(adult,action),e=>e.status===404);
+});
