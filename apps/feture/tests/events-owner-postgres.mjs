@@ -264,7 +264,7 @@ export async function runEventOwnersPostgres(){
    await assert.rejects(rpc(a,{action:'events.cancel',id:id(1),operationId:id(9999),expectedRevision:5}),/permission denied/);
    await assert.rejects(db.query('select * from public.feture_event_rsvps'),/permission denied/);
    await assert.rejects(db.query('select * from public.feture_event_rsvp_operations'),/permission denied/);
-   await assert.rejects(rsvp(c,{action:'events.rsvpStatus',id:id(40)}),/permission denied/);
+   await assert.rejects(rsvp(guest,{action:'events.rsvpStatus',id:id(40)}),/permission denied/);
    await db.exec('reset role');
   }
  }finally{await db.close();}
