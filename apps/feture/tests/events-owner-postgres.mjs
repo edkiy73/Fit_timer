@@ -16,7 +16,7 @@ export async function runEventOwnersPostgres(){
  try{
   await db.exec('create role anon;create role authenticated;create role service_role bypassrls;');
   await db.exec("create schema feture_seed;create table feture_seed.environment(singleton boolean,project_ref text,stage text);insert into feture_seed.environment values(true,'anrhayozrhrmiwexmbhw','prelaunch');");
-  await db.exec('create table public.feture_profiles(account_hash text primary key,adult_allowed boolean not null default true);');
+  await db.exec('create table public.feture_profiles(account_hash text primary key,adult_allowed boolean not null default true);grant select,insert,update,delete on public.feture_profiles to service_role;');
   await db.exec("create function public.feture_peer_eligible(p text) returns boolean language sql stable security invoker as $$ select exists(select 1 from public.feture_profiles where account_hash=p and adult_allowed) $$;");
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002000_feture_event_owner_drafts.sql',import.meta.url),'utf8'));
   const a='a'.repeat(32),b='b'.repeat(32),guest='c'.repeat(32);
