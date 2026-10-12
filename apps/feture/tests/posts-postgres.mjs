@@ -7,7 +7,7 @@ const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
 test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and irreversible text removal',async()=>{
  const db=new PGlite();try{
  await db.exec('create role anon;create role authenticated;create role service_role bypassrls;');
- for(const file of ['20261010_001_feture_domain.sql','20261010_002_catalog_read.sql','20261010090405_feture_scoped_seed.sql','20261010164924_feture_interest_transactions.sql','20261010225100_feture_verification_store.sql','20261010225653_feture_documents.sql','20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql','20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql','20261011083303_feture_qa_adult_access.sql','20261011113717_feture_qa_any_account_audit.sql','20261011120139_feture_operator_roles.sql','20261011121629_feture_operator_account_binding.sql','20261011133134_feture_community_posts.sql','20261011134257_feture_post_review.sql','20261011140051_feture_post_reports.sql','20261011140835_feture_post_report_author_privacy.sql','20261011141800_feture_post_recipients.sql','20261011043127_feture_questionnaires.sql','20261011045829_feture_questionnaires_release.sql','20261011190651_feture_test_result_posts.sql','20261011193939_feture_post_photos.sql','20261012050032_feture_photo_review_consent.sql'])await db.exec(sql(file));
+ for(const file of ['20261010_001_feture_domain.sql','20261010_002_catalog_read.sql','20261010090405_feture_scoped_seed.sql','20261010164924_feture_interest_transactions.sql','20261010225100_feture_verification_store.sql','20261010225653_feture_documents.sql','20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql','20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql','20261011083303_feture_qa_adult_access.sql','20261011113717_feture_qa_any_account_audit.sql','20261011120139_feture_operator_roles.sql','20261011121629_feture_operator_account_binding.sql','20261011133134_feture_community_posts.sql','20261011134257_feture_post_review.sql','20261011140051_feture_post_reports.sql','20261011140835_feture_post_report_author_privacy.sql','20261011141800_feture_post_recipients.sql','20261011043127_feture_questionnaires.sql','20261011045829_feture_questionnaires_release.sql','20261011190651_feture_test_result_posts.sql','20261011193939_feture_post_photos.sql','20261012050032_feture_photo_review_consent.sql','20261012073357_feture_staff_photo_read.sql'])await db.exec(sql(file));
  const rpc=async(name,args)=>(await db.query('select public.'+name+'('+args.map((_,i)=>'$'+(i+1)).join(',')+') result',args)).rows[0].result;
  const op=(actor,command)=>rpc('feture_post_command',[actor,JSON.stringify(command)]);
  const [a,b,c]=['a','b','c'].map(x=>x.repeat(32));for(const owner of [a,b,c])await db.query('insert into public.feture_profiles(account_hash) values($1)',[owner]);
@@ -185,6 +185,10 @@ test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and ir
 
  // C01.5b2a: explicit owner consent is bound to the exact pending photo/post.
  const consent=(actor,command)=>rpc('feture_photo_review_command',[actor,JSON.stringify(command)]);
+ const staffRead=(actor,rev=3,gen=generation)=>rpc('feture_staff_photo_read',[actor,gen,prep.id,rev]);
+ for(const actor of [qa,auditor,b])assert.equal((await staffRead(actor)).error,'forbidden');
+ assert.equal((await staffRead(manager,3,'2'.repeat(64))).error,'forbidden');
+ assert.equal((await staffRead(manager)).error,'resource_not_found');
  const status={action:'status',id:prep.id};
  const grant={action:'consent',id:prep.id,operationId:id(4100),expectedRevision:3,expectedConsentRevision:0,consent:true,consentVersion:'photo-staff-review-v1'};
  for(const name of ['feture_photo_review_consents','feture_photo_review_operations'])assert.equal((await db.query('select relrowsecurity from pg_class where oid=$1::regclass',[name])).rows[0].relrowsecurity,true);
@@ -199,6 +203,17 @@ test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and ir
  const photoGranted=await consent(a,grant);assert.equal(photoGranted.reviewConsent.active,true);assert.equal(photoGranted.reviewConsent.revision,1);
  assert.deepEqual(Object.keys(photoGranted.reviewConsent).sort(),['active','hasPhoto','postId','postRevision','revision']);
  assert.equal((await consent(a,grant)).replayed,true);
+ assert.deepEqual(Object.keys((await staffRead(manager)).photo).sort(),['bytes','consentRevision','hash','height','path','width']);
+ assert.equal((await staffRead(manager)).photo.consentRevision,1);
+ await db.exec('reset role');await db.query('insert into public.feture_blocks(blocker_hash,blocked_hash) values($1,$2)',[a,manager]);await db.exec('set role service_role');
+ assert.equal((await staffRead(manager)).error,'resource_not_found');
+ await db.exec('reset role');await db.query('delete from public.feture_blocks where blocker_hash=$1 and blocked_hash=$2',[a,manager]);await db.exec('set role service_role');
+
+ assert.equal((await staffRead(a)).error,'resource_not_found');
+ assert.equal((await staffRead(manager,2)).error,'resource_not_found');
+ await db.exec('reset role');await db.query("update public.feture_operators set role=null where account_hash=$1",[manager]);await db.exec('set role service_role');
+ assert.equal((await staffRead(manager)).error,'forbidden');
+ await db.exec('reset role');await db.query("update public.feture_operators set role='manager' where account_hash=$1",[manager]);await db.exec('set role service_role');
  assert.equal((await consent(a,{...grant,expectedConsentRevision:1})).error,'operation_conflict');
  // Consent alone does not unlock staff bytes, ordinary readers or publication.
  assert.equal((await photo(manager,{action:'read',id:prep.id,revision:3})).error,'resource_not_found');
@@ -207,7 +222,9 @@ test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and ir
  const withdraw={action:'revoke',id:prep.id,operationId:id(4101),expectedConsentRevision:1};
  await db.query("update public.feture_verification_attempts set proof_issued_at=clock_timestamp()-interval '30 seconds',proof_expires_at=clock_timestamp()-interval '1 second' where account_hash=$1",[a]);
  assert.equal((await consent(a,status)).reviewConsent.active,false);
+ assert.equal((await staffRead(manager)).error,'resource_not_found');
  assert.equal((await consent(a,withdraw)).reviewConsent.revision,2); // Revoke ignores adult expiry.
+ assert.equal((await staffRead(manager)).error,'resource_not_found');
  assert.equal((await consent(a,grant)).reviewConsent.active,false); // Old replay cannot restore consent.
  assert.equal((await consent(a,{...grant,operationId:id(4102),expectedConsentRevision:2})).error,'review_required');
  await db.query("update public.feture_verification_attempts set proof_expires_at=clock_timestamp()+interval '1 hour' where account_hash=$1",[a]);
@@ -272,6 +289,6 @@ test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and ir
  assert.equal((await db.query('select count(*) n from public.feture_photo_review_consents')).rows[0].n,0);
  assert.equal((await db.query('select count(*) n from public.feture_photo_review_operations')).rows[0].n,0);
  assert.equal((await db.query('select count(*) n from public.feture_photo_gc')).rows[0].n,5);
- for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(db.query('select * from public.feture_post_photos'));await assert.rejects(db.query('select * from public.feture_photo_gc'));await assert.rejects(photo(b,{action:'read',id:prep.id,revision:2}));await assert.rejects(rpc('feture_photo_sweep',[]));await assert.rejects(db.query('select * from public.feture_photo_review_consents'));await assert.rejects(db.query('select * from public.feture_photo_review_operations'));await assert.rejects(consent(b,status));await assert.rejects(rpc('feture_photo_review_status',[b,prep.id]));}
+ for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(db.query('select * from public.feture_post_photos'));await assert.rejects(db.query('select * from public.feture_photo_gc'));await assert.rejects(photo(b,{action:'read',id:prep.id,revision:2}));await assert.rejects(rpc('feture_photo_sweep',[]));await assert.rejects(db.query('select * from public.feture_photo_review_consents'));await assert.rejects(db.query('select * from public.feture_photo_review_operations'));await assert.rejects(consent(b,status));await assert.rejects(rpc('feture_photo_review_status',[b,prep.id]));await assert.rejects(staffRead(manager));}
  }finally{await db.close();}
 });

@@ -317,3 +317,38 @@ test('photo staff-review consent stays owner-only metadata and withdrawal surviv
  contaminated=true;await assert.rejects(photos.execute(closedActor,{action:'photo.reviewStatus',id}),e=>e.status===503);
  assert.equal(calls.some(c=>c.path.includes('/storage/')),false);
 });
+
+test('staff photo read rechecks consent/role after bounded Storage I/O and only projects JPEG bytes',async()=>{
+ const {postReview}=require('../lib/feture/post-review');
+ const id='00000000-0000-4000-8000-000000004000',op='00000000-0000-4000-8000-000000004002';
+ await store.set('a:'+identities.alice.hash,JSON.stringify({email:identities.alice.email,since:'2026-10-10T00:00:00Z',syncDevices:{[identities.alice.device]:{h:sha(identities.alice.token),at:new Date().toISOString()}}}));
+ const actor=await authenticate(req(identities.alice),store),body={action:'feture.posts.photo',id,revision:3};
+ const jpeg=Buffer.from([255,216,255,224,1,2,3,4]);
+ const descriptor={path:id+'/'+op+'.jpg',hash:sha(jpeg),bytes:jpeg.length,width:2,height:3,consentRevision:1};
+ for(const scenario of ['ok','initial_forbidden','second_forbidden','second_resource_not_found','second_review_required','changed_consent','oversize','hash','mime']){
+  let reads=0,storage=0,cancelled=0;
+  const transport={configured:()=>true,request:async(path,options)=>{
+   if(path==='/rest/v1/rpc/feture_staff_photo_read'){
+    reads++;assert.deepEqual(JSON.parse(options.body),{p_actor:actor.accountHash,p_generation:actor.accountGeneration,p_id:id,p_revision:3});
+    if(scenario==='initial_forbidden'||reads===2&&scenario.startsWith('second_'))return new Response(JSON.stringify({ok:false,error:scenario==='initial_forbidden'?'forbidden':scenario.slice(7)}));
+    return new Response(JSON.stringify({ok:true,photo:{...descriptor,...(reads===2&&scenario==='changed_consent'?{consentRevision:3}:{})}}));
+   }
+   storage++;assert.equal(path,'/storage/v1/object/authenticated/feture-post-photos/'+descriptor.path);
+   const stream=new ReadableStream({start(controller){controller.enqueue(new Uint8Array(scenario==='oversize'?Buffer.alloc(jpeg.length+1):scenario==='hash'?Buffer.alloc(jpeg.length):jpeg));if(!['oversize','mime'].includes(scenario))controller.close();},cancel(){cancelled++;}});
+   return new Response(stream,{headers:{'content-type':scenario==='mime'?'text/html':'image/jpeg'}});
+  }};
+  if(scenario==='ok'){
+   const result=await postReview(transport,actor,body);assert.deepEqual(result,{ok:true,photo:{mime:'image/jpeg',image:jpeg.toString('base64'),width:2,height:3}});assert.equal(reads,2);assert.equal(JSON.stringify(result).includes(descriptor.path),false);
+  }else{await assert.rejects(postReview(transport,actor,body),e=>[403,404,409,503].includes(e.status));if(scenario==='initial_forbidden')assert.equal(storage,0);if(['oversize','mime'].includes(scenario))assert.equal(cancelled,1);}
+ }
+ await assert.rejects(postReview({configured:()=>true,request:()=>{throw new Error('must not reach transport');}},actor,{...body,path:'foreign'}),e=>e.status===422);
+});
+
+test('staff response bodies have finite deadlines, byte limits and cancellation',async()=>{
+ const {readBoundedBody}=require('../lib/feture/staff-photo-read');
+ let cancelled=0;
+ const stalled=new Response(new ReadableStream({cancel(){cancelled++;}}));
+ await assert.rejects(readBoundedBody(stalled,16,20),/body_deadline/);assert.equal(cancelled,1);
+ const oversized=new Response(new ReadableStream({start(controller){controller.enqueue(new Uint8Array(17));},cancel(){cancelled++;}}));
+ await assert.rejects(readBoundedBody(oversized,16,100),e=>e.status===503);assert.equal(cancelled,2);
+});
