@@ -12,11 +12,12 @@ const {isJournalCommand}=require('./journal');
 const {isModerationCommand}=require('./moderation');
 const {isPostCommand}=require('./posts');
 const {isGroupsCommand}=require('./groups');
+const {isEventsCommand}=require('./events');
 const {isShareCommand}=require('./shares');
 /** @typedef {import('./contracts').Request} Request */
 /** @typedef {import('./contracts').Response} Response */
-/** @param {{store:import('./contracts').AccountStore;repository:import('./contracts').Repository;documents?:import('./documents').DocumentsRepository;profiles?:import('./profile').ProfileRepository;access?:import('./access').AccessRepository;moderation?:import('./moderation').ModerationRepository;tests?:import('./questionnaires').TestsRepository;journal?:import('./journal').JournalRepository;shares?:import('./shares').ShareRepository;photos?:ReturnType<typeof import('./post-photos').createPhotoRepository>;posts?:import('./posts').PostsRepository;groups?:ReturnType<typeof import('./groups').createGroupsRepository>;cors:(req:Request,res:Response)=>boolean;quota:(req:Request,scope:string)=>Promise<boolean>;qaResolver?:(accountHash:string)=>Promise<string|null>;metrics?:ReturnType<typeof import('./private-metrics').createPrivateMetrics>;audit:(event:import('./contracts').AuditEvent)=>void}} deps */
-function createHandler({store,repository,documents,profiles,access,moderation,tests,journal,shares,posts,groups,photos,cors,quota,audit,qaResolver,metrics}) {
+/** @param {{store:import('./contracts').AccountStore;repository:import('./contracts').Repository;documents?:import('./documents').DocumentsRepository;profiles?:import('./profile').ProfileRepository;access?:import('./access').AccessRepository;moderation?:import('./moderation').ModerationRepository;tests?:import('./questionnaires').TestsRepository;journal?:import('./journal').JournalRepository;shares?:import('./shares').ShareRepository;photos?:ReturnType<typeof import('./post-photos').createPhotoRepository>;posts?:import('./posts').PostsRepository;groups?:ReturnType<typeof import('./groups').createGroupsRepository>;events?:ReturnType<typeof import('./events').createEventsRepository>;cors:(req:Request,res:Response)=>boolean;quota:(req:Request,scope:string)=>Promise<boolean>;qaResolver?:(accountHash:string)=>Promise<string|null>;metrics?:ReturnType<typeof import('./private-metrics').createPrivateMetrics>;audit:(event:import('./contracts').AuditEvent)=>void}} deps */
+function createHandler({store,repository,documents,profiles,access,moderation,tests,journal,shares,posts,groups,events,photos,cors,quota,audit,qaResolver,metrics}) {
   /** @param {Request} req @param {Response} res */
   return async function handler(req,res) {
     const requestId=randomUUID();
@@ -36,6 +37,7 @@ function createHandler({store,repository,documents,profiles,access,moderation,te
       const metric=/** @param {unknown} result */async result=>{if(metrics)await metrics.record(action,actor,result);};
       if(input.action==='photo.put'||input.action==='photo.read'||input.action==='photo.remove'||input.action==='photo.reviewStatus'||input.action==='photo.reviewConsent'||input.action==='photo.reviewRevoke'){if(!photos)reject(503,'domain_unavailable');const result=await photos.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
       if(isGroupsCommand(input)){if(!groups)reject(503,'domain_unavailable');const result=await groups.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
+      if(isEventsCommand(input)){if(!events)reject(503,'domain_unavailable');const result=await events.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
       if(isPostCommand(input)){if(!posts)reject(503,'domain_unavailable');const result=await posts.execute(actor,input);await metric(result);record('ok');return send(200,{ok:true,...result,requestId});}
       if(isShareCommand(input)){if(!shares)reject(503,'domain_unavailable');const result=await shares.execute(actor,input);await metric(result);record('ok');return send(200,{ok:true,...result,requestId});}
       if(isTestsCommand(input)){if(!tests)reject(503,'domain_unavailable');const result=await tests.execute(actor,input);await metric(result);record('ok');return send(200,{ok:true,...result,requestId});}
