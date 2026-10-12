@@ -184,7 +184,7 @@ describe('FetUre starter', () => {
       await screen.findByText('Запись сохранена. Её видишь только ты.');
       expect(calls).toHaveLength(2);expect(calls[1]).toEqual(calls[0]);
       await user.click(screen.getByRole('link',{name:'← Мой мир'}));
-      expect(await screen.findByRole('heading',{name:/Твой мир/i})).toBeTruthy();
+      expect(await screen.findByRole('heading',{name:/Твой мир/i,level:1})).toBeTruthy();
     } finally {vi.restoreAllMocks();}
   });
 
@@ -207,7 +207,7 @@ describe('FetUre starter', () => {
       await user.click(screen.getByRole('button',{name:'Сохранить и продолжить позже'}));
       await screen.findByRole('alert');expect(choice).toHaveProperty('checked',true);
       expect(screen.getByRole('button',{name:'Загрузить сохранённое'}).matches(':disabled')).toBe(true);
-      await user.click(screen.getByRole('link',{name:'Исследовать'}));
+      await user.click(within(screen.getByRole('navigation',{name:'Основная навигация FetUre'})).getByRole('link',{name:'Исследовать'}));
       await screen.findByRole('dialog',{name:'Результат действия ещё не подтверждён'});
       expect(screen.queryByRole('button',{name:'Уйти без сохранения'})).toBeNull();
       await user.click(screen.getByRole('button',{name:'Остаться'}));expect(choice).toHaveProperty('checked',true);
@@ -217,7 +217,7 @@ describe('FetUre starter', () => {
       await user.click(screen.getByRole('button',{name:'Повторить то же действие'}));
       await screen.findByText('Ответы сохранены. Можно продолжить позже.');
       expect(calls).toHaveLength(3);expect(calls[1]).toEqual(calls[0]);expect(calls[2]).toEqual(calls[0]);
-      await user.click(screen.getByRole('link',{name:'Исследовать'}));
+      await user.click(within(screen.getByRole('navigation',{name:'Основная навигация FetUre'})).getByRole('link',{name:'Исследовать'}));
       expect(await screen.findByRole('heading',{name:/Новое начинается с любопытства/i})).toBeTruthy();
     } finally {vi.restoreAllMocks();}
   });
