@@ -195,6 +195,15 @@ describe('owner interest outbox',()=>{
   const late=createInterestAPI('/api/domain',async()=>{if(unavailable)throw Error('keychain unavailable');return a;},reply);
   await expect(late.mutate(a,op,new AbortController().signal)).rejects.toMatchObject({code:'auth_required'});
   expect(reply).toHaveBeenCalledTimes(1);
+  unavailable=false;
+  const parsed=vi.fn(async()=>{
+   const response=new Response(JSON.stringify(accepted),{status:200});
+   response.json=async()=>{unavailable=true;return accepted;};
+   return response;
+  });
+  const afterParse=createInterestAPI('/api/domain',async()=>{if(unavailable)throw Error('keychain unavailable');return a;},parsed);
+  await expect(afterParse.mutate(a,op,new AbortController().signal)).rejects.toMatchObject({code:'auth_required'});
+  expect(parsed).toHaveBeenCalledTimes(1);
  });
  it('guards request credentials and rejects invalid success envelopes instead of acknowledging writes',async()=>{
   let current:AuthSession|null=a;
