@@ -56,6 +56,11 @@ function eventCommand(v){
  if((v.action==='events.mine'||v.action==='events.catalog')&&keys(v,['action','cursor'])&&
     (v.cursor===null||record(v.cursor)&&keys(v.cursor,['at','id'])&&pgStamp(v.cursor.at)&&typeof v.cursor.id==='string'&&uuid.test(v.cursor.id)))
   return /** @type {import('./event-contract').EventCommand} */(v);
+ if(v.action==='events.attendanceRequests'&&keys(v,['action','id','cursor'])&&
+    typeof v.id==='string'&&uuid.test(v.id)&&
+    (v.cursor===null||record(v.cursor)&&keys(v.cursor,['at','id'])&&
+      pgStamp(v.cursor.at)&&typeof v.cursor.id==='string'&&uuid.test(v.cursor.id)))
+  return /** @type {import('./event-contract').EventCommand} */(v);
  if(v.action==='events.attendanceStatus'&&keys(v,['action','id'])&&
     typeof v.id==='string'&&uuid.test(v.id))
   return /** @type {import('./event-contract').EventCommand} */(v);

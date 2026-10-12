@@ -774,3 +774,34 @@ test('E04b Core attendance: exact commands, adult gate and withdrawal without re
  payload={ok:false,error:'resource_not_found'};
  await assert.rejects(repo.execute(adult,status),err=>err.status===404);
 });
+
+
+test('E04b2 owner attendance queue: trusted actor, cursor and strict request projection',async()=>{
+ const {createEventsRepository,requestQueueDto}=require('../lib/feture/events');
+ const person=identities.alice;await seed(person);
+ const adult=await authenticate(req(person),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const unverified=await authenticate(req(person),store);
+ const id='00000000-0000-4000-8000-000000000091';
+ const requestId='00000000-0000-4000-8000-000000000092';
+ const entry={requestId,requestedAt:'2026-10-12T15:00:00.123456+00:00',state:'pending'};
+ let response={ok:true,items:[entry],nextCursor:null};const calls=[];
+ const repository=createEventsRepository({configured:()=>true,request:async(path,options)=>{
+  calls.push({path,body:JSON.parse(options.body)});return new Response(JSON.stringify(response));
+ }},{requireCurrent:async()=>{}});
+ const command={action:'events.attendanceRequests',id,cursor:null};
+ assert.deepEqual((await repository.execute(adult,command)).items,[entry]);
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_event_attendance_owner_queue');
+ assert.deepEqual(calls[0].body,{p_actor:person.hash,p_command:command});
+ assert.deepEqual(requestQueueDto(entry),entry);
+ const baseline=calls.length;
+ for(const invalid of [{...command,ownerHash:identities.bob.hash},
+   {...command,cursor:{at:'bad',id}},
+   {...command,actorHash:'c'.repeat(32)}])
+  await assert.rejects(repository.execute(adult,invalid),e=>e.status===422);
+ await assert.rejects(repository.execute(unverified,command),e=>e.status===403);
+ assert.equal(calls.length,baseline);
+ response={ok:true,items:[{...entry,actorHash:'secret'}],nextCursor:null};
+ await assert.rejects(repository.execute(adult,command),e=>e.status===503);
+ response={ok:false,error:'resource_not_found'};
+ await assert.rejects(repository.execute(adult,command),e=>e.status===404);
+});
