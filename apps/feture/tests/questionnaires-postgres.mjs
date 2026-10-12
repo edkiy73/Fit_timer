@@ -132,7 +132,7 @@ test('W03 completed attempt DTO trusts only bounded scores and pinned editorial 
  assert.equal(safe.attempt.result.dimensions[0].interpretation,def.dimensions[0].high);
  assert.equal('privateField' in safe.attempt,false);
  for(const patch of [
-  {interpretation:'Not reviewed by editor'},{average:'4'},{average:10},
+  {interpretation:'Not reviewed by editor'},{average:'4'},{average:10},{average:3},
   {level:'low'},{total:7},{answered:99},{questionIds:['q1','q2','q3','q4','q5','private']},
   {questionIds:['q0','q0','q2','q3','q4','q5']}
  ]){
@@ -141,4 +141,23 @@ test('W03 completed attempt DTO trusts only bounded scores and pinned editorial 
  }
  provider={ok:true,attempt:{...valid,result:{answered:0,total:6,dimensions:[{id:'connection',answered:0,total:6,average:null,level:'insufficient',interpretation:'Пока мало ответов для вывода. Можно вернуться к этим вопросам позже.',questionIds:[]}]},answers:Object.fromEntries(qid.map(k=>[k,null]))}};
  assert.equal((await repository.execute(actor,read)).attempt.result.dimensions[0].level,'insufficient');
+
+ // Five answers, one skip; selected weights of the multi question average to 2.5.
+ // SQL dimension mean = (2.5 + 2 + 3 + 4 + 0) / 5 = 2.3.
+ const partial={...valid,answers:{
+  q0:['o1','o4'],q1:['o2'],q2:null,q3:['o3'],q4:['o4'],q5:['o0']
+ },result:{answered:5,total:6,dimensions:[{
+  id:'connection',answered:5,total:6,average:2.3,level:'mid',
+  interpretation:def.dimensions[0].mid,questionIds:['q0','q1','q3','q4','q5']
+ }]}};
+ provider={ok:true,attempt:partial};
+ assert.equal((await repository.execute(actor,read)).attempt.result.dimensions[0].average,2.3);
+ // Internally consistent metadata must NOT override the pinned answer weights.
+ provider={ok:true,attempt:{...partial,result:{...partial.result,dimensions:[{
+  ...partial.result.dimensions[0],average:3,level:'high',interpretation:def.dimensions[0].high
+ }]}}};
+ await assert.rejects(repository.execute(actor,read),e=>e.status===503&&e.code==='domain_unavailable');
+ // Valid answer shape with an option not published in this version is also denied.
+ provider={ok:true,attempt:{...partial,answers:{...partial.answers,q0:['unpublished-option']}}};
+ await assert.rejects(repository.execute(actor,read),e=>e.status===503&&e.code==='domain_unavailable');
 });
