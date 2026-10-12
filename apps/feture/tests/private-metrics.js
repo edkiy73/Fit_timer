@@ -41,10 +41,40 @@ test('O03 summary: aggregated counts only, small values suppressed, QA not mixed
  assert.equal(JSON.stringify(v).includes('2026-10'),false); // no individual dates
  assert.equal(Object.keys(v).sort().join(','),'cohorts,counts,days,events,operations');
  assert.deepEqual(v.operations,{
-  windowCount:7,weekCount:7,observedWindowDays:7,retentionDays:35,
+  windowCount:null,weekCount:null,observedWindowDays:7,retentionDays:35,
   maxActiveCounterKeys:432,readKeys:84,maxReadKeys:360,threshold:null,status:'not_configured'
  });
 });
+test('O03 totals and threshold comparisons cannot expose a masked 1–4 group through subtraction',async()=>{
+ const original=process.env.FETURE_O03_WARN_WEEKLY_EVENTS;
+ try{
+  const {metrics}=fixture();
+  for(let n=0;n<5;n++)await metrics.record('tests.start',actor,{replayed:false});
+  await metrics.record('share.create',{...actor,qaUntil:null},{replayed:false});
+  const safe=await metrics.summary(7);
+  assert.equal(safe.counts.qa.test_started,5);
+  assert.equal(safe.counts.other_verified.share_created,null);
+  assert.equal(safe.operations.windowCount,null);
+  assert.equal(safe.operations.weekCount,null);
+  const larger=fixture().metrics;
+  for(let n=0;n<99;n++)await larger.record('tests.start',actor,{replayed:false});
+  for(let n=0;n<3;n++)await larger.record('share.create',{...actor,qaUntil:null},{replayed:false});
+  process.env.FETURE_O03_WARN_WEEKLY_EVENTS='102';
+  const near=await larger.summary(7);
+  assert.equal(near.counts.qa.test_started,99);
+  assert.equal(near.counts.other_verified.share_created,null);
+  assert.equal(near.operations.windowCount,null);
+  assert.equal(near.operations.status,'suppressed');
+  process.env.FETURE_O03_WARN_WEEKLY_EVENTS='100';
+  assert.equal((await larger.summary(7)).operations.status,'warning'); // certainly >=100
+  process.env.FETURE_O03_WARN_WEEKLY_EVENTS='104';
+  assert.equal((await larger.summary(7)).operations.status,'within_threshold'); // certainly <104
+ }finally{
+  if(original===undefined)delete process.env.FETURE_O03_WARN_WEEKLY_EVENTS;
+  else process.env.FETURE_O03_WARN_WEEKLY_EVENTS=original;
+ }
+});
+
 test('O03 missing/failed Redis counters cannot break user mutations, admin summary fails closed',async()=>{
  const failed=createPrivateMetrics({incr:async()=>{throw Error('secret store failure');},many:async()=>{throw Error('secret store failure');}});
  await assert.doesNotReject(failed.record('posts.submit',actor,{}));

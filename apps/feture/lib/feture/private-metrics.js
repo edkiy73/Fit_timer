@@ -61,22 +61,39 @@ function createPrivateMetrics(store){
    }
    const raw=await store.many(keys);
    if(!Array.isArray(raw)||raw.length!==keys.length)throw new Error('metrics_unavailable');
-   const output=Object.fromEntries(TYPES.map(v=>[v,Object.fromEntries(EVENTS.map(e=>[e,0]))]));
+   const emptyGroups=()=>Object.fromEntries(TYPES.map(v=>[v,Object.fromEntries(EVENTS.map(e=>[e,0]))]));
+   const output=emptyGroups(),weekOutput=emptyGroups();
    let i=0,weekActions=0,windowActions=0;
    for(let d=0;d<days;d++)for(const cohort of TYPES)for(const event of EVENTS){
     const rawNumber=raw[i++];const n=rawNumber===null||rawNumber===undefined?0:Number(rawNumber);
     if(!Number.isSafeInteger(n)||n<0)throw new Error('metrics_unavailable');
     output[cohort][event]+=n;
     windowActions+=n;
-    if(d>=days-7)weekActions+=n;
+    if(d>=days-7){weekActions+=n;weekOutput[cohort][event]+=n;}
     if(!Number.isSafeInteger(output[cohort][event])||!Number.isSafeInteger(windowActions)||!Number.isSafeInteger(weekActions))throw new Error('metrics_unavailable');
    }
+   // A visible total must not let an operator subtract a published >=5
+   // cohort/event count from the total to recover a protected 1..4 cell.
+   const hasSmall=/** @param {Record<string,Record<string,number>>} groups */(groups)=>
+    TYPES.some(cohort=>EVENTS.some(event=>groups[cohort][event]>0&&groups[cohort][event]<5));
+   const weekHasSmall=hasSmall(weekOutput);
+   let weekLower=0,weekUpper=0;
+   for(const cohort of TYPES)for(const event of EVENTS){
+    const n=weekOutput[cohort][event];
+    weekLower+=n>0&&n<5?1:n;
+    weekUpper+=n>0&&n<5?4:n;
+   }
+   if(!Number.isSafeInteger(weekLower)||!Number.isSafeInteger(weekUpper))throw new Error('metrics_unavailable');
    const setting=weeklyThreshold();
+   // The warning itself must not reveal a hidden small value at the
+   // threshold boundary. Only report outcomes certain across 1..4.
    const status=setting.status==='configured'
-    ?weekActions>=/** @type {number} */(setting.threshold)?'warning':'within_threshold':setting.status;
+    ?weekLower>=/** @type {number} */(setting.threshold)?'warning'
+     :weekUpper</** @type {number} */(setting.threshold)?'within_threshold':'suppressed'
+    :setting.status;
    return {days,events:EVENTS,cohorts:TYPES,
     counts:Object.fromEntries(TYPES.map(c=>[c,Object.fromEntries(EVENTS.map(e=>[e,hideSmall(output[c][e])]))])),
-    operations:{windowCount:hideSmall(windowActions),weekCount:hideSmall(weekActions),
+    operations:{windowCount:hasSmall(output)?null:hideSmall(windowActions),weekCount:weekHasSmall?null:hideSmall(weekActions),
      observedWindowDays:days,retentionDays:35,maxActiveCounterKeys:MAX_ACTIVE_KEYS,readKeys:keys.length,maxReadKeys:MAX_READ_KEYS,
      threshold:setting.threshold,status}};
   }
