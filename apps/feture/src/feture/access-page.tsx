@@ -1,12 +1,13 @@
 import {useEffect,useState} from 'react';
-import {Link,useParams} from 'react-router';
+import {Link,useBlocker,useParams} from 'react-router';
 import {z} from 'zod';
 import type {AuthSession} from '@appbase/core/auth.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import concept from '../../data/concept-catalog.json';
 import {authClient} from '../auth';
 import {sameSession} from './interest-api';
-import {domainRequest,domainErrorMessage} from './domain-api';
+import {domainRequest,domainErrorMessage,DomainClientError} from './domain-api';
+import {AppDialog} from './components/primitives';
 import {stance,experience,boundary} from './model';
 const fieldLabels={nickname:'Имя',about:'О себе',pronouns:'Местоимения',identity:'Самоопределение',orientation:'Ориентация',relationships:'Отношения',city:'Город'};
 const topicLabels=new Map(concept.categories.flatMap(c=>c.interests.map(i=>[i.id,i.title] as const)));
@@ -56,12 +57,27 @@ function PermissionRow({row,kind,busy,run}:{row:Row;kind:string;busy:boolean;run
   {kind==='blocks'&&<button type="button" disabled={busy} onClick={()=>void run({action:'access.block',targetId:row.peerId,blocked:false})}>Разблокировать без восстановления доступа</button>}
  </article>;
 }
+type PeerRequestCommand={action:'access.request';targetId:string;operationId:string;scopes:string[];canMessage:boolean};
+// Access preflight (adult/consent) runs before the SQL receipt lookup. A denial on
+// retry therefore cannot establish whether the previous request was accepted.
+function definitivelyRejectedPeerRequest(error:unknown,wasRetry:boolean){
+ return error instanceof DomainClientError&&(
+  ['operation_conflict','invalid_request'].includes(error.code)||
+  (!wasRetry&&['resource_not_found','request_pending','verification_required','consent_required'].includes(error.code))
+ );
+}
 export function PeerProfilePage(){const {id}=useParams();return <SignedPage>{session=><PeerProfile key={id} session={session} id={id||''}/>}</SignedPage>;}
 function PeerProfile({session,id}:{session:AuthSession;id:string}){
- const [profile,setProfile]=useState<Projection|null>(null),[own,setOwn]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(false),[selected,setSelected]=useState<string[]>([]),[message,setMessage]=useState(false),[notice,setNotice]=useState(''),[operation,setOperation]=useState<string|null>(null),[topic,setTopic]=useState('');
+ const [profile,setProfile]=useState<Projection|null>(null),[own,setOwn]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(false),[selected,setSelected]=useState<string[]>([]),[message,setMessage]=useState(false),[notice,setNotice]=useState(''),[pendingRequest,setPendingRequest]=useState<PeerRequestCommand|null>(null),[topic,setTopic]=useState('');
  // Another account may revoke a grant while the profile is in a background tab.
  // Recheck the server on return and remove the old projection before the response.
  const [accessRefresh,setAccessRefresh]=useState(0);
+ const blocker=useBlocker(({currentLocation,nextLocation})=>pendingRequest!==null&&currentLocation.pathname!==nextLocation.pathname);
+ useEffect(()=>{
+  const warn=(event:BeforeUnloadEvent)=>{if(pendingRequest){event.preventDefault();event.returnValue='';}};
+  window.addEventListener('beforeunload',warn);
+  return()=>window.removeEventListener('beforeunload',warn);
+ },[pendingRequest]);
  useEffect(()=>{
   const refresh=()=>{setProfile(null);setAccessRefresh(n=>n+1);};
   const visible=()=>{if(document.visibilityState==='visible')refresh();};
@@ -70,9 +86,31 @@ function PeerProfile({session,id}:{session:AuthSession;id:string}){
   return()=>{window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',visible);};
  },[]);
  useEffect(()=>{const controller=new AbortController();setProfile(null);setError('');setBusy(true);if(!z.uuid().safeParse(id).success){setError('Профиль недоступен.');setBusy(false);return ()=>controller.abort();}domainRequest(session,{action:'access.profile',targetId:id},peerSchema,controller.signal).then(r=>{if(!controller.signal.aborted){setProfile(r.projection);setOwn(r.isOwner);}}).catch(e=>{if(!controller.signal.aborted)setError(domainErrorMessage(e));}).finally(()=>{if(!controller.signal.aborted)setBusy(false);});return ()=>controller.abort();},[session,id,accessRefresh]);
- const request=async()=>{if(busy||!selected.length&&!message)return;setBusy(true);setError('');const nonce=operation||crypto.randomUUID();setOperation(nonce);try{await domainRequest(session,{action:'access.request',targetId:id,operationId:nonce,scopes:selected,canMessage:message},ackSchema);if(sameSession(await authClient.getSession(),session)){setNotice('Запрос отправлен. Доступ появится после решения владельца.');setSelected([]);setMessage(false);setOperation(null);}}catch(e){if(sameSession(await authClient.getSession(),session))setError(domainErrorMessage(e));}finally{if(sameSession(await authClient.getSession(),session))setBusy(false);}};
- const block=async()=>{if(busy||!window.confirm('Заблокировать участника и отозвать доступ в обе стороны?'))return;setBusy(true);try{await domainRequest(session,{action:'access.block',targetId:id,blocked:true},ackSchema);if(sameSession(await authClient.getSession(),session)){setProfile(null);setNotice('Участник заблокирован.');}}catch(e){if(sameSession(await authClient.getSession(),session))setError(domainErrorMessage(e));}finally{if(sameSession(await authClient.getSession(),session))setBusy(false);}};
- return <section className="card ft-access"><p><Link to="/access">← Мои разрешения</Link></p><h2>Профиль участника</h2>{profile&&<ProjectedProfile data={profile}/>} {profile&&!own&&<><h3>Запросить выбранные сведения</h3><ScopeChoices selected={selected} onChange={v=>{setSelected(v);setOperation(null);}} choices={Object.keys(fieldLabels).map(k=>'profile:'+k)} disabled={busy}/><label>Добавить тему<select value={topic} disabled={busy||selected.length>=30} onChange={e=>setTopic(e.target.value)}><option value="">Выбери тему</option>{[...topicLabels].map(([topicId,title])=><option key={topicId} value={'interest:'+topicId}>{title}</option>)}</select></label><button type="button" disabled={busy||!topic||selected.includes(topic)||selected.length>=30} onClick={()=>{setSelected(v=>[...v,topic]);setTopic('');setOperation(null);}}>Добавить</button><ScopeChoices selected={selected.filter(s=>s.startsWith('interest:'))} choices={selected.filter(s=>s.startsWith('interest:'))} disabled={busy} onChange={v=>{setSelected(old=>[...old.filter(s=>!s.startsWith('interest:')), ...v]);setOperation(null);}}/><label className="ft-consent-choice"><input type="checkbox" checked={message} disabled={busy} onChange={e=>{setMessage(e.target.checked);setOperation(null);}}/>Отдельно запросить общение</label><button type="button" disabled={busy||!selected.length&&!message} onClick={()=>void request()}>Отправить запрос</button></>}
-  {!own&&profile&&z.uuid().safeParse(id).success&&<p><button type="button" disabled={busy} onClick={()=>void block()}>Заблокировать участника</button> · <Link to={'/report/'+id}>Сообщить о нарушении</Link></p>}{error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}{busy&&<p role="status">Загружаем…</p>}
+ const request=async()=>{
+  if(busy||(!pendingRequest&&!selected.length&&!message))return;
+  const wasRetry=pendingRequest!==null;
+  const command=pendingRequest??{action:'access.request',targetId:id,operationId:crypto.randomUUID(),scopes:[...selected],canMessage:message} satisfies PeerRequestCommand;
+  setPendingRequest(command);setBusy(true);setError('');setNotice('');
+  try{
+   await domainRequest(session,command,ackSchema);
+   if(sameSession(await authClient.getSession(),session)){
+    setNotice('Запрос отправлен. Доступ появится после решения владельца.');
+    setSelected([]);setMessage(false);setPendingRequest(null);
+   }
+  }catch(e){
+   if(sameSession(await authClient.getSession(),session)){
+    setError(domainErrorMessage(e));
+    if(definitivelyRejectedPeerRequest(e,wasRetry))setPendingRequest(null);
+   }
+  }finally{if(sameSession(await authClient.getSession(),session))setBusy(false);}
+ };
+ const block=async()=>{if(busy||pendingRequest||!window.confirm('Заблокировать участника и отозвать доступ в обе стороны?'))return;setBusy(true);try{await domainRequest(session,{action:'access.block',targetId:id,blocked:true},ackSchema);if(sameSession(await authClient.getSession(),session)){setProfile(null);setNotice('Участник заблокирован.');}}catch(e){if(sameSession(await authClient.getSession(),session))setError(domainErrorMessage(e));}finally{if(sameSession(await authClient.getSession(),session))setBusy(false);}};
+ return <section className="card ft-access"><p><Link to="/access">← Мои разрешения</Link></p><h2>Профиль участника</h2>{profile&&<ProjectedProfile data={profile}/>} {profile&&!own&&<><h3>Запросить выбранные сведения</h3><ScopeChoices selected={selected} onChange={setSelected} choices={Object.keys(fieldLabels).map(k=>'profile:'+k)} disabled={busy||!!pendingRequest}/><label>Добавить тему<select value={topic} disabled={busy||!!pendingRequest||selected.length>=30} onChange={e=>setTopic(e.target.value)}><option value="">Выбери тему</option>{[...topicLabels].map(([topicId,title])=><option key={topicId} value={'interest:'+topicId}>{title}</option>)}</select></label><button type="button" disabled={busy||!!pendingRequest||!topic||selected.includes(topic)||selected.length>=30} onClick={()=>{setSelected(v=>[...v,topic]);setTopic('');}}>Добавить</button><ScopeChoices selected={selected.filter(s=>s.startsWith('interest:'))} choices={selected.filter(s=>s.startsWith('interest:'))} disabled={busy||!!pendingRequest} onChange={v=>setSelected(old=>[...old.filter(s=>!s.startsWith('interest:')), ...v])}/><label className="ft-consent-choice"><input type="checkbox" checked={message} disabled={busy||!!pendingRequest} onChange={e=>setMessage(e.target.checked)}/>Отдельно запросить общение</label>{!pendingRequest&&<button type="button" disabled={busy||!selected.length&&!message} onClick={()=>void request()}>Отправить запрос</button>}</>}
+  {pendingRequest&&<div role="status"><p>Результат запроса пока неизвестен. Сервер мог его принять. Повтори точно тот же запрос, прежде чем изменять выбор или уходить.</p><button type="button" disabled={busy} onClick={()=>void request()}>Повторить прежний запрос</button><p><Link to="/verification" target="_blank" rel="noopener noreferrer">Проверка возраста</Link> · <Link to="/documents" target="_blank" rel="noopener noreferrer">Согласия</Link></p></div>}
+  {!own&&profile&&z.uuid().safeParse(id).success&&<p><button type="button" disabled={busy||!!pendingRequest} onClick={()=>void block()}>Заблокировать участника</button> · <Link to={'/report/'+id}>Сообщить о нарушении</Link></p>}{error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}{busy&&<p role="status">Загружаем…</p>}
+  {blocker.state==='blocked'&&<AppDialog title="Запрос ещё не подтверждён" onClose={()=>blocker.reset()}>
+   <p>Запрос мог быть принят сервером. Не создавай новый запрос: используй повтор с тем же идентификатором.</p>
+   <div className="ft-form-actions"><button type="button" disabled={busy} onClick={()=>{blocker.reset();void request();}}>Повторить прежний запрос</button><button type="button" onClick={()=>blocker.reset()}>Остаться</button></div>
+  </AppDialog>}
  </section>;
 }
