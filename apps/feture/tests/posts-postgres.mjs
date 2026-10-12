@@ -82,11 +82,24 @@ test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and ir
  assert.deepEqual(await view(manager),one);
  assert.equal((await db.query('select count(*)::int n from public.feture_post_view_receipts')).rows[0].n,3);
  assert.equal((await view('z'.repeat(32))).error,'resource_not_found');
+ for(const [idx,owner] of ['g'.repeat(32),'h'.repeat(32)].entries()){
+  await db.query('insert into public.feture_profiles(account_hash) values($1)',[owner]);
+  await rpc('feture_consent_accept',[owner,'ru',docs]);
+  await db.query("insert into public.feture_verification_attempts(id,account_hash,issuer,environment,policy_version,state,created_at,expires_at,proof_issued_at,proof_expires_at) values($1,$2,'fixture','production','v1','verified',clock_timestamp()-interval '1 minute',clock_timestamp()+interval '1 hour',clock_timestamp(),clock_timestamp()+interval '1 hour')",[id(7790+idx),owner]);
+ }
+ assert.equal((await view('g'.repeat(32))).hidden,true);
+ assert.deepEqual(await view('h'.repeat(32)),{ok:true,hidden:false,uniqueDailyOpens:5});
+ assert.equal((await view(b)).uniqueDailyOpens,5);
+ const receipts=(await db.query('select viewer_digest from public.feture_post_view_receipts')).rows;
+ assert.equal(receipts.length,5);
+ assert.ok(receipts.every(row=>/^[a-f0-9]{64}$/.test(row.viewer_digest)));
+
 
  assert.equal((await review(manager,{...approve,decision:'hide',reason:'privacy'})).error,'operation_conflict');
  const audit=await review(auditor,{action:'audit',cursor:null});assert.equal(audit.items.length,1);assert.equal(JSON.stringify(audit).includes('Мой личный текст'),false);
  const hide={action:'decide',id:id(10),operationId:id(91),expectedRevision:3,decision:'hide',reason:'privacy'};
  assert.equal((await review(manager,hide)).post.state,'hidden');assert.equal((await op(b,{action:'posts.read',id:id(10)})).error,'resource_not_found');
+ assert.equal((await view(b)).error,'resource_not_found');
  const reopen={...hide,operationId:id(92),expectedRevision:4,decision:'reopen',reason:'reviewed'};assert.equal((await review(manager,reopen)).post.state,'pending');assert.equal((await op(b,{action:'posts.read',id:id(10)})).error,'resource_not_found');
  const reapprove={...approve,operationId:id(93),expectedRevision:5};assert.equal((await review(manager,reapprove)).post.state,'published');
  await db.exec('reset role');await db.query("update public.feture_operators set role=null where account_hash=$1",[manager]);await db.exec('set role service_role');assert.equal((await review(manager,reapprove)).error,'forbidden');await db.exec('reset role');await db.query("update public.feture_operators set role='manager' where account_hash=$1",[manager]);await db.exec('set role service_role');
