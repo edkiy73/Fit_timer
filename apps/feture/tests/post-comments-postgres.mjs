@@ -117,7 +117,7 @@ test('C02.3a comments: moderation-first pending, ACL, exact CAS/replay, tombston
   const cdelete={action:'comments.delete',id:reply.id,expectedRevision:2,operationId:id(404)};
   await db.query('insert into public.feture_blocks(blocker_hash,blocked_hash) values($1,$2)',[a,c]);
   assert.equal((await cmd(c,read(reply.id))).error,'resource_not_found');
-  assert.equal((await cmd(c,{action:'comments.edit',id:reply.id,expectedRevision:1,operationId:id(405),text:'нельзя'})).error,'resource_not_found');
+  assert.equal((await cmd(c,{action:'comments.edit',id:reply.id,expectedRevision:2,operationId:id(405),text:'нельзя'})).error,'resource_not_found');
   assert.equal((await cmd(c,cdelete)).entry.state,'deleted');
   assert.equal((await cmd(c,reply)).entry.text,'');
   assert.equal((await db.query('select count(*)::int n from public.feture_post_comment_operations where account_hash=$1',[c])).rows[0].n,2);
