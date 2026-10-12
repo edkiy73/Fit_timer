@@ -71,20 +71,43 @@ function CreateComparison({session,linkId}:{session:AuthSession;linkId:string}){
 function ReadComparison({session,comparisonId}:{session:AuthSession;comparisonId:string}){
  const navigate=useNavigate();
  const [data,setData]=useState<ReturnType<typeof comparisonRead.parse>|null>(null),[attempt,setAttempt]=useState(0),[error,setError]=useState(''),[busy,setBusy]=useState(false),[approval,setApproval]=useState<string|null>(null);
+ // SQL supports a replay with the original expectedRevision after an approved
+ // reply was lost. Never invent another approval command while that result is unknown.
+ const pendingApproval=useRef<{action:'share.compare.approve';comparisonId:string;expectedRevision:number;reviewed:true}|null>(null);
+ const blocker=useBlocker(({currentLocation,nextLocation})=>pendingApproval.current!==null&&currentLocation.pathname!==nextLocation.pathname);
  const alive=useRef(true);useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
+ useEffect(()=>{
+  const warn=(event:BeforeUnloadEvent)=>{if(pendingApproval.current){event.preventDefault();event.returnValue='';}};
+  window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);
+ },[]);
  // Pause focus/visibility reads during a mutation; reread after it settles so
  // a delayed pre-approval snapshot cannot replace the new consent state.
- useEffect(()=>{if(busy)return;const controller=new AbortController();setData(null);setError('');setApproval(null);void domainRequest(session,{action:'share.compare.read',comparisonId},comparisonRead,controller.signal).then(x=>{if(!controller.signal.aborted)setData(x);}).catch(e=>{if(!controller.signal.aborted)setError(domainErrorMessage(e));});return()=>controller.abort();},[session,comparisonId,attempt,busy]);
+ useEffect(()=>{if(busy||pendingApproval.current)return;const controller=new AbortController();setData(null);setError('');setApproval(null);void domainRequest(session,{action:'share.compare.read',comparisonId},comparisonRead,controller.signal).then(x=>{if(!controller.signal.aborted)setData(x);}).catch(e=>{if(!controller.signal.aborted)setError(domainErrorMessage(e));});return()=>controller.abort();},[session,comparisonId,attempt,busy]);
  useEffect(()=>{const visible=()=>{if(document.visibilityState==='visible')setAttempt(n=>n+1);};window.addEventListener('focus',visible);document.addEventListener('visibilitychange',visible);return()=>{window.removeEventListener('focus',visible);document.removeEventListener('visibilitychange',visible);};},[]);
  const fingerprint=data?JSON.stringify([data.comparison.id,data.comparison.revision,data.myItems]):'';
- const approve=async()=>{if(busy||!data||approval!==fingerprint||data.comparison.role!=='owner'||data.comparison.state!=='pending')return;setBusy(true);setError('');try{const result=await domainRequest(session,{action:'share.compare.approve',comparisonId,expectedRevision:data.comparison.revision,reviewed:true},comparisonRead);if(alive.current){setData(result);setApproval(null);}}catch(e){if(alive.current){setData(null);setError(domainErrorMessage(e));}}finally{if(alive.current)setBusy(false);}};
- const revoke=async()=>{if(busy||!window.confirm('Отозвать своё согласие на сравнение? Новые просмотры закроются для обеих сторон. Ранее сохранённые снимки экрана отозвать нельзя.'))return;setBusy(true);setError('');try{await domainRequest(session,{action:'share.compare.revoke',comparisonId},revokedSchema);if(alive.current)navigate('/comparisons');}catch(e){if(alive.current){setData(null);setError(domainErrorMessage(e));}}finally{if(alive.current)setBusy(false);}};
- return <><p>Приглашение {comparisonId.slice(0,8)}</p><div className="ft-form-actions"><button disabled={busy} onClick={()=>setAttempt(n=>n+1)}>Обновить</button><button disabled={busy} onClick={()=>void revoke()}>Отозвать моё согласие</button><Link to="/comparisons">Все приглашения</Link></div>
-  {error?<p role="alert">{error}</p>:!data?<p role="status">Проверяем согласия и доступ…</p>:<>
+ const approve=async()=>{
+  if(busy||(!pendingApproval.current&&(!data||approval!==fingerprint||data.comparison.role!=='owner'||data.comparison.state!=='pending')))return;
+  const command=pendingApproval.current??{action:'share.compare.approve' as const,comparisonId,expectedRevision:data!.comparison.revision,reviewed:true as const};
+  pendingApproval.current=command;setBusy(true);setError('');
+  try{
+   const result=await domainRequest(session,command,comparisonRead);
+   if(alive.current){pendingApproval.current=null;setData(result);setApproval(null);}
+  }catch(e){if(alive.current)setError(domainErrorMessage(e));}
+  finally{if(alive.current)setBusy(false);}
+ };
+ const revoke=async()=>{if(busy||!window.confirm('Отозвать своё согласие на сравнение? Новые просмотры закроются для обеих сторон. Ранее сохранённые снимки экрана отозвать нельзя.'))return;setBusy(true);setError('');try{await domainRequest(session,{action:'share.compare.revoke',comparisonId},revokedSchema);if(alive.current){pendingApproval.current=null;navigate('/comparisons');}}catch(e){if(alive.current){setData(null);setError(domainErrorMessage(e));}}finally{if(alive.current)setBusy(false);}};
+ return <><p>Приглашение {comparisonId.slice(0,8)}</p><div className="ft-form-actions"><button disabled={busy||!!pendingApproval.current} onClick={()=>setAttempt(n=>n+1)}>Обновить</button><button disabled={busy} onClick={()=>void revoke()}>Отозвать моё согласие</button><Link to="/comparisons">Все приглашения</Link></div>
+  {pendingApproval.current&&<div role="status"><p>Исход согласия неизвестен. Повторим ровно тот же запрос и ревизию; новые подтверждения пока недоступны.</p><button type="button" disabled={busy} onClick={()=>void approve()}>Повторить то же согласие</button></div>}
+  {error&&<p role="alert">{error}</p>}
+  {!data?<p role="status">Проверяем согласия и доступ…</p>:<>
    <p>Доступ до {new Date(data.comparison.expiresAt).toLocaleString('ru')}. Изменение выбранных отметок или отзыв исходной ссылки закрывает сравнение.</p>
    {data.comparison.state==='pending'?<><p role="status">Результат закрыт до согласия владельца ссылки.</p><h3>Твои выбранные отметки</h3><div className="ft-share-preview">{data.myItems.map((x,i)=><div key={i}><strong>{x.title}</strong><span>{STANCE_LABELS[x.stance]}</span></div>)}</div>
-    {data.comparison.role==='owner'?<><label className="ft-consent-choice"><input type="checkbox" disabled={busy} checked={approval===fingerprint} onChange={e=>setApproval(e.target.checked?fingerprint:null)}/>Я отдельно разрешаю сравнить показанные выше мои отметки с выбранными отметками отправителя этого приглашения. Разрешение можно отозвать.</label><button disabled={busy||approval!==fingerprint} onClick={()=>void approve()}>Разрешить сравнение</button></>:<p>Своё согласие ты уже дал. Попроси владельца ссылки открыть приглашение в разделе «Сравнения».</p>}
+    {data.comparison.role==='owner'?<><label className="ft-consent-choice"><input type="checkbox" disabled={busy||!!pendingApproval.current} checked={approval===fingerprint} onChange={e=>setApproval(e.target.checked?fingerprint:null)}/>Я отдельно разрешаю сравнить показанные выше мои отметки с выбранными отметками отправителя этого приглашения. Разрешение можно отозвать.</label><button disabled={busy||!!pendingApproval.current||approval!==fingerprint} onClick={()=>void approve()}>Разрешить сравнение</button></>:<p>Своё согласие ты уже дал. Попроси владельца ссылки открыть приглашение в разделе «Сравнения».</p>}
    </>:<><h3>Общие выбранные темы</h3>{data.items?.length?<div className="ft-comparison-results">{data.items.map((x,i)=><div className="ft-map-proposal" key={i}><strong>{x.title}</strong><div className="ft-comparison-pair"><p>Моя отметка<br/><b>{STANCE_LABELS[x.mine]}</b></p><p>Отметка другого человека<br/><b>{STANCE_LABELS[x.theirs]}</b></p></div></div>)}</div>:<p>В выбранных вами наборах нет общих тем. Это ничего не говорит о совместимости или ценности человека.</p>}<p>Никакого общего балла: одинаковые или разные отметки не означают согласия на действия.</p></>}
   </>}
+  {blocker.state==='blocked'&&<AppDialog title="Результат согласия ещё не подтверждён" onClose={()=>blocker.reset()}>
+   <p>Согласие могло быть сохранено. Вернись к этому приглашению и повтори прежний запрос с той же ревизией либо отзови согласие.</p>
+   <div className="ft-form-actions"><button type="button" disabled={busy} onClick={()=>{blocker.reset();void approve();}}>Повторить то же согласие</button><button type="button" onClick={()=>blocker.reset()}>Остаться</button></div>
+  </AppDialog>}
  </>;
 }
