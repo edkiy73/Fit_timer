@@ -189,7 +189,7 @@ describe('FetUre starter', () => {
       await screen.findByText('Ответы сохранены. Можно продолжить позже.');
       expect(calls).toHaveLength(3);expect(calls[1]).toEqual(calls[0]);expect(calls[2]).toEqual(calls[0]);
       await user.click(screen.getByRole('link',{name:'Исследовать'}));
-      expect(await screen.findByRole('heading',{name:'Открой новые грани'})).toBeTruthy();
+      expect(await screen.findByRole('heading',{name:/Новое начинается с любопытства/i})).toBeTruthy();
     } finally {vi.restoreAllMocks();}
   });
 
