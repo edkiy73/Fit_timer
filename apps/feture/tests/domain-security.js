@@ -805,3 +805,47 @@ test('E04b2 owner attendance queue: trusted actor, cursor and strict request pro
  response={ok:false,error:'resource_not_found'};
  await assert.rejects(repository.execute(adult,command),e=>e.status===404);
 });
+
+
+test('E04b2b owner decision: trusted Core generation and minimal approve/decline receipt',async()=>{
+ const {createEventsRepository}=require('../lib/feture/events');
+ const user=identities.alice;await seed(user);
+ const since=new Date().toISOString();
+ await store.set('a:'+user.hash,JSON.stringify({email:user.email,since,
+  syncDevices:{[user.device]:{h:sha(user.token),at:since}}}));
+ const actor=await authenticate(req(user),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const unverified=await authenticate(req(user),store);
+ const id='00000000-0000-4000-8000-000000000095';
+ const requestId='00000000-0000-4000-8000-000000000096';
+ const action={action:'events.attendanceDecide',id,requestId,
+   operationId:'00000000-0000-4000-8000-000000000097',
+   expectedRevision:1,decision:'approve',reason:'reviewed'};
+ let response={ok:true,request:{requestId,state:'approved',revision:2},replayed:false};
+ const calls=[],guard=[];
+ const transport={configured:()=>true,request:async(path,opts)=>{
+  calls.push({path,body:JSON.parse(opts.body)});
+  return new Response(JSON.stringify(response));
+ }};
+ const events=createEventsRepository(transport,{requireCurrent:async a=>{guard.push(a.accountHash)}});
+ assert.equal(actor.accountGeneration.length,64);
+ assert.deepEqual(await events.execute(actor,action),{request:{requestId,state:'approved',revision:2},replayed:false});
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_event_attendance_owner_decide');
+ assert.deepEqual(calls[0].body,{p_actor:user.hash,p_generation:actor.accountGeneration,p_command:action});
+ assert.equal(guard.length,1);
+ const n=calls.length;
+ for(const bad of [{...action,actorHash:user.hash},{...action,requestId:'bad'},
+   {...action,expectedRevision:0},{...action,decision:'decline',reason:'reviewed'},
+   {...action,decision:'approve',reason:'capacity'}])
+  await assert.rejects(events.execute(actor,bad),err=>err.status===422);
+ await assert.rejects(events.execute(unverified,action),err=>err.status===403);
+ await assert.rejects(events.execute({...actor,accountGeneration:undefined},action),err=>err.status===401); // A forged actor loses Core's session trust marker.
+ const withoutGeneration=await authenticate(req(user),store,async()=>new Date(Date.now()+3600000).toISOString());
+ assert.equal(withoutGeneration.accountGeneration.length,64);
+ assert.equal(calls.length,n);
+ response={ok:true,request:{requestId,state:'approved',revision:2,privateJoinUrl:'secret'},replayed:false};
+ await assert.rejects(events.execute(actor,action),err=>err.status===503);
+ response={ok:false,error:'revision_conflict'};
+ await assert.rejects(events.execute(actor,action),err=>err.status===409);
+ response={ok:false,error:'resource_not_found'};
+ await assert.rejects(events.execute(actor,action),err=>err.status===404);
+});

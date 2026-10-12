@@ -31,7 +31,8 @@ export async function runEventOwnersPostgres(){
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002700_feture_event_public_catalog.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002800_feture_event_attendance_requests.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002900_feture_event_owner_request_queue.sql',import.meta.url),'utf8'));
-  await db.exec(readFileSync(new URL('../supabase/migrations/20261013003100_feture_event_staff_publication.sql',import.meta.url),'utf8'))
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261013003100_feture_event_staff_publication.sql',import.meta.url),'utf8'));
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261013003200_feture_event_attendance_owner_decisions.sql',import.meta.url),'utf8'))
   const a='a'.repeat(32),b='b'.repeat(32),guest='c'.repeat(32),manager='d'.repeat(32),qa='e'.repeat(32),auditor='f'.repeat(32),generation='1'.repeat(64);
   await db.query('insert into public.feture_profiles(account_hash) values ($1),($2),($3),($4),($5),($6)',[a,b,guest,manager,qa,auditor]);
   for(const [who,role] of [[manager,'manager'],[qa,'qa_operator'],[auditor,'auditor'],[a,'manager']])await db.query('insert into public.fixture_staff_role values ($1,$2,$3)',[who,generation,role]);
@@ -403,6 +404,64 @@ export async function runEventOwnersPostgres(){
   assert.equal(JSON.stringify(q1).includes('"actor_hash"'),false);
   assert.equal(JSON.stringify(q1).includes('"email"'),false);
 
+
+  // E04b2b moderation of a request is metadata-only, never admission or a join link.
+  await db.query("insert into public.feture_events(id,owner_hash,draft,state,published_at) values($1,$2,$3::jsonb,'published',clock_timestamp())",
+    [id(45),a,JSON.stringify(publishedDraft)]);
+  const attendanceDecision=async(who,command,gen=generation)=>(await db.query(
+   'select public.feture_event_attendance_owner_decide($1,$2,$3::jsonb) result',
+   [who,gen,JSON.stringify(command)])).rows[0].result;
+  const decision=(req,revision,operation,choice='approve',reason='reviewed')=>({
+   action:'events.attendanceDecide',id:id(45),requestId:req,operationId:id(operation),
+   expectedRevision:revision,decision:choice,reason
+  });
+  assert.equal((await attendance(guest,attendCmd('events.attendanceRequest',45,4801))).state,'pending');
+  const guestId=(await db.query("select request_id from public.feture_event_attendance_requests where event_id=$1 and actor_hash=$2",[id(45),guest])).rows[0].request_id;
+  const yes=decision(guestId,1,4802);
+  assert.equal((await attendanceDecision(guest,yes)).error,'resource_not_found'); // not event owner
+  assert.equal((await attendanceDecision(a,{...yes,actorHash:guest})).error,'invalid_request');
+  assert.equal((await attendanceDecision(a,{...yes,reason:'safety'})).error,'invalid_request');
+  assert.equal((await attendanceDecision(a,{...yes,expectedRevision:0})).error,'invalid_request');
+  assert.equal((await attendanceDecision(a,{...yes,requestId:id(9999)})).error,'resource_not_found');
+  const accepted=await attendanceDecision(a,yes);
+  assert.deepEqual(accepted.request,{requestId:guestId,state:'approved',revision:2});
+  assert.equal(accepted.replayed,false);
+  assert.equal(JSON.stringify(accepted).includes(guest),false);
+  assert.equal(JSON.stringify(accepted).includes(publishedDraft.privateJoinUrl),false);
+  assert.equal((await attendanceDecision(a,yes)).replayed,true);
+  await db.query('insert into public.feture_blocks(blocker_hash,blocked_hash) values($1,$2)',[a,guest]);
+  assert.equal((await attendanceDecision(a,yes)).error,'resource_not_found'); // block revokes even replayed approval
+  await db.query('delete from public.feture_blocks where blocker_hash=$1 and blocked_hash=$2',[a,guest]);
+  await db.query('update public.feture_profiles set adult_allowed=false where account_hash=$1',[guest]);
+  assert.equal((await attendanceDecision(a,yes)).error,'resource_not_found'); // revoke eligibility
+  await db.query('update public.feture_profiles set adult_allowed=true where account_hash=$1',[guest]);
+  assert.deepEqual((await statusReq(guest,45)).state,'approved');
+  assert.equal((await requestQueue(a,45)).items.length,0);
+  assert.equal((await attendanceDecision(a,{...yes,reason:'policy'})).error,'invalid_request');
+  assert.equal((await attendanceDecision(a,{...yes,decision:'decline',reason:'policy'})).error,'operation_conflict');
+  assert.equal((await attendanceDecision(a,decision(guestId,1,4803))).error,'revision_conflict');
+  assert.equal((await attendance(guest,attendCmd('events.attendanceWithdraw',45,4804))).state,'withdrawn');
+  assert.equal((await attendanceDecision(a,yes)).error,'revision_conflict');
+  assert.equal((await attendance(guest,attendCmd('events.attendanceRequest',45,4805))).state,'pending'); // new withdrawal cycle
+  assert.equal((await attendance(manager,attendCmd('events.attendanceRequest',45,4806))).state,'pending');
+  const managerId=(await db.query("select request_id from public.feture_event_attendance_requests where event_id=$1 and actor_hash=$2",[id(45),manager])).rows[0].request_id;
+  const no=decision(managerId,1,4807,'decline','capacity');
+  assert.equal((await attendanceDecision(a,no)).request.state,'declined');
+  assert.equal((await statusReq(manager,45)).state,'declined');
+  await assert.rejects(attendance(manager,attendCmd('events.attendanceRequest',45,4808)),/attendance_decision_requires_new_request_cycle/);
+  assert.equal((await attendance(manager,attendCmd('events.attendanceWithdraw',45,4809))).state,'withdrawn');
+  assert.equal((await attendanceDecision(a,no)).error,'revision_conflict');
+  await db.query("update public.feture_events set state='cancelled',published_at=null where id=$1",[id(45)]);
+  assert.equal((await attendanceDecision(a,decision(guestId,4,4810))).error,'resource_not_found');
+  const auditRows=(await db.query("select action,reason,response from public.feture_event_attendance_decisions where event_id=$1",[id(45)])).rows;
+  assert.equal(auditRows.length,2);
+  assert.deepEqual(auditRows.map(r=>r.action).sort(),['approve','decline']);
+  for(const audit of auditRows){
+   assert.equal(JSON.stringify(audit.response).includes(guest),false);
+   assert.equal(JSON.stringify(audit.response).includes(manager),false);
+   assert.equal(JSON.stringify(audit.response).includes('privateLocation'),false);
+  }
+
   await db.query('update public.feture_profiles set adult_allowed=false where account_hash=$1',[manager]);
   assert.equal((await decide(manager,rejectOne)).error,'forbidden');
   assert.equal((await staffRpc(manager)).error,'forbidden');
@@ -433,6 +492,8 @@ export async function runEventOwnersPostgres(){
    await assert.rejects(catalogList(guest),/permission denied/);
    await assert.rejects(eventPreview(guest,50),/permission denied/);
    await assert.rejects(db.query('select * from public.feture_event_attendance_requests'),/permission denied/);
+   await assert.rejects(db.query('select * from public.feture_event_attendance_decisions'),/permission denied/);
+   await assert.rejects(attendanceDecision(a,decision(guestId,1,4999)),/permission denied/);
    await assert.rejects(requestQueue(a,44),/permission denied/);
    await assert.rejects(db.query('select * from public.feture_event_attendance_operations'),/permission denied/);
    await assert.rejects(attendance(guest,attendCmd('events.attendanceRequest',40,4799)),/permission denied/);
