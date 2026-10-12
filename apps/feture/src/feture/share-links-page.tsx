@@ -1,5 +1,5 @@
 import {useEffect,useState} from 'react';
-import {Link,useParams} from 'react-router';
+import {Link,useLocation,useParams} from 'react-router';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import type {AuthSession} from '@appbase/core/auth.js';
 import {domainRequest,domainErrorMessage} from './domain-api';
@@ -49,11 +49,11 @@ function OwnLinks({session}:{session:AuthSession}){
  </section>;
 }
 export function SharedCardPage(){
- const auth=useOptionalAuth(),{linkId}=useParams();
+ const auth=useOptionalAuth(),{linkId}=useParams(),location=useLocation();
  useEffect(()=>{const meta=document.createElement('meta');meta.name='robots';meta.content='noindex,nofollow,noarchive';document.head.appendChild(meta);return ()=>meta.remove();},[]);
  if(!linkId||!/^([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i.test(linkId))return <section className="card"><p>Карточка недоступна.</p></section>;
  if(auth.loading)return <section className="card" role="status">Проверяем вход…</section>;
- if(!auth.session)return <section className="card"><h2>Карточка выбранных тем</h2><p>Получатель должен войти и подтвердить совершеннолетие. Сведения не загружаются до проверки.</p><Link to="/account">Войти</Link><p>После входа вернись по этой ссылке.</p></section>;
+ if(!auth.session)return <section className="card"><h2>Карточка выбранных тем</h2><p>Получатель должен войти и подтвердить совершеннолетие. Сведения не загружаются до проверки.</p><Link to="/account" state={{returnTo:location.pathname}}>Войти и открыть карточку</Link><p>После входа карточка откроется, если сервер разрешит доступ.</p></section>;
  return <SharedCard key={auth.session.email+auth.session.deviceId+auth.session.syncToken+linkId} session={auth.session} linkId={linkId}/>;
 }
 function SharedCard({session,linkId}:{session:AuthSession;linkId:string}){
