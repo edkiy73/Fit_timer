@@ -4,6 +4,8 @@
 
 **Active visual stream:** [Issue #908](https://github.com/edkiy73/Fit_timer/issues/908), [design kickoff + Sol/Astra prompt](DESIGN-START.md). Visual work runs **in parallel** with backend/media in non-overlapping files; DUX01 #909 → existing account/profile #841/#874/#875 → DUX02 #910 → DUX03 #911 → existing admin #842. Already-merged UX is audited, not rebuilt. Real browser screenshots and user QA remain explicit gates.
 
+**Reserved next Sol high-risk backend task:** [#931 — O02 expanded personal moderation/editorial staff roles](https://github.com/edkiy73/Fit_timer/issues/931), linked from parent [#865](https://github.com/edkiy73/Fit_timer/issues/865). **After** the active design stream reaches its handoff, the next manually started Sol security session should take #931: role/action/SQL permission matrix → independent security review → small gated PRs; migration and real sensitive-access release remain explicit approval/acceptance gates. GPT-6 can continue unrelated bounded functionality. User need not remember a separate prompt. No automatic model switch or background launch.
+
 ## Work order / dependency gates
 | Stage | Domain cards | Must be genuinely demonstrable before next gated experience |
 |---|---|---|
