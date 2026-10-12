@@ -70,7 +70,7 @@ function createPostsRepository(transport,documents){const guard=createAccessGuar
   }
   if(!['posts.mine','posts.delete','posts.read','posts.address','posts.rotateAddress','posts.revokeRecipient'].includes(c.action))await guard(actor);
   if(!transport.configured())reject(503,'domain_unavailable');
-  try{const response=await transport.request('/rest/v1/rpc/'+(['posts.testPreview','posts.fromTest'].includes(c.action)?'feture_test_share_command':['posts.address','posts.rotateAddress'].includes(c.action)?'feture_post_address_command':'feture_post_command'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({p_actor:actor.accountHash,p_command:c}),timeoutMs:8000});const r=await response.json();
+  try{const response=await transport.request('/rest/v1/rpc/'+(['posts.testPreview','posts.fromTest'].includes(c.action)?'feture_test_share_command':c.action==='posts.feed'?'feture_post_feed_command':['posts.address','posts.rotateAddress'].includes(c.action)?'feture_post_address_command':'feture_post_command'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({p_actor:actor.accountHash,p_command:c}),timeoutMs:8000});const r=await response.json();
    if(!response.ok||!object(r))reject(503,'domain_unavailable');
    if(r.ok!==true){if(['resource_not_found','recipient_unavailable'].includes(String(r.error)))reject(404,String(r.error));if(['revision_conflict','operation_conflict'].includes(String(r.error)))reject(409,String(r.error));if(r.error==='rate_limited')reject(429,'rate_limited');if(r.error==='invalid_request'||r.error==='invalid_cursor')reject(422,String(r.error));reject(503,'domain_unavailable');}
    if(c.action==='posts.testPreview'){
