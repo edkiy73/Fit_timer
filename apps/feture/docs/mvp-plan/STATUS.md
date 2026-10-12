@@ -10,6 +10,8 @@
 - **Supabase:** shared FitT project, таблицы только `feture_*`, `feture_seed.environment=prelaunch` (последняя read-only проверка). Доступ service_role через сервер; anon/authenticated напрямую приватное не читают.
 - **18+:** prelaunch QA разрешение любому существующему Core аккаунту через admin, 24–72 часа, отзыв, consent отдельно; при `stage=live` недействительно. PR #799 + #801 в main, SQL `20261011083303` и `20261011113717`. **Не является production proof**. Yoti — кандидат на реальную верификацию, договор/ключи/законы ещё не подтверждены. O02.1/O02.2: персональные роли управляющего, QA-оператора и аудитора и отдельный рабочий экран без общего ключа реализованы для допуска/журнала; остальные разделы ещё используют Core admin key.
 
+- **Визуальный поток DUX01 (#909 / #908):** тёплые FetUre-токены, Geologica в shell/portal, тематическая rail/tablet/phone навигация, floating blur dock и короткий hover/press. Локальный `npm run check` и React Chromium visual smoke (42 кадра, 320–1440, обе темы) прошли; независимый CSS/screenshot review выполнен, CTA-контраст исправлен. Срез в `design/909-shell-foundation`, merge только после GitHub CI. Далее: account visual gaps #874, затем #910. Live/staff/native и физические устройства остаются открытыми.
+
 ## Выполненные срезы (main либо явно указанный PR; независимая приёмка остаётся)
 | Направление | Факты |
 | --- | --- |

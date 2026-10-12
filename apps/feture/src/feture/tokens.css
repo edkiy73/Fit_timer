@@ -1,0 +1,43 @@
+/* Product-only visual vocabulary. Root tokens also reach React Aria portals. */
+:root {
+  --ft-font: "Geologica", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ft-ink: #1e1219;
+  --ft-muted: #75606d;
+  --ft-rose: #df234a;
+  --ft-action-fill: #df234a;
+  --ft-violet: #5c47d6;
+  --ft-border: #e3d7e0;
+  --ft-bg: #f3eef2;
+  --ft-white: #fff;
+  --ft-surface: #f8f3f7;
+  --ft-accent-ink: #a5274d;
+  --ft-accent-soft: #fce3e8;
+  --ft-nav: rgb(255 255 255 / .9);
+  --ft-shadow: 0 16px 38px -24px rgb(60 20 45 / .3);
+  --ft-radius-control: 14px;
+  --ft-radius-card: 24px;
+  --ft-radius-panel: 28px;
+  --ft-space-1: 8px;
+  --ft-space-2: 12px;
+  --ft-space-3: 16px;
+  --ft-space-4: 24px;
+  --ft-motion-press: 120ms;
+  --ft-motion-panel: 280ms;
+  --ft-ease: cubic-bezier(.2,.8,.2,1);
+}
+:root[data-theme=dark] {
+  --ft-ink: #fbf0f4;
+  --ft-muted: #b89fad;
+  --ft-rose: #ff3355;
+  /* White small-label contrast remains ≥4.5:1 in both themes. */
+  --ft-action-fill: #df234a;
+  --ft-violet: #b9a6ff;
+  --ft-border: #573649;
+  --ft-bg: #1a0f16;
+  --ft-white: #241520;
+  --ft-surface: #2f1c2a;
+  --ft-accent-ink: #ffb5cf;
+  --ft-accent-soft: #4a1a2a;
+  --ft-nav: rgb(36 21 32 / .92);
+  --ft-shadow: 0 18px 42px -24px rgb(0 0 0 / .7);
+}
