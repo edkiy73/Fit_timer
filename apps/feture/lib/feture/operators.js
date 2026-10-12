@@ -7,7 +7,7 @@ const {DomainError,reject}=require('./errors');
 const {createQaAdultAdmin}=require('./qa-adult');
 const {postReview}=require('./post-review');
 const {commentReview}=require('./comment-review');
-const {eventStaffQueue,eventStaffDecision}=require('./events-staff');
+const {eventStaffQueue,eventStaffDecision,eventStaffPublish}=require('./events-staff');
 const {timingSafeEqual}=require('node:crypto');
 /** @param {string} a @param {string} b */
 const sameSecret=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
@@ -32,7 +32,7 @@ function createOperatorEndpoint({transport,accounts,cors,quota}){
    // Check staff role BEFORE any email lookup: ordinary accounts must not
    // distinguish existing Core accounts by different lookup/grant errors.
    if(action.startsWith('feture.posts.')){const result=await postReview(transport,actor,body);res.statusCode=200;res.end(JSON.stringify(result));return;}
-   if(action.startsWith('feture.events.')){const result=await (action==='feture.events.decide'?eventStaffDecision(transport,actor,body):eventStaffQueue(transport,actor,body));res.statusCode=200;res.end(JSON.stringify(result));return;}
+   if(action.startsWith('feture.events.')){const result=await (action==='feture.events.decide'?eventStaffDecision(transport,actor,body):action==='feture.events.publish'?eventStaffPublish(transport,actor,body):eventStaffQueue(transport,actor,body));res.statusCode=200;res.end(JSON.stringify(result));return;}
    if(action.startsWith('feture.comments.')){const result=await commentReview(transport,actor,body);res.statusCode=200;res.end(JSON.stringify(result));return;}
    if(action.startsWith('feture.qa.')||action==='feture.operators.set'){
     if(!transport.configured())reject(503,'operators_unavailable');

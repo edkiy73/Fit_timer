@@ -30,7 +30,8 @@ export async function runEventOwnersPostgres(){
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002600_feture_event_rsvp_intents.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002700_feture_event_public_catalog.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002800_feture_event_attendance_requests.sql',import.meta.url),'utf8'));
-  await db.exec(readFileSync(new URL('../supabase/migrations/20261013002900_feture_event_owner_request_queue.sql',import.meta.url),'utf8'))
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261013002900_feture_event_owner_request_queue.sql',import.meta.url),'utf8'));
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261013003100_feture_event_staff_publication.sql',import.meta.url),'utf8'))
   const a='a'.repeat(32),b='b'.repeat(32),guest='c'.repeat(32),manager='d'.repeat(32),qa='e'.repeat(32),auditor='f'.repeat(32),generation='1'.repeat(64);
   await db.query('insert into public.feture_profiles(account_hash) values ($1),($2),($3),($4),($5),($6)',[a,b,guest,manager,qa,auditor]);
   for(const [who,role] of [[manager,'manager'],[qa,'qa_operator'],[auditor,'auditor'],[a,'manager']])await db.query('insert into public.fixture_staff_role values ($1,$2,$3)',[who,generation,role]);
@@ -163,6 +164,43 @@ export async function runEventOwnersPostgres(){
    assert.ok(!JSON.stringify(entry.response).includes(draft.privateJoinUrl));
    assert.ok(!JSON.stringify(entry.response).includes(draft.ticketUrl));
   }
+
+
+  // E03b: publication is a distinct reviewed operation. A private approval cannot publish.
+  const publish=async(who,command,gen=generation)=>(await db.query(
+    'select public.feture_event_staff_publish($1,$2,$3::jsonb) result',
+    [who,gen,JSON.stringify(command)])).rows[0].result;
+  const pubCmd=(n,revision,operation)=>({action:'publish',id:id(n),
+    operationId:id(operation),expectedRevision:revision});
+  assert.equal((await publish(manager,pubCmd(3,4,9700))).error,'review_required'); // approved but private
+  const cleanPublic={...clean,visibility:'public'};
+  assert.equal((await rpc(a,cmd(43,0,cleanPublic))).entry.state,'draft');
+  assert.equal((await rpc(a,{action:'events.submit',id:id(43),operationId:id(9701),expectedRevision:1})).entry.state,'pending');
+  assert.equal((await decide(manager,review(43,2,'approve','reviewed',9702))).event.state,'approved');
+  assert.equal((await publish(qa,pubCmd(43,3,9703))).error,'forbidden');
+  assert.equal((await publish(a,pubCmd(43,3,9704))).error,'review_required'); // owner cannot self-publish
+  assert.equal((await publish(manager,pubCmd(43,3,9705),'0'.repeat(64))).error,'forbidden');
+  assert.equal((await publish(manager,{...pubCmd(43,3,9706),ownerHash:a})).error,'invalid_request');
+  const publishCmd=pubCmd(43,3,9707);
+  const published=await publish(manager,publishCmd);
+  assert.deepEqual(published.event,{id:id(43),revision:4,state:'published'});
+  assert.equal(published.replayed,false);
+  assert.equal(JSON.stringify(published).includes(a),false);
+  assert.equal((await publish(manager,publishCmd)).replayed,true);
+  assert.equal((await publish(manager,{...publishCmd,expectedRevision:4})).error,'operation_conflict');
+  assert.equal((await publish(manager,pubCmd(43,3,9708))).error,'revision_conflict');
+  assert.equal((await rpc(a,{action:'events.read',id:id(43)})).entry.state,'published');
+  const publishedCatalogue=(await db.query('select public.feture_event_catalog_command($1,$2::jsonb) result',
+    [b,JSON.stringify({action:'events.preview',id:id(43)})])).rows[0].result;
+  assert.equal(publishedCatalogue.entry.id,id(43));
+  assert.equal(JSON.stringify(publishedCatalogue).includes('privateJoinUrl'),false);
+  const publicationAudit=(await db.query('select approved_draft_hash,response from public.feture_event_publications where event_id=$1',[id(43)])).rows;
+  assert.equal(publicationAudit.length,1);
+  assert.match(publicationAudit[0].approved_draft_hash,/^[a-f0-9]{64}$/);
+  assert.equal((await rpc(a,{action:'events.cancel',id:id(43),operationId:id(9709),expectedRevision:4})).event.state,'cancelled');
+  assert.equal((await publish(manager,publishCmd)).error,'revision_conflict'); // stale replay after cancellation
+  assert.equal((await db.query('select public.feture_event_catalog_command($1,$2::jsonb) result',
+    [b,JSON.stringify({action:'events.preview',id:id(43)})])).rows[0].result.error,'resource_not_found');
 
   // E02b: owner cancellation is final and never exposes draft in response.
   const cancelOne={action:'events.cancel',id:id(1),operationId:id(9901),expectedRevision:4};
@@ -383,6 +421,8 @@ export async function runEventOwnersPostgres(){
    await assert.rejects(db.query('select * from public.feture_events'),/permission denied/);
    await assert.rejects(db.query('select * from public.feture_event_operations'),/permission denied/);
    await assert.rejects(db.query('select * from public.feture_event_reviews'),/permission denied/);
+   await assert.rejects(db.query('select * from public.feture_event_publications'),/permission denied/);
+   await assert.rejects(publish(manager,pubCmd(43,4,9799)),/permission denied/);
    await assert.rejects(rpc(a,{action:'events.mine',cursor:null}),/permission denied/);
    await assert.rejects(staffRpc(manager),/permission denied/);
    await assert.rejects(decide(manager,rejectOne),/permission denied/);
