@@ -1,0 +1,21 @@
+/* O05 product catalogue within the shared AppBase workspace. */
+.ft-catalog-admin .ft-catalog-results{font-size:12px;line-height:1.5;color:var(--muted);margin:12px 0}
+.ft-catalog-admin .ft-catalog-topic-list{gap:10px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.ft-catalog-admin .ft-catalog-topic-list button{min-height:76px;border-radius:16px;padding:16px;align-items:flex-start}
+.ft-catalog-admin .ft-catalog-topic-list small{font-size:12px;line-height:1.5}
+.ft-catalog-admin .ft-catalog-publish-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}
+.ft-catalog-admin .ft-catalog-publish-list .ft-consent-choice{display:flex;align-items:flex-start;gap:12px;border:1px solid var(--line);padding:16px;border-radius:14px;background:var(--card);margin:0;min-height:76px;cursor:pointer;min-width:0}
+.ft-catalog-admin .ft-catalog-publish-list .ft-consent-choice:has(input:checked){border-color:var(--accent);background:var(--surface)}
+.ft-catalog-admin .ft-catalog-publish-list input[type=checkbox]{flex:none;margin-top:2px;width:20px;height:20px}
+.ft-catalog-admin .ft-catalog-publish-list label>span{display:grid;gap:5px;min-width:0}
+.ft-catalog-admin .ft-catalog-publish-list strong{font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.ft-catalog-admin .ft-catalog-publish-list small{font-size:11px;line-height:1.5;color:var(--muted)}
+.ft-catalog-admin .ft-catalog-pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:18px 0;flex-wrap:wrap}
+.ft-catalog-admin .ft-catalog-pagination span{font-size:12px;color:var(--muted)}
+.ft-catalog-admin .ft-catalog-pagination button{min-height:44px}
+.ft-catalog-admin .ft-catalog-related{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.ft-catalog-admin .ft-catalog-related-chip{display:flex;align-items:center;gap:8px;min-width:0;max-width:100%;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:4px 4px 4px 12px;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.ft-catalog-admin .ft-catalog-related-chip button{flex:none;min-width:44px;min-height:44px;padding:0;font-size:20px;border-radius:10px}
+.ft-catalog-admin .ab-admin-workspace :is(input:not([type=checkbox]),textarea,select){font-size:16px;min-height:44px}
+.ft-catalog-admin .ab-admin-workspace textarea{resize:vertical;line-height:1.6}
+@media(max-width:760px){.ft-catalog-admin :is(.ft-catalog-topic-list,.ft-catalog-publish-list){grid-template-columns:minmax(0,1fr)}.ft-catalog-admin .ft-catalog-publish-list .ft-consent-choice{padding:14px}.ft-catalog-admin .ft-catalog-topic-list button{padding:14px}}
