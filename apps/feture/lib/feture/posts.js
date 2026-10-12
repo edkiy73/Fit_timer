@@ -49,7 +49,7 @@ function createPostsRepository(transport,documents){const guard=createAccessGuar
   if(c.action==='posts.reactionSet'||c.action==='posts.reactionState'){
    await guard(actor);return reactions.execute(actor,c);
   }
-  if(c.action.startsWith('comments.')){
+  if(c.action==='comments.page'||c.action==='comments.read'||c.action==='comments.create'||c.action==='comments.edit'||c.action==='comments.delete'){
    if(c.action!=='comments.delete')await guard(actor);
    return comments.execute(actor,c);
   }
