@@ -344,3 +344,67 @@
 @media(max-width:650px){.ft-world-empty{grid-template-columns:1fr;gap:9px;padding:21px}.ft-world-empty-art{width:130px}.ft-world-empty-core{width:58px;height:58px}.ft-world-next{grid-template-columns:1fr}.ft-discover-hero{grid-template-columns:1fr;min-height:300px;border-radius:25px;padding:25px 21px}.ft-discover-hero h1{font-size:clamp(34px,8.8vw,45px)}.ft-discover-art{position:absolute;right:-120px;top:-95px;width:290px;min-height:290px;opacity:.28}.ft-discover-intro{align-items:flex-start;flex-direction:column}.ft-discover-grid{gap:9px}.ft-discover-card{padding:14px;min-height:196px;border-radius:18px;gap:10px}.ft-discover-card-title strong{font-size:16px}.ft-discover-card-title small{display:none}.ft-discover-card-icon{width:31px;height:31px}.ft-discover-card-link{font-size:11px}}
 @media(max-width:355px){.ft-discover-card{padding:11px;min-height:188px}.ft-discover-card-title strong{font-size:15px}.ft-discover-grid{gap:7px}}
 @media(prefers-reduced-motion:reduce){.ft-discover-art .core{animation:none}.ft-discover-card{transition:none}.ft-discover-card:is(:hover,:active){transform:none}}
+
+
+/* DUX11: Claude-inspired material, affordance and panel choreography. No data or navigation changes. */
+.ft-shell .ft-content :is(h1,h2,.ft-dialog h2){text-wrap:balance;font-variation-settings:"SHRP" 90}
+.ft-shell .ft-hero h1,.ft-shell .ft-home-hero h1,.ft-shell .ft-discover-hero h1{font-variation-settings:"SHRP" 100}
+.ft-shell :is(.ft-hero,.ft-home-hero,.ft-discover-hero){isolation:isolate}
+.ft-shell :is(.ft-jar-card,.ft-home-quick>a,.ft-discover-card){position:relative;transform:translateZ(0);will-change:auto}
+.ft-shell .ft-jar-card{overflow:hidden}
+.ft-shell .ft-jar-card:after{content:"";pointer-events:none;position:absolute;inset:0;border-radius:inherit;background:linear-gradient(125deg,#fff5 0%,transparent 36%,transparent 65%,#c08ab116 100%);opacity:.45;transition:opacity .22s var(--ft-ease)}
+.ft-shell .ft-jar-card:is(:hover,:focus-visible):after{opacity:1}
+.ft-shell .ft-jar-card .ft-jar{filter:drop-shadow(0 7px 13px #7c28521c);transition:filter .24s var(--ft-ease)}
+.ft-shell .ft-jar-card:is(:hover,:focus-visible) .ft-jar{filter:drop-shadow(0 10px 20px #b5457c3b)}
+.ft-shell .ft-discover-card:is(:hover,:focus-visible) .ft-discover-card-icon{background:#ffffff38;box-shadow:0 0 30px #ffc2ef47}
+.ft-shell .ft-discover-card .ft-discover-card-art{transition:transform .3s var(--ft-ease),opacity .3s var(--ft-ease)}
+@media(hover:hover){.ft-shell .ft-discover-card:hover .ft-discover-card-art{transform:scale(1.05) rotate(2deg);opacity:1}}
+.ft-shell .ft-home-quick>a:focus-visible{box-shadow:var(--ft-shadow),0 0 0 2px var(--ft-violet)}
+.ft-shell .ft-home-primary,.ft-shell .ft-primary{box-shadow:0 11px 26px -14px #d42d6680}
+.ft-shell .ft-home-primary:focus-visible,.ft-shell .ft-primary:focus-visible{box-shadow:0 0 0 3px var(--ft-violet),0 16px 35px -17px #df2353a3}
+.ft-shell .ft-home-primary svg,.ft-shell .ft-home-secondary svg{transition:transform .18s var(--ft-ease)}
+@media(hover:hover){.ft-shell :is(.ft-home-primary,.ft-home-secondary):hover svg{transform:translateX(3px)}}
+.ft-shell :is(.ft-topic,.ft-discover-card,.ft-jar-card) svg{flex-shrink:0}
+.ft-shell .ft-topic{transition:background-color .18s var(--ft-ease),border-color .18s var(--ft-ease),transform .13s var(--ft-ease)}
+.ft-shell .ft-topic:is(:hover,:focus-visible){background:var(--ft-surface);border-color:var(--ft-violet)!important}
+.ft-shell .ft-topic:active{transform:scale(.995)}
+/* React Aria owns modal focus, Escape and dirty-save blockers; styling relies on its enter/exit states. */
+.ft-overlay{background:rgb(28 12 30 / .68);backdrop-filter:blur(6px) saturate(1.08);-webkit-backdrop-filter:blur(6px) saturate(1.08)}
+.ft-modal{transform-origin:center}
+.ft-dialog{border:1px solid var(--ft-border);box-shadow:0 22px 75px -22px #130b1aca,0 8px 32px #a93f5a1c}
+.ft-dialog h2{font-variation-settings:"SHRP" 96;letter-spacing:-.045em;line-height:1.13}
+.ft-dialog-header{background:radial-gradient(ellipse 100% 120% at 96% -29%,#ce94f124,transparent 67%),var(--ft-white)}
+.ft-dialog-header:before{content:"";position:absolute;top:0;left:22px;right:22px;height:1px;background:linear-gradient(90deg,transparent,var(--ft-violet),transparent);opacity:.42}
+.ft-dialog-close{display:grid;place-items:center;background:var(--ft-surface);color:var(--ft-ink);border:1px solid var(--ft-border)!important;transition:transform .12s var(--ft-ease),background-color .16s var(--ft-ease)}
+.ft-dialog-close:hover{background:var(--ft-accent-soft)}
+.ft-dialog-close:active{transform:scale(.91)}
+.ft-dialog :is(.ft-status,.ft-visibility-options button){transition:border-color .18s var(--ft-ease),background-color .18s var(--ft-ease),box-shadow .18s var(--ft-ease),transform .12s var(--ft-ease)}
+.ft-dialog :is(.ft-status,.ft-visibility-options button):active{transform:scale(.985)}
+.ft-dialog :is(.ft-status.active,.ft-visibility-options button.active){box-shadow:inset 0 0 0 1px var(--ft-accent-ink)}
+.ft-dialog :is(.ft-status,.ft-visibility-options button):focus-visible{outline:3px solid var(--ft-violet);outline-offset:2px}
+.ft-dialog :is(.ft-status,.ft-visibility-options button,.ft-hint-chip){min-height:44px}
+.ft-hint-chip{border:1px solid var(--ft-border)!important;transition:background-color .18s var(--ft-ease),border-color .18s var(--ft-ease),transform .12s var(--ft-ease)}
+.ft-hint-chip:is(:hover,:focus-visible){background:var(--ft-accent-soft);border-color:var(--ft-violet)!important}.ft-hint-chip:active{transform:scale(.97)}
+/* Entrance and exit remain non-blocking, React Aria still controls unmount and restore focus. */
+.ft-overlay[data-entering]{animation:ft-premium-backdrop-in .24s ease-out both}
+.ft-overlay[data-exiting]{animation:ft-premium-backdrop-out .18s ease-in both}
+.ft-overlay .ft-modal[data-entering]{animation:ft-premium-dialog-in .32s var(--ft-ease) both}
+.ft-overlay .ft-modal[data-exiting]{animation:ft-premium-dialog-out .18s ease-in both}
+@keyframes ft-premium-backdrop-in{from{opacity:0}to{opacity:1}}
+@keyframes ft-premium-backdrop-out{from{opacity:1}to{opacity:0}}
+@keyframes ft-premium-dialog-in{from{opacity:0;transform:translateY(20px) scale(.965)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes ft-premium-dialog-out{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(10px) scale(.985)}}
+@media(max-width:767px){
+ .ft-overlay-adaptive .ft-modal[data-entering]{animation:ft-premium-sheet-in .34s var(--ft-ease) both}
+ .ft-overlay-adaptive .ft-modal[data-exiting]{animation:ft-premium-sheet-out .2s ease-in both}
+ .ft-dialog-adaptive{box-shadow:0 -22px 65px -25px #10051caf}
+ .ft-dialog-header{padding-top:26px}
+ .ft-dialog-header:after{content:"";position:absolute;top:10px;left:calc(50% - 20px);width:40px;height:4px;border-radius:99px;background:var(--ft-border);pointer-events:none}
+}
+@keyframes ft-premium-sheet-in{from{opacity:.65;transform:translateY(70px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ft-premium-sheet-out{from{opacity:1;transform:translateY(0)}to{opacity:.7;transform:translateY(60px)}}
+@media(prefers-reduced-motion:reduce){
+ .ft-overlay:is([data-entering],[data-exiting]),.ft-overlay .ft-modal:is([data-entering],[data-exiting]){animation:none!important}
+ .ft-shell :is(.ft-jar-card,.ft-discover-card,.ft-home-quick>a,.ft-topic,.ft-home-primary,.ft-home-secondary) *, .ft-hint-chip,.ft-dialog :is(.ft-status,.ft-visibility-options button,.ft-dialog-close){transition:none!important;transform:none!important}
+ .ft-shell .ft-discover-card .ft-discover-card-art{transition:none}
+}
