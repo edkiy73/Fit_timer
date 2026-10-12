@@ -51,63 +51,7 @@ begin
     jsonb_typeof(p_command->'id') is distinct from 'string' or
     (p_command->>'id') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' or
     jsonb_typeof(p_command->'operationId') is distinct from 'string' or
-    (p_command->>'operationId') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12} or
-    jsonb_typeof(p_command->'expectedRevision') is distinct from 'number' or
-    (p_command->>'expectedRevision') !~ '^[1-9][0-9]{0,14}$'
- then return jsonb_build_object('ok',false,'error','invalid_request');end if;
- eid:=(p_command->>'id')::uuid;
- op:=(p_command->>'operationId')::uuid;
- expected:=(p_command->>'expectedRevision')::bigint;
- digest:=encode(sha256(convert_to(p_command::text,'UTF8')),'hex');
- -- Keep publication/cancellation serialized on event row; retries after a
- -- cancellation do not return stale 'published' success.
- select * into e from public.feture_events where id=eid for update;
- if not found or e.state='deleted' then
-  return jsonb_build_object('ok',false,'error','resource_not_found');end if;
- if e.owner_hash=p_actor then
-  return jsonb_build_object('ok',false,'error','review_required');end if;
- select * into receipt from public.feture_event_publications
-  where actor_hash=p_actor and account_generation=p_generation and operation_id=op;
- if found then
-  if receipt.payload_hash<>digest then
-   return jsonb_build_object('ok',false,'error','operation_conflict');end if;
-  if e.state='published' and e.revision=receipt.applied_revision then
-   return receipt.response||jsonb_build_object('replayed',true);end if;
-  return jsonb_build_object('ok',false,'error','revision_conflict');
- end if;
- if e.state<>'approved' or e.revision<>expected then
-  return jsonb_build_object('ok',false,'error','revision_conflict');end if;
- if not public.feture_peer_eligible(e.owner_hash) or
-    e.draft->>'visibility'<>'public' or
-    e.draft->'privateLocation' is distinct from 'null'::jsonb or
-    e.draft->'privateJoinUrl' is distinct from 'null'::jsonb or
-    e.draft->'ticketUrl' is distinct from 'null'::jsonb or
-    (e.draft->>'startsAt')::timestamptz<=clock_timestamp() or
-    (e.draft->>'endsAt')::timestamptz<=clock_timestamp()
- then return jsonb_build_object('ok',false,'error','review_required');end if;
- draft_digest:=encode(sha256(convert_to(e.draft::text,'UTF8')),'hex');
- -- Current exact revision and draft must have passed a distinct prior review.
- if not exists(select 1 from public.feture_event_reviews r
-   where r.event_id=eid and r.action='approve'
-    and r.applied_revision=e.revision and r.draft_hash=draft_digest)
- then return jsonb_build_object('ok',false,'error','review_required');end if;
- update public.feture_events set state='published',revision=revision+1,
-  published_at=clock_timestamp(),updated_at=clock_timestamp()
- where id=eid returning * into e;
- result:=jsonb_build_object('ok',true,
-  'event',jsonb_build_object('id',e.id,'state','published','revision',e.revision),
-  'replayed',false);
- insert into public.feture_event_publications(actor_hash,account_generation,
-  operation_id,event_id,payload_hash,approved_draft_hash,applied_revision,response)
- values(p_actor,p_generation,op,eid,digest,draft_digest,e.revision,result);
- return result;
-end $$;
-revoke all on function public.feture_event_staff_publish(text,text,jsonb)
- from public,anon,authenticated;
-grant execute on function public.feture_event_staff_publish(text,text,jsonb)
- to service_role;
-notify pgrst,'reload schema';
- or
+    (p_command->>'operationId') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' or
     jsonb_typeof(p_command->'expectedRevision') is distinct from 'number' or
     (p_command->>'expectedRevision') !~ '^[1-9][0-9]{0,14}$'
  then return jsonb_build_object('ok',false,'error','invalid_request');end if;
