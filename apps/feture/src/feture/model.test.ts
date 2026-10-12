@@ -8,7 +8,7 @@ describe('Public catalogue fallback contract',()=>{
   const fallback=catalogSchema.parse(bundledCatalogue);
   expect(fallback.categories.some(category=>category.interests.length>0)).toBe(true);
   expect(catalogSchema.safeParse({...bundledCatalogue,categories:[]}).success).toBe(false);
-  expect(catalogSchema.safeParse({...bundledCatalogue,categories:[{...bundledCatalogue.categories[0],interests:[]}]}).success).toBe(false);
+  expect(catalogSchema.safeParse({...bundledCatalogue,categories:fallback.categories.map(category=>({...category,interests:[]}))}).success).toBe(false);
  });
 });
 describe('FetUre interest map',()=>{
