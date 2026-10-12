@@ -30,14 +30,16 @@ export function createInterestAPI(endpoint:string,getSession:()=>Promise<AuthSes
   try {
    const response=await send(endpoint,{method:'POST',cache:'no-store',signal:AbortSignal.any([signal,AbortSignal.timeout(12000)]),
     headers:{'Content-Type':'application/json','x-fit-email':session.email,'x-fit-device':session.deviceId,'x-fit-token':session.syncToken},body:JSON.stringify(body)});
-   const data:unknown=await response.json();
    if(!sameSession(await getSession(),session)||signal.aborted)throw new InterestError('auth_required');
-   if(response.status===409)return data;
-   if(!response.ok){
+   // Proxy/provider error pages are not guaranteed to be JSON.
+   // Respect the HTTP status (particularly 429 Retry-After) before parsing a body.
+   if(!response.ok&&response.status!==409){
     const code=response.status===401?'auth_required':response.status===403?'adult_verification_required':response.status===429?'rate_limited':response.status===422||response.status===413?'invalid_request':'unavailable';
     const retry=Number(response.headers.get('Retry-After'));
     throw new InterestError(code,Number.isFinite(retry)?Math.min(300000,Math.max(0,retry*1000)):0);
    }
+   const data:unknown=await response.json();
+   if(!sameSession(await getSession(),session)||signal.aborted)throw new InterestError('auth_required');
    return data;
   }catch(error){if(error instanceof InterestError)throw error;throw new InterestError(signal.aborted?'auth_required':'offline');}
  }
