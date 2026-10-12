@@ -74,7 +74,7 @@ test('C02.3a comments: moderation-first pending, ACL, exact CAS/replay, tombston
   const approved=decide(create.id,id(322),2,'approve','reviewed');
   assert.equal((await staff(manager,approved)).entry.state,'published');
   assert.equal((await staff(manager,approved)).replayed,true);
-  assert.equal((await staff(manager,{...approved,reason:'privacy'})).error,'operation_conflict');
+  assert.equal((await staff(manager,{...approved,expectedRevision:3})).error,'operation_conflict');
   assert.equal((await staff(b,{action:'audit',cursor:null})).error,'forbidden');
   const reply={action:'comments.create',id:id(400),postId:post,parentId:create.id,operationId:id(401),text:'Ответ на комментарий'};
   assert.equal((await cmd(c,reply)).entry.state,'pending');
