@@ -50,7 +50,7 @@ function createPostsRepository(transport,documents){const guard=createAccessGuar
    await guard(actor);return reactions.execute(actor,c);
   }
   if(c.action==='comments.page'||c.action==='comments.read'||c.action==='comments.create'||c.action==='comments.edit'||c.action==='comments.delete'){
-   if(c.action!=='comments.delete')await guard(actor);
+   if(c.action!=='comments.delete'&&c.action!=='comments.mine')await guard(actor);
    return comments.execute(actor,c);
   }
   if(c.action==='posts.bookmarks'||c.action==='posts.bookmarkSave'||c.action==='posts.bookmarkRemove'){
