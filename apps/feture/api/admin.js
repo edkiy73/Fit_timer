@@ -30,6 +30,6 @@ module.exports=async(req,res)=>{
   res.setHeader('Cache-Control','no-store');
   return fail(res,404,'unsupported_feture_observability');
  }
- if(typeof action==='string'&&(action.startsWith('feture.qa.')||action.startsWith('feture.operators.')||action.startsWith('feture.posts.')))return operators(req,res);
+ if(typeof action==='string'&&(action.startsWith('feture.qa.')||action.startsWith('feture.operators.')||action.startsWith('feture.posts.')||action.startsWith('feture.events.')))return operators(req,res);
  return coreAdmin(req,res);
 };
