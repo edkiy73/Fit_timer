@@ -86,3 +86,29 @@ test('questionnaires: version pinning, private attempts, authoritative scoring, 
   await db.query('delete from public.feture_profiles where account_hash=$1',[alice]);assert.equal((await db.query('select count(*)::int n from public.feture_test_operations where account_hash=$1',[alice])).rows[0].n,0);
  }finally{await db.close();}
 });
+
+// W03/W04: private history metadata must be checked before leaving the server.
+test('questionnaires history DTO rejects malformed provider metadata and strips extra private fields',async()=>{
+ const email='history@example.com',device='history-device',token='history-token';
+ const sha=s=>createHash('sha256').update(s).digest('hex');
+ const hash=sha(email).slice(0,32);
+ const actor=await authenticate({headers:{'x-fit-email':email,'x-fit-device':device,'x-fit-token':token}},
+  {configured:()=>true,get:async key=>key==='a:'+hash?JSON.stringify({email,syncDevices:{[device]:{h:sha(token),at:new Date().toISOString()}}}):null},
+  async()=>new Date(Date.now()+3600000).toISOString());
+ const item={id:id(3000),testId:'contract-test',title:'Исследование',status:'draft',revision:1,updatedAt:'2026-10-12T11:00:00Z',answers:{private:'never-in-list'},ownerHash:hash};
+ let payload={ok:true,versions:[],attempts:[item]};
+ const transport={configured:()=>true,request:async()=>new Response(JSON.stringify(payload))};
+ const repository=createTestsRepository(transport,{requireCurrent:async()=>{}});
+ const valid=await repository.execute(actor,{action:'tests.list'});
+ assert.deepEqual(valid,{versions:[],attempts:[{id:item.id,testId:item.testId,title:item.title,status:item.status,revision:item.revision,updatedAt:item.updatedAt}]});
+ for(const patch of [
+  {id:'not-a-uuid'},{testId:'wrong/id'},{title:{private:'secret'}},{title:'unsafe\ntext'},
+  {status:'pending'},{revision:'1'},{revision:0},{updatedAt:'tomorrow'},
+  {updatedAt:'2026-10-12'},{updatedAt:'2026-10-12T11:00:00'},
+ ]){
+  payload={ok:true,versions:[],attempts:[{...item,...patch}]};
+  await assert.rejects(repository.execute(actor,{action:'tests.list'}),e=>e.status===503&&e.code==='domain_unavailable');
+ }
+ payload={ok:true,versions:[],attempts:[item,{...item}]};
+ await assert.rejects(repository.execute(actor,{action:'tests.list'}),e=>e.status===503&&e.code==='domain_unavailable');
+});
