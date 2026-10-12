@@ -61,6 +61,14 @@ function eventCommand(v){
     (v.cursor===null||record(v.cursor)&&keys(v.cursor,['at','id'])&&
       pgStamp(v.cursor.at)&&typeof v.cursor.id==='string'&&uuid.test(v.cursor.id)))
   return /** @type {import('./event-contract').EventCommand} */(v);
+ if(v.action==='events.attendanceDecide'&&
+    keys(v,['action','id','requestId','operationId','expectedRevision','decision'])&&
+    typeof v.id==='string'&&uuid.test(v.id)&&
+    typeof v.requestId==='string'&&uuid.test(v.requestId)&&
+    typeof v.operationId==='string'&&uuid.test(v.operationId)&&
+    Number.isSafeInteger(v.expectedRevision)&&v.expectedRevision>=1&&v.expectedRevision<=999999999999999&&
+    ['approve','decline'].includes(String(v.decision)))
+  return /** @type {import('./event-contract').EventCommand} */(v);
  if(v.action==='events.attendanceStatus'&&keys(v,['action','id'])&&
     typeof v.id==='string'&&uuid.test(v.id))
   return /** @type {import('./event-contract').EventCommand} */(v);

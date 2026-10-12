@@ -73,12 +73,12 @@ function createEventsRepository(transport,documents){
   async execute(actor,request){
    requireOwner(actor,actor.accountHash);
    const command=eventCommand(request);
-   if(!['events.save','events.read','events.mine','events.submit','events.cancel','events.rsvpStatus','events.rsvpSet','events.catalog','events.preview','events.attendanceStatus','events.attendanceRequest','events.attendanceWithdraw','events.attendanceRequests'].includes(command.action))reject(422,'invalid_request');
+   if(!['events.save','events.read','events.mine','events.submit','events.cancel','events.rsvpStatus','events.rsvpSet','events.catalog','events.preview','events.attendanceStatus','events.attendanceRequest','events.attendanceWithdraw','events.attendanceRequests','events.attendanceDecide'].includes(command.action))reject(422,'invalid_request');
    if(command.action!=='events.cancel'&&!(command.action==='events.rsvpSet'&&command.status==='withdrawn')&&command.action!=='events.attendanceWithdraw')
     await guard(actor); // Withdrawal must stay possible after loss of event/18+/consent access.
    if(!transport.configured())reject(503,'domain_unavailable');
    try{
-    const response=await transport.request('/rest/v1/rpc/'+(command.action==='events.submit'?'feture_event_submit_command':command.action==='events.cancel'?'feture_event_cancel_command':command.action==='events.rsvpSet'||command.action==='events.rsvpStatus'?'feture_event_rsvp_command':command.action==='events.catalog'||command.action==='events.preview'?'feture_event_catalog_command':command.action==='events.attendanceRequests'?'feture_event_attendance_owner_queue':command.action==='events.attendanceStatus'||command.action==='events.attendanceRequest'||command.action==='events.attendanceWithdraw'?'feture_event_attendance_command':'feture_event_owner_command'),{
+    const response=await transport.request('/rest/v1/rpc/'+(command.action==='events.submit'?'feture_event_submit_command':command.action==='events.cancel'?'feture_event_cancel_command':command.action==='events.rsvpSet'||command.action==='events.rsvpStatus'?'feture_event_rsvp_command':command.action==='events.catalog'||command.action==='events.preview'?'feture_event_catalog_command':command.action==='events.attendanceDecide'?'feture_event_attendance_owner_decide':command.action==='events.attendanceRequests'?'feture_event_attendance_owner_queue':command.action==='events.attendanceStatus'||command.action==='events.attendanceRequest'||command.action==='events.attendanceWithdraw'?'feture_event_attendance_command':'feture_event_owner_command'),{
      method:'POST',headers:{'Content-Type':'application/json'},timeoutMs:8000,
      body:JSON.stringify({p_actor:actor.accountHash,p_command:command})
     });
@@ -91,6 +91,17 @@ function createEventsRepository(transport,documents){
      if(data.error==='rate_limited')reject(429,'rate_limited');
      reject(503,'domain_unavailable');
     }
+    if(command.action==='events.attendanceDecide'){
+     if(!shape(data,['ok','request','replayed'])||typeof data.replayed!=='boolean'||
+       !object(data.request)||!shape(data.request,['requestId','state','revision'])||
+       data.request.requestId!==command.requestId||
+       data.request.state!==(command.decision==='approve'?'approved':'declined')||
+       !Number.isSafeInteger(data.request.revision)||
+       Number(data.request.revision)<=command.expectedRevision)
+       reject(503,'domain_unavailable');
+     return {request:{requestId:data.request.requestId,state:data.request.state,
+       revision:data.request.revision},replayed:data.replayed};
+    }
     if(command.action==='events.attendanceRequests'){
      if(!shape(data,['ok','items','nextCursor'])||!Array.isArray(data.items)||
        data.items.length>20||!cursor(data.nextCursor))reject(503,'domain_unavailable');
@@ -98,7 +109,7 @@ function createEventsRepository(transport,documents){
     }
     if(command.action==='events.attendanceStatus'||command.action==='events.attendanceRequest'||command.action==='events.attendanceWithdraw'){
      if(!shape(data,['ok','state','replayed'])||
-       !['none','pending','withdrawn'].includes(String(data.state))||
+       !['none','pending','approved','declined','withdrawn'].includes(String(data.state))||
        typeof data.replayed!=='boolean'||
        (command.action==='events.attendanceWithdraw'&&data.state!=='withdrawn'))
        reject(503,'domain_unavailable');

@@ -11,6 +11,7 @@ export type EventCommand=
  | {action:'events.read';id:string}
  | {action:'events.preview';id:string}
  | {action:'events.rsvpStatus';id:string}
+ | {action:'events.attendanceDecide';id:string;requestId:string;operationId:string;expectedRevision:number;decision:'approve'|'decline'}
  | {action:'events.attendanceStatus';id:string}
  | {action:'events.attendanceRequests';id:string;cursor:EventCursor|null}
  | {action:'events.attendanceRequest'|'events.attendanceWithdraw';id:string;operationId:string}
