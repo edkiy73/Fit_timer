@@ -7,6 +7,7 @@ const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)&&Object.getProt
 /** @param {Record<string,unknown>} v @param {string[]} keys */
 const keys=(v,keys)=>Object.keys(v).sort().join('\0')===keys.slice().sort().join('\0');
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
+const pgStamp=v=>typeof v==='string'&&v.length<=50&&/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,6})?(?:Z|[+-]\d\d:\d\d)$/.test(v)&&Number.isFinite(Date.parse(v));
 /** @param {unknown} v @param {number} max @param {number} [min] */
 const plain=(v,max,min=0)=>typeof v==='string'&&v.length>=min&&v.length<=max&&v.trim().length>=min&&!/[\x00-\x08\x0b-\x1f\x7f]/.test(v);
 /** @param {unknown} v */
@@ -53,7 +54,7 @@ function eventDraft(v){
 function eventCommand(v){
  if(!record(v)||typeof v.action!=='string')reject(422,'invalid_request');
  if((v.action==='events.mine'||v.action==='events.catalog')&&keys(v,['action','cursor'])&&
-    (v.cursor===null||record(v.cursor)&&keys(v.cursor,['at','id'])&&instant(v.cursor.at)&&typeof v.cursor.id==='string'&&uuid.test(v.cursor.id)))
+    (v.cursor===null||record(v.cursor)&&keys(v.cursor,['at','id'])&&pgStamp(v.cursor.at)&&typeof v.cursor.id==='string'&&uuid.test(v.cursor.id)))
   return /** @type {import('./event-contract').EventCommand} */(v);
  if(v.action==='events.read'&&keys(v,['action','id'])&&typeof v.id==='string'&&uuid.test(v.id))
   return /** @type {import('./event-contract').EventCommand} */(v);
