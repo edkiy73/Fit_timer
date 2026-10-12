@@ -110,6 +110,20 @@ begin
     on conflict(id) do nothing;
   end loop;
 
+  -- Event RSVP intentions: three synthetic participants per event, no attendee list exposure.
+  for i in 1..(jsonb_array_length(payload->'events')*3) loop
+    item:=payload->'events'->((i-1)%jsonb_array_length(payload->'events'));
+    raw_id:=md5(ds||':event:'||(item->>'seedKey'));
+    target:=(substr(raw_id,1,8)||'-'||substr(raw_id,9,4)||'-4'||substr(raw_id,14,3)||'-8'||substr(raw_id,18,3)||'-'||substr(raw_id,21,12))::uuid;
+    actor:='seed:'||ds||':'||(people->((i*7+2)%people_count)->>'seedKey');
+    if actor='seed:'||ds||':'||(item->>'owner') then
+      actor:='seed:'||ds||':'||(people->((i*7+3)%people_count)->>'seedKey');
+    end if;
+    insert into public.feture_event_rsvps(event_id,actor_hash,status,visible_to_attendees,created_at,updated_at)
+    values(target,actor,case when i%4=0 then 'interested' else 'going' end,false,clock_timestamp(),clock_timestamp())
+    on conflict(event_id,actor_hash) do nothing;
+  end loop;
+
   for i in 1..(post_count*2) loop
     item:=posts->((i-1)%post_count);
     raw_id:=md5(ds||':post:'||(item->>'seedKey'));
@@ -144,6 +158,7 @@ select 'profiles' as entity,count(*)::int as rows from public.feture_profiles
 union all select 'posts',count(*)::int from public.feture_posts
 union all select 'groups',count(*)::int from public.feture_groups
 union all select 'events',count(*)::int from public.feture_events
+union all select 'rsvps',count(*)::int from public.feture_event_rsvps
 union all select 'comments',count(*)::int from public.feture_post_comments
 union all select 'likes',count(*)::int from public.feture_post_reactions;
 commit;
