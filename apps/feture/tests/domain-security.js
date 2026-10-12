@@ -577,7 +577,8 @@ test('E01b owner-only event RPC uses authenticated Core actor and strict DTO',as
  assert.equal(calls[0].body.p_actor,identity.hash);
  assert.deepEqual(calls[0].body.p_command,input);
  assert.equal(consents.length,1);
- assert.deepEqual(Object.keys(ownerDto({...entry,ownerHash:'other'})).sort(),['createdAt','draft','id','revision','state','updatedAt']);
+ assert.deepEqual(Object.keys(ownerDto(entry)).sort(),['createdAt','draft','id','revision','state','updatedAt']);
+ assert.throws(()=>ownerDto({...entry,ownerHash:'other'}),e=>e.code==='domain_unavailable');
  await assert.rejects(events.execute({accountHash:identity.hash,verifiedAdult:true},input),e=>e.status===401);
  await assert.rejects(events.execute(actor,{...input,ownerHash:identities.bob.hash}),e=>e.status===422);
  await assert.rejects(events.execute(actor,{action:'events.catalog',cursor:null}),e=>e.status===422);
