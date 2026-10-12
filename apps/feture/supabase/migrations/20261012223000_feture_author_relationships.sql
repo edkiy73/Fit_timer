@@ -32,7 +32,7 @@ grant select,insert on public.feture_author_relationship_operations to service_r
 create function public.feture_author_relationship_command(p_actor text,p_command jsonb)
 returns jsonb language plpgsql security invoker set search_path=pg_catalog,public as $$
 declare
- act text:=p_command->>'action'; keys text[];requested_kind text; public_id uuid;post_id uuid; op_id uuid;
+ act text:=p_command->>'action'; keys text[];requested_kind text; target_uuid uuid;post_id uuid; op_id uuid;
  desired boolean;payload_hash text;receipt public.feture_author_relationship_operations%rowtype;
  target_owner text;source_post public.feture_posts%rowtype;active_now boolean;
  cursor_value jsonb;cursor_at timestamptz;cursor_id uuid;page jsonb;
@@ -94,7 +94,7 @@ begin
  if jsonb_typeof(p_command->'publicAuthorId') is distinct from 'string' or
     p_command->>'publicAuthorId' !~* '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
  then return jsonb_build_object('ok',false,'error','invalid_request');end if;
- public_id:=(p_command->>'publicAuthorId')::uuid;
+ target_uuid:=(p_command->>'publicAuthorId')::uuid;
  if act='relationships.set' then
   desired:=(p_command->>'active')::boolean;
   if (desired and jsonb_typeof(p_command->'postId') is distinct from 'string') or
@@ -118,7 +118,7 @@ begin
   select * into receipt from public.feture_author_relationship_operations
    where viewer_hash=p_actor and operation_id=op_id;
   if receipt.operation_id is not null and
-    (receipt.payload_hash<>payload_hash or receipt.target_id<>public_id or receipt.kind<>requested_kind or receipt.active<>desired)
+    (receipt.payload_hash<>payload_hash or receipt.target_id<>target_uuid or receipt.kind<>requested_kind or receipt.active<>desired)
   then return jsonb_build_object('ok',false,'error','operation_conflict');end if;
  end if;
  if act='relationships.state' or desired then
@@ -130,14 +130,14 @@ begin
     not public.feture_post_visible(source_post,p_actor)
   then return jsonb_build_object('ok',false,'error','resource_not_found');end if;
   select a.account_hash into target_owner from public.feture_public_authors a
-   where a.public_id=public_id for key share;
+   where a.public_id=target_uuid for key share;
   if not found or target_owner<>source_post.author_hash
   then return jsonb_build_object('ok',false,'error','resource_not_found');end if;
  end if;
  if act='relationships.set' and receipt.operation_id is null then
   if desired then
    if not exists(select 1 from public.feture_author_relationships
-     where viewer_hash=p_actor and target_id=public_id and kind=requested_kind) then
+     where viewer_hash=p_actor and target_id=target_uuid and kind=requested_kind) then
     if (select count(*)>=200 from public.feture_author_relationships
       where viewer_hash=p_actor and kind=requested_kind)
     then return jsonb_build_object('ok',false,'error','rate_limited');end if;
@@ -145,18 +145,18 @@ begin
       where viewer_hash=p_actor and created_at>clock_timestamp()-interval '1 hour' and active)
     then return jsonb_build_object('ok',false,'error','rate_limited');end if;
     insert into public.feture_author_relationships(viewer_hash,target_id,kind)
-      values(p_actor,public_id,requested_kind) on conflict do nothing;
+      values(p_actor,target_uuid,requested_kind) on conflict do nothing;
    end if;
   else
    -- Owner-controlled cleanup requires neither author visibility nor current 18+ proof.
    delete from public.feture_author_relationships
-    where viewer_hash=p_actor and target_id=public_id and kind=requested_kind;
+    where viewer_hash=p_actor and target_id=target_uuid and kind=requested_kind;
   end if;
   insert into public.feture_author_relationship_operations(viewer_hash,operation_id,payload_hash,target_id,kind,active)
-   values(p_actor,op_id,payload_hash,public_id,requested_kind,desired);
+   values(p_actor,op_id,payload_hash,target_uuid,requested_kind,desired);
  end if;
  select exists(select 1 from public.feture_author_relationships
-   where viewer_hash=p_actor and target_id=public_id and kind=requested_kind) into active_now;
+   where viewer_hash=p_actor and target_id=target_uuid and kind=requested_kind) into active_now;
  return case when act='relationships.state'
   then jsonb_build_object('ok',true,'active',active_now)
   else jsonb_build_object('ok',true,'active',active_now,'replayed',receipt.operation_id is not null) end;
