@@ -1,0 +1,48 @@
+/* O05 FetUre documents — product scoped; the shared AppBase workspace is unchanged. */
+.ft-documents-admin .ft-document-toolbar{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:18px 0 16px}
+.ft-documents-admin .ft-document-toolbar label{display:grid;gap:7px;flex:1 1 220px;min-width:0;margin:0;font-size:12px;font-weight:700;color:var(--muted)}
+.ft-documents-admin .ft-document-toolbar label:nth-child(2){flex:0 1 180px}
+.ft-documents-admin .ft-document-toolbar :is(input,select){width:100%;min-width:0;min-height:44px;font-size:16px}
+.ft-documents-admin .ft-document-toolbar p{flex:1 1 100%;font-size:12px;color:var(--muted);margin:0;line-height:1.5}
+.ft-documents-admin .ft-document-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,265px),1fr));align-items:stretch;gap:12px}
+.ft-documents-admin .ft-document-grid .ft-document-card{position:relative;display:grid;grid-template-columns:40px minmax(0,1fr) auto;grid-template-rows:auto auto;align-content:start;align-items:start;text-align:left;column-gap:12px;row-gap:10px;min-width:0;min-height:104px;padding:16px;border:1px solid var(--line);border-radius:18px;background:var(--card);transition:border-color 150ms ease,transform 150ms ease,box-shadow 150ms ease}
+.ft-documents-admin .ft-document-grid .ft-document-card:hover{border-color:var(--accent);box-shadow:var(--ft-shadow);transform:translateY(-2px)}
+.ft-documents-admin .ft-document-grid .ft-document-card:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.ft-documents-admin .ft-document-card-number{display:grid;place-items:center;width:40px;height:40px;border-radius:13px;background:var(--surface);color:var(--muted);font-size:13px;font-weight:750}
+.ft-documents-admin .ft-document-card-copy{display:grid;gap:7px;min-width:0}
+.ft-documents-admin .ft-document-card-copy strong{font-size:14px;line-height:1.45;overflow-wrap:anywhere}
+.ft-documents-admin .ft-document-card-copy small{font-size:11px;color:var(--muted);line-height:1.5;overflow-wrap:anywhere}
+.ft-documents-admin .ft-document-card-state{grid-column:2;grid-row:2;justify-self:start;border-radius:99px;background:var(--surface);color:var(--muted);padding:4px 9px;font-size:11px;font-weight:700;line-height:1.5}
+.ft-documents-admin .ft-document-card-state.is-saved{background:var(--ft-accent-soft);color:var(--ft-accent-ink)}
+.ft-documents-admin .ft-document-card-arrow{grid-column:3;grid-row:1;align-self:center;font-size:18px;color:var(--muted)}
+.ft-documents-admin .ft-document-empty{padding:20px;border:1px dashed var(--line);border-radius:16px;color:var(--muted);line-height:1.6}
+.ft-document-workbench{min-width:0}
+.ft-document-workbench .ab-admin-workspace-tabs{position:sticky;top:-20px;z-index:2;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0 0 18px;padding:8px 0 12px;background:var(--card);border-bottom:1px solid var(--line)}
+.ft-document-workbench .ab-admin-workspace-tabs button{min-width:0;min-height:44px;padding:10px 7px;font-size:12px;line-height:1.4;white-space:normal;overflow-wrap:anywhere;border-radius:12px}
+.ft-document-workbench .ft-document-edit-intro{font-size:13px;line-height:1.65;color:var(--muted);margin:0 0 20px}
+.ft-document-workbench .ft-document-editor-fields{display:grid;gap:18px;min-width:0}
+.ft-document-workbench .ft-document-editor-fields label{display:grid;gap:8px;min-width:0;font-size:13px;font-weight:700}
+.ft-document-workbench .ft-document-editor-fields :is(input,textarea){min-width:0;width:100%;font-size:16px;line-height:1.6}
+.ft-document-workbench .ft-document-editor-fields input{min-height:44px}
+.ft-document-workbench .ft-document-editor-fields textarea{min-height:clamp(270px,40vh,500px);resize:vertical}
+.ft-document-workbench .ft-document-guide{margin:16px 0;padding:12px 16px;background:var(--surface);border:1px solid var(--line);border-radius:14px;font-size:12px;line-height:1.7}
+.ft-document-workbench .ft-document-guide summary{cursor:pointer;font-weight:700;min-height:30px}
+.ft-document-workbench .ft-document-guide p{margin:8px 0 0;color:var(--muted)}
+.ft-document-workbench .ft-document-consent{display:flex;align-items:flex-start;gap:12px;margin:16px 0;font-size:13px;line-height:1.6}
+.ft-document-workbench .ft-document-consent input{flex:none;width:20px;height:20px}
+.ft-document-workbench .ft-document-preview-caption{font-size:12px;color:var(--muted);margin:0 0 12px}
+.ft-document-workbench .ft-document-preview .card{padding:clamp(16px,3vw,28px);border-radius:18px;overflow-wrap:anywhere}
+.ft-document-workbench .ft-document-preview h2{font-size:clamp(20px,2.4vw,28px);line-height:1.25;margin:0 0 20px}
+.ft-document-workbench .ft-document-publish{padding:clamp(16px,3vw,26px);background:var(--surface);border:1px solid var(--line);border-radius:18px;line-height:1.65}
+.ft-document-workbench .ft-document-publish h3{margin:0 0 10px;font-size:20px}
+.ft-document-workbench .ft-document-publish p{font-size:13px}
+.ft-document-workbench .ft-document-publish label{display:flex;align-items:flex-start;gap:12px;margin:18px 0 0;font-size:13px}
+.ft-document-workbench .ft-document-publish input{flex:none;width:20px;height:20px}
+@media(max-width:600px){
+ .ft-documents-admin .ft-document-toolbar label:nth-child(2){flex:1 1 120px}
+ .ft-documents-admin .ft-document-grid{grid-template-columns:minmax(0,1fr)}
+ .ft-documents-admin .ft-document-grid .ft-document-card{min-height:94px;padding:14px}
+ .ft-document-workbench .ab-admin-workspace-tabs{top:-14px}
+ .ft-document-workbench .ft-document-editor-fields textarea{min-height:260px}
+}
+@media(prefers-reduced-motion:reduce){.ft-documents-admin .ft-document-grid .ft-document-card{transition:none}.ft-documents-admin .ft-document-grid .ft-document-card:hover{transform:none}}
