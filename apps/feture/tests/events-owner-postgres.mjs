@@ -35,6 +35,7 @@ export async function runEventOwnersPostgres(){
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013003200_feture_event_attendance_owner_decisions.sql',import.meta.url),'utf8'));
   await db.exec("create table public.feture_profile_details(account_hash text primary key,data jsonb not null,public_fields text[] not null default '{}');grant select,insert,update on public.feture_profile_details to service_role;");
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013003300_feture_event_owner_attendees.sql',import.meta.url),'utf8'));
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261013003400_feture_event_optin_peers.sql',import.meta.url),'utf8'));
   const a='a'.repeat(32),b='b'.repeat(32),guest='c'.repeat(32),manager='d'.repeat(32),qa='e'.repeat(32),auditor='f'.repeat(32),generation='1'.repeat(64);
   await db.query('insert into public.feture_profiles(account_hash) values ($1),($2),($3),($4),($5),($6)',[a,b,guest,manager,qa,auditor]);
   for(const [who,role] of [[manager,'manager'],[qa,'qa_operator'],[auditor,'auditor'],[a,'manager']])await db.query('insert into public.fixture_staff_role values ($1,$2,$3)',[who,generation,role]);
@@ -494,7 +495,37 @@ export async function runEventOwnersPostgres(){
   assert.equal(JSON.stringify(attendeePage).includes('HIDDEN_NAME'),false);
   assert.equal(JSON.stringify(attendeePage).includes(manager),false);
   assert.equal(JSON.stringify(attendeePage).includes(guest),false);
+
+  // E04c2: no one can see peer roster until their OWN currently active RSVP opts in.
+  const peerRoster=async(who,eventId=44,cursor=null)=>(await db.query(
+   'select public.feture_event_attendee_peers($1,$2::jsonb) result',
+   [who,JSON.stringify({action:'events.peers',id:id(eventId),cursor})])).rows[0].result;
+  assert.equal((await peerRoster(a)).error,'resource_not_found'); // owner is not an attendee
+  assert.equal((await peerRoster(b)).error,'resource_not_found'); // b RSVP is private
+  assert.equal((await peerRoster(guest)).error,'resource_not_found'); // guest RSVP is private
+  assert.equal((await peerRoster(manager)).error,'resource_not_found'); // declined
+  assert.equal((await peerRoster(b,42)).error,'resource_not_found'); // private event
+  await db.query("update public.feture_event_rsvps set visible_to_attendees=true,updated_at=clock_timestamp() where event_id=$1 and actor_hash in($2,$3)",[id(44),b,guest]);
+  const opted=await peerRoster(b);
+  assert.equal(opted.ok,true);
+  assert.equal(opted.items.length,1); // b nickname remains private
+  assert.equal(opted.items[0].displayName,'Public attendee');
+  assert.equal(opted.items[0].status,'interested');
+  assert.equal(JSON.stringify(opted).includes('HIDDEN_NAME'),false);
+  assert.equal(JSON.stringify(opted).includes(guest),false);
+  assert.equal(JSON.stringify(opted).includes(manager),false);
+  assert.equal(JSON.stringify(opted).includes('privateJoinUrl'),false);
+  assert.equal((await peerRoster(guest)).items.length,1);
+  await db.query("insert into public.feture_blocks(blocker_hash,blocked_hash) values($1,$2)",[b,guest]);
+  assert.deepEqual((await peerRoster(b)).items,[]); // block hides already opted-in peer
+  await db.query("delete from public.feture_blocks where blocker_hash=$1 and blocked_hash=$2",[b,guest]);
+  assert.equal((await peerRoster(b)).items.length,1);
+  assert.equal((await peerRoster(b,44,{at:'bad',id:id(1)})).error,'invalid_cursor');
+
   await db.query("update public.feture_profile_details set public_fields='{}' where account_hash=$1",[guest]);
+  assert.deepEqual((await peerRoster(b)).items,[]); // public nickname revocation takes effect immediately
+  await db.query("update public.feture_event_rsvps set visible_to_attendees=false where event_id=$1 and actor_hash=$2",[id(44),guest]);
+  assert.equal((await peerRoster(guest)).error,'resource_not_found');
   assert.equal((await attendees(a)).items.some(x=>x.displayName==='Public attendee'),false);
   await db.query("insert into public.feture_blocks(blocker_hash,blocked_hash) values($1,$2)",[a,guest]);
   assert.equal((await attendees(a)).counts.interested,0);
@@ -537,6 +568,7 @@ export async function runEventOwnersPostgres(){
    await assert.rejects(db.query('select * from public.feture_event_attendance_requests'),/permission denied/);
    await assert.rejects(db.query('select * from public.feture_event_attendance_decisions'),/permission denied/);
    await assert.rejects(attendees(a,44),/permission denied/);
+   await assert.rejects(peerRoster(b,44),/permission denied/);
    await assert.rejects(attendanceDecision(a,decision(guestId,1,4999)),/permission denied/);
    await assert.rejects(requestQueue(a,44),/permission denied/);
    await assert.rejects(db.query('select * from public.feture_event_attendance_operations'),/permission denied/);
