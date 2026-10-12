@@ -101,7 +101,7 @@ export function FetureExperience(){
               return <button key={category.id} className="ft-jar-card" onClick={()=>openCategory(category.id)} aria-label={`${category.title}: исследовано ${progress.known} из ${progress.total}; сила отмечена у ${progress.measured}; опыт отмечен у ${progress.experienced}; жёстких границ ${progress.boundaries}`}>
                 <Jar color={category.color} percent={progress.percent} known={progress.known} total={progress.total}/>
                 <strong>{category.short}</strong>
-                <span className="ft-jar-meta"><span>Сила: {progress.measured} тем</span><span>Опыт: {progress.experienced} · границы: {progress.boundaries}</span></span>
+                <span className="ft-jar-meta"><span>Сила: {progress.measured} тем</span><span>Опыт: {progress.experienced}</span><span>Границы: {progress.boundaries}</span></span>
               </button>;
             })}
           </div>}

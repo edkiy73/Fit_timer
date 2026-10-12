@@ -247,3 +247,19 @@
 @media(prefers-reduced-motion:reduce){.ft-overlay-adaptive .ft-modal[data-entering]{animation:none}}
 
 .ft-explore-empty .ft-state{flex-wrap:wrap;align-items:flex-start}.ft-explore-empty .ft-state>div{flex:1 1 200px;min-width:0}.ft-explore-empty button{max-width:100%;white-space:normal}
+
+/* DUX02: readable facts, compact containers; all map counts remain visible. */
+.ft-shell .ft-jar-card{min-height:224px;gap:6px;padding:16px 8px;border-radius:var(--ft-radius-card)}
+.ft-shell .ft-jar-card strong{font-size:13px;line-height:1.35;overflow-wrap:anywhere}
+.ft-shell .ft-jar{height:104px}
+.ft-shell .ft-jar-meta{font-size:11px;line-height:1.4;color:var(--ft-muted)}
+.ft-shell :is(.ft-map-explainer,.ft-statbar small){font-size:12px;line-height:1.5;color:var(--ft-muted)}
+.ft-shell .ft-category-card{min-height:182px;padding:16px;border-radius:var(--ft-radius-card)}
+.ft-shell :is(.ft-category-card strong,.ft-topic strong){font-size:14px;line-height:1.4}
+.ft-shell :is(.ft-category-card small,.ft-topic small){font-size:12px;line-height:1.4;color:var(--ft-muted)}
+@media(max-width:520px){
+ .ft-shell .ft-jar-card{min-height:202px;padding:12px 6px;border-radius:18px}
+ .ft-shell .ft-jar-card strong{font-size:12px}
+ .ft-shell .ft-jar{height:94px;width:min(60px,90%)}
+ .ft-shell .ft-category-card{padding:13px;min-height:180px;border-radius:18px}
+}
