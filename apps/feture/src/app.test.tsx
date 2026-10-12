@@ -66,6 +66,30 @@ describe('FetUre starter', () => {
     expect(await screen.findByRole('button',{name:/Все направления/i})).toBeTruthy();
   });
 
+  it('offers a skippable first-use journey without pretending selections were saved', async () => {
+    signIn();
+    const user=userEvent.setup();
+    const router=renderApp('/start');
+    expect(await screen.findByRole('heading',{name:/Что хочется открыть первым/i})).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Продолжить'}));
+    expect(await screen.findByRole('heading',{name:/Какие темы тебе интересны/i})).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Продолжить'}));
+    expect(await screen.findByRole('heading',{name:/Твой мир — в твоих руках/i})).toBeTruthy();
+    await user.click(screen.getByRole('button',{name:'Открыть каталог'}));
+    expect(router.state.location.pathname).toBe('/explore');
+  });
+
+  it('uses the selected first-use intention as a real destination', async () => {
+    signIn();
+    const user=userEvent.setup();
+    const router=renderApp('/start');
+    await user.click(await screen.findByRole('button',{name:/Найти общение/i}));
+    await user.click(screen.getByRole('button',{name:'Продолжить'}));
+    await user.click(screen.getByRole('button',{name:'Продолжить'}));
+    await user.click(screen.getByRole('button',{name:'Открыть сообщество'}));
+    expect(router.state.location.pathname).toBe('/community');
+  });
+
   it('keeps the intended shared-card route in account sign-in navigation state', async () => {
     const id='91e9ee01-e4e2-4900-a7ad-144c46442390';
     const router=renderApp('/share/'+id);
