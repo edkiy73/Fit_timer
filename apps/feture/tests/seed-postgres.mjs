@@ -56,7 +56,7 @@ test('seed transactions: ownership, review binding, idempotency, rollback, scope
     await assert.rejects(call(cleanup,{operation:'cleanup',apply:true,token:r.reviewToken}),/seed_review_rejected/);
     await db.query('update public.feture_profiles set about=$1 where account_hash=$2',[changed.records[0].value.about,data.records[0].key]);
     // A late FK failure rolls back earlier writes in the same function/transaction.
-    const broken=structuredClone(catalog);broken.version='2';broken.records[0].value.title='Changed temporarily';
+    const broken=structuredClone(catalog);broken.version=String(Number(catalog.version)+1);broken.records[0].value.title='Changed temporarily';
     broken.records.push({table:'feture_interests',key:'interest-999-1',seedKey:'interest-999-1',value:{id:'interest-999-1',category_id:'category-999',title:'Invalid dependency',position:0}});
     r=await call(broken);await assert.rejects(call(broken,{apply:true,token:r.reviewToken}),/foreign key constraint/);
     assert.equal((await db.query('select title from public.feture_categories where id=$1',[catalog.records[0].key])).rows[0].title,catalog.records[0].value.title);
