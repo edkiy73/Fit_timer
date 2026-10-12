@@ -7,7 +7,7 @@ const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
 test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and irreversible text removal',async()=>{
  const db=new PGlite();try{
  await db.exec('create role anon;create role authenticated;create role service_role bypassrls;');
- for(const file of ['20261010_001_feture_domain.sql','20261010_002_catalog_read.sql','20261010090405_feture_scoped_seed.sql','20261010164924_feture_interest_transactions.sql','20261010225100_feture_verification_store.sql','20261010225653_feture_documents.sql','20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql','20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql','20261011083303_feture_qa_adult_access.sql','20261011113717_feture_qa_any_account_audit.sql','20261011120139_feture_operator_roles.sql','20261011121629_feture_operator_account_binding.sql','20261011133134_feture_community_posts.sql','20261011134257_feture_post_review.sql','20261011140051_feture_post_reports.sql','20261011140835_feture_post_report_author_privacy.sql','20261011141800_feture_post_recipients.sql','20261011043127_feture_questionnaires.sql','20261011045829_feture_questionnaires_release.sql','20261011190651_feture_test_result_posts.sql','20261011193939_feture_post_photos.sql','20261012050032_feture_photo_review_consent.sql','20261012073357_feture_staff_photo_read.sql','20261012170000_feture_post_bookmarks.sql'])await db.exec(sql(file));
+ for(const file of ['20261010_001_feture_domain.sql','20261010_002_catalog_read.sql','20261010090405_feture_scoped_seed.sql','20261010164924_feture_interest_transactions.sql','20261010225100_feture_verification_store.sql','20261010225653_feture_documents.sql','20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql','20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql','20261011083303_feture_qa_adult_access.sql','20261011113717_feture_qa_any_account_audit.sql','20261011120139_feture_operator_roles.sql','20261011121629_feture_operator_account_binding.sql','20261011133134_feture_community_posts.sql','20261011134257_feture_post_review.sql','20261011140051_feture_post_reports.sql','20261011140835_feture_post_report_author_privacy.sql','20261011141800_feture_post_recipients.sql','20261011043127_feture_questionnaires.sql','20261011045829_feture_questionnaires_release.sql','20261011190651_feture_test_result_posts.sql','20261011193939_feture_post_photos.sql','20261012050032_feture_photo_review_consent.sql','20261012073357_feture_staff_photo_read.sql','20261012170000_feture_post_bookmarks.sql','20261013002400_feture_post_daily_views.sql'])await db.exec(sql(file));
  const rpc=async(name,args)=>(await db.query('select public.'+name+'('+args.map((_,i)=>'$'+(i+1)).join(',')+') result',args)).rows[0].result;
  const op=(actor,command)=>rpc('feture_post_command',[actor,JSON.stringify(command)]);
  const [a,b,c]=['a','b','c'].map(x=>x.repeat(32));for(const owner of [a,b,c])await db.query('insert into public.feture_profiles(account_hash) values($1)',[owner]);
@@ -73,6 +73,16 @@ test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and ir
  assert.equal((await review(qa,{...approve,action:null})).error,'invalid_request');
  assert.equal((await review(auditor,approve)).error,'forbidden');assert.equal((await review(manager,{...approve,expectedRevision:1})).error,'revision_conflict');
  const approved=await review(manager,approve);assert.equal(approved.post.state,'published');assert.equal((await review(manager,approve)).replayed,true);
+ const view=async owner=>rpc('feture_post_view_open',[owner,id(10)]);
+ assert.deepEqual(await view(a),{ok:true,hidden:true,uniqueDailyOpens:null});
+ const one=await view(b);
+ assert.deepEqual(one,{ok:true,hidden:true,uniqueDailyOpens:null});
+ assert.deepEqual(await view(b),one);
+ assert.deepEqual(await view(c),one);
+ assert.deepEqual(await view(manager),one);
+ assert.equal((await db.query('select count(*)::int n from public.feture_post_view_receipts')).rows[0].n,3);
+ assert.equal((await view('z'.repeat(32))).error,'resource_not_found');
+
  assert.equal((await review(manager,{...approve,decision:'hide',reason:'privacy'})).error,'operation_conflict');
  const audit=await review(auditor,{action:'audit',cursor:null});assert.equal(audit.items.length,1);assert.equal(JSON.stringify(audit).includes('Мой личный текст'),false);
  const hide={action:'decide',id:id(10),operationId:id(91),expectedRevision:3,decision:'hide',reason:'privacy'};
