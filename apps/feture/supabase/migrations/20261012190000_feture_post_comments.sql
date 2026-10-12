@@ -74,8 +74,13 @@ begin
          order by v.created_at desc,v.id desc),'[]'::jsonb) into page
    from (select c.* from public.feture_post_comments c
      where c.post_id=pid and c.state='published'
+     -- A commenter's revoked adult access or a block is never bypassed by a previously published post.
+     and public.feture_peer_eligible(c.author_hash)
+     and not public.feture_pair_blocked(p_actor,c.author_hash)
      and (c.parent_id is null or exists(select 1 from public.feture_post_comments p
-       where p.id=c.parent_id and p.post_id=pid and p.parent_id is null and p.state='published'))
+       where p.id=c.parent_id and p.post_id=pid and p.parent_id is null and p.state='published'
+         and public.feture_peer_eligible(p.author_hash)
+         and not public.feture_pair_blocked(p_actor,p.author_hash)))
      and (after_at is null or (c.created_at,c.id)<(after_at,after_id))
      order by c.created_at desc,c.id desc limit 21) v;
   return jsonb_build_object('ok',true,
@@ -110,8 +115,12 @@ begin
   select * into post_row from public.feture_posts where id=comment_row.post_id;
   if not found or not public.feture_post_visible(post_row,p_actor) or
     (comment_row.author_hash<>p_actor and (comment_row.state<>'published' or
+       not public.feture_peer_eligible(comment_row.author_hash) or
+       public.feture_pair_blocked(p_actor,comment_row.author_hash) or
        (comment_row.parent_id is not null and not exists(select 1 from public.feture_post_comments p
-          where p.id=comment_row.parent_id and p.post_id=comment_row.post_id and p.parent_id is null and p.state='published'))))
+          where p.id=comment_row.parent_id and p.post_id=comment_row.post_id and p.parent_id is null and p.state='published'
+            and public.feture_peer_eligible(p.author_hash)
+            and not public.feture_pair_blocked(p_actor,p.author_hash)))))
   then return jsonb_build_object('ok',false,'error','resource_not_found');end if;
   return jsonb_build_object('ok',true,'entry',public.feture_post_comment_dto(comment_row,comment_row.author_hash=p_actor));
  end if;
