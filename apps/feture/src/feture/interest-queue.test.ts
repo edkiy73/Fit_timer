@@ -16,14 +16,14 @@ const uuid=()=>`00000000-0000-4000-8000-${(++serial).toString().padStart(12,'0')
 const queues:ReturnType<typeof createInterestQueue>[]=[];
 afterEach(()=>{queues.splice(0).forEach(q=>q.dispose());});
 function setup(store:InterestStore=createInterestStore('queue-test-'+uuid())){
- let current:AuthSession|null=a,clock=Date.now(),mode:'online'|'offline'|'age'|'lost'='age';
+ let current:AuthSession|null=a,clock=Date.now(),mode:'online'|'offline'|'age'|'lost'|'limited'='age';
  let remote:InterestDTO|null=null;
  const calls:Mutation[]=[],receipts=new Map<string,{command:string;applied:number}>();
  const api:InterestAPI={
-  async list(){if(mode==='age')throw new InterestError('adult_verification_required');if(mode==='offline')throw new InterestError('offline');return remote?[structuredClone(remote)]:[];},
+  async list(){if(mode==='age')throw new InterestError('adult_verification_required');if(mode==='offline')throw new InterestError('offline');if(mode==='limited')throw new InterestError('rate_limited',300000);return remote?[structuredClone(remote)]:[];},
   async mutate(_session,op){
    calls.push(structuredClone(op));
-   if(mode==='age')throw new InterestError('adult_verification_required');if(mode==='offline')throw new InterestError('offline');
+   if(mode==='age')throw new InterestError('adult_verification_required');if(mode==='offline')throw new InterestError('offline');if(mode==='limited')throw new InterestError('rate_limited',300000);
    const old=receipts.get(op.operationId);let result:MutationResult;
    if(old){result=old.command===JSON.stringify(op)?{ok:true,replayed:true,appliedRevision:old.applied,appliedAt:at,entry:structuredClone(remote!)}:{ok:false,error:'operation_conflict',entry:remote};}
    else if(op.expectedRevision!==(remote?.revision??0))result={ok:false,error:'revision_conflict',entry:remote?structuredClone(remote):null};
@@ -47,6 +47,22 @@ async function idle(q:ReturnType<typeof createInterestQueue>,store:InterestStore
 }
 
 describe('owner interest outbox',()=>{
+ it('manual Retry does not wait for stale offline backoff and replays the same operation',async()=>{
+  const s=setup(),q=s.make();await q.select();s.setMode('offline');
+  await q.save('interest-1-1',state,q.getSnapshot().scope);await idle(q,s.store,'offline');
+  expect(s.calls).toHaveLength(1);
+  s.setMode('online');await q.sync();expect(s.calls).toHaveLength(1);
+  await q.retry();await idle(q,s.store,'synced');
+  expect(s.calls).toHaveLength(2);
+  expect(s.calls[1]).toEqual(s.calls[0]);expect(s.remote()?.revision).toBe(1);
+ });
+ it('manual Retry never bypasses the server rate-limit interval',async()=>{
+  const s=setup(),q=s.make();await q.select();s.setMode('limited');
+  await q.save('interest-1-1',state,q.getSnapshot().scope);await idle(q,s.store,'rate_limited');
+  expect(s.calls).toHaveLength(1);
+  s.setMode('online');await q.retry();
+  expect(s.calls).toHaveLength(1);expect(q.getSnapshot().pending).toBe(1);
+ });
  it('keeps guest data separate and imports only explicitly, privately and atomically',async()=>{
   const s=setup();s.setSession(null);const q=s.make();await q.select();
   expect(await q.save('interest-1-1',{...state,visibility:'public',useForDiscovery:true},'guest')).toBe(true);

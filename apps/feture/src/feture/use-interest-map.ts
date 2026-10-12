@@ -33,6 +33,6 @@ export function useInterestMap(){
   save:(id:string,state:Parameters<typeof interestQueue.save>[1])=>interestQueue.save(id,state,snapshot.scope),
   remove:(id:string)=>interestQueue.remove(id,snapshot.scope),
   resolve:(id:string,keepLocal:boolean)=>interestQueue.resolve(id,keepLocal,snapshot.scope),
-  importGuest:()=>interestQueue.importGuest(snapshot.scope),retry:()=>interestQueue.sync()
+  importGuest:()=>interestQueue.importGuest(snapshot.scope),retry:()=>interestQueue.retry()
  };
 }

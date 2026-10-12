@@ -136,6 +136,24 @@ export function createInterestQueue(deps:{store:InterestStore;api:InterestAPI;ge
    if(running===token){running=null;controller=null;}
   }
  }
+ /** A deliberate retry may bypass local backoff after an offline/network failure.
+  * Respect server rate limits and cross-tab leases. */
+ async function retry(){
+  await select();
+  const c=context;
+  if(!c||disposed)return;
+  if(snapshot.phase==='offline'||snapshot.phase==='unavailable'){
+   try{
+    await store.change(db=>{
+     if(!valid(db,c))throw new InterestError('auth_required');
+     db.owners[c.owner]!.retryAt=0;
+    });
+   }catch{return;}
+   if(context!==c||disposed)return;
+   clearTimeout(timer);
+  }
+  await sync();
+ }
  async function edit(id:string,state:InterestState|null,scope:string){
   try{
    if(!/^interest-[1-9]\d{0,2}-[1-9]\d{0,2}$/.test(id))throw new InterestError('invalid_request');
@@ -149,7 +167,7 @@ export function createInterestQueue(deps:{store:InterestStore;api:InterestAPI;ge
  return {
   getSnapshot:()=>snapshot,
   subscribe(listener:()=>void){listeners.add(listener);return ()=>{listeners.delete(listener);};},
-  select, sync,
+  select, sync, retry,
   async reload(){await select();await show();},
   save:(id:string,state:InterestState,scope:string)=>edit(id,state,scope),
   remove:(id:string,scope:string)=>edit(id,null,scope),
