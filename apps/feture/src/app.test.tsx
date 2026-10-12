@@ -137,7 +137,7 @@ describe('FetUre starter', () => {
     vi.spyOn(globalThis,'fetch').mockImplementation(async (_url,options)=>{
       const c=JSON.parse(String(options?.body||'{}')) as Record<string,unknown>;
       if(c.action==='tests.read')return new Response(JSON.stringify({ok:true,attempt,requestId}));
-      if(c.action==='tests.save'){calls.push(c);if(calls.length===1)return new Response(JSON.stringify({error:'domain_unavailable'}),{status:503});return new Response(JSON.stringify({ok:true,replayed:true,requestId,attempt:{...attempt,answers:c.answers,position:c.position,revision:2}}));}
+      if(c.action==='tests.save'){calls.push(c);if(calls.length===1)return new Response(JSON.stringify({error:'domain_unavailable'}),{status:503});if(calls.length===2)return new Response(JSON.stringify({error:'consent_required'}),{status:403});return new Response(JSON.stringify({ok:true,replayed:true,requestId,attempt:{...attempt,answers:c.answers,position:c.position,revision:2}}));}
       return new Response('{}',{status:503});
     });
     try {
@@ -152,8 +152,11 @@ describe('FetUre starter', () => {
       expect(screen.queryByRole('button',{name:'Уйти без сохранения'})).toBeNull();
       await user.click(screen.getByRole('button',{name:'Остаться'}));expect(choice).toHaveProperty('checked',true);
       await user.click(await screen.findByRole('button',{name:'Повторить то же действие'}));
+      await screen.findByText('Прочитай актуальные документы и подтверди согласие.');
+      expect(screen.getByRole('button',{name:'Загрузить сохранённое'}).matches(':disabled')).toBe(true);
+      await user.click(screen.getByRole('button',{name:'Повторить то же действие'}));
       await screen.findByText('Ответы сохранены. Можно продолжить позже.');
-      expect(calls).toHaveLength(2);expect(calls[1]).toEqual(calls[0]);
+      expect(calls).toHaveLength(3);expect(calls[1]).toEqual(calls[0]);expect(calls[2]).toEqual(calls[0]);
       await user.click(screen.getByRole('link',{name:'← Исследовать'}));
       expect(await screen.findByRole('heading',{name:'Открой новые грани'})).toBeTruthy();
     } finally {vi.restoreAllMocks();}
