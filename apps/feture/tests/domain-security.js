@@ -241,6 +241,40 @@ test('C02 muted feed: server-side prefiltered RPC with strict public DTO',async(
  await assert.rejects(repository.execute(actor,{action:'posts.feed',cursor:null}),e=>e.status===503);
 });
 
+test('C03 catalogue API: verified actor only, exact DTO and no private owner/membership leaks',async()=>{
+ const {createGroupsRepository,isGroupsCommand}=require('../lib/feture/groups');
+ await seed(identities.alice);
+ const adult=await authenticate(req(identities.alice),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const unverified=await authenticate(req(identities.alice),store);
+ const id='00000000-0000-4000-8000-000000000005',at='2026-10-12T09:00:00Z';
+ const group={id,slug:'sample-group',title:'Разговорный клуб',summary:'Открытая аннотация',rules:'Общие правила',visibility:'closed',publishedAt:at};
+ let payload={ok:true,items:[group],nextCursor:null};
+ const calls=[];
+ const repository=createGroupsRepository({configured:()=>true,request:async(path,options)=>{
+  calls.push({path,body:JSON.parse(options.body)});return new Response(JSON.stringify(payload));
+ }},{requireCurrent:async()=>{}});
+ for(const invalid of [{action:'groups.catalog',cursor:null,ownerHash:identities.bob.hash},
+  {action:'groups.preview',id,accountHash:identities.bob.hash},
+  {action:'groups.catalog',cursor:{at:'not a date',id}},
+  {action:'groups.preview',id:'not-uuid'}])
+ assert.throws(()=>command(invalid),e=>e.status===422);
+ const list={action:'groups.catalog',cursor:null},preview={action:'groups.preview',id};
+ assert.equal(isGroupsCommand(command(list)),true);
+ await assert.rejects(repository.execute(unverified,list),e=>e.code==='verification_required');
+ assert.equal(calls.length,0);
+ assert.equal((await repository.execute(adult,list)).items[0].visibility,'closed');
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_group_catalog_command');
+ assert.equal(calls[0].body.p_actor,identities.alice.hash);
+ assert.deepEqual(calls[0].body.p_command,list);
+ payload={ok:true,entry:group};
+ assert.equal((await repository.execute(adult,preview)).entry.title,'Разговорный клуб');
+ payload={ok:true,entry:{...group,owner_hash:identities.bob.hash}};
+ await assert.rejects(repository.execute(adult,preview),e=>e.status===503);
+ payload={ok:true,items:[{...group,members:[identities.bob.hash]}],nextCursor:null};
+ await assert.rejects(repository.execute(adult,list),e=>e.status===503);
+ await assert.rejects(repository.execute({accountHash:identities.alice.hash,verifiedAdult:true},list),e=>e.status===401);
+});
+
 test('C02 reaction API: actor-derived ownership and adult/consent guard',async()=>{
  const {createPostsRepository}=require('../lib/feture/posts');
  await seed(identities.alice);
