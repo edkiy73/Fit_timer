@@ -66,7 +66,7 @@ export function FetureExperience(){
           <div className="ft-conflict-actions"><button type="button" onClick={()=>void resolve(id,false)}>Оставить версию аккаунта</button><button type="button" onClick={()=>{if(window.confirm('Применить мою версию целиком, включая желание, опыт, границу и видимость? Это может восстановить удалённую тему или изменить границу.'))void resolve(id,true);}}>Применить мою версию</button></div>
          </div>)}
         </>}
-        {source!=='live'&&<div className="ft-network-hint" role="status"><Icon name={source==='loading'?'clock':'shield'} size={16}/>{source==='loading'?'Подключаем каталог…':'Не удалось обновить каталог. Доступные темы остаются на экране.'}{source==='offline'&&<button onClick={retry}>Обновить</button>}</div>}
+        {tab!=='dating'&&source!=='live'&&<div className="ft-network-hint" role="status"><Icon name={source==='loading'?'clock':'shield'} size={16}/>{source==='loading'?'Подключаем каталог…':'Не удалось обновить каталог. Доступные темы остаются на экране.'}{source==='offline'&&<button onClick={retry}>Обновить</button>}</div>}
         {tab==='home'&&<section className="ft-home" aria-label="Главная">
           <div className="ft-home-hero">
             <span className="ft-home-kicker"><Icon name="spark" size={16}/> Твоё пространство открытий</span>

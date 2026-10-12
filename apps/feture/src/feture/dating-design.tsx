@@ -42,7 +42,7 @@ export function DatingDesign(){
  };
  const changeSelection=(nextHistory:Decision[],nextFilters:Filters=filters)=>{
   const next=DESIGN_PROFILES.find(p=>(nextFilters.city==='all'||p.city===nextFilters.city)&&(nextFilters.age==='all'||(nextFilters.age==='under30'?p.age<30:p.age>=30))&&!nextHistory.some(h=>h.id===p.id));
-  if(next?.id!==current?.id){transitionLock.current=true;setTransitioning(true)}
+  if(started&&next?.id!==current?.id){transitionLock.current=true;setTransitioning(true)}
   setHistory(nextHistory);setFilters(nextFilters);setDirection(0);
  };
  const undo=()=>{if(transitionLock.current)return;changeSelection(history.slice(0,-1))};
