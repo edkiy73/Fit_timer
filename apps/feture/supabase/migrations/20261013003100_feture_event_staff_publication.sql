@@ -44,7 +44,9 @@ begin
  if role_status->>'role' is distinct from 'manager' or not public.feture_peer_eligible(p_actor)
  then return jsonb_build_object('ok',false,'error','forbidden');end if;
  select array_agg(k order by k) into fields from jsonb_object_keys(p_command) k;
- if fields is distinct from array['action','expectedRevision','id','operationId']::text[] or
+ if (select count(*) from jsonb_object_keys(p_command)) <>4 or
+    not (p_command ? 'action' and p_command ? 'expectedRevision' and
+         p_command ? 'id' and p_command ? 'operationId') or
     p_command->>'action' is distinct from 'publish' or
     jsonb_typeof(p_command->'id') is distinct from 'string' or
     (p_command->>'id') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' or

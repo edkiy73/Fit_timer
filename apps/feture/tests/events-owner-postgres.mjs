@@ -172,9 +172,7 @@ export async function runEventOwnersPostgres(){
     [who,gen,JSON.stringify(command)])).rows[0].result;
   const pubCmd=(n,revision,operation)=>({action:'publish',id:id(n),
     operationId:id(operation),expectedRevision:revision});
-  const pattern='^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$';
-  const debug=(await db.query("select ($1::jsonb->>'id') !~* $2 as badid, ($1::jsonb->>'operationId') !~* $2 as badop, ($1::jsonb->>'expectedRevision') !~ '^[1-9][0-9]{0,14}$' as badrev, ($1::jsonb->>'action') is distinct from 'publish' as badaction",[JSON.stringify(pubCmd(3,4,9700)),pattern])).rows[0];
-  assert.equal((await publish(manager,pubCmd(3,4,9700))).error,'review_required',JSON.stringify(debug));
+  assert.equal((await publish(manager,pubCmd(3,4,9700))).error,'review_required'); // approved but private
   const cleanPublic={...clean,visibility:'public'};
   assert.equal((await rpc(a,cmd(43,0,cleanPublic))).entry.state,'draft');
   assert.equal((await rpc(a,{action:'events.submit',id:id(43),operationId:id(9701),expectedRevision:1})).entry.state,'pending');
