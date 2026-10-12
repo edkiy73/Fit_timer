@@ -41,8 +41,8 @@ test('seed transactions: ownership, review binding, idempotency, rollback, scope
     const other={...data,datasetId:'feture-other-fixture',records:data.records.slice(0,1).map(e=>({...e,key:'seed:feture-other-fixture:'+e.seedKey,value:{...e.value,account_hash:'seed:feture-other-fixture:'+e.seedKey}}))};
     r=await call(other);await call(other,{apply:true,token:r.reviewToken});
     await assert.rejects(call(data,{apply:true,token:beforeOther.reviewToken}),/seed_review_rejected/);
-    const changed=structuredClone(data);changed.version='2';changed.records[0].value.about='Обновлённое описание';
-    assert.ok((await call({...changed,version:'1'})).blockers.includes('seed_version_reused'));
+    const changed=structuredClone(data);changed.version=String(Number(data.version)+1);changed.records[0].value.about='Обновлённое описание';
+    assert.ok((await call({...changed,version:data.version})).blockers.includes('seed_version_reused'));
     r=await call(changed);await call(changed,{apply:true,token:r.reviewToken});
     await assert.rejects(call(data),/seed_dataset_conflict/);
     const cleanup={...changed,records:[]};
