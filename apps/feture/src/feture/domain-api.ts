@@ -20,7 +20,16 @@ export async function domainRequest<T>(session:AuthSession,body:Record<string,un
  await requireCurrentSession(session,signal);
  const response=await fetch(apiUrl('/api/domain'),{method:'POST',cache:'no-store',signal:signal?AbortSignal.any([signal,AbortSignal.timeout(12000)]):AbortSignal.timeout(12000),headers:{'Content-Type':'application/json','x-fit-email':session.email,'x-fit-device':session.deviceId,'x-fit-token':session.syncToken},body:JSON.stringify(body)});
  await requireCurrentSession(session,signal);
- const input:unknown=await response.json();
+ // Proxies sometimes respond with HTML or an empty body instead of JSON.
+ // Preserve actionable HTTP status while still refusing malformed 200 payloads.
+ let input:unknown;
+ try{input=await response.json();}
+ catch{
+  await requireCurrentSession(session,signal);
+  throw new DomainClientError(response.status===401?'auth_required'
+   :response.status===429?'rate_limited'
+   :response.status===413?'request_too_large':'domain_unavailable');
+ }
  await requireCurrentSession(session,signal);
  if(!response.ok){const error=z.object({error:z.string()}).safeParse(input);throw new DomainClientError(error.success?error.data.error:'domain_unavailable');}
  const result=schema.safeParse(input);if(!result.success)throw new DomainClientError('domain_unavailable');return result.data;
