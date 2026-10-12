@@ -13,7 +13,7 @@ const schema=z.object({
   observedWindowDays:z.union([z.literal(7),z.literal(30)]),retentionDays:z.literal(35),
   maxActiveCounterKeys:z.number().int().positive(),readKeys:z.number().int().nonnegative(),
   maxReadKeys:z.number().int().positive(),threshold:z.number().int().positive().nullable(),
-  status:z.enum(['not_configured','invalid_configuration','warning','within_threshold'])
+  status:z.enum(['not_configured','invalid_configuration','warning','within_threshold','suppressed'])
  }).strict()
 }).strict();
 const names:Record<typeof events[number],string>={
@@ -43,11 +43,12 @@ export function MetricsAdmin({client,adminKey}:AdminSectionContext){
       {result.cohorts.map(c=><td key={c}>{result.counts[c]?.[event]===null?'Меньше 5':result.counts[c]?.[event]??'—'}</td>)}
     </tr>)}</tbody></table>}
   {result&&<section aria-labelledby="ft-metrics-load"><h3 id="ft-metrics-load">Нагрузка и хранение</h3>
-   <p>Учитываемые операции за {result.days} дн.: <strong>{result.operations.windowCount===null?'меньше 5':result.operations.windowCount}</strong>. За последние 7 дней: <strong>{result.operations.weekCount===null?'меньше 5':result.operations.weekCount}</strong>.</p>
+   <p>Учитываемые операции за {result.days} дн.: <strong>{result.operations.windowCount===null?'скрыто для приватности':result.operations.windowCount}</strong>. За последние 7 дней: <strong>{result.operations.weekCount===null?'скрыто для приватности':result.operations.weekCount}</strong>.</p>
    <p>Хранение счётчиков — {result.operations.retentionDays} дней. Максимум {result.operations.maxActiveCounterKeys} возможных ключа для фиксированных типов событий и групп. Чтение отчёта — {result.operations.readKeys} из максимальных {result.operations.maxReadKeys} ключей.</p>
    {result.operations.status==='not_configured'?<p role="status">Порог предупреждения о нагрузке ещё не настроен.</p>:
     result.operations.status==='invalid_configuration'?<p role="alert">Порог предупреждения задан некорректно — исправь настройку сервера.</p>:
     result.operations.status==='warning'?<p role="alert">За 7 дней число учитываемых действий достигло порога {result.operations.threshold}. Проверь расходы и нагрузку у поставщиков.</p>:
+    result.operations.status==='suppressed'?<p role="status">Срабатывание порога скрыто: малая активность отдельной группы не позволяет безопасно показать точное сравнение. Проверь расходы непосредственно у поставщиков.</p>:
     <p role="status">Число учитываемых действий ниже настроенного порога {result.operations.threshold} за 7 дней.</p>}
    <p>Это не фактический счёт за Redis, Supabase или Vercel: внешние запросы, зеркальное хранение, остальные приложения и тарификация провайдеров здесь не учитываются.</p>
   </section>}
