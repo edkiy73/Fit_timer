@@ -10,7 +10,8 @@ const previewSchema=z.object({ok:z.literal(true),preview:z.object({attemptId:z.u
 const createdSchema=z.object({ok:z.literal(true),entry:postSchema,replayed:z.boolean(),requestId:z.uuid()}).strict();
 // The server's adult/consent gate runs BEFORE the immutable operation receipt lookup.
 // A gate denial on retry cannot prove whether the earlier attempt created a draft.
-const definiteFirstAttemptCodes=new Set(['auth_required','session_changed','forbidden','rate_limited','recipient_unavailable','resource_not_found','revision_conflict','operation_conflict','invalid_request','verification_required','consent_required']);
+// Client-side auth_required can also occur AFTER an applied response if the session changed.
+const definiteFirstAttemptCodes=new Set(['forbidden','rate_limited','recipient_unavailable','resource_not_found','revision_conflict','operation_conflict','invalid_request','verification_required','consent_required']);
 const definiteReplayCodes=new Set(['revision_conflict','operation_conflict']);
 export function definitivelyRejectedTestDraft(error:unknown,wasRetry:boolean):boolean {
  return error instanceof DomainClientError&&
