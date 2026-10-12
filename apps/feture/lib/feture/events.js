@@ -15,10 +15,10 @@ function stamp(value){return typeof value==='string'&&value.length<=50&&/^\d{4}-
 function ownerDto(value){
  if(!object(value)||!shape(value,['id','revision','state','draft','createdAt','updatedAt'])||
   typeof value.id!=='string'||!uuid.test(value.id)||!Number.isSafeInteger(value.revision)||
-  Number(value.revision)<1||!['draft','pending','approved','rejected'].includes(String(value.state))||!stamp(value.createdAt)||!stamp(value.updatedAt))reject(503,'domain_unavailable');
+  Number(value.revision)<1||!['draft','pending','approved','rejected','cancelled'].includes(String(value.state))||!stamp(value.createdAt)||!stamp(value.updatedAt))reject(503,'domain_unavailable');
  try{eventDraft(value.draft);}catch{return reject(503,'domain_unavailable');}
  return /** @type {import('./events').EventOwnerEntry} */({
-  id:value.id,revision:value.revision,state:/** @type {'draft'|'pending'|'approved'|'rejected'} */(value.state),draft:value.draft,createdAt:value.createdAt,updatedAt:value.updatedAt
+  id:value.id,revision:value.revision,state:/** @type {'draft'|'pending'|'approved'|'rejected'|'cancelled'} */(value.state),draft:value.draft,createdAt:value.createdAt,updatedAt:value.updatedAt
  });
 }
 /** @param {unknown} value @returns {value is import('./event-contract').EventCursor|null} */
@@ -33,11 +33,11 @@ function createEventsRepository(transport,documents){
   async execute(actor,request){
    requireOwner(actor,actor.accountHash);
    const command=eventCommand(request);
-   if(!['events.save','events.read','events.mine','events.submit'].includes(command.action))reject(422,'invalid_request');
-   await guard(actor);
+   if(!['events.save','events.read','events.mine','events.submit','events.cancel'].includes(command.action))reject(422,'invalid_request');
+   if(command.action!=='events.cancel')await guard(actor); // Owner must be allowed to withdraw if consent/age expires.
    if(!transport.configured())reject(503,'domain_unavailable');
    try{
-    const response=await transport.request('/rest/v1/rpc/'+(command.action==='events.submit'?'feture_event_submit_command':'feture_event_owner_command'),{
+    const response=await transport.request('/rest/v1/rpc/'+(command.action==='events.submit'?'feture_event_submit_command':command.action==='events.cancel'?'feture_event_cancel_command':'feture_event_owner_command'),{
      method:'POST',headers:{'Content-Type':'application/json'},timeoutMs:8000,
      body:JSON.stringify({p_actor:actor.accountHash,p_command:command})
     });
@@ -49,6 +49,14 @@ function createEventsRepository(transport,documents){
      if(data.error==='revision_conflict'||data.error==='operation_conflict')reject(409,String(data.error));
      if(data.error==='rate_limited')reject(429,'rate_limited');
      reject(503,'domain_unavailable');
+    }
+    if(command.action==='events.cancel'){
+     if(!shape(data,['ok','event','replayed'])||typeof data.replayed!=='boolean'||!object(data.event)||
+      !shape(data.event,['id','state','revision'])||data.event.id!==command.id||
+      data.event.state!=='cancelled'||!Number.isSafeInteger(data.event.revision)||
+      Number(data.event.revision)<=command.expectedRevision)
+       reject(503,'domain_unavailable');
+     return {event:{id:data.event.id,state:'cancelled',revision:data.event.revision},replayed:data.replayed};
     }
     if(command.action==='events.mine'){
      if(!shape(data,['ok','items','nextCursor'])||!Array.isArray(data.items)||data.items.length>20||!cursor(data.nextCursor))reject(503,'domain_unavailable');
