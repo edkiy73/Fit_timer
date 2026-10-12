@@ -9,7 +9,7 @@ const shape=(v,keys)=>object(v)&&Object.keys(v).sort().join(',')===keys.sort().j
 /** @param {unknown} v */
 const date=v=>typeof v==='string'&&v.length<=40&&/^\d{4}-\d\d-\d\dT/.test(v)&&Number.isFinite(Date.parse(v));
 /** @param {unknown} v */
-const cursor=v=>v===null||shape(v,['at','id'])&&date(v.at)&&uuid(v.id);
+const cursor=v=>v===null||object(v)&&shape(v,['at','id'])&&date(v.at)&&uuid(v.id);
 /** @param {import('./contracts').Transport} transport @param {(value:unknown)=>import('./posts').PostEntry} postDto */
 function createPostBookmarksRepository(transport,postDto){
  return {
