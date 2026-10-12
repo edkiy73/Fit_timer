@@ -104,7 +104,7 @@ test('questionnaires history DTO rejects malformed provider metadata and strips 
  for(const patch of [
   {id:'not-a-uuid'},{testId:'wrong/id'},{title:{private:'secret'}},{title:'unsafe\ntext'},
   {status:'pending'},{revision:'1'},{revision:0},{updatedAt:'tomorrow'},
-  {updatedAt:'2026-10-12'},
+  {updatedAt:'2026-10-12'},{updatedAt:'2026-10-12T11:00:00'},
  ]){
   payload={ok:true,versions:[],attempts:[{...item,...patch}]};
   await assert.rejects(repository.execute(actor,{action:'tests.list'}),e=>e.status===503&&e.code==='domain_unavailable');
