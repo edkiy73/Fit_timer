@@ -6,6 +6,7 @@ import type {AuthSession} from '@appbase/core/auth.js';
 import {domainRequest,domainErrorMessage} from './domain-api';
 import {PostAddress} from './post-address';
 import {PostEngagement} from './post-engagement';
+import {PostComments} from './post-comments';
 import {ReportPostDialog,OwnPostReports} from './post-reports';
 import {AppDialog} from './components/primitives';
 import {PostPhotoDialog,usePrivatePostPhoto} from './post-photo';
@@ -47,7 +48,7 @@ function CommunityAccount({session}:{session:AuthSession}){
    {view==='reports'&&<OwnPostReports session={session} refresh={reload}/>}
    {loading&&<p role="status">Загружаем публикации…</p>}
    {view!=='reports'&&!loading&&!error&&items.length===0&&<div className="ft-note"><p>{view==='feed'?'Пока нет доступных обсуждений. Можно начать со своей истории.':view==='saved'?'Пока нет сохранённых публикаций.':'Здесь появятся твои черновики и публикации.'}</p></div>}
-   {items.map(post=><article className="ft-post" key={post.id}><div className="ft-post-author"><div><strong>{post.authorLabel||'Твой черновик'}</strong><p>{kinds[post.kind]} · {post.audience==='granted'?'Выбранным людям':'Сообществу'} · {post.mine?states[post.state]:new Date(post.publishedAt!).toLocaleDateString('ru-RU')}</p></div></div><p className="ft-post-copy">{post.text||'Текст ещё не добавлен.'}</p>{post.mine&&<button disabled={busy||uncertain} onClick={()=>open(post)}>Открыть</button>}{!post.mine&&<button disabled={busy||uncertain} onClick={()=>setReportTarget({id:post.id,revision:post.revision})}>Пожаловаться</button>}{post.state==='published'&&<PostEngagement session={session} id={post.id} savedView={view==='saved'} onUnsaved={()=>setReload(n=>n+1)}/>}</article>)}
+   {items.map(post=><article className="ft-post" key={post.id}><div className="ft-post-author"><div><strong>{post.authorLabel||'Твой черновик'}</strong><p>{kinds[post.kind]} · {post.audience==='granted'?'Выбранным людям':'Сообществу'} · {post.mine?states[post.state]:new Date(post.publishedAt!).toLocaleDateString('ru-RU')}</p></div></div><p className="ft-post-copy">{post.text||'Текст ещё не добавлен.'}</p>{post.mine&&<button disabled={busy||uncertain} onClick={()=>open(post)}>Открыть</button>}{!post.mine&&<button disabled={busy||uncertain} onClick={()=>setReportTarget({id:post.id,revision:post.revision})}>Пожаловаться</button>}{post.state==='published'&&<PostEngagement session={session} id={post.id} savedView={view==='saved'} onUnsaved={()=>setReload(n=>n+1)}/>}{post.state==='published'&&<PostComments session={session} postId={post.id}/>}</article>)}
    {cursor&&<button disabled={busy||loading} onClick={()=>void more()}>Ещё публикации</button>}
   </section>
   <section className="ft-post ft-community-editor" aria-label="Редактор публикации"><h2>{draft.revision?'Твоя публикация':'Начни обсуждение'}</h2><p>{states[draft.state]}. Черновики доступны только тебе.</p>
