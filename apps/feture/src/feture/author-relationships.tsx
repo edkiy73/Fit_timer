@@ -11,7 +11,7 @@ const mineSchema=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(
 type Kind='follow'|'mute';
 type RelationCommand={action:'relationships.set';kind:Kind;publicAuthorId:string;postId:string|null;operationId:string;active:boolean};
 type Cursor=z.infer<typeof cursor>;
-const isTerminal=(e:unknown)=>e instanceof DomainClientError&&[400,401,403,404,409,422,429].includes(e.status);
+const isTerminal=(e:unknown)=>e instanceof DomainClientError&&['invalid_request','invalid_cursor','auth_required','verification_required','consent_required','resource_not_found','operation_conflict','rate_limited'].includes(e.code);
 
 export function PostAuthorActions({session,postId,onMuted}:{session:AuthSession;postId:string;onMuted:()=>void}){
  const [open,setOpen]=useState(false),[loading,setLoading]=useState(false),[busy,setBusy]=useState(false);
@@ -49,7 +49,7 @@ export function PostAuthorActions({session,postId,onMuted}:{session:AuthSession;
   }catch(e){
    if(!alive.current)return;
    setError(domainErrorMessage(e));
-   if(isTerminal(e)){pending.current=null;setUncertain(false);if(e instanceof DomainClientError&&e.status===404)setChecked(false);}
+   if(isTerminal(e)){pending.current=null;setUncertain(false);if(e instanceof DomainClientError&&e.code==='resource_not_found')setChecked(false);}
    else setUncertain(true);
   }finally{if(alive.current)setBusy(false);}
  };
