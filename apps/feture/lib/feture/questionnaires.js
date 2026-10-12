@@ -70,7 +70,8 @@ function scoreDTO(input,definition,given){
  r.dimensions=r.dimensions.map(raw=>{
   const d=pick(raw,['id','answered','total','average','level','interpretation','questionIds']);
   const editorial=definition.dimensions.find(item=>item.id===d.id);
-  const questions=definition.questions.filter(q=>q.dimension===d.id).map(q=>q.id);
+  const dimensionQuestions=definition.questions.filter(q=>q.dimension===d.id);
+  const questions=dimensionQuestions.map(q=>q.id);
   if(!editorial||seen.has(d.id)||d.total!==questions.length||!Number.isSafeInteger(d.answered)
     ||d.answered<0||d.answered>d.total||!Array.isArray(d.questionIds)
     ||d.questionIds.length!==d.answered||new Set(d.questionIds).size!==d.questionIds.length
@@ -79,9 +80,25 @@ function scoreDTO(input,definition,given){
     reject(503,'domain_unavailable');
   seen.add(d.id);counted+=d.answered;
   const insufficient=d.answered<Math.ceil(questions.length/2);
+  // Match SQL feture_test_score: each answered question contributes equally;
+  // multi-select questions use the mean of their selected 0..4 weights.
+  // LCM(1..6)=60 keeps intermediate sums integral before rounding to 2 decimals.
+  let scaledScoreSum=0;
+  for(const q of dimensionQuestions){
+   const selected=given[q.id];
+   if(selected===null||selected===undefined)continue;
+   if(!Array.isArray(selected)||!selected.length||selected.length>q.options.length)reject(503,'domain_unavailable');
+   let weights=0;
+   for(const id of selected){
+    const option=q.options.find(o=>o.id===id);
+    if(!option)reject(503,'domain_unavailable');
+    weights+=option.score;
+   }
+   scaledScoreSum+=weights*60/selected.length;
+  }
+  const expectedAverage=insufficient?null:Math.floor((scaledScoreSum*100)/(60*d.answered)+0.5)/100;
   const average=d.average;
-  if(insufficient?average!==null:typeof average!=='number'||!Number.isFinite(average)||average<0||average>4)
-   reject(503,'domain_unavailable');
+  if(average!==expectedAverage)reject(503,'domain_unavailable');
   const level=average===null?'insufficient':average<1.5?'low':average<2.75?'mid':'high';
   const expected=level==='insufficient'
    ?'Пока мало ответов для вывода. Можно вернуться к этим вопросам позже.'
