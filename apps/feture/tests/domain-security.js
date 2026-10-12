@@ -243,6 +243,35 @@ test('C02 reaction API: actor-derived ownership and adult/consent guard',async()
  await assert.rejects(repository.execute({accountHash:identities.alice.hash,verifiedAdult:true},toggle),e=>e.status===401);
 });
 
+test('C02 comment API: protected reads, owner-bound pending writes, safe deletion without adult proof',async()=>{
+ const {createPostsRepository}=require('../lib/feture/posts');
+ await seed(identities.alice);
+ const actor=await authenticate(req(identities.alice),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const unverified=await authenticate(req(identities.alice),store);
+ const id='00000000-0000-4000-8000-000000000011',postId='00000000-0000-4000-8000-000000000012';
+ let row={id,postId,parentId:null,text:'Привет',state:'pending',revision:1,mine:true,createdAt:'2026-10-12T09:00:00Z',updatedAt:'2026-10-12T09:00:00Z'};
+ const calls=[];
+ const repository=createPostsRepository({configured:()=>true,request:async(path,options)=>{
+  calls.push({path,command:JSON.parse(options.body)});
+  return new Response(JSON.stringify({ok:true,entry:row,replayed:false}));
+ }},{requireCurrent:async()=>{}});
+ const create={action:'comments.create',id,postId,parentId:null,operationId:id,text:'Привет'};
+ for(const extra of [{accountHash:identities.bob.hash},{state:'published'},{parentId:postId,depth:2},{text:'\u0000SECRET'}])
+ assert.throws(()=>command({...create,...extra}),e=>e.status===422);
+ await assert.rejects(repository.execute(unverified,create),e=>e.code==='verification_required');
+ assert.equal(calls.length,0);
+ assert.equal((await repository.execute(actor,create)).entry.state,'pending');
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_post_comment_command');
+ assert.equal(calls[0].command.p_actor,identities.alice.hash);
+ row={...row,account_hash:identities.bob.hash};
+ await assert.rejects(repository.execute(actor,create),e=>e.status===503);
+ delete row.account_hash;
+ await assert.rejects(repository.execute(unverified,{action:'comments.read',id}),e=>e.code==='verification_required');
+ row={...row,text:'',state:'deleted',revision:2};
+ assert.deepEqual((await repository.execute(unverified,{action:'comments.delete',id,operationId:postId,expectedRevision:1})).entry.text,'');
+ await assert.rejects(repository.execute({accountHash:identities.alice.hash,verifiedAdult:true},{action:'comments.delete',id,operationId:postId,expectedRevision:1}),e=>e.status===401);
+});
+
 test('C01 post reports: authenticated identity, adult submit and metadata-only own status',async()=>{
  const {createPostsRepository}=require('../lib/feture/posts');await seed(identities.alice);const actor=await authenticate(req(identities.alice),store,async()=>new Date(Date.now()+3600000).toISOString()),unverified=await authenticate(req(identities.alice),store);
  const id='00000000-0000-4000-8000-000000000008',report={id,postId:id,postRevision:3,reason:'privacy',state:'open',revision:1,createdAt:'2026-10-11T00:00:00Z',resolvedAt:null,resolution:null};let reply={ok:true,report,replayed:false};const calls=[];
