@@ -17,6 +17,24 @@ const result=z.discriminatedUnion('ok',[
 export class InterestError extends Error {
  constructor(public code:string,public retryAfter=0){super(code);}
 }
+/** HTTP Retry-After permits either decimal seconds or an HTTP-date.
+ * Never follow unbounded/malformed headers or shorten a valid server cooldown.
+ * The local queue also applies its own capped exponential backoff.
+ */
+export function retryAfterMs(value:string|null,now=Date.now()):number {
+ if(!value)return 0;
+ const raw=value.trim();
+ if(!raw)return 0;
+ let delay:number;
+ if(/^[0-9]+$/.test(raw))delay=Number(raw)*1000;
+ else {
+  // Do not treat arbitrary numeric-looking strings as dates.
+  if(!/[A-Za-z]/.test(raw))return 0;
+  delay=Date.parse(raw)-now;
+ }
+ if(Number.isNaN(delay))return 0;
+ return Math.max(0,Math.min(300000,delay));
+}
 export interface InterestAPI {
  list(session:AuthSession,signal:AbortSignal):Promise<InterestDTO[]>;
  mutate(session:AuthSession,command:Mutation,signal:AbortSignal):Promise<MutationResult>;
@@ -41,8 +59,7 @@ export function createInterestAPI(endpoint:string,getSession:()=>Promise<AuthSes
    // Respect the HTTP status (particularly 429 Retry-After) before parsing a body.
    if(!response.ok&&response.status!==409){
     const code=response.status===401?'auth_required':response.status===403?'adult_verification_required':response.status===429?'rate_limited':response.status===422||response.status===413?'invalid_request':'unavailable';
-    const retry=Number(response.headers.get('Retry-After'));
-    throw new InterestError(code,Number.isFinite(retry)?Math.min(300000,Math.max(0,retry*1000)):0);
+    throw new InterestError(code,retryAfterMs(response.headers.get('Retry-After')));
    }
    // An HTTP response with unreadable JSON is a bad server/proxy envelope,
    // not proof that the device is offline. Keep immutable outbox commands for
