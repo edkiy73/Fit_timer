@@ -39,7 +39,7 @@ begin
  perform pg_advisory_xact_lock(hashtextextended('feture-operator-roles',0));
  role_state:=public.feture_operator_bound_command(p_actor,p_generation,null,false,'{"action":"status"}'::jsonb);
  my_role:=role_state->>'role';
- if role_state->>'ok'<>'true' or (act='audit' and my_role not in ('manager','auditor')) or
+ if role_state->>'ok' is distinct from 'true' or my_role is null or (act='audit' and my_role not in ('manager','auditor')) or
    (act<>'audit' and my_role<>'manager')
  then return jsonb_build_object('ok',false,'error','forbidden');end if;
  if act<>'audit' and not public.feture_peer_eligible(p_actor)
