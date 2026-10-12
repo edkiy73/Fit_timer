@@ -735,3 +735,42 @@ test('E03a public event catalogue: strict DTO, Core age/consent and safe deep-li
  response={ok:false,error:'resource_not_found'};
  await assert.rejects(repository.execute(adult,preview),e=>e.status===404);
 });
+
+
+test('E04b Core attendance: exact commands, adult gate and withdrawal without renewed consent',async()=>{
+ const {createEventsRepository}=require('../lib/feture/events');
+ const person=identities.alice;await seed(person);
+ const adult=await authenticate(req(person),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const unverified=await authenticate(req(person),store);
+ const id='00000000-0000-4000-8000-000000000088';
+ const status={action:'events.attendanceStatus',id};
+ const pending={action:'events.attendanceRequest',id,operationId:'00000000-0000-4000-8000-000000000089'};
+ const withdraw={...pending,action:'events.attendanceWithdraw',operationId:'00000000-0000-4000-8000-000000000090'};
+ const calls=[],guard=[];
+ let payload={ok:true,state:'none',replayed:false};
+ const transport={configured:()=>true,request:async(path,opts)=>{
+  calls.push({path,body:JSON.parse(opts.body)});return new Response(JSON.stringify(payload));
+ }};
+ const repo=createEventsRepository(transport,{requireCurrent:async actor=>{guard.push(actor.accountHash)}});
+ assert.deepEqual(await repo.execute(adult,status),{state:'none',replayed:false});
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_event_attendance_command');
+ assert.deepEqual(calls[0].body,{p_actor:person.hash,p_command:status});
+ payload={ok:true,state:'pending',replayed:false};
+ assert.deepEqual(await repo.execute(adult,pending),{state:'pending',replayed:false});
+ assert.equal(guard.length,2);
+ const before=calls.length;
+ for(const bad of [{...pending,ownerHash:identities.bob.hash},
+   {...status,privateLocation:'guess'},
+   {...pending,operationId:'bad'}])
+  await assert.rejects(repo.execute(adult,bad),err=>err.status===422);
+ await assert.rejects(repo.execute(unverified,pending),err=>err.status===403);
+ assert.equal(calls.length,before);
+ const noConsent=createEventsRepository(transport,{requireCurrent:async()=>{throw new Error('revoked')}});
+ payload={ok:true,state:'withdrawn',replayed:false};
+ assert.deepEqual(await noConsent.execute(unverified,withdraw),{state:'withdrawn',replayed:false});
+ assert.equal(calls.at(-1).path,'/rest/v1/rpc/feture_event_attendance_command');
+ payload={ok:true,state:'pending',replayed:true,privateJoinUrl:'secret'};
+ await assert.rejects(repo.execute(adult,status),err=>err.status===503);
+ payload={ok:false,error:'resource_not_found'};
+ await assert.rejects(repo.execute(adult,status),err=>err.status===404);
+});
