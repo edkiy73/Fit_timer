@@ -57,13 +57,36 @@ export function SharedCardPage(){
  return <SharedCard key={auth.session.email+auth.session.deviceId+auth.session.syncToken+linkId} session={auth.session} linkId={linkId}/>;
 }
 function SharedCard({session,linkId}:{session:AuthSession;linkId:string}){
- const [card,setCard]=useState<ReturnType<typeof readSchema.parse>['card']|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState('');
- useEffect(()=>{let live=true;setLoading(true);setCard(null);setError('');
-  void domainRequest(session,{action:'share.read',linkId},readSchema).then(data=>{if(live)setCard(data.card);})
-   .catch(e=>{if(live)setError(e instanceof Error&&e.message==='resource_not_found'?'Ссылка недоступна, отозвана или срок её действия истёк.':domainErrorMessage(e));})
-   .finally(()=>{if(live)setLoading(false);});
-  return ()=>{live=false;};
- },[session,linkId]);
+ const [card,setCard]=useState<ReturnType<typeof readSchema.parse>['card']|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[refresh,setRefresh]=useState(0);
+ // A card is a revocable server projection, not a snapshot that stays valid forever.
+ useEffect(()=>{
+  const reread=()=>setRefresh(n=>n+1);
+  const visible=()=>{if(document.visibilityState==='visible')reread();};
+  window.addEventListener('focus',reread);
+  document.addEventListener('visibilitychange',visible);
+  return ()=>{window.removeEventListener('focus',reread);document.removeEventListener('visibilitychange',visible);};
+ },[]);
+ useEffect(()=>{
+  const abort=new AbortController();setLoading(true);setCard(null);setError('');
+  void domainRequest(session,{action:'share.read',linkId},readSchema,abort.signal).then(data=>{
+   if(abort.signal.aborted)return;
+   if(Date.parse(data.card.expiresAt)<=Date.now())setError('Срок действия карточки истёк.');
+   else setCard(data.card);
+  }).catch(e=>{if(!abort.signal.aborted)setError(e instanceof Error&&e.message==='resource_not_found'?'Ссылка недоступна, отозвана или срок её действия истёк.':domainErrorMessage(e));})
+   .finally(()=>{if(!abort.signal.aborted)setLoading(false);});
+  return ()=>abort.abort();
+ },[session,linkId,refresh]);
+ useEffect(()=>{
+  if(!card)return;
+  let timeout:ReturnType<typeof setTimeout>;
+  const expire=()=>{
+   const remaining=Date.parse(card.expiresAt)-Date.now();
+   if(remaining<=0){setCard(null);setError('Срок действия карточки истёк.');return;}
+   timeout=setTimeout(expire,Math.min(remaining,2147483647));
+  };
+  expire();
+  return ()=>clearTimeout(timeout);
+ },[card]);
  return <section className="card ft-share-links">
   <p><Link to="/">← FetUre</Link></p><h2>Темы, которые человек выбрал для обсуждения</h2>
   {loading?<p role="status">Проверяем право доступа…</p>:card?<><p>Действует до {new Date(card.expiresAt).toLocaleString('ru')}. Это только выбранные человеком темы — не приглашение к действиям и не согласие.</p>
