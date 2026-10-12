@@ -42,7 +42,7 @@ export function PostEngagement({session,id,savedView,onUnsaved}:{session:AuthSes
   if(busy||pending.current?.action==='posts.reactionSet')return;
   setBusy(true);setError('');
   try{
-   const cmd=pending.current??{action:saved?'posts.bookmarkRemove':'posts.bookmarkSave',id,operationId:crypto.randomUUID()};
+   const cmd:Command=pending.current??{action:saved?'posts.bookmarkRemove':'posts.bookmarkSave',id,operationId:crypto.randomUUID()};
    pending.current=cmd;
    if(cmd.action==='posts.reactionSet')return;
    const result=await domainRequest(session,cmd,bookmarkSet);
