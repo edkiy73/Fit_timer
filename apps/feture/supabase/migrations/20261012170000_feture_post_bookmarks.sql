@@ -89,16 +89,17 @@ begin
  -- One owner lock serializes concurrent saves/removals and the operation receipt.
  perform 1 from public.feture_profiles where account_hash=p_actor for update;
  if not found then return jsonb_build_object('ok',false,'error','resource_not_found');end if;
+ -- Check immutable owner-owned receipt before a potentially unrelated target's visibility.
+ select * into receipt from public.feture_post_bookmark_operations
+  where account_hash=p_actor and operation_id=op;
+ if found and (receipt.action<>act or receipt.post_id<>pid) then
+  return jsonb_build_object('ok',false,'error','operation_conflict');
+ end if;
  select * into post_record from public.feture_posts where id=pid;
  if not found or not public.feture_post_visible(post_record,p_actor) then
   return jsonb_build_object('ok',false,'error','resource_not_found');
  end if;
- select * into receipt from public.feture_post_bookmark_operations
-  where account_hash=p_actor and operation_id=op;
- if found then
-  if receipt.action<>act or receipt.post_id<>pid then
-   return jsonb_build_object('ok',false,'error','operation_conflict');
-  end if;
+ if receipt.operation_id is not null then
   select exists(select 1 from public.feture_post_bookmarks
    where account_hash=p_actor and post_id=pid) into saved;
   return jsonb_build_object('ok',true,'saved',saved,'replayed',true);
