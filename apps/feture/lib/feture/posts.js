@@ -2,6 +2,7 @@
 'use strict';
 const {reject,DomainError}=require('./errors');
 const {reportCommand,createPostReportsRepository}=require('./post-reports');
+const {createPostBookmarksRepository}=require('./post-bookmarks');
 const {uuid}=require('./documents');
 const {requireOwner}=require('./permissions');
 const {createAccessGuard}=require('./access-guard');
@@ -20,6 +21,8 @@ function postCommand(input){if(!object(input))reject(422,'invalid_request');cons
  if(c.action==='posts.address'&&shape(c,['action']))return c;
  if(c.action==='posts.rotateAddress'&&shape(c,['action','operationId'])&&uuid(c.operationId))return /** @type {import('./posts').PostCommand} */(c);
  if(c.action==='posts.report'||c.action==='posts.reports')return reportCommand(c);
+ if(c.action==='posts.bookmarks'&&shape(c,['action','cursor'])&&cursor(c.cursor))return /** @type {import('./posts').PostCommand} */(c);
+ if((c.action==='posts.bookmarkSave'||c.action==='posts.bookmarkRemove')&&shape(c,['action','id','operationId'])&&uuid(c.id)&&uuid(c.operationId))return /** @type {import('./posts').PostCommand} */(c);
  if((c.action==='posts.feed'||c.action==='posts.mine')&&shape(c,['action','cursor'])&&cursor(c.cursor))return /** @type {import('./posts').PostCommand} */(c);
  if(c.action==='posts.read'&&shape(c,['action','id'])&&uuid(c.id))return /** @type {import('./posts').PostCommand} */(c);
  if(!uuid(c.id)||!uuid(c.operationId)||typeof c.expectedRevision!=='number'||!Number.isSafeInteger(c.expectedRevision)||c.expectedRevision<0||c.expectedRevision>999999999999999)reject(422,'invalid_request');
@@ -35,10 +38,13 @@ function dto(v){if(!object(v)||!shape(v,['id','text','kind','authorLabel','audie
  if(v.state==='deleted'&&(v.text!==''||v.authorLabel!==''||v.audience!=='private'||v.publishedAt!==null))reject(503,'domain_unavailable');
  return /** @type {import('./posts').PostEntry} */(v);}
 /** @param {import('./contracts').Transport} transport @param {import('./documents').DocumentsRepository} documents */
-function createPostsRepository(transport,documents){const guard=createAccessGuard(documents),reports=createPostReportsRepository(transport,documents);
+function createPostsRepository(transport,documents){const guard=createAccessGuard(documents),reports=createPostReportsRepository(transport,documents),bookmarks=createPostBookmarksRepository(transport,dto);
  return {/** @param {import('./contracts').Actor} actor @param {import('./posts').PostCommand} input */
  async execute(actor,input){requireOwner(actor,actor.accountHash);const c=postCommand(input);
   if(c.action==='posts.report'||c.action==='posts.reports')return reports.execute(actor,c);
+  if(c.action==='posts.bookmarks'||c.action==='posts.bookmarkSave'||c.action==='posts.bookmarkRemove'){
+   await guard(actor);return bookmarks.execute(actor,c);
+  }
   if(!['posts.mine','posts.delete','posts.read','posts.address','posts.rotateAddress','posts.revokeRecipient'].includes(c.action))await guard(actor);
   if(!transport.configured())reject(503,'domain_unavailable');
   try{const response=await transport.request('/rest/v1/rpc/'+(['posts.testPreview','posts.fromTest'].includes(c.action)?'feture_test_share_command':['posts.address','posts.rotateAddress'].includes(c.action)?'feture_post_address_command':'feture_post_command'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({p_actor:actor.accountHash,p_command:c}),timeoutMs:8000});const r=await response.json();
