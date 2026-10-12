@@ -61,9 +61,12 @@ describe('HTTP Retry-After for owner map',()=>{
   const send=vi.fn(async()=>new Response('limit',{status:429,headers:{'Retry-After':future}}));
   const api=createInterestAPI('/api/domain',async()=>a,send);
   const op:Mutation={action:'interests.set',interestId:'interest-1-1',operationId:uuid(),expectedRevision:0,state};
-  await expect(api.mutate(a,op,new AbortController().signal)).rejects.toMatchObject({code:'rate_limited',retryAfter:expect.any(Number)});
-  try{await api.mutate(a,op,new AbortController().signal);}
-  catch(error){expect((error as InterestError).retryAfter).toBeGreaterThan(88000);expect((error as InterestError).retryAfter).toBeLessThanOrEqual(90000);}
+  const outcome=await api.mutate(a,op,new AbortController().signal).catch(e=>e as InterestError);
+  expect(outcome).toBeInstanceOf(InterestError);
+  expect(outcome).toMatchObject({code:'rate_limited'});
+  expect((outcome as InterestError).retryAfter).toBeGreaterThan(88000);
+  expect((outcome as InterestError).retryAfter).toBeLessThanOrEqual(90000);
+  expect(send).toHaveBeenCalledTimes(1);
  });
 });
 
