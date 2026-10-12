@@ -81,7 +81,7 @@ test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and ir
  assert.deepEqual(await view(c),one);
  assert.deepEqual(await view(manager),one);
  assert.equal((await db.query('select count(*)::int n from public.feture_post_view_receipts')).rows[0].n,3);
- assert.equal((await view('z'.repeat(32))).error,'resource_not_found');
+ assert.equal((await view('f'.repeat(32))).error,'resource_not_found');
  for(const [idx,owner] of ['g'.repeat(32),'h'.repeat(32)].entries()){
   await db.query('insert into public.feture_profiles(account_hash) values($1)',[owner]);
   await rpc('feture_consent_accept',[owner,'ru',docs]);
