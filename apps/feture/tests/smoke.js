@@ -61,6 +61,24 @@ function fakeRes(){
     const payload=JSON.parse(result.body);
     const topics=payload.categories[0].interests;
     ok('public catalog exposes published revisions from three public-only sources; no drafts or questionnaires', result.statusCode===200 && topics.length===1 && topics[0].definition.includes('новая редакция') && topics[0].synonyms.includes('switch') && payload.editorialVersion===2 && payload.tests.length===0 && paths.sort().join() === 'feture_catalog_publications,feture_categories,feture_interests');
+
+    // An unavailable public taxonomy source must never expose internal request
+    // details, credentials, SQL diagnostics or provider payloads to clients/logs.
+    const secretMarker='PRIVATE_CATALOG_TOKEN_NEVER_EXPOSE';
+    const previousWarn=console.warn, warnings=[];
+    let unavailable;
+    try {
+      console.warn=(...parts)=>warnings.push(parts.join(' '));
+      global.fetch=async()=>{throw new Error(secretMarker);};
+      unavailable=fakeRes();
+      await catalog({method:'GET',headers:{},url:'/api/catalog'},unavailable);
+    } finally { console.warn=previousWarn; }
+    ok('public catalog upstream failure returns a bounded, sanitized 503',
+      unavailable.statusCode===503 &&
+      unavailable.headers['Cache-Control']==='no-store' &&
+      unavailable.headers['X-Content-Type-Options']==='nosniff' &&
+      unavailable.body===JSON.stringify({error:'catalog_unavailable'}) &&
+      !JSON.stringify(warnings).includes(secretMarker));
   } finally {
     global.fetch=oldFetch;
     if(oldUrl===undefined)delete process.env.SUPABASE_URL;else process.env.SUPABASE_URL=oldUrl;
