@@ -57,6 +57,7 @@ function createEventsRepository(transport,documents){
     if(!shape(data,command.action==='events.save'||command.action==='events.submit'?['ok','entry','replayed']:['ok','entry']))reject(503,'domain_unavailable');
     const entry=ownerDto(data.entry);
     if(command.id!==entry.id)reject(503,'domain_unavailable');
+    if(command.action==='events.submit'&&entry.state!=='pending'||command.action==='events.save'&&entry.state!=='draft')reject(503,'domain_unavailable');
     if(command.action==='events.save'||command.action==='events.submit'){
      if(typeof data.replayed!=='boolean')reject(503,'domain_unavailable');
      return {entry,replayed:data.replayed};

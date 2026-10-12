@@ -589,6 +589,10 @@ test('E01b owner-only event RPC uses authenticated Core actor and strict DTO',as
  await assert.rejects(denied.execute(actor,input),e=>e.status===403);
  assert.equal(calls.length,1);
  assert.equal(eventCommand(input).action,'events.save');
+ const submit={action:'events.submit',id,operationId:'00000000-0000-4000-8000-000000000009',expectedRevision:1};
+ const deniedPublish=createEventsRepository({configured:()=>true,request:async(path)=>new Response(JSON.stringify({ok:true,entry,replayed:false}))},documents);
+ await assert.rejects(deniedPublish.execute(actor,submit),e=>e.status===503);
+ assert.equal(eventCommand(submit).action,'events.submit');
 });
 test('E01b PostgreSQL owner/ACL/CAS contract (isolated PGlite)',async()=>{
  await (await import('./events-owner-postgres.mjs')).runEventOwnersPostgres();
