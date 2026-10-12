@@ -18,7 +18,7 @@ const revision=v=>typeof v==='number'&&Number.isSafeInteger(v)&&v>0&&v<1e15;
 function commentCommand(input){
  if(!obj(input))reject(422,'invalid_request');
  const c=input;
- if(c.action==='comments.page'&&shape(c,['action','postId','cursor'])&&uuid(c.postId)&&cursor(c.cursor))return /** @type {import('./post-comments').CommentCommand} */(c);
+ if((c.action==='comments.page'||c.action==='comments.mine')&&shape(c,['action','postId','cursor'])&&uuid(c.postId)&&cursor(c.cursor))return /** @type {import('./post-comments').CommentCommand} */(c);
  if(c.action==='comments.read'&&shape(c,['action','id'])&&uuid(c.id))return /** @type {import('./post-comments').CommentCommand} */(c);
  if(c.action==='comments.create'&&shape(c,['action','id','postId','parentId','operationId','text'])&&uuid(c.id)&&uuid(c.postId)&&uuid(c.operationId)&&(c.parentId===null||uuid(c.parentId))&&text(c.text))return /** @type {import('./post-comments').CommentCommand} */(c);
  if(c.action==='comments.edit'&&shape(c,['action','id','operationId','expectedRevision','text'])&&uuid(c.id)&&uuid(c.operationId)&&revision(c.expectedRevision)&&text(c.text))return /** @type {import('./post-comments').CommentCommand} */(c);
@@ -44,7 +44,7 @@ function createCommentsRepository(transport){
   const command=commentCommand(input);
   if(!transport.configured())reject(503,'domain_unavailable');
   try{
-   const response=await transport.request('/rest/v1/rpc/feture_post_comment_command',{
+   const response=await transport.request(command.action==='comments.mine'?'/rest/v1/rpc/feture_post_comment_mine':'/rest/v1/rpc/feture_post_comment_command',{
     method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({p_actor:actor.accountHash,p_command:command}),timeoutMs:8000
    });
    const data=await response.json();
@@ -56,10 +56,10 @@ function createCommentsRepository(transport){
     if(data.error==='rate_limited')reject(429,'rate_limited');
     reject(503,'domain_unavailable');
    }
-   if(command.action==='comments.page'){
+   if(command.action==='comments.page'||command.action==='comments.mine'){ 
     if(!shape(data,['ok','items','nextCursor'])||!Array.isArray(data.items)||data.items.length>20||!cursor(data.nextCursor))reject(503,'domain_unavailable');
     const items=data.items.map(commentDto);
-    if(items.some(entry=>entry.state!=='published'||entry.postId!==command.postId))reject(503,'domain_unavailable');
+    if(items.some(entry=>entry.postId!==command.postId||(command.action==='comments.page'?entry.state!=='published':!entry.mine)))reject(503,'domain_unavailable');
     return {items,nextCursor:data.nextCursor};
    }
    if(command.action==='comments.read'){

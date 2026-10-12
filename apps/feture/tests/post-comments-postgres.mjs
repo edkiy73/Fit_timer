@@ -12,6 +12,7 @@ test('C02.3a comments: moderation-first pending, ACL, exact CAS/replay, tombston
   for(const file of ['20261010_001_feture_domain.sql','20261010_002_catalog_read.sql','20261010090405_feture_scoped_seed.sql','20261010164924_feture_interest_transactions.sql','20261010225100_feture_verification_store.sql','20261010225653_feture_documents.sql','20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql','20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql','20261011083303_feture_qa_adult_access.sql','20261011113717_feture_qa_any_account_audit.sql','20261011120139_feture_operator_roles.sql','20261011121629_feture_operator_account_binding.sql','20261011133134_feture_community_posts.sql','20261011134257_feture_post_review.sql','20261011140051_feture_post_reports.sql','20261011140835_feture_post_report_author_privacy.sql','20261011141800_feture_post_recipients.sql','20261011043127_feture_questionnaires.sql','20261011045829_feture_questionnaires_release.sql','20261011190651_feture_test_result_posts.sql','20261011193939_feture_post_photos.sql','20261012050032_feture_photo_review_consent.sql','20261012073357_feture_staff_photo_read.sql'])await db.exec(sql(file));
   await db.exec(sql('20261012190000_feture_post_comments.sql'));
   await db.exec(sql('20261012193000_feture_post_comment_review.sql'));
+  await db.exec(sql('20261012210000_feture_post_comment_mine.sql'));
   const rpc=async(name,args)=>(await db.query('select public.'+name+'('+args.map((_,i)=>'$'+(i+1)).join(',')+') result',args)).rows[0].result;
   const cmd=(actor,request)=>rpc('feture_post_comment_command',[actor,JSON.stringify(request)]);
   const [a,b,c]=['a','b','c'].map(x=>x.repeat(32));
@@ -47,6 +48,7 @@ test('C02.3a comments: moderation-first pending, ACL, exact CAS/replay, tombston
   const page={action:'comments.page',postId:post,cursor:null};
   const create={action:'comments.create',id:id(300),postId:post,parentId:null,operationId:id(301),text:'Мой ответ'};
   const read=id=>({action:'comments.read',id});
+  const mine=(actor,postId=post)=>rpc('feture_post_comment_mine',[actor,JSON.stringify({action:'comments.mine',postId,cursor:null})]);
   assert.deepEqual((await cmd(b,page)).items,[]);
   assert.equal((await cmd(b,{...create,postId:privatePost})).error,'resource_not_found');
   assert.equal((await cmd(b,{...create,actor:a})).error,'invalid_request');
@@ -54,6 +56,9 @@ test('C02.3a comments: moderation-first pending, ACL, exact CAS/replay, tombston
   assert.equal(first.entry.state,'pending');
   assert.equal(first.entry.text,'Мой ответ');
   assert.equal(first.replayed,false);
+  assert.equal((await mine(b)).items[0].text,'Мой ответ');
+  assert.equal((await mine(c)).items.length,0);
+  assert.equal((await mine(b,privatePost)).items.length,0);
   assert.equal((await cmd(b,create)).replayed,true);
   assert.equal((await cmd(b,{...create,text:'Подмена'})).error,'operation_conflict');
   assert.equal((await cmd(c,read(create.id))).error,'resource_not_found');
@@ -112,13 +117,16 @@ test('C02.3a comments: moderation-first pending, ACL, exact CAS/replay, tombston
   assert.equal((await cmd(b,deleted)).entry.text,'');
   assert.equal((await cmd(b,deleted)).replayed,true);
   assert.equal((await cmd(b,create)).entry.state,'deleted');
+  assert.equal((await mine(b)).items.length,0);
   assert.deepEqual((await cmd(a,page)).items,[]);
   assert.equal((await cmd(c,read(reply.id))).entry.text,'Ответ на комментарий'); // Child owner only while parent deleted.
   const cdelete={action:'comments.delete',id:reply.id,expectedRevision:2,operationId:id(404)};
   await db.query('insert into public.feture_blocks(blocker_hash,blocked_hash) values($1,$2)',[a,c]);
   assert.equal((await cmd(c,read(reply.id))).error,'resource_not_found');
+  assert.equal((await mine(c)).items[0].text,'Ответ на комментарий');
   assert.equal((await cmd(c,{action:'comments.edit',id:reply.id,expectedRevision:2,operationId:id(405),text:'нельзя'})).error,'resource_not_found');
   assert.equal((await cmd(c,cdelete)).entry.state,'deleted');
+  assert.equal((await mine(c)).items.length,0);
   assert.equal((await cmd(c,reply)).entry.text,'');
   assert.equal((await db.query('select count(*)::int n from public.feture_post_comment_operations where account_hash=$1',[c])).rows[0].n,2);
 
@@ -136,6 +144,7 @@ test('C02.3a comments: moderation-first pending, ACL, exact CAS/replay, tombston
    await assert.rejects(db.query('select * from public.feture_post_comment_operations'),/permission denied/);
    await assert.rejects(cmd(b,page),/permission denied/);
    await assert.rejects(staff(manager,{action:'audit',cursor:null}),/permission denied/);
+   await assert.rejects(mine(b),/permission denied/);
    await assert.rejects(db.query('select * from public.feture_post_comment_reviews'),/permission denied/);
   }
  }finally{await db.close();}
