@@ -23,12 +23,13 @@ export async function runEventOwnersPostgres(){
   await db.exec("create table public.fixture_staff_role(account_hash text primary key, generation text not null, role text not null); grant select,insert,update on public.fixture_staff_role to service_role;");
   await db.exec("create function public.feture_operator_bound_command(p_actor text,p_generation text,p_target_generation text,p_bootstrap boolean,p_command jsonb) returns jsonb language sql stable security invoker as $$ select jsonb_build_object('ok',true,'role',(select role from public.fixture_staff_role where account_hash=p_actor and generation=p_generation)) $$;");
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002200_feture_event_staff_queue.sql',import.meta.url),'utf8'));
-  await db.exec(readFileSync(new URL('../supabase/migrations/20261013002300_feture_event_staff_decisions.sql',import.meta.url),'utf8'))
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261013002300_feture_event_staff_decisions.sql',import.meta.url),'utf8'));
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261013002500_feture_event_owner_cancel.sql',import.meta.url),'utf8'))
   const a='a'.repeat(32),b='b'.repeat(32),guest='c'.repeat(32),manager='d'.repeat(32),qa='e'.repeat(32),auditor='f'.repeat(32),generation='1'.repeat(64);
   await db.query('insert into public.feture_profiles(account_hash) values ($1),($2),($3),($4),($5),($6)',[a,b,guest,manager,qa,auditor]);
   for(const [who,role] of [[manager,'manager'],[qa,'qa_operator'],[auditor,'auditor'],[a,'manager']])await db.query('insert into public.fixture_staff_role values ($1,$2,$3)',[who,generation,role]);
   await db.exec('set role service_role');
-  const rpc=async(who,command)=>(await db.query('select public.'+(command.action==='events.submit'?'feture_event_submit_command':'feture_event_owner_command')+'($1,$2::jsonb) result',[who,JSON.stringify(command)])).rows[0].result;
+  const rpc=async(who,command)=>(await db.query('select public.'+(command.action==='events.submit'?'feture_event_submit_command':command.action==='events.cancel'?'feture_event_cancel_command':'feture_event_owner_command')+'($1,$2::jsonb) result',[who,JSON.stringify(command)])).rows[0].result;
   const cmd=(n,revision=0,content=draft)=>({action:'events.save',id:id(n),operationId:id(1000+n),expectedRevision:revision,draft:content});
   const first=await rpc(a,cmd(1));
   assert.equal(first.ok,true);
@@ -156,10 +157,40 @@ export async function runEventOwnersPostgres(){
    assert.ok(!JSON.stringify(entry.response).includes(draft.privateJoinUrl));
    assert.ok(!JSON.stringify(entry.response).includes(draft.ticketUrl));
   }
+
+  // E02b: owner cancellation is final and never exposes draft in response.
+  const cancelOne={action:'events.cancel',id:id(1),operationId:id(9901),expectedRevision:4};
+  assert.equal((await rpc(b,cancelOne)).error,'resource_not_found');
+  const cancelledOne=await rpc(a,cancelOne);
+  assert.equal(cancelledOne.ok,true);
+  assert.deepEqual(cancelledOne.event,{id:id(1),state:'cancelled',revision:5});
+  assert.equal(JSON.stringify(cancelledOne).includes(draft.privateJoinUrl),false);
+  assert.equal((await rpc(a,cancelOne)).replayed,true);
+  assert.deepEqual((await rpc(a,cancelOne)).event,cancelledOne.event);
+  assert.equal((await rpc(a,{...cancelOne,expectedRevision:5})).error,'operation_conflict');
+  assert.equal((await rpc(a,{...cancelOne,operationId:id(9902),expectedRevision:4})).error,'revision_conflict');
+  assert.equal((await rpc(a,{action:'events.read',id:id(1)})).entry.state,'cancelled');
+  assert.equal((await rpc(b,{action:'events.read',id:id(1)})).error,'resource_not_found');
+  assert.equal((await rpc(a,{...cmd(1,5),operationId:id(9903)})).error,'revision_conflict');
+  assert.equal((await rpc(a,{action:'events.submit',id:id(1),operationId:id(9904),expectedRevision:5})).error,'revision_conflict');
+  const pendingFour={action:'events.submit',id:id(4),operationId:id(9905),expectedRevision:1};
+  assert.equal((await rpc(a,pendingFour)).entry.state,'pending');
+  assert.equal((await staffRpc(manager)).items.length,1);
+  const cancellationFour=await rpc(a,{action:'events.cancel',id:id(4),operationId:id(9906),expectedRevision:2});
+  assert.equal(cancellationFour.event.state,'cancelled');
+  assert.equal((await staffRpc(manager)).items.length,0); // removed from staff queue immediately
+  const cancelApproved=await rpc(a,{action:'events.cancel',id:id(3),operationId:id(9907),expectedRevision:4});
+  assert.equal(cancelApproved.event.state,'cancelled');
+  assert.equal((await rpc(b,{action:'events.read',id:id(3)})).error,'resource_not_found');
   await db.query('update public.feture_profiles set adult_allowed=false where account_hash=$1',[manager]);
   assert.equal((await decide(manager,rejectOne)).error,'forbidden');
   assert.equal((await staffRpc(manager)).error,'forbidden');
   await db.query('update public.feture_profiles set adult_allowed=false where account_hash=$1',[a]);
+  // Deletion/privacy escape hatch: cancellation works even after eligibility expiry.
+  const cancelRevoked=await rpc(a,{action:'events.cancel',id:id(2),operationId:id(9908),expectedRevision:2});
+  assert.equal(cancelRevoked.event.state,'cancelled');
+  assert.equal(JSON.stringify(cancelRevoked).includes('Evening class'),false);
+
   assert.equal((await rpc(a,{action:'events.read',id:id(1)})).error,'resource_not_found');
   assert.equal((await rpc(a,cmd(1))).error,'resource_not_found');
   assert.equal((await rpc(a,{action:'events.mine',cursor:null})).error,'resource_not_found');
@@ -172,6 +203,7 @@ export async function runEventOwnersPostgres(){
    await assert.rejects(rpc(a,{action:'events.mine',cursor:null}),/permission denied/);
    await assert.rejects(staffRpc(manager),/permission denied/);
    await assert.rejects(decide(manager,rejectOne),/permission denied/);
+   await assert.rejects(rpc(a,{action:'events.cancel',id:id(1),operationId:id(9999),expectedRevision:5}),/permission denied/);
    await db.exec('reset role');
   }
  }finally{await db.close();}
