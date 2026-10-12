@@ -1,6 +1,8 @@
 # FetUre — start here, manual-only dual-subscription team
 
-**User command:** "Продолжай FetUre" or "Возьми FetUre Issue #NNN". Applies equally to Claude Code (subscription) and ChatGPT/Codex (subscription). **No model API keys, recurring jobs, automatic dispatch or paid fallback.** GitHub is the only cross-chat handoff, not old conversation history.
+**User command:** "Продолжай FetUre" or "Возьми FetUre Issue #NNN".
+
+**Separate visual-design session:** for "допиливай дизайн FetUre", "продолжай дизайн", Sol visual implementation or Astra review use [DESIGN-START.md](DESIGN-START.md) and [Issue #908](https://github.com/edkiy73/Fit_timer/issues/908) before generic next-task selection; respect parallel photo/backend ownership. The user manually chooses model. Do not reread old chats or replace existing UI unnecessarily. Applies equally to Claude Code (subscription) and ChatGPT/Codex (subscription). **No model API keys, recurring jobs, automatic dispatch or paid fallback.** GitHub is the only cross-chat handoff, not old conversation history.
 
 ## Coordinator: 90-second startup
 1. Refresh `main` and open PRs. Read only `AGENTS.md`, `apps/feture/AGENTS.md`, [MVP STATUS](../mvp-plan/STATUS.md) **top + next-action/handoff sections**, and [the roadmap](ROADMAP.md). Don't read 97KB archive.
