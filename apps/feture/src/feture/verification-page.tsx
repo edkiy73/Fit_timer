@@ -11,7 +11,7 @@ const statusSchema=z.discriminatedUnion('state',[z.object({state:z.literal('unav
 const responseSchema=z.object({ok:z.literal(true),status:statusSchema,requestId:z.string().uuid()}).strict();
 type Result={session:AuthSession;state:'unavailable'|'test_access'|'error'|'auth';qaUntil:string|undefined};
 export function VerificationPage(){
- const auth=useOptionalAuth();const {t}=useI18n();
+ const auth=useOptionalAuth();const {t,locale}=useI18n();
  const [result,setResult]=useState<Result|null>(null);const [attempt,setAttempt]=useState(0);
  const session=auth.session;
  useEffect(()=>{
@@ -39,7 +39,7 @@ export function VerificationPage(){
  const state=result&&sameSession(result.session,session)?result.state:null;
  return <section className="card" aria-labelledby="verification-title">
   <h2 id="verification-title">{t('verification.title')}</h2>
-  {auth.loading?<p role="status">{t('account.loading')}</p>:!session?<p>{t('verification.guest')}</p>:state===null?<p role="status">{t('verification.loading')}</p>:state==='test_access'?<><p role="status">Для этого аккаунта временно открыт QA-доступ до {result?.qaUntil?new Date(result.qaUntil).toLocaleString('ru'):'окончания разрешения'}.</p><p>Это разрешение администратора для тестирования prelaunch, а не удостоверение возраста или личности. Действующие правила необходимо принять отдельно. Доступ автоматически закроется по сроку или после отзыва.</p><p><Link to="/documents">Проверить согласия</Link></p></>:state==='unavailable'?<>
+  {auth.loading?<p role="status">{t('account.loading')}</p>:!session?<p>{t('verification.guest')}</p>:state===null?<p role="status">{t('verification.loading')}</p>:state==='test_access'?<><p role="status">{t('verification.qaAccessUntil',{until:result?.qaUntil?new Date(result.qaUntil).toLocaleString(locale==='en'?'en-US':'ru-RU'):t('verification.qaUntilUnknown')})}</p><p>{t('verification.qaAccessInfo')}</p><p><Link to="/documents">{t('verification.qaConsents')}</Link></p></>:state==='unavailable'?<>
    <p role="status">{t('verification.unavailable')}</p><p>{t('verification.details')}</p><p>{t('verification.local')}</p>
   </>:<p role="alert">{t(state==='auth'?'verification.auth':'verification.error')}</p>}
   {session&&state==='error'&&<button className="link-button" type="button" onClick={()=>setAttempt(n=>n+1)}>{t('verification.retry')}</button>}

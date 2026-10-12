@@ -141,5 +141,9 @@ export const ru = {
   "account.destination.safety.description": "Обращения и блокировки",
   "account.destination.documents.title": "Правила и согласия",
   "account.destination.documents.description": "Документы и твои решения",
-  "account.signingOut": "Выходим…"
+  "account.signingOut": "Выходим…",
+  "verification.qaAccessUntil": "Для этого аккаунта временно открыт QA-доступ до {until}.",
+  "verification.qaUntilUnknown": "окончания разрешения",
+  "verification.qaAccessInfo": "Это разрешение администратора для тестирования prelaunch, а не удостоверение возраста или личности. Действующие правила необходимо принять отдельно. Доступ автоматически закроется по сроку или после отзыва.",
+  "verification.qaConsents": "Проверить согласия"
 } as const;

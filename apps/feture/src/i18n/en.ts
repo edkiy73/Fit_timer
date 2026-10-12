@@ -143,5 +143,9 @@ export const en: Record<keyof typeof ru, string> = {
   "account.destination.safety.description": "Reports and blocked users",
   "account.destination.documents.title": "Terms and consent",
   "account.destination.documents.description": "Documents and your choices",
-  "account.signingOut": "Signing out…"
+  "account.signingOut": "Signing out…",
+  "verification.qaAccessUntil": "Temporary QA access for this account is enabled until {until}.",
+  "verification.qaUntilUnknown": "the permission expires",
+  "verification.qaAccessInfo": "This is a temporary administrator permission for prelaunch testing, not proof of age or identity. Current terms still require separate consent. Access ends when the permission expires or is revoked.",
+  "verification.qaConsents": "Review consents"
 };
