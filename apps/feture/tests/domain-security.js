@@ -220,6 +220,29 @@ test('C01 posts API: trusted actor, adult guard, forged publish and private DTO 
  await assert.rejects(repository.execute({accountHash:identities.alice.hash,verifiedAdult:true},save),e=>e.status===401);
 });
 
+test('C02 reaction API: actor-derived ownership and adult/consent guard',async()=>{
+ const {createPostsRepository}=require('../lib/feture/posts');
+ await seed(identities.alice);
+ const actor=await authenticate(req(identities.alice),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const unverified=await authenticate(req(identities.alice),store);
+ const id='00000000-0000-4000-8000-000000000009',calls=[];
+ let response={ok:true,liked:true,likes:1,replayed:false};
+ const repository=createPostsRepository({configured:()=>true,request:async(path,options)=>{calls.push({path,input:JSON.parse(options.body)});return new Response(JSON.stringify(response));}},{requireCurrent:async()=>{}});
+ const toggle={action:'posts.reactionSet',id,kind:'like',active:true,operationId:id};
+ for(const extra of [{accountHash:identities.bob.hash},{actor:identities.bob.hash},{likes:999},{kind:'heart'},{active:'true'}])
+ assert.throws(()=>command({...toggle,...extra}),e=>e.status===422);
+ await assert.rejects(repository.execute(unverified,toggle),e=>e.code==='verification_required');
+ assert.equal(calls.length,0);
+ assert.deepEqual(await repository.execute(actor,toggle),{liked:true,likes:1,replayed:false});
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_post_reaction_command');
+ assert.equal(calls[0].input.p_actor,identities.alice.hash);
+ response={ok:true,liked:true,likes:1};
+ assert.deepEqual(await repository.execute(actor,{action:'posts.reactionState',id}),{liked:true,likes:1});
+ response={...response,accountHash:'leak'};
+ await assert.rejects(repository.execute(actor,{action:'posts.reactionState',id}),e=>e.status===503);
+ await assert.rejects(repository.execute({accountHash:identities.alice.hash,verifiedAdult:true},toggle),e=>e.status===401);
+});
+
 test('C01 post reports: authenticated identity, adult submit and metadata-only own status',async()=>{
  const {createPostsRepository}=require('../lib/feture/posts');await seed(identities.alice);const actor=await authenticate(req(identities.alice),store,async()=>new Date(Date.now()+3600000).toISOString()),unverified=await authenticate(req(identities.alice),store);
  const id='00000000-0000-4000-8000-000000000008',report={id,postId:id,postRevision:3,reason:'privacy',state:'open',revision:1,createdAt:'2026-10-11T00:00:00Z',resolvedAt:null,resolution:null};let reply={ok:true,report,replayed:false};const calls=[];

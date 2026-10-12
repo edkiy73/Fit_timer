@@ -3,6 +3,7 @@
 const {reject,DomainError}=require('./errors');
 const {reportCommand,createPostReportsRepository}=require('./post-reports');
 const {createPostBookmarksRepository}=require('./post-bookmarks');
+const {reactionCommand,createReactionsRepository}=require('./post-reactions');
 const {uuid}=require('./documents');
 const {requireOwner}=require('./permissions');
 const {createAccessGuard}=require('./access-guard');
@@ -21,6 +22,7 @@ function postCommand(input){if(!object(input))reject(422,'invalid_request');cons
  if(c.action==='posts.address'&&shape(c,['action']))return c;
  if(c.action==='posts.rotateAddress'&&shape(c,['action','operationId'])&&uuid(c.operationId))return /** @type {import('./posts').PostCommand} */(c);
  if(c.action==='posts.report'||c.action==='posts.reports')return reportCommand(c);
+ if(c.action==='posts.reactionSet'||c.action==='posts.reactionState')return reactionCommand(c);
  if(c.action==='posts.bookmarks'&&shape(c,['action','cursor'])&&cursor(c.cursor))return /** @type {import('./posts').PostCommand} */(c);
  if((c.action==='posts.bookmarkSave'||c.action==='posts.bookmarkRemove')&&shape(c,['action','id','operationId'])&&uuid(c.id)&&uuid(c.operationId))return /** @type {import('./posts').PostCommand} */(c);
  if((c.action==='posts.feed'||c.action==='posts.mine')&&shape(c,['action','cursor'])&&cursor(c.cursor))return /** @type {import('./posts').PostCommand} */(c);
@@ -38,10 +40,13 @@ function dto(v){if(!object(v)||!shape(v,['id','text','kind','authorLabel','audie
  if(v.state==='deleted'&&(v.text!==''||v.authorLabel!==''||v.audience!=='private'||v.publishedAt!==null))reject(503,'domain_unavailable');
  return /** @type {import('./posts').PostEntry} */(v);}
 /** @param {import('./contracts').Transport} transport @param {import('./documents').DocumentsRepository} documents */
-function createPostsRepository(transport,documents){const guard=createAccessGuard(documents),reports=createPostReportsRepository(transport,documents),bookmarks=createPostBookmarksRepository(transport,dto);
+function createPostsRepository(transport,documents){const guard=createAccessGuard(documents),reports=createPostReportsRepository(transport,documents),bookmarks=createPostBookmarksRepository(transport,dto),reactions=createReactionsRepository(transport);
  return {/** @param {import('./contracts').Actor} actor @param {import('./posts').PostCommand} input */
  async execute(actor,input){requireOwner(actor,actor.accountHash);const c=postCommand(input);
   if(c.action==='posts.report'||c.action==='posts.reports')return reports.execute(actor,c);
+  if(c.action==='posts.reactionSet'||c.action==='posts.reactionState'){
+   await guard(actor);return reactions.execute(actor,c);
+  }
   if(c.action==='posts.bookmarks'||c.action==='posts.bookmarkSave'||c.action==='posts.bookmarkRemove'){
    await guard(actor);return bookmarks.execute(actor,c);
   }
