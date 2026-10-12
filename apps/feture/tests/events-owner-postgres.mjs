@@ -215,7 +215,7 @@ export async function runEventOwnersPostgres(){
   assert.equal((await own(b)).status,'going');
   assert.equal((await rsvp(a,choice(a,9803,'going'))).error,'resource_not_found');
   assert.equal((await rsvp(b,{...going,operationId:id(9804),status:'declined',visibleToAttendees:true})).error,'invalid_request');
-  for(const [n,who] of [[9805,c],[9806,manager],[9807,qa],[9808,auditor]])
+  for(const [n,who] of [[9805,guest],[9806,manager],[9807,qa],[9808,auditor]])
    assert.equal((await rsvp(who,choice(who,n,'going'))).ok,true);
   const aggregate=await own(b);
   assert.equal(aggregate.counts.going,5);
@@ -225,18 +225,18 @@ export async function runEventOwnersPostgres(){
   await db.query('insert into public.feture_blocks(blocker_hash,blocked_hash) values($1,$2)',[a,b]);
   assert.equal((await own(b)).error,'resource_not_found');
   assert.equal((await rsvp(b,choice(b,9809,'going'))).error,'resource_not_found');
-  assert.equal((await own(c)).counts.going,null); // 4 remain, threshold prevents identifying b
+  assert.equal((await own(guest)).counts.going,null); // 4 remain, threshold prevents identifying b
   const withdrawn=choice(b,9810,'withdrawn');
   assert.equal((await rsvp(b,withdrawn)).status,'withdrawn');
   assert.equal((await rsvp(b,withdrawn)).replayed,true);
   assert.equal((await rsvp(b,choice(b,9811,'interested'))).error,'resource_not_found');
-  assert.equal((await rsvp(c,choice(c,9812,'declined'))).status,'declined');
-  assert.equal((await own(c)).visibleToAttendees,false);
-  assert.equal((await rsvp(c,choice(c,9813,'declined',true))).error,'invalid_request');
+  assert.equal((await rsvp(guest,choice(guest,9812,'declined'))).status,'declined');
+  assert.equal((await own(guest)).visibleToAttendees,false);
+  assert.equal((await rsvp(guest,choice(guest,9813,'declined',true))).error,'invalid_request');
   await db.query('update public.feture_events set state=$1,published_at=null where id=$2',['hidden',id(40)]);
-  assert.equal((await own(c)).error,'resource_not_found');
-  assert.equal((await rsvp(c,choice(c,9814,'going'))).error,'resource_not_found');
-  assert.equal((await rsvp(c,choice(c,9815,'withdrawn'))).status,'withdrawn'); // leave after hide
+  assert.equal((await own(guest)).error,'resource_not_found');
+  assert.equal((await rsvp(guest,choice(guest,9814,'going'))).error,'resource_not_found');
+  assert.equal((await rsvp(guest,choice(guest,9815,'withdrawn'))).status,'withdrawn'); // leave after hide
   assert.equal((await db.query('select count(*)::int count from public.feture_event_rsvps where event_id=$1',[id(40)])).rows[0].count,5);
   assert.equal((await db.query('select count(*)::int count from public.feture_event_rsvp_operations')).rows[0].count,9);
 
