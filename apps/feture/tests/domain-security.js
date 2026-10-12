@@ -323,6 +323,43 @@ test('C02.4 public identity: Core ownership, explicit consent, revoke without ad
  await assert.rejects(repo.execute({accountHash:identities.alice.hash,verifiedAdult:true},{action:'authors.status'}),e=>e.status===401);
 });
 
+test('C02.4 relationship API: private owner, replay DTO, eligibility and removal after expiry',async()=>{
+ const {createPostsRepository}=require('../lib/feture/posts');
+ await seed(identities.alice);
+ const verified=await authenticate(req(identities.alice),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const expired=await authenticate(req(identities.alice),store);
+ const id='00000000-0000-4000-8000-000000000008',postId='00000000-0000-4000-8000-000000000009';
+ let reply={ok:true,active:false},calls=[];
+ const repo=createPostsRepository({configured:()=>true,request:async(path,opts)=>{
+  calls.push({path,params:JSON.parse(opts.body)});
+  return new Response(JSON.stringify(reply));
+ }},{requireCurrent:async()=>{}});
+ const state={action:'relationships.state',kind:'follow',postId,publicAuthorId:id};
+ const set={action:'relationships.set',kind:'follow',postId,publicAuthorId:id,active:true,operationId:id};
+ for(const extra of [{accountHash:identities.bob.hash},{kind:'something'},{profileId:id},{targetHash:identities.bob.hash},{postId:null}])
+ assert.throws(()=>command({...set,...extra}),e=>e.status===422);
+ await assert.rejects(repo.execute(expired,state),e=>e.code==='verification_required');
+ await assert.rejects(repo.execute(expired,set),e=>e.code==='verification_required');
+ await assert.rejects(repo.execute(expired,{action:'relationships.mine',kind:'follow',cursor:null}),e=>e.code==='verification_required');
+ assert.equal(calls.length,0);
+ assert.deepEqual(await repo.execute(verified,state),{active:false});
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_author_relationship_command');
+ assert.equal(calls[0].params.p_actor,identities.alice.hash);
+ reply={ok:true,active:true,replayed:false};
+ assert.deepEqual(await repo.execute(verified,set),{active:true,replayed:false});
+ assert.equal(calls.at(-1).params.p_command.publicAuthorId,id);
+ const remove={...set,postId:null,active:false};
+ reply={ok:true,active:false,replayed:false};
+ assert.deepEqual(await repo.execute(expired,remove),{active:false,replayed:false});
+ assert.equal(calls.at(-1).params.p_actor,identities.alice.hash);
+ assert.throws(()=>command({...remove,postId}),e=>e.status===422);
+ reply={ok:true,items:[{id,at:'2026-10-12T09:00:00Z'}],nextCursor:null};
+ assert.equal((await repo.execute(verified,{action:'relationships.mine',kind:'follow',cursor:null})).items[0].id,id);
+ reply={...reply,viewer_hash:'SECRET'};
+ await assert.rejects(repo.execute(verified,{action:'relationships.mine',kind:'follow',cursor:null}),e=>e.status===503);
+ await assert.rejects(repo.execute({accountHash:identities.alice.hash,verifiedAdult:true},remove),e=>e.status===401);
+});
+
 test('C01 post reports: authenticated identity, adult submit and metadata-only own status',async()=>{
  const {createPostsRepository}=require('../lib/feture/posts');await seed(identities.alice);const actor=await authenticate(req(identities.alice),store,async()=>new Date(Date.now()+3600000).toISOString()),unverified=await authenticate(req(identities.alice),store);
  const id='00000000-0000-4000-8000-000000000008',report={id,postId:id,postRevision:3,reason:'privacy',state:'open',revision:1,createdAt:'2026-10-11T00:00:00Z',resolvedAt:null,resolution:null};let reply={ok:true,report,replayed:false};const calls=[];
