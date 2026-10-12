@@ -12,28 +12,16 @@ import { categoryProgress, hasIntensity, matchesCategory, matchesCategoryName, m
 import { useInterestMap } from './use-interest-map';
 import {Community} from './community';
 import {ShareCardDialog} from './share-card';
+import {DatingDesign} from './dating-design';
 
 const VIEWS:{id:Visibility;label:string}[]=[{id:'private',label:'Только мне'},{id:'granted',label:'По разрешению'},{id:'public',label:'Открыто'}];
 type Edit = {id:string; title:string;category:string;definition:string;synonyms:string[];relatedTitles:string[]};
-const PROFILES=[
- {name:'Майя',age:29,city:'Бали',handle:'@maya.open',photos:[5,6],about:'Люблю долгие разговоры, путешествия и людей, которые не боятся быть собой. Исследую новые темы без спешки.',interests:['Доверие','Исследование себя','Путешествия'],looking:'Общение и единомышленники'},
- {name:'Алекс',age:32,city:'Берлин',handle:'@alex.notes',photos:[3,4],about:'Сначала хороший разговор, потом всё остальное. Уважаю личное пространство и люблю открытые вопросы.',interests:['Свидания','Открытость','Культура'],looking:'Новые знакомства'},
- {name:'Ника',age:27,city:'Амстердам',handle:'@nika.day',photos:[1,2],about:'Искренность, самоирония, музыка и любопытство к миру. Люблю узнавать людей через их истории.',interests:['Музыка','Близость','Дружба'],looking:'Друзья и знакомства'}
-];
-function Photo({n,alt,style}:{n:number;alt:string;style?:CSSProperties}){
- return <img src={`/images/profile-${n}.webp`} alt={alt} loading="lazy" style={style}/>;
-}
 export function FetureExperience(){
  const {tab,selected,interestId,query,go,openCategory,openInterest,closeInterest,setQuery,rememberScroll,restoreScroll}=useExperienceNavigation();
  const location=useLocation();
  const reduceMotion=useReducedMotion();
- const [person,setPerson]=useState(0);
- const [photo,setPhoto]=useState(0);
- const [datingEnabled,setDatingEnabled]=useState(false);
  const [shareOpen,setShareOpen]=useState(false);
  const area=useRef<HTMLElement|null>(null);
- const touch=useRef({x:0,y:0});
- const profileRef=useRef<HTMLDivElement|null>(null);
  const {data,source,retry}=useCatalog();
  const {map,loading:mapLoading,saving,save,remove,scope,phase,pending,guestCount,conflicts,server,resolve,importGuest,retry:retryMap}=useInterestMap();
  const allIds=useMemo(()=>data.categories.flatMap(c=>c.interests.map(i=>i.id)),[data]);
@@ -78,7 +66,7 @@ export function FetureExperience(){
           <div className="ft-conflict-actions"><button type="button" onClick={()=>void resolve(id,false)}>Оставить версию аккаунта</button><button type="button" onClick={()=>{if(window.confirm('Применить мою версию целиком, включая желание, опыт, границу и видимость? Это может восстановить удалённую тему или изменить границу.'))void resolve(id,true);}}>Применить мою версию</button></div>
          </div>)}
         </>}
-        {source!=='live'&&<div className="ft-network-hint" role="status"><Icon name={source==='loading'?'clock':'shield'} size={16}/>{source==='loading'?'Подключаем каталог…':'Не удалось обновить каталог. Доступные темы остаются на экране.'}{source==='offline'&&<button onClick={retry}>Обновить</button>}</div>}
+        {tab!=='dating'&&source!=='live'&&<div className="ft-network-hint" role="status"><Icon name={source==='loading'?'clock':'shield'} size={16}/>{source==='loading'?'Подключаем каталог…':'Не удалось обновить каталог. Доступные темы остаются на экране.'}{source==='offline'&&<button onClick={retry}>Обновить</button>}</div>}
         {tab==='home'&&<section className="ft-home" aria-label="Главная">
           <div className="ft-home-hero">
             <span className="ft-home-kicker"><Icon name="spark" size={16}/> Твоё пространство открытий</span>
@@ -163,27 +151,7 @@ export function FetureExperience(){
         {tab==='community'&&<><SectionTitle eyebrow="Люди и истории" title="Сообщество" description="Исследовать себя интереснее, когда можно услышать разные взгляды."/>
           <Community/>
         </>}
-        {tab==='dating'&&<><SectionTitle eyebrow="Необязательная часть FetUre" title="Знакомства" description="Ты решаешь, когда хочешь знакомиться, а когда — побыть в своём мире."/>
-           {!datingEnabled?<div className="ft-dating-off"><div className="ft-dating-halo"><Icon name="heart" size={38}/></div><h2>Только если захочешь</h2>
-             <p>Исследуй себя и общайся в сообществе без обязательного поиска партнёров. Смотри профили и узнавай людей в своём темпе.</p>
-             <button className="ft-primary" onClick={()=>setDatingEnabled(true)}>Смотреть профили <Icon name="arrow" size={18}/></button>
-             </div>:<>
-             <div className="ft-dating-container"><div className="ft-dating-card">
-               <div className="ft-dating-scroll" key={person} onTouchStart={e=>{touch.current={x:(e.touches[0]?.clientX ?? 0),y:(e.touches[0]?.clientY ?? 0)}}} onTouchEnd={e=>{
-                 const dx=(e.changedTouches[0]?.clientX ?? 0)-touch.current.x,dy=(e.changedTouches[0]?.clientY ?? 0)-touch.current.y;
-                 if(Math.abs(dx)>90&&Math.abs(dx)>Math.abs(dy)*1.5)nextPerson();
-               }}>
-                 <div className="ft-dating-photo" style={{backgroundImage:`linear-gradient(180deg, transparent 55%,rgba(24,12,28,.9) 100%),url(/images/profile-${PROFILES[person]!.photos[photo]}.webp)`}}>
-                   <div className="ft-photo-dots">{PROFILES[person]!.photos.map((n,i)=><button key={n} className={photo===i?'selected':''} aria-pressed={photo===i} onClick={()=>setPhoto(i)} aria-label={`Фото ${i+1}`}/>)}</div>
-                   <div className="ft-photo-caption"><span>{PROFILES[person]!.city}</span><h2>{PROFILES[person]!.name}, {PROFILES[person]!.age}</h2><p>{PROFILES[person]!.handle}</p><button onClick={()=>profileRef.current?.scrollIntoView({behavior:reduceMotion?'instant':'smooth',block:'start'})}>Подробнее о человеке ↓</button></div>
-                 </div>
-                 <div className="ft-dating-info" ref={profileRef}><p className="ft-eyebrow">О человеке</p><h3>Моя история</h3><p>{PROFILES[person]!.about}</p><h3>Что интересно</h3><div className="ft-post-tags">{PROFILES[person]!.interests.map(t=><HintChip key={t} title={t} description="Интерес помогает начать разговор. Отметка в профиле не означает согласие — желания и границы всегда обсуждаются отдельно.">{t}</HintChip>)}</div><h3>Намерения</h3><p>{PROFILES[person]!.looking}</p><div className="ft-note"><Icon name="shield" size={18}/><p>Личные интересы и границы доступны только с разрешения владельца.</p></div></div>
-               </div>
-               <div className="ft-dating-actions"><button onClick={nextPerson} aria-label="Следующий профиль"><Icon name="arrow" size={23}/></button></div>
-             </div></div>
-             <div className="ft-dating-links"><button onClick={()=>setDatingEnabled(false)}>Вернуться</button></div>
-           </>}
-        </>}
+        {tab==='dating'&&<DatingDesign/>}
 
       </m.div>
     </main>
@@ -194,7 +162,6 @@ export function FetureExperience(){
   {shareOpen&&scope!=='loading'&&<ShareCardDialog key={scope} categories={data.categories} map={map} server={server} phase={phase} pending={pending} conflicts={conflicts} onClose={()=>setShareOpen(false)}/>}
   {edit&&scope!=='loading'&&<InterestDialog key={`${scope}:${edit.id}`} interest={edit} current={map[edit.id]} onClose={closeInterest} onSave={async v=>{const ok=await save(edit.id,v);if(ok)closeInterest();return ok;}} onDelete={async()=>{const ok=await remove(edit.id);if(ok)closeInterest();return ok;}}/>}
  </div></MotionConfig></LazyMotion>;
- function nextPerson(){setPerson((person+1)%PROFILES.length);setPhoto(0)}
 }
 function InterestDialog({interest,current,onClose,onSave,onDelete}:{interest:Edit;current:InterestRecord|undefined;onClose:()=>void;onSave:(v:Omit<InterestRecord,'at'>)=>Promise<boolean>;onDelete:()=>Promise<boolean>}){
  const [busy,setBusy]=useState(false);

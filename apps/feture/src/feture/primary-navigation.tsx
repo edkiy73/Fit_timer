@@ -16,8 +16,8 @@ export function ProductBottomDock(){
  const {pathname}=useLocation();
  const auth=useOptionalAuth();
  const {t}=useI18n();
- const known=pathname==='/'||pathname==='/world'||pathname==='/explore'||pathname.startsWith('/explore/')||pathname==='/community'||pathname==='/account';
+ const known=pathname==='/'||pathname==='/world'||pathname==='/explore'||pathname.startsWith('/explore/')||pathname==='/community'||pathname==='/dating'||pathname==='/account';
  if(!known||auth.loading||(pathname==='/'&&!auth.session))return null;
- const selected=pathname.startsWith('/explore')?'explore':pathname==='/world'?'world':pathname==='/community'?'community':pathname==='/account'?'account':'home';
+ const selected=pathname.startsWith('/explore')?'explore':pathname==='/world'?'world':(pathname==='/community'||pathname==='/dating')?'community':pathname==='/account'?'account':'home';
  return <nav className={'ft-product-dock'+(pathname==='/account'?' ft-product-dock-account':'')} aria-label={t('nav.primaryAria')}>{PRIMARY_TABS.map(tab=><Link key={tab.id} to={tab.to} className={selected===tab.id?'active':''} aria-current={selected===tab.id?'page':undefined}><Icon name={tab.icon} size={21}/><span>{t('nav.primary.'+tab.id)}</span></Link>)}</nav>;
 }
