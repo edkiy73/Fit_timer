@@ -48,8 +48,8 @@ function createPostsRepository(transport,documents){const guard=createAccessGuar
  return {/** @param {import('./contracts').Actor} actor @param {import('./posts').PostCommand} input */
  async execute(actor,input){requireOwner(actor,actor.accountHash);const c=postCommand(input);
   if(c.action==='posts.report'||c.action==='posts.reports')return reports.execute(actor,c);
-  if(c.action==='authors.status'||c.action==='authors.enable'||c.action==='authors.disable'||c.action==='authors.rotate'){
-   if(c.action==='authors.enable'||c.action==='authors.rotate')await guard(actor);
+  if(c.action==='authors.status'||c.action==='authors.enable'||c.action==='authors.disable'||c.action==='authors.rotate'||c.action==='authors.resolve'){
+   if(c.action==='authors.enable'||c.action==='authors.rotate'||c.action==='authors.resolve')await guard(actor);
    return authors.execute(actor,c);
   }
   if(c.action==='posts.reactionSet'||c.action==='posts.reactionState'){
