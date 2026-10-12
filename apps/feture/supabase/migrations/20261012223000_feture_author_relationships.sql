@@ -32,7 +32,7 @@ grant select,insert on public.feture_author_relationship_operations to service_r
 create function public.feture_author_relationship_command(p_actor text,p_command jsonb)
 returns jsonb language plpgsql security invoker set search_path=pg_catalog,public as $$
 declare
- act text:=p_command->>'action'; keys text[];kind text; public_id uuid;post_id uuid; operation_id uuid;
+ act text:=p_command->>'action'; keys text[];requested_kind text; public_id uuid;post_id uuid; op_id uuid;
  desired boolean;payload_hash text;receipt public.feture_author_relationship_operations%rowtype;
  target_owner text;source_post public.feture_posts%rowtype;active_now boolean;
  cursor_value jsonb;cursor_at timestamptz;cursor_id uuid;page jsonb;
@@ -53,8 +53,8 @@ begin
    jsonb_typeof(p_command->'active') is distinct from 'boolean'
   then return jsonb_build_object('ok',false,'error','invalid_request');end if;
  else return jsonb_build_object('ok',false,'error','invalid_request');end if;
- kind:=p_command->>'kind';
- if jsonb_typeof(p_command->'kind') is distinct from 'string' or kind not in ('follow','mute')
+ requested_kind:=p_command->>'kind';
+ if jsonb_typeof(p_command->'kind') is distinct from 'string' or requested_kind not in ('follow','mute')
  then return jsonb_build_object('ok',false,'error','invalid_request');end if;
  if act='relationships.mine' then
   cursor_value:=p_command->'cursor';
@@ -75,7 +75,7 @@ begin
   from (
     select r.target_id,r.created_at from public.feture_author_relationships r
     join public.feture_public_authors a on a.public_id=r.target_id
-    where r.viewer_hash=p_actor and r.kind=kind
+    where r.viewer_hash=p_actor and r.kind=requested_kind
       and a.account_hash<>p_actor
       and public.feture_peer_eligible(a.account_hash)
       and not public.feture_pair_blocked(p_actor,a.account_hash)
@@ -110,15 +110,15 @@ begin
   post_id:=(p_command->>'postId')::uuid;
  end if;
  if act='relationships.set' then
-  operation_id:=(p_command->>'operationId')::uuid;
+  op_id:=(p_command->>'operationId')::uuid;
   -- Serializes all actions by a viewer, including immutable receipt checks.
   perform 1 from public.feture_profiles where account_hash=p_actor for update;
   if not found then return jsonb_build_object('ok',false,'error','resource_not_found');end if;
   payload_hash:=encode(sha256(convert_to(p_command::text,'UTF8')),'hex');
   select * into receipt from public.feture_author_relationship_operations
-   where viewer_hash=p_actor and operation_id=operation_id;
+   where viewer_hash=p_actor and operation_id=op_id;
   if receipt.operation_id is not null and
-    (receipt.payload_hash<>payload_hash or receipt.target_id<>public_id or receipt.kind<>kind or receipt.active<>desired)
+    (receipt.payload_hash<>payload_hash or receipt.target_id<>public_id or receipt.kind<>requested_kind or receipt.active<>desired)
   then return jsonb_build_object('ok',false,'error','operation_conflict');end if;
  end if;
  if act='relationships.state' or desired then
@@ -136,23 +136,27 @@ begin
  end if;
  if act='relationships.set' and receipt.operation_id is null then
   if desired then
-   if (select count(*)>=200 from public.feture_author_relationships where viewer_hash=p_actor and kind=kind)
-   then return jsonb_build_object('ok',false,'error','rate_limited');end if;
-   if (select count(*)>=30 from public.feture_author_relationship_operations
-     where viewer_hash=p_actor and created_at>clock_timestamp()-interval '1 hour' and active)
-   then return jsonb_build_object('ok',false,'error','rate_limited');end if;
-   insert into public.feture_author_relationships(viewer_hash,target_id,kind)
-     values(p_actor,public_id,kind) on conflict do nothing;
+   if not exists(select 1 from public.feture_author_relationships
+     where viewer_hash=p_actor and target_id=public_id and kind=requested_kind) then
+    if (select count(*)>=200 from public.feture_author_relationships
+      where viewer_hash=p_actor and kind=requested_kind)
+    then return jsonb_build_object('ok',false,'error','rate_limited');end if;
+    if (select count(*)>=30 from public.feture_author_relationship_operations
+      where viewer_hash=p_actor and created_at>clock_timestamp()-interval '1 hour' and active)
+    then return jsonb_build_object('ok',false,'error','rate_limited');end if;
+    insert into public.feture_author_relationships(viewer_hash,target_id,kind)
+      values(p_actor,public_id,requested_kind) on conflict do nothing;
+   end if;
   else
    -- Owner-controlled cleanup requires neither author visibility nor current 18+ proof.
    delete from public.feture_author_relationships
-    where viewer_hash=p_actor and target_id=public_id and kind=kind;
+    where viewer_hash=p_actor and target_id=public_id and kind=requested_kind;
   end if;
   insert into public.feture_author_relationship_operations(viewer_hash,operation_id,payload_hash,target_id,kind,active)
-   values(p_actor,operation_id,payload_hash,public_id,kind,desired);
+   values(p_actor,op_id,payload_hash,public_id,requested_kind,desired);
  end if;
  select exists(select 1 from public.feture_author_relationships
-   where viewer_hash=p_actor and target_id=public_id and kind=kind) into active_now;
+   where viewer_hash=p_actor and target_id=public_id and kind=requested_kind) into active_now;
  return case when act='relationships.state'
   then jsonb_build_object('ok',true,'active',active_now)
   else jsonb_build_object('ok',true,'active',active_now,'replayed',receipt.operation_id is not null) end;
