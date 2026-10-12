@@ -3,6 +3,7 @@
 const {reject,DomainError}=require('./errors');
 const {reportCommand,createPostReportsRepository}=require('./post-reports');
 const {createPostBookmarksRepository}=require('./post-bookmarks');
+const {postViewCommand,createPostViewsRepository}=require('./post-views');
 const {reactionCommand,createReactionsRepository}=require('./post-reactions');
 const {commentCommand,createCommentsRepository}=require('./post-comments');
 const {authorCommand,createPublicAuthorsRepository}=require('./public-authors');
@@ -26,6 +27,7 @@ function postCommand(input){if(!object(input))reject(422,'invalid_request');cons
  if(c.action==='posts.rotateAddress'&&shape(c,['action','operationId'])&&uuid(c.operationId))return /** @type {import('./posts').PostCommand} */(c);
  if(c.action==='posts.report'||c.action==='posts.reports')return reportCommand(c);
  if(c.action==='posts.reactionSet'||c.action==='posts.reactionState')return reactionCommand(c);
+ if(c.action==='posts.viewOpen')return postViewCommand(c);
  if(typeof c.action==='string'&&c.action.startsWith('comments.'))return commentCommand(c);
  if(typeof c.action==='string'&&c.action.startsWith('authors.'))return authorCommand(c);
  if(typeof c.action==='string'&&c.action.startsWith('relationships.'))return relationshipCommand(c);
@@ -46,10 +48,11 @@ function dto(v){if(!object(v)||!shape(v,['id','text','kind','authorLabel','audie
  if(v.state==='deleted'&&(v.text!==''||v.authorLabel!==''||v.audience!=='private'||v.publishedAt!==null))reject(503,'domain_unavailable');
  return /** @type {import('./posts').PostEntry} */(v);}
 /** @param {import('./contracts').Transport} transport @param {import('./documents').DocumentsRepository} documents */
-function createPostsRepository(transport,documents){const guard=createAccessGuard(documents),reports=createPostReportsRepository(transport,documents),bookmarks=createPostBookmarksRepository(transport,dto),reactions=createReactionsRepository(transport),comments=createCommentsRepository(transport),authors=createPublicAuthorsRepository(transport),relationships=createAuthorRelationshipsRepository(transport);
+function createPostsRepository(transport,documents){const guard=createAccessGuard(documents),reports=createPostReportsRepository(transport,documents),bookmarks=createPostBookmarksRepository(transport,dto),reactions=createReactionsRepository(transport),comments=createCommentsRepository(transport),authors=createPublicAuthorsRepository(transport),relationships=createAuthorRelationshipsRepository(transport),views=createPostViewsRepository(transport,documents);
  return {/** @param {import('./contracts').Actor} actor @param {import('./posts').PostCommand} input */
  async execute(actor,input){requireOwner(actor,actor.accountHash);const c=postCommand(input);
   if(c.action==='posts.report'||c.action==='posts.reports')return reports.execute(actor,c);
+  if(c.action==='posts.viewOpen')return views.execute(actor,c);
   if(c.action==='authors.status'||c.action==='authors.enable'||c.action==='authors.disable'||c.action==='authors.rotate'||c.action==='authors.resolve'){
    if(c.action==='authors.enable'||c.action==='authors.rotate'||c.action==='authors.resolve')await guard(actor);
    return authors.execute(actor,c);
