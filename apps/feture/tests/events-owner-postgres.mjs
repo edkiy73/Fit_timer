@@ -19,9 +19,13 @@ export async function runEventOwnersPostgres(){
   await db.exec('create table public.feture_profiles(account_hash text primary key,adult_allowed boolean not null default true);grant select,insert,update,delete on public.feture_profiles to service_role;');
   await db.exec("create function public.feture_peer_eligible(p text) returns boolean language sql stable security invoker as $$ select exists(select 1 from public.feture_profiles where account_hash=p and adult_allowed) $$;");
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002000_feture_event_owner_drafts.sql',import.meta.url),'utf8'));
-  await db.exec(readFileSync(new URL('../supabase/migrations/20261013002100_feture_event_submit_pending.sql',import.meta.url),'utf8'))
-  const a='a'.repeat(32),b='b'.repeat(32),guest='c'.repeat(32);
-  await db.query('insert into public.feture_profiles(account_hash) values ($1),($2),($3)',[a,b,guest]);
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261013002100_feture_event_submit_pending.sql',import.meta.url),'utf8'));
+  await db.exec("create table public.fixture_staff_role(account_hash text primary key, generation text not null, role text not null); grant select,insert,update on public.fixture_staff_role to service_role;");
+  await db.exec("create function public.feture_operator_bound_command(p_actor text,p_generation text,p_target_generation text,p_bootstrap boolean,p_command jsonb) returns jsonb language sql stable security invoker as $$ select jsonb_build_object('ok',true,'role',(select role from public.fixture_staff_role where account_hash=p_actor and generation=p_generation)) $$;");
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261013002200_feture_event_staff_queue.sql',import.meta.url),'utf8'))
+  const a='a'.repeat(32),b='b'.repeat(32),guest='c'.repeat(32),manager='d'.repeat(32),qa='e'.repeat(32),auditor='f'.repeat(32),generation='1'.repeat(64);
+  await db.query('insert into public.feture_profiles(account_hash) values ($1),($2),($3),($4),($5),($6)',[a,b,guest,manager,qa,auditor]);
+  for(const [who,role] of [[manager,'manager'],[qa,'qa_operator'],[auditor,'auditor']])await db.query('insert into public.fixture_staff_role values ($1,$2,$3)',[who,generation,role]);
   await db.exec('set role service_role');
   const rpc=async(who,command)=>(await db.query('select public.'+(command.action==='events.submit'?'feture_event_submit_command':'feture_event_owner_command')+'($1,$2::jsonb) result',[who,JSON.stringify(command)])).rows[0].result;
   const cmd=(n,revision=0,content=draft)=>({action:'events.save',id:id(n),operationId:id(1000+n),expectedRevision:revision,draft:content});
@@ -85,6 +89,23 @@ export async function runEventOwnersPostgres(){
   const empty={...draft,description:'',conditions:''};
   assert.equal((await rpc(a,{...cmd(2,1,empty),operationId:id(8001)})).ok,true);
   assert.equal((await rpc(a,{action:'events.submit',id:id(2),operationId:id(8002),expectedRevision:2})).error,'invalid_request');
+  
+  const staffRpc=async(who,gen=generation,cursor=null)=>(await db.query('select public.feture_event_staff_queue($1,$2,$3::jsonb) result',[who,gen,JSON.stringify({action:'queue',cursor})])).rows[0].result;
+  const staff=await staffRpc(manager);
+  assert.equal(staff.ok,true);
+  assert.equal(staff.items.length,1);
+  assert.equal(staff.items[0].id,id(1));
+  assert.equal(staff.items[0].state,'pending');
+  assert.equal(staff.items[0].title,'Private updated class');
+  assert.equal(staff.nextCursor,null);
+  for(const secret of [a,draft.privateJoinUrl,draft.ticketUrl,'owner_hash','privateJoinUrl','privateLocation','ticketUrl'])
+   assert.equal(JSON.stringify(staff).includes(secret),false);
+  assert.equal((await staffRpc(qa)).error,'forbidden');
+  assert.equal((await staffRpc(auditor)).error,'forbidden');
+  assert.equal((await staffRpc(manager,'0'.repeat(64))).error,'forbidden');
+  assert.equal((await staffRpc(guest)).error,'forbidden');
+  await db.query('update public.feture_profiles set adult_allowed=false where account_hash=$1',[manager]);
+  assert.equal((await staffRpc(manager)).error,'forbidden');
   await db.query('update public.feture_profiles set adult_allowed=false where account_hash=$1',[a]);
   assert.equal((await rpc(a,{action:'events.read',id:id(1)})).error,'resource_not_found');
   assert.equal((await rpc(a,cmd(1))).error,'resource_not_found');
@@ -95,6 +116,7 @@ export async function runEventOwnersPostgres(){
    await assert.rejects(db.query('select * from public.feture_events'),/permission denied/);
    await assert.rejects(db.query('select * from public.feture_event_operations'),/permission denied/);
    await assert.rejects(rpc(a,{action:'events.mine',cursor:null}),/permission denied/);
+   await assert.rejects(staffRpc(manager),/permission denied/);
    await db.exec('reset role');
   }
  }finally{await db.close();}

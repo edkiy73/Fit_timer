@@ -78,3 +78,40 @@ test('C01 report review: closed staff context/audit and personal generation',asy
  reply={ok:true,items:[{id,reportId:id,action:'hide',reason:'privacy',revision:2,at:since,note:'CONFIDENTIAL'}],nextCursor:null};assert.equal((await run({action:'feture.posts.reportAudit',cursor:null})).statusCode,503);
  reply={ok:false,error:'forbidden'};assert.equal((await run(queue)).statusCode,403);
 });
+
+
+test('E01d event queue: bound staff actor, strict metadata, no leaks or fallback',async()=>{
+ const email='event-staff@example.com',token='event-staff-token',owner=sha(email).slice(0,32),since=new Date().toISOString();
+ await store.set('a:'+owner,JSON.stringify({email,since,syncDevices:{device:{h:sha(token),at:since}}}));
+ const id='00000000-0000-4000-8000-000000000001';
+ const entry={id,revision:2,state:'pending',submittedAt:'2026-10-12T13:00:00Z',
+  title:'Review class',summary:'Safe summary',description:'Safe description',conditions:'18+',
+  startsAt:'2026-11-01T10:00:00+08:00',endsAt:'2026-11-01T11:00:00+08:00',
+  timeZone:'Asia/Makassar',format:'online',visibility:'private'};
+ let reply={ok:true,items:[entry],nextCursor:null};const calls=[];
+ const endpoint=createOperatorEndpoint({accounts:store,transport:{configured:()=>true,request:async(path,opts)=>{
+  calls.push({path,body:JSON.parse(opts.body)});return new Response(JSON.stringify(reply));
+ }},cors:()=>false,quota:async()=>true});
+ const run=async(body,headers={'x-fit-email':email,'x-fit-device':'device','x-fit-token':token})=>{
+  const req=Readable.from([]);req.method='POST';req.body=body;req.headers=headers;
+  const res={statusCode:0,setHeader(){},end(x){this.data=JSON.parse(x);}};
+  await endpoint(req,res);return res;
+ };
+ const command={action:'feture.events.queue',cursor:null};
+ assert.equal((await run(command,{'x-admin-key':'bootstrap-secret'})).statusCode,401);
+ assert.equal(calls.length,0);
+ assert.equal((await run({...command,ownerHash:'a'.repeat(32)})).statusCode,422);
+ assert.equal(calls.length,0);
+ const first=await run(command);assert.equal(first.statusCode,200);
+ assert.deepEqual(first.data,{ok:true,items:[entry],nextCursor:null});
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_event_staff_queue');
+ assert.equal(calls[0].body.p_actor,owner);
+ assert.equal(calls[0].body.p_generation,sha(owner+':'+since));
+ assert.deepEqual(calls[0].body.p_command,{action:'queue',cursor:null});
+ reply={ok:true,items:[{...entry,privateJoinUrl:'https://meet.example.org/private'}],nextCursor:null};
+ assert.equal((await run(command)).statusCode,503);
+ reply={ok:false,error:'forbidden'};
+ assert.equal((await run(command)).statusCode,403);
+ const n=calls.length;await store.set('a:'+owner,JSON.stringify({email,since,syncDevices:{}}));
+ assert.equal((await run(command)).statusCode,401);assert.equal(calls.length,n);
+});
