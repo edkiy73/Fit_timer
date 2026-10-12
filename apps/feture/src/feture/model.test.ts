@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { categoryProgress, normalizeRecord, parseInterestMap, type InterestRecord } from './model';
+import { categoryProgress, normalizeRecord, parseInterestMap, catalogSchema, type InterestRecord } from './model';
+import bundledCatalogue from '../../data/concept-catalog.json';
 const at='2026-10-10T06:00:00.000Z';
 const empty:Omit<InterestRecord,'at'>={stance:'unknown',experience:'unspecified',boundary:'none',boundaryNote:null,intensity:null,visibility:'private',useForDiscovery:false};
+describe('Public catalogue fallback contract',()=>{
+ it('does not replace usable bundled topics with an empty successful API response',()=>{
+  const fallback=catalogSchema.parse(bundledCatalogue);
+  expect(fallback.categories.some(category=>category.interests.length>0)).toBe(true);
+  expect(catalogSchema.safeParse({...bundledCatalogue,categories:[]}).success).toBe(false);
+  expect(catalogSchema.safeParse({...bundledCatalogue,categories:[{...bundledCatalogue.categories[0],interests:[]}]}).success).toBe(false);
+ });
+});
 describe('FetUre interest map',()=>{
  it('preserves independent experience and desire while hard boundaries exclude strength',()=>{
   const hard=normalizeRecord({...empty,stance:'fantasy',experience:'ongoing',boundary:'hard',intensity:5,boundaryNote:'cleared'},at);
