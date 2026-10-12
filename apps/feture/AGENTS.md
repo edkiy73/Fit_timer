@@ -2,6 +2,10 @@
 
 **Scope:** `apps/feture/**`. These rules supplement the root `AGENTS.md` and take precedence for FetUre-specific UX and test policy. They apply to AI coding agents and human contributors.
 
+## Current owner UX override — 2026-10-13 02:53
+
+See [USER-JOURNEYS-V3](docs/design-reference/USER-JOURNEYS-V3.md) before any visual/frontend task. Account required before entering the app; real Core registration/login, no guest/test consumer mode and no purpose-selection onboarding. User domain data/prefs/drafts live only on the server: remove local-first/guest import/durable offline domain queues in a scoped functional change, retaining server idempotency/CAS/ownership. Temporary form/request memory is not persistent storage; Core credential handling is separate. Five permanent tabs: Моя карта, Темы, Общение, Я, Знакомства. Dating participation remains voluntary and off by default; its tab is always visible. No dating candidate browsing until the viewer explicitly opens their own eligible dating profile with server-confirmed opt-in. Reciprocal discovery must be server enforced; no CSS-only gate. Registration/minimal non-sensitive account provisioning precedes adult proof; sensitive fields/content retain age/consent ACL. This overrides earlier guest/local-first, purpose question and conditional-dock guidance, not security requirements. The public welcome/registration URL stays reachable; this is product sign-in, not a global deployment allowlist.
+
 ## 1. Product, NOT a dating clone
 FetUre is a product for learning about yourself, building a meaningful private/public profile, and participating in a community. Dating is **third**, optional, and disabled by default. The app must be useful without dating, a local user base, or a romantic partner.
 - "Мой мир": deep, evolving personal profile, interest map/jars, tests, history and privacy controls.
