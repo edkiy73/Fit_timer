@@ -84,7 +84,7 @@ export function FetureExperience(){
             <span className="ft-home-kicker"><Icon name="spark" size={16}/> Твоё пространство открытий</span>
             <h1>Продолжим <em>с тебя.</em></h1>
             <p>Знакомься с новыми темами, исследуй свои интересы и находи людей, с которыми можно поговорить об этом.</p>
-            <div className="ft-home-actions"><Link to="/explore" className="ft-home-primary">Открыть новые темы <Icon name="arrow" size={20}/></Link><Link to="/world" className="ft-home-secondary">Мой мир <Icon name="arrow" size={17}/></Link></div>
+            <div className="ft-home-actions"><Link to={!mapLoading&&overall.known===0?"/start":"/explore"} className="ft-home-primary">{!mapLoading&&overall.known===0?"Начать знакомство с FetUre":"Открыть новые темы"} <Icon name="arrow" size={20}/></Link><Link to="/world" className="ft-home-secondary">Мой мир <Icon name="arrow" size={17}/></Link></div>
           </div>
           <div className="ft-home-overview">
             <div><span className="ft-home-overline">ТВОЁ ЛИЧНОЕ</span><h2>Карта твоего мира</h2><p>{mapLoading?'Загружаем твою карту…':overall.known>0?'Ты уже исследовал '+overall.known+' тем. Продолжай, когда захочешь.':'Пока здесь чистый лист. Выбери первую тему, и она станет частью твоей карты.'}</p><Link to="/world">Посмотреть мою карту <Icon name="arrow" size={17}/></Link></div>

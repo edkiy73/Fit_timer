@@ -14,6 +14,7 @@ import { sameSession } from './feture/interest-api';
 import { InterestLifecycle, interestQueue } from './feture/use-interest-map';
 import { FetureExperience } from './feture/experience';
 import { WelcomePage } from './feture/welcome';
+import { FirstStepsPage } from './feture/first-steps';
 import { ProductBottomDock, PRIMARY_TABS } from './feture/primary-navigation';
 import { NativeNavigation } from './feture/native-navigation';
 import { isExperiencePath } from './feture/navigation';
@@ -112,7 +113,7 @@ function Root(){
 
 function Shell(){
   const auth=useOptionalAuth(); const {t}=useI18n(); const location=useLocation();
-  if(isExperiencePath(location.pathname)) return <Outlet />;
+  if(isExperiencePath(location.pathname)||location.pathname==='/start') return <Outlet />;
   const study=location.pathname==='/tests'||location.pathname.startsWith('/tests/');
   return <main className={study?'app ft-study-shell':(location.pathname==='/account'||location.pathname==='/profile')?'app ft-account-shell':'app'}><header className="app-header">
     <div><div className="eyebrow">{t('app.eyebrow')}</div><h1>{PRODUCT_NAME}</h1></div>
@@ -231,6 +232,7 @@ export const routes: RouteObject[] = [
       children:[
         {index:true, element:<Home />},
         {path:'world', element:<Home />},
+        {path:'start', element:<FirstStepsPage />},
         {path:'explore/:categoryId?', element:<Home />},
         {path:'community', element:<Home />},
         {path:'dating', element:<Home />},
