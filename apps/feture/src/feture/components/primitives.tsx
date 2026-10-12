@@ -9,19 +9,22 @@ export function ActionButton({children,className='',type='button',...props}:Butt
   return <button {...props} type={type} className={`ft-primary ${className}`}>{children}</button>;
 }
 
-export function AppDialog({title,eyebrow,children,onClose}:{title:string;eyebrow?:string;children:ReactNode;onClose:()=>void}){
+export function AppDialog({title,eyebrow,children,onClose,presentation='dialog'}:{title:string;eyebrow?:string;children:ReactNode;onClose:()=>void;presentation?:'dialog'|'adaptive'}){
   // The URL represents the overlay; Escape, outside click and native/browser back agree.
   useEffect(()=>{
     const dismiss=()=>onClose();
     window.addEventListener('feture:dismiss-overlay',dismiss);
     return ()=>window.removeEventListener('feture:dismiss-overlay',dismiss);
   },[onClose]);
-  return <ModalOverlay isOpen isDismissable onOpenChange={open=>{if(!open)onClose();}} className="ft-overlay">
-    <Modal className="ft-modal"><Dialog className="ft-dialog">
+  const heading=<>
       <AriaButton className="ft-dialog-close" aria-label="Закрыть" onPress={onClose}><Icon name="close"/></AriaButton>
       {eyebrow&&<p className="ft-eyebrow">{eyebrow}</p>}
       <Heading slot="title" level={2}>{title}</Heading>
-      {children}
+    </>;
+  const adaptive=presentation==='adaptive';
+  return <ModalOverlay isOpen isDismissable onOpenChange={open=>{if(!open)onClose();}} className={`ft-overlay${adaptive?' ft-overlay-adaptive':''}`}>
+    <Modal className="ft-modal"><Dialog className={`ft-dialog${adaptive?' ft-dialog-adaptive':''}`}>
+      {adaptive?<><div className="ft-dialog-header">{heading}</div><div className="ft-dialog-body">{children}</div></>:<>{heading}{children}</>}
     </Dialog></Modal>
   </ModalOverlay>;
 }

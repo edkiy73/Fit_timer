@@ -223,4 +223,18 @@
  .ft-shell :is(.ft-jar-card,.ft-category-card,.ft-recommend-card):is(:hover,:active){transform:none}
 }
 
-.ft-explore-empty .ft-state{flex-wrap:wrap;align-items:flex-start}.ft-explore-empty .ft-state>div{flex:1 1 200px;min-width:0}.ft-explore-empty button{max-width:100%;white-space:normal}
+/* DUX02: opt-in interest editor. Other dialogs, including photos, stay unchanged. */
+.ft-dialog-adaptive{display:flex;flex-direction:column;overflow:hidden;padding:0;border:1px solid var(--ft-border);border-radius:var(--ft-radius-panel)}
+.ft-dialog-header{position:relative;flex:none;padding:24px 24px 18px;border-bottom:1px solid var(--ft-border);background:var(--ft-white)}
+.ft-dialog-header .ft-dialog-close{top:18px;right:18px;background:var(--ft-surface)}
+.ft-dialog-header .ft-eyebrow{color:var(--ft-accent-ink);margin-bottom:8px;padding-right:44px;overflow-wrap:anywhere}
+.ft-dialog-header h2{margin:0 46px 0 0;overflow-wrap:anywhere;font-size:24px}
+.ft-dialog-body{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:20px 24px 24px;scroll-padding-block:16px}
+.ft-dialog-body .ft-primary{background:var(--ft-action-fill)}
+.ft-dialog-body .ft-primary:hover{filter:brightness(.96)}
+.ft-dialog-adaptive :is(.ft-status,.ft-visibility-options button){border-color:var(--ft-border)!important}
+.ft-dialog-adaptive :is(.ft-status.active,.ft-visibility-options button.active){border-color:var(--ft-accent-ink)!important}
+.ft-dialog-adaptive :is(.ft-status small,.ft-intensity small,.ft-visibility small){color:var(--ft-muted);font-size:12px;line-height:1.5}
+.ft-overlay-adaptive .ft-modal[data-entering]{animation:ft-dialog-in var(--ft-motion-panel) var(--ft-ease)}
+@media(max-width:767px){
+ .ft-overlay-adaptive{align-items:flex-end;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area
