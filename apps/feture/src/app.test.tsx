@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryRouter, RouterProvider } from 'react-router';
@@ -51,7 +51,7 @@ describe('FetUre starter', () => {
     const router=renderApp('/');
     expect(await screen.findByRole('heading',{name:/Продолжим с тебя/i})).toBeTruthy();
     expect(screen.getByRole('navigation',{name:'Основная навигация FetUre'}).querySelectorAll('a')).toHaveLength(5);
-    await user.click(screen.getByRole('link',{name:/Мой мир/i,selector:'.ft-product-dock a'}));
+    await user.click(within(screen.getByRole('navigation',{name:'Основная навигация FetUre'})).getByRole('link',{name:'Мой мир'}));
     expect(router.state.location.pathname).toBe('/world');
     expect(await screen.findByRole('heading',{name:/Твой мир/i})).toBeTruthy();
   });
