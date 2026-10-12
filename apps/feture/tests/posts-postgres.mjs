@@ -82,13 +82,13 @@ test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and ir
  assert.deepEqual(await view(manager),one);
  assert.equal((await db.query('select count(*)::int n from public.feture_post_view_receipts')).rows[0].n,3);
  assert.equal((await view('f'.repeat(32))).error,'resource_not_found');
- for(const [idx,owner] of ['g'.repeat(32),'h'.repeat(32)].entries()){
+ for(const [idx,owner] of ['7'.repeat(32),'8'.repeat(32)].entries()){
   await db.query('insert into public.feture_profiles(account_hash) values($1)',[owner]);
   await rpc('feture_consent_accept',[owner,'ru',docs]);
   await db.query("insert into public.feture_verification_attempts(id,account_hash,issuer,environment,policy_version,state,created_at,expires_at,proof_issued_at,proof_expires_at) values($1,$2,'fixture','production','v1','verified',clock_timestamp()-interval '1 minute',clock_timestamp()+interval '1 hour',clock_timestamp(),clock_timestamp()+interval '1 hour')",[id(7790+idx),owner]);
  }
- assert.equal((await view('g'.repeat(32))).hidden,true);
- assert.deepEqual(await view('h'.repeat(32)),{ok:true,hidden:false,uniqueDailyOpens:5});
+ assert.equal((await view('7'.repeat(32))).hidden,true);
+ assert.deepEqual(await view('8'.repeat(32)),{ok:true,hidden:false,uniqueDailyOpens:5});
  assert.equal((await view(b)).uniqueDailyOpens,5);
  const receipts=(await db.query('select viewer_digest from public.feture_post_view_receipts')).rows;
  assert.equal(receipts.length,5);
