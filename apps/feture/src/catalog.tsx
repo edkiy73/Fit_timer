@@ -12,8 +12,7 @@ export function FetureCatalog(){
       <p>{source==='loading'?'Обновляем каталог. Встроенные темы уже доступны.':'Не удалось обновить каталог с сервера. Можно продолжить со встроенными темами.'}</p>
       {source==='offline'&&<button type="button" onClick={retry}>Повторить</button>}
     </div>}
-    <>
-      <p className="muted">{data.categories.length} направлений · {data.categories.reduce((n,c)=>n+c.interests.length,0)} тем</p>
+    <p className="muted">{data.categories.length} направлений · {data.categories.reduce((n,c)=>n+c.interests.length,0)} тем</p>
       <div className="feture-catalog-list">
         {data.categories.map(item=><details key={item.id} className="feture-catalog-category">
           <summary><span className="feture-dot" style={{background:item.color}}></span>
@@ -22,6 +21,5 @@ export function FetureCatalog(){
         </details>)}
       </div>
       <p><Link to="/tests">Опросники для знакомства с собой →</Link></p>
-    </>}
   </section>;
 }
