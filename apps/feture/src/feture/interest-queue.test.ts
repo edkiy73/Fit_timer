@@ -47,6 +47,39 @@ async function idle(q:ReturnType<typeof createInterestQueue>,store:InterestStore
 }
 
 describe('owner interest outbox',()=>{
+ it('hides an owner map on a failed session read without deleting its pending edits',async()=>{
+  const s=setup();let readable=true;
+  const q=createInterestQueue({store:s.store,api:s.api,getSession:async()=>{if(!readable)throw Error('keychain unavailable');return a;},hash:async v=>'hash:'+v,uuid});
+  queues.push(q);await q.select();
+  const oldScope=q.getSnapshot().scope;
+  await q.save('interest-1-1',state,oldScope);await idle(q,s.store,'adult_verification_required');
+  expect(q.getSnapshot().map['interest-1-1']).toBeDefined();
+  readable=false;
+  await expect(q.select()).resolves.toBeUndefined();
+  expect(q.getSnapshot()).toMatchObject({scope:'loading',phase:'auth_required',map:{},server:{},pending:0});
+  expect(await q.save('interest-1-2',state,oldScope)).toBe(false);
+  expect(await s.store.change(db=>db.owners['hash:'+a.email]!.pending.length)).toBe(1);
+  readable=true;await q.select();
+  expect(q.getSnapshot().pending).toBe(1);
+  expect(q.getSnapshot().map['interest-1-1']).toBeDefined();
+  s.setMode('online');await q.sync();await idle(q,s.store,'synced');
+  expect(s.remote()?.revision).toBe(1);
+ });
+ it('discards a late accepted mutation when the Core session becomes unreadable',async()=>{
+  const s=setup();let readable=true;
+  const q=createInterestQueue({store:s.store,api:s.api,getSession:async()=>{if(!readable)throw Error('keychain unavailable');return a;},hash:async v=>'hash:'+v,uuid});
+  queues.push(q);
+  let reply!:(result:MutationResult)=>void;
+  s.api.mutate=async()=>new Promise(resolve=>{reply=resolve;});
+  await q.select();
+  await q.save('interest-1-1',state,q.getSnapshot().scope);
+  await vi.waitFor(()=>expect(reply).toBeTypeOf('function'));
+  readable=false;
+  reply({ok:true,replayed:false,appliedRevision:1,appliedAt:at,entry:entry(1)});
+  await vi.waitFor(()=>expect(q.getSnapshot().phase).toBe('auth_required'));
+  expect(q.getSnapshot().map).toEqual({});
+  expect(await s.store.change(db=>db.owners['hash:'+a.email]!.pending.length)).toBe(1);
+ });
  it('manual Retry does not wait for stale offline backoff and replays the same operation',async()=>{
   const s=setup(),q=s.make();await q.select();s.setMode('offline');
   await q.save('interest-1-1',state,q.getSnapshot().scope);await idle(q,s.store,'offline');
