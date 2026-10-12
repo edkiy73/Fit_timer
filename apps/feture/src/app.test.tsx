@@ -44,6 +44,15 @@ describe('FetUre starter', () => {
     expect(await screen.findByRole('textbox',{name:'Email'})).toBeTruthy();
   });
 
+  it('keeps the intended shared-card route in account sign-in navigation state', async () => {
+    const id='91e9ee01-e4e2-4900-a7ad-144c46442390';
+    const router=renderApp('/share/'+id);
+    const user=userEvent.setup();
+    await user.click(await screen.findByRole('link',{name:'Войти и открыть карточку'}));
+    expect(router.state.location.pathname).toBe('/account');
+    expect(router.state.location.state).toEqual({returnTo:'/share/'+id});
+  });
+
   it('shows the signed-in account and signs out', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ok:true}),{status:200,headers:{'Content-Type':'application/json'}}));
     signIn();
