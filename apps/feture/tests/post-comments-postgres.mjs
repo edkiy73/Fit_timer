@@ -59,6 +59,17 @@ test('C02.3a comments: moderation-first pending, ACL, exact CAS/replay, tombston
   assert.equal((await cmd(a,page)).items.length,1);
   await db.query("update public.feture_post_comments set state='published' where id=$1",[reply.id]); // Staff fixture only, RPC never publishes.
   assert.equal((await cmd(a,page)).items.length,2);
+  // A block or expired adult proof of the commenter also hides the comment and its replies.
+  await db.query('insert into public.feture_blocks(blocker_hash,blocked_hash) values($1,$2)',[c,b]);
+  assert.deepEqual((await cmd(c,page)).items,[]);
+  assert.equal((await cmd(c,read(create.id))).error,'resource_not_found');
+  assert.equal((await cmd(a,page)).items.length,2); // Another reader is not affected.
+  await db.query('delete from public.feture_blocks where blocker_hash=$1 and blocked_hash=$2',[c,b]);
+  await db.query('update public.feture_verification_attempts set proof_expires_at=clock_timestamp() where account_hash=$1',[b]);
+  assert.deepEqual((await cmd(a,page)).items,[]);
+  assert.equal((await cmd(a,read(create.id))).error,'resource_not_found');
+  await db.query("update public.feture_verification_attempts set proof_expires_at=clock_timestamp()+interval '1 hour' where account_hash=$1",[b]);
+  assert.equal((await cmd(a,page)).items.length,2);
   await db.query("update public.feture_post_comments set state='hidden' where id=$1",[create.id]);
   assert.deepEqual((await cmd(a,page)).items,[]);
   assert.equal((await cmd(a,read(reply.id))).error,'resource_not_found');
