@@ -153,3 +153,43 @@ test('E01e staff decisions: bound generation, forged fields, safe response, no s
  const count=calls.length;await store.set('a:'+owner,JSON.stringify({email,since,syncDevices:{}}));
  assert.equal((await run(command)).statusCode,401);assert.equal(calls.length,count);
 });
+
+
+test('E03b publishing requires bound manager, strict response and server-provided actor',async()=>{
+ const email='event-publisher@example.com',token='event-publisher-token',since=new Date().toISOString();
+ const owner=sha(email).slice(0,32),id='00000000-0000-4000-8000-000000000051';
+ await store.set('a:'+owner,JSON.stringify({email,since,syncDevices:{device:{h:sha(token),at:since}}}));
+ const command={action:'feture.events.publish',id,
+   operationId:'00000000-0000-4000-8000-000000000052',expectedRevision:3};
+ let reply={ok:true,event:{id,state:'published',revision:4},replayed:false};
+ const calls=[];
+ const endpoint=createOperatorEndpoint({accounts:store,
+  transport:{configured:()=>true,request:async(path,options)=>{
+   calls.push({path,body:JSON.parse(options.body)});return new Response(JSON.stringify(reply));
+  }},cors:()=>false,quota:async()=>true});
+ const run=async(body,headers={'x-fit-email':email,'x-fit-device':'device','x-fit-token':token})=>{
+  const req=Readable.from([]);req.method='POST';req.body=body;req.headers=headers;
+  const res={statusCode:0,setHeader(){},end(x){this.data=JSON.parse(x);}};
+  await endpoint(req,res);return res;
+ };
+ assert.equal((await run(command,{'x-admin-key':'bootstrap-secret'})).statusCode,401);
+ assert.equal((await run({...command,actorHash:'a'.repeat(32)})).statusCode,422);
+ assert.equal((await run({...command,expectedRevision:0})).statusCode,422);
+ assert.equal(calls.length,0);
+ const ok=await run(command);
+ assert.equal(ok.statusCode,200);
+ assert.deepEqual(ok.data,{ok:true,event:{id,state:'published',revision:4},replayed:false});
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_event_staff_publish');
+ assert.deepEqual(calls[0].body,{p_actor:owner,p_generation:sha(owner+':'+since),
+   p_command:{action:'publish',id,operationId:command.operationId,expectedRevision:3}});
+ reply={ok:true,event:{id,state:'published',revision:4,privateLocation:'hidden'},replayed:false};
+ assert.equal((await run(command)).statusCode,503);
+ reply={ok:false,error:'review_required'};
+ assert.equal((await run(command)).statusCode,409);
+ reply={ok:false,error:'forbidden'};
+ assert.equal((await run(command)).statusCode,403);
+ const count=calls.length;
+ await store.set('a:'+owner,JSON.stringify({email,since,syncDevices:{}}));
+ assert.equal((await run(command)).statusCode,401);
+ assert.equal(calls.length,count);
+});
