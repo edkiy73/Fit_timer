@@ -22,6 +22,12 @@
 .ft-welcome-copy h1 em{font-style:normal;color:#ffa4c7;text-shadow:0 0 38px #ff619b4a}
 .ft-welcome-copy h1 span{display:block;color:#cdb7ff}
 .ft-welcome-lede{font-size:clamp(15px,1.3vw,18px);line-height:1.7;max-width:550px;margin:0 0 34px;color:#f1dfe9}
+
+/* Prepared RU/EN control: absent entirely while product.json offers only one language. */
+.ft-welcome-language{margin:0 0 20px;max-width:360px}
+.ft-welcome-language .ab-language{display:flex;align-items:center;flex-wrap:wrap;gap:10px;color:#f5e6f0;font-size:12px;font-weight:700}
+.ft-welcome-language .ab-language select{min-height:44px;max-width:100%;border:1px solid rgb(255 255 255 / .32);border-radius:12px;background:#38243d;color:#fff;padding:10px 34px 10px 13px;font:inherit;font-weight:650;cursor:pointer}
+.ft-welcome-language .ab-language select:focus-visible{outline:3px solid #d7b8ff;outline-offset:2px}
 .ft-welcome-buttons{display:flex;flex-wrap:wrap;gap:12px;align-items:stretch}
 .ft-welcome-buttons a{display:inline-flex;align-items:center;justify-content:center;gap:12px;min-height:52px;padding:12px 22px;font-size:14px;font-weight:760;border-radius:16px;transition:transform 130ms ease,box-shadow 220ms ease,background-color 220ms ease}
 .ft-welcome-primary{background:linear-gradient(120deg,#f33467,#dc235d);box-shadow:0 12px 34px #ff3b7266;color:white!important}

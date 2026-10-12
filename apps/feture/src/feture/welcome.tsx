@@ -1,10 +1,10 @@
 import { Link } from 'react-router';
-import {useI18n} from '@appbase/ui-react/i18n.js';
+import {LanguagePicker,useI18n} from '@appbase/ui-react/i18n.js';
 import { Icon } from './components/Icon';
 import './welcome.css';
 
 export function WelcomePage(){
- const {t}=useI18n();
+ const {t,canSwitch}=useI18n();
  const pillars=[
  {number:'01',icon:'world' as const,title:t('welcome.pillar.self.title'),detail:t('welcome.pillar.self.detail')},
  {number:'02',icon:'compass' as const,title:t('welcome.pillar.explore.title'),detail:t('welcome.pillar.explore.detail')},
@@ -25,6 +25,7 @@ export function WelcomePage(){
     <span className="ft-welcome-kicker"><span className="ft-welcome-kicker-dot"/> {t('welcome.kicker')}</span>
     <h1 id="ft-welcome-title">{t('welcome.hero.a')}<em>{t('welcome.hero.b')}</em><span>{t('welcome.hero.c')}</span></h1>
     <p className="ft-welcome-lede">{t('welcome.lede')}</p>
+    {canSwitch&&<div className="ft-welcome-language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')}/></div>}
     <div className="ft-welcome-buttons">
      <Link className="ft-welcome-primary" to="/explore">{t('welcome.cta')} <Icon name="arrow" size={21}/></Link>
      <Link className="ft-welcome-secondary" to="/account">{t('welcome.signup')}</Link>
