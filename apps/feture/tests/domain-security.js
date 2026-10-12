@@ -283,6 +283,37 @@ test('C02 comment API: protected reads, owner-bound pending writes, safe deletio
 
 });
 
+test('C02.4 public identity: Core ownership, explicit consent, revoke without adult proof',async()=>{
+ const {createPostsRepository}=require('../lib/feture/posts');
+ await seed(identities.alice);
+ const verified=await authenticate(req(identities.alice),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const expired=await authenticate(req(identities.alice),store);
+ const id='00000000-0000-4000-8000-000000000009';
+ let reply={ok:true,enabled:false,publicAuthorId:null,replayed:false},calls=[];
+ const repo=createPostsRepository({configured:()=>true,request:async(path,options)=>{
+  calls.push({path,params:JSON.parse(options.body)});
+  return new Response(JSON.stringify(reply));
+ }},{requireCurrent:async()=>{}});
+ const enable={action:'authors.enable',operationId:id,consent:true};
+ for(const extra of [{accountHash:identities.bob.hash},{consent:false},{consent:'true'},{publicAuthorId:id},{profileId:id}])
+ assert.throws(()=>command({...enable,...extra}),e=>e.status===422);
+ assert.deepEqual(await repo.execute(expired,{action:'authors.status'}),{enabled:false,publicAuthorId:null,replayed:false});
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_public_author_command');
+ assert.equal(calls[0].params.p_actor,identities.alice.hash);
+ await assert.rejects(repo.execute(expired,enable),e=>e.code==='verification_required');
+ assert.equal(calls.length,1);
+ reply={ok:true,enabled:true,publicAuthorId:id,replayed:false};
+ assert.deepEqual(await repo.execute(verified,enable),{enabled:true,publicAuthorId:id,replayed:false});
+ assert.equal(calls.at(-1).params.p_actor,identities.alice.hash);
+ await assert.rejects(repo.execute(expired,{action:'authors.rotate',operationId:id}),e=>e.code==='verification_required');
+ reply={ok:true,enabled:false,publicAuthorId:null,replayed:false};
+ assert.equal((await repo.execute(expired,{action:'authors.disable',operationId:id})).enabled,false);
+ assert.equal(calls.at(-1).params.p_actor,identities.alice.hash);
+ reply={...reply,account_hash:'SECRET'};
+ await assert.rejects(repo.execute(expired,{action:'authors.status'}),e=>e.status===503);
+ await assert.rejects(repo.execute({accountHash:identities.alice.hash,verifiedAdult:true},{action:'authors.status'}),e=>e.status===401);
+});
+
 test('C01 post reports: authenticated identity, adult submit and metadata-only own status',async()=>{
  const {createPostsRepository}=require('../lib/feture/posts');await seed(identities.alice);const actor=await authenticate(req(identities.alice),store,async()=>new Date(Date.now()+3600000).toISOString()),unverified=await authenticate(req(identities.alice),store);
  const id='00000000-0000-4000-8000-000000000008',report={id,postId:id,postRevision:3,reason:'privacy',state:'open',revision:1,createdAt:'2026-10-11T00:00:00Z',resolvedAt:null,resolution:null};let reply={ok:true,report,replayed:false};const calls=[];
