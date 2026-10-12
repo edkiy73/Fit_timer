@@ -10,7 +10,7 @@
     "build": "npm run check:catalog && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.server.json",
-    "test:smoke": "node tests/smoke.js",
+    "test:smoke": "node tests/smoke.js && node --check tests/e2e.mjs",
     "test:unit": "vitest run",
     "test:browser": "npm run build && node tests/e2e.mjs",
     "check": "npm run check:catalog && npm run typecheck && npm run test:smoke && npm run test:unit && npm run test:security && npm run test:seed && npm run test:interests && npm run build",
@@ -18,7 +18,8 @@
     "mobile:prepare:ios": "node scripts/mobile.mjs ios",
     "test:security": "node --test tests/domain-security.js tests/verification-engine.js tests/diagnostics-privacy.js tests/admin-observability-isolation.js tests/private-metrics.js tests/operators-security.js",
     "test:interests": "node --test tests/interest-transactions.mjs tests/verification-postgres.mjs tests/documents-postgres.mjs tests/profile-postgres.mjs tests/access-postgres.mjs tests/moderation-postgres.mjs tests/journal-postgres.mjs tests/questionnaires-postgres.mjs tests/test-map-postgres.mjs tests/catalog-drafts-postgres.mjs tests/catalog-publications-postgres.mjs tests/share-links-postgres.mjs tests/qa-adult-postgres.mjs tests/posts-postgres.mjs",
-    "test:seed": "node --test tests/seed-postgres.mjs"
+    "test:seed": "node --test tests/seed-postgres.mjs",
+    "test:visual": "npm run build && node tests/e2e.mjs --visual-qa"
   },
   "dependencies": {
     "@capacitor/android": "8.5.2",
