@@ -196,7 +196,7 @@ function InterestDialog({interest,current,onClose,onSave,onDelete}:{interest:Edi
   if(unsaved&&!window.confirm('Несохранённые изменения будут потеряны. Закрыть редактор?'))return;
   onClose();
  };
- return <AppDialog title={interest.title} eyebrow={interest.category} onClose={safeClose}>
+ return <AppDialog title={interest.title} eyebrow={interest.category} onClose={safeClose} presentation="adaptive">
   <p className="ft-muted">{interest.definition}</p>
   {interest.synonyms.length>0&&<p className="ft-muted"><small>Также ищут: {interest.synonyms.join(', ')}.</small></p>}
   {interest.relatedTitles.length>0&&<p className="ft-muted"><small>Связанные темы: {interest.relatedTitles.join(', ')}.</small></p>}
