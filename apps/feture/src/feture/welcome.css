@@ -67,3 +67,14 @@
 }
 @keyframes ft-welcome-reveal{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
 @keyframes ft-welcome-caption-in{from{opacity:0;transform:translateY(20px) rotate(-8deg)}to{opacity:1;transform:translateY(0) rotate(-5deg)}}
+
+
+/* Source-owned ambient imagery, not borrowed photography or fake members. */
+.ft-welcome-hero::before{
+ background-image:linear-gradient(90deg,#2515258c 0%,#29152e38 55%,transparent 86%),url('/images/feture-aurora.svg');
+ background-repeat:no-repeat;
+ background-position:center,60% center;
+ background-size:cover;
+ opacity:.86;
+}
+@media(max-width:700px){.ft-welcome-hero::before{background-position:center,62% center;opacity:.5}}
