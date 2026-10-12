@@ -101,6 +101,18 @@ function fakeRes(){
       ok('public catalog rejects excessive streamed upstream size without Content-Length',
         streamed.statusCode===503 && streamed.body===JSON.stringify({error:'catalog_unavailable'}) &&
         streamed.headers['Cache-Control']==='no-store');
+      // Documents share this public endpoint; published blocks must be bounded too.
+      global.fetch=async()=>tooLarge({},new TextEncoder().encode('[]'));
+      const emptyDocuments=fakeRes();
+      await catalog({method:'GET',headers:{},url:'/api/catalog?resource=documents&locale=ru'},emptyDocuments);
+      ok('public documents stream parses an empty released catalogue',
+        emptyDocuments.statusCode===200 && emptyDocuments.body===JSON.stringify({ok:true,documents:[]}));
+      global.fetch=async()=>tooLarge({},new Uint8Array(1024*1024+1));
+      const hugeDocuments=fakeRes();
+      await catalog({method:'GET',headers:{},url:'/api/catalog?resource=documents&locale=ru'},hugeDocuments);
+      ok('public documents reject oversized chunked data with sanitized 503',
+        hugeDocuments.statusCode===503 && hugeDocuments.body===JSON.stringify({error:'catalog_unavailable'}) &&
+        hugeDocuments.headers['Cache-Control']==='no-store');
     } finally { console.warn=previousWarning; }
   } finally {
     global.fetch=oldFetch;
