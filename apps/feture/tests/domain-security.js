@@ -581,7 +581,7 @@ test('E01b owner-only event RPC uses authenticated Core actor and strict DTO',as
  assert.throws(()=>ownerDto({...entry,ownerHash:'other'}),e=>e.code==='domain_unavailable');
  await assert.rejects(events.execute({accountHash:identity.hash,verifiedAdult:true},input),e=>e.status===401);
  await assert.rejects(events.execute(actor,{...input,ownerHash:identities.bob.hash}),e=>e.status===422);
- await assert.rejects(events.execute(actor,{action:'events.catalog',cursor:null}),e=>e.status===422);
+ await assert.rejects(events.execute(actor,{action:'events.catalog',cursor:null,ownerHash:identities.bob.hash}),e=>e.status===422);
  assert.equal(calls.length,1);
  const unverified=await authenticate(req(identity),store);
  await assert.rejects(events.execute(unverified,input),e=>e.status===403);

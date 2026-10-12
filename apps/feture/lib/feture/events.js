@@ -33,8 +33,8 @@ function publicCardDto(value){
   typeof value.description!=='string'||value.description.length>6000||
   typeof value.conditions!=='string'||value.conditions.length>3000||
   !['online','offline'].includes(String(value.format))||
-  typeof value.startsAt!=='string'||!/^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d(?::\\d\\d(?:\\.\\d{1,3})?)?(?:Z|[+-]\\d\\d:\\d\\d)$/.test(value.startsAt)||
-  typeof value.endsAt!=='string'||!/^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d(?::\\d\\d(?:\\.\\d{1,3})?)?(?:Z|[+-]\\d\\d:\\d\\d)$/.test(value.endsAt)||
+  typeof value.startsAt!=='string'||!/^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d{1,3})?)?(?:Z|[+-]\d\d:\d\d)$/.test(value.startsAt)||
+  typeof value.endsAt!=='string'||!/^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d{1,3})?)?(?:Z|[+-]\d\d:\d\d)$/.test(value.endsAt)||
   !Number.isFinite(Date.parse(value.startsAt))||!Number.isFinite(Date.parse(value.endsAt))||
   Date.parse(value.endsAt)<=Date.parse(value.startsAt)||
   typeof value.timeZone!=='string'||value.timeZone.length>64||
