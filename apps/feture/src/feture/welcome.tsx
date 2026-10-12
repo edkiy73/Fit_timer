@@ -1,33 +1,35 @@
 import { Link } from 'react-router';
+import {useI18n} from '@appbase/ui-react/i18n.js';
 import { Icon } from './components/Icon';
 import './welcome.css';
 
-const pillars=[
- {number:'01',icon:'world' as const,title:'Лучше понять себя',detail:'Замечай свои интересы, желания и границы. Всё в твоём темпе.'},
- {number:'02',icon:'compass' as const,title:'Открывать новое',detail:'Изучай темы и вопросы, о которых раньше, возможно, не задумывался.'},
- {number:'03',icon:'users' as const,title:'Быть среди своих',detail:'Обсуждения, сообщества и события. Знакомства — только по желанию.'}
-];
 export function WelcomePage(){
+ const {t}=useI18n();
+ const pillars=[
+ {number:'01',icon:'world' as const,title:t('welcome.pillar.self.title'),detail:t('welcome.pillar.self.detail')},
+ {number:'02',icon:'compass' as const,title:t('welcome.pillar.explore.title'),detail:t('welcome.pillar.explore.detail')},
+ {number:'03',icon:'users' as const,title:t('welcome.pillar.people.title'),detail:t('welcome.pillar.people.detail')}
+];
  return <main className="ft-welcome">
-  <a className="ft-welcome-skip" href="#ft-welcome-story">К содержимому</a>
+  <a className="ft-welcome-skip" href="#ft-welcome-story">{t('welcome.skip')}</a>
   <header className="ft-welcome-header">
-   <Link className="ft-welcome-brand" to="/" aria-label="FetUre — начало">Fet<span>Ure</span><i>.</i></Link>
-   <nav className="ft-welcome-header-actions" aria-label="На старте">
-    <Link className="ft-welcome-header-explore" to="/explore">Посмотреть темы</Link>
-    <Link className="ft-welcome-login" to="/account">Войти <Icon name="arrow" size={17}/></Link>
+   <Link className="ft-welcome-brand" to="/" aria-label={t('welcome.brandAria')}>Fet<span>Ure</span><i>.</i></Link>
+   <nav className="ft-welcome-header-actions" aria-label={t('welcome.headerNav')}>
+    <Link className="ft-welcome-header-explore" to="/explore">{t('welcome.explore')}</Link>
+    <Link className="ft-welcome-login" to="/account">{t('welcome.signin')} <Icon name="arrow" size={17}/></Link>
    </nav>
   </header>
   <section className="ft-welcome-hero" id="ft-welcome-story" aria-labelledby="ft-welcome-title">
    <div className="ft-welcome-aura" aria-hidden="true"/>
    <div className="ft-welcome-copy">
-    <span className="ft-welcome-kicker"><span className="ft-welcome-kicker-dot"/> Пространство, где можно быть собой</span>
-    <h1 id="ft-welcome-title">Открывай <em>себя.</em><span>Исследуй мир.</span></h1>
-    <p className="ft-welcome-lede">FetUre помогает лучше понять свои интересы, границы и то, что тебе важно. Найди новые темы, говори о них и двигайся в своём темпе.</p>
+    <span className="ft-welcome-kicker"><span className="ft-welcome-kicker-dot"/> {t('welcome.kicker')}</span>
+    <h1 id="ft-welcome-title">{t('welcome.hero.a')}<em>{t('welcome.hero.b')}</em><span>{t('welcome.hero.c')}</span></h1>
+    <p className="ft-welcome-lede">{t('welcome.lede')}</p>
     <div className="ft-welcome-buttons">
-     <Link className="ft-welcome-primary" to="/explore">Начать исследовать <Icon name="arrow" size={21}/></Link>
-     <Link className="ft-welcome-secondary" to="/account">Войти или зарегистрироваться</Link>
+     <Link className="ft-welcome-primary" to="/explore">{t('welcome.cta')} <Icon name="arrow" size={21}/></Link>
+     <Link className="ft-welcome-secondary" to="/account">{t('welcome.signup')}</Link>
     </div>
-    <p className="ft-welcome-trust"><Icon name="lock" size={16}/> Твои личные отметки приватны по умолчанию. Знакомства включаются отдельно.</p>
+    <p className="ft-welcome-trust"><Icon name="lock" size={16}/> {t('welcome.trust')}</p>
    </div>
    <div className="ft-welcome-art" aria-hidden="true">
     <div className="ft-welcome-art-sheen"/>
@@ -49,15 +51,15 @@ export function WelcomePage(){
      <circle cx="125" cy="481" r="17" fill="#e690bd"/>
      <circle cx="367" cy="470" r="8" fill="#f8bfd8"/>
     </svg>
-    <div className="ft-welcome-art-caption">Много граней.<span>Один настоящий ты.</span></div>
+    <div className="ft-welcome-art-caption">{t('welcome.art.a')}<span>{t('welcome.art.b')}</span></div>
    </div>
   </section>
   <section className="ft-welcome-values" aria-labelledby="ft-welcome-values-title">
-   <div className="ft-welcome-values-heading"><span>Начни с любопытства</span><h2 id="ft-welcome-values-title">Не нужно заранее знать, кого или что искать.</h2></div>
+   <div className="ft-welcome-values-heading"><span>{t('welcome.values.kicker')}</span><h2 id="ft-welcome-values-title">{t('welcome.values.title')}</h2></div>
    <div className="ft-welcome-value-grid">
     {pillars.map(p=><article className="ft-welcome-value" key={p.number}><span className="ft-welcome-value-no">{p.number}</span><span className="ft-welcome-value-icon"><Icon name={p.icon} size={23}/></span><h3>{p.title}</h3><p>{p.detail}</p></article>)}
    </div>
   </section>
-  <footer className="ft-welcome-footer"><span>FetUre — исследуй без спешки</span><Link to="/documents">Правила и согласия</Link><Link to="/account">Мой аккаунт</Link></footer>
+  <footer className="ft-welcome-footer"><span>{t('welcome.footer')}</span><Link to="/documents">{t('welcome.legal')}</Link><Link to="/account">{t('welcome.account')}</Link></footer>
  </main>;
 }
