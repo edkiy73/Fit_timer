@@ -54,3 +54,52 @@ async function eventStaffQueue(transport,actor,input){
  }catch(e){if(e instanceof DomainError)throw e;return reject(503,'operators_unavailable');}
 }
 module.exports={eventStaffQueue};
+
+
+const reasons=['reviewed','policy','privacy','nonconsent','minor','illegal','spam','other'];
+/** E01e: decision changes pending to approved or rejected, NOT published.
+ * @param {import('./contracts').Transport} transport
+ * @param {import('./contracts').Actor} actor
+ * @param {Record<string,unknown>} input */
+async function eventStaffDecision(transport,actor,input){
+ requireOwner(actor,actor.accountHash);
+ if(!actor.accountGeneration)reject(403,'forbidden');
+ if(!obj(input)||!shape(input,['action','decision','expectedRevision','id','operationId','reason'])||
+   input.action!=='feture.events.decide'||!uuid(input.id)||!uuid(input.operationId)||
+   !Number.isSafeInteger(input.expectedRevision)||Number(input.expectedRevision)<2||
+   Number(input.expectedRevision)>999999999999999||
+   !['approve','reject'].includes(String(input.decision))||!reasons.includes(String(input.reason))||
+   (input.decision==='approve'&&input.reason!=='reviewed')||
+   (input.decision==='reject'&&input.reason==='reviewed'))
+  reject(422,'invalid_request');
+ if(!transport.configured())reject(503,'operators_unavailable');
+ const command={action:'decide',decision:input.decision,reason:input.reason,id:input.id,
+   operationId:input.operationId,expectedRevision:input.expectedRevision};
+ try{
+  const response=await transport.request('/rest/v1/rpc/feture_event_staff_decide',{
+   method:'POST',timeoutMs:8000,headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({p_actor:actor.accountHash,p_generation:actor.accountGeneration,p_command:command})
+  });
+  const data=await response.json();
+  if(!response.ok||!obj(data))reject(503,'operators_unavailable');
+  if(data.ok!==true){
+   if(data.error==='forbidden')reject(403,'forbidden');
+   if(data.error==='review_required'||data.error==='revision_conflict'||data.error==='operation_conflict')
+    reject(409,String(data.error));
+   if(data.error==='resource_not_found')reject(404,'resource_not_found');
+   if(data.error==='invalid_request')reject(422,'invalid_request');
+   reject(503,'operators_unavailable');
+  }
+  if(!shape(data,['ok','event','replayed'])||typeof data.replayed!=='boolean'||
+     !obj(data.event)||!shape(data.event,['id','state','revision'])||
+     data.event.id!==input.id||!uuid(data.event.id)||
+     !['approved','rejected'].includes(String(data.event.state))||
+     data.event.state!==(input.decision==='approve'?'approved':'rejected')||
+     !Number.isSafeInteger(data.event.revision)||Number(data.event.revision)<3)
+    reject(503,'operators_unavailable');
+  // Never forward upstream metadata, owner hashes, drafts, URLs or reviewer identities.
+  return {ok:true,event:{id:data.event.id,state:data.event.state,revision:data.event.revision},
+   replayed:data.replayed};
+ }catch(e){if(e instanceof DomainError)throw e;return reject(503,'operators_unavailable');}
+}
+module.exports.eventStaffDecision=eventStaffDecision;

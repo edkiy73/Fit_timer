@@ -22,10 +22,11 @@ export async function runEventOwnersPostgres(){
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002100_feture_event_submit_pending.sql',import.meta.url),'utf8'));
   await db.exec("create table public.fixture_staff_role(account_hash text primary key, generation text not null, role text not null); grant select,insert,update on public.fixture_staff_role to service_role;");
   await db.exec("create function public.feture_operator_bound_command(p_actor text,p_generation text,p_target_generation text,p_bootstrap boolean,p_command jsonb) returns jsonb language sql stable security invoker as $$ select jsonb_build_object('ok',true,'role',(select role from public.fixture_staff_role where account_hash=p_actor and generation=p_generation)) $$;");
-  await db.exec(readFileSync(new URL('../supabase/migrations/20261013002200_feture_event_staff_queue.sql',import.meta.url),'utf8'))
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261013002200_feture_event_staff_queue.sql',import.meta.url),'utf8'));
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261013002300_feture_event_staff_decisions.sql',import.meta.url),'utf8'))
   const a='a'.repeat(32),b='b'.repeat(32),guest='c'.repeat(32),manager='d'.repeat(32),qa='e'.repeat(32),auditor='f'.repeat(32),generation='1'.repeat(64);
   await db.query('insert into public.feture_profiles(account_hash) values ($1),($2),($3),($4),($5),($6)',[a,b,guest,manager,qa,auditor]);
-  for(const [who,role] of [[manager,'manager'],[qa,'qa_operator'],[auditor,'auditor']])await db.query('insert into public.fixture_staff_role values ($1,$2,$3)',[who,generation,role]);
+  for(const [who,role] of [[manager,'manager'],[qa,'qa_operator'],[auditor,'auditor'],[a,'manager']])await db.query('insert into public.fixture_staff_role values ($1,$2,$3)',[who,generation,role]);
   await db.exec('set role service_role');
   const rpc=async(who,command)=>(await db.query('select public.'+(command.action==='events.submit'?'feture_event_submit_command':'feture_event_owner_command')+'($1,$2::jsonb) result',[who,JSON.stringify(command)])).rows[0].result;
   const cmd=(n,revision=0,content=draft)=>({action:'events.save',id:id(n),operationId:id(1000+n),expectedRevision:revision,draft:content});
@@ -104,7 +105,59 @@ export async function runEventOwnersPostgres(){
   assert.equal((await staffRpc(auditor)).error,'forbidden');
   assert.equal((await staffRpc(manager,'0'.repeat(64))).error,'forbidden');
   assert.equal((await staffRpc(guest)).error,'forbidden');
+
+  const decide=async(who,command,gen=generation)=>(await db.query(
+   'select public.feture_event_staff_decide($1,$2,$3::jsonb) result',
+   [who,gen,JSON.stringify(command)])).rows[0].result;
+  const review=(eventId,revision,decision,reason,op)=>({
+   action:'decide',id:id(eventId),expectedRevision:revision,
+   operationId:id(op),decision,reason
+  });
+  const denyUnreviewed=review(1,3,'approve','reviewed',9100);
+  assert.equal((await decide(manager,denyUnreviewed)).error,'review_required');
+  assert.equal((await decide(manager,{...denyUnreviewed,ownerHash:a})).error,'invalid_request');
+  assert.equal((await decide(manager,{...denyUnreviewed,reason:'policy'})).error,'invalid_request');
+  assert.equal((await decide(manager,review(1,3,'reject','reviewed',9100))).error,'invalid_request');
+  assert.equal((await decide(a,review(1,3,'reject','privacy',9101))).error,'review_required');
+  assert.equal((await decide(qa,review(1,3,'reject','privacy',9102))).error,'forbidden');
+  assert.equal((await decide(auditor,review(1,3,'reject','privacy',9103))).error,'forbidden');
+  assert.equal((await decide(manager,review(1,3,'reject','privacy',9104),'0'.repeat(64))).error,'forbidden');
+  const rejectOne=review(1,3,'reject','privacy',9201);
+  const rejected=await decide(manager,rejectOne);
+  assert.equal(rejected.ok,true);
+  assert.deepEqual(rejected.event,{id:id(1),revision:4,state:'rejected'});
+  assert.equal((await decide(manager,rejectOne)).replayed,true);
+  assert.deepEqual((await decide(manager,rejectOne)).event,rejected.event);
+  assert.equal((await decide(manager,{...rejectOne,reason:'spam'})).error,'operation_conflict');
+  assert.equal((await decide(manager,review(1,3,'reject','privacy',9202))).error,'revision_conflict');
+  assert.equal((await rpc(a,{action:'events.read',id:id(1)})).entry.state,'rejected');
+  assert.equal((await rpc(b,{action:'events.read',id:id(1)})).error,'resource_not_found');
+  // No private venue or external ticket in manager-approved unexamined event.
+  const clean={...draft,title:'No links class',ticketUrl:null,privateJoinUrl:null};
+  const updateThree={action:'events.save',id:id(3),operationId:id(9203),expectedRevision:1,draft:clean};
+  assert.equal((await rpc(a,updateThree)).entry.revision,2);
+  const submitThree={action:'events.submit',id:id(3),operationId:id(9204),expectedRevision:2};
+  assert.equal((await rpc(a,submitThree)).entry.state,'pending');
+  assert.equal((await decide(manager,review(3,3,'approve','reviewed',9205))).ok,true);
+  const approved=await decide(manager,review(3,3,'approve','reviewed',9205));
+  assert.equal(approved.replayed,true);
+  assert.deepEqual(approved.event,{id:id(3),revision:4,state:'approved'});
+  assert.equal((await decide(manager,review(3,3,'approve','reviewed',9206))).error,'revision_conflict');
+  assert.equal((await rpc(a,{action:'events.read',id:id(3)})).entry.state,'approved');
+  assert.equal((await rpc(b,{action:'events.read',id:id(3)})).error,'resource_not_found');
+  assert.equal((await rpc(a,{action:'events.catalog',cursor:null})).error,'invalid_request');
+  assert.equal((await staffRpc(manager)).items.length,0); // Approved is not pending and not public.
+  const audit=(await db.query('select action,reason,draft_hash,response from public.feture_event_reviews order by created_at')).rows;
+  assert.equal(audit.length,2);
+  assert.deepEqual(audit.map(x=>x.action).sort(),['approve','reject']);
+  for(const entry of audit){
+   assert.match(entry.draft_hash,/^[a-f0-9]{64}$/);
+   assert.ok(!JSON.stringify(entry.response).includes(a));
+   assert.ok(!JSON.stringify(entry.response).includes(draft.privateJoinUrl));
+   assert.ok(!JSON.stringify(entry.response).includes(draft.ticketUrl));
+  }
   await db.query('update public.feture_profiles set adult_allowed=false where account_hash=$1',[manager]);
+  assert.equal((await decide(manager,rejectOne)).error,'forbidden');
   assert.equal((await staffRpc(manager)).error,'forbidden');
   await db.query('update public.feture_profiles set adult_allowed=false where account_hash=$1',[a]);
   assert.equal((await rpc(a,{action:'events.read',id:id(1)})).error,'resource_not_found');
@@ -115,8 +168,10 @@ export async function runEventOwnersPostgres(){
    await db.exec('set role '+role);
    await assert.rejects(db.query('select * from public.feture_events'),/permission denied/);
    await assert.rejects(db.query('select * from public.feture_event_operations'),/permission denied/);
+   await assert.rejects(db.query('select * from public.feture_event_reviews'),/permission denied/);
    await assert.rejects(rpc(a,{action:'events.mine',cursor:null}),/permission denied/);
    await assert.rejects(staffRpc(manager),/permission denied/);
+   await assert.rejects(decide(manager,rejectOne),/permission denied/);
    await db.exec('reset role');
   }
  }finally{await db.close();}

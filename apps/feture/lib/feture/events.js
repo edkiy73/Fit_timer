@@ -15,10 +15,10 @@ function stamp(value){return typeof value==='string'&&value.length<=50&&/^\d{4}-
 function ownerDto(value){
  if(!object(value)||!shape(value,['id','revision','state','draft','createdAt','updatedAt'])||
   typeof value.id!=='string'||!uuid.test(value.id)||!Number.isSafeInteger(value.revision)||
-  Number(value.revision)<1||!['draft','pending'].includes(String(value.state))||!stamp(value.createdAt)||!stamp(value.updatedAt))reject(503,'domain_unavailable');
+  Number(value.revision)<1||!['draft','pending','approved','rejected'].includes(String(value.state))||!stamp(value.createdAt)||!stamp(value.updatedAt))reject(503,'domain_unavailable');
  try{eventDraft(value.draft);}catch{return reject(503,'domain_unavailable');}
  return /** @type {import('./events').EventOwnerEntry} */({
-  id:value.id,revision:value.revision,state:/** @type {'draft'|'pending'} */(value.state),draft:value.draft,createdAt:value.createdAt,updatedAt:value.updatedAt
+  id:value.id,revision:value.revision,state:/** @type {'draft'|'pending'|'approved'|'rejected'} */(value.state),draft:value.draft,createdAt:value.createdAt,updatedAt:value.updatedAt
  });
 }
 /** @param {unknown} value @returns {value is import('./event-contract').EventCursor|null} */
