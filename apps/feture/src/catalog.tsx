@@ -11,12 +11,12 @@ export function FetureCatalog(){
   useEffect(() => {
     const abort=new AbortController();
     setState({status:'loading'});
-    fetch(apiUrl('/api/catalog'),{signal:abort.signal})
+    fetch(apiUrl('/api/catalog'),{signal:AbortSignal.any([abort.signal,AbortSignal.timeout(12000)])})
       .then(async response => {
         if(!response.ok) throw new Error('catalog_request_failed');
         return catalogSchema.parse(await response.json());
       })
-      .then(data => setState({status:'ready',data}))
+      .then(data => { if(!abort.signal.aborted) setState({status:'ready',data}); })
       .catch(() => { if(!abort.signal.aborted) setState({status:'error'}); });
     return () => abort.abort();
   },[refresh]);
