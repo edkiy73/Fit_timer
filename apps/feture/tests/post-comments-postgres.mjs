@@ -122,7 +122,7 @@ test('C02.3a comments: moderation-first pending, ACL, exact CAS/replay, tombston
   assert.equal((await cmd(c,reply)).entry.text,'');
   assert.equal((await db.query('select count(*)::int n from public.feture_post_comment_operations where account_hash=$1',[c])).rows[0].n,2);
 
-  assert.equal((await staff(manager,decide(reply.id,id(329),2,'hide','privacy'))).error,'resource_not_found');
+  assert.equal((await staff(manager,decide(reply.id,id(329),3,'hide','privacy'))).error,'resource_not_found');
   await db.exec('reset role');
   await db.query("update public.feture_operators set role=null where account_hash=$1",[manager]);
   await db.exec('set role service_role');
