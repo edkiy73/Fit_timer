@@ -19,7 +19,7 @@ test('seed transactions: ownership, review binding, idempotency, rollback, scope
     };
     const data=payload(base),catalog=payload({...base,scope:'catalog'});
     await db.exec("create table public.appbase_kv(key text primary key,value text); insert into public.appbase_kv values('keep','shared');");
-    let r=await call(data);assert.equal(r.writes,0);assert.equal(r.counts.insert,3);
+    let r=await call(data);assert.equal(r.writes,0);assert.equal(r.counts.insert,data.records.length);
     assert.equal((await db.query('select count(*)::int n from public.feture_profiles')).rows[0].n,0);
     await assert.rejects(call(data,{project:'aaaaaaaaaaaaaaaaaaaa'}),/seed_environment_mismatch/);
     await assert.rejects(call(data,{stage:'live'}),/seed_environment_mismatch/);
@@ -35,7 +35,7 @@ test('seed transactions: ownership, review binding, idempotency, rollback, scope
     await call(catalog,{apply:true,adopt:true,token:r.reviewToken});
     assert.equal((await call(catalog)).counts.unchanged,156);
     r=await call(data);await call(data,{apply:true,token:r.reviewToken});
-    r=await call(data);assert.equal(r.counts.unchanged,3);assert.equal((await call(data,{apply:true,token:r.reviewToken})).writes,0);
+    r=await call(data);assert.equal(r.counts.unchanged,data.records.length);assert.equal((await call(data,{apply:true,token:r.reviewToken})).writes,0);
     await db.exec("insert into public.feture_profiles(account_hash,display_name) values('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','Owner');");
     const beforeOther=await call(data);
     const other={...data,datasetId:'feture-other-fixture',records:data.records.slice(0,1).map(e=>({...e,key:'seed:feture-other-fixture:'+e.seedKey,value:{...e.value,account_hash:'seed:feture-other-fixture:'+e.seedKey}}))};
@@ -61,7 +61,7 @@ test('seed transactions: ownership, review binding, idempotency, rollback, scope
     r=await call(broken);await assert.rejects(call(broken,{apply:true,token:r.reviewToken}),/foreign key constraint/);
     assert.equal((await db.query('select title from public.feture_categories where id=$1',[catalog.records[0].key])).rows[0].title,catalog.records[0].value.title);
     assert.ok((await call({...catalog,records:[]},{operation:'cleanup'})).blockers.includes('seed_has_dependents'));
-    r=await call(cleanup,{operation:'cleanup'});assert.equal(r.counts.delete,3);await call(cleanup,{operation:'cleanup',apply:true,token:r.reviewToken});
+    r=await call(cleanup,{operation:'cleanup'});assert.equal(r.counts.delete,data.records.length);await call(cleanup,{operation:'cleanup',apply:true,token:r.reviewToken});
     assert.equal((await db.query('select count(*)::int n from public.feture_profiles')).rows[0].n,2);
     assert.equal((await call(other)).counts.unchanged,1);
     assert.equal((await call(cleanup,{operation:'cleanup'})).counts.delete,0);
