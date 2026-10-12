@@ -130,7 +130,7 @@ begin
     not public.feture_post_visible(source_post,p_actor)
   then return jsonb_build_object('ok',false,'error','resource_not_found');end if;
   select a.account_hash into target_owner from public.feture_public_authors a
-   where a.public_id=target_uuid for key share;
+   where a.public_id=target_uuid;
   if not found or target_owner<>source_post.author_hash
   then return jsonb_build_object('ok',false,'error','resource_not_found');end if;
  end if;
