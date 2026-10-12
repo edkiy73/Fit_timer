@@ -41,6 +41,7 @@ it('retains the exact questionnaire save after a lost response and blocks unsafe
  });
  const router=mount(),user=userEvent.setup();
  await screen.findByText('Вопрос 1 из '+definition.questions.length,{exact:false});
+ await waitFor(()=>expect(document.querySelector('.ft-question-choice input:not(:disabled)')).not.toBeNull());
  await user.click(document.querySelector('.ft-question-choice input') as HTMLElement);
  const save=screen.getByRole('button',{name:'Сохранить и продолжить позже'});
  await waitFor(()=>expect(save.matches(':disabled')).toBe(false));
