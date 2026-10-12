@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
-import {Link,useBlocker,useNavigate,useParams} from 'react-router';
+import {Link,useBlocker,useLocation,useNavigate,useParams} from 'react-router';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import type {AuthSession} from '@appbase/core/auth.js';
 import {comparisonCreated,comparisonList,comparisonRead,uuidV4} from './comparison-model';
@@ -10,11 +10,11 @@ import {useCatalog} from './use-catalog';
 import {AppDialog} from './components/primitives';
 
 export function ComparisonPage(){
- const auth=useOptionalAuth(),{linkId,comparisonId}=useParams();
+ const auth=useOptionalAuth(),{linkId,comparisonId}=useParams(),location=useLocation();
  useEffect(()=>{const meta=document.createElement('meta');meta.name='robots';meta.content='noindex,nofollow,noarchive';document.head.appendChild(meta);return()=>meta.remove();},[]);
  if(linkId&&!uuidV4(linkId)||comparisonId&&!uuidV4(comparisonId))return <section className="card"><p>Сравнение недоступно.</p></section>;
  if(auth.loading)return <section className="card" role="status">Проверяем аккаунт…</section>;
- if(!auth.session)return <section className="card"><h2>Сравнение по согласию</h2><p>Войди в аккаунт, затем вернись по этой ссылке. Выбранные темы загружаются только после проверки совершеннолетия и согласий.</p><Link to="/account">Войти</Link></section>;
+ if(!auth.session)return <section className="card"><h2>Сравнение по согласию</h2><p>Войди в аккаунт, затем вернись по этой ссылке. Выбранные темы загружаются только после проверки совершеннолетия и согласий.</p><Link to="/account" state={{returnTo:location.pathname}}>Войти и вернуться к приглашению</Link></section>;
  const key=JSON.stringify([auth.session.email,auth.session.deviceId,auth.session.syncToken,linkId,comparisonId]);
  return <section className="card ft-access ft-comparisons"><p><Link to="/share-links">← Мои ссылки</Link></p><h2>Сравнение по согласию</h2>
   <p>Каждый отдельно разрешает использовать выбранные темы. Это повод для разговора, а не оценка человека или согласие на действия. Личные ответы, опыт, границы и дневники не раскрываются.</p>
