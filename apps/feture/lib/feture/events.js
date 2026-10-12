@@ -33,11 +33,12 @@ function createEventsRepository(transport,documents){
   async execute(actor,request){
    requireOwner(actor,actor.accountHash);
    const command=eventCommand(request);
-   if(!['events.save','events.read','events.mine','events.submit','events.cancel'].includes(command.action))reject(422,'invalid_request');
-   if(command.action!=='events.cancel')await guard(actor); // Owner must be allowed to withdraw if consent/age expires.
+   if(!['events.save','events.read','events.mine','events.submit','events.cancel','events.rsvpStatus','events.rsvpSet'].includes(command.action))reject(422,'invalid_request');
+   if(command.action!=='events.cancel'&&!(command.action==='events.rsvpSet'&&command.status==='withdrawn'))
+    await guard(actor); // Withdrawal must stay possible after loss of event/18+/consent access.
    if(!transport.configured())reject(503,'domain_unavailable');
    try{
-    const response=await transport.request('/rest/v1/rpc/'+(command.action==='events.submit'?'feture_event_submit_command':command.action==='events.cancel'?'feture_event_cancel_command':'feture_event_owner_command'),{
+    const response=await transport.request('/rest/v1/rpc/'+(command.action==='events.submit'?'feture_event_submit_command':command.action==='events.cancel'?'feture_event_cancel_command':command.action==='events.rsvpSet'||command.action==='events.rsvpStatus'?'feture_event_rsvp_command':'feture_event_owner_command'),{
      method:'POST',headers:{'Content-Type':'application/json'},timeoutMs:8000,
      body:JSON.stringify({p_actor:actor.accountHash,p_command:command})
     });
@@ -49,6 +50,19 @@ function createEventsRepository(transport,documents){
      if(data.error==='revision_conflict'||data.error==='operation_conflict')reject(409,String(data.error));
      if(data.error==='rate_limited')reject(429,'rate_limited');
      reject(503,'domain_unavailable');
+    }
+    if(command.action==='events.rsvpSet'||command.action==='events.rsvpStatus'){
+     if(!shape(data,['ok','status','visibleToAttendees','counts','replayed'])||
+       !['none','interested','going','declined','withdrawn'].includes(String(data.status))||
+       (command.action==='events.rsvpSet'&&command.status==='withdrawn'&&data.status!=='withdrawn'&&!data.replayed)||
+       typeof data.visibleToAttendees!=='boolean'||typeof data.replayed!=='boolean'||
+       !object(data.counts)||!shape(data.counts,['interested','going'])||
+       !['interested','going'].every(key=>data.counts[key]===null||
+         Number.isSafeInteger(data.counts[key])&&Number(data.counts[key])>=5)||
+       (!['interested','going'].includes(String(data.status))&&data.visibleToAttendees))
+       reject(503,'domain_unavailable');
+     return {status:data.status,visibleToAttendees:data.visibleToAttendees,
+       counts:{interested:data.counts.interested,going:data.counts.going},replayed:data.replayed};
     }
     if(command.action==='events.cancel'){
      if(!shape(data,['ok','event','replayed'])||typeof data.replayed!=='boolean'||!object(data.event)||
