@@ -34,8 +34,26 @@ export function shouldDeployPath(path) {
   return true; // Unrecognized changes may affect deployment.
 }
 
-export function shouldSkip(files) {
-  return Array.isArray(files) && files.length > 0 && !files.some(shouldDeployPath);
+// Override only from the commit subject. Squash-merge bodies can contain
+// earlier '[skip vercel]' commits and must not hide a final deploy.
+export function shouldSkip(files, commitMessage = '') {
+  // Unavailable Git history must fail open even with a skip marker.
+  if (!Array.isArray(files) || files.length === 0) return false;
+  const subject = String(commitMessage).split(/\r?\n/, 1)[0];
+  if (/\[deploy\]/i.test(subject)) return false;
+  if (/\[skip vercel\]/i.test(subject)) return true;
+  return !files.some(shouldDeployPath);
+}
+
+function commitSubject() {
+  if (process.env.VERCEL_GIT_COMMIT_MESSAGE) return process.env.VERCEL_GIT_COMMIT_MESSAGE;
+  try {
+    return execFileSync('git', ['log', '-1', '--format=%s', process.env.VERCEL_GIT_COMMIT_SHA || 'HEAD'], {
+      encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
+    });
+  } catch {
+    return '';
+  }
 }
 
 function changes() {
@@ -56,5 +74,5 @@ function changes() {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const files = changes();
   // Vercel: exit 0 skips; exit 1 deploys.
-  process.exit(shouldSkip(files) ? 0 : 1);
+  process.exit(shouldSkip(files, commitSubject()) ? 0 : 1);
 }
