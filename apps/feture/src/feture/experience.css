@@ -408,3 +408,9 @@
  .ft-shell :is(.ft-jar-card,.ft-discover-card,.ft-home-quick>a,.ft-topic,.ft-home-primary,.ft-home-secondary) *, .ft-hint-chip,.ft-dialog :is(.ft-status,.ft-visibility-options button,.ft-dialog-close){transition:none!important;transform:none!important}
  .ft-shell .ft-discover-card .ft-discover-card-art{transition:none}
 }
+
+
+/* Editorial visual distinct from the user's personal jar dashboard. */
+.ft-discover-hero{background-image:linear-gradient(90deg,#2b1838b0,transparent 76%),url('/images/feture-prism.svg'),radial-gradient(ellipse 66% 100% at 91% 19%,#9265b8b3,transparent 75%),linear-gradient(125deg,#25172e,#4b2354 72%,#272039);
+ background-size:cover,cover,cover,cover;background-repeat:no-repeat;background-position:center}
+@media(max-width:650px){.ft-discover-hero{background-position:center,62% center,center,center}}

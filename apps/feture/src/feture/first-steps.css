@@ -34,3 +34,8 @@
 @media(max-width:699px){.ft-first-layout{display:flex;flex-direction:column;width:calc(100% - 24px);border-radius:26px;min-height:calc(100dvh - 115px)}.ft-first-aside{padding:20px 23px;min-height:145px}.ft-first-aside h1{font-size:32px;margin:2px 0}.ft-first-aside>p{display:none}.ft-first-aside-foot{display:none}.ft-first-orbit{position:absolute;right:-75px;top:-50px;width:190px;min-height:190px;opacity:.34;margin:0}.ft-first-glow{width:45px;height:45px}.ft-first-stage{flex:1;padding:24px 20px 26px}.ft-first-step{padding-top:27px}.ft-first-step h2{font-size:clamp(27px,7.5vw,36px)}.ft-first-topic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ft-first-actions{padding-top:24px}}
 @media(max-width:350px){.ft-first-topic-grid{gap:7px}.ft-first-topic-grid button{padding:8px;font-size:12px}.ft-first-actions :is(a,button){padding:10px 12px;font-size:12px}}
 @media(prefers-reduced-motion:reduce){.ft-first-step{animation:none}.ft-first-progress>div span,.ft-first-goals button,.ft-first-topic-grid button{transition:none}.ft-first-goals button:active,.ft-first-topic-grid button:active{transform:none}}
+
+
+/* Reuse owned lightweight ambience; consistent brand without any personal media. */
+.ft-first-aside{background-image:linear-gradient(90deg,#24142ac9 0%,#2c19307d 65%,#321d4180 100%),url('/images/feture-aurora.svg'),radial-gradient(circle at 80% 75%,#9954ac,transparent 65%),linear-gradient(140deg,#251529,#432447 80%,#232035);
+ background-size:cover;background-position:center;background-repeat:no-repeat}
