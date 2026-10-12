@@ -31,7 +31,8 @@ export async function runEventOwnersPostgres(){
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002700_feture_event_public_catalog.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002800_feture_event_attendance_requests.sql',import.meta.url),'utf8'));
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002900_feture_event_owner_request_queue.sql',import.meta.url),'utf8'));
-  await db.exec(readFileSync(new URL('../supabase/migrations/20261013003100_feture_event_staff_publication.sql',import.meta.url),'utf8'))
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261013003100_feture_event_staff_publication.sql',import.meta.url),'utf8'));
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261013003200_feture_event_attendance_owner_decisions.sql',import.meta.url),'utf8'))
   const a='a'.repeat(32),b='b'.repeat(32),guest='c'.repeat(32),manager='d'.repeat(32),qa='e'.repeat(32),auditor='f'.repeat(32),generation='1'.repeat(64);
   await db.query('insert into public.feture_profiles(account_hash) values ($1),($2),($3),($4),($5),($6)',[a,b,guest,manager,qa,auditor]);
   for(const [who,role] of [[manager,'manager'],[qa,'qa_operator'],[auditor,'auditor'],[a,'manager']])await db.query('insert into public.fixture_staff_role values ($1,$2,$3)',[who,generation,role]);
@@ -403,6 +404,46 @@ export async function runEventOwnersPostgres(){
   assert.equal(JSON.stringify(q1).includes('"actor_hash"'),false);
   assert.equal(JSON.stringify(q1).includes('"email"'),false);
 
+  // E04b2b: owner-only CAS decisions. An approval is not venue access or a ticket.
+  const decideAttendance=async(who,command)=>(await db.query(
+    'select public.feture_event_attendance_owner_decide($1,$2::jsonb) result',
+    [who,JSON.stringify(command)])).rows[0].result;
+  const decision=(entry,operation,expectedRevision,choice='approve')=>({
+    action:'events.attendanceDecide',id:id(44),requestId:entry.requestId,
+    operationId:id(operation),expectedRevision,decision:choice
+  });
+  const approveCmd=decision(q1.items[0],9721,1);
+  assert.equal((await decideAttendance(guest,approveCmd)).error,'resource_not_found');
+  assert.equal((await decideAttendance(a,{...approveCmd,ownerHash:a})).error,'invalid_request');
+  assert.equal((await decideAttendance(a,{...approveCmd,expectedRevision:2})).error,'revision_conflict');
+  const approvedAttendance=await decideAttendance(a,approveCmd);
+  assert.deepEqual(approvedAttendance.request,{
+    requestId:q1.items[0].requestId,state:'approved',revision:2});
+  assert.equal(approvedAttendance.replayed,false);
+  assert.equal(JSON.stringify(approvedAttendance).includes('actor_hash'),false);
+  assert.equal((await decideAttendance(a,approveCmd)).replayed,true);
+  assert.equal((await decideAttendance(a,{...approveCmd,decision:'decline'})).error,'operation_conflict');
+  const firstRequester=(await db.query(
+    'select actor_hash from public.feture_event_attendance_requests where request_id=$1',
+    [q1.items[0].requestId])).rows[0].actor_hash;
+  assert.equal((await attendance(firstRequester,{action:'events.attendanceStatus',id:id(44)})).state,'approved');
+  assert.equal((await attendance(firstRequester,attendCmd('events.attendanceRequest',44,9731))).error,'revision_conflict');
+  assert.equal((await attendance(firstRequester,attendCmd('events.attendanceWithdraw',44,9732))).state,'withdrawn');
+  assert.equal((await decideAttendance(a,approveCmd)).error,'revision_conflict'); // replay cannot resurrect
+  const declineCmd=decision(q1.items[1],9722,1,'decline');
+  assert.equal((await decideAttendance(a,declineCmd)).request.state,'declined');
+  const secondRequester=(await db.query(
+    'select actor_hash from public.feture_event_attendance_requests where request_id=$1',
+    [q1.items[1].requestId])).rows[0].actor_hash;
+  assert.equal((await attendance(secondRequester,{action:'events.attendanceStatus',id:id(44)})).state,'declined');
+  assert.equal((await attendance(secondRequester,attendCmd('events.attendanceRequest',44,9733))).state,'pending');
+  assert.equal((await decideAttendance(a,declineCmd)).error,'revision_conflict');
+  const currentQueue=await requestQueue(a,44);
+  assert.equal(currentQueue.items.length,20); // 19 originals plus re-requested decline
+  assert.equal((await db.query(
+    'select count(*)::int n from public.feture_event_attendance_decisions')).rows[0].n,2);
+
+
   await db.query('update public.feture_profiles set adult_allowed=false where account_hash=$1',[manager]);
   assert.equal((await decide(manager,rejectOne)).error,'forbidden');
   assert.equal((await staffRpc(manager)).error,'forbidden');
@@ -434,6 +475,8 @@ export async function runEventOwnersPostgres(){
    await assert.rejects(eventPreview(guest,50),/permission denied/);
    await assert.rejects(db.query('select * from public.feture_event_attendance_requests'),/permission denied/);
    await assert.rejects(requestQueue(a,44),/permission denied/);
+   await assert.rejects(db.query('select * from public.feture_event_attendance_decisions'),/permission denied/);
+   await assert.rejects(decideAttendance(a,decision(q1.items[0],9799,2)),/permission denied/);
    await assert.rejects(db.query('select * from public.feture_event_attendance_operations'),/permission denied/);
    await assert.rejects(attendance(guest,attendCmd('events.attendanceRequest',40,4799)),/permission denied/);
 
