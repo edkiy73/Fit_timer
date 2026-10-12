@@ -45,15 +45,20 @@ describe('FetUre starter', () => {
     expect(await screen.findByRole('textbox',{name:'Email'})).toBeTruthy();
   });
 
-  it('separates Home from the personal World and renders five primary destinations', async () => {
+  it('opens World without a duplicate Home and adds Dating only after opting in', async () => {
     signIn();
     const user=userEvent.setup();
     const router=renderApp('/');
-    expect(await screen.findByRole('heading',{name:/Продолжим с тебя/i})).toBeTruthy();
-    expect(screen.getByRole('navigation',{name:'Основная навигация FetUre'}).querySelectorAll('a')).toHaveLength(5);
-    await user.click(within(screen.getByRole('navigation',{name:'Основная навигация FetUre'})).getByRole('link',{name:'Мой мир'}));
-    expect(router.state.location.pathname).toBe('/world');
     expect(await screen.findByRole('heading',{name:/Твой мир/i,level:1})).toBeTruthy();
+    const dock=()=>screen.getByRole('navigation',{name:'Основная навигация FetUre'});
+    expect(dock().querySelectorAll('a')).toHaveLength(4);
+    expect(router.state.location.pathname).toBe('/world');
+    await router.navigate('/dating');
+    await user.click(await screen.findByRole('button',{name:'Открыть знакомства'}));
+    expect(dock().querySelectorAll('a')).toHaveLength(5);
+    await user.click(within(dock()).getByRole('link',{name:'Исследовать'}));
+    expect(router.state.location.pathname).toBe('/explore');
+    expect(dock().querySelectorAll('a')).toHaveLength(5);
   });
   it('distinguishes the editorial Explore from a personal map', async () => {
     const router=renderApp('/explore');
@@ -179,7 +184,7 @@ describe('FetUre starter', () => {
       await screen.findByText('Запись сохранена. Её видишь только ты.');
       expect(calls).toHaveLength(2);expect(calls[1]).toEqual(calls[0]);
       await user.click(screen.getByRole('link',{name:'← Мой мир'}));
-      expect(await screen.findByRole('heading',{name:/Продолжим с тебя/i})).toBeTruthy();
+      expect(await screen.findByRole('heading',{name:/Твой мир/i})).toBeTruthy();
     } finally {vi.restoreAllMocks();}
   });
 

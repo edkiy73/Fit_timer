@@ -24,7 +24,7 @@ export function NativeNavigation(){
       }else if(document.querySelector('[role="dialog"]')){
         window.dispatchEvent(new Event('feture:dismiss-overlay'));
       }else if((window.history.state?.idx||0)>0)navigate(-1);
-      else if(location.pathname!=='/')navigate('/',{replace:true});
+      else if(location.pathname!=='/'&&location.pathname!=='/world')navigate('/world',{replace:true});
       else setExitPrompt(true);
     });
     let handle:Awaited<typeof registration>|undefined;

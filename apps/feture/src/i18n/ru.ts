@@ -1,4 +1,10 @@
 export const ru = {
+  'nav.primary.dating': 'Знакомства',
+  'nav.compact.world': 'Мой мир',
+  'nav.compact.explore': 'Темы',
+  'nav.compact.community': 'Общение',
+  'nav.compact.account': 'Я',
+  'nav.compact.dating': 'Встречи',
   'app.eyebrow': 'AppBase',
   'app.readyTitle': 'Основа готова',
   'app.readyText': 'Вход, синхронизация, покупки, язык, тема, Core, Vercel и тесты уже подключены.',
