@@ -147,7 +147,9 @@ describe('FetUre starter', () => {
       await user.click(screen.getByRole('button',{name:'Сохранить и продолжить позже'}));
       await screen.findByRole('alert');expect(choice).toHaveProperty('checked',true);
       await user.click(screen.getByRole('link',{name:'← Исследовать'}));
-      await screen.findByRole('dialog',{name:'Сохранить ответы перед выходом?'});
+      await screen.findByRole('dialog',{name:'Результат действия ещё не подтверждён'});
+      expect(screen.queryByRole('button',{name:'Уйти без сохранения'})).toBeNull();
+      expect(screen.getByRole('button',{name:'Загрузить сохранённое'}).matches(':disabled')).toBe(true);
       await user.click(screen.getByRole('button',{name:'Остаться'}));expect(choice).toHaveProperty('checked',true);
       await user.click(await screen.findByRole('button',{name:'Повторить то же действие'}));
       await screen.findByText('Ответы сохранены. Можно продолжить позже.');
