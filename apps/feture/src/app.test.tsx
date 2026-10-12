@@ -37,9 +37,10 @@ beforeEach(() => {
 });
 
 describe('FetUre starter', () => {
-  it('renders the native React experience and keeps account accessible', async () => {
+  it('shows the public Welcome and keeps account accessible', async () => {
     const router=renderApp();
-    expect(await screen.findByRole('heading',{name:/Твой мир/i})).toBeTruthy();
+    expect(await screen.findByRole('heading',{name:/Открывай себя/i})).toBeTruthy();
+    expect(screen.getByRole('link',{name:/Начать исследовать/i})).toBeTruthy();
     await router.navigate('/account');
     expect(await screen.findByRole('textbox',{name:'Email'})).toBeTruthy();
   });
@@ -60,7 +61,7 @@ describe('FetUre starter', () => {
     renderApp('/account');
     expect(await screen.findByText(/demo@example\.com/)).toBeTruthy();
     await user.click(screen.getByRole('button', {name:t['account.signOut']}));
-    expect(await screen.findByRole('heading',{name:/Твой мир/i})).toBeTruthy();
+    expect(await screen.findByRole('heading',{name:/Открывай себя/i})).toBeTruthy();
     vi.restoreAllMocks();
   });
 
