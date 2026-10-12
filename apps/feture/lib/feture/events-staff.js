@@ -103,3 +103,46 @@ async function eventStaffDecision(transport,actor,input){
  }catch(e){if(e instanceof DomainError)throw e;return reject(503,'operators_unavailable');}
 }
 module.exports.eventStaffDecision=eventStaffDecision;
+
+
+/** E03b publication is a separate checked transition AFTER manager-approved review.
+ * @param {import('./contracts').Transport} transport
+ * @param {import('./contracts').Actor} actor
+ * @param {Record<string,unknown>} input
+ */
+async function eventStaffPublish(transport,actor,input){
+ requireOwner(actor,actor.accountHash);
+ if(!actor.accountGeneration)reject(403,'forbidden');
+ if(!obj(input)||!shape(input,['action','expectedRevision','id','operationId'])||
+   input.action!=='feture.events.publish'||!uuid(input.id)||!uuid(input.operationId)||
+   !Number.isSafeInteger(input.expectedRevision)||Number(input.expectedRevision)<3||
+   Number(input.expectedRevision)>999999999999999)
+  reject(422,'invalid_request');
+ if(!transport.configured())reject(503,'operators_unavailable');
+ const command={action:'publish',id:input.id,
+   operationId:input.operationId,expectedRevision:input.expectedRevision};
+ try{
+  const response=await transport.request('/rest/v1/rpc/feture_event_staff_publish',{
+   method:'POST',timeoutMs:8000,headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({p_actor:actor.accountHash,p_generation:actor.accountGeneration,p_command:command})
+  });
+  const data=await response.json();
+  if(!response.ok||!obj(data))reject(503,'operators_unavailable');
+  if(data.ok!==true){
+   if(data.error==='forbidden')reject(403,'forbidden');
+   if(['review_required','revision_conflict','operation_conflict'].includes(String(data.error)))
+    reject(409,String(data.error));
+   if(data.error==='resource_not_found')reject(404,'resource_not_found');
+   if(data.error==='invalid_request')reject(422,'invalid_request');
+   reject(503,'operators_unavailable');
+  }
+  if(!shape(data,['ok','event','replayed'])||typeof data.replayed!=='boolean'||
+    !obj(data.event)||!shape(data.event,['id','state','revision'])||
+    data.event.id!==input.id||data.event.state!=='published'||
+    !Number.isSafeInteger(data.event.revision)||Number(data.event.revision)<4)
+   reject(503,'operators_unavailable');
+  return {ok:true,event:{id:data.event.id,state:'published',revision:data.event.revision},
+   replayed:data.replayed};
+ }catch(e){if(e instanceof DomainError)throw e;return reject(503,'operators_unavailable');}
+}
+module.exports.eventStaffPublish=eventStaffPublish;
