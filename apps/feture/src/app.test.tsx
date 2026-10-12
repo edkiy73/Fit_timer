@@ -156,7 +156,7 @@ describe('FetUre starter', () => {
       await user.click(screen.getByRole('button',{name:'Сохранить и продолжить позже'}));
       await screen.findByRole('alert');expect(choice).toHaveProperty('checked',true);
       expect(screen.getByRole('button',{name:'Загрузить сохранённое'}).matches(':disabled')).toBe(true);
-      await user.click(screen.getByRole('link',{name:'← Исследовать'}));
+      await user.click(screen.getByRole('link',{name:'Исследовать'}));
       await screen.findByRole('dialog',{name:'Результат действия ещё не подтверждён'});
       expect(screen.queryByRole('button',{name:'Уйти без сохранения'})).toBeNull();
       await user.click(screen.getByRole('button',{name:'Остаться'}));expect(choice).toHaveProperty('checked',true);
@@ -166,7 +166,7 @@ describe('FetUre starter', () => {
       await user.click(screen.getByRole('button',{name:'Повторить то же действие'}));
       await screen.findByText('Ответы сохранены. Можно продолжить позже.');
       expect(calls).toHaveLength(3);expect(calls[1]).toEqual(calls[0]);expect(calls[2]).toEqual(calls[0]);
-      await user.click(screen.getByRole('link',{name:'← Исследовать'}));
+      await user.click(screen.getByRole('link',{name:'Исследовать'}));
       expect(await screen.findByRole('heading',{name:'Открой новые грани'})).toBeTruthy();
     } finally {vi.restoreAllMocks();}
   });
