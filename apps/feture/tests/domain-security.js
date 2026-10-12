@@ -597,3 +597,30 @@ test('E01b owner-only event RPC uses authenticated Core actor and strict DTO',as
 test('E01b PostgreSQL owner/ACL/CAS contract (isolated PGlite)',async()=>{
  await (await import('./events-owner-postgres.mjs')).runEventOwnersPostgres();
 });
+
+
+test('M01 detail opens: Core verified actor, no client owner or upstream details',async()=>{
+ const {createPostViewsRepository,postViewCommand}=require('../lib/feture/post-views');
+ const account=identities.alice;await seed(account);
+ const actor=await authenticate(req(account),store,async()=>new Date(Date.now()+3600000).toISOString());
+ const id='00000000-0000-4000-8000-000000000010',request={action:'posts.viewOpen',id};
+ let payload={ok:true,hidden:true,uniqueDailyOpens:null};const calls=[];
+ const transport={configured:()=>true,request:async(path,options)=>{
+  calls.push({path,body:JSON.parse(options.body)});
+  return new Response(JSON.stringify(payload));
+ }};
+ const views=createPostViewsRepository(transport,{requireCurrent:async()=>{}});
+ assert.deepEqual(await views.execute(actor,request),{hidden:true,uniqueDailyOpens:null});
+ assert.equal(calls[0].path,'/rest/v1/rpc/feture_post_view_open');
+ assert.deepEqual(calls[0].body,{p_actor:account.hash,p_id:id});
+ assert.throws(()=>postViewCommand({...request,ownerHash:'b'.repeat(32)}),e=>e.status===422);
+ const n=calls.length;
+ await assert.rejects(views.execute({...actor},request),e=>e.status===401);
+ assert.equal(calls.length,n);
+ payload={ok:true,hidden:false,uniqueDailyOpens:5};
+ assert.deepEqual(await views.execute(actor,request),{hidden:false,uniqueDailyOpens:5});
+ payload={ok:true,hidden:false,uniqueDailyOpens:5,viewer:'not_allowed'};
+ await assert.rejects(views.execute(actor,request),e=>e.status===503);
+ payload={ok:false,error:'resource_not_found'};
+ await assert.rejects(views.execute(actor,request),e=>e.status===404);
+});
