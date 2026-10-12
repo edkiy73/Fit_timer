@@ -151,5 +151,11 @@ describe('owner interest outbox',()=>{
   current={...a,expiresAt:'2020-01-01T00:00:00Z'};await expect(api.mutate(current,op,new AbortController().signal)).rejects.toMatchObject({code:'auth_required'});expect(send).toHaveBeenCalledTimes(1);
   current=a;send.mockImplementation(async()=>new Response(JSON.stringify({ok:true,replayed:false,appliedRevision:1,appliedAt:at,entry:entry(1,{...state,intensity:100})}),{status:200}));
   await expect(api.mutate(a,op,new AbortController().signal)).rejects.toMatchObject({code:'unavailable'});
+  send.mockImplementation(async()=>new Response('<html>limited</html>',{status:429,headers:{'Retry-After':'120'}}));
+  await expect(api.mutate(a,op,new AbortController().signal)).rejects.toMatchObject({code:'rate_limited',retryAfter:120000});
+  send.mockImplementation(async()=>new Response('access denied',{status:403}));
+  await expect(api.mutate(a,op,new AbortController().signal)).rejects.toMatchObject({code:'adult_verification_required'});
+  send.mockImplementation(async()=>new Response('<html>unavailable</html>',{status:503}));
+  await expect(api.mutate(a,op,new AbortController().signal)).rejects.toMatchObject({code:'unavailable'});
  });
 });
