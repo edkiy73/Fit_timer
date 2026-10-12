@@ -44,7 +44,7 @@ begin
   if keys is distinct from array['action','cursor','kind']::text[]
   then return jsonb_build_object('ok',false,'error','invalid_request');end if;
  elsif act='relationships.state' then
-  if keys is distinct from array['action','postId','publicAuthorId','kind']::text[]
+  if keys is distinct from array['action','kind','postId','publicAuthorId']::text[]
   then return jsonb_build_object('ok',false,'error','invalid_request');end if;
  elsif act='relationships.set' then
   if keys is distinct from array['action','active','kind','operationId','postId','publicAuthorId']::text[] or
