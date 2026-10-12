@@ -20,7 +20,7 @@ begin
  if p_actor is null or p_actor !~ '^[a-f0-9]{32}$' or
     jsonb_typeof(p_command) is distinct from 'object' or
     p_command->>'action' is distinct from 'events.submit'
- then return jsonb_build_object('ok',false,'error','debug_header');end if;
+ then return jsonb_build_object('ok',false,'error','invalid_request');end if;
  select array_agg(k order by k) into fields from jsonb_object_keys(p_command) k;
  if fields is distinct from array['action','expectedRevision','id','operationId']::text[] or
     jsonb_typeof(p_command->'id') is distinct from 'string' or
@@ -29,7 +29,7 @@ begin
     p_command->>'operationId' !~* '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' or
     jsonb_typeof(p_command->'expectedRevision') is distinct from 'number' or
     p_command->>'expectedRevision' !~ '^[1-9][0-9]{0,14}$'
- then return jsonb_build_object('ok',false,'error','debug_shape');end if;
+ then return jsonb_build_object('ok',false,'error','invalid_request');end if;
  if not public.feture_peer_eligible(p_actor)
  then return jsonb_build_object('ok',false,'error','resource_not_found');end if;
  eid:=(p_command->>'id')::uuid;
@@ -56,11 +56,11 @@ begin
     char_length(btrim(row.draft->>'description'))<10 or
     char_length(btrim(row.draft->>'conditions'))<2 or
     row.draft->>'format' not in ('online','offline')
- then return jsonb_build_object('ok',false,'error','debug_content');end if;
+ then return jsonb_build_object('ok',false,'error','invalid_request');end if;
  begin event_start:=(row.draft->>'startsAt')::timestamptz;
- exception when others then return jsonb_build_object('ok',false,'error','debug_timestamp');end;
+ exception when others then return jsonb_build_object('ok',false,'error','invalid_request');end;
  if not isfinite(event_start) or event_start<clock_timestamp()+interval '5 minutes'
- then return jsonb_build_object('ok',false,'error','debug_time');end if;
+ then return jsonb_build_object('ok',false,'error','invalid_request');end if;
  if (select count(*)>=20 from public.feture_event_operations o
    where o.owner_hash=p_actor and o.created_at>clock_timestamp()-interval '1 day'
    and o.response->'entry'->>'state'='pending')

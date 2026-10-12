@@ -23,7 +23,7 @@ export async function runEventOwnersPostgres(){
   const a='a'.repeat(32),b='b'.repeat(32),guest='c'.repeat(32);
   await db.query('insert into public.feture_profiles(account_hash) values ($1),($2),($3)',[a,b,guest]);
   await db.exec('set role service_role');
-  const rpc=async(who,command)=>(await db.query('select public.feture_event_owner_command($1,$2::jsonb) result',[who,JSON.stringify(command)])).rows[0].result;
+  const rpc=async(who,command)=>(await db.query('select public.'+(command.action==='events.submit'?'feture_event_submit_command':'feture_event_owner_command')+'($1,$2::jsonb) result',[who,JSON.stringify(command)])).rows[0].result;
   const cmd=(n,revision=0,content=draft)=>({action:'events.save',id:id(n),operationId:id(1000+n),expectedRevision:revision,draft:content});
   const first=await rpc(a,cmd(1));
   assert.equal(first.ok,true);
@@ -67,8 +67,7 @@ export async function runEventOwnersPostgres(){
   assert.equal((await rpc(a,{action:'events.mine',cursor:{...page1.nextCursor,ownerHash:b}})).error,'invalid_cursor');
   const submit={action:'events.submit',id:id(1),operationId:id(6001),expectedRevision:2};
   const submitted=await rpc(a,submit);
-  const diag=(await db.query("select state,revision,draft->>'title' title,draft->>'description' description,draft->>'conditions' conditions,draft->>'format' format,draft->>'startsAt' start_at,clock_timestamp() now_at from public.feture_events where id=$1",[id(1)])).rows[0];
-  assert.equal(submitted.ok,true,JSON.stringify({submitted,diag}));
+  assert.equal(submitted.ok,true);
   assert.equal(submitted.entry.state,'pending');
   assert.equal(submitted.entry.revision,3);
   assert.equal((await rpc(a,submit)).replayed,true);
