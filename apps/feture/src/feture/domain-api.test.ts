@@ -60,3 +60,19 @@ it('A02 rejects current Core session expiry and credential change without claimi
  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({ok:true,value:'valid'}))));
  await expect(domainRequest(future,{action:'tests.list'},response)).resolves.toEqual({ok:true,value:'valid'});
 });
+
+it('A02 translates non-JSON proxy errors without falsely accepting a private result',async()=>{
+ getSession.mockResolvedValue(session);
+ const scenarios:[number,string][]=[
+  [401,'auth_required'],[429,'rate_limited'],[413,'request_too_large'],
+  [403,'domain_unavailable'],[503,'domain_unavailable'],[200,'domain_unavailable']
+ ];
+ for(const [status,code] of scenarios){
+  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response('<html>upstream error</html>',{
+   status,headers:{'Content-Type':'text/html'}
+  })));
+  await expect(domainRequest(session,{action:'tests.list'},response)).rejects.toMatchObject({code});
+ }
+ vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({error:'consent_required'}),{status:403})));
+ await expect(domainRequest(session,{action:'tests.list'},response)).rejects.toMatchObject({code:'consent_required'});
+});
