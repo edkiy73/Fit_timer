@@ -397,7 +397,7 @@ function paymentStatusLabel(status: unknown, copy: Copy){
     : status === 'manual_grant' ? copy.statusManualGrant : status === 'manual_revoke' ? copy.statusManualRevoke : String(status || '');
 }
 
-export function AdminPanel({client, productName, locale='ru', extraSections=NO_SECTIONS, hiddenCoreTabs=NO_HIDDEN_CORE_TABS, eventLabels=NO_LABELS, defaultTerms='', validateKeyOnConnect=false}: AdminPanelProps){
+export function AdminPanel({client, productName, locale='ru', extraSections=NO_SECTIONS, hiddenCoreTabs=NO_HIDDEN_CORE_TABS, eventLabels=NO_LABELS, defaultTerms='', validateKeyOnConnect=productName==='FetUre'}: AdminPanelProps){
   const copy = COPY[locale];
   const [key, setKey] = useState(() => {
     // Opt-in products may not trust a saved, unverified key from this browser tab.
