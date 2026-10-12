@@ -4,12 +4,24 @@ import {authClient} from '../auth';
 import {apiUrl} from '../api-url';
 import {sameSession} from './interest-api';
 export class DomainClientError extends Error {constructor(public code:string){super(code);}}
+// The owner can remain the same while the server-issued session expires.
+// Check both the captured and current Core session before sending and after
+// every async boundary so an expired session cannot publish a late private reply.
+async function requireCurrentSession(session:AuthSession,signal?:AbortSignal){
+ let current:AuthSession|null;
+ try{current=await authClient.getSession();}
+ catch{throw new DomainClientError('auth_required');}
+ const valid=(value:AuthSession|null)=>!!value&&
+  (value.expiresAt===undefined||typeof value.expiresAt==='string'&&Date.parse(value.expiresAt)>Date.now());
+ if(signal?.aborted||!sameSession(current,session)||!valid(session)||!valid(current))
+  throw new DomainClientError('auth_required');
+}
 export async function domainRequest<T>(session:AuthSession,body:Record<string,unknown>,schema:z.ZodType<T>,signal?:AbortSignal):Promise<T>{
- if(!sameSession(await authClient.getSession(),session))throw new DomainClientError('auth_required');
+ await requireCurrentSession(session,signal);
  const response=await fetch(apiUrl('/api/domain'),{method:'POST',cache:'no-store',signal:signal?AbortSignal.any([signal,AbortSignal.timeout(12000)]):AbortSignal.timeout(12000),headers:{'Content-Type':'application/json','x-fit-email':session.email,'x-fit-device':session.deviceId,'x-fit-token':session.syncToken},body:JSON.stringify(body)});
- if(!sameSession(await authClient.getSession(),session))throw new DomainClientError('auth_required');
+ await requireCurrentSession(session,signal);
  const input:unknown=await response.json();
- if(!sameSession(await authClient.getSession(),session))throw new DomainClientError('auth_required');
+ await requireCurrentSession(session,signal);
  if(!response.ok){const error=z.object({error:z.string()}).safeParse(input);throw new DomainClientError(error.success?error.data.error:'domain_unavailable');}
  const result=schema.safeParse(input);if(!result.success)throw new DomainClientError('domain_unavailable');return result.data;
 }
