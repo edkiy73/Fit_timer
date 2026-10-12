@@ -79,7 +79,8 @@ export async function runEventOwnersPostgres(){
   assert.equal((await rpc(a,{action:'events.read',id:id(1)})).entry.state,'pending');
   assert.equal((await rpc(a,{...cmd(1,3),operationId:id(7001)})).error,'revision_conflict');
   const stillPrivate=await rpc(a,{action:'events.mine',cursor:null});
-  assert.ok(stillPrivate.items.some(x=>x.id===id(1)&&x.state==='pending'));
+  const followingPrivate=stillPrivate.nextCursor?await rpc(a,{action:'events.mine',cursor:stillPrivate.nextCursor}):{items:[]};
+  assert.ok([...stillPrivate.items,...followingPrivate.items].some(x=>x.id===id(1)&&x.state==='pending'));
   assert.equal((await rpc(a,{action:'events.catalog',cursor:null})).error,'invalid_request');
   const empty={...draft,description:'',conditions:''};
   assert.equal((await rpc(a,{...cmd(2,1,empty),operationId:id(8001)})).ok,true);
