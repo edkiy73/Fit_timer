@@ -11,7 +11,7 @@ vi.mock('./use-interest-map',()=>({
 }));
 
 const id='91e9ee01-e4e2-4900-a7ad-144c46442390';
-const session={email:'owner@example.com',deviceId:'device',syncToken:'token',handle:'',locale:'ru',sub:null,premium:false,owned:[],fresh:false};
+const session={email:'owner@example.com',deviceId:'device',syncToken:'token',handle:'',locale:'ru' as const,sub:null,premium:false,owned:[],fresh:false};
 const preview={ok:true,attemptId:id,versionId:id,requestId:id,items:[{
  interestId:'interest-1-1',title:'Тема',reason:'Есть повод обдумать',dimensionId:'reflection',
  available:true,blockedReason:null,
