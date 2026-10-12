@@ -79,7 +79,11 @@ function createQaAdultAdmin(transport,accounts,actor){
     if(typeof data.activeCount!=='number'||!Number.isSafeInteger(data.activeCount)||data.activeCount<0||!Array.isArray(data.items)||data.items.length>25||!data.items.every(item=>
      item&&typeof item==='object'&&HASH.test(item.accountHash)&&typeof item.expiresAt==='string'
      &&Number.isFinite(Date.parse(item.expiresAt))&&typeof item.revoked==='boolean'))reject(503,'verification_unavailable');
-    output={ok:true,items:data.items,activeCount:data.activeCount};
+    // Keep the staff browser DTO closed even if a future SQL revision adds
+    // internal eligibility, account or review metadata to the returned row.
+    output={ok:true,items:data.items.map(item=>({
+     accountHash:item.accountHash,expiresAt:item.expiresAt,revoked:item.revoked
+    })),activeCount:data.activeCount};
    }else{
     const names=action==='feture.qa.grant'?'action,days,email,reviewed':'action,email';
     if(Object.keys(body).sort().join(',')!==names||typeof body.email!=='string')reject(422,'invalid_request');
