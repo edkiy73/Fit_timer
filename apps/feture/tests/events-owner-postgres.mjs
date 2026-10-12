@@ -19,10 +19,11 @@ export async function runEventOwnersPostgres(){
   await db.exec('create table public.feture_profiles(account_hash text primary key,adult_allowed boolean not null default true);grant select,insert,update,delete on public.feture_profiles to service_role;');
   await db.exec("create function public.feture_peer_eligible(p text) returns boolean language sql stable security invoker as $$ select exists(select 1 from public.feture_profiles where account_hash=p and adult_allowed) $$;");
   await db.exec(readFileSync(new URL('../supabase/migrations/20261013002000_feture_event_owner_drafts.sql',import.meta.url),'utf8'));
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261013002100_feture_event_submit_pending.sql',import.meta.url),'utf8'))
   const a='a'.repeat(32),b='b'.repeat(32),guest='c'.repeat(32);
   await db.query('insert into public.feture_profiles(account_hash) values ($1),($2),($3)',[a,b,guest]);
   await db.exec('set role service_role');
-  const rpc=async(who,command)=>(await db.query('select public.feture_event_owner_command($1,$2::jsonb) result',[who,JSON.stringify(command)])).rows[0].result;
+  const rpc=async(who,command)=>(await db.query('select public.'+(command.action==='events.submit'?'feture_event_submit_command':'feture_event_owner_command')+'($1,$2::jsonb) result',[who,JSON.stringify(command)])).rows[0].result;
   const cmd=(n,revision=0,content=draft)=>({action:'events.save',id:id(n),operationId:id(1000+n),expectedRevision:revision,draft:content});
   const first=await rpc(a,cmd(1));
   assert.equal(first.ok,true);
@@ -43,7 +44,7 @@ export async function runEventOwnersPostgres(){
   assert.equal((await rpc(a,{...cmd(2),draft:{...draft,ticketUrl:'javascript:alert(1)'}})).error,'invalid_request');
   assert.equal((await rpc(a,{...cmd(2),draft:{...draft,privateLocation:'Hidden address'}})).error,'invalid_request');
   assert.equal((await rpc(a,{action:'events.catalog',cursor:null})).error,'invalid_request');
-  assert.equal((await rpc(a,{action:'events.submit',id:id(1),operationId:id(77),expectedRevision:1})).error,'invalid_request');
+  assert.equal((await rpc(a,{action:'events.submit',id:id(1),operationId:id(77),expectedRevision:0})).error,'invalid_request');
   const updated={...cmd(1,1,{...draft,title:'Private updated class'}),operationId:id(2001)};
   const second=await rpc(a,updated);
   assert.equal(second.entry.revision,2);
@@ -64,6 +65,26 @@ export async function runEventOwnersPostgres(){
   assert.equal(new Set([...page1.items,...page2.items].map(x=>x.id)).size,23);
   assert.deepEqual((await rpc(b,{action:'events.mine',cursor:null})).items,[]);
   assert.equal((await rpc(a,{action:'events.mine',cursor:{...page1.nextCursor,ownerHash:b}})).error,'invalid_cursor');
+  const submit={action:'events.submit',id:id(1),operationId:id(6001),expectedRevision:2};
+  const submitted=await rpc(a,submit);
+  assert.equal(submitted.ok,true);
+  assert.equal(submitted.entry.state,'pending');
+  assert.equal(submitted.entry.revision,3);
+  assert.equal((await rpc(a,submit)).replayed,true);
+  assert.deepEqual((await rpc(a,submit)).entry,submitted.entry);
+  assert.equal((await rpc(a,{...submit,operationId:id(6002),expectedRevision:2})).error,'revision_conflict');
+  assert.equal((await rpc(a,{...submit,id:id(2),operationId:id(6001)})).error,'operation_conflict');
+  assert.equal((await rpc(b,submit)).error,'resource_not_found');
+  assert.equal((await rpc(b,{action:'events.read',id:id(1)})).error,'resource_not_found');
+  assert.equal((await rpc(a,{action:'events.read',id:id(1)})).entry.state,'pending');
+  assert.equal((await rpc(a,{...cmd(1,3),operationId:id(7001)})).error,'revision_conflict');
+  const stillPrivate=await rpc(a,{action:'events.mine',cursor:null});
+  const followingPrivate=stillPrivate.nextCursor?await rpc(a,{action:'events.mine',cursor:stillPrivate.nextCursor}):{items:[]};
+  assert.ok([...stillPrivate.items,...followingPrivate.items].some(x=>x.id===id(1)&&x.state==='pending'));
+  assert.equal((await rpc(a,{action:'events.catalog',cursor:null})).error,'invalid_request');
+  const empty={...draft,description:'',conditions:''};
+  assert.equal((await rpc(a,{...cmd(2,1,empty),operationId:id(8001)})).ok,true);
+  assert.equal((await rpc(a,{action:'events.submit',id:id(2),operationId:id(8002),expectedRevision:2})).error,'invalid_request');
   await db.query('update public.feture_profiles set adult_allowed=false where account_hash=$1',[a]);
   assert.equal((await rpc(a,{action:'events.read',id:id(1)})).error,'resource_not_found');
   assert.equal((await rpc(a,cmd(1))).error,'resource_not_found');
