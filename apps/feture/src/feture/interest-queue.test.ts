@@ -3,7 +3,7 @@ import type { AuthSession } from '@appbase/core/auth.js';
 import type { InterestDTO, InterestState, Mutation, MutationResult } from '../../lib/feture/contracts';
 import { createInterestQueue } from './interest-queue';
 import { createInterestStore, type InterestStore } from './interest-store';
-import { createInterestAPI, InterestError, type InterestAPI } from './interest-api';
+import { createInterestAPI, InterestError, retryAfterMs, type InterestAPI } from './interest-api';
 
 const state:InterestState={stance:'curious',experience:'none',boundary:'none',boundaryNote:null,intensity:4,visibility:'private',useForDiscovery:false};
 const cleared:InterestState={...state,stance:'unknown',experience:'unspecified',intensity:null};
@@ -45,6 +45,27 @@ async function idle(q:ReturnType<typeof createInterestQueue>,store:InterestStore
   expect(await store.change(db=>Object.values(db.owners).every(c=>c.lease===null))).toBe(true);
  },{timeout:2000,interval:10});
 }
+
+describe('HTTP Retry-After for owner map',()=>{
+ it('accepts either integer seconds or a server HTTP-date, capped to five minutes',()=>{
+  const now=Date.parse('2026-10-12T09:00:00.000Z');
+  expect(retryAfterMs('45',now)).toBe(45000);
+  expect(retryAfterMs('Mon, 12 Oct 2026 09:00:45 GMT',now)).toBe(45000);
+  expect(retryAfterMs('Mon, 12 Oct 2026 09:10:00 GMT',now)).toBe(300000);
+  expect(retryAfterMs('Mon, 12 Oct 2026 08:59:00 GMT',now)).toBe(0);
+  for(const invalid of [null,'',' ','NaN','-5','1.5','not a date'])expect(retryAfterMs(invalid,now)).toBe(0);
+  expect(retryAfterMs('999999999999999999999999999999999',now)).toBe(300000);
+ });
+ it('preserves the server date-based cooldown on a 429 response',async()=>{
+  const future=new Date(Date.now()+90000).toUTCString();
+  const send=vi.fn(async()=>new Response('limit',{status:429,headers:{'Retry-After':future}}));
+  const api=createInterestAPI('/api/domain',async()=>a,send);
+  const op:Mutation={action:'interests.set',interestId:'interest-1-1',operationId:uuid(),expectedRevision:0,state};
+  await expect(api.mutate(a,op,new AbortController().signal)).rejects.toMatchObject({code:'rate_limited',retryAfter:expect.any(Number)});
+  try{await api.mutate(a,op,new AbortController().signal);}
+  catch(error){expect((error as InterestError).retryAfter).toBeGreaterThan(88000);expect((error as InterestError).retryAfter).toBeLessThanOrEqual(90000);}
+ });
+});
 
 describe('owner interest outbox',()=>{
  it('hides an owner map on a failed session read without deleting its pending edits',async()=>{
