@@ -49,3 +49,33 @@ test('journal/history: owner isolation, CAS/retry, tombstones, clear retry and l
   assert.equal((await db.query('select count(*)::int n from public.feture_journal_entries where account_hash=$1',[alice])).rows[0].n,0);assert.equal((await db.query('select count(*)::int n from public.feture_interest_history where account_hash=$1',[alice])).rows[0].n,0);assert.equal((await db.query('select count(*)::int n from public.feture_journal_entries where account_hash=$1',[bob])).rows[0].n,1);
  }finally{await db.close();}
 });
+
+test('journal/history: reject duplicate pages, empty cursors and cursor not anchored to final item',async()=>{
+ const email='page@example.com',device='page-device',token='page-token',hash=sha(email).slice(0,32);
+ const actor=await authenticate({headers:{'x-fit-email':email,'x-fit-token':token,'x-fit-device':device}},
+  {configured:()=>true,get:async key=>key==='a:'+hash?JSON.stringify({email,syncDevices:{[device]:{h:sha(token),at:new Date().toISOString()}}}):null},
+  async()=>new Date(Date.now()+3600000).toISOString());
+ const timestamp='2026-10-12T11:00:00Z';
+ const makeEntry=n=>({id:id(1000+n),title:'Private',text:'Draft '+n,topicId:null,deleted:false,revision:1,createdAt:timestamp,updatedAt:timestamp});
+ const entries=Array.from({length:30},(_,i)=>makeEntry(i));
+ let payload={ok:true,items:entries,nextCursor:{id:entries[29].id,at:entries[29].createdAt}};
+ const repository=createJournalRepository({configured:()=>true,request:async()=>new Response(JSON.stringify(payload))},
+  {requireCurrent:async()=>{}});
+ const command={action:'journal.list',cursor:null};
+ const valid=await repository.execute(actor,command);
+ assert.equal(valid.items.length,30);assert.deepEqual(valid.nextCursor,{id:entries[29].id,at:timestamp});
+ const rejectPage=async()=>assert.rejects(repository.execute(actor,command),e=>e.status===503&&e.code==='domain_unavailable');
+ payload={ok:true,items:[entries[0],entries[0]],nextCursor:null};await rejectPage();
+ payload={ok:true,items:[],nextCursor:{id:id(1030),at:timestamp}};await rejectPage();
+ payload={ok:true,items:entries.slice(0,29),nextCursor:{id:id(1030),at:timestamp}};await rejectPage();
+ payload={ok:true,items:entries,nextCursor:{id:entries[0].id,at:timestamp}};await rejectPage();
+ payload={ok:true,items:entries,nextCursor:{id:entries[29].id,at:timestamp}};
+ await assert.rejects(repository.execute(actor,{action:'journal.list',cursor:{id:entries[29].id,at:timestamp}}),
+  e=>e.status===503&&e.code==='domain_unavailable');
+ const interestState={stance:'curious',experience:'none',boundary:'none',boundary_note:null,
+  intensity:2,visibility:'private',use_for_discovery:false,source:'manual',test_version:null,
+  deleted:false,interest_id:'interest-1-1',revision:1,updated_at:timestamp};
+ const history={id:id(2000),interestId:'interest-1-1',revision:1,createdAt:timestamp,entry:interestState};
+ payload={ok:true,items:[history,history],nextCursor:null};
+ await assert.rejects(repository.execute(actor,{action:'history.list',cursor:null}),e=>e.status===503&&e.code==='domain_unavailable');
+});

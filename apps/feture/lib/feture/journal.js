@@ -39,7 +39,22 @@ function createJournalRepository(transport,documents){const guard=createAccessGu
  if(!object(result))reject(503,'domain_unavailable');
  if(result.ok!==true){const e=result.error;if(e==='resource_not_found')reject(404,e);if(e==='revision_conflict'||e==='operation_conflict')throw new DomainError(409,e);if(e==='invalid_request')reject(422,e);if(e==='journal_limit')reject(429,e);reject(503,'domain_unavailable');}
  // SQL DTO explicitly omits owner. Do not expose unexpected transport fields.
- if(c.action==='journal.list'||c.action==='history.list'){if(!Array.isArray(result.items)||result.items.length>30||result.nextCursor!==null&&(!object(result.nextCursor)||!uuid(result.nextCursor.id)||!date(result.nextCursor.at)))reject(503,'domain_unavailable');return {items:result.items.map(c.action==='journal.list'?entryDTO:historyDTO),nextCursor:result.nextCursor===null?null:{id:result.nextCursor.id,at:result.nextCursor.at}};}
+ if(c.action==='journal.list'||c.action==='history.list'){
+  if(!Array.isArray(result.items)||result.items.length>30||
+    result.nextCursor!==null&&(!object(result.nextCursor)||!uuid(result.nextCursor.id)||!date(result.nextCursor.at)))reject(503,'domain_unavailable');
+  const items=result.items.map(c.action==='journal.list'?entryDTO:historyDTO);
+  // SQL returns one extra row only to detect a next page. Its cursor is the
+  // (id,createdAt) pair from item 30, not an arbitrary provider-supplied URL.
+  // A repeated or detached cursor could otherwise trap the UI in a loop.
+  if(new Set(items.map(item=>item.id)).size!==items.length)reject(503,'domain_unavailable');
+  if(result.nextCursor!==null){
+   const last=items.at(-1);
+   if(items.length!==30||!last||result.nextCursor.id!==last.id||result.nextCursor.at!==last.createdAt||
+     c.cursor!==null&&result.nextCursor.id===c.cursor.id&&result.nextCursor.at===c.cursor.at)
+    reject(503,'domain_unavailable');
+  }
+  return {items,nextCursor:result.nextCursor===null?null:{id:result.nextCursor.id,at:result.nextCursor.at}};
+ }
  if(c.action==='history.clear'){if(typeof result.cleared!=='number'||!Number.isSafeInteger(result.cleared)||result.cleared<0||typeof result.replayed!=='boolean')reject(503,'domain_unavailable');return {cleared:result.cleared,replayed:result.replayed};}
  if(!object(result.entry)||!uuid(result.entry.id)||result.entry.id!==c.id||typeof result.entry.revision!=='number'||!Number.isSafeInteger(result.entry.revision)||result.entry.revision<1)reject(503,'domain_unavailable');
  if(c.action!=='journal.read'&&typeof result.replayed!=='boolean')reject(503,'domain_unavailable');return {entry:entryDTO(result.entry),...(c.action==='journal.read'?{}:{replayed:result.replayed})};
