@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
-import {Link,useNavigate,useParams} from 'react-router';
+import {Link,useBlocker,useNavigate,useParams} from 'react-router';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import type {AuthSession} from '@appbase/core/auth.js';
 import {comparisonCreated,comparisonList,comparisonRead,uuidV4} from './comparison-model';
@@ -7,6 +7,7 @@ import {domainRequest,domainErrorMessage} from './domain-api';
 import {revokedSchema,STANCE_LABELS} from './share-link-model';
 import {useInterestMap} from './use-interest-map';
 import {useCatalog} from './use-catalog';
+import {AppDialog} from './components/primitives';
 
 export function ComparisonPage(){
  const auth=useOptionalAuth(),{linkId,comparisonId}=useParams();
@@ -32,7 +33,14 @@ function CreateComparison({session,linkId}:{session:AuthSession;linkId:string}){
  const queue=useInterestMap(),{data:catalog}=useCatalog(),navigate=useNavigate();
  const [scope,setScope]=useState(''),[selected,setSelected]=useState<string[]>([]),[approval,setApproval]=useState<string|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const pending=useRef<{action:'share.compare.create';comparisonId:string;linkId:string;reviewed:true;selected:{interestId:string;expectedRevision:number}[]}|null>(null);
- const alive=useRef(true);useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
+ const alive=useRef(true),allowExit=useRef(false);
+ const blocker=useBlocker(({currentLocation,nextLocation})=>pending.current!==null&&!allowExit.current&&currentLocation.pathname!==nextLocation.pathname);
+ useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
+ useEffect(()=>{
+  const warn=(event:BeforeUnloadEvent)=>{if(pending.current){event.preventDefault();event.returnValue='';}};
+  window.addEventListener('beforeunload',warn);
+  return()=>window.removeEventListener('beforeunload',warn);
+ },[]);
  useEffect(()=>{let live=true;void crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify([session.email,session.deviceId,session.syncToken]))).then(value=>{if(live)setScope(Array.from(new Uint8Array(value),b=>b.toString(16).padStart(2,'0')).join(''));});return()=>{live=false;};},[session]);
  const ready=!!scope&&scope===queue.scope&&queue.phase==='synced'&&queue.pending===0&&queue.conflicts.length===0;
  const choices=ready?catalog.categories.flatMap(c=>c.interests).filter(x=>{const row=queue.server[x.id];return row&&!row.deleted&&row.boundary==='none'&&row.stance!=='unknown';}):[];
@@ -43,7 +51,7 @@ function CreateComparison({session,linkId}:{session:AuthSession;linkId:string}){
   if(busy||!pending.current&&(!valid||!approved))return;
   const command=pending.current??{action:'share.compare.create',comparisonId:crypto.randomUUID(),linkId,selected:rows,reviewed:true};
   pending.current=command;setBusy(true);setError('');
-  try{const result=await domainRequest(session,command,comparisonCreated);if(alive.current){pending.current=null;navigate('/compare/'+result.comparison.id);}}
+  try{const result=await domainRequest(session,command,comparisonCreated);if(alive.current){pending.current=null;allowExit.current=true;navigate('/compare/'+result.comparison.id);}}
   catch(e){if(alive.current)setError(domainErrorMessage(e));}finally{if(alive.current)setBusy(false);}
  };
  return <><h3>Выбери свои темы</h3><p>От 1 до 6 сохранённых отметок. Владелец ссылки должен отдельно разрешить сравнение своих тем. До этого результат недоступен.</p>
@@ -52,7 +60,11 @@ function CreateComparison({session,linkId}:{session:AuthSession;linkId:string}){
   {valid&&<div className="ft-share-preview" aria-label="Выбранные мной сведения">{selected.map(id=><div key={id}><strong>{choices.find(x=>x.id===id)?.title}</strong><span>{STANCE_LABELS[queue.server[id]!.stance]}</span></div>)}</div>}
   <label className="ft-consent-choice"><input type="checkbox" checked={approved} disabled={!valid||busy||!!pending.current} onChange={e=>setApproval(e.target.checked?fingerprint:null)}/>Я проверил выбранные отметки и разрешаю сравнить их с темами владельца этой ссылки после его отдельного согласия. Разрешение можно отозвать.</label>
   <button disabled={busy||!pending.current&&(!valid||!approved)} onClick={()=>void create()}>{busy?'Отправляем…':pending.current?'Повторить тот же запрос':'Предложить сравнение'}</button>
-  {pending.current&&<p>Исход прошлого запроса неизвестен. Повтор использует тот же выбор и номер приглашения.</p>}{error&&<p role="alert">{error}</p>}
+  {pending.current&&<p role="status">Исход прошлого запроса неизвестен. Повтор использует тот же выбор и номер приглашения.</p>}{error&&<p role="alert">{error}</p>}
+  {blocker.state==='blocked'&&<AppDialog title="Результат приглашения ещё не подтверждён" onClose={()=>blocker.reset()}>
+   <p>Приглашение могло быть создано. Вернись и повтори то же действие с прежним идентификатором, чтобы не создавать второй запрос.</p>
+   <div className="ft-form-actions"><button type="button" disabled={busy} onClick={()=>{blocker.reset();void create();}}>Повторить то же действие</button><button type="button" onClick={()=>blocker.reset()}>Остаться</button></div>
+  </AppDialog>}
  </>;
 }
 
