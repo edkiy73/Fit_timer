@@ -67,7 +67,8 @@ export async function runEventOwnersPostgres(){
   assert.equal((await rpc(a,{action:'events.mine',cursor:{...page1.nextCursor,ownerHash:b}})).error,'invalid_cursor');
   const submit={action:'events.submit',id:id(1),operationId:id(6001),expectedRevision:2};
   const submitted=await rpc(a,submit);
-  assert.equal(submitted.ok,true,JSON.stringify(submitted));
+  const diag=(await db.query("select state,revision,draft->>'title' title,draft->>'description' description,draft->>'conditions' conditions,draft->>'format' format,draft->>'startsAt' start_at,clock_timestamp() now_at from public.feture_events where id=$1",[id(1)])).rows[0];
+  assert.equal(submitted.ok,true,JSON.stringify({submitted,diag}));
   assert.equal(submitted.entry.state,'pending');
   assert.equal(submitted.entry.revision,3);
   assert.equal((await rpc(a,submit)).replayed,true);
