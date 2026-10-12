@@ -154,7 +154,7 @@ function Account(){
     if(fence===undefined){setSignOutError('Не удалось остановить сохранение. Попробуй ещё раз.');setSigningOut(false);return;}
     let loggedOut=false;
     try {
-      if((fence?.pending||await appDocs.pending())&&!window.confirm('Есть изменения, сохранённые только на этом устройстве. При выходе они будут удалены. Продолжить?')){await interestQueue.finishLogout(fence,false);return;}
+      if((fence?.pending||await appDocs.pending())&&!window.confirm('Есть изменения, которые ещё не отправлены в аккаунт. Если выйти сейчас, они могут быть потеряны. Всё равно выйти?')){await interestQueue.finishLogout(fence,false);return;}
       if(fence&&!sameSession(await authClient.getSession(),fence.session))throw new Error('account_changed');
       await auth.logout();loggedOut=true;
       await interestQueue.finishLogout(fence,true);
