@@ -12,7 +12,7 @@ process.env.ADMIN_KEY ||= 'starter-e2e';
 const require = createRequire(import.meta.url);
 const APP = fileURLToPath(new URL('..', import.meta.url));
 const DIST = join(APP, 'dist');
-const API = Object.fromEntries(['auth', 'sync', 'health', 'admin', 'billing', 'domain'].map(name => [name, require(join(APP, 'api', name + '.js'))]));
+const API = Object.fromEntries(['auth', 'sync', 'health', 'admin', 'billing', 'domain', 'catalog'].map(name => [name, require(join(APP, 'api', name + '.js'))]));
 const TYPES = {'.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.svg':'image/svg+xml', '.png':'image/png', '.json':'application/json'};
 
 const PORT = 4175;
@@ -60,13 +60,18 @@ async function captureVisual(page,label,route,screen){
   for(const width of VISUAL_WIDTHS){
     for(const theme of (width===390||width===1440?['light','dark']:['light'])){
       await page.setViewportSize({width,height:820});
-      await page.evaluate(mode=>{
-        localStorage.setItem('feture.theme',mode);
-        window.dispatchEvent(new CustomEvent('feture:theme',{detail:mode}));
-      },theme);
+      // Apply a saved preference at startup so controlled theme pickers and
+      // CSS both show the same mode, rather than changing only root tokens.
+      await page.evaluate(mode=>localStorage.setItem('feture.theme',mode),theme);
+      await page.reload();
+      await screen().waitFor();
       await page.screenshot({path:join(ARTIFACTS,label+'-'+width+'-'+theme+'.png'),fullPage:true});
       const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1);
       ok(label+' '+width+'px '+theme+' no horizontal overflow',!overflow);
+      if(label==='home'||label==='explore'){
+        const navigation=page.getByRole('link',{name:'Исследовать',exact:true});
+        ok(label+' '+width+'px visible navigation',await navigation.evaluateAll(links=>links.some(link=>link.getBoundingClientRect().width>0)));
+      }
     }
   }
 }
@@ -84,6 +89,7 @@ try{
 
   await page.getByRole('link', {name:'Исследовать'}).first().click();
   ok('native interest explorer opens', await appears(page.getByRole('heading',{name:'Открой новые грани'})));
+  await captureVisual(page,'explore','/explore',()=>page.getByRole('heading',{name:'Открой новые грани'}));
   await captureVisual(page,'home','/',()=>page.getByRole('heading',{name:/Твой мир/i}));
   await captureVisual(page,'account-guest','/account',()=>page.getByRole('heading',{name:'Войти или зарегистрироваться'}));
   await page.goto(URL_ + '#/account');
@@ -96,6 +102,10 @@ try{
     await page.getByRole('button', {name:COPY.create}).click();
   }
   ok('email sign-in works against the real auth endpoint', await appears(page.getByRole('link', {name:COPY.account})));
+  // SignInForm finishes by navigating home. Wait before changing routes, or
+  // its late onSignedIn callback overwrites the screenshot's account navigation.
+  await page.waitForURL(url=>url.hash==='#/'||url.hash==='');
+  await page.getByRole('heading',{name:/Твой мир/i}).waitFor();
   await captureVisual(page,'account-signed-in','/account',()=>page.getByRole('heading',{name:'Аккаунт',exact:true}));
   await captureVisual(page,'profile','/profile',()=>page.getByRole('heading',{name:'Твой профиль'}));
 
