@@ -1,0 +1,5 @@
+# Shared low-overhead agent roles for FetUre. Requires a signed-in Codex/ChatGPT client.
+# Uses subscription entitlement; no API tokens, custom providers or paid runners.
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 2

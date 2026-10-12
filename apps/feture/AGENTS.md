@@ -69,9 +69,10 @@ There will be **hundreds of UX and product revisions**. Prioritize correct UX an
 
 Canonical Core auth and PostgreSQL-owned FetUre domain data remain the architecture; no second auth or client service-role secrets. No unrelated app changes.
 
-## 9. GitHub queue — subscription-only Claude + ChatGPT (owner decision 2026-10-12)
-- [Phone setup and subscription-only workflow](docs/agent-queue.md); [Claude routine prompt](docs/claude-routine-prompt.md); [UI acceptance](docs/ui-quality.md).
-- GitHub Issues named `[FetUre Queue NN] ...` are short execution tickets, NOT a replacement for STATUS or domain MVP cards. Do not re-read the archive on every task.
-- **No separately paid model APIs**: never instruct the owner to create `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`, never turn on credit fallback, do not install model-invoking GitHub Actions workflows. The previous API-funded queue workflows were removed.
-- Prefer official Claude Code Routines running on the user's Claude subscription for scheduled small implementation, and Codex Cloud / ChatGPT Work under their ChatGPT subscription for additional tasks or independent review. These are separately configured by the user in the providers' official UI, not by adding GitHub workflow secrets.
-- No autonomous merges, production database changes, payment/age/privacy decisions or Core/shared changes. Human acceptance plus independent review remains required; subscription quotas may pause the queue.
+## 9. Manual-only shared AI team and MVP Issue queue (owner decision 2026-10-12)
+- [Start here](docs/agent-team/START.md) → [GitHub Issue index](docs/agent-team/ISSUES.md) → [one MVP card](docs/mvp-plan/README.md) → [12-line handoff](docs/agent-team/HANDOFF.md).
+- Claude and ChatGPT/Codex are **equal manual executors**. Work can switch provider mid-Issue via GitHub branch/PR/handoff. Never depend on chat history or transfer whole repository context. Default one implementer, specialist agent only when useful.
+- Current visual north star: [owner-approved Claude HTML reference](docs/design-reference/README.md) + [responsive/quality acceptance](docs/ui-quality.md). Full original HTML is **opt-in only**, not default agent context; desktop requires independent full-width design.
+- The source of truth for requirements and live acceptance is still domain MVP cards + STATUS. Epics/Issues track work, **not alternative product specs**. Do not prematurely mark complete.
+- **No scheduled autonomous development, separately paid AI APIs, credits or model-invoking GitHub Actions.** The prior paid workflows were removed; the previous subscription-based routine guide is obsolete.
+- No autonomous merges, prod SQL, payment/age/privacy decisions or shared Core changes. PR + independent review + owner release decision.

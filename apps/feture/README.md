@@ -101,3 +101,9 @@ W06.1 добавляет личный дневник и историю карт�
 Текстовые обсуждения: [контракт C01.1](docs/community-posts.md), приватные черновики, отправка на проверку, выбор аудитории и отзыв получателей по личному коду, жалобы на конкретную версию и собственные статусы через вкладку «Сообщество». Личные решения управляющего в /#/operator.
 
 Ручная проверка текстовых публикаций — рабочий экран `/#/operator` → «Публикации», личная роль управляющего и актуальный допуск 18+/согласия; аудитору доступен журнал без текста.
+
+## Design quality and manual multi-agent development (2026-10-12)
+- [Start / one Issue per run](docs/agent-team/START.md), [MVP to production issue index](docs/agent-team/ISSUES.md), [12-line Claude ↔ Codex handoff](docs/agent-team/HANDOFF.md).
+- [Owner-approved Claude mobile visual prototype + production guide](docs/design-reference/README.md). Do not copy HTML prototype into runtime; design tablet and desktop separately.
+- [UI acceptance](docs/ui-quality.md) — real screen behavior, state handling, color themes and visible browser proof.
+- No separate model APIs, scheduled background agents or automatic merges. CI for code remains unchanged.

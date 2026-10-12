@@ -24,3 +24,7 @@
 5. Сторонний независимый reviewer проверяет diff и критические сценарии; приёмка дизайна владельцем остаётся самостоятельным этапом.
 
 Для задачи, затрагивающей `packages/ui-react`, автономный агент не меняет общий пакет: остановить такую задачу и создать отдельный PR с проверкой всех приложений. Не подменять реальный UX-тест утверждением «сборка прошла».
+## FetUre visual north star (owner-approved reference)
+Use [Claude mobile prototype reference](design-reference/README.md) for Geologica, warm dual theme, red/lilac accents, meaningful spatial rhythm, active chips, blur navigation, bottom-sheet and card motion. The original HTML is a **reference**, not production code, privacy implementation or proof of desktop responsiveness. Desktop: real responsive page/sidebar/multi-column reading at ≥1100px, **not a 390px phone framed on a desktop**. A generic stack of default cards/plain links (as on the initial Account page) fails UI acceptance even if the React build passes.
+
+Before a large UI implementation: a short UX hierarchy + states + form-factor plan; after: actual **React** browser screenshots at phone and desktop, inspect motion/drawer/focus/overflow, resolve defects. Browser/device evidence is always distinguished from proposal or source-only review. Do not load the 220KB HTML in every coding prompt; use the concise guide by default.
