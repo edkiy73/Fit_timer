@@ -38,7 +38,12 @@ export function createInterestAPI(endpoint:string,getSession:()=>Promise<AuthSes
     const retry=Number(response.headers.get('Retry-After'));
     throw new InterestError(code,Number.isFinite(retry)?Math.min(300000,Math.max(0,retry*1000)):0);
    }
-   const data:unknown=await response.json();
+   // An HTTP response with unreadable JSON is a bad server/proxy envelope,
+   // not proof that the device is offline. Keep immutable outbox commands for
+   // a later retry, without mislabelling this as a connectivity failure.
+   let data:unknown;
+   try{data=await response.json();}
+   catch{throw new InterestError(signal.aborted?'auth_required':'unavailable');}
    if(!sameSession(await getSession(),session)||signal.aborted)throw new InterestError('auth_required');
    return data;
   }catch(error){if(error instanceof InterestError)throw error;throw new InterestError(signal.aborted?'auth_required':'offline');}
