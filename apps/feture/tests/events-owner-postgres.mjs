@@ -172,7 +172,8 @@ export async function runEventOwnersPostgres(){
     [who,gen,JSON.stringify(command)])).rows[0].result;
   const pubCmd=(n,revision,operation)=>({action:'publish',id:id(n),
     operationId:id(operation),expectedRevision:revision});
-  assert.equal((await publish(manager,pubCmd(3,4,9700))).error,'review_required'); // approved but private
+  const debug=(await db.query("select array_agg(k order by k) as fields, jsonb_typeof($1::jsonb->'expectedRevision') as revtype from jsonb_object_keys($1::jsonb) k",[JSON.stringify(pubCmd(3,4,9700))])).rows[0];
+  assert.equal((await publish(manager,pubCmd(3,4,9700))).error,'review_required',JSON.stringify(debug)); // approved but private
   const cleanPublic={...clean,visibility:'public'};
   assert.equal((await rpc(a,cmd(43,0,cleanPublic))).entry.state,'draft');
   assert.equal((await rpc(a,{action:'events.submit',id:id(43),operationId:id(9701),expectedRevision:1})).entry.state,'pending');
