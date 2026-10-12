@@ -3,6 +3,7 @@
 // Read a bounded upstream body before JSON parsing, even when Content-Length is absent.
 // A single published release is JSONB and can otherwise exceed the row LIMIT.
 const MAX_UPSTREAM_BYTES = 1024 * 1024;
+/** @param {Response} response */
 async function boundedJson(response) {
   const claimed = response.headers?.get?.('content-length');
   if (claimed !== null && claimed !== undefined && Number(claimed) > MAX_UPSTREAM_BYTES) {
