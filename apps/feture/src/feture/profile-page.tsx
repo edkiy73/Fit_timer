@@ -7,6 +7,7 @@ import {authClient} from '../auth';
 import {domainRequest,domainErrorMessage,DomainClientError} from './domain-api';
 import {sameSession} from './interest-api';
 import {Icon} from './components/Icon';
+import {mergeProfileDraft,profileDraftChanged} from './profile-draft';
 
 const dataSchema=z.object({nickname:z.string().max(80),about:z.string().max(2000),pronouns:z.string().max(160),identity:z.string().max(160),orientation:z.string().max(160),relationships:z.string().max(160),city:z.string().max(120)}).strict();
 const profileSchema=z.object({id:z.uuid(),data:dataSchema,revision:z.number().int().positive(),updatedAt:z.iso.datetime({offset:true})}).strict();
@@ -87,11 +88,10 @@ function ProfileEditor({session}:{session:AuthSession}){
    const result=await domainRequest(session,{action:'profile.read'},readSchema);
    if(!sameSession(await authClient.getSession(),session))return;
    const latest=result.profile?.data||empty;
-   const merged={...latest};
-   // Keep locally edited fields only, never overwrite untouched remote updates.
-   for(const field of fields)if(data[field.key]!==serverData[field.key])merged[field.key]=data[field.key];
+   // Retain edited fields while accepting untouched remote updates.
+   const merged=mergeProfileDraft(serverData,data,latest,fields.map(field=>field.key));
    setData(merged);setServerData(latest);setRevision(result.profile?.revision||0);
-   setDirty(fields.some(field=>merged[field.key]!==latest[field.key]));setOperation(null);setConflict(false);
+   setDirty(profileDraftChanged(latest,merged,fields.map(field=>field.key)));setOperation(null);setConflict(false);
    setNotice('Версия аккаунта обновлена. Твои правки остались в форме — проверь их перед сохранением.');
   }catch(e){if(sameSession(await authClient.getSession(),session))setError(domainErrorMessage(e));}
   finally{if(sameSession(await authClient.getSession(),session))setBusy(false);}
@@ -100,7 +100,7 @@ function ProfileEditor({session}:{session:AuthSession}){
  const change=(value:string)=>{
   const key=fields[step]!.key;
   const next={...data,[key]:value};
-  setData(next);setDirty(fields.some(field=>next[field.key]!==serverData[field.key]));
+  setData(next);setDirty(profileDraftChanged(serverData,next,fields.map(field=>field.key)));
   setOperation(null);setConflict(false);setError('');setNotice('');
  };
  const cancel=()=>{
