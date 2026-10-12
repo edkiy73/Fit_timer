@@ -2,6 +2,8 @@
 
 **User command:** "Продолжай FetUre" or "Возьми FetUre Issue #NNN".
 
+**Reserved Sol security task:** [#931 — O02 personal staff roles/moderation/editorial ACL](https://github.com/edkiy73/Fit_timer/issues/931) belongs to the **next manually launched Sol backend/security session**, not the active Sol visual-design session. This is a persistent GitHub handoff, **no user prompt or issue number memorization needed**: after the design queue is clear, inspect #931 before selecting more unassigned high-risk work. Start with the role/SQL/RPC action matrix and independent security review, **not** an immediate production migration or write. Existing #865 remains parent and open. Do not assume the Sol design agent switches models/roles automatically, and do not interrupt its visual work.
+
 **Separate visual-design session:** for "допиливай дизайн FetUre", "продолжай дизайн", Sol visual implementation or Astra review use [DESIGN-START.md](DESIGN-START.md) and [Issue #908](https://github.com/edkiy73/Fit_timer/issues/908) before generic next-task selection; respect parallel photo/backend ownership. The user manually chooses model. Do not reread old chats or replace existing UI unnecessarily. Applies equally to Claude Code (subscription) and ChatGPT/Codex (subscription). **No model API keys, recurring jobs, automatic dispatch or paid fallback.** GitHub is the only cross-chat handoff, not old conversation history.
 
 ## Coordinator: 90-second startup
