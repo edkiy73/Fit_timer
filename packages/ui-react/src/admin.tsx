@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AdminClient, AdminHealth } from '@appbase/core/admin.js';
 import './admin.css';
 import { AdminAiSettings } from './admin-ai';
@@ -40,22 +40,22 @@ const COPY = {
     errors:'Ошибки', storage:'Хранилище', noKey:'Введи ключ администратора.',
     badKey:'Ключ не подошёл. Проверь его и попробуй ещё раз.', requestFailed:'Не удалось получить данные.',
     status:'Статус', deployment:'Сборка', warnings:'Что стоит сделать', services:'Сервисы',
-    statusOk:'Всё работает', statusWarning:'Работает, но не всё настроено', statusError:'Есть сбой — ученики могут не сохранить прогресс', statusLoading:'Проверяю…',
-    serviceHosting:'Хостинг', serviceStorage:'Хранилище данных', serviceMail:'Вход по коду из письма', serviceAi:'ИИ (разбор ошибок, разговор)', servicePush:'Уведомления на телефон', serviceBilling:'Оплата',
+    statusOk:'Всё работает', statusWarning:'Работает, но не всё настроено', statusError:'Хранилище недоступно — вход и сохранение могут не работать', statusLoading:'Проверяю…',
+    serviceSupabase:'Supabase API', serviceConfigured:'настроено, работа не проверена', servicePending:'ещё не проверено', serviceHosting:'Хостинг', serviceStorage:'Хранилище данных', serviceMail:'Вход по коду из письма', serviceAi:'ИИ', servicePush:'Уведомления на телефон', serviceBilling:'Оплата',
     serviceOn:'работает', serviceOff:'не настроено', serviceDisabled:'не используется', serviceMemory:'только временная память — данные пропадут', serviceBroken:'сбой',
     buildLine:'Сейчас на сайте версия из изменения', details:'Подробности для разработчика',
     analytics:'Аналитика', accounts:'Аккаунты', totalErrors:'Ошибок в приложении',
     noErrors:'Ошибок в приложении нет.', noUsers:'Аккаунтов пока нет.', email:'Email',
     premium:'Подписка', seen:'Последняя активность', count:'Количество',
     clear:'Очистить', migration:'Миграция хранилища',
-    owned:'Куплено', access:'Выдать доступ', sku:'Курс или покупка', grant:'Выдать', revoke:'Забрать',
+    owned:'Куплено', access:'Выдать доступ', sku:'Покупка', grant:'Выдать', revoke:'Забрать',
     premiumDays:'Подписка, дней', grantPremium:'Выдать подписку', revokePremium:'Забрать подписку',
     search:'Найти по почте', pick:'Нажми на человека — его карточка откроется выше.', nobody:'Никого не нашлось.',
-    card:'Сейчас у человека', cardCourses:'Курсы', cardNone:'нет', cardPremium:'Подписка', cardUntil:'до', cardSeen:'Заходил', cardSince:'Аккаунт с', cardNew:'Такого аккаунта ещё нет — он создастся при выдаче доступа.', never:'—',
-    accessDone:'Готово.', accessHint:'Для семьи, промо или возврата. Курс открывается навсегда, подписка — на выбранное число дней. Если человек ещё не заходил, аккаунт создастся сам.',
+    card:'Сейчас у человека', cardCourses:'Покупки', cardNone:'нет', cardPremium:'Подписка', cardUntil:'до', cardSeen:'Заходил', cardSince:'Аккаунт с', cardNew:'Такого аккаунта ещё нет — он создастся при выдаче доступа.', never:'—',
+    accessDone:'Готово.', accessHint:'Для семьи, промо или возврата. Доступ к покупке выдаётся без срока, подписка — на выбранное число дней. Если человек ещё не заходил, аккаунт создастся сам.',
     loginCode:'Код для входа', loginCodeDone:'Одноразовый код для', loginCodeHint:'действует 15 минут. На экране входа: email → «У меня есть код».',
     payments:'Платежи', noPayments:'Платежей пока нет.', when:'Когда', provider:'Провайдер', event:'Событие', account:'Аккаунт',
-    mainGroup:'Главное', accountsGroup:'Аккаунты', systemGroup:'Система', productGroup:'Продукт', menu:'Меню',
+    mainGroup:'Главное', accountsGroup:'Аккаунты', systemGroup:'Система', productGroup:'Продукт', menu:'Меню', navSearch:'Найти раздел', noNavMatches:'Разделы не найдены',
     settingsGroup:'Настройки', ai:'ИИ', billingKeys:'Способы оплаты', legal:'Владелец и контакты', campaigns:'Рассылки',
     eventInstall:'Открыли приложение впервые', newDevices:'Новых устройств за 30 дней', activity:'Что делали за 30 дней', activityHint:'«Раз» — сколько всего, «Устройств» — у скольких разных телефонов и браузеров.',
     times:'Раз', devices:'Устройств', platforms:'Откуда приходят', platformAndroid:'Android', platformIos:'iPhone', platformWeb:'Сайт',
@@ -63,7 +63,7 @@ const COPY = {
     retention:'Возвращаются', retentionHint:'Доля устройств, которые снова открыли приложение ровно через день, неделю и месяц после первого запуска. Считаются только устройства, у которых этот срок уже наступил.',
     retentionD1:'Через день', retentionD7:'Через неделю', retentionD30:'Через месяц', retentionOf:'из',
     errorTimes:'раз', errorFirst:'впервые', errorLast:'последний раз', errorBuild:'версия',
-    buyer:'Покупатель', product:'Покупка', statusPaid:'оплачено', statusRefunded:'возврат', statusCanceled:'продление отключено', statusRenewalOn:'продление включено (учеником)', statusRenewalOff:'продление отключено (учеником)',
+    buyer:'Покупатель', product:'Покупка', statusPaid:'оплачено', statusRefunded:'возврат', statusCanceled:'продление отключено', statusRenewalOn:'продление включено (пользователем)', statusRenewalOff:'продление отключено (пользователем)',
     statusManualGrant:'выдано вручную', statusManualRevoke:'забрано вручную',
     providerInstant:'без оплаты (выдано сразу)', providerAdmin:'Администратор'
   },
@@ -73,22 +73,22 @@ const COPY = {
     errors:'Errors', storage:'Storage', noKey:'Enter ADMIN_KEY for protected data.',
     badKey:'Wrong ADMIN_KEY or access denied.', requestFailed:'Could not load data.',
     status:'Status', deployment:'Build', warnings:'To do', services:'Services',
-    statusOk:'Everything works', statusWarning:'Works, but not everything is set up', statusError:'Something is broken — learners may lose progress', statusLoading:'Checking…',
-    serviceHosting:'Hosting', serviceStorage:'Data storage', serviceMail:'Sign-in by email code', serviceAi:'AI (mistake explanations, talk)', servicePush:'Phone notifications', serviceBilling:'Payments',
+    statusOk:'Everything works', statusWarning:'Works, but not everything is set up', statusError:'Storage is unavailable — sign-in and saving may not work', statusLoading:'Checking…',
+    serviceSupabase:'Supabase API', serviceConfigured:'configured, operation not verified', servicePending:'not checked yet', serviceHosting:'Hosting', serviceStorage:'Data storage', serviceMail:'Sign-in by email code', serviceAi:'AI', servicePush:'Phone notifications', serviceBilling:'Payments',
     serviceOn:'works', serviceOff:'not set up', serviceDisabled:'not used', serviceMemory:'temporary memory only — data will be lost', serviceBroken:'broken',
     buildLine:'The site runs the version from change', details:'Details for developers',
     analytics:'Analytics', accounts:'Accounts', totalErrors:'App errors',
     noErrors:'No app errors.', noUsers:'No accounts yet.', email:'Email',
     premium:'Premium', seen:'Last active', count:'Count',
     clear:'Clear', migration:'Storage migration',
-    owned:'Purchases', access:'Give access', sku:'Course or purchase', grant:'Grant', revoke:'Revoke',
+    owned:'Purchases', access:'Give access', sku:'Purchase', grant:'Grant', revoke:'Revoke',
     search:'Find by email', pick:'Tap a person to open their card above.', nobody:'Nobody found.',
-    card:'This person has', cardCourses:'Courses', cardNone:'none', cardPremium:'Premium', cardUntil:'until', cardSeen:'Last active', cardSince:'Account since', cardNew:'No such account yet — it is created when you give access.', never:'—',
+    card:'This person has', cardCourses:'Purchases', cardNone:'none', cardPremium:'Premium', cardUntil:'until', cardSeen:'Last active', cardSince:'Account since', cardNew:'No such account yet — it is created when you give access.', never:'—',
     premiumDays:'Premium, days', grantPremium:'Grant Premium', revokePremium:'Revoke Premium',
     accessDone:'Done.', accessHint:'Manual access: family, promo, refund. Purchases are permanent, Premium lasts for a period. The account is created if it does not exist yet.',
     loginCode:'Sign-in code', loginCodeDone:'One-time code for', loginCodeHint:'valid for 15 minutes. On the sign-in screen: email → “I have a code”.',
     payments:'Payments', noPayments:'No payments yet.', when:'When', provider:'Provider', event:'Event', account:'Account',
-    mainGroup:'Main', accountsGroup:'Accounts', systemGroup:'System', productGroup:'Product', menu:'Menu',
+    mainGroup:'Main', accountsGroup:'Accounts', systemGroup:'System', productGroup:'Product', menu:'Menu', navSearch:'Find section', noNavMatches:'No matching sections',
     settingsGroup:'Settings', ai:'AI', billingKeys:'Payment methods', legal:'Owner and contacts', campaigns:'Campaigns',
     eventInstall:'Opened the app for the first time', newDevices:'New devices in 30 days', activity:'Activity in 30 days', activityHint:'“Times” is the total, “Devices” is how many different phones and browsers.',
     times:'Times', devices:'Devices', platforms:'Where people come from', platformAndroid:'Android', platformIos:'iPhone', platformWeb:'Web',
@@ -96,7 +96,7 @@ const COPY = {
     retention:'Coming back', retentionHint:'Share of devices that opened the app again exactly one day, one week and one month after the first launch. Only devices whose day has already come are counted.',
     retentionD1:'After a day', retentionD7:'After a week', retentionD30:'After a month', retentionOf:'of',
     errorTimes:'times', errorFirst:'first', errorLast:'last', errorBuild:'build',
-    buyer:'Buyer', product:'Purchase', statusPaid:'paid', statusRefunded:'refunded', statusCanceled:'renewal off', statusRenewalOn:'renewal on (by the learner)', statusRenewalOff:'renewal off (by the learner)',
+    buyer:'Buyer', product:'Purchase', statusPaid:'paid', statusRefunded:'refunded', statusCanceled:'renewal off', statusRenewalOn:'renewal on (by the user)', statusRenewalOff:'renewal off (by the user)',
     statusManualGrant:'granted manually', statusManualRevoke:'revoked manually',
     providerInstant:'without payment (granted at once)', providerAdmin:'Administrator'
   }
@@ -216,7 +216,7 @@ function JsonCard({value}: {value: unknown}){
   return <pre className="ab-admin-json">{JSON.stringify(value, null, 2)}</pre>;
 }
 
-type Service = {configured?: boolean; enabled?: boolean};
+type Service = {configured?: boolean; enabled?: boolean; connected?: boolean};
 
 /* «Состояние»: one plain sentence, what works and what does not; raw data stays folded. */
 function HealthView({health, copy}: {health: AdminHealth | null; copy: Copy}){
@@ -228,18 +228,21 @@ function HealthView({health, copy}: {health: AdminHealth | null; copy: Copy}){
     : health.status === 'ok' ? copy.statusOk
     : health.status === 'warning' ? copy.statusWarning
     : copy.statusError;
-  const storageState = storage.mode === 'memory' ? copy.serviceMemory
+  const storageState = !health ? copy.servicePending
+    : storage.mode === 'memory' ? copy.serviceMemory
+    : storage.mode === 'none' ? copy.serviceOff
     : storage.status === 'ok' ? copy.serviceOn : copy.serviceBroken;
-  const state = (service: Service | undefined) => service?.enabled === false
-    ? copy.serviceDisabled
-    : service?.configured ? copy.serviceOn : copy.serviceOff;
+  const state = (service: Service | undefined) => !health ? copy.servicePending
+    : service?.enabled === false ? copy.serviceDisabled
+    : service?.configured ? copy.serviceConfigured : copy.serviceOff;
   const rows: Array<[string, boolean, string]> = [
-    [copy.serviceHosting, !!hosting?.adapter, hosting?.adapter || copy.serviceOff],
+    [copy.serviceHosting, !!hosting?.adapter, hosting?.adapter || (!health?copy.servicePending:copy.serviceOff)],
     [copy.serviceStorage, storage.status === 'ok' && storage.mode !== 'memory', storageState],
-    [copy.serviceMail, !!services.mail?.configured, services.mail?.configured ? copy.serviceOn : copy.serviceOff],
-    [copy.serviceAi, !!services.ai?.configured, state(services.ai)],
-    [copy.servicePush, !!services.push?.configured, state(services.push)],
-    [copy.serviceBilling, !!services.billing?.configured, state(services.billing)]
+    [copy.serviceSupabase, !!services.supabase?.connected, !health?copy.servicePending:!services.supabase?.configured?copy.serviceOff:services.supabase.connected?copy.serviceOn:copy.serviceBroken],
+    [copy.serviceMail, false, state(services.mail)],
+    [copy.serviceAi, false, state(services.ai)],
+    [copy.servicePush, false, state(services.push)],
+    [copy.serviceBilling, false, state(services.billing)]
   ];
   return (
     <section className="ab-admin-stack">
@@ -409,6 +412,9 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [navOpen, setNavOpen] = useState(false);
+  const [navSearch, setNavSearch] = useState('');
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const navigationRef = useRef<HTMLElement>(null);
   const [accessEmail, setAccessEmail] = useState('');
   const [userQuery, setUserQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
@@ -439,7 +445,36 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
     ];
   }, [copy, extraSections]);
 
+  const visibleNavGroups = useMemo(() => {
+    const search = navSearch.trim().toLocaleLowerCase();
+    if(!search) return navGroups;
+    return navGroups.map(group => ({...group, ids:group.ids.filter(id =>
+      group.label.toLocaleLowerCase().includes(search)
+      || (tabs.find(([tabId]) => tabId === id)?.[1] || '').toLocaleLowerCase().includes(search)
+    )})).filter(group => group.ids.length);
+  }, [navGroups, navSearch, tabs]);
+
   const currentLabel = tabs.find(([id]) => id === tab)?.[1] || copy.title;
+
+  // A removed product tab must never leave a blank admin workbench.
+  useEffect(() => {
+    if(tabs.some(([id]) => id === tab)) return;
+    setTab('health');
+    try{ sessionStorage.setItem('appbase.admin.tab', 'health'); }catch(_){}
+  }, [tab, tabs]);
+
+  // Off-canvas navigation behaves like a keyboard-accessible drawer on phones.
+  useEffect(() => {
+    if(!navOpen) return;
+    navigationRef.current?.querySelector<HTMLButtonElement>('.ab-admin-nav button')?.focus();
+    const onEscape = (event: KeyboardEvent) => {
+      if(event.key !== 'Escape') return;
+      setNavOpen(false);
+      menuButtonRef.current?.focus();
+    };
+    document.addEventListener('keydown', onEscape);
+    return () => document.removeEventListener('keydown', onEscape);
+  }, [navOpen]);
 
   const loadHealth = useCallback(async () => {
     try{
@@ -519,8 +554,9 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
 
   function selectTab(next: Tab){
     setTab(next);
-    sessionStorage.setItem('appbase.admin.tab', String(next));
+    try{ sessionStorage.setItem('appbase.admin.tab', String(next)); }catch(_){}
     setNavOpen(false);
+    setNavSearch('');
     window.scrollTo({top:0,left:0,behavior:'auto'});
   }
 
@@ -571,7 +607,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
 
   return (
     <div className="ab-admin-shell" data-nav-open={navOpen || undefined}>
-      <aside className="ab-admin-side" aria-label={copy.title}>
+      <aside ref={navigationRef} id="ab-admin-navigation" className="ab-admin-side" aria-label={copy.title}>
         <div className="ab-admin-brand">
           <div>
             <strong>{productName}</strong>
@@ -579,8 +615,9 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
           </div>
           <button type="button" className="ab-admin-signout" onClick={disconnect}>{copy.disconnect}</button>
         </div>
+        <label className="ab-admin-nav-search"><span>{copy.navSearch}</span><input type="search" value={navSearch} placeholder={copy.navSearch} onChange={e => setNavSearch(e.target.value)} /></label>
         <nav className="ab-admin-nav">
-          {navGroups.map(group => (
+          {visibleNavGroups.map(group => (
             <div className="ab-admin-nav-group" key={group.label}>
               <div className="ab-admin-nav-label">{group.label}</div>
               {group.ids.map(id => {
@@ -594,14 +631,15 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
               })}
             </div>
           ))}
+          {!visibleNavGroups.length && <p className="ab-admin-nav-empty">{copy.noNavMatches}</p>}
         </nav>
       </aside>
-      <button className="ab-admin-shade" aria-label={copy.menu} type="button" onClick={() => setNavOpen(false)} />
+      <button className="ab-admin-shade" aria-label={copy.menu} tabIndex={navOpen ? 0 : -1} type="button" onClick={() => { setNavOpen(false); menuButtonRef.current?.focus(); }} />
 
       <div className="ab-admin-main">
         <header className="ab-admin-topbar">
           <div className="ab-admin-topbar-inner">
-            <button className="ab-admin-menu" aria-label={copy.menu} type="button" onClick={() => setNavOpen(true)}>☰</button>
+            <button ref={menuButtonRef} className="ab-admin-menu" aria-label={copy.menu} aria-controls="ab-admin-navigation" aria-expanded={navOpen} type="button" onClick={() => setNavOpen(true)}>☰</button>
             <div>
               <h1>{currentLabel}</h1>
               <small>{productName} · {copy.title}</small>
@@ -627,7 +665,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
             <p className="ab-admin-empty">{copy.pick}</p>
             {users.length && !shownUsers.length ? <p className="ab-admin-empty">{copy.nobody}</p> : null}
             {shownUsers.length ? (
-              <div className="ab-admin-table-wrap"><table><thead><tr><th>{copy.email}</th><th>{copy.premium}</th><th>{copy.owned}</th><th>{copy.seen}</th></tr></thead>
+              <div className="ab-admin-table-wrap"><table className="ab-admin-card-table"><thead><tr><th>{copy.email}</th><th>{copy.premium}</th><th>{copy.owned}</th><th>{copy.seen}</th></tr></thead>
               <tbody>{shownUsers.map(user => <tr key={String(user.id || user.email)}>
                 <td><button type="button" className="ab-admin-link" onClick={() => { setAccessEmail(String(user.email || '')); window.scrollTo({top:0, behavior:'smooth'}); }}>{String(user.email || '—')}</button></td>
                 <td data-label={copy.premium}>{user.premium ? copy.cardUntil + ' ' + formatAdminDate((user.sub as {until?: string} | null)?.until, locale, false) : '—'}</td>
@@ -642,7 +680,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
       {tab === 'payments' && key && data && (
         <section className="ab-admin-panel">
           {payments.length ? (
-            <div className="ab-admin-table-wrap"><table><thead><tr><th>{copy.when}</th><th>{copy.product}</th><th>{copy.event}</th><th>{copy.provider}</th><th>{copy.buyer}</th></tr></thead>
+            <div className="ab-admin-table-wrap"><table className="ab-admin-card-table"><thead><tr><th>{copy.when}</th><th>{copy.product}</th><th>{copy.event}</th><th>{copy.provider}</th><th>{copy.buyer}</th></tr></thead>
             <tbody>{payments.map((row, i) => <tr key={i}>
               <td>{formatAdminDate(row.at, locale)}</td>
               <td data-label={copy.product}>{productTitle(products, row.sku)}</td>

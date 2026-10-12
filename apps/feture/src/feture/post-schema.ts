@@ -1,0 +1,2 @@
+import {z} from 'zod';
+export const postSchema=z.object({id:z.uuid(),text:z.string().max(3000),kind:z.enum(['text','story','question']),authorLabel:z.string().max(80),audience:z.enum(['private','public','granted']),plannedAudience:z.enum(['public','granted']),recipientCodes:z.array(z.uuid()).max(20),state:z.enum(['draft','pending','published','rejected','hidden','deleted']),revision:z.number().int().positive(),createdAt:z.iso.datetime({offset:true}),updatedAt:z.iso.datetime({offset:true}),publishedAt:z.iso.datetime({offset:true}).nullable(),mine:z.boolean()}).strict();

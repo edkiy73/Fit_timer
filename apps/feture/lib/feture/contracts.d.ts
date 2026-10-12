@@ -3,7 +3,7 @@ export type Request = IncomingMessage & { body?: unknown; rawBody?: unknown };
 export type Response = Pick<ServerResponse, 'setHeader' | 'end' | 'statusCode'>;
 export type Actor = Readonly<{accountHash:string; verifiedAdult:boolean;qaUntil?:string|null;accountGeneration?:string}>;
 export interface AccountStore { configured():boolean; get(key:string):Promise<string|null> }
-export interface Transport { configured():boolean; request(path:string,options?:{timeoutMs?:number;method?:string;headers?:Record<string,string>;body?:string}):Promise<globalThis.Response> }
+export interface Transport { configured():boolean; request(path:string,options?:{timeoutMs?:number;method?:string;headers?:Record<string,string>;body?:string|Uint8Array}):Promise<globalThis.Response> }
 export type ProfileDTO = {displayName:string; about:string; createdAt:string; updatedAt:string};
 export type InterestState = {stance:'unknown'|'curious'|'fantasy'|'want_to_try'|'not_interested';experience:'unspecified'|'none'|'tried'|'ongoing';boundary:'none'|'conditional'|'hard';boundaryNote:string|null;intensity:number|null;visibility:'private'|'public'|'granted';useForDiscovery:boolean};
 export type InterestDTO = InterestState & {interestId:string;revision:number;updatedAt:string;source:'manual'|'test';testVersion:string|null;deleted:boolean};
@@ -12,6 +12,6 @@ export type MutationResult = {ok:true;replayed:boolean;appliedRevision:number;ap
 export type Page = {limit:number;after:string|null};
 export type VerificationStatusDTO = {state:'unavailable';verifiedAdult:false;validUntil:null;reason:'provider_not_configured'}|{state:'test_access';verifiedAdult:false;validUntil:null;qaAccessUntil:string};
 export type DocumentCommand={action:'documents.status';locale:'ru'|'en'}|{action:'documents.accept';locale:'ru'|'en';documentIds:string[]};
-export type Command = {action:'verification.status'} | {action:'profile.get'} | ({action:'interests.list'} & Page) | Mutation | DocumentCommand | import('./profile').ProfileCommand | import('./access').AccessCommand | import('./moderation').ModerationCommand | import('./questionnaires').TestsCommand | import('./journal').JournalCommand | import('./shares').ShareCommand | import('./posts').PostCommand;
+export type Command = import('./post-photos').PhotoCommand | {action:'verification.status'} | {action:'profile.get'} | ({action:'interests.list'} & Page) | Mutation | DocumentCommand | import('./profile').ProfileCommand | import('./access').AccessCommand | import('./moderation').ModerationCommand | import('./questionnaires').TestsCommand | import('./journal').JournalCommand | import('./shares').ShareCommand | import('./posts').PostCommand;
 export interface Repository { getProfile(actor:Actor):Promise<ProfileDTO|null>; listInterests(actor:Actor,page:Page):Promise<{items:InterestDTO[];nextCursor:string|null}>; mutateInterest(actor:Actor,input:Mutation):Promise<MutationResult> }
 export type AuditEvent = Readonly<{requestId:string; action:Command['action']|'unknown';outcome:string}>;

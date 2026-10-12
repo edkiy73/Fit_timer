@@ -9,31 +9,34 @@ const {testsCommand}=require('./questionnaires');
 const {journalCommand}=require('./journal');
 const {shareCommand}=require('./shares');
 const {postCommand}=require('./posts');
-const MAX_BODY=16384;
+const {photoCommand}=require('./post-photos');
+const MAX_BODY=16384,MAX_PHOTO_BODY=1400000;
 /** @param {import('./contracts').Request} req @returns {Promise<unknown>} */
 async function readBody(req) {
   if(req.rawBody==null && req.body && typeof req.body==='object'&&!Buffer.isBuffer(req.body)) {
     let raw;try {raw=JSON.stringify(req.body);} catch {reject(422,'invalid_request');}
-    if(!raw||Buffer.byteLength(raw)>MAX_BODY)reject(413,'request_too_large');
+    if(!raw||Buffer.byteLength(raw)>MAX_PHOTO_BODY)reject(413,'request_too_large');
+    if(Buffer.byteLength(raw)>MAX_BODY&&/** @type {{action?:unknown}} */(req.body).action!=='photo.put')reject(413,'request_too_large');
     return req.body;
   }
   const supplied=req.rawBody??req.body;
   let raw='';
-  if(Buffer.isBuffer(supplied)) {if(supplied.length>MAX_BODY)reject(413,'request_too_large');raw=supplied.toString('utf8');}
+  if(Buffer.isBuffer(supplied)) {if(supplied.length>MAX_PHOTO_BODY)reject(413,'request_too_large');raw=supplied.toString('utf8');}
   else if(typeof supplied==='string')raw=supplied;
   else {
     const chunks=[];let bytes=0;
-    for await(const chunk of req) {const buffer=Buffer.from(chunk);bytes+=buffer.length;if(bytes>MAX_BODY)reject(413,'request_too_large');chunks.push(buffer);}
+    for await(const chunk of req) {const buffer=Buffer.from(chunk);bytes+=buffer.length;if(bytes>MAX_PHOTO_BODY)reject(413,'request_too_large');chunks.push(buffer);}
     raw=Buffer.concat(chunks).toString('utf8');
   }
-  if(Buffer.byteLength(raw)>MAX_BODY)reject(413,'request_too_large');
-  try {return JSON.parse(raw);} catch {return reject(422,'invalid_request');}
+  if(Buffer.byteLength(raw)>MAX_PHOTO_BODY)reject(413,'request_too_large');
+  try {const input=JSON.parse(raw);if(Buffer.byteLength(raw)>MAX_BODY&&input?.action!=='photo.put')reject(413,'request_too_large');return input;} catch(e) {if(e instanceof require('./errors').DomainError)throw e;return reject(422,'invalid_request');}
 }
 /** @param {unknown} input @returns {import('./contracts').Command} */
 function command(input) {
   if(!input||typeof input!=='object'||Array.isArray(input)||Object.getPrototypeOf(input)!==Object.prototype)reject(422,'invalid_request');
   const value=/** @type {Record<string,unknown>} */(input);
   const action=value.action;
+  if(typeof action==='string'&&action.startsWith('photo.'))return photoCommand(value);
   if(typeof action==='string'&&action.startsWith('posts.'))return postCommand(value);
   if(typeof action==='string'&&action.startsWith('share.'))return shareCommand(value);
   if(typeof action==='string'&&action.startsWith('tests.'))return testsCommand(value);

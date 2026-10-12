@@ -48,6 +48,14 @@
   font-size:11px!important;
   font-weight:600!important;
 }
+.ab-admin-nav-search{display:grid;gap:6px;position:sticky;top:-18px;z-index:1;
+  padding:10px 4px 12px;background:var(--card,#fff)}
+.ab-admin-nav-search span{font-size:11px;font-weight:700;color:var(--muted,#6b7280)}
+.ab-admin-nav-search input{width:100%;min-width:0;min-height:42px;box-sizing:border-box;
+  border:1px solid var(--line,#e4e6eb);border-radius:10px;padding:9px 11px;
+  background:var(--surface,#f3f4f6);color:var(--ink,#17181b);font:inherit;font-size:13px}
+.ab-admin-nav-search input:focus-visible{outline:2px solid var(--accent,#2f5fe0);outline-offset:2px}
+.ab-admin-nav-empty{color:var(--muted,#6b7280);font-size:13px;padding:12px 10px}
 .ab-admin-nav-group{margin:10px 0 18px}
 .ab-admin-nav-label{
   padding:0 10px 6px;
@@ -67,6 +75,7 @@
   border-radius:10px;
   margin:2px 0;
   padding:9px 10px;
+  min-height:44px;
   background:transparent;
   color:var(--ink,#17181b);
   font:inherit;
@@ -75,6 +84,10 @@
   cursor:pointer;
 }
 .ab-admin-nav button:hover{background:var(--surface,#eef1f6)}
+.ab-admin-nav button:focus-visible,.ab-admin-signout:focus-visible,.ab-admin-menu:focus-visible{
+  outline:2px solid var(--accent,#2f5fe0);
+  outline-offset:2px;
+}
 .ab-admin-nav button[data-active]{
   background:var(--surface,#eef1f6);
   color:var(--accent,#2f5fe0);
@@ -107,8 +120,8 @@
 }
 .ab-admin-menu{
   display:none;
-  width:38px;
-  height:38px;
+  width:44px;
+  height:44px;
   flex:none;
   border:1px solid var(--line,#e4e6eb)!important;
   border-radius:10px!important;
@@ -257,6 +270,17 @@
   font:inherit;
   font-size:13px;
 }
+/* Checkboxes/radio buttons are controls, not full-width text fields. */
+.ab-admin input:is([type="checkbox"],[type="radio"]){
+  width:20px;
+  height:20px;
+  min-width:20px;
+  max-width:20px;
+  flex:0 0 20px;
+  padding:0;
+  margin:0;
+  accent-color:var(--accent,#2f5fe0);
+}
 .ab-admin-access .ab-admin-row{align-items:flex-end}
 .ab-admin-access .ab-admin-empty{padding:0 0 9px;text-align:left}
 
@@ -313,10 +337,15 @@
   .ab-admin-side{
     width:min(84vw,300px);
     transform:translateX(-102%);
-    transition:transform .2s ease;
+    visibility:hidden;
+    transition:transform .2s ease,visibility 0s linear .2s;
     box-shadow:18px 0 45px rgba(0,0,0,.22);
   }
-  .ab-admin-shell[data-nav-open] .ab-admin-side{transform:none}
+  .ab-admin-shell[data-nav-open] .ab-admin-side{
+    transform:none;
+    visibility:visible;
+    transition:transform .2s ease,visibility 0s;
+  }
   .ab-admin-shade{
     display:block;
     position:fixed;
@@ -326,12 +355,15 @@
     padding:0;
     background:rgba(0,0,0,.35);
     opacity:0;
+    visibility:hidden;
     pointer-events:none;
-    transition:opacity .2s;
+    transition:opacity .2s,visibility 0s linear .2s;
   }
   .ab-admin-shell[data-nav-open] .ab-admin-shade{
     opacity:1;
+    visibility:visible;
     pointer-events:auto;
+    transition:opacity .2s,visibility 0s;
   }
   .ab-admin-main{margin-left:0}
   .ab-admin-menu{display:grid;place-items:center}
@@ -346,16 +378,21 @@
   .ab-admin-row{display:grid;grid-template-columns:1fr;gap:6px}
   .ab-admin-row>button{width:100%}
   .ab-admin-table-wrap{border-radius:9px}
-  .ab-admin table,.ab-admin tbody,.ab-admin tr,.ab-admin td{display:block;width:100%}
-  .ab-admin thead{display:none}
-  .ab-admin tr{
+  /* Only tables with per-cell labels can become cards. Other product tables
+     keep their headers and scroll within .ab-admin-table-wrap instead. */
+  .ab-admin table.ab-admin-card-table,
+  .ab-admin .ab-admin-card-table tbody,
+  .ab-admin .ab-admin-card-table tr,
+  .ab-admin .ab-admin-card-table td{display:block;width:100%}
+  .ab-admin .ab-admin-card-table thead{display:none}
+  .ab-admin .ab-admin-card-table tr{
     position:relative;
     padding:8px 9px;
     border-bottom:1px solid var(--line,#e4e6eb);
   }
-  .ab-admin tr:last-child{border-bottom:0}
-  .ab-admin td{padding:2px 0;border:0}
-  .ab-admin td[data-label]::before{
+  .ab-admin .ab-admin-card-table tr:last-child{border-bottom:0}
+  .ab-admin .ab-admin-card-table td{padding:2px 0;border:0}
+  .ab-admin .ab-admin-card-table td[data-label]::before{
     content:attr(data-label) ' · ';
     color:var(--muted,#6b7280);
     font-size:11px;
@@ -541,3 +578,11 @@
 .ab-admin button.ab-admin-link,.ab-admin-link{background:none!important;box-shadow:none!important;border:0!important;padding:0!important;margin:0!important;min-height:0!important;width:auto!important;color:var(--accent-ink,var(--accent,#2f5fe0))!important}
 .ab-admin-chip .ab-admin-link{font-size:12px}
 .ab-admin-access .ab-admin-feedback{margin:4px 0 8px;color:var(--ink,#111);font-weight:600}
+
+@media(max-width:360px){
+  .ab-admin-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media(prefers-reduced-motion:reduce){
+  .ab-admin-side,.ab-admin-shade,.ab-admin-shell[data-nav-open] .ab-admin-side,
+  .ab-admin-shell[data-nav-open] .ab-admin-shade{transition:none}
+}

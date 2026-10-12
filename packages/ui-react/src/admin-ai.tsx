@@ -21,7 +21,7 @@ const COPY = {
     enabled:'ИИ включён', primary:'Основная модель', backup:'Запасная — отвечает, если основная не смогла',
     provider:'Сервис', model:'Модель', keys:'Ключи сервисов',
     keysHint:'Нужен ключ хотя бы того сервиса, что выбран основной моделью. После сохранения нажми «Проверить, что ИИ отвечает».',
-    limits:'Лимит в месяц на одного ученика', light:'Простые запросы (разбор ошибки, разговор)', heavy:'Сложные запросы', image:'Картинки',
+    limits:'Лимит в месяц на одного пользователя', light:'Простые запросы', heavy:'Сложные запросы', image:'Картинки',
     save:'Сохранить', saving:'Сохраняю…', saved:'Сохранено.', saveError:'Не сохранилось: ',
     test:'Проверить, что ИИ отвечает', testing:'Спрашиваю…', testOk:'Ответил', testFail:'Не ответил: '
   },
@@ -30,7 +30,7 @@ const COPY = {
     enabled:'AI is on', primary:'Main model', backup:'Backup — answers when the main one fails',
     provider:'Service', model:'Model', keys:'Service keys',
     keysHint:'You need a key for at least the main model\'s service. After saving, tap «Check that the AI answers».',
-    limits:'Monthly limit per learner', light:'Simple requests (mistake explanation, talk)', heavy:'Heavy requests', image:'Images',
+    limits:'Monthly limit per user', light:'Simple requests', heavy:'Heavy requests', image:'Images',
     save:'Save', saving:'Saving…', saved:'Saved.', saveError:'Not saved: ',
     test:'Check that the AI answers', testing:'Asking…', testOk:'Answered', testFail:'No answer: '
   }

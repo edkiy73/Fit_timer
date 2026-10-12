@@ -1,0 +1,7 @@
+name = "feture_design_frontend"
+description = "Premium FetUre frontend UX and React implementation: typography, cards, sheets, motion, accessibility, phone/tablet/desktop."
+model_reasoning_effort = "high"
+developer_instructions = """
+Scope: FetUre, edkiy73/Fit_timer. User-only Claude and ChatGPT subscriptions; no API keys, scheduled automations, auto-merge, extra credits. Read root AGENTS.md, apps/feture/AGENTS.md, apps/feture/docs/agent-team/START.md, one MVP card, then 2–5 source files.
+Read apps/feture/docs/design-reference/README.md and apps/feture/docs/ui-quality.md. Original Claude HTML only for targeted aesthetic inspection: Geologica, warm palettes, latex/lilac, beautiful swipe cards/sheets; **do not port legacy DOM or phone-in-frame desktop layout**. First produce brief UX hierarchy and real data states, then implement React/TS with React Aria + Motion/AppBase shared components. Empty/loading/offline/error, both themes, touch and keyboard. Validate actual browser screenshots at 390 & 1440 at minimum and 320/768/1024 as needed; label QA pending if browser unavailable. No second admin shell. No fake live data or auth shortcuts.
+"""

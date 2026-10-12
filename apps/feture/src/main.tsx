@@ -10,6 +10,8 @@ import { captureFatal, installGlobalDiagnostics } from './observability';
 import { startAppSync } from './sync';
 import './styles.css';
 import './feture/experience.css';
+import './feture/account.css';
+import './feture/profile.css';
 
 applyProductTheme();
 // Every pressed button that waits for the server shows a spinner until the answer comes.

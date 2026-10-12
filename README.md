@@ -8,6 +8,7 @@ templates/react-app/  Minimum mandatory React + TypeScript + Vite starter scaffo
 apps/task-mini/       Executable architecture reference + one small real product domain
 apps/fittimer/        Fit Timer — production web/API/Android/iOS app
 apps/unmute/          Complex production consumer of the same AppBase contracts
+apps/feture/          FetUre — privacy-first social/discovery product, independent React/AppBase app
 docs/                 repository-level plans
 ```
 
@@ -36,3 +37,7 @@ npm run check:affected -- <base>  # CI: Core + only the apps changed since <base
 ```
 
 A change in `packages/core/` must keep every app green in the same pull request. New apps must live under `apps/<name>/` and define `scripts.check`.
+
+## FetUre AI development
+- [One-command manual workflow](apps/feture/docs/agent-team/START.md) — Claude Code ↔ ChatGPT/Codex, no model API or schedule.
+- [MVP issue queue to launch](apps/feture/docs/agent-team/ISSUES.md), [Claude visual reference](apps/feture/docs/design-reference/README.md).

@@ -130,7 +130,7 @@ h2{margin:0 0 8px}
   min-width:0;
   max-width:100%;
 }
-.ab-admin :is(.ft-catalog-admin,.ft-questionnaires-admin,.ft-documents-admin,.ft-access) :is(input:not([type="checkbox"]),textarea,select){
+.ab-admin :is(.ft-catalog-admin,.ft-questionnaires-admin,.ft-documents-admin,.ft-access) :is(input:not([type="checkbox"]):not([type="radio"]),textarea,select){
   box-sizing:border-box;
   display:block;
   width:100%;

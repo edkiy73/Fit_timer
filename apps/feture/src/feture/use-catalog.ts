@@ -9,7 +9,7 @@ export function useCatalog(){
  const [refresh,setRefresh]=useState(0);
  useEffect(()=>{
    const controller=new AbortController();
-   fetch(apiUrl('/api/catalog'),{signal:controller.signal})
+   fetch(apiUrl('/api/catalog'),{signal:AbortSignal.any([controller.signal,AbortSignal.timeout(12000)])})
     .then(async response=>{if(!response.ok)throw new Error('catalog_unavailable');return catalogSchema.parse(await response.json());})
     .then(json=>{if(!controller.signal.aborted){setData(json);setSource('live');}})
     .catch(()=>{if(!controller.signal.aborted)setSource('offline');});
