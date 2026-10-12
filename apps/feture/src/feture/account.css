@@ -2,16 +2,13 @@
 .app.ft-account-shell{width:min(calc(100% - 24px),1360px);margin:18px auto;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
 .ft-account-shell>.app-header{display:none}
 .ft-account-page{
-  --account-ink:#1e1219;--account-muted:#75606d;--account-line:#e8dce6;
-  --account-surface:#fff;--account-wash:#f8f1f6;--account-violet:#5c47d6;--account-rose:#df234a;
-  color:var(--account-ink);font-family:Geologica,Inter,system-ui,sans-serif;
+  --account-ink:var(--ft-ink);--account-muted:var(--ft-muted);--account-line:var(--ft-border);
+  --account-surface:var(--ft-white);--account-wash:var(--ft-surface);--account-violet:var(--ft-violet);--account-rose:var(--ft-rose);
+  color:var(--account-ink);font-family:var(--ft-font);
   min-width:0;line-height:1.5
 }
-:root[data-theme=dark] .ft-account-page{
-  --account-ink:#fbf0f4;--account-muted:#c6adbd;--account-line:#514050;
-  --account-surface:#281a28;--account-wash:#372439;--account-violet:#b9a6ff;--account-rose:#ff5571
-}
-.ft-account-page :is(a,button,select,input){font:inherit}
+
+.ft-account-page :is(button,select,input){font:inherit}
 .ft-account-page :is(a,button,select,input):focus-visible{outline:3px solid var(--account-violet);outline-offset:3px}
 .ft-account-page a{text-decoration:none;color:inherit}
 .ft-account-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:22px;min-width:0}
@@ -93,13 +90,14 @@
   .app.ft-account-shell{margin:0 auto;width:min(100%,1440px)}
   .ft-account-mobile-top{display:none}
   .ft-account-layout{grid-template-columns:235px minmax(0,1fr);gap:0;min-height:100dvh}
-  .ft-account-sidebar{position:sticky;top:0;height:100dvh;display:flex;flex-direction:column;background:#251627;padding:30px 19px;color:#eee2ed}
-  .ft-account-sidebar .ft-account-wordmark{color:#fff!important}
-  .ft-account-sidebar>p{font-size:12px;line-height:1.7;color:#c7b0c4;margin:18px 0 40px}
+  .ft-account-sidebar{position:sticky;top:0;height:100dvh;display:flex;flex-direction:column;background:var(--account-surface);padding:30px 19px;color:var(--account-ink);border-right:1px solid var(--account-line)}
+  .ft-account-sidebar .ft-account-wordmark{color:var(--account-ink)!important}
+  .ft-account-sidebar>p{font-size:12px;line-height:1.7;color:var(--account-muted);margin:18px 0 40px}
   .ft-account-sidebar nav{display:grid;gap:7px}
-  .ft-account-sidebar nav a{display:flex;align-items:center;gap:12px;min-height:45px;padding:10px 13px;border-radius:13px;font-size:13px;font-weight:650;color:#e1d5e2}
-  .ft-account-sidebar nav a.active,.ft-account-sidebar nav a:hover{background:#52334f;color:#fff}
-  .ft-account-sidebar-foot{margin-top:auto;color:#ac9aac;font-size:12px}
+  .ft-account-sidebar nav a{display:flex;align-items:center;gap:12px;min-height:45px;padding:10px 13px;border-radius:13px;font-size:13px;font-weight:650;color:var(--account-muted)}
+  .ft-account-sidebar nav a.active{background:var(--ft-accent-soft);color:var(--ft-accent-ink)}
+  .ft-account-sidebar nav a:hover:not(.active){background:var(--account-wash);color:var(--account-ink)}
+  .ft-account-sidebar-foot{margin-top:auto;color:var(--account-muted);font-size:12px}
   .ft-account-content{padding:42px clamp(30px,4.8vw,68px) 60px}
 }
 @media(max-width:619px){
@@ -115,3 +113,21 @@
 @media(prefers-reduced-motion:reduce){
   .ft-account-page :is(.ft-account-primary,.ft-account-secondary,.ft-account-destination){transition:none!important;transform:none!important}
 }
+
+/* Embedded Core form keeps its accessible name and all OTP/handle states. */
+.ft-account-signin .ab-auth-card{color:var(--account-ink)}
+.ft-account-signin .ab-auth-card>.ab-auth-kicker,.ft-account-signin .ab-auth-card>h1{display:none}
+.ft-account-signin .ab-auth-field{gap:8px;margin-bottom:16px}
+.ft-account-signin .ab-auth-field input{font-size:16px;border-color:var(--account-line);background:var(--account-wash);border-radius:var(--ft-radius-control)}
+.ft-account-signin .ab-auth-field input:focus{border-color:var(--account-violet);box-shadow:none}
+.ft-account-signin .ab-auth-primary{background:var(--ft-action-fill);color:#fff;border-radius:var(--ft-radius-control);font-weight:700}
+.ft-account-signin .ab-auth-secondary{color:var(--ft-accent-ink);font-weight:650}
+.ft-account-signin .ab-auth-lead{margin:0 0 16px;color:var(--account-muted);font-size:13px}
+.ft-account-guest-settings{align-self:start}
+.ft-account-guest-settings summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;cursor:pointer;font-size:17px;font-weight:700;list-style:none}
+.ft-account-guest-settings summary::-webkit-details-marker{display:none}
+.ft-account-guest-settings summary svg{flex:none;transition:transform var(--ft-motion-press) var(--ft-ease);color:var(--account-muted)}
+.ft-account-guest-settings[open] summary svg{transform:rotate(90deg)}
+.ft-account-guest-settings[open] .ft-account-preference-grid{margin-top:20px}
+.ft-account-guest-settings summary:focus-visible{outline:3px solid var(--account-violet);outline-offset:4px;border-radius:8px}
+@media(prefers-reduced-motion:reduce){.ft-account-guest-settings summary svg{transition:none}}
