@@ -39,6 +39,7 @@ function command(input) {
   if(typeof action==='string'&&action.startsWith('photo.'))return photoCommand(value);
   if(typeof action==='string'&&action.startsWith('posts.'))return postCommand(value);
   if(typeof action==='string'&&action.startsWith('comments.'))return postCommand(value);
+  if(typeof action==='string'&&action.startsWith('authors.'))return postCommand(value);
   if(typeof action==='string'&&action.startsWith('share.'))return shareCommand(value);
   if(typeof action==='string'&&action.startsWith('tests.'))return testsCommand(value);
   if(typeof action==='string'&&(action.startsWith('journal.')||action.startsWith('history.')))return journalCommand(value);
