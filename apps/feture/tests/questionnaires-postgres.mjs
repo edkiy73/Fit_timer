@@ -112,3 +112,33 @@ test('questionnaires history DTO rejects malformed provider metadata and strips 
  payload={ok:true,versions:[],attempts:[item,{...item}]};
  await assert.rejects(repository.execute(actor,{action:'tests.list'}),e=>e.status===503&&e.code==='domain_unavailable');
 });
+
+test('W03 completed attempt DTO trusts only bounded scores and pinned editorial interpretations',async()=>{
+ const email='score@example.com',device='score-device',token='score-token',sha=v=>createHash('sha256').update(v).digest('hex');
+ const hash=sha(email).slice(0,32);
+ const session={headers:{'x-fit-email':email,'x-fit-device':device,'x-fit-token':token}};
+ const actor=await authenticate(session,{configured:()=>true,get:async key=>key==='a:'+hash
+  ?JSON.stringify({email,syncDevices:{[device]:{h:sha(token),at:new Date().toISOString()}}}):null},
+  async()=>new Date(Date.now()+3600000).toISOString());
+ const def=make(),qid=def.questions.map(q=>q.id),version={id:id(3100),testId:def.id,revision:1,definition:def,publishedAt:'2026-10-12T11:00:00Z'};
+ const answers=Object.fromEntries(qid.map(k=>[k,['o4']]));
+ const score={answered:6,total:6,dimensions:[{id:'connection',answered:6,total:6,average:4,level:'high',interpretation:def.dimensions[0].high,questionIds:qid}]};
+ const valid={id:id(3101),version,status:'completed',answers,position:5,revision:2,result:score,updatedAt:'2026-10-12T11:05:00Z'};
+ let provider={ok:true,attempt:{...valid,privateField:'never-leave-server'}};
+ const repository=createTestsRepository({configured:()=>true,request:async()=>new Response(JSON.stringify(provider))},
+  {requireCurrent:async()=>{}});
+ const read={action:'tests.read',attemptId:valid.id};
+ const safe=await repository.execute(actor,read);
+ assert.equal(safe.attempt.result.dimensions[0].interpretation,def.dimensions[0].high);
+ assert.equal('privateField' in safe.attempt,false);
+ for(const patch of [
+  {interpretation:'Not reviewed by editor'},{average:'4'},{average:10},
+  {level:'low'},{total:7},{answered:99},{questionIds:['q1','q2','q3','q4','q5','private']},
+  {questionIds:['q0','q0','q2','q3','q4','q5']}
+ ]){
+  provider={ok:true,attempt:{...valid,result:{...score,dimensions:[{...score.dimensions[0],...patch}]}}};
+  await assert.rejects(repository.execute(actor,read),e=>e.status===503&&e.code==='domain_unavailable');
+ }
+ provider={ok:true,attempt:{...valid,result:{answered:0,total:6,dimensions:[{id:'connection',answered:0,total:6,average:null,level:'insufficient',interpretation:'Пока мало ответов для вывода. Можно вернуться к этим вопросам позже.',questionIds:[]}]},answers:Object.fromEntries(qid.map(k=>[k,null]))}};
+ assert.equal((await repository.execute(actor,read)).attempt.result.dimensions[0].level,'insufficient');
+});

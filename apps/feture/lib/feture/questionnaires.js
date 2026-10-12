@@ -57,11 +57,46 @@ function versionDTO(input){const v=pick(input,['id','testId','revision','definit
  d.dimensions=d.dimensions.map(x=>pick(x,['id','title','low','mid','high']));d.questions=d.questions.map(x=>{const q=pick(x,['id','prompt','dimension','kind','options']);if(!Array.isArray(q.options))reject(503,'domain_unavailable');q.options=q.options.map(o=>pick(o,['id','label','score']));return q;});
  try{v.definition=definition(d);}catch{return reject(503,'domain_unavailable');}if(v.testId!==d.id)reject(503,'domain_unavailable');return v;
 }
+/** A provider result is not authoritative merely because its fields exist:
+ * interpretations must come from the pinned editorial version, never arbitrary
+ * text in an unexpected backend response.
+ * @param {unknown} input @param {import('./questionnaires').TestDefinition} definition
+ * @param {import('./questionnaires').Answers} given */
+function scoreDTO(input,definition,given){
+ const r=pick(input,['answered','total','dimensions']);
+ if(!Number.isSafeInteger(r.answered)||r.answered<0||r.total!==definition.questions.length
+   ||r.answered>r.total||!Array.isArray(r.dimensions)||r.dimensions.length!==definition.dimensions.length)reject(503,'domain_unavailable');
+ const seen=new Set();let counted=0;
+ r.dimensions=r.dimensions.map(raw=>{
+  const d=pick(raw,['id','answered','total','average','level','interpretation','questionIds']);
+  const editorial=definition.dimensions.find(item=>item.id===d.id);
+  const questions=definition.questions.filter(q=>q.dimension===d.id).map(q=>q.id);
+  if(!editorial||seen.has(d.id)||d.total!==questions.length||!Number.isSafeInteger(d.answered)
+    ||d.answered<0||d.answered>d.total||!Array.isArray(d.questionIds)
+    ||d.questionIds.length!==d.answered||new Set(d.questionIds).size!==d.questionIds.length
+    ||d.questionIds.some(id=>typeof id!=='string'||!questions.includes(id)||given[id]===null||given[id]===undefined)
+    ||questions.filter(id=>given[id]!==null&&given[id]!==undefined).length!==d.answered)
+    reject(503,'domain_unavailable');
+  seen.add(d.id);counted+=d.answered;
+  const insufficient=d.answered<Math.ceil(questions.length/2);
+  const average=d.average;
+  if(insufficient?average!==null:typeof average!=='number'||!Number.isFinite(average)||average<0||average>4)
+   reject(503,'domain_unavailable');
+  const level=average===null?'insufficient':average<1.5?'low':average<2.75?'mid':'high';
+  const expected=level==='insufficient'
+   ?'Пока мало ответов для вывода. Можно вернуться к этим вопросам позже.'
+   :editorial[/** @type {'low'|'mid'|'high'} */(level)];
+  if(d.level!==level||d.interpretation!==expected)reject(503,'domain_unavailable');
+  return d;
+ });
+ if(counted!==r.answered)reject(503,'domain_unavailable');
+ return r;
+}
 /** @param {unknown} input */
 function attemptDTO(input){const a=pick(input,['id','version','status','answers','position','revision','result','updatedAt']);
  if(!uuid(a.id)||!['draft','completed'].includes(String(a.status))||typeof a.revision!=='number'||!Number.isSafeInteger(a.revision)||a.revision<1||typeof a.position!=='number'||!Number.isInteger(a.position)||a.position<0||a.position>11||typeof a.updatedAt!=='string'||!Number.isFinite(Date.parse(a.updatedAt)))reject(503,'domain_unavailable');a.version=versionDTO(a.version);
  try{a.answers=answers(a.answers);}catch{return reject(503,'domain_unavailable');}
- if(a.result!==null){const r=pick(a.result,['answered','total','dimensions']);if(!Array.isArray(r.dimensions)||r.dimensions.length>4)reject(503,'domain_unavailable');r.dimensions=r.dimensions.map(x=>pick(x,['id','answered','total','average','level','interpretation','questionIds']));a.result=r;}if((a.status==='completed')!==(a.result!==null))reject(503,'domain_unavailable');return a;
+ if(a.result!==null)a.result=scoreDTO(a.result,/** @type {import('./questionnaires').TestDefinition} */(a.version.definition),/** @type {import('./questionnaires').Answers} */(a.answers));if((a.status==='completed')!==(a.result!==null))reject(503,'domain_unavailable');return a;
 }
 /** Strict server projection for private attempt history. A malformed storage
  * response must fail closed instead of shipping an invalid 200 JSON payload.
