@@ -44,7 +44,7 @@ export async function runEventOwnersPostgres(){
   assert.equal((await rpc(a,{...cmd(2),draft:{...draft,ticketUrl:'javascript:alert(1)'}})).error,'invalid_request');
   assert.equal((await rpc(a,{...cmd(2),draft:{...draft,privateLocation:'Hidden address'}})).error,'invalid_request');
   assert.equal((await rpc(a,{action:'events.catalog',cursor:null})).error,'invalid_request');
-  assert.equal((await rpc(a,{action:'events.submit',id:id(1),operationId:id(77),expectedRevision:1})).error,'invalid_request');
+  assert.equal((await rpc(a,{action:'events.submit',id:id(1),operationId:id(77),expectedRevision:0})).error,'invalid_request');
   const updated={...cmd(1,1,{...draft,title:'Private updated class'}),operationId:id(2001)};
   const second=await rpc(a,updated);
   assert.equal(second.entry.revision,2);
