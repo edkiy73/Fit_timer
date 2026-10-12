@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState, type PointerEvent } from 'react';
+import { useMemo, useRef, useState, useEffect, type PointerEvent } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
-import { Link } from 'react-router';
+import { Link, useNavigate, useLocation } from 'react-router';
 import { Icon } from './components/Icon';
 import { ActionButton, AppDialog, HintChip } from './components/primitives';
 import { useQueryOverlay } from './navigation';
 import './dating-design.css';
+import {useDatingPresentation} from './dating-presentation';
 
 // Owner-approved prelaunch DESIGN FIXTURES, not discovery DTOs. No account,
 // network write, consent, grant, match or messages are created by this component.
@@ -21,7 +22,10 @@ const INITIAL_FILTERS:Filters={city:'all',age:'all'};
 export function DatingDesign(){
  const reduced=useReducedMotion();
  const overlay=useQueryOverlay('datingPanel');
- const [started,setStarted]=useState(false);
+ const {enabled:started,setEnabled:setStarted}=useDatingPresentation();
+ const navigate=useNavigate();
+ const location=useLocation();
+ const switchToLikes=()=>{const search=new URLSearchParams(location.search);search.set('datingPanel','likes');navigate({pathname:location.pathname,search:search.toString()},{replace:true,state:location.state})};
  const [filters,setFilters]=useState<Filters>(INITIAL_FILTERS);
  const [draft,setDraft]=useState<Filters>(INITIAL_FILTERS);
  const [history,setHistory]=useState<Decision[]>([]);
@@ -46,9 +50,9 @@ export function DatingDesign(){
   setHistory(nextHistory);setFilters(nextFilters);setDirection(0);
  };
  const undo=()=>{if(transitionLock.current)return;changeSelection(history.slice(0,-1))};
- return <section className="ft-connect" aria-labelledby="ft-connect-title">
-  <header className="ft-connect-heading"><div><span className="ft-connect-eyebrow">Люди, с которыми можно быть собой</span><h1 id="ft-connect-title">На одной <em>волне.</em></h1></div>
-   {started&&<button type="button" className="ft-connect-filter" disabled={transitioning} onClick={openFilters}><Icon name="settings" size={18}/> Фильтры{(filters.city!=='all'||filters.age!=='all')&&<span aria-label="Есть выбранные фильтры"/>}</button>}
+ return <section className={`ft-connect${started?' ft-connect-active':''}`} aria-labelledby="ft-connect-title">
+  <header className="ft-connect-heading"><div><span className="ft-connect-eyebrow">Люди, с которыми можно быть собой</span><h1 id="ft-connect-title"><span className="ft-connect-desktop-title">На одной <em>волне.</em></span><span className="ft-connect-mobile-title">Знакомства</span></h1></div>
+   {started&&<div className="ft-connect-heading-actions"><button type="button" className="ft-connect-options" aria-label="Настройки знакомств" onClick={()=>overlay.open('options')}><Icon name="heart" size={19}/></button><button type="button" className="ft-connect-filter" disabled={transitioning} onClick={openFilters}><Icon name="settings" size={18}/> Фильтры{(filters.city!=='all'||filters.age!=='all')&&<span aria-label="Есть выбранные фильтры"/>}</button></div>}
   </header>
   {!started?<div className="ft-connect-intro">
    <div className="ft-connect-intro-copy"><span className="ft-connect-pill"><Icon name="heart" size={15}/> Знакомства — по желанию</span><h2>Не искать идеальных.<br/><em>Встречать своих.</em></h2><p>Начни с любопытства. Общие темы помогают заговорить, а уважение к границам — услышать друг друга.</p><ActionButton onClick={()=>setStarted(true)}>Открыть знакомства <Icon name="arrow" size={19}/></ActionButton><Link to="/world">Мне пока хорошо в своём мире <Icon name="arrow" size={16}/></Link></div>
@@ -57,17 +61,18 @@ export function DatingDesign(){
   </div>:<>
    <div className="ft-connect-toolbar"><span><Icon name="compass" size={16}/>{filters.city==='all'?'Без границ на карте':filters.city}{filters.age!=='all'&&` · ${filters.age==='under30'?'18–29 лет':'От 30 лет'}`}</span><button type="button" onClick={()=>overlay.open('likes')}><Icon name="heart" size={16}/> Мои симпатии{likes>0&&<b>{likes}</b>}</button></div>
    <div className="ft-connect-layout">
-    <div className="ft-connect-stage">
+    <div className="ft-connect-stage">{available.length>1&&<div className="ft-connect-next" aria-hidden="true"/>}
      <AnimatePresence mode="wait" initial={false} custom={direction}>
-      {current?<m.div key={current.id} className="ft-connect-card" custom={direction} variants={{enter:(d:number)=>({opacity:0,x:reduced?0:d*24,scale:reduced?1:.98}),visible:{opacity:1,x:0,scale:1},exit:(d:number)=>({opacity:0,x:reduced?0:d*55,scale:reduced?1:.98})}} initial="enter" animate="visible" exit="exit" transition={{duration:reduced?0:.22,ease:[.2,.8,.2,1]}} onAnimationComplete={definition=>{if(definition==='visible')releaseTransition()}}>
+      {current?<m.div key={current.id} className="ft-connect-card" custom={direction} variants={{enter:(d:number)=>({opacity:0,x:reduced?0:d*24,scale:reduced?1:.98}),visible:{opacity:1,x:0,rotate:0,scale:1},exit:(d:number)=>({opacity:0,x:reduced?0:d*520,rotate:reduced?0:d*12,scale:reduced?1:.98})}} initial="enter" animate="visible" exit="exit" transition={{duration:reduced?0:.22,ease:[.2,.8,.2,1]}} onAnimationComplete={definition=>{if(definition==='visible')releaseTransition()}}>
        <ProfileCard profile={current} onDecision={decide}/>
       </m.div>:<m.div key="empty" className="ft-connect-empty" initial={{opacity:0}} animate={{opacity:1}} onAnimationComplete={releaseTransition}><Icon name="compass" size={38}/><span className="ft-connect-eyebrow">Можно никуда не спешить</span><h2>На сегодня<br/>все знакомства.</h2><p>Измени фильтры или вернись к тем, кто вызвал интерес.</p><ActionButton onClick={openFilters}>Изменить фильтры <Icon name="settings" size={18}/></ActionButton><button type="button" onClick={()=>{changeSelection(history.filter(h=>h.kind==='like'))}}>Посмотреть ещё раз</button></m.div>}
      </AnimatePresence>
      <div className="ft-connect-actions"><button type="button" className="ft-connect-undo" disabled={!history.length||transitioning} onClick={undo} aria-label="Отменить последний выбор"><Icon name="back" size={21}/><small>Отменить</small></button><button type="button" className="ft-connect-pass" disabled={!current||transitioning} onClick={()=>decide('pass')} aria-label="Пропустить профиль"><Icon name="close" size={27}/><small>Пропустить</small></button><button type="button" className="ft-connect-like" disabled={!current||transitioning} onClick={()=>decide('like')} aria-label="Нравится профиль"><Icon name="heart" size={28}/><small>Нравится</small></button></div>
     </div>
-    <aside className="ft-connect-companion"><span className="ft-connect-eyebrow">Начни с разговора</span><h2>Интереснее<br/><em>без сценария.</em></h2><p>Не обязательно совпадать во всём. Иногда достаточно одной темы, которую хочется обсудить.</p><div className="ft-connect-conversation"><Icon name="message" size={22}/><span>Вопрос для знакомства</span><strong>«Что ты недавно узнал о себе?»</strong></div><div className="ft-connect-safety"><Icon name="shield" size={21}/><div><strong>Симпатия — не согласие</strong><p>Личные темы и границы обсуждаются отдельно. Закрытые части профиля остаются закрытыми.</p></div></div><Link to="/explore">Найти тему для разговора <Icon name="arrow" size={17}/></Link><button type="button" className="ft-connect-pause" onClick={()=>{releaseTransition();setStarted(false);setHistory([])}}>Вернуться к началу</button></aside>
+    <aside className="ft-connect-companion"><span className="ft-connect-eyebrow">Начни с разговора</span><h2>Интереснее<br/><em>без сценария.</em></h2><p>Не обязательно совпадать во всём. Иногда достаточно одной темы, которую хочется обсудить.</p><div className="ft-connect-conversation"><Icon name="message" size={22}/><span>Вопрос для знакомства</span><strong>«Что ты недавно узнал о себе?»</strong></div><div className="ft-connect-safety"><Icon name="shield" size={21}/><div><strong>Симпатия — не согласие</strong><p>Личные темы и границы обсуждаются отдельно. Закрытые части профиля остаются закрытыми.</p></div></div><Link to="/explore">Найти тему для разговора <Icon name="arrow" size={17}/></Link><button type="button" className="ft-connect-pause" onClick={()=>{releaseTransition();setStarted(false);setHistory([]);navigate('/world',{replace:true})}}>Вернуться к началу</button></aside>
    </div>
   </>}
+  {overlay.value==='options'&&<AppDialog title="Твой темп знакомства" eyebrow="Знакомства" onClose={close} presentation="adaptive"><div className="ft-connect-options-panel"><button type="button" className="ft-textbtn" onClick={switchToLikes}>Мои симпатии{likes>0?` · ${likes}`:''}</button><p>Можно сделать паузу и вернуться к исследованию себя. Знакомства исчезнут из навигации; остальные разделы останутся на месте.</p><ActionButton onClick={()=>{releaseTransition();setStarted(false);navigate('/world',{replace:true})}}>Выключить знакомства</ActionButton><button type="button" className="ft-textbtn" onClick={close}>Продолжить знакомства</button></div></AppDialog>}
   {overlay.value==='filters'&&<AppDialog title="Кого хочется встретить?" eyebrow="Твой круг общения" onClose={close} presentation="adaptive"><form className="ft-connect-filter-form" onSubmit={e=>{e.preventDefault();changeSelection(history.filter(h=>h.kind==='like'),draft);close()}}><fieldset><legend>Где знакомиться</legend><p>Выбери город. Точная геолокация не нужна.</p><div>{['all','Бали','Берлин','Амстердам'].map(city=><button type="button" key={city} aria-pressed={draft.city===city} onClick={()=>setDraft({...draft,city})}>{city==='all'?'Весь мир':city}</button>)}</div></fieldset><fieldset><legend>Возраст</legend><div>{(['all','under30','30plus'] as const).map(age=><button type="button" key={age} aria-pressed={draft.age===age} onClick={()=>setDraft({...draft,age})}>{age==='all'?'Любой, от 18':age==='under30'?'18–29':'От 30'}</button>)}</div></fieldset><div className="ft-connect-filter-footer"><button type="button" onClick={()=>setDraft(INITIAL_FILTERS)}>Сбросить</button><ActionButton type="submit">Показать профили <Icon name="arrow" size={18}/></ActionButton></div></form></AppDialog>}
   {overlay.value==='likes'&&<AppDialog title="Кто вызвал интерес" eyebrow="Мои симпатии" onClose={close} presentation="adaptive"><div className="ft-connect-liked-list">{likes===0?<><Icon name="heart" size={32}/><p>Пока здесь никого. Когда кто-то понравится, можно будет вернуться к его профилю.</p></>:DESIGN_PROFILES.filter(p=>history.some(h=>h.id===p.id&&h.kind==='like')).map(p=><div key={p.id}><img src={`/images/profile-${p.photos[0]}.webp`} alt=""/><span><strong>{p.name}, {p.age}</strong><small>{p.city} · {p.looking}</small></span><button type="button" aria-label={`Вернуть профиль: ${p.name}`} onClick={()=>{changeSelection(history.filter(h=>h.id!==p.id),INITIAL_FILTERS);close()}}><Icon name="arrow" size={20}/></button></div>)}</div></AppDialog>}
  </section>;
@@ -80,6 +85,7 @@ function ProfileCard({profile,onDecision}:{profile:DesignProfile;onDecision:(kin
  const scroll=useRef<HTMLDivElement>(null);
  const details=useRef<HTMLDivElement>(null);
  const gesture=useRef<{id:number;x:number;y:number;axis:'x'|'y'|null}|null>(null);
+ useEffect(()=>{const cancel=()=>{gesture.current=null;setDrag(0)};window.addEventListener('resize',cancel);return()=>window.removeEventListener('resize',cancel)},[]);
  const pointerDown=(e:PointerEvent<HTMLDivElement>)=>{
   if(e.button!==0||(e.target as HTMLElement).closest('button,a,input'))return;
   gesture.current={id:e.pointerId,x:e.clientX,y:e.clientY,axis:null};
@@ -97,7 +103,7 @@ function ProfileCard({profile,onDecision}:{profile:DesignProfile;onDecision:(kin
   reset();if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);
   if(chosen)onDecision(dx>0?'like':'pass');
  };
- return <div className="ft-connect-profile" ref={scroll} tabIndex={0} aria-label={`Профиль: ${profile.name}. Прокрути, чтобы узнать больше.`} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={reset} onLostPointerCapture={reset} style={reduced?undefined:{transform:`translateX(${drag*.28}px) rotate(${drag*.025}deg)`}}>
+ return <div className="ft-connect-profile" ref={scroll} tabIndex={0} aria-label={`Профиль: ${profile.name}. Прокрути, чтобы узнать больше.`} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={reset} onLostPointerCapture={e=>{if(e.target===e.currentTarget)reset()}} style={reduced?undefined:{transform:`translateX(${drag}px) rotate(${drag*.045}deg)`}}>
   <div className="ft-connect-photo"><img key={photo} src={`/images/profile-${profile.photos[photo]}.webp`} alt={`${profile.name}, фото ${photo+1}`} draggable={false}/><div className="ft-connect-photo-shade"/>
    <div className="ft-connect-gallery" aria-label="Фотографии профиля">{profile.photos.map((n,i)=><button type="button" key={n} aria-label={`Показать фото ${i+1}`} aria-pressed={photo===i} onClick={()=>setPhoto(i)}><span/></button>)}</div>
    <button type="button" className="ft-connect-photo-prev" aria-label="Предыдущее фото" onClick={()=>setPhoto((photo+profile.photos.length-1)%profile.photos.length)}><Icon name="back" size={20}/></button><button type="button" className="ft-connect-photo-next" aria-label="Следующее фото" onClick={()=>setPhoto((photo+1)%profile.photos.length)}><Icon name="arrow" size={20}/></button>

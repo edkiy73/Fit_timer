@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link, Outlet, useNavigate, useLocation, type RouteObject } from 'react-router';
+import { Link, Outlet, useNavigate, useLocation, type RouteObject, Navigate } from 'react-router';
 import { AuthProvider, SignInForm, useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { AdminPanel } from '@appbase/ui-react/admin.js';
 import { I18nProvider, LanguagePicker, sharedUiLocale, useI18n } from '@appbase/ui-react/i18n.js';
@@ -15,7 +15,8 @@ import { InterestLifecycle, interestQueue } from './feture/use-interest-map';
 import { FetureExperience } from './feture/experience';
 import { WelcomePage } from './feture/welcome';
 import { FirstStepsPage } from './feture/first-steps';
-import { ProductBottomDock, PRIMARY_TABS } from './feture/primary-navigation';
+import { ProductLayout } from './feture/primary-navigation';
+import { DatingPresentationProvider } from './feture/dating-presentation';
 import { NativeNavigation } from './feture/native-navigation';
 import { isExperiencePath } from './feture/navigation';
 import { VerificationPage } from './feture/verification-page';
@@ -104,8 +105,7 @@ function Root(){
         <SettingsSync />
         <InterestLifecycle />
         <NativeNavigation />
-        <ProductBottomDock />
-        <Outlet />
+        <DatingPresentationProvider><ProductLayout><Outlet /></ProductLayout></DatingPresentationProvider>
       </AuthProvider>
     </Localized>
   );
@@ -127,6 +127,7 @@ function Home(){
   const location=useLocation();
   if(location.pathname==='/'&&auth.loading)return <main className="ft-welcome-loading" role="status">{t('account.appLoading')}</main>;
   if(location.pathname==='/'&&!auth.session)return <WelcomePage/>;
+  if(location.pathname==='/')return <Navigate to="/world" replace/>;
   return <FetureExperience/>;
 }
 
@@ -172,14 +173,6 @@ function Account(){
   return <div className="ft-account-page">
     <div className="ft-account-mobile-top"><Link to="/" className="ft-account-wordmark">Fet<span>Ure.</span></Link><Link to="/" className="ft-account-back"><Icon name="back" size={17}/> {t('account.myWorld')}</Link></div>
     <div className="ft-account-layout">
-      <aside className="ft-account-sidebar" aria-label={t('account.sidebarAria')}>
-        <Link to="/" className="ft-account-wordmark">Fet<span>Ure.</span></Link>
-        <p>{t('account.sidebarTagline')}</p>
-        <nav aria-label={t('account.sectionsAria')}>
-          {PRIMARY_TABS.map(item=><Link key={item.id} to={item.to} className={item.id==='account'?'active':''} aria-current={item.id==='account'?'page':undefined}><Icon name={item.icon} size={19}/>{t('nav.primary.'+item.id)}</Link>)}
-        </nav>
-        <span className="ft-account-sidebar-foot">{t('account.sidebarFoot')}</span>
-      </aside>
       <div className="ft-account-content">
         <div className="ft-account-heading"><div><span className="ft-account-eyebrow">{t('account.headingKicker')}</span><h1 id="ft-account-title">{t('account.heading')}</h1></div><Link to="/" className="ft-account-desktop-back"><Icon name="back" size={18}/> {t('account.myWorld')}</Link></div>
         {auth.loading ? <section role="status" className="ft-account-panel ft-account-loading">{t('account.loadingDetails')}</section> : auth.session ? <>

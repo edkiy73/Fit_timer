@@ -1,6 +1,12 @@
 import type { ru } from './ru';
 
 export const en: Record<keyof typeof ru, string> = {
+  'nav.primary.dating': 'Dating',
+  'nav.compact.world': 'My world',
+  'nav.compact.explore': 'Explore',
+  'nav.compact.community': 'Community',
+  'nav.compact.account': 'Me',
+  'nav.compact.dating': 'Dating',
   'app.eyebrow': 'AppBase',
   'app.readyTitle': 'Foundation ready',
   'app.readyText': 'Sign-in, sync, purchases, language, theme, Core, Vercel and tests are already wired.',

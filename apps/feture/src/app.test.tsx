@@ -45,15 +45,20 @@ describe('FetUre starter', () => {
     expect(await screen.findByRole('textbox',{name:'Email'})).toBeTruthy();
   });
 
-  it('separates Home from the personal World and renders five primary destinations', async () => {
+  it('opens World without a duplicate Home and adds Dating only after opting in', async () => {
     signIn();
     const user=userEvent.setup();
     const router=renderApp('/');
-    expect(await screen.findByRole('heading',{name:/Продолжим с тебя/i})).toBeTruthy();
-    expect(screen.getByRole('navigation',{name:'Основная навигация FetUre'}).querySelectorAll('a')).toHaveLength(5);
-    await user.click(within(screen.getByRole('navigation',{name:'Основная навигация FetUre'})).getByRole('link',{name:'Мой мир'}));
-    expect(router.state.location.pathname).toBe('/world');
     expect(await screen.findByRole('heading',{name:/Твой мир/i,level:1})).toBeTruthy();
+    const dock=()=>screen.getByRole('navigation',{name:'Основная навигация FetUre'});
+    expect(dock().querySelectorAll('a')).toHaveLength(4);
+    expect(router.state.location.pathname).toBe('/world');
+    await router.navigate('/dating');
+    await user.click(await screen.findByRole('button',{name:'Открыть знакомства'}));
+    expect(dock().querySelectorAll('a')).toHaveLength(5);
+    await user.click(within(dock()).getByRole('link',{name:'Исследовать'}));
+    expect(router.state.location.pathname).toBe('/explore');
+    expect(dock().querySelectorAll('a')).toHaveLength(5);
   });
   it('distinguishes the editorial Explore from a personal map', async () => {
     const router=renderApp('/explore');
@@ -179,7 +184,7 @@ describe('FetUre starter', () => {
       await screen.findByText('Запись сохранена. Её видишь только ты.');
       expect(calls).toHaveLength(2);expect(calls[1]).toEqual(calls[0]);
       await user.click(screen.getByRole('link',{name:'← Мой мир'}));
-      expect(await screen.findByRole('heading',{name:/Продолжим с тебя/i})).toBeTruthy();
+      expect(await screen.findByRole('heading',{name:/Твой мир/i,level:1})).toBeTruthy();
     } finally {vi.restoreAllMocks();}
   });
 
@@ -202,7 +207,7 @@ describe('FetUre starter', () => {
       await user.click(screen.getByRole('button',{name:'Сохранить и продолжить позже'}));
       await screen.findByRole('alert');expect(choice).toHaveProperty('checked',true);
       expect(screen.getByRole('button',{name:'Загрузить сохранённое'}).matches(':disabled')).toBe(true);
-      await user.click(screen.getByRole('link',{name:'Исследовать'}));
+      await user.click(within(screen.getByRole('navigation',{name:'Основная навигация FetUre'})).getByRole('link',{name:'Исследовать'}));
       await screen.findByRole('dialog',{name:'Результат действия ещё не подтверждён'});
       expect(screen.queryByRole('button',{name:'Уйти без сохранения'})).toBeNull();
       await user.click(screen.getByRole('button',{name:'Остаться'}));expect(choice).toHaveProperty('checked',true);
@@ -212,7 +217,7 @@ describe('FetUre starter', () => {
       await user.click(screen.getByRole('button',{name:'Повторить то же действие'}));
       await screen.findByText('Ответы сохранены. Можно продолжить позже.');
       expect(calls).toHaveLength(3);expect(calls[1]).toEqual(calls[0]);expect(calls[2]).toEqual(calls[0]);
-      await user.click(screen.getByRole('link',{name:'Исследовать'}));
+      await user.click(within(screen.getByRole('navigation',{name:'Основная навигация FetUre'})).getByRole('link',{name:'Исследовать'}));
       expect(await screen.findByRole('heading',{name:/Новое начинается с любопытства/i})).toBeTruthy();
     } finally {vi.restoreAllMocks();}
   });
