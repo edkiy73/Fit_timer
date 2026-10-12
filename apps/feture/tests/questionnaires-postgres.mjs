@@ -102,7 +102,7 @@ test('questionnaires history DTO rejects malformed provider metadata and strips 
  const valid=await repository.execute(actor,{action:'tests.list'});
  assert.deepEqual(valid,{versions:[],attempts:[{id:item.id,testId:item.testId,title:item.title,status:item.status,revision:item.revision,updatedAt:item.updatedAt}]});
  for(const patch of [
-  {id:'not-a-uuid'},{testId:'wrong/id'},{title:{private:'secret'}},{title:'unsafe\\ntext'},
+  {id:'not-a-uuid'},{testId:'wrong/id'},{title:{private:'secret'}},{title:'unsafe\ntext'},
   {status:'pending'},{revision:'1'},{revision:0},{updatedAt:'tomorrow'},
   {updatedAt:'2026-10-12'},
  ]){
