@@ -11,6 +11,7 @@ test('C02.4a public authors: opt-in, sever on revoke/rotate, exact replay, RLS r
   await db.exec('create role anon;create role authenticated;create role service_role bypassrls;');
   for(const file of ['20261010_001_feture_domain.sql','20261010_002_catalog_read.sql','20261010090405_feture_scoped_seed.sql','20261010164924_feture_interest_transactions.sql','20261010225100_feture_verification_store.sql','20261010225653_feture_documents.sql','20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql','20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql','20261011083303_feture_qa_adult_access.sql','20261011113717_feture_qa_any_account_audit.sql','20261011120139_feture_operator_roles.sql','20261011121629_feture_operator_account_binding.sql','20261011133134_feture_community_posts.sql','20261011134257_feture_post_review.sql','20261011140051_feture_post_reports.sql','20261011140835_feture_post_report_author_privacy.sql','20261011141800_feture_post_recipients.sql','20261011043127_feture_questionnaires.sql','20261011045829_feture_questionnaires_release.sql','20261011190651_feture_test_result_posts.sql','20261011193939_feture_post_photos.sql','20261012050032_feture_photo_review_consent.sql','20261012073357_feture_staff_photo_read.sql'])await db.exec(sql(file));
   await db.exec(sql('20261012213000_feture_public_authors.sql'));
+  await db.exec(sql('20261012215000_feture_public_author_resolve.sql'));
   const a='a'.repeat(32),b='b'.repeat(32);
   for(const actor of [a,b])await db.query('insert into public.feture_profiles(account_hash) values($1)',[actor]);
   await db.query("insert into public.feture_verification_policies values('fixture','production','v1',18,86400000,60000,90,true)");
@@ -43,8 +44,23 @@ test('C02.4a public authors: opt-in, sever on revoke/rotate, exact replay, RLS r
   assert.notEqual(rotated.publicAuthorId,first.publicAuthorId);
   assert.equal((await op(a,rotate(12))).publicAuthorId,rotated.publicAuthorId);
   assert.equal((await db.query('select count(*)::int n from public.feture_public_authors')).rows[0].n,1);
+  await rpc('feture_consent_accept',[b,'ru',docs]);
+  await db.query("insert into public.feture_verification_attempts(id,account_hash,issuer,environment,policy_version,state,created_at,expires_at,proof_issued_at,proof_expires_at) values($1,$2,'fixture','production','v1','verified',clock_timestamp()-interval '1 minute',clock_timestamp()+interval '1 hour',clock_timestamp(),clock_timestamp()+interval '1 hour')",[uuid(2),b]);
+  const published=uuid(100),hidden=uuid(101);
+  await db.query("insert into public.feture_posts(id,author_hash,body,kind,author_label,state,audience,published_at) values($1,$2,'Shared text','text','Alias','published','public',clock_timestamp())",[published,a]);
+  await db.query("insert into public.feture_posts(id,author_hash,body,kind,author_label,state,audience) values($1,$2,'Private text','text','Alias','hidden','private')",[hidden,a]);
+  const resolve=(actor,postId)=>rpc('feture_public_author_resolve',[actor,postId]);
+  assert.deepEqual(await resolve(b,published),{ok:true,publicAuthorId:rotated.publicAuthorId});
+  assert.equal((await resolve(b,hidden)).error,'resource_not_found');
+  assert.equal((await resolve(b,uuid(200))).error,'resource_not_found');
+  await db.query('insert into public.feture_blocks(blocker_hash,blocked_hash) values($1,$2)',[a,b]);
+  assert.equal((await resolve(b,published)).error,'resource_not_found');
+  await db.query('delete from public.feture_blocks where blocker_hash=$1 and blocked_hash=$2',[a,b]);
+  assert.equal((await resolve(b,published)).publicAuthorId,rotated.publicAuthorId);
+
   await db.query('update public.feture_verification_attempts set proof_expires_at=clock_timestamp() where account_hash=$1',[a]);
   assert.equal((await op(a,rotate(13))).error,'resource_not_found');
+  assert.equal((await resolve(b,published)).error,'resource_not_found');
   const denied=await op(a,disable(14));
   assert.equal(denied.enabled,false);assert.equal(denied.publicAuthorId,null);
   assert.equal((await op(a,enable(11))).enabled,false); // historical retry cannot resurrect a link.
@@ -57,6 +73,7 @@ test('C02.4a public authors: opt-in, sever on revoke/rotate, exact replay, RLS r
    await assert.rejects(db.query('select * from public.feture_public_authors'),/permission denied/);
    await assert.rejects(db.query('select * from public.feture_public_author_operations'),/permission denied/);
    await assert.rejects(op(a,{action:'authors.status'}),/permission denied/);
+   await assert.rejects(resolve(b,published),/permission denied/);
   }
  } finally {await db.close();}
 });
