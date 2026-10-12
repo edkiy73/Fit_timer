@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-export type IconName = 'world'|'compass'|'users'|'heart'|'arrow'|'back'|'check'|'lock'|'close'|'plus'|'search'|'shield'|'book'|'message'|'spark'|'eye'|'clock'|'settings';
+export type IconName = 'world'|'compass'|'users'|'heart'|'arrow'|'back'|'check'|'lock'|'close'|'plus'|'search'|'shield'|'book'|'message'|'spark'|'eye'|'clock'|'settings'|'user';
 export function Icon({name,size=20}:{name:IconName,size?:number}){
   const paths:Record<IconName,ReactNode> = {
     world:<><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 4 3 14 0 18M12 3c-3 4-3 14 0 18"/></>,
@@ -16,7 +16,8 @@ export function Icon({name,size=20}:{name:IconName,size?:number}){
     spark:<path d="m12 2 1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2ZM19 17v5m-2.5-2.5h5"/>,
     eye:<><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></>,
     clock:<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
-    settings:<><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9 7 7m10 10 2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></>
+    settings:<><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9 7 7m10 10 2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></>,
+    user:<><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>
   };
   return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>{paths[name]}</svg>;
 }

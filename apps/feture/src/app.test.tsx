@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryRouter, RouterProvider } from 'react-router';
@@ -45,6 +45,16 @@ describe('FetUre starter', () => {
     expect(await screen.findByRole('textbox',{name:'Email'})).toBeTruthy();
   });
 
+  it('separates Home from the personal World and renders five primary destinations', async () => {
+    signIn();
+    const user=userEvent.setup();
+    const router=renderApp('/');
+    expect(await screen.findByRole('heading',{name:/Продолжим с тебя/i})).toBeTruthy();
+    expect(screen.getByRole('navigation',{name:'Основная навигация FetUre'}).querySelectorAll('a')).toHaveLength(5);
+    await user.click(within(screen.getByRole('navigation',{name:'Основная навигация FetUre'})).getByRole('link',{name:'Мой мир'}));
+    expect(router.state.location.pathname).toBe('/world');
+    expect(await screen.findByRole('heading',{name:/Твой мир/i})).toBeTruthy();
+  });
   it('keeps the intended shared-card route in account sign-in navigation state', async () => {
     const id='91e9ee01-e4e2-4900-a7ad-144c46442390';
     const router=renderApp('/share/'+id);
@@ -134,7 +144,7 @@ describe('FetUre starter', () => {
       await screen.findByText('Запись сохранена. Её видишь только ты.');
       expect(calls).toHaveLength(2);expect(calls[1]).toEqual(calls[0]);
       await user.click(screen.getByRole('link',{name:'← Мой мир'}));
-      expect(await screen.findByRole('heading',{name:/Твой мир/i})).toBeTruthy();
+      expect(await screen.findByRole('heading',{name:/Продолжим с тебя/i})).toBeTruthy();
     } finally {vi.restoreAllMocks();}
   });
 

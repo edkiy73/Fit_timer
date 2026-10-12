@@ -1,9 +1,9 @@
 import { useCallback, useRef } from 'react';
 import { useLocation, useNavigate, useNavigationType, useParams } from 'react-router';
 
-export type ExperienceTab = 'world'|'explore'|'community'|'dating';
+export type ExperienceTab = 'home'|'world'|'explore'|'community'|'dating';
 const scrollPositions = new Map<string, number>(); // Positions only; no profile or answer data.
-export const isExperiencePath = (path:string) => path==='/' || /^\/(explore(?:\/[^/]+)?|community|dating)$/.test(path);
+export const isExperiencePath = (path:string) => path==='/' || /^\/(world|explore(?:\/[^/]+)?|community|dating)$/.test(path);
 
 export function useQueryOverlay(key:string){
   const location=useLocation();
@@ -33,7 +33,7 @@ export function useExperienceNavigation(){
   navigationRef.current=navigationType;
   const {categoryId}=useParams();
   const overlay=useQueryOverlay('interest');
-  const tab:ExperienceTab=location.pathname.startsWith('/explore')?'explore':location.pathname==='/community'?'community':location.pathname==='/dating'?'dating':'world';
+  const tab:ExperienceTab=location.pathname.startsWith('/explore')?'explore':location.pathname==='/community'?'community':location.pathname==='/dating'?'dating':location.pathname==='/world'?'world':'home';
   const params=new URLSearchParams(location.search);
   const query=params.get('q')||'';
   const path=location.pathname;
@@ -43,7 +43,7 @@ export function useExperienceNavigation(){
   },[path]);
   const rememberScroll=(top:number)=>scrollPositions.set(path,top);
   const search=query?new URLSearchParams({q:query}).toString():'';
-  const go=(next:ExperienceTab)=>navigate({pathname:next==='world'?'/':'/'+next,search:next==='explore'&&tab==='explore'?search:''});
+  const go=(next:ExperienceTab)=>navigate({pathname:next==='home'?'/':'/'+next,search:next==='explore'&&tab==='explore'?search:''});
   const openCategory=(id:string)=>navigate({pathname:'/explore/'+encodeURIComponent(id),search});
   const setQuery=(value:string)=>{
     const next=new URLSearchParams(location.search);

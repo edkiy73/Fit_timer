@@ -14,6 +14,7 @@ import { sameSession } from './feture/interest-api';
 import { InterestLifecycle, interestQueue } from './feture/use-interest-map';
 import { FetureExperience } from './feture/experience';
 import { WelcomePage } from './feture/welcome';
+import { ProductBottomDock, PRIMARY_TABS } from './feture/primary-navigation';
 import { NativeNavigation } from './feture/native-navigation';
 import { isExperiencePath } from './feture/navigation';
 import { VerificationPage } from './feture/verification-page';
@@ -102,6 +103,7 @@ function Root(){
         <SettingsSync />
         <InterestLifecycle />
         <NativeNavigation />
+        <ProductBottomDock />
         <Outlet />
       </AuthProvider>
     </Localized>
@@ -172,10 +174,7 @@ function Account(){
         <Link to="/" className="ft-account-wordmark">Fet<span>Ure.</span></Link>
         <p>Пространство, где интересно быть собой.</p>
         <nav aria-label="Основные разделы">
-          <Link to="/"><Icon name="world" size={19}/> Мой мир</Link>
-          <Link to="/explore"><Icon name="compass" size={19}/> Исследовать</Link>
-          <Link to="/community"><Icon name="users" size={19}/> Сообщество</Link>
-          <Link className="active" aria-current="page" to="/account"><Icon name="settings" size={19}/> Аккаунт</Link>
+          {PRIMARY_TABS.map(item=><Link key={item.id} to={item.to} className={item.id==='account'?'active':''} aria-current={item.id==='account'?'page':undefined}><Icon name={item.icon} size={19}/>{item.title}</Link>)}
         </nav>
         <span className="ft-account-sidebar-foot">Твой путь, твои правила</span>
       </aside>
@@ -231,6 +230,7 @@ export const routes: RouteObject[] = [
       element:<Shell />,
       children:[
         {index:true, element:<Home />},
+        {path:'world', element:<Home />},
         {path:'explore/:categoryId?', element:<Home />},
         {path:'community', element:<Home />},
         {path:'dating', element:<Home />},
