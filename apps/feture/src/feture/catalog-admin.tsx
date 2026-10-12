@@ -4,6 +4,7 @@ import type {AdminSectionContext} from '@appbase/ui-react/admin.js';
 import {AdminWorkspace} from '@appbase/ui-react/admin-workspace.js';
 import catalog from '../../data/concept-catalog.json';
 import published from '../../data/catalog-editorial.json';
+import './catalog-admin.css';
 
 const editorialEntry=z.object({
  definition:z.string().min(1).max(400).refine(s=>s.trim()===s&&!/[<>\x00-\x1f\x7f]/.test(s)),
@@ -27,6 +28,7 @@ const baseline=(id:string):Entry=>{
 export function CatalogAdmin({client,adminKey}:AdminSectionContext){
  const [id,setId]=useState(initialId);
  const [workspace,setWorkspace]=useState<'edit'|'publish'|null>(null),[listQuery,setListQuery]=useState(''),[publicationQuery,setPublicationQuery]=useState(''),[page,setPage]=useState(0);
+ const [publicationPage,setPublicationPage]=useState(0);
  const [drafts,setDrafts]=useState<z.infer<typeof draft>[]>([]);
  const [entry,setEntry]=useState<Entry>(()=>baseline(initialId));
  const [revision,setRevision]=useState(0),[dirty,setDirty]=useState(false),[loading,setLoading]=useState(false);
@@ -81,12 +83,15 @@ export function CatalogAdmin({client,adminKey}:AdminSectionContext){
  };
  const filteredTopics=topics.filter(topic=>[topic.title,topic.category,...(baseline(topic.id).synonyms)].join(' ').toLowerCase().includes(listQuery.trim().toLowerCase()));
  const filteredDrafts=drafts.filter(d=>{const t=topics.find(item=>item.id===d.interestId);return [t?.title,t?.category].join(' ').toLowerCase().includes(publicationQuery.trim().toLowerCase());});
+ const publicationPages=Math.max(1,Math.ceil(filteredDrafts.length/12));
+ const activePublicationPage=Math.min(publicationPage,publicationPages-1);
  return <section className="ft-catalog-admin">
   <div className="ab-admin-section-head"><div><h2>Каталог интересов</h2><p className="muted">{topics.length} тем · {drafts.length} черновиков · опубликована версия {publishedVersion}</p></div></div>
-  <div className="ft-form-actions"><button type="button" disabled={loading||publishing} onClick={()=>setWorkspace('publish')}>Публикация {publishSelected.length?('· '+publishSelected.length):''}</button>
+  <div className="ft-form-actions"><button type="button" disabled={loading||publishing} onClick={()=>{setPublicationPage(0);setWorkspace('publish');}}>Публикация {publishSelected.length?('· '+publishSelected.length):''}</button>
    <button type="button" className="ab-admin-secondary" disabled={loading||publishing} onClick={()=>setRefresh(n=>n+1)}>Обновить</button></div>
   <label>Поиск тем<input type="search" value={listQuery} onChange={e=>{setListQuery(e.target.value);setPage(0);}} placeholder="Название или категория"/></label>
-  <div className="ab-admin-item-list">
+  <p className="ft-catalog-results" role="status">{listQuery.trim()?'Найдено: '+filteredTopics.length+' из '+topics.length:'Тем в каталоге: '+topics.length}</p>
+  <div className="ab-admin-item-list ft-catalog-topic-list">
    {filteredTopics.slice(page*16,(page+1)*16).map(topic=>{
     const d=drafts.find(x=>x.interestId===topic.id);
     return <button type="button" key={topic.id} disabled={loading||publishing} onClick={()=>{choose(topic.id);setWorkspace('edit');}}>
@@ -106,7 +111,7 @@ export function CatalogAdmin({client,adminKey}:AdminSectionContext){
    <label>Поисковые синонимы (каждый с новой строки)<textarea disabled={loading} value={entry.synonyms.join('\n')} rows={4}
      onChange={e=>patch(v=>({...v,synonyms:e.target.value.split('\n').map(x=>x.trim()).filter(Boolean)}))}/></label>
    <h3>Связанные темы</h3>
-   <div>{entry.relatedIds.map(related=>{const t=topics.find(x=>x.id===related);return <span key={related} className="ft-textbtn">{t?.title??related} <button type="button" disabled={loading} aria-label={'Убрать '+(t?.title??related)} onClick={()=>patch(v=>({...v,relatedIds:v.relatedIds.filter(x=>x!==related)}))}>×</button> </span>;})}</div>
+   <div className="ft-catalog-related">{entry.relatedIds.map(related=>{const t=topics.find(x=>x.id===related);return <span key={related} className="ft-catalog-related-chip">{t?.title??related} <button type="button" disabled={loading} aria-label={'Убрать '+(t?.title??related)} onClick={()=>patch(v=>({...v,relatedIds:v.relatedIds.filter(x=>x!==related)}))}>×</button> </span>;})}</div>
    {entry.relatedIds.length<8&&<><label>Найти связанную тему<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Название или категория"/></label>
     <label>Выбрать тему<select value={nextRelated} onChange={e=>setNextRelated(e.target.value)}><option value="">Выбери тему</option>{relatedOptions.map(t=><option key={t.id} value={t.id}>{t.title} · {t.category}</option>)}</select></label>
     <button type="button" disabled={!nextRelated||loading} onClick={()=>{if(nextRelated&&relatedOptions.some(t=>t.id===nextRelated))patch(v=>({...v,relatedIds:[...v.relatedIds,nextRelated]}));setNextRelated('');}}>Добавить связь</button></>}
@@ -115,16 +120,19 @@ export function CatalogAdmin({client,adminKey}:AdminSectionContext){
   {workspace==='publish'&&<AdminWorkspace title="Публикация справочника" subtitle={'Версия '+publishedVersion+' · '+drafts.length+' доступных черновиков'} onClose={close}
     footer={<><button type="button" className="ab-admin-secondary" onClick={close}>Закрыть</button><button type="button" disabled={loading||publishing||dirty||publishSelected.length===0} onClick={()=>void publish()}>{publishing?'Публикуем…':('Опубликовать · '+publishSelected.length)}</button></>}>
    <p>Выбери только проверенные определения: опубликованные версии неизменяемы, а невыбранные темы не изменятся. Решение подтверждается отдельно.</p>
-   <label>Найти черновик<input type="search" value={publicationQuery} onChange={e=>setPublicationQuery(e.target.value)} placeholder="Название темы"/></label>
+   <label>Найти черновик<input type="search" value={publicationQuery} onChange={e=>{setPublicationQuery(e.target.value);setPublicationPage(0);}} placeholder="Название темы"/></label>
    <div className="ft-form-actions"><button type="button" className="ab-admin-secondary" disabled={publishing} onClick={()=>setPublishSelected([])}>Снять выбор ({publishSelected.length})</button></div>
-   <div className="ab-admin-item-list">
-    {filteredDrafts.map(d=><label key={d.interestId} className="ft-consent-choice">
+   <p className="ft-catalog-results" role="status">Найдено: {filteredDrafts.length} · выбрано во всём списке: {publishSelected.length}</p>
+   <div className="ab-admin-item-list ft-catalog-publish-list">
+    {filteredDrafts.slice(activePublicationPage*12,(activePublicationPage+1)*12).map(d=><label key={d.interestId} className="ft-consent-choice">
       <input type="checkbox" disabled={loading||publishing||dirty} checked={publishSelected.includes(d.interestId)}
        onChange={e=>setPublishSelected(items=>e.target.checked?[...items,d.interestId]:items.filter(v=>v!==d.interestId))}/>
-      {topics.find(t=>t.id===d.interestId)?.title??d.interestId} · редакция {d.revision}
+      <span><strong>{topics.find(t=>t.id===d.interestId)?.title??d.interestId}</strong><small>{topics.find(t=>t.id===d.interestId)?.category} · редакция {d.revision}</small></span>
      </label>)}
     {filteredDrafts.length===0&&<p className="muted">Нет подходящих черновиков.</p>}
    </div>
+   {publicationPages>1&&<nav className="ft-catalog-pagination" aria-label="Страницы черновиков"><button type="button" className="ab-admin-secondary" disabled={loading||publishing||activePublicationPage===0} onClick={()=>setPublicationPage(activePublicationPage-1)}>Назад</button><span>Страница {activePublicationPage+1} из {publicationPages}</span><button type="button" className="ab-admin-secondary" disabled={loading||publishing||activePublicationPage+1>=publicationPages} onClick={()=>setPublicationPage(activePublicationPage+1)}>Дальше</button></nav>}
+   <p className="muted">Выбор сохраняется при поиске и переходе между страницами. Публикуются все выбранные черновики.</p>
    {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
   </AdminWorkspace>}
  </section>;
