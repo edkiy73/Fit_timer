@@ -115,10 +115,12 @@ describe('FetUre starter', () => {
       await screen.findByRole('alert');
       expect(text).toHaveProperty('value','Мысль, которую нельзя потерять');
       await user.click(screen.getByRole('link',{name:'← Мой мир'}));
-      await screen.findByRole('dialog',{name:'Запись ещё не сохранена'});
+      await screen.findByRole('dialog',{name:'Результат действия ещё не подтверждён'});
+      expect(screen.queryByRole('button',{name:'Выйти без сохранения'})).toBeNull();
+      expect(text.matches(':disabled')).toBe(true);
       await user.click(screen.getByRole('button',{name:'Остаться'}));
       expect(text).toHaveProperty('value','Мысль, которую нельзя потерять');
-      await user.click(await screen.findByRole('button',{name:'Сохранить запись'}));
+      await user.click(await screen.findByRole('button',{name:'Повторить то же действие'}));
       await screen.findByText('Запись сохранена. Её видишь только ты.');
       expect(calls).toHaveLength(2);expect(calls[1]).toEqual(calls[0]);
       await user.click(screen.getByRole('link',{name:'← Мой мир'}));
