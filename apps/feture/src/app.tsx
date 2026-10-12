@@ -35,7 +35,16 @@ import {OperatorPage} from './feture/operator-page';
 import {ShareLinksPage,SharedCardPage} from './feture/share-links-page';
 import {ComparisonPage} from './feture/comparison-page';
 import type {AdminSection} from '@appbase/ui-react/admin.js';
-const productAdminSections:readonly AdminSection[]=[{id:'feture-operators',label:'Операторы QA',group:'FetUre',render:context=><OperatorsAdmin {...context}/>},{id:'feture-metrics',label:'Активность FetUre',group:'FetUre',render:context=><MetricsAdmin {...context}/> },{id:'feture-catalog',label:'Каталог FetUre',group:'FetUre',render:context=><CatalogAdmin {...context}/>},{id:'feture-tests',label:'Опросники FetUre',group:'FetUre',render:context=><QuestionnairesAdmin {...context}/>},{id:'feture-documents',label:'Документы FetUre',group:'FetUre',render:context=><DocumentsAdmin {...context}/>},{id:'feture-moderation',label:'Модерация FetUre',group:'FetUre',render:context=><ModerationAdmin {...context}/>},{id:'feture-qa-adult',label:'QA-доступ 18+',group:'FetUre',render:context=><QaAdultAdmin {...context}/>}];
+const productAdminSections:readonly AdminSection[]=[
+  // Keep IDs stable: AppBase persists the last selected tab in sessionStorage.
+  {id:'feture-moderation',label:'Модерация публикаций',group:'Проверка и доступ',render:context=><ModerationAdmin {...context}/>},
+  {id:'feture-qa-adult',label:'Временный доступ 18+',group:'Проверка и доступ',render:context=><QaAdultAdmin {...context}/>},
+  {id:'feture-operators',label:'Роли операторов',group:'Проверка и доступ',render:context=><OperatorsAdmin {...context}/>},
+  {id:'feture-catalog',label:'Темы каталога',group:'Редактура',render:context=><CatalogAdmin {...context}/>},
+  {id:'feture-tests',label:'Опросники',group:'Редактура',render:context=><QuestionnairesAdmin {...context}/>},
+  {id:'feture-documents',label:'Документы и согласия',group:'Редактура',render:context=><DocumentsAdmin {...context}/>},
+  {id:'feture-metrics',label:'Активность FetUre',group:'Наблюдение',render:context=><MetricsAdmin {...context}/>}
+];
 
 const hiddenFetureCoreTabs = ['overview','errors'] as const;
 const PRODUCT_NAME = 'FetUre';
