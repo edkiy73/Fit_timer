@@ -17,6 +17,7 @@ import { NativeNavigation } from './feture/native-navigation';
 import { isExperiencePath } from './feture/navigation';
 import { VerificationPage } from './feture/verification-page';
 import { ThemePicker } from './feture/components/ThemePicker';
+import { safeSignInReturnTo } from './feture/sign-in-return';
 import { Icon, type IconName } from './feture/components/Icon';
 import {DocumentsPage} from './feture/documents-page';
 import {DocumentsAdmin} from './feture/documents-admin';
@@ -132,6 +133,7 @@ function Account(){
   const auth = useOptionalAuth();
   const {t, locale} = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState('');
   // Keep Core logout and owner-scoped cleanup unchanged.
@@ -201,7 +203,7 @@ function Account(){
           <div className="ft-account-footer"><button className="ft-account-signout" type="button" disabled={signingOut} onClick={()=>void signOut()}><Icon name="back" size={17}/>{signingOut?'Выходим…':t('account.signOut')}</button>{signOutError&&<p role="alert">{signOutError}</p>}</div>
         </> : <div className="ft-account-guest">
           <section className="ft-account-hero" aria-labelledby="ft-guest-title"><span className="ft-account-hero-orbit" aria-hidden="true"/><span className="ft-account-hero-kicker">Место для твоих открытий</span><h2 id="ft-guest-title">Твой мир начинается с тебя.</h2><p>Исследуй свои интересы без длинной анкеты. С аккаунтом удобно вернуться к личным заметкам.</p><Link className="ft-account-secondary" to="/explore">Сначала исследовать <Icon name="arrow" size={18}/></Link></section>
-          <section className="ft-account-panel ft-account-signin" aria-labelledby="ft-signin-title"><h2 id="ft-signin-title">Войти или зарегистрироваться</h2><p>Используй свой email. Заполнить профиль можно позже.</p><SignInForm locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} askHandle={ASK_HANDLE} variant="inline" onSignedIn={()=>navigate('/')}/></section>
+          <section className="ft-account-panel ft-account-signin" aria-labelledby="ft-signin-title"><h2 id="ft-signin-title">Войти или зарегистрироваться</h2><p>Используй свой email. Заполнить профиль можно позже.</p><SignInForm locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} askHandle={ASK_HANDLE} variant="inline" onSignedIn={()=>navigate(safeSignInReturnTo(location.state),{replace:true})}/></section>
           <section className="ft-account-panel ft-account-preferences"><h2>Настройки</h2><div className="ft-account-preference-grid"><ThemePicker/><div className="language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')}/></div></div><Link className="ft-account-legal" to="/documents">Правила и согласия</Link></section>
         </div>}
       </div>
