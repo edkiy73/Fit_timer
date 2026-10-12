@@ -229,6 +229,33 @@ describe('owner interest outbox',()=>{
   await expect(afterParse.mutate(a,op,new AbortController().signal)).rejects.toMatchObject({code:'auth_required'});
   expect(parsed).toHaveBeenCalledTimes(1);
  });
+ it('rejects map success if the same session expires while HTTP or JSON is in flight',async()=>{
+  let time=Date.parse('2026-10-12T10:00:00.000Z');
+  const fakeClock=vi.spyOn(Date,'now').mockImplementation(()=>time);
+  try{
+   const current:AuthSession={...a,expiresAt:'2026-10-12T10:00:01.000Z'};
+   const op:Mutation={action:'interests.set',interestId:'interest-1-1',operationId:uuid(),expectedRevision:0,state};
+   const accepted={ok:true,replayed:false,appliedRevision:1,appliedAt:at,entry:entry(1)};
+   const send=vi.fn(async()=>{time+=2000;return new Response(JSON.stringify(accepted),{status:200});});
+   const api=createInterestAPI('/api/domain',async()=>current,send);
+   await expect(api.mutate(current,op,new AbortController().signal)).rejects.toMatchObject({code:'auth_required'});
+   expect(send).toHaveBeenCalledTimes(1);
+   time=Date.parse('2026-10-12T10:00:00.000Z');
+   const afterJson=vi.fn(async()=>{
+    const response=new Response(JSON.stringify(accepted),{status:200});
+    response.json=async()=>{time+=2000;return accepted;};
+    return response;
+   });
+   const parsed=createInterestAPI('/api/domain',async()=>current,afterJson);
+   await expect(parsed.mutate(current,op,new AbortController().signal)).rejects.toMatchObject({code:'auth_required'});
+   expect(afterJson).toHaveBeenCalledTimes(1);
+   // A newly attempted write with an already expired token must not be sent.
+   const blocked=vi.fn(async()=>new Response(JSON.stringify(accepted),{status:200}));
+   await expect(createInterestAPI('/api/domain',async()=>current,blocked)
+    .mutate(current,op,new AbortController().signal)).rejects.toMatchObject({code:'auth_required'});
+   expect(blocked).not.toHaveBeenCalled();
+  }finally{fakeClock.mockRestore();}
+ });
  it('guards request credentials and rejects invalid success envelopes instead of acknowledging writes',async()=>{
   let current:AuthSession|null=a;
   const send=vi.fn(async()=>new Response(JSON.stringify({ok:true,replayed:false,appliedRevision:1,appliedAt:at,entry:entry(1)}),{status:200}));
