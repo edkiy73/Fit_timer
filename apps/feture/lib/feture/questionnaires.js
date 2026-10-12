@@ -63,7 +63,7 @@ function attemptDTO(input){const a=pick(input,['id','version','status','answers'
  try{a.answers=answers(a.answers);}catch{return reject(503,'domain_unavailable');}
  if(a.result!==null){
   const r=pick(a.result,['answered','total','dimensions']);
-  const def=a.version.definition;
+  const def=/** @type {import('./questionnaires').TestDefinition} */(a.version.definition);
   if(typeof r.total!=='number'||r.total!==def.questions.length||
     typeof r.answered!=='number'||!Number.isSafeInteger(r.answered)||r.answered<0||r.answered>r.total||
     !Array.isArray(r.dimensions)||r.dimensions.length!==def.dimensions.length)reject(503,'domain_unavailable');
@@ -71,20 +71,21 @@ function attemptDTO(input){const a=pick(input,['id','version','status','answers'
    const dim=pick(value,['id','answered','total','average','level','interpretation','questionIds']);
    const expected=def.dimensions[index];
    const dimQuestions=def.questions.filter(q=>q.dimension===expected.id);
-   if(dim.id!==expected.id||!Number.isSafeInteger(dim.total)||dim.total!==dimQuestions.length||
-     !Number.isSafeInteger(dim.answered)||dim.answered<0||dim.answered>dim.total||
+   if(dim.id!==expected.id||typeof dim.total!=='number'||!Number.isSafeInteger(dim.total)||dim.total!==dimQuestions.length||
+     typeof dim.answered!=='number'||!Number.isSafeInteger(dim.answered)||dim.answered<0||dim.answered>dim.total||
      dim.average!==null&&(typeof dim.average!=='number'||!Number.isFinite(dim.average)||dim.average<0||dim.average>4)||
      typeof dim.interpretation!=='string'||!dim.interpretation.trim()||dim.interpretation.length>800||
-     /[\\x00-\\x1f\\x7f]/.test(dim.interpretation)||!Array.isArray(dim.questionIds)||
+     /[\x00-\x1f\x7f]/.test(dim.interpretation)||!Array.isArray(dim.questionIds)||
      dim.questionIds.length!==dim.answered||
      new Set(dim.questionIds).size!==dim.questionIds.length||
      dim.questionIds.some(q=>!dimQuestions.some(question=>question.id===q)))
     reject(503,'domain_unavailable');
-   const expectedLevel=dim.average===null?'insufficient':dim.average<1.5?'low':dim.average<2.75?'mid':'high';
+   const average=/** @type {number|null} */(dim.average);
+   const expectedLevel=average===null?'insufficient':average<1.5?'low':average<2.75?'mid':'high';
    if(dim.level!==expectedLevel)reject(503,'domain_unavailable');
    return dim;
   });
-  if(r.dimensions.reduce((sum,dim)=>sum+dim.answered,0)!==r.answered)reject(503,'domain_unavailable');
+  if(r.dimensions.reduce((sum,dim)=>sum+/** @type {number} */(dim.answered),0)!==r.answered)reject(503,'domain_unavailable');
   a.result=r;
  }
  if((a.status==='completed')!==(a.result!==null))reject(503,'domain_unavailable');return a;
