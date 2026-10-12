@@ -20,7 +20,11 @@ test('FetUre diagnostic shape carries only fixed enum/family and bounded build',
  assert.deepEqual(v,{action:'client_error',kind:'rejection',name:'TypeError',message:'feture_client_error',stack:'',build:'',platform:'ios',locale:'en'});
  const invalid=safeFetureDiagnostic({name:'Custom-'+leaked[0],kind:'supercritical',platform:'myphone',locale:leaked[1],build:'a'.repeat(200)});
  assert.equal(invalid.name,'Error');assert.equal(invalid.kind,'error');assert.equal(invalid.platform,'web');assert.equal(invalid.locale,'ru');assert.equal(invalid.build,'');
- assert.equal(safeFetureDiagnostic({name:'ReferenceError',build:'main.abc-123_456'}).build,'main.abc-123_456');
+ assert.equal(safeFetureDiagnostic({name:'ReferenceError',build:'abcdef123456'}).build,'abcdef123456');
+ assert.equal(safeFetureDiagnostic({name:'ReferenceError',build:'dev'}).build,'dev');
+ // Client-supplied text matching the old broad build charset must not reach Core diagnostics.
+ for(const value of ['main.abc-123_456','privateanswer','private-answer-abc','ABCDEF123456','12345678901'])
+  assert.equal(safeFetureDiagnostic({build:value}).build,'',value);
 });
 test('FetUre Core auth forces sanitization even when bypassing browser and sending raw data',async()=>{
  const payload={action:'client_error',kind:'rejection',name:'CustomName-'+leaked[0],message:leaked.join(' '),stack:'Error: '+leaked.join('\\n'),build:leaked[4],platform:'ios',locale:'en',extra:{private:leaked[1]}};
