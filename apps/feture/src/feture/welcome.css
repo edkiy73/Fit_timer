@@ -54,3 +54,16 @@
 @media(max-width:700px){.ft-welcome-header{padding:15px 20px;min-height:72px}.ft-welcome-header-explore{display:none}.ft-welcome-hero{display:flex;flex-direction:column;align-items:stretch;width:calc(100% - 24px);padding:clamp(27px,7vw,42px) 25px 34px;min-height:0;border-radius:30px}.ft-welcome-copy h1{font-size:clamp(42px,10.5vw,64px);letter-spacing:-.07em;margin:27px 0 22px}.ft-welcome-lede{font-size:15px}.ft-welcome-art{height:250px;min-height:0;margin:6px -10px -8px;overflow:visible}.ft-welcome-art svg{max-height:260px;max-width:340px}.ft-welcome-art-caption{right:2%;bottom:1px;font-size:11px;padding:12px 14px}.ft-welcome-art-caption span{font-size:15px}.ft-welcome-buttons{flex-direction:column}.ft-welcome-buttons a{width:100%}.ft-welcome-values{width:calc(100% - 36px);padding:50px 0}.ft-welcome-values-heading{display:block}.ft-welcome-values-heading h2{margin:13px 0 0}.ft-welcome-value-grid{grid-template-columns:minmax(0,1fr);gap:0}.ft-welcome-value{display:grid;grid-template-columns:54px minmax(0,1fr);gap:4px 14px;padding:16px 0;border-bottom:1px solid var(--ft-border)}.ft-welcome-value+.ft-welcome-value:before{display:none}.ft-welcome-value-no{grid-column:1/-1}.ft-welcome-value-icon{grid-row:2/4;width:48px;height:48px;margin:10px 0}.ft-welcome-value h3{margin:10px 0 0}.ft-welcome-value p{grid-column:2;max-width:none}}
 @media(max-width:355px){.ft-welcome-hero{padding:26px 17px 28px}.ft-welcome-copy h1{font-size:40px}.ft-welcome-art{height:200px}.ft-welcome-art svg{max-height:216px}.ft-welcome-brand{font-size:25px}.ft-welcome-login{padding:0 11px;font-size:12px}}
 @media(prefers-reduced-motion:reduce){.ft-welcome-art svg{animation:none}.ft-welcome-buttons a{transition:none}.ft-welcome-buttons a:is(:hover,:active){transform:none}}
+
+
+/* Claude reference: editorial staged reveal, without hiding content on reduced-motion devices. */
+@media(prefers-reduced-motion:no-preference){
+ .ft-welcome-kicker{animation:ft-welcome-reveal .62s var(--ft-ease) both}
+ .ft-welcome-copy h1{animation:ft-welcome-reveal .72s var(--ft-ease) .08s both}
+ .ft-welcome-lede{animation:ft-welcome-reveal .64s var(--ft-ease) .19s both}
+ .ft-welcome-buttons{animation:ft-welcome-reveal .64s var(--ft-ease) .28s both}
+ .ft-welcome-trust{animation:ft-welcome-reveal .55s var(--ft-ease) .34s both}
+ .ft-welcome-art-caption{animation:ft-welcome-caption-in .72s var(--ft-ease) .26s both}
+}
+@keyframes ft-welcome-reveal{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ft-welcome-caption-in{from{opacity:0;transform:translateY(20px) rotate(-8deg)}to{opacity:1;transform:translateY(0) rotate(-5deg)}}

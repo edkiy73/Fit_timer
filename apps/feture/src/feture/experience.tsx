@@ -62,7 +62,7 @@ export function FetureExperience(){
         to={item.to}><Icon name={item.icon} size={19}/>{item.title}</Link>)}
     </nav>
     <main className="ft-main" id="ft-main" tabIndex={-1} ref={area} onScroll={e=>rememberScroll(e.currentTarget.scrollTop)}>
-      <m.div className="ft-content" key={location.pathname} initial={reduceMotion?false:{opacity:0,y:6}} animate={{opacity:1,y:0}}>
+      <m.div className="ft-content" key={location.pathname} initial={reduceMotion?false:{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={motionTokens.screen}>
         {(tab==='world'||tab==='explore')&&<>
          {!(phase==='synced'&&pending===0)&&<div className="ft-interest-status" role="status">
           {phase==='local'?'Можно изучать темы без входа. Чтобы вернуться к отметкам с другого устройства, войди в аккаунт.':phase==='loading'?'Открываем твою карту…':phase==='synced'?'Некоторые изменения ещё сохраняются…':phase==='syncing'?'Сохраняем изменения…':phase==='adult_verification_required'?'Чтобы сохранить изменения в аккаунте, нужно подтвердить совершеннолетие. Пока они доступны здесь.':phase==='auth_required'?'Чтобы продолжить сохранять карту в аккаунте, войди снова.':phase==='storage_error'?'Не удалось сохранить последние изменения. Не закрывай редактор и попробуй ещё раз.':phase==='invalid_request'?'Не удалось принять изменения. Проверь их и повтори попытку.':phase==='rate_limited'?'Слишком много попыток сохранения. Попробуй позже.':phase==='offline'||phase==='unavailable'?'Нет связи с аккаунтом. Сохранение ещё не подтверждено — проверь подключение и повтори.':pending?'Есть изменения, которые ещё не подтверждены аккаунтом.':'Проверяем состояние изменений…'}
