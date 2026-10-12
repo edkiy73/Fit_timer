@@ -237,4 +237,13 @@
 .ft-dialog-adaptive :is(.ft-status small,.ft-intensity small,.ft-visibility small){color:var(--ft-muted);font-size:12px;line-height:1.5}
 .ft-overlay-adaptive .ft-modal[data-entering]{animation:ft-dialog-in var(--ft-motion-panel) var(--ft-ease)}
 @media(max-width:767px){
- .ft-overlay-adaptive{align-items:flex-end;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area
+ .ft-overlay-adaptive{align-items:flex-end;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}
+ .ft-overlay-adaptive .ft-modal{width:100%;max-width:none}
+ .ft-dialog-adaptive{max-height:calc(92dvh - env(safe-area-inset-top,0px));border-radius:var(--ft-radius-panel) var(--ft-radius-panel) 0 0;border-bottom:0}
+ .ft-dialog-header{padding:22px 20px 16px}
+ .ft-dialog-header h2{font-size:22px}
+ .ft-dialog-body{padding:18px 20px calc(24px + env(safe-area-inset-bottom,0px))}
+}
+@media(prefers-reduced-motion:reduce){.ft-overlay-adaptive .ft-modal[data-entering]{animation:none}}
+
+.ft-explore-empty .ft-state{flex-wrap:wrap;align-items:flex-start}.ft-explore-empty .ft-state>div{flex:1 1 200px;min-width:0}.ft-explore-empty button{max-width:100%;white-space:normal}
