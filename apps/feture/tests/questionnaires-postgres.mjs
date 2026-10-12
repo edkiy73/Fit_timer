@@ -112,3 +112,32 @@ test('questionnaires history DTO rejects malformed provider metadata and strips 
  payload={ok:true,versions:[],attempts:[item,{...item}]};
  await assert.rejects(repository.execute(actor,{action:'tests.list'}),e=>e.status===503&&e.code==='domain_unavailable');
 });
+
+test('questionnaires: completed result projection validates scoring metadata instead of returning malformed nested data',async()=>{
+ const email='scoring@example.com',device='scoring-device',token='scoring-token',hash=createHash('sha256').update(email).digest('hex').slice(0,32);
+ const actor=await authenticate({headers:{'x-fit-email':email,'x-fit-device':device,'x-fit-token':token}},
+  {configured:()=>true,get:async key=>key==='a:'+hash?JSON.stringify({email,syncDevices:{[device]:{h:createHash('sha256').update(token).digest('hex'),at:new Date().toISOString()}}}):null},
+  async()=>new Date(Date.now()+3600000).toISOString());
+ const definition=make();
+ const at='2026-10-12T12:00:00Z';
+ const version={id:id(5000),testId:definition.id,revision:1,definition,publishedAt:at};
+ const answers=Object.fromEntries(definition.questions.map(q=>[q.id,['o4']]));
+ const dim={id:'connection',answered:6,total:6,average:4,level:'high',interpretation:definition.dimensions[0].high,questionIds:definition.questions.map(q=>q.id)};
+ const original={id:id(5001),version,status:'completed',answers,position:5,revision:2,result:{answered:6,total:6,dimensions:[dim]},updatedAt:at,accountHash:hash,secret:'never exposed'};
+ let response={ok:true,attempt:original};
+ const repo=createTestsRepository({configured:()=>true,request:async()=>new Response(JSON.stringify(response))},{requireCurrent:async()=>{}});
+ const command={action:'tests.read',attemptId:original.id};
+ const accepted=await repo.execute(actor,command);
+ assert.equal(accepted.attempt.result.dimensions[0].level,'high');
+ assert.equal(accepted.attempt.accountHash,undefined);
+ assert.equal(accepted.attempt.secret,undefined);
+ const expectDenied=async()=>assert.rejects(repo.execute(actor,command),e=>e.status===503&&e.code==='domain_unavailable');
+ for(const bad of [
+  {answered:7},{total:7},{dimensions:[{...dim,average:'4'}]},
+  {dimensions:[{...dim,average:Infinity}]},{dimensions:[{...dim,level:'low'}]},
+  {dimensions:[{...dim,interpretation:'x'.repeat(801)}]},
+  {dimensions:[{...dim,questionIds:['q0','q0','q2','q3','q4','q5']}]},
+  {dimensions:[{...dim,questionIds:['q0']}]},{dimensions:[]},
+  {dimensions:[{...dim,total:4}]},
+ ]){response={ok:true,attempt:{...original,result:{...original.result,...bad}}};await expectDenied();}
+});
