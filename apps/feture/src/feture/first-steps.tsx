@@ -17,7 +17,7 @@ export function FirstStepsPage(){
  const [goal,setGoal]=useState<Goal|null>(null);
  const [selected,setSelected]=useState<string[]>([]);
  const categories=data.categories.slice(0,9);
- const finalTo=selected.length>0?'/explore/'+encodeURIComponent(selected[0]!):'/explore';
+ const finalTo=selected.length>0?'/explore/'+encodeURIComponent(selected[0]!):goal==='people'?'/community':goal==='self'?'/tests':'/explore';
  const next=()=>{if(step<2)setStep(current=>current+1);else navigate(finalTo);};
  const back=()=>setStep(current=>Math.max(0,current-1));
  return <main className="ft-first">
@@ -61,7 +61,7 @@ export function FirstStepsPage(){
     </div>
     <footer className="ft-first-actions">
       {step>0?<button type="button" className="ft-first-back" onClick={back}><Icon name="back" size={18}/> Назад</button>:<Link to="/" className="ft-first-back">На главную</Link>}
-      <button type="button" className="ft-first-next" onClick={next}>{step===2?(selected.length?'Перейти к выбранной теме':'Открыть каталог'):'Продолжить'} <Icon name="arrow" size={19}/></button>
+      <button type="button" className="ft-first-next" onClick={next}>{step===2?(selected.length?'Перейти к выбранной теме':goal==='people'?'Открыть сообщество':goal==='self'?'Перейти к вопросам':'Открыть каталог'):'Продолжить'} <Icon name="arrow" size={19}/></button>
     </footer>
    </section>
   </div>
