@@ -213,7 +213,7 @@ export async function runEventOwnersPostgres(){
   assert.equal((await rsvp(b,going)).visibleToAttendees,true);
   assert.equal((await rsvp(b,interested)).status,'going'); // immutable replay cannot restore old RSVP
   assert.equal((await own(b)).status,'going');
-  assert.equal((await rsvp(b,choice(a,9803,'going'))).error,'resource_not_found');
+  assert.equal((await rsvp(a,choice(a,9803,'going'))).error,'resource_not_found');
   assert.equal((await rsvp(b,{...going,operationId:id(9804),status:'declined',visibleToAttendees:true})).error,'invalid_request');
   for(const [n,who] of [[9805,c],[9806,manager],[9807,qa],[9808,auditor]])
    assert.equal((await rsvp(who,choice(who,n,'going'))).ok,true);
