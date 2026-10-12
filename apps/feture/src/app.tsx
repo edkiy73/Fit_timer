@@ -103,8 +103,8 @@ function Root(){
         <SettingsSync />
         <InterestLifecycle />
         <NativeNavigation />
-        <Outlet />
         <ProductBottomDock />
+        <Outlet />
       </AuthProvider>
     </Localized>
   );
