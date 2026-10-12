@@ -82,7 +82,7 @@ export function FetureExperience(){
           <div className="ft-conflict-actions"><button type="button" onClick={()=>void resolve(id,false)}>Оставить версию аккаунта</button><button type="button" onClick={()=>{if(window.confirm('Применить мою версию целиком, включая желание, опыт, границу и видимость? Это может восстановить удалённую тему или изменить границу.'))void resolve(id,true);}}>Применить мою версию</button></div>
          </div>)}
         </>}
-        {source!=='live'&&<div className="ft-network-hint" role="status"><Icon name={source==='loading'?'clock':'shield'} size={16}/>{source==='loading'?'Подключаем каталог…':'Нет соединения. Можно продолжить исследование.'}{source==='offline'&&<button onClick={retry}>Обновить</button>}</div>}
+        {source!=='live'&&<div className="ft-network-hint" role="status"><Icon name={source==='loading'?'clock':'shield'} size={16}/>{source==='loading'?'Подключаем каталог…':'Не удалось обновить каталог. Доступные темы остаются на экране.'}{source==='offline'&&<button onClick={retry}>Обновить</button>}</div>}
         {tab==='world'&&<>
           <div className="ft-hero">
             <div><p className="ft-hero-kicker">Личное пространство</p><h1>Твой мир.<br/><span>Твои грани.</span></h1>
@@ -94,7 +94,7 @@ export function FetureExperience(){
              <div><strong>{overall.interests}</strong><small>интересных тем</small></div>
              <div><strong>{overall.measured}</strong><small>тем с оценкой силы</small></div>
              <div><strong>{overall.boundaries}</strong><small>жёстких границ</small></div></div>
-          <div className="ft-section-head"><div><h2>Карта моего мира</h2><p>12 направлений. Каждое раскрывается постепенно.</p></div><button className="ft-textbtn" onClick={()=>go('explore')}>Все темы <Icon name="arrow" size={17}/></button></div>
+          <div className="ft-section-head"><div><h2>Карта моего мира</h2><p>Направлений: {data.categories.length}. Каждое раскрывается постепенно.</p></div><button className="ft-textbtn" onClick={()=>go('explore')}>Все темы <Icon name="arrow" size={17}/></button></div>
           {mapLoading?<StateCard tone="loading" title="Загружаем личную карту…"/>:<div className="ft-jars">
             {data.categories.map(category=>{
               const progress=categoryProgress(category.interests.map(i=>i.id),map);

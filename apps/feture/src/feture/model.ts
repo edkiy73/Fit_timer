@@ -83,7 +83,10 @@ const catalogCategory=z.object({
 const catalogTest=z.object({
  id:z.string(),title:z.string(),description:z.string(),category:z.number().int(),questions:z.number().int()
 });
-export const catalogSchema=z.object({version:z.number(),categories:z.array(catalogCategory),tests:z.array(catalogTest)});
+// A successful HTTP response with no published topics is not a usable release.
+// Reject it so consumers keep their bundled catalogue instead of showing a blank page.
+export const catalogSchema=z.object({version:z.number(),categories:z.array(catalogCategory),tests:z.array(catalogTest)})
+ .refine(value=>value.categories.some(category=>category.interests.length>0),{message:'catalog_empty'});
 
 const searchKey=(text:string)=>text.normalize('NFKC').toLocaleLowerCase('ru').replace(/ё/g,'е').trim();
 export function matchesInterest(item:Catalog['categories'][number]['interests'][number],query:string):boolean {
