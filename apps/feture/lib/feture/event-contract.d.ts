@@ -13,6 +13,7 @@ export type EventCommand=
  | {action:'events.rsvpStatus';id:string}
  | {action:'events.attendanceStatus';id:string}
  | {action:'events.attendanceRequests';id:string;cursor:EventCursor|null}
+ | {action:'events.attendanceDecide';id:string;requestId:string;operationId:string;expectedRevision:number;decision:'approve'|'decline';reason:'reviewed'|'capacity'|'policy'|'safety'|'other'}
  | {action:'events.attendanceRequest'|'events.attendanceWithdraw';id:string;operationId:string}
  | {action:'events.rsvpSet';id:string;operationId:string;status:'interested'|'going'|'declined'|'withdrawn';visibleToAttendees:boolean}
  | {action:'events.save';id:string;operationId:string;expectedRevision:number;draft:EventDraft}

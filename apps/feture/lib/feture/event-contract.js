@@ -56,6 +56,15 @@ function eventCommand(v){
  if((v.action==='events.mine'||v.action==='events.catalog')&&keys(v,['action','cursor'])&&
     (v.cursor===null||record(v.cursor)&&keys(v.cursor,['at','id'])&&pgStamp(v.cursor.at)&&typeof v.cursor.id==='string'&&uuid.test(v.cursor.id)))
   return /** @type {import('./event-contract').EventCommand} */(v);
+ if(v.action==='events.attendanceDecide'&&
+    keys(v,['action','decision','expectedRevision','id','operationId','reason','requestId'])&&
+    typeof v.id==='string'&&uuid.test(v.id)&&
+    typeof v.requestId==='string'&&uuid.test(v.requestId)&&
+    typeof v.operationId==='string'&&uuid.test(v.operationId)&&
+    Number.isSafeInteger(v.expectedRevision)&&v.expectedRevision>=1&&v.expectedRevision<=999999999999999&&
+    (v.decision==='approve'&&v.reason==='reviewed'||
+     v.decision==='decline'&&['capacity','policy','safety','other'].includes(String(v.reason))))
+  return /** @type {import('./event-contract').EventCommand} */(v);
  if(v.action==='events.attendanceRequests'&&keys(v,['action','id','cursor'])&&
     typeof v.id==='string'&&uuid.test(v.id)&&
     (v.cursor===null||record(v.cursor)&&keys(v.cursor,['at','id'])&&
