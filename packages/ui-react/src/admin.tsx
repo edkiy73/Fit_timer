@@ -27,6 +27,8 @@ export interface AdminPanelProps {
   extraSections?: readonly AdminSection[];
   /** Optional product-local opt-out for globally shared Core observability tabs. */
   hiddenCoreTabs?: readonly ('overview' | 'errors')[];
+  /** Require a real protected server read before showing the admin workspace (opt-in). */
+  validateKeyOnConnect?: boolean;
   /** Readable names of the product's analytics events, in the Admin language. */
   eventLabels?: Readonly<Record<string, string>>;
   /** The product's own terms of use (Markdown), shown in the legal tab until the owner edits them. */
@@ -395,12 +397,18 @@ function paymentStatusLabel(status: unknown, copy: Copy){
     : status === 'manual_grant' ? copy.statusManualGrant : status === 'manual_revoke' ? copy.statusManualRevoke : String(status || '');
 }
 
-export function AdminPanel({client, productName, locale='ru', extraSections=NO_SECTIONS, hiddenCoreTabs=NO_HIDDEN_CORE_TABS, eventLabels=NO_LABELS, defaultTerms=''}: AdminPanelProps){
+export function AdminPanel({client, productName, locale='ru', extraSections=NO_SECTIONS, hiddenCoreTabs=NO_HIDDEN_CORE_TABS, eventLabels=NO_LABELS, defaultTerms='', validateKeyOnConnect=productName==='FetUre'}: AdminPanelProps){
   const copy = COPY[locale];
   const [key, setKey] = useState(() => {
+    // Opt-in products may not trust a saved, unverified key from this browser tab.
+    if(validateKeyOnConnect) return '';
     try { return sessionStorage.getItem('appbase.admin.key') || ''; } catch (_) { return ''; }
   });
-  const [draftKey, setDraftKey] = useState(key);
+  const [draftKey, setDraftKey] = useState(() => {
+    try { return sessionStorage.getItem('appbase.admin.key') || ''; } catch (_) { return ''; }
+  });
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState('');
   const [tab, setTab] = useState<Tab>(() => {
     try{
       const stored = sessionStorage.getItem('appbase.admin.tab') || 'health';
@@ -535,13 +543,31 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
     return () => { live = false; };
   }, [tab, key, client, products.length]);
 
-  function connect(){
+  async function connect(){
+    if(authBusy) return;
     const next = draftKey.trim();
+    if(!next){ setAuthError(copy.noKey); return; }
+    setAuthError('');
+    if(validateKeyOnConnect){
+      setAuthBusy(true);
+      try{
+        // This action is read-only, but unlike /api/health it checks ADMIN_KEY.
+        await client.action(next, 'storage_status');
+      }catch(e){
+        const status = Number((e as {status?:number})?.status || 0);
+        const code = String((e as {code?:string})?.code || '');
+        setAuthError(status === 401 || status === 403 || code === 'bad_key'
+          ? copy.badKey
+          : code === 'no_admin_key'
+            ? (locale === 'ru' ? 'На сервере не настроен ADMIN_KEY. Проверь переменную Production и пересборку Vercel.' : 'ADMIN_KEY is not configured on the server. Check Production settings and redeploy Vercel.')
+            : copy.requestFailed);
+        return;
+      }finally{
+        setAuthBusy(false);
+      }
+    }
     setKey(next);
-    try{
-      if(next) sessionStorage.setItem('appbase.admin.key', next);
-      else sessionStorage.removeItem('appbase.admin.key');
-    }catch(_){}
+    try{ sessionStorage.setItem('appbase.admin.key', next); }catch(_){}
   }
 
   function disconnect(){
@@ -549,6 +575,7 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
     setDraftKey('');
     setData(null);
     setNavOpen(false);
+    setAuthError('');
     try{ sessionStorage.removeItem('appbase.admin.key'); }catch(_){}
   }
 
@@ -593,13 +620,15 @@ export function AdminPanel({client, productName, locale='ru', extraSections=NO_S
               aria-label={copy.key}
               type="password"
               value={draftKey}
-              onChange={e => setDraftKey(e.target.value)}
-              onKeyDown={e => { if(e.key === 'Enter') connect(); }}
+              onChange={e => { setDraftKey(e.target.value); setAuthError(''); }}
+              disabled={authBusy}
+              onKeyDown={e => { if(e.key === 'Enter') void connect(); }}
               placeholder={copy.key}
               autoComplete="off"
             />
-            <button type="button" onClick={connect}>{copy.connect}</button>
+            <button type="button" disabled={authBusy || !draftKey.trim()} onClick={() => void connect()}>{authBusy ? (locale === 'ru' ? 'Проверяю ключ…' : 'Checking key…') : copy.connect}</button>
           </div>
+          {authError && <p className="ab-admin-error" role="alert">{authError}</p>}
         </section>
       </main>
     );
