@@ -133,7 +133,9 @@ export function createInterestQueue(deps:{store:InterestStore;api:InterestAPI;ge
    if(context!==c)return;
    const code=error instanceof InterestError?error.code:'storage_error';
    if(code==='auth_required'){
-    if(!sameSession(await checkedSession(),c.session)){await select();return;}
+    let fresh:AuthSession|null;
+    try{fresh=await checkedSession();}catch{return;} // Already fenced: do not reject background sync.
+    if(!sameSession(fresh,c.session)){await select();return;}
     await store.change(db=>{db.blocked[c.stamp]=true;}).catch(()=>{});signalChange();
    }
    if(['offline','unavailable','rate_limited'].includes(code)){
