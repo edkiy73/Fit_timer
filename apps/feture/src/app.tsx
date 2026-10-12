@@ -13,6 +13,7 @@ import { FetureCatalog } from './catalog';
 import { sameSession } from './feture/interest-api';
 import { InterestLifecycle, interestQueue } from './feture/use-interest-map';
 import { FetureExperience } from './feture/experience';
+import { WelcomePage } from './feture/welcome';
 import { NativeNavigation } from './feture/native-navigation';
 import { isExperiencePath } from './feture/navigation';
 import { VerificationPage } from './feture/verification-page';
@@ -118,7 +119,11 @@ function Shell(){
 }
 
 function Home(){
-  return <FetureExperience />;
+  const auth=useOptionalAuth();
+  const location=useLocation();
+  if(location.pathname==='/'&&auth.loading)return <main className="ft-welcome-loading" role="status">Открываем FetUre…</main>;
+  if(location.pathname==='/'&&!auth.session)return <WelcomePage/>;
+  return <FetureExperience/>;
 }
 
 type AccountDestination={to:string;title:string;description:string;icon:IconName};
