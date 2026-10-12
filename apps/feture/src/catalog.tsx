@@ -1,9 +1,11 @@
 import {useMemo,useState} from 'react';
 import {Link} from 'react-router';
+import {useI18n} from '@appbase/ui-react/i18n.js';
 import {matchesCategoryName,matchesInterest} from './feture/model';
 import {useCatalog} from './feture/use-catalog';
 
 export function FetureCatalog(){
+  const {t}=useI18n();
   // Use the same validated public release and bundled offline fallback as Explore.
   const {data,source,retry}=useCatalog();
   const [query,setQuery]=useState('');
@@ -14,25 +16,25 @@ export function FetureCatalog(){
   })).filter(category=>category.interests.length>0),[data,term]);
   const visibleCount=categories.reduce((sum,category)=>sum+category.interests.length,0);
   return <section className="feture-catalog">
-    <p><Link to="/">← Мой мир</Link></p>
-    <h2>Каталог интересов</h2>
-    <p className="muted">Исследуй направления и узнай, что означает каждая тема. Личные ответы остаются в твоей карте.</p>
+    <p><Link to="/">{t('catalog.back')}</Link></p>
+    <h2>{t('catalog.heading')}</h2>
+    <p className="muted">{t('catalog.intro')}</p>
     {source!=='live'&&<div role="status">
-      <p>{source==='loading'?'Обновляем каталог. Встроенные темы уже доступны.':'Не удалось обновить каталог с сервера. Можно продолжить со встроенными темами.'}</p>
-      {source==='offline'&&<button type="button" onClick={retry}>Повторить</button>}
+      <p>{source==='loading'?t('catalog.loading'):t('catalog.offline')}</p>
+      {source==='offline'&&<button type="button" onClick={retry}>{t('catalog.retry')}</button>}
     </div>}
     <div className="feture-catalog-search">
-      <label htmlFor="ft-catalog-search">Найти тему</label>
+      <label htmlFor="ft-catalog-search">{t('catalog.searchLabel')}</label>
       <div className="feture-catalog-search-row">
         <input id="ft-catalog-search" type="search" autoComplete="off" value={query}
-          onChange={event=>setQuery(event.target.value)} placeholder="Название, описание или синоним"/>
-        {query&&<button type="button" onClick={()=>setQuery('')}>Сбросить</button>}
+          onChange={event=>setQuery(event.target.value)} placeholder={t('catalog.placeholder')}/>
+        {query&&<button type="button" onClick={()=>setQuery('')}>{t('catalog.reset')}</button>}
       </div>
     </div>
-    <p className="muted" role={term?'status':undefined}>{term? `Найдено: ${visibleCount} тем в ${categories.length} направлениях`:`${visibleCount} тем в ${categories.length} направлениях`}</p>
+    <p className="muted" role={term?'status':undefined}>{term?t('catalog.found',{count:visibleCount,categories:categories.length}):t('catalog.count',{count:visibleCount,categories:categories.length})}</p>
     {term&&visibleCount===0?<div className="feture-catalog-empty">
-      <p>Ничего не найдено. Попробуй другое слово или сбрось поиск.</p>
-      <button type="button" onClick={()=>setQuery('')}>Показать все темы</button>
+      <p>{t('catalog.noResults')}</p>
+      <button type="button" onClick={()=>setQuery('')}>{t('catalog.showAll')}</button>
     </div>:<div className="feture-catalog-list">
         {categories.map(item=><details key={item.id} className="feture-catalog-category" open={Boolean(term)}>
           <summary><span className="feture-dot" style={{background:item.color}}></span>
@@ -40,6 +42,6 @@ export function FetureCatalog(){
           <ul>{item.interests.map(x=><li key={x.id}><strong>{x.title}</strong><p className="muted">{x.definition}</p></li>)}</ul>
         </details>)}
       </div>}
-      <p><Link to="/tests">Опросники для знакомства с собой →</Link></p>
+      <p><Link to="/tests">{t('catalog.questionnaires')}</Link></p>
   </section>;
 }
