@@ -14,7 +14,7 @@ const manifestSchema=z.object({
   generationVersion:text(40),expectedProjectRef:z.string().regex(/^[a-z0-9]{20}$/),expectedStage:z.literal('prelaunch'),
   provenance:z.object({kind:z.literal('synthetic-development'),source:text(200)}).strict(),
   catalog:z.object({path:z.literal('data/concept-catalog.json'),sha256:z.string().regex(/^[a-f0-9]{64}$/)}).strict(),
-  profiles:z.array(z.object({seedKey:z.string().regex(/^[a-z0-9-]{2,40}$/),displayName:text(80),about:text(1000)}).strict()).max(10)
+  profiles:z.array(z.object({seedKey:z.string().regex(/^[a-z0-9-]{2,40}$/),displayName:text(80),about:text(1000)}).strict()).max(100)
 }).strict();
 const interestSchema=z.object({id:z.string().regex(/^interest-[1-9]\d{0,2}-[1-9]\d{0,2}$/),title:text(160)}).strict();
 const catalogSchema=z.object({version:z.literal(1),origin:text(200),categories:z.array(z.object({

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "datasetId": "feture-development-2026-10",
-  "generationVersion": "1",
+  "generationVersion": "2",
   "expectedProjectRef": "anrhayozrhrmiwexmbhw",
   "expectedStage": "prelaunch",
   "provenance": {
@@ -16,17 +16,182 @@
     {
       "seedKey": "maya",
       "displayName": "Майя",
-      "about": "Люблю долгие разговоры, путешествия и людей, которые не боятся быть собой."
+      "about": "Бали, кофе без спешки, длинные разговоры. Исследую границы привычного с уважением к чужим."
     },
     {
       "seedKey": "alex",
       "displayName": "Алекс",
-      "about": "Сначала хороший разговор. Уважаю личное пространство и люблю открытые вопросы."
+      "about": "Днём продуктовый дизайнер, вечером книжки, музыка и вопросы без правильного ответа."
     },
     {
       "seedKey": "nika",
       "displayName": "Ника",
       "about": "Искренность, самоирония, музыка и любопытство к миру."
+    },
+    {
+      "seedKey": "leo",
+      "displayName": "Лео",
+      "about": "Люблю небольшие компании, глубокую электронную музыку и красивые маршруты."
+    },
+    {
+      "seedKey": "nora",
+      "displayName": "Nora",
+      "about": "Slow mornings, meaningful conversations, contemporary art and ocean air."
+    },
+    {
+      "seedKey": "mira",
+      "displayName": "Мира",
+      "about": "Мне 31, фотографирую незнакомые города и собираю истории о людях."
+    },
+    {
+      "seedKey": "kai",
+      "displayName": "Kai",
+      "about": "Based in Canggu. Movement, good food, open-minded people, no unnecessary drama."
+    },
+    {
+      "seedKey": "alina",
+      "displayName": "Алина",
+      "about": "Делаю керамику, выращиваю растения и люблю живые обсуждения."
+    },
+    {
+      "seedKey": "dan",
+      "displayName": "Дэн",
+      "about": "Интроверт с прекрасной коллекцией плейлистов. Иногда организую маленькие встречи."
+    },
+    {
+      "seedKey": "sasha",
+      "displayName": "Саша",
+      "about": "Люблю свободные разговоры, психологию отношений и честные договорённости."
+    },
+    {
+      "seedKey": "riley",
+      "displayName": "Riley",
+      "about": "Community builder, curious reader, better listener than storyteller."
+    },
+    {
+      "seedKey": "sonya",
+      "displayName": "Соня",
+      "about": "Не люблю спешить. Танцы, книги, чувство юмора и бережность."
+    },
+    {
+      "seedKey": "river",
+      "displayName": "River",
+      "about": "Not interested in labels. Interested in kindness, art and being present."
+    },
+    {
+      "seedKey": "ilia",
+      "displayName": "Илья",
+      "about": "Музыкант и любитель пеших прогулок. Всегда за неожиданные вопросы."
+    },
+    {
+      "seedKey": "kira",
+      "displayName": "Кира",
+      "about": "Разговоры до утра, море, безалкогольные коктейли, перформансы."
+    },
+    {
+      "seedKey": "max",
+      "displayName": "Макс",
+      "about": "Собираю друзей за настольными играми. Иногда устраиваю кинопросмотры."
+    },
+    {
+      "seedKey": "jules",
+      "displayName": "Jules",
+      "about": "Writer and occasional host. I believe good communities are built slowly."
+    },
+    {
+      "seedKey": "lada",
+      "displayName": "Лада",
+      "about": "Исследую культуру, искусство, тело и границы. Всегда за уважение к выбору."
+    },
+    {
+      "seedKey": "dima",
+      "displayName": "Дима",
+      "about": "Мне ближе душевная компания, чем шумная вечеринка. Делаю музыку."
+    },
+    {
+      "seedKey": "ella",
+      "displayName": "Ella",
+      "about": "Learning to surf, learning to say no, learning to ask better questions."
+    },
+    {
+      "seedKey": "artem",
+      "displayName": "Артём",
+      "about": "С интересом смотрю на людей и города. Дизайн, путешествия, книги."
+    },
+    {
+      "seedKey": "taya",
+      "displayName": "Тая",
+      "about": "Влюблена в уютные пространства, красивый свет и маленькие встречи."
+    },
+    {
+      "seedKey": "fox",
+      "displayName": "Velvet Fox",
+      "about": "Night owl. Electronic music, unusual aesthetics, lots of curiosity."
+    },
+    {
+      "seedKey": "kapibara",
+      "displayName": "Капибара",
+      "about": "Мирный наблюдатель вечеринок, коллекционер мемов и хороших историй."
+    },
+    {
+      "seedKey": "nova",
+      "displayName": "Nova",
+      "about": "Photographer. More interested in stories than perfect pictures."
+    },
+    {
+      "seedKey": "polina",
+      "displayName": "Полина",
+      "about": "Организую творческие встречи, люблю коллажи и открытую коммуникацию."
+    },
+    {
+      "seedKey": "sam",
+      "displayName": "Sam",
+      "about": "Here for thoughtful conversations, board games and ocean sunsets."
+    },
+    {
+      "seedKey": "tima",
+      "displayName": "Тима",
+      "about": "Пробую новые занятия, учусь слушать и задавать вопросы."
+    },
+    {
+      "seedKey": "anya",
+      "displayName": "Аня",
+      "about": "Ценю камерные мероприятия, честность и возможность быть собой."
+    },
+    {
+      "seedKey": "moth",
+      "displayName": "Neon Moth",
+      "about": "After-dark dance floors, neon art and gentle company."
+    },
+    {
+      "seedKey": "vlad",
+      "displayName": "Влад",
+      "about": "Настолки, документальное кино, независимые выставки и прогулки."
+    },
+    {
+      "seedKey": "luna",
+      "displayName": "Luna",
+      "about": "Small gatherings, art books, deep house and mutual respect."
+    },
+    {
+      "seedKey": "irina",
+      "displayName": "Ирина",
+      "about": "Живу между двумя языками, пишу заметки о городе и встречах."
+    },
+    {
+      "seedKey": "morgan",
+      "displayName": "Morgan",
+      "about": "Avid reader, occasional DJ, always up for a good discussion."
+    },
+    {
+      "seedKey": "vita",
+      "displayName": "Вита",
+      "about": "Море, йога без культа идеальности и дружба без соревнований."
+    },
+    {
+      "seedKey": "zen",
+      "displayName": "Zen",
+      "about": "Designer, night swimmer, very serious about playlists."
     }
   ]
 }
