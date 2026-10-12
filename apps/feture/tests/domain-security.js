@@ -291,3 +291,29 @@ test('private photo upload strips metadata, freezes retries, checks access twice
  const gcCalls=[];await cleanupPhotoObjects({configured:()=>true,request:async(path)=>{gcCalls.push(path);if(path.includes('?select='))return new Response(JSON.stringify([{object_path:objectPath}]));if(path.startsWith('/storage/'))return new Response('{}',{status:503});return new Response('{}');}});
  assert.equal(gcCalls.some(x=>x.startsWith('/rest/v1/feture_photo_gc?object_path=')),false);
 });
+
+test('photo staff-review consent stays owner-only metadata and withdrawal survives closed adult/legal gates',async()=>{
+ const {createPhotoRepository,photoCommand}=require('../lib/feture/post-photos');
+ const id='00000000-0000-4000-8000-000000004000',operationId='00000000-0000-4000-8000-000000004100';
+ const status={postId:id,postRevision:3,revision:1,active:true,hasPhoto:true};
+ const grant={action:'photo.reviewConsent',id,operationId,expectedRevision:3,expectedConsentRevision:0,consent:true,consentVersion:'photo-staff-review-v1'};
+ for(const invalid of [{...grant,consent:false},{...grant,consentVersion:'other'},Object.fromEntries(Object.entries(grant).filter(([k])=>k!=='consentVersion')),{...grant,path:'foreign.jpg'},{...grant,contentHash:'a'.repeat(64)},{...grant,owner:identities.bob.hash},{...grant,expectedConsentRevision:-1}])assert.throws(()=>photoCommand(invalid),e=>e.status===422);
+ await seed(identities.alice);const calls=[];let contaminated=false;
+ const transport={configured:()=>true,request:async(path,options)=>{const payload=JSON.parse(options.body);calls.push({path,payload});assert.equal(path,'/rest/v1/rpc/feture_photo_review_command');assert.equal(payload.p_actor,identities.alice.hash);
+  const c=payload.p_command;return new Response(JSON.stringify({ok:true,reviewConsent:{...status,active:c.action==='consent',...(contaminated?{contentHash:'SECRET'}:{})},...(c.action==='status'?{}:{replayed:false})}));}};
+ const documents={requireCurrent:async()=>{}};const photos=createPhotoRepository(transport,documents);
+ const actor=await authenticate(req(identities.alice),store,async()=>new Date(Date.now()+3600000).toISOString());
+ assert.equal((await photos.execute(actor,grant)).reviewConsent.active,true);
+ const closedActor=await authenticate(req(identities.alice),store);
+ const revoke={action:'photo.reviewRevoke',id,operationId,expectedConsentRevision:1};
+ assert.equal((await photos.execute(closedActor,revoke)).reviewConsent.active,false);
+ assert.equal((await photos.execute(closedActor,{action:'photo.reviewStatus',id})).reviewConsent.postId,id);
+ await assert.rejects(photos.execute(closedActor,grant),e=>e.code==='verification_required');
+ await assert.rejects(createPhotoRepository(transport,{requireCurrent:async()=>{throw Object.assign(new Error('closed'),{code:'consent_required'});}}).execute(actor,grant),e=>e.code==='consent_required');
+ await assert.rejects(photos.execute({...actor},grant),e=>e.status===401);
+ const handler=createHandler({store,repository:createRepository(transport),photos,cors:()=>false,quota:async()=>true});
+ const res=response();await handler(req(identities.alice,{action:'photo.reviewStatus',id}),res);assert.equal(res.statusCode,200);assert.equal(res.headers['Cache-Control'],'no-store');
+ assert.deepEqual(Object.keys(JSON.parse(res.body).reviewConsent).sort(),['active','hasPhoto','postId','postRevision','revision']);
+ contaminated=true;await assert.rejects(photos.execute(closedActor,{action:'photo.reviewStatus',id}),e=>e.status===503);
+ assert.equal(calls.some(c=>c.path.includes('/storage/')),false);
+});

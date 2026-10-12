@@ -7,7 +7,7 @@ const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
 test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and irreversible text removal',async()=>{
  const db=new PGlite();try{
  await db.exec('create role anon;create role authenticated;create role service_role bypassrls;');
- for(const file of ['20261010_001_feture_domain.sql','20261010_002_catalog_read.sql','20261010090405_feture_scoped_seed.sql','20261010164924_feture_interest_transactions.sql','20261010225100_feture_verification_store.sql','20261010225653_feture_documents.sql','20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql','20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql','20261011083303_feture_qa_adult_access.sql','20261011113717_feture_qa_any_account_audit.sql','20261011120139_feture_operator_roles.sql','20261011121629_feture_operator_account_binding.sql','20261011133134_feture_community_posts.sql','20261011134257_feture_post_review.sql','20261011140051_feture_post_reports.sql','20261011140835_feture_post_report_author_privacy.sql','20261011141800_feture_post_recipients.sql','20261011043127_feture_questionnaires.sql','20261011045829_feture_questionnaires_release.sql','20261011190651_feture_test_result_posts.sql','20261011193939_feture_post_photos.sql'])await db.exec(sql(file));
+ for(const file of ['20261010_001_feture_domain.sql','20261010_002_catalog_read.sql','20261010090405_feture_scoped_seed.sql','20261010164924_feture_interest_transactions.sql','20261010225100_feture_verification_store.sql','20261010225653_feture_documents.sql','20261010230935_feture_private_profile.sql','20261010231459_feture_scoped_access.sql','20261010233014_feture_moderation.sql','20261011080915_feture_share_links.sql','20261011083303_feture_qa_adult_access.sql','20261011113717_feture_qa_any_account_audit.sql','20261011120139_feture_operator_roles.sql','20261011121629_feture_operator_account_binding.sql','20261011133134_feture_community_posts.sql','20261011134257_feture_post_review.sql','20261011140051_feture_post_reports.sql','20261011140835_feture_post_report_author_privacy.sql','20261011141800_feture_post_recipients.sql','20261011043127_feture_questionnaires.sql','20261011045829_feture_questionnaires_release.sql','20261011190651_feture_test_result_posts.sql','20261011193939_feture_post_photos.sql','20261012050032_feture_photo_review_consent.sql'])await db.exec(sql(file));
  const rpc=async(name,args)=>(await db.query('select public.'+name+'('+args.map((_,i)=>'$'+(i+1)).join(',')+') result',args)).rows[0].result;
  const op=(actor,command)=>rpc('feture_post_command',[actor,JSON.stringify(command)]);
  const [a,b,c]=['a','b','c'].map(x=>x.repeat(32));for(const owner of [a,b,c])await db.query('insert into public.feture_profiles(account_hash) values($1)',[owner]);
@@ -182,28 +182,96 @@ test('C01 posts: draft/pending isolation, reviewed feed ACL, CAS, retries and ir
  assert.equal((await photo(b,{action:'read',id:prep.id,revision:2})).error,'resource_not_found');
  assert.equal((await photo(a,{action:'read',id:prep.id,revision:2})).photo.hash,prep.contentHash);
  await op(a,{action:'posts.submit',id:prep.id,operationId:id(4003),expectedRevision:2});
+
+ // C01.5b2a: explicit owner consent is bound to the exact pending photo/post.
+ const consent=(actor,command)=>rpc('feture_photo_review_command',[actor,JSON.stringify(command)]);
+ const status={action:'status',id:prep.id};
+ const grant={action:'consent',id:prep.id,operationId:id(4100),expectedRevision:3,expectedConsentRevision:0,consent:true,consentVersion:'photo-staff-review-v1'};
+ for(const name of ['feture_photo_review_consents','feture_photo_review_operations'])assert.equal((await db.query('select relrowsecurity from pg_class where oid=$1::regclass',[name])).rows[0].relrowsecurity,true);
+ assert.equal((await db.query("select bool_and(not prosecdef) safe from pg_proc where proname in ('feture_photo_review_command','feture_photo_review_status')")).rows[0].safe,true);
+ assert.equal((await consent(b,status)).error,'resource_not_found');
+ assert.equal((await consent(manager,status)).error,'resource_not_found');
+ assert.equal((await consent(a,{...grant,consent:false})).error,'invalid_request');
+ assert.equal((await consent(a,{...grant,consentVersion:'other'})).error,'invalid_request');
+ assert.equal((await consent(a,Object.fromEntries(Object.entries(grant).filter(([k])=>k!=='consentVersion')))).error,'invalid_request');
+ assert.equal((await consent(a,{...grant,contentHash:prep.contentHash})).error,'invalid_request');
+ assert.equal((await consent(a,{...grant,expectedRevision:2})).error,'revision_conflict');
+ const photoGranted=await consent(a,grant);assert.equal(photoGranted.reviewConsent.active,true);assert.equal(photoGranted.reviewConsent.revision,1);
+ assert.deepEqual(Object.keys(photoGranted.reviewConsent).sort(),['active','hasPhoto','postId','postRevision','revision']);
+ assert.equal((await consent(a,grant)).replayed,true);
+ assert.equal((await consent(a,{...grant,expectedConsentRevision:1})).error,'operation_conflict');
+ // Consent alone does not unlock staff bytes, ordinary readers or publication.
+ assert.equal((await photo(manager,{action:'read',id:prep.id,revision:3})).error,'resource_not_found');
+ assert.equal((await photo(b,{action:'read',id:prep.id,revision:3})).error,'resource_not_found');
  await assert.rejects(review(manager,{...approve,id:prep.id,operationId:id(4004),expectedRevision:3}),/photo_review_required/);
- const detach={action:'remove',id:prep.id,operationId:id(4005),expectedRevision:3};
- assert.equal((await photo(a,detach)).entry.revision,4);assert.equal((await photo(a,detach)).replayed,true);
- assert.equal((await photo(a,{...detach,expectedRevision:4})).error,'operation_conflict');
- assert.equal((await photo(a,{action:'read',id:prep.id,revision:4})).photo,null);
+ const withdraw={action:'revoke',id:prep.id,operationId:id(4101),expectedConsentRevision:1};
+ await db.query("update public.feture_verification_attempts set proof_issued_at=clock_timestamp()-interval '30 seconds',proof_expires_at=clock_timestamp()-interval '1 second' where account_hash=$1",[a]);
+ assert.equal((await consent(a,status)).reviewConsent.active,false);
+ assert.equal((await consent(a,withdraw)).reviewConsent.revision,2); // Revoke ignores adult expiry.
+ assert.equal((await consent(a,grant)).reviewConsent.active,false); // Old replay cannot restore consent.
+ assert.equal((await consent(a,{...grant,operationId:id(4102),expectedConsentRevision:2})).error,'review_required');
+ await db.query("update public.feture_verification_attempts set proof_expires_at=clock_timestamp()+interval '1 hour' where account_hash=$1",[a]);
+ assert.equal((await consent(a,{...grant,operationId:id(4103),expectedConsentRevision:1})).error,'revision_conflict');
+ assert.equal((await consent(a,{...grant,operationId:id(4104),expectedConsentRevision:2})).reviewConsent.active,true);
+
+ await op(a,{...photoDraft,operationId:id(4110),expectedRevision:3,text:'A changed version'});
+ assert.equal((await consent(a,status)).reviewConsent.active,false);
+ assert.equal((await consent(a,{...grant,operationId:id(4111),expectedRevision:4,expectedConsentRevision:3})).error,'review_required');
+ await op(a,{action:'posts.submit',id:prep.id,operationId:id(4112),expectedRevision:4});
+ assert.equal((await consent(a,{...grant,operationId:id(4113),expectedRevision:5,expectedConsentRevision:3})).reviewConsent.active,true);
+ const detach={action:'remove',id:prep.id,operationId:id(4005),expectedRevision:5};
+ assert.equal((await photo(a,detach)).entry.revision,6);assert.equal((await photo(a,detach)).replayed,true);
+ assert.equal((await photo(a,{...detach,expectedRevision:6})).error,'operation_conflict');
+ assert.equal((await photo(a,{action:'read',id:prep.id,revision:6})).photo,null);
+ assert.equal((await consent(a,status)).reviewConsent.active,false);
+ assert.equal((await consent(a,{...grant,operationId:id(4104),expectedConsentRevision:2})).reviewConsent.active,false);
+ assert.equal((await consent(a,{...withdraw,operationId:id(4105),expectedConsentRevision:4})).reviewConsent.revision,5);
  assert.equal((await photo(a,prep)).upload,false); // Old retries cannot recreate removed objects.
  assert.equal((await db.query('select count(*) n from public.feture_photo_gc')).rows[0].n,1);
- const prep2={...prep,operationId:id(4006),expectedRevision:4};await photo(a,prep2);
- await photo(a,{...attach,operationId:prep2.operationId,expectedRevision:4});
- await op(a,{action:'posts.delete',id:prep.id,operationId:id(4007),expectedRevision:5});
- assert.equal((await photo(a,prep2)).entry.state,'deleted');assert.equal((await photo(a,{action:'read',id:prep.id,revision:6})).error,'resource_not_found');
+ const prep2={...prep,operationId:id(4006),expectedRevision:6};await photo(a,prep2);
+ await photo(a,{...attach,operationId:prep2.operationId,expectedRevision:6});
+ await op(a,{action:'posts.delete',id:prep.id,operationId:id(4007),expectedRevision:7});
+ assert.equal((await photo(a,prep2)).entry.state,'deleted');assert.equal((await photo(a,{action:'read',id:prep.id,revision:8})).error,'resource_not_found');
  assert.equal((await db.query('select count(*) n from public.feture_photo_gc')).rows[0].n,2);
  const stalePost={...photoDraft,id:id(4010),operationId:id(4011)};await op(a,stalePost);
  const stale={...prep,id:stalePost.id,operationId:id(4012)};await photo(a,stale);
+ assert.equal((await consent(a,{action:'status',id:stalePost.id})).reviewConsent.hasPhoto,false);
+ assert.equal((await consent(a,{...grant,id:stalePost.id,operationId:id(4120),expectedRevision:1})).error,'review_required');
+ const earlyRevoke={action:'revoke',id:stalePost.id,operationId:id(4121),expectedConsentRevision:0};
+ assert.equal((await consent(a,earlyRevoke)).reviewConsent.revision,1);
+ assert.equal((await consent(a,{...grant,id:stalePost.id,operationId:id(4122),expectedRevision:1})).error,'revision_conflict');
+ assert.equal((await consent(a,earlyRevoke)).replayed,true);
  await op(a,{...stalePost,expectedRevision:1,operationId:id(4013),text:'changed'});
  assert.equal((await photo(a,{...attach,id:stale.id,operationId:stale.operationId})).error,'revision_conflict');
  await db.exec('reset role');await db.query("update public.feture_post_photos set created_at=clock_timestamp()-interval '2 days' where operation_id=$1",[stale.operationId]);await db.exec('set role service_role');
  await rpc('feture_photo_sweep',[]);assert.equal((await photo(a,stale)).upload,false);
+
+ // A withdrawal before a first grant creates a monotonic tombstone: delayed grant CAS fails.
+ const nextDraft={...photoDraft,id:id(4500),operationId:id(4501)};await op(a,nextDraft);
+ const nextPhoto={...prep,id:nextDraft.id,operationId:id(4502)};await photo(a,nextPhoto);await photo(a,{...attach,id:nextDraft.id,operationId:nextPhoto.operationId});
+ await op(a,{action:'posts.submit',id:nextDraft.id,operationId:id(4503),expectedRevision:2});
+ const initialWithdraw={...withdraw,id:nextDraft.id,operationId:id(4504),expectedConsentRevision:0};
+ assert.equal((await consent(a,initialWithdraw)).reviewConsent.revision,1);
+ const delayedGrant={...grant,id:nextDraft.id,operationId:id(4506)};
+ assert.equal((await consent(a,delayedGrant)).error,'revision_conflict');
+ const freshGrant={...delayedGrant,operationId:id(4507),expectedConsentRevision:1};
+ assert.equal((await consent(a,freshGrant)).reviewConsent.active,true);
+ assert.equal((await consent(a,initialWithdraw)).reviewConsent.active,true); // Replay never withdraws a later explicit grant.
+ const replacement={...nextPhoto,operationId:id(4508),expectedRevision:3};await photo(a,replacement);
+ await photo(a,{...attach,id:nextDraft.id,operationId:replacement.operationId,expectedRevision:3});
+ assert.equal((await consent(a,{action:'status',id:nextDraft.id})).reviewConsent.active,false);
+ assert.equal((await consent(a,freshGrant)).reviewConsent.active,false);
+ await op(a,{action:'posts.delete',id:nextDraft.id,operationId:id(4509),expectedRevision:4});
+ assert.equal((await consent(a,{...initialWithdraw,operationId:id(4510),expectedConsentRevision:2})).reviewConsent.revision,3);
+ const noPhoto={...photoDraft,id:id(4600),operationId:id(4601)};await op(a,noPhoto);
+ await op(a,{action:'posts.submit',id:noPhoto.id,operationId:id(4602),expectedRevision:1});
+ assert.equal((await consent(a,{...grant,id:noPhoto.id,operationId:id(4603),expectedRevision:2})).error,'resource_not_found');
  // Erasure outbox survives profile cascade and contains only opaque paths.
  await db.exec('reset role');await db.query('delete from public.feture_profiles where account_hash=$1',[a]);await db.exec('set role service_role');
  assert.equal((await db.query('select count(*) n from public.feture_post_photos')).rows[0].n,0);
- assert.equal((await db.query('select count(*) n from public.feture_photo_gc')).rows[0].n,3);
- for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(db.query('select * from public.feture_post_photos'));await assert.rejects(db.query('select * from public.feture_photo_gc'));await assert.rejects(photo(b,{action:'read',id:prep.id,revision:2}));await assert.rejects(rpc('feture_photo_sweep',[]));}
+ assert.equal((await db.query('select count(*) n from public.feture_photo_review_consents')).rows[0].n,0);
+ assert.equal((await db.query('select count(*) n from public.feture_photo_review_operations')).rows[0].n,0);
+ assert.equal((await db.query('select count(*) n from public.feture_photo_gc')).rows[0].n,5);
+ for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(db.query('select * from public.feture_post_photos'));await assert.rejects(db.query('select * from public.feture_photo_gc'));await assert.rejects(photo(b,{action:'read',id:prep.id,revision:2}));await assert.rejects(rpc('feture_photo_sweep',[]));await assert.rejects(db.query('select * from public.feture_photo_review_consents'));await assert.rejects(db.query('select * from public.feture_photo_review_operations'));await assert.rejects(consent(b,status));await assert.rejects(rpc('feture_photo_review_status',[b,prep.id]));}
  }finally{await db.close();}
 });

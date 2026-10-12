@@ -33,7 +33,7 @@ function createHandler({store,repository,documents,profiles,access,moderation,te
       if(!(await quota(req,actor.accountHash))){res.setHeader('Retry-After','60');record('rate_limited');return send(429,{error:'rate_limited',requestId});}
       const input=command(await readBody(req));action=input.action;
       const metric=/** @param {unknown} result */async result=>{if(metrics)await metrics.record(action,actor,result);};
-      if(input.action==='photo.put'||input.action==='photo.read'||input.action==='photo.remove'){if(!photos)reject(503,'domain_unavailable');const result=await photos.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
+      if(input.action==='photo.put'||input.action==='photo.read'||input.action==='photo.remove'||input.action==='photo.reviewStatus'||input.action==='photo.reviewConsent'||input.action==='photo.reviewRevoke'){if(!photos)reject(503,'domain_unavailable');const result=await photos.execute(actor,input);record('ok');return send(200,{ok:true,...result,requestId});}
       if(isPostCommand(input)){if(!posts)reject(503,'domain_unavailable');const result=await posts.execute(actor,input);await metric(result);record('ok');return send(200,{ok:true,...result,requestId});}
       if(isShareCommand(input)){if(!shares)reject(503,'domain_unavailable');const result=await shares.execute(actor,input);await metric(result);record('ok');return send(200,{ok:true,...result,requestId});}
       if(isTestsCommand(input)){if(!tests)reject(503,'domain_unavailable');const result=await tests.execute(actor,input);await metric(result);record('ok');return send(200,{ok:true,...result,requestId});}

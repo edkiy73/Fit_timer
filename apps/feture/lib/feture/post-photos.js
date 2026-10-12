@@ -15,6 +15,7 @@ const shape=(v,keys)=>Object.keys(v).sort().join(',')===keys.sort().join(',');
 const revision=v=>typeof v==='number'&&Number.isSafeInteger(v)&&v>0&&v<=999999999999999;
 /** @param {unknown} input @returns {import('./post-photos').PhotoCommand} */
 function photoCommand(input){if(!object(input)||!uuid(input.id))reject(422,'invalid_request');const c=/** @type {Record<string,unknown>} */(input);
+ if(typeof c.action==='string'&&c.action.startsWith('photo.review'))return require('./post-photo-consent').reviewCommand(input);
  if(c.action==='photo.read'&&shape(c,['action','id','revision'])&&revision(c.revision))return /** @type {import('./post-photos').PhotoCommand} */(c);
  if(!uuid(c.operationId)||!revision(c.expectedRevision))reject(422,'invalid_request');
  if(c.action==='photo.remove'&&shape(c,['action','id','operationId','expectedRevision']))return /** @type {import('./post-photos').PhotoCommand} */(c);
@@ -47,7 +48,7 @@ function createPhotoRepository(transport,documents){const guard=createAccessGuar
  /** @param {unknown} entry @param {string} id */
  const entryFor=(entry,id)=>{const p=require('./posts').postDto(entry);if(p.id!==id||!p.mine)reject(503,'domain_unavailable');return p;};
  return {/** @param {import('./contracts').Actor} actor @param {import('./post-photos').PhotoCommand} input */
- async execute(actor,input){requireOwner(actor,actor.accountHash);const c=photoCommand(input);if(c.action!=='photo.remove')await guard(actor);if(!transport.configured())reject(503,'domain_unavailable');
+ async execute(actor,input){requireOwner(actor,actor.accountHash);const c=photoCommand(input);if(c.action==='photo.reviewStatus'||c.action==='photo.reviewConsent'||c.action==='photo.reviewRevoke')return require('./post-photo-consent').executeReviewConsent(transport,documents,actor,c);if(c.action!=='photo.remove')await guard(actor);if(!transport.configured())reject(503,'domain_unavailable');
  try{
  if(c.action==='photo.read'){
   const cmd={action:'read',id:c.id,revision:c.revision};const r=await rpc(actor.accountHash,cmd);if(!shape(r,['ok','photo']))reject(503,'domain_unavailable');if(r.photo===null)return {photo:null};
