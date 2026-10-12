@@ -54,7 +54,9 @@ function fakeRes(){
       const rows=table==='feture_categories'?[{id:'category-1',title:'Роли',short_title:'Роли',icon:'layers',accent_color:'#7156cb',position:1}]
         :table==='feture_interests'?[{id:'interest-1-3',category_id:'category-1',title:'Свитч',position:1},{id:'unpublished',category_id:'category-1',title:'Hidden',position:2}]
         :table==='feture_catalog_publications'?[{version:2,entries:{'interest-1-3':{definition:'Свитч — выбранная и опубликованная новая редакция.',synonyms:['switch','переключение роли'],relatedIds:[]}}}]:[];
-      return {ok:true,json:async()=>rows};
+      const bytes=new TextEncoder().encode(JSON.stringify(rows));
+      return {ok:true,headers:new Headers({'content-length':String(bytes.length)}),
+        body:new ReadableStream({start(stream){stream.enqueue(bytes);stream.close();}})};
     };
     const catalog=require('../api/catalog');
     const result=fakeRes();await catalog({method:'GET',headers:{}},result);
@@ -79,6 +81,27 @@ function fakeRes(){
       unavailable.headers['X-Content-Type-Options']==='nosniff' &&
       unavailable.body===JSON.stringify({error:'catalog_unavailable'}) &&
       !JSON.stringify(warnings).includes(secretMarker));
+
+    // A lying/missing Content-Length must not allow an oversized JSONB release
+    // to be buffered or parsed. Both paths still return the same safe error.
+    const tooLarge=(headers,chunk)=>({ok:true,headers:new Headers(headers),
+      body:new ReadableStream({start(stream){stream.enqueue(chunk);stream.close();}})});
+    const previousWarning=console.warn;
+    try {
+      console.warn=()=>{};
+      global.fetch=async()=>tooLarge({'content-length':String(1024*1024+1)},new Uint8Array([91,93]));
+      const claimed=fakeRes();
+      await catalog({method:'GET',headers:{},url:'/api/catalog'},claimed);
+      ok('public catalog rejects excessive declared upstream size',
+        claimed.statusCode===503 && claimed.body===JSON.stringify({error:'catalog_unavailable'}) &&
+        claimed.headers['Cache-Control']==='no-store');
+      global.fetch=async()=>tooLarge({},new Uint8Array(1024*1024+1));
+      const streamed=fakeRes();
+      await catalog({method:'GET',headers:{},url:'/api/catalog'},streamed);
+      ok('public catalog rejects excessive streamed upstream size without Content-Length',
+        streamed.statusCode===503 && streamed.body===JSON.stringify({error:'catalog_unavailable'}) &&
+        streamed.headers['Cache-Control']==='no-store');
+    } finally { console.warn=previousWarning; }
   } finally {
     global.fetch=oldFetch;
     if(oldUrl===undefined)delete process.env.SUPABASE_URL;else process.env.SUPABASE_URL=oldUrl;
