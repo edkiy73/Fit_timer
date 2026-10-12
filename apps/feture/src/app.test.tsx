@@ -53,7 +53,7 @@ describe('FetUre starter', () => {
     expect(screen.getByRole('navigation',{name:'Основная навигация FetUre'}).querySelectorAll('a')).toHaveLength(5);
     await user.click(within(screen.getByRole('navigation',{name:'Основная навигация FetUre'})).getByRole('link',{name:'Мой мир'}));
     expect(router.state.location.pathname).toBe('/world');
-    expect(await screen.findByRole('heading',{name:/Твой мир/i})).toBeTruthy();
+    expect(await screen.findByRole('heading',{name:/Твой мир/i,level:1})).toBeTruthy();
   });
   it('distinguishes the editorial Explore from a personal map', async () => {
     const router=renderApp('/explore');
