@@ -84,19 +84,19 @@ const I={at:sv('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5"
 const ic=(n,s)=>s?I[n].replace('<svg',`<svg style="width:${s}px;height:${s}px"`):I[n];
 
 /* ---------- media ---------- */
-const IMG=n=>(window.FT_IMG&&window.FT_IMG[n])||`images/profile-${n}.webp`;
+const IMG=n=>typeof n==='string'&&/^(blob:|data:image\/)/.test(n)?n:(window.FT_IMG&&window.FT_IMG[n])||`images/profile-${n}.webp`;
 const LOGO=()=>(window.FT_IMG&&window.FT_IMG.logo)||'icon.svg';
 const plate=(key,icon)=>`<div class="plate" style="${PL[key]||PL.rose};position:absolute;inset:0">${icon?`<span class="pi">${I[icon]}</span>`:''}</div>`;
 function person(id){if(id==='me')return meAsPerson();return PEOPLE[id];}
 function pname(id){if(id==='me')return S.me.name||S.me.nick||L('Ты','You');const p=PEOPLE[id];if(!p)return L('Участник','Member');return p.pair&&S.lang!=='en'?p.nameRu:p.name;}
 const PUBLIC_VIS={gender:'public',orient:'public',format:'public',role:'granted'};
 function publicField(m,k){return (m.vis?.[k]??PUBLIC_VIS[k]??'public')==='public'?m[k]:Array.isArray(m[k])?[]:null;}
-function meAsPerson(){const m=S.ui.profilePreview||S.me;return{name:m.name||m.nick,age:ageOf(m.dob),photo:m.photo,city:m.city,pron:m.pron,gender:publicField(m,'gender'),orient:publicField(m,'orient'),format:publicField(m,'format'),role:publicField(m,'role'),seek:m.dating?m.seek:[],bio:m.bio,verified:m.ageCheck==='ok',online:true,dating:m.dating,jars:m.jars.filter(j=>j.vis==='public'&&!j.limit).map(j=>[j.t,j.lv]),langs:m.langs};}
+function meAsPerson(){const m=S.ui.profilePreview||S.me;return{name:m.name||m.nick,age:m.showAge===false?null:ageOf(m.dob),photo:m.photo,city:m.city,location:m.location?.coords,pron:m.pron,gender:publicField(m,'gender'),orient:publicField(m,'orient'),format:publicField(m,'format'),role:publicField(m,'role'),seek:m.dating?m.seek:[],bio:m.bio,verified:m.ageCheck==='ok',online:true,dating:m.dating,jars:m.jars.filter(j=>j.vis==='public'&&!j.limit).map(j=>[j.t,j.lv]),langs:m.langs};}
 /** avatar: photo → img; pair → two plates; else initials plate */
 function av(id,cls='',variant=0){
  const p=person(id);
  if(!p) return `<span class="av ${cls}">${plate('night')}</span>`;
- if(p.photo) return `<span class="av ${cls}"><img src="${IMG(p.photo)}" alt="" loading="lazy" style="${variant?'transform:scale(1.35);object-position:50% 25%':''}"></span>`;
+ if(p.photo) return `<span class="av ${cls}"><img src="${IMG(p.photo)}" alt="" loading="lazy" draggable="false" style="${variant?'transform:scale(1.35);object-position:50% 25%':''}"></span>`;
  if(p.pair) return `<span class="av ${cls}" style="display:grid;grid-template-columns:1fr 1fr">${`<span style="position:relative">${plate(p.plate)}</span><span style="position:relative">${plate(p.plate2||p.plate)}</span>`}<b style="position:absolute;inset:0;display:grid;place-items:center;color:#fff;font:800 13px/1 var(--font)">${esc((p.name||'').split(/[ &и]+/).filter(Boolean).map(x=>x[0]).join('+'))}</b></span>`;
  const ini=(p.name||'?')[0];
  return `<span class="av ini ${cls}">${plate(p.plate||'night')}<b style="position:relative">${esc(ini)}</b></span>`;
@@ -104,7 +104,7 @@ function av(id,cls='',variant=0){
 /** big photo for cards: variant 0..2 gives distinct crops of the single licensed image */
 function bigPhoto(id,v=0){
  const p=person(id);
- if(p&&p.photo){const st=['','transform:scale(1.4);transform-origin:50% 30%','transform:scale(1.18) translateX(-6%);filter:saturate(1.15) hue-rotate(-8deg)'][v%3];return `<img src="${IMG(p.photo)}" alt="${esc(pname(id))}" style="${st}">`;}
+ if(p&&p.photo){const st=['','transform:scale(1.4);transform-origin:50% 30%','transform:scale(1.18) translateX(-6%);filter:saturate(1.15) hue-rotate(-8deg)'][v%3];return `<img src="${IMG(p.photo)}" alt="${esc(pname(id))}" draggable="false" style="${st}">`;}
  const key=p&&p.pair?[p.plate,p.plate2,p.plate][v%3]:(p&&p.plate)||'rose';
  return plate(key);
 }
@@ -159,7 +159,7 @@ let sheetOpener=null;
 function sheet(build,o={}){
  sheetOpener=document.activeElement;
  S.ui.sheet={build,o};drawSheet();
- requestAnimationFrame(()=>{$('#scrim').classList.add('on');$('#sheet').classList.add('on');const f=$('#sheet [autofocus]')||$('#sheet .sh-b button, #sheet .sh-b input, #sheet .sh-f button');f&&f.focus({preventScroll:true});});
+ requestAnimationFrame(()=>{$('#scrim').classList.add('on');$('#sheet').classList.add('on');syncModal();const f=$('#sheet [autofocus]')||$('#sheet .sh-b button, #sheet .sh-b input, #sheet .sh-f button');f&&f.focus({preventScroll:true});});
 }
 function drawSheet(){
  const s=S.ui.sheet;if(!s)return;const b=s.build();const el=$('#sheet');const bodyEl=$('.sh-b',el);const st=bodyEl?bodyEl.scrollTop:0;
@@ -176,11 +176,11 @@ function closeSheet(instant){
  syncModal();if(!instant&&sheetOpener&&sheetOpener.isConnected)sheetOpener.focus({preventScroll:true});
 }
 function ask(o){return new Promise(res=>{
- const opener=document.activeElement;const d=$('#dialog');const sc=$('#dscrim');
+ let resolved=false;const opener=document.activeElement;const d=$('#dialog');const sc=$('#dscrim');
  d.innerHTML=`${o.icon?`<div class="ico ${o.tone||''}">${I[o.icon]}</div>`:''}<h2>${o.title}</h2>${o.text?`<p>${o.text}</p>`:''}<div class="btns"><button class="btn ${o.danger?'danger':'primary'}" data-r="1">${o.ok||L('Продолжить','Continue')}</button><button class="btn soft" data-r="0">${o.cancel||L('Отмена','Cancel')}</button></div>`;
- d.setAttribute('role','alertdialog');d.style.display='block';sc.style.zIndex=66;
- requestAnimationFrame(()=>{sc.classList.add('on');d.classList.add('on');$('[data-r="0"]',d).focus();});
- const done=v=>{d.classList.remove('on');sc.classList.remove('on');setTimeout(()=>{d.style.display='none'},220);S.ui.ask=null;syncModal();if(opener?.isConnected)opener.focus({preventScroll:true});res(v);};
+ d.setAttribute('role','alertdialog');d.style.display='block';sc.style.zIndex=3;
+ requestAnimationFrame(()=>{if(resolved)return;sc.classList.add('on');d.classList.add('on');syncModal();$('[data-r="0"]',d).focus();});
+ const done=v=>{if(resolved)return;resolved=true;d.classList.remove('on');sc.classList.remove('on');setTimeout(()=>{if(!d.classList.contains('on'))d.style.display='none'},220);S.ui.ask=null;syncModal();if(opener?.isConnected)opener.focus({preventScroll:true});res(v);};
  S.ui.ask=()=>done(false);
  d.onclick=e=>{const b=e.target.closest('[data-r]');if(b)done(b.dataset.r==='1');};
  sc.onclick=()=>done(false);
@@ -206,7 +206,7 @@ function go(id,p={},o={}){
  if(S.session&&SC[id].auth&&!o.force){return;}
  if(S.session&&ROOT_TAB[id]){return tab(ROOT_TAB[id],p);}
  saveScroll();
- const st=stack();if(o.replace)st.pop();
+ const st=stack();if(o.replace){navNextReplace=true;st.pop();}
  st.push({id,p:{...p},f:{}});
  render(o.dir||'fwd');
 }
@@ -251,6 +251,7 @@ function render(dir,keep){
  }
  const tb=$('#toasts');tb.className='toasts'+($('.ctabar,.inputbar',m)?' cta':dock?'':' nodock');
  renderSide();renderCtx();
+ reserveChromeSpace();chromeSpaceObserver?.disconnect();const footer=$('.ctabar,.inputbar',m);if(footer)chromeSpaceObserver?.observe(footer);
  sc.after&&sc.after(r.p,r);
  window.QA_SYNC&&QA_SYNC();
  document.title=`FetUre · ${sc.title?sc.title(r.p):r.id}`;
@@ -364,3 +365,6 @@ function syncModal(){const modal=modalScope();for(const x of [$('#main'),$('#sid
 new MutationObserver(syncModal).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class','style']});
 document.addEventListener('keydown',e=>{const modal=modalScope();if(!modal||e.key!=='Tab')return;const nodes=[...modal.querySelectorAll('button,a[href],input,textarea,select,[tabindex="0"]')].filter(x=>!x.disabled&&!x.inert&&x.getClientRects().length);if(!nodes.length){e.preventDefault();modal.tabIndex=-1;modal.focus();return;}const a=nodes[0],z=nodes.at(-1);if(e.shiftKey&&(document.activeElement===a||!modal.contains(document.activeElement))){e.preventDefault();z.focus();}else if(!e.shiftKey&&(document.activeElement===z||!modal.contains(document.activeElement))){e.preventDefault();a.focus();}},true);
 window.addEventListener('beforeunload',e=>{if(cur()?.dirty){e.preventDefault();e.returnValue='';}});
+
+function reserveChromeSpace(){const v=$('#main .view'),footer=$('#main .ctabar,#main .inputbar');if(!v||!footer||v.classList.contains('deckmode'))return;const h=footer.getBoundingClientRect().height;if(h)v.style.paddingBottom=(h+24)+'px';}
+const chromeSpaceObserver=typeof ResizeObserver==='function'?new ResizeObserver(reserveChromeSpace):null;

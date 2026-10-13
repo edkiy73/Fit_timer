@@ -41,38 +41,45 @@ const OPT={
  seek:[['chat','общение','conversation'],['dates','свидания','dates'],['rel','отношения','relationship'],['exp','совместный опыт','shared experience'],['friends','дружба','friendship']],
  pron:[['she','она/её','she/her'],['he','он/его','he/him'],['they','они/их','they/them'],['any','любые','any']],
 };
+
+// Curated identifiers; user input cannot create new taxonomy entries.
+OPT.gender.push(['cisw','цис-женщина','cis woman'],['cism','цис-мужчина','cis man'],['fluid','гендерфлюид','genderfluid'],['flux','гендерфлакс','genderflux'],['bigender','бигендер','bigender'],['demigender','демигендер','demigender'],['demiw','демиженщина','demiwoman'],['demim','демимужчина','demiman'],['androgyne','андрогин','androgyne'],['neutral','гендерно-нейтральный','gender neutral'],['gnc','гендерно-неконформный','gender non-conforming'],['transnb','транс-небинарная персона','trans non-binary'],['transfem','трансфеминная персона','transfeminine'],['transmasc','трансмаскулинная персона','transmasculine'],['pangender','пангендер','pangender'],['multigender','мультигендер','multigender'],['femme','фем','femme'],['masc','маск','masc'],['butch','буч','butch'],['androgynous','андрогинная персона','androgynous'],['questioning','в поиске определения','questioning'],['unspecified','не указывать','prefer not to say']);
+OPT.orient.push(['homoflexible','гомофлексибильность','homoflexible'],['heteroflexible','гетерофлексибильность','heteroflexible'],['omni','омнисексуальность','omnisexual'],['polysexual','полисексуальность','polysexual'],['grayace','грейсексуальность','graysexual'],['fluid','сексуальная флюидность','sexually fluid'],['andro','андросексуальность','androsexual'],['gyno','гиносексуальность','gynosexual'],['questioning','в поиске определения','questioning'],['unspecified','не указывать','prefer not to say']);
+OPT.format.push(['enm','этическая немоногамия','ethical non-monogamy'],['solo-poly','соло-полиамория','solo polyamory'],['polyfidelity','полифиделити','polyfidelity'],['hierarchical-poly','иерархическая полиамория','hierarchical polyamory'],['nonhierarchical-poly','неиерархическая полиамория','non-hierarchical polyamory'],['monogamish','моногамия с договорёнными исключениями','monogamish'],['open-dating','встречи без эксклюзивности','non-exclusive dating'],['queerplatonic','квирплатонические отношения','queerplatonic relationship'],['exploring','исследую подходящий формат','exploring my relationship style'],['unspecified','не указывать','prefer not to say']);
+OPT.role[0][1]='ведущая роль';OPT.role[1][1]='принимающая роль';
+OPT.role.push(['dom','доминант','dominant'],['sub','сабмиссив','submissive'],['top','топ','top'],['bottom','боттом','bottom'],['rigger','риггер','rigger'],['rope-bottom','принимающая роль в шибари','rope bottom'],['sadist','садист','sadist'],['masochist','мазохист','masochist'],['brat','брат','brat'],['brat-tamer','brat tamer','brat tamer'],['primal','праймал','primal'],['sensual','сенсуальная роль','sensual'],['exploring','исследую роли','exploring roles'],['unspecified','не указывать','prefer not to say']);
 const CITY={berlin:{ru:'Берлин',en:'Berlin'},hamburg:{ru:'Гамбург',en:'Hamburg'},moscow:{ru:'Москва',en:'Moscow'},online:{ru:'Онлайн',en:'Online'}};
 
 const PEOPLE={
  sofi:{name:'Sofi',age:26,photo:1,city:'berlin',km:4,pron:'she',gender:['woman'],orient:['bi'],format:'open',role:'recv',seek:['dates','chat'],verified:true,online:true,dating:true,
   bio:{ru:'Люблю долгие переписки перед встречей и людей, которые не торопят. Фотографирую плёнку.',en:'I love long chats before meeting and people who don’t rush. I shoot film.'},
-  jars:[['experiments',5],['bondage',4],['sensory',4],['exhibition',2]],langs:['ru','en']},
- leon:{name:'Leon',age:33,photo:2,city:'berlin',km:8,pron:'he',gender:['transm'],orient:['bi'],format:'open',role:'lead',seek:['dates'],verified:false,online:false,last:{ru:'был вчера',en:'active yesterday'},dating:true,
+  jars:[['experiments',10],['bondage',8],['sensory',8],['exhibition',4]],langs:['ru','en']},
+ leon:{name:'Leon',age:33,photo:2,city:'berlin',km:8,pron:'he',gender:['transm'],orient:['bi'],format:'open',role:'lead',seek:['dates'],verified:true,online:false,last:{ru:'был вчера',en:'active yesterday'},dating:true,
   bio:{ru:'Сначала кофе и разговор, потом всё остальное. Веду небольшие вечеринки.',en:'Coffee and a talk first, everything else later. I host small parties.'},
-  jars:[['control',5],['roleplay',4],['bondage',3],['latex',4]],langs:['en','de']},
+  jars:[['control',10],['roleplay',8],['bondage',6],['latex',8]],langs:['en','de']},
  mia:{name:'Mia',age:29,photo:3,city:'berlin',km:3,pron:'she',gender:['transw'],orient:['queer'],format:'poly',role:'switch',seek:['dates','exp'],verified:true,online:true,dating:true,
   bio:{ru:'Люблю людей, которые говорят прямо, не торопят события и заранее обсуждают ожидания. Практикую шибари шесть лет.',en:'I like people who speak directly, don’t rush and agree on expectations up front. Six years of shibari.'},
-  jars:[['shibari',5],['bondage',4],['aftercare',5],['roleplay',4]],langs:['ru','en']},
+  jars:[['shibari',10],['bondage',8],['aftercare',10],['roleplay',8]],langs:['ru','en']},
  kai:{name:'Kai',age:27,photo:4,city:'berlin',km:5,pron:'they',gender:['nb'],orient:['pan'],format:'ra',role:'switch',seek:['chat','friends'],verified:true,online:false,last:{ru:'был(а) сегодня',en:'active today'},dating:true,
   bio:{ru:'Ищу людей, с которыми можно спокойно говорить о границах. Остальное приложится.',en:'Looking for people I can calmly talk boundaries with. The rest will follow.'},
-  jars:[['service',4],['bondage',3],['rituals',4],['talk',5]],langs:['en','ru']},
+  jars:[['service',8],['bondage',6],['rituals',8],['talk',10]],langs:['en','ru']},
  maya:{name:'Maya',age:31,photo:5,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:'none',seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
   bio:{ru:'Веду сообщество «Узлы и разговоры» и встречи для новичков. Здесь — ради людей и тем.',en:'I run the Rope & Talk community and newcomer meetups. Here for people and ideas.'},
-  jars:[['shibari',5],['talk',5],['aftercare',4]],langs:['ru','en','de']},
+  jars:[['shibari',10],['talk',10],['aftercare',8]],langs:['ru','en','de']},
  ari:{name:'Ari',age:30,photo:6,city:'berlin',km:6,pron:'he',gender:['man'],orient:['gay'],format:'open',role:'service',seek:['dates','friends'],verified:true,online:false,last:{ru:'был 2 ч назад',en:'active 2h ago'},dating:true,
   bio:{ru:'Дизайнер, бегаю по утрам, люблю ритуалы и порядок. Пишите про книги.',en:'Designer, morning runner, into rituals and order. Talk to me about books.'},
-  jars:[['service',5],['rituals',4],['latex',3],['slow',4]],langs:['en']},
+  jars:[['service',10],['rituals',8],['latex',6],['slow',8]],langs:['en']},
  kira:{name:'Kira',age:28,photo:7,city:'berlin',km:2,pron:'she',gender:['woman'],orient:['pan'],format:'poly',role:'recv',seek:['dates','rel'],verified:true,online:true,dating:true,
   bio:{ru:'Танцую, читаю, учусь доверять медленно. Важна честность и чувство юмора.',en:'I dance, read and learn to trust slowly. Honesty and humour matter.'},
-  jars:[['bondage',4],['sensory',5],['intimacy',5],['experiments',3]],langs:['ru','en']},
- lina:{name:'Lina',age:28,photo:9,city:'berlin',km:7,pron:'she',gender:['woman'],orient:['bi'],format:'open',role:'switch',seek:['dates','chat'],verified:false,online:false,last:{ru:'была вчера',en:'active yesterday'},dating:true,
+  jars:[['bondage',8],['sensory',10],['intimacy',10],['experiments',6]],langs:['ru','en']},
+ lina:{name:'Lina',age:28,photo:9,city:'berlin',km:7,pron:'she',gender:['woman'],orient:['bi'],format:'open',role:'switch',seek:['dates','chat'],verified:true,online:false,last:{ru:'была вчера',en:'active yesterday'},dating:true,
   bio:{ru:'Путешествую, готовлю для друзей, исследую себя без спешки.',en:'Travelling, cooking for friends, exploring myself at my own pace.'},
-  jars:[['roleplay',4],['experiments',4],['intimacy',4]],langs:['en']},
+  jars:[['roleplay',8],['experiments',8],['intimacy',8]],langs:['en']},
  tomeva:{name:'Eva & Tom',nameRu:'Eva и Tom',age:null,pair:true,plate:'amber',plate2:'ember',city:'berlin',km:3,pron:'any',gender:['woman','man'],orient:['bi'],format:'swing',role:'switch',seek:['exp','friends'],verified:true,online:true,dating:true,
   bio:{ru:'Пара, вместе 3 года. Отвечаем вдвоём, первая встреча — только в общественном месте.',en:'A couple, together 3 years. We reply together; first meeting in a public place only.'},
-  jars:[['experiments',5],['exhibition',3],['intimacy',4]],langs:['ru','en'],pairNote:{ru:'пара · вместе 3 года',en:'couple · 3 years together'}},
+  jars:[['experiments',10],['exhibition',6],['intimacy',8]],langs:['ru','en'],pairNote:{ru:'пара · вместе 3 года',en:'couple · 3 years together'}},
  dan:{name:'Dan',age:35,plate:'night',city:'berlin',pron:'he',gender:['man'],orient:['hetero'],format:'mono',role:'none',seek:['chat'],dating:false,bio:{ru:'Читаю больше, чем пишу.',en:'I read more than I post.'},jars:[]},
- noa:{name:'Noa',age:34,plate:'sea',city:'moscow',pron:'they',gender:['nb'],orient:['queer'],format:'ra',role:'none',seek:['chat'],dating:false,verified:true,bio:{ru:'Психолог, веду онлайн-круги о согласии.',en:'Counsellor, I host online circles on consent.'},jars:[['talk',5],['aftercare',5]]},
+ noa:{name:'Noa',age:34,plate:'sea',city:'moscow',pron:'they',gender:['nb'],orient:['queer'],format:'ra',role:'none',seek:['chat'],dating:false,verified:true,bio:{ru:'Психолог, веду онлайн-круги о согласии.',en:'Counsellor, I host online circles on consent.'},jars:[['talk',10],['aftercare',10]]},
 };
 
 const COMMUNITIES={
@@ -110,7 +117,7 @@ const DISCUSSIONS=[
 ];
 
 const POSTS=[
- {id:'p1',author:'mia',t:ago(2),type:'result',tags:['roleplay','talk'],likes:24,aud:'all',text:{ru:'Перепрошла тест «Роли» спустя полгода. Принимающая роль выросла, а интерес к показу ушёл почти в ноль. У кого ещё так менялось?',en:'Retook the Roles quiz after six months. Receiving role went up, interest in exhibition dropped to almost zero. Anyone else?'},result:[['roleplay',4],['exhibition',1]],comments:[['kai',{ru:'У меня наоборот — стало интереснее пробовать новое.',en:'Opposite for me — trying new things got more interesting.'}],['dan',{ru:'Классная идея — сравнивать себя с собой.',en:'Great idea to compare yourself with yourself.'}]]},
+ {id:'p1',author:'mia',t:ago(2),type:'result',tags:['roleplay','talk'],likes:24,aud:'all',text:{ru:'Перепрошла тест «Роли» спустя полгода. Принимающая роль выросла, а интерес к показу ушёл почти в ноль. У кого ещё так менялось?',en:'Retook the Roles quiz after six months. Receiving role went up, interest in exhibition dropped to almost zero. Anyone else?'},result:[['roleplay',8],['exhibition',2]],comments:[['kai',{ru:'У меня наоборот — стало интереснее пробовать новое.',en:'Opposite for me — trying new things got more interesting.'}],['dan',{ru:'Классная идея — сравнивать себя с собой.',en:'Great idea to compare yourself with yourself.'}]]},
  {id:'p2',author:'kai',t:ago(20),type:'photo',plate:'sea',tags:['shibari'],likes:41,aud:'all',text:{ru:'Вчерашний мастер-класс по обвязкам. Учились не узлам, а тому, как договариваться заранее.',en:'Yesterday’s rope workshop. We learned not knots but how to agree in advance.'},comments:[['mia',{ru:'Было тепло и спокойно, спасибо всем!',en:'It was warm and calm, thanks everyone!'}]]},
  {id:'p3',author:'tomeva',t:ago(70),type:'text',tags:['intimacy','talk'],likes:58,aud:'all',text:{ru:'Год в открытых отношениях. Главное, что поняли: правила лучше обновлять заранее, а не после.',en:'A year in an open relationship. Main lesson: update the rules before, not after.'},comments:[]},
  {id:'p4',author:'maya',t:ago(4),type:'poll',tags:['talk'],likes:17,aud:'all',text:{ru:'Как вы предпочитаете обсуждать границы перед встречей?',en:'How do you prefer to discuss boundaries before meeting?'},poll:[[{ru:'В переписке',en:'In writing'},34],[{ru:'Голосом',en:'Voice call'},21],[{ru:'При встрече за кофе',en:'Over coffee in person'},45]],comments:[]},
@@ -143,14 +150,14 @@ const REQ_SCOPES=[['info',{ru:'желания и границы',en:'wishes and 
 
 /* ---------- personas ---------- */
 function fullMe(){return{
- nick:'alex_b',name:'Alex',dob:'1994-03-14',photo:8,photos:[8],city:'berlin',pron:'he',gender:['man'],orient:['bi'],format:'open',role:'lead',seek:['dates','chat'],langs:['ru','en'],
+ nick:'alex_b',name:'Alex',showAge:true,dob:'1994-03-14',photo:8,photos:[8],city:'berlin',pron:'he',gender:['man'],orient:['bi'],format:'open',role:'lead',seek:['dates','chat'],langs:['ru','en'],
  bio:{ru:'Говорю прямо, слушаю внимательно. Люблю верёвку, долгие прогулки и людей, которые знают свои границы.',en:'I speak directly and listen closely. I love rope, long walks and people who know their limits.'},
  vis:{...PUBLIC_VIS},email:'alex@mail.com',methods:['email','google'],dating:true,datingVisible:true,socialLikes:true,requestsFrom:'all',rsvpShow:false,ageCheck:'ok',premium:false,
  jars:[
-  {t:'bondage',lv:4,real:'practice',vis:'public'},{t:'shibari',lv:3,real:'try',vis:'public'},{t:'roleplay',lv:4,real:'practice',vis:'public'},{t:'aftercare',lv:5,real:'practice',vis:'public'},
-  {t:'control',lv:4,real:'practice',vis:'granted'},{t:'sensory',lv:3,real:'fantasy',vis:'granted'},{t:'experiments',lv:5,real:'try',vis:'only'},{t:'intimacy',lv:4,real:'practice',vis:'public'},
+  {t:'bondage',lv:8,real:'practice',vis:'public'},{t:'shibari',lv:6,real:'try',vis:'public'},{t:'roleplay',lv:8,real:'practice',vis:'public'},{t:'aftercare',lv:10,real:'practice',vis:'public'},
+  {t:'control',lv:8,real:'practice',vis:'granted'},{t:'sensory',lv:6,real:'fantasy',vis:'granted'},{t:'experiments',lv:10,real:'try',vis:'only'},{t:'intimacy',lv:8,real:'practice',vis:'public'},
   {t:'impact',lv:0,limit:'hard',vis:'only'},{t:'exhibition',lv:0,limit:'discuss',vis:'granted'}],
- history:[{t:ago(30),topic:'shibari',from:2,to:3,src:'test'},{t:ago(200),topic:'aftercare',from:4,to:5,src:'manual'},{t:ago(400),topic:'impact',from:'—',to:'limit',src:'manual'}],
+ history:[{t:ago(30),topic:'shibari',from:4,to:6,src:'test'},{t:ago(200),topic:'aftercare',from:8,to:10,src:'manual'},{t:ago(400),topic:'impact',from:'—',to:'limit',src:'manual'}],
  journal:[
   {id:'j1',t:ago(26),topics:['shibari'],text:{ru:'Первое занятие у Mia. Страшно было только первые десять минут. Записать: спросить про ножницы для бандажа.',en:'First session with Mia. Scary only for the first ten minutes. Note: ask about safety shears.'}},
   {id:'j2',t:ago(130),topics:['talk'],text:{ru:'Поговорили с Kai о границах. Понял, что мне проще писать, чем говорить вслух — это нормально.',en:'Talked boundaries with Kai. I realised writing is easier for me than saying it out loud — and that’s fine.'}},
@@ -159,7 +166,7 @@ function fullMe(){return{
  saved:{posts:['p8'],events:['e4'],topics:['aftercare']},
 };}
 function newMe(){return{
- nick:'',name:'',dob:'',photo:null,photos:[],city:null,pron:null,gender:[],orient:[],format:null,role:null,seek:[],langs:[],bio:{ru:'',en:''},
+ nick:'',name:'',showAge:false,dob:'',photo:null,photos:[],city:null,pron:null,gender:[],orient:[],format:null,role:null,seek:[],langs:[],bio:{ru:'',en:''},
  vis:{gender:'only',orient:'only',format:'only',role:'only'},email:'',methods:[],dating:false,datingVisible:false,socialLikes:true,requestsFrom:'all',rsvpShow:false,ageCheck:'none',premium:false,
  jars:[],history:[],journal:[],tests:{},saved:{posts:[],events:[],topics:[]},fresh:true};}
 
@@ -203,7 +210,7 @@ function freshState(persona){
   ]:[],
   updates:full?[{id:'u1',e:'e1',t:ago(3),read:false,text:{ru:'Начало перенесли на 19:00. Возьмите удобную одежду.',en:'Start moved to 19:00. Bring comfortable clothes.'}},{id:'u2',c:'rope',t:ago(30),read:true,text:{ru:'Новые правила фотосъёмки на встречах — загляните в раздел «Правила».',en:'New photo rules for meetups — see the Rules tab.'}}]:[],
   history:full?[{p:'sofi',d:1,t:ago(30)},{p:'mia',d:1,t:ago(50)},{p:'lina',d:1,t:ago(60)},{p:'dan',d:-1,t:ago(80)}]:[],
-  filters:{feed:{},following:{},events:{format:'all'},dating:{show:'all',age:[18,99],dist:100,gender:[],format:[],seek:[],verified:false,topics:[]},search:{},comm:{}},
+  filters:{feed:{},following:{},events:{format:'all'},dating:{show:'all',age:[18,99],dist:100,gender:[],format:[],seek:[],topics:[],placeMode:'city',city:'',coords:null},search:{},comm:{}},
   searchRecent:full?['shibari','Mia','Kai']:[],
   quota:{max:3,used:full?1:0},
   ui:{},

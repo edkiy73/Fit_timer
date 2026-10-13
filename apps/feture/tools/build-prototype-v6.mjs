@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const app = join(dirname(fileURLToPath(import.meta.url)), '..');
 const src = join(app, 'prototype/v6');
 const read = (p) => readFileSync(join(src, p), 'utf8');
-const order = ['data.js', 'core.js', 'ui.js', 's-auth.js', 's-feed.js', 's-events.js', 's-people.js', 's-profile.js', 's-comm.js', 's-chats.js', 's-me.js', 's-settings.js', 's-completion.js', 'qa.js', 'main.js'];
+const order = ['data.js', 'core.js', 'ui.js', 's-location.js', 's-auth.js', 's-feed.js', 's-events.js', 's-people.js', 's-profile.js', 's-comm.js', 's-chats.js', 's-me.js', 's-settings.js', 's-completion.js', 's-navigation.js', 'qa.js', 'main.js'];
 
 const img = {};
 for (let i = 1; i <= 9; i++) img[i] = 'data:image/webp;base64,' + readFileSync(join(app, `public/images/profile-${i}.webp`)).toString('base64');

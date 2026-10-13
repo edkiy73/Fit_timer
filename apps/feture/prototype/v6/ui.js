@@ -1,12 +1,12 @@
 /* ============ SHARED COMPONENTS ============ */
 const JC=['var(--latex)','var(--lilac)','var(--skin)'];
-/** jars: list of {t,lv,limit,vis} or [t,lv]; levels are 1–5 "how it resonates now", never a percentage */
+/** jars: list of {t,lv,limit,vis} or [t,lv]; levels are 1–10 "how it resonates now", never a percentage */
 function jarsHTML(list,o={}){
  const items=list.map(x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x);
  return `<div class="jars ${o.pre?'pre':''} ${o.cls||''}">${items.map((j,i)=>{
-  const tag=o.act?'button':'div';const attrs=o.act?`data-act="${o.act}" data-v="${j.t}" aria-label="${esc(topic(j.t))}${j.limit?'':`, ${j.lv} ${L('из','of')} 5`}"`:'';
+  const tag=o.act?'button':'div';const attrs=o.act?`data-act="${o.act}" data-v="${j.t}" aria-label="${esc(topic(j.t))}${j.limit?'':`, ${j.lv} ${L('из','of')} 10`}"`:'';
   if(j.limit)return `<${tag} class="jar limit" ${attrs}><div class="glass"><span class="lim">${I.block}</span></div><span>${esc(topic(j.t))}</span></${tag}>`;
-  return `<${tag} class="jar" ${attrs} style="--jc:${JC[i%3]}"><div class="glass"><div class="fill" style="--v:${Math.max(8,j.lv*20)}"></div><div class="pct">${j.lv}/5</div>${o.vis&&j.vis!=='public'?`<span class="vis">${j.vis==='only'?I.eyeoff:I.lock}</span>`:''}</div><span>${esc(topic(j.t))}</span></${tag}>`;}).join('')}${o.add?`<button class="jar add" data-act="${o.add}"><div class="glass">${I.plus}</div><span>${L('Добавить','Add')}</span></button>`:''}</div>`;
+  return `<${tag} class="jar" ${attrs} style="--jc:${JC[i%3]}"><div class="glass"><div class="fill" style="--v:${Math.max(8,j.lv*10)}"></div><div class="pct">${j.lv}/10</div>${o.vis&&j.vis!=='public'?`<span class="vis">${j.vis==='only'?I.eyeoff:I.lock}</span>`:''}</div><span>${esc(topic(j.t))}</span></${tag}>`;}).join('')}${o.add?`<button class="jar add" data-act="${o.add}"><div class="glass">${I.plus}</div><span>${L('Добавить','Add')}</span></button>`:''}</div>`;
 }
 const fillJars=()=>setTimeout(()=>$$('.jars.pre').forEach(j=>j.classList.remove('pre')),90);
 function venn(n,o={}){return `<div class="venn ${o.mini?'mini':''} ${o.pre?'pre':''}" ${o.id?`id="${o.id}"`:''}><i></i><i></i><b>${n}${o.mini?'':`<small>${pl(n,['общая тема','общие темы','общих тем'],['shared topic','shared topics'],true)}</small>`}</b></div>`;}
@@ -17,12 +17,12 @@ function shared(id){
  const p=person(id);if(!p)return{match:[],complement:[],discuss:[],few:true};
  const mine=S.me.jars.filter(j=>j.vis==='public'&&!j.limit);
  const theirs=(p.jars||[]).map(j=>({t:j[0],lv:j[1]}));
- const match=mine.filter(j=>j.lv>=3&&theirs.some(x=>x.t===j.t&&x.lv>=3)).map(j=>j.t);
+ const match=mine.filter(j=>j.lv>=6&&theirs.some(x=>x.t===j.t&&x.lv>=6)).map(j=>j.t);
  const complement=[];const discuss=[];
  const r1=publicField(S.me,'role'),r2=p.role;
  if((r1==='lead'&&r2==='recv')||(r1==='recv'&&r2==='lead'))complement.push(L(`Твоя ${opt('role',r1)} роль и ${opt('role',r2)} у ${pname(id)} дополняют друг друга`,`Your ${opt('role',r1)} role and ${pname(id)}’s ${opt('role',r2)} role complement each other`));
  else if(r2==='switch'||r1==='switch')complement.push(L(`${pname(id)} — свитч: роли можно договорить вместе`,`${pname(id)} is a switch: roles are open to agree on`));
- mine.forEach(j=>{const x=theirs.find(y=>y.t===j.t);if(x&&Math.abs(x.lv-j.lv)>=2)discuss.push(L(`${topic(j.t)}: у тебя ${j.lv}/5, у ${pname(id)} ${x.lv}/5`,`${topic(j.t)}: you ${j.lv}/5, ${pname(id)} ${x.lv}/5`));
+ mine.forEach(j=>{const x=theirs.find(y=>y.t===j.t);if(x&&Math.abs(x.lv-j.lv)>=4)discuss.push(L(`${topic(j.t)}: у тебя ${j.lv}/10, у ${pname(id)} ${x.lv}/10`,`${topic(j.t)}: you ${j.lv}/10, ${pname(id)} ${x.lv}/10`));
   if(false)discuss.push(L(`${topic(j.t)}: ты хочешь попробовать, для ${pname(id)} это сильный интерес`,`${topic(j.t)}: you want to try, for ${pname(id)} it’s a strong interest`));});
  const publicFormat=publicField(S.me,'format');if(publicFormat&&p.format&&publicFormat!==p.format&&(publicFormat==='mono'||p.format==='mono'))discuss.push(L(`Формат отношений: ${opt('format',publicField(S.me,'format'))} и ${opt('format',p.format)}`,`Relationship format: ${opt('format',publicField(S.me,'format'))} vs ${opt('format',p.format)}`));
  return{match,complement,discuss:[...new Set(discuss)],few:mine.length<2||theirs.length<2};
@@ -32,7 +32,7 @@ function sharedSummary(id){const s=shared(id);if(s.few)return L('Пока мал
 
 /* ---------- people ---------- */
 function whoLine(id){const p=person(id);if(!p)return '';const g=(p.gender||[]).map(x=>opt('gender',x)).join(', ');const o=(p.orient||[]).map(x=>opt('orient',x)).join(', ');return [p.pair?T(p.pairNote):opt('pron',p.pron),[g,o].filter(Boolean).join(', ')].filter(Boolean).join(' · ');}
-function placeLine(id){const p=person(id);if(!p)return '';return p.km?`${city(p.city)}, ${p.km} ${L('км','km')}`:city(p.city);}
+function placeLine(id){const p=person(id);if(!p)return '';const km=S.me.location?.mode==='nearby'?nearbyDistance(id):null;return [city(p.city),km!==null?L(`около ${Math.max(5,km)} км`,`about ${Math.max(5,km)} km`):''].filter(Boolean).join(' · ');}
 function presence(id){const p=person(id);if(!p)return '';return p.online?L('сейчас в сети','online now'):T(p.last)||'';}
 function personRow(id,o={}){
  return `<button class="li" data-go="P01" data-p='${JSON.stringify({id})}'>${av(id,o.round?'round':'')}<span class="tx"><b>${esc(pname(id))}${person(id).dating&&person(id).age?`, ${person(id).age}`:''}</b><small>${o.sub||esc(whoLine(id))}</small></span>${o.right||I.chev}</button>`;
@@ -98,7 +98,25 @@ function commCard(id,o={}){
 
 /* ---------- sheet builders reused across screens ---------- */
 /** chip group: k = state key in obj; multi */
-function chipGroup(items,selected,act,o={}){return `<div class="chips ${o.cls||''}">${items.map(([id,l])=>{const on=selected.includes(id);const ex=o.ex&&o.ex.includes(id);return `<button class="chip ${on?'on ck':''} ${ex?'ex':''}" data-act="${act}" data-v="${id}" ${o.k?`data-k="${o.k}"`:''} aria-pressed="${on}">${esc(l)}</button>`;}).join('')}</div>`;}
+function chipGroup(items,selected,act,o={}){
+ if(items.length<=8)return `<div class="chips ${o.cls||''}">${items.map(([id,l])=>`<button class="chip ${selected.includes(id)?'on':''} ${o.ex?.includes(id)?'ex':''}" data-act="${act}" data-v="${esc(id)}" ${o.k?`data-k="${o.k}"`:''} aria-pressed="${selected.includes(id)}">${esc(l)}</button>`).join('')}</div>`;
+ const key=act+'-'+(o.k||''),queries=S.ui.choiceQueries||{},q=queries[key]||'';const selectedLabels=items.filter(([id])=>selected.includes(id)).map(x=>x[1]);
+ return `<details class="choice-picker" data-choice="${key}" ${S.ui.choiceOpen?.[key]?'open':''}><summary>${selectedLabels.length?esc(selectedLabels.slice(0,2).join(', '))+(selectedLabels.length>2?' +'+(selectedLabels.length-2):''):L('Выбрать из каталога','Choose from the catalogue')}<span>${selectedLabels.length||items.length}</span></summary><div class="selection-list" data-key="${key}"><input class="inp selection-search" type="search" data-in="choiceSearch" placeholder="${L('Найти вариант','Find an option')}" aria-label="${L('Поиск в каталоге','Search catalogue')}" value="${esc(q)}">${items.map(([id,l])=>{const text=(l+' '+id+' '+(OPT[o.k]||[]).find(x=>x[0]===id)?.[2]).toLowerCase();return `<button ${text.includes(q.toLowerCase())?'':'hidden'} data-choice-item data-text="${esc(text)}" class="${selected.includes(id)?'on':''}" data-act="${act}" data-v="${esc(id)}" ${o.k?`data-k="${o.k}"`:''} aria-pressed="${selected.includes(id)}">${esc(l)}</button>`;}).join('')}<p class="note choice-empty" ${items.some(([id,l])=>(l+' '+id).toLowerCase().includes(q.toLowerCase()))?'hidden':''}>${L('Такого варианта нет. Попробуй другое слово.','No such option. Try another word.')}</p></div></details>`;
+}
+const localMediaURLs=new Set();
+function clearLocalMedia(){for(const url of localMediaURLs)URL.revokeObjectURL(url);localMediaURLs.clear();}
+function pickLocalMedia(accept,multiple=true){return new Promise(resolve=>{
+ const input=document.createElement('input');input.type='file';input.accept=accept;input.multiple=multiple;input.hidden=true;document.body.append(input);
+ const finish=files=>{input.remove();resolve(files);};input.addEventListener('cancel',()=>finish([]),{once:true});
+ input.addEventListener('change',()=>{const chosen=[];for(const file of input.files){const video=file.type.startsWith('video/'),image=file.type.startsWith('image/');
+  if(!video&&!image||accept==='image/*'&&!image){toast(L('Выбери фото или видео поддерживаемого формата','Choose a supported photo or video'),{type:'warn'});continue;}
+  if(file.size>(video?100:20)*1024*1024){toast(L('Фото — до 20 МБ, видео — до 100 МБ','Photos up to 20 MB, videos up to 100 MB'),{type:'warn'});continue;}
+  const url=URL.createObjectURL(file);localMediaURLs.add(url);chosen.push({url,name:file.name,type:video?'video':'image',size:file.size});if(chosen.length>=6)break;
+ }finish(chosen);},{once:true});input.click();
+});}
+function mediaPreviews(files,removeAct){return files?.length?`<div class="attachment-preview">${files.map((f,i)=>`<figure>${f.type==='video'?`<video controls playsinline preload="metadata" src="${esc(f.url)}"></video>`:`<img src="${esc(f.url)}" alt="${esc(f.name)}" loading="lazy">`}<figcaption>${esc(f.name)}</figcaption>${removeAct?`<button class="btn soft auto" data-act="${removeAct}" data-v="${i}">${L('Убрать','Remove')}</button>`:''}</figure>`).join('')}</div>`:'';}
+IN.choiceSearch=el=>{const list=el.closest('.selection-list');S.ui.choiceQueries=S.ui.choiceQueries||{};S.ui.choiceQueries[list.dataset.key]=el.value;let n=0;for(const row of list.querySelectorAll('[data-choice-item]')){row.hidden=!row.dataset.text.includes(el.value.toLowerCase().trim());if(!row.hidden)n++;}$('.choice-empty',list).hidden=!!n;};
+document.addEventListener('toggle',e=>{if(e.target.matches?.('[data-choice]')&&e.target.isConnected){S.ui.choiceOpen=S.ui.choiceOpen||{};S.ui.choiceOpen[e.target.dataset.choice]=e.target.open;}},true);
 const optItems=g=>OPT[g].map(x=>[x[0],S.lang==='en'?x[2]:x[1]]);
 const topicItems=ids=>(ids||Object.keys(TOPICS)).map(t=>[t,topic(t)]);
 
