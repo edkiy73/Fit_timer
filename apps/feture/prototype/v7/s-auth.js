@@ -127,7 +127,7 @@ function signIn(persona){closeSheet(true);const lang=S.lang;S=freshState(persona
 
 /* A06–A08 — age check is a separate real process, never a checkbox */
 function needAge(then){
- if(S.me.ageCheck==='ok')return true;
+ if(!QA.ageRequired||S.me.ageCheck==='ok')return true; // V7.1: off by default — 18+ by date of birth at sign-up; admin can require a check per country
  sheet(()=>({title:L('Нужна проверка возраста','Age check needed'),lead:`<span class="ico l">${I.shield}</span>`,body:`<p class="lead">${L('Это действие доступно только после проверки 18+. Дата рождения при регистрации — самодекларация, её недостаточно.','This is available only after an 18+ check. The date of birth you entered is self-declared and isn’t enough.')}</p>
  <div class="fact"><i class="g">${I.check}</i><span>${L('Займёт 1–2 минуты: селфи для оценки возраста или документ','Takes 1–2 minutes: a selfie age estimate or an ID')}</span></div>
  <div class="fact"><i class="g">${I.check}</i><span>${L('Проверку делает отдельный сервис; фото не становится аватаром и не публикуется','A separate service checks it; the photo never becomes your avatar or gets published')}</span></div>

@@ -1364,3 +1364,6 @@ button.jar:active .glass{transform:scale(.95)}
 .pill{max-width:100%;white-space:normal}
 .evimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .evcov{position:relative;aspect-ratio:16/9;border-radius:18px;overflow:hidden;margin-bottom:8px}.evcov img{width:100%;height:100%;object-fit:cover}.evcov .rm{position:absolute;right:8px;top:8px;width:30px;height:30px;border-radius:50%;background:rgba(18,7,14,.6);color:#fff;display:grid;place-items:center}
+/* V7.1: thinner, tidier lid */
+.jar .glass::before{left:3px;right:3px;top:-5px;height:5px;border-radius:3px 3px 1px 1px;background:color-mix(in srgb,var(--line2) 80%,var(--ink) 20%);box-shadow:none}
+.jar .glass{margin-top:4px}

@@ -289,7 +289,7 @@ const C={
  notif:()=>S.notifs.filter(n=>!n.read&&!(n.p&&isBlocked(n.p))).length,
  updates:()=>S.updates.filter(u=>!u.read).length,
  reqIn:()=>S.reqIn.filter(r=>r.status==='new').length,
- quotaLeft:()=>Math.max(0,(S.me.premium?15:S.quota.max)-S.reqOut.filter(x=>Date.now()-x.t<DAY).length),
+ quotaLeft:()=>Math.max(0,S.quota.max-S.reqOut.filter(x=>Date.now()-x.t<DAY).length),
  joined:()=>S.joined.size,
  members:id=>COMMUNITIES[id].members+((S.joined.has(id)||COMMUNITIES[id].mine)?1:0), // base count excludes the viewer
 };

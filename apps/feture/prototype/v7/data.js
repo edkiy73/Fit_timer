@@ -46,6 +46,8 @@ Object.assign(TOPICS,{
  publicplace:{ru:'Публичные места',en:'Public places',cat:'limits'}, strongpain:{ru:'Сильная боль',en:'Intense pain',cat:'limits'}, overnight:{ru:'Ночёвка на первой встрече',en:'Overnight on a first meeting',cat:'limits'},
  thirdparty:{ru:'Третьи люди без договорённости',en:'Third people without agreement',cat:'limits'}, permanent:{ru:'Необратимые следы',en:'Permanent marks',cat:'limits'},
 });
+// V7.1: hidden from the catalogue by default (store-policy risk). In production this is an admin setting, not code.
+const ADMIN_HIDDEN_TOPICS=['blood','needles','knife','cnc'];const HIDDEN_TOPICS={};for(const k of ADMIN_HIDDEN_TOPICS){HIDDEN_TOPICS[k]=TOPICS[k];delete TOPICS[k];}
 const TOPIC_DESC={
  bondage:{ru:'Ограничение движений верёвкой, лентами или фиксаторами по взаимной договорённости. Главное — заранее обсуждённые сигналы и быстрый способ освободить.',en:'Restricting movement with rope, straps or cuffs by mutual agreement. The essentials are agreed signals and a quick way to release.'},
  shibari:{ru:'Японская техника обвязки, где важны эстетика, ритм и доверие. Учиться лучше у опытных людей и начинать с простых узлов.',en:'A Japanese rope technique focused on aesthetics, rhythm and trust. Best learned from experienced people, starting with simple ties.'},
@@ -55,7 +57,7 @@ const TOPIC_DESC={
 const CATS=[
  {id:'practice',ru:'Практики',en:'Practices',pl:'rose'},{id:'dynamics',ru:'Роли и динамика',en:'Roles & dynamics',pl:'lilac'},
  {id:'senses',ru:'Ощущения',en:'Sensations',pl:'amber'},{id:'fetish',ru:'Фетиши и образы',en:'Fetishes & looks',pl:'coal'},{id:'relations',ru:'Отношения и формат',en:'Relationships',pl:'sea'},
- {id:'safety',ru:'Безопасность и согласие',en:'Safety & consent',pl:'moss'},{id:'edge',ru:'Повышенный риск',en:'Edge play',pl:'wine'},{id:'limits',ru:'Частые границы',en:'Common limits',pl:'night'},
+ {id:'safety',ru:'Безопасность и согласие',en:'Safety & consent',pl:'moss'},{id:'edge',ru:'Только с опытом',en:'Experienced only',pl:'wine'},{id:'limits',ru:'Частые границы',en:'Common limits',pl:'night'},
 ];
 const OPT={
  gender:[['woman','женщина','woman'],['man','мужчина','man'],['nb','небинарная персона','non-binary'],['transw','транс-женщина','trans woman'],['transm','транс-мужчина','trans man'],['gq','гендерквир','genderqueer'],['ag','агендер','agender'],['search','пока ищу слово','still searching']],
@@ -240,7 +242,7 @@ function freshState(persona){
   history:full?[{p:'sofi',d:1,t:ago(30)},{p:'mia',d:1,t:ago(50)},{p:'lina',d:1,t:ago(60)},{p:'dan',d:-1,t:ago(80)}]:[],
   filters:{feed:{},following:{},events:{format:'all'},dating:{show:'all',age:[18,99],dist:100,gender:[],format:[],seek:[],topics:[],role:[],placeMode:'city',city:'',coords:null},search:{},comm:{}},
   searchRecent:full?['shibari','Mia','Kai']:[],
-  quota:{max:3,used:full?1:0},
+  quota:{max:10,used:full?1:0},
   ui:{},
  };
  // organizer event for the full persona (E15/E16)
