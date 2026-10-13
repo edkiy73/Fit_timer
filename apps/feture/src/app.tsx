@@ -5,6 +5,7 @@ import { AdminPanel } from '@appbase/ui-react/admin.js';
 import { I18nProvider, LanguagePicker, sharedUiLocale, useI18n } from '@appbase/ui-react/i18n.js';
 import product from '../config/product.json';
 import { authClient } from './auth';
+import {sandboxActive,endSandbox} from './feture/design/sandbox-session';
 import { adminClient } from './admin';
 import { appDocs, SETTINGS_DOC, syncNow } from './sync';
 import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
@@ -171,6 +172,7 @@ function Account(){
   };
   const handle=auth.session?.handle?.trim();
   const displayName=handle||t('account.fallbackName');
+ const sandbox=sandboxActive()&&!auth.session;
   return <div className="ft-account-page">
     <div className="ft-account-mobile-top"><Link to="/" className="ft-account-wordmark">Fet<span>Ure.</span></Link><Link to="/" className="ft-account-back"><Icon name="back" size={17}/> {t('account.myWorld')}</Link></div>
     <div className="ft-account-layout">
@@ -205,7 +207,8 @@ function Account(){
           <div className="ft-account-footer"><button className="ft-account-signout" type="button" disabled={signingOut} onClick={()=>void signOut()}><Icon name="back" size={17}/>{signingOut?t('account.signingOut'):t('account.signOut')}</button>{signOutError&&<p role="alert">{signOutError}</p>}</div>
         </> : <div className="ft-account-guest">
           <section className="ft-account-hero" aria-labelledby="ft-guest-title"><span className="ft-account-hero-orbit" aria-hidden="true"/><span className="ft-account-hero-kicker">{t('account.guestKicker')}</span><h2 id="ft-guest-title">{t('account.guestTitle')}</h2><p>{t('account.guestDescription')}</p><Link className="ft-account-secondary" to="/explore">{t('account.guestExplore')} <Icon name="arrow" size={18}/></Link></section>
-          <section className="ft-account-panel ft-account-signin" aria-labelledby="ft-signin-title"><h2 id="ft-signin-title">{t('account.signInTitle')}</h2><p>{t('account.signInDescription')}</p><SignInForm locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} askHandle={ASK_HANDLE} variant="inline" onSignedIn={()=>{const next=safeSignInReturnTo(location.state);navigate(next==='/'?'/design/F01':next,{replace:true});}}/></section>
+          {sandbox&&<section className="ft-account-panel ft-account-signin"><h2>{locale.startsWith('en')?'Temporary account':'Временный аккаунт'}</h2><p>{locale.startsWith('en')?'This account has no saved data. Exiting destroys all changes.':'В этом аккаунте нет сохранённых данных. При выходе все изменения исчезнут.'}</p><Link className="ft-account-primary" to="/design/F01">{locale.startsWith('en')?'Back to app':'Вернуться в приложение'}</Link><button className="ft-account-signout" type="button" onClick={()=>{endSandbox();navigate('/design/A01',{replace:true});}}>{locale.startsWith('en')?'Exit and reset':'Выйти и очистить'}</button></section>}
+          {!sandbox&&<section className="ft-account-panel ft-account-signin" aria-labelledby="ft-signin-title"><h2 id="ft-signin-title">{t('account.signInTitle')}</h2><p>{t('account.signInDescription')}</p><SignInForm locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} askHandle={ASK_HANDLE} variant="inline" onSignedIn={()=>{const next=safeSignInReturnTo(location.state);navigate(next==='/'?'/design/F01':next,{replace:true});}}/></section>}
           <details className="ft-account-panel ft-account-preferences ft-account-guest-settings"><summary>{t('account.settingsSummary')} <Icon name="arrow" size={18}/></summary><div className="ft-account-preference-grid"><ThemePicker/><div className="language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')}/></div></div><Link className="ft-account-legal" to="/documents">{t('account.documentsTitle')}</Link></details>
         </div>}
       </div>

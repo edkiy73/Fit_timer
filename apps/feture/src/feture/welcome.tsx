@@ -1,10 +1,12 @@
-import { Link } from 'react-router';
+import { Link,useNavigate } from 'react-router';
+import {startSandbox} from './design/sandbox-session';
 import {LanguagePicker,useI18n} from '@appbase/ui-react/i18n.js';
 import { Icon } from './components/Icon';
 import './welcome.css';
 
 export function WelcomePage(){
  const {t,canSwitch,locale}=useI18n();
+ const navigate=useNavigate();
  const pillars=[
  {number:'01',icon:'world' as const,title:t('welcome.pillar.self.title'),detail:t('welcome.pillar.self.detail')},
  {number:'02',icon:'compass' as const,title:t('welcome.pillar.explore.title'),detail:t('welcome.pillar.explore.detail')},
@@ -28,7 +30,7 @@ export function WelcomePage(){
     {canSwitch&&<div className="ft-welcome-language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')}/></div>}
     <div className="ft-welcome-buttons">
      <Link className="ft-welcome-primary" to="/design/A02" state={{mode:'register'}}>{locale==='ru'?'Вход или регистрация':'Sign in or create an account'} <Icon name="arrow" size={21}/></Link>
-     <Link className="ft-welcome-secondary" to="/design/A02" state={{mode:'register'}}>{t('welcome.signup')}</Link>
+     <button className="ft-welcome-secondary" type="button" onClick={()=>{startSandbox();navigate('/design/A04');}}>{locale==='ru'?'Пустой тестовый аккаунт · без кода':'Empty trial account · no code'}</button>
     </div>
     <p className="ft-welcome-trust"><Icon name="lock" size={16}/> {t('welcome.trust')}</p>
    </div>
