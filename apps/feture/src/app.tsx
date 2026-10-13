@@ -218,7 +218,7 @@ function Account(){
 // The irreversible server transaction must be enabled only after Issue #1074 is accepted.
 function DeleteFetureAccount(){
   const auth=useOptionalAuth();const {locale}=useI18n();const en=locale.startsWith('en');
-  const [step,setStep]=useState<1|2>(1),[typed,setTyped]=useState(''),[understood,setUnderstood]=useState(false),[feedback,setFeedback]=useState(false);
+  const [step,setStep]=useState<1|2>(1),[typed,setTyped]=useState(''),[understood,setUnderstood]=useState(false),[keepPublicContent,setKeepPublicContent]=useState(false),[feedback,setFeedback]=useState(false);
   if(auth.loading)return <main className="ft-account-page" role="status">{en?'Checking account…':'Проверяем аккаунт…'}</main>;
   if(!auth.session)return <Navigate to="/account" replace/>;
   const email=auth.session.email;
@@ -232,7 +232,7 @@ function DeleteFetureAccount(){
         <h2>{en?'What removal includes':'Что потребуется удалить'}</h2>
         <ul>
           <li>{en?'Public and private profile, jars, tests, journal, photos and access grants':'Открытый и закрытый профиль, баночки, опросы, дневник, фотографии и выданные доступы'}</li>
-          <li>{en?'Posts, replies, reactions, bookmarks and shared links':'Публикации, ответы, реакции, закладки и ссылки доступа'}</li>
+          <li>{en?'Reactions, bookmarks and shared links; posts and replies depend on your choice below':'Реакции, закладки и ссылки доступа; судьба публикаций и ответов зависит от выбора ниже'}</li>
           <li>{en?'Participation in communities, chats and events':'Участие в сообществах, чатах и событиях'}</li>
           <li>{en?'Your events must be cancelled with notice to attendees. Some discussions may become unavailable.':'Созданные события должны быть отменены с уведомлением участников. Некоторые обсуждения могут стать недоступны.'}</li>
         </ul>
@@ -240,9 +240,14 @@ function DeleteFetureAccount(){
       </section>
       <section className="ft-account-panel ft-delete-confirm">
         <div className="ft-delete-stage">{en?'Step':'Шаг'} {step} / 2</div>
-        {step===1?<><h2>{en?'Understand the consequences':'Последствия удаления'}</h2><p>{en?'Your own content will disappear from FetUre. Other people’s independent publications must remain.':'Твои материалы исчезнут из FetUre. Независимые публикации других участников должны сохраниться.'}</p><button className="ft-delete-next" onClick={()=>setStep(2)}>{en?'Continue to confirmation':'Перейти к подтверждению'}</button></>:
+        {step===1?<><h2>{en?'What happens to public discussions?':'Что делать с публичными обсуждениями?'}</h2>
+        <p>{en?'Deleting your account must not erase other people’s replies. You may allow your public posts and comments to remain without a profile link, or request that your own text is removed, with placeholders preserving discussion threads.':'Удаление аккаунта не должно стирать ответы других людей. Можно оставить свои публичные публикации и комментарии без ссылки на профиль или запросить удаление своего текста с сохранением чужих веток через заглушки.'}</p>
+        <label className="ft-delete-check"><input type="checkbox" checked={keepPublicContent} onChange={e=>setKeepPublicContent(e.target.checked)}/><span>{en?'Keep my public posts and comments under “Deleted account”':'Оставить мои публичные посты и комментарии от имени «Удалённый аккаунт»'}</span></label>
+        <p className="ft-delete-caution">{en?'Public text can still identify you if you included personal details. If you do not choose retention, your content must be removed, while other people’s independent replies stay.':'Публичный текст может раскрывать твою личность, если ты оставил в нём личные сведения. Без согласия на сохранение твой контент должен быть удалён, а самостоятельные ответы других людей — остаться.'}</p>
+        <button className="ft-delete-next" onClick={()=>setStep(2)}>{en?'Continue to confirmation':'Перейти к подтверждению'}</button></>:
         <><h2>{en?'Confirm account':'Подтверди аккаунт'}</h2><p>{en?'Enter the signed-in email exactly to confirm which FetUre profile you want removed:':'Введи email текущего аккаунта, чтобы подтвердить, чей профиль FetUre нужно удалить:'}</p>
           <p className="ft-delete-email">{email}</p>
+          <p role="status">{keepPublicContent?(en?'Public posts and comments: keep as “Deleted account”.':'Публикации и комментарии: оставить без профиля от имени «Удалённый аккаунт».'):(en?'Public posts and comments: remove my text, preserve others’ replies.':'Публикации и комментарии: удалить мой текст, сохранить ответы других людей.')}</p>
           <label className="ft-delete-input">{en?'Email confirmation':'Подтверждение email'}<input type="email" autoComplete="off" value={typed} onChange={e=>{setTyped(e.target.value);setFeedback(false);}} placeholder={email}/></label>
           <label className="ft-delete-check"><input type="checkbox" checked={understood} onChange={e=>{setUnderstood(e.target.checked);setFeedback(false);}}/>{en?'I understand that this cannot be undone.':'Я понимаю, что вернуть удалённые данные будет нельзя.'}</label>
           <button className="ft-delete-final" disabled={!matched||!understood} type="button" onClick={()=>setFeedback(true)}>{en?'Request permanent removal':'Подтвердить удаление'}</button>
