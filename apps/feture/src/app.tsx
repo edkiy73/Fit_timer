@@ -6,6 +6,7 @@ import { I18nProvider, LanguagePicker, sharedUiLocale, useI18n } from '@appbase/
 import product from '../config/product.json';
 import { authClient } from './auth';
 import {sandboxActive,endSandbox} from './feture/design/sandbox-session';
+import {sandboxTarget} from './feture/design/sandbox-route';
 import { adminClient } from './admin';
 import { appDocs, SETTINGS_DOC, syncNow } from './sync';
 import { dictionaries, i18nConfig, LOCALE_KEY } from './i18n';
@@ -122,6 +123,10 @@ function Root(){
 
 function Shell(){
   const auth=useOptionalAuth(); const {t}=useI18n(); const location=useLocation();
+  if(!auth.loading&&!auth.session&&sandboxActive()){
+   const destination=sandboxTarget(location.pathname);
+   if(destination)return <Navigate to={destination} replace/>;
+  }
   if(isExperiencePath(location.pathname)||location.pathname==='/start'||location.pathname.startsWith('/design/')) return <Outlet />;
   const study=location.pathname==='/tests'||location.pathname.startsWith('/tests/');
   return <main className={study?'app ft-study-shell':(location.pathname==='/account'||location.pathname==='/profile')?'app ft-account-shell':'app'}><header className="app-header">
