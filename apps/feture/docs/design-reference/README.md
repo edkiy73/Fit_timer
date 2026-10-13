@@ -2,6 +2,8 @@
 
 **Latest product brief 2026-10-13:** read [PRODUCT-SPEC-START](PRODUCT-SPEC-START.md), then the relevant part of [MASTER-PRODUCT-SPEC-V4](MASTER-PRODUCT-SPEC-V4.md). The new Feed / People / Communities / Chats / Me structure, RU/EN and full Events supersede previous product-navigation variants. Full specification and connected screen design are the current priority; the HTML below remains a visual reference.
 
+**V5, 2026-10-13 (Claude):** [CLAUDE-V5-REVIEW](CLAUDE-V5-REVIEW.md) — review of the V4 React workspace, root causes of the owner’s 11 defects, and the clickable reference prototype `/prototype-v5.html` (sources `apps/feture/prototype/v5/`, build `node tools/build-prototype-v5.mjs`, check `node tools/qa-prototype-v5.mjs`). It is the current visual and interaction reference for porting screens to React; it does not replace server rules.
+
 **Reference:** [Claude HTML prototype](claude-mvp-concept-2026-10-12.html), supplied by the owner 2026-10-12. Preserve the original unchanged; do not bundle this 220+ KB showcase into the production build. It is a *design vocabulary*, not proof of live features, authentication, desktop responsiveness or accessible interaction.
 
 ## What to carry over

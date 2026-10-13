@@ -2,6 +2,8 @@
 
 Обновлено: 13.10.2026.
 
+> **Дальше — V5.** Claude проверил этот интерфейс, разобрал причины 11 недоработок владельца и собрал эталонный прототип: https://feture-mvp.vercel.app/prototype-v5.html , описание — [CLAUDE-V5-REVIEW](CLAUDE-V5-REVIEW.md). Переносить экраны в React по V5 (раздел «Как переносить в React»).
+
 **Начинай с https://feture-mvp.vercel.app/design-handoff.html . Актуальный React-интерфейс: https://feture-mvp.vercel.app/#/design/F01 . Не используй `/concept.html` или старый HTML как текущую реализацию.**
 
 Старый Claude HTML — только визуальный источник (характер шрифтов, карточек, анимаций). Новую структуру задают текущие требования владельца и MASTER-PRODUCT-SPEC-V4. Работать с существующим React/TypeScript/AppBase, не делать ещё один параллельный прототип.
