@@ -100,11 +100,18 @@ function SettingsSync(){
   return null;
 }
 
+function SandboxAuthFence(){
+ const auth=useOptionalAuth();
+ useEffect(()=>{if(auth.session)endSandbox();},[auth.session]);
+ return null;
+}
+
 function Root(){
   return (
     <Localized>
       <AuthProvider client={authClient}>
         <SettingsSync />
+        <SandboxAuthFence />
         <InterestLifecycle />
         <NativeNavigation />
         <DatingPresentationProvider><ProductLayout><Outlet /></ProductLayout></DatingPresentationProvider>
