@@ -6,5 +6,5 @@ const invitePath=new RegExp('^/(?:share/'+uuid+'|compare/(?:new/)?'+uuid+')$','i
 export function safeSignInReturnTo(state:unknown):string {
  if(!state||typeof state!=='object'||!('returnTo' in state))return '/';
  const path=(state as {returnTo:unknown}).returnTo;
- return typeof path==='string'&&invitePath.test(path)?path:'/';
+ return typeof path==='string'&&(invitePath.test(path)||/^\/design\/[A-Z]\d{2}$/.test(path))?path:'/';
 }

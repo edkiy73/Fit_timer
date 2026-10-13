@@ -26,7 +26,8 @@
   },
   "i18n": {
     "locales": [
-      "ru"
+      "ru",
+      "en"
     ],
     "default": "ru"
   },

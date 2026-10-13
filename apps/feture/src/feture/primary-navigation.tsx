@@ -31,7 +31,7 @@ export function ProductLayout({children}:{children:ReactNode}){
  const auth=useOptionalAuth();
  const {t}=useI18n();
  const tabs=usePrimaryTabs();
- const standalone=pathname==='/start'||pathname.startsWith('/operator')||pathname.startsWith('/admin')||pathname.startsWith('/share/')||(pathname==='/'&&!auth.session);
+ const standalone=pathname.startsWith('/design/')||pathname==='/design'||pathname==='/start'||pathname.startsWith('/operator')||pathname.startsWith('/admin')||pathname.startsWith('/share/')||(pathname==='/'&&!auth.session);
  const selected=selectedTab(pathname);
  return <div className={`ft-product-layout${standalone?' ft-product-standalone':''}${pathname==='/dating'?' ft-product-dating':''}`}>
   {!standalone&&<aside className="ft-product-rail">

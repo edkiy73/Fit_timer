@@ -78,6 +78,8 @@ There will be **hundreds of UX and product revisions**. Prioritize correct UX an
 Canonical Core auth and PostgreSQL-owned FetUre domain data remain the architecture; no second auth or client service-role secrets. No unrelated app changes.
 
 ## 9. Manual-only shared AI team and MVP Issue queue (owner decision 2026-10-12)
+
+**Standing owner authorization, 2026-10-13:** The owner explicitly authorized publishing FetUre development commits to the public `edkiy73/Fit_timer` repository, creating PRs and independently merging verified changes during requested work. Do not ask for this same GitHub publication/PR/merge permission again. Run the existing checks and proportional independent review before a safe merge.
 - [Start here](docs/agent-team/START.md) → [GitHub Issue index](docs/agent-team/ISSUES.md) → [one MVP card](docs/mvp-plan/README.md) → [12-line handoff](docs/agent-team/HANDOFF.md).
 - Claude and ChatGPT/Codex are **equal manual executors**. Work can switch provider mid-Issue via GitHub branch/PR/handoff. Never depend on chat history or transfer whole repository context. Default one implementer, specialist agent only when useful.
 - Current visual north star: [owner-approved Claude HTML reference](docs/design-reference/README.md) + [responsive/quality acceptance](docs/ui-quality.md). Full original HTML is **opt-in only**, not default agent context; desktop requires independent full-width design.
