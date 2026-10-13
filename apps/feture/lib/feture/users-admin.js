@@ -3,8 +3,10 @@
 'use strict';
 /** @param {import('./contracts').Response} res @param {number} status @param {Record<string,unknown>} body */
 function reply(res,status,body){res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','no-store');res.end(JSON.stringify(body));}
-const fail=(res,status,code)=>reply(res,status,{error:code});
-const send=(res,status,body)=>reply(res,status,body);
+/** @param {import('./contracts').Response} res @param {number} status @param {string} code */
+function fail(res,status,code){reply(res,status,{error:code});}
+/** @param {import('./contracts').Response} res @param {number} status @param {Record<string,unknown>} body */
+function send(res,status,body){reply(res,status,body);}
 const HEX=/^[a-f0-9]{32}$/;
 /** @param {import('./contracts').Transport} transport
  * @param {{configured:()=>boolean,many:(keys:string[])=>Promise<unknown[]>}} store */
