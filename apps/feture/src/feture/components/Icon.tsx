@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-export type IconName = 'world'|'compass'|'users'|'heart'|'arrow'|'back'|'check'|'lock'|'close'|'plus'|'search'|'shield'|'book'|'message'|'spark'|'eye'|'clock'|'settings'|'user';
+export type IconName = 'world'|'compass'|'users'|'heart'|'arrow'|'back'|'check'|'lock'|'close'|'plus'|'search'|'shield'|'book'|'message'|'spark'|'eye'|'clock'|'settings'|'user'|'bell';
 export function Icon({name,size=20}:{name:IconName,size?:number}){
   const paths:Record<IconName,ReactNode> = {
+    bell:<><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></>,
     world:<><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 4 3 14 0 18M12 3c-3 4-3 14 0 18"/></>,
     compass:<><circle cx="12" cy="12" r="9"/><path d="m16 8-2.8 5.2L8 16l2.8-5.2L16 8Z"/></>,
     users:<><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M17 5a3 3 0 0 1 0 6M17 14a5 5 0 0 1 4 5"/></>,

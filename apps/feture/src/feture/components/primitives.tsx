@@ -9,7 +9,7 @@ export function ActionButton({children,className='',type='button',...props}:Butt
   return <button {...props} type={type} className={`ft-primary ${className}`}>{children}</button>;
 }
 
-export function AppDialog({title,eyebrow,children,onClose,presentation='dialog'}:{title:string;eyebrow?:string;children:ReactNode;onClose:()=>void;presentation?:'dialog'|'adaptive'}){
+export function AppDialog({title,eyebrow,children,onClose,presentation='dialog',closeLabel='Закрыть'}:{title:string;eyebrow?:string;children:ReactNode;onClose:()=>void;presentation?:'dialog'|'adaptive';closeLabel?:string}){
   // The URL represents the overlay; Escape, outside click and native/browser back agree.
   useEffect(()=>{
     const dismiss=()=>onClose();
@@ -17,7 +17,7 @@ export function AppDialog({title,eyebrow,children,onClose,presentation='dialog'}
     return ()=>window.removeEventListener('feture:dismiss-overlay',dismiss);
   },[onClose]);
   const heading=<>
-      <AriaButton className="ft-dialog-close" aria-label="Закрыть" onPress={onClose}><Icon name="close"/></AriaButton>
+      <AriaButton className="ft-dialog-close" aria-label={closeLabel} onPress={onClose}><Icon name="close"/></AriaButton>
       {eyebrow&&<p className="ft-eyebrow">{eyebrow}</p>}
       <Heading slot="title" level={2}>{title}</Heading>
     </>;

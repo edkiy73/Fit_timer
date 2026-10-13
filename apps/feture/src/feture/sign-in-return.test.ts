@@ -14,4 +14,9 @@ describe('OTP invitation return',()=>{
   expect(safeSignInReturnTo(null)).toBe('/');
   expect(safeSignInReturnTo({returnTo:42})).toBe('/');
  });
+ it('restores a bounded design screen without query parameters',()=>{
+  expect(safeSignInReturnTo({returnTo:'/design/F01'})).toBe('/design/F01');
+  for(const path of ['/design/F01?token=secret','/design/F01/other','/design/../admin','/design/https://elsewhere.example'])
+   expect(safeSignInReturnTo({returnTo:path})).toBe('/');
+ });
 });

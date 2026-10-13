@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, Outlet, useNavigate, useLocation, type RouteObject, Navigate } from 'react-router';
 import { AuthProvider, SignInForm, useOptionalAuth } from '@appbase/ui-react/auth.js';
 import { AdminPanel } from '@appbase/ui-react/admin.js';
@@ -13,6 +13,7 @@ import { FetureCatalog } from './catalog';
 import { sameSession } from './feture/interest-api';
 import { InterestLifecycle, interestQueue } from './feture/use-interest-map';
 import { FetureExperience } from './feture/experience';
+const ProductDesign = lazy(async()=>({default:(await import('./feture/design/product-design')).ProductDesign}));
 import { WelcomePage } from './feture/welcome';
 import { FirstStepsPage } from './feture/first-steps';
 import { ProductLayout } from './feture/primary-navigation';
@@ -113,7 +114,7 @@ function Root(){
 
 function Shell(){
   const auth=useOptionalAuth(); const {t}=useI18n(); const location=useLocation();
-  if(isExperiencePath(location.pathname)||location.pathname==='/start') return <Outlet />;
+  if(isExperiencePath(location.pathname)||location.pathname==='/start'||location.pathname.startsWith('/design/')) return <Outlet />;
   const study=location.pathname==='/tests'||location.pathname.startsWith('/tests/');
   return <main className={study?'app ft-study-shell':(location.pathname==='/account'||location.pathname==='/profile')?'app ft-account-shell':'app'}><header className="app-header">
     <div><div className="eyebrow">{t('app.eyebrow')}</div><h1>{PRODUCT_NAME}</h1></div>
@@ -180,6 +181,7 @@ function Account(){
             <span className="ft-account-hero-orbit" aria-hidden="true"/>
             <div className="ft-account-hero-identity"><span className="ft-account-avatar" aria-hidden="true">{(handle||'F').slice(0,1).toLocaleUpperCase()}</span><div><span className="ft-account-hero-kicker">{t('account.heroKicker')}</span><h2 id="ft-account-hero-title">{displayName}</h2><p className="ft-account-email">{auth.session.email}</p></div></div>
             <p>{t('account.heroDescription')}</p>
+            <Link className="ft-account-primary" to="/design/F01">{locale.startsWith('en')?'Open the new interface':'Открыть новый интерфейс'} <Icon name="spark" size={19}/></Link>
             <Link className="ft-account-primary" to="/profile">{t('account.myProfile')} <Icon name="arrow" size={19}/></Link>
           </section>
           <div className="ft-account-sections">
@@ -225,6 +227,8 @@ export const routes: RouteObject[] = [
       element:<Shell />,
       children:[
         {index:true, element:<Home />},
+        {path:'design', element:<Navigate to="/design/F01" replace/>},
+        {path:'design/:screenId', element:<Suspense fallback={<main className="fd-loading" role="status">FetUre…</main>}><ProductDesign /></Suspense>},
         {path:'world', element:<Home />},
         {path:'start', element:<FirstStepsPage />},
         {path:'explore/:categoryId?', element:<Home />},
