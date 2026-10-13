@@ -4,7 +4,7 @@ import { Icon } from './components/Icon';
 import './welcome.css';
 
 export function WelcomePage(){
- const {t,canSwitch}=useI18n();
+ const {t,canSwitch,locale}=useI18n();
  const pillars=[
  {number:'01',icon:'world' as const,title:t('welcome.pillar.self.title'),detail:t('welcome.pillar.self.detail')},
  {number:'02',icon:'compass' as const,title:t('welcome.pillar.explore.title'),detail:t('welcome.pillar.explore.detail')},
@@ -16,7 +16,7 @@ export function WelcomePage(){
    <Link className="ft-welcome-brand" to="/" aria-label={t('welcome.brandAria')}>Fet<span>Ure</span><i>.</i></Link>
    <nav className="ft-welcome-header-actions" aria-label={t('welcome.headerNav')}>
     <Link className="ft-welcome-header-explore" to="/explore">{t('welcome.explore')}</Link>
-    <Link className="ft-welcome-login" to="/account">{t('welcome.signin')} <Icon name="arrow" size={17}/></Link>
+    <Link className="ft-welcome-login" to="/design/A02">{t('welcome.signin')} <Icon name="arrow" size={17}/></Link>
    </nav>
   </header>
   <section className="ft-welcome-hero" id="ft-welcome-story" aria-labelledby="ft-welcome-title">
@@ -27,8 +27,8 @@ export function WelcomePage(){
     <p className="ft-welcome-lede">{t('welcome.lede')}</p>
     {canSwitch&&<div className="ft-welcome-language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')}/></div>}
     <div className="ft-welcome-buttons">
-     <Link className="ft-welcome-primary" to="/explore">{t('welcome.cta')} <Icon name="arrow" size={21}/></Link>
-     <Link className="ft-welcome-secondary" to="/account">{t('welcome.signup')}</Link>
+     <Link className="ft-welcome-primary" to="/design/A02" state={{mode:'register'}}>{locale==='ru'?'Вход или регистрация':'Sign in or create an account'} <Icon name="arrow" size={21}/></Link>
+     <Link className="ft-welcome-secondary" to="/design/A02" state={{mode:'register'}}>{t('welcome.signup')}</Link>
     </div>
     <p className="ft-welcome-trust"><Icon name="lock" size={16}/> {t('welcome.trust')}</p>
    </div>
@@ -61,6 +61,6 @@ export function WelcomePage(){
     {pillars.map(p=><article className="ft-welcome-value" key={p.number}><span className="ft-welcome-value-no">{p.number}</span><span className="ft-welcome-value-icon"><Icon name={p.icon} size={23}/></span><h3>{p.title}</h3><p>{p.detail}</p></article>)}
    </div>
   </section>
-  <footer className="ft-welcome-footer"><span>{t('welcome.footer')}</span><Link to="/documents">{t('welcome.legal')}</Link><Link to="/account">{t('welcome.account')}</Link></footer>
+  <footer className="ft-welcome-footer"><span>{t('welcome.footer')}</span><Link to="/documents">{t('welcome.legal')}</Link><Link to="/design/A02">{t('welcome.account')}</Link></footer>
  </main>;
 }

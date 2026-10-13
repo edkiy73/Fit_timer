@@ -181,7 +181,7 @@ function Account(){
             <span className="ft-account-hero-orbit" aria-hidden="true"/>
             <div className="ft-account-hero-identity"><span className="ft-account-avatar" aria-hidden="true">{(handle||'F').slice(0,1).toLocaleUpperCase()}</span><div><span className="ft-account-hero-kicker">{t('account.heroKicker')}</span><h2 id="ft-account-hero-title">{displayName}</h2><p className="ft-account-email">{auth.session.email}</p></div></div>
             <p>{t('account.heroDescription')}</p>
-            <Link className="ft-account-primary" to="/design/F01">{locale.startsWith('en')?'Open the new interface':'Открыть новый интерфейс'} <Icon name="spark" size={19}/></Link>
+            <Link className="ft-account-primary" to="/design/F01">{locale.startsWith('en')?'Open the app':'Открыть приложение'} <Icon name="spark" size={19}/></Link>
             <Link className="ft-account-primary" to="/profile">{t('account.myProfile')} <Icon name="arrow" size={19}/></Link>
           </section>
           <div className="ft-account-sections">
@@ -205,7 +205,7 @@ function Account(){
           <div className="ft-account-footer"><button className="ft-account-signout" type="button" disabled={signingOut} onClick={()=>void signOut()}><Icon name="back" size={17}/>{signingOut?t('account.signingOut'):t('account.signOut')}</button>{signOutError&&<p role="alert">{signOutError}</p>}</div>
         </> : <div className="ft-account-guest">
           <section className="ft-account-hero" aria-labelledby="ft-guest-title"><span className="ft-account-hero-orbit" aria-hidden="true"/><span className="ft-account-hero-kicker">{t('account.guestKicker')}</span><h2 id="ft-guest-title">{t('account.guestTitle')}</h2><p>{t('account.guestDescription')}</p><Link className="ft-account-secondary" to="/explore">{t('account.guestExplore')} <Icon name="arrow" size={18}/></Link></section>
-          <section className="ft-account-panel ft-account-signin" aria-labelledby="ft-signin-title"><h2 id="ft-signin-title">{t('account.signInTitle')}</h2><p>{t('account.signInDescription')}</p><SignInForm locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} askHandle={ASK_HANDLE} variant="inline" onSignedIn={()=>navigate(safeSignInReturnTo(location.state),{replace:true})}/></section>
+          <section className="ft-account-panel ft-account-signin" aria-labelledby="ft-signin-title"><h2 id="ft-signin-title">{t('account.signInTitle')}</h2><p>{t('account.signInDescription')}</p><SignInForm locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} askHandle={ASK_HANDLE} variant="inline" onSignedIn={()=>{const next=safeSignInReturnTo(location.state);navigate(next==='/'?'/design/F01':next,{replace:true});}}/></section>
           <details className="ft-account-panel ft-account-preferences ft-account-guest-settings"><summary>{t('account.settingsSummary')} <Icon name="arrow" size={18}/></summary><div className="ft-account-preference-grid"><ThemePicker/><div className="language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')}/></div></div><Link className="ft-account-legal" to="/documents">{t('account.documentsTitle')}</Link></details>
         </div>}
       </div>

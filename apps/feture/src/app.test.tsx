@@ -40,7 +40,7 @@ describe('FetUre starter', () => {
   it('shows the public Welcome and keeps account accessible', async () => {
     const router=renderApp();
     expect(await screen.findByRole('heading',{name:/Открывай себя/i})).toBeTruthy();
-    expect(screen.getByRole('link',{name:/Начать исследовать/i})).toBeTruthy();
+    expect(screen.getByRole('link',{name:/Вход или регистрация/i}).getAttribute('href')).toBe('/design/A02');
     await router.navigate('/account');
     expect(await screen.findByRole('textbox',{name:'Email'})).toBeTruthy();
   });
