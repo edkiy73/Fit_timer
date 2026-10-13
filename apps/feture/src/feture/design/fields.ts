@@ -31,6 +31,7 @@ export const fields:Partial<Record<ScreenId,readonly Field[]>>={
  S04:[f('Причина апелляции','Appeal reason','textarea')],
 };
 export const journeys:readonly (readonly ScreenId[])[]=[
+ ['A04','A05','X07','X08','X09','X02'],['C04','C05','C03'],
  ['F06','F07','F08','F09','M01','M02','M03'],['C06','C07','F08','F09','M01','M03'],
  ['C08','C09'],['E11','E12','E13','E14','M01','M03'],['P02','P03','P04','M01','M03'],
  ['Q04','Q03','M01','M03'],['X13','X14','M01','M03'],['X08','X09','X10','X11'],

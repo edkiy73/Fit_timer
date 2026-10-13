@@ -25,7 +25,7 @@ export const en: Record<keyof typeof ru, string> = {
   'verification.loading': 'Loading verification status…',
   'verification.unavailable': 'Age verification is currently unavailable.',
   'verification.details': 'Adulthood has not been verified. Verification cannot be started yet.',
-  'verification.local': 'Your marks remain on this device. Saving your map to your account is paused until adulthood is verified.',
+  'verification.local': 'Sensitive sections stay closed until age verification. Signing in does not verify adulthood.',
   'verification.error': 'Could not load the status. Check your connection and try again.',
   'verification.auth': 'Your session changed or ended. Sign in again.',
   'verification.retry': 'Retry',

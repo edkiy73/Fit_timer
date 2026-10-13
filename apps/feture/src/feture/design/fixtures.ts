@@ -7,7 +7,7 @@ export const people = [
  {id:'leo',name:'Leo',age:34,city:'Berlin',photo:4,ru:'Живые концерты, долгие прогулки и разговоры без готовых ответов.',en:'Live music, long walks and conversations without ready-made answers.',tags:['Music','Culture','Connection']},
  {id:'sam',name:'Sam',age:30,city:'Amsterdam',photo:2,ru:'Исследую себя без спешки. Начать можно с кофе и хорошего вопроса.',en:'Exploring at my own pace. Coffee and a good question are a great start.',tags:['Curiosity','Friendship','Art']},
 ] as const;
-export type DesignPerson=typeof people[number];
+export type DesignPerson={id:string;name:string;age:number;city:string;photo:number;ru:string;en:string;tags:readonly string[]};
 // Separate relationships for UI review; not real likes, matches or chat permissions.
 export const incomingLikeIds:readonly string[]=['nika','lina','leo','sam'];
 export const mutualPersonIds:readonly string[]=['maya','alex'];
