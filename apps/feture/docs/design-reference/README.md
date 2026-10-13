@@ -31,3 +31,5 @@
 6. **Review:** independent reviewer or second model for material screens, but do not spawn reviewers for trivial text edits.
 
 **First visual-quality target:** A06 account/profile/onboarding, then O05 common AppBase admin product adaptation. Keep any currently open PRs and dependencies in view; do not overwrite active work.
+
+Текущий V4 визуальный контракт: [VISUAL-CONTRACT-V4](VISUAL-CONTRACT-V4.md), после повторного просмотра HTML 13.10.2026. Сохранить компактные панели и ритм при дальнейшей интеграции; одна подходящая primary action на группу, семантические иконки, стеклянные инструменты с читаемыми слоями.
