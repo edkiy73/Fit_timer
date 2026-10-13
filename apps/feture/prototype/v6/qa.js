@@ -17,7 +17,7 @@ const QA_RUN={
  req:()=>{qaApp('P01',{id:'kira'});setTimeout(()=>{S.reqOut=S.reqOut.filter(x=>x.p!=='kira');ACT.reqAccess({dataset:{v:'kira'}});},300);},
  grant:()=>{qaApp('P07',{tab:'in'});setTimeout(()=>{const r=S.reqIn.find(x=>x.status==='new');if(r)ACT.grant({dataset:{v:r.id}});},300);},
  jar:()=>{qaApp('X01',{sub:'map'});setTimeout(()=>openJar('bondage'),300);},
- result:()=>{S.me.tests.roles={done:true,step:5,ans:{0:4,1:2,2:'practice',3:'try',4:0,5:5},t:Date.now()};qaApp('X09',{id:'roles'});},
+ result:()=>{S.me.tests.roles={done:true,step:5,ans:{0:8,1:4,2:'practice',3:'try',4:0,5:10},t:Date.now()};qaApp('X09',{id:'roles'});},
  limit:()=>{qaApp('P01',{id:'ari'});S.reqOut=Array.from({length:S.quota.max},(_,i)=>({id:'quota'+i,p:'quota'+i,status:'pending',t:Date.now()-i*1000,scopes:['info']}));setTimeout(()=>ACT.reqAccess({dataset:{v:'ari'}}),300);},
 };
 function qaApp(id,p={}){

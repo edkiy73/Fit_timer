@@ -50,6 +50,6 @@ const helpRender=SC.S01.render;SC.S01.render=(...a)=>{let html=helpRender(...a);
 ACT.v6Help=a=>{const [title,text]=helpText()[a.dataset.v];sheet(()=>({title,body:`<p class="lead">${text}</p>`}));};
 
 // Hash links update in place. Copy links are real; no sensitive form input enters URLs.
-const renderV6=render;render=function(dir,keep){renderV6(dir,keep);const r=cur();const hash=r.id+(r.p.id?':'+encodeURIComponent(r.p.id):'');history.replaceState(null,'','#'+hash);};
+const renderV6=render;render=function(dir,keep){renderV6(dir,keep);const r=cur();const hash=r.id+(r.p.id?':'+encodeURIComponent(r.p.id):'');history.replaceState(history.state,'','#'+hash);};
 
 ACT.sharePost=a=>copyReviewLink('F05',{id:a?.dataset?.v||cur().p.id});
