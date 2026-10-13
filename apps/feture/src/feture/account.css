@@ -131,3 +131,24 @@
 .ft-account-guest-settings[open] .ft-account-preference-grid{margin-top:20px}
 .ft-account-guest-settings summary:focus-visible{outline:3px solid var(--account-violet);outline-offset:4px;border-radius:8px}
 @media(prefers-reduced-motion:reduce){.ft-account-guest-settings summary svg{transition:none}}
+
+/* Irreversible action is a separate, legible, two-step account journey. */
+.ft-account-delete-link{color:#b24965;font-size:13px;text-decoration:underline;text-underline-offset:3px;min-height:44px;display:inline-flex;align-items:center}
+.ft-delete-page{padding:24px 12px 80px;max-width:860px;margin:auto}
+.ft-delete-page .ft-account-layout{display:block}
+.ft-delete-page .ft-account-content{width:100%;max-width:790px}
+.ft-delete-explainer,.ft-delete-confirm{padding:clamp(20px,4vw,32px);margin-top:18px}
+.ft-delete-explainer ul{line-height:1.65;margin:12px 0;padding-left:24px}
+.ft-delete-page h2{font-size:clamp(20px,3vw,24px);margin:12px 0}
+.ft-delete-caution{color:#b24965;font-size:14px;line-height:1.6}
+.ft-delete-stage{font-size:12px;letter-spacing:.09em;text-transform:uppercase;opacity:.65}
+.ft-delete-email{font-weight:650;overflow-wrap:anywhere}
+.ft-delete-input{display:flex;flex-direction:column;gap:8px;font-size:14px;margin:16px 0}
+.ft-delete-input input{width:100%;box-sizing:border-box;border:1px solid var(--account-line);border-radius:12px;background:var(--account-surface);color:var(--account-ink);min-height:48px;padding:12px}
+.ft-delete-check{display:flex;gap:12px;align-items:flex-start;font-size:14px;line-height:1.55;margin:18px 0}
+.ft-delete-check input{margin-top:4px;accent-color:#b24965}
+.ft-delete-next,.ft-delete-final{min-height:48px;border:0;border-radius:12px;padding:12px 20px;background:var(--account-violet);color:white;font-weight:650;cursor:pointer}
+.ft-delete-final{background:#a83b5b}
+.ft-delete-final:disabled{opacity:.4;cursor:not-allowed}
+.ft-delete-secondary{margin-left:12px;min-height:44px;background:transparent;border:0;color:var(--account-ink);cursor:pointer}
+@media(max-width:480px){.ft-delete-page{padding:14px 6px 75px}.ft-delete-next,.ft-delete-final{width:100%}.ft-delete-secondary{margin:8px 0 0;display:block;width:100%}}

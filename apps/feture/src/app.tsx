@@ -202,7 +202,7 @@ function Account(){
             </section>
           </div>
           <section className="ft-account-panel ft-account-preferences" aria-labelledby="ft-account-preferences-title"><h2 id="ft-account-preferences-title">{t('account.settingsTitle')}</h2><div className="ft-account-preference-grid"><ThemePicker/><div className="language"><LanguagePicker label={t('account.language')} systemLabel={t('account.languageSystem')}/></div></div></section>
-          <div className="ft-account-footer"><button className="ft-account-signout" type="button" disabled={signingOut} onClick={()=>void signOut()}><Icon name="back" size={17}/>{signingOut?t('account.signingOut'):t('account.signOut')}</button>{signOutError&&<p role="alert">{signOutError}</p>}</div>
+          <div className="ft-account-footer"><Link to="/account/delete" className="ft-account-delete-link">{locale.startsWith('en')?'Delete my FetUre data':'Удалить мои данные FetUre'}</Link><button className="ft-account-signout" type="button" disabled={signingOut} onClick={()=>void signOut()}><Icon name="back" size={17}/>{signingOut?t('account.signingOut'):t('account.signOut')}</button>{signOutError&&<p role="alert">{signOutError}</p>}</div>
         </> : <div className="ft-account-guest">
           <section className="ft-account-hero" aria-labelledby="ft-guest-title"><span className="ft-account-hero-orbit" aria-hidden="true"/><span className="ft-account-hero-kicker">{t('account.guestKicker')}</span><h2 id="ft-guest-title">{t('account.guestTitle')}</h2><p>{t('account.guestDescription')}</p><Link className="ft-account-secondary" to="/explore">{t('account.guestExplore')} <Icon name="arrow" size={18}/></Link></section>
           <section className="ft-account-panel ft-account-signin" aria-labelledby="ft-signin-title"><h2 id="ft-signin-title">{t('account.signInTitle')}</h2><p>{t('account.signInDescription')}</p><SignInForm locale={sharedUiLocale(locale)} productName={PRODUCT_NAME} askHandle={ASK_HANDLE} variant="inline" onSignedIn={()=>{const next=safeSignInReturnTo(location.state);navigate(next==='/'?'/design/F01':next,{replace:true});}}/></section>
@@ -211,6 +211,47 @@ function Account(){
       </div>
     </div>
   </div>;
+}
+
+
+// Only FetUre domain data may be removed here. Core identity is shared across products.
+// The irreversible server transaction must be enabled only after Issue #1074 is accepted.
+function DeleteFetureAccount(){
+  const auth=useOptionalAuth();const {locale}=useI18n();const en=locale.startsWith('en');
+  const [step,setStep]=useState<1|2>(1),[typed,setTyped]=useState(''),[understood,setUnderstood]=useState(false),[feedback,setFeedback]=useState(false);
+  if(auth.loading)return <main className="ft-account-page" role="status">{en?'Checking account…':'Проверяем аккаунт…'}</main>;
+  if(!auth.session)return <Navigate to="/account" replace/>;
+  const email=auth.session.email;
+  const matched=typed.trim().toLowerCase()===email.toLowerCase();
+  return <main className="ft-account-page ft-delete-page">
+    <div className="ft-account-layout"><div className="ft-account-content">
+      <div className="ft-account-heading"><div><span className="ft-account-eyebrow">{en?'Data and privacy':'Данные и приватность'}</span>
+        <h1>{en?'Delete FetUre profile':'Удаление профиля FetUre'}</h1></div><Link to="/account" className="ft-account-desktop-back"><Icon name="back" size={17}/>{en?'Account':'Аккаунт'}</Link></div>
+      <section className="ft-account-panel ft-delete-explainer">
+        <p>{en?'This action only concerns FetUre. Your AppBase email sign-in and data in FitTimer or UnMute must not be affected.':'Речь только о FetUre. Общий вход AppBase по email и данные FitTimer или UnMute затрагиваться не должны.'}</p>
+        <h2>{en?'What removal includes':'Что потребуется удалить'}</h2>
+        <ul>
+          <li>{en?'Public and private profile, jars, tests, journal, photos and access grants':'Открытый и закрытый профиль, баночки, опросы, дневник, фотографии и выданные доступы'}</li>
+          <li>{en?'Posts, replies, reactions, bookmarks and shared links':'Публикации, ответы, реакции, закладки и ссылки доступа'}</li>
+          <li>{en?'Participation in communities, chats and events':'Участие в сообществах, чатах и событиях'}</li>
+          <li>{en?'Your events must be cancelled with notice to attendees. Some discussions may become unavailable.':'Созданные события должны быть отменены с уведомлением участников. Некоторые обсуждения могут стать недоступны.'}</li>
+        </ul>
+        <p className="ft-delete-caution">{en?'Deletion is permanent. Any external ticket payments or third-party copies are handled separately.':'Удаление необратимо. Внешние оплаты билетов и копии материалов у третьих лиц обрабатываются отдельно.'}</p>
+      </section>
+      <section className="ft-account-panel ft-delete-confirm">
+        <div className="ft-delete-stage">{en?'Step':'Шаг'} {step} / 2</div>
+        {step===1?<><h2>{en?'Understand the consequences':'Последствия удаления'}</h2><p>{en?'Your own content will disappear from FetUre. Other people’s independent publications must remain.':'Твои материалы исчезнут из FetUre. Независимые публикации других участников должны сохраниться.'}</p><button className="ft-delete-next" onClick={()=>setStep(2)}>{en?'Continue to confirmation':'Перейти к подтверждению'}</button></>:
+        <><h2>{en?'Confirm account':'Подтверди аккаунт'}</h2><p>{en?'Enter the signed-in email exactly to confirm which FetUre profile you want removed:':'Введи email текущего аккаунта, чтобы подтвердить, чей профиль FetUre нужно удалить:'}</p>
+          <p className="ft-delete-email">{email}</p>
+          <label className="ft-delete-input">{en?'Email confirmation':'Подтверждение email'}<input type="email" autoComplete="off" value={typed} onChange={e=>{setTyped(e.target.value);setFeedback(false);}} placeholder={email}/></label>
+          <label className="ft-delete-check"><input type="checkbox" checked={understood} onChange={e=>{setUnderstood(e.target.checked);setFeedback(false);}}/>{en?'I understand that this cannot be undone.':'Я понимаю, что вернуть удалённые данные будет нельзя.'}</label>
+          <button className="ft-delete-final" disabled={!matched||!understood} type="button" onClick={()=>setFeedback(true)}>{en?'Request permanent removal':'Подтвердить удаление'}</button>
+          <button className="ft-delete-secondary" type="button" onClick={()=>{setStep(1);setFeedback(false);}}>{en?'Back':'Назад'}</button>
+          {feedback&&<p role="alert" className="ft-delete-caution">{en?'Deletion is not yet connected to a safe server transaction. No data has been deleted. Your account is unchanged.':'Безопасная серверная процедура удаления ещё не подключена. Ничего не удалено, аккаунт не изменён.'}</p>}
+        </>}
+      </section><Link className="ft-account-legal" to="/account">{en?'Cancel and keep my account':'Отмена — оставить аккаунт'}</Link>
+    </div></div>
+  </main>;
 }
 
 function Admin(){
@@ -235,6 +276,7 @@ export const routes: RouteObject[] = [
         {path:'community', element:<Home />},
         {path:'dating', element:<Home />},
         {path:'account', element:<Account />},
+        {path:'account/delete', element:<DeleteFetureAccount />},
         {path:'operator', element:<OperatorPage />},
         {path:'verification', element:<VerificationPage />},
         {path:'documents', element:<DocumentsPage />},
