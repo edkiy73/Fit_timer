@@ -11,7 +11,7 @@ function passDating(id,f){const p=PEOPLE[id];if(!p.verified||!p.pair&&p.age<18)r
  if(f.format.length&&!fmtList(p.format).some(x=>f.format.includes(x)))return false;
  if(f.seek.length&&!p.seek.some(s=>f.seek.includes(s)))return false;
  if((f.role||[]).length&&!f.role.includes(p.role))return false;
- if((f.topics||[]).length&&!p.jars.some(j=>f.topics.includes(j[0])))return false;return true;}
+ if((f.topics||[]).length&&!p.jars.some(j=>f.topics.includes(Array.isArray(j)?j[0]:j.t)))return false;return true;}
 const dfCount=f=>[f.show!=='all',f.age[0]!==18||f.age[1]!==99,f.placeMode==='nearby',!!f.city,f.gender.length,f.format.length,f.seek.length,(f.topics||[]).length,(f.role||[]).length].filter(Boolean).length;
 
 SC.D03={root:1,tab:'people',title:()=>L('Люди','People'),render:(p,r)=>{
