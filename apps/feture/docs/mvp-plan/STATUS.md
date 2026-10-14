@@ -95,3 +95,6 @@ Personal-flow #1090 merged a9c64e02, CI/preview проверены. В очер�
 
 ### V10: события завершены, следующая порция уведомлений
 Events #1091 merged3cb01b13, CI/browser PASS. Текущая малая порция N01→H02 убирает лишний переход и не создаёт чат по старому уведомлению после утраты match. Полный модульный набор/независимое ревью PASS; browser/CI проверяются перед merge. Основное React/AppBase не менялось.
+
+### Уточнение среза уведомлений PR1092
+Normal browser click N01 active match→Lina H02 подтверждён. End connection обнаружил мёртвые ice controls, исправлены до merge вместе с retry/typing ended UI; история сохранена. Full-module VM и независимое ревью follow-up PASS. Актуальный CI/browser/merge статус финального head — PR1092; карта завершённых срезов обновлена в V10-ROADMAP.

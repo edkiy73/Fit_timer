@@ -145,3 +145,5 @@ PR#1089 merged (`0667f360`) с сохранёнными атомарными com
 **Проверено:** полный модульный набор и RU/EN stale-match copy, active notification→Lina H02, read flag, stale/blocked/missing denial, H01 Updates param, u1→E03 и отсутствие изменения Match/Grant. Syntax/build, независимое read-only ревью PASS. CI/browser на final preview перед merge.
 
 **Перенос:** уведомление — указатель на актуально допустимое действие; историю нельзя использовать как authorization на новый диалог.
+
+**Проверка перед merge этой же порции:** браузер показал, что после End connection у пустого H02 оставались Conversation starters с действием на отсутствующий msgIn. Исправлено до merge: ended history не показывает ice/retry/typing, stale ice action проверяет текущее право. История сообщений сохранена. Live match→Lina H02 уже подтверждён normal click; обновлённый ended UI проверить на final head.
