@@ -224,6 +224,7 @@ function go(id,p={},o={}){
  if(o.replace&&confirmLeave(()=>go(id,p,{...o,replace:true})))return;
  if(ALIAS[id]){const [rid,rp]=ALIAS[id];return go(rid,{...rp,...p},o);}
  if(!SC[id]){toast(L('Экран не найден','Screen not found'),{type:'warn'});return;}
+ S.ui.chipShown={};
  if(S.ui.sheet)closeSheet(true);
  if(S.session&&SC[id].auth&&!o.force){return;}
  if(S.session&&ROOT_TAB[id]){return tab(ROOT_TAB[id],p);}

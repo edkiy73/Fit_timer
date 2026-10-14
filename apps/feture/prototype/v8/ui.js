@@ -119,7 +119,9 @@ function chipGroup(items,selected,act,o={}){
  if(o.all||items.length<=lim+2)return `<div class="chips">${items.map(([id,l])=>chipBtn(id,l,sel.has(id),act,o)).join('')}</div>`;
  if(o.fold){const open=S.ui.unfold?.[key];const keep=new Set([...sel,...items.slice(0,lim).map(x=>x[0])]);const hid=items.filter(([id])=>!keep.has(id)).length;
   return `<div class="chips ${open?'':'folded'}" data-fold="${key}">${items.map(([id,l])=>chipBtn(id,l,sel.has(id),act,o,keep.has(id)?'':'fx')).join('')}<button class="chip more" data-act="chipFold" data-v="${key}" data-n="${hid}">${open?L('Свернуть','Show less'):L(`Ещё ${hid}`,`${hid} more`)}</button></div>`;}
- const first=[...items.filter(([id])=>sel.has(id)),...items.filter(([id])=>!sel.has(id)).slice(0,Math.max(4,lim-sel.size))];
+ // keep the original order and every chip already on screen: selecting never moves chips around
+ S.ui.chipShown=S.ui.chipShown||{};const shown=S.ui.chipShown[key]=new Set([...(S.ui.chipShown[key]||[]),...items.slice(0,lim).map(x=>x[0]),...sel]);
+ const first=items.filter(([id])=>shown.has(id));
  return `<div class="chips">${first.map(([id,l])=>chipBtn(id,l,sel.has(id),act,o)).join('')}<button class="chip more" data-act="chipAll" data-v="${key}">${ic('search',14)}${L('Все варианты','All options')} · ${items.length}</button></div>`;
 }
 const chipPicker=o=>chipGroup(o.items,o.sel,o.act,{title:o.title,max:o.max,groups:o.cats?topicGroups(o.items.map(x=>x[0])):o.groups});
