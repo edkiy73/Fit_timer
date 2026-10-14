@@ -276,3 +276,5 @@ PR#1089 merged (`0667f360`) с сохранёнными атомарными com
 **Перенос:** server membership, private applicant answers и management authorization должны быть отдельными сущностями. Решение применяется к проверенной версии конкретной заявки; членство не даёт ни private-profile grant, ни права личного сообщения. Сервер/SQL этой порцией не реализованы.
 
 **Предыдущая порция14:** PR1100 merged5416607e, CI38619572863 success, public desktop request→withdraw→clear/toggle→dirty close/Stay→send→pending locked content PASS. Следом event editor и оставшийся сквозной обход; закрытые community cases ещё проверять в итоговой приёмке.
+
+**Browser follow-up перед merge:** на preview ed8a0af8 обычный путь Мои→Круг→Управление→Заявки показал2 заявки и1 решение. Найдены связанные пропуски: owner card оставался «По заявке», desktop My communities исключал owner. Исправлены вместе с исключением своих/hidden/review communities из recommendations; focused host contract теперь проверяет оба context selectors и owner badge. Эта UI-follow-up требует нового финального CI/browser head; прежний browser результат не выдаётся за приёмку изменённых context slots.
