@@ -173,11 +173,10 @@ V9 визуально открыт в браузере; проверены то�
 | 6 | Hidden dating без обязательного фото; реальный unfinished quiz next step | P02/D02/K04/X01; PR1090 merged, CI/preview PASS |
 | 7 | Непересекающиеся attendance/application lists и счётчики | E00/E03/E10/X01/context; PR1091 merged, CI/browser PASS |
 | 8 | Match notification в нужный диалог; stale match не даёт новый чат; ended history без мёртвых кнопок | N01/H01/H02/Updates; PR1092 merged, CI/browser390 PASS |
-
-| 9 | Единая audience в editor/preview/publish; актуальные public result attachments | F07/F09/Post draft; CI/browser/merge в PR текущей порции |
+| 9 | Единая audience в editor/preview/publish; актуальные public result attachments | F07/F09/Post draft; PR1093 merged c7022f45, CI38576218005/browser390 PASS |
 
 Контрольная V9 сохранена. Проверены конкретные state contracts и браузерные цепочки; не заявляется полный охват всех экранов или реальный backend/device. История с причинами и ограничениями — V10-CHANGELOG.
 
-Следующие малые порции: редактор→preview→Back и contextual create, затем закрытые сообщества/заявки, создание/редактирование события, настройка/пара и итоговый обход. Навигацию с шестью вкладками dating режима и пятью social режима не менять по старой спецификации без отдельного UX-обоснования: это более широкий radius, чем текущие fixes.
+Следующие малые порции: contextual create и остальные поля/медиа черновиков, затем закрытые сообщества/заявки, создание/редактирование события, настройка/пара и итоговый обход. Навигацию с шестью вкладками dating режима и пятью social режима не менять по старой спецификации без отдельного UX-обоснования: это более широкий radius, чем текущие fixes.
 
 Для переноса каждого среза в основное приложение: взять экранный контракт и сценарии из истории; сопоставить существующие DTO/API/AppBase permissions; реализовать в React и отдельно проверить реальную авторизацию/пersistence. Имитированные upload/age/payments/notifications этого прототипа доказательством production-готовности не являются.
