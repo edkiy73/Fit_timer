@@ -104,7 +104,8 @@ ACT.toAccess=a=>{closeSheet(true);go('P07',{tab:a.dataset.v||'in'});};
 /* P07 — access center: received / sent / shared with me / shared by me */
 const SCOPE_TXT=arr=>arr.map(s=>T(REQ_SCOPES.find(x=>x[0]===s)[1])).join(', ');
 const REQ_STATUS=()=>({pending:['wait',L('ждёт ответа','pending')],partial:['ok',L('открыт частично','partly shared')],granted:['ok',L('открыт','shared')],declined:['',L('без ответа','no answer')],expired:['',L('истёк','expired')],cancelled:['',L('отменён','cancelled')]});
-SC.P07={title:()=>L('Доступы','Access'),render:(p)=>{const t=['in','out','withme','byme'].includes(p.tab)?p.tab:'in';
+/** access requests and grants: one body used by P07 and directly by People → Requests (no list page in between) */
+function accessBody(p){const t=['in','out','withme','byme'].includes(p.tab)?p.tab:'in';
  const inc=S.reqIn.filter(r=>!isBlocked(r.p)).map(r=>({...r,status:effectiveRequestStatus(r)})),out=S.reqOut.filter(r=>!isBlocked(r.p)).map(r=>({...r,status:effectiveRequestStatus(r)})),withMe=S.reqOut.filter(r=>receivedGrant(r.p)===r),byMe=givenGrantEntries();
  const tabs=tabsRow([['in',L('Ко мне','To me'),C.reqIn()],['out',L('Мои запросы','My requests'),out.filter(r=>r.status==='pending').length],['withme',L('Открыто мне','Shared with me'),withMe.length],['byme',L('Я открыл(а)','I shared'),byMe.length]],t,'p7tab','access-tabs');const sections={};
  let body='';
@@ -116,7 +117,8 @@ SC.P07={title:()=>L('Доступы','Access'),render:(p)=>{const t=['in','out',
   <p class="note mt12">${L('Отказ показывается как «без ответа». Повторный запрос тому же человеку — не раньше чем через 7 дней.','A decline shows as “no answer”. You can ask the same person again after 7 days.')}</p>`;sections.out=body;}
  {body=withMe.length?`<div class="card list">${withMe.map(r=>linkRow({go:'P08',p:{id:r.p},av:av(r.p,''),title:pname(r.p),sub:`${SCOPE_TXT(r.granted)} · ${F.left(r.until)}`})).join('')}</div>`:empty('unlock',L('Пока никто не открыл','Nothing shared with you yet'),L('Здесь появятся расширенные профили, которые тебе открыли.','Private profiles shared with you appear here.'));;sections.withme=body;}
  {body=byMe.length?byMe.map(x=>`<div class="card" style="margin-bottom:10px"><div class="row">${whoLink(x.p,'')}<div class="grow"><button class="plink pnm" ${profGo(x.p)}>${esc(pname(x.p))}</button><div class="note">${esc(SCOPE_TXT(x.scopes))}</div></div><span class="pill">${x.until?F.left(x.until):L('без срока','no limit')}</span></div><div class="row g8 mt12"><button class="btn md soft" data-act="narrow" data-v="${x.p}">${L('Изменить','Change')}</button><button class="btn md danger" data-act="revoke" data-v="${x.p}">${L('Отозвать','Revoke')}</button></div></div>`).join(''):empty('lock',L('Ты никому не открывал(а) доступ','You haven’t shared with anyone'),L('Открыть можно, ответив на запрос.','You can share by answering a request.'));;sections.byme=body;}
- return `${bar(L('Доступы','Access'),{back:1,sm:1})}<div class="view nodock"><div class="wrap">${tabs}${sections[t]}</div></div>`;},after:()=>{$('#main .tabs .on')?.scrollIntoView({block:'nearest',inline:'nearest'});}};
+ return `${tabs}${sections[t]}`;}
+SC.P07={title:()=>L('Доступы','Access'),render:(p)=>`${bar(L('Доступы','Access'),{back:1,sm:1})}<div class="view nodock"><div class="wrap">${accessBody(p)}</div></div>`,after:()=>{$('#main .tabs .on')?.scrollIntoView({block:'nearest',inline:'nearest'});}};
 
 ACT.p7tab=a=>{const r=cur();r.p.tab=a.dataset.v;r.scroll=0;render('fade');};
 ACT.p7f=()=>setP('f',cur().p.f==='pending'?'':'pending');

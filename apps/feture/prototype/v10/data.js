@@ -257,7 +257,7 @@ function freshState(persona){
   ]:[],
   updates:full?[{id:'u1',e:'e1',t:ago(3),read:false,text:{ru:'Начало перенесли на 19:00. Возьмите удобную одежду.',en:'Start moved to 19:00. Bring comfortable clothes.'}},{id:'u2',c:'rope',t:ago(30),read:true,text:{ru:'Новые правила фотосъёмки на встречах — загляните в раздел «Правила».',en:'New photo rules for meetups — see the Rules tab.'}}]:[],
   history:full?[{p:'sofi',d:1,t:ago(30)},{p:'mia',d:1,t:ago(50)},{p:'lina',d:1,t:ago(60)},{p:'dan',d:-1,t:ago(80)}]:[],
-  filters:{feed:{},following:{},events:{format:'all'},dating:{show:'all',age:[18,99],dist:100,gender:[],format:[],seek:[],topics:[],role:[],placeMode:'city',city:'',coords:null},search:{},comm:{}},
+  filters:{feed:{},following:{},events:{format:'all'},dating:{show:'all',age:[18,99],dist:100,gender:[],orient:[],format:[],seek:[],topics:[],role:[],placeMode:'city',city:'',coords:null},search:{},comm:{}},
   searchRecent:full?['shibari','Mia','Kai']:[],
   quota:{max:10,used:full?1:0},
   ui:{},

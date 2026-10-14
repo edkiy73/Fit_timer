@@ -211,13 +211,18 @@ function updCard(u){const src=u.e?T(EV(u.e).title):T(COMMUNITIES[u.c].name);retu
 
 function accessSummary(){const pending=S.reqOut.filter(x=>x.status==='pending'&&!isBlocked(x.p)).length;return `<div class="card list">${linkRow({go:'P07',p:{tab:'in'},icon:'lock',tone:'v',title:L('Запросы ко мне','Requests to me'),badge:C.reqIn()||'',sub:L('Выбирай разделы и срок','Choose sections and duration')})}${linkRow({go:'P07',p:{tab:'out'},icon:'clock',title:L('Мои запросы','My requests'),val:String(pending),sub:L('Ожидающие и история решений','Pending requests and decisions')})}${linkRow({go:'P07',p:{tab:'withme'},icon:'unlock',title:L('Открыто мне','Shared with me')})}</div>`;}
 
+/* V10 revision: every category of a section sits in one popup as chips; only long searchable lists keep a small picker */
+function fInline(r){
+ if(r.search)return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${L('можно несколько','pick any')}</span></div><div class="chips">${r.on()?`<span class="chip on static">${esc(r.summary())}</span>`:''}<button class="chip dashed" data-act="fOpen" data-v="${r.k}">${ic('search',15)}${r.on()?L('Изменить','Change'):L('Выбрать','Choose')}</button></div></section>`;
+ const html=r.body().replace(/<section class="fsec"[^>]*><div class="sec">\s*<\/div>/g,'<section class="fsec">');const single=/role="radiogroup"/.test(html);
+ return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${single?L('один вариант','one option'):L('можно несколько','pick any')}</span></div><div class="fin-b">${html}</div></section>`;}
 /* ---------- V8 filters, Feeld-style: a tidy list «category → current choice»; a row opens its options with search ---------- */
 const sumOf=(items,sel,none)=>{const l=items.filter(([id])=>sel.includes(id)).map(x=>x[1]);return l.length?(l.slice(0,2).join(', ')+(l.length>2?` +${l.length-2}`:'')):(none||L('Любые','Any'));};
 function filterSheet(cfg){S.ui.fcfg=cfg;S.ui.fsub=null;const start=JSON.stringify(cfg.draft());
  sheet(()=>{const c=S.ui.fcfg;const sub=S.ui.fsub&&c.rows.find(r=>r.k===S.ui.fsub);
   if(sub)return{title:sub.label,lead:`<button class="ibtn ghost sm" data-act="fBack" aria-label="${L('К фильтрам','Back to filters')}">${I.back}</button>`,search:!!sub.search,searchPh:L('Найти вариант','Find an option'),body:`${sub.body()}<p class="note sh-empty" hidden>${L('Ничего не нашлось','Nothing found')}</p>`,foot:`<button class="btn primary" data-act="fBack">${L('Готово','Done')}</button>`};
   const n=c.count();return{title:c.title,head:`<button class="btn text auto" data-act="fReset">${L('Сбросить','Reset')}</button>`,
-   body:`${c.top?c.top():''}<div class="card list frows">${c.rows.map(r=>`<button class="li frow" data-act="fOpen" data-v="${r.k}"><span class="tx"><b>${r.label}</b><small class="${r.on()?'on':''}">${esc(r.summary())}</small></span>${I.chev}</button>`).join('')}</div>${c.note?`<p class="grp-n">${c.note}</p>`:''}${!n?`<p class="note mt12">${L('С такими фильтрами пока ничего нет. Можно применить их или изменить выбор.','Nothing matches yet. You can apply these filters or change your choices.')}</p>`:''}`,
+   body:`${c.top?c.top():''}${c.rows.map(fInline).join('')}${c.note?`<p class="grp-n">${c.note}</p>`:''}${!n?`<p class="note mt12">${L('С такими фильтрами пока ничего нет. Можно применить их или изменить выбор.','Nothing matches yet. You can apply these filters or change your choices.')}</p>`:''}`,
    foot:`<button class="btn primary" data-act="fApply">${n?c.applyLabel(n):L('Применить фильтры','Apply filters')}</button>`};},
  {full:true,guard:()=>JSON.stringify(S.ui.fcfg.draft())!==start,back:()=>{if(S.ui.fsub){S.ui.fsub=null;resheet();return true;}return false;}});}
 ACT.fOpen=a=>{S.ui.fsub=a.dataset.v;S.ui.shq='';resheet();$('#sheet .sh-b')&&($('#sheet .sh-b').scrollTop=0);};
