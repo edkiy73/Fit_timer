@@ -108,7 +108,7 @@ Preview `ee2a7efd` READY; GitHub AppBase all-apps consistency PASS. Реальн
 
 **Файлы:** `core.js/s-profile.js/s-me.js`. Форматы данных/выдачи/согласий не менялись. Сортировка баночек, ответные controls и остальные тестовые flows сохранены; широкий промежуточный локальный patch был пойман проверкой зависимостей и исправлен до commit/push.
 
-**Проверено:** весь предыдущий модульный набор плюс hidden remove/save без фото, сохранение dating и Match/Grant, запрет visible save/show без фото, приоритет care unfinished attempt и отсутствие ring/completeness. Syntax/build, независимое read-only ревью прошли. Browser/device acceptance нового среза — отдельно на итоговом preview.
+**Проверено:** весь предыдущий модульный набор плюс hidden remove/save без фото, сохранение dating и Match/Grant, запрет visible save/show без фото, приоритет care unfinished attempt и отсутствие ring/completeness. Syntax/build, независимое read-only ревью прошли. CI AppBase 38546443390 PASS; preview exact head1cde536 READY. В браузере подсказка открыла незавершённый тест «Забота и безопасность» с кнопкой «Продолжить». PR#1090 merged a9c64e02; физический device/upload не заявляется.
 
 **Перенос:** один predicate обязательного фото для публичного Discovery и fact-based next action. Не переносить условный процент обязательности необязательных чувствительных полей.
 
@@ -119,3 +119,15 @@ PR#1089 merged (`0667f360`) с сохранёнными атомарными com
 ## Шаблон следующих записей
 
 Дата / согласованный шаг. Проблема и наблюдаемый сценарий. Что изменили. Почему выбран этот вариант. Все затронутые модели/файлы/флоу. Проверки и результат. Ограничения и следующий шаг. Commit/PR.
+
+## 14.10.2026 — мероприятия: заявка отдельно от подтверждённого участия
+
+**Радиус:** ui.js event status/list selectors, E00 catalog counter, E03 RSVP copy, E10 lists, X01 count/context. RSVP/Application/Ticket сохраняют отдельные поля. Private address policy, Match/Grant и личные чаты не меняются.
+
+**Проблема:** sendApp сохраняет желание идти и pending application. Ранее такой пользователь уже попадал в «Иду», «Заявки» и дважды в счётчик, хотя адрес ещё закрыт; прошедшая неодобренная заявка называлась «Ты был(а)». X01 считал иначе, чем E00.
+
+**Решение:** подтверждённое «Иду» требует одобрения для заявочного события. Personal event groups не дублируются: awaiting/declined и approved без Going остаются в «Заявки»; отменённые участия — отдельный раздел; собственные события только «Организую». E00/X01 используют один уникальный upcoming count с исключением past/cancelled, включая собственные события. E03 показывает «хочу пойти — допуск ещё не получен». Снятие RSVP честно сообщает о сохранении заявки/билета, не обещает исчезновение из всех списков. Публичная подсказка участия не показывается для неодобренного Going.
+
+**Проверено:** полный предыдущий модульный набор, RU/EN rendering without mutation; pending→approved→RSVP clear→declined, cancelled/past/own categories, отсутствие duplicate card/count и ложного «Ты был», прежние адресные gates/Match/Grant и сохранение application/ticket. Syntax/build PASS. Независимое ревью выявило необходимость исключить собственные past/cancelled из summary — поправка внесена. Browser/CI проверяются на итоговом preview.
+
+**Перенос:** derived attendance = Going + admission для approval events; не менять исходный intent/approval/ticket одним общим boolean. Commit/PR привязывается при публикации.

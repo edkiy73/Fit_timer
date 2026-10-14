@@ -24,7 +24,7 @@ function testCards(){const list=Object.entries(QUIZ).sort(([a],[b])=>(S.me.tests
 
 SC.X01={root:1,tab:'me',title:()=>L('Я','Me'),render:()=>{const m=S.me;const [ns,nt,nid]=nextStep();
  const head=bar(L('Я','Me'),{actions:`${bellBtn()}<button class="ibtn" data-go="K01" aria-label="${L('Настройки','Settings')}">${I.gear}</button>`});
- const jars=myJars();const priv=(m.media||[]).length;const going=myEventIds('going').length+myEventIds('organize').length;const done=Object.keys(QUIZ).filter(k=>m.tests[k]?.done).length;const next=Object.keys(QUIZ).find(k=>!m.tests[k]?.done);
+ const jars=myJars();const priv=(m.media||[]).length;const going=myUpcomingEventIds().length;const done=Object.keys(QUIZ).filter(k=>m.tests[k]?.done).length;const next=Object.keys(QUIZ).find(k=>!m.tests[k]?.done);
  return head+`<div class="view"><div class="wrap">
  <section class="grp"><div class="card me-card"><button class="me-id" data-go="P03">${av('me','me-av')}<span class="grow"><b>${esc(pname('me'))}</b><small>@${esc(m.nick||'…')}${m.city?` · ${esc(city(m.city))}`:''}</small></span>${I.chev}</button>
   <div class="me-acts"><button class="btn secondary sm" data-go="P03">${I.eye}${L('Как видят','Preview')}</button><button class="btn secondary sm" data-go="P02">${I.edit}${L('Изменить','Edit')}</button></div>

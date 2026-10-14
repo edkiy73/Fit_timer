@@ -79,7 +79,7 @@ function evStatusPill(id){
  const e=EV(id),r=myR(id);
  if(e.cancelled)return `<span class="pill bad">${L('Отменено','Cancelled')}</span>`;
  if(e.organizer==='me')return `<span class="pill v">${L('Ты организатор','You organise')}</span>`;
- if(isPast(id))return r.status==='going'?`<span class="pill">${L('Ты был(а)','You went')}</span>`:'';
+ if(isPast(id))return eventAttendanceConfirmed(id)?`<span class="pill">${L('Ты был(а)','You went')}</span>`:'';
  if(r.app==='pending')return `<span class="pill wait">${L('Заявка на рассмотрении','Application pending')}</span>`;
  if(r.app==='approved')return `<span class="pill ok">${L('Заявка одобрена','Approved')}</span>`;
  if(r.app==='declined')return `<span class="pill bad">${L('Заявка отклонена','Declined')}</span>`;
@@ -183,15 +183,23 @@ window.CTX=function(tabId){
  if(tabId==='me')return `<h3>${L('Доступы','Access')}</h3><div class="card list">${linkRow({go:'P07',p:{tab:'in'},icon:'key',tone:'v',title:L('Запросы ко мне','Requests to me'),badge:C.reqIn()||''})}${linkRow({go:'P07',p:{tab:'out'},icon:'send',title:L('Мои запросы','My requests'),val:String(S.reqOut.length)})}</div><h3>${L('Мои события','My events')}</h3>${myEventIds('going').slice(0,2).map(id=>eventCard(id,{row:1})).join('<div style="height:8px"></div>')||`<p class="note">${L('Пока нет','None yet')}</p>`}${foot}`;
  return foot;
 };
+function eventAttendanceConfirmed(id){const e=EV(id),r=myR(id);return r.status==='going'&&(!e.approval||r.app==='approved');}
 function myEventIds(kind){
- return allEventIds().filter(id=>{const e=EV(id),r=myR(id),past=isPast(id);
-  if(kind==='going')return !past&&!e.cancelled&&r.status==='going'&&e.organizer!=='me';
-  if(kind==='interested')return !past&&!e.cancelled&&r.status==='interested';
-  if(kind==='apps')return !past&&r.app&&r.app!=='none';
-  if(kind==='organize')return e.organizer==='me';
-  if(kind==='past')return past&&r.status==='going';
+ return allEventIds().filter(id=>{const e=EV(id),r=myR(id),past=isPast(id),own=e.organizer==='me';
+  const app=e.approval&&['pending','approved','declined'].includes(r.app);
+  if(kind==='organize')return own;
+  if(own)return false;
+  if(kind==='cancelled')return !!e.cancelled&&(app||['going','interested'].includes(r.status));
+  if(e.cancelled)return false;
+  if(kind==='past')return past&&eventAttendanceConfirmed(id);
+  if(past)return false;
+  if(kind==='going')return eventAttendanceConfirmed(id);
+  if(kind==='apps')return app&&!eventAttendanceConfirmed(id);
+  if(kind==='interested')return r.status==='interested'&&!app;
   return false;}).sort((a,b)=>EV(a).start-EV(b).start);
 }
+const myUpcomingEventIds=()=>[...new Set(['going','apps','interested','organize'].flatMap(myEventIds))].filter(id=>!isPast(id)&&!EV(id).cancelled);
+
 function updCard(u){const src=u.e?T(EV(u.e).title):T(COMMUNITIES[u.c].name);return `<button class="upd ${u.read?'':'unread'}" data-act="openUpdate" data-v="${u.id}"><span class="ico ${u.e?'l':'v'}">${u.e?I.cal:I.users3}</span><span class="tx"><b>${esc(src)}</b><p>${esc(T(u.text))}</p><small>${F.rel(u.t)}</small></span></button>`;}
 
 
