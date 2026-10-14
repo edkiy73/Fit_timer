@@ -82,7 +82,7 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
   <p class="note center mt12">${L('Подписка показывает посты, но не открывает чат','Following shows posts but doesn’t open a chat')}</p>
  </div></article>`;}
 /** private layer: no real data is sent before access — the veil hides placeholders only */
-function veilBlock(id){const o=S.reqOut.find(x=>x.p===id&&(x.status==='pending'||['partial','granted'].includes(x.status)&&(x.until===null||x.until>Date.now())));const shared=S.reqOut.find(x=>x.p===id&&['partial','granted'].includes(x.status)&&(x.until===null||x.until>Date.now()));
+function veilBlock(id){const o=S.reqOut.find(x=>x.p===id&&x.status==='pending'&&!isBlocked(id));const shared=receivedGrant(id);
  if(shared)return `<button class="granted" style="width:100%;text-align:left" data-go="P08" data-id="${id}">${I.unlock}<span class="grow"><b>${L(`${pname(id)} открыл(а) тебе доступ`,`${pname(id)} shared with you`)}</b><span>${shared.granted.map(g=>T(REQ_SCOPES.find(x=>x[0]===g)[1])).join(', ')} · ${F.left(shared.until)}</span></span>${I.chev}</button>`;
  return `<div class="veil"><div class="veil-content"><div class="bar-sk" style="width:60%"></div><div class="bar-sk"></div><div class="bar-sk" style="width:80%"></div><div class="bar-sk" style="width:40%"></div></div>
  <div class="veil-glass"><div class="lockdot">${I.lock}</div><b>${L(`Открывает ${pname(id)}`,`${pname(id)} decides`)}</b><p>${L('Желания и границы, приватные фото и альбомы — только по решению владельца.','Wishes and boundaries, private photos and albums — only if the owner decides.')}</p>${o?`<span class="pill wait">${I.clock}${L('Запрос ждёт ответа','Request pending')}</span>`:`<button class="btn dark" data-act="reqAccess" data-v="${id}">${L('Запросить доступ','Request access')}</button>`}</div></div>`;}
@@ -226,3 +226,4 @@ ACT.d2City=()=>openCityPicker(cur().f.city,id=>{cur().f.city=id;if(cur().err)del
 ACT.d2PlaceMode=a=>{cur().f.placeMode=a.dataset.v;cur().dirty=true;refresh();};
 ACT.d2Geo=()=>requestCoarseLocation(coords=>{cur().f.coords=coords;cur().f.city=nearestKnownCity(coords);if(cur().err)delete cur().err.city;cur().dirty=true;refresh();});
 ACT.d2Photo=()=>{const r=cur();openUploader({max:1,have:0,accept:'image',aspect:'4:5',title:L('Фото для подборки','Photo for Discover'),done:items=>{r.f.photo=items[0].url;if(r.err)delete r.err.photo;r.dirty=true;refresh();}});};
+

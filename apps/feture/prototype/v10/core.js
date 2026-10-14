@@ -296,13 +296,20 @@ function unavailable(){return `${bar('',{back:1})}<div class="view nodock">${emp
 /* ---------- counters: always derived from state, never hard-coded ---------- */
 const isMatch=id=>S.matches.some(m=>m.p===id);
 const isBlocked=id=>S.blocked.some(b=>b.p===id);
+// Access is derived from consent, scopes and current time, never from visiting a screen.
+const grantTimeActive=until=>until===null||(typeof until==='number'&&Number.isFinite(until)&&until>Date.now());
+const effectiveRequestStatus=r=>['open','partial','granted'].includes(r.status)&&!grantTimeActive(r.until)?'expired':r.status;
+const receivedGrant=id=>!isBlocked(id)&&S.reqOut.find(r=>r.p===id&&['partial','granted'].includes(r.status)&&r.granted?.length&&grantTimeActive(r.until));
+const givenGrant=id=>!isBlocked(id)&&S.sharedByMe.find(r=>r.p===id&&r.scopes?.length&&grantTimeActive(r.until));
+const givenGrantEntries=()=>S.sharedByMe.filter(r=>givenGrant(r.p)===r);
+
 const C={
  likesIn:()=>S.likesIn.filter(l=>!isMatch(l.p)&&!isBlocked(l.p)&&!l.passed).length,
  newMatches:()=>S.matches.filter(m=>(!S.threads[m.p]||!S.threads[m.p].msgs.length)&&!isBlocked(m.p)).length,
  unreadChats:()=>Object.entries(S.threads).filter(([k,t])=>t.unread&&!S.archived.has(k)&&!isBlocked(k)).length,
  notif:()=>S.notifs.filter(n=>!n.read&&!(n.p&&isBlocked(n.p))).length,
  updates:()=>S.updates.filter(u=>!u.read).length,
- reqIn:()=>S.reqIn.filter(r=>r.status==='new').length,
+ reqIn:()=>S.reqIn.filter(r=>r.status==='new'&&!isBlocked(r.p)).length,
  quotaLeft:()=>Math.max(0,S.quota.max-S.reqOut.filter(x=>Date.now()-x.t<DAY).length),
  joined:()=>S.joined.size,
  members:id=>COMMUNITIES[id].members+((S.joined.has(id)||COMMUNITIES[id].mine)?1:0), // base count excludes the viewer

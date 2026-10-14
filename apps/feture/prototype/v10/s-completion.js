@@ -9,7 +9,7 @@ ACT.k7export=()=>{downloadFile(JSON.stringify({profile:S.me,posts:S.myPosts,requ
 const exportRender=SC.K07.render;SC.K07.render=(...args)=>exportRender(...args).replace(L('Профиль, карта, дневник, публикации и переписка — архивом на почту. Обычно до 24 часов.','Profile, map, journal, posts and messages — an archive to your email. Usually within 24 hours.'),L('Скачай профиль, интересы, публикации и переписку из текущей сессии. Храни файл в безопасном месте.','Download your profile, interests, posts and conversations from this session. Keep the file somewhere safe.')).replace(L('Запросить архив','Request archive'),L('Скачать JSON','Download JSON'));
 
 // Requests and grants share a single model, expired / blocked entries cannot be opened.
-const requestAccess=ACT.reqAccess;ACT.reqAccess=a=>{const id=a.dataset.v||cur().p.id;if(!PEOPLE[id]||isBlocked(id)){toast(L('Профиль недоступен','Profile unavailable'),{type:'warn'});return;}const g=S.reqOut.find(x=>x.p===id&&['partial','granted'].includes(x.status)&&(x.until===null||x.until>Date.now()));if(g){go('P08',{id});return;}return requestAccess(a);};
+const requestAccess=ACT.reqAccess;ACT.reqAccess=a=>{const id=a.dataset.v||cur().p.id;if(!PEOPLE[id]||isBlocked(id)){toast(L('Профиль недоступен','Profile unavailable'),{type:'warn'});return;}const g=receivedGrant(id);if(g){go('P08',{id});return;}return requestAccess(a);};
 // V8: private profile renders inside the profile (s-profile.js privSection).
 
 // V7: private photos/video live in P04 «Приватное» (s-profile.js); M01/M03 are aliases.
@@ -45,3 +45,4 @@ ACT.v6Help=a=>{const [title,text]=helpText()[a.dataset.v];sheet(()=>({title,body
 const renderV6=render;render=function(dir,keep){renderV6(dir,keep);const r=cur();const hash=r.id+(r.p.id?':'+encodeURIComponent(r.p.id):'');history.replaceState(history.state,'','#'+hash);};
 
 ACT.sharePost=a=>copyReviewLink('F05',{id:a?.dataset?.v||cur().p.id});
+
