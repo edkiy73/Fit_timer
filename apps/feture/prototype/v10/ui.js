@@ -203,8 +203,8 @@ function filterSheet(cfg){S.ui.fcfg=cfg;S.ui.fsub=null;const start=JSON.stringif
  sheet(()=>{const c=S.ui.fcfg;const sub=S.ui.fsub&&c.rows.find(r=>r.k===S.ui.fsub);
   if(sub)return{title:sub.label,lead:`<button class="ibtn ghost sm" data-act="fBack" aria-label="${L('К фильтрам','Back to filters')}">${I.back}</button>`,search:!!sub.search,searchPh:L('Найти вариант','Find an option'),body:`${sub.body()}<p class="note sh-empty" hidden>${L('Ничего не нашлось','Nothing found')}</p>`,foot:`<button class="btn primary" data-act="fBack">${L('Готово','Done')}</button>`};
   const n=c.count();return{title:c.title,head:`<button class="btn text auto" data-act="fReset">${L('Сбросить','Reset')}</button>`,
-   body:`${c.top?c.top():''}<div class="card list frows">${c.rows.map(r=>`<button class="li frow" data-act="fOpen" data-v="${r.k}"><span class="tx"><b>${r.label}</b><small class="${r.on()?'on':''}">${esc(r.summary())}</small></span>${I.chev}</button>`).join('')}</div>${c.note?`<p class="grp-n">${c.note}</p>`:''}`,
-   foot:`<button class="btn primary ${n?'':'off'}" data-act="fApply">${c.applyLabel(n)}</button>`};},
+   body:`${c.top?c.top():''}<div class="card list frows">${c.rows.map(r=>`<button class="li frow" data-act="fOpen" data-v="${r.k}"><span class="tx"><b>${r.label}</b><small class="${r.on()?'on':''}">${esc(r.summary())}</small></span>${I.chev}</button>`).join('')}</div>${c.note?`<p class="grp-n">${c.note}</p>`:''}${!n?`<p class="note mt12">${L('С такими фильтрами пока ничего нет. Можно применить их или изменить выбор.','Nothing matches yet. You can apply these filters or change your choices.')}</p>`:''}`,
+   foot:`<button class="btn primary" data-act="fApply">${n?c.applyLabel(n):L('Применить фильтры','Apply filters')}</button>`};},
  {full:true,guard:()=>JSON.stringify(S.ui.fcfg.draft())!==start,back:()=>{if(S.ui.fsub){S.ui.fsub=null;resheet();return true;}return false;}});}
 ACT.fOpen=a=>{S.ui.fsub=a.dataset.v;S.ui.shq='';resheet();$('#sheet .sh-b')&&($('#sheet .sh-b').scrollTop=0);};
 ACT.fBack=()=>{S.ui.fsub=null;S.ui.shq='';resheet();};
