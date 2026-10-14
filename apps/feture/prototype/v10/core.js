@@ -108,6 +108,7 @@ const plate=(key,icon)=>`<div class="plate" style="${PL[key]||PL.rose};position:
 function person(id){if(id==='me')return meAsPerson();return PEOPLE[id];}
 function pname(id){if(id==='me')return S.me.name||S.me.nick||L('Ты','You');const p=PEOPLE[id];if(!p)return L('Участник','Member');return p.pair&&S.lang!=='en'?p.nameRu:p.name;}
 const PUBLIC_VIS={gender:'public',orient:'public',format:'public',status:'public',role:'granted'};
+const requiresDiscoveryPhoto=m=>!!m.dating&&m.datingVisible!==false;
 function publicField(m,k){return (m.vis?.[k]??PUBLIC_VIS[k]??'public')==='public'?m[k]:Array.isArray(m[k])?[]:null;}
 function meAsPerson(){const m=S.ui.profilePreview||S.me;return{name:m.name||m.nick,age:m.showAge===false?null:ageOf(m.dob),photo:m.photo,city:m.city,location:m.location?.coords,pron:m.pron,gender:publicField(m,'gender'),orient:publicField(m,'orient'),format:publicField(m,'format'),status:publicField(m,'status'),role:publicField(m,'role'),seek:m.dating?m.seek:[],bio:m.bio,verified:m.ageCheck==='ok',online:true,dating:m.dating,jars:m.jars.filter(j=>j.vis==='public'&&!j.limit).map(j=>[j.t,j.lv]),langs:m.langs};}
 /** avatar: photo → img; pair → two plates; else initials plate */
