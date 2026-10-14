@@ -104,7 +104,7 @@ const evType=t=>({workshop:L('Мастер-класс','Workshop'),talk:L('Об�
 function commCard(id,o={}){
  const c=COMMUNITIES[id];const j=S.joined.has(id),pend=S.pendingJoin.has(id);
  const state=j?`<span class="pill ok">${I.check}${L('Ты участник','Member')}</span>`:pend?`<span class="pill wait">${L('Заявка отправлена','Request sent')}</span>`:c.privacy==='closed'?`<span class="pill">${I.lock}${L('По заявке','By request')}</span>`:'';
- return `<button class="cmc" data-go="C03" data-p='${JSON.stringify({id})}' style="animation-delay:${(o.i||0)*40}ms"><div class="cv" style="position:relative">${plate(c.plate,'users3')}</div><div class="tx"><b>${esc(T(c.name))}</b><small>${esc(T(c.desc))}</small><div class="meta"><span>${pl(C.members(id),['участник','участника','участников'],['member','members'])}</span><span>·</span><span>${c.city==='online'?L('онлайн','online'):esc(city(c.city))}</span>${state?` ${state}`:''}</div></div></button>`;
+ return `<button class="cmc" data-go="C03" data-p='${JSON.stringify({id})}' style="animation-delay:${(o.i||0)*40}ms"><div class="cv" style="position:relative">${evCover(c,'users3')}</div><div class="tx"><b>${esc(T(c.name))}</b><small>${esc(T(c.desc))}</small><div class="meta"><span>${pl(C.members(id),['участник','участника','участников'],['member','members'])}</span><span>·</span><span>${c.city==='online'?L('онлайн','online'):esc(city(c.city))}</span>${state?` ${state}`:''}</div></div></button>`;
 }
 
 /* ---------- sheet builders reused across screens ---------- */

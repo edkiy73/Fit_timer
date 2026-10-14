@@ -82,6 +82,7 @@ SC.E03={title:p=>EV(p.id)?T(EV(p.id).title):'',valid:p=>!!EV(p.id)&&(EV(p.id).st
   <div class="li"><span class="ico a">${I.ticket}</span><span class="tx"><b>${e.price?esc(T(e.price)):L('Бесплатно','Free')}</b><small>${e.external?L(`Билеты: ${e.external}`,`Tickets: ${e.external}`):e.approval?L('Участие по заявке','By application'):L('Можно просто прийти','Just come along')}</small></span></div>
  </div>
  <div class="sec">${L('О событии','About')}</div><p style="margin:0;font-size:15.5px;line-height:1.55">${esc(T(e.desc))}</p>
+ ${e.gallery?.length?`<div class="sec">${L('Фотографии','Photos')}</div>${mediaGrid(e.gallery,{id})}`:''}
  ${e.reqs&&e.reqs.length?`<div class="sec">${L('Условия участия','Requirements')}</div><div class="card">${e.reqs.map(x=>`<div class="fact"><i class="v">${I.check}</i><span>${esc(T(x))}</span></div>`).join('')}<p class="note mt8">${L('Условия задаёт организатор. FetUre не даёт медицинских и юридических гарантий.','The organiser sets the requirements. FetUre gives no medical or legal guarantees.')}</p></div>`:''}
  ${rsvpRow}
  ${lines.length?`<div class="sec">${L('Твой статус','Your status')}</div><div class="card list">${lines.map(([i,b,s])=>`<div class="statusline"><span class="ico">${i}</span><span class="tx"><b>${b}</b><small>${s}</small></span></div>`).join('')}</div>`:''}
