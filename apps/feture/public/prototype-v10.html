@@ -1463,6 +1463,16 @@ const QUIZ={
 /* ============ CORE: helpers, i18n, icons, router, sheets, toasts, network ============ */
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 let S=null;
+/** Prototype only: a new document resets seeds, drafts, timers and media together.
+ * Production must use AppBase sign-out; this helper is not an auth adapter. */
+function restartPrototype(){
+ const url=new URL(location.href);
+ url.searchParams.set('persona','new');url.searchParams.set('lang',S.lang);
+ // A changed query forces a new document even on the second restart (hash alone doesn't).
+ const restart=Number(url.searchParams.get('restart'));
+ url.searchParams.set('restart',String(Number.isSafeInteger(restart)&&restart>=0?restart+1:1));
+ url.hash='A01';location.replace(url.href);
+}
 const QA={offline:false,frame:'auto',seen:{},datingLive:false};
 const L=(ru,en)=>S&&S.lang==='en'?en:ru;
 const T=o=>o==null?'':typeof o==='string'?o:(o[S.lang]??o.ru??'');
@@ -3681,7 +3691,7 @@ SC.K01={title:()=>L('Настройки','Settings'),render:()=>{const m=S.me;re
  <div class="sec">${L('Приватность','Privacy')}</div><div class="card list">${linkRow({go:'K04',icon:'eye',tone:'v',title:L('Приватность и знакомства','Privacy & dating'),sub:m.dating?L('знакомства включены','dating on'):L('знакомства выключены','dating off')})}${linkRow({go:'P12',icon:'block',title:L('Заблокированные','Blocked'),val:String(S.blocked.length)})}${linkRow({go:'K07',icon:'download',title:L('Мои данные и удаление','Your data & deletion')})}</div>
  <div class="sec">${L('Поддержка','Support')}</div><div class="card list">${linkRow({go:'S01',icon:'help',title:L('Помощь и безопасность','Help & safety')})}${linkRow({act:'logout',icon:'logout',cls:'danger',title:L('Выйти','Sign out'),noChev:1})}</div>
  <p class="note center mt24">FetUre · V6 · ${L('прототип интерфейса','interface prototype')}</p></div></div>`;}};
-ACT.logout=()=>ask({icon:'logout',title:L('Выйти из аккаунта?','Sign out?'),text:L('На этом устройстве не останется твоих данных. Войти можно в любой момент.','None of your data stays on this device. You can sign in any time.'),ok:L('Выйти','Sign out'),danger:true}).then(ok=>{if(!ok)return;S.session=null;initNav();render('fade');toast(L('Ты вышел(ла) из аккаунта','Signed out'));});
+ACT.logout=()=>ask({icon:'logout',title:L('Выйти из аккаунта?','Sign out?'),text:L('На этом устройстве не останется твоих данных. Войти можно в любой момент.','None of your data stays on this device. You can sign in any time.'),ok:L('Выйти','Sign out'),danger:true}).then(ok=>{if(ok)restartPrototype();});
 SC.K02={title:()=>L('Язык','Language'),render:()=>`${bar(L('Язык','Language'),{back:1,sm:1})}<div class="view nodock compact"><div class="wrap">${[['system',L('Как в системе','System default'),L('Системный язык устройства','Device language')],['ru','Русский',''],['en','English','']].map(([k,t,s])=>`<button class="radio ${(S.langPref||'ru')===k?'on':''}" data-act="k2" data-v="${k}"><i></i><span class="tx"><b>${t}</b>${s?`<small>${s}</small>`:''}</span></button>`).join('')}<p class="note mt16">${L('Это язык интерфейса, писем и уведомлений. Публикации людей не переводятся автоматически, а язык событий указывается отдельно.','This is the language of the interface, emails and notifications. People’s posts aren’t auto-translated; event languages are set separately.')}</p></div></div>`};
 ACT.k2=a=>{S.langPref=a.dataset.v;S.lang=a.dataset.v==='system'?(navigator.language.toLowerCase().startsWith('ru')?'ru':'en'):a.dataset.v;document.documentElement.lang=S.lang;refresh();toast(S.lang==='en'?'Language: English':'Язык: русский',{type:'ok'});};
 const themePref=()=>{try{return localStorage.getItem('feture-v6-theme')||'auto'}catch(e){return 'auto'}};
@@ -3917,8 +3927,9 @@ function qaRender(){const q=($('#qaQ')?.value||'').toLowerCase();const r=cur();
  $('#qaNav').innerHTML=QA_LIST().map(([g,items])=>{const it=items.filter(([id,l])=>!q||l.toLowerCase().includes(q)||id.toLowerCase().includes(q));return it.length?`<div class="qa-g">${g}</div>${it.map(([id,l,p],k)=>`<button class="qa-l ${r&&r.id===id&&JSON.stringify(p||{})===JSON.stringify(Object.fromEntries(Object.entries(r.p).filter(([k2])=>p&&k2 in p)))?'on':''}" data-qa="${id}" data-qp='${JSON.stringify(p||{})}'><code>${id[0]==='!'?'···':id}</code><span>${l}</span></button>`).join('')}`:'';}).join('');
  const th=themePref();
  $('#qaOpts').innerHTML=[[L('Язык','Language'),[['ru','RU'],['en','EN']],S.lang,'qaLang'],[L('Тема','Theme'),[['light',L('Светлая','Light')],['dark',L('Тёмная','Dark')],['auto',L('Авто','Auto')]],th,'qaTheme'],[L('Ширина','Width'),[['auto',L('Окно','Window')],['compact','320'],['phone','390'],['tablet',L('Планшет','Tablet')]],QA.frame,'qaFrame'],[L('Сеть','Network'),[['on',L('Есть','Online')],['off',L('Нет','Offline')]],QA.offline?'off':'on','qaNet'],[L('Аккаунт','Account'),[['full',L('Заполненный','Filled')],['new',L('Новый','New')]],S.persona,'qaPersona'],['Premium',[['0',L('Нет','Off')],['1',L('Есть','On')]],S.me.premium?'1':'0','qaPrem'],[L('Знакомства в админке','Dating (admin)'),[['on',L('Включены','On')],['off',L('Скоро','Soon')]],QA.datingLive===false?'off':'on','qaDating'],[L('Логотип','Logo'),[['a','A'],['b','B'],['c','C']],QA.logo||'a','qaLogo'],[L('Проверка возраста','Age check'),[['off',L('По дате рождения','By birth date')],['on',L('Обязательна','Required')]],QA.ageRequired?'on':'off','qaAge']].map(([t,items,v,act])=>`<div class="qa-opt"><span>${t}</span>${seg(items,v,act)}</div>`).join('');
- $('#qaHint').innerHTML=L('Коды подтверждения: <b>000000</b> — неверный, <b>999999</b> — истёк, любой другой — верный. Почта <b>limit@…</b> — лимит отправки. Ник <b>alex</b> занят.','Codes: <b>000000</b> wrong, <b>999999</b> expired, any other works. Email <b>limit@…</b> hits the send limit. Nickname <b>alex</b> is taken.');
+ $('#qaHint').innerHTML=L('Коды подтверждения: <b>000000</b> — неверный, <b>999999</b> — истёк, любой другой — верный. Почта <b>limit@…</b> — лимит отправки. Ник <b>alex</b> занят.','Codes: <b>000000</b> wrong, <b>999999</b> expired, any other works. Email <b>limit@…</b> hits the send limit. Nickname <b>alex</b> is taken.')+`<button class="btn secondary mt12" data-act="qaRestart">${L('Начать регистрацию заново','Restart registration')}</button><span class="note">${L('Очистит текущую сессию прототипа и откроет приветствие.','Clears this prototype session and opens the welcome screen.')}</span>`;
 }
+ACT.qaRestart=()=>restartPrototype();
 window.FT_QA={go:(id,p)=>qaGo(id,p||{}),list:()=>QA_LIST(),screen:()=>cur()&&cur().id,tab:t=>tab(t),back:()=>back()};
 window.QA_SYNC=()=>{if($('#qa.open'))qaRender();};
 const qa=$('#qa'),qaScrim=$('#qaScrim');
@@ -3929,6 +3940,7 @@ $('#qaQ').addEventListener('input',qaRender);
 qa.addEventListener('click',e=>{
  const b=e.target.closest('[data-qa]');if(b){qaGo(b.dataset.qa,JSON.parse(b.dataset.qp||'{}'));if(matchMedia('(max-width:900px)').matches)QA_CLOSE();else qaRender();return;}
  const a=e.target.closest('[data-act]');if(!a)return;e.stopPropagation();const v=a.dataset.v;
+ if(a.dataset.act==='qaRestart'){ACT.qaRestart();return;}
  ({qaLang:()=>{S.lang=v;document.documentElement.lang=v;refresh();resheet();},qaTheme:()=>applyTheme(v),qaFrame:()=>{QA.frame=v;document.body.classList.toggle('frame',v!=='auto');document.body.classList.toggle('tablet',v==='tablet');document.body.classList.toggle('compact',v==='compact');refresh();},qaNet:()=>{QA.offline=v==='off';refresh();toast(QA.offline?L('Режим «нет сети»: действия будут падать с ошибкой','Offline mode: actions will fail with an error'):L('Сеть восстановлена','Back online'),{type:QA.offline?'warn':'ok'});},qaPersona:()=>{signIn(v);toast(v==='new'?L('Новый пустой аккаунт','New empty account'):L('Заполненный аккаунт Alex','Filled account: Alex'),{type:'ok'});},qaPrem:()=>{S.me.premium=v==='1';refresh();},qaDating:()=>{QA.datingLive=v==='on';refresh();},qaLogo:()=>{QA.logo=v;renderSide();refresh();},qaAge:()=>{QA.ageRequired=v==='on';refresh();}}[a.dataset.act]||(()=>{}))();
  qaRender();
 },true);
@@ -3938,7 +3950,7 @@ const qaListV6=QA_LIST;QA_LIST=()=>[...qaListV6(),[L('Дополнено в V6',
 
 /* ---- main.js ---- */
 /* ============ BOOT ============ */
-S=freshState('full');
+S=freshState(new URLSearchParams(location.search).get('persona')==='new'?'new':'full');
 S.lang=(()=>{try{const l=new URLSearchParams(location.search).get('lang');if(l==='en'||l==='ru')return l;}catch(e){}return 'ru';})();
 document.documentElement.lang=S.lang;
 applyTheme(themePref());

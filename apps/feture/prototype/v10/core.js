@@ -1,6 +1,16 @@
 /* ============ CORE: helpers, i18n, icons, router, sheets, toasts, network ============ */
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 let S=null;
+/** Prototype only: a new document resets seeds, drafts, timers and media together.
+ * Production must use AppBase sign-out; this helper is not an auth adapter. */
+function restartPrototype(){
+ const url=new URL(location.href);
+ url.searchParams.set('persona','new');url.searchParams.set('lang',S.lang);
+ // A changed query forces a new document even on the second restart (hash alone doesn't).
+ const restart=Number(url.searchParams.get('restart'));
+ url.searchParams.set('restart',String(Number.isSafeInteger(restart)&&restart>=0?restart+1:1));
+ url.hash='A01';location.replace(url.href);
+}
 const QA={offline:false,frame:'auto',seen:{},datingLive:false};
 const L=(ru,en)=>S&&S.lang==='en'?en:ru;
 const T=o=>o==null?'':typeof o==='string'?o:(o[S.lang]??o.ru??'');
@@ -403,3 +413,4 @@ function syncChrome(){const m=main();if(cur()?.fq)filterSections($(':scope>.view
  const v=$(':scope>.view',m);m.style.setProperty('--sc',0);if(v){const on=()=>{const k=Math.min(1,v.scrollTop/48);m.style.setProperty('--sc',k.toFixed(3));m.classList.toggle('scrolled',v.scrollTop>4);};v.addEventListener('scroll',on,{passive:true});on();}}
 // keep the focused field visible above the keyboard
 document.addEventListener('focusin',e=>{const el=e.target;if(!el.matches?.('input:not([type=checkbox]):not([type=radio]),textarea,select')||!el.closest('#main .view'))return;setTimeout(()=>{if(document.activeElement===el)el.scrollIntoView({block:'center',behavior:'smooth'});},320);});
+

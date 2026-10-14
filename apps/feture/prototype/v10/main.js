@@ -1,5 +1,5 @@
 /* ============ BOOT ============ */
-S=freshState('full');
+S=freshState(new URLSearchParams(location.search).get('persona')==='new'?'new':'full');
 S.lang=(()=>{try{const l=new URLSearchParams(location.search).get('lang');if(l==='en'||l==='ru')return l;}catch(e){}return 'ru';})();
 document.documentElement.lang=S.lang;
 applyTheme(themePref());
@@ -12,3 +12,4 @@ if(h){const [id,arg]=h.split(':');if(SC[id]){if(SC[id].auth)qaGo(id,{});else qaG
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{if(themePref()==='auto')refresh();});
 
 startNavHistory();
+
