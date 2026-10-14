@@ -1292,3 +1292,29 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .rsvp .r-not.on{background:var(--raise);color:var(--mute);box-shadow:inset 0 0 0 1.5px var(--line2)}
 .rsvp.has button:not(.on){color:var(--mute)}
 @container stage (max-width:360px){.rsvp button{flex-direction:column;gap:2px;font-size:12.5px}}
+
+/* =====================================================================
+   V10 owner revision, part 7 — chat line breaks and media.
+   ===================================================================== */
+.msg .mtx{white-space:pre-wrap}
+.comment p{white-space:pre-line}
+#msgIn{max-height:132px}
+.msg.has-media{padding:4px;max-width:min(78%,300px)}
+.msg.has-media .mtx{display:block;padding:6px 9px 2px}
+.msg.has-media .st{padding:0 8px 4px}
+.mtile{position:relative;display:block;width:100%;min-width:200px;border-radius:14px;overflow:hidden;background:var(--raise);text-align:left}
+.mtile>img,.mtile>video{display:block;width:100%;max-height:320px;object-fit:cover}
+.mtile.blur>img,.mtile.blur>video{filter:blur(28px) saturate(1.2);transform:scale(1.15)}
+.mcover{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:6px;color:#fff;background:rgba(10,6,10,.28);font-size:13px}
+.mcover svg{width:24px;height:24px}
+.mtile.eph{display:flex;align-items:center;gap:10px;min-height:60px;padding:10px 12px;background:color-mix(in srgb,var(--violet) 14%,var(--surf));color:var(--ink)}
+.msg.me .mtile.eph{background:color-mix(in srgb,var(--surf) 16%,transparent);color:inherit}
+.mtile.eph .ico{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--violet);color:#fff}
+.mtile.eph .ico svg{width:18px;height:18px}
+.mtile.eph b{display:block;font-size:14px;font-weight:600;line-height:1.3}
+.mtile.eph small{display:block;font-size:12px;opacity:.75;line-height:1.35;margin-top:2px}
+.mtile.eph.expired{background:var(--raise);color:var(--mute)}.mtile.eph.expired .ico{background:var(--line2)}
+.msg.me .mtile.eph.expired{background:color-mix(in srgb,var(--surf) 10%,transparent)}
+.cm-prev{border-radius:var(--r-l);overflow:hidden;background:var(--raise);margin-bottom:12px}
+.cm-prev img,.cm-prev video{display:block;width:100%;max-height:260px;object-fit:contain}
+.vw-label{margin-right:auto;margin-left:10px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.16);color:#fff;font-size:12.5px;font-weight:600}

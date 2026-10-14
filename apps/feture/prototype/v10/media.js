@@ -131,13 +131,13 @@ function vwImg(){return VW&&$$('#vwTrack figure')[VW.i]?.querySelector('img');}
 function vwZoomApply(){const img=vwImg();if(!img)return;const z=VW.z;img.style.transition=z.anim?'transform .22s var(--ease)':'none';img.style.transform=z.k>1?`translate(${z.x}px,${z.y}px) scale(${z.k})`:'';$('#viewer')?.classList.toggle('zoomed',z.k>1);}
 function vwZoomClamp(){const img=vwImg();if(!img)return;const z=VW.z,w=img.clientWidth,h=img.clientHeight,fw=innerWidth,fh=innerHeight;const mx=Math.max(0,(w*z.k-fw)/2),my=Math.max(0,(h*z.k-fh)/2);z.x=Math.max(-mx,Math.min(mx,z.x));z.y=Math.max(-my,Math.min(my,z.y));}
 function vwZoomToggle(cx,cy){const img=vwImg();if(!img)return;const z=VW.z;if(z.k>1){Object.assign(z,{k:1,x:0,y:0,anim:1});}else{const r=img.getBoundingClientRect();const k=2.5;z.k=k;z.x=(r.left+r.width/2-cx)*(k-1);z.y=(r.top+r.height/2-cy)*(k-1);z.anim=1;vwZoomClamp();}vwZoomApply();}
-function openViewer(items,index=0){
+function openViewer(items,index=0,o={}){
  items=(items||[]).filter(Boolean);if(!items.length)return;
  const el=$('#viewer')||Object.assign(document.createElement('div'),{id:'viewer',className:'viewer'});if(!el.isConnected)$('#layer').append(el);
- VW={items,i:Math.max(0,Math.min(items.length-1,index)),opener:document.activeElement};
+ VW={items,i:Math.max(0,Math.min(items.length-1,index)),opener:document.activeElement,onClose:o.onClose||null,label:o.label||''};
  el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label',L('Просмотр','Viewer'));
  el.innerHTML=`<div class="vw-track" id="vwTrack">${items.map(m=>`<figure>${m.type==='video'?`<video src="${esc(m.src)}" controls playsinline preload="metadata"></video>`:m.type==='plate'?`<div class="vw-plate">${plate(m.key)}</div>`:`<img src="${esc(m.src)}" alt="" draggable="false" style="${vwStyle(m.style)}">`}${m.wm?`<div class="vw-wm" aria-hidden="true">${Array.from({length:18},()=>`<span>${esc(m.wm)}</span>`).join('')}</div>`:''}</figure>`).join('')}</div>
- <div class="vw-top"><span class="vw-n" id="vwN"></span><button class="ibtn glass" data-act="vwClose" aria-label="${L('Закрыть','Close')}">${I.close}</button></div>
+ <div class="vw-top"><span class="vw-n" id="vwN"></span>${o.label?`<span class="vw-label">${esc(o.label)}</span>`:''}<button class="ibtn glass" data-act="vwClose" aria-label="${L('Закрыть','Close')}">${I.close}</button></div>
  ${items.length>1?`<button class="vw-nav l" data-act="vwStep" data-v="-1" aria-label="${L('Предыдущее','Previous')}">${I.back}</button><button class="vw-nav r" data-act="vwStep" data-v="1" aria-label="${L('Следующее','Next')}">${I.chev}</button><div class="vw-dots">${items.map(()=>'<i></i>').join('')}</div>`:''}`;
  el.style.removeProperty('--dy');requestAnimationFrame(()=>{el.classList.add('on');syncModal();$('[data-act="vwClose"]',el).focus({preventScroll:true});});
  vwGo(VW.i,true);
@@ -159,7 +159,7 @@ function openViewer(items,index=0){
 function vwGo(i,instant){if(!VW)return;i=Math.max(0,Math.min(VW.items.length-1,i));if(VW.z&&VW.z.k>1&&i!==VW.i){Object.assign(VW.z,{k:1,x:0,y:0,anim:0});vwZoomApply();}VW.i=i;const tr=$('#vwTrack');if(!tr)return;if(instant)tr.style.transition='none';tr.style.transform=`translateX(${-i*100}%)`;if(instant)requestAnimationFrame(()=>tr.style.transition='');
  const n=$('#vwN');if(n)n.textContent=VW.items.length>1?`${i+1} / ${VW.items.length}`:'';$$('#viewer .vw-dots i').forEach((d,k)=>d.classList.toggle('on',k===i));$$('#viewer video').forEach((v,k)=>{if(k!==i)v.pause();});
  $('#viewer .vw-nav.l')?.toggleAttribute('disabled',i===0);$('#viewer .vw-nav.r')?.toggleAttribute('disabled',i===VW.items.length-1);}
-function closeViewer(){const el=$('#viewer');if(!el||!el.classList.contains('on'))return false;el.classList.remove('on');el.querySelectorAll('video').forEach(v=>v.pause());const op=VW?.opener;VW=null;setTimeout(()=>{if(!el.classList.contains('on')){el.innerHTML='';el.style.removeProperty('--dy');}},260);syncModal();if(op?.isConnected)op.focus({preventScroll:true});return true;}
+function closeViewer(){const el=$('#viewer');if(!el||!el.classList.contains('on'))return false;el.classList.remove('on');el.querySelectorAll('video').forEach(v=>v.pause());const op=VW?.opener,cb=VW?.onClose;VW=null;if(cb)setTimeout(cb,0);setTimeout(()=>{if(!el.classList.contains('on')){el.innerHTML='';el.style.removeProperty('--dy');}},260);syncModal();if(op?.isConnected)op.focus({preventScroll:true});return true;}
 ACT.vwClose=()=>closeViewer();
 ACT.vwStep=a=>vwGo(VW.i+(+a.dataset.v));
 document.addEventListener('keydown',e=>{if(!VW)return;if(e.key==='ArrowRight'){vwGo(VW.i+1);e.stopImmediatePropagation();}if(e.key==='ArrowLeft'){vwGo(VW.i-1);e.stopImmediatePropagation();}if(e.key==='Escape'){closeViewer();e.stopImmediatePropagation();}},true);

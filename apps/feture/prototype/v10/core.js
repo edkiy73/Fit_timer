@@ -403,7 +403,7 @@ document.addEventListener('input',e=>{const el=e.target.closest('[data-in]');if(
 document.addEventListener('change',e=>{const el=e.target.closest('[data-ch]');if(!el)return;const fn=CH[el.dataset.ch];fn&&fn(el,e);});
 document.addEventListener('keydown',e=>{
  if(e.key==='Escape'){if($('#matchLayer .match')){ACT.matchClose();return;}if(S.ui.ask){S.ui.ask();return;}if($('#qa.open')){window.QA_CLOSE&&QA_CLOSE();return;}if(S.ui.sheet){userCloseSheet();return;}if(stack().length>1)back();}
- if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.enter&&!e.shiftKey){e.preventDefault();ACT[e.target.dataset.enter]?.(e.target,e);}
+ if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.enter&&!e.shiftKey&&!e.isComposing&&!(e.target.tagName==='TEXTAREA'&&matchMedia('(pointer:coarse)').matches)){e.preventDefault();ACT[e.target.dataset.enter]?.(e.target,e);}
 });
 // generic form memory: value lives on the route entry, errors clear while typing
 IN.f=el=>{const r=cur();r.f[el.name]=el.value;r.dirty=true;if(r.err&&r.err[el.name])setErr(el.name,'');const c=$(`[data-count="${el.name}"]`);if(c){const max=+c.textContent.split('/')[1];c.textContent=`${el.value.length} / ${max}`;c.classList.toggle('over',el.value.length>max);}};
