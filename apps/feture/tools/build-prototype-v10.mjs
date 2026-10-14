@@ -1,6 +1,6 @@
 // Builds the standalone V10 design prototype into public/prototype-v10.html (+ notes page).
 // One self-contained file: works from Vercel and when downloaded to a phone.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -11,9 +11,15 @@ const order = ['data.js', 'topics.js', 'core.js', 'ui.js', 'media.js', 's-locati
 
 const img = {};
 for (let i = 1; i <= 9; i++) img[i] = 'data:image/webp;base64,' + readFileSync(join(app, `public/images/profile-${i}.webp`)).toString('base64');
+// V10 content photos stay in public/images for React; inline them here so the standalone HTML works offline.
+const media = {};
+const mediaDir = join(app, 'public/images/v10-content');
+for (const name of readdirSync(mediaDir).filter(n => n.endsWith('.webp'))) {
+  media[name] = 'data:image/webp;base64,' + readFileSync(join(mediaDir, name)).toString('base64');
+}
 // Logos are inline SVG in core.js (LOGOS); the raster test mark is no longer embedded.
 
-const js = `window.FT_IMG=${JSON.stringify(img)};\n(function(){\n${order.map((f) => `/* ---- ${f} ---- */\n${read(f)}`).join('\n')}\n})();`;
+const js = `window.FT_IMG=${JSON.stringify(img)};window.FT_MEDIA=${JSON.stringify(media)};\n(function(){\n${order.map((f) => `/* ---- ${f} ---- */\n${read(f)}`).join('\n')}\n})();`;
 const html = read('index.html').replace('/*CSS*/', () => read('styles.css')).replace('/*JS*/', () => js.replace(/<\/script/gi, '<\\/script'));
 writeFileSync(join(app, 'public/prototype-v10.html'), html);
 console.log(`prototype-v10.html: ${(html.length / 1024).toFixed(0)} KB`);
