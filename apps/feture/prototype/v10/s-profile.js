@@ -256,7 +256,7 @@ SC.P10={title:p=>p.tab==='following'?L('Подписки','Following'):L('Под
  const list=tab==='following'?followingOf(id):followersOf(id);
  const row=k=>{const self=k==='me';const fol=S.follows.has(k);
   const act=self?`<span class="note">${L('это ты','you')}</span>`
-   :mine&&tab==='followers'?`<button class="btn sm ${fol?'soft':'primary'}" data-act="flwToggle" data-v="${k}" aria-pressed="${fol}">${fol?L('Отписаться','Unfollow'):L('Подписаться в ответ','Follow back')}</button><button class="ibtn sm" data-act="block" data-v="${k}" aria-label="${L(`Заблокировать ${pname(k)}`,`Block ${pname(k)}`)}">${I.block}</button>`
+   :mine&&tab==='followers'?`<button class="btn sm ${fol?'soft':'primary'}" data-act="flwToggle" data-v="${k}" aria-pressed="${fol}">${fol?L('Отписаться','Unfollow'):L('Подписаться','Follow back')}</button><button class="ibtn sm" data-act="block" data-v="${k}" aria-label="${L(`Заблокировать ${pname(k)}`,`Block ${pname(k)}`)}">${I.block}</button>`
    :`<button class="btn sm ${fol?'soft':'primary'}" data-act="flwToggle" data-v="${k}" aria-pressed="${fol}">${fol?L('Отписаться','Unfollow'):L('Подписаться','Follow')}</button>`;
   return `<div class="li frow"><button class="frow-go" data-go="${self?'P03':'P01'}" ${self?'':`data-p='${JSON.stringify({id:k})}'`}>${av(k,'')}<span class="tx"><b>${esc(pname(k))}${nameBadges(person(k),1)}</b><small>${esc(placeLine(k)||'')}</small></span></button>${act}</div>`;};
  const who=mine?'':` · ${esc(pname(id))}`;
