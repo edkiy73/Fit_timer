@@ -1,16 +1,18 @@
 /* ============ SHARED COMPONENTS ============ */
 /** jars: list of {t,lv,limit,vis} or [t,lv]. V9: one vessel, one colour; the fill is the level 1–10.
  *  «обсуждаемо» — dashed outline, «табу» — crossed out. o.more adds a «+N» tile, o.was shows the previous answer. */
+/** liquid colour follows the value: low → red, 3 → orange, 5 → yellow, 10 → green. The number is always printed, so colour is never the only cue. */
+function jarColor(v){const st=[[1,4],[3,26],[5,46],[7,88],[10,140]];v=Math.max(1,Math.min(10,+v||1));let h=st[0][1];for(let k=1;k<st.length;k++)if(v<=st[k][0]){const [a,ha]=st[k-1],[b,hb]=st[k];h=ha+(hb-ha)*(v-a)/(b-a);break;}return `hsl(${Math.round(h)} 58% 55%)`;}
 function jarsHTML(list,o={}){
  const items=list.map(x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x);
  return `<div class="jars ${o.pre?'pre':''} ${o.cls||''}">${items.map((j,i)=>{
   const tag=o.act?'button':'div';const attrs=o.act?`data-act="${o.act}" data-v="${j.t}" ${o.who?`data-who="${o.who}"`:''} aria-label="${esc(topic(j.t))}: ${esc(jarWord(j))}"`:'';
   const was=o.was&&o.was[j.t]!=null?`<small class="was">${L('было','was')} ${o.was[j.t]==='hard'?L('табу','taboo'):o.was[j.t]==='discuss'?L('обсужд.','negot.'):o.was[j.t]}</small>`:'';
   const vis=o.vis&&j.vis!=='public'?`<span class="jvis">${j.vis==='granted'?I.key:I.eyeoff}</span>`:'';
-  if(j.limit)return `<${tag} class="jar ${j.limit==='hard'?'taboo':'discuss'}" ${attrs}><span class="vessel"><span class="jm">${j.limit==='hard'?I.block:I.chat}</span>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw">${j.limit==='hard'?L('табу','taboo'):L('обсуждаемо','negotiable')}</span>${was}</${tag}>`;
-  return `<${tag} class="jar" ${attrs} style="--v:${j.lv};--d:${(i%6)*.05}s"><span class="vessel"><span class="fill"></span><b class="lv">${j.lv}</b>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw">${esc(LV_WORD(j.lv).toLowerCase())}</span>${was}</${tag}>`;}).join('')}${o.more?`<button class="jar more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="vessel"><b>+${o.more.n}</b></span><span class="jn">${L('Все','All')}</span></button>`:''}${o.add?`<button class="jar add" data-act="${o.add}"><span class="vessel">${I.plus}</span><span class="jn">${L('Добавить','Add')}</span></button>`:''}</div>`;
+  if(j.limit)return `<${tag} class="jar ${j.limit==='hard'?'taboo':'discuss'}" ${attrs}><span class="vessel"><span class="jm">${j.limit==='hard'?I.block:I.chat}</span>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw">${j.limit==='hard'?(o.who&&o.who!=='me'?L('нельзя','not for me'):L('табу','taboo')):L('обсуждаемо','negotiable')}</span>${was}</${tag}>`;
+  return `<${tag} class="jar" ${attrs} style="--v:${j.lv};--jc:${jarColor(j.lv)};--d:${(i%6)*.35}s"><span class="vessel"><span class="fill"><i class="bub"></i></span><b class="lv">${j.lv}</b>${vis}</span><span class="jn">${esc(topic(j.t))}</span>${was}</${tag}>`;}).join('')}${o.more?`<button class="jar more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="vessel"><b>+${o.more.n}</b></span><span class="jn">${L('Все','All')}</span></button>`:''}${o.add?`<button class="jar add" data-act="${o.add}"><span class="vessel">${I.plus}</span><span class="jn">${L('Добавить','Add')}</span></button>`:''}</div>`;
 }
-const pubJars=id=>id==='me'?S.me.jars.filter(j=>j.vis==='public'&&j.limit!=='hard'):(person(id)?.jars||[]).map(x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x).filter(j=>(!j.vis||j.vis==='public')&&j.limit!=='hard');
+const pubJars=id=>id==='me'?S.me.jars.filter(j=>j.vis==='public'):(person(id)?.jars||[]).map(x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x).filter(j=>!j.vis||j.vis==='public');
 const fillJars=()=>setTimeout(()=>$$('.jars.pre').forEach(j=>j.classList.remove('pre')),90);
 function venn(n,o={}){return `<div class="venn ${o.mini?'mini':''} ${o.pre?'pre':''}" ${o.id?`id="${o.id}"`:''}><i></i><i></i><b>${n}${o.mini?'':`<small>${pl(n,['общая тема','общие темы','общих тем'],['shared topic','shared topics'],true)}</small>`}</b></div>`;}
 const playVenn=()=>setTimeout(()=>$$('.venn.pre').forEach(v=>v.classList.remove('pre')),120);
@@ -19,7 +21,7 @@ const playVenn=()=>setTimeout(()=>$$('.venn.pre').forEach(v=>v.classList.remove(
 function shared(id){
  const p=person(id);if(!p)return{match:[],complement:[],discuss:[],few:true};
  const mine=S.me.jars.filter(j=>j.vis==='public'&&!j.limit);
- const theirs=(p.jars||[]).map(j=>({t:j[0],lv:j[1]}));
+ const theirs=(p.jars||[]).map(j=>Array.isArray(j)?{t:j[0],lv:j[1]}:j).filter(j=>!j.limit);
  const match=mine.filter(j=>j.lv>=6&&theirs.some(x=>x.t===j.t&&x.lv>=6)).map(j=>j.t);
  const complement=[];const discuss=[];
  const r1=publicField(S.me,'role'),r2=p.role;
@@ -56,7 +58,7 @@ function pollHTML(p,o={}){const voted=p.vote!=null;const opts=p.poll;const tot=o
  <div class="poll-f"><span class="note">${pl(tot,['голос','голоса','голосов'],['vote','votes'])}${voted?` · ${L('голос можно изменить','you can change your vote')}`:''}</span>${voted&&live?`<button class="btn text auto" data-act="unvote" data-v="${p.id}">${L('Отменить голос','Withdraw vote')}</button>`:''}</div></div>`;}
 function postMediaHTML(p,o={}){let h='';const m=postMedia(p);if(m.length)h+=mediaGrid(m,{id:p.id});
  if(p.poll)h+=pollHTML(p,o);
- if(p.result)h+=`<div class="testcard">${jarsHTML(p.result,{act:o.preview?'':'topic',who:p.author})}<div style="flex:1"><b>${L('Результат теста','Quiz result')}</b><div class="note">${L('Только выбранные темы, без ответов','Only chosen topics, no answers')}</div></div></div>`;
+ if(p.result)h+=`<div class="testcard" style="--n:${Math.min(4,p.result.length)}" aria-label="${L('Результат теста','Quiz result')}">${jarsHTML(p.result,{act:o.preview?'':'topic',who:p.author})}</div>`;
  return h;}
 function postCard(p,o={}){
  const mine=p.author==='me';const pid=JSON.stringify({id:p.id});

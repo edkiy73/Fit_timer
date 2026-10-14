@@ -1215,6 +1215,41 @@ button.jar:active .vessel{transform:scale(.95)}
 .pairline{display:flex;align-items:center;gap:10px;width:100%;margin-top:10px;padding:10px 12px;border-radius:var(--r);background:var(--surf);border:1px solid var(--line);text-align:left;font-size:14px;color:var(--mute)}
 .pairline b{color:var(--ink);font-weight:600}.pairline span{flex:1;min-width:0}.pairline>svg:first-child{color:var(--violet)}
 .pair-hero{display:flex;justify-content:center;margin:8px 0 4px}.pair-hero .av{width:72px;height:72px;box-shadow:0 0 0 3px var(--bg)}.pair-hero .av+.av{margin-left:-14px}
+
+/* =====================================================================
+   V10 owner revision, part 3 — living jars (V8 liquid) with value colour.
+   ===================================================================== */
+.jars{grid-template-columns:repeat(auto-fit,minmax(84px,1fr))}
+.jar .vessel{width:50px;height:86px;margin:8px 0 6px;border-radius:12px 12px 18px 18px;border:1.5px solid color-mix(in srgb,var(--line2) 85%,transparent);background:linear-gradient(90deg,var(--surf),color-mix(in srgb,var(--raise) 70%,var(--surf)));box-shadow:inset 0 -6px 12px -8px rgba(40,10,30,.18);overflow:visible;isolation:isolate}
+.jar .vessel::before{left:-4px;right:-4px;top:-9px;height:9px;border-radius:6px 6px 3px 3px;background:linear-gradient(var(--line2),color-mix(in srgb,var(--line2) 70%,var(--ink)));box-shadow:0 2px 0 -1px rgba(0,0,0,.08)}
+.jar .vessel::after{content:"";position:absolute;left:7px;top:8px;bottom:12px;width:5px;border-radius:5px;background:linear-gradient(rgba(255,255,255,.7),rgba(255,255,255,.06));z-index:3;pointer-events:none}
+.jar .fill{border-radius:0 0 16px 16px;overflow:hidden;height:calc(max(1,var(--v)) * 10%);
+ background:linear-gradient(to top,var(--jc,var(--accent)),color-mix(in srgb,var(--jc,var(--accent)) 60%,#fff));
+ -webkit-mask:linear-gradient(#000,#000) 0 7px/100% 100% no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='8'%3E%3Cpath d='M0 4 Q10 0 20 4 T40 4 V8 H0Z'/%3E%3C/svg%3E") 0 0/40px 8px repeat-x;
+ mask:linear-gradient(#000,#000) 0 7px/100% 100% no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='8'%3E%3Cpath d='M0 4 Q10 0 20 4 T40 4 V8 H0Z'/%3E%3C/svg%3E") 0 0/40px 8px repeat-x;
+ transition:transform 1.1s var(--ease);animation:jarWave 2.8s linear infinite;animation-delay:calc(-1 * var(--d,0s))}
+@keyframes jarWave{to{-webkit-mask-position:0 7px,40px 0;mask-position:0 7px,40px 0}}
+.jar .bub{position:absolute;left:30%;bottom:6px;width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.55);animation:jarBub 3.6s ease-in infinite;animation-delay:var(--d,0s)}
+.jar .bub::after{content:"";position:absolute;left:10px;top:12px;width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,.5)}
+@keyframes jarBub{0%{transform:translateY(0);opacity:0}15%{opacity:1}80%{opacity:.8}100%{transform:translateY(-56px);opacity:0}}
+.jar .lv{z-index:4;margin-top:0;align-self:start;padding-top:10px;font-size:19px;text-shadow:0 1px 0 color-mix(in srgb,var(--surf) 70%,transparent)}
+.jar .jvis{z-index:5}
+button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
+.jar.discuss .vessel,.jar.taboo .vessel{background:var(--surf)}
+.jar.taboo .vessel{background:repeating-linear-gradient(135deg,var(--surf) 0 6px,var(--raise) 6px 7px);border-color:color-mix(in srgb,var(--danger) 45%,var(--line2))}
+.jar .jm{margin-top:0}
+.jar .jw{font-weight:600}
+.jar.taboo .jw{color:var(--danger)}.jar.discuss .jw{color:var(--warn)}
+/* quiz result inside a post: only the jars, as many per row as fit */
+.testcard{display:block;padding:12px 8px}
+.testcard .jars{grid-template-columns:repeat(var(--n,4),minmax(0,1fr));min-width:0;gap:12px 2px}
+.testcard .jar .jn{font-size:12px}
+@container col (max-width:260px){.testcard .jars{grid-template-columns:repeat(min(2,var(--n,4)),minmax(0,1fr))}}
+.testcard .jar .vessel{width:44px;height:76px}
+.tc-res{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 2px}
+.tc-res i{display:inline-flex;align-items:center;gap:4px;max-width:100%;padding:2px 8px 2px 6px;border-radius:99px;background:var(--raise);font-style:normal;font-size:11.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc-res i::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--jc)}
+.tc-res em{font-style:normal;font-weight:700;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -1332,7 +1367,7 @@ const PEOPLE={
   jars:[['shibari',10],['bondage',8],['aftercare',10],['roleplay',8]],langs:['ru','en']},
  kai:{pv:true,name:'Kai',age:27,photo:4,nph:2,city:'berlin',km:5,pron:'they',gender:['nb'],orient:['pan'],format:'ra',role:'switch',seek:['chat','friends'],verified:true,online:false,last:{ru:'был(а) сегодня',en:'active today'},dating:true,
   bio:{ru:'Ищу людей, с которыми можно спокойно говорить о границах. Остальное приложится.',en:'Looking for people I can calmly talk boundaries with. The rest will follow.'},
-  jars:[['service',8],['bondage',6],['rituals',8],['talk',10]],langs:['en','ru']},
+  jars:[['service',8],['bondage',6],['rituals',8],['talk',10],{t:'filming',lv:0,limit:'hard'}],langs:['en','ru']},
  maya:{pv:true,name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:'none',seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
   bio:{ru:'Веду сообщество «Узлы и разговоры» и встречи для новичков. Здесь — ради людей и тем.',en:'I run the Rope & Talk community and newcomer meetups. Here for people and ideas.'},
   jars:[['shibari',10],['talk',10],['aftercare',8]],langs:['ru','en','de']},
@@ -2055,16 +2090,18 @@ document.addEventListener('focusin',e=>{const el=e.target;if(!el.matches?.('inpu
 /* ============ SHARED COMPONENTS ============ */
 /** jars: list of {t,lv,limit,vis} or [t,lv]. V9: one vessel, one colour; the fill is the level 1–10.
  *  «обсуждаемо» — dashed outline, «табу» — crossed out. o.more adds a «+N» tile, o.was shows the previous answer. */
+/** liquid colour follows the value: low → red, 3 → orange, 5 → yellow, 10 → green. The number is always printed, so colour is never the only cue. */
+function jarColor(v){const st=[[1,4],[3,26],[5,46],[7,88],[10,140]];v=Math.max(1,Math.min(10,+v||1));let h=st[0][1];for(let k=1;k<st.length;k++)if(v<=st[k][0]){const [a,ha]=st[k-1],[b,hb]=st[k];h=ha+(hb-ha)*(v-a)/(b-a);break;}return `hsl(${Math.round(h)} 58% 55%)`;}
 function jarsHTML(list,o={}){
  const items=list.map(x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x);
  return `<div class="jars ${o.pre?'pre':''} ${o.cls||''}">${items.map((j,i)=>{
   const tag=o.act?'button':'div';const attrs=o.act?`data-act="${o.act}" data-v="${j.t}" ${o.who?`data-who="${o.who}"`:''} aria-label="${esc(topic(j.t))}: ${esc(jarWord(j))}"`:'';
   const was=o.was&&o.was[j.t]!=null?`<small class="was">${L('было','was')} ${o.was[j.t]==='hard'?L('табу','taboo'):o.was[j.t]==='discuss'?L('обсужд.','negot.'):o.was[j.t]}</small>`:'';
   const vis=o.vis&&j.vis!=='public'?`<span class="jvis">${j.vis==='granted'?I.key:I.eyeoff}</span>`:'';
-  if(j.limit)return `<${tag} class="jar ${j.limit==='hard'?'taboo':'discuss'}" ${attrs}><span class="vessel"><span class="jm">${j.limit==='hard'?I.block:I.chat}</span>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw">${j.limit==='hard'?L('табу','taboo'):L('обсуждаемо','negotiable')}</span>${was}</${tag}>`;
-  return `<${tag} class="jar" ${attrs} style="--v:${j.lv};--d:${(i%6)*.05}s"><span class="vessel"><span class="fill"></span><b class="lv">${j.lv}</b>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw">${esc(LV_WORD(j.lv).toLowerCase())}</span>${was}</${tag}>`;}).join('')}${o.more?`<button class="jar more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="vessel"><b>+${o.more.n}</b></span><span class="jn">${L('Все','All')}</span></button>`:''}${o.add?`<button class="jar add" data-act="${o.add}"><span class="vessel">${I.plus}</span><span class="jn">${L('Добавить','Add')}</span></button>`:''}</div>`;
+  if(j.limit)return `<${tag} class="jar ${j.limit==='hard'?'taboo':'discuss'}" ${attrs}><span class="vessel"><span class="jm">${j.limit==='hard'?I.block:I.chat}</span>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw">${j.limit==='hard'?(o.who&&o.who!=='me'?L('нельзя','not for me'):L('табу','taboo')):L('обсуждаемо','negotiable')}</span>${was}</${tag}>`;
+  return `<${tag} class="jar" ${attrs} style="--v:${j.lv};--jc:${jarColor(j.lv)};--d:${(i%6)*.35}s"><span class="vessel"><span class="fill"><i class="bub"></i></span><b class="lv">${j.lv}</b>${vis}</span><span class="jn">${esc(topic(j.t))}</span>${was}</${tag}>`;}).join('')}${o.more?`<button class="jar more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="vessel"><b>+${o.more.n}</b></span><span class="jn">${L('Все','All')}</span></button>`:''}${o.add?`<button class="jar add" data-act="${o.add}"><span class="vessel">${I.plus}</span><span class="jn">${L('Добавить','Add')}</span></button>`:''}</div>`;
 }
-const pubJars=id=>id==='me'?S.me.jars.filter(j=>j.vis==='public'&&j.limit!=='hard'):(person(id)?.jars||[]).map(x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x).filter(j=>(!j.vis||j.vis==='public')&&j.limit!=='hard');
+const pubJars=id=>id==='me'?S.me.jars.filter(j=>j.vis==='public'):(person(id)?.jars||[]).map(x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x).filter(j=>!j.vis||j.vis==='public');
 const fillJars=()=>setTimeout(()=>$$('.jars.pre').forEach(j=>j.classList.remove('pre')),90);
 function venn(n,o={}){return `<div class="venn ${o.mini?'mini':''} ${o.pre?'pre':''}" ${o.id?`id="${o.id}"`:''}><i></i><i></i><b>${n}${o.mini?'':`<small>${pl(n,['общая тема','общие темы','общих тем'],['shared topic','shared topics'],true)}</small>`}</b></div>`;}
 const playVenn=()=>setTimeout(()=>$$('.venn.pre').forEach(v=>v.classList.remove('pre')),120);
@@ -2073,7 +2110,7 @@ const playVenn=()=>setTimeout(()=>$$('.venn.pre').forEach(v=>v.classList.remove(
 function shared(id){
  const p=person(id);if(!p)return{match:[],complement:[],discuss:[],few:true};
  const mine=S.me.jars.filter(j=>j.vis==='public'&&!j.limit);
- const theirs=(p.jars||[]).map(j=>({t:j[0],lv:j[1]}));
+ const theirs=(p.jars||[]).map(j=>Array.isArray(j)?{t:j[0],lv:j[1]}:j).filter(j=>!j.limit);
  const match=mine.filter(j=>j.lv>=6&&theirs.some(x=>x.t===j.t&&x.lv>=6)).map(j=>j.t);
  const complement=[];const discuss=[];
  const r1=publicField(S.me,'role'),r2=p.role;
@@ -2110,7 +2147,7 @@ function pollHTML(p,o={}){const voted=p.vote!=null;const opts=p.poll;const tot=o
  <div class="poll-f"><span class="note">${pl(tot,['голос','голоса','голосов'],['vote','votes'])}${voted?` · ${L('голос можно изменить','you can change your vote')}`:''}</span>${voted&&live?`<button class="btn text auto" data-act="unvote" data-v="${p.id}">${L('Отменить голос','Withdraw vote')}</button>`:''}</div></div>`;}
 function postMediaHTML(p,o={}){let h='';const m=postMedia(p);if(m.length)h+=mediaGrid(m,{id:p.id});
  if(p.poll)h+=pollHTML(p,o);
- if(p.result)h+=`<div class="testcard">${jarsHTML(p.result,{act:o.preview?'':'topic',who:p.author})}<div style="flex:1"><b>${L('Результат теста','Quiz result')}</b><div class="note">${L('Только выбранные темы, без ответов','Only chosen topics, no answers')}</div></div></div>`;
+ if(p.result)h+=`<div class="testcard" style="--n:${Math.min(4,p.result.length)}" aria-label="${L('Результат теста','Quiz result')}">${jarsHTML(p.result,{act:o.preview?'':'topic',who:p.author})}</div>`;
  return h;}
 function postCard(p,o={}){
  const mine=p.author==='me';const pid=JSON.stringify({id:p.id});
@@ -2781,7 +2818,7 @@ SC.F07={title:()=>L('Публикация','Post'),valid:p=>!p.id||!!ownPost(p.i
  const a=AUD().find(x=>x[0]===r.aud)||AUD()[0];const m=r.media;const el=resEligible();
  const mediaBlock=m.length?grp(L(`Фото и видео · ${m.length}/${MEDIA_MAX}`,`Photos & video · ${m.length}/${MEDIA_MAX}`),`<div class="edit-ph">${m.map((x,i)=>`<div>${x.type==='video'?`<video src="${esc(x.url)}" muted playsinline preload="metadata"></video><span class="mainph">${ic('video',12)} ${fmtDur(x.dur||0)}</span>`:`<img src="${esc(x.url)}" alt="">`}<button class="rm" data-act="rmMedia" data-v="${i}" aria-label="${L('Убрать','Remove')}">${I.close}</button><button class="vw" data-act="viewDraftMedia" data-v="${i}" aria-label="${L('Посмотреть','View')}"></button></div>`).join('')}${m.length<MEDIA_MAX?`<button data-act="postMedia" aria-label="${L('Добавить фото или видео','Add photo or video')}">${I.plus}</button>`:''}</div>`):'';
  const pollBlock=r.poll?grp(L(`Опрос · ${r.poll.opts.length}/${POLL_MAX}`,`Poll · ${r.poll.opts.length}/${POLL_MAX}`),`${r.poll.opts.map((o,i)=>`<div class="field pollopt ${r.err&&r.err['o'+i]?'err':''}" data-field="o${i}"><div class="inwrap"><span class="n">${i+1}</span><input class="inp" name="o${i}" data-in="pollOpt" data-i="${i}" value="${esc(o)}" maxlength="80" placeholder="${L('Вариант','Option')} ${i+1}" aria-label="${L('Вариант','Option')} ${i+1}">${r.poll.opts.length>2?`<button class="ibtn ghost sm" data-act="rmOpt" data-v="${i}" aria-label="${L('Убрать вариант','Remove option')}">${I.close}</button>`:''}</div></div>`).join('')}${r.poll.opts.length<POLL_MAX?`<button class="btn text auto" data-act="addOpt">${I.plus}${L('Добавить вариант','Add option')}</button>`:''}${r.err&&r.err.opts?`<div class="ferr">${I.alert}${r.err.opts}</div>`:''}`,{right:`<button data-act="rmPoll">${L('Убрать','Remove')}</button>`,foot:L('Голос можно изменить или отменить. Кто как голосовал, не видно никому.','Votes can be changed or withdrawn. Nobody sees who voted for what.')+(ex?.poll?' '+L('Изменение вариантов сбросит голоса опроса.','Changing the options resets the poll votes.'):'')}):'';
- const resBlock=r.result?grp(L('Результат','Result'),el.length?`${jarsHTML(el.filter(j=>r.resSel.includes(j.t)).map(j=>[j.t,j.lv]))}<div class="chips mt12">${el.map(j=>chipBtn(j.t,topic(j.t),r.resSel.includes(j.t),'resPick')).join('')}</div>`:`<p class="note">${L('Пока нечего показать: открой хотя бы одну тему для всех в «Я».','Nothing to show yet: make at least one topic public in Me.')}</p>`,{right:`<button data-act="rmResult">${L('Убрать','Remove')}</button>`,foot:L('Только темы, открытые всем, до 4. Ответы, границы и скрытые темы не попадают.','Only topics open to everyone, up to 4. Answers, limits and hidden topics are never included.')}):'';
+ const resBlock=r.result?grp(L('Результат','Result'),el.length?`${(sel=>sel.length?`<div class="testcard" style="--n:${Math.min(4,sel.length)}">${jarsHTML(sel)}</div>`:'')(el.filter(j=>r.resSel.includes(j.t)).slice(0,4).map(j=>[j.t,j.lv]))}<div class="chips mt12">${el.map(j=>chipBtn(j.t,topic(j.t),r.resSel.includes(j.t),'resPick')).join('')}</div>`:`<p class="note">${L('Пока нечего показать: открой хотя бы одну тему для всех в «Я».','Nothing to show yet: make at least one topic public in Me.')}</p>`,{right:`<button data-act="rmResult">${L('Убрать','Remove')}</button>`,foot:L('Только темы, открытые всем, до 4. Ответы, границы и скрытые темы не попадают.','Only topics open to everyone, up to 4. Answers, limits and hidden topics are never included.')}):'';
  const tools=`<div class="attach">${m.length?'':`<button data-act="postMedia">${I.image}<span>${L('Фото/видео','Photo/video')}</span></button>`}${r.poll?'':`<button data-act="addPoll">${I.poll}<span>${L('Опрос','Poll')}</span></button>`}${r.result?'':`<button data-act="addResult">${I.test}<span>${L('Результат','Result')}</span></button>`}</div>`;
  return `${bar(ex?L('Редактирование','Edit post'):L('Новая публикация','New post'),{back:1,sm:1,actions:`<button class="btn text auto" data-act="saveDraft">${L('В черновик','Save draft')}</button>`})}<div class="view nodock cta1"><div class="wrap">
  ${S.postEdits[p.id]?`<p class="note mb12">${L('Открыты сохранённые правки. Исходная публикация пока не изменена.','Saved changes are open. The original post is unchanged.')}</p>`:''}<section class="grp"><div class="card compose"><div class="row" style="gap:10px">${av('me','sm')}<button class="pill v" data-act="audience">${a[1]}${a[2]} ${ic('down',13)}</button></div>
@@ -3099,7 +3136,7 @@ function passDating(id,f){const p=PEOPLE[id];if(!p.verified||!p.pair&&p.age<18)r
  if(f.format.length&&!fmtList(p.format).some(x=>f.format.includes(x)))return false;
  if(f.seek.length&&!p.seek.some(s=>f.seek.includes(s)))return false;
  if((f.role||[]).length&&!f.role.includes(p.role))return false;
- if((f.topics||[]).length&&!p.jars.some(j=>f.topics.includes(j[0])))return false;return true;}
+ if((f.topics||[]).length&&!p.jars.some(j=>f.topics.includes(Array.isArray(j)?j[0]:j.t)))return false;return true;}
 const dfCount=f=>[f.show!=='all',f.age[0]!==18||f.age[1]!==99,f.placeMode==='nearby',!!f.city,f.gender.length,f.format.length,f.seek.length,(f.topics||[]).length,(f.role||[]).length].filter(Boolean).length;
 
 SC.D03={root:1,tab:'people',title:()=>L('Люди','People'),render:(p,r)=>{
@@ -3828,7 +3865,7 @@ const ansVal=v=>isNaN(+v)?v:+v;
 function jarShelf(list,o={}){const all=sortJars(list);const max=o.max||6;const shown=all.slice(0,max);const more=all.length-shown.length;
  return jarsHTML(shown,{...o,more:more>0?{n:more,act:o.moreAct,v:o.who||''}:null});}
 function testCards(){const list=Object.entries(QUIZ).sort(([a],[b])=>(S.me.tests[a]?.done?1:0)-(S.me.tests[b]?.done?1:0));
- return `<div class="tests">${list.map(([id,z])=>{const st=S.me.tests[id]||{};const n=z.topics.length;const got=Object.keys(st.ans||{}).length;return `<button class="tcard" data-go="X07" data-id="${id}"><span class="tc-art">${plate(z.pl)}<span class="tc-ic">${I[z.ic||'test']}</span></span><span class="tc-b"><b>${esc(T(z.title))}</b><small>${st.done?`${I.check}${L('пройден','done')}`:got?L(`начат · ${got} из ${n}`,`started · ${got} of ${n}`):pl(n,['тема','темы','тем'],['topic','topics'])}</small></span></button>`;}).join('')}</div>`;}
+ return `<div class="tests">${list.map(([id,z])=>{const st=S.me.tests[id]||{};const n=z.topics.length;const got=Object.keys(st.ans||{}).length;return `<button class="tcard" data-go="X07" data-id="${id}"><span class="tc-art">${plate(z.pl)}<span class="tc-ic">${I[z.ic||'test']}</span></span><span class="tc-b"><b>${esc(T(z.title))}</b>${st.done?`<span class="tc-res">${sortJars(quizJars(id)).slice(0,3).map(j=>`<i style="--jc:${j.limit?'var(--line2)':jarColor(j.lv)}">${esc(topic(j.t))} <em>${j.limit==='hard'?L('табу','taboo'):j.limit?L('обсужд.','negot.'):j.lv}</em></i>`).join('')}</span>`:''}<small>${st.done?`${I.check}${L('пройден','done')}${st.t?` · ${F.date(st.t)}`:''}`:got?L(`начат · ${got} из ${n}`,`started · ${got} of ${n}`):pl(n,['тема','темы','тем'],['topic','topics'])}</small></span></button>`;}).join('')}</div>`;}
 
 SC.X01={root:1,tab:'me',title:()=>L('Я','Me'),render:()=>{const m=S.me;const [ns,nt,nid]=nextStep();
  const head=bar(L('Я','Me'),{actions:`${bellBtn()}<button class="ibtn" data-go="K01" aria-label="${L('Настройки','Settings')}">${I.gear}</button>`});
@@ -3847,7 +3884,7 @@ ACT.myJarsAll=()=>go('X02');
 SC.X02={title:()=>L('Мои баночки','My jars'),render:()=>{const all=myJars();const g=[[L('Интересно','Into it'),all.filter(j=>!j.limit)],[L('Обсуждаемо','Negotiable'),all.filter(j=>j.limit==='discuss')],[L('Табу','Taboo'),all.filter(j=>j.limit==='hard')]].filter(x=>x[1].length);
  return `${bar(L('Мои баночки','My jars'),{back:1,sm:1,actions:`<button class="ibtn" data-go="X04" aria-label="${L('История','History')}">${I.hist}</button><button class="ibtn" data-act="addJar" aria-label="${L('Добавить тему','Add a topic')}">${I.plus}</button>`})}<div class="view nodock"><div class="wrap">
  ${all.length?g.map(([t,l])=>grp(`${t} · ${l.length}`,jarsHTML(l,{pre:1,act:'editJar',vis:1}))).join(''):empty('test',L('Пока пусто','Empty for now'),L('Пройди тест или добавь тему сам(а).','Take a quiz or add a topic yourself.'),`<button class="btn primary" data-go="X05">${L('К тестам','See quizzes')}</button>`)}
- <p class="grp-n">${I.eyeoff} ${L('только ты','only you')} · ${I.key} ${L('по доступу','by access')} · ${L('без значка — видно всем','no icon — everyone')}. ${L('Табу никогда не показывается в профиле.','Taboo is never shown on your profile.')}</p></div></div>`;},after:()=>fillJars()};
+ <p class="grp-n">${I.eyeoff} ${L('только ты','only you')} · ${I.key} ${L('по доступу','by access')} · ${L('без значка — видно всем','no icon — everyone')}. ${L('Табу показывается в профиле как «нельзя», только если ты сам(а) выбрал(а) «Все».','Taboo shows on your profile as “not for me” only if you chose “Everyone”.')}</p></div></div>`;},after:()=>fillJars()};
 SC.X05={title:()=>L('Тесты','Quizzes'),render:()=>{const done=Object.keys(QUIZ).filter(k=>S.me.tests[k]?.done).length;return `${bar(L('Тесты','Quizzes'),{back:1,sm:1})}<div class="view nodock"><div class="wrap">
  <p class="lead">${L('В каждом тесте несколько тем. У каждой — пояснение, что это. Отвечаешь от 1 до 10, «обсуждаемо» или «табу». Любую тему можно пропустить.','Each quiz is a few topics, each with an explanation. Answer 1 to 10, “negotiable” or “taboo”. Skip any topic.')}</p>
  <section class="grp"><div class="grp-t"><span>${L(`Пройдено ${done} из ${Object.keys(QUIZ).length}`,`${done} of ${Object.keys(QUIZ).length} done`)}</span></div>${testCards()}</section></div></div>`;}};
@@ -3865,9 +3902,9 @@ function openJar(t){const ex=S.me.jars.find(j=>j.t===t);S.ui.jar={t,v:jv(ex),vis
  sheet(()=>{const j=S.ui.jar;const taboo=j.v==='hard';
  return{title:topic(t),sub:T(CATS.find(c=>c.id===TOPICS[t]?.cat)||''),body:`<p class="topic-desc">${esc(T(TOPIC_DESC[t]))}</p>
  ${grp(topicQ(t),answerHTML(j.v,'jarAns'),{cls:'bare'})}
- ${j.v==null?'':grp(L('Кто видит','Who can see'),choices([['only',L('Только я','Only me')],['granted',L('По доступу','By access'),L('Те, кому ты откроешь расширенный профиль','People you share your private profile with')],['public',L('Все','Everyone'),taboo?L('Табу не бывает публичным','Taboo is never public'):L('В профиле и для совпадений','On your profile and for matching'),taboo]],j.vis,'jarVis'))}`,
+ ${j.v==null?'':grp(L('Кто видит','Who can see'),choices([['only',L('Только я','Only me')],['granted',L('По доступу','By access'),L('Те, кому ты откроешь расширенный профиль','People you share your private profile with')],['public',L('Все','Everyone'),taboo?L('Другие увидят в профиле: «нельзя». Без подробностей','Others see “not for me” on your profile. No details'):L('В профиле и для совпадений','On your profile and for matching')]],j.vis,'jarVis'))}`,
  foot:`<div class="row g8">${ex?`<button class="btn secondary icon" data-act="jarDel" aria-label="${L('Убрать','Remove')}">${I.trash}</button>`:''}<button class="btn primary ${j.v==null?'off':''}" data-act="jarSave">${ex?L('Сохранить','Save'):L('Добавить','Add')}</button></div>`};},{guard:()=>JSON.stringify(S.ui.jar)!==start});}
-ACT.jarAns=a=>{const j=S.ui.jar;j.v=ansVal(a.dataset.v);if(j.v==='hard'&&j.vis==='public')j.vis='only';resheet();};
+ACT.jarAns=a=>{const j=S.ui.jar;j.v=ansVal(a.dataset.v);resheet();};
 ACT.jarVis=a=>{S.ui.jar.vis=a.dataset.v;resheet();};
 ACT.jarSave=a=>{const j=S.ui.jar;if(j.v==null)return;const arr=S.me.jars;const i=arr.findIndex(x=>x.t===j.t);const old=i>=0?arr[i]:null;
  run(a,()=>{const val=jarFrom(j.t,j.v,{vis:j.vis});if(i>=0)arr[i]=val;else arr.push(val);S.me.history.unshift({t:Date.now(),topic:j.t,from:old?jv(old):'—',to:j.v,src:'manual'});closeSheet();refresh();},{ms:300,ok:j.vis==='public'?L('Сохранено. Видно в профиле','Saved. Shown on your profile'):L('Сохранено','Saved')});};
@@ -3883,9 +3920,10 @@ ACT.allJars=a=>{const who=a.dataset.v;const list=sortJars((person(who)?.jars||[]
  sheet(()=>({title:L(`Интересы · ${pname(who)}`,`Interests · ${pname(who)}`),body:CATS.map(c=>{const l=list.filter(j=>TOPICS[j.t]?.cat===c.id);return l.length?grp(T(c),jarsHTML(l,{act:'topic',who}),{cls:'bare'}):'';}).join('')}),{full:true});setTimeout(fillJars,50);};
 
 /* ---------- quizzes: one question = one topic: what it is + level 1–10 / обсуждаемо / табу ---------- */
-SC.X07={title:p=>T(QUIZ[p.id]?.title)||L('Тест','Quiz'),valid:p=>!!QUIZ[p.id],render:(p)=>{const z=QUIZ[p.id];const st=S.me.tests[p.id]||{};const n=z.topics.length;const got=Object.keys(st.ans||{}).length;return `${bar('',{back:1})}<div class="view nodock cta1"><div class="wrap">
+SC.X07={title:p=>T(QUIZ[p.id]?.title)||L('Тест','Quiz'),valid:p=>!!QUIZ[p.id],after:()=>fillJars(),render:(p)=>{const z=QUIZ[p.id];const st=S.me.tests[p.id]||{};const n=z.topics.length;const got=Object.keys(st.ans||{}).length;return `${bar('',{back:1})}<div class="view nodock cta1"><div class="wrap">
  <div class="quiz-art">${plate(z.pl)}<span class="tc-ic">${I[z.ic||'test']}</span></div>
  <h1 class="t">${esc(T(z.title))}</h1><p class="lead">${esc(T(z.desc))}</p>
+ ${st.done?grp(L(`Последний результат${st.t?` · ${F.date(st.t)}`:''}`,`Last result${st.t?` · ${F.date(st.t)}`:''}`),jarsHTML(sortJars(quizJars(p.id)),{pre:1,act:'editJar'}),{foot:L('Это твои ответы — видишь только ты. Что показывать в профиле, решаешь в «Мои баночки».','These are your answers — only you see them. What shows on your profile is set in My jars.')}):''}
  ${grp('',`<div class="li static"><span class="ico">${I.test}</span><span class="tx"><b>${pl(n,['тема','темы','тем'],['topic','topics'])} · ~${Math.max(1,Math.round(n/3))} ${L('мин','min')}</b><small>${L('У каждой — пояснение, что это','Each one explained')}</small></span></div>
  <div class="li static"><span class="ico">${I.undo}</span><span class="tx"><b>${L('Можно пропускать','Skip any topic')}</b><small>${L('Пропуск не считается ответом','A skip isn’t an answer')}</small></span></div>
  <div class="li static"><span class="ico">${I.lock}</span><span class="tx"><b>${L('Ответы видишь только ты','Only you see your answers')}</b><small>${L('Баночки меняются, когда ты сохранишь результат','Jars change only when you save the result')}</small></span></div>`,{list:1})}
