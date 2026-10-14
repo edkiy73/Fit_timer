@@ -1,0 +1,15 @@
+/* ============ BOOT ============ */
+S=freshState(new URLSearchParams(location.search).get('persona')==='new'?'new':'full');
+S.lang=(()=>{try{const l=new URLSearchParams(location.search).get('lang');if(l==='en'||l==='ru')return l;}catch(e){}return 'ru';})();
+document.documentElement.lang=S.lang;
+applyTheme(themePref());
+initNav();
+// keep auth layout single-column; root class follows the session
+const _render=render;render=function(dir,keep){$('#root').classList.toggle('auth',!S.session);_render(dir,keep);};
+// deep link: #D03 or #P01:mia opens a screen directly (review convenience)
+const h=decodeURIComponent((location.hash||'').slice(1));
+if(h){const [id,arg]=h.split(':');if(SC[id]){if(SC[id].auth)qaGo(id,{});else qaGo(id,arg?{id:arg}:{});}else render('fade');}else render('fade');
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{if(themePref()==='auto')refresh();});
+
+startNavHistory();
+

@@ -1,0 +1,377 @@
+{
+  "source_commit": "5fde301fb02ec62ba19f58fa71244d07145a1ab8",
+  "source": "prototype/v9",
+  "date": "2026-10-14",
+  "scope": "prototype only; not live backend acceptance",
+  "files": [
+    {
+      "file": "core.js",
+      "sha256": "099f48c55c06632b02b645c4d0cc48441581d31900f9ffe5b39231ebf2ff042b",
+      "screens": [],
+      "state_fields": [
+        "archived",
+        "blocked",
+        "joined",
+        "lang",
+        "likesIn",
+        "matches",
+        "me",
+        "nav",
+        "notifs",
+        "quota",
+        "reqIn",
+        "reqOut",
+        "session",
+        "threads",
+        "ui",
+        "updates"
+      ]
+    },
+    {
+      "file": "data.js",
+      "sha256": "089ff0bab688f8a3a4b8869fd98848b38b943007c5c7f8782b138fb8ddeea528",
+      "screens": [],
+      "state_fields": []
+    },
+    {
+      "file": "index.html",
+      "sha256": "fb3b452944389ff151c85718158ca6a1415ce9d210099268c458cc764e82fd70",
+      "screens": [],
+      "state_fields": []
+    },
+    {
+      "file": "main.js",
+      "sha256": "53476d7016d81cd2eda780872c3b47f5e9bd49236f78b757056369e8772f660f",
+      "screens": [],
+      "state_fields": [
+        "lang",
+        "session"
+      ]
+    },
+    {
+      "file": "media.js",
+      "sha256": "cb1584326103689166f6d8407a4db3a820a1fa7843289afc57377f2f7f2e5233",
+      "screens": [],
+      "state_fields": [
+        "lang",
+        "ui"
+      ]
+    },
+    {
+      "file": "qa.js",
+      "sha256": "fff262f0e5d14f641765fda57b1860058f0d5433c49c9a70e3d69fb9b8df13b7",
+      "screens": [],
+      "state_fields": [
+        "decided",
+        "deckOrder",
+        "lang",
+        "me",
+        "nav",
+        "persona",
+        "quota",
+        "reqIn",
+        "reqOut",
+        "session"
+      ]
+    },
+    {
+      "file": "s-auth.js",
+      "sha256": "f1530e34642d115f78d914a660e7c584cf8073abcc30a23e2f8cb73c779cbcb4",
+      "screens": [
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "A04X",
+        "A05",
+        "A07"
+      ],
+      "state_fields": [
+        "joined",
+        "lang",
+        "me",
+        "nav",
+        "pendingJoin",
+        "session",
+        "ui"
+      ]
+    },
+    {
+      "file": "s-chats.js",
+      "sha256": "48850779e4fd1cf8770a1c5c71a170800ca1d979d98ec4f813f705b1dd0500d4",
+      "screens": [
+        "H01",
+        "H02",
+        "H05",
+        "N01"
+      ],
+      "state_fields": [
+        "archived",
+        "matches",
+        "me",
+        "muted",
+        "notifs",
+        "reqOut",
+        "session",
+        "sharedByMe",
+        "threads",
+        "ui",
+        "updates"
+      ]
+    },
+    {
+      "file": "s-comm.js",
+      "sha256": "2f23d5eb591677f5b8aabe85bf0bda1a9d4c13a40728ec66690d0867331616d1",
+      "screens": [
+        "C01",
+        "C03",
+        "C06",
+        "C07",
+        "C08",
+        "C10"
+      ],
+      "state_fields": [
+        "discussions",
+        "filters",
+        "joined",
+        "lang",
+        "me",
+        "pendingJoin",
+        "session",
+        "ui"
+      ]
+    },
+    {
+      "file": "s-completion.js",
+      "sha256": "ec2aafa0157a9c003681748d383ee610b087657bc575f633210e78199f1e5a4f",
+      "screens": [
+        "C11",
+        "C12",
+        "K08",
+        "Q01",
+        "Q02",
+        "Q03",
+        "Q04",
+        "Q05",
+        "Q06",
+        "Q07"
+      ],
+      "state_fields": [
+        "extraEvents",
+        "me",
+        "myPosts",
+        "pair",
+        "pairInvite",
+        "pairProposal",
+        "reqOut",
+        "threads",
+        "ui"
+      ]
+    },
+    {
+      "file": "s-events.js",
+      "sha256": "bf5c5437a9a222b4f46077863f8a76e23e63f25ce9f62d77a65f04357d45cb99",
+      "screens": [
+        "E00",
+        "E03",
+        "E06",
+        "E10",
+        "E11",
+        "E15",
+        "E16"
+      ],
+      "state_fields": [
+        "extraEvents",
+        "filters",
+        "lang",
+        "me",
+        "notifs",
+        "rsvp",
+        "ui",
+        "updates"
+      ]
+    },
+    {
+      "file": "s-feed.js",
+      "sha256": "898fc5eaf60a767ce0f2083eaf043190522c08e797bf8dcd68722f9d681a52c6",
+      "screens": [
+        "F01",
+        "F04",
+        "F05",
+        "F07",
+        "F09",
+        "F10"
+      ],
+      "state_fields": [
+        "filters",
+        "follows",
+        "hiddenPosts",
+        "me",
+        "mutedAuthors",
+        "myPosts",
+        "nav",
+        "ui"
+      ]
+    },
+    {
+      "file": "s-location.js",
+      "sha256": "0830d5e881cca52906e5c02e41f9045c26e7acd39060abbb6581203516cd459b",
+      "screens": [],
+      "state_fields": [
+        "me",
+        "ui"
+      ]
+    },
+    {
+      "file": "s-me.js",
+      "sha256": "6855add8f4da7954b96d3ef73fbbf2af2b73af041c8a7b3d4a6dd6f43c507e66",
+      "screens": [
+        "G04",
+        "X01",
+        "X02",
+        "X04",
+        "X05",
+        "X07",
+        "X08",
+        "X09",
+        "X10",
+        "X11"
+      ],
+      "state_fields": [
+        "me",
+        "myPosts",
+        "pairInvite",
+        "ui"
+      ]
+    },
+    {
+      "file": "s-navigation.js",
+      "sha256": "14417e361bcd4d1c4afed771301257c17142086aa15a6165a49b30aa9e488b34",
+      "screens": [],
+      "state_fields": [
+        "nav",
+        "session",
+        "ui"
+      ]
+    },
+    {
+      "file": "s-people.js",
+      "sha256": "ccf71ae05d3d2915dbfdbc3c1fcf3aefe4de35f6054dd5d8fb9830bf13c8be44",
+      "screens": [
+        "D02",
+        "D03",
+        "D04",
+        "D09"
+      ],
+      "state_fields": [
+        "archived",
+        "decided",
+        "deckOrder",
+        "filters",
+        "follows",
+        "history",
+        "likesIn",
+        "likesOut",
+        "matches",
+        "me",
+        "nav",
+        "notifs",
+        "reqOut",
+        "session",
+        "threads",
+        "ui"
+      ]
+    },
+    {
+      "file": "s-profile.js",
+      "sha256": "8b834c7f2b73a3d9cda09cb8d7794ce8ba8d995b0660608794665805e8f2b395",
+      "screens": [
+        "P01",
+        "P02",
+        "P03",
+        "P04",
+        "P05",
+        "P07",
+        "P08"
+      ],
+      "state_fields": [
+        "blocked",
+        "follows",
+        "likesIn",
+        "likesOut",
+        "matches",
+        "me",
+        "myPosts",
+        "notifs",
+        "pairInvite",
+        "persona",
+        "quota",
+        "reqIn",
+        "reqOut",
+        "sharedByMe",
+        "threads",
+        "ui"
+      ]
+    },
+    {
+      "file": "s-settings.js",
+      "sha256": "c1ebff8be33b58e189543f8d0a5ff869bb19d8c107d4282bc6e0cc2838202e50",
+      "screens": [
+        "B01",
+        "G01",
+        "K01",
+        "K02",
+        "K03",
+        "K04",
+        "K05",
+        "K06",
+        "K07",
+        "P12",
+        "S01"
+      ],
+      "state_fields": [
+        "blocked",
+        "filters",
+        "lang",
+        "langPref",
+        "me",
+        "searchRecent",
+        "session",
+        "sharedByMe",
+        "ui"
+      ]
+    },
+    {
+      "file": "styles.css",
+      "sha256": "d5d007b15cab2486612d4d57240724faba15b999a6a81777e4ca23c6588519a2",
+      "screens": [],
+      "state_fields": []
+    },
+    {
+      "file": "topics.js",
+      "sha256": "14b56f059ac2f2e64ce6e0696a12b2aa032edccc6e862424e32835486a560857",
+      "screens": [],
+      "state_fields": []
+    },
+    {
+      "file": "ui.js",
+      "sha256": "d2c821f1c502b21d0ebfde5a6e7635220cef7636de11dae8e358673c7344eb79",
+      "screens": [],
+      "state_fields": [
+        "discussions",
+        "extraEvents",
+        "joined",
+        "lang",
+        "likesIn",
+        "me",
+        "myPosts",
+        "pendingJoin",
+        "posts",
+        "reqOut",
+        "rsvp",
+        "ui",
+        "updates"
+      ]
+    }
+  ]
+}
