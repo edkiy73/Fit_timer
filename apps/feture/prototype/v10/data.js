@@ -210,6 +210,7 @@ function freshState(persona){
   posts:POSTS.map(p=>({...p,liked:false,saved:false,comments:p.comments.map(c=>({a:c[0],text:c[1],t:p.t+HOUR}))})),
   myPosts:full?[{id:'m1',author:'me',t:ago(48),type:'text',tags:['shibari'],likes:14,aud:'all',status:'published',text:{ru:'Первый раз сходил на занятие по шибари. Больше всего удивило, сколько времени уходит на разговор до начала — и как это успокаивает.',en:'Went to my first shibari class. What surprised me most was how much time goes into talking first — and how calming that is.'},comments:[]},
    {id:'m2',author:'me',t:ago(3),type:'text',tags:['talk'],likes:0,aud:'followers',status:'draft',text:{ru:'Черновик: как я учусь говорить «нет» без чувства вины…',en:'Draft: how I’m learning to say “no” without guilt…'},comments:[]}]:[],
+  postEdits:{}, // private saved revisions; never part of published Posts
   discussions:DISCUSSIONS.map(d=>({...d,replies:d.replies.map(r=>({a:r[0],text:r[1],t:d.t+HOUR}))})),
   rsvp:full?{e1:{status:'going',app:'pending',answers:true},e2:{status:'interested'},e6:{status:'going',app:'none'}}:{},
   myEvents:full?['e8']:[],
@@ -249,3 +250,4 @@ function freshState(persona){
  if(full){st.extraEvents.e8={title:{ru:'Клуб чтения: «Больше двух»',en:'Book club: “More Than Two”'},type:'talk',format:'online',start:at(8,19),end:at(8,20,30),tz:'Europe/Berlin',lang:'RU',price:null,organizer:'me',community:'slow',approval:true,plate:'plum',link:'meet.feture.app/bookclub',desc:{ru:'Обсуждаем по главе в неделю. Камера по желанию.',en:'One chapter a week. Camera optional.'},reqs:[],q:[{ru:'Читал(а) ли книгу раньше?',en:'Have you read the book before?'}],status:'published',apps:[{p:'kira',status:'pending',answer:{ru:'Нет, начну с вами',en:'No, I’ll start with you'}},{p:'ari',status:'approved',answer:{ru:'Да, дважды',en:'Yes, twice'}},{p:'lina',status:'pending',answer:{ru:'Частично',en:'Partly'}}],announce:[]};}
  return st;
 }
+
