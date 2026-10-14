@@ -163,3 +163,5 @@ PR#1089 merged (`0667f360`) с сохранёнными атомарными com
 **Предыдущая порция:** PR1092 merged1f96c5e5; final640a8f9 AppBase38548139415 success, preview READY; browser390 active notification→Lina→End без ice/input, stale notification→H01. Это тестовые данные автономного прототипа.
 
 **Browser follow-up до merge:** normal390 Preview→Private circle→Edit сохранил текст, но восстановил старую audience из navHistory. Это не попало в VM pop-проверку. Добавлен внутренний composeId и узкая синхронизация audience в history snapshots именно того же F07/F09 черновика, без изменения Post DTO и других drafts. Browser Back/Edit/Forward проверяются на новом exact head.
+
+**Независимое follow-up:** тот же sync применяется при выборе из F07, чтобы browser Forward не восстанавливал прежнюю audience F09. Проверены обе стороны изменения и изоляция чужого composeId.
