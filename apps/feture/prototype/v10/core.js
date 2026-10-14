@@ -128,6 +128,8 @@ function photoItems(id){if(id==='me'){const m=S.ui.profilePreview||S.me;return (
 function photoBars(id,ix){const n=photoCount(id);return n>1?`<div class="pc-bars" aria-label="${L(`Фото ${ix+1} из ${n}`,`Photo ${ix+1} of ${n}`)}">${Array.from({length:n},(_,i)=>`<i class="${i===ix?'on':''}"></i>`).join('')}</div>`:'';}
 /** step through photos; returns false at the first/last photo (caller can nudge) */
 function stepPhoto(id,d){S.ui.ph=S.ui.ph||{};const n=photoCount(id),i=(S.ui.ph[id]||0)+d;if(i<0||i>=n)return false;S.ui.ph[id]=i;return true;}
+/** blurred backdrop for a whole-photo frame (profile hero): same picture, no framing transform */
+function photoBg(id,v=0){let src=null;if(id==='me'){const m=S.ui.profilePreview||S.me;const ph=(m.photos||[])[v]??m.photo;if(ph!=null)src=IMG(ph);}else{const p=person(id);if(p?.photo)src=IMG(p.photo);}return src?`<img class="mbg" src="${src}" alt="" aria-hidden="true" draggable="false">`:'';}
 function bigPhoto(id,v=0){
  const p=person(id);
  if(id==='me'){const m=S.ui.profilePreview||S.me;const ph=(m.photos||[])[v]??m.photo;if(ph!=null)return `<img src="${IMG(ph)}" alt="${esc(pname(id))}" draggable="false">`;return plate('rose','me');}

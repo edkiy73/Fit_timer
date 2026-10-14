@@ -1005,7 +1005,7 @@ button.jar:active .vessel{transform:scale(.95)}
 .viewer.drag .vw-track{transform:translateY(var(--dy))!important;transition:none}
 .vw-track figure{position:relative;flex:none;width:100%;height:100%;margin:0;display:grid;place-items:center;overflow:hidden}
 .vw-track img,.vw-track video{max-width:100%;max-height:100%;object-fit:contain}
-.vw-track figure>img[style*="scale"]{width:100%;height:100%;object-fit:cover}
+.vw-track img{will-change:transform;transform-origin:50% 50%}.viewer.zoomed .vw-track{cursor:grab}.viewer.zoomed .vw-nav,.viewer.zoomed .vw-dots{opacity:0;pointer-events:none}
 .vw-plate{position:relative;width:100%;aspect-ratio:4/5;max-height:100%}
 .vw-wm{position:absolute;inset:-20%;display:grid;grid-template-columns:repeat(3,1fr);align-content:space-around;justify-items:center;gap:60px 0;transform:rotate(-24deg);pointer-events:none;z-index:1}
 .vw-wm span{font-size:15px;font-weight:700;letter-spacing:.04em;color:rgba(255,255,255,.3);text-shadow:0 1px 2px rgba(0,0,0,.35);white-space:nowrap}
@@ -1160,6 +1160,33 @@ button.jar:active .vessel{transform:scale(.95)}
   .side{padding:18px 8px}
   .side .navb{padding:10px 2px;font-size:11px}
 }
+
+/* -- media: instafill frames (whole picture over its own blurred copy), capped height in feeds -- */
+.mf{position:relative;overflow:hidden;background:var(--raise);isolation:isolate}
+.mf>.mbg{position:absolute;inset:-12%;width:124%;height:124%;max-width:none;object-fit:cover;filter:blur(26px) saturate(1.15) brightness(.92);opacity:.9;z-index:-1}
+.mf>.mfg,.mcell.mf>video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.mcell.mf>video{background:#0b090b}
+.mgrid.n1 .mcell{aspect-ratio:var(--ar,4/5);max-height:min(560px,62dvh);width:100%}
+.mgrid.n1{justify-items:stretch}
+@container stage (min-width:768px){
+  .main>.inputbar{padding-inline:max(10px,calc((100% - 700px) / 2))}
+}
+
+/* -- dating deck: the photo keeps one framing whatever the window; wider card on tablet/desktop -- */
+.pc-ph>img{object-position:50% 30%}
+@container stage (min-width:768px){
+  .view.deckmode{justify-content:center}
+  .deck{flex:0 1 auto;height:100%;max-height:700px;aspect-ratio:4/5;width:auto;max-width:100%;margin:0 auto}
+}
+/* -- profile hero: the photo is shown whole in a fixed frame, so resizing never changes what is visible -- */
+.hero{height:auto;aspect-ratio:1/1;max-height:none;isolation:isolate}
+.hero>.mbg{position:absolute;inset:-12%;width:124%;height:124%;max-width:none;object-fit:cover;filter:blur(26px) saturate(1.1) brightness(.85);z-index:-1}
+.hero>img:not(.mbg){object-fit:contain;object-position:50% 50%}
+@container stage (min-width:768px){.hero{aspect-ratio:4/3}}
+/* -- likes grid: the photo sits inside the open-profile button; frame it like the card -- */
+.lk>button>img,.lk>button>.plate{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 30%}
+.lk>button{overflow:hidden;border-radius:inherit}
+.lk .inf{padding-right:54px}
 </style>
 </head>
 <body>
@@ -1682,6 +1709,8 @@ function photoItems(id){if(id==='me'){const m=S.ui.profilePreview||S.me;return (
 function photoBars(id,ix){const n=photoCount(id);return n>1?`<div class="pc-bars" aria-label="${L(`Фото ${ix+1} из ${n}`,`Photo ${ix+1} of ${n}`)}">${Array.from({length:n},(_,i)=>`<i class="${i===ix?'on':''}"></i>`).join('')}</div>`:'';}
 /** step through photos; returns false at the first/last photo (caller can nudge) */
 function stepPhoto(id,d){S.ui.ph=S.ui.ph||{};const n=photoCount(id),i=(S.ui.ph[id]||0)+d;if(i<0||i>=n)return false;S.ui.ph[id]=i;return true;}
+/** blurred backdrop for a whole-photo frame (profile hero): same picture, no framing transform */
+function photoBg(id,v=0){let src=null;if(id==='me'){const m=S.ui.profilePreview||S.me;const ph=(m.photos||[])[v]??m.photo;if(ph!=null)src=IMG(ph);}else{const p=person(id);if(p?.photo)src=IMG(p.photo);}return src?`<img class="mbg" src="${src}" alt="" aria-hidden="true" draggable="false">`:'';}
 function bigPhoto(id,v=0){
  const p=person(id);
  if(id==='me'){const m=S.ui.profilePreview||S.me;const ph=(m.photos||[])[v]??m.photo;if(ph!=null)return `<img src="${IMG(ph)}" alt="${esc(pname(id))}" draggable="false">`;return plate('rose','me');}
@@ -2331,26 +2360,39 @@ ACT.cropOk=()=>{const c=S.ui.crop;S.ui.cropDone=true;closeSheet(true);c.done({..
 
 /* ---------- full-screen viewer for photos and videos ---------- */
 let VW=null;
+/** the viewer always shows the whole original: framing transforms (stand-in crops) are dropped, colour filters kept */
+const vwStyle=st=>(st||'').replace(/transform(-origin)?\s*:[^;]*;?/g,'');
+/** zoom: double tap / double click toggles 2.5×, drag pans inside the picture's bounds, the next double tap returns to the whole picture */
+function vwImg(){return VW&&$$('#vwTrack figure')[VW.i]?.querySelector('img');}
+function vwZoomApply(){const img=vwImg();if(!img)return;const z=VW.z;img.style.transition=z.anim?'transform .22s var(--ease)':'none';img.style.transform=z.k>1?`translate(${z.x}px,${z.y}px) scale(${z.k})`:'';$('#viewer')?.classList.toggle('zoomed',z.k>1);}
+function vwZoomClamp(){const img=vwImg();if(!img)return;const z=VW.z,w=img.clientWidth,h=img.clientHeight,fw=innerWidth,fh=innerHeight;const mx=Math.max(0,(w*z.k-fw)/2),my=Math.max(0,(h*z.k-fh)/2);z.x=Math.max(-mx,Math.min(mx,z.x));z.y=Math.max(-my,Math.min(my,z.y));}
+function vwZoomToggle(cx,cy){const img=vwImg();if(!img)return;const z=VW.z;if(z.k>1){Object.assign(z,{k:1,x:0,y:0,anim:1});}else{const r=img.getBoundingClientRect();const k=2.5;z.k=k;z.x=(r.left+r.width/2-cx)*(k-1);z.y=(r.top+r.height/2-cy)*(k-1);z.anim=1;vwZoomClamp();}vwZoomApply();}
 function openViewer(items,index=0){
  items=(items||[]).filter(Boolean);if(!items.length)return;
  const el=$('#viewer')||Object.assign(document.createElement('div'),{id:'viewer',className:'viewer'});if(!el.isConnected)$('#layer').append(el);
  VW={items,i:Math.max(0,Math.min(items.length-1,index)),opener:document.activeElement};
  el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label',L('Просмотр','Viewer'));
- el.innerHTML=`<div class="vw-track" id="vwTrack">${items.map(m=>`<figure>${m.type==='video'?`<video src="${esc(m.src)}" controls playsinline preload="metadata"></video>`:m.type==='plate'?`<div class="vw-plate">${plate(m.key)}</div>`:`<img src="${esc(m.src)}" alt="" draggable="false" style="${m.style||''}">`}${m.wm?`<div class="vw-wm" aria-hidden="true">${Array.from({length:18},()=>`<span>${esc(m.wm)}</span>`).join('')}</div>`:''}</figure>`).join('')}</div>
+ el.innerHTML=`<div class="vw-track" id="vwTrack">${items.map(m=>`<figure>${m.type==='video'?`<video src="${esc(m.src)}" controls playsinline preload="metadata"></video>`:m.type==='plate'?`<div class="vw-plate">${plate(m.key)}</div>`:`<img src="${esc(m.src)}" alt="" draggable="false" style="${vwStyle(m.style)}">`}${m.wm?`<div class="vw-wm" aria-hidden="true">${Array.from({length:18},()=>`<span>${esc(m.wm)}</span>`).join('')}</div>`:''}</figure>`).join('')}</div>
  <div class="vw-top"><span class="vw-n" id="vwN"></span><button class="ibtn glass" data-act="vwClose" aria-label="${L('Закрыть','Close')}">${I.close}</button></div>
  ${items.length>1?`<button class="vw-nav l" data-act="vwStep" data-v="-1" aria-label="${L('Предыдущее','Previous')}">${I.back}</button><button class="vw-nav r" data-act="vwStep" data-v="1" aria-label="${L('Следующее','Next')}">${I.chev}</button><div class="vw-dots">${items.map(()=>'<i></i>').join('')}</div>`:''}`;
  el.style.removeProperty('--dy');requestAnimationFrame(()=>{el.classList.add('on');syncModal();$('[data-act="vwClose"]',el).focus({preventScroll:true});});
  vwGo(VW.i,true);
  const tr=$('#vwTrack');let sx=0,sy=0,dx=0,dy=0,id=null,mode=null;
- tr.onpointerdown=e=>{if(e.target.closest('video'))return;id=e.pointerId;sx=e.clientX;sy=e.clientY;dx=dy=0;mode=null;tr.setPointerCapture(id);};
- tr.onpointermove=e=>{if(e.pointerId!==id)return;dx=e.clientX-sx;dy=e.clientY-sy;if(!mode&&Math.hypot(dx,dy)>8)mode=Math.abs(dx)>Math.abs(dy)?'x':'y';
+ let lastTap=0,px=0,py=0;VW.z={k:1,x:0,y:0};
+ tr.onpointerdown=e=>{if(e.target.closest('video'))return;id=e.pointerId;sx=e.clientX;sy=e.clientY;dx=dy=0;mode=null;px=VW.z.x;py=VW.z.y;tr.setPointerCapture(id);};
+ tr.ondblclick=e=>{if(e.pointerType==='touch')return;e.preventDefault();vwZoomToggle(e.clientX,e.clientY);};
+ tr.onpointermove=e=>{if(e.pointerId!==id)return;dx=e.clientX-sx;dy=e.clientY-sy;
+  if(VW.z.k>1){if(Math.hypot(dx,dy)>4)mode='pan';if(mode==='pan'){VW.z.x=px+dx;VW.z.y=py+dy;VW.z.anim=0;vwZoomClamp();vwZoomApply();}return;}
+  if(!mode&&Math.hypot(dx,dy)>8)mode=Math.abs(dx)>Math.abs(dy)?'x':'y';
   if(mode==='x'){tr.style.transition='none';tr.style.transform=`translateX(calc(${-VW.i*100}% + ${dx}px))`;}
   if(mode==='y'&&dy>0){el.style.setProperty('--dy',dy+'px');el.classList.add('drag');}};
  tr.onpointerup=tr.onpointercancel=e=>{if(e.pointerId!==id)return;id=null;tr.style.transition='';el.classList.remove('drag');
   if(mode==='x'&&Math.abs(dx)>60)vwGo(VW.i+(dx<0?1:-1));else if(mode==='y'&&dy>110)closeViewer();else{vwGo(VW.i);el.style.removeProperty('--dy');}
-  if(!mode&&e.type==='pointerup'){const x=e.clientX/innerWidth;if(x<.25)vwGo(VW.i-1);else if(x>.75)vwGo(VW.i+1);}};
+  if(mode==='pan')return;
+  if(!mode&&e.type==='pointerup'&&e.pointerType==='touch'){const now=Date.now();if(now-lastTap<300){lastTap=0;vwZoomToggle(e.clientX,e.clientY);return;}lastTap=now;}
+  if(!mode&&e.type==='pointerup'&&VW.z.k===1){const x=e.clientX/innerWidth;if(x<.25)vwGo(VW.i-1);else if(x>.75)vwGo(VW.i+1);}};
 }
-function vwGo(i,instant){if(!VW)return;i=Math.max(0,Math.min(VW.items.length-1,i));VW.i=i;const tr=$('#vwTrack');if(!tr)return;if(instant)tr.style.transition='none';tr.style.transform=`translateX(${-i*100}%)`;if(instant)requestAnimationFrame(()=>tr.style.transition='');
+function vwGo(i,instant){if(!VW)return;i=Math.max(0,Math.min(VW.items.length-1,i));if(VW.z&&VW.z.k>1&&i!==VW.i){Object.assign(VW.z,{k:1,x:0,y:0,anim:0});vwZoomApply();}VW.i=i;const tr=$('#vwTrack');if(!tr)return;if(instant)tr.style.transition='none';tr.style.transform=`translateX(${-i*100}%)`;if(instant)requestAnimationFrame(()=>tr.style.transition='');
  const n=$('#vwN');if(n)n.textContent=VW.items.length>1?`${i+1} / ${VW.items.length}`:'';$$('#viewer .vw-dots i').forEach((d,k)=>d.classList.toggle('on',k===i));$$('#viewer video').forEach((v,k)=>{if(k!==i)v.pause();});
  $('#viewer .vw-nav.l')?.toggleAttribute('disabled',i===0);$('#viewer .vw-nav.r')?.toggleAttribute('disabled',i===VW.items.length-1);}
 function closeViewer(){const el=$('#viewer');if(!el||!el.classList.contains('on'))return false;el.classList.remove('on');el.querySelectorAll('video').forEach(v=>v.pause());const op=VW?.opener;VW=null;setTimeout(()=>{if(!el.classList.contains('on')){el.innerHTML='';el.style.removeProperty('--dy');}},260);syncModal();if(op?.isConnected)op.focus({preventScroll:true});return true;}
@@ -2358,9 +2400,15 @@ ACT.vwClose=()=>closeViewer();
 ACT.vwStep=a=>vwGo(VW.i+(+a.dataset.v));
 document.addEventListener('keydown',e=>{if(!VW)return;if(e.key==='ArrowRight'){vwGo(VW.i+1);e.stopImmediatePropagation();}if(e.key==='ArrowLeft'){vwGo(VW.i-1);e.stopImmediatePropagation();}if(e.key==='Escape'){closeViewer();e.stopImmediatePropagation();}},true);
 
+/** Instafill: the picture is shown whole (contain) over a blurred copy of itself that fills the frame.
+ *  A frame with data-fit="lo,hi" takes the picture's own ratio, clamped to [lo, hi], once it is known —
+ *  standard ratios fill the frame exactly, unusual ones (panoramas, very tall) keep their bands. Never stretched. */
+const fitAr=(r,lo,hi)=>Math.max(lo,Math.min(hi,r)).toFixed(4);
+const mfImg=(src,style,lazy)=>`<img class="mbg" src="${esc(src)}" alt="" aria-hidden="true" draggable="false"${lazy?' loading="lazy"':''}><img class="mfg" src="${esc(src)}" alt="" draggable="false"${lazy?' loading="lazy"':''} style="${style||''}">`;
+document.addEventListener('load',e=>{const img=e.target;if(!img.classList?.contains('mfg'))return;const f=img.parentElement;if(!f?.dataset.fit||!img.naturalWidth)return;const [lo,hi]=f.dataset.fit.split(',').map(Number);f.style.setProperty('--ar',fitAr(img.naturalWidth/img.naturalHeight,lo,hi));},true);
 /** media grid for posts and albums: 1 → full, 2 → halves, 3+ → mosaic; tap opens the viewer */
 function mediaGrid(list,o={}){if(!list||!list.length)return '';const n=list.length;const id=o.id||'';
- return `<div class="mgrid n${Math.min(n,4)}" ${o.attrs||''}>${list.slice(0,4).map((m,i)=>`<button class="mcell" data-act="mView" data-v="${esc(id)}" data-i="${i}" aria-label="${L('Открыть на весь экран','Open full screen')}">${m.type==='video'?`<video src="${esc(m.url)}" muted playsinline preload="metadata"></video><span class="dur">${I.video}${fmtDur(m.dur||0)}</span>`:m.type==='plate'?plate(m.key,'image'):`<img src="${esc(m.url)}" alt="" loading="lazy" draggable="false" style="${m.style||''}">`}${i===3&&n>4?`<span class="more">+${n-4}</span>`:''}</button>`).join('')}</div>`;}
+ return `<div class="mgrid n${Math.min(n,4)}" ${o.attrs||''}>${list.slice(0,4).map((m,i)=>`<button class="mcell mf" ${n===1?`data-fit=".8,1.91" ${m.w&&m.h?`style="--ar:${fitAr(m.w/m.h,.8,1.91)}"`:''}`:''} data-act="mView" data-v="${esc(id)}" data-i="${i}" aria-label="${L('Открыть на весь экран','Open full screen')}">${m.type==='video'?`<video src="${esc(m.url)}" muted playsinline preload="metadata"></video><span class="dur">${I.video}${fmtDur(m.dur||0)}</span>`:m.type==='plate'?plate(m.key,'image'):mfImg(m.url,m.style,'lazy')}${i===3&&n>4?`<span class="more">+${n-4}</span>`:''}</button>`).join('')}</div>`;}
 const MEDIA_SRC={};
 ACT.mView=(a,e)=>{e?.stopPropagation();const id=a.dataset.v;const list=(MEDIA_SRC[id]?MEDIA_SRC[id]():postById(id)?.media||EV(id)?.gallery)||[];openViewer(list.map(m=>m.type==='plate'?m:{type:m.type,src:m.url,style:m.style}),+a.dataset.i);};
 
@@ -3142,7 +3190,7 @@ function likesBody(r){const k=r.p.lk||'in';const inc=S.likesIn.filter(l=>!isMatc
  const t=seg([['in',L('Тебе','To you'),inc.length||''],['out',L('Твои','Yours')]],k,'lkTab','sm');
  if(k==='out')return t+(out.length?`<p class="note" style="margin:0 0 10px">${L('Ждут ответа. Отменить симпатию можно в любой момент — человек не узнает.','Waiting for an answer. You can withdraw a like any time — they won’t be told.')}</p><div class="card list">${out.map(l=>`<div class="li">${av(l.p,'')}<button class="tx" data-go="P01" data-id="${l.p}" style="text-align:left"><b>${esc(pname(l.p))}</b><small>${l.src==='profile'?L('из профиля','from profile'):L('из подборки','from discover')} · ${F.rel(l.t)}</small></button><span class="pill wait">${L('ждёт','pending')}</span><button class="ibtn ghost sm" data-act="unlike" data-v="${l.p}" aria-label="${L('Отменить симпатию','Withdraw like')}">${I.close}</button></div>`).join('')}</div>`:empty('heart',L('Ты пока никому не отправил(а) симпатию','You haven’t liked anyone yet'),L('Симпатию можно отправить из подборки или из профиля человека.','You can like someone from Discover or from their profile.'),`<button class="btn soft" data-act="pplSub" data-v="discover">${L('К подборке','To Discover')}</button>`));
  if(!inc.length)return t+empty('heart',L('Пока никто не отправил симпатию','No likes yet'),L('Пройденные тесты и пара публикаций помогают людям найти тебя.','Quizzes and a couple of posts help people find you.'),`<button class="btn soft" data-go="P02">${L('Дополнить профиль','Improve your profile')}</button>`);
- return t+`<p class="note" style="margin:0 0 12px">${L('Видно бесплатно. Ответная симпатия сразу откроет чат.','Free to see. Liking back opens a chat right away.')}</p><div class="likes">${inc.map((l,i)=>`<div class="lk" style="animation-delay:${i*50}ms"><button style="position:absolute;inset:0" data-go="P01" data-id="${l.p}" aria-label="${esc(pname(l.p))}">${bigPhoto(l.p,0)}</button><span class="src">${l.src==='profile'?L('из профиля','from profile'):L('из подборки','from discover')}</span><span class="inf"><b>${esc(pname(l.p))}${person(l.p).age?', '+person(l.p).age:''}</b><small>${esc(sharedSummary(l.p))}</small></span><button class="lkb" data-act="likeBack" data-v="${l.p}" aria-label="${L('Ответить симпатией','Like back')}">${I.heartf}</button></div>`).join('')}</div>`;}
+ return t+`<p class="note" style="margin:0 0 12px">${L('Ответная симпатия сразу откроет чат.','Liking back opens a chat right away.')}</p><div class="likes">${inc.map((l,i)=>`<div class="lk" style="animation-delay:${i*50}ms"><button style="position:absolute;inset:0" data-go="P01" data-id="${l.p}" aria-label="${esc(pname(l.p))}">${bigPhoto(l.p,0)}</button><span class="src">${l.src==='profile'?L('из профиля','from profile'):L('из подборки','from discover')}</span><span class="inf"><b>${esc(pname(l.p))}${person(l.p).age?', '+person(l.p).age:''}</b><small>${esc(sharedSummary(l.p))}</small></span><button class="lkb" data-act="likeBack" data-v="${l.p}" aria-label="${L('Ответить симпатией','Like back')}">${I.heartf}</button></div>`).join('')}</div>`;}
 ACT.lkTab=a=>{cur().p.lk=a.dataset.v;refresh();};
 ACT.likeBack=a=>{if(!S.me.dating&&!S.me.socialLikes){toast(L('Сначала включи симпатии в настройках приватности','Turn on likes in privacy settings first'),{type:'warn'});return;}run(a,()=>{likePerson(a.dataset.v,'likes');if(cur().id==='D03')refresh();},{ms:300});};
 ACT.unlike=a=>{const id=a.dataset.v;const prev=S.likesOut.slice();run(a,()=>{S.likesOut=S.likesOut.filter(l=>l.p!==id);refresh();},{ok:L('Симпатия отменена','Like withdrawn'),undo:()=>{S.likesOut=prev;refresh();}});};
@@ -3247,7 +3295,7 @@ function profileView(id,r,o={}){
  const html=`<header class="bar overlay"><button class="ibtn glass" data-back aria-label="${L('Назад','Back')}">${I.back}</button><span style="flex:1"></span>${me?`<button class="ibtn glass" data-go="P02" aria-label="${L('Редактировать','Edit')}">${I.edit}</button>`:`<button class="ibtn glass" data-act="profileMenu" data-v="${id}" aria-label="${L('Ещё','More')}">${I.more}</button>`}</header>
  <div class="view nodock top0"><div class="wrap">
  ${o.banner||''}
- <div class="hero">${me&&!p.photo?`<div class="plate" style="${PL.rose};position:absolute;inset:0"><span class="pi">${I.me}</span></div>`:bigPhoto(id,ix)}${photoBars(id,ix)}${photoCount(id)>1?`<button class="pc-zone l" data-act="pPhoto" data-v="-1" aria-label="${L('Предыдущее фото','Previous photo')}"></button><button class="pc-zone r" data-act="pPhoto" data-v="1" aria-label="${L('Следующее фото','Next photo')}"></button>`:''}${p.photo?`<button class="pc-zone c" data-act="pView" aria-label="${L('Открыть фото на весь экран','Open photo full screen')}"></button>`:''}
+ <div class="hero">${me&&!p.photo?`<div class="plate" style="${PL.rose};position:absolute;inset:0"><span class="pi">${I.me}</span></div>`:photoBg(id,ix)+bigPhoto(id,ix)}${photoBars(id,ix)}${photoCount(id)>1?`<button class="pc-zone l" data-act="pPhoto" data-v="-1" aria-label="${L('Предыдущее фото','Previous photo')}"></button><button class="pc-zone r" data-act="pPhoto" data-v="1" aria-label="${L('Следующее фото','Next photo')}"></button>`:''}${p.photo?`<button class="pc-zone c" data-act="pView" aria-label="${L('Открыть фото на весь экран','Open photo full screen')}"></button>`:''}
   <div class="pc-info"><h2 class="pc-name">${esc(displayName)}${p.age&&p.dating?`<span>${p.age}</span>`:''}${p.verified?I.verified:''}</h2><div class="pc-who"><span>${esc(whoLine(id))}</span><span>${esc(placeLine(id))}</span>${!me&&p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>${keys.length?`<div class="pc-keys">${keys.map(k=>`<span>${esc(k)}</span>`).join('')}</div>`:''}</div></div>
  ${acts}${o.after||''}
  ${!me&&mutual?`<p class="note center mt8">${L('Вы совпали — можно переписываться','You matched — you can chat')}</p>`:''}
@@ -3257,7 +3305,7 @@ function profileView(id,r,o={}){
 SC.P01={title:p=>pname(p.id),valid:p=>!!PEOPLE[p.id]&&!isBlocked(p.id),render:(p,r)=>profileView(p.id,r),after:()=>fillJars()};
 SC.P03={title:()=>L('Мой профиль','My profile'),render:(p,r)=>profileView('me',r,{after:`<div class="alert info mt12">${I.eye}<span><b>${L('Так тебя видят другие','This is how others see you')}</b>${S.me.dating?L('Знакомства включены — в подборке видны возраст и «Ищет».','Dating is on — Discover shows your age and “Looking for”.'):L('Знакомства выключены — возраст и «Ищет» скрыты.','Dating is off — age and “Looking for” are hidden.')}</span></div>`}),after:()=>fillJars()};
 
-ACT.pPhoto=a=>{const id=cur().id==='P03'?'me':cur().p.id;if(!stepPhoto(id,+a.dataset.v)){const h=$('.hero');h?.classList.remove('nudge-l','nudge-r');void h?.offsetWidth;h?.classList.add(+a.dataset.v<0?'nudge-l':'nudge-r');return;}const h=$('.hero');const ix=S.ui.ph[id];const img=$('.hero>img,.hero>.plate');if(img){const t=document.createElement('div');t.innerHTML=bigPhoto(id,ix);img.replaceWith(t.firstElementChild);}$$('.hero .pc-bars i').forEach((b,i)=>b.classList.toggle('on',i===ix));};
+ACT.pPhoto=a=>{const id=cur().id==='P03'?'me':cur().p.id;if(!stepPhoto(id,+a.dataset.v)){const h=$('.hero');h?.classList.remove('nudge-l','nudge-r');void h?.offsetWidth;h?.classList.add(+a.dataset.v<0?'nudge-l':'nudge-r');return;}const h=$('.hero');const ix=S.ui.ph[id];const img=$('.hero>img:not(.mbg),.hero>.plate');if(img){const t=document.createElement('div');t.innerHTML=bigPhoto(id,ix);img.replaceWith(t.firstElementChild);}const bg=$('.hero>.mbg');if(bg){const t=document.createElement('div');t.innerHTML=photoBg(id,ix);if(t.firstElementChild)bg.replaceWith(t.firstElementChild);}$$('.hero .pc-bars i').forEach((b,i)=>b.classList.toggle('on',i===ix));};
 ACT.pView=()=>{const id=cur().id==='P03'?'me':cur().p.id;openViewer(photoItems(id),(S.ui.ph||{})[id]||0);};
 ACT.toMap=()=>openMe('X01');
 ACT.shareProfile=()=>toast(L('Ссылка на профиль скопирована. Без входа она ничего не покажет','Profile link copied. It shows nothing without signing in'),{type:'ok'});

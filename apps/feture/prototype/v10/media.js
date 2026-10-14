@@ -124,26 +124,39 @@ ACT.cropOk=()=>{const c=S.ui.crop;S.ui.cropDone=true;closeSheet(true);c.done({..
 
 /* ---------- full-screen viewer for photos and videos ---------- */
 let VW=null;
+/** the viewer always shows the whole original: framing transforms (stand-in crops) are dropped, colour filters kept */
+const vwStyle=st=>(st||'').replace(/transform(-origin)?\s*:[^;]*;?/g,'');
+/** zoom: double tap / double click toggles 2.5×, drag pans inside the picture's bounds, the next double tap returns to the whole picture */
+function vwImg(){return VW&&$$('#vwTrack figure')[VW.i]?.querySelector('img');}
+function vwZoomApply(){const img=vwImg();if(!img)return;const z=VW.z;img.style.transition=z.anim?'transform .22s var(--ease)':'none';img.style.transform=z.k>1?`translate(${z.x}px,${z.y}px) scale(${z.k})`:'';$('#viewer')?.classList.toggle('zoomed',z.k>1);}
+function vwZoomClamp(){const img=vwImg();if(!img)return;const z=VW.z,w=img.clientWidth,h=img.clientHeight,fw=innerWidth,fh=innerHeight;const mx=Math.max(0,(w*z.k-fw)/2),my=Math.max(0,(h*z.k-fh)/2);z.x=Math.max(-mx,Math.min(mx,z.x));z.y=Math.max(-my,Math.min(my,z.y));}
+function vwZoomToggle(cx,cy){const img=vwImg();if(!img)return;const z=VW.z;if(z.k>1){Object.assign(z,{k:1,x:0,y:0,anim:1});}else{const r=img.getBoundingClientRect();const k=2.5;z.k=k;z.x=(r.left+r.width/2-cx)*(k-1);z.y=(r.top+r.height/2-cy)*(k-1);z.anim=1;vwZoomClamp();}vwZoomApply();}
 function openViewer(items,index=0){
  items=(items||[]).filter(Boolean);if(!items.length)return;
  const el=$('#viewer')||Object.assign(document.createElement('div'),{id:'viewer',className:'viewer'});if(!el.isConnected)$('#layer').append(el);
  VW={items,i:Math.max(0,Math.min(items.length-1,index)),opener:document.activeElement};
  el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label',L('Просмотр','Viewer'));
- el.innerHTML=`<div class="vw-track" id="vwTrack">${items.map(m=>`<figure>${m.type==='video'?`<video src="${esc(m.src)}" controls playsinline preload="metadata"></video>`:m.type==='plate'?`<div class="vw-plate">${plate(m.key)}</div>`:`<img src="${esc(m.src)}" alt="" draggable="false" style="${m.style||''}">`}${m.wm?`<div class="vw-wm" aria-hidden="true">${Array.from({length:18},()=>`<span>${esc(m.wm)}</span>`).join('')}</div>`:''}</figure>`).join('')}</div>
+ el.innerHTML=`<div class="vw-track" id="vwTrack">${items.map(m=>`<figure>${m.type==='video'?`<video src="${esc(m.src)}" controls playsinline preload="metadata"></video>`:m.type==='plate'?`<div class="vw-plate">${plate(m.key)}</div>`:`<img src="${esc(m.src)}" alt="" draggable="false" style="${vwStyle(m.style)}">`}${m.wm?`<div class="vw-wm" aria-hidden="true">${Array.from({length:18},()=>`<span>${esc(m.wm)}</span>`).join('')}</div>`:''}</figure>`).join('')}</div>
  <div class="vw-top"><span class="vw-n" id="vwN"></span><button class="ibtn glass" data-act="vwClose" aria-label="${L('Закрыть','Close')}">${I.close}</button></div>
  ${items.length>1?`<button class="vw-nav l" data-act="vwStep" data-v="-1" aria-label="${L('Предыдущее','Previous')}">${I.back}</button><button class="vw-nav r" data-act="vwStep" data-v="1" aria-label="${L('Следующее','Next')}">${I.chev}</button><div class="vw-dots">${items.map(()=>'<i></i>').join('')}</div>`:''}`;
  el.style.removeProperty('--dy');requestAnimationFrame(()=>{el.classList.add('on');syncModal();$('[data-act="vwClose"]',el).focus({preventScroll:true});});
  vwGo(VW.i,true);
  const tr=$('#vwTrack');let sx=0,sy=0,dx=0,dy=0,id=null,mode=null;
- tr.onpointerdown=e=>{if(e.target.closest('video'))return;id=e.pointerId;sx=e.clientX;sy=e.clientY;dx=dy=0;mode=null;tr.setPointerCapture(id);};
- tr.onpointermove=e=>{if(e.pointerId!==id)return;dx=e.clientX-sx;dy=e.clientY-sy;if(!mode&&Math.hypot(dx,dy)>8)mode=Math.abs(dx)>Math.abs(dy)?'x':'y';
+ let lastTap=0,px=0,py=0;VW.z={k:1,x:0,y:0};
+ tr.onpointerdown=e=>{if(e.target.closest('video'))return;id=e.pointerId;sx=e.clientX;sy=e.clientY;dx=dy=0;mode=null;px=VW.z.x;py=VW.z.y;tr.setPointerCapture(id);};
+ tr.ondblclick=e=>{if(e.pointerType==='touch')return;e.preventDefault();vwZoomToggle(e.clientX,e.clientY);};
+ tr.onpointermove=e=>{if(e.pointerId!==id)return;dx=e.clientX-sx;dy=e.clientY-sy;
+  if(VW.z.k>1){if(Math.hypot(dx,dy)>4)mode='pan';if(mode==='pan'){VW.z.x=px+dx;VW.z.y=py+dy;VW.z.anim=0;vwZoomClamp();vwZoomApply();}return;}
+  if(!mode&&Math.hypot(dx,dy)>8)mode=Math.abs(dx)>Math.abs(dy)?'x':'y';
   if(mode==='x'){tr.style.transition='none';tr.style.transform=`translateX(calc(${-VW.i*100}% + ${dx}px))`;}
   if(mode==='y'&&dy>0){el.style.setProperty('--dy',dy+'px');el.classList.add('drag');}};
  tr.onpointerup=tr.onpointercancel=e=>{if(e.pointerId!==id)return;id=null;tr.style.transition='';el.classList.remove('drag');
   if(mode==='x'&&Math.abs(dx)>60)vwGo(VW.i+(dx<0?1:-1));else if(mode==='y'&&dy>110)closeViewer();else{vwGo(VW.i);el.style.removeProperty('--dy');}
-  if(!mode&&e.type==='pointerup'){const x=e.clientX/innerWidth;if(x<.25)vwGo(VW.i-1);else if(x>.75)vwGo(VW.i+1);}};
+  if(mode==='pan')return;
+  if(!mode&&e.type==='pointerup'&&e.pointerType==='touch'){const now=Date.now();if(now-lastTap<300){lastTap=0;vwZoomToggle(e.clientX,e.clientY);return;}lastTap=now;}
+  if(!mode&&e.type==='pointerup'&&VW.z.k===1){const x=e.clientX/innerWidth;if(x<.25)vwGo(VW.i-1);else if(x>.75)vwGo(VW.i+1);}};
 }
-function vwGo(i,instant){if(!VW)return;i=Math.max(0,Math.min(VW.items.length-1,i));VW.i=i;const tr=$('#vwTrack');if(!tr)return;if(instant)tr.style.transition='none';tr.style.transform=`translateX(${-i*100}%)`;if(instant)requestAnimationFrame(()=>tr.style.transition='');
+function vwGo(i,instant){if(!VW)return;i=Math.max(0,Math.min(VW.items.length-1,i));if(VW.z&&VW.z.k>1&&i!==VW.i){Object.assign(VW.z,{k:1,x:0,y:0,anim:0});vwZoomApply();}VW.i=i;const tr=$('#vwTrack');if(!tr)return;if(instant)tr.style.transition='none';tr.style.transform=`translateX(${-i*100}%)`;if(instant)requestAnimationFrame(()=>tr.style.transition='');
  const n=$('#vwN');if(n)n.textContent=VW.items.length>1?`${i+1} / ${VW.items.length}`:'';$$('#viewer .vw-dots i').forEach((d,k)=>d.classList.toggle('on',k===i));$$('#viewer video').forEach((v,k)=>{if(k!==i)v.pause();});
  $('#viewer .vw-nav.l')?.toggleAttribute('disabled',i===0);$('#viewer .vw-nav.r')?.toggleAttribute('disabled',i===VW.items.length-1);}
 function closeViewer(){const el=$('#viewer');if(!el||!el.classList.contains('on'))return false;el.classList.remove('on');el.querySelectorAll('video').forEach(v=>v.pause());const op=VW?.opener;VW=null;setTimeout(()=>{if(!el.classList.contains('on')){el.innerHTML='';el.style.removeProperty('--dy');}},260);syncModal();if(op?.isConnected)op.focus({preventScroll:true});return true;}
@@ -151,8 +164,14 @@ ACT.vwClose=()=>closeViewer();
 ACT.vwStep=a=>vwGo(VW.i+(+a.dataset.v));
 document.addEventListener('keydown',e=>{if(!VW)return;if(e.key==='ArrowRight'){vwGo(VW.i+1);e.stopImmediatePropagation();}if(e.key==='ArrowLeft'){vwGo(VW.i-1);e.stopImmediatePropagation();}if(e.key==='Escape'){closeViewer();e.stopImmediatePropagation();}},true);
 
+/** Instafill: the picture is shown whole (contain) over a blurred copy of itself that fills the frame.
+ *  A frame with data-fit="lo,hi" takes the picture's own ratio, clamped to [lo, hi], once it is known —
+ *  standard ratios fill the frame exactly, unusual ones (panoramas, very tall) keep their bands. Never stretched. */
+const fitAr=(r,lo,hi)=>Math.max(lo,Math.min(hi,r)).toFixed(4);
+const mfImg=(src,style,lazy)=>`<img class="mbg" src="${esc(src)}" alt="" aria-hidden="true" draggable="false"${lazy?' loading="lazy"':''}><img class="mfg" src="${esc(src)}" alt="" draggable="false"${lazy?' loading="lazy"':''} style="${style||''}">`;
+document.addEventListener('load',e=>{const img=e.target;if(!img.classList?.contains('mfg'))return;const f=img.parentElement;if(!f?.dataset.fit||!img.naturalWidth)return;const [lo,hi]=f.dataset.fit.split(',').map(Number);f.style.setProperty('--ar',fitAr(img.naturalWidth/img.naturalHeight,lo,hi));},true);
 /** media grid for posts and albums: 1 → full, 2 → halves, 3+ → mosaic; tap opens the viewer */
 function mediaGrid(list,o={}){if(!list||!list.length)return '';const n=list.length;const id=o.id||'';
- return `<div class="mgrid n${Math.min(n,4)}" ${o.attrs||''}>${list.slice(0,4).map((m,i)=>`<button class="mcell" data-act="mView" data-v="${esc(id)}" data-i="${i}" aria-label="${L('Открыть на весь экран','Open full screen')}">${m.type==='video'?`<video src="${esc(m.url)}" muted playsinline preload="metadata"></video><span class="dur">${I.video}${fmtDur(m.dur||0)}</span>`:m.type==='plate'?plate(m.key,'image'):`<img src="${esc(m.url)}" alt="" loading="lazy" draggable="false" style="${m.style||''}">`}${i===3&&n>4?`<span class="more">+${n-4}</span>`:''}</button>`).join('')}</div>`;}
+ return `<div class="mgrid n${Math.min(n,4)}" ${o.attrs||''}>${list.slice(0,4).map((m,i)=>`<button class="mcell mf" ${n===1?`data-fit=".8,1.91" ${m.w&&m.h?`style="--ar:${fitAr(m.w/m.h,.8,1.91)}"`:''}`:''} data-act="mView" data-v="${esc(id)}" data-i="${i}" aria-label="${L('Открыть на весь экран','Open full screen')}">${m.type==='video'?`<video src="${esc(m.url)}" muted playsinline preload="metadata"></video><span class="dur">${I.video}${fmtDur(m.dur||0)}</span>`:m.type==='plate'?plate(m.key,'image'):mfImg(m.url,m.style,'lazy')}${i===3&&n>4?`<span class="more">+${n-4}</span>`:''}</button>`).join('')}</div>`;}
 const MEDIA_SRC={};
 ACT.mView=(a,e)=>{e?.stopPropagation();const id=a.dataset.v;const list=(MEDIA_SRC[id]?MEDIA_SRC[id]():postById(id)?.media||EV(id)?.gallery)||[];openViewer(list.map(m=>m.type==='plate'?m:{type:m.type,src:m.url,style:m.style}),+a.dataset.i);};
