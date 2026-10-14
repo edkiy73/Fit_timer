@@ -1077,6 +1077,15 @@ button.jar:active .vessel{transform:scale(.95)}
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 
+
+/* V10: compact identity choices and every access direction visible on small screens. */
+.identity-grid{display:grid;gap:16px;margin-top:24px}
+.identity-grid>.grp{margin:0}
+.tabs.access-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin:0 0 16px;padding:4px;overflow:visible;border:1px solid var(--line);border-radius:14px;background:var(--bg)}
+.tabs.access-tabs button{justify-content:center;text-align:center;white-space:normal;min-height:44px;padding:8px;font-size:13px;border-radius:10px}
+.tabs.access-tabs button.on{background:var(--surf);box-shadow:0 1px 3px #0000000a}
+.tabs.access-tabs button.on::after{display:none}
+@media(min-width:900px){body:not(.frame) .auth-wrap.identity-onboarding{max-width:760px}body:not(.frame) .identity-grid{grid-template-columns:repeat(2,minmax(0,1fr))}body:not(.frame) .tabs.access-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -1802,7 +1811,7 @@ function seg(items,active,act,cls=''){
  const i=Math.max(0,items.findIndex(x=>x[0]===active));
  return `<div class="seg ${cls}" role="tablist"><span class="knob" style="width:calc((100% - 8px)/${items.length});transform:translateX(${i*100}%)"></span>${items.map(([id,l,n])=>`<button role="tab" aria-selected="${id===active}" class="${id===active?'on':''}" data-act="${act}" data-v="${id}"><span>${l}</span>${n?`<em>${n}</em>`:''}</button>`).join('')}</div>`;
 }
-function tabsRow(items,active,act){return `<div class="tabs" role="tablist">${items.map(([id,l,n])=>`<button role="tab" aria-selected="${id===active}" class="${id===active?'on':''}" data-act="${act}" data-v="${id}">${l}${n?`<em>${n}</em>`:''}</button>`).join('')}</div>`;}
+function tabsRow(items,active,act,cls=''){return `<div class="tabs ${cls}" role="tablist">${items.map(([id,l,n])=>`<button role="tab" aria-selected="${id===active}" class="${id===active?'on':''}" data-act="${act}" data-v="${id}">${l}${n?`<em>${n}</em>`:''}</button>`).join('')}</div>`;}
 /** V8: everything that belongs together lives in one card with a small title above it */
 function grp(title,html,o={}){return `<section class="grp ${o.cls||''}" ${o.id?`id="${o.id}"`:''}>${title?`<div class="grp-t"><span>${title}</span>${o.right||''}</div>`:''}<div class="card ${o.list?'list':''} ${o.flat?'flat':''} ${o.inner||''}">${html}</div>${o.foot?`<p class="grp-n">${o.foot}</p>`:''}</section>`;}
 /** single or multiple choice as rows inside one card */
@@ -2021,7 +2030,7 @@ const identityFields=()=>[
  ['role',L('Роль','Role'),L('Один вариант. Это не согласие на какие-либо практики.','One option. This is not consent to any practice.')]
 ];
 const identityDraft=m=>({gender:[...(m.gender||[])],orient:[...(m.orient||[])],format:[...fmtList(m.format)],role:m.role||null});
-function identityChoices(k,value,act){const title=identityFields().find(x=>x[0]===k)[1];return chipGroup(optItems(k),k==='role'?[value]:value,act,{k,title,groups:optGroups(k),limit:OPT_BASE[k]||8});}
+function identityChoices(k,value,act){const title=identityFields().find(x=>x[0]===k)[1];return chipGroup(optItems(k),k==='role'?[value]:value,act,{k,title,groups:optGroups(k),limit:{gender:4,orient:6,format:6,role:3}[k]});}
 function toggleIdentityValue(value,k,v){if(k==='role')return value===v?null:v;const arr=[...(value||[])],i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);return arr;}
 
 const topicGroups=ids=>{ids=ids||Object.keys(TOPICS);return CATS.map(c=>[T(c),ids.filter(t=>TOPICS[t]?.cat===c.id)]).filter(g=>g[1].length);};
@@ -2434,7 +2443,7 @@ SC.A05={auth:1,title:()=>L('Первые шаги','First steps'),render:(p,r)=>
   ${grp(L('Начни с одного','Start with one'),`<div class="tests">${['rope','power','senses','care'].map(id=>{const z=QUIZ[id];return `<button class="tcard" data-act="finishOnb" data-v="X07" data-p='${JSON.stringify({id})}'><span class="tc-art">${plate(z.pl)}<span class="tc-ic">${I[z.ic||'test']}</span></span><span class="tc-b"><b>${esc(T(z.title))}</b><small>${pl(z.topics.length,['тема','темы','тем'],['topic','topics'])}</small></span></button>`;}).join('')}</div>`,{cls:'bare'})}
   </div></div><div class="ctabar"><div class="wrap"><button class="btn soft" data-act="finishOnb" data-v="F01">${L('Сразу в ленту','Go to the feed')}</button></div></div>`;
  if(!r.identityInit){Object.assign(r.f,identityDraft(S.me));r.identityInit=true;}
- return `${bar(L('О тебе','About you'),{back:1,actions:`<span class="pill">1 / 3</span>`})}<div class="view nodock cta2"><div class="auth-wrap"><h2 class="t">${L('О тебе','About you')}</h2><p class="lead">${L('Всё необязательно. Выбери то, что подходит, или заполни позже.','Everything is optional. Choose what fits or fill this in later.')}</p><p class="note">${L('Видно только тебе. Открыть другим можно в профиле.','Only you can see this. You can share it from your profile later.')}</p>${identityFields().map(([k,title,desc])=>grp(title,`<p class="note mb12">${desc}</p>${identityChoices(k,r.f[k],'idPick')}`)).join('')}</div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="a05next">${L('Сохранить и продолжить','Save and continue')}</button><button class="btn secondary" data-act="a05skip">${L('Заполнить позже','Fill in later')}</button></div></div>`;}};
+ return `${bar(L('О тебе','About you'),{back:1,actions:`<span class="pill">1 / 3</span>`})}<div class="view nodock cta2"><div class="auth-wrap identity-onboarding"><p class="lead">${L('Всё необязательно. Выбери то, что подходит, или заполни позже.','Everything is optional. Choose what fits or fill this in later.')}</p><p class="note">${L('Видно только тебе. Открыть другим можно в профиле.','Only you can see this. You can share it from your profile later.')}</p><div class="identity-grid">${identityFields().map(([k,title,desc])=>grp(title,`<p class="note mb12">${desc}</p>${identityChoices(k,r.f[k],'idPick')}`)).join('')}</div></div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="a05next">${L('Сохранить и продолжить','Save and continue')}</button><button class="btn secondary" data-act="a05skip">${L('Заполнить позже','Fill in later')}</button></div></div>`;}};
 ACT.idPick=a=>{const r=cur(),k=a.dataset.k;if(!IDENTITY_KEYS.includes(k))return;r.f[k]=toggleIdentityValue(r.f[k],k,a.dataset.v);r.dirty=true;refresh();};
 function applyIdentityDraft(){const r=cur(),next=identityDraft(r.f),vis={...S.me.vis};for(const k of IDENTITY_KEYS){if(JSON.stringify(S.me[k])!==JSON.stringify(next[k]))vis[k]='only';else vis[k]=vis[k]||'only';}Object.assign(S.me,next,{vis});r.dirty=false;}
 ACT.a05next=()=>{applyIdentityDraft();go('A05',{step:2});};
@@ -3200,7 +3209,7 @@ const SCOPE_TXT=arr=>arr.map(s=>T(REQ_SCOPES.find(x=>x[0]===s)[1])).join(', ');
 const REQ_STATUS=()=>({pending:['wait',L('ждёт ответа','pending')],partial:['ok',L('открыт частично','partly shared')],granted:['ok',L('открыт','shared')],declined:['',L('без ответа','no answer')],expired:['',L('истёк','expired')],cancelled:['',L('отменён','cancelled')]});
 SC.P07={title:()=>L('Доступы','Access'),render:(p)=>{const t=['in','out','withme','byme'].includes(p.tab)?p.tab:'in';
  const inc=S.reqIn.filter(r=>!isBlocked(r.p)).map(r=>({...r,status:effectiveRequestStatus(r)})),out=S.reqOut.filter(r=>!isBlocked(r.p)).map(r=>({...r,status:effectiveRequestStatus(r)})),withMe=S.reqOut.filter(r=>receivedGrant(r.p)===r),byMe=givenGrantEntries();
- const tabs=tabsRow([['in',L('Ко мне','To me'),C.reqIn()],['out',L('Мои запросы','My requests'),out.filter(r=>r.status==='pending').length],['withme',L('Открыто мне','Shared with me'),withMe.length],['byme',L('Я открыл(а)','I shared'),byMe.length]],t,'p7tab');const sections={};
+ const tabs=tabsRow([['in',L('Ко мне','To me'),C.reqIn()],['out',L('Мои запросы','My requests'),out.filter(r=>r.status==='pending').length],['withme',L('Открыто мне','Shared with me'),withMe.length],['byme',L('Я открыл(а)','I shared'),byMe.length]],t,'p7tab','access-tabs');const sections={};
  let body='';
  {body=`<p class="note" style="margin:0 0 12px">${L('Запросы к тебе бесплатны. Ты решаешь, что открыть и на какой срок. Отказ без объяснений.','Requests to you are free. You decide what to share and for how long. No explanation needed to decline.')}</p>${inc.length?inc.map(r=>`<div class="card" style="margin-bottom:10px"><div class="row">${av(r.p,'')}<button class="grow" style="text-align:left" data-go="P01" data-id="${r.p}"><b style="font-size:16px">${esc(pname(r.p))}${person(r.p).age?', '+person(r.p).age:''}</b><div class="note">${F.rel(r.t)} · ${esc(sharedSummary(r.p))}</div></button></div><div class="chips mt12">${r.scopes.map(s=>`<span class="pill">${esc(T(REQ_SCOPES.find(x=>x[0]===s)[1]))}</span>`).join('')}</div>
   ${r.status==='new'?`<div class="row g8 mt12"><button class="btn md primary" data-act="grant" data-v="${r.id}">${L('Открыть…','Share…')}</button><button class="btn md soft" data-act="decline" data-v="${r.id}">${L('Отказать','Decline')}</button></div>`:`<div class="row mt12" style="gap:8px;font-size:13.5px;font-weight:600;color:${r.status==='open'?'var(--mint)':'var(--mute)'}">${r.status==='open'?I.check:I.x}${r.status==='open'?L(`Открыто: ${SCOPE_TXT(r.granted)} · ${F.left(r.until)}`,`Shared: ${SCOPE_TXT(r.granted)} · ${F.left(r.until)}`):r.status==='expired'?L('Срок доступа истёк','Access has expired'):L('Отказано. Человек видит нейтральное «без ответа»','Declined. They see a neutral “no answer”')}</div>`}</div>`).join(''):empty('lock',L('Запросов нет','No requests'),L('Когда кто-то попросит открыть расширенный профиль, запрос появится здесь.','When someone asks to see your private profile, it appears here.'))}

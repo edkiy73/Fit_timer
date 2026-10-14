@@ -134,7 +134,7 @@ const identityFields=()=>[
  ['role',L('Роль','Role'),L('Один вариант. Это не согласие на какие-либо практики.','One option. This is not consent to any practice.')]
 ];
 const identityDraft=m=>({gender:[...(m.gender||[])],orient:[...(m.orient||[])],format:[...fmtList(m.format)],role:m.role||null});
-function identityChoices(k,value,act){const title=identityFields().find(x=>x[0]===k)[1];return chipGroup(optItems(k),k==='role'?[value]:value,act,{k,title,groups:optGroups(k),limit:OPT_BASE[k]||8});}
+function identityChoices(k,value,act){const title=identityFields().find(x=>x[0]===k)[1];return chipGroup(optItems(k),k==='role'?[value]:value,act,{k,title,groups:optGroups(k),limit:{gender:4,orient:6,format:6,role:3}[k]});}
 function toggleIdentityValue(value,k,v){if(k==='role')return value===v?null:v;const arr=[...(value||[])],i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);return arr;}
 
 const topicGroups=ids=>{ids=ids||Object.keys(TOPICS);return CATS.map(c=>[T(c),ids.filter(t=>TOPICS[t]?.cat===c.id)]).filter(g=>g[1].length);};

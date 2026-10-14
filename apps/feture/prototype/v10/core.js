@@ -340,7 +340,7 @@ function seg(items,active,act,cls=''){
  const i=Math.max(0,items.findIndex(x=>x[0]===active));
  return `<div class="seg ${cls}" role="tablist"><span class="knob" style="width:calc((100% - 8px)/${items.length});transform:translateX(${i*100}%)"></span>${items.map(([id,l,n])=>`<button role="tab" aria-selected="${id===active}" class="${id===active?'on':''}" data-act="${act}" data-v="${id}"><span>${l}</span>${n?`<em>${n}</em>`:''}</button>`).join('')}</div>`;
 }
-function tabsRow(items,active,act){return `<div class="tabs" role="tablist">${items.map(([id,l,n])=>`<button role="tab" aria-selected="${id===active}" class="${id===active?'on':''}" data-act="${act}" data-v="${id}">${l}${n?`<em>${n}</em>`:''}</button>`).join('')}</div>`;}
+function tabsRow(items,active,act,cls=''){return `<div class="tabs ${cls}" role="tablist">${items.map(([id,l,n])=>`<button role="tab" aria-selected="${id===active}" class="${id===active?'on':''}" data-act="${act}" data-v="${id}">${l}${n?`<em>${n}</em>`:''}</button>`).join('')}</div>`;}
 /** V8: everything that belongs together lives in one card with a small title above it */
 function grp(title,html,o={}){return `<section class="grp ${o.cls||''}" ${o.id?`id="${o.id}"`:''}>${title?`<div class="grp-t"><span>${title}</span>${o.right||''}</div>`:''}<div class="card ${o.list?'list':''} ${o.flat?'flat':''} ${o.inner||''}">${html}</div>${o.foot?`<p class="grp-n">${o.foot}</p>`:''}</section>`;}
 /** single or multiple choice as rows inside one card */

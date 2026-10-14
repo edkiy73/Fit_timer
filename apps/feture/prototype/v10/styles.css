@@ -1065,3 +1065,13 @@ button.jar:active .vessel{transform:scale(.95)}
   .qa-opt{grid-template-columns:66px minmax(0,1fr)}
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+
+/* V10: compact identity choices and every access direction visible on small screens. */
+.identity-grid{display:grid;gap:16px;margin-top:24px}
+.identity-grid>.grp{margin:0}
+.tabs.access-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin:0 0 16px;padding:4px;overflow:visible;border:1px solid var(--line);border-radius:14px;background:var(--bg)}
+.tabs.access-tabs button{justify-content:center;text-align:center;white-space:normal;min-height:44px;padding:8px;font-size:13px;border-radius:10px}
+.tabs.access-tabs button.on{background:var(--surf);box-shadow:0 1px 3px #0000000a}
+.tabs.access-tabs button.on::after{display:none}
+@media(min-width:900px){body:not(.frame) .auth-wrap.identity-onboarding{max-width:760px}body:not(.frame) .identity-grid{grid-template-columns:repeat(2,minmax(0,1fr))}body:not(.frame) .tabs.access-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}}
