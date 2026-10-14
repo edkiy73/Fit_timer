@@ -255,3 +255,24 @@ PR#1089 merged (`0667f360`) с сохранёнными атомарными com
 **Фото:** использован свежий main7d352bd5 другого ИИ. Все его фото, seed associations и event galleries сохранены; наш ранее подготовленный photo-патч не применялся поверх него. Build пересобирает standalone из актуальных исходников; supplied photos остаются linked assets как в commit владельца.
 
 **Предыдущая порция13:** PR1098 merged4932b8c3, CI38589035580 success; public desktop C03→C07→publish→C06 PASS. Текущий остаток плана — V10-ROADMAP: approval/closed lists, event editor, draft flows, settings/pair, RU/EN/themes/responsive QA, переносимые экранные контракты.
+
+
+## 15.10.2026 — ведущий рассматривает заявки, состав и счётчики согласованы
+
+**Радиус:** свежие managedCommunities/communityRequests/communityMembers, ownsCommunity/host IDs/C.members; C01/C03/C06/C07/C08/C10/C11/C12 и community edit/hosts handlers; собственный archive K07. Фото/галереи/Chat/Match/Grant/events не меняются. Это UI/state прототипа, не server authorization.
+
+**Проблема:** C11 был только пустым состоянием, C10 показывал0 заявок. Созданное сообщество имело global mine, что позволяло новой сессии унаследовать управление. Заявка сохраняла pending Set без своего ответа.
+
+**Решение:** C11 получил новые заявки и историю решений, ответ заявителя, approve и confirm-decline. Подтверждение/async callback повторяют owner/session/route/community/request и pending/unchanged applicant-answer checks; duplicate/stale/offline не дают двойного решения или success. Approval добавляет участника один раз, decline не блокирует профиль. Групповое участие не меняет личные чаты/Match/Grant.
+
+**Списки/приватность:** C10 count следует pending, C.members учитывает дополнительные approved members без повторного seed count. Общий roster показывает только разрешивших видимость, включая пустое состояние без остальных участников. Incoming answers доступны только owner C11; public community cards их не содержат. Closed request сохраняет private record; withdrawal переводит собственную pending запись в withdrawn. K07 export включает только applicant me, не чужие ответы ведущему.
+
+**Ownership:** session managedCommunities — единственный источник управления; c8Save регистрирует created ID в текущей сессии. Global mine удалён, чужой review community не открывается в C03. Screens и edit/save/hosts handlers повторяют ownership. Независимое ревью нашло и помогло устранить global-mine/new-persona и circle-host inconsistency.
+
+**Наполнение:** полный аккаунт управляет «Кругом общения» с2 новыми заявками и1 предыдущим решением;2 начальных участника — Kai и текущий ведущий. Новый аккаунт имеет пустые requests/management/membership additions и не видит private answers. Circle использует уже существующее supplied фото; все прежние assets/associations/gallery сохранены.
+
+**Проверки:** syntax/build; prior community/discussion contracts; focused RU/EN host contract с actual run/net: approve/decline/history/counts/visibility, duplicate/foreign/revoked-role/changed-answer/stale-session/offline, Match/Grant/threads unchanged, export own-only, create→signIn new C03/C10/C11/C07 deny. Independent final review blockers нет; tests повторно PASS. CI/public browser final head фиксируются в PR. Реальное решение ведущего в другом аккаунте, уведомления/staff/native/backend не проверены.
+
+**Перенос:** server membership, private applicant answers и management authorization должны быть отдельными сущностями. Решение применяется к проверенной версии конкретной заявки; членство не даёт ни private-profile grant, ни права личного сообщения. Сервер/SQL этой порцией не реализованы.
+
+**Предыдущая порция14:** PR1100 merged5416607e, CI38619572863 success, public desktop request→withdraw→clear/toggle→dirty close/Stay→send→pending locked content PASS. Следом event editor и оставшийся сквозной обход; закрытые community cases ещё проверять в итоговой приёмке.
