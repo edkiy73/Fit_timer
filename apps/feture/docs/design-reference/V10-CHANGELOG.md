@@ -199,3 +199,5 @@ PR#1089 merged (`0667f360`) с сохранёнными атомарными com
 **Перенос:** редактирование содержимого отдельно от накопленной активности. Для неизменённого опроса не пересоздавать варианты с нулевыми счётчиками; язык UI не является изменением модели выбора.
 
 **Предыдущая порция10:** PR1095 squash merged f35bf18b, final166c175 AppBase38579948369 success, exact preview READY; browser desktop и сохранение чужой формы описаны выше.
+
+**Приёмка порции11 перед слиянием PR1096:** source05ed7fe6 прошёл AppBase38581230477 success, FetUre preview READY. Browser desktop: own m1 с14 likes→F05→reply→Edit→изменить body→Publish вернул F05 с обновлённым body,14 likes и1 прежним reply. Poll matrix и обе mid-edit locale switches подтверждены focused state contracts, не заявляется browser multi-user voting. Runtime/source не менялись в финальном документирующем commit. Итоговый CI/merge/deploy в [PR1096](https://github.com/edkiy73/Fit_timer/pull/1096).

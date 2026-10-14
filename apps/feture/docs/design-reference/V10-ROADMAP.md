@@ -175,7 +175,7 @@ V9 визуально открыт в браузере; проверены то�
 | 8 | Match notification в нужный диалог; stale match не даёт новый чат; ended history без мёртвых кнопок | N01/H01/H02/Updates; PR1092 merged, CI/browser390 PASS |
 | 9 | Единая audience в editor/preview/publish; актуальные public result attachments | F07/F09/Post draft; PR1093 merged c7022f45, CI38576218005/browser390 PASS |
 | 10 | Публикация сохраняет исходный раздел и другие черновики; завершённый редактор не возвращается через историю | F07/F09/navHistory/F10; PR1095 merged f35bf18b, final166c175 CI38579948369/browser desktop/review PASS |
-| 11 | Редактирование сохраняет реакции, комментарии и неизменённый опрос при RU/EN переключении | F07/F09/Post/pollHTML; focused contracts/review PASS, CI/browser/merge в PR текущей порции |
+| 11 | Редактирование сохраняет реакции, комментарии и неизменённый опрос при RU/EN переключении | F07/F09/Post/pollHTML; PR1096 source05ed7fe6 CI38581230477/browser desktop/review PASS; merge/deploy см. PR |
 
 Контрольная V9 сохранена. Проверены конкретные state contracts и браузерные цепочки; не заявляется полный охват всех экранов или реальный backend/device. История с причинами и ограничениями — V10-CHANGELOG.
 
