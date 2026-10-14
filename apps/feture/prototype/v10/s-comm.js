@@ -91,9 +91,14 @@ SC.C07={title:()=>L('Новое обсуждение','New discussion'),valid:p=
  <div class="sec">${L('Фото и видео','Photos and videos')}<span class="note">${L('до 6 вложений','up to 6 attachments')}</span></div><button class="btn soft" data-act="discussionMedia">${I.image}${L('Добавить фото или видео','Add photos or videos')}</button>${mediaPreviews(r.media,'discussionMediaRemove')}
  <div class="alert">${I.users3}<span>${L(`Увидят ${c.privacy==='closed'?'только участники':'все, кто открывает сообщество'}. Расширить аудиторию нельзя.`,`Visible to ${c.privacy==='closed'?'members only':'everyone who opens the community'}. The audience can’t be widened.`)}</span></div>
  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="cdPost">${L('Опубликовать','Publish')}</button></div></div>`;}};
-ACT.cdPost=a=>{const r=cur();if(!SC.C07.valid(r.p)){toast(L('Обсуждение могут создать участники сообщества','Only community members can create a discussion'),{type:'warn'});return;}r.err={};if(fv('title').trim().length<5)r.err.title=L('Минимум 5 символов','At least 5 characters');if(fv('text').trim().length<10&&!r.media?.length)r.err.text=L('Расскажи подробнее — хотя бы 10 символов','Tell a bit more — at least 10 characters');
+ACT.cdPost=a=>{const r=cur(),community=r.p.id;
+ const allowed=()=>!!S.session&&SC.C07.valid({id:community})&&r.p.id===community;
+ const denied=()=>toast(L('Обсуждение могут создать участники сообщества','Only community members can create a discussion'),{type:'warn'});
+ if(!allowed()){denied();return;}const draft=()=>({title:fv('title'),text:fv('text'),media:copyNavValue(r.media||[])}),submitted=draft();
+ r.err={};if(submitted.title.trim().length<5)r.err.title=L('Минимум 5 символов','At least 5 characters');if(submitted.text.trim().length<10&&!submitted.media.length)r.err.text=L('Расскажи подробнее — хотя бы 10 символов','Tell a bit more — at least 10 characters');
  if(Object.keys(r.err).length){refresh();shakeFirstErr();return;}
- run(a,()=>{const id='d'+Date.now();S.discussions.unshift({id,c:r.p.id,author:'me',t:Date.now(),title:{ru:fv('title'),en:fv('title')},text:{ru:fv('text'),en:fv('text')},media:[...(r.media||[])],replies:[]});r.dirty=false;go('C06',{id},{replace:true});},{ok:L('Обсуждение опубликовано','Discussion published')});};
+ let published=false;return run(a,()=>{if(!allowed()){denied();return;}if(JSON.stringify(draft())!==JSON.stringify(submitted)){toast(L('Правки ещё не отправлены. Проверь их и нажми «Опубликовать» снова','Your changes have not been sent. Review them and press Publish again'),{type:'warn'});return;}
+ const id='d'+Date.now();S.discussions.unshift({id,c:community,author:'me',t:Date.now(),title:{ru:submitted.title,en:submitted.title},text:{ru:submitted.text,en:submitted.text},media:submitted.media,replies:[]});published=true;r.dirty=false;go('C06',{id},{replace:true});},{ok:()=>published?L('Обсуждение опубликовано','Discussion published'):null});};
 
 /* C08 — create community; C10 — manage */
 SC.C08={title:()=>L('Новое сообщество','New community'),render:(p,r)=>{r.f.privacy=r.f.privacy||'open';r.f.topics=r.f.topics||[];r.f.plate=r.f.plate||'lilac';return `${bar(L('Новое сообщество','New community'),{back:1,sm:1})}<div class="view nodock cta1"><div class="wrap">
