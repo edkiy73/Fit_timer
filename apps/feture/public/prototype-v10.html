@@ -1468,7 +1468,6 @@ const QUIZ={
  limits:{title:{ru:'Частые границы',en:'Common limits'},pl:'amber',ic:'block',desc:{ru:'Что для тебя «нет», а что — только после разговора.',en:'What’s a no for you and what needs a talk first.'},topics:['unprotected','permanent','strongpain','publicplace','filming','substances','thirdparty']},
 };
 
-
 /* ---- core.js ---- */
 /* ============ CORE: helpers, i18n, icons, router, sheets, toasts, network ============ */
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
@@ -2280,7 +2279,6 @@ function mediaGrid(list,o={}){if(!list||!list.length)return '';const n=list.leng
 const MEDIA_SRC={};
 ACT.mView=(a,e)=>{e?.stopPropagation();const id=a.dataset.v;const list=(MEDIA_SRC[id]?MEDIA_SRC[id]():postById(id)?.media)||[];openViewer(list.map(m=>m.type==='plate'?m:{type:m.type,src:m.url,style:m.style}),+a.dataset.i);};
 
-
 /* ---- s-location.js ---- */
 /* Searchable country/city selection and explicitly requested coarse location. No geocoding API. */
 const COUNTRY_CODES='AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW'.toLowerCase().split(' ');
@@ -2329,7 +2327,6 @@ function requestCoarseLocation(done){
 function locationFields(f,cityAct,modeAct,geoAct){const mode=f.placeMode||'city';return `<div class="sec">${L('Где искать','Where to search')}</div>${choices([['city',L('По городу','By city')],['nearby',L('Рядом','Nearby')]],mode,modeAct)}<button class="li" data-act="${cityAct}"><span class="ico">${I.pin}</span><span class="tx"><b>${f.city?esc(placeCaption(f.city)):L('Выбрать страну и город','Choose country and city')}</b><small>${L('Поиск по названию города','Search by city name')}</small></span>${I.chev}</button>${mode==='nearby'?`<p class="note mt8">${L('Только примерная область около 5 км. Точная точка и адрес не сохраняются и не показываются.','Only a coarse area of about 5 km. Your exact position and address are never stored or displayed.')}</p><button class="btn soft mt8" data-act="${geoAct}">${I.pin}${f.coords?L('Обновить примерное расположение','Update approximate location'):L('Указать примерное расположение','Set approximate location')}</button>${f.coords?`<p class="note mt8">${L('Примерная область выбрана','Approximate area is set')}</p>`:''}`:''}`;}
 
 function nearestKnownCity(coords){const near=PLACES.map(([id,country,ru,en,lat,lon])=>({id,km:distanceKm(coords,{lat,lon})})).sort((a,b)=>a.km-b.km)[0];return near?.km<=50?near.id:'';}
-
 
 /* ---- s-auth.js ---- */
 /* ============ A: WELCOME, SIGN IN / UP, CODE, PROFILE + DATE OF BIRTH, FIRST STEPS, AGE CHECK ============ */
@@ -3455,9 +3452,14 @@ SC.C07={title:()=>L('Новое обсуждение','New discussion'),valid:p=
  <div class="sec">${L('Фото и видео','Photos and videos')}<span class="note">${L('до 6 вложений','up to 6 attachments')}</span></div><button class="btn soft" data-act="discussionMedia">${I.image}${L('Добавить фото или видео','Add photos or videos')}</button>${mediaPreviews(r.media,'discussionMediaRemove')}
  <div class="alert">${I.users3}<span>${L(`Увидят ${c.privacy==='closed'?'только участники':'все, кто открывает сообщество'}. Расширить аудиторию нельзя.`,`Visible to ${c.privacy==='closed'?'members only':'everyone who opens the community'}. The audience can’t be widened.`)}</span></div>
  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="cdPost">${L('Опубликовать','Publish')}</button></div></div>`;}};
-ACT.cdPost=a=>{const r=cur();if(!SC.C07.valid(r.p)){toast(L('Обсуждение могут создать участники сообщества','Only community members can create a discussion'),{type:'warn'});return;}r.err={};if(fv('title').trim().length<5)r.err.title=L('Минимум 5 символов','At least 5 characters');if(fv('text').trim().length<10&&!r.media?.length)r.err.text=L('Расскажи подробнее — хотя бы 10 символов','Tell a bit more — at least 10 characters');
+ACT.cdPost=a=>{const r=cur(),community=r.p.id;
+ const allowed=()=>!!S.session&&SC.C07.valid({id:community})&&r.p.id===community;
+ const denied=()=>toast(L('Обсуждение могут создать участники сообщества','Only community members can create a discussion'),{type:'warn'});
+ if(!allowed()){denied();return;}const draft=()=>({title:fv('title'),text:fv('text'),media:copyNavValue(r.media||[])}),submitted=draft();
+ r.err={};if(submitted.title.trim().length<5)r.err.title=L('Минимум 5 символов','At least 5 characters');if(submitted.text.trim().length<10&&!submitted.media.length)r.err.text=L('Расскажи подробнее — хотя бы 10 символов','Tell a bit more — at least 10 characters');
  if(Object.keys(r.err).length){refresh();shakeFirstErr();return;}
- run(a,()=>{const id='d'+Date.now();S.discussions.unshift({id,c:r.p.id,author:'me',t:Date.now(),title:{ru:fv('title'),en:fv('title')},text:{ru:fv('text'),en:fv('text')},media:[...(r.media||[])],replies:[]});r.dirty=false;go('C06',{id},{replace:true});},{ok:L('Обсуждение опубликовано','Discussion published')});};
+ let published=false;return run(a,()=>{if(!allowed()){denied();return;}if(JSON.stringify(draft())!==JSON.stringify(submitted)){toast(L('Правки ещё не отправлены. Проверь их и нажми «Опубликовать» снова','Your changes have not been sent. Review them and press Publish again'),{type:'warn'});return;}
+ const id='d'+Date.now();S.discussions.unshift({id,c:community,author:'me',t:Date.now(),title:{ru:submitted.title,en:submitted.title},text:{ru:submitted.text,en:submitted.text},media:submitted.media,replies:[]});published=true;r.dirty=false;go('C06',{id},{replace:true});},{ok:()=>published?L('Обсуждение опубликовано','Discussion published'):null});};
 
 /* C08 — create community; C10 — manage */
 SC.C08={title:()=>L('Новое сообщество','New community'),render:(p,r)=>{r.f.privacy=r.f.privacy||'open';r.f.topics=r.f.topics||[];r.f.plate=r.f.plate||'lilac';return `${bar(L('Новое сообщество','New community'),{back:1,sm:1})}<div class="view nodock cta1"><div class="wrap">
@@ -3483,7 +3485,6 @@ ACT.soon=()=>toast(L('Этот экран — в следующей версии
 ACT.discussionMedia=async()=>{const owner=S,r=cur(),files=await pickLocalMedia('image/*,video/*');if(S!==owner||cur()!==r)return;r.media=[...(r.media||[]),...files].slice(0,6);if(files.length){r.dirty=true;refresh();}};
 ACT.discussionMediaRemove=a=>{cur().media.splice(+a.dataset.v,1);cur().dirty=true;refresh();};
 ACT.cfTopic=a=>{const f=S.ui.cf;f.topics=f.topics||[];const i=f.topics.indexOf(a.dataset.v);i<0?f.topics.push(a.dataset.v):f.topics.splice(i,1);resheet();};
-
 
 /* ---- s-chats.js ---- */
 /* ============ H: CHATS, UPDATES; N: NOTIFICATIONS ============ */
@@ -3943,7 +3944,6 @@ let fullH=0;
 function syncViewport(){const vv=window.visualViewport,de=document.documentElement;const h=vv?.height||innerHeight;const typing=!!document.activeElement?.matches?.('input,textarea,[contenteditable]');if(!typing||!fullH)fullH=Math.max(h,innerHeight);
  de.style.setProperty('--app-h',h+'px');de.style.setProperty('--app-top',(vv?.offsetTop||0)+'px');de.classList.toggle('kb',typing&&h<fullH*.8);}
 window.visualViewport?.addEventListener('resize',syncViewport);window.visualViewport?.addEventListener('scroll',syncViewport);window.addEventListener('resize',syncViewport);document.addEventListener('focusout',()=>setTimeout(syncViewport,350));syncViewport();
-
 
 /* ---- qa.js ---- */
 /* ============ REVIEW DRAWER (prototype-only tooling, not product UI) ============ */
