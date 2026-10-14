@@ -197,7 +197,7 @@ function drawSheet(){
 }
 const resheet=()=>drawSheet();
 /** V8: closing a sheet by the user (×, scrim, Back, Esc) asks first when its guard says input would be lost */
-function userCloseSheet(){const s=S&&S.ui.sheet;if(!s)return;if(s.o.back&&s.o.back())return;if(s.o.guard&&s.o.guard()){ask({icon:'warn',tone:'a',title:L('Закрыть без сохранения?','Close without saving?'),text:L('Выбранное здесь пропадёт.','What you picked here will be lost.'),ok:L('Закрыть','Close'),cancel:L('Остаться','Stay'),danger:true}).then(ok=>{if(ok)closeSheet();});return;}closeSheet();}
+function userCloseSheet(){const owner=S,session=S?.session,s=S&&S.ui.sheet;if(!s)return;if(s.o.back&&s.o.back())return;if(s.o.guard&&s.o.guard()){ask({icon:'warn',tone:'a',title:L('Закрыть без сохранения?','Close without saving?'),text:L('Выбранное здесь пропадёт.','What you picked here will be lost.'),ok:L('Закрыть','Close'),cancel:L('Остаться','Stay'),danger:true}).then(ok=>{if(ok&&S===owner&&S.session===session&&S.ui.sheet===s)closeSheet();});return;}closeSheet();}
 function closeSheet(instant){
  const s=S&&S.ui.sheet;if(!s)return;S.ui.sheet=null;
  $('#scrim').classList.remove('on');const el=$('#sheet');el.classList.remove('on');

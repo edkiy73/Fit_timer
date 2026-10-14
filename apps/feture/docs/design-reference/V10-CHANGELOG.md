@@ -238,3 +238,20 @@ PR#1089 merged (`0667f360`) с сохранёнными атомарными com
 **Приёмка предыдущей порции12:** PR1097 squash merged d4253349, check/Vercel preview success на61638125; независимое read-only ревью без блокеров и все focused compose/privacy/export contracts повторно PASS. Public browser desktop после обновления: own published m1→Edit→Save draft→Back показал отдельные «Сохранённые правки» и исходный опубликованный текст одновременно. До готовности production reload показывал прежний runtime; это не засчитано новой приёмкой.
 
 **Для переноса:** сервер принимает конкретный снимок отправки и повторно проверяет право участия. Несохранённые правки, появившиеся в ожидании ответа, нельзя молча публиковать или уничтожать.
+
+
+## 15.10.2026 — заявка в сообщество не теряет ответ и не выполняется из старого окна
+
+**Радиус:** C03 join/request sheet, cjAns/cjOk/cjGo, pendingJoin/joined, withdraw/leave confirmations; общий userCloseSheet guard для незавершённых окон. Match/Grant/Posts/events/photos не меняются.
+
+**Проблема:** чтение поля через `value || oldAnswer` возвращало старый ответ после очистки. Закрытие окна не предупреждало о потере текста. Submit брал текущий route ID без связи с исходной формой, а late withdraw/leave confirmations не повторяли session/route checks.
+
+**Решение:** отдельный input handler хранит точное значение, включая пустое. Окно предупреждает перед потерей введённого; cancel сохраняет форму. Sheet и форма закреплены за исходным сообществом. Submit проверяет session/eligibility/актуальность sheet/community до и после задержки; изменённые ответ/согласие/тип вступления остаются в форме с предложением отправить снова. Успех только при записи. Open join добавляет joined; closed request — только pending, не право читать или писать. Отзыв/выход повторяют session/route/state checks после подтверждения и задержки.
+
+**Независимое ревью:** найден общий late close bug в userCloseSheet. Подтверждение теперь закрывает только тот же sheet той же сессии, не заменившее его окно. Этот narrow fix необходим новой guarded request форме; остальные sheet flows не перепроектированы.
+
+**Проверки:** syntax/build, existing discussion contract; новый focused RU/EN community contract с настоящими run/net и контролируемым таймером: clear/repaint, guard, closed pending rights, in-flight answer edit, закрытый sheet, offline retry, open join, session/tab switches during confirmations, replacement sheet/session close. Final review/CI/public browser — в PR. Реальный backend/staff/native не проверены; одобрение заявок ведущим пока отдельный незавершённый сценарий прототипа.
+
+**Фото:** использован свежий main7d352bd5 другого ИИ. Все его фото, seed associations и event galleries сохранены; наш ранее подготовленный photo-патч не применялся поверх него. Build пересобирает standalone из актуальных исходников; supplied photos остаются linked assets как в commit владельца.
+
+**Предыдущая порция13:** PR1098 merged4932b8c3, CI38589035580 success; public desktop C03→C07→publish→C06 PASS. Текущий остаток плана — V10-ROADMAP: approval/closed lists, event editor, draft flows, settings/pair, RU/EN/themes/responsive QA, переносимые экранные контракты.
