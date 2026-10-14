@@ -101,3 +101,6 @@ Normal browser click N01 active match→Lina H02 подтверждён. End con
 
 ### V10: уведомления завершены, порция editor/preview
 PR1092 merged1f96c5e5, CI/browser390 PASS. Следующая порция F07/F09 исправляет потерянную audience в preview и актуально проверяет result topics перед publish, включая async callback. История/радиус в V10-CHANGELOG, targeted full-module contracts проходят; итоговый CI/browser в PR. Основной React/backend вне scope.
+
+### V10: порция editor/preview завершена
+PR1093 squash merged c7022f45. Final source d43175c9: CI AppBase38576218005 success, exact preview READY; browser390 Preview→Private circle→Edit retains text/audience→Followers in editor→Forward→Publish card «подписчикам». История в V10-CHANGELOG, девять малых срезов в V10-ROADMAP. Это не завершение полной переработки прототипа. Следом contextual create/остальные drafts, closed community и event creation; production rollout текущего merge проверяется отдельно.
