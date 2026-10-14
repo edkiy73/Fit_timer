@@ -95,10 +95,12 @@ const resEligible=()=>S.me.jars.filter(j=>!j.limit&&j.vis==='public'&&Number.isI
 const postResultSelection=r=>[...new Set(r.resSel||[])].filter(t=>resEligible().some(j=>j.t===t)).slice(0,4);
 const postResultReady=d=>!d.result||postResultSelection({resSel:d.result}).length>0;
 const missingPostResult=()=>toast(L('Темы результата больше не открыты всем. Вернись в редактор','Result topics are no longer public. Return to the editor'),{type:'warn'});
+let composeDraftSeq=0;
+function syncComposeAudience(owner,aud){if(!owner||typeof navHistory==='undefined'||!navHistory)return;for(const entry of navHistory.entries){for(const route of Object.values(entry.nav?.stacks||{}).flat()){if(route.id==='F07'&&route.composeId===owner){route.aud=aud;route.dirty=true;}if(route.id==='F09'&&route.p.draft?.composeId===owner)route.p.draft.aud=aud;}}}
 const composeAudience=()=>cur().id==='F09'?cur().p.draft.aud:cur().aud;
 SC.F07={title:()=>L('Публикация','Post'),render:(p,r)=>{
  const ex=p.id?postById(p.id):null;
- if(!r.init){r.init=1;r.tags=[];r.aud='all';r.media=[];r.poll=null;r.result=false;r.resSel=resEligible().slice(0,4).map(j=>j.t);
+ if(!r.init){r.init=1;r.composeId='compose'+(++composeDraftSeq);r.tags=[];r.aud='all';r.media=[];r.poll=null;r.result=false;r.resSel=resEligible().slice(0,4).map(j=>j.t);
   if(ex){r.f.text=T(ex.text);r.tags=[...ex.tags];r.aud=ex.aud;r.media=(ex.media||[]).slice();r.poll=ex.poll?{opts:ex.poll.map(x=>T(x[0]))}:null;r.result=!!ex.result;if(ex.result)r.resSel=ex.result.map(x=>x[0]);}
   if(p.x==='poll')r.poll={opts:['','']};if(p.x==='result')r.result=true;if(p.x==='media')setTimeout(()=>{if(cur()===r)ACT.postMedia();},250);}
  r.resSel=postResultSelection(r);
@@ -129,7 +131,7 @@ IN.pollOpt=el=>{const r=cur();r.poll.opts[+el.dataset.i]=el.value;r.dirty=true;i
 ACT.addOpt=()=>{const r=cur();if(r.poll.opts.length>=POLL_MAX)return;r.poll.opts.push('');refresh();setTimeout(()=>$(`[name="o${r.poll.opts.length-1}"]`)?.focus(),60);};
 ACT.rmOpt=a=>{const r=cur();r.poll.opts.splice(+a.dataset.v,1);r.dirty=true;refresh();};
 ACT.audience=()=>sheet(()=>({title:L('Кто увидит','Who can see this'),body:`<div class="btns" style="gap:0">${AUD().map(([k,i,t,s])=>`<button class="radio ${composeAudience()===k?'on':''}" data-act="setAud" data-v="${k}" style="margin-top:8px"><i></i><span class="tx"><b>${t}</b><small>${s}</small></span></button>`).join('')}</div><p class="note mt16">${L('Откровенные фото и видео — только для приватного круга.','Explicit photos and video are for the private circle only.')}</p>`}));
-ACT.setAud=a=>{const r=cur(),v=a.dataset.v;if(!AUD().some(x=>x[0]===v))return;if(r.id==='F09'){r.p.draft.aud=v;const editor=stack().slice(0,-1).reverse().find(x=>x.id==='F07');if(editor){editor.aud=v;editor.dirty=true;}}else{r.aud=v;r.dirty=true;}closeSheet();refresh();};
+ACT.setAud=a=>{const r=cur(),v=a.dataset.v;if(!AUD().some(x=>x[0]===v))return;if(r.id==='F09'){r.p.draft.aud=v;const editor=stack().slice(0,-1).reverse().find(x=>x.id==='F07');if(editor){editor.aud=v;editor.dirty=true;}syncComposeAudience(r.p.draft.composeId,v);}else{r.aud=v;r.dirty=true;}closeSheet();refresh();};
 function validatePost(){const r=cur();r.err={};const tx=fv('text').trim();
  if(!tx&&!r.media.length&&!r.result)r.err.text=L('Напиши пару слов или добавь фото','Write a few words or add a photo');
  if(r.result&&!postResultSelection(r).length)r.err.text=L('Выбери открытые темы для результата или убери его','Choose public topics for the result or remove it');
@@ -137,7 +139,7 @@ function validatePost(){const r=cur();r.err={};const tx=fv('text').trim();
  if(tx.length>1000)r.err.text=L('Максимум 1000 символов','1000 characters max');
  if(r.poll){const f=r.poll.opts.map(o=>o.trim());f.forEach((o,i)=>{if(!o)r.err['o'+i]=' ';});const filled=f.filter(Boolean);if(filled.length<2)r.err.opts=L('Нужно минимум 2 варианта','At least 2 options needed');else if(f.some(o=>!o))r.err.opts=L('Заполни или убери пустые варианты','Fill in or remove empty options');if(new Set(filled.map(x=>x.toLowerCase())).size!==filled.length)r.err.opts=L('Варианты не должны повторяться','Options must be different');}
  if(Object.keys(r.err).length){refresh();shakeFirstErr();return false;}return true;}
-const draftOf=r=>({text:fv('text').trim(),tags:[...r.tags],aud:r.aud,media:r.media.slice(),poll:r.poll?r.poll.opts.map(o=>o.trim()).filter(Boolean):null,result:r.result&&postResultSelection(r).length?postResultSelection(r):null,edit:r.p.id||null});
+const draftOf=r=>({composeId:r.composeId,text:fv('text').trim(),tags:[...r.tags],aud:r.aud,media:r.media.slice(),poll:r.poll?r.poll.opts.map(o=>o.trim()).filter(Boolean):null,result:r.result&&postResultSelection(r).length?postResultSelection(r):null,edit:r.p.id||null});
 const postFromDraft=(d,id)=>({id,author:'me',t:Date.now(),type:'post',tags:d.tags,likes:0,aud:d.aud,text:{ru:d.text,en:d.text},comments:[],media:d.media,poll:d.poll?d.poll.map(o=>[{ru:o,en:o},0]):null,result:d.result?resEligible().filter(j=>postResultSelection({resSel:d.result}).includes(j.t)).map(j=>[j.t,j.lv]):null});
 ACT.toPreview=()=>{if(!validatePost())return;go('F09',{draft:draftOf(cur())});};
 ACT.saveDraft=a=>{const r=cur();if(!fv('text').trim()&&!r.media.length){setErr('text',L('Пустой черновик не сохранить','Can’t save an empty draft'));shakeFirstErr();return;}
