@@ -107,7 +107,7 @@ body.frame .layer,body.frame .toasts{position:absolute}
   .side .navb:hover{background:var(--raise);color:var(--ink)}
   .side .navb.on{color:var(--ink);background:var(--surf);box-shadow:inset 0 0 0 1px var(--line)}
   .side .navb em{position:absolute;top:6px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:#fff;font:700 10.5px/18px var(--font);font-style:normal;text-align:center}
-  .side .sp{flex:1}.side .create,.side .mebtn span{display:none}
+  .side .sp{flex:1}.side .create>span,.side .mebtn>span:not(.av){display:none}
   .side .mebtn{width:44px;height:44px;border-radius:14px;overflow:hidden}
   .dock{display:none!important}
   .main>.bar,.main>.view>.wrap,.main>.ctabar>.wrap{max-width:680px;margin-inline:auto;width:100%}
@@ -120,9 +120,9 @@ body.frame .layer,body.frame .toasts{position:absolute}
   .side .brand img{width:34px}.side .brand b{display:block;font:800 22px/1 var(--font);letter-spacing:-.04em}.side .brand b i{font-style:normal;color:var(--accent)}
   .side .navb{grid-auto-flow:column;justify-content:start;align-items:center;gap:12px;padding:11px 12px;font-size:15px}
   .side .navb em{position:static;margin-left:auto}
-  .side .create{display:flex;margin-top:14px}
+  .side .create{display:flex;width:100%;min-height:50px;padding:0 18px;margin-top:14px;border-radius:var(--r)}.side .create>span{display:inline}
   .side .mebtn{display:flex;align-items:center;gap:10px;width:100%;height:auto;padding:8px;border-radius:var(--r);overflow:visible;text-align:left}
-  .side .mebtn .av{width:38px;height:38px}.side .mebtn span{display:grid;line-height:1.25;font-size:14px;font-weight:600}.side .mebtn small{font-size:12px;font-weight:400;color:var(--mute)}
+  .side .mebtn .av{width:38px;height:38px}.side .mebtn>span:not(.av){display:grid;line-height:1.25;font-size:14px;font-weight:600}.side .mebtn small{font-size:12px;font-weight:400;color:var(--mute)}
   .ctx{display:block;overflow-y:auto;padding:22px 18px 40px;border-left:1px solid var(--line)}
 }
 
@@ -1005,7 +1005,7 @@ button.jar:active .vessel{transform:scale(.95)}
 .viewer.drag .vw-track{transform:translateY(var(--dy))!important;transition:none}
 .vw-track figure{position:relative;flex:none;width:100%;height:100%;margin:0;display:grid;place-items:center;overflow:hidden}
 .vw-track img,.vw-track video{max-width:100%;max-height:100%;object-fit:contain}
-.vw-track figure>img[style*="scale"]{width:100%;height:100%;object-fit:cover}
+.vw-track img{will-change:transform;transform-origin:50% 50%}.viewer.zoomed .vw-track{cursor:grab}.viewer.zoomed .vw-nav,.viewer.zoomed .vw-dots{opacity:0;pointer-events:none}
 .vw-plate{position:relative;width:100%;aspect-ratio:4/5;max-height:100%}
 .vw-wm{position:absolute;inset:-20%;display:grid;grid-template-columns:repeat(3,1fr);align-content:space-around;justify-items:center;gap:60px 0;transform:rotate(-24deg);pointer-events:none;z-index:1}
 .vw-wm span{font-size:15px;font-weight:700;letter-spacing:.04em;color:rgba(255,255,255,.3);text-shadow:0 1px 2px rgba(0,0,0,.35);white-space:nowrap}
@@ -1041,7 +1041,8 @@ button.jar:active .vessel{transform:scale(.95)}
 .ctx .mini b{display:block;font-size:14px;font-weight:600}.ctx .mini small{display:block;font-size:12px;color:var(--mute)}
 .ctx .foot{margin-top:26px;font-size:12px;color:var(--faint);line-height:1.6}
 .qa-fab{position:fixed;left:6px;bottom:calc(var(--dock) + 18px + var(--safe-b));z-index:90;width:38px;height:32px;display:grid;place-items:center;border-radius:10px;border:1px solid var(--line2);background:var(--nav);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);font-size:11px;font-weight:700;color:var(--mute);box-shadow:var(--shadow-s)}
-@container stage (min-width:768px){.qa-fab{bottom:12px}}
+@container stage (min-width:768px){.toasts{bottom:24px}}
+@media (min-width:768px){body:not(.frame) .qa-fab{left:auto;right:12px;bottom:12px}}
 .qa{position:fixed;inset:0 auto 0 0;z-index:95;width:min(380px,calc(100vw - 24px));display:flex;flex-direction:column;background:var(--bg);border-right:1px solid var(--line);box-shadow:var(--shadow);transform:translateX(-102%);transition:transform .3s var(--ease)}
 .qa.open{transform:none;pointer-events:auto}.qa:not(.open){pointer-events:none}
 .qa-scrim{position:fixed;inset:0;z-index:94;background:var(--scrim);opacity:0;pointer-events:none;transition:opacity .25s}
@@ -1086,6 +1087,106 @@ button.jar:active .vessel{transform:scale(.95)}
 .tabs.access-tabs button.on{background:var(--surf);box-shadow:0 1px 3px #0000000a}
 .tabs.access-tabs button.on::after{display:none}
 @media(min-width:900px){body:not(.frame) .auth-wrap.identity-onboarding{max-width:760px}body:not(.frame) .identity-grid{grid-template-columns:repeat(2,minmax(0,1fr))}body:not(.frame) .tabs.access-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+/* =====================================================================
+   V10 owner revision, part 1 — Claude, 15.10.2026.
+   See docs/design-reference/V10-OWNER-REVISION-PLAN.md (part 1).
+   ===================================================================== */
+
+/* -- one column geometry: bar, hero, tabs and content share the same edges -- */
+@container stage (min-width:768px){
+  /* the bar has its own gutter, the view's wrap does not: widen the bar by the gutter so both align */
+  .main>.bar,.main>.ctabar>.wrap{max-width:calc(680px + 2 * var(--gut))}
+  .main>.ctabar>.wrap{max-width:680px}
+  .view .hero,.view .ev-hero,.view .cm-hero{margin:8px 0 0;border-radius:var(--r-xl)}
+  .view.top0>.wrap>.hero:first-child,.view.top0>.wrap>.ev-hero:first-child,.view.top0>.wrap>.cm-hero:first-child{margin-top:8px}
+  .tabs,.matches{margin-inline:0;padding-inline:0}
+  .chips.scroll{margin-inline:0;padding-inline:0}
+  /* tablet rail: fixed rows, one-line labels, create as an icon button, avatar visible */
+  .side .navb{min-height:62px;align-content:center}
+  .side .navb span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .side .create{display:grid;place-items:center;width:48px;min-height:48px;padding:0;margin:10px auto 0;border-radius:16px}
+}
+/* desktop: the background fills the whole window; side columns grow outward, their content hugs the centre */
+@container stage (min-width:1100px){
+  .root{grid-template-columns:minmax(232px,1fr) minmax(0,880px) minmax(320px,1fr);max-width:none}
+  .side{padding:22px 14px 22px max(14px,calc(100% - 218px))}
+  .ctx{padding:22px max(18px,calc(100% - 302px)) 40px 18px}
+  .side .navb{min-height:0}
+  .side .create{display:flex;width:100%;min-height:50px;padding:0 18px;margin:14px 0 0;border-radius:var(--r)}
+}
+
+/* -- floating header (V8 shape): no solid strip, glass controls over content, title fades on scroll -- */
+.main>.bar{margin-bottom:calc(-1 * var(--barh,56px));pointer-events:none;background:none}
+.main>.bar>*{pointer-events:auto}
+.main>.bar>h1{pointer-events:none;opacity:calc(1 - var(--sc,0));transform:translateY(calc(var(--sc,0) * -8px))}
+.main.scrolled>.bar:not(.overlay){box-shadow:none}
+.main>.bar:not(.overlay) .ibtn:not(.glass):not(.add),.main>.bar>.btn.text{background:color-mix(in srgb,var(--surf) 70%,transparent);-webkit-backdrop-filter:blur(16px) saturate(1.6);backdrop-filter:blur(16px) saturate(1.6);box-shadow:0 8px 20px -14px rgba(40,10,30,.55),inset 0 0 0 1px color-mix(in srgb,var(--line) 70%,transparent)}
+.main>.bar>.btn.text{border-radius:14px;min-height:40px;padding:0 12px}
+.main>.bar .seg{-webkit-backdrop-filter:blur(16px) saturate(1.6);backdrop-filter:blur(16px) saturate(1.6);background:color-mix(in srgb,var(--surf) 78%,transparent);box-shadow:0 8px 20px -14px rgba(40,10,30,.5)}
+.main>.bar .langsw{-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);background:color-mix(in srgb,var(--raise) 80%,transparent)}
+.main.hasbar>.view:not(.top0){padding-top:calc(var(--barh,56px) + 2px)}
+.main.hasbar>.view{-webkit-mask-image:linear-gradient(to bottom,transparent calc(var(--safe-t) + 4px),#000 calc(var(--safe-t) + 48px));mask-image:linear-gradient(to bottom,transparent calc(var(--safe-t) + 4px),#000 calc(var(--safe-t) + 48px))}
+.netbar+.bar{min-height:56px}
+
+/* -- dock (V8 shape): floating translucent pill, active tab on a soft plate -- */
+.dock{left:10px;right:10px;bottom:calc(10px + var(--safe-b));height:var(--dock);padding:5px;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow)}
+.dock button{height:auto;border-radius:18px;font-size:clamp(9.5px,2.7vw,11px);letter-spacing:-.01em;font-weight:600;transition:color .2s}
+.dock button svg{width:23px;height:23px}
+.dock button.on::before{content:"";position:absolute;inset:0;border-radius:18px;background:var(--raise);z-index:-1;animation:pop .3s var(--ease)}
+.dock button.on svg{color:var(--accent)}
+.dock em{top:4px;box-shadow:0 0 0 2px var(--nav)}
+.dock em.dot{top:8px}
+.toasts{bottom:calc(var(--dock) + 24px + var(--safe-b))}
+.qa-fab{bottom:calc(var(--dock) + 24px + var(--safe-b))}
+.view.deckmode{padding-bottom:calc(var(--dock) + 22px + var(--safe-b))}
+@container stage (min-width:768px){.toasts{bottom:24px}}
+@media (min-width:768px){body:not(.frame) .qa-fab{left:auto;right:12px;bottom:12px}}
+
+/* -- RU/EN switch: both labels centred inside equal halves -- */
+.langsw{align-self:center;line-height:1}
+.langsw button{display:grid;place-items:center;width:auto;min-width:0;height:30px;padding:0;text-align:center;line-height:1}
+
+/* -- events: covers keep a 2:1 frame; two cards per row once the column itself is wide enough -- */
+.view>.wrap{container:col/inline-size}
+.evc:not(.row) .cv{height:auto;aspect-ratio:2/1}
+@container col (min-width:600px){
+  .evgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch}
+  .evgrid>.evc+.evc{margin-top:0}
+  .evgrid>.evc .bd b{font-size:16px}
+}
+@container stage (min-width:768px) and (max-width:1099px){
+  .root:not(.auth){grid-template-columns:96px minmax(0,1fr)}
+  .side{padding:18px 8px}
+  .side .navb{padding:10px 2px;font-size:11px}
+}
+
+/* -- media: instafill frames (whole picture over its own blurred copy), capped height in feeds -- */
+.mf{position:relative;overflow:hidden;background:var(--raise);isolation:isolate}
+.mf>.mbg{position:absolute;inset:-12%;width:124%;height:124%;max-width:none;object-fit:cover;filter:blur(26px) saturate(1.15) brightness(.92);opacity:.9;z-index:-1}
+.mf>.mfg,.mcell.mf>video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.mcell.mf>video{background:#0b090b}
+.mgrid.n1 .mcell{aspect-ratio:var(--ar,4/5);max-height:min(560px,62dvh);width:100%}
+.mgrid.n1{justify-items:stretch}
+@container stage (min-width:768px){
+  .main>.inputbar{padding-inline:max(10px,calc((100% - 700px) / 2))}
+}
+
+/* -- dating deck: the photo keeps one framing whatever the window; wider card on tablet/desktop -- */
+.pc-ph>img{object-position:50% 30%}
+@container stage (min-width:768px){
+  .view.deckmode{justify-content:center}
+  .deck{flex:0 1 auto;height:100%;max-height:700px;aspect-ratio:4/5;width:auto;max-width:100%;margin:0 auto}
+}
+/* -- profile hero: the photo is shown whole in a fixed frame, so resizing never changes what is visible -- */
+.hero{height:auto;aspect-ratio:1/1;max-height:none;isolation:isolate}
+.hero>.mbg{position:absolute;inset:-12%;width:124%;height:124%;max-width:none;object-fit:cover;filter:blur(26px) saturate(1.1) brightness(.85);z-index:-1}
+.hero>img:not(.mbg){object-fit:contain;object-position:50% 50%}
+@container stage (min-width:768px){.hero{aspect-ratio:4/3}}
+/* -- likes grid: the photo sits inside the open-profile button; frame it like the card -- */
+.lk>button>img,.lk>button>.plate{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 30%}
+.lk>button{overflow:hidden;border-radius:inherit}
+.lk .inf{padding-right:54px}
 </style>
 </head>
 <body>
@@ -1608,6 +1709,8 @@ function photoItems(id){if(id==='me'){const m=S.ui.profilePreview||S.me;return (
 function photoBars(id,ix){const n=photoCount(id);return n>1?`<div class="pc-bars" aria-label="${L(`Фото ${ix+1} из ${n}`,`Photo ${ix+1} of ${n}`)}">${Array.from({length:n},(_,i)=>`<i class="${i===ix?'on':''}"></i>`).join('')}</div>`:'';}
 /** step through photos; returns false at the first/last photo (caller can nudge) */
 function stepPhoto(id,d){S.ui.ph=S.ui.ph||{};const n=photoCount(id),i=(S.ui.ph[id]||0)+d;if(i<0||i>=n)return false;S.ui.ph[id]=i;return true;}
+/** blurred backdrop for a whole-photo frame (profile hero): same picture, no framing transform */
+function photoBg(id,v=0){let src=null;if(id==='me'){const m=S.ui.profilePreview||S.me;const ph=(m.photos||[])[v]??m.photo;if(ph!=null)src=IMG(ph);}else{const p=person(id);if(p?.photo)src=IMG(p.photo);}return src?`<img class="mbg" src="${src}" alt="" aria-hidden="true" draggable="false">`:'';}
 function bigPhoto(id,v=0){
  const p=person(id);
  if(id==='me'){const m=S.ui.profilePreview||S.me;const ph=(m.photos||[])[v]??m.photo;if(ph!=null)return `<img src="${IMG(ph)}" alt="${esc(pname(id))}" draggable="false">`;return plate('rose','me');}
@@ -1813,7 +1916,7 @@ function renderSide(){
  const s=$('#side');if(!s)return;
  if(!S.session){s.innerHTML='';return;}
  s.innerHTML=`<div class="brand"><img src="${LOGO()}" alt=""><b>Fet<i>Ure</i></b></div><nav aria-label="${L('Разделы','Sections')}">${TABDEF().map(([t,icn,l,n])=>`<button class="navb ${S.nav.tab===t?'on':''}" data-tab="${t}">${icn}<span>${l}</span>${n==='dot'?'<em style="min-width:9px;width:9px;height:9px;padding:0"></em>':n?`<em>${n}</em>`:''}</button>`).join('')}</nav>
- <button class="btn primary create" data-act="create">${I.plus}${L('Создать','Create')}</button><div class="sp"></div>
+ <button class="btn primary create" data-act="create" aria-label="${L('Создать','Create')}">${I.plus}<span>${L('Создать','Create')}</span></button><div class="sp"></div>
  <button class="mebtn" data-tab="me">${av('me','')}<span>${esc(pname('me'))}<small>@${esc(S.me.nick||'…')}</small></span></button>`;
 }
 function renderCtx(){const c=$('#ctx');if(!c)return;c.innerHTML=S.session&&window.CTX?CTX(S.nav.tab):'';}
@@ -2257,26 +2360,39 @@ ACT.cropOk=()=>{const c=S.ui.crop;S.ui.cropDone=true;closeSheet(true);c.done({..
 
 /* ---------- full-screen viewer for photos and videos ---------- */
 let VW=null;
+/** the viewer always shows the whole original: framing transforms (stand-in crops) are dropped, colour filters kept */
+const vwStyle=st=>(st||'').replace(/transform(-origin)?\s*:[^;]*;?/g,'');
+/** zoom: double tap / double click toggles 2.5×, drag pans inside the picture's bounds, the next double tap returns to the whole picture */
+function vwImg(){return VW&&$$('#vwTrack figure')[VW.i]?.querySelector('img');}
+function vwZoomApply(){const img=vwImg();if(!img)return;const z=VW.z;img.style.transition=z.anim?'transform .22s var(--ease)':'none';img.style.transform=z.k>1?`translate(${z.x}px,${z.y}px) scale(${z.k})`:'';$('#viewer')?.classList.toggle('zoomed',z.k>1);}
+function vwZoomClamp(){const img=vwImg();if(!img)return;const z=VW.z,w=img.clientWidth,h=img.clientHeight,fw=innerWidth,fh=innerHeight;const mx=Math.max(0,(w*z.k-fw)/2),my=Math.max(0,(h*z.k-fh)/2);z.x=Math.max(-mx,Math.min(mx,z.x));z.y=Math.max(-my,Math.min(my,z.y));}
+function vwZoomToggle(cx,cy){const img=vwImg();if(!img)return;const z=VW.z;if(z.k>1){Object.assign(z,{k:1,x:0,y:0,anim:1});}else{const r=img.getBoundingClientRect();const k=2.5;z.k=k;z.x=(r.left+r.width/2-cx)*(k-1);z.y=(r.top+r.height/2-cy)*(k-1);z.anim=1;vwZoomClamp();}vwZoomApply();}
 function openViewer(items,index=0){
  items=(items||[]).filter(Boolean);if(!items.length)return;
  const el=$('#viewer')||Object.assign(document.createElement('div'),{id:'viewer',className:'viewer'});if(!el.isConnected)$('#layer').append(el);
  VW={items,i:Math.max(0,Math.min(items.length-1,index)),opener:document.activeElement};
  el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label',L('Просмотр','Viewer'));
- el.innerHTML=`<div class="vw-track" id="vwTrack">${items.map(m=>`<figure>${m.type==='video'?`<video src="${esc(m.src)}" controls playsinline preload="metadata"></video>`:m.type==='plate'?`<div class="vw-plate">${plate(m.key)}</div>`:`<img src="${esc(m.src)}" alt="" draggable="false" style="${m.style||''}">`}${m.wm?`<div class="vw-wm" aria-hidden="true">${Array.from({length:18},()=>`<span>${esc(m.wm)}</span>`).join('')}</div>`:''}</figure>`).join('')}</div>
+ el.innerHTML=`<div class="vw-track" id="vwTrack">${items.map(m=>`<figure>${m.type==='video'?`<video src="${esc(m.src)}" controls playsinline preload="metadata"></video>`:m.type==='plate'?`<div class="vw-plate">${plate(m.key)}</div>`:`<img src="${esc(m.src)}" alt="" draggable="false" style="${vwStyle(m.style)}">`}${m.wm?`<div class="vw-wm" aria-hidden="true">${Array.from({length:18},()=>`<span>${esc(m.wm)}</span>`).join('')}</div>`:''}</figure>`).join('')}</div>
  <div class="vw-top"><span class="vw-n" id="vwN"></span><button class="ibtn glass" data-act="vwClose" aria-label="${L('Закрыть','Close')}">${I.close}</button></div>
  ${items.length>1?`<button class="vw-nav l" data-act="vwStep" data-v="-1" aria-label="${L('Предыдущее','Previous')}">${I.back}</button><button class="vw-nav r" data-act="vwStep" data-v="1" aria-label="${L('Следующее','Next')}">${I.chev}</button><div class="vw-dots">${items.map(()=>'<i></i>').join('')}</div>`:''}`;
  el.style.removeProperty('--dy');requestAnimationFrame(()=>{el.classList.add('on');syncModal();$('[data-act="vwClose"]',el).focus({preventScroll:true});});
  vwGo(VW.i,true);
  const tr=$('#vwTrack');let sx=0,sy=0,dx=0,dy=0,id=null,mode=null;
- tr.onpointerdown=e=>{if(e.target.closest('video'))return;id=e.pointerId;sx=e.clientX;sy=e.clientY;dx=dy=0;mode=null;tr.setPointerCapture(id);};
- tr.onpointermove=e=>{if(e.pointerId!==id)return;dx=e.clientX-sx;dy=e.clientY-sy;if(!mode&&Math.hypot(dx,dy)>8)mode=Math.abs(dx)>Math.abs(dy)?'x':'y';
+ let lastTap=0,px=0,py=0;VW.z={k:1,x:0,y:0};
+ tr.onpointerdown=e=>{if(e.target.closest('video'))return;id=e.pointerId;sx=e.clientX;sy=e.clientY;dx=dy=0;mode=null;px=VW.z.x;py=VW.z.y;tr.setPointerCapture(id);};
+ tr.ondblclick=e=>{if(e.pointerType==='touch')return;e.preventDefault();vwZoomToggle(e.clientX,e.clientY);};
+ tr.onpointermove=e=>{if(e.pointerId!==id)return;dx=e.clientX-sx;dy=e.clientY-sy;
+  if(VW.z.k>1){if(Math.hypot(dx,dy)>4)mode='pan';if(mode==='pan'){VW.z.x=px+dx;VW.z.y=py+dy;VW.z.anim=0;vwZoomClamp();vwZoomApply();}return;}
+  if(!mode&&Math.hypot(dx,dy)>8)mode=Math.abs(dx)>Math.abs(dy)?'x':'y';
   if(mode==='x'){tr.style.transition='none';tr.style.transform=`translateX(calc(${-VW.i*100}% + ${dx}px))`;}
   if(mode==='y'&&dy>0){el.style.setProperty('--dy',dy+'px');el.classList.add('drag');}};
  tr.onpointerup=tr.onpointercancel=e=>{if(e.pointerId!==id)return;id=null;tr.style.transition='';el.classList.remove('drag');
   if(mode==='x'&&Math.abs(dx)>60)vwGo(VW.i+(dx<0?1:-1));else if(mode==='y'&&dy>110)closeViewer();else{vwGo(VW.i);el.style.removeProperty('--dy');}
-  if(!mode&&e.type==='pointerup'){const x=e.clientX/innerWidth;if(x<.25)vwGo(VW.i-1);else if(x>.75)vwGo(VW.i+1);}};
+  if(mode==='pan')return;
+  if(!mode&&e.type==='pointerup'&&e.pointerType==='touch'){const now=Date.now();if(now-lastTap<300){lastTap=0;vwZoomToggle(e.clientX,e.clientY);return;}lastTap=now;}
+  if(!mode&&e.type==='pointerup'&&VW.z.k===1){const x=e.clientX/innerWidth;if(x<.25)vwGo(VW.i-1);else if(x>.75)vwGo(VW.i+1);}};
 }
-function vwGo(i,instant){if(!VW)return;i=Math.max(0,Math.min(VW.items.length-1,i));VW.i=i;const tr=$('#vwTrack');if(!tr)return;if(instant)tr.style.transition='none';tr.style.transform=`translateX(${-i*100}%)`;if(instant)requestAnimationFrame(()=>tr.style.transition='');
+function vwGo(i,instant){if(!VW)return;i=Math.max(0,Math.min(VW.items.length-1,i));if(VW.z&&VW.z.k>1&&i!==VW.i){Object.assign(VW.z,{k:1,x:0,y:0,anim:0});vwZoomApply();}VW.i=i;const tr=$('#vwTrack');if(!tr)return;if(instant)tr.style.transition='none';tr.style.transform=`translateX(${-i*100}%)`;if(instant)requestAnimationFrame(()=>tr.style.transition='');
  const n=$('#vwN');if(n)n.textContent=VW.items.length>1?`${i+1} / ${VW.items.length}`:'';$$('#viewer .vw-dots i').forEach((d,k)=>d.classList.toggle('on',k===i));$$('#viewer video').forEach((v,k)=>{if(k!==i)v.pause();});
  $('#viewer .vw-nav.l')?.toggleAttribute('disabled',i===0);$('#viewer .vw-nav.r')?.toggleAttribute('disabled',i===VW.items.length-1);}
 function closeViewer(){const el=$('#viewer');if(!el||!el.classList.contains('on'))return false;el.classList.remove('on');el.querySelectorAll('video').forEach(v=>v.pause());const op=VW?.opener;VW=null;setTimeout(()=>{if(!el.classList.contains('on')){el.innerHTML='';el.style.removeProperty('--dy');}},260);syncModal();if(op?.isConnected)op.focus({preventScroll:true});return true;}
@@ -2284,9 +2400,15 @@ ACT.vwClose=()=>closeViewer();
 ACT.vwStep=a=>vwGo(VW.i+(+a.dataset.v));
 document.addEventListener('keydown',e=>{if(!VW)return;if(e.key==='ArrowRight'){vwGo(VW.i+1);e.stopImmediatePropagation();}if(e.key==='ArrowLeft'){vwGo(VW.i-1);e.stopImmediatePropagation();}if(e.key==='Escape'){closeViewer();e.stopImmediatePropagation();}},true);
 
+/** Instafill: the picture is shown whole (contain) over a blurred copy of itself that fills the frame.
+ *  A frame with data-fit="lo,hi" takes the picture's own ratio, clamped to [lo, hi], once it is known —
+ *  standard ratios fill the frame exactly, unusual ones (panoramas, very tall) keep their bands. Never stretched. */
+const fitAr=(r,lo,hi)=>Math.max(lo,Math.min(hi,r)).toFixed(4);
+const mfImg=(src,style,lazy)=>`<img class="mbg" src="${esc(src)}" alt="" aria-hidden="true" draggable="false"${lazy?' loading="lazy"':''}><img class="mfg" src="${esc(src)}" alt="" draggable="false"${lazy?' loading="lazy"':''} style="${style||''}">`;
+document.addEventListener('load',e=>{const img=e.target;if(!img.classList?.contains('mfg'))return;const f=img.parentElement;if(!f?.dataset.fit||!img.naturalWidth)return;const [lo,hi]=f.dataset.fit.split(',').map(Number);f.style.setProperty('--ar',fitAr(img.naturalWidth/img.naturalHeight,lo,hi));},true);
 /** media grid for posts and albums: 1 → full, 2 → halves, 3+ → mosaic; tap opens the viewer */
 function mediaGrid(list,o={}){if(!list||!list.length)return '';const n=list.length;const id=o.id||'';
- return `<div class="mgrid n${Math.min(n,4)}" ${o.attrs||''}>${list.slice(0,4).map((m,i)=>`<button class="mcell" data-act="mView" data-v="${esc(id)}" data-i="${i}" aria-label="${L('Открыть на весь экран','Open full screen')}">${m.type==='video'?`<video src="${esc(m.url)}" muted playsinline preload="metadata"></video><span class="dur">${I.video}${fmtDur(m.dur||0)}</span>`:m.type==='plate'?plate(m.key,'image'):`<img src="${esc(m.url)}" alt="" loading="lazy" draggable="false" style="${m.style||''}">`}${i===3&&n>4?`<span class="more">+${n-4}</span>`:''}</button>`).join('')}</div>`;}
+ return `<div class="mgrid n${Math.min(n,4)}" ${o.attrs||''}>${list.slice(0,4).map((m,i)=>`<button class="mcell mf" ${n===1?`data-fit=".8,1.91" ${m.w&&m.h?`style="--ar:${fitAr(m.w/m.h,.8,1.91)}"`:''}`:''} data-act="mView" data-v="${esc(id)}" data-i="${i}" aria-label="${L('Открыть на весь экран','Open full screen')}">${m.type==='video'?`<video src="${esc(m.url)}" muted playsinline preload="metadata"></video><span class="dur">${I.video}${fmtDur(m.dur||0)}</span>`:m.type==='plate'?plate(m.key,'image'):mfImg(m.url,m.style,'lazy')}${i===3&&n>4?`<span class="more">+${n-4}</span>`:''}</button>`).join('')}</div>`;}
 const MEDIA_SRC={};
 ACT.mView=(a,e)=>{e?.stopPropagation();const id=a.dataset.v;const list=(MEDIA_SRC[id]?MEDIA_SRC[id]():postById(id)?.media||EV(id)?.gallery)||[];openViewer(list.map(m=>m.type==='plate'?m:{type:m.type,src:m.url,style:m.style}),+a.dataset.i);};
 
@@ -2712,7 +2834,7 @@ function eventsList(){
  return `<div class="myev"><button class="myev-main" data-go="E10"><span class="ico g">${I.cal}</span><span class="tx"><b>${L('Мои события','My events')}${mine?`<em>${mine}</em>`:''}</b><small>${nxt?`${L('Ближайшее','Next')}: ${esc(T(EV(nxt).title))} · ${F.date(EV(nxt).start)}`:L('Иду, интересуюсь, заявки, организую','Going, interested, applications, organising')}</small></span></button><button class="ibtn add" data-go="E11" aria-label="${L('Создать событие','Create an event')}">${I.plus}</button></div>
  <div class="filterline"><div class="chips scroll">${[['all',L('Все','All')],['offline',S.me.city?L('В моём городе','My city'):L('Офлайн','In person')],['online',L('Онлайн','Online')]].map(([k,l])=>`<button class="chip filter ${f.format===k?'on':''}" data-act="evFormat" data-v="${k}" aria-pressed="${f.format===k}">${k==='online'?ic('video',15):k==='offline'?ic('pin',15):''}${l}</button>`).join('')}</div><button class="chip filter ${n?'on':''}" data-act="evFilters">${ic('filter',16)}${L('Фильтры','Filters')}${n?`<em class="badge-abs">${n}</em>`:''}</button></div>
  ${!ids.length?empty('cal',L('Событий не нашлось','No events found'),L('Попробуй другой формат или сними фильтры. Можно создать своё.','Try another format or remove filters. Or create your own.'),`<button class="btn soft" data-act="evReset">${L('Сбросить фильтры','Reset filters')}</button><button class="btn text" data-go="E11">${L('Создать событие','Create an event')}</button>`)
- :firstLoad('events',`${soon.length?`<div class="sec">${L('Ближайшие 7 дней','Next 7 days')}</div>${soon.map((id,i)=>eventCard(id,{i})).join('')}`:''}${later.length?`<div class="sec">${L('Позже','Later')}</div>${later.map((id,i)=>eventCard(id,{i})).join('')}`:''}${canc.length?`<div class="sec">${L('Отменены','Cancelled')}</div>${canc.map(id=>eventCard(id,{row:1})).join('')}`:''}`,`<div class="sk" style="height:250px;border-radius:24px;margin-top:20px"></div><div class="sk" style="height:250px;border-radius:24px;margin-top:12px"></div>`)}`;
+ :firstLoad('events',`${soon.length?`<div class="sec">${L('Ближайшие 7 дней','Next 7 days')}</div><div class="evgrid">${soon.map((id,i)=>eventCard(id,{i})).join('')}</div>`:''}${later.length?`<div class="sec">${L('Позже','Later')}</div><div class="evgrid">${later.map((id,i)=>eventCard(id,{i})).join('')}</div>`:''}${canc.length?`<div class="sec">${L('Отменены','Cancelled')}</div>${canc.map(id=>eventCard(id,{row:1})).join('')}`:''}`,`<div class="sk" style="height:250px;border-radius:24px;margin-top:20px"></div><div class="sk" style="height:250px;border-radius:24px;margin-top:12px"></div>`)}`;
 }
 ACT.evFormat=a=>{S.filters.events.format=a.dataset.v;refresh();};
 ACT.evReset=()=>{S.filters.events=EF_DEF();refresh();};
@@ -3068,7 +3190,7 @@ function likesBody(r){const k=r.p.lk||'in';const inc=S.likesIn.filter(l=>!isMatc
  const t=seg([['in',L('Тебе','To you'),inc.length||''],['out',L('Твои','Yours')]],k,'lkTab','sm');
  if(k==='out')return t+(out.length?`<p class="note" style="margin:0 0 10px">${L('Ждут ответа. Отменить симпатию можно в любой момент — человек не узнает.','Waiting for an answer. You can withdraw a like any time — they won’t be told.')}</p><div class="card list">${out.map(l=>`<div class="li">${av(l.p,'')}<button class="tx" data-go="P01" data-id="${l.p}" style="text-align:left"><b>${esc(pname(l.p))}</b><small>${l.src==='profile'?L('из профиля','from profile'):L('из подборки','from discover')} · ${F.rel(l.t)}</small></button><span class="pill wait">${L('ждёт','pending')}</span><button class="ibtn ghost sm" data-act="unlike" data-v="${l.p}" aria-label="${L('Отменить симпатию','Withdraw like')}">${I.close}</button></div>`).join('')}</div>`:empty('heart',L('Ты пока никому не отправил(а) симпатию','You haven’t liked anyone yet'),L('Симпатию можно отправить из подборки или из профиля человека.','You can like someone from Discover or from their profile.'),`<button class="btn soft" data-act="pplSub" data-v="discover">${L('К подборке','To Discover')}</button>`));
  if(!inc.length)return t+empty('heart',L('Пока никто не отправил симпатию','No likes yet'),L('Пройденные тесты и пара публикаций помогают людям найти тебя.','Quizzes and a couple of posts help people find you.'),`<button class="btn soft" data-go="P02">${L('Дополнить профиль','Improve your profile')}</button>`);
- return t+`<p class="note" style="margin:0 0 12px">${L('Видно бесплатно. Ответная симпатия сразу откроет чат.','Free to see. Liking back opens a chat right away.')}</p><div class="likes">${inc.map((l,i)=>`<div class="lk" style="animation-delay:${i*50}ms"><button style="position:absolute;inset:0" data-go="P01" data-id="${l.p}" aria-label="${esc(pname(l.p))}">${bigPhoto(l.p,0)}</button><span class="src">${l.src==='profile'?L('из профиля','from profile'):L('из подборки','from discover')}</span><span class="inf"><b>${esc(pname(l.p))}${person(l.p).age?', '+person(l.p).age:''}</b><small>${esc(sharedSummary(l.p))}</small></span><button class="lkb" data-act="likeBack" data-v="${l.p}" aria-label="${L('Ответить симпатией','Like back')}">${I.heartf}</button></div>`).join('')}</div>`;}
+ return t+`<p class="note" style="margin:0 0 12px">${L('Ответная симпатия сразу откроет чат.','Liking back opens a chat right away.')}</p><div class="likes">${inc.map((l,i)=>`<div class="lk" style="animation-delay:${i*50}ms"><button style="position:absolute;inset:0" data-go="P01" data-id="${l.p}" aria-label="${esc(pname(l.p))}">${bigPhoto(l.p,0)}</button><span class="src">${l.src==='profile'?L('из профиля','from profile'):L('из подборки','from discover')}</span><span class="inf"><b>${esc(pname(l.p))}${person(l.p).age?', '+person(l.p).age:''}</b><small>${esc(sharedSummary(l.p))}</small></span><button class="lkb" data-act="likeBack" data-v="${l.p}" aria-label="${L('Ответить симпатией','Like back')}">${I.heartf}</button></div>`).join('')}</div>`;}
 ACT.lkTab=a=>{cur().p.lk=a.dataset.v;refresh();};
 ACT.likeBack=a=>{if(!S.me.dating&&!S.me.socialLikes){toast(L('Сначала включи симпатии в настройках приватности','Turn on likes in privacy settings first'),{type:'warn'});return;}run(a,()=>{likePerson(a.dataset.v,'likes');if(cur().id==='D03')refresh();},{ms:300});};
 ACT.unlike=a=>{const id=a.dataset.v;const prev=S.likesOut.slice();run(a,()=>{S.likesOut=S.likesOut.filter(l=>l.p!==id);refresh();},{ok:L('Симпатия отменена','Like withdrawn'),undo:()=>{S.likesOut=prev;refresh();}});};
@@ -3173,7 +3295,7 @@ function profileView(id,r,o={}){
  const html=`<header class="bar overlay"><button class="ibtn glass" data-back aria-label="${L('Назад','Back')}">${I.back}</button><span style="flex:1"></span>${me?`<button class="ibtn glass" data-go="P02" aria-label="${L('Редактировать','Edit')}">${I.edit}</button>`:`<button class="ibtn glass" data-act="profileMenu" data-v="${id}" aria-label="${L('Ещё','More')}">${I.more}</button>`}</header>
  <div class="view nodock top0"><div class="wrap">
  ${o.banner||''}
- <div class="hero">${me&&!p.photo?`<div class="plate" style="${PL.rose};position:absolute;inset:0"><span class="pi">${I.me}</span></div>`:bigPhoto(id,ix)}${photoBars(id,ix)}${photoCount(id)>1?`<button class="pc-zone l" data-act="pPhoto" data-v="-1" aria-label="${L('Предыдущее фото','Previous photo')}"></button><button class="pc-zone r" data-act="pPhoto" data-v="1" aria-label="${L('Следующее фото','Next photo')}"></button>`:''}${p.photo?`<button class="pc-zone c" data-act="pView" aria-label="${L('Открыть фото на весь экран','Open photo full screen')}"></button>`:''}
+ <div class="hero">${me&&!p.photo?`<div class="plate" style="${PL.rose};position:absolute;inset:0"><span class="pi">${I.me}</span></div>`:photoBg(id,ix)+bigPhoto(id,ix)}${photoBars(id,ix)}${photoCount(id)>1?`<button class="pc-zone l" data-act="pPhoto" data-v="-1" aria-label="${L('Предыдущее фото','Previous photo')}"></button><button class="pc-zone r" data-act="pPhoto" data-v="1" aria-label="${L('Следующее фото','Next photo')}"></button>`:''}${p.photo?`<button class="pc-zone c" data-act="pView" aria-label="${L('Открыть фото на весь экран','Open photo full screen')}"></button>`:''}
   <div class="pc-info"><h2 class="pc-name">${esc(displayName)}${p.age&&p.dating?`<span>${p.age}</span>`:''}${p.verified?I.verified:''}</h2><div class="pc-who"><span>${esc(whoLine(id))}</span><span>${esc(placeLine(id))}</span>${!me&&p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>${keys.length?`<div class="pc-keys">${keys.map(k=>`<span>${esc(k)}</span>`).join('')}</div>`:''}</div></div>
  ${acts}${o.after||''}
  ${!me&&mutual?`<p class="note center mt8">${L('Вы совпали — можно переписываться','You matched — you can chat')}</p>`:''}
@@ -3183,7 +3305,7 @@ function profileView(id,r,o={}){
 SC.P01={title:p=>pname(p.id),valid:p=>!!PEOPLE[p.id]&&!isBlocked(p.id),render:(p,r)=>profileView(p.id,r),after:()=>fillJars()};
 SC.P03={title:()=>L('Мой профиль','My profile'),render:(p,r)=>profileView('me',r,{after:`<div class="alert info mt12">${I.eye}<span><b>${L('Так тебя видят другие','This is how others see you')}</b>${S.me.dating?L('Знакомства включены — в подборке видны возраст и «Ищет».','Dating is on — Discover shows your age and “Looking for”.'):L('Знакомства выключены — возраст и «Ищет» скрыты.','Dating is off — age and “Looking for” are hidden.')}</span></div>`}),after:()=>fillJars()};
 
-ACT.pPhoto=a=>{const id=cur().id==='P03'?'me':cur().p.id;if(!stepPhoto(id,+a.dataset.v)){const h=$('.hero');h?.classList.remove('nudge-l','nudge-r');void h?.offsetWidth;h?.classList.add(+a.dataset.v<0?'nudge-l':'nudge-r');return;}const h=$('.hero');const ix=S.ui.ph[id];const img=$('.hero>img,.hero>.plate');if(img){const t=document.createElement('div');t.innerHTML=bigPhoto(id,ix);img.replaceWith(t.firstElementChild);}$$('.hero .pc-bars i').forEach((b,i)=>b.classList.toggle('on',i===ix));};
+ACT.pPhoto=a=>{const id=cur().id==='P03'?'me':cur().p.id;if(!stepPhoto(id,+a.dataset.v)){const h=$('.hero');h?.classList.remove('nudge-l','nudge-r');void h?.offsetWidth;h?.classList.add(+a.dataset.v<0?'nudge-l':'nudge-r');return;}const h=$('.hero');const ix=S.ui.ph[id];const img=$('.hero>img:not(.mbg),.hero>.plate');if(img){const t=document.createElement('div');t.innerHTML=bigPhoto(id,ix);img.replaceWith(t.firstElementChild);}const bg=$('.hero>.mbg');if(bg){const t=document.createElement('div');t.innerHTML=photoBg(id,ix);if(t.firstElementChild)bg.replaceWith(t.firstElementChild);}$$('.hero .pc-bars i').forEach((b,i)=>b.classList.toggle('on',i===ix));};
 ACT.pView=()=>{const id=cur().id==='P03'?'me':cur().p.id;openViewer(photoItems(id),(S.ui.ph||{})[id]||0);};
 ACT.toMap=()=>openMe('X01');
 ACT.shareProfile=()=>toast(L('Ссылка на профиль скопирована. Без входа она ничего не покажет','Profile link copied. It shows nothing without signing in'),{type:'ok'});
@@ -3411,7 +3533,7 @@ SC.C03={title:p=>SC.C03.valid(p)?T(COMMUNITIES[p.id].name):L('Сообществ
  if(t==='disc')body=!canRead?`<div class="veil" style="min-height:200px"><div class="veil-content"><div class="bar-sk" style="width:70%"></div><div class="bar-sk"></div><div class="bar-sk" style="width:50%"></div><div class="bar-sk"></div></div><div class="veil-glass"><div class="lockdot">${I.lock}</div><b>${L('Обсуждения видят участники','Discussions are for members')}</b><p>${L('Подай заявку — ведущие рассмотрят её.','Request to join — the hosts will review it.')}</p></div></div>`
   :`${j?`<button class="composer" data-go="C07" data-id="${id}">${av('me','sm')}<span>${L('Начать обсуждение','Start a discussion')}</span><span class="ibtn">${I.plus}</span></button>`:''}${discs.length?`<div class="card list">${discs.map(d=>`<button class="disc" data-go="C06" data-id="${d.id}">${d.pinned?`<span class="pill v" style="margin-bottom:6px">${L('Закреплено','Pinned')}</span>`:''}<b>${esc(T(d.title))}</b><p>${esc(T(d.text))}</p><span class="meta">${av(d.author,'xs')}<span>${esc(pname(d.author))}</span><span>·</span><span>${F.rel(d.t)}</span><span>${I.chat}${d.replies.length}</span></span></button>`).join('')}</div>`:empty('chat',L('Обсуждений пока нет','No discussions yet'),j?L('Начни первое — спроси или поделись опытом.','Start the first one — ask or share experience.'):L('Вступи, чтобы начать первое обсуждение.','Join to start the first discussion.'))}
   ${!j&&c.privacy==='open'?`<p class="note mt12">${L('Читать можно и без вступления. Чтобы писать — вступи и прими правила.','You can read without joining. To post, join and accept the rules.')}</p>`:''}`;
- if(t==='events')body=evs.length?evs.map((e,i)=>eventCard(e,{i})).join(''):empty('cal',L('Ближайших событий нет','No upcoming events'),'',ownsCommunity(id)?`<button class="btn primary" data-go="E11">${L('Создать событие','Create an event')}</button>`:'');
+ if(t==='events')body=evs.length?`<div class="evgrid">${evs.map((e,i)=>eventCard(e,{i})).join('')}</div>`:empty('cal',L('Ближайших событий нет','No upcoming events'),'',ownsCommunity(id)?`<button class="btn primary" data-go="E11">${L('Создать событие','Create an event')}</button>`:'');
  if(t==='members'){const hosts=communityHostIds(id);const known=[...(c.seedMembers||[]),...(S.communityRequests[id]||[]).filter(x=>x.status==='approved'&&x.showMember).map(x=>x.p)];const vis=[...new Set(c.knownMembers?known:[...['maya','mia','kai','sofi','kira','dan','noa'],...known])].filter(x=>!!PEOPLE[x]&&!c.mods.includes(x)&&canRead).slice(0,12);body=`<div class="sec" style="margin-top:4px">${L('Ведущие','Hosts')}</div><div class="card list">${hosts.map(m=>personRow(m,{sub:L('ведущий(ая)','host')})).join('')}</div>
   <div class="sec">${pl(C.members(id),['участник','участника','участников'],['member','members'])}</div>${canRead?`<div class="card list">${j&&!ownsCommunity(id)?`<div class="li">${av('me','')}<span class="tx"><b>${esc(pname('me'))}</b><small>${L('это ты','that’s you')}</small></span></div>`:''}${vis.map(m=>personRow(m)).join('')}${!vis.length&&ownsCommunity(id)?`<p class="note">${L('Других участников пока нет','No other members yet')}</p>`:''}</div><p class="note mt12">${L('Показываем только тех, кто разрешил видеть своё участие.','We only show members who allow their membership to be visible.')}</p>`:`<p class="note">${L('Список участников доступен после вступления.','The member list is available after joining.')}</p>`}`;}
  if(t==='rules')body=`<div class="card"><ol class="rules">${c.rules.map(x=>`<li>${esc(T(x))}</li>`).join('')}</ol></div><p class="note mt12">${L('Ведущие управляют обсуждениями и участием в сообществе, но не видят личные чаты и расширенные профили.','Hosts manage discussions and membership, but never see private chats, journals or private profiles.')}</p>`;

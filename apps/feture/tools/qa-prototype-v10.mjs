@@ -9,7 +9,8 @@ import { join } from 'node:path';
 const out = process.argv[2] || 'qa-v10';
 mkdirSync(out, { recursive: true });
 const exe = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
-const url = pathToFileURL(join(process.cwd(), 'public/prototype-v10.html')).href;
+// V10_URL=http://localhost:PORT/prototype-v10.html serves linked photos; file:// cannot resolve /images/*.
+const url = process.env.V10_URL || pathToFileURL(join(process.cwd(), 'public/prototype-v10.html')).href;
 const b = await chromium.launch({ executablePath: exe });
 const problems = [];
 const note = (m) => { problems.push(m); console.log('✗', m); };

@@ -96,7 +96,7 @@ body.frame .layer,body.frame .toasts{position:absolute}
   .side .navb:hover{background:var(--raise);color:var(--ink)}
   .side .navb.on{color:var(--ink);background:var(--surf);box-shadow:inset 0 0 0 1px var(--line)}
   .side .navb em{position:absolute;top:6px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:#fff;font:700 10.5px/18px var(--font);font-style:normal;text-align:center}
-  .side .sp{flex:1}.side .create,.side .mebtn span{display:none}
+  .side .sp{flex:1}.side .create>span,.side .mebtn>span:not(.av){display:none}
   .side .mebtn{width:44px;height:44px;border-radius:14px;overflow:hidden}
   .dock{display:none!important}
   .main>.bar,.main>.view>.wrap,.main>.ctabar>.wrap{max-width:680px;margin-inline:auto;width:100%}
@@ -109,9 +109,9 @@ body.frame .layer,body.frame .toasts{position:absolute}
   .side .brand img{width:34px}.side .brand b{display:block;font:800 22px/1 var(--font);letter-spacing:-.04em}.side .brand b i{font-style:normal;color:var(--accent)}
   .side .navb{grid-auto-flow:column;justify-content:start;align-items:center;gap:12px;padding:11px 12px;font-size:15px}
   .side .navb em{position:static;margin-left:auto}
-  .side .create{display:flex;margin-top:14px}
+  .side .create{display:flex;width:100%;min-height:50px;padding:0 18px;margin-top:14px;border-radius:var(--r)}.side .create>span{display:inline}
   .side .mebtn{display:flex;align-items:center;gap:10px;width:100%;height:auto;padding:8px;border-radius:var(--r);overflow:visible;text-align:left}
-  .side .mebtn .av{width:38px;height:38px}.side .mebtn span{display:grid;line-height:1.25;font-size:14px;font-weight:600}.side .mebtn small{font-size:12px;font-weight:400;color:var(--mute)}
+  .side .mebtn .av{width:38px;height:38px}.side .mebtn>span:not(.av){display:grid;line-height:1.25;font-size:14px;font-weight:600}.side .mebtn small{font-size:12px;font-weight:400;color:var(--mute)}
   .ctx{display:block;overflow-y:auto;padding:22px 18px 40px;border-left:1px solid var(--line)}
 }
 
@@ -994,7 +994,7 @@ button.jar:active .vessel{transform:scale(.95)}
 .viewer.drag .vw-track{transform:translateY(var(--dy))!important;transition:none}
 .vw-track figure{position:relative;flex:none;width:100%;height:100%;margin:0;display:grid;place-items:center;overflow:hidden}
 .vw-track img,.vw-track video{max-width:100%;max-height:100%;object-fit:contain}
-.vw-track figure>img[style*="scale"]{width:100%;height:100%;object-fit:cover}
+.vw-track img{will-change:transform;transform-origin:50% 50%}.viewer.zoomed .vw-track{cursor:grab}.viewer.zoomed .vw-nav,.viewer.zoomed .vw-dots{opacity:0;pointer-events:none}
 .vw-plate{position:relative;width:100%;aspect-ratio:4/5;max-height:100%}
 .vw-wm{position:absolute;inset:-20%;display:grid;grid-template-columns:repeat(3,1fr);align-content:space-around;justify-items:center;gap:60px 0;transform:rotate(-24deg);pointer-events:none;z-index:1}
 .vw-wm span{font-size:15px;font-weight:700;letter-spacing:.04em;color:rgba(255,255,255,.3);text-shadow:0 1px 2px rgba(0,0,0,.35);white-space:nowrap}
@@ -1030,7 +1030,8 @@ button.jar:active .vessel{transform:scale(.95)}
 .ctx .mini b{display:block;font-size:14px;font-weight:600}.ctx .mini small{display:block;font-size:12px;color:var(--mute)}
 .ctx .foot{margin-top:26px;font-size:12px;color:var(--faint);line-height:1.6}
 .qa-fab{position:fixed;left:6px;bottom:calc(var(--dock) + 18px + var(--safe-b));z-index:90;width:38px;height:32px;display:grid;place-items:center;border-radius:10px;border:1px solid var(--line2);background:var(--nav);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);font-size:11px;font-weight:700;color:var(--mute);box-shadow:var(--shadow-s)}
-@container stage (min-width:768px){.qa-fab{bottom:12px}}
+@container stage (min-width:768px){.toasts{bottom:24px}}
+@media (min-width:768px){body:not(.frame) .qa-fab{left:auto;right:12px;bottom:12px}}
 .qa{position:fixed;inset:0 auto 0 0;z-index:95;width:min(380px,calc(100vw - 24px));display:flex;flex-direction:column;background:var(--bg);border-right:1px solid var(--line);box-shadow:var(--shadow);transform:translateX(-102%);transition:transform .3s var(--ease)}
 .qa.open{transform:none;pointer-events:auto}.qa:not(.open){pointer-events:none}
 .qa-scrim{position:fixed;inset:0;z-index:94;background:var(--scrim);opacity:0;pointer-events:none;transition:opacity .25s}
@@ -1075,3 +1076,103 @@ button.jar:active .vessel{transform:scale(.95)}
 .tabs.access-tabs button.on{background:var(--surf);box-shadow:0 1px 3px #0000000a}
 .tabs.access-tabs button.on::after{display:none}
 @media(min-width:900px){body:not(.frame) .auth-wrap.identity-onboarding{max-width:760px}body:not(.frame) .identity-grid{grid-template-columns:repeat(2,minmax(0,1fr))}body:not(.frame) .tabs.access-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+/* =====================================================================
+   V10 owner revision, part 1 — Claude, 15.10.2026.
+   See docs/design-reference/V10-OWNER-REVISION-PLAN.md (part 1).
+   ===================================================================== */
+
+/* -- one column geometry: bar, hero, tabs and content share the same edges -- */
+@container stage (min-width:768px){
+  /* the bar has its own gutter, the view's wrap does not: widen the bar by the gutter so both align */
+  .main>.bar,.main>.ctabar>.wrap{max-width:calc(680px + 2 * var(--gut))}
+  .main>.ctabar>.wrap{max-width:680px}
+  .view .hero,.view .ev-hero,.view .cm-hero{margin:8px 0 0;border-radius:var(--r-xl)}
+  .view.top0>.wrap>.hero:first-child,.view.top0>.wrap>.ev-hero:first-child,.view.top0>.wrap>.cm-hero:first-child{margin-top:8px}
+  .tabs,.matches{margin-inline:0;padding-inline:0}
+  .chips.scroll{margin-inline:0;padding-inline:0}
+  /* tablet rail: fixed rows, one-line labels, create as an icon button, avatar visible */
+  .side .navb{min-height:62px;align-content:center}
+  .side .navb span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .side .create{display:grid;place-items:center;width:48px;min-height:48px;padding:0;margin:10px auto 0;border-radius:16px}
+}
+/* desktop: the background fills the whole window; side columns grow outward, their content hugs the centre */
+@container stage (min-width:1100px){
+  .root{grid-template-columns:minmax(232px,1fr) minmax(0,880px) minmax(320px,1fr);max-width:none}
+  .side{padding:22px 14px 22px max(14px,calc(100% - 218px))}
+  .ctx{padding:22px max(18px,calc(100% - 302px)) 40px 18px}
+  .side .navb{min-height:0}
+  .side .create{display:flex;width:100%;min-height:50px;padding:0 18px;margin:14px 0 0;border-radius:var(--r)}
+}
+
+/* -- floating header (V8 shape): no solid strip, glass controls over content, title fades on scroll -- */
+.main>.bar{margin-bottom:calc(-1 * var(--barh,56px));pointer-events:none;background:none}
+.main>.bar>*{pointer-events:auto}
+.main>.bar>h1{pointer-events:none;opacity:calc(1 - var(--sc,0));transform:translateY(calc(var(--sc,0) * -8px))}
+.main.scrolled>.bar:not(.overlay){box-shadow:none}
+.main>.bar:not(.overlay) .ibtn:not(.glass):not(.add),.main>.bar>.btn.text{background:color-mix(in srgb,var(--surf) 70%,transparent);-webkit-backdrop-filter:blur(16px) saturate(1.6);backdrop-filter:blur(16px) saturate(1.6);box-shadow:0 8px 20px -14px rgba(40,10,30,.55),inset 0 0 0 1px color-mix(in srgb,var(--line) 70%,transparent)}
+.main>.bar>.btn.text{border-radius:14px;min-height:40px;padding:0 12px}
+.main>.bar .seg{-webkit-backdrop-filter:blur(16px) saturate(1.6);backdrop-filter:blur(16px) saturate(1.6);background:color-mix(in srgb,var(--surf) 78%,transparent);box-shadow:0 8px 20px -14px rgba(40,10,30,.5)}
+.main>.bar .langsw{-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);background:color-mix(in srgb,var(--raise) 80%,transparent)}
+.main.hasbar>.view:not(.top0){padding-top:calc(var(--barh,56px) + 2px)}
+.main.hasbar>.view{-webkit-mask-image:linear-gradient(to bottom,transparent calc(var(--safe-t) + 4px),#000 calc(var(--safe-t) + 48px));mask-image:linear-gradient(to bottom,transparent calc(var(--safe-t) + 4px),#000 calc(var(--safe-t) + 48px))}
+.netbar+.bar{min-height:56px}
+
+/* -- dock (V8 shape): floating translucent pill, active tab on a soft plate -- */
+.dock{left:10px;right:10px;bottom:calc(10px + var(--safe-b));height:var(--dock);padding:5px;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow)}
+.dock button{height:auto;border-radius:18px;font-size:clamp(9.5px,2.7vw,11px);letter-spacing:-.01em;font-weight:600;transition:color .2s}
+.dock button svg{width:23px;height:23px}
+.dock button.on::before{content:"";position:absolute;inset:0;border-radius:18px;background:var(--raise);z-index:-1;animation:pop .3s var(--ease)}
+.dock button.on svg{color:var(--accent)}
+.dock em{top:4px;box-shadow:0 0 0 2px var(--nav)}
+.dock em.dot{top:8px}
+.toasts{bottom:calc(var(--dock) + 24px + var(--safe-b))}
+.qa-fab{bottom:calc(var(--dock) + 24px + var(--safe-b))}
+.view.deckmode{padding-bottom:calc(var(--dock) + 22px + var(--safe-b))}
+@container stage (min-width:768px){.toasts{bottom:24px}}
+@media (min-width:768px){body:not(.frame) .qa-fab{left:auto;right:12px;bottom:12px}}
+
+/* -- RU/EN switch: both labels centred inside equal halves -- */
+.langsw{align-self:center;line-height:1}
+.langsw button{display:grid;place-items:center;width:auto;min-width:0;height:30px;padding:0;text-align:center;line-height:1}
+
+/* -- events: covers keep a 2:1 frame; two cards per row once the column itself is wide enough -- */
+.view>.wrap{container:col/inline-size}
+.evc:not(.row) .cv{height:auto;aspect-ratio:2/1}
+@container col (min-width:600px){
+  .evgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch}
+  .evgrid>.evc+.evc{margin-top:0}
+  .evgrid>.evc .bd b{font-size:16px}
+}
+@container stage (min-width:768px) and (max-width:1099px){
+  .root:not(.auth){grid-template-columns:96px minmax(0,1fr)}
+  .side{padding:18px 8px}
+  .side .navb{padding:10px 2px;font-size:11px}
+}
+
+/* -- media: instafill frames (whole picture over its own blurred copy), capped height in feeds -- */
+.mf{position:relative;overflow:hidden;background:var(--raise);isolation:isolate}
+.mf>.mbg{position:absolute;inset:-12%;width:124%;height:124%;max-width:none;object-fit:cover;filter:blur(26px) saturate(1.15) brightness(.92);opacity:.9;z-index:-1}
+.mf>.mfg,.mcell.mf>video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.mcell.mf>video{background:#0b090b}
+.mgrid.n1 .mcell{aspect-ratio:var(--ar,4/5);max-height:min(560px,62dvh);width:100%}
+.mgrid.n1{justify-items:stretch}
+@container stage (min-width:768px){
+  .main>.inputbar{padding-inline:max(10px,calc((100% - 700px) / 2))}
+}
+
+/* -- dating deck: the photo keeps one framing whatever the window; wider card on tablet/desktop -- */
+.pc-ph>img{object-position:50% 30%}
+@container stage (min-width:768px){
+  .view.deckmode{justify-content:center}
+  .deck{flex:0 1 auto;height:100%;max-height:700px;aspect-ratio:4/5;width:auto;max-width:100%;margin:0 auto}
+}
+/* -- profile hero: the photo is shown whole in a fixed frame, so resizing never changes what is visible -- */
+.hero{height:auto;aspect-ratio:1/1;max-height:none;isolation:isolate}
+.hero>.mbg{position:absolute;inset:-12%;width:124%;height:124%;max-width:none;object-fit:cover;filter:blur(26px) saturate(1.1) brightness(.85);z-index:-1}
+.hero>img:not(.mbg){object-fit:contain;object-position:50% 50%}
+@container stage (min-width:768px){.hero{aspect-ratio:4/3}}
+/* -- likes grid: the photo sits inside the open-profile button; frame it like the card -- */
+.lk>button>img,.lk>button>.plate{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 30%}
+.lk>button{overflow:hidden;border-radius:inherit}
+.lk .inf{padding-right:54px}
