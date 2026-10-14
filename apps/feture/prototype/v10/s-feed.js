@@ -150,13 +150,19 @@ SC.F09={title:()=>L('Предпросмотр','Preview'),valid:p=>!!p.draft,ren
  <div class="card list mt16">${linkRow({act:'audience',icon:'eye',tone:'v',title:a[2],sub:a[3],val:L('Изменить','Change')})}${hasPhoto?linkRow({icon:'shield',tone:'a',title:L('Проверка фото и видео','Photo & video review'),sub:L('Обычно до 30 минут. До этого публикацию видишь только ты','Usually under 30 minutes. Until then only you can see it'),noChev:1}):''}</div>
  </div></div><div class="ctabar"><div class="wrap"><div class="row g8"><button class="btn soft" style="flex:0 0 auto;width:auto" data-back>${L('Изменить','Edit')}</button><button class="btn primary" data-act="publish">${hasPhoto?L('Отправить на проверку','Submit for review'):L('Опубликовать','Publish')}</button></div></div></div>`;}};
 ACT.back=()=>back();
-ACT.publish=a=>{const d=cur().p.draft;if(!postResultReady(d)){missingPostResult();return;}let published=false;const hasPhoto=d.media.length>0;
+function finishPostCompose(route,composeId){
+ const trim=st=>{let i=composeId?st.findIndex(r=>r.id==='F07'&&r.composeId===composeId):-1;if(i<0&&composeId)i=st.findIndex(r=>r.id==='F09'&&r.p.draft?.composeId===composeId);if(i<0)i=st.indexOf(route);if(i>=0){st.splice(Math.max(1,i));return true;}return false;};
+ trim(stack());
+ if(typeof navHistory!=='undefined'&&navHistory){for(const entry of navHistory.entries){let changed=false;for(const st of Object.values(entry.nav?.stacks||{}))changed=trim(st)||changed;if(changed){const st=entry.nav.stacks[entry.nav.tab]||[];entry.key=JSON.stringify([!!S.session,entry.nav.tab,st.map(r=>[r.id,r.p])]);}}navNextReplace=true;}
+ render('back');
+}
+ACT.publish=a=>{const route=cur(),d=route.p.draft;if(!postResultReady(d)){missingPostResult();return;}let published=false;const hasPhoto=d.media.length>0;
  run(a,()=>{
   if(!postResultReady(d)){missingPostResult();return;}
   {const id=d.edit||'m'+Date.now();const obj={...postFromDraft(d,id),status:hasPhoto?'review':'published'};
    const ex=S.myPosts.find(x=>x.id===id);ex?Object.assign(ex,obj,{comments:ex.comments}):S.myPosts.unshift(obj);}
-  published=true;const st=stack();st.forEach(r=>r.dirty=false);st.length=1;S.nav.stacks.feed[0].p.sub='foryou';if(S.nav.tab!=='feed')S.nav.tab='feed';render('back');
- },{ok:()=>!published?null:hasPhoto?L('Отправлено на проверку. Сообщим, когда опубликуем','Submitted for review. We’ll let you know when it’s live'):L('Опубликовано','Published')});};
+  published=true;finishPostCompose(route,d.composeId||route.composeId);
+ },{ok:()=>{if(!published)return null;toast(hasPhoto?L('Отправлено на проверку. Сообщим, когда опубликуем','Submitted for review. We’ll let you know when it’s live'):L('Опубликовано','Published'),{type:'ok',action:{label:L('Мои публикации','My posts'),fn:()=>go('F10')}});return null;}});};
 
 /* F10 — my posts and drafts */
 SC.F10={title:()=>L('Мои публикации','My posts'),render:()=>{const by=k=>S.myPosts.filter(x=>x.status===k);

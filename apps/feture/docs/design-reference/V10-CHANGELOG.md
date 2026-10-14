@@ -165,3 +165,19 @@ PR#1089 merged (`0667f360`) с сохранёнными атомарными com
 **Browser follow-up до merge:** normal390 Preview→Private circle→Edit сохранил текст, но восстановил старую audience из navHistory. Это не попало в VM pop-проверку. Добавлен внутренний composeId и узкая синхронизация audience в history snapshots именно того же F07/F09 черновика, без изменения Post DTO и других drafts. Browser Back/Edit/Forward проверяются на новом exact head.
 
 **Независимое follow-up:** тот же sync применяется при выборе из F07, чтобы browser Forward не восстанавливал прежнюю audience F09. Проверены обе стороны изменения и изоляция чужого composeId.
+
+## 14.10.2026 — публикация возвращает в исходный раздел и сохраняет другие черновики
+
+**Радиус:** F07→publishNow, F09→publish, active navigation stack и navHistory, parent forms C07/P02 и любые другие route drafts, F10/успешный toast. Post DTO/audience/result eligibility, Match/Grant и community admission не меняются.
+
+**Проблема:** ACT.publish снимал dirty со всех экранов активного стека, обрезал его до root и переводил в Feed. Создание через общую кнопку на desktop из обсуждения/профиля уничтожало чужой несохранённый draft и его предупреждение. Feed Following также насильно сбрасывался в foryou. Browser history могла снова открыть уже завершённую композицию.
+
+**Решение:** finishPostCompose закрывает только F07/F09 и последующие экраны того же composeId, сохраняет предшествующие формы и другие tabs, возвращает в исходный раздел/экран. Соответствующие history snapshots очищаются от завершённой композиции; текущая запись заменяется, не добавляя возврат в completed editor. После успеха есть действие «Мои публикации», которое открывает F10 поверх сохранённого контекста. Выбранная аудитория, фильтры, формат Post и проверки public result сохранены; для фото/видео остаётся review.
+
+**Файлы:** s-feed.js, generated V10/notes, Roadmap/STATUS. Общие core/navigation handlers не переписывались. Навигационный helper ограничен одной post-композицией.
+
+**Проверено:** syntax/build; полный порядок модулей и прежние focused compose audience/privacy/history contracts. Дополнительно RU/EN direct+preview publish над C07 draft/text/media/dirty и P02 draft в другой вкладке; исходный раздел/форма сохраняются, Post сохраняется, Match/Grant не меняются; completed compose не остаётся в history; действие F10 сохраняет parent leave guard; Feed Following и My posts origin не сбрасываются. Независимое read-only ревью — blockers нет. CI/browser final head проверяются перед merge и отмечаются в PR; не заявляется реальный backend/native.
+
+**Перенос:** завершение одной операции закрывает только принадлежащую ей цепочку экранов. Глобальный очиститель dirty или reset всего tab stack после submit недопустим, когда в нём есть другая незавершённая форма.
+
+**Приёмка порции10 перед слиянием PR1095:** source a9c6f8e1 прошёл AppBase38578735452 success, FetUre exact preview READY. Browser desktop: обычная навигация Сообщества→Узлы→Начать обсуждение→title/text→общая Create→Post→Preview→Publish вернула C07 с теми же title/text. Back запросил подтверждение несохранённых изменений; Stay сохранил форму. Я→Мои публикации показал новый post; возврат в Сообщества снова открыл прежний C07 draft. Toast F10-action и history pruning дополнительно проверены state contracts, browser click по toast не заявляется. Системы backend/native и реальная media загрузка не проверялись. Runtime/source unchanged в финальном документирующем commit; CI/merge/deploy status отмечается в PR1095.
