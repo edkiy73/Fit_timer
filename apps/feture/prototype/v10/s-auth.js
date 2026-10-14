@@ -110,7 +110,7 @@ SC.A05={auth:1,title:()=>L('Первые шаги','First steps'),render:(p,r)=>
  /* V8: community first — interests → communities → a first quiz you can share. Dating is not part of onboarding. */
  if(p.step===2){r.f.tp=r.f.tp||[];const pop=['shibari','bondage','talk','aftercare','slow','latex','roleplay','sensory','intimacy','rituals','service','experiments'];const comms=Object.keys(COMMUNITIES).filter(c=>!COMMUNITIES[c].hidden&&(!r.f.tp.length||COMMUNITIES[c].topics.some(t=>r.f.tp.includes(t)))).slice(0,4);
   return `${bar('',{back:1,actions:`<span class="pill">2 / 3</span>`})}<div class="view nodock cta1"><div class="auth-wrap">
-  <div class="steps"><i class="on"></i><i class="on"></i><i></i></div><h2 class="t">${L('Что тебе интересно?','What are you into?')}</h2><p class="lead">${L('Подберём сообщества и ленту. Это никто не видит.','We’ll tune communities and your feed. Nobody sees this.')}</p>
+  <div class="steps"><i class="on"></i><i class="on"></i><i></i></div><h2 class="t">${L('Что тебе интересно?','What are you into?')}</h2><p class="lead">${L('Выбранные темы станут фильтром ленты. Это не ответы теста и не публичные интересы.','Your choices will filter your feed. They are not quiz answers or public interests.')}</p>
   ${grp(L('Темы','Topics'),`<div class="chips">${pop.map(t=>chipBtn(t,topic(t),r.f.tp.includes(t),'onbTopic')).join('')}</div>`)}
   <div class="grp"><div class="grp-t"><span>${L('Сообщества для тебя','Communities for you')}</span></div>${comms.map(c=>`<div class="onb-c">${commCard(c)}<button class="btn sm ${S.joined.has(c)?'soft':'primary'} auto" data-act="onbJoin" data-v="${c}">${S.joined.has(c)?L('Ты участник','Joined'):COMMUNITIES[c].privacy==='closed'?L('Заявка','Request'):L('Вступить','Join')}</button></div>`).join('')}</div>
   </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-go="A05" data-p='{"step":3}'>${L('Дальше','Next')}</button></div></div>`;}
@@ -126,7 +126,7 @@ ACT.a05next=()=>{applyIdentityDraft();go('A05',{step:2});};
 ACT.a05skip=()=>{const r=cur();Object.assign(r.f,identityDraft(S.me));r.dirty=false;go('A05',{step:2});};
 ACT.onbTopic=a=>{const r=cur();const i=r.f.tp.indexOf(a.dataset.v);i<0?r.f.tp.push(a.dataset.v):r.f.tp.splice(i,1);refresh();};
 ACT.onbJoin=a=>{const c=a.dataset.v;if(COMMUNITIES[c].privacy==='closed'){S.pendingJoin.add(c);toast(L('Заявка будет отправлена после входа','Request will be sent after sign-up'),{type:'ok'});}else S.joined.has(c)?S.joined.delete(c):S.joined.add(c);refresh();};
-ACT.finishOnb=a=>{const target=a.dataset.v;const p=parseP(a);run(a,()=>{S.session={at:Date.now()};initNav();render('fade');if(/^X0[1-7]$/.test(target))openMe(target,p);else if(target!=='F01'||p.sub)go(target,p);toast(L('Аккаунт создан. Добро пожаловать!','Account created. Welcome!'),{type:'ok'});},{ms:400});};
+ACT.finishOnb=a=>{const target=a.dataset.v;const p=parseP(a);run(a,()=>{const topics=[...S.nav.auth].reverse().find(r=>r.id==='A05'&&r.p.step===2)?.f.tp;if(Array.isArray(topics))S.filters.feed={...S.filters.feed,tags:[...new Set(topics.filter(t=>TOPICS[t]))]};S.session={at:Date.now()};initNav();render('fade');if(/^X0[1-7]$/.test(target))openMe(target,p);else if(target!=='F01'||p.sub)go(target,p);toast(L('Аккаунт создан. Добро пожаловать!','Account created. Welcome!'),{type:'ok'});},{ms:400});};
 function signIn(persona){closeSheet(true);const lang=S.lang;S=freshState(persona);S.lang=lang;S.session={at:Date.now()};initNav();QA.seen={};render('fade');}
 
 /* A06–A08 — age check is a separate real process, never a checkbox */

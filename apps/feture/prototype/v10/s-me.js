@@ -96,6 +96,8 @@ ACT.qPrev=()=>{const st=S.me.tests[cur().p.id];st.step=Math.max(0,st.step-1);S.u
 ACT.quizClose=()=>{const st=S.me.tests[cur().p.id];ask({icon:'test',tone:'v',title:L('Закончить позже?','Finish later?'),text:L(`Ответы сохранены. Продолжишь с темы ${st.step+1}.`,`Answers are saved. You’ll continue from topic ${st.step+1}.`),ok:L('Выйти','Leave'),cancel:L('Остаться','Stay')}).then(ok=>{if(ok)back();});};
 /* X09 — result: every answered topic as a jar, grouped; tap any jar to change the answer; one button saves all */
 const quizJars=id=>{const z=QUIZ[id],st=S.me.tests[id]||{};return z.topics.filter(t=>st.ans&&st.ans[t]!=null).map(t=>jarFrom(t,st.ans[t]));};
+const shareableQuizJars=id=>sortJars(quizJars(id)).filter(j=>!j.limit&&Number.isInteger(j.lv)&&j.lv>=1&&j.lv<=10);
+const normalizeShareSelection=(id,sel)=>[...new Set(sel||[])].filter(t=>shareableQuizJars(id).some(j=>j.t===t)).slice(0,4);
 SC.X09={title:()=>L('Результат','Result'),valid:p=>!!QUIZ[p.id],render:(p)=>{const z=QUIZ[p.id];const js=sortJars(quizJars(p.id));const skipped=z.topics.length-js.length;
  const g=[[L('Интересно','Into it'),js.filter(j=>!j.limit)],[L('Обсуждаемо','Negotiable'),js.filter(j=>j.limit==='discuss')],[L('Табу','Taboo'),js.filter(j=>j.limit==='hard')]].filter(x=>x[1].length);
  const was={};js.forEach(j=>{const m=S.me.jars.find(x=>x.t===j.t);if(m&&jv(m)!==jv(j))was[j.t]=jv(m);});
@@ -111,15 +113,15 @@ ACT.qeSkip=()=>{const q=S.ui.qe;delete S.me.tests[q.id].ans[q.t];closeSheet(true
 ACT.qSave=a=>{const id=a.dataset.v;const js=quizJars(id);run(a,()=>{js.forEach(n=>{const i=S.me.jars.findIndex(j=>j.t===n.t);const old=i>=0?S.me.jars[i]:null;const val={...n,vis:old?old.vis:'only'};if(val.limit==='hard'&&val.vis==='public')val.vis='only';i>=0?S.me.jars[i]=val:S.me.jars.push(val);if(!old||jv(old)!==jv(n))S.me.history.unshift({t:Date.now(),topic:n.t,from:old?jv(old):'—',to:jv(n),src:'test'});});
  const st=stack();while(st.length>1&&['X07','X08','X09'].includes(cur().id))st.pop();go('X02');},{ok:L(`Сохранено: ${js.length}. Новые баночки видишь только ты`,`Saved: ${js.length}. New jars are visible only to you`)});};
 SC.X10={title:()=>L('Результат','Result'),valid:p=>!!QUIZ[p.id],render:(p,r)=>SC.X09.render(p,r)};
-SC.X11={title:()=>L('Поделиться','Share'),valid:p=>!!QUIZ[p.id],render:(p,r)=>{const jars=sortJars(quizJars(p.id)).filter(s=>!s.limit);if(!r.sel)r.sel=jars.slice(0,4).map(j=>j.t);r.aud=r.aud||'all';const chosen=jars.filter(j=>r.sel.includes(j.t));
+SC.X11={title:()=>L('Поделиться','Share'),valid:p=>!!QUIZ[p.id],render:(p,r)=>{const jars=shareableQuizJars(p.id);if(!r.sel)r.sel=jars.slice(0,4).map(j=>j.t);else r.sel=normalizeShareSelection(p.id,r.sel);r.aud=r.aud||'all';const chosen=jars.filter(j=>r.sel.includes(j.t));
  return `${bar(L('Поделиться результатом','Share result'),{back:1,sm:1})}<div class="view nodock cta1"><div class="wrap">
  <div class="sharecard"><div class="sc-top"><img src="${LOGO()}" alt="">FetUre · ${esc(T(QUIZ[p.id].title))}</div>${chosen.length?jarsHTML(chosen):`<p class="note">${L('Выбери темы ниже','Pick topics below')}</p>`}</div>
  ${grp(L('Что показать · до 4','What to show · up to 4'),choices(jars.map(j=>[j.t,topic(j.t),jarWord(j)]),r.sel,'x11pick',{multi:1}),{foot:L('Табу, «обсуждаемо» и невыбранные темы в публикацию не попадут.','Taboo, negotiable and unselected topics are never included.')})}
  ${grp(L('Кому','Audience'),choices(AUD().slice(0,3).map(([k,i,t,s])=>[k,t,s]),r.aud,'x11aud'))}
  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary ${chosen.length?'':'off'}" data-act="x11go">${L('Опубликовать','Publish')}</button></div></div>`;},after:()=>fillJars()};
-ACT.x11pick=a=>{const r=cur();const i=r.sel.indexOf(a.dataset.v);if(i<0&&r.sel.length>=4){toast(L('Не больше 4 тем','Up to 4 topics'),{type:'warn'});return;}i<0?r.sel.push(a.dataset.v):r.sel.splice(i,1);refresh();};
+ACT.x11pick=a=>{const r=cur();r.sel=normalizeShareSelection(r.p.id,r.sel);if(!shareableQuizJars(r.p.id).some(j=>j.t===a.dataset.v))return;const i=r.sel.indexOf(a.dataset.v);if(i<0&&r.sel.length>=4){toast(L('Не больше 4 тем','Up to 4 topics'),{type:'warn'});return;}i<0?r.sel.push(a.dataset.v):r.sel.splice(i,1);refresh();};
 ACT.x11aud=a=>{cur().aud=a.dataset.v;refresh();};
-ACT.x11go=a=>{const r=cur();const jars=quizJars(r.p.id).filter(s=>r.sel.includes(s.t));run(a,()=>{S.myPosts.unshift({id:'m'+Date.now(),author:'me',t:Date.now(),type:'result',tags:r.sel.slice(0,3),likes:0,aud:r.aud,status:'published',text:{ru:`Мой результат теста «${QUIZ[r.p.id].title.ru}»`,en:`My “${QUIZ[r.p.id].title.en}” quiz result`},result:jars.map(j=>[j.t,j.lv]),comments:[]});back();},{ok:L('Опубликовано в ленте','Published to the feed')});};
+ACT.x11go=a=>{const r=cur();const jars=shareableQuizJars(r.p.id).filter(s=>r.sel.includes(s.t)).slice(0,4);if(!jars.length){toast(L('Выбери хотя бы одну тему для публикации','Choose at least one topic to publish'),{type:'warn'});refresh();return;}run(a,()=>{S.myPosts.unshift({id:'m'+Date.now(),author:'me',t:Date.now(),type:'result',tags:jars.slice(0,3).map(j=>j.t),likes:0,aud:r.aud,status:'published',text:{ru:`Мой результат теста «${QUIZ[r.p.id].title.ru}»`,en:`My “${QUIZ[r.p.id].title.en}” quiz result`},result:jars.map(j=>[j.t,j.lv]),comments:[]});back();},{ok:L('Опубликовано в ленте','Published to the feed')});};
 
 /* G04 — saved */
 SC.G04={title:()=>L('Сохранённое','Saved'),render:()=>{const s=S.me.saved;const posts=s.posts.map(postById).filter(Boolean),evs=s.events.filter(EV);
@@ -128,3 +130,4 @@ SC.G04={title:()=>L('Сохранённое','Saved'),render:()=>{const s=S.me.s
  ${evs.length?`<div class="grp"><div class="grp-t"><span>${L('События','Events')} · ${evs.length}</span></div>${evs.map(id=>eventCard(id,{row:1})).join('<div style="height:8px"></div>')}</div>`:''}
  ${posts.length?`<div class="grp"><div class="grp-t"><span>${L('Публикации','Posts')} · ${posts.length}</span></div><div class="posts">${posts.map((x,i)=>postCard(x,{i})).join('')}</div></div>`:''}
  <p class="grp-n">${L('Сохранённое видишь только ты.','Only you can see your saved items.')}</p></div></div>`;}};
+
