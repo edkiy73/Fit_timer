@@ -147,3 +147,17 @@ PR#1089 merged (`0667f360`) с сохранёнными атомарными com
 **Перенос:** уведомление — указатель на актуально допустимое действие; историю нельзя использовать как authorization на новый диалог.
 
 **Проверка перед merge этой же порции:** браузер показал, что после End connection у пустого H02 оставались Conversation starters с действием на отсутствующий msgIn. Исправлено до merge: ended history не показывает ice/retry/typing, stale ice action проверяет текущее право. История сообщений сохранена. Live match→Lina H02 уже подтверждён normal click; обновлённый ended UI проверить на final head.
+
+## 14.10.2026 — предпросмотр и редактор сохраняют одну аудиторию
+
+**Радиус:** F07 draft, F09 preview/audience, publishNow/publish, postFromDraft, public topic attachments. Формат Post/aud сохранён; Match/Grant и разрешения зрителя не меняются.
+
+**Проблема:** Change audience в F09 писал route.aud, но preview/publish читали p.draft.aud. Выбранная приватность не применялась. После изменения видимости/границы темы другой вкладкой preview мог публиковать пустое result-вложение. resEligible также принимал numeric0/string при public/no-limit.
+
+**Решение:** общий composeAudience читает текущий draft; F09 выбор синхронизирует preview и исходный F07 editor. Back возвращает текст/выбор и dirty editor, без лишней confirm на самом preview. Result selection нормализуется по текущим public integer1–10/no-limit, dedupe/max4. Stale picks игнорируются. Validation не пропускает пустое result. Preview publish перепроверяет вложение до отправки и внутри async callback; при исчезнувших темах остаётся preview с понятным предупреждением, без пустого поста и ложного success toast.
+
+**Проверено:** syntax/build; full-module VM RU/EN audience→preview→Back→publish, invalid aud no-op, numeric/private/hard/string/0 guards, stale preview и async boundary change, сохранение Match/Grant. Независимое ревью выявило финальную stale publish проверку — добавлена. Старый временный VM из /tmp утрачен после возобновления сессии; новый targeted full-module harness собран в рабочем каталоге, полный прежний набор заново не заявляется. CI/browser acceptance текущего head фиксируется в PR.
+
+**Перенос:** редактор и preview используют один владеющий draft; публикация валидирует актуальное раскрытие выбранных тем, а не только snapshot во время открытия preview.
+
+**Предыдущая порция:** PR1092 merged1f96c5e5; final640a8f9 AppBase38548139415 success, preview READY; browser390 active notification→Lina→End без ice/input, stale notification→H01. Это тестовые данные автономного прототипа.
