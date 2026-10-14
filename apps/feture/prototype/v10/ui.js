@@ -125,6 +125,18 @@ function chipGroup(items,selected,act,o={}){
 }
 const chipPicker=o=>chipGroup(o.items,o.sel,o.act,{title:o.title,max:o.max,groups:o.cats?topicGroups(o.items.map(x=>x[0])):o.groups});
 const optGroups=g=>{const b=OPT_BASE[g]||8;const ids=OPT[g].map(x=>x[0]);return [[L('Популярное','Popular'),ids.slice(0,b)],[L('Ещё варианты','More options'),ids.slice(b)]];};
+/** Shared identity choices: same IDs, multiplicity and catalog in onboarding/profile. */
+const IDENTITY_KEYS=['gender','orient','format','role'];
+const identityFields=()=>[
+ ['gender',L('Гендер','Gender'),L('Можно выбрать несколько вариантов.','You can choose more than one.')],
+ ['orient',L('Ориентация','Orientation'),L('Выбери определения, которые тебе подходят.','Choose the definitions that fit you.')],
+ ['format',L('Формат отношений','Relationship format'),L('Какие форматы подходят тебе сейчас?','Which relationship styles fit you now?')],
+ ['role',L('Роль','Role'),L('Один вариант. Это не согласие на какие-либо практики.','One option. This is not consent to any practice.')]
+];
+const identityDraft=m=>({gender:[...(m.gender||[])],orient:[...(m.orient||[])],format:[...fmtList(m.format)],role:m.role||null});
+function identityChoices(k,value,act){const title=identityFields().find(x=>x[0]===k)[1];return chipGroup(optItems(k),k==='role'?[value]:value,act,{k,title,groups:optGroups(k),limit:OPT_BASE[k]||8});}
+function toggleIdentityValue(value,k,v){if(k==='role')return value===v?null:v;const arr=[...(value||[])],i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);return arr;}
+
 const topicGroups=ids=>{ids=ids||Object.keys(TOPICS);return CATS.map(c=>[T(c),ids.filter(t=>TOPICS[t]?.cat===c.id)]).filter(g=>g[1].length);};
 ACT.chipFold=a=>{const key=a.dataset.v;S.ui.unfold=S.ui.unfold||{};const box=a.closest('.chips');const open=box.classList.toggle('folded')===false;S.ui.unfold[key]=open;a.textContent=open?L('Свернуть','Show less'):L(`Ещё ${a.dataset.n}`,`${a.dataset.n} more`);};
 ACT.chipAll=a=>openChipPicker(a.dataset.v);
@@ -200,3 +212,4 @@ ACT.fReset=()=>{S.ui.fcfg.reset();resheet();};
 ACT.fApply=()=>{S.ui.fcfg.apply();closeSheet();refresh();toast(L('Фильтры применены','Filters applied'),{type:'ok'});};
 /** a single option list for one filter category: chips grouped, searchable */
 const fChips=(items,sel,act,o={})=>o.groups?o.groups.map(([t,ids])=>fsec(t,chipGroup(items.filter(([id])=>ids.includes(id)),sel,act,{...o,all:1,k:o.k}))).join(''):fsec(o.title||'',chipGroup(items,sel,act,{...o,all:1}));
+
