@@ -1318,3 +1318,15 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .cm-prev{border-radius:var(--r-l);overflow:hidden;background:var(--raise);margin-bottom:12px}
 .cm-prev img,.cm-prev video{display:block;width:100%;max-height:260px;object-fit:contain}
 .vw-label{margin-right:auto;margin-left:10px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.16);color:#fff;font-size:12.5px;font-weight:600}
+
+/* =====================================================================
+   V10 owner revision, part 8 — photo verification, gifting Premium.
+   ===================================================================== */
+.pv-pose{display:flex;align-items:center;gap:14px;margin-top:12px;padding:16px;border-radius:var(--r-l);background:var(--violet-soft);color:var(--ink)}
+.pv-pose span{font-size:40px;line-height:1}.pv-pose b{font-size:16px;font-weight:650;line-height:1.35}
+.pv-selfie{display:flex;align-items:center;gap:12px}.pv-selfie img{width:96px;height:120px;object-fit:cover;border-radius:var(--r)}
+.pv-state{display:grid;justify-items:center;gap:8px;margin:8px 0 20px;padding:20px 16px;border-radius:var(--r-l);background:var(--surf);border:1px solid var(--line);text-align:center}
+.pv-state b{font-size:18px;font-weight:700}.pv-state p{margin:0;color:var(--mute);font-size:14px;line-height:1.5}
+.pv-state .nbadge svg{width:40px;height:40px}.pv-state .ico{width:44px;height:44px}
+.pv-pose .ico{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--violet);color:#fff;font-size:inherit}
+.pv-pose .ico svg{width:22px;height:22px}.pv-pose small{display:block;font-size:12px;color:var(--mute)}.pv-pose b{display:block}
