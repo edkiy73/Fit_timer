@@ -333,7 +333,7 @@ function renderSide(){
  const s=$('#side');if(!s)return;
  if(!S.session){s.innerHTML='';return;}
  s.innerHTML=`<div class="brand"><img src="${LOGO()}" alt=""><b>Fet<i>Ure</i></b></div><nav aria-label="${L('Разделы','Sections')}">${TABDEF().map(([t,icn,l,n])=>`<button class="navb ${S.nav.tab===t?'on':''}" data-tab="${t}">${icn}<span>${l}</span>${n==='dot'?'<em style="min-width:9px;width:9px;height:9px;padding:0"></em>':n?`<em>${n}</em>`:''}</button>`).join('')}</nav>
- <button class="btn primary create" data-act="create">${I.plus}${L('Создать','Create')}</button><div class="sp"></div>
+ <button class="btn primary create" data-act="create" aria-label="${L('Создать','Create')}">${I.plus}<span>${L('Создать','Create')}</span></button><div class="sp"></div>
  <button class="mebtn" data-tab="me">${av('me','')}<span>${esc(pname('me'))}<small>@${esc(S.me.nick||'…')}</small></span></button>`;
 }
 function renderCtx(){const c=$('#ctx');if(!c)return;c.innerHTML=S.session&&window.CTX?CTX(S.nav.tab):'';}
