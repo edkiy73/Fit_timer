@@ -25,7 +25,7 @@ SC.D03={root:1,tab:'people',title:()=>L('Люди','People'),render:(p,r)=>{
  if(!S.me.dating)return head+`<div class="view"><div class="wrap">${datingOff()}</div></div>`;
  const list=pool();
  if(!list.length)return head+`<div class="view"><div class="wrap">${deckEmpty()}</div></div>`;
- return head+`<div class="view deckmode">${S.me.datingVisible?'':`<button class="incog" data-act="incogInfo">${I.eyeoff}<span>${L('Ты смотришь незаметно — тебя нет в подборке','You’re browsing hidden — you’re not in Discover')}</span><b>${L('Показаться','Show me')}</b></button>`}<div class="deck" id="deck">${deckInner(list)}</div></div>`;},
+ return head+`<div class="view deckmode"><div class="deck" id="deck">${deckInner(list)}</div></div>`;},
  after:(p)=>{if((p.sub||'discover')==='discover'&&S.me.dating)initDeck();fillJars();}};
 ACT.pplSub=a=>setSub(a.dataset.v);
 
@@ -165,7 +165,7 @@ function openChat(id){if(!PEOPLE[id]||isBlocked(id)||!isMatch(id)&&!S.threads[id
 SC.D04={title:()=>L('Фильтры знакомств','Dating filters'),render:(p,r)=>{if(!r.d)r.d=JSON.parse(JSON.stringify(S.filters.dating));const f=r.d;f.topics=f.topics||[];f.placeMode=f.placeMode||'city';const n=S.deckOrder.filter(id=>!S.decided[id]&&!isMatch(id)&&!isBlocked(id)&&PEOPLE[id].dating&&passDating(id,f)).length;
  const DROWS=dfRows();
  return `${bar(L('Фильтры','Filters'),{back:1,sm:1,actions:`<button class="btn text auto" data-act="dfReset">${L('Сбросить','Reset')}</button>`})}<div class="view nodock cta1"><div class="wrap">
- ${grp(L('Кого показывать','Show'),seg([['all',L('Все','All')],['people',L('Люди','People')],['pairs',L('Пары','Couples')]],f.show,'dfShow','sm'))}
+ ${grp(L('Кого показывать','Show'),choices([['all',L('Все','All')],['people',L('Люди','People')],['pairs',L('Пары','Couples')]],f.show,'dfShow'))}
  ${grp(L('Возраст','Age'),`<div class="dual"><span class="trk"><i style="left:${(f.age[0]-18)/81*100}%;right:${100-(f.age[1]-18)/81*100}%"></i></span><input type="range" min="18" max="99" value="${f.age[0]}" data-in="dfAge" data-i="0" aria-label="${L('Минимальный возраст','Minimum age')}"><input type="range" min="18" max="99" value="${f.age[1]}" data-in="dfAge" data-i="1" aria-label="${L('Максимальный возраст','Maximum age')}"></div>`,{right:`<b style="color:var(--ink)" id="ageLbl">${f.age[0]}–${f.age[1]}</b>`})}
  ${grp(L('Где искать','Where'),`${locationFields(f,'dfCity','dfPlaceMode','dfGeo').replace(/^<div class="sec">[^<]*<\/div>/,'')}${f.city&&f.placeMode==='city'?`<button class="btn text auto" data-act="dfAnyCity">${L('Искать в любом городе','Search any city')}</button>`:''}${f.placeMode==='nearby'?`<div class="row" style="justify-content:space-between;margin-top:10px"><span class="note">${L('Радиус','Radius')}</span><b id="distLbl">${L(`до ${f.dist} км`,`up to ${f.dist} km`)}</b></div><div class="dual single"><span class="trk"><i style="left:0;right:${100-(f.dist-5)/95*100}%"></i></span><input type="range" min="5" max="100" step="5" value="${f.dist}" data-in="dfDist" aria-label="${L('Расстояние','Distance')}"></div>`:''}`)}
  ${grp(L('Предпочтения','Preferences'),DROWS.map(([k,l,items])=>`<button class="li frow" data-act="dfOpen" data-v="${k}"><span class="tx"><b>${l}</b><small class="${(f[k]||[]).length?'on':''}">${esc(sumOf(items,f[k]||[]))}</small></span>${I.chev}</button>`).join(''),{list:1,inner:'frows'})}

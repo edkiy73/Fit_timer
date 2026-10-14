@@ -1399,11 +1399,6 @@ button.jar:active .glass{transform:scale(.95)}
 .radio:not(:has(+.radio)){border-bottom-left-radius:18px;border-bottom-right-radius:18px}
 .radio.on{border-color:var(--line);background:var(--surf)}
 .radio[style*="margin-top:8px"]{margin-top:0!important}
-/* loose content after a small title gets its own card */
-.sec+.chips:not(.scroll),.sec+.status-pick,.sec+.scale,.sec+.dual,.sec+p,.flabel+.chips,.sec+.mini-jars,.fsec>.sec+.chips{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:12px}
-.sec+.chips:not(.scroll),.fsec>.sec+.chips{gap:7px}
-.sec+.scale{display:grid}
-.sec+p{margin:0!important}
 .sec{margin:20px 4px 7px;font-size:12.5px;letter-spacing:.02em}
 .field>.flabel{margin:0 4px 7px}
 .mini-jars{border-radius:20px}
@@ -1437,7 +1432,6 @@ button.jar:active .glass{transform:scale(.95)}
 .scale.ten{margin-top:12px}
 .card .seg.sm button{font-size:12.5px}
 /* forms inside cards */
-.card .flabel+.chips,.card .sec+.chips:not(.scroll),.card .sec+.status-pick,.card .sec+.scale,.card .sec+p{background:none;border:0;padding:0}
 .form-card{display:grid;gap:14px}
 .form-card>.field,.form-card>label.field{margin:0}
 .form-card .inp,.card .field .inp{background:var(--raise)}
@@ -1454,3 +1448,19 @@ button.jar:active .glass{transform:scale(.95)}
 .priv-in .grp:first-child{margin-top:4px}
 .veil-card{padding:0;overflow:hidden}.veil-card .veil{margin:0;border-radius:0}
 .acc-sec .card+.card{margin-top:8px}
+/* V8.1: chips are never boxed; a card never sits inside another card */
+.grp>.card:has(>.chips:only-child),.grp>.card:has(>.chips:first-child+.grp-n:last-child){background:none;border:0;padding:0;box-shadow:none}
+.card .card{background:none;border:0;padding:0;box-shadow:none;border-radius:0}
+.chip:has(>.badge-abs){position:relative;overflow:visible}.chip>em.badge-abs{position:absolute;top:-5px;right:-5px}
+/* V8.1 consistency: forms, plain text, tabs and chips sit on the background; cards hold only lists of rows and media */
+.card.form-card{background:none;border:0;padding:0;box-shadow:none;border-radius:0}
+.form-card .inp,.card .field .inp{background:var(--surf)}
+.grp>.card:has(>p.bio:only-child),.grp>.card:has(>p.topic-desc:only-child),.grp.bare>.card{background:none;border:0;padding:0 4px;box-shadow:none}
+.grp.bare .scale.ten{margin-top:0}
+.priv-open{background:none;padding:0;border-radius:0;margin-top:26px;border-top:1px solid var(--line);padding-top:16px}
+.onb-c{position:relative;display:block;margin-bottom:10px}.onb-c>.cmc{padding-bottom:62px;align-items:flex-start}.onb-c>.btn{position:absolute;left:12px;right:12px;bottom:12px;margin:0;width:auto}
+.grp>.card:has(>.cmp:only-child){background:none;border:0;padding:0;box-shadow:none}
+.grp>.card:has(>.cmp:only-child) .cmp>div{background:var(--surf);border:1px solid var(--line)}
+.vw-wm{position:absolute;inset:-20%;display:grid;grid-template-columns:repeat(3,1fr);align-content:space-around;justify-items:center;gap:60px 0;transform:rotate(-24deg);pointer-events:none;z-index:1}
+.vw-wm span{font-size:15px;font-weight:700;letter-spacing:.04em;color:rgba(255,255,255,.32);text-shadow:0 1px 2px rgba(0,0,0,.35);white-space:nowrap}
+.vw-track figure{position:relative}
