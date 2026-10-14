@@ -98,3 +98,6 @@ Events #1091 merged3cb01b13, CI/browser PASS. Текущая малая порц
 
 ### Уточнение среза уведомлений PR1092
 Normal browser click N01 active match→Lina H02 подтверждён. End connection обнаружил мёртвые ice controls, исправлены до merge вместе с retry/typing ended UI; история сохранена. Full-module VM и независимое ревью follow-up PASS. Актуальный CI/browser/merge статус финального head — PR1092; карта завершённых срезов обновлена в V10-ROADMAP.
+
+### V10: уведомления завершены, порция editor/preview
+PR1092 merged1f96c5e5, CI/browser390 PASS. Следующая порция F07/F09 исправляет потерянную audience в preview и актуально проверяет result topics перед publish, включая async callback. История/радиус в V10-CHANGELOG, targeted full-module contracts проходят; итоговый CI/browser в PR. Основной React/backend вне scope.

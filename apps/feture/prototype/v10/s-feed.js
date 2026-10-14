@@ -91,12 +91,19 @@ ACT.composeX=a=>go('F07',{x:a.dataset.x});
 const AUD=()=>[['all',I.globe,L('Все участники','All members'),L('Видно в ленте и в твоём профиле','Visible in the feed and on your profile')],['followers',I.people,L('Подписчики','Followers'),L('Только те, кто подписан на тебя','Only people who follow you')],['granted',I.key,L('Приватный круг','Private circle'),L('Люди, которым ты открыл(а) расширенный профиль','People you’ve shared your private profile with')]];
 const POLL_MAX=10;
 /* V8: start minimal — text and three buttons; each block opens only when asked, in its own card */
-const resEligible=()=>S.me.jars.filter(j=>!j.limit&&j.vis==='public');
+const resEligible=()=>S.me.jars.filter(j=>!j.limit&&j.vis==='public'&&Number.isInteger(j.lv)&&j.lv>=1&&j.lv<=10);
+const postResultSelection=r=>[...new Set(r.resSel||[])].filter(t=>resEligible().some(j=>j.t===t)).slice(0,4);
+const postResultReady=d=>!d.result||postResultSelection({resSel:d.result}).length>0;
+const missingPostResult=()=>toast(L('Темы результата больше не открыты всем. Вернись в редактор','Result topics are no longer public. Return to the editor'),{type:'warn'});
+let composeDraftSeq=0;
+function syncComposeAudience(owner,aud){if(!owner||typeof navHistory==='undefined'||!navHistory)return;for(const entry of navHistory.entries){for(const route of Object.values(entry.nav?.stacks||{}).flat()){if(route.id==='F07'&&route.composeId===owner){route.aud=aud;route.dirty=true;}if(route.id==='F09'&&route.p.draft?.composeId===owner)route.p.draft.aud=aud;}}}
+const composeAudience=()=>cur().id==='F09'?cur().p.draft.aud:cur().aud;
 SC.F07={title:()=>L('Публикация','Post'),render:(p,r)=>{
  const ex=p.id?postById(p.id):null;
- if(!r.init){r.init=1;r.tags=[];r.aud='all';r.media=[];r.poll=null;r.result=false;r.resSel=resEligible().slice(0,4).map(j=>j.t);
+ if(!r.init){r.init=1;r.composeId='compose'+(++composeDraftSeq);r.tags=[];r.aud='all';r.media=[];r.poll=null;r.result=false;r.resSel=resEligible().slice(0,4).map(j=>j.t);
   if(ex){r.f.text=T(ex.text);r.tags=[...ex.tags];r.aud=ex.aud;r.media=(ex.media||[]).slice();r.poll=ex.poll?{opts:ex.poll.map(x=>T(x[0]))}:null;r.result=!!ex.result;if(ex.result)r.resSel=ex.result.map(x=>x[0]);}
   if(p.x==='poll')r.poll={opts:['','']};if(p.x==='result')r.result=true;if(p.x==='media')setTimeout(()=>{if(cur()===r)ACT.postMedia();},250);}
+ r.resSel=postResultSelection(r);
  const a=AUD().find(x=>x[0]===r.aud)||AUD()[0];const m=r.media;const el=resEligible();
  const mediaBlock=m.length?grp(L(`Фото и видео · ${m.length}/${MEDIA_MAX}`,`Photos & video · ${m.length}/${MEDIA_MAX}`),`<div class="edit-ph">${m.map((x,i)=>`<div>${x.type==='video'?`<video src="${esc(x.url)}" muted playsinline preload="metadata"></video><span class="mainph">${ic('video',12)} ${fmtDur(x.dur||0)}</span>`:`<img src="${esc(x.url)}" alt="">`}<button class="rm" data-act="rmMedia" data-v="${i}" aria-label="${L('Убрать','Remove')}">${I.close}</button><button class="vw" data-act="viewDraftMedia" data-v="${i}" aria-label="${L('Посмотреть','View')}"></button></div>`).join('')}${m.length<MEDIA_MAX?`<button data-act="postMedia" aria-label="${L('Добавить фото или видео','Add photo or video')}">${I.plus}</button>`:''}</div>`):'';
  const pollBlock=r.poll?grp(L(`Опрос · ${r.poll.opts.length}/${POLL_MAX}`,`Poll · ${r.poll.opts.length}/${POLL_MAX}`),`${r.poll.opts.map((o,i)=>`<div class="field pollopt ${r.err&&r.err['o'+i]?'err':''}" data-field="o${i}"><div class="inwrap"><span class="n">${i+1}</span><input class="inp" name="o${i}" data-in="pollOpt" data-i="${i}" value="${esc(o)}" maxlength="80" placeholder="${L('Вариант','Option')} ${i+1}" aria-label="${L('Вариант','Option')} ${i+1}">${r.poll.opts.length>2?`<button class="ibtn ghost sm" data-act="rmOpt" data-v="${i}" aria-label="${L('Убрать вариант','Remove option')}">${I.close}</button>`:''}</div></div>`).join('')}${r.poll.opts.length<POLL_MAX?`<button class="btn text auto" data-act="addOpt">${I.plus}${L('Добавить вариант','Add option')}</button>`:''}${r.err&&r.err.opts?`<div class="ferr">${I.alert}${r.err.opts}</div>`:''}`,{right:`<button data-act="rmPoll">${L('Убрать','Remove')}</button>`,foot:L('Голос можно изменить или отменить. Кто как голосовал, не видно никому.','Votes can be changed or withdrawn. Nobody sees who voted for what.')}):'';
@@ -110,7 +117,7 @@ SC.F07={title:()=>L('Публикация','Post'),render:(p,r)=>{
  ${grp(L('Темы · до 3','Topics · up to 3'),chipPicker({items:topicItems(),sel:r.tags,act:'postTag',title:L('Темы публикации','Post topics'),max:3,cats:true}))}
  ${r.aud==='granted'?`<p class="grp-n">${L('Увидят только люди, которым ты открыл(а) расширенный профиль. Когда доступ закончится — публикация пропадёт у них.','Only people you shared your private profile with will see it. When access ends, it disappears for them.')}</p>`:''}
  </div></div><div class="ctabar"><div class="wrap"><div class="row g8"><button class="btn soft" style="flex:0 0 auto;width:auto" data-act="toPreview">${I.eye}${L('Как увидят','Preview')}</button><button class="btn primary" data-act="publishNow">${m.length?L('Отправить на проверку','Submit for review'):L('Опубликовать','Publish')}</button></div></div></div>`;}};
-ACT.resPick=a=>{const r=cur();const v=a.dataset.v;const i=r.resSel.indexOf(v);if(i<0&&r.resSel.length>=4){toast(L('Не больше 4 тем','Up to 4 topics'),{type:'warn'});return;}i<0?r.resSel.push(v):r.resSel.splice(i,1);r.dirty=true;refresh();};
+ACT.resPick=a=>{const r=cur();r.resSel=postResultSelection(r);const v=a.dataset.v;if(!resEligible().some(j=>j.t===v))return;const i=r.resSel.indexOf(v);if(i<0&&r.resSel.length>=4){toast(L('Не больше 4 тем','Up to 4 topics'),{type:'warn'});return;}i<0?r.resSel.push(v):r.resSel.splice(i,1);r.dirty=true;refresh();};
 ACT.publishNow=a=>{if(!validatePost())return;const r=cur();r.p.draft=draftOf(r);ACT.publish(a);};
 ACT.postTag=a=>{const r=cur();const v=a.dataset.v;const i=r.tags.indexOf(v);if(i<0&&r.tags.length>=3){toast(L('Можно выбрать не больше 3 тем','You can pick up to 3 topics'),{type:'warn'});return;}i<0?r.tags.push(v):r.tags.splice(i,1);r.dirty=true;refresh();};
 ACT.postMedia=()=>{const r=cur();openUploader({max:MEDIA_MAX,have:r.media.length,accept:'media',aspect:'4:5',aspects:['4:5','1:1','orig'],title:L('Фото и видео','Photos & video'),done:items=>{r.media.push(...items);r.dirty=true;if(r.err)delete r.err.media;refresh();}});};
@@ -123,16 +130,17 @@ ACT.rmResult=()=>{cur().result=false;cur().dirty=true;refresh();};
 IN.pollOpt=el=>{const r=cur();r.poll.opts[+el.dataset.i]=el.value;r.dirty=true;if(r.err){delete r.err['o'+el.dataset.i];delete r.err.opts;}$(`[data-field="o${el.dataset.i}"]`)?.classList.remove('err');};
 ACT.addOpt=()=>{const r=cur();if(r.poll.opts.length>=POLL_MAX)return;r.poll.opts.push('');refresh();setTimeout(()=>$(`[name="o${r.poll.opts.length-1}"]`)?.focus(),60);};
 ACT.rmOpt=a=>{const r=cur();r.poll.opts.splice(+a.dataset.v,1);r.dirty=true;refresh();};
-ACT.audience=()=>sheet(()=>({title:L('Кто увидит','Who can see this'),body:`<div class="btns" style="gap:0">${AUD().map(([k,i,t,s])=>`<button class="radio ${cur().aud===k?'on':''}" data-act="setAud" data-v="${k}" style="margin-top:8px"><i></i><span class="tx"><b>${t}</b><small>${s}</small></span></button>`).join('')}</div><p class="note mt16">${L('Откровенные фото и видео — только для приватного круга.','Explicit photos and video are for the private circle only.')}</p>`}));
-ACT.setAud=a=>{cur().aud=a.dataset.v;cur().dirty=true;closeSheet();refresh();};
+ACT.audience=()=>sheet(()=>({title:L('Кто увидит','Who can see this'),body:`<div class="btns" style="gap:0">${AUD().map(([k,i,t,s])=>`<button class="radio ${composeAudience()===k?'on':''}" data-act="setAud" data-v="${k}" style="margin-top:8px"><i></i><span class="tx"><b>${t}</b><small>${s}</small></span></button>`).join('')}</div><p class="note mt16">${L('Откровенные фото и видео — только для приватного круга.','Explicit photos and video are for the private circle only.')}</p>`}));
+ACT.setAud=a=>{const r=cur(),v=a.dataset.v;if(!AUD().some(x=>x[0]===v))return;if(r.id==='F09'){r.p.draft.aud=v;const editor=stack().slice(0,-1).reverse().find(x=>x.id==='F07');if(editor){editor.aud=v;editor.dirty=true;}syncComposeAudience(r.p.draft.composeId,v);}else{r.aud=v;r.dirty=true;syncComposeAudience(r.composeId,v);}closeSheet();refresh();};
 function validatePost(){const r=cur();r.err={};const tx=fv('text').trim();
  if(!tx&&!r.media.length&&!r.result)r.err.text=L('Напиши пару слов или добавь фото','Write a few words or add a photo');
+ if(r.result&&!postResultSelection(r).length)r.err.text=L('Выбери открытые темы для результата или убери его','Choose public topics for the result or remove it');
  if(r.poll&&!tx)r.err.text=L('Напиши вопрос для опроса','Write the poll question');
  if(tx.length>1000)r.err.text=L('Максимум 1000 символов','1000 characters max');
  if(r.poll){const f=r.poll.opts.map(o=>o.trim());f.forEach((o,i)=>{if(!o)r.err['o'+i]=' ';});const filled=f.filter(Boolean);if(filled.length<2)r.err.opts=L('Нужно минимум 2 варианта','At least 2 options needed');else if(f.some(o=>!o))r.err.opts=L('Заполни или убери пустые варианты','Fill in or remove empty options');if(new Set(filled.map(x=>x.toLowerCase())).size!==filled.length)r.err.opts=L('Варианты не должны повторяться','Options must be different');}
  if(Object.keys(r.err).length){refresh();shakeFirstErr();return false;}return true;}
-const draftOf=r=>({text:fv('text').trim(),tags:[...r.tags],aud:r.aud,media:r.media.slice(),poll:r.poll?r.poll.opts.map(o=>o.trim()).filter(Boolean):null,result:r.result&&r.resSel.length?[...r.resSel]:null,edit:r.p.id||null});
-const postFromDraft=(d,id)=>({id,author:'me',t:Date.now(),type:'post',tags:d.tags,likes:0,aud:d.aud,text:{ru:d.text,en:d.text},comments:[],media:d.media,poll:d.poll?d.poll.map(o=>[{ru:o,en:o},0]):null,result:d.result?resEligible().filter(j=>d.result.includes(j.t)).map(j=>[j.t,j.lv]):null});
+const draftOf=r=>({composeId:r.composeId,text:fv('text').trim(),tags:[...r.tags],aud:r.aud,media:r.media.slice(),poll:r.poll?r.poll.opts.map(o=>o.trim()).filter(Boolean):null,result:r.result&&postResultSelection(r).length?postResultSelection(r):null,edit:r.p.id||null});
+const postFromDraft=(d,id)=>({id,author:'me',t:Date.now(),type:'post',tags:d.tags,likes:0,aud:d.aud,text:{ru:d.text,en:d.text},comments:[],media:d.media,poll:d.poll?d.poll.map(o=>[{ru:o,en:o},0]):null,result:d.result?resEligible().filter(j=>postResultSelection({resSel:d.result}).includes(j.t)).map(j=>[j.t,j.lv]):null});
 ACT.toPreview=()=>{if(!validatePost())return;go('F09',{draft:draftOf(cur())});};
 ACT.saveDraft=a=>{const r=cur();if(!fv('text').trim()&&!r.media.length){setErr('text',L('Пустой черновик не сохранить','Can’t save an empty draft'));shakeFirstErr();return;}
  run(a,()=>{const id=r.p.id||'m'+Date.now();const ex=S.myPosts.find(x=>x.id===id);const obj={...postFromDraft(draftOf(r),id),status:'draft'};ex?Object.assign(ex,obj):S.myPosts.unshift(obj);r.dirty=false;r.p.id=id;},{ok:L('Черновик сохранён в «Я → Мои публикации»','Draft saved in Me → My posts')});};
@@ -142,12 +150,13 @@ SC.F09={title:()=>L('Предпросмотр','Preview'),valid:p=>!!p.draft,ren
  <div class="card list mt16">${linkRow({act:'audience',icon:'eye',tone:'v',title:a[2],sub:a[3],val:L('Изменить','Change')})}${hasPhoto?linkRow({icon:'shield',tone:'a',title:L('Проверка фото и видео','Photo & video review'),sub:L('Обычно до 30 минут. До этого публикацию видишь только ты','Usually under 30 minutes. Until then only you can see it'),noChev:1}):''}</div>
  </div></div><div class="ctabar"><div class="wrap"><div class="row g8"><button class="btn soft" style="flex:0 0 auto;width:auto" data-back>${L('Изменить','Edit')}</button><button class="btn primary" data-act="publish">${hasPhoto?L('Отправить на проверку','Submit for review'):L('Опубликовать','Publish')}</button></div></div></div>`;}};
 ACT.back=()=>back();
-ACT.publish=a=>{const d=cur().p.draft;const hasPhoto=d.media.length>0;
+ACT.publish=a=>{const d=cur().p.draft;if(!postResultReady(d)){missingPostResult();return;}let published=false;const hasPhoto=d.media.length>0;
  run(a,()=>{
+  if(!postResultReady(d)){missingPostResult();return;}
   {const id=d.edit||'m'+Date.now();const obj={...postFromDraft(d,id),status:hasPhoto?'review':'published'};
    const ex=S.myPosts.find(x=>x.id===id);ex?Object.assign(ex,obj,{comments:ex.comments}):S.myPosts.unshift(obj);}
-  const st=stack();st.forEach(r=>r.dirty=false);st.length=1;S.nav.stacks.feed[0].p.sub='foryou';if(S.nav.tab!=='feed')S.nav.tab='feed';render('back');
- },{ok:()=>hasPhoto?L('Отправлено на проверку. Сообщим, когда опубликуем','Submitted for review. We’ll let you know when it’s live'):L('Опубликовано','Published')});};
+  published=true;const st=stack();st.forEach(r=>r.dirty=false);st.length=1;S.nav.stacks.feed[0].p.sub='foryou';if(S.nav.tab!=='feed')S.nav.tab='feed';render('back');
+ },{ok:()=>!published?null:hasPhoto?L('Отправлено на проверку. Сообщим, когда опубликуем','Submitted for review. We’ll let you know when it’s live'):L('Опубликовано','Published')});};
 
 /* F10 — my posts and drafts */
 SC.F10={title:()=>L('Мои публикации','My posts'),render:()=>{const by=k=>S.myPosts.filter(x=>x.status===k);
@@ -159,3 +168,4 @@ SC.F10={title:()=>L('Мои публикации','My posts'),render:()=>{const 
  ${!S.myPosts.length?empty('feed',L('Ты ещё ничего не публиковал(а)','You haven’t posted yet'),L('Поделись мыслью, фото или опросом — аудиторию выбираешь сам(а).','Share a thought, photos or a poll — you choose the audience.'),`<button class="btn primary" data-go="F07">${L('Создать публикацию','Create a post')}</button>`):''}
  </div></div>`;}};
 ACT.f10tab=a=>setP('t',a.dataset.v);
+
