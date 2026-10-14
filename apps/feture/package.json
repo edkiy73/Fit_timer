@@ -7,7 +7,7 @@
     "check:catalog": "node tools/check-catalog-editorial.mjs",
     "check:auth-env": "node tools/check-auth-env.mjs",
     "dev": "vite",
-    "build": "npm run check:catalog && vite build",
+    "build": "npm run check:catalog && node tools/build-prototype-v10.mjs && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.server.json",
     "test:smoke": "node tests/smoke.js && node --test tests/vercel-ignore.test.mjs && node --check tests/e2e.mjs",
