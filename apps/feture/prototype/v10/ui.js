@@ -37,8 +37,12 @@ function sharedSummary(id){const s=shared(id);if(s.few)return L('Пока мал
 function whoLine(id){const p=person(id);if(!p)return '';const g=(p.gender||[]).map(x=>opt('gender',x)).join(', ');const o=(p.orient||[]).map(x=>opt('orient',x)).join(', ');return [p.pair?T(p.pairNote):opt('pron',p.pron),[g,o].filter(Boolean).join(', ')].filter(Boolean).join(' · ');}
 function placeLine(id){const p=person(id);if(!p)return '';const km=S.me.location?.mode==='nearby'?nearbyDistance(id):null;return [city(p.city),km!==null?L(`около ${Math.max(5,km)} км`,`about ${Math.max(5,km)} km`):''].filter(Boolean).join(' · ');}
 function presence(id){const p=person(id);if(!p)return '';return p.online?L('сейчас в сети','online now'):T(p.last)||'';}
+/** attributes that open a person's profile (own profile for me) */
+const profGo=id=>id==='me'?'data-go="P03"':`data-go="P01" data-p='${JSON.stringify({id})}'`;
+/** avatar + name as one link to the profile; used where a row has its own other actions */
+const whoLink=(id,cls='xs',extra='')=>`<button class="plink" ${profGo(id)} aria-label="${L(`Профиль: ${pname(id)}`,`Profile: ${pname(id)}`)}">${av(id,cls)}</button>`;
 function personRow(id,o={}){
- return `<button class="li" data-go="P01" data-p='${JSON.stringify({id})}'>${av(id,o.round?'round':'')}<span class="tx"><b>${esc(pname(id))}${person(id).dating&&person(id).age?`, ${person(id).age}`:''}</b><small>${o.sub||esc(whoLine(id))}</small></span>${o.right||I.chev}</button>`;
+ return `<button class="li" ${profGo(id)}>${av(id,o.round?'round':'')}<span class="tx"><b>${esc(pname(id))}${person(id).dating&&person(id).age?`, ${person(id).age}`:''}</b><small>${o.sub||esc(whoLine(id))}</small></span>${o.right||I.chev}</button>`;
 }
 
 /* ---------- posts ---------- */
@@ -56,7 +60,7 @@ function postMediaHTML(p,o={}){let h='';const m=postMedia(p);if(m.length)h+=medi
  return h;}
 function postCard(p,o={}){
  const mine=p.author==='me';const pid=JSON.stringify({id:p.id});
- const head=`<div class="post-h"><button class="who" data-go="${mine?'P03':'P01'}" data-p='${JSON.stringify({id:p.author})}'>${av(p.author,'sm')}<span class="tx"><b>${esc(pname(p.author))}</b><small>${F.rel(p.t)}${p.aud==='followers'?` · <span class="aud">${I.people}${L('подписчикам','followers')}</span>`:''}${o.community&&p.community?` · ${esc(T(COMMUNITIES[p.community].name))}`:''}</small></span></button><button class="ibtn ghost sm" data-act="postMenu" data-v="${p.id}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
+ const head=`<div class="post-h"><button class="who" ${profGo(p.author)}>${av(p.author,'sm')}<span class="tx"><b>${esc(pname(p.author))}${nameBadges(person(p.author))}</b><small>${F.rel(p.t)}${p.aud==='followers'?` · <span class="aud">${I.people}${L('подписчикам','followers')}</span>`:''}${o.community&&p.community?` · ${esc(T(COMMUNITIES[p.community].name))}`:''}</small></span></button><button class="ibtn ghost sm" data-act="postMenu" data-v="${p.id}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
  const media=postMediaHTML(p,o);
  const tags=p.tags&&p.tags.length?`<div class="tags">${p.tags.map(t=>`<button data-go="F04" data-p='${JSON.stringify({id:t})}'>#${esc(topic(t))}</button>`).join('')}</div>`:'';
  const nC=p.comments.length;
@@ -90,7 +94,7 @@ function evStatusPill(id){
 function evWhen(id,full){const e=EV(id);const t=F.time(e.start,USER_TZ);const day=full?F.day(e.start):F.date(e.start);
  const diffTz=e.format==='online'&&e.tz!==USER_TZ;return `${day}, ${t}${diffTz?` · ${F.time(e.start,e.tz)} ${F.tzName(e.tz)}`:''}`;}
 function eventCard(id,o={}){
- const e=EV(id);const st=evStatusPill(id);
+ const e=EV(id);const st=o.neutral?'':evStatusPill(id);
  const fmt=e.format==='online'?`<span>${I.video}${L('Онлайн','Online')}</span>`:`<span>${I.pin}${esc(T(e.area)||city(e.city))}</span>`;
  const meta=`<div class="meta"><span>${I.clock}${F.time(e.start)}</span><span>${I.globe}${e.lang}</span><span>${I.ticket}${e.price?esc(T(e.price)):L('Бесплатно','Free')}</span></div>`;
  if(o.row)return `<button class="evc row" data-go="E03" data-p='${JSON.stringify({id})}'><div class="cv">${evCover(e,'cal')}<div class="date"><b>${F.dnum(e.start)}</b><small>${F.mon(e.start)}</small></div></div><div class="bd"><small>${e.format==='online'?L('Онлайн','Online'):esc(city(e.city))} · ${F.time(e.start)}</small><b>${esc(T(e.title))}</b>${st||`<span class="note">${esc(pname(e.organizer))}</span>`}</div></button>`;

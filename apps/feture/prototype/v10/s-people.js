@@ -64,7 +64,7 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
   ${photoCount(id)>1?`<div class="pc-zone l" data-ph="-1"></div><div class="pc-zone r" data-ph="1"></div>`:''}<div class="pc-zone c" data-ph="0" aria-hidden="true"></div>
   <div class="pc-tags">${likesMe?`<span class="pc-liked">${I.heartf}${L('Ты нравишься','Likes you')}</span>`:''}<span class="pc-score"><b>${sh.few?'—':sh.match.length}</b><small>${sh.few?L('мало данных','not enough data'):pl(sh.match.length,['общая тема','общие темы','общих тем'],['shared topic','shared topics'],true)}</small></span></div>
   <div class="stamp l">${L('Да','Like')}</div><div class="stamp n">${L('Мимо','Pass')}</div>
-  <div class="pc-info"><h2 class="pc-name">${esc(pname(id))}${p.age?`<span>${p.age}</span>`:''}${p.verified?`<span title="${L('Возраст подтверждён','Age verified')}" style="display:contents">${I.verified}</span>`:''}</h2>
+  <div class="pc-info"><h2 class="pc-name">${esc(pname(id))}${p.age?`<span>${p.age}</span>`:''}${nameBadges(p)}</h2>
    <div class="pc-who"><span>${esc(whoLine(id))}</span><span>${esc(placeLine(id))}</span>${p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>
    <div class="pc-keys">${keys.map(k=>`<span>${esc(k)}</span>`).join('')}</div>
    <div class="pc-hint">${I.down}${L('Листай вниз — что у вас общего','Scroll down — what you share')}</div></div>

@@ -80,34 +80,40 @@ OPT.role[0][1]='ведущая роль';OPT.role[1][1]='принимающая 
 OPT.role.push(['dom','доминант','dominant'],['sub','сабмиссив','submissive'],['top','топ','top'],['bottom','боттом','bottom'],['rigger','риггер','rigger'],['rope-bottom','принимающая роль в шибари','rope bottom'],['sadist','садист','sadist'],['masochist','мазохист','masochist'],['brat','брат','brat'],['brat-tamer','brat tamer','brat tamer'],['primal','праймал','primal'],['sensual','сенсуальная роль','sensual'],['exploring','исследую роли','exploring roles'],['unspecified','не указывать','prefer not to say']);
 const CITY={berlin:{ru:'Берлин',en:'Berlin'},hamburg:{ru:'Гамбург',en:'Hamburg'},moscow:{ru:'Москва',en:'Moscow'},online:{ru:'Онлайн',en:'Online'}};
 
+/** Who follows whom (seed). 'me' entries exist only for the full persona. Counts in profiles are always the length of these lists. */
+const FOLLOW_SEED={sofi:['mia','kira','me'],leon:['mia','maya'],mia:['maya','kai','sofi','me'],kai:['maya','mia','noa','me'],maya:['mia','noa'],ari:['kai'],kira:['sofi','mia','lina'],lina:['kira','me'],tomeva:['mia','maya'],dan:['me'],noa:['maya','kai']};
 const PEOPLE={
- sofi:{name:'Sofi',age:26,photo:1,nph:3,city:'berlin',km:4,pron:'she',gender:['woman'],orient:['bi'],format:['open','serious'],status:'single',role:'recv',seek:['dates','chat'],verified:true,online:true,dating:true,
+ sofi:{pv:true,name:'Sofi',age:26,photo:1,nph:3,city:'berlin',km:4,pron:'she',gender:['woman'],orient:['bi'],format:['open','serious'],status:'single',role:'recv',seek:['dates','chat'],verified:true,online:true,dating:true,
   bio:{ru:'Люблю долгие переписки перед встречей и людей, которые не торопят. Фотографирую плёнку.',en:'I love long chats before meeting and people who don’t rush. I shoot film.'},
   jars:[['experiments',10],['bondage',8],['sensory',8],['exhibition',4]],langs:['ru','en']},
- leon:{name:'Leon',age:33,photo:2,nph:2,city:'berlin',km:8,pron:'he',gender:['transm'],orient:['bi'],format:'open',role:'lead',seek:['dates'],verified:true,online:false,last:{ru:'был вчера',en:'active yesterday'},dating:true,
+ leon:{premium:true,name:'Leon',age:33,photo:2,nph:2,city:'berlin',km:8,pron:'he',gender:['transm'],orient:['bi'],format:'open',role:'lead',seek:['dates'],verified:true,online:false,last:{ru:'был вчера',en:'active yesterday'},dating:true,
   bio:{ru:'Сначала кофе и разговор, потом всё остальное. Веду небольшие вечеринки.',en:'Coffee and a talk first, everything else later. I host small parties.'},
   jars:[['control',10],['roleplay',8],['bondage',6],['latex',8]],langs:['en','de']},
- mia:{name:'Mia',age:29,photo:3,nph:5,city:'berlin',km:3,pron:'she',gender:['transw'],orient:['queer'],format:['poly','play'],status:'partnered',role:'switch',seek:['dates','exp'],verified:true,online:true,dating:true,
+ mia:{pv:true,premium:true,privText:{ru:'Перед первой сессией всегда созваниваемся. Стоп-слово — «красный», жест — два хлопка. После — обязательно чай и разговор.',en:'We always call before a first session. Safeword is “red”, gesture is two taps. Afterwards — tea and a talk, always.'},name:'Mia',age:29,photo:3,nph:5,city:'berlin',km:3,pron:'she',gender:['transw'],orient:['queer'],format:['poly','play'],status:'partnered',role:'switch',seek:['dates','exp'],verified:true,online:true,dating:true,
   bio:{ru:'Люблю людей, которые говорят прямо, не торопят события и заранее обсуждают ожидания. Практикую шибари шесть лет.',en:'I like people who speak directly, don’t rush and agree on expectations up front. Six years of shibari.'},
   jars:[['shibari',10],['bondage',8],['aftercare',10],['roleplay',8]],langs:['ru','en']},
- kai:{name:'Kai',age:27,photo:4,nph:2,city:'berlin',km:5,pron:'they',gender:['nb'],orient:['pan'],format:'ra',role:'switch',seek:['chat','friends'],verified:true,online:false,last:{ru:'был(а) сегодня',en:'active today'},dating:true,
+ kai:{pv:true,name:'Kai',age:27,photo:4,nph:2,city:'berlin',km:5,pron:'they',gender:['nb'],orient:['pan'],format:'ra',role:'switch',seek:['chat','friends'],verified:true,online:false,last:{ru:'был(а) сегодня',en:'active today'},dating:true,
   bio:{ru:'Ищу людей, с которыми можно спокойно говорить о границах. Остальное приложится.',en:'Looking for people I can calmly talk boundaries with. The rest will follow.'},
   jars:[['service',8],['bondage',6],['rituals',8],['talk',10]],langs:['en','ru']},
- maya:{name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:'none',seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
+ maya:{pv:true,name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:'none',seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
   bio:{ru:'Веду сообщество «Узлы и разговоры» и встречи для новичков. Здесь — ради людей и тем.',en:'I run the Rope & Talk community and newcomer meetups. Here for people and ideas.'},
   jars:[['shibari',10],['talk',10],['aftercare',8]],langs:['ru','en','de']},
  ari:{name:'Ari',age:30,photo:6,city:'berlin',km:6,pron:'he',gender:['man'],orient:['gay'],format:'open',role:'service',seek:['dates','friends'],verified:true,online:false,last:{ru:'был 2 ч назад',en:'active 2h ago'},dating:true,
   bio:{ru:'Дизайнер, бегаю по утрам, люблю ритуалы и порядок. Пишите про книги.',en:'Designer, morning runner, into rituals and order. Talk to me about books.'},
   jars:[['service',10],['rituals',8],['latex',6],['slow',8]],langs:['en']},
- kira:{name:'Kira',age:28,photo:7,nph:4,city:'berlin',km:2,pron:'she',gender:['woman'],orient:['pan'],format:['poly','serious'],status:'single',role:'recv',seek:['dates','rel'],verified:true,online:true,dating:true,
+ kira:{pv:true,name:'Kira',age:28,photo:7,nph:4,city:'berlin',km:2,pron:'she',gender:['woman'],orient:['pan'],format:['poly','serious'],status:'single',role:'recv',seek:['dates','rel'],verified:true,online:true,dating:true,
   bio:{ru:'Танцую, читаю, учусь доверять медленно. Важна честность и чувство юмора.',en:'I dance, read and learn to trust slowly. Honesty and humour matter.'},
   jars:[['bondage',8],['sensory',10],['intimacy',10],['experiments',6]],langs:['ru','en']},
  lina:{name:'Lina',age:28,photo:9,nph:3,city:'berlin',km:7,pron:'she',gender:['woman'],orient:['bi'],format:'open',role:'switch',seek:['dates','chat'],verified:true,online:false,last:{ru:'была вчера',en:'active yesterday'},dating:true,
   bio:{ru:'Путешествую, готовлю для друзей, исследую себя без спешки.',en:'Travelling, cooking for friends, exploring myself at my own pace.'},
   jars:[['roleplay',8],['experiments',8],['intimacy',8]],langs:['en']},
- tomeva:{name:'Eva & Tom',nameRu:'Eva и Tom',age:null,pair:true,plate:'amber',plate2:'ember',city:'berlin',km:3,pron:'any',gender:['woman','man'],orient:['bi'],format:'swing',role:'switch',seek:['exp','friends'],verified:true,online:true,dating:true,
+ tomeva:{premium:true,members:['eva','tom'],name:'Eva & Tom',nameRu:'Eva и Tom',age:null,pair:true,plate:'amber',plate2:'ember',city:'berlin',km:3,pron:'any',gender:['woman','man'],orient:['bi'],format:'swing',role:'switch',seek:['exp','friends'],verified:true,online:true,dating:true,
   bio:{ru:'Пара, вместе 3 года. Отвечаем вдвоём, первая встреча — только в общественном месте.',en:'A couple, together 3 years. We reply together; first meeting in a public place only.'},
   jars:[['experiments',10],['exhibition',6],['intimacy',8]],langs:['ru','en'],pairNote:{ru:'пара · вместе 3 года',en:'couple · 3 years together'}},
+ eva:{name:'Eva',age:32,plate:'amber',city:'berlin',pron:'she',gender:['woman'],orient:['bi'],format:'swing',role:'switch',seek:['exp','friends'],verified:true,pv:true,online:true,dating:false,pairOf:'tomeva',
+  bio:{ru:'Половина пары Eva и Tom. Личные сообщения — сюда, общие вопросы — в профиль пары.',en:'One half of Eva & Tom. Personal messages here, couple questions on the couple profile.'},jars:[['roleplay',8],['intimacy',9]],langs:['en','de']},
+ tom:{name:'Tom',age:34,plate:'ember',city:'berlin',pron:'he',gender:['man'],orient:['bi'],format:'swing',role:'lead',seek:['exp'],verified:true,online:false,last:{ru:'был сегодня',en:'active today'},dating:false,pairOf:'tomeva',
+  bio:{ru:'Готовлю, катаюсь на велосипеде. В паре с Eva.',en:'I cook and ride bikes. In a couple with Eva.'},jars:[['control',8],['rituals',7]],langs:['en']},
  dan:{name:'Dan',age:35,plate:'night',city:'berlin',pron:'he',gender:['man'],orient:['hetero'],format:'mono',role:'none',seek:['chat'],dating:false,bio:{ru:'Читаю больше, чем пишу.',en:'I read more than I post.'},jars:[]},
  noa:{name:'Noa',age:34,plate:'sea',city:'moscow',pron:'they',gender:['nb'],orient:['queer'],format:'ra',role:'none',seek:['chat'],dating:false,verified:true,bio:{ru:'Психолог, веду онлайн-круги о согласии.',en:'Counsellor, I host online circles on consent.'},jars:[['talk',10],['aftercare',10]]},
 };
@@ -182,7 +188,7 @@ const EVENTS={
 const REQ_SCOPES=[['info',{ru:'желания и границы',en:'wishes and boundaries'}],['photos',{ru:'приватные фото',en:'private photos'}],['video',{ru:'видео',en:'video'}],['album',{ru:'альбом «Лето»',en:'album “Summer”'}]];
 
 /* ---------- personas ---------- */
-function fullMe(){return{
+function fullMe(){return{privText:{ru:'Новичок в верёвке, поэтому сначала — разговор и короткая встреча на нейтральной территории. Не люблю сюрпризов.',en:'New to rope, so first a talk and a short meeting on neutral ground. I don’t like surprises.'},
  nick:'alex_b',name:'Alex',showAge:true,dob:'1994-03-14',photo:8,photos:[8],city:'berlin',pron:'he',gender:['man'],orient:['bi'],format:['open','play'],status:'single',role:'lead',seek:['dates','chat'],langs:['ru','en'],
  bio:{ru:'Говорю прямо, слушаю внимательно. Люблю верёвку, долгие прогулки и людей, которые знают свои границы.',en:'I speak directly and listen closely. I love rope, long walks and people who know their limits.'},
  vis:{...PUBLIC_VIS},email:'alex@mail.com',methods:['email','google'],dating:true,datingVisible:true,socialLikes:true,requestsFrom:'all',rsvpShow:false,ageCheck:'ok',premium:false,
@@ -204,11 +210,12 @@ function newMe(){return{
  jars:[],history:[],journal:[],tests:{},saved:{posts:[],events:[],topics:[]},fresh:true};}
 
 function freshState(persona){
- const full=persona==='full';
+ const full=persona!=='new';
  const st={
   persona,lang:'ru',session:null,
   me:full?fullMe():newMe(),
   follows:new Set(full?['maya','mia','kai','noa']:[]),
+  graph:Object.fromEntries(Object.entries(FOLLOW_SEED).map(([k,v])=>[k,new Set(full?v:v.filter(x=>x!=='me'))])),
   joined:new Set(full?['rope','first']:[]), pendingJoin:new Set(full?['queer']:[]),
   managedCommunities:new Set(full?['circle']:[]), communityMembers:{},
   communityRequests:full?{circle:[
@@ -254,7 +261,14 @@ function freshState(persona){
   searchRecent:full?['shibari','Mia','Kai']:[],
   quota:{max:10,used:full?1:0},
   ui:{},
+  // in the pair persona Kira is my partner's separate account, not a like/request in my queues
+  pair:persona==='pair'?{status:'active',with:'kira',since:ago(24*40),name:{ru:'Alex и Kira',en:'Alex & Kira'},
+   desc:{ru:'Пара, вместе год. Отвечаем по очереди, о встречах договариваемся вдвоём.',en:'A couple, together a year. We reply in turns and agree on meetings together.'},
+   rules:{ru:'Сначала переписка с обоими, потом встреча в людном месте.',en:'Chat with both of us first, then meet somewhere public.'},
+   proposal:{by:'kira',field:'desc',text:{ru:'Пара, вместе год. Любим спокойный темп и честные разговоры.',en:'A couple, together a year. We like a slow pace and honest talks.'},t:ago(5)},
+   grants:[{p:'tomeva',scopes:['info'],me:'yes',partner:'yes',until:NOW+3*DAY},{p:'mia',scopes:['photos'],me:'yes',partner:'pending',until:null}]}:null,
  };
+ if(persona==='pair'){st.likesIn=st.likesIn.filter(x=>x.p!=='kira');st.reqOut=st.reqOut.filter(x=>x.p!=='kira');st.deckOrder=st.deckOrder.filter(x=>x!=='kira');st.communityRequests.circle=st.communityRequests.circle.filter(x=>x.p!=='kira');st.notifs=st.notifs.filter(x=>x.p!=='kira');st.follows.add('kira');st.graph.kira.add('me');}
  // organizer event for the full persona (E15/E16)
  if(full){st.extraEvents.e8={title:{ru:'Клуб чтения: «Больше двух»',en:'Book club: “More Than Two”'},type:'talk',format:'online',start:at(8,19),end:at(8,20,30),tz:'Europe/Berlin',lang:'RU',price:null,organizer:'me',community:'slow',approval:true,plate:'plum',link:'meet.feture.app/bookclub',desc:{ru:'Обсуждаем по главе в неделю. Камера по желанию.',en:'One chapter a week. Camera optional.'},reqs:[],q:[{ru:'Читал(а) ли книгу раньше?',en:'Have you read the book before?'}],status:'published',apps:[{p:'kira',status:'pending',answer:{ru:'Нет, начну с вами',en:'No, I’ll start with you'}},{p:'ari',status:'approved',answer:{ru:'Да, дважды',en:'Yes, twice'}},{p:'lina',status:'pending',answer:{ru:'Частично',en:'Partly'}}],announce:[]};}
  return st;

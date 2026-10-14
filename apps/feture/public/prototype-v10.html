@@ -1187,6 +1187,34 @@ button.jar:active .vessel{transform:scale(.95)}
 .lk>button>img,.lk>button>.plate{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 30%}
 .lk>button{overflow:hidden;border-radius:inherit}
 .lk .inf{padding-right:54px}
+
+/* =====================================================================
+   V10 owner revision, part 2 — profile badges, followers / following.
+   ===================================================================== */
+.nbadge{display:inline-grid;place-items:center;flex:none;vertical-align:-3px;margin-left:4px;line-height:0}
+.nbadge svg{width:17px;height:17px}
+.nbadge.v{color:#4F9BFF}.nbadge.p{color:#E8A317}
+.pc-name .nbadge{align-self:center;margin-left:0}.pc-name .nbadge svg{width:20px;height:20px}
+.pc-name .nbadge.v svg{color:#8EC5FF}.pc-name .nbadge.p svg{color:#FFD36B}
+.pc-name .nbadge+.nbadge{margin-left:-6px}
+.li b .nbadge svg{width:15px;height:15px}
+.fcounts{display:flex;gap:6px;margin:12px 0 0}
+.fcounts button{display:inline-flex;align-items:baseline;gap:5px;min-height:40px;padding:8px 12px;border-radius:var(--r);font-size:14px;color:var(--mute)}
+.fcounts button:first-child{padding-left:2px}
+.fcounts button:hover{background:var(--raise);color:var(--ink)}
+.fcounts b{font-size:16px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.frow{gap:8px}
+.frow-go{flex:1;min-width:0;display:flex;align-items:center;gap:12px;text-align:left}
+.frow .btn.sm{width:auto;flex:none}
+/* names and avatars that open a profile without hijacking neighbouring buttons */
+.plink{flex:none;border-radius:50%;align-self:flex-start}
+.plink.pnm{display:inline-flex;align-items:center;border-radius:6px;font-size:14px;font-weight:600;color:var(--ink)}
+.plink.pnm:hover,.plink.row:hover{text-decoration:underline;text-underline-offset:3px}
+.plink.row{flex:1;min-width:0;border-radius:var(--r-s);align-self:auto}
+/* couple */
+.pairline{display:flex;align-items:center;gap:10px;width:100%;margin-top:10px;padding:10px 12px;border-radius:var(--r);background:var(--surf);border:1px solid var(--line);text-align:left;font-size:14px;color:var(--mute)}
+.pairline b{color:var(--ink);font-weight:600}.pairline span{flex:1;min-width:0}.pairline>svg:first-child{color:var(--violet)}
+.pair-hero{display:flex;justify-content:center;margin:8px 0 4px}.pair-hero .av{width:72px;height:72px;box-shadow:0 0 0 3px var(--bg)}.pair-hero .av+.av{margin-left:-14px}
 </style>
 </head>
 <body>
@@ -1290,34 +1318,40 @@ OPT.role[0][1]='ведущая роль';OPT.role[1][1]='принимающая 
 OPT.role.push(['dom','доминант','dominant'],['sub','сабмиссив','submissive'],['top','топ','top'],['bottom','боттом','bottom'],['rigger','риггер','rigger'],['rope-bottom','принимающая роль в шибари','rope bottom'],['sadist','садист','sadist'],['masochist','мазохист','masochist'],['brat','брат','brat'],['brat-tamer','brat tamer','brat tamer'],['primal','праймал','primal'],['sensual','сенсуальная роль','sensual'],['exploring','исследую роли','exploring roles'],['unspecified','не указывать','prefer not to say']);
 const CITY={berlin:{ru:'Берлин',en:'Berlin'},hamburg:{ru:'Гамбург',en:'Hamburg'},moscow:{ru:'Москва',en:'Moscow'},online:{ru:'Онлайн',en:'Online'}};
 
+/** Who follows whom (seed). 'me' entries exist only for the full persona. Counts in profiles are always the length of these lists. */
+const FOLLOW_SEED={sofi:['mia','kira','me'],leon:['mia','maya'],mia:['maya','kai','sofi','me'],kai:['maya','mia','noa','me'],maya:['mia','noa'],ari:['kai'],kira:['sofi','mia','lina'],lina:['kira','me'],tomeva:['mia','maya'],dan:['me'],noa:['maya','kai']};
 const PEOPLE={
- sofi:{name:'Sofi',age:26,photo:1,nph:3,city:'berlin',km:4,pron:'she',gender:['woman'],orient:['bi'],format:['open','serious'],status:'single',role:'recv',seek:['dates','chat'],verified:true,online:true,dating:true,
+ sofi:{pv:true,name:'Sofi',age:26,photo:1,nph:3,city:'berlin',km:4,pron:'she',gender:['woman'],orient:['bi'],format:['open','serious'],status:'single',role:'recv',seek:['dates','chat'],verified:true,online:true,dating:true,
   bio:{ru:'Люблю долгие переписки перед встречей и людей, которые не торопят. Фотографирую плёнку.',en:'I love long chats before meeting and people who don’t rush. I shoot film.'},
   jars:[['experiments',10],['bondage',8],['sensory',8],['exhibition',4]],langs:['ru','en']},
- leon:{name:'Leon',age:33,photo:2,nph:2,city:'berlin',km:8,pron:'he',gender:['transm'],orient:['bi'],format:'open',role:'lead',seek:['dates'],verified:true,online:false,last:{ru:'был вчера',en:'active yesterday'},dating:true,
+ leon:{premium:true,name:'Leon',age:33,photo:2,nph:2,city:'berlin',km:8,pron:'he',gender:['transm'],orient:['bi'],format:'open',role:'lead',seek:['dates'],verified:true,online:false,last:{ru:'был вчера',en:'active yesterday'},dating:true,
   bio:{ru:'Сначала кофе и разговор, потом всё остальное. Веду небольшие вечеринки.',en:'Coffee and a talk first, everything else later. I host small parties.'},
   jars:[['control',10],['roleplay',8],['bondage',6],['latex',8]],langs:['en','de']},
- mia:{name:'Mia',age:29,photo:3,nph:5,city:'berlin',km:3,pron:'she',gender:['transw'],orient:['queer'],format:['poly','play'],status:'partnered',role:'switch',seek:['dates','exp'],verified:true,online:true,dating:true,
+ mia:{pv:true,premium:true,privText:{ru:'Перед первой сессией всегда созваниваемся. Стоп-слово — «красный», жест — два хлопка. После — обязательно чай и разговор.',en:'We always call before a first session. Safeword is “red”, gesture is two taps. Afterwards — tea and a talk, always.'},name:'Mia',age:29,photo:3,nph:5,city:'berlin',km:3,pron:'she',gender:['transw'],orient:['queer'],format:['poly','play'],status:'partnered',role:'switch',seek:['dates','exp'],verified:true,online:true,dating:true,
   bio:{ru:'Люблю людей, которые говорят прямо, не торопят события и заранее обсуждают ожидания. Практикую шибари шесть лет.',en:'I like people who speak directly, don’t rush and agree on expectations up front. Six years of shibari.'},
   jars:[['shibari',10],['bondage',8],['aftercare',10],['roleplay',8]],langs:['ru','en']},
- kai:{name:'Kai',age:27,photo:4,nph:2,city:'berlin',km:5,pron:'they',gender:['nb'],orient:['pan'],format:'ra',role:'switch',seek:['chat','friends'],verified:true,online:false,last:{ru:'был(а) сегодня',en:'active today'},dating:true,
+ kai:{pv:true,name:'Kai',age:27,photo:4,nph:2,city:'berlin',km:5,pron:'they',gender:['nb'],orient:['pan'],format:'ra',role:'switch',seek:['chat','friends'],verified:true,online:false,last:{ru:'был(а) сегодня',en:'active today'},dating:true,
   bio:{ru:'Ищу людей, с которыми можно спокойно говорить о границах. Остальное приложится.',en:'Looking for people I can calmly talk boundaries with. The rest will follow.'},
   jars:[['service',8],['bondage',6],['rituals',8],['talk',10]],langs:['en','ru']},
- maya:{name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:'none',seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
+ maya:{pv:true,name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:'none',seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
   bio:{ru:'Веду сообщество «Узлы и разговоры» и встречи для новичков. Здесь — ради людей и тем.',en:'I run the Rope & Talk community and newcomer meetups. Here for people and ideas.'},
   jars:[['shibari',10],['talk',10],['aftercare',8]],langs:['ru','en','de']},
  ari:{name:'Ari',age:30,photo:6,city:'berlin',km:6,pron:'he',gender:['man'],orient:['gay'],format:'open',role:'service',seek:['dates','friends'],verified:true,online:false,last:{ru:'был 2 ч назад',en:'active 2h ago'},dating:true,
   bio:{ru:'Дизайнер, бегаю по утрам, люблю ритуалы и порядок. Пишите про книги.',en:'Designer, morning runner, into rituals and order. Talk to me about books.'},
   jars:[['service',10],['rituals',8],['latex',6],['slow',8]],langs:['en']},
- kira:{name:'Kira',age:28,photo:7,nph:4,city:'berlin',km:2,pron:'she',gender:['woman'],orient:['pan'],format:['poly','serious'],status:'single',role:'recv',seek:['dates','rel'],verified:true,online:true,dating:true,
+ kira:{pv:true,name:'Kira',age:28,photo:7,nph:4,city:'berlin',km:2,pron:'she',gender:['woman'],orient:['pan'],format:['poly','serious'],status:'single',role:'recv',seek:['dates','rel'],verified:true,online:true,dating:true,
   bio:{ru:'Танцую, читаю, учусь доверять медленно. Важна честность и чувство юмора.',en:'I dance, read and learn to trust slowly. Honesty and humour matter.'},
   jars:[['bondage',8],['sensory',10],['intimacy',10],['experiments',6]],langs:['ru','en']},
  lina:{name:'Lina',age:28,photo:9,nph:3,city:'berlin',km:7,pron:'she',gender:['woman'],orient:['bi'],format:'open',role:'switch',seek:['dates','chat'],verified:true,online:false,last:{ru:'была вчера',en:'active yesterday'},dating:true,
   bio:{ru:'Путешествую, готовлю для друзей, исследую себя без спешки.',en:'Travelling, cooking for friends, exploring myself at my own pace.'},
   jars:[['roleplay',8],['experiments',8],['intimacy',8]],langs:['en']},
- tomeva:{name:'Eva & Tom',nameRu:'Eva и Tom',age:null,pair:true,plate:'amber',plate2:'ember',city:'berlin',km:3,pron:'any',gender:['woman','man'],orient:['bi'],format:'swing',role:'switch',seek:['exp','friends'],verified:true,online:true,dating:true,
+ tomeva:{premium:true,members:['eva','tom'],name:'Eva & Tom',nameRu:'Eva и Tom',age:null,pair:true,plate:'amber',plate2:'ember',city:'berlin',km:3,pron:'any',gender:['woman','man'],orient:['bi'],format:'swing',role:'switch',seek:['exp','friends'],verified:true,online:true,dating:true,
   bio:{ru:'Пара, вместе 3 года. Отвечаем вдвоём, первая встреча — только в общественном месте.',en:'A couple, together 3 years. We reply together; first meeting in a public place only.'},
   jars:[['experiments',10],['exhibition',6],['intimacy',8]],langs:['ru','en'],pairNote:{ru:'пара · вместе 3 года',en:'couple · 3 years together'}},
+ eva:{name:'Eva',age:32,plate:'amber',city:'berlin',pron:'she',gender:['woman'],orient:['bi'],format:'swing',role:'switch',seek:['exp','friends'],verified:true,pv:true,online:true,dating:false,pairOf:'tomeva',
+  bio:{ru:'Половина пары Eva и Tom. Личные сообщения — сюда, общие вопросы — в профиль пары.',en:'One half of Eva & Tom. Personal messages here, couple questions on the couple profile.'},jars:[['roleplay',8],['intimacy',9]],langs:['en','de']},
+ tom:{name:'Tom',age:34,plate:'ember',city:'berlin',pron:'he',gender:['man'],orient:['bi'],format:'swing',role:'lead',seek:['exp'],verified:true,online:false,last:{ru:'был сегодня',en:'active today'},dating:false,pairOf:'tomeva',
+  bio:{ru:'Готовлю, катаюсь на велосипеде. В паре с Eva.',en:'I cook and ride bikes. In a couple with Eva.'},jars:[['control',8],['rituals',7]],langs:['en']},
  dan:{name:'Dan',age:35,plate:'night',city:'berlin',pron:'he',gender:['man'],orient:['hetero'],format:'mono',role:'none',seek:['chat'],dating:false,bio:{ru:'Читаю больше, чем пишу.',en:'I read more than I post.'},jars:[]},
  noa:{name:'Noa',age:34,plate:'sea',city:'moscow',pron:'they',gender:['nb'],orient:['queer'],format:'ra',role:'none',seek:['chat'],dating:false,verified:true,bio:{ru:'Психолог, веду онлайн-круги о согласии.',en:'Counsellor, I host online circles on consent.'},jars:[['talk',10],['aftercare',10]]},
 };
@@ -1392,7 +1426,7 @@ const EVENTS={
 const REQ_SCOPES=[['info',{ru:'желания и границы',en:'wishes and boundaries'}],['photos',{ru:'приватные фото',en:'private photos'}],['video',{ru:'видео',en:'video'}],['album',{ru:'альбом «Лето»',en:'album “Summer”'}]];
 
 /* ---------- personas ---------- */
-function fullMe(){return{
+function fullMe(){return{privText:{ru:'Новичок в верёвке, поэтому сначала — разговор и короткая встреча на нейтральной территории. Не люблю сюрпризов.',en:'New to rope, so first a talk and a short meeting on neutral ground. I don’t like surprises.'},
  nick:'alex_b',name:'Alex',showAge:true,dob:'1994-03-14',photo:8,photos:[8],city:'berlin',pron:'he',gender:['man'],orient:['bi'],format:['open','play'],status:'single',role:'lead',seek:['dates','chat'],langs:['ru','en'],
  bio:{ru:'Говорю прямо, слушаю внимательно. Люблю верёвку, долгие прогулки и людей, которые знают свои границы.',en:'I speak directly and listen closely. I love rope, long walks and people who know their limits.'},
  vis:{...PUBLIC_VIS},email:'alex@mail.com',methods:['email','google'],dating:true,datingVisible:true,socialLikes:true,requestsFrom:'all',rsvpShow:false,ageCheck:'ok',premium:false,
@@ -1414,11 +1448,12 @@ function newMe(){return{
  jars:[],history:[],journal:[],tests:{},saved:{posts:[],events:[],topics:[]},fresh:true};}
 
 function freshState(persona){
- const full=persona==='full';
+ const full=persona!=='new';
  const st={
   persona,lang:'ru',session:null,
   me:full?fullMe():newMe(),
   follows:new Set(full?['maya','mia','kai','noa']:[]),
+  graph:Object.fromEntries(Object.entries(FOLLOW_SEED).map(([k,v])=>[k,new Set(full?v:v.filter(x=>x!=='me'))])),
   joined:new Set(full?['rope','first']:[]), pendingJoin:new Set(full?['queer']:[]),
   managedCommunities:new Set(full?['circle']:[]), communityMembers:{},
   communityRequests:full?{circle:[
@@ -1464,7 +1499,14 @@ function freshState(persona){
   searchRecent:full?['shibari','Mia','Kai']:[],
   quota:{max:10,used:full?1:0},
   ui:{},
+  // in the pair persona Kira is my partner's separate account, not a like/request in my queues
+  pair:persona==='pair'?{status:'active',with:'kira',since:ago(24*40),name:{ru:'Alex и Kira',en:'Alex & Kira'},
+   desc:{ru:'Пара, вместе год. Отвечаем по очереди, о встречах договариваемся вдвоём.',en:'A couple, together a year. We reply in turns and agree on meetings together.'},
+   rules:{ru:'Сначала переписка с обоими, потом встреча в людном месте.',en:'Chat with both of us first, then meet somewhere public.'},
+   proposal:{by:'kira',field:'desc',text:{ru:'Пара, вместе год. Любим спокойный темп и честные разговоры.',en:'A couple, together a year. We like a slow pace and honest talks.'},t:ago(5)},
+   grants:[{p:'tomeva',scopes:['info'],me:'yes',partner:'yes',until:NOW+3*DAY},{p:'mia',scopes:['photos'],me:'yes',partner:'pending',until:null}]}:null,
  };
+ if(persona==='pair'){st.likesIn=st.likesIn.filter(x=>x.p!=='kira');st.reqOut=st.reqOut.filter(x=>x.p!=='kira');st.deckOrder=st.deckOrder.filter(x=>x!=='kira');st.communityRequests.circle=st.communityRequests.circle.filter(x=>x.p!=='kira');st.notifs=st.notifs.filter(x=>x.p!=='kira');st.follows.add('kira');st.graph.kira.add('me');}
  // organizer event for the full persona (E15/E16)
  if(full){st.extraEvents.e8={title:{ru:'Клуб чтения: «Больше двух»',en:'Book club: “More Than Two”'},type:'talk',format:'online',start:at(8,19),end:at(8,20,30),tz:'Europe/Berlin',lang:'RU',price:null,organizer:'me',community:'slow',approval:true,plate:'plum',link:'meet.feture.app/bookclub',desc:{ru:'Обсуждаем по главе в неделю. Камера по желанию.',en:'One chapter a week. Camera optional.'},reqs:[],q:[{ru:'Читал(а) ли книгу раньше?',en:'Have you read the book before?'}],status:'published',apps:[{p:'kira',status:'pending',answer:{ru:'Нет, начну с вами',en:'No, I’ll start with you'}},{p:'ari',status:'approved',answer:{ru:'Да, дважды',en:'Yes, twice'}},{p:'lina',status:'pending',answer:{ru:'Частично',en:'Partly'}}],announce:[]};}
  return st;
@@ -1690,8 +1732,9 @@ function person(id){if(id==='me')return meAsPerson();return PEOPLE[id];}
 function pname(id){if(id==='me')return S.me.name||S.me.nick||L('Ты','You');const p=PEOPLE[id];if(!p)return L('Участник','Member');return p.pair&&S.lang!=='en'?p.nameRu:p.name;}
 const PUBLIC_VIS={gender:'public',orient:'public',format:'public',status:'public',role:'granted'};
 const requiresDiscoveryPhoto=m=>!!m.dating&&m.datingVisible!==false;
-function publicField(m,k){return (m.vis?.[k]??PUBLIC_VIS[k]??'public')==='public'?m[k]:Array.isArray(m[k])?[]:null;}
-function meAsPerson(){const m=S.ui.profilePreview||S.me;return{name:m.name||m.nick,age:m.showAge===false?null:ageOf(m.dob),photo:m.photo,city:m.city,location:m.location?.coords,pron:m.pron,gender:publicField(m,'gender'),orient:publicField(m,'orient'),format:publicField(m,'format'),status:publicField(m,'status'),role:publicField(m,'role'),seek:m.dating?m.seek:[],bio:m.bio,verified:m.ageCheck==='ok',online:true,dating:m.dating,jars:m.jars.filter(j=>j.vis==='public'&&!j.limit).map(j=>[j.t,j.lv]),langs:m.langs};}
+/** a profile field as another member sees it; S.ui.viewGrant = rendering for someone with private-profile access */
+function publicField(m,k){const v=m.vis?.[k]??PUBLIC_VIS[k]??'public';return v==='public'||v==='granted'&&S.ui.viewGrant?m[k]:Array.isArray(m[k])?[]:null;}
+function meAsPerson(){const m=S.ui.profilePreview||S.me;return{pv:m.photoCheck==='ok',premium:!!m.premium,name:m.name||m.nick,age:m.showAge===false?null:ageOf(m.dob),photo:m.photo,city:m.city,location:m.location?.coords,pron:m.pron,gender:publicField(m,'gender'),orient:publicField(m,'orient'),format:publicField(m,'format'),status:publicField(m,'status'),role:publicField(m,'role'),seek:m.dating?m.seek:[],bio:m.bio,verified:m.ageCheck==='ok',online:true,dating:m.dating,jars:m.jars.filter(j=>j.vis==='public'&&!j.limit).map(j=>[j.t,j.lv]),langs:m.langs};}
 /** avatar: photo → img; pair → two plates; else initials plate */
 function av(id,cls='',variant=0){
  const p=person(id);
@@ -2048,8 +2091,12 @@ function sharedSummary(id){const s=shared(id);if(s.few)return L('Пока мал
 function whoLine(id){const p=person(id);if(!p)return '';const g=(p.gender||[]).map(x=>opt('gender',x)).join(', ');const o=(p.orient||[]).map(x=>opt('orient',x)).join(', ');return [p.pair?T(p.pairNote):opt('pron',p.pron),[g,o].filter(Boolean).join(', ')].filter(Boolean).join(' · ');}
 function placeLine(id){const p=person(id);if(!p)return '';const km=S.me.location?.mode==='nearby'?nearbyDistance(id):null;return [city(p.city),km!==null?L(`около ${Math.max(5,km)} км`,`about ${Math.max(5,km)} km`):''].filter(Boolean).join(' · ');}
 function presence(id){const p=person(id);if(!p)return '';return p.online?L('сейчас в сети','online now'):T(p.last)||'';}
+/** attributes that open a person's profile (own profile for me) */
+const profGo=id=>id==='me'?'data-go="P03"':`data-go="P01" data-p='${JSON.stringify({id})}'`;
+/** avatar + name as one link to the profile; used where a row has its own other actions */
+const whoLink=(id,cls='xs',extra='')=>`<button class="plink" ${profGo(id)} aria-label="${L(`Профиль: ${pname(id)}`,`Profile: ${pname(id)}`)}">${av(id,cls)}</button>`;
 function personRow(id,o={}){
- return `<button class="li" data-go="P01" data-p='${JSON.stringify({id})}'>${av(id,o.round?'round':'')}<span class="tx"><b>${esc(pname(id))}${person(id).dating&&person(id).age?`, ${person(id).age}`:''}</b><small>${o.sub||esc(whoLine(id))}</small></span>${o.right||I.chev}</button>`;
+ return `<button class="li" ${profGo(id)}>${av(id,o.round?'round':'')}<span class="tx"><b>${esc(pname(id))}${person(id).dating&&person(id).age?`, ${person(id).age}`:''}</b><small>${o.sub||esc(whoLine(id))}</small></span>${o.right||I.chev}</button>`;
 }
 
 /* ---------- posts ---------- */
@@ -2067,7 +2114,7 @@ function postMediaHTML(p,o={}){let h='';const m=postMedia(p);if(m.length)h+=medi
  return h;}
 function postCard(p,o={}){
  const mine=p.author==='me';const pid=JSON.stringify({id:p.id});
- const head=`<div class="post-h"><button class="who" data-go="${mine?'P03':'P01'}" data-p='${JSON.stringify({id:p.author})}'>${av(p.author,'sm')}<span class="tx"><b>${esc(pname(p.author))}</b><small>${F.rel(p.t)}${p.aud==='followers'?` · <span class="aud">${I.people}${L('подписчикам','followers')}</span>`:''}${o.community&&p.community?` · ${esc(T(COMMUNITIES[p.community].name))}`:''}</small></span></button><button class="ibtn ghost sm" data-act="postMenu" data-v="${p.id}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
+ const head=`<div class="post-h"><button class="who" ${profGo(p.author)}>${av(p.author,'sm')}<span class="tx"><b>${esc(pname(p.author))}${nameBadges(person(p.author))}</b><small>${F.rel(p.t)}${p.aud==='followers'?` · <span class="aud">${I.people}${L('подписчикам','followers')}</span>`:''}${o.community&&p.community?` · ${esc(T(COMMUNITIES[p.community].name))}`:''}</small></span></button><button class="ibtn ghost sm" data-act="postMenu" data-v="${p.id}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
  const media=postMediaHTML(p,o);
  const tags=p.tags&&p.tags.length?`<div class="tags">${p.tags.map(t=>`<button data-go="F04" data-p='${JSON.stringify({id:t})}'>#${esc(topic(t))}</button>`).join('')}</div>`:'';
  const nC=p.comments.length;
@@ -2101,7 +2148,7 @@ function evStatusPill(id){
 function evWhen(id,full){const e=EV(id);const t=F.time(e.start,USER_TZ);const day=full?F.day(e.start):F.date(e.start);
  const diffTz=e.format==='online'&&e.tz!==USER_TZ;return `${day}, ${t}${diffTz?` · ${F.time(e.start,e.tz)} ${F.tzName(e.tz)}`:''}`;}
 function eventCard(id,o={}){
- const e=EV(id);const st=evStatusPill(id);
+ const e=EV(id);const st=o.neutral?'':evStatusPill(id);
  const fmt=e.format==='online'?`<span>${I.video}${L('Онлайн','Online')}</span>`:`<span>${I.pin}${esc(T(e.area)||city(e.city))}</span>`;
  const meta=`<div class="meta"><span>${I.clock}${F.time(e.start)}</span><span>${I.globe}${e.lang}</span><span>${I.ticket}${e.price?esc(T(e.price)):L('Бесплатно','Free')}</span></div>`;
  if(o.row)return `<button class="evc row" data-go="E03" data-p='${JSON.stringify({id})}'><div class="cv">${evCover(e,'cal')}<div class="date"><b>${F.dnum(e.start)}</b><small>${F.mon(e.start)}</small></div></div><div class="bd"><small>${e.format==='online'?L('Онлайн','Online'):esc(city(e.city))} · ${F.time(e.start)}</small><b>${esc(T(e.title))}</b>${st||`<span class="note">${esc(pname(e.organizer))}</span>`}</div></button>`;
@@ -2686,7 +2733,7 @@ ACT.editPost=a=>{closeSheet(true);const p=postById(a.dataset.v);go('F07',{id:p.i
 SC.F05={title:()=>L('Публикация','Post'),valid:p=>!!postById(p.id)&&!isBlocked(postById(p.id).author),render:(p,r)=>{const x=postById(p.id);
  return `${bar(L('Публикация','Post'),{back:1,sm:1})}<div class="view nodock cta1"><div class="wrap">${postCard(x,{detail:1})}
  <div class="sec" id="replies">${pl(x.comments.length,['ответ','ответа','ответов'],['reply','replies'])}</div>
- ${x.comments.length?x.comments.map((c,i)=>`<div class="comment ${c.status||''}">${av(c.a,'xs')}<div class="tx"><b>${esc(pname(c.a))}</b><time>${c.status==='pending'?L('отправляется…','sending…'):c.status==='failed'?L('не отправлено','not sent'):F.rel(c.t)}</time><p>${esc(T(c.text))}</p>${c.status==='failed'?`<button class="btn text auto" style="min-height:32px;padding:0;color:var(--danger)" data-act="retryComment" data-v="${i}">${L('Повторить','Retry')}</button>`:''}</div></div>`).join(''):`<p class="note">${L('Пока никто не ответил. Начни разговор — по-доброму.','No replies yet. Start the conversation — kindly.')}</p>`}
+ ${x.comments.length?x.comments.map((c,i)=>`<div class="comment ${c.status||''}">${whoLink(c.a)}<div class="tx"><button class="plink pnm" ${profGo(c.a)}>${esc(pname(c.a))}${nameBadges(person(c.a))}</button><time>${c.status==='pending'?L('отправляется…','sending…'):c.status==='failed'?L('не отправлено','not sent'):F.rel(c.t)}</time><p>${esc(T(c.text))}</p>${c.status==='failed'?`<button class="btn text auto" style="min-height:32px;padding:0;color:var(--danger)" data-act="retryComment" data-v="${i}">${L('Повторить','Retry')}</button>`:''}</div></div>`).join(''):`<p class="note">${L('Пока никто не ответил. Начни разговор — по-доброму.','No replies yet. Start the conversation — kindly.')}</p>`}
  </div></div><div class="inputbar"><textarea id="cmt" rows="1" placeholder="${L('Ответить…','Reply…')}" aria-label="${L('Ответ','Reply')}" data-in="grow" data-enter="sendComment">${esc(r.f.cmt||'')}</textarea><button class="ibtn send" data-act="sendComment" aria-label="${L('Отправить','Send')}">${I.send}</button></div>`;}};
 IN.grow=el=>{el.style.height='auto';el.style.height=Math.min(120,el.scrollHeight)+'px';cur().f[el.id]=el.value;const s=el.parentNode.querySelector('.send');if(s)s.disabled=!el.value.trim();};
 ACT.focusReply=()=>{$('#cmt')?.focus();};
@@ -3021,7 +3068,7 @@ SC.E15={title:()=>L('Панель организатора','Manage event'),vali
  <p class="note mt16">${L('Ты видишь только тех, кто ответил или подал заявку. Личные чаты, альбомы и интересы участников организатору недоступны.','You only see people who answered or applied. Attendees’ private chats, albums and maps are never available to organisers.')}</p></div></div>`;}};
 SC.E16={title:()=>L('Заявки','Applications'),valid:p=>!!EV(p.id)&&EV(p.id).organizer==='me',render:(p)=>{const e=EV(p.id);const k=p.k||'pending';const list=(e.apps||[]).filter(a=>a.status===k);
  return `${bar(L('Заявки','Applications'),{back:1,sm:1,sub:esc(T(e.title))})}<div class="view nodock"><div class="wrap">${seg([['pending',L('Ждут','Pending'),(e.apps||[]).filter(a=>a.status==='pending').length||''],['approved',L('Одобрены','Approved')],['declined',L('Отклонены','Declined')]],k,'e16tab')}
- ${list.length?list.map(a=>`<div class="card" style="margin-bottom:10px"><div class="row">${av(a.p,'')}<div class="grow"><b>${esc(pname(a.p))}, ${person(a.p).age}</b><div class="note">${esc(whoLine(a.p))}</div></div></div><div class="card flat mt12" style="padding:12px 14px"><div class="note">${esc(T((e.q||[{ru:'Ответ',en:'Answer'}])[0]))}</div><div style="margin-top:4px">${esc(T(a.answer))}</div></div>
+ ${list.length?list.map(a=>`<div class="card" style="margin-bottom:10px"><div class="row"><button class="plink row g12 grow" style="text-align:left" ${profGo(a.p)}>${av(a.p,'')}<span class="grow"><b style="display:block">${esc(pname(a.p))}, ${person(a.p).age}</b><small class="note" style="display:block">${esc(whoLine(a.p))}</small></span></button></div><div class="card flat mt12" style="padding:12px 14px"><div class="note">${esc(T((e.q||[{ru:'Ответ',en:'Answer'}])[0]))}</div><div style="margin-top:4px">${esc(T(a.answer))}</div></div>
   ${k==='pending'?`<div class="row g8 mt12"><button class="btn md primary" data-act="appDecide" data-v="${a.p}" data-d="approved">${L('Одобрить','Approve')}</button><button class="btn md soft" data-act="appDecide" data-v="${a.p}" data-d="declined">${L('Отклонить','Decline')}</button></div>`:''}</div>`).join(''):empty('doc',L('Здесь пусто','Nothing here'),k==='pending'?L('Новые заявки появятся здесь и в уведомлениях.','New applications appear here and in notifications.'):'')}
  <p class="note">${L('Причину отказа можно не объяснять. Человек увидит нейтральное «Заявка отклонена».','You don’t have to give a reason. The person sees a neutral “Application declined”.')}</p></div></div>`;}};
 ACT.e16tab=a=>setP('k',a.dataset.v);
@@ -3105,7 +3152,7 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
   ${photoCount(id)>1?`<div class="pc-zone l" data-ph="-1"></div><div class="pc-zone r" data-ph="1"></div>`:''}<div class="pc-zone c" data-ph="0" aria-hidden="true"></div>
   <div class="pc-tags">${likesMe?`<span class="pc-liked">${I.heartf}${L('Ты нравишься','Likes you')}</span>`:''}<span class="pc-score"><b>${sh.few?'—':sh.match.length}</b><small>${sh.few?L('мало данных','not enough data'):pl(sh.match.length,['общая тема','общие темы','общих тем'],['shared topic','shared topics'],true)}</small></span></div>
   <div class="stamp l">${L('Да','Like')}</div><div class="stamp n">${L('Мимо','Pass')}</div>
-  <div class="pc-info"><h2 class="pc-name">${esc(pname(id))}${p.age?`<span>${p.age}</span>`:''}${p.verified?`<span title="${L('Возраст подтверждён','Age verified')}" style="display:contents">${I.verified}</span>`:''}</h2>
+  <div class="pc-info"><h2 class="pc-name">${esc(pname(id))}${p.age?`<span>${p.age}</span>`:''}${nameBadges(p)}</h2>
    <div class="pc-who"><span>${esc(whoLine(id))}</span><span>${esc(placeLine(id))}</span>${p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>
    <div class="pc-keys">${keys.map(k=>`<span>${esc(k)}</span>`).join('')}</div>
    <div class="pc-hint">${I.down}${L('Листай вниз — что у вас общего','Scroll down — what you share')}</div></div>
@@ -3272,38 +3319,41 @@ ACT.d2Photo=()=>{const r=cur();openUploader({max:1,have:0,accept:'image',aspect:
 /* ---- s-profile.js ---- */
 /* ============ P: PROFILES, PRIVATE LAYER & ACCESS, SAFETY ============ */
 function profileView(id,r,o={}){
- const me=id==='me';if(me&&r.p.preview)S.ui.profilePreview=r.p.preview;const p=person(id);const ix=(S.ui.ph||{})[id]||0;const t=r.p.t||'about';
+ const me=id==='me',self=me&&!o.asOther;if(me&&r.p.preview)S.ui.profilePreview=r.p.preview;const p=person(id);const ix=(S.ui.ph||{})[id]||0;const t=r.p.t||'about';
  const displayName=me?(p.name||p.nick||L('Ты','You')):pname(id);const posts=(me?S.myPosts.filter(x=>x.status==='published'):allPosts().filter(x=>x.author===id)).sort((a,b)=>b.t-a.t);
- const mutual=isMatch(id),liked=S.likesOut.some(l=>l.p===id),canLike=!me&&(p.dating||p.socialLikes);
- const sh=me?null:shared(id);
+ const mutual=!me&&isMatch(id),liked=!me&&S.likesOut.some(l=>l.p===id),canLike=!self&&(p.dating||p.socialLikes);
+ const sh=me?null:shared(id);const inert=h=>o.asOther?h.replace(/ data-(act|go|p|v|id)=("[^"]*"|'[^']*')/g,'').replace(/<button /g,'<button disabled tabindex="-1" '):h;
  const keys=[...fmtList(p.format).slice(0,2).map(x=>opt('format',x)),p.role&&p.role!=='none'&&opt('role',p.role),...(p.dating?(p.seek||[]).slice(0,2).map(s=>opt('seek',s)):[])].filter(Boolean);
  const likeBtn=mutual?`<button class="btn primary" data-act="openChat" data-v="${id}">${I.chat}${L('Написать','Message')}</button>`:liked?`<button class="btn on" data-act="unlikeP" data-v="${id}" aria-pressed="true">${I.heartf}${L('Симпатия','Liked')}</button>`:canLike?`<button class="btn primary" data-act="likeProfile" data-v="${id}">${I.heartf}${L('Нравится','Like')}</button>`:`<button class="btn soft off" title="${L('Не принимает симпатии','Not accepting likes')}">${I.heart}${L('Симпатии выкл.','Likes off')}</button>`;
  const pending=S.reqOut.find(x=>x.p===id&&x.status==='pending');
- const acts=me?`<div class="row g8" style="margin-top:16px"><button class="btn primary" data-go="P02">${I.edit}${L('Редактировать','Edit profile')}</button><button class="btn soft" data-act="shareProfile">${I.share}${L('Поделиться','Share')}</button></div>`
-  :`<div class="p-acts">${likeBtn}<button class="btn soft" data-act="follow" data-v="${id}" aria-pressed="${S.follows.has(id)}">${S.follows.has(id)?`${I.check}${L('Подписка','Following')}`:L('Подписаться','Follow')}</button><button class="ibtn" data-act="reqAccess" data-v="${id}" aria-label="${pending?L('Запрос на расширенный профиль отправлен','Private profile request sent'):L('Запросить расширенный профиль','Request private profile')}" title="${L('Расширенный профиль','Private profile')}">${pending?I.clock:I.key}</button></div>`;
+ const acts=self?`<div class="row g8" style="margin-top:16px"><button class="btn primary" data-go="P02">${I.edit}${L('Редактировать','Edit profile')}</button><button class="btn soft" data-act="shareProfile">${I.share}${L('Поделиться','Share')}</button></div>`
+  :inert(`<div class="p-acts">${likeBtn}<button class="btn soft" data-act="follow" data-v="${id}" aria-pressed="${S.follows.has(id)}">${S.follows.has(id)?`${I.check}${L('Подписка','Following')}`:L('Подписаться','Follow')}</button><button class="ibtn" data-act="reqAccess" data-v="${id}" aria-label="${pending?L('Запрос на расширенный профиль отправлен','Private profile request sent'):L('Запросить расширенный профиль','Request private profile')}" title="${L('Расширенный профиль','Private profile')}">${pending?I.clock:I.key}</button></div>`);
  const orgEvents=allEventIds().filter(e=>EV(e).organizer===id&&!isPast(e)&&!EV(e).cancelled&&EV(e).status!=='review');
  const modOf=Object.keys(COMMUNITIES).filter(c=>COMMUNITIES[c].mods.includes(id));
  const kv=[[L('Местоимения','Pronouns'),opt('pron',p.pron)],[L('Гендер','Gender'),(p.gender||[]).map(g=>opt('gender',g)).join(', ')],[L('Ориентация','Orientation'),(p.orient||[]).map(g=>opt('orient',g)).join(', ')],[L('Сейчас','Status'),opt('status',p.status)],[L('Формат отношений','Relationship format'),fmtText(p.format)],[L('Роль','Role'),p.role&&p.role!=='none'?opt('role',p.role):''],[L('Ищет','Looking for'),p.dating?(p.seek||[]).map(s=>opt('seek',s)).join(', '):''],[L('Языки','Languages'),(p.langs||[]).map(x=>({ru:'русский',en:'English',de:'Deutsch'}[x])).join(', ')]].filter(x=>x[1]);
  /* V8: one page — profile, then the private profile right after it when access is open. No tabs. */
- const body=`${T(p.bio)?grp(L('О себе','About'),`<p class="bio">${esc(T(p.bio))}</p>`):me?grp(L('О себе','About'),`<button class="li" data-go="P02"><span class="ico">${I.edit}</span><span class="tx"><b>${L('Добавь пару слов о себе','Add a few words about yourself')}</b><small>${L('Так людям проще начать разговор','It makes starting a conversation easier')}</small></span>${I.chev}</button>`,{list:1}):''}
+ const body=`${T(p.bio)?grp(L('О себе','About'),`<p class="bio">${esc(T(p.bio))}</p>`):self?grp(L('О себе','About'),`<button class="li" data-go="P02"><span class="ico">${I.edit}</span><span class="tx"><b>${L('Добавь пару слов о себе','Add a few words about yourself')}</b><small>${L('Так людям проще начать разговор','It makes starting a conversation easier')}</small></span>${I.chev}</button>`,{list:1}):''}
   ${kv.length?grp(L('Кратко','At a glance'),`<dl class="kv">${kv.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`):''}
-  ${grp(L('Интересы','Interests'),pubJars(id).length?jarShelf(pubJars(id),{pre:1,act:me?'editJar':'topic',who:id,moreAct:me?'myJarsAll':'allJars'}):`<p class="note">${me?L('Открой интересы в «Я» — они появятся здесь.','Make interests public in Me — they’ll show here.'):L(`${pname(id)} пока не открыл(а) интересы.`,`${pname(id)} hasn’t shared interests yet.`)}</p>`,{foot:pubJars(id).length&&!me?L('Нажми на баночку — увидишь, что это и как у тебя.','Tap a jar to see what it is and how it is for you.'):''})}
-  ${posts.length?`<div class="grp"><div class="grp-t"><span>${L('Публикации','Posts')} · ${posts.length}</span></div><div class="posts">${posts.slice(0,3).map((x,i)=>postCard(x,{i})).join('')}</div></div>`:''}
+  ${grp(L('Интересы','Interests'),pubJars(id).length?jarShelf(pubJars(id),{pre:1,act:self?'editJar':'topic',who:id,moreAct:self?'myJarsAll':'allJars'}):`<p class="note">${self?L('Открой интересы в «Я» — они появятся здесь.','Make interests public in Me — they’ll show here.'):L(`${pname(id)} пока не открыл(а) интересы.`,`${pname(id)} hasn’t shared interests yet.`)}</p>`,{foot:pubJars(id).length&&!self?L('Нажми на баночку — увидишь, что это и как у тебя.','Tap a jar to see what it is and how it is for you.'):''})}
+  ${posts.length?`<div class="grp"><div class="grp-t"><span>${L('Публикации','Posts')} · ${posts.length}</span></div><div class="posts">${inert(posts.slice(0,3).map((x,i)=>postCard(x,{i})).join(''))}</div></div>`:''}
   ${modOf.length?`<div class="grp"><div class="grp-t"><span>${L('Ведёт сообщества','Runs communities')}</span></div>${modOf.map((c,i)=>commCard(c,{i})).join('')}</div>`:''}
-  ${orgEvents.length?`<div class="grp"><div class="grp-t"><span>${L('Организует','Organising')}</span></div>${orgEvents.map(e=>eventCard(e,{row:1})).join('<div style="height:8px"></div>')}</div>`:''}
-  ${me?myPrivSection():privSection(id)}`;
- const html=`<header class="bar overlay"><button class="ibtn glass" data-back aria-label="${L('Назад','Back')}">${I.back}</button><span style="flex:1"></span>${me?`<button class="ibtn glass" data-go="P02" aria-label="${L('Редактировать','Edit')}">${I.edit}</button>`:`<button class="ibtn glass" data-act="profileMenu" data-v="${id}" aria-label="${L('Ещё','More')}">${I.more}</button>`}</header>
+  ${orgEvents.length?`<div class="grp"><div class="grp-t"><span>${L('Организует','Organising')}</span></div>${orgEvents.map(e=>eventCard(e,{row:1,neutral:o.asOther})).join('<div style="height:8px"></div>')}</div>`:''}
+  ${self?myPrivSection():me?privSection('me',o):privSection(id)}`;
+ const html=`<header class="bar overlay"><button class="ibtn glass" data-back aria-label="${L('Назад','Back')}">${I.back}</button><span style="flex:1"></span>${self?`<button class="ibtn glass" data-go="P02" aria-label="${L('Редактировать','Edit')}">${I.edit}</button>`:inert(`<button class="ibtn glass" data-act="profileMenu" data-v="${id}" aria-label="${L('Ещё','More')}">${I.more}</button>`)}</header>
  <div class="view nodock top0"><div class="wrap">
  ${o.banner||''}
  <div class="hero">${me&&!p.photo?`<div class="plate" style="${PL.rose};position:absolute;inset:0"><span class="pi">${I.me}</span></div>`:photoBg(id,ix)+bigPhoto(id,ix)}${photoBars(id,ix)}${photoCount(id)>1?`<button class="pc-zone l" data-act="pPhoto" data-v="-1" aria-label="${L('Предыдущее фото','Previous photo')}"></button><button class="pc-zone r" data-act="pPhoto" data-v="1" aria-label="${L('Следующее фото','Next photo')}"></button>`:''}${p.photo?`<button class="pc-zone c" data-act="pView" aria-label="${L('Открыть фото на весь экран','Open photo full screen')}"></button>`:''}
-  <div class="pc-info"><h2 class="pc-name">${esc(displayName)}${p.age&&p.dating?`<span>${p.age}</span>`:''}${p.verified?I.verified:''}</h2><div class="pc-who"><span>${esc(whoLine(id))}</span><span>${esc(placeLine(id))}</span>${!me&&p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>${keys.length?`<div class="pc-keys">${keys.map(k=>`<span>${esc(k)}</span>`).join('')}</div>`:''}</div></div>
- ${acts}${o.after||''}
+  <div class="pc-info"><h2 class="pc-name">${esc(displayName)}${p.age&&p.dating?`<span>${p.age}</span>`:''}${nameBadges(p)}</h2><div class="pc-who"><span>${esc(whoLine(id))}</span><span>${esc(placeLine(id))}</span>${!self&&p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>${keys.length?`<div class="pc-keys">${keys.map(k=>`<span>${esc(k)}</span>`).join('')}</div>`:''}</div></div>
+ ${acts}${followCounts(id)}${pairLine(id,o)}${o.after||''}
  ${!me&&mutual?`<p class="note center mt8">${L('Вы совпали — можно переписываться','You matched — you can chat')}</p>`:''}
- ${!me?`<button class="why mt12" data-go="P05" data-id="${id}">${venn(sh.few?'?':sh.match.length,{mini:1})}<span class="grow"><b>${esc(sharedSummary(id))}</b><span>${L('Что у вас общего','What you share')}</span></span>${I.chev}</button>`:''}
+ ${!me?`<button class="why mt12" data-go="P05" data-id="${id}">${venn(sh.few?'?':sh.match.length,{mini:1})}<span class="grow"><b>${esc(sharedSummary(id))}</b><span>${L('Что у вас общего','What you share')}</span></span>${I.chev}</button>`:o.asOther?`<div class="why mt12" aria-disabled="true">${venn('?',{mini:1})}<span class="grow"><b>${L('Общие темы — у каждого свои','Shared topics differ per person')}</b><span>${L('Человек увидит своё совпадение с тобой','Each person sees their own overlap with you')}</span></span></div>`:''}
  ${body}</div></div>`;if(me)delete S.ui.profilePreview;return html;
 }
 SC.P01={title:p=>pname(p.id),valid:p=>!!PEOPLE[p.id]&&!isBlocked(p.id),render:(p,r)=>profileView(p.id,r),after:()=>fillJars()};
-SC.P03={title:()=>L('Мой профиль','My profile'),render:(p,r)=>profileView('me',r,{after:`<div class="alert info mt12">${I.eye}<span><b>${L('Так тебя видят другие','This is how others see you')}</b>${S.me.dating?L('Знакомства включены — в подборке видны возраст и «Ищет».','Dating is on — Discover shows your age and “Looking for”.'):L('Знакомства выключены — возраст и «Ищет» скрыты.','Dating is off — age and “Looking for” are hidden.')}</span></div>`}),after:()=>fillJars()};
+SC.P03={title:()=>L('Как видят мой профиль','My profile as others see it'),render:(p,r)=>{const lv=p.lv==='granted'?'granted':'all';S.ui.viewGrant=lv==='granted';try{
+ const top=`<div class="alert info mt12">${I.eye}<span><b>${L('Так тебя видят другие','This is how others see you')}</b>${lv==='granted'?L('Так видит человек, которому ты открыл(а) расширенный профиль. Кнопки здесь не работают — это просмотр.','As seen by someone you shared your private profile with. Buttons don’t work here — it’s a preview.'):L('Так видит любой участник без доступа. Кнопки здесь не работают — это просмотр.','As any member without access sees it. Buttons don’t work here — it’s a preview.')}</span></div>${seg([['all',L('Любой участник','Any member')],['granted',L('С доступом','With access')]],lv,'p3lv')}`;
+ return profileView('me',r,{asOther:true,grant:lv,banner:'',after:top});}finally{S.ui.viewGrant=false;}},after:()=>fillJars()};
+ACT.p3lv=a=>{const r=cur();r.p={...r.p,lv:a.dataset.v};refresh();};
 
 ACT.pPhoto=a=>{const id=cur().id==='P03'?'me':cur().p.id;if(!stepPhoto(id,+a.dataset.v)){const h=$('.hero');h?.classList.remove('nudge-l','nudge-r');void h?.offsetWidth;h?.classList.add(+a.dataset.v<0?'nudge-l':'nudge-r');return;}const h=$('.hero');const ix=S.ui.ph[id];const img=$('.hero>img:not(.mbg),.hero>.plate');if(img){const t=document.createElement('div');t.innerHTML=bigPhoto(id,ix);img.replaceWith(t.firstElementChild);}const bg=$('.hero>.mbg');if(bg){const t=document.createElement('div');t.innerHTML=photoBg(id,ix);if(t.firstElementChild)bg.replaceWith(t.firstElementChild);}$$('.hero .pc-bars i').forEach((b,i)=>b.classList.toggle('on',i===ix));};
 ACT.pView=()=>{const id=cur().id==='P03'?'me':cur().p.id;openViewer(photoItems(id),(S.ui.ph||{})[id]||0);};
@@ -3332,7 +3382,7 @@ ACT.rpBlock=()=>{S.ui.rp.block=!S.ui.rp.block;resheet();};
 ACT.rpSend=a=>{if(!S.ui.rp.why){toast(L('Выбери причину жалобы','Choose a reason'),{type:'err'});$('#sheet .radio')?.classList.add('shake');return;}
  const id=cur().p.id;run(a,()=>{closeSheet();if(S.ui.rp.block&&id&&PEOPLE[id])doBlock(id);},{ok:L('Жалоба отправлена. Сообщим о решении в уведомлениях','Report sent. We’ll notify you of the decision')});};
 ACT.block=a=>{const id=a.dataset.v;closeSheet(true);ask({icon:'block',tone:'l',title:L(`Заблокировать ${pname(id)}?`,`Block ${pname(id)}?`),text:L('Симпатии, чат и выданные доступы прекратятся сразу. Человек не получит уведомление. Разблокировка не вернёт доступы.','Likes, chat and any access you shared end immediately. They won’t be notified. Unblocking doesn’t restore access.'),ok:L('Заблокировать','Block'),danger:true}).then(ok=>{if(ok)run(null,()=>doBlock(id),{ok:L('Заблокировано','Blocked')});});};
-function doBlock(id){S.reqOut=S.reqOut.filter(x=>x.p!==id);S.reqIn=S.reqIn.filter(x=>x.p!==id);S.notifs=S.notifs.filter(x=>x.p!==id);S.likesIn=S.likesIn.filter(x=>x.p!==id);S.blocked.unshift({p:id,t:Date.now()});S.matches=S.matches.filter(m=>m.p!==id);S.likesOut=S.likesOut.filter(l=>l.p!==id);S.sharedByMe=S.sharedByMe.filter(x=>x.p!==id);S.follows.delete(id);delete S.threads[id];
+function doBlock(id){S.reqOut=S.reqOut.filter(x=>x.p!==id);S.reqIn=S.reqIn.filter(x=>x.p!==id);S.notifs=S.notifs.filter(x=>x.p!==id);S.likesIn=S.likesIn.filter(x=>x.p!==id);S.blocked.unshift({p:id,t:Date.now()});S.matches=S.matches.filter(m=>m.p!==id);S.likesOut=S.likesOut.filter(l=>l.p!==id);S.sharedByMe=S.sharedByMe.filter(x=>x.p!==id);S.follows.delete(id);S.graph[id]?.delete('me');delete S.threads[id];
  const st=stack();while(st.length>1&&st[st.length-1].p&&st[st.length-1].p.id===id)st.pop();render('back');}
 
 /* P05 — shared interests: categories, no universal score */
@@ -3384,7 +3434,7 @@ SC.P07={title:()=>L('Доступы','Access'),render:(p)=>{const t=['in','out',
   ${list.length?`<div class="card list">${list.map(r=>{const [c,l]=REQ_STATUS()[r.status];return `<div class="rqrow"><button class="top" style="width:100%;text-align:left" data-go="P01" data-id="${r.p}">${av(r.p,'')}<span class="grow"><b>${esc(pname(r.p))} <span class="pill ${c}">${l}</span></b><small>${L('Просил(а)','Asked for')}: ${esc(SCOPE_TXT(r.scopes))} · ${F.rel(r.t)}</small>${r.status==='partial'?`<small>${L('Открыто','Shared')}: ${esc(SCOPE_TXT(r.granted))} · ${F.left(r.until)}</small>`:''}</span></button>${r.status==='pending'?`<div class="acts3"><button class="btn text auto" data-act="cancelReq" data-v="${r.id}">${L('Отменить запрос','Cancel request')}</button></div>`:['partial','granted'].includes(r.status)?`<div class="acts3"><button class="btn text auto" data-go="P08" data-id="${r.p}">${L('Смотреть открытое','View shared')}</button></div>`:''}</div>`;}).join('')}</div>`:empty('send',only?L('Ничего не ждёт ответа','Nothing pending'):L('Ты ещё ничего не запрашивал(а)','You haven’t asked for anything yet'),L('Запросить доступ можно в профиле человека или в подборке.','You can request access on a profile or in Discover.'))}
   <p class="note mt12">${L('Отказ показывается как «без ответа». Повторный запрос тому же человеку — не раньше чем через 7 дней.','A decline shows as “no answer”. You can ask the same person again after 7 days.')}</p>`;sections.out=body;}
  {body=withMe.length?`<div class="card list">${withMe.map(r=>linkRow({go:'P08',p:{id:r.p},av:av(r.p,''),title:pname(r.p),sub:`${SCOPE_TXT(r.granted)} · ${F.left(r.until)}`})).join('')}</div>`:empty('unlock',L('Пока никто не открыл','Nothing shared with you yet'),L('Здесь появятся расширенные профили, которые тебе открыли.','Private profiles shared with you appear here.'));;sections.withme=body;}
- {body=byMe.length?byMe.map(x=>`<div class="card" style="margin-bottom:10px"><div class="row">${av(x.p,'')}<div class="grow"><b>${esc(pname(x.p))}</b><div class="note">${esc(SCOPE_TXT(x.scopes))}</div></div><span class="pill">${x.until?F.left(x.until):L('без срока','no limit')}</span></div><div class="row g8 mt12"><button class="btn md soft" data-act="narrow" data-v="${x.p}">${L('Изменить','Change')}</button><button class="btn md danger" data-act="revoke" data-v="${x.p}">${L('Отозвать','Revoke')}</button></div></div>`).join(''):empty('lock',L('Ты никому не открывал(а) доступ','You haven’t shared with anyone'),L('Открыть можно, ответив на запрос.','You can share by answering a request.'));;sections.byme=body;}
+ {body=byMe.length?byMe.map(x=>`<div class="card" style="margin-bottom:10px"><div class="row">${whoLink(x.p,'')}<div class="grow"><button class="plink pnm" ${profGo(x.p)}>${esc(pname(x.p))}</button><div class="note">${esc(SCOPE_TXT(x.scopes))}</div></div><span class="pill">${x.until?F.left(x.until):L('без срока','no limit')}</span></div><div class="row g8 mt12"><button class="btn md soft" data-act="narrow" data-v="${x.p}">${L('Изменить','Change')}</button><button class="btn md danger" data-act="revoke" data-v="${x.p}">${L('Отозвать','Revoke')}</button></div></div>`).join(''):empty('lock',L('Ты никому не открывал(а) доступ','You haven’t shared with anyone'),L('Открыть можно, ответив на запрос.','You can share by answering a request.'));;sections.byme=body;}
  return `${bar(L('Доступы','Access'),{back:1,sm:1})}<div class="view nodock"><div class="wrap">${tabs}${sections[t]}</div></div>`;},after:()=>{$('#main .tabs .on')?.scrollIntoView({block:'nearest',inline:'nearest'});}};
 
 ACT.p7tab=a=>{const r=cur();r.p.tab=a.dataset.v;r.scroll=0;render('fade');};
@@ -3411,12 +3461,26 @@ ACT.nwOk=a=>{const o=S.ui.nw,x=givenGrant(o.p);if(!x){closeSheet(true);toast(L('
 /* P08 — private profile shared with me */
 /* P08 — V8: the private profile is a continuation of the profile, not a separate screen */
 const activeGrant=receivedGrant;
-function privSection(id){const g=activeGrant(id);if(!g)return grp(L('Расширенный профиль','Private profile'),veilBlock(id),{inner:'flat veil-card'});const P0=person(id);
- const head=`<div class="grp-t" id="priv"><span>${I.unlock} ${L('Расширенный профиль','Private profile')}</span><span class="note">${esc(F.left(g.until))}</span></div>`;
- const info=g.granted.includes('info')?`${grp(L('Желания','Wishes'),[[topic('shibari'),L('практикую, принимающая роль','practising, receiving role'),'ok'],[topic('sensory'),L('практикую','practising'),'ok'],[topic('temperature'),L('хочу попробовать','want to try'),'wait'],[topic('roleplay'),L('фантазия','fantasy'),''],[topic('aftercare'),L('обязательно','essential'),'hot']].map(([n,v,c])=>`<div class="stat-row"><span>${n}</span><span class="pill ${c}">${v}</span></div>`).join(''),{list:1})}
-  ${grp(L('Границы','Limits'),jarsHTML([{t:'filming',limit:'hard'},{t:'strongpain',limit:'discuss'},{t:'publicplace',limit:'hard'}]))}`:'';
- const media=g.granted.includes('album')||g.granted.includes('photos')?grp(g.granted.includes('album')?L('Альбом «Лето» · 6 фото','Album “Summer” · 6 photos'):L('Приватные фото · 3','Private photos · 3'),`<div class="pgrid">${(g.granted.includes('album')?[0,1,2,3,4,5]:[0,1,2]).map(k=>`<button class="pcell" data-act="privPeek" data-v="${id}" data-i="${k}">${P0.photo?`<img src="${IMG(P0.photo)}" alt="" style="${CROPS[k%6]}">`:plate('rose')}<span class="wm">${esc(S.me.nick)}</span></button>`).join('')}</div>`,{foot:L('С твоим водяным знаком. Доступ могут отозвать в любой момент — уважай доверие.','With your watermark. Access can be revoked any time — respect the trust.')}):'';
- return `<section class="priv-open">${head}<div class="priv-in">${info}${media}</div></section>`;}
+/** What a person with access sees in someone's private layer. One projection for seed people and for me,
+ *  so «Как видят» (my preview) and a real granted view render through the same code. */
+const SEED_PRIV_JARS=[{t:'shibari',lv:9},{t:'sensory',lv:8},{t:'temperature',lv:6},{t:'roleplay',lv:7},{t:'aftercare',lv:10},{t:'filming',lv:0,limit:'hard'},{t:'strongpain',lv:0,limit:'discuss'},{t:'publicplace',lv:0,limit:'hard'}];
+function privProj(id){
+ if(id==='me')return{jars:S.me.jars.filter(j=>j.vis==='granted'),text:T(S.me.privText)||'',media:privMedia().map(m=>({type:m.type,src:privSrc(m),style:m.style,sec:m.type==='video'?'video':m.sec,dur:m.dur}))};
+ const P0=person(id);return{jars:SEED_PRIV_JARS,text:T(P0?.privText)||'',media:P0?.photo?[0,1,2,3,4,5].map(k=>({type:'image',src:IMG(P0.photo),style:CROPS[k%6],sec:k<3?'photos':'album'})):[]};}
+/** sections a grant opens: info → text + wishes & limits; photos/album/video → those media sections */
+function privOpenHTML(id,g,o={}){const pr=privProj(id),has=k=>g.granted.includes(k);
+ const media=pr.media.filter(m=>has(m.sec));const wishes=pr.jars.filter(j=>!j.limit),limits=pr.jars.filter(j=>j.limit);
+ const info=has('info')?`${pr.text?grp(L('От себя','In their words'),`<p class="bio">${esc(pr.text)}</p>`):''}${wishes.length?grp(L('Желания','Wishes'),jarsHTML(wishes,{act:o.preview?'':'topic',who:id})):''}${limits.length?grp(L('Границы','Limits'),jarsHTML(limits,{act:o.preview?'':'topic',who:id})):''}${!pr.text&&!pr.jars.length?`<p class="note">${L('Здесь пока ничего нет.','Nothing here yet.')}</p>`:''}`:'';
+ const wm=o.preview?L('ник зрителя','viewer’s nick'):(S.me.nick||'');
+ const mediaHTML=media.length?grp(L(`Фото и видео · ${media.length}`,`Photos & video · ${media.length}`),`<div class="pgrid">${media.map((m,k)=>`<button class="pcell" ${o.preview?'disabled':`data-act="privPeek" data-v="${id}" data-i="${k}"`}>${m.type==='video'?`<video src="${esc(m.src)}" muted playsinline preload="metadata"></video>`:`<img src="${esc(m.src)}" alt="" style="${m.style||''}" draggable="false">`}<span class="wm">${esc(wm)}</span></button>`).join('')}</div>`,{foot:o.preview?L('Каждый видит с собственным водяным знаком.','Everyone sees them with their own watermark.'):L('С твоим водяным знаком. Доступ могут отозвать в любой момент — уважай доверие.','With your watermark. Access can be revoked any time — respect the trust.')}):'';
+ const head=`<div class="grp-t" id="priv"><span>${I.unlock} ${L('Расширенный профиль','Private profile')}</span><span class="note">${g.until?esc(F.left(g.until)):''}</span></div>`;
+ return `<section class="priv-open">${head}<div class="priv-in">${info}${mediaHTML}</div></section>`;}
+function privSection(id,o={}){
+ if(id==='me'){const g=o.grant==='granted'?{granted:['info','photos','album','video'],until:null}:null;
+  if(!g)return grp(L('Расширенный профиль','Private profile'),veilBlock('me').replace(/ data-(act|v)="[^"]*"/g,'').replace(/<button /g,'<button disabled tabindex="-1" '),{inner:'flat veil-card'});
+  return privOpenHTML('me',g,{preview:1});}
+ const g=activeGrant(id);if(!g)return grp(L('Расширенный профиль','Private profile'),veilBlock(id),{inner:'flat veil-card'});
+ return privOpenHTML(id,g);}
 function myPrivSection(){const jars=S.me.jars.filter(j=>j.vis==='granted');const media=privMedia();
  const head=`<div class="grp-t" id="priv"><span>${I.key} ${L('Расширенный профиль','Private profile')}</span><button data-go="P04">${L('Изменить','Edit')}</button></div>`;
  const empty=!jars.length&&!media.length;
@@ -3425,7 +3489,7 @@ function myPrivSection(){const jars=S.me.jars.filter(j=>j.vis==='granted');const
  ${jars.length?grp(L('Желания и границы','Wishes & limits'),jarsHTML(jars,{act:'editJar',who:'me'})):''}
  ${media.length?`<section class="grp"><div class="grp-t"><span>${L('Фото и видео','Photos & video')} · ${media.length}</span></div><div class="pgrid">${media.slice(0,6).map((m,i)=>`<button class="pcell" data-act="privView" data-v="${i}">${m.type==='video'?`<video src="${esc(privSrc(m))}" muted playsinline preload="metadata"></video>`:`<img src="${esc(privSrc(m))}" alt="" style="${m.style||''}" draggable="false">`}<span class="wm">${esc(S.me.nick||'')}</span></button>`).join('')}</div><p class="grp-n">${L('Другие увидят их со своим водяным знаком.','Others see them with their own watermark.')}</p></section>`:''}
  </div></section>`;}
-ACT.privPeek=a=>{const id=a.dataset.v,P0=person(id),g=activeGrant(id);if(!P0||!g||!g.granted.some(k=>['album','photos'].includes(k))){toast(L('Доступ к фото недоступен','Photo access is unavailable'),{type:'warn'});refresh();return;}const n=g.granted.includes('album')?6:3;openViewer(Array.from({length:n},(_,k)=>({type:'image',src:IMG(P0.photo),style:CROPS[k%6],wm:'@'+(S.me.nick||'')})),+a.dataset.i);};
+ACT.privPeek=a=>{const id=a.dataset.v,g=activeGrant(id);const media=g?privProj(id).media.filter(m=>g.granted.includes(m.sec)):[];if(!person(id)||!media.length){toast(L('Доступ к фото недоступен','Photo access is unavailable'),{type:'warn'});refresh();return;}openViewer(media.map(m=>({type:m.type,src:m.src,style:m.style,wm:'@'+(S.me.nick||'')})),+a.dataset.i);};
 SC.P08={title:p=>pname(p.id),valid:p=>!!PEOPLE[p.id]&&!isBlocked(p.id),render:(p,r)=>profileView(p.id,r),after:()=>{fillJars();setTimeout(()=>$('#priv')?.scrollIntoView({block:'start',behavior:'smooth'}),120);}};
 
 /* P02 — edit my profile: one source of truth for every screen */
@@ -3442,7 +3506,7 @@ SC.P02={title:()=>L('Редактировать профиль','Edit profile'),
  </div></section><section class="grp"><div class="grp-t"><span>${L('Кто ты','About you')}</span><span class="note">${L('видимость — у каждого поля','visibility per field')}</span></div><div class="card form-card"><div class="field"><span class="flabel">${L('Местоимения','Pronouns')}</span>${chipGroup(optItems('pron'),[r.pron],'peOne',{k:'pron'})}</div>
  ${[['gender',L('Гендер','Gender'),1],['orient',L('Ориентация','Orientation'),1],['status',L('Сейчас','Current status'),0],['format',L('Формат отношений','Relationship format'),1],['role',L('Роль','Role'),0]].map(([k,l,multi])=>`<div class="field"><span class="flabel">${l}${visBtn(k)}</span>${IDENTITY_KEYS.includes(k)?identityChoices(k,r[k],multi?'peMulti':'peOne'):chipGroup(optItems(k),[r[k]],'peOne',{k,title:l})}</div>`).join('')}
  <div class="field"><span class="flabel">${L('Языки','Languages')}</span>${chipGroup([['ru','русский'],['en','English'],['de','Deutsch']],r.langs,'peMulti',{k:'langs'})}</div>
- </div></section><section class="grp"><div class="grp-t"><span>${L('Ещё','More')}</span></div><div class="card list">${linkRow({go:'P04',icon:'key',tone:'a',title:L('Расширенный профиль','Private profile'),sub:L('Фото, видео и желания — по запросу и на срок','Photos, video and wishes — on request, for a set time')})}${linkRow({act:'toMap',icon:'spark',tone:'l',title:L('Интересы','Interests'),sub:L('Управляются в «Я»','Managed in Me')})}</div></section>
+ </div></section><section class="grp"><div class="grp-t"><span>${L('Ещё','More')}</span></div><div class="card list">${linkRow({go:'P04',icon:'key',tone:'a',title:L('Расширенный профиль','Private profile'),sub:L('Фото, видео и желания — по запросу и на срок','Photos, video and wishes — on request, for a set time')})}${linkRow({go:'X02',icon:'spark',tone:'l',title:L('Интересы и границы','Interests & limits'),sub:L('Мои баночки: значение темы и кто её видит — все, по доступу или только ты','My jars: each topic’s value and who sees it — everyone, by access or only you')})}</div></section>
  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="peSave">${L('Сохранить','Save')}</button></div></div>`;}};
 ACT.visCycle=a=>{const r=cur();const k=a.dataset.v;const order=['public','granted','only'];r.vis[k]=order[(order.indexOf(r.vis[k])+1)%3];r.dirty=true;refresh();toast({public:L('Видно всем участникам','Visible to all members'),granted:L('Только тем, кому ты открыл(а) доступ','Only people you’ve shared access with'),only:L('Видишь только ты','Only you can see it')}[r.vis[k]]);};
 ACT.peOne=a=>{const r=cur(),k=a.dataset.k;r[k]=k==='role'?toggleIdentityValue(r[k],k,a.dataset.v):r[k]===a.dataset.v?null:a.dataset.v;r.dirty=true;refresh();};
@@ -3459,14 +3523,18 @@ ACT.peSave=a=>{const r=cur();if(requiresDiscoveryPhoto(S.me)&&!r.photos.length){
 
 /* P04 — V7 «Приватное»: what you share by request — wishes & limits, private photos/video, albums */
 const PRIV_SEC=()=>[['photos',L('Фото','Photos')],['video',L('Видео','Video')],['album',L('Альбом «Лето»','Album “Summer”')]];
-function privMedia(){if(!S.me.media){S.me.media=S.persona==='full'?[...[0,1,2].map(i=>({id:'pm'+i,type:'image',src:8,style:CROPS[i+1],sec:'photos'})),...[3,4,5,0,1,2].map((v,i)=>({id:'pa'+i,type:'image',src:8,style:CROPS[v],sec:'album'}))]:[];}return S.me.media;}
+function privMedia(){if(!S.me.media){S.me.media=S.persona!=='new'?[...[0,1,2].map(i=>({id:'pm'+i,type:'image',src:8,style:CROPS[i+1],sec:'photos'})),...[3,4,5,0,1,2].map((v,i)=>({id:'pa'+i,type:'image',src:8,style:CROPS[v],sec:'album'}))]:[];}return S.me.media;}
 const privSrc=m=>m.url||IMG(m.src);
 MEDIA_SRC.priv=()=>privMedia().filter(m=>!S.ui.privSec||m.sec===S.ui.privSec).map(m=>({type:m.type,url:privSrc(m),style:m.style,dur:m.dur}));
-SC.P04={title:()=>L('Расширенный профиль','Private profile'),render:(p,r)=>{const sec=p.sec||'';S.ui.privSec=sec;const all=privMedia();const list=all.filter(m=>!sec||m.sec===sec);const granted=S.me.jars.filter(j=>j.vis==='granted').length;
+SC.P04={title:()=>L('Расширенный профиль','Private profile'),render:(p,r)=>{const sec=p.sec||'';S.ui.privSec=sec;const all=privMedia();const list=all.filter(m=>!sec||m.sec===sec);const gj=S.me.jars.filter(j=>j.vis==='granted');if(r.f.privText===undefined)r.f.privText=T(S.me.privText)||'';
  if(p.add&&!r.opened){r.opened=1;setTimeout(()=>{if(cur()===r)ACT.privAdd();},300);}
  return `${bar(L('Расширенный профиль','Private profile'),{back:1,sm:1,actions:`<button class="ibtn" data-act="privAdd" aria-label="${L('Добавить фото или видео','Add photos or video')}">${I.plus}</button>`})}<div class="view nodock"><div class="wrap">
  <p class="lead" style="margin:4px 4px 0">${L('Видят только те, кому ты сам(а) откроешь доступ — выбранные разделы и на выбранный срок.','Only people you choose see this — the sections you pick, for the time you set.')}</p>
- ${grp(L('Желания и границы','Wishes & limits'),linkRow({act:'toMap',icon:'spark',tone:'l',title:L('Темы «по доступу» и границы','“By access” topics and limits'),val:String(granted)}),{list:1})}
+ <section class="grp"><div class="grp-t"><span>${L('Текст от себя','In your own words')}</span></div><div class="card form-card">${field({name:'privText',label:L('Что важно знать тем, кому ты откроешь доступ','What people you share with should know'),textarea:1,max:1000,ph:L('Например: как я люблю договариваться, что для меня важно до встречи','E.g. how I like to agree on things, what matters to me before meeting'),attrs:'rows="4"'})}<button class="btn soft sm" data-act="privTextSave">${L('Сохранить текст','Save text')}</button></div></section>
+ <section class="grp"><div class="grp-t"><span>${L('Желания и границы','Wishes & limits')} · ${gj.length}</span><button data-go="X02">${L('Изменить','Edit')}</button></div>
+ <p class="grp-n" style="margin:0 2px 10px">${L('Это твои баночки с видимостью «по доступу». Видимость каждой темы меняется в «Мои баночки»: нажми на баночку → «Кто видит». Человек с доступом увидит ровно это:','These are your jars set to “by access”. Change each topic’s visibility in My jars: tap a jar → “Who can see”. Someone with access sees exactly this:')}</p>
+ <div class="card">${gj.length?jarsHTML(gj,{act:'editJar',who:'me'}):`<p class="note">${L('Пока ни одной темы «по доступу». Человек с доступом не увидит желаний и границ.','No “by access” topics yet. Someone with access won’t see any wishes or limits.')}</p>`}</div>
+ <p class="grp-n">${L('Темы «всем» видны в обычном профиле, «только я» — никому.','“Everyone” topics show on your regular profile, “only me” — to no one.')} <button class="btn text auto" style="min-height:0;padding:0" data-go="P03" data-p='{"lv":"granted"}'>${L('Посмотреть, как видят с доступом','See it as someone with access')}</button></p></section>
  <section class="grp"><div class="grp-t"><span>${L('Фото и видео','Photos & video')} · ${all.length}</span></div>
  ${all.length?`<div class="chips scroll" style="margin-bottom:10px">${[['',L('Все','All')],...PRIV_SEC()].map(([k,l])=>`<button class="chip filter ${sec===k?'on':''}" data-act="privSec" data-v="${k}">${l} <span style="opacity:.6">${k?all.filter(m=>m.sec===k).length:all.length}</span></button>`).join('')}</div>
  <div class="pgrid">${list.map((m,i)=>`<button class="pcell" data-act="privView" data-v="${i}" aria-label="${L('Открыть','Open')}">${m.type==='video'?`<video src="${esc(privSrc(m))}" muted playsinline preload="metadata"></video><span class="dur">${I.video}${fmtDur(m.dur||0)}</span>`:`<img src="${esc(privSrc(m))}" alt="" style="${m.style||''}" draggable="false">`}<span class="wm">${esc(S.me.nick||'')}</span></button>`).join('')}<button class="pcell add" data-act="privAdd">${I.plus}<small>${L('Добавить','Add')}</small></button></div>`
@@ -3476,6 +3544,7 @@ SC.P04={title:()=>L('Расширенный профиль','Private profile'),r
  ${grp('',linkRow({go:'P07',p:{tab:'byme'},icon:'unlock',title:L('Кому уже открыто','Already shared with'),val:String(givenGrantEntries().length)}),{list:1})}
  </div></div>`;}};
 ACT.privSec=a=>{cur().p.sec=a.dataset.v;refresh();};
+ACT.privTextSave=a=>{const r=cur();const v=fv('privText').trim().slice(0,1000);run(a,()=>{S.me.privText=v;r.f.privText=v;r.dirty=false;refresh();},{ms:300,ok:L('Текст сохранён — его видят только те, кому ты откроешь доступ','Saved — only people you share access with can see it')});};
 ACT.privView=a=>{MEDIA_SRC.priv&&openViewer(MEDIA_SRC.priv().map(m=>({type:m.type,src:m.url,style:m.style,wm:'@'+(S.me.nick||'')})),+a.dataset.v);};
 ACT.privAdd=()=>{const sec=cur().p.sec||'photos';openUploader({max:6,have:0,accept:'media',aspect:null,aspects:['orig','4:5','1:1'],title:L('Приватные фото и видео','Private photos & video'),done:items=>{privMedia().unshift(...items.map(i=>({id:'pm'+Math.random().toString(36).slice(2,7),type:i.type,url:i.url,dur:i.dur,sec:i.type==='video'?'video':sec==='album'?'album':'photos'})));refresh();}});};
 ACT.p4sec=a=>{if(a.dataset.v==='info')return openMe('X01');go('P04',{sec:a.dataset.v});};
@@ -3491,6 +3560,36 @@ ACT.previewDraft=()=>{const r=cur();const value={...S.me,name:fv('name'),nick:fv
 ACT.peCity=()=>openCityPicker(cur().f.city,id=>{cur().f.city=id;cur().dirty=true;refresh();});
 ACT.peHideCity=()=>{cur().f.city='';cur().dirty=true;refresh();};
 
+
+/* ---------- V10 revision part 2: badges, followers / following ---------- */
+/** small badges after a name: photo verification and Premium. Neither opens private data or chat. */
+function nameBadges(p,sm){if(!p)return '';return `${p.pv?`<span class="nbadge v" title="${L('Фото подтверждено','Photo verified')}" role="img" aria-label="${L('Фото подтверждено','Photo verified')}">${I.verified}</span>`:''}${p.premium?`<span class="nbadge p" title="Premium" role="img" aria-label="Premium">${I.crown}</span>`:''}`;}
+/** follow graph: counts are always the length of the lists people can open */
+function followingOf(id){const set=id==='me'?S.follows:(S.graph[id]||new Set());return [...set].filter(x=>(x==='me'||PEOPLE[x])&&!isBlocked(x));}
+function followersOf(id){return ['me',...Object.keys(PEOPLE)].filter(k=>k!==id&&!isBlocked(k)&&followingOf(k).includes(id));}
+function followCounts(id){const a=followersOf(id).length,b=followingOf(id).length;
+ return `<div class="fcounts"><button data-go="P10" data-p='${JSON.stringify({id,tab:'followers'})}'><b>${a}</b>${pl(a,['подписчик','подписчика','подписчиков'],['follower','followers'],true)}</button><button data-go="P10" data-p='${JSON.stringify({id,tab:'following'})}'><b>${b}</b>${pl(b,['подписка','подписки','подписок'],['following','following'],true)}</button></div>`;}
+SC.P10={title:p=>p.tab==='following'?L('Подписки','Following'):L('Подписчики','Followers'),valid:p=>(p.id==='me'||!!PEOPLE[p.id])&&!isBlocked(p.id),render:(p)=>{const id=p.id,tab=p.tab==='following'?'following':'followers',mine=id==='me';
+ const list=tab==='following'?followingOf(id):followersOf(id);
+ const row=k=>{const self=k==='me';const fol=S.follows.has(k);
+  const act=self?`<span class="note">${L('это ты','you')}</span>`
+   :mine&&tab==='followers'?`<button class="btn sm ${fol?'soft':'primary'}" data-act="flwToggle" data-v="${k}" aria-pressed="${fol}">${fol?L('Отписаться','Unfollow'):L('Подписаться в ответ','Follow back')}</button><button class="ibtn sm" data-act="block" data-v="${k}" aria-label="${L(`Заблокировать ${pname(k)}`,`Block ${pname(k)}`)}">${I.block}</button>`
+   :`<button class="btn sm ${fol?'soft':'primary'}" data-act="flwToggle" data-v="${k}" aria-pressed="${fol}">${fol?L('Отписаться','Unfollow'):L('Подписаться','Follow')}</button>`;
+  return `<div class="li frow"><button class="frow-go" data-go="${self?'P03':'P01'}" ${self?'':`data-p='${JSON.stringify({id:k})}'`}>${av(k,'')}<span class="tx"><b>${esc(pname(k))}${nameBadges(person(k),1)}</b><small>${esc(placeLine(k)||'')}</small></span></button>${act}</div>`;};
+ const who=mine?'':` · ${esc(pname(id))}`;
+ return `${bar((tab==='following'?L('Подписки','Following'):L('Подписчики','Followers'))+who,{back:1,sm:1})}<div class="view nodock"><div class="wrap">
+ ${seg([['followers',`${L('Подписчики','Followers')} · ${followersOf(id).length}`],['following',`${L('Подписки','Following')} · ${followingOf(id).length}`]],tab,'flwTab')}
+ ${mine&&tab==='followers'?`<p class="note" style="margin:12px 2px">${L('Подписка показывает публикации в ленте «Подписки». Она не открывает чат и приватные разделы. Заблокированный человек исчезнет из списка.','Following shows posts in the Following feed. It doesn’t open chat or private sections. A blocked person disappears from the list.')}</p>`:''}
+ ${list.length?`<div class="card list mt12">${list.map(row).join('')}</div>`:empty('people',tab==='following'?L('Пока ни на кого не подписан(а)','Not following anyone yet'):L('Подписчиков пока нет','No followers yet'),'')}</div></div>`;}};
+ACT.flwTab=a=>{const r=cur();r.p={...r.p,tab:a.dataset.v};refresh();};
+ACT.flwToggle=a=>{const id=a.dataset.v;if(!PEOPLE[id]||isBlocked(id))return;const on=!S.follows.has(id);on?S.follows.add(id):S.follows.delete(id);refresh();toast(on?L(`Подписка на ${pname(id)}`,`Following ${pname(id)}`):L(`Ты отписался(ась) от ${pname(id)}`,`Unfollowed ${pname(id)}`),{type:on?'ok':'',action:{label:L('Отменить','Undo'),fn:()=>{if(isBlocked(id))return;on?S.follows.delete(id):S.follows.add(id);refresh();}}});};
+
+/** couple links on a profile: a couple profile names its two accounts, each partner links to the couple */
+function pairLine(id,o={}){const p=person(id);if(!p)return '';
+ if(p.pair&&p.members)return grp(L('Общий профиль двух аккаунтов','A couple profile of two accounts'),p.members.map(m=>personRow(m,{sub:L('личный профиль','personal profile')})).join(''),{list:1,foot:L('Чаты, симпатии и доступы у каждого свои. Общие доступы открываются только с согласия обоих.','Chats, likes and grants are personal. Joint grants open only when both agree.')});
+ const couple=p.pairOf&&PEOPLE[p.pairOf]?['P01',{id:p.pairOf},pname(p.pairOf)]:S.pair?.status==='active'&&(id==='me'||id===S.pair.with)?['Q03',null,pairName()]:null;
+ if(!couple)return '';const btn=`<button class="pairline" data-go="${couple[0]}" ${couple[1]?`data-p='${JSON.stringify(couple[1])}'`:''}>${I.couple}<span>${L('В паре','In a couple')} · <b>${esc(couple[2])}</b></span>${I.chev}</button>`;
+ return o.asOther?btn.replace(/ data-(go|p)=("[^"]*"|'[^']*')/g,'').replace('<button ','<button disabled '):btn;}
 
 /* ---- s-comm.js ---- */
 /* ============ C: COMMUNITIES ============ */
@@ -3535,7 +3634,7 @@ SC.C03={title:p=>SC.C03.valid(p)?T(COMMUNITIES[p.id].name):L('Сообществ
   ${!j&&c.privacy==='open'?`<p class="note mt12">${L('Читать можно и без вступления. Чтобы писать — вступи и прими правила.','You can read without joining. To post, join and accept the rules.')}</p>`:''}`;
  if(t==='events')body=evs.length?`<div class="evgrid">${evs.map((e,i)=>eventCard(e,{i})).join('')}</div>`:empty('cal',L('Ближайших событий нет','No upcoming events'),'',ownsCommunity(id)?`<button class="btn primary" data-go="E11">${L('Создать событие','Create an event')}</button>`:'');
  if(t==='members'){const hosts=communityHostIds(id);const known=[...(c.seedMembers||[]),...(S.communityRequests[id]||[]).filter(x=>x.status==='approved'&&x.showMember).map(x=>x.p)];const vis=[...new Set(c.knownMembers?known:[...['maya','mia','kai','sofi','kira','dan','noa'],...known])].filter(x=>!!PEOPLE[x]&&!c.mods.includes(x)&&canRead).slice(0,12);body=`<div class="sec" style="margin-top:4px">${L('Ведущие','Hosts')}</div><div class="card list">${hosts.map(m=>personRow(m,{sub:L('ведущий(ая)','host')})).join('')}</div>
-  <div class="sec">${pl(C.members(id),['участник','участника','участников'],['member','members'])}</div>${canRead?`<div class="card list">${j&&!ownsCommunity(id)?`<div class="li">${av('me','')}<span class="tx"><b>${esc(pname('me'))}</b><small>${L('это ты','that’s you')}</small></span></div>`:''}${vis.map(m=>personRow(m)).join('')}${!vis.length&&ownsCommunity(id)?`<p class="note">${L('Других участников пока нет','No other members yet')}</p>`:''}</div><p class="note mt12">${L('Показываем только тех, кто разрешил видеть своё участие.','We only show members who allow their membership to be visible.')}</p>`:`<p class="note">${L('Список участников доступен после вступления.','The member list is available after joining.')}</p>`}`;}
+  <div class="sec">${pl(C.members(id),['участник','участника','участников'],['member','members'])}</div>${canRead?`<div class="card list">${j&&!ownsCommunity(id)?`<button class="li" data-go="P03">${av('me','')}<span class="tx"><b>${esc(pname('me'))}</b><small>${L('это ты','that’s you')}</small></span>${I.chev}</button>`:''}${vis.map(m=>personRow(m)).join('')}${!vis.length&&ownsCommunity(id)?`<p class="note">${L('Других участников пока нет','No other members yet')}</p>`:''}</div><p class="note mt12">${L('Показываем только тех, кто разрешил видеть своё участие.','We only show members who allow their membership to be visible.')}</p>`:`<p class="note">${L('Список участников доступен после вступления.','The member list is available after joining.')}</p>`}`;}
  if(t==='rules')body=`<div class="card"><ol class="rules">${c.rules.map(x=>`<li>${esc(T(x))}</li>`).join('')}</ol></div><p class="note mt12">${L('Ведущие управляют обсуждениями и участием в сообществе, но не видят личные чаты и расширенные профили.','Hosts manage discussions and membership, but never see private chats, journals or private profiles.')}</p>`;
  return `<header class="bar overlay"><button class="ibtn glass" data-back aria-label="${L('Назад','Back')}">${I.back}</button><span style="flex:1"></span><button class="ibtn glass" data-act="cMenu" aria-label="${L('Ещё','More')}">${I.more}</button></header>
  <div class="view nodock top0"><div class="wrap"><div class="cm-hero">${evCover(c)}</div>
@@ -3576,10 +3675,10 @@ ACT.cManage=()=>go('C10',{id:cur().p.id});
 SC.C06={title:()=>L('Обсуждение','Discussion'),valid:p=>!!S.discussions.find(d=>d.id===p.id),render:(p,r)=>{const d=S.discussions.find(x=>x.id===p.id);const c=COMMUNITIES[d.c];if(!SC.C03.valid({id:d.c}))return unavailable();const j=S.joined.has(d.c)||ownsCommunity(d.c);
  if(c.privacy==='closed'&&!j)return unavailable();
  return `${bar(T(c.name),{back:1,sm:1,sub:L('Обсуждение','Discussion')})}<div class="view nodock ${j?'cta1':''}"><div class="wrap">
- <div class="post-h"><button class="who" data-go="P01" data-id="${d.author}">${av(d.author,'sm')}<span class="tx"><b>${esc(pname(d.author))}</b><small>${F.rel(d.t)}</small></span></button><button class="ibtn ghost sm" data-act="report" data-v="post" aria-label="${L('Пожаловаться','Report')}">${I.flag}</button></div>
+ <div class="post-h"><button class="who" ${profGo(d.author)}>${av(d.author,'sm')}<span class="tx"><b>${esc(pname(d.author))}${nameBadges(person(d.author))}</b><small>${F.rel(d.t)}</small></span></button><button class="ibtn ghost sm" data-act="report" data-v="post" aria-label="${L('Пожаловаться','Report')}">${I.flag}</button></div>
  <h2 class="t md" style="margin-top:14px">${esc(T(d.title))}</h2><p style="margin:0;font-size:15.5px;line-height:1.55">${esc(T(d.text))}</p>
  ${mediaPreviews(d.media)}<div class="sec">${pl(d.replies.length,['ответ','ответа','ответов'],['reply','replies'])}</div>
- ${d.replies.map(x=>`<div class="comment ${x.status||''}">${av(x.a,'xs')}<div class="tx"><b>${esc(pname(x.a))}</b><time>${x.status==='failed'?L('не отправлено','not sent'):x.status==='pending'?L('отправляется…','sending…'):F.rel(x.t)}</time><p>${esc(T(x.text))}</p></div></div>`).join('')||`<p class="note">${L('Ответов пока нет.','No replies yet.')}</p>`}
+ ${d.replies.map(x=>`<div class="comment ${x.status||''}">${whoLink(x.a)}<div class="tx"><button class="plink pnm" ${profGo(x.a)}>${esc(pname(x.a))}${nameBadges(person(x.a))}</button><time>${x.status==='failed'?L('не отправлено','not sent'):x.status==='pending'?L('отправляется…','sending…'):F.rel(x.t)}</time><p>${esc(T(x.text))}</p></div></div>`).join('')||`<p class="note">${L('Ответов пока нет.','No replies yet.')}</p>`}
  ${!j?`<div class="alert info mt16">${I.info}<span>${L('Чтобы отвечать, вступи в сообщество.','Join the community to reply.')}</span></div><button class="btn primary mt12" data-back>${L('К сообществу','To the community')}</button>`:''}
  </div></div>${j?`<div class="inputbar"><textarea id="dr" rows="1" placeholder="${L('Ответить в обсуждении…','Reply to the discussion…')}" data-in="grow" data-enter="sendReply">${esc(r.f.dr||'')}</textarea><button class="ibtn send" data-act="sendReply" aria-label="${L('Отправить','Send')}">${I.send}</button></div>`:''}`;}};
 ACT.sendReply=()=>{const route=cur(),d=S.discussions.find(x=>x.id===route.p.id);if(!d||!S.session||!(S.joined.has(d.c)||ownsCommunity(d.c))){toast(L('Ответить могут только участники сообщества','Only community members can reply'),{type:'warn'});return;}const el=$('#dr'),v=el?.value.trim();if(!v){toast(L('Напиши ответ','Write a reply'),{type:'warn'});el?.focus();return;}const owner=S,session=S.session,x={a:'me',text:{ru:v,en:v},t:Date.now(),status:'pending'};d.replies.push(x);route.f.dr='';refresh();$('#main .view').scrollTop=1e6;
@@ -3741,7 +3840,7 @@ SC.X01={root:1,tab:'me',title:()=>L('Я','Me'),render:()=>{const m=S.me;const [n
  ${grp(L('Мои баночки','My jars'),jars.length?jarShelf(m.jars,{max:4,pre:1,act:'editJar',vis:1,add:'addJar',moreAct:'myJarsAll'}):`<div class="jar-empty"><p>${L('Баночка — это одна тема и то, как она тебе откликается: от 1 до 10, «обсуждаемо» или «табу».','A jar is one topic and how it feels to you: 1 to 10, “negotiable” or “taboo”.')}</p><div class="row g8"><button class="btn primary sm" data-go="X07" data-id="${next||'rope'}">${L('Пройти тест','Take a quiz')}</button><button class="btn secondary sm" data-act="addJar">${I.plus}${L('Добавить тему','Add a topic')}</button></div></div>`,{right:jars.length?`<button data-go="X02">${L('Все','All')} · ${jars.length}</button>`:''})}
  ${grp(L('Тесты','Quizzes'),linkRow({go:'X05',icon:'test',title:L('Узнай себя','Get to know yourself'),sub:L(`Пройдено ${done} из ${Object.keys(QUIZ).length}. Каждый тест — несколько тем с пояснениями.`,`${done} of ${Object.keys(QUIZ).length} done. Each quiz is a few topics, each explained.`)}),{list:1})}
  ${grp(L('Приватное','Private'),`${linkRow({go:'P04',icon:'key',title:L('Расширенный профиль','Private profile'),sub:priv?pl(priv,['фото или видео','фото или видео','фото и видео'],['photo or video','photos and videos']):L('Фото, видео и желания — по запросу и на срок','Photos, video and wishes — on request, for a set time')})}${linkRow({go:'P07',icon:'unlock',title:L('Доступы','Access'),sub:L('Кто просит и кому открыто','Who asks and who can see it'),badge:C.reqIn()||''})}`,{list:1})}
- ${grp(L('Активность','Activity'),`${linkRow({go:'E10',icon:'cal',title:L('Мои события','My events'),val:going?String(going):''})}${linkRow({go:'F10',icon:'feed',title:L('Мои публикации','My posts'),val:String(S.myPosts.length)})}${linkRow({go:'G04',icon:'bookmark',title:L('Сохранённое','Saved'),val:String(m.saved.posts.length+m.saved.events.length)})}${linkRow({act:'pairLink',icon:'couple',title:L('Пара','Couple'),sub:S.pairInvite?L('ждём ответа партнёра','waiting for your partner'):''})}`,{list:1})}
+ ${grp(L('Активность','Activity'),`${linkRow({go:'E10',icon:'cal',title:L('Мои события','My events'),val:going?String(going):''})}${linkRow({go:'F10',icon:'feed',title:L('Мои публикации','My posts'),val:String(S.myPosts.length)})}${linkRow({go:'G04',icon:'bookmark',title:L('Сохранённое','Saved'),val:String(m.saved.posts.length+m.saved.events.length)})}${S.pair?.status==='active'?linkRow({go:'Q03',icon:'couple',title:L('Пара','Couple'),sub:pairName()}):linkRow({act:'pairLink',icon:'couple',title:L('Пара','Couple'),sub:S.pairInvite?L('ждём ответа партнёра','waiting for your partner'):''})}`,{list:1})}
  </div></div>`;},after:()=>fillJars()};
 ACT.myJarsAll=()=>go('X02');
 /* X02 — all my jars, grouped by answer */
@@ -4004,10 +4103,27 @@ SC.Q01={title:()=>L('Связь пары','Couple connection'),render:()=>`${bar
 SC.Q02={title:()=>L('Пригласить в пару','Invite partner'),render:()=>`${bar(L('Пригласить в пару','Invite partner'),{back:1,sm:1})}<div class="view nodock cta1"><div class="wrap">${field({name:'partner',label:L('Ник партнёра','Partner nickname'),ph:'@nickname'})}<p class="note">${L('Каждый подтверждает связь в своём аккаунте. До двух подтверждений общего профиля нет.','Each person confirms in their own account. There is no couple profile until both confirm.')}</p></div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="v6PairInvite">${L('Отправить приглашение','Send invitation')}</button></div></div>`};
 ACT.v6PairInvite=a=>{const r=cur(),nick=fv('partner').trim().replace(/^@/,'');if(!/^[a-z0-9_.]{3,20}$/i.test(nick)||nick===S.me.nick){setErr('partner',L('Укажи другой корректный ник','Enter another valid nickname'));return;}run(a,()=>{S.pairInvite={nick,status:'pending'};r.dirty=false;go('Q01',{}, {replace:true});},{ok:L('Приглашение отправлено','Invitation sent')});};
 ACT.v6PairCancel=()=>{S.pairInvite=null;refresh();};
-SC.Q03={title:()=>L('Общий профиль','Couple profile'),render:()=>S.pair?.status==='active'?`${bar(L('Общий профиль','Couple profile'),{back:1,sm:1})}<div class="view nodock"><div class="wrap"><h2 class="t">${esc(S.pair.name)}</h2><p>${L('Только сведения, которые подтвердили оба.','Only details approved by both people.')}</p><button class="btn soft" data-go="Q04">${L('Предложить изменения','Propose changes')}</button></div></div>`:unavailable()};
+/* Q03 — the couple profile: a layer over two separate accounts. Each person keeps own chats, likes and grants. */
+const pairName=()=>S.pair?T(S.pair.name):'';
+SC.Q03={title:()=>L('Общий профиль','Couple profile'),render:()=>{const P=S.pair;if(P?.status!=='active')return unavailable();const pr=P.proposal;
+ const member=id=>`<button class="li" ${profGo(id)}>${av(id,'')}<span class="tx"><b>${esc(pname(id))}${nameBadges(person(id))}</b><small>${id==='me'?L('ты · личный профиль отдельно','you · personal profile is separate'):L('партнёр · свой аккаунт','partner · own account')}</small></span>${I.chev}</button>`;
+ return `${bar(L('Общий профиль','Couple profile'),{back:1,sm:1,actions:`<button class="ibtn" data-go="Q04" aria-label="${L('Предложить изменения','Propose changes')}">${I.edit}</button>`})}<div class="view nodock"><div class="wrap">
+ <div class="pair-hero">${av('me','lg')}${av(P.with,'lg')}</div><h2 class="t center">${esc(pairName())}</h2><p class="note center">${L(`вместе в FetUre с ${F.date(P.since)}`,`a couple on FetUre since ${F.date(P.since)}`)}</p>
+ ${pr?`<div class="alert warn mt16">${I.clock}<span><b>${L(`${pname(pr.by)} предлагает новое описание`,`${pname(pr.by)} proposes a new description`)}</b>«${esc(T(pr.text))}»<span class="row g8 mt8"><button class="btn sm primary" data-act="pairProposal" data-v="yes">${L('Согласиться','Approve')}</button><button class="btn sm soft" data-act="pairProposal" data-v="no">${L('Отклонить','Decline')}</button></span></span></div>`:''}
+ ${grp(L('Описание пары','About the couple'),`<p class="bio">${esc(T(P.desc))}</p>`,{foot:L('Меняется только с согласия обоих.','Changes only with both agreeing.')})}
+ ${grp(L('Правила знакомства','How to approach us'),`<p class="bio">${esc(T(P.rules))}</p>`)}
+ ${grp(L('Двое — два аккаунта','Two people, two accounts'),member('me')+member(P.with),{list:1})}
+ ${grp(L('Что общее, а что у каждого своё','What’s shared and what’s personal'),`<div class="fact"><i class="g">${I.check}</i><span>${L('Общее: описание, правила, совместные публикации и общие доступы — каждый шаг подтверждают оба.','Shared: description, rules, joint posts and joint grants — both confirm every step.')}</span></div><div class="fact"><i class="v">${I.lock}</i><span>${L('Личное: чаты, симпатии, баночки, расширенный профиль и личные доступы. Партнёр их не видит.','Personal: chats, likes, jars, private profile and personal grants. Your partner can’t see them.')}</span></div>`)}
+ <div class="card list mt16">${linkRow({go:'Q05',icon:'lock',title:L('Общие доступы','Shared grants'),val:String(P.grants.length)})}${linkRow({go:'P01',p:{id:P.with},icon:'me',title:L(`Личный профиль ${pname(P.with)}`,`${pname(P.with)}’s own profile`)})}${linkRow({go:'Q06',icon:'x',cls:'danger',title:L('Разъединить пару','Unlink couple')})}</div>
+ </div></div>`;}};
+ACT.pairProposal=a=>{const P=S.pair;if(!P?.proposal)return;const yes=a.dataset.v==='yes';run(a,()=>{if(yes)P.desc=P.proposal.text;P.proposal=null;refresh();},{ms:400,ok:yes?L('Описание обновлено — согласились оба','Description updated — you both agreed'):L('Предложение отклонено. Описание прежнее','Proposal declined. The description stays')});};
 SC.Q04={title:()=>L('Изменения пары','Couple changes'),render:()=>`${bar(L('Изменения пары','Couple changes'),{back:1,sm:1})}<div class="view nodock"><div class="wrap">${field({name:'pairName',label:L('Название пары','Couple name')})}<button class="btn primary" data-act="v6PairChange">${L('Отправить на согласование','Request partner approval')}</button><p class="note">${L('Публикация произойдёт после отдельного подтверждения второго человека.','Publishing requires the other person’s separate approval.')}</p></div></div>`};
 ACT.v6PairChange=()=>{if(!fv('pairName').trim())return;S.pairProposal=fv('pairName').trim();cur().dirty=false;toast(L('Предложение ожидает согласия партнёра','Proposal awaits partner consent'),{type:'info'});};
-SC.Q05={title:()=>L('Общие доступы','Shared grants'),render:()=>`${bar(L('Общие доступы','Shared grants'),{back:1,sm:1})}<div class="view nodock"><div class="wrap">${empty('lock',L('Общих доступов нет','No shared grants'),L('Новые материалы и каждый доступ требуют двух решений. Личные доступы управляются отдельно.','New media and every grant need two decisions. Personal grants are managed separately.'))}<button class="btn soft" data-go="P07">${L('Мои личные доступы','My personal grants')}</button></div></div>`};
+SC.Q05={title:()=>L('Общие доступы','Shared grants'),render:()=>{const P=S.pair;const st=v=>v==='yes'?`<span class="pill ok">${I.check}${L('да','yes')}</span>`:`<span class="pill wait">${I.clock}${L('ждёт','pending')}</span>`;
+ const rows=(P?.grants||[]).filter(g=>!isBlocked(g.p)).map(g=>`<div class="li">${whoLink(g.p,'')}<span class="tx"><b>${esc(pname(g.p))}</b><small>${esc(SCOPE_TXT(g.scopes))}${g.until?` · ${esc(F.left(g.until))}`:''}</small><span class="row g8 mt8"><span class="note">${L('Ты','You')}</span>${st(g.me)}<span class="note">${esc(pname(P.with))}</span>${st(g.partner)}</span></span></div>`).join('');
+ return `${bar(L('Общие доступы','Shared grants'),{back:1,sm:1})}<div class="view nodock"><div class="wrap"><p class="lead">${L('Общий доступ открывается, только когда согласились оба. Пока второй не ответил, человек ничего не видит.','A joint grant opens only when both agree. Until the second person answers, nothing is visible.')}</p>
+ ${rows?`<div class="card list">${rows}</div>`:empty('lock',L('Общих доступов нет','No shared grants'),L('Новые материалы и каждый доступ требуют двух решений. Личные доступы управляются отдельно.','New media and every grant need two decisions. Personal grants are managed separately.'))}
+ <button class="btn soft mt16" data-go="P07">${L('Мои личные доступы','My personal grants')}</button></div></div>`;}};
 SC.Q06={title:()=>L('Разъединить пару','Unlink couple'),render:()=>`${bar(L('Разъединить пару','Unlink couple'),{back:1,sm:1})}<div class="view nodock"><div class="wrap"><p class="lead">${L('Общий профиль перестанет действовать, общие доступы закроются. Личные аккаунты и данные останутся.','The couple profile and shared grants stop. Personal accounts and data remain.')}</p><button class="btn danger" data-act="v6PairUnlink">${L('Разъединить','Unlink')}</button></div></div>`};
 ACT.v6PairUnlink=()=>ask({title:L('Разъединить пару?','Unlink the couple?'),ok:L('Разъединить','Unlink'),danger:true}).then(ok=>{if(ok){S.pair=null;S.pairInvite=null;go('Q01',{}, {replace:true});}});SC.Q07={...SC.Q01,title:()=>L('Связь остановлена','Connection stopped')};
 
@@ -4120,7 +4236,7 @@ const QA_RUN={
  limit:()=>{qaApp('P01',{id:'ari'});S.reqOut=Array.from({length:S.quota.max},(_,i)=>({id:'quota'+i,p:'quota'+i,status:'pending',t:Date.now()-i*1000,scopes:['info']}));setTimeout(()=>ACT.reqAccess({dataset:{v:'ari'}}),300);},
 };
 function qaApp(id,p={}){
- if(!S.session)signIn('full');
+ if(!S.session)signIn(S.persona==='pair'?'pair':'full');
  closeSheet(true);ACT.matchClose&&$('#matchLayer').innerHTML&&ACT.matchClose();
  const t=ROOT_TAB[id]||SC[id].tab||S.nav.tab;
  S.nav.tab=t;S.nav.stacks[t].length=1;
@@ -4131,12 +4247,13 @@ function qaGo(id,p){
  closeSheet(true);if($('#matchLayer').innerHTML)ACT.matchClose();
  if(id[0]==='!'){QA_RUN[id.slice(1)]();return;}
  if(SC[id].auth||id==='A04X'){S.session=null;initNav();if(id!=='A01'){if(id==='A04X')S.nav.auth.push({id:'A04',p:{email:'new@mail.com',via:'email'},f:{}});S.nav.auth.push({id,p:{...p},f:{}});}render('fade');return;}
+ if(id==='Q03'&&S.pair?.status!=='active')signIn('pair');
  qaApp(id,p);
 }
 function qaRender(){const q=($('#qaQ')?.value||'').toLowerCase();const r=cur();
  $('#qaNav').innerHTML=QA_LIST().map(([g,items])=>{const it=items.filter(([id,l])=>!q||l.toLowerCase().includes(q)||id.toLowerCase().includes(q));return it.length?`<div class="qa-g">${g}</div>${it.map(([id,l,p],k)=>`<button class="qa-l ${r&&r.id===id&&JSON.stringify(p||{})===JSON.stringify(Object.fromEntries(Object.entries(r.p).filter(([k2])=>p&&k2 in p)))?'on':''}" data-qa="${id}" data-qp='${JSON.stringify(p||{})}'><code>${id[0]==='!'?'···':id}</code><span>${l}</span></button>`).join('')}`:'';}).join('');
  const th=themePref();
- $('#qaOpts').innerHTML=[[L('Язык','Language'),[['ru','RU'],['en','EN']],S.lang,'qaLang'],[L('Тема','Theme'),[['light',L('Светлая','Light')],['dark',L('Тёмная','Dark')],['auto',L('Авто','Auto')]],th,'qaTheme'],[L('Ширина','Width'),[['auto',L('Окно','Window')],['compact','320'],['phone','390'],['tablet',L('Планшет','Tablet')]],QA.frame,'qaFrame'],[L('Сеть','Network'),[['on',L('Есть','Online')],['off',L('Нет','Offline')]],QA.offline?'off':'on','qaNet'],[L('Аккаунт','Account'),[['full',L('Заполненный','Filled')],['new',L('Новый','New')]],S.persona,'qaPersona'],['Premium',[['0',L('Нет','Off')],['1',L('Есть','On')]],S.me.premium?'1':'0','qaPrem'],[L('Знакомства в админке','Dating (admin)'),[['on',L('Включены','On')],['off',L('Скоро','Soon')]],QA.datingLive===false?'off':'on','qaDating'],[L('Логотип','Logo'),[['a','A'],['b','B'],['c','C']],QA.logo||'a','qaLogo'],[L('Проверка возраста','Age check'),[['off',L('По дате рождения','By birth date')],['on',L('Обязательна','Required')]],QA.ageRequired?'on':'off','qaAge']].map(([t,items,v,act])=>`<div class="qa-opt"><span>${t}</span>${seg(items,v,act)}</div>`).join('');
+ $('#qaOpts').innerHTML=[[L('Язык','Language'),[['ru','RU'],['en','EN']],S.lang,'qaLang'],[L('Тема','Theme'),[['light',L('Светлая','Light')],['dark',L('Тёмная','Dark')],['auto',L('Авто','Auto')]],th,'qaTheme'],[L('Ширина','Width'),[['auto',L('Окно','Window')],['compact','320'],['phone','390'],['tablet',L('Планшет','Tablet')]],QA.frame,'qaFrame'],[L('Сеть','Network'),[['on',L('Есть','Online')],['off',L('Нет','Offline')]],QA.offline?'off':'on','qaNet'],[L('Аккаунт','Account'),[['full',L('Заполненный','Filled')],['pair',L('В паре','Couple')],['new',L('Новый','New')]],S.persona,'qaPersona'],['Premium',[['0',L('Нет','Off')],['1',L('Есть','On')]],S.me.premium?'1':'0','qaPrem'],[L('Знакомства в админке','Dating (admin)'),[['on',L('Включены','On')],['off',L('Скоро','Soon')]],QA.datingLive===false?'off':'on','qaDating'],[L('Логотип','Logo'),[['a','A'],['b','B'],['c','C']],QA.logo||'a','qaLogo'],[L('Проверка возраста','Age check'),[['off',L('По дате рождения','By birth date')],['on',L('Обязательна','Required')]],QA.ageRequired?'on':'off','qaAge']].map(([t,items,v,act])=>`<div class="qa-opt"><span>${t}</span>${seg(items,v,act)}</div>`).join('');
  $('#qaHint').innerHTML=L('Коды подтверждения: <b>000000</b> — неверный, <b>999999</b> — истёк, любой другой — верный. Почта <b>limit@…</b> — лимит отправки. Ник <b>alex</b> занят.','Codes: <b>000000</b> wrong, <b>999999</b> expired, any other works. Email <b>limit@…</b> hits the send limit. Nickname <b>alex</b> is taken.')+`<button class="btn secondary mt12" data-act="qaRestart">${L('Начать регистрацию заново','Restart registration')}</button><span class="note">${L('Очистит текущую сессию прототипа и откроет приветствие.','Clears this prototype session and opens the welcome screen.')}</span>`;
 }
 ACT.qaRestart=()=>restartPrototype();
@@ -4151,16 +4268,16 @@ qa.addEventListener('click',e=>{
  const b=e.target.closest('[data-qa]');if(b){qaGo(b.dataset.qa,JSON.parse(b.dataset.qp||'{}'));if(matchMedia('(max-width:900px)').matches)QA_CLOSE();else qaRender();return;}
  const a=e.target.closest('[data-act]');if(!a)return;e.stopPropagation();const v=a.dataset.v;
  if(a.dataset.act==='qaRestart'){ACT.qaRestart();return;}
- ({qaLang:()=>{S.lang=v;document.documentElement.lang=v;refresh();resheet();},qaTheme:()=>applyTheme(v),qaFrame:()=>{QA.frame=v;document.body.classList.toggle('frame',v!=='auto');document.body.classList.toggle('tablet',v==='tablet');document.body.classList.toggle('compact',v==='compact');refresh();},qaNet:()=>{QA.offline=v==='off';refresh();toast(QA.offline?L('Режим «нет сети»: действия будут падать с ошибкой','Offline mode: actions will fail with an error'):L('Сеть восстановлена','Back online'),{type:QA.offline?'warn':'ok'});},qaPersona:()=>{signIn(v);toast(v==='new'?L('Новый пустой аккаунт','New empty account'):L('Заполненный аккаунт Alex','Filled account: Alex'),{type:'ok'});},qaPrem:()=>{S.me.premium=v==='1';refresh();},qaDating:()=>{QA.datingLive=v==='on';refresh();},qaLogo:()=>{QA.logo=v;renderSide();refresh();},qaAge:()=>{QA.ageRequired=v==='on';refresh();}}[a.dataset.act]||(()=>{}))();
+ ({qaLang:()=>{S.lang=v;document.documentElement.lang=v;refresh();resheet();},qaTheme:()=>applyTheme(v),qaFrame:()=>{QA.frame=v;document.body.classList.toggle('frame',v!=='auto');document.body.classList.toggle('tablet',v==='tablet');document.body.classList.toggle('compact',v==='compact');refresh();},qaNet:()=>{QA.offline=v==='off';refresh();toast(QA.offline?L('Режим «нет сети»: действия будут падать с ошибкой','Offline mode: actions will fail with an error'):L('Сеть восстановлена','Back online'),{type:QA.offline?'warn':'ok'});},qaPersona:()=>{signIn(v);toast(v==='new'?L('Новый пустой аккаунт','New empty account'):v==='pair'?L('Alex в паре с Kira — два отдельных аккаунта','Alex in a couple with Kira — two separate accounts'):L('Заполненный аккаунт Alex','Filled account: Alex'),{type:'ok'});},qaPrem:()=>{S.me.premium=v==='1';refresh();},qaDating:()=>{QA.datingLive=v==='on';refresh();},qaLogo:()=>{QA.logo=v;renderSide();refresh();},qaAge:()=>{QA.ageRequired=v==='on';refresh();}}[a.dataset.act]||(()=>{}))();
  qaRender();
 },true);
 
-const qaListV6=QA_LIST;QA_LIST=()=>[...qaListV6(),[L('Дополнено в V6','Completed in V6'),[['Q01',L('Связь пары','Couple connection')],['Q02',L('Приглашение','Invitation')],['Q05',L('Общие доступы','Shared grants')],['Q06',L('Разъединить пару','Unlink couple')],['P04',L('Расширенный профиль: фото и видео','Private profile: photos & video')],['K08',L('Ссылки и сравнения','Links and comparisons')],['S01',L('Помощь','Help')]]]];
+const qaListV6=QA_LIST;QA_LIST=()=>[...qaListV6(),[L('Дополнено в V6','Completed in V6'),[['Q01',L('Связь пары','Couple connection')],['Q03',L('Общий профиль пары (аккаунт «В паре»)','Couple profile (Couple account)')],['P01',L('Половина пары · Eva','Couple member · Eva'),{id:'eva'}],['P10',L('Мои подписчики','My followers'),{id:'me',tab:'followers'}],['P10',L('Подписки Mia','Mia is following'),{id:'mia',tab:'following'}],['P03',L('Как видят: с доступом','Preview: with access'),{lv:'granted'}],['Q02',L('Приглашение','Invitation')],['Q05',L('Общие доступы','Shared grants')],['Q06',L('Разъединить пару','Unlink couple')],['P04',L('Расширенный профиль: фото и видео','Private profile: photos & video')],['K08',L('Ссылки и сравнения','Links and comparisons')],['S01',L('Помощь','Help')]]]];
 
 
 /* ---- main.js ---- */
 /* ============ BOOT ============ */
-S=freshState(new URLSearchParams(location.search).get('persona')==='new'?'new':'full');
+S=freshState((p=>p==='new'||p==='pair'?p:'full')(new URLSearchParams(location.search).get('persona')));
 S.lang=(()=>{try{const l=new URLSearchParams(location.search).get('lang');if(l==='en'||l==='ru')return l;}catch(e){}return 'ru';})();
 document.documentElement.lang=S.lang;
 applyTheme(themePref());
