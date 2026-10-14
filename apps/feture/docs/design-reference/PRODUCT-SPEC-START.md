@@ -6,7 +6,11 @@
 
 Источник продукта: [MASTER-PRODUCT-SPEC-V4.md](MASTER-PRODUCT-SPEC-V4.md). 25 разделов, 10 гипотетических персон/путей, 127 экранов, 24 общих окна. Это целевая спецификация, не отчёт о готовности live-функций. Claude HTML остаётся визуальным референсом.
 
-## V8 — текущий прототип
+## V9 — текущий прототип
+
+[V9-CHANGELOG](V9-CHANGELOG.md), `/prototype-v9.html#F01`: новая дизайн-система (светлая и тёмная), баночка = один ответ 1–10 / «обсуждаемо» / «табу», тесты по конкретным темам с пояснениями. Исходники `prototype/v9/`, сборка `node apps/feture/tools/build-prototype-v9.mjs`.
+
+## V8 — прототип
 
 [V8-CHANGELOG](V8-CHANGELOG.md), `/prototype-v8.html#F01`: упрощение после UX-оценки. Исходники `prototype/v8/`, сборка `node apps/feture/tools/build-prototype-v8.mjs`.
 
