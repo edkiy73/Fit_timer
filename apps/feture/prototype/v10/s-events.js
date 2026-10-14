@@ -48,6 +48,7 @@ function evAccess(id){const e=EV(id),r=myR(id);if(e.organizer==='me')return true
 SC.E03={title:p=>EV(p.id)?T(EV(p.id).title):'',valid:p=>!!EV(p.id)&&(EV(p.id).status!=='review'||EV(p.id).organizer==='me'),render:(p)=>{
  const id=p.id,e=EV(id),r=myR(id),past=isPast(id),acc=evAccess(id),orgMe=e.organizer==='me';const saved=S.me.saved.events.includes(id);
  const diffTz=e.tz!==USER_TZ;
+ if(e.gallery?.length)MEDIA_SRC['ev:'+id]=()=>e.gallery;
  const answered=r.status&&r.status!=='none';
  const rsvpRow=!e.cancelled&&!past&&!orgMe&&(!e.approval||r.app==='approved')?`<div class="sec">${L('Твой ответ','Your answer')}${answered?`<button data-act="rsvpClear">${L('Снять ответ','Remove answer')}</button>`:`<span class="note" style="font-weight:500">${L('пока без ответа','no answer yet')}</span>`}</div><div class="rsvp ${answered?'has':''}">${[['interested',I.eye,L('Интересуюсь','Interested')],['going',I.check,L('Иду','Going')],['not',I.x,L('Не иду','Not going')]].map(([k,i,l])=>`<button class="${r.status===k?'on':''}" data-act="rsvp" data-v="${k}" aria-pressed="${r.status===k}">${i}${l}</button>`).join('')}</div><p class="note mt8">${answered?L('Нажми на выбранный ответ ещё раз, чтобы снять его.','Tap your answer again to remove it.'):L('Ответ можно изменить или снять в любой момент.','You can change or remove your answer any time.')}</p>`:'';
  const lines=[];
@@ -73,7 +74,7 @@ SC.E03={title:p=>EV(p.id)?T(EV(p.id).title):'',valid:p=>!!EV(p.id)&&(EV(p.id).st
  ${e.status==='review'?`<div class="alert warn mt16">${I.clock}<span><b>${L('На проверке','In review')}</b>${L('Пока событие видишь только ты. Обычно проверка занимает до часа.','Only you can see the event for now. Review usually takes under an hour.')}</span></div>`:''}
  <div class="card list mt16">
   <button class="li" data-go="${orgMe?'P03':'P01'}" data-p='${JSON.stringify({id:e.organizer})}'>${av(e.organizer,'sm')}<span class="tx"><b>${esc(pname(e.organizer))}</b><small>${L('Организатор','Organiser')}</small></span>${I.chev}</button>
-  ${e.community?`<button class="li" data-go="C03" data-id="${e.community}"><span class="av sm" style="position:relative">${plate(COMMUNITIES[e.community].plate)}</span><span class="tx"><b>${esc(T(COMMUNITIES[e.community].name))}</b><small>${L('Сообщество','Community')}</small></span>${I.chev}</button>`:''}
+  ${e.community?`<button class="li" data-go="C03" data-id="${e.community}"><span class="av sm" style="position:relative">${commCover(COMMUNITIES[e.community])}</span><span class="tx"><b>${esc(T(COMMUNITIES[e.community].name))}</b><small>${L('Сообщество','Community')}</small></span>${I.chev}</button>`:''}
  </div>
  <div class="card list mt12">
   <div class="li"><span class="ico l">${I.cal}</span><span class="tx"><b>${F.day(e.start)}</b><small>${F.time(e.start)}–${F.time(e.end)} ${diffTz?`${L('у тебя','your time')} · ${F.time(e.start,e.tz)} ${F.tzName(e.tz)}`:F.tzName(USER_TZ)}</small></span></div>
@@ -82,6 +83,7 @@ SC.E03={title:p=>EV(p.id)?T(EV(p.id).title):'',valid:p=>!!EV(p.id)&&(EV(p.id).st
   <div class="li"><span class="ico a">${I.ticket}</span><span class="tx"><b>${e.price?esc(T(e.price)):L('Бесплатно','Free')}</b><small>${e.external?L(`Билеты: ${e.external}`,`Tickets: ${e.external}`):e.approval?L('Участие по заявке','By application'):L('Можно просто прийти','Just come along')}</small></span></div>
  </div>
  <div class="sec">${L('О событии','About')}</div><p style="margin:0;font-size:15.5px;line-height:1.55">${esc(T(e.desc))}</p>
+ ${e.gallery?.length?`<div class="sec">${L('Фотографии','Photos')}</div>${mediaGrid(e.gallery,{id:'ev:'+id})}`:''}
  ${e.reqs&&e.reqs.length?`<div class="sec">${L('Условия участия','Requirements')}</div><div class="card">${e.reqs.map(x=>`<div class="fact"><i class="v">${I.check}</i><span>${esc(T(x))}</span></div>`).join('')}<p class="note mt8">${L('Условия задаёт организатор. FetUre не даёт медицинских и юридических гарантий.','The organiser sets the requirements. FetUre gives no medical or legal guarantees.')}</p></div>`:''}
  ${rsvpRow}
  ${lines.length?`<div class="sec">${L('Твой статус','Your status')}</div><div class="card list">${lines.map(([i,b,s])=>`<div class="statusline"><span class="ico">${i}</span><span class="tx"><b>${b}</b><small>${s}</small></span></div>`).join('')}</div>`:''}
