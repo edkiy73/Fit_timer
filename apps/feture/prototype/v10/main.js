@@ -1,5 +1,5 @@
 /* ============ BOOT ============ */
-S=freshState(new URLSearchParams(location.search).get('persona')==='new'?'new':'full');
+S=freshState((p=>p==='new'||p==='pair'?p:'full')(new URLSearchParams(location.search).get('persona')));
 S.lang=(()=>{try{const l=new URLSearchParams(location.search).get('lang');if(l==='en'||l==='ru')return l;}catch(e){}return 'ru';})();
 document.documentElement.lang=S.lang;
 applyTheme(themePref());
