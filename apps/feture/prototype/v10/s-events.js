@@ -15,7 +15,7 @@ const efCount=f=>(f.when!=='any'?1:0)+(f.types||[]).length+(f.lang||[]).length+(
 function eventsList(){
  const f=Object.assign(EF_DEF(),S.filters.events);S.filters.events=f;const ids=evFiltered(f);const n=efCount(f);
  const soon=ids.filter(id=>!EV(id).cancelled&&EV(id).start-NOW<7*DAY),later=ids.filter(id=>!EV(id).cancelled&&EV(id).start-NOW>=7*DAY),canc=ids.filter(id=>EV(id).cancelled);
- const mine=myEventIds('going').length+myEventIds('interested').length+myEventIds('apps').length+myEventIds('organize').length;
+ const mine=myUpcomingEventIds().length;
  const nxt=myEventIds('going')[0];
  return `<div class="myev"><button class="myev-main" data-go="E10"><span class="ico g">${I.cal}</span><span class="tx"><b>${L('Мои события','My events')}${mine?`<em>${mine}</em>`:''}</b><small>${nxt?`${L('Ближайшее','Next')}: ${esc(T(EV(nxt).title))} · ${F.date(EV(nxt).start)}`:L('Иду, интересуюсь, заявки, организую','Going, interested, applications, organising')}</small></span></button><button class="ibtn add" data-go="E11" aria-label="${L('Создать событие','Create an event')}">${I.plus}</button></div>
  <div class="filterline"><div class="chips scroll">${[['all',L('Все','All')],['offline',S.me.city?L('В моём городе','My city'):L('Офлайн','In person')],['online',L('Онлайн','Online')]].map(([k,l])=>`<button class="chip filter ${f.format===k?'on':''}" data-act="evFormat" data-v="${k}" aria-pressed="${f.format===k}">${k==='online'?ic('video',15):k==='offline'?ic('pin',15):''}${l}</button>`).join('')}</div><button class="chip filter ${n?'on':''}" data-act="evFilters">${ic('filter',16)}${L('Фильтры','Filters')}${n?`<em class="badge-abs">${n}</em>`:''}</button></div>
@@ -52,10 +52,10 @@ SC.E03={title:p=>EV(p.id)?T(EV(p.id).title):'',valid:p=>!!EV(p.id)&&(EV(p.id).st
  const rsvpRow=!e.cancelled&&!past&&!orgMe&&(!e.approval||r.app==='approved')?`<div class="sec">${L('Твой ответ','Your answer')}${answered?`<button data-act="rsvpClear">${L('Снять ответ','Remove answer')}</button>`:`<span class="note" style="font-weight:500">${L('пока без ответа','no answer yet')}</span>`}</div><div class="rsvp ${answered?'has':''}">${[['interested',I.eye,L('Интересуюсь','Interested')],['going',I.check,L('Иду','Going')],['not',I.x,L('Не иду','Not going')]].map(([k,i,l])=>`<button class="${r.status===k?'on':''}" data-act="rsvp" data-v="${k}" aria-pressed="${r.status===k}">${i}${l}</button>`).join('')}</div><p class="note mt8">${answered?L('Нажми на выбранный ответ ещё раз, чтобы снять его.','Tap your answer again to remove it.'):L('Ответ можно изменить или снять в любой момент.','You can change or remove your answer any time.')}</p>`:'';
  const lines=[];
  if(!orgMe&&!e.cancelled&&!past){
-  lines.push([I.check,L('Ответ','Answer'),{none:L('не выбран','not chosen'),interested:L('интересуюсь — это не заявка и не билет','interested — not an application or ticket'),going:L('иду','going'),not:L('не иду','not going')}[r.status||'none']]);
+  lines.push([I.check,L('Ответ','Answer'),{none:L('не выбран','not chosen'),interested:L('интересуюсь — это не заявка и не билет','interested — not an application or ticket'),going:e.approval&&r.app!=='approved'?L('хочу пойти — допуск ещё не получен','want to attend — admission not confirmed'):L('иду','going'),not:L('не иду','not going')}[r.status||'none']]);
   if(e.approval)lines.push([I.doc,L('Заявка','Application'),{none:L('не подана — нужна для участия','not submitted — required to attend'),pending:L('на рассмотрении у организатора','being reviewed by the organiser'),approved:L('одобрена','approved'),declined:L('отклонена','declined')}[r.app||'none']]);
   if(e.price||e.external)lines.push([I.ticket,L('Билет','Ticket'),e.external?(r.ticket==='self'?L('ты отметил(а), что купил(а) на сайте','you marked it as bought on the site'):L('продаётся на сайте организатора, мы его не проверяем','sold on the organiser’s site; we don’t verify it')):L(`оплата на месте, ${T(e.price)}`,`pay at the door, ${T(e.price)}`)]);
-  lines.push([I.eyeoff,L('Видимость','Visibility'),(r.show??S.me.rsvpShow)?L('другие видят, что ты идёшь — меняется в настройках','others can see you’re going — change in settings'):L('участие видит только организатор — меняется в настройках','only the organiser sees it — change in settings')]);
+  lines.push([I.eyeoff,L('Видимость','Visibility'),(eventAttendanceConfirmed(id)&&(r.show??S.me.rsvpShow))?L('другие видят, что ты идёшь — меняется в настройках','others can see you’re going — change in settings'):L('участие видит только организатор — меняется в настройках','only the organiser sees it — change in settings')]);
  }
  let cta='';
  if(orgMe)cta=`<button class="btn primary" data-go="E15" data-id="${id}">${I.gear}${L('Панель организатора','Manage event')}</button>`;
@@ -94,7 +94,7 @@ ACT.evMenu=()=>sheet(()=>({title:L('Событие','Event'),body:`<div class="c
 ACT.addCal=()=>{closeSheet();toast(L('Добавлено в календарь','Added to calendar'),{type:'ok'});};
 ACT.similar=()=>{back();setTimeout(()=>tab('events'),50);};
 /* E05 — RSVP and privacy */
-ACT.rsvpClear=a=>{const id=cur().p.id;const prev={...myR(id)};run(a,()=>{S.rsvp[id]={...myR(id),status:'none',show:false};refresh();},{ok:L('Ответ снят. Ты не в списках события','Answer removed. You’re off the event lists'),undo:()=>{S.rsvp[id]=prev;refresh();}});};
+ACT.rsvpClear=a=>{const id=cur().p.id;const prev={...myR(id)};run(a,()=>{S.rsvp[id]={...myR(id),status:'none',show:false};refresh();},{ok:L('Ответ снят. Заявка и отметка о билете сохранены','Answer removed. Application and ticket note kept'),undo:()=>{S.rsvp[id]=prev;refresh();}});};
 ACT.rsvp=a=>{const id=cur().p.id;const e=EV(id);const v=a.dataset.v;if(myR(id).status===v&&a.closest?.('.rsvp'))return ACT.rsvpClear(a);
   run(a,()=>{S.rsvp[id]={...myR(id),status:v,show:myR(id).show??S.me.rsvpShow};refresh();},{ok:v==='going'?(e.external?L('Ты идёшь. Билет — на сайте организатора','You’re going. Get the ticket on the organiser’s site'):L('Ты идёшь. Место открыто ниже','You’re going. The place is shown below')):v==='interested'?L('Отметили «Интересуюсь». Это не заявка и не билет','Marked “Interested”. That’s not an application or ticket'):L('Отметили «Не иду»','Marked “Not going”')});};
 ACT.rsvpPrivacy=()=>{const id=cur().p.id;S.ui.rv={status:myR(id).status,show:myR(id).show??S.me.rsvpShow};rsvpSheet(id);};
@@ -131,9 +131,9 @@ ACT.sendApp=a=>{const r=cur();const e=EV(r.p.id);r.err={};(e.q||[1]).forEach((q,
 
 /* E10 — my events: only events with MY status (fix: previously showed all events) */
 SC.E10={title:()=>L('Мои события','My events'),render:()=>{
- const groups=[['going',L('Иду','Going')],['apps',L('Заявки','Applications')],['interested',L('Интересуюсь','Interested')],['organize',L('Организую','Organising')],['past',L('Прошедшие','Past')]].map(([k,l])=>[k,l,myEventIds(k)]).filter(g=>g[2].length);
+ const groups=[['going',L('Иду','Going')],['apps',L('Заявки','Applications')],['interested',L('Интересуюсь','Interested')],['organize',L('Организую','Organising')],['past',L('Прошедшие','Past')],['cancelled',L('Отменённые','Cancelled')]].map(([k,l])=>[k,l,myEventIds(k)]).filter(g=>g[2].length);
  return `${bar(L('Мои события','My events'),{back:1,sm:1,actions:`<button class="ibtn" data-go="E11" aria-label="${L('Создать событие','Create event')}">${I.plus}</button>`})}<div class="view nodock"><div class="wrap">
- ${groups.length?groups.map(([k,l,ids])=>`<section class="grp"><div class="grp-t"><span>${l} · ${ids.length}</span></div>${ids.map((id,i)=>eventCard(id,{row:1,i})).join('<div style="height:8px"></div>')}</section>`).join(''):empty('cal',L('Пока пусто','Nothing here yet'),L('Отметь «Иду» или «Интересуюсь» на странице события — оно появится здесь.','Answer “Going” or “Interested” on an event and it shows up here.'),`<button class="btn soft" data-act="toEvents">${L('Смотреть события','Browse events')}</button>`)}
+ ${groups.length?groups.map(([k,l,ids])=>`<section class="grp"><div class="grp-t"><span>${l} · ${ids.length}</span></div>${ids.map((id,i)=>eventCard(id,{row:1,i})).join('<div style="height:8px"></div>')}</section>`).join(''):empty('cal',L('Пока пусто','Nothing here yet'),L('Ответь на событие или подай заявку — оно появится здесь.','Respond to an event or apply to attend — it shows up here.'),`<button class="btn soft" data-act="toEvents">${L('Смотреть события','Browse events')}</button>`)}
  <p class="grp-n">${L('Прошедшие события видишь только ты.','Only you see your past events.')}</p></div></div>`;}};
 ACT.e10tab=a=>setP('k',a.dataset.v);
 ACT.toEvents=()=>tab('events');
@@ -221,3 +221,4 @@ ACT.cDo=a=>{const e=EV(cur().p.id);const reason=$('#cReason').value.trim();run(a
 function zonedParts(ts,tz){const p=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(ts);return Object.fromEntries(p.filter(x=>x.type!=='literal').map(x=>[x.type,+x.value]));}
 function zonedDay(ts,tz){const p=zonedParts(ts,tz);return `${p.year}-${String(p.month).padStart(2,'0')}-${String(p.day).padStart(2,'0')}`;}
 function zonedTime(y,m,d,h,mi,tz){if(![y,m,d,h,mi].every(Number.isFinite))return NaN;const target=Date.UTC(y,m-1,d,h,mi);let ts=target;for(let i=0;i<4;i++){const p=zonedParts(ts,tz);const delta=target-Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute);if(!delta)break;ts+=delta;}const p=zonedParts(ts,tz);return p.year===y&&p.month===m&&p.day===d&&p.hour===h&&p.minute===mi?ts:NaN;}
+
