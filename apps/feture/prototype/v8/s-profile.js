@@ -154,7 +154,7 @@ function myPrivSection(){const jars=S.me.jars.filter(j=>j.vis==='granted'||j.lim
  ${jars.length?grp(L('Желания и границы','Wishes & limits'),jarsHTML(jars,{act:'editJar',who:'me'})):''}
  ${media.length?`<section class="grp"><div class="grp-t"><span>${L('Фото и видео','Photos & video')} · ${media.length}</span></div><div class="pgrid">${media.slice(0,6).map((m,i)=>`<button class="pcell" data-act="privView" data-v="${i}">${m.type==='video'?`<video src="${esc(privSrc(m))}" muted playsinline preload="metadata"></video>`:`<img src="${esc(privSrc(m))}" alt="" style="${m.style||''}" draggable="false">`}<span class="wm">${esc(S.me.nick||'')}</span></button>`).join('')}</div><p class="grp-n">${L('Другие увидят их со своим водяным знаком.','Others see them with their own watermark.')}</p></section>`:''}
  </div></section>`;}
-ACT.privPeek=a=>{const id=a.dataset.v,P0=person(id);const n=activeGrant(id)?.granted.includes('album')?6:3;openViewer(Array.from({length:n},(_,k)=>({type:'image',src:IMG(P0.photo),style:CROPS[k%6]})),+a.dataset.i);};
+ACT.privPeek=a=>{const id=a.dataset.v,P0=person(id);const n=activeGrant(id)?.granted.includes('album')?6:3;openViewer(Array.from({length:n},(_,k)=>({type:'image',src:IMG(P0.photo),style:CROPS[k%6],wm:'@'+(S.me.nick||'')})),+a.dataset.i);};
 SC.P08={title:p=>pname(p.id),valid:p=>!!PEOPLE[p.id]&&!isBlocked(p.id),render:(p,r)=>profileView(p.id,r),after:()=>{fillJars();setTimeout(()=>$('#priv')?.scrollIntoView({block:'start',behavior:'smooth'}),120);}};
 
 /* P02 — edit my profile: one source of truth for every screen */
@@ -205,7 +205,7 @@ SC.P04={title:()=>L('Расширенный профиль','Private profile'),r
  ${grp('',linkRow({go:'P07',p:{tab:'byme'},icon:'unlock',title:L('Кому уже открыто','Already shared with'),val:String(S.sharedByMe.length)}),{list:1})}
  </div></div>`;}};
 ACT.privSec=a=>{cur().p.sec=a.dataset.v;refresh();};
-ACT.privView=a=>{MEDIA_SRC.priv&&openViewer(MEDIA_SRC.priv().map(m=>({type:m.type,src:m.url,style:m.style})),+a.dataset.v);};
+ACT.privView=a=>{MEDIA_SRC.priv&&openViewer(MEDIA_SRC.priv().map(m=>({type:m.type,src:m.url,style:m.style,wm:'@'+(S.me.nick||'')})),+a.dataset.v);};
 ACT.privAdd=()=>{const sec=cur().p.sec||'photos';openUploader({max:6,have:0,accept:'media',aspect:null,aspects:['orig','4:5','1:1'],title:L('Приватные фото и видео','Private photos & video'),done:items=>{privMedia().unshift(...items.map(i=>({id:'pm'+Math.random().toString(36).slice(2,7),type:i.type,url:i.url,dur:i.dur,sec:i.type==='video'?'video':sec==='album'?'album':'photos'})));refresh();}});};
 ACT.p4sec=a=>{if(a.dataset.v==='info')return openMe('X01');go('P04',{sec:a.dataset.v});};
 ACT.reqFrom=a=>run(null,()=>{S.me.requestsFrom=a.dataset.v;refresh();},{ms:300,ok:L('Сохранено','Saved')});
