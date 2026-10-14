@@ -201,3 +201,23 @@ PR#1089 merged (`0667f360`) с сохранёнными атомарными com
 **Предыдущая порция10:** PR1095 squash merged f35bf18b, final166c175 AppBase38579948369 success, exact preview READY; browser desktop и сохранение чужой формы описаны выше.
 
 **Приёмка порции11 перед слиянием PR1096:** source05ed7fe6 прошёл AppBase38581230477 success, FetUre preview READY. Browser desktop: own m1 с14 likes→F05→reply→Edit→изменить body→Publish вернул F05 с обновлённым body,14 likes и1 прежним reply. Poll matrix и обе mid-edit locale switches подтверждены focused state contracts, не заявляется browser multi-user voting. Runtime/source не менялись в финальном документирующем commit. Итоговый CI/merge/deploy в [PR1096](https://github.com/edkiy73/Fit_timer/pull/1096).
+
+## 14.10.2026 — сохранённые правки отдельно от опубликованной версии
+
+**Радиус:** freshState/data, F07 owner/editor/saveDraft, F09 publish, F10 drafts/live Posts, discard/delPost, owner JSON export K07. F01/F05/public profile используют прежний Post, не private revision. Match/Grant и событие/членство не меняются.
+
+**Проблема:** Save draft в редакторе существующей публикации переводил оригинал в status:draft, заменял видимый body/audience/attachments и убирал пост из ленты. «Сохранить на потом» фактически меняло уже опубликованную версию.
+
+**Решение:** S.postEdits — отдельный private session map sourceId→{draft,t}. Для published/review оригинала Save draft сохраняет только эту карту; оригинал/статус/engagement остаются прежними. Новая публикация сохраняется в старый обычный draft. F07 автоматически продолжает сохранённые правки с их текстом, темами, аудиторией, медиа, poll/result и исходной pollLocale. F10 отдельно показывает «Сохранённые правки» рядом с обычными черновиками и live Posts. Удаление сохранённых правок имеет своё подтверждение и не удаляет оригинал/ответы. Publish применяет draft, сохраняет engagement, clears saved revision; media edits по-прежнему уходят на review. Delete original clears cache.
+
+**Приватность/целостность:** ownership/existence checks F07/F09 и save/publish, включая async completion, не позволяют stale editor воскресить deleted original или редактировать чужой post. Private revisions не записываются в Post DTO и не читаются публичными карточками/лентой. Fresh new/full state пустой, repeat reset clears session. Позднее подтверждение discard не удаляет более новые правки/данные другой сессии; success только при фактическом удалении.
+
+**Зависимый экспорт:** независимое ревью нашло K07 archive, который ранее покрывал все сохранённые drafts через myPosts. Добавлен отдельный owner-only archive.postEdits; archive.posts остаются оригинальными Posts. Описание экспорта отражает сохранённые правки. Это экспорт своих данных текущей прототипной сессии, не публичный payload.
+
+**Файлы:** data.js/s-feed.js/s-completion.js, standalone/notes, Roadmap/STATUS. React/server/SQL/AppBase не менялись. Модель production draft/revision и server authorization внедрять отдельно при переносе.
+
+**Проверено:** syntax/build и focused full-module compose/context/privacy/poll suite. RU/EN Save draft сохраняет original целиком, status/aud/engagement/live body неизменны; повторное открытие всех полей, separate listing/public card isolation; publish applies+clears и media review; discard preserves original; delete cleans cache; stale/foreign actions deny; fresh states empty; export includes cache separately, stale confirmation keeps newer edit. Independent final privacy/data-loss review blockers нет. Final CI/browser и merge/deploy фиксируются в PR; реальный backend/storage/native не проверены.
+
+**Перенос:** private saved revision и live content — разные владельцы состояния. Save draft не равно publish, unpublish или withdrawal. Проверять owner/existence повторно в save/publish endpoint и включать drafts в собственный data export.
+
+**Предыдущая порция11:** PR1096 squash merged a7b3d697, finala4c41f33 AppBase38581901333 success, exact preview READY; browser14 likes+1 reply после edit и poll/locale contract checks описаны выше.
