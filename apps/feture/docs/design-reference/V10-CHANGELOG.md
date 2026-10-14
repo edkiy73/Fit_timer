@@ -181,3 +181,23 @@ PR#1089 merged (`0667f360`) с сохранёнными атомарными com
 **Перенос:** завершение одной операции закрывает только принадлежащую ей цепочку экранов. Глобальный очиститель dirty или reset всего tab stack после submit недопустим, когда в нём есть другая незавершённая форма.
 
 **Приёмка порции10 перед слиянием PR1095:** source a9c6f8e1 прошёл AppBase38578735452 success, FetUre exact preview READY. Browser desktop: обычная навигация Сообщества→Узлы→Начать обсуждение→title/text→общая Create→Post→Preview→Publish вернула C07 с теми же title/text. Back запросил подтверждение несохранённых изменений; Stay сохранил форму. Я→Мои публикации показал новый post; возврат в Сообщества снова открыл прежний C07 draft. Toast F10-action и history pruning дополнительно проверены state contracts, browser click по toast не заявляется. Системы backend/native и реальная media загрузка не проверялись. Runtime/source unchanged в финальном документирующем commit; CI/merge/deploy status отмечается в PR1095.
+
+## 14.10.2026 — редактирование не обнуляет реакции, ответы и неизменённый опрос
+
+**Радиус:** F07 editor/saveDraft, F09/direct publish, postFromDraft, F01/F05/F10 и pollHTML. Форматы Post, доступы/аудитория и правила публикации сохранены; личные likes/Match/Grant не участвуют.
+
+**Проблема:** postFromDraft всегда создавал likes0/comments[], publish сохранял только прежние comments, saveDraft терял оба. Неизменённый poll пересоздавался с нулевыми totals, а при изменении/removal его вариантов мог оставаться прежний own vote index.
+
+**Решение:** saveDraft/publish передают текущий existing Post в преобразование. Реакции и comments сохраняются. При тех же подписях/порядке/числе вариантов сохранены оригинальные bilingual labels, totals и own vote; при изменении/удалении вариантов totals становятся0 и own vote очищается. В editor существующего poll явно сказано, что изменение вариантов сбрасывает голоса. Сохранённые/liked flags остаются через существующий update. Published→draft при Save draft — прежняя семантика, в этой порции не менялась.
+
+**Язык:** независимое ревью поймало RU→EN mid-edit: comparison по текущему UI lang считал старые русские options изменёнными. F07 сохраняет internal pollLocale при открытии, draft передаёт его в preview/submit, сравнение anchored к этой локали. Метаданные черновика не попадают в Post DTO.
+
+**Файлы:** s-feed.js и standalone/notes, Roadmap/STATUS. Отдельные UI/server/SQL/AppBase не менялись.
+
+**Проверено:** syntax/build; предыдущие focused compose privacy/audience/history/context contracts. RU/EN saveDraft/direct/preview сохраняют likes/comments/unchanged bilingual poll totals/own vote/liked/saved, ID и число Posts. Changed/removed poll очищает stale vote, сохраняет остальное engagement; reset hint присутствует. RU→EN и EN→RU во время редактирования не стирают голоса/переводы, Post не получает pollLocale. Независимое read-only ревью final blockers нет. CI/browser final head и merge/deploy фиксируются в PR, не заявляется реальная multi-account/backend/native проверка.
+
+**Перенос:** редактирование содержимого отдельно от накопленной активности. Для неизменённого опроса не пересоздавать варианты с нулевыми счётчиками; язык UI не является изменением модели выбора.
+
+**Предыдущая порция10:** PR1095 squash merged f35bf18b, final166c175 AppBase38579948369 success, exact preview READY; browser desktop и сохранение чужой формы описаны выше.
+
+**Приёмка порции11 перед слиянием PR1096:** source05ed7fe6 прошёл AppBase38581230477 success, FetUre preview READY. Browser desktop: own m1 с14 likes→F05→reply→Edit→изменить body→Publish вернул F05 с обновлённым body,14 likes и1 прежним reply. Poll matrix и обе mid-edit locale switches подтверждены focused state contracts, не заявляется browser multi-user voting. Runtime/source не менялись в финальном документирующем commit. Итоговый CI/merge/deploy в [PR1096](https://github.com/edkiy73/Fit_timer/pull/1096).
