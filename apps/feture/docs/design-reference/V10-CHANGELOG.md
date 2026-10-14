@@ -128,6 +128,20 @@ PR#1089 merged (`0667f360`) с сохранёнными атомарными com
 
 **Решение:** подтверждённое «Иду» требует одобрения для заявочного события. Personal event groups не дублируются: awaiting/declined и approved без Going остаются в «Заявки»; отменённые участия — отдельный раздел; собственные события только «Организую». E00/X01 используют один уникальный upcoming count с исключением past/cancelled, включая собственные события. E03 показывает «хочу пойти — допуск ещё не получен». Снятие RSVP честно сообщает о сохранении заявки/билета, не обещает исчезновение из всех списков. Публичная подсказка участия не показывается для неодобренного Going.
 
-**Проверено:** полный предыдущий модульный набор, RU/EN rendering without mutation; pending→approved→RSVP clear→declined, cancelled/past/own categories, отсутствие duplicate card/count и ложного «Ты был», прежние адресные gates/Match/Grant и сохранение application/ticket. Syntax/build PASS. Независимое ревью выявило необходимость исключить собственные past/cancelled из summary — поправка внесена. Browser/CI проверяются на итоговом preview.
+**Проверено:** полный предыдущий модульный набор, RU/EN rendering without mutation; pending→approved→RSVP clear→declined, cancelled/past/own categories, отсутствие duplicate card/count и ложного «Ты был», прежние адресные gates/Match/Grant и сохранение application/ticket. Syntax/build PASS. Независимое ревью выявило необходимость исключить собственные past/cancelled из summary — поправка внесена. CI AppBase 38547296180 success; FetUre preview READY exact head8fbf4c93. Browser E10 заявка pending в одном разделе, E03 waiting admission copy и venue closed. PR#1091 merged3cb01b13. Реальный backend/device не заявляется.
 
 **Перенос:** derived attendance = Going + admission для approval events; не менять исходный intent/approval/ticket одним общим boolean. Commit/PR привязывается при публикации.
+
+## 14.10.2026 — уведомление о совпадении открывает нужный диалог
+
+**Радиус:** N01 notification click/copy, H01 conversation/update subroute, openChat прежний authorization, Updates→Event/Community read marker. Match/Grant, sending/media и события не меняются.
+
+**Проблема:** уведомление «это взаимно, можно написать» открывало общий список, требуя повторного поиска контакта; историческая запись продолжала обещать диалог после прекращения общения. H01 notification route терял sub params; stale missing handlers падали.
+
+**Решение:** активное совпадение открывает диалог через существующий openChat — одна навигация вместо двух. При утраченном совпадении текст говорит о прошлом, click ведёт в conversations без создания/восстановления чата. Blocked/missing notification action игнорируется. H01 route сохраняет переданный sub, по умолчанию conversations. Missing update action безопасно игнорируется, существующий update открывает исходное событие/сообщество.
+
+**Файлы:** s-chats.js, standalone build, история и STATUS. Форматы payload сохранены; отдельные grants, admission, tickets не дают личный чат.
+
+**Проверено:** полный модульный набор и RU/EN stale-match copy, active notification→Lina H02, read flag, stale/blocked/missing denial, H01 Updates param, u1→E03 и отсутствие изменения Match/Grant. Syntax/build, независимое read-only ревью PASS. CI/browser на final preview перед merge.
+
+**Перенос:** уведомление — указатель на актуально допустимое действие; историю нельзя использовать как authorization на новый диалог.
