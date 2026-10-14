@@ -132,6 +132,9 @@ const COMMUNITIES={
  poly:{name:{ru:'Пары и поли',en:'Couples & Poly'},plate:'amber',cover:'/images/v10-content/community-poly.webp',privacy:'open',members:905,city:'berlin',langs:'RU · EN',topics:['intimacy','talk'],mods:['tomeva'],
   desc:{ru:'Договорённости, ревность, календари и всё, что помогает отношениям нескольких людей.',en:'Agreements, jealousy, calendars and everything that helps multi-partner relationships.'},
   rules:[{ru:'Пары пишут от имени обоих только с согласия обоих.',en:'Couples post for both only with both agreeing.'}]},
+ circle:{name:{ru:'Круг общения',en:'Conversation Circle'},plate:'sea',cover:'/images/v10-content/community-slow.webp',privacy:'closed',members:1,knownMembers:true,seedMembers:['kai'],city:'online',langs:'RU · EN',topics:['talk','slow'],mods:['kai'],
+  desc:{ru:'Небольшой круг для спокойных разговоров, обмена опытом и встреч без спешки.',en:'A small circle for calm conversations, sharing experiences and unhurried meetups.'},
+  rules:[{ru:'Истории участников остаются внутри сообщества.',en:'Members’ stories stay within the community.'},{ru:'Уважаем право отказаться и не торопим друг друга.',en:'Respect the right to say no and don’t rush each other.'}],questions:[{ru:'О чём хочешь поговорить в круге?',en:'What would you like to discuss in the circle?'}]},
 };
 
 const DISCUSSIONS=[
@@ -207,6 +210,12 @@ function freshState(persona){
   me:full?fullMe():newMe(),
   follows:new Set(full?['maya','mia','kai','noa']:[]),
   joined:new Set(full?['rope','first']:[]), pendingJoin:new Set(full?['queer']:[]),
+  managedCommunities:new Set(full?['circle']:[]), communityMembers:{},
+  communityRequests:full?{circle:[
+   {id:'cr1',p:'kira',t:ago(2),status:'pending',showMember:true,answer:{ru:'Хочу обсуждать границы и знакомиться без спешки.',en:'I’d like to discuss boundaries and meet people slowly.'}},
+   {id:'cr2',p:'lina',t:ago(4),status:'pending',showMember:false,answer:{ru:'Ищу небольшой круг для спокойных разговоров.',en:'I’m looking for a small circle for calm conversations.'}},
+   {id:'cr3',p:'kai',t:ago(48),updated:ago(24),status:'approved',showMember:true,answer:{ru:'Интересны разговоры о доверии и заботе.',en:'I’m interested in conversations about trust and care.'}}
+  ]}:{} ,
   posts:POSTS.map(p=>({...p,liked:false,saved:false,comments:p.comments.map(c=>({a:c[0],text:c[1],t:p.t+HOUR}))})),
   myPosts:full?[{id:'m1',author:'me',t:ago(48),type:'text',tags:['shibari'],likes:14,aud:'all',status:'published',text:{ru:'Первый раз сходил на занятие по шибари. Больше всего удивило, сколько времени уходит на разговор до начала — и как это успокаивает.',en:'Went to my first shibari class. What surprised me most was how much time goes into talking first — and how calming that is.'},comments:[]},
    {id:'m2',author:'me',t:ago(3),type:'text',tags:['talk'],likes:0,aud:'followers',status:'draft',text:{ru:'Черновик: как я учусь говорить «нет» без чувства вины…',en:'Draft: how I’m learning to say “no” without guilt…'},comments:[]}]:[],

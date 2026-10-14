@@ -304,6 +304,8 @@ const receivedGrant=id=>!isBlocked(id)&&S.reqOut.find(r=>r.p===id&&['partial','g
 const givenGrant=id=>!isBlocked(id)&&S.sharedByMe.find(r=>r.p===id&&r.scopes?.length&&grantTimeActive(r.until));
 const givenGrantEntries=()=>S.sharedByMe.filter(r=>givenGrant(r.p)===r);
 
+function communityHostIds(id){const c=COMMUNITIES[id];return c?[...c.mods,...(ownsCommunity(id)&&!c.mods.includes('me')?['me']:[])]:[];}
+function ownsCommunity(id){return !!S?.session&&!!COMMUNITIES[id]&&!!S.managedCommunities?.has(id);}
 const C={
  likesIn:()=>S.likesIn.filter(l=>!isMatch(l.p)&&!isBlocked(l.p)&&!l.passed).length,
  newMatches:()=>S.matches.filter(m=>(!S.threads[m.p]||!S.threads[m.p].msgs.length)&&!isBlocked(m.p)).length,
@@ -313,7 +315,7 @@ const C={
  reqIn:()=>S.reqIn.filter(r=>r.status==='new'&&!isBlocked(r.p)).length,
  quotaLeft:()=>Math.max(0,S.quota.max-S.reqOut.filter(x=>Date.now()-x.t<DAY).length),
  joined:()=>S.joined.size,
- members:id=>COMMUNITIES[id].members+((S.joined.has(id)||COMMUNITIES[id].mine)?1:0), // base count excludes the viewer
+ members:id=>COMMUNITIES[id].members+((S.joined.has(id)||ownsCommunity(id))?1:0)+(S.communityMembers[id]?.size||0), // base count excludes the viewer
 };
 
 /* ---------- shared chrome ---------- */
