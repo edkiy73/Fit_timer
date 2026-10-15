@@ -80,8 +80,8 @@ function qaLong(on){
  refresh();}
 window.QA_SYNC=()=>{if($('#qa.open'))qaRender();};
 const qa=$('#qa'),qaScrim=$('#qaScrim');
-window.QA_CLOSE=()=>{qa.classList.remove('open');qaScrim.classList.remove('on');qa.setAttribute('aria-hidden','true');$('#qaFab').focus();};
-$('#qaFab').onclick=()=>{qaRender();qa.classList.add('open');qaScrim.classList.add('on');qa.removeAttribute('aria-hidden');};
+window.QA_CLOSE=()=>{qa.classList.remove('open');qaScrim.classList.remove('on');qa.setAttribute('aria-hidden','true');syncModal();$('#qaFab').focus({preventScroll:true});};
+$('#qaFab').onclick=()=>{qaRender();qa.classList.add('open');qaScrim.classList.add('on');qa.removeAttribute('aria-hidden');syncModal();};
 qaScrim.onclick=QA_CLOSE;$('#qaClose').onclick=QA_CLOSE;
 qa.addEventListener('click',e=>{
  const b=e.target.closest('[data-qa]');if(b){qaGo(b.dataset.qa,JSON.parse(b.dataset.qp||'{}'));if(matchMedia('(max-width:900px)').matches)QA_CLOSE();else qaRender();return;}
