@@ -11,9 +11,9 @@ function restartPrototype(){
  url.searchParams.set('restart',String(Number.isSafeInteger(restart)&&restart>=0?restart+1:1));
  url.hash='A01';location.replace(url.href);
 }
-const QA={offline:false,frame:'auto',seen:{},datingLive:false,autoApprove:false};
+const QA={offline:false,frame:'auto',seen:{},datingLive:true,autoApprove:true,maintenance:false};
 /* QA «Мои запросы → Одобрять сразу»: whatever the user asks for or sends to review is answered yes after a short pause
-   (qaApproveAll in qa.js). Off by default — the normal flows keep their waiting states. */
+   (qaApproveAll in qa.js). On by default in the prototype; can be turned off to inspect waiting states. */
 function autoResolve(){if(!QA.autoApprove)return;const owner=S;setTimeout(()=>{if(S===owner)qaApproveAll();},1200);}
 const L=(ru,en)=>S&&S.lang==='en'?en:ru;
 const T=o=>o==null?'':typeof o==='string'?o:(o[S.lang]??o.ru??'');
@@ -114,14 +114,20 @@ const LOGOS={
  c:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><rect width='120' height='120' rx='32' fill='#F6EDF3'/><circle cx='48' cy='60' r='28' fill='#FF3355' fill-opacity='.9'/><circle cx='72' cy='60' r='28' fill='#5C47D6' fill-opacity='.85'/><path d='M60 74c-7-5-11-9-11-14a5.5 5.5 0 0 1 11-1 5.5 5.5 0 0 1 11 1c0 5-4 9-11 14z' fill='#fff'/></svg>`};
 const LOGO=()=>'data:image/svg+xml,'+encodeURIComponent(LOGOS[QA.logo||'a']);
 const plate=(key,icon)=>`<div class="plate" style="${PL[key]||PL.rose};position:absolute;inset:0">${icon?`<span class="pi">${I[icon]}</span>`:''}</div>`;
-function person(id){if(id==='me')return meAsPerson();return PEOPLE[id];}
+function person(id){if(id==='couple')return S.pair?.status==='active'?ownedAsPerson(S.ui.couplePreview||coupleProfile()):null;if(id==='me')return meAsPerson();return PEOPLE[id];}
 /* one public identity — the nickname (no separate display name) */
-function pname(id){if(id==='me')return S.me.nick||L('Ты','You');const p=PEOPLE[id];if(!p)return L('Участник','Member');return p.pair&&S.lang!=='en'?p.nameRu:p.name;}
-const PUBLIC_VIS={gender:'public',orient:'public',format:'public',status:'public',role:'granted'};
+function pname(id){if(id==='couple')return T(S.ui.couplePreview?.name||S.pair?.profile?.name||S.pair?.name)||L('Пара','Couple');if(id==='me')return S.me.nick||L('Ты','You');const p=PEOPLE[id];if(!p)return L('Участник','Member');return p.pair&&S.lang!=='en'?p.nameRu:p.name;}
+const PUBLIC_VIS={pron:'public',seek:'public',gender:'public',orient:'public',format:'public',status:'public',role:'granted'};
 const requiresDiscoveryPhoto=m=>!!m.dating&&m.datingVisible!==false;
 /** a profile field as another member sees it; S.ui.viewGrant = rendering for someone with private-profile access */
 function publicField(m,k){const v=m.vis?.[k]??PUBLIC_VIS[k]??'public';return v==='public'||v==='granted'&&S.ui.viewGrant?m[k]:Array.isArray(m[k])?[]:null;}
-function meAsPerson(){const m=S.ui.profilePreview||S.me;return{pv:m.photoCheck==='ok',premium:!!m.premium,name:m.nick,age:m.showAge===false?null:ageOf(m.dob),photo:m.photo,city:m.city,location:m.location?.coords,pron:m.pron,gender:publicField(m,'gender'),orient:publicField(m,'orient'),format:publicField(m,'format'),status:publicField(m,'status'),role:publicField(m,'role'),seek:m.dating?m.seek:[],bio:m.bio,verified:m.ageCheck==='ok',online:true,dating:m.dating,jars:m.jars.filter(j=>j.vis==='public'&&!j.limit).map(j=>[j.t,j.lv]),langs:m.langs};}
+function ownedAsPerson(m){return{photo:m.photo,bio:m.bio,city:m.city,dating:!!m.dating,socialLikes:!!m.socialLikes,pair:!!m.pair,members:m.pair?[...m.members]:undefined,pv:m.photoCheck==='ok',premium:!!m.premium,name:m.pair?T(m.name):m.nick,age:m.showAge===false?null:ageOf(m.dob),location:m.location?.coords,pron:publicField(m,'pron'),gender:publicField(m,'gender'),orient:publicField(m,'orient'),format:publicField(m,'format'),status:publicField(m,'status'),role:publicField(m,'role'),seek:publicField(m,'seek')||[],verified:m.ageCheck==='ok',online:true,jars:(m.jars||[]).filter(j=>j.vis==='public')};}
+function meAsPerson(){return ownedAsPerson(S.ui.profilePreview||S.me);}
+function coupleProfile(){const P=S.pair;if(P?.status!=='active')return null;if(!P.profile)P.profile={pair:true,members:['me',P.with],name:{...P.name},nick:'couple',bio:P.desc||{ru:'',en:''},privText:{ru:'',en:''},photos:[],photo:null,city:null,pron:null,gender:[],orient:[],role:null,status:'couple',format:[],seek:[],vis:{...PUBLIC_VIS},jars:[],history:[],media:[],requestsFrom:'all',dating:true,datingVisible:false,showAge:false};return P.profile;}
+function editableProfile(r=cur()){if(r.p?.owner!=='couple')return S.me;const P=S.pair;if(P?.status!=='active')return null;coupleProfile();return P.draft??=structuredClone(P.profile);}
+function submitCoupleDraft(){const P=S.pair;if(P?.status!=='active'||!P.draft)return;P.proposal={by:'me',field:'profile',text:structuredClone(P.draft),t:Date.now()};autoResolve();}
+function commitCoupleProposal(P){if(P!==S.pair||P?.status!=='active'||!P.proposal)return false;const q=P.proposal;if(q.field==='profile'){P.profile=structuredClone(q.text);P.name={...P.profile.name};P.desc=P.profile.bio;delete P.draft;}else P[q.field||'desc']=q.text;P.proposal=null;return true;}
+
 /** avatar: photo → img; pair → two plates; else initials plate */
 function av(id,cls='',variant=0){
  const p=person(id);let inner,st='',k='';
@@ -136,16 +142,16 @@ function av(id,cls='',variant=0){
 /** Photos of a person. Prototype people have one licensed image each, so extra photos are distinct crops of it
  *  (stand-ins for a real 2–6 photo gallery). My own photos are real local files. */
 const CROPS=['','transform:scale(1.45);transform-origin:50% 28%','transform:scale(1.2) translateX(-7%);filter:saturate(1.15) hue-rotate(-8deg)','transform:scale(1.7);transform-origin:40% 60%','transform:scale(1.3) translateX(6%);filter:contrast(1.08) saturate(.9)','transform:scale(2);transform-origin:55% 35%'];
-function photoCount(id){if(id==='me'){const m=S.ui.profilePreview||S.me;return Math.max(1,(m.photos||[]).length);}const p=person(id);return p?.photo?Math.min(6,p.nph||1):1;}
-function photoItems(id){if(id==='me'){const m=S.ui.profilePreview||S.me;return (m.photos||[]).map(ph=>({type:'image',src:IMG(ph)}));}const p=person(id);if(!p?.photo)return [];return Array.from({length:photoCount(id)},(_,i)=>({type:'image',src:IMG(p.photo),style:CROPS[i%6]}));}
+function photoCount(id){if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);return Math.max(1,(m.photos||[]).length);}const p=person(id);return p?.photo?Math.min(6,p.nph||1):1;}
+function photoItems(id){if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);return (m.photos||[]).map(ph=>({type:'image',src:IMG(ph)}));}const p=person(id);if(!p?.photo)return [];return Array.from({length:photoCount(id)},(_,i)=>({type:'image',src:IMG(p.photo),style:CROPS[i%6]}));}
 function photoBars(id,ix){const n=photoCount(id);return n>1?`<div class="pc-bars" aria-label="${L(`Фото ${ix+1} из ${n}`,`Photo ${ix+1} of ${n}`)}">${Array.from({length:n},(_,i)=>`<i class="${i===ix?'on':''}"></i>`).join('')}</div>`:'';}
 /** step through photos; returns false at the first/last photo (caller can nudge) */
 function stepPhoto(id,d){S.ui.ph=S.ui.ph||{};const n=photoCount(id),i=(S.ui.ph[id]||0)+d;if(i<0||i>=n)return false;S.ui.ph[id]=i;return true;}
 /** blurred backdrop for a whole-photo frame (profile hero): same picture, no framing transform */
-function photoBg(id,v=0){let src=null;if(id==='me'){const m=S.ui.profilePreview||S.me;const ph=(m.photos||[])[v]??m.photo;if(ph!=null)src=IMG(ph);}else{const p=person(id);if(p?.photo)src=IMG(p.photo);}return src?`<img class="mbg" src="${src}" alt="" aria-hidden="true" draggable="false">`:'';}
+function photoBg(id,v=0){let src=null;if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);const ph=(m.photos||[])[v]??m.photo;if(ph!=null)src=IMG(ph);}else{const p=person(id);if(p?.photo)src=IMG(p.photo);}return src?`<img class="mbg" src="${src}" alt="" aria-hidden="true" draggable="false">`:'';}
 function bigPhoto(id,v=0){
  const p=person(id);
- if(id==='me'){const m=S.ui.profilePreview||S.me;const ph=(m.photos||[])[v]??m.photo;if(ph!=null)return `<img src="${IMG(ph)}" alt="${esc(pname(id))}" draggable="false">`;return plate('rose','me');}
+ if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);const ph=(m.photos||[])[v]??m.photo;if(ph!=null)return `<img src="${IMG(ph)}" alt="${esc(pname(id))}" draggable="false">`;return plate('rose','me');}
  if(p&&p.photo)return `<img src="${IMG(p.photo)}" alt="${esc(pname(id))}" draggable="false" style="${CROPS[v%6]}">`;
  const key=p&&p.pair?[p.plate,p.plate2,p.plate][v%3]:(p&&p.plate)||'rose';
  return plate(key);
@@ -179,8 +185,8 @@ const NETFAIL=()=>L('Нет соединения. Ничего не отправ
 function run(btn,work,o={}){
  if(btn&&btn.classList.contains('busy'))return Promise.resolve();
  btn&&btn.classList.add('busy');
- const owner=S,session=S?.session,route=cur();return net(o.ms).then(()=>{if(S!==owner||S?.session!==session||cur()!==route)return;btn&&btn.isConnected&&btn.classList.remove('busy');const r=work();const msg=typeof o.ok==='function'?o.ok():o.ok;if(msg)toast(msg,{type:'ok',action:o.undo?{label:L('Отменить','Undo'),fn:()=>{if(S===owner&&S.session===session)o.undo();}}:null});return r;})
-  .catch(e=>{if(S!==owner||S?.session!==session||cur()!==route)return;btn&&btn.isConnected&&btn.classList.remove('busy');if(e&&e.message!=='offline'){console.error(e);}toast(o.fail||NETFAIL(),{type:'err',action:{label:L('Повторить','Retry'),fn:()=>{if(S===owner&&S.session===session&&cur()===route)run(null,work,o);}}});});
+ const owner=S,session=S?.session,route=cur();return net(o.ms).then(()=>{if(QA.maintenance||S!==owner||S?.session!==session||cur()!==route)return;btn&&btn.isConnected&&btn.classList.remove('busy');const r=work();const msg=typeof o.ok==='function'?o.ok():o.ok;if(msg)toast(msg,{type:'ok',action:o.undo?{label:L('Отменить','Undo'),fn:()=>{if(S===owner&&S.session===session)o.undo();}}:null});return r;})
+  .catch(e=>{if(QA.maintenance||S!==owner||S?.session!==session||cur()!==route)return;btn&&btn.isConnected&&btn.classList.remove('busy');if(e&&e.message!=='offline'){console.error(e);}toast(o.fail||NETFAIL(),{type:'err',action:{label:L('Повторить','Retry'),fn:()=>{if(S===owner&&S.session===session&&cur()===route)run(null,work,o);}}});});
 }
 
 /* ---------- toasts ---------- */
@@ -285,7 +291,7 @@ function setSub(v){const r=cur();if(r.p.sub===v)return;r.p.sub=v;r.scroll=0;rend
 
 const main=()=>$('#main');
 function render(dir,keep){
- const r=cur();const sc=SC[r.id];
+ const r=cur();const sc=QA.maintenance?SC.MAINT:SC[r.id];document.body.classList.toggle('maintenance',!!QA.maintenance);
  let html;
  try{html=(sc.valid&&!sc.valid(r.p))?unavailable():sc.render(r.p,r);}
  catch(e){console.error(e);html=`${bar(L('Ошибка','Error'),{back:1})}<div class="view nodock">${empty('alert',L('Экран не загрузился','The screen did not load'),L('Попробуй открыть его ещё раз.','Try opening it again.'),`<button class="btn primary" data-act="reload">${L('Обновить','Reload')}</button>`)}</div>`;}
@@ -293,7 +299,7 @@ function render(dir,keep){
  const m=main();
  m.innerHTML=(QA.offline?`<div class="netbar" role="status">${I.wifioff}${L('Нет соединения — показываем сохранённое','Offline — showing what’s loaded')}</div>`:'')+html+(dock?dockHTML():'');
  if(dir&&!keep&&dir!=='fade-keep')$$('#toasts .toast:not(.keep)').forEach(t=>t.remove());
- m.dataset.screen=r.id;
+ m.dataset.screen=QA.maintenance?'MAINT':r.id;
  const v=$('.view',m);
  if(v){
   if(keep||dir==='back')v.scrollTop=r.scroll||0;
@@ -403,6 +409,7 @@ const V={
 function parseP(el){if(el.dataset.p){try{return JSON.parse(el.dataset.p)}catch(e){}}return el.dataset.id?{id:el.dataset.id}:{};}
 document.addEventListener('click',e=>{
  const t=e.target;
+ if(QA.maintenance&&!t.closest('#qa,#qaFab,#qaScrim')&&t.closest('[data-act]')?.dataset.act!=='maintenanceRetry'){e.preventDefault();return;}
  if(t.closest('[data-back]')){e.preventDefault();back();return;}
  const tb=t.closest('[data-tab]');if(tb){e.preventDefault();tab(tb.dataset.tab);return;}
  const g=t.closest('[data-go]'),a=t.closest('[data-act]');

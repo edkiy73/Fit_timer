@@ -12,7 +12,7 @@ function jarsHTML(list,o={}){
   if(j.limit)return `<${tag} class="jar ${j.limit==='hard'?'taboo':'discuss'}" ${attrs}><span class="vessel"><span class="jm">${j.limit==='hard'?I.block:I.chat}</span>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw sr">${j.limit==='hard'?(o.who&&o.who!=='me'?L('нельзя','not for me'):L('табу','taboo')):L('обсуждаемо','negotiable')}</span>${was}</${tag}>`;
   return `<${tag} class="jar" ${attrs} style="--v:${j.lv};--jc:${jarColor(j.lv)};--d:${(i%6)*.35}s"><span class="vessel"><span class="fill"><i class="bub"></i></span><b class="lv">${j.lv}</b>${vis}</span><span class="jn">${esc(topic(j.t))}</span>${was}</${tag}>`;}).join('')}${o.more?`<button class="jar more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="vessel"><b>+${o.more.n}</b></span><span class="jn">${L('Все','All')}</span></button>`:''}${o.add?`<button class="jar add" data-act="${o.add}"><span class="vessel">${I.plus}</span><span class="jn">${L('Добавить','Add')}</span></button>`:''}</div>`;
 }
-const pubJars=id=>id==='me'?S.me.jars.filter(j=>j.vis==='public'):(person(id)?.jars||[]).map(x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x).filter(j=>!j.vis||j.vis==='public');
+const pubJars=id=>id==='me'||id==='couple'?(id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me)).jars.filter(j=>j.vis==='public'):(person(id)?.jars||[]).map(x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x).filter(j=>!j.vis||j.vis==='public');
 const fillJars=()=>setTimeout(()=>$$('.jars.pre').forEach(j=>j.classList.remove('pre')),90);
 function venn(n,o={}){return `<div class="venn ${o.mini?'mini':''} ${o.pre?'pre':''}" ${o.id?`id="${o.id}"`:''}><i></i><i></i><b>${n}${o.mini?'':`<small>${pl(n,['общая тема','общие темы','общих тем'],['shared topic','shared topics'],true)}</small>`}</b></div>`;}
 const playVenn=()=>setTimeout(()=>$$('.venn.pre').forEach(v=>v.classList.remove('pre')),120);
@@ -53,9 +53,10 @@ const postById=id=>S.posts.find(p=>p.id===id)||S.myPosts.find(p=>p.id===id);
 /** V7: one post type with optional attachments — photos/video (≤6), a poll (2–10 options) or a quiz result */
 const postMedia=p=>p.media&&p.media.length?p.media:p.type==='photo'?[{type:'plate',key:p.plate||'rose'}]:[];
 const postKinds=p=>{const k=[];if(postMedia(p).length)k.push('photo');if(p.poll)k.push('poll');if(p.result)k.push('result');if(!k.length)k.push('text');return k;};
-function pollHTML(p,o={}){const voted=p.vote!=null;const opts=p.poll;const tot=opts.reduce((a,x)=>a+x[1],0)+(voted?1:0);const live=!o.preview;
- return `<div class="poll ${voted?'voted':''}" role="group" aria-label="${p.pollQ?esc(T(p.pollQ)):L('Опрос','Poll')}">${p.pollQ?`<b class="poll-q">${esc(T(p.pollQ))}</b>`:''}${opts.map((x,i)=>{const n=x[1]+(p.vote===i?1:0);const pc=tot?Math.round(n/tot*100):0;return `<button ${live?`data-act="vote" data-v="${p.id}" data-i="${i}"`:'tabindex="-1"'} class="${p.vote===i?'mine':''}" aria-pressed="${p.vote===i}"><i style="width:${voted?pc:0}%"></i><span class="po">${p.vote===i?ic('check',15):''}${esc(T(x[0]))}</span>${voted?`<span class="pc">${pc}%</span>`:''}</button>`;}).join('')}
- <div class="poll-f"><span class="note">${pl(tot,['голос','голоса','голосов'],['vote','votes'])}${voted?` · ${L('голос можно изменить','you can change your vote')}`:''}</span>${voted&&live?`<button class="btn text auto" data-act="unvote" data-v="${p.id}">${L('Отменить голос','Withdraw vote')}</button>`:''}</div></div>`;}
+function pollVoters(p,i){return [...new Set([...(p.pollVoters?.[i]||[]),...(p.vote===i?['me']:[])])].filter(id=>person(id)&&!isBlocked(id));}
+function pollHTML(p,o={}){const voted=p.vote!=null,opts=p.poll,live=!o.preview,tot=opts.reduce((n,x,i)=>n+pollVoters(p,i).length,0);return `<div class="poll ${voted?'voted':''}" role="group" aria-label="${p.pollQ?esc(T(p.pollQ)):L('Опрос','Poll')}">${p.pollQ?`<b class="poll-q">${esc(T(p.pollQ))}</b>`:''}${opts.map((x,i)=>{const n=pollVoters(p,i).length,pc=tot?Math.round(n/tot*100):0;return `<div class="poll-option"><button type="button" ${live&&!voted?`data-act="vote" data-v="${p.id}" data-i="${i}"`:''} class="poll-choice ${p.vote===i?'mine':''}" aria-pressed="${p.vote===i}" aria-disabled="${!live||voted}"><i style="width:${voted?pc:0}%"></i><span class="po">${p.vote===i?ic('check',15):''}${esc(T(x[0]))}</span></button>${voted?`<button type="button" class="poll-count" ${live?`data-act="pollPeople" data-v="${p.id}" data-i="${i}"`:''} aria-label="${L('Кто выбрал этот вариант','Who chose this option')}: ${n}">${n}</button>`:''}</div>`;}).join('')}<div class="poll-f"><span class="note">${pl(tot,['голос','голоса','голосов'],['vote','votes'])}</span>${voted&&live?`<button type="button" class="poll-undo" data-act="unvote" data-v="${p.id}">${L('Отменить голос','Withdraw vote')}</button>`:''}</div></div>`;}
+ACT.pollPeople=a=>{const p=postById(a.dataset.v),i=+a.dataset.i;if(!p?.poll?.[i]||p.vote==null)return;const ids=pollVoters(p,i);sheet(()=>({title:T(p.poll[i][0]),body:ids.length?`<div class="card list">${ids.map(id=>personRow(id)).join('')}</div>`:empty('people',L('Пока никто','Nobody yet'),'' )}));};
+
 function postMediaHTML(p,o={}){let h='';const m=postMedia(p);if(m.length)h+=mediaGrid(m,{id:p.id});
  if(p.poll)h+=pollHTML(p,o);
  if(p.result)h+=`<div class="testcard" style="--n:${Math.min(4,p.result.length)}" aria-label="${L('Результат теста','Quiz result')}">${jarsHTML(p.result,{act:o.preview?'':'topic',who:p.author})}</div>`;
@@ -87,13 +88,19 @@ ACT.mdLink=(a,e)=>{e?.stopPropagation();const u=a.dataset.v;let host='';try{host
 const replyList=(kind,id)=>kind==='p'?postById(id)?.comments:S.discussions.find(x=>x.id===id)?.replies;
 function replyActs(kind,id,i,c){if(c.status)return '';const n=(c.likes||0)+(c.liked?1:0);
  return `<div class="r-acts"><button class="${c.liked?'on':''}" data-act="rLike" data-v="${kind}:${id}" data-i="${i}" aria-pressed="${!!c.liked}" aria-label="${L('Нравится ответ','Like reply')}">${c.liked?I.heartf:I.heart}${n?`<span>${n}</span>`:''}</button><button data-act="rReply" data-v="${kind}:${id}" data-i="${i}" aria-label="${L(`Ответить ${pname(c.a)}`,`Reply to ${pname(c.a)}`)}">${I.chat}</button><button data-act="rMore" data-v="${kind}:${id}" data-i="${i}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;}
-const replyAt=a=>{const [kind,id]=a.dataset.v.split(':');const list=replyList(kind,id);const c=list?.[+a.dataset.i];return c?{kind,id,c,list}:null;};
-ACT.rLike=a=>{const x=replyAt(a);if(!x||x.c.status||isBlocked(x.c.a))return;x.c.liked=!x.c.liked;refresh();};
-ACT.rReply=a=>{const x=replyAt(a);if(!x)return;const el=$(x.kind==='p'?'#cmt':'#dr');if(!el){toast(L('Чтобы отвечать, вступи в сообщество.','Join the community to reply.'),{type:'info'});return;}
- const tag=x.c.a==='me'?'':`@${x.c.a==='me'?S.me.nick:(PEOPLE[x.c.a]?x.c.a:pname(x.c.a))} `;if(tag&&!el.value.startsWith(tag))el.value=tag+el.value;cur().f[el.id]=el.value;el.focus();el.setSelectionRange(el.value.length,el.value.length);IN.grow&&IN.grow(el);};
+function identifyReplies(kind,id){const list=replyList(kind,id)||[];list.forEach((c,i)=>{if(!c.id)c.id=`${kind}_${id}_${i}`;});return list;}
+function replyTree(kind,id){const list=identifyReplies(kind,id),byId=new Map(list.map(c=>[c.id,c])),seen=new Set();const children=parent=>list.filter(c=>(c.parent||null)===parent);const draw=(c,depth=0)=>{if(seen.has(c.id))return '';seen.add(c.id);const hidden=c.deleted||isBlocked(c.a),parent=byId.get(c.parent);const status=c.status==='pending'?L('отправляется…','sending…'):c.status==='failed'?L('не отправлено','not sent'):F.rel(c.t);return `<div class="reply-node" style="--depth:${Math.min(depth,2)}" id="reply-${esc(c.id)}"><div class="comment ${hidden?'removed':c.status||''}">${hidden?'':whoLink(c.a)}<div class="tx">${hidden?`<p class="note">${L('Ответ недоступен','Reply unavailable')}</p>`:`<button class="plink pnm" ${profGo(c.a)}><span class="nmt">${esc(pname(c.a))}</span>${nameBadges(person(c.a))}</button><time>${status}</time>${parent&&!parent.deleted&&!isBlocked(parent.a)?`<small class="reply-to">${L('Ответ для','Reply to')} <button class="plink" ${profGo(parent.a)}>${esc(pname(parent.a))}</button></small>`:''}<p class="reply-text">${esc(T(c.text))}</p>${c.status==='failed'&&kind==='p'?`<button class="btn text auto" data-act="retryComment" data-v="${esc(c.id)}">${L('Повторить','Retry')}</button>`:''}${replyActs(kind,id,c.id,c)}`}</div></div></div>${children(c.id).map(x=>draw(x,depth+1)).join('')}`;};return children(null).map(c=>draw(c)).join('')+list.filter(c=>!seen.has(c.id)).map(c=>draw(c)).join('');}
+function replyComposer(route){const c=route.replyTarget;if(!c)return '';return `<div class="reply-target"><span>${L('Ответ для','Reply to')} <b>${esc(pname(c.a))}</b></span><button class="ibtn sm" data-act="replyCancel" aria-label="${L('Отменить ответ','Cancel reply')}">${I.close}</button></div>`;}
+ACT.replyCancel=()=>{delete cur().replyTarget;refresh();};
+function notifyReply(kind,id,c){if(c.notified||c.status||c.deleted)return;const list=identifyReplies(kind,id);const parent=list.find(x=>x.id===c.parent);const root=kind==='p'?postById(id)?.author:S.discussions.find(x=>x.id===id)?.author;const targets=[...new Set([parent&&!parent.deleted?parent.a:null,root].filter(x=>x&&x!==c.a&&!isBlocked(x)))];c.notified=true;S.replyDeliveries??=[];for(const to of targets){const n={id:'rn_'+c.id+'_'+to,type:'reply',to,p:c.a,reply:c.id,parent:c.parent||null,t:Date.now(),read:false,go:[kind==='p'?'F05':'C06',{id,reply:c.id}]};S.replyDeliveries.push(n);if(to==='me')S.notifs.unshift(n);}}
+function scrollToReply(p){if(p.reply)document.getElementById?.('reply-'+p.reply)?.scrollIntoView({block:'center'});}
+const replyAt=a=>{const [kind,id]=a.dataset.v.split(':');const list=identifyReplies(kind,id);const c=list.find(x=>x.id===a.dataset.i)||list[+a.dataset.i];return c?{kind,id,c,list}:null;};
+ACT.rLike=a=>{const x=replyAt(a);if(!x||x.c.status||x.c.deleted||isBlocked(x.c.a))return;x.c.liked=!x.c.liked;refresh();};
+ACT.rReply=a=>{const x=replyAt(a);if(!x||x.c.status||x.c.deleted||isBlocked(x.c.a))return;const input=x.kind==='p'?'cmt':'dr';if(!$('#'+input))return;cur().replyTarget={id:x.c.id,a:x.c.a};refresh();const el=$('#'+input);el?.focus();};
+
 ACT.rMore=a=>{const x=replyAt(a);if(!x)return;const mine=x.c.a==='me';
  sheet(()=>({title:L('Ответ','Reply'),body:`<div class="card list">${mine?linkRow({act:'rDel',v:a.dataset.v,p:null,icon:'trash',cls:'danger',title:L('Удалить ответ','Delete reply'),noChev:1}).replace('data-act="rDel"',`data-act="rDel" data-i="${a.dataset.i}"`):`${linkRow({go:'P01',p:{id:x.c.a},icon:'me',title:L(`Профиль ${pname(x.c.a)}`,`${pname(x.c.a)}’s profile`)})}${linkRow({act:'report',v:'comment',icon:'flag',cls:'danger',title:L('Пожаловаться','Report'),noChev:1}).replace('data-act="report"',`data-act="report" data-who="${x.c.a}"`)}${linkRow({act:'block',v:x.c.a,icon:'block',cls:'danger',title:L(`Заблокировать ${pname(x.c.a)}`,`Block ${pname(x.c.a)}`),sub:L('Скроет ответы и прекратит контакт','Hides their replies and ends contact'),noChev:1})}`}</div>`}));};
-ACT.rDel=a=>{const x=replyAt(a);if(!x||x.c.a!=='me')return;closeSheet(true);ask({icon:'trash',tone:'l',title:L('Удалить ответ?','Delete reply?'),ok:L('Удалить','Delete'),danger:true}).then(ok=>{if(!ok)return;const i=x.list.indexOf(x.c);if(i>=0)x.list.splice(i,1);refresh();toast(L('Ответ удалён','Reply deleted'),{type:'ok'});});};
+ACT.rDel=a=>{const x=replyAt(a);if(!x||x.c.a!=='me')return;closeSheet(true);ask({icon:'trash',tone:'l',title:L('Удалить ответ?','Delete reply?'),ok:L('Удалить','Delete'),danger:true}).then(ok=>{if(!ok)return;const i=x.list.indexOf(x.c);if(i>=0){x.c.deleted=true;x.c.text={ru:'',en:''};}refresh();toast(L('Ответ удалён','Reply deleted'),{type:'ok'});});};
 /* Rich text field (V10 round 2): FetLife-like — a toolbar with icons, formatting shows as you type.
    The stored value stays the same safe Markdown that md() renders, so drafts, validation, preview and the API contract
    don't change. Rendering into the editor always goes through md() (escaped text), pasting is plain text only,
@@ -220,7 +227,7 @@ function evWhen(id,full){const e=EV(id);const t=F.time(e.start,USER_TZ);const da
 function eventCard(id,o={}){
  const e=EV(id);const st=o.neutral?'':evStatusPill(id);
  const fmt=e.format==='online'?`<span>${I.video}${L('Онлайн','Online')}</span>`:`<span>${I.pin}${esc(T(e.area)||city(e.city))}</span>`;
- const meta=`<div class="meta"><span>${I.clock}${F.time(e.start)}</span><span>${I.globe}${e.lang}</span><span>${I.ticket}${e.price?esc(T(e.price)):L('Бесплатно','Free')}</span></div>`;
+ const meta=`<div class="meta"><span>${I.clock}${F.time(e.start)}</span><span>${I.ticket}${e.price?esc(T(e.price)):L('Бесплатно','Free')}</span></div>`;
  if(o.row)return `<button class="evc row" data-go="E03" data-p='${JSON.stringify({id})}'><div class="cv">${evCover(e,'cal')}<div class="date"><b>${F.dnum(e.start)}</b><small>${F.mon(e.start)}</small></div></div><div class="bd"><small>${e.format==='online'?L('Онлайн','Online'):esc(city(e.city))} · ${F.time(e.start)}</small><b>${esc(T(e.title))}</b>${st||`<span class="note">${esc(pname(e.organizer))}</span>`}</div></button>`;
  return `<button class="evc" data-go="E03" data-p='${JSON.stringify({id})}' style="animation-delay:${(o.i||0)*50}ms"><div class="cv">${evCover(e,'cal')}<div class="date"><b>${F.dnum(e.start)}</b><small>${F.mon(e.start)}</small></div><div class="fmt">${fmt}</div>${st?`<div class="my">${st}</div>`:''}</div>
  <div class="bd"><small>${esc(evType(e.type))} · ${esc(pname(e.organizer))}</small><b>${esc(T(e.title))}</b>${meta}</div></button>`;
@@ -256,16 +263,21 @@ function chipGroup(items,selected,act,o={}){
 const chipPicker=o=>chipGroup(o.items,o.sel,o.act,{title:o.title,max:o.max,groups:o.cats?topicGroups(o.items.map(x=>x[0])):o.groups});
 const optGroups=g=>{const b=OPT_BASE[g]||8;const ids=OPT[g].map(x=>x[0]);return [[L('Популярное','Popular'),ids.slice(0,b)],[L('Ещё варианты','More options'),ids.slice(b)]];};
 /** Shared identity choices: same IDs, multiplicity and catalog in onboarding/profile. */
-const IDENTITY_KEYS=['gender','orient','format','role'];
+const IDENTITY_KEYS=['pron','gender','orient','role','status','format','seek'];
+const IDENTITY_MULTI=['gender','orient','format','seek'];
 const identityFields=()=>[
- ['gender',L('Гендер','Gender'),L('Можно выбрать несколько вариантов.','You can choose more than one.')],
- ['orient',L('Ориентация','Orientation'),L('Выбери определения, которые тебе подходят.','Choose the definitions that fit you.')],
- ['format',L('Формат отношений','Relationship format'),L('Какие форматы подходят тебе сейчас?','Which relationship styles fit you now?')],
- ['role',L('Роль','Role'),L('Один вариант. Это не согласие на какие-либо практики.','One option. This is not consent to any practice.')]
+ ['pron',L('Местоимения','Pronouns'),L('Необязательно.','Optional.')],
+ ['gender',L('Гендер','Gender'),L('До пяти выбранных вариантов.','Up to five selected options.')],
+ ['orient',L('Ориентация','Orientation'),L('До пяти выбранных вариантов.','Up to five selected options.')],
+ ['role',L('Роль','Role'),L('Один вариант. Это не согласие на практики.','One option. This is not consent to any practice.')],
+ ['status',L('Статус отношений','Relationship status'),L('Необязательно.','Optional.')],
+ ['format',L('Формат отношений','Relationship format'),L('До пяти выбранных вариантов.','Up to five selected options.')],
+ ['seek',L('Ищу','Looking for'),L('Можно выбрать несколько.','You can choose more than one.')]
 ];
-const identityDraft=m=>({gender:[...(m.gender||[])],orient:[...(m.orient||[])],format:[...fmtList(m.format)],role:m.role||null});
-function identityChoices(k,value,act){const title=identityFields().find(x=>x[0]===k)[1];return chipGroup(optItems(k),k==='role'?[value]:value,act,{k,title,groups:optGroups(k),limit:{gender:4,orient:6,format:6,role:3}[k]});}
-function toggleIdentityValue(value,k,v){if(k==='role')return value===v?null:v;const arr=[...(value||[])],i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);return arr;}
+const identityDraft=m=>Object.fromEntries(IDENTITY_KEYS.map(k=>[k,IDENTITY_MULTI.includes(k)?[...fmtList(m[k])]:m[k]==='any'||m[k]==='unspecified'?null:m[k]||null]));
+function identityChoices(k,value,act){const title=identityFields().find(x=>x[0]===k)[1];return chipGroup(optItems(k),IDENTITY_MULTI.includes(k)?fmtList(value):[value],act,{k,title,groups:optGroups(k),limit:5,max:['gender','orient','format'].includes(k)?5:undefined});}
+function toggleIdentityValue(value,k,v){if(!OPT[k]?.some(x=>x[0]===v))return value;if(!IDENTITY_MULTI.includes(k))return value===v?null:v;const arr=[...fmtList(value)],i=arr.indexOf(v);if(i<0){if(['gender','orient','format'].includes(k)&&arr.length>=5){toast(L('Можно выбрать до пяти вариантов','Choose up to five options'),{type:'info'});return arr;}arr.push(v);}else arr.splice(i,1);return arr;}
+
 
 const topicGroups=ids=>{ids=ids||Object.keys(TOPICS);return CATS.map(c=>[T(c),ids.filter(t=>TOPICS[t]?.cat===c.id)]).filter(g=>g[1].length);};
 ACT.chipFold=a=>{const key=a.dataset.v;S.ui.unfold=S.ui.unfold||{};const box=a.closest('.chips');const open=box.classList.toggle('folded')===false;S.ui.unfold[key]=open;a.textContent=open?L('Свернуть','Show less'):L(`Ещё ${a.dataset.n}`,`${a.dataset.n} more`);};
