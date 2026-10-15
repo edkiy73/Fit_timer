@@ -34,3 +34,7 @@ prepare('Q02');run("S.pair=null;S.pairInvite={nick:'kira',by:'me',status:'pendin
 console.log('PASS safety stop vs delayed grant, inactive route actor, regular shared media and invitation limits');
 prepare('Q03');run("S.pair.proposal=null;editableProfile({p:{owner:'couple'}}).bio='Explicit approval';markCoupleDraft();submitCoupleDraft();qaApproveAll()");assert.equal(run('S.pair.proposal.status'),'pending','global QA auto approval must not approve a shared profile revision');
 console.log('PASS shared profile always requires an explicit other-partner decision');
+
+prepare('H02',{id:'mia',actor:'couple'});run("var expiredForOne={mode:'t15',type:'image',url:'PRIVATE_EXPIRED_READER',recipients:['me','kira'],views:{me:{openedAt:chatNow()-16*60e3,done:false},kira:{openedAt:null,done:false}}}");assert.equal(run("chatMediaHTML({me:0,media:expiredForOne},0).includes('PRIVATE_EXPIRED_READER')"),false);assert.equal(run('expiredForOne.url'),'PRIVATE_EXPIRED_READER');
+prepare('P02',{owner:'couple'});run("editableProfile(cur());cur().pairLease=S.pair.draftLease;cur().pairVersion=S.pair.draftVersion||0;markCoupleDraft()");assert.equal(run('cur().pairVersion'),run('S.pair.draftVersion'));run('markCoupleDraft(true)');assert.notEqual(run('cur().pairVersion'),run('S.pair.draftVersion'));
+console.log('PASS merged inline draft baseline and expired recipient DOM isolation');

@@ -81,10 +81,38 @@ Object.assign(TOPIC_DESC,{
 for(const k of Object.keys(HIDDEN_TOPICS))TOPIC_DESC[k]=TOPIC_DESC[k]||{ru:'Практика только для опытных людей. Скрыта из каталога.',en:'For experienced people only. Hidden from the catalogue.'};
 
 /* the one answer scale used everywhere: quiz, jar sheet, compare */
-const LV_WORD=n=>n>=10?L('Главное для меня','Essential to me'):n>=7?L('Очень нравится','Love it'):n>=4?L('Интересно','Into it'):L('Немного интересно','A little curious');
+/* every level has its own word and one plain sentence (owner, 15.10: no repeats like 7–9 «очень нравится») */
+const LV_TXT={
+ 1:[['Едва любопытно','Barely curious'],['Знаю, что такое бывает. Пока просто любопытно.','I know it exists. Just curious for now.']],
+ 2:[['Мелькает мысль','Crosses my mind'],['Иногда приходит в голову — без спешки и планов.','It comes to mind now and then — no rush, no plans.']],
+ 3:[['Присматриваюсь','Eyeing it'],['Интересно, но сначала хочется узнать больше.','Curious, but I want to know more first.']],
+ 4:[['Попробую','I’d try it'],['С правильным человеком — почему бы и нет.','With the right person — why not.']],
+ 5:[['Интересно','Interested'],['Уже не просто мысль: хочется попробовать по-настоящему.','More than a thought: I want to really try it.']],
+ 6:[['Тянет','Drawn to it'],['Цепляет. Хочется возвращаться к этому снова.','It hooks me. I want to come back to it.']],
+ 7:[['Нравится','I like it'],['Приятно и знакомо — соглашаюсь с удовольствием.','Familiar and good — a happy yes.']],
+ 8:[['Очень нравится','Really into it'],['Одно из любимого. Радует каждый раз.','One of my favourites. Good every time.']],
+ 9:[['Обожаю','I adore it'],['Почти всегда «да». Это меня зажигает.','Almost always a yes. It lights me up.']],
+ 10:[['Без этого никак','A must'],['Часть меня. Без этого всё будет не то.','Part of who I am. Without it, it’s not the same.']],
+};
+const lvTxt=n=>LV_TXT[Math.max(1,Math.min(10,Math.round(+n)||1))];
+const LV_WORD=n=>{const w=lvTxt(n)[0];return L(w[0],w[1]);};
+const LV_HINT=n=>{const w=lvTxt(n)[1];return L(w[0],w[1]);};
 const MARK_WORD=m=>m==='hard'?L('Табу','Taboo'):L('Обсуждаемо','Negotiable');
 const MARK_TEXT=m=>m==='hard'?L('Точно нет. Не показываем в профиле и не предлагаем людей, для которых это важно.','A firm no. Never shown on your profile; we won’t suggest people for whom it matters.'):L('Возможно, но только после разговора и на твоих условиях.','Maybe — only after a talk and on your terms.');
-const jarWord=j=>j.limit?MARK_WORD(j.limit):`${j.lv} · ${LV_WORD(j.lv)}`;
+/* direction of a level answer: give / receive / watch, any combination; all three read as «всё». Optional: no mark = not said.
+   Limits (табу / обсуждаемо) and the «Частые границы» topics carry no direction. */
+const DIRS=['give','get','watch'];
+const DIR_WORD=d=>({give:L('давать','giving'),get:L('получать','receiving'),watch:L('смотреть','watching')})[d]||'';
+const normDir=d=>{const a=Array.isArray(d)?d:d==='all'?DIRS:d?[d]:[];const out=DIRS.filter(x=>a.includes(x));return out.length?out:undefined;};
+const dirText=d=>{const a=normDir(d);if(!a)return '';return a.length===DIRS.length?L('всё','all of it'):a.map(DIR_WORD).join(', ');};
+const hasDir=t=>!isLimitCat(t);
+/** one jar shape everywhere: [t,lv,dir?] seed arrays or {t,lv,limit,vis,dir} objects */
+const normJar=x=>{const j=Array.isArray(x)?{t:x[0],lv:x[1],dir:x[2]}:{...x};const d=j.limit?undefined:normDir(j.dir);if(d)j.dir=d;else delete j.dir;return j;};
+const jarWord=j=>{j=normJar(j);return j.limit?MARK_WORD(j.limit):[`${j.lv} · ${LV_WORD(j.lv)}`,dirText(j.dir)].filter(Boolean).join(', ');};
+/** the answer without its number (the number sits in a badge): «Нравится, давать» */
+const jarDesc=j=>{j=normJar(j);return j.limit?MARK_WORD(j.limit):[LV_WORD(j.lv),dirText(j.dir)].filter(Boolean).join(', ');};
+/** short form for comparisons: «8/10, давать» */
+const jarShort=j=>{j=normJar(j);return j.limit?MARK_WORD(j.limit).toLowerCase():[`${j.lv}/10`,dirText(j.dir)].filter(Boolean).join(', ');};
 const isLimitCat=t=>TOPICS[t]?.cat==='limits';
 const topicQ=t=>isLimitCat(t)?L('Как ты к этому относишься?','How do you feel about this?'):L('Насколько тебе это интересно?','How into this are you?');
 

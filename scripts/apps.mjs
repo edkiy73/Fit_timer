@@ -2,7 +2,7 @@ import { readdir, readFile, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { affectedApps } from './affected-apps.mjs';
+import { affectedApps, lightChecks } from './affected-apps.mjs';
 
 const ROOT = process.cwd();
 const APPS_DIR = path.join(ROOT, 'apps');
@@ -38,17 +38,20 @@ function resolveAffected(base, names){
   const diff = base && !/^0+$/.test(base)
     ? spawnSync('git', ['diff', '--name-only', base + '...HEAD'], {cwd:ROOT, encoding:'utf8'})
     : null;
-  return diff && diff.status === 0
-    ? affectedApps(diff.stdout.split('\n').filter(Boolean), names)
-    : (console.log('Не удалось вычислить изменения относительно ' + (base || '(нет base)') + ' — проверяю всё'),
-       {core:true, apps:names});
+  if(!(diff && diff.status === 0)){
+    console.log('Не удалось вычислить изменения относительно ' + (base || '(нет base)') + ' — проверяю всё');
+    return {core:true, apps:names, light:{}};
+  }
+  const files = diff.stdout.split('\n').filter(Boolean);
+  return {...affectedApps(files, names), light:lightChecks(files, names)};
 }
 const all = await apps();
 if(!all.length) throw new Error('No apps with package.json found under apps/');
 
 if(mode === 'setup' || mode === 'setup:affected'){
   const target = mode === 'setup:affected' ? resolveAffected(scriptName, all.map(a=>a.name)) : null;
-  const selected = target ? all.filter(a=>target.apps.includes(a.name)) : all;
+  // Облегчённой проверке (только node) зависимости приложения не нужны.
+  const selected = target ? all.filter(a=>target.apps.includes(a.name) && !target.light[a.name]) : all;
   console.log('Установка зависимостей: ' + (selected.map(a=>a.name).join(', ') || 'нет приложений'));
   for(const app of selected){
     const lock = path.join(app.dir, 'package-lock.json');
@@ -72,15 +75,16 @@ if(mode === 'setup' || mode === 'setup:affected'){
   // CI: проверить только то, что затронуто изменениями с <base> (sha или ref).
   // Если diff посчитать нельзя (нет base, новая ветка, мелкий clone) — проверяем всё.
   const target = resolveAffected(scriptName, all.map(a=>a.name));
-  console.log('Core: ' + (target.core ? 'да' : 'нет') + '; приложения: ' + (target.apps.join(', ') || 'нет'));
+  console.log('Core: ' + (target.core ? 'да' : 'нет') + '; приложения: ' + (target.apps.map(n => target.light[n] ? n + ' (' + target.light[n] + ')' : n).join(', ') || 'нет'));
   if(target.core){
     console.log('\n== check core ==');
     await run('npm', ['run', 'check'], path.join(ROOT, 'packages', 'core'));
   }
   for(const app of all.filter(a => target.apps.includes(a.name))){
-    if(!app.pkg.scripts?.check) throw new Error(app.name + ' must define scripts.check');
-    console.log('\n== check ' + app.name + ' ==');
-    await run('npm', ['run', 'check'], app.dir);
+    const script = target.light[app.name] || 'check';
+    if(!app.pkg.scripts?.[script]) throw new Error(app.name + ' must define scripts.' + script);
+    console.log('\n== ' + script + ' ' + app.name + ' ==');
+    await run('npm', ['run', script], app.dir);
   }
 }else if(mode === 'run'){
   if(!scriptName) throw new Error('Usage: node scripts/apps.mjs run <script>');

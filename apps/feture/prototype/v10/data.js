@@ -63,7 +63,7 @@ const OPT={
  gender:[['woman','женщина','woman'],['man','мужчина','man'],['nb','небинарная персона','non-binary'],['transw','транс-женщина','trans woman'],['transm','транс-мужчина','trans man'],['gq','гендерквир','genderqueer'],['ag','агендер','agender'],['search','пока ищу слово','still searching']],
  orient:[['hetero','гетеро','straight'],['bi','би','bi'],['pan','пан','pan'],['gay','гей','gay'],['lesbian','лесби','lesbian'],['queer','квир','queer'],['ace','асексуальность','asexual'],['demi','демисексуальность','demisexual']],
  format:[['mono','моногамия','monogamy'],['open','открытые отношения','open relationship'],['poly','полиамория','polyamory'],['swing','свинг','swinging'],['ra','анархия отношений','relationship anarchy'],['talk','только общение','just talking']],
- role:[['lead','ведущая','leading'],['recv','принимающая','receiving'],['switch','свитч','switch'],['service','сервис','service'],['none','не важно','no preference']],
+ role:[['lead','ведущая','leading'],['recv','принимающая','receiving'],['switch','свитч','switch'],['service','сервис','service']],
  seek:[['chat','общение','conversation'],['dates','свидания','dates'],['rel','отношения','relationship'],['exp','совместный опыт','shared experience'],['friends','дружба','friendship'],['play','партнёра по практикам','a play partner'],['events','компанию на события','company for events'],['learn','научиться, наставника','to learn / a mentor'],['online','общение онлайн','online only']],
  pron:[['she','она/её','she/her'],['he','он/его','he/him'],['they','они/их','they/them'],['any','любые','any']],
 };
@@ -86,17 +86,17 @@ const FOLLOW_SEED={sofi:['mia','kira','me'],leon:['mia','maya'],mia:['maya','kai
 const PEOPLE={
  sofi:{pv:true,name:'Sofi',age:26,photo:1,nph:3,city:'berlin',km:4,pron:'she',gender:['woman'],orient:['bi'],format:['open','serious'],status:'single',role:['recv'],seek:['dates','chat'],verified:true,online:true,dating:true,
   bio:{ru:'Люблю долгие переписки перед встречей и людей, которые не торопят. Фотографирую плёнку.',en:'I love long chats before meeting and people who don’t rush. I shoot film.'},
-  jars:[['experiments',10],['bondage',8],['sensory',8],['exhibition',4]]},
+  jars:[['experiments',10],['bondage',8,['get']],['sensory',8,['get']],['exhibition',4,['watch']]]},
  leon:{premium:true,name:'Leon',age:33,photo:2,nph:2,city:'berlin',km:8,pron:'he',gender:['transm'],orient:['bi'],format:'open',role:['lead'],seek:['dates'],verified:true,online:false,last:{ru:'был вчера',en:'active yesterday'},dating:true,
   bio:{ru:'Сначала кофе и разговор, потом всё остальное. Веду небольшие вечеринки.',en:'Coffee and a talk first, everything else later. I host small parties.'},
-  jars:[['control',10],['roleplay',8],['bondage',6],['latex',8]]},
+  jars:[['control',10,['give']],['roleplay',8,['give','get']],['bondage',8,['give']],['latex',8,['watch']]]},
  mia:{pv:true,premium:true,privText:{ru:'Перед первой сессией всегда созваниваемся. Стоп-слово — «красный», жест — два хлопка. После — обязательно чай и разговор.',en:'We always call before a first session. Safeword is “red”, gesture is two taps. Afterwards — tea and a talk, always.'},name:'Mia',age:29,photo:3,nph:5,city:'berlin',km:3,pron:'she',gender:['transw'],orient:['queer'],format:['poly','play'],status:'partnered',role:['switch'],seek:['dates','exp'],verified:true,online:true,dating:true,
   bio:{ru:'Люблю людей, которые говорят прямо, не торопят события и заранее обсуждают ожидания. Практикую шибари шесть лет.',en:'I like people who speak directly, don’t rush and agree on expectations up front. Six years of shibari.'},
-  jars:[['shibari',10],['bondage',8],['aftercare',10],['roleplay',8]]},
+  jars:[['shibari',10,['give','watch']],['bondage',8,['give']],['aftercare',10,['give','get']],['roleplay',8,'all']]},
  kai:{pv:true,name:'Kai',age:27,photo:4,nph:2,city:'berlin',km:5,pron:'they',gender:['nb'],orient:['pan'],format:'ra',role:['switch'],seek:['chat','friends'],verified:true,online:false,last:{ru:'был(а) сегодня',en:'active today'},dating:true,
   bio:{ru:'Ищу людей, с которыми можно спокойно говорить о границах. Остальное приложится.',en:'Looking for people I can calmly talk boundaries with. The rest will follow.'},
-  jars:[['service',8],['bondage',6],['rituals',8],['talk',10],{t:'filming',lv:0,limit:'hard'}]},
- maya:{pv:true,name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:['none'],seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
+  jars:[['service',8,['give']],['bondage',6,['get']],['rituals',8],['talk',10],{t:'filming',lv:0,limit:'hard'}]},
+ maya:{pv:true,name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:[],seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
   bio:{ru:'Веду сообщество «Узлы и разговоры» и встречи для новичков. Здесь — ради людей и тем.',en:'I run the Rope & Talk community and newcomer meetups. Here for people and ideas.'},
   jars:[['shibari',10],['talk',10],['aftercare',8]]},
  ari:{name:'Ari',age:30,photo:6,city:'berlin',km:6,pron:'he',gender:['man'],orient:['gay'],format:'open',role:['service'],seek:['dates','friends'],verified:true,online:false,last:{ru:'был 2 ч назад',en:'active 2h ago'},dating:true,
@@ -121,8 +121,8 @@ const PEOPLE={
   bio:{ru:'Половина пары Eva и Tom. Личные сообщения — сюда, общие вопросы — в профиль пары.',en:'One half of Eva & Tom. Personal messages here, couple questions on the couple profile.'},jars:[['roleplay',8],['intimacy',9]]},
  tom:{name:'Tom',age:34,plate:'ember',city:'berlin',pron:'he',gender:['man'],orient:['bi'],format:'swing',role:['lead'],seek:['exp'],verified:true,online:false,last:{ru:'был сегодня',en:'active today'},dating:false,pairOf:'tomeva',
   bio:{ru:'Готовлю, катаюсь на велосипеде. В паре с Eva.',en:'I cook and ride bikes. In a couple with Eva.'},jars:[['control',8],['rituals',7]]},
- dan:{name:'Dan',age:35,plate:'night',city:'berlin',pron:'he',gender:['man'],orient:['hetero'],format:'mono',role:['none'],seek:['chat'],dating:false,bio:{ru:'Читаю больше, чем пишу.',en:'I read more than I post.'},jars:[]},
- noa:{name:'Noa',age:34,plate:'sea',city:'moscow',pron:'they',gender:['nb'],orient:['queer'],format:'ra',role:['none'],seek:['chat'],dating:false,verified:true,bio:{ru:'Психолог, веду онлайн-круги о согласии.',en:'Counsellor, I host online circles on consent.'},jars:[['talk',10],['aftercare',10]]},
+ dan:{name:'Dan',age:35,plate:'night',city:'berlin',pron:'he',gender:['man'],orient:['hetero'],format:'mono',role:[],seek:['chat'],dating:false,bio:{ru:'Читаю больше, чем пишу.',en:'I read more than I post.'},jars:[]},
+ noa:{name:'Noa',age:34,plate:'sea',city:'moscow',pron:'they',gender:['nb'],orient:['queer'],format:'ra',role:[],seek:['chat'],dating:false,verified:true,bio:{ru:'Психолог, веду онлайн-круги о согласии.',en:'Counsellor, I host online circles on consent.'},jars:[['talk',10],['aftercare',10]]},
 };
 
 for(const [pairId,ids,names] of [['lenamax',['lena','max'],['Lena','Max']],['nikajonas',['nika','jonas'],['Nika','Jonas']]]){const pair=PEOPLE[pairId];pair.members=ids;ids.forEach((id,i)=>{PEOPLE[id]={name:names[i],age:i?33:30,plate:i?'sea':'rose',city:pair.city,pron:i?'he':'she',gender:[i?'man':'woman'],orient:['bi'],format:[...pair.format],status:'partnered',role:['switch'],seek:['friends'],dating:false,socialLikes:true,pairOf:pairId,bio:{ru:'Личный профиль. Общий профиль пары доступен ниже.',en:'Personal profile. Our couple profile is linked below.'},jars:[]};});}
@@ -168,7 +168,9 @@ const POSTS=[
  {id:'p2',author:'kai',t:ago(20),type:'photo',media:[{type:'image',url:'/images/v10-content/post-p2-rope-details-45.webp'}],plate:'sea',tags:['shibari'],likes:41,aud:'all',text:{ru:'Вчерашний мастер-класс по обвязкам. Учились не узлам, а тому, как договариваться заранее.',en:'Yesterday’s rope workshop. We learned not knots but how to agree in advance.'},comments:[['mia',{ru:'Было тепло и спокойно, спасибо всем!',en:'It was warm and calm, thanks everyone!'}]]},
  {id:'p3',author:'tomeva',t:ago(70),type:'text',tags:['intimacy','talk'],likes:58,aud:'all',text:{ru:'Год в открытых отношениях. Главное, что поняли: правила лучше обновлять заранее, а не после.',en:'A year in an open relationship. Main lesson: update the rules before, not after.'},comments:[]},
  {id:'p4',author:'maya',t:ago(4),type:'poll',tags:['talk'],likes:17,aud:'all',text:{ru:'Собираю опыт для встречи новичков в субботу.',en:'Collecting experience for Saturday’s newcomers meetup.'},pollQ:{ru:'Как вы предпочитаете обсуждать границы перед встречей?',en:'How do you prefer to discuss boundaries before meeting?'},poll:[[{ru:'В переписке',en:'In writing'},34],[{ru:'Голосом',en:'Voice call'},21],[{ru:'При встрече за кофе',en:'Over coffee in person'},45]],comments:[]},
- {id:'p5',author:'sofi',t:ago(9),type:'text',tags:['slow'],likes:12,aud:'all',text:{ru:'Если вы тоже любите долгие переписки перед встречей — вы по адресу.',en:'If you also love long chats before meeting — you’re in the right place.'},comments:[]},
+ {id:'p5',author:'sofi',t:ago(9),type:'text',tags:['slow'],likes:12,aud:'all',text:{ru:'Если вы тоже любите долгие переписки перед встречей — вы по адресу.',en:'If you also love long chats before meeting — you’re in the right place.'},comments:[['kai',{ru:'Да! Переписка помогает понять, совпадаем ли мы по темпу.',en:'Yes! Writing helps see if our pace matches.'}],['sofi',{ru:'Вот-вот. А сколько обычно переписываешься до встречи?',en:'Exactly. How long do you usually write before meeting?'},0],
+  ['kai',{ru:'Неделю-две. Потом короткий созвон, и только потом кофе.',en:'A week or two. Then a short call, and only then coffee.'},1],['leon',{ru:'Мне хватает пары дней, но созвон — обязательно.',en:'A couple of days is enough for me, but a call is a must.'},0],
+  ['mia',{ru:'Созвон — лучший фильтр, согласна.',en:'A call is the best filter, agreed.'},3],['maya',{ru:'Добавлю в памятку для новичков, спасибо.',en:'Adding this to our beginners’ guide, thanks.'},0],['noa',{ru:'Читаю и узнаю себя.',en:'Reading this and recognising myself.'},0]]},
  {id:'p6',author:'leon',t:ago(30),type:'photo',media:[{type:'image',url:'/images/v10-content/post-p6-latex-night-prep-45.webp'}],plate:'coal',tags:['latex'],likes:33,aud:'followers',text:{ru:'Готовим следующую Latex Night. Дресс-код мягкий, правила строгие.',en:'Preparing the next Latex Night. Soft dress code, strict rules.'},comments:[]},
  {id:'p7',author:'ari',t:ago(14),type:'text',media:[{type:'image',url:'/images/v10-content/post-p7-morning-coffee-45.webp'}],tags:['rituals','service'],likes:9,aud:'all',text:{ru:'Маленький ритуал утра: кофе, список дел и одно доброе сообщение. Удивительно, как это меняет день.',en:'A small morning ritual: coffee, a to-do list and one kind message. Amazing how it changes the day.'},comments:[]},
  {id:'p8',author:'noa',t:ago(40),type:'text',tags:['talk','aftercare'],likes:66,aud:'all',text:{ru:'Напоминание: «забота после» нужна не только тому, кто был в принимающей роли.',en:'Reminder: aftercare isn’t only for the person in the receiving role.'},comments:[['sofi',{ru:'Очень важно, спасибо.',en:'So important, thank you.'}]]},
@@ -193,7 +195,7 @@ const EVENTS={
   desc:{ru:'Танцы и разговоры.',en:'Dancing and conversations.'},reqs:[]},
 };
 
-const REQ_SCOPES=[['info',{ru:'желания и границы',en:'wishes and boundaries'}],['photos',{ru:'приватные фото',en:'private photos'}],['video',{ru:'видео',en:'video'}],['album',{ru:'альбом «Лето»',en:'album “Summer”'}]];
+const REQ_SCOPES=[['info',{ru:'текст и интересы',en:'text and interests'}],['photos',{ru:'приватные фото',en:'private photos'}],['video',{ru:'видео',en:'video'}],['album',{ru:'альбом «Лето»',en:'album “Summer”'}]];
 
 /* ---------- personas ---------- */
 function fullMe(){return{privText:{ru:'Новичок в верёвке, поэтому сначала — разговор и короткая встреча на нейтральной территории. Не люблю сюрпризов.',en:'New to rope, so first a talk and a short meeting on neutral ground. I don’t like surprises.'},
@@ -201,8 +203,8 @@ function fullMe(){return{privText:{ru:'Новичок в верёвке, поэ�
  bio:{ru:'Говорю прямо, слушаю внимательно. Люблю верёвку, долгие прогулки и людей, которые знают свои границы.',en:'I speak directly and listen closely. I love rope, long walks and people who know their limits.'},
  vis:{...PUBLIC_VIS},email:'alex@mail.com',methods:['email','google'],dating:true,datingVisible:true,socialLikes:true,requestsFrom:'all',rsvpShow:false,ageCheck:'ok',premium:false,
  jars:[
-  {t:'bondage',lv:8,real:'practice',vis:'public'},{t:'shibari',lv:6,real:'try',vis:'public'},{t:'roleplay',lv:8,real:'practice',vis:'public'},{t:'aftercare',lv:10,real:'practice',vis:'public'},
-  {t:'control',lv:8,real:'practice',vis:'granted'},{t:'sensory',lv:6,real:'fantasy',vis:'granted'},{t:'experiments',lv:10,real:'try',vis:'only'},{t:'intimacy',lv:8,real:'practice',vis:'public'},
+  {t:'bondage',lv:8,dir:['give'],real:'practice',vis:'public'},{t:'shibari',lv:6,dir:['give'],real:'try',vis:'public'},{t:'roleplay',lv:8,dir:['give','get'],real:'practice',vis:'public'},{t:'aftercare',lv:10,real:'practice',vis:'public'},
+  {t:'control',lv:8,dir:['give'],real:'practice',vis:'granted'},{t:'sensory',lv:6,dir:['give','get','watch'],real:'fantasy',vis:'granted'},{t:'experiments',lv:10,real:'try',vis:'only'},{t:'intimacy',lv:8,real:'practice',vis:'public'},
   {t:'impact',lv:0,limit:'hard',vis:'only'},{t:'exhibition',lv:0,limit:'discuss',vis:'granted'}],
  history:[{t:ago(30),topic:'shibari',from:4,to:6,src:'test'},{t:ago(200),topic:'aftercare',from:8,to:10,src:'manual'},{t:ago(400),topic:'impact',from:'—',to:'limit',src:'manual'}],
  journal:[
@@ -231,7 +233,7 @@ function freshState(persona){
    {id:'cr2',p:'lina',t:ago(4),status:'pending',showMember:false,answer:{ru:'Ищу небольшой круг для спокойных разговоров.',en:'I’m looking for a small circle for calm conversations.'}},
    {id:'cr3',p:'kai',t:ago(48),updated:ago(24),status:'approved',showMember:true,answer:{ru:'Интересны разговоры о доверии и заботе.',en:'I’m interested in conversations about trust and care.'}}
   ]}:{} ,
-  posts:POSTS.map(p=>({...p,pollVoters:p.poll?p.poll.map((_,i)=>Object.keys(PEOPLE).filter((id,j)=>!PEOPLE[id].pair&&j%p.poll.length===i).slice(0,5)):undefined,liked:false,saved:false,comments:p.comments.map((c,i)=>({a:c[0],text:c[1],t:p.t+HOUR,likes:(i*3+2)%6}))})),
+  posts:POSTS.map(p=>({...p,pollVoters:p.poll?p.poll.map((_,i)=>Object.keys(PEOPLE).filter((id,j)=>!PEOPLE[id].pair&&j%p.poll.length===i).slice(0,5)):undefined,liked:false,saved:false,comments:p.comments.map((c,i)=>({id:`p_${p.id}_${i}`,parent:c[2]!=null?`p_${p.id}_${c[2]}`:null,a:c[0],text:c[1],t:p.t+HOUR*(1+i),likes:(i*3+2)%6}))})),
   myPosts:full?[{id:'m1',author:'me',t:ago(48),type:'text',tags:['shibari'],likes:14,aud:'all',status:'published',text:{ru:'Первый раз сходил на занятие по шибари. Больше всего удивило, сколько времени уходит на разговор до начала — и как это успокаивает.',en:'Went to my first shibari class. What surprised me most was how much time goes into talking first — and how calming that is.'},comments:[]},
    {id:'m2',author:'me',t:ago(3),type:'text',tags:['talk'],likes:0,aud:'followers',status:'draft',text:{ru:'Черновик: как я учусь говорить «нет» без чувства вины…',en:'Draft: how I’m learning to say “no” without guilt…'},comments:[]}]:[],
   postEdits:{}, // private saved revisions; never part of published Posts
@@ -245,7 +247,7 @@ function freshState(persona){
   likesOut:full?[{p:'maya',src:'profile',t:ago(10)}]:[],
   matches:full?[{p:'mia',t:ago(26)},{p:'kai',t:ago(120)},{p:'sofi',t:ago(5)},{p:'lina',t:ago(1)},{p:'tomeva',t:ago(24)}]:[],
   threads:full?{
-   mia:{msgs:[{me:0,text:{ru:'Привет! Увидела, что у нас совпали связывание и забота после 🙂',en:'Hi! Saw we matched on bondage and aftercare 🙂'},t:ago(25)},{me:1,text:{ru:'Привет! Да, редко кто сразу пишет про заботу после',en:'Hi! Yes, rarely does anyone mention aftercare first'},t:ago(24.8)},{me:0,text:{ru:'Расскажешь, как ты к этому пришёл?',en:'Will you tell me how you got into it?'},t:ago(.1)},{me:0,text:{ru:'С прошлой встречи 🙂',en:'From the last meetup 🙂'},t:ago(.6),media:{type:'image',url:'/images/v10-content/post-p7-morning-coffee-45.webp',mode:'normal'}},{me:0,text:'',t:ago(.5),media:{type:'image',url:'/images/v10-content/gallery-e1-ropes.webp',mode:'once',openedAt:null,done:false}},{me:0,text:'',t:ago(.4),media:{type:'image',url:'/images/v10-content/post-p2-rope-details-45.webp',mode:'t15',openedAt:null,done:false}}],unread:1},
+   mia:{msgs:[{me:0,text:{ru:'Привет! Увидела, что у нас совпали связывание и забота после 🙂',en:'Hi! Saw we matched on bondage and aftercare 🙂'},t:ago(25)},{me:1,text:{ru:'Привет! Да, редко кто сразу пишет про заботу после',en:'Hi! Yes, rarely does anyone mention aftercare first'},t:ago(24.8)},{me:0,text:{ru:'Расскажешь, как ты к этому пришёл?',en:'Will you tell me how you got into it?'},t:ago(.1)},{me:0,text:{ru:'С прошлой встречи 🙂',en:'From the last meetup 🙂'},t:ago(.6),media:{type:'image',url:'/images/v10-content/post-p7-morning-coffee-45.webp',mode:'normal'}},{me:0,text:'',t:ago(.5),media:{type:'image',url:'/images/v10-content/gallery-e1-ropes.webp',mode:'once',openedAt:null,done:false}},{me:0,text:'',t:ago(.4),media:{type:'image',url:'/images/v10-content/post-p2-rope-details-45.webp',mode:'t15',openedAt:null,done:false}},{me:1,text:'',t:ago(.35),media:{type:'image',url:'/images/v10-content/gallery-e1-ropes.webp',mode:'t120',openedAt:Date.now()-50*60e3,done:false}},{me:0,text:'',t:ago(.3),media:{type:'image',url:null,mode:'once',openedAt:Date.now()-20*60e3,done:true}}],unread:1},
    kai:{msgs:[{me:1,text:{ru:'Спасибо за круг вчера, было очень спокойно.',en:'Thanks for the circle yesterday, it was really calm.'},t:ago(50)},{me:0,text:{ru:'Рад(а), что пришёл! В четверг будет ещё один.',en:'Glad you came! There’s another one on Thursday.'},t:ago(49)}],unread:0},
    tomeva:{pair:true,msgs:[{me:0,text:{ru:'Eva: Тогда в субботу в кафе?',en:'Eva: Saturday at the café then?'},t:ago(1.2)}],unread:1},
   }:{},
