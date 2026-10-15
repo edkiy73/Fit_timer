@@ -1869,7 +1869,7 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .mtile.eph2:not([disabled]):hover .eph-veil{background:linear-gradient(180deg,rgba(12,6,12,.15),rgba(12,6,12,.45))}
 .mtile.eph2.expired{min-height:150px}
 .mtile.eph2.expired .eph-c{opacity:.8}
-.mmatch{display:block;width:44px;height:70px;margin-bottom:2px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.35))}
+.mmatch{display:block;width:56px;height:70px;margin-bottom:2px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.35))}
 .mmatch svg{width:100%;height:100%;overflow:visible}
 .mmatch.lit .fl{animation:matchFl 1.2s ease-in-out infinite alternate}
 .mmatch.lit .core{animation:matchCore .9s ease-in-out infinite alternate}
