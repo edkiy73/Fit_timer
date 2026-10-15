@@ -18,7 +18,7 @@ const dfCount=f=>[f.show!=='all',f.age[0]!==18||f.age[1]!==99,f.placeMode==='nea
 SC.D03={root:1,tab:'people',title:()=>L('Люди','People'),render:(p,r)=>{
  const sub=p.sub||'discover';if(sub==='matches')return SC.H01.render({sub:'chats'},r);if(sub==='requests')return `<header class="bar">${seg([['discover',L('Подборка','Discover')],['likes',L('Симпатии','Likes'),C.likesIn()||''],['requests',L('Запросы','Requests'),C.reqIn()||'']],sub,'pplSub')}${bellBtn()}</header><div class="view"><div class="wrap">${accessBody(p)}</div></div>`;const n=C.likesIn();
  const tabs=seg([['discover',L('Подборка','Discover')],['likes',L('Симпатии','Likes'),n||''],['requests',L('Запросы','Requests'),C.reqIn()||'']],sub,'pplSub');
- const right=sub==='discover'&&S.me.dating?`<button class="ibtn" data-go="D04" aria-label="${L('Фильтры','Filters')}">${I.filter}${dfCount(S.filters.dating)?`<sup>${dfCount(S.filters.dating)}</sup>`:''}</button>`:bellBtn();
+ const right=sub==='discover'&&S.me.dating?`<button class="ibtn" data-act="dfSheet" aria-label="${L('Фильтры','Filters')}">${I.filter}${dfCount(S.filters.dating)?`<sup>${dfCount(S.filters.dating)}</sup>`:''}</button>`:bellBtn();
  const head=`<header class="bar">${tabs}${right}</header>`;
  if(sub==='likes')return head+`<div class="view"><div class="wrap">${likesBody(r)}</div></div>`;
  if(sub==='matches')return head+`<div class="view"><div class="wrap">${matchesBody()}</div></div>`;
@@ -60,7 +60,7 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
  const post=allPosts().filter(x=>x.author===id).sort((a,b)=>b.t-a.t)[0];
  const keys=[...fmtList(p.format).slice(0,2).map(x=>opt('format',x)),p.role&&p.role!=='none'?opt('role',p.role):'',...p.seek.slice(0,1).map(s=>opt('seek',s))].filter(Boolean);
  return `<article class="pc ${pos}" data-id="${id}" ${pos==='next'?'inert aria-hidden="true"':`aria-label="${esc(pname(id))}"`}>
- <div class="pc-ph">${bigPhoto(id,ix)}
+ <div class="pc-ph">${photoBg(id,ix)}${bigPhoto(id,ix)}
   ${photoBars(id,ix)}
   ${photoCount(id)>1?`<div class="pc-zone l" data-ph="-1"></div><div class="pc-zone r" data-ph="1"></div>`:''}<div class="pc-zone c" data-ph="0" aria-hidden="true"></div>
   <div class="pc-tags">${likesMe?`<span class="pc-liked">${I.heartf}${L('Ты нравишься','Likes you')}</span>`:''}<span class="pc-score"><b>${sh.few?'—':sh.match.length}</b><small>${sh.few?L('мало данных','not enough data'):pl(sh.match.length,['общая тема','общие темы','общих тем'],['shared topic','shared topics'],true)}</small></span></div>
@@ -107,7 +107,7 @@ function initDeck(){const c=$('#deck .pc.top');if(!c)return;const acts=$('#acts'
   const z=e.target.closest('[data-ph]');if(!z)return;e.stopPropagation();const id=c.dataset.id;const d=+z.dataset.ph;
   if(!d){openViewer(photoItems(id),(S.ui.ph||{})[id]||0);return;}
   if(!stepPhoto(id,d)){c.classList.remove('nudge-l','nudge-r');void c.offsetWidth;c.classList.add(d<0?'nudge-l':'nudge-r');return;}
-  const ph=$('.pc-ph',c);const img=ph.firstElementChild;const tmp=document.createElement('div');tmp.innerHTML=bigPhoto(id,S.ui.ph[id]);ph.replaceChild(tmp.firstElementChild,img);
+  const ph=$('.pc-ph',c);const img=ph.querySelector(':scope>img:not(.mbg),:scope>.plate')||ph.lastElementChild;const tmp=document.createElement('div');tmp.innerHTML=bigPhoto(id,S.ui.ph[id]);ph.replaceChild(tmp.firstElementChild,img);
   $$('.pc-bars i',c).forEach((b,i)=>b.classList.toggle('on',i===S.ui.ph[id]));},true);
 }
 document.addEventListener('keydown',e=>{if(!S||!S.session||cur().id!=='D03'||(cur().p.sub||'discover')!=='discover'||S.ui.sheet||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key==='ArrowRight')decide(1);if(e.key==='ArrowLeft')decide(-1);});
@@ -141,7 +141,7 @@ ACT.matchChat=a=>{ACT.matchClose();openChat(a.dataset.v);};
 /* D10 — nobody left */
 function deckEmpty(){const n=dfCount(S.filters.dating);return `<div class="empty" style="padding-top:4px"><div class="radar"><i></i><i></i><i></i><span class="me">${S.me.photo?`<img src="${IMG(S.me.photo)}" alt="" style="width:100%;height:100%;object-fit:cover">`:plate('rose')}</span><span class="dot" style="left:18px;top:60px;position:absolute;overflow:hidden">${plate('sea')}</span><span class="dot" style="right:24px;top:150px;width:22px;height:22px;position:absolute;overflow:hidden">${plate('amber')}</span></div>
  <h3>${L('На сегодня анкеты закончились','That’s everyone for today')}</h3><p>${n?L('С текущими фильтрами больше никого. Можно расширить поиск или заглянуть позже.','No one else matches your filters. Widen the search or check back later.'):L('Новые люди появятся, когда кто-то рядом включит знакомства.','New people appear as others nearby turn on dating.')}</p>
- <div class="btns">${n?`<button class="btn primary" data-go="D04">${L('Изменить фильтры','Change filters')}</button>`:''}<button class="btn soft" data-act="toLikes">${L('Ответить на симпатии','Answer your likes')}${C.likesIn()?` · ${C.likesIn()}`:''}</button><button class="btn text" data-go="D09">${L('Кого я уже смотрел(а)','Recently viewed')}</button></div>
+ <div class="btns">${n?`<button class="btn primary" data-act="dfSheet">${L('Изменить фильтры','Change filters')}</button>`:''}<button class="btn soft" data-act="toLikes">${L('Ответить на симпатии','Answer your likes')}${C.likesIn()?` · ${C.likesIn()}`:''}</button><button class="btn text" data-go="D09">${L('Кого я уже смотрел(а)','Recently viewed')}</button></div>
  <div class="card list mt16" style="text-align:left;width:100%">${linkRow({act:'toEvents',icon:'cal',tone:'g',title:L('События рядом','Events nearby'),sub:L('Познакомиться вживую','Meet in person')})}${linkRow({tab:1,act:'toGroups',icon:'groups',tone:'v',title:L('Сообщества','Communities'),sub:L('Люди по интересам','People with your interests')})}${linkRow({act:'toMap',icon:'spark',tone:'l',title:L('Пройти тест','Take a quiz'),sub:L('Больше общего — точнее подборка','More shared topics — better matches')})}</div></div>`;}
 ACT.toLikes=()=>setSub('likes');ACT.toGroups=()=>tab('groups');
 
@@ -163,25 +163,34 @@ ACT.openChat=a=>openChat(a.dataset.v);
 function openChat(id){if(!PEOPLE[id]||isBlocked(id)||!isMatch(id)&&!S.threads[id]?.ended){toast(L('Чат доступен только после взаимной симпатии.','Chat requires a mutual personal like.'),{type:'warn'});return;}if(!S.threads[id])S.threads[id]={msgs:[],unread:0,fresh:true};S.archived.delete(id);if(S.nav.tab!=='chats'){S.nav.tab='chats';S.nav.stacks.chats.length=1;}go('H02',{id});}
 
 /* D04 — dating filters: only fields people opened for dating */
-SC.D04={title:()=>L('Фильтры знакомств','Dating filters'),render:(p,r)=>{if(!r.d)r.d=JSON.parse(JSON.stringify(S.filters.dating));const f=r.d;f.topics=f.topics||[];f.placeMode=f.placeMode||'city';const n=S.deckOrder.filter(id=>!S.decided[id]&&!isMatch(id)&&!isBlocked(id)&&PEOPLE[id].dating&&passDating(id,f)).length;
- const DROWS=dfRows();
- return `${bar(L('Фильтры','Filters'),{back:1,sm:1,actions:`<button class="btn text auto" data-act="dfReset">${L('Сбросить','Reset')}</button>`})}<div class="view nodock cta1"><div class="wrap">
- <section class="fin"><div class="fin-t"><b>${L('Кого показывать','Show')}</b><span>${L('один вариант','one option')}</span></div><div class="fin-b">${choices([['all',L('Все','All')],['people',L('Люди','People')],['pairs',L('Пары','Couples')]],f.show,'dfShow')}</div></section>
+/* D04 — dating filters: a popup like every other filter (round 5). The draft lives in S.ui.df until «Показать»;
+   long lists open inside the same popup (S.ui.dfsub), the city picker returns to it. */
+const dfRows=()=>[['gender',L('Гендер','Gender'),optItems('gender'),optGroups('gender')],['orient',L('Ориентация','Orientation'),optItems('orient'),optGroups('orient')],['format',L('Формат отношений','Relationship format'),optItems('format'),optGroups('format')],['seek',L('Что ищет','Looking for'),optItems('seek')],['role',L('Роль','Role'),optItems('role'),optGroups('role')],['topics',L('Интересы','Interests'),topicItems(Object.keys(TOPICS).filter(t=>!['limits','edge','safety'].includes(TOPICS[t].cat))),topicGroups(Object.keys(TOPICS).filter(t=>!['limits','edge','safety'].includes(TOPICS[t].cat)))]];
+const dfr=()=>S.ui.df;
+const dfRe=()=>{if(S.ui.sheet)resheet();else refresh();};
+function dfMatches(f){return S.deckOrder.filter(id=>!S.decided[id]&&!isMatch(id)&&!isBlocked(id)&&PEOPLE[id].dating&&passDating(id,f)).length;}
+function dfSheet(){if(!S.ui.df)S.ui.df=JSON.parse(JSON.stringify(S.filters.dating));S.ui.dfsub=null;const f0=S.ui.df;f0.topics=f0.topics||[];f0.placeMode=f0.placeMode||'city';
+ sheet(()=>{const f=S.ui.df;if(!f)return{title:'',body:''};const DROWS=dfRows();
+  if(S.ui.dfsub){const row=DROWS.find(x=>x[0]===S.ui.dfsub);f[row[0]]=f[row[0]]||[];return{title:row[1],lead:`<button class="ibtn ghost sm" data-act="dfBack" aria-label="${L('К фильтрам','Back to filters')}">${I.back}</button>`,search:row[2].length>10,searchPh:L('Найти вариант','Find an option'),body:`${fChips(row[2],f[row[0]],'dfMulti',{k:row[0],groups:row[3]})}<p class="note sh-empty" hidden>${L('Ничего не нашлось','Nothing found')}</p>`,foot:`<button class="btn primary" data-act="dfBack">${f[row[0]].length?L(`Готово · ${f[row[0]].length}`,`Done · ${f[row[0]].length}`):L('Готово','Done')}</button>`};}
+  const n=dfMatches(f);
+  return{title:L('Фильтры знакомств','Dating filters'),head:`<button class="btn text auto" data-act="dfReset">${L('Сбросить','Reset')}</button>`,
+   body:`<section class="fin"><div class="fin-t"><b>${L('Кого показывать','Show')}</b><span>${L('один вариант','one option')}</span></div><div class="fin-b">${choices([['all',L('Все','All')],['people',L('Люди','People')],['pairs',L('Пары','Couples')]],f.show,'dfShow')}</div></section>
  <section class="fin"><div class="fin-t"><b>${L('Возраст','Age')}</b><b class="fin-v" id="ageLbl">${f.age[0]}–${f.age[1]}</b></div><div class="card"><div class="dual"><span class="trk"><i style="left:${(f.age[0]-18)/81*100}%;right:${100-(f.age[1]-18)/81*100}%"></i></span><input type="range" min="18" max="99" value="${f.age[0]}" data-in="dfAge" data-i="0" aria-label="${L('Минимальный возраст','Minimum age')}"><input type="range" min="18" max="99" value="${f.age[1]}" data-in="dfAge" data-i="1" aria-label="${L('Максимальный возраст','Maximum age')}"></div></div></section>
  <section class="fin"><div class="fin-t"><b>${L('Где искать','Where')}</b></div><div class="card">${locationFields(f,'dfCity','dfPlaceMode','dfGeo').replace(/^<div class="sec">[^<]*<\/div>/,'')}${f.city&&f.placeMode==='city'?`<button class="btn text auto" data-act="dfAnyCity">${L('Искать в любом городе','Search any city')}</button>`:''}${f.placeMode==='nearby'?`<div class="row" style="justify-content:space-between;margin-top:10px"><span class="note">${L('Радиус','Radius')}</span><b id="distLbl">${L(`до ${f.dist} км`,`up to ${f.dist} km`)}</b></div><div class="dual single"><span class="trk"><i style="left:0;right:${100-(f.dist-5)/95*100}%"></i></span><input type="range" min="5" max="100" step="5" value="${f.dist}" data-in="dfDist" aria-label="${L('Расстояние','Distance')}"></div>`:''}</div></section>
  ${DROWS.map(([k,l,items,groups])=>`<section class="fin"><div class="fin-t"><b>${l}</b><span>${L('можно несколько','pick any')}</span></div>${popChips(items,f[k]||[],'dfMulti',`data-act="dfOpen" data-v="${k}"`,{groups,k,lim:k==='topics'?6:groups?groups[0][1].length:items.length})}</section>`).join('')}
- <p class="grp-n">${L('Фильтры работают только по данным, которые люди сами открыли для знакомств. Скрытые поля и границы не участвуют.','Filters use only what people opened for dating. Hidden fields and limits are never used.')}</p>
- </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="dfApply">${n?L(`Показать ${pl(n,['анкету','анкеты','анкет'],[])}`,`Show ${pl(n,[],['profile','profiles'])}`):L('Применить · пока никого','Apply · no matches yet')}</button></div></div>`;}};
-const dfr=()=>cur().d;
-const dfRows=()=>[['gender',L('Гендер','Gender'),optItems('gender'),optGroups('gender')],['orient',L('Ориентация','Orientation'),optItems('orient'),optGroups('orient')],['format',L('Формат отношений','Relationship format'),optItems('format'),optGroups('format')],['seek',L('Что ищет','Looking for'),optItems('seek')],['role',L('Роль','Role'),optItems('role'),optGroups('role')],['topics',L('Интересы','Interests'),topicItems(Object.keys(TOPICS).filter(t=>!['limits','edge','safety'].includes(TOPICS[t].cat))),topicGroups(Object.keys(TOPICS).filter(t=>!['limits','edge','safety'].includes(TOPICS[t].cat)))]];
-ACT.dfOpen=a=>{const k=a.dataset.v;const row=dfRows().find(x=>x[0]===k);sheet(()=>{const f=dfr();f[k]=f[k]||[];return{title:row[1],search:row[2].length>10,searchPh:L('Найти вариант','Find an option'),body:`${fChips(row[2],f[k],'dfMulti',{k,groups:row[3]})}<p class="note sh-empty" hidden>${L('Ничего не нашлось','Nothing found')}</p>`,foot:`<button class="btn primary" data-act="closeSheet">${f[k].length?L(`Готово · ${f[k].length}`,`Done · ${f[k].length}`):L('Готово','Done')}</button>`};},{full:row[2].length>10});};
-ACT.dfShow=a=>{dfr().show=a.dataset.v;cur().dirty=true;refresh();};
-ACT.dfMulti=a=>{const d=dfr();d[a.dataset.k]=d[a.dataset.k]||[];const arr=d[a.dataset.k];const i=arr.indexOf(a.dataset.v);i<0?arr.push(a.dataset.v):arr.splice(i,1);cur().dirty=true;refresh();if(S.ui.sheet)resheet();};
-
-ACT.dfReset=()=>{cur().d={show:'all',age:[18,99],dist:100,gender:[],orient:[],format:[],seek:[],topics:[],role:[],placeMode:'city',city:'',coords:null};cur().fq='';cur().dirty=JSON.stringify(cur().d)!==JSON.stringify(S.filters.dating);refresh();};
-IN.dfAge=el=>{const f=dfr();const i=+el.dataset.i;let v=+el.value;if(i===0)v=Math.min(v,f.age[1]-1);else v=Math.max(v,f.age[0]+1);el.value=v;f.age[i]=v;cur().dirty=true;$('#ageLbl').textContent=`${f.age[0]}–${f.age[1]}`;const t=el.parentNode.querySelector('.trk i');t.style.left=(f.age[0]-18)/81*100+'%';t.style.right=100-(f.age[1]-18)/81*100+'%';clearTimeout(S.ui.dfT);S.ui.dfT=setTimeout(refresh,350);};
-IN.dfDist=el=>{const f=dfr();f.dist=+el.value;cur().dirty=true;$('#distLbl').textContent=L(`до ${f.dist} км`,`up to ${f.dist} km`);el.parentNode.querySelector('.trk i').style.right=100-(f.dist-5)/95*100+'%';clearTimeout(S.ui.dfT);S.ui.dfT=setTimeout(refresh,350);};
-ACT.dfApply=()=>{if(dfr().placeMode==='nearby'&&!dfr().coords&&!S.me.location?.coords){toast(L('Укажи примерное расположение или выбери поиск по городу','Set approximate location or search by city'),{type:'warn'});return;}S.filters.dating={...dfr(),age:[Math.max(18,dfr().age[0]),Math.max(18,dfr().age[1])]};cur().dirty=false;back();toast(L('Фильтры применены','Filters applied'),{type:'ok'});};
+ <p class="grp-n">${L('Фильтры работают только по данным, которые люди сами открыли для знакомств. Скрытые поля и границы не участвуют.','Filters use only what people opened for dating. Hidden fields and limits are never used.')}</p>`,
+   foot:`<button class="btn primary" data-act="dfApply">${n?L(`Показать ${pl(n,['анкету','анкеты','анкет'],[])}`,`Show ${pl(n,[],['profile','profiles'])}`):L('Применить · пока никого','Apply · no matches yet')}</button>`};},{full:true});}
+ACT.dfSheet=()=>{S.ui.df=null;dfSheet();};
+ACT.dfBack=()=>{S.ui.dfsub=null;resheet();};
+ACT.dfOpen=a=>{S.ui.dfsub=a.dataset.v;resheet();};
+ACT.dfShow=a=>{dfr().show=a.dataset.v;dfRe();};
+ACT.dfMulti=a=>{const d=dfr();d[a.dataset.k]=d[a.dataset.k]||[];const arr=d[a.dataset.k];const i=arr.indexOf(a.dataset.v);i<0?arr.push(a.dataset.v):arr.splice(i,1);dfRe();};
+ACT.dfReset=()=>{S.ui.df={show:'all',age:[18,99],dist:100,gender:[],orient:[],format:[],seek:[],topics:[],role:[],placeMode:'city',city:'',coords:null};dfRe();};
+IN.dfAge=el=>{const f=dfr();const i=+el.dataset.i;let v=+el.value;if(i===0)v=Math.min(v,f.age[1]-1);else v=Math.max(v,f.age[0]+1);el.value=v;f.age[i]=v;$('#ageLbl').textContent=`${f.age[0]}–${f.age[1]}`;const t=el.parentNode.querySelector('.trk i');t.style.left=(f.age[0]-18)/81*100+'%';t.style.right=100-(f.age[1]-18)/81*100+'%';clearTimeout(S.ui.dfT);S.ui.dfT=setTimeout(dfRe,350);};
+IN.dfDist=el=>{const f=dfr();f.dist=+el.value;$('#distLbl').textContent=L(`до ${f.dist} км`,`up to ${f.dist} km`);el.parentNode.querySelector('.trk i').style.right=100-(f.dist-5)/95*100+'%';clearTimeout(S.ui.dfT);S.ui.dfT=setTimeout(dfRe,350);};
+ACT.dfApply=()=>{const f=dfr();if(f.placeMode==='nearby'&&!f.coords&&!S.me.location?.coords){toast(L('Укажи примерное расположение или выбери поиск по городу','Set approximate location or search by city'),{type:'warn'});return;}S.filters.dating={...f,age:[Math.max(18,f.age[0]),Math.max(18,f.age[1])]};S.ui.df=null;closeSheet(true);if(cur().id==='D04')back();else refresh();toast(L('Фильтры применены','Filters applied'),{type:'ok'});};
+/* deep link / review list: the deck with the filter popup open */
+SC.D04={tab:'people',title:()=>L('Фильтры знакомств','Dating filters'),render:(p,r)=>SC.D03.render({sub:'discover'},r),after:()=>{SC.D03.after({sub:'discover'});S.ui.df=null;setTimeout(dfSheet,60);}};
 
 /* D02 — enable dating */
 SC.D02={title:()=>L('Анкета для знакомств','Dating profile'),render:(p,r)=>{const f=r.f;
@@ -219,10 +228,10 @@ ACT.d9tab=a=>setP('k',a.dataset.v);
 ACT.premD9=()=>premiumSheet('history');
 ACT.restore=a=>{const id=a.dataset.v;run(a,()=>{delete S.decided[id];S.deckOrder=[id,...S.deckOrder.filter(x=>x!==id)];},{ok:L(`${pname(id)} снова в подборке`,`${pname(id)} is back in Discover`)});};
 
-ACT.dfCity=()=>openCityPicker(dfr().city,id=>{dfr().city=id;cur().dirty=true;refresh();});
-ACT.dfAnyCity=()=>{dfr().city='';cur().dirty=true;refresh();};
-ACT.dfPlaceMode=a=>{dfr().placeMode=a.dataset.v;dfr().coords=dfr().coords||S.me.location?.coords||null;cur().dirty=true;refresh();};
-ACT.dfGeo=()=>requestCoarseLocation(coords=>{dfr().coords=coords;dfr().city=nearestKnownCity(coords);cur().dirty=true;refresh();});
+ACT.dfCity=()=>{const keep=S.ui.df;openCityPicker(keep.city,id=>{keep.city=id;S.ui.df=keep;dfSheet();});};
+ACT.dfAnyCity=()=>{dfr().city='';dfRe();};
+ACT.dfPlaceMode=a=>{dfr().placeMode=a.dataset.v;dfr().coords=dfr().coords||S.me.location?.coords||null;dfRe();};
+ACT.dfGeo=()=>{const keep=S.ui.df;requestCoarseLocation(coords=>{keep.coords=coords;keep.city=nearestKnownCity(coords);S.ui.df=keep;if(S.ui.sheet)resheet();else dfSheet();});};
 ACT.d2City=()=>openCityPicker(cur().f.city,id=>{cur().f.city=id;if(cur().err)delete cur().err.city;cur().dirty=true;refresh();});
 ACT.d2PlaceMode=a=>{cur().f.placeMode=a.dataset.v;cur().dirty=true;refresh();};
 ACT.d2Geo=()=>requestCoarseLocation(coords=>{cur().f.coords=coords;cur().f.city=nearestKnownCity(coords);if(cur().err)delete cur().err.city;cur().dirty=true;refresh();});

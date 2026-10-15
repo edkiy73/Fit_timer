@@ -81,7 +81,7 @@ OPT.role.push(['dom','доминант','dominant'],['sub','сабмиссив',
 const CITY={berlin:{ru:'Берлин',en:'Berlin'},hamburg:{ru:'Гамбург',en:'Hamburg'},moscow:{ru:'Москва',en:'Moscow'},online:{ru:'Онлайн',en:'Online'}};
 
 /** Who follows whom (seed). 'me' entries exist only for the full persona. Counts in profiles are always the length of these lists. */
-const FOLLOW_SEED={sofi:['mia','kira','me'],leon:['mia','maya'],mia:['maya','kai','sofi','me'],kai:['maya','mia','noa','me'],maya:['mia','noa'],ari:['kai'],kira:['sofi','mia','lina'],lina:['kira','me'],tomeva:['mia','maya'],dan:['me'],noa:['maya','kai']};
+const FOLLOW_SEED={sofi:['mia','kira','me'],leon:['mia','maya'],mia:['maya','kai','sofi','me'],kai:['maya','mia','noa','me'],maya:['mia','noa'],ari:['kai'],kira:['sofi','mia','lina'],lina:['kira','me'],tomeva:['mia','maya'],lenamax:['tomeva','kira'],nikajonas:['noa','me'],dan:['me'],noa:['maya','kai']};
 const PEOPLE={
  sofi:{pv:true,name:'Sofi',age:26,photo:1,nph:3,city:'berlin',km:4,pron:'she',gender:['woman'],orient:['bi'],format:['open','serious'],status:'single',role:'recv',seek:['dates','chat'],verified:true,online:true,dating:true,
   bio:{ru:'Люблю долгие переписки перед встречей и людей, которые не торопят. Фотографирую плёнку.',en:'I love long chats before meeting and people who don’t rush. I shoot film.'},
@@ -110,6 +110,12 @@ const PEOPLE={
  tomeva:{premium:true,members:['eva','tom'],name:'Eva & Tom',nameRu:'Eva и Tom',age:null,pair:true,plate:'amber',plate2:'ember',city:'berlin',km:3,pron:'any',gender:['woman','man'],orient:['bi'],format:'swing',role:'switch',seek:['exp','friends'],verified:true,online:true,dating:true,
   bio:{ru:'Пара, вместе 3 года. Отвечаем вдвоём, первая встреча — только в общественном месте.',en:'A couple, together 3 years. We reply together; first meeting in a public place only.'},
   jars:[['experiments',10],['exhibition',6],['intimacy',8]],langs:['ru','en'],pairNote:{ru:'пара · вместе 3 года',en:'couple · 3 years together'}},
+ lenamax:{pair:true,name:'Lena & Max',nameRu:'Lena и Max',age:null,photo:'p1',city:'berlin',km:5,pron:'any',gender:['woman','man'],orient:['hetero','bi'],format:['open'],status:'partnered',role:'switch',seek:['exp','events'],verified:true,pv:true,online:true,dating:true,
+  bio:{ru:'Пара, вместе 6 лет. Ходим на латекс-вечеринки, ищем пару или человека для общения и совместных выходов. Сначала переписка с обоими.',en:'A couple, together 6 years. We go to latex parties and look for a couple or a person to talk to and go out with. Chat with both of us first.'},
+  jars:[['latex',10],['exhibition',8],['roleplay',7],['control',6]],langs:['ru','en','de'],pairNote:{ru:'пара · вместе 6 лет',en:'couple · 6 years together'}},
+ nikajonas:{pair:true,name:'Nika & Jonas',nameRu:'Nika и Jonas',age:null,photo:'p2',city:'berlin',km:8,pron:'any',gender:['woman','man'],orient:['bi'],format:['poly'],status:'partnered',role:'switch',seek:['friends','dates'],verified:true,online:false,last:{ru:'были вчера',en:'active yesterday'},dating:true,
+  bio:{ru:'Полиаморная пара. Любим долгие разговоры, кофейни и медленный темп. Пишите, если хочется познакомиться спокойно.',en:'A polyamorous couple. We love long talks, cafés and a slow pace. Write if you want to get to know each other calmly.'},
+  jars:[['talk',10],['slow',9],['intimacy',8],['sensory',6]],langs:['en','de'],pairNote:{ru:'пара · вместе 2 года',en:'couple · 2 years together'}},
  eva:{name:'Eva',age:32,plate:'amber',city:'berlin',pron:'she',gender:['woman'],orient:['bi'],format:'swing',role:'switch',seek:['exp','friends'],verified:true,pv:true,online:true,dating:false,pairOf:'tomeva',
   bio:{ru:'Половина пары Eva и Tom. Личные сообщения — сюда, общие вопросы — в профиль пары.',en:'One half of Eva & Tom. Personal messages here, couple questions on the couple profile.'},jars:[['roleplay',8],['intimacy',9]],langs:['en','de']},
  tom:{name:'Tom',age:34,plate:'ember',city:'berlin',pron:'he',gender:['man'],orient:['bi'],format:'swing',role:'lead',seek:['exp'],verified:true,online:false,last:{ru:'был сегодня',en:'active today'},dating:false,pairOf:'tomeva',
@@ -232,8 +238,8 @@ function freshState(persona){
   myEvents:full?['e8']:[],
   extraEvents:{},
   decided:{}, // personId -> 1 like / -1 pass (discover)
-  deckOrder:['kira','leon','ari','tomeva'],
-  likesIn:full?[{p:'kira',src:'discover',t:ago(3)},{p:'leon',src:'profile',t:ago(20)},{p:'ari',src:'discover',t:ago(40)}]:[],
+  deckOrder:['kira','lenamax','leon','ari','nikajonas','tomeva'],
+  likesIn:full?[{p:'kira',src:'discover',t:ago(3)},{p:'lenamax',src:'discover',t:ago(9)},{p:'leon',src:'profile',t:ago(20)},{p:'ari',src:'discover',t:ago(40)}]:[],
   likesOut:full?[{p:'maya',src:'profile',t:ago(10)}]:[],
   matches:full?[{p:'mia',t:ago(26)},{p:'kai',t:ago(120)},{p:'sofi',t:ago(5)},{p:'lina',t:ago(1)},{p:'tomeva',t:ago(24)}]:[],
   threads:full?{
