@@ -1957,3 +1957,9 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .me-pair .tx{flex:1;min-width:0}.me-pair .tx b{display:block;font-size:14px}.me-pair .tx small{display:block;font-size:12.5px;color:var(--mute)}
 .mp-ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--violet));color:#fff}.mp-ic svg{width:17px;height:17px}
 .mp-avs{display:flex}.mp-avs .av{box-shadow:0 0 0 2px var(--raise)}.mp-avs .av+.av{margin-left:-8px}
+/* 15.10 round: pair row sits in the card grid (no extra gap); «найден» row has its own padding */
+.me-card .me-pair{margin-top:0}
+.pair-prev .li{padding:10px 14px;gap:12px}
+.pair-prev .li .pill{flex:none}
+.pair-wait{align-items:center;flex-wrap:wrap}.pair-wait>span{flex:1;min-width:160px}
+.pe-leg{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:4px}.pe-leg span{display:inline-flex;align-items:center;gap:5px}.pe-leg svg{width:14px;height:14px;flex:none}

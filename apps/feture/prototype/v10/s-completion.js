@@ -34,8 +34,16 @@ ACT.v6PairInvite=a=>{const r=cur(),nick=fv('partner').trim().replace(/^@/,'');if
 ACT.v6PairCancel=()=>{S.pairInvite=null;refresh();};
 /* Q03 — the couple profile: a layer over two separate accounts. Each person keeps own chats, likes and grants. */
 const pairName=()=>S.pair?T(S.pair.name):'';
-SC.Q03={title:()=>L('Профиль пары','Couple profile'),valid:()=>S.pair?.status==='active',render:(p,r)=>{const P=S.pair,q=P.proposal;const pending=q?`<div class="alert info">${I.clock}<span>${L('Изменения ожидают согласия партнёра','Changes await partner approval')}${q.by!=='me'?`<button class="btn text" data-act="pairProposal" data-v="yes">${L('Принять','Approve')}</button><button class="btn text" data-act="pairProposal" data-v="no">${L('Отклонить','Decline')}</button>`:''}</span></div>`:'';return profileView('couple',r,{before:pending,after:`<div class="card list mt12">${linkRow({go:'P04',p:{owner:'couple'},icon:'lock',title:L('Редактировать расширенный профиль','Edit private profile')})}${linkRow({go:'Q05',icon:'key',title:L('Общие доступы','Shared grants')})}${linkRow({go:'Q06',icon:'x',title:L('Разъединить пару','Unlink couple')})}</div>`});},after:()=>fillJars()};
-ACT.pairProposal=a=>{const P=S.pair,q=P?.proposal;if(!q||q.by==='me')return;const session=S.session;run(a,()=>{if(S.pair!==P||S.session!==session||P.proposal!==q)return;if(a.dataset.v==='yes')commitCoupleProposal(P);else P.proposal=null;refresh();},{ms:300});};
+/* one couple profile (owner 15.10): what you saved is what you see. Your own change waiting for the partner is shown as the
+   profile with a note and «Отменить»; the partner's change is offered to accept or decline. The editor starts from the same version. */
+SC.Q03={title:()=>L('Профиль пары','Couple profile'),valid:()=>S.pair?.status==='active',render:(p,r)=>{const P=S.pair,q=P.proposal;const mine=q?.by==='me'&&q.field==='profile';
+ if(mine)r.p.preview=q.text;else delete r.p.preview;
+ const who=esc(pname(P.with));
+ const pending=!q?'':mine?`<div class="alert info pair-wait">${I.clock}<span>${L(`Изменения ждут согласия ${who}. Пока их видишь только ты.`,`Changes are waiting for ${who} to agree. Only you see them for now.`)}</span><button class="btn text auto" data-act="pairProposalCancel">${L('Отменить','Cancel')}</button></div>`
+  :`<div class="alert info pair-wait">${I.clock}<span>${L(`${who} предлагает изменить профиль пары`,`${who} suggests changes to the couple profile`)}</span><button class="btn text auto" data-act="pairProposal" data-v="no">${L('Отклонить','Decline')}</button><button class="btn text auto" data-act="pairProposal" data-v="yes">${L('Принять','Accept')}</button></div>`;
+ return profileView('couple',r,{before:pending,after:`<div class="card list mt12">${linkRow({go:'Q05',icon:'key',title:L('Общие доступы','Shared grants')})}${linkRow({go:'Q06',icon:'x',title:L('Разъединить пару','Unlink couple')})}</div>`});},after:()=>fillJars()};
+ACT.pairProposalCancel=()=>{const P=S.pair;if(P?.proposal?.by!=='me')return;P.proposal=null;delete P.draft;refresh();toast(L('Изменения отменены','Changes cancelled'));};
+ACT.pairProposal=a=>{const P=S.pair,q=P?.proposal;if(!q||q.by==='me')return;const session=S.session;run(a,()=>{if(S.pair!==P||S.session!==session||P.proposal!==q)return;if(a.dataset.v==='yes')commitCoupleProposal(P);else{P.proposal=null;delete P.draft;}refresh();},{ms:300});};
 SC.Q04={...SC.P02,render:(p,r)=>{r.p.owner='couple';return SC.P02.render(r.p,r);}};
 ACT.v6PairChange=a=>ACT.peSave(a);
 SC.Q05={title:()=>L('Общие доступы','Shared grants'),render:()=>{const P=S.pair;const st=v=>v==='yes'?`<span class="pill ok">${I.check}${L('да','yes')}</span>`:`<span class="pill wait">${I.clock}${L('ждёт','pending')}</span>`;
