@@ -1839,3 +1839,45 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .poll.voted .poll-count{border:0;background:var(--raise);min-height:48px}
 .poll.voted .poll-undo,.poll .poll-undo{border:0;box-shadow:none;background:transparent;min-height:32px}
 .poll.voted .poll-undo:hover{background:var(--raise)}
+/* poll footer: votes count and «withdraw» on one line; withdraw is a soft secondary button */
+.poll-f{display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:10px}
+.poll-f .note{margin:0;white-space:nowrap}
+.poll.voted .poll-undo,.poll .poll-undo{background:var(--raise);padding:0 12px;min-height:34px;border-radius:11px;color:var(--ink)}
+.poll.voted .poll-undo:hover,.poll .poll-undo:hover{background:color-mix(in srgb,var(--ink) 10%,var(--raise))}
+
+/* replies: order toggle, batch loading, a flash on the reply you just sent */
+.cm-sort{display:inline-flex;gap:2px;padding:3px;margin:0 0 8px;border-radius:12px;background:var(--raise)}
+.cm-sort button{min-height:30px;padding:0 12px;border-radius:9px;font-size:13px;font-weight:600;color:var(--mute)}
+.cm-sort button.on{background:var(--surf);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.cm-load{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;margin:8px 0 12px;border-radius:14px;background:var(--raise);font-size:14px;font-weight:600;color:var(--ink)}
+.cm-load:hover{background:color-mix(in srgb,var(--ink) 8%,var(--raise))}
+@keyframes cmFlash{0%,30%{background:color-mix(in srgb,var(--accent) 14%,transparent)}100%{background:transparent}}
+.cm.cm-flash{animation:cmFlash 1.8s ease-out;border-radius:12px}
+/* the reply field grows without a scrollbar until its max height */
+.inputbar textarea{overflow-y:hidden;scrollbar-width:thin}
+
+/* =====================================================================
+   V10 owner revision, 15.10 — one-time / timed chat media: blurred picture + a burning match.
+   ===================================================================== */
+.mtile.eph2{position:relative;display:grid;place-items:center;min-height:220px;padding:0;background:#1A1218;color:#fff;isolation:isolate}
+.mtile.eph2 .eph-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(26px) saturate(1.25);transform:scale(1.2);z-index:-2}
+.mtile.eph2 .eph-ash{position:absolute;inset:0;z-index:-2;background:radial-gradient(70% 60% at 50% 60%,#3A2A30,#140D12)}
+.mtile.eph2 .eph-veil{position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(12,6,12,.25),rgba(12,6,12,.55))}
+.eph-c{display:grid;justify-items:center;gap:4px;padding:18px 16px;text-align:center;max-width:260px}
+.eph-c b{font-size:14px;font-weight:650;line-height:1.3;text-shadow:0 1px 8px rgba(0,0,0,.4)}
+.eph-c small{font-size:12px;line-height:1.35;opacity:.85}
+.mtile.eph2:not([disabled]):hover .eph-veil{background:linear-gradient(180deg,rgba(12,6,12,.15),rgba(12,6,12,.45))}
+.mtile.eph2.expired{min-height:150px}
+.mtile.eph2.expired .eph-c{opacity:.8}
+.mmatch{display:block;width:56px;height:70px;margin-bottom:2px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.35))}
+.mmatch svg{width:100%;height:100%;overflow:visible}
+.mmatch.lit .fl{animation:matchFl 1.2s ease-in-out infinite alternate}
+.mmatch.lit .core{animation:matchCore .9s ease-in-out infinite alternate}
+.mmatch.lit{filter:drop-shadow(0 0 14px rgba(255,120,60,.55)) drop-shadow(0 6px 14px rgba(0,0,0,.35))}
+.mmatch .sp{opacity:0;animation:matchSp 2.2s ease-out infinite}.mmatch .s2{animation-delay:1.1s}
+.mmatch.out{color:#fff}.mmatch .smoke{animation:matchSmoke 3s ease-in-out infinite}
+@keyframes matchFl{0%{transform:scale(1,1) skewX(0)}50%{transform:scale(.95,1.06) skewX(3deg)}100%{transform:scale(1.04,.96) skewX(-3deg)}}
+@keyframes matchCore{to{transform:translateY(1px) scale(.9);opacity:.85}}
+@keyframes matchSp{0%{opacity:0;transform:translate(0,0)}20%{opacity:1}100%{opacity:0;transform:translate(4px,-16px)}}
+@keyframes matchSmoke{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:.6;transform:translateY(-3px)}}
+@media (prefers-reduced-motion:reduce){.mmatch .fl,.mmatch .core,.mmatch .sp,.mmatch .smoke{animation:none}}
