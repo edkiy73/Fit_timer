@@ -37,7 +37,7 @@ function qaGo(id,p){
  if(id==='Q03'&&S.pair?.status!=='active')signIn('pair');
  qaApp(id,p);
 }
-function qaRender(){const q=($('#qaQ')?.value||'').toLowerCase();const r=cur();
+function qaRender(){const q='';const r=cur();
  $('#qaNav').innerHTML=QA_LIST().map(([g,items])=>{const it=items.filter(([id,l])=>!q||l.toLowerCase().includes(q)||id.toLowerCase().includes(q));return it.length?`<div class="qa-g">${g}</div>${it.map(([id,l,p],k)=>`<button class="qa-l ${r&&r.id===id&&JSON.stringify(p||{})===JSON.stringify(Object.fromEntries(Object.entries(r.p).filter(([k2])=>p&&k2 in p)))?'on':''}" data-qa="${id}" data-qp='${JSON.stringify(p||{})}'><code>${id[0]==='!'?'···':id}</code><span>${l}</span></button>`).join('')}`:'';}).join('');
  const th=themePref();
  $('#qaOpts').innerHTML=[[L('Техработы (админка)','Maintenance (admin)'),[['off',L('Выключены','Off')],['on',L('Включены','On')]],QA.maintenance?'on':'off','qaMaintenance'],[L('Язык','Language'),[['ru','RU'],['en','EN']],S.lang,'qaLang'],[L('Тема','Theme'),[['light',L('Светлая','Light')],['dark',L('Тёмная','Dark')],['auto',L('Авто','Auto')]],th,'qaTheme'],[L('Ширина','Width'),[['auto',L('Окно','Window')],['compact','320'],['phone','390'],['tablet',L('Планшет','Tablet')]],QA.frame,'qaFrame'],[L('Сеть','Network'),[['on',L('Есть','Online')],['off',L('Нет','Offline')]],QA.offline?'off':'on','qaNet'],[L('Фото-проверка','Photo check'),[['ok',L('Одобрить','Approve')],['no',L('Отклонить','Reject')]],'','qaPv'],[L('Подарок','Gift'),[['get',L('Получить Premium','Receive Premium')]],'','qaGift'],[L('Часы чата','Chat clock'),[['0',L('Сейчас','Now')],['15','+15 мин'],['120','+2 ч'],['1440','+24 ч']],String(Math.round((QA.clockShift||0)/60e3)),'qaClock'],[L('Аккаунт','Account'),[['full',L('Заполненный','Filled')],['pair',L('В паре','Couple')],['new',L('Новый','New')]],S.persona,'qaPersona'],['Premium',[['0',L('Нет','Off')],['1',L('Есть','On')]],S.me.premium?'1':'0','qaPrem'],[L('Знакомства в админке','Dating (admin)'),[['on',L('Включены','On')],['off',L('Скоро','Soon')]],QA.datingLive===false?'off':'on','qaDating'],[L('Логотип','Logo'),[['a','A'],['b','B'],['c','C']],QA.logo||'a','qaLogo'],[L('Мои запросы','My requests'),[['wait',L('Ждать ответа','Wait for answer')],['yes',L('Одобрять сразу','Approve at once')]],QA.autoApprove?'yes':'wait','qaAuto'],[L('Длина текстов','Text length'),[['off',L('Обычные','Normal')],['on',L('Длинные','Long')]],QA.long?'on':'off','qaLongT'],[L('Проверка возраста','Age check'),[['off',L('По дате рождения','By birth date')],['on',L('Обязательна','Required')]],QA.ageRequired?'on':'off','qaAge']].map(([t,items,v,act])=>`<div class="qa-opt"><span>${t}</span>${seg(items,v,act)}</div>`).join('');
@@ -82,9 +82,8 @@ function qaLong(on){
 window.QA_SYNC=()=>{if($('#qa.open'))qaRender();};
 const qa=$('#qa'),qaScrim=$('#qaScrim');
 window.QA_CLOSE=()=>{qa.classList.remove('open');qaScrim.classList.remove('on');qa.setAttribute('aria-hidden','true');$('#qaFab').focus();};
-$('#qaFab').onclick=()=>{qaRender();qa.classList.add('open');qaScrim.classList.add('on');qa.removeAttribute('aria-hidden');setTimeout(()=>$('#qaQ').focus(),200);};
+$('#qaFab').onclick=()=>{qaRender();qa.classList.add('open');qaScrim.classList.add('on');qa.removeAttribute('aria-hidden');};
 qaScrim.onclick=QA_CLOSE;$('#qaClose').onclick=QA_CLOSE;
-$('#qaQ').addEventListener('input',qaRender);
 qa.addEventListener('click',e=>{
  const b=e.target.closest('[data-qa]');if(b){qaGo(b.dataset.qa,JSON.parse(b.dataset.qp||'{}'));if(matchMedia('(max-width:900px)').matches)QA_CLOSE();else qaRender();return;}
  const a=e.target.closest('[data-act]');if(!a)return;e.stopPropagation();const v=a.dataset.v;

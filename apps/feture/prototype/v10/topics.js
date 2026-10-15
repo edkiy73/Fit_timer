@@ -85,14 +85,14 @@ for(const k of Object.keys(HIDDEN_TOPICS))TOPIC_DESC[k]=TOPIC_DESC[k]||{ru:'Пр
 const LV_TXT={
  1:[['Едва любопытно','Barely curious'],['Знаю, что такое бывает. Пока просто любопытно.','I know it exists. Just curious for now.']],
  2:[['Мелькает мысль','Crosses my mind'],['Иногда приходит в голову — без спешки и планов.','It comes to mind now and then — no rush, no plans.']],
- 3:[['Любопытно, но осторожно','Curious, carefully'],['Хочется узнать больше, прежде чем решаться.','I’d like to know more before deciding.']],
- 4:[['Можно попробовать','Up for trying'],['С правильным человеком — почему бы и нет.','With the right person — why not.']],
- 5:[['Всерьёз интересно','Genuinely interested'],['Уже не просто мысль: хочется попробовать по-настоящему.','More than a thought: I want to really try it.']],
+ 3:[['С опаской','Cautious'],['Интересно, но сначала хочется узнать больше.','Curious, but I want to know more first.']],
+ 4:[['Попробую','I’d try it'],['С правильным человеком — почему бы и нет.','With the right person — why not.']],
+ 5:[['Интересно','Interested'],['Уже не просто мысль: хочется попробовать по-настоящему.','More than a thought: I want to really try it.']],
  6:[['Тянет','Drawn to it'],['Цепляет. Хочется возвращаться к этому снова.','It hooks me. I want to come back to it.']],
  7:[['Нравится','I like it'],['Приятно и знакомо — соглашаюсь с удовольствием.','Familiar and good — a happy yes.']],
  8:[['Очень нравится','Really into it'],['Одно из любимого. Радует каждый раз.','One of my favourites. Good every time.']],
  9:[['Обожаю','I adore it'],['Почти всегда «да». Это меня зажигает.','Almost always a yes. It lights me up.']],
- 10:[['Без этого никак','Can’t do without it'],['Часть меня. Без этого всё будет не то.','Part of who I am. Without it, it’s not the same.']],
+ 10:[['Без этого никак','A must'],['Часть меня. Без этого всё будет не то.','Part of who I am. Without it, it’s not the same.']],
 };
 const lvTxt=n=>LV_TXT[Math.max(1,Math.min(10,Math.round(+n)||1))];
 const LV_WORD=n=>{const w=lvTxt(n)[0];return L(w[0],w[1]);};
@@ -109,6 +109,8 @@ const hasDir=t=>!isLimitCat(t);
 /** one jar shape everywhere: [t,lv,dir?] seed arrays or {t,lv,limit,vis,dir} objects */
 const normJar=x=>{const j=Array.isArray(x)?{t:x[0],lv:x[1],dir:x[2]}:{...x};const d=j.limit?undefined:normDir(j.dir);if(d)j.dir=d;else delete j.dir;return j;};
 const jarWord=j=>{j=normJar(j);return j.limit?MARK_WORD(j.limit):[`${j.lv} · ${LV_WORD(j.lv)}`,dirText(j.dir)].filter(Boolean).join(', ');};
+/** the answer without its number (the number sits in a badge): «Нравится, давать» */
+const jarDesc=j=>{j=normJar(j);return j.limit?MARK_WORD(j.limit):[LV_WORD(j.lv),dirText(j.dir)].filter(Boolean).join(', ');};
 /** short form for comparisons: «8/10, давать» */
 const jarShort=j=>{j=normJar(j);return j.limit?MARK_WORD(j.limit).toLowerCase():[`${j.lv}/10`,dirText(j.dir)].filter(Boolean).join(', ');};
 const isLimitCat=t=>TOPICS[t]?.cat==='limits';
