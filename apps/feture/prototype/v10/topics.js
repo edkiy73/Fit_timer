@@ -85,7 +85,7 @@ for(const k of Object.keys(HIDDEN_TOPICS))TOPIC_DESC[k]=TOPIC_DESC[k]||{ru:'Пр
 const LV_TXT={
  1:[['Едва любопытно','Barely curious'],['Знаю, что такое бывает. Пока просто любопытно.','I know it exists. Just curious for now.']],
  2:[['Мелькает мысль','Crosses my mind'],['Иногда приходит в голову — без спешки и планов.','It comes to mind now and then — no rush, no plans.']],
- 3:[['С опаской','Cautious'],['Интересно, но сначала хочется узнать больше.','Curious, but I want to know more first.']],
+ 3:[['Присматриваюсь','Eyeing it'],['Интересно, но сначала хочется узнать больше.','Curious, but I want to know more first.']],
  4:[['Попробую','I’d try it'],['С правильным человеком — почему бы и нет.','With the right person — why not.']],
  5:[['Интересно','Interested'],['Уже не просто мысль: хочется попробовать по-настоящему.','More than a thought: I want to really try it.']],
  6:[['Тянет','Drawn to it'],['Цепляет. Хочется возвращаться к этому снова.','It hooks me. I want to come back to it.']],

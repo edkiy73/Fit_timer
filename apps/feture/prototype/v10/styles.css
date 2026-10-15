@@ -1750,3 +1750,92 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 @media (max-height:760px){.welcome.wv .w-kick{display:none}}
 @media (max-height:640px){.welcome.wv .w-title{font-size:32px}.welcome.wv .w-txt h2{font-size:18px}.welcome.wv .w-txt p{font-size:13.5px;-webkit-line-clamp:2}.welcome.wv .w-age{font-size:11px}}
 @container wvis (max-height:150px){.wf-jars .jd{display:none}}
+
+/* =====================================================================
+   V10 owner revision, 15.10 — polls: tappable before, liquid bars after.
+   ===================================================================== */
+.poll{gap:8px}
+.poll-hint{margin:-4px 2px 2px;font-size:12.5px;color:var(--faint)}
+.poll .poll-option{position:relative;display:flex;align-items:stretch;gap:6px;border-radius:14px;background:none}
+.poll .poll-choice{position:relative;flex:1;min-width:0;min-height:48px;padding:0 14px;border-radius:14px;display:flex;align-items:center;justify-content:flex-start;gap:12px;overflow:hidden;
+ background:var(--surf);box-shadow:inset 0 0 0 1.5px var(--line2);font-size:15px;font-weight:550;text-align:left;transition:box-shadow .15s,background .15s,transform .12s}
+.poll:not(.voted) .poll-choice:hover{box-shadow:inset 0 0 0 1.5px var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--surf))}
+.poll:not(.voted) .poll-choice:active{transform:scale(.985)}
+.poll .pradio{flex:none;width:20px;height:20px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--line2);transition:box-shadow .15s}
+.poll:not(.voted) .poll-choice:hover .pradio{box-shadow:inset 0 0 0 2px var(--accent)}
+.poll .po{position:relative;z-index:1;display:flex;align-items:center;gap:6px;min-width:0}
+.poll .pot{min-width:0;overflow-wrap:anywhere;line-height:1.3;padding:10px 0}
+.poll .pmine{flex:none;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:#fff}
+.poll .pmine svg{width:12px;height:12px;stroke-width:3}
+.poll.voted .poll-choice{box-shadow:none;background:var(--raise);cursor:default}
+.poll.voted .poll-option.mine .pot{font-weight:700}
+/* the fill: a jar-like liquid with a soft wavy edge */
+.poll .pfill{position:absolute;left:0;top:0;bottom:0;width:var(--pc);min-width:6px;border-radius:14px 6px 6px 14px;
+ background:linear-gradient(90deg,color-mix(in srgb,var(--ink) 9%,transparent),color-mix(in srgb,var(--ink) 15%,transparent));
+ -webkit-mask:linear-gradient(#000,#000) 0 0/calc(100% - 5px) 100% no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='16'%3E%3Cpath d='M0 0 H3 Q6 4 3 8 T3 16 H0Z'/%3E%3C/svg%3E") 100% 0/6px 16px repeat-y;
+ mask:linear-gradient(#000,#000) 0 0/calc(100% - 5px) 100% no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='16'%3E%3Cpath d='M0 0 H3 Q6 4 3 8 T3 16 H0Z'/%3E%3C/svg%3E") 100% 0/6px 16px repeat-y;
+ animation:pollWave 2.4s linear infinite}
+.poll .poll-option.mine .pfill{background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 30%,transparent),color-mix(in srgb,var(--accent) 48%,transparent))}
+.poll .poll-option.lead:not(.mine) .pfill{background:linear-gradient(90deg,color-mix(in srgb,var(--violet) 18%,transparent),color-mix(in srgb,var(--violet) 30%,transparent))}
+@keyframes pollWave{to{-webkit-mask-position:0 0,100% 16px;mask-position:0 0,100% 16px}}
+.poll.anim .pfill{animation:pollFill 1.1s var(--ease) both,pollWave 2.4s linear infinite}
+.poll.anim .poll-option:nth-child(3) .pfill{animation-delay:.06s,0s}.poll.anim .poll-option:nth-child(4) .pfill{animation-delay:.12s,0s}.poll.anim .poll-option:nth-child(5) .pfill{animation-delay:.18s,0s}
+@keyframes pollFill{from{width:0}}
+.poll .pbub{position:absolute;left:12%;bottom:4px;width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.6);animation:pollBub 3.2s ease-in infinite}
+@keyframes pollBub{0%{transform:translate(0,0);opacity:0}20%{opacity:1}100%{transform:translate(60px,-34px);opacity:0}}
+/* the count: a contained button — number + chevron — clearly opens the list of people */
+.poll .poll-count{position:static;flex:none;align-self:stretch;min-width:58px;padding:0 8px 0 12px;border-radius:14px;display:flex;align-items:center;justify-content:center;gap:2px;
+ background:var(--raise);box-shadow:none;border:0;color:var(--ink);font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums;overflow:hidden}
+.poll .poll-count svg{width:15px;height:15px;color:var(--faint)}
+.poll .poll-count:hover{background:color-mix(in srgb,var(--ink) 10%,var(--raise))}
+.poll .poll-option.mine .poll-count{color:var(--accent)}
+.poll .poll-option .poll-choice{padding-right:14px}
+.poll-f{margin-top:2px}
+.poll .poll-undo{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 10px;border-radius:10px;border:0;box-shadow:none;background:transparent;color:var(--mute);font-size:13px;font-weight:600;text-decoration:none}
+.poll .poll-undo svg{width:15px;height:15px}
+.poll .poll-undo:hover{background:var(--raise);color:var(--ink)}
+@media (prefers-reduced-motion:reduce){.poll .pfill,.poll.anim .pfill{animation:none}.poll .pbub{display:none}}
+
+/* =====================================================================
+   V10 owner revision, 15.10 — replies like Threads: avatar + thread line, one step in, long branches fold.
+   ===================================================================== */
+.th{position:relative;padding:14px 0 6px;border-top:1px solid var(--line)}
+.th:first-of-type{border-top:0}
+.cm{position:relative;display:grid;grid-template-columns:36px minmax(0,1fr);gap:12px;padding-bottom:6px;scroll-margin-top:88px}
+.cm.child{grid-template-columns:28px minmax(0,1fr);gap:10px;padding:8px 0 4px}
+.cm-l{position:relative;display:flex;justify-content:center}
+.cm-l .plink{display:block;position:relative;z-index:1}
+.cm-ghost{width:36px;height:36px;background:var(--raise)}.cm.child .cm-ghost{width:28px;height:28px}
+.cm-b{min-width:0}
+.cm-h{display:flex;align-items:baseline;gap:8px;min-width:0}
+.cm-h .pnm{display:flex;align-items:center;min-width:0;font-weight:650;font-size:14.5px}
+.cm-h .nmt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cm-h time{flex:none;font-size:12.5px;color:var(--faint)}
+.cm-to{display:flex;align-items:center;gap:4px;margin-top:1px;font-size:12.5px;color:var(--faint)}
+.cm-to svg{width:12px;height:12px;transform:scaleX(-1) rotate(-90deg)}
+.cm-to .plink{color:var(--mute);font-weight:600}
+.cm .reply-text{margin:3px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.45}
+.cm .r-acts{margin:2px 0 0 -8px}
+.cm.pending,.cm.failed{opacity:.7}
+.cm:target{background:color-mix(in srgb,var(--accent) 6%,transparent);border-radius:12px}
+/* thread line: from under the root avatar down the branch; each answer hangs on it with a soft curve */
+.th.has-kids>.cm>.cm-l::after{content:"";position:absolute;left:50%;top:42px;bottom:-6px;width:2px;margin-left:-1px;border-radius:2px;background:var(--line2)}
+.cm-kids{position:relative;margin-left:48px}
+.cm-kids>*{position:relative}
+.cm-kids>*::before{content:"";position:absolute;left:-31px;top:0;width:24px;height:22px;border-left:2px solid var(--line2);border-bottom:2px solid var(--line2);border-bottom-left-radius:14px}
+.cm-kids>.cm::before{top:-2px}
+.cm-kids>*:not(:last-child)::after{content:"";position:absolute;left:-31px;top:0;bottom:0;width:2px;background:var(--line2)}
+.cm-more{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:6px 10px 6px 4px;margin:2px 0 6px;border-radius:12px;font-size:13.5px;font-weight:650;color:var(--accent)}
+.cm-more::before{height:20px!important;top:0!important}
+.cm-more:hover{background:var(--raise)}
+.cm-more.less{color:var(--mute);font-weight:600}
+.cm-avs{display:flex}.cm-avs .av{width:22px;height:22px;box-shadow:0 0 0 2px var(--bg)}.cm-avs .av+.av{margin-left:-7px}
+.cm-avs:empty{display:none}
+/* override the older .poll button / .poll.voted button rules */
+.poll .poll-choice{color:var(--ink)}
+.poll .po svg{color:inherit}
+.poll .pmine svg{width:12px;height:12px;color:#fff}
+.poll.voted .poll-choice{border:0;background:var(--raise)}
+.poll.voted .poll-count{border:0;background:var(--raise);min-height:48px}
+.poll.voted .poll-undo,.poll .poll-undo{border:0;box-shadow:none;background:transparent;min-height:32px}
+.poll.voted .poll-undo:hover{background:var(--raise)}

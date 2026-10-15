@@ -1761,6 +1761,95 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 @media (max-height:760px){.welcome.wv .w-kick{display:none}}
 @media (max-height:640px){.welcome.wv .w-title{font-size:32px}.welcome.wv .w-txt h2{font-size:18px}.welcome.wv .w-txt p{font-size:13.5px;-webkit-line-clamp:2}.welcome.wv .w-age{font-size:11px}}
 @container wvis (max-height:150px){.wf-jars .jd{display:none}}
+
+/* =====================================================================
+   V10 owner revision, 15.10 — polls: tappable before, liquid bars after.
+   ===================================================================== */
+.poll{gap:8px}
+.poll-hint{margin:-4px 2px 2px;font-size:12.5px;color:var(--faint)}
+.poll .poll-option{position:relative;display:flex;align-items:stretch;gap:6px;border-radius:14px;background:none}
+.poll .poll-choice{position:relative;flex:1;min-width:0;min-height:48px;padding:0 14px;border-radius:14px;display:flex;align-items:center;justify-content:flex-start;gap:12px;overflow:hidden;
+ background:var(--surf);box-shadow:inset 0 0 0 1.5px var(--line2);font-size:15px;font-weight:550;text-align:left;transition:box-shadow .15s,background .15s,transform .12s}
+.poll:not(.voted) .poll-choice:hover{box-shadow:inset 0 0 0 1.5px var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--surf))}
+.poll:not(.voted) .poll-choice:active{transform:scale(.985)}
+.poll .pradio{flex:none;width:20px;height:20px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--line2);transition:box-shadow .15s}
+.poll:not(.voted) .poll-choice:hover .pradio{box-shadow:inset 0 0 0 2px var(--accent)}
+.poll .po{position:relative;z-index:1;display:flex;align-items:center;gap:6px;min-width:0}
+.poll .pot{min-width:0;overflow-wrap:anywhere;line-height:1.3;padding:10px 0}
+.poll .pmine{flex:none;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:#fff}
+.poll .pmine svg{width:12px;height:12px;stroke-width:3}
+.poll.voted .poll-choice{box-shadow:none;background:var(--raise);cursor:default}
+.poll.voted .poll-option.mine .pot{font-weight:700}
+/* the fill: a jar-like liquid with a soft wavy edge */
+.poll .pfill{position:absolute;left:0;top:0;bottom:0;width:var(--pc);min-width:6px;border-radius:14px 6px 6px 14px;
+ background:linear-gradient(90deg,color-mix(in srgb,var(--ink) 9%,transparent),color-mix(in srgb,var(--ink) 15%,transparent));
+ -webkit-mask:linear-gradient(#000,#000) 0 0/calc(100% - 5px) 100% no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='16'%3E%3Cpath d='M0 0 H3 Q6 4 3 8 T3 16 H0Z'/%3E%3C/svg%3E") 100% 0/6px 16px repeat-y;
+ mask:linear-gradient(#000,#000) 0 0/calc(100% - 5px) 100% no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='16'%3E%3Cpath d='M0 0 H3 Q6 4 3 8 T3 16 H0Z'/%3E%3C/svg%3E") 100% 0/6px 16px repeat-y;
+ animation:pollWave 2.4s linear infinite}
+.poll .poll-option.mine .pfill{background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 30%,transparent),color-mix(in srgb,var(--accent) 48%,transparent))}
+.poll .poll-option.lead:not(.mine) .pfill{background:linear-gradient(90deg,color-mix(in srgb,var(--violet) 18%,transparent),color-mix(in srgb,var(--violet) 30%,transparent))}
+@keyframes pollWave{to{-webkit-mask-position:0 0,100% 16px;mask-position:0 0,100% 16px}}
+.poll.anim .pfill{animation:pollFill 1.1s var(--ease) both,pollWave 2.4s linear infinite}
+.poll.anim .poll-option:nth-child(3) .pfill{animation-delay:.06s,0s}.poll.anim .poll-option:nth-child(4) .pfill{animation-delay:.12s,0s}.poll.anim .poll-option:nth-child(5) .pfill{animation-delay:.18s,0s}
+@keyframes pollFill{from{width:0}}
+.poll .pbub{position:absolute;left:12%;bottom:4px;width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.6);animation:pollBub 3.2s ease-in infinite}
+@keyframes pollBub{0%{transform:translate(0,0);opacity:0}20%{opacity:1}100%{transform:translate(60px,-34px);opacity:0}}
+/* the count: a contained button — number + chevron — clearly opens the list of people */
+.poll .poll-count{position:static;flex:none;align-self:stretch;min-width:58px;padding:0 8px 0 12px;border-radius:14px;display:flex;align-items:center;justify-content:center;gap:2px;
+ background:var(--raise);box-shadow:none;border:0;color:var(--ink);font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums;overflow:hidden}
+.poll .poll-count svg{width:15px;height:15px;color:var(--faint)}
+.poll .poll-count:hover{background:color-mix(in srgb,var(--ink) 10%,var(--raise))}
+.poll .poll-option.mine .poll-count{color:var(--accent)}
+.poll .poll-option .poll-choice{padding-right:14px}
+.poll-f{margin-top:2px}
+.poll .poll-undo{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 10px;border-radius:10px;border:0;box-shadow:none;background:transparent;color:var(--mute);font-size:13px;font-weight:600;text-decoration:none}
+.poll .poll-undo svg{width:15px;height:15px}
+.poll .poll-undo:hover{background:var(--raise);color:var(--ink)}
+@media (prefers-reduced-motion:reduce){.poll .pfill,.poll.anim .pfill{animation:none}.poll .pbub{display:none}}
+
+/* =====================================================================
+   V10 owner revision, 15.10 — replies like Threads: avatar + thread line, one step in, long branches fold.
+   ===================================================================== */
+.th{position:relative;padding:14px 0 6px;border-top:1px solid var(--line)}
+.th:first-of-type{border-top:0}
+.cm{position:relative;display:grid;grid-template-columns:36px minmax(0,1fr);gap:12px;padding-bottom:6px;scroll-margin-top:88px}
+.cm.child{grid-template-columns:28px minmax(0,1fr);gap:10px;padding:8px 0 4px}
+.cm-l{position:relative;display:flex;justify-content:center}
+.cm-l .plink{display:block;position:relative;z-index:1}
+.cm-ghost{width:36px;height:36px;background:var(--raise)}.cm.child .cm-ghost{width:28px;height:28px}
+.cm-b{min-width:0}
+.cm-h{display:flex;align-items:baseline;gap:8px;min-width:0}
+.cm-h .pnm{display:flex;align-items:center;min-width:0;font-weight:650;font-size:14.5px}
+.cm-h .nmt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cm-h time{flex:none;font-size:12.5px;color:var(--faint)}
+.cm-to{display:flex;align-items:center;gap:4px;margin-top:1px;font-size:12.5px;color:var(--faint)}
+.cm-to svg{width:12px;height:12px;transform:scaleX(-1) rotate(-90deg)}
+.cm-to .plink{color:var(--mute);font-weight:600}
+.cm .reply-text{margin:3px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.45}
+.cm .r-acts{margin:2px 0 0 -8px}
+.cm.pending,.cm.failed{opacity:.7}
+.cm:target{background:color-mix(in srgb,var(--accent) 6%,transparent);border-radius:12px}
+/* thread line: from under the root avatar down the branch; each answer hangs on it with a soft curve */
+.th.has-kids>.cm>.cm-l::after{content:"";position:absolute;left:50%;top:42px;bottom:-6px;width:2px;margin-left:-1px;border-radius:2px;background:var(--line2)}
+.cm-kids{position:relative;margin-left:48px}
+.cm-kids>*{position:relative}
+.cm-kids>*::before{content:"";position:absolute;left:-31px;top:0;width:24px;height:22px;border-left:2px solid var(--line2);border-bottom:2px solid var(--line2);border-bottom-left-radius:14px}
+.cm-kids>.cm::before{top:-2px}
+.cm-kids>*:not(:last-child)::after{content:"";position:absolute;left:-31px;top:0;bottom:0;width:2px;background:var(--line2)}
+.cm-more{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:6px 10px 6px 4px;margin:2px 0 6px;border-radius:12px;font-size:13.5px;font-weight:650;color:var(--accent)}
+.cm-more::before{height:20px!important;top:0!important}
+.cm-more:hover{background:var(--raise)}
+.cm-more.less{color:var(--mute);font-weight:600}
+.cm-avs{display:flex}.cm-avs .av{width:22px;height:22px;box-shadow:0 0 0 2px var(--bg)}.cm-avs .av+.av{margin-left:-7px}
+.cm-avs:empty{display:none}
+/* override the older .poll button / .poll.voted button rules */
+.poll .poll-choice{color:var(--ink)}
+.poll .po svg{color:inherit}
+.poll .pmine svg{width:12px;height:12px;color:#fff}
+.poll.voted .poll-choice{border:0;background:var(--raise)}
+.poll.voted .poll-count{border:0;background:var(--raise);min-height:48px}
+.poll.voted .poll-undo,.poll .poll-undo{border:0;box-shadow:none;background:transparent;min-height:32px}
+.poll.voted .poll-undo:hover{background:var(--raise)}
 </style>
 </head>
 <body>
@@ -1951,7 +2040,9 @@ const POSTS=[
  {id:'p2',author:'kai',t:ago(20),type:'photo',media:[{type:'image',url:'/images/v10-content/post-p2-rope-details-45.webp'}],plate:'sea',tags:['shibari'],likes:41,aud:'all',text:{ru:'Вчерашний мастер-класс по обвязкам. Учились не узлам, а тому, как договариваться заранее.',en:'Yesterday’s rope workshop. We learned not knots but how to agree in advance.'},comments:[['mia',{ru:'Было тепло и спокойно, спасибо всем!',en:'It was warm and calm, thanks everyone!'}]]},
  {id:'p3',author:'tomeva',t:ago(70),type:'text',tags:['intimacy','talk'],likes:58,aud:'all',text:{ru:'Год в открытых отношениях. Главное, что поняли: правила лучше обновлять заранее, а не после.',en:'A year in an open relationship. Main lesson: update the rules before, not after.'},comments:[]},
  {id:'p4',author:'maya',t:ago(4),type:'poll',tags:['talk'],likes:17,aud:'all',text:{ru:'Собираю опыт для встречи новичков в субботу.',en:'Collecting experience for Saturday’s newcomers meetup.'},pollQ:{ru:'Как вы предпочитаете обсуждать границы перед встречей?',en:'How do you prefer to discuss boundaries before meeting?'},poll:[[{ru:'В переписке',en:'In writing'},34],[{ru:'Голосом',en:'Voice call'},21],[{ru:'При встрече за кофе',en:'Over coffee in person'},45]],comments:[]},
- {id:'p5',author:'sofi',t:ago(9),type:'text',tags:['slow'],likes:12,aud:'all',text:{ru:'Если вы тоже любите долгие переписки перед встречей — вы по адресу.',en:'If you also love long chats before meeting — you’re in the right place.'},comments:[]},
+ {id:'p5',author:'sofi',t:ago(9),type:'text',tags:['slow'],likes:12,aud:'all',text:{ru:'Если вы тоже любите долгие переписки перед встречей — вы по адресу.',en:'If you also love long chats before meeting — you’re in the right place.'},comments:[['kai',{ru:'Да! Переписка помогает понять, совпадаем ли мы по темпу.',en:'Yes! Writing helps see if our pace matches.'}],['sofi',{ru:'Вот-вот. А сколько обычно переписываешься до встречи?',en:'Exactly. How long do you usually write before meeting?'},0],
+  ['kai',{ru:'Неделю-две. Потом короткий созвон, и только потом кофе.',en:'A week or two. Then a short call, and only then coffee.'},1],['leon',{ru:'Мне хватает пары дней, но созвон — обязательно.',en:'A couple of days is enough for me, but a call is a must.'},0],
+  ['mia',{ru:'Созвон — лучший фильтр, согласна.',en:'A call is the best filter, agreed.'},3],['maya',{ru:'Добавлю в памятку для новичков, спасибо.',en:'Adding this to our beginners’ guide, thanks.'},0],['noa',{ru:'Читаю и узнаю себя.',en:'Reading this and recognising myself.'},0]]},
  {id:'p6',author:'leon',t:ago(30),type:'photo',media:[{type:'image',url:'/images/v10-content/post-p6-latex-night-prep-45.webp'}],plate:'coal',tags:['latex'],likes:33,aud:'followers',text:{ru:'Готовим следующую Latex Night. Дресс-код мягкий, правила строгие.',en:'Preparing the next Latex Night. Soft dress code, strict rules.'},comments:[]},
  {id:'p7',author:'ari',t:ago(14),type:'text',media:[{type:'image',url:'/images/v10-content/post-p7-morning-coffee-45.webp'}],tags:['rituals','service'],likes:9,aud:'all',text:{ru:'Маленький ритуал утра: кофе, список дел и одно доброе сообщение. Удивительно, как это меняет день.',en:'A small morning ritual: coffee, a to-do list and one kind message. Amazing how it changes the day.'},comments:[]},
  {id:'p8',author:'noa',t:ago(40),type:'text',tags:['talk','aftercare'],likes:66,aud:'all',text:{ru:'Напоминание: «забота после» нужна не только тому, кто был в принимающей роли.',en:'Reminder: aftercare isn’t only for the person in the receiving role.'},comments:[['sofi',{ru:'Очень важно, спасибо.',en:'So important, thank you.'}]]},
@@ -2014,7 +2105,7 @@ function freshState(persona){
    {id:'cr2',p:'lina',t:ago(4),status:'pending',showMember:false,answer:{ru:'Ищу небольшой круг для спокойных разговоров.',en:'I’m looking for a small circle for calm conversations.'}},
    {id:'cr3',p:'kai',t:ago(48),updated:ago(24),status:'approved',showMember:true,answer:{ru:'Интересны разговоры о доверии и заботе.',en:'I’m interested in conversations about trust and care.'}}
   ]}:{} ,
-  posts:POSTS.map(p=>({...p,pollVoters:p.poll?p.poll.map((_,i)=>Object.keys(PEOPLE).filter((id,j)=>!PEOPLE[id].pair&&j%p.poll.length===i).slice(0,5)):undefined,liked:false,saved:false,comments:p.comments.map((c,i)=>({a:c[0],text:c[1],t:p.t+HOUR,likes:(i*3+2)%6}))})),
+  posts:POSTS.map(p=>({...p,pollVoters:p.poll?p.poll.map((_,i)=>Object.keys(PEOPLE).filter((id,j)=>!PEOPLE[id].pair&&j%p.poll.length===i).slice(0,5)):undefined,liked:false,saved:false,comments:p.comments.map((c,i)=>({id:`p_${p.id}_${i}`,parent:c[2]!=null?`p_${p.id}_${c[2]}`:null,a:c[0],text:c[1],t:p.t+HOUR*(1+i),likes:(i*3+2)%6}))})),
   myPosts:full?[{id:'m1',author:'me',t:ago(48),type:'text',tags:['shibari'],likes:14,aud:'all',status:'published',text:{ru:'Первый раз сходил на занятие по шибари. Больше всего удивило, сколько времени уходит на разговор до начала — и как это успокаивает.',en:'Went to my first shibari class. What surprised me most was how much time goes into talking first — and how calming that is.'},comments:[]},
    {id:'m2',author:'me',t:ago(3),type:'text',tags:['talk'],likes:0,aud:'followers',status:'draft',text:{ru:'Черновик: как я учусь говорить «нет» без чувства вины…',en:'Draft: how I’m learning to say “no” without guilt…'},comments:[]}]:[],
   postEdits:{}, // private saved revisions; never part of published Posts
@@ -2155,7 +2246,7 @@ for(const k of Object.keys(HIDDEN_TOPICS))TOPIC_DESC[k]=TOPIC_DESC[k]||{ru:'Пр
 const LV_TXT={
  1:[['Едва любопытно','Barely curious'],['Знаю, что такое бывает. Пока просто любопытно.','I know it exists. Just curious for now.']],
  2:[['Мелькает мысль','Crosses my mind'],['Иногда приходит в голову — без спешки и планов.','It comes to mind now and then — no rush, no plans.']],
- 3:[['С опаской','Cautious'],['Интересно, но сначала хочется узнать больше.','Curious, but I want to know more first.']],
+ 3:[['Присматриваюсь','Eyeing it'],['Интересно, но сначала хочется узнать больше.','Curious, but I want to know more first.']],
  4:[['Попробую','I’d try it'],['С правильным человеком — почему бы и нет.','With the right person — why not.']],
  5:[['Интересно','Interested'],['Уже не просто мысль: хочется попробовать по-настоящему.','More than a thought: I want to really try it.']],
  6:[['Тянет','Drawn to it'],['Цепляет. Хочется возвращаться к этому снова.','It hooks me. I want to come back to it.']],
@@ -2667,7 +2758,7 @@ function jarsHTML(list,o={}){
   if(j.limit)return `<${tag} class="jar ${j.limit==='hard'?'taboo':'discuss'}" ${attrs}><span class="vessel"><span class="jm">${j.limit==='hard'?I.block:I.chat}</span>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw sr">${j.limit==='hard'?(o.who&&o.who!=='me'?L('нельзя','not for me'):L('табу','taboo')):L('обсуждаемо','negotiable')}</span>${was}</${tag}>`;
   /* the higher the level, the calmer the surface: 8–9 barely ripple, 10 is full to the lid — only bubbles */
   const calm=j.lv>=10?'full':j.lv>=8?'calm':'';
-  return `<${tag} class="jar ${calm}" ${attrs} style="--v:${j.lv};--jc:${jarColor(j.lv)};--d:${(i%6)*.35}s"><span class="vessel"><span class="fill"><i class="bub"></i>${j.lv>=8?'<i class="bub b2"></i>':''}</span><b class="lv">${j.lv}</b>${vis}</span><span class="jn">${esc(topic(j.t))}</span>${j.dir&&!o.noDir?`<span class="jd">${esc(dirText(j.dir))}</span>`:''}${was}</${tag}>`;}).join('')}${o.more?`<button class="jar more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="vessel"><b>+${o.more.n}</b></span><span class="jn">${L('Все','All')}</span></button>`:''}${o.add?`<button class="jar add" data-act="${o.add}"><span class="vessel">${I.plus}</span><span class="jn">${L('Добавить','Add')}</span></button>`:''}</div>`;
+  return `<${tag} class="jar ${calm}" ${attrs} style="--v:${j.lv};--jc:${jarColor(j.lv)};--d:${(i%6)*.35}s"><span class="vessel"><span class="fill"><i class="bub"></i>${j.lv>=8?'<i class="bub b2"></i>':''}</span><b class="lv">${j.lv}</b>${vis}</span><span class="jn">${esc(topic(j.t))}</span>${was}</${tag}>`;}).join('')}${o.more?`<button class="jar more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="vessel"><b>+${o.more.n}</b></span><span class="jn">${L('Все','All')}</span></button>`:''}${o.add?`<button class="jar add" data-act="${o.add}"><span class="vessel">${I.plus}</span><span class="jn">${L('Добавить','Add')}</span></button>`:''}</div>`;
 }
 /** one answer row: level badge + name (one line, cut with «…») + the answer under it. Long nicknames and long words never squeeze each other. */
 function ansRow(name,j,note=''){const n=j?normJar(j):null;const badge=!n?'<span class="ar-lv none">—</span>':n.limit?`<span class="ar-lv ${n.limit==='hard'?'taboo':'discuss'}">${n.limit==='hard'?I.block:I.chat}</span>`:`<span class="ar-lv" style="--jc:${jarColor(n.lv)}">${n.lv}</span>`;
@@ -2720,7 +2811,12 @@ const postById=id=>S.posts.find(p=>p.id===id)||S.myPosts.find(p=>p.id===id);
 const postMedia=p=>p.media&&p.media.length?p.media:p.type==='photo'?[{type:'plate',key:p.plate||'rose'}]:[];
 const postKinds=p=>{const k=[];if(postMedia(p).length)k.push('photo');if(p.poll)k.push('poll');if(p.result)k.push('result');if(!k.length)k.push('text');return k;};
 function pollVoters(p,i){return [...new Set([...(p.pollVoters?.[i]||[]),...(p.vote===i?['me']:[])])].filter(id=>person(id)&&!isBlocked(id));}
-function pollHTML(p,o={}){const voted=p.vote!=null,opts=p.poll,live=!o.preview,tot=opts.reduce((n,x,i)=>n+pollVoters(p,i).length,0);return `<div class="poll ${voted?'voted':''}" role="group" aria-label="${p.pollQ?esc(T(p.pollQ)):L('Опрос','Poll')}">${p.pollQ?`<b class="poll-q">${esc(T(p.pollQ))}</b>`:''}${opts.map((x,i)=>{const n=pollVoters(p,i).length,pc=tot?Math.round(n/tot*100):0;return `<div class="poll-option"><button type="button" ${live&&!voted?`data-act="vote" data-v="${p.id}" data-i="${i}"`:''} class="poll-choice ${p.vote===i?'mine':''}" aria-pressed="${p.vote===i}" aria-disabled="${!live||voted}"><i style="width:${voted?pc:0}%"></i><span class="po">${p.vote===i?ic('check',15):''}${esc(T(x[0]))}</span></button>${voted?`<button type="button" class="poll-count" ${live?`data-act="pollPeople" data-v="${p.id}" data-i="${i}"`:''} aria-label="${L('Кто выбрал этот вариант','Who chose this option')}: ${n}">${n}</button>`:''}</div>`;}).join('')}<div class="poll-f"><span class="note">${pl(tot,['голос','голоса','голосов'],['vote','votes'])}</span>${voted&&live?`<button type="button" class="poll-undo" data-act="unvote" data-v="${p.id}">${L('Отменить голос','Withdraw vote')}</button>`:''}</div></div>`;}
+/* poll (owner 15.10): before the vote every option is an outlined button with an empty circle — obviously tappable;
+   after it the bars fill like the jars (liquid edge, a bubble in yours), the text never moves (your mark sits after it),
+   the count is a contained «people» button, and withdrawing is a quiet text button with an icon. */
+function pollHTML(p,o={}){const voted=p.vote!=null,opts=p.poll,live=!o.preview,tot=opts.reduce((n,x,i)=>n+pollVoters(p,i).length,0),max=Math.max(1,...opts.map((x,i)=>pollVoters(p,i).length));const anim=p._voteAt&&Date.now()-p._voteAt<1500;
+ return `<div class="poll ${voted?'voted':''} ${anim?'anim':''}" role="group" aria-label="${p.pollQ?esc(T(p.pollQ)):L('Опрос','Poll')}">${p.pollQ?`<b class="poll-q">${esc(T(p.pollQ))}</b>`:''}${!voted&&live?`<p class="poll-hint">${L('Выбери один вариант','Pick one option')}</p>`:''}${opts.map((x,i)=>{const n=pollVoters(p,i).length,pc=tot?Math.round(n/tot*100):0,mine=p.vote===i,lead=voted&&n===max&&n>0;
+  return `<div class="poll-option ${mine?'mine':''} ${lead?'lead':''}"><button type="button" ${live&&!voted?`data-act="vote" data-v="${p.id}" data-i="${i}"`:''} class="poll-choice ${mine?'mine':''}" aria-pressed="${mine}" aria-disabled="${!live||voted}">${voted?`<i class="pfill" style="--pc:${pc}%">${mine?'<b class="pbub"></b>':''}</i>`:'<span class="pradio" aria-hidden="true"></span>'}<span class="po"><span class="pot">${esc(T(x[0]))}</span>${mine?`<span class="pmine" aria-label="${L('твой выбор','your choice')}">${I.check}</span>`:''}</span></button>${voted?`<button type="button" class="poll-count" ${live?`data-act="pollPeople" data-v="${p.id}" data-i="${i}"`:''} aria-label="${L('Кто выбрал этот вариант','Who chose this option')}: ${n}"><span>${n}</span>${live?I.chev:''}</button>`:''}</div>`;}).join('')}<div class="poll-f"><span class="note">${pl(tot,['голос','голоса','голосов'],['vote','votes'])}${voted?` · ${L('нажми на число — увидишь, кто','tap a number to see who')}`:''}</span>${voted&&live?`<button type="button" class="poll-undo" data-act="unvote" data-v="${p.id}">${I.undo}<span>${L('Отменить голос','Withdraw vote')}</span></button>`:''}</div></div>`;}
 ACT.pollPeople=a=>{const p=postById(a.dataset.v),i=+a.dataset.i;if(!p?.poll?.[i]||p.vote==null)return;const ids=pollVoters(p,i);sheet(()=>({title:T(p.poll[i][0]),body:ids.length?`<div class="card list">${ids.map(id=>personRow(id)).join('')}</div>`:empty('people',L('Пока никто','Nobody yet'),'' )}));};
 
 function postMediaHTML(p,o={}){let h='';const m=postMedia(p);if(m.length)h+=mediaGrid(m,{id:p.id});
@@ -2755,7 +2851,21 @@ const replyList=(kind,id)=>kind==='p'?postById(id)?.comments:S.discussions.find(
 function replyActs(kind,id,i,c){if(c.status)return '';const n=(c.likes||0)+(c.liked?1:0);
  return `<div class="r-acts"><button class="${c.liked?'on':''}" data-act="rLike" data-v="${kind}:${id}" data-i="${i}" aria-pressed="${!!c.liked}" aria-label="${L('Нравится ответ','Like reply')}">${c.liked?I.heartf:I.heart}${n?`<span>${n}</span>`:''}</button><button data-act="rReply" data-v="${kind}:${id}" data-i="${i}" aria-label="${L(`Ответить ${pname(c.a)}`,`Reply to ${pname(c.a)}`)}">${I.chat}</button><button data-act="rMore" data-v="${kind}:${id}" data-i="${i}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;}
 function identifyReplies(kind,id){const list=replyList(kind,id)||[];list.forEach((c,i)=>{if(!c.id)c.id=`${kind}_${id}_${i}`;});return list;}
-function replyTree(kind,id){const list=identifyReplies(kind,id),byId=new Map(list.map(c=>[c.id,c])),seen=new Set();const children=parent=>list.filter(c=>(c.parent||null)===parent);const draw=(c,depth=0)=>{if(seen.has(c.id))return '';seen.add(c.id);const hidden=c.deleted||isBlocked(c.a),parent=byId.get(c.parent);const status=c.status==='pending'?L('отправляется…','sending…'):c.status==='failed'?L('не отправлено','not sent'):F.rel(c.t);return `<div class="reply-node" style="--depth:${Math.min(depth,2)}" id="reply-${esc(c.id)}"><div class="comment ${hidden?'removed':c.status||''}">${hidden?'':whoLink(c.a)}<div class="tx">${hidden?`<p class="note">${L('Ответ недоступен','Reply unavailable')}</p>`:`<button class="plink pnm" ${profGo(c.a)}><span class="nmt">${esc(pname(c.a))}</span>${nameBadges(person(c.a))}</button><time>${status}</time>${parent&&!parent.deleted&&!isBlocked(parent.a)?`<small class="reply-to">${L('Ответ для','Reply to')} <button class="plink" ${profGo(parent.a)}>${esc(pname(parent.a))}</button></small>`:''}<p class="reply-text">${esc(T(c.text))}</p>${c.status==='failed'&&kind==='p'?`<button class="btn text auto" data-act="retryComment" data-v="${esc(c.id)}">${L('Повторить','Retry')}</button>`:''}${replyActs(kind,id,c.id,c)}`}</div></div></div>${children(c.id).map(x=>draw(x,depth+1)).join('')}`;};return children(null).map(c=>draw(c)).join('')+list.filter(c=>!seen.has(c.id)).map(c=>draw(c)).join('');}
+/* replies like Threads / X (owner 15.10): a top-level reply with its avatar and a thread line; every answer inside that
+   branch hangs on the line one step in (no endless indent), deeper answers say whom they answer. A long branch shows
+   its first two answers and «Ещё N ответов»; the branch opens by itself for a deep link or your just-sent reply. */
+function replyTree(kind,id){const list=identifyReplies(kind,id),byId=new Map(list.map(c=>[c.id,c])),route=cur(),open=route.open||(route.open=[]),focus=route.p?.reply;
+ const kids=parent=>list.filter(c=>(c.parent||null)===parent);const roots=list.filter(c=>!c.parent||!byId.has(c.parent));
+ const flat=root=>{const out=[],seen=new Set([root.id]);const walk=pid=>kids(pid).forEach(c=>{if(seen.has(c.id))return;seen.add(c.id);out.push(c);walk(c.id);});walk(root.id);return out;};
+ const one=(c,root,child)=>{const hidden=c.deleted||isBlocked(c.a),parent=byId.get(c.parent);const status=c.status==='pending'?L('отправляется…','sending…'):c.status==='failed'?L('не отправлено','not sent'):F.rel(c.t);
+  const to=child&&parent&&parent.id!==root.id&&!parent.deleted&&!isBlocked(parent.a)?`<small class="cm-to">${L('в ответ','replying to')} <button class="plink" ${profGo(parent.a)}>${esc(pname(parent.a))}</button></small>`:'';
+  return `<article class="cm ${child?'child':''} ${hidden?'removed':c.status||''}" id="reply-${esc(c.id)}"><div class="cm-l">${hidden?'<span class="av cm-ghost"></span>':whoLink(c.a,child?'xs':'sm')}</div><div class="cm-b">${hidden?`<p class="note">${L('Ответ недоступен','Reply unavailable')}</p>`:`<div class="cm-h"><button class="plink pnm" ${profGo(c.a)}><span class="nmt">${esc(pname(c.a))}</span>${nameBadges(person(c.a))}</button><time>${status}</time></div>${to}<p class="reply-text">${esc(T(c.text))}</p>${c.status==='failed'&&kind==='p'?`<button class="btn text auto" data-act="retryComment" data-v="${esc(c.id)}">${L('Повторить','Retry')}</button>`:''}${replyActs(kind,id,c.id,c)}`}</div></article>`;};
+ return roots.map(root=>{const all=flat(root);const recent=c=>c.a==='me'&&(c.status||Date.now()-c.t<15000);const forced=all.some(c=>c.id===focus||recent(c));const isOpen=open.includes(root.id)||forced||all.length<=3;const shown=isOpen?all:all.slice(0,2),rest=all.length-shown.length;
+  const more=rest?`<button class="cm-more" data-act="thOpen" data-v="${esc(root.id)}"><span class="cm-avs">${[...new Set(all.slice(2).map(c=>c.a))].filter(x=>!isBlocked(x)).slice(0,3).map(x=>av(x,'xs')).join('')}</span>${L(`Ещё ${pl(rest,['ответ','ответа','ответов'],['reply','replies'])}`,`${rest} more ${rest===1?'reply':'replies'}`)}</button>`:'';
+  const less=isOpen&&!forced&&all.length>3?`<button class="cm-more less" data-act="thClose" data-v="${esc(root.id)}">${L('Свернуть ветку','Collapse thread')}</button>`:'';
+  return `<div class="th ${all.length?'has-kids':''}">${one(root,root,false)}${all.length?`<div class="cm-kids">${shown.map(c=>one(c,root,true)).join('')}${more}${less}</div>`:''}</div>`;}).join('');}
+ACT.thOpen=a=>{const r=cur();r.open=[...new Set([...(r.open||[]),a.dataset.v])];refresh();};
+ACT.thClose=a=>{const r=cur();r.open=(r.open||[]).filter(x=>x!==a.dataset.v);refresh();};
 function replyComposer(route){const c=route.replyTarget;if(!c)return '';return `<div class="reply-target"><span>${L('Ответ для','Reply to')} <b>${esc(pname(c.a))}</b></span><button class="ibtn sm" data-act="replyCancel" aria-label="${L('Отменить ответ','Cancel reply')}">${I.close}</button></div>`;}
 ACT.replyCancel=()=>{delete cur().replyTarget;refresh();};
 function notifyReply(kind,id,c){if(c.notified||c.status||c.deleted)return;const list=identifyReplies(kind,id);const parent=list.find(x=>x.id===c.parent);const root=kind==='p'?postById(id)?.author:S.discussions.find(x=>x.id===id)?.author;const targets=[...new Set([parent&&!parent.deleted?parent.a:null,root].filter(x=>x&&x!==c.a&&!isBlocked(x)))];c.notified=true;S.replyDeliveries??=[];for(const to of targets){const n={id:'rn_'+c.id+'_'+to,type:'reply',to,p:c.a,reply:c.id,parent:c.parent||null,t:Date.now(),read:false,go:[kind==='p'?'F05':'C06',{id,reply:c.id}]};S.replyDeliveries.push(n);if(to==='me')S.notifs.unshift(n);}}
@@ -3520,7 +3630,7 @@ ACT.likePost=a=>{const p=postById(a.dataset.v);p.liked=!p.liked;a.classList.togg
 ACT.savePost=a=>{const p=postById(a.dataset.v);p.saved=!p.saved;const s=S.me.saved.posts;p.saved?s.push(p.id):s.splice(s.indexOf(p.id),1);a.classList.toggle('saved',p.saved);a.innerHTML=p.saved?I.bookmarkf:I.bookmark;toast(p.saved?L('Сохранено — найдёшь в «Я → Сохранённое»','Saved — find it in Me → Saved'):L('Убрано из сохранённого','Removed from saved'),{type:p.saved?'ok':'',action:p.saved?{label:L('Открыть','Open'),fn:()=>go('G04')}:null});};
 ACT.sharePost=()=>{toast(L('Ссылка скопирована. Откроется только у тех, кому видна публикация','Link copied. It opens only for people who can see the post'),{type:'ok'});};
 /* V7: a vote can be changed (tap another option) or withdrawn (tap it again / «Отменить голос») */
-ACT.vote=a=>{const p=postById(a.dataset.v),i=+a.dataset.i;if(!p?.poll?.[i]||p.vote!=null)return;run(null,()=>{if(p.vote!=null)return;p.vote=i;refresh();},{ms:220});};
+ACT.vote=a=>{const p=postById(a.dataset.v),i=+a.dataset.i;if(!p?.poll?.[i]||p.vote!=null)return;run(null,()=>{if(p.vote!=null)return;p.vote=i;p._voteAt=Date.now();refresh();},{ms:220});};
 ACT.unvote=a=>{const p=postById(a.dataset.v);if(!p?.poll||p.vote==null)return;run(null,()=>{p.vote=null;refresh();},{ms:220,ok:L('Голос отменён','Vote withdrawn')});};
 
 /* F05 — post with replies */
