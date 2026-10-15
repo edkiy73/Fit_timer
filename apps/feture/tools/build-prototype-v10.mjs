@@ -10,7 +10,7 @@ const read = (p) => readFileSync(join(src, p), 'utf8');
 const order = ['data.js', 'topics.js', 'core.js', 'ui.js', 'media.js', 's-location.js', 's-auth.js', 's-feed.js', 's-events.js', 's-people.js', 's-profile.js', 's-comm.js', 's-chats.js', 's-me.js', 's-settings.js', 's-completion.js', 's-navigation.js', 'qa.js', 'main.js'];
 
 const img = {};
-for (let i = 1; i <= 9; i++) img[i] = 'data:image/webp;base64,' + readFileSync(join(app, `public/images/profile-${i}.webp`)).toString('base64');
+for (let i = 1; i <= 9; i++) img[i] = 'data:image/webp;base64,' + readFileSync(join(app, `public/images/profile-${i}-45.webp`)).toString('base64');
 // Logos are inline SVG in core.js (LOGOS); the raster test mark is no longer embedded.
 
 const js = `window.FT_IMG=${JSON.stringify(img)};\n(function(){\n${order.map((f) => `/* ---- ${f} ---- */\n${read(f)}`).join('\n')}\n})();`;

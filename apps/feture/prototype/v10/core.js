@@ -11,7 +11,10 @@ function restartPrototype(){
  url.searchParams.set('restart',String(Number.isSafeInteger(restart)&&restart>=0?restart+1:1));
  url.hash='A01';location.replace(url.href);
 }
-const QA={offline:false,frame:'auto',seen:{},datingLive:false};
+const QA={offline:false,frame:'auto',seen:{},datingLive:false,autoApprove:false};
+/* QA «Мои запросы → Одобрять сразу»: whatever the user asks for or sends to review is answered yes after a short pause
+   (qaApproveAll in qa.js). Off by default — the normal flows keep their waiting states. */
+function autoResolve(){if(!QA.autoApprove)return;const owner=S;setTimeout(()=>{if(S===owner)qaApproveAll();},1200);}
 const L=(ru,en)=>S&&S.lang==='en'?en:ru;
 const T=o=>o==null?'':typeof o==='string'?o:(o[S.lang]??o.ru??'');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -103,7 +106,7 @@ const I={at:sv('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5"
 const ic=(n,s)=>s?I[n].replace('<svg',`<svg style="width:${s}px;height:${s}px"`):I[n];
 
 /* ---------- media ---------- */
-const IMG=n=>typeof n==='string'&&/^(blob:|data:image\/)/.test(n)?n:(window.FT_IMG&&window.FT_IMG[n])||`images/profile-${n}.webp`;
+const IMG=n=>typeof n==='string'&&/^(blob:|data:image\/)/.test(n)?n:(window.FT_IMG&&window.FT_IMG[n])||`images/profile-${n}-45.webp`;
 /* V7: the test mark is gone. Three vector options for the owner (QA drawer → Логотип); A is the default. */
 const LOGOS={
  a:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><defs><linearGradient id='a' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#FF4F6D'/><stop offset='1' stop-color='#C2134A'/></linearGradient><linearGradient id='b' x1='0' y1='1' x2='1' y2='0'><stop offset='0' stop-color='#6A52F0'/><stop offset='1' stop-color='#C3B3FF'/></linearGradient></defs><rect width='120' height='120' rx='32' fill='#1E1219'/><circle cx='47' cy='60' r='23' fill='none' stroke='url(#a)' stroke-width='12'/><circle cx='73' cy='60' r='23' fill='none' stroke='url(#b)' stroke-width='12'/><path d='M51 37.4A23 23 0 0 1 65.6 45.2' fill='none' stroke='#1E1219' stroke-width='17'/><path d='M51 37.4A23 23 0 0 1 65.6 45.2' fill='none' stroke='url(#a)' stroke-width='12'/></svg>`,

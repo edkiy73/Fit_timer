@@ -34,8 +34,8 @@ ACT.feedFilters=a=>{const fk=a.dataset.v;const d=JSON.parse(JSON.stringify(S.fil
   reset:()=>{S.ui.ff.d={tags:[],ex:[],types:[]};},apply:()=>{S.filters[fk]=S.ui.ff.d;},
   note:fk==='following'?L('Действует только для подписок.','Applies to Following only.'):'',
   rows:[{k:'types',label:L('Что в публикации','Post contains'),on:()=>S.ui.ff.d.types.length,summary:()=>sumOf(TYPES(),S.ui.ff.d.types,L('Всё','Anything')),body:()=>fChips(TYPES(),S.ui.ff.d.types,'ffType')},
-   {k:'tags',label:L('Показывать темы','Show topics'),search:1,on:()=>S.ui.ff.d.tags.length,summary:()=>sumOf(TI,S.ui.ff.d.tags,L('Все темы','All topics')),body:()=>fChips(TI,S.ui.ff.d.tags,'ffTag',{groups:topicGroups()})},
-   {k:'ex',label:L('Скрывать темы','Hide topics'),search:1,on:()=>S.ui.ff.d.ex.length,summary:()=>sumOf(TI,S.ui.ff.d.ex,L('Ничего не скрыто','Nothing hidden')),body:()=>fChips(TI,S.ui.ff.d.ex,'ffEx',{groups:topicGroups()})}]});};
+   {k:'tags',label:L('Показывать темы','Show topics'),search:1,pick:()=>({items:TI,sel:S.ui.ff.d.tags,act:'ffTag',groups:topicGroups()}),on:()=>S.ui.ff.d.tags.length,summary:()=>sumOf(TI,S.ui.ff.d.tags,L('Все темы','All topics')),body:()=>fChips(TI,S.ui.ff.d.tags,'ffTag',{groups:topicGroups()})},
+   {k:'ex',label:L('Скрывать темы','Hide topics'),search:1,pick:()=>({items:TI,sel:S.ui.ff.d.ex,act:'ffEx',groups:topicGroups()}),on:()=>S.ui.ff.d.ex.length,summary:()=>sumOf(TI,S.ui.ff.d.ex,L('Ничего не скрыто','Nothing hidden')),body:()=>fChips(TI,S.ui.ff.d.ex,'ffEx',{groups:topicGroups()})}]});};
 const ffToggle=(k)=>a=>{const d=S.ui.ff.d;const v=a.dataset.v;const arr=d[k];const i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);if(k==='tags')d.ex=d.ex.filter(x=>x!==v);if(k==='ex')d.tags=d.tags.filter(x=>x!==v);resheet();};
 ACT.ffTag=ffToggle('tags');ACT.ffEx=ffToggle('ex');ACT.ffType=ffToggle('types');
 ACT.ffReset=()=>{S.ui.ff.d={tags:[],ex:[],types:[]};resheet();};
@@ -169,7 +169,7 @@ ACT.publish=a=>{const route=cur(),d=route.p.draft;if(d.edit&&!ownPost(d.edit)){t
   if(!postResultReady(d)){missingPostResult();return;}
   {const id=d.edit||'m'+Date.now();const ex=S.myPosts.find(x=>x.id===id);const obj={...postFromDraft(d,id,ex),status:hasPhoto?'review':'published'};
    ex?Object.assign(ex,obj):S.myPosts.unshift(obj);delete S.postEdits[id];}
-  published=true;finishPostCompose(route,d.composeId||route.composeId);
+  published=true;finishPostCompose(route,d.composeId||route.composeId);if(hasPhoto)autoResolve();
  },{ok:()=>{if(!published)return null;toast(hasPhoto?L('Отправлено на проверку. Сообщим, когда опубликуем','Submitted for review. We’ll let you know when it’s live'):L('Опубликовано','Published'),{type:'ok',action:{label:L('Мои публикации','My posts'),fn:()=>go('F10')}});return null;}});};
 
 /* F10 — my posts and drafts */

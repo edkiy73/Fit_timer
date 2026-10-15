@@ -128,7 +128,7 @@ SC.E06={title:()=>L('Заявка','Application'),valid:p=>!!EV(p.id),render:(p,
  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="sendApp">${L('Отправить заявку','Send application')}</button></div></div>`;}};
 ACT.sendApp=a=>{const r=cur();const e=EV(r.p.id);r.err={};(e.q||[1]).forEach((q,i)=>{const v=fv('q'+i).trim();if(v.length<3)r.err['q'+i]=L('Ответь хотя бы парой слов','Answer in at least a few words');});if(!r.f.ok)r.err.ok=L('Нужно согласие с условиями','You need to accept the requirements');
  if(Object.keys(r.err).length){refresh();shakeFirstErr();return;}
- run(a,()=>{S.rsvp[r.p.id]={...myR(r.p.id),status:'going',app:'pending'};r.dirty=false;back();},{ok:L('Заявка отправлена. Ответ придёт в уведомления','Application sent. You’ll be notified of the answer')});};
+ run(a,()=>{S.rsvp[r.p.id]={...myR(r.p.id),status:'going',app:'pending'};autoResolve();r.dirty=false;back();},{ok:L('Заявка отправлена. Ответ придёт в уведомления','Application sent. You’ll be notified of the answer')});};
 
 /* E10 — my events: only events with MY status (fix: previously showed all events) */
 SC.E10={title:()=>L('Мои события','My events'),render:()=>{
@@ -206,7 +206,7 @@ ACT.evfSubmit=a=>{const r=cur();run(a,()=>{const old=r.editId&&S.extraEvents[r.e
  const announce=old?[...(changed.length?[{text:L(`Событие изменено: ${changed.join('; ')}.`,`Event updated: ${changed.join('; ')}.`),t:Date.now(),auto:true}]:[]),...(old.announce||[])]:[];
  S.extraEvents[id]={...nx,interested:old?.interested,apps:old?old.apps:[],announce,status:old?old.status:'review'};if(r.draftId&&S.eventDrafts)delete S.eventDrafts[r.draftId];r.dirty=false;if(old){back();toast(changed.length?L('Изменения сохранены. Участникам ушло уведомление о новом времени или месте','Changes saved. Attendees were notified about the new time or place'):L('Изменения сохранены','Changes saved'),{type:'ok'});return;}
  const st=stack();st.pop();go('E15',{id},{replace:false});
- setTimeout(()=>{const e=S.extraEvents[id];if(e&&e.status==='review'){e.status='published';S.notifs.unshift({id:'n'+Date.now(),type:'evok',e:id,t:Date.now(),read:false,go:['E15',{id}]});if(cur().id==='E15'||cur().id==='E03')refresh();else renderSide();toast(L('Событие опубликовано','Your event is live'),{type:'ok'});}},6000);},{ok:()=>r.editId?'':L('Отправлено на проверку','Submitted for review')});};
+ setTimeout(()=>{const e=S.extraEvents[id];if(e&&e.status==='review'){e.status='published';S.notifs.unshift({id:'n'+Date.now(),type:'evok',e:id,t:Date.now(),read:false,go:['E15',{id}]});if(cur().id==='E15'||cur().id==='E03')refresh();else renderSide();toast(L('Событие опубликовано','Your event is live'),{type:'ok'});}},QA.autoApprove?1200:6000);},{ok:()=>r.editId?'':L('Отправлено на проверку','Submitted for review')});};
 
 /* E15–E18 — organiser panel */
 SC.E15={title:()=>L('Панель организатора','Manage event'),valid:p=>!!EV(p.id)&&EV(p.id).organizer==='me',render:(p)=>{const id=p.id,e=EV(id);const apps=e.apps||[];const pend=apps.filter(a=>a.status==='pending').length,appr=apps.filter(a=>a.status==='approved').length;
