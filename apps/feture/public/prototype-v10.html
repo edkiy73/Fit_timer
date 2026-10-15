@@ -1910,8 +1910,9 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .chat-down em{position:absolute;top:-6px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:10px;display:grid;place-items:center;background:var(--accent);color:#fff;font:700 11.5px/1 var(--font);font-style:normal;box-shadow:0 0 0 2px var(--bg)}
 @media (prefers-reduced-motion:reduce){.mmatch .w,.mmatch .ember{animation:none}.mmatch .w0{opacity:.5}}
 /* replies: thread lines at half strength; time centred on the nickname line */
-.th.has-kids>.cm>.cm-l::after,.cm-kids>*:not(:last-child)::after{background:color-mix(in srgb,var(--line2) 50%,transparent)}
-.cm-kids>*::before{border-color:color-mix(in srgb,var(--line2) 50%,transparent)}
+/* opaque (mixed with the page background), so overlapping segments don't build up darker joints */
+.th.has-kids>.cm>.cm-l::after,.cm-kids>*:not(:last-child)::after{background:color-mix(in srgb,var(--line2) 50%,var(--bg))}
+.cm-kids>*::before{border-color:color-mix(in srgb,var(--line2) 50%,var(--bg))}
 .cm-h{align-items:center}
 .cm-h time{line-height:1;padding-top:1px}
 </style>
