@@ -2926,7 +2926,7 @@ function replyTree(kind,id){const list=identifyReplies(kind,id),byId=new Map(lis
   return `<article class="cm ${child?'child':''} ${hidden?'removed':c.status||''}" id="reply-${esc(c.id)}"><div class="cm-l">${hidden?'<span class="av cm-ghost"></span>':whoLink(c.a,child?'xs':'sm')}</div><div class="cm-b">${hidden?`<p class="note">${L('Ответ недоступен','Reply unavailable')}</p>`:`<div class="cm-h"><button class="plink pnm" ${profGo(c.a)}><span class="nmt">${esc(pname(c.a))}</span>${nameBadges(person(c.a))}</button><time>${status}</time></div>${to}<p class="reply-text">${esc(T(c.text))}</p>${c.status==='failed'&&kind==='p'?`<button class="btn text auto" data-act="retryComment" data-v="${esc(c.id)}">${L('Повторить','Retry')}</button>`:''}${replyActs(kind,id,c.id,c)}`}</div></article>`;};
  /* order of top-level replies: your fresh ones first, then «interesting» (likes + answers, then newer) or «new» (newest first).
     1000 top-level replies don't render at once: REPLY_PAGE (50) at a time, the next batch loads when the end scrolls into view. */
- const sort=route.sort||'top',score=c=>(c.likes||0)+(c.liked?1:0)+2*flat(c).length,mineNew=c=>c.a==='me'&&(c.status||Date.now()-c.t<15000);
+ const sort=route.sort||'top',score=c=>(c.likes||0)+(c.liked?1:0)+2*flat(c).length,mineNew=c=>c.a==='me'&&(!!c.status||Date.now()-c.t<15000)?1:0;
  const gone=c=>c.deleted||isBlocked(c.a)?1:0;roots.sort((a,b)=>(gone(a)-gone(b))||(mineNew(b)-mineNew(a))||(sort==='new'?b.t-a.t:(score(b)-score(a))||(b.t-a.t)));
  const PAGE=REPLY_PAGE;const fi=focus?roots.findIndex(r=>r.id===focus||flat(r).some(c=>c.id===focus)):-1;route.shown=Math.max(route.shown||PAGE,fi+1);
  const page=roots.slice(0,route.shown),left=roots.length-page.length;
