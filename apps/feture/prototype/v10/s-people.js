@@ -16,10 +16,10 @@ function passDating(id,f){const p=PEOPLE[id];if(!p.verified||!p.pair&&p.age<18)r
 const dfCount=f=>[f.show!=='all',f.age[0]!==18||f.age[1]!==99,f.placeMode==='nearby',!!f.city,f.gender.length,(f.orient||[]).length,f.format.length,f.seek.length,(f.topics||[]).length,(f.role||[]).length].filter(Boolean).length;
 
 SC.D03={root:1,tab:'people',title:()=>L('Люди','People'),render:(p,r)=>{
- const sub=p.sub||'discover';if(sub==='matches')return SC.H01.render({sub:'chats'},r);if(sub==='requests')return `<header class="bar">${seg([['discover',L('Подборка','Discover')],['likes',L('Симпатии','Likes'),C.likesIn()||''],['requests',L('Запросы','Requests'),C.reqIn()||'']],sub,'pplSub')}${bellBtn()}</header><div class="view"><div class="wrap">${accessBody(p)}</div></div>`;const n=C.likesIn();
+ const sub=p.sub||'discover';if(sub==='matches')return SC.H01.render({sub:'chats'},r);if(sub==='requests')return `<header class="bar">${seg([['discover',L('Подборка','Discover')],['likes',L('Симпатии','Likes'),C.likesIn()||''],['requests',L('Запросы','Requests'),C.reqIn()||'']],sub,'pplSub')}${bellBtn()}</header>${authorPicker()}<div class="view"><div class="wrap">${accessBody(p)}</div></div>`;const n=C.likesIn();
  const tabs=seg([['discover',L('Подборка','Discover')],['likes',L('Симпатии','Likes'),n||''],['requests',L('Запросы','Requests'),C.reqIn()||'']],sub,'pplSub');
  const right=sub==='discover'&&authorProfile().dating?`<button class="ibtn" data-act="dfSheet" aria-label="${L('Фильтры','Filters')}">${I.filter}${dfCount(social().filters.dating)?`<sup>${dfCount(social().filters.dating)}</sup>`:''}</button>`:bellBtn();
- const head=`<header class="bar">${tabs}${right}</header>${authorPicker()}${actionAuthor()==='couple'&&!authorProfile().dating?`<p class="note">${L('Знакомства пары выключены. Включить их можно через согласованную версию профиля. Карточка остаётся на месте.','Couple dating is off. Enable it through an approved profile revision. The current card stays in place.')}</p>`:''}`;
+ const head=`<header class="bar">${tabs}${right}</header>${authorPicker()}<p class="note" data-dating-author-reason>${actionAuthor()==='couple'&&!authorProfile().dating?L('Знакомства пары выключены. Включить их можно через согласованную версию профиля. Карточка остаётся на месте.','Couple dating is off. Enable it through an approved profile revision. The current card stays in place.'):''}</p>`;
  if(sub==='likes')return head+`<div class="view"><div class="wrap">${likesBody(r)}</div></div>`;
  if(sub==='matches')return head+`<div class="view"><div class="wrap">${matchesBody()}</div></div>`;
  if(!DATING_LIVE())return head+`<div class="view"><div class="wrap">${datingSoon()}</div></div>`;
@@ -78,7 +78,7 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
   ${sh.discuss.length?`<div class="sec">${L('Стоит обсудить','Worth discussing')}</div>${sh.discuss.slice(0,2).map(c=>`<div class="fact"><i class="a">${I.warn}</i><span>${esc(c)}</span></div>`).join('')}`:''}
   <div class="sec">${L('Интересы','Interests')}</div>${jarShelf(pubJars(id),{pre:1,act:'topic',who:id,moreAct:'allJars'})}
   ${post?`<div class="sec">${L('Публикация','Post')} · ${F.rel(post.t)}</div><button class="quote" data-go="F05" data-id="${post.id}"><p>${esc(T(post.text))}</p>${ic('chev',18)}</button>`:''}
-  <div class="sec">${L('Расширенный профиль','Private profile')}</div>${veilBlock(id)}
+  <div class="sec">${L('Расширенный профиль','Private profile')}</div><div data-deck-private="${id}">${veilBlock(id)}</div>
   <div class="pc-foot"><button class="btn soft" data-go="P01" data-id="${id}">${L('Полный профиль','Full profile')}</button><button class="btn soft" data-act="follow" data-v="${id}">${social().follows.has(id)?L('Ты подписан(а)','Following'):L('Подписаться','Follow')}</button></div>
   <p class="note center mt12">${L('Подписка показывает посты, но не открывает чат','Following shows posts but doesn’t open a chat')}</p>
  </div></article>`;}
