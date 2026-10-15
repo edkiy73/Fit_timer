@@ -39,13 +39,15 @@ SC.A01={auth:1,title:()=>L('Приветствие','Welcome'),render:()=>{const
    <div class="w-age">${L('Только для взрослых, 18+. Продолжая, ты соглашаешься с','Adults only, 18+. By continuing you agree to the')} <a href="#" data-act="terms">${L('условиями','terms')}</a>.</div>
   </div>
  </div></div>`;},
- after:()=>{const show=$('.w-show');if(!show)return;wPlay(S.ui.wIdx||0,true);
+ after:()=>{const show=$('.w-show');if(!show)return;wPlay(S.ui.wIdx||0,true);wFit();if(!window.__wFitBound){window.__wFitBound=1;addEventListener('resize',()=>{if($('.w-show'))wFit();});}
   show.addEventListener('animationend',e=>{if(e.target.matches('.w-pb.on>i'))wShow((S.ui.wIdx||0)+1);});
   show.addEventListener('keydown',e=>{if(e.key==='ArrowRight')wShow((S.ui.wIdx||0)+1);else if(e.key==='ArrowLeft')wShow((S.ui.wIdx||0)-1);});
   let x0=null,y0=0;const st=$('.w-stage',show);
   st.addEventListener('pointerdown',e=>{x0=e.clientX;y0=e.clientY;});
   st.addEventListener('pointerup',e=>{if(x0==null)return;const dx=e.clientX-x0,dy=e.clientY-y0;x0=null;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy))wShow((S.ui.wIdx||0)+(dx<0?1:-1));});
   st.addEventListener('pointercancel',()=>{x0=null;});}};
+/* fit each slide's picture into the space it has: as large as possible (up to 1.12 on a desktop), never cut, never squeezed unevenly */
+function wFit(){const max=innerWidth>=1024?1.12:1;$$('.w-vis').forEach(v=>{const c=v.firstElementChild;if(!c)return;c.style.transform='none';const cs=getComputedStyle(v),pw=v.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),ph=v.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);const w=c.scrollWidth,h=c.scrollHeight;if(!w||!h)return;const k=Math.min(max,pw/w,ph/h);c.style.transformOrigin='50% 0';c.style.transform=`translateY(${Math.max(0,(ph-h*k)/2).toFixed(1)}px) scale(${k.toFixed(3)})`;});}
 /* switch slides in place — no re-render, so the aura and the page don't flash */
 function wShow(i){const sl=$$('.w-slide');if(!sl.length)return;const n=sl.length;i=((i%n)+n)%n;S.ui.wIdx=i;
  sl.forEach((s,k)=>{s.classList.toggle('on',k===i);s.setAttribute('aria-hidden',String(k!==i));});
