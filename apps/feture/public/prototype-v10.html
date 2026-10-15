@@ -194,7 +194,7 @@ h3.t{font:650 17px/1.3 var(--font);margin:0 0 6px}
 .card+.card{margin-top:8px}
 .card.list{padding:0 16px}
 .card.flat{background:var(--raise);border-color:transparent}
-.grp.bare>.card,.card.form-card,.grp>.card:has(>.chips:only-child),.grp>.card:has(>.seg:only-child),.grp>.card:has(>p:only-child),.grp>.card:has(>.jars:only-child),.grp>.card:has(>.tests:only-child),.grp>.card:has(>.cmp:only-child),.grp>.card:has(>.ans:only-child){background:none;border:0;padding:0;border-radius:0}
+.grp.bare>.card,.card.form-card,.grp>.card:has(>.chips:only-child),.grp>.card:has(>.seg:only-child),.grp>.card:has(>p:only-child),.grp>.card:has(>.md.bio:only-child),.grp>.card:has(>.jars:only-child),.grp>.card:has(>.tests:only-child),.grp>.card:has(>.cmp:only-child),.grp>.card:has(>.ans:only-child){background:none;border:0;padding:0;border-radius:0}
 .card .card{background:none;border:0;padding:0;border-radius:0}
 .form-card{display:grid;gap:16px}.form-card>.field{margin:0}
 .card>.chips,.card>.seg{margin:0}
@@ -1364,32 +1364,30 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .frow .tx b .nbadge{flex:none}
 
 /* -- name badges: one round shape and size; blue = photo verified, gold = Premium; the glyph is white in light theme, black in dark -- */
-.nbadge{--nbi:#fff;width:17px;height:17px;border-radius:50%;vertical-align:-3px;color:var(--nbi)}
+/* size follows the text (≈ cap height + a bit, 13–22 px); centred on the capital letters, not on the baseline */
+.nbadge{--nbi:#fff;width:clamp(13px,.9em,22px);height:clamp(13px,.9em,22px);margin-left:.28em;border-radius:50%;vertical-align:middle;position:relative;top:-.07em;color:var(--nbi)}
+.nbadge+.nbadge{margin-left:.2em}
+.nbadge svg,.li b .nbadge svg,.pc-name .nbadge svg{width:62%;height:62%;stroke-width:2.8}
+.pc-name .nbadge,.frow .tx b .nbadge{top:0;margin-left:0}
+.frow .tx b .nbadge{margin-left:.15em}
 .nbadge.v{background:#2F86F6}.nbadge.p{background:#E5A112}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nbadge{--nbi:#111012}:root:not([data-theme="light"]) .nbadge.v{background:#5FA4FF}:root:not([data-theme="light"]) .nbadge.p{background:#F2B83A}}
 :root[data-theme="dark"] .nbadge{--nbi:#111012}:root[data-theme="dark"] .nbadge.v{background:#5FA4FF}:root[data-theme="dark"] .nbadge.p{background:#F2B83A}
-.nbadge svg,.li b .nbadge svg{width:11px;height:11px;stroke-width:2.6}
 .nbadge.v svg,.nbadge.p svg,.pc-name .nbadge.v svg,.pc-name .nbadge.p svg{color:var(--nbi)}
-.pc-name .nbadge{width:21px;height:21px}.pc-name .nbadge svg{width:13px;height:13px}
-.pc-name .nbadge+.nbadge{margin-left:2px}
-.li b .nbadge{width:16px;height:16px}
+.pc-name .nbadge+.nbadge{margin-left:-4px}
 .pv-state .nbadge{width:44px;height:44px}.pv-state .nbadge svg{width:26px;height:26px}
 
 /* -- rich text field: toolbar + live formatting (posts, discussions) -- */
-.rte-box{border:1px solid var(--line2);border-radius:var(--r);background:var(--surf);overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.rte-box{position:relative;border:1px solid var(--line2);border-radius:var(--r);background:var(--surf);transition:border-color .15s,box-shadow .15s}
 .rte-box:focus-within{border-color:var(--ink)}
 .field.err .rte-box{border-color:var(--danger)}
-.rte-tb{display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:5px 6px;border-bottom:1px solid var(--line);background:var(--raise)}
+.rte-tb{display:flex;flex-wrap:nowrap;overflow:hidden;align-items:center;gap:2px;padding:5px 6px;border-radius:var(--r) var(--r) 0 0;border-bottom:1px solid var(--line);background:var(--raise)}
 .rte-tb button{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;color:var(--ink)}
 .rte-tb button svg{width:19px;height:19px}
 .rte-tb button:hover{background:color-mix(in srgb,var(--ink) 8%,transparent)}
 .rte-tb button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .rte-tb button[data-v="redo"],.rte-tb button[data-v="undo"]{color:var(--mute)}
 .rte-tb>i{width:1px;height:20px;margin:0 4px;background:var(--line2)}
-.rte-tb>button[data-v="more"]{margin-left:auto}
-.rte-more{display:none;gap:2px}
-.rte.more .rte-more{display:flex}
-@container col (min-width:520px){.rte-more{display:flex}.rte-tb>button[data-v="more"]{display:none}}
 .rte .rte-ed{position:relative;display:block;min-height:150px;max-height:50dvh;overflow-y:auto;border:0;border-radius:0;background:none;font-size:16px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;cursor:text}
 .rte .rte-ed:focus{box-shadow:none}
 .rte .rte-ed.is-empty::before{content:attr(data-ph);color:var(--faint);pointer-events:none;position:absolute}
@@ -1399,11 +1397,53 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .rte-ed blockquote{margin:0 0 8px;padding:2px 0 2px 12px;border-left:3px solid var(--line2);color:var(--mute)}
 .rte-ed a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
 #dialog #rteUrl{margin-top:12px}
-.rte-more .nar{display:none}
-@container col (max-width:350px){
-  .rte-tb{gap:1px;padding:5px 4px}.rte-tb button{width:31px;height:32px}.rte-tb>i{margin:0 2px}
-  .rte-tb>button[data-v="redo"]{display:none}.rte-more .nar{display:grid}
-}
+
+/* round 3: one-row toolbar, the rest under «…» (rteFit) */
+.rte-tb button{flex:none}.rte-tb button>span{display:none}
+.rte-tb>i{flex:none}
+.rte-tb>.rte-mbtn{margin-left:auto}
+.rte-tb [hidden]{display:none!important}
+.rte-pop{position:absolute;right:6px;top:46px;z-index:6;display:grid;min-width:200px;padding:6px;border-radius:var(--r);background:var(--surf);border:1px solid var(--line);box-shadow:var(--shadow)}
+.rte-pop[hidden]{display:none}
+.rte-pop button{display:flex;align-items:center;gap:12px;min-height:42px;padding:0 10px;border-radius:10px;font-size:15px;color:var(--ink);text-align:left}
+.rte-pop button svg{width:19px;height:19px;flex:none}
+.rte-pop button:hover{background:var(--raise)}
+.rte-pop button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.rte .rte-ed{border-radius:0 0 var(--r) var(--r)}
+.md.bio{margin-top:0;font-size:15.5px;line-height:1.55}.md.bio p:last-child{margin-bottom:0}
+.md.cdesc{margin-top:14px;font-size:15px}
+.field.rte,.rte-box,.rte-tb{min-width:0;max-width:100%}
+
+/* -- round 3: follower counts live in the photo caption, one quiet line; the «as others see you» panel is one card with its switch -- */
+.pc-stats{display:flex;flex-wrap:wrap;gap:0 16px;margin-top:4px}
+.pc-stats button{display:inline-flex;align-items:baseline;gap:5px;min-height:32px;padding:0;font-size:13.5px;color:rgba(255,255,255,.86)}
+.pc-stats b{font-size:14.5px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
+.pc-stats button:hover{color:#fff}.pc-stats button:hover span,.pc-stats button:hover{text-decoration:underline;text-underline-offset:3px}
+.pv-panel{margin:12px 0 0;padding:14px;border-radius:var(--r-l);background:var(--raise)}
+.pv-h{display:flex;gap:12px;align-items:flex-start;font-size:14px;line-height:1.45;color:var(--mute)}
+.pv-h svg{flex:none;width:22px;height:22px;margin-top:1px;color:var(--ink)}
+.pv-h b{display:block;font-size:15px;color:var(--ink)}
+.pv-panel .seg{margin-top:12px;background:var(--surf)}
+
+/* -- round 3: long names, nicks, cities, titles (checked at the input limits with FT_QA.stress()) -- */
+.one{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-row .tx b,.chat-row .tx small,.frow .tx small,.post-h .tx small,.nmt{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.post-h .tx,.comment .tx{min-width:0}
+.post-h .tx b,.comment .pnm{display:flex;align-items:center;min-width:0;max-width:100%}
+.post-h .tx b>.nbadge,.comment .pnm>.nbadge{flex:none;top:0}
+.matches .mn{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lk .inf b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.li .tx{min-width:0}.li .tx b{overflow-wrap:break-word;-webkit-hyphens:auto;hyphens:auto}
+/* a long name keeps to two lines in the photo caption; a long event title grows the cover instead of sliding under the buttons */
+.pc-name .pcn{font:inherit;letter-spacing:inherit;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;max-width:100%}
+.ev-hero{height:auto;min-height:240px;display:flex;flex-direction:column;justify-content:flex-end}
+.ev-hero .pc-info{position:relative;padding-top:calc(76px + var(--safe-t))}
+/* the photo keeps its ratio as a minimum (spacer), the caption may make the card taller */
+.hero:has(>.pc-info){display:grid;aspect-ratio:auto}
+.hero:has(>.pc-info)::before{content:"";grid-area:1/1;aspect-ratio:1/1}
+@container stage (min-width:768px){.hero:has(>.pc-info)::before{aspect-ratio:4/3}}
+.hero>.pc-info{position:relative;grid-area:1/1;align-self:end;padding-top:calc(96px + var(--safe-t))}
 </style>
 </head>
 <body>
@@ -1680,6 +1720,7 @@ function freshState(persona){
    {id:'n4',type:'like',p:'kira',t:ago(3),read:false,go:['D06']},
    {id:'n5',type:'reply',p:'dan',post:'m1',t:ago(6),read:true,go:['F05',{id:'m1'}]},
    {id:'n6',type:'grant',p:'mia',t:ago(28),read:true,go:['P08',{id:'mia'}]},
+   {id:'n8',type:'follow',p:'lina',t:ago(2),read:false,go:['P10',{id:'me',tab:'followers'}]},
    {id:'n7',type:'group',c:'rope',t:ago(60),read:true,go:['C03',{id:'rope'}]},
   ]:[],
   updates:full?[{id:'u1',e:'e1',t:ago(3),read:false,text:{ru:'Начало перенесли на 19:00. Возьмите удобную одежду.',en:'Start moved to 19:00. Bring comfortable clothes.'}},{id:'u2',c:'rope',t:ago(30),read:true,text:{ru:'Новые правила фотосъёмки на встречах — загляните в раздел «Правила».',en:'New photo rules for meetups — see the Rules tab.'}}]:[],
@@ -2317,7 +2358,7 @@ function mdInline(s){const keep=[];const put=h=>`\u0000${keep.push(h)-1}\u0000`;
  s=s.replace(/!?\[([^\]\n]{1,120})\]\((https?:\/\/[^\s()<>"']{1,400})\)/g,(_,t,u)=>put(`<a href="${u}" data-act="mdLink" data-v="${u}" rel="noopener noreferrer nofollow">${t}</a>`));
  s=s.replace(/\*\*([^*\n]+)\*\*|__([^_\n]+)__/g,(_,a,b)=>`<b>${a||b}</b>`).replace(/~~([^~\n]+)~~/g,'<s>$1</s>').replace(/(^|[\s(])\*([^*\n]+)\*(?=$|[\s).,!?:;])/g,'$1<i>$2</i>').replace(/(^|[\s(])_([^_\n]+)_(?=$|[\s).,!?:;])/g,'$1<i>$2</i>');
  return s.replace(/\u0000(\d+)\u0000/g,(_,i)=>keep[+i]);}
-function md(src){const lines=esc(String(src||'')).split('\n');let out='',list=null,para=[];
+function md(src,cls){const lines=esc(String(src||'')).split('\n');let out='',list=null,para=[];
  const flushP=()=>{if(para.length){out+=`<p>${para.map(mdInline).join('<br>')}</p>`;para=[];}};const flushL=()=>{if(list){out+=`<${list.t}>${list.items.map(x=>`<li>${mdInline(x)}</li>`).join('')}</${list.t}>`;list=null;}};
  for(let k=0;k<lines.length;k++){const l=lines[k];let m;
   if(!l.trim()){flushP();flushL();continue;}
@@ -2326,7 +2367,9 @@ function md(src){const lines=esc(String(src||'')).split('\n');let out='',list=nu
   if((m=l.match(/^&gt;\s?(.*)/))){flushP();const q=[m[1]];while(k+1<lines.length&&/^&gt;/.test(lines[k+1]))q.push(lines[++k].replace(/^&gt;\s?/,''));out+=`<blockquote>${q.map(mdInline).join('<br>')}</blockquote>`;continue;}
   if((m=l.match(/^#{1,3}\s+(.*)/))){flushP();out+=`<h4>${mdInline(m[1])}</h4>`;continue;}
   para.push(l);}
- flushP();flushL();return `<div class="md">${out}</div>`;}
+ flushP();flushL();return `<div class="md${cls?' '+cls:''}">${out}</div>`;}
+/** Markdown → one line of plain text, for list rows and previews */
+const mdPlain=s=>String(s||'').replace(/!?\[([^\]]*)\]\([^)]*\)/g,'$1').replace(/^\s*(#{1,3}|>|[-*]|\d+[.)])\s+/gm,'').replace(/(\*\*|__|~~|`)/g,'').replace(/(^|\s)[*_]([^*_\n]+)[*_](?=\s|$|[.,!?:;])/g,'$1$2').replace(/\s*\n+\s*/g,' ').trim();
 ACT.mdLink=(a,e)=>{e?.stopPropagation();const u=a.dataset.v;let host='';try{host=new URL(u).host;}catch(_){return;}if(!/^https?:$/.test(new URL(u).protocol))return;
  ask({icon:'link',title:L('Открыть внешнюю ссылку?','Open an external link?'),text:L(`Ссылка ведёт на ${host} — это не FetUre. Не вводи там пароль от FetUre.`,`The link goes to ${host}, outside FetUre. Don’t enter your FetUre password there.`),ok:L('Открыть','Open')}).then(ok=>{if(ok)window.open(u,'_blank','noopener,noreferrer');});};
 /** reply actions under a comment/reply: like, reply, more (report / block, delete own). kind 'p' = post replies, 'd' = discussion replies */
@@ -2344,13 +2387,29 @@ ACT.rDel=a=>{const x=replyAt(a);if(!x||x.c.a!=='me')return;closeSheet(true);ask(
    The stored value stays the same safe Markdown that md() renders, so drafts, validation, preview and the API contract
    don't change. Rendering into the editor always goes through md() (escaped text), pasting is plain text only,
    and only http(s) links survive. Prototype uses execCommand; the React app takes a real editor (see the plan, round 2). */
-function rteHTML(v){const h=md(v);return h.slice(16,-6).replace(/ data-act="mdLink" data-v="[^"]*"/g,'');}
-function rteField(o){const r=cur();const v=r.f[o.name]??'';const err=r.err&&r.err[o.name];
- const b=(c,icon,label,x='')=>`<button type="button" data-act="rte" data-v="${c}" aria-label="${label}" title="${label}" ${x}>${I[icon]}</button>`;
+function rteHTML(v){return md(v).replace(/^<div class="md[^"]*">/,'').replace(/<\/div>$/,'').replace(/ data-act="mdLink" data-v="[^"]*"/g,'');}
+/** o.name — route form field (r.f); o.local — a field inside a sheet: no route state, the value lives on the editor
+ *  (data-md), read it with rteVal(id). The toolbar is one row: what doesn’t fit goes under «…» (rteFit). */
+function rteField(o){const r=cur();const v=o.local?(o.value||''):(r.f[o.name]??'');const err=!o.local&&r.err&&r.err[o.name];
+ const b=(c,icon,label,x='')=>`<button type="button" data-act="rte" data-v="${c}" aria-label="${label}" title="${label}" ${x}>${I[icon]}<span>${label}</span></button>`;
  return `<div class="field rte ${err?'err':''}" data-field="${o.name}">${o.label?`<span>${o.label}</span>`:''}<div class="rte-box">
- <div class="rte-tb" role="toolbar" aria-label="${L('Оформление текста','Text formatting')}">${b('undo','undo',L('Отменить','Undo'))}${b('redo','redo',L('Повторить','Redo'))}<i></i>${b('bold','fbold',L('Жирный','Bold'),'aria-pressed="false"')}${b('italic','fital',L('Курсив','Italic'),'aria-pressed="false"')}${b('strikeThrough','fstrike',L('Зачёркнутый','Strikethrough'),'aria-pressed="false"')}${b('link','link',L('Ссылка','Link'))}${o.media?b('media','image',L('Фото или видео','Photo or video'),`data-media="${o.media}"`):''}${b('h4','fhead',L('Заголовок','Heading'),'aria-pressed="false"')}<i></i><span class="rte-more">${b('redo','redo',L('Повторить','Redo'),'class="nar"')}${b('insertUnorderedList','flist',L('Список','List'),'aria-pressed="false"')}${b('insertOrderedList','folist',L('Нумерованный список','Numbered list'),'aria-pressed="false"')}${b('blockquote','fquote',L('Цитата','Quote'),'aria-pressed="false"')}</span>${b('more','more',L('Ещё','More'),'aria-expanded="false"')}</div>
- <div class="inp rte-ed ${v?'':'is-empty'}" contenteditable="true" role="textbox" aria-multiline="true" aria-label="${esc(o.label||o.ph||'')}" data-in="rte" data-name="${o.name}" data-ph="${esc(o.ph||'')}" ${o.max?`data-max="${o.max}"`:''} ${err?'aria-invalid="true"':''}>${rteHTML(v)}</div></div>
+ <div class="rte-tb" role="toolbar" aria-label="${L('Оформление текста','Text formatting')}">${b('undo','undo',L('Отменить','Undo'))}${b('redo','redo',L('Повторить','Redo'))}<i></i>${b('bold','fbold',L('Жирный','Bold'),'aria-pressed="false"')}${b('italic','fital',L('Курсив','Italic'),'aria-pressed="false"')}${b('strikeThrough','fstrike',L('Зачёркнутый','Strikethrough'),'aria-pressed="false"')}${b('link','link',L('Ссылка','Link'))}${b('h4','fhead',L('Заголовок','Heading'),'aria-pressed="false"')}<i></i>${b('insertUnorderedList','flist',L('Список','List'),'aria-pressed="false"')}${b('insertOrderedList','folist',L('Нумерованный список','Numbered list'),'aria-pressed="false"')}${b('blockquote','fquote',L('Цитата','Quote'),'aria-pressed="false"')}<button type="button" class="rte-mbtn" data-act="rte" data-v="more" aria-label="${L('Ещё оформление','More formatting')}" aria-expanded="false" hidden>${I.more}</button></div>
+ <div class="rte-pop" role="menu" hidden></div>
+ <div class="inp rte-ed ${v?'':'is-empty'}" contenteditable="true" role="textbox" aria-multiline="true" aria-label="${esc(o.label||o.ph||'')}" data-in="rte" data-name="${o.name}" ${o.local?`id="${o.local}" data-local="1"`:''} data-md="${esc(v)}" data-ph="${esc(o.ph||'')}" ${o.max?`data-max="${o.max}"`:''} ${err?'aria-invalid="true"':''}>${rteHTML(v)}</div></div>
  ${err?`<div class="ferr">${I.alert}${err}</div>`:''}${o.max?`<div class="counter" data-count="${o.name}">${String(v).length} / ${o.max}</div>`:''}</div>`;}
+const rteVal=id=>document.getElementById(id)?.dataset.md??'';
+/** one-row toolbar: show everything, then hide from the end until the row fits; hidden commands go into the «…» menu */
+function rteFit(box){const tb=$('.rte-tb',box),pop=$('.rte-pop',box),mb=$('.rte-mbtn',tb);if(!tb||!tb.clientWidth)return;
+ const items=[...tb.children].filter(x=>x!==mb);items.forEach(x=>x.hidden=false);mb.hidden=true;pop.innerHTML='';
+ const over=()=>tb.scrollWidth>tb.clientWidth+1;if(!over()){box.classList.remove('pop-on');return;}
+ mb.hidden=false;const hid=[];
+ for(let k=items.length-1;k>=0&&over();k--){if(items[k].tagName==='I'){items[k].hidden=true;continue;}items[k].hidden=true;hid.unshift(items[k]);}
+ // a separator never ends the visible row
+ for(let k=items.length-1;k>=0;k--){if(items[k].hidden)continue;if(items[k].tagName==='I')items[k].hidden=true;else break;}
+ pop.innerHTML=hid.map(x=>{const c=x.cloneNode(true);c.hidden=false;c.setAttribute('role','menuitem');return c.outerHTML;}).join('');}
+const rteObs=typeof ResizeObserver==='function'?new ResizeObserver(es=>es.forEach(e=>rteFit(e.target))):null;
+new MutationObserver(()=>$$('.rte-box:not([data-fit])').forEach(b=>{b.dataset.fit=1;rteFit(b);rteObs?.observe(b);})).observe(document.body,{childList:true,subtree:true});
+document.addEventListener('click',e=>{if(!e.target.closest('.rte-mbtn,.rte-pop'))$$('.rte-box.pop-on').forEach(b=>{b.classList.remove('pop-on');$('.rte-pop',b).hidden=true;$('.rte-mbtn',b).setAttribute('aria-expanded','false');});});
 /** editor DOM → Markdown. Only the tags the toolbar makes are kept; everything else becomes its text. */
 function rteMd(root){
  const wrap=(m,x)=>{const t=x.match(/^(\s*)([\s\S]*?)(\s*)$/);return t[2]?`${t[1]}${m}${t[2]}${m}${t[3]}`:x;};
@@ -2369,19 +2428,19 @@ function rteMd(root){
   else if(g==='UL'||g==='OL'){const it=[...c.children].filter(x=>x.tagName==='LI').map(x=>inl(x).replace(/\n/g,' ').trim()).filter(Boolean);if(it.length)out.push(it.map((x,k)=>(g==='OL'?`${k+1}. `:'- ')+x).join('\n'));}
   else{const t=lines(inl(c)).join('\n');if(t.trim())out.push(t);}});
  walk(root);flush();return out.join('\n\n').trim();}
-const rteSync=ed=>{const r=cur();const name=ed.dataset.name;const v=rteMd(ed);r.f[name]=v;r.dirty=true;ed.classList.toggle('is-empty',!ed.textContent.trim()&&!ed.querySelector('li'));
- if(r.err&&r.err[name])setErr(name,'');const c=$(`[data-count="${name}"]`);if(c){const max=+ed.dataset.max;c.textContent=`${v.length} / ${max}`;c.classList.toggle('over',v.length>max);}};
+const rteSync=ed=>{const r=cur();const name=ed.dataset.name;const v=rteMd(ed);ed.dataset.md=v;if(!ed.dataset.local){r.f[name]=v;r.dirty=true;}ed.classList.toggle('is-empty',!ed.textContent.trim()&&!ed.querySelector('li'));
+ if(!ed.dataset.local&&r.err&&r.err[name])setErr(name,'');const c=$(`[data-count="${name}"]`,ed.closest('.rte'));if(c){const max=+ed.dataset.max;c.textContent=`${v.length} / ${max}`;c.classList.toggle('over',v.length>max);}};
 IN.rte=el=>rteSync(el);
-const rteState=()=>{const ed=document.activeElement?.closest?.('.rte-ed');if(!ed)return;const tb=$('.rte-tb',ed.closest('.rte'));const blk=String(document.queryCommandValue('formatBlock')||'').toLowerCase();
+const rteState=()=>{const ed=document.activeElement?.closest?.('.rte-ed');if(!ed)return;const tb=ed.closest('.rte-box');const blk=String(document.queryCommandValue('formatBlock')||'').toLowerCase();
  $$('[aria-pressed]',tb).forEach(b=>{const c=b.dataset.v;let on=false;try{on=c==='h4'||c==='blockquote'?blk===c:document.queryCommandState(c);}catch(_){}b.setAttribute('aria-pressed',String(!!on));});};
 document.addEventListener('selectionchange',rteState);
 // toolbar buttons must not take the caret away from the text
-document.addEventListener('mousedown',e=>{if(e.target.closest('.rte-tb button'))e.preventDefault();});
+document.addEventListener('mousedown',e=>{if(e.target.closest('.rte-tb button,.rte-pop button'))e.preventDefault();});
 document.addEventListener('paste',e=>{const ed=e.target.closest?.('.rte-ed');if(!ed)return;e.preventDefault();document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text/plain'));});
 document.addEventListener('focusin',e=>{if(e.target.closest?.('.rte-ed')){try{document.execCommand('defaultParagraphSeparator',false,'p');document.execCommand('styleWithCSS',false,false);}catch(_){}}});
-ACT.rte=a=>{const box=a.closest('.rte'),ed=$('.rte-ed',box),c=a.dataset.v;
- if(c==='more'){const on=box.classList.toggle('more');a.setAttribute('aria-expanded',String(on));return;}
- if(c==='media'){ACT[a.dataset.media]?.(a);return;}
+ACT.rte=a=>{const box=a.closest('.rte-box'),ed=$('.rte-ed',box),c=a.dataset.v;
+ if(c==='more'){const on=box.classList.toggle('pop-on');$('.rte-pop',box).hidden=!on;a.setAttribute('aria-expanded',String(on));return;}
+ if(a.closest('.rte-pop')){box.classList.remove('pop-on');$('.rte-pop',box).hidden=true;$('.rte-mbtn',box).setAttribute('aria-expanded','false');}
  if(document.activeElement!==ed)ed.focus();
  if(c==='link'){const sel=getSelection();const range=sel.rangeCount?sel.getRangeAt(0).cloneRange():null;const txt=sel.toString();
   ask({icon:'link',title:L('Ссылка','Link'),text:`<input class="inp" id="rteUrl" type="url" inputmode="url" placeholder="https://" aria-label="${L('Адрес ссылки','Link address')}">`,ok:L('Вставить','Insert')}).then(ok=>{
@@ -2394,7 +2453,7 @@ ACT.rte=a=>{const box=a.closest('.rte'),ed=$('.rte-ed',box),c=a.dataset.v;
  rteSync(ed);rteState();};
 function postCard(p,o={}){
  const mine=p.author==='me';const pid=JSON.stringify({id:p.id});
- const head=`<div class="post-h"><button class="who" ${profGo(p.author)}>${av(p.author,'sm')}<span class="tx"><b>${esc(pname(p.author))}${nameBadges(person(p.author))}</b><small>${F.rel(p.t)}${p.aud==='followers'?` · <span class="aud">${I.people}${L('подписчикам','followers')}</span>`:''}${o.community&&p.community?` · ${esc(T(COMMUNITIES[p.community].name))}`:''}</small></span></button><button class="ibtn ghost sm" data-act="postMenu" data-v="${p.id}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
+ const head=`<div class="post-h"><button class="who" ${profGo(p.author)}>${av(p.author,'sm')}<span class="tx"><b><span class="nmt">${esc(pname(p.author))}</span>${nameBadges(person(p.author))}</b><small>${F.rel(p.t)}${p.aud==='followers'?` · <span class="aud">${I.people}${L('подписчикам','followers')}</span>`:''}${o.community&&p.community?` · ${esc(T(COMMUNITIES[p.community].name))}`:''}</small></span></button><button class="ibtn ghost sm" data-act="postMenu" data-v="${p.id}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
  const media=postMediaHTML(p,o);
  const tags=p.tags&&p.tags.length?`<div class="tags">${p.tags.map(t=>`<button data-go="F04" data-p='${JSON.stringify({id:t})}'>#${esc(topic(t))}</button>`).join('')}</div>`:'';
  const nC=p.comments.length;
@@ -2444,7 +2503,7 @@ const commAv=c=>evCover(c,'users3');
 function commCard(id,o={}){
  const c=COMMUNITIES[id];const j=S.joined.has(id),pend=S.pendingJoin.has(id);
  const state=ownsCommunity(id)?`<span class="pill ok">${I.gear}${L('Ты ведёшь','You host')}</span>`:j?`<span class="pill ok">${I.check}${L('Ты участник','Member')}</span>`:pend?`<span class="pill wait">${L('Заявка отправлена','Request sent')}</span>`:c.privacy==='closed'?`<span class="pill">${I.lock}${L('По заявке','By request')}</span>`:'';
- return `<button class="cmc" data-go="C03" data-p='${JSON.stringify({id})}' style="animation-delay:${(o.i||0)*40}ms"><div class="cv" style="position:relative">${commAv(c)}</div><div class="tx"><b>${esc(T(c.name))}</b><small>${esc(T(c.desc))}</small><div class="meta"><span>${pl(C.members(id),['участник','участника','участников'],['member','members'])}</span><span>·</span><span>${c.city==='online'?L('онлайн','online'):esc(city(c.city))}</span>${state?` ${state}`:''}</div></div></button>`;
+ return `<button class="cmc" data-go="C03" data-p='${JSON.stringify({id})}' style="animation-delay:${(o.i||0)*40}ms"><div class="cv" style="position:relative">${commAv(c)}</div><div class="tx"><b>${esc(T(c.name))}</b><small>${esc(mdPlain(T(c.desc)))}</small><div class="meta"><span>${pl(C.members(id),['участник','участника','участников'],['member','members'])}</span><span>·</span><span>${c.city==='online'?L('онлайн','online'):esc(city(c.city))}</span>${state?` ${state}`:''}</div></div></button>`;
 }
 
 /* ---------- sheet builders reused across screens ---------- */
@@ -3020,7 +3079,7 @@ ACT.editPost=a=>{closeSheet(true);const p=postById(a.dataset.v);go('F07',{id:p.i
 SC.F05={title:()=>L('Публикация','Post'),valid:p=>!!postById(p.id)&&!isBlocked(postById(p.id).author),render:(p,r)=>{const x=postById(p.id);
  return `${bar(L('Публикация','Post'),{back:1,sm:1})}<div class="view nodock cta1"><div class="wrap">${postCard(x,{detail:1})}
  <div class="sec" id="replies">${pl(x.comments.length,['ответ','ответа','ответов'],['reply','replies'])}</div>
- ${x.comments.length?x.comments.map((c,i)=>isBlocked(c.a)?'':`<div class="comment ${c.status||''}">${whoLink(c.a)}<div class="tx"><button class="plink pnm" ${profGo(c.a)}>${esc(pname(c.a))}${nameBadges(person(c.a))}</button><time>${c.status==='pending'?L('отправляется…','sending…'):c.status==='failed'?L('не отправлено','not sent'):F.rel(c.t)}</time><p>${esc(T(c.text))}</p>${c.status==='failed'?`<button class="btn text auto" style="min-height:32px;padding:0;color:var(--danger)" data-act="retryComment" data-v="${i}">${L('Повторить','Retry')}</button>`:''}${replyActs('p',x.id,i,c)}</div></div>`).join(''):`<p class="note">${L('Пока никто не ответил. Начни разговор — по-доброму.','No replies yet. Start the conversation — kindly.')}</p>`}
+ ${x.comments.length?x.comments.map((c,i)=>isBlocked(c.a)?'':`<div class="comment ${c.status||''}">${whoLink(c.a)}<div class="tx"><button class="plink pnm" ${profGo(c.a)}><span class="nmt">${esc(pname(c.a))}</span>${nameBadges(person(c.a))}</button><time>${c.status==='pending'?L('отправляется…','sending…'):c.status==='failed'?L('не отправлено','not sent'):F.rel(c.t)}</time><p>${esc(T(c.text))}</p>${c.status==='failed'?`<button class="btn text auto" style="min-height:32px;padding:0;color:var(--danger)" data-act="retryComment" data-v="${i}">${L('Повторить','Retry')}</button>`:''}${replyActs('p',x.id,i,c)}</div></div>`).join(''):`<p class="note">${L('Пока никто не ответил. Начни разговор — по-доброму.','No replies yet. Start the conversation — kindly.')}</p>`}
  </div></div><div class="inputbar"><textarea id="cmt" rows="1" placeholder="${L('Ответить…','Reply…')}" aria-label="${L('Ответ','Reply')}" data-in="grow" data-enter="sendComment">${esc(r.f.cmt||'')}</textarea><button class="ibtn send" data-act="sendComment" aria-label="${L('Отправить','Send')}">${I.send}</button></div>`;}};
 IN.grow=el=>{el.style.height='auto';el.style.height=Math.min(120,el.scrollHeight)+'px';cur().f[el.id]=el.value;const s=el.parentNode.querySelector('.send');if(s)s.disabled=!el.value.trim();};
 ACT.focusReply=()=>{$('#cmt')?.focus();};
@@ -3069,10 +3128,10 @@ SC.F07={title:()=>L('Публикация','Post'),valid:p=>!p.id||!!ownPost(p.i
  const mediaBlock=m.length?grp(L(`Фото и видео · ${m.length}/${MEDIA_MAX}`,`Photos & video · ${m.length}/${MEDIA_MAX}`),`<div class="edit-ph">${m.map((x,i)=>`<div>${x.type==='video'?`<video src="${esc(x.url)}" muted playsinline preload="metadata"></video><span class="mainph">${ic('video',12)} ${fmtDur(x.dur||0)}</span>`:`<img src="${esc(x.url)}" alt="">`}<button class="rm" data-act="rmMedia" data-v="${i}" aria-label="${L('Убрать','Remove')}">${I.close}</button><button class="vw" data-act="viewDraftMedia" data-v="${i}" aria-label="${L('Посмотреть','View')}"></button></div>`).join('')}${m.length<MEDIA_MAX?`<button data-act="postMedia" aria-label="${L('Добавить фото или видео','Add photo or video')}">${I.plus}</button>`:''}</div>`):'';
  const pollBlock=r.poll?grp(L(`Опрос · ${r.poll.opts.length}/${POLL_MAX}`,`Poll · ${r.poll.opts.length}/${POLL_MAX}`),`${field({name:'pollQ',label:L('Вопрос','Question'),max:200,ph:L('О чём спросить людей?','What do you want to ask?')})}${r.poll.opts.map((o,i)=>`<div class="field pollopt ${r.err&&r.err['o'+i]?'err':''}" data-field="o${i}"><div class="inwrap"><span class="n">${i+1}</span><input class="inp" name="o${i}" data-in="pollOpt" data-i="${i}" value="${esc(o)}" maxlength="80" placeholder="${L('Вариант','Option')} ${i+1}" aria-label="${L('Вариант','Option')} ${i+1}">${r.poll.opts.length>2?`<button class="ibtn ghost sm" data-act="rmOpt" data-v="${i}" aria-label="${L('Убрать вариант','Remove option')}">${I.close}</button>`:''}</div></div>`).join('')}${r.poll.opts.length<POLL_MAX?`<button class="btn text auto" data-act="addOpt">${I.plus}${L('Добавить вариант','Add option')}</button>`:''}${r.err&&r.err.opts?`<div class="ferr">${I.alert}${r.err.opts}</div>`:''}`,{right:`<button data-act="rmPoll">${L('Убрать','Remove')}</button>`,foot:L('Голос можно изменить или отменить. Кто как голосовал, не видно никому.','Votes can be changed or withdrawn. Nobody sees who voted for what.')+(ex?.poll?' '+L('Изменение вариантов сбросит голоса опроса.','Changing the options resets the poll votes.'):'')}):'';
  const resBlock=r.result?grp(L('Результат','Result'),el.length?`${(sel=>sel.length?`<div class="testcard" style="--n:${Math.min(4,sel.length)}">${jarsHTML(sel)}</div>`:'')(el.filter(j=>r.resSel.includes(j.t)).slice(0,4).map(j=>[j.t,j.lv]))}<div class="chips mt12">${el.map(j=>chipBtn(j.t,topic(j.t),r.resSel.includes(j.t),'resPick')).join('')}</div>`:`<p class="note">${L('Пока нечего показать: открой хотя бы одну тему для всех в «Я».','Nothing to show yet: make at least one topic public in Me.')}</p>`,{right:`<button data-act="rmResult">${L('Убрать','Remove')}</button>`,foot:L('Только темы, открытые всем, до 4. Ответы, границы и скрытые темы не попадают.','Only topics open to everyone, up to 4. Answers, limits and hidden topics are never included.')}):'';
- const tools=`<div class="attach">${r.poll?'':`<button data-act="addPoll">${I.poll}<span>${L('Опрос','Poll')}</span></button>`}${r.result?'':`<button data-act="addResult">${I.test}<span>${L('Результат','Result')}</span></button>`}</div>`;
+ const tools=`<div class="attach">${m.length?'':`<button data-act="postMedia">${I.image}<span>${L('Фото/видео','Photo/video')}</span></button>`}${r.poll?'':`<button data-act="addPoll">${I.poll}<span>${L('Опрос','Poll')}</span></button>`}${r.result?'':`<button data-act="addResult">${I.test}<span>${L('Результат','Result')}</span></button>`}</div>`;
  return `${bar(ex?L('Редактирование','Edit post'):L('Новая публикация','New post'),{back:1,sm:1,actions:`<button class="btn text auto" data-act="saveDraft">${L('В черновик','Save draft')}</button>`})}<div class="view nodock cta1"><div class="wrap">
  ${S.postEdits[p.id]?`<p class="note mb12">${L('Открыты сохранённые правки. Исходная публикация пока не изменена.','Saved changes are open. The original post is unchanged.')}</p>`:''}<section class="grp"><div class="card compose"><div class="row" style="gap:10px">${av('me','sm')}<button class="pill v" data-act="audience">${a[1]}${a[2]} ${ic('down',13)}</button></div>
- ${rteField({name:'text',label:'',max:1000,media:'postMedia',ph:r.poll?L('Пара слов к опросу — по желанию','A few words about the poll — optional'):L('О чём хочется рассказать?','What would you like to share?')})}
+ ${rteField({name:'text',label:'',max:1000,ph:r.poll?L('Пара слов к опросу — по желанию','A few words about the poll — optional'):L('О чём хочется рассказать?','What would you like to share?')})}
  ${tools}</div>${r.err&&r.err.media?`<div class="ferr">${I.alert}${r.err.media}</div>`:''}</section>
  ${mediaBlock}${pollBlock}${resBlock}
  ${grp(L('Темы · до 3','Topics · up to 3'),chipPicker({items:topicItems(),sel:r.tags,act:'postTag',title:L('Темы публикации','Post topics'),max:3,cats:true}))}
@@ -3230,7 +3289,7 @@ SC.E03={title:p=>EV(p.id)?T(EV(p.id).title):'',valid:p=>!!EV(p.id)&&(EV(p.id).st
   <div class="li"><span class="ico g">${I.globe}</span><span class="tx"><b>${e.lang}</b><small>${L('Язык события','Event language')}</small></span></div>
   <div class="li"><span class="ico a">${I.ticket}</span><span class="tx"><b>${e.price?esc(T(e.price)):L('Бесплатно','Free')}</b><small>${e.external?L(`Билеты: ${e.external}`,`Tickets: ${e.external}`):e.approval?L('Участие по заявке','By application'):L('Можно просто прийти','Just come along')}</small></span></div>
  </div>
- <div class="sec">${L('О событии','About')}</div><p style="margin:0;font-size:15.5px;line-height:1.55">${esc(T(e.desc))}</p>
+ <div class="sec">${L('О событии','About')}</div>${md(T(e.desc),'bio')}
  ${e.gallery?.length?`<div class="sec">${L('Фотографии','Photos')}</div>${mediaGrid(e.gallery,{id})}`:''}
  ${e.reqs&&e.reqs.length?`<div class="sec">${L('Условия участия','Requirements')}</div><div class="card">${e.reqs.map(x=>`<div class="fact"><i class="v">${I.check}</i><span>${esc(T(x))}</span></div>`).join('')}<p class="note mt8">${L('Условия задаёт организатор. FetUre не даёт медицинских и юридических гарантий.','The organiser sets the requirements. FetUre gives no medical or legal guarantees.')}</p></div>`:''}
  ${rsvpRow}
@@ -3302,7 +3361,7 @@ SC.E11={title:()=>L('Новое событие','New event'),render:(p,r)=>{
  let body='';
  if(step===1)body=`${field({name:'title',label:L('Название','Title'),ph:L('Например, «Кофе для новичков»','For example, “Newcomers coffee”'),max:80})}
   <div class="field ${r.err&&r.err.type?'err':''}" data-field="type"><span class="flabel">${L('Тип','Type')}</span>${chipGroup(['meetup','workshop','talk','party'].map(t=>[t,evType(t)]),[f.type],'evfType')}${r.err&&r.err.type?`<div class="ferr">${I.alert}${r.err.type}</div>`:''}</div>
-  ${field({name:'desc',label:L('Описание','Description'),textarea:1,max:1500,ph:L('Что будет, для кого, как всё устроено','What happens, who it’s for, how it works'),attrs:'rows="5"'})}
+  ${rteField({name:'desc',label:L('Описание','Description'),max:1500,ph:L('Что будет, для кого, как всё устроено','What happens, who it’s for, how it works')})}
   <div class="field"><span class="flabel">${L('Обложка','Cover')}</span>${f.cover?`<div class="evcov"><img src="${esc(f.cover)}" alt=""><button class="rm" data-act="evfCoverRm" aria-label="${L('Убрать обложку','Remove cover')}">${I.close}</button></div>`:''}<button class="btn soft md" data-act="evfCover" style="margin-bottom:10px">${I.image}${f.cover?L('Заменить фото','Replace photo'):L('Загрузить фото 16:9','Upload a 16:9 photo')}</button><div class="note" style="margin-bottom:8px">${L('или выбери цвет:','or pick a colour:')}</div><div class="chips">${['rose','sea','amber','lilac','moss','coal'].map(k=>`<button data-act="evfPlate" data-v="${k}" aria-label="${k}" style="position:relative;width:52px;height:52px;border-radius:16px;overflow:hidden;outline:${f.plate===k?'3px solid var(--ink)':'0'};outline-offset:2px">${plate(k)}</button>`).join('')}</div></div>
   <div class="field"><span class="flabel">${L('Фото события','Event photos')} · ${f.gallery.length}/6<i>${L('необязательно','optional')}</i></span>${f.gallery.length?`<div class="edit-ph">${f.gallery.map((m,i)=>`<div><img src="${esc(m.url)}" alt=""><button class="rm" data-act="evfGalRm" data-v="${i}" aria-label="${L('Убрать фото','Remove photo')} ${i+1}">${I.close}</button></div>`).join('')}</div>`:''}${f.gallery.length<6?`<button class="btn soft md" data-act="evfGal">${I.image}${L('Добавить фото места или прошлых встреч','Add photos of the venue or past meetups')}</button>`:''}<div class="fhint">${L('Без узнаваемых лиц без согласия. Пройдут ту же проверку, что и обложка.','No recognisable faces without consent. Reviewed like the cover.')}</div></div>`;
  if(step===2)body=`<div class="field"><span class="flabel">${L('Формат','Format')}</span>${seg([['offline',L('Офлайн','In person')],['online',L('Онлайн','Online')]],f.format,'evfFormat','sm')}</div>
@@ -3455,14 +3514,14 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
   ${photoCount(id)>1?`<div class="pc-zone l" data-ph="-1"></div><div class="pc-zone r" data-ph="1"></div>`:''}<div class="pc-zone c" data-ph="0" aria-hidden="true"></div>
   <div class="pc-tags">${likesMe?`<span class="pc-liked">${I.heartf}${L('Ты нравишься','Likes you')}</span>`:''}<span class="pc-score"><b>${sh.few?'—':sh.match.length}</b><small>${sh.few?L('мало данных','not enough data'):pl(sh.match.length,['общая тема','общие темы','общих тем'],['shared topic','shared topics'],true)}</small></span></div>
   <div class="stamp l">${L('Да','Like')}</div><div class="stamp n">${L('Мимо','Pass')}</div>
-  <div class="pc-info"><h2 class="pc-name">${esc(pname(id))}${p.age?`<span>${p.age}</span>`:''}${nameBadges(p)}</h2>
+  <div class="pc-info"><h2 class="pc-name"><span class="pcn">${esc(pname(id))}</span>${p.age?`<span>${p.age}</span>`:''}${nameBadges(p)}</h2>
    <div class="pc-who"><span>${esc(whoLine(id))}</span><span>${esc(placeLine(id))}</span>${p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>
    <div class="pc-keys">${keys.map(k=>`<span>${esc(k)}</span>`).join('')}</div>
    <div class="pc-hint">${I.down}${L('Листай вниз — что у вас общего','Scroll down — what you share')}</div></div>
  </div>
  <div class="pc-body">
   <button class="why" data-go="P05" data-id="${id}">${venn(sh.few?'?':sh.match.length,{mini:1})}<span class="grow"><b>${esc(sharedSummary(id))}</b><span>${L('Только то, что вы оба открыли','Only what you both made visible')}</span></span>${I.chev}</button>
-  <div class="sec">${L('О себе','About')}</div><p style="margin:0;font-size:15px;line-height:1.55">${esc(T(p.bio))}</p>
+  <div class="sec">${L('О себе','About')}</div>${md(T(p.bio),'bio')}
   ${sh.match.length?`<div class="sec">${L('Совпадает','In common')}</div><div class="chips">${sh.match.map(m=>`<span class="chip hit">${esc(topic(m))}</span>`).join('')}</div>`:''}
   ${sh.complement.length?`<div class="sec">${L('Роли','Roles')}</div>${sh.complement.map(c=>`<div class="fact"><i class="g">${I.check}</i><span>${esc(c)}</span></div>`).join('')}`:''}
   ${sh.discuss.length?`<div class="sec">${L('Стоит обсудить','Worth discussing')}</div>${sh.discuss.slice(0,2).map(c=>`<div class="fact"><i class="a">${I.warn}</i><span>${esc(c)}</span></div>`).join('')}`:''}
@@ -3635,7 +3694,7 @@ function profileView(id,r,o={}){
  const modOf=Object.keys(COMMUNITIES).filter(c=>COMMUNITIES[c].mods.includes(id));
  const kv=[[L('Местоимения','Pronouns'),opt('pron',p.pron)],[L('Гендер','Gender'),(p.gender||[]).map(g=>opt('gender',g)).join(', ')],[L('Ориентация','Orientation'),(p.orient||[]).map(g=>opt('orient',g)).join(', ')],[L('Сейчас','Status'),opt('status',p.status)],[L('Формат отношений','Relationship format'),fmtText(p.format)],[L('Роль','Role'),p.role&&p.role!=='none'?opt('role',p.role):''],[L('Ищет','Looking for'),p.dating?(p.seek||[]).map(s=>opt('seek',s)).join(', '):''],[L('Языки','Languages'),(p.langs||[]).map(x=>({ru:'русский',en:'English',de:'Deutsch'}[x])).join(', ')]].filter(x=>x[1]);
  /* V8: one page — profile, then the private profile right after it when access is open. No tabs. */
- const body=`${T(p.bio)?grp(L('О себе','About'),`<p class="bio">${esc(T(p.bio))}</p>`):self?grp(L('О себе','About'),`<button class="li" data-go="P02"><span class="ico">${I.edit}</span><span class="tx"><b>${L('Добавь пару слов о себе','Add a few words about yourself')}</b><small>${L('Так людям проще начать разговор','It makes starting a conversation easier')}</small></span>${I.chev}</button>`,{list:1}):''}
+ const body=`${T(p.bio)?grp(L('О себе','About'),md(T(p.bio),'bio')):self?grp(L('О себе','About'),`<button class="li" data-go="P02"><span class="ico">${I.edit}</span><span class="tx"><b>${L('Добавь пару слов о себе','Add a few words about yourself')}</b><small>${L('Так людям проще начать разговор','It makes starting a conversation easier')}</small></span>${I.chev}</button>`,{list:1}):''}
   ${kv.length?grp(L('Кратко','At a glance'),`<dl class="kv">${kv.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`):''}
   ${grp(L('Интересы','Interests'),pubJars(id).length?jarShelf(pubJars(id),{pre:1,act:self?'editJar':'topic',who:id,moreAct:self?'myJarsAll':'allJars'}):`<p class="note">${self?L('Открой интересы в «Я» — они появятся здесь.','Make interests public in Me — they’ll show here.'):L(`${pname(id)} пока не открыл(а) интересы.`,`${pname(id)} hasn’t shared interests yet.`)}</p>`,{foot:pubJars(id).length&&!self?L('Нажми на баночку — увидишь, что это и как у тебя.','Tap a jar to see what it is and how it is for you.'):''})}
   ${posts.length?`<div class="grp"><div class="grp-t"><span>${L('Публикации','Posts')} · ${posts.length}</span></div><div class="posts">${inert(posts.slice(0,3).map((x,i)=>postCard(x,{i})).join(''))}</div></div>`:''}
@@ -3646,16 +3705,16 @@ function profileView(id,r,o={}){
  <div class="view nodock top0"><div class="wrap">
  ${o.banner||''}
  <div class="hero">${me&&!p.photo?`<div class="plate" style="${PL.rose};position:absolute;inset:0"><span class="pi">${I.me}</span></div>`:photoBg(id,ix)+bigPhoto(id,ix)}${photoBars(id,ix)}${photoCount(id)>1?`<button class="pc-zone l" data-act="pPhoto" data-v="-1" aria-label="${L('Предыдущее фото','Previous photo')}"></button><button class="pc-zone r" data-act="pPhoto" data-v="1" aria-label="${L('Следующее фото','Next photo')}"></button>`:''}${p.photo?`<button class="pc-zone c" data-act="pView" aria-label="${L('Открыть фото на весь экран','Open photo full screen')}"></button>`:''}
-  <div class="pc-info"><h2 class="pc-name">${esc(displayName)}${p.age&&p.dating?`<span>${p.age}</span>`:''}${nameBadges(p)}</h2><div class="pc-who"><span>${esc(whoLine(id))}</span><span>${esc(placeLine(id))}</span>${!self&&p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>${keys.length?`<div class="pc-keys">${keys.map(k=>`<span>${esc(k)}</span>`).join('')}</div>`:''}</div></div>
- ${acts}${followCounts(id)}${pairLine(id,o)}${o.after||''}
+  <div class="pc-info"><h2 class="pc-name"><span class="pcn">${esc(displayName)}</span>${p.age&&p.dating?`<span>${p.age}</span>`:''}${nameBadges(p)}</h2><div class="pc-who"><span>${esc(whoLine(id))}</span><span>${esc(placeLine(id))}</span>${!self&&p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>${followCounts(id)}${keys.length?`<div class="pc-keys">${keys.map(k=>`<span>${esc(k)}</span>`).join('')}</div>`:''}</div></div>
+ ${o.before||''}${acts}${pairLine(id,o)}${o.after||''}
  ${!me&&mutual?`<p class="note center mt8">${L('Вы совпали — можно переписываться','You matched — you can chat')}</p>`:''}
  ${!me?`<button class="why mt12" data-go="P05" data-id="${id}">${venn(sh.few?'?':sh.match.length,{mini:1})}<span class="grow"><b>${esc(sharedSummary(id))}</b><span>${L('Что у вас общего','What you share')}</span></span>${I.chev}</button>`:o.asOther?`<div class="why mt12" aria-disabled="true">${venn('?',{mini:1})}<span class="grow"><b>${L('Общие темы — у каждого свои','Shared topics differ per person')}</b><span>${L('Человек увидит своё совпадение с тобой','Each person sees their own overlap with you')}</span></span></div>`:''}
  ${body}</div></div>`;if(me)delete S.ui.profilePreview;return html;
 }
 SC.P01={title:p=>pname(p.id),valid:p=>!!PEOPLE[p.id]&&!isBlocked(p.id),render:(p,r)=>profileView(p.id,r),after:()=>fillJars()};
 SC.P03={title:()=>L('Как видят мой профиль','My profile as others see it'),render:(p,r)=>{const lv=p.lv==='granted'?'granted':'all';S.ui.viewGrant=lv==='granted';try{
- const top=`<div class="alert info mt12">${I.eye}<span><b>${L('Так тебя видят другие','This is how others see you')}</b>${lv==='granted'?L('Так видит человек, которому ты открыл(а) расширенный профиль. Кнопки здесь не работают — это просмотр.','As seen by someone you shared your private profile with. Buttons don’t work here — it’s a preview.'):L('Так видит любой участник без доступа. Кнопки здесь не работают — это просмотр.','As any member without access sees it. Buttons don’t work here — it’s a preview.')}</span></div>${seg([['all',L('Любой участник','Any member')],['granted',L('С доступом','With access')]],lv,'p3lv')}`;
- return profileView('me',r,{asOther:true,grant:lv,banner:'',after:top});}finally{S.ui.viewGrant=false;}},after:()=>fillJars()};
+ const top=`<div class="pv-panel"><div class="pv-h">${I.eye}<span><b>${L('Так тебя видят другие','This is how others see you')}</b>${lv==='granted'?L('Так видит человек, которому ты открыл(а) расширенный профиль. Кнопки здесь не работают — это просмотр.','As seen by someone you shared your private profile with. Buttons don’t work here — it’s a preview.'):L('Так видит любой участник без доступа. Кнопки здесь не работают — это просмотр.','As any member without access sees it. Buttons don’t work here — it’s a preview.')}</span></div>${seg([['all',L('Любой участник','Any member')],['granted',L('С доступом','With access')]],lv,'p3lv')}</div>`;
+ return profileView('me',r,{asOther:true,grant:lv,banner:'',before:top});}finally{S.ui.viewGrant=false;}},after:()=>fillJars()};
 ACT.p3lv=a=>{const r=cur();r.p={...r.p,lv:a.dataset.v};refresh();};
 
 ACT.pPhoto=a=>{const id=cur().id==='P03'?'me':cur().p.id;if(!stepPhoto(id,+a.dataset.v)){const h=$('.hero');h?.classList.remove('nudge-l','nudge-r');void h?.offsetWidth;h?.classList.add(+a.dataset.v<0?'nudge-l':'nudge-r');return;}const h=$('.hero');const ix=S.ui.ph[id];const img=$('.hero>img:not(.mbg),.hero>.plate');if(img){const t=document.createElement('div');t.innerHTML=bigPhoto(id,ix);img.replaceWith(t.firstElementChild);}const bg=$('.hero>.mbg');if(bg){const t=document.createElement('div');t.innerHTML=photoBg(id,ix);if(t.firstElementChild)bg.replaceWith(t.firstElementChild);}$$('.hero .pc-bars i').forEach((b,i)=>b.classList.toggle('on',i===ix));};
@@ -3775,7 +3834,7 @@ function privProj(id){
 /** sections a grant opens: info → text + wishes & limits; photos/album/video → those media sections */
 function privOpenHTML(id,g,o={}){const pr=privProj(id),has=k=>g.granted.includes(k);
  const media=pr.media.filter(m=>has(m.sec));const wishes=pr.jars.filter(j=>!j.limit),limits=pr.jars.filter(j=>j.limit);
- const info=has('info')?`${pr.text?grp(L('От себя','In their words'),`<p class="bio">${esc(pr.text)}</p>`):''}${wishes.length?grp(L('Желания','Wishes'),jarsHTML(wishes,{act:o.preview?'':'topic',who:id})):''}${limits.length?grp(L('Границы','Limits'),jarsHTML(limits,{act:o.preview?'':'topic',who:id})):''}${!pr.text&&!pr.jars.length?`<p class="note">${L('Здесь пока ничего нет.','Nothing here yet.')}</p>`:''}`:'';
+ const info=has('info')?`${pr.text?grp(L('От себя','In their words'),md(pr.text,'bio')):''}${wishes.length?grp(L('Желания','Wishes'),jarsHTML(wishes,{act:o.preview?'':'topic',who:id})):''}${limits.length?grp(L('Границы','Limits'),jarsHTML(limits,{act:o.preview?'':'topic',who:id})):''}${!pr.text&&!pr.jars.length?`<p class="note">${L('Здесь пока ничего нет.','Nothing here yet.')}</p>`:''}`:'';
  const wm=o.preview?L('ник зрителя','viewer’s nick'):(S.me.nick||'');
  const mediaHTML=media.length?grp(L(`Фото и видео · ${media.length}`,`Photos & video · ${media.length}`),`<div class="pgrid">${media.map((m,k)=>`<button class="pcell" ${o.preview?'disabled':`data-act="privPeek" data-v="${id}" data-i="${k}"`}>${m.type==='video'?`<video src="${esc(m.src)}" muted playsinline preload="metadata"></video>`:`<img src="${esc(m.src)}" alt="" style="${m.style||''}" draggable="false">`}<span class="wm">${esc(wm)}</span></button>`).join('')}</div>`,{foot:o.preview?L('Каждый видит с собственным водяным знаком.','Everyone sees them with their own watermark.'):L('С твоим водяным знаком. Доступ могут отозвать в любой момент — уважай доверие.','With your watermark. Access can be revoked any time — respect the trust.')}):'';
  const head=`<div class="grp-t" id="priv"><span>${I.unlock} ${L('Расширенный профиль','Private profile')}</span><span class="note">${g.until?esc(F.left(g.until)):''}</span></div>`;
@@ -3806,7 +3865,7 @@ SC.P02={title:()=>L('Редактировать профиль','Edit profile'),
  <p class="note mt8">${L('Можно выбрать сразу несколько. Сжимаем и стираем геометку прямо на телефоне. Нажми на фото, чтобы кадрировать или сделать главным.','Pick several at once. We compress and wipe location on your phone. Tap a photo to crop it or make it main.')}</p>
  </div></section><section class="grp"><div class="grp-t"><span>${L('Основное','Basics')}</span></div><div class="card form-card">${field({name:'name',label:L('Имя','Name'),ph:'Alex',max:30})}
  ${field({name:'nick',label:L('Ник','Nickname'),icon:'at',attrs:'autocapitalize="off" spellcheck="false"',hint:L('Ник — часть аккаунта, отдельного «ника для знакомств» нет.','Your nickname belongs to your account — there’s no separate dating nickname.')})}
- ${field({name:'bio',label:L('О себе','About you'),textarea:1,max:500,ph:L('Пара фраз о том, что для тебя важно','A few lines about what matters to you'),attrs:'rows="4"'})}
+ ${rteField({name:'bio',label:L('О себе','About you'),max:500,ph:L('Пара фраз о том, что для тебя важно','A few lines about what matters to you')})}
  <button class="li" data-act="peCity"><span class="ico">${I.pin}</span><span class="tx"><b>${L('Город','City')}</b><small>${r.f.city?esc(placeCaption(r.f.city)):L('Не показывать','Don’t show')}</small></span>${I.chev}</button><button class="btn text auto" data-act="peHideCity">${L('Не показывать город','Hide city')}</button>
  </div></section><section class="grp"><div class="grp-t"><span>${L('Кто ты','About you')}</span><span class="note">${L('видимость — у каждого поля','visibility per field')}</span></div><div class="card form-card"><div class="field"><span class="flabel">${L('Местоимения','Pronouns')}</span>${chipGroup(optItems('pron'),[r.pron],'peOne',{k:'pron'})}</div>
  ${[['gender',L('Гендер','Gender'),1],['orient',L('Ориентация','Orientation'),1],['status',L('Сейчас','Current status'),0],['format',L('Формат отношений','Relationship format'),1],['role',L('Роль','Role'),0]].map(([k,l,multi])=>`<div class="field"><span class="flabel">${l}${visBtn(k)}</span>${IDENTITY_KEYS.includes(k)?identityChoices(k,r[k],multi?'peMulti':'peOne'):chipGroup(optItems(k),[r[k]],'peOne',{k,title:l})}</div>`).join('')}
@@ -3835,7 +3894,7 @@ SC.P04={title:()=>L('Расширенный профиль','Private profile'),r
  if(p.add&&!r.opened){r.opened=1;setTimeout(()=>{if(cur()===r)ACT.privAdd();},300);}
  return `${bar(L('Расширенный профиль','Private profile'),{back:1,sm:1,actions:`<button class="ibtn" data-act="privAdd" aria-label="${L('Добавить фото или видео','Add photos or video')}">${I.plus}</button>`})}<div class="view nodock"><div class="wrap">
  <p class="lead" style="margin:4px 4px 0">${L('Видят только те, кому ты сам(а) откроешь доступ — выбранные разделы и на выбранный срок.','Only people you choose see this — the sections you pick, for the time you set.')}</p>
- <section class="grp"><div class="grp-t"><span>${L('Текст от себя','In your own words')}</span></div><div class="card form-card">${field({name:'privText',label:L('Что важно знать тем, кому ты откроешь доступ','What people you share with should know'),textarea:1,max:1000,ph:L('Например: как я люблю договариваться, что для меня важно до встречи','E.g. how I like to agree on things, what matters to me before meeting'),attrs:'rows="4"'})}<button class="btn soft sm" data-act="privTextSave">${L('Сохранить текст','Save text')}</button></div></section>
+ <section class="grp"><div class="grp-t"><span>${L('Текст от себя','In your own words')}</span></div><div class="card form-card">${rteField({name:'privText',label:L('Что важно знать тем, кому ты откроешь доступ','What people you share with should know'),max:1000,ph:L('Например: как я люблю договариваться, что для меня важно до встречи','E.g. how I like to agree on things, what matters to me before meeting')})}<button class="btn soft sm" data-act="privTextSave">${L('Сохранить текст','Save text')}</button></div></section>
  <section class="grp"><div class="grp-t"><span>${L('Желания и границы','Wishes & limits')} · ${gj.length}</span><button data-go="X02">${L('Изменить','Edit')}</button></div>
  <p class="grp-n" style="margin:0 2px 10px">${L('Это твои баночки с видимостью «по доступу». Видимость каждой темы меняется в «Мои баночки»: нажми на баночку → «Кто видит». Человек с доступом увидит ровно это:','These are your jars set to “by access”. Change each topic’s visibility in My jars: tap a jar → “Who can see”. Someone with access sees exactly this:')}</p>
  <div class="card">${gj.length?jarsHTML(gj,{act:'editJar',who:'me'}):`<p class="note">${L('Пока ни одной темы «по доступу». Человек с доступом не увидит желаний и границ.','No “by access” topics yet. Someone with access won’t see any wishes or limits.')}</p>`}</div>
@@ -3873,7 +3932,7 @@ function nameBadges(p,sm){if(!p)return '';return `${p.pv?`<span class="nbadge v"
 function followingOf(id){const set=id==='me'?S.follows:(S.graph[id]||new Set());return [...set].filter(x=>(x==='me'||PEOPLE[x])&&!isBlocked(x));}
 function followersOf(id){return ['me',...Object.keys(PEOPLE)].filter(k=>k!==id&&!isBlocked(k)&&followingOf(k).includes(id));}
 function followCounts(id){const a=followersOf(id).length,b=followingOf(id).length;
- return `<div class="fcounts"><button data-go="P10" data-p='${JSON.stringify({id,tab:'followers'})}'><b>${a}</b>${pl(a,['подписчик','подписчика','подписчиков'],['follower','followers'],true)}</button><button data-go="P10" data-p='${JSON.stringify({id,tab:'following'})}'><b>${b}</b>${pl(b,['подписка','подписки','подписок'],['following','following'],true)}</button></div>`;}
+ return `<div class="pc-stats"><button data-go="P10" data-p='${JSON.stringify({id,tab:'followers'})}'><b>${a}</b>${pl(a,['подписчик','подписчика','подписчиков'],['follower','followers'],true)}</button><button data-go="P10" data-p='${JSON.stringify({id,tab:'following'})}'><b>${b}</b>${pl(b,['подписка','подписки','подписок'],['following','following'],true)}</button></div>`;}
 SC.P10={title:p=>p.tab==='following'?L('Подписки','Following'):L('Подписчики','Followers'),valid:p=>(p.id==='me'||!!PEOPLE[p.id])&&!isBlocked(p.id),render:(p)=>{const id=p.id,tab=p.tab==='following'?'following':'followers',mine=id==='me';
  const list=tab==='following'?followingOf(id):followersOf(id);
  const row=k=>{const self=k==='me';const fol=S.follows.has(k);
@@ -3946,7 +4005,7 @@ SC.C03={title:p=>SC.C03.valid(p)?T(COMMUNITIES[p.id].name):L('Сообществ
  <div class="cm-head"><div class="cv" style="position:relative">${commAv(c)}</div><h2>${esc(T(c.name))}</h2>
  <div class="cm-meta"><span>${I.people}<b id="mcount">${pl(C.members(id),['участник','участника','участников'],['member','members'])}</b></span><span>${c.privacy==='closed'?I.lock:I.globe}${c.privacy==='closed'?L('по заявке','by request'):L('открытое','open')}</span><span>${c.city==='online'?I.video:I.pin}${c.city==='online'?L('онлайн','online'):esc(city(c.city))}</span><span>${c.langs}</span></div></div>
  ${c.status==='review'?`<div class="alert warn mt12">${I.clock}<span><b>${L('На проверке','In review')}</b>${L('Сообщество видишь только ты, пока его не одобрят.','Only you can see the community until it’s approved.')}</span></div>`:''}
- <p style="margin:14px 0 0;font-size:15px;line-height:1.55">${esc(T(c.desc))}</p>
+ ${md(T(c.desc),'bio cdesc')}
  <div class="chips mt12">${c.topics.map(x=>`<button class="chip tag" data-go="F04" data-id="${x}">#${esc(topic(x))}</button>`).join('')}</div>
  <div class="row g8 mt16">${action}</div>
  <div style="height:18px"></div>${tabs}${body}</div></div>`;}};
@@ -3980,10 +4039,10 @@ ACT.cManage=()=>go('C10',{id:cur().p.id});
 SC.C06={title:()=>L('Обсуждение','Discussion'),valid:p=>!!S.discussions.find(d=>d.id===p.id),render:(p,r)=>{const d=S.discussions.find(x=>x.id===p.id);const c=COMMUNITIES[d.c];if(!SC.C03.valid({id:d.c}))return unavailable();const j=S.joined.has(d.c)||ownsCommunity(d.c);
  if(c.privacy==='closed'&&!j)return unavailable();
  return `${bar(T(c.name),{back:1,sm:1,sub:L('Обсуждение','Discussion')})}<div class="view nodock ${j?'cta1':''}"><div class="wrap">
- <div class="post-h"><button class="who" ${profGo(d.author)}>${av(d.author,'sm')}<span class="tx"><b>${esc(pname(d.author))}${nameBadges(person(d.author))}</b><small>${F.rel(d.t)}</small></span></button><button class="ibtn ghost sm" data-act="report" data-v="post" aria-label="${L('Пожаловаться','Report')}">${I.flag}</button></div>
+ <div class="post-h"><button class="who" ${profGo(d.author)}>${av(d.author,'sm')}<span class="tx"><b><span class="nmt">${esc(pname(d.author))}</span>${nameBadges(person(d.author))}</b><small>${F.rel(d.t)}</small></span></button><button class="ibtn ghost sm" data-act="report" data-v="post" aria-label="${L('Пожаловаться','Report')}">${I.flag}</button></div>
  <h2 class="t md" style="margin-top:14px">${esc(T(d.title))}</h2><div style="font-size:15.5px;line-height:1.55">${md(T(d.text))}</div>
  ${mediaPreviews(d.media)}<div class="sec">${pl(d.replies.length,['ответ','ответа','ответов'],['reply','replies'])}</div>
- ${d.replies.map((x,i)=>isBlocked(x.a)?'':`<div class="comment ${x.status||''}">${whoLink(x.a)}<div class="tx"><button class="plink pnm" ${profGo(x.a)}>${esc(pname(x.a))}${nameBadges(person(x.a))}</button><time>${x.status==='failed'?L('не отправлено','not sent'):x.status==='pending'?L('отправляется…','sending…'):F.rel(x.t)}</time><p>${esc(T(x.text))}</p>${replyActs('d',d.id,i,x)}</div></div>`).join('')||`<p class="note">${L('Ответов пока нет.','No replies yet.')}</p>`}
+ ${d.replies.map((x,i)=>isBlocked(x.a)?'':`<div class="comment ${x.status||''}">${whoLink(x.a)}<div class="tx"><button class="plink pnm" ${profGo(x.a)}><span class="nmt">${esc(pname(x.a))}</span>${nameBadges(person(x.a))}</button><time>${x.status==='failed'?L('не отправлено','not sent'):x.status==='pending'?L('отправляется…','sending…'):F.rel(x.t)}</time><p>${esc(T(x.text))}</p>${replyActs('d',d.id,i,x)}</div></div>`).join('')||`<p class="note">${L('Ответов пока нет.','No replies yet.')}</p>`}
  ${!j?`<div class="alert info mt16">${I.info}<span>${L('Чтобы отвечать, вступи в сообщество.','Join the community to reply.')}</span></div><button class="btn primary mt12" data-back>${L('К сообществу','To the community')}</button>`:''}
  </div></div>${j?`<div class="inputbar"><textarea id="dr" rows="1" placeholder="${L('Ответить в обсуждении…','Reply to the discussion…')}" data-in="grow" data-enter="sendReply">${esc(r.f.dr||'')}</textarea><button class="ibtn send" data-act="sendReply" aria-label="${L('Отправить','Send')}">${I.send}</button></div>`:''}`;}};
 ACT.sendReply=()=>{const route=cur(),d=S.discussions.find(x=>x.id===route.p.id);if(!d||!S.session||!(S.joined.has(d.c)||ownsCommunity(d.c))){toast(L('Ответить могут только участники сообщества','Only community members can reply'),{type:'warn'});return;}const el=$('#dr'),v=el?.value.trim();if(!v){toast(L('Напиши ответ','Write a reply'),{type:'warn'});el?.focus();return;}const owner=S,session=S.session,x={a:'me',text:{ru:v,en:v},t:Date.now(),status:'pending'};d.replies.push(x);route.f.dr='';refresh();$('#main .view').scrollTop=1e6;
@@ -3993,8 +4052,8 @@ ACT.sendReply=()=>{const route=cur(),d=S.discussions.find(x=>x.id===route.p.id);
 /* C07 — new discussion */
 SC.C07={title:()=>L('Новое обсуждение','New discussion'),valid:p=>!!COMMUNITIES[p.id]&&(S.joined.has(p.id)||ownsCommunity(p.id)),render:(p,r)=>{const c=COMMUNITIES[p.id];r.media=r.media||[];return `${bar(L('Новое обсуждение','New discussion'),{back:1,sm:1,sub:esc(T(c.name))})}<div class="view nodock cta1"><div class="wrap">
  ${field({name:'title',label:L('Тема','Topic'),ph:L('Коротко, о чём разговор','In short, what’s it about'),max:120})}
- ${rteField({name:'text',label:L('Текст','Text'),max:3000,media:'discussionMedia',ph:L('Подробности, вопрос или опыт','Details, a question or experience')})}
- ${r.media.length?`<div class="sec">${L('Фото и видео','Photos and videos')}<span class="note">${r.media.length} / 6</span></div>${mediaPreviews(r.media,'discussionMediaRemove')}`:''}
+ ${rteField({name:'text',label:L('Текст','Text'),max:3000,ph:L('Подробности, вопрос или опыт','Details, a question or experience')})}
+ <div class="sec">${L('Фото и видео','Photos and videos')}<span class="note">${L('до 6 вложений','up to 6 attachments')}</span></div><button class="btn soft" data-act="discussionMedia">${I.image}${L('Добавить фото или видео','Add photos or videos')}</button>${mediaPreviews(r.media,'discussionMediaRemove')}
  <div class="alert">${I.users3}<span>${L(`Увидят ${c.privacy==='closed'?'только участники':'все, кто открывает сообщество'}. Расширить аудиторию нельзя.`,`Visible to ${c.privacy==='closed'?'members only':'everyone who opens the community'}. The audience can’t be widened.`)}</span></div>
  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="cdPost">${L('Опубликовать','Publish')}</button></div></div>`;}};
 ACT.cdPost=a=>{const r=cur(),community=r.p.id;
@@ -4009,7 +4068,7 @@ ACT.cdPost=a=>{const r=cur(),community=r.p.id;
 /* C08 — create community; C10 — manage */
 SC.C08={title:()=>L('Новое сообщество','New community'),render:(p,r)=>{r.f.privacy=r.f.privacy||'open';r.f.topics=r.f.topics||[];r.f.plate=r.f.plate||'lilac';return `${bar(L('Новое сообщество','New community'),{back:1,sm:1})}<div class="view nodock cta1"><div class="wrap">
  <section class="grp"><div class="card form-card">${field({name:'name',label:L('Название','Name'),ph:L('Например, «Верёвка по выходным»','E.g. “Weekend Rope”'),max:50})}
- ${field({name:'desc',label:L('О чём сообщество','What it’s about'),textarea:1,max:500,attrs:'rows="4"'})}
+ ${rteField({name:'desc',label:L('О чём сообщество','What it’s about'),max:500})}
  <div class="field ${r.err&&r.err.topics?'err':''}" data-field="topics"><span class="flabel">${L('Темы','Topics')}<i style="font-style:normal;font-weight:500;color:var(--faint)">${L('1–3','1–3')}</i></span>${chipGroup(topicItems(),r.f.topics,'c8Topic')}${r.err&&r.err.topics?`<div class="ferr">${I.alert}${r.err.topics}</div>`:''}</div>
  <div class="field"><span class="flabel">${L('Кто может вступить','Who can join')}</span>${[['open',L('Открытое','Open'),L('Любой участник FetUre, читать можно без вступления','Any FetUre member; readable without joining')],['closed',L('По заявке','By request'),L('Видно в каталоге, вступление после одобрения','Listed in the catalogue; join after approval')],['hidden',L('Скрытое','Hidden'),L('Не видно в каталоге, только по приглашению','Not listed; invite only')]].map(([k,t,s])=>`<button class="radio ${r.f.privacy===k?'on':''}" data-act="c8Priv" data-v="${k}"><i></i><span class="tx"><b>${t}</b><small>${s}</small></span></button>`).join('')}</div>
  ${field({name:'rules',label:L('Правила — по одному на строку','Rules — one per line'),textarea:1,max:1000,attrs:'rows="4"',ph:L('Согласие прежде всего','Consent first')})}
@@ -4045,7 +4104,7 @@ SC.H01={root:1,tab:'chats',title:()=>L('Чаты','Chats'),render:(p)=>{const su
  const ids=threadIds(false).filter(id=>!q||pname(id).toLowerCase().includes(q));const arch=threadIds(true).length;
  return head+`<div class="view"><div class="wrap">
  ${p.searching?`<div class="inwrap" style="margin-bottom:12px">${I.search}<input class="inp" id="chatQ" placeholder="${L('Имя собеседника','Name')}" value="${esc(p.q||'')}" data-in="chatQ" autofocus style="min-height:46px"></div>`:''}
- ${fresh.length&&!q?`<div class="sec" style="margin-top:4px">${L('Новые совпадения','New matches')}</div><div class="matches">${fresh.map(m=>`<button data-act="openChat" data-v="${m.p}"><span class="ring2">${av(m.p,'round')}</span>${esc(pname(m.p).split(' ')[0])}</button>`).join('')}</div>`:''}
+ ${fresh.length&&!q?`<div class="sec" style="margin-top:4px">${L('Новые совпадения','New matches')}</div><div class="matches">${fresh.map(m=>`<button data-act="openChat" data-v="${m.p}"><span class="ring2">${av(m.p,'round')}</span><span class="mn">${esc(pname(m.p).split(' ')[0])}</span></button>`).join('')}</div>`:''}
  ${tabs}
  ${ids.length?firstLoad('chats',ids.map(chatRow).join(''),Array.from({length:4},()=>`<div class="row" style="padding:10px 0"><div class="sk" style="width:58px;height:58px;border-radius:50%"></div><div class="grow"><div class="sk" style="height:13px;width:35%"></div><div class="sk" style="height:11px;width:70%;margin-top:8px"></div></div></div>`).join('')):q?empty('search',L('Никого не нашли','No one found'),L('Ищем только среди твоих диалогов.','We only search your conversations.')):empty('chat',L('Пока тихо','Quiet for now'),L('Личный чат открывается после взаимной симпатии. Посмотри подборку или ответь тем, кому ты нравишься.','A private chat opens after a mutual like. Check Discover or answer people who like you.'),`<button class="btn primary" data-act="toPeople">${L('К людям','To People')}</button>`)}
  ${arch?`<button class="btn text mt8" data-go="H05">${I.archive}${L(`Архив · ${arch}`,`Archive · ${arch}`)}</button>`:''}
@@ -4129,9 +4188,9 @@ ACT.ecDo=a=>{const id=a.dataset.v;run(a,()=>{S.threads[id].ended=true;S.matches=
 SC.H05={title:()=>L('Архив','Archive'),render:()=>{const ids=threadIds(true);return `${bar(L('Архив','Archive'),{back:1,sm:1})}<div class="view nodock"><div class="wrap"><p class="note" style="margin:0 0 10px">${L('Архив прячет диалог из списка. Это не блокировка и не удаление.','Archiving hides a conversation from the list. It’s not blocking or deleting.')}</p>${ids.length?ids.map(chatRow).join(''):empty('archive',L('Архив пуст','Archive is empty'))}</div></div>`;}};
 
 /* N01 — one notification centre; counters derive from read state */
-const NTXT={match:n=>isMatch(n.p)?L(`<b>${pname(n.p)}</b> — это взаимно! Можно написать`,`<b>${pname(n.p)}</b> — it’s mutual! You can chat now`):L(`<b>${pname(n.p)}</b> — ранее было совпадение. Новый диалог сейчас недоступен`,`<b>${pname(n.p)}</b> — a previous match. You can’t start a new conversation now`),req:n=>L(`<b>${pname(n.p)}</b> просит открыть расширенный профиль`,`<b>${pname(n.p)}</b> asks to see your private profile`),event:n=>L(`Изменение: <b>${T(EV(n.e).title)}</b> — начало в 19:00`,`Change: <b>${T(EV(n.e).title)}</b> — starts at 19:00`),like:n=>L(`<b>${pname(n.p)}</b> отправил(а) тебе симпатию`,`<b>${pname(n.p)}</b> liked you`),reply:n=>L(`<b>${pname(n.p)}</b> ответил(а) на твою публикацию`,`<b>${pname(n.p)}</b> replied to your post`),grant:n=>L(`<b>${pname(n.p)}</b> открыл(а) тебе расширенный профиль`,`<b>${pname(n.p)}</b> shared a private profile with you`),group:n=>L(`Новые правила в <b>${T(COMMUNITIES[n.c].name)}</b>`,`New rules in <b>${T(COMMUNITIES[n.c].name)}</b>`),evok:n=>L(`Событие <b>${T(EV(n.e).title)}</b> опубликовано`,`Your event <b>${T(EV(n.e).title)}</b> is live`)};
-const NICO={match:['heart','l'],req:['lock','v'],event:['cal','a'],like:['heart','l'],reply:['chat','g'],grant:['unlock','g'],group:['users3','v'],evok:['check','g']};
-SC.N01={title:()=>L('Уведомления','Notifications'),render:(p)=>{const k=p.k||'all';const acts=['match','req','like','grant','reply'];
+const NTXT={follow:n=>L(`<b>${pname(n.p)}</b> подписывается на тебя — твои публикации будут в ленте «Подписки»`,`<b>${pname(n.p)}</b> follows you — your posts will be in their Following feed`),match:n=>isMatch(n.p)?L(`<b>${pname(n.p)}</b> — это взаимно! Можно написать`,`<b>${pname(n.p)}</b> — it’s mutual! You can chat now`):L(`<b>${pname(n.p)}</b> — ранее было совпадение. Новый диалог сейчас недоступен`,`<b>${pname(n.p)}</b> — a previous match. You can’t start a new conversation now`),req:n=>L(`<b>${pname(n.p)}</b> просит открыть расширенный профиль`,`<b>${pname(n.p)}</b> asks to see your private profile`),event:n=>L(`Изменение: <b>${T(EV(n.e).title)}</b> — начало в 19:00`,`Change: <b>${T(EV(n.e).title)}</b> — starts at 19:00`),like:n=>L(`<b>${pname(n.p)}</b> отправил(а) тебе симпатию`,`<b>${pname(n.p)}</b> liked you`),reply:n=>L(`<b>${pname(n.p)}</b> ответил(а) на твою публикацию`,`<b>${pname(n.p)}</b> replied to your post`),grant:n=>L(`<b>${pname(n.p)}</b> открыл(а) тебе расширенный профиль`,`<b>${pname(n.p)}</b> shared a private profile with you`),group:n=>L(`Новые правила в <b>${T(COMMUNITIES[n.c].name)}</b>`,`New rules in <b>${T(COMMUNITIES[n.c].name)}</b>`),evok:n=>L(`Событие <b>${T(EV(n.e).title)}</b> опубликовано`,`Your event <b>${T(EV(n.e).title)}</b> is live`)};
+const NICO={follow:['users3','v'],match:['heart','l'],req:['lock','v'],event:['cal','a'],like:['heart','l'],reply:['chat','g'],grant:['unlock','g'],group:['users3','v'],evok:['check','g']};
+SC.N01={title:()=>L('Уведомления','Notifications'),render:(p)=>{const k=p.k||'all';const acts=['match','req','like','grant','reply','follow'];
  const list=S.notifs.filter(n=>!(n.p&&isBlocked(n.p))&&(k==='all'||(k==='act'?acts.includes(n.type):!acts.includes(n.type))));
  const neu=list.filter(n=>!n.read),old=list.filter(n=>n.read);
  const row=n=>{const [i,t]=NICO[n.type]||['bell',''];return `<button class="nt ${n.read?'':'unread'}" data-act="openNotif" data-v="${n.id}"><span class="ntw">${n.p?av(n.p,''):`<span class="av" style="position:relative">${plate(n.e?EV(n.e).plate:n.c?COMMUNITIES[n.c].plate:'rose')}</span>`}<span class="ico ${t}">${I[i]}</span></span><span class="tx">${NTXT[n.type](n)}<time>${F.rel(n.t)}</time></span>${n.read?'':'<span class="dotu" aria-label="new"></span>'}</button>`;};
@@ -4182,7 +4241,7 @@ SC.X01={root:1,tab:'me',title:()=>L('Я','Me'),render:()=>{const m=S.me;const [n
  ${grp(L('Мои баночки','My jars'),jars.length?jarShelf(m.jars,{max:4,pre:1,act:'editJar',vis:1,add:'addJar',moreAct:'myJarsAll'}):`<div class="jar-empty"><p>${L('Баночка — это одна тема и то, как она тебе откликается: от 1 до 10, «обсуждаемо» или «табу».','A jar is one topic and how it feels to you: 1 to 10, “negotiable” or “taboo”.')}</p><div class="row g8"><button class="btn primary sm" data-go="X07" data-id="${next||'rope'}">${L('Пройти тест','Take a quiz')}</button><button class="btn secondary sm" data-act="addJar">${I.plus}${L('Добавить тему','Add a topic')}</button></div></div>`,{right:jars.length?`<button data-go="X02">${L('Все','All')} · ${jars.length}</button>`:''})}
  ${grp(L('Тесты','Quizzes'),linkRow({go:'X05',icon:'test',title:L('Узнай себя','Get to know yourself'),sub:L(`Пройдено ${done} из ${Object.keys(QUIZ).length}. Каждый тест — несколько тем с пояснениями.`,`${done} of ${Object.keys(QUIZ).length} done. Each quiz is a few topics, each explained.`)}),{list:1})}
  ${grp(L('Приватное','Private'),`${linkRow({go:'P04',icon:'key',title:L('Расширенный профиль','Private profile'),sub:priv?pl(priv,['фото или видео','фото или видео','фото и видео'],['photo or video','photos and videos']):L('Фото, видео и желания — по запросу и на срок','Photos, video and wishes — on request, for a set time')})}${linkRow({go:'P07',icon:'unlock',title:L('Доступы','Access'),sub:L('Кто просит и кому открыто','Who asks and who can see it'),badge:C.reqIn()||''})}`,{list:1})}
- ${grp(L('Активность','Activity'),`${linkRow({go:'E10',icon:'cal',title:L('Мои события','My events'),val:going?String(going):''})}${linkRow({go:'F10',icon:'feed',title:L('Мои публикации','My posts'),val:String(S.myPosts.length)})}${linkRow({go:'G04',icon:'bookmark',title:L('Сохранённое','Saved'),val:String(m.saved.posts.length+m.saved.events.length)})}${S.pair?.status==='active'?linkRow({go:'Q03',icon:'couple',title:L('Пара','Couple'),sub:pairName()}):linkRow({act:'pairLink',icon:'couple',title:L('Пара','Couple'),sub:S.pairInvite?L('ждём ответа партнёра','waiting for your partner'):''})}`,{list:1})}
+ ${grp(L('Активность','Activity'),`${linkRow({go:'E10',icon:'cal',title:L('Мои события','My events'),val:going?String(going):''})}${linkRow({go:'F10',icon:'feed',title:L('Мои публикации','My posts'),val:String(S.myPosts.length)})}${linkRow({go:'P10',p:{id:'me',tab:'followers'},icon:'users3',title:L('Подписчики и подписки','Followers & following'),val:`${followersOf('me').length} · ${followingOf('me').length}`})}${linkRow({go:'G04',icon:'bookmark',title:L('Сохранённое','Saved'),val:String(m.saved.posts.length+m.saved.events.length)})}${S.pair?.status==='active'?linkRow({go:'Q03',icon:'couple',title:L('Пара','Couple'),sub:pairName()}):linkRow({act:'pairLink',icon:'couple',title:L('Пара','Couple'),sub:S.pairInvite?L('ждём ответа партнёра','waiting for your partner'):''})}`,{list:1})}
  </div></div>`;},after:()=>fillJars()};
 ACT.myJarsAll=()=>go('X02');
 /* X02 — all my jars, grouped by answer */
@@ -4293,8 +4352,8 @@ const hl=(s,q)=>{s=esc(s);if(!q)return s;const i=s.toLowerCase().indexOf(q.toLow
 function searchData(q,f){q=q.toLowerCase().trim();const has=s=>String(s||'').toLowerCase().includes(q);
  const people=Object.keys(PEOPLE).filter(id=>!isBlocked(id)&&(has(pname(id))||has(id)||has(PEOPLE[id].name)));
  const posts=filterPosts(allPosts(),f.posts||{}).filter(p=>has(T(p.text))||p.tags.some(t=>has(topic(t))));
- const groups=Object.keys(COMMUNITIES).filter(c=>!COMMUNITIES[c].hidden&&(has(T(COMMUNITIES[c].name))||has(T(COMMUNITIES[c].desc))||COMMUNITIES[c].topics.some(t=>has(topic(t))))&&(!(f.groups||{}).privacy||f.groups.privacy==='all'||COMMUNITIES[c].privacy===f.groups.privacy));
- const ef=Object.assign(EF_DEF(),f.events||{});const events=evFiltered(ef).filter(id=>has(T(EV(id).title))||has(T(EV(id).desc))||has(pname(EV(id).organizer)));
+ const groups=Object.keys(COMMUNITIES).filter(c=>!COMMUNITIES[c].hidden&&(has(T(COMMUNITIES[c].name))||has(mdPlain(T(COMMUNITIES[c].desc)))||COMMUNITIES[c].topics.some(t=>has(topic(t))))&&(!(f.groups||{}).privacy||f.groups.privacy==='all'||COMMUNITIES[c].privacy===f.groups.privacy));
+ const ef=Object.assign(EF_DEF(),f.events||{});const events=evFiltered(ef).filter(id=>has(T(EV(id).title))||has(mdPlain(T(EV(id).desc)))||has(pname(EV(id).organizer)));
  const topics=Object.keys(TOPICS).filter(t=>has(topic(t))||has(TOPICS[t].en)||has(TOPICS[t].ru));
  return{people,posts,groups,events,topics};}
 SC.G01={title:()=>L('Поиск','Search'),render:(p,r)=>{const scope=p.scope||'all';const q=r.f.q??p.q??'';r.f.q=q;S.filters.search=S.filters.search||{};const f=S.filters.search;
@@ -4360,8 +4419,8 @@ ACT.k4social=()=>run(null,()=>{S.me.socialLikes=!S.me.socialLikes;refresh();},{m
 ACT.k4rsvp=()=>run(null,()=>{S.me.rsvpShow=!S.me.rsvpShow;refresh();},{ms:300,ok:L('Сохранено','Saved')});
 ACT.k4off=()=>ask({icon:'heart',tone:'l',title:L('Выключить знакомства?','Turn off dating?'),text:L('Ты пропадёшь из подборки и перестанешь видеть анкеты. Совпадения, чаты и выданные доступы останутся.','You’ll disappear from Discover and stop seeing profiles. Matches, chats and shared access stay.'),ok:L('Выключить','Turn off'),danger:true}).then(ok=>{if(ok)run(null,()=>{S.me.dating=false;S.me.datingVisible=false;refresh();},{ok:L('Знакомства выключены','Dating is off')});});
 /* K05 — V7 notifications: safe mode by default, push + email channels per category, quiet hours and email digest */
-const NOTIF_CATS=()=>[['match',I.chat,L('Совпадения и сообщения','Matches & messages'),L('Взаимная симпатия, новое сообщение','A mutual like, a new message')],['likes',I.heart,L('Новые симпатии','New likes'),L('Собираем вместе, не чаще раза в час','Grouped, at most hourly')],['req',I.key,L('Запросы и доступы','Requests & access'),L('Кто-то просит открыть приватное, тебе открыли доступ','Someone asks for private sections, access shared with you')],['events',I.cal,L('События','Events'),L('Изменения, отмены, напоминания за день','Changes, cancellations, day-before reminders')],['replies',I.feed,L('Ответы и реакции','Replies & reactions'),L('Ответы на твои публикации и обсуждения','Replies to your posts and discussions')],['groups',I.groups,L('Сообщества','Communities'),L('Объявления ведущих, решения по заявке','Host announcements, join decisions')],['news',I.spark,L('Новости FetUre','FetUre news'),L('Новые функции — не чаще раза в месяц','New features — at most monthly')]];
-function notifDefaults(){return{mode:'safe',push:true,email:true,digest:'daily',quiet:true,from:'23:00',to:'08:00',cat:{match:{push:1,email:1},likes:{push:1,email:0},req:{push:1,email:1},events:{push:1,email:1},replies:{push:1,email:0},groups:{push:0,email:0},news:{push:0,email:1}}};}
+const NOTIF_CATS=()=>[['match',I.chat,L('Совпадения и сообщения','Matches & messages'),L('Взаимная симпатия, новое сообщение','A mutual like, a new message')],['likes',I.heart,L('Новые симпатии','New likes'),L('Собираем вместе, не чаще раза в час','Grouped, at most hourly')],['req',I.key,L('Запросы и доступы','Requests & access'),L('Кто-то просит открыть приватное, тебе открыли доступ','Someone asks for private sections, access shared with you')],['events',I.cal,L('События','Events'),L('Изменения, отмены, напоминания за день','Changes, cancellations, day-before reminders')],['replies',I.feed,L('Ответы и реакции','Replies & reactions'),L('Ответы на твои публикации и обсуждения','Replies to your posts and discussions')],['follows',I.users3,L('Новые подписчики','New followers'),L('Кто подписывается на твои публикации','Who starts following your posts')],['groups',I.groups,L('Сообщества','Communities'),L('Объявления ведущих, решения по заявке','Host announcements, join decisions')],['news',I.spark,L('Новости FetUre','FetUre news'),L('Новые функции — не чаще раза в месяц','New features — at most monthly')]];
+function notifDefaults(){return{mode:'safe',push:true,email:true,digest:'daily',quiet:true,from:'23:00',to:'08:00',cat:{match:{push:1,email:1},likes:{push:1,email:0},req:{push:1,email:1},events:{push:1,email:1},replies:{push:1,email:0},follows:{push:1,email:0},groups:{push:0,email:0},news:{push:0,email:1}}};}
 SC.K05={title:()=>L('Уведомления','Notifications'),render:(p,r)=>{const n=S.me.notif||(S.me.notif=notifDefaults());const safe=n.mode==='safe';
  const lock=(t,b)=>`<div class="lockscreen"><span class="ls-app"><img src="${LOGO()}" alt="">${safe?L('Уведомление','Notification'):'FetUre'}</span><b>${t}</b><span>${b}</span><small>${L('сейчас','now')}</small></div>`;
  return `${bar(L('Уведомления','Notifications'),{back:1,sm:1})}<div class="view nodock compact"><div class="wrap">
@@ -4372,7 +4431,7 @@ SC.K05={title:()=>L('Уведомления','Notifications'),render:(p,r)=>{con
  <div class="card list">${toggleRow('k5ch',L('Пуш на телефон','Push to phone'),L('Можно выключить в любой момент','Turn off any time'),n.push,'data-v="push"')}${toggleRow('k5ch',L('Письма на почту','Email'),esc(S.me.email||L('почта не указана','no email')),n.email,'data-v="email"')}</div>
  ${n.email?`<div class="chips mt8">${[['instant',L('Сразу','Instantly')],['daily',L('Раз в день','Daily digest')],['weekly',L('Раз в неделю','Weekly')]].map(([k,l])=>chipBtn(k,l,n.digest===k,'k5digest')).join('')}</div><p class="note mt8">${L('Письма всегда нейтральные: тема «Новости твоего аккаунта», без имён и текста — подробности только в приложении.','Emails are always discreet: subject “Your account updates”, no names or text — details only in the app.')}</p>`:''}
  <div class="sec">${L('О чём сообщать','What to notify about')}<span class="nhead">${ic('phone',14)}${ic('mail',14)}</span></div>
- <div class="card list ncats">${NOTIF_CATS().map(([k,i,t,d])=>{const c=n.cat[k];return `<div class="li"><span class="ico">${i}</span><span class="tx"><b>${t}</b><small>${d}</small></span><button class="nt-t ${c.push&&n.push?'on':''}" data-act="k5cat" data-v="${k}" data-c="push" ${n.push?'':'disabled'} aria-pressed="${!!c.push}" aria-label="${L('Пуш','Push')}: ${t}">${I.phone}</button><button class="nt-t ${c.email&&n.email?'on':''}" data-act="k5cat" data-v="${k}" data-c="email" ${n.email?'':'disabled'} aria-pressed="${!!c.email}" aria-label="${L('Почта','Email')}: ${t}">${I.mail}</button></div>`;}).join('')}</div>
+ <div class="card list ncats">${NOTIF_CATS().map(([k,i,t,d])=>{const c=n.cat[k]||(n.cat[k]={...notifDefaults().cat[k]});return `<div class="li"><span class="ico">${i}</span><span class="tx"><b>${t}</b><small>${d}</small></span><button class="nt-t ${c.push&&n.push?'on':''}" data-act="k5cat" data-v="${k}" data-c="push" ${n.push?'':'disabled'} aria-pressed="${!!c.push}" aria-label="${L('Пуш','Push')}: ${t}">${I.phone}</button><button class="nt-t ${c.email&&n.email?'on':''}" data-act="k5cat" data-v="${k}" data-c="email" ${n.email?'':'disabled'} aria-pressed="${!!c.email}" aria-label="${L('Почта','Email')}: ${t}">${I.mail}</button></div>`;}).join('')}</div>
  <div class="sec">${L('Тихие часы','Quiet hours')}</div>
  <div class="card list">${toggleRow('k5quiet',L(`Не беспокоить ${n.from}–${n.to}`,`Do not disturb ${n.from}–${n.to}`),L('Пуши придут утром одним сообщением. По твоему часовому поясу','Pushes arrive in the morning as one message. Your time zone'),n.quiet)}</div>
  <p class="note mt12">${L('Уведомления безопасности аккаунта (вход с нового устройства, удаление) приходят всегда — в безопасном виде.','Account security alerts (new sign-in, deletion) always come through — discreetly.')}</p></div></div>`;}};
@@ -4542,8 +4601,8 @@ ACT.cRequestDecision=a=>{const owner=S,session=S.session,route=cur(),id=route.p.
  if(status==='declined')return ask({title:L('Отклонить заявку?','Decline this request?'),text:L('Участие в сообществе не откроется. Это не блокировка профиля.','Community membership will not be granted. This does not block the profile.'),ok:L('Отклонить','Decline'),danger:true}).then(ok=>ok?submit():undefined);return submit();};
 SC.C12={title:()=>L('Модерация сообщества','Community moderation'),valid:p=>ownsCommunity(p.id),render:p=>!ownsCommunity(p.id)?unavailable():`${bar(L('Модерация сообщества','Community moderation'),{back:1,sm:1})}<div class="view nodock"><div class="wrap">${empty('shield',L('Очередь обращений пуста','Report queue is empty'),L('Проверяй обсуждения, ответы и правила. Личные данные участников ведущим недоступны.','Review discussions, replies and rules. Hosts cannot access members’ private data.'))}${linkRow({go:'C03',p:{id:p.id,t:'rules'},icon:'doc',title:L('Правила сообщества','Community rules')})}</div></div>`};
 const manageCommunity=SC.C10.render;SC.C10.render=(p,r)=>manageCommunity(p,r).replace('data-act="soon"','data-go="C11" data-id="'+p.id+'"').replace('data-act="soon"','data-go="C12" data-id="'+p.id+'"').replace('data-act="soon"','data-act="v6CommunityEdit"').replace('data-act="soon"','data-act="v6Hosts"');
-ACT.v6CommunityEdit=()=>{if(!ownsCommunity(cur().p.id))return;const c=COMMUNITIES[cur().p.id];S.ui.communityDraft={name:T(c.name),desc:T(c.desc),rules:c.rules.map(T).join('\n')};sheet(()=>({title:L('Описание и правила','Description and rules'),body:`<label class="field"><span>${L('Название','Name')}</span><input class="inp" id="v6cn" value="${esc(S.ui.communityDraft.name)}"></label><label class="field"><span>${L('Описание','Description')}</span><textarea class="inp" id="v6cd">${esc(S.ui.communityDraft.desc)}</textarea></label><label class="field"><span>${L('Правила — по одному на строку','Rules — one per line')}</span><textarea class="inp" id="v6cr">${esc(S.ui.communityDraft.rules)}</textarea></label>`,foot:`<button class="btn primary" data-act="v6CommunitySave">${L('Сохранить','Save')}</button>`}));};
-ACT.v6CommunitySave=()=>{if(!ownsCommunity(cur().p.id))return;const c=COMMUNITIES[cur().p.id],name=$('#v6cn').value.trim(),desc=$('#v6cd').value.trim(),rules=$('#v6cr').value.trim();if(name.length<3||!rules){toast(L('Нужны название и правила','A name and rules are required'),{type:'err'});return;}c.name={ru:name,en:name};c.desc={ru:desc,en:desc};c.rules=rules.split('\n').map(x=>({ru:x,en:x}));closeSheet();refresh();};
+ACT.v6CommunityEdit=()=>{if(!ownsCommunity(cur().p.id))return;const c=COMMUNITIES[cur().p.id];S.ui.communityDraft={name:T(c.name),desc:T(c.desc),rules:c.rules.map(T).join('\n')};sheet(()=>({title:L('Описание и правила','Description and rules'),body:`<label class="field"><span>${L('Название','Name')}</span><input class="inp" id="v6cn" value="${esc(S.ui.communityDraft.name)}"></label>${rteField({name:'v6cd',local:'v6cd',value:S.ui.communityDraft.desc,label:L('Описание','Description'),max:500})}<label class="field"><span>${L('Правила — по одному на строку','Rules — one per line')}</span><textarea class="inp" id="v6cr">${esc(S.ui.communityDraft.rules)}</textarea></label>`,foot:`<button class="btn primary" data-act="v6CommunitySave">${L('Сохранить','Save')}</button>`}));};
+ACT.v6CommunitySave=()=>{if(!ownsCommunity(cur().p.id))return;const c=COMMUNITIES[cur().p.id],name=$('#v6cn').value.trim(),desc=rteVal('v6cd').trim(),rules=$('#v6cr').value.trim();if(name.length<3||!rules){toast(L('Нужны название и правила','A name and rules are required'),{type:'err'});return;}c.name={ru:name,en:name};c.desc={ru:desc,en:desc};c.rules=rules.split('\n').map(x=>({ru:x,en:x}));closeSheet();refresh();};
 ACT.v6Hosts=()=>ownsCommunity(cur().p.id)&&sheet(()=>({title:L('Ведущие сообщества','Community hosts'),body:`<div class="card list">${communityHostIds(cur().p.id).map(id=>personRow(id)).join('')||personRow('me')}</div><p class="note">${L('Назначение ролей требует отдельной проверки прав. Роль ведущего не открывает личные профили участников.','Assigning roles needs a separate permission check. A host role never opens members’ private profiles.')}</p>`}));
 
 SC.K08={title:()=>L('Ссылки и сравнения','Links and comparisons'),render:()=>`${bar(L('Ссылки и сравнения','Links and comparisons'),{back:1,sm:1})}<div class="view nodock compact"><div class="wrap">${empty('link',L('Активных приватных ссылок нет','No active private links'),L('Публичная ссылка не передаёт доступ. Приватные ссылки должны иметь выбранные разделы, срок и отзыв.','A public link never transfers access. Private links need selected sections, expiry and revocation.'))}<button class="btn soft" data-act="shareProfile">${L('Поделиться публичным профилем','Share public profile')}</button></div></div>`};
@@ -4656,11 +4715,29 @@ function qaGo(id,p){
 function qaRender(){const q=($('#qaQ')?.value||'').toLowerCase();const r=cur();
  $('#qaNav').innerHTML=QA_LIST().map(([g,items])=>{const it=items.filter(([id,l])=>!q||l.toLowerCase().includes(q)||id.toLowerCase().includes(q));return it.length?`<div class="qa-g">${g}</div>${it.map(([id,l,p],k)=>`<button class="qa-l ${r&&r.id===id&&JSON.stringify(p||{})===JSON.stringify(Object.fromEntries(Object.entries(r.p).filter(([k2])=>p&&k2 in p)))?'on':''}" data-qa="${id}" data-qp='${JSON.stringify(p||{})}'><code>${id[0]==='!'?'···':id}</code><span>${l}</span></button>`).join('')}`:'';}).join('');
  const th=themePref();
- $('#qaOpts').innerHTML=[[L('Язык','Language'),[['ru','RU'],['en','EN']],S.lang,'qaLang'],[L('Тема','Theme'),[['light',L('Светлая','Light')],['dark',L('Тёмная','Dark')],['auto',L('Авто','Auto')]],th,'qaTheme'],[L('Ширина','Width'),[['auto',L('Окно','Window')],['compact','320'],['phone','390'],['tablet',L('Планшет','Tablet')]],QA.frame,'qaFrame'],[L('Сеть','Network'),[['on',L('Есть','Online')],['off',L('Нет','Offline')]],QA.offline?'off':'on','qaNet'],[L('Фото-проверка','Photo check'),[['ok',L('Одобрить','Approve')],['no',L('Отклонить','Reject')]],'','qaPv'],[L('Подарок','Gift'),[['get',L('Получить Premium','Receive Premium')]],'','qaGift'],[L('Часы чата','Chat clock'),[['0',L('Сейчас','Now')],['15','+15 мин'],['120','+2 ч'],['1440','+24 ч']],String(Math.round((QA.clockShift||0)/60e3)),'qaClock'],[L('Аккаунт','Account'),[['full',L('Заполненный','Filled')],['pair',L('В паре','Couple')],['new',L('Новый','New')]],S.persona,'qaPersona'],['Premium',[['0',L('Нет','Off')],['1',L('Есть','On')]],S.me.premium?'1':'0','qaPrem'],[L('Знакомства в админке','Dating (admin)'),[['on',L('Включены','On')],['off',L('Скоро','Soon')]],QA.datingLive===false?'off':'on','qaDating'],[L('Логотип','Logo'),[['a','A'],['b','B'],['c','C']],QA.logo||'a','qaLogo'],[L('Проверка возраста','Age check'),[['off',L('По дате рождения','By birth date')],['on',L('Обязательна','Required')]],QA.ageRequired?'on':'off','qaAge']].map(([t,items,v,act])=>`<div class="qa-opt"><span>${t}</span>${seg(items,v,act)}</div>`).join('');
+ $('#qaOpts').innerHTML=[[L('Язык','Language'),[['ru','RU'],['en','EN']],S.lang,'qaLang'],[L('Тема','Theme'),[['light',L('Светлая','Light')],['dark',L('Тёмная','Dark')],['auto',L('Авто','Auto')]],th,'qaTheme'],[L('Ширина','Width'),[['auto',L('Окно','Window')],['compact','320'],['phone','390'],['tablet',L('Планшет','Tablet')]],QA.frame,'qaFrame'],[L('Сеть','Network'),[['on',L('Есть','Online')],['off',L('Нет','Offline')]],QA.offline?'off':'on','qaNet'],[L('Фото-проверка','Photo check'),[['ok',L('Одобрить','Approve')],['no',L('Отклонить','Reject')]],'','qaPv'],[L('Подарок','Gift'),[['get',L('Получить Premium','Receive Premium')]],'','qaGift'],[L('Часы чата','Chat clock'),[['0',L('Сейчас','Now')],['15','+15 мин'],['120','+2 ч'],['1440','+24 ч']],String(Math.round((QA.clockShift||0)/60e3)),'qaClock'],[L('Аккаунт','Account'),[['full',L('Заполненный','Filled')],['pair',L('В паре','Couple')],['new',L('Новый','New')]],S.persona,'qaPersona'],['Premium',[['0',L('Нет','Off')],['1',L('Есть','On')]],S.me.premium?'1':'0','qaPrem'],[L('Знакомства в админке','Dating (admin)'),[['on',L('Включены','On')],['off',L('Скоро','Soon')]],QA.datingLive===false?'off':'on','qaDating'],[L('Логотип','Logo'),[['a','A'],['b','B'],['c','C']],QA.logo||'a','qaLogo'],[L('Длина текстов','Text length'),[['off',L('Обычные','Normal')],['on',L('Длинные','Long')]],QA.long?'on':'off','qaLongT'],[L('Проверка возраста','Age check'),[['off',L('По дате рождения','By birth date')],['on',L('Обязательна','Required')]],QA.ageRequired?'on':'off','qaAge']].map(([t,items,v,act])=>`<div class="qa-opt"><span>${t}</span>${seg(items,v,act)}</div>`).join('');
  $('#qaHint').innerHTML=L('Коды подтверждения: <b>000000</b> — неверный, <b>999999</b> — истёк, любой другой — верный. Почта <b>limit@…</b> — лимит отправки. Ник <b>alex</b> занят.','Codes: <b>000000</b> wrong, <b>999999</b> expired, any other works. Email <b>limit@…</b> hits the send limit. Nickname <b>alex</b> is taken.')+`<button class="btn secondary mt12" data-act="qaRestart">${L('Начать регистрацию заново','Restart registration')}</button><span class="note">${L('Очистит текущую сессию прототипа и откроет приветствие.','Clears this prototype session and opens the welcome screen.')}</span>`;
 }
 ACT.qaRestart=()=>restartPrototype();
-window.FT_QA={go:(id,p)=>qaGo(id,p||{}),list:()=>QA_LIST(),screen:()=>cur()&&cur().id,tab:t=>tab(t),back:()=>back(),field:n=>cur()?.f?.[n]};
+window.FT_QA={go:(id,p)=>qaGo(id,p||{}),list:()=>QA_LIST(),screen:()=>cur()&&cur().id,tab:t=>tab(t),back:()=>back(),field:n=>cur()?.f?.[n],
+ stress:on=>qaLong(on!==false)};
+/* «Длинные тексты»: worst-case lengths at the input limits, switchable in the review panel or with ?long=1.
+   Names 30 (name field limit), nick 20, community 50, event 80, discussion title 120, bio 500, long real city names.
+   The original seed values are kept and restored when the switch goes back to «Обычные». */
+const LONG={snap:null};
+function qaLong(on){
+ if(!LONG.snap)LONG.snap={people:Object.fromEntries(Object.entries(PEOPLE).map(([k,p])=>[k,{name:p.name,nameRu:p.nameRu,bio:p.bio}])),city:{...CITY},comm:Object.fromEntries(Object.entries(COMMUNITIES).map(([k,c])=>[k,{name:c.name,desc:c.desc}])),ev:Object.fromEntries(Object.entries(EVENTS).map(([k,e])=>[k,e.title])),disc:(S.discussions||[]).map(d=>d.title)};
+ const o=LONG.snap;QA.long=on;
+ if(!on){Object.entries(o.people).forEach(([k,v])=>{if(PEOPLE[k])Object.assign(PEOPLE[k],v);});Object.assign(CITY,o.city);Object.entries(o.comm).forEach(([k,v])=>{if(COMMUNITIES[k])Object.assign(COMMUNITIES[k],v);});Object.entries(o.ev).forEach(([k,v])=>{if(EVENTS[k])EVENTS[k].title=v;});(S.discussions||[]).forEach((d,i)=>{if(o.disc[i]!=null)d.title=o.disc[i];});if(LONG.me){Object.assign(S.me,LONG.me);LONG.me=null;}refresh();return;}
+ const nm=['Alexandrina-Maximiliana Rose','Konstantin Wolfgang Bergmann','Anastasia-Valentina Petrova','Jean-Baptiste Montgomery III'];
+ const bio={ru:'Говорю прямо и бережно. Люблю долгие переписки, верёвку, медленные вечера и людей, которые заранее обсуждают границы. Первая встреча — только в публичном месте и без спешки. Мне важно, чтобы обе стороны могли остановиться в любой момент и не объяснять почему. Пишу длинно, отвечаю не сразу, но всегда отвечаю. Если сомневаешься — спроси, я лучше объясню ещё раз, чем угадаю. Не люблю сюрпризы и давление, люблю ясные договорённости и смех после. Пишу этот текст до лимита, чтобы проверить, как ведёт себя длинное описание в профиле.'.slice(0,500),en:'I speak plainly and kindly. I love long chats, rope, slow evenings and people who talk about boundaries first. First meeting only in a public place and without rushing. Both sides must be able to stop at any moment without explaining why. I write long and reply slowly, but I always reply. If unsure, ask — I would rather explain twice than guess. No surprises or pressure; clear agreements and laughter after. This text runs to the limit to test a long profile description.'.slice(0,500)};
+ Object.keys(PEOPLE).forEach((id,i)=>{const p=PEOPLE[id];p.name=nm[i%nm.length];if(p.nameRu)p.nameRu=nm[i%nm.length];if(i%3===0)p.bio=bio;});
+ if(!LONG.me)LONG.me={name:S.me.name,nick:S.me.nick};S.me.name='Александра-Валентина Мария';S.me.nick='alexandra.valentina1';
+ Object.keys(CITY).forEach((k,i)=>{CITY[k]=i%2?{ru:'Гармиш-Партенкирхен',en:'Garmisch-Partenkirchen'}:{ru:'Франкфурт-на-Майне',en:'Frankfurt am Main'};});
+ Object.values(COMMUNITIES).forEach(c=>{c.name={ru:'Верёвочные практики и разговоры о границах для новых'.slice(0,50),en:'Rope practice and boundary talks for curious beginners'.slice(0,50)};});
+ Object.values(EVENTS).forEach(e=>{e.title={ru:'Большой вечер знакомства для новичков: верёвка, разговоры, правила и согласие'.slice(0,80),en:'Big newcomers evening: rope, conversations, house rules and consent basics'.slice(0,80)};});
+ (S.discussions||[]).forEach(d=>{d.title={ru:'Как вы договариваетесь о стоп-словах и сигналах, если партнёр новичок и стесняется говорить прямо?'.slice(0,120),en:'How do you agree on safewords and signals when your partner is new and shy about saying things directly?'.slice(0,120)};});
+ refresh();}
 window.QA_SYNC=()=>{if($('#qa.open'))qaRender();};
 const qa=$('#qa'),qaScrim=$('#qaScrim');
 window.QA_CLOSE=()=>{qa.classList.remove('open');qaScrim.classList.remove('on');qa.setAttribute('aria-hidden','true');$('#qaFab').focus();};
@@ -4671,7 +4748,7 @@ qa.addEventListener('click',e=>{
  const b=e.target.closest('[data-qa]');if(b){qaGo(b.dataset.qa,JSON.parse(b.dataset.qp||'{}'));if(matchMedia('(max-width:900px)').matches)QA_CLOSE();else qaRender();return;}
  const a=e.target.closest('[data-act]');if(!a)return;e.stopPropagation();const v=a.dataset.v;
  if(a.dataset.act==='qaRestart'){ACT.qaRestart();return;}
- ({qaLang:()=>{S.lang=v;document.documentElement.lang=v;refresh();resheet();},qaTheme:()=>applyTheme(v),qaFrame:()=>{QA.frame=v;document.body.classList.toggle('frame',v!=='auto');document.body.classList.toggle('tablet',v==='tablet');document.body.classList.toggle('compact',v==='compact');refresh();},qaPv:()=>pvResolve(v==='ok'),qaGift:()=>giftReceive(),qaClock:()=>{QA.clockShift=(+v)*60e3;refresh();toast(L('Модельное время чата сдвинуто — только для проверки исчезающих фото','Chat model time shifted — only for testing disappearing media'));},qaNet:()=>{QA.offline=v==='off';refresh();toast(QA.offline?L('Режим «нет сети»: действия будут падать с ошибкой','Offline mode: actions will fail with an error'):L('Сеть восстановлена','Back online'),{type:QA.offline?'warn':'ok'});},qaPersona:()=>{signIn(v);toast(v==='new'?L('Новый пустой аккаунт','New empty account'):v==='pair'?L('Alex в паре с Kira — два отдельных аккаунта','Alex in a couple with Kira — two separate accounts'):L('Заполненный аккаунт Alex','Filled account: Alex'),{type:'ok'});},qaPrem:()=>{S.me.premium=v==='1';refresh();},qaDating:()=>{QA.datingLive=v==='on';refresh();},qaLogo:()=>{QA.logo=v;renderSide();refresh();},qaAge:()=>{QA.ageRequired=v==='on';refresh();}}[a.dataset.act]||(()=>{}))();
+ ({qaLang:()=>{S.lang=v;document.documentElement.lang=v;refresh();resheet();},qaTheme:()=>applyTheme(v),qaFrame:()=>{QA.frame=v;document.body.classList.toggle('frame',v!=='auto');document.body.classList.toggle('tablet',v==='tablet');document.body.classList.toggle('compact',v==='compact');refresh();},qaPv:()=>pvResolve(v==='ok'),qaGift:()=>giftReceive(),qaClock:()=>{QA.clockShift=(+v)*60e3;refresh();toast(L('Модельное время чата сдвинуто — только для проверки исчезающих фото','Chat model time shifted — only for testing disappearing media'));},qaNet:()=>{QA.offline=v==='off';refresh();toast(QA.offline?L('Режим «нет сети»: действия будут падать с ошибкой','Offline mode: actions will fail with an error'):L('Сеть восстановлена','Back online'),{type:QA.offline?'warn':'ok'});},qaPersona:()=>{signIn(v);toast(v==='new'?L('Новый пустой аккаунт','New empty account'):v==='pair'?L('Alex в паре с Kira — два отдельных аккаунта','Alex in a couple with Kira — two separate accounts'):L('Заполненный аккаунт Alex','Filled account: Alex'),{type:'ok'});},qaPrem:()=>{S.me.premium=v==='1';refresh();},qaDating:()=>{QA.datingLive=v==='on';refresh();},qaLogo:()=>{QA.logo=v;renderSide();refresh();},qaAge:()=>{QA.ageRequired=v==='on';refresh();},qaLongT:()=>qaLong(v==='on')}[a.dataset.act]||(()=>{}))();
  qaRender();
 },true);
 
@@ -4693,6 +4770,8 @@ if(h){const [id,arg]=h.split(':');if(SC[id]){if(SC[id].auth)qaGo(id,{});else qaG
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{if(themePref()==='auto')refresh();});
 
 startNavHistory();
+// ?long=1 — review with worst-case text lengths (same as «Длина текстов → Длинные» in the V10 panel)
+try{if(new URLSearchParams(location.search).get('long')==='1')qaLong(true);}catch(e){}
 
 
 })();</script>
