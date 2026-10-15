@@ -222,7 +222,7 @@ function newMe(){return{
 function freshState(persona){
  const full=persona!=='new';
  const st={
-  persona,lang:'ru',session:null,
+  persona,lang:'ru',session:null,author:'me',
   me:full?fullMe():newMe(),
   follows:new Set(full?['maya','mia','kai','noa']:[]),
   graph:Object.fromEntries(Object.entries(FOLLOW_SEED).map(([k,v])=>[k,new Set(full?v:v.filter(x=>x!=='me'))])),
