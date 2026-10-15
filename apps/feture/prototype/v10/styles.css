@@ -1715,7 +1715,7 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
  .w-show{flex:1;max-height:620px}
 }
 @container stage (min-width:1024px){
- .w-vis>:not(.wf-jars){transform:scale(1.12)}
+
 }
 .jar .jd{overflow-wrap:break-word}
 @container stage (max-width:359px){.wf-jars .jar .jd{font-size:10.5px}}
@@ -1744,12 +1744,12 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
  .welcome.wv .w-txt p{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
  .welcome.wv .w-act{position:sticky;bottom:0;z-index:3;margin:0 -20px;padding:12px 20px calc(14px + var(--safe-b));background:linear-gradient(to top,var(--bg) 70%,transparent)}
 }
-@container wvis (max-height:210px){.w-vis>*{transform:scale(.86)}}
-@container wvis (max-height:170px){.w-vis>*{transform:scale(.72)}}
-@container wvis (max-height:130px){.w-vis>*{transform:scale(.58)}}
+
+
+
 @media (max-height:760px){.welcome.wv .w-kick{display:none}}
 @media (max-height:640px){.welcome.wv .w-title{font-size:32px}.welcome.wv .w-txt h2{font-size:18px}.welcome.wv .w-txt p{font-size:13.5px;-webkit-line-clamp:2}.welcome.wv .w-age{font-size:11px}}
-@container wvis (max-height:150px){.wf-jars .jd{display:none}}
+
 
 /* =====================================================================
    V10 owner revision, 15.10 — polls: tappable before, liquid bars after.
@@ -1904,3 +1904,56 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .cm-kids>*::before{border-color:color-mix(in srgb,var(--line2) 50%,var(--bg))}
 .cm-h{align-items:center}
 .cm-h time{line-height:1;padding-top:1px}
+
+/* replies: no red tint on a reply being sent / just sent — a soft neutral wash only */
+.cm:target{background:var(--raise)}
+@keyframes cmFlash{0%,30%{background:var(--raise)}100%{background:transparent}}
+.cm.pending,.cm.failed{opacity:.6}
+
+/* welcome: the picture is fitted by script (wFit) — the old stepped scales are off */
+.w-vis>*{flex:none}
+.wf-jars .jar .vessel{transform:none!important}
+.welcome.wv .w-vis{place-items:start center}
+
+/* =====================================================================
+   V10 owner revision, 15.10 — couple connection scene, private gallery, private block in the editor, «me» couple row.
+   ===================================================================== */
+.pair-wrap{display:grid;gap:14px;padding-top:8px}
+.pair-wrap .t,.pair-wrap .lead{margin:0}
+.pair-scene{position:relative;display:flex;align-items:center;justify-content:center;gap:0;padding:18px 0 6px}
+.ps-av .av{width:88px;height:88px;box-shadow:0 0 0 4px var(--bg),0 14px 30px -14px rgba(0,0,0,.45)}
+.ps-q{width:88px;height:88px;border-radius:50%;display:grid;place-items:center;border:2px dashed var(--line2);color:var(--faint);background:var(--surf)}
+.ps-q svg{width:28px;height:28px}
+.ps-link{position:relative;width:86px;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 6px}
+.ps-link i{width:7px;height:7px;border-radius:50%;background:var(--line2);animation:psDot 1.6s ease-in-out infinite}
+.ps-link i:nth-child(2){animation-delay:.2s}.ps-link i:nth-child(3){animation-delay:.4s}
+.ps-link b{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;display:grid;place-items:center;background:var(--surf);color:var(--faint);box-shadow:0 0 0 1px var(--line2);transition:background .3s,color .3s}
+.ps-link b svg{width:17px;height:17px}
+.pair-scene.ready .ps-link b,.pair-scene.wait .ps-link b,.pair-scene.on .ps-link b{background:linear-gradient(135deg,var(--accent),var(--violet));color:#fff;box-shadow:0 8px 20px -8px color-mix(in srgb,var(--accent) 70%,transparent)}
+.pair-scene.ready .ps-link i,.pair-scene.wait .ps-link i,.pair-scene.on .ps-link i{background:var(--accent)}
+.pair-scene.on .ps-link i{animation:none}
+@keyframes psDot{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1.1)}}
+.pair-facts{display:grid;gap:2px;margin:2px 0 4px}
+.pf{display:flex;gap:12px;align-items:center;padding:8px 2px}
+.pf b{display:block;font-size:14.5px}.pf small{display:block;font-size:13px;color:var(--mute)}
+.pair-prev:empty{display:none}
+.pair-prev .li{border-radius:var(--r);background:var(--surf);box-shadow:0 0 0 1px var(--line)}
+@media (prefers-reduced-motion:reduce){.ps-link i{animation:none}}
+/* private gallery: first large, rest 4:5 tiles, no card */
+.pgal{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.pgc{position:relative;aspect-ratio:4/5;overflow:hidden;border-radius:12px;background:var(--raise)}
+.pgc:first-child:not(:only-child):not(.add){grid-column:span 2;grid-row:span 2;aspect-ratio:auto}
+.pgc img,.pgc video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pgc .wm{position:absolute;right:6px;bottom:6px;font-size:9.5px;font-weight:700;color:rgba(255,255,255,.85);text-shadow:0 1px 2px rgba(0,0,0,.55)}
+.pgc .dur{position:absolute;left:6px;bottom:6px;display:flex;align-items:center;gap:3px;padding:2px 7px;border-radius:99px;background:rgba(10,6,10,.6);color:#fff;font-size:11px;font-weight:700}.pgc .dur svg{width:12px;height:12px}
+.pgc.add{display:grid;place-items:center;align-content:center;gap:4px;color:var(--faint);border:1.5px dashed var(--line2);background:none}.pgc.add small{font-size:12px;font-weight:600}
+/* private block inside the editor */
+.pe-priv .pe-block{display:grid;gap:8px;padding:14px 0 4px;border-top:1px solid var(--line)}
+.pe-h{display:flex;align-items:center;gap:8px}.pe-h b{font-size:14.5px}.pe-h span{font-size:13px;color:var(--faint);font-weight:600}.pe-h .btn{margin-left:auto;min-height:30px;padding:0}
+.pe-n{margin:0;font-size:12.5px;color:var(--faint)}
+.pe-priv .rte,.pe-priv .field{margin:0}
+/* couple row inside the «me» card */
+.me-pair{display:flex;align-items:center;gap:12px;width:100%;margin-top:12px;padding:10px 12px;border-radius:var(--r);background:var(--raise);text-align:left}
+.me-pair .tx{flex:1;min-width:0}.me-pair .tx b{display:block;font-size:14px}.me-pair .tx small{display:block;font-size:12.5px;color:var(--mute)}
+.mp-ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--violet));color:#fff}.mp-ic svg{width:17px;height:17px}
+.mp-avs{display:flex}.mp-avs .av{box-shadow:0 0 0 2px var(--raise)}.mp-avs .av+.av{margin-left:-8px}

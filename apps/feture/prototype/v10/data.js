@@ -63,7 +63,7 @@ const OPT={
  gender:[['woman','женщина','woman'],['man','мужчина','man'],['nb','небинарная персона','non-binary'],['transw','транс-женщина','trans woman'],['transm','транс-мужчина','trans man'],['gq','гендерквир','genderqueer'],['ag','агендер','agender'],['search','пока ищу слово','still searching']],
  orient:[['hetero','гетеро','straight'],['bi','би','bi'],['pan','пан','pan'],['gay','гей','gay'],['lesbian','лесби','lesbian'],['queer','квир','queer'],['ace','асексуальность','asexual'],['demi','демисексуальность','demisexual']],
  format:[['mono','моногамия','monogamy'],['open','открытые отношения','open relationship'],['poly','полиамория','polyamory'],['swing','свинг','swinging'],['ra','анархия отношений','relationship anarchy'],['talk','только общение','just talking']],
- role:[['lead','ведущая','leading'],['recv','принимающая','receiving'],['switch','свитч','switch'],['service','сервис','service'],['none','не важно','no preference']],
+ role:[['lead','ведущая','leading'],['recv','принимающая','receiving'],['switch','свитч','switch'],['service','сервис','service']],
  seek:[['chat','общение','conversation'],['dates','свидания','dates'],['rel','отношения','relationship'],['exp','совместный опыт','shared experience'],['friends','дружба','friendship'],['play','партнёра по практикам','a play partner'],['events','компанию на события','company for events'],['learn','научиться, наставника','to learn / a mentor'],['online','общение онлайн','online only']],
  pron:[['she','она/её','she/her'],['he','он/его','he/him'],['they','они/их','they/them'],['any','любые','any']],
 };
@@ -96,7 +96,7 @@ const PEOPLE={
  kai:{pv:true,name:'Kai',age:27,photo:4,nph:2,city:'berlin',km:5,pron:'they',gender:['nb'],orient:['pan'],format:'ra',role:['switch'],seek:['chat','friends'],verified:true,online:false,last:{ru:'был(а) сегодня',en:'active today'},dating:true,
   bio:{ru:'Ищу людей, с которыми можно спокойно говорить о границах. Остальное приложится.',en:'Looking for people I can calmly talk boundaries with. The rest will follow.'},
   jars:[['service',8,['give']],['bondage',6,['get']],['rituals',8],['talk',10],{t:'filming',lv:0,limit:'hard'}]},
- maya:{pv:true,name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:['none'],seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
+ maya:{pv:true,name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:[],seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
   bio:{ru:'Веду сообщество «Узлы и разговоры» и встречи для новичков. Здесь — ради людей и тем.',en:'I run the Rope & Talk community and newcomer meetups. Here for people and ideas.'},
   jars:[['shibari',10],['talk',10],['aftercare',8]]},
  ari:{name:'Ari',age:30,photo:6,city:'berlin',km:6,pron:'he',gender:['man'],orient:['gay'],format:'open',role:['service'],seek:['dates','friends'],verified:true,online:false,last:{ru:'был 2 ч назад',en:'active 2h ago'},dating:true,
@@ -121,8 +121,8 @@ const PEOPLE={
   bio:{ru:'Половина пары Eva и Tom. Личные сообщения — сюда, общие вопросы — в профиль пары.',en:'One half of Eva & Tom. Personal messages here, couple questions on the couple profile.'},jars:[['roleplay',8],['intimacy',9]]},
  tom:{name:'Tom',age:34,plate:'ember',city:'berlin',pron:'he',gender:['man'],orient:['bi'],format:'swing',role:['lead'],seek:['exp'],verified:true,online:false,last:{ru:'был сегодня',en:'active today'},dating:false,pairOf:'tomeva',
   bio:{ru:'Готовлю, катаюсь на велосипеде. В паре с Eva.',en:'I cook and ride bikes. In a couple with Eva.'},jars:[['control',8],['rituals',7]]},
- dan:{name:'Dan',age:35,plate:'night',city:'berlin',pron:'he',gender:['man'],orient:['hetero'],format:'mono',role:['none'],seek:['chat'],dating:false,bio:{ru:'Читаю больше, чем пишу.',en:'I read more than I post.'},jars:[]},
- noa:{name:'Noa',age:34,plate:'sea',city:'moscow',pron:'they',gender:['nb'],orient:['queer'],format:'ra',role:['none'],seek:['chat'],dating:false,verified:true,bio:{ru:'Психолог, веду онлайн-круги о согласии.',en:'Counsellor, I host online circles on consent.'},jars:[['talk',10],['aftercare',10]]},
+ dan:{name:'Dan',age:35,plate:'night',city:'berlin',pron:'he',gender:['man'],orient:['hetero'],format:'mono',role:[],seek:['chat'],dating:false,bio:{ru:'Читаю больше, чем пишу.',en:'I read more than I post.'},jars:[]},
+ noa:{name:'Noa',age:34,plate:'sea',city:'moscow',pron:'they',gender:['nb'],orient:['queer'],format:'ra',role:[],seek:['chat'],dating:false,verified:true,bio:{ru:'Психолог, веду онлайн-круги о согласии.',en:'Counsellor, I host online circles on consent.'},jars:[['talk',10],['aftercare',10]]},
 };
 
 for(const [pairId,ids,names] of [['lenamax',['lena','max'],['Lena','Max']],['nikajonas',['nika','jonas'],['Nika','Jonas']]]){const pair=PEOPLE[pairId];pair.members=ids;ids.forEach((id,i)=>{PEOPLE[id]={name:names[i],age:i?33:30,plate:i?'sea':'rose',city:pair.city,pron:i?'he':'she',gender:[i?'man':'woman'],orient:['bi'],format:[...pair.format],status:'partnered',role:['switch'],seek:['friends'],dating:false,socialLikes:true,pairOf:pairId,bio:{ru:'Личный профиль. Общий профиль пары доступен ниже.',en:'Personal profile. Our couple profile is linked below.'},jars:[]};});}
