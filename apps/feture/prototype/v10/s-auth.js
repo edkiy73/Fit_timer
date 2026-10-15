@@ -2,12 +2,59 @@
 const langSw=()=>`<div class="langsw" role="group" aria-label="Language">${[['ru','RU'],['en','EN']].map(([k,l])=>`<button class="${S.lang===k?'on':''}" data-act="setLang" data-v="${k}" aria-pressed="${S.lang===k}">${l}</button>`).join('')}</div>`;
 ACT.setLang=a=>{S.lang=a.dataset.v;document.documentElement.lang=S.lang;refresh();resheet();};
 
-SC.A01={auth:1,title:()=>L('Приветствие','Welcome'),render:()=>`<div class="welcome"><div class="w-bg"></div>
- <div class="w-top"><img class="w-logo" src="${LOGO()}" alt="FetUre">${langSw()}</div>
- <h1 class="w-word"><span>Fet</span><span>Ure</span></h1>
- <div class="w-lines"><span>${L('Пойми, чего хочешь.','Understand what you want.')}</span><span>${L('Покажи ровно столько, сколько решишь.','Show exactly as much as you choose.')}</span><span>${L('Найди тех, с кем это совпадает.','Find people it resonates with.')}</span></div>
- <div class="w-cta"><button class="btn primary" data-go="A02" data-p='{"mode":"up"}'>${L('Создать аккаунт','Create account')}</button><button class="btn soft" data-go="A02" data-p='{"mode":"in"}'>${L('У меня уже есть аккаунт','I already have an account')}</button></div>
- <div class="w-age">${L('Только для взрослых, 18+. Продолжая, ты соглашаешься с','Adults only, 18+. By continuing you agree to the')} <a href="#" data-act="terms">${L('условиями','terms')}</a>.</div></div>`};
+/* A01 — welcome (owner, 15.10.2026: «максимально круто», a slider with the top features).
+   Always the dark brand palette; on a wide screen hero left, features right; on a phone one column with buttons at the bottom.
+   The slider is one grid cell: slides cross-fade, the bar of the active slide fills and moves on (no timers to clean up);
+   hover/focus pauses it, reduced motion turns autoplay off. Visuals are decorative; the words carry the meaning. */
+const W_SLIDES=()=>[
+ {k:L('Баночки','Jars'),h:L('Интересы — баночками, а не анкетой','Interests as jars, not a form'),p:L('Каждая тема — от 1 до 10, «обсуждаемо» или «табу». И как тебе ближе: давать, получать или смотреть.','Every topic is 1 to 10, “negotiable” or “taboo”. Plus how you like it: giving, receiving or watching.'),
+  v:()=>`<div class="wf-jars">${jarsHTML([{t:'shibari',lv:10,dir:['give']},{t:'aftercare',lv:8,dir:['get']},{t:'roleplay',lv:6,dir:DIRS},{t:'latex',lv:3,dir:['watch']}],{pre:1})}</div>`},
+ {k:L('Приватность','Privacy'),h:L('Покажи ровно столько, сколько решишь','Show exactly as much as you choose'),p:L('Каждое поле, фото и интерес: всем, по доступу или только тебе. По умолчанию всё скрыто.','Every field, photo and interest: everyone, by access or only you. Hidden by default.'),
+  v:()=>`<div class="wf-layers">${[[I.globe,L('Ник и фото','Nickname & photo'),L('всем','everyone'),'ok'],[I.key,L('Роли и желания','Roles & wishes'),L('по доступу','by access'),'v'],[I.eyeoff,L('Дневник','Journal'),L('только я','only me'),'']].map(([i,b,e,c],n)=>`<div class="wf-row" style="--n:${n}"><span class="wf-ic">${i}</span><b>${b}</b><em class="${c}">${e}</em></div>`).join('')}</div>`},
+ {k:L('Доступ на срок','Timed access'),h:L('Приватное — по запросу и на срок','Private — on request, for a set time'),p:L('Фото и желания открываешь конкретному человеку на день, неделю или месяц. Передумаешь — закроешь в один тап.','Open photos and wishes to one person for a day, a week or a month. Change your mind — close it in one tap.'),
+  v:()=>`<div class="wf-req"><div class="wf-req-h">${av('mia','wf-av')}<span><b>Mia</b><small>${L('просит открыть приватные фото','asks to see your private photos')}</small></span></div><div class="wf-dur">${[L('24 часа','24 hours'),L('7 дней','7 days'),L('30 дней','30 days')].map((d,n)=>`<span class="${n===1?'on':''}">${d}</span>`).join('')}</div><div class="wf-req-f">${I.unlock}<span>${L('Отозвать можно в любой момент','Revoke any time')}</span></div></div>`},
+ {k:L('Взаимность','Mutual'),h:L('Пишут только взаимно','Messages only when it’s mutual'),p:L('Никаких непрошеных сообщений: чат открывается только после взаимной симпатии.','No unsolicited messages: a chat opens only after a mutual like.'),
+  v:()=>`<div class="wf-match"><div class="wf-pair">${av('lina','wf-big')}<span class="wf-heart">${I.heart}</span>${av('ari','wf-big')}</div><div class="wf-bub l">${L('Взаимно! Теперь можно написать','It’s mutual! You can write now')}</div><div class="wf-bub r">${L('Привет! Классный пост про верёвку','Hi! Loved your post about rope')}</div></div>`},
+ {k:L('Совпадения','In common'),h:L('Честно о совпадениях','Honest about what you share'),p:L('Без процентов «совместимости»: что совпадает, что дополняет друг друга и что стоит обсудить заранее.','No “compatibility” percentages: what you share, what complements and what to talk through first.'),
+  v:()=>`<div class="wf-cmp">${venn(3,{})}<div class="wf-facts"><span class="wf-f g">${I.check}${L('Шибари: у тебя давать, у Mia получать','Shibari: you giving, Mia receiving')}</span><span class="wf-f a">${I.chat}${L('Темп: стоит обсудить','Pace: worth a talk')}</span></div></div>`},
+ {k:L('Сообщество','Community'),h:L('Сообщества и встречи','Communities and meet-ups'),p:L('Обсуждения с модерацией и события онлайн и офлайн. Адрес видят только одобренные участники.','Moderated discussions and events online and offline. Only approved guests see the address.'),
+  v:()=>`<div class="wf-ev"><div class="wf-date"><small>${L('СБ','SAT')}</small><b>19</b></div><div class="wf-ev-b"><b>${L('Вечер шибари для новичков','Shibari night for beginners')}</b><small>${I.pin}${L('Берлин · адрес после одобрения','Berlin · address after approval')}</small><div class="wf-ppl">${['sofi','mia','kai','leon'].map(id=>av(id,'wf-sm')).join('')}<em>+38</em></div></div></div>`},
+];
+SC.A01={auth:1,title:()=>L('Приветствие','Welcome'),render:()=>{const sl=W_SLIDES(),cur=Math.min(S.ui.wIdx||0,sl.length-1),nn=n=>String(n+1).padStart(2,'0');
+ return `<div class="welcome wv"><div class="w-aura" aria-hidden="true"><i></i><i></i><i></i></div><div class="w-mark" aria-hidden="true">FetUre</div>
+ <header class="w-top"><div class="w-brand"><img class="w-logo" src="${LOGO()}" alt=""><b>Fet<i>Ure</i></b></div>${langSw()}</header>
+ <div class="w-grid">
+  <div class="w-head">
+   <p class="w-kick"><i></i>${L('18+ · приватно по умолчанию','18+ · private by default')}</p>
+   <h1 class="w-title">${L('Пойми, чего <em>хочешь</em>.','Know what you <em>want</em>.')}</h1>
+   <p class="w-sub">${L('Покажи ровно столько, сколько решишь. Найди тех, с кем это совпадает.','Show exactly as much as you choose. Find people it resonates with.')}</p>
+  </div>
+  <section class="w-show" aria-roledescription="${L('карусель','carousel')}" aria-label="${L('Главное в FetUre','FetUre highlights')}">
+   <div class="w-prog">${sl.map((x,n)=>`<button class="w-pb ${n===cur?'on':''} ${n<cur?'done':''}" data-act="wSlide" data-v="${n}" aria-label="${nn(n)} · ${esc(x.k)}" aria-current="${n===cur}"><i></i></button>`).join('')}</div>
+   <div class="w-stage">${sl.map((x,n)=>`<article class="w-slide ${n===cur?'on':''}" data-i="${n}" aria-hidden="${n!==cur}"><div class="w-vis" aria-hidden="true">${x.v()}</div><div class="w-txt"><span class="w-k">${nn(n)} · ${esc(x.k)}</span><h2>${esc(x.h)}</h2><p>${esc(x.p)}</p></div></article>`).join('')}</div>
+   <div class="w-ctrl"><span class="w-count"><b>${nn(cur)}</b> / ${nn(sl.length-1)}</span><span class="w-arrows"><button class="ibtn" data-act="wSlide" data-v="prev" aria-label="${L('Назад','Previous')}">${I.back}</button><button class="ibtn" data-act="wSlide" data-v="next" aria-label="${L('Дальше','Next')}">${I.chev}</button></span></div>
+  </section>
+  <div class="w-act">
+   <div class="w-cta"><button class="btn primary" data-go="A02" data-p='{"mode":"up"}'>${L('Создать аккаунт','Create account')}</button><button class="btn soft" data-go="A02" data-p='{"mode":"in"}'>${L('У меня уже есть аккаунт','I already have an account')}</button></div>
+   <div class="w-age">${L('Только для взрослых, 18+. Продолжая, ты соглашаешься с','Adults only, 18+. By continuing you agree to the')} <a href="#" data-act="terms">${L('условиями','terms')}</a>.</div>
+  </div>
+ </div></div>`;},
+ after:()=>{const show=$('.w-show');if(!show)return;wPlay(S.ui.wIdx||0,true);
+  show.addEventListener('animationend',e=>{if(e.target.matches('.w-pb.on>i'))wShow((S.ui.wIdx||0)+1);});
+  show.addEventListener('keydown',e=>{if(e.key==='ArrowRight')wShow((S.ui.wIdx||0)+1);else if(e.key==='ArrowLeft')wShow((S.ui.wIdx||0)-1);});
+  let x0=null,y0=0;const st=$('.w-stage',show);
+  st.addEventListener('pointerdown',e=>{x0=e.clientX;y0=e.clientY;});
+  st.addEventListener('pointerup',e=>{if(x0==null)return;const dx=e.clientX-x0,dy=e.clientY-y0;x0=null;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy))wShow((S.ui.wIdx||0)+(dx<0?1:-1));});
+  st.addEventListener('pointercancel',()=>{x0=null;});}};
+/* switch slides in place — no re-render, so the aura and the page don't flash */
+function wShow(i){const sl=$$('.w-slide');if(!sl.length)return;const n=sl.length;i=((i%n)+n)%n;S.ui.wIdx=i;
+ sl.forEach((s,k)=>{s.classList.toggle('on',k===i);s.setAttribute('aria-hidden',String(k!==i));});
+ $$('.w-pb').forEach((b,k)=>{b.classList.toggle('on',k===i);b.classList.toggle('done',k<i);b.setAttribute('aria-current',String(k===i));const bar=b.firstElementChild;if(k===i&&bar){bar.style.animation='none';void bar.offsetWidth;bar.style.animation='';}});
+ const c=$('.w-count b');if(c)c.textContent=String(i+1).padStart(2,'0');wPlay(i);}
+/* replay the entrance of the active visual: jars fill again, rows slide in */
+function wPlay(i,first){const s=$$('.w-slide')[i];if(!s)return;const j=$('.jars',s);if(j){j.classList.add('pre');setTimeout(()=>j.classList.remove('pre'),first?260:120);}
+ const v=$('.venn',s);if(v){v.classList.add('pre');setTimeout(()=>v.classList.remove('pre'),first?260:140);}}
+ACT.wSlide=a=>{const v=a.dataset.v,i=S.ui.wIdx||0;wShow(v==='next'?i+1:v==='prev'?i-1:+v);};
 
 ACT.terms=()=>sheet(()=>({title:L('Условия и приватность','Terms and privacy'),body:`<p class="lead">${L('Коротко о главном. Полный текст юридически согласуется перед запуском.','The essentials. The full legal text is finalised before launch.')}</p>
  ${[[I.shield,L('Тебе 18+','You are 18+'),L('Дата рождения нужна, чтобы подтвердить 18+. Её никто не увидит. Возраст можно показывать в профиле по твоему выбору.','Your birth date confirms you are 18+. Nobody sees it. You choose whether to show your age on your profile.')],[I.lock,L('Приватно по умолчанию','Private by default'),L('Интересы и ответы тестов видишь только ты.','Your interests and quiz answers are visible only to you.')],[I.heart,L('Чат — только взаимно','Chat only when mutual'),L('Никто не напишет тебе без взаимной симпатии.','Nobody can message you without a mutual like.')],[I.trash,L('Твои данные — твои','Your data is yours'),L('Экспорт и удаление доступны всегда и бесплатно.','Export and deletion are always available and free.')]].map(([i,b,s])=>`<div class="fact"><i class="v">${i}</i><span><b>${b}.</b> ${s}</span></div>`).join('')}`,foot:`<button class="btn primary" data-act="closeSheet">${L('Понятно','Got it')}</button>`}));
@@ -106,19 +153,15 @@ ACT.toWelcome=()=>{S.nav.auth=[{id:'A01',p:{},f:{}}];render('back');};
 
 /* A05 — optional first steps: identity (private by default) → where to start */
 SC.A05={auth:1,title:()=>L('Первые шаги','First steps'),render:(p,r)=>{
- /* V8: community first — interests → communities → a first quiz you can share. Dating is not part of onboarding. */
- if(p.step===2){r.f.tp=r.f.tp||[];const pop=['shibari','bondage','talk','aftercare','slow','latex','roleplay','sensory','intimacy','rituals','service','experiments'];const comms=Object.keys(COMMUNITIES).filter(c=>!COMMUNITIES[c].hidden&&(!r.f.tp.length||COMMUNITIES[c].topics.some(t=>r.f.tp.includes(t)))).slice(0,4);
-  return `${bar('',{back:1,actions:`<span class="pill">2 / 3</span>`})}<div class="view nodock cta1"><div class="auth-wrap">
-  <div class="steps"><i class="on"></i><i class="on"></i><i></i></div><h2 class="t">${L('Что тебе интересно?','What are you into?')}</h2><p class="lead">${L('Выбранные темы станут фильтром ленты. Это не ответы теста и не публичные интересы.','Your choices will filter your feed. They are not quiz answers or public interests.')}</p>
+ /* community first — interests → communities. Quizzes are «скоро» (owner, 15.10) and no longer part of onboarding. Dating is not part of onboarding. */
+ if(p.step>=2){r.f.tp=r.f.tp||[];const pop=['shibari','bondage','talk','aftercare','slow','latex','roleplay','sensory','intimacy','rituals','service','experiments'];const comms=Object.keys(COMMUNITIES).filter(c=>!COMMUNITIES[c].hidden&&(!r.f.tp.length||COMMUNITIES[c].topics.some(t=>r.f.tp.includes(t)))).slice(0,4);
+  return `${bar('',{back:1,actions:`<span class="pill">2 / 2</span>`})}<div class="view nodock cta1"><div class="auth-wrap">
+  <div class="steps"><i class="on"></i><i class="on"></i></div><h2 class="t">${L('Что тебе интересно?','What are you into?')}</h2><p class="lead">${L('Выбранные темы станут фильтром ленты. Это не публичные интересы.','Your choices will filter your feed. They are not public interests.')}</p>
   ${grp(L('Интересы','Interests'),`<div class="chips">${pop.map(t=>chipBtn(t,topic(t),r.f.tp.includes(t),'onbTopic')).join('')}</div>`)}
   <div class="grp"><div class="grp-t"><span>${L('Сообщества для тебя','Communities for you')}</span></div>${comms.map(c=>`<div class="onb-c">${commCard(c)}<button class="btn sm ${S.joined.has(c)?'soft':'primary'} auto" data-act="onbJoin" data-v="${c}">${S.joined.has(c)?L('Ты участник','Joined'):COMMUNITIES[c].privacy==='closed'?L('Заявка','Request'):L('Вступить','Join')}</button></div>`).join('')}</div>
-  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-go="A05" data-p='{"step":3}'>${L('Дальше','Next')}</button></div></div>`;}
- if(p.step===3)return `${bar('',{back:1,actions:`<span class="pill">3 / 3</span>`})}<div class="view nodock cta1"><div class="auth-wrap">
-  <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i></div><h2 class="t">${L('Узнай себя','Get to know yourself')}</h2><p class="lead">${L('Тесты помогают узнать себя. Интересы для профиля ты выбираешь и заполняешь отдельно в разделе «Я».','Quizzes help you get to know yourself. Choose and fill in profile interests separately in Me.')}</p>
-  ${grp(L('Начни с одного','Start with one'),`<div class="tests">${['rope','power','senses','care'].map(id=>{const z=QUIZ[id];return `<button class="tcard" data-act="finishOnb" data-v="X07" data-p='${JSON.stringify({id})}'><span class="tc-art">${plate(z.pl)}<span class="tc-ic">${I[z.ic||'test']}</span></span><span class="tc-b"><b>${esc(T(z.title))}</b><small>${pl(z.topics.length,['тема','темы','тем'],['topic','topics'])}</small></span></button>`;}).join('')}</div>`,{cls:'bare'})}
-  </div></div><div class="ctabar"><div class="wrap"><button class="btn soft" data-act="finishOnb" data-v="F01">${L('Сразу в ленту','Go to the feed')}</button></div></div>`;
+  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="finishOnb" data-v="F01">${L('Готово','Done')}</button></div></div>`;}
  if(!r.identityInit){Object.assign(r.f,identityDraft(S.me));r.identityInit=true;}
- return `${bar(L('О тебе','About you'),{back:1,actions:`<span class="pill">1 / 3</span>`})}<div class="view nodock cta2"><div class="auth-wrap identity-onboarding"><p class="lead">${L('Всё необязательно. Выбери то, что подходит, или заполни позже.','Everything is optional. Choose what fits or fill this in later.')}</p><p class="note">${L('Видно только тебе. Открыть другим можно в профиле.','Only you can see this. You can share it from your profile later.')}</p><div class="identity-grid">${identityFields().map(([k,title,desc])=>grp(title,`<p class="note mb12">${desc}</p>${identityChoices(k,r.f[k],'idPick')}`)).join('')}</div></div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="a05next">${L('Сохранить и продолжить','Save and continue')}</button><button class="btn secondary" data-act="a05skip">${L('Заполнить позже','Fill in later')}</button></div></div>`;}};
+ return `${bar(L('О тебе','About you'),{back:1,actions:`<span class="pill">1 / 2</span>`})}<div class="view nodock cta2"><div class="auth-wrap identity-onboarding"><p class="lead">${L('Всё необязательно. Выбери то, что подходит, или заполни позже.','Everything is optional. Choose what fits or fill this in later.')}</p><p class="note">${L('Видно только тебе. Открыть другим можно в профиле.','Only you can see this. You can share it from your profile later.')}</p><div class="identity-grid">${identityFields().map(([k,title,desc])=>grp(title,`<p class="note mb12">${desc}</p>${identityChoices(k,r.f[k],'idPick')}`)).join('')}</div></div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="a05next">${L('Сохранить и продолжить','Save and continue')}</button><button class="btn secondary" data-act="a05skip">${L('Заполнить позже','Fill in later')}</button></div></div>`;}};
 ACT.idPick=a=>{const r=cur(),k=a.dataset.k;if(!IDENTITY_KEYS.includes(k))return;r.f[k]=toggleIdentityValue(r.f[k],k,a.dataset.v);r.dirty=true;refresh();};
 function applyIdentityDraft(){const r=cur(),next=identityDraft(r.f),vis={...S.me.vis};for(const k of IDENTITY_KEYS){if(JSON.stringify(S.me[k])!==JSON.stringify(next[k]))vis[k]='only';else vis[k]=vis[k]||'only';}Object.assign(S.me,next,{vis});r.dirty=false;}
 ACT.a05next=()=>{applyIdentityDraft();go('A05',{step:2});};
