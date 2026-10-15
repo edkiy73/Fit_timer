@@ -133,7 +133,7 @@ function submitCoupleDraft(){const P=S.pair;if(P?.status!=='active'||!P.draft||P
  const q=P.proposal={id:'pv'+Date.now()+'_'+(P.draftVersion||0),by,field:'profile',text:structuredClone(P.draft),base:P.revision,draftVersion:P.draftVersion||0,status:'pending',t:Date.now()};
  pairNotify('proposal',q.id,{go:['Q03']});return true;}
 function commitCoupleProposal(P,reviewer=pairMember(),expected=P?.proposal?.id){if(P!==S.pair||P?.status!=='active'||!P.proposal)return false;const q=P.proposal;
- if(q.id&&((q.status!=='pending')||q.id!==expected||q.by===reviewer||q.base!==(P.revision||0)))return false;
+ if(q.id&&(!realMembers('couple').includes(reviewer)||(q.status!=='pending')||q.id!==expected||q.by===reviewer||q.base!==(P.revision||0)))return false;
  if(q.field==='profile'){P.profile=structuredClone(q.text);P.name={...P.profile.name};P.desc=P.profile.bio;P.revision=(P.revision||0)+1;P.draftLease=(P.draftLease||0)+1;if((P.draftVersion||0)===(q.draftVersion||0))delete P.draft;P.draftBase=P.revision;}else P[q.field||'desc']=q.text;
  P.proposal=null;pairNotify('profileApproved',q.id||String(q.t),{go:['Q03']});return true;}
 function pairNotify(type,key,extra={}){const P=S.pair;if(!P)return;P.notifications??={};for(const recipient of ['me',P.with]){const list=P.notifications[recipient]??=[];const id='pair_'+type+'_'+key+'_'+recipient;if(list.some(n=>n.id===id))continue;const n={id,type:'pair',pairEvent:type,pairName:T(P.name),to:recipient,t:Date.now(),read:false,...extra};list.unshift(n);if(recipient===pairMember())S.notifs.unshift(n);}}
