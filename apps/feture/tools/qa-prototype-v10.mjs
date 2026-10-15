@@ -84,12 +84,12 @@ for (const [lang, width] of [['ru', 390], ['en', 390], ['ru', 320]]) {
   await p.evaluate(() => window.FT_QA.go('F01', { sub: 'foryou' }));
   await p.waitForTimeout(300);
   await p.click('.composer .cmp-main'); await p.waitForTimeout(350);
-  await p.fill('textarea[name="text"]', 'Привет, это тест');
+  await p.click('.rte-ed[data-name="text"]'); await p.keyboard.type('Привет, это тест');
   await p.click('[data-act="toPreview"]'); await p.waitForTimeout(400);
   const s1 = await p.evaluate(() => window.FT_QA.screen());
   if (s1 !== 'F09') note(`preview blocked by leave dialog (screen ${s1})`); else console.log('✓ editor → preview without dialog');
   await p.goBack(); await p.waitForTimeout(400);
-  const s2 = await p.evaluate(() => [window.FT_QA.screen(), document.querySelector('textarea[name="text"]')?.value]);
+  const s2 = await p.evaluate(() => [window.FT_QA.screen(), document.querySelector('.rte-ed[data-name="text"]')?.textContent]);
   if (s2[0] !== 'F07' || s2[1] !== 'Привет, это тест') note(`system back from preview lost the draft: ${s2}`); else console.log('✓ back keeps the draft');
   await p.goForward(); await p.waitForTimeout(400);
   if (await p.evaluate(() => window.FT_QA.screen()) !== 'F09') note('system forward did not return to preview'); else console.log('✓ forward');
