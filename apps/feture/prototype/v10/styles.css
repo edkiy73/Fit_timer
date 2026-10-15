@@ -1875,7 +1875,7 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .mmatch.lit .core{animation:matchCore .9s ease-in-out infinite alternate}
 .mmatch.lit{filter:drop-shadow(0 0 14px rgba(255,120,60,.55)) drop-shadow(0 6px 14px rgba(0,0,0,.35))}
 .mmatch .sp{opacity:0;animation:matchSp 2.2s ease-out infinite}.mmatch .s2{animation-delay:1.1s}
-.mmatch.out{color:#fff}.mmatch .smoke{animation:matchSmoke 3s ease-in-out infinite}
+.mmatch.out{color:#fff}
 @keyframes matchFl{0%{transform:scale(1,1) skewX(0)}50%{transform:scale(.95,1.06) skewX(3deg)}100%{transform:scale(1.04,.96) skewX(-3deg)}}
 @keyframes matchCore{to{transform:translateY(1px) scale(.9);opacity:.85}}
 @keyframes matchSp{0%{opacity:0;transform:translate(0,0)}20%{opacity:1}100%{opacity:0;transform:translate(4px,-16px)}}
@@ -1883,3 +1883,24 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 @media (prefers-reduced-motion:reduce){.mmatch .fl,.mmatch .core,.mmatch .sp,.mmatch .smoke{animation:none}}
 /* the poll keeps its height when you vote / withdraw: no hint line above the options, footer always one button tall */
 .poll-f{min-height:34px}
+
+/* smoke from a burnt-out match: wisps rise straight up, sway and fade; the ember glows out */
+.mmatch .w{opacity:0;animation:smokeRise 3.6s ease-out infinite}
+.mmatch .w1{animation-delay:1.2s}.mmatch .w2{animation-delay:2.4s}
+.mmatch .ember{animation:ember 2.4s ease-in-out infinite}
+@keyframes smokeRise{0%{opacity:0;transform:translate(0,4px) scaleY(.6)}25%{opacity:.9}70%{opacity:.35}100%{opacity:0;transform:translate(3px,-12px) scaleY(1.15)}}
+@keyframes ember{0%,100%{opacity:.25}50%{opacity:.9}}
+.mmatch .w{transform-box:fill-box;transform-origin:50% 100%}
+/* chat: round «to latest» button with the new-message counter */
+.chat-down{position:absolute;right:14px;bottom:calc(76px + var(--safe-b));z-index:6;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--surf);color:var(--ink);box-shadow:0 0 0 1px var(--line2),0 10px 24px -10px rgba(0,0,0,.45);opacity:0;transform:translateY(10px) scale(.9);pointer-events:none;transition:opacity .18s,transform .22s var(--ease)}
+.chat-down.on{opacity:1;transform:none;pointer-events:auto}
+.chat-down.low{bottom:calc(16px + var(--safe-b))}
+.chat-down svg{width:22px;height:22px}
+.chat-down em{position:absolute;top:-6px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:10px;display:grid;place-items:center;background:var(--accent);color:#fff;font:700 11.5px/1 var(--font);font-style:normal;box-shadow:0 0 0 2px var(--bg)}
+@media (prefers-reduced-motion:reduce){.mmatch .w,.mmatch .ember{animation:none}.mmatch .w0{opacity:.5}}
+/* replies: thread lines at half strength; time centred on the nickname line */
+/* opaque (mixed with the page background), so overlapping segments don't build up darker joints */
+.th.has-kids>.cm>.cm-l::after,.cm-kids>*:not(:last-child)::after{background:color-mix(in srgb,var(--line2) 50%,var(--bg))}
+.cm-kids>*::before{border-color:color-mix(in srgb,var(--line2) 50%,var(--bg))}
+.cm-h{align-items:center}
+.cm-h time{line-height:1;padding-top:1px}
