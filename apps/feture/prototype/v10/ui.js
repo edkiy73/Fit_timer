@@ -115,10 +115,10 @@ function replyTree(kind,id){const list=identifyReplies(kind,id),byId=new Map(lis
   const to=child&&parent&&parent.id!==root.id&&!parent.deleted&&!isBlocked(parent.a)?`<small class="cm-to">${L('в ответ','replying to')} <button class="plink" ${profGo(parent.a)}>${esc(pname(parent.a))}</button></small>`:'';
   return `<article class="cm ${child?'child':''} ${hidden?'removed':c.status||''}" id="reply-${esc(c.id)}"><div class="cm-l">${hidden?'<span class="av cm-ghost"></span>':whoLink(c.a,child?'xs':'sm')}</div><div class="cm-b">${hidden?`<p class="note">${L('Ответ недоступен','Reply unavailable')}</p>`:`<div class="cm-h"><button class="plink pnm" ${profGo(c.a)}><span class="nmt">${esc(pname(c.a))}</span>${nameBadges(person(c.a))}</button><time>${status}</time></div>${to}<p class="reply-text">${esc(T(c.text))}</p>${c.status==='failed'&&kind==='p'?`<button class="btn text auto" data-act="retryComment" data-v="${esc(c.id)}">${L('Повторить','Retry')}</button>`:''}${replyActs(kind,id,c.id,c)}`}</div></article>`;};
  /* order of top-level replies: your fresh ones first, then «interesting» (likes + answers, then newer) or «new» (newest first).
-    1000 top-level replies don't render at once: 10 at a time, the next batch loads when the end scrolls into view. */
+    1000 top-level replies don't render at once: REPLY_PAGE (50) at a time, the next batch loads when the end scrolls into view. */
  const sort=route.sort||'top',score=c=>(c.likes||0)+(c.liked?1:0)+2*flat(c).length,mineNew=c=>c.a==='me'&&(c.status||Date.now()-c.t<15000);
  const gone=c=>c.deleted||isBlocked(c.a)?1:0;roots.sort((a,b)=>(gone(a)-gone(b))||(mineNew(b)-mineNew(a))||(sort==='new'?b.t-a.t:(score(b)-score(a))||(b.t-a.t)));
- const PAGE=10;const fi=focus?roots.findIndex(r=>r.id===focus||flat(r).some(c=>c.id===focus)):-1;route.shown=Math.max(route.shown||PAGE,fi+1);
+ const PAGE=REPLY_PAGE;const fi=focus?roots.findIndex(r=>r.id===focus||flat(r).some(c=>c.id===focus)):-1;route.shown=Math.max(route.shown||PAGE,fi+1);
  const page=roots.slice(0,route.shown),left=roots.length-page.length;
  const head=roots.length>1?`<div class="cm-sort" role="tablist" aria-label="${L('Порядок ответов','Reply order')}">${[['top',L('Интересные','Top')],['new',L('Новые','Newest')]].map(([k,l])=>`<button role="tab" class="${sort===k?'on':''}" aria-selected="${sort===k}" data-act="thSort" data-v="${k}">${l}</button>`).join('')}</div>`:'';
  const tail=left?`<button class="cm-load" data-act="thPage" data-left="${left}">${L(`Показать ещё ${Math.min(PAGE,left)} из ${left}`,`Show ${Math.min(PAGE,left)} more of ${left}`)}</button>`:'';
@@ -126,8 +126,9 @@ function replyTree(kind,id){const list=identifyReplies(kind,id),byId=new Map(lis
   const more=rest?`<button class="cm-more" data-act="thOpen" data-v="${esc(root.id)}"><span class="cm-avs">${[...new Set(all.slice(2).map(c=>c.a))].filter(x=>!isBlocked(x)).slice(0,3).map(x=>av(x,'xs')).join('')}</span>${L(`Ещё ${pl(rest,['ответ','ответа','ответов'],['reply','replies'])}`,`${rest} more ${rest===1?'reply':'replies'}`)}</button>`:'';
   const less=isOpen&&!forced&&all.length>3?`<button class="cm-more less" data-act="thClose" data-v="${esc(root.id)}">${L('Свернуть ветку','Collapse thread')}</button>`:'';
   return `<div class="th ${all.length?'has-kids':''}">${one(root,root,false)}${all.length?`<div class="cm-kids">${shown.map(c=>one(c,root,true)).join('')}${more}${less}</div>`:''}</div>`;}).join('')+tail;}
-ACT.thSort=a=>{const r=cur();if(r.sort===a.dataset.v)return;r.sort=a.dataset.v;r.shown=10;refresh();};
-ACT.thPage=()=>{const r=cur();r.shown=(r.shown||10)+10;refresh();};
+const REPLY_PAGE=50;
+ACT.thSort=a=>{const r=cur();if(r.sort===a.dataset.v)return;r.sort=a.dataset.v;r.shown=REPLY_PAGE;refresh();};
+ACT.thPage=()=>{const r=cur();r.shown=(r.shown||REPLY_PAGE)+REPLY_PAGE;refresh();};
 ACT.thOpen=a=>{const r=cur();r.open=[...new Set([...(r.open||[]),a.dataset.v])];refresh();};
 ACT.thClose=a=>{const r=cur();r.open=(r.open||[]).filter(x=>x!==a.dataset.v);refresh();};
 function replyComposer(route){const c=route.replyTarget;if(!c)return '';return `<div class="reply-target"><span>${L('Ответ для','Reply to')} <b>${esc(pname(c.a))}</b></span><button class="ibtn sm" data-act="replyCancel" aria-label="${L('Отменить ответ','Cancel reply')}">${I.close}</button></div>`;}
