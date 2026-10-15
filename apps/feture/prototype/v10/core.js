@@ -114,19 +114,59 @@ const LOGOS={
  c:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><rect width='120' height='120' rx='32' fill='#F6EDF3'/><circle cx='48' cy='60' r='28' fill='#FF3355' fill-opacity='.9'/><circle cx='72' cy='60' r='28' fill='#5C47D6' fill-opacity='.85'/><path d='M60 74c-7-5-11-9-11-14a5.5 5.5 0 0 1 11-1 5.5 5.5 0 0 1 11 1c0 5-4 9-11 14z' fill='#fff'/></svg>`};
 const LOGO=()=>'data:image/svg+xml,'+encodeURIComponent(LOGOS[QA.logo||'a']);
 const plate=(key,icon)=>`<div class="plate" style="${PL[key]||PL.rose};position:absolute;inset:0">${icon?`<span class="pi">${I[icon]}</span>`:''}</div>`;
-function person(id){if(id==='couple')return S.pair?.status==='active'?ownedAsPerson(S.ui.couplePreview||coupleProfile()):null;if(id==='me')return meAsPerson();return PEOPLE[id];}
+function person(id){if(id==='couple')return S.pair?.status==='active'?ownedAsPerson(S.ui.couplePreview||coupleProfile()):S.pair?{name:L('Совместный профиль недоступен','Couple profile unavailable'),pair:true,members:[],jars:[],photo:null}:null;if(id==='me')return meAsPerson();return PEOPLE[id];}
 /* one public identity — the nickname (no separate display name) */
-function pname(id){if(id==='couple')return T(S.ui.couplePreview?.name||S.pair?.profile?.name||S.pair?.name)||L('Пара','Couple');if(id==='me')return S.me.nick||L('Ты','You');const p=PEOPLE[id];if(!p)return L('Участник','Member');return p.pair&&S.lang!=='en'?p.nameRu:p.name;}
+function pname(id){if(id==='couple'&&!activePair())return L('Совместный профиль недоступен','Couple profile unavailable');if(id==='couple')return T(S.ui.couplePreview?.name||S.pair?.profile?.name||S.pair?.name)||L('Пара','Couple');if(id==='me')return S.me.nick||L('Ты','You');const p=PEOPLE[id];if(!p)return L('Участник','Member');return p.pair&&S.lang!=='en'?p.nameRu:p.name;}
 const PUBLIC_VIS={pron:'public',seek:'public',gender:'public',orient:'public',format:'public',status:'public',role:'granted'};
 const requiresDiscoveryPhoto=m=>!!m.dating&&m.datingVisible!==false;
 /** a profile field as another member sees it; S.ui.viewGrant = rendering for someone with private-profile access */
 function publicField(m,k){const v=m.vis?.[k]??PUBLIC_VIS[k]??'public';return v==='public'||v==='granted'&&S.ui.viewGrant?m[k]:Array.isArray(m[k])?[]:null;}
 function ownedAsPerson(m){return{photo:m.photo,bio:m.bio,city:m.city,dating:!!m.dating,socialLikes:!!m.socialLikes,pair:!!m.pair,members:m.pair?[...m.members]:undefined,pv:m.photoCheck==='ok',premium:!!m.premium,name:m.pair?T(m.name):m.nick,age:m.showAge===false?null:ageOf(m.dob),location:m.location?.coords,pron:publicField(m,'pron'),gender:publicField(m,'gender'),orient:publicField(m,'orient'),format:publicField(m,'format'),status:publicField(m,'status'),role:publicField(m,'role'),seek:publicField(m,'seek')||[],verified:m.ageCheck==='ok',online:true,jars:(m.jars||[]).filter(j=>j.vis==='public')};}
 function meAsPerson(){return ownedAsPerson(S.ui.profilePreview||S.me);}
-function coupleProfile(){const P=S.pair;if(P?.status!=='active')return null;if(!P.profile)P.profile={pair:true,members:['me',P.with],name:{...P.name},nick:'couple',bio:P.desc||{ru:'',en:''},privText:{ru:'',en:''},photos:[],photo:null,city:null,pron:null,gender:[],orient:[],role:[],status:'couple',format:[],seek:[],vis:{...PUBLIC_VIS},jars:[],history:[],media:[],requestsFrom:'all',dating:true,datingVisible:false,showAge:false};return P.profile;}
-function editableProfile(r=cur()){if(r.p?.owner!=='couple')return S.me;const P=S.pair;if(P?.status!=='active')return null;coupleProfile();return P.draft??=structuredClone(P.profile);}
-function submitCoupleDraft(){const P=S.pair;if(P?.status!=='active'||!P.draft)return;P.proposal={by:'me',field:'profile',text:structuredClone(P.draft),t:Date.now()};autoResolve();}
-function commitCoupleProposal(P){if(P!==S.pair||P?.status!=='active'||!P.proposal)return false;const q=P.proposal;if(q.field==='profile'){P.profile=structuredClone(q.text);P.name={...P.profile.name};P.desc=P.profile.bio;delete P.draft;}else P[q.field||'desc']=q.text;P.proposal=null;return true;}
+function coupleProfile(){const P=S.pair;if(P?.status!=='active')return null;if(!P.profile)P.profile={pair:true,members:['me',P.with],name:{...P.name},nick:'couple',bio:P.desc||{ru:'',en:''},privText:{ru:'',en:''},photos:[],photo:null,city:null,pron:null,gender:[],orient:[],role:[],status:'couple',format:[],seek:[],vis:{...PUBLIC_VIS},jars:[],history:[],media:[],requestsFrom:'all',socialLikes:true,dating:false,datingVisible:false,showAge:false};return P.profile;}
+const pairMember=()=>S.pairMember==='partner'?(S.pair?.with||S.pairInvite?.nick):'me';
+function editableProfile(r=cur()){if(r.p?.owner!=='couple')return S.me;const P=S.pair;if(P?.status!=='active')return null;coupleProfile();P.revision??=0;P.draftBase??=P.revision;if(!P.draft){P.draft=structuredClone(P.profile);P.draftBy=pairMember();P.draftLease=(P.draftLease||0)+1;}return P.draftBy&&P.draftBy!==pairMember()?structuredClone(P.draft):P.draft;}
+function coupleWritable(lease){const P=S.pair;const ok=activePair()&&(!P.draftBy||P.draftBy===pairMember())&&(lease==null||lease===(P.draftLease||0));if(!ok)toast(L('Черновик занят другим участником или изменился. Вернись в профиль пары. Введённые данные остаются здесь.','The draft belongs to the other partner or changed. Return to the couple profile. Your input stays here.'),{type:'warn'});return ok;}
+function markCoupleDraft(){const P=S.pair;if(!P?.draft||!coupleWritable())return;P.draftVersion=(P.draftVersion||0)+1;if(!['P02','Q04'].includes(cur()?.id))for(const parent of stack().slice(0,-1))if(parent.p.owner==='couple'&&parent.pairLease===(P.draftLease||0))parent.pairVersion=P.draftVersion;}
+function submitCoupleDraft(){const P=S.pair;if(P?.status!=='active'||!P.draft||P.proposal?.status==='pending')return false;if(!coupleWritable())return false;const by=pairMember();P.revision??=0;
+ if(P.draftBase!==P.revision){toast(L('Профиль уже изменился. Открой актуальную версию перед отправкой.','The profile changed. Open the current version before submitting.'),{type:'warn'});return false;}
+ const q=P.proposal={id:'pv'+Date.now()+'_'+(P.draftVersion||0),by,field:'profile',text:structuredClone(P.draft),base:P.revision,draftVersion:P.draftVersion||0,status:'pending',t:Date.now()};
+ pairNotify('proposal',q.id,{go:['Q03']});autoResolve();return true;}
+function commitCoupleProposal(P,reviewer=pairMember(),expected=P?.proposal?.id){if(P!==S.pair||P?.status!=='active'||!P.proposal)return false;const q=P.proposal;
+ if(q.id&&((q.status!=='pending')||q.id!==expected||q.by===reviewer||q.base!==(P.revision||0)))return false;
+ if(q.field==='profile'){P.profile=structuredClone(q.text);P.name={...P.profile.name};P.desc=P.profile.bio;P.revision=(P.revision||0)+1;P.draftLease=(P.draftLease||0)+1;if((P.draftVersion||0)===(q.draftVersion||0))delete P.draft;P.draftBase=P.revision;}else P[q.field||'desc']=q.text;
+ P.proposal=null;pairNotify('profileApproved',q.id||String(q.t),{go:['Q03']});return true;}
+function pairNotify(type,key,extra={}){const P=S.pair;if(!P)return;P.notifications??={};for(const recipient of ['me',P.with]){const list=P.notifications[recipient]??=[];const id='pair_'+type+'_'+key+'_'+recipient;if(list.some(n=>n.id===id))continue;const n={id,type:'pair',pairEvent:type,pairName:T(P.name),to:recipient,t:Date.now(),read:false,...extra};list.unshift(n);if(recipient===pairMember())S.notifs.unshift(n);}}
+
+/* Social author: one session choice; owned couple state extends the existing pair. */
+const authorId=()=>S.author==='couple'?'couple':'me';
+const activePair=()=>S.pair?.status==='active';
+const actionAuthor=()=>cur()?.id==='P07'&&cur().p.owner==='couple'?'couple':['H02','H03','H04','H05'].includes(cur()?.id)?(cur().p.actor||'me'):(cur()?.p.actor||authorId());
+const authorProfile=(id=actionAuthor())=>id==='couple'?coupleProfile():S.me;
+function social(id=actionAuthor()){
+ if(id==='me')return S;
+ const p=S.pair;if(!p)return null;
+ return p.social??={follows:new Set(),likesIn:[],likesOut:[],matches:[],reqIn:[],reqOut:[],sharedByMe:[],threads:{},archived:new Set(),muted:new Set(),decided:{},history:[],filters:{dating:structuredClone(S.filters.dating)}};
+}
+const realMembers=id=>id==='me'?['me']:id==='couple'?(S.pair?['me',S.pair.with]:[]):PEOPLE[id]?.pair?[...(PEOPLE[id].members||[])]:[id];
+const relatedIdentity=id=>realMembers(authorId()).some(m=>realMembers(id).includes(m));
+const ownedIdentity=id=>id==='me'||id==='couple'&&activePair();
+function authorAllowed(id=actionAuthor()){return !!S.session&&(id==='me'||id==='couple'&&activePair());}
+function authorGuard(id=actionAuthor()){if(authorAllowed(id))return true;toast(L('Совместный профиль отключён. Выбери личный профиль — черновик сохранён.','The couple profile is inactive. Choose your personal profile — your draft is kept.'),{type:'warn'});return false;}
+const authorTicket=(id=actionAuthor())=>({id,state:S,session:S.session,pair:S.pair,safety:S.pair?.safetyEpoch||0});
+const validAuthor=t=>S===t.state&&S.session===t.session&&authorAllowed(t.id)&&(t.id!=='couple'||S.pair===t.pair&&(S.pair.safetyEpoch||0)===t.safety);
+function authorPicker(fixed){const id=fixed||actionAuthor();return `<div class="author-picker" data-author-picker ${fixed?'data-fixed-author="'+fixed+'"':''} aria-label="${L('Автор действия','Acting as')}">${(activePair()?['me','couple']:['me']).map(k=>`<button type="button" class="author-option ${id===k?'on':''}" data-act="chooseAuthor" data-v="${k}" aria-pressed="${id===k}" ${fixed?'disabled':''}>${av(k,'xs')}<span><small>${k==='me'?L('Я','Me'):L('Мы','Us')}</small><b>${esc(pname(k))}</b></span></button>`).join('')}</div>`;}
+/* Patch only author controls and action labels: keep editors, media, sheets and the deck DOM alive. */
+function paintAuthor(){
+ $$('[data-author-picker]:not([data-fixed-author])').forEach(el=>el.outerHTML=authorPicker());
+ $$('[data-act="follow"],[data-act="flwToggle"]').forEach(el=>{const on=social()?.follows.has(el.dataset.v);el.setAttribute('aria-pressed',!!on);el.innerHTML=on?L('Отписаться','Unfollow'):L('Подписаться','Follow');});
+ $$('.p-acts [data-act="likeProfile"],.p-acts [data-act="unlikeP"],.p-acts [data-act="openChat"]').forEach(el=>{const id=el.dataset.v,on=social()?.likesOut.some(l=>l.p===id),match=isMatch(id);el.dataset.act=match?'openChat':on?'unlikeP':'likeProfile';el.setAttribute('aria-pressed',!!on);el.innerHTML=match?I.chat+L('Написать','Message'):on?I.heartf+L('Симпатия','Liked'):I.heart+L('Нравится','Like');});
+ $$('[data-act="reqAccess"]').forEach(el=>{const pending=social()?.reqOut.some(x=>x.p===el.dataset.v&&x.status==='pending');el.setAttribute('aria-label',pending?L('Запрос отправлен','Request sent'):L('Запросить доступ','Request access'));if(el.classList.contains('ibtn'))el.innerHTML=pending?I.clock:I.key;});
+ $$('[data-private-context]').forEach(el=>el.innerHTML=privSection(el.dataset.privateContext));
+ $$('[data-author-reason]').forEach(el=>{const reason=cur().p.id&&['C06','C07','C03'].includes(cur().id)?communityAuthorReason(cur().id==='C06'?S.discussions.find(d=>d.id===cur().p.id)?.c:cur().p.id):'';el.innerHTML=esc(reason);});
+ if(cur().id==='P08'&&!receivedGrant(cur().p.id))refresh();
+ if(cur().id==='D03'&&cur().p.sub==='likes')refresh();
+}
 
 /** avatar: photo → img; pair → two plates; else initials plate */
 function av(id,cls='',variant=0){
@@ -316,32 +356,33 @@ function render(dir,keep){
 function unavailable(){return `${bar('',{back:1})}<div class="view nodock">${empty('lock',L('Это недоступно','This isn’t available'),L('Возможно, ссылка устарела, доступ отозван или материал удалён.','The link may be outdated, access revoked or the item removed.'),`<button class="btn soft" data-back>${L('Назад','Back')}</button>`)}</div>`;}
 
 /* ---------- counters: always derived from state, never hard-coded ---------- */
-const isMatch=id=>S.matches.some(m=>m.p===id);
-const isBlocked=id=>S.blocked.some(b=>b.p===id);
+const isMatch=(id,actor=actionAuthor())=>authorAllowed(actor)&&!relatedFor(actor,id)&&social(actor)?.matches.some(m=>m.p===id);
+const isBlocked=id=>S.blocked.some(b=>b.p===id||realMembers(id).includes(b.p));
+const relatedFor=(actor,id)=>realMembers(actor).some(m=>realMembers(id).includes(m));
 // Access is derived from consent, scopes and current time, never from visiting a screen.
 const grantTimeActive=until=>until===null||(typeof until==='number'&&Number.isFinite(until)&&until>Date.now());
 const effectiveRequestStatus=r=>['open','partial','granted'].includes(r.status)&&!grantTimeActive(r.until)?'expired':r.status;
-const receivedGrant=id=>!isBlocked(id)&&S.reqOut.find(r=>r.p===id&&['partial','granted'].includes(r.status)&&r.granted?.length&&grantTimeActive(r.until));
-const givenGrant=id=>!isBlocked(id)&&S.sharedByMe.find(r=>r.p===id&&r.scopes?.length&&grantTimeActive(r.until));
-const givenGrantEntries=()=>S.sharedByMe.filter(r=>givenGrant(r.p)===r);
+const receivedGrant=id=>authorAllowed(actionAuthor())&&!relatedFor(actionAuthor(),id)&&!isBlocked(id)&&social()?.reqOut.find(r=>r.p===id&&['partial','granted'].includes(r.status)&&r.granted?.length&&grantTimeActive(r.until));
+const givenGrant=id=>authorAllowed(actionAuthor())&&!isBlocked(id)&&social()?.sharedByMe.find(r=>r.p===id&&r.scopes?.length&&grantTimeActive(r.until));
+const givenGrantEntries=()=>social().sharedByMe.filter(r=>givenGrant(r.p)===r);
 
 function communityHostIds(id){const c=COMMUNITIES[id];return c?[...c.mods,...(ownsCommunity(id)&&!c.mods.includes('me')?['me']:[])]:[];}
 function ownsCommunity(id){return !!S?.session&&!!COMMUNITIES[id]&&!!S.managedCommunities?.has(id);}
 const C={
- likesIn:()=>S.likesIn.filter(l=>!isMatch(l.p)&&!isBlocked(l.p)&&!l.passed).length,
- newMatches:()=>S.matches.filter(m=>(!S.threads[m.p]||!S.threads[m.p].msgs.length)&&!isBlocked(m.p)).length,
- unreadChats:()=>Object.entries(S.threads).filter(([k,t])=>t.unread&&!S.archived.has(k)&&!isBlocked(k)).length,
- notif:()=>S.notifs.filter(n=>!n.read&&!(n.p&&isBlocked(n.p))).length,
+ likesIn:()=>social().likesIn.filter(l=>!isMatch(l.p)&&!isBlocked(l.p)&&!l.passed).length,
+ newMatches:()=>social().matches.filter(m=>(!social().threads[m.p]||!social().threads[m.p].msgs.length)&&!isBlocked(m.p)).length,
+ unreadChats:()=>['me',...(activePair()?['couple']:[])].reduce((n,a)=>n+Object.entries(social(a).threads).filter(([k,t])=>chatUnread(t)&&!social(a).archived.has(k)&&!isBlocked(k)).length,0),
+ notif:()=>currentNotifications().filter(n=>!n.read&&!(n.p&&isBlocked(n.p))).length,
  updates:()=>S.updates.filter(u=>!u.read).length,
- reqIn:()=>S.reqIn.filter(r=>r.status==='new'&&!isBlocked(r.p)).length,
- quotaLeft:()=>Math.max(0,S.quota.max-S.reqOut.filter(x=>Date.now()-x.t<DAY).length),
+ reqIn:()=>social().reqIn.filter(r=>r.status==='new'&&!isBlocked(r.p)).length,
+ quotaLeft:()=>Math.max(0,S.quota.max-[...S.reqOut,...(S.pair?.social?.reqOut||[])].filter(x=>Date.now()-x.t<DAY).length),
  joined:()=>S.joined.size,
  members:id=>COMMUNITIES[id].members+((S.joined.has(id)||ownsCommunity(id))?1:0)+(S.communityMembers[id]?.size||0), // base count excludes the viewer
 };
 
 /* ---------- shared chrome ---------- */
 function bar(title,o={}){
- return `<header class="bar ${o.cls||''}">${o.back?`<button class="ibtn ghost" data-back aria-label="${L('Назад','Back')}">${I.back}</button>`:''}${o.lead||''}<h1 class="${o.sm?'sm':''}">${title}${o.sub?`<span class="sub">${o.sub}</span>`:''}</h1>${o.actions||''}</header>`;
+ return `<header class="bar ${o.cls||''}">${o.back?`<button class="ibtn ghost" data-back aria-label="${L('Назад','Back')}">${I.back}</button>`:''}${o.lead||''}<h1 class="${o.sm?'sm':''}">${title}${o.sub?`<span class="sub">${o.sub}</span>`:''}</h1>${o.actions||''}</header>${cur()?.id?.startsWith('E')&&authorId()==='couple'?`<p class="note">${L('Участие и организация — от личного профиля','Participation and organising use your personal profile')} · ${esc(pname('me'))}</p>`:''}${['F01','F05','P07','P10','C06','C07'].includes(cur()?.id)?authorPicker(cur().id==='P07'&&cur().p.owner==='couple'?'couple':null):''}`;
 }
 const bellBtn=()=>{const n=C.notif();return `<button class="ibtn" data-go="N01" aria-label="${L('Уведомления','Notifications')}${n?`: ${n}`:''}">${I.bell}${n?`<sup>${n}</sup>`:''}</button>`;};
 const searchBtn=(scope)=>`<button class="ibtn" data-go="G01" data-p='${JSON.stringify({scope:scope||'all'})}' aria-label="${L('Поиск','Search')}">${I.search}</button>`;
@@ -446,3 +487,19 @@ function syncChrome(){const m=main();if(cur()?.fq)filterSections($(':scope>.view
 // keep the focused field visible above the keyboard
 document.addEventListener('focusin',e=>{const el=e.target;if(!el.matches?.('input:not([type=checkbox]):not([type=radio]),textarea,select,[contenteditable]')||!el.closest('#main .view'))return;setTimeout(()=>{if(document.activeElement===el)el.scrollIntoView({block:'center',behavior:'smooth'});},320);});
 
+
+function communityMemberCanWrite(id,member,kind='post'){const c=COMMUNITIES[id];if(!c||isBlocked(member)||S.communityRestrictions?.[id]?.[member])return false;if(kind==='comment'&&c.commentPolicy==='public'&&c.privacy==='open')return true;if(member==='me')return S.joined.has(id)||ownsCommunity(id);return !!c.mods?.includes(member)||!!c.seedMembers?.includes(member)||!!S.communityMembers[id]?.has(member)||!!S.pair?.memberCommunities?.[member]?.includes(id);}
+function communityAuthorReason(id,actor=actionAuthor(),kind='post'){if(!authorAllowed(actor))return L('Совместный профиль отключён','Couple profile is inactive');const members=realMembers(actor);return members.every(m=>communityMemberCanWrite(id,m,kind))?'':actor==='couple'?L('Чтобы писать от пары, оба должны состоять в этом сообществе и иметь право публикации.','To write as a couple, both partners must belong to this community and have permission to post.'):L('Для публикации нужно право участника сообщества.','Posting requires community member permission.');}
+const communityAuthorAllowed=(id,actor=actionAuthor(),kind='post')=>!communityAuthorReason(id,actor,kind);
+function requestReason(id,actor=actionAuthor()){if(!authorAllowed(actor)||!PEOPLE[id]||isBlocked(id)||relatedFor(actor,id))return L('Этот профиль недоступен для выбранного автора','This profile is unavailable to the selected author');const policy=PEOPLE[id].requestsFrom||'all';if(policy==='none'||policy==='matches'&&!isMatch(id,actor))return L('Этот профиль не принимает запросы от выбранного автора','This profile does not accept requests from the selected author');const st=social(actor);if(st.reqOut.some(x=>x.p===id&&x.status==='pending'))return L('Запрос уже отправлен','Request already sent');if(st.reqOut.some(x=>x.p===id&&x.status==='declined'&&Date.now()-x.t<7*DAY))return L('После отказа нужно подождать 7 дней','Wait 7 days after a decline');if(C.quotaLeft()<=0)return L('Запросы на сегодня закончились','No requests left today');return '';}
+
+function currentNotifications(){const member=pairMember();const personal=member==='me'?S.notifs.filter(n=>n.type!=='pair'):[];const shared=S.pair?.notifications?.[member]||[];const updates=(S.updates||[]).map(u=>({...u,type:u.e?'event':'group',go:u.e?['E03',{id:u.e}]:['C03',{id:u.c}]}));return [...personal,...shared,...updates].sort((a,b)=>b.t-a.t);}
+function dissolvePair(){const P=S.pair;if(!activePair())return;coupleProfile();P.safetyEpoch=(P.safetyEpoch||0)+1;P.status='dissolved';P.endedAt=Date.now();P.restoreUntil=P.endedAt+30*DAY;P.recovery=[];P.proposal=null;P.grants=[];if(P.social){P.social.sharedByMe=[];P.social.reqOut.forEach(x=>{x.status='revoked';x.granted=[];});P.social.reqIn.forEach(x=>{x.status='no';x.granted=[];});}S.author='me';pairNotify('dissolved',String(P.endedAt),{go:['Q07']});}
+function expirePair(now=Date.now()){const P=S.pair;if(!P||P.status!=='dissolved'||now<P.restoreUntil)return false;
+ P.status='deleted';P.retainedThreads=Object.fromEntries(Object.entries(P.social?.threads||{}).map(([id,t])=>[id,{target:id,msgs:t.msgs.filter(m=>!m.me).map(m=>structuredClone(m)),ended:true}]));delete P.profile;delete P.draft;delete P.social;delete P.desc;delete P.rules;P.name={ru:'Удалённый совместный профиль',en:'Deleted couple profile'};P.grants=[];
+ S.myPosts=S.myPosts.filter(x=>x.author!=='couple');for(const post of [...S.posts,...S.myPosts])for(const c of post.comments||[])if(c.a==='couple'){c.deleted=true;c.text={ru:'',en:''};delete c.media;}
+ for(const d of S.discussions){if(d.author==='couple'){d.text={ru:'Публикация удалена',en:'Post removed'};d.title={ru:'Совместный профиль удалён',en:'Couple profile deleted'};d.media=[];}for(const c of d.replies||[])if(c.a==='couple'){c.deleted=true;c.text={ru:'',en:''};delete c.media;}}
+ S.pairMember='me';return true;
+}
+function requestPairRestore(){const P=S.pair;if(P?.status!=='dissolved'||expirePair())return false;const member=pairMember();if(!['me',P.with].includes(member))return false;if(!P.recovery.includes(member))P.recovery.push(member);if(P.recovery.length===2){P.status='active';P.profile.dating=false;P.profile.datingVisible=false;P.recovery=[];pairNotify('restored',String(Date.now()),{go:['Q03']});return true;}pairNotify('restoreRequested',String(P.endedAt),{go:['Q07']});return false;}
+function socialDelivery(identity,type,key,extra={}){if(identity==='couple'){pairNotify(type,key,extra);return;}S.socialDeliveries??={};for(const recipient of realMembers(identity)){const list=S.socialDeliveries[recipient]??=[];const id=type+'_'+key+'_'+recipient;if(!list.some(x=>x.id===id))list.push({id,type,to:recipient,read:false,t:Date.now(),...extra});}}

@@ -1500,3 +1500,6 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .maintenance #layer{display:none!important}
 /* Keep prototype controls in the sidebar area, clear of tablet message/submit buttons. */
 @media(min-width:768px){body:not(.frame) .qa-fab{left:24px;right:auto;bottom:12px}}
+
+/* Shared social author control. Names stay bounded at phone/fold widths. */
+.author-picker{display:flex;gap:6px;max-width:100%;min-width:0;margin:8px 0;flex-wrap:wrap}.author-option{display:flex;align-items:center;gap:6px;min-width:0;max-width:calc(50% - 3px);padding:6px 10px;border:1px solid var(--line);border-radius:16px;background:var(--surf);color:var(--ink);text-align:left}.author-option.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 8%,var(--surf))}.author-option span{min-width:0}.author-option b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.author-option small{font-size:10px;color:var(--mute)}.author-option:disabled{opacity:1}.author-option .av{flex-shrink:0}.author-reason{font-size:12px;color:var(--mute);margin:6px 0}.bar .author-picker{flex:0 1 auto;margin:0;max-width:300px}.bar .author-option{padding:4px 7px}.bar .author-option b{max-width:90px}@media(max-width:600px){.bar .author-option .av{display:none}.bar .author-option b{max-width:65px}}

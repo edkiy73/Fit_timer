@@ -20,17 +20,17 @@ const playVenn=()=>setTimeout(()=>$$('.venn.pre').forEach(v=>v.classList.remove(
 /** Shared interests: only data both people made visible. Categories, no score. */
 function shared(id){
  const p=person(id);if(!p)return{match:[],complement:[],discuss:[],few:true};
- const mine=S.me.jars.filter(j=>j.vis==='public'&&!j.limit);
+ const mine=(authorProfile()?.jars||[]).filter(j=>j.vis==='public'&&!j.limit);
  const theirs=(p.jars||[]).map(j=>Array.isArray(j)?{t:j[0],lv:j[1]}:j).filter(j=>!j.limit);
  const match=mine.filter(j=>j.lv>=6&&theirs.some(x=>x.t===j.t&&x.lv>=6)).map(j=>j.t);
  const complement=[];const discuss=[];
- const r1=fmtList(publicField(S.me,'role')),r2=fmtList(p.role);
+ const r1=fmtList(publicField(authorProfile()||S.me,'role')),r2=fmtList(p.role);
  const roles=r1.includes('lead')&&r2.includes('recv')?['lead','recv']:r1.includes('recv')&&r2.includes('lead')?['recv','lead']:null;
  if(roles)complement.push(L(`Твоя ${opt('role',roles[0])} и ${opt('role',roles[1])} у ${pname(id)} дополняют друг друга`,`Your ${opt('role',roles[0])} role and ${pname(id)}’s ${opt('role',roles[1])} role complement each other`));
  else if(r1.includes('switch')||r2.includes('switch'))complement.push(L('Среди открытых ролей есть свитч: роли можно договорить вместе','The shared roles include switch: roles are open to agree on'));
  mine.forEach(j=>{const x=theirs.find(y=>y.t===j.t);if(x&&Math.abs(x.lv-j.lv)>=4)discuss.push(L(`${topic(j.t)}: у тебя ${j.lv}/10, у ${pname(id)} ${x.lv}/10`,`${topic(j.t)}: you ${j.lv}/10, ${pname(id)} ${x.lv}/10`));
   if(false)discuss.push(L(`${topic(j.t)}: ты хочешь попробовать, для ${pname(id)} это сильный интерес`,`${topic(j.t)}: you want to try, for ${pname(id)} it’s a strong interest`));});
- const mf=fmtList(publicField(S.me,'format')),tf=fmtList(p.format);if(mf.length&&tf.length&&mf.includes('mono')!==tf.includes('mono'))discuss.push(L(`Формат отношений: ${fmtText(mf,2)} и ${fmtText(tf,2)}`,`Relationship format: ${fmtText(mf,2)} vs ${fmtText(tf,2)}`));else{const both=mf.filter(x=>tf.includes(x));if(both.length)complement.push(L(`Совпадает формат: ${fmtText(both,2)}`,`Same format: ${fmtText(both,2)}`));}
+ const mf=fmtList(publicField(authorProfile()||S.me,'format')),tf=fmtList(p.format);if(mf.length&&tf.length&&mf.includes('mono')!==tf.includes('mono'))discuss.push(L(`Формат отношений: ${fmtText(mf,2)} и ${fmtText(tf,2)}`,`Relationship format: ${fmtText(mf,2)} vs ${fmtText(tf,2)}`));else{const both=mf.filter(x=>tf.includes(x));if(both.length)complement.push(L(`Совпадает формат: ${fmtText(both,2)}`,`Same format: ${fmtText(both,2)}`));}
  return{match,complement,discuss:[...new Set(discuss)],few:mine.length<2||theirs.length<2};
 }
 function sharedSummary(id){const s=shared(id);if(s.few)return L('Пока мало общего контекста','Not much shared context yet');
@@ -41,7 +41,7 @@ function whoLine(id){const p=person(id);if(!p)return '';const g=(p.gender||[]).m
 function placeLine(id){const p=person(id);if(!p)return '';const km=S.me.location?.mode==='nearby'?nearbyDistance(id):null;return [city(p.city),km!==null?L(`около ${Math.max(5,km)} км`,`about ${Math.max(5,km)} km`):''].filter(Boolean).join(' · ');}
 function presence(id){const p=person(id);if(!p)return '';return p.online?L('сейчас в сети','online now'):T(p.last)||'';}
 /** attributes that open a person's profile (own profile for me) */
-const profGo=id=>id==='me'?'data-go="P03"':`data-go="P01" data-p='${JSON.stringify({id})}'`;
+const profGo=id=>id==='couple'?'data-go="Q03"':id==='me'?'data-go="P03"':`data-go="P01" data-p='${JSON.stringify({id})}'`;
 /** avatar + name as one link to the profile; used where a row has its own other actions */
 const whoLink=(id,cls='xs',extra='')=>`<button class="plink" ${profGo(id)} aria-label="${L(`Профиль: ${pname(id)}`,`Profile: ${pname(id)}`)}">${av(id,cls)}</button>`;
 function personRow(id,o={}){
@@ -49,8 +49,8 @@ function personRow(id,o={}){
 }
 
 /* ---------- posts ---------- */
-const allPosts=()=>[...S.myPosts.filter(p=>p.status==='published'),...S.posts];
-const postById=id=>S.posts.find(p=>p.id===id)||S.myPosts.find(p=>p.id===id);
+const allPosts=()=>[...S.myPosts.filter(p=>p.status==='published'&&(p.author!=='couple'||activePair())),...S.posts];
+const postById=id=>{const p=S.posts.find(p=>p.id===id)||S.myPosts.find(p=>p.id===id);if(p?.author==='couple'&&!activePair())return {...p,text:{ru:'Совместный профиль недоступен',en:'Couple profile unavailable'},media:[],tags:[],result:null,poll:null,comments:(p.comments||[]).filter(c=>c.a!=='couple'),unavailable:true};return p;};
 /** V7: one post type with optional attachments — photos/video (≤6), a poll (2–10 options) or a quiz result */
 const postMedia=p=>p.media&&p.media.length?p.media:p.type==='photo'?[{type:'plate',key:p.plate||'rose'}]:[];
 const postKinds=p=>{const k=[];if(postMedia(p).length)k.push('photo');if(p.poll)k.push('poll');if(p.result)k.push('result');if(!k.length)k.push('text');return k;};
@@ -87,21 +87,21 @@ ACT.mdLink=(a,e)=>{e?.stopPropagation();const u=a.dataset.v;let host='';try{host
  ask({icon:'link',title:L('Открыть внешнюю ссылку?','Open an external link?'),text:L(`Ссылка ведёт на ${host} — это не FetUre. Не вводи там пароль от FetUre.`,`The link goes to ${host}, outside FetUre. Don’t enter your FetUre password there.`),ok:L('Открыть','Open')}).then(ok=>{if(ok)window.open(u,'_blank','noopener,noreferrer');});};
 /** reply actions under a comment/reply: like, reply, more (report / block, delete own). kind 'p' = post replies, 'd' = discussion replies */
 const replyList=(kind,id)=>kind==='p'?postById(id)?.comments:S.discussions.find(x=>x.id===id)?.replies;
-function replyActs(kind,id,i,c){if(c.status)return '';const n=(c.likes||0)+(c.liked?1:0);
+function replyActs(kind,id,i,c){if(c.status)return '';c={...c,liked:!!(c.reactions?c.reactions[actionAuthor()]:actionAuthor()==='me'&&c.liked)};const n=(c.likes||0)+(c.reactions?Object.values(c.reactions).filter(Boolean).length:c.liked?1:0);
  return `<div class="r-acts"><button class="${c.liked?'on':''}" data-act="rLike" data-v="${kind}:${id}" data-i="${i}" aria-pressed="${!!c.liked}" aria-label="${L('Нравится ответ','Like reply')}">${c.liked?I.heartf:I.heart}${n?`<span>${n}</span>`:''}</button><button data-act="rReply" data-v="${kind}:${id}" data-i="${i}" aria-label="${L(`Ответить ${pname(c.a)}`,`Reply to ${pname(c.a)}`)}">${I.chat}</button><button data-act="rMore" data-v="${kind}:${id}" data-i="${i}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;}
 function identifyReplies(kind,id){const list=replyList(kind,id)||[];list.forEach((c,i)=>{if(!c.id)c.id=`${kind}_${id}_${i}`;});return list;}
-function replyTree(kind,id){const list=identifyReplies(kind,id),byId=new Map(list.map(c=>[c.id,c])),seen=new Set();const children=parent=>list.filter(c=>(c.parent||null)===parent);const draw=(c,depth=0)=>{if(seen.has(c.id))return '';seen.add(c.id);const hidden=c.deleted||isBlocked(c.a),parent=byId.get(c.parent);const status=c.status==='pending'?L('отправляется…','sending…'):c.status==='failed'?L('не отправлено','not sent'):F.rel(c.t);return `<div class="reply-node" style="--depth:${Math.min(depth,2)}" id="reply-${esc(c.id)}"><div class="comment ${hidden?'removed':c.status||''}">${hidden?'':whoLink(c.a)}<div class="tx">${hidden?`<p class="note">${L('Ответ недоступен','Reply unavailable')}</p>`:`<button class="plink pnm" ${profGo(c.a)}><span class="nmt">${esc(pname(c.a))}</span>${nameBadges(person(c.a))}</button><time>${status}</time>${parent&&!parent.deleted&&!isBlocked(parent.a)?`<small class="reply-to">${L('Ответ для','Reply to')} <button class="plink" ${profGo(parent.a)}>${esc(pname(parent.a))}</button></small>`:''}<p class="reply-text">${esc(T(c.text))}</p>${c.status==='failed'&&kind==='p'?`<button class="btn text auto" data-act="retryComment" data-v="${esc(c.id)}">${L('Повторить','Retry')}</button>`:''}${replyActs(kind,id,c.id,c)}`}</div></div></div>${children(c.id).map(x=>draw(x,depth+1)).join('')}`;};return children(null).map(c=>draw(c)).join('')+list.filter(c=>!seen.has(c.id)).map(c=>draw(c)).join('');}
+function replyTree(kind,id){const list=identifyReplies(kind,id),byId=new Map(list.map(c=>[c.id,c])),seen=new Set();const children=parent=>list.filter(c=>(c.parent||null)===parent);const draw=(c,depth=0)=>{if(seen.has(c.id))return '';seen.add(c.id);const hidden=c.deleted||c.a==='couple'&&!activePair()||isBlocked(c.a),parent=byId.get(c.parent);const status=c.status==='pending'?L('отправляется…','sending…'):c.status==='failed'?L('не отправлено','not sent'):F.rel(c.t);return `<div class="reply-node" style="--depth:${Math.min(depth,2)}" id="reply-${esc(c.id)}"><div class="comment ${hidden?'removed':c.status||''}">${hidden?'':whoLink(c.a)}<div class="tx">${hidden?`<p class="note">${L('Ответ недоступен','Reply unavailable')}</p>`:`<button class="plink pnm" ${profGo(c.a)}><span class="nmt">${esc(pname(c.a))}</span>${nameBadges(person(c.a))}</button><time>${status}</time>${parent&&!parent.deleted&&!isBlocked(parent.a)?`<small class="reply-to">${L('Ответ для','Reply to')} <button class="plink" ${profGo(parent.a)}>${esc(pname(parent.a))}</button></small>`:''}<p class="reply-text">${esc(T(c.text))}</p>${c.status==='failed'&&kind==='p'?`<button class="btn text auto" data-act="retryComment" data-v="${esc(c.id)}">${L('Повторить','Retry')}</button>`:''}${replyActs(kind,id,c.id,c)}`}</div></div></div>${children(c.id).map(x=>draw(x,depth+1)).join('')}`;};return children(null).map(c=>draw(c)).join('')+list.filter(c=>!seen.has(c.id)).map(c=>draw(c)).join('');}
 function replyComposer(route){const c=route.replyTarget;if(!c)return '';return `<div class="reply-target"><span>${L('Ответ для','Reply to')} <b>${esc(pname(c.a))}</b></span><button class="ibtn sm" data-act="replyCancel" aria-label="${L('Отменить ответ','Cancel reply')}">${I.close}</button></div>`;}
 ACT.replyCancel=()=>{delete cur().replyTarget;refresh();};
-function notifyReply(kind,id,c){if(c.notified||c.status||c.deleted)return;const list=identifyReplies(kind,id);const parent=list.find(x=>x.id===c.parent);const root=kind==='p'?postById(id)?.author:S.discussions.find(x=>x.id===id)?.author;const targets=[...new Set([parent&&!parent.deleted?parent.a:null,root].filter(x=>x&&x!==c.a&&!isBlocked(x)))];c.notified=true;S.replyDeliveries??=[];for(const to of targets){const n={id:'rn_'+c.id+'_'+to,type:'reply',to,p:c.a,reply:c.id,parent:c.parent||null,t:Date.now(),read:false,go:[kind==='p'?'F05':'C06',{id,reply:c.id}]};S.replyDeliveries.push(n);if(to==='me')S.notifs.unshift(n);}}
+function notifyReply(kind,id,c){if(c.notified||c.status||c.deleted)return;const list=identifyReplies(kind,id);const parent=list.find(x=>x.id===c.parent);const root=kind==='p'?postById(id)?.author:S.discussions.find(x=>x.id===id)?.author;const targets=[...new Set([parent&&!parent.deleted?parent.a:null,root].filter(x=>x&&x!==c.a&&!isBlocked(x)))];c.notified=true;S.replyDeliveries??=[];for(const to of targets){const n={id:'rn_'+c.id+'_'+to,type:'reply',to,p:c.a,reply:c.id,parent:c.parent||null,t:Date.now(),read:false,go:[kind==='p'?'F05':'C06',{id,reply:c.id}]};S.replyDeliveries.push(n);if(to==='me')S.notifs.unshift(n);else socialDelivery(to,'reply',c.id,{p:c.a,go:n.go});}}
 function scrollToReply(p){if(p.reply)document.getElementById?.('reply-'+p.reply)?.scrollIntoView({block:'center'});}
 const replyAt=a=>{const [kind,id]=a.dataset.v.split(':');const list=identifyReplies(kind,id);const c=list.find(x=>x.id===a.dataset.i)||list[+a.dataset.i];return c?{kind,id,c,list}:null;};
-ACT.rLike=a=>{const x=replyAt(a);if(!x||x.c.status||x.c.deleted||isBlocked(x.c.a))return;x.c.liked=!x.c.liked;refresh();};
+ACT.rLike=a=>{const x=replyAt(a);if(!x||x.c.status||x.c.deleted||isBlocked(x.c.a))return;if(!authorGuard()||x.kind==='d'&&!communityAuthorAllowed(S.discussions.find(d=>d.id===x.id)?.c,actionAuthor(),'comment'))return;x.c.reactions??={me:!!x.c.liked};x.c.reactions[actionAuthor()]=!x.c.reactions[actionAuthor()];x.c.liked=!!x.c.reactions.me;refresh();};
 ACT.rReply=a=>{const x=replyAt(a);if(!x||x.c.status||x.c.deleted||isBlocked(x.c.a))return;const input=x.kind==='p'?'cmt':'dr';if(!$('#'+input))return;cur().replyTarget={id:x.c.id,a:x.c.a};refresh();const el=$('#'+input);el?.focus();};
 
-ACT.rMore=a=>{const x=replyAt(a);if(!x)return;const mine=x.c.a==='me';
+ACT.rMore=a=>{const x=replyAt(a);if(!x)return;const mine=ownedIdentity(x.c.a);
  sheet(()=>({title:L('Ответ','Reply'),body:`<div class="card list">${mine?linkRow({act:'rDel',v:a.dataset.v,p:null,icon:'trash',cls:'danger',title:L('Удалить ответ','Delete reply'),noChev:1}).replace('data-act="rDel"',`data-act="rDel" data-i="${a.dataset.i}"`):`${linkRow({go:'P01',p:{id:x.c.a},icon:'me',title:L(`Профиль ${pname(x.c.a)}`,`${pname(x.c.a)}’s profile`)})}${linkRow({act:'report',v:'comment',icon:'flag',cls:'danger',title:L('Пожаловаться','Report'),noChev:1}).replace('data-act="report"',`data-act="report" data-who="${x.c.a}"`)}${linkRow({act:'block',v:x.c.a,icon:'block',cls:'danger',title:L(`Заблокировать ${pname(x.c.a)}`,`Block ${pname(x.c.a)}`),sub:L('Скроет ответы и прекратит контакт','Hides their replies and ends contact'),noChev:1})}`}</div>`}));};
-ACT.rDel=a=>{const x=replyAt(a);if(!x||x.c.a!=='me')return;closeSheet(true);ask({icon:'trash',tone:'l',title:L('Удалить ответ?','Delete reply?'),ok:L('Удалить','Delete'),danger:true}).then(ok=>{if(!ok)return;const i=x.list.indexOf(x.c);if(i>=0){x.c.deleted=true;x.c.text={ru:'',en:''};}refresh();toast(L('Ответ удалён','Reply deleted'),{type:'ok'});});};
+ACT.rDel=a=>{const x=replyAt(a);if(!x||!ownedIdentity(x.c.a))return;closeSheet(true);ask({icon:'trash',tone:'l',title:L('Удалить ответ?','Delete reply?'),ok:L('Удалить','Delete'),danger:true}).then(ok=>{if(!ok)return;const i=x.list.indexOf(x.c);if(i>=0){x.c.deleted=true;x.c.text={ru:'',en:''};}refresh();toast(L('Ответ удалён','Reply deleted'),{type:'ok'});});};
 /* Rich text field (V10 round 2): FetLife-like — a toolbar with icons, formatting shows as you type.
    The stored value stays the same safe Markdown that md() renders, so drafts, validation, preview and the API contract
    don't change. Rendering into the editor always goes through md() (escaped text), pasting is plain text only,
@@ -190,14 +190,14 @@ ACT.rte=a=>{const box=a.closest('.rte-box'),ed=$('.rte-ed',box),c=a.dataset.v;
  if(c==='h4'||c==='blockquote'){const blk=String(document.queryCommandValue('formatBlock')||'').toLowerCase();document.execCommand('formatBlock',false,blk===c?'p':c);}
  else document.execCommand(c,false,null);
  rteSync(ed);rteState();};
-function postCard(p,o={}){
- const mine=p.author==='me';const pid=JSON.stringify({id:p.id});
+function postCard(p,o={}){p={...p,liked:!!(p.reactions?p.reactions[actionAuthor()]:actionAuthor()==='me'&&p.liked)};
+ const mine=ownedIdentity(p.author);const pid=JSON.stringify({id:p.id});
  const head=`<div class="post-h"><button class="who" ${profGo(p.author)}>${av(p.author,'sm')}<span class="tx"><b><span class="nmt">${esc(pname(p.author))}</span>${nameBadges(person(p.author))}</b><small>${F.rel(p.t)}${p.aud==='followers'?` · <span class="aud">${I.people}${L('подписчикам','followers')}</span>`:''}${o.community&&p.community?` · ${esc(T(COMMUNITIES[p.community].name))}`:''}</small></span></button><button class="ibtn ghost sm" data-act="postMenu" data-v="${p.id}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
  const media=postMediaHTML(p,o);
  const tags=p.tags&&p.tags.length?`<div class="tags">${p.tags.map(t=>`<button data-go="F04" data-p='${JSON.stringify({id:t})}'>#${esc(topic(t))}</button>`).join('')}</div>`:'';
  const nC=p.comments.length;
  return `<article class="post" style="animation-delay:${(o.i||0)*40}ms">${head}<div class="body" ${o.detail?'':`data-go="F05" data-p='${pid}'`}>${T(p.text)?md(T(p.text)):''}${media}</div>${tags}
- <div class="post-a"><button class="${p.liked?'on':''}" data-act="likePost" data-v="${p.id}" aria-pressed="${!!p.liked}" aria-label="${L('Нравится публикация','Like post')}">${p.liked?I.heartf:I.heart}<span>${p.likes+(p.liked?1:0)}</span></button>
+ <div class="post-a"><button class="${p.liked?'on':''}" data-act="likePost" data-v="${p.id}" aria-pressed="${!!p.liked}" aria-label="${L('Нравится публикация','Like post')}">${p.liked?I.heartf:I.heart}<span>${p.likes+(p.reactions?Object.values(p.reactions).filter(Boolean).length:p.liked?1:0)}</span></button>
  <button ${o.detail?'data-act="focusReply"':`data-go="F05" data-p='${pid}'`} aria-label="${L('Обсуждение','Replies')}">${I.chat}<span>${nC}</span></button>
  <button class="sp ${p.saved?'saved':''}" data-act="savePost" data-v="${p.id}" aria-pressed="${!!p.saved}" aria-label="${L('Сохранить','Save')}">${p.saved?I.bookmarkf:I.bookmark}</button>
  <button data-act="sharePost" data-v="${p.id}" aria-label="${L('Поделиться','Share')}">${I.share}</button></div></article>`;
@@ -373,3 +373,8 @@ ACT.fApply=()=>{S.ui.fcfg.apply();closeSheet();refresh();toast(L('Фильтры
 /** a single option list for one filter category: chips grouped, searchable */
 const fChips=(items,sel,act,o={})=>o.groups?o.groups.map(([t,ids])=>fsec(t,chipGroup(items.filter(([id])=>ids.includes(id)),sel,act,{...o,all:1,k:o.k}))).join(''):fsec(o.title||'',chipGroup(items,sel,act,{...o,all:1}));
 
+
+/* Author changes never route, rebuild a sheet or replace the discovery card. */
+ACT.chooseAuthor=a=>{const id=a.dataset.v;if(!authorAllowed(id))return;S.author=id;if(cur().p.actor&&cur().id!=='H02')cur().p.actor=id;paintAuthor();paintReactions();$$('[data-act="rLike"]').forEach(el=>{const x=replyAt(el);if(!x)return;const on=!!(x.c.reactions?x.c.reactions[actionAuthor()]:actionAuthor()==='me'&&x.c.liked);el.classList.toggle('on',on);el.setAttribute('aria-pressed',on);});};
+
+function paintReactions(){$$('[data-act="likePost"]').forEach(el=>{const p=postById(el.dataset.v);if(!p)return;const on=!!(p.reactions?p.reactions[actionAuthor()]:actionAuthor()==='me'&&p.liked);el.classList.toggle('on',on);el.setAttribute('aria-pressed',on);el.innerHTML=`${on?I.heartf:I.heart}<span>${p.likes+(p.reactions?Object.values(p.reactions).filter(Boolean).length:p.liked?1:0)}</span>`;});}

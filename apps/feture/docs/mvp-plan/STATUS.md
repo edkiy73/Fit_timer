@@ -4,6 +4,8 @@
 **V10, интересы (15.10.2026):** множественный выбор новых тем, последовательные ответы, финальная видимость «Все» по умолчанию и атомарное сохранение/отмена для личного и парного профиля. Тесты отделены от баночек без изменения формата. Согласование пары сохранено. Только прототип; следующий шаг — перенос утверждённого UX в React/AppBase.
 
 
+**V10, пары Я/Мы (15.10):** реализованы A–E в прототипе: один author control, версия профиля с согласием второго, отдельные social actions, права обоих в community, совместные чаты/notifications и dissolution/recovery/expiry. Сборка/6 focused contracts/162 route renders проходят; публикация и browser acceptance фиксируются в PR. React/backend/настоящие две сессии и native не реализованы этим срезом.
+
 ## Главное
 
 - **V10, новый запрос 15.10 после PR1114:** [план проходов и результаты](../design-reference/V10-FOLLOWUP-PASSES-2026-10-15.md). Унификация обычного/парного profile и редакторов; ветки/адресаты уведомлений; locked polls + voter rosters; prototype maintenance; общая анкета/интересы, content languages removed, age visibility independent of dating, prototype defaults pair/autoApprove/dating. Уточнение: роль — до пяти выбранных чипов, общие интересы пары заполняются отдельно вручную, не объединяются из личных. Реальные backend/native/photo verification отдельно. [PR1115](https://github.com/edkiy73/Fit_timer/pull/1115) merged2854e6c4, CI38707191671 success, Vercel READY; production Q03→P02→Q03 проверено облачным браузером.
