@@ -78,6 +78,7 @@ OPT_BASE.format=14;
 OPT.status=[['single','свободен(на)','single'],['dating','встречаюсь','dating'],['partnered','в отношениях','in a relationship'],['married','в браке','married'],['couple','мы пара — ищем вместе','we’re a couple, looking together'],['complicated','всё сложно','it’s complicated'],['unspecified','не указывать','prefer not to say']];
 OPT.role[0][1]='ведущая роль';OPT.role[1][1]='принимающая роль';
 OPT.role.push(['dom','доминант','dominant'],['sub','сабмиссив','submissive'],['top','топ','top'],['bottom','боттом','bottom'],['rigger','риггер','rigger'],['rope-bottom','принимающая роль в шибари','rope bottom'],['sadist','садист','sadist'],['masochist','мазохист','masochist'],['brat','брат','brat'],['brat-tamer','brat tamer','brat tamer'],['primal','праймал','primal'],['sensual','сенсуальная роль','sensual'],['exploring','исследую роли','exploring roles'],['unspecified','не указывать','prefer not to say']);
+for(const k of Object.keys(OPT))OPT[k]=OPT[k].filter(x=>x[0]!=='unspecified'&&!(k==='pron'&&x[0]==='any'));
 const CITY={berlin:{ru:'Берлин',en:'Berlin'},hamburg:{ru:'Гамбург',en:'Hamburg'},moscow:{ru:'Москва',en:'Moscow'},online:{ru:'Онлайн',en:'Online'}};
 
 /** Who follows whom (seed). 'me' entries exist only for the full persona. Counts in profiles are always the length of these lists. */
@@ -85,66 +86,67 @@ const FOLLOW_SEED={sofi:['mia','kira','me'],leon:['mia','maya'],mia:['maya','kai
 const PEOPLE={
  sofi:{pv:true,name:'Sofi',age:26,photo:1,nph:3,city:'berlin',km:4,pron:'she',gender:['woman'],orient:['bi'],format:['open','serious'],status:'single',role:'recv',seek:['dates','chat'],verified:true,online:true,dating:true,
   bio:{ru:'Люблю долгие переписки перед встречей и людей, которые не торопят. Фотографирую плёнку.',en:'I love long chats before meeting and people who don’t rush. I shoot film.'},
-  jars:[['experiments',10],['bondage',8],['sensory',8],['exhibition',4]],langs:['ru','en']},
+  jars:[['experiments',10],['bondage',8],['sensory',8],['exhibition',4]]},
  leon:{premium:true,name:'Leon',age:33,photo:2,nph:2,city:'berlin',km:8,pron:'he',gender:['transm'],orient:['bi'],format:'open',role:'lead',seek:['dates'],verified:true,online:false,last:{ru:'был вчера',en:'active yesterday'},dating:true,
   bio:{ru:'Сначала кофе и разговор, потом всё остальное. Веду небольшие вечеринки.',en:'Coffee and a talk first, everything else later. I host small parties.'},
-  jars:[['control',10],['roleplay',8],['bondage',6],['latex',8]],langs:['en','de']},
+  jars:[['control',10],['roleplay',8],['bondage',6],['latex',8]]},
  mia:{pv:true,premium:true,privText:{ru:'Перед первой сессией всегда созваниваемся. Стоп-слово — «красный», жест — два хлопка. После — обязательно чай и разговор.',en:'We always call before a first session. Safeword is “red”, gesture is two taps. Afterwards — tea and a talk, always.'},name:'Mia',age:29,photo:3,nph:5,city:'berlin',km:3,pron:'she',gender:['transw'],orient:['queer'],format:['poly','play'],status:'partnered',role:'switch',seek:['dates','exp'],verified:true,online:true,dating:true,
   bio:{ru:'Люблю людей, которые говорят прямо, не торопят события и заранее обсуждают ожидания. Практикую шибари шесть лет.',en:'I like people who speak directly, don’t rush and agree on expectations up front. Six years of shibari.'},
-  jars:[['shibari',10],['bondage',8],['aftercare',10],['roleplay',8]],langs:['ru','en']},
+  jars:[['shibari',10],['bondage',8],['aftercare',10],['roleplay',8]]},
  kai:{pv:true,name:'Kai',age:27,photo:4,nph:2,city:'berlin',km:5,pron:'they',gender:['nb'],orient:['pan'],format:'ra',role:'switch',seek:['chat','friends'],verified:true,online:false,last:{ru:'был(а) сегодня',en:'active today'},dating:true,
   bio:{ru:'Ищу людей, с которыми можно спокойно говорить о границах. Остальное приложится.',en:'Looking for people I can calmly talk boundaries with. The rest will follow.'},
-  jars:[['service',8],['bondage',6],['rituals',8],['talk',10],{t:'filming',lv:0,limit:'hard'}],langs:['en','ru']},
+  jars:[['service',8],['bondage',6],['rituals',8],['talk',10],{t:'filming',lv:0,limit:'hard'}]},
  maya:{pv:true,name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:'none',seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
   bio:{ru:'Веду сообщество «Узлы и разговоры» и встречи для новичков. Здесь — ради людей и тем.',en:'I run the Rope & Talk community and newcomer meetups. Here for people and ideas.'},
-  jars:[['shibari',10],['talk',10],['aftercare',8]],langs:['ru','en','de']},
+  jars:[['shibari',10],['talk',10],['aftercare',8]]},
  ari:{name:'Ari',age:30,photo:6,city:'berlin',km:6,pron:'he',gender:['man'],orient:['gay'],format:'open',role:'service',seek:['dates','friends'],verified:true,online:false,last:{ru:'был 2 ч назад',en:'active 2h ago'},dating:true,
   bio:{ru:'Дизайнер, бегаю по утрам, люблю ритуалы и порядок. Пишите про книги.',en:'Designer, morning runner, into rituals and order. Talk to me about books.'},
-  jars:[['service',10],['rituals',8],['latex',6],['slow',8]],langs:['en']},
+  jars:[['service',10],['rituals',8],['latex',6],['slow',8]]},
  kira:{pv:true,name:'Kira',age:28,photo:7,nph:4,city:'berlin',km:2,pron:'she',gender:['woman'],orient:['pan'],format:['poly','serious'],status:'single',role:'recv',seek:['dates','rel'],verified:true,online:true,dating:true,
   bio:{ru:'Танцую, читаю, учусь доверять медленно. Важна честность и чувство юмора.',en:'I dance, read and learn to trust slowly. Honesty and humour matter.'},
-  jars:[['bondage',8],['sensory',10],['intimacy',10],['experiments',6]],langs:['ru','en']},
+  jars:[['bondage',8],['sensory',10],['intimacy',10],['experiments',6]]},
  lina:{name:'Lina',age:28,photo:9,nph:3,city:'berlin',km:7,pron:'she',gender:['woman'],orient:['bi'],format:'open',role:'switch',seek:['dates','chat'],verified:true,online:false,last:{ru:'была вчера',en:'active yesterday'},dating:true,
   bio:{ru:'Путешествую, готовлю для друзей, исследую себя без спешки.',en:'Travelling, cooking for friends, exploring myself at my own pace.'},
-  jars:[['roleplay',8],['experiments',8],['intimacy',8]],langs:['en']},
+  jars:[['roleplay',8],['experiments',8],['intimacy',8]]},
  tomeva:{premium:true,members:['eva','tom'],name:'Eva & Tom',nameRu:'Eva и Tom',age:null,pair:true,plate:'amber',plate2:'ember',city:'berlin',km:3,pron:'any',gender:['woman','man'],orient:['bi'],format:'swing',role:'switch',seek:['exp','friends'],verified:true,online:true,dating:true,
   bio:{ru:'Пара, вместе 3 года. Отвечаем вдвоём, первая встреча — только в общественном месте.',en:'A couple, together 3 years. We reply together; first meeting in a public place only.'},
-  jars:[['experiments',10],['exhibition',6],['intimacy',8]],langs:['ru','en'],pairNote:{ru:'пара · вместе 3 года',en:'couple · 3 years together'}},
+  jars:[['experiments',10],['exhibition',6],['intimacy',8]],pairNote:{ru:'пара · вместе 3 года',en:'couple · 3 years together'}},
  lenamax:{pair:true,name:'Lena & Max',nameRu:'Lena и Max',age:null,photo:'p1',city:'berlin',km:5,pron:'any',gender:['woman','man'],orient:['hetero','bi'],format:['open'],status:'partnered',role:'switch',seek:['exp','events'],verified:true,pv:true,online:true,dating:true,
   bio:{ru:'Пара, вместе 6 лет. Ходим на латекс-вечеринки, ищем пару или человека для общения и совместных выходов. Сначала переписка с обоими.',en:'A couple, together 6 years. We go to latex parties and look for a couple or a person to talk to and go out with. Chat with both of us first.'},
-  jars:[['latex',10],['exhibition',8],['roleplay',7],['control',6]],langs:['ru','en','de'],pairNote:{ru:'пара · вместе 6 лет',en:'couple · 6 years together'}},
+  jars:[['latex',10],['exhibition',8],['roleplay',7],['control',6]],pairNote:{ru:'пара · вместе 6 лет',en:'couple · 6 years together'}},
  nikajonas:{pair:true,name:'Nika & Jonas',nameRu:'Nika и Jonas',age:null,photo:'p2',city:'berlin',km:8,pron:'any',gender:['woman','man'],orient:['bi'],format:['poly'],status:'partnered',role:'switch',seek:['friends','dates'],verified:true,online:false,last:{ru:'были вчера',en:'active yesterday'},dating:true,
   bio:{ru:'Полиаморная пара. Любим долгие разговоры, кофейни и медленный темп. Пишите, если хочется познакомиться спокойно.',en:'A polyamorous couple. We love long talks, cafés and a slow pace. Write if you want to get to know each other calmly.'},
-  jars:[['talk',10],['slow',9],['intimacy',8],['sensory',6]],langs:['en','de'],pairNote:{ru:'пара · вместе 2 года',en:'couple · 2 years together'}},
+  jars:[['talk',10],['slow',9],['intimacy',8],['sensory',6]],pairNote:{ru:'пара · вместе 2 года',en:'couple · 2 years together'}},
  eva:{name:'Eva',age:32,plate:'amber',city:'berlin',pron:'she',gender:['woman'],orient:['bi'],format:'swing',role:'switch',seek:['exp','friends'],verified:true,pv:true,online:true,dating:false,pairOf:'tomeva',
-  bio:{ru:'Половина пары Eva и Tom. Личные сообщения — сюда, общие вопросы — в профиль пары.',en:'One half of Eva & Tom. Personal messages here, couple questions on the couple profile.'},jars:[['roleplay',8],['intimacy',9]],langs:['en','de']},
+  bio:{ru:'Половина пары Eva и Tom. Личные сообщения — сюда, общие вопросы — в профиль пары.',en:'One half of Eva & Tom. Personal messages here, couple questions on the couple profile.'},jars:[['roleplay',8],['intimacy',9]]},
  tom:{name:'Tom',age:34,plate:'ember',city:'berlin',pron:'he',gender:['man'],orient:['bi'],format:'swing',role:'lead',seek:['exp'],verified:true,online:false,last:{ru:'был сегодня',en:'active today'},dating:false,pairOf:'tomeva',
-  bio:{ru:'Готовлю, катаюсь на велосипеде. В паре с Eva.',en:'I cook and ride bikes. In a couple with Eva.'},jars:[['control',8],['rituals',7]],langs:['en']},
+  bio:{ru:'Готовлю, катаюсь на велосипеде. В паре с Eva.',en:'I cook and ride bikes. In a couple with Eva.'},jars:[['control',8],['rituals',7]]},
  dan:{name:'Dan',age:35,plate:'night',city:'berlin',pron:'he',gender:['man'],orient:['hetero'],format:'mono',role:'none',seek:['chat'],dating:false,bio:{ru:'Читаю больше, чем пишу.',en:'I read more than I post.'},jars:[]},
  noa:{name:'Noa',age:34,plate:'sea',city:'moscow',pron:'they',gender:['nb'],orient:['queer'],format:'ra',role:'none',seek:['chat'],dating:false,verified:true,bio:{ru:'Психолог, веду онлайн-круги о согласии.',en:'Counsellor, I host online circles on consent.'},jars:[['talk',10],['aftercare',10]]},
 };
 
+for(const [pairId,ids,names] of [['lenamax',['lena','max'],['Lena','Max']],['nikajonas',['nika','jonas'],['Nika','Jonas']]]){const pair=PEOPLE[pairId];pair.members=ids;ids.forEach((id,i)=>{PEOPLE[id]={name:names[i],age:i?33:30,plate:i?'sea':'rose',city:pair.city,pron:i?'he':'she',gender:[i?'man':'woman'],orient:['bi'],format:[...pair.format],status:'partnered',role:'switch',seek:['friends'],dating:false,socialLikes:true,pairOf:pairId,bio:{ru:'Личный профиль. Общий профиль пары доступен ниже.',en:'Personal profile. Our couple profile is linked below.'},jars:[]};});}
 const COMMUNITIES={
- rope:{name:{ru:'Узлы и разговоры',en:'Rope & Talk'},plate:'rose',cover:'/images/v10-content/community-rope.webp',privacy:'open',members:1284,city:'berlin',langs:'RU · EN',topics:['shibari','bondage','talk'],mods:['maya','mia'],
+ rope:{name:{ru:'Узлы и разговоры',en:'Rope & Talk'},plate:'rose',cover:'/images/v10-content/community-rope.webp',privacy:'open',members:1284,city:'berlin',topics:['shibari','bondage','talk'],mods:['maya','mia'],
   desc:{ru:'Учимся обвязкам безопасно и без спешки. Практика, разборы ошибок и встречи в Берлине.',en:'Learning rope safely and slowly. Practice, mistakes reviewed, and meetups in Berlin.'},
   rules:[{ru:'Согласие прежде всего: фото и истории о других — только с их разрешения.',en:'Consent first: photos and stories about others only with their permission.'},{ru:'Без советов «на глаз» по безопасности — делимся источниками.',en:'No guesswork safety advice — share sources.'},{ru:'Личные сообщения — только по взаимной симпатии, не через группу.',en:'Private messages only through mutual likes, not via the group.'}]},
- slow:{name:{ru:'Медленный темп',en:'Slow Pace'},plate:'sea',cover:'/images/v10-content/community-slow.webp',privacy:'open',members:642,city:'online',langs:'RU',topics:['slow','talk','intimacy'],mods:['kai'],
+ slow:{name:{ru:'Медленный темп',en:'Slow Pace'},plate:'sea',cover:'/images/v10-content/community-slow.webp',privacy:'open',members:642,city:'online',topics:['slow','talk','intimacy'],mods:['kai'],
   desc:{ru:'Для тех, кто знакомится не торопясь: переписка, разговоры, доверие.',en:'For those who take their time: writing, talking, trust.'},
   rules:[{ru:'Уважаем темп другого человека.',en:'Respect other people’s pace.'},{ru:'Никакого давления и навязчивых сообщений.',en:'No pressure or pushy messages.'}]},
- queer:{name:{ru:'Квир Берлин',en:'Queer Berlin'},plate:'lilac',cover:'/images/v10-content/community-queer.webp',privacy:'closed',members:389,city:'berlin',langs:'EN · RU · DE',topics:['intimacy','talk'],mods:['mia'],
+ queer:{name:{ru:'Квир Берлин',en:'Queer Berlin'},plate:'lilac',cover:'/images/v10-content/community-queer.webp',privacy:'closed',members:389,city:'berlin',topics:['intimacy','talk'],mods:['mia'],
   desc:{ru:'Закрытое сообщество квир-людей Берлина. Вступление по заявке.',en:'A closed community for queer people in Berlin. Join by request.'},
   rules:[{ru:'Только для квир-людей и союзников по приглашению.',en:'Queer people and invited allies only.'},{ru:'Ничего из группы не выносится наружу.',en:'Nothing leaves the group.'}],
   questions:[{ru:'Почему хочешь вступить?',en:'Why do you want to join?'}]},
- latex:{name:{ru:'Латекс-клуб',en:'Latex Club'},plate:'coal',cover:'/images/v10-content/community-latex.webp',privacy:'closed',members:211,city:'berlin',langs:'EN',topics:['latex','exhibition'],mods:['leon'],
+ latex:{name:{ru:'Латекс-клуб',en:'Latex Club'},plate:'coal',cover:'/images/v10-content/community-latex.webp',privacy:'closed',members:211,city:'berlin',topics:['latex','exhibition'],mods:['leon'],
   desc:{ru:'Уход за латексом, мастерские и закрытые вечера.',en:'Latex care, workshops and private evenings.'},
   rules:[{ru:'Фото участников — только с согласия.',en:'Photos of members only with consent.'}],questions:[{ru:'Есть ли у тебя опыт с латексом?',en:'Do you have experience with latex?'}]},
- first:{name:{ru:'Новичкам',en:'First Steps'},plate:'moss',privacy:'open',members:2310,city:'online',langs:'RU · EN',topics:['talk','aftercare','slow'],mods:['maya','noa'],
+ first:{name:{ru:'Новичкам',en:'First Steps'},plate:'moss',privacy:'open',members:2310,city:'online',topics:['talk','aftercare','slow'],mods:['maya','noa'],
   desc:{ru:'Глупых вопросов нет. Объясняем термины, делимся опытом, помогаем начать безопасно.',en:'No stupid questions. Explaining terms, sharing experience, helping you start safely.'},
   rules:[{ru:'Отвечаем доброжелательно.',en:'Answer kindly.'},{ru:'Не просим и не отправляем откровенные фото.',en:'Don’t ask for or send explicit photos.'}]},
- poly:{name:{ru:'Пары и поли',en:'Couples & Poly'},plate:'amber',cover:'/images/v10-content/community-poly.webp',privacy:'open',members:905,city:'berlin',langs:'RU · EN',topics:['intimacy','talk'],mods:['tomeva'],
+ poly:{name:{ru:'Пары и поли',en:'Couples & Poly'},plate:'amber',cover:'/images/v10-content/community-poly.webp',privacy:'open',members:905,city:'berlin',topics:['intimacy','talk'],mods:['tomeva'],
   desc:{ru:'Договорённости, ревность, календари и всё, что помогает отношениям нескольких людей.',en:'Agreements, jealousy, calendars and everything that helps multi-partner relationships.'},
   rules:[{ru:'Пары пишут от имени обоих только с согласия обоих.',en:'Couples post for both only with both agreeing.'}]},
- circle:{name:{ru:'Круг общения',en:'Conversation Circle'},plate:'sea',cover:'/images/v10-content/community-slow.webp',privacy:'closed',members:1,knownMembers:true,seedMembers:['kai'],city:'online',langs:'RU · EN',topics:['talk','slow'],mods:['kai'],
+ circle:{name:{ru:'Круг общения',en:'Conversation Circle'},plate:'sea',cover:'/images/v10-content/community-slow.webp',privacy:'closed',members:1,knownMembers:true,seedMembers:['kai'],city:'online',topics:['talk','slow'],mods:['kai'],
   desc:{ru:'Небольшой круг для спокойных разговоров, обмена опытом и встреч без спешки.',en:'A small circle for calm conversations, sharing experiences and unhurried meetups.'},
   rules:[{ru:'Истории участников остаются внутри сообщества.',en:'Members’ stories stay within the community.'},{ru:'Уважаем право отказаться и не торопим друг друга.',en:'Respect the right to say no and don’t rush each other.'}],questions:[{ru:'О чём хочешь поговорить в круге?',en:'What would you like to discuss in the circle?'}]},
 };
@@ -174,20 +176,20 @@ const POSTS=[
 ];
 
 const EVENTS={
- e1:{title:{ru:'Вечер шибари для начинающих',en:'Shibari basics evening'},type:'workshop',format:'offline',city:'berlin',area:{ru:'Кройцберг',en:'Kreuzberg'},venue:{ru:'Studio Knoten, Oranienstraße 12, 2 этаж',en:'Studio Knoten, Oranienstraße 12, 2nd floor'},start:at(3,19),end:at(3,22),tz:'Europe/Berlin',lang:'RU · EN',price:{ru:'15 €',en:'€15'},organizer:'maya',community:'rope',approval:true,plate:'rose',cover:'/images/v10-content/event-e1-shibari-workshop.webp',gallery:[{type:'image',url:'/images/v10-content/gallery-e1-ropes.webp'}],
+ e1:{title:{ru:'Вечер шибари для начинающих',en:'Shibari basics evening'},type:'workshop',format:'offline',city:'berlin',area:{ru:'Кройцберг',en:'Kreuzberg'},venue:{ru:'Studio Knoten, Oranienstraße 12, 2 этаж',en:'Studio Knoten, Oranienstraße 12, 2nd floor'},start:at(3,19),end:at(3,22),tz:'Europe/Berlin',price:{ru:'15 €',en:'€15'},organizer:'maya',community:'rope',approval:true,plate:'rose',cover:'/images/v10-content/event-e1-shibari-workshop.webp',gallery:[{type:'image',url:'/images/v10-content/gallery-e1-ropes.webp'}],
   desc:{ru:'Небольшая группа до 12 человек. Разберём три базовых узла, сигналы и безопасное освобождение. Верёвки выдаём. Можно прийти одному или в паре.',en:'A small group of up to 12. Three basic ties, signals and safe release. Rope provided. Come solo or with a partner.'},
   reqs:[{ru:'18+ и подтверждённый возраст',en:'18+ with verified age'},{ru:'Согласие с правилами студии',en:'Agree to studio rules'},{ru:'Удобная одежда',en:'Comfortable clothes'}],q:[{ru:'Был ли у тебя опыт с верёвкой?',en:'Any experience with rope?'}]},
- e2:{title:{ru:'Круг о границах: онлайн',en:'Boundaries circle: online'},type:'talk',format:'online',start:at(1,18,30),end:at(1,20),tz:'Europe/Moscow',lang:'RU',price:null,organizer:'noa',community:'first',approval:false,plate:'sea',cover:'/images/v10-content/event-e2-boundaries-circle.webp',link:'https://meet.feture.app/circle-7',
+ e2:{title:{ru:'Круг о границах: онлайн',en:'Boundaries circle: online'},type:'talk',format:'online',start:at(1,18,30),end:at(1,20),tz:'Europe/Moscow',price:null,organizer:'noa',community:'first',approval:false,plate:'sea',cover:'/images/v10-content/event-e2-boundaries-circle.webp',link:'https://meet.feture.app/circle-7',
   desc:{ru:'Спокойный разговор в кругу до 20 человек: как просить, как отказывать и как пересматривать договорённости. Камеру можно не включать.',en:'A calm circle of up to 20: how to ask, how to say no, how to revisit agreements. Camera optional.'},reqs:[{ru:'Можно анонимно для других участников',en:'You can stay anonymous to other attendees'}]},
- e3:{title:{ru:'Latex Night',en:'Latex Night'},type:'party',format:'offline',city:'berlin',area:{ru:'Фридрихсхайн',en:'Friedrichshain'},venue:{ru:'Club Velour, Revaler Str. 99',en:'Club Velour, Revaler Str. 99'},start:at(9,22),end:at(10,4),tz:'Europe/Berlin',lang:'EN · DE',price:{ru:'25 €',en:'€25'},organizer:'leon',community:'latex',approval:false,external:'tickets.velour.club',plate:'coal',cover:'/images/v10-content/event-e3-latex-night.webp',gallery:[{type:'image',url:'/images/v10-content/gallery-e3-club.webp'}],
+ e3:{title:{ru:'Latex Night',en:'Latex Night'},type:'party',format:'offline',city:'berlin',area:{ru:'Фридрихсхайн',en:'Friedrichshain'},venue:{ru:'Club Velour, Revaler Str. 99',en:'Club Velour, Revaler Str. 99'},start:at(9,22),end:at(10,4),tz:'Europe/Berlin',price:{ru:'25 €',en:'€25'},organizer:'leon',community:'latex',approval:false,external:'tickets.velour.club',plate:'coal',cover:'/images/v10-content/event-e3-latex-night.webp',gallery:[{type:'image',url:'/images/v10-content/gallery-e3-club.webp'}],
   desc:{ru:'Вечеринка с мягким дресс-кодом и строгими правилами согласия. Билеты продаёт клуб.',en:'A party with a soft dress code and strict consent rules. Tickets sold by the club.'},reqs:[{ru:'18+, документ на входе',en:'18+, ID at the door'},{ru:'Дресс-код: латекс, кожа или чёрное',en:'Dress code: latex, leather or black'}]},
- e4:{title:{ru:'Кофе для новичков',en:'Newcomers coffee'},type:'meetup',format:'offline',city:'berlin',area:{ru:'Нойкёльн',en:'Neukölln'},venue:{ru:'Café Ruhe, Weserstraße 40',en:'Café Ruhe, Weserstraße 40'},start:at(5,12),end:at(5,14),tz:'Europe/Berlin',lang:'RU',price:null,organizer:'maya',community:'first',approval:false,plate:'moss',cover:'/images/v10-content/event-e4-newcomers-coffee.webp',gallery:[{type:'image',url:'/images/v10-content/gallery-e4-cafe.webp'}],
+ e4:{title:{ru:'Кофе для новичков',en:'Newcomers coffee'},type:'meetup',format:'offline',city:'berlin',area:{ru:'Нойкёльн',en:'Neukölln'},venue:{ru:'Café Ruhe, Weserstraße 40',en:'Café Ruhe, Weserstraße 40'},start:at(5,12),end:at(5,14),tz:'Europe/Berlin',price:null,organizer:'maya',community:'first',approval:false,plate:'moss',cover:'/images/v10-content/event-e4-newcomers-coffee.webp',gallery:[{type:'image',url:'/images/v10-content/gallery-e4-cafe.webp'}],
   desc:{ru:'Знакомимся в обычном кафе, без дресс-кода и сцен. Просто поговорить и задать вопросы.',en:'Meeting in a regular café, no dress code, no scenes. Just talk and ask questions.'},reqs:[]},
- e5:{title:{ru:'Мастерская: забота после сцены',en:'Workshop: aftercare'},type:'workshop',format:'online',start:at(12,19),end:at(12,21),tz:'Europe/Berlin',lang:'EN',price:{ru:'10 €',en:'€10'},organizer:'mia',community:null,approval:false,external:'pay.example.org',plate:'wine',cover:'/images/v10-content/event-e5-aftercare-workshop.webp',
+ e5:{title:{ru:'Мастерская: забота после сцены',en:'Workshop: aftercare'},type:'workshop',format:'online',start:at(12,19),end:at(12,21),tz:'Europe/Berlin',price:{ru:'10 €',en:'€10'},organizer:'mia',community:null,approval:false,external:'pay.example.org',plate:'wine',cover:'/images/v10-content/event-e5-aftercare-workshop.webp',
   desc:{ru:'Практическая онлайн-мастерская: что нужно телу и голове после интенсивной сцены.',en:'A practical online workshop: what body and mind need after an intense scene.'},reqs:[]},
- e6:{title:{ru:'Пикник сообщества',en:'Community picnic'},type:'meetup',format:'offline',city:'berlin',area:{ru:'Тиргартен',en:'Tiergarten'},venue:{ru:'Тиргартен, у озера',en:'Tiergarten, by the lake'},start:NOW-12*DAY,end:NOW-12*DAY+3*HOUR,tz:'Europe/Berlin',lang:'RU · EN',price:null,organizer:'maya',community:'rope',approval:false,plate:'moss',cover:'/images/v10-content/event-e6-community-picnic.webp',past:true,
+ e6:{title:{ru:'Пикник сообщества',en:'Community picnic'},type:'meetup',format:'offline',city:'berlin',area:{ru:'Тиргартен',en:'Tiergarten'},venue:{ru:'Тиргартен, у озера',en:'Tiergarten, by the lake'},start:NOW-12*DAY,end:NOW-12*DAY+3*HOUR,tz:'Europe/Berlin',price:null,organizer:'maya',community:'rope',approval:false,plate:'moss',cover:'/images/v10-content/event-e6-community-picnic.webp',past:true,
   desc:{ru:'Летний пикник сообщества.',en:'Summer community picnic.'},reqs:[]},
- e7:{title:{ru:'Квир-вечер в Шёнеберге',en:'Queer evening in Schöneberg'},type:'party',format:'offline',city:'berlin',area:{ru:'Шёнеберг',en:'Schöneberg'},venue:{ru:'—',en:'—'},start:at(6,21),end:at(7,2),tz:'Europe/Berlin',lang:'EN',price:null,organizer:'mia',community:'queer',approval:true,plate:'lilac',cancelled:{ru:'Площадка закрылась на ремонт. Перенесём, как только найдём новое место.',en:'The venue closed for renovation. We’ll reschedule once we find a new place.'},
+ e7:{title:{ru:'Квир-вечер в Шёнеберге',en:'Queer evening in Schöneberg'},type:'party',format:'offline',city:'berlin',area:{ru:'Шёнеберг',en:'Schöneberg'},venue:{ru:'—',en:'—'},start:at(6,21),end:at(7,2),tz:'Europe/Berlin',price:null,organizer:'mia',community:'queer',approval:true,plate:'lilac',cancelled:{ru:'Площадка закрылась на ремонт. Перенесём, как только найдём новое место.',en:'The venue closed for renovation. We’ll reschedule once we find a new place.'},
   desc:{ru:'Танцы и разговоры.',en:'Dancing and conversations.'},reqs:[]},
 };
 
@@ -195,7 +197,7 @@ const REQ_SCOPES=[['info',{ru:'желания и границы',en:'wishes and 
 
 /* ---------- personas ---------- */
 function fullMe(){return{privText:{ru:'Новичок в верёвке, поэтому сначала — разговор и короткая встреча на нейтральной территории. Не люблю сюрпризов.',en:'New to rope, so first a talk and a short meeting on neutral ground. I don’t like surprises.'},
- nick:'alex_b',name:'Alex',showAge:true,dob:'1994-03-14',photo:8,photos:[8],city:'berlin',pron:'he',gender:['man'],orient:['bi'],format:['open','play'],status:'single',role:'lead',seek:['dates','chat'],langs:['ru','en'],
+ nick:'alex_b',name:'Alex',showAge:true,dob:'1994-03-14',photo:8,photos:[8],city:'berlin',pron:'he',gender:['man'],orient:['bi'],format:['open','play'],status:'single',role:'lead',seek:['dates','chat'],
  bio:{ru:'Говорю прямо, слушаю внимательно. Люблю верёвку, долгие прогулки и людей, которые знают свои границы.',en:'I speak directly and listen closely. I love rope, long walks and people who know their limits.'},
  vis:{...PUBLIC_VIS},email:'alex@mail.com',methods:['email','google'],dating:true,datingVisible:true,socialLikes:true,requestsFrom:'all',rsvpShow:false,ageCheck:'ok',premium:false,
  jars:[
@@ -211,7 +213,7 @@ function fullMe(){return{privText:{ru:'Новичок в верёвке, поэ�
  saved:{posts:['p8'],events:['e4'],topics:['aftercare']},
 };}
 function newMe(){return{
- nick:'',name:'',showAge:false,dob:'',photo:null,photos:[],city:null,pron:null,gender:[],orient:[],format:[],status:null,role:null,seek:[],langs:[],bio:{ru:'',en:''},
+ nick:'',name:'',showAge:false,dob:'',photo:null,photos:[],city:null,pron:null,gender:[],orient:[],format:[],status:null,role:null,seek:[],bio:{ru:'',en:''},
  vis:{gender:'only',orient:'only',format:'only',role:'only'},email:'',methods:[],dating:false,datingVisible:false,socialLikes:true,requestsFrom:'all',rsvpShow:false,ageCheck:'none',premium:false,
  jars:[],history:[],journal:[],tests:{},saved:{posts:[],events:[],topics:[]},fresh:true};}
 
@@ -229,7 +231,7 @@ function freshState(persona){
    {id:'cr2',p:'lina',t:ago(4),status:'pending',showMember:false,answer:{ru:'Ищу небольшой круг для спокойных разговоров.',en:'I’m looking for a small circle for calm conversations.'}},
    {id:'cr3',p:'kai',t:ago(48),updated:ago(24),status:'approved',showMember:true,answer:{ru:'Интересны разговоры о доверии и заботе.',en:'I’m interested in conversations about trust and care.'}}
   ]}:{} ,
-  posts:POSTS.map(p=>({...p,liked:false,saved:false,comments:p.comments.map((c,i)=>({a:c[0],text:c[1],t:p.t+HOUR,likes:(i*3+2)%6}))})),
+  posts:POSTS.map(p=>({...p,pollVoters:p.poll?p.poll.map((_,i)=>Object.keys(PEOPLE).filter((id,j)=>!PEOPLE[id].pair&&j%p.poll.length===i).slice(0,5)):undefined,liked:false,saved:false,comments:p.comments.map((c,i)=>({a:c[0],text:c[1],t:p.t+HOUR,likes:(i*3+2)%6}))})),
   myPosts:full?[{id:'m1',author:'me',t:ago(48),type:'text',tags:['shibari'],likes:14,aud:'all',status:'published',text:{ru:'Первый раз сходил на занятие по шибари. Больше всего удивило, сколько времени уходит на разговор до начала — и как это успокаивает.',en:'Went to my first shibari class. What surprised me most was how much time goes into talking first — and how calming that is.'},comments:[]},
    {id:'m2',author:'me',t:ago(3),type:'text',tags:['talk'],likes:0,aud:'followers',status:'draft',text:{ru:'Черновик: как я учусь говорить «нет» без чувства вины…',en:'Draft: how I’m learning to say “no” without guilt…'},comments:[]}]:[],
   postEdits:{}, // private saved revisions; never part of published Posts
@@ -277,7 +279,7 @@ function freshState(persona){
  };
  if(persona==='pair'){st.likesIn=st.likesIn.filter(x=>x.p!=='kira');st.reqOut=st.reqOut.filter(x=>x.p!=='kira');st.deckOrder=st.deckOrder.filter(x=>x!=='kira');st.communityRequests.circle=st.communityRequests.circle.filter(x=>x.p!=='kira');st.notifs=st.notifs.filter(x=>x.p!=='kira');st.follows.add('kira');st.graph.kira.add('me');}
  // organizer event for the full persona (E15/E16)
- if(full){st.extraEvents.e8={title:{ru:'Клуб чтения: «Больше двух»',en:'Book club: “More Than Two”'},type:'talk',format:'online',start:at(8,19),end:at(8,20,30),tz:'Europe/Berlin',lang:'RU',price:null,organizer:'me',community:'slow',approval:true,plate:'plum',link:'https://meet.feture.app/bookclub',desc:{ru:'Обсуждаем по главе в неделю. Камера по желанию.',en:'One chapter a week. Camera optional.'},reqs:[],q:[{ru:'Читал(а) ли книгу раньше?',en:'Have you read the book before?'}],status:'published',apps:[{p:'kira',status:'pending',answer:{ru:'Нет, начну с вами',en:'No, I’ll start with you'}},{p:'ari',status:'approved',answer:{ru:'Да, дважды',en:'Yes, twice'}},{p:'lina',status:'pending',answer:{ru:'Частично',en:'Partly'}}],announce:[]};}
+ if(full){st.extraEvents.e8={title:{ru:'Клуб чтения: «Больше двух»',en:'Book club: “More Than Two”'},type:'talk',format:'online',start:at(8,19),end:at(8,20,30),tz:'Europe/Berlin',price:null,organizer:'me',community:'slow',approval:true,plate:'plum',link:'https://meet.feture.app/bookclub',desc:{ru:'Обсуждаем по главе в неделю. Камера по желанию.',en:'One chapter a week. Camera optional.'},reqs:[],q:[{ru:'Читал(а) ли книгу раньше?',en:'Have you read the book before?'}],status:'published',apps:[{p:'kira',status:'pending',answer:{ru:'Нет, начну с вами',en:'No, I’ll start with you'}},{p:'ari',status:'approved',answer:{ru:'Да, дважды',en:'Yes, twice'}},{p:'lina',status:'pending',answer:{ru:'Частично',en:'Partly'}}],announce:[]};}
  return st;
 }
 

@@ -10,7 +10,7 @@ SC.A01={auth:1,title:()=>L('Приветствие','Welcome'),render:()=>`<div 
  <div class="w-age">${L('Только для взрослых, 18+. Продолжая, ты соглашаешься с','Adults only, 18+. By continuing you agree to the')} <a href="#" data-act="terms">${L('условиями','terms')}</a>.</div></div>`};
 
 ACT.terms=()=>sheet(()=>({title:L('Условия и приватность','Terms and privacy'),body:`<p class="lead">${L('Коротко о главном. Полный текст юридически согласуется перед запуском.','The essentials. The full legal text is finalised before launch.')}</p>
- ${[[I.shield,L('Тебе 18+','You are 18+'),L('Дата рождения нужна для этого. Другим видно только возраст, и только если ты включишь знакомства.','Your date of birth confirms it. Others only see your age, and only if you turn on dating.')],[I.lock,L('Приватно по умолчанию','Private by default'),L('Интересы и ответы тестов видишь только ты.','Your interests and quiz answers are visible only to you.')],[I.heart,L('Чат — только взаимно','Chat only when mutual'),L('Никто не напишет тебе без взаимной симпатии.','Nobody can message you without a mutual like.')],[I.trash,L('Твои данные — твои','Your data is yours'),L('Экспорт и удаление доступны всегда и бесплатно.','Export and deletion are always available and free.')]].map(([i,b,s])=>`<div class="fact"><i class="v">${i}</i><span><b>${b}.</b> ${s}</span></div>`).join('')}`,foot:`<button class="btn primary" data-act="closeSheet">${L('Понятно','Got it')}</button>`}));
+ ${[[I.shield,L('Тебе 18+','You are 18+'),L('Дата рождения нужна, чтобы подтвердить 18+. Её никто не увидит. Возраст можно показывать в профиле по твоему выбору.','Your birth date confirms you are 18+. Nobody sees it. You choose whether to show your age on your profile.')],[I.lock,L('Приватно по умолчанию','Private by default'),L('Интересы и ответы тестов видишь только ты.','Your interests and quiz answers are visible only to you.')],[I.heart,L('Чат — только взаимно','Chat only when mutual'),L('Никто не напишет тебе без взаимной симпатии.','Nobody can message you without a mutual like.')],[I.trash,L('Твои данные — твои','Your data is yours'),L('Экспорт и удаление доступны всегда и бесплатно.','Export and deletion are always available and free.')]].map(([i,b,s])=>`<div class="fact"><i class="v">${i}</i><span><b>${b}.</b> ${s}</span></div>`).join('')}`,foot:`<button class="btn primary" data-act="closeSheet">${L('Понятно','Got it')}</button>`}));
 
 SC.A02={auth:1,title:p=>p.mode==='in'?L('Вход','Sign in'):L('Регистрация','Sign up'),render:(p)=>{const up=p.mode!=='in';return `${bar('',{back:1,actions:langSw()})}<div class="view nodock"><div class="auth-wrap">
  ${seg([['up',L('Регистрация','Sign up')],['in',L('Вход','Sign in')]],up?'up':'in','authMode')}
@@ -41,7 +41,7 @@ ACT.oaAcc=a=>{S.ui.oa.acc=+a.dataset.v;resheet();};
 ACT.oaHide=a=>{S.ui.oa.hide=a.dataset.v==='1';resheet();};
 ACT.oaGo=a=>{const o=S.ui.oa;const existing=o.prov==='google'&&o.acc===0;
  run(a,()=>{closeSheet(true);
-  if(existing){signIn('full');toast(L('С возвращением, Alex','Welcome back, Alex'),{type:'ok'});return;}
+  if(existing){signIn(S.persona==='pair'?'pair':'full');toast(L('С возвращением, Alex','Welcome back, Alex'),{type:'ok'});return;}
   if(a.dataset.m==='in'){toast(L('Аккаунта с этой почтой ещё нет — создадим новый','No account with this email yet — let’s create one'),{type:'info'});}
   const email=o.prov==='google'?'new.person@gmail.com':(o.hide?'x7k2@privaterelay.appleid.com':'alex@icloud.com');
   go('A04',{email,via:o.prov});});};
@@ -64,7 +64,7 @@ ACT.checkCode=a=>{const r=cur();const c=r.f.code||'';
  if(c.length<6)return fail(L('Введи все 6 цифр','Enter all 6 digits'));
  run(a,()=>{if(c==='000000'){r.tries=(r.tries||5)-1;return fail(L(`Неверный код. Осталось попыток: ${r.tries}`,`Wrong code. Attempts left: ${r.tries}`));}
   if(c==='999999')return fail(L('Код истёк. Запроси новый','The code has expired. Request a new one'));
-  if(r.p.mode==='in'){signIn('full');toast(L('С возвращением, Alex','Welcome back, Alex'),{type:'ok'});}
+  if(r.p.mode==='in'){signIn(S.persona==='pair'?'pair':'full');toast(L('С возвращением, Alex','Welcome back, Alex'),{type:'ok'});}
   else go('A04',{email:r.p.email,via:'email'});});};
 ACT.resend=a=>run(a,()=>{cur().sent=Date.now();cur().f.code='';refresh();},{ok:L('Новый код отправлен','New code sent')});
 
@@ -80,8 +80,7 @@ SC.A04={auth:1,title:()=>L('Профиль','Profile'),render:(p,r)=>{const yNow
   <div class="dob"><select class="inp" name="dd" data-ch="dob" aria-label="${L('День','Day')}"><option value="">${L('День','Day')}</option>${Array.from({length:31},(_,i)=>`<option ${r.f.dd==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
   <select class="inp" name="mm" data-ch="dob" aria-label="${L('Месяц','Month')}"><option value="">${L('Месяц','Month')}</option>${MONTHS().map((m,i)=>`<option value="${i+1}" ${r.f.mm==i+1?'selected':''}>${m}</option>`).join('')}</select>
   <select class="inp" name="yy" data-ch="dob" aria-label="${L('Год','Year')}"><option value="">${L('Год','Year')}</option>${Array.from({length:90},(_,i)=>yNow-i).map(y=>`<option ${r.f.yy==y?'selected':''}>${y}</option>`).join('')}</select></div>
-  ${r.err&&r.err.dob?`<div class="ferr">${I.alert}${r.err.dob}</div>`:`<div class="fhint">${r.f.dd&&r.f.mm&&r.f.yy&&!V.dob(r.f.dd,r.f.mm,r.f.yy)?`<span style="color:var(--mint);font-weight:600">${L('Тебе','You are')} ${ageOf(`${r.f.yy}-${String(r.f.mm).padStart(2,'0')}-${String(r.f.dd).padStart(2,'0')}`)}.</span> `:''}${L('Нужна, чтобы подтвердить 18+. Дату никто не увидит — в профиле только возраст, и только если ты сам включишь знакомства.','Needed to confirm 18+. Nobody sees the date — your profile shows only your age, and only if you turn on dating.')}</div>`}</div>
- <div class="field"><span class="flabel">${L('Местоимения','Pronouns')}<i style="font-style:normal;font-weight:500;color:var(--faint)">${L('необязательно','optional')}</i></span>${chipGroup(optItems('pron'),[r.f.pron],'pickPron')}</div>
+  ${r.err&&r.err.dob?`<div class="ferr">${I.alert}${r.err.dob}</div>`:`<div class="fhint">${r.f.dd&&r.f.mm&&r.f.yy&&!V.dob(r.f.dd,r.f.mm,r.f.yy)?`<span style="color:var(--mint);font-weight:600">${L('Тебе','You are')} ${ageOf(`${r.f.yy}-${String(r.f.mm).padStart(2,'0')}-${String(r.f.dd).padStart(2,'0')}`)}.</span> `:''}${L('Нужна, чтобы подтвердить 18+. Дату никто не увидит. Ты выбираешь, показывать ли возраст в профиле.','Needed to confirm 18+. Nobody sees the date. You choose whether to show your age on your profile.')}</div>`}</div>
  <div class="hr"></div>
  <button class="check ${r.f.terms?'on':''} ${r.err&&r.err.terms?'err':''}" data-act="chk" data-v="terms" data-field="terms" role="checkbox" aria-checked="${!!r.f.terms}"><i>${I.check}</i><span>${L('Принимаю','I accept the')} <a href="#" data-act="terms">${L('условия и политику приватности','terms and privacy policy')}</a>${r.err&&r.err.terms?`<span class="ferr" style="margin-top:4px">${I.alert}${r.err.terms}</span>`:''}</span></button>
  <button class="check ${r.f.news?'on':''}" data-act="chk" data-v="news" role="checkbox" aria-checked="${!!r.f.news}"><i>${I.check}</i><span>${L('Присылать новости FetUre на почту','Email me FetUre news')} <span class="note">· ${L('необязательно','optional')}</span></span></button>
@@ -111,7 +110,7 @@ SC.A05={auth:1,title:()=>L('Первые шаги','First steps'),render:(p,r)=>
  if(p.step===2){r.f.tp=r.f.tp||[];const pop=['shibari','bondage','talk','aftercare','slow','latex','roleplay','sensory','intimacy','rituals','service','experiments'];const comms=Object.keys(COMMUNITIES).filter(c=>!COMMUNITIES[c].hidden&&(!r.f.tp.length||COMMUNITIES[c].topics.some(t=>r.f.tp.includes(t)))).slice(0,4);
   return `${bar('',{back:1,actions:`<span class="pill">2 / 3</span>`})}<div class="view nodock cta1"><div class="auth-wrap">
   <div class="steps"><i class="on"></i><i class="on"></i><i></i></div><h2 class="t">${L('Что тебе интересно?','What are you into?')}</h2><p class="lead">${L('Выбранные темы станут фильтром ленты. Это не ответы теста и не публичные интересы.','Your choices will filter your feed. They are not quiz answers or public interests.')}</p>
-  ${grp(L('Темы','Topics'),`<div class="chips">${pop.map(t=>chipBtn(t,topic(t),r.f.tp.includes(t),'onbTopic')).join('')}</div>`)}
+  ${grp(L('Интересы','Interests'),`<div class="chips">${pop.map(t=>chipBtn(t,topic(t),r.f.tp.includes(t),'onbTopic')).join('')}</div>`)}
   <div class="grp"><div class="grp-t"><span>${L('Сообщества для тебя','Communities for you')}</span></div>${comms.map(c=>`<div class="onb-c">${commCard(c)}<button class="btn sm ${S.joined.has(c)?'soft':'primary'} auto" data-act="onbJoin" data-v="${c}">${S.joined.has(c)?L('Ты участник','Joined'):COMMUNITIES[c].privacy==='closed'?L('Заявка','Request'):L('Вступить','Join')}</button></div>`).join('')}</div>
   </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-go="A05" data-p='{"step":3}'>${L('Дальше','Next')}</button></div></div>`;}
  if(p.step===3)return `${bar('',{back:1,actions:`<span class="pill">3 / 3</span>`})}<div class="view nodock cta1"><div class="auth-wrap">

@@ -1,5 +1,5 @@
 /* ============ E: EVENTS — catalog, filters, details, RSVP/application/ticket, my events, organiser ============ */
-const EF_DEF=()=>({format:'all',when:'any',types:[],lang:[],price:'any',open:false});
+const EF_DEF=()=>({format:'all',when:'any',types:[],price:'any',open:false});
 function evFiltered(f){
  return allEventIds().filter(id=>{const e=EV(id);if(isPast(id))return false;
   if(e.status==='review'&&e.organizer!=='me')return false;
@@ -7,11 +7,10 @@ function evFiltered(f){
   const d=(e.start-NOW)/DAY;if(f.when==='week'&&d>7)return false;if(f.when==='month'&&d>31)return false;
   if(f.when==='weekend'){const wd=new Date(e.start).getDay();if(!(wd===0||wd===6||wd===5))return false;}
   if((f.types||[]).length&&!f.types.includes(e.type))return false;
-  if((f.lang||[]).length&&!f.lang.some(l=>e.lang.includes(l.toUpperCase())))return false;
   if(f.price==='free'&&e.price)return false;if(f.price==='paid'&&!e.price)return false;
   if(f.open&&e.approval)return false;return true;}).sort((a,b)=>EV(a).start-EV(b).start);
 }
-const efCount=f=>(f.when!=='any'?1:0)+(f.types||[]).length+(f.lang||[]).length+(f.price!=='any'?1:0)+(f.open?1:0);
+const efCount=f=>(f.when!=='any'?1:0)+(f.types||[]).length+(f.price!=='any'?1:0)+(f.open?1:0);
 function eventsList(){
  const f=Object.assign(EF_DEF(),S.filters.events);S.filters.events=f;const ids=evFiltered(f);const n=efCount(f);
  const soon=ids.filter(id=>!EV(id).cancelled&&EV(id).start-NOW<7*DAY),later=ids.filter(id=>!EV(id).cancelled&&EV(id).start-NOW>=7*DAY),canc=ids.filter(id=>EV(id).cancelled);
@@ -34,7 +33,6 @@ ACT.evFilters=(a,e,pre)=>{S.ui.ef=pre||JSON.parse(JSON.stringify(Object.assign(E
   note:L('Город — из твоего профиля.','City comes from your profile.'),
   rows:[one('format',FMT(),L('Формат','Format')),one('when',WHEN(),L('Когда','When')),
    {k:'types',label:L('Тип','Type'),on:()=>S.ui.ef.types.length,summary:()=>sumOf(TYP(),S.ui.ef.types,L('Любой','Any')),body:()=>fChips(TYP(),S.ui.ef.types,'efMulti',{k:'types'})},
-   {k:'lang',label:L('Язык','Language'),on:()=>S.ui.ef.lang.length,summary:()=>sumOf(LANG,S.ui.ef.lang,L('Любой','Any')),body:()=>fChips(LANG,S.ui.ef.lang,'efMulti',{k:'lang'})},
    one('price',PRICE(),L('Стоимость','Price')),
    {k:'open',label:L('Участие','Admission'),on:()=>S.ui.ef.open,summary:()=>S.ui.ef.open?L('Без заявки','No application'):L('Любое','Any'),body:()=>grp('',choices([['0',L('Любое','Any')],['1',L('Без заявки — просто прийти','No application — just come')]],S.ui.ef.open?'1':'0','efOpen'))}]});};
 ACT.efSet=a=>{S.ui.ef[a.dataset.k]=a.dataset.v;resheet();};
@@ -78,7 +76,6 @@ SC.E03={title:p=>EV(p.id)?T(EV(p.id).title):'',valid:p=>!!EV(p.id)&&(EV(p.id).st
  <div class="card list mt12">
   <div class="li"><span class="ico l">${I.cal}</span><span class="tx"><b>${F.day(e.start)}</b><small>${F.time(e.start)}–${F.time(e.end)} ${diffTz?`${L('у тебя','your time')} · ${F.time(e.start,e.tz)} ${F.tzName(e.tz)}`:F.tzName(USER_TZ)}</small></span></div>
   <div class="li"><span class="ico v">${e.format==='online'?I.video:I.pin}</span><span class="tx"><b>${e.format==='online'?L('Онлайн','Online'):esc(T(e.area)+', '+city(e.city))}</b><small>${acc?(e.format==='online'?L('Ссылка доступна — нажми «Как подключиться»','Link available — tap “How to join”'):esc(T(e.venue))):e.approval?L('Адрес и ссылка откроются после одобрения заявки','Address and link open after your application is approved'):L('Точное место откроется, когда ответишь «Иду»','The exact place opens once you answer “Going”')}</small></span>${acc?'':`<span class="lockpill">${I.lock}</span>`}</div>
-  <div class="li"><span class="ico g">${I.globe}</span><span class="tx"><b>${e.lang}</b><small>${L('Язык события','Event language')}</small></span></div>
   <div class="li"><span class="ico a">${I.ticket}</span><span class="tx"><b>${e.price?esc(T(e.price)):L('Бесплатно','Free')}</b><small>${e.external?L(`Билеты: ${e.external}`,`Tickets: ${e.external}`):e.approval?L('Участие по заявке','By application'):L('Можно просто прийти','Just come along')}</small></span></div>
  </div>
  <div class="sec">${L('О событии','About')}</div>${md(T(e.desc),'bio')}
@@ -175,7 +172,7 @@ SC.E11={title:()=>L('Новое событие','New event'),render:(p,r)=>{
  return head+(step<4?`<section class="grp"><div class="card form-card">${body}</div></section>`:body)+`</div></div><div class="ctabar"><div class="wrap"><div class="row g8">${step>1?`<button class="btn soft" style="flex:0 0 auto;width:auto" data-act="evfStep" data-v="-1">${I.back}</button>`:''}<button class="btn primary" data-act="${step<4?'evfNext':'evfSubmit'}">${step<4?L('Дальше','Next'):L('Отправить на проверку','Submit for review')}</button></div></div></div>`;}};
 function evFromForm(r){const f=r.f;const [y,m,d]=(f.date||isoDay(NOW)).split('-').map(Number);const [ye,me,de]=(f.date2||f.date||isoDay(NOW)).split('-').map(Number);const [h1,mi1]=f.t1.split(':').map(Number);const [h2,mi2]=f.t2.split(':').map(Number);
  const start=zonedTime(y,m,d,h1,mi1,f.tz);const end=zonedTime(ye,me,de,h2,mi2,f.tz);
- return{title:{ru:f.title,en:f.title},type:f.type||'meetup',format:f.format,city:f.city,area:{ru:f.area||'',en:f.area||''},venue:{ru:f.addr||'',en:f.addr||''},link:f.link,start,end,tz:f.tz,lang:S.lang.toUpperCase(),price:f.price==='free'?null:{ru:f.amount||'',en:f.amount||''},external:f.price==='ext'?f.ext:null,organizer:'me',community:null,approval:f.approval,plate:f.plate,cover:f.cover||null,gallery:(f.gallery||[]).length?f.gallery.map(m=>({...m})):null,desc:{ru:f.desc,en:f.desc},reqs:f.reqs?[{ru:f.reqs,en:f.reqs}]:[],q:f.approval&&f.q0?[{ru:f.q0,en:f.q0}]:null,status:'review',apps:[],announce:[]};}
+ return{title:{ru:f.title,en:f.title},type:f.type||'meetup',format:f.format,city:f.city,area:{ru:f.area||'',en:f.area||''},venue:{ru:f.addr||'',en:f.addr||''},link:f.link,start,end,tz:f.tz,price:f.price==='free'?null:{ru:f.amount||'',en:f.amount||''},external:f.price==='ext'?f.ext:null,organizer:'me',community:null,approval:f.approval,plate:f.plate,cover:f.cover||null,gallery:(f.gallery||[]).length?f.gallery.map(m=>({...m})):null,desc:{ru:f.desc,en:f.desc},reqs:f.reqs?[{ru:f.reqs,en:f.reqs}]:[],q:f.approval&&f.q0?[{ru:f.q0,en:f.q0}]:null,status:'review',apps:[],announce:[]};}
 function evfValidate(r){const f=r.f;const e={};const s=r.step||1;
  if(s===1){if((f.title||'').trim().length<5)e.title=L('Минимум 5 символов','At least 5 characters');if(!f.type)e.type=L('Выбери тип события','Choose an event type');if((f.desc||'').trim().length<20)e.desc=L('Опиши подробнее — хотя бы 20 символов','Describe it a bit more — at least 20 characters');}
  if(s===2){const ev=evFromForm(r);if(!f.date)e.date=L('Укажи дату','Pick a date');else if(ev.start<Date.now())e.date=L('Дата уже прошла','That date has passed');
