@@ -26,7 +26,7 @@ function pl(n,ru,en,bare){
  else{const a=Math.abs(n)%100,b=a%10;w=a>10&&a<20?ru[2]:b>1&&b<5?ru[1]:b===1?ru[0]:ru[2];}
  return bare?w:`${n} ${w}`;
 }
-const opt=(group,id)=>{const o=(OPT[group]||[]).find(x=>x[0]===id);return o?(S.lang==='en'?o[2]:o[1]):'';};
+const opt=(group,id)=>{if(Array.isArray(id))return id.map(v=>opt(group,v)).filter(Boolean).join(', ');const o=(OPT[group]||[]).find(x=>x[0]===id);return o?(S.lang==='en'?o[2]:o[1]):'';};
 const topic=id=>T(TOPICS[id])||id;
 /** V7: relationship format is a multi-select; older single values still read fine */
 const fmtList=x=>Array.isArray(x)?x:x?[x]:[];
@@ -123,7 +123,7 @@ const requiresDiscoveryPhoto=m=>!!m.dating&&m.datingVisible!==false;
 function publicField(m,k){const v=m.vis?.[k]??PUBLIC_VIS[k]??'public';return v==='public'||v==='granted'&&S.ui.viewGrant?m[k]:Array.isArray(m[k])?[]:null;}
 function ownedAsPerson(m){return{photo:m.photo,bio:m.bio,city:m.city,dating:!!m.dating,socialLikes:!!m.socialLikes,pair:!!m.pair,members:m.pair?[...m.members]:undefined,pv:m.photoCheck==='ok',premium:!!m.premium,name:m.pair?T(m.name):m.nick,age:m.showAge===false?null:ageOf(m.dob),location:m.location?.coords,pron:publicField(m,'pron'),gender:publicField(m,'gender'),orient:publicField(m,'orient'),format:publicField(m,'format'),status:publicField(m,'status'),role:publicField(m,'role'),seek:publicField(m,'seek')||[],verified:m.ageCheck==='ok',online:true,jars:(m.jars||[]).filter(j=>j.vis==='public')};}
 function meAsPerson(){return ownedAsPerson(S.ui.profilePreview||S.me);}
-function coupleProfile(){const P=S.pair;if(P?.status!=='active')return null;if(!P.profile)P.profile={pair:true,members:['me',P.with],name:{...P.name},nick:'couple',bio:P.desc||{ru:'',en:''},privText:{ru:'',en:''},photos:[],photo:null,city:null,pron:null,gender:[],orient:[],role:null,status:'couple',format:[],seek:[],vis:{...PUBLIC_VIS},jars:[],history:[],media:[],requestsFrom:'all',dating:true,datingVisible:false,showAge:false};return P.profile;}
+function coupleProfile(){const P=S.pair;if(P?.status!=='active')return null;if(!P.profile)P.profile={pair:true,members:['me',P.with],name:{...P.name},nick:'couple',bio:P.desc||{ru:'',en:''},privText:{ru:'',en:''},photos:[],photo:null,city:null,pron:null,gender:[],orient:[],role:[],status:'couple',format:[],seek:[],vis:{...PUBLIC_VIS},jars:[],history:[],media:[],requestsFrom:'all',dating:true,datingVisible:false,showAge:false};return P.profile;}
 function editableProfile(r=cur()){if(r.p?.owner!=='couple')return S.me;const P=S.pair;if(P?.status!=='active')return null;coupleProfile();return P.draft??=structuredClone(P.profile);}
 function submitCoupleDraft(){const P=S.pair;if(P?.status!=='active'||!P.draft)return;P.proposal={by:'me',field:'profile',text:structuredClone(P.draft),t:Date.now()};autoResolve();}
 function commitCoupleProposal(P){if(P!==S.pair||P?.status!=='active'||!P.proposal)return false;const q=P.proposal;if(q.field==='profile'){P.profile=structuredClone(q.text);P.name={...P.profile.name};P.desc=P.profile.bio;delete P.draft;}else P[q.field||'desc']=q.text;P.proposal=null;return true;}
