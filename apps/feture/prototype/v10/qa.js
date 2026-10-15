@@ -44,7 +44,7 @@ function qaRender(){const q=($('#qaQ')?.value||'').toLowerCase();const r=cur();
  $('#qaHint').innerHTML=L('Коды подтверждения: <b>000000</b> — неверный, <b>999999</b> — истёк, любой другой — верный. Почта <b>limit@…</b> — лимит отправки. Ник <b>alex</b> занят.','Codes: <b>000000</b> wrong, <b>999999</b> expired, any other works. Email <b>limit@…</b> hits the send limit. Nickname <b>alex</b> is taken.')+`<button class="btn secondary mt12" data-act="qaRestart">${L('Начать регистрацию заново','Restart registration')}</button><span class="note">${L('Очистит текущую сессию прототипа и откроет приветствие.','Clears this prototype session and opens the welcome screen.')}</span>`;
 }
 ACT.qaRestart=()=>restartPrototype();
-window.FT_QA={go:(id,p)=>qaGo(id,p||{}),list:()=>QA_LIST(),screen:()=>cur()&&cur().id,tab:t=>tab(t),back:()=>back()};
+window.FT_QA={go:(id,p)=>qaGo(id,p||{}),list:()=>QA_LIST(),screen:()=>cur()&&cur().id,tab:t=>tab(t),back:()=>back(),field:n=>cur()?.f?.[n]};
 window.QA_SYNC=()=>{if($('#qa.open'))qaRender();};
 const qa=$('#qa'),qaScrim=$('#qaScrim');
 window.QA_CLOSE=()=>{qa.classList.remove('open');qaScrim.classList.remove('on');qa.setAttribute('aria-hidden','true');$('#qaFab').focus();};

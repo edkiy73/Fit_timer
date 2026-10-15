@@ -65,11 +65,15 @@ ACT.jarSave=a=>{const j=S.ui.jar;if(j.v==null)return;const arr=S.me.jars;const i
  run(a,()=>{const val=jarFrom(j.t,j.v,{vis:j.vis});if(i>=0)arr[i]=val;else arr.push(val);S.me.history.unshift({t:Date.now(),topic:j.t,from:old?jv(old):'—',to:j.v,src:'manual'});closeSheet();refresh();},{ms:300,ok:j.vis==='public'?L('Сохранено. Видно в профиле','Saved. Shown on your profile'):L('Сохранено','Saved')});};
 ACT.jarDel=()=>{const t=S.ui.jar.t;closeSheet(true);ask({icon:'trash',tone:'l',title:L(`Убрать «${topic(t)}»?`,`Remove “${topic(t)}”?`),text:L('История изменений сохранится — её видишь только ты.','Change history is kept — only you can see it.'),ok:L('Убрать','Remove'),danger:true}).then(ok=>{if(ok){S.me.jars=S.me.jars.filter(j=>j.t!==t);refresh();toast(L('Убрано','Removed'),{type:'ok'});}});};
 /** someone else’s jar: what it is, their answer and yours */
-function openTopic(t,who){const theirs=who&&who!=='me'?(person(who)?.jars||[]).map(normJar).find(x=>x.t===t):null;const mine=S.me.jars.find(j=>j.t===t);
+/* «Как откликается» always pairs the person whose jar was tapped with you. The tapped jar carries the answer it showed
+   (data-ans), so a jar from a private layer or a quiz result still shows that person’s row. Opened from a topic page there is no
+   other person: the group is then «Твой ответ», one row. */
+function openTopic(t,who,ans){const other=who&&who!=='me'&&person(who);const shown=ans!=null&&ans!==''?jarFrom(t,ansVal(ans)):null;
+ const theirs=other?(shown||(other.jars||[]).map(normJar).find(x=>x.t===t)||null):null;const mine=S.me.jars.find(j=>j.t===t);
  sheet(()=>({title:topic(t),sub:T(CATS.find(c=>c.id===TOPICS[t]?.cat)||''),body:`<p class="topic-desc">${esc(T(TOPIC_DESC[t]))}</p>
- ${grp(L('Как откликается','How it feels'),`${theirs?`<div class="li static"><span class="tx"><b>${esc(pname(who))}</b></span><span class="val strong">${esc(jarWord(theirs))}</span></div>`:''}<div class="li static"><span class="tx"><b>${L('Ты','You')}</b>${mine&&mine.vis!=='public'?`<small>${L('твой ответ видишь только ты','only you see your answer')}</small>`:''}</span><span class="val ${mine?'strong':''}">${mine?esc(jarWord(mine)):L('не отмечено','not set')}</span></div>`,{list:1})}`,
+ ${grp(theirs?L('Как откликается','How it feels'):L('Твой ответ','Your answer'),`${theirs?`<div class="li static"><span class="tx"><b>${esc(pname(who))}</b></span><span class="val strong">${esc(jarWord(theirs))}</span></div>`:''}<div class="li static"><span class="tx"><b>${L('Ты','You')}</b>${mine&&mine.vis!=='public'?`<small>${L('твой ответ видишь только ты','only you see your answer')}</small>`:''}</span><span class="val ${mine?'strong':''}">${mine?esc(jarWord(mine)):L('не отмечено','not set')}</span></div>`,{list:1})}`,
  foot:`<button class="btn ${mine?'secondary':'primary'}" data-act="editJar" data-v="${t}">${mine?L('Изменить у себя','Edit mine'):`${I.plus}${L('Добавить к себе','Add to mine')}`}</button>`}));}
-ACT.topic=a=>openTopic(a.dataset.v,a.dataset.who);
+ACT.topic=a=>openTopic(a.dataset.v,a.dataset.who,a.dataset.ans);
 /** all public jars of a person, grouped by category */
 ACT.allJars=a=>{const who=a.dataset.v;const list=sortJars((person(who)?.jars||[]).filter(j=>!normJar(j).vis||normJar(j).vis==='public'));
  sheet(()=>({title:L(`Интересы · ${pname(who)}`,`Interests · ${pname(who)}`),body:CATS.map(c=>{const l=list.filter(j=>TOPICS[j.t]?.cat===c.id);return l.length?grp(T(c),jarsHTML(l,{act:'topic',who}),{cls:'bare'}):'';}).join('')}),{full:true});setTimeout(fillJars,50);};

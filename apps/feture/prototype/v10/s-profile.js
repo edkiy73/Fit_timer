@@ -246,7 +246,7 @@ ACT.peHideCity=()=>{cur().f.city='';cur().dirty=true;refresh();};
 
 /* ---------- V10 revision part 2: badges, followers / following ---------- */
 /** small badges after a name: photo verification and Premium. Neither opens private data or chat. */
-function nameBadges(p,sm){if(!p)return '';return `${p.pv?`<span class="nbadge v" title="${L('Фото подтверждено','Photo verified')}" role="img" aria-label="${L('Фото подтверждено','Photo verified')}">${I.verified}</span>`:''}${p.premium||S.giftedTo?.has(p)?`<span class="nbadge p" title="Premium" role="img" aria-label="Premium">${I.crown}</span>`:''}`;}
+function nameBadges(p,sm){if(!p)return '';return `${p.pv?`<span class="nbadge v" title="${L('Фото подтверждено','Photo verified')}" role="img" aria-label="${L('Фото подтверждено','Photo verified')}">${I.check}</span>`:''}${p.premium||S.giftedTo?.has(p)?`<span class="nbadge p" title="Premium" role="img" aria-label="Premium">${I.crown}</span>`:''}`;}
 /** follow graph: counts are always the length of the lists people can open */
 function followingOf(id){const set=id==='me'?S.follows:(S.graph[id]||new Set());return [...set].filter(x=>(x==='me'||PEOPLE[x])&&!isBlocked(x));}
 function followersOf(id){return ['me',...Object.keys(PEOPLE)].filter(k=>k!==id&&!isBlocked(k)&&followingOf(k).includes(id));}
@@ -256,13 +256,13 @@ SC.P10={title:p=>p.tab==='following'?L('Подписки','Following'):L('Под
  const list=tab==='following'?followingOf(id):followersOf(id);
  const row=k=>{const self=k==='me';const fol=S.follows.has(k);
   const act=self?`<span class="note">${L('это ты','you')}</span>`
-   :mine&&tab==='followers'?`<button class="btn sm ${fol?'soft':'primary'}" data-act="flwToggle" data-v="${k}" aria-pressed="${fol}">${fol?L('Отписаться','Unfollow'):L('Подписаться','Follow back')}</button><button class="ibtn sm" data-act="block" data-v="${k}" aria-label="${L(`Заблокировать ${pname(k)}`,`Block ${pname(k)}`)}">${I.block}</button>`
+   :mine&&tab==='followers'?`<button class="btn sm ${fol?'soft':'primary'}" data-act="flwToggle" data-v="${k}" aria-pressed="${fol}">${fol?L('Отписаться','Unfollow'):L('Подписаться','Follow back')}</button>`
    :`<button class="btn sm ${fol?'soft':'primary'}" data-act="flwToggle" data-v="${k}" aria-pressed="${fol}">${fol?L('Отписаться','Unfollow'):L('Подписаться','Follow')}</button>`;
-  return `<div class="li frow"><button class="frow-go" data-go="${self?'P03':'P01'}" ${self?'':`data-p='${JSON.stringify({id:k})}'`}>${av(k,'')}<span class="tx"><b>${esc(pname(k))}${nameBadges(person(k),1)}</b><small>${esc(placeLine(k)||'')}</small></span></button>${act}</div>`;};
+  return `<div class="li frow"><button class="frow-go" data-go="${self?'P03':'P01'}" ${self?'':`data-p='${JSON.stringify({id:k})}'`}>${av(k,'')}<span class="tx"><b><span class="fnm">${esc(pname(k))}</span>${nameBadges(person(k),1)}</b><small>${esc(placeLine(k)||'')}</small></span></button>${act}</div>`;};
  const who=mine?'':` · ${esc(pname(id))}`;
  return `${bar((tab==='following'?L('Подписки','Following'):L('Подписчики','Followers'))+who,{back:1,sm:1})}<div class="view nodock"><div class="wrap">
  ${seg([['followers',`${L('Подписчики','Followers')} · ${followersOf(id).length}`],['following',`${L('Подписки','Following')} · ${followingOf(id).length}`]],tab,'flwTab')}
- ${mine&&tab==='followers'?`<p class="note" style="margin:12px 2px">${L('Подписка показывает публикации в ленте «Подписки». Она не открывает чат и приватные разделы. Заблокированный человек исчезнет из списка.','Following shows posts in the Following feed. It doesn’t open chat or private sections. A blocked person disappears from the list.')}</p>`:''}
+ ${mine&&tab==='followers'?`<p class="note" style="margin:12px 2px">${L('Подписка показывает публикации в ленте «Подписки». Она не открывает чат и приватные разделы.','Following shows posts in the Following feed. It doesn’t open chat or private sections.')}</p>`:''}
  ${list.length?`<div class="card list mt12">${list.map(row).join('')}</div>`:empty('people',tab==='following'?L('Пока ни на кого не подписан(а)','Not following anyone yet'):L('Подписчиков пока нет','No followers yet'),'')}</div></div>`;}};
 ACT.flwTab=a=>{const r=cur();r.p={...r.p,tab:a.dataset.v};refresh();};
 ACT.flwToggle=a=>{const id=a.dataset.v;if(!PEOPLE[id]||isBlocked(id))return;const on=!S.follows.has(id);on?S.follows.add(id):S.follows.delete(id);refresh();toast(on?L(`Подписка на ${pname(id)}`,`Following ${pname(id)}`):L(`Ты отписался(ась) от ${pname(id)}`,`Unfollowed ${pname(id)}`),{type:on?'ok':'',action:{label:L('Отменить','Undo'),fn:()=>{if(isBlocked(id))return;on?S.follows.delete(id):S.follows.add(id);refresh();}}});};

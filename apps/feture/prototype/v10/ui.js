@@ -6,10 +6,10 @@ function jarColor(v){const st=[[1,4],[3,26],[5,46],[7,88],[10,140]];v=Math.max(1
 function jarsHTML(list,o={}){
  const items=list.map(x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x);
  return `<div class="jars ${o.pre?'pre':''} ${o.cls||''}">${items.map((j,i)=>{
-  const tag=o.act?'button':'div';const attrs=o.act?`data-act="${o.act}" data-v="${j.t}" ${o.who?`data-who="${o.who}"`:''} aria-label="${esc(topic(j.t))}: ${esc(jarWord(j))}"`:'';
+  const tag=o.act?'button':'div';const attrs=o.act?`data-act="${o.act}" data-v="${j.t}" ${o.who?`data-who="${o.who}" data-ans="${j.limit||j.lv}"`:''} aria-label="${esc(topic(j.t))}: ${esc(jarWord(j))}"`:'';
   const was=o.was&&o.was[j.t]!=null?`<small class="was">${L('было','was')} ${o.was[j.t]==='hard'?L('табу','taboo'):o.was[j.t]==='discuss'?L('обсужд.','negot.'):o.was[j.t]}</small>`:'';
   const vis=o.vis&&j.vis!=='public'?`<span class="jvis">${j.vis==='granted'?I.key:I.eyeoff}</span>`:'';
-  if(j.limit)return `<${tag} class="jar ${j.limit==='hard'?'taboo':'discuss'}" ${attrs}><span class="vessel"><span class="jm">${j.limit==='hard'?I.block:I.chat}</span>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw">${j.limit==='hard'?(o.who&&o.who!=='me'?L('нельзя','not for me'):L('табу','taboo')):L('обсуждаемо','negotiable')}</span>${was}</${tag}>`;
+  if(j.limit)return `<${tag} class="jar ${j.limit==='hard'?'taboo':'discuss'}" ${attrs}><span class="vessel"><span class="jm">${j.limit==='hard'?I.block:I.chat}</span>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw sr">${j.limit==='hard'?(o.who&&o.who!=='me'?L('нельзя','not for me'):L('табу','taboo')):L('обсуждаемо','negotiable')}</span>${was}</${tag}>`;
   return `<${tag} class="jar" ${attrs} style="--v:${j.lv};--jc:${jarColor(j.lv)};--d:${(i%6)*.35}s"><span class="vessel"><span class="fill"><i class="bub"></i></span><b class="lv">${j.lv}</b>${vis}</span><span class="jn">${esc(topic(j.t))}</span>${was}</${tag}>`;}).join('')}${o.more?`<button class="jar more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="vessel"><b>+${o.more.n}</b></span><span class="jn">${L('Все','All')}</span></button>`:''}${o.add?`<button class="jar add" data-act="${o.add}"><span class="vessel">${I.plus}</span><span class="jn">${L('Добавить','Add')}</span></button>`:''}</div>`;
 }
 const pubJars=id=>id==='me'?S.me.jars.filter(j=>j.vis==='public'):(person(id)?.jars||[]).map(x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x).filter(j=>!j.vis||j.vis==='public');
@@ -91,7 +91,58 @@ ACT.rReply=a=>{const x=replyAt(a);if(!x)return;const el=$(x.kind==='p'?'#cmt':'#
 ACT.rMore=a=>{const x=replyAt(a);if(!x)return;const mine=x.c.a==='me';
  sheet(()=>({title:L('Ответ','Reply'),body:`<div class="card list">${mine?linkRow({act:'rDel',v:a.dataset.v,p:null,icon:'trash',cls:'danger',title:L('Удалить ответ','Delete reply'),noChev:1}).replace('data-act="rDel"',`data-act="rDel" data-i="${a.dataset.i}"`):`${linkRow({go:'P01',p:{id:x.c.a},icon:'me',title:L(`Профиль ${pname(x.c.a)}`,`${pname(x.c.a)}’s profile`)})}${linkRow({act:'report',v:'comment',icon:'flag',cls:'danger',title:L('Пожаловаться','Report'),noChev:1}).replace('data-act="report"',`data-act="report" data-who="${x.c.a}"`)}${linkRow({act:'block',v:x.c.a,icon:'block',cls:'danger',title:L(`Заблокировать ${pname(x.c.a)}`,`Block ${pname(x.c.a)}`),sub:L('Скроет ответы и прекратит контакт','Hides their replies and ends contact'),noChev:1})}`}</div>`}));};
 ACT.rDel=a=>{const x=replyAt(a);if(!x||x.c.a!=='me')return;closeSheet(true);ask({icon:'trash',tone:'l',title:L('Удалить ответ?','Delete reply?'),ok:L('Удалить','Delete'),danger:true}).then(ok=>{if(!ok)return;const i=x.list.indexOf(x.c);if(i>=0)x.list.splice(i,1);refresh();toast(L('Ответ удалён','Reply deleted'),{type:'ok'});});};
-const MD_HINT=()=>L('Можно оформить: **жирный**, *курсив*, ~~зачёркнутый~~, > цитата, - список, [текст](https://…). Картинки — через «Фото/видео».','Formatting: **bold**, *italic*, ~~strike~~, > quote, - list, [text](https://…). Images go through Photo/video.');
+/* Rich text field (V10 round 2): FetLife-like — a toolbar with icons, formatting shows as you type.
+   The stored value stays the same safe Markdown that md() renders, so drafts, validation, preview and the API contract
+   don't change. Rendering into the editor always goes through md() (escaped text), pasting is plain text only,
+   and only http(s) links survive. Prototype uses execCommand; the React app takes a real editor (see the plan, round 2). */
+function rteHTML(v){const h=md(v);return h.slice(16,-6).replace(/ data-act="mdLink" data-v="[^"]*"/g,'');}
+function rteField(o){const r=cur();const v=r.f[o.name]??'';const err=r.err&&r.err[o.name];
+ const b=(c,icon,label,x='')=>`<button type="button" data-act="rte" data-v="${c}" aria-label="${label}" title="${label}" ${x}>${I[icon]}</button>`;
+ return `<div class="field rte ${err?'err':''}" data-field="${o.name}">${o.label?`<span>${o.label}</span>`:''}<div class="rte-box">
+ <div class="rte-tb" role="toolbar" aria-label="${L('Оформление текста','Text formatting')}">${b('undo','undo',L('Отменить','Undo'))}${b('redo','redo',L('Повторить','Redo'))}<i></i>${b('bold','fbold',L('Жирный','Bold'),'aria-pressed="false"')}${b('italic','fital',L('Курсив','Italic'),'aria-pressed="false"')}${b('strikeThrough','fstrike',L('Зачёркнутый','Strikethrough'),'aria-pressed="false"')}${b('link','link',L('Ссылка','Link'))}${o.media?b('media','image',L('Фото или видео','Photo or video'),`data-media="${o.media}"`):''}${b('h4','fhead',L('Заголовок','Heading'),'aria-pressed="false"')}<i></i><span class="rte-more">${b('redo','redo',L('Повторить','Redo'),'class="nar"')}${b('insertUnorderedList','flist',L('Список','List'),'aria-pressed="false"')}${b('insertOrderedList','folist',L('Нумерованный список','Numbered list'),'aria-pressed="false"')}${b('blockquote','fquote',L('Цитата','Quote'),'aria-pressed="false"')}</span>${b('more','more',L('Ещё','More'),'aria-expanded="false"')}</div>
+ <div class="inp rte-ed ${v?'':'is-empty'}" contenteditable="true" role="textbox" aria-multiline="true" aria-label="${esc(o.label||o.ph||'')}" data-in="rte" data-name="${o.name}" data-ph="${esc(o.ph||'')}" ${o.max?`data-max="${o.max}"`:''} ${err?'aria-invalid="true"':''}>${rteHTML(v)}</div></div>
+ ${err?`<div class="ferr">${I.alert}${err}</div>`:''}${o.max?`<div class="counter" data-count="${o.name}">${String(v).length} / ${o.max}</div>`:''}</div>`;}
+/** editor DOM → Markdown. Only the tags the toolbar makes are kept; everything else becomes its text. */
+function rteMd(root){
+ const wrap=(m,x)=>{const t=x.match(/^(\s*)([\s\S]*?)(\s*)$/);return t[2]?`${t[1]}${m}${t[2]}${m}${t[3]}`:x;};
+ const inl=n=>[...n.childNodes].map(c=>{if(c.nodeType===3)return c.nodeValue.replace(/ /g,' ');if(c.nodeType!==1)return '';const g=c.tagName,x=inl(c);
+  if(g==='BR')return '\n';if(g==='B'||g==='STRONG')return wrap('**',x);if(g==='I'||g==='EM')return wrap('*',x);if(g==='S'||g==='STRIKE'||g==='DEL')return wrap('~~',x);if(g==='CODE')return x?`\`${x}\``:'';
+  if(g==='A'){const h=c.getAttribute('href')||'';return /^https?:\/\//.test(h)&&x.trim()?`[${x.trim()}](${h})`:x;}
+  if(g==='DIV'||g==='P'||g==='LI')return '\n'+x;return x;}).join('');
+ const lines=s=>s.replace(/^\n+|\n+$/g,'').split('\n');const out=[];let run='';
+ const flush=()=>{if(run.trim())out.push(lines(run).join('\n'));run='';};
+ const BLK=/^(P|DIV|H[1-6]|BLOCKQUOTE|UL|OL)$/;const walk=node=>[...node.childNodes].forEach(c=>{const g=c.nodeType===1?c.tagName:'';
+  if((g==='P'||g==='DIV')&&[...c.children].some(x=>BLK.test(x.tagName))){flush();walk(c);flush();return;}
+  if(!g||!BLK.test(g)){run+=c.nodeType===3?c.nodeValue.replace(/ /g,' '):g==='BR'?'\n':inl({childNodes:[c]});return;}
+  flush();
+  if(/^H/.test(g)){const t=inl(c).replace(/\n/g,' ').trim();if(t)out.push('## '+t);}
+  else if(g==='BLOCKQUOTE'){const t=lines(inl(c)).filter(x=>x.trim());if(t.length)out.push(t.map(x=>'> '+x).join('\n'));}
+  else if(g==='UL'||g==='OL'){const it=[...c.children].filter(x=>x.tagName==='LI').map(x=>inl(x).replace(/\n/g,' ').trim()).filter(Boolean);if(it.length)out.push(it.map((x,k)=>(g==='OL'?`${k+1}. `:'- ')+x).join('\n'));}
+  else{const t=lines(inl(c)).join('\n');if(t.trim())out.push(t);}});
+ walk(root);flush();return out.join('\n\n').trim();}
+const rteSync=ed=>{const r=cur();const name=ed.dataset.name;const v=rteMd(ed);r.f[name]=v;r.dirty=true;ed.classList.toggle('is-empty',!ed.textContent.trim()&&!ed.querySelector('li'));
+ if(r.err&&r.err[name])setErr(name,'');const c=$(`[data-count="${name}"]`);if(c){const max=+ed.dataset.max;c.textContent=`${v.length} / ${max}`;c.classList.toggle('over',v.length>max);}};
+IN.rte=el=>rteSync(el);
+const rteState=()=>{const ed=document.activeElement?.closest?.('.rte-ed');if(!ed)return;const tb=$('.rte-tb',ed.closest('.rte'));const blk=String(document.queryCommandValue('formatBlock')||'').toLowerCase();
+ $$('[aria-pressed]',tb).forEach(b=>{const c=b.dataset.v;let on=false;try{on=c==='h4'||c==='blockquote'?blk===c:document.queryCommandState(c);}catch(_){}b.setAttribute('aria-pressed',String(!!on));});};
+document.addEventListener('selectionchange',rteState);
+// toolbar buttons must not take the caret away from the text
+document.addEventListener('mousedown',e=>{if(e.target.closest('.rte-tb button'))e.preventDefault();});
+document.addEventListener('paste',e=>{const ed=e.target.closest?.('.rte-ed');if(!ed)return;e.preventDefault();document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text/plain'));});
+document.addEventListener('focusin',e=>{if(e.target.closest?.('.rte-ed')){try{document.execCommand('defaultParagraphSeparator',false,'p');document.execCommand('styleWithCSS',false,false);}catch(_){}}});
+ACT.rte=a=>{const box=a.closest('.rte'),ed=$('.rte-ed',box),c=a.dataset.v;
+ if(c==='more'){const on=box.classList.toggle('more');a.setAttribute('aria-expanded',String(on));return;}
+ if(c==='media'){ACT[a.dataset.media]?.(a);return;}
+ if(document.activeElement!==ed)ed.focus();
+ if(c==='link'){const sel=getSelection();const range=sel.rangeCount?sel.getRangeAt(0).cloneRange():null;const txt=sel.toString();
+  ask({icon:'link',title:L('Ссылка','Link'),text:`<input class="inp" id="rteUrl" type="url" inputmode="url" placeholder="https://" aria-label="${L('Адрес ссылки','Link address')}">`,ok:L('Вставить','Insert')}).then(ok=>{
+   const u=(document.getElementById('rteUrl')?.value||'').trim();ed.focus();if(range){sel.removeAllRanges();sel.addRange(range);}
+   if(!ok||!u)return;if(!/^https?:\/\/[^\s()<>"']{1,400}$/.test(u)){toast(L('Нужна ссылка, начинающаяся с https://','A link must start with https://'),{type:'warn'});return;}
+   if(txt)document.execCommand('createLink',false,u);else document.execCommand('insertHTML',false,`<a href="${esc(u)}">${esc(u)}</a>&nbsp;`);rteSync(ed);});
+  setTimeout(()=>document.getElementById('rteUrl')?.focus(),60);return;}
+ if(c==='h4'||c==='blockquote'){const blk=String(document.queryCommandValue('formatBlock')||'').toLowerCase();document.execCommand('formatBlock',false,blk===c?'p':c);}
+ else document.execCommand(c,false,null);
+ rteSync(ed);rteState();};
 function postCard(p,o={}){
  const mine=p.author==='me';const pid=JSON.stringify({id:p.id});
  const head=`<div class="post-h"><button class="who" ${profGo(p.author)}>${av(p.author,'sm')}<span class="tx"><b>${esc(pname(p.author))}${nameBadges(person(p.author))}</b><small>${F.rel(p.t)}${p.aud==='followers'?` · <span class="aud">${I.people}${L('подписчикам','followers')}</span>`:''}${o.community&&p.community?` · ${esc(T(COMMUNITIES[p.community].name))}`:''}</small></span></button><button class="ibtn ghost sm" data-act="postMenu" data-v="${p.id}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;

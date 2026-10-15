@@ -1331,3 +1331,65 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .pv-pose .ico{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--violet);color:#fff;font-size:inherit}
 .pv-pose .ico svg{width:22px;height:22px}.pv-pose small{display:block;font-size:12px;color:var(--mute)}.pv-pose b{display:block}
 .frow .tx b{display:flex;align-items:center;gap:2px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* =====================================================================
+   V10 owner revision, round 2 — Claude, 15.10.2026.
+   See docs/design-reference/V10-OWNER-REVISION-PLAN.md («Второй круг»).
+   ===================================================================== */
+
+/* -- glass buttons over a rounded hero: keep them inside the picture, not on its edge -- */
+@container stage (min-width:768px){
+  .main>.bar.overlay{padding:22px calc(var(--gut) + 14px) 8px}
+}
+
+/* -- jars: the word under a limit jar is for screen readers only (the icon says it);
+      the grid keeps one column width whatever the count, rows start at the left -- */
+.jars{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}
+.jar .vessel{border-radius:7px 7px 18px 18px}
+.jar .vessel::before{left:3px;right:3px;top:-6px;height:6px;border-radius:4px 4px 2px 2px}
+
+/* -- followers: no block button in the row (blocking lives in the profile menu); a long name is cut with «…», badges stay -- */
+.frow .tx b .fnm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.frow .tx b .nbadge{flex:none}
+
+/* -- name badges: one round shape and size; blue = photo verified, gold = Premium; the glyph is white in light theme, black in dark -- */
+.nbadge{--nbi:#fff;width:17px;height:17px;border-radius:50%;vertical-align:-3px;color:var(--nbi)}
+.nbadge.v{background:#2F86F6}.nbadge.p{background:#E5A112}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nbadge{--nbi:#111012}:root:not([data-theme="light"]) .nbadge.v{background:#5FA4FF}:root:not([data-theme="light"]) .nbadge.p{background:#F2B83A}}
+:root[data-theme="dark"] .nbadge{--nbi:#111012}:root[data-theme="dark"] .nbadge.v{background:#5FA4FF}:root[data-theme="dark"] .nbadge.p{background:#F2B83A}
+.nbadge svg,.li b .nbadge svg{width:11px;height:11px;stroke-width:2.6}
+.nbadge.v svg,.nbadge.p svg,.pc-name .nbadge.v svg,.pc-name .nbadge.p svg{color:var(--nbi)}
+.pc-name .nbadge{width:21px;height:21px}.pc-name .nbadge svg{width:13px;height:13px}
+.pc-name .nbadge+.nbadge{margin-left:2px}
+.li b .nbadge{width:16px;height:16px}
+.pv-state .nbadge{width:44px;height:44px}.pv-state .nbadge svg{width:26px;height:26px}
+
+/* -- rich text field: toolbar + live formatting (posts, discussions) -- */
+.rte-box{border:1px solid var(--line2);border-radius:var(--r);background:var(--surf);overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.rte-box:focus-within{border-color:var(--ink)}
+.field.err .rte-box{border-color:var(--danger)}
+.rte-tb{display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:5px 6px;border-bottom:1px solid var(--line);background:var(--raise)}
+.rte-tb button{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;color:var(--ink)}
+.rte-tb button svg{width:19px;height:19px}
+.rte-tb button:hover{background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.rte-tb button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.rte-tb button[data-v="redo"],.rte-tb button[data-v="undo"]{color:var(--mute)}
+.rte-tb>i{width:1px;height:20px;margin:0 4px;background:var(--line2)}
+.rte-tb>button[data-v="more"]{margin-left:auto}
+.rte-more{display:none;gap:2px}
+.rte.more .rte-more{display:flex}
+@container col (min-width:520px){.rte-more{display:flex}.rte-tb>button[data-v="more"]{display:none}}
+.rte .rte-ed{position:relative;display:block;min-height:150px;max-height:50dvh;overflow-y:auto;border:0;border-radius:0;background:none;font-size:16px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;cursor:text}
+.rte .rte-ed:focus{box-shadow:none}
+.rte .rte-ed.is-empty::before{content:attr(data-ph);color:var(--faint);pointer-events:none;position:absolute}
+.rte-ed p{margin:0 0 8px}.rte-ed p:last-child{margin-bottom:0}
+.rte-ed h4{font:650 17px/1.35 var(--font);margin:6px 0}
+.rte-ed ul,.rte-ed ol{margin:0 0 8px;padding-left:22px}.rte-ed ul{list-style:disc}.rte-ed ol{list-style:decimal}.rte-ed li{margin:2px 0}
+.rte-ed blockquote{margin:0 0 8px;padding:2px 0 2px 12px;border-left:3px solid var(--line2);color:var(--mute)}
+.rte-ed a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+#dialog #rteUrl{margin-top:12px}
+.rte-more .nar{display:none}
+@container col (max-width:350px){
+  .rte-tb{gap:1px;padding:5px 4px}.rte-tb button{width:31px;height:32px}.rte-tb>i{margin:0 2px}
+  .rte-tb>button[data-v="redo"]{display:none}.rte-more .nar{display:grid}
+}

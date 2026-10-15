@@ -94,8 +94,8 @@ ACT.sendReply=()=>{const route=cur(),d=S.discussions.find(x=>x.id===route.p.id);
 /* C07 — new discussion */
 SC.C07={title:()=>L('Новое обсуждение','New discussion'),valid:p=>!!COMMUNITIES[p.id]&&(S.joined.has(p.id)||ownsCommunity(p.id)),render:(p,r)=>{const c=COMMUNITIES[p.id];r.media=r.media||[];return `${bar(L('Новое обсуждение','New discussion'),{back:1,sm:1,sub:esc(T(c.name))})}<div class="view nodock cta1"><div class="wrap">
  ${field({name:'title',label:L('Тема','Topic'),ph:L('Коротко, о чём разговор','In short, what’s it about'),max:120})}
- ${field({name:'text',label:L('Текст','Text'),textarea:1,max:3000,ph:L('Подробности, вопрос или опыт','Details, a question or experience'),attrs:'rows="6"',hint:MD_HINT()})}
- <div class="sec">${L('Фото и видео','Photos and videos')}<span class="note">${L('до 6 вложений','up to 6 attachments')}</span></div><button class="btn soft" data-act="discussionMedia">${I.image}${L('Добавить фото или видео','Add photos or videos')}</button>${mediaPreviews(r.media,'discussionMediaRemove')}
+ ${rteField({name:'text',label:L('Текст','Text'),max:3000,media:'discussionMedia',ph:L('Подробности, вопрос или опыт','Details, a question or experience')})}
+ ${r.media.length?`<div class="sec">${L('Фото и видео','Photos and videos')}<span class="note">${r.media.length} / 6</span></div>${mediaPreviews(r.media,'discussionMediaRemove')}`:''}
  <div class="alert">${I.users3}<span>${L(`Увидят ${c.privacy==='closed'?'только участники':'все, кто открывает сообщество'}. Расширить аудиторию нельзя.`,`Visible to ${c.privacy==='closed'?'members only':'everyone who opens the community'}. The audience can’t be widened.`)}</span></div>
  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="cdPost">${L('Опубликовать','Publish')}</button></div></div>`;}};
 ACT.cdPost=a=>{const r=cur(),community=r.p.id;

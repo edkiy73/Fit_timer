@@ -1342,6 +1342,68 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .pv-pose .ico{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--violet);color:#fff;font-size:inherit}
 .pv-pose .ico svg{width:22px;height:22px}.pv-pose small{display:block;font-size:12px;color:var(--mute)}.pv-pose b{display:block}
 .frow .tx b{display:flex;align-items:center;gap:2px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* =====================================================================
+   V10 owner revision, round 2 — Claude, 15.10.2026.
+   See docs/design-reference/V10-OWNER-REVISION-PLAN.md («Второй круг»).
+   ===================================================================== */
+
+/* -- glass buttons over a rounded hero: keep them inside the picture, not on its edge -- */
+@container stage (min-width:768px){
+  .main>.bar.overlay{padding:22px calc(var(--gut) + 14px) 8px}
+}
+
+/* -- jars: the word under a limit jar is for screen readers only (the icon says it);
+      the grid keeps one column width whatever the count, rows start at the left -- */
+.jars{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}
+.jar .vessel{border-radius:7px 7px 18px 18px}
+.jar .vessel::before{left:3px;right:3px;top:-6px;height:6px;border-radius:4px 4px 2px 2px}
+
+/* -- followers: no block button in the row (blocking lives in the profile menu); a long name is cut with «…», badges stay -- */
+.frow .tx b .fnm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.frow .tx b .nbadge{flex:none}
+
+/* -- name badges: one round shape and size; blue = photo verified, gold = Premium; the glyph is white in light theme, black in dark -- */
+.nbadge{--nbi:#fff;width:17px;height:17px;border-radius:50%;vertical-align:-3px;color:var(--nbi)}
+.nbadge.v{background:#2F86F6}.nbadge.p{background:#E5A112}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nbadge{--nbi:#111012}:root:not([data-theme="light"]) .nbadge.v{background:#5FA4FF}:root:not([data-theme="light"]) .nbadge.p{background:#F2B83A}}
+:root[data-theme="dark"] .nbadge{--nbi:#111012}:root[data-theme="dark"] .nbadge.v{background:#5FA4FF}:root[data-theme="dark"] .nbadge.p{background:#F2B83A}
+.nbadge svg,.li b .nbadge svg{width:11px;height:11px;stroke-width:2.6}
+.nbadge.v svg,.nbadge.p svg,.pc-name .nbadge.v svg,.pc-name .nbadge.p svg{color:var(--nbi)}
+.pc-name .nbadge{width:21px;height:21px}.pc-name .nbadge svg{width:13px;height:13px}
+.pc-name .nbadge+.nbadge{margin-left:2px}
+.li b .nbadge{width:16px;height:16px}
+.pv-state .nbadge{width:44px;height:44px}.pv-state .nbadge svg{width:26px;height:26px}
+
+/* -- rich text field: toolbar + live formatting (posts, discussions) -- */
+.rte-box{border:1px solid var(--line2);border-radius:var(--r);background:var(--surf);overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.rte-box:focus-within{border-color:var(--ink)}
+.field.err .rte-box{border-color:var(--danger)}
+.rte-tb{display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:5px 6px;border-bottom:1px solid var(--line);background:var(--raise)}
+.rte-tb button{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;color:var(--ink)}
+.rte-tb button svg{width:19px;height:19px}
+.rte-tb button:hover{background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.rte-tb button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.rte-tb button[data-v="redo"],.rte-tb button[data-v="undo"]{color:var(--mute)}
+.rte-tb>i{width:1px;height:20px;margin:0 4px;background:var(--line2)}
+.rte-tb>button[data-v="more"]{margin-left:auto}
+.rte-more{display:none;gap:2px}
+.rte.more .rte-more{display:flex}
+@container col (min-width:520px){.rte-more{display:flex}.rte-tb>button[data-v="more"]{display:none}}
+.rte .rte-ed{position:relative;display:block;min-height:150px;max-height:50dvh;overflow-y:auto;border:0;border-radius:0;background:none;font-size:16px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;cursor:text}
+.rte .rte-ed:focus{box-shadow:none}
+.rte .rte-ed.is-empty::before{content:attr(data-ph);color:var(--faint);pointer-events:none;position:absolute}
+.rte-ed p{margin:0 0 8px}.rte-ed p:last-child{margin-bottom:0}
+.rte-ed h4{font:650 17px/1.35 var(--font);margin:6px 0}
+.rte-ed ul,.rte-ed ol{margin:0 0 8px;padding-left:22px}.rte-ed ul{list-style:disc}.rte-ed ol{list-style:decimal}.rte-ed li{margin:2px 0}
+.rte-ed blockquote{margin:0 0 8px;padding:2px 0 2px 12px;border-left:3px solid var(--line2);color:var(--mute)}
+.rte-ed a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+#dialog #rteUrl{margin-top:12px}
+.rte-more .nar{display:none}
+@container col (max-width:350px){
+  .rte-tb{gap:1px;padding:5px 4px}.rte-tb button{width:31px;height:32px}.rte-tb>i{margin:0 2px}
+  .rte-tb>button[data-v="redo"]{display:none}.rte-more .nar{display:grid}
+}
 </style>
 </head>
 <body>
@@ -1791,7 +1853,13 @@ const I={at:sv('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5"
  me:sv('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.2 3.6-7 8-7s8 2.8 8 7"/>'),
  heart:sv('<path d="M12 20s-7.5-4.6-7.5-10.4A4.2 4.2 0 0 1 12 7.3a4.2 4.2 0 0 1 7.5 2.3C19.5 15.4 12 20 12 20z"/>',2.1),
  heartf:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10.4A4.2 4.2 0 0 1 12 7.3a4.2 4.2 0 0 1 7.5 2.3C19.5 15.4 12 20 12 20z" fill="currentColor"/></svg>',
- x:sv('<path d="M6 6l12 12M18 6L6 18"/>',2.6), undo:sv('<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',2.2),
+ x:sv('<path d="M6 6l12 12M18 6L6 18"/>',2.6), undo:sv('<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',2.2),redo:sv('<path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',2.2),
+ fbold:sv('<path d="M7 5h5.5a3.5 3.5 0 0 1 0 7H7zM7 12h6.5a3.5 3.5 0 0 1 0 7H7z"/>',2.4),fital:sv('<path d="M10 5h8M6 19h8M14 5l-4 14"/>'),
+ fstrike:sv('<path d="M4 12h16M16.5 7.6C16 6 14.3 5 12 5c-2.8 0-4.5 1.4-4.5 3.3 0 .9.4 1.7 1.2 2.2M8 16.2C8.6 18 10.2 19 12.3 19c2.8 0 4.7-1.4 4.7-3.5 0-.7-.2-1.3-.6-1.8"/>'),
+ fhead:sv('<path d="M4 7V5h10v2M9 5v14M7 19h4M14 12v-1.5h7V12M17.5 10.5V19M16 19h3"/>'),
+ flist:sv('<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>',2.2),
+ folist:sv('<path d="M10 6h10M10 12h10M10 18h10M4 4.5h1.5V9M4 9h3M4 14.6c.4-.6 1-1 1.7-1 .9 0 1.5.6 1.5 1.3 0 1.2-3.2 2-3.2 4.1h3.3"/>',1.8),
+ fquote:sv('<path d="M6 17c2-1 3-2.7 3-5V7H4.5v5H9M15 17c2-1 3-2.7 3-5V7h-4.5v5H18"/>'),
  lock:sv('<rect x="5" y="10.5" width="14" height="10.5" rx="3"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/>',2.1),
  unlock:sv('<rect x="5" y="10.5" width="14" height="10.5" rx="3"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 6.8-1.2"/>',2.1),
  eye:sv('<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>'),
@@ -2175,7 +2243,7 @@ function measureBar(){const m=main(),b=$(':scope>.bar',m);m.style.setProperty('-
 function syncChrome(){const m=main();if(cur()?.fq)filterSections($(':scope>.view',m)||m,cur().fq);const b=$(':scope>.bar',m),ft=$(':scope>.ctabar,:scope>.inputbar',m);m.classList.toggle('hasbar',!!b&&!b.classList.contains('overlay'));m.classList.toggle('hascta',!!ft);if(ft)requestAnimationFrame(()=>$('#root').style.setProperty('--ctah',ft.getBoundingClientRect().height+'px'));measureBar();barObserver?.disconnect();if(b)barObserver?.observe(b);
  const v=$(':scope>.view',m);m.style.setProperty('--sc',0);if(v){const on=()=>{const k=Math.min(1,v.scrollTop/48);m.style.setProperty('--sc',k.toFixed(3));m.classList.toggle('scrolled',v.scrollTop>4);};v.addEventListener('scroll',on,{passive:true});on();}}
 // keep the focused field visible above the keyboard
-document.addEventListener('focusin',e=>{const el=e.target;if(!el.matches?.('input:not([type=checkbox]):not([type=radio]),textarea,select')||!el.closest('#main .view'))return;setTimeout(()=>{if(document.activeElement===el)el.scrollIntoView({block:'center',behavior:'smooth'});},320);});
+document.addEventListener('focusin',e=>{const el=e.target;if(!el.matches?.('input:not([type=checkbox]):not([type=radio]),textarea,select,[contenteditable]')||!el.closest('#main .view'))return;setTimeout(()=>{if(document.activeElement===el)el.scrollIntoView({block:'center',behavior:'smooth'});},320);});
 
 
 /* ---- ui.js ---- */
@@ -2187,10 +2255,10 @@ function jarColor(v){const st=[[1,4],[3,26],[5,46],[7,88],[10,140]];v=Math.max(1
 function jarsHTML(list,o={}){
  const items=list.map(x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x);
  return `<div class="jars ${o.pre?'pre':''} ${o.cls||''}">${items.map((j,i)=>{
-  const tag=o.act?'button':'div';const attrs=o.act?`data-act="${o.act}" data-v="${j.t}" ${o.who?`data-who="${o.who}"`:''} aria-label="${esc(topic(j.t))}: ${esc(jarWord(j))}"`:'';
+  const tag=o.act?'button':'div';const attrs=o.act?`data-act="${o.act}" data-v="${j.t}" ${o.who?`data-who="${o.who}" data-ans="${j.limit||j.lv}"`:''} aria-label="${esc(topic(j.t))}: ${esc(jarWord(j))}"`:'';
   const was=o.was&&o.was[j.t]!=null?`<small class="was">${L('было','was')} ${o.was[j.t]==='hard'?L('табу','taboo'):o.was[j.t]==='discuss'?L('обсужд.','negot.'):o.was[j.t]}</small>`:'';
   const vis=o.vis&&j.vis!=='public'?`<span class="jvis">${j.vis==='granted'?I.key:I.eyeoff}</span>`:'';
-  if(j.limit)return `<${tag} class="jar ${j.limit==='hard'?'taboo':'discuss'}" ${attrs}><span class="vessel"><span class="jm">${j.limit==='hard'?I.block:I.chat}</span>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw">${j.limit==='hard'?(o.who&&o.who!=='me'?L('нельзя','not for me'):L('табу','taboo')):L('обсуждаемо','negotiable')}</span>${was}</${tag}>`;
+  if(j.limit)return `<${tag} class="jar ${j.limit==='hard'?'taboo':'discuss'}" ${attrs}><span class="vessel"><span class="jm">${j.limit==='hard'?I.block:I.chat}</span>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw sr">${j.limit==='hard'?(o.who&&o.who!=='me'?L('нельзя','not for me'):L('табу','taboo')):L('обсуждаемо','negotiable')}</span>${was}</${tag}>`;
   return `<${tag} class="jar" ${attrs} style="--v:${j.lv};--jc:${jarColor(j.lv)};--d:${(i%6)*.35}s"><span class="vessel"><span class="fill"><i class="bub"></i></span><b class="lv">${j.lv}</b>${vis}</span><span class="jn">${esc(topic(j.t))}</span>${was}</${tag}>`;}).join('')}${o.more?`<button class="jar more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="vessel"><b>+${o.more.n}</b></span><span class="jn">${L('Все','All')}</span></button>`:''}${o.add?`<button class="jar add" data-act="${o.add}"><span class="vessel">${I.plus}</span><span class="jn">${L('Добавить','Add')}</span></button>`:''}</div>`;
 }
 const pubJars=id=>id==='me'?S.me.jars.filter(j=>j.vis==='public'):(person(id)?.jars||[]).map(x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x).filter(j=>!j.vis||j.vis==='public');
@@ -2272,7 +2340,58 @@ ACT.rReply=a=>{const x=replyAt(a);if(!x)return;const el=$(x.kind==='p'?'#cmt':'#
 ACT.rMore=a=>{const x=replyAt(a);if(!x)return;const mine=x.c.a==='me';
  sheet(()=>({title:L('Ответ','Reply'),body:`<div class="card list">${mine?linkRow({act:'rDel',v:a.dataset.v,p:null,icon:'trash',cls:'danger',title:L('Удалить ответ','Delete reply'),noChev:1}).replace('data-act="rDel"',`data-act="rDel" data-i="${a.dataset.i}"`):`${linkRow({go:'P01',p:{id:x.c.a},icon:'me',title:L(`Профиль ${pname(x.c.a)}`,`${pname(x.c.a)}’s profile`)})}${linkRow({act:'report',v:'comment',icon:'flag',cls:'danger',title:L('Пожаловаться','Report'),noChev:1}).replace('data-act="report"',`data-act="report" data-who="${x.c.a}"`)}${linkRow({act:'block',v:x.c.a,icon:'block',cls:'danger',title:L(`Заблокировать ${pname(x.c.a)}`,`Block ${pname(x.c.a)}`),sub:L('Скроет ответы и прекратит контакт','Hides their replies and ends contact'),noChev:1})}`}</div>`}));};
 ACT.rDel=a=>{const x=replyAt(a);if(!x||x.c.a!=='me')return;closeSheet(true);ask({icon:'trash',tone:'l',title:L('Удалить ответ?','Delete reply?'),ok:L('Удалить','Delete'),danger:true}).then(ok=>{if(!ok)return;const i=x.list.indexOf(x.c);if(i>=0)x.list.splice(i,1);refresh();toast(L('Ответ удалён','Reply deleted'),{type:'ok'});});};
-const MD_HINT=()=>L('Можно оформить: **жирный**, *курсив*, ~~зачёркнутый~~, > цитата, - список, [текст](https://…). Картинки — через «Фото/видео».','Formatting: **bold**, *italic*, ~~strike~~, > quote, - list, [text](https://…). Images go through Photo/video.');
+/* Rich text field (V10 round 2): FetLife-like — a toolbar with icons, formatting shows as you type.
+   The stored value stays the same safe Markdown that md() renders, so drafts, validation, preview and the API contract
+   don't change. Rendering into the editor always goes through md() (escaped text), pasting is plain text only,
+   and only http(s) links survive. Prototype uses execCommand; the React app takes a real editor (see the plan, round 2). */
+function rteHTML(v){const h=md(v);return h.slice(16,-6).replace(/ data-act="mdLink" data-v="[^"]*"/g,'');}
+function rteField(o){const r=cur();const v=r.f[o.name]??'';const err=r.err&&r.err[o.name];
+ const b=(c,icon,label,x='')=>`<button type="button" data-act="rte" data-v="${c}" aria-label="${label}" title="${label}" ${x}>${I[icon]}</button>`;
+ return `<div class="field rte ${err?'err':''}" data-field="${o.name}">${o.label?`<span>${o.label}</span>`:''}<div class="rte-box">
+ <div class="rte-tb" role="toolbar" aria-label="${L('Оформление текста','Text formatting')}">${b('undo','undo',L('Отменить','Undo'))}${b('redo','redo',L('Повторить','Redo'))}<i></i>${b('bold','fbold',L('Жирный','Bold'),'aria-pressed="false"')}${b('italic','fital',L('Курсив','Italic'),'aria-pressed="false"')}${b('strikeThrough','fstrike',L('Зачёркнутый','Strikethrough'),'aria-pressed="false"')}${b('link','link',L('Ссылка','Link'))}${o.media?b('media','image',L('Фото или видео','Photo or video'),`data-media="${o.media}"`):''}${b('h4','fhead',L('Заголовок','Heading'),'aria-pressed="false"')}<i></i><span class="rte-more">${b('redo','redo',L('Повторить','Redo'),'class="nar"')}${b('insertUnorderedList','flist',L('Список','List'),'aria-pressed="false"')}${b('insertOrderedList','folist',L('Нумерованный список','Numbered list'),'aria-pressed="false"')}${b('blockquote','fquote',L('Цитата','Quote'),'aria-pressed="false"')}</span>${b('more','more',L('Ещё','More'),'aria-expanded="false"')}</div>
+ <div class="inp rte-ed ${v?'':'is-empty'}" contenteditable="true" role="textbox" aria-multiline="true" aria-label="${esc(o.label||o.ph||'')}" data-in="rte" data-name="${o.name}" data-ph="${esc(o.ph||'')}" ${o.max?`data-max="${o.max}"`:''} ${err?'aria-invalid="true"':''}>${rteHTML(v)}</div></div>
+ ${err?`<div class="ferr">${I.alert}${err}</div>`:''}${o.max?`<div class="counter" data-count="${o.name}">${String(v).length} / ${o.max}</div>`:''}</div>`;}
+/** editor DOM → Markdown. Only the tags the toolbar makes are kept; everything else becomes its text. */
+function rteMd(root){
+ const wrap=(m,x)=>{const t=x.match(/^(\s*)([\s\S]*?)(\s*)$/);return t[2]?`${t[1]}${m}${t[2]}${m}${t[3]}`:x;};
+ const inl=n=>[...n.childNodes].map(c=>{if(c.nodeType===3)return c.nodeValue.replace(/ /g,' ');if(c.nodeType!==1)return '';const g=c.tagName,x=inl(c);
+  if(g==='BR')return '\n';if(g==='B'||g==='STRONG')return wrap('**',x);if(g==='I'||g==='EM')return wrap('*',x);if(g==='S'||g==='STRIKE'||g==='DEL')return wrap('~~',x);if(g==='CODE')return x?`\`${x}\``:'';
+  if(g==='A'){const h=c.getAttribute('href')||'';return /^https?:\/\//.test(h)&&x.trim()?`[${x.trim()}](${h})`:x;}
+  if(g==='DIV'||g==='P'||g==='LI')return '\n'+x;return x;}).join('');
+ const lines=s=>s.replace(/^\n+|\n+$/g,'').split('\n');const out=[];let run='';
+ const flush=()=>{if(run.trim())out.push(lines(run).join('\n'));run='';};
+ const BLK=/^(P|DIV|H[1-6]|BLOCKQUOTE|UL|OL)$/;const walk=node=>[...node.childNodes].forEach(c=>{const g=c.nodeType===1?c.tagName:'';
+  if((g==='P'||g==='DIV')&&[...c.children].some(x=>BLK.test(x.tagName))){flush();walk(c);flush();return;}
+  if(!g||!BLK.test(g)){run+=c.nodeType===3?c.nodeValue.replace(/ /g,' '):g==='BR'?'\n':inl({childNodes:[c]});return;}
+  flush();
+  if(/^H/.test(g)){const t=inl(c).replace(/\n/g,' ').trim();if(t)out.push('## '+t);}
+  else if(g==='BLOCKQUOTE'){const t=lines(inl(c)).filter(x=>x.trim());if(t.length)out.push(t.map(x=>'> '+x).join('\n'));}
+  else if(g==='UL'||g==='OL'){const it=[...c.children].filter(x=>x.tagName==='LI').map(x=>inl(x).replace(/\n/g,' ').trim()).filter(Boolean);if(it.length)out.push(it.map((x,k)=>(g==='OL'?`${k+1}. `:'- ')+x).join('\n'));}
+  else{const t=lines(inl(c)).join('\n');if(t.trim())out.push(t);}});
+ walk(root);flush();return out.join('\n\n').trim();}
+const rteSync=ed=>{const r=cur();const name=ed.dataset.name;const v=rteMd(ed);r.f[name]=v;r.dirty=true;ed.classList.toggle('is-empty',!ed.textContent.trim()&&!ed.querySelector('li'));
+ if(r.err&&r.err[name])setErr(name,'');const c=$(`[data-count="${name}"]`);if(c){const max=+ed.dataset.max;c.textContent=`${v.length} / ${max}`;c.classList.toggle('over',v.length>max);}};
+IN.rte=el=>rteSync(el);
+const rteState=()=>{const ed=document.activeElement?.closest?.('.rte-ed');if(!ed)return;const tb=$('.rte-tb',ed.closest('.rte'));const blk=String(document.queryCommandValue('formatBlock')||'').toLowerCase();
+ $$('[aria-pressed]',tb).forEach(b=>{const c=b.dataset.v;let on=false;try{on=c==='h4'||c==='blockquote'?blk===c:document.queryCommandState(c);}catch(_){}b.setAttribute('aria-pressed',String(!!on));});};
+document.addEventListener('selectionchange',rteState);
+// toolbar buttons must not take the caret away from the text
+document.addEventListener('mousedown',e=>{if(e.target.closest('.rte-tb button'))e.preventDefault();});
+document.addEventListener('paste',e=>{const ed=e.target.closest?.('.rte-ed');if(!ed)return;e.preventDefault();document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text/plain'));});
+document.addEventListener('focusin',e=>{if(e.target.closest?.('.rte-ed')){try{document.execCommand('defaultParagraphSeparator',false,'p');document.execCommand('styleWithCSS',false,false);}catch(_){}}});
+ACT.rte=a=>{const box=a.closest('.rte'),ed=$('.rte-ed',box),c=a.dataset.v;
+ if(c==='more'){const on=box.classList.toggle('more');a.setAttribute('aria-expanded',String(on));return;}
+ if(c==='media'){ACT[a.dataset.media]?.(a);return;}
+ if(document.activeElement!==ed)ed.focus();
+ if(c==='link'){const sel=getSelection();const range=sel.rangeCount?sel.getRangeAt(0).cloneRange():null;const txt=sel.toString();
+  ask({icon:'link',title:L('Ссылка','Link'),text:`<input class="inp" id="rteUrl" type="url" inputmode="url" placeholder="https://" aria-label="${L('Адрес ссылки','Link address')}">`,ok:L('Вставить','Insert')}).then(ok=>{
+   const u=(document.getElementById('rteUrl')?.value||'').trim();ed.focus();if(range){sel.removeAllRanges();sel.addRange(range);}
+   if(!ok||!u)return;if(!/^https?:\/\/[^\s()<>"']{1,400}$/.test(u)){toast(L('Нужна ссылка, начинающаяся с https://','A link must start with https://'),{type:'warn'});return;}
+   if(txt)document.execCommand('createLink',false,u);else document.execCommand('insertHTML',false,`<a href="${esc(u)}">${esc(u)}</a>&nbsp;`);rteSync(ed);});
+  setTimeout(()=>document.getElementById('rteUrl')?.focus(),60);return;}
+ if(c==='h4'||c==='blockquote'){const blk=String(document.queryCommandValue('formatBlock')||'').toLowerCase();document.execCommand('formatBlock',false,blk===c?'p':c);}
+ else document.execCommand(c,false,null);
+ rteSync(ed);rteState();};
 function postCard(p,o={}){
  const mine=p.author==='me';const pid=JSON.stringify({id:p.id});
  const head=`<div class="post-h"><button class="who" ${profGo(p.author)}>${av(p.author,'sm')}<span class="tx"><b>${esc(pname(p.author))}${nameBadges(person(p.author))}</b><small>${F.rel(p.t)}${p.aud==='followers'?` · <span class="aud">${I.people}${L('подписчикам','followers')}</span>`:''}${o.community&&p.community?` · ${esc(T(COMMUNITIES[p.community].name))}`:''}</small></span></button><button class="ibtn ghost sm" data-act="postMenu" data-v="${p.id}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
@@ -2950,10 +3069,10 @@ SC.F07={title:()=>L('Публикация','Post'),valid:p=>!p.id||!!ownPost(p.i
  const mediaBlock=m.length?grp(L(`Фото и видео · ${m.length}/${MEDIA_MAX}`,`Photos & video · ${m.length}/${MEDIA_MAX}`),`<div class="edit-ph">${m.map((x,i)=>`<div>${x.type==='video'?`<video src="${esc(x.url)}" muted playsinline preload="metadata"></video><span class="mainph">${ic('video',12)} ${fmtDur(x.dur||0)}</span>`:`<img src="${esc(x.url)}" alt="">`}<button class="rm" data-act="rmMedia" data-v="${i}" aria-label="${L('Убрать','Remove')}">${I.close}</button><button class="vw" data-act="viewDraftMedia" data-v="${i}" aria-label="${L('Посмотреть','View')}"></button></div>`).join('')}${m.length<MEDIA_MAX?`<button data-act="postMedia" aria-label="${L('Добавить фото или видео','Add photo or video')}">${I.plus}</button>`:''}</div>`):'';
  const pollBlock=r.poll?grp(L(`Опрос · ${r.poll.opts.length}/${POLL_MAX}`,`Poll · ${r.poll.opts.length}/${POLL_MAX}`),`${field({name:'pollQ',label:L('Вопрос','Question'),max:200,ph:L('О чём спросить людей?','What do you want to ask?')})}${r.poll.opts.map((o,i)=>`<div class="field pollopt ${r.err&&r.err['o'+i]?'err':''}" data-field="o${i}"><div class="inwrap"><span class="n">${i+1}</span><input class="inp" name="o${i}" data-in="pollOpt" data-i="${i}" value="${esc(o)}" maxlength="80" placeholder="${L('Вариант','Option')} ${i+1}" aria-label="${L('Вариант','Option')} ${i+1}">${r.poll.opts.length>2?`<button class="ibtn ghost sm" data-act="rmOpt" data-v="${i}" aria-label="${L('Убрать вариант','Remove option')}">${I.close}</button>`:''}</div></div>`).join('')}${r.poll.opts.length<POLL_MAX?`<button class="btn text auto" data-act="addOpt">${I.plus}${L('Добавить вариант','Add option')}</button>`:''}${r.err&&r.err.opts?`<div class="ferr">${I.alert}${r.err.opts}</div>`:''}`,{right:`<button data-act="rmPoll">${L('Убрать','Remove')}</button>`,foot:L('Голос можно изменить или отменить. Кто как голосовал, не видно никому.','Votes can be changed or withdrawn. Nobody sees who voted for what.')+(ex?.poll?' '+L('Изменение вариантов сбросит голоса опроса.','Changing the options resets the poll votes.'):'')}):'';
  const resBlock=r.result?grp(L('Результат','Result'),el.length?`${(sel=>sel.length?`<div class="testcard" style="--n:${Math.min(4,sel.length)}">${jarsHTML(sel)}</div>`:'')(el.filter(j=>r.resSel.includes(j.t)).slice(0,4).map(j=>[j.t,j.lv]))}<div class="chips mt12">${el.map(j=>chipBtn(j.t,topic(j.t),r.resSel.includes(j.t),'resPick')).join('')}</div>`:`<p class="note">${L('Пока нечего показать: открой хотя бы одну тему для всех в «Я».','Nothing to show yet: make at least one topic public in Me.')}</p>`,{right:`<button data-act="rmResult">${L('Убрать','Remove')}</button>`,foot:L('Только темы, открытые всем, до 4. Ответы, границы и скрытые темы не попадают.','Only topics open to everyone, up to 4. Answers, limits and hidden topics are never included.')}):'';
- const tools=`<div class="attach">${m.length?'':`<button data-act="postMedia">${I.image}<span>${L('Фото/видео','Photo/video')}</span></button>`}${r.poll?'':`<button data-act="addPoll">${I.poll}<span>${L('Опрос','Poll')}</span></button>`}${r.result?'':`<button data-act="addResult">${I.test}<span>${L('Результат','Result')}</span></button>`}</div>`;
+ const tools=`<div class="attach">${r.poll?'':`<button data-act="addPoll">${I.poll}<span>${L('Опрос','Poll')}</span></button>`}${r.result?'':`<button data-act="addResult">${I.test}<span>${L('Результат','Result')}</span></button>`}</div>`;
  return `${bar(ex?L('Редактирование','Edit post'):L('Новая публикация','New post'),{back:1,sm:1,actions:`<button class="btn text auto" data-act="saveDraft">${L('В черновик','Save draft')}</button>`})}<div class="view nodock cta1"><div class="wrap">
  ${S.postEdits[p.id]?`<p class="note mb12">${L('Открыты сохранённые правки. Исходная публикация пока не изменена.','Saved changes are open. The original post is unchanged.')}</p>`:''}<section class="grp"><div class="card compose"><div class="row" style="gap:10px">${av('me','sm')}<button class="pill v" data-act="audience">${a[1]}${a[2]} ${ic('down',13)}</button></div>
- ${field({name:'text',label:'',textarea:1,max:1000,ph:r.poll?L('Пара слов к опросу — по желанию','A few words about the poll — optional'):L('О чём хочется рассказать?','What would you like to share?'),attrs:'rows="4"',hint:MD_HINT()})}
+ ${rteField({name:'text',label:'',max:1000,media:'postMedia',ph:r.poll?L('Пара слов к опросу — по желанию','A few words about the poll — optional'):L('О чём хочется рассказать?','What would you like to share?')})}
  ${tools}</div>${r.err&&r.err.media?`<div class="ferr">${I.alert}${r.err.media}</div>`:''}</section>
  ${mediaBlock}${pollBlock}${resBlock}
  ${grp(L('Темы · до 3','Topics · up to 3'),chipPicker({items:topicItems(),sel:r.tags,act:'postTag',title:L('Темы публикации','Post topics'),max:3,cats:true}))}
@@ -3749,7 +3868,7 @@ ACT.peHideCity=()=>{cur().f.city='';cur().dirty=true;refresh();};
 
 /* ---------- V10 revision part 2: badges, followers / following ---------- */
 /** small badges after a name: photo verification and Premium. Neither opens private data or chat. */
-function nameBadges(p,sm){if(!p)return '';return `${p.pv?`<span class="nbadge v" title="${L('Фото подтверждено','Photo verified')}" role="img" aria-label="${L('Фото подтверждено','Photo verified')}">${I.verified}</span>`:''}${p.premium||S.giftedTo?.has(p)?`<span class="nbadge p" title="Premium" role="img" aria-label="Premium">${I.crown}</span>`:''}`;}
+function nameBadges(p,sm){if(!p)return '';return `${p.pv?`<span class="nbadge v" title="${L('Фото подтверждено','Photo verified')}" role="img" aria-label="${L('Фото подтверждено','Photo verified')}">${I.check}</span>`:''}${p.premium||S.giftedTo?.has(p)?`<span class="nbadge p" title="Premium" role="img" aria-label="Premium">${I.crown}</span>`:''}`;}
 /** follow graph: counts are always the length of the lists people can open */
 function followingOf(id){const set=id==='me'?S.follows:(S.graph[id]||new Set());return [...set].filter(x=>(x==='me'||PEOPLE[x])&&!isBlocked(x));}
 function followersOf(id){return ['me',...Object.keys(PEOPLE)].filter(k=>k!==id&&!isBlocked(k)&&followingOf(k).includes(id));}
@@ -3759,13 +3878,13 @@ SC.P10={title:p=>p.tab==='following'?L('Подписки','Following'):L('Под
  const list=tab==='following'?followingOf(id):followersOf(id);
  const row=k=>{const self=k==='me';const fol=S.follows.has(k);
   const act=self?`<span class="note">${L('это ты','you')}</span>`
-   :mine&&tab==='followers'?`<button class="btn sm ${fol?'soft':'primary'}" data-act="flwToggle" data-v="${k}" aria-pressed="${fol}">${fol?L('Отписаться','Unfollow'):L('Подписаться','Follow back')}</button><button class="ibtn sm" data-act="block" data-v="${k}" aria-label="${L(`Заблокировать ${pname(k)}`,`Block ${pname(k)}`)}">${I.block}</button>`
+   :mine&&tab==='followers'?`<button class="btn sm ${fol?'soft':'primary'}" data-act="flwToggle" data-v="${k}" aria-pressed="${fol}">${fol?L('Отписаться','Unfollow'):L('Подписаться','Follow back')}</button>`
    :`<button class="btn sm ${fol?'soft':'primary'}" data-act="flwToggle" data-v="${k}" aria-pressed="${fol}">${fol?L('Отписаться','Unfollow'):L('Подписаться','Follow')}</button>`;
-  return `<div class="li frow"><button class="frow-go" data-go="${self?'P03':'P01'}" ${self?'':`data-p='${JSON.stringify({id:k})}'`}>${av(k,'')}<span class="tx"><b>${esc(pname(k))}${nameBadges(person(k),1)}</b><small>${esc(placeLine(k)||'')}</small></span></button>${act}</div>`;};
+  return `<div class="li frow"><button class="frow-go" data-go="${self?'P03':'P01'}" ${self?'':`data-p='${JSON.stringify({id:k})}'`}>${av(k,'')}<span class="tx"><b><span class="fnm">${esc(pname(k))}</span>${nameBadges(person(k),1)}</b><small>${esc(placeLine(k)||'')}</small></span></button>${act}</div>`;};
  const who=mine?'':` · ${esc(pname(id))}`;
  return `${bar((tab==='following'?L('Подписки','Following'):L('Подписчики','Followers'))+who,{back:1,sm:1})}<div class="view nodock"><div class="wrap">
  ${seg([['followers',`${L('Подписчики','Followers')} · ${followersOf(id).length}`],['following',`${L('Подписки','Following')} · ${followingOf(id).length}`]],tab,'flwTab')}
- ${mine&&tab==='followers'?`<p class="note" style="margin:12px 2px">${L('Подписка показывает публикации в ленте «Подписки». Она не открывает чат и приватные разделы. Заблокированный человек исчезнет из списка.','Following shows posts in the Following feed. It doesn’t open chat or private sections. A blocked person disappears from the list.')}</p>`:''}
+ ${mine&&tab==='followers'?`<p class="note" style="margin:12px 2px">${L('Подписка показывает публикации в ленте «Подписки». Она не открывает чат и приватные разделы.','Following shows posts in the Following feed. It doesn’t open chat or private sections.')}</p>`:''}
  ${list.length?`<div class="card list mt12">${list.map(row).join('')}</div>`:empty('people',tab==='following'?L('Пока ни на кого не подписан(а)','Not following anyone yet'):L('Подписчиков пока нет','No followers yet'),'')}</div></div>`;}};
 ACT.flwTab=a=>{const r=cur();r.p={...r.p,tab:a.dataset.v};refresh();};
 ACT.flwToggle=a=>{const id=a.dataset.v;if(!PEOPLE[id]||isBlocked(id))return;const on=!S.follows.has(id);on?S.follows.add(id):S.follows.delete(id);refresh();toast(on?L(`Подписка на ${pname(id)}`,`Following ${pname(id)}`):L(`Ты отписался(ась) от ${pname(id)}`,`Unfollowed ${pname(id)}`),{type:on?'ok':'',action:{label:L('Отменить','Undo'),fn:()=>{if(isBlocked(id))return;on?S.follows.delete(id):S.follows.add(id);refresh();}}});};
@@ -3874,8 +3993,8 @@ ACT.sendReply=()=>{const route=cur(),d=S.discussions.find(x=>x.id===route.p.id);
 /* C07 — new discussion */
 SC.C07={title:()=>L('Новое обсуждение','New discussion'),valid:p=>!!COMMUNITIES[p.id]&&(S.joined.has(p.id)||ownsCommunity(p.id)),render:(p,r)=>{const c=COMMUNITIES[p.id];r.media=r.media||[];return `${bar(L('Новое обсуждение','New discussion'),{back:1,sm:1,sub:esc(T(c.name))})}<div class="view nodock cta1"><div class="wrap">
  ${field({name:'title',label:L('Тема','Topic'),ph:L('Коротко, о чём разговор','In short, what’s it about'),max:120})}
- ${field({name:'text',label:L('Текст','Text'),textarea:1,max:3000,ph:L('Подробности, вопрос или опыт','Details, a question or experience'),attrs:'rows="6"',hint:MD_HINT()})}
- <div class="sec">${L('Фото и видео','Photos and videos')}<span class="note">${L('до 6 вложений','up to 6 attachments')}</span></div><button class="btn soft" data-act="discussionMedia">${I.image}${L('Добавить фото или видео','Add photos or videos')}</button>${mediaPreviews(r.media,'discussionMediaRemove')}
+ ${rteField({name:'text',label:L('Текст','Text'),max:3000,media:'discussionMedia',ph:L('Подробности, вопрос или опыт','Details, a question or experience')})}
+ ${r.media.length?`<div class="sec">${L('Фото и видео','Photos and videos')}<span class="note">${r.media.length} / 6</span></div>${mediaPreviews(r.media,'discussionMediaRemove')}`:''}
  <div class="alert">${I.users3}<span>${L(`Увидят ${c.privacy==='closed'?'только участники':'все, кто открывает сообщество'}. Расширить аудиторию нельзя.`,`Visible to ${c.privacy==='closed'?'members only':'everyone who opens the community'}. The audience can’t be widened.`)}</span></div>
  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="cdPost">${L('Опубликовать','Publish')}</button></div></div>`;}};
 ACT.cdPost=a=>{const r=cur(),community=r.p.id;
@@ -4096,11 +4215,15 @@ ACT.jarSave=a=>{const j=S.ui.jar;if(j.v==null)return;const arr=S.me.jars;const i
  run(a,()=>{const val=jarFrom(j.t,j.v,{vis:j.vis});if(i>=0)arr[i]=val;else arr.push(val);S.me.history.unshift({t:Date.now(),topic:j.t,from:old?jv(old):'—',to:j.v,src:'manual'});closeSheet();refresh();},{ms:300,ok:j.vis==='public'?L('Сохранено. Видно в профиле','Saved. Shown on your profile'):L('Сохранено','Saved')});};
 ACT.jarDel=()=>{const t=S.ui.jar.t;closeSheet(true);ask({icon:'trash',tone:'l',title:L(`Убрать «${topic(t)}»?`,`Remove “${topic(t)}”?`),text:L('История изменений сохранится — её видишь только ты.','Change history is kept — only you can see it.'),ok:L('Убрать','Remove'),danger:true}).then(ok=>{if(ok){S.me.jars=S.me.jars.filter(j=>j.t!==t);refresh();toast(L('Убрано','Removed'),{type:'ok'});}});};
 /** someone else’s jar: what it is, their answer and yours */
-function openTopic(t,who){const theirs=who&&who!=='me'?(person(who)?.jars||[]).map(normJar).find(x=>x.t===t):null;const mine=S.me.jars.find(j=>j.t===t);
+/* «Как откликается» always pairs the person whose jar was tapped with you. The tapped jar carries the answer it showed
+   (data-ans), so a jar from a private layer or a quiz result still shows that person’s row. Opened from a topic page there is no
+   other person: the group is then «Твой ответ», one row. */
+function openTopic(t,who,ans){const other=who&&who!=='me'&&person(who);const shown=ans!=null&&ans!==''?jarFrom(t,ansVal(ans)):null;
+ const theirs=other?(shown||(other.jars||[]).map(normJar).find(x=>x.t===t)||null):null;const mine=S.me.jars.find(j=>j.t===t);
  sheet(()=>({title:topic(t),sub:T(CATS.find(c=>c.id===TOPICS[t]?.cat)||''),body:`<p class="topic-desc">${esc(T(TOPIC_DESC[t]))}</p>
- ${grp(L('Как откликается','How it feels'),`${theirs?`<div class="li static"><span class="tx"><b>${esc(pname(who))}</b></span><span class="val strong">${esc(jarWord(theirs))}</span></div>`:''}<div class="li static"><span class="tx"><b>${L('Ты','You')}</b>${mine&&mine.vis!=='public'?`<small>${L('твой ответ видишь только ты','only you see your answer')}</small>`:''}</span><span class="val ${mine?'strong':''}">${mine?esc(jarWord(mine)):L('не отмечено','not set')}</span></div>`,{list:1})}`,
+ ${grp(theirs?L('Как откликается','How it feels'):L('Твой ответ','Your answer'),`${theirs?`<div class="li static"><span class="tx"><b>${esc(pname(who))}</b></span><span class="val strong">${esc(jarWord(theirs))}</span></div>`:''}<div class="li static"><span class="tx"><b>${L('Ты','You')}</b>${mine&&mine.vis!=='public'?`<small>${L('твой ответ видишь только ты','only you see your answer')}</small>`:''}</span><span class="val ${mine?'strong':''}">${mine?esc(jarWord(mine)):L('не отмечено','not set')}</span></div>`,{list:1})}`,
  foot:`<button class="btn ${mine?'secondary':'primary'}" data-act="editJar" data-v="${t}">${mine?L('Изменить у себя','Edit mine'):`${I.plus}${L('Добавить к себе','Add to mine')}`}</button>`}));}
-ACT.topic=a=>openTopic(a.dataset.v,a.dataset.who);
+ACT.topic=a=>openTopic(a.dataset.v,a.dataset.who,a.dataset.ans);
 /** all public jars of a person, grouped by category */
 ACT.allJars=a=>{const who=a.dataset.v;const list=sortJars((person(who)?.jars||[]).filter(j=>!normJar(j).vis||normJar(j).vis==='public'));
  sheet(()=>({title:L(`Интересы · ${pname(who)}`,`Interests · ${pname(who)}`),body:CATS.map(c=>{const l=list.filter(j=>TOPICS[j.t]?.cat===c.id);return l.length?grp(T(c),jarsHTML(l,{act:'topic',who}),{cls:'bare'}):'';}).join('')}),{full:true});setTimeout(fillJars,50);};
@@ -4314,7 +4437,7 @@ const PV_POSES=()=>[[L('Подними ладонь рядом с лицом','R
 SC.V01={title:()=>L('Фото-верификация','Photo verification'),render:(p,r)=>{const m=S.me,st=m.photoCheck||'none';r.pose=r.pose??(Date.now()%3);const pose=PV_POSES()[r.pose];
  const about=`<div class="card list">${[[I.check,'g',L('Что значит значок','What the badge means'),L('Фото в профиле — действительно ты. Другие видят значок рядом с именем.','Your profile photos really show you. Others see the badge next to your name.')],[I.info,'',L('Чего он не значит','What it doesn’t mean'),L('Это не проверка возраста и не проверка документов. Значок ничего не открывает: ни чат, ни приватные фото.','It isn’t an age or ID check. The badge opens nothing: no chat, no private photos.')],[I.lock,'v',L('Что происходит с селфи','What happens to the selfie'),L('Его видит только проверка. В профиле оно не появится; после решения удаляется.','Only the review sees it. It never appears on your profile and is deleted after the decision.')]].map(([ic,t,b,s])=>`<div class="li static"><span class="ico ${t}">${ic}</span><span class="tx"><b>${b}</b><small>${s}</small></span></div>`).join('')}</div>`;
  let body='';
- if(st==='ok')body=`<div class="pv-state ok"><span class="nbadge v">${I.verified}</span><b>${L('Фото подтверждено','Photo verified')}</b><p>${L(`Подтверждено ${m.photoCheckAt?F.date(m.photoCheckAt):''}. Если сменишь главное фото на фото другого человека, значок снимут.`,`Verified ${m.photoCheckAt?F.date(m.photoCheckAt):''}. If your main photo stops showing you, the badge is removed.`)}</p></div>${about}`;
+ if(st==='ok')body=`<div class="pv-state ok"><span class="nbadge v">${I.check}</span><b>${L('Фото подтверждено','Photo verified')}</b><p>${L(`Подтверждено ${m.photoCheckAt?F.date(m.photoCheckAt):''}. Если сменишь главное фото на фото другого человека, значок снимут.`,`Verified ${m.photoCheckAt?F.date(m.photoCheckAt):''}. If your main photo stops showing you, the badge is removed.`)}</p></div>${about}`;
  else if(st==='pending')body=`<div class="pv-state wait"><span class="ico a">${I.clock}</span><b>${L('Проверяем селфи','Checking your selfie')}</b><p>${L('Обычно до 24 часов. Сообщим в уведомлениях. Профиль работает как обычно.','Usually within 24 hours. We’ll notify you. Your profile works as usual.')}</p></div>${about}`;
  else body=`${st==='rejected'?`<div class="alert err">${I.alert}<span><b>${L('Не получилось подтвердить','We couldn’t verify it')}</b>${esc(T(m.photoCheckReason)||L('Лицо плохо видно.','The face isn’t clearly visible.'))} ${L('Попробуй ещё раз — это бесплатно.','Try again — it’s free.')}</span></div>`:''}
   <p class="lead">${L('Сделай селфи с жестом. Сравним его с фото в профиле.','Take a selfie doing the gesture. We compare it with your profile photos.')}</p>
@@ -4537,7 +4660,7 @@ function qaRender(){const q=($('#qaQ')?.value||'').toLowerCase();const r=cur();
  $('#qaHint').innerHTML=L('Коды подтверждения: <b>000000</b> — неверный, <b>999999</b> — истёк, любой другой — верный. Почта <b>limit@…</b> — лимит отправки. Ник <b>alex</b> занят.','Codes: <b>000000</b> wrong, <b>999999</b> expired, any other works. Email <b>limit@…</b> hits the send limit. Nickname <b>alex</b> is taken.')+`<button class="btn secondary mt12" data-act="qaRestart">${L('Начать регистрацию заново','Restart registration')}</button><span class="note">${L('Очистит текущую сессию прототипа и откроет приветствие.','Clears this prototype session and opens the welcome screen.')}</span>`;
 }
 ACT.qaRestart=()=>restartPrototype();
-window.FT_QA={go:(id,p)=>qaGo(id,p||{}),list:()=>QA_LIST(),screen:()=>cur()&&cur().id,tab:t=>tab(t),back:()=>back()};
+window.FT_QA={go:(id,p)=>qaGo(id,p||{}),list:()=>QA_LIST(),screen:()=>cur()&&cur().id,tab:t=>tab(t),back:()=>back(),field:n=>cur()?.f?.[n]};
 window.QA_SYNC=()=>{if($('#qa.open'))qaRender();};
 const qa=$('#qa'),qaScrim=$('#qaScrim');
 window.QA_CLOSE=()=>{qa.classList.remove('open');qaScrim.classList.remove('on');qa.setAttribute('aria-hidden','true');$('#qaFab').focus();};

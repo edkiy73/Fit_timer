@@ -41,7 +41,13 @@ const I={at:sv('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5"
  me:sv('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.2 3.6-7 8-7s8 2.8 8 7"/>'),
  heart:sv('<path d="M12 20s-7.5-4.6-7.5-10.4A4.2 4.2 0 0 1 12 7.3a4.2 4.2 0 0 1 7.5 2.3C19.5 15.4 12 20 12 20z"/>',2.1),
  heartf:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10.4A4.2 4.2 0 0 1 12 7.3a4.2 4.2 0 0 1 7.5 2.3C19.5 15.4 12 20 12 20z" fill="currentColor"/></svg>',
- x:sv('<path d="M6 6l12 12M18 6L6 18"/>',2.6), undo:sv('<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',2.2),
+ x:sv('<path d="M6 6l12 12M18 6L6 18"/>',2.6), undo:sv('<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',2.2),redo:sv('<path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',2.2),
+ fbold:sv('<path d="M7 5h5.5a3.5 3.5 0 0 1 0 7H7zM7 12h6.5a3.5 3.5 0 0 1 0 7H7z"/>',2.4),fital:sv('<path d="M10 5h8M6 19h8M14 5l-4 14"/>'),
+ fstrike:sv('<path d="M4 12h16M16.5 7.6C16 6 14.3 5 12 5c-2.8 0-4.5 1.4-4.5 3.3 0 .9.4 1.7 1.2 2.2M8 16.2C8.6 18 10.2 19 12.3 19c2.8 0 4.7-1.4 4.7-3.5 0-.7-.2-1.3-.6-1.8"/>'),
+ fhead:sv('<path d="M4 7V5h10v2M9 5v14M7 19h4M14 12v-1.5h7V12M17.5 10.5V19M16 19h3"/>'),
+ flist:sv('<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>',2.2),
+ folist:sv('<path d="M10 6h10M10 12h10M10 18h10M4 4.5h1.5V9M4 9h3M4 14.6c.4-.6 1-1 1.7-1 .9 0 1.5.6 1.5 1.3 0 1.2-3.2 2-3.2 4.1h3.3"/>',1.8),
+ fquote:sv('<path d="M6 17c2-1 3-2.7 3-5V7H4.5v5H9M15 17c2-1 3-2.7 3-5V7h-4.5v5H18"/>'),
  lock:sv('<rect x="5" y="10.5" width="14" height="10.5" rx="3"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/>',2.1),
  unlock:sv('<rect x="5" y="10.5" width="14" height="10.5" rx="3"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 6.8-1.2"/>',2.1),
  eye:sv('<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>'),
@@ -425,5 +431,5 @@ function measureBar(){const m=main(),b=$(':scope>.bar',m);m.style.setProperty('-
 function syncChrome(){const m=main();if(cur()?.fq)filterSections($(':scope>.view',m)||m,cur().fq);const b=$(':scope>.bar',m),ft=$(':scope>.ctabar,:scope>.inputbar',m);m.classList.toggle('hasbar',!!b&&!b.classList.contains('overlay'));m.classList.toggle('hascta',!!ft);if(ft)requestAnimationFrame(()=>$('#root').style.setProperty('--ctah',ft.getBoundingClientRect().height+'px'));measureBar();barObserver?.disconnect();if(b)barObserver?.observe(b);
  const v=$(':scope>.view',m);m.style.setProperty('--sc',0);if(v){const on=()=>{const k=Math.min(1,v.scrollTop/48);m.style.setProperty('--sc',k.toFixed(3));m.classList.toggle('scrolled',v.scrollTop>4);};v.addEventListener('scroll',on,{passive:true});on();}}
 // keep the focused field visible above the keyboard
-document.addEventListener('focusin',e=>{const el=e.target;if(!el.matches?.('input:not([type=checkbox]):not([type=radio]),textarea,select')||!el.closest('#main .view'))return;setTimeout(()=>{if(document.activeElement===el)el.scrollIntoView({block:'center',behavior:'smooth'});},320);});
+document.addEventListener('focusin',e=>{const el=e.target;if(!el.matches?.('input:not([type=checkbox]):not([type=radio]),textarea,select,[contenteditable]')||!el.closest('#main .view'))return;setTimeout(()=>{if(document.activeElement===el)el.scrollIntoView({block:'center',behavior:'smooth'});},320);});
 
