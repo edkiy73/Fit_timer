@@ -74,7 +74,7 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
   <button class="why" data-go="P05" data-id="${id}">${venn(sh.few?'?':sh.match.length,{mini:1})}<span class="grow"><b>${esc(sharedSummary(id))}</b><span>${L('Только то, что вы оба открыли','Only what you both made visible')}</span></span>${I.chev}</button>
   <div class="sec">${L('О себе','About')}</div>${md(T(p.bio),'bio')}
   ${sh.match.length?`<div class="sec">${L('Совпадает','In common')}</div><div class="chips">${sh.match.map(m=>`<span class="chip hit">${esc(topic(m))}</span>`).join('')}</div>`:''}
-  ${sh.complement.length?`<div class="sec">${L('Роли','Roles')}</div>${sh.complement.map(c=>`<div class="fact"><i class="g">${I.check}</i><span>${esc(c)}</span></div>`).join('')}`:''}
+  ${sh.complement.length?`<div class="sec">${L('Дополняете друг друга','You complement each other')}</div>${sh.complement.map(c=>`<div class="fact"><i class="g">${I.check}</i><span>${esc(c)}</span></div>`).join('')}`:''}
   ${sh.discuss.length?`<div class="sec">${L('Стоит обсудить','Worth discussing')}</div>${sh.discuss.slice(0,2).map(c=>`<div class="fact"><i class="a">${I.warn}</i><span>${esc(c)}</span></div>`).join('')}`:''}
   <div class="sec">${L('Интересы','Interests')}</div>${jarShelf(pubJars(id),{pre:1,act:'topic',who:id,moreAct:'allJars'})}
   ${post?`<div class="sec">${L('Публикация','Post')} · ${F.rel(post.t)}</div><button class="quote" data-go="F05" data-id="${post.id}"><p>${esc(T(post.text))}</p>${ic('chev',18)}</button>`:''}

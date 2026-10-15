@@ -1511,6 +1511,227 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .maintenance #layer{display:none!important}
 /* Keep prototype controls in the sidebar area, clear of tablet message/submit buttons. */
 @media(min-width:768px){body:not(.frame) .qa-fab{left:24px;right:auto;bottom:12px}}
+
+/* =====================================================================
+   V10 owner revision, 15.10 — jars: higher water, calmer as they fill, 10 is full to the lid.
+   ===================================================================== */
+.jar .fill{height:calc(16% + var(--v) * 8.4%)}
+.jar.calm .fill{
+ -webkit-mask:linear-gradient(#000,#000) 0 4px/100% 100% no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='5'%3E%3Cpath d='M0 2.5 Q10 1 20 2.5 T40 2.5 V5 H0Z'/%3E%3C/svg%3E") 0 0/40px 5px repeat-x;
+ mask:linear-gradient(#000,#000) 0 4px/100% 100% no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='5'%3E%3Cpath d='M0 2.5 Q10 1 20 2.5 T40 2.5 V5 H0Z'/%3E%3C/svg%3E") 0 0/40px 5px repeat-x;
+ animation:jarWaveCalm 5.5s linear infinite;animation-delay:calc(-1 * var(--d,0s))}
+@keyframes jarWaveCalm{to{-webkit-mask-position:0 4px,40px 0;mask-position:0 4px,40px 0}}
+/* full: no surface, no wave — the liquid touches the lid; only bubbles keep it alive */
+.jar.full .fill{height:100%;border-radius:6px 6px 16px 16px;-webkit-mask:none;mask:none;animation:none;box-shadow:inset 0 2px 0 rgba(255,255,255,.35)}
+.jar .bub.b2{left:62%;width:4px;height:4px;animation-duration:4.4s;animation-delay:calc(var(--d,0s) + 1.7s)}
+.jar.full .bub{animation-name:jarBubFull}
+@keyframes jarBubFull{0%{transform:translateY(0);opacity:0}12%{opacity:1}85%{opacity:.75}100%{transform:translateY(-70px);opacity:0}}
+.jar .jd{max-width:100%;margin-top:-1px;font-size:11.5px;line-height:1.2;font-weight:550;color:var(--mute);overflow-wrap:anywhere}
+/* answer control: each level has its own word + one sentence; optional direction chips */
+.ans-word{display:grid;gap:2px}
+.ans-word b{font-size:15px}
+.ans-word span{color:var(--mute)}
+.ans-dir{display:grid;gap:8px;margin-top:6px;padding-top:12px;border-top:1px solid var(--line)}
+.ans-dt{margin:0;font-size:13.5px;font-weight:650;color:var(--ink)}
+.ans-dt small{font-weight:450;color:var(--faint);font-size:12.5px}
+.ans-dir .chips{gap:6px}
+@media (prefers-reduced-motion:reduce){.jar .fill,.jar.calm .fill{animation:none}.jar .bub{animation:none;opacity:0}}
+
+/* -- quizzes «скоро» -- */
+.soon-wrap{min-height:100%;display:grid;place-items:center}
+.soon{display:grid;justify-items:center;gap:12px;max-width:440px;margin:24px auto;text-align:center}
+.soon .t{margin:4px 0 0}.soon .lead{margin:0 0 8px}
+.soon-pill{background:var(--accent-soft);color:var(--accent);font-weight:700;letter-spacing:.02em}
+.soon-art{position:relative;width:120px;height:120px;display:grid;place-items:center;margin-bottom:4px}
+.soon-art i{position:absolute;inset:0;border-radius:50%;border:1.5px solid color-mix(in srgb,var(--accent) 40%,transparent);animation:soonRing 3.2s var(--ease) infinite}
+.soon-art i:nth-child(2){animation-delay:1.05s;border-color:color-mix(in srgb,var(--violet) 45%,transparent)}
+.soon-art i:nth-child(3){animation-delay:2.1s}
+.soon-art span{position:relative;width:64px;height:64px;border-radius:22px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--violet));color:#fff;box-shadow:0 18px 40px -16px color-mix(in srgb,var(--accent) 70%,transparent)}
+.soon-art span svg{width:30px;height:30px}
+@keyframes soonRing{0%{transform:scale(.55);opacity:0}30%{opacity:1}100%{transform:scale(1.15);opacity:0}}
+@media (prefers-reduced-motion:reduce){.soon-art i{animation:none;opacity:.5}}
+
+/* =====================================================================
+   V10 owner revision, 15.10 — welcome: dark brand stage, aurora, feature slider.
+   The welcome keeps its own dark palette in both themes: it is the brand moment, not a working screen.
+   ===================================================================== */
+.welcome.wv{--bg:#0C090E;--bg2:#070508;--surf:rgba(255,255,255,.055);--raise:rgba(255,255,255,.09);--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.16);
+ --ink:#F8F3F7;--mute:#BDB2C0;--faint:#8A808E;--accent:#FF3D61;--accent-soft:rgba(255,61,97,.16);--violet:#A797FF;--violet-soft:rgba(167,151,255,.16);
+ --ok:#6BD3A4;--ok-soft:rgba(107,211,164,.14);--warn:#E9B663;--warn-soft:rgba(233,182,99,.14);
+ color-scheme:dark;color:var(--ink);background:var(--bg);
+ display:flex;flex-direction:column;gap:0;padding:calc(14px + var(--safe-t)) 20px calc(18px + var(--safe-b));overflow-x:hidden;overflow-y:auto;isolation:isolate}
+.welcome.wv>*{position:relative;z-index:1}
+.welcome.wv>.w-aura,.welcome.wv>.w-mark{position:absolute;z-index:0}
+/* aurora: three soft lights drifting slowly */
+.w-aura{inset:0;overflow:hidden;pointer-events:none}
+.w-aura i{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;will-change:transform}
+.w-aura i:nth-child(1){width:70vmax;height:70vmax;left:-25vmax;top:-30vmax;background:radial-gradient(closest-side,#FF2D55,transparent);animation:wDrift1 18s ease-in-out infinite alternate}
+.w-aura i:nth-child(2){width:60vmax;height:60vmax;right:-28vmax;top:10%;background:radial-gradient(closest-side,#6A4DFF,transparent);opacity:.5;animation:wDrift2 22s ease-in-out infinite alternate}
+.w-aura i:nth-child(3){width:50vmax;height:50vmax;left:20%;bottom:-32vmax;background:radial-gradient(closest-side,#C2185B,transparent);opacity:.4;animation:wDrift3 26s ease-in-out infinite alternate}
+.w-aura::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 0%,transparent 40%,rgba(7,5,8,.75)),
+ url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+@keyframes wDrift1{to{transform:translate(12vmax,8vmax) scale(1.1)}}
+@keyframes wDrift2{to{transform:translate(-10vmax,-6vmax) scale(.92)}}
+@keyframes wDrift3{to{transform:translate(-8vmax,-10vmax) scale(1.12)}}
+.w-mark{display:none;right:-2vw;bottom:-4vw;font:800 22vw/.8 var(--font);letter-spacing:-.07em;color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.06);pointer-events:none;user-select:none;white-space:nowrap}
+.w-top{display:flex;align-items:center;justify-content:space-between;flex:none}
+.w-brand{display:flex;align-items:center;gap:10px}
+.welcome .w-logo{width:38px;height:38px;border-radius:12px;margin:0;box-shadow:0 8px 24px -10px rgba(255,61,97,.7)}
+.w-brand b{font:800 20px/1 var(--font);letter-spacing:-.04em}.w-brand b i{font-style:normal;color:var(--accent)}
+.welcome .langsw{background:rgba(255,255,255,.08);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.welcome .langsw button.on{background:rgba(255,255,255,.16);color:var(--ink);box-shadow:none}
+.w-grid{flex:1;display:flex;flex-direction:column;gap:18px;min-height:0;padding-top:18px}
+.w-head{display:grid;gap:10px;animation:rise .7s var(--ease) both}
+.w-kick{display:inline-flex;align-items:center;gap:8px;justify-self:start;margin:0;padding:6px 12px 6px 10px;border-radius:99px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px var(--line2);font-size:12px;font-weight:650;letter-spacing:.02em;color:var(--mute)}
+.w-kick i{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(255,61,97,.6);animation:wPulse 2.4s ease-out infinite}
+@keyframes wPulse{0%{box-shadow:0 0 0 0 rgba(255,61,97,.6)}70%,100%{box-shadow:0 0 0 9px rgba(255,61,97,0)}}
+.w-title{margin:0;font:800 clamp(38px,11vw,52px)/.98 var(--font);letter-spacing:-.05em;text-wrap:balance}
+.w-title em{font-style:normal;background:linear-gradient(100deg,#FF3D61 10%,#FF7A93 45%,#A797FF 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.w-sub{margin:0;max-width:34ch;font-size:16px;line-height:1.45;color:var(--mute)}
+/* the slider card: glass, one grid cell for all slides */
+.w-show{display:flex;flex-direction:column;gap:14px;padding:14px 16px 12px;border-radius:28px;background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 30px 80px -40px rgba(0,0,0,.9);-webkit-backdrop-filter:blur(24px) saturate(1.2);backdrop-filter:blur(24px) saturate(1.2);animation:rise .8s .08s var(--ease) both;touch-action:pan-y}
+.w-prog{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+.w-pb{position:relative;height:16px;display:grid;align-items:center;border-radius:4px}
+.w-pb::before{content:"";height:3px;border-radius:3px;background:rgba(255,255,255,.16)}
+.w-pb i{position:absolute;left:0;top:50%;height:3px;margin-top:-1.5px;width:0;border-radius:3px;background:linear-gradient(90deg,var(--accent),#FF8FA4)}
+.w-pb.done i{width:100%;background:rgba(255,255,255,.55)}
+.w-pb.on i{animation:wProg 6.5s linear forwards}
+.w-show:hover .w-pb.on i,.w-show:focus-within .w-pb.on i{animation-play-state:paused}
+@keyframes wProg{from{width:0}to{width:100%}}
+.w-stage{display:grid;flex:1;min-height:0;user-select:none;-webkit-user-select:none}
+.w-slide{grid-area:1/1;display:flex;flex-direction:column;gap:14px;opacity:0;visibility:hidden;transform:translateX(26px) scale(.985);filter:blur(6px);transition:opacity .5s var(--ease),transform .6s var(--ease),filter .5s var(--ease),visibility 0s .6s}
+.w-slide.on{opacity:1;visibility:visible;transform:none;filter:none;transition:opacity .5s var(--ease),transform .6s var(--ease),filter .5s var(--ease),visibility 0s}
+.w-vis{position:relative;flex:1;min-height:168px;display:grid;place-items:center;border-radius:20px;background:radial-gradient(90% 80% at 50% 100%,rgba(255,61,97,.14),transparent 70%),rgba(0,0,0,.18);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);overflow:hidden;padding:14px}
+.w-txt{display:grid;gap:6px}
+.w-k{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.w-txt h2{margin:0;font:750 21px/1.15 var(--font);letter-spacing:-.03em;text-wrap:balance}
+.w-txt p{margin:0;font-size:14.5px;line-height:1.5;color:var(--mute);text-wrap:pretty}
+.w-ctrl{display:flex;align-items:center;justify-content:space-between}
+.w-count{font-size:12.5px;font-weight:600;color:var(--faint);font-variant-numeric:tabular-nums}.w-count b{color:var(--ink)}
+.w-arrows{display:flex;gap:6px}
+.w-arrows .ibtn{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px var(--line2);color:var(--ink)}
+.w-arrows .ibtn:hover{background:rgba(255,255,255,.14)}
+.w-arrows svg{width:18px;height:18px}
+.w-act{display:grid;gap:10px;animation:rise .8s .14s var(--ease) both}
+.welcome.wv .w-cta{display:grid;gap:8px;max-width:none}
+.welcome.wv .w-cta .btn{min-height:52px;border-radius:16px;font-size:15.5px}
+.welcome.wv .w-cta .btn.primary{background:linear-gradient(135deg,#FF3D61,#E0144A);box-shadow:0 16px 36px -14px rgba(255,61,97,.85),inset 0 1px 0 rgba(255,255,255,.25)}
+.welcome.wv .w-cta .btn.primary:hover{filter:brightness(1.08)}
+.welcome.wv .w-cta .btn.soft{background:rgba(255,255,255,.07);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.welcome.wv .w-age{margin:0;max-width:none;font-size:12px;color:var(--faint);text-align:center}
+.welcome.wv .w-age a{color:var(--ink)}
+
+/* -- slide visuals -- */
+.wf-jars .jars{grid-template-columns:repeat(4,minmax(64px,84px));gap:10px 6px;justify-content:center}
+.wf-jars .jar .jn{font-size:12.5px}
+.wf-layers{display:grid;gap:8px;width:min(100%,330px)}
+.wf-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px var(--line);animation:wRow .6s var(--ease) both;animation-delay:calc(var(--n) * .09s + .1s)}
+.w-slide:not(.on) .wf-row{animation:none}
+@keyframes wRow{from{opacity:0;transform:translateY(10px)}}
+.wf-ic{width:32px;height:32px;flex:none;border-radius:10px;display:grid;place-items:center;background:rgba(255,255,255,.08);color:var(--ink)}.wf-ic svg{width:17px;height:17px}
+.wf-row b{flex:1;min-width:0;font-size:14px;font-weight:600}
+.wf-row em{font-style:normal;font-size:12px;font-weight:700;padding:4px 9px;border-radius:99px;background:rgba(255,255,255,.08);color:var(--mute);white-space:nowrap}
+.wf-row em.ok{background:var(--ok-soft);color:var(--ok)}.wf-row em.v{background:var(--violet-soft);color:var(--violet)}
+.wf-req{width:min(100%,330px);display:grid;gap:12px;padding:14px;border-radius:18px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px var(--line2)}
+.wf-req-h{display:flex;align-items:center;gap:10px}.wf-req-h span{display:grid;gap:1px;min-width:0}.wf-req-h b{font-size:15px}.wf-req-h small{font-size:12.5px;color:var(--mute);line-height:1.3}
+.welcome .wf-av{width:44px;height:44px}
+.wf-dur{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.wf-dur span{display:grid;place-items:center;min-height:36px;border-radius:11px;background:rgba(255,255,255,.06);font-size:13px;font-weight:600;color:var(--mute)}
+.wf-dur span.on{background:var(--ink);color:#120D14}
+.wf-req-f{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--mute)}.wf-req-f svg{width:16px;height:16px;color:var(--ok)}
+.wf-match{display:grid;justify-items:center;gap:8px;width:min(100%,320px)}
+.wf-pair{display:flex;align-items:center;margin-bottom:4px}
+.welcome .wf-big{width:68px;height:68px;box-shadow:0 0 0 3px #1A1220}
+.wf-heart{position:relative;z-index:2;width:38px;height:38px;margin:0 -10px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#FF3D61,#E0144A);color:#fff;box-shadow:0 10px 26px -8px rgba(255,61,97,.9);animation:wBeat 1.6s ease-in-out infinite}
+.wf-heart svg{width:19px;height:19px;fill:currentColor}
+@keyframes wBeat{0%,100%{transform:scale(1)}15%{transform:scale(1.18)}30%{transform:scale(.96)}45%{transform:scale(1.1)}}
+.wf-bub{max-width:88%;padding:8px 12px;border-radius:16px;font-size:13px;line-height:1.35}
+.wf-bub.l{justify-self:start;background:rgba(255,255,255,.09);border-bottom-left-radius:5px}
+.wf-bub.r{justify-self:end;background:linear-gradient(135deg,#FF3D61,#C8174C);color:#fff;border-bottom-right-radius:5px}
+.w-slide.on .wf-bub{animation:wRow .55s var(--ease) both}.w-slide.on .wf-bub.r{animation-delay:.35s}
+.wf-cmp{display:grid;justify-items:center;gap:10px;width:min(100%,330px)}
+.welcome .venn{margin:0;transform:scale(.86)}
+.welcome .venn i:nth-child(2){mix-blend-mode:screen}
+.wf-facts{display:grid;gap:6px;width:100%}
+.wf-f{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.06);font-size:12.5px;line-height:1.3}
+.wf-f svg{width:16px;height:16px;flex:none}.wf-f.g svg{color:var(--ok)}.wf-f.a svg{color:var(--warn)}
+.wf-ev{width:min(100%,340px);display:flex;gap:12px;padding:14px;border-radius:18px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px var(--line2)}
+.wf-date{flex:none;width:56px;height:62px;border-radius:14px;display:grid;place-content:center;text-align:center;background:linear-gradient(160deg,#FF3D61,#8E2DE2);color:#fff}
+.wf-date small{font-size:11px;font-weight:700;letter-spacing:.08em;opacity:.85}.wf-date b{font:800 26px/1 var(--font)}
+.wf-ev-b{display:grid;gap:5px;min-width:0}.wf-ev-b>b{font-size:15px;line-height:1.25}
+.wf-ev-b>small{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--mute)}.wf-ev-b>small svg{width:14px;height:14px}
+.wf-ppl{display:flex;align-items:center;margin-top:3px}
+.welcome .wf-sm{width:26px;height:26px;box-shadow:0 0 0 2px #1A1220}.welcome .wf-sm+.wf-sm{margin-left:-8px}
+.wf-ppl em{margin-left:8px;font-style:normal;font-size:12px;font-weight:700;color:var(--mute)}
+
+/* short phones: tighter, the subtitle goes */
+@container stage (max-height:700px){.w-sub{display:none}.w-vis{min-height:140px}}
+@media (max-height:700px){.welcome.wv .w-sub{display:none}.welcome.wv .w-vis{min-height:140px}.welcome.wv .w-title{font-size:36px}}
+
+/* tablet: one centred column, a little more air */
+@container stage (min-width:768px){
+ .welcome.wv{padding:28px 40px 28px;justify-content:flex-start}
+ .welcome.wv>*:not(.w-aura):not(.w-mark){width:100%;max-width:640px;margin-inline:auto}
+ .w-grid{gap:22px;padding-top:28px}
+ .w-title{font-size:60px}
+ .w-sub{font-size:18px}
+ .w-show{padding:18px 20px 14px;border-radius:32px}
+ .w-vis{min-height:230px}
+ .w-txt h2{font-size:24px}
+ .welcome.wv .w-cta{grid-template-columns:1fr 1fr}
+}
+/* desktop: hero left, features right, the brand word as a ghost in the corner */
+@container stage (min-width:1024px){
+ .welcome.wv{padding:32px clamp(40px,5vw,80px)}
+ .welcome.wv>*:not(.w-aura):not(.w-mark){max-width:1240px}
+ .w-mark{display:block}
+ .w-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(400px,500px);grid-template-areas:"head show" "act show";grid-template-rows:auto 1fr;column-gap:clamp(48px,6vw,104px);row-gap:36px;align-content:center;padding:0}
+ .w-head{grid-area:head;align-self:end;gap:18px}
+ .w-act{grid-area:act;align-self:start;max-width:520px}
+ .w-show{grid-area:show;align-self:center;height:min(600px,calc(100cqh - 140px));min-height:500px;padding:22px 24px 18px;border-radius:36px}
+ .w-title{font-size:clamp(60px,6.4vw,96px)}
+ .w-sub{font-size:20px;max-width:30ch}
+ .w-vis{min-height:0}
+ .w-txt h2{font-size:27px}
+ .w-txt p{font-size:15.5px}
+ .welcome.wv .w-cta{grid-template-columns:1fr 1fr}
+ .welcome.wv .w-age{text-align:left}
+ .wf-jars .jars{grid-template-columns:repeat(4,minmax(72px,96px))}
+ .wf-jars .jar .vessel{transform:scale(1.12);transform-origin:50% 100%}
+}
+@media (prefers-reduced-motion:reduce){
+ .w-aura i,.w-kick i,.wf-heart{animation:none}
+ .w-pb.on i{animation:none;width:100%}
+ .w-slide,.w-slide.on{transition:opacity .2s;transform:none;filter:none}
+}
+/* the old 680px column rule (.welcome>*) must not clip the aurora / ghost word */
+.welcome.wv>.w-aura{width:auto;max-width:none;margin:0;inset:0}
+.welcome.wv>.w-mark{width:auto;max-width:none;margin:0}
+/* phones: no subtitle and no arrow row (swipe + the bars), so both buttons stay on screen */
+@container stage (max-width:767px){
+ .welcome.wv .w-sub{display:none}
+ .welcome.wv .w-ctrl{display:none}
+ .welcome.wv .w-grid{gap:16px;padding-top:16px}
+ .welcome.wv .w-show{padding-bottom:16px}
+}
+@container stage (min-width:1024px){
+ .w-grid{grid-template-areas:". show" "head show" "act show" ". show";grid-template-rows:1fr auto auto 1fr;row-gap:32px}
+ .w-head,.w-act{align-self:auto}
+ .w-mark{left:-1.5vw;right:auto;bottom:-5.5vw}
+}
+.wf-jars{width:100%}
+.wf-jars .jars{grid-template-columns:repeat(4,minmax(0,84px))}
+@container stage (max-width:359px){.wf-jars .jar .vessel{width:42px;height:74px}.wf-jars .jar .jn{font-size:11.5px}.wf-jars .jars{gap:10px 2px}}
+@container stage (min-width:768px) and (max-width:1023px){
+ .w-grid{justify-content:center}
+ .w-show{flex:1;max-height:620px}
+}
+@container stage (min-width:1024px){
+ .w-vis>:not(.wf-jars){transform:scale(1.12)}
+}
+.jar .jd{overflow-wrap:break-word}
+@container stage (max-width:359px){.wf-jars .jar .jd{font-size:10.5px}}
+@container stage (min-width:768px){.wf-jars .jar .vessel{transform:scale(1.12);transform-origin:50% 100%}}
 </style>
 </head>
 <body>
@@ -1620,16 +1841,16 @@ const FOLLOW_SEED={sofi:['mia','kira','me'],leon:['mia','maya'],mia:['maya','kai
 const PEOPLE={
  sofi:{pv:true,name:'Sofi',age:26,photo:1,nph:3,city:'berlin',km:4,pron:'she',gender:['woman'],orient:['bi'],format:['open','serious'],status:'single',role:['recv'],seek:['dates','chat'],verified:true,online:true,dating:true,
   bio:{ru:'Люблю долгие переписки перед встречей и людей, которые не торопят. Фотографирую плёнку.',en:'I love long chats before meeting and people who don’t rush. I shoot film.'},
-  jars:[['experiments',10],['bondage',8],['sensory',8],['exhibition',4]]},
+  jars:[['experiments',10],['bondage',8,['get']],['sensory',8,['get']],['exhibition',4,['watch']]]},
  leon:{premium:true,name:'Leon',age:33,photo:2,nph:2,city:'berlin',km:8,pron:'he',gender:['transm'],orient:['bi'],format:'open',role:['lead'],seek:['dates'],verified:true,online:false,last:{ru:'был вчера',en:'active yesterday'},dating:true,
   bio:{ru:'Сначала кофе и разговор, потом всё остальное. Веду небольшие вечеринки.',en:'Coffee and a talk first, everything else later. I host small parties.'},
-  jars:[['control',10],['roleplay',8],['bondage',6],['latex',8]]},
+  jars:[['control',10,['give']],['roleplay',8,['give','get']],['bondage',8,['give']],['latex',8,['watch']]]},
  mia:{pv:true,premium:true,privText:{ru:'Перед первой сессией всегда созваниваемся. Стоп-слово — «красный», жест — два хлопка. После — обязательно чай и разговор.',en:'We always call before a first session. Safeword is “red”, gesture is two taps. Afterwards — tea and a talk, always.'},name:'Mia',age:29,photo:3,nph:5,city:'berlin',km:3,pron:'she',gender:['transw'],orient:['queer'],format:['poly','play'],status:'partnered',role:['switch'],seek:['dates','exp'],verified:true,online:true,dating:true,
   bio:{ru:'Люблю людей, которые говорят прямо, не торопят события и заранее обсуждают ожидания. Практикую шибари шесть лет.',en:'I like people who speak directly, don’t rush and agree on expectations up front. Six years of shibari.'},
-  jars:[['shibari',10],['bondage',8],['aftercare',10],['roleplay',8]]},
+  jars:[['shibari',10,['give','watch']],['bondage',8,['give']],['aftercare',10,['give','get']],['roleplay',8,'all']]},
  kai:{pv:true,name:'Kai',age:27,photo:4,nph:2,city:'berlin',km:5,pron:'they',gender:['nb'],orient:['pan'],format:'ra',role:['switch'],seek:['chat','friends'],verified:true,online:false,last:{ru:'был(а) сегодня',en:'active today'},dating:true,
   bio:{ru:'Ищу людей, с которыми можно спокойно говорить о границах. Остальное приложится.',en:'Looking for people I can calmly talk boundaries with. The rest will follow.'},
-  jars:[['service',8],['bondage',6],['rituals',8],['talk',10],{t:'filming',lv:0,limit:'hard'}]},
+  jars:[['service',8,['give']],['bondage',6,['get']],['rituals',8],['talk',10],{t:'filming',lv:0,limit:'hard'}]},
  maya:{pv:true,name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:['none'],seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
   bio:{ru:'Веду сообщество «Узлы и разговоры» и встречи для новичков. Здесь — ради людей и тем.',en:'I run the Rope & Talk community and newcomer meetups. Here for people and ideas.'},
   jars:[['shibari',10],['talk',10],['aftercare',8]]},
@@ -1735,8 +1956,8 @@ function fullMe(){return{privText:{ru:'Новичок в верёвке, поэ�
  bio:{ru:'Говорю прямо, слушаю внимательно. Люблю верёвку, долгие прогулки и людей, которые знают свои границы.',en:'I speak directly and listen closely. I love rope, long walks and people who know their limits.'},
  vis:{...PUBLIC_VIS},email:'alex@mail.com',methods:['email','google'],dating:true,datingVisible:true,socialLikes:true,requestsFrom:'all',rsvpShow:false,ageCheck:'ok',premium:false,
  jars:[
-  {t:'bondage',lv:8,real:'practice',vis:'public'},{t:'shibari',lv:6,real:'try',vis:'public'},{t:'roleplay',lv:8,real:'practice',vis:'public'},{t:'aftercare',lv:10,real:'practice',vis:'public'},
-  {t:'control',lv:8,real:'practice',vis:'granted'},{t:'sensory',lv:6,real:'fantasy',vis:'granted'},{t:'experiments',lv:10,real:'try',vis:'only'},{t:'intimacy',lv:8,real:'practice',vis:'public'},
+  {t:'bondage',lv:8,dir:['give'],real:'practice',vis:'public'},{t:'shibari',lv:6,dir:['give'],real:'try',vis:'public'},{t:'roleplay',lv:8,dir:['give','get'],real:'practice',vis:'public'},{t:'aftercare',lv:10,real:'practice',vis:'public'},
+  {t:'control',lv:8,dir:['give'],real:'practice',vis:'granted'},{t:'sensory',lv:6,dir:['give','get','watch'],real:'fantasy',vis:'granted'},{t:'experiments',lv:10,real:'try',vis:'only'},{t:'intimacy',lv:8,real:'practice',vis:'public'},
   {t:'impact',lv:0,limit:'hard',vis:'only'},{t:'exhibition',lv:0,limit:'discuss',vis:'granted'}],
  history:[{t:ago(30),topic:'shibari',from:4,to:6,src:'test'},{t:ago(200),topic:'aftercare',from:8,to:10,src:'manual'},{t:ago(400),topic:'impact',from:'—',to:'limit',src:'manual'}],
  journal:[
@@ -1902,10 +2123,36 @@ Object.assign(TOPIC_DESC,{
 for(const k of Object.keys(HIDDEN_TOPICS))TOPIC_DESC[k]=TOPIC_DESC[k]||{ru:'Практика только для опытных людей. Скрыта из каталога.',en:'For experienced people only. Hidden from the catalogue.'};
 
 /* the one answer scale used everywhere: quiz, jar sheet, compare */
-const LV_WORD=n=>n>=10?L('Главное для меня','Essential to me'):n>=7?L('Очень нравится','Love it'):n>=4?L('Интересно','Into it'):L('Немного интересно','A little curious');
+/* every level has its own word and one plain sentence (owner, 15.10: no repeats like 7–9 «очень нравится») */
+const LV_TXT={
+ 1:[['Едва любопытно','Barely curious'],['Знаю, что такое бывает. Пока просто любопытно.','I know it exists. Just curious for now.']],
+ 2:[['Мелькает мысль','Crosses my mind'],['Иногда приходит в голову — без спешки и планов.','It comes to mind now and then — no rush, no plans.']],
+ 3:[['Любопытно, но осторожно','Curious, carefully'],['Хочется узнать больше, прежде чем решаться.','I’d like to know more before deciding.']],
+ 4:[['Можно попробовать','Up for trying'],['С правильным человеком — почему бы и нет.','With the right person — why not.']],
+ 5:[['Всерьёз интересно','Genuinely interested'],['Уже не просто мысль: хочется попробовать по-настоящему.','More than a thought: I want to really try it.']],
+ 6:[['Тянет','Drawn to it'],['Цепляет. Хочется возвращаться к этому снова.','It hooks me. I want to come back to it.']],
+ 7:[['Нравится','I like it'],['Приятно и знакомо — соглашаюсь с удовольствием.','Familiar and good — a happy yes.']],
+ 8:[['Очень нравится','Really into it'],['Одно из любимого. Радует каждый раз.','One of my favourites. Good every time.']],
+ 9:[['Обожаю','I adore it'],['Почти всегда «да». Это меня зажигает.','Almost always a yes. It lights me up.']],
+ 10:[['Без этого никак','Can’t do without it'],['Часть меня. Без этого всё будет не то.','Part of who I am. Without it, it’s not the same.']],
+};
+const lvTxt=n=>LV_TXT[Math.max(1,Math.min(10,Math.round(+n)||1))];
+const LV_WORD=n=>{const w=lvTxt(n)[0];return L(w[0],w[1]);};
+const LV_HINT=n=>{const w=lvTxt(n)[1];return L(w[0],w[1]);};
 const MARK_WORD=m=>m==='hard'?L('Табу','Taboo'):L('Обсуждаемо','Negotiable');
 const MARK_TEXT=m=>m==='hard'?L('Точно нет. Не показываем в профиле и не предлагаем людей, для которых это важно.','A firm no. Never shown on your profile; we won’t suggest people for whom it matters.'):L('Возможно, но только после разговора и на твоих условиях.','Maybe — only after a talk and on your terms.');
-const jarWord=j=>j.limit?MARK_WORD(j.limit):`${j.lv} · ${LV_WORD(j.lv)}`;
+/* direction of a level answer: give / receive / watch, any combination; all three read as «всё». Optional: no mark = not said.
+   Limits (табу / обсуждаемо) and the «Частые границы» topics carry no direction. */
+const DIRS=['give','get','watch'];
+const DIR_WORD=d=>({give:L('давать','giving'),get:L('получать','receiving'),watch:L('смотреть','watching')})[d]||'';
+const normDir=d=>{const a=Array.isArray(d)?d:d==='all'?DIRS:d?[d]:[];const out=DIRS.filter(x=>a.includes(x));return out.length?out:undefined;};
+const dirText=d=>{const a=normDir(d);if(!a)return '';return a.length===DIRS.length?L('всё','all of it'):a.map(DIR_WORD).join(', ');};
+const hasDir=t=>!isLimitCat(t);
+/** one jar shape everywhere: [t,lv,dir?] seed arrays or {t,lv,limit,vis,dir} objects */
+const normJar=x=>{const j=Array.isArray(x)?{t:x[0],lv:x[1],dir:x[2]}:{...x};const d=j.limit?undefined:normDir(j.dir);if(d)j.dir=d;else delete j.dir;return j;};
+const jarWord=j=>{j=normJar(j);return j.limit?MARK_WORD(j.limit):[`${j.lv} · ${LV_WORD(j.lv)}`,dirText(j.dir)].filter(Boolean).join(', ');};
+/** short form for comparisons: «8/10, давать» */
+const jarShort=j=>{j=normJar(j);return j.limit?MARK_WORD(j.limit).toLowerCase():[`${j.lv}/10`,dirText(j.dir)].filter(Boolean).join(', ');};
 const isLimitCat=t=>TOPICS[t]?.cat==='limits';
 const topicQ=t=>isLimitCat(t)?L('Как ты к этому относишься?','How do you feel about this?'):L('Насколько тебе это интересно?','How into this are you?');
 
@@ -2382,15 +2629,17 @@ document.addEventListener('focusin',e=>{const el=e.target;if(!el.matches?.('inpu
 /** liquid colour follows the value: low → red, 3 → orange, 5 → yellow, 10 → green. The number is always printed, so colour is never the only cue. */
 function jarColor(v){const st=[[1,4],[3,26],[5,46],[7,88],[10,140]];v=Math.max(1,Math.min(10,+v||1));let h=st[0][1];for(let k=1;k<st.length;k++)if(v<=st[k][0]){const [a,ha]=st[k-1],[b,hb]=st[k];h=ha+(hb-ha)*(v-a)/(b-a);break;}return `hsl(${Math.round(h)} 58% 55%)`;}
 function jarsHTML(list,o={}){
- const items=list.map(x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x);
+ const items=list.map(normJar);
  return `<div class="jars ${o.pre?'pre':''} ${o.cls||''}">${items.map((j,i)=>{
-  const tag=o.act?'button':'div';const attrs=o.act?`data-act="${o.act}" data-v="${j.t}" ${o.who?`data-who="${o.who}" data-ans="${j.limit||j.lv}"`:''} aria-label="${esc(topic(j.t))}: ${esc(jarWord(j))}"`:'';
+  const tag=o.act?'button':'div';const attrs=o.act?`data-act="${o.act}" data-v="${j.t}" ${o.who?`data-who="${o.who}" data-ans="${j.limit||j.lv}"${j.dir?` data-dir="${j.dir.join(' ')}"`:''}`:''} aria-label="${esc(topic(j.t))}: ${esc(jarWord(j))}"`:'';
   const was=o.was&&o.was[j.t]!=null?`<small class="was">${L('было','was')} ${o.was[j.t]==='hard'?L('табу','taboo'):o.was[j.t]==='discuss'?L('обсужд.','negot.'):o.was[j.t]}</small>`:'';
   const vis=o.vis&&j.vis!=='public'?`<span class="jvis">${j.vis==='granted'?I.key:I.eyeoff}</span>`:'';
   if(j.limit)return `<${tag} class="jar ${j.limit==='hard'?'taboo':'discuss'}" ${attrs}><span class="vessel"><span class="jm">${j.limit==='hard'?I.block:I.chat}</span>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw sr">${j.limit==='hard'?(o.who&&o.who!=='me'?L('нельзя','not for me'):L('табу','taboo')):L('обсуждаемо','negotiable')}</span>${was}</${tag}>`;
-  return `<${tag} class="jar" ${attrs} style="--v:${j.lv};--jc:${jarColor(j.lv)};--d:${(i%6)*.35}s"><span class="vessel"><span class="fill"><i class="bub"></i></span><b class="lv">${j.lv}</b>${vis}</span><span class="jn">${esc(topic(j.t))}</span>${was}</${tag}>`;}).join('')}${o.more?`<button class="jar more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="vessel"><b>+${o.more.n}</b></span><span class="jn">${L('Все','All')}</span></button>`:''}${o.add?`<button class="jar add" data-act="${o.add}"><span class="vessel">${I.plus}</span><span class="jn">${L('Добавить','Add')}</span></button>`:''}</div>`;
+  /* the higher the level, the calmer the surface: 8–9 barely ripple, 10 is full to the lid — only bubbles */
+  const calm=j.lv>=10?'full':j.lv>=8?'calm':'';
+  return `<${tag} class="jar ${calm}" ${attrs} style="--v:${j.lv};--jc:${jarColor(j.lv)};--d:${(i%6)*.35}s"><span class="vessel"><span class="fill"><i class="bub"></i>${j.lv>=8?'<i class="bub b2"></i>':''}</span><b class="lv">${j.lv}</b>${vis}</span><span class="jn">${esc(topic(j.t))}</span>${j.dir&&!o.noDir?`<span class="jd">${esc(dirText(j.dir))}</span>`:''}${was}</${tag}>`;}).join('')}${o.more?`<button class="jar more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="vessel"><b>+${o.more.n}</b></span><span class="jn">${L('Все','All')}</span></button>`:''}${o.add?`<button class="jar add" data-act="${o.add}"><span class="vessel">${I.plus}</span><span class="jn">${L('Добавить','Add')}</span></button>`:''}</div>`;
 }
-const pubJars=id=>id==='me'||id==='couple'?(id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me)).jars.filter(j=>j.vis==='public'):(person(id)?.jars||[]).map(x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x).filter(j=>!j.vis||j.vis==='public');
+const pubJars=id=>id==='me'||id==='couple'?(id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me)).jars.filter(j=>j.vis==='public'):(person(id)?.jars||[]).map(normJar).filter(j=>!j.vis||j.vis==='public');
 const fillJars=()=>setTimeout(()=>$$('.jars.pre').forEach(j=>j.classList.remove('pre')),90);
 function venn(n,o={}){return `<div class="venn ${o.mini?'mini':''} ${o.pre?'pre':''}" ${o.id?`id="${o.id}"`:''}><i></i><i></i><b>${n}${o.mini?'':`<small>${pl(n,['общая тема','общие темы','общих тем'],['shared topic','shared topics'],true)}</small>`}</b></div>`;}
 const playVenn=()=>setTimeout(()=>$$('.venn.pre').forEach(v=>v.classList.remove('pre')),120);
@@ -2399,20 +2648,25 @@ const playVenn=()=>setTimeout(()=>$$('.venn.pre').forEach(v=>v.classList.remove(
 function shared(id){
  const p=person(id);if(!p)return{match:[],complement:[],discuss:[],few:true};
  const mine=S.me.jars.filter(j=>j.vis==='public'&&!j.limit);
- const theirs=(p.jars||[]).map(j=>Array.isArray(j)?{t:j[0],lv:j[1]}:j).filter(j=>!j.limit);
+ const theirs=(p.jars||[]).map(normJar).filter(j=>!j.limit);
  const match=mine.filter(j=>j.lv>=6&&theirs.some(x=>x.t===j.t&&x.lv>=6)).map(j=>j.t);
  const complement=[];const discuss=[];
  const r1=fmtList(publicField(S.me,'role')),r2=fmtList(p.role);
  const roles=r1.includes('lead')&&r2.includes('recv')?['lead','recv']:r1.includes('recv')&&r2.includes('lead')?['recv','lead']:null;
  if(roles)complement.push(L(`Твоя ${opt('role',roles[0])} и ${opt('role',roles[1])} у ${pname(id)} дополняют друг друга`,`Your ${opt('role',roles[0])} role and ${pname(id)}’s ${opt('role',roles[1])} role complement each other`));
  else if(r1.includes('switch')||r2.includes('switch'))complement.push(L('Среди открытых ролей есть свитч: роли можно договорить вместе','The shared roles include switch: roles are open to agree on'));
- mine.forEach(j=>{const x=theirs.find(y=>y.t===j.t);if(x&&Math.abs(x.lv-j.lv)>=4)discuss.push(L(`${topic(j.t)}: у тебя ${j.lv}/10, у ${pname(id)} ${x.lv}/10`,`${topic(j.t)}: you ${j.lv}/10, ${pname(id)} ${x.lv}/10`));
-  if(false)discuss.push(L(`${topic(j.t)}: ты хочешь попробовать, для ${pname(id)} это сильный интерес`,`${topic(j.t)}: you want to try, for ${pname(id)} it’s a strong interest`));});
+ mine.forEach(j=>{const x=theirs.find(y=>y.t===j.t);if(!x)return;
+  if(Math.abs(x.lv-j.lv)>=4){discuss.push(L(`${topic(j.t)}: у тебя ${jarShort(j)}, у ${pname(id)} ${jarShort(x)}`,`${topic(j.t)}: you ${jarShort(j)}, ${pname(id)} ${jarShort(x)}`));return;}
+  /* direction: giving meets receiving → complements; both only give (or only receive) → worth agreeing on */
+  const a=normDir(j.dir),b=normDir(x.dir);if(!a||!b)return;
+  const fits=(a.includes('give')&&b.includes('get'))||(a.includes('get')&&b.includes('give'));
+  if(fits)complement.push(L(`${topic(j.t)}: у тебя ${dirText(a)}, у ${pname(id)} ${dirText(b)} — дополняете друг друга`,`${topic(j.t)}: you — ${dirText(a)}, ${pname(id)} — ${dirText(b)}: you complement each other`));
+  else if(a.length===1&&b.length===1&&a[0]===b[0]&&a[0]!=='watch')discuss.push(L(`${topic(j.t)}: вам обоим ближе ${dirText(a)} — стоит договориться`,`${topic(j.t)}: you both lean to ${dirText(a)} — worth agreeing on`));});
  const mf=fmtList(publicField(S.me,'format')),tf=fmtList(p.format);if(mf.length&&tf.length&&mf.includes('mono')!==tf.includes('mono'))discuss.push(L(`Формат отношений: ${fmtText(mf,2)} и ${fmtText(tf,2)}`,`Relationship format: ${fmtText(mf,2)} vs ${fmtText(tf,2)}`));else{const both=mf.filter(x=>tf.includes(x));if(both.length)complement.push(L(`Совпадает формат: ${fmtText(both,2)}`,`Same format: ${fmtText(both,2)}`));}
  return{match,complement,discuss:[...new Set(discuss)],few:mine.length<2||theirs.length<2};
 }
 function sharedSummary(id){const s=shared(id);if(s.few)return L('Пока мало общего контекста','Not much shared context yet');
- const parts=[];if(s.match.length)parts.push(pl(s.match.length,['общая тема','общие темы','общих тем'],['shared topic','shared topics']));if(s.complement.length)parts.push(L('роли дополняют','roles complement'));return parts.join(', ')||L('Есть что обсудить','Something to talk about');}
+ const parts=[];if(s.match.length)parts.push(pl(s.match.length,['общая тема','общие темы','общих тем'],['shared topic','shared topics']));if(s.complement.length)parts.push(L('дополняете друг друга','you complement each other'));return parts.join(', ')||L('Есть что обсудить','Something to talk about');}
 
 /* ---------- people ---------- */
 function whoLine(id){const p=person(id);if(!p)return '';const g=(p.gender||[]).map(x=>opt('gender',x)).join(', ');const o=(p.orient||[]).map(x=>opt('orient',x)).join(', ');return [p.pair?T(p.pairNote):opt('pron',p.pron),[g,o].filter(Boolean).join(', ')].filter(Boolean).join(' · ');}
@@ -2985,12 +3239,59 @@ function nearestKnownCity(coords){const near=PLACES.map(([id,country,ru,en,lat,l
 const langSw=()=>`<div class="langsw" role="group" aria-label="Language">${[['ru','RU'],['en','EN']].map(([k,l])=>`<button class="${S.lang===k?'on':''}" data-act="setLang" data-v="${k}" aria-pressed="${S.lang===k}">${l}</button>`).join('')}</div>`;
 ACT.setLang=a=>{S.lang=a.dataset.v;document.documentElement.lang=S.lang;refresh();resheet();};
 
-SC.A01={auth:1,title:()=>L('Приветствие','Welcome'),render:()=>`<div class="welcome"><div class="w-bg"></div>
- <div class="w-top"><img class="w-logo" src="${LOGO()}" alt="FetUre">${langSw()}</div>
- <h1 class="w-word"><span>Fet</span><span>Ure</span></h1>
- <div class="w-lines"><span>${L('Пойми, чего хочешь.','Understand what you want.')}</span><span>${L('Покажи ровно столько, сколько решишь.','Show exactly as much as you choose.')}</span><span>${L('Найди тех, с кем это совпадает.','Find people it resonates with.')}</span></div>
- <div class="w-cta"><button class="btn primary" data-go="A02" data-p='{"mode":"up"}'>${L('Создать аккаунт','Create account')}</button><button class="btn soft" data-go="A02" data-p='{"mode":"in"}'>${L('У меня уже есть аккаунт','I already have an account')}</button></div>
- <div class="w-age">${L('Только для взрослых, 18+. Продолжая, ты соглашаешься с','Adults only, 18+. By continuing you agree to the')} <a href="#" data-act="terms">${L('условиями','terms')}</a>.</div></div>`};
+/* A01 — welcome (owner, 15.10.2026: «максимально круто», a slider with the top features).
+   Always the dark brand palette; on a wide screen hero left, features right; on a phone one column with buttons at the bottom.
+   The slider is one grid cell: slides cross-fade, the bar of the active slide fills and moves on (no timers to clean up);
+   hover/focus pauses it, reduced motion turns autoplay off. Visuals are decorative; the words carry the meaning. */
+const W_SLIDES=()=>[
+ {k:L('Баночки','Jars'),h:L('Интересы — баночками, а не анкетой','Interests as jars, not a form'),p:L('Каждая тема — от 1 до 10, «обсуждаемо» или «табу». И как тебе ближе: давать, получать или смотреть.','Every topic is 1 to 10, “negotiable” or “taboo”. Plus how you like it: giving, receiving or watching.'),
+  v:()=>`<div class="wf-jars">${jarsHTML([{t:'shibari',lv:10,dir:['give']},{t:'aftercare',lv:8,dir:['get']},{t:'roleplay',lv:6,dir:DIRS},{t:'latex',lv:3,dir:['watch']}],{pre:1})}</div>`},
+ {k:L('Приватность','Privacy'),h:L('Покажи ровно столько, сколько решишь','Show exactly as much as you choose'),p:L('Каждое поле, фото и интерес: всем, по доступу или только тебе. По умолчанию всё скрыто.','Every field, photo and interest: everyone, by access or only you. Hidden by default.'),
+  v:()=>`<div class="wf-layers">${[[I.globe,L('Ник и фото','Nickname & photo'),L('всем','everyone'),'ok'],[I.key,L('Роли и желания','Roles & wishes'),L('по доступу','by access'),'v'],[I.eyeoff,L('Дневник','Journal'),L('только я','only me'),'']].map(([i,b,e,c],n)=>`<div class="wf-row" style="--n:${n}"><span class="wf-ic">${i}</span><b>${b}</b><em class="${c}">${e}</em></div>`).join('')}</div>`},
+ {k:L('Доступ на срок','Timed access'),h:L('Приватное — по запросу и на срок','Private — on request, for a set time'),p:L('Фото и желания открываешь конкретному человеку на день, неделю или месяц. Передумаешь — закроешь в один тап.','Open photos and wishes to one person for a day, a week or a month. Change your mind — close it in one tap.'),
+  v:()=>`<div class="wf-req"><div class="wf-req-h">${av('mia','wf-av')}<span><b>Mia</b><small>${L('просит открыть приватные фото','asks to see your private photos')}</small></span></div><div class="wf-dur">${[L('24 часа','24 hours'),L('7 дней','7 days'),L('30 дней','30 days')].map((d,n)=>`<span class="${n===1?'on':''}">${d}</span>`).join('')}</div><div class="wf-req-f">${I.unlock}<span>${L('Отозвать можно в любой момент','Revoke any time')}</span></div></div>`},
+ {k:L('Взаимность','Mutual'),h:L('Пишут только взаимно','Messages only when it’s mutual'),p:L('Никаких непрошеных сообщений: чат открывается только после взаимной симпатии.','No unsolicited messages: a chat opens only after a mutual like.'),
+  v:()=>`<div class="wf-match"><div class="wf-pair">${av('lina','wf-big')}<span class="wf-heart">${I.heart}</span>${av('ari','wf-big')}</div><div class="wf-bub l">${L('Взаимно! Теперь можно написать','It’s mutual! You can write now')}</div><div class="wf-bub r">${L('Привет! Классный пост про верёвку','Hi! Loved your post about rope')}</div></div>`},
+ {k:L('Совпадения','In common'),h:L('Честно о совпадениях','Honest about what you share'),p:L('Без процентов «совместимости»: что совпадает, что дополняет друг друга и что стоит обсудить заранее.','No “compatibility” percentages: what you share, what complements and what to talk through first.'),
+  v:()=>`<div class="wf-cmp">${venn(3,{})}<div class="wf-facts"><span class="wf-f g">${I.check}${L('Шибари: у тебя давать, у Mia получать','Shibari: you giving, Mia receiving')}</span><span class="wf-f a">${I.chat}${L('Темп: стоит обсудить','Pace: worth a talk')}</span></div></div>`},
+ {k:L('Сообщество','Community'),h:L('Сообщества и встречи','Communities and meet-ups'),p:L('Обсуждения с модерацией и события онлайн и офлайн. Адрес видят только одобренные участники.','Moderated discussions and events online and offline. Only approved guests see the address.'),
+  v:()=>`<div class="wf-ev"><div class="wf-date"><small>${L('СБ','SAT')}</small><b>19</b></div><div class="wf-ev-b"><b>${L('Вечер шибари для новичков','Shibari night for beginners')}</b><small>${I.pin}${L('Берлин · адрес после одобрения','Berlin · address after approval')}</small><div class="wf-ppl">${['sofi','mia','kai','leon'].map(id=>av(id,'wf-sm')).join('')}<em>+38</em></div></div></div>`},
+];
+SC.A01={auth:1,title:()=>L('Приветствие','Welcome'),render:()=>{const sl=W_SLIDES(),cur=Math.min(S.ui.wIdx||0,sl.length-1),nn=n=>String(n+1).padStart(2,'0');
+ return `<div class="welcome wv"><div class="w-aura" aria-hidden="true"><i></i><i></i><i></i></div><div class="w-mark" aria-hidden="true">FetUre</div>
+ <header class="w-top"><div class="w-brand"><img class="w-logo" src="${LOGO()}" alt=""><b>Fet<i>Ure</i></b></div>${langSw()}</header>
+ <div class="w-grid">
+  <div class="w-head">
+   <p class="w-kick"><i></i>${L('18+ · приватно по умолчанию','18+ · private by default')}</p>
+   <h1 class="w-title">${L('Пойми, чего <em>хочешь</em>.','Know what you <em>want</em>.')}</h1>
+   <p class="w-sub">${L('Покажи ровно столько, сколько решишь. Найди тех, с кем это совпадает.','Show exactly as much as you choose. Find people it resonates with.')}</p>
+  </div>
+  <section class="w-show" aria-roledescription="${L('карусель','carousel')}" aria-label="${L('Главное в FetUre','FetUre highlights')}">
+   <div class="w-prog">${sl.map((x,n)=>`<button class="w-pb ${n===cur?'on':''} ${n<cur?'done':''}" data-act="wSlide" data-v="${n}" aria-label="${nn(n)} · ${esc(x.k)}" aria-current="${n===cur}"><i></i></button>`).join('')}</div>
+   <div class="w-stage">${sl.map((x,n)=>`<article class="w-slide ${n===cur?'on':''}" data-i="${n}" aria-hidden="${n!==cur}"><div class="w-vis" aria-hidden="true">${x.v()}</div><div class="w-txt"><span class="w-k">${nn(n)} · ${esc(x.k)}</span><h2>${esc(x.h)}</h2><p>${esc(x.p)}</p></div></article>`).join('')}</div>
+   <div class="w-ctrl"><span class="w-count"><b>${nn(cur)}</b> / ${nn(sl.length-1)}</span><span class="w-arrows"><button class="ibtn" data-act="wSlide" data-v="prev" aria-label="${L('Назад','Previous')}">${I.back}</button><button class="ibtn" data-act="wSlide" data-v="next" aria-label="${L('Дальше','Next')}">${I.chev}</button></span></div>
+  </section>
+  <div class="w-act">
+   <div class="w-cta"><button class="btn primary" data-go="A02" data-p='{"mode":"up"}'>${L('Создать аккаунт','Create account')}</button><button class="btn soft" data-go="A02" data-p='{"mode":"in"}'>${L('У меня уже есть аккаунт','I already have an account')}</button></div>
+   <div class="w-age">${L('Только для взрослых, 18+. Продолжая, ты соглашаешься с','Adults only, 18+. By continuing you agree to the')} <a href="#" data-act="terms">${L('условиями','terms')}</a>.</div>
+  </div>
+ </div></div>`;},
+ after:()=>{const show=$('.w-show');if(!show)return;wPlay(S.ui.wIdx||0,true);
+  show.addEventListener('animationend',e=>{if(e.target.matches('.w-pb.on>i'))wShow((S.ui.wIdx||0)+1);});
+  show.addEventListener('keydown',e=>{if(e.key==='ArrowRight')wShow((S.ui.wIdx||0)+1);else if(e.key==='ArrowLeft')wShow((S.ui.wIdx||0)-1);});
+  let x0=null,y0=0;const st=$('.w-stage',show);
+  st.addEventListener('pointerdown',e=>{x0=e.clientX;y0=e.clientY;});
+  st.addEventListener('pointerup',e=>{if(x0==null)return;const dx=e.clientX-x0,dy=e.clientY-y0;x0=null;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy))wShow((S.ui.wIdx||0)+(dx<0?1:-1));});
+  st.addEventListener('pointercancel',()=>{x0=null;});}};
+/* switch slides in place — no re-render, so the aura and the page don't flash */
+function wShow(i){const sl=$$('.w-slide');if(!sl.length)return;const n=sl.length;i=((i%n)+n)%n;S.ui.wIdx=i;
+ sl.forEach((s,k)=>{s.classList.toggle('on',k===i);s.setAttribute('aria-hidden',String(k!==i));});
+ $$('.w-pb').forEach((b,k)=>{b.classList.toggle('on',k===i);b.classList.toggle('done',k<i);b.setAttribute('aria-current',String(k===i));const bar=b.firstElementChild;if(k===i&&bar){bar.style.animation='none';void bar.offsetWidth;bar.style.animation='';}});
+ const c=$('.w-count b');if(c)c.textContent=String(i+1).padStart(2,'0');wPlay(i);}
+/* replay the entrance of the active visual: jars fill again, rows slide in */
+function wPlay(i,first){const s=$$('.w-slide')[i];if(!s)return;const j=$('.jars',s);if(j){j.classList.add('pre');setTimeout(()=>j.classList.remove('pre'),first?260:120);}
+ const v=$('.venn',s);if(v){v.classList.add('pre');setTimeout(()=>v.classList.remove('pre'),first?260:140);}}
+ACT.wSlide=a=>{const v=a.dataset.v,i=S.ui.wIdx||0;wShow(v==='next'?i+1:v==='prev'?i-1:+v);};
 
 ACT.terms=()=>sheet(()=>({title:L('Условия и приватность','Terms and privacy'),body:`<p class="lead">${L('Коротко о главном. Полный текст юридически согласуется перед запуском.','The essentials. The full legal text is finalised before launch.')}</p>
  ${[[I.shield,L('Тебе 18+','You are 18+'),L('Дата рождения нужна, чтобы подтвердить 18+. Её никто не увидит. Возраст можно показывать в профиле по твоему выбору.','Your birth date confirms you are 18+. Nobody sees it. You choose whether to show your age on your profile.')],[I.lock,L('Приватно по умолчанию','Private by default'),L('Интересы и ответы тестов видишь только ты.','Your interests and quiz answers are visible only to you.')],[I.heart,L('Чат — только взаимно','Chat only when mutual'),L('Никто не напишет тебе без взаимной симпатии.','Nobody can message you without a mutual like.')],[I.trash,L('Твои данные — твои','Your data is yours'),L('Экспорт и удаление доступны всегда и бесплатно.','Export and deletion are always available and free.')]].map(([i,b,s])=>`<div class="fact"><i class="v">${i}</i><span><b>${b}.</b> ${s}</span></div>`).join('')}`,foot:`<button class="btn primary" data-act="closeSheet">${L('Понятно','Got it')}</button>`}));
@@ -3089,19 +3390,15 @@ ACT.toWelcome=()=>{S.nav.auth=[{id:'A01',p:{},f:{}}];render('back');};
 
 /* A05 — optional first steps: identity (private by default) → where to start */
 SC.A05={auth:1,title:()=>L('Первые шаги','First steps'),render:(p,r)=>{
- /* V8: community first — interests → communities → a first quiz you can share. Dating is not part of onboarding. */
- if(p.step===2){r.f.tp=r.f.tp||[];const pop=['shibari','bondage','talk','aftercare','slow','latex','roleplay','sensory','intimacy','rituals','service','experiments'];const comms=Object.keys(COMMUNITIES).filter(c=>!COMMUNITIES[c].hidden&&(!r.f.tp.length||COMMUNITIES[c].topics.some(t=>r.f.tp.includes(t)))).slice(0,4);
-  return `${bar('',{back:1,actions:`<span class="pill">2 / 3</span>`})}<div class="view nodock cta1"><div class="auth-wrap">
-  <div class="steps"><i class="on"></i><i class="on"></i><i></i></div><h2 class="t">${L('Что тебе интересно?','What are you into?')}</h2><p class="lead">${L('Выбранные темы станут фильтром ленты. Это не ответы теста и не публичные интересы.','Your choices will filter your feed. They are not quiz answers or public interests.')}</p>
+ /* community first — interests → communities. Quizzes are «скоро» (owner, 15.10) and no longer part of onboarding. Dating is not part of onboarding. */
+ if(p.step>=2){r.f.tp=r.f.tp||[];const pop=['shibari','bondage','talk','aftercare','slow','latex','roleplay','sensory','intimacy','rituals','service','experiments'];const comms=Object.keys(COMMUNITIES).filter(c=>!COMMUNITIES[c].hidden&&(!r.f.tp.length||COMMUNITIES[c].topics.some(t=>r.f.tp.includes(t)))).slice(0,4);
+  return `${bar('',{back:1,actions:`<span class="pill">2 / 2</span>`})}<div class="view nodock cta1"><div class="auth-wrap">
+  <div class="steps"><i class="on"></i><i class="on"></i></div><h2 class="t">${L('Что тебе интересно?','What are you into?')}</h2><p class="lead">${L('Выбранные темы станут фильтром ленты. Это не публичные интересы.','Your choices will filter your feed. They are not public interests.')}</p>
   ${grp(L('Интересы','Interests'),`<div class="chips">${pop.map(t=>chipBtn(t,topic(t),r.f.tp.includes(t),'onbTopic')).join('')}</div>`)}
   <div class="grp"><div class="grp-t"><span>${L('Сообщества для тебя','Communities for you')}</span></div>${comms.map(c=>`<div class="onb-c">${commCard(c)}<button class="btn sm ${S.joined.has(c)?'soft':'primary'} auto" data-act="onbJoin" data-v="${c}">${S.joined.has(c)?L('Ты участник','Joined'):COMMUNITIES[c].privacy==='closed'?L('Заявка','Request'):L('Вступить','Join')}</button></div>`).join('')}</div>
-  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-go="A05" data-p='{"step":3}'>${L('Дальше','Next')}</button></div></div>`;}
- if(p.step===3)return `${bar('',{back:1,actions:`<span class="pill">3 / 3</span>`})}<div class="view nodock cta1"><div class="auth-wrap">
-  <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i></div><h2 class="t">${L('Узнай себя','Get to know yourself')}</h2><p class="lead">${L('Тесты помогают узнать себя. Интересы для профиля ты выбираешь и заполняешь отдельно в разделе «Я».','Quizzes help you get to know yourself. Choose and fill in profile interests separately in Me.')}</p>
-  ${grp(L('Начни с одного','Start with one'),`<div class="tests">${['rope','power','senses','care'].map(id=>{const z=QUIZ[id];return `<button class="tcard" data-act="finishOnb" data-v="X07" data-p='${JSON.stringify({id})}'><span class="tc-art">${plate(z.pl)}<span class="tc-ic">${I[z.ic||'test']}</span></span><span class="tc-b"><b>${esc(T(z.title))}</b><small>${pl(z.topics.length,['тема','темы','тем'],['topic','topics'])}</small></span></button>`;}).join('')}</div>`,{cls:'bare'})}
-  </div></div><div class="ctabar"><div class="wrap"><button class="btn soft" data-act="finishOnb" data-v="F01">${L('Сразу в ленту','Go to the feed')}</button></div></div>`;
+  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="finishOnb" data-v="F01">${L('Готово','Done')}</button></div></div>`;}
  if(!r.identityInit){Object.assign(r.f,identityDraft(S.me));r.identityInit=true;}
- return `${bar(L('О тебе','About you'),{back:1,actions:`<span class="pill">1 / 3</span>`})}<div class="view nodock cta2"><div class="auth-wrap identity-onboarding"><p class="lead">${L('Всё необязательно. Выбери то, что подходит, или заполни позже.','Everything is optional. Choose what fits or fill this in later.')}</p><p class="note">${L('Видно только тебе. Открыть другим можно в профиле.','Only you can see this. You can share it from your profile later.')}</p><div class="identity-grid">${identityFields().map(([k,title,desc])=>grp(title,`<p class="note mb12">${desc}</p>${identityChoices(k,r.f[k],'idPick')}`)).join('')}</div></div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="a05next">${L('Сохранить и продолжить','Save and continue')}</button><button class="btn secondary" data-act="a05skip">${L('Заполнить позже','Fill in later')}</button></div></div>`;}};
+ return `${bar(L('О тебе','About you'),{back:1,actions:`<span class="pill">1 / 2</span>`})}<div class="view nodock cta2"><div class="auth-wrap identity-onboarding"><p class="lead">${L('Всё необязательно. Выбери то, что подходит, или заполни позже.','Everything is optional. Choose what fits or fill this in later.')}</p><p class="note">${L('Видно только тебе. Открыть другим можно в профиле.','Only you can see this. You can share it from your profile later.')}</p><div class="identity-grid">${identityFields().map(([k,title,desc])=>grp(title,`<p class="note mb12">${desc}</p>${identityChoices(k,r.f[k],'idPick')}`)).join('')}</div></div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="a05next">${L('Сохранить и продолжить','Save and continue')}</button><button class="btn secondary" data-act="a05skip">${L('Заполнить позже','Fill in later')}</button></div></div>`;}};
 ACT.idPick=a=>{const r=cur(),k=a.dataset.k;if(!IDENTITY_KEYS.includes(k))return;r.f[k]=toggleIdentityValue(r.f[k],k,a.dataset.v);r.dirty=true;refresh();};
 function applyIdentityDraft(){const r=cur(),next=identityDraft(r.f),vis={...S.me.vis};for(const k of IDENTITY_KEYS){if(JSON.stringify(S.me[k])!==JSON.stringify(next[k]))vis[k]='only';else vis[k]=vis[k]||'only';}Object.assign(S.me,next,{vis});r.dirty=false;}
 ACT.a05next=()=>{applyIdentityDraft();go('A05',{step:2});};
@@ -3243,7 +3540,7 @@ SC.F07={title:()=>L('Публикация','Post'),valid:p=>!p.id||!!ownPost(p.i
  const a=AUD().find(x=>x[0]===r.aud)||AUD()[0];const m=r.media;const el=resEligible();
  const mediaBlock=m.length?grp(L(`Фото и видео · ${m.length}/${MEDIA_MAX}`,`Photos & video · ${m.length}/${MEDIA_MAX}`),`<div class="edit-ph">${m.map((x,i)=>`<div>${x.type==='video'?`<video src="${esc(x.url)}" muted playsinline preload="metadata"></video><span class="mainph">${ic('video',12)} ${fmtDur(x.dur||0)}</span>`:`<img src="${esc(x.url)}" alt="">`}<button class="rm" data-act="rmMedia" data-v="${i}" aria-label="${L('Убрать','Remove')}">${I.close}</button><button class="vw" data-act="viewDraftMedia" data-v="${i}" aria-label="${L('Посмотреть','View')}"></button></div>`).join('')}${m.length<MEDIA_MAX?`<button data-act="postMedia" aria-label="${L('Добавить фото или видео','Add photo or video')}">${I.plus}</button>`:''}</div>`):'';
  const pollBlock=r.poll?grp(L(`Опрос · ${r.poll.opts.length}/${POLL_MAX}`,`Poll · ${r.poll.opts.length}/${POLL_MAX}`),`${field({name:'pollQ',label:L('Вопрос','Question'),max:200,ph:L('О чём спросить людей?','What do you want to ask?')})}${r.poll.opts.map((o,i)=>`<div class="field pollopt ${r.err&&r.err['o'+i]?'err':''}" data-field="o${i}"><div class="inwrap"><span class="n">${i+1}</span><input class="inp" name="o${i}" data-in="pollOpt" data-i="${i}" value="${esc(o)}" maxlength="80" placeholder="${L('Вариант','Option')} ${i+1}" aria-label="${L('Вариант','Option')} ${i+1}">${r.poll.opts.length>2?`<button class="ibtn ghost sm" data-act="rmOpt" data-v="${i}" aria-label="${L('Убрать вариант','Remove option')}">${I.close}</button>`:''}</div></div>`).join('')}${r.poll.opts.length<POLL_MAX?`<button class="btn text auto" data-act="addOpt">${I.plus}${L('Добавить вариант','Add option')}</button>`:''}${r.err&&r.err.opts?`<div class="ferr">${I.alert}${r.err.opts}</div>`:''}`,{right:`<button data-act="rmPoll">${L('Убрать','Remove')}</button>`,foot:L('Голос можно отменить отдельной ссылкой. После голосования видны участники, выбравшие каждый вариант.','Withdraw your vote using the separate link. After voting, participants can see who chose each option.')+(ex?.poll?' '+L('Изменение вариантов сбросит голоса опроса.','Changing the options resets the poll votes.'):'')}):'';
- const resBlock=r.result?grp(L('Результат','Result'),el.length?`${(sel=>sel.length?`<div class="testcard" style="--n:${Math.min(4,sel.length)}">${jarsHTML(sel)}</div>`:'')(el.filter(j=>r.resSel.includes(j.t)).slice(0,4).map(j=>[j.t,j.lv]))}<div class="chips mt12">${el.map(j=>chipBtn(j.t,topic(j.t),r.resSel.includes(j.t),'resPick')).join('')}</div>`:`<p class="note">${L('Пока нечего показать: открой хотя бы одну тему для всех в «Я».','Nothing to show yet: make at least one topic public in Me.')}</p>`,{right:`<button data-act="rmResult">${L('Убрать','Remove')}</button>`,foot:L('Только темы, открытые всем, до 4. Ответы, границы и скрытые темы не попадают.','Only topics open to everyone, up to 4. Answers, limits and hidden topics are never included.')}):'';
+ const resBlock=r.result?grp(L('Результат','Result'),el.length?`${(sel=>sel.length?`<div class="testcard" style="--n:${Math.min(4,sel.length)}">${jarsHTML(sel)}</div>`:'')(el.filter(j=>r.resSel.includes(j.t)).slice(0,4).map(j=>[j.t,j.lv,j.dir]))}<div class="chips mt12">${el.map(j=>chipBtn(j.t,topic(j.t),r.resSel.includes(j.t),'resPick')).join('')}</div>`:`<p class="note">${L('Пока нечего показать: открой хотя бы одну тему для всех в «Я».','Nothing to show yet: make at least one topic public in Me.')}</p>`,{right:`<button data-act="rmResult">${L('Убрать','Remove')}</button>`,foot:L('Только темы, открытые всем, до 4. Ответы, границы и скрытые темы не попадают.','Only topics open to everyone, up to 4. Answers, limits and hidden topics are never included.')}):'';
  const tools=`<div class="attach">${m.length?'':`<button data-act="postMedia">${I.image}<span>${L('Фото/видео','Photo/video')}</span></button>`}${r.poll?'':`<button data-act="addPoll">${I.poll}<span>${L('Опрос','Poll')}</span></button>`}${r.result?'':`<button data-act="addResult">${I.test}<span>${L('Результат','Result')}</span></button>`}</div>`;
  return `${bar(ex?L('Редактирование','Edit post'):L('Новая публикация','New post'),{back:1,sm:1,actions:`<button class="btn text auto" data-act="saveDraft">${L('В черновик','Save draft')}</button>`})}<div class="view nodock cta1"><div class="wrap">
  ${S.postEdits[p.id]?`<p class="note mb12">${L('Открыты сохранённые правки. Исходная публикация пока не изменена.','Saved changes are open. The original post is unchanged.')}</p>`:''}<section class="grp"><div class="card compose"><div class="row" style="gap:10px">${av('me','sm')}<button class="pill v" data-act="audience">${a[1]}${a[2]} ${ic('down',13)}</button></div>
@@ -3279,7 +3576,7 @@ function validatePost(){const r=cur();if(!SC.F07.valid(r.p)){toast(L('Эта п�
 const draftOf=r=>({composeId:r.composeId,pollLocale:r.pollLocale,text:fv('text').trim(),tags:[...r.tags],aud:r.aud,media:r.media.slice(),poll:r.poll?r.poll.opts.map(o=>o.trim()).filter(Boolean):null,pollQ:r.poll?fv('pollQ').trim():null,result:r.result&&postResultSelection(r).length?postResultSelection(r):null,edit:r.p.id||null});
 const postFromDraft=(d,id,existing=null)=>{
  const samePoll=existing?.poll&&d.poll&&(T(existing.pollQ)||'')===(d.pollQ||'')&&existing.poll.length===d.poll.length&&existing.poll.every((o,i)=>(typeof o[0]==='object'?(o[0][d.pollLocale]??o[0].ru??o[0].en??''):o[0])===d.poll[i]);
- return {id,author:'me',t:Date.now(),type:'post',tags:d.tags,likes:existing?.likes??0,vote:samePoll?(existing.vote??null):null,pollVoters:samePoll?structuredClone(existing.pollVoters||[]):[],aud:d.aud,text:{ru:d.text,en:d.text},comments:existing?.comments||[],media:d.media,poll:d.poll?(samePoll?existing.poll:d.poll.map(o=>[{ru:o,en:o},0])):null,pollQ:d.poll&&d.pollQ?{ru:d.pollQ,en:d.pollQ}:null,result:d.result?resEligible().filter(j=>postResultSelection({resSel:d.result}).includes(j.t)).map(j=>[j.t,j.lv]):null};
+ return {id,author:'me',t:Date.now(),type:'post',tags:d.tags,likes:existing?.likes??0,vote:samePoll?(existing.vote??null):null,pollVoters:samePoll?structuredClone(existing.pollVoters||[]):[],aud:d.aud,text:{ru:d.text,en:d.text},comments:existing?.comments||[],media:d.media,poll:d.poll?(samePoll?existing.poll:d.poll.map(o=>[{ru:o,en:o},0])):null,pollQ:d.poll&&d.pollQ?{ru:d.pollQ,en:d.pollQ}:null,result:d.result?resEligible().filter(j=>postResultSelection({resSel:d.result}).includes(j.t)).map(j=>[j.t,j.lv,j.dir]):null};
 };
 ACT.toPreview=()=>{if(!validatePost())return;go('F09',{draft:draftOf(cur())});};
 ACT.saveDraft=a=>{const r=cur();if(!SC.F07.valid(r.p)){toast(L('Эта публикация больше недоступна для редактирования','This post can no longer be edited'),{type:'warn'});return;}if(!fv('text').trim()&&!r.media.length){setErr('text',L('Пустой черновик не сохранить','Can’t save an empty draft'));shakeFirstErr();return;}
@@ -3636,7 +3933,7 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
   <button class="why" data-go="P05" data-id="${id}">${venn(sh.few?'?':sh.match.length,{mini:1})}<span class="grow"><b>${esc(sharedSummary(id))}</b><span>${L('Только то, что вы оба открыли','Only what you both made visible')}</span></span>${I.chev}</button>
   <div class="sec">${L('О себе','About')}</div>${md(T(p.bio),'bio')}
   ${sh.match.length?`<div class="sec">${L('Совпадает','In common')}</div><div class="chips">${sh.match.map(m=>`<span class="chip hit">${esc(topic(m))}</span>`).join('')}</div>`:''}
-  ${sh.complement.length?`<div class="sec">${L('Роли','Roles')}</div>${sh.complement.map(c=>`<div class="fact"><i class="g">${I.check}</i><span>${esc(c)}</span></div>`).join('')}`:''}
+  ${sh.complement.length?`<div class="sec">${L('Дополняете друг друга','You complement each other')}</div>${sh.complement.map(c=>`<div class="fact"><i class="g">${I.check}</i><span>${esc(c)}</span></div>`).join('')}`:''}
   ${sh.discuss.length?`<div class="sec">${L('Стоит обсудить','Worth discussing')}</div>${sh.discuss.slice(0,2).map(c=>`<div class="fact"><i class="a">${I.warn}</i><span>${esc(c)}</span></div>`).join('')}`:''}
   <div class="sec">${L('Интересы','Interests')}</div>${jarShelf(pubJars(id),{pre:1,act:'topic',who:id,moreAct:'allJars'})}
   ${post?`<div class="sec">${L('Публикация','Post')} · ${F.rel(post.t)}</div><button class="quote" data-go="F05" data-id="${post.id}"><p>${esc(T(post.text))}</p>${ic('chev',18)}</button>`:''}
@@ -3875,7 +4172,7 @@ SC.P05={title:()=>L('Что у вас общего','Shared interests'),valid:p=
  ${venn(s.few?'?':s.match.length,{pre:1})}<p class="center note" style="margin-top:6px">${L('Ты и','You and')} ${esc(pname(id))}</p>
  <div class="card mt16">
   <div class="cat"><span class="ico g">${I.check}</span><div class="tx"><b>${L('Совпадает','In common')}</b>${s.match.length?`<div class="chips">${s.match.map(m=>`<span class="chip hit">${esc(topic(m))}</span>`).join('')}</div>`:`<p class="note">${L('Пока нет общих открытых тем','No shared public topics yet')}</p>`}</div></div>
-  <div class="cat"><span class="ico v">${I.couple}</span><div class="tx"><b>${L('Дополняется','Complements')}</b>${s.complement.length?s.complement.map(c=>`<p class="note" style="color:var(--ink);margin-top:4px">${esc(c)}</p>`).join(''):`<p class="note">${L('Роли не указаны','Roles not specified')}</p>`}</div></div>
+  <div class="cat"><span class="ico v">${I.couple}</span><div class="tx"><b>${L('Дополняется','Complements')}</b>${s.complement.length?s.complement.map(c=>`<p class="note" style="color:var(--ink);margin-top:4px">${esc(c)}</p>`).join(''):`<p class="note">${L('Роли и направления пока не пересекаются','Roles and directions don’t meet yet')}</p>`}</div></div>
   <div class="cat"><span class="ico a">${I.warn}</span><div class="tx"><b>${L('Стоит обсудить','Worth discussing')}</b>${s.discuss.length?s.discuss.map(c=>`<p class="note" style="color:var(--ink);margin-top:4px">${esc(c)}</p>`).join(''):`<p class="note">${L('Явных различий не видно','No obvious differences')}</p>`}</div></div>
   ${s.few?`<div class="cat"><span class="ico">${I.info}</span><div class="tx"><b>${L('Мало данных','Not enough data')}</b><p class="note">${L('Пока мало общего контекста — это не оценка человека.','Not much shared context yet — this isn’t a judgement of the person.')}</p></div></div>`:''}
  </div>
@@ -4342,19 +4639,21 @@ ACT.pushOk=()=>{closeSheet();toast(L('Уведомления включены','
    A jar is one answer about one topic: level 1–10, «обсуждаемо» or «табу». The same answer control is used in quizzes and in the jar sheet.
    Profiles show a short shelf of jars (top by level) — the full list opens on demand. */
 const VIS=()=>({public:[I.globe,L('всем','everyone'),'ok'],granted:[I.key,L('по доступу','by access'),'v'],only:[I.eyeoff,L('только я','only me'),'']});
-function nextStep(){const m=S.me;const partial=Object.keys(QUIZ).find(id=>!m.tests[id]?.done&&Object.keys(m.tests[id]?.ans||{}).length);if(partial)return[L('Продолжи начатый тест','Continue your unfinished quiz'),'test',partial];if(!m.jars.length)return[L('Добавь темы, которые тебе интересны','Add topics you are interested in'),'topic',null];if(requiresDiscoveryPhoto(m)&&!m.photo)return[L('Добавь фото для показа в подборке','Add a photo to appear in Discover'),'P02',null];return['','',null];}
+function nextStep(){const m=S.me;if(!m.jars.length)return[L('Добавь темы, которые тебе интересны','Add topics you are interested in'),'topic',null];if(requiresDiscoveryPhoto(m)&&!m.photo)return[L('Добавь фото для показа в подборке','Add a photo to appear in Discover'),'P02',null];return['','',null];}
 
-const normJar=x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x;
 const sortJars=list=>{list=list.map(normJar);return [...list.filter(j=>!j.limit).sort((a,b)=>b.lv-a.lv),...list.filter(j=>j.limit==='discuss'),...list.filter(j=>j.limit==='hard')];};
 const myJars=()=>sortJars(S.me.jars);
 const jv=j=>j?(j.limit||j.lv):null;
-const jarFrom=(t,v,base={})=>typeof v==='number'?{...base,t,lv:v,limit:undefined}:{...base,t,lv:0,limit:v};
+const jarFrom=(t,v,base={})=>{const j=typeof v==='number'?{...base,t,lv:v,limit:undefined}:{...base,t,lv:0,limit:v};const d=typeof v==='number'&&hasDir(t)?normDir(base.dir):undefined;if(d)j.dir=d;else delete j.dir;return j;};
 /* the one answer control: level 1–10 + «обсуждаемо» + «табу» */
-function answerHTML(v,act){const n=typeof v==='number'?v:null;
+function answerHTML(v,act,o={}){const n=typeof v==='number'?v:null;const dir=normDir(o.dir)||[];const all=dir.length===DIRS.length;
  return `<div class="ans"><div class="ans-scale" role="radiogroup" aria-label="${L('Уровень от 1 до 10','Level 1 to 10')}">${[1,2,3,4,5,6,7,8,9,10].map(k=>`<button class="${n&&k<=n?'fill':''} ${n===k?'on':''}" data-act="${act}" data-v="${k}" role="radio" aria-checked="${n===k}">${k}</button>`).join('')}</div>
  <div class="ans-l"><span>${L('немного','a little')}</span><span>${L('очень','a lot')}</span></div>
  <div class="ans-marks"><button class="ans-m ${v==='discuss'?'on':''}" data-act="${act}" data-v="discuss" aria-pressed="${v==='discuss'}">${I.chat}<span>${L('Обсуждаемо','Negotiable')}</span></button><button class="ans-m taboo ${v==='hard'?'on':''}" data-act="${act}" data-v="hard" aria-pressed="${v==='hard'}">${I.block}<span>${L('Табу','Taboo')}</span></button></div>
- <p class="ans-word" aria-live="polite">${v==null?L('Выбери уровень — или «обсуждаемо» / «табу».','Pick a level — or “negotiable” / “taboo”.'):n?`<b>${n}</b> · ${LV_WORD(n)}`:MARK_TEXT(v)}</p></div>`;}
+ <p class="ans-word" aria-live="polite">${v==null?L('Выбери уровень — или «обсуждаемо» / «табу».','Pick a level — or “negotiable” / “taboo”.'):n?`<b>${n} · ${LV_WORD(n)}</b><span>${LV_HINT(n)}</span>`:MARK_TEXT(v)}</p>
+ ${n&&o.dirAct&&hasDir(o.t)?`<div class="ans-dir"><p class="ans-dt">${L('Как тебе ближе','How you like it')} <small>${L('· можно несколько или ничего','· pick any, or none')}</small></p><div class="chips">${[['all',L('Всё','All of it')],['give',L('Давать','Giving')],['get',L('Получать','Receiving')],['watch',L('Смотреть','Watching')]].map(([k,l])=>{const on=k==='all'?all:!all&&dir.includes(k);return `<button class="chip ${on?'on':''}" aria-pressed="${on}" data-act="${o.dirAct}" data-v="${k}">${l}</button>`;}).join('')}</div></div>`:''}</div>`;}
+/** «Всё» = all three; tapping a single direction while «Всё» is on keeps only that one */
+const toggleDir=(cur,v)=>{const a=normDir(cur)||[];if(v==='all')return a.length===DIRS.length?undefined:[...DIRS];if(!DIRS.includes(v))return normDir(a);if(a.length===DIRS.length)return [v];return normDir(a.includes(v)?a.filter(x=>x!==v):[...a,v]);};
 const ansVal=v=>isNaN(+v)?v:+v;
 /** a short shelf of jars: the top few by level, then «+N» that opens the full list */
 function jarShelf(list,o={}){const all=sortJars(list);const max=o.max||6;const shown=all.slice(0,max);const more=all.length-shown.length;
@@ -4364,13 +4663,13 @@ function testCards(){const list=Object.entries(QUIZ).sort(([a],[b])=>(S.me.tests
 
 SC.X01={root:1,tab:'me',title:()=>L('Я','Me'),render:()=>{const m=S.me;const [ns,nt,nid]=nextStep();
  const head=bar(L('Я','Me'),{actions:`${bellBtn()}<button class="ibtn" data-go="K01" aria-label="${L('Настройки','Settings')}">${I.gear}</button>`});
- const jars=myJars();const priv=(m.media||[]).length;const going=myUpcomingEventIds().length;const done=Object.keys(QUIZ).filter(k=>m.tests[k]?.done).length;const next=Object.keys(QUIZ).find(k=>!m.tests[k]?.done);
+ const jars=myJars();const priv=(m.media||[]).length;const going=myUpcomingEventIds().length;
  return head+`<div class="view"><div class="wrap">
  <section class="grp"><div class="card me-card"><button class="me-id" data-go="P03">${av('me','me-av')}<span class="grow"><b>${esc(pname('me'))}</b>${m.city?`<small>${esc(city(m.city))}</small>`:''}</span>${I.chev}</button>
   <div class="me-acts"><button class="btn secondary sm" data-go="P03">${I.eye}${L('Как видят','Preview')}</button><button class="btn secondary sm" data-go="P02">${I.edit}${L('Изменить','Edit')}</button></div>
   ${nt?`<button class="nextstep" ${nt==='test'?`data-go="X07" data-id="${nid}"`:nt==='topic'?'data-act="addJar"':'data-go="P02"'}><span class="ico">${nt==='P02'?I.camera:I.test}</span><span class="tx"><b>${L('Следующий шаг','Next step')}</b><small>${ns}</small></span>${I.chev}</button>`:''}</div></section>
  ${grp(L('Мои интересы','My interests'),jars.length?jarShelf(m.jars,{max:4,pre:1,act:'editJar',vis:1,add:'addJar',moreAct:'myJarsAll'}):`<div class="jar-empty"><p>${L('Баночка — это одна тема и то, как она тебе откликается: от 1 до 10, «обсуждаемо» или «табу».','A jar is one topic and how it feels to you: 1 to 10, “negotiable” or “taboo”.')}</p><div class="row g8"><button class="btn secondary sm" data-act="addJar">${I.plus}${L('Добавить интерес','Add an interest')}</button></div></div>`,{right:jars.length?`<button data-go="X02">${L('Все','All')} · ${jars.length}</button>`:''})}
- ${grp(L('Тесты','Quizzes'),linkRow({go:'X05',icon:'test',title:L('Узнай себя','Get to know yourself'),sub:L(`Пройдено ${done} из ${Object.keys(QUIZ).length}. Каждый тест — несколько тем с пояснениями.`,`${done} of ${Object.keys(QUIZ).length} done. Each quiz is a few topics, each explained.`)}),{list:1})}
+ ${grp(L('Тесты','Quizzes'),linkRow({go:'X05',icon:'test',title:L('Узнай себя','Get to know yourself'),sub:L('Новые тесты о тебе','New quizzes about you'),val:L('скоро','soon')}),{list:1})}
  ${grp(L('Приватное','Private'),`${linkRow({go:'P04',icon:'key',title:L('Расширенный профиль','Private profile'),sub:priv?pl(priv,['фото или видео','фото или видео','фото и видео'],['photo or video','photos and videos']):L('Фото, видео и желания — по запросу и на срок','Photos, video and wishes — on request, for a set time')})}${linkRow({go:'P07',icon:'unlock',title:L('Доступы','Access'),sub:L('Кто просит и кому открыто','Who asks and who can see it'),badge:C.reqIn()||''})}`,{list:1})}
  ${grp(L('Активность','Activity'),`${linkRow({go:'E10',icon:'cal',title:L('Мои события','My events'),val:going?String(going):''})}${linkRow({go:'F10',icon:'feed',title:L('Мои публикации','My posts'),val:String(S.myPosts.length)})}${linkRow({go:'P10',p:{id:'me',tab:'followers'},icon:'users3',title:L('Подписчики и подписки','Followers & following'),val:`${followersOf('me').length} · ${followingOf('me').length}`})}${linkRow({go:'G04',icon:'bookmark',title:L('Сохранённое','Saved'),val:String(m.saved.posts.length+m.saved.events.length)})}${S.pair?.status==='active'?linkRow({go:'Q03',icon:'couple',title:L('Пара','Couple'),sub:pairName()}):linkRow({act:'pairLink',icon:'couple',title:L('Пара','Couple'),sub:S.pairInvite?L('ждём ответа партнёра','waiting for your partner'):''})}`,{list:1})}
  </div></div>`;},after:()=>fillJars()};
@@ -4380,57 +4679,66 @@ SC.X02={title:()=>L('Мои интересы','My interests'),valid:p=>p.owner!=
  return `${bar(L('Мои интересы','My interests'),{back:1,sm:1,actions:`<button class="ibtn" data-go="X04" data-p='${JSON.stringify({owner:p.owner})}' aria-label="${L('История','History')}">${I.hist}</button><button class="ibtn" data-act="addJar" aria-label="${L('Добавить интерес','Add an interest')}">${I.plus}</button>`})}<div class="view nodock"><div class="wrap">
  ${all.length?g.map(([t,l])=>grp(`${t} · ${l.length}`,jarsHTML(l,{pre:1,act:p.owner==='couple'?'editCoupleJar':'editJar',vis:1}))).join(''):p.owner==='couple'?empty('spark',L('Общих интересов пока нет','No couple interests yet'),L('Добавьте общие интересы вручную. Изменения публикуются после согласия обоих. Личные ответы не копируются.','Add couple interests yourselves. Changes publish once both agree. Personal answers are not copied.'),`<button class="btn primary" data-act="addJar">${L('Добавить интерес','Add an interest')}</button>`):empty('test',L('Пока пусто','Empty for now'),L('Выбери темы и настрой, как они тебе откликаются.','Choose topics and set how they feel to you.'),`<button class="btn primary" data-act="addJar">${L('Добавить интересы','Add interests')}</button>`)}
  <p class="grp-n">${I.eyeoff} ${L('только ты','only you')} · ${I.key} ${L('по доступу','by access')} · ${L('без значка — видно всем','no icon — everyone')}. ${L('Табу показывается в профиле как «нельзя», только если ты сам(а) выбрал(а) «Все».','Taboo shows on your profile as “not for me” only if you chose “Everyone”.')}</p></div></div>`;},after:()=>fillJars()};
-SC.X05={title:()=>L('Тесты','Quizzes'),render:()=>{const done=Object.keys(QUIZ).filter(k=>S.me.tests[k]?.done).length;return `${bar(L('Тесты','Quizzes'),{back:1,sm:1})}<div class="view nodock"><div class="wrap">
- <p class="lead">${L('В каждом тесте несколько тем. У каждой — пояснение, что это. Отвечаешь от 1 до 10, «обсуждаемо» или «табу». Любую тему можно пропустить.','Each quiz is a few topics, each with an explanation. Answer 1 to 10, “negotiable” or “taboo”. Skip any topic.')}</p>
- <section class="grp"><div class="grp-t"><span>${L(`Пройдено ${done} из ${Object.keys(QUIZ).length}`,`${done} of ${Object.keys(QUIZ).length} done`)}</span></div>${testCards()}</section></div></div>`;}};
-const histTxt=h=>{const f=v=>v==='limit'||v==='hard'?L('табу','taboo'):v==='discuss'?L('обсуждаемо','negotiable'):v==='—'?'—':`${v}/10`;return h.from==='—'?L(`добавлено: ${f(h.to)}`,`added: ${f(h.to)}`):`${f(h.from)} → ${f(h.to)}`;};
+/* Quizzes are paused (owner, 15.10.2026): the entry stays, the screen says «скоро». New quizzes will not write to jars.
+   The old quiz screens (X07–X11) are kept in code below but every route shows this stub. */
+const QUIZ_SOON=true;
+SC.X05={title:()=>L('Тесты','Quizzes'),render:()=>`${bar(L('Тесты','Quizzes'),{back:1,sm:1})}<div class="view nodock"><div class="wrap soon-wrap">
+ <div class="soon"><div class="soon-art" aria-hidden="true"><i></i><i></i><i></i><span>${I.test}</span></div>
+ <span class="pill soon-pill">${L('Скоро','Coming soon')}</span>
+ <h1 class="t">${L('Тесты готовятся','Quizzes are on the way')}</h1>
+ <p class="lead">${L('Делаем новые тесты, которые помогут лучше понять себя. Они будут жить отдельно от баночек: интересы в профиле ты отмечаешь сам.','We’re making new quizzes to help you understand yourself. They’ll live apart from your jars: you set profile interests yourself.')}</p>
+ <button class="btn secondary auto" data-act="addJar">${I.plus}${L('Пока — добавить интересы','Meanwhile — add interests')}</button></div>
+ </div></div>`};
+const histTxt=h=>{const dt=h.dir?`, ${dirText(h.dir)}`:'';const f=v=>v==='limit'||v==='hard'?L('табу','taboo'):v==='discuss'?L('обсуждаемо','negotiable'):v==='—'?'—':`${v}/10`;return h.from==='—'?L(`добавлено: ${f(h.to)}${dt}`,`added: ${f(h.to)}${dt}`):`${f(h.from)} → ${f(h.to)}${dt}`;};
 SC.X04={title:()=>L('История интересов','Interest history'),valid:p=>p.owner!=='couple'||S.pair?.status==='active',render:(p,r)=>`${bar(L('История интересов','Interest history'),{back:1,sm:1})}<div class="view nodock"><div class="wrap">${grp('',editableProfile(r).history.map(h=>`<div class="li static"><span class="ico">${h.src==='test'?I.test:I.edit}</span><span class="tx"><b>${esc(topic(h.topic))}</b><small>${histTxt(h)} · ${h.src==='test'?L('из теста','from a quiz'):L('вручную','manual')}</small></span><span class="val">${F.date(h.t)}</span></div>`).join('')||`<div class="li static"><span class="tx"><small>${L('Пока пусто','Empty for now')}</small></span></div>`,{list:1,foot:L('Видишь только ты.','Only you see this.')})}</div></div>`};
 
 /* Batch interests are a temporary draft, independent of quiz answers. */
 ACT.addJar=()=>topicPicker();ACT.addLimit=()=>topicPicker();
 function topicPicker(initial){
  const owner=cur().p.owner||'me',model=editableProfile({p:{owner}});if(!model)return;
- const d={owner,session:S.session,pair:S.pair,selected:initial&&TOPICS[initial]&&!model.jars.some(j=>j.t===initial)?[initial]:[],answers:{},step:0,stage:'pick',vis:'public'};S.ui.interestDraft=d;
+ const d={owner,session:S.session,pair:S.pair,selected:initial&&TOPICS[initial]&&!model.jars.some(j=>j.t===initial)?[initial]:[],answers:{},dirs:{},step:0,stage:'pick',vis:'public'};S.ui.interestDraft=d;
  sheet(()=>{
   if(d.stage==='pick'){const have=model.jars.map(j=>j.t);return{title:L('Добавить интересы','Add interests'),sub:L('Выбери несколько тем, затем настрой каждую.','Choose several topics, then set each one.'),search:true,searchPh:L('Найти интерес','Find an interest'),body:CATS.map(c=>{const ts=Object.keys(TOPICS).filter(t=>TOPICS[t].cat===c.id&&!have.includes(t));return ts.length?fsec(T(c),`<div class="chips">${ts.map(t=>`<button class="chip ${d.selected.includes(t)?'on':''}" aria-pressed="${d.selected.includes(t)}" data-act="pickTopic" data-v="${t}" data-txt="${chipTxt(t,topic(t))}">${esc(topic(t))}</button>`).join('')}</div>`):'';}).join('')+`<p class="note sh-empty" hidden>${L('Такой темы пока нет.','No such topic yet.')}</p>`,foot:`<button class="btn primary" data-act="interestsStart" ${d.selected.length?'':'disabled'}>${L('Продолжить','Continue')}${d.selected.length?` · ${d.selected.length}`:''}</button>`};}
-  if(d.stage==='answer'){const t=d.selected[d.step];return{title:topic(t),sub:L(`Интерес ${d.step+1} из ${d.selected.length}`,`Interest ${d.step+1} of ${d.selected.length}`),body:`<div class="qprog"><i style="width:${(d.step+1)/d.selected.length*100}%"></i></div><p class="topic-desc">${esc(T(TOPIC_DESC[t]))}</p>${grp(topicQ(t),answerHTML(d.answers[t]??null,'interestAnswer'),{cls:'bare'})}`,foot:`<div class="row g8"><button class="btn secondary" data-act="interestBack">${L('Назад','Back')}</button><button class="btn primary" data-act="interestNext" ${d.answers[t]==null?'disabled':''}>${d.step===d.selected.length-1?L('Продолжить','Continue'):L('Дальше','Next')}</button></div>`};}
-  return{title:L('Кому показывать интересы?','Who can see these interests?'),sub:L(`Готово: ${d.selected.length}. Сохрани, чтобы добавить баночки в профиль.`,`${d.selected.length} ready. Save to add the jars to your profile.`),body:`${d.selected.map(t=>`<div class="li static"><span class="tx"><b>${esc(topic(t))}</b></span><span class="val">${esc(jarWord(jarFrom(t,d.answers[t])))}</span></div>`).join('')}${grp(L('Кто видит','Who can see'),choices([['public',L('Все','Everyone'),L('В профиле и для совпадений. Табу будет показано как «нельзя».','On your profile and for matching. Taboo is shown as “not for me”.')],['granted',L('По доступу','By access'),L('Те, кому открыт расширенный профиль','People with access to your private profile')],['only',L('Только я','Only me')]],d.vis,'interestsVis'))}`,foot:`<button class="btn primary" data-act="interestsSave">${L('Добавить в профиль','Add to profile')}</button><div class="row g8 mt12"><button class="btn secondary" data-act="interestBack">${L('Назад','Back')}</button><button class="btn soft" data-act="interestsDiscard">${L('Выйти без сохранения','Leave without saving')}</button></div>`};
+  if(d.stage==='answer'){const t=d.selected[d.step];return{title:topic(t),sub:L(`Интерес ${d.step+1} из ${d.selected.length}`,`Interest ${d.step+1} of ${d.selected.length}`),body:`<div class="qprog"><i style="width:${(d.step+1)/d.selected.length*100}%"></i></div><p class="topic-desc">${esc(T(TOPIC_DESC[t]))}</p>${grp(topicQ(t),answerHTML(d.answers[t]??null,'interestAnswer',{t,dir:d.dirs[t],dirAct:'interestDir'}),{cls:'bare'})}`,foot:`<div class="row g8"><button class="btn secondary" data-act="interestBack">${L('Назад','Back')}</button><button class="btn primary" data-act="interestNext" ${d.answers[t]==null?'disabled':''}>${d.step===d.selected.length-1?L('Продолжить','Continue'):L('Дальше','Next')}</button></div>`};}
+  return{title:L('Кому показывать интересы?','Who can see these interests?'),sub:L(`Готово: ${d.selected.length}. Сохрани, чтобы добавить баночки в профиль.`,`${d.selected.length} ready. Save to add the jars to your profile.`),body:`${d.selected.map(t=>`<div class="li static"><span class="tx"><b>${esc(topic(t))}</b></span><span class="val">${esc(jarWord(jarFrom(t,d.answers[t],{dir:d.dirs[t]})))}</span></div>`).join('')}${grp(L('Кто видит','Who can see'),choices([['public',L('Все','Everyone'),L('В профиле и для совпадений. Табу будет показано как «нельзя».','On your profile and for matching. Taboo is shown as “not for me”.')],['granted',L('По доступу','By access'),L('Те, кому открыт расширенный профиль','People with access to your private profile')],['only',L('Только я','Only me')]],d.vis,'interestsVis'))}`,foot:`<button class="btn primary" data-act="interestsSave">${L('Добавить в профиль','Add to profile')}</button><div class="row g8 mt12"><button class="btn secondary" data-act="interestBack">${L('Назад','Back')}</button><button class="btn soft" data-act="interestsDiscard">${L('Выйти без сохранения','Leave without saving')}</button></div>`};
  },{full:true,guard:()=>d.selected.length>0,onClose:()=>{if(S.ui.interestDraft===d)delete S.ui.interestDraft;}});
 }
 ACT.pickTopic=a=>{const d=S.ui.interestDraft,t=a.dataset.v;if(!d||!TOPICS[t])return;const i=d.selected.indexOf(t);if(i<0)d.selected.push(t);else{d.selected.splice(i,1);delete d.answers[t];}resheet();};
 ACT.interestsStart=()=>{const d=S.ui.interestDraft;if(!d?.selected.length)return;d.stage='answer';d.step=0;S.ui.shq='';resheet();};
 ACT.interestAnswer=a=>{const d=S.ui.interestDraft;if(!d||d.stage!=='answer')return;d.answers[d.selected[d.step]]=ansVal(a.dataset.v);resheet();};
+ACT.interestDir=a=>{const d=S.ui.interestDraft;if(!d||d.stage!=='answer')return;const t=d.selected[d.step];d.dirs[t]=toggleDir(d.dirs[t],a.dataset.v);resheet();};
 ACT.interestNext=()=>{const d=S.ui.interestDraft;if(!d||d.answers[d.selected[d.step]]==null)return;if(d.step<d.selected.length-1)d.step++;else d.stage='visibility';resheet();};
 ACT.interestBack=()=>{const d=S.ui.interestDraft;if(!d)return;if(d.stage==='visibility')d.stage='answer';else if(d.step>0)d.step--;else d.stage='pick';resheet();};
 ACT.interestsVis=a=>{const d=S.ui.interestDraft;if(d&&['public','granted','only'].includes(a.dataset.v)){d.vis=a.dataset.v;resheet();}};
 ACT.interestsDiscard=()=>closeSheet();
 ACT.interestsSave=a=>{const d=S.ui.interestDraft;if(!d||d.stage!=='visibility'||d.session!==S.session||!d.selected.length||d.selected.some(t=>d.answers[t]==null))return;
  run(a,()=>{if(S.ui.interestDraft!==d||S.session!==d.session||d.owner==='couple'&&S.pair!==d.pair)return;const model=editableProfile({p:{owner:d.owner}});if(!model)return;
-  d.selected.forEach(t=>{const i=model.jars.findIndex(j=>j.t===t),old=model.jars[i];const value=jarFrom(t,d.answers[t],{vis:d.vis});if(i<0)model.jars.push(value);else model.jars[i]=value;model.history.unshift({t:Date.now(),topic:t,from:old?jv(old):'—',to:d.answers[t],src:'manual'});});
+  d.selected.forEach(t=>{const i=model.jars.findIndex(j=>j.t===t),old=model.jars[i];const value=jarFrom(t,d.answers[t],{vis:d.vis,dir:d.dirs[t]});if(i<0)model.jars.push(value);else model.jars[i]=value;model.history.unshift({t:Date.now(),topic:t,from:old?jv(old):'—',to:d.answers[t],dir:value.dir,src:'manual'});});
   if(d.owner==='couple')submitCoupleDraft();closeSheet();refresh();
  },{ms:300,ok:L('Интересы добавлены','Interests added')});};
 ACT.editJar=a=>{if(S.ui.sheet)closeSheet(true);if(!editableProfile().jars.some(j=>j.t===a.dataset.v)){topicPicker(a.dataset.v);return;}openJar(a.dataset.v);};
 /* the jar sheet: what it is → your answer → who sees. Nothing is preselected for a new topic. */
-function openJar(t,owner=cur().p.owner||'me'){const model=editableProfile({p:{owner}});if(!model)return;const ex=model.jars.find(j=>j.t===t);S.ui.jar={t,v:jv(ex),vis:ex?.vis||'only',owner,session:S.session};const start=JSON.stringify(S.ui.jar);
+function openJar(t,owner=cur().p.owner||'me'){const model=editableProfile({p:{owner}});if(!model)return;const ex=model.jars.find(j=>j.t===t);S.ui.jar={t,v:jv(ex),dir:normDir(ex?.dir),vis:ex?.vis||'only',owner,session:S.session};const start=JSON.stringify(S.ui.jar);
  sheet(()=>{const j=S.ui.jar;const taboo=j.v==='hard';
  return{title:topic(t),sub:T(CATS.find(c=>c.id===TOPICS[t]?.cat)||''),body:`<p class="topic-desc">${esc(T(TOPIC_DESC[t]))}</p>
- ${grp(topicQ(t),answerHTML(j.v,'jarAns'),{cls:'bare'})}
+ ${grp(topicQ(t),answerHTML(j.v,'jarAns',{t,dir:j.dir,dirAct:'jarDir'}),{cls:'bare'})}
  ${j.v==null?'':grp(L('Кто видит','Who can see'),choices([['only',L('Только я','Only me')],['granted',L('По доступу','By access'),L('Те, кому ты откроешь расширенный профиль','People you share your private profile with')],['public',L('Все','Everyone'),taboo?L('Другие увидят в профиле: «нельзя». Без подробностей','Others see “not for me” on your profile. No details'):L('В профиле и для совпадений','On your profile and for matching')]],j.vis,'jarVis'))}`,
  foot:`<div class="row g8">${ex?`<button class="btn secondary icon" data-act="jarDel" aria-label="${L('Убрать','Remove')}">${I.trash}</button>`:''}<button class="btn primary ${j.v==null?'off':''}" data-act="jarSave">${ex?L('Сохранить','Save'):L('Добавить','Add')}</button></div>`};},{guard:()=>JSON.stringify(S.ui.jar)!==start});}
 ACT.jarAns=a=>{const j=S.ui.jar;j.v=ansVal(a.dataset.v);resheet();};
+ACT.jarDir=a=>{const j=S.ui.jar;if(!j)return;j.dir=toggleDir(j.dir,a.dataset.v);resheet();};
 ACT.jarVis=a=>{S.ui.jar.vis=a.dataset.v;resheet();};
-ACT.jarSave=a=>{const j=S.ui.jar;if(j.v==null||j.session!==S.session)return;const pair=S.pair;run(a,()=>{if(S.session!==j.session||j.owner==='couple'&&S.pair!==pair)return;const model=editableProfile({p:{owner:j.owner}});if(!model)return;const arr=model.jars,i=arr.findIndex(x=>x.t===j.t),old=arr[i];const val=jarFrom(j.t,j.v,{vis:j.vis});if(i>=0)arr[i]=val;else arr.push(val);model.history.unshift({t:Date.now(),topic:j.t,from:old?jv(old):'—',to:j.v,src:'manual'});if(j.owner==='couple')submitCoupleDraft();closeSheet();refresh();},{ms:300,ok:L('Сохранено','Saved')});};
+ACT.jarSave=a=>{const j=S.ui.jar;if(j.v==null||j.session!==S.session)return;const pair=S.pair;run(a,()=>{if(S.session!==j.session||j.owner==='couple'&&S.pair!==pair)return;const model=editableProfile({p:{owner:j.owner}});if(!model)return;const arr=model.jars,i=arr.findIndex(x=>x.t===j.t),old=arr[i];const val=jarFrom(j.t,j.v,{vis:j.vis,dir:j.dir});if(i>=0)arr[i]=val;else arr.push(val);model.history.unshift({t:Date.now(),topic:j.t,from:old?jv(old):'—',to:j.v,dir:val.dir,src:'manual'});if(j.owner==='couple')submitCoupleDraft();closeSheet();refresh();},{ms:300,ok:L('Сохранено','Saved')});};
 ACT.jarDel=()=>{const {t,owner,session}=S.ui.jar;closeSheet(true);ask({icon:'trash',tone:'l',title:L(`Убрать «${topic(t)}»?`,`Remove “${topic(t)}”?`),text:L('История изменений сохранится — её видишь только ты.','Change history is kept — only you can see it.'),ok:L('Убрать','Remove'),danger:true}).then(ok=>{if(ok&&S.session===session){const model=editableProfile({p:{owner}});if(!model)return;model.jars=model.jars.filter(j=>j.t!==t);if(owner==='couple')submitCoupleDraft();refresh();toast(L('Убрано','Removed'),{type:'ok'});}});};
 /** someone else’s jar: what it is, their answer and yours */
 /* «Как откликается» always pairs the person whose jar was tapped with you. The tapped jar carries the answer it showed
    (data-ans), so a jar from a private layer or a quiz result still shows that person’s row. Opened from a topic page there is no
    other person: the group is then «Твой ответ», one row. */
-function openTopic(t,who,ans){const other=who&&who!=='me'&&person(who);const shown=ans!=null&&ans!==''?jarFrom(t,ansVal(ans)):null;
+function openTopic(t,who,ans,dir){const other=who&&who!=='me'&&person(who);const shown=ans!=null&&ans!==''?jarFrom(t,ansVal(ans),{dir:dir?dir.split(' '):undefined}):null;
  const theirs=other?(shown||(other.jars||[]).map(normJar).find(x=>x.t===t)||null):null;const mine=S.me.jars.find(j=>j.t===t);
  sheet(()=>({title:topic(t),sub:T(CATS.find(c=>c.id===TOPICS[t]?.cat)||''),body:`<p class="topic-desc">${esc(T(TOPIC_DESC[t]))}</p>
  ${grp(theirs?L('Как откликается','How it feels'):L('Твой ответ','Your answer'),`${theirs?`<div class="li static"><span class="tx"><b>${esc(pname(who))}</b></span><span class="val strong">${esc(jarWord(theirs))}</span></div>`:''}<div class="li static"><span class="tx"><b>${L('Ты','You')}</b>${mine&&mine.vis!=='public'?`<small>${L('твой ответ видишь только ты','only you see your answer')}</small>`:''}</span><span class="val ${mine?'strong':''}">${mine?esc(jarWord(mine)):L('не отмечено','not set')}</span></div>`,{list:1})}`,
  foot:`<button class="btn ${mine?'secondary':'primary'}" data-act="editJar" data-v="${t}">${mine?L('Изменить у себя','Edit mine'):`${I.plus}${L('Добавить к себе','Add to mine')}`}</button>`}));}
-ACT.topic=a=>openTopic(a.dataset.v,a.dataset.who,a.dataset.ans);
+ACT.topic=a=>openTopic(a.dataset.v,a.dataset.who,a.dataset.ans,a.dataset.dir);
 /** all public jars of a person, grouped by category */
 ACT.allJars=a=>{const who=a.dataset.v;const list=sortJars((person(who)?.jars||[]).filter(j=>!normJar(j).vis||normJar(j).vis==='public'));
  sheet(()=>({title:L(`Интересы · ${pname(who)}`,`Interests · ${pname(who)}`),body:CATS.map(c=>{const l=list.filter(j=>TOPICS[j.t]?.cat===c.id);return l.length?grp(T(c),jarsHTML(l,{act:'topic',who}),{cls:'bare'}):'';}).join('')}),{full:true});setTimeout(fillJars,50);};
@@ -4484,6 +4792,7 @@ ACT.x11pick=a=>{const r=cur();r.sel=normalizeShareSelection(r.p.id,r.sel);if(!sh
 ACT.x11aud=a=>{cur().aud=a.dataset.v;refresh();};
 ACT.x11go=a=>{const r=cur();const jars=shareableQuizJars(r.p.id).filter(s=>r.sel.includes(s.t)).slice(0,4);if(!jars.length){toast(L('Выбери хотя бы одну тему для публикации','Choose at least one topic to publish'),{type:'warn'});refresh();return;}run(a,()=>{S.myPosts.unshift({id:'m'+Date.now(),author:'me',t:Date.now(),type:'result',tags:jars.slice(0,3).map(j=>j.t),likes:0,aud:r.aud,status:'published',text:{ru:`Мой результат теста «${QUIZ[r.p.id].title.ru}»`,en:`My “${QUIZ[r.p.id].title.en}” quiz result`},result:jars.map(j=>[j.t,j.lv]),comments:[]});back();},{ok:L('Опубликовано в ленте','Published to the feed')});};
 
+if(QUIZ_SOON)for(const k of ['X07','X08','X09','X10','X11'])SC[k]={title:SC.X05.title,render:SC.X05.render};
 /* G04 — saved */
 SC.G04={title:()=>L('Сохранённое','Saved'),render:()=>{const s=S.me.saved;const posts=s.posts.map(postById).filter(Boolean),evs=s.events.filter(EV);
  return `${bar(L('Сохранённое','Saved'),{back:1,sm:1})}<div class="view nodock"><div class="wrap">

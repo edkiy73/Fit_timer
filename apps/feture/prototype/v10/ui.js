@@ -4,15 +4,17 @@
 /** liquid colour follows the value: low → red, 3 → orange, 5 → yellow, 10 → green. The number is always printed, so colour is never the only cue. */
 function jarColor(v){const st=[[1,4],[3,26],[5,46],[7,88],[10,140]];v=Math.max(1,Math.min(10,+v||1));let h=st[0][1];for(let k=1;k<st.length;k++)if(v<=st[k][0]){const [a,ha]=st[k-1],[b,hb]=st[k];h=ha+(hb-ha)*(v-a)/(b-a);break;}return `hsl(${Math.round(h)} 58% 55%)`;}
 function jarsHTML(list,o={}){
- const items=list.map(x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x);
+ const items=list.map(normJar);
  return `<div class="jars ${o.pre?'pre':''} ${o.cls||''}">${items.map((j,i)=>{
-  const tag=o.act?'button':'div';const attrs=o.act?`data-act="${o.act}" data-v="${j.t}" ${o.who?`data-who="${o.who}" data-ans="${j.limit||j.lv}"`:''} aria-label="${esc(topic(j.t))}: ${esc(jarWord(j))}"`:'';
+  const tag=o.act?'button':'div';const attrs=o.act?`data-act="${o.act}" data-v="${j.t}" ${o.who?`data-who="${o.who}" data-ans="${j.limit||j.lv}"${j.dir?` data-dir="${j.dir.join(' ')}"`:''}`:''} aria-label="${esc(topic(j.t))}: ${esc(jarWord(j))}"`:'';
   const was=o.was&&o.was[j.t]!=null?`<small class="was">${L('было','was')} ${o.was[j.t]==='hard'?L('табу','taboo'):o.was[j.t]==='discuss'?L('обсужд.','negot.'):o.was[j.t]}</small>`:'';
   const vis=o.vis&&j.vis!=='public'?`<span class="jvis">${j.vis==='granted'?I.key:I.eyeoff}</span>`:'';
   if(j.limit)return `<${tag} class="jar ${j.limit==='hard'?'taboo':'discuss'}" ${attrs}><span class="vessel"><span class="jm">${j.limit==='hard'?I.block:I.chat}</span>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw sr">${j.limit==='hard'?(o.who&&o.who!=='me'?L('нельзя','not for me'):L('табу','taboo')):L('обсуждаемо','negotiable')}</span>${was}</${tag}>`;
-  return `<${tag} class="jar" ${attrs} style="--v:${j.lv};--jc:${jarColor(j.lv)};--d:${(i%6)*.35}s"><span class="vessel"><span class="fill"><i class="bub"></i></span><b class="lv">${j.lv}</b>${vis}</span><span class="jn">${esc(topic(j.t))}</span>${was}</${tag}>`;}).join('')}${o.more?`<button class="jar more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="vessel"><b>+${o.more.n}</b></span><span class="jn">${L('Все','All')}</span></button>`:''}${o.add?`<button class="jar add" data-act="${o.add}"><span class="vessel">${I.plus}</span><span class="jn">${L('Добавить','Add')}</span></button>`:''}</div>`;
+  /* the higher the level, the calmer the surface: 8–9 barely ripple, 10 is full to the lid — only bubbles */
+  const calm=j.lv>=10?'full':j.lv>=8?'calm':'';
+  return `<${tag} class="jar ${calm}" ${attrs} style="--v:${j.lv};--jc:${jarColor(j.lv)};--d:${(i%6)*.35}s"><span class="vessel"><span class="fill"><i class="bub"></i>${j.lv>=8?'<i class="bub b2"></i>':''}</span><b class="lv">${j.lv}</b>${vis}</span><span class="jn">${esc(topic(j.t))}</span>${j.dir&&!o.noDir?`<span class="jd">${esc(dirText(j.dir))}</span>`:''}${was}</${tag}>`;}).join('')}${o.more?`<button class="jar more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="vessel"><b>+${o.more.n}</b></span><span class="jn">${L('Все','All')}</span></button>`:''}${o.add?`<button class="jar add" data-act="${o.add}"><span class="vessel">${I.plus}</span><span class="jn">${L('Добавить','Add')}</span></button>`:''}</div>`;
 }
-const pubJars=id=>id==='me'||id==='couple'?(id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me)).jars.filter(j=>j.vis==='public'):(person(id)?.jars||[]).map(x=>Array.isArray(x)?{t:x[0],lv:x[1]}:x).filter(j=>!j.vis||j.vis==='public');
+const pubJars=id=>id==='me'||id==='couple'?(id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me)).jars.filter(j=>j.vis==='public'):(person(id)?.jars||[]).map(normJar).filter(j=>!j.vis||j.vis==='public');
 const fillJars=()=>setTimeout(()=>$$('.jars.pre').forEach(j=>j.classList.remove('pre')),90);
 function venn(n,o={}){return `<div class="venn ${o.mini?'mini':''} ${o.pre?'pre':''}" ${o.id?`id="${o.id}"`:''}><i></i><i></i><b>${n}${o.mini?'':`<small>${pl(n,['общая тема','общие темы','общих тем'],['shared topic','shared topics'],true)}</small>`}</b></div>`;}
 const playVenn=()=>setTimeout(()=>$$('.venn.pre').forEach(v=>v.classList.remove('pre')),120);
@@ -21,20 +23,25 @@ const playVenn=()=>setTimeout(()=>$$('.venn.pre').forEach(v=>v.classList.remove(
 function shared(id){
  const p=person(id);if(!p)return{match:[],complement:[],discuss:[],few:true};
  const mine=S.me.jars.filter(j=>j.vis==='public'&&!j.limit);
- const theirs=(p.jars||[]).map(j=>Array.isArray(j)?{t:j[0],lv:j[1]}:j).filter(j=>!j.limit);
+ const theirs=(p.jars||[]).map(normJar).filter(j=>!j.limit);
  const match=mine.filter(j=>j.lv>=6&&theirs.some(x=>x.t===j.t&&x.lv>=6)).map(j=>j.t);
  const complement=[];const discuss=[];
  const r1=fmtList(publicField(S.me,'role')),r2=fmtList(p.role);
  const roles=r1.includes('lead')&&r2.includes('recv')?['lead','recv']:r1.includes('recv')&&r2.includes('lead')?['recv','lead']:null;
  if(roles)complement.push(L(`Твоя ${opt('role',roles[0])} и ${opt('role',roles[1])} у ${pname(id)} дополняют друг друга`,`Your ${opt('role',roles[0])} role and ${pname(id)}’s ${opt('role',roles[1])} role complement each other`));
  else if(r1.includes('switch')||r2.includes('switch'))complement.push(L('Среди открытых ролей есть свитч: роли можно договорить вместе','The shared roles include switch: roles are open to agree on'));
- mine.forEach(j=>{const x=theirs.find(y=>y.t===j.t);if(x&&Math.abs(x.lv-j.lv)>=4)discuss.push(L(`${topic(j.t)}: у тебя ${j.lv}/10, у ${pname(id)} ${x.lv}/10`,`${topic(j.t)}: you ${j.lv}/10, ${pname(id)} ${x.lv}/10`));
-  if(false)discuss.push(L(`${topic(j.t)}: ты хочешь попробовать, для ${pname(id)} это сильный интерес`,`${topic(j.t)}: you want to try, for ${pname(id)} it’s a strong interest`));});
+ mine.forEach(j=>{const x=theirs.find(y=>y.t===j.t);if(!x)return;
+  if(Math.abs(x.lv-j.lv)>=4){discuss.push(L(`${topic(j.t)}: у тебя ${jarShort(j)}, у ${pname(id)} ${jarShort(x)}`,`${topic(j.t)}: you ${jarShort(j)}, ${pname(id)} ${jarShort(x)}`));return;}
+  /* direction: giving meets receiving → complements; both only give (or only receive) → worth agreeing on */
+  const a=normDir(j.dir),b=normDir(x.dir);if(!a||!b)return;
+  const fits=(a.includes('give')&&b.includes('get'))||(a.includes('get')&&b.includes('give'));
+  if(fits)complement.push(L(`${topic(j.t)}: у тебя ${dirText(a)}, у ${pname(id)} ${dirText(b)} — дополняете друг друга`,`${topic(j.t)}: you — ${dirText(a)}, ${pname(id)} — ${dirText(b)}: you complement each other`));
+  else if(a.length===1&&b.length===1&&a[0]===b[0]&&a[0]!=='watch')discuss.push(L(`${topic(j.t)}: вам обоим ближе ${dirText(a)} — стоит договориться`,`${topic(j.t)}: you both lean to ${dirText(a)} — worth agreeing on`));});
  const mf=fmtList(publicField(S.me,'format')),tf=fmtList(p.format);if(mf.length&&tf.length&&mf.includes('mono')!==tf.includes('mono'))discuss.push(L(`Формат отношений: ${fmtText(mf,2)} и ${fmtText(tf,2)}`,`Relationship format: ${fmtText(mf,2)} vs ${fmtText(tf,2)}`));else{const both=mf.filter(x=>tf.includes(x));if(both.length)complement.push(L(`Совпадает формат: ${fmtText(both,2)}`,`Same format: ${fmtText(both,2)}`));}
  return{match,complement,discuss:[...new Set(discuss)],few:mine.length<2||theirs.length<2};
 }
 function sharedSummary(id){const s=shared(id);if(s.few)return L('Пока мало общего контекста','Not much shared context yet');
- const parts=[];if(s.match.length)parts.push(pl(s.match.length,['общая тема','общие темы','общих тем'],['shared topic','shared topics']));if(s.complement.length)parts.push(L('роли дополняют','roles complement'));return parts.join(', ')||L('Есть что обсудить','Something to talk about');}
+ const parts=[];if(s.match.length)parts.push(pl(s.match.length,['общая тема','общие темы','общих тем'],['shared topic','shared topics']));if(s.complement.length)parts.push(L('дополняете друг друга','you complement each other'));return parts.join(', ')||L('Есть что обсудить','Something to talk about');}
 
 /* ---------- people ---------- */
 function whoLine(id){const p=person(id);if(!p)return '';const g=(p.gender||[]).map(x=>opt('gender',x)).join(', ');const o=(p.orient||[]).map(x=>opt('orient',x)).join(', ');return [p.pair?T(p.pairNote):opt('pron',p.pron),[g,o].filter(Boolean).join(', ')].filter(Boolean).join(' · ');}
