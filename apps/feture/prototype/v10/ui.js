@@ -24,9 +24,10 @@ function shared(id){
  const theirs=(p.jars||[]).map(j=>Array.isArray(j)?{t:j[0],lv:j[1]}:j).filter(j=>!j.limit);
  const match=mine.filter(j=>j.lv>=6&&theirs.some(x=>x.t===j.t&&x.lv>=6)).map(j=>j.t);
  const complement=[];const discuss=[];
- const r1=publicField(S.me,'role'),r2=p.role;
- if((r1==='lead'&&r2==='recv')||(r1==='recv'&&r2==='lead'))complement.push(L(`Твоя ${opt('role',r1)} роль и ${opt('role',r2)} у ${pname(id)} дополняют друг друга`,`Your ${opt('role',r1)} role and ${pname(id)}’s ${opt('role',r2)} role complement each other`));
- else if(r2==='switch'||r1==='switch')complement.push(L(`${pname(id)} — свитч: роли можно договорить вместе`,`${pname(id)} is a switch: roles are open to agree on`));
+ const r1=fmtList(publicField(S.me,'role')),r2=fmtList(p.role);
+ const roles=r1.includes('lead')&&r2.includes('recv')?['lead','recv']:r1.includes('recv')&&r2.includes('lead')?['recv','lead']:null;
+ if(roles)complement.push(L(`Твоя ${opt('role',roles[0])} и ${opt('role',roles[1])} у ${pname(id)} дополняют друг друга`,`Your ${opt('role',roles[0])} role and ${pname(id)}’s ${opt('role',roles[1])} role complement each other`));
+ else if(r1.includes('switch')||r2.includes('switch'))complement.push(L('Среди открытых ролей есть свитч: роли можно договорить вместе','The shared roles include switch: roles are open to agree on'));
  mine.forEach(j=>{const x=theirs.find(y=>y.t===j.t);if(x&&Math.abs(x.lv-j.lv)>=4)discuss.push(L(`${topic(j.t)}: у тебя ${j.lv}/10, у ${pname(id)} ${x.lv}/10`,`${topic(j.t)}: you ${j.lv}/10, ${pname(id)} ${x.lv}/10`));
   if(false)discuss.push(L(`${topic(j.t)}: ты хочешь попробовать, для ${pname(id)} это сильный интерес`,`${topic(j.t)}: you want to try, for ${pname(id)} it’s a strong interest`));});
  const mf=fmtList(publicField(S.me,'format')),tf=fmtList(p.format);if(mf.length&&tf.length&&mf.includes('mono')!==tf.includes('mono'))discuss.push(L(`Формат отношений: ${fmtText(mf,2)} и ${fmtText(tf,2)}`,`Relationship format: ${fmtText(mf,2)} vs ${fmtText(tf,2)}`));else{const both=mf.filter(x=>tf.includes(x));if(both.length)complement.push(L(`Совпадает формат: ${fmtText(both,2)}`,`Same format: ${fmtText(both,2)}`));}
@@ -264,19 +265,19 @@ const chipPicker=o=>chipGroup(o.items,o.sel,o.act,{title:o.title,max:o.max,group
 const optGroups=g=>{const b=OPT_BASE[g]||8;const ids=OPT[g].map(x=>x[0]);return [[L('Популярное','Popular'),ids.slice(0,b)],[L('Ещё варианты','More options'),ids.slice(b)]];};
 /** Shared identity choices: same IDs, multiplicity and catalog in onboarding/profile. */
 const IDENTITY_KEYS=['pron','gender','orient','role','status','format','seek'];
-const IDENTITY_MULTI=['gender','orient','format','seek'];
+const IDENTITY_MULTI=['gender','orient','format','role','seek'];
 const identityFields=()=>[
  ['pron',L('Местоимения','Pronouns'),L('Необязательно.','Optional.')],
  ['gender',L('Гендер','Gender'),L('До пяти выбранных вариантов.','Up to five selected options.')],
  ['orient',L('Ориентация','Orientation'),L('До пяти выбранных вариантов.','Up to five selected options.')],
- ['role',L('Роль','Role'),L('Один вариант. Это не согласие на практики.','One option. This is not consent to any practice.')],
+ ['role',L('Роль','Role'),L('До пяти вариантов. Это не согласие на практики.','Up to five options. This is not consent to any practice.')],
  ['status',L('Статус отношений','Relationship status'),L('Необязательно.','Optional.')],
  ['format',L('Формат отношений','Relationship format'),L('До пяти выбранных вариантов.','Up to five selected options.')],
  ['seek',L('Ищу','Looking for'),L('Можно выбрать несколько.','You can choose more than one.')]
 ];
 const identityDraft=m=>Object.fromEntries(IDENTITY_KEYS.map(k=>[k,IDENTITY_MULTI.includes(k)?[...fmtList(m[k])]:m[k]==='any'||m[k]==='unspecified'?null:m[k]||null]));
-function identityChoices(k,value,act){const title=identityFields().find(x=>x[0]===k)[1];return chipGroup(optItems(k),IDENTITY_MULTI.includes(k)?fmtList(value):[value],act,{k,title,groups:optGroups(k),limit:5,max:['gender','orient','format'].includes(k)?5:undefined});}
-function toggleIdentityValue(value,k,v){if(!OPT[k]?.some(x=>x[0]===v))return value;if(!IDENTITY_MULTI.includes(k))return value===v?null:v;const arr=[...fmtList(value)],i=arr.indexOf(v);if(i<0){if(['gender','orient','format'].includes(k)&&arr.length>=5){toast(L('Можно выбрать до пяти вариантов','Choose up to five options'),{type:'info'});return arr;}arr.push(v);}else arr.splice(i,1);return arr;}
+function identityChoices(k,value,act){const title=identityFields().find(x=>x[0]===k)[1];return chipGroup(optItems(k),IDENTITY_MULTI.includes(k)?fmtList(value):[value],act,{k,title,groups:optGroups(k),limit:5,max:['gender','orient','format','role'].includes(k)?5:undefined});}
+function toggleIdentityValue(value,k,v){if(!OPT[k]?.some(x=>x[0]===v))return value;if(!IDENTITY_MULTI.includes(k))return value===v?null:v;const arr=[...fmtList(value)],i=arr.indexOf(v);if(i<0){if(['gender','orient','format','role'].includes(k)&&arr.length>=5){toast(L('Можно выбрать до пяти вариантов','Choose up to five options'),{type:'info'});return arr;}arr.push(v);}else arr.splice(i,1);return arr;}
 
 
 const topicGroups=ids=>{ids=ids||Object.keys(TOPICS);return CATS.map(c=>[T(c),ids.filter(t=>TOPICS[t]?.cat===c.id)]).filter(g=>g[1].length);};
