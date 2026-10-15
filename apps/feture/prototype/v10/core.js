@@ -160,7 +160,8 @@ function authorGuard(id=actionAuthor()){if(authorAllowed(id))return true;toast(L
 const authorTicket=(id=actionAuthor())=>({id,state:S,session:S.session,pair:S.pair,safety:S.pair?.safetyEpoch||0});
 const validAuthor=t=>S===t.state&&S.session===t.session&&authorAllowed(t.id)&&(t.id!=='couple'||S.pair===t.pair&&(S.pair.safetyEpoch||0)===t.safety);
 function authorPicker(fixed){if(!activePair())return '';const id=fixed||actionAuthor();return `<span class="author-picker" data-author-picker ${fixed?'data-fixed-author="'+fixed+'"':''}><button type="button" class="author-trigger" ${fixed?'disabled':'data-act="authorMenu"'} aria-label="${L('Автор','Author')}: ${esc(pname(id))}" aria-haspopup="menu" title="${esc(pname(id))}">${av(id,'xs')}<span>${id==='me'?L('Я','Me'):L('Мы','Us')}</span>${fixed?'':I.down}</button></span>`;}
-function closeAuthorMenu(){const menu=$('#authorMenu');if(!menu?.remove)return false;menu.remove();$$('[data-act="authorMenu"]').forEach(el=>el.setAttribute('aria-expanded','false'));return true;}
+let authorMenuAction=null;
+function closeAuthorMenu(){authorMenuAction=null;const menu=$('#authorMenu');if(!menu?.remove)return false;menu.remove();$$('[data-act="authorMenu"]').forEach(el=>el.setAttribute('aria-expanded','false'));return true;}
 
 /* Patch only author controls and action labels: keep editors, media, sheets and the deck DOM alive. */
 function paintAuthor(){
@@ -256,7 +257,7 @@ function toast(msg,o={}){
 let sheetOpener=null;
 /** build() → {title, body, foot, head}; rebuilt by resheet() so sheet state stays in S */
 function sheet(build,o={}){
- sheetOpener=document.activeElement;S.ui.shq='';
+ sheetOpener=document.activeElement;$('#sheet').inert=false;S.ui.shq='';
  S.ui.sheet={build,o};drawSheet();
  requestAnimationFrame(()=>{$('#scrim').classList.add('on');$('#sheet').classList.add('on');syncModal();const sh=$('#sheet');const f=$('#sheet [autofocus]');if(f)f.focus({preventScroll:true});else{sh.tabIndex=-1;sh.focus({preventScroll:true});}});
 }
@@ -272,7 +273,7 @@ const resheet=()=>drawSheet();
 function userCloseSheet(){const owner=S,session=S?.session,s=S&&S.ui.sheet;if(!s)return;if(s.o.back&&s.o.back())return;if(s.o.guard&&s.o.guard()){ask({icon:'warn',tone:'a',title:L('Закрыть без сохранения?','Close without saving?'),text:L('Выбранное здесь пропадёт.','What you picked here will be lost.'),ok:L('Закрыть','Close'),cancel:L('Остаться','Stay'),danger:true}).then(ok=>{if(ok&&S===owner&&S.session===session&&S.ui.sheet===s)closeSheet();});return;}closeSheet();}
 function closeSheet(instant){
  const s=S&&S.ui.sheet;if(!s)return;S.ui.sheet=null;
- $('#scrim').classList.remove('on');const el=$('#sheet');el.classList.remove('on');
+ $('#scrim').classList.remove('on');const el=$('#sheet');el.classList.remove('on');el.inert=true;
  s.o.onClose&&s.o.onClose();
  syncModal();if(!instant&&sheetOpener&&sheetOpener.isConnected)sheetOpener.focus({preventScroll:true});
 }

@@ -43,7 +43,7 @@ ACT.ffMode=a=>{S.ui.ffMode=a.dataset.v;resheet();};
 ACT.ffApply=()=>{S.filters[S.ui.ff.fk]=S.ui.ff.d;closeSheet();refresh();};
 
 /* post actions — a post like is a reaction, never a personal like */
-ACT.likePost=a=>{const p=postById(a.dataset.v);if(!p||p.unavailable||!authorGuard()||isBlocked(p.author))return;const actor=actionAuthor();p.reactions??={me:!!p.liked};p.reactions[actor]=!p.reactions[actor];if(actor==='me')p.liked=p.reactions.me;paintReactions();};
+ACT.likePost=a=>{if(cur().id==='F01'&&activePair()&&!a.dataset.authorConfirmed){openAuthorMenu(a,()=>{a.dataset.authorConfirmed='1';try{ACT.likePost(a);}finally{delete a.dataset.authorConfirmed;}});return;}const p=postById(a.dataset.v);if(!p||p.unavailable||!authorGuard()||isBlocked(p.author))return;const actor=actionAuthor();p.reactions??={me:!!p.liked};p.reactions[actor]=!p.reactions[actor];if(actor==='me')p.liked=p.reactions.me;paintReactions();};
 ACT.savePost=a=>{const p=postById(a.dataset.v);p.saved=!p.saved;const s=S.me.saved.posts;p.saved?s.push(p.id):s.splice(s.indexOf(p.id),1);a.classList.toggle('saved',p.saved);a.innerHTML=p.saved?I.bookmarkf:I.bookmark;toast(p.saved?L('Сохранено — найдёшь в «Я → Сохранённое»','Saved — find it in Me → Saved'):L('Убрано из сохранённого','Removed from saved'),{type:p.saved?'ok':'',action:p.saved?{label:L('Открыть','Open'),fn:()=>go('G04')}:null});};
 ACT.sharePost=()=>{toast(L('Ссылка скопирована. Откроется только у тех, кому видна публикация','Link copied. It opens only for people who can see the post'),{type:'ok'});};
 /* V7: a vote can be changed (tap another option) or withdrawn (tap it again / «Отменить голос») */

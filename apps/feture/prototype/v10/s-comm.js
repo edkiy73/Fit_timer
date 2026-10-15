@@ -80,7 +80,7 @@ ACT.cManage=()=>go('C10',{id:cur().p.id});
 /* C06 — discussion thread */
 SC.C06={title:()=>L('Обсуждение','Discussion'),valid:p=>!!S.discussions.find(d=>d.id===p.id),render:(p,r)=>{const d=S.discussions.find(x=>x.id===p.id);const c=COMMUNITIES[d.c];if(!SC.C03.valid({id:d.c}))return unavailable();const j=communityMemberCanWrite(d.c,'me','comment');if(d.author==='couple'&&!activePair())return `${bar(L('Обсуждение недоступно','Discussion unavailable'),{back:1})}<div class="view">${empty('lock',L('Совместный профиль отключён','Couple profile is inactive'),'')}</div>`;
  if(c.privacy==='closed'&&!j)return unavailable();
- return `${bar(T(c.name),{back:1,sm:1,sub:L('Обсуждение','Discussion')})}<div class="view nodock ${j?'cta1':''}"><div class="wrap">
+ return `${bar(T(c.name),{back:1,sm:1,sub:L('Обсуждение','Discussion'),actions:authorPicker()})}<div class="view nodock ${j?'cta1':''}"><div class="wrap">
  <div class="post-h"><button class="who" ${profGo(d.author)}>${av(d.author,'sm')}<span class="tx"><b><span class="nmt">${esc(pname(d.author))}</span>${nameBadges(person(d.author))}</b><small>${F.rel(d.t)}</small></span></button><button class="ibtn ghost sm" data-act="report" data-v="post" aria-label="${L('Пожаловаться','Report')}">${I.flag}</button></div>
  <h2 class="t md" style="margin-top:14px">${esc(T(d.title))}</h2><div style="font-size:15.5px;line-height:1.55">${md(T(d.text))}</div>
  ${mediaPreviews(d.media)}<div class="sec">${pl(d.replies.length,['ответ','ответа','ответов'],['reply','replies'])}</div>
