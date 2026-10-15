@@ -1433,3 +1433,10 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .hero:has(>.pc-info)::before{content:"";grid-area:1/1;aspect-ratio:1/1}
 @container stage (min-width:768px){.hero:has(>.pc-info)::before{aspect-ratio:4/3}}
 .hero>.pc-info{position:relative;grid-area:1/1;align-self:end;padding-top:calc(96px + var(--safe-t))}
+
+/* -- online dot: on the circle's edge (45°), never clipped; the photo is clipped by .av-in -- */
+.av.on{overflow:visible;background:none}
+.av-in{position:absolute;inset:0;display:block;border-radius:50%;overflow:hidden;background:var(--raise)}
+.av-in.ini{display:grid;place-items:center}
+.av.on::after{right:calc(14.6% - 5px);bottom:calc(14.6% - 5px);z-index:1;box-shadow:0 0 0 2px var(--av-ring,var(--bg))}
+.card .av.on,.sheet .av.on,.li .av.on{--av-ring:var(--surf)}

@@ -1444,6 +1444,13 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .hero:has(>.pc-info)::before{content:"";grid-area:1/1;aspect-ratio:1/1}
 @container stage (min-width:768px){.hero:has(>.pc-info)::before{aspect-ratio:4/3}}
 .hero>.pc-info{position:relative;grid-area:1/1;align-self:end;padding-top:calc(96px + var(--safe-t))}
+
+/* -- online dot: on the circle's edge (45°), never clipped; the photo is clipped by .av-in -- */
+.av.on{overflow:visible;background:none}
+.av-in{position:absolute;inset:0;display:block;border-radius:50%;overflow:hidden;background:var(--raise)}
+.av-in.ini{display:grid;place-items:center}
+.av.on::after{right:calc(14.6% - 5px);bottom:calc(14.6% - 5px);z-index:1;box-shadow:0 0 0 2px var(--av-ring,var(--bg))}
+.card .av.on,.sheet .av.on,.li .av.on{--av-ring:var(--surf)}
 </style>
 </head>
 <body>
@@ -1973,12 +1980,14 @@ function publicField(m,k){const v=m.vis?.[k]??PUBLIC_VIS[k]??'public';return v==
 function meAsPerson(){const m=S.ui.profilePreview||S.me;return{pv:m.photoCheck==='ok',premium:!!m.premium,name:m.name||m.nick,age:m.showAge===false?null:ageOf(m.dob),photo:m.photo,city:m.city,location:m.location?.coords,pron:m.pron,gender:publicField(m,'gender'),orient:publicField(m,'orient'),format:publicField(m,'format'),status:publicField(m,'status'),role:publicField(m,'role'),seek:m.dating?m.seek:[],bio:m.bio,verified:m.ageCheck==='ok',online:true,dating:m.dating,jars:m.jars.filter(j=>j.vis==='public'&&!j.limit).map(j=>[j.t,j.lv]),langs:m.langs};}
 /** avatar: photo → img; pair → two plates; else initials plate */
 function av(id,cls='',variant=0){
- const p=person(id);
- if(!p) return `<span class="av ${cls}">${plate('night')}</span>`;
- if(p.photo) return `<span class="av ${cls}"><img src="${IMG(p.photo)}" alt="" loading="lazy" draggable="false" style="${variant?'transform:scale(1.35);object-position:50% 25%':''}"></span>`;
- if(p.pair) return `<span class="av ${cls}" style="display:grid;grid-template-columns:1fr 1fr">${`<span style="position:relative">${plate(p.plate)}</span><span style="position:relative">${plate(p.plate2||p.plate)}</span>`}<b style="position:absolute;inset:0;display:grid;place-items:center;color:#fff;font:800 13px/1 var(--font)">${esc((p.name||'').split(/[ &и]+/).filter(Boolean).map(x=>x[0]).join('+'))}</b></span>`;
- const ini=(p.name||'?')[0];
- return `<span class="av ini ${cls}">${plate(p.plate||'night')}<b style="position:relative">${esc(ini)}</b></span>`;
+ const p=person(id);let inner,st='',k='';
+ if(!p)inner=plate('night');
+ else if(p.photo)inner=`<img src="${IMG(p.photo)}" alt="" loading="lazy" draggable="false" style="${variant?'transform:scale(1.35);object-position:50% 25%':''}">`;
+ else if(p.pair){st='display:grid;grid-template-columns:1fr 1fr';inner=`<span style="position:relative">${plate(p.plate)}</span><span style="position:relative">${plate(p.plate2||p.plate)}</span><b style="position:absolute;inset:0;display:grid;place-items:center;color:#fff;font:800 13px/1 var(--font)">${esc((p.name||'').split(/[ &и]+/).filter(Boolean).map(x=>x[0]).join('+'))}</b>`;}
+ else{k='ini';inner=`${plate(p.plate||'night')}<b style="position:relative">${esc((p.name||'?')[0])}</b>`;}
+ // online: the dot sits on the circle's edge, so the picture is clipped by an inner circle, not by the avatar itself
+ if(/(^|\s)on(\s|$)/.test(cls))return `<span class="av ${k} ${cls}"><span class="av-in ${k}" ${st?`style="${st}"`:''}>${inner}</span></span>`;
+ return `<span class="av ${k} ${cls}" ${st?`style="${st}"`:''}>${inner}</span>`;
 }
 /** Photos of a person. Prototype people have one licensed image each, so extra photos are distinct crops of it
  *  (stand-ins for a real 2–6 photo gallery). My own photos are real local files. */
