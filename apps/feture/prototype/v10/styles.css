@@ -1462,3 +1462,4 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
   .welcome .w-cta,.welcome .w-age{max-width:460px}
 }
 .pc-who:empty{display:none}
+.hcard .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
