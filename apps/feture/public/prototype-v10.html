@@ -1850,6 +1850,48 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .poll.voted .poll-count{border:0;background:var(--raise);min-height:48px}
 .poll.voted .poll-undo,.poll .poll-undo{border:0;box-shadow:none;background:transparent;min-height:32px}
 .poll.voted .poll-undo:hover{background:var(--raise)}
+/* poll footer: votes count and «withdraw» on one line; withdraw is a soft secondary button */
+.poll-f{display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:10px}
+.poll-f .note{margin:0;white-space:nowrap}
+.poll.voted .poll-undo,.poll .poll-undo{background:var(--raise);padding:0 12px;min-height:34px;border-radius:11px;color:var(--ink)}
+.poll.voted .poll-undo:hover,.poll .poll-undo:hover{background:color-mix(in srgb,var(--ink) 10%,var(--raise))}
+
+/* replies: order toggle, batch loading, a flash on the reply you just sent */
+.cm-sort{display:inline-flex;gap:2px;padding:3px;margin:0 0 8px;border-radius:12px;background:var(--raise)}
+.cm-sort button{min-height:30px;padding:0 12px;border-radius:9px;font-size:13px;font-weight:600;color:var(--mute)}
+.cm-sort button.on{background:var(--surf);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.cm-load{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;margin:8px 0 12px;border-radius:14px;background:var(--raise);font-size:14px;font-weight:600;color:var(--ink)}
+.cm-load:hover{background:color-mix(in srgb,var(--ink) 8%,var(--raise))}
+@keyframes cmFlash{0%,30%{background:color-mix(in srgb,var(--accent) 14%,transparent)}100%{background:transparent}}
+.cm.cm-flash{animation:cmFlash 1.8s ease-out;border-radius:12px}
+/* the reply field grows without a scrollbar until its max height */
+.inputbar textarea{overflow-y:hidden;scrollbar-width:thin}
+
+/* =====================================================================
+   V10 owner revision, 15.10 — one-time / timed chat media: blurred picture + a burning match.
+   ===================================================================== */
+.mtile.eph2{position:relative;display:grid;place-items:center;min-height:220px;padding:0;background:#1A1218;color:#fff;isolation:isolate}
+.mtile.eph2 .eph-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(26px) saturate(1.25);transform:scale(1.2);z-index:-2}
+.mtile.eph2 .eph-ash{position:absolute;inset:0;z-index:-2;background:radial-gradient(70% 60% at 50% 60%,#3A2A30,#140D12)}
+.mtile.eph2 .eph-veil{position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(12,6,12,.25),rgba(12,6,12,.55))}
+.eph-c{display:grid;justify-items:center;gap:4px;padding:18px 16px;text-align:center;max-width:260px}
+.eph-c b{font-size:14px;font-weight:650;line-height:1.3;text-shadow:0 1px 8px rgba(0,0,0,.4)}
+.eph-c small{font-size:12px;line-height:1.35;opacity:.85}
+.mtile.eph2:not([disabled]):hover .eph-veil{background:linear-gradient(180deg,rgba(12,6,12,.15),rgba(12,6,12,.45))}
+.mtile.eph2.expired{min-height:150px}
+.mtile.eph2.expired .eph-c{opacity:.8}
+.mmatch{display:block;width:44px;height:70px;margin-bottom:2px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.35))}
+.mmatch svg{width:100%;height:100%;overflow:visible}
+.mmatch.lit .fl{animation:matchFl 1.2s ease-in-out infinite alternate}
+.mmatch.lit .core{animation:matchCore .9s ease-in-out infinite alternate}
+.mmatch.lit{filter:drop-shadow(0 0 14px rgba(255,120,60,.55)) drop-shadow(0 6px 14px rgba(0,0,0,.35))}
+.mmatch .sp{opacity:0;animation:matchSp 2.2s ease-out infinite}.mmatch .s2{animation-delay:1.1s}
+.mmatch.out{color:#fff}.mmatch .smoke{animation:matchSmoke 3s ease-in-out infinite}
+@keyframes matchFl{0%{transform:scale(1,1) skewX(0)}50%{transform:scale(.95,1.06) skewX(3deg)}100%{transform:scale(1.04,.96) skewX(-3deg)}}
+@keyframes matchCore{to{transform:translateY(1px) scale(.9);opacity:.85}}
+@keyframes matchSp{0%{opacity:0;transform:translate(0,0)}20%{opacity:1}100%{opacity:0;transform:translate(4px,-16px)}}
+@keyframes matchSmoke{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:.6;transform:translateY(-3px)}}
+@media (prefers-reduced-motion:reduce){.mmatch .fl,.mmatch .core,.mmatch .sp,.mmatch .smoke{animation:none}}
 </style>
 </head>
 <body>
@@ -2119,7 +2161,7 @@ function freshState(persona){
   likesOut:full?[{p:'maya',src:'profile',t:ago(10)}]:[],
   matches:full?[{p:'mia',t:ago(26)},{p:'kai',t:ago(120)},{p:'sofi',t:ago(5)},{p:'lina',t:ago(1)},{p:'tomeva',t:ago(24)}]:[],
   threads:full?{
-   mia:{msgs:[{me:0,text:{ru:'Привет! Увидела, что у нас совпали связывание и забота после 🙂',en:'Hi! Saw we matched on bondage and aftercare 🙂'},t:ago(25)},{me:1,text:{ru:'Привет! Да, редко кто сразу пишет про заботу после',en:'Hi! Yes, rarely does anyone mention aftercare first'},t:ago(24.8)},{me:0,text:{ru:'Расскажешь, как ты к этому пришёл?',en:'Will you tell me how you got into it?'},t:ago(.1)},{me:0,text:{ru:'С прошлой встречи 🙂',en:'From the last meetup 🙂'},t:ago(.6),media:{type:'image',url:'/images/v10-content/post-p7-morning-coffee-45.webp',mode:'normal'}},{me:0,text:'',t:ago(.5),media:{type:'image',url:'/images/v10-content/gallery-e1-ropes.webp',mode:'once',openedAt:null,done:false}},{me:0,text:'',t:ago(.4),media:{type:'image',url:'/images/v10-content/post-p2-rope-details-45.webp',mode:'t15',openedAt:null,done:false}}],unread:1},
+   mia:{msgs:[{me:0,text:{ru:'Привет! Увидела, что у нас совпали связывание и забота после 🙂',en:'Hi! Saw we matched on bondage and aftercare 🙂'},t:ago(25)},{me:1,text:{ru:'Привет! Да, редко кто сразу пишет про заботу после',en:'Hi! Yes, rarely does anyone mention aftercare first'},t:ago(24.8)},{me:0,text:{ru:'Расскажешь, как ты к этому пришёл?',en:'Will you tell me how you got into it?'},t:ago(.1)},{me:0,text:{ru:'С прошлой встречи 🙂',en:'From the last meetup 🙂'},t:ago(.6),media:{type:'image',url:'/images/v10-content/post-p7-morning-coffee-45.webp',mode:'normal'}},{me:0,text:'',t:ago(.5),media:{type:'image',url:'/images/v10-content/gallery-e1-ropes.webp',mode:'once',openedAt:null,done:false}},{me:0,text:'',t:ago(.4),media:{type:'image',url:'/images/v10-content/post-p2-rope-details-45.webp',mode:'t15',openedAt:null,done:false}},{me:1,text:'',t:ago(.35),media:{type:'image',url:'/images/v10-content/gallery-e1-ropes.webp',mode:'t120',openedAt:Date.now()-50*60e3,done:false}},{me:0,text:'',t:ago(.3),media:{type:'image',url:null,mode:'once',openedAt:Date.now()-20*60e3,done:true}}],unread:1},
    kai:{msgs:[{me:1,text:{ru:'Спасибо за круг вчера, было очень спокойно.',en:'Thanks for the circle yesterday, it was really calm.'},t:ago(50)},{me:0,text:{ru:'Рад(а), что пришёл! В четверг будет ещё один.',en:'Glad you came! There’s another one on Thursday.'},t:ago(49)}],unread:0},
    tomeva:{pair:true,msgs:[{me:0,text:{ru:'Eva: Тогда в субботу в кафе?',en:'Eva: Saturday at the café then?'},t:ago(1.2)}],unread:1},
   }:{},
@@ -2816,7 +2858,7 @@ function pollVoters(p,i){return [...new Set([...(p.pollVoters?.[i]||[]),...(p.vo
    the count is a contained «people» button, and withdrawing is a quiet text button with an icon. */
 function pollHTML(p,o={}){const voted=p.vote!=null,opts=p.poll,live=!o.preview,tot=opts.reduce((n,x,i)=>n+pollVoters(p,i).length,0),max=Math.max(1,...opts.map((x,i)=>pollVoters(p,i).length));const anim=p._voteAt&&Date.now()-p._voteAt<1500;
  return `<div class="poll ${voted?'voted':''} ${anim?'anim':''}" role="group" aria-label="${p.pollQ?esc(T(p.pollQ)):L('Опрос','Poll')}">${p.pollQ?`<b class="poll-q">${esc(T(p.pollQ))}</b>`:''}${!voted&&live?`<p class="poll-hint">${L('Выбери один вариант','Pick one option')}</p>`:''}${opts.map((x,i)=>{const n=pollVoters(p,i).length,pc=tot?Math.round(n/tot*100):0,mine=p.vote===i,lead=voted&&n===max&&n>0;
-  return `<div class="poll-option ${mine?'mine':''} ${lead?'lead':''}"><button type="button" ${live&&!voted?`data-act="vote" data-v="${p.id}" data-i="${i}"`:''} class="poll-choice ${mine?'mine':''}" aria-pressed="${mine}" aria-disabled="${!live||voted}">${voted?`<i class="pfill" style="--pc:${pc}%">${mine?'<b class="pbub"></b>':''}</i>`:'<span class="pradio" aria-hidden="true"></span>'}<span class="po"><span class="pot">${esc(T(x[0]))}</span>${mine?`<span class="pmine" aria-label="${L('твой выбор','your choice')}">${I.check}</span>`:''}</span></button>${voted?`<button type="button" class="poll-count" ${live?`data-act="pollPeople" data-v="${p.id}" data-i="${i}"`:''} aria-label="${L('Кто выбрал этот вариант','Who chose this option')}: ${n}"><span>${n}</span>${live?I.chev:''}</button>`:''}</div>`;}).join('')}<div class="poll-f"><span class="note">${pl(tot,['голос','голоса','голосов'],['vote','votes'])}${voted?` · ${L('нажми на число — увидишь, кто','tap a number to see who')}`:''}</span>${voted&&live?`<button type="button" class="poll-undo" data-act="unvote" data-v="${p.id}">${I.undo}<span>${L('Отменить голос','Withdraw vote')}</span></button>`:''}</div></div>`;}
+  return `<div class="poll-option ${mine?'mine':''} ${lead?'lead':''}"><button type="button" ${live&&!voted?`data-act="vote" data-v="${p.id}" data-i="${i}"`:''} class="poll-choice ${mine?'mine':''}" aria-pressed="${mine}" aria-disabled="${!live||voted}">${voted?`<i class="pfill" style="--pc:${pc}%">${mine?'<b class="pbub"></b>':''}</i>`:'<span class="pradio" aria-hidden="true"></span>'}<span class="po"><span class="pot">${esc(T(x[0]))}</span>${mine?`<span class="pmine" aria-label="${L('твой выбор','your choice')}">${I.check}</span>`:''}</span></button>${voted?`<button type="button" class="poll-count" ${live?`data-act="pollPeople" data-v="${p.id}" data-i="${i}"`:''} aria-label="${L('Кто выбрал этот вариант','Who chose this option')}: ${n}"><span>${n}</span>${live?I.chev:''}</button>`:''}</div>`;}).join('')}<div class="poll-f"><span class="note">${pl(tot,['голос','голоса','голосов'],['vote','votes'])}</span>${voted&&live?`<button type="button" class="poll-undo" data-act="unvote" data-v="${p.id}">${I.undo}<span>${L('Отменить голос','Withdraw vote')}</span></button>`:''}</div></div>`;}
 ACT.pollPeople=a=>{const p=postById(a.dataset.v),i=+a.dataset.i;if(!p?.poll?.[i]||p.vote==null)return;const ids=pollVoters(p,i);sheet(()=>({title:T(p.poll[i][0]),body:ids.length?`<div class="card list">${ids.map(id=>personRow(id)).join('')}</div>`:empty('people',L('Пока никто','Nobody yet'),'' )}));};
 
 function postMediaHTML(p,o={}){let h='';const m=postMedia(p);if(m.length)h+=mediaGrid(m,{id:p.id});
@@ -2860,16 +2902,28 @@ function replyTree(kind,id){const list=identifyReplies(kind,id),byId=new Map(lis
  const one=(c,root,child)=>{const hidden=c.deleted||isBlocked(c.a),parent=byId.get(c.parent);const status=c.status==='pending'?L('отправляется…','sending…'):c.status==='failed'?L('не отправлено','not sent'):F.rel(c.t);
   const to=child&&parent&&parent.id!==root.id&&!parent.deleted&&!isBlocked(parent.a)?`<small class="cm-to">${L('в ответ','replying to')} <button class="plink" ${profGo(parent.a)}>${esc(pname(parent.a))}</button></small>`:'';
   return `<article class="cm ${child?'child':''} ${hidden?'removed':c.status||''}" id="reply-${esc(c.id)}"><div class="cm-l">${hidden?'<span class="av cm-ghost"></span>':whoLink(c.a,child?'xs':'sm')}</div><div class="cm-b">${hidden?`<p class="note">${L('Ответ недоступен','Reply unavailable')}</p>`:`<div class="cm-h"><button class="plink pnm" ${profGo(c.a)}><span class="nmt">${esc(pname(c.a))}</span>${nameBadges(person(c.a))}</button><time>${status}</time></div>${to}<p class="reply-text">${esc(T(c.text))}</p>${c.status==='failed'&&kind==='p'?`<button class="btn text auto" data-act="retryComment" data-v="${esc(c.id)}">${L('Повторить','Retry')}</button>`:''}${replyActs(kind,id,c.id,c)}`}</div></article>`;};
- return roots.map(root=>{const all=flat(root);const recent=c=>c.a==='me'&&(c.status||Date.now()-c.t<15000);const forced=all.some(c=>c.id===focus||recent(c));const isOpen=open.includes(root.id)||forced||all.length<=3;const shown=isOpen?all:all.slice(0,2),rest=all.length-shown.length;
+ /* order of top-level replies: your fresh ones first, then «interesting» (likes + answers, then newer) or «new» (newest first).
+    1000 top-level replies don't render at once: 10 at a time, the next batch loads when the end scrolls into view. */
+ const sort=route.sort||'top',score=c=>(c.likes||0)+(c.liked?1:0)+2*flat(c).length,mineNew=c=>c.a==='me'&&(c.status||Date.now()-c.t<15000);
+ const gone=c=>c.deleted||isBlocked(c.a)?1:0;roots.sort((a,b)=>(gone(a)-gone(b))||(mineNew(b)-mineNew(a))||(sort==='new'?b.t-a.t:(score(b)-score(a))||(b.t-a.t)));
+ const PAGE=10;const fi=focus?roots.findIndex(r=>r.id===focus||flat(r).some(c=>c.id===focus)):-1;route.shown=Math.max(route.shown||PAGE,fi+1);
+ const page=roots.slice(0,route.shown),left=roots.length-page.length;
+ const head=roots.length>1?`<div class="cm-sort" role="tablist" aria-label="${L('Порядок ответов','Reply order')}">${[['top',L('Интересные','Top')],['new',L('Новые','Newest')]].map(([k,l])=>`<button role="tab" class="${sort===k?'on':''}" aria-selected="${sort===k}" data-act="thSort" data-v="${k}">${l}</button>`).join('')}</div>`:'';
+ const tail=left?`<button class="cm-load" data-act="thPage" data-left="${left}">${L(`Показать ещё ${Math.min(PAGE,left)} из ${left}`,`Show ${Math.min(PAGE,left)} more of ${left}`)}</button>`:'';
+ return head+page.map(root=>{const all=flat(root);const recent=c=>c.a==='me'&&(c.status||Date.now()-c.t<15000);const forced=all.some(c=>c.id===focus||recent(c));const isOpen=open.includes(root.id)||forced||all.length<=3;const shown=isOpen?all:all.slice(0,2),rest=all.length-shown.length;
   const more=rest?`<button class="cm-more" data-act="thOpen" data-v="${esc(root.id)}"><span class="cm-avs">${[...new Set(all.slice(2).map(c=>c.a))].filter(x=>!isBlocked(x)).slice(0,3).map(x=>av(x,'xs')).join('')}</span>${L(`Ещё ${pl(rest,['ответ','ответа','ответов'],['reply','replies'])}`,`${rest} more ${rest===1?'reply':'replies'}`)}</button>`:'';
   const less=isOpen&&!forced&&all.length>3?`<button class="cm-more less" data-act="thClose" data-v="${esc(root.id)}">${L('Свернуть ветку','Collapse thread')}</button>`:'';
-  return `<div class="th ${all.length?'has-kids':''}">${one(root,root,false)}${all.length?`<div class="cm-kids">${shown.map(c=>one(c,root,true)).join('')}${more}${less}</div>`:''}</div>`;}).join('');}
+  return `<div class="th ${all.length?'has-kids':''}">${one(root,root,false)}${all.length?`<div class="cm-kids">${shown.map(c=>one(c,root,true)).join('')}${more}${less}</div>`:''}</div>`;}).join('')+tail;}
+ACT.thSort=a=>{const r=cur();if(r.sort===a.dataset.v)return;r.sort=a.dataset.v;r.shown=10;refresh();};
+ACT.thPage=()=>{const r=cur();r.shown=(r.shown||10)+10;refresh();};
 ACT.thOpen=a=>{const r=cur();r.open=[...new Set([...(r.open||[]),a.dataset.v])];refresh();};
 ACT.thClose=a=>{const r=cur();r.open=(r.open||[]).filter(x=>x!==a.dataset.v);refresh();};
 function replyComposer(route){const c=route.replyTarget;if(!c)return '';return `<div class="reply-target"><span>${L('Ответ для','Reply to')} <b>${esc(pname(c.a))}</b></span><button class="ibtn sm" data-act="replyCancel" aria-label="${L('Отменить ответ','Cancel reply')}">${I.close}</button></div>`;}
 ACT.replyCancel=()=>{delete cur().replyTarget;refresh();};
 function notifyReply(kind,id,c){if(c.notified||c.status||c.deleted)return;const list=identifyReplies(kind,id);const parent=list.find(x=>x.id===c.parent);const root=kind==='p'?postById(id)?.author:S.discussions.find(x=>x.id===id)?.author;const targets=[...new Set([parent&&!parent.deleted?parent.a:null,root].filter(x=>x&&x!==c.a&&!isBlocked(x)))];c.notified=true;S.replyDeliveries??=[];for(const to of targets){const n={id:'rn_'+c.id+'_'+to,type:'reply',to,p:c.a,reply:c.id,parent:c.parent||null,t:Date.now(),read:false,go:[kind==='p'?'F05':'C06',{id,reply:c.id}]};S.replyDeliveries.push(n);if(to==='me')S.notifs.unshift(n);}}
-function scrollToReply(p){if(p.reply)document.getElementById?.('reply-'+p.reply)?.scrollIntoView({block:'center'});}
+function scrollToReply(p){const r=cur();const to=r.scrollTo||(r.scrolledTo!==p.reply?p.reply:null);if(to){const el=document.getElementById?.('reply-'+to);if(el){el.scrollIntoView({block:'center',behavior:r.scrollTo?'smooth':'auto'});if(r.scrollTo){el.classList.add('cm-flash');delete r.scrollTo;}else r.scrolledTo=p.reply;}}
+ /* auto-load the next batch of replies when «show more» comes into view */
+ const more=$('.cm-load');if(more&&'IntersectionObserver' in window){const io=new IntersectionObserver(es=>{if(es.some(e=>e.isIntersecting)){io.disconnect();if(cur()===r&&document.contains(more))ACT.thPage();}},{rootMargin:'200px'});io.observe(more);}}
 const replyAt=a=>{const [kind,id]=a.dataset.v.split(':');const list=identifyReplies(kind,id);const c=list.find(x=>x.id===a.dataset.i)||list[+a.dataset.i];return c?{kind,id,c,list}:null;};
 ACT.rLike=a=>{const x=replyAt(a);if(!x||x.c.status||x.c.deleted||isBlocked(x.c.a))return;x.c.liked=!x.c.liked;refresh();};
 ACT.rReply=a=>{const x=replyAt(a);if(!x||x.c.status||x.c.deleted||isBlocked(x.c.a))return;const input=x.kind==='p'?'cmt':'dr';if(!$('#'+input))return;cur().replyTarget={id:x.c.id,a:x.c.a};refresh();const el=$('#'+input);el?.focus();};
@@ -3633,6 +3687,14 @@ ACT.sharePost=()=>{toast(L('Ссылка скопирована. Откроет�
 ACT.vote=a=>{const p=postById(a.dataset.v),i=+a.dataset.i;if(!p?.poll?.[i]||p.vote!=null)return;run(null,()=>{if(p.vote!=null)return;p.vote=i;p._voteAt=Date.now();refresh();},{ms:220});};
 ACT.unvote=a=>{const p=postById(a.dataset.v);if(!p?.poll||p.vote==null)return;run(null,()=>{p.vote=null;refresh();},{ms:220,ok:L('Голос отменён','Vote withdrawn')});};
 
+/* post menu (restored: it was dropped by mistake in #1115) */
+ACT.postMenu=a=>{const p=postById(a.dataset.v);const mine=p.author==='me';
+ sheet(()=>({title:L('Публикация','Post'),body:`<div class="card list">${mine?`${linkRow({act:'editPost',v:p.id,icon:'edit',title:L('Редактировать','Edit'),noChev:1})}${linkRow({act:'delPost',v:p.id,icon:'trash',cls:'danger',title:L('Удалить','Delete'),noChev:1})}`:
+ `${linkRow({act:'hidePost',v:p.id,icon:'eyeoff',title:L('Скрыть публикацию','Hide this post'),sub:L('Больше не увидишь её в ленте','You won’t see it in your feed'),noChev:1})}${linkRow({act:'muteAuthor',v:p.author,icon:'belloff',title:L(`Не показывать ${pname(p.author)}`,`Mute ${pname(p.author)}`),sub:L('Автор не узнает об этом','The author won’t be notified'),noChev:1})}${linkRow({act:'sharePost',v:p.id,icon:'link',title:L('Скопировать ссылку','Copy link'),noChev:1})}${linkRow({act:'report',v:'post',icon:'flag',cls:'danger',title:L('Пожаловаться','Report'),noChev:1})}`}</div>`}));};
+ACT.hidePost=a=>{S.hiddenPosts=S.hiddenPosts||new Set();S.hiddenPosts.add(a.dataset.v);closeSheet();refresh();toast(L('Публикация скрыта','Post hidden'),{action:{label:L('Вернуть','Undo'),fn:()=>{S.hiddenPosts.delete(a.dataset.v);refresh();}}});};
+ACT.muteAuthor=a=>{S.mutedAuthors=S.mutedAuthors||new Set();S.mutedAuthors.add(a.dataset.v);closeSheet();refresh();toast(L(`${pname(a.dataset.v)} скрыт(а) из ленты`,`${pname(a.dataset.v)} muted in your feed`),{action:{label:L('Вернуть','Undo'),fn:()=>{S.mutedAuthors.delete(a.dataset.v);refresh();}}});};
+ACT.delPost=a=>{closeSheet(true);ask({icon:'trash',tone:'l',title:L('Удалить публикацию?','Delete this post?'),text:L('Её больше никто не увидит. Комментарии тоже удалятся.','Nobody will see it again. Comments are deleted too.'),ok:L('Удалить','Delete'),danger:true}).then(ok=>{if(!ok)return;run(null,()=>{S.myPosts=S.myPosts.filter(x=>x.id!==a.dataset.v);delete S.postEdits[a.dataset.v];if(cur().id==='F05')back();else refresh();},{ok:L('Публикация удалена','Post deleted')});});};
+ACT.editPost=a=>{closeSheet(true);const p=postById(a.dataset.v);go('F07',{id:p.id});};
 /* F05 — post with replies */
 SC.F05={title:()=>L('Публикация','Post'),valid:p=>!!postById(p.id)&&!isBlocked(postById(p.id).author),render:(p,r)=>{const x=postById(p.id);
  return `${bar(L('Публикация','Post'),{back:1,sm:1})}<div class="view nodock cta1"><div class="wrap">${postCard(x,{detail:1})}
@@ -3640,10 +3702,10 @@ SC.F05={title:()=>L('Публикация','Post'),valid:p=>!!postById(p.id)&&!i
  ${x.comments.length?replyTree('p',x.id):`<p class="note">${L('Пока никто не ответил. Начни разговор — по-доброму.','No replies yet. Start the conversation — kindly.')}</p>`}
  ${replyComposer(r)}
  </div></div><div class="inputbar"><textarea id="cmt" rows="1" placeholder="${L('Ответить…','Reply…')}" aria-label="${L('Ответ','Reply')}" data-in="grow" data-enter="sendComment">${esc(r.f.cmt||'')}</textarea><button class="ibtn send" data-act="sendComment" aria-label="${L('Отправить','Send')}">${I.send}</button></div>`;},after:p=>scrollToReply(p)};
-IN.grow=el=>{el.style.height='auto';el.style.height=Math.min(120,el.scrollHeight)+'px';cur().f[el.id]=el.value;const s=el.parentNode.querySelector('.send');if(s)s.disabled=!el.value.trim();};
+IN.grow=el=>{el.style.height='auto';const h=el.scrollHeight+2;el.style.height=Math.min(120,h)+'px';el.style.overflowY=h>120?'auto':'hidden';cur().f[el.id]=el.value;const s=el.parentNode.querySelector('.send');if(s)s.disabled=!el.value.trim();};
 ACT.focusReply=()=>{$('#cmt')?.focus();};
 function sendPostReply(c,x,route,owner,session){const allowed=()=>S===owner&&S.session===session&&postById(x.id)===x&&x.comments.includes(c)&&!c.deleted&&!isBlocked(x.author);if(!allowed())return;const repaint=()=>{if(cur()===route)refresh();};c.status='pending';repaint();net().then(()=>{if(!allowed())return;c.status='';notifyReply('p',x.id,c);repaint();}).catch(()=>{if(!allowed())return;c.status='failed';repaint();toast(L('Ответ не отправлен. Текст сохранён — можно повторить','Reply not sent. Your text is kept — you can retry'),{type:'err'});});}
-ACT.sendComment=()=>{const route=cur(),el=$('#cmt'),v=el?.value.trim();if(!v){el?.focus();return;}if(v.length>1000){toast(L('Максимум 1000 символов','1000 characters max'),{type:'err'});return;}const x=postById(route.p.id);if(!S.session||!x||isBlocked(x.author))return;identifyReplies('p',x.id);const parent=x.comments.find(c=>c.id===route.replyTarget?.id);if(route.replyTarget&&(!parent||parent.deleted||isBlocked(parent.a)))return;const c={id:'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),a:'me',text:{ru:v,en:v},parent:parent?.id||null,t:Date.now(),status:'pending'};x.comments.push(c);route.f.cmt='';delete route.replyTarget;sendPostReply(c,x,route,S,S.session);};
+ACT.sendComment=()=>{const route=cur(),el=$('#cmt'),v=el?.value.trim();if(!v){el?.focus();return;}if(v.length>1000){toast(L('Максимум 1000 символов','1000 characters max'),{type:'err'});return;}const x=postById(route.p.id);if(!S.session||!x||isBlocked(x.author))return;identifyReplies('p',x.id);const parent=x.comments.find(c=>c.id===route.replyTarget?.id);if(route.replyTarget&&(!parent||parent.deleted||isBlocked(parent.a)))return;const c={id:'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),a:'me',text:{ru:v,en:v},parent:parent?.id||null,t:Date.now(),status:'pending'};x.comments.push(c);route.f.cmt='';delete route.replyTarget;route.scrollTo=c.id;sendPostReply(c,x,route,S,S.session);};
 ACT.retryComment=a=>{const x=postById(cur().p.id);if(!x)return;const c=identifyReplies('p',x.id).find(c=>c.id===a.dataset.v)||x.comments[+a.dataset.v];if(!c||c.status!=='failed'||c.a!=='me')return;sendPostReply(c,x,cur(),S,S.session);};
 
 /* F04 — topic feed */
@@ -4613,7 +4675,7 @@ SC.C06={title:()=>L('Обсуждение','Discussion'),valid:p=>!!S.discussion
  ${replyTree('d',d.id)||`<p class="note">${L('Ответов пока нет.','No replies yet.')}</p>`}${replyComposer(r)}
  ${!j?`<div class="alert info mt16">${I.info}<span>${L('Чтобы отвечать, вступи в сообщество.','Join the community to reply.')}</span></div><button class="btn primary mt12" data-back>${L('К сообществу','To the community')}</button>`:''}
  </div></div>${j?`<div class="inputbar"><textarea id="dr" rows="1" placeholder="${L('Ответить в обсуждении…','Reply to the discussion…')}" data-in="grow" data-enter="sendReply">${esc(r.f.dr||'')}</textarea><button class="ibtn send" data-act="sendReply" aria-label="${L('Отправить','Send')}">${I.send}</button></div>`:''}`;}};
-ACT.sendReply=()=>{const route=cur(),d=S.discussions.find(x=>x.id===route.p.id);if(!d||!S.session||!(S.joined.has(d.c)||ownsCommunity(d.c))){toast(L('Ответить могут только участники сообщества','Only community members can reply'),{type:'warn'});return;}const el=$('#dr'),v=el?.value.trim();if(!v){toast(L('Напиши ответ','Write a reply'),{type:'warn'});el?.focus();return;}identifyReplies('d',d.id);const parent=d.replies.find(c=>c.id===route.replyTarget?.id);if(route.replyTarget&&(!parent||parent.deleted||isBlocked(parent.a)))return;const owner=S,session=S.session,x={id:'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),parent:parent?.id||null,a:'me',text:{ru:v,en:v},t:Date.now(),status:'pending'};d.replies.push(x);route.f.dr='';delete route.replyTarget;refresh();$('#main .view').scrollTop=1e6;
+ACT.sendReply=()=>{const route=cur(),d=S.discussions.find(x=>x.id===route.p.id);if(!d||!S.session||!(S.joined.has(d.c)||ownsCommunity(d.c))){toast(L('Ответить могут только участники сообщества','Only community members can reply'),{type:'warn'});return;}const el=$('#dr'),v=el?.value.trim();if(!v){toast(L('Напиши ответ','Write a reply'),{type:'warn'});el?.focus();return;}identifyReplies('d',d.id);const parent=d.replies.find(c=>c.id===route.replyTarget?.id);if(route.replyTarget&&(!parent||parent.deleted||isBlocked(parent.a)))return;const owner=S,session=S.session,x={id:'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),parent:parent?.id||null,a:'me',text:{ru:v,en:v},t:Date.now(),status:'pending'};d.replies.push(x);route.f.dr='';delete route.replyTarget;route.scrollTo=x.id;refresh();
  const allowed=()=>S===owner&&S.session===session&&S.discussions.includes(d)&&(S.joined.has(d.c)||ownsCommunity(d.c));
  const repaint=()=>{if(cur()===route)refresh();};const send=()=>{if(!allowed())return;x.status='pending';repaint();net().then(()=>{if(!allowed())return;x.status='';notifyReply('d',d.id,x);repaint();}).catch(()=>{if(!allowed())return;x.status='failed';repaint();toast(L('Ответ не отправлен','Reply not sent'),{type:'err',action:{label:L('Повторить','Retry'),fn:send}});});};send();};
 
@@ -4722,13 +4784,25 @@ const cmModeLabel=m=>m.mode==='once'?L('один просмотр','view once'):
 function chatMediaHTML(x,i){const m=x.media,st=cmState(m),kind=m.type==='video'?L('Видео','Video'):L('Фото','Photo');
  if(st==='normal'){const hidden=!x.me&&S.me.chatBlur!==false&&!m.revealed;const thumb=m.type==='video'?`<video src="${esc(m.url)}" muted playsinline preload="metadata"></video>`:`<img src="${esc(m.url)}" alt="" draggable="false">`;
   return `<button class="mtile ${hidden?'blur':''}" data-act="chatMedia" data-v="${i}" aria-label="${hidden?L(`${kind} скрыто. Нажми, чтобы посмотреть`,`${kind} hidden. Tap to view`):L(`Открыть: ${kind}`,`Open ${kind}`)}">${thumb}${hidden?`<span class="mcover">${I.eyeoff}<b>${L('Нажми, чтобы посмотреть','Tap to view')}</b></span>`:''}</button>`;}
- const icon=m.mode==='once'?I.eye:I.timer;let line,sub='',can=false;
+ let line,sub='',can=false;
  if(x.me){line=`${kind} · ${cmModeLabel(m)}`;sub=st==='unopened'?L('ещё не просмотрено','not viewed yet'):st==='open'?L('открыто сейчас','open now'):st==='counting'?L(`просмотрено · осталось ${cmLeft(m)}`,`viewed · ${cmLeft(m)} left`):L('просмотр закончился, файла больше нет в чате','viewing ended; the file is gone from the chat');}
  else{can=st==='unopened'||st==='counting';line=`${kind} · ${cmModeLabel(m)}`;sub=st==='unopened'?(m.mode==='once'?L('нажми, чтобы открыть — посмотреть можно один раз','tap to open — you can view it once'):L('нажми, чтобы открыть — отсчёт начнётся с этого момента','tap to open — the countdown starts then')):st==='counting'?L(`можно открыть ещё · осталось ${cmLeft(m)}`,`can open again · ${cmLeft(m)} left`):st==='open'?L('открыто','open'):L('просмотр закончился','viewing ended');}
- return `<button class="mtile eph ${st}" ${can?`data-act="chatMedia" data-v="${i}"`:'disabled'}><span class="ico">${st==='expired'?I.check:icon}</span><span class="tx"><b>${line}</b><small>${sub}</small></span></button>`;}
+ /* owner 15.10: the media sits blurred (like regular blurred media), words in the centre, and a burning match instead of an icon —
+    the stick burns down with the time left; burnt out = charred stick, no picture. Your own media can be opened until it burns out. */
+ const mineCan=x.me&&st!=='expired'&&!!m.url;const frac=st==='expired'?0:st==='counting'?Math.max(.08,(m.openedAt+CM_TTL[m.mode]-chatNow())/CM_TTL[m.mode]):1;
+ const bg=m.url?(m.type==='video'?`<video class="eph-bg" src="${esc(m.url)}" muted playsinline preload="metadata"></video>`:`<img class="eph-bg" src="${esc(m.url)}" alt="" draggable="false">`):'<span class="eph-ash"></span>';
+ return `<button class="mtile eph2 ${st}" ${can||mineCan?`data-act="chatMedia" data-v="${i}"`:'disabled'} aria-label="${esc(line)}. ${esc(sub)}">${bg}<span class="eph-veil"></span><span class="eph-c">${matchSVG(frac,st!=='expired')}<b>${line}</b><small>${sub}${mineCan?` · ${L('нажми, чтобы проверить','tap to check')}`:''}</small></span></button>`;}
+/** a match in the jars' liquid style: the stick length is the time left, the flame flickers and throws sparks */
+function matchSVG(frac,lit){const top=12+Math.round((1-frac)*34),uid='m'+Math.random().toString(36).slice(2,7);
+ return `<span class="mmatch ${lit?'lit':'out'}" aria-hidden="true"><svg viewBox="0 0 40 64"><defs><linearGradient id="${uid}f" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FF3D61"/><stop offset=".55" stop-color="#FF8A3D"/><stop offset="1" stop-color="#FFD66B"/></linearGradient><linearGradient id="${uid}s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#F1D3A8"/><stop offset="1" stop-color="#C9A274"/></linearGradient></defs>
+ <rect x="17.5" y="${top}" width="5" height="${60-top}" rx="2.5" fill="url(#${uid}s)"/>${lit?`<rect x="17.5" y="${top}" width="5" height="5" rx="2" fill="#3A2A26"/><ellipse cx="20" cy="${top}" rx="4.6" ry="5.2" fill="#B5233F"/>
+ <g class="fl" style="transform-origin:20px ${top}px"><path d="M20 ${top-24} C 28 ${top-14}, 28 ${top-4}, 20 ${top+1} C 12 ${top-4}, 12 ${top-14}, 20 ${top-24} Z" fill="url(#${uid}f)"/><path class="core" d="M20 ${top-13} C 24 ${top-8}, 24 ${top-3}, 20 ${top} C 16 ${top-3}, 16 ${top-8}, 20 ${top-13} Z" fill="#FFF3C4"/></g>
+ <circle class="sp s1" cx="18" cy="${top-20}" r="1.2" fill="#FFD66B"/><circle class="sp s2" cx="23" cy="${top-18}" r="1" fill="#FF8A3D"/>`:`<rect x="17.5" y="${top}" width="5" height="9" rx="2.5" fill="#2A1F1C"/><path class="smoke" d="M20 ${top-4} c -4 -5, 4 -8, 0 -13 c -4 -5, 3 -8, 0 -12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".5"/>`}</svg></span>`;}
 ACT.chatMedia=a=>{const id=cur().p.id,t=S.threads[id];const x=t?.msgs[+a.dataset.v];if(!x?.media||isBlocked(id))return;const m=x.media,st=cmState(m);
  if(st==='normal'){if(!x.me&&S.me.chatBlur!==false&&!m.revealed){m.revealed=true;refresh();return;}openViewer([{type:m.type,src:m.url}],0);return;}
- if(x.me||!(st==='unopened'||st==='counting')||!m.url)return;
+ /* your own one-time/timed media: look at it until it burns out — this never starts or changes the recipient's timer */
+ if(x.me){if(st!=='expired'&&m.url)openViewer([{type:m.type,src:m.url}],0,{label:L('Твоё фото — собеседник видит его по правилам, которые ты выбрал(а)','Your media — they see it under the rules you chose')});return;}
+ if(!(st==='unopened'||st==='counting')||!m.url)return;
  if(!m.openedAt)m.openedAt=chatNow(); // the first conscious tap starts the timer, never a render
  openViewer([{type:m.type,src:m.url,wm:'@'+(S.me.nick||'')}],0,{label:m.mode==='once'?L('Один просмотр — после закрытия исчезнет','View once — gone after you close it'):L(`Осталось ${cmLeft(m)}`,`${cmLeft(m)} left`),onClose:()=>{if(m.mode==='once'){m.done=true;m.url=null;}if(cur()?.id==='H02')refresh();}});};
 function chatSendSheet(){const c=S.ui.cm;if(!c)return{title:'',body:''};const kind=c.file.type==='video'?L('Видео','Video'):L('Фото','Photo');
