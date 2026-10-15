@@ -68,7 +68,7 @@ function mdInline(s){const keep=[];const put=h=>`\u0000${keep.push(h)-1}\u0000`;
  s=s.replace(/!?\[([^\]\n]{1,120})\]\((https?:\/\/[^\s()<>"']{1,400})\)/g,(_,t,u)=>put(`<a href="${u}" data-act="mdLink" data-v="${u}" rel="noopener noreferrer nofollow">${t}</a>`));
  s=s.replace(/\*\*([^*\n]+)\*\*|__([^_\n]+)__/g,(_,a,b)=>`<b>${a||b}</b>`).replace(/~~([^~\n]+)~~/g,'<s>$1</s>').replace(/(^|[\s(])\*([^*\n]+)\*(?=$|[\s).,!?:;])/g,'$1<i>$2</i>').replace(/(^|[\s(])_([^_\n]+)_(?=$|[\s).,!?:;])/g,'$1<i>$2</i>');
  return s.replace(/\u0000(\d+)\u0000/g,(_,i)=>keep[+i]);}
-function md(src){const lines=esc(String(src||'')).split('\n');let out='',list=null,para=[];
+function md(src,cls){const lines=esc(String(src||'')).split('\n');let out='',list=null,para=[];
  const flushP=()=>{if(para.length){out+=`<p>${para.map(mdInline).join('<br>')}</p>`;para=[];}};const flushL=()=>{if(list){out+=`<${list.t}>${list.items.map(x=>`<li>${mdInline(x)}</li>`).join('')}</${list.t}>`;list=null;}};
  for(let k=0;k<lines.length;k++){const l=lines[k];let m;
   if(!l.trim()){flushP();flushL();continue;}
@@ -77,7 +77,9 @@ function md(src){const lines=esc(String(src||'')).split('\n');let out='',list=nu
   if((m=l.match(/^&gt;\s?(.*)/))){flushP();const q=[m[1]];while(k+1<lines.length&&/^&gt;/.test(lines[k+1]))q.push(lines[++k].replace(/^&gt;\s?/,''));out+=`<blockquote>${q.map(mdInline).join('<br>')}</blockquote>`;continue;}
   if((m=l.match(/^#{1,3}\s+(.*)/))){flushP();out+=`<h4>${mdInline(m[1])}</h4>`;continue;}
   para.push(l);}
- flushP();flushL();return `<div class="md">${out}</div>`;}
+ flushP();flushL();return `<div class="md${cls?' '+cls:''}">${out}</div>`;}
+/** Markdown → one line of plain text, for list rows and previews */
+const mdPlain=s=>String(s||'').replace(/!?\[([^\]]*)\]\([^)]*\)/g,'$1').replace(/^\s*(#{1,3}|>|[-*]|\d+[.)])\s+/gm,'').replace(/(\*\*|__|~~|`)/g,'').replace(/(^|\s)[*_]([^*_\n]+)[*_](?=\s|$|[.,!?:;])/g,'$1$2').replace(/\s*\n+\s*/g,' ').trim();
 ACT.mdLink=(a,e)=>{e?.stopPropagation();const u=a.dataset.v;let host='';try{host=new URL(u).host;}catch(_){return;}if(!/^https?:$/.test(new URL(u).protocol))return;
  ask({icon:'link',title:L('Открыть внешнюю ссылку?','Open an external link?'),text:L(`Ссылка ведёт на ${host} — это не FetUre. Не вводи там пароль от FetUre.`,`The link goes to ${host}, outside FetUre. Don’t enter your FetUre password there.`),ok:L('Открыть','Open')}).then(ok=>{if(ok)window.open(u,'_blank','noopener,noreferrer');});};
 /** reply actions under a comment/reply: like, reply, more (report / block, delete own). kind 'p' = post replies, 'd' = discussion replies */
@@ -95,13 +97,29 @@ ACT.rDel=a=>{const x=replyAt(a);if(!x||x.c.a!=='me')return;closeSheet(true);ask(
    The stored value stays the same safe Markdown that md() renders, so drafts, validation, preview and the API contract
    don't change. Rendering into the editor always goes through md() (escaped text), pasting is plain text only,
    and only http(s) links survive. Prototype uses execCommand; the React app takes a real editor (see the plan, round 2). */
-function rteHTML(v){const h=md(v);return h.slice(16,-6).replace(/ data-act="mdLink" data-v="[^"]*"/g,'');}
-function rteField(o){const r=cur();const v=r.f[o.name]??'';const err=r.err&&r.err[o.name];
- const b=(c,icon,label,x='')=>`<button type="button" data-act="rte" data-v="${c}" aria-label="${label}" title="${label}" ${x}>${I[icon]}</button>`;
+function rteHTML(v){return md(v).replace(/^<div class="md[^"]*">/,'').replace(/<\/div>$/,'').replace(/ data-act="mdLink" data-v="[^"]*"/g,'');}
+/** o.name — route form field (r.f); o.local — a field inside a sheet: no route state, the value lives on the editor
+ *  (data-md), read it with rteVal(id). The toolbar is one row: what doesn’t fit goes under «…» (rteFit). */
+function rteField(o){const r=cur();const v=o.local?(o.value||''):(r.f[o.name]??'');const err=!o.local&&r.err&&r.err[o.name];
+ const b=(c,icon,label,x='')=>`<button type="button" data-act="rte" data-v="${c}" aria-label="${label}" title="${label}" ${x}>${I[icon]}<span>${label}</span></button>`;
  return `<div class="field rte ${err?'err':''}" data-field="${o.name}">${o.label?`<span>${o.label}</span>`:''}<div class="rte-box">
- <div class="rte-tb" role="toolbar" aria-label="${L('Оформление текста','Text formatting')}">${b('undo','undo',L('Отменить','Undo'))}${b('redo','redo',L('Повторить','Redo'))}<i></i>${b('bold','fbold',L('Жирный','Bold'),'aria-pressed="false"')}${b('italic','fital',L('Курсив','Italic'),'aria-pressed="false"')}${b('strikeThrough','fstrike',L('Зачёркнутый','Strikethrough'),'aria-pressed="false"')}${b('link','link',L('Ссылка','Link'))}${o.media?b('media','image',L('Фото или видео','Photo or video'),`data-media="${o.media}"`):''}${b('h4','fhead',L('Заголовок','Heading'),'aria-pressed="false"')}<i></i><span class="rte-more">${b('redo','redo',L('Повторить','Redo'),'class="nar"')}${b('insertUnorderedList','flist',L('Список','List'),'aria-pressed="false"')}${b('insertOrderedList','folist',L('Нумерованный список','Numbered list'),'aria-pressed="false"')}${b('blockquote','fquote',L('Цитата','Quote'),'aria-pressed="false"')}</span>${b('more','more',L('Ещё','More'),'aria-expanded="false"')}</div>
- <div class="inp rte-ed ${v?'':'is-empty'}" contenteditable="true" role="textbox" aria-multiline="true" aria-label="${esc(o.label||o.ph||'')}" data-in="rte" data-name="${o.name}" data-ph="${esc(o.ph||'')}" ${o.max?`data-max="${o.max}"`:''} ${err?'aria-invalid="true"':''}>${rteHTML(v)}</div></div>
+ <div class="rte-tb" role="toolbar" aria-label="${L('Оформление текста','Text formatting')}">${b('undo','undo',L('Отменить','Undo'))}${b('redo','redo',L('Повторить','Redo'))}<i></i>${b('bold','fbold',L('Жирный','Bold'),'aria-pressed="false"')}${b('italic','fital',L('Курсив','Italic'),'aria-pressed="false"')}${b('strikeThrough','fstrike',L('Зачёркнутый','Strikethrough'),'aria-pressed="false"')}${b('link','link',L('Ссылка','Link'))}${b('h4','fhead',L('Заголовок','Heading'),'aria-pressed="false"')}<i></i>${b('insertUnorderedList','flist',L('Список','List'),'aria-pressed="false"')}${b('insertOrderedList','folist',L('Нумерованный список','Numbered list'),'aria-pressed="false"')}${b('blockquote','fquote',L('Цитата','Quote'),'aria-pressed="false"')}<button type="button" class="rte-mbtn" data-act="rte" data-v="more" aria-label="${L('Ещё оформление','More formatting')}" aria-expanded="false" hidden>${I.more}</button></div>
+ <div class="rte-pop" role="menu" hidden></div>
+ <div class="inp rte-ed ${v?'':'is-empty'}" contenteditable="true" role="textbox" aria-multiline="true" aria-label="${esc(o.label||o.ph||'')}" data-in="rte" data-name="${o.name}" ${o.local?`id="${o.local}" data-local="1"`:''} data-md="${esc(v)}" data-ph="${esc(o.ph||'')}" ${o.max?`data-max="${o.max}"`:''} ${err?'aria-invalid="true"':''}>${rteHTML(v)}</div></div>
  ${err?`<div class="ferr">${I.alert}${err}</div>`:''}${o.max?`<div class="counter" data-count="${o.name}">${String(v).length} / ${o.max}</div>`:''}</div>`;}
+const rteVal=id=>document.getElementById(id)?.dataset.md??'';
+/** one-row toolbar: show everything, then hide from the end until the row fits; hidden commands go into the «…» menu */
+function rteFit(box){const tb=$('.rte-tb',box),pop=$('.rte-pop',box),mb=$('.rte-mbtn',tb);if(!tb||!tb.clientWidth)return;
+ const items=[...tb.children].filter(x=>x!==mb);items.forEach(x=>x.hidden=false);mb.hidden=true;pop.innerHTML='';
+ const over=()=>tb.scrollWidth>tb.clientWidth+1;if(!over()){box.classList.remove('pop-on');return;}
+ mb.hidden=false;const hid=[];
+ for(let k=items.length-1;k>=0&&over();k--){if(items[k].tagName==='I'){items[k].hidden=true;continue;}items[k].hidden=true;hid.unshift(items[k]);}
+ // a separator never ends the visible row
+ for(let k=items.length-1;k>=0;k--){if(items[k].hidden)continue;if(items[k].tagName==='I')items[k].hidden=true;else break;}
+ pop.innerHTML=hid.map(x=>{const c=x.cloneNode(true);c.hidden=false;c.setAttribute('role','menuitem');return c.outerHTML;}).join('');}
+const rteObs=typeof ResizeObserver==='function'?new ResizeObserver(es=>es.forEach(e=>rteFit(e.target))):null;
+new MutationObserver(()=>$$('.rte-box:not([data-fit])').forEach(b=>{b.dataset.fit=1;rteFit(b);rteObs?.observe(b);})).observe(document.body,{childList:true,subtree:true});
+document.addEventListener('click',e=>{if(!e.target.closest('.rte-mbtn,.rte-pop'))$$('.rte-box.pop-on').forEach(b=>{b.classList.remove('pop-on');$('.rte-pop',b).hidden=true;$('.rte-mbtn',b).setAttribute('aria-expanded','false');});});
 /** editor DOM → Markdown. Only the tags the toolbar makes are kept; everything else becomes its text. */
 function rteMd(root){
  const wrap=(m,x)=>{const t=x.match(/^(\s*)([\s\S]*?)(\s*)$/);return t[2]?`${t[1]}${m}${t[2]}${m}${t[3]}`:x;};
@@ -120,19 +138,19 @@ function rteMd(root){
   else if(g==='UL'||g==='OL'){const it=[...c.children].filter(x=>x.tagName==='LI').map(x=>inl(x).replace(/\n/g,' ').trim()).filter(Boolean);if(it.length)out.push(it.map((x,k)=>(g==='OL'?`${k+1}. `:'- ')+x).join('\n'));}
   else{const t=lines(inl(c)).join('\n');if(t.trim())out.push(t);}});
  walk(root);flush();return out.join('\n\n').trim();}
-const rteSync=ed=>{const r=cur();const name=ed.dataset.name;const v=rteMd(ed);r.f[name]=v;r.dirty=true;ed.classList.toggle('is-empty',!ed.textContent.trim()&&!ed.querySelector('li'));
- if(r.err&&r.err[name])setErr(name,'');const c=$(`[data-count="${name}"]`);if(c){const max=+ed.dataset.max;c.textContent=`${v.length} / ${max}`;c.classList.toggle('over',v.length>max);}};
+const rteSync=ed=>{const r=cur();const name=ed.dataset.name;const v=rteMd(ed);ed.dataset.md=v;if(!ed.dataset.local){r.f[name]=v;r.dirty=true;}ed.classList.toggle('is-empty',!ed.textContent.trim()&&!ed.querySelector('li'));
+ if(!ed.dataset.local&&r.err&&r.err[name])setErr(name,'');const c=$(`[data-count="${name}"]`,ed.closest('.rte'));if(c){const max=+ed.dataset.max;c.textContent=`${v.length} / ${max}`;c.classList.toggle('over',v.length>max);}};
 IN.rte=el=>rteSync(el);
-const rteState=()=>{const ed=document.activeElement?.closest?.('.rte-ed');if(!ed)return;const tb=$('.rte-tb',ed.closest('.rte'));const blk=String(document.queryCommandValue('formatBlock')||'').toLowerCase();
+const rteState=()=>{const ed=document.activeElement?.closest?.('.rte-ed');if(!ed)return;const tb=ed.closest('.rte-box');const blk=String(document.queryCommandValue('formatBlock')||'').toLowerCase();
  $$('[aria-pressed]',tb).forEach(b=>{const c=b.dataset.v;let on=false;try{on=c==='h4'||c==='blockquote'?blk===c:document.queryCommandState(c);}catch(_){}b.setAttribute('aria-pressed',String(!!on));});};
 document.addEventListener('selectionchange',rteState);
 // toolbar buttons must not take the caret away from the text
-document.addEventListener('mousedown',e=>{if(e.target.closest('.rte-tb button'))e.preventDefault();});
+document.addEventListener('mousedown',e=>{if(e.target.closest('.rte-tb button,.rte-pop button'))e.preventDefault();});
 document.addEventListener('paste',e=>{const ed=e.target.closest?.('.rte-ed');if(!ed)return;e.preventDefault();document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text/plain'));});
 document.addEventListener('focusin',e=>{if(e.target.closest?.('.rte-ed')){try{document.execCommand('defaultParagraphSeparator',false,'p');document.execCommand('styleWithCSS',false,false);}catch(_){}}});
-ACT.rte=a=>{const box=a.closest('.rte'),ed=$('.rte-ed',box),c=a.dataset.v;
- if(c==='more'){const on=box.classList.toggle('more');a.setAttribute('aria-expanded',String(on));return;}
- if(c==='media'){ACT[a.dataset.media]?.(a);return;}
+ACT.rte=a=>{const box=a.closest('.rte-box'),ed=$('.rte-ed',box),c=a.dataset.v;
+ if(c==='more'){const on=box.classList.toggle('pop-on');$('.rte-pop',box).hidden=!on;a.setAttribute('aria-expanded',String(on));return;}
+ if(a.closest('.rte-pop')){box.classList.remove('pop-on');$('.rte-pop',box).hidden=true;$('.rte-mbtn',box).setAttribute('aria-expanded','false');}
  if(document.activeElement!==ed)ed.focus();
  if(c==='link'){const sel=getSelection();const range=sel.rangeCount?sel.getRangeAt(0).cloneRange():null;const txt=sel.toString();
   ask({icon:'link',title:L('Ссылка','Link'),text:`<input class="inp" id="rteUrl" type="url" inputmode="url" placeholder="https://" aria-label="${L('Адрес ссылки','Link address')}">`,ok:L('Вставить','Insert')}).then(ok=>{
@@ -145,7 +163,7 @@ ACT.rte=a=>{const box=a.closest('.rte'),ed=$('.rte-ed',box),c=a.dataset.v;
  rteSync(ed);rteState();};
 function postCard(p,o={}){
  const mine=p.author==='me';const pid=JSON.stringify({id:p.id});
- const head=`<div class="post-h"><button class="who" ${profGo(p.author)}>${av(p.author,'sm')}<span class="tx"><b>${esc(pname(p.author))}${nameBadges(person(p.author))}</b><small>${F.rel(p.t)}${p.aud==='followers'?` · <span class="aud">${I.people}${L('подписчикам','followers')}</span>`:''}${o.community&&p.community?` · ${esc(T(COMMUNITIES[p.community].name))}`:''}</small></span></button><button class="ibtn ghost sm" data-act="postMenu" data-v="${p.id}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
+ const head=`<div class="post-h"><button class="who" ${profGo(p.author)}>${av(p.author,'sm')}<span class="tx"><b><span class="nmt">${esc(pname(p.author))}</span>${nameBadges(person(p.author))}</b><small>${F.rel(p.t)}${p.aud==='followers'?` · <span class="aud">${I.people}${L('подписчикам','followers')}</span>`:''}${o.community&&p.community?` · ${esc(T(COMMUNITIES[p.community].name))}`:''}</small></span></button><button class="ibtn ghost sm" data-act="postMenu" data-v="${p.id}" aria-label="${L('Ещё','More')}">${I.more}</button></div>`;
  const media=postMediaHTML(p,o);
  const tags=p.tags&&p.tags.length?`<div class="tags">${p.tags.map(t=>`<button data-go="F04" data-p='${JSON.stringify({id:t})}'>#${esc(topic(t))}</button>`).join('')}</div>`:'';
  const nC=p.comments.length;
@@ -195,7 +213,7 @@ const commAv=c=>evCover(c,'users3');
 function commCard(id,o={}){
  const c=COMMUNITIES[id];const j=S.joined.has(id),pend=S.pendingJoin.has(id);
  const state=ownsCommunity(id)?`<span class="pill ok">${I.gear}${L('Ты ведёшь','You host')}</span>`:j?`<span class="pill ok">${I.check}${L('Ты участник','Member')}</span>`:pend?`<span class="pill wait">${L('Заявка отправлена','Request sent')}</span>`:c.privacy==='closed'?`<span class="pill">${I.lock}${L('По заявке','By request')}</span>`:'';
- return `<button class="cmc" data-go="C03" data-p='${JSON.stringify({id})}' style="animation-delay:${(o.i||0)*40}ms"><div class="cv" style="position:relative">${commAv(c)}</div><div class="tx"><b>${esc(T(c.name))}</b><small>${esc(T(c.desc))}</small><div class="meta"><span>${pl(C.members(id),['участник','участника','участников'],['member','members'])}</span><span>·</span><span>${c.city==='online'?L('онлайн','online'):esc(city(c.city))}</span>${state?` ${state}`:''}</div></div></button>`;
+ return `<button class="cmc" data-go="C03" data-p='${JSON.stringify({id})}' style="animation-delay:${(o.i||0)*40}ms"><div class="cv" style="position:relative">${commAv(c)}</div><div class="tx"><b>${esc(T(c.name))}</b><small>${esc(mdPlain(T(c.desc)))}</small><div class="meta"><span>${pl(C.members(id),['участник','участника','участников'],['member','members'])}</span><span>·</span><span>${c.city==='online'?L('онлайн','online'):esc(city(c.city))}</span>${state?` ${state}`:''}</div></div></button>`;
 }
 
 /* ---------- sheet builders reused across screens ---------- */

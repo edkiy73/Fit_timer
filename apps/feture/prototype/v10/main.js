@@ -12,4 +12,6 @@ if(h){const [id,arg]=h.split(':');if(SC[id]){if(SC[id].auth)qaGo(id,{});else qaG
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{if(themePref()==='auto')refresh();});
 
 startNavHistory();
+// ?long=1 — review with worst-case text lengths (same as «Длина текстов → Длинные» in the V10 panel)
+try{if(new URLSearchParams(location.search).get('long')==='1')qaLong(true);}catch(e){}
 

@@ -253,6 +253,7 @@ function freshState(persona){
    {id:'n4',type:'like',p:'kira',t:ago(3),read:false,go:['D06']},
    {id:'n5',type:'reply',p:'dan',post:'m1',t:ago(6),read:true,go:['F05',{id:'m1'}]},
    {id:'n6',type:'grant',p:'mia',t:ago(28),read:true,go:['P08',{id:'mia'}]},
+   {id:'n8',type:'follow',p:'lina',t:ago(2),read:false,go:['P10',{id:'me',tab:'followers'}]},
    {id:'n7',type:'group',c:'rope',t:ago(60),read:true,go:['C03',{id:'rope'}]},
   ]:[],
   updates:full?[{id:'u1',e:'e1',t:ago(3),read:false,text:{ru:'Начало перенесли на 19:00. Возьмите удобную одежду.',en:'Start moved to 19:00. Bring comfortable clothes.'}},{id:'u2',c:'rope',t:ago(30),read:true,text:{ru:'Новые правила фотосъёмки на встречах — загляните в раздел «Правила».',en:'New photo rules for meetups — see the Rules tab.'}}]:[],
