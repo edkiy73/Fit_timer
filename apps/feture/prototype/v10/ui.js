@@ -212,7 +212,7 @@ function evStatusPill(id){
  if(r.app==='approved')return `<span class="pill ok">${L('Заявка одобрена','Approved')}</span>`;
  if(r.app==='declined')return `<span class="pill bad">${L('Заявка отклонена','Declined')}</span>`;
  if(r.status==='going')return `<span class="pill ok">${L('Иду','Going')}</span>`;
- if(r.status==='interested')return `<span class="pill v">${L('Интересуюсь','Interested')}</span>`;
+ if(r.status==='interested')return `<span class="pill v">${L('Интересно','Interested')}</span>`;
  return '';
 }
 function evWhen(id,full){const e=EV(id);const t=F.time(e.start,USER_TZ);const day=full?F.day(e.start):F.date(e.start);

@@ -53,6 +53,8 @@ function qaApproveAll(){if(!S?.session)return 0;let n=0;const now=Date.now(),not
  S.reqOut.forEach(r=>{if(r.status==='pending'&&PEOPLE[r.p]&&!isBlocked(r.p)){r.status='granted';r.granted=[...r.scopes];r.until=now+7*DAY;note({type:'grant',p:r.p,go:['P08',{id:r.p}]});n++;}});
  if(S.pairInvite?.status==='pending'&&PEOPLE[S.pairInvite.nick]){const w=S.pairInvite.nick;S.pair={status:'active',with:w,since:now,name:{ru:`${pname('me')} и ${pname(w)}`,en:`${pname('me')} & ${pname(w)}`},desc:{ru:'',en:''},rules:{ru:'',en:''},proposal:null,grants:[]};S.pairInvite=null;n++;}
  (S.pair?.grants||[]).forEach(g=>{if(g.partner==='pending'){g.partner='yes';n++;}});
+ if(S.pairProposal&&S.pair){S.pair.name={ru:S.pairProposal,en:S.pairProposal};S.pairProposal=null;n++;}
+ if(S.pair?.proposal&&S.pair.proposal.by==='me'){S.pair[S.pair.proposal.field||'desc']=S.pair.proposal.text;S.pair.proposal=null;n++;}
  Object.entries(S.rsvp||{}).forEach(([id,r])=>{if(r.app==='pending'&&EV(id)){r.app='approved';note({type:'evapp',e:id,go:['E03',{id}]});n++;}});
  [...(S.pendingJoin||[])].forEach(id=>{if(!COMMUNITIES[id])return;S.pendingJoin.delete(id);S.joined.add(id);(S.communityRequests[id]||[]).forEach(q=>{if(q.p==='me'&&q.status==='pending'){q.status='approved';q.updated=now;}});note({type:'groupok',c:id,go:['C03',{id}]});n++;});
  (S.myPosts||[]).forEach(p=>{if(p.status==='review'){p.status='published';note({type:'postok',go:['F10',{}]});n++;}});
