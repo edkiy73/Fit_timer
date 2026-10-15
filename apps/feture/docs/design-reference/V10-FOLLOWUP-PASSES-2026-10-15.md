@@ -18,7 +18,7 @@
 
 | Проход | Состояние | Следующий шаг |
 |---|---|---|
-| 1–2 | Реализовано, проверено моделью | CI/публикация и browser QA ниже |
+| 1–2 | Завершено в прототипе | PR1115 слит, CI и browser PASS |
 | 3 | Реализовано | Parent ID, ветки, адресат + автор, дедупликация |
 | 4 | Реализовано | Locked vote, ссылка отмены, roster/count |
 | 5 | Реализовано в прототипе | Реальный admin/backend отдельно |
@@ -52,3 +52,6 @@
 Опросы: seed-голоса приведены к существующим тестовым людям; счётчики и списки берутся из одного roster. Старые агрегаты 34/21/45 не представлены как 100 несуществующих аккаунтов. Изменение вариантов нового опроса создаёт новый roster; неизменённый опрос сохраняет голосовавших.
 
 Проверки: синтаксис всех JS, standalone build; пять contract scripts (4 прежних + followup) PASS; формирование 162 QA routes RU/EN без ошибок; независимое read-only ревью нашло и помогло исправить гонки draft/media, gallery preview и owner history. Реальные multi-account/backend/native действия не проверялись. Browser QA завершён локально в Chromium headless shell: 92 экрана × RU390/EN390/RU320 — No problems found; обычные клики pair editor → save → private text → preview, reply branch, poll → voter list → withdrawal, maintenance on/off прошли на390/768/1440. Скриншоты пары и техработ просмотрены. Найденное перекрытие Send кнопкой V10 на планшете исправлено переносом QA FAB в область sidebar. Локальная подача файлов через Playwright route fulfilment, без живого backend. Полный npm run check PASS, включая typecheck/build,77 unit tests, security/seed/Postgres и5 prototype contracts.
+
+
+**Публикация:** [PR #1115](https://github.com/edkiy73/Fit_timer/pull/1115) слит в main `2854e6c440591c7225bad60103c40b72a024c32f`. GitHub CI [38707191671](https://github.com/edkiy73/Fit_timer/actions/runs/38707191671) success, Vercel READY. Production `https://feture-mvp.vercel.app/prototype-v10.html#Q03` открыт облачным браузером: два участника и переход Q03 → общий P02 → Q03 подтверждены. Дальнейшие задачи — только новые правки владельца либо отдельно оговорённые backend/native/biometric gaps.
