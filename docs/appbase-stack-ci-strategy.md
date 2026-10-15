@@ -95,6 +95,7 @@ Rules:
    - `packages/core/**`, `packages/ui-react/**`, `templates/**`, root config and shared scripts → Core + every app through the consistency runner;
    - `apps/<name>/**` → that app only;
    - Markdown and `apps/*/docs/**` never trigger builds or tests.
+   - **Prototype-only changes** (`scripts/affected-apps.mjs`, `LIGHT_SCOPES`): when the only non-doc files changed in an app are its standalone HTML prototypes (FetUre: `prototype/**`, `public/prototype-v*.html`, their build/QA tools and `tests/prototype-v*` contracts), the runner executes that app's `check:prototype` (build is in sync with sources + prototype contract tests) instead of the full `check`, and skips `npm ci` for it. Any other file in the same app, Core or root config restores the full check. The prototype is not shipped from the React build, so type-check, unit, security, DB and Vite build add no signal for it.
    Core/UI/template changes also re-run the Starter baseline contract; changes that can alter the generated Starter compile a fresh generated app. Task Mini's browser workflow watches Core/UI/Task Mini paths. The CI wiring itself is contract-tested so these guarantees cannot silently disappear.
 4. **Android/iOS builds** keep their own path filters (FitTimer client/native/build paths + `packages/core/**`) and run in parallel with the rest; they are not on the critical path.
 5. **Releases** (manual Android dispatch, `main` push builds) keep the full signed native pipeline.

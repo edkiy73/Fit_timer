@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.server.json",
     "test:smoke": "node tests/smoke.js && node --test tests/vercel-ignore.test.mjs && node --check tests/e2e.mjs",
+    "check:prototype": "node tools/check-prototype-sync.mjs && npm run test:prototype",
     "test:prototype": "node tests/prototype-v10-community-contract.mjs && node tests/prototype-v10-discussion-contract.mjs && node tests/prototype-v10-host-contract.mjs && node tests/prototype-v10-profile-preview-contract.mjs && node tests/prototype-v10-followup-contract.mjs",
     "test:unit": "vitest run",
     "test:browser": "npm run build && node tests/e2e.mjs",

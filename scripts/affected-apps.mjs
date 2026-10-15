@@ -20,3 +20,31 @@ export function affectedApps(files, appNames){
     ? {core: true, apps: [...appNames]}
     : {core: false, apps: appNames.filter(n => apps.has(n))};
 }
+
+/* Облегчённая проверка: если в приложении изменено ТОЛЬКО то, что описано в LIGHT_SCOPES
+   (сейчас — автономные HTML-прототипы FetUre), вместо полного `check` запускается его скрипт
+   `check:prototype`. Любой другой файл приложения, Core или корень возвращают полную проверку. */
+export const LIGHT_SCOPES = {
+  feture: {
+    script: 'check:prototype',
+    paths: [
+      /^apps\/feture\/prototype\//,
+      /^apps\/feture\/public\/prototype-v\d+(?:-notes)?\.html$/,
+      /^apps\/feture\/tools\/(?:build|qa)-prototype-v\d+\.mjs$/,
+      /^apps\/feture\/tests\/prototype-v\d+-[\w-]+\.mjs$/
+    ]
+  }
+};
+
+export function lightChecks(files, appNames){
+  const target = affectedApps(files, appNames);
+  if(target.core) return {};
+  const out = {};
+  for(const name of target.apps){
+    const scope = LIGHT_SCOPES[name];
+    if(!scope) continue;
+    const own = files.filter(f => f.startsWith(`apps/${name}/`) && !f.endsWith('.md') && !f.startsWith(`apps/${name}/docs/`));
+    if(own.length && own.every(f => scope.paths.some(re => re.test(f)))) out[name] = scope.script;
+  }
+  return out;
+}
