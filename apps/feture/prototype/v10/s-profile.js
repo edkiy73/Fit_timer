@@ -191,7 +191,7 @@ const COUPLE_FIELDS=['role','format','seek'];
 function peJars(m,owner){const list=sortJars(m.jars);
  return `<section class="grp" id="peJars"><div class="grp-t"><span>${owner==='couple'?L('Общие интересы','Couple interests'):L('Интересы','Interests')}</span><span class="note">${list.length}</span></div><div class="card form-card">
  ${jarsHTML(list,{act:owner==='couple'?'editCoupleJar':'editJar',vis:1,add:'peJarAdd'})}
- <p class="pe-n">${I.key} ${L('по доступу — видно в расширенном профиле','by access — shown in the private profile')} · ${I.eyeoff} ${L('только ты','only you')}</p></div></section>`;}
+ <p class="pe-n pe-leg"><span>${I.key}${L('по доступу — видно в расширенном профиле','by access — shown in the private profile')}</span><span>${I.eyeoff}${L('только ты','only you')}</span></p></div></section>`;}
 ACT.peJarAdd=()=>topicPicker();
 function privEditor(m,r,owner){const media=privMedia(m).map(x=>({type:x.type,src:privSrc(x),dur:x.dur}));
  return `<section class="grp" id="privEdit"><div class="grp-t"><span>${I.key} ${L('Расширенный профиль','Private profile')}</span></div><div class="card form-card pe-priv">
