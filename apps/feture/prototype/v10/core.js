@@ -131,7 +131,7 @@ function markCoupleDraft(){const P=S.pair;if(!P?.draft||!coupleWritable())return
 function submitCoupleDraft(){const P=S.pair;if(P?.status!=='active'||!P.draft||P.proposal?.status==='pending')return false;if(!coupleWritable())return false;const by=pairMember();P.revision??=0;
  if(P.draftBase!==P.revision){toast(L('Профиль уже изменился. Открой актуальную версию перед отправкой.','The profile changed. Open the current version before submitting.'),{type:'warn'});return false;}
  const q=P.proposal={id:'pv'+Date.now()+'_'+(P.draftVersion||0),by,field:'profile',text:structuredClone(P.draft),base:P.revision,draftVersion:P.draftVersion||0,status:'pending',t:Date.now()};
- pairNotify('proposal',q.id,{go:['Q03']});autoResolve();return true;}
+ pairNotify('proposal',q.id,{go:['Q03']});return true;}
 function commitCoupleProposal(P,reviewer=pairMember(),expected=P?.proposal?.id){if(P!==S.pair||P?.status!=='active'||!P.proposal)return false;const q=P.proposal;
  if(q.id&&((q.status!=='pending')||q.id!==expected||q.by===reviewer||q.base!==(P.revision||0)))return false;
  if(q.field==='profile'){P.profile=structuredClone(q.text);P.name={...P.profile.name};P.desc=P.profile.bio;P.revision=(P.revision||0)+1;P.draftLease=(P.draftLease||0)+1;if((P.draftVersion||0)===(q.draftVersion||0))delete P.draft;P.draftBase=P.revision;}else P[q.field||'desc']=q.text;
