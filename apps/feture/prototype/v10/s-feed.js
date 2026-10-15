@@ -60,7 +60,7 @@ ACT.delPost=a=>{closeSheet(true);ask({icon:'trash',tone:'l',title:L('Удали�
 ACT.editPost=a=>{closeSheet(true);const p=postById(a.dataset.v);go('F07',{id:p.id});};
 /* F05 — post with replies */
 SC.F05={title:()=>L('Публикация','Post'),valid:p=>!!postById(p.id)&&!isBlocked(postById(p.id).author),render:(p,r)=>{const x=postById(p.id);
- return `${bar(L('Публикация','Post'),{back:1,sm:1})}<div class="view nodock cta1"><div class="wrap">${postCard(x,{detail:1})}
+ return `${bar(L('Публикация','Post'),{back:1,sm:1,actions:authorPicker()})}<div class="view nodock cta1"><div class="wrap">${postCard(x,{detail:1})}
  <div class="sec" id="replies">${pl(x.comments.length,['ответ','ответа','ответов'],['reply','replies'])}</div>
  ${x.comments.length?replyTree('p',x.id):`<p class="note">${L('Пока никто не ответил. Начни разговор — по-доброму.','No replies yet. Start the conversation — kindly.')}</p>`}
  ${replyComposer(r)}
@@ -151,7 +151,7 @@ ACT.saveDraft=a=>{const r=cur();if(!SC.F07.valid(r.p)){toast(L('Эта публ�
  let saved=false,revision=false;run(a,()=>{if(!SC.F07.valid(r.p))return;const id=r.p.id||'m'+Date.now();const ex=ownPost(id),d=draftOf(r);revision=!!ex&&ex.status!=='draft';if(revision){S.postEdits[id]={draft:copyNavValue(d),t:Date.now()};}else{const obj={...postFromDraft(d,id,ex),status:'draft'};ex?Object.assign(ex,obj):S.myPosts.unshift(obj);}saved=true;r.dirty=false;r.p.id=id;refresh();},{ok:()=>!saved?null:revision?L('Правки сохранены. Исходная публикация не изменена','Changes saved. The original post is unchanged'):L('Черновик сохранён в «Я → Мои публикации»','Draft saved in Me → My posts')});};
 
 SC.F09={title:()=>L('Предпросмотр','Preview'),valid:p=>!!p.draft&&(!p.draft.edit||!!ownPost(p.draft.edit)),render:(p)=>{const d=p.draft;const a=AUD().find(x=>x[0]===d.aud);const fake={...postFromDraft(d,'preview')};MEDIA_SRC.preview=()=>d.media;const hasPhoto=d.media.length>0;
- return `${bar(L('Предпросмотр','Preview'),{back:1,sm:1})}${authorPicker(d.edit?ownPost(d.edit)?.author:null)}<div class="view nodock cta1"><div class="wrap">
+ return `${bar(L('Предпросмотр','Preview'),{back:1,sm:1,actions:authorPicker(d.edit?ownPost(d.edit)?.author:null)})}<div class="view nodock cta1"><div class="wrap">
  <p class="note">${L('Так публикацию увидят другие:','This is how others will see it:')}</p><div class="card preview-post" style="padding:0 16px;margin-top:10px">${postCard(fake,{detail:1,preview:1})}</div>
  <div class="card list mt16">${linkRow({act:'audience',icon:'eye',tone:'v',title:a[2],sub:a[3],val:L('Изменить','Change')})}${hasPhoto?linkRow({icon:'shield',tone:'a',title:L('Проверка фото и видео','Photo & video review'),sub:L('Обычно до 30 минут. До этого публикацию видишь только ты','Usually under 30 minutes. Until then only you can see it'),noChev:1}):''}</div>
  </div></div><div class="ctabar"><div class="wrap"><div class="row g8"><button class="btn soft" style="flex:0 0 auto;width:auto" data-back>${L('Изменить','Edit')}</button><button class="btn primary" data-act="publish">${hasPhoto?L('Отправить на проверку','Submit for review'):L('Опубликовать','Publish')}</button></div></div></div>`;}};
