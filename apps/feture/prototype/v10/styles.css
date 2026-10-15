@@ -1052,7 +1052,6 @@ button.jar:active .vessel{transform:scale(.95)}
 .qa-l.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
 .qa-l code{flex:none;font:600 11px/1.5 ui-monospace,monospace;color:var(--faint);width:38px}
 .qa-l>span{min-width:0;line-height:1.4}
-.qa-search{width:100%;min-height:38px;padding:8px 12px;border-radius:10px;border:1px solid var(--line2);background:var(--surf);font-size:13.5px;outline:0;margin-top:8px}
 
 /* ============ SMALL SCREENS · MOTION ============ */
 @container stage (max-width:380px){
@@ -1721,3 +1720,33 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .jar .jd{overflow-wrap:break-word}
 @container stage (max-width:359px){.wf-jars .jar .jd{font-size:10.5px}}
 @container stage (min-width:768px){.wf-jars .jar .vessel{transform:scale(1.12);transform-origin:50% 100%}}
+
+/* -- answer rows (someone's jar vs yours, the add-interests summary): badge + one-line name + answer below -- */
+.ansrow{align-items:center}
+.ansrow .tx{min-width:0}
+.ansrow .tx b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ansrow .tx small{color:var(--ink);opacity:.78;font-weight:500}
+.ar-lv{flex:none;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;font:750 16px/1 var(--font);color:#1A1414;background:var(--jc,var(--raise))}
+.ar-lv svg{width:18px;height:18px}
+.ar-lv.none{background:var(--raise);color:var(--faint)}
+.ar-lv.discuss{background:var(--warn-soft);color:var(--warn)}
+.ar-lv.taboo{background:var(--danger-soft);color:var(--danger)}
+
+/* -- welcome on phones (owner 15.10): the buttons are always on screen. The slider card takes what is left and shrinks;
+      its picture shrinks first (scaled by its own height), the words stay. Very short screens scroll, buttons stay pinned. -- */
+@container stage (max-width:767px){
+ .welcome.wv{overflow-y:auto;padding-bottom:0}
+ .welcome.wv .w-grid{min-height:0;gap:14px;padding-top:14px}
+ .welcome.wv .w-show{flex:1 1 0;min-height:250px;padding:12px 14px 14px;gap:12px;overflow:hidden}
+ .welcome.wv .w-stage{min-height:0}
+ .welcome.wv .w-slide{min-height:0;gap:12px}
+ .welcome.wv .w-vis{flex:1 1 0;min-height:96px;container:wvis/size;padding:8px}
+ .welcome.wv .w-txt p{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+ .welcome.wv .w-act{position:sticky;bottom:0;z-index:3;margin:0 -20px;padding:12px 20px calc(14px + var(--safe-b));background:linear-gradient(to top,var(--bg) 70%,transparent)}
+}
+@container wvis (max-height:210px){.w-vis>*{transform:scale(.86)}}
+@container wvis (max-height:170px){.w-vis>*{transform:scale(.72)}}
+@container wvis (max-height:130px){.w-vis>*{transform:scale(.58)}}
+@media (max-height:760px){.welcome.wv .w-kick{display:none}}
+@media (max-height:640px){.welcome.wv .w-title{font-size:32px}.welcome.wv .w-txt h2{font-size:18px}.welcome.wv .w-txt p{font-size:13.5px;-webkit-line-clamp:2}.welcome.wv .w-age{font-size:11px}}
+@container wvis (max-height:150px){.wf-jars .jd{display:none}}
