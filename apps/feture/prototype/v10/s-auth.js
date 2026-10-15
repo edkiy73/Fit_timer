@@ -75,7 +75,7 @@ SC.A04={auth:1,title:()=>L('Профиль','Profile'),render:(p,r)=>{const yNow
  <h2 class="t">${L('Как тебя называть','What should we call you')}</h2><p class="lead">${L('Только самое нужное. Фото и подробности — потом, когда захочешь.','Just the essentials. Photos and details later, whenever you like.')}</p>
  ${p.via&&p.via!=='email'?`<div class="alert ok mb16" style="margin-bottom:16px">${I.okc}<span>${L('Вход подтверждён через','Signed in with')} ${p.via==='google'?'Google':'Apple'} · ${esc(p.email)}</span></div>`:''}
  ${field({name:'nick',label:L('Ник','Nickname'),ph:'alex_b',icon:'at',attrs:'autocomplete="username" autocapitalize="off" spellcheck="false" data-in="nick"',hint:L('Латиница, цифры, точка и _. По нику тебя смогут найти.','Latin letters, digits, dot and _. People can find you by it.')}).replace('data-in="f" ','')}
- ${field({name:'name',label:L('Имя в профиле','Display name'),opt:1,ph:'Alex',attrs:'autocomplete="given-name"'})}
+ 
  <div class="field ${r.err&&r.err.dob?'err':''}" data-field="dob"><span class="flabel">${L('Дата рождения','Date of birth')}</span>
   <div class="dob"><select class="inp" name="dd" data-ch="dob" aria-label="${L('День','Day')}"><option value="">${L('День','Day')}</option>${Array.from({length:31},(_,i)=>`<option ${r.f.dd==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
   <select class="inp" name="mm" data-ch="dob" aria-label="${L('Месяц','Month')}"><option value="">${L('Месяц','Month')}</option>${MONTHS().map((m,i)=>`<option value="${i+1}" ${r.f.mm==i+1?'selected':''}>${m}</option>`).join('')}</select>
@@ -100,7 +100,7 @@ ACT.saveA04=a=>{const r=cur();r.err={};
  run(a,()=>{
   // a new account starts empty: keep only the language and the open sign-up flow
   const nav=S.nav,lang=S.lang;S=freshState('new');S.nav=nav;S.lang=lang;QA.seen={};
-  S.me.nick=fv('nick').trim();S.me.name=fv('name').trim();S.me.dob=`${r.f.yy}-${String(r.f.mm).padStart(2,'0')}-${String(r.f.dd).padStart(2,'0')}`;S.me.pron=r.f.pron||null;S.me.email=r.p.email||'';S.me.methods=[r.p.via||'email'];
+  S.me.nick=fv('nick').trim();S.me.dob=`${r.f.yy}-${String(r.f.mm).padStart(2,'0')}-${String(r.f.dd).padStart(2,'0')}`;S.me.pron=r.f.pron||null;S.me.email=r.p.email||'';S.me.methods=[r.p.via||'email'];
   go('A05',{step:1});});};
 SC.A04X={auth:1,title:()=>'18+',render:()=>`${bar('',{back:1})}<div class="view nodock"><div class="auth-wrap">${empty('shield',L('FetUre только для взрослых','FetUre is for adults only'),L('Судя по дате рождения, тебе ещё нет 18. Мы не создали аккаунт и не сохранили введённые данные.','Based on your date of birth you’re not 18 yet. We didn’t create an account or keep what you entered.'),`<button class="btn soft" data-back>${L('Я ошибся в дате','I entered the wrong date')}</button><button class="btn text" data-act="toWelcome">${L('На главную','Back to start')}</button>`)}</div></div>`};
 ACT.toWelcome=()=>{S.nav.auth=[{id:'A01',p:{},f:{}}];render('back');};

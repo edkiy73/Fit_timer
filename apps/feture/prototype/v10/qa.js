@@ -61,17 +61,17 @@ function qaApproveAll(){if(!S?.session)return 0;let n=0;const now=Date.now(),not
  if(S.me.photoCheck==='pending'){pvResolve(true);n++;}
  if(n){refresh();renderSide();toast(L(`Одобрено сразу: ${n}`,`Approved at once: ${n}`),{type:'ok'});}return n;}
 /* «Длинные тексты»: worst-case lengths at the input limits, switchable in the review panel or with ?long=1.
-   Names 30 (name field limit), nick 20, community 50, event 80, discussion title 120, bio 500, long real city names.
+   Nicknames 20 (the only public name; limit 20), community 50, event 80, discussion title 120, bio 500, long real city names.
    The original seed values are kept and restored when the switch goes back to «Обычные». */
 const LONG={snap:null};
 function qaLong(on){
  if(!LONG.snap)LONG.snap={people:Object.fromEntries(Object.entries(PEOPLE).map(([k,p])=>[k,{name:p.name,nameRu:p.nameRu,bio:p.bio}])),city:{...CITY},comm:Object.fromEntries(Object.entries(COMMUNITIES).map(([k,c])=>[k,{name:c.name,desc:c.desc}])),ev:Object.fromEntries(Object.entries(EVENTS).map(([k,e])=>[k,e.title])),disc:(S.discussions||[]).map(d=>d.title)};
  const o=LONG.snap;QA.long=on;
  if(!on){Object.entries(o.people).forEach(([k,v])=>{if(PEOPLE[k])Object.assign(PEOPLE[k],v);});Object.assign(CITY,o.city);Object.entries(o.comm).forEach(([k,v])=>{if(COMMUNITIES[k])Object.assign(COMMUNITIES[k],v);});Object.entries(o.ev).forEach(([k,v])=>{if(EVENTS[k])EVENTS[k].title=v;});(S.discussions||[]).forEach((d,i)=>{if(o.disc[i]!=null)d.title=o.disc[i];});if(LONG.me){Object.assign(S.me,LONG.me);LONG.me=null;}refresh();return;}
- const nm=['Alexandrina-Maximiliana Rose','Konstantin Wolfgang Bergmann','Anastasia-Valentina Petrova','Jean-Baptiste Montgomery III'];
+ const nm=['alexandrina.maximila','konstantin.wolfgang1','anastasia_valentina2','jean.baptiste.montgo'];
  const bio={ru:'Говорю прямо и бережно. Люблю долгие переписки, верёвку, медленные вечера и людей, которые заранее обсуждают границы. Первая встреча — только в публичном месте и без спешки. Мне важно, чтобы обе стороны могли остановиться в любой момент и не объяснять почему. Пишу длинно, отвечаю не сразу, но всегда отвечаю. Если сомневаешься — спроси, я лучше объясню ещё раз, чем угадаю. Не люблю сюрпризы и давление, люблю ясные договорённости и смех после. Пишу этот текст до лимита, чтобы проверить, как ведёт себя длинное описание в профиле.'.slice(0,500),en:'I speak plainly and kindly. I love long chats, rope, slow evenings and people who talk about boundaries first. First meeting only in a public place and without rushing. Both sides must be able to stop at any moment without explaining why. I write long and reply slowly, but I always reply. If unsure, ask — I would rather explain twice than guess. No surprises or pressure; clear agreements and laughter after. This text runs to the limit to test a long profile description.'.slice(0,500)};
  Object.keys(PEOPLE).forEach((id,i)=>{const p=PEOPLE[id];p.name=nm[i%nm.length];if(p.nameRu)p.nameRu=nm[i%nm.length];if(i%3===0)p.bio=bio;});
- if(!LONG.me)LONG.me={name:S.me.name,nick:S.me.nick};S.me.name='Александра-Валентина Мария';S.me.nick='alexandra.valentina1';
+ if(!LONG.me)LONG.me={nick:S.me.nick};S.me.nick='alexandra.valentina1';
  Object.keys(CITY).forEach((k,i)=>{CITY[k]=i%2?{ru:'Гармиш-Партенкирхен',en:'Garmisch-Partenkirchen'}:{ru:'Франкфурт-на-Майне',en:'Frankfurt am Main'};});
  Object.values(COMMUNITIES).forEach(c=>{c.name={ru:'Верёвочные практики и разговоры о границах для новых'.slice(0,50),en:'Rope practice and boundary talks for curious beginners'.slice(0,50)};});
  Object.values(EVENTS).forEach(e=>{e.title={ru:'Большой вечер знакомства для новичков: верёвка, разговоры, правила и согласие'.slice(0,80),en:'Big newcomers evening: rope, conversations, house rules and consent basics'.slice(0,80)};});

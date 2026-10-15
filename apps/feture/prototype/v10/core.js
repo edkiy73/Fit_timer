@@ -115,12 +115,13 @@ const LOGOS={
 const LOGO=()=>'data:image/svg+xml,'+encodeURIComponent(LOGOS[QA.logo||'a']);
 const plate=(key,icon)=>`<div class="plate" style="${PL[key]||PL.rose};position:absolute;inset:0">${icon?`<span class="pi">${I[icon]}</span>`:''}</div>`;
 function person(id){if(id==='me')return meAsPerson();return PEOPLE[id];}
-function pname(id){if(id==='me')return S.me.name||S.me.nick||L('Ты','You');const p=PEOPLE[id];if(!p)return L('Участник','Member');return p.pair&&S.lang!=='en'?p.nameRu:p.name;}
+/* one public identity — the nickname (no separate display name) */
+function pname(id){if(id==='me')return S.me.nick||L('Ты','You');const p=PEOPLE[id];if(!p)return L('Участник','Member');return p.pair&&S.lang!=='en'?p.nameRu:p.name;}
 const PUBLIC_VIS={gender:'public',orient:'public',format:'public',status:'public',role:'granted'};
 const requiresDiscoveryPhoto=m=>!!m.dating&&m.datingVisible!==false;
 /** a profile field as another member sees it; S.ui.viewGrant = rendering for someone with private-profile access */
 function publicField(m,k){const v=m.vis?.[k]??PUBLIC_VIS[k]??'public';return v==='public'||v==='granted'&&S.ui.viewGrant?m[k]:Array.isArray(m[k])?[]:null;}
-function meAsPerson(){const m=S.ui.profilePreview||S.me;return{pv:m.photoCheck==='ok',premium:!!m.premium,name:m.name||m.nick,age:m.showAge===false?null:ageOf(m.dob),photo:m.photo,city:m.city,location:m.location?.coords,pron:m.pron,gender:publicField(m,'gender'),orient:publicField(m,'orient'),format:publicField(m,'format'),status:publicField(m,'status'),role:publicField(m,'role'),seek:m.dating?m.seek:[],bio:m.bio,verified:m.ageCheck==='ok',online:true,dating:m.dating,jars:m.jars.filter(j=>j.vis==='public'&&!j.limit).map(j=>[j.t,j.lv]),langs:m.langs};}
+function meAsPerson(){const m=S.ui.profilePreview||S.me;return{pv:m.photoCheck==='ok',premium:!!m.premium,name:m.nick,age:m.showAge===false?null:ageOf(m.dob),photo:m.photo,city:m.city,location:m.location?.coords,pron:m.pron,gender:publicField(m,'gender'),orient:publicField(m,'orient'),format:publicField(m,'format'),status:publicField(m,'status'),role:publicField(m,'role'),seek:m.dating?m.seek:[],bio:m.bio,verified:m.ageCheck==='ok',online:true,dating:m.dating,jars:m.jars.filter(j=>j.vis==='public'&&!j.limit).map(j=>[j.t,j.lv]),langs:m.langs};}
 /** avatar: photo → img; pair → two plates; else initials plate */
 function av(id,cls='',variant=0){
  const p=person(id);let inner,st='',k='';
@@ -348,7 +349,7 @@ function renderSide(){
  if(!S.session){s.innerHTML='';return;}
  s.innerHTML=`<div class="brand"><img src="${LOGO()}" alt=""><b>Fet<i>Ure</i></b></div><nav aria-label="${L('Разделы','Sections')}">${TABDEF().map(([t,icn,l,n])=>`<button class="navb ${S.nav.tab===t?'on':''}" data-tab="${t}">${icn}<span>${l}</span>${n==='dot'?'<em style="min-width:9px;width:9px;height:9px;padding:0"></em>':n?`<em>${n}</em>`:''}</button>`).join('')}</nav>
  <button class="btn primary create" data-act="create" aria-label="${L('Создать','Create')}">${I.plus}<span>${L('Создать','Create')}</span></button><div class="sp"></div>
- <button class="mebtn" data-tab="me">${av('me','')}<span>${esc(pname('me'))}<small>@${esc(S.me.nick||'…')}</small></span></button>`;
+ <button class="mebtn" data-tab="me">${av('me','')}<span>${esc(pname('me'))}</span></button>`;
 }
 function renderCtx(){const c=$('#ctx');if(!c)return;c.innerHTML=S.session&&window.CTX?CTX(S.nav.tab):'';}
 

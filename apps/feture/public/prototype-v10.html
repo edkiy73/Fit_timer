@@ -1997,12 +1997,13 @@ const LOGOS={
 const LOGO=()=>'data:image/svg+xml,'+encodeURIComponent(LOGOS[QA.logo||'a']);
 const plate=(key,icon)=>`<div class="plate" style="${PL[key]||PL.rose};position:absolute;inset:0">${icon?`<span class="pi">${I[icon]}</span>`:''}</div>`;
 function person(id){if(id==='me')return meAsPerson();return PEOPLE[id];}
-function pname(id){if(id==='me')return S.me.name||S.me.nick||L('Ты','You');const p=PEOPLE[id];if(!p)return L('Участник','Member');return p.pair&&S.lang!=='en'?p.nameRu:p.name;}
+/* one public identity — the nickname (no separate display name) */
+function pname(id){if(id==='me')return S.me.nick||L('Ты','You');const p=PEOPLE[id];if(!p)return L('Участник','Member');return p.pair&&S.lang!=='en'?p.nameRu:p.name;}
 const PUBLIC_VIS={gender:'public',orient:'public',format:'public',status:'public',role:'granted'};
 const requiresDiscoveryPhoto=m=>!!m.dating&&m.datingVisible!==false;
 /** a profile field as another member sees it; S.ui.viewGrant = rendering for someone with private-profile access */
 function publicField(m,k){const v=m.vis?.[k]??PUBLIC_VIS[k]??'public';return v==='public'||v==='granted'&&S.ui.viewGrant?m[k]:Array.isArray(m[k])?[]:null;}
-function meAsPerson(){const m=S.ui.profilePreview||S.me;return{pv:m.photoCheck==='ok',premium:!!m.premium,name:m.name||m.nick,age:m.showAge===false?null:ageOf(m.dob),photo:m.photo,city:m.city,location:m.location?.coords,pron:m.pron,gender:publicField(m,'gender'),orient:publicField(m,'orient'),format:publicField(m,'format'),status:publicField(m,'status'),role:publicField(m,'role'),seek:m.dating?m.seek:[],bio:m.bio,verified:m.ageCheck==='ok',online:true,dating:m.dating,jars:m.jars.filter(j=>j.vis==='public'&&!j.limit).map(j=>[j.t,j.lv]),langs:m.langs};}
+function meAsPerson(){const m=S.ui.profilePreview||S.me;return{pv:m.photoCheck==='ok',premium:!!m.premium,name:m.nick,age:m.showAge===false?null:ageOf(m.dob),photo:m.photo,city:m.city,location:m.location?.coords,pron:m.pron,gender:publicField(m,'gender'),orient:publicField(m,'orient'),format:publicField(m,'format'),status:publicField(m,'status'),role:publicField(m,'role'),seek:m.dating?m.seek:[],bio:m.bio,verified:m.ageCheck==='ok',online:true,dating:m.dating,jars:m.jars.filter(j=>j.vis==='public'&&!j.limit).map(j=>[j.t,j.lv]),langs:m.langs};}
 /** avatar: photo → img; pair → two plates; else initials plate */
 function av(id,cls='',variant=0){
  const p=person(id);let inner,st='',k='';
@@ -2230,7 +2231,7 @@ function renderSide(){
  if(!S.session){s.innerHTML='';return;}
  s.innerHTML=`<div class="brand"><img src="${LOGO()}" alt=""><b>Fet<i>Ure</i></b></div><nav aria-label="${L('Разделы','Sections')}">${TABDEF().map(([t,icn,l,n])=>`<button class="navb ${S.nav.tab===t?'on':''}" data-tab="${t}">${icn}<span>${l}</span>${n==='dot'?'<em style="min-width:9px;width:9px;height:9px;padding:0"></em>':n?`<em>${n}</em>`:''}</button>`).join('')}</nav>
  <button class="btn primary create" data-act="create" aria-label="${L('Создать','Create')}">${I.plus}<span>${L('Создать','Create')}</span></button><div class="sp"></div>
- <button class="mebtn" data-tab="me">${av('me','')}<span>${esc(pname('me'))}<small>@${esc(S.me.nick||'…')}</small></span></button>`;
+ <button class="mebtn" data-tab="me">${av('me','')}<span>${esc(pname('me'))}</span></button>`;
 }
 function renderCtx(){const c=$('#ctx');if(!c)return;c.innerHTML=S.session&&window.CTX?CTX(S.nav.tab):'';}
 
@@ -2991,7 +2992,7 @@ SC.A04={auth:1,title:()=>L('Профиль','Profile'),render:(p,r)=>{const yNow
  <h2 class="t">${L('Как тебя называть','What should we call you')}</h2><p class="lead">${L('Только самое нужное. Фото и подробности — потом, когда захочешь.','Just the essentials. Photos and details later, whenever you like.')}</p>
  ${p.via&&p.via!=='email'?`<div class="alert ok mb16" style="margin-bottom:16px">${I.okc}<span>${L('Вход подтверждён через','Signed in with')} ${p.via==='google'?'Google':'Apple'} · ${esc(p.email)}</span></div>`:''}
  ${field({name:'nick',label:L('Ник','Nickname'),ph:'alex_b',icon:'at',attrs:'autocomplete="username" autocapitalize="off" spellcheck="false" data-in="nick"',hint:L('Латиница, цифры, точка и _. По нику тебя смогут найти.','Latin letters, digits, dot and _. People can find you by it.')}).replace('data-in="f" ','')}
- ${field({name:'name',label:L('Имя в профиле','Display name'),opt:1,ph:'Alex',attrs:'autocomplete="given-name"'})}
+ 
  <div class="field ${r.err&&r.err.dob?'err':''}" data-field="dob"><span class="flabel">${L('Дата рождения','Date of birth')}</span>
   <div class="dob"><select class="inp" name="dd" data-ch="dob" aria-label="${L('День','Day')}"><option value="">${L('День','Day')}</option>${Array.from({length:31},(_,i)=>`<option ${r.f.dd==i+1?'selected':''}>${i+1}</option>`).join('')}</select>
   <select class="inp" name="mm" data-ch="dob" aria-label="${L('Месяц','Month')}"><option value="">${L('Месяц','Month')}</option>${MONTHS().map((m,i)=>`<option value="${i+1}" ${r.f.mm==i+1?'selected':''}>${m}</option>`).join('')}</select>
@@ -3016,7 +3017,7 @@ ACT.saveA04=a=>{const r=cur();r.err={};
  run(a,()=>{
   // a new account starts empty: keep only the language and the open sign-up flow
   const nav=S.nav,lang=S.lang;S=freshState('new');S.nav=nav;S.lang=lang;QA.seen={};
-  S.me.nick=fv('nick').trim();S.me.name=fv('name').trim();S.me.dob=`${r.f.yy}-${String(r.f.mm).padStart(2,'0')}-${String(r.f.dd).padStart(2,'0')}`;S.me.pron=r.f.pron||null;S.me.email=r.p.email||'';S.me.methods=[r.p.via||'email'];
+  S.me.nick=fv('nick').trim();S.me.dob=`${r.f.yy}-${String(r.f.mm).padStart(2,'0')}-${String(r.f.dd).padStart(2,'0')}`;S.me.pron=r.f.pron||null;S.me.email=r.p.email||'';S.me.methods=[r.p.via||'email'];
   go('A05',{step:1});});};
 SC.A04X={auth:1,title:()=>'18+',render:()=>`${bar('',{back:1})}<div class="view nodock"><div class="auth-wrap">${empty('shield',L('FetUre только для взрослых','FetUre is for adults only'),L('Судя по дате рождения, тебе ещё нет 18. Мы не создали аккаунт и не сохранили введённые данные.','Based on your date of birth you’re not 18 yet. We didn’t create an account or keep what you entered.'),`<button class="btn soft" data-back>${L('Я ошибся в дате','I entered the wrong date')}</button><button class="btn text" data-act="toWelcome">${L('На главную','Back to start')}</button>`)}</div></div>`};
 ACT.toWelcome=()=>{S.nav.auth=[{id:'A01',p:{},f:{}}];render('back');};
@@ -3917,12 +3918,12 @@ SC.P08={title:p=>pname(p.id),valid:p=>!!PEOPLE[p.id]&&!isBlocked(p.id),render:(p
 
 /* P02 — edit my profile: one source of truth for every screen */
 SC.P02={title:()=>L('Редактировать профиль','Edit profile'),render:(p,r)=>{const m=S.me;
- if(!r.init){r.init=1;Object.assign(r.f,{name:m.name,nick:m.nick,bio:T(m.bio),city:m.city||''});r.photos=[...m.photos];r.pron=m.pron;r.gender=[...m.gender];r.orient=[...m.orient];r.format=[...fmtList(m.format)];r.status=m.status||null;r.role=m.role;r.langs=[...m.langs];r.vis={...PUBLIC_VIS,...m.vis};}
+ if(!r.init){r.init=1;Object.assign(r.f,{nick:m.nick,bio:T(m.bio),city:m.city||''});r.photos=[...m.photos];r.pron=m.pron;r.gender=[...m.gender];r.orient=[...m.orient];r.format=[...fmtList(m.format)];r.status=m.status||null;r.role=m.role;r.langs=[...m.langs];r.vis={...PUBLIC_VIS,...m.vis};}
  const visBtn=k=>`<button class="pill ${r.vis[k]==='public'?'ok':r.vis[k]==='granted'?'v':''}" data-act="visCycle" data-v="${k}">${r.vis[k]==='public'?I.globe:r.vis[k]==='granted'?I.lock:I.eyeoff}${{public:L('всем','everyone'),granted:L('по доступу','by access'),only:L('только я','only me')}[r.vis[k]]}</button>`;
  return `${bar(L('Профиль','Profile'),{back:1,sm:1,actions:`<button class="btn text auto" data-act="previewDraft">${L('Как видят','Preview')}</button>`})}<div class="view nodock cta1"><div class="wrap">
  <section class="grp"><div class="grp-t"><span>${L('Фото','Photos')}</span><span class="note">${r.photos.length}/6 · ${L('формат 4:5','4:5 format')}</span></div><div class="card"><div class="edit-ph">${r.photos.map((ph,i)=>`<div><img src="${IMG(ph)}" alt="">${i===0?`<span class="mainph">${L('главное','main')}</span>`:''}<button class="vw" data-act="phMenu" data-v="${i}" aria-label="${L('Действия с фото','Photo actions')} ${i+1}"></button><button class="rm" data-act="phRm" data-v="${i}" aria-label="${L('Удалить фото','Remove photo')}">${I.close}</button></div>`).join('')}${r.photos.length<6?`<button data-act="phAdd" aria-label="${L('Добавить фото','Add photos')}">${I.camera}<small>${L('Добавить','Add')}</small></button>`:''}</div>
  <p class="note mt8">${L('Можно выбрать сразу несколько. Сжимаем и стираем геометку прямо на телефоне. Нажми на фото, чтобы кадрировать или сделать главным.','Pick several at once. We compress and wipe location on your phone. Tap a photo to crop it or make it main.')}</p>
- </div></section><section class="grp"><div class="grp-t"><span>${L('Основное','Basics')}</span></div><div class="card form-card">${field({name:'name',label:L('Имя','Name'),ph:'Alex',max:30})}
+ </div></section><section class="grp"><div class="grp-t"><span>${L('Основное','Basics')}</span></div><div class="card form-card">
  ${field({name:'nick',label:L('Ник','Nickname'),icon:'at',attrs:'autocapitalize="off" spellcheck="false"',hint:L('Ник — часть аккаунта, отдельного «ника для знакомств» нет.','Your nickname belongs to your account — there’s no separate dating nickname.')})}
  ${rteField({name:'bio',label:L('О себе','About you'),max:500,ph:L('Пара фраз о том, что для тебя важно','A few lines about what matters to you')})}
  <button class="li" data-act="peCity"><span class="ico">${I.pin}</span><span class="tx"><b>${L('Город','City')}</b><small>${r.f.city?esc(placeCaption(r.f.city)):L('Не показывать','Don’t show')}</small></span>${I.chev}</button><button class="btn text auto" data-act="peHideCity">${L('Не показывать город','Hide city')}</button>
@@ -3940,9 +3941,9 @@ ACT.phView=a=>{closeSheet(true);openViewer(cur().photos.map(ph=>({type:'image',s
 ACT.phMain=a=>{closeSheet(true);const r=cur();const [ph]=r.photos.splice(+a.dataset.v,1);r.photos.unshift(ph);r.dirty=true;refresh();toast(L('Теперь это главное фото','This is now your main photo'),{type:'ok'});};
 ACT.phCrop=a=>{closeSheet(true);const r=cur(),i=+a.dataset.v;const src=IMG(r.photos[i]);S.ui.up=null;openCrop(src,'4:5',{x:0,y:0,z:1},async crop=>{const c=await cropImage({full:src,crop},'4:5');r.photos[i]=c.url;r.dirty=true;refresh();toast(L('Кадр сохранён','Crop saved'),{type:'ok'});});};
 ACT.phRm=a=>{if(S.ui.sheet)closeSheet(true);const r=cur();if(requiresDiscoveryPhoto(S.me)&&r.photos.length===1){toast(L('Для показа в подборке нужно фото. Сначала выключи показ анкеты в настройках.','A photo is required to appear in Discover. Turn off profile visibility in settings first.'),{type:'warn'});return;}r.photos.splice(+a.dataset.v,1);r.dirty=true;refresh();};
-ACT.peSave=a=>{const r=cur();if(requiresDiscoveryPhoto(S.me)&&!r.photos.length){toast(L('Для показа в подборке нужно хотя бы одно фото','At least one photo is required to appear in Discover'),{type:'warn'});return;}r.err={};const nk=fv('nick').trim();const ne=nk.toLowerCase()===S.me.nick.toLowerCase()?'':V.nick(nk);if(ne)r.err.nick=ne;if(fv('bio').length>500)r.err.bio=L('Максимум 500 символов','500 characters max');if(fv('name').length>30)r.err.name=L('Максимум 30 символов','30 characters max');
+ACT.peSave=a=>{const r=cur();if(requiresDiscoveryPhoto(S.me)&&!r.photos.length){toast(L('Для показа в подборке нужно хотя бы одно фото','At least one photo is required to appear in Discover'),{type:'warn'});return;}r.err={};const nk=fv('nick').trim();const ne=nk.toLowerCase()===S.me.nick.toLowerCase()?'':V.nick(nk);if(ne)r.err.nick=ne;if(fv('bio').length>500)r.err.bio=L('Максимум 500 символов','500 characters max');
  if(Object.keys(r.err).length){refresh();shakeFirstErr();toast(L('Проверь отмеченные поля','Check the highlighted fields'),{type:'err'});return;}
- run(a,()=>{Object.assign(S.me,{name:fv('name').trim(),nick:nk,bio:{ru:fv('bio'),en:fv('bio')},city:r.f.city||null,photos:[...r.photos],photo:r.photos[0]||null,pron:r.pron,gender:r.gender,orient:r.orient,format:[...r.format],status:r.status,role:r.role,langs:[...r.langs],vis:{...r.vis}});r.dirty=false;back();},{ok:L('Профиль обновлён — изменения видны везде','Profile updated — changes show everywhere')});};
+ run(a,()=>{Object.assign(S.me,{nick:nk,bio:{ru:fv('bio'),en:fv('bio')},city:r.f.city||null,photos:[...r.photos],photo:r.photos[0]||null,pron:r.pron,gender:r.gender,orient:r.orient,format:[...r.format],status:r.status,role:r.role,langs:[...r.langs],vis:{...r.vis}});r.dirty=false;back();},{ok:L('Профиль обновлён — изменения видны везде','Profile updated — changes show everywhere')});};
 
 /* P04 — V7 «Приватное»: what you share by request — wishes & limits, private photos/video, albums */
 const PRIV_SEC=()=>[['photos',L('Фото','Photos')],['video',L('Видео','Video')],['album',L('Альбом «Лето»','Album “Summer”')]];
@@ -3979,7 +3980,7 @@ ACT.pairLink=()=>{sheet(()=>({title:L('Профиль пары','Couple profile'
  <label class="field mt16"><span>${L('Ник партнёра','Partner’s nickname')}</span><div class="inwrap">${I.at}<input class="inp" id="pairNick" placeholder="kira" autocapitalize="off"></div></label>`,foot:`<button class="btn primary" data-act="pairSend">${L('Отправить приглашение','Send invitation')}</button>`}));};
 ACT.pairSend=a=>{const v=$('#pairNick').value.trim().toLowerCase();if(!v){$('#pairNick').classList.add('err');toast(L('Укажи ник партнёра','Enter your partner’s nickname'),{type:'err'});return;}if(!PEOPLE[v]){$('#pairNick').classList.add('err');toast(L('Такого ника нет. Проверь написание','No such nickname. Check the spelling'),{type:'err'});return;}run(a,()=>{S.pairInvite={p:v,t:Date.now()};closeSheet();refresh();},{ok:L(`Приглашение отправлено ${pname(v)}. Пара появится после её/его согласия`,`Invitation sent to ${pname(v)}. The couple appears once they accept`)});};
 
-ACT.previewDraft=()=>{const r=cur();const value={...S.me,name:fv('name'),nick:fv('nick'),bio:{ru:fv('bio'),en:fv('bio')},city:r.f.city||null,photos:[...r.photos],photo:r.photos[0]||null,pron:r.pron,gender:[...r.gender],orient:[...r.orient],format:[...r.format],status:r.status,role:r.role,langs:[...r.langs],vis:{...r.vis}};go('P03',{preview:value},{keepDraft:true});};
+ACT.previewDraft=()=>{const r=cur();const value={...S.me,nick:fv('nick'),bio:{ru:fv('bio'),en:fv('bio')},city:r.f.city||null,photos:[...r.photos],photo:r.photos[0]||null,pron:r.pron,gender:[...r.gender],orient:[...r.orient],format:[...r.format],status:r.status,role:r.role,langs:[...r.langs],vis:{...r.vis}};go('P03',{preview:value},{keepDraft:true});};
 ACT.peCity=()=>openCityPicker(cur().f.city,id=>{cur().f.city=id;cur().dirty=true;refresh();});
 ACT.peHideCity=()=>{cur().f.city='';cur().dirty=true;refresh();};
 
@@ -4294,7 +4295,7 @@ SC.X01={root:1,tab:'me',title:()=>L('Я','Me'),render:()=>{const m=S.me;const [n
  const head=bar(L('Я','Me'),{actions:`${bellBtn()}<button class="ibtn" data-go="K01" aria-label="${L('Настройки','Settings')}">${I.gear}</button>`});
  const jars=myJars();const priv=(m.media||[]).length;const going=myUpcomingEventIds().length;const done=Object.keys(QUIZ).filter(k=>m.tests[k]?.done).length;const next=Object.keys(QUIZ).find(k=>!m.tests[k]?.done);
  return head+`<div class="view"><div class="wrap">
- <section class="grp"><div class="card me-card"><button class="me-id" data-go="P03">${av('me','me-av')}<span class="grow"><b>${esc(pname('me'))}</b><small>@${esc(m.nick||'…')}${m.city?` · ${esc(city(m.city))}`:''}</small></span>${I.chev}</button>
+ <section class="grp"><div class="card me-card"><button class="me-id" data-go="P03">${av('me','me-av')}<span class="grow"><b>${esc(pname('me'))}</b>${m.city?`<small>${esc(city(m.city))}</small>`:''}</span>${I.chev}</button>
   <div class="me-acts"><button class="btn secondary sm" data-go="P03">${I.eye}${L('Как видят','Preview')}</button><button class="btn secondary sm" data-go="P02">${I.edit}${L('Изменить','Edit')}</button></div>
   ${nt?`<button class="nextstep" ${nt==='test'?`data-go="X07" data-id="${nid}"`:nt==='topic'?'data-act="addJar"':'data-go="P02"'}><span class="ico">${nt==='P02'?I.camera:I.test}</span><span class="tx"><b>${L('Следующий шаг','Next step')}</b><small>${ns}</small></span>${I.chev}</button>`:''}</div></section>
  ${grp(L('Мои баночки','My jars'),jars.length?jarShelf(m.jars,{max:4,pre:1,act:'editJar',vis:1,add:'addJar',moreAct:'myJarsAll'}):`<div class="jar-empty"><p>${L('Баночка — это одна тема и то, как она тебе откликается: от 1 до 10, «обсуждаемо» или «табу».','A jar is one topic and how it feels to you: 1 to 10, “negotiable” or “taboo”.')}</p><div class="row g8"><button class="btn primary sm" data-go="X07" data-id="${next||'rope'}">${L('Пройти тест','Take a quiz')}</button><button class="btn secondary sm" data-act="addJar">${I.plus}${L('Добавить тему','Add a topic')}</button></div></div>`,{right:jars.length?`<button data-go="X02">${L('Все','All')} · ${jars.length}</button>`:''})}
@@ -4795,17 +4796,17 @@ function qaApproveAll(){if(!S?.session)return 0;let n=0;const now=Date.now(),not
  if(S.me.photoCheck==='pending'){pvResolve(true);n++;}
  if(n){refresh();renderSide();toast(L(`Одобрено сразу: ${n}`,`Approved at once: ${n}`),{type:'ok'});}return n;}
 /* «Длинные тексты»: worst-case lengths at the input limits, switchable in the review panel or with ?long=1.
-   Names 30 (name field limit), nick 20, community 50, event 80, discussion title 120, bio 500, long real city names.
+   Nicknames 20 (the only public name; limit 20), community 50, event 80, discussion title 120, bio 500, long real city names.
    The original seed values are kept and restored when the switch goes back to «Обычные». */
 const LONG={snap:null};
 function qaLong(on){
  if(!LONG.snap)LONG.snap={people:Object.fromEntries(Object.entries(PEOPLE).map(([k,p])=>[k,{name:p.name,nameRu:p.nameRu,bio:p.bio}])),city:{...CITY},comm:Object.fromEntries(Object.entries(COMMUNITIES).map(([k,c])=>[k,{name:c.name,desc:c.desc}])),ev:Object.fromEntries(Object.entries(EVENTS).map(([k,e])=>[k,e.title])),disc:(S.discussions||[]).map(d=>d.title)};
  const o=LONG.snap;QA.long=on;
  if(!on){Object.entries(o.people).forEach(([k,v])=>{if(PEOPLE[k])Object.assign(PEOPLE[k],v);});Object.assign(CITY,o.city);Object.entries(o.comm).forEach(([k,v])=>{if(COMMUNITIES[k])Object.assign(COMMUNITIES[k],v);});Object.entries(o.ev).forEach(([k,v])=>{if(EVENTS[k])EVENTS[k].title=v;});(S.discussions||[]).forEach((d,i)=>{if(o.disc[i]!=null)d.title=o.disc[i];});if(LONG.me){Object.assign(S.me,LONG.me);LONG.me=null;}refresh();return;}
- const nm=['Alexandrina-Maximiliana Rose','Konstantin Wolfgang Bergmann','Anastasia-Valentina Petrova','Jean-Baptiste Montgomery III'];
+ const nm=['alexandrina.maximila','konstantin.wolfgang1','anastasia_valentina2','jean.baptiste.montgo'];
  const bio={ru:'Говорю прямо и бережно. Люблю долгие переписки, верёвку, медленные вечера и людей, которые заранее обсуждают границы. Первая встреча — только в публичном месте и без спешки. Мне важно, чтобы обе стороны могли остановиться в любой момент и не объяснять почему. Пишу длинно, отвечаю не сразу, но всегда отвечаю. Если сомневаешься — спроси, я лучше объясню ещё раз, чем угадаю. Не люблю сюрпризы и давление, люблю ясные договорённости и смех после. Пишу этот текст до лимита, чтобы проверить, как ведёт себя длинное описание в профиле.'.slice(0,500),en:'I speak plainly and kindly. I love long chats, rope, slow evenings and people who talk about boundaries first. First meeting only in a public place and without rushing. Both sides must be able to stop at any moment without explaining why. I write long and reply slowly, but I always reply. If unsure, ask — I would rather explain twice than guess. No surprises or pressure; clear agreements and laughter after. This text runs to the limit to test a long profile description.'.slice(0,500)};
  Object.keys(PEOPLE).forEach((id,i)=>{const p=PEOPLE[id];p.name=nm[i%nm.length];if(p.nameRu)p.nameRu=nm[i%nm.length];if(i%3===0)p.bio=bio;});
- if(!LONG.me)LONG.me={name:S.me.name,nick:S.me.nick};S.me.name='Александра-Валентина Мария';S.me.nick='alexandra.valentina1';
+ if(!LONG.me)LONG.me={nick:S.me.nick};S.me.nick='alexandra.valentina1';
  Object.keys(CITY).forEach((k,i)=>{CITY[k]=i%2?{ru:'Гармиш-Партенкирхен',en:'Garmisch-Partenkirchen'}:{ru:'Франкфурт-на-Майне',en:'Frankfurt am Main'};});
  Object.values(COMMUNITIES).forEach(c=>{c.name={ru:'Верёвочные практики и разговоры о границах для новых'.slice(0,50),en:'Rope practice and boundary talks for curious beginners'.slice(0,50)};});
  Object.values(EVENTS).forEach(e=>{e.title={ru:'Большой вечер знакомства для новичков: верёвка, разговоры, правила и согласие'.slice(0,80),en:'Big newcomers evening: rope, conversations, house rules and consent basics'.slice(0,80)};});
