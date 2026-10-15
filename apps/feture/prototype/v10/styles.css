@@ -1075,7 +1075,7 @@ button.jar:active .vessel{transform:scale(.95)}
 .tabs.access-tabs button{justify-content:center;text-align:center;white-space:normal;min-height:44px;padding:8px;font-size:13px;border-radius:10px}
 .tabs.access-tabs button.on{background:var(--surf);box-shadow:0 1px 3px #0000000a}
 .tabs.access-tabs button.on::after{display:none}
-@media(min-width:900px){body:not(.frame) .auth-wrap.identity-onboarding{max-width:760px}body:not(.frame) .identity-grid{grid-template-columns:repeat(2,minmax(0,1fr))}body:not(.frame) .tabs.access-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(min-width:900px){body:not(.frame) .tabs.access-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}}
 
 /* =====================================================================
    V10 owner revision, part 1 — Claude, 15.10.2026.
@@ -1408,11 +1408,8 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .pc-stats button{display:inline-flex;align-items:baseline;gap:5px;min-height:32px;padding:0;font-size:13.5px;color:rgba(255,255,255,.86)}
 .pc-stats b{font-size:14.5px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
 .pc-stats button:hover{color:#fff}.pc-stats button:hover span,.pc-stats button:hover{text-decoration:underline;text-underline-offset:3px}
-.pv-panel{margin:12px 0 0;padding:14px;border-radius:var(--r-l);background:var(--raise)}
-.pv-h{display:flex;gap:12px;align-items:flex-start;font-size:14px;line-height:1.45;color:var(--mute)}
-.pv-h svg{flex:none;width:22px;height:22px;margin-top:1px;color:var(--ink)}
-.pv-h b{display:block;font-size:15px;color:var(--ink)}
-.pv-panel .seg{margin-top:12px;background:var(--surf)}
+.pv-panel{margin:12px 0 0}
+.pv-panel .seg{margin:8px 0 0}
 
 /* -- round 3: long names, nicks, cities, titles (checked at the input limits with FT_QA.stress()) -- */
 .one{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1430,8 +1427,10 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .ev-hero .pc-info{position:relative;padding-top:calc(76px + var(--safe-t))}
 /* the photo keeps its ratio as a minimum (spacer), the caption may make the card taller */
 .hero:has(>.pc-info){display:grid;aspect-ratio:auto}
-.hero:has(>.pc-info)::before{content:"";grid-area:1/1;aspect-ratio:1/1}
-@container stage (min-width:768px){.hero:has(>.pc-info)::before{aspect-ratio:4/3}}
+/* profile photos are 4:5 (upload crop, seed photos): the card is 4:5 too; on wide screens it is capped by the window height
+   and the picture sits whole on its own blurred backdrop */
+.hero:has(>.pc-info)::before{content:"";grid-area:1/1;aspect-ratio:4/5}
+@container stage (min-width:768px){.hero:has(>.pc-info)::before{max-height:min(78vh,720px)}}
 .hero>.pc-info{position:relative;grid-area:1/1;align-self:end;padding-top:calc(96px + var(--safe-t))}
 
 /* -- online dot: on the circle's edge (45°), never clipped; the photo is clipped by .av-in -- */
@@ -1440,3 +1439,27 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 .av-in.ini{display:grid;place-items:center}
 .av.on::after{right:calc(14.6% - 5px);bottom:calc(14.6% - 5px);z-index:1;box-shadow:0 0 0 2px var(--av-ring,var(--bg))}
 .card .av.on,.sheet .av.on,.li .av.on{--av-ring:var(--surf)}
+
+/* =====================================================================
+   V10 owner revision, round 4 — Claude, 15.10.2026.
+   ===================================================================== */
+/* -- filters: no rules between sections, chips start on the heading's left edge, chips are the app's usual chips -- */
+.fin{padding:0;border-top:0;margin-top:20px}
+.fin:first-child{margin-top:2px;padding-top:0}
+.fin-t{margin:0 0 10px}
+.fin .fin-b .grp,.fin .fin-b .grp>.card,.fin .fin-b .card{margin:0;padding:0;background:none;border:0;box-shadow:none;border-radius:0}
+.fin .chl{margin:0;padding:0;gap:8px}
+.fin-b .ch{min-height:36px;padding:7px 14px;line-height:1.25;gap:0}
+.fin-b .ch .tx b{line-height:1.25}
+.fin .fsec .sec{margin:12px 0 8px}.fin .fsec:first-child .sec{margin-top:0}
+.fin-t .fin-v{font-size:15px;color:var(--ink)}
+
+/* -- sign-up and onboarding: one 460px column on every step, header and bottom buttons included; the welcome screen too -- */
+@container stage (min-width:768px){
+  .root.auth .main>.bar{max-width:calc(460px + 2 * var(--gut))}
+  .root.auth .main>.ctabar>.wrap{max-width:460px}
+  .welcome>*:not(.w-bg){width:100%;max-width:460px;margin-inline:auto}
+  .welcome .w-cta,.welcome .w-age{max-width:460px}
+}
+.pc-who:empty{display:none}
+.hcard .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

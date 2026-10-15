@@ -72,6 +72,7 @@ function md(src,cls){const lines=esc(String(src||'')).split('\n');let out='',lis
  const flushP=()=>{if(para.length){out+=`<p>${para.map(mdInline).join('<br>')}</p>`;para=[];}};const flushL=()=>{if(list){out+=`<${list.t}>${list.items.map(x=>`<li>${mdInline(x)}</li>`).join('')}</${list.t}>`;list=null;}};
  for(let k=0;k<lines.length;k++){const l=lines[k];let m;
   if(!l.trim()){flushP();flushL();continue;}
+  if(/^\\([-*]|\d+[.)]|&gt;|#{1,3})\s/.test(l)){flushL();para.push(l.slice(1));continue;}
   if((m=l.match(/^\s*[-*]\s+(.*)/))||(m=l.match(/^\s*\d+[.)]\s+(.*)/))){const t=/^\s*\d/.test(l)?'ol':'ul';flushP();if(list&&list.t!==t)flushL();list=list||{t,items:[]};list.items.push(m[1]);continue;}
   flushL();
   if((m=l.match(/^&gt;\s?(.*)/))){flushP();const q=[m[1]];while(k+1<lines.length&&/^&gt;/.test(lines[k+1]))q.push(lines[++k].replace(/^&gt;\s?/,''));out+=`<blockquote>${q.map(mdInline).join('<br>')}</blockquote>`;continue;}
@@ -79,7 +80,7 @@ function md(src,cls){const lines=esc(String(src||'')).split('\n');let out='',lis
   para.push(l);}
  flushP();flushL();return `<div class="md${cls?' '+cls:''}">${out}</div>`;}
 /** Markdown → one line of plain text, for list rows and previews */
-const mdPlain=s=>String(s||'').replace(/!?\[([^\]]*)\]\([^)]*\)/g,'$1').replace(/^\s*(#{1,3}|>|[-*]|\d+[.)])\s+/gm,'').replace(/(\*\*|__|~~|`)/g,'').replace(/(^|\s)[*_]([^*_\n]+)[*_](?=\s|$|[.,!?:;])/g,'$1$2').replace(/\s*\n+\s*/g,' ').trim();
+const mdPlain=s=>String(s||'').replace(/!?\[([^\]]*)\]\([^)]*\)/g,'$1').replace(/^\s*(#{1,3}|>|[-*]|\d+[.)])\s+/gm,'').replace(/(\*\*|__|~~|`)/g,'').replace(/(^|\s)[*_]([^*_\n]+)[*_](?=\s|$|[.,!?:;])/g,'$1$2').replace(/^\\(?=[-*>#\d])/gm,'').replace(/\s*\n+\s*/g,' ').trim();
 ACT.mdLink=(a,e)=>{e?.stopPropagation();const u=a.dataset.v;let host='';try{host=new URL(u).host;}catch(_){return;}if(!/^https?:$/.test(new URL(u).protocol))return;
  ask({icon:'link',title:L('Открыть внешнюю ссылку?','Open an external link?'),text:L(`Ссылка ведёт на ${host} — это не FetUre. Не вводи там пароль от FetUre.`,`The link goes to ${host}, outside FetUre. Don’t enter your FetUre password there.`),ok:L('Открыть','Open')}).then(ok=>{if(ok)window.open(u,'_blank','noopener,noreferrer');});};
 /** reply actions under a comment/reply: like, reply, more (report / block, delete own). kind 'p' = post replies, 'd' = discussion replies */
@@ -128,7 +129,9 @@ function rteMd(root){
   if(g==='A'){const h=c.getAttribute('href')||'';return /^https?:\/\//.test(h)&&x.trim()?`[${x.trim()}](${h})`:x;}
   if(g==='DIV'||g==='P'||g==='LI')return '\n'+x;return x;}).join('');
  const lines=s=>s.replace(/^\n+|\n+$/g,'').split('\n');const out=[];let run='';
- const flush=()=>{if(run.trim())out.push(lines(run).join('\n'));run='';};
+ // a plain line that only looks like markup («- », «1. », «> », «## ») is kept literal with a backslash
+ const esc1=l=>/^\s*([-*]|\d+[.)]|>|#{1,3})\s/.test(l)?'\\'+l.replace(/^\s+/,''):l;
+ const flush=()=>{if(run.trim())out.push(lines(run).map(esc1).join('\n'));run='';};
  const BLK=/^(P|DIV|H[1-6]|BLOCKQUOTE|UL|OL)$/;const walk=node=>[...node.childNodes].forEach(c=>{const g=c.nodeType===1?c.tagName:'';
   if((g==='P'||g==='DIV')&&[...c.children].some(x=>BLK.test(x.tagName))){flush();walk(c);flush();return;}
   if(!g||!BLK.test(g)){run+=c.nodeType===3?c.nodeValue.replace(/ /g,' '):g==='BR'?'\n':inl({childNodes:[c]});return;}
@@ -136,11 +139,29 @@ function rteMd(root){
   if(/^H/.test(g)){const t=inl(c).replace(/\n/g,' ').trim();if(t)out.push('## '+t);}
   else if(g==='BLOCKQUOTE'){const t=lines(inl(c)).filter(x=>x.trim());if(t.length)out.push(t.map(x=>'> '+x).join('\n'));}
   else if(g==='UL'||g==='OL'){const it=[...c.children].filter(x=>x.tagName==='LI').map(x=>inl(x).replace(/\n/g,' ').trim()).filter(Boolean);if(it.length)out.push(it.map((x,k)=>(g==='OL'?`${k+1}. `:'- ')+x).join('\n'));}
-  else{const t=lines(inl(c)).join('\n');if(t.trim())out.push(t);}});
+  else{const t=lines(inl(c)).map(esc1).join('\n');if(t.trim())out.push(t);}});
  walk(root);flush();return out.join('\n\n').trim();}
 const rteSync=ed=>{const r=cur();const name=ed.dataset.name;const v=rteMd(ed);ed.dataset.md=v;if(!ed.dataset.local){r.f[name]=v;r.dirty=true;}ed.classList.toggle('is-empty',!ed.textContent.trim()&&!ed.querySelector('li'));
  if(!ed.dataset.local&&r.err&&r.err[name])setErr(name,'');const c=$(`[data-count="${name}"]`,ed.closest('.rte'));if(c){const max=+ed.dataset.max;c.textContent=`${v.length} / ${max}`;c.classList.toggle('over',v.length>max);}};
-IN.rte=el=>rteSync(el);
+/* Markdown shortcuts while typing: «- » or «* » at a line start makes a list, «1. » a numbered list, «> » a quote.
+   Undo is the usual one: Backspace right after the shortcut (or the undo button / Ctrl+Z) gives back the typed characters;
+   the toolbar button toggles the list off; Enter on an empty item leaves the list. */
+const RTE_AUTO=[[/^[-*]$/,'insertUnorderedList'],[/^1[.)]$/,'insertOrderedList'],[/^>$/,'blockquote']];
+function rteAuto(ed,e){if(e?.inputType!=='insertText'||e.data!==' ')return false;const sel=getSelection();if(!sel.rangeCount||!sel.isCollapsed)return false;
+ const n=sel.anchorNode,off=sel.anchorOffset;if(!n||n.nodeType!==3||!ed.contains(n))return false;
+ if(n.previousSibling&&n.previousSibling.nodeName!=='BR')return false;if(n.parentElement.closest('li,blockquote,h4'))return false;
+ const typed=n.nodeValue.slice(0,off),mk=typed.replace(/[\s ]$/,'');if(typed===mk)return false;
+ const rule=RTE_AUTO.find(([re])=>re.test(mk));if(!rule)return false;
+ // the shortcut must be the first thing on its line
+ for(let p=n.parentElement;p&&p!==ed;p=p.parentElement){if(p.previousSibling&&!/^(P|DIV)$/.test(p.nodeName))return false;if(/^(P|DIV)$/.test(p.nodeName))break;}
+ const r=document.createRange();r.setStart(n,0);r.setEnd(n,off);sel.removeAllRanges();sel.addRange(r);document.execCommand('delete');
+ if(rule[1]==='blockquote')document.execCommand('formatBlock',false,'blockquote');else document.execCommand(rule[1]);
+ ed._auto={cmd:rule[1],text:mk+' '};return true;}
+document.addEventListener('keydown',e=>{const ed=e.target.closest?.('.rte-ed');if(!ed||!ed._auto)return;const a=ed._auto;
+ if(e.key==='Backspace'){const sel=getSelection();const blk=sel.anchorNode&&(sel.anchorNode.nodeType===1?sel.anchorNode:sel.anchorNode.parentElement).closest('li,blockquote');
+  if(blk&&!blk.textContent.trim()){e.preventDefault();if(a.cmd==='blockquote')document.execCommand('formatBlock',false,'p');else document.execCommand(a.cmd);document.execCommand('insertText',false,a.text);ed._auto=null;rteSync(ed);rteState();return;}}
+ if(e.key.length===1||e.key==='Enter'||e.key==='Backspace')ed._auto=null;},true);
+IN.rte=(el,e)=>{if(rteAuto(el,e))rteState();rteSync(el);};
 const rteState=()=>{const ed=document.activeElement?.closest?.('.rte-ed');if(!ed)return;const tb=ed.closest('.rte-box');const blk=String(document.queryCommandValue('formatBlock')||'').toLowerCase();
  $$('[aria-pressed]',tb).forEach(b=>{const c=b.dataset.v;let on=false;try{on=c==='h4'||c==='blockquote'?blk===c:document.queryCommandState(c);}catch(_){}b.setAttribute('aria-pressed',String(!!on));});};
 document.addEventListener('selectionchange',rteState);
@@ -315,8 +336,12 @@ function updCard(u){const src=u.e?T(EV(u.e).title):T(COMMUNITIES[u.c].name);retu
 function accessSummary(){const pending=S.reqOut.filter(x=>x.status==='pending'&&!isBlocked(x.p)).length;return `<div class="card list">${linkRow({go:'P07',p:{tab:'in'},icon:'lock',tone:'v',title:L('Запросы ко мне','Requests to me'),badge:C.reqIn()||'',sub:L('Выбирай разделы и срок','Choose sections and duration')})}${linkRow({go:'P07',p:{tab:'out'},icon:'clock',title:L('Мои запросы','My requests'),val:String(pending),sub:L('Ожидающие и история решений','Pending requests and decisions')})}${linkRow({go:'P07',p:{tab:'withme'},icon:'unlock',title:L('Открыто мне','Shared with me')})}</div>`;}
 
 /* V10 revision: every category of a section sits in one popup as chips; only long searchable lists keep a small picker */
+/** a long list inside a filter: the chosen ones and a few popular ones as chips, the rest behind «Все варианты · N» (same as chipPicker) */
+function popChips(items,sel,act,more,o={}){if(items.length<=(o.lim||6)+2)return `<div class="chips">${items.map(([id,l])=>chipBtn(id,l,sel.includes(id),act,o)).join('')}</div>`;const pop=(o.groups?o.groups[0][1]:items.map(x=>x[0])).slice(0,o.lim||6);const shown=items.filter(([id])=>sel.includes(id)||pop.includes(id));
+ return `<div class="chips">${shown.map(([id,l])=>chipBtn(id,l,sel.includes(id),act,o)).join('')}<button class="chip more" ${more}>${ic('search',14)}${L('Все варианты','All options')} · ${items.length}</button></div>`;}
 function fInline(r){
- if(r.search)return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${L('можно несколько','pick any')}</span></div><div class="chips">${r.on()?`<span class="chip on static">${esc(r.summary())}</span>`:''}<button class="chip dashed" data-act="fOpen" data-v="${r.k}">${ic('search',15)}${r.on()?L('Изменить','Change'):L('Выбрать','Choose')}</button></div></section>`;
+ if(r.search&&r.pick){const pk=r.pick();return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${L('можно несколько','pick any')}</span></div>${popChips(pk.items,pk.sel,pk.act,`data-act="fOpen" data-v="${r.k}"`,{groups:pk.groups})}</section>`;}
+ if(r.search)return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${L('можно несколько','pick any')}</span></div><div class="chips">${r.on()?`<span class="chip on static">${esc(r.summary())}</span>`:''}<button class="chip more" data-act="fOpen" data-v="${r.k}">${ic('search',14)}${L('Все варианты','All options')}</button></div></section>`;
  const html=r.body().replace(/<section class="fsec"[^>]*><div class="sec">\s*<\/div>/g,'<section class="fsec">');const single=/role="radiogroup"/.test(html);
  return `<section class="fin"><div class="fin-t"><b>${r.label}</b><span>${single?L('один вариант','one option'):L('можно несколько','pick any')}</span></div><div class="fin-b">${html}</div></section>`;}
 /* ---------- V8 filters, Feeld-style: a tidy list «category → current choice»; a row opens its options with search ---------- */
