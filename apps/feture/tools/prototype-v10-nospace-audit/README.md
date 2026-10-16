@@ -16,3 +16,14 @@ node verify.mjs 320 ru light                        # скриншоты и CSS-
 ```
 
 Результаты (`out/`, `shots/`) в репозиторий не кладутся. Необязательно: `fonts/onest.css` + woff2, чтобы не зависеть от Google Fonts.
+
+## Опасный ввод (теги, спецсимволы)
+
+Режим данных: `?hostile=1`, `FT_QA.hostile(true)`, панель V10 → «Опасные символы». `window.__x(id)` вызывается каждым script-/handler-пейлоадом; `FT_QA.hits()` и `FT_QA.hostileIds()` показывают, какое поле выполнилось.
+
+```bash
+node sec.mjs ru 390 0/4 20      # обход кликами + проверка DOM: выполнение, внедрённые теги, on*-атрибуты, javascript:-URL
+node flowsec.mjs ru 390 light full   # те же проверки на сценариях с набором опасных строк руками
+node poc.mjs                     # сквозные PoC: введённое руками имя сообщества → заголовок Bottom Sheet
+node urlt.mjs                    # hash, query, localStorage
+```

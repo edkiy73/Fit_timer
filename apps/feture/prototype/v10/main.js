@@ -16,3 +16,4 @@ startNavHistory();
 try{if(new URLSearchParams(location.search).get('long')==='1')qaLong(true);}catch(e){}
 
 try{if(new URLSearchParams(location.search).get('nospace')==='1')qaNosp(true);}catch(e){}
+try{if(new URLSearchParams(location.search).get('hostile')==='1')qaNosp(true,'xss');}catch(e){}
