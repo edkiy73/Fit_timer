@@ -37,7 +37,7 @@
       ]
     },
     {
-      "source": "/la-famiglia-party-bar/(.*)",
+      "source": "/bar/(.*)",
       "headers": [
         {
           "key": "Content-Security-Policy",
@@ -50,6 +50,11 @@
     {
       "source": "/app",
       "destination": "/app/",
+      "permanent": false
+    },
+    {
+      "source": "/bar",
+      "destination": "/bar/",
       "permanent": false
     }
   ],
