@@ -106,7 +106,7 @@ const I={at:sv('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5"
 const ic=(n,s)=>s?I[n].replace('<svg',`<svg style="width:${s}px;height:${s}px"`):I[n];
 
 /* ---------- media ---------- */
-const IMG=n=>typeof n==='string'&&/^(blob:|data:image\/)/.test(n)?n:(window.FT_IMG&&window.FT_IMG[n])||`images/profile-${n}-45.webp`;
+const IMG=n=>typeof n==='string'&&/^(blob:|data:image\/|\/images\/)/.test(n)?n:(window.FT_IMG&&window.FT_IMG[n])||`images/profile-${n}-45.webp`;
 /* V7: the test mark is gone. Three vector options for the owner (QA drawer → Логотип); A is the default. */
 const LOGOS={
  a:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><defs><linearGradient id='a' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#FF4F6D'/><stop offset='1' stop-color='#C2134A'/></linearGradient><linearGradient id='b' x1='0' y1='1' x2='1' y2='0'><stop offset='0' stop-color='#6A52F0'/><stop offset='1' stop-color='#C3B3FF'/></linearGradient></defs><rect width='120' height='120' rx='32' fill='#1E1219'/><circle cx='47' cy='60' r='23' fill='none' stroke='url(#a)' stroke-width='12'/><circle cx='73' cy='60' r='23' fill='none' stroke='url(#b)' stroke-width='12'/><path d='M51 37.4A23 23 0 0 1 65.6 45.2' fill='none' stroke='#1E1219' stroke-width='17'/><path d='M51 37.4A23 23 0 0 1 65.6 45.2' fill='none' stroke='url(#a)' stroke-width='12'/></svg>`,
@@ -128,7 +128,11 @@ const pairMember=()=>S.pairMember==='partner'?(S.pair?.with||S.pairInvite?.nick)
 function editableProfile(r=cur()){if(r.p?.owner!=='couple')return S.me;const P=S.pair;if(P?.status!=='active')return null;coupleProfile();P.revision??=0;P.draftBase??=P.revision;if(!P.draft){P.draft=structuredClone(P.profile);P.draftBy=pairMember();P.draftLease=(P.draftLease||0)+1;}return P.draftBy&&P.draftBy!==pairMember()?structuredClone(P.draft):P.draft;}
 function coupleWritable(lease){const P=S.pair;const ok=activePair()&&(!P.draftBy||P.draftBy===pairMember())&&(lease==null||lease===(P.draftLease||0));if(!ok)toast(L('Черновик занят другим участником или изменился. Вернись в профиль пары. Введённые данные остаются здесь.','The draft belongs to the other partner or changed. Return to the couple profile. Your input stays here.'),{type:'warn'});return ok;}
 function markCoupleDraft(fromEditor=false){const P=S.pair;if(!P?.draft||!coupleWritable())return;P.draftVersion=(P.draftVersion||0)+1;if(!fromEditor)for(const parent of stack())if(parent.p.owner==='couple'&&parent.pairLease===(P.draftLease||0))parent.pairVersion=P.draftVersion;}
-function submitCoupleDraft(){const P=S.pair;if(P?.status!=='active'||!P.draft||P.proposal?.status==='pending')return false;if(!coupleWritable())return false;const by=pairMember();P.revision??=0;
+/* Compare user-editable content, with defaults and stable object/set ordering. */
+function normalizedCouple(p){if(!p)return null;const n=structuredClone(p);delete n.history;delete n.photo;delete n.requests;for(const k of ['gender','orient','role','format','seek'])n[k]=[...(n[k]||[])].sort();n.privOn=n.privOn??(!!T(n.privText)||privMedia(n).length>0);n.dating=!!n.dating;n.datingVisible=!!n.datingVisible;n.socialLikes=n.socialLikes!==false;n.showAge=n.showAge!==false;n.requestsFrom=n.requestsFrom||'all';n.city=n.city||null;n.pron=n.pron||null;for(const k of ['photos','media','jars'])n[k]??=[];const norm=v=>typeof v==='string'?v.trim().normalize('NFC'):Array.isArray(v)?v.map(norm):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().filter(k=>v[k]!==undefined).map(k=>[k,norm(v[k])])):v;return norm(n);}
+const coupleDraftChanged=()=>!!S.pair?.draft&&JSON.stringify(normalizedCouple(S.pair.draft))!==JSON.stringify(normalizedCouple(S.pair.profile));
+const editedText=(prior,value)=>T(prior).trim()===value.trim()?structuredClone(prior):{ru:value.trim(),en:value.trim()};
+function submitCoupleDraft(){const P=S.pair;if(P?.status!=='active'||!P.draft||P.proposal?.status==='pending')return false;if(!coupleWritable())return false;if(!coupleDraftChanged()){toast(L('Нет изменений для согласования','No changes to approve'));return false;}const by=pairMember();P.revision??=0;
  if(P.draftBase!==P.revision){toast(L('Профиль уже изменился. Открой актуальную версию перед отправкой.','The profile changed. Open the current version before submitting.'),{type:'warn'});return false;}
  const q=P.proposal={id:'pv'+Date.now()+'_'+(P.draftVersion||0),by,field:'profile',text:structuredClone(P.draft),base:P.revision,draftVersion:P.draftVersion||0,status:'pending',t:Date.now()};
  pairNotify('proposal',q.id,{go:['Q03']});return true;}
@@ -141,7 +145,7 @@ function pairNotify(type,key,extra={}){const P=S.pair;if(!P)return;P.notificatio
 /* Social author: one session choice; owned couple state extends the existing pair. */
 const authorId=()=>S.author==='couple'?'couple':'me';
 const activePair=()=>S.pair?.status==='active';
-const actionAuthor=()=>cur()?.id==='P07'&&cur().p.owner==='couple'?'couple':['H02','H03','H04','H05'].includes(cur()?.id)?(cur().p.actor||'me'):(cur()?.p.actor||authorId());
+const actionAuthor=()=>(cur()?.id==='Q05'||cur()?.id==='P07'&&cur().p.owner==='couple')?'couple':['H02','H03','H04','H05'].includes(cur()?.id)?(cur().p.actor||'me'):(cur()?.p.actor||authorId());
 const authorProfile=(id=actionAuthor())=>id==='couple'?coupleProfile():S.me;
 function social(id=actionAuthor()){
  if(id==='me')return S;
@@ -155,19 +159,24 @@ function authorAllowed(id=actionAuthor()){return !!S.session&&(id==='me'||id==='
 function authorGuard(id=actionAuthor()){if(authorAllowed(id))return true;toast(L('Совместный профиль отключён. Выбери личный профиль — черновик сохранён.','The couple profile is inactive. Choose your personal profile — your draft is kept.'),{type:'warn'});return false;}
 const authorTicket=(id=actionAuthor())=>({id,state:S,session:S.session,pair:S.pair,safety:S.pair?.safetyEpoch||0});
 const validAuthor=t=>S===t.state&&S.session===t.session&&authorAllowed(t.id)&&(t.id!=='couple'||S.pair===t.pair&&(S.pair.safetyEpoch||0)===t.safety);
-function authorPicker(fixed){const id=fixed||actionAuthor();return `<div class="author-picker" data-author-picker ${fixed?'data-fixed-author="'+fixed+'"':''} aria-label="${L('Автор действия','Acting as')}">${(activePair()?['me','couple']:['me']).map(k=>`<button type="button" class="author-option ${id===k?'on':''}" data-act="chooseAuthor" data-v="${k}" aria-pressed="${id===k}" ${fixed?'disabled':''}>${av(k,'xs')}<span><small>${k==='me'?L('Я','Me'):L('Мы','Us')}</small><b>${esc(pname(k))}</b></span></button>`).join('')}</div>`;}
+function authorPicker(fixed){if(!activePair())return '';const id=fixed||actionAuthor();return `<span class="author-picker" data-author-picker ${fixed?'data-fixed-author="'+fixed+'"':''}><button type="button" class="author-trigger" ${fixed?'disabled':'data-act="authorMenu"'} aria-label="${L('Автор','Author')}: ${esc(pname(id))}" aria-haspopup="menu" title="${esc(pname(id))}">${av(id,'xs')}<span>${id==='me'?L('Я','Me'):L('Мы','Us')}</span>${fixed?'':I.down}</button></span>`;}
+let authorMenuAction=null,authorMenuOpener=null;
+function closeAuthorMenu(){authorMenuAction=null;const menu=$('#authorMenu');if(!menu?.remove)return false;menu.remove();$$('[data-act="authorMenu"]').forEach(el=>el.setAttribute('aria-expanded','false'));syncModal();if(authorMenuOpener?.isConnected)authorMenuOpener.focus({preventScroll:true});authorMenuOpener=null;return true;}
+
 /* Patch only author controls and action labels: keep editors, media, sheets and the deck DOM alive. */
 function paintAuthor(){
  $$('[data-author-picker]:not([data-fixed-author])').forEach(el=>el.outerHTML=authorPicker());
  $$('[data-act="follow"],[data-act="flwToggle"]').forEach(el=>{const on=social()?.follows.has(el.dataset.v);el.setAttribute('aria-pressed',!!on);el.innerHTML=on?L('Отписаться','Unfollow'):L('Подписаться','Follow');});
  $$('.p-acts [data-act="likeProfile"],.p-acts [data-act="unlikeP"],.p-acts [data-act="openChat"]').forEach(el=>{const id=el.dataset.v,on=social()?.likesOut.some(l=>l.p===id),match=isMatch(id);el.dataset.act=match?'openChat':on?'unlikeP':'likeProfile';el.setAttribute('aria-pressed',!!on);el.innerHTML=match?I.chat+L('Написать','Message'):on?I.heartf+L('Симпатия','Liked'):I.heart+L('Нравится','Like');});
+ $$('[data-couple-request]').forEach(el=>el.hidden=actionAuthor()!=='couple');
  $$('[data-act="reqAccess"]').forEach(el=>{const pending=social()?.reqOut.some(x=>x.p===el.dataset.v&&x.status==='pending');el.setAttribute('aria-label',pending?L('Запрос отправлен','Request sent'):L('Запросить доступ','Request access'));if(el.classList.contains('ibtn'))el.innerHTML=pending?I.clock:I.key;});
  $$('[data-private-context]').forEach(el=>el.innerHTML=privSection(el.dataset.privateContext));
  $$('[data-deck-private]').forEach(el=>el.innerHTML=veilBlock(el.dataset.deckPrivate));
  $$('#deck [data-act="decide"][data-v="1"]').forEach(el=>{const id=$('#deck .pc.top')?.dataset.id;el.setAttribute('aria-pressed',!!id&&social().likesOut.some(l=>l.p===id));});
- $$('[data-author-reason]').forEach(el=>{const reason=cur().p.id&&['C06','C07','C03'].includes(cur().id)?communityAuthorReason(cur().id==='C06'?S.discussions.find(d=>d.id===cur().p.id)?.c:cur().p.id):'';el.innerHTML=esc(reason);});
+ $$('[data-author-reason]').forEach(el=>{const reason=cur().p.id&&['C06','C07','C03'].includes(cur().id)?communityAuthorReason(cur().id==='C06'?S.discussions.find(d=>d.id===cur().p.id)?.c:cur().p.id):'';el.innerHTML=esc(reason);el.hidden=!reason;$$('[data-act="shareCommunityPartner"]').forEach(b=>b.hidden=!activePair()||actionAuthor()!=='couple'||!reason);});
  if(cur().id==='P08'&&!receivedGrant(cur().p.id))refresh();
- $$('[data-dating-author-reason]').forEach(el=>{el.textContent=actionAuthor()==='couple'&&!authorProfile().dating?L('Знакомства пары выключены. Включить их можно через согласованную версию профиля. Карточка остаётся на месте.','Couple dating is off. Enable it through an approved profile revision. The current card stays in place.'):'';});
+ $$('[data-dating-author-reason]').forEach(el=>{el.hidden=actionAuthor()!=='couple'||!!authorProfile().dating;el.innerHTML=el.hidden?'':`${L('Знакомства пары выключены.','Couple dating is off.')} <button class="btn text auto" data-go="P02" data-p='{"owner":"couple"}'>${L('Настроить','Edit profile')}</button>`;});
+ if(cur().id==='D03'&&(cur().p.sub||'discover')==='discover'&&!$('#deck')){refresh();return;}
  if(['P07','P10'].includes(cur().id)||cur().id==='D03'&&['likes','requests'].includes(cur().p.sub))refresh();
 }
 
@@ -248,7 +257,7 @@ function toast(msg,o={}){
 let sheetOpener=null;
 /** build() → {title, body, foot, head}; rebuilt by resheet() so sheet state stays in S */
 function sheet(build,o={}){
- sheetOpener=document.activeElement;S.ui.shq='';
+ sheetOpener=document.activeElement;$('#sheet').inert=false;S.ui.shq='';
  S.ui.sheet={build,o};drawSheet();
  requestAnimationFrame(()=>{$('#scrim').classList.add('on');$('#sheet').classList.add('on');syncModal();const sh=$('#sheet');const f=$('#sheet [autofocus]');if(f)f.focus({preventScroll:true});else{sh.tabIndex=-1;sh.focus({preventScroll:true});}});
 }
@@ -264,7 +273,7 @@ const resheet=()=>drawSheet();
 function userCloseSheet(){const owner=S,session=S?.session,s=S&&S.ui.sheet;if(!s)return;if(s.o.back&&s.o.back())return;if(s.o.guard&&s.o.guard()){ask({icon:'warn',tone:'a',title:L('Закрыть без сохранения?','Close without saving?'),text:L('Выбранное здесь пропадёт.','What you picked here will be lost.'),ok:L('Закрыть','Close'),cancel:L('Остаться','Stay'),danger:true}).then(ok=>{if(ok&&S===owner&&S.session===session&&S.ui.sheet===s)closeSheet();});return;}closeSheet();}
 function closeSheet(instant){
  const s=S&&S.ui.sheet;if(!s)return;S.ui.sheet=null;
- $('#scrim').classList.remove('on');const el=$('#sheet');el.classList.remove('on');
+ $('#scrim').classList.remove('on');const el=$('#sheet');el.classList.remove('on');el.inert=true;
  s.o.onClose&&s.o.onClose();
  syncModal();if(!instant&&sheetOpener&&sheetOpener.isConnected)sheetOpener.focus({preventScroll:true});
 }
@@ -334,6 +343,7 @@ function setSub(v){const r=cur();if(r.p.sub===v)return;r.p.sub=v;r.scroll=0;rend
 
 const main=()=>$('#main');
 function render(dir,keep){
+ closeAuthorMenu();
  const r=cur();const sc=QA.maintenance?SC.MAINT:SC[r.id];document.body.classList.toggle('maintenance',!!QA.maintenance);
  let html;
  try{html=(sc.valid&&!sc.valid(r.p))?unavailable():sc.render(r.p,r);}
@@ -385,7 +395,7 @@ const C={
 
 /* ---------- shared chrome ---------- */
 function bar(title,o={}){
- return `<header class="bar ${o.cls||''}">${o.back?`<button class="ibtn ghost" data-back aria-label="${L('Назад','Back')}">${I.back}</button>`:''}${o.lead||''}<h1 class="${o.sm?'sm':''}">${title}${o.sub?`<span class="sub">${o.sub}</span>`:''}</h1>${o.actions||''}</header>${cur()?.id?.startsWith('E')&&authorId()==='couple'?`<p class="note">${L('Участие и организация — от личного профиля','Participation and organising use your personal profile')} · ${esc(pname('me'))}</p>`:''}${['F01','F05','P07','P10','C06','C07'].includes(cur()?.id)?authorPicker(cur().id==='P07'&&cur().p.owner==='couple'?'couple':null):''}`;
+ return `<header class="bar ${o.cls||''}">${o.back?`<button class="ibtn ghost" data-back aria-label="${L('Назад','Back')}">${I.back}</button>`:''}${o.lead||''}<h1 class="${o.sm?'sm':''}">${title}${o.sub?`<span class="sub">${o.sub}</span>`:''}</h1>${o.actions||''}</header>`;
 }
 const bellBtn=()=>{const n=C.notif();return `<button class="ibtn" data-go="N01" aria-label="${L('Уведомления','Notifications')}${n?`: ${n}`:''}">${I.bell}${n?`<sup>${n}</sup>`:''}</button>`;};
 const searchBtn=(scope)=>`<button class="ibtn" data-go="G01" data-p='${JSON.stringify({scope:scope||'all'})}' aria-label="${L('Поиск','Search')}">${I.search}</button>`;
@@ -465,7 +475,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{const el=e.target.closest('[data-in]');if(!el)return;const fn=IN[el.dataset.in];fn&&fn(el,e);});
 document.addEventListener('change',e=>{const el=e.target.closest('[data-ch]');if(!el)return;const fn=CH[el.dataset.ch];fn&&fn(el,e);});
 document.addEventListener('keydown',e=>{
- if(e.key==='Escape'){if($('#matchLayer .match')){ACT.matchClose();return;}if(S.ui.ask){S.ui.ask();return;}if($('#qa.open')){window.QA_CLOSE&&QA_CLOSE();return;}if(S.ui.sheet){userCloseSheet();return;}if(stack().length>1)back();}
+ if(e.key==='Escape'){if(closeAuthorMenu()){e.preventDefault();return;}if($('#matchLayer .match')){ACT.matchClose();return;}if(S.ui.ask){S.ui.ask();return;}if($('#qa.open')){window.QA_CLOSE&&QA_CLOSE();return;}if(S.ui.sheet){userCloseSheet();return;}if(stack().length>1)back();}
  if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.enter&&!e.shiftKey&&!e.isComposing&&!(e.target.tagName==='TEXTAREA'&&matchMedia('(pointer:coarse)').matches)){e.preventDefault();ACT[e.target.dataset.enter]?.(e.target,e);}
 });
 // generic form memory: value lives on the route entry, errors clear while typing
@@ -475,7 +485,7 @@ ACT.reload=()=>refresh();
 ACT.go=(a)=>go(a.dataset.v,parseP(a));
 
 
-function modalScope(){return $('#dialog.on')||$('#viewer.on')||$('#matchLayer .match')||$('#qa.open')||$('#sheet.on');}
+function modalScope(){return $('#authorMenu')||$('#dialog.on')||$('#viewer.on')||$('#matchLayer .match')||$('#qa.open')||$('#sheet.on');}
 function syncModal(){const modal=modalScope();for(const x of [$('#main'),$('#side'),$('#ctx')])if(x)x.inert=!!modal;$('#qaFab').inert=!!modal;$('#sheet').inert=!!modal&&modal!==$('#sheet');$('#sheet').setAttribute('aria-hidden',String(!S?.ui.sheet));$('#qa').inert=!$('#qa.open');if(modal&&modal!==$('#sheet')&&S?.ui.sheet)$('#sheet').inert=true;}
 new MutationObserver(syncModal).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class','style']});
 document.addEventListener('keydown',e=>{const modal=modalScope();if(!modal||e.key!=='Tab')return;const nodes=[...modal.querySelectorAll('button,a[href],input,textarea,select,[tabindex="0"]')].filter(x=>!x.disabled&&!x.inert&&x.getClientRects().length);if(!nodes.length){e.preventDefault();modal.tabIndex=-1;modal.focus();return;}const a=nodes[0],z=nodes.at(-1);if(e.shiftKey&&(document.activeElement===a||!modal.contains(document.activeElement))){e.preventDefault();z.focus();}else if(!e.shiftKey&&(document.activeElement===z||!modal.contains(document.activeElement))){e.preventDefault();a.focus();}},true);
@@ -491,7 +501,7 @@ function syncChrome(){const m=main();if(cur()?.fq)filterSections($(':scope>.view
 document.addEventListener('focusin',e=>{const el=e.target;if(!el.matches?.('input:not([type=checkbox]):not([type=radio]),textarea,select,[contenteditable]')||!el.closest('#main .view'))return;setTimeout(()=>{if(document.activeElement===el)el.scrollIntoView({block:'center',behavior:'smooth'});},320);});
 
 
-function communityMemberCanWrite(id,member,kind='post'){const c=COMMUNITIES[id];if(!c||isBlocked(member)||S.communityRestrictions?.[id]?.[member])return false;if(kind==='comment'&&c.commentPolicy==='public'&&c.privacy==='open')return true;if(member==='me')return S.joined.has(id)||ownsCommunity(id);return !!c.mods?.includes(member)||!!c.seedMembers?.includes(member)||!!S.communityMembers[id]?.has(member)||!!S.pair?.memberCommunities?.[member]?.includes(id);}
+function communityMemberCanWrite(id,member,kind='post'){const c=COMMUNITIES[id];if(!c||isBlocked(member)||S.communityRestrictions?.[id]?.[member])return false;if(kind==='comment'&&c.commentPolicy==='public'&&c.privacy==='open')return true;if(member==='me')return S.joined.has(id)||ownsCommunity(id);if(S.pair?.memberCommunities&&Object.hasOwn(S.pair.memberCommunities,member))return S.pair.memberCommunities[member].includes(id);return !!c.mods?.includes(member)||!!c.seedMembers?.includes(member)||!!S.communityMembers[id]?.has(member)||!!S.pair?.memberCommunities?.[member]?.includes(id);}
 function communityAuthorReason(id,actor=actionAuthor(),kind='post'){if(!authorAllowed(actor))return L('Совместный профиль отключён','Couple profile is inactive');const members=realMembers(actor);return members.every(m=>communityMemberCanWrite(id,m,kind))?'':actor==='couple'?L('Чтобы писать от пары, оба должны состоять в этом сообществе и иметь право публикации.','To write as a couple, both partners must belong to this community and have permission to post.'):L('Для публикации нужно право участника сообщества.','Posting requires community member permission.');}
 const communityAuthorAllowed=(id,actor=actionAuthor(),kind='post')=>!communityAuthorReason(id,actor,kind);
 function requestReason(id,actor=actionAuthor()){if(!authorAllowed(actor)||!PEOPLE[id]||isBlocked(id)||relatedFor(actor,id))return L('Этот профиль недоступен для выбранного автора','This profile is unavailable to the selected author');const policy=PEOPLE[id].requestsFrom||'all';if(policy==='none'||policy==='matches'&&!isMatch(id,actor))return L('Этот профиль не принимает запросы от выбранного автора','This profile does not accept requests from the selected author');const st=social(actor);if(st.reqOut.some(x=>x.p===id&&x.status==='pending'))return L('Запрос уже отправлен','Request already sent');if(st.reqOut.some(x=>x.p===id&&x.status==='declined'&&Date.now()-x.t<7*DAY))return L('После отказа нужно подождать 7 дней','Wait 7 days after a decline');if(C.quotaLeft()<=0)return L('Запросы на сегодня закончились','No requests left today');return '';}

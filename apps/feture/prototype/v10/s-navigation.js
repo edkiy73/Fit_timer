@@ -23,6 +23,7 @@ function recordNav(dir){
 const renderWithHistory=render;render=function(dir,keep){renderWithHistory(dir,keep);recordNav(dir);};
 const saveScrollWithHistory=saveScroll;saveScroll=function(){saveScrollWithHistory();captureNav();};
 const fallbackBack=back;back=function(){
+ if(closeAuthorMenu())return;
  if(S.ui.ask){S.ui.ask();return;}if(closeViewer())return;if($('#matchLayer .match')){ACT.matchClose();return;}if($('#qa.open')){QA_CLOSE();return;}if(S.ui.sheet){userCloseSheet();return;}
  if(navHistory){saveScroll();history.back();return;}fallbackBack();
 };
@@ -32,6 +33,7 @@ function restoreNavEntry(index){
 }
 window.addEventListener('popstate',e=>{
  if(!navHistory)return;if(historyResume){historyResume=false;return;}
+ if($('#authorMenu')){historyResume=true;history.go(1);closeAuthorMenu();return;}
  const from=navHistory.index;captureNav();const state=e.state;
  const resume=()=>{historyResume=true;history.go(state?.fetureNav===navHistory.token?from-state.index:1);};
  if(S.ui.ask){resume();S.ui.ask();return;}if($('#viewer.on')){resume();closeViewer();return;}if($('#matchLayer .match')){resume();ACT.matchClose();return;}if($('#qa.open')){resume();QA_CLOSE();return;}if(S.ui.sheet){resume();userCloseSheet();return;}
