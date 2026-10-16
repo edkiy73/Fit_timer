@@ -706,3 +706,5 @@ $("#qx").addEventListener("click",e=>{e.preventDefault();S.q="";$("#q").value=""
 history.replaceState({},"",location.pathname+location.search);
 renderRails();renderMenu();barCount();renderFav();
 })();
+
+if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{}));

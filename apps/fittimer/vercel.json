@@ -89,8 +89,28 @@
           "value": "no-cache, must-revalidate"
         }
       ]
+    },
+    {
+      "source": "/bar/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/bar/"
+        }
+      ]
     }
   ],
   "buildCommand": "npm run build:web",
-  "ignoreCommand": "node scripts/vercel-ignore.mjs"
+  "ignoreCommand": "node scripts/vercel-ignore.mjs",
+  "redirects": [
+    {
+      "source": "/bar",
+      "destination": "/bar/",
+      "permanent": false
+    }
+  ]
 }
