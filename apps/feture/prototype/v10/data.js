@@ -195,7 +195,7 @@ const EVENTS={
   desc:{ru:'Танцы и разговоры.',en:'Dancing and conversations.'},reqs:[]},
 };
 
-const REQ_SCOPES=[['info',{ru:'желания и границы',en:'wishes and boundaries'}],['photos',{ru:'приватные фото',en:'private photos'}],['video',{ru:'видео',en:'video'}],['album',{ru:'альбом «Лето»',en:'album “Summer”'}]];
+const REQ_SCOPES=[['info',{ru:'текст и интересы',en:'text and interests'}],['photos',{ru:'приватные фото',en:'private photos'}],['video',{ru:'видео',en:'video'}],['album',{ru:'альбом «Лето»',en:'album “Summer”'}]];
 
 /* ---------- personas ---------- */
 function fullMe(){return{privText:{ru:'Новичок в верёвке, поэтому сначала — разговор и короткая встреча на нейтральной территории. Не люблю сюрпризов.',en:'New to rope, so first a talk and a short meeting on neutral ground. I don’t like surprises.'},
@@ -222,7 +222,7 @@ function newMe(){return{
 function freshState(persona){
  const full=persona!=='new';
  const st={
-  persona,lang:'ru',session:null,
+  persona,lang:'ru',session:null,author:'me',
   me:full?fullMe():newMe(),
   follows:new Set(full?['maya','mia','kai','noa']:[]),
   graph:Object.fromEntries(Object.entries(FOLLOW_SEED).map(([k,v])=>[k,new Set(full?v:v.filter(x=>x!=='me'))])),

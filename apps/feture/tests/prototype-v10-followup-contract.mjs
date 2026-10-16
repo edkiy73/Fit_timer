@@ -14,12 +14,12 @@ function prepare(id='Q03',p={}){timers.length=0;run(`S=freshState('pair');S.sess
 async function finish(p){const fn=timers.shift();assert.ok(fn,'expected model network timer');fn();await p;await Promise.resolve();}
 prepare();run("coupleProfile();var m=editableProfile({p:{owner:'couple'}});m.name={ru:'Together',en:'Together'};m.privText='COUPLE_SECRET';m.jars=[{t:'shibari',lv:7,vis:'public'},{t:'latex',lv:8,vis:'only'}];submitCoupleDraft()");
 assert.notEqual(run("pname('couple')"),'Together');assert.ok(!run("JSON.stringify(person('couple'))").includes('COUPLE_SECRET'));
-run('commitCoupleProposal(S.pair)');assert.equal(run("pname('couple')"),'Together');assert.notEqual(run('S.me.privText'),'COUPLE_SECRET');
+run('commitCoupleProposal(S.pair,S.pair.with)');assert.equal(run("pname('couple')"),'Together');assert.notEqual(run('S.me.privText'),'COUPLE_SECRET');
 assert.ok(!run("JSON.stringify(person('me'))").includes('privText'));assert.equal(run("person('me').photo"),8);assert.ok(run("T(person('me').bio)").length>20);
 for(const lv of ['all','granted']){const html=run(`SC.P03.render({owner:'couple',lv:'${lv}'},{p:{owner:'couple',lv:'${lv}'},f:{}})`);assert.equal(html.includes('COUPLE_SECRET'),lv==='granted');assert.ok(!html.includes(run("topic('latex')")));}
 for(const id of ['tomeva','lenamax','nikajonas'])assert.equal(run(`person('${id}').members.every(id=>!!person(id))`),true);
 // An approval while a jar save is in flight does not discard the later change.
-prepare('X02',{owner:'couple'});run("coupleProfile();editableProfile().bio='Before';submitCoupleDraft();S.ui.jar={t:'shibari',v:9,vis:'public',owner:'couple',session:S.session};ACT.jarSave(null);commitCoupleProposal(S.pair)");await finish();assert.equal(run('S.pair.proposal.text.jars[0].lv'),9);assert.equal(run('S.me.jars.find(x=>x.t==="shibari").lv'),6);
+prepare('X02',{owner:'couple'});run("coupleProfile();editableProfile().bio='Before';submitCoupleDraft();S.ui.jar={t:'shibari',v:9,vis:'public',owner:'couple',session:S.session};ACT.jarSave(null);commitCoupleProposal(S.pair,S.pair.with)");await finish();assert.equal(run('S.pair.draft.jars[0].lv'),9);assert.equal(run('S.pair.proposal'),null);assert.equal(run('S.me.jars.find(x=>x.t==="shibari").lv'),6);
 // Session switch cannot apply a pending pair update to the next account.
 prepare('P04',{owner:'couple'});run("cur().f.privText='LATE_SECRET';ACT.privTextSave(null);S=freshState('new');S.session={};initNav()");await finish();assert.ok(!run('JSON.stringify(S.me)').includes('LATE_SECRET'));
 // Viewer uses draft photographs, never personal photographs on a couple page.

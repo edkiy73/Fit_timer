@@ -229,3 +229,8 @@ V9 визуально открыт в браузере; проверены то�
 | 6 | Передача для React/AppBase | Для каждой области финальный экранный контракт, состояния/поля и отдельно backend/native gaps |
 
 Фото добавлены другим ИИ в main7d352bd5; photo assets, associations и galleries не переписывать старым пакетом. Порция15 добавляет prototype host approval; real staff/backend authority и multi-account доставка не заявляются. Следующий implementation срез — event editor. Перенос в основное приложение — отдельный этап после UX-приёмки прототипа.
+
+
+## Новый контракт пары — 15.10.2026
+
+Порции A–E описаны в V10-CHANGELOG: автор Я/Мы; один согласуемый профиль; независимые social actions и community rights; scoped dating/chats; notifications/dissolution/recovery/expiry. Массовые интересы сохранены и тесты с баночками не соединены. Реальный backend и устройства остаются отдельной приёмкой. Оперативные проверки и публикация — в PR текущего среза.

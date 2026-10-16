@@ -29,7 +29,7 @@ ACT.cfApply=()=>{const f=S.ui.cf;f.topic=f.topics.length===1?f.topics[0]:'';S.fi
 
 /* C03 — community page; discussions belong to THIS community only */
 SC.C03={title:p=>SC.C03.valid(p)?T(COMMUNITIES[p.id].name):L('Сообщество недоступно','Community unavailable'),valid:p=>!!COMMUNITIES[p.id]&&(COMMUNITIES[p.id].status!=='review'||ownsCommunity(p.id)),render:(p)=>{if(!SC.C03.valid(p))return unavailable();const id=p.id,c=COMMUNITIES[id];const j=S.joined.has(id)||ownsCommunity(id),pend=S.pendingJoin.has(id);const t=p.t||'disc';
- const discs=S.discussions.filter(d=>d.c===id).sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||b.t-a.t);
+ const discs=S.discussions.filter(d=>d.c===id&&(d.author!=='couple'||activePair())).sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||b.t-a.t);
  const evs=allEventIds().filter(e=>EV(e).community===id&&!isPast(e)&&EV(e).status!=='review');
  const canRead=c.privacy==='open'||j;
  const action=ownsCommunity(id)?`<button class="btn md soft" data-act="cManage">${I.gear}${L('Управление','Manage')}</button>`:j?`<button class="btn md soft" data-act="cLeave">${I.check}${L('Ты участник','Member')}</button>`:pend?`<button class="btn md soft" data-act="cCancelReq">${I.clock}${L('Заявка отправлена','Request sent')}</button>`:`<button class="btn md primary" data-act="cJoin">${c.privacy==='closed'?L('Подать заявку','Request to join'):L('Вступить','Join')}</button>`;
@@ -78,34 +78,35 @@ ACT.cCancelReq=()=>{const owner=S,session=S.session,route=cur(),id=route.p.id;if
 ACT.cManage=()=>go('C10',{id:cur().p.id});
 
 /* C06 — discussion thread */
-SC.C06={title:()=>L('Обсуждение','Discussion'),valid:p=>!!S.discussions.find(d=>d.id===p.id),render:(p,r)=>{const d=S.discussions.find(x=>x.id===p.id);const c=COMMUNITIES[d.c];if(!SC.C03.valid({id:d.c}))return unavailable();const j=S.joined.has(d.c)||ownsCommunity(d.c);
+SC.C06={title:()=>L('Обсуждение','Discussion'),valid:p=>!!S.discussions.find(d=>d.id===p.id),render:(p,r)=>{const d=S.discussions.find(x=>x.id===p.id);const c=COMMUNITIES[d.c];if(!SC.C03.valid({id:d.c}))return unavailable();const j=communityMemberCanWrite(d.c,'me','comment');if(d.author==='couple'&&!activePair())return `${bar(L('Обсуждение недоступно','Discussion unavailable'),{back:1})}<div class="view">${empty('lock',L('Совместный профиль отключён','Couple profile is inactive'),'')}</div>`;
  if(c.privacy==='closed'&&!j)return unavailable();
  return `${bar(T(c.name),{back:1,sm:1,sub:L('Обсуждение','Discussion')})}<div class="view nodock ${j?'cta1':''}"><div class="wrap">
  <div class="post-h"><button class="who" ${profGo(d.author)}>${av(d.author,'sm')}<span class="tx"><b><span class="nmt">${esc(pname(d.author))}</span>${nameBadges(person(d.author))}</b><small>${F.rel(d.t)}</small></span></button><button class="ibtn ghost sm" data-act="report" data-v="post" aria-label="${L('Пожаловаться','Report')}">${I.flag}</button></div>
  <h2 class="t md" style="margin-top:14px">${esc(T(d.title))}</h2><div style="font-size:15.5px;line-height:1.55">${md(T(d.text))}</div>
  ${mediaPreviews(d.media)}<div class="sec">${pl(d.replies.length,['ответ','ответа','ответов'],['reply','replies'])}</div>
- ${replyTree('d',d.id)||`<p class="note">${L('Ответов пока нет.','No replies yet.')}</p>`}${replyComposer(r)}
+ ${replyTree('d',d.id)||`<p class="note">${L('Ответов пока нет.','No replies yet.')}</p>`}${replyComposer(r)}<p class="author-reason" data-author-reason>${esc(communityAuthorReason(d.c,actionAuthor(),'comment'))}</p>
  ${!j?`<div class="alert info mt16">${I.info}<span>${L('Чтобы отвечать, вступи в сообщество.','Join the community to reply.')}</span></div><button class="btn primary mt12" data-back>${L('К сообществу','To the community')}</button>`:''}
  </div></div>${j?`<div class="inputbar"><textarea id="dr" rows="1" placeholder="${L('Ответить в обсуждении…','Reply to the discussion…')}" data-in="grow" data-enter="sendReply">${esc(r.f.dr||'')}</textarea><button class="ibtn send" data-act="sendReply" aria-label="${L('Отправить','Send')}">${I.send}</button></div>`:''}`;}};
-ACT.sendReply=()=>{const route=cur(),d=S.discussions.find(x=>x.id===route.p.id);if(!d||!S.session||!(S.joined.has(d.c)||ownsCommunity(d.c))){toast(L('Ответить могут только участники сообщества','Only community members can reply'),{type:'warn'});return;}const el=$('#dr'),v=el?.value.trim();if(!v){toast(L('Напиши ответ','Write a reply'),{type:'warn'});el?.focus();return;}identifyReplies('d',d.id);const parent=d.replies.find(c=>c.id===route.replyTarget?.id);if(route.replyTarget&&(!parent||parent.deleted||isBlocked(parent.a)))return;const owner=S,session=S.session,x={id:'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),parent:parent?.id||null,a:'me',text:{ru:v,en:v},t:Date.now(),status:'pending'};d.replies.push(x);route.f.dr='';delete route.replyTarget;route.scrollTo=x.id;refresh();
- const allowed=()=>S===owner&&S.session===session&&S.discussions.includes(d)&&(S.joined.has(d.c)||ownsCommunity(d.c));
+ACT.sendReply=()=>{const ticket=authorTicket(actionAuthor());const route=cur(),d=S.discussions.find(x=>x.id===route.p.id);if(!d||!validAuthor(ticket)||!communityAuthorAllowed(d.c,ticket.id,'comment')){toast(L('Ответить могут только участники сообщества','Only community members can reply'),{type:'warn'});return;}const el=$('#dr'),v=el?.value.trim();if(!v){toast(L('Напиши ответ','Write a reply'),{type:'warn'});el?.focus();return;}identifyReplies('d',d.id);const parent=d.replies.find(c=>c.id===route.replyTarget?.id);if(route.replyTarget&&(!parent||parent.deleted||isBlocked(parent.a)))return;const owner=S,session=S.session,x={id:'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),parent:parent?.id||null,a:ticket.id,sender:pairMember(),text:{ru:v,en:v},t:Date.now(),status:'pending'};d.replies.push(x);route.f.dr='';delete route.replyTarget;route.scrollTo=x.id;refresh();
+ const allowed=()=>S===owner&&S.session===session&&validAuthor(ticket)&&S.discussions.includes(d)&&communityAuthorAllowed(d.c,ticket.id,'comment');
  const repaint=()=>{if(cur()===route)refresh();};const send=()=>{if(!allowed())return;x.status='pending';repaint();net().then(()=>{if(!allowed())return;x.status='';notifyReply('d',d.id,x);repaint();}).catch(()=>{if(!allowed())return;x.status='failed';repaint();toast(L('Ответ не отправлен','Reply not sent'),{type:'err',action:{label:L('Повторить','Retry'),fn:send}});});};send();};
 
 /* C07 — new discussion */
 SC.C07={title:()=>L('Новое обсуждение','New discussion'),valid:p=>!!COMMUNITIES[p.id]&&(S.joined.has(p.id)||ownsCommunity(p.id)),render:(p,r)=>{const c=COMMUNITIES[p.id];r.media=r.media||[];return `${bar(L('Новое обсуждение','New discussion'),{back:1,sm:1,sub:esc(T(c.name))})}<div class="view nodock cta1"><div class="wrap">
+ <p class="author-reason" data-author-reason>${esc(communityAuthorReason(p.id))}</p><button class="btn text" data-act="shareCommunityPartner">${L('Поделиться сообществом с партнёром','Share community with partner')}</button>
  ${field({name:'title',label:L('Тема','Topic'),ph:L('Коротко, о чём разговор','In short, what’s it about'),max:120})}
  ${rteField({name:'text',label:L('Текст','Text'),max:3000,ph:L('Подробности, вопрос или опыт','Details, a question or experience')})}
  <div class="sec">${L('Фото и видео','Photos and videos')}<span class="note">${L('до 6 вложений','up to 6 attachments')}</span></div><button class="btn soft" data-act="discussionMedia">${I.image}${L('Добавить фото или видео','Add photos or videos')}</button>${mediaPreviews(r.media,'discussionMediaRemove')}
  <div class="alert">${I.users3}<span>${L(`Увидят ${c.privacy==='closed'?'только участники':'все, кто открывает сообщество'}. Расширить аудиторию нельзя.`,`Visible to ${c.privacy==='closed'?'members only':'everyone who opens the community'}. The audience can’t be widened.`)}</span></div>
  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="cdPost">${L('Опубликовать','Publish')}</button></div></div>`;}};
 ACT.cdPost=a=>{const r=cur(),community=r.p.id;
- const allowed=()=>!!S.session&&SC.C07.valid({id:community})&&r.p.id===community;
- const denied=()=>toast(L('Обсуждение могут создать участники сообщества','Only community members can create a discussion'),{type:'warn'});
+ const ticket=authorTicket(actionAuthor());const allowed=()=>validAuthor(ticket)&&SC.C07.valid({id:community})&&r.p.id===community&&communityAuthorAllowed(community,ticket.id);
+ const denied=()=>toast(communityAuthorReason(community,ticket.id)||L('Обсуждение могут создать участники сообщества','Only community members can create a discussion'),{type:'warn'});
  if(!allowed()){denied();return;}const draft=()=>({title:fv('title'),text:fv('text'),media:copyNavValue(r.media||[])}),submitted=draft();
  r.err={};if(submitted.title.trim().length<5)r.err.title=L('Минимум 5 символов','At least 5 characters');if(submitted.text.trim().length<10&&!submitted.media.length)r.err.text=L('Расскажи подробнее — хотя бы 10 символов','Tell a bit more — at least 10 characters');
  if(Object.keys(r.err).length){refresh();shakeFirstErr();return;}
  let published=false;return run(a,()=>{if(!allowed()){denied();return;}if(JSON.stringify(draft())!==JSON.stringify(submitted)){toast(L('Правки ещё не отправлены. Проверь их и нажми «Опубликовать» снова','Your changes have not been sent. Review them and press Publish again'),{type:'warn'});return;}
- const id='d'+Date.now();S.discussions.unshift({id,c:community,author:'me',t:Date.now(),title:{ru:submitted.title,en:submitted.title},text:{ru:submitted.text,en:submitted.text},media:submitted.media,replies:[]});published=true;r.dirty=false;go('C06',{id},{replace:true});},{ok:()=>published?L('Обсуждение опубликовано','Discussion published'):null});};
+ const id='d'+Date.now();S.discussions.unshift({id,c:community,author:ticket.id,sender:pairMember(),t:Date.now(),title:{ru:submitted.title,en:submitted.title},text:{ru:submitted.text,en:submitted.text},media:submitted.media,replies:[]});published=true;r.dirty=false;go('C06',{id},{replace:true});},{ok:()=>published?L('Обсуждение опубликовано','Discussion published'):null});};
 
 /* C08 — create community; C10 — manage */
 SC.C08={title:()=>L('Новое сообщество','New community'),render:(p,r)=>{r.f.privacy=r.f.privacy||'open';r.f.topics=r.f.topics||[];r.f.plate=r.f.plate||'lilac';return `${bar(L('Новое сообщество','New community'),{back:1,sm:1})}<div class="view nodock cta1"><div class="wrap">
@@ -134,3 +135,5 @@ ACT.cfTopic=a=>{const f=S.ui.cf;f.topics=f.topics||[];const i=f.topics.indexOf(a
 
 
 const discussionAfter=SC.C06.after;SC.C06.after=(p,r)=>{discussionAfter?.(p,r);scrollToReply(p);};
+
+ACT.shareCommunityPartner=()=>{const id=cur().id==='C06'?S.discussions.find(d=>d.id===cur().p.id)?.c:cur().p.id;copyReviewLink('C03',{id});};
