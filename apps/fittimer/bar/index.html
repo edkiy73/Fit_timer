@@ -88,14 +88,11 @@ svg{display:block}
 .tab.on{color:var(--bone)}.tab.on::after{transform:scaleX(1)}
 .pill{flex:none;padding:7px 12px;border-radius:999px;border:1px solid var(--line2);background:var(--ink2);font-size:12.5px;font-weight:600;color:var(--bone2);transition:all .25s var(--ease)}
 .pill.on{background:var(--bone);border-color:var(--bone);color:#140d0b}
+.pill.mybar{border-color:rgba(201,163,91,.5);color:var(--brass2)}.pill.mybar.on{background:var(--brass);border-color:var(--brass);color:#140d0b}
 .pill:active,.tab:active{transform:scale(.96)}
+.opt:active{transform:scale(.985)}
 .meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;font-size:12px;color:var(--smoke)}
 .meta button{color:var(--brass);font-weight:700;font-size:12px}
-.pantry-flag{display:none;align-items:center;gap:10px;margin-top:10px;padding:9px 12px;border-radius:13px;background:linear-gradient(90deg,rgba(111,17,27,.55),rgba(111,17,27,.18));border:1px solid rgba(163,32,46,.45);font-size:12.5px}
-.pantry-flag.on{display:flex}
-.pantry-flag b{font-weight:800}
-.pantry-flag span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--bone2)}
-.pantry-flag button{font-weight:700;color:var(--brass2);font-size:12px}
 
 /* cocktail list */
 .list{display:grid;grid-template-columns:1fr;gap:10px;margin-top:6px}
@@ -179,7 +176,7 @@ svg{display:block}
 .cat[open] summary .chev{transform:rotate(180deg)}
 .cat.flash summary b{color:var(--brass2)}
 .opts{display:grid;gap:8px;padding:0 0 16px}
-.opt{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:11px 13px;border-radius:14px;background:var(--ink2);border:1px solid var(--line2)}
+.opt{cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:11px 13px;border-radius:14px;background:var(--ink2);border:1px solid var(--line2)}
 .opt .t{grid-column:1/-1;font-size:10.5px;font-weight:800;color:var(--smoke)}
 .opt .t.value{color:var(--ok)}.opt .t.good{color:var(--brass)}
 .opt .n{font-weight:700;font-size:13.5px}
@@ -330,7 +327,6 @@ svg{display:block}
       </label>
       <div class="rail" id="bases"></div>
       <div class="rail" id="styles"></div>
-      <div class="pantry-flag" id="flag"><span id="flagTxt"></span><button id="flagOff" type="button">Выключить</button></div>
       <div class="meta"><span id="count"></span><button id="reset" type="button">Сбросить</button></div>
     </div>
     <div class="list" id="list"></div>

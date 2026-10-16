@@ -489,20 +489,14 @@ function card(c,k){
 /* ---------- menu ---------- */
 function renderRails(){
   $("#bases").innerHTML=BASES.map(b=>`<button class="tab ${S.base===b?"on":""}" data-base="${b}" type="button">${b}</button>`).join("");
-  $("#styles").innerHTML=STYLES.map(s=>`<button class="pill ${S.style===s?"on":""}" data-style="${s}" type="button">${s}</button>`).join("");
+  $("#styles").innerHTML=`<button class="pill mybar ${S.pantryOn?"on":""}" data-mybar type="button" aria-pressed="${S.pantryOn}">Мой бар (${S.pantry.size})</button>`+STYLES.map(s=>`<button class="pill ${S.style===s?"on":""}" data-style="${s}" type="button">${s}</button>`).join("");
 }
 function renderMenu(){
   const list=visible();
   $("#count").textContent=`${list.length} из ${cocktails.length}`;
-  const flag=$("#flag");
-  flag.classList.toggle("on",S.pantryOn);
-  if(S.pantryOn){
-    const n=S.pantry.size;
-    $("#flagTxt").innerHTML=`<b>Из твоего бара</b> · ${n} ${plural(n,"бутылка","бутылки","бутылок")}${S.mode==="variations"?" + вариации":""}`;
-  }
   $("#searchBox").classList.toggle("has",!!S.q);
   $("#list").innerHTML=list.length?list.map(card).join(""):
-    `<div class="empty" style="grid-column:1/-1"><h3>Ничего не нашлось</h3><p>${S.pantryOn?"Из этих бутылок не собрать. Добавь бутылку или выключи подбор.":"Попробуй другой запрос или сбрось фильтры."}</p><button class="btn btn-ghost" data-act="reset" type="button">Сбросить фильтры</button></div>`;
+    `<div class="empty" style="grid-column:1/-1"><h3>Ничего не нашлось</h3><p>${S.pantryOn?"Из этих бутылок не собрать. Добавь бутылку или выключи чип «Мой бар».":"Попробуй другой запрос или сбрось фильтры."}</p><button class="btn btn-ghost" data-act="reset" type="button">Сбросить фильтры</button></div>`;
 }
 
 /* ---------- bar ---------- */
@@ -513,6 +507,7 @@ function renderBar(){
   barCount();
 }
 function barCount(){
+  renderRails();
   const seg=$("#seg");seg.dataset.v=S.mode;
   seg.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.mode));
   const n=S.pantry.size?cocktails.filter(c=>makeable(c).length).length:0;
@@ -664,11 +659,11 @@ $("#donOpen").addEventListener("click",()=>{const i=donPick.i;closeDon(true);his
 /* ---------- toast & copy ---------- */
 let tt=null;
 function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>el.classList.remove("on"),1800)}
-async function copy(text){
+async function copy(text,msg="Рецепт скопирован"){
   let ok=false;
   try{if(navigator.clipboard&&isSecureContext){await navigator.clipboard.writeText(text);ok=true}}catch(_){}
   if(!ok){try{const ta=document.createElement("textarea");ta.value=text;ta.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta);ta.select();ok=document.execCommand("copy");ta.remove()}catch(_){}}
-  toast(ok?"Рецепт скопирован":"Не получилось скопировать");
+  toast(ok?msg:"Не получилось скопировать");
 }
 
 /* ---------- events ---------- */
@@ -686,13 +681,16 @@ document.addEventListener("click",e=>{
   if(el=t.closest("#seg button")){S.mode=el.dataset.v;save();barCount();return}
   if(t.closest("#barClear")){S.pantry.clear();S.pantryOn=false;save();renderBar();toast("Бар очищен");return}
   if(t.closest("#barGo")){S.pantryOn=true;save();go("menu");return}
-  if(t.closest("#flagOff")){S.pantryOn=false;save();renderMenu();return}
+  if(t.closest("[data-mybar]")){
+    if(!S.pantry.size){toast("Сначала отметь бутылки в «Моём баре»");go("bar");return}
+    S.pantryOn=!S.pantryOn;save();renderRails();renderMenu();return}
   if(el=t.closest("[data-fav]")){const i=+el.dataset.fav;const on=!S.favs.has(i);on?S.favs.add(i):S.favs.delete(i);save();
     el.classList.toggle("on",on);el.querySelector("span").textContent=on?"В семье":"В семью";
     toast(on?`${cocktails[i].name} — теперь в семье`:"Убрано из семьи");
     const fb=$("#favBadge");fb.textContent=S.favs.size;fb.classList.toggle("on",S.favs.size>0);
     if(S.tab==="menu")renderMenu(); if(S.tab==="fav")renderFav(); return}
   if(el=t.closest("[data-copy]")){const c=cocktails[+el.dataset.copy];copy(`${c.name}: ${c.main.recipe}. ${c.serve}`);return}
+  if(el=t.closest(".opt")){const n=el.querySelector(".n").textContent;copy(n,`Скопировано: ${n}`);return}
   if(el=t.closest("[data-jump]")){const n=el.dataset.jump;if(!n){toast("Под это нет отдельной подборки");return}
     const d=document.getElementById(catId(n));if(!d)return;d.open=true;d.classList.add("flash");
     d.scrollIntoView({behavior:RM?"auto":"smooth",block:"center"});setTimeout(()=>d.classList.remove("flash"),1400);return}
