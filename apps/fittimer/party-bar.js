@@ -508,6 +508,7 @@ const styleOptions=["Все вкусы","мягкое","лёгкое","креп�
 
 let selectedBase="Все", selectedStyle="Все вкусы", search="";
 let pantryActive=false, pantry=new Set();
+let pantryRecipeMode="main";
 
 function chip(label, active, handler){
   const b=document.createElement("button"); b.className="chip"+(active?" active":""); b.textContent=label; b.onclick=handler; return b;
@@ -525,7 +526,9 @@ function canMake(recipe){
 function makeableNames(c){
   const arr=[];
   if(canMake(c.main)) arr.push("Основной");
-  c.variations.forEach(v=>{ if(canMake(v)) arr.push(v.name); });
+  if(pantryRecipeMode==="variations"){
+    c.variations.forEach(v=>{ if(canMake(v)) arr.push(v.name); });
+  }
   return arr;
 }
 function searchable(c){
@@ -549,7 +552,7 @@ function variationHTML(v){
     <div class="variation-head"><div class="variation-name">${v.name}</div><div class="variation-abv">≈ ${v.abv}°</div></div>
     <div class="variation-recipe">${v.recipe}</div>
     <div class="variation-taste">${v.taste}</div>
-    ${pantryActive?`<div class="variation-state">${ok?'✓ Можно сделать':'Не хватает ингредиентов'}</div>`:""}
+    ${pantryActive && pantryRecipeMode==="variations"?`<div class="variation-state">${ok?'✓ Можно сделать':'Не хватает ингредиентов'}</div>`:""}
   </div>`;
 }
 
@@ -673,7 +676,7 @@ function card(c){
       </div>
       <div class="desc">${c.desc}</div>
       <div class="tags">${c.tags.map(t=>`<span class="tag">${t}</span>`).join("")}</div>
-      <div class="makeable ${pantryActive?'show':''}"><b>По бутылкам подходит:</b> ${m.join(", ")}</div>
+      <div class="makeable ${pantryActive?'show':''}"><b>${pantryRecipeMode==="main"?"Доступен основной рецепт":"Доступные рецепты"}:</b> ${m.join(", ")}</div>
       <div class="section-title">Основной рецепт</div>
       <div class="recipe"><b>${c.main.recipe}</b></div>
       <div class="section-title">Вкус</div><div class="taste">${c.main.taste}</div>
@@ -694,7 +697,7 @@ function card(c){
       `:""}
 
       <div class="section-title">Как делать</div><div class="serve">${c.serve}</div>
-      <details ${pantryActive && !canMake(c.main) ? "open" : ""}>
+      <details ${pantryActive && pantryRecipeMode==="variations" && !canMake(c.main) ? "open" : ""}>
         <summary>Вариации (${c.variations.length})</summary>
         ${c.variations.map(v=>{
           const ok=canMake(v);
@@ -702,7 +705,7 @@ function card(c){
             <div class="variation-head"><div class="variation-name">${v.name}</div><div class="variation-abv">≈ ${v.abv}°</div></div>
             <div class="variation-recipe">${v.recipe}</div>
             <div class="variation-taste">${v.taste}</div>
-            ${pantryActive?`<div class="variation-state">${ok?'✓ Можно сделать':'Не хватает ингредиентов'}</div>`:""}
+            ${pantryActive && pantryRecipeMode==="variations"?`<div class="variation-state">${ok?'✓ Можно сделать':'Не хватает ингредиентов'}</div>`:""}
           </div>`;
         }).join("")}
       </details>
@@ -715,7 +718,7 @@ function renderPantrySummary(){
   if(!pantryActive){el.className="pantry-summary"; el.textContent=""; return;}
   const labels=[...pantry].map(k=>ING[k].label);
   el.className="pantry-summary show";
-  el.innerHTML=`<b>Подбор по бару включён:</b> ${labels.length?labels.join(", "):"ничего не выбрано"}`;
+  el.innerHTML=`<b>Подбор по бару:</b> ${labels.length?labels.join(", "):"ничего не выбрано"}<br><b>Режим:</b> ${pantryRecipeMode==="main"?"только основные рецепты":"с учётом вариаций"}`;
 }
 function render(){
   const bf=document.getElementById("baseFilters"), sf=document.getElementById("styleFilters");
@@ -758,19 +761,26 @@ function renderIngredientPicker(){
 }
 
 const dlg=document.getElementById("pantryDialog");
-document.getElementById("pantryBtn").onclick=()=>{renderIngredientPicker();dlg.showModal();};
+document.getElementById("pantryBtn").onclick=()=>{
+  renderIngredientPicker();
+  const mode=dlg.querySelector('input[name="pantryRecipeMode"][value="'+pantryRecipeMode+'"]');
+  if(mode) mode.checked=true;
+  dlg.showModal();
+};
 document.getElementById("closePantry").onclick=()=>dlg.close();
 document.getElementById("clearPantry").onclick=()=>{
   dlg.querySelectorAll('input[type="checkbox"]').forEach(x=>x.checked=false);
 };
 document.getElementById("applyPantry").onclick=()=>{
   pantry=new Set([...dlg.querySelectorAll('input[type="checkbox"]:checked')].map(x=>x.dataset.ing));
+  const selectedMode=dlg.querySelector('input[name="pantryRecipeMode"]:checked');
+  pantryRecipeMode=selectedMode?selectedMode.value:"main";
   pantryActive=pantry.size>0;
   dlg.close(); render();
 };
 document.getElementById("search").addEventListener("input",e=>{search=e.target.value;render();});
 document.getElementById("resetBtn").onclick=()=>{
-  selectedBase="Все"; selectedStyle="Все вкусы"; search=""; pantryActive=false; pantry.clear();
+  selectedBase="Все"; selectedStyle="Все вкусы"; search=""; pantryActive=false; pantry.clear(); pantryRecipeMode="main";
   document.getElementById("search").value=""; render();
 };
 
