@@ -18,6 +18,140 @@ const ING = {
 };
 
 const cocktails = [
+  {name:"Godfather", premium:true, family:"Семья Корлеоне", base:"Бурбон", abv:27,
+    art:{shape:"rocks", c1:"#7a3d12", c2:"#c97a2e", ice:2, garnish:"none", bg1:"#1b0f0a", bg2:"#4e2a12"},
+    desc:"Виски и миндаль. Предложение, от которого невозможно отказаться.",
+    tags:["Корлеоне","крепкое","виски","мягкое","вечер"],
+    main:{recipe:"Бурбон 45 мл + амаретто 25 мл", ingredients:["bourbon","amaretto"], taste:"Бурбон, марципан, тёплая карамель."},
+    who:"Тем, кто любит виски, но без горечи.",
+    extras:[{name:"Большой кубик льда", mode:"recommended", effect:"Тает медленно — вкус не разбавляется."},{name:"Апельсиновая цедра", mode:"optional", effect:"Свежее и ярче."}],
+    serve:"Стакан с большим кубиком льда. Налить и мешать 15 секунд.",
+    variations:[
+      {name:"Мягче", recipe:"Бурбон 40 + амаретто 30", ingredients:["bourbon","amaretto"], abv:25, taste:"Слаще, миндаль впереди."},
+      {name:"Irish Godfather", recipe:"Ирландский виски 45 + амаретто 25", ingredients:["irish","amaretto"], abv:26, taste:"Мягче и фруктовее."}]},
+  {name:"Godmother", family:"Семья Корлеоне", base:"Водка", abv:25,
+    art:{shape:"rocks", c1:"#b9853e", c2:"#ead09a", ice:3, garnish:"none", bg1:"#19120b", bg2:"#4d3a1d"},
+    desc:"Младшая сестра Godfather: водка и амаретто. Чисто и мягко.",
+    tags:["Корлеоне","мягкое","сладкое"],
+    main:{recipe:"Водка 45 мл + амаретто 25 мл", ingredients:["vodka","amaretto"], taste:"Миндаль, ваниль, чистый спирт без резкости."},
+    who:"Любителям сладкого и мягкого.",
+    extras:[{name:"Лимонная цедра", mode:"optional", effect:"Убирает приторность."}],
+    serve:"Стакан со льдом. Налить и мешать 15 секунд.",
+    variations:[
+      {name:"Godchild", recipe:"Водка 30 + амаретто 30 + сливки 30", ingredients:["vodka","amaretto"], abv:18, taste:"Десерт в стакане."},
+      {name:"Суше", recipe:"Водка 50 + амаретто 15", ingredients:["vodka","amaretto"], abv:28, taste:"Крепче, миндаль тише."}]},
+  {name:"French Connection", family:"Семья Корлеоне", base:"Бренди", abv:27,
+    art:{shape:"rocks", c1:"#6e2c10", c2:"#b8642a", ice:2, garnish:"none", bg1:"#180c08", bg2:"#4a2112"},
+    desc:"Коньяк и амаретто. Французский родственник семьи.",
+    tags:["Корлеоне","крепкое","мягкое","вечер"],
+    main:{recipe:"Бренди 45 мл + амаретто 25 мл", ingredients:["brandy","amaretto"], taste:"Сухофрукты, дуб, миндаль."},
+    who:"Тем, кто любит коньяк после ужина.",
+    extras:[{name:"Апельсиновая цедра", mode:"optional", effect:"Освежает плотный вкус."}],
+    serve:"Стакан со льдом. Налить и мешать 15 секунд.",
+    variations:[
+      {name:"Мягче", recipe:"Бренди 40 + амаретто 30", ingredients:["brandy","amaretto"], abv:25, taste:"Слаще и круглее."},
+      {name:"French Kiss", recipe:"Бренди 40 + амаретто 20 + Triple Sec 10", ingredients:["brandy","amaretto","triple"], abv:26, taste:"Появляется апельсин."}]},
+  {name:"Espresso Martini", premium:true, family:"Современная классика", base:"Водка", abv:16,
+    art:{shape:"nick", c1:"#2a1710", c2:"#6b4630", ice:0, garnish:"none", bg1:"#120b08", bg2:"#3b2418"},
+    desc:"Кофе, водка и плотная пенка. Будит и веселит одновременно.",
+    tags:["кофе","мягкое","десертное","вечер"],
+    main:{recipe:"Водка 45 мл + кофейный ликёр 25 мл + эспрессо 30 мл + сахарный сироп 5 мл", ingredients:["vodka","coffee"], taste:"Крепкий кофе, лёгкая сладость, бархатная пенка."},
+    who:"Всем, кто не хочет, чтобы вечер заканчивался.",
+    extras:[{name:"Свежий эспрессо 30 мл", mode:"required", effect:"Без него не будет ни вкуса, ни пенки."},{name:"Щепотка соли", mode:"optional", effect:"Кофе ярче, горечь мягче."},{name:"Три кофейных зерна", mode:"optional", effect:"Классическое украшение."}],
+    serve:"Сварить эспрессо и чуть остудить. Встряхнуть со льдом очень сильно 15 секунд. Процедить в охлаждённый бокал — сверху плотная пенка.",
+    variations:[
+      {name:"Покрепче", recipe:"Водка 50 + кофейный ликёр 20 + эспрессо 30", ingredients:["vodka","coffee"], abv:18, taste:"Суше, кофе строже."},
+      {name:"Amaretto Espresso", recipe:"Водка 30 + амаретто 15 + кофейный ликёр 20 + эспрессо 30", ingredients:["vodka","amaretto","coffee"], abv:15, taste:"Миндаль и кофе."},
+      {name:"Tequila Espresso", recipe:"Текила 45 + кофейный ликёр 25 + эспрессо 30", ingredients:["tequila","coffee"], abv:16, taste:"Агава даёт землистость."}]},
+  {name:"Americano", family:"Классика · лёгкий", base:"Campari", abv:9,
+    art:{shape:"highball", c1:"#8c1a1d", c2:"#e0443a", ice:5, garnish:"orange", bubbles:true, bg1:"#170b0b", bg2:"#4f1715"},
+    desc:"Campari, вермут и содовая. Negroni, который можно пить весь вечер.",
+    tags:["горькое","лёгкое","апельсин","классика"],
+    main:{recipe:"Campari 40 мл + сладкий красный вермут 40 мл + содовая 80 мл", ingredients:["bitter","sweetV"], taste:"Горький апельсин, травы, пузырьки."},
+    who:"Для начала вечера и тем, кому Negroni крепковат.",
+    extras:[{name:"Содовая 80 мл", mode:"required", effect:"Лёгкость и пузырьки."},{name:"Долька апельсина", mode:"recommended", effect:"Аромат и цвет."}],
+    serve:"Высокий стакан со льдом. Campari и вермут, сверху содовая, мягко перемешать. Долька апельсина.",
+    variations:[
+      {name:"Aperol Americano", recipe:"Aperol 40 + сладкий красный вермут 40 + содовая 80", ingredients:["aperol","sweetV"], abv:8, taste:"Мягче и слаще."},
+      {name:"Сухой", recipe:"Campari 40 + сладкий красный вермут 20 + сухой вермут 20 + содовая 80", ingredients:["bitter","sweetV","dryV"], abv:9, taste:"Меньше сладости."}]},
+  {name:"Cardinale", family:"Классика · джин", base:"Джин", abv:26,
+    art:{shape:"nick", c1:"#9e1521", c2:"#e2414a", ice:0, garnish:"lemon", bg1:"#160a0b", bg2:"#521418"},
+    desc:"Negroni на сухом вермуте. Строже, светлее, элегантнее.",
+    tags:["горькое","сухое","крепкое","джин"],
+    main:{recipe:"Джин 40 мл + Campari 25 мл + сухой вермут 25 мл", ingredients:["gin","bitter","dryV"], taste:"Можжевельник, сухая горечь, цитрус."},
+    who:"Тем, кому Negroni сладковат.",
+    extras:[{name:"Лимонная цедра", mode:"recommended", effect:"Свежесть и аромат."}],
+    serve:"Мешать со льдом 25 секунд. Процедить в охлаждённый бокал. Лимонная цедра.",
+    variations:[
+      {name:"Мягче", recipe:"Джин 40 + Campari 15 + Aperol 10 + сухой вермут 25", ingredients:["gin","bitter","aperol","dryV"], abv:25, taste:"Горечь мягче."},
+      {name:"На льду", recipe:"Джин 40 + Campari 25 + сухой вермут 25, в стакане со льдом", ingredients:["gin","bitter","dryV"], abv:22, taste:"Проще и легче пить."}]},
+  {name:"Manhattan", premium:true, family:"Классика · бурбон", base:"Бурбон", abv:28,
+    art:{shape:"nick", c1:"#6a1e14", c2:"#b6522c", ice:0, garnish:"cherry", bg1:"#160a08", bg2:"#4a1d12"},
+    desc:"Король виски-коктейлей. Бурбон, вермут и пряность.",
+    tags:["крепкое","виски","классика","вечер"],
+    main:{recipe:"Бурбон 60 мл + сладкий красный вермут 30 мл", ingredients:["bourbon","sweetV"], taste:"Карамель, вишня, пряности."},
+    who:"Ценителям виски.",
+    extras:[{name:"Angostura", mode:"recommended", effect:"2 дэша — без них это просто виски с вермутом."},{name:"Коктейльная вишня", mode:"optional", effect:"Классика."},{name:"Апельсиновая цедра", mode:"optional", effect:"Свежее."}],
+    serve:"Мешать со льдом 30 секунд. Процедить в охлаждённый бокал. Вишня или цедра.",
+    variations:[
+      {name:"Perfect Manhattan", recipe:"Бурбон 60 + сладкий красный вермут 15 + сухой вермут 15", ingredients:["bourbon","sweetV","dryV"], abv:28, taste:"Суше и сложнее."},
+      {name:"Brandy Manhattan", recipe:"Бренди 60 + сладкий красный вермут 30", ingredients:["brandy","sweetV"], abv:27, taste:"Мягче, фруктовее."}]},
+  {name:"Dry Martini", premium:true, family:"Классика · джин", base:"Джин", abv:30,
+    art:{shape:"nick", c1:"#cfd7c8", c2:"#f1f4e6", ice:0, garnish:"lemon", bg1:"#0f1210", bg2:"#2f3a33"},
+    desc:"Самый строгий коктейль в мире. Только джин, вермут и холод.",
+    tags:["крепкое","сухое","джин","классика"],
+    main:{recipe:"Джин 60 мл + сухой вермут 15 мл", ingredients:["gin","dryV"], taste:"Ледяной можжевельник, сухие травы."},
+    who:"Тем, кто любит крепкое и чистое.",
+    extras:[{name:"Лимонная цедра или оливка", mode:"recommended", effect:"Цедра — свежесть, оливка — солоноватость."},{name:"Orange bitters", mode:"optional", effect:"1 дэш — объём."}],
+    serve:"Всё должно быть ледяным. Мешать со льдом 30 секунд. Процедить в замороженный бокал.",
+    variations:[
+      {name:"Vodka Martini", recipe:"Водка 60 + сухой вермут 10", ingredients:["vodka","dryV"], abv:30, taste:"Чище и нейтральнее."},
+      {name:"Wet Martini", recipe:"Джин 50 + сухой вермут 25", ingredients:["gin","dryV"], abv:26, taste:"Мягче, больше трав."},
+      {name:"Dirty", recipe:"Джин 60 + сухой вермут 10 + рассол оливок 10", ingredients:["gin","dryV"], abv:28, taste:"Солёный и пикантный."}]},
+  {name:"Black Russian", family:"Классика · кофе", base:"Водка", abv:26,
+    art:{shape:"rocks", c1:"#1c0f0a", c2:"#4a2a1a", ice:3, garnish:"none", bg1:"#0e0907", bg2:"#2d1a10"},
+    desc:"Водка и кофейный ликёр. Два ингредиента — и уже вечер.",
+    tags:["крепкое","кофе","десертное"],
+    main:{recipe:"Водка 50 мл + кофейный ликёр 25 мл", ingredients:["vodka","coffee"], taste:"Кофе, карамель, крепость."},
+    who:"Кофеманам.",
+    extras:[{name:"Лимонная цедра", mode:"optional", effect:"Неожиданно освежает."}],
+    serve:"Стакан со льдом. Налить и мешать 10 секунд.",
+    variations:[
+      {name:"С колой", recipe:"Водка 40 + кофейный ликёр 20 + кола 60", ingredients:["vodka","coffee","cola"], abv:15, taste:"Легче и веселее."},
+      {name:"Мягче", recipe:"Водка 40 + кофейный ликёр 30", ingredients:["vodka","coffee"], abv:24, taste:"Слаще."}]},
+  {name:"White Russian", family:"Классика · кофе", base:"Водка", abv:17,
+    art:{shape:"rocks", c1:"#8a6a52", c2:"#e8d9c4", ice:3, garnish:"none", bg1:"#15100c", bg2:"#43352a"},
+    desc:"Кофе со сливками и характером. Любимый напиток Чувака.",
+    tags:["мягкое","кофе","десертное"],
+    main:{recipe:"Водка 40 мл + кофейный ликёр 20 мл + сливки 30 мл", ingredients:["vodka","coffee"], taste:"Сливки, кофе, ваниль."},
+    who:"Тем, кто не любит вкус алкоголя.",
+    extras:[{name:"Сливки 30 мл", mode:"required", effect:"Без них это Black Russian."}],
+    serve:"Стакан со льдом. Водка и ликёр, сверху аккуратно сливки. Размешать перед глотком.",
+    variations:[
+      {name:"Amaretto Russian", recipe:"Водка 30 + кофейный ликёр 15 + амаретто 15 + сливки 30", ingredients:["vodka","coffee","amaretto"], abv:17, taste:"С миндалём."},
+      {name:"Лёгкий", recipe:"Водка 30 + кофейный ликёр 20 + молоко 60", ingredients:["vodka","coffee"], abv:12, taste:"Почти кофе с молоком."}]},
+  {name:"El Presidente", family:"Классика · ром", base:"Белый ром", abv:24,
+    art:{shape:"nick", c1:"#b8442a", c2:"#f08a55", ice:0, garnish:"peel", bg1:"#170c08", bg2:"#552315"},
+    desc:"Кубинская классика 1920-х. Ром, сухой вермут и апельсин.",
+    tags:["сухое","крепкое","ром","апельсин"],
+    main:{recipe:"Белый ром 45 мл + сухой вермут 25 мл + Triple Sec 10 мл + гренадин 5 мл", ingredients:["rum","dryV","triple"], taste:"Лёгкий ром, апельсин, сухая сладость."},
+    who:"Тем, кто любит Manhattan, но хочет полегче.",
+    extras:[{name:"Гренадин 5 мл", mode:"recommended", effect:"Цвет и мягкая сладость. Можно заменить сиропом."},{name:"Апельсиновая цедра", mode:"optional", effect:"Аромат."}],
+    serve:"Мешать со льдом 25 секунд. Процедить в охлаждённый бокал. Апельсиновая цедра.",
+    variations:[
+      {name:"Без гренадина", recipe:"Белый ром 45 + сухой вермут 25 + Triple Sec 10", ingredients:["rum","dryV","triple"], abv:25, taste:"Суше."},
+      {name:"Rosso", recipe:"Белый ром 45 + сладкий красный вермут 20 + Triple Sec 10", ingredients:["rum","sweetV","triple"], abv:23, taste:"Слаще и темнее."}]},
+  {name:"Kamikaze", family:"Шоты · компания", base:"Водка", abv:22,
+    art:{shape:"nick", c1:"#cfe08a", c2:"#f2f7c8", ice:0, garnish:"lime", bg1:"#10130c", bg2:"#34401f"},
+    desc:"Водка, апельсин, лайм. Разливается по шотам на всю компанию.",
+    tags:["кислое","цитрус","крепкое","шоты"],
+    main:{recipe:"Водка 30 мл + Triple Sec 15 мл + лаймовый сок 15 мл", ingredients:["vodka","triple"], taste:"Кислый лайм, апельсин, лёгкий удар."},
+    who:"Компании, когда пора тост.",
+    extras:[{name:"Лаймовый сок 15 мл", mode:"required", effect:"Основа вкуса."}],
+    serve:"Встряхнуть со льдом 10 секунд. Разлить по шотам.",
+    variations:[
+      {name:"Long Kamikaze", recipe:"Водка 40 + Triple Sec 20 + лайм 20 + содовая 60", ingredients:["vodka","triple"], abv:12, taste:"Высокий и освежающий."},
+      {name:"Lemon Drop", recipe:"Водка 40 + Triple Sec 15 + лимон 20 + сироп 10", ingredients:["vodka","triple"], abv:20, taste:"Лимонный и сладковатый."}]},
   {name:"Boulevardier", premium:true, family:"Классика · бурбон", base:"Бурбон", abv:24,
     art:{shape:"rocks", c1:"#7c240f", c2:"#cf5d25", ice:3, garnish:"peel", bg1:"#2a120d", bg2:"#5a2614"},
     desc:"Плотный виски с травяной горечью и карамелью. Главный коктейль вечера.",
@@ -324,8 +458,8 @@ const cocktails = [
       {name:"Aperol Cuba", recipe:"Белый ром 40 + Aperol 15 + лайм 15 + кола 70", ingredients:["rum","aperol","cola"], abv:13, taste:"Апельсиновее и мягче."}]}
 ];
 
-const BASES = ["Все","Бурбон","Ирландский виски","Джин","Белый ром","Текила","Водка","Aperol","Jägermeister","Бренди","Амаретто","Мультибаза"];
-const STYLES = ["Любой вкус","мягкое","лёгкое","крепкое","горькое","кислое","сухое","виски","джин","апельсин","кола"];
+const BASES = ["Все","Бурбон","Ирландский виски","Джин","Белый ром","Текила","Водка","Aperol","Campari","Jägermeister","Бренди","Амаретто","Мультибаза"];
+const STYLES = ["Любой вкус","Корлеоне","мягкое","лёгкое","крепкое","горькое","кислое","сухое","виски","джин","апельсин","кофе","кола","шоты"];
 
 const BASKET = [
   {name:"Ядро бара", level:"Сначала это", cls:"core", items:["Бурбон","Джин","Красный вермут","Сухой вермут","Campari","Aperol","Triple Sec"], note:"Закрывает Boulevardier, Negroni, Old Pal, Gin & It и почти всё «Выбор Дона»."},
@@ -567,6 +701,7 @@ function detail(c){
       <button class="ib fav ${S.favs.has(c.i)?"on":""}" data-fav="${c.i}" type="button"><svg viewBox="0 0 24 24"><path d="M12 5.5c3 0 5 2.4 5 5.2S14.8 16 12 16s-5-2.5-5-5.3 2-5.2 5-5.2z"/><path d="M12 16v5"/></svg><span>${S.favs.has(c.i)?"В семье":"В семью"}</span></button>
       <button class="ib" data-copy="${c.i}" type="button"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>Рецепт</button>
     </div>
+    <button class="btn btn-brass cook" data-cook="${c.i}" type="button"><svg viewBox="0 0 24 24"><path d="M7 3h10l-1.5 7h-7z"/><path d="M8.5 10 9 21h6l.5-11"/></svg>Готовить по шагам</button>
     <p class="d-desc">${c.desc}</p>
     ${pantry?`<div class="d-status ${okMain?"":"no"}">${okMain?"✓ Всё есть в баре":"Не хватает: "+missing.join(", ")}</div>`:""}
     <div class="d-sec"><h4>Состав</h4><div class="menu-rows">${rows(c.main.recipe)}</div></div>
@@ -578,7 +713,8 @@ function detail(c){
   </div>`;
 }
 function openSheet(i,push=true){
-  const c=cocktails[i]; if(!c)return; cur=c;
+  const c=cocktails[i]; if(!c)return;
+  if(!push&&cur===c&&sheet.classList.contains("on"))return; cur=c;
   body.innerHTML=detail(c); body.scrollTop=0;
   sheet.classList.add("on"); veil.classList.add("on");
   document.documentElement.style.overflow="hidden";
@@ -591,11 +727,14 @@ function closeSheet(fromPop){
   if(!fromPop&&history.state&&history.state.sheet!=null) history.back();
 }
 window.addEventListener("popstate",e=>{
-  if(e.state&&e.state.sheet!=null) openSheet(e.state.sheet,false); else {closeSheet(true);closeDon(true);}
+  const s=e.state||{};
+  if(!s.panel) closePanel(true);
+  if(s.sheet!=null) openSheet(s.sheet,false); else closeSheet(true);
+  if(!s.don) closeDon(true);
 });
 veil.addEventListener("click",()=>closeSheet());
 $("#sheetX").addEventListener("click",()=>closeSheet());
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeSheet();closeDon()}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(panel.classList.contains("on"))return closePanel();closeSheet();closeDon()}});
 /* drag to close (touch) */
 (function(){
   let y0=null,dy=0,active=false;
@@ -689,6 +828,8 @@ document.addEventListener("click",e=>{
     toast(on?`${cocktails[i].name} — теперь в семье`:"Убрано из семьи");
     const fb=$("#favBadge");fb.textContent=S.favs.size;fb.classList.toggle("on",S.favs.size>0);
     if(S.tab==="menu")renderMenu(); if(S.tab==="fav")renderFav(); return}
+  if(el=t.closest("[data-cook]")){openBartender(+el.dataset.cook);return}
+  if(el=t.closest("[data-mode]")){el.dataset.mode==="party"?openParty():openCards();return}
   if(el=t.closest("[data-copy]")){const c=cocktails[+el.dataset.copy];copy(`${c.name}: ${c.main.recipe}. ${c.serve}`);return}
   if(el=t.closest(".opt")){const n=el.querySelector(".n").textContent;copy(n,`Скопировано: ${n}`);return}
   if(el=t.closest("[data-jump]")){const n=el.dataset.jump;if(!n){toast("Под это нет отдельной подборки");return}
@@ -699,6 +840,230 @@ function resetAll(){S.base="Все";S.style="Любой вкус";S.q="";S.pantr
 let qt=null;
 $("#q").addEventListener("input",e=>{S.q=e.target.value;clearTimeout(qt);qt=setTimeout(renderMenu,120)});
 $("#qx").addEventListener("click",e=>{e.preventDefault();S.q="";$("#q").value="";renderMenu();$("#q").focus()});
+
+/* ---------- panels (bartender, party, cards) ---------- */
+const panel=$("#panel"),pBody=$("#pBody"),pTitle=$("#pTitle"),pNav=$("#pNav");
+let pKind=null,wake=null;
+function openPanel(kind,title){
+  pKind=kind;pTitle.textContent=title;pNav.innerHTML="";pNav.hidden=true;
+  panel.classList.add("on");document.documentElement.style.overflow="hidden";
+  if(!(history.state&&history.state.panel)) history.pushState({...(history.state||{}),panel:kind},"","#"+kind);
+}
+function closePanel(fromPop){
+  if(!panel.classList.contains("on"))return;
+  panel.classList.remove("on");pKind=null;stopTimer();
+  if(wake){try{wake.release()}catch(_){}wake=null}
+  if(!sheet.classList.contains("on"))document.documentElement.style.overflow="";
+  if(!fromPop&&history.state&&history.state.panel)history.back();
+}
+$("#pX").addEventListener("click",()=>closePanel());
+const buzz=p=>{if(navigator.vibrate)try{navigator.vibrate(p)}catch(_){}};
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const cap=s=>s[0].toUpperCase()+s.slice(1);
+
+/* recipe parsing: "Бурбон 50 мл + Campari 25 мл" -> [{name, ml, key}] */
+const PMAP=[[/бурбон/,"bourbon"],[/ирланд/,"irish"],[/джин/,"gin"],[/(^|\s)ром/,"rum"],[/текил/,"tequila"],[/водк/,"vodka"],[/бренди|коньяк/,"brandy"],[/красн\S* вермут/,"sweetV"],[/сух\S* вермут/,"dryV"],[/campari/,"bitter"],[/aperol/,"aperol"],[/triple/,"triple"],[/j[äa]ger/,"jager"],[/амаретто/,"amaretto"],[/кофейн/,"coffee"],[/кола/,"cola"],[/лайм/,"lime"],[/лимон/,"lemon"],[/гренадин/,"grenadine"],[/сироп/,"syrup"],[/содов|сода/,"soda"],[/сливк|молок/,"cream"],[/эспрессо/,"espresso"]];
+function parts(recipe){
+  return recipe.split(/\s\+\s/).map(p=>{
+    const m=p.trim().match(/^(.+?)\s+(\d+(?:[.,]\d+)?)(?:\s*[–-]\s*(\d+))?\s*(?:мл)?$/);
+    if(!m)return {name:p.trim(),ml:null,key:null};
+    const name=m[1].trim(),a=parseFloat(m[2].replace(",",".")),b=m[3]?parseFloat(m[3]):null;
+    const low=name.toLowerCase();const hit=PMAP.find(([r])=>r.test(low));
+    return {name,ml:b?(a+b)/2:a,range:b?[a,b]:null,key:hit?hit[1]:null};
+  });
+}
+
+/* ===== bartender mode ===== */
+const GLASS={rocks:"Низкий стакан со льдом",highball:"Высокий стакан, доверху льда",wine:"Бокал для вина со льдом",nick:"Коктейльный бокал — охлади его льдом или в морозилке"};
+let bt={c:null,k:0,mult:1,steps:[]};
+function btSteps(c,mult){
+  const s=[{kind:"Подготовь",big:c.name,txt:GLASS[c.art.shape]||"Бокал и лёд",art:true}];
+  parts(c.main.recipe).forEach(p=>{
+    const fmt=v=>{const r=Math.round(v*mult*2)/2;return String(r).replace(".",",")};
+    s.push(p.ml!=null?{kind:"Налей",big:(p.range?fmt(p.range[0])+"–"+fmt(p.range[1]):fmt(p.ml))+" мл",txt:cap(p.name)}:{kind:"Добавь",big:"",txt:cap(p.name)});
+  });
+  const low0=c.main.recipe.toLowerCase();
+  (c.extras||[]).filter(x=>x.mode!=="optional"&&!low0.includes(x.name.toLowerCase().split(/[\s/]/)[0])).forEach(x=>s.push({kind:"Совет",big:"",txt:x.name+". "+x.effect.replace(/\.$/,"")}));
+  c.serve.split(/(?<=[.!])\s+/).filter(Boolean).forEach(t=>{
+    const low=t.toLowerCase();let sec=0;const m=low.match(/(\d+)(?:\s*[–-]\s*(\d+))?\s*сек/);
+    if(m)sec=+(m[2]||m[1]); else if(/встрях/.test(low))sec=12; else if(/^мешать|мешать со льдом/.test(low))sec=20;
+    s.push({kind:sec?"Время":"Дальше",big:"",txt:t.replace(/\.$/,""),sec});
+  });
+  s.push({kind:"Готово",big:"За семью",txt:c.name+" · "+c.abv+"°",art:true,end:true});
+  return s;
+}
+async function openBartender(i){
+  const c=cocktails[i];bt={c,k:0,mult:1,steps:btSteps(c,1)};
+  openPanel("bartender","Режим бармена");pNav.hidden=false;
+  try{if("wakeLock"in navigator)wake=await navigator.wakeLock.request("screen")}catch(_){}
+  renderBt();
+}
+function renderBt(){
+  const {c,k,steps}=bt,st=steps[k];stopTimer();
+  pBody.innerHTML=`<div class="bt-top"><div class="portions" role="group" aria-label="Порции">${[1,2,4,6].map(n=>`<button type="button" class="pill ${bt.mult===n?"on":""}" data-pa="mult" data-n="${n}">${n===1?"1 порция":n===6?"6 порций":n+" порции"}</button>`).join("")}</div>
+    <div class="bt-prog">${steps.map((_,j)=>`<i class="${j<=k?"f":""}"></i>`).join("")}</div></div>
+  <div class="bt-step" data-pa="next">
+    ${st.art?`<div class="bt-art">${glass(c.art,{thumb:true,pour:st.end})}</div>`:""}
+    <div class="bt-k">${st.kind} · ${k+1} из ${steps.length}</div>
+    ${st.big?`<div class="bt-big">${st.big}</div>`:""}
+    <div class="bt-txt">${st.txt}</div>
+    ${st.sec?`<button type="button" class="timer" data-pa="timer" data-s="${st.sec}"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="tr-bg"/><circle cx="60" cy="60" r="52" class="tr" id="tRing"/></svg><span id="tTxt">${st.sec} с</span><small id="tSub">Нажми — старт</small></button>`:""}
+  </div>`;
+  pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="prev" ${k?"":"disabled"}>Назад</button><button class="btn btn-brass" type="button" data-pa="${st.end?"done":"next"}">${st.end?"Закрыть":"Дальше"}</button>`;
+  if(st.end)buzz([20,60,20]);
+}
+let tmr=null;
+function stopTimer(){clearInterval(tmr);tmr=null}
+function startTimer(btn,sec){
+  if(tmr){stopTimer();btn.classList.remove("run");$("#tTxt").textContent=sec+" с";$("#tSub").textContent="Нажми — старт";$("#tRing").style.strokeDashoffset=0;return}
+  const t0=Date.now(),ring=$("#tRing"),L=2*Math.PI*52;ring.style.strokeDasharray=L;btn.classList.add("run");$("#tSub").textContent="Нажми — стоп";buzz(15);
+  tmr=setInterval(()=>{const left=Math.max(0,sec-(Date.now()-t0)/1000);
+    $("#tTxt").textContent=Math.ceil(left)+" с";ring.style.strokeDashoffset=L*(1-left/sec);
+    if(left<=0){stopTimer();btn.classList.remove("run");btn.classList.add("fin");$("#tTxt").textContent="Готово";$("#tSub").textContent="Дальше →";buzz([200,80,200]);}
+  },100);
+}
+
+/* ===== party calculator ===== */
+const BOT={bourbon:700,irish:700,gin:700,rum:700,tequila:700,vodka:700,brandy:700,sweetV:1000,dryV:1000,bitter:750,aperol:700,triple:700,jager:700,amaretto:700,coffee:700};
+const PT={guests:store.get("ptGuests",6),per:store.get("ptPer",3),sel:new Set(store.get("ptSel",[]))};
+function openParty(){
+  if(!PT.sel.size)(S.favs.size?[...S.favs]:cocktails.filter(c=>c.premium).slice(0,4).map(c=>c.i)).forEach(i=>PT.sel.add(i));
+  openPanel("party","Вечеринка");renderParty();
+}
+function partyCalc(){
+  const list=[...PT.sel].map(i=>cocktails[i]).filter(Boolean);
+  const total=PT.guests*PT.per;const each=list.length?Math.ceil(total/list.length):0;
+  const sum={},misc={};
+  list.forEach(c=>parts(c.main.recipe).forEach(p=>{if(p.ml==null)return;
+    if(p.key)sum[p.key]=(sum[p.key]||0)+p.ml*each; else misc[p.name.toLowerCase()]=(misc[p.name.toLowerCase()]||0)+p.ml*each;}));
+  const rowsOut=[];
+  Object.keys(BOT).forEach(k=>{if(!sum[k])return;const ml=sum[k],n=Math.ceil(ml/BOT[k]);
+    rowsOut.push({grp:"Бутылки",name:ING[k].label,val:`${n} × ${BOT[k]/1000>=1?BOT[k]/1000+" л":BOT[k]+" мл"}`,sub:`≈ ${Math.round(ml/10)*10} мл`});});
+  const L=v=>(Math.ceil(v/500)*0.5).toString().replace(".",",")+" л";
+  if(sum.lime)rowsOut.push({grp:"Фрукты и миксеры",name:"Лаймы",val:Math.ceil(sum.lime/25)+" шт",sub:`сок ≈ ${Math.round(sum.lime)} мл`});
+  if(sum.lemon)rowsOut.push({grp:"Фрукты и миксеры",name:"Лимоны",val:Math.ceil(sum.lemon/35)+" шт",sub:`сок ≈ ${Math.round(sum.lemon)} мл`});
+  if(sum.cola)rowsOut.push({grp:"Фрукты и миксеры",name:"Кола",val:L(sum.cola),sub:""});
+  if(sum.soda)rowsOut.push({grp:"Фрукты и миксеры",name:"Содовая",val:L(sum.soda),sub:""});
+  if(sum.cream)rowsOut.push({grp:"Фрукты и миксеры",name:"Сливки",val:L(sum.cream),sub:""});
+  if(sum.syrup)rowsOut.push({grp:"Фрукты и миксеры",name:"Сахарный сироп",val:Math.ceil(sum.syrup/50)*50+" мл",sub:"сахар и вода 1:1"});
+  if(sum.espresso)rowsOut.push({grp:"Фрукты и миксеры",name:"Эспрессо",val:Math.ceil(sum.espresso/30)+" шотов",sub:""});
+  if(sum.grenadine)rowsOut.push({grp:"Фрукты и миксеры",name:"Гренадин",val:Math.ceil(sum.grenadine/10)*10+" мл",sub:""});
+  rowsOut.push({grp:"Лёд",name:"Лёд",val:Math.ceil(total*0.3)+" кг",sub:"с запасом на шейкер и стаканы"});
+  return {list,total,each,rows:rowsOut};
+}
+function renderParty(){
+  const r=partyCalc();
+  const stp=(id,v,lbl)=>`<div class="stp"><span>${lbl}</span><div><button type="button" class="ib" data-pa="${id}" data-d="-1" aria-label="Меньше">−</button><b>${v}</b><button type="button" class="ib" data-pa="${id}" data-d="1" aria-label="Больше">+</button></div></div>`;
+  let grp="";
+  pBody.innerHTML=`<p class="p-lead">Скажи, сколько вас и что наливаем, — Дон посчитает, что купить.</p>
+  ${stp("guests",PT.guests,"Гостей")}${stp("per",PT.per,"Коктейлей на человека")}
+  <div class="p-sec"><h4>Что наливаем <small>${PT.sel.size} выбрано</small></h4><div class="pick">${cocktails.map(c=>`<button type="button" class="pill ${PT.sel.has(c.i)?"on":""}" data-pa="sel" data-i="${c.i}">${c.name}</button>`).join("")}</div></div>
+  ${r.list.length?`<div class="p-sec"><h4>Список покупок <small>${r.total} ${plural(r.total,"коктейль","коктейля","коктейлей")} · по ${r.each} каждого</small></h4><div class="res">${r.rows.map(x=>{const h=x.grp!==grp?`<div class="res-g">${grp=x.grp}</div>`:"";return h+`<div class="mr"><span>${x.name}${x.sub?`<small>${x.sub}</small>`:""}</span><i></i><b>${x.val}</b></div>`}).join("")}</div>
+  <p class="fine">Бутылки считаются по основным рецептам. Лучше взять с запасом — гости любят повторять.</p></div>`:`<div class="empty"><p>Выбери хотя бы один коктейль.</p></div>`}`;
+  pNav.hidden=!r.list.length;
+  pNav.innerHTML=`<button class="btn btn-brass" type="button" data-pa="pcopy">Скопировать список</button>`;
+  store.set("ptGuests",PT.guests);store.set("ptPer",PT.per);store.set("ptSel",[...PT.sel]);
+}
+
+/* ===== Don's cards (game) ===== */
+const ORDERS=[
+  ["Приказ","Дон назначает тебя барменом раунда. Готовь {c} тому, кто сидит справа."],
+  ["Приказ","Сделай коктейль человеку слева. Он выбирает из меню — ты не споришь."],
+  ["Приказ","Тот, кто пришёл последним, моет шейкер. Так решила семья."],
+  ["Приказ","Выбери консильери. До следующей карты, когда пьёшь ты, — пьёт и он."],
+  ["Приказ","Придумай себе прозвище в мафии. Лучшее закрепляется до конца вечера."],
+  ["Приказ","Изобрази, как Дон пробует твой коктейль. Семья ставит оценку от 1 до 5."],
+  ["Приказ","Тридцать секунд все говорят с итальянским акцентом. Сбился — пьёшь воду."],
+  ["Приказ","Придумай название коктейлю, который у тебя в руке. Семья голосует — нравится или нет."],
+  ["Приказ","Сделай {c} всем, кто захочет. Рецепт — в меню, режим бармена поможет."],
+  ["Приказ","Поменяйся местами с тем, кто сидит напротив."],
+  ["Приказ","Назови три коктейля из меню за пять секунд. Не успел — готовишь {light} для любого."],
+  ["Омерта","До следующей карты никто не говорит слово «нет». Сказал — тост за Дона."],
+  ["Омерта","Никаких телефонов в руках до следующей карты. Нарушил — наливаешь всем воду."],
+  ["Омерта","Обращаться друг к другу только «дон» и имя. Ошибся — делаешь глоток."],
+  ["Омерта","Пить только левой рукой. Заметил нарушение — громко скажи «Предатель!»."],
+  ["Тост","Тост за семью. Все чокаются, последний говорит следующий тост."],
+  ["Тост","Тост за хозяина бара. Без него этого вечера не было бы."],
+  ["Тост","По кругу закончите фразу «Семья — это…». Потом общий тост."],
+  ["Тост","Тот, у кого самый крепкий коктейль в руке, говорит тост."],
+  ["Вопрос","Какой коктейль из меню описывает тебя лучше всего? Объясни за 15 секунд."],
+  ["Вопрос","Кому из присутствующих ты доверишь свой бар на неделю? Почему?"],
+  ["Вопрос","Худший коктейль в твоей жизни — где и что это было?"],
+  ["Вопрос","Если бы семья открыла настоящий бар — какая у тебя роль?"],
+  ["Вопрос","Какой коктейль ты закажешь Дону, если он угощает? Только из меню."],
+  ["Испытание","Слепая дегустация: закрой глаза, сосед даёт глоток — угадай основу."],
+  ["Испытание","Угадай состав коктейля соседа, не пробуя. Угадал два ингредиента — он делает тебе следующий."],
+  ["Испытание","Шейкер-шоу: потряси шейкер самым эффектным образом. Семья аплодирует — или молчит."],
+  ["Испытание","Предатель среди нас: все закрывают глаза, ты тихо касаешься плеча одного. Остальные угадывают, кого."],
+  ["Испытание","Комплимент по кругу: каждый говорит что-то приятное человеку слева."],
+  ["Дон доволен","Выбери любого — он делает тебе коктейль по твоему выбору."],
+  ["Дон недоволен","Следующий раунд ты пьёшь что-то лёгкое — например, {light}."],
+  ["Дон бережёт семью","Пауза: все выпивают по стакану воды. Потом продолжаем."],
+  ["Двойная карта","Вытяни ещё одну карту и отдай её любому игроку."]
+];
+let G={mode:"orders",deck:[],k:0,q:null,score:0,streak:0,n:0};
+function openCards(){openPanel("cards","Карты Дона");pNav.hidden=false;newDeck();}
+function newDeck(){G.deck=shuffle(ORDERS);G.k=0;renderCards()}
+function pool(){return S.pantryOn?cocktails.filter(c=>makeable(c).length):cocktails}
+function fill(t){
+  const light=cocktails.filter(c=>c.abv<=12);
+  return t.replace("{c}",`<b>${pick(pool()).name}</b>`).replace("{light}",`<b>${pick(light).name}</b>`);
+}
+function modeTabs(){return `<div class="g-tabs"><button type="button" class="pill ${G.mode==="orders"?"on":""}" data-pa="gmode" data-m="orders">Приказы Дона</button><button type="button" class="pill ${G.mode==="quiz"?"on":""}" data-pa="gmode" data-m="quiz">Угадай коктейль</button></div>`}
+function renderCards(){
+  if(G.mode==="quiz")return renderQuiz();
+  const done=G.k>=G.deck.length;
+  const [kind,txt]=done?["Конец колоды","Дон доволен вечером. Перемешать и сыграть ещё?"]:G.deck[G.k];
+  pBody.innerHTML=`${modeTabs()}<p class="p-lead">Кладите телефон в центр. По очереди тяните карту — и выполняйте.</p>
+  <div class="gcard k-${kind.split(" ")[0].toLowerCase()}" data-pa="${done?"reshuffle":"draw"}">
+    <svg class="g-corner" viewBox="0 0 24 24"><path d="M2.5 15.5c4 2.6 15 2.6 19 0"/><path d="M5.5 15c0-4.5 1.6-9 4-9 1.1 0 1.6 1.2 2.5 1.2S13.4 6 14.5 6c2.4 0 4 4.5 4 9"/></svg>
+    <div class="g-kind">${kind}</div><p class="g-txt">${done?txt:fill(txt)}</p>
+    <div class="g-foot">${done?"":`${G.k+1} / ${G.deck.length} · нажми — следующая`}</div>
+  </div>`;
+  pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="reshuffle">Перемешать</button><button class="btn btn-brass" type="button" data-pa="${done?"reshuffle":"draw"}">${done?"Ещё раз":"Следующая карта"}</button>`;
+}
+function newQuiz(){
+  const all=cocktails,c=pick(all);
+  const opts=shuffle([c,...shuffle(all.filter(x=>x!==c&&x.base===c.base)).slice(0,1),...shuffle(all.filter(x=>x!==c)).slice(0,6)].filter((x,i,a)=>a.indexOf(x)===i).slice(0,4));
+  G.q={c,opts:shuffle(opts),ans:null};
+}
+function renderQuiz(){
+  if(!G.q)newQuiz();
+  const {c,opts,ans}=G.q;
+  const ings=parts(c.main.recipe).map(p=>cap(p.name)+(p.ml!=null?` · ${p.range?p.range.join("–"):p.ml} мл`:"")).map(x=>`<span class="chipb">${x}</span>`).join("");
+  pBody.innerHTML=`${modeTabs()}<div class="q-score"><span>Счёт <b>${G.score}</b> из ${G.n}</span><span>Серия <b>${G.streak}</b></span></div>
+  <div class="q-card"><div class="q-art">${glass(c.art,{thumb:true})}</div><div class="chips q-ings">${ings}</div>${ans?`<p class="q-fam">${c.family} · ${c.abv}°</p>`:`<p class="q-fam">Что это за коктейль?</p>`}</div>
+  <div class="q-opts">${opts.map(o=>`<button type="button" class="qo ${ans?(o===c?"ok":o===ans?"bad":"dim"):""}" data-pa="ans" data-i="${o.i}" ${ans?"disabled":""}>${o.name}</button>`).join("")}</div>`;
+  pNav.innerHTML=ans?`<button class="btn btn-ghost" type="button" data-pa="qopen">Рецепт</button><button class="btn btn-brass" type="button" data-pa="qnext">Дальше</button>`:`<button class="btn btn-ghost" type="button" data-pa="qnext">Пропустить</button>`;
+}
+
+panel.addEventListener("click",e=>{
+  const el=e.target.closest("[data-pa]");if(!el)return;const a=el.dataset.pa;
+  if(a==="next"||a==="prev"){bt.k=Math.max(0,Math.min(bt.steps.length-1,bt.k+(a==="next"?1:-1)));renderBt();pBody.scrollTop=0;return}
+  if(a==="timer"){e.stopPropagation();startTimer(el,+el.dataset.s);return}
+  if(a==="mult"){bt.mult=+el.dataset.n;bt.steps=btSteps(bt.c,bt.mult);renderBt();return}
+  if(a==="done"){closePanel();return}
+  if(a==="guests"){PT.guests=Math.max(1,Math.min(60,PT.guests+ +el.dataset.d));renderParty();return}
+  if(a==="per"){PT.per=Math.max(1,Math.min(10,PT.per+ +el.dataset.d));renderParty();return}
+  if(a==="sel"){const i=+el.dataset.i;PT.sel.has(i)?PT.sel.delete(i):PT.sel.add(i);const y=pBody.scrollTop;renderParty();pBody.scrollTop=y;return}
+  if(a==="pcopy"){const r=partyCalc();copy(`La Famiglia — вечеринка на ${PT.guests} (${r.total} ${plural(r.total,"коктейль","коктейля","коктейлей")})\nМеню: ${r.list.map(c=>c.name).join(", ")}\n\n`+r.rows.map(x=>`• ${x.name} — ${x.val}${x.sub?` (${x.sub})`:""}`).join("\n"),"Список скопирован");return}
+  if(a==="gmode"){G.mode=el.dataset.m;if(G.mode==="quiz")G.q=null;renderCards();return}
+  if(a==="draw"){G.k++;buzz(8);renderCards();return}
+  if(a==="reshuffle"){newDeck();buzz(12);return}
+  if(a==="ans"){const o=cocktails[+el.dataset.i];G.q.ans=o;G.n++;if(o===G.q.c){G.score++;G.streak++;buzz([15,40,15])}else{G.streak=0;buzz(120)}renderQuiz();return}
+  if(a==="qnext"){G.q=null;renderQuiz();return}
+  if(a==="qopen"){const i=G.q.c.i;closePanel(true);history.replaceState({sheet:i},"","#"+i);openSheet(i,false);return}
+});
+/* swipe between bartender steps / cards */
+(function(){let x0=null,y0=0;
+  pBody.addEventListener("touchstart",e=>{if(e.touches.length===1){x0=e.touches[0].clientX;y0=e.touches[0].clientY}},{passive:true});
+  pBody.addEventListener("touchend",e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0,dy=e.changedTouches[0].clientY-y0;x0=null;
+    if(Math.abs(dx)<60||Math.abs(dy)>Math.abs(dx))return;
+    if(pKind==="bartender"){bt.k=Math.max(0,Math.min(bt.steps.length-1,bt.k+(dx<0?1:-1)));renderBt()}
+    else if(pKind==="cards"&&G.mode==="orders"&&dx<0&&G.k<G.deck.length){G.k++;buzz(8);renderCards()}
+  });
+})();
 
 /* ---------- init ---------- */
 history.replaceState({},"",location.pathname+location.search);
