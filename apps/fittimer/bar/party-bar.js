@@ -967,7 +967,7 @@ function renderParty(){
 }
 
 /* ===== Don's cards (game) ===== */
-let G={tab:"decks",view:"decks",back:"decks",deck:null,pending:null,hard:store.get("gHard",false),cards:[],k:0,turn:0,
+let G={tab:"decks",view:"decks",back:"decks",deck:null,pending:null,hard:store.get("gHard",false),turns:Math.min(99,Math.max(20,+store.get("gTurns",33)||33)),cards:[],k:0,turn:0,
   players:store.get("gPlayers",[]),q:null,score:0,streak:0,n:0};
 let agreed=false;
 const deckById=id=>DECKS.find(d=>d.id===id);
@@ -981,11 +981,12 @@ function buildRamp(){
   const top=G.hard?6:5,ranks=G.hard?RAMP_RANKS.concat(RAMP_TOP):RAMP_RANKS;
   const pools={};for(let l=1;l<=top;l++)pools[l]=shuffle(DECKS.find(d=>d.lvl===l).cards.filter(c=>c[0]!=="Двойная карта"&&c[0]!=="Дон бережёт семью"));
   const take=l=>{for(let d=0;d<6;d++)for(const x of [l-d,l+d])if(x>=1&&x<=top&&pools[x].length)return {lvl:x,card:pools[x].pop()};return {lvl:l,card:WATER}};
-  return Array.from({length:33},(_,k)=>{
-    const t=1.3+(top-1.3)*k/32;let l=Math.floor(t)+(Math.random()<t%1?1:0);
-    if(k<32&&l>1&&Math.random()<.2)l--;
-    const c=(k===11||k===22)?{lvl:Math.floor(t),card:WATER}:take(Math.min(top,l));
-    c.rank=ranks[Math.min(ranks.length-1,Math.floor(k*ranks.length/33))];
+  const N=G.turns,last=N-1;
+  return Array.from({length:N},(_,k)=>{
+    const t=1.3+(top-1.3)*k/last;let l=Math.floor(t)+(Math.random()<t%1?1:0);
+    if(k<last&&l>1&&Math.random()<.2)l--;
+    const c=(k%11===10&&k<last)?{lvl:Math.floor(t),card:WATER}:take(Math.min(top,l));
+    c.rank=ranks[Math.min(ranks.length-1,Math.floor(k*ranks.length/N))];
     return c;
   });
 }
@@ -1016,6 +1017,18 @@ function roster(){
 function renderCards(){
   if(G.tab==="quiz")return renderQuiz();
   if(G.view==="play")return renderPlay();
+  if(G.view==="rampset"){
+    const top=G.hard?6:5,T=G.turns,mins=Math.round(T*1.5);
+    pBody.innerHTML=`<div class="g-bar lv${top}"><button type="button" class="g-back" data-pa="decks">← Колоды</button><span><b>Разгоняемся</b> · настройка</span></div>
+    <div class="gcard lv${top} rset">${HAT}<div class="g-kind">Сколько ходов играем?</div>
+      <div class="rs-num"><button type="button" class="ib" data-pa="turns" data-d="-5" aria-label="Минус 5">−5</button><b>${T}</b><button type="button" class="ib" data-pa="turns" data-d="5" aria-label="Плюс 5">+5</button></div>
+      <input type="range" id="rsRange" min="20" max="99" step="1" value="${T}" aria-label="Количество ходов">
+      <div class="rs-presets">${[20,33,50,75,99].map(n=>`<button type="button" class="pill ${n===T?"on":""}" data-pa="turnsset" data-n="${n}">${n}</button>`).join("")}</div>
+      <p class="rs-hint">Примерно ${mins<60?mins+" минут":Math.floor(mins/60)+" ч "+(mins%60?mins%60+" мин":"")}. Разгон растянется на все ${T} ${plural(T,"ход","хода","ходов")} — от лёгких карт до ${G.hard?"красной комнаты":"«Кровных уз»"}.</p>
+      <button type="button" class="pill hard ${G.hard?"on":""}" data-pa="hard" aria-pressed="${G.hard}">${G.hard?"Без тормозов: включено":"Без тормозов — до красного уровня"}</button></div>`;
+    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-brass" type="button" data-pa="rampgo">Начать</button>`;
+    return;
+  }
   if(G.view==="roster"){
     pBody.innerHTML=`<div class="g-bar"><button type="button" class="g-back" data-pa="rdone">← К игре</button><span>Состав можно менять прямо по ходу игры</span></div>${roster()}`;
     pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-brass" type="button" data-pa="rdone">Вернуться к игре</button>`;return;
@@ -1030,7 +1043,7 @@ function renderCards(){
   }
   const top=G.hard?6:5;
   pBody.innerHTML=`${tabs()}${roster()}
-  <button type="button" class="deck ramp lv${top}" data-pa="deck" data-id="ramp"><span class="d-lv">${HAT}</span><span class="d-t"><b>Разгоняемся</b><small>Карьера в Семье: карты из всех колод вперемешку, 33 хода от лёгких до ${G.hard?"красной комнаты":"«Кровных уз»"}</small></span>${heat(top)}</button>
+  <button type="button" class="deck ramp lv${top}" data-pa="deck" data-id="ramp"><span class="d-lv">${HAT}</span><span class="d-t"><b>Разгоняемся</b><small>Карьера в Семье: карты из всех колод вперемешку, ${G.turns} ${plural(G.turns,"ход","хода","ходов")} от лёгких до ${G.hard?"красной комнаты":"«Кровных уз»"}</small></span>${heat(top)}</button>
   <button type="button" class="pill hard ${G.hard?"on":""}" data-pa="hard" aria-pressed="${G.hard}">${G.hard?"Без тормозов: включено":"Без тормозов — до красного уровня"}</button>
   <div class="decks">${DECKS.map(d=>`<button type="button" class="deck lv${d.lvl}" data-pa="deck" data-id="${d.id}"><span class="d-lv">${d.lvl}</span><span class="d-t"><b>${d.name}${d.adult?` <em>18+</em>`:""}</b><small>${d.sub}</small></span>${heat(d.lvl)}</button>`).join("")}</div>`;
   pNav.hidden=true;
@@ -1042,7 +1055,7 @@ function renderPlay(){
   const [kind,txt]=done?["Конец колоды","Дон доволен вечером. Перемешать и сыграть ещё раз?"]:cur.card;
   const me=who(0),next=who(1);
   pBody.innerHTML=`<div class="g-bar lv${lvl}"><button type="button" class="g-back" data-pa="decks">← Колоды</button><span>${ramp?`<b>${(cur||G.cards[n-1]).rank}</b> · Разгоняемся`:d.name}</span><button type="button" class="g-pl" data-pa="roster" aria-label="Игроки"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.3 3-5 6-5s5.4 1.7 6 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.6.2 4.4 1.8 5 4.8"/></svg>${G.players.length||"+"}</button></div>
-  ${ramp?`<div class="bt-prog ramp-prog">${G.cards.map((c,j)=>`<i class="lv${c.lvl} ${j<=G.k?"f":""}"></i>`).join("")}</div>`:""}
+  ${ramp?`<div class="bt-prog ramp-prog" style="gap:${n>45?1:n>30?2:4}px">${G.cards.map((c,j)=>`<i class="lv${c.lvl} ${j<=G.k?"f":""}"></i>`).join("")}</div>`:""}
   <div class="gcard lv${lvl}" data-pa="${done?"reshuffle":"draw"}">${HAT}
     ${me&&!done?`<div class="g-who">Ход: <b>${esc(me)}</b></div>`:""}
     <div class="g-kind">${kind}${ramp&&!done?` · ${heat(lvl)}`:""}</div><p class="g-txt">${txt}</p>
@@ -1050,6 +1063,11 @@ function renderPlay(){
   pNav.hidden=false;
   pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="gprev" ${G.k?"":"disabled"}>Назад</button><button class="btn btn-brass" type="button" data-pa="${done?"reshuffle":"draw"}">${done?"Ещё раз":"Следующая карта"}</button>`;
 }
+panel.addEventListener("input",e=>{
+  if(e.target.id!=="rsRange")return;G.turns=+e.target.value;store.set("gTurns",G.turns);
+  const b=pBody.querySelector(".rs-num b");if(b)b.textContent=G.turns;
+});
+panel.addEventListener("change",e=>{if(e.target.id==="rsRange")renderCards()});
 panel.addEventListener("submit",e=>{
   if(e.target.id!=="rAdd")return;e.preventDefault();
   const inp=$("#rName"),v=inp.value.trim().replace(/\s+/g," ").slice(0,20);
@@ -1082,7 +1100,9 @@ panel.addEventListener("click",e=>{
   if(a==="sel"){const i=+el.dataset.i;PT.sel.has(i)?PT.sel.delete(i):PT.sel.add(i);const y=pBody.scrollTop;renderParty();pBody.scrollTop=y;return}
   if(a==="pcopy"){const r=partyCalc();copy(`La Famiglia — вечеринка на ${PT.guests} (${r.total} ${plural(r.total,"коктейль","коктейля","коктейлей")})\nМеню: ${r.list.map(c=>c.name).join(", ")}\n\n`+r.rows.map(x=>`• ${x.name} — ${x.val}${x.sub?` (${x.sub})`:""}`).join("\n"),"Список скопирован");return}
   if(a==="gtab"){G.tab=el.dataset.m;G.view="decks";if(G.tab==="quiz")G.q=null;pNav.hidden=G.tab!=="quiz";renderCards();return}
-  if(a==="deck"){startDeck(el.dataset.id);return}
+  if(a==="deck"){if(el.dataset.id==="ramp"){G.view="rampset";renderCards();pBody.scrollTop=0}else startDeck(el.dataset.id);return}
+  if(a==="turns"||a==="turnsset"){G.turns=Math.min(99,Math.max(20,a==="turns"?G.turns+ +el.dataset.d:+el.dataset.n));store.set("gTurns",G.turns);renderCards();return}
+  if(a==="rampgo"){startDeck("ramp");return}
   if(a==="hard"){G.hard=!G.hard;store.set("gHard",G.hard);renderCards();return}
   if(a==="agree"){agreed=true;startDeck(G.pending);return}
   if(a==="decks"){G.view="decks";renderCards();pBody.scrollTop=0;return}
