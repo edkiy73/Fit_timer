@@ -40,7 +40,7 @@ function qaGo(id,p){
 function qaRender(){const q='';const r=cur();
  $('#qaNav').innerHTML=QA_LIST().map(([g,items])=>{const it=items.filter(([id,l])=>!q||l.toLowerCase().includes(q)||id.toLowerCase().includes(q));return it.length?`<div class="qa-g">${g}</div>${it.map(([id,l,p],k)=>`<button class="qa-l ${r&&r.id===id&&JSON.stringify(p||{})===JSON.stringify(Object.fromEntries(Object.entries(r.p).filter(([k2])=>p&&k2 in p)))?'on':''}" data-qa="${id}" data-qp='${JSON.stringify(p||{})}'><code>${id[0]==='!'?'···':id}</code><span>${l}</span></button>`).join('')}`:'';}).join('');
  const th=themePref();
- $('#qaOpts').innerHTML=[[L('Техработы (админка)','Maintenance (admin)'),[['off',L('Выключены','Off')],['on',L('Включены','On')]],QA.maintenance?'on':'off','qaMaintenance'],[L('Язык','Language'),[['ru','RU'],['en','EN']],S.lang,'qaLang'],[L('Тема','Theme'),[['light',L('Светлая','Light')],['dark',L('Тёмная','Dark')],['auto',L('Авто','Auto')]],th,'qaTheme'],[L('Ширина','Width'),[['auto',L('Окно','Window')],['compact','320'],['phone','390'],['tablet',L('Планшет','Tablet')]],QA.frame,'qaFrame'],[L('Сеть','Network'),[['on',L('Есть','Online')],['off',L('Нет','Offline')]],QA.offline?'off':'on','qaNet'],[L('Фото-проверка','Photo check'),[['ok',L('Одобрить','Approve')],['no',L('Отклонить','Reject')]],'','qaPv'],[L('Подарок','Gift'),[['get',L('Получить Premium','Receive Premium')]],'','qaGift'],[L('Часы чата','Chat clock'),[['0',L('Сейчас','Now')],['15','+15 мин'],['120','+2 ч'],['1440','+24 ч']],String(Math.round((QA.clockShift||0)/60e3)),'qaClock'],[L('Аккаунт','Account'),[['full',L('Заполненный','Filled')],['pair',L('В паре','Couple')],['new',L('Новый','New')]],S.persona,'qaPersona'],['Premium',[['0',L('Нет','Off')],['1',L('Есть','On')]],S.me.premium?'1':'0','qaPrem'],[L('Знакомства в админке','Dating (admin)'),[['on',L('Включены','On')],['off',L('Скоро','Soon')]],QA.datingLive===false?'off':'on','qaDating'],[L('Логотип','Logo'),[['a','A'],['b','B'],['c','C']],QA.logo||'a','qaLogo'],[L('Мои запросы','My requests'),[['wait',L('Ждать ответа','Wait for answer')],['yes',L('Одобрять сразу','Approve at once')]],QA.autoApprove?'yes':'wait','qaAuto'],[L('Длина текстов','Text length'),[['off',L('Обычные','Normal')],['on',L('Длинные','Long')]],QA.long?'on':'off','qaLongT'],[L('Проверка возраста','Age check'),[['off',L('По дате рождения','By birth date')],['on',L('Обязательна','Required')]],QA.ageRequired?'on':'off','qaAge']].map(([t,items,v,act])=>`<div class="qa-opt"><span>${t}</span>${seg(items,v,act)}</div>`).join('');
+ $('#qaOpts').innerHTML=[[L('Техработы (админка)','Maintenance (admin)'),[['off',L('Выключены','Off')],['on',L('Включены','On')]],QA.maintenance?'on':'off','qaMaintenance'],[L('Язык','Language'),[['ru','RU'],['en','EN']],S.lang,'qaLang'],[L('Тема','Theme'),[['light',L('Светлая','Light')],['dark',L('Тёмная','Dark')],['auto',L('Авто','Auto')]],th,'qaTheme'],[L('Ширина','Width'),[['auto',L('Окно','Window')],['compact','320'],['phone','390'],['tablet',L('Планшет','Tablet')]],QA.frame,'qaFrame'],[L('Сеть','Network'),[['on',L('Есть','Online')],['off',L('Нет','Offline')]],QA.offline?'off':'on','qaNet'],[L('Фото-проверка','Photo check'),[['ok',L('Одобрить','Approve')],['no',L('Отклонить','Reject')]],'','qaPv'],[L('Подарок','Gift'),[['get',L('Получить Premium','Receive Premium')]],'','qaGift'],[L('Часы чата','Chat clock'),[['0',L('Сейчас','Now')],['15','+15 мин'],['120','+2 ч'],['1440','+24 ч']],String(Math.round((QA.clockShift||0)/60e3)),'qaClock'],[L('Аккаунт','Account'),[['full',L('Заполненный','Filled')],['pair',L('В паре','Couple')],['new',L('Новый','New')]],S.persona,'qaPersona'],['Premium',[['0',L('Нет','Off')],['1',L('Есть','On')]],S.me.premium?'1':'0','qaPrem'],[L('Знакомства в админке','Dating (admin)'),[['on',L('Включены','On')],['off',L('Скоро','Soon')]],QA.datingLive===false?'off':'on','qaDating'],[L('Логотип','Logo'),[['a','A'],['b','B'],['c','C']],QA.logo||'a','qaLogo'],[L('Мои запросы','My requests'),[['wait',L('Ждать ответа','Wait for answer')],['yes',L('Одобрять сразу','Approve at once')]],QA.autoApprove?'yes':'wait','qaAuto'],[L('Длина текстов','Text length'),[['off',L('Обычные','Normal')],['on',L('Длинные','Long')]],QA.long?'on':'off','qaLongT'],[L('Тексты без пробелов','Unbroken text'),[['off',L('Обычные','Normal')],['on',L('Без пробелов','No spaces')]],QA.nosp?'on':'off','qaNosp'],[L('Проверка возраста','Age check'),[['off',L('По дате рождения','By birth date')],['on',L('Обязательна','Required')]],QA.ageRequired?'on':'off','qaAge']].map(([t,items,v,act])=>`<div class="qa-opt"><span>${t}</span>${seg(items,v,act)}</div>`).join('');
  $('#qaHint').innerHTML=L('Коды подтверждения: <b>000000</b> — неверный, <b>999999</b> — истёк, любой другой — верный. Почта <b>limit@…</b> — лимит отправки. Ник <b>alex</b> занят.','Codes: <b>000000</b> wrong, <b>999999</b> expired, any other works. Email <b>limit@…</b> hits the send limit. Nickname <b>alex</b> is taken.')+`<button class="btn secondary mt12" data-act="qaRestart">${L('Начать регистрацию заново','Restart registration')}</button><span class="note">${L('Очистит текущую сессию прототипа и откроет приветствие.','Clears this prototype session and opens the welcome screen.')}</span>`;
 }
 ACT.qaRestart=()=>restartPrototype();
@@ -67,6 +67,7 @@ function qaApproveAll(){if(!S?.session)return 0;let n=0;const now=Date.now(),not
    The original seed values are kept and restored when the switch goes back to «Обычные». */
 const LONG={snap:null};
 function qaLong(on){
+ if(on&&NOSP.on)qaNosp(false);
  if(!LONG.snap)LONG.snap={people:Object.fromEntries(Object.entries(PEOPLE).map(([k,p])=>[k,{name:p.name,nameRu:p.nameRu,bio:p.bio}])),city:{...CITY},comm:Object.fromEntries(Object.entries(COMMUNITIES).map(([k,c])=>[k,{name:c.name,desc:c.desc}])),ev:Object.fromEntries(Object.entries(EVENTS).map(([k,e])=>[k,e.title])),disc:(S.discussions||[]).map(d=>d.title)};
  const o=LONG.snap;QA.long=on;
  if(!on){Object.entries(o.people).forEach(([k,v])=>{if(PEOPLE[k])Object.assign(PEOPLE[k],v);});Object.assign(CITY,o.city);Object.entries(o.comm).forEach(([k,v])=>{if(COMMUNITIES[k])Object.assign(COMMUNITIES[k],v);});Object.entries(o.ev).forEach(([k,v])=>{if(EVENTS[k])EVENTS[k].title=v;});(S.discussions||[]).forEach((d,i)=>{if(o.disc[i]!=null)d.title=o.disc[i];});if(LONG.me){Object.assign(S.me,LONG.me);LONG.me=null;}refresh();return;}
@@ -79,6 +80,85 @@ function qaLong(on){
  Object.values(EVENTS).forEach(e=>{e.title={ru:'Большой вечер знакомства для новичков: верёвка, разговоры, правила и согласие'.slice(0,80),en:'Big newcomers evening: rope, conversations, house rules and consent basics'.slice(0,80)};});
  (S.discussions||[]).forEach(d=>{d.title={ru:'Как вы договариваетесь о стоп-словах и сигналах, если партнёр новичок и стесняется говорить прямо?'.slice(0,120),en:'How do you agree on safewords and signals when your partner is new and shy about saying things directly?'.slice(0,120)};});
  refresh();}
+/* «Тексты без пробелов» (QA.nosp, ?nospace=1): every user-visible free-text field gets ONE unbroken string of the field's maximum length
+   (limits come from the forms: nickname 20, bio 500, community name 50, event title 80, discussion title 120, comment 1000, chat message 2000 …;
+   fields with no limit get 600). Cyrillic, Latin, digits, wide capitals, a URL and an e-mail rotate across fields.
+   Data only: ids, routes, enums, photo URLs and timestamps are never touched. Nothing is stored — the original value of every field is kept
+   in NOSP.log and put back on «Обычные». Content created while the mode is on (new posts, replies, chat answers…) is substituted too,
+   unless the tester already typed an unbroken string of a comparable length. Re-applied before every screen/sheet render, so lazily created data is covered. */
+const NOSP={on:false,log:[],seen:new WeakMap(),byPut:new Map(),n:0};
+const NOSP_NOLIMIT=600;
+const NOSP_CHUNK={cyr:'Непрерывнаястрокабезпробеловсверхдлинноеслово',lat:'Unbreakablestringwithoutanyspacesoverflowcheck',mix:'ПриветWorldДлинноеСловоLongWord2026Ёё',num:'01234567890123456789',wide:'WМШЩWМШЩЖЫWMШЩ'};
+function nospGen(tag,lim,n,nick){
+ const rep=(c,k)=>c.repeat(Math.ceil(k/c.length)+1).slice(0,k);
+ const id=n.toString(36); // every generated value is unique, so copies made from it can be traced back and restored
+ if(nick){const v=[()=>rep('alexandrina.maximila',lim),()=>rep('W',lim),()=>rep('m_W.',lim),()=>rep(NOSP_CHUNK.num,lim)];return (id+v[n%v.length]()).slice(0,lim);}
+ const flavors=['cyr','lat','mix','url','email','num','wide'];let f=flavors[n%flavors.length];
+ if(lim<40&&(f==='url'||f==='email'))f='lat';
+ const pre=tag+id+':',room=Math.max(1,lim-pre.length);
+ let body;
+ if(f==='url'){const head='https://example.com/';body=room>head.length+20?head+rep('Unbreakablepathsegment0123456789?q=ПриветWorld&x=1',room-head.length):rep(NOSP_CHUNK.lat,room);}
+ else if(f==='email'){const dom='@verylongsubdomainnamewithoutspaces.example.org';body=room>dom.length+20?rep('first.last.nospaces.',room-dom.length)+dom:rep(NOSP_CHUNK.lat,room);}
+ else body=rep(NOSP_CHUNK[f],room);
+ return (pre+body).slice(0,lim);
+}
+/* a value the tester typed already looks like the stress string — leave it alone */
+const nospTyped=(v,lim)=>v!==''&&!/\s/.test(v)&&v.length>=Math.min(Math.round(lim*.6),100);
+function nospSet(h,k,lim,tag,nick){
+ const cur=h[k];if(typeof cur!=='string'||cur===''||cur==='—')return;
+ let m=NOSP.seen.get(h);if(!m)NOSP.seen.set(h,m={});
+ const e=m[k];if(e&&cur===e.put)return;
+ if(nospTyped(cur,lim))return;
+ const put=nospGen(tag,lim,NOSP.n++,nick);
+ const rec={h,k,orig:cur,put};m[k]=rec;NOSP.log.push(rec);NOSP.byPut.set(put,cur);h[k]=put;
+}
+/** a text field that is either a plain string or {ru,en}; lim may be a number or [ru,en] */
+function nospSub(h,k,lim,tag,nick){
+ if(!h)return;const v=h[k];if(v==null)return;
+ if(typeof v==='string')nospSet(h,k,lim,tag,nick);
+ else if(typeof v==='object'){for(const l of ['ru','en'])if(typeof v[l]==='string')nospSet(v,l,lim,tag+l,nick);}
+}
+const nospEach=(list,f)=>{if(Array.isArray(list))list.forEach(f);else if(list&&typeof list==='object')Object.values(list).forEach(f);};
+function nospApply(){
+ if(!NOSP.on||typeof S==='undefined'||!S)return;
+ const N=NOSP_NOLIMIT;
+ Object.entries(PEOPLE).forEach(([id,p])=>{const lim=p.pair?60:20;nospSub(p,'name',lim,'nick',!p.pair);nospSub(p,'nameRu',60,'nick');nospSub(p,'bio',500,'bio');nospSub(p,'privText',1000,'priv');nospSub(p,'pairNote',100,'pair');});
+ Object.entries(CITY).forEach(([id,c])=>{if(id==='online'||!c)return;nospSub(c,'ru',60,'city');nospSub(c,'en',60,'city');});
+ Object.values(COMMUNITIES).forEach(c=>{nospSub(c,'name',50,'comm');nospSub(c,'desc',500,'cdesc');const rl=(c.rules||[]).length||1;nospEach(c.rules,r=>{nospSub(r,'ru',Math.floor(1000/rl),'rule');nospSub(r,'en',Math.floor(1000/rl),'rule');});nospEach(c.questions,q=>{nospSub(q,'ru',120,'cq');nospSub(q,'en',120,'cq');});});
+ const ev=e=>{if(!e)return;nospSub(e,'title',80,'ev');nospSub(e,'desc',1500,'edesc');nospSub(e,'area',N,'area');nospSub(e,'venue',N,'venue');nospSub(e,'price',N,'price');nospSub(e,'cancelled',300,'cancel');nospSet(e,'link',N,'link');nospSet(e,'external',N,'ext');
+  const rl=(e.reqs||[]).length||1;nospEach(e.reqs,r=>{nospSub(r,'ru',Math.floor(500/rl),'req');nospSub(r,'en',Math.floor(500/rl),'req');});
+  nospEach(e.q,q=>{nospSub(q,'ru',120,'eq');nospSub(q,'en',120,'eq');});nospEach(e.apps,a=>nospSub(a,'answer',300,'ans'));nospEach(e.announce,a=>nospSub(a,'text',500,'ann'));};
+ Object.values(EVENTS).forEach(ev);Object.values(S.extraEvents||{}).forEach(ev);
+ const m=S.me;if(m){nospSet(m,'nick',20,'nick',true);nospSub(m,'bio',500,'bio');nospSub(m,'privText',1000,'priv');nospSet(m,'email',120,'mail');nospEach(m.journal,j=>nospSub(j,'text',1000,'jrn'));}
+ const post=p=>{nospSub(p,'text',1000,'post');nospSub(p,'pollQ',200,'pollq');nospEach(p.poll,o=>Array.isArray(o)?nospSub(o,0,80,'opt'):nospSub(o,'t',80,'opt'));nospEach(p.comments,c=>nospSub(c,'text',1000,'cmt'));};
+ (S.posts||[]).forEach(post);(S.myPosts||[]).forEach(post);Object.values(S.postEdits||{}).forEach(x=>x&&typeof x==='object'&&post(x));
+ (S.discussions||[]).forEach(d=>{nospSub(d,'title',120,'disc');nospSub(d,'text',3000,'dtext');nospEach(d.replies,r=>nospSub(r,'text',1000,'rep'));});
+ Object.values(S.threads||{}).forEach(t=>nospEach(t.msgs,x=>nospSub(x,'text',2000,'msg')));
+ (S.updates||[]).forEach(u=>nospSub(u,'text',500,'upd'));
+ Object.values(S.communityRequests||{}).forEach(l=>nospEach(l,q=>nospSub(q,'answer',300,'join')));
+ const pr=S.pair;if(pr){nospSub(pr,'name',60,'pname');nospSub(pr,'desc',500,'pdesc');nospSub(pr,'rules',1000,'prules');if(pr.proposal)nospSub(pr.proposal,'text',500,'prop');
+  const pp=pr.profile;if(pp){nospSub(pp,'name',60,'pname');nospSub(pp,'bio',500,'bio');nospSub(pp,'privText',1000,'priv');}}
+ if(S.pairInvite)nospSet(S.pairInvite,'nick',20,'nick',true);
+ (S.searchRecent||[]).forEach((q,i,a)=>nospSet(a,i,200,'q'));
+}
+/* copies of substituted values made by the prototype itself (a couple profile cloned from the couple name, drafts …) are put back too */
+function nospSweep(o,seen=new WeakSet(),d=0){
+ if(!o||typeof o!=='object'||d>9||seen.has(o))return;const pr=Object.getPrototypeOf(o);if(pr!==Object.prototype&&pr!==Array.prototype&&pr!==null)return;seen.add(o);
+ for(const k of Object.keys(o)){const v=o[k];if(typeof v==='string'){if(NOSP.byPut.has(v))o[k]=NOSP.byPut.get(v);}else nospSweep(v,seen,d+1);}
+}
+function qaNosp(on){
+ if(on&&QA.long)qaLong(false);
+ if(!NOSP.on===!on)return;
+ NOSP.on=QA.nosp=!!on;
+ if(on){nospApply();}
+ else{NOSP.log.forEach(r=>{if(r.h[r.k]===r.put)r.h[r.k]=r.orig;});
+  nospSweep(S);[PEOPLE,CITY,COMMUNITIES,EVENTS].forEach(x=>nospSweep(x));
+  NOSP.log=[];NOSP.seen=new WeakMap();NOSP.byPut=new Map();NOSP.n=0;}
+ refresh();resheet();}
+/* every screen / sheet render re-applies the mode first, so data created lazily or by interaction is covered */
+Object.values(SC).forEach(sc=>{if(!sc||!sc.render||sc.nospHook)return;const r0=sc.render;sc.render=function(...a){NOSP.on&&nospApply();return r0.apply(this,a);};sc.nospHook=1;});
+{const ds0=drawSheet;drawSheet=function(){NOSP.on&&nospApply();return ds0();};}
+FT_QA.nospace=on=>qaNosp(on!==false);FT_QA.nospStat=()=>({on:NOSP.on,fields:NOSP.log.length});
 window.QA_SYNC=()=>{if($('#qa.open'))qaRender();};
 const qa=$('#qa'),qaScrim=$('#qaScrim');
 window.QA_CLOSE=()=>{qa.classList.remove('open');qaScrim.classList.remove('on');qa.setAttribute('aria-hidden','true');$('#qaFab').focus();};
@@ -88,7 +168,7 @@ qa.addEventListener('click',e=>{
  const b=e.target.closest('[data-qa]');if(b){qaGo(b.dataset.qa,JSON.parse(b.dataset.qp||'{}'));if(matchMedia('(max-width:900px)').matches)QA_CLOSE();else qaRender();return;}
  const a=e.target.closest('[data-act]');if(!a)return;e.stopPropagation();const v=a.dataset.v;
  if(a.dataset.act==='qaRestart'){ACT.qaRestart();return;}
- ({qaMaintenance:()=>{QA.maintenance=v==='on';if(QA.maintenance){ACT.matchClose?.();$('#matchLayer').innerHTML='';}closeSheet(true);S.ui.ask?.();closeViewer();refresh();},qaLang:()=>{S.lang=v;document.documentElement.lang=v;refresh();resheet();},qaTheme:()=>applyTheme(v),qaFrame:()=>{QA.frame=v;document.body.classList.toggle('frame',v!=='auto');document.body.classList.toggle('tablet',v==='tablet');document.body.classList.toggle('compact',v==='compact');refresh();},qaPv:()=>pvResolve(v==='ok'),qaGift:()=>giftReceive(),qaClock:()=>{QA.clockShift=(+v)*60e3;refresh();toast(L('Модельное время чата сдвинуто — только для проверки исчезающих фото','Chat model time shifted — only for testing disappearing media'));},qaNet:()=>{QA.offline=v==='off';refresh();toast(QA.offline?L('Режим «нет сети»: действия будут падать с ошибкой','Offline mode: actions will fail with an error'):L('Сеть восстановлена','Back online'),{type:QA.offline?'warn':'ok'});},qaPersona:()=>{signIn(v);toast(v==='new'?L('Новый пустой аккаунт','New empty account'):v==='pair'?L('Alex в паре с Kira — два отдельных аккаунта','Alex in a couple with Kira — two separate accounts'):L('Заполненный аккаунт Alex','Filled account: Alex'),{type:'ok'});},qaPrem:()=>{S.me.premium=v==='1';refresh();},qaDating:()=>{QA.datingLive=v==='on';refresh();},qaLogo:()=>{QA.logo=v;renderSide();refresh();},qaAge:()=>{QA.ageRequired=v==='on';refresh();},qaLongT:()=>qaLong(v==='on'),qaAuto:()=>{QA.autoApprove=v==='yes';if(QA.autoApprove)qaApproveAll();}}[a.dataset.act]||(()=>{}))();
+ ({qaMaintenance:()=>{QA.maintenance=v==='on';if(QA.maintenance){ACT.matchClose?.();$('#matchLayer').innerHTML='';}closeSheet(true);S.ui.ask?.();closeViewer();refresh();},qaLang:()=>{S.lang=v;document.documentElement.lang=v;refresh();resheet();},qaTheme:()=>applyTheme(v),qaFrame:()=>{QA.frame=v;document.body.classList.toggle('frame',v!=='auto');document.body.classList.toggle('tablet',v==='tablet');document.body.classList.toggle('compact',v==='compact');refresh();},qaPv:()=>pvResolve(v==='ok'),qaGift:()=>giftReceive(),qaClock:()=>{QA.clockShift=(+v)*60e3;refresh();toast(L('Модельное время чата сдвинуто — только для проверки исчезающих фото','Chat model time shifted — only for testing disappearing media'));},qaNet:()=>{QA.offline=v==='off';refresh();toast(QA.offline?L('Режим «нет сети»: действия будут падать с ошибкой','Offline mode: actions will fail with an error'):L('Сеть восстановлена','Back online'),{type:QA.offline?'warn':'ok'});},qaPersona:()=>{signIn(v);toast(v==='new'?L('Новый пустой аккаунт','New empty account'):v==='pair'?L('Alex в паре с Kira — два отдельных аккаунта','Alex in a couple with Kira — two separate accounts'):L('Заполненный аккаунт Alex','Filled account: Alex'),{type:'ok'});},qaPrem:()=>{S.me.premium=v==='1';refresh();},qaDating:()=>{QA.datingLive=v==='on';refresh();},qaLogo:()=>{QA.logo=v;renderSide();refresh();},qaAge:()=>{QA.ageRequired=v==='on';refresh();},qaLongT:()=>qaLong(v==='on'),qaNosp:()=>qaNosp(v==='on'),qaAuto:()=>{QA.autoApprove=v==='yes';if(QA.autoApprove)qaApproveAll();}}[a.dataset.act]||(()=>{}))();
  qaRender();
 },true);
 

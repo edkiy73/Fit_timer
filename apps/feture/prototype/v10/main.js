@@ -15,3 +15,4 @@ startNavHistory();
 // ?long=1 — review with worst-case text lengths (same as «Длина текстов → Длинные» in the V10 panel)
 try{if(new URLSearchParams(location.search).get('long')==='1')qaLong(true);}catch(e){}
 
+try{if(new URLSearchParams(location.search).get('nospace')==='1')qaNosp(true);}catch(e){}
