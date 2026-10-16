@@ -425,6 +425,26 @@ svg{display:block}
 .g-rules{margin:0;padding:0 0 0 18px;display:grid;gap:10px;font-size:15px;line-height:1.45;color:var(--bone2)}
 .g-rules b{color:#ffb3ba}
 
+/* players queue */
+.roster{margin:0 0 14px;padding:12px 14px;border-radius:18px;background:var(--ink2);border:1px solid var(--line2)}
+.r-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px}
+.r-h b{font-family:var(--serif);font-weight:400;font-size:18px}
+.r-h small{font-size:11.5px;color:var(--smoke);text-align:right}
+.r-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.r-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 6px 5px 6px;border-radius:12px;background:var(--ink4);border:1px solid var(--line);font-size:13px;font-weight:700}
+.r-chip i{font-style:normal;width:20px;height:20px;border-radius:7px;display:grid;place-items:center;font-size:11px;background:var(--brassdim);color:var(--brass2)}
+.r-chip button{width:22px;height:22px;border-radius:50%;color:var(--smoke);font-size:16px;line-height:1}
+.r-add{display:flex;gap:8px}
+.r-add input{flex:1;min-width:0;height:42px;padding:0 12px;border-radius:12px;background:var(--ink3);border:1px solid var(--line);outline:0;font-size:16px}
+.r-add input:focus{border-color:rgba(201,163,91,.5)}
+.r-add .ib{height:42px}
+.r-acts{display:flex;gap:16px;margin-top:10px}
+.g-pl{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 10px;border-radius:10px;background:var(--ink3);border:1px solid var(--line2);font-size:12px;font-weight:800;color:var(--bone2);flex:none}
+.g-pl svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
+.g-who{position:absolute;top:20px;left:0;right:0;text-align:center;font-size:13px;color:var(--bone2)}
+.g-who b{font-family:var(--serif);font-weight:400;font-size:22px;color:rgb(var(--lv));margin-left:4px}
+.g-kind .heat{vertical-align:-1px;margin-left:4px}
+
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .grain{display:none}

@@ -967,35 +967,59 @@ function renderParty(){
 }
 
 /* ===== Don's cards (game) ===== */
-let G={tab:"decks",view:"decks",deck:null,pending:null,hard:store.get("gHard",false),cards:[],k:0,q:null,score:0,streak:0,n:0};
+let G={tab:"decks",view:"decks",back:"decks",deck:null,pending:null,hard:store.get("gHard",false),cards:[],k:0,turn:0,
+  players:store.get("gPlayers",[]),q:null,score:0,streak:0,n:0};
 let agreed=false;
 const deckById=id=>DECKS.find(d=>d.id===id);
+const esc=s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const HAT=`<svg class="g-corner" viewBox="0 0 24 24"><path d="M2.5 15.5c4 2.6 15 2.6 19 0"/><path d="M5.5 15c0-4.5 1.6-9 4-9 1.1 0 1.6 1.2 2.5 1.2S13.4 6 14.5 6c2.4 0 4 4.5 4 9"/></svg>`;
+const WATER=["Дон бережёт семью","Пауза: все пьют воду. Потом продолжаем."];
 function openCards(){openPanel("cards","Карты Дона");G.tab="decks";G.view="decks";renderCards()}
+/* «Разгоняемся»: каждый ход — карта из случайной колоды вокруг «температуры» хода,
+   температура плавно растёт от лёгкой к верхнему уровню; иногда даём передышку на уровень ниже. */
 function buildRamp(){
-  const lv=G.hard?[2,3,4,5,6]:[2,3,4,5];
-  const pools={};lv.forEach(l=>pools[l]=shuffle(DECKS.find(d=>d.lvl===l).cards.filter(c=>c[0]!=="Двойная карта")));
-  return Array.from({length:33},(_,k)=>{const l=lv[Math.min(lv.length-1,Math.floor(k*lv.length/33))];return {lvl:l,card:pools[l].pop()}});
+  const top=G.hard?6:5,ranks=G.hard?RAMP_RANKS.concat(RAMP_TOP):RAMP_RANKS;
+  const pools={};for(let l=1;l<=top;l++)pools[l]=shuffle(DECKS.find(d=>d.lvl===l).cards.filter(c=>c[0]!=="Двойная карта"&&c[0]!=="Дон бережёт семью"));
+  const take=l=>{for(let d=0;d<6;d++)for(const x of [l-d,l+d])if(x>=1&&x<=top&&pools[x].length)return {lvl:x,card:pools[x].pop()};return {lvl:l,card:WATER}};
+  return Array.from({length:33},(_,k)=>{
+    const t=1.3+(top-1.3)*k/32;let l=Math.floor(t)+(Math.random()<t%1?1:0);
+    if(k<32&&l>1&&Math.random()<.2)l--;
+    const c=(k===11||k===22)?{lvl:Math.floor(t),card:WATER}:take(Math.min(top,l));
+    c.rank=ranks[Math.min(ranks.length-1,Math.floor(k*ranks.length/33))];
+    return c;
+  });
 }
 function startDeck(id){
   const adult=id==="ramp"||deckById(id).adult;
   if(adult&&!agreed){G.pending=id;G.view="rules";return renderCards()}
-  G.deck=id;G.k=0;G.view="play";
+  G.deck=id;G.k=0;G.turn=0;G.view="play";
   G.cards=id==="ramp"?buildRamp():shuffle(deckById(id).cards).map(card=>({lvl:deckById(id).lvl,card}));
   renderCards();pBody.scrollTop=0;
 }
 function drawNext(){
   if(G.k>=G.cards.length)return;
-  const prev=G.cards[G.k].lvl;G.k++;buzz(8);
+  const prev=G.cards[G.k];G.k++;G.turn++;buzz(8);
   const nx=G.cards[G.k];
-  if(G.deck==="ramp"&&nx&&nx.lvl>prev){toast(`Повышение в семье: ${RANKS[nx.lvl]}`);buzz([20,50,20,50,40])}
+  if(G.deck==="ramp"&&nx&&nx.rank!==prev.rank){toast(`Повышение в семье: ${nx.rank}`);buzz([20,50,20,50,40])}
   renderCards();
 }
+const who=off=>{const n=G.players.length;return n?G.players[((G.turn+off)%n+n)%n]:null};
 const heat=l=>`<span class="heat lv${l}" aria-label="Уровень ${l} из 6">${[1,2,3,4,5,6].map(i=>`<i class="${i<=l?"f":""}"></i>`).join("")}</span>`;
 function tabs(){return `<div class="g-tabs"><button type="button" class="pill ${G.tab==="decks"?"on":""}" data-pa="gtab" data-m="decks">Колоды</button><button type="button" class="pill ${G.tab==="quiz"?"on":""}" data-pa="gtab" data-m="quiz">Угадай коктейль</button></div>`}
+function roster(){
+  const p=G.players;
+  return `<div class="roster"><div class="r-h"><b>Очередь игроков</b><small>${p.length?p.length+" "+plural(p.length,"игрок","игрока","игроков"):"необязательно — карта сама скажет, чей ход"}</small></div>
+  ${p.length?`<div class="r-list">${p.map((n,i)=>`<span class="r-chip"><i>${i+1}</i>${esc(n)}<button type="button" data-pa="rdel" data-i="${i}" aria-label="Убрать ${esc(n)}">×</button></span>`).join("")}</div>`:""}
+  <form class="r-add" id="rAdd"><input id="rName" maxlength="20" placeholder="Имя игрока" autocomplete="off" enterkeyhint="done"><button type="submit" class="ib">Добавить</button></form>
+  ${p.length>1?`<div class="r-acts"><button type="button" class="g-back" data-pa="rshuf">Перемешать очередь</button><button type="button" class="g-back" data-pa="rclear">Очистить</button></div>`:""}</div>`;
+}
 function renderCards(){
   if(G.tab==="quiz")return renderQuiz();
   if(G.view==="play")return renderPlay();
+  if(G.view==="roster"){
+    pBody.innerHTML=`<div class="g-bar"><button type="button" class="g-back" data-pa="rdone">← К игре</button><span>Состав можно менять прямо по ходу игры</span></div>${roster()}`;
+    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-brass" type="button" data-pa="rdone">Вернуться к игре</button>`;return;
+  }
   if(G.view==="rules"){
     pBody.innerHTML=`<div class="gcard lv5 rules"><div class="g-kind">Закон семьи · 18+</div>
       <p class="g-txt">Дальше будет жарче.</p>
@@ -1005,8 +1029,8 @@ function renderCards(){
     return;
   }
   const top=G.hard?6:5;
-  pBody.innerHTML=`${tabs()}<p class="p-lead">Положите телефон в центр. По очереди тяните карту и выполняйте. Колоды идут от тёплого к горячему.</p>
-  <button type="button" class="deck ramp lv${top}" data-pa="deck" data-id="ramp"><span class="d-lv">${HAT}</span><span class="d-t"><b>Карьера в Семье</b><small>Разгоняемся: 33 хода от пиччотто до ${G.hard?"Дона — красный уровень":"консильери"}</small></span>${heat(top)}</button>
+  pBody.innerHTML=`${tabs()}${roster()}
+  <button type="button" class="deck ramp lv${top}" data-pa="deck" data-id="ramp"><span class="d-lv">${HAT}</span><span class="d-t"><b>Разгоняемся</b><small>Карьера в Семье: карты из всех колод вперемешку, 33 хода от лёгких до ${G.hard?"красной комнаты":"«Кровных уз»"}</small></span>${heat(top)}</button>
   <button type="button" class="pill hard ${G.hard?"on":""}" data-pa="hard" aria-pressed="${G.hard}">${G.hard?"Без тормозов: включено":"Без тормозов — до красного уровня"}</button>
   <div class="decks">${DECKS.map(d=>`<button type="button" class="deck lv${d.lvl}" data-pa="deck" data-id="${d.id}"><span class="d-lv">${d.lvl}</span><span class="d-t"><b>${d.name}${d.adult?` <em>18+</em>`:""}</b><small>${d.sub}</small></span>${heat(d.lvl)}</button>`).join("")}</div>`;
   pNav.hidden=true;
@@ -1016,14 +1040,21 @@ function renderPlay(){
   const cur=done?null:G.cards[G.k];
   const lvl=cur?cur.lvl:(ramp?(G.hard?6:5):d.lvl);
   const [kind,txt]=done?["Конец колоды","Дон доволен вечером. Перемешать и сыграть ещё раз?"]:cur.card;
-  pBody.innerHTML=`<div class="g-bar lv${lvl}"><button type="button" class="g-back" data-pa="decks">← Колоды</button><span>${ramp?`<b>${RANKS[lvl]}</b> · Карьера в Семье`:d.name}</span>${heat(lvl)}</div>
+  const me=who(0),next=who(1);
+  pBody.innerHTML=`<div class="g-bar lv${lvl}"><button type="button" class="g-back" data-pa="decks">← Колоды</button><span>${ramp?`<b>${(cur||G.cards[n-1]).rank}</b> · Разгоняемся`:d.name}</span><button type="button" class="g-pl" data-pa="roster" aria-label="Игроки"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.3 3-5 6-5s5.4 1.7 6 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.6.2 4.4 1.8 5 4.8"/></svg>${G.players.length||"+"}</button></div>
   ${ramp?`<div class="bt-prog ramp-prog">${G.cards.map((c,j)=>`<i class="lv${c.lvl} ${j<=G.k?"f":""}"></i>`).join("")}</div>`:""}
   <div class="gcard lv${lvl}" data-pa="${done?"reshuffle":"draw"}">${HAT}
-    <div class="g-kind">${kind}</div><p class="g-txt">${txt}</p>
-    <div class="g-foot">${done?"":`${G.k+1} / ${n} · нажми — следующая`}</div></div>`;
+    ${me&&!done?`<div class="g-who">Ход: <b>${esc(me)}</b></div>`:""}
+    <div class="g-kind">${kind}${ramp&&!done?` · ${heat(lvl)}`:""}</div><p class="g-txt">${txt}</p>
+    <div class="g-foot">${done?"":`${G.k+1} / ${n}${next&&G.players.length>1?` · дальше: ${esc(next)}`:" · нажми — следующая"}`}</div></div>`;
   pNav.hidden=false;
   pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="gprev" ${G.k?"":"disabled"}>Назад</button><button class="btn btn-brass" type="button" data-pa="${done?"reshuffle":"draw"}">${done?"Ещё раз":"Следующая карта"}</button>`;
 }
+panel.addEventListener("submit",e=>{
+  if(e.target.id!=="rAdd")return;e.preventDefault();
+  const inp=$("#rName"),v=inp.value.trim().replace(/\s+/g," ").slice(0,20);
+  if(!v)return;G.players.push(v);store.set("gPlayers",G.players);renderCards();const i2=$("#rName");if(i2)i2.focus();
+});
 function newQuiz(){
   const all=cocktails,c=pick(all);
   const opts=shuffle([c,...shuffle(all.filter(x=>x!==c&&x.base===c.base)).slice(0,1),...shuffle(all.filter(x=>x!==c)).slice(0,6)].filter((x,i,a)=>a.indexOf(x)===i).slice(0,4));
@@ -1056,7 +1087,12 @@ panel.addEventListener("click",e=>{
   if(a==="agree"){agreed=true;startDeck(G.pending);return}
   if(a==="decks"){G.view="decks";renderCards();pBody.scrollTop=0;return}
   if(a==="draw"){drawNext();return}
-  if(a==="gprev"){if(G.k>0){G.k--;renderCards()}return}
+  if(a==="gprev"){if(G.k>0){G.k--;G.turn--;renderCards()}return}
+  if(a==="roster"){G.curName=who(0);G.view="roster";renderCards();return}
+  if(a==="rdone"){const i=G.players.indexOf(G.curName);if(i>=0)G.turn=i;G.view="play";renderCards();return}
+  if(a==="rdel"){G.players.splice(+el.dataset.i,1);store.set("gPlayers",G.players);renderCards();return}
+  if(a==="rshuf"){G.players=shuffle(G.players);G.turn=0;store.set("gPlayers",G.players);renderCards();return}
+  if(a==="rclear"){G.players=[];store.set("gPlayers",G.players);renderCards();return}
   if(a==="reshuffle"){startDeck(G.deck);buzz(12);return}
   if(a==="ans"){const o=cocktails[+el.dataset.i];G.q.ans=o;G.n++;if(o===G.q.c){G.score++;G.streak++;buzz([15,40,15])}else{G.streak=0;buzz(120)}renderQuiz();return}
   if(a==="qnext"){G.q=null;renderQuiz();return}
@@ -1068,7 +1104,7 @@ panel.addEventListener("click",e=>{
   pBody.addEventListener("touchend",e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0,dy=e.changedTouches[0].clientY-y0;x0=null;
     if(Math.abs(dx)<60||Math.abs(dy)>Math.abs(dx))return;
     if(pKind==="bartender"){bt.k=Math.max(0,Math.min(bt.steps.length-1,bt.k+(dx<0?1:-1)));renderBt()}
-    else if(pKind==="cards"&&G.tab==="decks"&&G.view==="play"){if(dx<0)drawNext();else if(G.k>0){G.k--;renderCards()}}
+    else if(pKind==="cards"&&G.tab==="decks"&&G.view==="play"){if(dx<0)drawNext();else if(G.k>0){G.k--;G.turn--;renderCards()}}
   });
 })();
 
