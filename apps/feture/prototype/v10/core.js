@@ -145,7 +145,7 @@ function pairNotify(type,key,extra={}){const P=S.pair;if(!P)return;P.notificatio
 /* Social author: one session choice; owned couple state extends the existing pair. */
 const authorId=()=>S.author==='couple'?'couple':'me';
 const activePair=()=>S.pair?.status==='active';
-const actionAuthor=()=>cur()?.id==='P07'&&cur().p.owner==='couple'?'couple':['H02','H03','H04','H05'].includes(cur()?.id)?(cur().p.actor||'me'):(cur()?.p.actor||authorId());
+const actionAuthor=()=>(cur()?.id==='Q05'||cur()?.id==='P07'&&cur().p.owner==='couple')?'couple':['H02','H03','H04','H05'].includes(cur()?.id)?(cur().p.actor||'me'):(cur()?.p.actor||authorId());
 const authorProfile=(id=actionAuthor())=>id==='couple'?coupleProfile():S.me;
 function social(id=actionAuthor()){
  if(id==='me')return S;
@@ -160,8 +160,8 @@ function authorGuard(id=actionAuthor()){if(authorAllowed(id))return true;toast(L
 const authorTicket=(id=actionAuthor())=>({id,state:S,session:S.session,pair:S.pair,safety:S.pair?.safetyEpoch||0});
 const validAuthor=t=>S===t.state&&S.session===t.session&&authorAllowed(t.id)&&(t.id!=='couple'||S.pair===t.pair&&(S.pair.safetyEpoch||0)===t.safety);
 function authorPicker(fixed){if(!activePair())return '';const id=fixed||actionAuthor();return `<span class="author-picker" data-author-picker ${fixed?'data-fixed-author="'+fixed+'"':''}><button type="button" class="author-trigger" ${fixed?'disabled':'data-act="authorMenu"'} aria-label="${L('Автор','Author')}: ${esc(pname(id))}" aria-haspopup="menu" title="${esc(pname(id))}">${av(id,'xs')}<span>${id==='me'?L('Я','Me'):L('Мы','Us')}</span>${fixed?'':I.down}</button></span>`;}
-let authorMenuAction=null;
-function closeAuthorMenu(){authorMenuAction=null;const menu=$('#authorMenu');if(!menu?.remove)return false;menu.remove();$$('[data-act="authorMenu"]').forEach(el=>el.setAttribute('aria-expanded','false'));return true;}
+let authorMenuAction=null,authorMenuOpener=null;
+function closeAuthorMenu(){authorMenuAction=null;const menu=$('#authorMenu');if(!menu?.remove)return false;menu.remove();$$('[data-act="authorMenu"]').forEach(el=>el.setAttribute('aria-expanded','false'));syncModal();if(authorMenuOpener?.isConnected)authorMenuOpener.focus({preventScroll:true});authorMenuOpener=null;return true;}
 
 /* Patch only author controls and action labels: keep editors, media, sheets and the deck DOM alive. */
 function paintAuthor(){
@@ -485,7 +485,7 @@ ACT.reload=()=>refresh();
 ACT.go=(a)=>go(a.dataset.v,parseP(a));
 
 
-function modalScope(){return $('#dialog.on')||$('#viewer.on')||$('#matchLayer .match')||$('#qa.open')||$('#sheet.on');}
+function modalScope(){return $('#authorMenu')||$('#dialog.on')||$('#viewer.on')||$('#matchLayer .match')||$('#qa.open')||$('#sheet.on');}
 function syncModal(){const modal=modalScope();for(const x of [$('#main'),$('#side'),$('#ctx')])if(x)x.inert=!!modal;$('#qaFab').inert=!!modal;$('#sheet').inert=!!modal&&modal!==$('#sheet');$('#sheet').setAttribute('aria-hidden',String(!S?.ui.sheet));$('#qa').inert=!$('#qa.open');if(modal&&modal!==$('#sheet')&&S?.ui.sheet)$('#sheet').inert=true;}
 new MutationObserver(syncModal).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class','style']});
 document.addEventListener('keydown',e=>{const modal=modalScope();if(!modal||e.key!=='Tab')return;const nodes=[...modal.querySelectorAll('button,a[href],input,textarea,select,[tabindex="0"]')].filter(x=>!x.disabled&&!x.inert&&x.getClientRects().length);if(!nodes.length){e.preventDefault();modal.tabIndex=-1;modal.focus();return;}const a=nodes[0],z=nodes.at(-1);if(e.shiftKey&&(document.activeElement===a||!modal.contains(document.activeElement))){e.preventDefault();z.focus();}else if(!e.shiftKey&&(document.activeElement===z||!modal.contains(document.activeElement))){e.preventDefault();a.focus();}},true);

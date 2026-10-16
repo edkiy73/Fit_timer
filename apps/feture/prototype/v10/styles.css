@@ -1033,9 +1033,9 @@ button.jar:active .vessel{transform:scale(.95)}
 @container stage (min-width:768px){.toasts{bottom:24px}}
 @media (min-width:768px){body:not(.frame) .qa-fab{left:auto;right:12px;bottom:12px}}
 .qa{position:fixed;inset:0 auto 0 0;z-index:95;width:min(380px,calc(100vw - 24px));display:flex;flex-direction:column;background:var(--bg);border-right:1px solid var(--line);box-shadow:var(--shadow);transform:translateX(-102%);transition:transform .3s var(--ease)}
-.qa.open{transform:none;pointer-events:auto}.qa:not(.open){pointer-events:none}
+.qa.open{transform:none;pointer-events:auto}.qa:not(.open){pointer-events:none;visibility:hidden}
 .qa-scrim{position:fixed;inset:0;z-index:94;background:var(--scrim);opacity:0;pointer-events:none;transition:opacity .25s}
-.qa-scrim.on{opacity:1;pointer-events:auto}
+.qa-scrim.on{opacity:1;pointer-events:auto}.qa-scrim:not(.on){visibility:hidden}
 .qa-h{flex:none;max-height:65%;overflow:auto;padding:12px 14px;border-bottom:1px solid var(--line)}
 .qa-h .row{justify-content:space-between}
 .qa-h .row>b{font:800 20px/1 var(--font);letter-spacing:-.04em}.qa-h .row>b i{font-style:normal;color:var(--accent)}
