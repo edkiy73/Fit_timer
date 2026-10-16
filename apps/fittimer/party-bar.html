@@ -133,6 +133,18 @@
     .shop-why{font-size:11px;line-height:1.45;color:var(--muted);margin-top:5px}
     .shop-source{margin:0 17px 18px;padding:10px 11px;border:1px solid var(--line);border-radius:13px;background:#111416;color:#8f979c;font-size:11px;line-height:1.45}
     .legend{margin-top:18px;padding:14px;border-radius:16px;background:#111416;border:1px solid var(--line);color:var(--muted);font-size:12px;line-height:1.5}
+    .copyable{cursor:pointer;touch-action:manipulation}
+    .copyable:active{opacity:.65}
+    .copy-toast{
+      position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));z-index:9999;
+      transform:translate(-50%,18px);opacity:0;pointer-events:none;
+      max-width:min(92vw,520px);padding:10px 13px;border-radius:999px;
+      background:rgba(27,31,34,.96);border:1px solid #3a4247;color:#f4f4f2;
+      box-shadow:0 10px 30px rgba(0,0,0,.38);font-size:12px;font-weight:750;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      transition:opacity .18s ease,transform .18s ease
+    }
+    .copy-toast.show{opacity:1;transform:translate(-50%,0)}
     .footer{color:#737b80;font-size:11px;line-height:1.5;margin-top:14px}
     dialog{width:min(620px,calc(100% - 24px));max-height:min(82vh,760px);border:1px solid #343a3e;border-radius:22px;background:#15191b;color:var(--text);padding:0;box-shadow:0 25px 80px rgba(0,0,0,.6)}
     dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(5px)}
@@ -192,6 +204,7 @@
   </div>
   <div class="footer">Домашняя шпаргалка для вечеринки. Пей ответственно.</div>
 </div>
+<div class="copy-toast" id="copyToast" role="status" aria-live="polite"></div>
 
 <dialog id="pantryDialog">
   <div class="modal-head">
