@@ -40,6 +40,7 @@ FetUre may contain highly sensitive personal information.
 - Hard/soft limits are NOT percentages of desire. A boundary excludes unsafe compatibility rather than subtracting arbitrary points.
 - Anonymous public taxonomy is permitted, private profile/test/interest data is not. Validate authentication and record ownership on server. Seed profiles may support the pre-launch experience under section 6; never represent them as real participants after launch. Avoid sexualized images in common screens/marketing and plan moderation and 18+ handling.
 - Local data, account switching and deletion must not expose one person's private map to another. Preserve data on sync failure.
+- User text is hostile by default. Escape on output (`esc()` in the prototype, React's default escaping in the app — never `innerHTML`/`dangerouslySetInnerHTML`), and normalise/validate on the **server** at write time. Read [docs/input-safety-backend-checklist.md](docs/input-safety-backend-checklist.md) before moving any text field to the backend or the React app.
 
 ## 5. RAPID MVP DEVELOPMENT: MINIMAL TESTING (explicit owner preference)
 There will be **hundreds of UX and product revisions**. Prioritize correct UX and shipping useful increments, not accumulating fragile tests.

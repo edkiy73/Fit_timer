@@ -95,7 +95,7 @@ window.__x=id=>{(window.__xssHits=window.__xssHits||[]).push(id);};
 function nospPayload(tag,lim,n,nick){
  const id=n.toString(36);
  if(tag==='link'||tag==='ext')return `javascript:__x('${id}')//https://example.com`.slice(0,lim);
- const short=[`"><b>${id}`,`<b>${id}</b>&'`,`'"&<>;${id}`,`\u202E${id}\u200Dabc`,`<i/onclick=__x(${id})>`,`{{7*7}}\${id}`];
+ const short=[`"><b data-xss=${id}>x`,`<b data-xss=${id}>x</b>&'`,`'"&<>;${id}`,`\u202E${id}\u200Dabc`,`<i/onclick=__x(${id})>`,`{{7*7}}\${id}`];
  if(nick||lim<48)return short[n%short.length].slice(0,lim);
  const P=[
   `<img src=x onerror=__x('${id}')>`,
@@ -188,7 +188,7 @@ function qaNosp(on,kind='text'){
 /* every screen / sheet render re-applies the mode first, so data created lazily or by interaction is covered */
 Object.values(SC).forEach(sc=>{if(!sc||!sc.render||sc.nospHook)return;const r0=sc.render;sc.render=function(...a){NOSP.on&&nospApply();return r0.apply(this,a);};sc.nospHook=1;});
 {const ds0=drawSheet;drawSheet=function(){NOSP.on&&nospApply();return ds0();};}
-FT_QA.nospace=on=>qaNosp(on!==false);FT_QA.hostile=on=>qaNosp(on!==false,'xss');FT_QA.hits=()=>window.__xssHits||[];FT_QA.hostileIds=()=>NOSP.ids||{};FT_QA.nospStat=()=>({on:NOSP.on,fields:NOSP.log.length});
+FT_QA.nospace=on=>qaNosp(on!==false);FT_QA.hostile=on=>qaNosp(on!==false,'xss');FT_QA.hits=()=>window.__xssHits||[];FT_QA.sanitize=on=>{window.__NO_SANITIZE__=on===false;};FT_QA.hostileIds=()=>NOSP.ids||{};FT_QA.nospStat=()=>({on:NOSP.on,fields:NOSP.log.length});
 window.QA_SYNC=()=>{if($('#qa.open'))qaRender();};
 const qa=$('#qa'),qaScrim=$('#qaScrim');
 window.QA_CLOSE=()=>{qa.classList.remove('open');qaScrim.classList.remove('on');qa.setAttribute('aria-hidden','true');syncModal();$('#qaFab').focus({preventScroll:true});};

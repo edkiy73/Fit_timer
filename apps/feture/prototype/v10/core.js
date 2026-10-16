@@ -17,7 +17,37 @@ const QA={offline:false,frame:'auto',seen:{},datingLive:true,autoApprove:true,ma
 function autoResolve(){if(!QA.autoApprove)return;const owner=S;setTimeout(()=>{if(S===owner)qaApproveAll();},1200);}
 const L=(ru,en)=>S&&S.lang==='en'?en:ru;
 const T=o=>o==null?'':typeof o==='string'?o:(o[S.lang]??o.ru??'');
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/** Text that people type or that arrives from the server: drop control characters and invisible bidi overrides (U+202A–202E, 2066–2069, 200B/200E/200F, 2060–2064, FEFF —
+ *  ZWJ/ZWNJ stay for emoji and Persian/Indic text) and cap runs of combining marks at 4 («Zalgo» stacks overlap neighbouring lines). The server must do the same — see
+ *  docs/design-reference/V10-HOSTILE-INPUT-AUDIT-2026-10-16.md §6. */
+const cleanText=s=>String(s??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u200B\u200E\u200F\u202A-\u202E\u2060-\u2064\u2066-\u206F\uFEFF\uFFF9-\uFFFB]/g,'').replace(/(\p{M}{4})\p{M}+/gu,'$1');
+const esc=s=>cleanText(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/** Last line of defence for HTML slots that are meant to hold inline text (sheet/dialog titles, bar titles, row labels, empty states).
+ *  Callers must still esc() user text; this strips anything active that slips through: scripts, frames, styles, meta/base, forms,
+ *  on* handlers, javascript:/data: URLs, fixed/absolute-positioned styles. The string is parsed in an inert <template>, so nothing runs
+ *  while sanitising and stray closing tags («</h2>») cannot escape the slot. Real FetUre markup (icons, <b>, avatars, one <input>) is kept.
+ *  QA can switch it off (FT_QA.sanitize(false)) to prove that callers escape by themselves. */
+const SAFE_TAGS=new Set('B I STRONG EM U S SMALL MARK CODE SPAN BR P DIV LABEL INPUT SVG PATH CIRCLE RECT G LINE POLYLINE POLYGON ELLIPSE IMG A'.split(' '));
+const SAFE_ATTR=/^(class|role|aria-[a-z-]+|type|inputmode|placeholder|value|name|autofocus|maxlength|autocomplete|enterkeyhint|viewbox|d|fill|stroke|stroke-[a-z]+|fill-rule|clip-rule|cx|cy|r|x|y|x1|x2|y1|y2|rx|ry|width|height|points|transform|opacity|alt|draggable|loading|lang|dir)$/i;
+function safeInline(html){
+ if(window.__NO_SANITIZE__||html==null||html==='')return html;
+ html=String(html);if(html.indexOf('<')<0)return html;
+ const t=document.createElement('template');t.innerHTML=html;
+ const walk=n=>{[...n.children].forEach(e=>{
+  const tag=e.tagName.toUpperCase();
+  if(!SAFE_TAGS.has(tag)){if(/^(SCRIPT|STYLE|IFRAME|FRAME|OBJECT|EMBED|META|BASE|LINK|FORM|TEMPLATE|NOSCRIPT|TEXTAREA|SELECT|VIDEO|AUDIO|SOURCE|DETAILS|DIALOG|MATH)$/.test(tag)){e.remove();return;}walk(e);e.replaceWith(...e.childNodes);return;}
+  for(const a of [...e.attributes]){const nm=a.name.toLowerCase(),v=a.value;
+   if(nm==='id'&&tag==='INPUT'&&/^[\w-]{1,40}$/.test(v))continue;
+   if(nm==='style'){if(/url\(|expression|@import|behavior|position\s*:\s*(fixed|absolute|sticky)|z-index|inset|-moz-binding/i.test(v))e.removeAttribute(a.name);continue;}
+   if(nm==='src'&&tag==='IMG'){if(!/^(data:image\/|blob:|\/?images\/|\/images\/)/i.test(v))e.remove();continue;}
+   if(nm==='href'&&tag==='A'){if(!/^(https?:\/\/|#)/i.test(v))e.removeAttribute(a.name);continue;}
+   if(!SAFE_ATTR.test(nm))e.removeAttribute(a.name);}
+  if(!e.isConnected&&!e.parentNode)return;
+  if(tag==='INPUT'&&!/^(text|url|search|email)$/i.test(e.getAttribute('type')||'text'))e.setAttribute('type','text');
+  if(tag==='IMG'&&!e.getAttribute('src'))e.remove();
+  walk(e);});};
+ walk(t.content);return t.innerHTML;}
+
 const loc=()=>S.lang==='en'?'en-GB':'ru-RU';
 /** pl(5,['событие','события','событий'],['event','events']) → "5 событий" */
 function pl(n,ru,en,bare){
@@ -265,7 +295,7 @@ function drawSheet(){
  const s=S.ui.sheet;if(!s)return;const b=s.build();const el=$('#sheet');const bodyEl=$('.sh-b',el);const st=bodyEl?bodyEl.scrollTop:0;
  el.className='sheet'+(s.o.full?' full':'')+(el.classList.contains('on')?' on':'');
  el.setAttribute('aria-label',b.title||'');
- el.innerHTML=`<div class="grab"></div>${b.title!==false?`<div class="sh-h">${b.lead||''}<div class="sh-ht"><h2>${b.title||''}</h2>${b.sub?`<p>${b.sub}</p>`:''}</div>${b.head||''}<button class="ibtn ghost sm" data-act="closeSheet" aria-label="${L('Закрыть','Close')}">${I.close}</button></div>`:''}${b.search?`<div class="sh-search"><div class="inwrap">${I.search}<input class="inp" type="search" data-in="shq" value="${esc(S.ui.shq||'')}" placeholder="${esc(b.searchPh||L('Найти','Search'))}" aria-label="${esc(b.searchPh||L('Найти','Search'))}" enterkeyhint="search"></div></div>`:''}<div class="sh-b">${b.body||''}</div>${b.foot?`<div class="sh-f">${b.foot}</div>`:''}`;
+ el.innerHTML=`<div class="grab"></div>${b.title!==false?`<div class="sh-h">${safeInline(b.lead)||''}<div class="sh-ht"><h2>${safeInline(b.title)||''}</h2>${b.sub?`<p>${safeInline(b.sub)}</p>`:''}</div>${b.head||''}<button class="ibtn ghost sm" data-act="closeSheet" aria-label="${L('Закрыть','Close')}">${I.close}</button></div>`:''}${b.search?`<div class="sh-search"><div class="inwrap">${I.search}<input class="inp" type="search" data-in="shq" value="${esc(S.ui.shq||'')}" placeholder="${esc(b.searchPh||L('Найти','Search'))}" aria-label="${esc(b.searchPh||L('Найти','Search'))}" enterkeyhint="search"></div></div>`:''}<div class="sh-b">${b.body||''}</div>${b.foot?`<div class="sh-f">${b.foot}</div>`:''}`;
  const nb=$('.sh-b',el);if(nb){if(b.search&&S.ui.shq)filterSections(nb,S.ui.shq);nb.scrollTop=st;}
 }
 const resheet=()=>drawSheet();
@@ -279,7 +309,7 @@ function closeSheet(instant){
 }
 function ask(o){return new Promise(res=>{
  let resolved=false;const opener=document.activeElement;const d=$('#dialog');const sc=$('#dscrim');
- d.innerHTML=`${o.icon?`<div class="ico ${o.tone||''}">${I[o.icon]}</div>`:''}<h2>${o.title}</h2>${o.text?`<p>${o.text}</p>`:''}<div class="btns"><button class="btn ${o.danger?'danger':'primary'}" data-r="1">${o.ok||L('Продолжить','Continue')}</button><button class="btn soft" data-r="0">${o.cancel||L('Отмена','Cancel')}</button></div>`;
+ d.innerHTML=`${o.icon?`<div class="ico ${o.tone||''}">${I[o.icon]}</div>`:''}<h2>${safeInline(o.title)}</h2>${o.text?`<p>${safeInline(o.text)}</p>`:''}<div class="btns"><button class="btn ${o.danger?'danger':'primary'}" data-r="1">${o.ok||L('Продолжить','Continue')}</button><button class="btn soft" data-r="0">${o.cancel||L('Отмена','Cancel')}</button></div>`;
  d.setAttribute('role','alertdialog');d.style.display='block';sc.style.zIndex=3;
  requestAnimationFrame(()=>{if(resolved)return;sc.classList.add('on');d.classList.add('on');syncModal();$('[data-r="0"]',d).focus();});
  const done=v=>{if(resolved)return;resolved=true;d.classList.remove('on');sc.classList.remove('on');setTimeout(()=>{if(!d.classList.contains('on'))d.style.display='none'},220);S.ui.ask=null;syncModal();if(opener?.isConnected)opener.focus({preventScroll:true});res(v);};
@@ -395,10 +425,10 @@ const C={
 
 /* ---------- shared chrome ---------- */
 function bar(title,o={}){
- return `<header class="bar ${o.cls||''}">${o.back?`<button class="ibtn ghost" data-back aria-label="${L('Назад','Back')}">${I.back}</button>`:''}${o.lead||''}<h1 class="${o.sm?'sm':''}">${title}${o.sub?`<span class="sub">${o.sub}</span>`:''}</h1>${o.actions||''}</header>`;
+ return `<header class="bar ${o.cls||''}">${o.back?`<button class="ibtn ghost" data-back aria-label="${L('Назад','Back')}">${I.back}</button>`:''}${o.lead||''}<h1 class="${o.sm?'sm':''}">${safeInline(title)}${o.sub?`<span class="sub">${safeInline(o.sub)}</span>`:''}</h1>${o.actions||''}</header>`;
 }
 const bellBtn=()=>{const n=C.notif();return `<button class="ibtn" data-go="N01" aria-label="${L('Уведомления','Notifications')}${n?`: ${n}`:''}">${I.bell}${n?`<sup>${n}</sup>`:''}</button>`;};
-const searchBtn=(scope)=>`<button class="ibtn" data-go="G01" data-p='${JSON.stringify({scope:scope||'all'})}' aria-label="${L('Поиск','Search')}">${I.search}</button>`;
+const searchBtn=(scope)=>`<button class="ibtn" data-go="G01" data-p='${esc(JSON.stringify({scope:scope||'all'}))}' aria-label="${L('Поиск','Search')}">${I.search}</button>`;
 /* V8: community first — Events get their own tab; People appear only once dating is switched on in the admin */
 const TABDEF=()=>[['feed',I.feed,L('Лента','Feed'),0],...(window.DATING_ON&&DATING_ON()?[['people',I.people,L('Люди','People'),C.likesIn()]]:[]),['events',I.cal,L('События','Events'),0],['groups',I.groups,L('Сообщества','Communities'),0],['chats',I.chat,L('Чаты','Chats'),C.unreadChats()||(C.newMatches()?'dot':0)],['me',I.me,L('Я','Me'),C.reqIn()]];
 function dockHTML(){
@@ -423,10 +453,10 @@ function tabsRow(items,active,act,cls=''){return `<div class="tabs ${cls}" role=
 function grp(title,html,o={}){return `<section class="grp ${o.cls||''}" ${o.id?`id="${o.id}"`:''}>${title?`<div class="grp-t"><span>${title}</span>${o.right||''}</div>`:''}<div class="card ${o.list?'list':''} ${o.flat?'flat':''} ${o.inner||''}">${html}</div>${o.foot?`<p class="grp-n">${o.foot}</p>`:''}</section>`;}
 /** single or multiple choice as rows inside one card */
 function choices(items,sel,act,o={}){const set=new Set([].concat(sel).filter(x=>x!=null));return `<div class="chl ${o.multi?'multi':''}" role="${o.multi?'group':'radiogroup'}">${items.map(([k,t,s,dis])=>`<button class="ch ${set.has(k)?'on':''}" data-act="${act}" data-v="${esc(k)}" ${o.k?`data-k="${o.k}"`:''} role="${o.multi?'checkbox':'radio'}" aria-checked="${set.has(k)}" ${dis?'disabled':''}><span class="tx"><b>${t}</b>${s?`<small>${s}</small>`:''}</span><i></i></button>`).join('')}</div>`;}
-function empty(icon,title,text,btns=''){return `<div class="empty"><div class="em-ic">${I[icon]}</div><h3>${title}</h3>${text?`<p>${text}</p>`:''}${btns?`<div class="btns">${btns}</div>`:''}</div>`;}
+function empty(icon,title,text,btns=''){return `<div class="empty"><div class="em-ic">${I[icon]}</div><h3>${safeInline(title)}</h3>${text?`<p>${safeInline(text)}</p>`:''}${btns?`<div class="btns">${btns}</div>`:''}</div>`;}
 function sw(on){return `<span class="sw ${on?'on':''}" aria-hidden="true"></span>`;}
 function toggleRow(act,title,sub,on,extra=''){return `<button class="li" data-act="${act}" ${extra} role="switch" aria-checked="${!!on}"><span class="tx"><b>${title}</b>${sub?`<small>${sub}</small>`:''}</span>${sw(on)}</button>`;}
-function linkRow(o){return `<button class="li ${o.cls||''}" ${o.go?`data-go="${o.go}"`:''} ${o.p?`data-p='${JSON.stringify(o.p)}'`:''} ${o.act?`data-act="${o.act}"`:''} ${o.v?`data-v="${o.v}"`:''}>${o.icon?`<span class="ico ${o.tone||''}">${I[o.icon]}</span>`:''}${o.av||''}<span class="tx"><b>${o.title}</b>${o.sub?`<small>${o.sub}</small>`:''}</span>${o.val?`<span class="val">${o.val}</span>`:''}${o.badge?`<span class="pill hot">${o.badge}</span>`:''}${o.noChev?'':I.chev}</button>`;}
+function linkRow(o){return `<button class="li ${o.cls||''}" ${o.go?`data-go="${esc(o.go)}"`:''} ${o.p?`data-p='${esc(JSON.stringify(o.p))}'`:''} ${o.act?`data-act="${esc(o.act)}"`:''} ${o.v?`data-v="${esc(o.v)}"`:''}>${o.icon?`<span class="ico ${o.tone||''}">${I[o.icon]}</span>`:''}${o.av||''}<span class="tx"><b>${safeInline(o.title)}</b>${o.sub?`<small>${safeInline(o.sub)}</small>`:''}</span>${o.val?`<span class="val">${safeInline(o.val)}</span>`:''}${o.badge?`<span class="pill hot">${safeInline(o.badge)}</span>`:''}${o.noChev?'':I.chev}</button>`;}
 /** form field bound to route form state (r.f) so language switch / back keeps input */
 function field(o){
  const r=cur();const v=r.f[o.name]??o.value??'';const err=r.err&&r.err[o.name];
@@ -472,6 +502,11 @@ document.addEventListener('click',e=>{
  if(a&&!a.disabled&&!a.classList.contains('busy')){const fn=ACT[a.dataset.act];if(fn){e.preventDefault();fn(a,e);}else console.warn('no action',a.dataset.act);}
  if(t.id==='scrim')userCloseSheet();
 });
+/* typed or pasted text is cleaned before any handler sees it (the same rules the server must enforce) */
+document.addEventListener('input',e=>{const t=e.target;if(!t)return;
+ if(t.matches?.('input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),textarea')){const v=t.value;if(typeof v==='string'&&v){const c=cleanText(v);if(c!==v){const p=t.selectionStart;t.value=c;try{t.setSelectionRange(Math.min(p,c.length),Math.min(p,c.length));}catch(_){}}}}
+ else if(t.isContentEditable&&t.classList?.contains('rte-ed')){const w=document.createTreeWalker(t,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){const c=cleanText(n.nodeValue);if(c!==n.nodeValue)n.nodeValue=c;}}
+},true);
 document.addEventListener('input',e=>{const el=e.target.closest('[data-in]');if(!el)return;const fn=IN[el.dataset.in];fn&&fn(el,e);});
 document.addEventListener('change',e=>{const el=e.target.closest('[data-ch]');if(!el)return;const fn=CH[el.dataset.ch];fn&&fn(el,e);});
 document.addEventListener('keydown',e=>{
