@@ -866,6 +866,40 @@ const SHOPPING_GUIDE = [
     {tier:"Вторым",cls:"good",name:"Orange bitters",price:"зависит от бренда",why:"Полезен для Martini/Martinez-подобных и сухих джиновых коктейлей."}]}
 ];
 
+const BASKET_CATEGORY_TARGETS={
+  "Бурбон":"Бурбон",
+  "Джин":"Джин",
+  "Сладкий красный вермут":"Сладкий красный вермут",
+  "Сухой вермут":"Сухой вермут",
+  "Campari":"Aperol / Campari / Jägermeister",
+  "Aperol":"Aperol / Campari / Jägermeister",
+  "Triple Sec":"Апельсиновый ликёр",
+  "Ирландский виски":"Ирландский виски",
+  "Белый ром":"Белый ром",
+  "Angostura bitters":"Биттеры",
+  "Текила":"Текила",
+  "Jägermeister":"Aperol / Campari / Jägermeister",
+  "Водка":"Водка",
+  "Бренди":"Бренди",
+  "Амаретто":"Амаретто",
+  "Кофейный ликёр":"Кофейный ликёр"
+};
+
+function shoppingCategoryId(name){
+  return "shop-"+String(name).toLowerCase()
+    .normalize("NFKD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^a-zа-я0-9]+/gi,"-").replace(/^-+|-+$/g,"");
+}
+
+function jumpToShoppingCategory(item){
+  const category=BASKET_CATEGORY_TARGETS[item]||item;
+  const target=document.getElementById(shoppingCategoryId(category));
+  if(!target) return;
+  target.scrollIntoView({behavior:"smooth",block:"start"});
+  target.classList.add("jump-highlight");
+  setTimeout(()=>target.classList.remove("jump-highlight"),1400);
+}
+
 function renderShopping(){
   const box=document.getElementById("shoppingList");
   const guide=document.getElementById("basicBasket");
@@ -880,13 +914,13 @@ function renderShopping(){
               <div class="basket-group-name">${g.name}</div>
               <div class="basket-level ${g.cls}">${g.level}</div>
             </div>
-            <div class="basket-items">${g.items.map(i=>`<span class="basket-item">${i}</span>`).join("")}</div>
+            <div class="basket-items">${g.items.map(i=>`<span class="basket-item nav-target" data-basket-target="${i}" title="Перейти к вариантам">${i}</span>`).join("")}</div>
             <div class="basket-note">${g.note}</div>
           </div>`).join("")}
       </div>`;
   }
   box.innerHTML=SHOPPING_GUIDE.map(cat=>`
-    <section class="shop-cat">
+    <section class="shop-cat" id="${shoppingCategoryId(cat.category)}">
       <div class="shop-cat-title">${cat.category}</div>
       <div class="shop-cat-note">${cat.note}</div>
       <div class="shop-options">${cat.options.map(o=>`
@@ -943,7 +977,6 @@ function installCopyTargets(){
     ".variation-name",
     ".ingredient b",
     ".extra-top b",
-    ".basket-item",
     ".shop-name",
     ".shop-cat-title"
   ];
@@ -954,6 +987,13 @@ function installCopyTargets(){
 }
 
 document.addEventListener("click",e=>{
+  const basketItem=e.target.closest(".basket-item.nav-target");
+  if(basketItem){
+    e.preventDefault();
+    e.stopPropagation();
+    jumpToShoppingCategory(basketItem.dataset.basketTarget||basketItem.textContent);
+    return;
+  }
   const el=e.target.closest(".copyable");
   if(!el) return;
   const text=el.dataset.copyText || el.textContent;
