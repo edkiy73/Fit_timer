@@ -462,6 +462,14 @@ svg{display:block}
 .g-alt b{display:block;font-size:11.5px;font-weight:800;color:rgb(var(--lv));margin-bottom:3px}
 .g-alt small{display:block;margin-top:5px;font-size:11px;color:var(--smoke)}
 
+/* notes */
+.note-mark{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:800;color:var(--bone2);background:var(--ink4);padding:2px 7px;border-radius:6px}
+.note-mark svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.note-ta{width:100%;min-height:84px;padding:12px 13px;border-radius:14px;background:var(--ink3);border:1px solid var(--line2);color:var(--bone);font:15px/1.5 var(--sans);resize:vertical;outline:0}
+.note-ta:focus{border-color:rgba(201,163,91,.5)}
+.note-ta::placeholder{color:var(--smoke2)}
+.note-st{margin-top:6px;font-size:11.5px;color:var(--smoke)}
+
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .grain{display:none}

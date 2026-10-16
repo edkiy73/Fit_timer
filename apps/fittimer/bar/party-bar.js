@@ -531,7 +531,7 @@ const store={
 const S={
   tab:"menu", base:"Все", style:"Любой вкус", q:"",
   pantry:new Set(store.get("pantry",[])), mode:store.get("mode","main"),
-  pantryOn:store.get("pantryOn",false), favs:new Set(store.get("favs",[]))
+  pantryOn:store.get("pantryOn",false), favs:new Set(store.get("favs",[])), notes:store.get("notes",{})
 };
 if(!S.pantry.size) S.pantryOn=false;
 cocktails.forEach((c,i)=>{c.i=i;c.txt=[c.name,c.family,c.desc,c.base,c.who,c.serve,...c.tags,c.main.recipe,c.main.taste,...c.variations.flatMap(v=>[v.name,v.recipe,v.taste])].join(" ").toLowerCase();});
@@ -549,7 +549,7 @@ function visible(){
   return cocktails.filter(c=>
     (S.base==="Все"||c.base===S.base)&&
     (S.style==="Любой вкус"||c.tags.includes(S.style)||c.txt.includes(S.style))&&
-    (!q||c.txt.includes(q))&&
+    (!q||c.txt.includes(q)||(S.notes[c.name]||"").toLowerCase().includes(q))&&
     (!S.pantryOn||makeable(c).length>0));
 }
 const plural=(n,a,b,c)=>{n=Math.abs(n)%100;const m=n%10;return n>10&&n<20?c:m>1&&m<5?b:m===1?a:c};
@@ -616,7 +616,7 @@ function card(c,k){
       <span class="cc-name">${c.name}</span>
       <span class="cc-fam">${c.family}</span>
       <span class="cc-desc">${c.desc}</span>
-      <span class="cc-row"><span class="abv">${c.abv}° ${meter(c.abv)}</span>${c.premium?`<span class="don-mark">Выбор Дона</span>`:""}${m.length?`<span class="can">✓ ${m.length>1?m.length+" "+plural(m.length,"рецепт","рецепта","рецептов"):"можно"}</span>`:""}</span>
+      <span class="cc-row"><span class="abv">${c.abv}° ${meter(c.abv)}</span>${c.premium?`<span class="don-mark">Выбор Дона</span>`:""}${m.length?`<span class="can">✓ ${m.length>1?m.length+" "+plural(m.length,"рецепт","рецепта","рецептов"):"можно"}</span>`:""}${S.notes[c.name]?`<span class="note-mark" title="Есть заметка"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>заметка</span>`:""}</span>
     </span>${S.favs.has(c.i)?ROSE:""}</button>`;
 }
 
@@ -707,6 +707,7 @@ function detail(c){
     <div class="d-sec"><h4>Состав</h4><div class="menu-rows">${rows(c.main.recipe)}</div></div>
     <div class="d-sec duo"><div class="note"><b>Вкус</b>${c.main.taste}</div><div class="note"><b>Кому налить</b>${c.who}</div></div>
     <div class="d-sec"><h4>Как делать</h4><p class="steps">${c.serve}</p></div>
+    <div class="d-sec"><h4>Моя заметка</h4><textarea class="note-ta" id="noteTa" data-name="${esc(c.name)}" rows="3" maxlength="600" placeholder="Например: сиропа меньше, Ане зашло, взять Bulleit…">${esc(S.notes[c.name]||"")}</textarea><div class="note-st" id="noteSt">${S.notes[c.name]?"Сохранено на этом телефоне":"Видно только тебе, хранится на этом телефоне"}</div></div>
     ${c.extras&&c.extras.length?`<div class="d-sec"><h4>Добавки</h4><div class="ex">${c.extras.map(x=>`<div class="exr"><div class="exr-h"><span>${x.name}</span><span class="mode ${x.mode}">${modeName[x.mode]}</span></div><p>${x.effect}</p></div>`).join("")}</div></div>`:""}
     <div class="d-sec"><h4>Вариации</h4><div class="vars">${c.variations.map(v=>{const ok=has(v);return `<div class="var ${pantry&&!ok?"off":""}"><div class="var-h"><b>${v.name}</b><span>${v.abv}°</span></div><div class="r">${v.recipe}</div><div class="tt">${v.taste}</div>${pantry?`<div class="st">${ok?"✓ Можно сделать":"Не хватает бутылок"}</div>`:""}</div>`}).join("")}</div></div>
     <p class="fine">° — примерная крепость в бокале, уже со льдом.</p>
@@ -838,6 +839,13 @@ document.addEventListener("click",e=>{
 });
 function resetAll(){S.base="Все";S.style="Любой вкус";S.q="";S.pantryOn=false;$("#q").value="";save();renderRails();renderMenu()}
 let qt=null;
+let nt=null;
+document.addEventListener("input",e=>{
+  if(e.target.id!=="noteTa")return;
+  const name=e.target.dataset.name,v=e.target.value.trim();clearTimeout(nt);$("#noteSt").textContent="Сохраняю…";
+  nt=setTimeout(()=>{if(v)S.notes[name]=v;else delete S.notes[name];store.set("notes",S.notes);$("#noteSt").textContent=v?"Сохранено на этом телефоне":"Заметка удалена";
+    if(S.tab==="menu")renderMenu();if(S.tab==="fav")renderFav();},400);
+});
 $("#q").addEventListener("input",e=>{S.q=e.target.value;clearTimeout(qt);qt=setTimeout(renderMenu,120)});
 $("#qx").addEventListener("click",e=>{e.preventDefault();S.q="";$("#q").value="";renderMenu();$("#q").focus()});
 
