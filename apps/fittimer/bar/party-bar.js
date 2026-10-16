@@ -967,72 +967,123 @@ function renderParty(){
 }
 
 /* ===== Don's cards (game) ===== */
-const ORDERS=[
-  ["Приказ","Дон назначает тебя барменом раунда. Готовь {c} тому, кто сидит справа."],
-  ["Приказ","Сделай коктейль человеку слева. Он выбирает из меню — ты не споришь."],
-  ["Приказ","Тот, кто пришёл последним, моет шейкер. Так решила семья."],
-  ["Приказ","Выбери консильери. До следующей карты, когда пьёшь ты, — пьёт и он."],
-  ["Приказ","Придумай себе прозвище в мафии. Лучшее закрепляется до конца вечера."],
-  ["Приказ","Изобрази, как Дон пробует твой коктейль. Семья ставит оценку от 1 до 5."],
-  ["Приказ","Тридцать секунд все говорят с итальянским акцентом. Сбился — пьёшь воду."],
-  ["Приказ","Придумай название коктейлю, который у тебя в руке. Семья голосует — нравится или нет."],
-  ["Приказ","Сделай {c} всем, кто захочет. Рецепт — в меню, режим бармена поможет."],
-  ["Приказ","Поменяйся местами с тем, кто сидит напротив."],
-  ["Приказ","Назови три коктейля из меню за пять секунд. Не успел — готовишь {light} для любого."],
-  ["Омерта","До следующей карты никто не говорит слово «нет». Сказал — тост за Дона."],
-  ["Омерта","Никаких телефонов в руках до следующей карты. Нарушил — наливаешь всем воду."],
-  ["Омерта","Обращаться друг к другу только «дон» и имя. Ошибся — делаешь глоток."],
-  ["Омерта","Пить только левой рукой. Заметил нарушение — громко скажи «Предатель!»."],
-  ["Тост","Тост за семью. Все чокаются, последний говорит следующий тост."],
-  ["Тост","Тост за хозяина бара. Без него этого вечера не было бы."],
-  ["Тост","По кругу закончите фразу «Семья — это…». Потом общий тост."],
-  ["Тост","Тот, у кого самый крепкий коктейль в руке, говорит тост."],
-  ["Вопрос","Какой коктейль из меню описывает тебя лучше всего? Объясни за 15 секунд."],
-  ["Вопрос","Кому из присутствующих ты доверишь свой бар на неделю? Почему?"],
-  ["Вопрос","Худший коктейль в твоей жизни — где и что это было?"],
-  ["Вопрос","Если бы семья открыла настоящий бар — какая у тебя роль?"],
-  ["Вопрос","Какой коктейль ты закажешь Дону, если он угощает? Только из меню."],
-  ["Испытание","Слепая дегустация: закрой глаза, сосед даёт глоток — угадай основу."],
-  ["Испытание","Угадай состав коктейля соседа, не пробуя. Угадал два ингредиента — он делает тебе следующий."],
-  ["Испытание","Шейкер-шоу: потряси шейкер самым эффектным образом. Семья аплодирует — или молчит."],
-  ["Испытание","Предатель среди нас: все закрывают глаза, ты тихо касаешься плеча одного. Остальные угадывают, кого."],
-  ["Испытание","Комплимент по кругу: каждый говорит что-то приятное человеку слева."],
-  ["Дон доволен","Выбери любого — он делает тебе коктейль по твоему выбору."],
-  ["Дон недоволен","Следующий раунд ты пьёшь что-то лёгкое — например, {light}."],
-  ["Дон бережёт семью","Пауза: все выпивают по стакану воды. Потом продолжаем."],
-  ["Двойная карта","Вытяни ещё одну карту и отдай её любому игроку."]
-];
-let G={mode:"orders",deck:[],k:0,q:null,score:0,streak:0,n:0};
-function openCards(){openPanel("cards","Карты Дона");pNav.hidden=false;newDeck();}
-function newDeck(){G.deck=shuffle(ORDERS);G.k=0;renderCards()}
-function pool(){return S.pantryOn?cocktails.filter(c=>makeable(c).length):cocktails}
-function fill(t){
-  const light=cocktails.filter(c=>c.abv<=12);
-  return t.replace("{c}",`<b>${pick(pool()).name}</b>`).replace("{light}",`<b>${pick(light).name}</b>`);
+let G={tab:"decks",view:"decks",back:"decks",deck:null,pending:null,hard:store.get("gHard",false),turns:Math.min(99,Math.max(20,+store.get("gTurns",33)||33)),cards:[],k:0,turn:0,
+  players:store.get("gPlayers",[]),q:null,score:0,streak:0,n:0};
+let agreed=false;
+const deckById=id=>DECKS.find(d=>d.id===id);
+const esc=s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const HAT=`<svg class="g-corner" viewBox="0 0 24 24"><path d="M2.5 15.5c4 2.6 15 2.6 19 0"/><path d="M5.5 15c0-4.5 1.6-9 4-9 1.1 0 1.6 1.2 2.5 1.2S13.4 6 14.5 6c2.4 0 4 4.5 4 9"/></svg>`;
+const WATER=["Дон бережёт семью","Пауза: все пьют воду. Потом продолжаем."];
+function openCards(){openPanel("cards","Карты Дона");G.tab="decks";G.view="decks";renderCards()}
+/* «Разгоняемся»: каждый ход — карта из случайной колоды вокруг «температуры» хода,
+   температура плавно растёт от лёгкой к верхнему уровню; иногда даём передышку на уровень ниже. */
+function buildRamp(){
+  const top=G.hard?6:5,ranks=G.hard?RAMP_RANKS.concat(RAMP_TOP):RAMP_RANKS;
+  const pools={};for(let l=1;l<=top;l++)pools[l]=shuffle(DECKS.find(d=>d.lvl===l).cards.filter(c=>c[0]!=="Двойная карта"&&c[0]!=="Дон бережёт семью"));
+  const take=l=>{for(let d=0;d<6;d++)for(const x of [l-d,l+d])if(x>=1&&x<=top&&pools[x].length)return {lvl:x,card:pools[x].pop()};return {lvl:l,card:WATER}};
+  const N=G.turns,last=N-1;
+  return Array.from({length:N},(_,k)=>{
+    const t=1.3+(top-1.3)*k/last;let l=Math.floor(t)+(Math.random()<t%1?1:0);
+    if(k<last&&l>1&&Math.random()<.2)l--;
+    const c=(k%11===10&&k<last)?{lvl:Math.floor(t),card:WATER}:take(Math.min(top,l));
+    c.rank=ranks[Math.min(ranks.length-1,Math.floor(k*ranks.length/N))];
+    return c;
+  });
 }
-function modeTabs(){return `<div class="g-tabs"><button type="button" class="pill ${G.mode==="orders"?"on":""}" data-pa="gmode" data-m="orders">Приказы Дона</button><button type="button" class="pill ${G.mode==="quiz"?"on":""}" data-pa="gmode" data-m="quiz">Угадай коктейль</button></div>`}
+function startDeck(id){
+  const adult=id==="ramp"||deckById(id).adult;
+  if(adult&&!agreed){G.pending=id;G.view="rules";return renderCards()}
+  G.deck=id;G.k=0;G.turn=0;G.view="play";
+  G.cards=id==="ramp"?buildRamp():shuffle(deckById(id).cards).map(card=>({lvl:deckById(id).lvl,card}));
+  renderCards();pBody.scrollTop=0;
+}
+function drawNext(){
+  if(G.k>=G.cards.length)return;
+  const prev=G.cards[G.k];G.k++;G.turn++;buzz(8);
+  const nx=G.cards[G.k];
+  if(G.deck==="ramp"&&nx&&nx.rank!==prev.rank){toast(`Повышение в семье: ${nx.rank}`);buzz([20,50,20,50,40])}
+  renderCards();
+}
+const who=off=>{const n=G.players.length;return n?G.players[((G.turn+off)%n+n)%n]:null};
+const heat=l=>`<span class="heat lv${l}" aria-label="Уровень ${l} из 6">${[1,2,3,4,5,6].map(i=>`<i class="${i<=l?"f":""}"></i>`).join("")}</span>`;
+function tabs(){return `<div class="g-tabs"><button type="button" class="pill ${G.tab==="decks"?"on":""}" data-pa="gtab" data-m="decks">Колоды</button><button type="button" class="pill ${G.tab==="quiz"?"on":""}" data-pa="gtab" data-m="quiz">Угадай коктейль</button></div>`}
+function roster(){
+  const p=G.players;
+  return `<div class="roster"><div class="r-h"><b>Очередь игроков</b><small>${p.length?p.length+" "+plural(p.length,"игрок","игрока","игроков"):"необязательно — карта сама скажет, чей ход"}</small></div>
+  ${p.length?`<div class="r-list">${p.map((n,i)=>`<span class="r-chip"><i>${i+1}</i>${esc(n)}<button type="button" data-pa="rdel" data-i="${i}" aria-label="Убрать ${esc(n)}">×</button></span>`).join("")}</div>`:""}
+  <form class="r-add" id="rAdd"><input id="rName" maxlength="20" placeholder="Имя игрока" autocomplete="off" enterkeyhint="done"><button type="submit" class="ib">Добавить</button></form>
+  ${p.length>1?`<div class="r-acts"><button type="button" class="g-back" data-pa="rshuf">Перемешать очередь</button><button type="button" class="g-back" data-pa="rclear">Очистить</button></div>`:""}</div>`;
+}
 function renderCards(){
-  if(G.mode==="quiz")return renderQuiz();
-  const done=G.k>=G.deck.length;
-  const [kind,txt]=done?["Конец колоды","Дон доволен вечером. Перемешать и сыграть ещё?"]:G.deck[G.k];
-  pBody.innerHTML=`${modeTabs()}<p class="p-lead">Кладите телефон в центр. По очереди тяните карту — и выполняйте.</p>
-  <div class="gcard k-${kind.split(" ")[0].toLowerCase()}" data-pa="${done?"reshuffle":"draw"}">
-    <svg class="g-corner" viewBox="0 0 24 24"><path d="M2.5 15.5c4 2.6 15 2.6 19 0"/><path d="M5.5 15c0-4.5 1.6-9 4-9 1.1 0 1.6 1.2 2.5 1.2S13.4 6 14.5 6c2.4 0 4 4.5 4 9"/></svg>
-    <div class="g-kind">${kind}</div><p class="g-txt">${done?txt:fill(txt)}</p>
-    <div class="g-foot">${done?"":`${G.k+1} / ${G.deck.length} · нажми — следующая`}</div>
-  </div>`;
-  pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="reshuffle">Перемешать</button><button class="btn btn-brass" type="button" data-pa="${done?"reshuffle":"draw"}">${done?"Ещё раз":"Следующая карта"}</button>`;
+  if(G.tab==="quiz")return renderQuiz();
+  if(G.view==="play")return renderPlay();
+  if(G.view==="rampset"){
+    const top=G.hard?6:5,T=G.turns,mins=Math.round(T*1.5);
+    pBody.innerHTML=`<div class="g-bar lv${top}"><button type="button" class="g-back" data-pa="decks">← Колоды</button><span><b>Разгоняемся</b> · настройка</span></div>
+    <div class="gcard lv${top} rset">${HAT}<div class="g-kind">Сколько ходов играем?</div>
+      <div class="rs-num"><button type="button" class="ib" data-pa="turns" data-d="-5" aria-label="Минус 5">−5</button><b>${T}</b><button type="button" class="ib" data-pa="turns" data-d="5" aria-label="Плюс 5">+5</button></div>
+      <input type="range" id="rsRange" min="20" max="99" step="1" value="${T}" aria-label="Количество ходов">
+      <div class="rs-presets">${[20,33,50,75,99].map(n=>`<button type="button" class="pill ${n===T?"on":""}" data-pa="turnsset" data-n="${n}">${n}</button>`).join("")}</div>
+      <p class="rs-hint">Примерно ${mins<60?mins+" минут":Math.floor(mins/60)+" ч "+(mins%60?mins%60+" мин":"")}. Разгон растянется на все ${T} ${plural(T,"ход","хода","ходов")} — от лёгких карт до ${G.hard?"красной комнаты":"«Кровных уз»"}.</p>
+      <button type="button" class="pill hard ${G.hard?"on":""}" data-pa="hard" aria-pressed="${G.hard}">${G.hard?"Без тормозов: включено":"Без тормозов — до красного уровня"}</button></div>`;
+    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-brass" type="button" data-pa="rampgo">Начать</button>`;
+    return;
+  }
+  if(G.view==="roster"){
+    pBody.innerHTML=`<div class="g-bar"><button type="button" class="g-back" data-pa="rdone">← К игре</button><span>Состав можно менять прямо по ходу игры</span></div>${roster()}`;
+    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-brass" type="button" data-pa="rdone">Вернуться к игре</button>`;return;
+  }
+  if(G.view==="rules"){
+    pBody.innerHTML=`<div class="gcard lv5 rules"><div class="g-kind">Закон семьи · 18+</div>
+      <p class="g-txt">Дальше будет жарче.</p>
+      <ul class="g-rules"><li>Только для взрослых и только для своих.</li><li>Любой может сказать «пас» — без объяснений и без штрафа.</li><li>Касания и поцелуи — только если второй человек согласен.</li><li>Стоп-слово <b>«Омерта»</b> останавливает любое задание.</li><li>Что было за столом — остаётся за столом.</li></ul></div>`;
+    pNav.hidden=false;
+    pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="decks">Назад</button><button class="btn btn-brass" type="button" data-pa="agree">Мы в деле</button>`;
+    return;
+  }
+  const top=G.hard?6:5;
+  pBody.innerHTML=`${tabs()}${roster()}
+  <button type="button" class="deck ramp lv${top}" data-pa="deck" data-id="ramp"><span class="d-lv">${HAT}</span><span class="d-t"><b>Разгоняемся</b><small>Карьера в Семье: карты из всех колод вперемешку, ${G.turns} ${plural(G.turns,"ход","хода","ходов")} от лёгких до ${G.hard?"красной комнаты":"«Кровных уз»"}</small></span>${heat(top)}</button>
+  <button type="button" class="pill hard ${G.hard?"on":""}" data-pa="hard" aria-pressed="${G.hard}">${G.hard?"Без тормозов: включено":"Без тормозов — до красного уровня"}</button>
+  <div class="decks">${DECKS.map(d=>`<button type="button" class="deck lv${d.lvl}" data-pa="deck" data-id="${d.id}"><span class="d-lv">${d.lvl}</span><span class="d-t"><b>${d.name}${d.adult?` <em>18+</em>`:""}</b><small>${d.sub}</small></span>${heat(d.lvl)}</button>`).join("")}</div>`;
+  pNav.hidden=true;
 }
+function renderPlay(){
+  const n=G.cards.length,done=G.k>=n,ramp=G.deck==="ramp",d=ramp?null:deckById(G.deck);
+  const cur=done?null:G.cards[G.k];
+  const lvl=cur?cur.lvl:(ramp?(G.hard?6:5):d.lvl);
+  const [kind,txt]=done?["Конец колоды","Дон доволен вечером. Перемешать и сыграть ещё раз?"]:cur.card;
+  const me=who(0),next=who(1);
+  pBody.innerHTML=`<div class="g-bar lv${lvl}"><button type="button" class="g-back" data-pa="decks">← Колоды</button><span>${ramp?`<b>${(cur||G.cards[n-1]).rank}</b> · Разгоняемся`:d.name}</span><button type="button" class="g-pl" data-pa="roster" aria-label="Игроки"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.3 3-5 6-5s5.4 1.7 6 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.6.2 4.4 1.8 5 4.8"/></svg>${G.players.length||"+"}</button></div>
+  ${ramp?`<div class="bt-prog ramp-prog" style="gap:${n>45?1:n>30?2:4}px">${G.cards.map((c,j)=>`<i class="lv${c.lvl} ${j<=G.k?"f":""}"></i>`).join("")}</div>`:""}
+  <div class="gcard lv${lvl}" data-pa="${done?"reshuffle":"draw"}">${HAT}
+    ${me&&!done?`<div class="g-who">Ход: <b>${esc(me)}</b></div>`:""}
+    <div class="g-kind">${kind}${ramp&&!done?` · ${heat(lvl)}`:""}</div><p class="g-txt">${txt}</p>
+    <div class="g-foot">${done?"":`${G.k+1} / ${n}${next&&G.players.length>1?` · дальше: ${esc(next)}`:" · нажми — следующая"}`}</div></div>`;
+  pNav.hidden=false;
+  pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="gprev" ${G.k?"":"disabled"}>Назад</button><button class="btn btn-brass" type="button" data-pa="${done?"reshuffle":"draw"}">${done?"Ещё раз":"Следующая карта"}</button>`;
+}
+panel.addEventListener("input",e=>{
+  if(e.target.id!=="rsRange")return;G.turns=+e.target.value;store.set("gTurns",G.turns);
+  const b=pBody.querySelector(".rs-num b");if(b)b.textContent=G.turns;
+});
+panel.addEventListener("change",e=>{if(e.target.id==="rsRange")renderCards()});
+panel.addEventListener("submit",e=>{
+  if(e.target.id!=="rAdd")return;e.preventDefault();
+  const inp=$("#rName"),v=inp.value.trim().replace(/\s+/g," ").slice(0,20);
+  if(!v)return;G.players.push(v);store.set("gPlayers",G.players);renderCards();const i2=$("#rName");if(i2)i2.focus();
+});
 function newQuiz(){
   const all=cocktails,c=pick(all);
   const opts=shuffle([c,...shuffle(all.filter(x=>x!==c&&x.base===c.base)).slice(0,1),...shuffle(all.filter(x=>x!==c)).slice(0,6)].filter((x,i,a)=>a.indexOf(x)===i).slice(0,4));
   G.q={c,opts:shuffle(opts),ans:null};
 }
 function renderQuiz(){
+  pNav.hidden=false;
   if(!G.q)newQuiz();
   const {c,opts,ans}=G.q;
   const ings=parts(c.main.recipe).map(p=>cap(p.name)+(p.ml!=null?` · ${p.range?p.range.join("–"):p.ml} мл`:"")).map(x=>`<span class="chipb">${x}</span>`).join("");
-  pBody.innerHTML=`${modeTabs()}<div class="q-score"><span>Счёт <b>${G.score}</b> из ${G.n}</span><span>Серия <b>${G.streak}</b></span></div>
+  pBody.innerHTML=`${tabs()}<div class="q-score"><span>Счёт <b>${G.score}</b> из ${G.n}</span><span>Серия <b>${G.streak}</b></span></div>
   <div class="q-card"><div class="q-art">${glass(c.art,{thumb:true})}</div><div class="chips q-ings">${ings}</div>${ans?`<p class="q-fam">${c.family} · ${c.abv}°</p>`:`<p class="q-fam">Что это за коктейль?</p>`}</div>
   <div class="q-opts">${opts.map(o=>`<button type="button" class="qo ${ans?(o===c?"ok":o===ans?"bad":"dim"):""}" data-pa="ans" data-i="${o.i}" ${ans?"disabled":""}>${o.name}</button>`).join("")}</div>`;
   pNav.innerHTML=ans?`<button class="btn btn-ghost" type="button" data-pa="qopen">Рецепт</button><button class="btn btn-brass" type="button" data-pa="qnext">Дальше</button>`:`<button class="btn btn-ghost" type="button" data-pa="qnext">Пропустить</button>`;
@@ -1048,9 +1099,21 @@ panel.addEventListener("click",e=>{
   if(a==="per"){PT.per=Math.max(1,Math.min(10,PT.per+ +el.dataset.d));renderParty();return}
   if(a==="sel"){const i=+el.dataset.i;PT.sel.has(i)?PT.sel.delete(i):PT.sel.add(i);const y=pBody.scrollTop;renderParty();pBody.scrollTop=y;return}
   if(a==="pcopy"){const r=partyCalc();copy(`La Famiglia — вечеринка на ${PT.guests} (${r.total} ${plural(r.total,"коктейль","коктейля","коктейлей")})\nМеню: ${r.list.map(c=>c.name).join(", ")}\n\n`+r.rows.map(x=>`• ${x.name} — ${x.val}${x.sub?` (${x.sub})`:""}`).join("\n"),"Список скопирован");return}
-  if(a==="gmode"){G.mode=el.dataset.m;if(G.mode==="quiz")G.q=null;renderCards();return}
-  if(a==="draw"){G.k++;buzz(8);renderCards();return}
-  if(a==="reshuffle"){newDeck();buzz(12);return}
+  if(a==="gtab"){G.tab=el.dataset.m;G.view="decks";if(G.tab==="quiz")G.q=null;pNav.hidden=G.tab!=="quiz";renderCards();return}
+  if(a==="deck"){if(el.dataset.id==="ramp"){G.view="rampset";renderCards();pBody.scrollTop=0}else startDeck(el.dataset.id);return}
+  if(a==="turns"||a==="turnsset"){G.turns=Math.min(99,Math.max(20,a==="turns"?G.turns+ +el.dataset.d:+el.dataset.n));store.set("gTurns",G.turns);renderCards();return}
+  if(a==="rampgo"){startDeck("ramp");return}
+  if(a==="hard"){G.hard=!G.hard;store.set("gHard",G.hard);renderCards();return}
+  if(a==="agree"){agreed=true;startDeck(G.pending);return}
+  if(a==="decks"){G.view="decks";renderCards();pBody.scrollTop=0;return}
+  if(a==="draw"){drawNext();return}
+  if(a==="gprev"){if(G.k>0){G.k--;G.turn--;renderCards()}return}
+  if(a==="roster"){G.curName=who(0);G.view="roster";renderCards();return}
+  if(a==="rdone"){const i=G.players.indexOf(G.curName);if(i>=0)G.turn=i;G.view="play";renderCards();return}
+  if(a==="rdel"){G.players.splice(+el.dataset.i,1);store.set("gPlayers",G.players);renderCards();return}
+  if(a==="rshuf"){G.players=shuffle(G.players);G.turn=0;store.set("gPlayers",G.players);renderCards();return}
+  if(a==="rclear"){G.players=[];store.set("gPlayers",G.players);renderCards();return}
+  if(a==="reshuffle"){startDeck(G.deck);buzz(12);return}
   if(a==="ans"){const o=cocktails[+el.dataset.i];G.q.ans=o;G.n++;if(o===G.q.c){G.score++;G.streak++;buzz([15,40,15])}else{G.streak=0;buzz(120)}renderQuiz();return}
   if(a==="qnext"){G.q=null;renderQuiz();return}
   if(a==="qopen"){const i=G.q.c.i;closePanel(true);history.replaceState({sheet:i},"","#"+i);openSheet(i,false);return}
@@ -1061,7 +1124,7 @@ panel.addEventListener("click",e=>{
   pBody.addEventListener("touchend",e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0,dy=e.changedTouches[0].clientY-y0;x0=null;
     if(Math.abs(dx)<60||Math.abs(dy)>Math.abs(dx))return;
     if(pKind==="bartender"){bt.k=Math.max(0,Math.min(bt.steps.length-1,bt.k+(dx<0?1:-1)));renderBt()}
-    else if(pKind==="cards"&&G.mode==="orders"&&dx<0&&G.k<G.deck.length){G.k++;buzz(8);renderCards()}
+    else if(pKind==="cards"&&G.tab==="decks"&&G.view==="play"){if(dx<0)drawNext();else if(G.k>0){G.k--;G.turn--;renderCards()}}
   });
 })();
 
