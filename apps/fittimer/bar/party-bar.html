@@ -370,8 +370,6 @@ svg{display:block}
   border:1px solid rgba(201,163,91,.4);box-shadow:0 30px 80px rgba(0,0,0,.55),inset 0 0 0 6px rgba(0,0,0,.4),inset 0 0 0 7px rgba(201,163,91,.18);
   animation:deal .55s var(--spring)}
 @keyframes deal{from{opacity:0;transform:translateX(40%) rotate(10deg) scale(.92)}to{opacity:1;transform:none}}
-.gcard.k-омерта{background:radial-gradient(90% 60% at 50% 0%,rgba(163,32,46,.28),transparent 70%),linear-gradient(165deg,#1d0c0e,#0b0607 70%);border-color:rgba(163,32,46,.55)}
-.gcard.k-дон{background:radial-gradient(90% 60% at 50% 0%,rgba(159,207,143,.12),transparent 70%),linear-gradient(165deg,#15180f,#080907 70%)}
 .g-corner{position:absolute;top:18px;left:18px;width:30px;height:30px;fill:none;stroke:var(--brass);stroke-width:1.5;stroke-linecap:round;opacity:.8}
 .g-kind{font-size:12px;font-weight:800;color:var(--brass);text-align:center}
 .g-txt{margin:0;font-family:var(--serif);font-size:clamp(24px,7vw,34px);line-height:1.25;text-align:center;color:var(--bone)}
@@ -391,6 +389,41 @@ svg{display:block}
 .qo.bad{background:rgba(163,32,46,.25);border-color:rgba(163,32,46,.6);color:#ffb3ba;animation:shake .4s}
 .qo.dim{opacity:.4}
 @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* decks & heat levels */
+.lv1{--lv:201,163,91}.lv2{--lv:232,170,78}.lv3{--lv:236,122,52}.lv4{--lv:170,110,220}.lv5{--lv:205,52,72}.lv6{--lv:255,36,64}
+.decks{display:grid;gap:8px;margin-top:8px}
+.deck{display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border-radius:18px;text-align:left;
+  background:linear-gradient(110deg,rgba(var(--lv),.16),rgba(var(--lv),.03) 60%),var(--ink2);border:1px solid rgba(var(--lv),.35);transition:transform .2s var(--ease)}
+.deck:active{transform:scale(.98)}
+.d-lv{width:38px;height:38px;flex:none;border-radius:12px;display:grid;place-items:center;font-family:var(--serif);font-size:20px;color:rgb(var(--lv));background:rgba(var(--lv),.12);border:1px solid rgba(var(--lv),.35)}
+.d-lv .g-corner{position:static;width:24px;height:24px;stroke:rgb(var(--lv))}
+.d-t{flex:1;min-width:0}
+.d-t b{display:block;font-family:var(--serif);font-weight:400;font-size:19px;line-height:1.15;color:var(--bone)}
+.d-t b em{font-style:normal;font-family:var(--sans);font-size:10.5px;font-weight:800;color:#fff;background:rgba(var(--lv),.75);padding:2px 6px;border-radius:6px;vertical-align:3px}
+.d-t small{display:block;margin-top:3px;font-size:12px;line-height:1.35;color:var(--smoke)}
+.deck.ramp{padding:16px 14px;border-width:1.5px;box-shadow:0 14px 40px rgba(var(--lv),.14)}
+.deck.ramp b{font-size:22px}
+.pill.hard{display:block;width:100%;margin:8px 0 6px;text-align:center}
+.pill.hard.on{background:rgb(255,36,64);border-color:rgb(255,36,64);color:#fff}
+.heat{display:inline-flex;gap:2px;flex:none}
+.heat i{width:4px;height:12px;border-radius:2px;background:rgba(var(--lv),.18)}
+.heat i.f{background:rgb(var(--lv))}
+.g-bar{display:flex;align-items:center;gap:10px;margin:2px 0 12px;font-size:13px;color:var(--bone2)}
+.g-bar span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-bar b{color:rgb(var(--lv))}
+.g-back{font-weight:700;color:var(--brass);font-size:13px;white-space:nowrap}
+.ramp-prog{margin:0 0 12px}
+.ramp-prog i{background:rgba(var(--lv),.18)}
+.ramp-prog i.f{background:rgb(var(--lv));box-shadow:0 0 6px rgba(var(--lv),.6)}
+.gcard[class*="lv"]{background:radial-gradient(90% 60% at 50% 0%,rgba(var(--lv),.22),transparent 70%),linear-gradient(165deg,#1b1210,#0a0707 70%);
+  border-color:rgba(var(--lv),.5);box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 60px rgba(var(--lv),.10),inset 0 0 0 6px rgba(0,0,0,.4),inset 0 0 0 7px rgba(var(--lv),.2)}
+.gcard[class*="lv"] .g-kind,.gcard[class*="lv"] .g-corner{color:rgb(var(--lv));stroke:rgb(var(--lv))}
+.gcard.lv6{animation:deal .55s var(--spring),pulse6 3s ease-in-out infinite}
+@keyframes pulse6{50%{box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 90px rgba(255,36,64,.28),inset 0 0 0 6px rgba(0,0,0,.4),inset 0 0 0 7px rgba(255,36,64,.35)}}
+.gcard.rules{cursor:default;justify-content:flex-start;padding-top:40px}
+.g-rules{margin:0;padding:0 0 0 18px;display:grid;gap:10px;font-size:15px;line-height:1.45;color:var(--bone2)}
+.g-rules b{color:#ffb3ba}
 
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
@@ -490,6 +523,7 @@ svg{display:block}
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="./party-cards.js" defer></script>
 <script src="./party-bar.js" defer></script>
 </body>
 </html>
