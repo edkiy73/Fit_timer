@@ -103,6 +103,21 @@
     .extra-badge.optional{background:#1c2225}
 
     .empty{text-align:center;color:var(--muted);padding:36px 10px}
+    .basket-guide{margin:14px 17px 0;padding:14px;border:1px solid #5b4020;background:linear-gradient(180deg,#20180f,#17191a);border-radius:18px}
+    .basket-title{font-size:18px;font-weight:900;letter-spacing:-.02em}
+    .basket-sub{font-size:12px;color:var(--muted);line-height:1.45;margin-top:5px}
+    .basket-groups{display:grid;gap:10px;margin-top:12px}
+    .basket-group{border:1px solid var(--line);background:#171c1e;border-radius:14px;padding:11px}
+    .basket-group-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .basket-group-name{font-size:13px;font-weight:900}
+    .basket-level{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;padding:4px 7px;border-radius:999px;white-space:nowrap}
+    .basket-level.core{background:#3d2a12;color:#ffd58c;border:1px solid #735022}
+    .basket-level.recommended{background:#18301d;color:#bde8c4;border:1px solid #315d39}
+    .basket-level.expand{background:#1d2633;color:#c7d8ef;border:1px solid #354760}
+    .basket-level.niche{background:#29252e;color:#d9cfdf;border:1px solid #4a4352}
+    .basket-items{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+    .basket-item{font-size:11px;padding:6px 8px;border-radius:999px;background:#202629;border:1px solid #30373b;color:#e1e5e7}
+    .basket-note{font-size:11px;color:var(--muted);line-height:1.45;margin-top:8px}
     .shopping-list{padding:14px 17px 18px;display:grid;gap:12px}
     .shop-cat{border:1px solid var(--line);background:#171b1d;border-radius:16px;padding:13px}
     .shop-cat-title{font-size:16px;font-weight:850;margin-bottom:3px}
@@ -202,6 +217,7 @@
     </div>
     <div class="modal-sub">По каждой категории — бюджетный нормальный, лучший баланс цены/качества и вариант получше без ухода в дорогой премиум.</div>
   </div>
+  <div class="basket-guide" id="basicBasket"></div>
   <div class="shopping-list" id="shoppingList"></div>
   <div class="shop-source">Цены — ориентир розницы на Бали, проверены 16 октября 2026 по Atambah Bottle Shop. Наличие и цена могут меняться.</div>
 </dialog>
@@ -985,6 +1001,37 @@ document.getElementById("resetBtn").onclick=()=>{
 
 
 
+const BASIC_BASKET = [
+  {
+    name:"Ядро бара",
+    level:"Ядро",
+    cls:"core",
+    items:["Бурбон","Джин","Сладкий красный вермут","Сухой вермут","Campari","Aperol","Triple Sec"],
+    note:"Главная корзина под наш профиль: Boulevardier, Negroni, Old Pal, Lucien Gaudin, Gin & It и большинство Premium-вариаций."
+  },
+  {
+    name:"Добавить следующим",
+    level:"Очень желательно",
+    cls:"recommended",
+    items:["Ирландский виски","Белый ром","Angostura bitters"],
+    note:"Сильно расширяет меню без лишних бутылок: Irish Manhattan-ish, Rum Bitter, Daiquiri/Mojito и нормальные виски-твисты."
+  },
+  {
+    name:"Расширить бар",
+    level:"Расширение",
+    cls:"expand",
+    items:["Текила","Jägermeister"],
+    note:"Текила открывает Margarita и Batanga; Jägermeister — отдельную травяную ветку. Брать после ядра."
+  },
+  {
+    name:"Только если реально любите",
+    level:"На любителя",
+    cls:"niche",
+    items:["Водка","Бренди","Амаретто","Кофейный ликёр"],
+    note:"Не плохие категории, просто они почти не нужны для нашего основного топа. Имеют смысл под конкретные любимые коктейли."
+  }
+];
+
 const SHOPPING_GUIDE = [
   {category:"Бурбон",note:"Boulevardier, Old Pal, Whiskey Sour, Bourbon Orange Bitter",options:[
     {tier:"Бюджет",cls:"",name:"Jim Beam White 700 мл",price:"≈ Rp 380k",why:"Отличная рабочая бутылка для смешивания."},
@@ -1036,6 +1083,23 @@ const SHOPPING_GUIDE = [
 
 function renderShopping(){
   const box=document.getElementById("shoppingList");
+  const guide=document.getElementById("basicBasket");
+  if(guide){
+    guide.innerHTML=`
+      <div class="basket-title">Базовая корзина под наш вкус</div>
+      <div class="basket-sub">Сначала категории алкоголя, которые реально покрывают любимые коктейли. Ниже уже — конкретные бутылки по бюджету.</div>
+      <div class="basket-groups">
+        ${BASIC_BASKET.map(g=>`
+          <div class="basket-group">
+            <div class="basket-group-head">
+              <div class="basket-group-name">${g.name}</div>
+              <div class="basket-level ${g.cls}">${g.level}</div>
+            </div>
+            <div class="basket-items">${g.items.map(i=>`<span class="basket-item">${i}</span>`).join("")}</div>
+            <div class="basket-note">${g.note}</div>
+          </div>`).join("")}
+      </div>`;
+  }
   box.innerHTML=SHOPPING_GUIDE.map(cat=>`
     <section class="shop-cat">
       <div class="shop-cat-title">${cat.category}</div>
