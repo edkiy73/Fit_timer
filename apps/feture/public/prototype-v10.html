@@ -5653,7 +5653,7 @@ function qaGo(id,p){
 function qaRender(){const q='';const r=cur();
  $('#qaNav').innerHTML=QA_LIST().map(([g,items])=>{const it=items.filter(([id,l])=>!q||l.toLowerCase().includes(q)||id.toLowerCase().includes(q));return it.length?`<div class="qa-g">${g}</div>${it.map(([id,l,p],k)=>`<button class="qa-l ${r&&r.id===id&&JSON.stringify(p||{})===JSON.stringify(Object.fromEntries(Object.entries(r.p).filter(([k2])=>p&&k2 in p)))?'on':''}" data-qa="${id}" data-qp='${JSON.stringify(p||{})}'><code>${id[0]==='!'?'···':id}</code><span>${l}</span></button>`).join('')}`:'';}).join('');
  const th=themePref();
- $('#qaOpts').innerHTML=[[L('Техработы (админка)','Maintenance (admin)'),[['off',L('Выключены','Off')],['on',L('Включены','On')]],QA.maintenance?'on':'off','qaMaintenance'],[L('Язык','Language'),[['ru','RU'],['en','EN']],S.lang,'qaLang'],[L('Тема','Theme'),[['light',L('Светлая','Light')],['dark',L('Тёмная','Dark')],['auto',L('Авто','Auto')]],th,'qaTheme'],[L('Ширина','Width'),[['auto',L('Окно','Window')],['compact','320'],['phone','390'],['tablet','768'],['desktop','1440']],QA.frame,'qaFrame'],[L('Сеть','Network'),[['on',L('Есть','Online')],['off',L('Нет','Offline')]],QA.offline?'off':'on','qaNet'],[L('Фото-проверка','Photo check'),[['ok',L('Одобрить','Approve')],['no',L('Отклонить','Reject')]],'','qaPv'],[L('Подарок','Gift'),[['get',L('Получить Premium','Receive Premium')]],'','qaGift'],[L('Часы чата','Chat clock'),[['0',L('Сейчас','Now')],['15','+15 мин'],['120','+2 ч'],['1440','+24 ч']],String(Math.round((QA.clockShift||0)/60e3)),'qaClock'],[L('Проверяемый участник','Test participant'),[['me',L('Alex','Alex')],['partner',L('Партнёр','Partner')]],S.pairMember||'me','qaPairMember'],[L('Пара: тестовые действия','Couple: test actions'),[['invite',L('Открыть приглашение','Open invitation')],['incoming',L('Входящие','Incoming')],['member',L('Вступить: партнёр','Partner: join')],['leave',L('Выйти: партнёр','Partner: leave')],['blocked',L('Ограничить: партнёр','Restrict partner')],['unblock',L('Снять ограничение','Unrestrict partner')],['photos',L('Фото для пары','Couple photos')],['expire',L('+31 день','+31 days')]],'','qaPairAction'],[L('Аккаунт','Account'),[['full',L('Заполненный','Filled')],['pair',L('В паре','Couple')],['new',L('Новый','New')]],S.persona,'qaPersona'],['Premium',[['0',L('Нет','Off')],['1',L('Есть','On')]],S.me.premium?'1':'0','qaPrem'],[L('Знакомства в админке','Dating (admin)'),[['on',L('Включены','On')],['off',L('Скоро','Soon')]],QA.datingLive===false?'off':'on','qaDating'],[L('Логотип','Logo'),[['a','A'],['b','B'],['c','C']],QA.logo||'a','qaLogo'],[L('Мои запросы','My requests'),[['wait',L('Ждать ответа','Wait for answer')],['yes',L('Одобрять сразу','Approve at once')]],QA.autoApprove?'yes':'wait','qaAuto'],[L('Длина текстов','Text length'),[['off',L('Обычные','Normal')],['on',L('Длинные','Long')]],QA.long?'on':'off','qaLongT'],[L('Тексты без пробелов','Unbroken text'),[['off',L('Обычные','Normal')],['on',L('Без пробелов','No spaces')]],QA.nosp?'on':'off','qaNosp'],[L('Проверка возраста','Age check'),[['off',L('По дате рождения','By birth date')],['on',L('Обязательна','Required')]],QA.ageRequired?'on':'off','qaAge']].map(([t,items,v,act])=>`<div class="qa-opt"><span>${t}</span>${seg(items,v,act)}</div>`).join('');
+ $('#qaOpts').innerHTML=[[L('Техработы (админка)','Maintenance (admin)'),[['off',L('Выключены','Off')],['on',L('Включены','On')]],QA.maintenance?'on':'off','qaMaintenance'],[L('Язык','Language'),[['ru','RU'],['en','EN']],S.lang,'qaLang'],[L('Тема','Theme'),[['light',L('Светлая','Light')],['dark',L('Тёмная','Dark')],['auto',L('Авто','Auto')]],th,'qaTheme'],[L('Ширина','Width'),[['auto',L('Окно','Window')],['compact','320'],['phone','390'],['tablet','768'],['desktop','1440']],QA.frame,'qaFrame'],[L('Сеть','Network'),[['on',L('Есть','Online')],['off',L('Нет','Offline')]],QA.offline?'off':'on','qaNet'],[L('Фото-проверка','Photo check'),[['ok',L('Одобрить','Approve')],['no',L('Отклонить','Reject')]],'','qaPv'],[L('Подарок','Gift'),[['get',L('Получить Premium','Receive Premium')]],'','qaGift'],[L('Часы чата','Chat clock'),[['0',L('Сейчас','Now')],['15','+15 мин'],['120','+2 ч'],['1440','+24 ч']],String(Math.round((QA.clockShift||0)/60e3)),'qaClock'],[L('Проверяемый участник','Test participant'),[['me',L('Alex','Alex')],['partner',L('Партнёр','Partner')]],S.pairMember||'me','qaPairMember'],[L('Пара: тестовые действия','Couple: test actions'),[['invite',L('Открыть приглашение','Open invitation')],['incoming',L('Входящие','Incoming')],['member',L('Вступить: партнёр','Partner: join')],['leave',L('Выйти: партнёр','Partner: leave')],['blocked',L('Ограничить: партнёр','Restrict partner')],['unblock',L('Снять ограничение','Unrestrict partner')],['photos',L('Фото для пары','Couple photos')],['expire',L('+31 день','+31 days')]],'','qaPairAction'],[L('Аккаунт','Account'),[['full',L('Заполненный','Filled')],['pair',L('В паре','Couple')],['new',L('Новый','New')]],S.persona,'qaPersona'],['Premium',[['0',L('Нет','Off')],['1',L('Есть','On')]],S.me.premium?'1':'0','qaPrem'],[L('Знакомства в админке','Dating (admin)'),[['on',L('Включены','On')],['off',L('Скоро','Soon')]],QA.datingLive===false?'off':'on','qaDating'],[L('Логотип','Logo'),[['a','A'],['b','B'],['c','C']],QA.logo||'a','qaLogo'],[L('Мои запросы','My requests'),[['wait',L('Ждать ответа','Wait for answer')],['yes',L('Одобрять сразу','Approve at once')]],QA.autoApprove?'yes':'wait','qaAuto'],[L('Длина текстов','Text length'),[['off',L('Обычные','Normal')],['on',L('Длинные','Long')]],QA.long?'on':'off','qaLongT'],[L('Тексты без пробелов','Unbroken text'),[['off',L('Обычные','Normal')],['on',L('Без пробелов','No spaces')]],QA.nosp?'on':'off','qaNosp'],[L('Опасные символы','Hostile input'),[['off',L('Обычные','Normal')],['on',L('Теги и спецсимволы','Tags & symbols')]],QA.xss?'on':'off','qaXss'],[L('Проверка возраста','Age check'),[['off',L('По дате рождения','By birth date')],['on',L('Обязательна','Required')]],QA.ageRequired?'on':'off','qaAge']].map(([t,items,v,act])=>`<div class="qa-opt"><span>${t}</span>${seg(items,v,act)}</div>`).join('');
  $('#qaHint').innerHTML=L('Коды подтверждения: <b>000000</b> — неверный, <b>999999</b> — истёк, любой другой — верный. Почта <b>limit@…</b> — лимит отправки. Ник <b>alex</b> занят.','Codes: <b>000000</b> wrong, <b>999999</b> expired, any other works. Email <b>limit@…</b> hits the send limit. Nickname <b>alex</b> is taken.')+`<button class="btn secondary mt12" data-act="qaRestart">${L('Начать регистрацию заново','Restart registration')}</button><span class="note">${L('Очистит текущую сессию прототипа и откроет приветствие.','Clears this prototype session and opens the welcome screen.')}</span>`;
 }
 ACT.qaRestart=()=>restartPrototype();
@@ -5698,10 +5698,40 @@ function qaLong(on){
    Data only: ids, routes, enums, photo URLs and timestamps are never touched. Nothing is stored — the original value of every field is kept
    in NOSP.log and put back on «Обычные». Content created while the mode is on (new posts, replies, chat answers…) is substituted too,
    unless the tester already typed an unbroken string of a comparable length. Re-applied before every screen/sheet render, so lazily created data is covered. */
-const NOSP={on:false,log:[],seen:new WeakMap(),byPut:new Map(),n:0};
+const NOSP={on:false,kind:'text',log:[],seen:new WeakMap(),byPut:new Map(),n:0};
 const NOSP_NOLIMIT=600;
 const NOSP_CHUNK={cyr:'Непрерывнаястрокабезпробеловсверхдлинноеслово',lat:'Unbreakablestringwithoutanyspacesoverflowcheck',mix:'ПриветWorldДлинноеСловоLongWord2026Ёё',num:'01234567890123456789',wide:'WМШЩWМШЩЖЫWMШЩ'};
+/* «Опасные символы» (QA.xss): instead of long words, hostile strings — tags, event handlers, javascript: links, broken markup,
+   Markdown, template syntax, bidi/zero-width/combining marks, control characters, SQL/path strings. Every script payload calls
+   window.__x(id), so a test can see exactly which field executed. Same data-only, restorable machinery as «Без пробелов». */
+window.__x=id=>{(window.__xssHits=window.__xssHits||[]).push(id);};
+function nospPayload(tag,lim,n,nick){
+ const id=n.toString(36);
+ if(tag==='link'||tag==='ext')return `javascript:__x('${id}')//https://example.com`.slice(0,lim);
+ const short=[`"><b>${id}`,`<b>${id}</b>&'`,`'"&<>;${id}`,`\u202E${id}\u200Dabc`,`<i/onclick=__x(${id})>`,`{{7*7}}\${id}`];
+ if(nick||lim<48)return short[n%short.length].slice(0,lim);
+ const P=[
+  `<img src=x onerror=__x('${id}')>`,
+  `<script>__x('${id}')<\/script>`,
+  `"><svg onload=__x('${id}')>`,
+  `'"><iframe srcdoc="<script>parent.__x('${id}')<\/script>"></iframe>`,
+  `</h2></div></section></main><b id=brk${id} style="position:fixed;inset:0;background:red">BRK</b>`,
+  `[x](javascript:__x('${id}')) [y](https://e.x/a"onmouseover="__x('${id}')) <a href="javascript:__x('${id}')">l</a>`,
+  '{{constructor.constructor("__x(\''+id+'\')")()}} ${__x(\''+id+'\')} %s %n \\x00 \\u0000',
+  `&lt;img src=x onerror=__x('${id}')&gt; &#60;b&#62; &amp;amp; &#x3C;script&#x3E;`,
+  `\u202E\u2066RTL-OVERRIDE\u2069\u200B\u200D\uFEFF${id} \u202Dtext`,
+  `Z̷̢̛̖͓̰a̸̺͉̽l̴̡̛g̵̨͚o̷͍̓ ${'\u0336\u0334\u0335\u0337\u0489'.repeat(40)} ${id}`,
+  `<style>*{display:none!important}</style><meta http-equiv=refresh content="0;url=javascript:__x('${id}')"><base href="https://evil.example/">`,
+  `**bold** _it_ ~~s~~ \`code\` \n# h\n- li\n> q\n\n\n![img](https://x.y/a.png) [a](https://x.y) ${id}`,
+  `\u0000\u0001\r\n\t<!--${id}--><![CDATA[x]]><?php echo 1 ?>`,
+  `data:text/html,<script>__x('${id}')<\/script> vbscript:x file:///etc/passwd`,
+  `'; DROP TABLE users;-- ' OR 1=1 -- ../../etc/passwd %2e%2e%2f %00 ${id}`,
+  `<a href=# onclick="__x('${id}')" onmouseover=__x('${id}')>click</a><input autofocus onfocus=__x('${id}')><details open ontoggle=__x('${id}')>`
+ ];
+ return P[n%P.length].slice(0,lim);
+}
 function nospGen(tag,lim,n,nick){
+ if(NOSP.kind==='xss'){(NOSP.ids=NOSP.ids||{})[n.toString(36)]=tag;return nospPayload(tag,lim,n,nick);}
  const rep=(c,k)=>c.repeat(Math.ceil(k/c.length)+1).slice(0,k);
  const id=n.toString(36); // every generated value is unique, so copies made from it can be traced back and restored
  if(nick){const v=[()=>rep('alexandrina.maximila',lim),()=>rep('W',lim),()=>rep('m_W.',lim),()=>rep(NOSP_CHUNK.num,lim)];return (id+v[n%v.length]()).slice(0,lim);}
@@ -5758,19 +5788,20 @@ function nospSweep(o,seen=new WeakSet(),d=0){
  if(!o||typeof o!=='object'||d>9||seen.has(o))return;const pr=Object.getPrototypeOf(o);if(pr!==Object.prototype&&pr!==Array.prototype&&pr!==null)return;seen.add(o);
  for(const k of Object.keys(o)){const v=o[k];if(typeof v==='string'){if(NOSP.byPut.has(v))o[k]=NOSP.byPut.get(v);}else nospSweep(v,seen,d+1);}
 }
-function qaNosp(on){
+function qaNosp(on,kind='text'){
  if(on&&QA.long)qaLong(false);
+ if(on&&NOSP.on&&NOSP.kind!==kind)qaNosp(false);
  if(!NOSP.on===!on)return;
- NOSP.on=QA.nosp=!!on;
+ NOSP.on=!!on;NOSP.kind=kind;QA.nosp=!!on&&kind==='text';QA.xss=!!on&&kind==='xss';
  if(on){nospApply();}
  else{NOSP.log.forEach(r=>{if(r.h[r.k]===r.put)r.h[r.k]=r.orig;});
   nospSweep(S);[PEOPLE,CITY,COMMUNITIES,EVENTS].forEach(x=>nospSweep(x));
-  NOSP.log=[];NOSP.seen=new WeakMap();NOSP.byPut=new Map();NOSP.n=0;}
+  NOSP.log=[];NOSP.seen=new WeakMap();NOSP.byPut=new Map();NOSP.ids={};NOSP.n=0;}
  refresh();resheet();}
 /* every screen / sheet render re-applies the mode first, so data created lazily or by interaction is covered */
 Object.values(SC).forEach(sc=>{if(!sc||!sc.render||sc.nospHook)return;const r0=sc.render;sc.render=function(...a){NOSP.on&&nospApply();return r0.apply(this,a);};sc.nospHook=1;});
 {const ds0=drawSheet;drawSheet=function(){NOSP.on&&nospApply();return ds0();};}
-FT_QA.nospace=on=>qaNosp(on!==false);FT_QA.nospStat=()=>({on:NOSP.on,fields:NOSP.log.length});
+FT_QA.nospace=on=>qaNosp(on!==false);FT_QA.hostile=on=>qaNosp(on!==false,'xss');FT_QA.hits=()=>window.__xssHits||[];FT_QA.hostileIds=()=>NOSP.ids||{};FT_QA.nospStat=()=>({on:NOSP.on,fields:NOSP.log.length});
 window.QA_SYNC=()=>{if($('#qa.open'))qaRender();};
 const qa=$('#qa'),qaScrim=$('#qaScrim');
 window.QA_CLOSE=()=>{qa.classList.remove('open');qaScrim.classList.remove('on');qa.setAttribute('aria-hidden','true');syncModal();$('#qaFab').focus({preventScroll:true});};
@@ -5780,7 +5811,7 @@ qa.addEventListener('click',e=>{
  const b=e.target.closest('[data-qa]');if(b){qaGo(b.dataset.qa,JSON.parse(b.dataset.qp||'{}'));if(matchMedia('(max-width:900px)').matches)QA_CLOSE();else qaRender();return;}
  const a=e.target.closest('[data-act]');if(!a)return;e.stopPropagation();const v=a.dataset.v;
  if(a.dataset.act==='qaRestart'){ACT.qaRestart();return;}
- ({qaNosp:()=>qaNosp(v==='on'),qaPairMember:()=>{S.pairMember=v;refresh();resheet();},qaPairAction:()=>ACT.qaPair(a),qaMaintenance:()=>{QA.maintenance=v==='on';if(QA.maintenance){ACT.matchClose?.();$('#matchLayer').innerHTML='';}closeSheet(true);S.ui.ask?.();closeViewer();refresh();},qaLang:()=>{S.lang=v;document.documentElement.lang=v;refresh();resheet();},qaTheme:()=>applyTheme(v),qaFrame:()=>{QA.frame=v;document.body.classList.remove('frame','tablet','compact');document.body.classList.toggle('qa-viewport',v!=='auto');document.body.style.setProperty('--qa-width',({compact:320,phone:390,tablet:768,desktop:1440}[v]||innerWidth)+'px');refresh();},qaPv:()=>pvResolve(v==='ok'),qaGift:()=>giftReceive(),qaClock:()=>{QA.clockShift=(+v)*60e3;refresh();toast(L('Модельное время чата сдвинуто — только для проверки исчезающих фото','Chat model time shifted — only for testing disappearing media'));},qaNet:()=>{QA.offline=v==='off';refresh();toast(QA.offline?L('Режим «нет сети»: действия будут падать с ошибкой','Offline mode: actions will fail with an error'):L('Сеть восстановлена','Back online'),{type:QA.offline?'warn':'ok'});},qaPersona:()=>{signIn(v);toast(v==='new'?L('Новый пустой аккаунт','New empty account'):v==='pair'?L('Alex в паре с Kira — два отдельных аккаунта','Alex in a couple with Kira — two separate accounts'):L('Заполненный аккаунт Alex','Filled account: Alex'),{type:'ok'});},qaPrem:()=>{S.me.premium=v==='1';refresh();},qaDating:()=>{QA.datingLive=v==='on';refresh();},qaLogo:()=>{QA.logo=v;renderSide();refresh();},qaAge:()=>{QA.ageRequired=v==='on';refresh();},qaLongT:()=>qaLong(v==='on'),qaAuto:()=>{QA.autoApprove=v==='yes';if(QA.autoApprove)qaApproveAll();}}[a.dataset.act]||(()=>{}))();
+ ({qaNosp:()=>qaNosp(v==='on'),qaXss:()=>qaNosp(v==='on','xss'),qaPairMember:()=>{S.pairMember=v;refresh();resheet();},qaPairAction:()=>ACT.qaPair(a),qaMaintenance:()=>{QA.maintenance=v==='on';if(QA.maintenance){ACT.matchClose?.();$('#matchLayer').innerHTML='';}closeSheet(true);S.ui.ask?.();closeViewer();refresh();},qaLang:()=>{S.lang=v;document.documentElement.lang=v;refresh();resheet();},qaTheme:()=>applyTheme(v),qaFrame:()=>{QA.frame=v;document.body.classList.remove('frame','tablet','compact');document.body.classList.toggle('qa-viewport',v!=='auto');document.body.style.setProperty('--qa-width',({compact:320,phone:390,tablet:768,desktop:1440}[v]||innerWidth)+'px');refresh();},qaPv:()=>pvResolve(v==='ok'),qaGift:()=>giftReceive(),qaClock:()=>{QA.clockShift=(+v)*60e3;refresh();toast(L('Модельное время чата сдвинуто — только для проверки исчезающих фото','Chat model time shifted — only for testing disappearing media'));},qaNet:()=>{QA.offline=v==='off';refresh();toast(QA.offline?L('Режим «нет сети»: действия будут падать с ошибкой','Offline mode: actions will fail with an error'):L('Сеть восстановлена','Back online'),{type:QA.offline?'warn':'ok'});},qaPersona:()=>{signIn(v);toast(v==='new'?L('Новый пустой аккаунт','New empty account'):v==='pair'?L('Alex в паре с Kira — два отдельных аккаунта','Alex in a couple with Kira — two separate accounts'):L('Заполненный аккаунт Alex','Filled account: Alex'),{type:'ok'});},qaPrem:()=>{S.me.premium=v==='1';refresh();},qaDating:()=>{QA.datingLive=v==='on';refresh();},qaLogo:()=>{QA.logo=v;renderSide();refresh();},qaAge:()=>{QA.ageRequired=v==='on';refresh();},qaLongT:()=>qaLong(v==='on'),qaAuto:()=>{QA.autoApprove=v==='yes';if(QA.autoApprove)qaApproveAll();}}[a.dataset.act]||(()=>{}))();
  qaRender();
 },true);
 
@@ -5808,6 +5839,7 @@ startNavHistory();
 try{if(new URLSearchParams(location.search).get('long')==='1')qaLong(true);}catch(e){}
 
 try{if(new URLSearchParams(location.search).get('nospace')==='1')qaNosp(true);}catch(e){}
+try{if(new URLSearchParams(location.search).get('hostile')==='1')qaNosp(true,'xss');}catch(e){}
 
 })();</script>
 </body>
