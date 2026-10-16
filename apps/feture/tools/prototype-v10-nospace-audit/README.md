@@ -27,3 +27,5 @@ node flowsec.mjs ru 390 light full   # те же проверки на сцен�
 node poc.mjs                     # сквозные PoC: введённое руками имя сообщества → заголовок Bottom Sheet
 node urlt.mjs                    # hash, query, localStorage
 ```
+
+`SAN=off node sec.mjs …` выключает защитный слой `safeInline()` и проверяет, что вызовы экранируют сами (должно быть 0 находок). `typed.mjs` — очистка ввода (bidi/управляющие/Zalgo).
