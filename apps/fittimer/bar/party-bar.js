@@ -1038,7 +1038,7 @@ function renderCards(){
   if(G.view==="rules"){
     pBody.innerHTML=`<div class="gcard lv5 rules"><div class="g-kind">Закон семьи · 18+</div>
       <p class="g-txt">Дальше будет жарче.</p>
-      <ul class="g-rules"><li>Только для взрослых и только для своих.</li><li>Любой может сказать «пас» — без объяснений и без штрафа.</li><li>Касания и поцелуи — только если второй человек согласен.</li><li>Стоп-слово <b>«Омерта»</b> останавливает любое задание.</li><li>Что было за столом — остаётся за столом.</li></ul></div>`;
+      <ul class="g-rules"><li>Только для взрослых и только для своих.</li><li>Любой может сказать «пас» — без объяснений и без штрафа.</li><li>Касания и поцелуи — только если второй человек согласен.</li><li>Стоп-фраза <b>«Дон не одобряет»</b> останавливает любое задание.</li><li>Что было за столом — остаётся за столом.</li></ul></div>`;
     pNav.hidden=false;
     pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="decks">Назад</button><button class="btn btn-brass" type="button" data-pa="agree">Мы в деле</button>`;
     return;
@@ -1058,7 +1058,7 @@ function renderPlay(){
   const [kind,txt]=done?["Конец колоды","Дон доволен вечером. Перемешать и сыграть ещё раз?"]:cur.card;
   const noPen=["Дон бережёт семью","Клятва","Финал","Двойная карта"];
   if(cur&&cur.lvl>=5&&!noPen.includes(kind)&&!cur.pen)cur.pen=PENALTIES[Math.floor(Math.random()*PENALTIES.length)];
-  const alt=cur&&cur.pen?(G.showAlt?`<div class="g-alt" data-pa="alt"><b>Не хочешь — штраф:</b>${cur.pen}<small>«Омерта» отменяет задание без всякого штрафа.</small></div>`:`<button type="button" class="g-lvl" data-pa="alt">А есть ещё варианты?</button>`):"";
+  const alt=cur&&cur.pen?(G.showAlt?`<div class="g-alt" data-pa="alt"><b>Не хочешь — штраф:</b>${cur.pen}<small>«Дон не одобряет» отменяет задание без всякого штрафа.</small></div>`:`<button type="button" class="g-lvl" data-pa="alt">А есть ещё варианты?</button>`):"";
   const me=who(0),next=who(1);
   pBody.innerHTML=`<div class="g-bar lv${lvl}"><button type="button" class="g-back" data-pa="decks">← Колоды</button><span>${ramp?`<b>${(cur||G.cards[n-1]).rank}</b> · Разгоняемся`:d.name}</span><button type="button" class="g-pl" data-pa="roster" aria-label="Игроки"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.3 3-5 6-5s5.4 1.7 6 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.6.2 4.4 1.8 5 4.8"/></svg>${G.players.length||"+"}</button></div>
   ${ramp?`<div class="bt-prog ramp-prog" style="gap:${n>45?1:n>30?2:4}px">${G.cards.map((c,j)=>`<i class="lv${lvl} ${j<=G.k?"f":""}"></i>`).join("")}</div>`:""}
