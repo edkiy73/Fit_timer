@@ -153,6 +153,15 @@
     .modal-title{font-size:21px;font-weight:850}
     .modal-close{border:0;background:#24292c;color:white;border-radius:999px;width:34px;height:34px;font-size:20px;cursor:pointer}
     .modal-sub{font-size:12px;color:var(--muted);line-height:1.4;margin-top:5px}
+    .pantry-mode{padding:12px 17px 0}
+    .pantry-mode-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+    .pantry-mode-options{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+    .pantry-mode-option{position:relative;display:block;cursor:pointer}
+    .pantry-mode-option input{position:absolute;opacity:0;pointer-events:none}
+    .pantry-mode-card{display:block;padding:10px 11px;border-radius:13px;border:1px solid var(--line);background:#191d1f}
+    .pantry-mode-card b{display:block;font-size:12px}
+    .pantry-mode-card small{display:block;color:var(--muted);font-size:10px;line-height:1.35;margin-top:3px}
+    .pantry-mode-option input:checked + .pantry-mode-card{border-color:#b85d1f;background:#2a1b12;box-shadow:inset 0 0 0 1px rgba(255,122,26,.28)}
     .ingredients{padding:14px 17px;display:grid;grid-template-columns:1fr;gap:8px}
     .ingredient{display:flex;align-items:center;gap:11px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#191d1f;cursor:pointer}
     .ingredient input{width:20px;height:20px;accent-color:var(--accent)}
@@ -212,7 +221,20 @@
       <div class="modal-title">Что есть в баре?</div>
       <button class="modal-close" id="closePantry" aria-label="Закрыть">×</button>
     </div>
-    <div class="modal-sub">Отметь бутылки и основные миксеры, которые есть. Лимон, лайм, сироп, соль, биттеры-капли и цедра проверяются отдельно внутри карточки — там будет написано, что ещё понадобится.</div>
+    <div class="modal-sub">Отметь бутылки и основные миксеры, которые есть, и выбери — учитывать только основной рецепт или ещё и вариации. Лимон, лайм, сироп, соль и цедра показываются отдельно внутри карточки.</div>
+  </div>
+  <div class="pantry-mode">
+    <div class="pantry-mode-title">Что учитывать</div>
+    <div class="pantry-mode-options">
+      <label class="pantry-mode-option">
+        <input type="radio" name="pantryRecipeMode" value="main" checked>
+        <span class="pantry-mode-card"><b>Только основные</b><small>Коктейль показывается только если хватает на его базовый рецепт.</small></span>
+      </label>
+      <label class="pantry-mode-option">
+        <input type="radio" name="pantryRecipeMode" value="variations">
+        <span class="pantry-mode-card"><b>С вариациями</b><small>Подойдут также коктейли, у которых можно собрать хотя бы одну вариацию.</small></span>
+      </label>
+    </div>
   </div>
   <div class="ingredients" id="ingredients"></div>
   <div class="modal-actions">
