@@ -1000,7 +1000,7 @@ function startDeck(id){
   renderCards();pBody.scrollTop=0;
 }
 function drawNext(){
-  if(G.k>=G.cards.length)return;G.showLvl=false;
+  if(G.k>=G.cards.length)return;G.showLvl=false;G.showAlt=false;
   const prev=G.cards[G.k];G.k++;G.turn++;buzz(8);
   const nx=G.cards[G.k];
   if(G.deck==="ramp"&&nx&&nx.rank!==prev.rank){toast(`Повышение в семье: ${nx.rank}`);buzz([20,50,20,50,40])}
@@ -1056,12 +1056,15 @@ function renderPlay(){
   const lvl=ramp?(cur?cur.stage:(G.hard?6:5)):(cur?cur.lvl:d.lvl);
   const lvlInfo=cur&&ramp?(G.showLvl?`<button type="button" class="g-lvl on" data-pa="lvl">${heat(cur.lvl)} ${DECKS.find(x=>x.lvl===cur.lvl).name}</button>`:`<button type="button" class="g-lvl" data-pa="lvl">А что за уровень?</button>`):"";
   const [kind,txt]=done?["Конец колоды","Дон доволен вечером. Перемешать и сыграть ещё раз?"]:cur.card;
+  const noPen=["Дон бережёт семью","Клятва","Финал","Двойная карта"];
+  if(cur&&cur.lvl>=5&&!noPen.includes(kind)&&!cur.pen)cur.pen=PENALTIES[Math.floor(Math.random()*PENALTIES.length)];
+  const alt=cur&&cur.pen?(G.showAlt?`<div class="g-alt" data-pa="alt"><b>Не хочешь — штраф:</b>${cur.pen}<small>«Омерта» отменяет задание без всякого штрафа.</small></div>`:`<button type="button" class="g-lvl" data-pa="alt">А есть ещё варианты?</button>`):"";
   const me=who(0),next=who(1);
   pBody.innerHTML=`<div class="g-bar lv${lvl}"><button type="button" class="g-back" data-pa="decks">← Колоды</button><span>${ramp?`<b>${(cur||G.cards[n-1]).rank}</b> · Разгоняемся`:d.name}</span><button type="button" class="g-pl" data-pa="roster" aria-label="Игроки"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.3 3-5 6-5s5.4 1.7 6 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.6.2 4.4 1.8 5 4.8"/></svg>${G.players.length||"+"}</button></div>
   ${ramp?`<div class="bt-prog ramp-prog" style="gap:${n>45?1:n>30?2:4}px">${G.cards.map((c,j)=>`<i class="lv${lvl} ${j<=G.k?"f":""}"></i>`).join("")}</div>`:""}
   <div class="gcard lv${lvl}" data-pa="${done?"reshuffle":"draw"}">${HAT}
     ${me&&!done?`<div class="g-who">Ход: <b>${esc(me)}</b></div>`:""}
-    <div class="g-kind">${kind}</div><p class="g-txt">${txt}</p>${lvlInfo}
+    <div class="g-kind">${kind}</div><p class="g-txt">${txt}</p>${lvlInfo||alt?`<div class="g-opts">${lvlInfo}${alt}</div>`:""}
     <div class="g-foot">${done?"":`${G.k+1} / ${n}${next&&G.players.length>1?` · дальше: ${esc(next)}`:" · нажми — следующая"}`}</div></div>`;
   pNav.hidden=false;
   pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="gprev" ${G.k?"":"disabled"}>Назад</button><button class="btn btn-brass" type="button" data-pa="${done?"reshuffle":"draw"}">${done?"Ещё раз":"Следующая карта"}</button>`;
@@ -1110,8 +1113,9 @@ panel.addEventListener("click",e=>{
   if(a==="agree"){agreed=true;startDeck(G.pending);return}
   if(a==="decks"){G.view="decks";renderCards();pBody.scrollTop=0;return}
   if(a==="draw"){drawNext();return}
-  if(a==="gprev"){if(G.k>0){G.k--;G.turn--;G.showLvl=false;renderCards()}return}
+  if(a==="gprev"){if(G.k>0){G.k--;G.turn--;G.showLvl=G.showAlt=false;renderCards()}return}
   if(a==="lvl"){G.showLvl=!G.showLvl;renderCards();return}
+  if(a==="alt"){G.showAlt=!G.showAlt;renderCards();return}
   if(a==="roster"){G.curName=who(0);G.view="roster";renderCards();return}
   if(a==="rdone"){const i=G.players.indexOf(G.curName);if(i>=0)G.turn=i;G.view="play";renderCards();return}
   if(a==="rdel"){G.players.splice(+el.dataset.i,1);store.set("gPlayers",G.players);renderCards();return}
@@ -1128,7 +1132,7 @@ panel.addEventListener("click",e=>{
   pBody.addEventListener("touchend",e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0,dy=e.changedTouches[0].clientY-y0;x0=null;
     if(Math.abs(dx)<60||Math.abs(dy)>Math.abs(dx))return;
     if(pKind==="bartender"){bt.k=Math.max(0,Math.min(bt.steps.length-1,bt.k+(dx<0?1:-1)));renderBt()}
-    else if(pKind==="cards"&&G.tab==="decks"&&G.view==="play"){if(dx<0)drawNext();else if(G.k>0){G.k--;G.turn--;G.showLvl=false;renderCards()}}
+    else if(pKind==="cards"&&G.tab==="decks"&&G.view==="play"){if(dx<0)drawNext();else if(G.k>0){G.k--;G.turn--;G.showLvl=G.showAlt=false;renderCards()}}
   });
 })();
 
