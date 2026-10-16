@@ -891,3 +891,65 @@ document.getElementById("shoppingBtn").onclick=()=>{renderShopping();shoppingDlg
 document.getElementById("closeShopping").onclick=()=>shoppingDlg.close();
 
 render();
+
+
+let copyToastTimer=null;
+async function copyTextValue(text){
+  const value=String(text||"").replace(/\s+/g," ").trim();
+  if(!value) return;
+  let ok=false;
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(value);
+      ok=true;
+    }
+  }catch(_){}
+  if(!ok){
+    try{
+      const ta=document.createElement("textarea");
+      ta.value=value;
+      ta.setAttribute("readonly","");
+      ta.style.position="fixed";
+      ta.style.opacity="0";
+      ta.style.pointerEvents="none";
+      document.body.appendChild(ta);
+      ta.select();
+      ok=document.execCommand("copy");
+      ta.remove();
+    }catch(_){}
+  }
+  const toast=document.getElementById("copyToast");
+  if(toast){
+    toast.textContent=(ok?"Скопировано: ":"Не удалось скопировать: ")+value;
+    toast.classList.add("show");
+    clearTimeout(copyToastTimer);
+    copyToastTimer=setTimeout(()=>toast.classList.remove("show"),1800);
+  }
+}
+
+function installCopyTargets(){
+  const selectors=[
+    ".title",
+    ".variation-name",
+    ".ingredient b",
+    ".extra-top b",
+    ".basket-item",
+    ".shop-name",
+    ".shop-cat-title"
+  ];
+  document.querySelectorAll(selectors.join(",")).forEach(el=>{
+    el.classList.add("copyable");
+    el.title="Нажмите, чтобы скопировать";
+  });
+}
+
+document.addEventListener("click",e=>{
+  const el=e.target.closest(".copyable");
+  if(!el) return;
+  const text=el.dataset.copyText || el.textContent;
+  copyTextValue(text);
+});
+
+const copyObserver=new MutationObserver(()=>installCopyTargets());
+copyObserver.observe(document.body,{childList:true,subtree:true});
+installCopyTargets();
