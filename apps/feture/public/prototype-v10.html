@@ -1987,6 +1987,28 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 
 /* Exact QA canvas widths use the same stage container queries as the app. */
 body.qa-viewport{overflow:auto;display:block}body.qa-viewport .stage{position:relative;inset:auto;width:var(--qa-width);height:900px;min-height:0;margin:0 auto;container:stage/inline-size}body.qa-viewport .root{width:100%;height:100%;border-radius:0;box-shadow:none}body.qa-viewport .layer,body.qa-viewport .toasts{position:absolute}body.qa-viewport .qa-fab{position:fixed;left:8px;right:auto;bottom:8px}
+/* ============ UNBROKEN USER TEXT (V10 overflow audit, 2026-10-16) ============
+   Any user-entered text may be one long word (nickname, URL, e-mail, pasted string). Containers that show it must wrap it
+   and be allowed to shrink inside flex/grid parents. `anywhere` (not `break-word`) also lowers min-content, so a long word
+   no longer stretches the parent. Single-line ellipsis components (.nmt, .chat-row, .frow, .bar .sub, .recent) stay as they are. */
+.md,.md p,.bio,.quote p,.poll-q,.poll .pot,.cmc b,.cmc small,.cmc .meta>*,.cm-head h2,.cm-head .cm-meta>*,.disc b,.disc p,.rules li,h2.t,
+.ev-title,.ev-hero .pill,.evc .bd b,.evc .bd small,.evc .bd .meta>*,.fact>span,.statusline .tx,.statusline small,.upd b,.upd p,.nt .tx,
+.li .tx,.li .tx b,.li .tx small,.li>span.tx,.me-id b,.me-id small,.me-pair .tx b,.me-pair .tx small,.pc-who>*,.pc-keys>*,.veil-glass b,
+.rqcard .row b,.ansrow .tx b,.card.flat .note,.card.flat>div,.alert>span,.field>span,.sheet .sh-h h2,.sheet .sh-h p,.sheet .lead,.sheet .sec,
+.dialog h2,.dialog p,.toast .tx,.pair-wrap h2,.onb-c .cmc .tx,.ctx .evc .bd,.ctx .cmc .tx{overflow-wrap:anywhere;min-width:0}
+.pc-who>*,.pc-keys>*,.cmc .meta>*,.cm-head .cm-meta>*,.ev-hero .pill,.evc .bd .meta>*{max-width:100%}
+.fact>span,.statusline .tx,.toast .tx{flex:1}
+.poll{grid-template-columns:minmax(0,1fr)}
+.dialog{overflow-x:hidden}
+.ctx{overflow-x:hidden}
+/* overlays sized by content: keep inside the picture, never over the date badge */
+.evc .fmt{max-width:calc(100% - 96px);justify-content:flex-end}
+.evc .fmt span{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pgc .wm,.pcell .wm{max-width:calc(100% - 12px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctx .mini,.ctx .mini .grow,.ctx .mini b,.ctx .mini small,.rqrow .grow,.rqrow .top .grow b,.rqrow small,.pairline span,.pairline b,.author-option span,.author-option b{overflow-wrap:anywhere;min-width:0}
+.hero:has(>.pc-info),.ev-hero:has(>.pc-info){grid-template-columns:minmax(0,1fr)}
+.hero>.pc-info,.ev-hero>.pc-info{min-width:0;max-width:100%}
+.card.row>.grow,.card.row .note{min-width:0;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
