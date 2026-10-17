@@ -22,9 +22,14 @@ export function affectedApps(files, appNames){
 }
 
 /* Облегчённая проверка: если в приложении изменено ТОЛЬКО то, что описано в LIGHT_SCOPES
-   (сейчас — автономные HTML-прототипы FetUre), вместо полного `check` запускается его скрипт
+   (автономные HTML-прототипы FetUre и пати-бар FitTimer), вместо полного `check` запускается его скрипт
    `check:prototype`. Любой другой файл приложения, Core или корень возвращают полную проверку. */
 export const LIGHT_SCOPES = {
+  /* Пати-бар /bar — автономная статическая страница без сборки и без кода FitTimer. */
+  fittimer: {
+    script: 'check:bar',
+    paths: [/^apps\/fittimer\/bar\//]
+  },
   feture: {
     script: 'check:prototype',
     paths: [
@@ -47,4 +52,12 @@ export function lightChecks(files, appNames){
     if(own.length && own.every(f => scope.paths.some(re => re.test(f)))) out[name] = scope.script;
   }
   return out;
+}
+
+/* Нужны ли браузерные тесты FitTimer: нет, если в FitTimer изменён только пати-бар. */
+export function fittimerBrowserNeeded(files, appNames){
+  const target = affectedApps(files, appNames);
+  if(target.core) return true;
+  if(!target.apps.includes('fittimer')) return false;
+  return !lightChecks(files, appNames).fittimer;
 }
