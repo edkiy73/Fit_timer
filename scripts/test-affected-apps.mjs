@@ -1,6 +1,6 @@
 /* Проверка фильтра путей CI: node scripts/test-affected-apps.mjs */
 import assert from 'node:assert/strict';
-import { affectedApps, lightChecks } from './affected-apps.mjs';
+import { affectedApps, lightChecks, fittimerBrowserNeeded } from './affected-apps.mjs';
 
 const APPS = ['feture', 'fittimer', 'task-mini', 'unmute'];
 const all = {core: true, apps: APPS};
@@ -35,7 +35,23 @@ const light = [
   [[F + 'public/images/v10-content/x.webp'], {}],
   [[F + 'package.json'], {}],
   [[F + 'docs/why.md'], {}],
-  [['apps/task-mini/src/app.tsx'], {}]
+  [['apps/task-mini/src/app.tsx'], {}],
+  [['apps/fittimer/bar/party-bar.js', 'apps/fittimer/bar/index.html'], {fittimer: 'check:bar'}],
+  [['apps/fittimer/bar/party-bar.js', 'apps/fittimer/src/app/70-workout.js'], {}],
+  [['apps/fittimer/bar/party-bar.js', 'apps/fittimer/vercel.json'], {}],
+  [['apps/fittimer/bar/party-bar.js', 'packages/core/src/core/ui.ts'], {}]
 ];
 for(const [files, want] of light) assert.deepEqual(lightChecks(files, APPS), want, files.join(', '));
 console.log(`ok  light-checks (${light.length} случаев)`);
+
+const browser = [
+  [['apps/fittimer/bar/party-bar.js'], false],
+  [['apps/fittimer/bar/sw.js', 'apps/fittimer/docs/why.md'], false],
+  [['apps/fittimer/bar/sw.js', 'apps/fittimer/src/app/70-workout.js'], true],
+  [['apps/fittimer/src/app/70-workout.js'], true],
+  [['apps/unmute/src/app.tsx'], false],
+  [['packages/core/src/core/ui.ts'], true],
+  [['package.json'], true]
+];
+for(const [files, want] of browser) assert.equal(fittimerBrowserNeeded(files, APPS), want, files.join(', '));
+console.log(`ok  fittimer-browser-needed (${browser.length} случаев)`);

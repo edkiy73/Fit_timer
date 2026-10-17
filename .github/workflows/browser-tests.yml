@@ -22,8 +22,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Изменён только пати-бар (apps/fittimer/bar, LIGHT_SCOPES) — он не связан с кодом
+  # FitTimer, браузерный регресс приложения не нужен; бар проверяет check:bar.
+  scope:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.s.outputs.run }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: s
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          RUN=$(node scripts/fittimer-browser-needed.mjs "$BASE")
+          echo "Браузерные тесты нужны: $RUN"
+          echo "run=$RUN" >> "$GITHUB_OUTPUT"
+
   shard:
     name: shard ${{ matrix.shard }}/4
+    needs: scope
+    if: ${{ needs.scope.outputs.run != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -69,8 +89,8 @@ jobs:
   # отменённый новым пушем, не должен красить устаревший коммит.
   browser:
     if: ${{ !cancelled() }}
-    needs: shard
+    needs: [scope, shard]
     runs-on: ubuntu-latest
     steps:
-      - name: Все части прошли
-        run: test "${{ needs.shard.result }}" = success
+      - name: Все части прошли (или тесты не нужны)
+        run: test "${{ needs.scope.outputs.run }}" = false -o "${{ needs.shard.result }}" = success
