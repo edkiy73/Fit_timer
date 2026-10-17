@@ -9,6 +9,7 @@ window.FT_LAB_BRIDGE={
  init(pair,lang){S.lang=lang;document.documentElement.lang=lang;if(pair&&activePair()){const p=coupleProfile();p.dating=true;p.datingVisible=true;p.socialLikes=true;}},
  actor(id){if(id==='couple'&&!activePair())return false;S.author=id;if(cur().p.actor&&cur().id!=='H02')cur().p.actor=id;return true;},
  current(){return actionAuthor();},
+ personalIdle(){if(actionAuthor()==='me'||deckBusy||S.ui.sheet||$('#matchLayer .match')||['C03','C06','C07','H02','E03','P08'].includes(cur().id))return;this.choose('me');},
  screen(){return cur().id;},
  isPair(){return activePair();},
  eligible(b){const a=b.dataset.act;if(['C03','C06','C07','H02','E03'].includes(cur().id))return false;return ['likePost','rLike','follow','flwToggle','likeProfile','unlikeP','reqAccess','publishNow','publish','sendComment'].includes(a)||(a==='decide'&&b.dataset.v==='1');},
