@@ -567,25 +567,27 @@ svg{display:block}
 .ac-sec small{display:block;margin-top:4px;font-size:12px;color:var(--smoke)}
 .ac-play.low .ac-sec b{color:#ff8c99;animation:acBeat 1s ease-in-out infinite}
 @keyframes acBeat{50%{transform:scale(1.08)}}
-.hg{width:92px;filter:drop-shadow(0 10px 24px rgba(201,163,91,.25))}
-.ac-play.draw .hg{width:64px}.ac-play.draw .ac-sec b{font-size:40px}
+.ac-play.draw .ac-sec b{font-size:40px}
 .hg svg{display:block;width:100%;height:auto;overflow:visible}
-.hg-top,.hg-bot{transform-box:fill-box;transform-origin:50% 100%}
-.hg-top{animation:hgTop var(--t) linear forwards}
-.hg-bot{transform:scaleY(0);animation:hgBot var(--t) linear forwards}
 .hg-str{animation:hgStr .5s linear infinite}
 .hg.done .hg-str{opacity:0}
 .hg.done svg{animation:hgFlip 1s var(--spring)}
-@keyframes hgTop{to{transform:scaleY(0)}}
-@keyframes hgBot{from{transform:scaleY(0)}to{transform:scaleY(1)}}
 @keyframes hgStr{to{stroke-dashoffset:-14}}
 @keyframes hgFlip{from{transform:rotate(0)}to{transform:rotate(180deg)}}
 .ac-word{animation:acReveal .7s var(--spring)}
 @keyframes acReveal{from{opacity:0;transform:rotateX(70deg) translateY(-20px)}to{opacity:1;transform:none}}
+.hg{width:118px;flex:none;filter:drop-shadow(0 14px 30px rgba(201,163,91,.28))}
+.ac-play.draw .hg{width:78px}
+.hg.idle svg{animation:hgBreath 2.6s ease-in-out infinite}
+.hg.go svg{animation:hgIn 1s var(--spring)}
+@keyframes hgIn{from{transform:rotate(-180deg) scale(.9)}to{transform:none}}
+@keyframes hgBreath{50%{transform:translateY(-3px)}}
+.hg.idle .hg-str{opacity:0}
+.ac-got{display:block;margin-top:8px;font-style:normal;font-size:12.5px;font-weight:800;color:var(--ok)}
+.ac-sec{min-width:0}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .grain{display:none}
-  .hg-top,.hg-bot{animation-duration:var(--t)!important}
 }
 </style>
 </head>
@@ -690,8 +692,8 @@ svg{display:block}
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="./party-cards.js?v=16" defer></script>
-<script src="./party-activity.js?v=16" defer></script>
-<script src="./party-bar.js?v=16" defer></script>
+<script src="./party-cards.js?v=17" defer></script>
+<script src="./party-activity.js?v=17" defer></script>
+<script src="./party-bar.js?v=17" defer></script>
 </body>
 </html>
