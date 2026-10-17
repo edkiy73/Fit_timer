@@ -5,8 +5,7 @@ const dir=dirname(fileURLToPath(import.meta.url)),v10=dirname(dir),app=join(v10,
 const read=n=>readFileSync(join(dir,n),'utf8');
 const base=readFileSync(join(v10,'styles.css'),'utf8');
 const tokens=base.slice(base.indexOf(':root{'),base.indexOf('/* ============ BASE'));
-const core=readFileSync(join(v10,'core.js'),'utf8');
-const icons=core.slice(core.indexOf('const sv='),core.indexOf('const ic='));
-const html=read('index.html').replace('/*TOKENS*/',()=>tokens).replace('/*CSS*/',()=>read('styles.css')).replace('/*JS*/',()=>icons+'\n'+read('gesture.js')+'\n'+read('app.js'));
+const js=read('app.js').replace('"__ENGINE_JSON__"',()=>JSON.stringify(read('frame-engine.js'))).replace('"__BRIDGE_JSON__"',()=>JSON.stringify(read('bridge.js')));
+const html=read('index.html').replace('/*TOKENS*/',()=>tokens).replace('/*CSS*/',()=>read('styles.css')).replace('/*JS*/',()=>js.replace(/<\/script/gi,'<\\/script'));
 writeFileSync(join(app,'public/prototype-v10-actions.html'),html);
-console.log('Built public/prototype-v10-actions.html');
+console.log('Built real V10 action comparison');
