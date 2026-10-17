@@ -1354,18 +1354,43 @@ let acT=null;
 const acSave=()=>{store.set("acTeams",A.teams);store.set("acScore",A.sc);store.set("acCur",A.cur);store.set("acTime",A.time);store.set("acGoal",A.goal);store.set("acDrink",A.drink)};
 const acStarted=()=>A.sc.some(s=>s>0);
 function acStop(){clearInterval(acT);acT=null}
-function acRoll(){A.m=pick(ACT_METHODS);A.all=A.turns>0&&Math.random()<(A.teams.length>2?1/6:1/8);A.view="turn"}
+function acRoll(){A.open=false;A.m=pick(ACT_METHODS);A.all=A.turns>0&&Math.random()<(A.teams.length>2?1/6:1/8);A.view="turn"}
 function acWord(p){const u=A.used[p];let pool=ACT_WORDS[p].filter(w=>!u.has(w));if(!pool.length){u.clear();pool=ACT_WORDS[p]}const w=pick(pool);u.add(w);return w}
 function acBoard(){
   return `<div class="ac-sb">${A.teams.map((t,i)=>`<div class="ac-row ${i===A.cur&&A.view!=="win"?"on":""}"><span>${esc(t)}</span><i><b style="width:${Math.min(100,(A.sc[i]||0)/A.goal*100)}%"></b></i><em>${A.sc[i]||0}<small>/${A.goal}</small></em></div>`).join("")}</div>`;
 }
+const ACI={
+  say:`<svg viewBox="0 0 24 24"><path d="M4 5.5h16v10.5H10l-4.5 3.5V16H4z"/><path d="M8 9.5h8M8 12.5h5"/></svg>`,
+  show:`<svg viewBox="0 0 24 24"><circle cx="12" cy="4.8" r="2.2"/><path d="M12 8v6.5M12 14.5l-3.2 6M12 14.5l3.2 6M4.5 7.5 12 10l7.5-2.5"/></svg>`,
+  draw:`<svg viewBox="0 0 24 24"><path d="M4 20l1-4.2L16.3 4.5a2 2 0 0 1 2.8 0l.4.4a2 2 0 0 1 0 2.8L8.2 19z"/><path d="M14.5 6.3l3.2 3.2"/></svg>`,
+  team:`<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.3 3-5 6-5s5.4 1.7 6 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.6.2 4.4 1.8 5 4.8"/></svg>`,
+  card:`<svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M9 9.5h6M9 13h4"/></svg>`,
+  glass:`<svg viewBox="0 0 24 24"><path d="M6 3h12M6 21h12M7.5 3c0 5 4.5 6 4.5 9s-4.5 4-4.5 9M16.5 3c0 5-4.5 6-4.5 9s4.5 4 4.5 9"/></svg>`,
+  crown:`<svg viewBox="0 0 24 24"><path d="M4 18h16l1-10-5 4-4-6-4 6-5-4z"/></svg>`
+};
+function hourglass(t){
+  return `<div class="hg" style="--t:${t}s"><svg viewBox="0 0 120 190" aria-hidden="true">
+  <defs><linearGradient id="hgG" x1="0" x2="1"><stop offset="0" stop-color="#7a5a24"/><stop offset=".35" stop-color="#f3d58e"/><stop offset=".6" stop-color="#c9a35b"/><stop offset="1" stop-color="#6b4d1c"/></linearGradient>
+   <linearGradient id="hgS" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1d08a"/><stop offset="1" stop-color="#b98a35"/></linearGradient>
+   <clipPath id="hgC"><path d="M31 20C31 62 57 74 57 95S31 128 31 170H89C89 128 63 116 63 95S89 62 89 20Z"/></clipPath></defs>
+  <g clip-path="url(#hgC)"><rect class="hg-top" x="20" y="44" width="80" height="51" fill="url(#hgS)"/><rect class="hg-bot" x="20" y="124" width="80" height="46" fill="url(#hgS)"/>
+   <line class="hg-str" x1="60" y1="95" x2="60" y2="170" stroke="#e9c57c" stroke-width="2" stroke-dasharray="2 5"/></g>
+  <path d="M31 20C31 62 57 74 57 95S31 128 31 170H89C89 128 63 116 63 95S89 62 89 20Z" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.45)" stroke-width="2"/>
+  <path d="M38 28c0 22 8 34 15 44" stroke="rgba(255,255,255,.35)" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <rect x="17" y="12" width="7" height="166" rx="3" fill="url(#hgG)"/><rect x="96" y="12" width="7" height="166" rx="3" fill="url(#hgG)"/>
+  <rect x="8" y="4" width="104" height="14" rx="5" fill="url(#hgG)"/><rect x="8" y="172" width="104" height="14" rx="5" fill="url(#hgG)"/>
+  <circle cx="20" cy="11" r="2" fill="#fff3cf"/><circle cx="100" cy="11" r="2" fill="#fff3cf"/><circle cx="20" cy="179" r="2" fill="#fff3cf"/><circle cx="100" cy="179" r="2" fill="#fff3cf"/>
+  </svg></div>`;
+}
 function renderAct(){
   acStop();
   if(!agreed){
-    pBody.innerHTML=`${tabs()}<div class="gcard lv5 rules"><div class="g-kind">Активити · 18+</div>
-      <p class="g-txt">Объясни, покажи, нарисуй.</p>
-      <ul class="g-rules"><li>Только для взрослых и только для своих.</li><li>Слова пикантные, но без пошлости — играем с юмором.</li><li>Показываем без касаний, если второй человек не согласен.</li><li>Стоп-фраза <b>«Дон не одобряет»</b> — слово меняется без штрафа.</li></ul></div>`;
-    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-brass" type="button" data-pa="acagree">Мы в деле</button>`;return;
+    const st=[["team","Делимся на команды","От 2 до 4. Ходят по очереди."],["card","Тянем карту","Она скажет как: словами, жестами или рисунком."],["glass","Переворачиваем часы","Свои угадывают, пока сыплется песок."],["crown","Копим очки","Слово сложнее — очков больше. Кто первым до финиша — Дон."]];
+    pBody.innerHTML=`${tabs()}<div class="ac-intro"><div class="ac-ttl"><b>Активити</b><em>18+</em></div><p class="ac-sub">Объясни, покажи, нарисуй — на время.</p>
+      <ol class="ac-steps">${st.map(([i,h,s],k)=>`<li style="--d:${k}"><span class="ac-si">${ACI[i]}<i>${k+1}</i></span><span><b>${h}</b><small>${s}</small></span></li>`).join("")}</ol>
+      <div class="ac-ways">${ACT_METHODS.map(m=>`<span>${ACI[m.id]}<b>${m.name.split(" ")[0]}</b></span>`).join("")}</div>
+      <p class="ac-18">Только для своих и взрослых. Стоп-фраза <b>«Дон не одобряет»</b> меняет слово без штрафа.</p></div>`;
+    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-brass" type="button" data-pa="acagree">Понятно, нам есть 18</button>`;return;
   }
   const team=esc(A.teams[A.cur]||"");
   if(A.view==="setup"){
@@ -1382,24 +1407,31 @@ function renderAct(){
     return;
   }
   if(A.view==="turn"){
-    pBody.innerHTML=`${acBoard()}<div class="gcard ${A.all?"lv6":"lv3"} ac-card">${HAT}
-      <div class="g-kind">${A.all?"Все играют":`Ход команды «${team}»`}</div>
-      <p class="g-txt">${A.m.name}</p><p class="ac-rule">${A.m.rule}</p>
-      <p class="ac-hint">${A.all?`Объясняет игрок команды «${team}», угадывают все команды. Очки — тем, кто первым угадал.`:"Тот, кто объясняет, берёт телефон и выбирает сложность. Остальные не подглядывают."}</p>
-      <div class="ac-pts">${[[3,"Легко"],[4,"Средне"],[5,"Жёстко"]].map(([p,l])=>`<button type="button" class="ac-p p${p}" data-pa="acpts" data-p="${p}"><b>${p}</b><small>${l}</small></button>`).join("")}</div></div>`;
+    const lv=A.all?"lv6":"lv3";
+    pBody.innerHTML=`${acBoard()}<p class="ac-step"><b>Ход «${team}»</b> · ${A.open?"выбери сложность":"передай телефон тому, кто объясняет"}</p>
+    <div class="ac-flip ${A.open?"open":""}"><div class="ac-in">
+      <button type="button" class="ac-face ac-back ${lv}" data-pa="acopen"><span class="ac-orn"></span>${HAT}<b>Активити</b><small>Нажми, чтобы вытянуть карту</small></button>
+      <div class="ac-face ac-front gcard ${lv}">${A.all?`<div class="ac-all">Все играют</div>`:""}
+        <span class="ac-big">${ACI[A.m.id]}</span><p class="g-txt">${A.m.name}</p><p class="ac-rule">${A.m.rule}</p>
+        ${A.all?`<p class="ac-hint">Угадывают все команды — очки тем, кто первый.</p>`:""}
+        <div class="ac-pts">${[[3,"Легко"],[4,"Средне"],[5,"Жёстко"]].map(([p,l])=>`<button type="button" class="ac-p p${p}" data-pa="acpts" data-p="${p}"><b>${p}</b><small>${l}</small></button>`).join("")}</div>
+        <p class="ac-hint">Цифра — сколько очков получит команда.</p></div>
+    </div></div>`;
     pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="acsetup">Счёт и настройки</button>`;return;
   }
   if(A.view==="play"){
     const draw=A.m.id==="draw";
-    pBody.innerHTML=`<div class="ac-timer"><b id="acSec">${A.time}</b><i><span id="acBar"></span></i></div>
-    <div class="gcard ${A.all?"lv6":"lv3"} ac-card ac-word ${draw?"short":""}">${HAT}<div class="g-kind">${A.m.name} · ${A.pts} ${plural(A.pts,"очко","очка","очков")}</div><p class="g-txt">${esc(A.word)}</p><p class="ac-rule">${A.m.rule}</p><button type="button" class="g-lvl ac-hide" data-pa="achide">Запомнил — скрыть слово</button></div>
+    pBody.innerHTML=`<div class="ac-play ${draw?"draw":""}">${hourglass(A.time)}<div class="ac-sec"><b id="acSec">${A.time}</b><small>${A.all?"угадывают все":"угадывает «"+team+"»"}</small></div></div>
+    <div class="gcard ${A.all?"lv6":"lv3"} ac-card ac-word ${draw?"short":""}"><div class="g-kind">${A.m.name} · ${A.pts} ${plural(A.pts,"очко","очка","очков")}</div><p class="g-txt">${esc(A.word)}</p><p class="ac-rule">${A.m.rule}</p><button type="button" class="g-lvl ac-hide" data-pa="achide">Запомнил — скрыть слово</button></div>
     ${draw?`<div class="ac-draw"><canvas id="acCv" aria-label="Поле для рисования"></canvas><button type="button" class="g-back" data-pa="acclear">Стереть</button></div>`:""}`;
     pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="acmiss">Не угадали</button><button class="btn btn-brass" type="button" data-pa="achit">Угадали</button>`;
     if(draw)acCanvas();
-    const T=A.time;acT=setInterval(()=>{const s=$("#acSec"),bar=$("#acBar");if(!s){acStop();return}
-      const left=Math.max(0,T-(Date.now()-A.t0)/1000);s.textContent=left>0?Math.ceil(left):"Время!";bar.style.width=(left/T*100)+"%";
-      s.parentNode.classList.toggle("low",left<=10);
-      if(left<=0){acStop();buzz([200,80,200])}},200);
+    const T=A.time,hg=pBody.querySelector(".hg");
+    pBody.querySelectorAll(".hg-top,.hg-bot").forEach(r=>r.style.animationDelay=-((Date.now()-A.t0)/1000)+"s");
+    acT=setInterval(()=>{const s=$("#acSec");if(!s){acStop();return}
+      const left=Math.max(0,T-(Date.now()-A.t0)/1000);s.textContent=left>0?Math.ceil(left):"Время!";
+      s.parentNode.parentNode.classList.toggle("low",left<=10);
+      if(left<=0){acStop();hg.classList.add("done");buzz([200,80,200])}},200);
     return;
   }
   if(A.view==="who"){
@@ -1437,6 +1469,7 @@ function acClick(a,el){
   if(a==="acnew"){A.sc=A.teams.map(()=>0);A.cur=0;A.turns=0;acSave();acRoll();renderAct();return true}
   if(a==="acgo"){if(A.sc.some(s=>s>=A.goal))return acClick("acnew",el);acRoll();renderAct();return true}
   if(a==="acsetup"){A.view="setup";renderAct();return true}
+  if(a==="acopen"){A.open=true;pBody.querySelector(".ac-flip").classList.add("open");const s=pBody.querySelector(".ac-step");if(s)s.innerHTML=`<b>Ход «${esc(A.teams[A.cur])}»</b> · выбери сложность`;buzz(12);return true}
   if(a==="acpts"){A.pts=+el.dataset.p;A.word=acWord(A.pts);A.t0=Date.now();A.view="play";buzz(12);renderAct();return true}
   if(a==="achit"){if(A.all){acStop();A.view="who";renderAct()}else acResult(A.cur);return true}
   if(a==="acwin"){acResult(+el.dataset.i);return true}
