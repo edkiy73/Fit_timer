@@ -1354,12 +1354,31 @@ let acT=null;
 const acSave=()=>{store.set("acTeams",A.teams);store.set("acScore",A.sc);store.set("acCur",A.cur);store.set("acTime",A.time);store.set("acGoal",A.goal);store.set("acDrink",A.drink);store.set("acMulti",A.multi);store.set("acDeck",A.deck)};
 const acStarted=()=>A.sc.some(s=>s>0);
 function acStop(){clearInterval(acT);acT=null}
-function acRoll(){A.open=false;A.run=false;A.m=pick(ACT_METHODS);A.all=!A.multi&&A.turns>0&&Math.random()<(A.teams.length>2?1/6:1/8);A.view="turn"}
+/* Поле: клетка, на которой стоит фишка команды, задаёт способ; каждая 7-я — «Все играют». */
+const acCell=i=>i%7===0?"all":["say","show","draw"][i%3];
+function acRoll(){A.open=false;A.run=false;const pos=Math.min(A.sc[A.cur]||0,A.goal),t=pos?acCell(pos):"start";
+  A.all=t==="all"&&!A.multi;A.m=t==="start"||t==="all"?pick(ACT_METHODS):ACT_METHODS.find(m=>m.id===t);A.cell=t;A.view="turn"}
 const acPool=p=>A.deck==="clean"?ACT_CLEAN[p]:A.deck==="adult"?ACT_WORDS[p]:ACT_CLEAN[p].concat(ACT_WORDS[p]);
 function acWord(p){const u=A.used[p],all=acPool(p);let pool=all.filter(w=>!u.has(w));if(!pool.length){all.forEach(w=>u.delete(w));pool=all}const w=pick(pool);u.add(w);A.hot=ACT_WORDS[p].includes(w);return w}
 const acAdult=()=>A.deck!=="clean";
+const TC=["#e8c27a","#ff6b7a","#5fd39a","#6aa8ff"],STAR=`<svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/></svg>`;
 function acBoard(){
-  return `<div class="ac-sb">${A.teams.map((t,i)=>`<div class="ac-row ${i===A.cur&&A.view!=="win"?"on":""}"><span>${esc(t)}</span><i><b style="width:${Math.min(100,(A.sc[i]||0)/A.goal*100)}%"></b></i><em>${A.sc[i]||0}<small>/${A.goal}</small></em></div>`).join("")}</div>`;
+  const N=A.goal,cols=8;queueMicrotask(acFieldSync);
+  const cells=Array.from({length:N+1},(_,i)=>{const r=Math.floor(i/cols),c=r%2?cols-1-i%cols:i%cols,t=i===0?"start":i===N?"fin":acCell(i);
+    return `<i class="fc ${t}" style="grid-row:${r+1};grid-column:${c+1}">${t==="start"?"СТАРТ":t==="fin"?ACI.crown:t==="all"?STAR:ACI[t]}</i>`}).join("");
+  return `<div class="field">${cells}${A.teams.map((t,k)=>`<b class="ftk" data-k="${k}" style="--c:${TC[k]}">${esc(t.trim()[0]||"?").toUpperCase()}</b>`).join("")}</div>
+  <p class="f-leg"><span class="say">Объясни</span><span class="show">Покажи</span><span class="draw">Нарисуй</span><span class="all">Все играют</span></p>
+  <div class="ac-sb">${A.teams.map((t,i)=>`<div class="ac-row ${i===A.cur&&A.view!=="win"?"on":""}"><span><s style="background:${TC[i]}"></s>${esc(t)}</span><em>${Math.min(A.sc[i]||0,N)}<small>/${N}</small></em></div>`).join("")}</div>`;
+}
+function acFieldSync(){
+  const f=pBody.querySelector(".field");if(!f)return;const N=A.goal;
+  const place=(tk,pos)=>{const c=f.children[Math.min(pos,N)],k=+tk.dataset.k;tk.style.transform=`translate(${c.offsetLeft+c.offsetWidth/2-10+(k%2?6:-6)}px,${c.offsetTop+c.offsetHeight/2-10+(k>1?6:-6)}px)`};
+  const tks=[...f.querySelectorAll(".ftk")],an=A.anim;A.anim=null;
+  tks.forEach(tk=>{const k=+tk.dataset.k;place(tk,an&&an.k===k?an.from:A.sc[k]||0)});
+  if(!an||an.to<=an.from)return;
+  const tk=tks[an.k];let p=an.from;tk.classList.add("go");
+  const step=()=>{if(!tk.isConnected)return;p++;place(tk,p);buzz(6);if(p<Math.min(an.to,N))setTimeout(step,230);else setTimeout(()=>tk.classList.remove("go"),300)};
+  setTimeout(step,350);
 }
 const ACI={
   say:`<svg viewBox="0 0 24 24"><path d="M4 5.5h16v10.5H10l-4.5 3.5V16H4z"/><path d="M8 9.5h8M8 12.5h5"/></svg>`,
@@ -1435,7 +1454,7 @@ function renderAct(){
       <button type="button" class="ac-face ac-back ${lv}" data-pa="acopen"><span class="ac-orn"></span>${HAT}<b>Активити</b><small>Нажми, чтобы вытянуть карту</small></button>
       <div class="ac-face ac-front gcard ${lv}">${A.all?`<div class="ac-all">Все играют</div>`:""}
         <span class="ac-big">${ACI[A.m.id]}</span><p class="g-txt">${A.m.name}</p><p class="ac-rule">${A.m.rule}</p>
-        ${A.all?`<p class="ac-hint">Угадывают все команды — очки тем, кто первый.</p>`:""}
+        <p class="ac-hint">${A.cell==="start"?"Первый ход — способ выпал случайно.":A.cell==="all"?(A.all?"Фишка на звезде: угадывают все команды — очки тем, кто первый.":"Фишка на звезде — способ выпал случайно."):"Так велит клетка, на которой стоит ваша фишка."}</p>
         <div class="ac-pts">${[[3,"Легко"],[4,"Средне"],[5,"Жёстко"]].map(([p,l])=>`<button type="button" class="ac-p p${p}" data-pa="acpts" data-p="${p}"><b>${p}</b><small>${l}</small></button>`).join("")}</div>
         <p class="ac-hint">Цифра — сколько очков получит команда.</p></div>
     </div></div>`;
@@ -1479,7 +1498,7 @@ function renderAct(){
 }
 function acResult(team,pts=A.pts){
   acStop();A.turns++;A.run=false;
-  if(team!=null&&pts>0){A.sc[team]=(A.sc[team]||0)+pts;toast(`+${pts} · «${A.teams[team]}»`);buzz([15,40,15])}
+  if(team!=null&&pts>0){A.anim={k:team,from:A.sc[team]||0,to:(A.sc[team]||0)+pts};A.sc[team]=(A.sc[team]||0)+pts;toast(`+${pts} · «${A.teams[team]}»`);buzz([15,40,15])}
   else{toast(A.drink?`Промах — «${A.teams[A.cur]}» делает глоток`:"Промах — ход переходит");buzz(120)}
   if(A.sc.some(s=>s>=A.goal)){A.view="win";acSave();return renderAct()}
   A.cur=(A.cur+1)%A.teams.length;acSave();acRoll();renderAct();pBody.scrollTop=0;
