@@ -1188,7 +1188,7 @@ const deckById=id=>DECKS.find(d=>d.id===id);
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const HAT=`<svg class="g-corner" viewBox="0 0 24 24"><path d="M2.5 15.5c4 2.6 15 2.6 19 0"/><path d="M5.5 15c0-4.5 1.6-9 4-9 1.1 0 1.6 1.2 2.5 1.2S13.4 6 14.5 6c2.4 0 4 4.5 4 9"/></svg>`;
 const WATER=["Дон бережёт семью","Пауза: все пьют воду. Потом продолжаем."];
-function openCards(tab="decks"){openPanel("cards",tab==="activity"?"Активити 18+":"Карты Дона");G.tab=tab;G.view="decks";if(tab==="activity")A.view="setup";renderCards()}
+function openCards(tab="decks"){openPanel("cards",tab==="activity"?"Активити":"Карты Дона");G.tab=tab;G.view="decks";if(tab==="activity")A.view="setup";renderCards()}
 /* «Разгоняемся»: игра делится на этапы по уровням колод; верхний этап — самый длинный,
    чтобы взрослые карты были и в короткой игре. На каждом ходу карта берётся из колоды этапа,
    иногда — на уровень ниже (передышка) или выше (анонс). Карты не повторяются. */
@@ -1222,7 +1222,7 @@ function drawNext(){
 }
 const who=off=>{const n=G.players.length;return n?G.players[((G.turn+off)%n+n)%n]:null};
 const heat=l=>`<span class="heat lv${l}" aria-label="Уровень ${l} из 6">${[1,2,3,4,5,6].map(i=>`<i class="${i<=l?"f":""}"></i>`).join("")}</span>`;
-function tabs(){return `<div class="g-tabs"><button type="button" class="pill ${G.tab==="decks"?"on":""}" data-pa="gtab" data-m="decks">Колоды</button><button type="button" class="pill ${G.tab==="activity"?"on":""}" data-pa="gtab" data-m="activity">Активити 18+</button><button type="button" class="pill ${G.tab==="quiz"?"on":""}" data-pa="gtab" data-m="quiz">Угадай коктейль</button></div>`}
+function tabs(){return `<div class="g-tabs"><button type="button" class="pill ${G.tab==="decks"?"on":""}" data-pa="gtab" data-m="decks">Колоды</button><button type="button" class="pill ${G.tab==="activity"?"on":""}" data-pa="gtab" data-m="activity">Активити</button><button type="button" class="pill ${G.tab==="quiz"?"on":""}" data-pa="gtab" data-m="quiz">Угадай коктейль</button></div>`}
 function roster(){
   const p=G.players;
   return `<div class="roster"><div class="r-h"><b>Очередь игроков</b><small>${p.length?p.length+" "+plural(p.length,"игрок","игрока","игроков"):"необязательно — карта сама скажет, чей ход"}</small></div>
@@ -1346,26 +1346,71 @@ panel.addEventListener("click",e=>{
   if(a==="qnext"){G.q=null;renderQuiz();return}
   if(a==="qopen"){const i=G.q.c.i;closePanel(true);history.replaceState({sheet:i},"","#"+i);openSheet(i,false);return}
 });
-/* ===== Активити 18+ ===== */
+/* ===== Активити: обычные слова, 18+ или вперемешку ===== */
 const A={teams:store.get("acTeams",["Корлеоне","Таттаглия"]),sc:store.get("acScore",[]),cur:store.get("acCur",0),
-  time:store.get("acTime",60),goal:store.get("acGoal",30),drink:store.get("acDrink",false),
+  time:store.get("acTime",60),goal:store.get("acGoal",30),drink:store.get("acDrink",false),multi:store.get("acMulti",false),deck:store.get("acDeck","mix"),seen:false,hot:false,run:false,got:0,n:0,
   view:"setup",m:null,all:false,pts:0,word:"",t0:0,turns:0,used:{3:new Set(),4:new Set(),5:new Set()}};
 let acT=null;
-const acSave=()=>{store.set("acTeams",A.teams);store.set("acScore",A.sc);store.set("acCur",A.cur);store.set("acTime",A.time);store.set("acGoal",A.goal);store.set("acDrink",A.drink)};
+const acSave=()=>{store.set("acTeams",A.teams);store.set("acScore",A.sc);store.set("acCur",A.cur);store.set("acTime",A.time);store.set("acGoal",A.goal);store.set("acDrink",A.drink);store.set("acMulti",A.multi);store.set("acDeck",A.deck)};
 const acStarted=()=>A.sc.some(s=>s>0);
 function acStop(){clearInterval(acT);acT=null}
-function acRoll(){A.m=pick(ACT_METHODS);A.all=A.turns>0&&Math.random()<(A.teams.length>2?1/6:1/8);A.view="turn"}
-function acWord(p){const u=A.used[p];let pool=ACT_WORDS[p].filter(w=>!u.has(w));if(!pool.length){u.clear();pool=ACT_WORDS[p]}const w=pick(pool);u.add(w);return w}
+function acRoll(){A.open=false;A.run=false;A.m=pick(ACT_METHODS);A.all=!A.multi&&A.turns>0&&Math.random()<(A.teams.length>2?1/6:1/8);A.view="turn"}
+const acPool=p=>A.deck==="clean"?ACT_CLEAN[p]:A.deck==="adult"?ACT_WORDS[p]:ACT_CLEAN[p].concat(ACT_WORDS[p]);
+function acWord(p){const u=A.used[p],all=acPool(p);let pool=all.filter(w=>!u.has(w));if(!pool.length){all.forEach(w=>u.delete(w));pool=all}const w=pick(pool);u.add(w);A.hot=ACT_WORDS[p].includes(w);return w}
+const acAdult=()=>A.deck!=="clean";
 function acBoard(){
   return `<div class="ac-sb">${A.teams.map((t,i)=>`<div class="ac-row ${i===A.cur&&A.view!=="win"?"on":""}"><span>${esc(t)}</span><i><b style="width:${Math.min(100,(A.sc[i]||0)/A.goal*100)}%"></b></i><em>${A.sc[i]||0}<small>/${A.goal}</small></em></div>`).join("")}</div>`;
 }
+const ACI={
+  say:`<svg viewBox="0 0 24 24"><path d="M4 5.5h16v10.5H10l-4.5 3.5V16H4z"/><path d="M8 9.5h8M8 12.5h5"/></svg>`,
+  show:`<svg viewBox="0 0 24 24"><circle cx="12" cy="4.8" r="2.2"/><path d="M12 8v6.5M12 14.5l-3.2 6M12 14.5l3.2 6M4.5 7.5 12 10l7.5-2.5"/></svg>`,
+  draw:`<svg viewBox="0 0 24 24"><path d="M4 20l1-4.2L16.3 4.5a2 2 0 0 1 2.8 0l.4.4a2 2 0 0 1 0 2.8L8.2 19z"/><path d="M14.5 6.3l3.2 3.2"/></svg>`,
+  team:`<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.3 3-5 6-5s5.4 1.7 6 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.6.2 4.4 1.8 5 4.8"/></svg>`,
+  card:`<svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M9 9.5h6M9 13h4"/></svg>`,
+  glass:`<svg viewBox="0 0 24 24"><path d="M6 3h12M6 21h12M7.5 3c0 5 4.5 6 4.5 9s-4.5 4-4.5 9M16.5 3c0 5-4.5 6-4.5 9s4.5 4 4.5 9"/></svg>`,
+  crown:`<svg viewBox="0 0 24 24"><path d="M4 18h16l1-10-5 4-4-6-4 6-5-4z"/></svg>`
+};
+function hourglass(){
+  return `<div class="hg"><svg viewBox="0 0 140 232" aria-hidden="true">
+  <defs><linearGradient id="hgW" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#7a4a26"/><stop offset=".5" stop-color="#3b2212"/><stop offset="1" stop-color="#22130a"/></linearGradient>
+   <linearGradient id="hgB" x1="0" x2="1"><stop offset="0" stop-color="#6b4d1c"/><stop offset=".3" stop-color="#f6dc98"/><stop offset=".55" stop-color="#c9a35b"/><stop offset="1" stop-color="#5a3f15"/></linearGradient>
+   <linearGradient id="hgS" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6d892"/><stop offset="1" stop-color="#b8862f"/></linearGradient>
+   <radialGradient id="hgGl" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="rgba(255,255,255,.16)"/><stop offset=".6" stop-color="rgba(255,255,255,.04)"/><stop offset="1" stop-color="rgba(255,255,255,.1)"/></radialGradient>
+   <clipPath id="hgC"><path d="M38 27C38 85 66 99 66 116C66 133 38 147 38 205H102C102 147 74 133 74 116C74 99 102 85 102 27Z"/></clipPath></defs>
+  <ellipse cx="70" cy="228" rx="62" ry="4" fill="rgba(0,0,0,.5)"/>
+  <rect x="11" y="24" width="6" height="184" rx="3" fill="url(#hgB)"/><rect x="123" y="24" width="6" height="184" rx="3" fill="url(#hgB)"/>
+  ${[44,116,188].map(y=>`<ellipse cx="14" cy="${y}" rx="6" ry="4" fill="url(#hgB)"/><ellipse cx="126" cy="${y}" rx="6" ry="4" fill="url(#hgB)"/>`).join("")}
+  <g clip-path="url(#hgC)"><path class="hg-sa" fill="url(#hgS)"/><path class="hg-sb" fill="url(#hgS)"/>
+   <line class="hg-str" x1="70" y1="114" x2="70" y2="205" stroke="#f0cf86" stroke-width="2.2" stroke-dasharray="2 4"/></g>
+  <path d="M38 27C38 85 66 99 66 116C66 133 38 147 38 205H102C102 147 74 133 74 116C74 99 102 85 102 27Z" fill="url(#hgGl)" stroke="rgba(255,255,255,.55)" stroke-width="1.6"/>
+  <path d="M45 36C46 72 56 90 62 102" stroke="rgba(255,255,255,.4)" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M45 196C46 166 54 148 61 136" stroke="rgba(255,255,255,.18)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <rect x="2" y="4" width="136" height="20" rx="8" fill="url(#hgW)"/><rect x="8" y="21" width="124" height="5" rx="2.5" fill="url(#hgB)"/>
+  <rect x="8" y="206" width="124" height="5" rx="2.5" fill="url(#hgB)"/><rect x="2" y="208" width="136" height="20" rx="8" fill="url(#hgW)"/>
+  <path d="M10 9h120" stroke="rgba(255,220,170,.25)" stroke-width="2" stroke-linecap="round"/>
+  </svg></div>`;
+}
+function hgSet(hg,f){
+  f=Math.max(0,Math.min(1,f));const L=50+63*f,dip=2+7*(1-f),h=62*f,top=205-h*1.05;
+  hg.querySelector(".hg-sa").setAttribute("d",f>=1?"":`M30 ${L}Q70 ${L+dip} 110 ${L}V117H30Z`);
+  hg.querySelector(".hg-sb").setAttribute("d",h<1?"":`M30 205V${205-h*.3}Q70 ${205-h*1.75} 110 ${205-h*.3}V205Z`);
+  hg.querySelector(".hg-str").setAttribute("y2",top);
+}
 function renderAct(){
   acStop();
-  if(!agreed){
-    pBody.innerHTML=`${tabs()}<div class="gcard lv5 rules"><div class="g-kind">Активити · 18+</div>
-      <p class="g-txt">Объясни, покажи, нарисуй.</p>
-      <ul class="g-rules"><li>Только для взрослых и только для своих.</li><li>Слова пикантные, но без пошлости — играем с юмором.</li><li>Показываем без касаний, если второй человек не согласен.</li><li>Стоп-фраза <b>«Дон не одобряет»</b> — слово меняется без штрафа.</li></ul></div>`;
-    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-brass" type="button" data-pa="acagree">Мы в деле</button>`;return;
+  if(A.view==="gate"){
+    pBody.innerHTML=`<div class="gcard lv5 rules"><div class="g-kind">Слова 18+</div>
+      <p class="g-txt">Дальше будет жарче.</p>
+      <ul class="g-rules"><li>Только для взрослых и только для своих.</li><li>Слова пикантные, но без пошлости — играем с юмором.</li><li>Показываем без касаний, если второй человек не согласен.</li><li>Стоп-фраза <b>«Дон не одобряет»</b> меняет слово без штрафа.</li></ul></div>`;
+    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="acsetup">Назад</button><button class="btn btn-brass" type="button" data-pa="acagree">Нам есть 18</button>`;return;
+  }
+  if(!A.seen){
+    const st=[["team","Делимся на команды","От 2 до 4. Ходят по очереди."],["card","Тянем карту","Она скажет как: словами, жестами или рисунком."],["glass","Переворачиваем часы","Свои угадывают, пока сыплется песок."],["crown","Копим очки","Слово сложнее — очков больше. Кто первым до финиша — Дон."]];
+    pBody.innerHTML=`${tabs()}<div class="ac-intro"><div class="ac-ttl"><b>Активити</b></div><p class="ac-sub">Объясни, покажи, нарисуй — на время.</p>
+      <ol class="ac-steps">${st.map(([i,h,s],k)=>`<li style="--d:${k}"><span class="ac-si">${ACI[i]}<i>${k+1}</i></span><span><b>${h}</b><small>${s}</small></span></li>`).join("")}</ol>
+      <div class="ac-ways">${ACT_METHODS.map(m=>`<span>${ACI[m.id]}<b>${m.name.split(" ")[0]}</b></span>`).join("")}</div>
+      <p class="ac-18">Слова — обычные, <b>18+</b> или вперемешку: выберете на следующем шаге.</p></div>`;
+    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-brass" type="button" data-pa="acseen">Понятно</button>`;return;
   }
   const team=esc(A.teams[A.cur]||"");
   if(A.view==="setup"){
@@ -1374,6 +1419,8 @@ function renderAct(){
     <div class="roster"><div class="r-h"><b>Команды</b><small>${A.teams.length} из 4</small></div>
       <div class="r-list">${A.teams.map((n,i)=>`<span class="r-chip"><i>${i+1}</i>${esc(n)}${A.teams.length>2?`<button type="button" data-pa="acdel" data-i="${i}" aria-label="Убрать ${esc(n)}">×</button>`:""}</span>`).join("")}</div>
       ${A.teams.length<4?`<form class="r-add" id="acAdd"><input id="acName" maxlength="20" placeholder="Название команды" autocomplete="off" enterkeyhint="done"><button type="submit" class="ib">Добавить</button></form>`:""}</div>
+    <div class="ac-opt"><span>Слова</span><div>${[["clean","Обычные"],["adult","18+"],["mix","Вперемешку"]].map(([v,l])=>`<button type="button" class="pill ${A.deck===v?"on":""} ${v==="adult"?"p18":""}" data-pa="acdeck" data-v="${v}">${l}</button>`).join("")}</div></div>
+    <div class="ac-opt"><span>Слов за ход</span><div><button type="button" class="pill ${A.multi?"":"on"}" data-pa="acmulti" data-v="0">Одно</button><button type="button" class="pill ${A.multi?"on":""}" data-pa="acmulti" data-v="1">Сколько успеете</button></div></div>
     ${opt("Время хода",[45,60,90],A.time,v=>v+" с")}${opt("Играем до",[20,30,50],A.goal,v=>v+" очков")}
     <button type="button" class="pill hard ${A.drink?"on":""}" data-pa="acdrink" aria-pressed="${A.drink}">${A.drink?"Промах — команда делает глоток":"Штраф за промах: глоток"}</button>
     ${acStarted()?`<div class="p-sec"><h4>Текущая партия</h4>${acBoard()}</div>`:""}`;
@@ -1382,25 +1429,42 @@ function renderAct(){
     return;
   }
   if(A.view==="turn"){
-    pBody.innerHTML=`${acBoard()}<div class="gcard ${A.all?"lv6":"lv3"} ac-card">${HAT}
-      <div class="g-kind">${A.all?"Все играют":`Ход команды «${team}»`}</div>
-      <p class="g-txt">${A.m.name}</p><p class="ac-rule">${A.m.rule}</p>
-      <p class="ac-hint">${A.all?`Объясняет игрок команды «${team}», угадывают все команды. Очки — тем, кто первым угадал.`:"Тот, кто объясняет, берёт телефон и выбирает сложность. Остальные не подглядывают."}</p>
-      <div class="ac-pts">${[[3,"Легко"],[4,"Средне"],[5,"Жёстко"]].map(([p,l])=>`<button type="button" class="ac-p p${p}" data-pa="acpts" data-p="${p}"><b>${p}</b><small>${l}</small></button>`).join("")}</div></div>`;
+    const lv=A.all?"lv6":"lv3";
+    pBody.innerHTML=`${acBoard()}<p class="ac-step"><b>Ход «${team}»</b> · ${A.open?"выбери сложность":"передай телефон тому, кто объясняет"}</p>
+    <div class="ac-flip ${A.open?"open":""}"><div class="ac-in">
+      <button type="button" class="ac-face ac-back ${lv}" data-pa="acopen"><span class="ac-orn"></span>${HAT}<b>Активити</b><small>Нажми, чтобы вытянуть карту</small></button>
+      <div class="ac-face ac-front gcard ${lv}">${A.all?`<div class="ac-all">Все играют</div>`:""}
+        <span class="ac-big">${ACI[A.m.id]}</span><p class="g-txt">${A.m.name}</p><p class="ac-rule">${A.m.rule}</p>
+        ${A.all?`<p class="ac-hint">Угадывают все команды — очки тем, кто первый.</p>`:""}
+        <div class="ac-pts">${[[3,"Легко"],[4,"Средне"],[5,"Жёстко"]].map(([p,l])=>`<button type="button" class="ac-p p${p}" data-pa="acpts" data-p="${p}"><b>${p}</b><small>${l}</small></button>`).join("")}</div>
+        <p class="ac-hint">Цифра — сколько очков получит команда.</p></div>
+    </div></div>`;
     pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="acsetup">Счёт и настройки</button>`;return;
   }
   if(A.view==="play"){
-    const draw=A.m.id==="draw";
-    pBody.innerHTML=`<div class="ac-timer"><b id="acSec">${A.time}</b><i><span id="acBar"></span></i></div>
-    <div class="gcard ${A.all?"lv6":"lv3"} ac-card ac-word ${draw?"short":""}">${HAT}<div class="g-kind">${A.m.name} · ${A.pts} ${plural(A.pts,"очко","очка","очков")}</div><p class="g-txt">${esc(A.word)}</p><p class="ac-rule">${A.m.rule}</p><button type="button" class="g-lvl ac-hide" data-pa="achide">Запомнил — скрыть слово</button></div>
-    ${draw?`<div class="ac-draw"><canvas id="acCv" aria-label="Поле для рисования"></canvas><button type="button" class="g-back" data-pa="acclear">Стереть</button></div>`:""}`;
-    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="acmiss">Не угадали</button><button class="btn btn-brass" type="button" data-pa="achit">Угадали</button>`;
-    if(draw)acCanvas();
-    const T=A.time;acT=setInterval(()=>{const s=$("#acSec"),bar=$("#acBar");if(!s){acStop();return}
-      const left=Math.max(0,T-(Date.now()-A.t0)/1000);s.textContent=left>0?Math.ceil(left):"Время!";bar.style.width=(left/T*100)+"%";
-      s.parentNode.classList.toggle("low",left<=10);
-      if(left<=0){acStop();buzz([200,80,200])}},200);
+    const draw=A.m.id==="draw",T=A.time,el0=A.run?(Date.now()-A.t0)/1000:0;
+    pBody.innerHTML=`<div class="ac-play ${draw?"draw":""}">${hourglass()}<div class="ac-sec"><b id="acSec">${A.run?Math.ceil(Math.max(0,T-el0)):T}</b><small>${A.run?(A.all?"угадывают все":"угадывает «"+team+"»"):"секунд на ход"}</small>${A.multi&&A.run?`<em class="ac-got">+${A.got} за ход · ${A.n} ${plural(A.n,"слово","слова","слов")}</em>`:""}</div></div>
+    <div class="gcard ${A.all?"lv6":"lv3"} ac-card ac-word ${draw?"short":""}">${A.run?`<span class="ac-stamp ok">Угадали</span><span class="ac-stamp no">${A.multi?"Пропуск":"Не угадали"}</span>`:""}<div class="g-kind">${A.m.name} · ${A.pts} ${plural(A.pts,"очко","очка","очков")}${A.hot&&A.deck==="mix"?` <em class="ac-hot">18+</em>`:""}</div><p class="g-txt">${esc(A.word)}</p><p class="ac-rule">${A.m.rule}</p>${A.run?`<button type="button" class="g-lvl ac-hide" data-pa="achide">Запомнил — скрыть слово</button><p class="ac-swh">← свайп: ${A.multi?"пропуск":"не угадали"} · угадали →</p>`:`<p class="ac-hint">${A.multi?"Объясняй слова одно за другим — сколько успеете, пока сыплется песок.":"Запомни слово. Когда будешь готов — переворачивай часы."}</p>`}</div>
+    ${draw&&A.run?`<div class="ac-draw"><canvas id="acCv" aria-label="Поле для рисования"></canvas><button type="button" class="g-back" data-pa="acclear">Стереть</button></div>`:""}`;
+    pNav.hidden=false;
+    pNav.innerHTML=!A.run?`<button class="btn btn-brass" type="button" data-pa="acstart">Готов — переворачиваю часы</button>`:
+      A.multi?`<button class="btn btn-ghost" type="button" data-pa="acskip">Пропустить</button><button class="btn btn-brass" type="button" data-pa="achit">Угадали</button>`:
+      `<button class="btn btn-ghost" type="button" data-pa="acmiss">Не угадали</button><button class="btn btn-brass" type="button" data-pa="achit">Угадали</button>`;
+    if(draw&&A.run)acCanvas();
+    const hg=pBody.querySelector(".hg");hgSet(hg,el0/T);hg.classList.toggle("idle",!A.run);
+    if(!A.run)return;
+    if(A.fresh){hg.classList.add("go");A.fresh=false}
+    acT=setInterval(()=>{const s=$("#acSec");if(!s){acStop();return}
+      const el=(Date.now()-A.t0)/1000,left=Math.max(0,T-el);s.textContent=left>0?Math.ceil(left):"Время!";hgSet(hg,el/T);
+      s.parentNode.parentNode.classList.toggle("low",left<=10&&left>0);
+      if(left<=0){acStop();hg.classList.add("done");buzz([200,80,200]);
+        if(A.multi)setTimeout(()=>{if(A.view==="play"&&A.run){A.view="sum";renderAct()}},1100)}},100);
     return;
+  }
+  if(A.view==="sum"){
+    pBody.innerHTML=`<div class="gcard lv3 ac-card">${HAT}<div class="g-kind">Время вышло</div><p class="g-txt">«${team}»: +${A.got}</p><p class="ac-hint">${A.n} ${plural(A.n,"слово","слова","слов")} за ход. Последнее слово — «${esc(A.word)}». Если его угадали в последнюю секунду, засчитай.</p>
+      <button type="button" class="pill" data-pa="aclast">Последнее угадали · +${A.pts}</button></div>${acBoard()}`;
+    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-brass" type="button" data-pa="acpass">Передать ход</button>`;return;
   }
   if(A.view==="who"){
     pBody.innerHTML=`<div class="gcard lv6 ac-card">${HAT}<div class="g-kind">Кто угадал первым?</div><p class="g-txt">${esc(A.word)}</p>
@@ -1413,9 +1477,9 @@ function renderAct(){
     pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="acsetup">Настройки</button><button class="btn btn-brass" type="button" data-pa="acnew">Ещё партия</button>`;
   }
 }
-function acResult(team){
-  acStop();A.turns++;
-  if(team!=null){A.sc[team]=(A.sc[team]||0)+A.pts;toast(`+${A.pts} · «${A.teams[team]}»`);buzz([15,40,15])}
+function acResult(team,pts=A.pts){
+  acStop();A.turns++;A.run=false;
+  if(team!=null&&pts>0){A.sc[team]=(A.sc[team]||0)+pts;toast(`+${pts} · «${A.teams[team]}»`);buzz([15,40,15])}
   else{toast(A.drink?`Промах — «${A.teams[A.cur]}» делает глоток`:"Промах — ход переходит");buzz(120)}
   if(A.sc.some(s=>s>=A.goal)){A.view="win";acSave();return renderAct()}
   A.cur=(A.cur+1)%A.teams.length;acSave();acRoll();renderAct();pBody.scrollTop=0;
@@ -1430,21 +1494,55 @@ function acCanvas(){
   const up=()=>{on=false};cv.addEventListener("pointerup",up);cv.addEventListener("pointercancel",up);
 }
 function acClick(a,el){
-  if(a==="acagree"){agreed=true;renderAct();return true}
+  if(a==="acseen"){A.seen=true;renderAct();pBody.scrollTop=0;return true}
+  if(a==="acagree"){agreed=true;return acClick(A.after||"acgo",el)}
+  if(a==="acdeck"){A.deck=el.dataset.v;acSave();renderAct();return true}
   if(a==="acset"){A[el.dataset.k]=+el.dataset.v;acSave();renderAct();return true}
   if(a==="acdrink"){A.drink=!A.drink;acSave();renderAct();return true}
   if(a==="acdel"){const i=+el.dataset.i;A.teams.splice(i,1);A.sc.splice(i,1);if(A.cur>=A.teams.length)A.cur=0;acSave();renderAct();return true}
+  if((a==="acnew"||a==="acgo")&&acAdult()&&!agreed){A.after=a;A.view="gate";renderAct();pBody.scrollTop=0;return true}
   if(a==="acnew"){A.sc=A.teams.map(()=>0);A.cur=0;A.turns=0;acSave();acRoll();renderAct();return true}
   if(a==="acgo"){if(A.sc.some(s=>s>=A.goal))return acClick("acnew",el);acRoll();renderAct();return true}
   if(a==="acsetup"){A.view="setup";renderAct();return true}
-  if(a==="acpts"){A.pts=+el.dataset.p;A.word=acWord(A.pts);A.t0=Date.now();A.view="play";buzz(12);renderAct();return true}
-  if(a==="achit"){if(A.all){acStop();A.view="who";renderAct()}else acResult(A.cur);return true}
+  if(a==="acopen"){A.open=true;pBody.querySelector(".ac-flip").classList.add("open");const s=pBody.querySelector(".ac-step");if(s)s.innerHTML=`<b>Ход «${esc(A.teams[A.cur])}»</b> · выбери сложность`;buzz(12);return true}
+  if(a==="acpts"){A.pts=+el.dataset.p;A.word=acWord(A.pts);A.run=false;A.got=0;A.n=0;A.view="play";buzz(12);renderAct();pBody.scrollTop=0;return true}
+  if(a==="acstart"){A.run=true;A.fresh=true;A.t0=Date.now();buzz(20);renderAct();return true}
+  if(a==="achit"){if(A.multi){A.got+=A.pts;A.n++;A.word=acWord(A.pts);buzz([15,40,15]);renderAct()}else if(A.all){acStop();A.view="who";renderAct()}else acResult(A.cur);return true}
+  if(a==="acskip"){A.word=acWord(A.pts);buzz(10);renderAct();return true}
+  if(a==="aclast"){A.got+=A.pts;A.n++;el.disabled=true;el.textContent="Засчитано";const g=pBody.querySelector(".g-txt");if(g)g.textContent=`«${A.teams[A.cur]}»: +${A.got}`;return true}
+  if(a==="acpass"){acResult(A.got>0?A.cur:null,A.got);return true}
+  if(a==="acmulti"){A.multi=el.dataset.v==="1";acSave();renderAct();return true}
   if(a==="acwin"){acResult(+el.dataset.i);return true}
   if(a==="acmiss"){acResult(null);return true}
   if(a==="achide"){const c=pBody.querySelector(".ac-word");const h=c.classList.toggle("hid");el.textContent=h?"Показать слово":"Запомнил — скрыть слово";return true}
   if(a==="acclear"){const cv=$("#acCv");if(cv)cv.getContext("2d").clearRect(0,0,cv.width,cv.height);return true}
   return false;
 }
+/* Свайп карты со словом по всему экрану: вправо — угадали, влево — нет / пропуск. */
+(function(){
+  let sx=0,sy=0,dx=0,drag=false,card=null,id=null;
+  const live=()=>pKind==="cards"&&G.tab==="activity"&&A.view==="play"&&A.run;
+  pBody.addEventListener("pointerdown",e=>{
+    if(!live()||e.target.closest("canvas,button,a,input")||(e.pointerType==="mouse"&&e.button))return;
+    card=pBody.querySelector(".ac-word");if(!card)return;id=e.pointerId;sx=e.clientX;sy=e.clientY;dx=0;drag=false;
+  });
+  pBody.addEventListener("pointermove",e=>{
+    if(e.pointerId!==id||!card)return;const x=e.clientX-sx,y=e.clientY-sy;
+    if(!drag){if(Math.abs(x)<10||Math.abs(x)<Math.abs(y)*1.2)return;drag=true;card.classList.add("drag");try{pBody.setPointerCapture(id)}catch(_){}}
+    dx=x;const k=Math.min(1,Math.abs(dx)/110);
+    card.style.transform=`translateX(${dx}px) rotate(${dx/18}deg)`;
+    card.querySelector(".ac-stamp.ok").style.opacity=dx>0?k:0;card.querySelector(".ac-stamp.no").style.opacity=dx<0?k:0;
+  });
+  const end=e=>{
+    if(e.pointerId!==id||!card)return;const c=card;card=null;id=null;
+    if(!drag)return;c.classList.remove("drag");
+    if(Math.abs(dx)>90&&e.type==="pointerup"){
+      const right=dx>0;c.classList.add("fly");c.style.transform=`translateX(${right?130:-130}vw) rotate(${right?28:-28}deg)`;buzz(right?[15,40,15]:30);
+      setTimeout(()=>{if(live())acClick(right?"achit":A.multi?"acskip":"acmiss",c)},230);
+    }else{c.style.transform="";c.querySelectorAll(".ac-stamp").forEach(s=>s.style.opacity=0)}
+  };
+  pBody.addEventListener("pointerup",end);pBody.addEventListener("pointercancel",end);
+})();
 panel.addEventListener("submit",e=>{
   if(e.target.id!=="acAdd")return;e.preventDefault();
   const v=$("#acName").value.trim().replace(/\s+/g," ").slice(0,20);if(!v||A.teams.length>=4)return;
