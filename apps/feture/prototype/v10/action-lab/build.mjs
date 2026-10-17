@@ -7,6 +7,6 @@ const base=readFileSync(join(v10,'styles.css'),'utf8');
 const tokens=base.slice(base.indexOf(':root{'),base.indexOf('/* ============ BASE'));
 const core=readFileSync(join(v10,'core.js'),'utf8');
 const icons=core.slice(core.indexOf('const sv='),core.indexOf('const ic='));
-const html=read('index.html').replace('/*TOKENS*/',()=>tokens).replace('/*CSS*/',()=>read('styles.css')).replace('/*JS*/',()=>icons+'\n'+read('app.js'));
+const html=read('index.html').replace('/*TOKENS*/',()=>tokens).replace('/*CSS*/',()=>read('styles.css')).replace('/*JS*/',()=>icons+'\n'+read('gesture.js')+'\n'+read('app.js'));
 writeFileSync(join(app,'public/prototype-v10-actions.html'),html);
 console.log('Built public/prototype-v10-actions.html');
