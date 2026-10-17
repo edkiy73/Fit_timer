@@ -470,6 +470,28 @@ svg{display:block}
 .note-ta::placeholder{color:var(--smoke2)}
 .note-st{margin-top:6px;font-size:11.5px;color:var(--smoke)}
 
+/* ratings */
+.stars{display:flex;align-items:center;gap:2px;margin-top:12px}
+.stars button{font-size:26px;line-height:1;padding:2px 3px;color:rgba(201,163,91,.25);transition:transform .2s var(--spring),color .2s}
+.stars button.on{color:var(--brass2);text-shadow:0 0 12px rgba(201,163,91,.4)}
+.stars button:active{transform:scale(1.25)}
+.stars span{margin-left:8px;font-size:12px;font-weight:700;color:var(--smoke)}
+.rate-mark{font-size:11px;font-weight:800;color:var(--brass2)}
+/* bartender controls & overview */
+.bt-ctl{display:flex;gap:8px;align-items:center}
+.bt-seg{display:flex;padding:3px;border-radius:12px;background:var(--ink2);border:1px solid var(--line2);flex:none}
+.bt-seg button{height:34px;padding:0 12px;border-radius:9px;font-size:13px;font-weight:700;color:var(--smoke)}
+.bt-seg button.on{background:var(--bone);color:#140d0b}
+.bt-sel{flex:1;min-width:0;height:42px;padding:0 12px;border-radius:12px;background:var(--ink3);border:1px solid var(--line);color:var(--bone);font:600 15px var(--sans);outline:0}
+.bt-ov{justify-content:flex-start;gap:10px;padding-top:6px}
+.bt-art.sm{width:96px;height:96px}
+.bt-name{font-family:var(--serif);font-size:clamp(30px,9vw,44px);line-height:1.05;color:var(--bone)}
+.bt-rows{width:100%;max-width:440px;text-align:left;margin-top:6px;font-size:17px}
+.bt-rows .mr{font-size:17px}
+.bt-sum{margin-top:6px;font-size:14px;color:var(--bone2)}
+.bt-sum b{color:var(--brass2)}
+.bt-glass{max-width:34ch;font-size:13px;color:var(--smoke);line-height:1.45}
+
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .grain{display:none}
