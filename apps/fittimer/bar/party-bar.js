@@ -1356,7 +1356,16 @@ const acStarted=()=>A.sc.some(s=>s>0);
 function acStop(){clearInterval(acT);acT=null}
 /* Поле: клетка, на которой стоит фишка команды, задаёт способ; каждая 7-я — «Все играют». */
 const acCell=i=>i%7===0?"all":["say","show","draw"][i%3];
-function acRoll(){A.open=false;A.run=false;const pos=Math.min(A.sc[A.cur]||0,A.goal),t=pos?acCell(pos):"start";
+function acDie(){
+  const card=pBody.querySelector(".ac-front"),die=card.querySelector(".ac-big"),ids=["say","show","draw"];let n=0;buzz(10);
+  const tick=()=>{if(!die.isConnected)return;n++;
+    if(n<11){die.innerHTML=ACI[ids[n%3]];setTimeout(tick,60+n*14)}
+    else{A.rolled=true;die.innerHTML=ACI[A.m.id];card.classList.remove("rolling");card.classList.add("rolled");buzz([20,40,30]);
+      card.querySelector(".g-txt").textContent=A.m.name;card.querySelector(".ac-rule").textContent=A.m.rule;
+      card.querySelectorAll(".ac-p").forEach(b=>b.disabled=false);const st=pBody.querySelector(".ac-step");if(st)st.innerHTML=`<b>Ход «${esc(A.teams[A.cur])}»</b> · объясняющий выбирает сложность`}};
+  setTimeout(tick,250);
+}
+function acRoll(){A.rolled=false;A.run=false;const pos=Math.min(A.sc[A.cur]||0,A.goal),t=pos?acCell(pos):"start";
   A.all=t==="all"&&!A.multi;A.m=t==="start"||t==="all"?pick(ACT_METHODS):ACT_METHODS.find(m=>m.id===t);A.cell=t;A.view="turn"}
 const acPool=p=>A.deck==="clean"?ACT_CLEAN[p]:A.deck==="adult"?ACT_WORDS[p]:ACT_CLEAN[p].concat(ACT_WORDS[p]);
 function acWord(p){const u=A.used[p],all=acPool(p);let pool=all.filter(w=>!u.has(w));if(!pool.length){all.forEach(w=>u.delete(w));pool=all}const w=pick(pool);u.add(w);A.hot=ACT_WORDS[p].includes(w);return w}
@@ -1448,22 +1457,21 @@ function renderAct(){
     return;
   }
   if(A.view==="turn"){
-    const lv=A.all?"lv6":"lv3";
-    pBody.innerHTML=`${acBoard()}<p class="ac-step"><b>Ход «${team}»</b> · ${A.open?"выбери сложность":"передай телефон тому, кто объясняет"}</p>
-    <div class="ac-flip ${A.open?"open":""}"><div class="ac-in">
-      <button type="button" class="ac-face ac-back ${lv}" data-pa="acopen"><span class="ac-orn"></span>${HAT}<b>Активити</b><small>Нажми, чтобы вытянуть карту</small></button>
-      <div class="ac-face ac-front gcard ${lv}">${A.all?`<div class="ac-all">Все играют</div>`:""}
-        <span class="ac-big">${ACI[A.m.id]}</span><p class="g-txt">${A.m.name}</p><p class="ac-rule">${A.m.rule}</p>
-        <p class="ac-hint">${A.cell==="start"?"Первый ход — способ выпал случайно.":A.cell==="all"?(A.all?"Фишка на звезде: угадывают все команды — очки тем, кто первый.":"Фишка на звезде — способ выпал случайно."):"Так велит клетка, на которой стоит ваша фишка."}</p>
-        <div class="ac-pts">${[[3,"Легко"],[4,"Средне"],[5,"Жёстко"]].map(([p,l])=>`<button type="button" class="ac-p p${p}" data-pa="acpts" data-p="${p}"><b>${p}</b><small>${l}</small></button>`).join("")}</div>
-        <p class="ac-hint">Цифра — сколько очков получит команда.</p></div>
-    </div></div>`;
-    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="acsetup">Счёт и настройки</button>`;return;
+    const lv=A.all?"lv6":"lv3",roll=(A.cell==="start"||A.cell==="all")&&!A.rolled;
+    pBody.innerHTML=`${acBoard()}<p class="ac-step"><b>Ход «${team}»</b> · ${roll?"бросаем кубик":"объясняющий выбирает сложность"}</p>
+    <div class="gcard ${lv} ac-card ac-front ${roll?"rolling":""}">${A.all?`<div class="ac-all">Все играют</div>`:""}
+      <span class="ac-big ${A.cell==="start"||A.cell==="all"?"die":""}">${ACI[A.m.id]}</span><p class="g-txt">${roll?"Кубик решает…":A.m.name}</p><p class="ac-rule">${roll?"&nbsp;":A.m.rule}</p>
+      <p class="ac-hint">${A.cell==="start"?"Первый ход — способ решает кубик.":A.cell==="all"?(A.all?"Фишка на звезде: способ решает кубик, угадывают все команды — очки тем, кто первый.":"Фишка на звезде — способ решает кубик."):"Так велит клетка, на которой стоит ваша фишка."}</p>
+      <div class="ac-pts">${[[3,"Легко"],[4,"Средне"],[5,"Жёстко"]].map(([p,l])=>`<button type="button" class="ac-p p${p}" data-pa="acpts" data-p="${p}" ${roll?"disabled":""}><b>${p}</b><small>${l}</small></button>`).join("")}</div>
+      <p class="ac-hint">Цифра — сколько очков получит команда. Остальные не подглядывают.</p></div>`;
+    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="acsetup">Счёт и настройки</button>`;
+    if(roll)acDie();
+    return;
   }
   if(A.view==="play"){
     const draw=A.m.id==="draw",T=A.time,el0=A.run?(Date.now()-A.t0)/1000:0;
     pBody.innerHTML=`<div class="ac-play ${draw?"draw":""}">${hourglass()}<div class="ac-sec"><b id="acSec">${A.run?Math.ceil(Math.max(0,T-el0)):T}</b><small>${A.run?(A.all?"угадывают все":"угадывает «"+team+"»"):"секунд на ход"}</small>${A.multi&&A.run?`<em class="ac-got">+${A.got} за ход · ${A.n} ${plural(A.n,"слово","слова","слов")}</em>`:""}</div></div>
-    <div class="gcard ${A.all?"lv6":"lv3"} ac-card ac-word ${draw?"short":""}">${A.run?`<span class="ac-stamp ok">Угадали</span><span class="ac-stamp no">${A.multi?"Пропуск":"Не угадали"}</span>`:""}<div class="g-kind">${A.m.name} · ${A.pts} ${plural(A.pts,"очко","очка","очков")}${A.hot&&A.deck==="mix"?` <em class="ac-hot">18+</em>`:""}</div><p class="g-txt">${esc(A.word)}</p><p class="ac-rule">${A.m.rule}</p>${A.run?`<button type="button" class="g-lvl ac-hide" data-pa="achide">Запомнил — скрыть слово</button><p class="ac-swh">← свайп: ${A.multi?"пропуск":"не угадали"} · угадали →</p>`:`<p class="ac-hint">${A.multi?"Объясняй слова одно за другим — сколько успеете, пока сыплется песок.":"Запомни слово. Когда будешь готов — переворачивай часы."}</p>`}</div>
+    <div class="gcard ${A.all?"lv6":"lv3"} ac-card ac-word ${draw?"short":""}">${A.run?`<span class="ac-stamp ok">Угадали</span><span class="ac-stamp no">${A.multi?"Пропуск":"Не угадали"}</span>`:""}<div class="g-kind">${A.m.name} · ${A.pts} ${plural(A.pts,"очко","очка","очков")}${A.hot&&A.deck==="mix"?` <em class="ac-hot">18+</em>`:""}</div><p class="g-txt">${esc(A.word)}</p><p class="ac-rule">${A.m.rule}</p>${A.run?`<button type="button" class="g-lvl ac-hide" data-pa="achide">Запомнил — скрыть слово</button><p class="ac-swh">← свайп: ${A.multi?"пропуск":"не угадали"} · угадали →</p>`:`<p class="ac-hint">${A.multi?"Объясняй слова одно за другим — сколько успеете, пока сыплется песок. Старт — кнопкой или свайпом влево.":"Запомни слово. Когда будешь готов — переворачивай часы: кнопкой или свайпом влево."}</p>`}</div>
     ${draw&&A.run?`<div class="ac-draw"><canvas id="acCv" aria-label="Поле для рисования"></canvas><button type="button" class="g-back" data-pa="acclear">Стереть</button></div>`:""}`;
     pNav.hidden=false;
     pNav.innerHTML=!A.run?`<button class="btn btn-brass" type="button" data-pa="acstart">Готов — переворачиваю часы</button>`:
@@ -1523,7 +1531,6 @@ function acClick(a,el){
   if(a==="acnew"){A.sc=A.teams.map(()=>0);A.cur=0;A.turns=0;acSave();acRoll();renderAct();return true}
   if(a==="acgo"){if(A.sc.some(s=>s>=A.goal))return acClick("acnew",el);acRoll();renderAct();return true}
   if(a==="acsetup"){A.view="setup";renderAct();return true}
-  if(a==="acopen"){A.open=true;pBody.querySelector(".ac-flip").classList.add("open");const s=pBody.querySelector(".ac-step");if(s)s.innerHTML=`<b>Ход «${esc(A.teams[A.cur])}»</b> · выбери сложность`;buzz(12);return true}
   if(a==="acpts"){A.pts=+el.dataset.p;A.word=acWord(A.pts);A.run=false;A.got=0;A.n=0;A.view="play";buzz(12);renderAct();pBody.scrollTop=0;return true}
   if(a==="acstart"){A.run=true;A.fresh=true;A.t0=Date.now();buzz(20);renderAct();return true}
   if(a==="achit"){if(A.multi){A.got+=A.pts;A.n++;A.word=acWord(A.pts);buzz([15,40,15]);renderAct()}else if(A.all){acStop();A.view="who";renderAct()}else acResult(A.cur);return true}
@@ -1568,6 +1575,8 @@ panel.addEventListener("submit",e=>{
   A.teams.push(v);A.sc.push(0);acSave();renderAct();
 });
 
+/* Свайп влево = главная кнопка снизу на экранах «дальше» (не там, где действие что-то засчитывает). */
+const SWIPE_NEXT=new Set(["acstart","acpass","acseen","qnext","rampgo"]);
 /* swipe between bartender steps / cards */
 (function(){let x0=null,y0=0;
   pBody.addEventListener("touchstart",e=>{if(e.touches.length===1){x0=e.touches[0].clientX;y0=e.touches[0].clientY}},{passive:true});
@@ -1575,6 +1584,7 @@ panel.addEventListener("submit",e=>{
     if(Math.abs(dx)<60||Math.abs(dy)>Math.abs(dx))return;
     if(pKind==="bartender"){bt.k=Math.max(0,Math.min(bt.steps.length-1,bt.k+(dx<0?1:-1)));renderBt()}
     else if(pKind==="cards"&&G.tab==="decks"&&G.view==="play"){if(dx<0)drawNext();else if(G.k>0){G.k--;G.turn--;G.showLvl=G.showAlt=false;renderCards()}}
+    else if(dx<0&&!e.target.closest("canvas")){const b=pNav.querySelector(".btn-brass");if(b&&!pNav.hidden&&SWIPE_NEXT.has(b.dataset.pa)){buzz(8);b.click()}}
   });
 })();
 
