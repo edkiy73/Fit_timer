@@ -47,14 +47,17 @@
 
 .profile-actions{display:grid;grid-template-columns:minmax(0,1fr) auto}.profile-actions>[data-slot]:first-child{grid-column:1/-1}.profile-actions .action{display:flex;width:100%}.profile-actions .dual-wrap{display:block}.profile-actions .dual-fire{flex:1;justify-content:center}
 .variant-dual .profile-actions>[data-slot]{grid-column:1/-1}
+/* 04 / Hold and swipe. Statuses are independent; gestures commit one identity at a time. */
+.variants{grid-template-columns:repeat(4,minmax(0,1fr))}.variants button{gap:8px;padding-inline:12px}.variants em{font-size:8px}.gesture-guide{padding:12px 4px 16px;border-top:1px solid var(--line);font-size:12px;color:var(--ink)}.gesture-guide small{display:block;color:var(--mute);font-size:10px;margin-top:4px}.gesture-control{display:inline-flex;flex-direction:column;gap:6px;max-width:100%;vertical-align:middle}.gesture-control>.action{display:flex}.gesture-states{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}.identity-state{display:inline-flex;gap:3px;align-items:center;font-size:9px;color:var(--mute);min-height:22px}.identity-state .avatar.small{width:16px;height:16px}.identity-state>svg{width:11px;height:11px;color:var(--accent)}.identity-state.done{color:var(--accent);font-weight:650}.identity-state>i{width:7px;height:7px;border:1px solid var(--line2);border-radius:50%;margin-inline:2px}.hold-fire{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y;transition:box-shadow .15s,transform .15s}.hold-fire.holding{box-shadow:inset 0 0 0 2px var(--violet);transform:scale(.97)}.gesture-action.both-active{box-shadow:0 0 0 1px var(--accent)}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.profile-actions .gesture-control,.full-action .gesture-control{display:flex;width:100%}.profile-actions .gesture-control>.action{width:100%}.variant-gesture .post-foot,.variant-gesture .comment-actions{align-items:flex-start}.gesture-preview{position:fixed;z-index:120;width:260px;max-width:calc(100vw - 24px);padding:7px;border-radius:21px;border:1px solid var(--line2);background:var(--surf);color:var(--ink);box-shadow:0 18px 60px #08050b44;pointer-events:none}.gesture-choice{display:flex;align-items:center;gap:8px;padding:11px 8px;border-radius:14px;min-height:67px}.gesture-choice .direction{font-size:18px;color:var(--mute);width:14px}.gesture-choice>span:not(.avatar):not(.direction){flex:1;min-width:0}.gesture-choice b{font-size:12px;display:block}.gesture-choice small{font-size:11px;color:var(--mute);display:block;margin-top:2px}.gesture-choice>svg{width:16px;height:16px;color:var(--accent)}.gesture-choice.selected{background:var(--accent-soft)}.gesture-neutral{font-size:10px;color:var(--mute);text-align:center;padding:10px 4px;border-block:1px solid var(--line);margin-block:4px}.gesture-action.compact .gesture-states{gap:4px}
+@media(max-width:1100px){.variants{grid-template-columns:repeat(2,minmax(0,1fr))}.variants button{min-height:54px}}@media(max-width:700px){.variants button{flex-direction:row;align-items:center;min-height:58px;padding:10px 8px;gap:7px}.variants button span{font-size:11px}.gesture-guide{font-size:11px}.gesture-guide small{font-size:9px}.variant-gesture .post-foot{gap:3px}.variant-gesture .post-foot .plain-icon{min-width:28px}}
 </style></head><body>
 <header class="page-head"><a class="brand" href="prototype-v10.html">Fet<span>Ure</span> <small>V10 / Action lab</small></a><div class="top-actions"><button id="lang" class="small-btn" aria-label="Switch language">EN</button><button id="theme" class="small-btn" aria-label="Тёмная тема">◐</button><a class="small-btn" href="prototype-v10.html" id="back-link">В прототип ↗</a></div></header>
 <main><section class="intro"><div class="eyebrow" data-ru="ВЫБОР АВТОРА · ИНТЕРАКТИВНЫЙ МАКЕТ" data-en="AUTHOR CHOICE · INTERACTIVE STUDY"></div><h1 data-ru="Одно действие.<br>От себя или от пары." data-en="One action.<br>Yourself or your couple."></h1><p data-ru="Все места — на одной странице. Нажимай на действия и аватарки: у каждого автора свои лайки, подписки и запросы." data-en="Every context on one page. Try the actions and avatars: each identity has its own likes, follows and requests."></p></section>
-<section class="controls" aria-label="Настройки макета"><div class="variants" role="group" aria-label="Механика выбора автора"><button data-variant="split" aria-pressed="true"><b>01</b><span data-ru="Раздельная кнопка" data-en="Split button"></span><em data-ru="Основной вариант" data-en="Recommended"></em></button><button data-variant="choose" aria-pressed="false"><b>02</b><span data-ru="Выбор при действии" data-en="Choose on action"></span></button><button data-variant="dual" aria-pressed="false"><b>03</b><span data-ru="Два автора сразу" data-en="Both identities"></span></button></div><div class="control-bottom"><p id="mechanic-note"></p><div class="settings"><button id="pair-toggle" class="pair-toggle" role="switch" aria-checked="true"><i></i><span data-ru="Активная пара" data-en="Active couple"></span></button><button id="reset" class="small-btn" data-ru="Сбросить" data-en="Reset"></button></div></div></section>
+<section class="controls" aria-label="Настройки макета"><div class="variants" role="group" aria-label="Механика выбора автора"><button data-variant="split" aria-pressed="true"><b>01</b><span data-ru="Раздельная кнопка" data-en="Split button"></span><em data-ru="Основной вариант" data-en="Recommended"></em></button><button data-variant="choose" aria-pressed="false"><b>02</b><span data-ru="Выбор при действии" data-en="Choose on action"></span></button><button data-variant="dual" aria-pressed="false"><b>03</b><span data-ru="Два автора сразу" data-en="Both identities"></span></button><button data-variant="gesture" aria-pressed="false"><b>04</b><span data-ru="Удержать и свайпнуть" data-en="Hold and swipe"></span></button></div><div class="control-bottom"><p id="mechanic-note"></p><div class="settings"><button id="pair-toggle" class="pair-toggle" role="switch" aria-checked="true"><i></i><span data-ru="Активная пара" data-en="Active couple"></span></button><button id="reset" class="small-btn" data-ru="Сбросить" data-en="Reset"></button></div></div><div id="gesture-guide" class="gesture-guide" hidden><span data-ru="Удержи кнопку → вверх: Мы · вниз: Я → отпусти для действия. Вернись в центр, чтобы отменить." data-en="Hold an action → up: Us · down: Me → release to act. Return to the center to cancel."></span><small data-ru="На компьютере — удерживай мышь и двигай. Клавиатура: ↑ / ↓, Enter — выполнить, Esc — отменить." data-en="On desktop, hold and move the mouse. Keyboard: ↑ / ↓, Enter to confirm, Esc to cancel."></small></div></section>
 <nav class="jump-links" aria-label="Фрагменты"><a href="#profile" data-ru="Профиль" data-en="Profile"></a><a href="#post" data-ru="Лента" data-en="Feed"></a><a href="#comments" data-ru="Ответы" data-en="Replies"></a><a href="#dating" data-ru="Свайпы" data-en="Swipes"></a><a href="#compose" data-ru="Публикация" data-en="Composer"></a><a href="#lists" data-ru="Списки" data-en="Lists"></a><a href="#fixed" data-ru="Фиксированный автор" data-en="Fixed identity"></a></nav>
 <div class="gallery" id="gallery"></div>
 <footer class="page-foot"><span data-ru="FetUre V10 · выбор автора действия" data-en="FetUre V10 · action identity"></span><span data-ru="Изменения на этой странице не затрагивают прототип." data-en="Actions on this page do not change the prototype."></span></footer></main>
-<div id="author-menu" role="dialog" aria-modal="true" aria-label="Выбор автора" hidden></div><div id="menu-scrim" hidden></div><div id="toast" role="status" aria-live="polite"></div>
+<div id="author-menu" role="dialog" aria-modal="true" aria-label="Выбор автора" hidden></div><div id="menu-scrim" hidden></div><div id="gesture-preview" class="gesture-preview" role="status" aria-live="polite" hidden></div><div id="toast" role="status" aria-live="polite"></div>
 <script>const sv=(d,w)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w||2}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const I={at:sv('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5"/><path d="M15.5 8v7h2"/>'),
  back:sv('<path d="M15 18l-6-6 6-6"/>',2.4), chev:sv('<path d="M9 6l6 6-6 6"/>',2.2), down:sv('<path d="M6 9l6 6 6-6"/>',2.2), close:sv('<path d="M6 6l12 12M18 6L6 18"/>',2.4),
@@ -125,6 +128,75 @@ const I={at:sv('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5"
  apple:'<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8s2 .8 3.4.8 2.2-1.3 3.1-2.5c1-1.4 1.4-2.8 1.4-2.9 0 0-2.7-1-2.7-4.1zM13.9 5c.7-.9 1.2-2 1-3.2-1 0-2.3.7-3 1.6-.7.8-1.3 2-1.1 3.1 1.2.1 2.3-.6 3.1-1.5z"/></svg>',
 };
 
+/* Fourth study: hold, preview a direction, release to commit one identity.
+   Touch scroll remains native until the hold is armed. No synthetic click after a gesture. */
+let gesture=null,blockedGestureClick=null;
+const HOLD_MS=280,CHOOSE_DISTANCE=32;
+function nextGestureAction(id,who){
+ const a=actions[id],on=active(id,who);
+ if(on&&a.type==='like')return L('Убрать лайк','Remove like');
+ if(on&&a.type==='follow')return L('Отписаться','Unfollow');
+ if(on&&a.type==='request')return L('Отменить запрос','Cancel request');
+ return a.label?a.label():op[a.type].off();
+}
+function gestureAction(id,classes){
+ const a=actions[id],who=owner(a.context),hasBoth=active(id,'me')&&active(id,'couple'),shown=nextGestureAction(id,who);
+ return `<span class="gesture-control"><span class="${classes} gesture-action ${hasBoth?'both-active':''}"><button class="fire hold-fire" data-fire="${id}" data-hold="${id}" aria-label="${esc(shown+' '+by(who))}" aria-describedby="gesture-guide" aria-pressed="${active(id,who)}">${actionIcon(id,who)}${a.circle?'':`<span>${esc(a.count!=null?actionLabel(id,who):shown)}</span>`}</button><button class="identity" data-menu="${id}" aria-label="${esc(L('Изменить автора: ','Change identity: ')+name(who))}" aria-haspopup="dialog">${avatar(who)}${a.compact||a.circle?'':`<span class="who">${short(who)}</span>`}${icon('down')}</button></span><span class="gesture-states" aria-label="${esc(L('Состояния авторов','Identity states'))}">${['me','couple'].map(w=>`<span class="identity-state ${active(id,w)?'done':''}" title="${esc(name(w))}">${avatar(w,'small')}<span>${short(w)}</span>${active(id,w)?icon('check'):'<i aria-hidden="true"></i>'}<span class="sr-only">${active(id,w)?L('действие выполнено','action active'):L('действие не выполнено','no action')}</span></span>`).join('')}</span></span>`;
+}
+function blockGestureClick(id){blockedGestureClick={id,until:Date.now()+700};}
+function cancelGesture(){
+ if(!gesture)return;
+ clearTimeout(gesture.timer);gesture.button?.classList.remove('holding');
+ if(gesture.armed)blockGestureClick(gesture.id);
+ gesture=null;const preview=document.querySelector('#gesture-preview');if(preview)preview.hidden=true;
+}
+function paintGesture(){
+ const g=gesture;if(!g?.armed)return;const el=$('#gesture-preview');
+ el.innerHTML=`<div class="gesture-choice ${g.who==='couple'?'selected':''}"><span class="direction">↑</span>${avatar('couple')}<span><b>${L('Мы','Us')} · Alex & Eva</b><small>${esc(nextGestureAction(g.id,'couple'))}</small></span>${g.who==='couple'?icon('check'):''}</div><div class="gesture-neutral">${g.who?L('Отпусти, чтобы выполнить','Release to confirm'):L('Центр — отмена','Center — cancel')}</div><div class="gesture-choice ${g.who==='me'?'selected':''}"><span class="direction">↓</span>${avatar('me')}<span><b>${L('Я','Me')} · Alex</b><small>${esc(nextGestureAction(g.id,'me'))}</small></span>${g.who==='me'?icon('check'):''}</div>`;
+ el.hidden=false;const r=g.button.getBoundingClientRect(),viewH=window.visualViewport?.height||innerHeight;
+ el.style.left=Math.min(Math.max(12,r.left+r.width/2-el.offsetWidth/2),innerWidth-el.offsetWidth-12)+'px';
+ el.style.top=Math.min(Math.max(12,r.top+r.height/2-el.offsetHeight/2),Math.max(12,viewH-el.offsetHeight-12))+'px';
+}
+function armGesture(){
+ const g=gesture;if(!g||!g.button.isConnected||variant!=='gesture'||!hasPair){cancelGesture();return;}
+ g.armed=true;g.button.classList.add('holding');paintGesture();
+}
+function startGesture(button,x,y,kind,token){
+ cancelGesture();if(variant!=='gesture'||!hasPair)return;
+ gesture={button,id:button.dataset.hold,x,y,kind,token,who:null,armed:false,timer:setTimeout(armGesture,HOLD_MS)};
+}
+function moveGesture(x,y){
+ const g=gesture;if(!g)return;const dx=x-g.x,dy=y-g.y;
+ if(!g.armed){if(Math.hypot(dx,dy)>9){blockGestureClick(g.id);cancelGesture();}return;}
+ g.who=Math.abs(dx)>90?null:dy<=-CHOOSE_DISTANCE?'couple':dy>=CHOOSE_DISTANCE?'me':null;paintGesture();
+}
+function finishGesture(){
+ const g=gesture;if(!g)return false;const commit=g.armed&&g.who,id=g.id,who=g.who,armed=g.armed;
+ cancelGesture();if(!armed)return false;blockGestureClick(id);
+ if(commit){authors[actions[id].context]=who;perform(id,who);}else notify(L('Действие отменено','Action cancelled'));
+ return true;
+}
+// Capture runs before the ordinary click handler, including clicks synthesized by touch.
+document.addEventListener('click',e=>{const b=e.target.closest?.('[data-hold]');if(b&&blockedGestureClick?.id===b.dataset.hold&&Date.now()<blockedGestureClick.until){e.preventDefault();e.stopImmediatePropagation();}},true);
+document.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.button!==0)return;const b=e.target.closest?.('[data-hold]');if(b){startGesture(b,e.clientX,e.clientY,'pointer',e.pointerId);b.setPointerCapture?.(e.pointerId);}});
+document.addEventListener('pointermove',e=>{if(gesture?.kind==='pointer'&&gesture.token===e.pointerId)moveGesture(e.clientX,e.clientY);});
+document.addEventListener('pointerup',e=>{if(gesture?.kind==='pointer'&&gesture.token===e.pointerId){const armed=finishGesture();if(armed)e.preventDefault();}});
+document.addEventListener('pointercancel',e=>{if(gesture?.kind==='pointer'&&gesture.token===e.pointerId)cancelGesture();});
+document.addEventListener('touchstart',e=>{if(e.touches.length!==1){cancelGesture();return;}const b=e.target.closest?.('[data-hold]');if(b){const t=e.touches[0];startGesture(b,t.clientX,t.clientY,'touch',t.identifier);}},{passive:true});
+document.addEventListener('touchmove',e=>{if(gesture?.kind!=='touch')return;const t=[...e.touches].find(t=>t.identifier===gesture.token);if(!t){cancelGesture();return;}if(gesture.armed)e.preventDefault();moveGesture(t.clientX,t.clientY);},{passive:false});
+document.addEventListener('touchend',e=>{if(gesture?.kind==='touch'&&[...e.changedTouches].some(t=>t.identifier===gesture.token)){if(gesture.armed)e.preventDefault();finishGesture();}},{passive:false});
+document.addEventListener('touchcancel',()=>{if(gesture?.kind==='touch')cancelGesture();});
+document.addEventListener('contextmenu',e=>{if(e.target.closest?.('[data-hold]')&&gesture?.armed)e.preventDefault();});
+document.addEventListener('keydown',e=>{
+ const b=e.target.closest?.('[data-hold]');
+ if(b&&['ArrowUp','ArrowDown'].includes(e.key)&&variant==='gesture'&&hasPair){e.preventDefault();e.stopImmediatePropagation();if(gesture?.button!==b){startGesture(b,0,0,'keyboard',null);clearTimeout(gesture.timer);armGesture();}gesture.who=e.key==='ArrowUp'?'couple':'me';paintGesture();return;}
+ if(gesture?.kind==='keyboard'&&['Enter',' ','Escape','Tab'].includes(e.key)){
+  if(e.key==='Tab'){cancelGesture();return;}e.preventDefault();e.stopImmediatePropagation();if(e.key==='Escape')cancelGesture();else finishGesture();
+ }
+},true);
+window.addEventListener('blur',cancelGesture);window.addEventListener('resize',cancelGesture);
+document.addEventListener('scroll',cancelGesture,{capture:true,passive:true});
+
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 let lang='ru',variant='split',hasPair=true,menuContext=null,menuOpener=null,toastTimer;
 const state={},authors={},drafts={},events={};
@@ -160,6 +232,7 @@ function actionIcon(id,who){const a=actions[id];return active(id,who)?(a.type===
 function action(id){const a=actions[id],who=owner(a.context),on=active(id,who),label=actionLabel(id,who);const classes=`action ${a.compact?'compact':''} ${a.primary?'primary':''} ${a.circle?'circle':''} ${on?'active':''}`;
  const title=`${op[a.type].off()} ${by(who)}`;
  if(!hasPair)return `<div class="${classes}"><button class="fire" data-fire="${id}" aria-label="${esc(title)}" ${['like','follow'].includes(a.type)?`aria-pressed="${on}"`:''}>${actionIcon(id,who)}${a.circle?'':`<span>${esc(label)}</span>`}</button></div>`;
+ if(variant==='gesture')return gestureAction(id,classes);
  if(variant==='dual')return `<div class="dual-wrap">${a.compact||a.circle?'':`<p class="dual-label">${esc(a.label?a.label():op[a.type].off())}</p>`}<div class="${classes}">${['me','couple'].map(w=>`<button class="dual-fire ${active(id,w)?'on':''}" data-fire="${id}" data-who="${w}" aria-label="${esc(op[a.type].off()+' '+by(w))}" aria-pressed="${active(id,w)}">${avatar(w)}<span>${short(w)}</span>${actionIcon(id,w)}</button>`).join('')}</div></div>`;
  const chooser=variant==='choose';
  return `<div class="${classes}"><button class="fire" ${chooser?`data-menu="${id}"`:`data-fire="${id}"`} aria-label="${esc(chooser?L('Выбрать автора: ','Choose identity: ')+title:title)}" ${chooser?'aria-haspopup="dialog"':`aria-pressed="${on}"`}>${actionIcon(id,who)}${a.circle?'':`<span>${esc(label)}</span>`}${chooser?avatar(who,'small'):''}${chooser?icon('down'):''}</button>${chooser?'':`<button class="identity" data-menu="${id}" aria-label="${esc(L('Изменить автора: ','Change identity: ')+name(who))}" aria-haspopup="dialog">${avatar(who)}${a.compact||a.circle?'':`<span class="who">${short(who)}</span>`}${icon('down')}</button>`}</div>`;
@@ -169,13 +242,14 @@ const fixed=(who='me')=>`<span class="fixed-author">${avatar(who,'small')}${shor
 const normal=(text,key,primary=false)=>`<button class="standard-btn ${primary?'primary':''}" data-local="${key}">${text}</button>`;
 function specimen(id,num,title,body,note,tag=''){return `<section class="specimen" id="${id}"><div class="spec-label"><span class="num">${num}</span><h2>${title}</h2>${tag?`<span class="tag">${tag}</span>`:''}</div><div class="fragment">${body}</div><p class="caption">${note}</p></section>`;}
 function render(){
+ cancelGesture();
  // Preserve locally typed drafts when changing a mechanism, identity, or display setting.
  $$('textarea').forEach(t=>drafts[t.id]=t.value);
  const checkedPoll=$('input[name=poll]:checked');if(checkedPoll)events.poll=checkedPoll.value;
- document.body.classList.toggle('no-pair',!hasPair);document.body.classList.toggle('variant-dual',variant==='dual');
+ document.body.classList.toggle('no-pair',!hasPair);document.body.classList.toggle('variant-dual',variant==='dual');document.body.classList.toggle('variant-gesture',variant==='gesture');$('#gesture-guide').hidden=variant!=='gesture'||!hasPair;
  $$('[data-ru]').forEach(e=>e.innerHTML=e.dataset[lang]);$('#lang').textContent=lang==='ru'?'EN':'RU';document.documentElement.lang=lang;
  $$('[data-variant]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.variant===variant));$('#pair-toggle').setAttribute('aria-checked',hasPair);
- const notes={split:L('Основная часть выполняет действие. Аватарка со стрелкой меняет автора — без выполнения действия.','The main part performs the action. The avatar and arrow change identity without performing it.'),choose:L('Нажатие открывает два варианта. Выбор «Я» или «Мы» сразу выполняет действие.','Tap to see both identities. Choosing Me or Us immediately performs the action.'),dual:L('Оба автора и оба состояния видны сразу. Нажатие на «Я» или «Мы» выполняет действие.','Both identities and their states are visible. Tap Me or Us to perform the action.')};
+ const notes={gesture:L('Касание — от показанного автора. Удержание 280 мс и движение вверх / вниз — выбор и действие при отпускании. Лайки и подписки у каждого автора свои.','Tap to act as the shown identity. Hold for 280 ms, move up / down, then release. Each identity has independent likes and follows.'),split:L('Основная часть выполняет действие. Аватарка со стрелкой меняет автора — без выполнения действия.','The main part performs the action. The avatar and arrow change identity without performing it.'),choose:L('Нажатие открывает два варианта. Выбор «Я» или «Мы» сразу выполняет действие.','Tap to see both identities. Choosing Me or Us immediately performs the action.'),dual:L('Оба автора и оба состояния видны сразу. Нажатие на «Я» или «Мы» выполняет действие.','Both identities and their states are visible. Tap Me or Us to perform the action.')};
  $('#mechanic-note').textContent=hasPair?notes[variant]:L('Пары нет: обычные кнопки, без аватарок автора, «Я / Мы» и лишних стрелок.','No active couple: ordinary buttons, without identity avatars, Me / Us labels or extra arrows.');
  const authorC=owner('comments'),authorP=owner('compose'),authorD=owner('discussion');
  const cards=[];
