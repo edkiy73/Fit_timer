@@ -5,7 +5,7 @@ let mode='gesture',pair=true,lang='ru',theme='light',sourceHTML='',generation=0;
 const mounted=new Map();
 const screens=[
  ['dating','D03',{},'Знакомства','Dating','Четыре плавающие кнопки: возврат, пропуск, доступ, лайк. Автор выбирается у доступа и лайка.','Four floating actions: undo, pass, request, like. Identity applies to request and like.'],
- ['profile','P01',{id:'noah'},'Профиль человека','Member profile','Исходный профиль V10. Кнопки остаются на своих местах.','The original V10 profile. Buttons stay in their original positions.'],
+ ['profile','P01',{id:'noa'},'Профиль человека','Member profile','Исходный профиль V10. Кнопки остаются на своих местах.','The original V10 profile. Buttons stay in their original positions.'],
  ['feed','F01',{sub:'foryou'},'Публикации в ленте','Feed posts','Настоящие карточки и панель реакций. Можно прокручивать ленту.','Real post cards and reaction controls. Scroll the feed.'],
  ['replies','F05',{id:'p1'},'Публикация и ответы','Post and replies','Лайки ответов и отправка сообщения в реальном экране.','Reply reactions and the real reply composer.'],
  ['compose','F07',{type:'text'},'Редактор публикации','Post composer','Оригинальный редактор: черновик, вложения, предпросмотр и публикация.','The original composer: draft, attachments, preview and publish.'],

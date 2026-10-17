@@ -1,4 +1,10 @@
 /* Injected ONLY into isolated srcdoc copies of V10 by the comparison page. */
+// srcdoc keeps its own history entries; route hashes must not try to change its URL.
+if(location.href==='about:srcdoc'){
+ const replace=history.replaceState.bind(history),push=history.pushState.bind(history);
+ history.replaceState=(state,title)=>replace(state,title);
+ history.pushState=(state,title)=>push(state,title);
+}
 window.FT_LAB_BRIDGE={
  init(pair,lang){S.lang=lang;document.documentElement.lang=lang;if(pair&&activePair()){const p=coupleProfile();p.dating=true;p.datingVisible=true;p.socialLikes=true;}},
  actor(id){if(id==='couple'&&!activePair())return false;S.author=id;if(cur().p.actor&&cur().id!=='H02')cur().p.actor=id;return true;},
