@@ -128,7 +128,7 @@ function likePerson(id,src){if(!authorGuard()||!PEOPLE[id]||relatedFor(actionAut
  const theyLike=social().likesIn.some(l=>l.p===id)||QA.autoApprove;
  if(theyLike){social().matches.unshift({p:id,t:Date.now()});social().likesIn=social().likesIn.filter(l=>l.p!==id);if(actionAuthor()==='couple')pairNotify('match',id,{p:id,go:['H02',{id,actor:'couple'}]});else S.notifs.unshift({id:'n'+Date.now(),type:'match',p:id,t:Date.now(),read:true,go:['H01']});ensureThread(id,actionAuthor());showMatch(id);}
  else{if(!social().likesOut.some(l=>l.p===id))social().likesOut.unshift({p:id,src,t:Date.now()});toast(authorProfile().dating&&!authorProfile().datingVisible?L(`Симпатия отправлена. ${pname(id)} увидит твою анкету в «Симпатиях»`,`Like sent. ${pname(id)} will see your profile in Likes`):L(`Симпатия отправлена. Чат откроется, если ${pname(id)} ответит взаимностью`,`Like sent. A chat opens if ${pname(id)} likes you back`),{type:'ok'});}
- renderSide();const d=$('.dock');if(d&&S.session&&SC[cur().id].root){d.outerHTML=dockHTML();}
+ renderSide();const d=$('.dock');if(d&&screenHasDock(cur().id)){d.outerHTML=dockHTML();}
 }
 /* D08 — it’s mutual */
 function showMatch(id){const m=$('#matchLayer');const sh=sharedSummary(id);
