@@ -1188,7 +1188,7 @@ const deckById=id=>DECKS.find(d=>d.id===id);
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const HAT=`<svg class="g-corner" viewBox="0 0 24 24"><path d="M2.5 15.5c4 2.6 15 2.6 19 0"/><path d="M5.5 15c0-4.5 1.6-9 4-9 1.1 0 1.6 1.2 2.5 1.2S13.4 6 14.5 6c2.4 0 4 4.5 4 9"/></svg>`;
 const WATER=["Дон бережёт семью","Пауза: все пьют воду. Потом продолжаем."];
-function openCards(tab="decks"){openPanel("cards",tab==="activity"?"Активити 18+":"Карты Дона");G.tab=tab;G.view="decks";if(tab==="activity")A.view="setup";renderCards()}
+function openCards(tab="decks"){openPanel("cards",tab==="activity"?"Активити":"Карты Дона");G.tab=tab;G.view="decks";if(tab==="activity")A.view="setup";renderCards()}
 /* «Разгоняемся»: игра делится на этапы по уровням колод; верхний этап — самый длинный,
    чтобы взрослые карты были и в короткой игре. На каждом ходу карта берётся из колоды этапа,
    иногда — на уровень ниже (передышка) или выше (анонс). Карты не повторяются. */
@@ -1222,7 +1222,7 @@ function drawNext(){
 }
 const who=off=>{const n=G.players.length;return n?G.players[((G.turn+off)%n+n)%n]:null};
 const heat=l=>`<span class="heat lv${l}" aria-label="Уровень ${l} из 6">${[1,2,3,4,5,6].map(i=>`<i class="${i<=l?"f":""}"></i>`).join("")}</span>`;
-function tabs(){return `<div class="g-tabs"><button type="button" class="pill ${G.tab==="decks"?"on":""}" data-pa="gtab" data-m="decks">Колоды</button><button type="button" class="pill ${G.tab==="activity"?"on":""}" data-pa="gtab" data-m="activity">Активити 18+</button><button type="button" class="pill ${G.tab==="quiz"?"on":""}" data-pa="gtab" data-m="quiz">Угадай коктейль</button></div>`}
+function tabs(){return `<div class="g-tabs"><button type="button" class="pill ${G.tab==="decks"?"on":""}" data-pa="gtab" data-m="decks">Колоды</button><button type="button" class="pill ${G.tab==="activity"?"on":""}" data-pa="gtab" data-m="activity">Активити</button><button type="button" class="pill ${G.tab==="quiz"?"on":""}" data-pa="gtab" data-m="quiz">Угадай коктейль</button></div>`}
 function roster(){
   const p=G.players;
   return `<div class="roster"><div class="r-h"><b>Очередь игроков</b><small>${p.length?p.length+" "+plural(p.length,"игрок","игрока","игроков"):"необязательно — карта сама скажет, чей ход"}</small></div>
@@ -1346,16 +1346,18 @@ panel.addEventListener("click",e=>{
   if(a==="qnext"){G.q=null;renderQuiz();return}
   if(a==="qopen"){const i=G.q.c.i;closePanel(true);history.replaceState({sheet:i},"","#"+i);openSheet(i,false);return}
 });
-/* ===== Активити 18+ ===== */
+/* ===== Активити: обычные слова, 18+ или вперемешку ===== */
 const A={teams:store.get("acTeams",["Корлеоне","Таттаглия"]),sc:store.get("acScore",[]),cur:store.get("acCur",0),
-  time:store.get("acTime",60),goal:store.get("acGoal",30),drink:store.get("acDrink",false),multi:store.get("acMulti",false),run:false,got:0,n:0,
+  time:store.get("acTime",60),goal:store.get("acGoal",30),drink:store.get("acDrink",false),multi:store.get("acMulti",false),deck:store.get("acDeck","mix"),seen:false,hot:false,run:false,got:0,n:0,
   view:"setup",m:null,all:false,pts:0,word:"",t0:0,turns:0,used:{3:new Set(),4:new Set(),5:new Set()}};
 let acT=null;
-const acSave=()=>{store.set("acTeams",A.teams);store.set("acScore",A.sc);store.set("acCur",A.cur);store.set("acTime",A.time);store.set("acGoal",A.goal);store.set("acDrink",A.drink);store.set("acMulti",A.multi)};
+const acSave=()=>{store.set("acTeams",A.teams);store.set("acScore",A.sc);store.set("acCur",A.cur);store.set("acTime",A.time);store.set("acGoal",A.goal);store.set("acDrink",A.drink);store.set("acMulti",A.multi);store.set("acDeck",A.deck)};
 const acStarted=()=>A.sc.some(s=>s>0);
 function acStop(){clearInterval(acT);acT=null}
 function acRoll(){A.open=false;A.run=false;A.m=pick(ACT_METHODS);A.all=!A.multi&&A.turns>0&&Math.random()<(A.teams.length>2?1/6:1/8);A.view="turn"}
-function acWord(p){const u=A.used[p];let pool=ACT_WORDS[p].filter(w=>!u.has(w));if(!pool.length){u.clear();pool=ACT_WORDS[p]}const w=pick(pool);u.add(w);return w}
+const acPool=p=>A.deck==="clean"?ACT_CLEAN[p]:A.deck==="adult"?ACT_WORDS[p]:ACT_CLEAN[p].concat(ACT_WORDS[p]);
+function acWord(p){const u=A.used[p],all=acPool(p);let pool=all.filter(w=>!u.has(w));if(!pool.length){all.forEach(w=>u.delete(w));pool=all}const w=pick(pool);u.add(w);A.hot=ACT_WORDS[p].includes(w);return w}
+const acAdult=()=>A.deck!=="clean";
 function acBoard(){
   return `<div class="ac-sb">${A.teams.map((t,i)=>`<div class="ac-row ${i===A.cur&&A.view!=="win"?"on":""}"><span>${esc(t)}</span><i><b style="width:${Math.min(100,(A.sc[i]||0)/A.goal*100)}%"></b></i><em>${A.sc[i]||0}<small>/${A.goal}</small></em></div>`).join("")}</div>`;
 }
@@ -1396,13 +1398,19 @@ function hgSet(hg,f){
 }
 function renderAct(){
   acStop();
-  if(!agreed){
+  if(A.view==="gate"){
+    pBody.innerHTML=`<div class="gcard lv5 rules"><div class="g-kind">Слова 18+</div>
+      <p class="g-txt">Дальше будет жарче.</p>
+      <ul class="g-rules"><li>Только для взрослых и только для своих.</li><li>Слова пикантные, но без пошлости — играем с юмором.</li><li>Показываем без касаний, если второй человек не согласен.</li><li>Стоп-фраза <b>«Дон не одобряет»</b> меняет слово без штрафа.</li></ul></div>`;
+    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="acsetup">Назад</button><button class="btn btn-brass" type="button" data-pa="acagree">Нам есть 18</button>`;return;
+  }
+  if(!A.seen){
     const st=[["team","Делимся на команды","От 2 до 4. Ходят по очереди."],["card","Тянем карту","Она скажет как: словами, жестами или рисунком."],["glass","Переворачиваем часы","Свои угадывают, пока сыплется песок."],["crown","Копим очки","Слово сложнее — очков больше. Кто первым до финиша — Дон."]];
-    pBody.innerHTML=`${tabs()}<div class="ac-intro"><div class="ac-ttl"><b>Активити</b><em>18+</em></div><p class="ac-sub">Объясни, покажи, нарисуй — на время.</p>
+    pBody.innerHTML=`${tabs()}<div class="ac-intro"><div class="ac-ttl"><b>Активити</b></div><p class="ac-sub">Объясни, покажи, нарисуй — на время.</p>
       <ol class="ac-steps">${st.map(([i,h,s],k)=>`<li style="--d:${k}"><span class="ac-si">${ACI[i]}<i>${k+1}</i></span><span><b>${h}</b><small>${s}</small></span></li>`).join("")}</ol>
       <div class="ac-ways">${ACT_METHODS.map(m=>`<span>${ACI[m.id]}<b>${m.name.split(" ")[0]}</b></span>`).join("")}</div>
-      <p class="ac-18">Только для своих и взрослых. Стоп-фраза <b>«Дон не одобряет»</b> меняет слово без штрафа.</p></div>`;
-    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-brass" type="button" data-pa="acagree">Понятно, нам есть 18</button>`;return;
+      <p class="ac-18">Слова — обычные, <b>18+</b> или вперемешку: выберете на следующем шаге.</p></div>`;
+    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-brass" type="button" data-pa="acseen">Понятно</button>`;return;
   }
   const team=esc(A.teams[A.cur]||"");
   if(A.view==="setup"){
@@ -1411,6 +1419,7 @@ function renderAct(){
     <div class="roster"><div class="r-h"><b>Команды</b><small>${A.teams.length} из 4</small></div>
       <div class="r-list">${A.teams.map((n,i)=>`<span class="r-chip"><i>${i+1}</i>${esc(n)}${A.teams.length>2?`<button type="button" data-pa="acdel" data-i="${i}" aria-label="Убрать ${esc(n)}">×</button>`:""}</span>`).join("")}</div>
       ${A.teams.length<4?`<form class="r-add" id="acAdd"><input id="acName" maxlength="20" placeholder="Название команды" autocomplete="off" enterkeyhint="done"><button type="submit" class="ib">Добавить</button></form>`:""}</div>
+    <div class="ac-opt"><span>Слова</span><div>${[["clean","Обычные"],["adult","18+"],["mix","Вперемешку"]].map(([v,l])=>`<button type="button" class="pill ${A.deck===v?"on":""} ${v==="adult"?"p18":""}" data-pa="acdeck" data-v="${v}">${l}</button>`).join("")}</div></div>
     <div class="ac-opt"><span>Слов за ход</span><div><button type="button" class="pill ${A.multi?"":"on"}" data-pa="acmulti" data-v="0">Одно</button><button type="button" class="pill ${A.multi?"on":""}" data-pa="acmulti" data-v="1">Сколько успеете</button></div></div>
     ${opt("Время хода",[45,60,90],A.time,v=>v+" с")}${opt("Играем до",[20,30,50],A.goal,v=>v+" очков")}
     <button type="button" class="pill hard ${A.drink?"on":""}" data-pa="acdrink" aria-pressed="${A.drink}">${A.drink?"Промах — команда делает глоток":"Штраф за промах: глоток"}</button>
@@ -1435,7 +1444,7 @@ function renderAct(){
   if(A.view==="play"){
     const draw=A.m.id==="draw",T=A.time,el0=A.run?(Date.now()-A.t0)/1000:0;
     pBody.innerHTML=`<div class="ac-play ${draw?"draw":""}">${hourglass()}<div class="ac-sec"><b id="acSec">${A.run?Math.ceil(Math.max(0,T-el0)):T}</b><small>${A.run?(A.all?"угадывают все":"угадывает «"+team+"»"):"секунд на ход"}</small>${A.multi&&A.run?`<em class="ac-got">+${A.got} за ход · ${A.n} ${plural(A.n,"слово","слова","слов")}</em>`:""}</div></div>
-    <div class="gcard ${A.all?"lv6":"lv3"} ac-card ac-word ${draw?"short":""}"><div class="g-kind">${A.m.name} · ${A.pts} ${plural(A.pts,"очко","очка","очков")}</div><p class="g-txt">${esc(A.word)}</p><p class="ac-rule">${A.m.rule}</p>${A.run?`<button type="button" class="g-lvl ac-hide" data-pa="achide">Запомнил — скрыть слово</button>`:`<p class="ac-hint">${A.multi?"Объясняй слова одно за другим — сколько успеете, пока сыплется песок.":"Запомни слово. Когда будешь готов — переворачивай часы."}</p>`}</div>
+    <div class="gcard ${A.all?"lv6":"lv3"} ac-card ac-word ${draw?"short":""}"><div class="g-kind">${A.m.name} · ${A.pts} ${plural(A.pts,"очко","очка","очков")}${A.hot&&A.deck==="mix"?` <em class="ac-hot">18+</em>`:""}</div><p class="g-txt">${esc(A.word)}</p><p class="ac-rule">${A.m.rule}</p>${A.run?`<button type="button" class="g-lvl ac-hide" data-pa="achide">Запомнил — скрыть слово</button>`:`<p class="ac-hint">${A.multi?"Объясняй слова одно за другим — сколько успеете, пока сыплется песок.":"Запомни слово. Когда будешь готов — переворачивай часы."}</p>`}</div>
     ${draw&&A.run?`<div class="ac-draw"><canvas id="acCv" aria-label="Поле для рисования"></canvas><button type="button" class="g-back" data-pa="acclear">Стереть</button></div>`:""}`;
     pNav.hidden=false;
     pNav.innerHTML=!A.run?`<button class="btn btn-brass" type="button" data-pa="acstart">Готов — переворачиваю часы</button>`:
@@ -1485,10 +1494,13 @@ function acCanvas(){
   const up=()=>{on=false};cv.addEventListener("pointerup",up);cv.addEventListener("pointercancel",up);
 }
 function acClick(a,el){
-  if(a==="acagree"){agreed=true;renderAct();return true}
+  if(a==="acseen"){A.seen=true;renderAct();pBody.scrollTop=0;return true}
+  if(a==="acagree"){agreed=true;return acClick(A.after||"acgo",el)}
+  if(a==="acdeck"){A.deck=el.dataset.v;acSave();renderAct();return true}
   if(a==="acset"){A[el.dataset.k]=+el.dataset.v;acSave();renderAct();return true}
   if(a==="acdrink"){A.drink=!A.drink;acSave();renderAct();return true}
   if(a==="acdel"){const i=+el.dataset.i;A.teams.splice(i,1);A.sc.splice(i,1);if(A.cur>=A.teams.length)A.cur=0;acSave();renderAct();return true}
+  if((a==="acnew"||a==="acgo")&&acAdult()&&!agreed){A.after=a;A.view="gate";renderAct();pBody.scrollTop=0;return true}
   if(a==="acnew"){A.sc=A.teams.map(()=>0);A.cur=0;A.turns=0;acSave();acRoll();renderAct();return true}
   if(a==="acgo"){if(A.sc.some(s=>s>=A.goal))return acClick("acnew",el);acRoll();renderAct();return true}
   if(a==="acsetup"){A.view="setup";renderAct();return true}

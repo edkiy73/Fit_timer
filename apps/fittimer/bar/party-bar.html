@@ -585,6 +585,10 @@ svg{display:block}
 .hg.idle .hg-str{opacity:0}
 .ac-got{display:block;margin-top:8px;font-style:normal;font-size:12.5px;font-weight:800;color:var(--ok)}
 .ac-sec{min-width:0}
+.ac-opt{flex-wrap:wrap}
+.ac-opt div{flex-wrap:wrap;justify-content:flex-end}
+.pill.p18.on{background:rgb(205,52,72);border-color:rgb(205,52,72);color:#fff}
+.ac-hot{font-style:normal;font-size:10px;font-weight:800;color:#fff;background:rgb(205,52,72);padding:2px 6px;border-radius:6px;vertical-align:1px}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .grain{display:none}
@@ -608,7 +612,7 @@ svg{display:block}
       <div class="tiles">
         <button class="tile" type="button" data-mode="party"><svg viewBox="0 0 24 24"><path d="M5 8h14l-1.2 12.2a1 1 0 0 1-1 .8H7.2a1 1 0 0 1-1-.8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/><path d="M9.5 13h5M12 10.5v5"/></svg><span><b>Вечеринка</b><small>Что купить на всех</small></span></button>
         <button class="tile" type="button" data-mode="cards"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="11" height="15" rx="2" transform="rotate(-8 9 12.5)"/><rect x="9.5" y="4" width="11" height="15" rx="2" transform="rotate(8 15 11.5)"/><path d="M13.2 10.5c1.6.6 3.6.9 5.2.6"/></svg><span><b>Карты Дона</b><small>Игра для компании</small></span></button>
-        <button class="tile wide" type="button" data-mode="activity"><svg viewBox="0 0 24 24"><path d="M4 19c2-1 3.5-3 5-6s3-5 5-5 2.5 2 1 4-4 2-4 0 3-5 6-6"/><path d="M17.5 4.5l2 2-6 6-2.5.5.5-2.5z"/></svg><span><b>Активити 18+</b><small>Объясни, покажи, нарисуй — командами на время</small></span></button>
+        <button class="tile wide" type="button" data-mode="activity"><svg viewBox="0 0 24 24"><path d="M4 19c2-1 3.5-3 5-6s3-5 5-5 2.5 2 1 4-4 2-4 0 3-5 6-6"/><path d="M17.5 4.5l2 2-6 6-2.5.5.5-2.5z"/></svg><span><b>Активити</b><small>Объясни, покажи, нарисуй · обычные слова и 18+</small></span></button>
       </div>
     </header>
     <div class="bar-top">
@@ -692,8 +696,8 @@ svg{display:block}
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="./party-cards.js?v=17" defer></script>
-<script src="./party-activity.js?v=17" defer></script>
-<script src="./party-bar.js?v=17" defer></script>
+<script src="./party-cards.js?v=18" defer></script>
+<script src="./party-activity.js?v=18" defer></script>
+<script src="./party-bar.js?v=18" defer></script>
 </body>
 </html>
