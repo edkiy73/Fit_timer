@@ -647,6 +647,11 @@ svg{display:block}
 .ac-play.draw .hg{width:46px}
 .ac-play{gap:14px}
 .ac-sec b{font-size:44px}
+.ac-draw{position:relative;text-align:left}
+.ac-draw canvas{margin-bottom:0}
+.ac-erase{position:absolute;right:10px;bottom:10px;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:rgba(20,13,11,.85);border:1px solid var(--line);box-shadow:0 4px 12px rgba(0,0,0,.5)}
+.ac-erase svg{width:20px;height:20px;fill:none;stroke:var(--brass2);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ac-erase:active{transform:scale(.92)}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .grain{display:none}
@@ -754,8 +759,8 @@ svg{display:block}
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="./party-cards.js?v=25" defer></script>
-<script src="./party-activity.js?v=25" defer></script>
-<script src="./party-bar.js?v=25" defer></script>
+<script src="./party-cards.js?v=26" defer></script>
+<script src="./party-activity.js?v=26" defer></script>
+<script src="./party-bar.js?v=26" defer></script>
 </body>
 </html>

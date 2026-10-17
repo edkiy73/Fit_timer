@@ -1463,7 +1463,7 @@ function renderAct(){
     const draw=A.m.id==="draw",T=A.time,el0=A.run?(Date.now()-A.t0)/1000:0;
     pBody.innerHTML=`<div class="ac-play ${draw?"draw":""}">${hourglass()}<div class="ac-sec"><b id="acSec">${A.run?Math.ceil(Math.max(0,T-el0)):T}</b><small>${A.run?(A.all?"угадывают все":"угадывает «"+team+"»"):"секунд на ход"}</small>${A.multi&&A.run?`<em class="ac-got">+${A.got} за ход · ${A.n} ${plural(A.n,"слово","слова","слов")}</em>`:""}</div></div>
     <div class="gcard ${A.all?"lv6":"lv3"} ac-card ac-word ${draw?"short":""}">${A.run?`<span class="ac-stamp ok">Угадали</span><span class="ac-stamp no">${A.multi?"Пропуск":"Не угадали"}</span>`:""}<div class="g-kind">${A.m.name} · ${A.pts} ${plural(A.pts,"очко","очка","очков")}${A.hot&&A.deck==="mix"?` <em class="ac-hot">18+</em>`:""}</div><p class="g-txt">${esc(A.word)}</p><p class="ac-rule">${A.m.rule}</p>${A.run?`<button type="button" class="g-lvl ac-hide" data-pa="achide">Запомнил — скрыть слово</button><p class="ac-swh">← свайп: ${A.multi?"пропуск":"не угадали"} · угадали →</p>`:`<p class="ac-hint">${A.multi?"Объясняй слова одно за другим — сколько успеете, пока сыплется песок. Старт — кнопкой или свайпом.":"Запомни слово. Когда будешь готов — переворачивай часы: кнопкой или свайпом."}</p>`}</div>
-    ${draw&&A.run?`<div class="ac-draw"><canvas id="acCv" aria-label="Поле для рисования"></canvas><button type="button" class="g-back" data-pa="acclear">Стереть</button></div>`:""}`;
+    ${draw&&A.run?`<div class="ac-draw"><canvas id="acCv" aria-label="Поле для рисования"></canvas><button type="button" class="ac-erase" data-pa="acclear" aria-label="Стереть рисунок"><svg viewBox="0 0 24 24"><path d="M15.5 4.5l4 4L10 18H6l-2-2 11.5-11.5z"/><path d="M9.5 10.5l4 4M6 18h14"/></svg></button></div>`:""}`;
     pNav.hidden=false;
     pNav.innerHTML=!A.run?`<button class="btn btn-brass" type="button" data-pa="acstart">Готов — переворачиваю часы</button>`:
       A.multi?`<button class="btn btn-ghost" type="button" data-pa="acskip">Пропустить</button><button class="btn btn-brass" type="button" data-pa="achit">Угадали</button>`:
@@ -1503,7 +1503,7 @@ function acResult(team,pts=A.pts){
   A.cur=(A.cur+1)%A.teams.length;acSave();acRoll();renderAct();pBody.scrollTop=0;
 }
 function acCanvas(){
-  const cv=$("#acCv"),dpr=devicePixelRatio||1,w=cv.clientWidth,h=Math.round(w*.75);
+  const cv=$("#acCv"),dpr=devicePixelRatio||1,w=cv.clientWidth,room=innerHeight-cv.getBoundingClientRect().top-(pNav.hidden?0:pNav.offsetHeight)-24,h=Math.round(Math.max(150,Math.min(w*.75,room)));
   cv.width=w*dpr;cv.height=h*dpr;cv.style.height=h+"px";
   const x=cv.getContext("2d");x.scale(dpr,dpr);x.lineCap=x.lineJoin="round";x.lineWidth=4;x.strokeStyle="#efe5d3";
   let on=false;const pt=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
