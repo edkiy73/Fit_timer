@@ -1362,7 +1362,7 @@ function acDie(){
     if(n<11){die.innerHTML=ACI[ids[n%3]];setTimeout(tick,60+n*14)}
     else{A.rolled=true;die.innerHTML=ACI[A.m.id];card.classList.remove("rolling");card.classList.add("rolled");buzz([20,40,30]);
       card.querySelector(".g-txt").textContent=A.m.name;card.querySelector(".ac-rule").textContent=A.m.rule;
-      card.querySelectorAll(".ac-p").forEach(b=>b.disabled=false);const st=pBody.querySelector(".ac-step");if(st)st.innerHTML=`<b>Ход «${esc(A.teams[A.cur])}»</b> · объясняющий выбирает сложность`}};
+      card.querySelectorAll(".ac-p").forEach(b=>b.disabled=false);0}};
   setTimeout(tick,250);
 }
 function acRoll(){A.rolled=false;A.run=false;const pos=Math.min(A.sc[A.cur]||0,A.goal),t=pos?acCell(pos):"start";
@@ -1458,10 +1458,10 @@ function renderAct(){
   }
   if(A.view==="turn"){
     const lv=A.all?"lv6":"lv3",roll=(A.cell==="start"||A.cell==="all")&&!A.rolled;
-    pBody.innerHTML=`${acBoard()}<p class="ac-step"><b>Ход «${team}»</b> · ${roll?"бросаем кубик":"объясняющий выбирает сложность"}</p>
+    pBody.innerHTML=`${acBoard()}<p class="ac-step"><b>Ход «${team}»</b> · объясняющий выбирает сложность</p>
     <div class="gcard ${lv} ac-card ac-front ${roll?"rolling":""}">${A.all?`<div class="ac-all">Все играют</div>`:""}
-      <span class="ac-big ${A.cell==="start"||A.cell==="all"?"die":""}">${ACI[A.m.id]}</span><p class="g-txt">${roll?"Кубик решает…":A.m.name}</p><p class="ac-rule">${roll?"&nbsp;":A.m.rule}</p>
-      <p class="ac-hint">${A.cell==="start"?"Первый ход — способ решает кубик.":A.cell==="all"?(A.all?"Фишка на звезде: способ решает кубик, угадывают все команды — очки тем, кто первый.":"Фишка на звезде — способ решает кубик."):"Так велит клетка, на которой стоит ваша фишка."}</p>
+      <span class="ac-big ${A.cell==="start"||A.cell==="all"?"die":""}">${ACI[A.m.id]}</span><p class="g-txt">${roll?"&nbsp;":A.m.name}</p><p class="ac-rule">${roll?"&nbsp;":A.m.rule}</p>
+      ${A.all?`<p class="ac-hint">Угадывают все команды — очки тем, кто первый.</p>`:""}
       <div class="ac-pts">${[[3,"Легко"],[4,"Средне"],[5,"Жёстко"]].map(([p,l])=>`<button type="button" class="ac-p p${p}" data-pa="acpts" data-p="${p}" ${roll?"disabled":""}><b>${p}</b><small>${l}</small></button>`).join("")}</div>
       <p class="ac-hint">Цифра — сколько очков получит команда. Остальные не подглядывают.</p></div>`;
     pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="acsetup">Счёт и настройки</button>`;
@@ -1471,7 +1471,7 @@ function renderAct(){
   if(A.view==="play"){
     const draw=A.m.id==="draw",T=A.time,el0=A.run?(Date.now()-A.t0)/1000:0;
     pBody.innerHTML=`<div class="ac-play ${draw?"draw":""}">${hourglass()}<div class="ac-sec"><b id="acSec">${A.run?Math.ceil(Math.max(0,T-el0)):T}</b><small>${A.run?(A.all?"угадывают все":"угадывает «"+team+"»"):"секунд на ход"}</small>${A.multi&&A.run?`<em class="ac-got">+${A.got} за ход · ${A.n} ${plural(A.n,"слово","слова","слов")}</em>`:""}</div></div>
-    <div class="gcard ${A.all?"lv6":"lv3"} ac-card ac-word ${draw?"short":""}">${A.run?`<span class="ac-stamp ok">Угадали</span><span class="ac-stamp no">${A.multi?"Пропуск":"Не угадали"}</span>`:""}<div class="g-kind">${A.m.name} · ${A.pts} ${plural(A.pts,"очко","очка","очков")}${A.hot&&A.deck==="mix"?` <em class="ac-hot">18+</em>`:""}</div><p class="g-txt">${esc(A.word)}</p><p class="ac-rule">${A.m.rule}</p>${A.run?`<button type="button" class="g-lvl ac-hide" data-pa="achide">Запомнил — скрыть слово</button><p class="ac-swh">← свайп: ${A.multi?"пропуск":"не угадали"} · угадали →</p>`:`<p class="ac-hint">${A.multi?"Объясняй слова одно за другим — сколько успеете, пока сыплется песок. Старт — кнопкой или свайпом влево.":"Запомни слово. Когда будешь готов — переворачивай часы: кнопкой или свайпом влево."}</p>`}</div>
+    <div class="gcard ${A.all?"lv6":"lv3"} ac-card ac-word ${draw?"short":""}">${A.run?`<span class="ac-stamp ok">Угадали</span><span class="ac-stamp no">${A.multi?"Пропуск":"Не угадали"}</span>`:""}<div class="g-kind">${A.m.name} · ${A.pts} ${plural(A.pts,"очко","очка","очков")}${A.hot&&A.deck==="mix"?` <em class="ac-hot">18+</em>`:""}</div><p class="g-txt">${esc(A.word)}</p><p class="ac-rule">${A.m.rule}</p>${A.run?`<button type="button" class="g-lvl ac-hide" data-pa="achide">Запомнил — скрыть слово</button><p class="ac-swh">← свайп: ${A.multi?"пропуск":"не угадали"} · угадали →</p>`:`<p class="ac-hint">${A.multi?"Объясняй слова одно за другим — сколько успеете, пока сыплется песок. Старт — кнопкой или свайпом.":"Запомни слово. Когда будешь готов — переворачивай часы: кнопкой или свайпом."}</p>`}</div>
     ${draw&&A.run?`<div class="ac-draw"><canvas id="acCv" aria-label="Поле для рисования"></canvas><button type="button" class="g-back" data-pa="acclear">Стереть</button></div>`:""}`;
     pNav.hidden=false;
     pNav.innerHTML=!A.run?`<button class="btn btn-brass" type="button" data-pa="acstart">Готов — переворачиваю часы</button>`:
@@ -1575,7 +1575,8 @@ panel.addEventListener("submit",e=>{
   A.teams.push(v);A.sc.push(0);acSave();renderAct();
 });
 
-/* Свайп влево = главная кнопка снизу на экранах «дальше» (не там, где действие что-то засчитывает). */
+/* Свайп = главная кнопка снизу на экранах «дальше» (не там, где действие что-то засчитывает):
+   если кнопка внизу одна — в любую сторону, если их две — влево. */
 const SWIPE_NEXT=new Set(["acstart","acpass","acseen","qnext","rampgo"]);
 /* swipe between bartender steps / cards */
 (function(){let x0=null,y0=0;
@@ -1584,7 +1585,8 @@ const SWIPE_NEXT=new Set(["acstart","acpass","acseen","qnext","rampgo"]);
     if(Math.abs(dx)<60||Math.abs(dy)>Math.abs(dx))return;
     if(pKind==="bartender"){bt.k=Math.max(0,Math.min(bt.steps.length-1,bt.k+(dx<0?1:-1)));renderBt()}
     else if(pKind==="cards"&&G.tab==="decks"&&G.view==="play"){if(dx<0)drawNext();else if(G.k>0){G.k--;G.turn--;G.showLvl=G.showAlt=false;renderCards()}}
-    else if(dx<0&&!e.target.closest("canvas")){const b=pNav.querySelector(".btn-brass");if(b&&!pNav.hidden&&SWIPE_NEXT.has(b.dataset.pa)){buzz(8);b.click()}}
+    else if(!pNav.hidden&&!e.target.closest("canvas")){const bs=pNav.querySelectorAll(".btn"),b=pNav.querySelector(".btn-brass");
+      if(b&&SWIPE_NEXT.has(b.dataset.pa)&&(dx<0||bs.length===1)){buzz(8);b.click()}}
   });
 })();
 
