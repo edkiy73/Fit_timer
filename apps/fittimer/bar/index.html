@@ -550,7 +550,7 @@ svg{display:block}
 .ac-in{display:grid;transform-style:preserve-3d;transition:transform .9s var(--spring)}
 .ac-flip.open .ac-in{transform:rotateY(180deg)}
 .ac-face{grid-area:1/1;-webkit-backface-visibility:hidden;backface-visibility:hidden}
-.ac-front{transform:rotateY(180deg);animation:none;cursor:default;min-height:auto;padding:30px 20px 22px;gap:10px}
+.ac-front{cursor:default;min-height:auto;padding:30px 20px 22px;gap:10px}
 .ac-back{position:relative;min-height:56vh;border-radius:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;overflow:hidden;
   background:radial-gradient(80% 50% at 50% 50%,rgba(var(--lv),.28),transparent 70%),repeating-linear-gradient(45deg,rgba(201,163,91,.07) 0 2px,transparent 2px 14px),repeating-linear-gradient(-45deg,rgba(201,163,91,.07) 0 2px,transparent 2px 14px),linear-gradient(165deg,#22160f,#0a0707);
   border:1px solid rgba(var(--lv),.55);box-shadow:0 30px 80px rgba(0,0,0,.55),inset 0 0 0 8px rgba(0,0,0,.45),inset 0 0 0 9px rgba(var(--lv),.35);animation:acGlow 2.4s ease-in-out infinite}
@@ -613,6 +613,13 @@ svg{display:block}
 .f-leg{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 12px;margin:0 0 10px;font-size:11px;font-weight:700;color:var(--smoke)}
 .f-leg span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:5px;background:rgb(var(--fcc))}
 .f-leg .say{--fcc:236,122,52}.f-leg .show{--fcc:170,110,220}.f-leg .draw{--fcc:76,195,138}.f-leg .all{--fcc:255,64,90}
+.ac-front{animation:deal .55s var(--spring)}
+.ac-big.die{border-radius:20px;background:linear-gradient(145deg,#2a1d14,#120c09);border:1.5px solid rgba(var(--lv),.6);box-shadow:0 10px 24px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.12)}
+.rolling .ac-big.die{animation:dieRoll .25s linear infinite}
+.rolled .ac-big.die{animation:dieLand .6s var(--spring)}
+@keyframes dieRoll{0%{transform:rotate(0) translateY(0)}25%{transform:rotate(90deg) translateY(-8px) scale(.92)}50%{transform:rotate(180deg) translateY(0)}75%{transform:rotate(270deg) translateY(-6px) scale(.95)}100%{transform:rotate(360deg)}}
+@keyframes dieLand{0%{transform:scale(1.25) rotate(-12deg)}100%{transform:none}}
+.ac-p[disabled]{opacity:.35}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .grain{display:none}
@@ -720,8 +727,8 @@ svg{display:block}
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="./party-cards.js?v=20" defer></script>
-<script src="./party-activity.js?v=20" defer></script>
-<script src="./party-bar.js?v=20" defer></script>
+<script src="./party-cards.js?v=21" defer></script>
+<script src="./party-activity.js?v=21" defer></script>
+<script src="./party-bar.js?v=21" defer></script>
 </body>
 </html>
