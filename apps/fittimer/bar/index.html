@@ -493,6 +493,8 @@ svg{display:block}
 .bt-glass{max-width:34ch;font-size:13px;color:var(--smoke);line-height:1.45}
 
 .top-mark{font-size:10.5px;font-weight:800;color:var(--brass2);border:1px solid rgba(234,209,147,.45);padding:1px 6px;border-radius:6px}
+.seg[data-v="extras"] .knob{transform:translateX(100%)}
+.opt .w.u{color:var(--smoke2);font-size:11.5px}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .grain{display:none}
@@ -550,9 +552,17 @@ svg{display:block}
   <!-- SHOP -->
   <section class="screen" id="s-shop">
     <div class="head"><h2>Покупки</h2><p>Что брать в первую очередь и какую бутылку выбрать. Цены — Бали.</p></div>
-    <div id="tiers"></div>
-    <div class="cats" id="cats"></div>
-    <p class="src">Цены: Atambah Bottle Shop, 16.10.2026. Ориентир — могут меняться.</p>
+    <div class="seg" id="shopSeg" data-v="bottles"><span class="knob"></span><button type="button" data-v="bottles" class="on">Бутылки</button><button type="button" data-v="extras">Допы</button></div>
+    <div id="shopBottles">
+      <div id="tiers"></div>
+      <div class="cats" id="cats"></div>
+      <p class="src">Цены: Atambah Bottle Shop, 16.10.2026. Ориентир — могут меняться.</p>
+    </div>
+    <div id="shopExtras" hidden>
+      <p class="hint">Всё, что нужно кроме бутылок. Нажми на пункт — название скопируется.</p>
+      <div class="cats" id="extraCats"></div>
+      <div class="cta-wrap"><button class="btn btn-brass" data-extras-copy type="button">Скопировать весь список</button></div>
+    </div>
   </section>
 </main>
 

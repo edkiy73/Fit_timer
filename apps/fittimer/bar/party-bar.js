@@ -618,6 +618,44 @@ const SHOP = [
     {tier:"Вторым",cls:"good",name:"Orange bitters",price:"по бренду",why:"Для сухих джиновых коктейлей."}]}
 ];
 
+const ADDONS = [
+  {group:"Цитрус и соки", note:"Свежий сок вместо пакетного — главный апгрейд вкуса", items:[
+    {name:"Лаймы", rx:/лайм/, why:"Свежий сок и цедра. Один лайм ≈ 25 мл сока."},
+    {name:"Лимоны", rx:/лимон/, why:"Сок для sour-коктейлей и цедра для аромата."},
+    {name:"Апельсины", rx:/апельсинов\S* (цедр|дольк)|долька апельсина/, why:"Цедра и дольки — для красоты и аромата."},
+    {name:"Клюквенный сок", rx:/клюкв/, why:"Без сахара, если найдёшь."},
+    {name:"Томатный сок", rx:/томат/, why:"Для текилы вдогонку."}]},
+  {group:"Сиропы и сладкое", note:"Сахарный сироп можно сварить: сахар и вода 1:1",
+   items:[
+    {name:"Сахарный сироп", rx:/^(сахарн\S* )?сироп(\s|$)|сахарный ободок/, why:"Или сварить: сахар и вода 1:1, хранить в холодильнике."},
+    {name:"Гренадин", rx:/гренадин/, why:"Гранатовый сироп: цвет и сладость."},
+    {name:"Сироп агавы", rx:/агав/, why:"Мягче сахара в Margarita. Можно заменить сахарным."}]},
+  {group:"Газировка", note:"Брать холодной и маленькими бутылками — газ не выдохнется", items:[
+    {name:"Содовая", rx:/содов|^сода/, why:"Без вкуса, просто газ."},
+    {name:"Спрайт или тоник", rx:/спрайт|тоник/, why:"Для текила-бума."},
+    {name:"Энергетик", rx:/энергетик/, why:"Для Jägerbomb."}]},
+  {group:"Ликёры для шотов", note:"Маленьких бутылок хватит на весь вечер", items:[
+    {name:"Сливочный ликёр (Baileys)", rx:/сливочн/, why:"Слои в B-52, Baby Guinness, Медузе."},
+    {name:"Кокосовый ликёр (Malibu)", rx:/кокосов/, why:"Для Медузы."},
+    {name:"Персиковый ликёр", rx:/персиков/, why:"Для Green Tea Shot."},
+    {name:"Blue Curaçao", rx:/curaçao|curacao/, why:"Синий цвет. Только если хочется шоу."}]},
+  {group:"Молочное, специи, закуска", note:"Мелочи, без которых рецепт не тот", items:[
+    {name:"Сливки или молоко", rx:/сливк|молок/, why:"Для White Russian и Colorado Bulldog."},
+    {name:"Яйца", rx:/белок/, why:"Белок даёт пенку в sour-коктейлях. По желанию."},
+    {name:"Мята", rx:/мят/, why:"Свежая, для Mojito."},
+    {name:"Соль", rx:/соль|saline/, why:"Щепотка делает вкус ярче. Для ободка Margarita."},
+    {name:"Табаско", rx:/табаско/, why:"Для Боярского."},
+    {name:"Огурцы в рассоле", rx:/огуречн/, why:"Рассол — для Pickleback, огурцы — закуска."},
+    {name:"Коктейльная вишня", rx:/вишн/, why:"Для Manhattan."},
+    {name:"Оливки", rx:/олив/, why:"Для Dry Martini."},
+    {name:"Эспрессо и кофейные зёрна", rx:/эспрессо|кофейн\S* зерн/, why:"Для Espresso Martini."}]},
+  {group:"Лёд и посуда", note:"Льда нужно больше, чем кажется", items:[
+    {name:"Лёд", rx:/(^|\s)(лёд|льд)/, serve:true, why:"Примерно 0,5 кг на гостя. Ещё пакет про запас."},
+    {name:"Стопки для шотов", rx:/(^|\s)шот/, serve:true, tag:"шоты", why:"По одной на гостя, лучше толстостенные."},
+    {name:"Трубочки", rx:/трубочк/, serve:true, why:"Для Mind Eraser и Медузы."},
+    {name:"Барная ложка", rx:/ложк/, serve:true, why:"Для слоёв и размешивания."}]}
+];
+
 /* ================= app ================= */
 (function(){
 "use strict";
@@ -630,7 +668,7 @@ const store={
 const S={
   tab:"menu", base:"Все", style:"Любой вкус", q:"",
   pantry:new Set(store.get("pantry",[])), mode:store.get("mode","main"),
-  pantryOn:store.get("pantryOn",false), favs:new Set(store.get("favs",[])), notes:store.get("notes",{}), rates:store.get("rates",{})
+  pantryOn:store.get("pantryOn",false), favs:new Set(store.get("favs",[])), notes:store.get("notes",{}), rates:store.get("rates",{}), shopTab:"bottles"
 };
 if(!S.pantry.size) S.pantryOn=false;
 cocktails.forEach((c,i)=>{c.i=i;c.txt=[c.name,c.family,c.desc,c.base,c.who,c.serve,...c.tags,c.main.recipe,c.main.taste,...c.variations.flatMap(v=>[v.name,v.recipe,v.taste])].join(" ").toLowerCase();});
@@ -774,6 +812,27 @@ function renderShop(){
     <div class="chips">${t.items.map(i=>`<button class="chipb ${S.pantry.has(BASKET_KEY[i])?"have":""}" data-jump="${BASKET_CAT[i]||""}" type="button">${S.pantry.has(BASKET_KEY[i])?"✓ ":""}${i}</button>`).join("")}</div></div>`).join("");
   $("#cats").innerHTML=SHOP.map(c=>`<details class="cat" id="${catId(c.category)}"><summary><b>${c.category}<small>${c.note}</small></b><svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></summary>
     <div class="opts">${c.options.map(o=>`<div class="opt"><span class="t ${o.cls}">${o.tier}</span><span class="n">${o.name}</span><span class="p">${o.price}</span><span class="w">${o.why}</span></div>`).join("")}</div></details>`).join("");
+  renderExtras();
+}
+function addonUses(a){
+  return cocktails.filter(c=>{
+    const lines=[c.main,...c.variations].flatMap(r=>parts(r.recipe).map(p=>p.name)).concat(c.extras.map(e=>e.name)).map(s=>s.toLowerCase());
+    if(a.tag&&c.tags.includes(a.tag))return true;
+    if(a.serve)lines.push(c.serve.toLowerCase());
+    return lines.some(s=>a.rx.test(s));
+  });
+}
+function renderExtras(){
+  const seg=$("#shopSeg");seg.dataset.v=S.shopTab;
+  seg.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.shopTab));
+  $("#shopBottles").hidden=S.shopTab!=="bottles";$("#shopExtras").hidden=S.shopTab!=="extras";
+  if(S.shopTab!=="extras")return;
+  const mine=S.pantry.size?cocktails.filter(c=>makeable(c).length):[];
+  $("#extraCats").innerHTML=ADDONS.map(g=>{
+    const rows=g.items.map(a=>({a,u:addonUses(a)})).filter(x=>x.u.length).sort((x,y)=>y.u.length-x.u.length);
+    return `<details class="cat" open><summary><b>${g.group}<small>${g.note}</small></b><svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+    <div class="opts">${rows.map(({a,u})=>{const forMe=u.some(c=>mine.includes(c));
+      return `<div class="opt">${forMe?`<span class="t value">Нужно для твоего бара</span>`:""}<span class="n">${a.name}</span><span class="p">${u.length} ${plural(u.length,"рецепт","рецепта","рецептов")}</span><span class="w">${a.why}</span><span class="w u">Для: ${u.slice(0,5).map(c=>c.name).join(", ")}${u.length>5?` и ещё ${u.length-5}`:""}</span></div>`}).join("")}</div></details>`}).join("");
 }
 
 /* ---------- tabs ---------- */
@@ -927,6 +986,8 @@ document.addEventListener("click",e=>{
   if(el=t.closest("[data-go]")){go(el.dataset.go);return}
   if(el=t.closest("[data-ing]")){const k=el.dataset.ing;S.pantry.has(k)?S.pantry.delete(k):S.pantry.add(k);
     el.classList.toggle("on");el.setAttribute("aria-pressed",S.pantry.has(k));if(!S.pantry.size)S.pantryOn=false;save();barCount();return}
+  if(el=t.closest("#shopSeg button")){S.shopTab=el.dataset.v;renderExtras();return}
+  if(el=t.closest("[data-extras-copy]")){copy("Допы для бара:\n"+ADDONS.map(g=>g.items.filter(a=>addonUses(a).length).map(a=>"• "+a.name).join("\n")).join("\n"),"Список допов скопирован");return}
   if(el=t.closest("#seg button")){S.mode=el.dataset.v;save();barCount();return}
   if(t.closest("#barClear")){S.pantry.clear();S.pantryOn=false;save();renderBar();toast("Бар очищен");return}
   if(t.closest("#barGo")){S.pantryOn=true;save();go("menu");return}
