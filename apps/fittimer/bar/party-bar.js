@@ -1399,22 +1399,14 @@ const ACI={
 };
 function hourglass(){
   return `<div class="hg"><svg viewBox="0 0 140 232" aria-hidden="true">
-  <defs><linearGradient id="hgW" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#7a4a26"/><stop offset=".5" stop-color="#3b2212"/><stop offset="1" stop-color="#22130a"/></linearGradient>
-   <linearGradient id="hgB" x1="0" x2="1"><stop offset="0" stop-color="#6b4d1c"/><stop offset=".3" stop-color="#f6dc98"/><stop offset=".55" stop-color="#c9a35b"/><stop offset="1" stop-color="#5a3f15"/></linearGradient>
-   <linearGradient id="hgS" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6d892"/><stop offset="1" stop-color="#b8862f"/></linearGradient>
-   <radialGradient id="hgGl" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="rgba(255,255,255,.16)"/><stop offset=".6" stop-color="rgba(255,255,255,.04)"/><stop offset="1" stop-color="rgba(255,255,255,.1)"/></radialGradient>
+  <defs><linearGradient id="hgB" x1="0" x2="1"><stop offset="0" stop-color="#8a6526"/><stop offset=".45" stop-color="#ead196"/><stop offset="1" stop-color="#8a6526"/></linearGradient>
+   <linearGradient id="hgS" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ead196"/><stop offset="1" stop-color="#c9a35b"/></linearGradient>
    <clipPath id="hgC"><path d="M38 27C38 85 66 99 66 116C66 133 38 147 38 205H102C102 147 74 133 74 116C74 99 102 85 102 27Z"/></clipPath></defs>
-  <ellipse cx="70" cy="228" rx="62" ry="4" fill="rgba(0,0,0,.5)"/>
-  <rect x="11" y="24" width="6" height="184" rx="3" fill="url(#hgB)"/><rect x="123" y="24" width="6" height="184" rx="3" fill="url(#hgB)"/>
-  ${[44,116,188].map(y=>`<ellipse cx="14" cy="${y}" rx="6" ry="4" fill="url(#hgB)"/><ellipse cx="126" cy="${y}" rx="6" ry="4" fill="url(#hgB)"/>`).join("")}
   <g clip-path="url(#hgC)"><path class="hg-sa" fill="url(#hgS)"/><path class="hg-sb" fill="url(#hgS)"/>
-   <line class="hg-str" x1="70" y1="114" x2="70" y2="205" stroke="#f0cf86" stroke-width="2.2" stroke-dasharray="2 4"/></g>
-  <path d="M38 27C38 85 66 99 66 116C66 133 38 147 38 205H102C102 147 74 133 74 116C74 99 102 85 102 27Z" fill="url(#hgGl)" stroke="rgba(255,255,255,.55)" stroke-width="1.6"/>
-  <path d="M45 36C46 72 56 90 62 102" stroke="rgba(255,255,255,.4)" stroke-width="3" fill="none" stroke-linecap="round"/>
-  <path d="M45 196C46 166 54 148 61 136" stroke="rgba(255,255,255,.18)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-  <rect x="2" y="4" width="136" height="20" rx="8" fill="url(#hgW)"/><rect x="8" y="21" width="124" height="5" rx="2.5" fill="url(#hgB)"/>
-  <rect x="8" y="206" width="124" height="5" rx="2.5" fill="url(#hgB)"/><rect x="2" y="208" width="136" height="20" rx="8" fill="url(#hgW)"/>
-  <path d="M10 9h120" stroke="rgba(255,220,170,.25)" stroke-width="2" stroke-linecap="round"/>
+   <line class="hg-str" x1="70" y1="114" x2="70" y2="205" stroke="#ead196" stroke-width="3" stroke-dasharray="3 5"/></g>
+  <path d="M38 27C38 85 66 99 66 116C66 133 38 147 38 205H102C102 147 74 133 74 116C74 99 102 85 102 27Z" fill="rgba(255,255,255,.04)" stroke="rgba(239,229,211,.55)" stroke-width="4"/>
+  <rect x="20" y="24" width="7" height="184" rx="3.5" fill="url(#hgB)"/><rect x="113" y="24" width="7" height="184" rx="3.5" fill="url(#hgB)"/>
+  <rect x="8" y="8" width="124" height="18" rx="6" fill="url(#hgB)"/><rect x="8" y="206" width="124" height="18" rx="6" fill="url(#hgB)"/>
   </svg></div>`;
 }
 function hgSet(hg,f){
