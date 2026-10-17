@@ -531,7 +531,7 @@ const store={
 const S={
   tab:"menu", base:"Все", style:"Любой вкус", q:"",
   pantry:new Set(store.get("pantry",[])), mode:store.get("mode","main"),
-  pantryOn:store.get("pantryOn",false), favs:new Set(store.get("favs",[])), notes:store.get("notes",{})
+  pantryOn:store.get("pantryOn",false), favs:new Set(store.get("favs",[])), notes:store.get("notes",{}), rates:store.get("rates",{})
 };
 if(!S.pantry.size) S.pantryOn=false;
 cocktails.forEach((c,i)=>{c.i=i;c.txt=[c.name,c.family,c.desc,c.base,c.who,c.serve,...c.tags,c.main.recipe,c.main.taste,...c.variations.flatMap(v=>[v.name,v.recipe,v.taste])].join(" ").toLowerCase();});
@@ -616,7 +616,7 @@ function card(c,k){
       <span class="cc-name">${c.name}</span>
       <span class="cc-fam">${c.family}</span>
       <span class="cc-desc">${c.desc}</span>
-      <span class="cc-row"><span class="abv">${c.abv}° ${meter(c.abv)}</span>${c.premium?`<span class="don-mark">Выбор Дона</span>`:""}${m.length?`<span class="can">✓ ${m.length>1?m.length+" "+plural(m.length,"рецепт","рецепта","рецептов"):"можно"}</span>`:""}${S.notes[c.name]?`<span class="note-mark" title="Есть заметка"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>заметка</span>`:""}</span>
+      <span class="cc-row"><span class="abv">${c.abv}° ${meter(c.abv)}</span>${c.premium?`<span class="don-mark">Выбор Дона</span>`:""}${m.length?`<span class="can">✓ ${m.length>1?m.length+" "+plural(m.length,"рецепт","рецепта","рецептов"):"можно"}</span>`:""}${S.rates[c.name]?`<span class="rate-mark">★ ${S.rates[c.name]}</span>`:""}${S.notes[c.name]?`<span class="note-mark" title="Есть заметка"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>заметка</span>`:""}</span>
     </span>${S.favs.has(c.i)?ROSE:""}</button>`;
 }
 
@@ -653,7 +653,7 @@ function barCount(){
 
 /* ---------- fav ---------- */
 function renderFav(){
-  const list=cocktails.filter(c=>S.favs.has(c.i));
+  const list=cocktails.filter(c=>S.favs.has(c.i)).sort((a,b)=>(S.rates[b.name]||0)-(S.rates[a.name]||0));
   $("#favList").innerHTML=list.length?list.map(card).join(""):
     `<div class="empty" style="grid-column:1/-1"><svg viewBox="0 0 24 24" width="44" height="44" style="margin:0 auto;stroke:var(--wine2);fill:none" stroke-width="1.2"><path d="M12 5.5c3 0 5 2.4 5 5.2S14.8 16 12 16s-5-2.5-5-5.3 2-5.2 5-5.2z"/><path d="M12 9c-1.7 0-2.6 1.1-2.6 2.3S10.6 13.5 12 13.5s2.5-1 2.5-2.3"/><path d="M12 16v6M12 19.2c-2.2-.4-3.4-1.8-3.6-3.4"/></svg><h3>Пока никого</h3><p>Открой коктейль и нажми «В семью» — он появится здесь.</p><button class="btn btn-brass" data-go="menu" type="button">В меню</button></div>`;
   const fb=$("#favBadge");fb.textContent=S.favs.size;fb.classList.toggle("on",S.favs.size>0);
@@ -701,6 +701,7 @@ function detail(c){
       <button class="ib fav ${S.favs.has(c.i)?"on":""}" data-fav="${c.i}" type="button"><svg viewBox="0 0 24 24"><path d="M12 5.5c3 0 5 2.4 5 5.2S14.8 16 12 16s-5-2.5-5-5.3 2-5.2 5-5.2z"/><path d="M12 16v5"/></svg><span>${S.favs.has(c.i)?"В семье":"В семью"}</span></button>
       <button class="ib" data-copy="${c.i}" type="button"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>Рецепт</button>
     </div>
+    <div class="stars" role="group" aria-label="Моя оценка">${[1,2,3,4,5].map(n=>`<button type="button" class="${(S.rates[c.name]||0)>=n?"on":""}" data-rate="${n}" data-rn="${esc(c.name)}" aria-label="${n} из 5">★</button>`).join("")}<span>${S.rates[c.name]?"Моя оценка":"Оцени коктейль"}</span></div>
     <button class="btn btn-brass cook" data-cook="${c.i}" type="button"><svg viewBox="0 0 24 24"><path d="M7 3h10l-1.5 7h-7z"/><path d="M8.5 10 9 21h6l.5-11"/></svg>Готовить по шагам</button>
     <p class="d-desc">${c.desc}</p>
     ${pantry?`<div class="d-status ${okMain?"":"no"}">${okMain?"✓ Всё есть в баре":"Не хватает: "+missing.join(", ")}</div>`:""}
@@ -829,6 +830,10 @@ document.addEventListener("click",e=>{
     toast(on?`${cocktails[i].name} — теперь в семье`:"Убрано из семьи");
     const fb=$("#favBadge");fb.textContent=S.favs.size;fb.classList.toggle("on",S.favs.size>0);
     if(S.tab==="menu")renderMenu(); if(S.tab==="fav")renderFav(); return}
+  if(el=t.closest("[data-rate]")){const nm=el.dataset.rn,v=+el.dataset.rate;
+    if(S.rates[nm]===v)delete S.rates[nm];else S.rates[nm]=v;store.set("rates",S.rates);
+    const box=el.parentElement;box.querySelectorAll("button").forEach((b,i)=>b.classList.toggle("on",(S.rates[nm]||0)>i));box.querySelector("span").textContent=S.rates[nm]?"Моя оценка":"Оцени коктейль";
+    buzz(8);if(S.tab==="menu")renderMenu();if(S.tab==="fav")renderFav();return}
   if(el=t.closest("[data-cook]")){openBartender(+el.dataset.cook);return}
   if(el=t.closest("[data-mode]")){el.dataset.mode==="party"?openParty():openCards();return}
   if(el=t.closest("[data-copy]")){const c=cocktails[+el.dataset.copy];copy(`${c.name}: ${c.main.recipe}. ${c.serve}`);return}
@@ -884,13 +889,34 @@ function parts(recipe){
 
 /* ===== bartender mode ===== */
 const GLASS={rocks:"Низкий стакан со льдом",highball:"Высокий стакан, доверху льда",wine:"Бокал для вина со льдом",nick:"Коктейльный бокал — охлади его льдом или в морозилке"};
-let bt={c:null,k:0,mult:1,steps:[]};
-function btSteps(c,mult){
-  const s=[{kind:"Подготовь",big:c.name,txt:GLASS[c.art.shape]||"Бокал и лёд",art:true}];
-  parts(c.main.recipe).forEach(p=>{
-    const fmt=v=>{const r=Math.round(v*mult*2)/2;return String(r).replace(".",",")};
-    s.push(p.ml!=null?{kind:"Налей",big:(p.range?fmt(p.range[0])+"–"+fmt(p.range[1]):fmt(p.ml))+" мл",txt:cap(p.name)}:{kind:"Добавь",big:"",txt:cap(p.name)});
-  });
+const VOLS=[250,500,750,1000,1250,1500,2000,2500,3000,4000,5000];
+let bt={c:null,k:0,mode:store.get("btMode","port"),n:store.get("btN",1),vol:store.get("btVol",1000),steps:[]};
+const fmtMl=v=>String(v).replace(".",",");
+const fmtL=v=>v>=1000?fmtMl(v/1000)+" л":v+" мл";
+/* Количества для текущего режима. Порции: рецепт × N. Литры: всё с мл масштабируется так,
+   чтобы смесь (без льда) была ровно выбранного объёма — округляем до 5 мл и добиваем крупнейший ингредиент. */
+function btAmounts(c){
+  const ps=parts(c.main.recipe),base=ps.reduce((s,p)=>s+(p.ml||0),0);
+  if(bt.mode==="vol"&&base){
+    const f=bt.vol/base;
+    const rows=ps.map(p=>({...p,amt:p.ml!=null?Math.max(5,Math.round(p.ml*f/5)*5):null}));
+    const withMl=rows.filter(r=>r.amt!=null);
+    const diff=bt.vol-withMl.reduce((s,r)=>s+r.amt,0);
+    if(diff&&withMl.length){const big=withMl.reduce((a,b)=>b.amt>a.amt?b:a);big.amt+=diff}
+    return {rows:rows.map(r=>({name:r.name,txt:r.amt!=null?fmtMl(r.amt)+" мл":"по вкусу",ml:r.amt})),total:bt.vol,serv:bt.vol/base};
+  }
+  const n=bt.n,r1=v=>{const x=v*n;return x>=20?Math.round(x):Math.round(x*2)/2};
+  const rows=ps.map(p=>({name:p.name,ml:p.ml!=null?r1(p.ml):null,
+    txt:p.ml==null?"по вкусу":(p.range?fmtMl(r1(p.range[0]))+"–"+fmtMl(r1(p.range[1])):fmtMl(r1(p.ml)))+" мл"}));
+  return {rows,total:Math.round(base*n),serv:n};
+}
+function btSteps(c){
+  const a=btAmounts(c);
+  const servTxt=bt.mode==="vol"?`≈ ${fmtMl(Math.round(a.serv*10)/10)} ${plural(Math.round(a.serv),"порция","порции","порций")}`:`${bt.n} ${plural(bt.n,"порция","порции","порций")}`;
+  const s=[{kind:"Рецепт целиком",big:"",overview:true,rows:a.rows,
+    txt:`${bt.mode==="vol"?"Смесь без льда":"Итого жидкости"}: <b>${fmtL(a.total)}</b> · ${servTxt}`,
+    glass:(bt.mode==="vol"?"Большой кувшин или шейкер по частям. Подача: ":"")+(GLASS[c.art.shape]||"Бокал и лёд")}];
+  a.rows.forEach(r=>s.push(r.ml!=null?{kind:"Налей",big:r.txt,txt:cap(r.name)}:{kind:"Добавь",big:"",txt:cap(r.name)}));
   const low0=c.main.recipe.toLowerCase();
   (c.extras||[]).filter(x=>x.mode!=="optional"&&!low0.includes(x.name.toLowerCase().split(/[\s/]/)[0])).forEach(x=>s.push({kind:"Совет",big:"",txt:x.name+". "+x.effect.replace(/\.$/,"")}));
   c.serve.split(/(?<=[.!])\s+/).filter(Boolean).forEach(t=>{
@@ -902,25 +928,36 @@ function btSteps(c,mult){
   return s;
 }
 async function openBartender(i){
-  const c=cocktails[i];bt={c,k:0,mult:1,steps:btSteps(c,1)};
+  const c=cocktails[i];bt.c=c;bt.k=0;bt.steps=btSteps(c);
   openPanel("bartender","Режим бармена");pNav.hidden=false;
   try{if("wakeLock"in navigator)wake=await navigator.wakeLock.request("screen")}catch(_){}
   renderBt();
 }
 function renderBt(){
   const {c,k,steps}=bt,st=steps[k];stopTimer();
-  pBody.innerHTML=`<div class="bt-top"><div class="portions" role="group" aria-label="Порции">${[1,2,4,6].map(n=>`<button type="button" class="pill ${bt.mult===n?"on":""}" data-pa="mult" data-n="${n}">${n===1?"1 порция":n===6?"6 порций":n+" порции"}</button>`).join("")}</div>
+  const sel=bt.mode==="vol"
+    ?`<select id="btVol" class="bt-sel" aria-label="Объём смеси">${VOLS.map(v=>`<option value="${v}" ${v===bt.vol?"selected":""}>${fmtL(v)} смеси</option>`).join("")}</select>`
+    :`<select id="btN" class="bt-sel" aria-label="Порции">${Array.from({length:20},(_,i)=>i+1).map(n=>`<option value="${n}" ${n===bt.n?"selected":""}>${n} ${plural(n,"порция","порции","порций")}</option>`).join("")}</select>`;
+  pBody.innerHTML=`<div class="bt-top"><div class="bt-ctl"><div class="bt-seg"><button type="button" class="${bt.mode==="port"?"on":""}" data-pa="btmode" data-m="port">Порции</button><button type="button" class="${bt.mode==="vol"?"on":""}" data-pa="btmode" data-m="vol">Литры</button></div>${sel}</div>
     <div class="bt-prog">${steps.map((_,j)=>`<i class="${j<=k?"f":""}"></i>`).join("")}</div></div>
-  <div class="bt-step" data-pa="next">
+  ${st.overview?`<div class="bt-step bt-ov">
+    <div class="bt-art sm">${glass(c.art,{thumb:true})}</div>
+    <div class="bt-k">${st.kind} · ${k+1} из ${steps.length}</div>
+    <div class="bt-name">${c.name}</div>
+    <div class="menu-rows bt-rows">${st.rows.map(r=>`<div class="mr"><span>${cap(r.name)}</span><i></i><b>${r.txt}</b></div>`).join("")}</div>
+    <div class="bt-sum">${st.txt}</div>
+    <div class="bt-glass">${st.glass}</div></div>`
+  :`<div class="bt-step" data-pa="next">
     ${st.art?`<div class="bt-art">${glass(c.art,{thumb:true,pour:st.end})}</div>`:""}
     <div class="bt-k">${st.kind} · ${k+1} из ${steps.length}</div>
     ${st.big?`<div class="bt-big">${st.big}</div>`:""}
     <div class="bt-txt">${st.txt}</div>
     ${st.sec?`<button type="button" class="timer" data-pa="timer" data-s="${st.sec}"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="tr-bg"/><circle cx="60" cy="60" r="52" class="tr" id="tRing"/></svg><span id="tTxt">${st.sec} с</span><small id="tSub">Нажми — старт</small></button>`:""}
-  </div>`;
-  pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="prev" ${k?"":"disabled"}>Назад</button><button class="btn btn-brass" type="button" data-pa="${st.end?"done":"next"}">${st.end?"Закрыть":"Дальше"}</button>`;
+  </div>`}`;
+  pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="prev" ${k?"":"disabled"}>Назад</button><button class="btn btn-brass" type="button" data-pa="${st.end?"done":"next"}">${st.end?"Закрыть":k===0?"Начать":"Дальше"}</button>`;
   if(st.end)buzz([20,60,20]);
 }
+function btRebuild(){store.set("btMode",bt.mode);store.set("btN",bt.n);store.set("btVol",bt.vol);bt.steps=btSteps(bt.c);if(bt.k>=bt.steps.length)bt.k=0;renderBt()}
 let tmr=null;
 function stopTimer(){clearInterval(tmr);tmr=null}
 function startTimer(btn,sec){
@@ -1081,7 +1118,11 @@ panel.addEventListener("input",e=>{
   if(e.target.id!=="rsRange")return;G.turns=+e.target.value;store.set("gTurns",G.turns);
   const b=pBody.querySelector(".rs-num b");if(b)b.textContent=G.turns;
 });
-panel.addEventListener("change",e=>{if(e.target.id==="rsRange")renderCards()});
+panel.addEventListener("change",e=>{
+  if(e.target.id==="rsRange")renderCards();
+  if(e.target.id==="btN"){bt.n=+e.target.value;btRebuild()}
+  if(e.target.id==="btVol"){bt.vol=+e.target.value;btRebuild()}
+});
 panel.addEventListener("submit",e=>{
   if(e.target.id!=="rAdd")return;e.preventDefault();
   const inp=$("#rName"),v=inp.value.trim().replace(/\s+/g," ").slice(0,20);
@@ -1107,7 +1148,7 @@ panel.addEventListener("click",e=>{
   const el=e.target.closest("[data-pa]");if(!el)return;const a=el.dataset.pa;
   if(a==="next"||a==="prev"){bt.k=Math.max(0,Math.min(bt.steps.length-1,bt.k+(a==="next"?1:-1)));renderBt();pBody.scrollTop=0;return}
   if(a==="timer"){e.stopPropagation();startTimer(el,+el.dataset.s);return}
-  if(a==="mult"){bt.mult=+el.dataset.n;bt.steps=btSteps(bt.c,bt.mult);renderBt();return}
+  if(a==="btmode"){bt.mode=el.dataset.m;btRebuild();return}
   if(a==="done"){closePanel();return}
   if(a==="guests"){PT.guests=Math.max(1,Math.min(60,PT.guests+ +el.dataset.d));renderParty();return}
   if(a==="per"){PT.per=Math.max(1,Math.min(10,PT.per+ +el.dataset.d));renderParty();return}
