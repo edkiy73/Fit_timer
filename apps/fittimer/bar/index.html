@@ -495,6 +495,38 @@ svg{display:block}
 .top-mark{font-size:10.5px;font-weight:800;color:var(--brass2);border:1px solid rgba(234,209,147,.45);padding:1px 6px;border-radius:6px}
 .seg[data-v="extras"] .knob{transform:translateX(100%)}
 .opt .w.u{color:var(--smoke2);font-size:11.5px}
+.tile.wide{grid-column:1/-1}
+.ac-sb{display:grid;gap:6px;margin:0 0 12px}
+.ac-row{display:grid;grid-template-columns:minmax(0,7.5em) 1fr auto;align-items:center;gap:10px;padding:8px 12px;border-radius:14px;background:var(--ink2);border:1px solid var(--line2);font-size:13px;font-weight:700}
+.ac-row span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-row.on{border-color:rgba(236,122,52,.6);background:linear-gradient(110deg,rgba(236,122,52,.16),var(--ink2) 70%)}
+.ac-row i{height:6px;border-radius:3px;background:var(--ink4);overflow:hidden}
+.ac-row i b{display:block;height:100%;background:linear-gradient(90deg,var(--brass),rgb(236,122,52));border-radius:3px;transition:width .5s var(--ease)}
+.ac-row em{font-style:normal;font-family:var(--serif);font-size:18px;color:var(--brass2)}
+.ac-row em small{font-family:var(--sans);font-size:11px;color:var(--smoke)}
+.ac-card{cursor:default;min-height:auto;padding:46px 22px 24px;gap:12px}
+.ac-rule{margin:-4px 0 0;text-align:center;font-size:12.5px;font-weight:700;color:rgb(var(--lv))}
+.ac-hint{margin:0;text-align:center;font-size:13px;line-height:1.45;color:var(--smoke)}
+.ac-pts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+.ac-p{padding:12px 6px;border-radius:16px;background:var(--ink3);border:1px solid var(--line);text-align:center;transition:transform .2s var(--ease)}
+.ac-p:active{transform:scale(.96)}
+.ac-p b{display:block;font-family:var(--serif);font-weight:400;font-size:30px;line-height:1;color:var(--brass2)}
+.ac-p small{display:block;margin-top:4px;font-size:11.5px;font-weight:700;color:var(--smoke)}
+.ac-p.p5{border-color:rgba(205,52,72,.55)}.ac-p.p5 b{color:#ff8c99}
+.ac-word .g-txt{font-size:clamp(26px,8vw,38px)}
+.ac-word.short{padding-top:40px}
+.ac-timer{display:flex;align-items:center;gap:12px;margin:0 0 12px}
+.ac-timer b{min-width:2.4em;font-family:var(--serif);font-weight:400;font-size:30px;color:var(--brass2)}
+.ac-timer i{flex:1;height:8px;border-radius:4px;background:var(--ink4);overflow:hidden}
+.ac-timer i span{display:block;height:100%;width:100%;background:var(--brass);border-radius:4px;transition:width .2s linear}
+.ac-timer.low b{color:#ff8c99}.ac-timer.low i span{background:rgb(205,52,72)}
+.ac-draw{margin-top:12px;text-align:right}
+.ac-draw canvas{display:block;width:100%;border-radius:18px;background:#120c0a;border:1px solid var(--line);touch-action:none;margin-bottom:8px}
+.ac-who{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.ac-opt{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;font-size:13.5px;font-weight:700}
+.ac-opt div{display:flex;gap:6px}
+.ac-hide{align-self:center}
+.ac-word.hid .g-txt,.ac-word.hid .ac-rule{filter:blur(14px);opacity:.35;user-select:none}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .grain{display:none}
@@ -518,6 +550,7 @@ svg{display:block}
       <div class="tiles">
         <button class="tile" type="button" data-mode="party"><svg viewBox="0 0 24 24"><path d="M5 8h14l-1.2 12.2a1 1 0 0 1-1 .8H7.2a1 1 0 0 1-1-.8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/><path d="M9.5 13h5M12 10.5v5"/></svg><span><b>Вечеринка</b><small>Что купить на всех</small></span></button>
         <button class="tile" type="button" data-mode="cards"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="11" height="15" rx="2" transform="rotate(-8 9 12.5)"/><rect x="9.5" y="4" width="11" height="15" rx="2" transform="rotate(8 15 11.5)"/><path d="M13.2 10.5c1.6.6 3.6.9 5.2.6"/></svg><span><b>Карты Дона</b><small>Игра для компании</small></span></button>
+        <button class="tile wide" type="button" data-mode="activity"><svg viewBox="0 0 24 24"><path d="M4 19c2-1 3.5-3 5-6s3-5 5-5 2.5 2 1 4-4 2-4 0 3-5 6-6"/><path d="M17.5 4.5l2 2-6 6-2.5.5.5-2.5z"/></svg><span><b>Активити 18+</b><small>Объясни, покажи, нарисуй — командами на время</small></span></button>
       </div>
     </header>
     <div class="bar-top">
@@ -602,6 +635,7 @@ svg{display:block}
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="./party-cards.js" defer></script>
+<script src="./party-activity.js" defer></script>
 <script src="./party-bar.js" defer></script>
 </body>
 </html>

@@ -1004,7 +1004,7 @@ document.addEventListener("click",e=>{
     const box=el.parentElement;box.querySelectorAll("button").forEach((b,i)=>b.classList.toggle("on",(S.rates[nm]||0)>i));box.querySelector("span").textContent=S.rates[nm]?"Моя оценка":"Оцени коктейль";
     buzz(8);if(S.tab==="menu")renderMenu();if(S.tab==="fav")renderFav();return}
   if(el=t.closest("[data-cook]")){openBartender(+el.dataset.cook);return}
-  if(el=t.closest("[data-mode]")){el.dataset.mode==="party"?openParty():openCards();return}
+  if(el=t.closest("[data-mode]")){el.dataset.mode==="party"?openParty():openCards(el.dataset.mode==="activity"?"activity":"decks");return}
   if(el=t.closest("[data-copy]")){const c=cocktails[+el.dataset.copy];copy(`${c.name}: ${c.main.recipe}. ${c.serve}`);return}
   if(el=t.closest(".opt")){const n=el.querySelector(".n").textContent;copy(n,`Скопировано: ${n}`);return}
   if(el=t.closest("[data-jump]")){const n=el.dataset.jump;if(!n){toast("Под это нет отдельной подборки");return}
@@ -1033,7 +1033,7 @@ function openPanel(kind,title){
 }
 function closePanel(fromPop){
   if(!panel.classList.contains("on"))return;
-  panel.classList.remove("on");pKind=null;stopTimer();
+  panel.classList.remove("on");pKind=null;stopTimer();acStop();
   if(wake){try{wake.release()}catch(_){}wake=null}
   if(!sheet.classList.contains("on"))document.documentElement.style.overflow="";
   if(!fromPop&&history.state&&history.state.panel)history.back();
@@ -1188,7 +1188,7 @@ const deckById=id=>DECKS.find(d=>d.id===id);
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const HAT=`<svg class="g-corner" viewBox="0 0 24 24"><path d="M2.5 15.5c4 2.6 15 2.6 19 0"/><path d="M5.5 15c0-4.5 1.6-9 4-9 1.1 0 1.6 1.2 2.5 1.2S13.4 6 14.5 6c2.4 0 4 4.5 4 9"/></svg>`;
 const WATER=["Дон бережёт семью","Пауза: все пьют воду. Потом продолжаем."];
-function openCards(){openPanel("cards","Карты Дона");G.tab="decks";G.view="decks";renderCards()}
+function openCards(tab="decks"){openPanel("cards",tab==="activity"?"Активити 18+":"Карты Дона");G.tab=tab;G.view="decks";if(tab==="activity")A.view="setup";renderCards()}
 /* «Разгоняемся»: игра делится на этапы по уровням колод; верхний этап — самый длинный,
    чтобы взрослые карты были и в короткой игре. На каждом ходу карта берётся из колоды этапа,
    иногда — на уровень ниже (передышка) или выше (анонс). Карты не повторяются. */
@@ -1222,7 +1222,7 @@ function drawNext(){
 }
 const who=off=>{const n=G.players.length;return n?G.players[((G.turn+off)%n+n)%n]:null};
 const heat=l=>`<span class="heat lv${l}" aria-label="Уровень ${l} из 6">${[1,2,3,4,5,6].map(i=>`<i class="${i<=l?"f":""}"></i>`).join("")}</span>`;
-function tabs(){return `<div class="g-tabs"><button type="button" class="pill ${G.tab==="decks"?"on":""}" data-pa="gtab" data-m="decks">Колоды</button><button type="button" class="pill ${G.tab==="quiz"?"on":""}" data-pa="gtab" data-m="quiz">Угадай коктейль</button></div>`}
+function tabs(){return `<div class="g-tabs"><button type="button" class="pill ${G.tab==="decks"?"on":""}" data-pa="gtab" data-m="decks">Колоды</button><button type="button" class="pill ${G.tab==="activity"?"on":""}" data-pa="gtab" data-m="activity">Активити 18+</button><button type="button" class="pill ${G.tab==="quiz"?"on":""}" data-pa="gtab" data-m="quiz">Угадай коктейль</button></div>`}
 function roster(){
   const p=G.players;
   return `<div class="roster"><div class="r-h"><b>Очередь игроков</b><small>${p.length?p.length+" "+plural(p.length,"игрок","игрока","игроков"):"необязательно — карта сама скажет, чей ход"}</small></div>
@@ -1232,6 +1232,7 @@ function roster(){
 }
 function renderCards(){
   if(G.tab==="quiz")return renderQuiz();
+  if(G.tab==="activity")return renderAct();
   if(G.view==="play")return renderPlay();
   if(G.view==="rampset"){
     const top=G.hard?6:5,T=G.turns,mins=Math.round(T*1.5);
@@ -1315,6 +1316,7 @@ function renderQuiz(){
 
 panel.addEventListener("click",e=>{
   const el=e.target.closest("[data-pa]");if(!el)return;const a=el.dataset.pa;
+  if(a.startsWith("ac")&&acClick(a,el))return;
   if(a==="next"||a==="prev"){bt.k=Math.max(0,Math.min(bt.steps.length-1,bt.k+(a==="next"?1:-1)));renderBt();pBody.scrollTop=0;return}
   if(a==="timer"){e.stopPropagation();startTimer(el,+el.dataset.s);return}
   if(a==="btmode"){bt.mode=el.dataset.m;btRebuild();return}
@@ -1323,7 +1325,7 @@ panel.addEventListener("click",e=>{
   if(a==="per"){PT.per=Math.max(1,Math.min(10,PT.per+ +el.dataset.d));renderParty();return}
   if(a==="sel"){const i=+el.dataset.i;PT.sel.has(i)?PT.sel.delete(i):PT.sel.add(i);const y=pBody.scrollTop;renderParty();pBody.scrollTop=y;return}
   if(a==="pcopy"){const r=partyCalc();copy(`La Famiglia — вечеринка на ${PT.guests} (${r.total} ${plural(r.total,"коктейль","коктейля","коктейлей")})\nМеню: ${r.list.map(c=>c.name).join(", ")}\n\n`+r.rows.map(x=>`• ${x.name} — ${x.val}${x.sub?` (${x.sub})`:""}`).join("\n"),"Список скопирован");return}
-  if(a==="gtab"){G.tab=el.dataset.m;G.view="decks";if(G.tab==="quiz")G.q=null;pNav.hidden=G.tab!=="quiz";renderCards();return}
+  if(a==="gtab"){G.tab=el.dataset.m;G.view="decks";if(G.tab==="activity")A.view="setup";if(G.tab==="quiz")G.q=null;pNav.hidden=G.tab!=="quiz";renderCards();return}
   if(a==="deck"){if(el.dataset.id==="ramp"){G.view="rampset";renderCards();pBody.scrollTop=0}else startDeck(el.dataset.id);return}
   if(a==="turns"||a==="turnsset"){G.turns=Math.min(99,Math.max(20,a==="turns"?G.turns+ +el.dataset.d:+el.dataset.n));store.set("gTurns",G.turns);renderCards();return}
   if(a==="rampgo"){startDeck("ramp");return}
@@ -1344,6 +1346,111 @@ panel.addEventListener("click",e=>{
   if(a==="qnext"){G.q=null;renderQuiz();return}
   if(a==="qopen"){const i=G.q.c.i;closePanel(true);history.replaceState({sheet:i},"","#"+i);openSheet(i,false);return}
 });
+/* ===== Активити 18+ ===== */
+const A={teams:store.get("acTeams",["Корлеоне","Таттаглия"]),sc:store.get("acScore",[]),cur:store.get("acCur",0),
+  time:store.get("acTime",60),goal:store.get("acGoal",30),drink:store.get("acDrink",false),
+  view:"setup",m:null,all:false,pts:0,word:"",t0:0,turns:0,used:{3:new Set(),4:new Set(),5:new Set()}};
+let acT=null;
+const acSave=()=>{store.set("acTeams",A.teams);store.set("acScore",A.sc);store.set("acCur",A.cur);store.set("acTime",A.time);store.set("acGoal",A.goal);store.set("acDrink",A.drink)};
+const acStarted=()=>A.sc.some(s=>s>0);
+function acStop(){clearInterval(acT);acT=null}
+function acRoll(){A.m=pick(ACT_METHODS);A.all=A.turns>0&&Math.random()<(A.teams.length>2?1/6:1/8);A.view="turn"}
+function acWord(p){const u=A.used[p];let pool=ACT_WORDS[p].filter(w=>!u.has(w));if(!pool.length){u.clear();pool=ACT_WORDS[p]}const w=pick(pool);u.add(w);return w}
+function acBoard(){
+  return `<div class="ac-sb">${A.teams.map((t,i)=>`<div class="ac-row ${i===A.cur&&A.view!=="win"?"on":""}"><span>${esc(t)}</span><i><b style="width:${Math.min(100,(A.sc[i]||0)/A.goal*100)}%"></b></i><em>${A.sc[i]||0}<small>/${A.goal}</small></em></div>`).join("")}</div>`;
+}
+function renderAct(){
+  acStop();
+  if(!agreed){
+    pBody.innerHTML=`${tabs()}<div class="gcard lv5 rules"><div class="g-kind">Активити · 18+</div>
+      <p class="g-txt">Объясни, покажи, нарисуй.</p>
+      <ul class="g-rules"><li>Только для взрослых и только для своих.</li><li>Слова пикантные, но без пошлости — играем с юмором.</li><li>Показываем без касаний, если второй человек не согласен.</li><li>Стоп-фраза <b>«Дон не одобряет»</b> — слово меняется без штрафа.</li></ul></div>`;
+    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-brass" type="button" data-pa="acagree">Мы в деле</button>`;return;
+  }
+  const team=esc(A.teams[A.cur]||"");
+  if(A.view==="setup"){
+    const opt=(id,vals,cur,fmt)=>`<div class="ac-opt"><span>${id}</span><div>${vals.map(v=>`<button type="button" class="pill ${v===cur?"on":""}" data-pa="acset" data-k="${id==="Время хода"?"time":"goal"}" data-v="${v}">${fmt(v)}</button>`).join("")}</div></div>`;
+    pBody.innerHTML=`${tabs()}<p class="p-lead">Команды по очереди объясняют слова: словами, жестами или рисунком. Чем сложнее слово — тем больше очков.</p>
+    <div class="roster"><div class="r-h"><b>Команды</b><small>${A.teams.length} из 4</small></div>
+      <div class="r-list">${A.teams.map((n,i)=>`<span class="r-chip"><i>${i+1}</i>${esc(n)}${A.teams.length>2?`<button type="button" data-pa="acdel" data-i="${i}" aria-label="Убрать ${esc(n)}">×</button>`:""}</span>`).join("")}</div>
+      ${A.teams.length<4?`<form class="r-add" id="acAdd"><input id="acName" maxlength="20" placeholder="Название команды" autocomplete="off" enterkeyhint="done"><button type="submit" class="ib">Добавить</button></form>`:""}</div>
+    ${opt("Время хода",[45,60,90],A.time,v=>v+" с")}${opt("Играем до",[20,30,50],A.goal,v=>v+" очков")}
+    <button type="button" class="pill hard ${A.drink?"on":""}" data-pa="acdrink" aria-pressed="${A.drink}">${A.drink?"Промах — команда делает глоток":"Штраф за промах: глоток"}</button>
+    ${acStarted()?`<div class="p-sec"><h4>Текущая партия</h4>${acBoard()}</div>`:""}`;
+    pNav.hidden=false;
+    pNav.innerHTML=acStarted()?`<button class="btn btn-ghost" type="button" data-pa="acnew">Новая игра</button><button class="btn btn-brass" type="button" data-pa="acgo">Продолжить</button>`:`<button class="btn btn-brass" type="button" data-pa="acnew">Начать</button>`;
+    return;
+  }
+  if(A.view==="turn"){
+    pBody.innerHTML=`${acBoard()}<div class="gcard ${A.all?"lv6":"lv3"} ac-card">${HAT}
+      <div class="g-kind">${A.all?"Все играют":`Ход команды «${team}»`}</div>
+      <p class="g-txt">${A.m.name}</p><p class="ac-rule">${A.m.rule}</p>
+      <p class="ac-hint">${A.all?`Объясняет игрок команды «${team}», угадывают все команды. Очки — тем, кто первым угадал.`:"Тот, кто объясняет, берёт телефон и выбирает сложность. Остальные не подглядывают."}</p>
+      <div class="ac-pts">${[[3,"Легко"],[4,"Средне"],[5,"Жёстко"]].map(([p,l])=>`<button type="button" class="ac-p p${p}" data-pa="acpts" data-p="${p}"><b>${p}</b><small>${l}</small></button>`).join("")}</div></div>`;
+    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="acsetup">Счёт и настройки</button>`;return;
+  }
+  if(A.view==="play"){
+    const draw=A.m.id==="draw";
+    pBody.innerHTML=`<div class="ac-timer"><b id="acSec">${A.time}</b><i><span id="acBar"></span></i></div>
+    <div class="gcard ${A.all?"lv6":"lv3"} ac-card ac-word ${draw?"short":""}">${HAT}<div class="g-kind">${A.m.name} · ${A.pts} ${plural(A.pts,"очко","очка","очков")}</div><p class="g-txt">${esc(A.word)}</p><p class="ac-rule">${A.m.rule}</p><button type="button" class="g-lvl ac-hide" data-pa="achide">Запомнил — скрыть слово</button></div>
+    ${draw?`<div class="ac-draw"><canvas id="acCv" aria-label="Поле для рисования"></canvas><button type="button" class="g-back" data-pa="acclear">Стереть</button></div>`:""}`;
+    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="acmiss">Не угадали</button><button class="btn btn-brass" type="button" data-pa="achit">Угадали</button>`;
+    if(draw)acCanvas();
+    const T=A.time;acT=setInterval(()=>{const s=$("#acSec"),bar=$("#acBar");if(!s){acStop();return}
+      const left=Math.max(0,T-(Date.now()-A.t0)/1000);s.textContent=left>0?Math.ceil(left):"Время!";bar.style.width=(left/T*100)+"%";
+      s.parentNode.classList.toggle("low",left<=10);
+      if(left<=0){acStop();buzz([200,80,200])}},200);
+    return;
+  }
+  if(A.view==="who"){
+    pBody.innerHTML=`<div class="gcard lv6 ac-card">${HAT}<div class="g-kind">Кто угадал первым?</div><p class="g-txt">${esc(A.word)}</p>
+      <div class="ac-who">${A.teams.map((t,i)=>`<button type="button" class="pill" data-pa="acwin" data-i="${i}">${esc(t)}</button>`).join("")}</div></div>`;
+    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="acmiss">Никто</button>`;return;
+  }
+  if(A.view==="win"){
+    const w=A.sc.indexOf(Math.max(...A.sc));
+    pBody.innerHTML=`<div class="gcard lv6 ac-card">${HAT}<div class="g-kind">Финал</div><p class="g-txt">Победила семья «${esc(A.teams[w])}»</p><p class="ac-hint">Проигравшие наливают победителям.</p></div>${acBoard()}`;
+    pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="acsetup">Настройки</button><button class="btn btn-brass" type="button" data-pa="acnew">Ещё партия</button>`;
+  }
+}
+function acResult(team){
+  acStop();A.turns++;
+  if(team!=null){A.sc[team]=(A.sc[team]||0)+A.pts;toast(`+${A.pts} · «${A.teams[team]}»`);buzz([15,40,15])}
+  else{toast(A.drink?`Промах — «${A.teams[A.cur]}» делает глоток`:"Промах — ход переходит");buzz(120)}
+  if(A.sc.some(s=>s>=A.goal)){A.view="win";acSave();return renderAct()}
+  A.cur=(A.cur+1)%A.teams.length;acSave();acRoll();renderAct();pBody.scrollTop=0;
+}
+function acCanvas(){
+  const cv=$("#acCv"),dpr=devicePixelRatio||1,w=cv.clientWidth,h=Math.round(w*.75);
+  cv.width=w*dpr;cv.height=h*dpr;cv.style.height=h+"px";
+  const x=cv.getContext("2d");x.scale(dpr,dpr);x.lineCap=x.lineJoin="round";x.lineWidth=4;x.strokeStyle="#efe5d3";
+  let on=false;const pt=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
+  cv.addEventListener("pointerdown",e=>{on=true;cv.setPointerCapture(e.pointerId);const [a,b]=pt(e);x.beginPath();x.moveTo(a,b);x.lineTo(a+.1,b);x.stroke()});
+  cv.addEventListener("pointermove",e=>{if(!on)return;const [a,b]=pt(e);x.lineTo(a,b);x.stroke()});
+  const up=()=>{on=false};cv.addEventListener("pointerup",up);cv.addEventListener("pointercancel",up);
+}
+function acClick(a,el){
+  if(a==="acagree"){agreed=true;renderAct();return true}
+  if(a==="acset"){A[el.dataset.k]=+el.dataset.v;acSave();renderAct();return true}
+  if(a==="acdrink"){A.drink=!A.drink;acSave();renderAct();return true}
+  if(a==="acdel"){const i=+el.dataset.i;A.teams.splice(i,1);A.sc.splice(i,1);if(A.cur>=A.teams.length)A.cur=0;acSave();renderAct();return true}
+  if(a==="acnew"){A.sc=A.teams.map(()=>0);A.cur=0;A.turns=0;acSave();acRoll();renderAct();return true}
+  if(a==="acgo"){if(A.sc.some(s=>s>=A.goal))return acClick("acnew",el);acRoll();renderAct();return true}
+  if(a==="acsetup"){A.view="setup";renderAct();return true}
+  if(a==="acpts"){A.pts=+el.dataset.p;A.word=acWord(A.pts);A.t0=Date.now();A.view="play";buzz(12);renderAct();return true}
+  if(a==="achit"){if(A.all){acStop();A.view="who";renderAct()}else acResult(A.cur);return true}
+  if(a==="acwin"){acResult(+el.dataset.i);return true}
+  if(a==="acmiss"){acResult(null);return true}
+  if(a==="achide"){const c=pBody.querySelector(".ac-word");const h=c.classList.toggle("hid");el.textContent=h?"Показать слово":"Запомнил — скрыть слово";return true}
+  if(a==="acclear"){const cv=$("#acCv");if(cv)cv.getContext("2d").clearRect(0,0,cv.width,cv.height);return true}
+  return false;
+}
+panel.addEventListener("submit",e=>{
+  if(e.target.id!=="acAdd")return;e.preventDefault();
+  const v=$("#acName").value.trim().replace(/\s+/g," ").slice(0,20);if(!v||A.teams.length>=4)return;
+  A.teams.push(v);A.sc.push(0);acSave();renderAct();
+});
+
 /* swipe between bartender steps / cards */
 (function(){let x0=null,y0=0;
   pBody.addEventListener("touchstart",e=>{if(e.touches.length===1){x0=e.touches[0].clientX;y0=e.touches[0].clientY}},{passive:true});
