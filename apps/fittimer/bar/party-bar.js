@@ -1376,8 +1376,7 @@ function acBoard(){
   const cells=Array.from({length:N+1},(_,i)=>{const r=Math.floor(i/cols),c=r%2?cols-1-i%cols:i%cols,t=i===0?"start":i===N?"fin":acCell(i);
     return `<i class="fc ${t}" style="grid-row:${r+1};grid-column:${c+1}">${t==="start"?"СТАРТ":t==="fin"?ACI.crown:t==="all"?STAR:ACI[t]}</i>`}).join("");
   return `<div class="field">${cells}${A.teams.map((t,k)=>`<b class="ftk" data-k="${k}" style="--c:${TC[k]}">${esc(t.trim()[0]||"?").toUpperCase()}</b>`).join("")}</div>
-  <p class="f-leg"><span class="say">Объясни</span><span class="show">Покажи</span><span class="draw">Нарисуй</span><span class="all">Все играют</span></p>
-  <div class="ac-sb">${A.teams.map((t,i)=>`<div class="ac-row ${i===A.cur&&A.view!=="win"?"on":""}"><span><s style="background:${TC[i]}"></s>${esc(t)}</span><em>${Math.min(A.sc[i]||0,N)}<small>/${N}</small></em></div>`).join("")}</div>`;
+  <div class="ac-sc">${A.teams.map((t,i)=>`<span class="${i===A.cur&&A.view!=="win"?"on":""}"><s style="background:${TC[i]}"></s>${esc(t)}<b>${Math.min(A.sc[i]||0,N)}</b></span>`).join("")}<small>до ${N}</small></div>`;
 }
 function acFieldSync(){
   const f=pBody.querySelector(".field");if(!f)return;const N=A.goal;
@@ -1433,17 +1432,17 @@ function renderAct(){
     pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="acsetup">Назад</button><button class="btn btn-brass" type="button" data-pa="acagree">Нам есть 18</button>`;return;
   }
   if(!A.seen){
-    const st=[["team","Делимся на команды","От 2 до 4. Ходят по очереди."],["card","Тянем карту","Она скажет как: словами, жестами или рисунком."],["glass","Переворачиваем часы","Свои угадывают, пока сыплется песок."],["crown","Копим очки","Слово сложнее — очков больше. Кто первым до финиша — Дон."]];
-    pBody.innerHTML=`${tabs()}<div class="ac-intro"><div class="ac-ttl"><b>Активити</b></div><p class="ac-sub">Объясни, покажи, нарисуй — на время.</p>
+    const st=[["team","Делимся на команды","2–4 команды, ходят по очереди"],["card","Клетка решает, как объяснять","цвет клетки под фишкой — способ"],["glass","Выбираем сложность и переворачиваем часы","3, 4 или 5 очков — свои угадывают"],["crown","Фишка идёт вперёд","на столько клеток, сколько очков. Первые на финише — победили"]];
+    pBody.innerHTML=`${tabs()}<div class="ac-intro">
       <ol class="ac-steps">${st.map(([i,h,s],k)=>`<li style="--d:${k}"><span class="ac-si">${ACI[i]}<i>${k+1}</i></span><span><b>${h}</b><small>${s}</small></span></li>`).join("")}</ol>
-      <div class="ac-ways">${ACT_METHODS.map(m=>`<span>${ACI[m.id]}<b>${m.name.split(" ")[0]}</b></span>`).join("")}</div>
-      <p class="ac-18">Слова — обычные, <b>18+</b> или вперемешку: выберете на следующем шаге.</p></div>`;
+      <div class="ac-ways">${ACT_METHODS.map(m=>`<span class="${m.id}">${ACI[m.id]}<b>${m.name.split(" ")[0]}</b></span>`).join("")}<span class="all">${STAR}<b>Все играют</b></span></div>
+      <p class="ac-18">Слова — обычные, <b>18+</b> или вперемешку: выберете дальше.</p></div>`;
     pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-brass" type="button" data-pa="acseen">Понятно</button>`;return;
   }
   const team=esc(A.teams[A.cur]||"");
   if(A.view==="setup"){
     const opt=(id,vals,cur,fmt)=>`<div class="ac-opt"><span>${id}</span><div>${vals.map(v=>`<button type="button" class="pill ${v===cur?"on":""}" data-pa="acset" data-k="${id==="Время хода"?"time":"goal"}" data-v="${v}">${fmt(v)}</button>`).join("")}</div></div>`;
-    pBody.innerHTML=`${tabs()}<p class="p-lead">Команды по очереди объясняют слова: словами, жестами или рисунком. Чем сложнее слово — тем больше очков.</p>
+    pBody.innerHTML=`${tabs()}
     <div class="roster"><div class="r-h"><b>Команды</b><small>${A.teams.length} из 4</small></div>
       <div class="r-list">${A.teams.map((n,i)=>`<span class="r-chip"><i>${i+1}</i>${esc(n)}${A.teams.length>2?`<button type="button" data-pa="acdel" data-i="${i}" aria-label="Убрать ${esc(n)}">×</button>`:""}</span>`).join("")}</div>
       ${A.teams.length<4?`<form class="r-add" id="acAdd"><input id="acName" maxlength="20" placeholder="Название команды" autocomplete="off" enterkeyhint="done"><button type="submit" class="ib">Добавить</button></form>`:""}</div>
@@ -1458,12 +1457,12 @@ function renderAct(){
   }
   if(A.view==="turn"){
     const lv=A.all?"lv6":"lv3",roll=(A.cell==="start"||A.cell==="all")&&!A.rolled;
-    pBody.innerHTML=`${acBoard()}<p class="ac-step"><b>Ход «${team}»</b> · объясняющий выбирает сложность</p>
+    pBody.innerHTML=`${acBoard()}<p class="ac-step"><b>Ход «${team}»</b> · сложность выбирает объясняющий</p>
     <div class="gcard ${lv} ac-card ac-front ${roll?"rolling":""}">${A.all?`<div class="ac-all">Все играют</div>`:""}
       <span class="ac-big ${A.cell==="start"||A.cell==="all"?"die":""}">${ACI[A.m.id]}</span><p class="g-txt">${roll?"&nbsp;":A.m.name}</p><p class="ac-rule">${roll?"&nbsp;":A.m.rule}</p>
       ${A.all?`<p class="ac-hint">Угадывают все команды — очки тем, кто первый.</p>`:""}
       <div class="ac-pts">${[[3,"Легко"],[4,"Средне"],[5,"Жёстко"]].map(([p,l])=>`<button type="button" class="ac-p p${p}" data-pa="acpts" data-p="${p}" ${roll?"disabled":""}><b>${p}</b><small>${l}</small></button>`).join("")}</div>
-      <p class="ac-hint">Цифра — сколько очков получит команда. Остальные не подглядывают.</p></div>`;
+      </div>`;
     pNav.hidden=false;pNav.innerHTML=`<button class="btn btn-ghost" type="button" data-pa="acsetup">Счёт и настройки</button>`;
     if(roll)acDie();
     return;

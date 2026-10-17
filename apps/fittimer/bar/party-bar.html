@@ -620,6 +620,29 @@ svg{display:block}
 @keyframes dieRoll{0%{transform:rotate(0) translateY(0)}25%{transform:rotate(90deg) translateY(-8px) scale(.92)}50%{transform:rotate(180deg) translateY(0)}75%{transform:rotate(270deg) translateY(-6px) scale(.95)}100%{transform:rotate(360deg)}}
 @keyframes dieLand{0%{transform:scale(1.25) rotate(-12deg)}100%{transform:none}}
 .ac-p[disabled]{opacity:.35}
+.ac-intro .ac-steps{grid-template-columns:1fr;gap:6px}
+.ac-intro .ac-steps li{flex-direction:row;align-items:center;gap:12px;padding:10px 12px;border-radius:16px}
+.ac-intro .ac-steps b{font-size:16px}
+.ac-intro .ac-steps small{margin-top:2px;font-size:12px}
+.ac-intro .ac-si{flex:none;width:36px;height:36px}
+.ac-ways{grid-template-columns:repeat(4,1fr);gap:6px}
+.ac-ways span{padding:10px 4px;font-size:11.5px;border-style:solid;border-color:rgba(var(--fcc),.45);background:rgba(var(--fcc),.08);text-align:center}
+.ac-ways svg{stroke:rgb(var(--fcc))}
+.ac-ways .say{--fcc:236,122,52}.ac-ways .show{--fcc:170,110,220}.ac-ways .draw{--fcc:76,195,138}.ac-ways .all{--fcc:255,64,90}
+.ac-ways .all svg{fill:rgb(var(--fcc));stroke:none}
+.fc{aspect-ratio:1.3}
+.field{gap:3px;padding:6px}
+.ac-sc{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px}
+.ac-sc span{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--ink2);border:1px solid var(--line2);font-size:12.5px;font-weight:700;max-width:100%}
+.ac-sc span.on{border-color:rgba(236,122,52,.7);background:rgba(236,122,52,.12)}
+.ac-sc s{width:10px;height:10px;border-radius:50%;flex:none}
+.ac-sc b{font-family:var(--serif);font-weight:400;font-size:16px;color:var(--brass2)}
+.ac-sc small{margin-left:auto;font-size:11px;color:var(--smoke)}
+.ac-step{margin:0 0 8px;font-size:12.5px}
+.ac-front{padding:20px 16px 16px;gap:8px}
+.ac-front .ac-big{width:56px;height:56px;border-radius:18px}
+.ac-front .ac-big svg{width:30px;height:30px}
+.ac-front .g-txt{font-size:clamp(22px,6.5vw,30px)}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .grain{display:none}
@@ -727,8 +750,8 @@ svg{display:block}
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="./party-cards.js?v=22" defer></script>
-<script src="./party-activity.js?v=22" defer></script>
-<script src="./party-bar.js?v=22" defer></script>
+<script src="./party-cards.js?v=23" defer></script>
+<script src="./party-activity.js?v=23" defer></script>
+<script src="./party-bar.js?v=23" defer></script>
 </body>
 </html>
