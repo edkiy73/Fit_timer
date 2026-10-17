@@ -141,8 +141,8 @@ const cocktails = [
     variations:[
       {name:"Без гренадина", recipe:"Белый ром 45 + сухой вермут 25 + Triple Sec 10", ingredients:["rum","dryV","triple"], abv:25, taste:"Суше."},
       {name:"Rosso", recipe:"Белый ром 45 + сладкий красный вермут 20 + Triple Sec 10", ingredients:["rum","sweetV","triple"], abv:23, taste:"Слаще и темнее."}]},
-  {name:"Kamikaze", family:"Шоты · компания", base:"Водка", abv:22,
-    art:{shape:"nick", c1:"#cfe08a", c2:"#f2f7c8", ice:0, garnish:"lime", bg1:"#10130c", bg2:"#34401f"},
+  {name:"Kamikaze", top:4, family:"Шоты · компания", base:"Водка", abv:22,
+    art:{shape:"shot", c1:"#cfe08a", c2:"#f2f7c8", ice:0, garnish:"lime", bg1:"#10130c", bg2:"#34401f"},
     desc:"Водка, апельсин, лайм. Разливается по шотам на всю компанию.",
     tags:["кислое","цитрус","крепкое","шоты"],
     main:{recipe:"Водка 30 мл + Triple Sec 15 мл + лаймовый сок 15 мл", ingredients:["vodka","triple"], taste:"Кислый лайм, апельсин, лёгкий удар."},
@@ -152,6 +152,105 @@ const cocktails = [
     variations:[
       {name:"Long Kamikaze", recipe:"Водка 40 + Triple Sec 20 + лайм 20 + содовая 60", ingredients:["vodka","triple"], abv:12, taste:"Высокий и освежающий."},
       {name:"Lemon Drop", recipe:"Водка 40 + Triple Sec 15 + лимон 20 + сироп 10", ingredients:["vodka","triple"], abv:20, taste:"Лимонный и сладковатый."}]},
+  {name:"B-52", top:1, family:"Шоты · слои", base:"Мультибаза", abv:26,
+    art:{shape:"shot", layers:[["#3a1c0e",1],["#d8c19c",1],["#e58a26",1]], c1:"#3a1c0e", c2:"#e58a26", ice:0, garnish:"none", bg1:"#140b07", bg2:"#4a2a14"},
+    desc:"Три ровных слоя: кофе, сливки, апельсин. Самый узнаваемый шот в мире.",
+    tags:["шоты","кофе","мягкое","десертное","слои"],
+    main:{recipe:"Кофейный ликёр 20 мл + сливочный ликёр 20 мл + Triple Sec 20 мл", ingredients:["coffee","triple"], taste:"Кофе со сливками и апельсиновой коркой. Сладко и мягко."},
+    who:"Тем, кто любит сладкое, и тем, кто хочет красиво.",
+    extras:[{name:"Сливочный ликёр (Baileys) 20 мл", mode:"required", effect:"Средний слой. Без него слоёв не будет."},{name:"Барная ложка", mode:"optional", effect:"Слои ложатся ровнее."}],
+    serve:"Ничего не охлаждать со льдом. Налить кофейный ликёр. Сливочный пустить по обратной стороне ложки. Сверху так же Triple Sec. Пить залпом.",
+    variations:[
+      {name:"B-52 горящий", recipe:"Кофейный ликёр 20 + сливочный ликёр 20 + Triple Sec 15 + белый ром 5", ingredients:["coffee","triple","rum"], abv:28, taste:"Верхний слой поджигают на секунду и тушат. Только на устойчивой поверхности, подальше от волос и салфеток."},
+      {name:"B-52 с амаретто", recipe:"Кофейный ликёр 20 + сливочный ликёр 20 + амаретто 20", ingredients:["coffee","amaretto"], abv:22, taste:"Миндаль вместо апельсина, ещё мягче."}]},
+  {name:"Jägerbomb", top:2, family:"Шоты · бомба", base:"Jägermeister", abv:10,
+    art:{shape:"shot", c1:"#2a1608", c2:"#6b3a14", ice:0, garnish:"none", bubbles:true, bg1:"#0d120b", bg2:"#2e3a1c"},
+    desc:"Шот Jägermeister роняют в стакан энергетика. Бодрит, как старт вечера.",
+    tags:["шоты","травяное","сладкое","бомба"],
+    main:{recipe:"Jägermeister 40 мл + энергетик 100 мл", ingredients:["jager"], taste:"Травы, лакрица, сладкий энергетик."},
+    who:"Тем, кому нужен второй ветер.",
+    extras:[{name:"Энергетик 100 мл", mode:"required", effect:"Половина рецепта."},{name:"Сильно охлаждённый Jäger", mode:"optional", effect:"Мягче и без лакричной резкости."}],
+    serve:"Энергетик в стакан. Jägermeister в шот. Уронить шот в стакан и сразу выпить.",
+    variations:[
+      {name:"Колой вместо энергетика", recipe:"Jägermeister 40 + кола 100", ingredients:["jager","cola"], abv:10, taste:"Спокойнее, без бодрящего эффекта."},
+      {name:"Ледяной", recipe:"Jägermeister 40 + лаймовый сок 5", ingredients:["jager"], abv:33, taste:"Из морозилки, с каплей лайма. Для тех, кто без газировки."}]},
+  {name:"Боярский", top:3, family:"Шоты · острое", base:"Водка", abv:20,
+    art:{shape:"shot", layers:[["#8e0f1d",1],["#ece4e4",1.1]], c1:"#8e0f1d", c2:"#ece4e4", ice:0, garnish:"none", bg1:"#160708", bg2:"#4a1218"},
+    desc:"Красный гренадин, водка сверху и капля табаско. Наш главный тост.",
+    tags:["шоты","крепкое","острое","слои"],
+    main:{recipe:"Гренадин 20 мл + водка 25 мл + табаско 3 капли", ingredients:["vodka"], taste:"Сладкий гранат, чистая водка, острый хвост."},
+    who:"Тем, кто любит «тысяча чертей» вслух перед тостом.",
+    extras:[{name:"Гренадин 20 мл", mode:"required", effect:"Нижний красный слой."},{name:"Табаско 2–3 капли", mode:"required", effect:"Острота, ради которой его и пьют."}],
+    serve:"Гренадин на дно. Холодную водку по ложке вторым слоем. Табаско каплями сверху — они опустятся до границы слоёв.",
+    variations:[
+      {name:"Без огня", recipe:"Гренадин 20 + водка 25", ingredients:["vodka"], abv:20, taste:"Мягче, для тех, кто не любит остроту."},
+      {name:"Боярский на текиле", recipe:"Гренадин 20 + текила 25 + табаско 3 капли", ingredients:["tequila"], abv:20, taste:"Агава вместо водки, ярче и дерзче."}]},
+  {name:"Медуза", top:5, family:"Шоты · слои", base:"Белый ром", abv:30,
+    art:{shape:"shot", layers:[["#f4f1e6",1]], c1:"#f4f1e6", c2:"#ffffff", ice:0, garnish:"none", bg1:"#07101a", bg2:"#163a54", jelly:true},
+    desc:"Прозрачный шот, в котором плавает «медуза» из сливочного ликёра.",
+    tags:["шоты","крепкое","апельсин","кокос"],
+    main:{recipe:"Triple Sec 15 мл + белый ром 15 мл + кокосовый ликёр 15 мл + сливочный ликёр 3 капли", ingredients:["triple","rum"], taste:"Апельсин и кокос, крепкий ром, сливочная нота в конце."},
+    who:"Тем, кто любит шоу, но крепче, чем B-52.",
+    extras:[{name:"Кокосовый ликёр (Malibu) 15 мл", mode:"required", effect:"Средний слой и кокосовый вкус."},{name:"Сливочный ликёр (Baileys) 3–5 капель", mode:"required", effect:"Сама «медуза»."}],
+    serve:"Слоями: Triple Sec, ром, кокосовый ликёр. Сверху пипеткой или трубочкой капли сливочного ликёра. Пить залпом через трубочку.",
+    variations:[
+      {name:"Медуза без кокоса", recipe:"Triple Sec 20 + белый ром 20 + сливочный ликёр 3 капли", ingredients:["triple","rum"], abv:36, taste:"Суше и крепче."},
+      {name:"Голубая медуза", recipe:"Triple Sec 15 + белый ром 15 + кокосовый ликёр 10 + Blue Curaçao 5 + сливочный ликёр 3 капли", ingredients:["triple","rum"], abv:30, taste:"То же, но синее. Нужен Blue Curaçao."}]},
+  {name:"Tequila Slammer", top:6, family:"Шоты · текила", base:"Текила", abv:20,
+    art:{shape:"shot", c1:"#d8d6a6", c2:"#f6f5dc", ice:0, garnish:"lime", bubbles:true, bg1:"#14110a", bg2:"#3e3a1e"},
+    desc:"«Текила-бум»: текила с газировкой, накрыть ладонью, хлопнуть о стол и выпить.",
+    tags:["шоты","крепкое","цитрус","бомба"],
+    main:{recipe:"Текила 30 мл + спрайт/тоник 30 мл", ingredients:["tequila"], taste:"Резкий газ, текила, сладкий цитрус."},
+    who:"Самым шумным за столом.",
+    extras:[{name:"Спрайт или тоник 30 мл", mode:"required", effect:"Газ, ради которого хлопают."},{name:"Толстостенный рокс или шот", mode:"optional", effect:"Тонкий стакан от удара может треснуть."}],
+    serve:"Текила и газировка в толстый стакан. Накрыть ладонью, стукнуть дном о стол и выпить, пока пенится.",
+    variations:[
+      {name:"Классический текила-шот", recipe:"Текила 40 + лаймовый сок 10", ingredients:["tequila"], abv:33, taste:"Соль на руку, текила, лайм."},
+      {name:"Sangrita-бандера", recipe:"Текила 30 + лаймовый сок 30 + томатный сок 30", ingredients:["tequila"], abv:13, taste:"Три шота в цветах флага Мексики: лайм, текила, томат с перцем."}]},
+  {name:"Baby Guinness", top:7, family:"Шоты · слои", base:"Мультибаза", abv:19,
+    art:{shape:"shot", layers:[["#1d0d06",3.2],["#efe1c4",.8]], c1:"#1d0d06", c2:"#efe1c4", ice:0, garnish:"none", bg1:"#0f0905", bg2:"#3a2414"},
+    desc:"Выглядит как крошечная пинта тёмного пива, на вкус — кофе со сливками.",
+    tags:["шоты","кофе","мягкое","десертное","слои"],
+    main:{recipe:"Кофейный ликёр 40 мл + сливочный ликёр 10 мл", ingredients:["coffee"], taste:"Кофе, сливочная «пена», мягко и сладко."},
+    who:"Тем, кто не пьёт крепкие шоты, но хочет со всеми.",
+    extras:[{name:"Сливочный ликёр (Baileys) 10 мл", mode:"required", effect:"Белая «пенка» сверху."}],
+    serve:"Кофейный ликёр почти до края. Сливочный ликёр по ложке сверху тонким слоем.",
+    variations:[
+      {name:"Покрепче", recipe:"Кофейный ликёр 25 + водка 15 + сливочный ликёр 10", ingredients:["coffee","vodka"], abv:24, taste:"Тот же вид, но с ударом."},
+      {name:"С амаретто", recipe:"Кофейный ликёр 30 + амаретто 10 + сливочный ликёр 10", ingredients:["coffee","amaretto"], abv:21, taste:"Миндаль поверх кофе."}]},
+  {name:"Green Tea Shot", top:8, family:"Шоты · компания", base:"Ирландский виски", abv:17,
+    art:{shape:"shot", c1:"#b9a03a", c2:"#e9dc8a", ice:0, garnish:"lemon", bg1:"#11120a", bg2:"#383a1c"},
+    desc:"Зелёного чая тут нет: виски, персик и лимон. Пьётся как холодный чай.",
+    tags:["шоты","кислое","цитрус","лёгкое","виски"],
+    main:{recipe:"Ирландский виски 15 мл + персиковый ликёр 15 мл + лимонный сок 15 мл + содовая 10 мл", ingredients:["irish"], taste:"Персик, лимон, мягкий виски. Похоже на холодный чай."},
+    who:"Тем, кто боится крепких шотов.",
+    extras:[{name:"Персиковый ликёр 15 мл", mode:"required", effect:"Главный вкус."},{name:"Лимонный сок 15 мл", mode:"required", effect:"Кислинка, как в чае с лимоном."}],
+    serve:"Виски, ликёр и лимон встряхнуть со льдом. Разлить по шотам, долить каплю содовой.",
+    variations:[
+      {name:"White Tea Shot", recipe:"Водка 15 + персиковый ликёр 15 + лимонный сок 15 + содовая 10", ingredients:["vodka"], abv:16, taste:"Без виски, светлее и чище."},
+      {name:"На бурбоне", recipe:"Бурбон 15 + персиковый ликёр 15 + лимонный сок 15 + содовая 10", ingredients:["bourbon"], abv:17, taste:"Ваниль и карамель."}]},
+  {name:"Pickleback", top:9, family:"Шоты · вдогонку", base:"Ирландский виски", abv:40,
+    art:{shape:"shot", c1:"#a8661c", c2:"#e0a54c", ice:0, garnish:"none", bg1:"#120c06", bg2:"#3e2a12"},
+    desc:"Шот виски и сразу вдогонку шот рассола. Звучит странно, работает идеально.",
+    tags:["шоты","крепкое","виски","солёное"],
+    main:{recipe:"Ирландский виски 40 мл + огуречный рассол 40 мл", ingredients:["irish"], taste:"Виски, а потом солёный рассол стирает жжение."},
+    who:"Тем, кто пьёт виски чистым и ценит хорошую закуску.",
+    extras:[{name:"Огуречный рассол 40 мл", mode:"required", effect:"Второй шот, вдогонку."}],
+    serve:"Два отдельных шота. Сначала виски, сразу за ним холодный рассол.",
+    variations:[
+      {name:"На бурбоне", recipe:"Бурбон 40 + огуречный рассол 40", ingredients:["bourbon"], abv:40, taste:"Слаще, с ванилью."},
+      {name:"На текиле", recipe:"Текила 40 + томатный сок 40", ingredients:["tequila"], abv:40, taste:"Вдогонку томат с перцем и лаймом."}]},
+  {name:"Mind Eraser", top:10, family:"Шоты · трубочка", base:"Водка", abv:20,
+    art:{shape:"shot", layers:[["#2a1408",1],["#e9e6df",1],["#f2f2f2",1]], c1:"#2a1408", c2:"#f2f2f2", ice:0, garnish:"none", bubbles:true, bg1:"#0c0a09", bg2:"#2f2620"},
+    desc:"Кофе, водка и газировка слоями. Выпить через трубочку одним заходом.",
+    tags:["шоты","кофе","крепкое","слои"],
+    main:{recipe:"Кофейный ликёр 30 мл + водка 30 мл + содовая 30 мл", ingredients:["coffee","vodka"], taste:"Сначала газ, потом водка, в конце сладкий кофе."},
+    who:"Тем, кто любит фокусы с трубочкой.",
+    extras:[{name:"Содовая 30 мл", mode:"required", effect:"Верхний слой с газом."},{name:"Трубочка", mode:"required", effect:"Пьют снизу вверх, залпом."}],
+    serve:"В рокс со льдом: кофейный ликёр, сверху по ложке водка, затем содовая. Трубочку на дно и выпить сразу целиком.",
+    variations:[
+      {name:"Сливочный", recipe:"Кофейный ликёр 30 + водка 30 + сливки 30", ingredients:["coffee","vodka"], abv:20, taste:"Как Белый русский, только залпом."},
+      {name:"Колой", recipe:"Кофейный ликёр 30 + водка 30 + кола 30", ingredients:["coffee","vodka","cola"], abv:20, taste:"Слаще, с карамелью."}]},
   {name:"Boulevardier", premium:true, family:"Классика · бурбон", base:"Бурбон", abv:24,
     art:{shape:"rocks", c1:"#7c240f", c2:"#cf5d25", ice:3, garnish:"peel", bg1:"#2a120d", bg2:"#5a2614"},
     desc:"Плотный виски с травяной горечью и карамелью. Главный коктейль вечера.",
@@ -519,6 +618,44 @@ const SHOP = [
     {tier:"Вторым",cls:"good",name:"Orange bitters",price:"по бренду",why:"Для сухих джиновых коктейлей."}]}
 ];
 
+const ADDONS = [
+  {group:"Цитрус и соки", note:"Свежий сок вместо пакетного — главный апгрейд вкуса", items:[
+    {name:"Лаймы", rx:/лайм/, why:"Свежий сок и цедра. Один лайм ≈ 25 мл сока."},
+    {name:"Лимоны", rx:/лимон/, why:"Сок для sour-коктейлей и цедра для аромата."},
+    {name:"Апельсины", rx:/апельсинов\S* (цедр|дольк)|долька апельсина/, why:"Цедра и дольки — для красоты и аромата."},
+    {name:"Клюквенный сок", rx:/клюкв/, why:"Без сахара, если найдёшь."},
+    {name:"Томатный сок", rx:/томат/, why:"Для текилы вдогонку."}]},
+  {group:"Сиропы и сладкое", note:"Сахарный сироп можно сварить: сахар и вода 1:1",
+   items:[
+    {name:"Сахарный сироп", rx:/^(сахарн\S* )?сироп(\s|$)|сахарный ободок/, why:"Или сварить: сахар и вода 1:1, хранить в холодильнике."},
+    {name:"Гренадин", rx:/гренадин/, why:"Гранатовый сироп: цвет и сладость."},
+    {name:"Сироп агавы", rx:/агав/, why:"Мягче сахара в Margarita. Можно заменить сахарным."}]},
+  {group:"Газировка", note:"Брать холодной и маленькими бутылками — газ не выдохнется", items:[
+    {name:"Содовая", rx:/содов|^сода/, why:"Без вкуса, просто газ."},
+    {name:"Спрайт или тоник", rx:/спрайт|тоник/, why:"Для текила-бума."},
+    {name:"Энергетик", rx:/энергетик/, why:"Для Jägerbomb."}]},
+  {group:"Ликёры для шотов", note:"Маленьких бутылок хватит на весь вечер", items:[
+    {name:"Сливочный ликёр (Baileys)", rx:/сливочн/, why:"Слои в B-52, Baby Guinness, Медузе."},
+    {name:"Кокосовый ликёр (Malibu)", rx:/кокосов/, why:"Для Медузы."},
+    {name:"Персиковый ликёр", rx:/персиков/, why:"Для Green Tea Shot."},
+    {name:"Blue Curaçao", rx:/curaçao|curacao/, why:"Синий цвет. Только если хочется шоу."}]},
+  {group:"Молочное, специи, закуска", note:"Мелочи, без которых рецепт не тот", items:[
+    {name:"Сливки или молоко", rx:/сливк|молок/, why:"Для White Russian и Colorado Bulldog."},
+    {name:"Яйца", rx:/белок/, why:"Белок даёт пенку в sour-коктейлях. По желанию."},
+    {name:"Мята", rx:/мят/, why:"Свежая, для Mojito."},
+    {name:"Соль", rx:/соль|saline/, why:"Щепотка делает вкус ярче. Для ободка Margarita."},
+    {name:"Табаско", rx:/табаско/, why:"Для Боярского."},
+    {name:"Огурцы в рассоле", rx:/огуречн/, why:"Рассол — для Pickleback, огурцы — закуска."},
+    {name:"Коктейльная вишня", rx:/вишн/, why:"Для Manhattan."},
+    {name:"Оливки", rx:/олив/, why:"Для Dry Martini."},
+    {name:"Эспрессо и кофейные зёрна", rx:/эспрессо|кофейн\S* зерн/, why:"Для Espresso Martini."}]},
+  {group:"Лёд и посуда", note:"Льда нужно больше, чем кажется", items:[
+    {name:"Лёд", rx:/(^|\s)(лёд|льд)/, serve:true, why:"Примерно 0,5 кг на гостя. Ещё пакет про запас."},
+    {name:"Стопки для шотов", rx:/(^|\s)шот/, serve:true, tag:"шоты", why:"По одной на гостя, лучше толстостенные."},
+    {name:"Трубочки", rx:/трубочк/, serve:true, why:"Для Mind Eraser и Медузы."},
+    {name:"Барная ложка", rx:/ложк/, serve:true, why:"Для слоёв и размешивания."}]}
+];
+
 /* ================= app ================= */
 (function(){
 "use strict";
@@ -531,7 +668,7 @@ const store={
 const S={
   tab:"menu", base:"Все", style:"Любой вкус", q:"",
   pantry:new Set(store.get("pantry",[])), mode:store.get("mode","main"),
-  pantryOn:store.get("pantryOn",false), favs:new Set(store.get("favs",[])), notes:store.get("notes",{}), rates:store.get("rates",{})
+  pantryOn:store.get("pantryOn",false), favs:new Set(store.get("favs",[])), notes:store.get("notes",{}), rates:store.get("rates",{}), shopTab:"bottles"
 };
 if(!S.pantry.size) S.pantryOn=false;
 cocktails.forEach((c,i)=>{c.i=i;c.txt=[c.name,c.family,c.desc,c.base,c.who,c.serve,...c.tags,c.main.recipe,c.main.taste,...c.variations.flatMap(v=>[v.name,v.recipe,v.taste])].join(" ").toLowerCase();});
@@ -550,7 +687,7 @@ function visible(){
     (S.base==="Все"||c.base===S.base)&&
     (S.style==="Любой вкус"||c.tags.includes(S.style)||c.txt.includes(S.style))&&
     (!q||c.txt.includes(q)||(S.notes[c.name]||"").toLowerCase().includes(q))&&
-    (!S.pantryOn||makeable(c).length>0));
+    (!S.pantryOn||makeable(c).length>0)).sort((a,b)=>S.style==="шоты"?(a.top||99)-(b.top||99):0);
 }
 const plural=(n,a,b,c)=>{n=Math.abs(n)%100;const m=n%10;return n>10&&n<20?c:m>1&&m<5?b:m===1?a:c};
 
@@ -584,6 +721,15 @@ function glass(a,{thumb=false,pour=false}={}){
     <path clip-path="url(#c${u})" d="M326 205c2 40 28 83 74 83s72-43 74-83z" fill="url(#l${u})"/>
     ${ice(356,194,34,36,-10,.36)}${ice(390,205,36,38,12,.33)}${bub}
     <rect x="394" y="312" width="12" height="62" rx="6" fill="rgba(255,255,255,.28)"/><ellipse cx="400" cy="382" rx="58" ry="10" fill="rgba(255,255,255,.22)"/>`;}
+  else if(a.shape==="shot"){top=180;
+    const L=a.layers||[[null,1]],sum=L.reduce((s,l)=>s+l[1],0);let y=312;
+    const bands=L.map(([c,f])=>{const h=132*f/sum;y-=h;return `<rect x="340" y="${y.toFixed(1)}" width="120" height="${(h+.6).toFixed(1)}" fill="${c||`url(#l${u})`}"/>`}).join("");
+    const jelly=a.jelly?`<path d="M386 214c0-12 28-12 28 0c0 4-3 6-6 6c0 8 4 14 2 22M393 220c0 10-4 16-2 26M400 220c0 9 3 15 0 24" fill="rgba(240,228,205,.9)" stroke="rgba(240,228,205,.85)" stroke-width="3" stroke-linecap="round"/>`:"";
+    g=`<path d="M338 150h124l-15 180c-1 12-9 18-21 18h-52c-12 0-20-6-21-18z" fill="rgba(255,255,255,.07)" stroke="rgba(255,255,255,.42)" stroke-width="6"/>
+    <clipPath id="i${u}"><path d="M352 180h96l-11 132h-74z"/></clipPath>
+    <g clip-path="url(#c${u})"><g clip-path="url(#i${u})">${bands}${bub}${jelly}</g></g>
+    <path d="M362 314h76l-2 16c-1 6-5 9-11 9h-50c-6 0-10-3-11-9z" fill="rgba(255,255,255,.16)"/>
+    <path d="M336 152h128" stroke="rgba(255,255,255,.48)" stroke-width="6" stroke-linecap="round"/><path d="M358 168l-9 120" stroke="rgba(255,255,255,.22)" stroke-width="5" stroke-linecap="round"/>`;}
   else {top=156;g=`<path d="M300 132h200c-6 57-49 109-100 109s-94-52-100-109z" fill="rgba(255,255,255,.07)" stroke="rgba(255,255,255,.42)" stroke-width="6"/>
     <path clip-path="url(#c${u})" d="M326 160h148c-10 36-38 60-74 60s-64-24-74-60z" fill="url(#l${u})"/>
     <rect x="394" y="241" width="12" height="86" rx="6" fill="rgba(255,255,255,.28)"/><ellipse cx="400" cy="335" rx="66" ry="10" fill="rgba(255,255,255,.22)"/>
@@ -616,14 +762,14 @@ function card(c,k){
       <span class="cc-name">${c.name}</span>
       <span class="cc-fam">${c.family}</span>
       <span class="cc-desc">${c.desc}</span>
-      <span class="cc-row"><span class="abv">${c.abv}° ${meter(c.abv)}</span>${c.premium?`<span class="don-mark">Выбор Дона</span>`:""}${m.length?`<span class="can">✓ ${m.length>1?m.length+" "+plural(m.length,"рецепт","рецепта","рецептов"):"можно"}</span>`:""}${S.rates[c.name]?`<span class="rate-mark">★ ${S.rates[c.name]}</span>`:""}${S.notes[c.name]?`<span class="note-mark" title="Есть заметка"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>заметка</span>`:""}</span>
+      <span class="cc-row"><span class="abv">${c.abv}° ${meter(c.abv)}</span>${c.premium?`<span class="don-mark">Выбор Дона</span>`:""}${c.top?`<span class="top-mark">№${c.top} шот</span>`:""}${m.length?`<span class="can">✓ ${m.length>1?m.length+" "+plural(m.length,"рецепт","рецепта","рецептов"):"можно"}</span>`:""}${S.rates[c.name]?`<span class="rate-mark">★ ${S.rates[c.name]}</span>`:""}${S.notes[c.name]?`<span class="note-mark" title="Есть заметка"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>заметка</span>`:""}</span>
     </span>${S.favs.has(c.i)?ROSE:""}</button>`;
 }
 
 /* ---------- menu ---------- */
 function renderRails(){
   $("#bases").innerHTML=BASES.map(b=>`<button class="tab ${S.base===b?"on":""}" data-base="${b}" type="button">${b}</button>`).join("");
-  $("#styles").innerHTML=`<button class="pill mybar ${S.pantryOn?"on":""}" data-mybar type="button" aria-pressed="${S.pantryOn}">Мой бар (${S.pantry.size})</button>`+STYLES.map(s=>`<button class="pill ${S.style===s?"on":""}" data-style="${s}" type="button">${s}</button>`).join("");
+  $("#styles").innerHTML=`<button class="pill mybar ${S.pantryOn?"on":""}" data-mybar type="button" aria-pressed="${S.pantryOn}">Мой бар (${S.pantry.size})</button>`+STYLES.map(s=>`<button class="pill ${S.style===s?"on":""}" data-style="${s}" type="button">${s==="шоты"?"топ-10 шотов":s}</button>`).join("");
 }
 function renderMenu(){
   const list=visible();
@@ -666,6 +812,27 @@ function renderShop(){
     <div class="chips">${t.items.map(i=>`<button class="chipb ${S.pantry.has(BASKET_KEY[i])?"have":""}" data-jump="${BASKET_CAT[i]||""}" type="button">${S.pantry.has(BASKET_KEY[i])?"✓ ":""}${i}</button>`).join("")}</div></div>`).join("");
   $("#cats").innerHTML=SHOP.map(c=>`<details class="cat" id="${catId(c.category)}"><summary><b>${c.category}<small>${c.note}</small></b><svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></summary>
     <div class="opts">${c.options.map(o=>`<div class="opt"><span class="t ${o.cls}">${o.tier}</span><span class="n">${o.name}</span><span class="p">${o.price}</span><span class="w">${o.why}</span></div>`).join("")}</div></details>`).join("");
+  renderExtras();
+}
+function addonUses(a){
+  return cocktails.filter(c=>{
+    const lines=[c.main,...c.variations].flatMap(r=>parts(r.recipe).map(p=>p.name)).concat(c.extras.map(e=>e.name)).map(s=>s.toLowerCase());
+    if(a.tag&&c.tags.includes(a.tag))return true;
+    if(a.serve)lines.push(c.serve.toLowerCase());
+    return lines.some(s=>a.rx.test(s));
+  });
+}
+function renderExtras(){
+  const seg=$("#shopSeg");seg.dataset.v=S.shopTab;
+  seg.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.shopTab));
+  $("#shopBottles").hidden=S.shopTab!=="bottles";$("#shopExtras").hidden=S.shopTab!=="extras";
+  if(S.shopTab!=="extras")return;
+  const mine=S.pantry.size?cocktails.filter(c=>makeable(c).length):[];
+  $("#extraCats").innerHTML=ADDONS.map(g=>{
+    const rows=g.items.map(a=>({a,u:addonUses(a)})).filter(x=>x.u.length).sort((x,y)=>y.u.length-x.u.length);
+    return `<details class="cat" open><summary><b>${g.group}<small>${g.note}</small></b><svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+    <div class="opts">${rows.map(({a,u})=>{const forMe=u.some(c=>mine.includes(c));
+      return `<div class="opt">${forMe?`<span class="t value">Нужно для твоего бара</span>`:""}<span class="n">${a.name}</span><span class="p">${u.length} ${plural(u.length,"рецепт","рецепта","рецептов")}</span><span class="w">${a.why}</span><span class="w u">Для: ${u.slice(0,5).map(c=>c.name).join(", ")}${u.length>5?` и ещё ${u.length-5}`:""}</span></div>`}).join("")}</div></details>`}).join("");
 }
 
 /* ---------- tabs ---------- */
@@ -819,6 +986,8 @@ document.addEventListener("click",e=>{
   if(el=t.closest("[data-go]")){go(el.dataset.go);return}
   if(el=t.closest("[data-ing]")){const k=el.dataset.ing;S.pantry.has(k)?S.pantry.delete(k):S.pantry.add(k);
     el.classList.toggle("on");el.setAttribute("aria-pressed",S.pantry.has(k));if(!S.pantry.size)S.pantryOn=false;save();barCount();return}
+  if(el=t.closest("#shopSeg button")){S.shopTab=el.dataset.v;renderExtras();return}
+  if(el=t.closest("[data-extras-copy]")){copy("Допы для бара:\n"+ADDONS.map(g=>g.items.filter(a=>addonUses(a).length).map(a=>"• "+a.name).join("\n")).join("\n"),"Список допов скопирован");return}
   if(el=t.closest("#seg button")){S.mode=el.dataset.v;save();barCount();return}
   if(t.closest("#barClear")){S.pantry.clear();S.pantryOn=false;save();renderBar();toast("Бар очищен");return}
   if(t.closest("#barGo")){S.pantryOn=true;save();go("menu");return}
