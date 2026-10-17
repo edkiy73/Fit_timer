@@ -1444,7 +1444,7 @@ function renderAct(){
   if(A.view==="play"){
     const draw=A.m.id==="draw",T=A.time,el0=A.run?(Date.now()-A.t0)/1000:0;
     pBody.innerHTML=`<div class="ac-play ${draw?"draw":""}">${hourglass()}<div class="ac-sec"><b id="acSec">${A.run?Math.ceil(Math.max(0,T-el0)):T}</b><small>${A.run?(A.all?"угадывают все":"угадывает «"+team+"»"):"секунд на ход"}</small>${A.multi&&A.run?`<em class="ac-got">+${A.got} за ход · ${A.n} ${plural(A.n,"слово","слова","слов")}</em>`:""}</div></div>
-    <div class="gcard ${A.all?"lv6":"lv3"} ac-card ac-word ${draw?"short":""}"><div class="g-kind">${A.m.name} · ${A.pts} ${plural(A.pts,"очко","очка","очков")}${A.hot&&A.deck==="mix"?` <em class="ac-hot">18+</em>`:""}</div><p class="g-txt">${esc(A.word)}</p><p class="ac-rule">${A.m.rule}</p>${A.run?`<button type="button" class="g-lvl ac-hide" data-pa="achide">Запомнил — скрыть слово</button>`:`<p class="ac-hint">${A.multi?"Объясняй слова одно за другим — сколько успеете, пока сыплется песок.":"Запомни слово. Когда будешь готов — переворачивай часы."}</p>`}</div>
+    <div class="gcard ${A.all?"lv6":"lv3"} ac-card ac-word ${draw?"short":""}">${A.run?`<span class="ac-stamp ok">Угадали</span><span class="ac-stamp no">${A.multi?"Пропуск":"Не угадали"}</span>`:""}<div class="g-kind">${A.m.name} · ${A.pts} ${plural(A.pts,"очко","очка","очков")}${A.hot&&A.deck==="mix"?` <em class="ac-hot">18+</em>`:""}</div><p class="g-txt">${esc(A.word)}</p><p class="ac-rule">${A.m.rule}</p>${A.run?`<button type="button" class="g-lvl ac-hide" data-pa="achide">Запомнил — скрыть слово</button><p class="ac-swh">← свайп: ${A.multi?"пропуск":"не угадали"} · угадали →</p>`:`<p class="ac-hint">${A.multi?"Объясняй слова одно за другим — сколько успеете, пока сыплется песок.":"Запомни слово. Когда будешь готов — переворачивай часы."}</p>`}</div>
     ${draw&&A.run?`<div class="ac-draw"><canvas id="acCv" aria-label="Поле для рисования"></canvas><button type="button" class="g-back" data-pa="acclear">Стереть</button></div>`:""}`;
     pNav.hidden=false;
     pNav.innerHTML=!A.run?`<button class="btn btn-brass" type="button" data-pa="acstart">Готов — переворачиваю часы</button>`:
@@ -1518,6 +1518,31 @@ function acClick(a,el){
   if(a==="acclear"){const cv=$("#acCv");if(cv)cv.getContext("2d").clearRect(0,0,cv.width,cv.height);return true}
   return false;
 }
+/* Свайп карты со словом по всему экрану: вправо — угадали, влево — нет / пропуск. */
+(function(){
+  let sx=0,sy=0,dx=0,drag=false,card=null,id=null;
+  const live=()=>pKind==="cards"&&G.tab==="activity"&&A.view==="play"&&A.run;
+  pBody.addEventListener("pointerdown",e=>{
+    if(!live()||e.target.closest("canvas,button,a,input")||(e.pointerType==="mouse"&&e.button))return;
+    card=pBody.querySelector(".ac-word");if(!card)return;id=e.pointerId;sx=e.clientX;sy=e.clientY;dx=0;drag=false;
+  });
+  pBody.addEventListener("pointermove",e=>{
+    if(e.pointerId!==id||!card)return;const x=e.clientX-sx,y=e.clientY-sy;
+    if(!drag){if(Math.abs(x)<10||Math.abs(x)<Math.abs(y)*1.2)return;drag=true;card.classList.add("drag");try{pBody.setPointerCapture(id)}catch(_){}}
+    dx=x;const k=Math.min(1,Math.abs(dx)/110);
+    card.style.transform=`translateX(${dx}px) rotate(${dx/18}deg)`;
+    card.querySelector(".ac-stamp.ok").style.opacity=dx>0?k:0;card.querySelector(".ac-stamp.no").style.opacity=dx<0?k:0;
+  });
+  const end=e=>{
+    if(e.pointerId!==id||!card)return;const c=card;card=null;id=null;
+    if(!drag)return;c.classList.remove("drag");
+    if(Math.abs(dx)>90&&e.type==="pointerup"){
+      const right=dx>0;c.classList.add("fly");c.style.transform=`translateX(${right?130:-130}vw) rotate(${right?28:-28}deg)`;buzz(right?[15,40,15]:30);
+      setTimeout(()=>{if(live())acClick(right?"achit":A.multi?"acskip":"acmiss",c)},230);
+    }else{c.style.transform="";c.querySelectorAll(".ac-stamp").forEach(s=>s.style.opacity=0)}
+  };
+  pBody.addEventListener("pointerup",end);pBody.addEventListener("pointercancel",end);
+})();
 panel.addEventListener("submit",e=>{
   if(e.target.id!=="acAdd")return;e.preventDefault();
   const v=$("#acName").value.trim().replace(/\s+/g," ").slice(0,20);if(!v||A.teams.length>=4)return;

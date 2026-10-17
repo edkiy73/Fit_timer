@@ -589,6 +589,14 @@ svg{display:block}
 .ac-opt div{flex-wrap:wrap;justify-content:flex-end}
 .pill.p18.on{background:rgb(205,52,72);border-color:rgb(205,52,72);color:#fff}
 .ac-hot{font-style:normal;font-size:10px;font-weight:800;color:#fff;background:rgb(205,52,72);padding:2px 6px;border-radius:6px;vertical-align:1px}
+#pBody{touch-action:pan-y}
+.ac-word{position:relative;touch-action:pan-y;transition:transform .35s var(--spring)}
+.ac-word.drag{transition:none}
+.ac-word.fly{transition:transform .3s ease-in}
+.ac-stamp{position:absolute;top:18px;padding:5px 12px;border-radius:10px;font-size:15px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;opacity:0;pointer-events:none;border:2.5px solid}
+.ac-stamp.ok{left:18px;color:var(--ok);border-color:var(--ok);transform:rotate(-12deg)}
+.ac-stamp.no{right:18px;color:#ff8c99;border-color:#ff8c99;transform:rotate(12deg)}
+.ac-swh{margin:0;text-align:center;font-size:11.5px;color:var(--smoke2)}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .grain{display:none}
@@ -696,8 +704,8 @@ svg{display:block}
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="./party-cards.js?v=18" defer></script>
-<script src="./party-activity.js?v=18" defer></script>
-<script src="./party-bar.js?v=18" defer></script>
+<script src="./party-cards.js?v=19" defer></script>
+<script src="./party-activity.js?v=19" defer></script>
+<script src="./party-bar.js?v=19" defer></script>
 </body>
 </html>
