@@ -2009,6 +2009,20 @@ body.qa-viewport{overflow:auto;display:block}body.qa-viewport .stage{position:re
 .hero:has(>.pc-info),.ev-hero:has(>.pc-info){grid-template-columns:minmax(0,1fr)}
 .hero>.pc-info,.ev-hero>.pc-info{min-width:0;max-width:100%}
 .card.row>.grow,.card.row .note{min-width:0;overflow-wrap:anywhere}
+
+/* Persistent phone navigation: reserve space once, including fixed screen actions. */
+@container stage (max-width:767px){
+ .main.has-dock{--dock-space:calc(var(--dock) + 22px + var(--safe-b))}
+ .main.has-dock>.view:not(.deckmode){padding-bottom:calc(var(--dock-space) + 18px)}
+ .main.has-dock.hascta>.ctabar{margin-bottom:var(--dock-space);padding-bottom:8px}
+ .main.has-dock.replying>.dock{display:none}
+ .main.has-dock.has-reply:not(.replying)>.inputbar{display:none}
+ .main.has-dock.replying>.reply-launch{display:none}
+ html.kb .main.has-dock>.ctabar{margin-bottom:0}
+ html.kb .main.has-dock>.view:not(.deckmode){padding-bottom:24px}
+}
+@container stage (min-width:768px){.reply-launch{display:none!important}}
+.main.has-dock.has-reply.replying>.inputbar{display:flex}
 </style>
 </head>
 <body>
@@ -2818,7 +2832,7 @@ function tab(t,p){
   if(p){Object.assign(st[0].p,p);render('fade');return;}
   const v=$('#main .view');v&&v.scrollTo({top:0,behavior:'smooth'});return;
  }
- saveScroll();S.nav.tab=t;if(p)Object.assign(st[0].p,p);render('fade');
+ saveScroll();S.nav.tab=t;if(p)Object.assign(st[0].p,p);render('tab');
 }
 /** re-render current screen in place (state changed), keeping scroll */
 function refresh(){saveScroll();render(null,true);}
@@ -2826,6 +2840,9 @@ function setP(k,v){cur().p[k]=v;refresh();}
 /** switch a root sub-tab: resets that sub-tab's scroll */
 function setSub(v){const r=cur();if(r.p.sub===v)return;r.p.sub=v;r.scroll=0;render('fade');}
 
+// Ordinary routes keep global navigation; focused tasks opt out explicitly.
+const DOCKLESS=new Set(['A07','V01','MAINT','H02','D02','F07','F09','E06','E11','P02','P04','Q04','C07','C08','X08','X11']);
+const screenHasDock=(id,sc=SC[id])=>!!S.session&&!QA.maintenance&&!sc?.auth&&!DOCKLESS.has(id)&&sc?.dock!==false;
 const main=()=>$('#main');
 function render(dir,keep){
  closeAuthorMenu();
@@ -2833,15 +2850,20 @@ function render(dir,keep){
  let html;
  try{html=(sc.valid&&!sc.valid(r.p))?unavailable():sc.render(r.p,r);}
  catch(e){console.error(e);html=`${bar(L('Ошибка','Error'),{back:1})}<div class="view nodock">${empty('alert',L('Экран не загрузился','The screen did not load'),L('Попробуй открыть его ещё раз.','Try opening it again.'),`<button class="btn primary" data-act="reload">${L('Обновить','Reload')}</button>`)}</div>`;}
- const dock=S.session&&sc.root;
+ const dock=screenHasDock(r.id,sc);
  const m=main();
+ m.classList.toggle('has-dock',dock);m.classList.toggle('replying',!!keep&&m.classList.contains('replying'));
  m.innerHTML=(QA.offline?`<div class="netbar" role="status">${I.wifioff}${L('Нет соединения — показываем сохранённое','Offline — showing what’s loaded')}</div>`:'')+html+(dock?dockHTML():'');
  if(dir&&!keep&&dir!=='fade-keep')$$('#toasts .toast:not(.keep)').forEach(t=>t.remove());
  m.dataset.screen=QA.maintenance?'MAINT':r.id;
+ const reply=dock&&$(':scope>.inputbar',m);
+ m.classList.toggle('has-reply',!!reply);
+ if(reply)reply.insertAdjacentHTML('beforebegin',`<div class="ctabar reply-launch"><div class="wrap"><button class="btn soft" data-act="dockReply">${I.chat}${L('Написать ответ','Write a reply')}</button></div></div>`);
  const v=$('.view',m);
  if(v){
-  if(keep||dir==='back')v.scrollTop=r.scroll||0;
-  if(dir&&!keep){v.classList.add(dir==='back'?'enter-back':dir==='fade'?'enter-fade':'enter');}
+  if(dock)v.classList.remove('nodock');
+  if(keep||dir==='back'||dir==='tab')v.scrollTop=r.scroll||0;
+  if(dir&&!keep){v.classList.add(dir==='back'?'enter-back':(dir==='fade'||dir==='tab')?'enter-fade':'enter');}
  }
  const tb=$('#toasts');tb.className='toasts'+($('.ctabar,.inputbar',m)?' cta':dock?'':' nodock');
  renderSide();renderCtx();
@@ -2985,7 +3007,7 @@ window.addEventListener('beforeunload',e=>{if(cur()?.dirty){e.preventDefault();e
    Footers (.ctabar/.inputbar) are flex items, so the keyboard shrinks the view instead of covering them. */
 const barObserver=typeof ResizeObserver==='function'?new ResizeObserver(()=>measureBar()):null;
 function measureBar(){const m=main(),b=$(':scope>.bar',m);m.style.setProperty('--barh',b?b.getBoundingClientRect().height+'px':'0px');}
-function syncChrome(){const m=main();if(cur()?.fq)filterSections($(':scope>.view',m)||m,cur().fq);const b=$(':scope>.bar',m),ft=$(':scope>.ctabar,:scope>.inputbar',m);m.classList.toggle('hasbar',!!b&&!b.classList.contains('overlay'));m.classList.toggle('hascta',!!ft);if(ft)requestAnimationFrame(()=>$('#root').style.setProperty('--ctah',ft.getBoundingClientRect().height+'px'));measureBar();barObserver?.disconnect();if(b)barObserver?.observe(b);
+function syncChrome(){const m=main();if(cur()?.fq)filterSections($(':scope>.view',m)||m,cur().fq);const b=$(':scope>.bar',m),ft=$(':scope>.ctabar,:scope>.inputbar',m);m.classList.toggle('hasbar',!!b&&!b.classList.contains('overlay'));m.classList.toggle('hascta',!!ft);if(ft)requestAnimationFrame(()=>{const visible=$$(':scope>.ctabar,:scope>.inputbar',m).find(el=>el.getClientRects().length);if(visible)$('#root').style.setProperty('--ctah',(visible.getBoundingClientRect().height+(parseFloat(getComputedStyle(visible).marginBottom)||0))+'px');});measureBar();barObserver?.disconnect();if(b)barObserver?.observe(b);
  const v=$(':scope>.view',m);m.style.setProperty('--sc',0);if(v){const on=()=>{const k=Math.min(1,v.scrollTop/48);m.style.setProperty('--sc',k.toFixed(3));m.classList.toggle('scrolled',v.scrollTop>4);};v.addEventListener('scroll',on,{passive:true});on();}}
 // keep the focused field visible above the keyboard
 document.addEventListener('focusin',e=>{const el=e.target;if(!el.matches?.('input:not([type=checkbox]):not([type=radio]),textarea,select,[contenteditable]')||!el.closest('#main .view'))return;setTimeout(()=>{if(document.activeElement===el)el.scrollIntoView({block:'center',behavior:'smooth'});},320);});
@@ -3006,6 +3028,10 @@ function expirePair(now=Date.now()){const P=S.pair;if(!P||P.status!=='dissolved'
 }
 function requestPairRestore(){const P=S.pair;if(P?.status!=='dissolved'||expirePair())return false;const member=pairMember();if(!['me',P.with].includes(member))return false;if(!P.recovery.includes(member))P.recovery.push(member);if(P.recovery.length===2){P.status='active';P.profile.dating=false;P.profile.datingVisible=false;P.recovery=[];pairNotify('restored',String(Date.now()),{go:['Q03']});return true;}pairNotify('restoreRequested',String(P.endedAt),{go:['Q07']});return false;}
 function socialDelivery(identity,type,key,extra={}){if(identity==='couple'){pairNotify(type,key,extra);return;}S.socialDeliveries??={};for(const recipient of realMembers(identity)){const list=S.socialDeliveries[recipient]??=[];const id=type+'_'+key+'_'+recipient;if(!list.some(x=>x.id===id))list.push({id,type,to:recipient,read:false,t:Date.now(),...extra});}}
+
+// Collapse reply entry while browsing; give the composer the full bottom area on focus.
+ACT.dockReply=()=>{main().classList.add('replying');$('.inputbar textarea',main())?.focus();syncChrome();};
+document.addEventListener('focusout',()=>{const m=main();if(m?.classList.contains('replying'))requestAnimationFrame(()=>{if(!$('.inputbar',m)?.contains(document.activeElement)){m.classList.remove('replying');syncChrome();}});});
 
 /* ---- ui.js ---- */
 /* ============ SHARED COMPONENTS ============ */
@@ -3154,7 +3180,7 @@ function scrollToReply(p){const r=cur();const to=r.scrollTo||(r.scrolledTo!==p.r
  const more=$('.cm-load');if(more&&'IntersectionObserver' in window){const io=new IntersectionObserver(es=>{if(es.some(e=>e.isIntersecting)){io.disconnect();if(cur()===r&&document.contains(more))ACT.thPage();}},{rootMargin:'200px'});io.observe(more);}}
 const replyAt=a=>{const [kind,id]=a.dataset.v.split(':');const list=identifyReplies(kind,id);const c=list.find(x=>x.id===a.dataset.i)||list[+a.dataset.i];return c?{kind,id,c,list}:null;};
 ACT.rLike=a=>{const x=replyAt(a);if(!x||x.c.status||x.c.deleted||isBlocked(x.c.a))return;if(!authorGuard()||x.kind==='d'&&!communityAuthorAllowed(S.discussions.find(d=>d.id===x.id)?.c,actionAuthor(),'comment'))return;x.c.reactions??={me:!!x.c.liked};x.c.reactions[actionAuthor()]=!x.c.reactions[actionAuthor()];x.c.liked=!!x.c.reactions.me;refresh();};
-ACT.rReply=a=>{const x=replyAt(a);if(!x||x.c.status||x.c.deleted||isBlocked(x.c.a))return;const input=x.kind==='p'?'cmt':'dr';if(!$('#'+input))return;cur().replyTarget={id:x.c.id,a:x.c.a};refresh();const el=$('#'+input);el?.focus();};
+ACT.rReply=a=>{const x=replyAt(a);if(!x||x.c.status||x.c.deleted||isBlocked(x.c.a))return;const input=x.kind==='p'?'cmt':'dr';if(!$('#'+input))return;cur().replyTarget={id:x.c.id,a:x.c.a};refresh();ACT.dockReply();};
 
 ACT.rMore=a=>{const x=replyAt(a);if(!x)return;const mine=ownedIdentity(x.c.a);
  sheet(()=>({title:L('Ответ','Reply'),body:`<div class="card list">${mine?linkRow({act:'rDel',v:a.dataset.v,p:null,icon:'trash',cls:'danger',title:L('Удалить ответ','Delete reply'),noChev:1}).replace('data-act="rDel"',`data-act="rDel" data-i="${a.dataset.i}"`):`${linkRow({go:'P01',p:{id:x.c.a},icon:'me',title:L(`Профиль ${esc(pname(x.c.a))}`,`${esc(pname(x.c.a))}’s profile`)})}${linkRow({act:'report',v:'comment',icon:'flag',cls:'danger',title:L('Пожаловаться','Report'),noChev:1}).replace('data-act="report"',`data-act="report" data-who="${x.c.a}"`)}${linkRow({act:'block',v:x.c.a,icon:'block',cls:'danger',title:L(`Заблокировать ${esc(pname(x.c.a))}`,`Block ${esc(pname(x.c.a))}`),sub:L('Скроет ответы и прекратит контакт','Hides their replies and ends contact'),noChev:1})}`}</div>`}));};
@@ -3941,7 +3967,7 @@ SC.F05={title:()=>L('Публикация','Post'),valid:p=>!!postById(p.id)&&!i
  ${replyComposer(r)}
  </div></div><div class="inputbar"><textarea id="cmt" rows="1" placeholder="${L('Ответить…','Reply…')}" aria-label="${L('Ответ','Reply')}" data-in="grow" data-enter="sendComment">${esc(r.f.cmt||'')}</textarea><button class="ibtn send" data-act="sendComment" aria-label="${L('Отправить','Send')}">${I.send}</button></div>`;},after:p=>scrollToReply(p)};
 IN.grow=el=>{el.style.height='auto';const h=el.scrollHeight+2;el.style.height=Math.min(120,h)+'px';el.style.overflowY=h>120?'auto':'hidden';cur().f[el.id]=el.value;const s=el.parentNode.querySelector('.send');if(s)s.disabled=!el.value.trim();};
-ACT.focusReply=()=>{$('#cmt')?.focus();};
+ACT.focusReply=()=>ACT.dockReply();
 function sendPostReply(c,x,route,owner,session){const allowed=()=>S===owner&&S.session===session&&authorAllowed(c.a)&&postById(x.id)===x&&x.comments.includes(c)&&!c.deleted&&!isBlocked(x.author);if(!allowed())return;const repaint=()=>{if(cur()===route)refresh();};c.status='pending';repaint();net().then(()=>{if(!allowed())return;c.status='';notifyReply('p',x.id,c);repaint();}).catch(()=>{if(!allowed())return;c.status='failed';repaint();toast(L('Ответ не отправлен. Текст сохранён — можно повторить','Reply not sent. Your text is kept — you can retry'),{type:'err'});});}
 ACT.sendComment=()=>{const route=cur(),el=$('#cmt'),v=el?.value.trim();if(!v){el?.focus();return;}if(v.length>1000){toast(L('Максимум 1000 символов','1000 characters max'),{type:'err'});return;}const x=postById(route.p.id);if(!authorGuard()||!S.session||!x||x.unavailable||isBlocked(x.author))return;identifyReplies('p',x.id);const parent=x.comments.find(c=>c.id===route.replyTarget?.id);if(route.replyTarget&&(!parent||parent.deleted||isBlocked(parent.a)))return;const c={id:'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),a:actionAuthor(),sender:pairMember(),text:{ru:v,en:v},parent:parent?.id||null,t:Date.now(),status:'pending'};x.comments.push(c);route.f.cmt='';delete route.replyTarget;route.scrollTo=c.id;sendPostReply(c,x,route,S,S.session);};
 ACT.retryComment=a=>{const x=postById(cur().p.id);if(!x)return;const c=identifyReplies('p',x.id).find(c=>c.id===a.dataset.v)||x.comments[+a.dataset.v];if(!c||c.status!=='failed'||!ownedIdentity(c.a))return;sendPostReply(c,x,cur(),S,S.session);};
@@ -4431,7 +4457,7 @@ function likePerson(id,src){if(!authorGuard()||!PEOPLE[id]||relatedFor(actionAut
  const theyLike=social().likesIn.some(l=>l.p===id)||QA.autoApprove;
  if(theyLike){social().matches.unshift({p:id,t:Date.now()});social().likesIn=social().likesIn.filter(l=>l.p!==id);if(actionAuthor()==='couple')pairNotify('match',id,{p:id,go:['H02',{id,actor:'couple'}]});else S.notifs.unshift({id:'n'+Date.now(),type:'match',p:id,t:Date.now(),read:true,go:['H01']});ensureThread(id,actionAuthor());showMatch(id);}
  else{if(!social().likesOut.some(l=>l.p===id))social().likesOut.unshift({p:id,src,t:Date.now()});toast(authorProfile().dating&&!authorProfile().datingVisible?L(`Симпатия отправлена. ${pname(id)} увидит твою анкету в «Симпатиях»`,`Like sent. ${pname(id)} will see your profile in Likes`):L(`Симпатия отправлена. Чат откроется, если ${pname(id)} ответит взаимностью`,`Like sent. A chat opens if ${pname(id)} likes you back`),{type:'ok'});}
- renderSide();const d=$('.dock');if(d&&S.session&&SC[cur().id].root){d.outerHTML=dockHTML();}
+ renderSide();const d=$('.dock');if(d&&screenHasDock(cur().id)){d.outerHTML=dockHTML();}
 }
 /* D08 — it’s mutual */
 function showMatch(id){const m=$('#matchLayer');const sh=sharedSummary(id);

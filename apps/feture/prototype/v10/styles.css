@@ -1998,3 +1998,17 @@ body.qa-viewport{overflow:auto;display:block}body.qa-viewport .stage{position:re
 .hero:has(>.pc-info),.ev-hero:has(>.pc-info){grid-template-columns:minmax(0,1fr)}
 .hero>.pc-info,.ev-hero>.pc-info{min-width:0;max-width:100%}
 .card.row>.grow,.card.row .note{min-width:0;overflow-wrap:anywhere}
+
+/* Persistent phone navigation: reserve space once, including fixed screen actions. */
+@container stage (max-width:767px){
+ .main.has-dock{--dock-space:calc(var(--dock) + 22px + var(--safe-b))}
+ .main.has-dock>.view:not(.deckmode){padding-bottom:calc(var(--dock-space) + 18px)}
+ .main.has-dock.hascta>.ctabar{margin-bottom:var(--dock-space);padding-bottom:8px}
+ .main.has-dock.replying>.dock{display:none}
+ .main.has-dock.has-reply:not(.replying)>.inputbar{display:none}
+ .main.has-dock.replying>.reply-launch{display:none}
+ html.kb .main.has-dock>.ctabar{margin-bottom:0}
+ html.kb .main.has-dock>.view:not(.deckmode){padding-bottom:24px}
+}
+@container stage (min-width:768px){.reply-launch{display:none!important}}
+.main.has-dock.has-reply.replying>.inputbar{display:flex}

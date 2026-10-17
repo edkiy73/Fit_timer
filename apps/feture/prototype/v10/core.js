@@ -363,7 +363,7 @@ function tab(t,p){
   if(p){Object.assign(st[0].p,p);render('fade');return;}
   const v=$('#main .view');v&&v.scrollTo({top:0,behavior:'smooth'});return;
  }
- saveScroll();S.nav.tab=t;if(p)Object.assign(st[0].p,p);render('fade');
+ saveScroll();S.nav.tab=t;if(p)Object.assign(st[0].p,p);render('tab');
 }
 /** re-render current screen in place (state changed), keeping scroll */
 function refresh(){saveScroll();render(null,true);}
@@ -371,6 +371,9 @@ function setP(k,v){cur().p[k]=v;refresh();}
 /** switch a root sub-tab: resets that sub-tab's scroll */
 function setSub(v){const r=cur();if(r.p.sub===v)return;r.p.sub=v;r.scroll=0;render('fade');}
 
+// Ordinary routes keep global navigation; focused tasks opt out explicitly.
+const DOCKLESS=new Set(['A07','V01','MAINT','H02','D02','F07','F09','E06','E11','P02','P04','Q04','C07','C08','X08','X11']);
+const screenHasDock=(id,sc=SC[id])=>!!S.session&&!QA.maintenance&&!sc?.auth&&!DOCKLESS.has(id)&&sc?.dock!==false;
 const main=()=>$('#main');
 function render(dir,keep){
  closeAuthorMenu();
@@ -378,15 +381,20 @@ function render(dir,keep){
  let html;
  try{html=(sc.valid&&!sc.valid(r.p))?unavailable():sc.render(r.p,r);}
  catch(e){console.error(e);html=`${bar(L('Ошибка','Error'),{back:1})}<div class="view nodock">${empty('alert',L('Экран не загрузился','The screen did not load'),L('Попробуй открыть его ещё раз.','Try opening it again.'),`<button class="btn primary" data-act="reload">${L('Обновить','Reload')}</button>`)}</div>`;}
- const dock=S.session&&sc.root;
+ const dock=screenHasDock(r.id,sc);
  const m=main();
+ m.classList.toggle('has-dock',dock);m.classList.toggle('replying',!!keep&&m.classList.contains('replying'));
  m.innerHTML=(QA.offline?`<div class="netbar" role="status">${I.wifioff}${L('Нет соединения — показываем сохранённое','Offline — showing what’s loaded')}</div>`:'')+html+(dock?dockHTML():'');
  if(dir&&!keep&&dir!=='fade-keep')$$('#toasts .toast:not(.keep)').forEach(t=>t.remove());
  m.dataset.screen=QA.maintenance?'MAINT':r.id;
+ const reply=dock&&$(':scope>.inputbar',m);
+ m.classList.toggle('has-reply',!!reply);
+ if(reply)reply.insertAdjacentHTML('beforebegin',`<div class="ctabar reply-launch"><div class="wrap"><button class="btn soft" data-act="dockReply">${I.chat}${L('Написать ответ','Write a reply')}</button></div></div>`);
  const v=$('.view',m);
  if(v){
-  if(keep||dir==='back')v.scrollTop=r.scroll||0;
-  if(dir&&!keep){v.classList.add(dir==='back'?'enter-back':dir==='fade'?'enter-fade':'enter');}
+  if(dock)v.classList.remove('nodock');
+  if(keep||dir==='back'||dir==='tab')v.scrollTop=r.scroll||0;
+  if(dir&&!keep){v.classList.add(dir==='back'?'enter-back':(dir==='fade'||dir==='tab')?'enter-fade':'enter');}
  }
  const tb=$('#toasts');tb.className='toasts'+($('.ctabar,.inputbar',m)?' cta':dock?'':' nodock');
  renderSide();renderCtx();
@@ -530,7 +538,7 @@ window.addEventListener('beforeunload',e=>{if(cur()?.dirty){e.preventDefault();e
    Footers (.ctabar/.inputbar) are flex items, so the keyboard shrinks the view instead of covering them. */
 const barObserver=typeof ResizeObserver==='function'?new ResizeObserver(()=>measureBar()):null;
 function measureBar(){const m=main(),b=$(':scope>.bar',m);m.style.setProperty('--barh',b?b.getBoundingClientRect().height+'px':'0px');}
-function syncChrome(){const m=main();if(cur()?.fq)filterSections($(':scope>.view',m)||m,cur().fq);const b=$(':scope>.bar',m),ft=$(':scope>.ctabar,:scope>.inputbar',m);m.classList.toggle('hasbar',!!b&&!b.classList.contains('overlay'));m.classList.toggle('hascta',!!ft);if(ft)requestAnimationFrame(()=>$('#root').style.setProperty('--ctah',ft.getBoundingClientRect().height+'px'));measureBar();barObserver?.disconnect();if(b)barObserver?.observe(b);
+function syncChrome(){const m=main();if(cur()?.fq)filterSections($(':scope>.view',m)||m,cur().fq);const b=$(':scope>.bar',m),ft=$(':scope>.ctabar,:scope>.inputbar',m);m.classList.toggle('hasbar',!!b&&!b.classList.contains('overlay'));m.classList.toggle('hascta',!!ft);if(ft)requestAnimationFrame(()=>{const visible=$$(':scope>.ctabar,:scope>.inputbar',m).find(el=>el.getClientRects().length);if(visible)$('#root').style.setProperty('--ctah',(visible.getBoundingClientRect().height+(parseFloat(getComputedStyle(visible).marginBottom)||0))+'px');});measureBar();barObserver?.disconnect();if(b)barObserver?.observe(b);
  const v=$(':scope>.view',m);m.style.setProperty('--sc',0);if(v){const on=()=>{const k=Math.min(1,v.scrollTop/48);m.style.setProperty('--sc',k.toFixed(3));m.classList.toggle('scrolled',v.scrollTop>4);};v.addEventListener('scroll',on,{passive:true});on();}}
 // keep the focused field visible above the keyboard
 document.addEventListener('focusin',e=>{const el=e.target;if(!el.matches?.('input:not([type=checkbox]):not([type=radio]),textarea,select,[contenteditable]')||!el.closest('#main .view'))return;setTimeout(()=>{if(document.activeElement===el)el.scrollIntoView({block:'center',behavior:'smooth'});},320);});
@@ -551,3 +559,7 @@ function expirePair(now=Date.now()){const P=S.pair;if(!P||P.status!=='dissolved'
 }
 function requestPairRestore(){const P=S.pair;if(P?.status!=='dissolved'||expirePair())return false;const member=pairMember();if(!['me',P.with].includes(member))return false;if(!P.recovery.includes(member))P.recovery.push(member);if(P.recovery.length===2){P.status='active';P.profile.dating=false;P.profile.datingVisible=false;P.recovery=[];pairNotify('restored',String(Date.now()),{go:['Q03']});return true;}pairNotify('restoreRequested',String(P.endedAt),{go:['Q07']});return false;}
 function socialDelivery(identity,type,key,extra={}){if(identity==='couple'){pairNotify(type,key,extra);return;}S.socialDeliveries??={};for(const recipient of realMembers(identity)){const list=S.socialDeliveries[recipient]??=[];const id=type+'_'+key+'_'+recipient;if(!list.some(x=>x.id===id))list.push({id,type,to:recipient,read:false,t:Date.now(),...extra});}}
+
+// Collapse reply entry while browsing; give the composer the full bottom area on focus.
+ACT.dockReply=()=>{main().classList.add('replying');$('.inputbar textarea',main())?.focus();syncChrome();};
+document.addEventListener('focusout',()=>{const m=main();if(m?.classList.contains('replying'))requestAnimationFrame(()=>{if(!$('.inputbar',m)?.contains(document.activeElement)){m.classList.remove('replying');syncChrome();}});});
