@@ -272,6 +272,8 @@ function freshState(persona){
   searchRecent:full?['shibari','Mia','Kai']:[],
   quota:{max:10,used:full?1:0},
   ui:{},
+  // an invitation to form a couple that waits in the decisions inbox (the main persona is not in a couple yet)
+  pairIncoming:persona==='full'?{from:'sofi',t:ago(2),status:'pending'}:null,
   // in the pair persona Kira is my partner's separate account, not a like/request in my queues
   pair:persona==='pair'?{id:'pair_alex_kira_seed',status:'active',with:'kira',since:ago(24*40),name:{ru:'Alex и Kira',en:'Alex & Kira'},
    desc:{ru:'Пара, вместе год. Отвечаем по очереди, о встречах договариваемся вдвоём.',en:'A couple, together a year. We reply in turns and agree on meetings together.'},
