@@ -55,7 +55,7 @@ const profGo=id=>id==='couple'?'data-go="Q03"':id==='me'?'data-go="P03"':`data-g
 /** avatar + name as one link to the profile; used where a row has its own other actions */
 const whoLink=(id,cls='xs',extra='')=>`<button class="plink" ${profGo(id)} aria-label="${esc(L(`Профиль: ${pname(id)}`,`Profile: ${pname(id)}`))}">${av(id,cls)}</button>`;
 function personRow(id,o={}){
- return `<button class="li" ${profGo(id)}>${av(id,o.round?'round':'')}<span class="tx"><b>${esc(pname(id))}${person(id).dating&&person(id).age?`, ${person(id).age}`:''}</b><small>${o.sub||esc(whoLine(id))}</small></span>${o.right||I.chev}</button>`;
+ return `<button class="li" ${profGo(id)}>${av(id,o.round?'round':'')}<span class="tx"><b>${esc(pname(id))}${person(id).dating&&person(id).age?`, ${person(id).age}`:''}${nameBadges(person(id))}</b><small>${o.sub||esc(whoLine(id))}</small></span>${o.right||I.chev}</button>`;
 }
 
 /* ---------- posts ---------- */

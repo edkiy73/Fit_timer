@@ -150,3 +150,10 @@ console.log('PASS unified profile editor saves rich private text for personal an
  run("coupleProfile();S.pair.profile.dating=true;S.datingActor='me';social('couple').likesOut.push({p:'mia',src:'discover',t:Date.now()})");assert.ok(run("otherDoneChip('mia')").includes('like sent')||run("otherDoneChip('mia')").includes('симпатия отправлена'),'the card says the couple already liked this person');
  run("S.datingActor='couple'");assert.equal(run("otherDoneChip('mia')").includes('Alex'),false,'the chip names the other identity, not the acting one');
  console.log('PASS events in the feed: ranking, limits, off/mine modes, hide; discovery card shows the other identity’s earlier action');}
+// One identity look: every pair avatar is two overlapping circles, names carry the same badges in lists and cards.
+{prepare('X01',{});
+ for(const id of ['tomeva','lenamax','nikajonas','couple']){const h=run(`av('${id}','sm')`);assert.ok(h.includes('av pair')&&(h.match(/class="avh/g)||[]).length===2,'pair avatar has two circles: '+id);}
+ assert.ok(!run("av('mia','sm')").includes('avh'),'a person avatar is a single circle');
+ const verified=run("Object.keys(PEOPLE).find(id=>PEOPLE[id].verified&&!PEOPLE[id].pair)");assert.ok(verified);
+ assert.ok(run(`personRow('${verified}')`).includes('nbadge'),'list rows show verification badges');
+ console.log('PASS identity look: pair avatars are always two circles; badges follow names in lists');}
