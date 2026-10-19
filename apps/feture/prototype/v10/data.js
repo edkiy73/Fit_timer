@@ -143,7 +143,7 @@ const COMMUNITIES={
  first:{name:{ru:'Новичкам',en:'First Steps'},plate:'moss',privacy:'open',members:2310,city:'online',topics:['talk','aftercare','slow'],mods:['maya','noa'],
   desc:{ru:'Глупых вопросов нет. Объясняем термины, делимся опытом, помогаем начать безопасно.',en:'No stupid questions. Explaining terms, sharing experience, helping you start safely.'},
   rules:[{ru:'Отвечаем доброжелательно.',en:'Answer kindly.'},{ru:'Не просим и не отправляем откровенные фото.',en:'Don’t ask for or send explicit photos.'}]},
- poly:{name:{ru:'Пары и поли',en:'Couples & Poly'},plate:'amber',cover:'/images/v10-content/community-poly.webp',privacy:'open',members:905,city:'berlin',topics:['intimacy','talk'],mods:['tomeva'],
+ poly:{name:{ru:'Пары и поли',en:'Couples & Poly'},plate:'amber',cover:'/images/v10-content/community-poly.webp',privacy:'open',members:905,city:'berlin',topics:['intimacy','talk'],mods:['eva'],
   desc:{ru:'Договорённости, ревность, календари и всё, что помогает отношениям нескольких людей.',en:'Agreements, jealousy, calendars and everything that helps multi-partner relationships.'},
   rules:[{ru:'Пары пишут от имени обоих только с согласия обоих.',en:'Couples post for both only with both agreeing.'}]},
  circle:{name:{ru:'Круг общения',en:'Conversation Circle'},plate:'sea',cover:'/images/v10-content/community-slow.webp',privacy:'closed',members:1,knownMembers:true,seedMembers:['kai'],city:'online',topics:['talk','slow'],mods:['kai'],
@@ -160,7 +160,7 @@ const DISCUSSIONS=[
  {id:'d6',c:'first',author:'dan',t:ago(20),title:{ru:'Как сказать партнёру о своём интересе?',en:'How do I tell my partner about my interest?'},text:{ru:'Встречаемся три года, боюсь, что не поймёт.',en:'We’ve been together three years, I’m afraid they won’t understand.'},replies:[['maya',{ru:'Начни с карты интересов — можно показать только выбранное.',en:'Start with your map — you can share only what you choose.'}],['kira',{ru:'Мне помог разговор не в спальне, а на прогулке.',en:'For me it helped to talk on a walk, not in the bedroom.'}]]},
  {id:'d7',c:'queer',author:'mia',t:ago(26),title:{ru:'Встреча в субботу: кто идёт?',en:'Saturday meetup: who’s coming?'},text:{ru:'Только для участников группы.',en:'Members only.'},replies:[]},
  {id:'d8',c:'latex',author:'leon',t:ago(70),title:{ru:'Уход: тальк или силикон?',en:'Care: talc or silicone?'},text:{ru:'Спор вечный, давайте с фактами.',en:'The eternal debate — facts please.'},replies:[]},
- {id:'d9',c:'poly',author:'tomeva',t:ago(12),title:{ru:'Общий календарь: ваш опыт',en:'Shared calendar: your experience'},text:{ru:'Пробуем общий календарь на троих. Что работает у вас?',en:'We’re trying a shared calendar for three. What works for you?'},replies:[['kai',{ru:'Цвета по людям и правило «не двигать чужое».',en:'Colour per person and a “don’t move others’ events” rule.'}]]},
+ {id:'d9',c:'poly',author:'eva',t:ago(12),title:{ru:'Общий календарь: ваш опыт',en:'Shared calendar: your experience'},text:{ru:'Пробуем общий календарь на троих. Что работает у вас?',en:'We’re trying a shared calendar for three. What works for you?'},replies:[['kai',{ru:'Цвета по людям и правило «не двигать чужое».',en:'Colour per person and a “don’t move others’ events” rule.'}]]},
 ];
 
 const POSTS=[
@@ -222,7 +222,7 @@ function newMe(){return{
 function freshState(persona){
  const full=persona!=='new';
  const st={
-  persona,lang:'ru',session:null,author:'me',
+  persona,lang:'ru',session:null,datingActor:'me',
   me:full?fullMe():newMe(),
   follows:new Set(full?['maya','mia','kai','noa']:[]),
   graph:Object.fromEntries(Object.entries(FOLLOW_SEED).map(([k,v])=>[k,new Set(full?v:v.filter(x=>x!=='me'))])),
@@ -273,10 +273,10 @@ function freshState(persona){
   quota:{max:10,used:full?1:0},
   ui:{},
   // in the pair persona Kira is my partner's separate account, not a like/request in my queues
-  pair:persona==='pair'?{status:'active',with:'kira',since:ago(24*40),name:{ru:'Alex и Kira',en:'Alex & Kira'},
+  pair:persona==='pair'?{id:'pair_alex_kira_seed',status:'active',with:'kira',since:ago(24*40),name:{ru:'Alex и Kira',en:'Alex & Kira'},
    desc:{ru:'Пара, вместе год. Отвечаем по очереди, о встречах договариваемся вдвоём.',en:'A couple, together a year. We reply in turns and agree on meetings together.'},
    rules:{ru:'Сначала переписка с обоими, потом встреча в людном месте.',en:'Chat with both of us first, then meet somewhere public.'},
-   proposal:{by:'kira',field:'desc',text:{ru:'Пара, вместе год. Любим спокойный темп и честные разговоры.',en:'A couple, together a year. We like a slow pace and honest talks.'},t:ago(5)},
+   proposal:null,
    grants:[{p:'tomeva',scopes:['info'],me:'yes',partner:'yes',until:NOW+3*DAY},{p:'mia',scopes:['photos'],me:'yes',partner:'pending',until:null}]}:null,
  };
  if(persona==='pair'){st.likesIn=st.likesIn.filter(x=>x.p!=='kira');st.reqOut=st.reqOut.filter(x=>x.p!=='kira');st.deckOrder=st.deckOrder.filter(x=>x!=='kira');st.communityRequests.circle=st.communityRequests.circle.filter(x=>x.p!=='kira');st.notifs=st.notifs.filter(x=>x.p!=='kira');st.follows.add('kira');st.graph.kira.add('me');}
@@ -284,4 +284,5 @@ function freshState(persona){
  if(full){st.extraEvents.e8={title:{ru:'Клуб чтения: «Больше двух»',en:'Book club: “More Than Two”'},type:'talk',format:'online',start:at(8,19),end:at(8,20,30),tz:'Europe/Berlin',price:null,organizer:'me',community:'slow',approval:true,plate:'plum',link:'https://meet.feture.app/bookclub',desc:{ru:'Обсуждаем по главе в неделю. Камера по желанию.',en:'One chapter a week. Camera optional.'},reqs:[],q:[{ru:'Читал(а) ли книгу раньше?',en:'Have you read the book before?'}],status:'published',apps:[{p:'kira',status:'pending',answer:{ru:'Нет, начну с вами',en:'No, I’ll start with you'}},{p:'ari',status:'approved',answer:{ru:'Да, дважды',en:'Yes, twice'}},{p:'lina',status:'pending',answer:{ru:'Частично',en:'Partly'}}],announce:[]};}
  return st;
 }
+
 

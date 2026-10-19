@@ -2012,3 +2012,6 @@ body.qa-viewport{overflow:auto;display:block}body.qa-viewport .stage{position:re
 }
 @container stage (min-width:768px){.reply-launch{display:none!important}}
 .main.has-dock.has-reply.replying>.inputbar{display:flex}
+
+
+.author-trigger{max-width:min(220px,46vw)}.author-trigger>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.bar>.author-picker{flex:0 1 auto;min-width:0}.compose .author-picker{max-width:100%}.author-trigger:disabled{opacity:1}.pair-status:empty{display:none}@media(max-width:480px){.bar:has(>.author-picker){flex-wrap:wrap}.bar>.author-picker{order:3;flex-basis:100%}.bar>.author-picker .author-trigger{max-width:100%}.bar>.author-picker .av{width:24px;height:24px}.bar>.author-picker .author-trigger{min-height:36px;font-size:12px}.bar:has(>.author-picker)>.note{display:none}}
