@@ -24,7 +24,7 @@ SC.D03={root:1,tab:'people',title:()=>L('Люди','People'),render:(p,r)=>{
  if(sub==='matches')return head+`<div class="view"><div class="wrap">${matchesBody()}</div></div>`;
  if(!DATING_LIVE())return head+`<div class="view"><div class="wrap">${datingSoon()}</div></div>`;
  if(!authorProfile().dating)return head+`<div class="view"><div class="wrap">${datingOff()}</div></div>`;
- const list=pool();
+ let list=pool();const requested=S.ui.datingCandidate;if(requested&&list.includes(requested)){list=[requested,...list.filter(id=>id!==requested)];S.deckOrder=[requested,...S.deckOrder.filter(id=>id!==requested)];}delete S.ui.datingCandidate;
  if(!list.length)return head+`<div class="view"><div class="wrap">${deckEmpty()}</div></div>`;
  return head+`<div class="view deckmode"><div class="deck" id="deck">${deckInner(list)}</div></div>`;},
  after:(p)=>{if((p.sub||'discover')==='discover'&&$('#deck'))initDeck();fillJars();}};
@@ -79,7 +79,7 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
   <div class="sec">${L('Интересы','Interests')}</div>${jarShelf(pubJars(id),{pre:1,act:'topic',who:id,moreAct:'allJars'})}
   ${post?`<div class="sec">${L('Публикация','Post')} · ${F.rel(post.t)}</div><button class="quote" data-go="F05" data-id="${post.id}"><p>${esc(T(post.text))}</p>${ic('chev',18)}</button>`:''}
   <div class="sec">${L('Расширенный профиль','Private profile')}</div><div data-deck-private="${id}">${veilBlock(id)}</div>
-  <div class="pc-foot"><button class="btn soft" data-go="P01" data-id="${id}">${L('Полный профиль','Full profile')}</button><button class="btn soft" data-act="follow" data-v="${id}">${social().follows.has(id)?L('Ты подписан(а)','Following'):L('Подписаться','Follow')}</button></div>
+  <div class="pc-foot"><button class="btn soft" data-go="P01" data-p='${esc(JSON.stringify({id,actor:datingActor()}))}'>${L('Полный профиль','Full profile')}</button><button class="btn soft" data-act="follow" data-v="${id}">${social('me').follows.has(id)?L('Ты подписан(а)','Following'):L('Подписаться','Follow')}</button></div>
   <p class="note center mt12">${L('Подписка показывает посты, но не открывает чат','Following shows posts but doesn’t open a chat')}</p>
  </div></article>`;}
 /** private layer: no real data is sent before access — the veil hides placeholders only */
@@ -117,26 +117,26 @@ function decide(dir){if(deckBusy)return;const id=$('#deck .pc.top')?.dataset.id|
  deckBusy=true;if(c){c.classList.add('fly');c.style.transform=`translateX(${dir*130}%) rotate(${dir*16}deg)`;c.style.setProperty(dir>0?'--l':'--n',1);}
  const nx=$('#deck .pc.next');if(nx){nx.style.transform='';nx.classList.add('promote');}
  social().dhist=social().dhist||[];social().dhist.push({id,dir});social().decided[id]=dir;social().history.unshift({p:id,d:dir,t:Date.now()});if(dir>0)likePerson(id,'discover');
- setTimeout(()=>{deckBusy=false;if(!validAuthor(ticket)||S!==owner||cur()!==route||!S.session||!authorProfile().dating)return;deckRender();},c?290:0);
+ setTimeout(()=>{deckBusy=false;if(!validAuthor(ticket)||datingActor()!==ticket.id||S!==owner||cur()!==route||!S.session||!authorProfile().dating)return;deckRender();},c?290:0);
 }
 ACT.decide=a=>decide(+a.dataset.v);
 ACT.undo=()=>{const h=social().dhist||[];if(h.length&&isMatch(h.at(-1).id)){toast(L('Уже взаимно. Управлять контактом можно в Чатах.','Already mutual. Manage this connection in Chats.'),{type:'info',action:{label:L('Чаты','Chats'),fn:()=>tab('chats')}});return;}if(!h.length){toast(L('Пока некого возвращать','Nothing to bring back yet'),{type:'info'});return;}
  if((social().undos||0)>=1&&!S.me.premium){premiumSheet('undo');return;}
  const last=h.pop();delete social().decided[last.id];social().history.shift();social().likesOut=social().likesOut.filter(l=>l.p!==last.id);social().undos=(social().undos||0)+1;undoAnim=last.dir;deckRender();toast(L('Вернули предыдущую анкету','Previous profile is back'),{type:'ok'});};
 /** a personal like; only a mutual like opens a chat (R01) */
-function likePerson(id,src){if(!authorGuard()||!PEOPLE[id]||relatedFor(actionAuthor(),id)||isBlocked(id)||isMatch(id)||!authorProfile().socialLikes&&src!=='discover'||src==='discover'&&!authorProfile().dating||!PEOPLE[id].dating&&!PEOPLE[id].socialLikes)return;
+function likePerson(id,src){if(src==='profile'&&(actionAuthor()!=='me'||PEOPLE[id]?.pair))return;if(actionAuthor()==='couple'&&!canAct('dating','couple'))return;if(!authorGuard()||!PEOPLE[id]||relatedFor(actionAuthor(),id)||isBlocked(id)||isMatch(id)||!authorProfile().socialLikes&&src!=='discover'||src==='discover'&&!authorProfile().dating||!PEOPLE[id].dating&&!PEOPLE[id].socialLikes)return;
  const theyLike=social().likesIn.some(l=>l.p===id)||QA.autoApprove;
  if(theyLike){social().matches.unshift({p:id,t:Date.now()});social().likesIn=social().likesIn.filter(l=>l.p!==id);if(actionAuthor()==='couple')pairNotify('match',id,{p:id,go:['H02',{id,actor:'couple'}]});else S.notifs.unshift({id:'n'+Date.now(),type:'match',p:id,t:Date.now(),read:true,go:['H01']});ensureThread(id,actionAuthor());showMatch(id);}
- else{if(!social().likesOut.some(l=>l.p===id))social().likesOut.unshift({p:id,src,t:Date.now()});toast(authorProfile().dating&&!authorProfile().datingVisible?L(`Симпатия отправлена. ${pname(id)} увидит твою анкету в «Симпатиях»`,`Like sent. ${pname(id)} will see your profile in Likes`):L(`Симпатия отправлена. Чат откроется, если ${pname(id)} ответит взаимностью`,`Like sent. A chat opens if ${pname(id)} likes you back`),{type:'ok'});}
+ else{if(!social().likesOut.some(l=>l.p===id))social().likesOut.unshift({p:id,src,initiator:pairMember(),pairId:actionAuthor()==='couple'?S.pair.id:null,t:Date.now()});toast(authorProfile().dating&&!authorProfile().datingVisible?L(`Симпатия отправлена. ${pname(id)} увидит твою анкету в «Симпатиях»`,`Like sent. ${pname(id)} will see your profile in Likes`):L(`Симпатия отправлена. Чат откроется, если ${pname(id)} ответит взаимностью`,`Like sent. A chat opens if ${pname(id)} likes you back`),{type:'ok'});}
  renderSide();const d=$('.dock');if(d&&screenHasDock(cur().id)){d.outerHTML=dockHTML();}
 }
 /* D08 — it’s mutual */
-function showMatch(id){const m=$('#matchLayer');const sh=sharedSummary(id);
+function showMatch(id){S.ui.matchContext={id,actor:actionAuthor(),ticket:authorTicket()};const m=$('#matchLayer');const sh=sharedSummary(id);
  m.innerHTML=`<div class="match" role="dialog" aria-modal="true" aria-label="${L('Это взаимно','It’s mutual')}"><div class="pair">${av(actionAuthor(),'')}<span class="heart">${I.heartf}</span>${av(id,'')}</div><h2>${L('Это взаимно','It’s mutual')}</h2><p>${L(`Ты и ${esc(pname(id))} понравились друг другу. ${sh}.`,`You and ${esc(pname(id))} like each other. ${sh}.`)}</p>
  <button class="btn primary" data-act="matchChat" data-v="${id}">${I.chat}${L('Написать первым','Send the first message')}</button><button class="btn soft" data-act="matchClose">${L('Смотреть дальше','Keep browsing')}</button><p class="note mt16">${L('Расширенный профиль остаётся закрытым — его открывают отдельно.','The private profile stays closed — it’s shared separately.')}</p></div>`;
  m.style.pointerEvents='auto';$('.match .btn',m).focus();}
 ACT.matchClose=()=>{const m=$('#matchLayer');m.innerHTML='';m.style.pointerEvents='none';if(cur().id==='D03')refresh();};
-ACT.matchChat=a=>{ACT.matchClose();openChat(a.dataset.v);};
+ACT.matchChat=a=>{const context=S.ui.matchContext;ACT.matchClose();if(!context||context.id!==a.dataset.v||!validAuthor(context.ticket))return;openChat(context.id,context.actor);};
 
 /* D10 — nobody left */
 function deckEmpty(){const n=dfCount(social().filters.dating);return `<div class="empty" style="padding-top:4px"><div class="radar"><i></i><i></i><i></i><span class="me">${S.me.photo?`<img src="${IMG(S.me.photo)}" alt="" style="width:100%;height:100%;object-fit:cover">`:plate('rose')}</span><span class="dot" style="left:18px;top:60px;position:absolute;overflow:hidden">${plate('sea')}</span><span class="dot" style="right:24px;top:150px;width:22px;height:22px;position:absolute;overflow:hidden">${plate('amber')}</span></div>
@@ -152,16 +152,16 @@ function likesBody(r){const k=r.p.lk||'in';const inc=social().likesIn.filter(l=>
  if(!inc.length)return t+empty('heart',L('Пока никто не отправил симпатию','No likes yet'),L('Пройденные тесты и пара публикаций помогают людям найти тебя.','Quizzes and a couple of posts help people find you.'),`<button class="btn soft" data-go="P02">${L('Дополнить профиль','Improve your profile')}</button>`);
  return t+`<p class="note" style="margin:0 0 12px">${L('Ответная симпатия сразу откроет чат.','Liking back opens a chat right away.')}</p><div class="likes">${inc.map((l,i)=>`<div class="lk" style="animation-delay:${i*50}ms"><button style="position:absolute;inset:0" data-go="P01" data-id="${l.p}" aria-label="${esc(pname(l.p))}">${bigPhoto(l.p,0)}</button><span class="src">${l.src==='profile'?L('из профиля','from profile'):L('из подборки','from discover')}</span><span class="inf"><b>${esc(pname(l.p))}${person(l.p).age?', '+person(l.p).age:''}</b><small>${esc(sharedSummary(l.p))}</small></span><button class="lkb" data-act="likeBack" data-v="${l.p}" aria-label="${L('Ответить симпатией','Like back')}">${I.heartf}</button></div>`).join('')}</div>`;}
 ACT.lkTab=a=>{cur().p.lk=a.dataset.v;refresh();};
-ACT.likeBack=a=>{if(!authorProfile().dating&&!authorProfile().socialLikes){toast(L('Сначала включи симпатии в настройках приватности','Turn on likes in privacy settings first'),{type:'warn'});return;}run(a,()=>{likePerson(a.dataset.v,'likes');if(cur().id==='D03')refresh();},{ms:300});};
-ACT.unlike=a=>{const id=a.dataset.v;const prev=social().likesOut.slice();run(a,()=>{social().likesOut=social().likesOut.filter(l=>l.p!==id);refresh();},{ok:L('Симпатия отменена','Like withdrawn'),undo:()=>{social().likesOut=prev;refresh();}});};
+ACT.likeBack=a=>{const ticket=authorTicket();if(!authorProfile().dating&&!authorProfile().socialLikes){toast(L('Сначала включи симпатии в настройках приватности','Turn on likes in privacy settings first'),{type:'warn'});return;}run(a,()=>{if(!validAuthor(ticket))return;likePerson(a.dataset.v,'likes');if(cur().id==='D03')refresh();},{ms:300});};
+ACT.unlike=a=>{const id=a.dataset.v,ticket=authorTicket(),st=social();const prev=st.likesOut.slice();run(a,()=>{if(!validAuthor(ticket))return;st.likesOut=st.likesOut.filter(l=>l.p!==id);refresh();},{ok:L('Симпатия отменена','Like withdrawn'),undo:()=>{if(!validAuthor(ticket))return;st.likesOut=prev;refresh();}});};
 
 /* D07 — matches */
 function matchesBody(){const ms=social().matches.filter(m=>!isBlocked(m.p));
  if(!ms.length)return empty('chat',L('Совпадений пока нет','No matches yet'),L('Совпадение — это взаимная симпатия. Тогда откроется личный чат.','A match is a mutual like. That’s when a private chat opens.'));
  return `<p class="note" style="margin:0 0 6px">${L('Совпадения — взаимные симпатии. С ними можно переписываться.','Matches are mutual likes. You can chat with them.')}</p><div class="card list">${ms.map(m=>`<div class="li">${av(m.p,'round')}<button class="tx" data-go="P01" data-id="${m.p}" style="text-align:left"><b>${esc(pname(m.p))}</b><small>${L('совпали','matched')} ${F.rel(m.t)} · ${esc(sharedSummary(m.p))}</small></button><button class="btn sm ${S.threads[m.p]?'soft':'primary'}" data-act="openChat" data-v="${m.p}">${S.threads[m.p]?L('Чат','Chat'):L('Написать','Message')}</button></div>`).join('')}</div>`;}
 ACT.openChat=a=>openChat(a.dataset.v,a.dataset.actor||actionAuthor());
-function ensureThread(id,actor=actionAuthor()){const st=social(actor);if(!st)return null;const t=st.threads[id]??={msgs:[],unread:0,fresh:true};t.actor=actor;t.target=id;t.members=[...new Set([...realMembers(actor),...realMembers(id)])];t.pair=t.members.length>2;t.readBy??={};return t;}
-function openChat(id,actor=actionAuthor()){if(!PEOPLE[id]||!authorAllowed(actor)||relatedFor(actor,id)||isBlocked(id)||!isMatch(id,actor)&&!social(actor)?.threads[id]?.ended){toast(L('Чат доступен только после взаимной симпатии выбранных профилей.','Chat requires a mutual like between the selected profiles.'),{type:'warn'});return;}ensureThread(id,actor);social(actor).archived.delete(id);if(S.nav.tab!=='chats'){S.nav.tab='chats';S.nav.stacks.chats.length=1;}go('H02',{id,actor});}
+function ensureThread(id,actor=actionAuthor()){const st=social(actor);if(!st)return null;const t=st.threads[id]??={msgs:[],unread:0,fresh:true};t.actor??=actor;t.target??=id;t.members??=[...new Set([...realMembers(actor),...realMembers(id)])];t.pairId??=actor==='couple'?S.pair?.id:null;t.pair=t.members.length>2;t.readBy??={};return t;}
+function openChat(id,actor=actionAuthor()){if(!PEOPLE[id]||!chatReadable(id,actor)||relatedFor(actor,id)||isBlocked(id)||!isMatch(id,actor)&&!social(actor)?.threads[id]?.ended){toast(L('Чат доступен только после взаимной симпатии выбранных профилей.','Chat requires a mutual like between the selected profiles.'),{type:'warn'});return;}ensureThread(id,actor);social(actor).archived.delete(id);if(S.nav.tab!=='chats'){S.nav.tab='chats';S.nav.stacks.chats.length=1;}go('H02',{id,actor});}
 
 /* D04 — dating filters: only fields people opened for dating */
 /* D04 — dating filters: a popup like every other filter (round 5). The draft lives in S.ui.df until «Показать»;
@@ -240,3 +240,4 @@ ACT.d2Photo=()=>{const r=cur();openUploader({max:1,have:0,accept:'image',aspect:
 
 
 for(const key of ['enableDating','datingPeek','goVisible']){const original=ACT[key];ACT[key]=(...args)=>{if(actionAuthor()==='couple'){go('P02',{owner:'couple'});return;}return original(...args);};}
+

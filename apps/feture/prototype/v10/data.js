@@ -222,7 +222,7 @@ function newMe(){return{
 function freshState(persona){
  const full=persona!=='new';
  const st={
-  persona,lang:'ru',session:null,author:'me',
+  persona,lang:'ru',session:null,datingActor:'me',
   me:full?fullMe():newMe(),
   follows:new Set(full?['maya','mia','kai','noa']:[]),
   graph:Object.fromEntries(Object.entries(FOLLOW_SEED).map(([k,v])=>[k,new Set(full?v:v.filter(x=>x!=='me'))])),
@@ -273,10 +273,10 @@ function freshState(persona){
   quota:{max:10,used:full?1:0},
   ui:{},
   // in the pair persona Kira is my partner's separate account, not a like/request in my queues
-  pair:persona==='pair'?{status:'active',with:'kira',since:ago(24*40),name:{ru:'Alex и Kira',en:'Alex & Kira'},
+  pair:persona==='pair'?{id:'pair_alex_kira_seed',status:'active',with:'kira',since:ago(24*40),name:{ru:'Alex и Kira',en:'Alex & Kira'},
    desc:{ru:'Пара, вместе год. Отвечаем по очереди, о встречах договариваемся вдвоём.',en:'A couple, together a year. We reply in turns and agree on meetings together.'},
    rules:{ru:'Сначала переписка с обоими, потом встреча в людном месте.',en:'Chat with both of us first, then meet somewhere public.'},
-   proposal:{by:'kira',field:'desc',text:{ru:'Пара, вместе год. Любим спокойный темп и честные разговоры.',en:'A couple, together a year. We like a slow pace and honest talks.'},t:ago(5)},
+   proposal:null,
    grants:[{p:'tomeva',scopes:['info'],me:'yes',partner:'yes',until:NOW+3*DAY},{p:'mia',scopes:['photos'],me:'yes',partner:'pending',until:null}]}:null,
  };
  if(persona==='pair'){st.likesIn=st.likesIn.filter(x=>x.p!=='kira');st.reqOut=st.reqOut.filter(x=>x.p!=='kira');st.deckOrder=st.deckOrder.filter(x=>x!=='kira');st.communityRequests.circle=st.communityRequests.circle.filter(x=>x.p!=='kira');st.notifs=st.notifs.filter(x=>x.p!=='kira');st.follows.add('kira');st.graph.kira.add('me');}
@@ -284,4 +284,5 @@ function freshState(persona){
  if(full){st.extraEvents.e8={title:{ru:'Клуб чтения: «Больше двух»',en:'Book club: “More Than Two”'},type:'talk',format:'online',start:at(8,19),end:at(8,20,30),tz:'Europe/Berlin',price:null,organizer:'me',community:'slow',approval:true,plate:'plum',link:'https://meet.feture.app/bookclub',desc:{ru:'Обсуждаем по главе в неделю. Камера по желанию.',en:'One chapter a week. Camera optional.'},reqs:[],q:[{ru:'Читал(а) ли книгу раньше?',en:'Have you read the book before?'}],status:'published',apps:[{p:'kira',status:'pending',answer:{ru:'Нет, начну с вами',en:'No, I’ll start with you'}},{p:'ari',status:'approved',answer:{ru:'Да, дважды',en:'Yes, twice'}},{p:'lina',status:'pending',answer:{ru:'Частично',en:'Partly'}}],announce:[]};}
  return st;
 }
+
 
