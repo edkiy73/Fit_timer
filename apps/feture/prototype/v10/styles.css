@@ -2250,17 +2250,3 @@ body.capture-shield>*{visibility:hidden!important}
 .actth.round{border-radius:50%}
 .actth .av{position:absolute;inset:0;width:100%;height:100%;border-radius:0}
 .actth .av img,.actth .av .av-in{width:100%;height:100%}
-
-/* activity rows v2: icon column | text | picture in the proportion of its own card (events / communities wide like their cards, posts square, people round) */
-.actrow .tx{min-width:0}
-.actpv{position:relative;flex:none;height:44px;border-radius:10px;overflow:hidden;background:var(--raise)}
-.actpv.wide{width:88px}.actpv.sq{width:44px}.actpv.round{width:44px;border-radius:50%}
-.actpv>img,.actpv>.evimg,.actpv>.plate{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.actpv .plate .pi{display:none}
-.actpv>.av{position:absolute;inset:0;width:100%;height:100%;border-radius:0}.actpv>.av img,.actpv>.av .av-in{width:100%;height:100%}
-@media (max-width:359px){.actpv.wide{width:68px}}
-
-/* four profile tabs: counts become small superscripts so the labels fit */
-.seg.tabs-full.n4 button{font-size:12.5px;gap:2px;padding:0 2px}
-.seg.tabs-full.n4 em{align-self:flex-start;margin-top:5px;min-width:0;height:auto;padding:0;background:none;color:var(--accent);font-size:10.5px;line-height:1}
-@media (max-width:359px){.seg.tabs-full.n4 button{font-size:10.5px;padding:0}.seg.tabs-full.n4 em{display:none}}
