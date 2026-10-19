@@ -2244,3 +2244,9 @@ body.capture-shield>*{visibility:hidden!important}
 /* a match is good news: green, not the red accent (red reads as a warning/dislike) */
 .chip.hit{background:var(--ok-soft);color:var(--ok)}
 .compat .cp-t b{background:var(--ok-soft);color:var(--ok)}
+
+/* activity rows: every row has the same 46px tile (picture, heart or avatar), so text never shifts from row to row */
+.actth.ic{background:var(--accent-soft);color:var(--accent)}.actth.ic svg{width:22px;height:22px}
+.actth.round{border-radius:50%}
+.actth .av{position:absolute;inset:0;width:100%;height:100%;border-radius:0}
+.actth .av img,.actth .av .av-in{width:100%;height:100%}

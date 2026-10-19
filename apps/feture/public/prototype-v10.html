@@ -2255,6 +2255,12 @@ body.capture-shield>*{visibility:hidden!important}
 /* a match is good news: green, not the red accent (red reads as a warning/dislike) */
 .chip.hit{background:var(--ok-soft);color:var(--ok)}
 .compat .cp-t b{background:var(--ok-soft);color:var(--ok)}
+
+/* activity rows: every row has the same 46px tile (picture, heart or avatar), so text never shifts from row to row */
+.actth.ic{background:var(--accent-soft);color:var(--accent)}.actth.ic svg{width:22px;height:22px}
+.actth.round{border-radius:50%}
+.actth .av{position:absolute;inset:0;width:100%;height:100%;border-radius:0}
+.actth .av img,.actth .av .av-in{width:100%;height:100%}
 </style>
 </head>
 <body>
@@ -5289,10 +5295,10 @@ function activityOf(id){const out=[],pub=p=>p.aud==='all'&&!p.unavailable&&!isBl
   followingOf(id).slice(0,2).forEach((p,i)=>out.push({k:'follow',p,t:Date.now()-(i+2)*DAY*1.7}));}
  return out.sort((a,b)=>b.t-a.t);}
 function activityList(id,items,o={}){const rows=items.slice(0,12).map(x=>{
-  if(x.k==='like')return linkRow({go:'F05',p:{id:x.post.id},...((x.post.media||[]).find(m=>m.type==='image'&&m.url)?{av:`<span class="actth"><img src="${esc(x.post.media.find(m=>m.type==='image'&&m.url).url)}" alt="" loading="lazy" draggable="false"><i>${I.heartf}</i></span>`}:{icon:'heartf',tone:'l'}),title:L(`Лайк · публикация ${pname(x.post.author)}`,`Like · ${pname(x.post.author)}’s post`),sub:`${mdPlain(T(x.post.text)).slice(0,70)||L('Публикация','Post')} · ${F.rel(x.t)}`});
+  if(x.k==='like')return linkRow({go:'F05',p:{id:x.post.id},...((x.post.media||[]).find(m=>m.type==='image'&&m.url)?{av:`<span class="actth"><img src="${esc(x.post.media.find(m=>m.type==='image'&&m.url).url)}" alt="" loading="lazy" draggable="false"><i>${I.heartf}</i></span>`}:{av:`<span class="actth ic">${I.heartf}</span>`}),title:L(`Лайк · публикация ${pname(x.post.author)}`,`Like · ${pname(x.post.author)}’s post`),sub:`${mdPlain(T(x.post.text)).slice(0,70)||L('Публикация','Post')} · ${F.rel(x.t)}`});
   if(x.k==='event')return linkRow({go:'E03',p:{id:x.e},av:`<span class="actth">${evCover(EV(x.e),'cal')}</span>`,title:x.st==='interested'?L('Интересует событие','Interested in an event'):L('Идёт на событие','Going to an event'),sub:`${T(EV(x.e).title)} · ${F.rel(x.t)}`});
   if(x.k==='comm')return linkRow({go:'C03',p:{id:x.c},av:`<span class="actth">${commAv(COMMUNITIES[x.c])}</span>`,title:L('Сообщество','Community'),sub:`${T(COMMUNITIES[x.c].name)} · ${F.rel(x.t)}`});
-  return linkRow({go:'P01',p:{id:x.p},av:av(x.p,''),title:L('Подписка','Followed'),sub:`${pname(x.p)} · ${F.rel(x.t)}`});}).join('');
+  return linkRow({go:'P01',p:{id:x.p},av:`<span class="actth round">${av(x.p,'')}</span>`,title:L('Подписка','Followed'),sub:`${pname(x.p)} · ${F.rel(x.t)}`});}).join('');
  const mode=ACT_VIS().find(x=>x[0]===activityMode(id));
  return `<div class="card list">${rows}</div>${o.self?`<p class="note mt12">${L('Видят','Visible to')}: ${esc(mode[1].toLowerCase())} · <button class="btn text auto" data-go="K01">${L('Изменить в настройках','Change in settings')}</button></p>`:''}`;}
 ACT.profAct=a=>{const id=cur().p.id||(cur().p.owner==='couple'?'couple':'me');S.ui.pa||(S.ui.pa={});S.ui.pa[id]=a.dataset.v;refresh();};
