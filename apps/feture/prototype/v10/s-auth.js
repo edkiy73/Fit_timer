@@ -119,7 +119,7 @@ ACT.resend=a=>run(a,()=>{cur().sent=Date.now();cur().f.code='';refresh();},{ok:L
 
 /* A04 — minimal profile with date of birth (owner requirement 13.10.2026) */
 const MONTHS=()=>S.lang==='en'?['January','February','March','April','May','June','July','August','September','October','November','December']:['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-SC.A04={auth:1,title:()=>L('Профиль','Profile'),render:(p,r)=>{const yNow=new Date(NOW).getFullYear();r.f.pron=r.f.pron||'';return `${bar('',{back:1,actions:`<span class="pill">1 / 2</span>`})}<div class="view nodock cta1"><div class="auth-wrap">
+SC.A04={auth:1,title:()=>L('Профиль','Profile'),render:(p,r)=>{const yNow=new Date(NOW).getFullYear();return `${bar('',{back:1,actions:`<span class="pill">1 / 2</span>`})}<div class="view nodock cta1"><div class="auth-wrap">
  <div class="steps"><i class="on"></i><i></i></div>
  <h2 class="t">${L('Как тебя называть','What should we call you')}</h2>
  ${p.via&&p.via!=='email'?`<div class="alert ok mb16" style="margin-bottom:16px">${I.okc}<span>${L('Вход подтверждён через','Signed in with')} ${p.via==='google'?'Google':'Apple'} · ${esc(p.email)}</span></div>`:''}
@@ -137,7 +137,6 @@ SC.A04={auth:1,title:()=>L('Профиль','Profile'),render:(p,r)=>{const yNow
 I.at=sv('<circle cx="12" cy="12" r="3.6"/><path d="M15.6 12v1.4a2.6 2.6 0 0 0 5.2 0V12a8.8 8.8 0 1 0-3.5 7"/>');
 let nickT;IN.nick=el=>{IN.f(el);clearTimeout(nickT);const v=el.value;nickT=setTimeout(()=>{if(cur().f.nick!==v)return;const e=V.nick(v);if(v.length>=3){setErr('nick',e);if(!e){const f=$('[data-field="nick"]');if(f&&!$('.fok',f)){const d=document.createElement('div');d.className='fok';d.innerHTML=I.okc+L('Ник свободен','Nickname is available');$('.fhint',f)?.replaceWith(d);}}}},450);};
 CH.dob=el=>{const r=cur();r.f[el.name]=el.value;r.dirty=true;if(r.err)delete r.err.dob;refresh();};
-ACT.pickPron=a=>{const r=cur();r.f.pron=r.f.pron===a.dataset.v?'':a.dataset.v;refresh();};
 ACT.chk=a=>{const r=cur();r.f[a.dataset.v]=!r.f[a.dataset.v];if(r.err)delete r.err[a.dataset.v];refresh();};
 ACT.saveA04=a=>{const r=cur();r.err={};
  const n=V.nick(fv('nick'));if(n)r.err.nick=n;
@@ -148,7 +147,7 @@ ACT.saveA04=a=>{const r=cur();r.err={};
  run(a,()=>{
   // a new account starts empty: keep only the language and the open sign-up flow
   const nav=S.nav,lang=S.lang;S=freshState('new');S.nav=nav;S.lang=lang;QA.seen={};
-  S.me.nick=fv('nick').trim();S.me.dob=`${r.f.yy}-${String(r.f.mm).padStart(2,'0')}-${String(r.f.dd).padStart(2,'0')}`;S.me.pron=r.f.pron||null;S.me.email=r.p.email||'';S.me.methods=[r.p.via||'email'];
+  S.me.nick=fv('nick').trim();S.me.dob=`${r.f.yy}-${String(r.f.mm).padStart(2,'0')}-${String(r.f.dd).padStart(2,'0')}`;S.me.email=r.p.email||'';S.me.methods=[r.p.via||'email'];
   go('A05',{step:1});});};
 SC.A04X={auth:1,title:()=>'18+',render:()=>`${bar('',{back:1})}<div class="view nodock"><div class="auth-wrap">${empty('shield',L('FetUre только для взрослых','FetUre is for adults only'),L('Судя по дате рождения, тебе ещё нет 18. Мы не создали аккаунт и не сохранили введённые данные.','Based on your date of birth you’re not 18 yet. We didn’t create an account or keep what you entered.'),`<button class="btn soft" data-back>${L('Я ошибся в дате','I entered the wrong date')}</button><button class="btn text" data-act="toWelcome">${L('На главную','Back to start')}</button>`)}</div></div>`};
 ACT.toWelcome=()=>{S.nav.auth=[{id:'A01',p:{},f:{}}];render('back');};

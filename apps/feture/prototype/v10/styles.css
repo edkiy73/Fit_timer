@@ -2250,3 +2250,6 @@ body.capture-shield>*{visibility:hidden!important}
 .actth.round{border-radius:50%}
 .actth .av{position:absolute;inset:0;width:100%;height:100%;border-radius:0}
 .actth .av img,.actth .av .av-in{width:100%;height:100%}
+
+.pc-who .pl{display:inline-flex;align-items:center;gap:4px}.pc-who .pl svg{width:14px;height:14px;flex:none}
+.kv{margin:0}

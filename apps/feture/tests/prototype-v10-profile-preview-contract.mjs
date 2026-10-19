@@ -77,4 +77,13 @@ assert.ok(pv.includes('Нравится')&&!pv.includes('Симпатии вык
 assert.ok(pv.includes('class="compat"')&&pv.includes('cp-demo')&&!pv.includes('Общие интересы — у каждого свои'),'the preview shows the real «what you share» block with a small demo note');
 // activity rows share one 46px tile whatever the row shows (picture, heart, avatar): text never shifts between rows.
 {const rows=run("activityList('mia',activityOf('mia'))");const leads=[...rows.matchAll(/<button class="li [^"]*"[^>]*>(<span class="[^"]*">)/g)].map(m=>m[1]);assert.ok(leads.length>3&&leads.every(l=>/actth/.test(l)),'every activity row starts with the same tile');}
+// One profile content everywhere: the discovery card and the full profile render the same details card, shared block and private panel; no pronouns anywhere.
+run("S=freshState('full');S.session={};initNav();");
+for(const id of ['kira','mia','maya','tomeva']){const det=run(`detailsGroup('${id}')`),card=run(`card('${id}','top')`),prof=run(`profileView('${id}',{p:{},f:{}})`);
+ if(det){assert.ok(card.includes(det)&&prof.includes(det),`${id}: the details card is the same in the discovery card and the profile`);}
+ assert.ok(card.includes(run(`compatBlock('${id}')`))&&prof.includes(run(`compatBlock('${id}')`)),`${id}: the shared block is the same`);
+ assert.ok(!/Местоимения|Pronouns|он\/его|она\/её/.test(card+prof),`${id}: no pronouns`);
+ assert.ok(prof.includes('class="pl"')===!!run(`placeLine('${id}')`)&&card.includes('class="pl"')===!!run(`placeLine('${id}')`),`${id}: the city sits in the header line of both`);}
+assert.ok(run("identityFields().map(f=>f[0]).join()")==='gender,orient,role,status,format,seek','pronouns are not a profile field any more');
+assert.ok(run("detailsGroup('me')").includes('<dl class="kv">'),'my own details are listed too');
 console.log('PASS RU/EN profile preview: details are public at both levels; the private part (description/interests/photos/video) opens only with access; hidden topics stay hidden; activity tab follows its privacy setting; follow lists drop blocked people');

@@ -55,11 +55,17 @@ function compatBlock(id,o={}){const demo=!!o.demo;
  const comp=sh.complement.length?sec(L('Дополняете друг друга','You complement each other'),null,sh.complement.map(c=>`<div class="fact"><i class="g">${I.check}</i><span>${esc(c)}</span></div>`).join('')):'';
  const disc=sh.discuss.length?sec(L('Стоит обсудить','Worth discussing'),null,sh.discuss.slice(0,2).map(c=>`<div class="fact"><i class="a">${I.warn}</i><span>${esc(c)}</span></div>`).join('')):'';
  return `<section class="compat"><button class="cp-h" ${demo?'data-act="demoNote"':`data-go="P05" data-id="${esc(id)}"`}>${venn(sh.few?'?':sh.match.length,{mini:1})}<span class="grow"><b>${esc(sharedSummary(id,sh))}</b><span>${L('Только то, что вы оба открыли','Only what you both made visible')}</span></span>${I.chev}</button>${match}${comp}${disc}${demo?`<p class="cp-demo">${L('Демо: так блок увидит человек — с вашими общими интересами','Demo: this is how a visitor sees it, with your shared interests')}</p>`:''}</section>`;}
+/** «what a person told about themselves»: every chosen detail in ONE card — the same block in the discovery card and in every profile
+    (gender, orientation, role, relationship status, format; «looking for» only when dating is on). City sits in the header line. */
+function detailsGroup(id){const p=person(id);if(!p)return '';
+ const only=p.pair?['role','format','seek']:null;
+ const rows=identityFields().filter(([k])=>(!only||only.includes(k))&&(k!=='seek'||p.dating)).map(([k,title])=>{const v=IDENTITY_MULTI.includes(k)?fmtList(p[k]).map(x=>opt(k,x)).filter(Boolean).join(', '):opt(k,p[k]);return v?[title,v]:null;}).filter(Boolean);
+ return rows.length?grp(p.pair?L('Данные пары','Couple details'):L('Данные','Details'),`<dl class="kv">${rows.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`):'';}
 function sharedSummary(id,sh){const s=sh||shared(id);if(s.few)return L('Пока мало общего контекста','Not much shared context yet');
  const parts=[];if(s.match.length)parts.push(pl(s.match.length,['общий интерес','общих интереса','общих интересов'],['shared interest','shared interests']));if(s.complement.length)parts.push(L('дополняете друг друга','you complement each other'));return parts.join(', ')||L('Есть что обсудить','Something to talk about');}
 
 /* ---------- people ---------- */
-function whoLine(id){const p=person(id);if(!p)return '';const g=(p.gender||[]).map(x=>opt('gender',x)).join(', ');const o=(p.orient||[]).map(x=>opt('orient',x)).join(', ');return [p.pair?T(p.pairNote):opt('pron',p.pron),[g,o].filter(Boolean).join(', ')].filter(Boolean).join(' · ');}
+function whoLine(id){const p=person(id);if(!p)return '';const g=(p.gender||[]).map(x=>opt('gender',x)).join(', ');const o=(p.orient||[]).map(x=>opt('orient',x)).join(', ');return [p.pair?T(p.pairNote):'',[g,o].filter(Boolean).join(', ')].filter(Boolean).join(' · ');}
 function placeLine(id){const p=person(id);if(!p)return '';const km=S.me.location?.mode==='nearby'?nearbyDistance(id):null;return [city(p.city),km!==null?L(`около ${Math.max(5,km)} км`,`about ${Math.max(5,km)} km`):''].filter(Boolean).join(' · ');}
 function presence(id){const p=person(id);if(!p)return '';return p.online?L('сейчас в сети','online now'):T(p.last)||'';}
 /** attributes that open a person's profile (own profile for me) */
@@ -324,10 +330,9 @@ function chipGroup(items,selected,act,o={}){
 const chipPicker=o=>chipGroup(o.items,o.sel,o.act,{title:o.title,max:o.max,groups:o.cats?topicGroups(o.items.map(x=>x[0])):o.groups});
 const optGroups=g=>{const b=OPT_BASE[g]||8;const ids=OPT[g].map(x=>x[0]);return [[L('Популярное','Popular'),ids.slice(0,b)],[L('Ещё варианты','More options'),ids.slice(b)]];};
 /** Shared identity choices: same IDs, multiplicity and catalog in onboarding/profile. */
-const IDENTITY_KEYS=['pron','gender','orient','role','status','format','seek'];
+const IDENTITY_KEYS=['gender','orient','role','status','format','seek'];
 const IDENTITY_MULTI=['gender','orient','format','role','seek'];
 const identityFields=()=>[
- ['pron',L('Местоимения','Pronouns'),L('Необязательно.','Optional.')],
  ['gender',L('Гендер','Gender'),L('До пяти выбранных вариантов.','Up to five selected options.')],
  ['orient',L('Ориентация','Orientation'),L('До пяти выбранных вариантов.','Up to five selected options.')],
  ['role',L('Роль','Role'),L('До пяти вариантов. Это не согласие на практики.','Up to five options. This is not consent to any practice.')],
