@@ -195,7 +195,9 @@ const EVENTS={
   desc:{ru:'Танцы и разговоры.',en:'Dancing and conversations.'},reqs:[]},
 };
 
-const REQ_SCOPES=[['info',{ru:'текст и интересы',en:'text and interests'}],['photos',{ru:'фото',en:'photos'}],['video',{ru:'видео',en:'video'}],['album',{ru:'альбом «Лето»',en:'album “Summer”'}]];
+const REQ_SCOPES=[['info',{ru:'Описание',en:'Description'}],['interests',{ru:'Интересы',en:'Interests'}],['photos',{ru:'Фото',en:'Photos'}],['video',{ru:'Видео',en:'Video'}]];
+const cleanScopes=arr=>[...new Set((arr||[]).filter(k=>REQ_SCOPES.some(([s])=>s===k)))];
+const allowedScopes=(owner,viewer)=>REQ_SCOPES.filter(([k])=>owner!=='couple'||PEOPLE[viewer]?.pair||['info','interests'].includes(k)).map(([k])=>k);
 
 /* ---------- personas ---------- */
 function fullMe(){return{privText:{ru:'Новичок в верёвке, поэтому сначала — разговор и короткая встреча на нейтральной территории. Не люблю сюрпризов.',en:'New to rope, so first a talk and a short meeting on neutral ground. I don’t like surprises.'},
@@ -253,8 +255,8 @@ function freshState(persona){
   }:{},
   archived:new Set(full?[]:[]),muted:new Set(),
   blocked:full?[{p:'dan',t:ago(300)}]:[],
-  reqIn:full?[{id:'r1',p:'kai',scopes:['info','photos'],t:ago(.2),status:'new'},{id:'r2',p:'leon',scopes:['info'],t:ago(2),status:'new'},{id:'r3',p:'tomeva',scopes:['info','photos','album'],t:ago(22),status:'new'}]:[],
-  reqOut:full?[{id:'o1',p:'kira',scopes:['info','photos'],t:ago(4),status:'pending'},{id:'o2',p:'mia',scopes:['info','photos','album'],t:ago(30),status:'partial',granted:['info','album'],until:NOW+5*DAY},{id:'o3',p:'leon',scopes:['info'],t:ago(80),status:'declined'},{id:'o4',p:'ari',scopes:['info'],t:ago(200),status:'expired'}]:[],
+  reqIn:full?[{id:'r1',p:'kai',scopes:['info','photos'],t:ago(.2),status:'new'},{id:'r2',p:'leon',scopes:['info'],t:ago(2),status:'new'},{id:'r3',p:'tomeva',scopes:['info','interests','photos','video'],t:ago(22),status:'new'}]:[],
+  reqOut:full?[{id:'o1',p:'kira',scopes:['info','photos'],t:ago(4),status:'pending'},{id:'o2',p:'mia',scopes:['info','interests','photos','video'],t:ago(30),status:'partial',granted:['info','photos'],until:NOW+5*DAY},{id:'o3',p:'leon',scopes:['info'],t:ago(80),status:'declined'},{id:'o4',p:'ari',scopes:['info'],t:ago(200),status:'expired'}]:[],
   sharedByMe:full?[{p:'mia',scopes:['info','photos'],until:NOW+5*DAY,t:ago(28)},{p:'kai',scopes:['info'],until:NOW+23*HOUR,t:ago(1)}]:[],
   notifs:full?[
    {id:'n1',type:'match',p:'lina',t:ago(1),read:false,go:['H01']},

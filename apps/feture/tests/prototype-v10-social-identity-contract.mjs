@@ -118,13 +118,14 @@ console.log('PASS unified profile editor saves rich private text for personal an
  const hub=run("SC.Q01.render(cur().p,cur())");assert.ok(hub.includes('pairTrustOpen')&&hub.includes('Q06'),'all pair management lives in one hub');
  prepare('P01',{id:'mia'});run("S.me=S.me;S.datingActor='me'");assert.ok(!run("profileActorLine('mia',{a:'me'})").includes('undefined'));
  console.log('PASS acting identity: remembered modes, couple/personal profile likes with reasons and other-side state, couple page without actions, single pair hub');}
-// One inbox: access requests (personal and couple), partner approvals, host requests; quick share = everything asked for 7 days.
+// One inbox: sharing always reviews independent permissions first.
 {prepare('N01',{});run("coupleProfile();S.pair.proposal=null");
  const kinds=run("todoItems().map(x=>x.k+':'+(x.a||''))");assert.ok(kinds.some(k=>k.startsWith('req:me')),'personal requests are decisions');assert.ok(kinds.some(k=>k==='eapp:'||k==='capp:'),'host requests are decisions');
- const html=run("todoHTML()");assert.ok(html.includes('grantQuick')&&html.includes('decline'),'inbox cards decide in place');
+ const html=run("todoHTML()");assert.ok(html.includes('data-act="grant"')&&html.includes('decline'),'inbox cards open permission review');assert.ok(!html.includes('grantQuick')&&!html.includes('Выбрать, что открыть'));
  const id=run("S.reqIn.find(r=>r.status==='new').id");const scopes=run(`S.reqIn.find(r=>r.id==='${id}').scopes.join()`);
- await finish(run(`ACT.grantQuick({dataset:{v:'${id}',actor:'me'},classList:{contains:()=>false,add(){},remove(){}},setAttribute(){},removeAttribute(){}})`));
- assert.equal(run(`S.reqIn.find(r=>r.id==='${id}').status`),'open');assert.equal(run(`S.reqIn.find(r=>r.id==='${id}').granted.join()`),scopes,'quick share opens everything that was asked');
+ run(`ACT.grant({dataset:{v:'${id}',actor:'me'}})`);assert.equal(run(`S.reqIn.find(r=>r.id==='${id}').status`),'new','opening the popup does not grant');
+ await finish(run(`ACT.grOk({classList:{contains:()=>false,add(){},remove(){}},setAttribute(){},removeAttribute(){}})`));
+ assert.equal(run(`S.reqIn.find(r=>r.id==='${id}').status`),'open');assert.equal(run(`S.reqIn.find(r=>r.id==='${id}').granted.join()`),scopes,'only confirmed scopes are granted');
  const days=run(`Math.round((S.reqIn.find(r=>r.id==='${id}').until-Date.now())/86400000)`);assert.equal(days,7);
  assert.ok(!run("SC.D03.render({sub:'discover'},cur())").includes("pplSub\" data-v=\"requests"),'People has no Requests tab');
  const access=run("accessBody({tab:'in'})");assert.ok(!access.includes('data-v="in"'),'Access is a ledger: no incoming-decision tab');
@@ -211,3 +212,32 @@ prepare('X01');run('ACT.addJar()');assert.equal(run('S.ui.interestDraft.fixedVis
 assert.equal((run("SC.X01.render()").match(/data-go="P03"/g)||[]).length,1,'Me keeps only the profile-card preview entry');
 assert.ok(!run("SC.C01.render({})").includes('data-v="joined"'),'no third top-level community tab');assert.ok(run('SC.C02.render()').includes('Ты участник'),'memberships remain reachable');
 console.log('PASS contextual public/private jars save without a visibility step; general picker and community memberships remain available');
+// Notification actions stay on their own tab; type filters never mix decision categories.
+for(const lang of ['ru','en']){
+ prepare('N01',{k:'todo'});run(`S.lang='${lang}'`);
+ assert.ok(!run('SC.N01.render(cur().p)').includes('data-act="readAll"'));
+ assert.ok(!run('SC.N01.render(cur().p)').includes('lock screen'));
+ assert.ok(!run('SC.N01.render(cur().p)').includes('На экране блокировки'));
+ const unread=run('currentNotifications().filter(n=>!n.read).length');run('ACT.readAll()');assert.equal(run('currentNotifications().filter(n=>!n.read).length'),unread,'decision tab cannot mark notifications read');
+ const eventHTML=run("todoHTML('events')");assert.ok(eventHTML.includes('appDecide'));assert.ok(!eventHTML.includes('data-act="grant"')&&!eventHTML.includes('cRequestDecision'));
+ assert.ok(!run("todoHTML('access')").includes('appDecide'));
+ run("cur().p.k='all'");const all=run('SC.N01.render(cur().p)');assert.ok(all.includes('class="inbox-read-all"'));assert.ok(!all.includes('btn text auto" data-act="readAll"'));
+ run('ACT.readAll()');assert.equal(run('currentNotifications().filter(n=>!n.read).length'),0);
+}
+// Four permissions are independent in both rendering and explicit grant confirmation.
+for(const lang of ['ru','en']){
+ prepare('N01',{k:'todo'});run(`S.lang='${lang}';S.me.privText='ONLY_DESCRIPTION';S.me.jars=[{t:'shibari',lv:9,vis:'granted'}];S.me.media=[{type:'image',url:'ONLY_PHOTO',sec:'photos'},{type:'video',url:'ONLY_VIDEO',sec:'video'}]`);
+ assert.equal(run('REQ_SCOPES.map(([k])=>k).join()'),'info,interests,photos,video');
+ const desc=run("privOpenHTML('me',{granted:['info']})"),interests=run("privOpenHTML('me',{granted:['interests']})"),photo=run("privOpenHTML('me',{granted:['photos']})"),video=run("privOpenHTML('me',{granted:['video']})");
+ assert.ok(desc.includes('ONLY_DESCRIPTION')&&!desc.includes('ONLY_PHOTO')&&!desc.includes('ONLY_VIDEO')&&!desc.includes('data-act="topic"'));
+ assert.ok(interests.includes('data-act="topic"')&&!interests.includes('ONLY_DESCRIPTION')&&!interests.includes('ONLY_PHOTO'));
+ assert.ok(photo.includes('ONLY_PHOTO')&&!photo.includes('ONLY_VIDEO')&&!photo.includes('ONLY_DESCRIPTION'));
+ assert.ok(video.includes('ONLY_VIDEO')&&!video.includes('ONLY_PHOTO')&&!video.includes('ONLY_DESCRIPTION'));
+ run("sheet=build=>{S.ui.testGrantSheet=build()};ACT.grant({dataset:{v:S.reqIn[0].id,actor:'me'}})");
+ const popup=run('S.ui.testGrantSheet.body');assert.equal((popup.match(/role="checkbox"/g)||[]).length,4);assert.ok(!popup.includes('Что увидит')&&!popup.includes('will see')&&!popup.includes('album'));
+ assert.equal(run('S.reqIn[0].status'),'new');run("S.ui.gr.sel=['interests','album','invalid'];ACT.grOk(null)");await finish();assert.equal(run('S.reqIn[0].granted.join()'),'interests');
+ prepare('N01',{k:'todo'});run("ACT.grant({dataset:{v:S.reqIn[0].id,actor:'me'}});ACT.grOk(null);S.reqIn[0].status='no'");await finish();assert.equal(run('S.reqIn[0].status'),'no','delayed confirmation cannot undo decline');
+ assert.equal(run("allowedScopes('couple','mia').join()"),'info,interests','couple-to-person request keeps media restriction');
+}
+run('sheet=originalSheetForContext');
+console.log('PASS inbox filters, tab-scoped mark-all and four independent permissions with explicit review and delayed-decline guard');
