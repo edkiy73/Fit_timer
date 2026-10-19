@@ -220,7 +220,7 @@ function closeAuthorMenu(){authorMenuAction=null;const menu=$('#authorMenu');if(
 function paintAuthor(){
  $$('[data-author-picker]:not([data-fixed-author])').forEach(el=>el.outerHTML=authorPicker());
  $$('[data-act="follow"],[data-act="flwToggle"]').forEach(el=>{const on=social()?.follows.has(el.dataset.v);el.setAttribute('aria-pressed',!!on);el.innerHTML=on?L('Отписаться','Unfollow'):L('Подписаться','Follow');});
- $$('.p-acts [data-act="likeProfile"],.p-acts [data-act="unlikeP"],.p-acts [data-act="openChat"]').forEach(el=>{const id=el.dataset.v,on=social()?.likesOut.some(l=>l.p===id),match=isMatch(id);el.dataset.act=match?'openChat':on?'unlikeP':'likeProfile';el.setAttribute('aria-pressed',!!on);el.innerHTML=match?I.chat+L('Написать','Message'):on?I.heartf+L('Симпатия отправлена','Like sent'):I.heart+L('Нравится','Like');});
+ $$('.p-acts [data-act="likeProfile"],.p-acts [data-act="unlikeP"],.p-acts [data-act="openChat"]').forEach(el=>{const id=el.dataset.v,on=social()?.likesOut.some(l=>l.p===id),match=isMatch(id);el.dataset.act=match?'openChat':on?'unlikeP':'likeProfile';el.setAttribute('aria-pressed',!!on);el.innerHTML=match?I.chat+L('Написать','Message'):on?I.heartf+L('Отправлено','Sent'):I.heart+L('Нравится','Like');});
  $$('[data-couple-request]').forEach(el=>el.hidden=actionAuthor()!=='couple');
  $$('[data-act="reqAccess"]').forEach(el=>{const pending=social()?.reqOut.some(x=>x.p===el.dataset.v&&x.status==='pending');el.setAttribute('aria-label',pending?L('Запрос отправлен','Request sent'):L('Запросить доступ','Request access'));if(el.classList.contains('ibtn'))el.innerHTML=pending?I.clock:I.key;});
  $$('[data-private-context]').forEach(el=>el.innerHTML=privSection(el.dataset.privateContext));
