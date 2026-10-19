@@ -97,7 +97,7 @@ const missingPostResult=()=>toast(L('Темы результата больше 
 let composeDraftSeq=0;
 function syncComposeAudience(owner,aud){if(!owner||typeof navHistory==='undefined'||!navHistory)return;for(const entry of navHistory.entries){for(const route of Object.values(entry.nav?.stacks||{}).flat()){if(route.id==='F07'&&route.composeId===owner){route.aud=aud;route.dirty=true;}if(route.id==='F09'&&route.p.draft?.composeId===owner)route.p.draft.aud=aud;}}}
 const composeAudience=()=>cur().id==='F09'?cur().p.draft.aud:cur().aud;
-const ownPost=id=>S.myPosts.find(p=>p.id===id&&ownedIdentity(p.author));
+const ownPost=id=>S.myPosts.find(p=>p.id===id&&!p.hiddenByPair&&ownedIdentity(p.author)&&(p.author==='couple'||pairMember()==='me'));
 SC.F07={title:()=>L('Публикация','Post'),valid:p=>!p.id||!!ownPost(p.id),render:(p,r)=>{
  const ex=p.id?postById(p.id):null;
  if(!r.init){r.init=1;r.author=ex?.author||(p.author==='couple'&&activePair()?'couple':'me');r.pairId=ex?.pairId||(r.author==='couple'?(coupleProfile(),S.pair?.id):null);r.composeId='compose'+(++composeDraftSeq);r.pollLocale=S.lang;r.tags=[];r.aud='all';r.media=[];r.poll=null;r.result=false;r.resSel=resEligible().slice(0,4).map(j=>j.t);
@@ -151,7 +151,7 @@ ACT.saveDraft=a=>{const r=cur();if(!SC.F07.valid(r.p)){toast(L('Эта публ�
  let saved=false,revision=false;run(a,()=>{if(!SC.F07.valid(r.p))return;const id=r.p.id||'m'+Date.now();const ex=ownPost(id),d=draftOf(r);revision=!!ex&&ex.status!=='draft';if(revision){S.postEdits[id]={draft:copyNavValue(d),t:Date.now()};}else{const obj={...postFromDraft(d,id,ex),status:'draft'};ex?Object.assign(ex,obj):S.myPosts.unshift(obj);}saved=true;r.dirty=false;r.p.id=id;refresh();},{ok:()=>!saved?null:revision?L('Правки сохранены. Исходная публикация не изменена','Changes saved. The original post is unchanged'):L('Черновик сохранён в «Я → Мои публикации»','Draft saved in Me → My posts')});};
 
 SC.F09={title:()=>L('Предпросмотр','Preview'),valid:p=>!!p.draft&&(!p.draft.edit||!!ownPost(p.draft.edit)),render:(p)=>{const d=p.draft;const a=AUD().find(x=>x[0]===d.aud);const fake={...postFromDraft(d,'preview')};MEDIA_SRC.preview=()=>d.media;const hasPhoto=d.media.length>0;
- return `${bar(L('Предпросмотр','Preview'),{back:1,sm:1,actions:authorPicker(d.edit?ownPost(d.edit)?.author:null)})}<div class="view nodock cta1"><div class="wrap">
+ return `${bar(L('Предпросмотр','Preview'),{back:1,sm:1})}<div class="view nodock cta1"><div class="wrap">
  <p class="note">${L('Так публикацию увидят другие:','This is how others will see it:')}</p><div class="card preview-post" style="padding:0 16px;margin-top:10px">${postCard(fake,{detail:1,preview:1})}</div>
  <div class="card list mt16">${linkRow({act:'audience',icon:'eye',tone:'v',title:a[2],sub:a[3],val:L('Изменить','Change')})}${hasPhoto?linkRow({icon:'shield',tone:'a',title:L('Проверка фото и видео','Photo & video review'),sub:L('Обычно до 30 минут. До этого публикацию видишь только ты','Usually under 30 minutes. Until then only you can see it'),noChev:1}):''}</div>
  </div></div><div class="ctabar"><div class="wrap"><div class="row g8"><button class="btn soft" style="flex:0 0 auto;width:auto" data-back>${L('Изменить','Edit')}</button><button class="btn primary" data-act="publish">${d.author==='couple'?L('На согласование','Request approval'):hasPhoto?L('Отправить на проверку','Submit for review'):L('Опубликовать','Publish')}</button></div></div></div>`;}};
@@ -162,7 +162,7 @@ function finishPostCompose(route,composeId){
  if(typeof navHistory!=='undefined'&&navHistory){for(const entry of navHistory.entries){let changed=false;for(const st of Object.values(entry.nav?.stacks||{}))changed=trim(st)||changed;if(changed){const st=entry.nav.stacks[entry.nav.tab]||[];entry.key=JSON.stringify([!!S.session,entry.nav.tab,st.map(r=>[r.id,r.p])]);}}navNextReplace=true;}
  render('back');
 }
-ACT.publish=a=>{const route=cur(),d=route.p.draft;if(!d)return;if(d.author==='couple'&&d.pairId!==S.pair?.id)return;const ticket=authorTicket(d.author||'me');if(!authorGuard(ticket.id))return;if(d.edit&&!ownPost(d.edit)){toast(L('Исходная публикация удалена. Изменения не отправлены','The original post was deleted. Changes were not sent'),{type:'warn'});return;}if(!postResultReady(d)){missingPostResult();return;}let published=false;const hasPhoto=d.media.length>0;
+ACT.publish=a=>{const route=cur(),d=route.p.draft;if(!d||d.by&&d.by!==pairMember())return;if(d.author==='couple'&&d.pairId!==S.pair?.id)return;const ticket=authorTicket(d.author||'me');if(!authorGuard(ticket.id))return;if(d.edit&&!ownPost(d.edit)){toast(L('Исходная публикация удалена. Изменения не отправлены','The original post was deleted. Changes were not sent'),{type:'warn'});return;}if(!postResultReady(d)){missingPostResult();return;}let published=false;const hasPhoto=d.media.length>0;
  run(a,()=>{
   if(!validAuthor(ticket))return;
   if(d.edit&&!ownPost(d.edit)){toast(L('Исходная публикация удалена. Изменения не отправлены','The original post was deleted. Changes were not sent'),{type:'warn'});return;}
