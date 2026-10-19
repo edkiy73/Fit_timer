@@ -2151,3 +2151,14 @@ body.capture-shield>*{visibility:hidden!important}
 .actth>img,.actth>.evimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .actth>.plate,.actth>.pl{position:absolute;inset:0;width:100%;height:100%}
 .actth>i{position:absolute;right:3px;bottom:3px;width:18px;height:18px;border-radius:50%;background:rgba(10,6,10,.62);color:#ff6b86;display:grid;place-items:center}.actth>i svg{width:11px;height:11px}
+
+/* «what you share» block: same in the discovery card and the full profile */
+.compat{border-radius:var(--r-l);background:var(--surf);border:1px solid var(--line);overflow:hidden}
+.compat .cp-h{display:flex;align-items:center;gap:14px;width:100%;padding:14px;text-align:left}
+.compat .cp-h b{display:block;font-size:15px;font-weight:650;line-height:1.35}.compat .cp-h .grow>span{display:block;margin-top:1px;font-size:13px;color:var(--mute)}
+.compat .cp-h>svg{width:18px;height:18px;flex:none;color:var(--faint)}
+.compat .cp-s{padding:12px 14px 14px;border-top:1px solid var(--line)}
+.compat .cp-t{display:flex;align-items:center;gap:8px;margin:0 0 9px;font-size:12.5px;font-weight:650;letter-spacing:.02em;text-transform:uppercase;color:var(--mute)}
+.compat .cp-t b{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--accent-soft);color:var(--accent);font-size:11.5px;line-height:20px;text-align:center;letter-spacing:0}
+.compat .chips{gap:8px}
+.compat .fact{padding:4px 0}

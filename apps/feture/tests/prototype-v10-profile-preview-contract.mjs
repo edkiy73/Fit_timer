@@ -53,4 +53,9 @@ run("ACT.miOrder({dataset:{k:'pub',order:'2,0,1'}})");assert.deepEqual(json("rou
 assert.ok(run("vframe({w:1920,h:1080,crop:{x:0,y:0,z:1}})").includes('width:222.22%'),'landscape video fills the 4:5 frame');assert.ok(run("vframe({w:1080,h:1920})").includes('height:'),'portrait video without crop still gets a frame');
 assert.equal(run("firstPhoto(route.photos)"),'/P','the first image — not a video — is the main photo');
 run("ACT.miRm({dataset:{k:'pub',v:'0'}})");assert.equal(run("route.photos.length"),2);
+// «What you share» is one component: the discovery card and the full profile render the same block; matches open the side-by-side answers.
+run("S=freshState('full');S.session={};initNav();");
+const blk=run("compatBlock('kira')");assert.ok(blk.includes('class="compat"')&&blk.includes('data-go="P05"')&&blk.includes('data-act="topic"')&&blk.includes('data-who="kira"'),'summary opens the comparison, each match opens topic answers');
+assert.ok(run("card('kira','top')").includes(blk),'discovery card uses the shared block');assert.ok(run("profileView('kira',{p:{},f:{}})").includes(blk),'full profile uses the shared block');
+assert.ok(run("card('kira','top')").includes('data-private-context="kira"')&&!run("card('kira','top')").includes('data-deck-private'),'the card shows the same private panel as the profile');
 console.log('PASS RU/EN profile preview: details are public at both levels; the private part (description/interests/photos/video) opens only with access; hidden topics stay hidden; activity tab follows its privacy setting; follow lists drop blocked people');

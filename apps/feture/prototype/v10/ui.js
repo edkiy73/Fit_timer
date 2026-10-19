@@ -44,6 +44,14 @@ function shared(id){
  const mf=fmtList(publicField(authorProfile()||S.me,'format')),tf=fmtList(p.format);if(mf.length&&tf.length&&mf.includes('mono')!==tf.includes('mono'))discuss.push(L(`Формат отношений: ${fmtText(mf,2)} и ${fmtText(tf,2)}`,`Relationship format: ${fmtText(mf,2)} vs ${fmtText(tf,2)}`));else{const both=mf.filter(x=>tf.includes(x));if(both.length)complement.push(L(`Совпадает формат: ${fmtText(both,2)}`,`Same format: ${fmtText(both,2)}`));}
  return{match,complement,discuss:[...new Set(discuss)],few:mine.length<2||theirs.length<2};
 }
+/** «what you share» — ONE component for the discovery card and the full profile: summary (opens the full comparison), matches (each topic opens the side-by-side answers),
+    what complements, what is worth discussing. Uses only what both of you made visible. */
+function compatBlock(id){const sh=shared(id);
+ const sec=(t,n,body)=>`<div class="cp-s"><div class="cp-t"><span>${t}</span>${n!=null?`<b>${n}</b>`:''}</div>${body}</div>`;
+ const match=sh.match.length?sec(L('Совпадает','In common'),sh.match.length,`<div class="chips">${sh.match.map(m=>`<button class="chip hit" data-act="topic" data-v="${esc(m)}" data-who="${esc(id)}">${esc(topic(m))}</button>`).join('')}</div>`):'';
+ const comp=sh.complement.length?sec(L('Дополняете друг друга','You complement each other'),null,sh.complement.map(c=>`<div class="fact"><i class="g">${I.check}</i><span>${esc(c)}</span></div>`).join('')):'';
+ const disc=sh.discuss.length?sec(L('Стоит обсудить','Worth discussing'),null,sh.discuss.slice(0,2).map(c=>`<div class="fact"><i class="a">${I.warn}</i><span>${esc(c)}</span></div>`).join('')):'';
+ return `<section class="compat"><button class="cp-h" data-go="P05" data-id="${esc(id)}">${venn(sh.few?'?':sh.match.length,{mini:1})}<span class="grow"><b>${esc(sharedSummary(id))}</b><span>${L('Только то, что вы оба открыли','Only what you both made visible')}</span></span>${I.chev}</button>${match}${comp}${disc}</section>`;}
 function sharedSummary(id){const s=shared(id);if(s.few)return L('Пока мало общего контекста','Not much shared context yet');
  const parts=[];if(s.match.length)parts.push(pl(s.match.length,['общий интерес','общих интереса','общих интересов'],['shared interest','shared interests']));if(s.complement.length)parts.push(L('дополняете друг друга','you complement each other'));return parts.join(', ')||L('Есть что обсудить','Something to talk about');}
 

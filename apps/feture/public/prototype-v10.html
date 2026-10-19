@@ -2162,6 +2162,17 @@ body.capture-shield>*{visibility:hidden!important}
 .actth>img,.actth>.evimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .actth>.plate,.actth>.pl{position:absolute;inset:0;width:100%;height:100%}
 .actth>i{position:absolute;right:3px;bottom:3px;width:18px;height:18px;border-radius:50%;background:rgba(10,6,10,.62);color:#ff6b86;display:grid;place-items:center}.actth>i svg{width:11px;height:11px}
+
+/* «what you share» block: same in the discovery card and the full profile */
+.compat{border-radius:var(--r-l);background:var(--surf);border:1px solid var(--line);overflow:hidden}
+.compat .cp-h{display:flex;align-items:center;gap:14px;width:100%;padding:14px;text-align:left}
+.compat .cp-h b{display:block;font-size:15px;font-weight:650;line-height:1.35}.compat .cp-h .grow>span{display:block;margin-top:1px;font-size:13px;color:var(--mute)}
+.compat .cp-h>svg{width:18px;height:18px;flex:none;color:var(--faint)}
+.compat .cp-s{padding:12px 14px 14px;border-top:1px solid var(--line)}
+.compat .cp-t{display:flex;align-items:center;gap:8px;margin:0 0 9px;font-size:12.5px;font-weight:650;letter-spacing:.02em;text-transform:uppercase;color:var(--mute)}
+.compat .cp-t b{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--accent-soft);color:var(--accent);font-size:11.5px;line-height:20px;text-align:center;letter-spacing:0}
+.compat .chips{gap:8px}
+.compat .fact{padding:4px 0}
 </style>
 </head>
 <body>
@@ -2837,7 +2848,6 @@ function paintAuthor(){
  $$('[data-couple-request]').forEach(el=>el.hidden=actionAuthor()!=='couple');
  $$('[data-act="reqAccess"]').forEach(el=>{const pending=social()?.reqOut.some(x=>x.p===el.dataset.v&&x.status==='pending');el.setAttribute('aria-label',pending?L('Запрос отправлен','Request sent'):L('Запросить доступ','Request access'));if(el.classList.contains('ibtn'))el.innerHTML=pending?I.clock:I.key;});
  $$('[data-private-context]').forEach(el=>el.innerHTML=privSection(el.dataset.privateContext));
- $$('[data-deck-private]').forEach(el=>el.innerHTML=veilBlock(el.dataset.deckPrivate));
  $$('#deck [data-act="decide"][data-v="1"]').forEach(el=>{const id=$('#deck .pc.top')?.dataset.id;el.setAttribute('aria-pressed',!!id&&social().likesOut.some(l=>l.p===id));});
  $$('[data-author-reason]').forEach(el=>{const reason=cur().p.id&&['C06','C07','C03'].includes(cur().id)?communityAuthorReason(cur().id==='C06'?S.discussions.find(d=>d.id===cur().p.id)?.c:cur().p.id):'';el.innerHTML=esc(reason);el.hidden=!reason;$$('[data-act="shareCommunityPartner"]').forEach(b=>b.hidden=!activePair()||actionAuthor()!=='couple'||!reason);});
  if(cur().id==='P08'&&!receivedGrant(cur().p.id))refresh();
@@ -3296,6 +3306,14 @@ function shared(id){
  const mf=fmtList(publicField(authorProfile()||S.me,'format')),tf=fmtList(p.format);if(mf.length&&tf.length&&mf.includes('mono')!==tf.includes('mono'))discuss.push(L(`Формат отношений: ${fmtText(mf,2)} и ${fmtText(tf,2)}`,`Relationship format: ${fmtText(mf,2)} vs ${fmtText(tf,2)}`));else{const both=mf.filter(x=>tf.includes(x));if(both.length)complement.push(L(`Совпадает формат: ${fmtText(both,2)}`,`Same format: ${fmtText(both,2)}`));}
  return{match,complement,discuss:[...new Set(discuss)],few:mine.length<2||theirs.length<2};
 }
+/** «what you share» — ONE component for the discovery card and the full profile: summary (opens the full comparison), matches (each topic opens the side-by-side answers),
+    what complements, what is worth discussing. Uses only what both of you made visible. */
+function compatBlock(id){const sh=shared(id);
+ const sec=(t,n,body)=>`<div class="cp-s"><div class="cp-t"><span>${t}</span>${n!=null?`<b>${n}</b>`:''}</div>${body}</div>`;
+ const match=sh.match.length?sec(L('Совпадает','In common'),sh.match.length,`<div class="chips">${sh.match.map(m=>`<button class="chip hit" data-act="topic" data-v="${esc(m)}" data-who="${esc(id)}">${esc(topic(m))}</button>`).join('')}</div>`):'';
+ const comp=sh.complement.length?sec(L('Дополняете друг друга','You complement each other'),null,sh.complement.map(c=>`<div class="fact"><i class="g">${I.check}</i><span>${esc(c)}</span></div>`).join('')):'';
+ const disc=sh.discuss.length?sec(L('Стоит обсудить','Worth discussing'),null,sh.discuss.slice(0,2).map(c=>`<div class="fact"><i class="a">${I.warn}</i><span>${esc(c)}</span></div>`).join('')):'';
+ return `<section class="compat"><button class="cp-h" data-go="P05" data-id="${esc(id)}">${venn(sh.few?'?':sh.match.length,{mini:1})}<span class="grow"><b>${esc(sharedSummary(id))}</b><span>${L('Только то, что вы оба открыли','Only what you both made visible')}</span></span>${I.chev}</button>${match}${comp}${disc}</section>`;}
 function sharedSummary(id){const s=shared(id);if(s.few)return L('Пока мало общего контекста','Not much shared context yet');
  const parts=[];if(s.match.length)parts.push(pl(s.match.length,['общий интерес','общих интереса','общих интересов'],['shared interest','shared interests']));if(s.complement.length)parts.push(L('дополняете друг друга','you complement each other'));return parts.join(', ')||L('Есть что обсудить','Something to talk about');}
 
@@ -4665,14 +4683,11 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
    <div class="pc-hint">${I.down}${L('Листай вниз — что у вас общего','Scroll down — what you share')}</div></div>
  </div>
  <div class="pc-body">
-  <button class="why" data-go="P05" data-id="${id}">${venn(sh.few?'?':sh.match.length,{mini:1})}<span class="grow"><b>${esc(sharedSummary(id))}</b><span>${L('Только то, что вы оба открыли','Only what you both made visible')}</span></span>${I.chev}</button>
+  ${compatBlock(id)}
   <div class="sec">${L('О себе','About')}</div>${md(T(p.bio),'bio')}
-  ${sh.match.length?`<div class="sec">${L('Совпадает','In common')}</div><div class="chips">${sh.match.map(m=>`<span class="chip hit">${esc(topic(m))}</span>`).join('')}</div>`:''}
-  ${sh.complement.length?`<div class="sec">${L('Дополняете друг друга','You complement each other')}</div>${sh.complement.map(c=>`<div class="fact"><i class="g">${I.check}</i><span>${esc(c)}</span></div>`).join('')}`:''}
-  ${sh.discuss.length?`<div class="sec">${L('Стоит обсудить','Worth discussing')}</div>${sh.discuss.slice(0,2).map(c=>`<div class="fact"><i class="a">${I.warn}</i><span>${esc(c)}</span></div>`).join('')}`:''}
   <div class="sec">${L('Интересы','Interests')}</div>${jarShelf(pubJars(id),{pre:1,act:'topic',who:id,moreAct:'allJars'})}
   ${post?`<div class="sec">${L('Публикация','Post')} · ${F.rel(post.t)}</div><button class="quote" data-go="F05" data-id="${post.id}"><p>${esc(T(post.text))}</p>${ic('chev',18)}</button>`:''}
-  <div class="sec">${L('Приватная часть','Private part')}</div><div data-deck-private="${id}">${veilBlock(id)}</div>
+  <div class="mt16" data-private-context="${id}">${privSection(id)}</div>
   <div class="pc-foot"><button class="btn soft" data-go="P01" data-p='${esc(JSON.stringify({id,actor:datingActor()}))}'>${L('Полный профиль','Full profile')}</button><button class="btn soft" data-act="follow" data-v="${id}">${social('me').follows.has(id)?L('Ты подписан(а)','Following'):L('Подписаться','Follow')}</button></div>
   
  </div></article>`;}
@@ -4845,7 +4860,7 @@ function profileView(id,r,o={}){
  <div class="hero">${p.pair&&!hasHeroMedia(id)?`<div class="plate" style="${PL[p.plate]||PL.rose};position:absolute;inset:0"></div><div class="hero-pairav">${av(id,'xl')}</div>`:me&&!hasHeroMedia(id)?`<div class="plate" style="${PL.rose};position:absolute;inset:0"><span class="pi">${I.me}</span></div>`:photoBg(id,ix)+bigPhoto(id,ix)}${photoBars(id,ix)}${photoCount(id)>1?`<button class="pc-zone l" data-act="pPhoto" data-v="-1" aria-label="${L('Предыдущее фото','Previous photo')}"></button><button class="pc-zone r" data-act="pPhoto" data-v="1" aria-label="${L('Следующее фото','Next photo')}"></button>`:''}${hasHeroMedia(id)?`<button class="pc-zone c" data-act="pView" aria-label="${L('Открыть фото на весь экран','Open photo full screen')}"></button>`:''}
   <div class="pc-info"><h2 class="pc-name"><span class="pcn">${esc(displayName)}</span>${p.age?`<span>${p.age}</span>`:''}${nameBadges(p)}</h2><div class="pc-who">${[whoLine(id),placeLine(id)].filter(Boolean).map(x=>`<span>${esc(x)}</span>`).join('')}${!self&&p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>${followCounts(id)}${keys.length?`<div class="pc-keys">${keys.map(k=>`<span>${esc(k)}</span>`).join('')}</div>`:''}</div></div>
  ${acts}${pairLine(id,o)}${o.before||''}${o.after||''}
- ${!me?`<button class="why mt12" data-go="P05" data-id="${id}">${venn(sh.few?'?':sh.match.length,{mini:1})}<span class="grow"><b>${esc(sharedSummary(id))}</b><span>${L('Что у вас общего','What you share')}</span></span>${I.chev}</button>`:o.asOther?`<div class="why mt12" aria-disabled="true">${venn('?',{mini:1})}<span class="grow"><b>${L('Общие интересы — у каждого свои','Shared interests differ per person')}</b><span>${L('Человек увидит своё совпадение с тобой','Each person sees their own overlap with you')}</span></span></div>`:''}
+ ${!me?`<div class="mt12">${compatBlock(id)}</div>`:o.asOther?`<div class="why mt12" aria-disabled="true">${venn('?',{mini:1})}<span class="grow"><b>${L('Общие интересы — у каждого свои','Shared interests differ per person')}</b><span>${L('Человек увидит своё совпадение с тобой','Each person sees their own overlap with you')}</span></span></div>`:''}
  ${body}${o.footer||''}</div></div>`;if(me)delete S.ui[id==='couple'?'couplePreview':'profilePreview'];return html;
 }
 SC.P01={title:p=>pname(p.id),valid:p=>!!PEOPLE[p.id]&&!isBlocked(p.id),render:(p,r)=>profileView(p.id,r),after:()=>fillJars()};

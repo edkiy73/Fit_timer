@@ -224,7 +224,6 @@ function paintAuthor(){
  $$('[data-couple-request]').forEach(el=>el.hidden=actionAuthor()!=='couple');
  $$('[data-act="reqAccess"]').forEach(el=>{const pending=social()?.reqOut.some(x=>x.p===el.dataset.v&&x.status==='pending');el.setAttribute('aria-label',pending?L('Запрос отправлен','Request sent'):L('Запросить доступ','Request access'));if(el.classList.contains('ibtn'))el.innerHTML=pending?I.clock:I.key;});
  $$('[data-private-context]').forEach(el=>el.innerHTML=privSection(el.dataset.privateContext));
- $$('[data-deck-private]').forEach(el=>el.innerHTML=veilBlock(el.dataset.deckPrivate));
  $$('#deck [data-act="decide"][data-v="1"]').forEach(el=>{const id=$('#deck .pc.top')?.dataset.id;el.setAttribute('aria-pressed',!!id&&social().likesOut.some(l=>l.p===id));});
  $$('[data-author-reason]').forEach(el=>{const reason=cur().p.id&&['C06','C07','C03'].includes(cur().id)?communityAuthorReason(cur().id==='C06'?S.discussions.find(d=>d.id===cur().p.id)?.c:cur().p.id):'';el.innerHTML=esc(reason);el.hidden=!reason;$$('[data-act="shareCommunityPartner"]').forEach(b=>b.hidden=!activePair()||actionAuthor()!=='couple'||!reason);});
  if(cur().id==='P08'&&!receivedGrant(cur().p.id))refresh();
