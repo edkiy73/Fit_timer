@@ -209,7 +209,7 @@ run('sheet=originalSheetForContext');
 for(const [action,visibility] of [['peJarAdd','public']]){
  prepare('P02');run('QA.offline=false');run(`ACT.${action}()`);const topicId=run('Object.keys(TOPICS).find(t=>!S.me.jars.some(j=>j.t===t))');
  assert.equal(run('S.ui.interestDraft.fixedVis'),true);assert.equal(run('S.ui.interestDraft.vis'),visibility);
- run(`ACT.interestsVis({dataset:{v:'only'}})`);assert.equal(run('S.ui.interestDraft.vis'),visibility,'destination cannot drift to a different profile layer');
+ assert.equal(run('S.ui.interestDraft.vis'),visibility,'interests are always public');
  run(`ACT.pickTopic({dataset:{v:'${topicId}'}});ACT.interestsStart();ACT.interestAnswer({dataset:{v:'7'}})`);timers.length=0;await finish(run('ACT.interestNext(null)'));
  assert.equal(run(`S.me.jars.find(j=>j.t==='${topicId}').vis`),visibility,'last answer saves directly in its original layer');assert.equal(run('!!S.ui.interestDraft'),false,'no visibility step remains');
 }

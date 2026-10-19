@@ -194,10 +194,10 @@ SC.P08={title:p=>pname(p.id),valid:p=>!!PEOPLE[p.id]&&!isBlocked(p.id),render:(p
 /* Main profile: media (photos and video together), basics + your details in ONE card, interests. The private part comes last, as its own panel
    with the switch next to its title; it holds only a description, photos and video — each with its own permission. Saved with the profile, no separate save. */
 const COUPLE_FIELDS=['role','format','seek'];
-/** interests live only in the main part; a jar hidden from others is marked with a crossed eye */
+/** interests live only in the main part and are always public */
 function peJars(m,owner){const list=sortJars(m.jars||[]);
  return `<section class="grp" id="peJars"><div class="grp-t"><span>${owner==='couple'?L('Общие интересы','Couple interests'):L('Интересы','Interests')}</span><span class="note">${list.length}</span></div><div class="card form-card">
- ${jarsHTML(list,{act:owner==='couple'?'editCoupleJar':'editJar',add:'peJarAdd',vis:1})}
+ ${jarsHTML(list,{act:owner==='couple'?'editCoupleJar':'editJar',add:'peJarAdd'})}
 </div></section>`;}
 ACT.peJarAdd=()=>topicPicker(null,null,'public');
 

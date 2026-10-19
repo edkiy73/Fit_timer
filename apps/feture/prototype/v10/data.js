@@ -204,8 +204,8 @@ function fullMe(){return{privText:{ru:'Новичок в верёвке, поэ�
  email:'alex@mail.com',methods:['email','google'],dating:true,datingVisible:true,socialLikes:true,requestsFrom:'all',activityVis:'all',rsvpShow:true,ageCheck:'ok',premium:false,
  jars:[
   {t:'bondage',lv:8,dir:['give'],real:'practice',vis:'public'},{t:'shibari',lv:6,dir:['give'],real:'try',vis:'public'},{t:'roleplay',lv:8,dir:['give','get'],real:'practice',vis:'public'},{t:'aftercare',lv:10,real:'practice',vis:'public'},
-  {t:'control',lv:8,dir:['give'],real:'practice',vis:'only'},{t:'sensory',lv:6,dir:['give','get','watch'],real:'fantasy',vis:'only'},{t:'experiments',lv:10,real:'try',vis:'only'},{t:'intimacy',lv:8,real:'practice',vis:'public'},
-  {t:'impact',lv:0,limit:'hard',vis:'only'},{t:'exhibition',lv:0,limit:'discuss',vis:'only'}],
+  {t:'control',lv:8,dir:['give'],real:'practice',vis:'public'},{t:'sensory',lv:6,dir:['give','get','watch'],real:'fantasy',vis:'public'},{t:'experiments',lv:10,real:'try',vis:'public'},{t:'intimacy',lv:8,real:'practice',vis:'public'},
+  {t:'impact',lv:0,limit:'hard',vis:'public'},{t:'exhibition',lv:0,limit:'discuss',vis:'public'}],
  history:[{t:ago(30),topic:'shibari',from:4,to:6,src:'test'},{t:ago(200),topic:'aftercare',from:8,to:10,src:'manual'},{t:ago(400),topic:'impact',from:'—',to:'limit',src:'manual'}],
  journal:[
   {id:'j1',t:ago(26),topics:['shibari'],text:{ru:'Первое занятие у Mia. Страшно было только первые десять минут. Записать: спросить про ножницы для бандажа.',en:'First session with Mia. Scary only for the first ten minutes. Note: ask about safety shears.'}},

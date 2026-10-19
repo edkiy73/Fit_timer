@@ -2367,8 +2367,8 @@ function fullMe(){return{privText:{ru:'Новичок в верёвке, поэ�
  email:'alex@mail.com',methods:['email','google'],dating:true,datingVisible:true,socialLikes:true,requestsFrom:'all',activityVis:'all',rsvpShow:true,ageCheck:'ok',premium:false,
  jars:[
   {t:'bondage',lv:8,dir:['give'],real:'practice',vis:'public'},{t:'shibari',lv:6,dir:['give'],real:'try',vis:'public'},{t:'roleplay',lv:8,dir:['give','get'],real:'practice',vis:'public'},{t:'aftercare',lv:10,real:'practice',vis:'public'},
-  {t:'control',lv:8,dir:['give'],real:'practice',vis:'only'},{t:'sensory',lv:6,dir:['give','get','watch'],real:'fantasy',vis:'only'},{t:'experiments',lv:10,real:'try',vis:'only'},{t:'intimacy',lv:8,real:'practice',vis:'public'},
-  {t:'impact',lv:0,limit:'hard',vis:'only'},{t:'exhibition',lv:0,limit:'discuss',vis:'only'}],
+  {t:'control',lv:8,dir:['give'],real:'practice',vis:'public'},{t:'sensory',lv:6,dir:['give','get','watch'],real:'fantasy',vis:'public'},{t:'experiments',lv:10,real:'try',vis:'public'},{t:'intimacy',lv:8,real:'practice',vis:'public'},
+  {t:'impact',lv:0,limit:'hard',vis:'public'},{t:'exhibition',lv:0,limit:'discuss',vis:'public'}],
  history:[{t:ago(30),topic:'shibari',from:4,to:6,src:'test'},{t:ago(200),topic:'aftercare',from:8,to:10,src:'manual'},{t:ago(400),topic:'impact',from:'—',to:'limit',src:'manual'}],
  journal:[
   {id:'j1',t:ago(26),topics:['shibari'],text:{ru:'Первое занятие у Mia. Страшно было только первые десять минут. Записать: спросить про ножницы для бандажа.',en:'First session with Mia. Scary only for the first ten minutes. Note: ask about safety shears.'}},
@@ -4988,10 +4988,10 @@ SC.P08={title:p=>pname(p.id),valid:p=>!!PEOPLE[p.id]&&!isBlocked(p.id),render:(p
 /* Main profile: media (photos and video together), basics + your details in ONE card, interests. The private part comes last, as its own panel
    with the switch next to its title; it holds only a description, photos and video — each with its own permission. Saved with the profile, no separate save. */
 const COUPLE_FIELDS=['role','format','seek'];
-/** interests live only in the main part; a jar hidden from others is marked with a crossed eye */
+/** interests live only in the main part and are always public */
 function peJars(m,owner){const list=sortJars(m.jars||[]);
  return `<section class="grp" id="peJars"><div class="grp-t"><span>${owner==='couple'?L('Общие интересы','Couple interests'):L('Интересы','Interests')}</span><span class="note">${list.length}</span></div><div class="card form-card">
- ${jarsHTML(list,{act:owner==='couple'?'editCoupleJar':'editJar',add:'peJarAdd',vis:1})}
+ ${jarsHTML(list,{act:owner==='couple'?'editCoupleJar':'editJar',add:'peJarAdd'})}
 </div></section>`;}
 ACT.peJarAdd=()=>topicPicker(null,null,'public');
 
@@ -5572,11 +5572,10 @@ SC.X04={title:()=>L('История интересов','Interest history'),vali
 ACT.addJar=()=>topicPicker();ACT.addLimit=()=>topicPicker();
 function topicPicker(initial,ownerIn,visIn){if(cur().p.owner==='couple'&&!coupleWritable())return;
  const owner=ownerIn||cur().p.owner||'me',model=editableProfile({p:{owner}});if(!model)return;
- const d={owner,session:S.session,pair:S.pair,lease:S.pair?.draftLease||0,selected:initial&&TOPICS[initial]&&!model.jars.some(j=>j.t===initial)?[initial]:[],answers:{},dirs:{},step:0,stage:'pick',vis:visIn||'public',fixedVis:visIn==='public'};S.ui.interestDraft=d;
+ const d={owner,session:S.session,pair:S.pair,lease:S.pair?.draftLease||0,selected:initial&&TOPICS[initial]&&!model.jars.some(j=>j.t===initial)?[initial]:[],answers:{},dirs:{},step:0,stage:'pick',vis:'public',fixedVis:true};S.ui.interestDraft=d;
  sheet(()=>{
   if(d.stage==='pick'){const have=model.jars.map(j=>j.t);return{title:L('Добавить интересы','Add interests'),sub:L('Выбери несколько интересов, затем настрой каждый.','Choose several interests, then set each one.'),search:true,searchPh:L('Найти интерес','Find an interest'),body:CATS.map(c=>{const ts=Object.keys(TOPICS).filter(t=>TOPICS[t].cat===c.id&&!have.includes(t));return ts.length?fsec(T(c),`<div class="chips">${ts.map(t=>`<button class="chip ${d.selected.includes(t)?'on':''}" aria-pressed="${d.selected.includes(t)}" data-act="pickTopic" data-v="${t}" data-txt="${chipTxt(t,topic(t))}">${esc(topic(t))}</button>`).join('')}</div>`):'';}).join('')+`<p class="note sh-empty" hidden>${L('Такого интереса пока нет.','No such interest yet.')}</p>`,foot:`<button class="btn primary" data-act="interestsStart" ${d.selected.length?'':'disabled'}>${L('Продолжить','Continue')}${d.selected.length?` · ${d.selected.length}`:''}</button>`};}
   if(d.stage==='answer'){const t=d.selected[d.step];return{title:topic(t),sub:L(`Интерес ${d.step+1} из ${d.selected.length}`,`Interest ${d.step+1} of ${d.selected.length}`),body:`<div class="qprog"><i style="width:${(d.step+1)/d.selected.length*100}%"></i></div><p class="topic-desc">${esc(T(TOPIC_DESC[t]))}</p>${grp(topicQ(t),answerHTML(d.answers[t]??null,'interestAnswer',{t,dir:d.dirs[t],dirAct:'interestDir'}),{cls:'bare'})}`,foot:`<div class="row g8"><button class="btn secondary" data-act="interestBack">${L('Назад','Back')}</button><button class="btn primary" data-act="interestNext" ${d.answers[t]==null?'disabled':''}>${d.step===d.selected.length-1?(d.fixedVis?L('Добавить в профиль','Add to profile'):L('Продолжить','Continue')):L('Дальше','Next')}</button></div>`};}
-  return{title:L('Кому показывать интересы?','Who can see these interests?'),sub:L(`Готово: ${d.selected.length}. Сохрани, чтобы добавить баночки в профиль.`,`${d.selected.length} ready. Save to add the jars to your profile.`),body:`${d.selected.map(t=>ansRow(topic(t),jarFrom(t,d.answers[t],{dir:d.dirs[t]}))).join('')}${grp(L('Кто видит','Who can see'),choices([['public',L('Все','Everyone'),L('В профиле и для совпадений. Табу будет показано как «нельзя».','On your profile and for matching. Taboo is shown as “not for me”.')],['only',L('Только я','Only me')]],d.vis,'interestsVis'))}`,foot:`<button class="btn primary" data-act="interestsSave">${L('Добавить в профиль','Add to profile')}</button><div class="row g8 mt12"><button class="btn secondary" data-act="interestBack">${L('Назад','Back')}</button><button class="btn soft" data-act="interestsDiscard">${L('Выйти без сохранения','Leave without saving')}</button></div>`};
  },{full:true,guard:()=>d.selected.length>0,onClose:()=>{if(S.ui.interestDraft===d)delete S.ui.interestDraft;}});
 }
 ACT.pickTopic=a=>{const d=S.ui.interestDraft,t=a.dataset.v;if(!d||!TOPICS[t])return;const i=d.selected.indexOf(t);if(i<0)d.selected.push(t);else{d.selected.splice(i,1);delete d.answers[t];}resheet();};
@@ -5584,25 +5583,23 @@ ACT.interestsStart=()=>{const d=S.ui.interestDraft;if(!d?.selected.length)return
 ACT.interestAnswer=a=>{const d=S.ui.interestDraft;if(!d||d.stage!=='answer')return;d.answers[d.selected[d.step]]=ansVal(a.dataset.v);resheet();};
 ACT.interestDir=a=>{const d=S.ui.interestDraft;if(!d||d.stage!=='answer')return;const t=d.selected[d.step];d.dirs[t]=toggleDir(d.dirs[t],a.dataset.v);resheet();};
 ACT.interestNext=a=>{const d=S.ui.interestDraft;if(!d||d.answers[d.selected[d.step]]==null)return;if(d.step<d.selected.length-1)d.step++;else if(d.fixedVis){return ACT.interestsSave(a);}else d.stage='visibility';resheet();};
-ACT.interestBack=()=>{const d=S.ui.interestDraft;if(!d)return;if(d.stage==='visibility')d.stage='answer';else if(d.step>0)d.step--;else d.stage='pick';resheet();};
-ACT.interestsVis=a=>{const d=S.ui.interestDraft;if(d&&!d.fixedVis&&['public','only'].includes(a.dataset.v)){d.vis=a.dataset.v;resheet();}};
+ACT.interestBack=()=>{const d=S.ui.interestDraft;if(!d)return;if(d.step>0)d.step--;else d.stage='pick';resheet();};
 ACT.interestsDiscard=()=>closeSheet();
-ACT.interestsSave=a=>{const d=S.ui.interestDraft;if(!d||!(d.stage==='visibility'||d.fixedVis&&d.stage==='answer'&&d.step===d.selected.length-1)||d.session!==S.session||!d.selected.length||d.selected.some(t=>d.answers[t]==null))return;
+ACT.interestsSave=a=>{const d=S.ui.interestDraft;if(!d||!(d.stage==='answer'&&d.step===d.selected.length-1)||d.session!==S.session||!d.selected.length||d.selected.some(t=>d.answers[t]==null))return;
  return run(a,()=>{if(S.ui.interestDraft!==d||S.session!==d.session||d.owner==='couple'&&(S.pair!==d.pair||!coupleWritable(d.lease)))return;const model=editableProfile({p:{owner:d.owner}});if(!model)return;
   d.selected.forEach(t=>{const i=model.jars.findIndex(j=>j.t===t),old=model.jars[i];const value=jarFrom(t,d.answers[t],{vis:d.vis,dir:d.dirs[t]});if(i<0)model.jars.push(value);else model.jars[i]=value;model.history.unshift({t:Date.now(),topic:t,from:old?jv(old):'—',to:d.answers[t],dir:value.dir,src:'manual'});});
   let msg='';if(d.owner==='couple'){markCoupleDraft();msg=coupleQuickSubmit();}closeSheet();refresh();if(msg)setTimeout(()=>toast(msg,{type:'ok'}),350);
  },{ms:300,ok:L('Интересы добавлены','Interests added')});};
 ACT.editJar=a=>{if(S.ui.sheet)closeSheet(true);if(!editableProfile().jars.some(j=>j.t===a.dataset.v)){topicPicker(a.dataset.v);return;}openJar(a.dataset.v);};
 /* the jar sheet: what it is → your answer → who sees. Nothing is preselected for a new topic. */
-function openJar(t,owner=cur().p.owner||'me'){const model=editableProfile({p:{owner}});if(!model)return;const ex=model.jars.find(j=>j.t===t);S.ui.jar={t,v:jv(ex),dir:normDir(ex?.dir),vis:ex?.vis||'only',owner,session:S.session};const start=JSON.stringify(S.ui.jar);
+function openJar(t,owner=cur().p.owner||'me'){const model=editableProfile({p:{owner}});if(!model)return;const ex=model.jars.find(j=>j.t===t);S.ui.jar={t,v:jv(ex),dir:normDir(ex?.dir),vis:'public',owner,session:S.session};const start=JSON.stringify(S.ui.jar);
  sheet(()=>{const j=S.ui.jar;const taboo=j.v==='hard';
  return{title:topic(t),sub:T(CATS.find(c=>c.id===TOPICS[t]?.cat)||''),body:`<p class="topic-desc">${esc(T(TOPIC_DESC[t]))}</p>
  ${grp(topicQ(t),answerHTML(j.v,'jarAns',{t,dir:j.dir,dirAct:'jarDir'}),{cls:'bare'})}
- ${j.v==null?'':grp(L('Кто видит','Who can see'),choices([['only',L('Только я','Only me')],['public',L('Все','Everyone'),taboo?L('Другие увидят в профиле: «нельзя». Без подробностей','Others see “not for me” on your profile. No details'):L('В профиле и для совпадений','On your profile and for matching')]],j.vis,'jarVis'))}`,
+`,
  foot:`<div class="row g8">${ex?`<button class="btn secondary icon" data-act="jarDel" aria-label="${L('Убрать','Remove')}">${I.trash}</button>`:''}<button class="btn primary ${j.v==null?'off':''}" data-act="jarSave">${ex?L('Сохранить','Save'):L('Добавить','Add')}</button></div>`};},{guard:()=>JSON.stringify(S.ui.jar)!==start});}
 ACT.jarAns=a=>{const j=S.ui.jar;j.v=ansVal(a.dataset.v);resheet();};
 ACT.jarDir=a=>{const j=S.ui.jar;if(!j)return;j.dir=toggleDir(j.dir,a.dataset.v);resheet();};
-ACT.jarVis=a=>{S.ui.jar.vis=a.dataset.v;resheet();};
 ACT.jarSave=a=>{const j=S.ui.jar;if(j.owner==='couple'&&!coupleWritable())return;if(j.v==null||j.session!==S.session)return;const pair=S.pair;run(a,()=>{if(S.session!==j.session||j.owner==='couple'&&S.pair!==pair)return;const model=editableProfile({p:{owner:j.owner}});if(!model)return;const arr=model.jars,i=arr.findIndex(x=>x.t===j.t),old=arr[i];const val=jarFrom(j.t,j.v,{vis:j.vis,dir:j.dir});if(i>=0)arr[i]=val;else arr.push(val);model.history.unshift({t:Date.now(),topic:j.t,from:old?jv(old):'—',to:j.v,dir:val.dir,src:'manual'});let msg='';if(j.owner==='couple'){markCoupleDraft();msg=coupleQuickSubmit();}closeSheet();refresh();if(msg)setTimeout(()=>toast(msg,{type:'ok'}),350);},{ms:300,ok:L('Сохранено','Saved')});};
 ACT.jarDel=()=>{const {t,owner,session}=S.ui.jar;closeSheet(true);ask({icon:'trash',tone:'l',title:L(`Убрать «${topic(t)}»?`,`Remove “${topic(t)}”?`),text:L('История изменений сохранится — её видишь только ты.','Change history is kept — only you can see it.'),ok:L('Убрать','Remove'),danger:true}).then(ok=>{if(ok&&S.session===session){const model=editableProfile({p:{owner}});if(!model)return;model.jars=model.jars.filter(j=>j.t!==t);let msg='';if(owner==='couple'){markCoupleDraft();msg=coupleQuickSubmit();}refresh();toast(msg||L('Убрано','Removed'),{type:'ok'});}});};
 /** someone else’s jar: what it is, their answer and yours */
