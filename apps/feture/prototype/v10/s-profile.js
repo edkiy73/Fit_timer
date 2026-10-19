@@ -214,13 +214,13 @@ function privEditor(m,r,owner){const sp=privSplit(privMedia(m)),jars=sortJars((m
  const kind=(k,title,label)=>`<section class="grp"><div class="grp-t"><span>${title}</span><span class="note">${sp[k].length}/${PRIV_MAX[k]}</span></div><div class="card form-card">${miGrid(k,sp[k].map(x=>miCell({k,id:x.id,type:x.type==='video'?'video':'image',src:privSrc(x),dur:x.dur,w:x.w,h:x.h,crop:x.crop})),sp[k].length<PRIV_MAX[k]?miAdd(k,label):'')}</div></section>`;
  return `${head}
  <div class="vault-b">
- <div class="card list"><div class="li">${selectRow('peReq',L('Кто может просить доступ','Who may ask'),[['all',L('Все','Everyone')],['matches',L('Взаимные','Mutual')],['none',L('Никто','Nobody')]],r.reqFrom||'all')}</div></div>
  <section class="grp"><div class="grp-t"><span>${L('Описание','Description')}</span></div><div class="card form-card">${rteField({name:'privText',label:'',max:1000,ph:L('Как тебе удобно договариваться, что важно до встречи','How you like to agree on things, what matters before meeting')})}</div></section>
  <section class="grp"><div class="grp-t"><span>${L('Интересы','Interests')}</span><span class="note">${jars.length}</span></div><div class="card form-card">${jarsHTML(jars,{act:owner==='couple'?'editCoupleJar':'editJar',add:'peJarAddPriv'})}</div></section>
  ${kind('photos',L('Фото','Photos'),L('Добавить фото','Add photos'))}
  ${kind('video',L('Видео','Video'),L('Добавить видео','Add video'))}
  ${owner==='couple'?`<div class="card list mt12">${linkRow({go:'Q05',icon:'unlock',title:L('Кому открыто','Who has access'),val:String(grants)})}</div>`:''}
- ${grants?`<button class="btn text danger auto mt8" data-act="revokeAll">${L('Отозвать все доступы','Revoke all access')}</button>`:''}
+ <div class="card list mt16"><div class="li">${selectRow('peReq',L('Кто может просить доступ','Who may ask'),[['all',L('Все','Everyone')],['matches',L('Взаимные','Mutual')],['none',L('Никто','Nobody')]],r.reqFrom||'all')}</div></div>
+ ${grants?`<div class="vault-act"><button class="btn text danger auto" data-act="revokeAll">${L('Отозвать все доступы','Revoke all access')}</button></div>`:''}
  </div></section>`;}
 ACT.pePriv=()=>{const r=cur();r.privOn=!r.privOn;r.dirty=true;refresh();};
 ACT.peReq=a=>{const r=cur();r.reqFrom=a.dataset.v;r.dirty=true;refresh();};

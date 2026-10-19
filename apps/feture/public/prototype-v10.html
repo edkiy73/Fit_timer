@@ -31,6 +31,7 @@
   --scrim:rgba(14,10,14,.44); --veil:rgba(245,243,240,.6);
   --shadow:0 18px 44px -24px rgba(20,12,18,.38); --shadow-s:0 6px 16px -10px rgba(20,12,18,.32);
   --nav:rgba(255,255,255,.86);
+  --fld:color-mix(in srgb,var(--ink) 5%,transparent);
   --font:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --ease:cubic-bezier(.2,.8,.2,1);
   --dock:64px; --gut:16px; --r-s:10px; --r:14px; --r-l:18px; --r-xl:24px;
@@ -2162,6 +2163,21 @@ body.capture-shield>*{visibility:hidden!important}
 .actth>img,.actth>.evimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .actth>.plate,.actth>.pl{position:absolute;inset:0;width:100%;height:100%}
 .actth>i{position:absolute;right:3px;bottom:3px;width:18px;height:18px;border-radius:50%;background:rgba(10,6,10,.62);color:#ff6b86;display:grid;place-items:center}.actth>i svg{width:11px;height:11px}
+
+/* fields, editors and jars are almost transparent: they take the colour of whatever panel they sit on (grey page, violet private panel) */
+.inp,.rte-box{background:var(--fld)}
+.rte-tb{background:color-mix(in srgb,var(--ink) 4%,transparent)}
+.vault .card.list{background:var(--fld)}
+.vault .card.form-card{background:transparent;border-color:transparent;padding:0}
+.vault .mi{background:var(--fld)}
+.jar .vessel,.jar.discuss .vessel{background:var(--fld)}
+.jar.taboo .vessel{background:repeating-linear-gradient(135deg,transparent 0 6px,color-mix(in srgb,var(--ink) 9%,transparent) 6px 7px)}
+/* private part: air under the header, the access row and «Revoke» close the panel, «Revoke» is centred */
+.vault-b{margin-top:14px}
+.vault-b>.card.list.mt16{margin-top:20px}
+.vault-act{display:flex;justify-content:center;margin-top:12px}
+.vault-act .btn{width:auto}
+.vault-b{margin-top:22px}.vault-b>.grp:first-child{margin-top:0}
 </style>
 </head>
 <body>
@@ -5033,13 +5049,13 @@ function privEditor(m,r,owner){const sp=privSplit(privMedia(m)),jars=sortJars((m
  const kind=(k,title,label)=>`<section class="grp"><div class="grp-t"><span>${title}</span><span class="note">${sp[k].length}/${PRIV_MAX[k]}</span></div><div class="card form-card">${miGrid(k,sp[k].map(x=>miCell({k,id:x.id,type:x.type==='video'?'video':'image',src:privSrc(x),dur:x.dur,w:x.w,h:x.h,crop:x.crop})),sp[k].length<PRIV_MAX[k]?miAdd(k,label):'')}</div></section>`;
  return `${head}
  <div class="vault-b">
- <div class="card list"><div class="li">${selectRow('peReq',L('Кто может просить доступ','Who may ask'),[['all',L('Все','Everyone')],['matches',L('Взаимные','Mutual')],['none',L('Никто','Nobody')]],r.reqFrom||'all')}</div></div>
  <section class="grp"><div class="grp-t"><span>${L('Описание','Description')}</span></div><div class="card form-card">${rteField({name:'privText',label:'',max:1000,ph:L('Как тебе удобно договариваться, что важно до встречи','How you like to agree on things, what matters before meeting')})}</div></section>
  <section class="grp"><div class="grp-t"><span>${L('Интересы','Interests')}</span><span class="note">${jars.length}</span></div><div class="card form-card">${jarsHTML(jars,{act:owner==='couple'?'editCoupleJar':'editJar',add:'peJarAddPriv'})}</div></section>
  ${kind('photos',L('Фото','Photos'),L('Добавить фото','Add photos'))}
  ${kind('video',L('Видео','Video'),L('Добавить видео','Add video'))}
  ${owner==='couple'?`<div class="card list mt12">${linkRow({go:'Q05',icon:'unlock',title:L('Кому открыто','Who has access'),val:String(grants)})}</div>`:''}
- ${grants?`<button class="btn text danger auto mt8" data-act="revokeAll">${L('Отозвать все доступы','Revoke all access')}</button>`:''}
+ <div class="card list mt16"><div class="li">${selectRow('peReq',L('Кто может просить доступ','Who may ask'),[['all',L('Все','Everyone')],['matches',L('Взаимные','Mutual')],['none',L('Никто','Nobody')]],r.reqFrom||'all')}</div></div>
+ ${grants?`<div class="vault-act"><button class="btn text danger auto" data-act="revokeAll">${L('Отозвать все доступы','Revoke all access')}</button></div>`:''}
  </div></section>`;}
 ACT.pePriv=()=>{const r=cur();r.privOn=!r.privOn;r.dirty=true;refresh();};
 ACT.peReq=a=>{const r=cur();r.reqFrom=a.dataset.v;r.dirty=true;refresh();};
