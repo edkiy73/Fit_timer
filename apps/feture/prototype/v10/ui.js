@@ -18,7 +18,7 @@ function jarsHTML(list,o={}){
 /** one answer row: level badge + name (one line, cut with «…») + the answer under it. Long nicknames and long words never squeeze each other. */
 function ansRow(name,j,note=''){const n=j?normJar(j):null;const badge=!n?'<span class="ar-lv none">—</span>':n.limit?`<span class="ar-lv ${n.limit==='hard'?'taboo':'discuss'}">${n.limit==='hard'?I.block:I.chat}</span>`:`<span class="ar-lv" style="--jc:${jarColor(n.lv)};--jt:${jarInk(n.lv)}">${n.lv}</span>`;
  return `<div class="li static ansrow">${badge}<span class="tx"><b>${esc(name)}</b><small>${n?esc(jarDesc(n)):L('не отмечено','not set')}${note?` · ${note}`:''}</small></span></div>`;}
-const pubJars=id=>id==='me'||id==='couple'?(id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me)).jars.filter(j=>j.vis==='public'):(person(id)?.jars||[]).map(normJar).filter(j=>!j.vis||j.vis==='public');
+const pubJars=id=>id==='me'||id==='couple'?(id==='couple'?(S.ui.couplePreview||(S.pair?.proposal?.status==='pending'&&S.pair.proposal.text?.jars?S.pair.proposal.text:coupleProfile())):(S.ui.profilePreview||S.me)).jars.filter(j=>j.vis==='public'):(person(id)?.jars||[]).map(normJar).filter(j=>!j.vis||j.vis==='public');
 const fillJars=()=>setTimeout(()=>$$('.jars.pre').forEach(j=>j.classList.remove('pre')),90);
 function venn(n,o={}){return `<div class="venn ${o.mini?'mini':''} ${o.pre?'pre':''}" ${o.id?`id="${o.id}"`:''}><i></i><i></i><b>${n}${o.mini?'':`<small>${pl(n,['общий интерес','общих интереса','общих интересов'],['shared interest','shared interests'],true)}</small>`}</b></div>`;}
 const playVenn=()=>setTimeout(()=>$$('.venn.pre').forEach(v=>v.classList.remove('pre')),120);

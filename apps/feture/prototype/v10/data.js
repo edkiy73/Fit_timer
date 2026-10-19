@@ -195,7 +195,7 @@ const EVENTS={
   desc:{ru:'Танцы и разговоры.',en:'Dancing and conversations.'},reqs:[]},
 };
 
-const REQ_SCOPES=[['info',{ru:'текст и интересы',en:'text and interests'}],['photos',{ru:'приватные фото',en:'private photos'}],['video',{ru:'видео',en:'video'}],['album',{ru:'альбом «Лето»',en:'album “Summer”'}]];
+const REQ_SCOPES=[['info',{ru:'текст и интересы',en:'text and interests'}],['photos',{ru:'фото',en:'photos'}],['video',{ru:'видео',en:'video'}],['album',{ru:'альбом «Лето»',en:'album “Summer”'}]];
 
 /* ---------- personas ---------- */
 function fullMe(){return{privText:{ru:'Новичок в верёвке, поэтому сначала — разговор и короткая встреча на нейтральной территории. Не люблю сюрпризов.',en:'New to rope, so first a talk and a short meeting on neutral ground. I don’t like surprises.'},
