@@ -320,7 +320,7 @@ ACT.peHideCity=()=>{cur().f.city='';cur().dirty=true;refresh();};
 function activityBlock(id,tabs){const on=tabs.filter(t=>t[2]);if(!on.length)return '';S.ui.pa||(S.ui.pa={});const cur_=on.some(t=>t[0]===S.ui.pa[id])?S.ui.pa[id]:on[0][0];const t=on.find(x=>x[0]===cur_);
  return `<section class="grp activity">${on.length>1?tabsRow(on.map(x=>[x[0],x[1],x[2]]),cur_,'profAct','tabs-full'):`<div class="grp-t"><span>${t[1]} · ${t[2]}</span></div>`}${t[3]()}</section>`;}
 /* ---------- activity: what a person did — likes, events, communities, follows. The owner decides who sees the tab (Settings → Privacy) ---------- */
-const ACT_VIS=()=>[['all',L('Все','Everyone')],['followers',L('Подписчики и взаимные','Followers & mutual')],['off',L('Выключена','Off')]];
+const ACT_VIS=()=>[['all',L('Все','Everyone')],['followers',L('Подписчики и взаимные','Followers & mutual')],['off',L('Никто','Nobody')]];
 const actHash=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h;};
 const activityMode=id=>(id==='me'?S.me.activityVis:person(id)?.actVis)||'all';
 /** is the activity tab visible to this viewer? `o.asOther` = «as others see me» preview: no access = a stranger, with access = a contact */
