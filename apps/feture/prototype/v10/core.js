@@ -404,7 +404,7 @@ function setP(k,v){cur().p[k]=v;navNextReplace=true;refresh();}
 function setSub(v){const r=cur();if(r.p.sub===v)return;r.p.sub=v;r.scroll=0;navNextReplace=true;render('fade');}
 
 // Ordinary routes keep global navigation; focused tasks opt out explicitly.
-const DOCKLESS=new Set(['A07','V01','MAINT','H02','D02','F07','F09','E06','E11','P02','P04','Q04','C07','C08','X08','X11']);
+const DOCKLESS=new Set(['A07','V01','MAINT','H02','F07','F09','E06','E11','P02','P04','Q04','C07','C08','X08','X11']);
 const screenHasDock=(id,sc=SC[id])=>!!S.session&&!QA.maintenance&&!sc?.auth&&!DOCKLESS.has(id)&&sc?.dock!==false;
 const main=()=>$('#main');
 function render(dir,keep){
