@@ -3780,7 +3780,7 @@ function filterSheet(cfg){S.ui.fcfg=cfg;S.ui.fsub=null;const start=JSON.stringif
   if(sub)return{title:sub.label,lead:`<button class="ibtn ghost sm" data-act="fBack" aria-label="${L('К фильтрам','Back to filters')}">${I.back}</button>`,search:!!sub.search,searchPh:L('Найти вариант','Find an option'),body:`${sub.body()}<p class="note sh-empty" hidden>${L('Ничего не нашлось','Nothing found')}</p>`,foot:`<button class="btn primary" data-act="fBack">${L('Готово','Done')}</button>`};
   const n=c.count();return{title:c.title,head:`<button class="btn text auto" data-act="fReset">${L('Сбросить','Reset')}</button>`,
    body:`${c.top?c.top():''}${c.rows.map(fInline).join('')}${c.note?`<p class="grp-n">${c.note}</p>`:''}${!n?`<p class="note mt12">${L('С такими фильтрами пока ничего нет. Можно применить их или изменить выбор.','Nothing matches yet. You can apply these filters or change your choices.')}</p>`:''}`,
-   foot:`<button class="btn primary" data-act="fApply">${n?c.applyLabel(n):L('Применить фильтры','Apply filters')}</button>`};},
+   foot:`<button class="btn primary" data-act="fApply">${L('Применить','Apply')}</button>`};},
  {full:true,guard:()=>JSON.stringify(S.ui.fcfg.draft())!==start,back:()=>{if(S.ui.fsub){S.ui.fsub=null;resheet();return true;}return false;}});}
 ACT.fOpen=a=>{S.ui.fsub=a.dataset.v;S.ui.shq='';resheet();$('#sheet .sh-b')&&($('#sheet .sh-b').scrollTop=0);};
 ACT.fBack=()=>{S.ui.fsub=null;S.ui.shq='';resheet();};
@@ -4912,7 +4912,7 @@ function dfSheet(){if(!S.ui.df)S.ui.df=JSON.parse(JSON.stringify(social().filter
  <section class="fin"><div class="fin-t"><b>${L('Где искать','Where')}</b></div><div class="card">${locationFields(f,'dfCity','dfPlaceMode','dfGeo').replace(/^<div class="sec">[^<]*<\/div>/,'')}${f.city&&f.placeMode==='city'?`<button class="btn text auto" data-act="dfAnyCity">${L('Искать в любом городе','Search any city')}</button>`:''}${f.placeMode==='nearby'?`<div class="row" style="justify-content:space-between;margin-top:10px"><span class="note">${L('Радиус','Radius')}</span><b id="distLbl">${L(`до ${f.dist} км`,`up to ${f.dist} km`)}</b></div><div class="dual single"><span class="trk"><i style="left:0;right:${100-(f.dist-5)/95*100}%"></i></span><input type="range" min="5" max="100" step="5" value="${f.dist}" data-in="dfDist" aria-label="${L('Расстояние','Distance')}"></div>`:''}</div></section>
  ${DROWS.map(([k,l,items,groups])=>`<section class="fin"><div class="fin-t"><b>${l}</b><span>${L('можно несколько','pick any')}</span></div>${popChips(items,f[k]||[],'dfMulti',`data-act="dfOpen" data-v="${k}"`,{groups,k,lim:k==='topics'?6:groups?groups[0][1].length:items.length})}</section>`).join('')}
  `,
-   foot:`<button class="btn primary" data-act="dfApply">${n?L(`Показать ${pl(n,['анкету','анкеты','анкет'],[])}`,`Show ${pl(n,[],['profile','profiles'])}`):L('Применить · пока никого','Apply · no matches yet')}</button>`};},{full:true});}
+   foot:`<button class="btn primary" data-act="dfApply">${L('Применить','Apply')}</button>`};},{full:true});}
 ACT.dfSheet=()=>{S.ui.df=null;dfSheet();};
 ACT.dfBack=()=>{S.ui.dfsub=null;resheet();};
 ACT.dfOpen=a=>{S.ui.dfsub=a.dataset.v;resheet();};
