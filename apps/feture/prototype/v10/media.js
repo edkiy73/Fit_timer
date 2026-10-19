@@ -101,7 +101,7 @@ ACT.upCrop=a=>{const up=S.ui.up;const it=up.items[+a.dataset.v];openCrop(it.full
 function openCrop(src,aspect,crop,done){
  const [aw,ah]=ASPECTS[aspect];const st={x:crop.x,y:crop.y,z:crop.z};const prevUp=S.ui.up;
  sheet(()=>({title:L('Кадрирование','Crop'),body:`<div class="crop" style="aspect-ratio:${aw}/${ah}" id="cropBox"><img src="${esc(src)}" alt="" draggable="false" id="cropImg"><div class="crop-grid"><i></i><i></i><i></i><i></i></div></div>
-  <label class="crop-zoom">${ic('search',16)}<input type="range" min="1" max="3" step="0.01" value="${st.z}" id="cropZ" aria-label="${L('Масштаб','Zoom')}"></label><p class="note center">${L(`Формат ${aspect} — одинаковый для всех фото, поэтому лента и профиль выглядят ровно. Двигай фото пальцем.`,`${aspect} format is the same for every photo, so the feed and profile look tidy. Drag the photo to move it.`)}</p>`,
+  <label class="crop-zoom">${ic('search',16)}<input type="range" min="1" max="3" step="0.01" value="${st.z}" id="cropZ" aria-label="${L('Масштаб','Zoom')}"></label>`,
   foot:`<div class="row g8"><button class="btn soft" style="flex:0 0 auto;width:auto" data-act="cropReset">${L('Сбросить','Reset')}</button><button class="btn primary" data-act="cropOk">${L('Применить','Apply')}</button></div>`}),{full:true,onClose:()=>{if(!S.ui.cropDone&&prevUp){S.ui.up=prevUp;setTimeout(()=>{if(!S.ui.sheet)sheet(uploaderSheet,{full:true});},300);}S.ui.cropDone=false;}});
  S.ui.crop={st,done,aspect};
  requestAnimationFrame(()=>{const box=$('#cropBox'),img=$('#cropImg'),z=$('#cropZ');if(!box)return;

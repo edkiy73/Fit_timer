@@ -149,7 +149,7 @@ ACT.qSave=()=>{go('X05');};
 SC.X10={title:()=>L('Результат','Result'),valid:p=>!!QUIZ[p.id],render:(p,r)=>SC.X09.render(p,r)};
 SC.X11={title:()=>L('Поделиться','Share'),valid:p=>!!QUIZ[p.id],render:(p,r)=>{const jars=shareableQuizJars(p.id);if(!r.sel)r.sel=jars.slice(0,4).map(j=>j.t);else r.sel=normalizeShareSelection(p.id,r.sel);r.aud=r.aud||'all';const chosen=jars.filter(j=>r.sel.includes(j.t));
  return `${bar(L('Поделиться результатом','Share result'),{back:1,sm:1})}<div class="view nodock cta1"><div class="wrap">
- <div class="sharecard"><div class="sc-top"><img src="${LOGO()}" alt="">FetUre · ${esc(T(QUIZ[p.id].title))}</div>${chosen.length?jarsHTML(chosen):`<p class="note">${L('Выбери интересы ниже','Pick interests below')}</p>`}</div>
+ <div class="sharecard"><div class="sc-top"><img src="${LOGO()}" alt="">FetUre · ${esc(T(QUIZ[p.id].title))}</div>${chosen.length?jarsHTML(chosen):``}</div>
  ${grp(L('Что показать · до 4','What to show · up to 4'),choices(jars.map(j=>[j.t,topic(j.t),jarWord(j)]),r.sel,'x11pick',{multi:1}),{foot:L('Табу, «обсуждаемо» и невыбранные интересы в публикацию не попадут.','Taboo, negotiable and unselected interests are never included.')})}
  ${grp(L('Кому','Audience'),choices(AUD().slice(0,3).map(([k,i,t,s])=>[k,t,s]),r.aud,'x11aud'))}
  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary ${chosen.length?'':'off'}" data-act="x11go">${L('Опубликовать','Publish')}</button></div></div>`;},after:()=>fillJars()};
