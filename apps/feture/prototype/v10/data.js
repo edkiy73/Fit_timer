@@ -87,7 +87,7 @@ const PEOPLE={
  sofi:{pv:true,name:'Sofi',age:26,photo:1,nph:3,city:'berlin',km:4,pron:'she',gender:['woman'],orient:['bi'],format:['open','serious'],status:'single',role:['recv'],seek:['dates','chat'],verified:true,online:true,dating:true,
   bio:{ru:'Люблю долгие переписки перед встречей и людей, которые не торопят. Фотографирую плёнку.',en:'I love long chats before meeting and people who don’t rush. I shoot film.'},
   jars:[['experiments',10],['bondage',8,['get']],['sensory',8,['get']],['exhibition',4,['watch']]]},
- leon:{premium:true,name:'Leon',age:33,photo:2,nph:2,city:'berlin',km:8,pron:'he',gender:['transm'],orient:['bi'],format:'open',role:['lead'],seek:['dates'],verified:true,online:false,last:{ru:'был вчера',en:'active yesterday'},dating:true,
+ leon:{actVis:'off',premium:true,name:'Leon',age:33,photo:2,nph:2,city:'berlin',km:8,pron:'he',gender:['transm'],orient:['bi'],format:'open',role:['lead'],seek:['dates'],verified:true,online:false,last:{ru:'был вчера',en:'active yesterday'},dating:true,
   bio:{ru:'Сначала кофе и разговор, потом всё остальное. Веду небольшие вечеринки.',en:'Coffee and a talk first, everything else later. I host small parties.'},
   jars:[['control',10,['give']],['roleplay',8,['give','get']],['bondage',8,['give']],['latex',8,['watch']]]},
  mia:{pv:true,premium:true,privText:{ru:'Перед первой сессией всегда созваниваемся. Стоп-слово — «красный», жест — два хлопка. После — обязательно чай и разговор.',en:'We always call before a first session. Safeword is “red”, gesture is two taps. Afterwards — tea and a talk, always.'},name:'Mia',age:29,photo:3,nph:5,city:'berlin',km:3,pron:'she',gender:['transw'],orient:['queer'],format:['poly','play'],status:'partnered',role:['switch'],seek:['dates','exp'],verified:true,online:true,dating:true,
@@ -96,7 +96,7 @@ const PEOPLE={
  kai:{pv:true,name:'Kai',age:27,photo:4,nph:2,city:'berlin',km:5,pron:'they',gender:['nb'],orient:['pan'],format:'ra',role:['switch'],seek:['chat','friends'],verified:true,online:false,last:{ru:'был(а) сегодня',en:'active today'},dating:true,
   bio:{ru:'Ищу людей, с которыми можно спокойно говорить о границах. Остальное приложится.',en:'Looking for people I can calmly talk boundaries with. The rest will follow.'},
   jars:[['service',8,['give']],['bondage',6,['get']],['rituals',8],['talk',10],{t:'filming',lv:0,limit:'hard'}]},
- maya:{pv:true,name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:[],seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
+ maya:{actVis:'followers',pv:true,name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:[],seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
   bio:{ru:'Веду сообщество «Узлы и разговоры» и встречи для новичков. Здесь — ради людей и тем.',en:'I run the Rope & Talk community and newcomer meetups. Here for people and ideas.'},
   jars:[['shibari',10],['talk',10],['aftercare',8]]},
  ari:{name:'Ari',age:30,photo:6,city:'berlin',km:6,pron:'he',gender:['man'],orient:['gay'],format:'open',role:['service'],seek:['dates','friends'],verified:true,online:false,last:{ru:'был 2 ч назад',en:'active 2h ago'},dating:true,
@@ -195,19 +195,19 @@ const EVENTS={
   desc:{ru:'Танцы и разговоры.',en:'Dancing and conversations.'},reqs:[]},
 };
 
-const REQ_SCOPES=[['info',{ru:'Описание',en:'Description'}],['interests',{ru:'Интересы',en:'Interests'}],['photos',{ru:'Фото',en:'Photos'}],['video',{ru:'Видео',en:'Video'}]];
+const REQ_SCOPES=[['info',{ru:'Описание',en:'Description'}],['photos',{ru:'Фото',en:'Photos'}],['video',{ru:'Видео',en:'Video'}]];
 const cleanScopes=arr=>[...new Set((arr||[]).filter(k=>REQ_SCOPES.some(([s])=>s===k)))];
-const allowedScopes=(owner,viewer)=>REQ_SCOPES.filter(([k])=>owner!=='couple'||PEOPLE[viewer]?.pair||['info','interests'].includes(k)).map(([k])=>k);
+const allowedScopes=(owner,viewer)=>REQ_SCOPES.filter(([k])=>owner!=='couple'||PEOPLE[viewer]?.pair||k==='info').map(([k])=>k);
 
 /* ---------- personas ---------- */
 function fullMe(){return{privText:{ru:'Новичок в верёвке, поэтому сначала — разговор и короткая встреча на нейтральной территории. Не люблю сюрпризов.',en:'New to rope, so first a talk and a short meeting on neutral ground. I don’t like surprises.'},
  nick:'alex_b',name:'Alex',showAge:true,dob:'1994-03-14',photo:8,photos:[8],city:'berlin',pron:'he',gender:['man'],orient:['bi'],format:['open','play'],status:'single',role:['lead'],seek:['dates','chat'],
  bio:{ru:'Говорю прямо, слушаю внимательно. Люблю верёвку, долгие прогулки и людей, которые знают свои границы.',en:'I speak directly and listen closely. I love rope, long walks and people who know their limits.'},
- vis:{...PUBLIC_VIS},email:'alex@mail.com',methods:['email','google'],dating:true,datingVisible:true,socialLikes:true,requestsFrom:'all',rsvpShow:true,ageCheck:'ok',premium:false,
+ email:'alex@mail.com',methods:['email','google'],dating:true,datingVisible:true,socialLikes:true,requestsFrom:'all',activityVis:'all',rsvpShow:true,ageCheck:'ok',premium:false,
  jars:[
   {t:'bondage',lv:8,dir:['give'],real:'practice',vis:'public'},{t:'shibari',lv:6,dir:['give'],real:'try',vis:'public'},{t:'roleplay',lv:8,dir:['give','get'],real:'practice',vis:'public'},{t:'aftercare',lv:10,real:'practice',vis:'public'},
-  {t:'control',lv:8,dir:['give'],real:'practice',vis:'granted'},{t:'sensory',lv:6,dir:['give','get','watch'],real:'fantasy',vis:'granted'},{t:'experiments',lv:10,real:'try',vis:'only'},{t:'intimacy',lv:8,real:'practice',vis:'public'},
-  {t:'impact',lv:0,limit:'hard',vis:'only'},{t:'exhibition',lv:0,limit:'discuss',vis:'granted'}],
+  {t:'control',lv:8,dir:['give'],real:'practice',vis:'public'},{t:'sensory',lv:6,dir:['give','get','watch'],real:'fantasy',vis:'public'},{t:'experiments',lv:10,real:'try',vis:'public'},{t:'intimacy',lv:8,real:'practice',vis:'public'},
+  {t:'impact',lv:0,limit:'hard',vis:'public'},{t:'exhibition',lv:0,limit:'discuss',vis:'public'}],
  history:[{t:ago(30),topic:'shibari',from:4,to:6,src:'test'},{t:ago(200),topic:'aftercare',from:8,to:10,src:'manual'},{t:ago(400),topic:'impact',from:'—',to:'limit',src:'manual'}],
  journal:[
   {id:'j1',t:ago(26),topics:['shibari'],text:{ru:'Первое занятие у Mia. Страшно было только первые десять минут. Записать: спросить про ножницы для бандажа.',en:'First session with Mia. Scary only for the first ten minutes. Note: ask about safety shears.'}},
@@ -218,7 +218,7 @@ function fullMe(){return{privText:{ru:'Новичок в верёвке, поэ�
 };}
 function newMe(){return{
  nick:'',name:'',showAge:false,dob:'',photo:null,photos:[],city:null,pron:null,gender:[],orient:[],format:[],status:null,role:[],seek:[],bio:{ru:'',en:''},
- vis:{gender:'only',orient:'only',format:'only',role:'only'},email:'',methods:[],dating:false,datingVisible:false,socialLikes:true,requestsFrom:'all',rsvpShow:true,ageCheck:'none',premium:false,
+ email:'',methods:[],dating:false,datingVisible:false,socialLikes:true,requestsFrom:'all',activityVis:'all',rsvpShow:true,ageCheck:'none',premium:false,
  jars:[],history:[],journal:[],tests:{},saved:{posts:[],events:[],topics:[]},fresh:true};}
 
 function freshState(persona){
@@ -255,8 +255,8 @@ function freshState(persona){
   }:{},
   archived:new Set(full?[]:[]),muted:new Set(),
   blocked:full?[{p:'dan',t:ago(300)}]:[],
-  reqIn:full?[{id:'r1',p:'kai',scopes:['info','photos'],t:ago(.2),status:'new'},{id:'r2',p:'leon',scopes:['info'],t:ago(2),status:'new'},{id:'r3',p:'tomeva',scopes:['info','interests','photos','video'],t:ago(22),status:'new'}]:[],
-  reqOut:full?[{id:'o1',p:'kira',scopes:['info','photos'],t:ago(4),status:'pending'},{id:'o2',p:'mia',scopes:['info','interests','photos','video'],t:ago(30),status:'partial',granted:['info','photos'],until:NOW+5*DAY},{id:'o3',p:'leon',scopes:['info'],t:ago(80),status:'declined'},{id:'o4',p:'ari',scopes:['info'],t:ago(200),status:'expired'}]:[],
+  reqIn:full?[{id:'r1',p:'kai',scopes:['info','photos'],t:ago(.2),status:'new'},{id:'r2',p:'leon',scopes:['info'],t:ago(2),status:'new'},{id:'r3',p:'tomeva',scopes:['info','photos'],t:ago(22),status:'new'}]:[],
+  reqOut:full?[{id:'o1',p:'kira',scopes:['info','photos'],t:ago(4),status:'pending'},{id:'o2',p:'mia',scopes:['info','photos','video'],t:ago(30),status:'partial',granted:['info','photos'],until:NOW+5*DAY},{id:'o3',p:'leon',scopes:['info'],t:ago(80),status:'declined'},{id:'o4',p:'ari',scopes:['info'],t:ago(200),status:'expired'}]:[],
   sharedByMe:full?[{p:'mia',scopes:['info','photos'],until:NOW+5*DAY,t:ago(28)},{p:'kai',scopes:['info'],until:NOW+23*HOUR,t:ago(1)}]:[],
   notifs:full?[
    {id:'n1',type:'match',p:'lina',t:ago(1),read:false,go:['H01']},

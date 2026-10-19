@@ -32,10 +32,13 @@ const fmtDur=s=>`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}
  * Open the uploader. o = {max, accept:'image'|'media', aspect:'4:5'|'1:1'|'16:9'|null, aspects:[...], title, have, done(items)}
  * Items: {type:'image'|'video', url, size, w, h, dur?}
  */
+/** what an uploader accepts: 'image' (photos), 'video', or anything else = both */
+const upAccept=a=>a==='image'?'image/*':a==='video'?'video/*':'image/*,video/*';
+const upAllows=(a,f)=>f.type.startsWith('image/')?a!=='video':f.type.startsWith('video/')?a!=='image':false;
 function openUploader(o){
  const left=Math.max(0,(o.max||MEDIA_MAX)-(o.have||0));
  if(!left){toast(L(`Уже ${o.max||MEDIA_MAX} из ${o.max||MEDIA_MAX} — убери что-нибудь, чтобы добавить новое`,`Already ${o.max||MEDIA_MAX} of ${o.max||MEDIA_MAX} — remove one to add another`),{type:'warn'});return;}
- const input=document.createElement('input');input.type='file';input.multiple=left>1;input.accept=o.accept==='image'?'image/*':'image/*,video/*';input.hidden=true;document.body.append(input);
+ const input=document.createElement('input');input.type='file';input.multiple=left>1;input.accept=upAccept(o.accept);input.hidden=true;document.body.append(input);
  input.addEventListener('change',()=>{const files=[...input.files];input.remove();if(files.length)startUpload(o,files,left);},{once:true});
  input.addEventListener('cancel',()=>input.remove(),{once:true});
  input.click();
@@ -45,8 +48,8 @@ function startUpload(o,files,left){
  if(files.length>left)toast(L(`Можно добавить ещё ${left}. Остальные файлы пропустили`,`You can add ${left} more. The rest were skipped`),{type:'warn'});
  const items=[];
  for(const f of files.slice(0,left)){
-  const video=f.type.startsWith('video/'),image=f.type.startsWith('image/');
-  if(!image&&!(video&&o.accept!=='image')){toast(L(`«${f.name}» — не фото и не видео`,`“${f.name}” isn’t a photo or video`),{type:'warn'});continue;}
+  const video=f.type.startsWith('video/');
+  if(!upAllows(o.accept,f)){toast(o.accept==='image'?L(`«${f.name}» — не фото`,`“${f.name}” isn’t a photo`):o.accept==='video'?L(`«${f.name}» — не видео`,`“${f.name}” isn’t a video`):L(`«${f.name}» — не фото и не видео`,`“${f.name}” isn’t a photo or video`),{type:'warn'});continue;}
   if(f.size>(video?200:25)*1048576){toast(video?L('Видео — до 200 МБ','Videos up to 200 MB'):L('Фото — до 25 МБ','Photos up to 25 MB'),{type:'warn'});continue;}
   items.push({id:'u'+Math.random().toString(36).slice(2,8),file:f,type:video?'video':'image',name:f.name,orig:f.size,status:'prep',progress:0,crop:{x:0,y:0,z:1}});
  }
@@ -90,8 +93,8 @@ function uploaderSheet(){const up=S.ui.up,o=up.o;const ready=up.items.filter(i=>
 ACT.upAspect=async a=>{const up=S.ui.up;up.aspect=a.dataset.v==='orig'?null:a.dataset.v;for(const it of up.items.filter(i=>i.type==='image'&&i.full)){it.crop={x:0,y:0,z:1};if(up.aspect){const c=await cropImage(it,up.aspect);Object.assign(it,{url:c.url,size:c.size,w:c.w,h:c.h});}else Object.assign(it,{url:it.full});}upRefresh();};
 ACT.upRm=a=>{const up=S.ui.up;up.items.splice(+a.dataset.v,1);if(!up.items.length){closeSheet();return;}upRefresh();};
 ACT.upRetry=a=>{const it=S.ui.up.items[+a.dataset.v];it.status='up';it.progress=0;upRefresh();uploadTick(it);};
-ACT.upMore=()=>{const up=S.ui.up;const left=(up.o.max||MEDIA_MAX)-(up.o.have||0)-up.items.length;const input=document.createElement('input');input.type='file';input.multiple=true;input.accept=up.o.accept==='image'?'image/*':'image/*,video/*';input.hidden=true;document.body.append(input);
- input.addEventListener('change',()=>{const files=[...input.files].slice(0,left);input.remove();for(const f of files){const video=f.type.startsWith('video/');if(!f.type.startsWith('image/')&&!(video&&up.o.accept!=='image'))continue;const it={id:'u'+Math.random().toString(36).slice(2,8),file:f,type:video?'video':'image',name:f.name,orig:f.size,status:'prep',progress:0,crop:{x:0,y:0,z:1}};up.items.push(it);processItem(it);}upRefresh();},{once:true});input.click();};
+ACT.upMore=()=>{const up=S.ui.up;const left=(up.o.max||MEDIA_MAX)-(up.o.have||0)-up.items.length;const input=document.createElement('input');input.type='file';input.multiple=true;input.accept=upAccept(up.o.accept);input.hidden=true;document.body.append(input);
+ input.addEventListener('change',()=>{const files=[...input.files].slice(0,left);input.remove();for(const f of files){const video=f.type.startsWith('video/');if(!upAllows(up.o.accept,f))continue;const it={id:'u'+Math.random().toString(36).slice(2,8),file:f,type:video?'video':'image',name:f.name,orig:f.size,status:'prep',progress:0,crop:{x:0,y:0,z:1}};up.items.push(it);processItem(it);}upRefresh();},{once:true});input.click();};
 ACT.upView=a=>{const up=S.ui.up;openViewer(up.items.filter(i=>i.url).map(i=>({type:i.type,src:i.url})),+a.dataset.v);};
 ACT.upDone=()=>{const up=S.ui.up;if(!up||up.items.some(i=>i.status==='prep'||i.status==='up'))return;const ok=up.items.filter(i=>i.status==='ok').map(i=>({type:i.type,url:i.url,size:i.size,w:i.w,h:i.h,dur:i.dur}));up.finished=true;closeSheet();S.ui.up=null;
  if(S!==up.owner||cur()!==up.route)return;if(ok.length){up.o.done(ok);toast(L(`Добавлено: ${ok.length}`,`Added: ${ok.length}`),{type:'ok'});}};
@@ -179,3 +182,25 @@ ACT.mView=(a,e)=>{e?.stopPropagation();const id=a.dataset.v;const list=(MEDIA_SR
 
 function invalidateViewer(){if(!VW)return;closeViewer();const el=$('#viewer');if(el)el.innerHTML='';VW=null;}
 setInterval(()=>{if(VW&&!VW.guard())invalidateViewer();},250);
+
+/* ---------- drag to reorder: a grid with data-reorder="action" whose cells are .mi[data-id] ----------
+   mouse: drag after a few pixels; touch: press and hold (so scrolling keeps working). On drop the action gets dataset.order = ids in the new order. */
+(function(){
+ let d=null,swallow=false;
+ const cells=g=>[...g.children].filter(c=>c.classList.contains('mi'));
+ const stop=()=>{if(!d)return;clearTimeout(d.timer);if(d.ghost)d.ghost.remove();d.cell.classList.remove('mi-ph');d.grid.classList.remove('reordering');document.body.classList.remove('no-sel');d=null;};
+ const begin=()=>{if(!d||d.on)return;d.on=true;const r=d.cell.getBoundingClientRect();d.dx=d.x-r.left;d.dy=d.y-r.top;const g=d.ghost=d.cell.cloneNode(true);g.classList.add('mi-ghost');g.removeAttribute('data-id');g.style.cssText=`position:fixed;left:0;top:0;width:${r.width}px;height:${r.height}px;transform:translate(${r.left}px,${r.top}px);z-index:60;pointer-events:none`;document.body.append(g);d.cell.classList.add('mi-ph');d.grid.classList.add('reordering');document.body.classList.add('no-sel');navigator.vibrate?.(8);};
+ document.addEventListener('pointerdown',e=>{if(e.button>0||e.target.closest('.rm,.mi-menu'))return;const cell=e.target.closest?.('[data-reorder]>.mi');if(!cell)return;const grid=cell.parentElement;if(cells(grid).length<2)return;stop();
+  d={grid,cell,pid:e.pointerId,x:e.clientX,y:e.clientY,touch:e.pointerType!=='mouse',on:false,start:cells(grid).map(c=>c.dataset.id).join(',')};if(d.touch)d.timer=setTimeout(begin,330);});
+ document.addEventListener('pointermove',e=>{if(!d||e.pointerId!==d.pid)return;
+  if(!d.on){const m=Math.hypot(e.clientX-d.x,e.clientY-d.y);if(d.touch){if(m>8)stop();}else if(m>5)begin();return;}
+  d.ghost.style.transform=`translate(${e.clientX-d.dx}px,${e.clientY-d.dy}px)`;
+  const over=document.elementFromPoint(e.clientX,e.clientY)?.closest('.mi');if(!over||over===d.cell||over.parentElement!==d.grid)return;
+  const list=cells(d.grid);d.grid.insertBefore(d.cell,list.indexOf(over)>list.indexOf(d.cell)?over.nextSibling:over);});
+ const up=e=>{if(!d||e.pointerId!==d.pid)return;const was=d.on,grid=d.grid,order=cells(grid).map(c=>c.dataset.id).join(','),changed=order!==d.start;stop();
+  if(was){swallow=true;setTimeout(()=>{swallow=false;},60);if(changed&&e.type==='pointerup')ACT[grid.dataset.reorder]?.({dataset:{order}});else if(changed||e.type==='pointercancel')refresh();}};
+ document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);
+ document.addEventListener('touchmove',e=>{if(d?.on)e.preventDefault();},{passive:false});
+ document.addEventListener('contextmenu',e=>{if(d||e.target.closest?.('[data-reorder]>.mi'))e.preventDefault();});
+ document.addEventListener('click',e=>{if(swallow){e.stopPropagation();e.preventDefault();swallow=false;}},true);
+})();
