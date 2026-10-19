@@ -221,7 +221,13 @@ function av(id,cls='',variant=0){
  const p=person(id);let inner,st='',k='';
  if(!p)inner=plate('night');
  else if(p.photo)inner=`<img src="${IMG(p.photo)}" alt="" loading="lazy" draggable="false" style="${variant?'transform:scale(1.35);object-position:50% 25%':''}">`;
- else if(p.pair){st='display:grid;grid-template-columns:1fr 1fr';inner=`<span style="position:relative">${plate(p.plate)}</span><span style="position:relative">${plate(p.plate2||p.plate)}</span><b style="position:absolute;inset:0;display:grid;place-items:center;color:#fff;font:800 13px/1 var(--font)">${esc((p.name||'').split(/[ &и]+/).filter(Boolean).map(x=>x[0]).join('+'))}</b>`;}
+ else if(p.pair){/* a pair is always two overlapping circles — member photo, else its initial on the member's plate (never one shared monogram) */
+  const nm=(p.name||'').split(/\s*(?:&|и|and)\s*/).filter(Boolean);
+  const half=i=>{const m=p.members?.[i],q=m&&person(m),ph=q?.photo||(!q&&i===0?p.photo:null);
+   if(ph)return `<span class="avh"><img src="${IMG(ph)}" alt="" loading="lazy" draggable="false"></span>`;
+   const pl=q?.plate||(i?p.plate2||p.plate:p.plate)||'night',nameI=q?.name||nm[i]||'?';
+   return `<span class="avh ini">${plate(pl)}<b>${esc([...String(nameI)][0]||'?')}</b></span>`;};
+  return `<span class="av pair ${cls}">${half(0)}${half(1)}</span>`;}
  else{k='ini';inner=`${plate(p.plate||'night')}<b style="position:relative">${esc((p.name||'?')[0])}</b>`;}
  // online: the dot sits on the circle's edge, so the picture is clipped by an inner circle, not by the avatar itself
  if(/(^|\s)on(\s|$)/.test(cls))return `<span class="av ${k} ${cls}"><span class="av-in ${k}" ${st?`style="${st}"`:''}>${inner}</span></span>`;
