@@ -1,8 +1,9 @@
 /* ============ SHARED COMPONENTS ============ */
 /** jars: list of {t,lv,limit,vis} or [t,lv]. V9: one vessel, one colour; the fill is the level 1–10.
  *  «обсуждаемо» — dashed outline, «табу» — crossed out. o.more adds a «+N» tile, o.was shows the previous answer. */
-/** liquid colour follows the value: low → red, 3 → orange, 5 → yellow, 10 → green. The number is always printed, so colour is never the only cue. */
-function jarColor(v){const st=[[1,4],[3,26],[5,46],[7,88],[10,140]];v=Math.max(1,Math.min(10,+v||1));let h=st[0][1];for(let k=1;k<st.length;k++)if(v<=st[k][0]){const [a,ha]=st[k-1],[b,hb]=st[k];h=ha+(hb-ha)*(v-a)/(b-a);break;}return `hsl(${Math.round(h)} 58% 55%)`;}
+/** liquid colour follows the value on one scale of the accent: a dark accent for 10 → the regular accent for 1 (no other hues). The number is always printed. */
+function jarColor(v){v=Math.max(1,Math.min(10,+v||1));return `color-mix(in srgb,var(--accent) ${Math.round((10-v)/9*100)}%,var(--accent-deep))`;}
+const jarInk=v=>(+v||1)>=8?'#fff':'#1A1414';
 function jarsHTML(list,o={}){
  const items=list.map(normJar);
  return `<div class="jars ${o.pre?'pre':''} ${o.cls||''}">${items.map((j,i)=>{
@@ -12,14 +13,14 @@ function jarsHTML(list,o={}){
   if(j.limit)return `<${tag} class="jar ${j.limit==='hard'?'taboo':'discuss'}" ${attrs}><span class="vessel"><span class="jm">${j.limit==='hard'?I.block:I.chat}</span>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw sr">${j.limit==='hard'?(o.who&&o.who!=='me'?L('нельзя','not for me'):L('табу','taboo')):L('обсуждаемо','negotiable')}</span>${was}</${tag}>`;
   /* the higher the level, the calmer the surface: 8–9 barely ripple, 10 is full to the lid — only bubbles */
   const calm=j.lv>=10?'full':j.lv>=8?'calm':'';
-  return `<${tag} class="jar ${calm}" ${attrs} style="--v:${j.lv};--jc:${jarColor(j.lv)};--d:${(i%6)*.35}s"><span class="vessel"><span class="fill"><i class="bub"></i>${j.lv>=8?'<i class="bub b2"></i>':''}</span><b class="lv">${j.lv}</b>${vis}</span><span class="jn">${esc(topic(j.t))}</span>${was}</${tag}>`;}).join('')}${o.more?`<button class="jar more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="vessel"><b>+${o.more.n}</b></span><span class="jn">${L('Все','All')}</span></button>`:''}${o.add?`<button class="jar add" data-act="${o.add}"><span class="vessel">${I.plus}</span><span class="jn">${L('Добавить','Add')}</span></button>`:''}</div>`;
+  return `<${tag} class="jar ${calm}" ${attrs} style="--v:${j.lv};--jc:${jarColor(j.lv)};--jt:${jarInk(j.lv)};--d:${(i%6)*.35}s"><span class="vessel"><span class="fill"><i class="bub"></i>${j.lv>=8?'<i class="bub b2"></i>':''}</span><b class="lv">${j.lv}</b>${vis}</span><span class="jn">${esc(topic(j.t))}</span>${was}</${tag}>`;}).join('')}${o.more?`<button class="jar more" data-act="${o.more.act}" data-v="${o.more.v}"><span class="vessel"><b>+${o.more.n}</b></span><span class="jn">${L('Все','All')}</span></button>`:''}${o.add?`<button class="jar add" data-act="${o.add}"><span class="vessel">${I.plus}</span><span class="jn">${L('Добавить','Add')}</span></button>`:''}</div>`;
 }
 /** one answer row: level badge + name (one line, cut with «…») + the answer under it. Long nicknames and long words never squeeze each other. */
-function ansRow(name,j,note=''){const n=j?normJar(j):null;const badge=!n?'<span class="ar-lv none">—</span>':n.limit?`<span class="ar-lv ${n.limit==='hard'?'taboo':'discuss'}">${n.limit==='hard'?I.block:I.chat}</span>`:`<span class="ar-lv" style="--jc:${jarColor(n.lv)}">${n.lv}</span>`;
+function ansRow(name,j,note=''){const n=j?normJar(j):null;const badge=!n?'<span class="ar-lv none">—</span>':n.limit?`<span class="ar-lv ${n.limit==='hard'?'taboo':'discuss'}">${n.limit==='hard'?I.block:I.chat}</span>`:`<span class="ar-lv" style="--jc:${jarColor(n.lv)};--jt:${jarInk(n.lv)}">${n.lv}</span>`;
  return `<div class="li static ansrow">${badge}<span class="tx"><b>${esc(name)}</b><small>${n?esc(jarDesc(n)):L('не отмечено','not set')}${note?` · ${note}`:''}</small></span></div>`;}
 const pubJars=id=>id==='me'||id==='couple'?(id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me)).jars.filter(j=>j.vis==='public'):(person(id)?.jars||[]).map(normJar).filter(j=>!j.vis||j.vis==='public');
 const fillJars=()=>setTimeout(()=>$$('.jars.pre').forEach(j=>j.classList.remove('pre')),90);
-function venn(n,o={}){return `<div class="venn ${o.mini?'mini':''} ${o.pre?'pre':''}" ${o.id?`id="${o.id}"`:''}><i></i><i></i><b>${n}${o.mini?'':`<small>${pl(n,['общая тема','общие темы','общих тем'],['shared topic','shared topics'],true)}</small>`}</b></div>`;}
+function venn(n,o={}){return `<div class="venn ${o.mini?'mini':''} ${o.pre?'pre':''}" ${o.id?`id="${o.id}"`:''}><i></i><i></i><b>${n}${o.mini?'':`<small>${pl(n,['общий интерес','общих интереса','общих интересов'],['shared interest','shared interests'],true)}</small>`}</b></div>`;}
 const playVenn=()=>setTimeout(()=>$$('.venn.pre').forEach(v=>v.classList.remove('pre')),120);
 
 /** Shared interests: only data both people made visible. Categories, no score. */
@@ -44,7 +45,7 @@ function shared(id){
  return{match,complement,discuss:[...new Set(discuss)],few:mine.length<2||theirs.length<2};
 }
 function sharedSummary(id){const s=shared(id);if(s.few)return L('Пока мало общего контекста','Not much shared context yet');
- const parts=[];if(s.match.length)parts.push(pl(s.match.length,['общая тема','общие темы','общих тем'],['shared topic','shared topics']));if(s.complement.length)parts.push(L('дополняете друг друга','you complement each other'));return parts.join(', ')||L('Есть что обсудить','Something to talk about');}
+ const parts=[];if(s.match.length)parts.push(pl(s.match.length,['общий интерес','общих интереса','общих интересов'],['shared interest','shared interests']));if(s.complement.length)parts.push(L('дополняете друг друга','you complement each other'));return parts.join(', ')||L('Есть что обсудить','Something to talk about');}
 
 /* ---------- people ---------- */
 function whoLine(id){const p=person(id);if(!p)return '';const g=(p.gender||[]).map(x=>opt('gender',x)).join(', ');const o=(p.orient||[]).map(x=>opt('orient',x)).join(', ');return [p.pair?T(p.pairNote):opt('pron',p.pron),[g,o].filter(Boolean).join(', ')].filter(Boolean).join(' · ');}

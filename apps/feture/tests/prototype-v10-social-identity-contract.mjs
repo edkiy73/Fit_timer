@@ -110,7 +110,7 @@ console.log('PASS unified profile editor saves rich private text for personal an
  assert.equal(run("S.likesOut.length"),meBefore,'the personal list is untouched');
  assert.equal(run(`withActor('me',()=>social().likesOut.some(l=>l.p==='${target}'))`),false);
  assert.ok(text(run(`profileActorLine('${target}',{a:'me'})`)).includes('Alex'),'the line names the other identity that already acted');
- assert.equal(run("profileActorLine('mia',{a:'me'}).length>0"),true);
+ assert.equal(run("profileActorLine('mia',{a:'couple'}).length>0"),true);assert.equal(run("profileActorLine('mia',{a:'me'}).length"),0,'no caption when nothing needs saying');
  prepare('F07');run("coupleProfile();ACT.chooseAuthor({dataset:{v:'couple',k:'compose'}})");assert.equal(run('S.composeActor'),'couple');
  prepare('F07');run("S.composeActor='couple';coupleProfile()");run("SC.F07.render(cur().p,cur())");assert.equal(run('cur().author'),'couple','the publishing identity is remembered');
  prepare('Q03');run("coupleProfile()");const page=run("SC.Q03.render(cur().p,cur())");for(const a of ['pairTrustOpen','pairSubmit','jointReview','pairHide','Q06','F07'])assert.ok(!String(page).includes(a),'couple page has no actions: '+a);
@@ -176,7 +176,7 @@ console.log('PASS unified profile editor saves rich private text for personal an
  assert.deepEqual(json("privFieldRows(S.me).map(x=>x[0])").length>0,true,'it is listed in the private part instead');
  run("S.ui.viewGrant=true");assert.deepEqual(json("meAsPerson().role"),[],'even for a viewer with access the main profile does not repeat it');run("S.ui.viewGrant=false");
  prepare('P02',{});run("S.me.vis={...PUBLIC_VIS,role:'granted'};S.me.privOn=true;");const ed=run("SC.P02.render(cur().p,cur())");
- assert.ok(ed.includes('id="privEdit"')&&ed.includes('fieldBack'),'the editor shows moved data inside the private panel');assert.ok(!ed.includes('data-act="visCycle"')&&!ed.includes('Who sees these fields')&&!ed.includes('Кто видит эти поля'),'no scattered visibility pills');
+ assert.ok(ed.split('id="privEdit"')[1]?.includes('data-act="fieldWhere" data-k="role"'),'the editor shows moved data inside the private panel');assert.ok(!ed.includes('data-act="visCycle"')&&!ed.includes('Who sees these fields')&&!ed.includes('Кто видит эти поля'),'no scattered visibility pills');
  assert.ok(ed.includes('data-act="peReq"'),'who may ask for access is set inside the private panel');
  prepare('Q01',{});run("coupleProfile()");const hub=run("SC.Q01.render(cur().p,cur())");assert.ok(!hub.includes('pairHide')&&!hub.includes('pairStopSharing'),'no non-clickable status rows in the pair hub');
  prepare('Q03',{});run("coupleProfile()");assert.ok(!text(run("SC.Q03.render(cur().p,cur())")).match(/Статус отношений|Relationship status/),'a couple page does not show a relationship status');
