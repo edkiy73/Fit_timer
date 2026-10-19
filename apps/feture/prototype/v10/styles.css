@@ -2240,3 +2240,7 @@ body.capture-shield>*{visibility:hidden!important}
 .vault .veil-glass{padding-bottom:12px}
 
 .compat .cp-demo{margin:0;padding:10px 14px 12px;border-top:1px solid var(--line);font-size:12px;line-height:1.4;color:var(--mute)}
+
+/* a match is good news: green, not the red accent (red reads as a warning/dislike) */
+.chip.hit{background:var(--ok-soft);color:var(--ok)}
+.compat .cp-t b{background:var(--ok-soft);color:var(--ok)}
