@@ -84,7 +84,7 @@ run("var trustTicket=authorTicket('couple');setPairTrust(false)");assert.equal(r
 run("submitJointPost({...trustedDraft,text:'Needs consent again'},'after-revoke')");assert.equal(run("jointQueue()['after-revoke'].status"),'pending');assert.equal(run("S.myPosts.some(p=>p.id==='after-revoke')"),false);
 run("setPairTrust(true);S.pairMember='me';setPairTrust(true);dissolvePair()");assert.equal(run('pairTrusted()'),false);assert.equal(run('S.pair.trust'),null);
 run("S.pair.status='active'");assert.equal(run('pairTrusted()'),false,'restoration never restores delegated consent');
-for(const lang of ['ru','en']){prepare('Q03');run(`S.lang='${lang}';coupleProfile()`);const h=run("SC.Q01.render(cur().p,cur())");assert.ok(h.includes('pairTrustOpen'));assert.ok(!h.includes('Редактировать расширенный профиль'));assert.ok(!h.includes('Edit private profile'));
+for(const lang of ['ru','en']){prepare('Q03');run(`S.lang='${lang}';coupleProfile()`);const h=run("SC.Q01.render(cur().p,cur())");assert.ok(h.includes('pairTrustOpen'));assert.ok(!h.includes('Редактировать приватную часть'));assert.ok(!h.includes('Edit private part'));
  const review=run("jointPostReview({author:'couple',text:'Review content',tags:[],aud:'all',media:[],poll:null,result:null})");assert.ok(!/postMenu|likePost|savePost|sharePost|post-a/.test(review),'approval preview contains no dead social controls');
  const hidden=run("replyTree('d','d1')");assert.ok(hidden.includes('cm-ghost'));assert.ok(hidden.includes('aria-hidden="true"'));
 }
@@ -117,3 +117,14 @@ console.log('PASS unified profile editor saves rich private text for personal an
  const hub=run("SC.Q01.render(cur().p,cur())");assert.ok(hub.includes('pairTrustOpen')&&hub.includes('Q06'),'all pair management lives in one hub');
  prepare('P01',{id:'mia'});run("S.me=S.me;S.datingActor='me'");assert.ok(!run("profileActorLine('mia',{a:'me'})").includes('undefined'));
  console.log('PASS acting identity: remembered modes, couple/personal profile likes with reasons and other-side state, couple page without actions, single pair hub');}
+// One inbox: access requests (personal and couple), partner approvals, host requests; quick share = everything asked for 7 days.
+{prepare('N01',{});run("coupleProfile();S.pair.proposal=null");
+ const kinds=run("todoItems().map(x=>x.k+':'+(x.a||''))");assert.ok(kinds.some(k=>k.startsWith('req:me')),'personal requests are decisions');assert.ok(kinds.some(k=>k==='comm:'||k==='event:'),'host requests are decisions');
+ const html=run("todoHTML()");assert.ok(html.includes('grantQuick')&&html.includes('decline'),'inbox cards decide in place');
+ const id=run("S.reqIn.find(r=>r.status==='new').id");const scopes=run(`S.reqIn.find(r=>r.id==='${id}').scopes.join()`);
+ await finish(run(`ACT.grantQuick({dataset:{v:'${id}',actor:'me'},classList:{contains:()=>false,add(){},remove(){}},setAttribute(){},removeAttribute(){}})`));
+ assert.equal(run(`S.reqIn.find(r=>r.id==='${id}').status`),'open');assert.equal(run(`S.reqIn.find(r=>r.id==='${id}').granted.join()`),scopes,'quick share opens everything that was asked');
+ const days=run(`Math.round((S.reqIn.find(r=>r.id==='${id}').until-Date.now())/86400000)`);assert.equal(days,7);
+ assert.ok(!run("SC.D03.render({sub:'discover'},cur())").includes("pplSub\" data-v=\"requests"),'People has no Requests tab');
+ const access=run("accessBody({tab:'in'})");assert.ok(!access.includes('data-v="in"'),'Access is a ledger: no incoming-decision tab');
+ console.log('PASS one inbox for decisions: personal/couple requests, partner approvals, host requests; quick share for 7 days; People and Access without request tabs');}

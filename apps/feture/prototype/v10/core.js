@@ -348,10 +348,10 @@ function ask(o){return new Promise(res=>{
 /* ---------- router ---------- */
 const SC={};             // screen registry: id → {tab, root, title(), render(p,r), after(p,r), valid(p), dock, auth}
 const ACT={}, IN={}, CH={};
-const ROOTS={feed:'F01',events:'E00',people:'D03',groups:'C01',chats:'H01',me:'X01'};
+const ROOTS={feed:'F01',people:'D03',groups:'C01',chats:'H01',me:'X01'};
 const ROOT_TAB=Object.fromEntries(Object.entries(ROOTS).map(([t,id])=>[id,t]));
 // spec IDs that are sub-tabs of a root screen
-const ALIAS={M01:['P04',{add:1}],M03:['P04',{}],F03:['F01',{sub:'following'}],E01:['E00',{}],D06:['D03',{sub:'likes'}],D07:['H01',{sub:'chats'}],C02:['C01',{sub:'joined'}],H06:['H01',{sub:'updates'}]};
+const ALIAS={M01:['P04',{add:1}],M03:['P04',{}],F03:['F01',{sub:'following'}],E01:['C01',{sub:'events'}],E00:['C01',{sub:'events'}],D06:['D03',{sub:'likes'}],D07:['H01',{sub:'chats'}],C02:['C01',{sub:'joined'}],H06:['H01',{sub:'updates'}]};
 /** open a section of «Я» from anywhere: the hub stays underneath, Back returns to it */
 function openMe(id,p={}){if(S.ui.sheet)closeSheet(true);saveScroll();S.nav.tab='me';S.nav.stacks.me.length=1;if(id==='X01'){render('fade');return;}S.nav.stacks.me.push({id,p:{...p},f:{}});render('fwd');}
 function initNav(){S.nav={tab:'feed',stacks:Object.fromEntries(Object.entries(ROOTS).map(([t,id])=>[t,[{id,p:{}}]])),auth:[{id:'A01',p:{}}]};}
@@ -382,6 +382,7 @@ function back(){
  else if(S.session&&S.nav.tab!=='feed')tab('feed');
 }
 function tab(t,p){
+ if(t==='events'){t='groups';p={...p,sub:'events'};}/* events live inside the Community tab */
  if(S.ui.sheet)closeSheet(true);
  const st=S.nav.stacks[t];
  if(S.nav.tab===t&&st.length>1&&confirmLeave(()=>tab(t,p),st.slice(1)))return;
@@ -465,7 +466,7 @@ function bar(title,o={}){
 const bellBtn=()=>{const n=C.notif();return `<button class="ibtn" data-go="N01" aria-label="${L('Уведомления','Notifications')}${n?`: ${n}`:''}">${I.bell}${n?`<sup>${n}</sup>`:''}</button>`;};
 const searchBtn=(scope)=>`<button class="ibtn" data-go="G01" data-p='${esc(JSON.stringify({scope:scope||'all'}))}' aria-label="${L('Поиск','Search')}">${I.search}</button>`;
 /* V8: community first — Events get their own tab; People appear only once dating is switched on in the admin */
-const TABDEF=()=>[['feed',I.feed,L('Лента','Feed'),0],...(window.DATING_ON&&DATING_ON()?[['people',I.people,L('Люди','People'),C.likesIn()]]:[]),['events',I.cal,L('События','Events'),0],['groups',I.groups,L('Сообщества','Communities'),0],['chats',I.chat,L('Чаты','Chats'),C.unreadChats()||(C.newMatches()?'dot':0)],['me',I.me,L('Я','Me'),C.reqIn()]];
+const TABDEF=()=>[['feed',I.feed,L('Лента','Feed'),0],...(window.DATING_ON&&DATING_ON()?[['people',I.people,L('Люди','People'),C.likesIn()]]:[]),['groups',I.groups,L('Комьюнити','Community'),0],['chats',I.chat,L('Чаты','Chats'),C.unreadChats()||(C.newMatches()?'dot':0)],['me',I.me,L('Я','Me'),C.reqIn()]];
 function dockHTML(){
  const td=TABDEF();return `<nav class="dock" style="grid-template-columns:repeat(${td.length},1fr)" aria-label="${L('Разделы','Sections')}">${td.map(([t,icn,l,n])=>`<button class="${S.nav.tab===t?'on':''}" data-tab="${t}" aria-label="${l}${n&&n!=='dot'?`, ${n}`:''}" ${S.nav.tab===t?'aria-current="page"':''}>${icn}<span>${l}</span>${n==='dot'?'<em class="dot"></em>':n?`<em>${n}</em>`:''}</button>`).join('')}</nav>`;
 }
@@ -576,7 +577,7 @@ function communityAuthorReason(id,actor='me',kind='post'){if(actor!=='me')return
 const communityAuthorAllowed=(id,actor=actionAuthor(),kind='post')=>!communityAuthorReason(id,actor,kind);
 function requestReason(id,actor=actionAuthor()){if(!authorAllowed(actor)||!PEOPLE[id]||isBlocked(id)||relatedFor(actor,id))return L('Этот профиль недоступен для выбранного автора','This profile is unavailable to the selected author');const policy=PEOPLE[id].requestsFrom||'all';if(policy==='none'||policy==='matches'&&!isMatch(id,actor))return L('Этот профиль не принимает запросы от выбранного автора','This profile does not accept requests from the selected author');const st=social(actor);if(st.reqOut.some(x=>x.p===id&&x.status==='pending'))return L('Запрос уже отправлен','Request already sent');if(st.reqOut.some(x=>x.p===id&&x.status==='declined'&&Date.now()-x.t<7*DAY))return L('После отказа нужно подождать 7 дней','Wait 7 days after a decline');if(C.quotaLeft()<=0)return L('Запросы на сегодня закончились','No requests left today');return '';}
 
-function currentNotifications(){const member=pairMember();const personal=member==='me'?S.notifs.filter(n=>n.type!=='pair'):[];const shared=S.pair?.notifications?.[member]||[];const updates=(S.updates||[]).map(u=>({...u,type:u.e?'event':'group',go:u.e?['E03',{id:u.e}]:['C03',{id:u.c}]}));return [...personal,...shared,...updates].sort((a,b)=>b.t-a.t);}
+function currentNotifications(){const member=pairMember();const personal=member==='me'?S.notifs.filter(n=>n.type!=='pair'):[];const shared=S.pair?.notifications?.[member]||[];const updates=(S.updates||[]).map(u=>({...u,type:u.e?'event':'group',go:u.e?['E03',{id:u.e}]:['C03',{id:u.c}]}));const covered=new Set(updates.map(u=>u.e||u.c));/* an organiser's update already says what changed: no second row for the same event/community */return [...personal.filter(n=>!((n.type==='event'||n.type==='group')&&covered.has(n.e||n.c))),...shared,...updates].sort((a,b)=>b.t-a.t);}
 function dissolvePair(){if(typeof invalidateViewer==='function')invalidateViewer();const P=S.pair;if(!activePair())return;coupleProfile();P.safetyEpoch=(P.safetyEpoch||0)+1;P.status='dissolved';P.endedAt=Date.now();P.restoreUntil=P.endedAt+30*DAY;P.recovery=[];P.trust=null;P.proposal=null;P.grants=[];if(P.social){P.social.sharedByMe=[];P.social.reqOut.forEach(x=>{x.status='revoked';x.granted=[];});P.social.reqIn.forEach(x=>{x.status='no';x.granted=[];});}S.datingActor='me';S.datingEpoch=(S.datingEpoch||0)+1;for(const t of Object.values(P.social?.threads||{})){t.ended=true;for(const m of t.msgs)if(m.media)m.media.url=null;}for(const q of Object.values(P.postProposals||{}))q.status='cancelled';for(const p of S.myPosts)if(p.author==='couple')p.hiddenByPair=true;pairNotify('dissolved',String(P.endedAt),{go:['Q07']});}
 function expirePair(now=Date.now()){const P=S.pair;if(!P||P.status!=='dissolved'||now<P.restoreUntil)return false;
  P.status='deleted';P.retainedThreads=Object.fromEntries(Object.entries(P.social?.threads||{}).map(([id,t])=>[id,{target:id,msgs:t.msgs.filter(m=>!m.me).map(m=>structuredClone(m)),ended:true}]));delete P.profile;delete P.draft;delete P.social;delete P.desc;delete P.rules;P.name={ru:'Удалённый совместный профиль',en:'Deleted couple profile'};P.grants=[];

@@ -118,7 +118,7 @@ ACT.ticketSelf=()=>{const id=cur().p.id;S.rsvp[id]={...myR(id),status:'going',ti
 
 /* E06 — application */
 SC.E06={title:()=>L('Заявка','Application'),valid:p=>!!EV(p.id),render:(p,r)=>{const e=EV(p.id);r.f.ok=r.f.ok||false;return `${bar(L('Заявка на участие','Apply to attend'),{back:1,sm:1,sub:esc(T(e.title))})}<div class="view nodock cta1"><div class="wrap">
- <div class="alert info">${I.info}<span>${L('Организатор увидит ник, возраст и ответы ниже. Расширенный профиль и интересы не прикладываются.','The organiser will see your nickname, age and the answers below. Your private profile and map are not attached.')}</span></div>
+ <div class="alert info">${I.info}<span>${L('Организатор увидит ник, возраст и ответы ниже. Приватная часть и интересы не прикладываются.','The organiser will see your nickname, age and the answers below. Your private part and map are not attached.')}</span></div>
  <section class="grp"><div class="grp-t"><span>${L('Ответы организатору','Answers for the organiser')}</span></div><div class="card form-card">${(e.q||[{ru:'Расскажи немного о себе',en:'Tell us a bit about yourself'}]).map((q,i)=>field({name:'q'+i,label:T(q),textarea:1,max:300,attrs:'rows="3"'})).join('')}
  ${field({name:'note',label:L('Что важно знать организатору','Anything the organiser should know'),opt:1,ph:L('Например, доступность площадки','For example, venue accessibility'),textarea:1,max:300,attrs:'rows="2"'})}</div></section>
  <button class="check ${r.f.ok?'on':''} ${r.err&&r.err.ok?'err':''}" data-act="chk" data-v="ok" data-field="ok"><i>${I.check}</i><span>${L('Прочитал(а) условия участия и согласен(на) с ними','I’ve read and accept the requirements')}${r.err&&r.err.ok?`<span class="ferr">${I.alert}${r.err.ok}</span>`:''}</span></button>
@@ -136,7 +136,6 @@ SC.E10={title:()=>L('Мои события','My events'),render:()=>{
  <p class="grp-n">${L('Прошедшие события видишь только ты.','Only you see your past events.')}</p></div></div>`;}};
 ACT.e10tab=a=>setP('k',a.dataset.v);
 ACT.toEvents=()=>tab('events');
-SC.E00={root:1,tab:'events',title:()=>L('События','Events'),render:()=>`${bar(L('События','Events'),{actions:`${searchBtn('events')}${bellBtn()}`})}<div class="view"><div class="wrap">${eventsList()}</div></div>`};
 
 /* E11–E14 — create event in 4 short steps with validation */
 const pad=n=>String(n).padStart(2,'0');
