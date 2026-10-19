@@ -55,7 +55,7 @@ function datingSoon(){const on=S.me.notifyDating;return `<div class="soon"><div 
 ACT.notifyDating=a=>run(a,()=>{S.me.notifyDating=!S.me.notifyDating;refresh();},{ms:300,ok:()=>S.me.notifyDating?L('Готово — пришлём уведомление о запуске','Done — we’ll notify you at launch'):L('Не будем напоминать','We won’t remind you')});
 
 /* deck */
-function deckInner(list){const a=list[0],b=list[1];return `${b?card(b,'next'):''}${card(a,'top')}<div class="acts onphoto" id="acts"><button class="act undo ${social().dhist&&social().dhist.length?'':'off'}" data-act="undo" aria-label="${L('Вернуть предыдущую анкету','Bring back the previous profile')}">${I.undo}</button><button class="act pass" data-act="decide" data-v="-1" aria-label="${L('Пропустить','Pass')}">${I.x}</button><button class="act req" data-act="reqAccess" data-v="${a}" aria-label="${L('Запросить приватную часть','Request private part')}">${I.key}</button><button class="act like" data-act="decide" data-v="1" aria-label="${L('Нравится человек','Like this person')}">${I.heartf}</button></div>`;}
+function deckInner(list){const a=list[0],b=list[1];return `${b?card(b,'next'):''}${card(a,'top')}<div class="acts onphoto" id="acts"><button class="act undo ${social().dhist&&social().dhist.length?'':'off'}" data-act="undo" aria-label="${L('Вернуть предыдущую анкету','Bring back the previous profile')}">${I.undo}</button><button class="act pass" data-act="decide" data-v="-1" aria-label="${L('Пропустить','Pass')}">${I.x}</button>${hasPrivatePart(a)?`<button class="act req" data-act="reqAccess" data-v="${a}" aria-label="${L('Запросить приватную часть','Request private part')}">${I.key}</button>`:''}<button class="act like" data-act="decide" data-v="1" aria-label="${L('Нравится человек','Like this person')}">${I.heartf}</button></div>`;}
 function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=shared(id);const likesMe=social().likesIn.some(l=>l.p===id);
  const post=allPosts().filter(x=>x.author===id).sort((a,b)=>b.t-a.t)[0];
  const keys=[...fmtList(p.format).slice(0,2).map(x=>opt('format',x)),...fmtList(p.role).filter(v=>v!=='none').slice(0,2).map(v=>opt('role',v)),...p.seek.slice(0,1).map(s=>opt('seek',s))].filter(Boolean);
@@ -71,21 +71,20 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
    <div class="pc-hint">${I.down}${L('Листай вниз — что у вас общего','Scroll down — what you share')}</div></div>
  </div>
  <div class="pc-body">
-  <button class="why" data-go="P05" data-id="${id}">${venn(sh.few?'?':sh.match.length,{mini:1})}<span class="grow"><b>${esc(sharedSummary(id))}</b><span>${L('Только то, что вы оба открыли','Only what you both made visible')}</span></span>${I.chev}</button>
+  ${compatBlock(id)}
   <div class="sec">${L('О себе','About')}</div>${md(T(p.bio),'bio')}
-  ${sh.match.length?`<div class="sec">${L('Совпадает','In common')}</div><div class="chips">${sh.match.map(m=>`<span class="chip hit">${esc(topic(m))}</span>`).join('')}</div>`:''}
-  ${sh.complement.length?`<div class="sec">${L('Дополняете друг друга','You complement each other')}</div>${sh.complement.map(c=>`<div class="fact"><i class="g">${I.check}</i><span>${esc(c)}</span></div>`).join('')}`:''}
-  ${sh.discuss.length?`<div class="sec">${L('Стоит обсудить','Worth discussing')}</div>${sh.discuss.slice(0,2).map(c=>`<div class="fact"><i class="a">${I.warn}</i><span>${esc(c)}</span></div>`).join('')}`:''}
   <div class="sec">${L('Интересы','Interests')}</div>${jarShelf(pubJars(id),{pre:1,act:'topic',who:id,moreAct:'allJars'})}
   ${post?`<div class="sec">${L('Публикация','Post')} · ${F.rel(post.t)}</div><button class="quote" data-go="F05" data-id="${post.id}"><p>${esc(T(post.text))}</p>${ic('chev',18)}</button>`:''}
-  <div class="sec">${L('Приватная часть','Private part')}</div><div data-deck-private="${id}">${veilBlock(id)}</div>
+  <div class="mt16" data-private-context="${id}">${privSection(id)}</div>
   <div class="pc-foot"><button class="btn soft" data-go="P01" data-p='${esc(JSON.stringify({id,actor:datingActor()}))}'>${L('Полный профиль','Full profile')}</button><button class="btn soft" data-act="follow" data-v="${id}">${social('me').follows.has(id)?L('Ты подписан(а)','Following'):L('Подписаться','Follow')}</button></div>
   
  </div></article>`;}
 /** private layer: no real data is sent before access — the veil hides placeholders only */
 function veilBlock(id){const o=social().reqOut.find(x=>x.p===id&&x.status==='pending'&&!isBlocked(id));const shared=receivedGrant(id);
  if(shared)return `<button class="granted" style="width:100%;text-align:left" data-go="P08" data-id="${id}">${I.unlock}<span class="grow"><b>${L(`${esc(pname(id))} открыл(а) тебе доступ`,`${esc(pname(id))} shared with you`)}</b><span>${shared.granted.map(g=>T(REQ_SCOPES.find(x=>x[0]===g)[1])).join(', ')} · ${F.left(shared.until)}</span></span>${I.chev}</button>`;
- return `<div class="veil-act">${veilAction(id,o)}</div>`;}
+ const nm=esc(pname(id));
+ return `<div class="veil"><div class="veil-content" aria-hidden="true"><div class="bar-sk" style="width:72%"></div><div class="bar-sk"></div><div class="bar-sk" style="width:46%"></div><div class="vt"><i></i><i></i><i></i></div></div>
+ <div class="veil-glass"><b>${L(`Открывает ${nm}`,`${nm} decides`)}</b><p>${L('Описание, интересы, фото и видео — только по решению владельца','Description, interests, photos and video — only if the owner decides')}</p><div class="veil-act">${veilAction(id,o)}</div></div></div>`;}
 /** the private part from the outside: closed → request → pending (withdraw) → open / declined (quiet cool-down) / expired (ask again) / not accepting */
 function veilAction(id,pending){const last=social().reqOut.filter(x=>x.p===id).sort((a,b)=>b.t-a.t)[0],policy=PEOPLE[id]?.requestsFrom||'all';
  if(pending)return `<span class="pill wait">${I.clock}${L('Запрос ждёт ответа','Request pending')}</span><button class="btn soft sm" data-act="cancelReq" data-v="${pending.id}">${L('Отозвать запрос','Withdraw request')}</button>`;
