@@ -2,7 +2,7 @@
 /** jars: list of {t,lv,limit,vis} or [t,lv]. V9: one vessel, one colour; the fill is the level 1–10.
  *  «обсуждаемо» — dashed outline, «табу» — crossed out. o.more adds a «+N» tile, o.was shows the previous answer. */
 /** liquid colour follows the value on one scale of the accent: a dark accent for 10 → the regular accent for 1 (no other hues). The number is always printed. */
-function jarColor(v){v=Math.max(1,Math.min(10,+v||1));return `color-mix(in srgb,var(--accent) ${Math.round(40+(v-1)/9*60)}%,#fff)`;}
+function jarColor(v){v=Math.max(1,Math.min(10,+v||1));return `color-mix(in srgb,var(--accent) ${Math.round(35+(v-1)/9*65)}%,var(--accent-deep))`;}
 const jarInk=v=>(+v||1)>=6?'#fff':'#1A1414';
 function jarsHTML(list,o={}){
  const items=list.map(normJar);
