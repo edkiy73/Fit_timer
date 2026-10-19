@@ -165,11 +165,11 @@ const editedText=(prior,value)=>T(prior).trim()===value.trim()?structuredClone(p
 function submitCoupleDraft(){const P=S.pair;if(P?.status!=='active'||!P.draft||P.proposal?.status==='pending')return false;if(!coupleWritable())return false;if(!coupleDraftChanged()){toast(L('Нет изменений для согласования','No changes to approve'));return false;}const by=pairMember();P.revision??=0;
  if(P.draftBase!==P.revision){toast(L('Профиль уже изменился. Открой актуальную версию перед отправкой.','The profile changed. Open the current version before submitting.'),{type:'warn'});return false;}
  const q=P.proposal={id:'pv'+Date.now()+'_'+(P.draftVersion||0),by,field:'profile',text:structuredClone(P.draft),base:P.revision,draftVersion:P.draftVersion||0,status:'pending',t:Date.now()};
- if(pairTrusted())return commitCoupleProposal(P,by,q.id,true);pairNotify('proposal',q.id,{go:['Q03']});return true;}
+ if(pairTrusted())return commitCoupleProposal(P,by,q.id,true);pairNotify('proposal',q.id,{go:['Q01']});return true;}
 function commitCoupleProposal(P,reviewer=pairMember(),expected=P?.proposal?.id,delegated=false){if(P!==S.pair||P?.status!=='active'||!P.proposal)return false;const q=P.proposal;
  if(!q.id||(!realMembers('couple').includes(reviewer)||(q.status!=='pending')||q.id!==expected||(q.by===reviewer&&!(delegated&&pairTrusted()&&reviewer===pairMember()))||q.base!==(P.revision||0)||q.draftVersion!==(P.draftVersion||0)))return false;
  if(q.field==='profile'){P.profile=structuredClone(q.text);P.name={...P.profile.name};P.desc=P.profile.bio;P.revision=(P.revision||0)+1;P.draftLease=(P.draftLease||0)+1;if((P.draftVersion||0)===(q.draftVersion||0))delete P.draft;P.draftBase=P.revision;}else P[q.field||'desc']=q.text;
- P.proposal=null;pairNotify('profileApproved',q.id||String(q.t),{go:['Q03']});return true;}
+ P.proposal=null;pairNotify('profileApproved',q.id||String(q.t),{go:['Q01']});return true;}
 function pairNotify(type,key,extra={}){const P=S.pair;if(!P)return;P.notifications??={};for(const recipient of ['me',P.with]){const list=P.notifications[recipient]??=[];const id='pair_'+type+'_'+key+'_'+recipient;if(list.some(n=>n.id===id))continue;const n={id,type:'pair',pairEvent:type,pairName:T(P.name),to:recipient,t:Date.now(),read:false,...extra};list.unshift(n);if(recipient===pairMember())S.notifs.unshift(n);}}
 
 /* Social author: one session choice; owned couple state extends the existing pair. */
@@ -179,7 +179,9 @@ const accessActor=()=>cur()?.id==='P01'?(cur().p.actor||'me'):actionAuthor();
 const composeActor=()=>cur()?.id==='F09'?(cur().p.draft?.author||'me'):(cur()?.author||'me');
 const activePair=()=>S.pair?.status==='active';
 // Explicit surface contexts; the social network always acts as the signed-in person.
-const actionAuthor=()=>{const r=cur();if(!r)return 'me';if(['F07','F09'].includes(r.id))return composeActor();if(['D03','D04','D09','D12'].includes(r.id))return datingActor();if(r.id==='Q05'||r.id==='P07'&&r.p.owner==='couple')return 'couple';if(['H02','H03','H04','H05','P08','P05'].includes(r.id))return r.p.actor||'me';return 'me';};
+const actionAuthor=()=>{if(S.ui?.actOverride)return S.ui.actOverride;const r=cur();if(!r)return 'me';if(['F07','F09'].includes(r.id))return composeActor();if(['D03','D04','D09','D12'].includes(r.id))return datingActor();if(r.id==='Q05'||r.id==='P07'&&r.p.owner==='couple')return 'couple';if(['H02','H03','H04','H05','P08','P05'].includes(r.id))return r.p.actor||'me';return 'me';};
+/* explicit acting identity for one call (a like sent from a profile page uses the remembered dating mode, not the route) */
+function withActor(a,fn){S.ui||(S.ui={});const prev=S.ui.actOverride;S.ui.actOverride=a;try{return fn();}finally{S.ui.actOverride=prev;}}
 const canAct=(operation,actor='me')=>authorAllowed(actor)&&(['react','comment','follow','community','event'].includes(operation)?actor==='me':operation==='dating'?actor!=='couple'||!!coupleProfile()?.dating:true);
 const authorProfile=(id=actionAuthor())=>id==='couple'?coupleProfile():S.me;
 function social(id=actionAuthor()){
@@ -194,7 +196,20 @@ function authorAllowed(id=actionAuthor()){return !!S.session&&(id==='me'&&pairMe
 function authorGuard(id=actionAuthor()){if(authorAllowed(id))return true;toast(L('Совместный профиль отключён. Выбери личный профиль — черновик сохранён.','The couple profile is inactive. Choose your personal profile — your draft is kept.'),{type:'warn'});return false;}
 const authorTicket=(id=actionAuthor())=>({id,state:S,session:S.session,member:pairMember(),pair:S.pair,safety:S.pair?.safetyEpoch||0,datingEpoch:S.datingEpoch||0,dating:cur()?.id==='D03'});
 const validAuthor=t=>S===t.state&&S.session===t.session&&pairMember()===t.member&&(!t.dating||(S.datingEpoch||0)===t.datingEpoch)&&authorAllowed(t.id)&&(t.id!=='couple'||S.pair===t.pair&&(S.pair.safetyEpoch||0)===t.safety);
-function authorPicker(fixed){const r=cur(),dating=r?.id==='D03',compose=['F07','F09'].includes(r?.id);if(!dating&&!compose)return '';if(!activePair()&&!fixed)return '';const id=fixed||(dating?datingActor():composeActor());const immutable=!!fixed||r.id==='F09';return `<span class="author-picker" data-author-picker><button type="button" class="author-trigger" ${immutable?'disabled':'data-act="authorMenu"'} aria-label="${dating?L('Анкета знакомств','Dating profile'):L('Автор публикации','Post author')}: ${esc(pname(id))}" ${immutable?'':'aria-haspopup="menu"'}>${av(id,'xs')}<span>${esc(pname(id))}</span>${immutable?'':I.down}</button></span>`;}
+function authorKind(){const r=cur();return ['F07','F09'].includes(r?.id)?'compose':'dating';}
+const kindActor=k=>k==='compose'?composeActor():datingActor();
+/** the other identity's unseen likes/requests: the lists stay separate, so a dot tells you something waits there */
+function otherActorWaiting(){if(!activePair())return 0;const o=datingActor()==='couple'?'me':'couple',d=social(o);return d?(d.likesIn.length+d.reqIn.filter(x=>x.status==='new').length):0;}
+function authorPicker(fixed){const r=cur(),dating=r?.id==='D03',compose=['F07','F09'].includes(r?.id);if(!dating&&!compose)return '';if(!activePair()&&!fixed)return '';const id=fixed||(dating?datingActor():composeActor());const immutable=!!fixed||r.id==='F09';const w=dating&&!immutable?otherActorWaiting():0;return `<span class="author-picker" data-author-picker><button type="button" class="author-trigger" ${immutable?'disabled':`data-act="authorMenu" data-k="${dating?'dating':'compose'}"`} aria-label="${dating?L('Знакомиться как','Meet as'):L('Опубликовать как','Post as')}: ${esc(pname(id))}${w?`. ${L('Ждёт у другого профиля','Waiting on the other profile')}: ${w}`:''}" ${immutable?'':'aria-haspopup="menu"'}>${av(id,'xs')}<span>${esc(pname(id))}</span>${w?`<i class="ap-dot">${w}</i>`:''}${immutable?'':I.down}</button></span>`;}
+/** one line under a profile's actions: who sends the like, and what the other identity has already done */
+function profileActorLine(id,act){if(!activePair()||id==='me'||id==='couple')return '';const other=act.a==='me'?'couple':'me',os=withActor(other,()=>({liked:social(other)?.likesOut.some(l=>l.p===id),match:isMatch(id,other)}));
+ const who=pname(act.a),oname=pname(other);
+ const main=act.why==='coupleOff'?L('Анкета пары выключена — симпатия отправится от тебя','The couple profile is off — the like is sent as you'):act.why==='solo'?L('Парой — только в знакомствах. Отправится от тебя','As a couple — Discover only. Sent as you'):L(`Симпатию отправит ${esc(who)}`,`The like is sent by ${esc(who)}`);
+ const done=os.match?L(`${esc(oname)}: совпадение уже есть`,`${esc(oname)}: already a match`):os.liked?L(`${esc(oname)}: симпатия уже отправлена`,`${esc(oname)}: like already sent`):'';
+ return `<p class="actor-line"><span>${main}</span> <button type="button" class="linkbtn" data-act="authorMenu" data-k="dating">${L('Изменить','Change')}</button>${done?`<small>${done}</small>`:''}</p>`;}
+/** who sends a like from this profile: the remembered dating mode, narrowed by what the target and the couple allow */
+function likeActor(id){const t=PEOPLE[id],want=datingActor();if(want==='couple'){if(!canAct('dating','couple')||!authorProfile('couple')?.dating)return{a:'me',why:'coupleOff'};if(!t?.dating||relatedFor('couple',id))return{a:'me',why:'solo'};return{a:'couple'};}return{a:'me'};}
+function canLikeFrom(actor,id){const t=PEOPLE[id];if(!t)return false;if(actor==='couple')return !!t.dating;if(t.pair)return !!t.dating;return !!(t.dating||t.socialLikes);}
 
 let authorMenuAction=null,authorMenuOpener=null;
 function closeAuthorMenu(){authorMenuAction=null;const menu=$('#authorMenu');if(!menu?.remove)return false;menu.remove();$$('[data-act="authorMenu"]').forEach(el=>el.setAttribute('aria-expanded','false'));syncModal();if(authorMenuOpener?.isConnected)authorMenuOpener.focus({preventScroll:true});authorMenuOpener=null;return true;}
@@ -569,7 +584,7 @@ function expirePair(now=Date.now()){const P=S.pair;if(!P||P.status!=='dissolved'
  for(const d of S.discussions){if(d.author==='couple'){d.text={ru:'Публикация удалена',en:'Post removed'};d.title={ru:'Совместный профиль удалён',en:'Couple profile deleted'};d.media=[];}for(const c of d.replies||[])if(c.a==='couple'){c.deleted=true;c.text={ru:'',en:''};delete c.media;}}
  S.pairMember='me';return true;
 }
-function requestPairRestore(){const P=S.pair;if(P?.status!=='dissolved'||expirePair())return false;const member=pairMember();if(!['me',P.with].includes(member))return false;if(!P.recovery.includes(member))P.recovery.push(member);if(P.recovery.length===2){P.status='active';P.profile.dating=false;P.profile.datingVisible=false;P.recovery=[];pairNotify('restored',String(Date.now()),{go:['Q03']});return true;}pairNotify('restoreRequested',String(P.endedAt),{go:['Q07']});return false;}
+function requestPairRestore(){const P=S.pair;if(P?.status!=='dissolved'||expirePair())return false;const member=pairMember();if(!['me',P.with].includes(member))return false;if(!P.recovery.includes(member))P.recovery.push(member);if(P.recovery.length===2){P.status='active';P.profile.dating=false;P.profile.datingVisible=false;P.recovery=[];pairNotify('restored',String(Date.now()),{go:['Q01']});return true;}pairNotify('restoreRequested',String(P.endedAt),{go:['Q07']});return false;}
 function socialDelivery(identity,type,key,extra={}){if(identity==='couple'){pairNotify(type,key,extra);return;}S.socialDeliveries??={};for(const recipient of realMembers(identity)){const list=S.socialDeliveries[recipient]??=[];const id=type+'_'+key+'_'+recipient;if(!list.some(x=>x.id===id))list.push({id,type,to:recipient,read:false,t:Date.now(),...extra});}}
 
 // Collapse reply entry while browsing; give the composer the full bottom area on focus.
@@ -580,14 +595,14 @@ document.addEventListener('focusout',()=>{const m=main();if(m?.classList.contain
 
 /* Joint work has an explicit pair, creator, version and second-person approval. */
 function jointQueue(){return S.pair?(S.pair.postProposals??={}):{};}
-function submitJointPost(d,id,existing){if(!canAct('publish','couple')||d.pairId!==S.pair.id)return false;const queue=jointQueue(),prior=queue[id];const version=(prior?.version||existing?.version||0)+1;const q={id,version,pairId:S.pair.id,by:pairMember(),status:'pending',kind:'post',draft:structuredClone(d),base:existing?.version||0,t:Date.now()};queue[id]=q;if(pairTrusted())return commitJointPost(q,pairMember(),true);pairNotify('postApproval',id+'_'+version,{go:['Q03']});return true;}
+function submitJointPost(d,id,existing){if(!canAct('publish','couple')||d.pairId!==S.pair.id)return false;const queue=jointQueue(),prior=queue[id];const version=(prior?.version||existing?.version||0)+1;const q={id,version,pairId:S.pair.id,by:pairMember(),status:'pending',kind:'post',draft:structuredClone(d),base:existing?.version||0,t:Date.now()};queue[id]=q;if(pairTrusted())return commitJointPost(q,pairMember(),true);pairNotify('postApproval',id+'_'+version,{go:['Q01']});return true;}
 function approveJointWork(id,version,reviewer=pairMember()){
  const q=jointQueue()[id];if(!activePair()||!q||q.status!=='pending'||q.pairId!==S.pair.id||q.version!==Number(version)||q.by===reviewer||!realMembers('couple').includes(reviewer))return false;
  if(q.kind==='grant'){const st=social('couple'),r=st.reqIn.find(x=>x.id===q.request);if(!r||r.status!=='new'||isBlocked(r.p)||q.safety!==(S.pair.safetyEpoch||0)||q.profileRevision!==(S.pair.revision||0))return false;r.status='open';r.granted=[...q.scopes];r.until=q.until;st.sharedByMe=st.sharedByMe.filter(x=>x.p!==r.p);st.sharedByMe.push({p:r.p,owner:S.pair.id,viewers:[...q.viewers],pairId:S.pair.id,profileRevision:q.profileRevision,scopes:[...q.scopes],until:q.until,t:Date.now()});}
  else return commitJointPost(q,reviewer);
- q.status='approved';pairNotify('workApproved',id+'_'+version,{go:['Q03']});return true;
+ q.status='approved';pairNotify('workApproved',id+'_'+version,{go:['Q01']});return true;
 }
-function queueJointGrant(r,o,until){if(!activePair())return false;const id='grant_'+r.id,old=jointQueue()[id];jointQueue()[id]={id,kind:'grant',version:(old?.version||0)+1,pairId:S.pair.id,request:r.id,by:pairMember(),status:'pending',scopes:[...o.sel],viewers:[...realMembers(r.p)],until,profileRevision:S.pair.revision||0,safety:S.pair.safetyEpoch||0,t:Date.now()};pairNotify('grantApproval',id,{go:['Q03']});return true;}
+function queueJointGrant(r,o,until){if(!activePair())return false;const id='grant_'+r.id,old=jointQueue()[id];jointQueue()[id]={id,kind:'grant',version:(old?.version||0)+1,pairId:S.pair.id,request:r.id,by:pairMember(),status:'pending',scopes:[...o.sel],viewers:[...realMembers(r.p)],until,profileRevision:S.pair.revision||0,safety:S.pair.safetyEpoch||0,t:Date.now()};pairNotify('grantApproval',id,{go:['Q01']});return true;}
 
 
 function chatReadable(id,actor='me'){if(authorAllowed(actor))return actor!=='me'||pairMember()==='me';const t=social(actor)?.threads[id];return !!S.session&&actor==='couple'&&S.pair?.status==='dissolved'&&!!t?.ended&&t.members?.includes(pairMember());}
@@ -603,5 +618,5 @@ function commitJointPost(q,reviewer,delegated=false){
  if(q.by===reviewer&&!(delegated&&pairTrusted()&&reviewer===pairMember()))return false;
  if(!postResultReady(q.draft))return false;const existing=S.myPosts.find(x=>x.id===q.id);if((existing?.version||0)!==q.base)return false;
  const obj={...postFromDraft(q.draft,q.id,existing),version:q.version,creator:existing?.creator||q.by,approvedBy:delegated?[...realMembers('couple')]:[q.by,reviewer],delegated:!!delegated,status:q.draft.media.length?'review':'published'};
- existing?Object.assign(existing,obj):S.myPosts.unshift(obj);delete S.postEdits[q.id];q.status='approved';pairNotify('workApproved',q.id+'_'+q.version,{go:['Q03']});if(obj.status==='review')autoResolve();return true;
+ existing?Object.assign(existing,obj):S.myPosts.unshift(obj);delete S.postEdits[q.id];q.status='approved';pairNotify('workApproved',q.id+'_'+q.version,{go:['Q01']});if(obj.status==='review')autoResolve();return true;
 }

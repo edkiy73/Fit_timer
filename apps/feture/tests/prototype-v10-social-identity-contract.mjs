@@ -84,7 +84,7 @@ run("var trustTicket=authorTicket('couple');setPairTrust(false)");assert.equal(r
 run("submitJointPost({...trustedDraft,text:'Needs consent again'},'after-revoke')");assert.equal(run("jointQueue()['after-revoke'].status"),'pending');assert.equal(run("S.myPosts.some(p=>p.id==='after-revoke')"),false);
 run("setPairTrust(true);S.pairMember='me';setPairTrust(true);dissolvePair()");assert.equal(run('pairTrusted()'),false);assert.equal(run('S.pair.trust'),null);
 run("S.pair.status='active'");assert.equal(run('pairTrusted()'),false,'restoration never restores delegated consent');
-for(const lang of ['ru','en']){prepare('Q03');run(`S.lang='${lang}';coupleProfile()`);const h=run("SC.Q03.render(cur().p,cur())");assert.ok(h.includes('pairTrustOpen'));assert.ok(!h.includes('Редактировать расширенный профиль'));assert.ok(!h.includes('Edit private profile'));
+for(const lang of ['ru','en']){prepare('Q03');run(`S.lang='${lang}';coupleProfile()`);const h=run("SC.Q01.render(cur().p,cur())");assert.ok(h.includes('pairTrustOpen'));assert.ok(!h.includes('Редактировать расширенный профиль'));assert.ok(!h.includes('Edit private profile'));
  const review=run("jointPostReview({author:'couple',text:'Review content',tags:[],aud:'all',media:[],poll:null,result:null})");assert.ok(!/postMenu|likePost|savePost|sharePost|post-a/.test(review),'approval preview contains no dead social controls');
  const hidden=run("replyTree('d','d1')");assert.ok(hidden.includes('cm-ghost'));assert.ok(hidden.includes('aria-hidden="true"'));
 }
@@ -97,3 +97,23 @@ for(const owner of ['me','couple']){prepare('P02',{owner});run("coupleProfile();
  const save=run('ACT.peSave(null)');await finish(save);document.querySelector=query;
  assert.equal(run(owner==='me'?'T(S.me.privText)':'T(S.pair.profile.privText)'),'Unified editor private text','unified RTE saves private text without a legacy textarea');}
 console.log('PASS unified profile editor saves rich private text for personal and trusted couple profiles');
+// Acting identity: remembered modes, likes from a profile (person and couple targets), pair page without actions.
+{prepare('P01',{id:'mia'});run("S.me.dating=true;S.me.socialLikes=true;coupleProfile();S.pair.profile.dating=true;S.pair.profile.datingVisible=true;S.datingActor='couple'");
+ assert.equal(run("likeActor('mia').a"),'couple','couple mode likes a dating profile as the couple');
+ assert.equal(run("likeActor('maya').a"),'me');assert.equal(run("likeActor('maya').why"),'solo','social-only target is liked personally, with the reason shown');
+ assert.equal(run("canLikeFrom('couple','maya')"),false);assert.equal(run("canLikeFrom('me','lenamax')"),true,'a couple with dating on can be liked from its page');
+ run("S.pair.profile.dating=false");assert.equal(run("likeActor('mia').a"),'me');assert.equal(run("likeActor('mia').why"),'coupleOff','couple dating off falls back to personal with a reason');
+ run("S.pair.profile.dating=true");
+ const target=run("Object.keys(PEOPLE).find(id=>PEOPLE[id].dating&&!PEOPLE[id].pair&&!relatedFor('couple',id)&&!social('couple').likesIn.some(l=>l.p===id)&&!social('couple').matches.some(m=>m.p===id)&&!isBlocked(id))");assert.ok(target);
+ const meBefore=run("S.likesOut.length");await finish(run(`ACT.likeProfile({dataset:{v:'${target}'},classList:{contains:()=>false,add(){},remove(){}},setAttribute(){},removeAttribute(){}})`));
+ assert.equal(run(`social('couple').likesOut.some(l=>l.p==='${target}'&&l.src==='profile')`),true,'profile like is recorded on the couple side');
+ assert.equal(run("S.likesOut.length"),meBefore,'the personal list is untouched');
+ assert.equal(run(`withActor('me',()=>social().likesOut.some(l=>l.p==='${target}'))`),false);
+ assert.ok(text(run(`profileActorLine('${target}',{a:'me'})`)).includes('Alex'),'the line names the other identity that already acted');
+ assert.equal(run("profileActorLine('mia',{a:'me'}).length>0"),true);
+ prepare('F07');run("coupleProfile();ACT.chooseAuthor({dataset:{v:'couple',k:'compose'}})");assert.equal(run('S.composeActor'),'couple');
+ prepare('F07');run("S.composeActor='couple';coupleProfile()");run("SC.F07.render(cur().p,cur())");assert.equal(run('cur().author'),'couple','the publishing identity is remembered');
+ prepare('Q03');run("coupleProfile()");const page=run("SC.Q03.render(cur().p,cur())");for(const a of ['pairTrustOpen','pairSubmit','jointReview','pairHide','Q06','F07'])assert.ok(!String(page).includes(a),'couple page has no actions: '+a);
+ const hub=run("SC.Q01.render(cur().p,cur())");assert.ok(hub.includes('pairTrustOpen')&&hub.includes('Q06'),'all pair management lives in one hub');
+ prepare('P01',{id:'mia'});run("S.me=S.me;S.datingActor='me'");assert.ok(!run("profileActorLine('mia',{a:'me'})").includes('undefined'));
+ console.log('PASS acting identity: remembered modes, couple/personal profile likes with reasons and other-side state, couple page without actions, single pair hub');}
