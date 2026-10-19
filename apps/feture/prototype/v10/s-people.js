@@ -66,13 +66,12 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
   <div class="pc-tags">${otherDoneChip(id)}${likesMe?`<span class="pc-liked">${I.heartf}${L('Ты нравишься','Likes you')}</span>`:''}<span class="pc-score"><b>${sh.few?'—':sh.match.length}</b><small>${sh.few?L('мало данных','not enough data'):pl(sh.match.length,['общий интерес','общих интереса','общих интересов'],['shared interest','shared interests'],true)}</small></span></div>
   <div class="stamp l">${L('Да','Like')}</div><div class="stamp n">${L('Мимо','Pass')}</div>
   <div class="pc-info"><h2 class="pc-name"><span class="pcn">${esc(pname(id))}</span>${p.age?`<span>${p.age}</span>`:''}${nameBadges(p)}</h2>
-   <div class="pc-who">${[whoLine(id),placeLine(id)].filter(Boolean).map(x=>`<span>${esc(x)}</span>`).join('')}${p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>
-   <div class="pc-keys">${keys.map(k=>`<span>${esc(k)}</span>`).join('')}</div>
+   <div class="pc-who">${p.pair?`<span>${esc(whoLine(id))}</span>`:''}${placeLine(id)?`<span class="pl">${I.pin}${esc(placeLine(id))}</span>`:''}${p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>
    <div class="pc-hint">${I.down}${L('Листай вниз — что у вас общего','Scroll down — what you share')}</div></div>
  </div>
  <div class="pc-body">
   ${compatBlock(id)}
-  <div class="sec">${L('О себе','About')}</div>${md(T(p.bio),'bio')}
+  <div class="sec">${L('О себе','About')}</div>${md(T(p.bio),'bio')}${detailsGroup(id)}
   <div class="sec">${L('Интересы','Interests')}</div>${jarShelf(pubJars(id),{pre:1,act:'topic',who:id,moreAct:'allJars'})}
   ${post?`<div class="sec">${L('Публикация','Post')} · ${F.rel(post.t)}</div><button class="quote" data-go="F05" data-id="${post.id}"><p>${esc(T(post.text))}</p>${ic('chev',18)}</button>`:''}
   <div class="mt16" data-private-context="${id}">${privSection(id)}</div>
