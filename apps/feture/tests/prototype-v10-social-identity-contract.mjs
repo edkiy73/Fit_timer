@@ -170,20 +170,26 @@ console.log('PASS unified profile editor saves rich private text for personal an
  const day=json("feedEventPicks()");assert.ok(day.length<=3);run("feedEventPicks()");assert.deepEqual(json("feedEventPicks()"),day,'the same day keeps the same set');
  run("S.ui.feedEvDay.ids=new Set(['x1','x2','x3'])");assert.equal(json("feedEventPicks()").length,0,'a day with three events already shown adds no new ones');
  console.log('PASS couple invitation in the inbox (accept/decline) and the daily event limit in the feed');}
-// Two layers: what lives in the private part is shown there and never in the main profile; setup of the couple up front; tabs do not walk the history.
+// Two layers: the main profile holds media, details and interests; the private part holds only a description, photos and video (switch beside its title).
 {prepare('X01',{});run("coupleProfile()");
- run("S.me.vis={...PUBLIC_VIS,role:'granted',orient:'public'};S.me.role=['lead'];S.me.orient=['bi']");
- assert.deepEqual(json("meAsPerson().role"),[],'a field placed in the private part is not in the main profile');
- assert.deepEqual(json("privFieldRows(S.me).map(x=>x[0])").length>0,true,'it is listed in the private part instead');
- run("S.ui.viewGrant=true");assert.deepEqual(json("meAsPerson().role"),[],'even for a viewer with access the main profile does not repeat it');run("S.ui.viewGrant=false");
- prepare('P02',{});run("S.me.vis={...PUBLIC_VIS,role:'granted'};S.me.privOn=true;");const ed=run("SC.P02.render(cur().p,cur())");
- assert.ok(ed.split('id="privEdit"')[1]?.includes('data-sel="fieldWhere" data-k="role"'),'the editor shows moved data inside the private panel');assert.ok(!ed.includes('data-act="visCycle"')&&!ed.includes('Who sees these fields')&&!ed.includes('Кто видит эти поля'),'no scattered visibility pills');
- assert.ok(ed.includes('data-sel="peReq"'),'who may ask for access is set inside the private panel');
+ run("S.me.role=['lead'];S.me.orient=['bi']");
+ assert.deepEqual(json("meAsPerson().role"),['lead'],'details always belong to the main profile');
+ prepare('P02',{});run("S.me.privOn=true;");const ed=run("SC.P02.render(cur().p,cur())");
+ const priv=ed.split('id="privEdit"')[1]||'';
+ const vh=priv.split('<div class="vault-b">')[0];assert.ok(vh.includes('data-act="pePriv"')&&vh.indexOf('Приватная часть')<vh.indexOf('data-act="pePriv"'),'the private switch sits in the header, right of the title');
+ assert.ok(!priv.includes('fieldWhere')&&!ed.includes('data-sel="fieldWhere"')&&!ed.includes('data-act="visCycle"'),'no per-field layer switches');
+ assert.ok(!priv.includes('peJarAddPriv')&&!priv.includes('data-sel="fieldWhere"')&&!/Интересы|Interests/.test(text(priv)),'no interests or chips in the private part');
+ assert.ok(priv.includes('data-sel="peReq"'),'who may ask for access is set inside the private panel');
+ assert.ok(priv.includes('data-k="photos"')&&priv.includes('data-k="video"'),'photos and video are separate lists in the private part');
+ assert.ok(!/privatePreview/.test(ed),'no second preview entry: «Как видят» is in the top bar');
+ const head=text(ed.split('id="privEdit"')[0]);assert.ok(!/Основной профиль|Main profile|Кто ты|Основное|Basics/.test(head),'no layer headings above the main card');
+ assert.ok(ed.indexOf('data-act="peWho"')>ed.indexOf('data-act="peCity"')&&ed.indexOf('data-act="peWho"')<ed.indexOf('id="peJars"'),'your details sit in the same card as the basics');
+ assert.equal((ed.match(/<section class="grp"><div class="card form-card">/g)||[]).length,1,'basics and details are one card');
  prepare('Q01',{});run("coupleProfile()");const hub=run("SC.Q01.render(cur().p,cur())");assert.ok(!hub.includes('pairHide')&&!hub.includes('pairStopSharing'),'no non-clickable status rows in the pair hub');
  prepare('Q03',{});run("coupleProfile()");assert.ok(!text(run("SC.Q03.render(cur().p,cur())")).match(/Статус отношений|Relationship status/),'a couple page does not show a relationship status');
  prepare('Q09',{});run("coupleProfile();var r=cur();r.init=1;r.mode='approve';r.req='matches'");run("ACT.q9Done()");assert.equal(run("S.pair.profile.requestsFrom"),'matches','settings chosen at creation are applied');
  prepare('P07',{});run("ACT.p7tab({dataset:{v:'withme'}})");assert.equal(run("navNextReplace"),true,'switching a tab replaces the history entry');
- console.log('PASS two layers: private data lives only in the private part, editor panels, couple set-up, tabs do not add history');}
+ console.log('PASS two layers: details in the main profile, private part = description/photos/video, editor panels, couple set-up, tabs do not add history');}
 {prepare('K01',{});const sel=run("selectRow('k2','x',[['ru','Русский'],['en','English']],'ru')");assert.ok(sel.includes('data-sel="k2"')&&!sel.includes('data-act='),'a select must not carry data-act: tapping it would fire the click handler and re-render before a value is chosen');
  run("CH.sel({value:'en',dataset:{sel:'k2'}})");assert.equal(run("S.lang"),'en','a changed select runs its action');
  console.log('PASS inline selects: change runs the action, a tap does not re-render');}
@@ -200,14 +206,14 @@ console.log('PASS unified profile editor saves rich private text for personal an
 
 run('sheet=originalSheetForContext');
 // Contextual profile additions keep their public/private destination; the general picker still asks.
-for(const [action,visibility] of [['peJarAdd','public'],['peJarAddPriv','granted']]){
+for(const [action,visibility] of [['peJarAdd','public']]){
  prepare('P02');run('QA.offline=false');run(`ACT.${action}()`);const topicId=run('Object.keys(TOPICS).find(t=>!S.me.jars.some(j=>j.t===t))');
  assert.equal(run('S.ui.interestDraft.fixedVis'),true);assert.equal(run('S.ui.interestDraft.vis'),visibility);
- run(`ACT.interestsVis({dataset:{v:'${visibility==='public'?'granted':'public'}'}})`);assert.equal(run('S.ui.interestDraft.vis'),visibility,'destination cannot drift to a different profile layer');
+ run(`ACT.interestsVis({dataset:{v:'only'}})`);assert.equal(run('S.ui.interestDraft.vis'),visibility,'destination cannot drift to a different profile layer');
  run(`ACT.pickTopic({dataset:{v:'${topicId}'}});ACT.interestsStart();ACT.interestAnswer({dataset:{v:'7'}})`);timers.length=0;await finish(run('ACT.interestNext(null)'));
  assert.equal(run(`S.me.jars.find(j=>j.t==='${topicId}').vis`),visibility,'last answer saves directly in its original layer');assert.equal(run('!!S.ui.interestDraft'),false,'no visibility step remains');
 }
 prepare('X01');run('ACT.addJar()');assert.equal(run('S.ui.interestDraft.fixedVis'),false,'general picker preserves the visibility choice');
 assert.equal((run("SC.X01.render()").match(/data-go="P03"/g)||[]).length,1,'Me keeps only the profile-card preview entry');
 assert.ok(!run("SC.C01.render({})").includes('data-v="joined"'),'no third top-level community tab');assert.ok(run('SC.C02.render()').includes('Ты участник'),'memberships remain reachable');
-console.log('PASS contextual public/private jars save without a visibility step; general picker and community memberships remain available');
+console.log('PASS contextual public jars save without a visibility step; general picker and community memberships remain available');
