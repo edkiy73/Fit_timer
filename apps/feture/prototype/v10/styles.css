@@ -888,7 +888,7 @@ button.jar:active .vessel{transform:scale(.95)}
 
 /* ============ DECK (dating) ============ */
 .view.deckmode{display:flex;flex-direction:column;overflow:hidden;padding:0 10px calc(var(--dock) + 16px + var(--safe-b))}
-.deck{position:relative;flex:1;min-height:0;width:100%;max-width:480px;margin:0 auto}
+.deck{position:relative;flex:1;min-height:0;width:100%;max-width:680px;margin:0 auto}
 .pc{position:absolute;inset:0;border-radius:var(--r-xl);background:var(--surf);border:1px solid var(--line);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:none;box-shadow:var(--shadow);transition:transform .32s var(--ease);will-change:transform;user-select:none;-webkit-user-select:none;--l:0;--n:0;isolation:isolate;contain:layout paint}
 .pc::-webkit-scrollbar{display:none}
 .pc.drag{transition:none}.pc.fly{transition:transform .28s ease-in}
@@ -1499,7 +1499,7 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 /* discover on wide screens: the card takes the content column (680px) and the screen height down to the bottom;
    the photo is shown whole on its own blurred backdrop (instafill), like the profile card */
 .pc-ph>.mbg{display:none}
-@container stage (min-width:768px){
+@container stage (min-width:481px){
   .view.deckmode{justify-content:stretch;padding-bottom:16px}
   .deck{flex:1 1 auto;width:100%;max-width:680px;height:auto;max-height:none;aspect-ratio:auto;margin:0 auto}
   .pc-ph{isolation:isolate}
@@ -2074,13 +2074,14 @@ body.qa-viewport{overflow:auto;display:block}body.qa-viewport .stage{position:re
 
 /* controls: tabs (seg) only switch views; a value is picked in a select; several values are chips; a yes/no is a switch */
 .selrow{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:0;flex:1;min-width:0}
-.selrow>span{flex:none;font-size:15px;color:var(--mute)}
-.selrow select{appearance:none;-webkit-appearance:none;flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--ink);font:600 15px/1.3 var(--font);text-align:right;text-align-last:right;padding:0 24px 0 0;cursor:pointer;text-overflow:ellipsis}
-.selrow.solo select{text-align:left;text-align-last:left}
+.selrow>.selt{flex:1 1 auto;min-width:0;font-size:15px;color:var(--mute)}
+.selrow>.selv{flex:0 1 auto;max-width:55%;min-width:0;padding-right:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;font:600 15px/1.3 var(--font);color:var(--ink)}
+.selrow.solo>.selv{flex:1 1 auto;max-width:none;text-align:left}
+.selrow select{appearance:none;-webkit-appearance:none;position:absolute;inset:0;width:100%;height:100%;margin:0;border:0;outline:0;background:transparent;color:transparent;font:600 15px/1.3 var(--font);opacity:0;cursor:pointer}
 .selrow::after{content:"";position:absolute;right:2px;top:50%;width:14px;height:14px;margin-top:-7px;background:var(--mute);pointer-events:none;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center/contain no-repeat}
 .selrow option{background:var(--surf);color:var(--ink)}
 .fl-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.fl-row .selrow{min-height:0;flex:none}.fl-row .selrow select{padding:2px 22px 2px 0;font-size:13px;color:var(--violet)}.fl-row .selrow::after{background:var(--violet);width:12px;height:12px;margin-top:-6px}
+.fl-row .selrow{min-height:0;flex:none}.fl-row .selrow>.selv{font-size:13px;color:var(--violet)}.fl-row .selrow::after{background:var(--violet);width:12px;height:12px;margin-top:-6px}
 
 .bio{margin:14px 2px 6px;font-size:16px;line-height:1.5;overflow-wrap:anywhere}.vault .bio{margin:6px 2px 0}.vault-h .ibtn{margin:-6px -6px -6px 0}
 .vault-h{margin:0}.vault-b{margin-top:6px}.veil-act{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;padding:10px 0 2px}.veil-act .btn{width:100%}.vault.closed{padding-bottom:12px}
@@ -2178,3 +2179,8 @@ body.capture-shield>*{visibility:hidden!important}
 .vault .veil-glass{background:color-mix(in srgb,var(--surf) 38%,transparent);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 
 .owner-only>.vault{margin-top:24px}.owner-only>.note{margin-top:8px}
+/* a select row inside a list reads like its neighbours (toggle / link rows): title in ink, current value muted */
+.li .selrow:not(.solo)>.selt{color:var(--ink);font-weight:600}
+.li .selrow:not(.solo)>.selv{color:var(--mute);font-weight:500}
+
+.selrow>.selt small{display:block;margin-top:2px;font-size:12.5px;font-weight:400;line-height:1.35;color:var(--mute)}

@@ -899,7 +899,7 @@ button.jar:active .vessel{transform:scale(.95)}
 
 /* ============ DECK (dating) ============ */
 .view.deckmode{display:flex;flex-direction:column;overflow:hidden;padding:0 10px calc(var(--dock) + 16px + var(--safe-b))}
-.deck{position:relative;flex:1;min-height:0;width:100%;max-width:480px;margin:0 auto}
+.deck{position:relative;flex:1;min-height:0;width:100%;max-width:680px;margin:0 auto}
 .pc{position:absolute;inset:0;border-radius:var(--r-xl);background:var(--surf);border:1px solid var(--line);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:none;box-shadow:var(--shadow);transition:transform .32s var(--ease);will-change:transform;user-select:none;-webkit-user-select:none;--l:0;--n:0;isolation:isolate;contain:layout paint}
 .pc::-webkit-scrollbar{display:none}
 .pc.drag{transition:none}.pc.fly{transition:transform .28s ease-in}
@@ -1510,7 +1510,7 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 /* discover on wide screens: the card takes the content column (680px) and the screen height down to the bottom;
    the photo is shown whole on its own blurred backdrop (instafill), like the profile card */
 .pc-ph>.mbg{display:none}
-@container stage (min-width:768px){
+@container stage (min-width:481px){
   .view.deckmode{justify-content:stretch;padding-bottom:16px}
   .deck{flex:1 1 auto;width:100%;max-width:680px;height:auto;max-height:none;aspect-ratio:auto;margin:0 auto}
   .pc-ph{isolation:isolate}
@@ -2085,13 +2085,14 @@ body.qa-viewport{overflow:auto;display:block}body.qa-viewport .stage{position:re
 
 /* controls: tabs (seg) only switch views; a value is picked in a select; several values are chips; a yes/no is a switch */
 .selrow{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:0;flex:1;min-width:0}
-.selrow>span{flex:none;font-size:15px;color:var(--mute)}
-.selrow select{appearance:none;-webkit-appearance:none;flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--ink);font:600 15px/1.3 var(--font);text-align:right;text-align-last:right;padding:0 24px 0 0;cursor:pointer;text-overflow:ellipsis}
-.selrow.solo select{text-align:left;text-align-last:left}
+.selrow>.selt{flex:1 1 auto;min-width:0;font-size:15px;color:var(--mute)}
+.selrow>.selv{flex:0 1 auto;max-width:55%;min-width:0;padding-right:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;font:600 15px/1.3 var(--font);color:var(--ink)}
+.selrow.solo>.selv{flex:1 1 auto;max-width:none;text-align:left}
+.selrow select{appearance:none;-webkit-appearance:none;position:absolute;inset:0;width:100%;height:100%;margin:0;border:0;outline:0;background:transparent;color:transparent;font:600 15px/1.3 var(--font);opacity:0;cursor:pointer}
 .selrow::after{content:"";position:absolute;right:2px;top:50%;width:14px;height:14px;margin-top:-7px;background:var(--mute);pointer-events:none;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center/contain no-repeat}
 .selrow option{background:var(--surf);color:var(--ink)}
 .fl-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.fl-row .selrow{min-height:0;flex:none}.fl-row .selrow select{padding:2px 22px 2px 0;font-size:13px;color:var(--violet)}.fl-row .selrow::after{background:var(--violet);width:12px;height:12px;margin-top:-6px}
+.fl-row .selrow{min-height:0;flex:none}.fl-row .selrow>.selv{font-size:13px;color:var(--violet)}.fl-row .selrow::after{background:var(--violet);width:12px;height:12px;margin-top:-6px}
 
 .bio{margin:14px 2px 6px;font-size:16px;line-height:1.5;overflow-wrap:anywhere}.vault .bio{margin:6px 2px 0}.vault-h .ibtn{margin:-6px -6px -6px 0}
 .vault-h{margin:0}.vault-b{margin-top:6px}.veil-act{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;padding:10px 0 2px}.veil-act .btn{width:100%}.vault.closed{padding-bottom:12px}
@@ -2189,6 +2190,11 @@ body.capture-shield>*{visibility:hidden!important}
 .vault .veil-glass{background:color-mix(in srgb,var(--surf) 38%,transparent);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 
 .owner-only>.vault{margin-top:24px}.owner-only>.note{margin-top:8px}
+/* a select row inside a list reads like its neighbours (toggle / link rows): title in ink, current value muted */
+.li .selrow:not(.solo)>.selt{color:var(--ink);font-weight:600}
+.li .selrow:not(.solo)>.selv{color:var(--mute);font-weight:500}
+
+.selrow>.selt small{display:block;margin-top:2px;font-size:12.5px;font-weight:400;line-height:1.35;color:var(--mute)}
 </style>
 </head>
 <body>
@@ -3136,8 +3142,8 @@ function tabsRow(items,active,act,cls=''){return seg(items,active,act,cls||'sm')
 /** V8: everything that belongs together lives in one card with a small title above it */
 function grp(title,html,o={}){return `<section class="grp ${o.cls||''}" ${o.id?`id="${o.id}"`:''}>${title?`<div class="grp-t"><span>${title}</span>${o.right||''}</div>`:''}<div class="card ${o.list?'list':''} ${o.flat?'flat':''} ${o.inner||''}">${html}</div>${o.foot?`<p class="grp-n">${o.foot}</p>`:''}</section>`;}
 /** one way to pick a value: a native select with its current text (single choice) or chips (several). No big option blocks. */
-function selectRow(act,label,items,value,o={}){return `<label class="selrow ${label?'':'solo'}">${label?`<span>${label}</span>`:''}<select data-ch="sel" data-sel="${act}" ${o.k?`data-k="${o.k}"`:''} aria-label="${esc(label||o.aria||'')}">${items.map(([k,t,,dis])=>`<option value="${esc(k)}" ${String(k)===String(value)?'selected':''} ${dis?'disabled':''}>${esc(t)}</option>`).join('')}</select></label>`;}
-CH.sel=el=>{el.dataset.v=el.value;const fn=ACT[el.dataset.sel];if(fn)fn(el);};
+function selectRow(act,label,items,value,o={}){const sel=items.find(([k])=>String(k)===String(value));return `<label class="selrow ${label?'':'solo'}">${label?`<span class="selt">${label}${o.sub?`<small>${o.sub}</small>`:''}</span>`:''}<span class="selv" aria-hidden="true">${esc(sel?sel[1]:'')}</span><select data-ch="sel" data-sel="${act}" ${o.k?`data-k="${o.k}"`:''} aria-label="${esc(label||o.aria||'')}">${items.map(([k,t,,dis])=>`<option value="${esc(k)}" ${String(k)===String(value)?'selected':''} ${dis?'disabled':''}>${esc(t)}</option>`).join('')}</select></label>`;}
+CH.sel=el=>{el.dataset.v=el.value;const v=el.closest?.('.selrow')?.querySelector('.selv');if(v)v.textContent=el.selectedOptions?.[0]?.textContent??v.textContent;const fn=ACT[el.dataset.sel];if(fn)fn(el);};
 function choices(items,sel,act,o={}){if(!o.multi)return selectRow(act,o.label||'',items,[].concat(sel)[0],o);const set=new Set([].concat(sel).filter(x=>x!=null));return `<div class="chips" role="group">${items.map(([k,t,,dis])=>`<button class="chip ${set.has(k)?'on':''}" data-act="${act}" data-v="${esc(k)}" ${o.k?`data-k="${o.k}"`:''} aria-pressed="${set.has(k)}" ${dis?'disabled':''}>${t}</button>`).join('')}</div>`;}
 function empty(icon,title,text,btns=''){return `<div class="empty"><div class="em-ic">${I[icon]}</div><h3>${safeInline(title)}</h3>${text?`<p>${safeInline(text)}</p>`:''}${btns?`<div class="btns">${btns}</div>`:''}</div>`;}
 function sw(on){return `<span class="sw ${on?'on':''}" aria-hidden="true"></span>`;}
@@ -5178,7 +5184,7 @@ ACT.peHideCity=()=>{cur().f.city='';cur().dirty=true;refresh();};
 function activityBlock(id,tabs){const on=tabs.filter(t=>t[2]);if(!on.length)return '';S.ui.pa||(S.ui.pa={});const cur_=on.some(t=>t[0]===S.ui.pa[id])?S.ui.pa[id]:on[0][0];const t=on.find(x=>x[0]===cur_);
  return `<section class="grp activity">${on.length>1?tabsRow(on.map(x=>[x[0],x[1],x[2]]),cur_,'profAct','tabs-full'):`<div class="grp-t"><span>${t[1]} · ${t[2]}</span></div>`}${t[3]()}</section>`;}
 /* ---------- activity: what a person did — likes, events, communities, follows. The owner decides who sees the tab (Settings → Privacy) ---------- */
-const ACT_VIS=()=>[['all',L('Все','Everyone')],['followers',L('Подписчики и взаимные','Followers & mutual')],['off',L('Выключена','Off')]];
+const ACT_VIS=()=>[['all',L('Все','Everyone')],['followers',L('Подписчики и взаимные','Followers & mutual')],['off',L('Никто','Nobody')]];
 const actHash=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h;};
 const activityMode=id=>(id==='me'?S.me.activityVis:person(id)?.actVis)||'all';
 /** is the activity tab visible to this viewer? `o.asOther` = «as others see me» preview: no access = a stranger, with access = a contact */
@@ -5801,14 +5807,13 @@ ACT.gfGroupsApply=()=>{S.filters.search.groups=S.ui.cf;closeSheet();refresh();};
 
 /* K01 — settings */
 SC.K01={title:()=>L('Настройки','Settings'),render:()=>{const m=S.me;return `${bar(L('Настройки','Settings'),{back:1,sm:1})}<div class="view nodock compact"><div class="wrap">
- <div class="sec" style="margin-top:4px">${L('Аккаунт','Account')}</div><div class="card list">${linkRow({go:'K06',icon:'key',title:L('Вход и безопасность','Sign-in & security'),sub:esc(m.email)||L('почта не указана','no email')})}${linkRow({act:'ageFromMe',icon:'shield',tone:m.ageCheck==='ok'?'g':'a',title:L('Проверка возраста','Age check'),val:{ok:L('подтверждено','verified'),pending:L('проверяется','in progress'),none:L('не пройдена','not done')}[m.ageCheck]})}${linkRow({go:'V01',icon:'verified',tone:'v',title:L('Фото-верификация','Photo verification'),val:{ok:L('подтверждено','verified'),pending:L('проверяется','in review'),rejected:L('не прошла','failed'),none:L('не пройдена','not done')}[m.photoCheck||'none']})}${linkRow({go:'B01',icon:'crown',tone:'l',title:'Premium',val:m.premium?L('активен','active'):L('не подключён','not active')})}</div>
- <div class="sec">${L('Приложение','App')}</div><div class="card list"><div class="li"><span class="ico">${I.globe}</span>${selectRow('k2',L('Язык','Language'),[['system',L('Как в системе','System')],['ru','Русский'],['en','English']],S.langPref||'ru')}</div><div class="li"><span class="ico">${I.moon}</span>${selectRow('k3',L('Тема оформления','Appearance'),[['light',L('Светлая','Light')],['dark',L('Тёмная','Dark')],['auto',L('Системная','System')]],themePref())}</div>${linkRow({go:'K05',icon:'bell',title:L('Уведомления','Notifications')})}</div>
- <div class="sec">${L('Знакомства','Dating')}</div><div class="card list"><div class="li">${selectRow('k4mode',L('Знакомства','Dating'),[['on',L('Включены','On')],['hidden',L('Смотрю незаметно','Browsing hidden')],['off',L('Выключены','Off')]],!m.dating?'off':m.datingVisible?'on':'hidden',{aria:L('Знакомства','Dating')})}</div>${toggleRow('k4social',L('Принимать симпатии из профиля','Accept likes from my profile'),'',m.socialLikes)}</div>
- <div class="sec">${L('Приватность профиля','Profile privacy')}</div><div class="card list"><div class="li">${selectRow('k4act',L('Показывать активность в профиле','Show activity on my profile'),ACT_VIS(),m.activityVis||'all')}</div>${toggleRow('k4rsvp',L('Показывать моё участие в событиях по умолчанию','Show my event attendance by default'),'',m.rsvpShow)}</div>
- <p class="grp-n">${L('Активность — лайки, события, сообщества и подписки. Если выключить, вкладки «Активность» не будет у других; ты её видишь всегда.','Activity covers likes, events, communities and follows. If it’s off, others don’t see the Activity tab; you always do.')}</p>
+ <div class="sec" style="margin-top:4px">${L('Аккаунт','Account')}</div><div class="card list">${linkRow({go:'K06',icon:'key',title:L('Вход и безопасность','Sign-in & security'),sub:esc(m.email)||L('почта не указана','no email')})}${linkRow({act:'ageFromMe',icon:'shield',tone:m.ageCheck==='ok'?'g':'a',title:L('Проверка возраста','Age check'),sub:L('Нужна для знакомств','Needed for dating'),val:{ok:L('подтверждено','verified'),pending:L('проверяется','in progress'),none:L('не пройдена','not done')}[m.ageCheck]})}${linkRow({go:'V01',icon:'verified',tone:'v',title:L('Фото-верификация','Photo verification'),sub:L('Галочка у имени','A badge by your name'),val:{ok:L('подтверждено','verified'),pending:L('проверяется','in review'),rejected:L('не прошла','failed'),none:L('не пройдена','not done')}[m.photoCheck||'none']})}${linkRow({go:'B01',icon:'crown',tone:'l',title:'Premium',sub:L('Больше возможностей','More features'),val:m.premium?L('активен','active'):L('не подключён','not active')})}</div>
+ <div class="sec">${L('Приложение','App')}</div><div class="card list"><div class="li"><span class="ico">${I.globe}</span>${selectRow('k2',L('Язык','Language'),[['system',L('Как в системе','System')],['ru','Русский'],['en','English']],S.langPref||'ru',{sub:L('Язык интерфейса','Interface language')})}</div><div class="li"><span class="ico">${I.moon}</span>${selectRow('k3',L('Тема оформления','Appearance'),[['light',L('Светлая','Light')],['dark',L('Тёмная','Dark')],['auto',L('Системная','System')]],themePref(),{sub:L('Как выглядит приложение','How the app looks')})}</div>${linkRow({go:'K05',icon:'bell',title:L('Уведомления','Notifications'),sub:L('Что и когда приходит','What arrives and when')})}</div>
+ <div class="sec">${L('Знакомства','Dating')}</div><div class="card list"><div class="li">${selectRow('k4mode',L('Знакомства','Dating'),[['on',L('Включены','On')],['hidden',L('Смотрю незаметно','Browsing hidden')],['off',L('Выключены','Off')]],!m.dating?'off':m.datingVisible?'on':'hidden',{aria:L('Знакомства','Dating'),sub:L('Подборка и просмотр анкет','Discover and browsing')})}</div>${toggleRow('k4social',L('Принимать симпатии из профиля','Accept likes from my profile'),L('Симпатию можно отправить из профиля','A like can be sent from your profile'),m.socialLikes)}</div>
+ <div class="sec">${L('Приватность профиля','Profile privacy')}</div><div class="card list"><div class="li">${selectRow('k4act',L('Кто видит активность','Who sees my activity'),ACT_VIS(),m.activityVis||'all',{sub:L('Лайки, события, подписки','Likes, events, follows')})}</div>${toggleRow('k4rsvp',L('Показывать моё участие в событиях по умолчанию','Show my event attendance by default'),L('Видно, на какие события ты идёшь','Shows which events you attend'),m.rsvpShow)}</div>
  <div class="sec">${L('Чаты','Chats')}</div><div class="card list">${toggleRow('k4blur',L('Размывать входящие фото и видео','Blur incoming photos and video'),L('Пока не нажмёшь, содержимое скрыто','Hidden until you tap'),m.chatBlur!==false)}</div>
- <div class="sec">${L('Данные','Data')}</div><div class="card list">${linkRow({go:'P12',icon:'block',title:L('Заблокированные','Blocked'),val:String(S.blocked.length)})}${linkRow({go:'K07',icon:'download',title:L('Мои данные и удаление','Your data & deletion')})}</div>
- <div class="sec">${L('Поддержка','Support')}</div><div class="card list">${linkRow({go:'S01',icon:'help',title:L('Помощь и безопасность','Help & safety')})}${linkRow({act:'logout',icon:'logout',cls:'danger',title:L('Выйти','Sign out'),noChev:1})}</div>
+ <div class="sec">${L('Данные','Data')}</div><div class="card list">${linkRow({go:'P12',icon:'block',title:L('Заблокированные','Blocked'),sub:L('Не увидят тебя и не напишут','They can’t see or message you'),val:String(S.blocked.length)})}${linkRow({go:'K07',icon:'download',title:L('Мои данные и удаление','Your data & deletion'),sub:L('Архив данных и удаление аккаунта','Data archive and account deletion')})}</div>
+ <div class="sec">${L('Поддержка','Support')}</div><div class="card list">${linkRow({go:'S01',icon:'help',title:L('Помощь и безопасность','Help & safety'),sub:L('Правила, жалобы, поддержка','Rules, reports, support')})}${linkRow({act:'logout',icon:'logout',cls:'danger',title:L('Выйти','Sign out'),noChev:1})}</div>
  <p class="note center mt24">FetUre · V6 · ${L('прототип интерфейса','interface prototype')}</p></div></div>`;}};
 ACT.feedEvLess=a=>{(S.ui.feedEvHidden??=new Set()).add(a.dataset.v);toast(L('Реже такое. Это событие скрыто из ленты','Less of this. The event is hidden from the feed'),{type:'ok',action:{label:L('Вернуть','Undo'),fn:()=>{S.ui.feedEvHidden.delete(a.dataset.v);refresh();}}});refresh();};
 ACT.logout=()=>ask({icon:'logout',title:L('Выйти из аккаунта?','Sign out?'),text:L('На этом устройстве не останется твоих данных. Войти можно в любой момент.','None of your data stays on this device. You can sign in any time.'),ok:L('Выйти','Sign out'),danger:true}).then(ok=>{if(ok)restartPrototype();});
@@ -5989,7 +5994,7 @@ SC.Q01={title:()=>L('Связь пары','Couple connection'),render:(p,r)=>{co
  </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="v6PairInvite">${I.send}${L('Пригласить в пару','Invite to couple')}</button></div></div>`;},
  after:()=>{const f=$('[name="partner"]');if(!f)return;const upd=()=>{const n=f.value.trim().replace(/^@/,'').toLowerCase();const ok=PEOPLE[n]&&!PEOPLE[n].pair&&n!==S.me.nick;const o=$('#psOther'),pv=$('#pairPrev');if(o)o.innerHTML=ok?av(n,''):`<span class="ps-q">${I.plus}</span>`;$('.pair-scene')?.classList.toggle('ready',!!ok);if(pv)pv.innerHTML=ok?`<div class="li static">${av(n,'sm')}<span class="tx"><b>${esc(pname(n))}${nameBadges(PEOPLE[n])}</b><small>${esc(whoLine(n))}</small></span><span class="pill ok">${I.check}${L('найден','found')}</span></div>`:n.length>2?`<p class="note">${L('Пока не нашли такой ник — проверь написание','No such nickname yet — check the spelling')}</p>`:'';};f.addEventListener('input',upd);upd();}};
 
-ACT.v6PairInvite=a=>{if(activePair()||S.pair?.status==='dissolved')return;const ticket=authorTicket('me'),r=cur(),nick=fv('partner').trim().replace(/^@/,'');if(!/^[a-z0-9_.]{3,20}$/i.test(nick)||nick===S.me.nick||!PEOPLE[nick]||PEOPLE[nick].pair||PEOPLE[nick].pairOf){setErr('partner',L('Укажи другой корректный ник','Enter another valid nickname'));return;}run(a,()=>{if(!validAuthor(ticket)||cur()!==r||activePair()||S.pairInvite?.status==='pending')return;S.pairInvite={nick,status:'pending',by:'me',t:Date.now()};autoResolve();r.dirty=false;go('Q01',{}, {replace:true});},{ok:L('Приглашение отправлено','Invitation sent')});};
+ACT.v6PairInvite=a=>{if(activePair()||S.pair?.status==='dissolved')return;const ticket=authorTicket('me'),r=cur(),nick=fv('partner').trim().replace(/^@/,'');if(!/^[a-z0-9_.]{3,20}$/i.test(nick)||nick===S.me.nick||!PEOPLE[nick]||PEOPLE[nick].pair||PEOPLE[nick].pairOf){setErr('partner',L('Укажи другой корректный ник','Enter another valid nickname'));return;}run(a,()=>{if(!validAuthor(ticket)||cur()!==r||activePair()||S.pairInvite?.status==='pending')return;S.pairInvite={nick,status:'pending',by:'me',t:Date.now()};autoResolve();r.dirty=false;if(S.ui.ask)S.ui.ask();/* «leave without saving?» opened by pressing Back while sending must not outlive the form */go('Q01',{}, {replace:true});},{ok:L('Приглашение отправлено','Invitation sent')});};
 ACT.v6PairCancel=()=>{S.pairInvite=null;refresh();};
 /* Q03 — the couple profile: a layer over two separate accounts. Each person keeps own chats, likes and grants. */
 const pairName=()=>S.pair?T(S.pair.name):'';
