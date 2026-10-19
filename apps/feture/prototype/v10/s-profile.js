@@ -334,7 +334,7 @@ ACT.peHideCity=()=>{cur().f.city='';cur().dirty=true;refresh();};
 /** small badges after a name: photo verification and Premium. Neither opens private data or chat. */
 /** one block for everything a person does (posts, events they run, communities they lead): the only tabbed part of a profile */
 function activityBlock(id,tabs){const on=tabs.filter(t=>t[2]);if(!on.length)return '';S.ui.pa||(S.ui.pa={});const cur_=on.some(t=>t[0]===S.ui.pa[id])?S.ui.pa[id]:on[0][0];const t=on.find(x=>x[0]===cur_);
- return `<section class="grp activity">${on.length>1?tabsRow(on.map(x=>[x[0],x[1],x[2]]),cur_,'profAct','tabs-full'):`<div class="grp-t"><span>${t[1]} · ${t[2]}</span></div>`}${t[3]()}</section>`;}
+ return `<section class="grp activity">${on.length>1?tabsRow(on.map(x=>[x[0],x[1],x[2]]),cur_,'profAct',`tabs-full${on.length>3?' n4':''}`):`<div class="grp-t"><span>${t[1]} · ${t[2]}</span></div>`}${t[3]()}</section>`;}
 /* ---------- activity: what a person did — likes, events, communities, follows. The owner decides who sees the tab (Settings → Privacy) ---------- */
 const ACT_VIS=()=>[['all',L('Все','Everyone')],['followers',L('Подписчики и взаимные','Followers & mutual')],['off',L('Никто','Nobody')]];
 const actHash=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return h;};
@@ -352,11 +352,16 @@ function activityOf(id){const out=[],pub=p=>p.aud==='all'&&!p.unavailable&&!isBl
   Object.keys(COMMUNITIES).filter(c=>!COMMUNITIES[c].hidden&&COMMUNITIES[c].privacy==='open'&&(COMMUNITIES[c].mods.includes(id)||actHash(id+c)%4===0)).slice(0,2).forEach((c,i)=>out.push({k:'comm',c,t:Date.now()-(i+5)*DAY}));
   followingOf(id).slice(0,2).forEach((p,i)=>out.push({k:'follow',p,t:Date.now()-(i+2)*DAY*1.7}));}
  return out.sort((a,b)=>b.t-a.t);}
+/** one activity row: a small type icon on the left (same size in every row), the text, and — on the right — the picture of the thing itself
+    in the proportion of its own card (event / community: wide 2:1 like the event card and the community banner, post: square, person: round).
+    The same image file is reused, nothing extra is loaded. */
+function actRow(o){const pv=o.pv?`<span class="actpv ${o.pv[0]}">${o.pv[1]}</span>`:'';
+ return `<button class="li actrow" data-go="${esc(o.go)}" data-p='${esc(JSON.stringify(o.p))}'><span class="ico ${o.tone||''}">${I[o.icon]}</span><span class="tx"><b>${safeInline(o.title)}</b><small>${safeInline(o.sub)}</small></span>${pv}${I.chev}</button>`;}
 function activityList(id,items,o={}){const rows=items.slice(0,12).map(x=>{
-  if(x.k==='like')return linkRow({go:'F05',p:{id:x.post.id},...((x.post.media||[]).find(m=>m.type==='image'&&m.url)?{av:`<span class="actth"><img src="${esc(x.post.media.find(m=>m.type==='image'&&m.url).url)}" alt="" loading="lazy" draggable="false"><i>${I.heartf}</i></span>`}:{av:`<span class="actth ic">${I.heartf}</span>`}),title:L(`Лайк · публикация ${pname(x.post.author)}`,`Like · ${pname(x.post.author)}’s post`),sub:`${mdPlain(T(x.post.text)).slice(0,70)||L('Публикация','Post')} · ${F.rel(x.t)}`});
-  if(x.k==='event')return linkRow({go:'E03',p:{id:x.e},av:`<span class="actth">${evCover(EV(x.e),'cal')}</span>`,title:x.st==='interested'?L('Интересует событие','Interested in an event'):L('Идёт на событие','Going to an event'),sub:`${T(EV(x.e).title)} · ${F.rel(x.t)}`});
-  if(x.k==='comm')return linkRow({go:'C03',p:{id:x.c},av:`<span class="actth">${commAv(COMMUNITIES[x.c])}</span>`,title:L('Сообщество','Community'),sub:`${T(COMMUNITIES[x.c].name)} · ${F.rel(x.t)}`});
-  return linkRow({go:'P01',p:{id:x.p},av:`<span class="actth round">${av(x.p,'')}</span>`,title:L('Подписка','Followed'),sub:`${pname(x.p)} · ${F.rel(x.t)}`});}).join('');
+  if(x.k==='like'){const img=(x.post.media||[]).find(m=>m.type==='image'&&m.url);return actRow({go:'F05',p:{id:x.post.id},icon:'heartf',tone:'l',pv:img?['sq',`<img src="${esc(img.url)}" alt="" loading="lazy" draggable="false">`]:null,title:L(`Лайк · публикация ${pname(x.post.author)}`,`Like · ${pname(x.post.author)}’s post`),sub:`${mdPlain(T(x.post.text)).slice(0,70)||L('Публикация','Post')} · ${F.rel(x.t)}`});}
+  if(x.k==='event')return actRow({go:'E03',p:{id:x.e},icon:'cal',tone:'g',pv:['wide',evCover(EV(x.e),'cal')],title:x.st==='interested'?L('Интересует событие','Interested in an event'):L('Идёт на событие','Going to an event'),sub:`${T(EV(x.e).title)} · ${F.rel(x.t)}`});
+  if(x.k==='comm')return actRow({go:'C03',p:{id:x.c},icon:'groups',tone:'v',pv:['wide',commAv(COMMUNITIES[x.c])],title:L('Сообщество','Community'),sub:`${T(COMMUNITIES[x.c].name)} · ${F.rel(x.t)}`});
+  return actRow({go:'P01',p:{id:x.p},icon:'people',tone:'',pv:['round',av(x.p,'')],title:L('Подписка','Followed'),sub:`${pname(x.p)} · ${F.rel(x.t)}`});}).join('');
  const mode=ACT_VIS().find(x=>x[0]===activityMode(id));
  return `<div class="card list">${rows}</div>${o.self?`<p class="note mt12">${L('Видят','Visible to')}: ${esc(mode[1].toLowerCase())} · <button class="btn text auto" data-go="K01">${L('Изменить в настройках','Change in settings')}</button></p>`:''}`;}
 ACT.profAct=a=>{const id=cur().p.id||(cur().p.owner==='couple'?'couple':'me');S.ui.pa||(S.ui.pa={});S.ui.pa[id]=a.dataset.v;refresh();};
