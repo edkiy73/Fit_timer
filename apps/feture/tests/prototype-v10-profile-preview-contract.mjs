@@ -86,4 +86,10 @@ for(const id of ['kira','mia','maya','tomeva']){const det=run(`detailsGroup('${i
  assert.ok(prof.includes('class="pl"')===!!run(`placeLine('${id}')`)&&card.includes('class="pl"')===!!run(`placeLine('${id}')`),`${id}: the city sits in the header line of both`);}
 assert.ok(run("identityFields().map(f=>f[0]).join()")==='gender,orient,role,status,format,seek','pronouns are not a profile field any more');
 assert.ok(run("detailsGroup('me')").includes('<dl class="kv">'),'my own details are listed too');
+// «End connection» is in the profile's ⋯ menu once a like is set; it works for a like without a chat and removes the like.
+run("S=freshState('full');S.session={};initNav();toast=()=>{};closeSheet=()=>{};sheet=()=>{};refresh=()=>{};");
+let menu='';run("sheet=b=>{globalThis.__m=b()}");run("ACT.profileMenu({dataset:{v:'maya'}})");menu=String(run("__m.body"));
+assert.ok(run("social().likesOut.some(l=>l.p==='maya')")&&menu.includes('data-act="endConn"'),'a liked person offers «End connection» in the menu');
+const none=run("Object.keys(PEOPLE).find(id=>!PEOPLE[id].pair&&!social().likesOut.some(l=>l.p===id)&&!isMatch(id))");run(`ACT.profileMenu({dataset:{v:'${none}'}})`);assert.ok(!String(run("__m.body")).includes('data-act="endConn"'),'no like, no «End connection»');
+run("ACT.endConn({dataset:{v:'maya'}});");const pop=String(run("__m.body"));assert.ok(pop.includes('Твоя симпатия снимается')&&pop.includes('не блокировка'),'the popup says what happens');
 console.log('PASS RU/EN profile preview: details are public at both levels; the private part (description/interests/photos/video) opens only with access; hidden topics stay hidden; activity tab follows its privacy setting; follow lists drop blocked people');
