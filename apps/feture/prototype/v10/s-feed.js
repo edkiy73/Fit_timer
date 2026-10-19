@@ -6,8 +6,8 @@ function filterPosts(list,f){return list.filter(p=>!(S.hiddenPosts&&S.hiddenPost
 
 /** events in the feed: upcoming within 14 days, never cancelled/under review; priority — mine (going/applied) → organisers I follow →
  *  communities I joined → my city or online; one card per six posts, at most three per screen */
-function feedEventPicks(){const mode=S.me.feedEvents||'all';if(mode==='off')return [];const now=Date.now(),mine=new Set(myUpcomingEventIds()),seen=S.ui.feedEvSeen??={},hidden=S.ui.feedEvHidden??=new Set();
- const rank=id=>{const e=EV(id);if(mine.has(id))return 0;if(social('me').follows.has(e.organizer))return 1;if(mode==='mine')return 9;if(e.community&&S.joined.has(e.community))return 2;if(e.format==='online'||e.city===S.me.city)return 3;return 9;};
+function feedEventPicks(){if(S.filters.feed.events===false)return [];const now=Date.now(),mine=new Set(myUpcomingEventIds()),seen=S.ui.feedEvSeen??={},hidden=S.ui.feedEvHidden??=new Set();
+ const rank=id=>{const e=EV(id);if(mine.has(id))return 0;if(social('me').follows.has(e.organizer))return 1;if(e.community&&S.joined.has(e.community))return 2;if(e.format==='online'||e.city===S.me.city)return 3;return 9;};
  /* an event that was first shown more than 3 days ago is not repeated, unless it is mine or starts within 2 days */
  const stale=id=>{const t=seen[id];return t&&now-t>3*DAY&&!mine.has(id)&&EV(id).start-now>2*DAY;};
  const picks=allEventIds().filter(id=>{const e=EV(id);return e&&!hidden.has(id)&&!stale(id)&&!isPast(id)&&!e.cancelled&&e.status!=='review'&&e.start-now<=14*DAY&&e.organizer!=='me'&&!isBlocked(e.organizer);}).map(id=>[rank(id),id]).filter(x=>x[0]<9).sort((a,b)=>a[0]-b[0]||EV(a[1]).start-EV(b[1]).start).slice(0,3).map(x=>x[1]);
@@ -18,20 +18,21 @@ SC.F01={root:1,tab:'feed',title:()=>L('Лента','Feed'),render:(p)=>{
  const sub=p.sub||'foryou';
  const head=`${bar(L('Лента','Feed'),{actions:`${searchBtn('posts')}${bellBtn()}`})}`;
  const tabs='';
- const fkey=sub==='following'?'following':'feed';const f=S.filters[fkey];const n=filtN(f);
+ const fkey=sub==='following'?'following':'feed';const f=S.filters[fkey];const n=filtN(f)+(f.events===false?1:0);
  const src=sub==='following'?allPosts().filter(x=>social('me').follows.has(x.author)||x.author==='me'):allPosts();
  const list=filterPosts(src,f).sort((a,b)=>b.t-a.t);
- const chipsActive=[...(f.tags||[]).map(t=>`<button class="chip filter on" data-act="rmFilter" data-k="tags" data-v="${t}">#${esc(topic(t))} ${ic('close',14)}</button>`),...(f.ex||[]).map(t=>`<button class="chip ex" data-act="rmFilter" data-k="ex" data-v="${t}">${esc(topic(t))} ${ic('close',14)}</button>`),...(f.types||[]).map(t=>`<button class="chip filter on" data-act="rmFilter" data-k="types" data-v="${t}">${TYPES().find(x=>x[0]===t)[1]} ${ic('close',14)}</button>`)].join('');
+ const chipsActive=[...(f.tags||[]).map(t=>`<button class="chip filter on" data-act="rmFilter" data-k="tags" data-v="${t}">#${esc(topic(t))} ${ic('close',14)}</button>`),...(f.ex||[]).map(t=>`<button class="chip ex" data-act="rmFilter" data-k="ex" data-v="${t}">${esc(topic(t))} ${ic('close',14)}</button>`),...(f.types||[]).map(t=>`<button class="chip filter on" data-act="rmFilter" data-k="types" data-v="${t}">${TYPES().find(x=>x[0]===t)[1]} ${ic('close',14)}</button>`)].join('')+(f.events===false?`<button class="chip filter on" data-act="feedEventsReset">${L('Без событий','No events')} ${ic('close',14)}</button>`:'');
  const quick=!n?Object.keys(TOPICS).slice(0,7).filter(t=>allPosts().some(p=>p.tags.includes(t))).map(t=>`<button class="chip filter" data-act="quickTag" data-v="${t}">#${esc(topic(t))}</button>`).join(''):chipsActive;
  let body;
  if(sub==='following'&&!social('me').follows.size)body=empty('people',L('Ты пока ни на кого не подписан(а)','You’re not following anyone yet'),L('Подпишись на авторов и сообщества — их публикации появятся здесь. Подписка не открывает личный чат.','Follow authors and communities — their posts appear here. Following doesn’t open a private chat.'),`<button class="btn primary" data-go="G01" data-p='{"scope":"people"}'>${L('Найти людей','Find people')}</button><button class="btn soft" data-tab="groups">${L('Сообщества','Communities')}</button>`);
  else if(!list.length)body=empty('filter',L('Ничего не нашлось','Nothing found'),L('С такими фильтрами публикаций нет. Сними один из фильтров.','No posts match these filters. Remove one of them.'),`<button class="btn soft" data-act="clearFeedFilters">${L('Сбросить фильтры','Reset filters')}</button>`);
- else{const ev=sub==='foryou'&&!n?feedEventPicks():[];let k=0;body=`<div class="posts">${firstLoad('feed-'+sub,list.map((x,i)=>postCard(x,{i})+((i+1)%6===0&&ev[k]?`<div class="feed-ev"><div class="fe-h"><small>${L('Скоро рядом','Coming up')}</small><button type="button" class="linkbtn" data-act="feedEvLess" data-v="${ev[k]}">${L('Реже такое','Less of this')}</button></div>${eventCard(ev[k++],{row:1})}</div>`:'')).join(''))}</div>`;}
+ else{const ev=sub==='foryou'?feedEventPicks():[];let k=0;body=`<div class="posts">${firstLoad('feed-'+sub,list.map((x,i)=>postCard(x,{i})+((i+1)%6===0&&ev[k]?`<div class="feed-ev"><div class="fe-h"><small>${L('Скоро рядом','Coming up')}</small><button type="button" class="linkbtn" data-act="feedEvLess" data-v="${ev[k]}">${L('Реже такое','Less of this')}</button></div>${eventCard(ev[k++],{row:1})}</div>`:'')).join(''))}</div>`;}
  return head+`<div class="view"><div class="wrap">${tabs}
  <div class="composer"><button class="cmp-main" data-go="F07">${av('me','sm')}<span>${L('Что у тебя нового?','What’s on your mind?')}</span></button><button class="ibtn ghost sm" data-act="composeX" data-x="media" aria-label="${L('Фото или видео','Photo or video')}">${I.image}</button><button class="ibtn ghost sm" data-act="composeX" data-x="poll" aria-label="${L('Опрос','Poll')}">${I.poll}</button><button class="ibtn add" data-act="create" aria-label="${L('Создать','Create')}">${I.plus}</button></div>
  <div class="filterline"><div class="chips scroll"><button class="chip filter ${sub==='following'?'on':''}" data-act="feedSub" data-v="${sub==='following'?'foryou':'following'}" aria-pressed="${sub==='following'}">${L('Подписки','Following')}</button>${quick}</div><button class="chip filter ${n?'on':''}" data-act="feedFilters" data-v="${fkey}" aria-label="${L('Фильтры','Filters')}">${ic('filter',16)}${L('Фильтры','Filters')}${n?`<em class="badge-abs">${n}</em>`:''}</button></div>
  ${body}</div></div>`;}};
 ACT.feedSub=a=>setSub(a.dataset.v);
+ACT.feedEventsReset=()=>{S.filters.feed.events=true;refresh();};
 ACT.quickTag=a=>{const fk=cur().p.sub==='following'?'following':'feed';const f=S.filters[fk];f.tags=f.tags||[];const v=a.dataset.v;const k=f.tags.indexOf(v);k<0?f.tags.push(v):f.tags.splice(k,1);refresh();};
 ACT.rmFilter=a=>{const fk=cur().p.sub==='following'?'following':'feed';const f=S.filters[fk];f[a.dataset.k]=(f[a.dataset.k]||[]).filter(x=>x!==a.dataset.v);refresh();};
 ACT.clearFeedFilters=()=>{const fk=cur().p.sub==='following'?'following':'feed';S.filters[fk]={};refresh();};
@@ -40,6 +41,7 @@ ACT.clearFeedFilters=()=>{const fk=cur().p.sub==='following'?'following':'feed';
 ACT.feedFilters=a=>{const fk=a.dataset.v;const d=JSON.parse(JSON.stringify(S.filters[fk]));d.tags=d.tags||[];d.ex=d.ex||[];d.types=d.types||[];S.ui.ff={fk,d};
  const src=()=>fk==='following'?allPosts().filter(x=>social('me').follows.has(x.author)||x.author==='me'):allPosts();const TI=topicItems();
  filterSheet({title:L('Фильтры ленты','Feed filters'),draft:()=>S.ui.ff.d,count:()=>filterPosts(src(),S.ui.ff.d).length,
+  top:fk==='feed'?()=>`<div class="card list">${toggleRow('ffEvents',L('Показывать события','Show events'),'',S.ui.ff.d.events!==false)}</div>`:null,
   applyLabel:n=>n?L(`Показать ${pl(n,['публикацию','публикации','публикаций'],[])}`,`Show ${pl(n,[],['post','posts'])}`):L('Нет подходящих публикаций','No matching posts'),
   reset:()=>{S.ui.ff.d={tags:[],ex:[],types:[]};},apply:()=>{S.filters[fk]=S.ui.ff.d;},
   note:fk==='following'?L('Действует только для подписок.','Applies to Following only.'):'',
@@ -47,6 +49,7 @@ ACT.feedFilters=a=>{const fk=a.dataset.v;const d=JSON.parse(JSON.stringify(S.fil
    {k:'tags',label:L('Показывать интересы','Show interests'),search:1,pick:()=>({items:TI,sel:S.ui.ff.d.tags,act:'ffTag',groups:topicGroups()}),on:()=>S.ui.ff.d.tags.length,summary:()=>sumOf(TI,S.ui.ff.d.tags,L('Все интересы','All interests')),body:()=>fChips(TI,S.ui.ff.d.tags,'ffTag',{groups:topicGroups()})},
    {k:'ex',label:L('Скрывать интересы','Hide interests'),search:1,pick:()=>({items:TI,sel:S.ui.ff.d.ex,act:'ffEx',groups:topicGroups()}),on:()=>S.ui.ff.d.ex.length,summary:()=>sumOf(TI,S.ui.ff.d.ex,L('Ничего не скрыто','Nothing hidden')),body:()=>fChips(TI,S.ui.ff.d.ex,'ffEx',{groups:topicGroups()})}]});};
 const ffToggle=(k)=>a=>{const d=S.ui.ff.d;const v=a.dataset.v;const arr=d[k];const i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);if(k==='tags')d.ex=d.ex.filter(x=>x!==v);if(k==='ex')d.tags=d.tags.filter(x=>x!==v);resheet();};
+ACT.ffEvents=()=>{S.ui.ff.d.events=S.ui.ff.d.events===false;resheet();};
 ACT.ffTag=ffToggle('tags');ACT.ffEx=ffToggle('ex');ACT.ffType=ffToggle('types');
 ACT.ffReset=()=>{S.ui.ff.d={tags:[],ex:[],types:[]};resheet();};
 ACT.ffMode=a=>{S.ui.ffMode=a.dataset.v;resheet();};
@@ -195,4 +198,5 @@ ACT.f10tab=a=>setP('t',a.dataset.v);
 
 
 ACT.discardPostEdits=a=>{const id=a.dataset.v,owner=S,edit=S.postEdits[id];if(!edit)return;ask({icon:'trash',title:L('Удалить сохранённые правки?','Discard saved changes?'),text:L('Исходная публикация и ответы останутся. Удалятся только сохранённые правки.','The original post and replies stay. Only the saved changes are discarded.'),ok:L('Удалить правки','Discard changes'),danger:true}).then(ok=>{if(!ok||S!==owner||S.postEdits[id]!==edit)return;let discarded=false;run(null,()=>{if(S.postEdits[id]!==edit)return;delete S.postEdits[id];discarded=true;refresh();},{ok:()=>discarded?L('Правки удалены. Исходная публикация сохранена','Changes discarded. Original post kept'):null});});};
+
 

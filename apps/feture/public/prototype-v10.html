@@ -3120,8 +3120,8 @@ const barObserver=typeof ResizeObserver==='function'?new ResizeObserver(()=>meas
 function measureBar(){const m=main(),b=$(':scope>.bar',m);m.style.setProperty('--barh',b?b.getBoundingClientRect().height+'px':'0px');}
 function syncChrome(){const m=main();if(cur()?.fq)filterSections($(':scope>.view',m)||m,cur().fq);const b=$(':scope>.bar',m),ft=$(':scope>.ctabar,:scope>.inputbar',m);m.classList.toggle('hasbar',!!b&&!b.classList.contains('overlay'));m.classList.toggle('hascta',!!ft);if(ft)requestAnimationFrame(()=>{const visible=$$(':scope>.ctabar,:scope>.inputbar',m).find(el=>el.getClientRects().length);if(visible)$('#root').style.setProperty('--ctah',(visible.getBoundingClientRect().height+(parseFloat(getComputedStyle(visible).marginBottom)||0))+'px');});measureBar();barObserver?.disconnect();if(b)barObserver?.observe(b);
  const v=$(':scope>.view',m);m.style.setProperty('--sc',0);if(v){const on=()=>{const k=Math.min(1,v.scrollTop/48);m.style.setProperty('--sc',k.toFixed(3));m.classList.toggle('scrolled',v.scrollTop>4);};v.addEventListener('scroll',on,{passive:true});on();}}
-// keep the focused field visible above the keyboard
-document.addEventListener('focusin',e=>{const el=e.target;if(!el.matches?.('input:not([type=checkbox]):not([type=radio]),textarea,select,[contenteditable]')||!el.closest('#main .view'))return;setTimeout(()=>{if(document.activeElement===el)el.scrollIntoView({block:'center',behavior:'smooth'});},320);});
+// Only text entry can open a keyboard. Native selects must keep their scroll position.
+document.addEventListener('focusin',e=>{const el=e.target;if(!el.matches?.('input:not([type]),input[type=text],input[type=email],input[type=password],input[type=search],input[type=tel],input[type=url],input[type=number],textarea,[contenteditable=true]')||!el.closest('#main .view'))return;setTimeout(()=>{if(document.activeElement!==el)return;const box=el.getBoundingClientRect(),view=el.closest('#main .view').getBoundingClientRect(),viewport=window.visualViewport;const top=Math.max(view.top,viewport?.offsetTop||0),bottom=Math.min(view.bottom,(viewport?.offsetTop||0)+(viewport?.height||innerHeight));if(box.top<top||box.bottom>bottom)el.scrollIntoView({block:'nearest',behavior:'smooth'});},320);});
 
 
 function communityMemberCanWrite(id,member,kind='post'){const c=COMMUNITIES[id];if(!c||isBlocked(member)||S.communityRestrictions?.[id]?.[member])return false;if(kind==='comment'&&c.commentPolicy==='public'&&c.privacy==='open')return true;if(member==='me')return S.joined.has(id)||ownsCommunity(id);if(S.pair?.memberCommunities&&Object.hasOwn(S.pair.memberCommunities,member))return S.pair.memberCommunities[member].includes(id);return !!c.mods?.includes(member)||!!c.seedMembers?.includes(member)||!!S.communityMembers[id]?.has(member)||!!S.pair?.memberCommunities?.[member]?.includes(id);}
@@ -3173,6 +3173,7 @@ function commitJointPost(q,reviewer,delegated=false){
  const obj={...postFromDraft(q.draft,q.id,existing),version:q.version,creator:existing?.creator||q.by,approvedBy:delegated?[...realMembers('couple')]:[q.by,reviewer],delegated:!!delegated,status:q.draft.media.length?'review':'published'};
  existing?Object.assign(existing,obj):S.myPosts.unshift(obj);delete S.postEdits[q.id];q.status='approved';pairNotify('workApproved',q.id+'_'+q.version,{go:['Q01']});if(obj.status==='review')autoResolve();return true;
 }
+
 
 /* ---- ui.js ---- */
 /* ============ SHARED COMPONENTS ============ */
@@ -4059,8 +4060,8 @@ function filterPosts(list,f){return list.filter(p=>!(S.hiddenPosts&&S.hiddenPost
 
 /** events in the feed: upcoming within 14 days, never cancelled/under review; priority — mine (going/applied) → organisers I follow →
  *  communities I joined → my city or online; one card per six posts, at most three per screen */
-function feedEventPicks(){const mode=S.me.feedEvents||'all';if(mode==='off')return [];const now=Date.now(),mine=new Set(myUpcomingEventIds()),seen=S.ui.feedEvSeen??={},hidden=S.ui.feedEvHidden??=new Set();
- const rank=id=>{const e=EV(id);if(mine.has(id))return 0;if(social('me').follows.has(e.organizer))return 1;if(mode==='mine')return 9;if(e.community&&S.joined.has(e.community))return 2;if(e.format==='online'||e.city===S.me.city)return 3;return 9;};
+function feedEventPicks(){if(S.filters.feed.events===false)return [];const now=Date.now(),mine=new Set(myUpcomingEventIds()),seen=S.ui.feedEvSeen??={},hidden=S.ui.feedEvHidden??=new Set();
+ const rank=id=>{const e=EV(id);if(mine.has(id))return 0;if(social('me').follows.has(e.organizer))return 1;if(e.community&&S.joined.has(e.community))return 2;if(e.format==='online'||e.city===S.me.city)return 3;return 9;};
  /* an event that was first shown more than 3 days ago is not repeated, unless it is mine or starts within 2 days */
  const stale=id=>{const t=seen[id];return t&&now-t>3*DAY&&!mine.has(id)&&EV(id).start-now>2*DAY;};
  const picks=allEventIds().filter(id=>{const e=EV(id);return e&&!hidden.has(id)&&!stale(id)&&!isPast(id)&&!e.cancelled&&e.status!=='review'&&e.start-now<=14*DAY&&e.organizer!=='me'&&!isBlocked(e.organizer);}).map(id=>[rank(id),id]).filter(x=>x[0]<9).sort((a,b)=>a[0]-b[0]||EV(a[1]).start-EV(b[1]).start).slice(0,3).map(x=>x[1]);
@@ -4071,20 +4072,21 @@ SC.F01={root:1,tab:'feed',title:()=>L('Лента','Feed'),render:(p)=>{
  const sub=p.sub||'foryou';
  const head=`${bar(L('Лента','Feed'),{actions:`${searchBtn('posts')}${bellBtn()}`})}`;
  const tabs='';
- const fkey=sub==='following'?'following':'feed';const f=S.filters[fkey];const n=filtN(f);
+ const fkey=sub==='following'?'following':'feed';const f=S.filters[fkey];const n=filtN(f)+(f.events===false?1:0);
  const src=sub==='following'?allPosts().filter(x=>social('me').follows.has(x.author)||x.author==='me'):allPosts();
  const list=filterPosts(src,f).sort((a,b)=>b.t-a.t);
- const chipsActive=[...(f.tags||[]).map(t=>`<button class="chip filter on" data-act="rmFilter" data-k="tags" data-v="${t}">#${esc(topic(t))} ${ic('close',14)}</button>`),...(f.ex||[]).map(t=>`<button class="chip ex" data-act="rmFilter" data-k="ex" data-v="${t}">${esc(topic(t))} ${ic('close',14)}</button>`),...(f.types||[]).map(t=>`<button class="chip filter on" data-act="rmFilter" data-k="types" data-v="${t}">${TYPES().find(x=>x[0]===t)[1]} ${ic('close',14)}</button>`)].join('');
+ const chipsActive=[...(f.tags||[]).map(t=>`<button class="chip filter on" data-act="rmFilter" data-k="tags" data-v="${t}">#${esc(topic(t))} ${ic('close',14)}</button>`),...(f.ex||[]).map(t=>`<button class="chip ex" data-act="rmFilter" data-k="ex" data-v="${t}">${esc(topic(t))} ${ic('close',14)}</button>`),...(f.types||[]).map(t=>`<button class="chip filter on" data-act="rmFilter" data-k="types" data-v="${t}">${TYPES().find(x=>x[0]===t)[1]} ${ic('close',14)}</button>`)].join('')+(f.events===false?`<button class="chip filter on" data-act="feedEventsReset">${L('Без событий','No events')} ${ic('close',14)}</button>`:'');
  const quick=!n?Object.keys(TOPICS).slice(0,7).filter(t=>allPosts().some(p=>p.tags.includes(t))).map(t=>`<button class="chip filter" data-act="quickTag" data-v="${t}">#${esc(topic(t))}</button>`).join(''):chipsActive;
  let body;
  if(sub==='following'&&!social('me').follows.size)body=empty('people',L('Ты пока ни на кого не подписан(а)','You’re not following anyone yet'),L('Подпишись на авторов и сообщества — их публикации появятся здесь. Подписка не открывает личный чат.','Follow authors and communities — their posts appear here. Following doesn’t open a private chat.'),`<button class="btn primary" data-go="G01" data-p='{"scope":"people"}'>${L('Найти людей','Find people')}</button><button class="btn soft" data-tab="groups">${L('Сообщества','Communities')}</button>`);
  else if(!list.length)body=empty('filter',L('Ничего не нашлось','Nothing found'),L('С такими фильтрами публикаций нет. Сними один из фильтров.','No posts match these filters. Remove one of them.'),`<button class="btn soft" data-act="clearFeedFilters">${L('Сбросить фильтры','Reset filters')}</button>`);
- else{const ev=sub==='foryou'&&!n?feedEventPicks():[];let k=0;body=`<div class="posts">${firstLoad('feed-'+sub,list.map((x,i)=>postCard(x,{i})+((i+1)%6===0&&ev[k]?`<div class="feed-ev"><div class="fe-h"><small>${L('Скоро рядом','Coming up')}</small><button type="button" class="linkbtn" data-act="feedEvLess" data-v="${ev[k]}">${L('Реже такое','Less of this')}</button></div>${eventCard(ev[k++],{row:1})}</div>`:'')).join(''))}</div>`;}
+ else{const ev=sub==='foryou'?feedEventPicks():[];let k=0;body=`<div class="posts">${firstLoad('feed-'+sub,list.map((x,i)=>postCard(x,{i})+((i+1)%6===0&&ev[k]?`<div class="feed-ev"><div class="fe-h"><small>${L('Скоро рядом','Coming up')}</small><button type="button" class="linkbtn" data-act="feedEvLess" data-v="${ev[k]}">${L('Реже такое','Less of this')}</button></div>${eventCard(ev[k++],{row:1})}</div>`:'')).join(''))}</div>`;}
  return head+`<div class="view"><div class="wrap">${tabs}
  <div class="composer"><button class="cmp-main" data-go="F07">${av('me','sm')}<span>${L('Что у тебя нового?','What’s on your mind?')}</span></button><button class="ibtn ghost sm" data-act="composeX" data-x="media" aria-label="${L('Фото или видео','Photo or video')}">${I.image}</button><button class="ibtn ghost sm" data-act="composeX" data-x="poll" aria-label="${L('Опрос','Poll')}">${I.poll}</button><button class="ibtn add" data-act="create" aria-label="${L('Создать','Create')}">${I.plus}</button></div>
  <div class="filterline"><div class="chips scroll"><button class="chip filter ${sub==='following'?'on':''}" data-act="feedSub" data-v="${sub==='following'?'foryou':'following'}" aria-pressed="${sub==='following'}">${L('Подписки','Following')}</button>${quick}</div><button class="chip filter ${n?'on':''}" data-act="feedFilters" data-v="${fkey}" aria-label="${L('Фильтры','Filters')}">${ic('filter',16)}${L('Фильтры','Filters')}${n?`<em class="badge-abs">${n}</em>`:''}</button></div>
  ${body}</div></div>`;}};
 ACT.feedSub=a=>setSub(a.dataset.v);
+ACT.feedEventsReset=()=>{S.filters.feed.events=true;refresh();};
 ACT.quickTag=a=>{const fk=cur().p.sub==='following'?'following':'feed';const f=S.filters[fk];f.tags=f.tags||[];const v=a.dataset.v;const k=f.tags.indexOf(v);k<0?f.tags.push(v):f.tags.splice(k,1);refresh();};
 ACT.rmFilter=a=>{const fk=cur().p.sub==='following'?'following':'feed';const f=S.filters[fk];f[a.dataset.k]=(f[a.dataset.k]||[]).filter(x=>x!==a.dataset.v);refresh();};
 ACT.clearFeedFilters=()=>{const fk=cur().p.sub==='following'?'following':'feed';S.filters[fk]={};refresh();};
@@ -4093,6 +4095,7 @@ ACT.clearFeedFilters=()=>{const fk=cur().p.sub==='following'?'following':'feed';
 ACT.feedFilters=a=>{const fk=a.dataset.v;const d=JSON.parse(JSON.stringify(S.filters[fk]));d.tags=d.tags||[];d.ex=d.ex||[];d.types=d.types||[];S.ui.ff={fk,d};
  const src=()=>fk==='following'?allPosts().filter(x=>social('me').follows.has(x.author)||x.author==='me'):allPosts();const TI=topicItems();
  filterSheet({title:L('Фильтры ленты','Feed filters'),draft:()=>S.ui.ff.d,count:()=>filterPosts(src(),S.ui.ff.d).length,
+  top:fk==='feed'?()=>`<div class="card list">${toggleRow('ffEvents',L('Показывать события','Show events'),'',S.ui.ff.d.events!==false)}</div>`:null,
   applyLabel:n=>n?L(`Показать ${pl(n,['публикацию','публикации','публикаций'],[])}`,`Show ${pl(n,[],['post','posts'])}`):L('Нет подходящих публикаций','No matching posts'),
   reset:()=>{S.ui.ff.d={tags:[],ex:[],types:[]};},apply:()=>{S.filters[fk]=S.ui.ff.d;},
   note:fk==='following'?L('Действует только для подписок.','Applies to Following only.'):'',
@@ -4100,6 +4103,7 @@ ACT.feedFilters=a=>{const fk=a.dataset.v;const d=JSON.parse(JSON.stringify(S.fil
    {k:'tags',label:L('Показывать интересы','Show interests'),search:1,pick:()=>({items:TI,sel:S.ui.ff.d.tags,act:'ffTag',groups:topicGroups()}),on:()=>S.ui.ff.d.tags.length,summary:()=>sumOf(TI,S.ui.ff.d.tags,L('Все интересы','All interests')),body:()=>fChips(TI,S.ui.ff.d.tags,'ffTag',{groups:topicGroups()})},
    {k:'ex',label:L('Скрывать интересы','Hide interests'),search:1,pick:()=>({items:TI,sel:S.ui.ff.d.ex,act:'ffEx',groups:topicGroups()}),on:()=>S.ui.ff.d.ex.length,summary:()=>sumOf(TI,S.ui.ff.d.ex,L('Ничего не скрыто','Nothing hidden')),body:()=>fChips(TI,S.ui.ff.d.ex,'ffEx',{groups:topicGroups()})}]});};
 const ffToggle=(k)=>a=>{const d=S.ui.ff.d;const v=a.dataset.v;const arr=d[k];const i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);if(k==='tags')d.ex=d.ex.filter(x=>x!==v);if(k==='ex')d.tags=d.tags.filter(x=>x!==v);resheet();};
+ACT.ffEvents=()=>{S.ui.ff.d.events=S.ui.ff.d.events===false;resheet();};
 ACT.ffTag=ffToggle('tags');ACT.ffEx=ffToggle('ex');ACT.ffType=ffToggle('types');
 ACT.ffReset=()=>{S.ui.ff.d={tags:[],ex:[],types:[]};resheet();};
 ACT.ffMode=a=>{S.ui.ffMode=a.dataset.v;resheet();};
@@ -4248,6 +4252,7 @@ ACT.f10tab=a=>setP('t',a.dataset.v);
 
 
 ACT.discardPostEdits=a=>{const id=a.dataset.v,owner=S,edit=S.postEdits[id];if(!edit)return;ask({icon:'trash',title:L('Удалить сохранённые правки?','Discard saved changes?'),text:L('Исходная публикация и ответы останутся. Удалятся только сохранённые правки.','The original post and replies stay. Only the saved changes are discarded.'),ok:L('Удалить правки','Discard changes'),danger:true}).then(ok=>{if(!ok||S!==owner||S.postEdits[id]!==edit)return;let discarded=false;run(null,()=>{if(S.postEdits[id]!==edit)return;delete S.postEdits[id];discarded=true;refresh();},{ok:()=>discarded?L('Правки удалены. Исходная публикация сохранена','Changes discarded. Original post kept'):null});});};
+
 
 
 /* ---- s-events.js ---- */
@@ -5572,14 +5577,10 @@ ACT.gfGroupsApply=()=>{S.filters.search.groups=S.ui.cf;closeSheet();refresh();};
 /* K01 — settings */
 SC.K01={title:()=>L('Настройки','Settings'),render:()=>{const m=S.me;return `${bar(L('Настройки','Settings'),{back:1,sm:1})}<div class="view nodock compact"><div class="wrap">
  <div class="sec" style="margin-top:4px">${L('Аккаунт','Account')}</div><div class="card list">${linkRow({go:'K06',icon:'key',title:L('Вход и безопасность','Sign-in & security'),sub:esc(m.email)||L('почта не указана','no email')})}${linkRow({act:'ageFromMe',icon:'shield',tone:m.ageCheck==='ok'?'g':'a',title:L('Проверка возраста','Age check'),val:{ok:L('подтверждено','verified'),pending:L('проверяется','in progress'),none:L('не пройдена','not done')}[m.ageCheck]})}${linkRow({go:'V01',icon:'verified',tone:'v',title:L('Фото-верификация','Photo verification'),val:{ok:L('подтверждено','verified'),pending:L('проверяется','in review'),rejected:L('не прошла','failed'),none:L('не пройдена','not done')}[m.photoCheck||'none']})}${linkRow({go:'B01',icon:'crown',tone:'l',title:'Premium',val:m.premium?L('активен','active'):L('не подключён','not active')})}</div>
- <div class="sec">${L('Приложение','App')}</div><div class="card list"><div class="li"><span class="ico">${I.globe}</span>${selectRow('k2',L('Язык','Language'),[['system',L('Как в системе','System')],['ru','Русский'],['en','English']],S.langPref||'ru')}</div><div class="li"><span class="ico">${I.moon}</span>${selectRow('k3',L('Тема оформления','Appearance'),[['light',L('Светлая','Light')],['dark',L('Тёмная','Dark')],['auto',L('Системная','System')]],themePref())}</div><div class="li"><span class="ico">${I.cal}</span>${selectRow('feedEvSet',L('События в ленте','Events in the feed'),FEED_EV_MODES().map(([k,t])=>[k,t]),feedEvMode())}</div>${linkRow({go:'K05',icon:'bell',title:L('Уведомления','Notifications')})}</div>
+ <div class="sec">${L('Приложение','App')}</div><div class="card list"><div class="li"><span class="ico">${I.globe}</span>${selectRow('k2',L('Язык','Language'),[['system',L('Как в системе','System')],['ru','Русский'],['en','English']],S.langPref||'ru')}</div><div class="li"><span class="ico">${I.moon}</span>${selectRow('k3',L('Тема оформления','Appearance'),[['light',L('Светлая','Light')],['dark',L('Тёмная','Dark')],['auto',L('Системная','System')]],themePref())}</div>${linkRow({go:'K05',icon:'bell',title:L('Уведомления','Notifications')})}</div>
  <div class="sec">${L('Приватность','Privacy')}</div><div class="card list">${linkRow({go:'K04',icon:'eye',tone:'v',title:L('Приватность и знакомства','Privacy & dating'),sub:m.dating?L('знакомства включены','dating on'):L('знакомства выключены','dating off')})}${linkRow({go:'P12',icon:'block',title:L('Заблокированные','Blocked'),val:String(S.blocked.length)})}${linkRow({go:'K07',icon:'download',title:L('Мои данные и удаление','Your data & deletion')})}</div>
  <div class="sec">${L('Поддержка','Support')}</div><div class="card list">${linkRow({go:'S01',icon:'help',title:L('Помощь и безопасность','Help & safety')})}${linkRow({act:'logout',icon:'logout',cls:'danger',title:L('Выйти','Sign out'),noChev:1})}</div>
  <p class="note center mt24">FetUre · V6 · ${L('прототип интерфейса','interface prototype')}</p></div></div>`;}};
-const FEED_EV_MODES=()=>[['all',L('Все подходящие','All that fit'),L('Мои, организаторы из подписок, мои сообщества, мой город и онлайн','Mine, followed organisers, my communities, my city and online')],['mine',L('Только мои и подписки','Mine and follows'),L('Куда я иду и события тех, на кого подписан(а)','Events I attend and from people I follow')],['off',L('Не показывать','Off'),L('События только в «Комьюнити»','Events stay in Community')]];
-const feedEvMode=()=>S.me.feedEvents||'all';
-const feedEvLabel=()=>FEED_EV_MODES().find(x=>x[0]===feedEvMode())[1];
-ACT.feedEvSet=a=>{S.me.feedEvents=a.dataset.v;refresh();};
 ACT.feedEvLess=a=>{(S.ui.feedEvHidden??=new Set()).add(a.dataset.v);toast(L('Реже такое. Это событие скрыто из ленты','Less of this. The event is hidden from the feed'),{type:'ok',action:{label:L('Вернуть','Undo'),fn:()=>{S.ui.feedEvHidden.delete(a.dataset.v);refresh();}}});refresh();};
 ACT.logout=()=>ask({icon:'logout',title:L('Выйти из аккаунта?','Sign out?'),text:L('На этом устройстве не останется твоих данных. Войти можно в любой момент.','None of your data stays on this device. You can sign in any time.'),ok:L('Выйти','Sign out'),danger:true}).then(ok=>{if(ok)restartPrototype();});
 ACT.k2=a=>{S.langPref=a.dataset.v;S.lang=a.dataset.v==='system'?(navigator.language.toLowerCase().startsWith('ru')?'ru':'en'):a.dataset.v;document.documentElement.lang=S.lang;refresh();toast(S.lang==='en'?'Language: English':'Язык: русский',{type:'ok'});};
@@ -5727,6 +5728,7 @@ SC.MAINT={title:()=>L('Технические работы','Maintenance'),rende
 ACT.maintenanceRetry=()=>{refresh();if(QA.maintenance)toast(L('Работы ещё идут','Maintenance is still in progress'),{type:'info'});};
 
 ACT.k4mode=a=>{const v=a.dataset.v,m=S.me;if(v==='off'){if(m.dating)ACT.k4off();return;}if(!m.dating){ACT.enableDating();return;}if(v==='on'&&!m.datingVisible)ACT.k4vis();else if(v==='hidden'&&m.datingVisible)ACT.k4vis();};
+
 
 /* ---- s-completion.js ---- */
 /* V6: complete formerly missing flows. All domain changes are confined to this prototype. */

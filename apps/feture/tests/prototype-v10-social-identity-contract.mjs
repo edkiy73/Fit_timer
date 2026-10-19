@@ -144,12 +144,12 @@ console.log('PASS unified profile editor saves rich private text for personal an
 {prepare('F01',{sub:'foryou'});run("S.me.dating=true;S.joined.add('rope')");
  const all=json("feedEventPicks()");assert.ok(all.length>0&&all.length<=3,'feed picks 1–3 upcoming events');
  assert.ok(all.every(id=>run(`!isPast('${id}')&&!EV('${id}').cancelled&&EV('${id}').organizer!=='me'`)),'only upcoming, not cancelled, not my own');
- run("S.me.feedEvents='off'");assert.equal(json("feedEventPicks()").length,0,'switched off');
- run("S.me.feedEvents='mine'");assert.ok(json("feedEventPicks()").every(id=>run(`myUpcomingEventIds().includes('${id}')||social('me').follows.has(EV('${id}').organizer)`)),'mine = attending or followed organisers');
- run("S.me.feedEvents='all'");const first=all[0];run(`ACT.feedEvLess({dataset:{v:'${first}'}})`);assert.ok(!json("feedEventPicks()").includes(first),'«Less of this» hides the event');
+ run("S.filters.feed.events=false");assert.equal(json("feedEventPicks()").length,0,'switched off');
+
+ run("S.filters.feed.events=true");const first=all[0];run(`ACT.feedEvLess({dataset:{v:'${first}'}})`);assert.ok(!json("feedEventPicks()").includes(first),'«Less of this» hides the event');
  run("coupleProfile();S.pair.profile.dating=true;S.datingActor='me';social('couple').likesOut.push({p:'mia',src:'discover',t:Date.now()})");assert.ok(run("otherDoneChip('mia')").includes('like sent')||run("otherDoneChip('mia')").includes('симпатия отправлена'),'the card says the couple already liked this person');
  run("S.datingActor='couple'");assert.equal(run("otherDoneChip('mia')").includes('Alex'),false,'the chip names the other identity, not the acting one');
- console.log('PASS events in the feed: ranking, limits, off/mine modes, hide; discovery card shows the other identity’s earlier action');}
+ console.log('PASS events in the feed: ranking, limits, feed filter toggle, hide; discovery card shows the other identity’s earlier action');}
 // One identity look: every pair avatar is two overlapping circles, names carry the same badges in lists and cards.
 {prepare('X01',{});
  for(const id of ['tomeva','lenamax','nikajonas','couple']){const h=run(`av('${id}','sm')`);assert.ok(h.includes('av pair')&&(h.match(/class="avh/g)||[]).length===2,'pair avatar has two circles: '+id);}
@@ -186,3 +186,4 @@ console.log('PASS unified profile editor saves rich private text for personal an
 {prepare('K01',{});const sel=run("selectRow('k2','x',[['ru','Русский'],['en','English']],'ru')");assert.ok(sel.includes('data-sel="k2"')&&!sel.includes('data-act='),'a select must not carry data-act: tapping it would fire the click handler and re-render before a value is chosen');
  run("CH.sel({value:'en',dataset:{sel:'k2'}})");assert.equal(run("S.lang"),'en','a changed select runs its action');
  console.log('PASS inline selects: change runs the action, a tap does not re-render');}
+
