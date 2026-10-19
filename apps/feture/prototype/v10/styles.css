@@ -2047,3 +2047,15 @@ body.qa-viewport{overflow:auto;display:block}body.qa-viewport .stage{position:re
 .chv{display:inline-grid;transition:transform .2s}.chv.open{transform:rotate(180deg)}
 @media(prefers-reduced-motion:reduce){.chv{transition:none}}
 .rqcard .btn.text.auto{padding-left:0;justify-content:flex-start}
+
+/* two layers of a profile: the main profile and the private part — visibly separate */
+.layer-sep{display:flex;align-items:center;gap:12px;margin:34px 4px 14px;color:var(--violet);font:700 12px/1.3 var(--font);letter-spacing:.04em;text-transform:uppercase}
+.layer-sep::before,.layer-sep::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--violet));opacity:.6}.layer-sep::after{transform:scaleX(-1)}
+.layer-sep span{display:inline-flex;align-items:center;gap:6px}.layer-sep svg{width:15px;height:15px}
+.vault{position:relative;border-radius:28px;padding:18px 16px 16px;border:1px solid color-mix(in srgb,var(--violet) 38%,transparent);background:linear-gradient(165deg,var(--violet-soft),color-mix(in srgb,var(--violet-soft) 35%,var(--surf)) 60%,var(--surf));box-shadow:0 18px 50px -30px var(--violet)}
+.vault-h{display:flex;align-items:center;gap:12px;margin:0 0 6px}.vault-h>div{min-width:0}
+.vault-h .vi{flex:none;width:44px;height:44px;border-radius:15px;display:grid;place-items:center;background:var(--violet);color:var(--surf)}.vault-h .vi svg{width:22px;height:22px}
+.vault-h b{display:block;font:750 18px/1.25 var(--font)}.vault-h small{display:block;font-size:13px;line-height:1.35;color:var(--mute);margin-top:2px}.vault-h .vst{margin-left:auto;flex:none}
+.vault-b>.grp:first-child{margin-top:10px}.vault .veil{border:0;background:transparent}.vault .veil-glass{min-height:150px}
+.vault .grp-t{color:var(--violet)}
+.layer-h{margin:4px 4px 14px}.layer-h b{display:block;font:750 20px/1.25 var(--font)}.layer-h small{display:block;font-size:13.5px;color:var(--mute);margin-top:2px}

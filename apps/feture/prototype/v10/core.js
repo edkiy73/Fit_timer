@@ -150,7 +150,9 @@ function pname(id){if(id==='couple'&&!activePair())return T(S.pair?.name)||L('С
 const PUBLIC_VIS={pron:'public',seek:'public',gender:'public',orient:'public',format:'public',status:'public',role:'granted'};
 const requiresDiscoveryPhoto=m=>!!m.dating&&m.datingVisible!==false;
 /** a profile field as another member sees it; S.ui.viewGrant = rendering for someone with private-profile access */
-function publicField(m,k){const v=m.vis?.[k]??PUBLIC_VIS[k]??'public';return v==='public'||v==='granted'&&S.ui.viewGrant?m[k]:Array.isArray(m[k])?[]:null;}
+/** the main profile shows only what is placed in it; data placed in the private part is shown there (privFieldRows), never in both */
+function publicField(m,k){const v=m.vis?.[k]??PUBLIC_VIS[k]??'public';return v==='public'?m[k]:Array.isArray(m[k])?[]:null;}
+const fieldLayer=(m,k)=>m.vis?.[k]??PUBLIC_VIS[k]??'public';
 function ownedAsPerson(m){return{photo:m.photo,bio:m.bio,city:m.city,dating:!!m.dating,socialLikes:!!m.socialLikes,pair:!!m.pair,members:m.pair?[...m.members]:undefined,pv:m.photoCheck==='ok',premium:!!m.premium,name:m.pair?T(m.name):m.nick,age:m.showAge===false?null:ageOf(m.dob),location:m.location?.coords,pron:publicField(m,'pron'),gender:publicField(m,'gender'),orient:publicField(m,'orient'),format:publicField(m,'format'),status:publicField(m,'status'),role:publicField(m,'role'),seek:publicField(m,'seek')||[],verified:m.ageCheck==='ok',online:true,jars:(m.jars||[]).filter(j=>j.vis==='public')};}
 function meAsPerson(){return ownedAsPerson(S.ui.profilePreview||S.me);}
 function coupleProfile(){const P=S.pair;if(P?.status!=='active')return null;P.id??='pair_'+P.with+'_'+P.since;if(!P.profile)P.profile={pair:true,members:['me',P.with],name:{...P.name},nick:'couple',bio:P.desc||{ru:'',en:''},privText:{ru:'',en:''},photos:[],photo:null,city:null,pron:null,gender:[],orient:[],role:[],status:'couple',format:[],seek:[],vis:{...PUBLIC_VIS},jars:[],history:[],media:[],requestsFrom:'all',socialLikes:false,dating:false,datingVisible:false,showAge:false};return P.profile;}
@@ -395,9 +397,10 @@ function tab(t,p){
 }
 /** re-render current screen in place (state changed), keeping scroll */
 function refresh(){saveScroll();render(null,true);}
-function setP(k,v){cur().p[k]=v;refresh();}
+/* switching a tab or a filter inside a screen replaces the history entry: Back leaves the screen, it does not walk through the tabs */
+function setP(k,v){cur().p[k]=v;navNextReplace=true;refresh();}
 /** switch a root sub-tab: resets that sub-tab's scroll */
-function setSub(v){const r=cur();if(r.p.sub===v)return;r.p.sub=v;r.scroll=0;render('fade');}
+function setSub(v){const r=cur();if(r.p.sub===v)return;r.p.sub=v;r.scroll=0;navNextReplace=true;render('fade');}
 
 // Ordinary routes keep global navigation; focused tasks opt out explicitly.
 const DOCKLESS=new Set(['A07','V01','MAINT','H02','D02','F07','F09','E06','E11','P02','P04','Q04','C07','C08','X08','X11']);

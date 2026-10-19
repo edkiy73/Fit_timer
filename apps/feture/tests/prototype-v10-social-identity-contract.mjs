@@ -169,3 +169,17 @@ console.log('PASS unified profile editor saves rich private text for personal an
  const day=json("feedEventPicks()");assert.ok(day.length<=3);run("feedEventPicks()");assert.deepEqual(json("feedEventPicks()"),day,'the same day keeps the same set');
  run("S.ui.feedEvDay.ids=new Set(['x1','x2','x3'])");assert.equal(json("feedEventPicks()").length,0,'a day with three events already shown adds no new ones');
  console.log('PASS couple invitation in the inbox (accept/decline) and the daily event limit in the feed');}
+// Two layers: what lives in the private part is shown there and never in the main profile; setup of the couple up front; tabs do not walk the history.
+{prepare('X01',{});run("coupleProfile()");
+ run("S.me.vis={...PUBLIC_VIS,role:'granted',orient:'public'};S.me.role=['lead'];S.me.orient=['bi']");
+ assert.deepEqual(json("meAsPerson().role"),[],'a field placed in the private part is not in the main profile');
+ assert.deepEqual(json("privFieldRows(S.me).map(x=>x[0])").length>0,true,'it is listed in the private part instead');
+ run("S.ui.viewGrant=true");assert.deepEqual(json("meAsPerson().role"),[],'even for a viewer with access the main profile does not repeat it');run("S.ui.viewGrant=false");
+ prepare('P02',{});run("S.me.vis={...PUBLIC_VIS,role:'granted'};S.me.privOn=true;");const ed=run("SC.P02.render(cur().p,cur())");
+ assert.ok(ed.includes('id="privEdit"')&&ed.includes('fieldBack'),'the editor shows moved data inside the private panel');assert.ok(!ed.includes('data-act="visCycle"')&&!ed.includes('Who sees these fields')&&!ed.includes('Кто видит эти поля'),'no scattered visibility pills');
+ assert.ok(ed.includes('data-act="peReq"'),'who may ask for access is set inside the private panel');
+ prepare('Q01',{});run("coupleProfile()");const hub=run("SC.Q01.render(cur().p,cur())");assert.ok(!hub.includes('pairHide')&&!hub.includes('pairStopSharing'),'no non-clickable status rows in the pair hub');
+ prepare('Q03',{});run("coupleProfile()");assert.ok(!text(run("SC.Q03.render(cur().p,cur())")).match(/Статус отношений|Relationship status/),'a couple page does not show a relationship status');
+ prepare('Q09',{});run("coupleProfile();var r=cur();r.init=1;r.mode='approve';r.req='matches'");run("ACT.q9Done()");assert.equal(run("S.pair.profile.requestsFrom"),'matches','settings chosen at creation are applied');
+ prepare('P07',{});run("ACT.p7tab({dataset:{v:'withme'}})");assert.equal(run("navNextReplace"),true,'switching a tab replaces the history entry');
+ console.log('PASS two layers: private data lives only in the private part, editor panels, couple set-up, tabs do not add history');}
