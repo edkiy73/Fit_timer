@@ -68,3 +68,27 @@ for(const lang of ['ru','en']){
  assert.ok(!replies.includes('Можно ссылку на видео'));
 }
 console.log('PASS discussion explains QA reviewer mode and blocked reply without weakening personal permissions');
+
+// Mutual trust delegates future shared content only; it never grants private access.
+prepare('Q03');run("coupleProfile();S.pair.proposal=null;var prior={author:'couple',pairId:S.pair.id,by:'me',text:'Awaiting original consent',tags:[],aud:'all',media:[],poll:null,result:null};submitJointPost(prior,'old-pending');setPairTrust(true)");
+assert.equal(run('pairTrusted()'),false,'one partner cannot enable trust');
+run("S.pairMember='partner';setPairTrust(true)");assert.equal(run('pairTrusted()'),true);
+assert.equal(run("jointQueue()['old-pending'].status"),'pending','trust cannot auto-publish existing pending work');
+run("var trustedDraft={...prior,text:'Future shared post'};submitJointPost(trustedDraft,'trusted-new')");
+assert.equal(run("S.myPosts.filter(p=>p.id==='trusted-new').length"),1);assert.equal(run("jointQueue()['trusted-new'].status"),'approved');
+run("var profileDraft=editableProfile({p:{owner:'couple'}});profileDraft.bio='Trusted complete version';markCoupleDraft();submitCoupleDraft()");assert.equal(run("T(S.pair.profile.bio)"),'Trusted complete version');assert.equal(run('S.pair.proposal'),null);
+run("var trustGrant={id:'trust-grant',p:'mia',status:'new',scopes:['info']};social('couple').reqIn=[trustGrant];queueJointGrant(trustGrant,{sel:['info']},null);var trustQ=jointQueue()['grant_trust-grant']");
+assert.equal(run("trustQ.status"),'pending');assert.equal(run("approveJointWork(trustQ.id,trustQ.version,pairMember())"),false,'trust does not allow self-approved sensitive grants');
+assert.equal(run("social('couple').sharedByMe.some(x=>x.p==='mia')"),false);
+run("var trustTicket=authorTicket('couple');setPairTrust(false)");assert.equal(run('pairTrusted()'),false);assert.equal(run('validAuthor(trustTicket)'),false,'revocation invalidates delayed writes');
+run("submitJointPost({...trustedDraft,text:'Needs consent again'},'after-revoke')");assert.equal(run("jointQueue()['after-revoke'].status"),'pending');assert.equal(run("S.myPosts.some(p=>p.id==='after-revoke')"),false);
+run("setPairTrust(true);S.pairMember='me';setPairTrust(true);dissolvePair()");assert.equal(run('pairTrusted()'),false);assert.equal(run('S.pair.trust'),null);
+run("S.pair.status='active'");assert.equal(run('pairTrusted()'),false,'restoration never restores delegated consent');
+for(const lang of ['ru','en']){prepare('Q03');run(`S.lang='${lang}';coupleProfile()`);const h=run("SC.Q03.render(cur().p,cur())");assert.ok(h.includes('pairTrustOpen'));assert.ok(!h.includes('Редактировать расширенный профиль'));assert.ok(!h.includes('Edit private profile'));
+ const review=run("jointPostReview({author:'couple',text:'Review content',tags:[],aud:'all',media:[],poll:null,result:null})");assert.ok(!/postMenu|likePost|savePost|sharePost|post-a/.test(review),'approval preview contains no dead social controls');
+ const hidden=run("replyTree('d','d1')");assert.ok(hidden.includes('cm-ghost'));assert.ok(hidden.includes('aria-hidden="true"'));
+}
+console.log('PASS mutual content trust, revocation, explicit private grants, unlink reset and focused review UI');
+prepare('Q03');run("sheet=()=>{};coupleProfile();ACT.pairTrustOpen();var oldTrustButton={dataset:{form:trustConsentForm.id,pair:S.pair.id,epoch:String(S.pair.safetyEpoch||0),v:'on'}};S.pairMember='partner';ACT.pairTrustSet(oldTrustButton)");assert.equal(run('S.pair.trust'),undefined,'stale form cannot consent for another participant');
+run("S.pairMember='me';ACT.pairTrustOpen();oldTrustButton.dataset.form=trustConsentForm.id;S.session={};ACT.pairTrustSet(oldTrustButton)");assert.equal(run('S.pair.trust'),undefined,'stale consent cannot cross session');
+console.log('PASS trust consent is bound to the opening session and participant');
