@@ -2166,13 +2166,29 @@ body.capture-shield>*{visibility:hidden!important}
 /* «what you share» block: same in the discovery card and the full profile */
 .compat{border-radius:var(--r-l);background:var(--surf);border:1px solid var(--line);overflow:hidden}
 .compat .cp-h{display:flex;align-items:center;gap:14px;width:100%;padding:14px;text-align:left}
-.compat .cp-h b{display:block;font-size:15px;font-weight:650;line-height:1.35}.compat .cp-h .grow>span{display:block;margin-top:1px;font-size:13px;color:var(--mute)}
+.compat .cp-h .grow>b{display:block;font-size:15px;font-weight:650;line-height:1.35}.compat .cp-h .grow>span{display:block;margin-top:1px;font-size:13px;color:var(--mute)}
 .compat .cp-h>svg{width:18px;height:18px;flex:none;color:var(--faint)}
 .compat .cp-s{padding:12px 14px 14px;border-top:1px solid var(--line)}
 .compat .cp-t{display:flex;align-items:center;gap:8px;margin:0 0 9px;font-size:12.5px;font-weight:650;letter-spacing:.02em;text-transform:uppercase;color:var(--mute)}
 .compat .cp-t b{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--accent-soft);color:var(--accent);font-size:11.5px;line-height:20px;text-align:center;letter-spacing:0}
 .compat .chips{gap:8px}
 .compat .fact{padding:4px 0}
+
+/* private part seen from outside: a frosted veil over blurred placeholders (text lines + photo tiles) */
+.vault .veil{border:0;border-radius:20px;background:color-mix(in srgb,var(--surf) 60%,transparent);margin-top:6px}
+.vault .veil-glass{min-height:200px;gap:8px;padding:24px 16px 20px}
+.veil-content .vt{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:16px}
+.veil-content .vt i{aspect-ratio:4/5;border-radius:10px;background:linear-gradient(140deg,var(--violet-soft),var(--line2))}
+.veil-content{filter:blur(7px);opacity:.75}
+.veil-glass .veil-act{padding:8px 0 0;width:100%;max-width:300px}
+.vault-lead{margin:8px 2px 14px;font-size:14.5px;line-height:1.5;color:var(--mute)}
+.vault.off .btn{width:100%}
+.vault .veil-content{padding:18px 16px;filter:blur(5px);opacity:1}
+.vault .veil-content .bar-sk{background:color-mix(in srgb,var(--violet) 34%,var(--line2))}
+.vault .veil-content .vt i{background:linear-gradient(140deg,color-mix(in srgb,var(--violet) 55%,transparent),color-mix(in srgb,var(--accent) 30%,var(--line2)))}
+.vault .veil-glass{background:color-mix(in srgb,var(--surf) 38%,transparent);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+
+.owner-only>.vault{margin-top:24px}.owner-only>.note{margin-top:8px}
 </style>
 </head>
 <body>
@@ -2291,7 +2307,7 @@ const PEOPLE={
  kai:{pv:true,name:'Kai',age:27,photo:4,nph:2,city:'berlin',km:5,pron:'they',gender:['nb'],orient:['pan'],format:'ra',role:['switch'],seek:['chat','friends'],verified:true,online:false,last:{ru:'был(а) сегодня',en:'active today'},dating:true,
   bio:{ru:'Ищу людей, с которыми можно спокойно говорить о границах. Остальное приложится.',en:'Looking for people I can calmly talk boundaries with. The rest will follow.'},
   jars:[['service',8,['give']],['bondage',6,['get']],['rituals',8],['talk',10],{t:'filming',lv:0,limit:'hard'}]},
- maya:{actVis:'followers',pv:true,name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:[],seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
+ maya:{privOn:false,actVis:'followers',pv:true,name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:[],seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
   bio:{ru:'Веду сообщество «Узлы и разговоры» и встречи для новичков. Здесь — ради людей и тем.',en:'I run the Rope & Talk community and newcomer meetups. Here for people and ideas.'},
   jars:[['shibari',10],['talk',10],['aftercare',8]]},
  ari:{name:'Ari',age:30,photo:6,city:'berlin',km:6,pron:'he',gender:['man'],orient:['gay'],format:'open',role:['service'],seek:['dates','friends'],verified:true,online:false,last:{ru:'был 2 ч назад',en:'active 2h ago'},dating:true,
@@ -4667,7 +4683,7 @@ function datingSoon(){const on=S.me.notifyDating;return `<div class="soon"><div 
 ACT.notifyDating=a=>run(a,()=>{S.me.notifyDating=!S.me.notifyDating;refresh();},{ms:300,ok:()=>S.me.notifyDating?L('Готово — пришлём уведомление о запуске','Done — we’ll notify you at launch'):L('Не будем напоминать','We won’t remind you')});
 
 /* deck */
-function deckInner(list){const a=list[0],b=list[1];return `${b?card(b,'next'):''}${card(a,'top')}<div class="acts onphoto" id="acts"><button class="act undo ${social().dhist&&social().dhist.length?'':'off'}" data-act="undo" aria-label="${L('Вернуть предыдущую анкету','Bring back the previous profile')}">${I.undo}</button><button class="act pass" data-act="decide" data-v="-1" aria-label="${L('Пропустить','Pass')}">${I.x}</button><button class="act req" data-act="reqAccess" data-v="${a}" aria-label="${L('Запросить приватную часть','Request private part')}">${I.key}</button><button class="act like" data-act="decide" data-v="1" aria-label="${L('Нравится человек','Like this person')}">${I.heartf}</button></div>`;}
+function deckInner(list){const a=list[0],b=list[1];return `${b?card(b,'next'):''}${card(a,'top')}<div class="acts onphoto" id="acts"><button class="act undo ${social().dhist&&social().dhist.length?'':'off'}" data-act="undo" aria-label="${L('Вернуть предыдущую анкету','Bring back the previous profile')}">${I.undo}</button><button class="act pass" data-act="decide" data-v="-1" aria-label="${L('Пропустить','Pass')}">${I.x}</button>${hasPrivatePart(a)?`<button class="act req" data-act="reqAccess" data-v="${a}" aria-label="${L('Запросить приватную часть','Request private part')}">${I.key}</button>`:''}<button class="act like" data-act="decide" data-v="1" aria-label="${L('Нравится человек','Like this person')}">${I.heartf}</button></div>`;}
 function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=shared(id);const likesMe=social().likesIn.some(l=>l.p===id);
  const post=allPosts().filter(x=>x.author===id).sort((a,b)=>b.t-a.t)[0];
  const keys=[...fmtList(p.format).slice(0,2).map(x=>opt('format',x)),...fmtList(p.role).filter(v=>v!=='none').slice(0,2).map(v=>opt('role',v)),...p.seek.slice(0,1).map(s=>opt('seek',s))].filter(Boolean);
@@ -4694,7 +4710,9 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
 /** private layer: no real data is sent before access — the veil hides placeholders only */
 function veilBlock(id){const o=social().reqOut.find(x=>x.p===id&&x.status==='pending'&&!isBlocked(id));const shared=receivedGrant(id);
  if(shared)return `<button class="granted" style="width:100%;text-align:left" data-go="P08" data-id="${id}">${I.unlock}<span class="grow"><b>${L(`${esc(pname(id))} открыл(а) тебе доступ`,`${esc(pname(id))} shared with you`)}</b><span>${shared.granted.map(g=>T(REQ_SCOPES.find(x=>x[0]===g)[1])).join(', ')} · ${F.left(shared.until)}</span></span>${I.chev}</button>`;
- return `<div class="veil-act">${veilAction(id,o)}</div>`;}
+ const nm=esc(pname(id));
+ return `<div class="veil"><div class="veil-content" aria-hidden="true"><div class="bar-sk" style="width:72%"></div><div class="bar-sk"></div><div class="bar-sk" style="width:46%"></div><div class="vt"><i></i><i></i><i></i></div></div>
+ <div class="veil-glass"><b>${L(`Открывает ${nm}`,`${nm} decides`)}</b><p>${L('Описание, интересы, фото и видео — только по решению владельца','Description, interests, photos and video — only if the owner decides')}</p><div class="veil-act">${veilAction(id,o)}</div></div></div>`;}
 /** the private part from the outside: closed → request → pending (withdraw) → open / declined (quiet cool-down) / expired (ask again) / not accepting */
 function veilAction(id,pending){const last=social().reqOut.filter(x=>x.p===id).sort((a,b)=>b.t-a.t)[0],policy=PEOPLE[id]?.requestsFrom||'all';
  if(pending)return `<span class="pill wait">${I.clock}${L('Запрос ждёт ответа','Request pending')}</span><button class="btn soft sm" data-act="cancelReq" data-v="${pending.id}">${L('Отозвать запрос','Withdraw request')}</button>`;
@@ -4852,7 +4870,7 @@ function profileView(id,r,o={}){
  const pj=pubJars(id);const actItems=activityShown(id,o)?activityOf(id):[];
  const body=`${bio}
   ${pj.length?grp(L('Интересы','Interests'),jarShelf(pj,{pre:1,act:'topic',who:id,moreAct:self?(id==='couple'?'coupleJars':'myJarsAll'):'allJars'})):''}
-  ${self?myPrivSection(owner):me?privSection(id,o):`<div data-private-context="${id}">${privSection(id)}</div>`}
+  ${self?myPrivSection(owner):me?(privSection(id,o)||(o.asOther&&!hasPrivatePart(id)?`<div class="owner-only">${myPrivSection(owner)}<p class="note center">${L('Это видишь только ты — другим этого блока не видно','Only you see this — others don’t see this block')}</p></div>`:'')):`<div data-private-context="${id}">${privSection(id)}</div>`}
   ${activityBlock(id,[['posts',L('Публикации','Posts'),posts.length,()=>`<div class="posts">${inert(posts.slice(0,3).map((x,i)=>postCard(x,{i})).join(''))}</div>`],['events',L('События','Events'),orgEvents.length,()=>orgEvents.map(e=>eventCard(e,{row:1,neutral:o.asOther})).join('<div style="height:8px"></div>')],...(actItems.length?[['activity',L('Активность','Activity'),actItems.length,()=>activityList(id,actItems,{self:self})]]:[]),['comm',L('Сообщества','Communities'),modOf.length,()=>modOf.map((c,i)=>commCard(c,{i})).join('')]])}`;
  const html=`<header class="bar overlay"><button class="ibtn glass" data-back aria-label="${L('Назад','Back')}">${I.back}</button><span style="flex:1"></span>${self?'':o.asOther?`<button class="ibtn glass" data-act="p3Menu" aria-label="${L('Ещё','More')}">${I.more}</button>`:inert(`<button class="ibtn glass" data-act="profileMenu" data-v="${id}" aria-label="${L('Ещё','More')}">${I.more}</button>`)}</header>
  <div class="view nodock top0 profile-page"><div class="wrap">
@@ -4988,7 +5006,7 @@ const activeGrant=receivedGrant;
 const SEED_PRIV_JARS=[{t:'shibari',lv:9},{t:'sensory',lv:8},{t:'temperature',lv:6},{t:'roleplay',lv:7},{t:'aftercare',lv:10},{t:'filming',lv:0,limit:'hard'},{t:'strongpain',lv:0,limit:'discuss'},{t:'publicplace',lv:0,limit:'hard'}];
 function privProj(id){
  if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);return{jars:m.jars.filter(j=>j.vis==='granted'),text:T(m.privText)||'',media:privMedia(m).map(m=>({type:m.type==='video'?'video':'image',src:privSrc(m),style:m.style,sec:m.type==='video'?'video':'photos',dur:m.dur,w:m.w,h:m.h,crop:m.crop}))};}
- const P0=person(id);const own=P0?.photo?photoItems(id).map(x=>x.src):[];return{jars:SEED_PRIV_JARS,text:T(P0?.privText)||'',media:P0?.photo?[...own,...['/images/v10-content/post-p9-evening-atmosphere-45.webp','/images/v10-content/gallery-e3-club.webp','/images/v10-content/post-p6-latex-night-prep-45.webp','/images/v10-content/gallery-e1-ropes.webp']].slice(0,6).map(src=>({type:'image',src,sec:'photos'})):[]};}
+ const P0=person(id);const own=P0?.photo?photoItems(id).map(x=>x.src):[];return{jars:P0?.photo||P0?.privText?SEED_PRIV_JARS:[],text:T(P0?.privText)||'',media:P0?.photo?[...own,...['/images/v10-content/post-p9-evening-atmosphere-45.webp','/images/v10-content/gallery-e3-club.webp','/images/v10-content/post-p6-latex-night-prep-45.webp','/images/v10-content/gallery-e1-ropes.webp']].slice(0,6).map(src=>({type:'image',src,sec:'photos'})):[]};}
 /** sections a grant opens: info → description; interests → the interests placed in the private part; photos → photos; video → video */
 /* private gallery (owner 15.10): no card, no cut-up crops — the first photo large, the rest as 4:5 tiles; watermark per viewer */
 function privGallery(list,o={}){if(!list.length)return '';return `<div class="pgal">${list.map((m,i)=>`<button class="pgc" ${o.act?`data-act="${o.act}" ${o.v!=null?`data-v="${o.v}"`:''} data-i="${i+(o.off||0)}"`:'disabled'} aria-label="${L('Открыть','Open')}">${m.type==='video'?`<video src="${esc(m.src)}" ${m.type==='video'?`style="${vframe(m)}"`:''} muted playsinline preload="metadata"></video><span class="dur">${I.video}${fmtDur(m.dur||0)}</span>`:`<img src="${esc(m.src)}" alt="" draggable="false">`}${o.wm?`<span class="wm">${esc(o.wm)}</span>`:''}</button>`).join('')}</div>`;}
@@ -5001,6 +5019,9 @@ const privSplit=list=>({photos:list.filter(m=>m.type!=='video'),video:list.filte
 const privOrdered=list=>{const s=privSplit(list);return [...s.photos,...s.video];};
 function privMediaGroups(media,o={}){const s=privSplit(media);let off=0;const groups=[[s.photos,L('Фото','Photos')],[s.video,L('Видео','Video')]].filter(([l])=>l.length);
  return groups.map(([l,t],gi)=>{const h=grp(`${t} · ${l.length}`,privGallery(l,{act:o.act,v:o.v,wm:o.wm,off}),{cls:'bare',foot:gi===groups.length-1?o.foot:''});off+=l.length;return h;}).join('');}
+/** does this person have a private part worth showing to others? (switched on and not empty) */
+function hasPrivatePart(id){if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);if(!m||m.privOn===false)return false;const pr=privProj(id);return !!(pr.text||pr.jars.length||pr.media.length);}
+ const p=PEOPLE[id];if(!p||p.privOn===false)return false;const pr=privProj(id);return !!(pr.text||pr.jars.length||pr.media.length);}
 function privOpenHTML(id,g,o={}){const pr=privProj(id),has=k=>g.granted.includes(k);
  const media=pr.media.filter(m=>has(m.sec));
  const desc=has('info')&&pr.text?grp(L('Описание','Description'),md(pr.text,'bio')):'';
@@ -5009,14 +5030,17 @@ function privOpenHTML(id,g,o={}){const pr=privProj(id),has=k=>g.granted.includes
  const mediaHTML=privMediaGroups(media,{act:o.preview?'':'privPeek',v:id,wm,foot:o.preview?L('Каждый видит с собственным водяным знаком.','Everyone sees them with their own watermark.'):L('С твоим водяным знаком. Доступ могут отозвать в любой момент — уважай доверие.','With your watermark. Access can be revoked any time — respect the trust.')});
  return vaultHTML(`${desc}${interests}${mediaHTML}${!desc&&!interests&&!mediaHTML?`<p class="note">${L('Здесь пока ничего нет.','Nothing here yet.')}</p>`:''}`,{open:1,badge:g.until?`<span class="pill v">${esc(F.left(g.until))}</span>`:''});}
 function privSection(id,o={}){
- if(id==='me'||id==='couple'){const pm=id==='couple'?coupleProfile():(S.ui.profilePreview||S.me);if(pm?.privOn===false)return '';const g=o.grant==='granted'?{granted:['info','interests','photos','video'],until:null}:null;
+ if(id==='me'||id==='couple'){if(!hasPrivatePart(id))return '';const g=o.grant==='granted'?{granted:['info','interests','photos','video'],until:null}:null;
   if(!g)return vaultHTML(veilBlock(id).replace(/ data-(act|v)="[^"]*"/g,'').replace(/<button /g,'<button disabled tabindex="-1" '),{cls:'closed'});
   return privOpenHTML(id,g,{preview:1});}
- const g=activeGrant(id);if(!g)return vaultHTML(veilBlock(id),{cls:'closed'});
+ if(!hasPrivatePart(id))return '';const g=activeGrant(id);if(!g)return vaultHTML(veilBlock(id),{cls:'closed'});
  return privOpenHTML(id,g);}
-function myPrivSection(owner='me'){const model=owner==='couple'?(S.ui.couplePreview||coupleProfile()):S.me;if(model.privOn===false)return '';const media=privMedia(model).map(m=>({type:m.type==='video'?'video':'image',src:privSrc(m),dur:m.dur,w:m.w,h:m.h,crop:m.crop}));const jars=(model.jars||[]).filter(j=>j.vis==='granted');
+function myPrivSection(owner='me'){const model=owner==='couple'?(S.ui.couplePreview||coupleProfile()):S.me;
+ if(model.privOn===false)return vaultHTML(`<p class="vault-lead">${L('Приватную часть видишь только ты. Включи её, чтобы показывать описание, интересы, фото и видео тем, кому разрешишь.','Only you see the private part. Turn it on to share a description, interests, photos and video with people you allow.')}</p><button class="btn primary" data-act="privEnable" data-v="${owner}">${I.unlock}${L('Включить приватную часть','Turn on the private part')}</button>`,{cls:'off',badge:`<span class="pill">${L('выключена','off')}</span>`});
+ const media=privMedia(model).map(m=>({type:m.type==='video'?'video':'image',src:privSrc(m),dur:m.dur,w:m.w,h:m.h,crop:m.crop}));const jars=(model.jars||[]).filter(j=>j.vis==='granted');
  const parts=`${T(model.privText)?grp(L('Описание','Description'),md(T(model.privText),'bio')):''}${jars.length?grp(L('Интересы','Interests'),jarsHTML(sortJars(jars),{act:'topic',who:'me'})):''}${privMediaGroups(media,{act:'privView',wm:S.me.nick||''})}`;
- return vaultHTML(parts.trim()?parts:`<p class="note">${L('Пока пусто','Empty for now')}</p>`);}
+ return vaultHTML(parts.trim()?parts:`<p class="vault-lead">${L('Пока пусто. Добавь описание, интересы, фото или видео — их увидят только те, кому ты откроешь доступ.','Nothing here yet. Add a description, interests, photos or video — only people you give access to will see them.')}</p><button class="btn soft" data-go="P04" data-p='${esc(JSON.stringify({owner}))}'>${I.plus}${L('Добавить','Add')}</button>`);}
+ACT.privEnable=a=>{const owner=a.dataset.v==='couple'?'couple':'me';if(owner==='couple'&&!coupleWritable())return;const m=editableProfile({p:{owner}});if(!m)return;m.privOn=true;if(owner==='couple')markCoupleDraft();go('P04',{owner});toast(L('Приватная часть включена — добавь, что покажешь','Private part is on — add what you want to share'),{type:'ok'});};
 ACT.privPeek=a=>{const id=a.dataset.v,g=activeGrant(id);const media=g?privOrdered(privProj(id).media.filter(m=>g.granted.includes(m.sec)&&(accessActor()!=='couple'||PEOPLE[id]?.pair))):[];if(!person(id)||!media.length){toast(L('Доступ к фото недоступен','Photo access is unavailable'),{type:'warn'});refresh();return;}const actor=accessActor(),ticket=authorTicket(actor),scopes=[...new Set(media.map(m=>m.sec))];openViewer(media.map(m=>({type:m.type,src:m.src,wm:'@'+(S.me.nick||'')})),+a.dataset.i,{guard:()=>validAuthor(ticket)&&receivedGrant(id,actor)===g&&scopes.every(sec=>g.granted.includes(sec))&&(actor!=='couple'||!!PEOPLE[id]?.pair)});};
 SC.P08={title:p=>pname(p.id),valid:p=>!!PEOPLE[p.id]&&!isBlocked(p.id),render:(p,r)=>profileView(p.id,r),after:()=>{fillJars();setTimeout(()=>$('#priv')?.scrollIntoView({block:'start',behavior:'smooth'}),120);}};
 

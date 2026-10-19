@@ -58,4 +58,11 @@ run("S=freshState('full');S.session={};initNav();");
 const blk=run("compatBlock('kira')");assert.ok(blk.includes('class="compat"')&&blk.includes('data-go="P05"')&&blk.includes('data-act="topic"')&&blk.includes('data-who="kira"'),'summary opens the comparison, each match opens topic answers');
 assert.ok(run("card('kira','top')").includes(blk),'discovery card uses the shared block');assert.ok(run("profileView('kira',{p:{},f:{}})").includes(blk),'full profile uses the shared block');
 assert.ok(run("card('kira','top')").includes('data-private-context="kira"')&&!run("card('kira','top')").includes('data-deck-private'),'the card shows the same private panel as the profile');
+// The private part is shown to viewers only when it exists; the owner always gets a way to switch it on / fill it.
+run("S=freshState('full');S.session={};initNav();");
+assert.ok(run("hasPrivatePart('kira')")&&!run("hasPrivatePart('maya')"),'a profile with the private part off has none for viewers');
+assert.equal(run("privSection('maya')"),'','viewers see no private block when it is off');
+assert.ok(run("privSection('kira')").includes('class="veil"')&&run("privSection('kira')").includes('veil-content'),'closed private part is a blurred veil with the request action');
+run("S.me.privOn=false");assert.equal(run("privSection('me',{grant:'granted'})"),'','my preview shows no private block when it is off');assert.ok(run("myPrivSection('me')").includes('data-act="privEnable"'),'the owner can switch it on');
+run("S.me.privOn=true;S.me.privText={ru:'',en:''};S.me.media=[];S.me.jars=S.me.jars.filter(j=>j.vis!=='granted')");assert.equal(run("privSection('me',{grant:'granted'})"),'','empty private part: nothing for viewers');assert.ok(run("myPrivSection('me')").includes('data-go="P04"'),'empty private part: the owner is offered to add content');
 console.log('PASS RU/EN profile preview: details are public at both levels; the private part (description/interests/photos/video) opens only with access; hidden topics stay hidden; activity tab follows its privacy setting; follow lists drop blocked people');

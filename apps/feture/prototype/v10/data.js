@@ -96,7 +96,7 @@ const PEOPLE={
  kai:{pv:true,name:'Kai',age:27,photo:4,nph:2,city:'berlin',km:5,pron:'they',gender:['nb'],orient:['pan'],format:'ra',role:['switch'],seek:['chat','friends'],verified:true,online:false,last:{ru:'был(а) сегодня',en:'active today'},dating:true,
   bio:{ru:'Ищу людей, с которыми можно спокойно говорить о границах. Остальное приложится.',en:'Looking for people I can calmly talk boundaries with. The rest will follow.'},
   jars:[['service',8,['give']],['bondage',6,['get']],['rituals',8],['talk',10],{t:'filming',lv:0,limit:'hard'}]},
- maya:{actVis:'followers',pv:true,name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:[],seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
+ maya:{privOn:false,actVis:'followers',pv:true,name:'Maya',age:31,photo:5,nph:3,city:'hamburg',km:null,pron:'she',gender:['woman'],orient:['queer'],format:'mono',role:[],seek:['chat'],verified:true,online:true,dating:false,socialLikes:true,
   bio:{ru:'Веду сообщество «Узлы и разговоры» и встречи для новичков. Здесь — ради людей и тем.',en:'I run the Rope & Talk community and newcomer meetups. Here for people and ideas.'},
   jars:[['shibari',10],['talk',10],['aftercare',8]]},
  ari:{name:'Ari',age:30,photo:6,city:'berlin',km:6,pron:'he',gender:['man'],orient:['gay'],format:'open',role:['service'],seek:['dates','friends'],verified:true,online:false,last:{ru:'был 2 ч назад',en:'active 2h ago'},dating:true,
