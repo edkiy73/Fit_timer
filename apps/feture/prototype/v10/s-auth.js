@@ -158,7 +158,7 @@ SC.A05={auth:1,title:()=>L('Первые шаги','First steps'),render:(p,r)=>
  /* community first — interests → communities. Quizzes are «скоро» (owner, 15.10) and no longer part of onboarding. Dating is not part of onboarding. */
  if(p.step>=2){r.f.tp=r.f.tp||[];const pop=['shibari','bondage','talk','aftercare','slow','latex','roleplay','sensory','intimacy','rituals','service','experiments'];const comms=Object.keys(COMMUNITIES).filter(c=>!COMMUNITIES[c].hidden&&(!r.f.tp.length||COMMUNITIES[c].topics.some(t=>r.f.tp.includes(t)))).slice(0,4);
   return `${bar('',{back:1,actions:`<span class="pill">2 / 2</span>`})}<div class="view nodock cta1"><div class="auth-wrap">
-  <div class="steps"><i class="on"></i><i class="on"></i></div><h2 class="t">${L('Что тебе интересно?','What are you into?')}</h2><p class="lead">${L('Выбранные интересы станут фильтром ленты. Это не публичные интересы.','Your choices will filter your feed. They are not public interests.')}</p>
+  <div class="steps"><i class="on"></i><i class="on"></i></div><h2 class="t">${L('Что тебе интересно?','What are you into?')}</h2>
   ${grp(L('Интересы','Interests'),`<div class="chips">${pop.map(t=>chipBtn(t,topic(t),r.f.tp.includes(t),'onbTopic')).join('')}</div>`)}
   <div class="grp"><div class="grp-t"><span>${L('Сообщества для тебя','Communities for you')}</span></div>${comms.map(c=>`<div class="onb-c">${commCard(c)}<button class="btn sm ${S.joined.has(c)?'soft':'primary'} auto" data-act="onbJoin" data-v="${c}">${S.joined.has(c)?L('Ты участник','Joined'):COMMUNITIES[c].privacy==='closed'?L('Заявка','Request'):L('Вступить','Join')}</button></div>`).join('')}</div>
   </div></div><div class="ctabar"><div class="wrap"><button class="btn primary" data-act="finishOnb" data-v="F01">${L('Готово','Done')}</button></div></div>`;}
@@ -186,7 +186,7 @@ function needAge(then){
 ACT.ageStart=()=>{closeSheet(true);go('A07',{});};
 SC.A07={title:()=>L('Проверка возраста','Age check'),render:(p,r)=>{const st=r.st||'choose';
  if(st==='choose')return `${bar(L('Проверка возраста','Age check'),{back:1,sm:1})}<div class="view nodock">
- <p class="lead">${L('Выбери удобный способ. Результат — только «18+ подтверждено», без хранения документа в FetUre.','Choose a method. The result is just “18+ confirmed” — FetUre doesn’t store your ID.')}</p>
+ 
  <button class="radio ${r.m!=='doc'?'on':''}" data-act="ageM" data-v="selfie"><i></i><span class="tx"><b>${L('Селфи','Selfie')}</b><small>${L('Оценка возраста по лицу, около минуты','Face age estimate, about a minute')}</small></span></button>
  <button class="radio ${r.m==='doc'?'on':''}" data-act="ageM" data-v="doc"><i></i><span class="tx"><b>${L('Документ','ID document')}</b><small>${L('Паспорт или права, 2–3 минуты','Passport or licence, 2–3 minutes')}</small></span></button>
  <div class="alert mt16">${I.lock}<span>${L('Камера нужна только на время проверки. Снимок не попадёт в профиль, ленту или чаты.','The camera is used only during the check. The image never goes to your profile, feed or chats.')}</span></div>
