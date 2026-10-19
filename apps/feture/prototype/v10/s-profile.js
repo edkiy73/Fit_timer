@@ -151,10 +151,11 @@ ACT.nwOk=a=>{const ticket=authorTicket(actionAuthor()),st=social(ticket.id),o=S.
 const activeGrant=receivedGrant;
 /** What a person with access sees in someone's private layer. One projection for seed people and for me,
  *  so «Как видят» (my preview) and a real granted view render through the same code. */
+const SEED_PRIV_JARS=[{t:'shibari',lv:9},{t:'sensory',lv:8},{t:'temperature',lv:6},{t:'roleplay',lv:7},{t:'aftercare',lv:10},{t:'filming',lv:0,limit:'hard'},{t:'strongpain',lv:0,limit:'discuss'},{t:'publicplace',lv:0,limit:'hard'}];
 function privProj(id){
- if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);return{text:T(m.privText)||'',media:privMedia(m).map(m=>({type:m.type==='video'?'video':'image',src:privSrc(m),style:m.style,sec:m.type==='video'?'video':'photos',dur:m.dur}))};}
- const P0=person(id);const own=P0?.photo?photoItems(id).map(x=>x.src):[];return{text:T(P0?.privText)||'',media:P0?.photo?[...own,...['/images/v10-content/post-p9-evening-atmosphere-45.webp','/images/v10-content/gallery-e3-club.webp','/images/v10-content/post-p6-latex-night-prep-45.webp','/images/v10-content/gallery-e1-ropes.webp']].slice(0,6).map(src=>({type:'image',src,sec:'photos'})):[]};}
-/** sections a grant opens: info → description; photos → photos; video → video */
+ if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);return{jars:m.jars.filter(j=>j.vis==='granted'),text:T(m.privText)||'',media:privMedia(m).map(m=>({type:m.type==='video'?'video':'image',src:privSrc(m),style:m.style,sec:m.type==='video'?'video':'photos',dur:m.dur}))};}
+ const P0=person(id);const own=P0?.photo?photoItems(id).map(x=>x.src):[];return{jars:SEED_PRIV_JARS,text:T(P0?.privText)||'',media:P0?.photo?[...own,...['/images/v10-content/post-p9-evening-atmosphere-45.webp','/images/v10-content/gallery-e3-club.webp','/images/v10-content/post-p6-latex-night-prep-45.webp','/images/v10-content/gallery-e1-ropes.webp']].slice(0,6).map(src=>({type:'image',src,sec:'photos'})):[]};}
+/** sections a grant opens: info → description; interests → the interests placed in the private part; photos → photos; video → video */
 /* private gallery (owner 15.10): no card, no cut-up crops — the first photo large, the rest as 4:5 tiles; watermark per viewer */
 function privGallery(list,o={}){if(!list.length)return '';return `<div class="pgal">${list.map((m,i)=>`<button class="pgc" ${o.act?`data-act="${o.act}" ${o.v!=null?`data-v="${o.v}"`:''} data-i="${i+(o.off||0)}"`:'disabled'} aria-label="${L('Открыть','Open')}">${m.type==='video'?`<video src="${esc(m.src)}" muted playsinline preload="metadata"></video><span class="dur">${I.video}${fmtDur(m.dur||0)}</span>`:`<img src="${esc(m.src)}" alt="" draggable="false">`}${o.wm?`<span class="wm">${esc(o.wm)}</span>`:''}</button>`).join('')}</div>`;}
 /** the private part is a layer of its own: a visibly separate panel with its own header, state and content */
@@ -169,17 +170,18 @@ function privMediaGroups(media,o={}){const s=privSplit(media);let off=0;const gr
 function privOpenHTML(id,g,o={}){const pr=privProj(id),has=k=>g.granted.includes(k);
  const media=pr.media.filter(m=>has(m.sec));
  const desc=has('info')&&pr.text?grp(L('Описание','Description'),md(pr.text,'bio')):'';
+ const pj=sortJars(pr.jars||[]);const interests=has('interests')&&pj.length?grp(L('Интересы','Interests'),jarsHTML(pj,{act:o.preview?'':'topic',who:id})):'';
  const wm=o.preview?L('ник зрителя','viewer’s nick'):(S.me.nick||'');
  const mediaHTML=privMediaGroups(media,{act:o.preview?'':'privPeek',v:id,wm,foot:o.preview?L('Каждый видит с собственным водяным знаком.','Everyone sees them with their own watermark.'):L('С твоим водяным знаком. Доступ могут отозвать в любой момент — уважай доверие.','With your watermark. Access can be revoked any time — respect the trust.')});
- return vaultHTML(`${desc}${mediaHTML}${!desc&&!mediaHTML?`<p class="note">${L('Здесь пока ничего нет.','Nothing here yet.')}</p>`:''}`,{open:1,badge:g.until?`<span class="pill v">${esc(F.left(g.until))}</span>`:''});}
+ return vaultHTML(`${desc}${interests}${mediaHTML}${!desc&&!interests&&!mediaHTML?`<p class="note">${L('Здесь пока ничего нет.','Nothing here yet.')}</p>`:''}`,{open:1,badge:g.until?`<span class="pill v">${esc(F.left(g.until))}</span>`:''});}
 function privSection(id,o={}){
- if(id==='me'||id==='couple'){const pm=id==='couple'?coupleProfile():(S.ui.profilePreview||S.me);if(pm?.privOn===false)return '';const g=o.grant==='granted'?{granted:['info','photos','video'],until:null}:null;
+ if(id==='me'||id==='couple'){const pm=id==='couple'?coupleProfile():(S.ui.profilePreview||S.me);if(pm?.privOn===false)return '';const g=o.grant==='granted'?{granted:['info','interests','photos','video'],until:null}:null;
   if(!g)return vaultHTML(veilBlock(id).replace(/ data-(act|v)="[^"]*"/g,'').replace(/<button /g,'<button disabled tabindex="-1" '),{cls:'closed'});
   return privOpenHTML(id,g,{preview:1});}
  const g=activeGrant(id);if(!g)return vaultHTML(veilBlock(id),{cls:'closed'});
  return privOpenHTML(id,g);}
-function myPrivSection(owner='me'){const model=owner==='couple'?(S.ui.couplePreview||coupleProfile()):S.me;if(model.privOn===false)return '';const media=privMedia(model).map(m=>({type:m.type==='video'?'video':'image',src:privSrc(m),dur:m.dur}));
- const parts=`${T(model.privText)?grp(L('Описание','Description'),md(T(model.privText),'bio')):''}${privMediaGroups(media,{act:'privView',wm:S.me.nick||''})}`;
+function myPrivSection(owner='me'){const model=owner==='couple'?(S.ui.couplePreview||coupleProfile()):S.me;if(model.privOn===false)return '';const media=privMedia(model).map(m=>({type:m.type==='video'?'video':'image',src:privSrc(m),dur:m.dur}));const jars=(model.jars||[]).filter(j=>j.vis==='granted');
+ const parts=`${T(model.privText)?grp(L('Описание','Description'),md(T(model.privText),'bio')):''}${jars.length?grp(L('Интересы','Interests'),jarsHTML(sortJars(jars),{act:'topic',who:'me'})):''}${privMediaGroups(media,{act:'privView',wm:S.me.nick||''})}`;
  return vaultHTML(parts.trim()?parts:`<p class="note">${L('Пока пусто','Empty for now')}</p>`);}
 ACT.privPeek=a=>{const id=a.dataset.v,g=activeGrant(id);const media=g?privOrdered(privProj(id).media.filter(m=>g.granted.includes(m.sec)&&(accessActor()!=='couple'||PEOPLE[id]?.pair))):[];if(!person(id)||!media.length){toast(L('Доступ к фото недоступен','Photo access is unavailable'),{type:'warn'});refresh();return;}const actor=accessActor(),ticket=authorTicket(actor),scopes=[...new Set(media.map(m=>m.sec))];openViewer(media.map(m=>({type:m.type,src:m.src,wm:'@'+(S.me.nick||'')})),+a.dataset.i,{guard:()=>validAuthor(ticket)&&receivedGrant(id,actor)===g&&scopes.every(sec=>g.granted.includes(sec))&&(actor!=='couple'||!!PEOPLE[id]?.pair)});};
 SC.P08={title:p=>pname(p.id),valid:p=>!!PEOPLE[p.id]&&!isBlocked(p.id),render:(p,r)=>profileView(p.id,r),after:()=>{fillJars();setTimeout(()=>$('#priv')?.scrollIntoView({block:'start',behavior:'smooth'}),120);}};
@@ -188,12 +190,13 @@ SC.P08={title:p=>pname(p.id),valid:p=>!!PEOPLE[p.id]&&!isBlocked(p.id),render:(p
 /* Main profile: media (photos and video together), basics + your details in ONE card, interests. The private part comes last, as its own panel
    with the switch next to its title; it holds only a description, photos and video — each with its own permission. Saved with the profile, no separate save. */
 const COUPLE_FIELDS=['role','format','seek'];
-/** interests live only in the main part and are always public */
-function peJars(m,owner){const list=sortJars(m.jars||[]);
+/** main-profile interests: public ones and the ones only you see (crossed eye); interests placed in the private part are in its panel */
+function peJars(m,owner){const list=sortJars((m.jars||[]).filter(j=>j.vis!=='granted'));
  return `<section class="grp" id="peJars"><div class="grp-t"><span>${owner==='couple'?L('Общие интересы','Couple interests'):L('Интересы','Interests')}</span><span class="note">${list.length}</span></div><div class="card form-card">
- ${jarsHTML(list,{act:owner==='couple'?'editCoupleJar':'editJar',add:'peJarAdd'})}
+ ${jarsHTML(list,{act:owner==='couple'?'editCoupleJar':'editJar',add:'peJarAdd',vis:1})}
 </div></section>`;}
 ACT.peJarAdd=()=>topicPicker(null,null,'public');
+ACT.peJarAddPriv=()=>topicPicker(null,null,'granted');
 
 /* ----- media editor: one grid for the main profile (photos + video together) and one per private kind (photos / video) ----- */
 /** a cell: tap → menu (view, replace, crop, move, delete), ✕ → delete, press-and-drag → reorder */
@@ -205,7 +208,7 @@ const PUB_MAX=6;
 function pubMediaEditor(r){const first=r.photos.findIndex(x=>!isVideoItem(x));
  return miGrid('pub',r.photos.map((ph,i)=>miCell({k:'pub',id:String(i),type:isVideoItem(ph)?'video':'image',src:isVideoItem(ph)?ph.url:IMG(ph),dur:ph.dur,main:i===first})),r.photos.length<PUB_MAX?miAdd('pub',L('Добавить фото или видео','Add photos or video')):'');}
 /** the private part in the editor: one panel — switch beside the title; description, photos, video, who may ask, access */
-function privEditor(m,r,owner){const sp=privSplit(privMedia(m)),grants=givenGrantEntries().length,on=!!r.privOn;
+function privEditor(m,r,owner){const sp=privSplit(privMedia(m)),jars=sortJars((m.jars||[]).filter(j=>j.vis==='granted')),grants=givenGrantEntries().length,on=!!r.privOn;
  const head=`<section class="vault" id="privEdit"><div class="vault-h"><span class="vi">${I.lock}</span><div><b>${L('Приватная часть','Private part')}</b></div><button class="vsw" data-act="pePriv" role="switch" aria-checked="${on}" aria-label="${L('Приватная часть','Private part')}">${sw(on)}</button></div>`;
  if(!on)return `${head}</section>`;
  const kind=(k,title,label)=>`<section class="grp"><div class="grp-t"><span>${title}</span><span class="note">${sp[k].length}/${PRIV_MAX[k]}</span></div><div class="card form-card">${miGrid(k,sp[k].map(x=>miCell({k,id:x.id,type:x.type==='video'?'video':'image',src:privSrc(x),dur:x.dur})),sp[k].length<PRIV_MAX[k]?miAdd(k,label):'')}</div></section>`;
@@ -213,6 +216,7 @@ function privEditor(m,r,owner){const sp=privSplit(privMedia(m)),grants=givenGran
  <div class="vault-b">
  <div class="card list"><div class="li">${selectRow('peReq',L('Кто может просить доступ','Who may ask'),[['all',L('Все','Everyone')],['matches',L('Взаимные','Mutual')],['none',L('Никто','Nobody')]],r.reqFrom||'all')}</div></div>
  <section class="grp"><div class="grp-t"><span>${L('Описание','Description')}</span></div><div class="card form-card">${rteField({name:'privText',label:'',max:1000,ph:L('Как тебе удобно договариваться, что важно до встречи','How you like to agree on things, what matters before meeting')})}</div></section>
+ <section class="grp"><div class="grp-t"><span>${L('Интересы','Interests')}</span><span class="note">${jars.length}</span></div><div class="card form-card">${jarsHTML(jars,{act:owner==='couple'?'editCoupleJar':'editJar',add:'peJarAddPriv'})}</div></section>
  ${kind('photos',L('Фото','Photos'),L('Добавить фото','Add photos'))}
  ${kind('video',L('Видео','Video'),L('Добавить видео','Add video'))}
  ${owner==='couple'?`<div class="card list mt12">${linkRow({go:'Q05',icon:'unlock',title:L('Кому открыто','Who has access'),val:String(grants)})}</div>`:''}

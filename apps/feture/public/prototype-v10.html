@@ -2370,9 +2370,9 @@ const EVENTS={
   desc:{ru:'Танцы и разговоры.',en:'Dancing and conversations.'},reqs:[]},
 };
 
-const REQ_SCOPES=[['info',{ru:'Описание',en:'Description'}],['photos',{ru:'Фото',en:'Photos'}],['video',{ru:'Видео',en:'Video'}]];
+const REQ_SCOPES=[['info',{ru:'Описание',en:'Description'}],['interests',{ru:'Интересы',en:'Interests'}],['photos',{ru:'Фото',en:'Photos'}],['video',{ru:'Видео',en:'Video'}]];
 const cleanScopes=arr=>[...new Set((arr||[]).filter(k=>REQ_SCOPES.some(([s])=>s===k)))];
-const allowedScopes=(owner,viewer)=>REQ_SCOPES.filter(([k])=>owner!=='couple'||PEOPLE[viewer]?.pair||k==='info').map(([k])=>k);
+const allowedScopes=(owner,viewer)=>REQ_SCOPES.filter(([k])=>owner!=='couple'||PEOPLE[viewer]?.pair||['info','interests'].includes(k)).map(([k])=>k);
 
 /* ---------- personas ---------- */
 function fullMe(){return{privText:{ru:'Новичок в верёвке, поэтому сначала — разговор и короткая встреча на нейтральной территории. Не люблю сюрпризов.',en:'New to rope, so first a talk and a short meeting on neutral ground. I don’t like surprises.'},
@@ -2381,8 +2381,8 @@ function fullMe(){return{privText:{ru:'Новичок в верёвке, поэ�
  email:'alex@mail.com',methods:['email','google'],dating:true,datingVisible:true,socialLikes:true,requestsFrom:'all',activityVis:'all',rsvpShow:true,ageCheck:'ok',premium:false,
  jars:[
   {t:'bondage',lv:8,dir:['give'],real:'practice',vis:'public'},{t:'shibari',lv:6,dir:['give'],real:'try',vis:'public'},{t:'roleplay',lv:8,dir:['give','get'],real:'practice',vis:'public'},{t:'aftercare',lv:10,real:'practice',vis:'public'},
-  {t:'control',lv:8,dir:['give'],real:'practice',vis:'public'},{t:'sensory',lv:6,dir:['give','get','watch'],real:'fantasy',vis:'public'},{t:'experiments',lv:10,real:'try',vis:'public'},{t:'intimacy',lv:8,real:'practice',vis:'public'},
-  {t:'impact',lv:0,limit:'hard',vis:'public'},{t:'exhibition',lv:0,limit:'discuss',vis:'public'}],
+  {t:'control',lv:8,dir:['give'],real:'practice',vis:'granted'},{t:'sensory',lv:6,dir:['give','get','watch'],real:'fantasy',vis:'granted'},{t:'experiments',lv:10,real:'try',vis:'only'},{t:'intimacy',lv:8,real:'practice',vis:'public'},
+  {t:'impact',lv:0,limit:'hard',vis:'only'},{t:'exhibition',lv:0,limit:'discuss',vis:'granted'}],
  history:[{t:ago(30),topic:'shibari',from:4,to:6,src:'test'},{t:ago(200),topic:'aftercare',from:8,to:10,src:'manual'},{t:ago(400),topic:'impact',from:'—',to:'limit',src:'manual'}],
  journal:[
   {id:'j1',t:ago(26),topics:['shibari'],text:{ru:'Первое занятие у Mia. Страшно было только первые десять минут. Записать: спросить про ножницы для бандажа.',en:'First session with Mia. Scary only for the first ten minutes. Note: ask about safety shears.'}},
@@ -2430,8 +2430,8 @@ function freshState(persona){
   }:{},
   archived:new Set(full?[]:[]),muted:new Set(),
   blocked:full?[{p:'dan',t:ago(300)}]:[],
-  reqIn:full?[{id:'r1',p:'kai',scopes:['info','photos'],t:ago(.2),status:'new'},{id:'r2',p:'leon',scopes:['info'],t:ago(2),status:'new'},{id:'r3',p:'tomeva',scopes:['info','photos'],t:ago(22),status:'new'}]:[],
-  reqOut:full?[{id:'o1',p:'kira',scopes:['info','photos'],t:ago(4),status:'pending'},{id:'o2',p:'mia',scopes:['info','photos','video'],t:ago(30),status:'partial',granted:['info','photos'],until:NOW+5*DAY},{id:'o3',p:'leon',scopes:['info'],t:ago(80),status:'declined'},{id:'o4',p:'ari',scopes:['info'],t:ago(200),status:'expired'}]:[],
+  reqIn:full?[{id:'r1',p:'kai',scopes:['info','photos'],t:ago(.2),status:'new'},{id:'r2',p:'leon',scopes:['info'],t:ago(2),status:'new'},{id:'r3',p:'tomeva',scopes:['info','interests','photos','video'],t:ago(22),status:'new'}]:[],
+  reqOut:full?[{id:'o1',p:'kira',scopes:['info','photos'],t:ago(4),status:'pending'},{id:'o2',p:'mia',scopes:['info','interests','photos','video'],t:ago(30),status:'partial',granted:['info','photos'],until:NOW+5*DAY},{id:'o3',p:'leon',scopes:['info'],t:ago(80),status:'declined'},{id:'o4',p:'ari',scopes:['info'],t:ago(200),status:'expired'}]:[],
   sharedByMe:full?[{p:'mia',scopes:['info','photos'],until:NOW+5*DAY,t:ago(28)},{p:'kai',scopes:['info'],until:NOW+23*HOUR,t:ago(1)}]:[],
   notifs:full?[
    {id:'n1',type:'match',p:'lina',t:ago(1),read:false,go:['H01']},
@@ -3252,7 +3252,7 @@ function jarsHTML(list,o={}){
  return `<div class="jars ${o.pre?'pre':''} ${o.cls||''}">${items.map((j,i)=>{
   const tag=o.act?'button':'div';const attrs=o.act?`data-act="${o.act}" data-v="${j.t}" ${o.who?`data-who="${o.who}" data-ans="${j.limit||j.lv}"${j.dir?` data-dir="${j.dir.join(' ')}"`:''}`:''} aria-label="${esc(topic(j.t))}: ${esc(jarWord(j))}"`:'';
   const was=o.was&&o.was[j.t]!=null?`<small class="was">${L('было','was')} ${o.was[j.t]==='hard'?L('табу','taboo'):o.was[j.t]==='discuss'?L('обсужд.','negot.'):o.was[j.t]}</small>`:'';
-  const vis=o.vis&&j.vis!=='public'?`<span class="jvis">${I.eyeoff}</span>`:'';
+  const vis=o.vis&&j.vis!=='public'?`<span class="jvis">${j.vis==='granted'?I.key:I.eyeoff}</span>`:'';
   if(j.limit)return `<${tag} class="jar ${j.limit==='hard'?'taboo':'discuss'}" ${attrs}><span class="vessel"><span class="jm">${j.limit==='hard'?I.block:I.chat}</span>${vis}</span><span class="jn">${esc(topic(j.t))}</span><span class="jw sr">${j.limit==='hard'?(o.who&&o.who!=='me'?L('нельзя','not for me'):L('табу','taboo')):L('обсуждаемо','negotiable')}</span>${was}</${tag}>`;
   /* the higher the level, the calmer the surface: 8–9 barely ripple, 10 is full to the lid — only bubbles */
   const calm=j.lv>=10?'full':j.lv>=8?'calm':'';
@@ -3948,8 +3948,8 @@ ACT.setLang=a=>{S.lang=a.dataset.v;document.documentElement.lang=S.lang;refresh(
 const W_SLIDES=()=>[
  {k:L('Баночки','Jars'),h:L('Интересы — баночками, а не анкетой','Interests as jars, not a form'),p:L('Каждый интерес — от 1 до 10, «обсуждаемо» или «табу». И как тебе ближе: давать, получать или смотреть.','Every interest is 1 to 10, “negotiable” or “taboo”. Plus how you like it: giving, receiving or watching.'),
   v:()=>`<div class="wf-jars">${jarsHTML([{t:'shibari',lv:10,dir:['give']},{t:'aftercare',lv:8,dir:['get']},{t:'roleplay',lv:6,dir:DIRS},{t:'latex',lv:3,dir:['watch']}],{pre:1})}</div>`},
- {k:L('Приватность','Privacy'),h:L('Покажи ровно столько, сколько решишь','Show exactly as much as you choose'),p:L('Приватная часть — описание, фото и видео — открывается только тем, кому разрешишь ты. По умолчанию она закрыта.','Your private part — a description, photos and video — opens only for people you allow. It’s closed by default.'),
-  v:()=>`<div class="wf-layers">${[[I.globe,L('Ник и фото','Nickname & photo'),L('всем','everyone'),'ok'],[I.key,L('Приватная часть: описание, фото, видео','Private part: description, photos, video'),L('по доступу','by access'),'v'],[I.eyeoff,L('Дневник','Journal'),L('только я','only me'),'']].map(([i,b,e,c],n)=>`<div class="wf-row" style="--n:${n}"><span class="wf-ic">${i}</span><b>${b}</b><em class="${c}">${e}</em></div>`).join('')}</div>`},
+ {k:L('Приватность','Privacy'),h:L('Покажи ровно столько, сколько решишь','Show exactly as much as you choose'),p:L('Приватная часть — описание, интересы, фото и видео — открывается только тем, кому разрешишь ты. По умолчанию она закрыта.','Your private part — a description, interests, photos and video — opens only for people you allow. It’s closed by default.'),
+  v:()=>`<div class="wf-layers">${[[I.globe,L('Ник и фото','Nickname & photo'),L('всем','everyone'),'ok'],[I.key,L('Приватная часть: описание, интересы, фото, видео','Private part: description, interests, photos, video'),L('по доступу','by access'),'v'],[I.eyeoff,L('Дневник','Journal'),L('только я','only me'),'']].map(([i,b,e,c],n)=>`<div class="wf-row" style="--n:${n}"><span class="wf-ic">${i}</span><b>${b}</b><em class="${c}">${e}</em></div>`).join('')}</div>`},
  {k:L('Доступ на срок','Timed access'),h:L('Приватное — по запросу и на срок','Private — on request, for a set time'),p:L('Фото и желания открываешь конкретному человеку на день, неделю или месяц. Передумаешь — закроешь в один тап.','Open photos and wishes to one person for a day, a week or a month. Change your mind — close it in one tap.'),
   v:()=>`<div class="wf-req"><div class="wf-req-h">${av('mia','wf-av')}<span><b>Mia</b><small>${L('просит открыть фото','asks to see your photos')}</small></span></div><div class="wf-dur">${[L('24 часа','24 hours'),L('7 дней','7 days'),L('30 дней','30 days')].map((d,n)=>`<span class="${n===1?'on':''}">${d}</span>`).join('')}</div><div class="wf-req-f">${I.unlock}<span>${L('Отозвать можно в любой момент','Revoke any time')}</span></div></div>`},
  {k:L('Взаимность','Mutual'),h:L('Пишут только взаимно','Messages only when it’s mutual'),p:L('Никаких непрошеных сообщений: чат открывается только после взаимной симпатии.','No unsolicited messages: a chat opens only after a mutual like.'),
@@ -4959,10 +4959,11 @@ ACT.nwOk=a=>{const ticket=authorTicket(actionAuthor()),st=social(ticket.id),o=S.
 const activeGrant=receivedGrant;
 /** What a person with access sees in someone's private layer. One projection for seed people and for me,
  *  so «Как видят» (my preview) and a real granted view render through the same code. */
+const SEED_PRIV_JARS=[{t:'shibari',lv:9},{t:'sensory',lv:8},{t:'temperature',lv:6},{t:'roleplay',lv:7},{t:'aftercare',lv:10},{t:'filming',lv:0,limit:'hard'},{t:'strongpain',lv:0,limit:'discuss'},{t:'publicplace',lv:0,limit:'hard'}];
 function privProj(id){
- if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);return{text:T(m.privText)||'',media:privMedia(m).map(m=>({type:m.type==='video'?'video':'image',src:privSrc(m),style:m.style,sec:m.type==='video'?'video':'photos',dur:m.dur}))};}
- const P0=person(id);const own=P0?.photo?photoItems(id).map(x=>x.src):[];return{text:T(P0?.privText)||'',media:P0?.photo?[...own,...['/images/v10-content/post-p9-evening-atmosphere-45.webp','/images/v10-content/gallery-e3-club.webp','/images/v10-content/post-p6-latex-night-prep-45.webp','/images/v10-content/gallery-e1-ropes.webp']].slice(0,6).map(src=>({type:'image',src,sec:'photos'})):[]};}
-/** sections a grant opens: info → description; photos → photos; video → video */
+ if(id==='me'||id==='couple'){const m=id==='couple'?(S.ui.couplePreview||coupleProfile()):(S.ui.profilePreview||S.me);return{jars:m.jars.filter(j=>j.vis==='granted'),text:T(m.privText)||'',media:privMedia(m).map(m=>({type:m.type==='video'?'video':'image',src:privSrc(m),style:m.style,sec:m.type==='video'?'video':'photos',dur:m.dur}))};}
+ const P0=person(id);const own=P0?.photo?photoItems(id).map(x=>x.src):[];return{jars:SEED_PRIV_JARS,text:T(P0?.privText)||'',media:P0?.photo?[...own,...['/images/v10-content/post-p9-evening-atmosphere-45.webp','/images/v10-content/gallery-e3-club.webp','/images/v10-content/post-p6-latex-night-prep-45.webp','/images/v10-content/gallery-e1-ropes.webp']].slice(0,6).map(src=>({type:'image',src,sec:'photos'})):[]};}
+/** sections a grant opens: info → description; interests → the interests placed in the private part; photos → photos; video → video */
 /* private gallery (owner 15.10): no card, no cut-up crops — the first photo large, the rest as 4:5 tiles; watermark per viewer */
 function privGallery(list,o={}){if(!list.length)return '';return `<div class="pgal">${list.map((m,i)=>`<button class="pgc" ${o.act?`data-act="${o.act}" ${o.v!=null?`data-v="${o.v}"`:''} data-i="${i+(o.off||0)}"`:'disabled'} aria-label="${L('Открыть','Open')}">${m.type==='video'?`<video src="${esc(m.src)}" muted playsinline preload="metadata"></video><span class="dur">${I.video}${fmtDur(m.dur||0)}</span>`:`<img src="${esc(m.src)}" alt="" draggable="false">`}${o.wm?`<span class="wm">${esc(o.wm)}</span>`:''}</button>`).join('')}</div>`;}
 /** the private part is a layer of its own: a visibly separate panel with its own header, state and content */
@@ -4977,17 +4978,18 @@ function privMediaGroups(media,o={}){const s=privSplit(media);let off=0;const gr
 function privOpenHTML(id,g,o={}){const pr=privProj(id),has=k=>g.granted.includes(k);
  const media=pr.media.filter(m=>has(m.sec));
  const desc=has('info')&&pr.text?grp(L('Описание','Description'),md(pr.text,'bio')):'';
+ const pj=sortJars(pr.jars||[]);const interests=has('interests')&&pj.length?grp(L('Интересы','Interests'),jarsHTML(pj,{act:o.preview?'':'topic',who:id})):'';
  const wm=o.preview?L('ник зрителя','viewer’s nick'):(S.me.nick||'');
  const mediaHTML=privMediaGroups(media,{act:o.preview?'':'privPeek',v:id,wm,foot:o.preview?L('Каждый видит с собственным водяным знаком.','Everyone sees them with their own watermark.'):L('С твоим водяным знаком. Доступ могут отозвать в любой момент — уважай доверие.','With your watermark. Access can be revoked any time — respect the trust.')});
- return vaultHTML(`${desc}${mediaHTML}${!desc&&!mediaHTML?`<p class="note">${L('Здесь пока ничего нет.','Nothing here yet.')}</p>`:''}`,{open:1,badge:g.until?`<span class="pill v">${esc(F.left(g.until))}</span>`:''});}
+ return vaultHTML(`${desc}${interests}${mediaHTML}${!desc&&!interests&&!mediaHTML?`<p class="note">${L('Здесь пока ничего нет.','Nothing here yet.')}</p>`:''}`,{open:1,badge:g.until?`<span class="pill v">${esc(F.left(g.until))}</span>`:''});}
 function privSection(id,o={}){
- if(id==='me'||id==='couple'){const pm=id==='couple'?coupleProfile():(S.ui.profilePreview||S.me);if(pm?.privOn===false)return '';const g=o.grant==='granted'?{granted:['info','photos','video'],until:null}:null;
+ if(id==='me'||id==='couple'){const pm=id==='couple'?coupleProfile():(S.ui.profilePreview||S.me);if(pm?.privOn===false)return '';const g=o.grant==='granted'?{granted:['info','interests','photos','video'],until:null}:null;
   if(!g)return vaultHTML(veilBlock(id).replace(/ data-(act|v)="[^"]*"/g,'').replace(/<button /g,'<button disabled tabindex="-1" '),{cls:'closed'});
   return privOpenHTML(id,g,{preview:1});}
  const g=activeGrant(id);if(!g)return vaultHTML(veilBlock(id),{cls:'closed'});
  return privOpenHTML(id,g);}
-function myPrivSection(owner='me'){const model=owner==='couple'?(S.ui.couplePreview||coupleProfile()):S.me;if(model.privOn===false)return '';const media=privMedia(model).map(m=>({type:m.type==='video'?'video':'image',src:privSrc(m),dur:m.dur}));
- const parts=`${T(model.privText)?grp(L('Описание','Description'),md(T(model.privText),'bio')):''}${privMediaGroups(media,{act:'privView',wm:S.me.nick||''})}`;
+function myPrivSection(owner='me'){const model=owner==='couple'?(S.ui.couplePreview||coupleProfile()):S.me;if(model.privOn===false)return '';const media=privMedia(model).map(m=>({type:m.type==='video'?'video':'image',src:privSrc(m),dur:m.dur}));const jars=(model.jars||[]).filter(j=>j.vis==='granted');
+ const parts=`${T(model.privText)?grp(L('Описание','Description'),md(T(model.privText),'bio')):''}${jars.length?grp(L('Интересы','Interests'),jarsHTML(sortJars(jars),{act:'topic',who:'me'})):''}${privMediaGroups(media,{act:'privView',wm:S.me.nick||''})}`;
  return vaultHTML(parts.trim()?parts:`<p class="note">${L('Пока пусто','Empty for now')}</p>`);}
 ACT.privPeek=a=>{const id=a.dataset.v,g=activeGrant(id);const media=g?privOrdered(privProj(id).media.filter(m=>g.granted.includes(m.sec)&&(accessActor()!=='couple'||PEOPLE[id]?.pair))):[];if(!person(id)||!media.length){toast(L('Доступ к фото недоступен','Photo access is unavailable'),{type:'warn'});refresh();return;}const actor=accessActor(),ticket=authorTicket(actor),scopes=[...new Set(media.map(m=>m.sec))];openViewer(media.map(m=>({type:m.type,src:m.src,wm:'@'+(S.me.nick||'')})),+a.dataset.i,{guard:()=>validAuthor(ticket)&&receivedGrant(id,actor)===g&&scopes.every(sec=>g.granted.includes(sec))&&(actor!=='couple'||!!PEOPLE[id]?.pair)});};
 SC.P08={title:p=>pname(p.id),valid:p=>!!PEOPLE[p.id]&&!isBlocked(p.id),render:(p,r)=>profileView(p.id,r),after:()=>{fillJars();setTimeout(()=>$('#priv')?.scrollIntoView({block:'start',behavior:'smooth'}),120);}};
@@ -4996,12 +4998,13 @@ SC.P08={title:p=>pname(p.id),valid:p=>!!PEOPLE[p.id]&&!isBlocked(p.id),render:(p
 /* Main profile: media (photos and video together), basics + your details in ONE card, interests. The private part comes last, as its own panel
    with the switch next to its title; it holds only a description, photos and video — each with its own permission. Saved with the profile, no separate save. */
 const COUPLE_FIELDS=['role','format','seek'];
-/** interests live only in the main part and are always public */
-function peJars(m,owner){const list=sortJars(m.jars||[]);
+/** main-profile interests: public ones and the ones only you see (crossed eye); interests placed in the private part are in its panel */
+function peJars(m,owner){const list=sortJars((m.jars||[]).filter(j=>j.vis!=='granted'));
  return `<section class="grp" id="peJars"><div class="grp-t"><span>${owner==='couple'?L('Общие интересы','Couple interests'):L('Интересы','Interests')}</span><span class="note">${list.length}</span></div><div class="card form-card">
- ${jarsHTML(list,{act:owner==='couple'?'editCoupleJar':'editJar',add:'peJarAdd'})}
+ ${jarsHTML(list,{act:owner==='couple'?'editCoupleJar':'editJar',add:'peJarAdd',vis:1})}
 </div></section>`;}
 ACT.peJarAdd=()=>topicPicker(null,null,'public');
+ACT.peJarAddPriv=()=>topicPicker(null,null,'granted');
 
 /* ----- media editor: one grid for the main profile (photos + video together) and one per private kind (photos / video) ----- */
 /** a cell: tap → menu (view, replace, crop, move, delete), ✕ → delete, press-and-drag → reorder */
@@ -5013,7 +5016,7 @@ const PUB_MAX=6;
 function pubMediaEditor(r){const first=r.photos.findIndex(x=>!isVideoItem(x));
  return miGrid('pub',r.photos.map((ph,i)=>miCell({k:'pub',id:String(i),type:isVideoItem(ph)?'video':'image',src:isVideoItem(ph)?ph.url:IMG(ph),dur:ph.dur,main:i===first})),r.photos.length<PUB_MAX?miAdd('pub',L('Добавить фото или видео','Add photos or video')):'');}
 /** the private part in the editor: one panel — switch beside the title; description, photos, video, who may ask, access */
-function privEditor(m,r,owner){const sp=privSplit(privMedia(m)),grants=givenGrantEntries().length,on=!!r.privOn;
+function privEditor(m,r,owner){const sp=privSplit(privMedia(m)),jars=sortJars((m.jars||[]).filter(j=>j.vis==='granted')),grants=givenGrantEntries().length,on=!!r.privOn;
  const head=`<section class="vault" id="privEdit"><div class="vault-h"><span class="vi">${I.lock}</span><div><b>${L('Приватная часть','Private part')}</b></div><button class="vsw" data-act="pePriv" role="switch" aria-checked="${on}" aria-label="${L('Приватная часть','Private part')}">${sw(on)}</button></div>`;
  if(!on)return `${head}</section>`;
  const kind=(k,title,label)=>`<section class="grp"><div class="grp-t"><span>${title}</span><span class="note">${sp[k].length}/${PRIV_MAX[k]}</span></div><div class="card form-card">${miGrid(k,sp[k].map(x=>miCell({k,id:x.id,type:x.type==='video'?'video':'image',src:privSrc(x),dur:x.dur})),sp[k].length<PRIV_MAX[k]?miAdd(k,label):'')}</div></section>`;
@@ -5021,6 +5024,7 @@ function privEditor(m,r,owner){const sp=privSplit(privMedia(m)),grants=givenGran
  <div class="vault-b">
  <div class="card list"><div class="li">${selectRow('peReq',L('Кто может просить доступ','Who may ask'),[['all',L('Все','Everyone')],['matches',L('Взаимные','Mutual')],['none',L('Никто','Nobody')]],r.reqFrom||'all')}</div></div>
  <section class="grp"><div class="grp-t"><span>${L('Описание','Description')}</span></div><div class="card form-card">${rteField({name:'privText',label:'',max:1000,ph:L('Как тебе удобно договариваться, что важно до встречи','How you like to agree on things, what matters before meeting')})}</div></section>
+ <section class="grp"><div class="grp-t"><span>${L('Интересы','Interests')}</span><span class="note">${jars.length}</span></div><div class="card form-card">${jarsHTML(jars,{act:owner==='couple'?'editCoupleJar':'editJar',add:'peJarAddPriv'})}</div></section>
  ${kind('photos',L('Фото','Photos'),L('Добавить фото','Add photos'))}
  ${kind('video',L('Видео','Video'),L('Добавить видео','Add video'))}
  ${owner==='couple'?`<div class="card list mt12">${linkRow({go:'Q05',icon:'unlock',title:L('Кому открыто','Who has access'),val:String(grants)})}</div>`:''}
@@ -5527,7 +5531,7 @@ ACT.pushOk=()=>{closeSheet();toast(L('Уведомления включены','
 /* ============ X: ME — V9. Claude, 14.10.2026 ============
    A jar is one answer about one topic: level 1–10, «обсуждаемо» or «табу». The same answer control is used in quizzes and in the jar sheet.
    Profiles show a short shelf of jars (top by level) — the full list opens on demand. */
-const VIS=()=>({public:[I.globe,L('всем','everyone'),'ok'],only:[I.eyeoff,L('только я','only me'),'']});
+const VIS=()=>({public:[I.globe,L('всем','everyone'),'ok'],granted:[I.key,L('по доступу','by access'),'v'],only:[I.eyeoff,L('только я','only me'),'']});
 function nextStep(){const m=S.me;if(!m.jars.length)return[L('Добавь интересы, которые тебе интересны','Add interests you care about'),'topic',null];if(requiresDiscoveryPhoto(m)&&!m.photo)return[L('Добавь фото для показа в подборке','Add a photo to appear in Discover'),'P02',null];return['','',null];}
 
 const sortJars=list=>{list=list.map(normJar);return [...list.filter(j=>!j.limit).sort((a,b)=>b.lv-a.lv),...list.filter(j=>j.limit==='discuss'),...list.filter(j=>j.limit==='hard')];};
@@ -5568,7 +5572,7 @@ ACT.myJarsAll=()=>go('X02');
 SC.X02={title:()=>L('Мои интересы','My interests'),valid:p=>p.owner!=='couple'||S.pair?.status==='active',render:(p,r)=>{const all=sortJars(editableProfile(r).jars);const g=[[L('Интересно','Into it'),all.filter(j=>!j.limit)],[L('Обсуждаемо','Negotiable'),all.filter(j=>j.limit==='discuss')],[L('Табу','Taboo'),all.filter(j=>j.limit==='hard')]].filter(x=>x[1].length);
  return `${bar(L('Мои интересы','My interests'),{back:1,sm:1,actions:`<button class="ibtn" data-go="X04" data-p='${esc(JSON.stringify({owner:p.owner}))}' aria-label="${L('История','History')}">${I.hist}</button><button class="ibtn" data-act="addJar" aria-label="${L('Добавить интерес','Add an interest')}">${I.plus}</button>`})}<div class="view nodock"><div class="wrap">
  ${all.length?g.map(([t,l])=>grp(`${t} · ${l.length}`,jarsHTML(l,{pre:1,act:p.owner==='couple'?'editCoupleJar':'editJar',vis:1}))).join(''):p.owner==='couple'?empty('spark',L('Общих интересов пока нет','No couple interests yet'),L('Добавьте общие интересы вручную. Изменения публикуются после согласия обоих. Личные ответы не копируются.','Add couple interests yourselves. Changes publish once both agree. Personal answers are not copied.'),`<button class="btn primary" data-act="addJar">${L('Добавить интерес','Add an interest')}</button>`):empty('test',L('Пока пусто','Empty for now'),L('Выбери интересы и настрой, как они тебе откликаются.','Choose interests and set how they feel to you.'),`<button class="btn primary" data-act="addJar">${L('Добавить интересы','Add interests')}</button>`)}
- <p class="grp-n">${I.eyeoff} ${L('только ты','only you')} · ${L('без значка — видно всем','no icon — everyone')}. ${L('Табу показывается в профиле как «нельзя», только если ты сам(а) выбрал(а) «Все».','Taboo shows on your profile as “not for me” only if you chose “Everyone”.')}</p></div></div>`;},after:()=>fillJars()};
+ <p class="grp-n">${I.eyeoff} ${L('только ты','only you')} · ${I.key} ${L('по доступу','by access')} · ${L('без значка — видно всем','no icon — everyone')}. ${L('Табу показывается в профиле как «нельзя», только если ты сам(а) выбрал(а) «Все».','Taboo shows on your profile as “not for me” only if you chose “Everyone”.')}</p></div></div>`;},after:()=>fillJars()};
 /* Quizzes are paused (owner, 15.10.2026): the entry stays, the screen says «скоро». New quizzes will not write to jars.
    The old quiz screens (X07–X11) are kept in code below but every route shows this stub. */
 const QUIZ_SOON=true;
@@ -5586,10 +5590,11 @@ SC.X04={title:()=>L('История интересов','Interest history'),vali
 ACT.addJar=()=>topicPicker();ACT.addLimit=()=>topicPicker();
 function topicPicker(initial,ownerIn,visIn){if(cur().p.owner==='couple'&&!coupleWritable())return;
  const owner=ownerIn||cur().p.owner||'me',model=editableProfile({p:{owner}});if(!model)return;
- const d={owner,session:S.session,pair:S.pair,lease:S.pair?.draftLease||0,selected:initial&&TOPICS[initial]&&!model.jars.some(j=>j.t===initial)?[initial]:[],answers:{},dirs:{},step:0,stage:'pick',vis:'public',fixedVis:true};S.ui.interestDraft=d;
+ const d={owner,session:S.session,pair:S.pair,lease:S.pair?.draftLease||0,selected:initial&&TOPICS[initial]&&!model.jars.some(j=>j.t===initial)?[initial]:[],answers:{},dirs:{},step:0,stage:'pick',vis:visIn||'public',fixedVis:['public','granted'].includes(visIn)};S.ui.interestDraft=d;
  sheet(()=>{
   if(d.stage==='pick'){const have=model.jars.map(j=>j.t);return{title:L('Добавить интересы','Add interests'),sub:L('Выбери несколько интересов, затем настрой каждый.','Choose several interests, then set each one.'),search:true,searchPh:L('Найти интерес','Find an interest'),body:CATS.map(c=>{const ts=Object.keys(TOPICS).filter(t=>TOPICS[t].cat===c.id&&!have.includes(t));return ts.length?fsec(T(c),`<div class="chips">${ts.map(t=>`<button class="chip ${d.selected.includes(t)?'on':''}" aria-pressed="${d.selected.includes(t)}" data-act="pickTopic" data-v="${t}" data-txt="${chipTxt(t,topic(t))}">${esc(topic(t))}</button>`).join('')}</div>`):'';}).join('')+`<p class="note sh-empty" hidden>${L('Такого интереса пока нет.','No such interest yet.')}</p>`,foot:`<button class="btn primary" data-act="interestsStart" ${d.selected.length?'':'disabled'}>${L('Продолжить','Continue')}${d.selected.length?` · ${d.selected.length}`:''}</button>`};}
   if(d.stage==='answer'){const t=d.selected[d.step];return{title:topic(t),sub:L(`Интерес ${d.step+1} из ${d.selected.length}`,`Interest ${d.step+1} of ${d.selected.length}`),body:`<div class="qprog"><i style="width:${(d.step+1)/d.selected.length*100}%"></i></div><p class="topic-desc">${esc(T(TOPIC_DESC[t]))}</p>${grp(topicQ(t),answerHTML(d.answers[t]??null,'interestAnswer',{t,dir:d.dirs[t],dirAct:'interestDir'}),{cls:'bare'})}`,foot:`<div class="row g8"><button class="btn secondary" data-act="interestBack">${L('Назад','Back')}</button><button class="btn primary" data-act="interestNext" ${d.answers[t]==null?'disabled':''}>${d.step===d.selected.length-1?(d.fixedVis?L('Добавить в профиль','Add to profile'):L('Продолжить','Continue')):L('Дальше','Next')}</button></div>`};}
+  return{title:L('Кому показывать интересы?','Who can see these interests?'),sub:L(`Готово: ${d.selected.length}. Сохрани, чтобы добавить баночки в профиль.`,`${d.selected.length} ready. Save to add the jars to your profile.`),body:`${d.selected.map(t=>ansRow(topic(t),jarFrom(t,d.answers[t],{dir:d.dirs[t]}))).join('')}${grp(L('Кто видит','Who can see'),choices([['public',L('Все','Everyone'),L('В профиле и для совпадений. Табу будет показано как «нельзя».','On your profile and for matching. Taboo is shown as “not for me”.')],['granted',L('По доступу','By access'),L('Те, кому открыт приватную часть','People with access to your private part')],['only',L('Только я','Only me')]],d.vis,'interestsVis'))}`,foot:`<button class="btn primary" data-act="interestsSave">${L('Добавить в профиль','Add to profile')}</button><div class="row g8 mt12"><button class="btn secondary" data-act="interestBack">${L('Назад','Back')}</button><button class="btn soft" data-act="interestsDiscard">${L('Выйти без сохранения','Leave without saving')}</button></div>`};
  },{full:true,guard:()=>d.selected.length>0,onClose:()=>{if(S.ui.interestDraft===d)delete S.ui.interestDraft;}});
 }
 ACT.pickTopic=a=>{const d=S.ui.interestDraft,t=a.dataset.v;if(!d||!TOPICS[t])return;const i=d.selected.indexOf(t);if(i<0)d.selected.push(t);else{d.selected.splice(i,1);delete d.answers[t];}resheet();};
@@ -5597,23 +5602,25 @@ ACT.interestsStart=()=>{const d=S.ui.interestDraft;if(!d?.selected.length)return
 ACT.interestAnswer=a=>{const d=S.ui.interestDraft;if(!d||d.stage!=='answer')return;d.answers[d.selected[d.step]]=ansVal(a.dataset.v);resheet();};
 ACT.interestDir=a=>{const d=S.ui.interestDraft;if(!d||d.stage!=='answer')return;const t=d.selected[d.step];d.dirs[t]=toggleDir(d.dirs[t],a.dataset.v);resheet();};
 ACT.interestNext=a=>{const d=S.ui.interestDraft;if(!d||d.answers[d.selected[d.step]]==null)return;if(d.step<d.selected.length-1)d.step++;else if(d.fixedVis){return ACT.interestsSave(a);}else d.stage='visibility';resheet();};
-ACT.interestBack=()=>{const d=S.ui.interestDraft;if(!d)return;if(d.step>0)d.step--;else d.stage='pick';resheet();};
+ACT.interestBack=()=>{const d=S.ui.interestDraft;if(!d)return;if(d.stage==='visibility')d.stage='answer';else if(d.step>0)d.step--;else d.stage='pick';resheet();};
+ACT.interestsVis=a=>{const d=S.ui.interestDraft;if(d&&!d.fixedVis&&['public','granted','only'].includes(a.dataset.v)){d.vis=a.dataset.v;resheet();}};
 ACT.interestsDiscard=()=>closeSheet();
-ACT.interestsSave=a=>{const d=S.ui.interestDraft;if(!d||!(d.stage==='answer'&&d.step===d.selected.length-1)||d.session!==S.session||!d.selected.length||d.selected.some(t=>d.answers[t]==null))return;
+ACT.interestsSave=a=>{const d=S.ui.interestDraft;if(!d||!(d.stage==='visibility'||d.fixedVis&&d.stage==='answer'&&d.step===d.selected.length-1)||d.session!==S.session||!d.selected.length||d.selected.some(t=>d.answers[t]==null))return;
  return run(a,()=>{if(S.ui.interestDraft!==d||S.session!==d.session||d.owner==='couple'&&(S.pair!==d.pair||!coupleWritable(d.lease)))return;const model=editableProfile({p:{owner:d.owner}});if(!model)return;
   d.selected.forEach(t=>{const i=model.jars.findIndex(j=>j.t===t),old=model.jars[i];const value=jarFrom(t,d.answers[t],{vis:d.vis,dir:d.dirs[t]});if(i<0)model.jars.push(value);else model.jars[i]=value;model.history.unshift({t:Date.now(),topic:t,from:old?jv(old):'—',to:d.answers[t],dir:value.dir,src:'manual'});});
   let msg='';if(d.owner==='couple'){markCoupleDraft();msg=coupleQuickSubmit();}closeSheet();refresh();if(msg)setTimeout(()=>toast(msg,{type:'ok'}),350);
  },{ms:300,ok:L('Интересы добавлены','Interests added')});};
 ACT.editJar=a=>{if(S.ui.sheet)closeSheet(true);if(!editableProfile().jars.some(j=>j.t===a.dataset.v)){topicPicker(a.dataset.v);return;}openJar(a.dataset.v);};
 /* the jar sheet: what it is → your answer → who sees. Nothing is preselected for a new topic. */
-function openJar(t,owner=cur().p.owner||'me'){const model=editableProfile({p:{owner}});if(!model)return;const ex=model.jars.find(j=>j.t===t);S.ui.jar={t,v:jv(ex),dir:normDir(ex?.dir),vis:'public',owner,session:S.session};const start=JSON.stringify(S.ui.jar);
+function openJar(t,owner=cur().p.owner||'me'){const model=editableProfile({p:{owner}});if(!model)return;const ex=model.jars.find(j=>j.t===t);S.ui.jar={t,v:jv(ex),dir:normDir(ex?.dir),vis:ex?.vis||'only',owner,session:S.session};const start=JSON.stringify(S.ui.jar);
  sheet(()=>{const j=S.ui.jar;const taboo=j.v==='hard';
  return{title:topic(t),sub:T(CATS.find(c=>c.id===TOPICS[t]?.cat)||''),body:`<p class="topic-desc">${esc(T(TOPIC_DESC[t]))}</p>
  ${grp(topicQ(t),answerHTML(j.v,'jarAns',{t,dir:j.dir,dirAct:'jarDir'}),{cls:'bare'})}
-`,
+ ${j.v==null?'':grp(L('Кто видит','Who can see'),choices([['only',L('Только я','Only me')],['granted',L('По доступу','By access'),L('Те, кому ты откроешь приватную часть','People you share your private part with')],['public',L('Все','Everyone'),taboo?L('Другие увидят в профиле: «нельзя». Без подробностей','Others see “not for me” on your profile. No details'):L('В профиле и для совпадений','On your profile and for matching')]],j.vis,'jarVis'))}`,
  foot:`<div class="row g8">${ex?`<button class="btn secondary icon" data-act="jarDel" aria-label="${L('Убрать','Remove')}">${I.trash}</button>`:''}<button class="btn primary ${j.v==null?'off':''}" data-act="jarSave">${ex?L('Сохранить','Save'):L('Добавить','Add')}</button></div>`};},{guard:()=>JSON.stringify(S.ui.jar)!==start});}
 ACT.jarAns=a=>{const j=S.ui.jar;j.v=ansVal(a.dataset.v);resheet();};
 ACT.jarDir=a=>{const j=S.ui.jar;if(!j)return;j.dir=toggleDir(j.dir,a.dataset.v);resheet();};
+ACT.jarVis=a=>{S.ui.jar.vis=a.dataset.v;resheet();};
 ACT.jarSave=a=>{const j=S.ui.jar;if(j.owner==='couple'&&!coupleWritable())return;if(j.v==null||j.session!==S.session)return;const pair=S.pair;run(a,()=>{if(S.session!==j.session||j.owner==='couple'&&S.pair!==pair)return;const model=editableProfile({p:{owner:j.owner}});if(!model)return;const arr=model.jars,i=arr.findIndex(x=>x.t===j.t),old=arr[i];const val=jarFrom(j.t,j.v,{vis:j.vis,dir:j.dir});if(i>=0)arr[i]=val;else arr.push(val);model.history.unshift({t:Date.now(),topic:j.t,from:old?jv(old):'—',to:j.v,dir:val.dir,src:'manual'});let msg='';if(j.owner==='couple'){markCoupleDraft();msg=coupleQuickSubmit();}closeSheet();refresh();if(msg)setTimeout(()=>toast(msg,{type:'ok'}),350);},{ms:300,ok:L('Сохранено','Saved')});};
 ACT.jarDel=()=>{const {t,owner,session}=S.ui.jar;closeSheet(true);ask({icon:'trash',tone:'l',title:L(`Убрать «${topic(t)}»?`,`Remove “${topic(t)}”?`),text:L('История изменений сохранится — её видишь только ты.','Change history is kept — only you can see it.'),ok:L('Убрать','Remove'),danger:true}).then(ok=>{if(ok&&S.session===session){const model=editableProfile({p:{owner}});if(!model)return;model.jars=model.jars.filter(j=>j.t!==t);let msg='';if(owner==='couple'){markCoupleDraft();msg=coupleQuickSubmit();}refresh();toast(msg||L('Убрано','Removed'),{type:'ok'});}});};
 /** someone else’s jar: what it is, their answer and yours */

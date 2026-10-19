@@ -179,7 +179,7 @@ console.log('PASS unified profile editor saves rich private text for personal an
  const priv=ed.split('id="privEdit"')[1]||'';
  const vh=priv.split('<div class="vault-b">')[0];assert.ok(vh.includes('data-act="pePriv"')&&vh.indexOf('Приватная часть')<vh.indexOf('data-act="pePriv"'),'the private switch sits in the header, right of the title');
  assert.ok(!priv.includes('fieldWhere')&&!ed.includes('data-sel="fieldWhere"')&&!ed.includes('data-act="visCycle"'),'no per-field layer switches');
- assert.ok(!priv.includes('peJarAddPriv')&&!priv.includes('data-sel="fieldWhere"')&&!/Интересы|Interests/.test(text(priv)),'no interests or chips in the private part');
+ assert.ok(priv.includes('peJarAddPriv')&&!priv.includes('data-sel="fieldWhere"'),'private part has its own interests but no details chips or layer switches');
  assert.ok(priv.includes('data-sel="peReq"'),'who may ask for access is set inside the private panel');
  assert.ok(priv.includes('data-k="photos"')&&priv.includes('data-k="video"'),'photos and video are separate lists in the private part');
  assert.ok(!/privatePreview/.test(ed),'no second preview entry: «Как видят» is in the top bar');
@@ -210,11 +210,11 @@ run('sheet=originalSheetForContext');
 for(const [action,visibility] of [['peJarAdd','public']]){
  prepare('P02');run('QA.offline=false');run(`ACT.${action}()`);const topicId=run('Object.keys(TOPICS).find(t=>!S.me.jars.some(j=>j.t===t))');
  assert.equal(run('S.ui.interestDraft.fixedVis'),true);assert.equal(run('S.ui.interestDraft.vis'),visibility);
- assert.equal(run('S.ui.interestDraft.vis'),visibility,'interests are always public');
+ run(`ACT.interestsVis({dataset:{v:'only'}})`);assert.equal(run('S.ui.interestDraft.vis'),visibility,'destination cannot drift to a different profile layer');
  run(`ACT.pickTopic({dataset:{v:'${topicId}'}});ACT.interestsStart();ACT.interestAnswer({dataset:{v:'7'}})`);timers.length=0;await finish(run('ACT.interestNext(null)'));
  assert.equal(run(`S.me.jars.find(j=>j.t==='${topicId}').vis`),visibility,'last answer saves directly in its original layer');assert.equal(run('!!S.ui.interestDraft'),false,'no visibility step remains');
 }
-prepare('X01');run('ACT.addJar()');assert.equal(run('S.ui.interestDraft.vis'),'public','general picker has no visibility choice either');
+prepare('X01');run('ACT.addJar()');assert.equal(run('S.ui.interestDraft.fixedVis'),false,'general picker preserves the visibility choice');
 assert.equal((run("SC.X01.render()").match(/data-go="P03"/g)||[]).length,1,'Me keeps only the profile-card preview entry');
 assert.ok(!run("SC.C01.render({})").includes('data-v="joined"'),'no third top-level community tab');assert.ok(run('SC.C02.render()').includes('Ты участник'),'memberships remain reachable');
 console.log('PASS contextual public jars save without a visibility step; general picker and community memberships remain available');
@@ -230,19 +230,20 @@ for(const lang of ['ru','en']){
  run("cur().p.k='all'");const all=run('SC.N01.render(cur().p)');assert.ok(all.includes('class="inbox-read-all"'));assert.ok(!all.includes('btn text auto" data-act="readAll"'));
  run('ACT.readAll()');assert.equal(run('currentNotifications().filter(n=>!n.read).length'),0);
 }
-// Three permissions (description, photos, video) are independent in both rendering and explicit grant confirmation.
+// Four permissions (description, interests, photos, video) are independent in both rendering and explicit grant confirmation.
 for(const lang of ['ru','en']){
- prepare('N01',{k:'todo'});run(`S.lang='${lang}';S.me.privText='ONLY_DESCRIPTION';S.me.media=[{type:'image',url:'ONLY_PHOTO',sec:'photos'},{type:'video',url:'ONLY_VIDEO',sec:'video'}]`);
- assert.equal(run('REQ_SCOPES.map(([k])=>k).join()'),'info,photos,video');
- const desc=run("privOpenHTML('me',{granted:['info']})"),photo=run("privOpenHTML('me',{granted:['photos']})"),video=run("privOpenHTML('me',{granted:['video']})");
+ prepare('N01',{k:'todo'});run(`S.lang='${lang}';S.me.privText='ONLY_DESCRIPTION';S.me.jars=[{t:'shibari',lv:9,vis:'granted'}];S.me.media=[{type:'image',url:'ONLY_PHOTO',sec:'photos'},{type:'video',url:'ONLY_VIDEO',sec:'video'}]`);
+ assert.equal(run('REQ_SCOPES.map(([k])=>k).join()'),'info,interests,photos,video');
+ const desc=run("privOpenHTML('me',{granted:['info']})"),interests=run("privOpenHTML('me',{granted:['interests']})"),photo=run("privOpenHTML('me',{granted:['photos']})"),video=run("privOpenHTML('me',{granted:['video']})");
  assert.ok(desc.includes('ONLY_DESCRIPTION')&&!desc.includes('ONLY_PHOTO')&&!desc.includes('ONLY_VIDEO')&&!desc.includes('data-act="topic"'),'description alone shows no media and no interests');
+ assert.ok(interests.includes('data-act="topic"')&&!interests.includes('ONLY_DESCRIPTION')&&!interests.includes('ONLY_PHOTO'));
  assert.ok(photo.includes('ONLY_PHOTO')&&!photo.includes('ONLY_VIDEO')&&!photo.includes('ONLY_DESCRIPTION'));
  assert.ok(video.includes('ONLY_VIDEO')&&!video.includes('ONLY_PHOTO')&&!video.includes('ONLY_DESCRIPTION'));
  run("sheet=build=>{S.ui.testGrantSheet=build()};ACT.grant({dataset:{v:S.reqIn[0].id,actor:'me'}})");
- const popup=run('S.ui.testGrantSheet.body');assert.equal((popup.match(/role="checkbox"/g)||[]).length,3);assert.ok(!popup.includes('Что увидит')&&!popup.includes('will see')&&!popup.includes('album'));
- assert.equal(run('S.reqIn[0].status'),'new');run("S.ui.gr.sel=['photos','album','interests','invalid'];ACT.grOk(null)");await finish();assert.equal(run('S.reqIn[0].granted.join()'),'photos');
+ const popup=run('S.ui.testGrantSheet.body');assert.equal((popup.match(/role="checkbox"/g)||[]).length,4);assert.ok(!popup.includes('Что увидит')&&!popup.includes('will see')&&!popup.includes('album'));
+ assert.equal(run('S.reqIn[0].status'),'new');run("S.ui.gr.sel=['interests','album','invalid'];ACT.grOk(null)");await finish();assert.equal(run('S.reqIn[0].granted.join()'),'interests');
  prepare('N01',{k:'todo'});run("ACT.grant({dataset:{v:S.reqIn[0].id,actor:'me'}});ACT.grOk(null);S.reqIn[0].status='no'");await finish();assert.equal(run('S.reqIn[0].status'),'no','delayed confirmation cannot undo decline');
- assert.equal(run("allowedScopes('couple','mia').join()"),'info','couple-to-person request keeps media restriction');
+ assert.equal(run("allowedScopes('couple','mia').join()"),'info,interests','couple-to-person request keeps media restriction');
 }
 run('sheet=originalSheetForContext');
-console.log('PASS inbox filters, tab-scoped mark-all and three independent permissions with explicit review and delayed-decline guard');
+console.log('PASS inbox filters, tab-scoped mark-all and four independent permissions with explicit review and delayed-decline guard');

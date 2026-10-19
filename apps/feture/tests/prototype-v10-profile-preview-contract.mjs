@@ -17,12 +17,13 @@ for(const lang of ['ru','en']){
  assert.equal(run('S.ui.viewGrant'),false,'access level must not leak out of the preview render');
  assert.ok(!all.includes(priv),'public preview shows no private description');
  assert.ok(all.includes(role)&&gr.includes(role),'details (role, format…) are part of the main profile at both levels');
- for(const t of hidden)assert.ok(!all.includes(t)&&!gr.includes(t),`topic ${t} hidden from others stays hidden at both levels`);
+ const byAccess=JSON.parse(JSON.stringify(run("S.me.jars.filter(j=>j.vis==='granted').map(j=>topic(j.t))")));
+ for(const t of byAccess)assert.ok(!all.includes(t)&&gr.includes(t),`by-access interest ${t}: hidden without access, shown with it`);
  assert.ok(gr.includes(priv),'with-access preview shows the private description');
  for(const t of onlyMe)assert.ok(!gr.includes(t),`only-me topic ${t} stays hidden even with access`);
- // the private part holds description, photos and video only: no interests, no details, no album permission
- assert.deepEqual(JSON.parse(JSON.stringify(run("REQ_SCOPES.map(s=>s[0])"))),['info','photos','video']);
- assert.ok(!text(run("SC.P03.render({lv:'granted'},{p:{lv:'granted'},f:{}})").split('id="priv"')[1]||'').includes(run("topic(S.me.jars.find(j=>j.vis==='public').t)")),'private part lists no interests');
+ // the private part holds description, interests, photos and video: no details chips, no album permission
+ assert.deepEqual(JSON.parse(JSON.stringify(run("REQ_SCOPES.map(s=>s[0])"))),['info','interests','photos','video']);
+ assert.ok(!text(run("SC.P03.render({lv:'granted'},{p:{lv:'granted'},f:{}})").split('id="priv"')[1]||'').includes(run("topic(S.me.jars.find(j=>j.vis==='public').t)")),'private part lists only its own interests, not the public ones');
  // activity tab: owner setting decides who sees it; default is everyone; the owner always sees their own
  assert.equal(run("S.me.activityVis"),'all');
  assert.ok(run("activityShown('me')")&&run("activityShown('mia')"),'default: activity visible');
@@ -51,4 +52,4 @@ run("ACT.miOrder({dataset:{k:'photos',order:'a,zzz'}})");assert.deepEqual(json("
 run("ACT.miOrder({dataset:{k:'pub',order:'2,0,1'}})");assert.deepEqual(json("route.photos.map(x=>typeof x==='object'?x.type:x)"),['/P',8,'video']);
 assert.equal(run("firstPhoto(route.photos)"),'/P','the first image — not a video — is the main photo');
 run("ACT.miRm({dataset:{k:'pub',v:'0'}})");assert.equal(run("route.photos.length"),2);
-console.log('PASS RU/EN profile preview: details are public at both levels; the private part (description/photos/video, no interests) opens only with access; hidden topics stay hidden; activity tab follows its privacy setting; follow lists drop blocked people');
+console.log('PASS RU/EN profile preview: details are public at both levels; the private part (description/interests/photos/video) opens only with access; hidden topics stay hidden; activity tab follows its privacy setting; follow lists drop blocked people');
