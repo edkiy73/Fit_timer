@@ -899,7 +899,7 @@ button.jar:active .vessel{transform:scale(.95)}
 
 /* ============ DECK (dating) ============ */
 .view.deckmode{display:flex;flex-direction:column;overflow:hidden;padding:0 10px calc(var(--dock) + 16px + var(--safe-b))}
-.deck{position:relative;flex:1;min-height:0;width:100%;max-width:480px;margin:0 auto}
+.deck{position:relative;flex:1;min-height:0;width:100%;max-width:680px;margin:0 auto}
 .pc{position:absolute;inset:0;border-radius:var(--r-xl);background:var(--surf);border:1px solid var(--line);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:none;box-shadow:var(--shadow);transition:transform .32s var(--ease);will-change:transform;user-select:none;-webkit-user-select:none;--l:0;--n:0;isolation:isolate;contain:layout paint}
 .pc::-webkit-scrollbar{display:none}
 .pc.drag{transition:none}.pc.fly{transition:transform .28s ease-in}
@@ -1510,7 +1510,7 @@ button.jar:hover .vessel{border-color:var(--jc,var(--ink))}
 /* discover on wide screens: the card takes the content column (680px) and the screen height down to the bottom;
    the photo is shown whole on its own blurred backdrop (instafill), like the profile card */
 .pc-ph>.mbg{display:none}
-@container stage (min-width:768px){
+@container stage (min-width:481px){
   .view.deckmode{justify-content:stretch;padding-bottom:16px}
   .deck{flex:1 1 auto;width:100%;max-width:680px;height:auto;max-height:none;aspect-ratio:auto;margin:0 auto}
   .pc-ph{isolation:isolate}
