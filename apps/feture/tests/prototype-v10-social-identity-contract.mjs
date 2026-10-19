@@ -92,3 +92,8 @@ console.log('PASS mutual content trust, revocation, explicit private grants, unl
 prepare('Q03');run("sheet=()=>{};coupleProfile();ACT.pairTrustOpen();var oldTrustButton={dataset:{form:trustConsentForm.id,pair:S.pair.id,epoch:String(S.pair.safetyEpoch||0),v:'on'}};S.pairMember='partner';ACT.pairTrustSet(oldTrustButton)");assert.equal(run('S.pair.trust'),undefined,'stale form cannot consent for another participant');
 run("S.pairMember='me';ACT.pairTrustOpen();oldTrustButton.dataset.form=trustConsentForm.id;S.session={};ACT.pairTrustSet(oldTrustButton)");assert.equal(run('S.pair.trust'),undefined,'stale consent cannot cross session');
 console.log('PASS trust consent is bound to the opening session and participant');
+for(const owner of ['me','couple']){prepare('P02',{owner});run("coupleProfile();setPairTrust(true);S.pairMember='partner';setPairTrust(true);S.pairMember='me';SC.P02.render(cur().p,cur());cur().privOn=true;cur().f.privText='Unified editor private text';cur().dirty=true");
+ const query=document.querySelector;document.querySelector=s=>s==='[name="privText"]'?null:query(s);
+ const save=run('ACT.peSave(null)');await finish(save);document.querySelector=query;
+ assert.equal(run(owner==='me'?'T(S.me.privText)':'T(S.pair.profile.privText)'),'Unified editor private text','unified RTE saves private text without a legacy textarea');}
+console.log('PASS unified profile editor saves rich private text for personal and trusted couple profiles');
