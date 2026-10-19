@@ -1,19 +1,23 @@
 /* ============ C: COMMUNITIES ============ */
 const myComms=()=>Object.keys(COMMUNITIES).filter(c=>ownsCommunity(c));
-SC.C01={root:1,tab:'groups',title:()=>L('Комьюнити','Community'),render:(p)=>{const sub=p.sub||'discover';const f=S.filters.comm;f.topic=f.topic||'';f.privacy=f.privacy||'all';
+SC.C01={root:1,tab:'groups',title:()=>L('Комьюнити','Community'),render:(p)=>{const sub=p.sub==='events'?'events':'discover';const f=S.filters.comm;f.topic=f.topic||'';f.privacy=f.privacy||'all';
  const head=bar(L('Комьюнити','Community'),{actions:`${searchBtn(sub==='events'?'events':'groups')}${bellBtn()}`});
- const tabs=seg([['discover',L('Сообщества','Communities')],['events',L('События','Events')],['joined',L('Мои','Mine'),S.joined.size+myComms().length||'']],sub,'cSub');
+ const tabs=seg([['discover',L('Сообщества','Communities')],['events',L('События','Events')]],sub,'cSub');
  if(sub==='events')return head+`<div class="view"><div class="wrap">${tabs}${eventsList()}</div></div>`;
- if(sub==='joined'){const j=[...S.joined],pend=[...S.pendingJoin],mine=myComms();
-  return head+`<div class="view"><div class="wrap">${tabs}${!j.length&&!pend.length&&!mine.length?empty('groups',L('Ты пока ни в одном сообществе','You haven’t joined any community'),L('Сообщества — обсуждения, правила и встречи по интересам. Вступление не открывает личные чаты.','Communities are discussions, rules and meetups around interests. Joining doesn’t open private chats.'),`<button class="btn primary" data-act="cSub" data-v="discover">${L('Выбрать сообщество','Find a community')}</button>`):
-  `${mine.length?`<div class="sec">${L('Ты ведёшь','You run')}</div>${mine.map((c,i)=>commCard(c,{i})).join('')}`:''}${j.length?`<div class="sec">${L('Ты участник','Member of')}</div>${j.map((c,i)=>commCard(c,{i})).join('')}`:''}${pend.length?`<div class="sec">${L('Заявки','Requests')}</div>${pend.map((c,i)=>commCard(c,{i})).join('')}`:''}`}
-  <button class="btn soft mt16" data-go="C08">${I.plus}${L('Создать сообщество','Create a community')}</button></div></div>`;}
  const all=Object.keys(COMMUNITIES).filter(c=>!COMMUNITIES[c].hidden&&(COMMUNITIES[c].status!=='review'||ownsCommunity(c))&&(!(f.topics||[]).length&&!f.topic||(f.topics||[f.topic]).some(t=>COMMUNITIES[c].topics.includes(t)))&&(f.privacy==='all'||COMMUNITIES[c].privacy===f.privacy)&&(!f.online||COMMUNITIES[c].city==='online'));
  const used=[...new Set(Object.values(COMMUNITIES).flatMap(c=>c.topics))];const n=(f.privacy!=='all'?1:0)+(f.online?1:0)+(f.topics||[]).length;
- return head+`<div class="view"><div class="wrap">${tabs}
+ return head+`<div class="view"><div class="wrap">${tabs}${collectionShortcut({title:L('Мои сообщества','My communities'),count:new Set([...S.joined,...S.pendingJoin,...myComms()]).size,go:'C02',create:'C08',createLabel:L('Создать сообщество','Create a community'),icon:'users3'})}
  <div class="filterline"><div class="chips scroll"><button class="chip filter ${!f.topic?'on':''}" data-act="cTopic" data-v="">${L('Все интересы','All interests')}</button>${used.map(t=>`<button class="chip filter ${f.topic===t?'on':''}" data-act="cTopic" data-v="${t}">${esc(topic(t))}</button>`).join('')}</div><button class="chip filter ${n?'on':''}" data-act="cFilters">${ic('filter',16)}${L('Фильтры','Filters')}${n?`<em class="badge-abs">${n}</em>`:''}</button></div>
  ${all.length?firstLoad('comm',all.map((c,i)=>commCard(c,{i})).join(''),Array.from({length:4},()=>`<div class="sk" style="height:90px;border-radius:22px;margin-top:10px"></div>`).join('')):empty('groups',L('Ничего не нашлось','Nothing found'),L('Попробуй другой интерес — или создай своё сообщество.','Try another interest — or create your own community.'),`<button class="btn soft" data-act="cReset">${L('Сбросить фильтры','Reset filters')}</button>`)}
- <div class="card flat mt16 row"><span class="ico l">${I.plus}</span><div class="grow"><b>${L('Не нашёл(ла) своё?','Didn’t find yours?')}</b></div><button class="btn sm primary" data-go="C08">${L('Создать','Create')}</button></div></div></div>`;}};
+ </div></div>`;}};
+
+SC.C02={title:()=>L('Мои сообщества','My communities'),render:()=>{const mine=myComms(),j=[...S.joined].filter(c=>!mine.includes(c)),pend=[...S.pendingJoin].filter(c=>!mine.includes(c)&&!j.includes(c));
+  return `${bar(L('Мои сообщества','My communities'),{back:1,sm:1,actions:`<button class="ibtn" data-go="C08" aria-label="${L('Создать сообщество','Create a community')}">${I.plus}</button>`})}<div class="view nodock"><div class="wrap">${!j.length&&!pend.length&&!mine.length?empty('groups',L('Ты пока ни в одном сообществе','You haven’t joined any community'),L('Сообщества — обсуждения, правила и встречи по интересам. Вступление не открывает личные чаты.','Communities are discussions, rules and meetups around interests. Joining doesn’t open private chats.'),`<button class="btn primary" data-act="findCommunities">${L('Выбрать сообщество','Find a community')}</button>`):
+  `${mine.length?`<div class="sec">${L('Ты ведёшь','You run')}</div>${mine.map((c,i)=>commCard(c,{i})).join('')}`:''}${j.length?`<div class="sec">${L('Ты участник','Member of')}</div>${j.map((c,i)=>commCard(c,{i})).join('')}`:''}${pend.length?`<div class="sec">${L('Заявки','Requests')}</div>${pend.map((c,i)=>commCard(c,{i})).join('')}`:''}`}
+</div></div>`;}};
+
+ACT.findCommunities=()=>tab('groups',{sub:'discover'});
+
 ACT.cSub=a=>setSub(a.dataset.v);
 ACT.cTopic=a=>{S.filters.comm.topic=a.dataset.v;S.filters.comm.topics=a.dataset.v?[a.dataset.v]:[];refresh();};
 ACT.cReset=()=>{S.filters.comm={};refresh();};
