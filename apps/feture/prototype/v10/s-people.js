@@ -16,8 +16,8 @@ function passDating(id,f){const p=PEOPLE[id];if(!p.verified||!p.pair&&p.age<18)r
 const dfCount=f=>[f.show!=='all',f.age[0]!==18||f.age[1]!==99,f.placeMode==='nearby',!!f.city,f.gender.length,(f.orient||[]).length,f.format.length,f.seek.length,(f.topics||[]).length,(f.role||[]).length].filter(Boolean).length;
 
 SC.D03={root:1,tab:'people',title:()=>L('Люди','People'),render:(p,r)=>{
- const sub=p.sub||'discover';if(sub==='matches')return SC.H01.render({sub:'chats'},r);if(sub==='requests')return `<header class="bar">${seg([['discover',L('Подборка','Discover')],['likes',L('Симпатии','Likes'),C.likesIn()||''],['requests',L('Запросы','Requests'),C.reqIn()||'']],sub,'pplSub')}${authorPicker()}${bellBtn()}</header><div class="view"><div class="wrap">${accessBody(p)}</div></div>`;const n=C.likesIn();
- const tabs=seg([['discover',L('Подборка','Discover')],['likes',L('Симпатии','Likes'),n||''],['requests',L('Запросы','Requests'),C.reqIn()||'']],sub,'pplSub');
+ const sub=p.sub||'discover';if(sub==='matches')return SC.H01.render({sub:'chats'},r);const n=C.likesIn();
+ const tabs=seg([['discover',L('Подборка','Discover')],['likes',L('Симпатии','Likes'),n||'']],sub,'pplSub');
  const right=sub==='discover'&&authorProfile().dating?`<button class="ibtn" data-act="dfSheet" aria-label="${L('Фильтры','Filters')}">${I.filter}${dfCount(social().filters.dating)?`<sup>${dfCount(social().filters.dating)}</sup>`:''}</button>`:bellBtn();
  const head=`<header class="bar">${tabs}${authorPicker()}${right}</header><p class="note" data-dating-author-reason ${actionAuthor()==='couple'&&!authorProfile().dating?'':'hidden'}>${actionAuthor()==='couple'&&!authorProfile().dating?L('Знакомства пары выключены. Изменить это можно в профиле пары.','Couple dating is off. Change this in the couple profile.'):''}</p>`;
  if(sub==='likes')return head+`<div class="view"><div class="wrap">${likesBody(r)}</div></div>`;
@@ -55,7 +55,7 @@ function datingSoon(){const on=S.me.notifyDating;return `<div class="soon"><div 
 ACT.notifyDating=a=>run(a,()=>{S.me.notifyDating=!S.me.notifyDating;refresh();},{ms:300,ok:()=>S.me.notifyDating?L('Готово — пришлём уведомление о запуске','Done — we’ll notify you at launch'):L('Не будем напоминать','We won’t remind you')});
 
 /* deck */
-function deckInner(list){const a=list[0],b=list[1];return `${b?card(b,'next'):''}${card(a,'top')}<div class="acts onphoto" id="acts"><button class="act undo ${social().dhist&&social().dhist.length?'':'off'}" data-act="undo" aria-label="${L('Вернуть предыдущую анкету','Bring back the previous profile')}">${I.undo}</button><button class="act pass" data-act="decide" data-v="-1" aria-label="${L('Пропустить','Pass')}">${I.x}</button><button class="act req" data-act="reqAccess" data-v="${a}" aria-label="${L('Запросить расширенный профиль','Request private profile')}">${I.key}</button><button class="act like" data-act="decide" data-v="1" aria-label="${L('Нравится человек','Like this person')}">${I.heartf}</button></div>`;}
+function deckInner(list){const a=list[0],b=list[1];return `${b?card(b,'next'):''}${card(a,'top')}<div class="acts onphoto" id="acts"><button class="act undo ${social().dhist&&social().dhist.length?'':'off'}" data-act="undo" aria-label="${L('Вернуть предыдущую анкету','Bring back the previous profile')}">${I.undo}</button><button class="act pass" data-act="decide" data-v="-1" aria-label="${L('Пропустить','Pass')}">${I.x}</button><button class="act req" data-act="reqAccess" data-v="${a}" aria-label="${L('Запросить приватную часть','Request private part')}">${I.key}</button><button class="act like" data-act="decide" data-v="1" aria-label="${L('Нравится человек','Like this person')}">${I.heartf}</button></div>`;}
 function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=shared(id);const likesMe=social().likesIn.some(l=>l.p===id);
  const post=allPosts().filter(x=>x.author===id).sort((a,b)=>b.t-a.t)[0];
  const keys=[...fmtList(p.format).slice(0,2).map(x=>opt('format',x)),...fmtList(p.role).filter(v=>v!=='none').slice(0,2).map(v=>opt('role',v)),...p.seek.slice(0,1).map(s=>opt('seek',s))].filter(Boolean);
@@ -63,7 +63,7 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
  <div class="pc-ph">${photoBg(id,ix)}${bigPhoto(id,ix)}
   ${photoBars(id,ix)}
   ${photoCount(id)>1?`<div class="pc-zone l" data-ph="-1"></div><div class="pc-zone r" data-ph="1"></div>`:''}<div class="pc-zone c" data-ph="0" aria-hidden="true"></div>
-  <div class="pc-tags">${likesMe?`<span class="pc-liked">${I.heartf}${L('Ты нравишься','Likes you')}</span>`:''}<span class="pc-score"><b>${sh.few?'—':sh.match.length}</b><small>${sh.few?L('мало данных','not enough data'):pl(sh.match.length,['общая тема','общие темы','общих тем'],['shared topic','shared topics'],true)}</small></span></div>
+  <div class="pc-tags">${otherDoneChip(id)}${likesMe?`<span class="pc-liked">${I.heartf}${L('Ты нравишься','Likes you')}</span>`:''}<span class="pc-score"><b>${sh.few?'—':sh.match.length}</b><small>${sh.few?L('мало данных','not enough data'):pl(sh.match.length,['общая тема','общие темы','общих тем'],['shared topic','shared topics'],true)}</small></span></div>
   <div class="stamp l">${L('Да','Like')}</div><div class="stamp n">${L('Мимо','Pass')}</div>
   <div class="pc-info"><h2 class="pc-name"><span class="pcn">${esc(pname(id))}</span>${p.age?`<span>${p.age}</span>`:''}${nameBadges(p)}</h2>
    <div class="pc-who">${[whoLine(id),placeLine(id)].filter(Boolean).map(x=>`<span>${esc(x)}</span>`).join('')}${p.online?`<span class="on">${L('в сети','online')}</span>`:''}</div>
@@ -78,7 +78,7 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
   ${sh.discuss.length?`<div class="sec">${L('Стоит обсудить','Worth discussing')}</div>${sh.discuss.slice(0,2).map(c=>`<div class="fact"><i class="a">${I.warn}</i><span>${esc(c)}</span></div>`).join('')}`:''}
   <div class="sec">${L('Интересы','Interests')}</div>${jarShelf(pubJars(id),{pre:1,act:'topic',who:id,moreAct:'allJars'})}
   ${post?`<div class="sec">${L('Публикация','Post')} · ${F.rel(post.t)}</div><button class="quote" data-go="F05" data-id="${post.id}"><p>${esc(T(post.text))}</p>${ic('chev',18)}</button>`:''}
-  <div class="sec">${L('Расширенный профиль','Private profile')}</div><div data-deck-private="${id}">${veilBlock(id)}</div>
+  <div class="sec">${L('Приватная часть','Private part')}</div><div data-deck-private="${id}">${veilBlock(id)}</div>
   <div class="pc-foot"><button class="btn soft" data-go="P01" data-p='${esc(JSON.stringify({id,actor:datingActor()}))}'>${L('Полный профиль','Full profile')}</button><button class="btn soft" data-act="follow" data-v="${id}">${social('me').follows.has(id)?L('Ты подписан(а)','Following'):L('Подписаться','Follow')}</button></div>
   <p class="note center mt12">${L('Подписка показывает посты, но не открывает чат','Following shows posts but doesn’t open a chat')}</p>
  </div></article>`;}
@@ -86,7 +86,14 @@ function card(id,pos){const p=PEOPLE[id];const ix=(S.ui.ph||{})[id]||0;const sh=
 function veilBlock(id){const o=social().reqOut.find(x=>x.p===id&&x.status==='pending'&&!isBlocked(id));const shared=receivedGrant(id);
  if(shared)return `<button class="granted" style="width:100%;text-align:left" data-go="P08" data-id="${id}">${I.unlock}<span class="grow"><b>${L(`${esc(pname(id))} открыл(а) тебе доступ`,`${esc(pname(id))} shared with you`)}</b><span>${shared.granted.map(g=>T(REQ_SCOPES.find(x=>x[0]===g)[1])).join(', ')} · ${F.left(shared.until)}</span></span>${I.chev}</button>`;
  return `<div class="veil"><div class="veil-content"><div class="bar-sk" style="width:60%"></div><div class="bar-sk"></div><div class="bar-sk" style="width:80%"></div><div class="bar-sk" style="width:40%"></div></div>
- <div class="veil-glass"><div class="lockdot">${I.lock}</div><b>${L(`Открывает ${esc(pname(id))}`,`${esc(pname(id))} decides`)}</b><p>${L('Интересы, приватные фото и альбомы — только по решению владельца.','Interests, private photos and albums — only if the owner decides.')}</p>${o?`<span class="pill wait">${I.clock}${L('Запрос ждёт ответа','Request pending')}</span>`:`<button class="btn dark" data-act="reqAccess" data-v="${id}">${L('Запросить доступ','Request access')}</button>`}</div></div>`;}
+ <div class="veil-glass"><div class="lockdot">${I.lock}</div><b>${L(`Открывает ${esc(pname(id))}`,`${esc(pname(id))} decides`)}</b><p>${L('Интересы, приватные фото и альбомы — только по решению владельца.','Interests, private photos and albums — only if the owner decides.')}</p>${veilAction(id,o)}</div></div>`;}
+/** the private part from the outside: closed → request → pending (withdraw) → open / declined (quiet cool-down) / expired (ask again) / not accepting */
+function veilAction(id,pending){const last=social().reqOut.filter(x=>x.p===id).sort((a,b)=>b.t-a.t)[0],policy=PEOPLE[id]?.requestsFrom||'all';
+ if(pending)return `<span class="pill wait">${I.clock}${L('Запрос ждёт ответа','Request pending')}</span><button class="btn soft sm" data-act="cancelReq" data-v="${pending.id}">${L('Отозвать запрос','Withdraw request')}</button>`;
+ if(policy==='none'||policy==='matches'&&!isMatch(id))return `<span class="pill">${I.lock}${policy==='none'?L('Запросы сейчас не принимаются','Not accepting requests'):L('Запросы — только после совпадения','Requests after a match only')}</span>`;
+ if(last&&last.status==='declined'&&Date.now()-last.t<7*DAY){const d=Math.max(1,Math.ceil((7*DAY-(Date.now()-last.t))/DAY));return `<span class="pill">${I.clock}${L(`Пока без ответа · повторить через ${d} дн.`,`No answer yet · ask again in ${d} d`)}</span>`;}
+ const expired=last&&effectiveRequestStatus(last)==='expired';
+ return `${expired?`<span class="pill">${I.clock}${L('Прежний доступ закончился','Earlier access has ended')}</span>`:''}<button class="btn dark" data-act="reqAccess" data-v="${id}">${expired?L('Запросить снова','Ask again'):L('Запросить доступ','Request access')}</button>`;}
 function deckRender(){const d=$('#deck');const list=pool();if(!d||!list.length){refresh();return;}d.innerHTML=deckInner(list);initDeck();fillJars();}
 let undoAnim=0;
 function initDeck(){const c=$('#deck .pc.top');if(!c)return;const acts=$('#acts');
@@ -124,7 +131,11 @@ ACT.undo=()=>{if(cur()?.id!=='D03'||!canAct('dating',datingActor()))return;const
  if((social().undos||0)>=1&&!S.me.premium){premiumSheet('undo');return;}
  const last=h.pop();delete social().decided[last.id];social().history.shift();social().likesOut=social().likesOut.filter(l=>l.p!==last.id);social().undos=(social().undos||0)+1;undoAnim=last.dir;deckRender();toast(L('Вернули предыдущую анкету','Previous profile is back'),{type:'ok'});};
 /** a personal like; only a mutual like opens a chat (R01) */
-function likePerson(id,src){if(src==='profile'&&(actionAuthor()!=='me'||PEOPLE[id]?.pair))return;if(actionAuthor()==='couple'&&!canAct('dating','couple'))return;if(!authorGuard()||!PEOPLE[id]||relatedFor(actionAuthor(),id)||isBlocked(id)||isMatch(id)||!authorProfile().socialLikes&&src!=='discover'||src==='discover'&&!authorProfile().dating||!PEOPLE[id].dating&&!PEOPLE[id].socialLikes)return;
+/** the other identity of a couple already acted on this candidate: say so on the card (lists stay separate, the card tells who did what) */
+function otherDoneChip(id){if(!activePair())return '';const o=datingActor()==='couple'?'me':'couple',d=social(o);if(!d)return '';
+ const t=d.matches.some(m=>m.p===id)?L('совпадение','match'):d.likesOut.some(l=>l.p===id)?L('симпатия отправлена','like sent'):d.decided?.[id]<0?L('пропущено','passed'):'';
+ return t?`<span class="pc-other">${I.check}${esc(pname(o))}: ${t}</span>`:'';}
+function likePerson(id,src){if(src==='profile'&&!canLikeFrom(actionAuthor(),id))return;if(actionAuthor()==='couple'&&!canAct('dating','couple'))return;if(!authorGuard()||!PEOPLE[id]||relatedFor(actionAuthor(),id)||isBlocked(id)||isMatch(id)||src!=='discover'&&actionAuthor()==='me'&&!(PEOPLE[id]?.pair?authorProfile().dating:authorProfile().socialLikes)||src==='discover'&&!authorProfile().dating||!PEOPLE[id].dating&&!PEOPLE[id].socialLikes)return;
  const theyLike=social().likesIn.some(l=>l.p===id)||QA.autoApprove;
  if(theyLike){social().matches.unshift({p:id,t:Date.now()});social().likesIn=social().likesIn.filter(l=>l.p!==id);if(actionAuthor()==='couple')pairNotify('match',id,{p:id,go:['H02',{id,actor:'couple'}]});else S.notifs.unshift({id:'n'+Date.now(),type:'match',p:id,t:Date.now(),read:true,go:['H01']});ensureThread(id,actionAuthor());showMatch(id);}
  else{if(!social().likesOut.some(l=>l.p===id))social().likesOut.unshift({p:id,src,initiator:pairMember(),pairId:actionAuthor()==='couple'?S.pair.id:null,t:Date.now()});toast(authorProfile().dating&&!authorProfile().datingVisible?L(`Симпатия отправлена. ${pname(id)} увидит твою анкету в «Симпатиях»`,`Like sent. ${pname(id)} will see your profile in Likes`):L(`Симпатия отправлена. Чат откроется, если ${pname(id)} ответит взаимностью`,`Like sent. A chat opens if ${pname(id)} likes you back`),{type:'ok'});}
@@ -133,7 +144,7 @@ function likePerson(id,src){if(src==='profile'&&(actionAuthor()!=='me'||PEOPLE[i
 /* D08 — it’s mutual */
 function showMatch(id){S.ui.matchContext={id,actor:actionAuthor(),ticket:authorTicket()};const m=$('#matchLayer');const sh=sharedSummary(id);
  m.innerHTML=`<div class="match" role="dialog" aria-modal="true" aria-label="${L('Это взаимно','It’s mutual')}"><div class="pair">${av(actionAuthor(),'')}<span class="heart">${I.heartf}</span>${av(id,'')}</div><h2>${L('Это взаимно','It’s mutual')}</h2><p>${L(`${actionAuthor()==='couple'?esc(pname('couple')):'Ты'} и ${esc(pname(id))} понравились друг другу. ${sh}.`,`${actionAuthor()==='couple'?esc(pname('couple')):'You'} and ${esc(pname(id))} like each other. ${sh}.`)}</p>
- <button class="btn primary" data-act="matchChat" data-v="${id}">${I.chat}${L('Написать первым','Send the first message')}</button><button class="btn soft" data-act="matchClose">${L('Смотреть дальше','Keep browsing')}</button><p class="note mt16">${L('Расширенный профиль остаётся закрытым — его открывают отдельно.','The private profile stays closed — it’s shared separately.')}</p></div>`;
+ <button class="btn primary" data-act="matchChat" data-v="${id}">${I.chat}${L('Написать первым','Send the first message')}</button><button class="btn soft" data-act="matchClose">${L('Смотреть дальше','Keep browsing')}</button><p class="note mt16">${L('Приватная часть остаётся закрытой — его открывают отдельно.','The private part stays closed — it’s shared separately.')}</p></div>`;
  m.style.pointerEvents='auto';$('.match .btn',m).focus();}
 ACT.matchClose=()=>{const m=$('#matchLayer');m.innerHTML='';m.style.pointerEvents='none';if(cur().id==='D03')refresh();};
 ACT.matchChat=a=>{const context=S.ui.matchContext;ACT.matchClose();if(!context||context.id!==a.dataset.v||!validAuthor(context.ticket))return;openChat(context.id,context.actor);};

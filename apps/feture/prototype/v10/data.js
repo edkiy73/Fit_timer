@@ -258,7 +258,7 @@ function freshState(persona){
   sharedByMe:full?[{p:'mia',scopes:['info','photos'],until:NOW+5*DAY,t:ago(28)},{p:'kai',scopes:['info'],until:NOW+23*HOUR,t:ago(1)}]:[],
   notifs:full?[
    {id:'n1',type:'match',p:'lina',t:ago(1),read:false,go:['H01']},
-   {id:'n2',type:'req',p:'kai',t:ago(.2),read:false,go:['P07',{tab:'in'}]},
+   {id:'n2',type:'req',p:'kai',t:ago(.2),read:false,go:['N01',{k:'todo'}]},
    {id:'n3',type:'event',e:'e1',t:ago(3),read:false,go:['E03',{id:'e1'}]},
    {id:'n4',type:'like',p:'kira',t:ago(3),read:false,go:['D06']},
    {id:'n5',type:'reply',p:'dan',post:'m1',t:ago(6),read:true,go:['F05',{id:'m1'}]},

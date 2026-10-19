@@ -277,6 +277,14 @@ h3.t{font:650 17px/1.3 var(--font);margin:0 0 6px}
 .av.sm{width:36px;height:36px}.av.xs{width:28px;height:28px}.av.lg{width:56px;height:56px}
 .av.on::after{content:"";position:absolute;right:2px;bottom:2px;width:10px;height:10px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 2px var(--surf)}
 .av.ini{display:grid;place-items:center;font:700 16px/1 var(--font);color:#fff}
+.av.xl{width:96px;height:96px}
+.hero-pairav{position:absolute;left:0;right:0;top:20%;display:grid;place-items:center}.hero-pairav .av.xl{width:132px;height:132px;--av-ring:transparent}
+/* pair identity: two overlapping circles, same everywhere (list row, request, post, hero) */
+.av.pair{overflow:visible;background:none;border-radius:0;container-type:inline-size}
+.av.pair .avh{position:absolute;top:20%;width:60%;height:60%;border-radius:50%;overflow:hidden;background:var(--raise);box-shadow:0 0 0 max(1.5px,.04em) var(--av-ring,var(--bg))}
+.av.pair .avh:first-child{left:0}.av.pair .avh:last-child{right:0}
+.av.pair .avh img{width:100%;height:100%;object-fit:cover}
+.av.pair .avh b{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font:700 24cqw/1 var(--font)}
 .avs{display:flex}.avs .av{border:2px solid var(--surf);margin-left:-8px}.avs .av:first-child{margin-left:0}
 /* choice rows (radio / checkbox) */
 .chl{display:grid}
@@ -2025,3 +2033,17 @@ body.qa-viewport{overflow:auto;display:block}body.qa-viewport .stage{position:re
 .joint-review-post{border:1px solid var(--line);border-radius:var(--r-l);padding:16px;background:var(--surf)}.joint-review-post .review-byline{display:flex;gap:10px;align-items:center;margin-bottom:16px}.review-byline>div{min-width:0}.review-byline b,.review-byline small{display:block;overflow-wrap:anywhere}.review-byline small{font-size:12px;color:var(--mute);margin-top:3px}.joint-review-post .body{font-size:15px;line-height:1.55;overflow-wrap:anywhere}.joint-review-post .body>p:first-child{margin-top:0}.joint-review-post .body>p:last-child{margin-bottom:0}
 .review-foot{display:grid;gap:10px}.review-foot>p{margin:0;font-size:13px;color:var(--mute);line-height:1.45}.review-foot .btn{margin:0!important;width:100%;white-space:normal;line-height:1.25}.review-changes{display:grid;gap:0}.review-changes .li{padding:14px 0;align-items:start}.review-changes .tx small{white-space:normal;overflow-wrap:anywhere;line-height:1.5}.trust-status{display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}.trust-status span:last-child{color:var(--mute);text-align:right}.trust-copy{font-size:14px;line-height:1.5;margin:8px 0 16px}
 @media(max-width:480px){.profile-page .priv-open{padding:16px}.joint-review-post{padding:14px}.pair-review-meta{font-size:12px}}
+
+/* who acts: plate dot for the other identity, consequence lines, one-line caption under profile actions */
+.ap-dot{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--accent);color:#fff;font:700 10px/1 var(--font);font-style:normal}
+.author-menu{width:280px}.author-menu .am-t{margin:4px 8px 6px;font:700 12px/1.3 var(--font);color:var(--mute);text-transform:none}
+.author-menu button small{display:block;margin-top:2px;font-size:12px;font-weight:400;color:var(--mute);white-space:normal}.author-menu button[aria-disabled=true]{opacity:.55}
+.actor-line{margin:8px 2px 0;font-size:13px;line-height:1.4;color:var(--mute)}.actor-line small{display:block;font-size:12px;color:var(--faint)}
+.actor-line .linkbtn{padding:0;border:0;background:none;color:var(--accent);font:inherit;font-weight:650;text-decoration:underline;text-underline-offset:2px}
+
+.feed-ev{margin:4px 0 12px}.feed-ev>small{display:block;margin:0 4px 6px;font:700 12px/1.3 var(--font);color:var(--mute)}
+.feed-ev .fe-h{display:flex;justify-content:space-between;align-items:baseline;margin:0 4px 6px}.feed-ev .fe-h small{margin:0}.feed-ev .linkbtn{padding:0;border:0;background:none;color:var(--mute);font:600 12px/1.3 var(--font);text-decoration:underline;text-underline-offset:2px}
+.pc-other{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:14px;background:#0008;color:#fff;font:600 12px/1.2 var(--font);backdrop-filter:blur(6px)}.pc-other svg{width:13px;height:13px}
+.chv{display:inline-grid;transition:transform .2s}.chv.open{transform:rotate(180deg)}
+@media(prefers-reduced-motion:reduce){.chv{transition:none}}
+.rqcard .btn.text.auto{padding-left:0;justify-content:flex-start}

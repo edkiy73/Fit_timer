@@ -84,7 +84,7 @@ run("var trustTicket=authorTicket('couple');setPairTrust(false)");assert.equal(r
 run("submitJointPost({...trustedDraft,text:'Needs consent again'},'after-revoke')");assert.equal(run("jointQueue()['after-revoke'].status"),'pending');assert.equal(run("S.myPosts.some(p=>p.id==='after-revoke')"),false);
 run("setPairTrust(true);S.pairMember='me';setPairTrust(true);dissolvePair()");assert.equal(run('pairTrusted()'),false);assert.equal(run('S.pair.trust'),null);
 run("S.pair.status='active'");assert.equal(run('pairTrusted()'),false,'restoration never restores delegated consent');
-for(const lang of ['ru','en']){prepare('Q03');run(`S.lang='${lang}';coupleProfile()`);const h=run("SC.Q03.render(cur().p,cur())");assert.ok(h.includes('pairTrustOpen'));assert.ok(!h.includes('Редактировать расширенный профиль'));assert.ok(!h.includes('Edit private profile'));
+for(const lang of ['ru','en']){prepare('Q03');run(`S.lang='${lang}';coupleProfile()`);const h=run("SC.Q01.render(cur().p,cur())");assert.ok(h.includes('pairTrustOpen'));assert.ok(!h.includes('Редактировать приватную часть'));assert.ok(!h.includes('Edit private part'));
  const review=run("jointPostReview({author:'couple',text:'Review content',tags:[],aud:'all',media:[],poll:null,result:null})");assert.ok(!/postMenu|likePost|savePost|sharePost|post-a/.test(review),'approval preview contains no dead social controls');
  const hidden=run("replyTree('d','d1')");assert.ok(hidden.includes('cm-ghost'));assert.ok(hidden.includes('aria-hidden="true"'));
 }
@@ -97,3 +97,56 @@ for(const owner of ['me','couple']){prepare('P02',{owner});run("coupleProfile();
  const save=run('ACT.peSave(null)');await finish(save);document.querySelector=query;
  assert.equal(run(owner==='me'?'T(S.me.privText)':'T(S.pair.profile.privText)'),'Unified editor private text','unified RTE saves private text without a legacy textarea');}
 console.log('PASS unified profile editor saves rich private text for personal and trusted couple profiles');
+// Acting identity: remembered modes, likes from a profile (person and couple targets), pair page without actions.
+{prepare('P01',{id:'mia'});run("S.me.dating=true;S.me.socialLikes=true;coupleProfile();S.pair.profile.dating=true;S.pair.profile.datingVisible=true;S.datingActor='couple'");
+ assert.equal(run("likeActor('mia').a"),'couple','couple mode likes a dating profile as the couple');
+ assert.equal(run("likeActor('maya').a"),'me');assert.equal(run("likeActor('maya').why"),'solo','social-only target is liked personally, with the reason shown');
+ assert.equal(run("canLikeFrom('couple','maya')"),false);assert.equal(run("canLikeFrom('me','lenamax')"),true,'a couple with dating on can be liked from its page');
+ run("S.pair.profile.dating=false");assert.equal(run("likeActor('mia').a"),'me');assert.equal(run("likeActor('mia').why"),'coupleOff','couple dating off falls back to personal with a reason');
+ run("S.pair.profile.dating=true");
+ const target=run("Object.keys(PEOPLE).find(id=>PEOPLE[id].dating&&!PEOPLE[id].pair&&!relatedFor('couple',id)&&!social('couple').likesIn.some(l=>l.p===id)&&!social('couple').matches.some(m=>m.p===id)&&!isBlocked(id))");assert.ok(target);
+ const meBefore=run("S.likesOut.length");await finish(run(`ACT.likeProfile({dataset:{v:'${target}'},classList:{contains:()=>false,add(){},remove(){}},setAttribute(){},removeAttribute(){}})`));
+ assert.equal(run(`social('couple').likesOut.some(l=>l.p==='${target}'&&l.src==='profile')`),true,'profile like is recorded on the couple side');
+ assert.equal(run("S.likesOut.length"),meBefore,'the personal list is untouched');
+ assert.equal(run(`withActor('me',()=>social().likesOut.some(l=>l.p==='${target}'))`),false);
+ assert.ok(text(run(`profileActorLine('${target}',{a:'me'})`)).includes('Alex'),'the line names the other identity that already acted');
+ assert.equal(run("profileActorLine('mia',{a:'me'}).length>0"),true);
+ prepare('F07');run("coupleProfile();ACT.chooseAuthor({dataset:{v:'couple',k:'compose'}})");assert.equal(run('S.composeActor'),'couple');
+ prepare('F07');run("S.composeActor='couple';coupleProfile()");run("SC.F07.render(cur().p,cur())");assert.equal(run('cur().author'),'couple','the publishing identity is remembered');
+ prepare('Q03');run("coupleProfile()");const page=run("SC.Q03.render(cur().p,cur())");for(const a of ['pairTrustOpen','pairSubmit','jointReview','pairHide','Q06','F07'])assert.ok(!String(page).includes(a),'couple page has no actions: '+a);
+ const hub=run("SC.Q01.render(cur().p,cur())");assert.ok(hub.includes('pairTrustOpen')&&hub.includes('Q06'),'all pair management lives in one hub');
+ prepare('P01',{id:'mia'});run("S.me=S.me;S.datingActor='me'");assert.ok(!run("profileActorLine('mia',{a:'me'})").includes('undefined'));
+ console.log('PASS acting identity: remembered modes, couple/personal profile likes with reasons and other-side state, couple page without actions, single pair hub');}
+// One inbox: access requests (personal and couple), partner approvals, host requests; quick share = everything asked for 7 days.
+{prepare('N01',{});run("coupleProfile();S.pair.proposal=null");
+ const kinds=run("todoItems().map(x=>x.k+':'+(x.a||''))");assert.ok(kinds.some(k=>k.startsWith('req:me')),'personal requests are decisions');assert.ok(kinds.some(k=>k==='eapp:'||k==='capp:'),'host requests are decisions');
+ const html=run("todoHTML()");assert.ok(html.includes('grantQuick')&&html.includes('decline'),'inbox cards decide in place');
+ const id=run("S.reqIn.find(r=>r.status==='new').id");const scopes=run(`S.reqIn.find(r=>r.id==='${id}').scopes.join()`);
+ await finish(run(`ACT.grantQuick({dataset:{v:'${id}',actor:'me'},classList:{contains:()=>false,add(){},remove(){}},setAttribute(){},removeAttribute(){}})`));
+ assert.equal(run(`S.reqIn.find(r=>r.id==='${id}').status`),'open');assert.equal(run(`S.reqIn.find(r=>r.id==='${id}').granted.join()`),scopes,'quick share opens everything that was asked');
+ const days=run(`Math.round((S.reqIn.find(r=>r.id==='${id}').until-Date.now())/86400000)`);assert.equal(days,7);
+ assert.ok(!run("SC.D03.render({sub:'discover'},cur())").includes("pplSub\" data-v=\"requests"),'People has no Requests tab');
+ const access=run("accessBody({tab:'in'})");assert.ok(!access.includes('data-v="in"'),'Access is a ledger: no incoming-decision tab');
+ console.log('PASS one inbox for decisions: personal/couple requests, partner approvals, host requests; quick share for 7 days; People and Access without request tabs');}
+// Host applications are decided in the inbox card itself, with the same guards as the host screens.
+{const btn="classList:{contains:()=>false,add(){},remove(){}},setAttribute(){},removeAttribute(){}";
+ prepare('N01',{});const ea=json("todoItems().filter(x=>x.k==='eapp').map(x=>({e:x.e,p:x.x.p}))");assert.ok(ea.length,'seeded event application shows in the inbox');
+ await finish(run(`ACT.appDecide({dataset:{e:'${ea[0].e}',v:'${ea[0].p}',d:'approved'},${btn}})`));
+ assert.equal(run(`EV('${ea[0].e}').apps.find(a=>a.p==='${ea[0].p}').status`),'approved');
+ prepare('N01',{});const ca=json("todoItems().filter(x=>x.k==='capp').map(x=>({c:x.c,id:x.q.id,p:x.q.p}))");assert.ok(ca.length,'seeded community request shows in the inbox');
+ await finish(run(`ACT.cRequestDecision({dataset:{c:'${ca[0].c}',v:'${ca[0].id}',status:'approved'},${btn}})`));
+ assert.equal(run(`S.communityRequests['${ca[0].c}'].find(q=>q.id==='${ca[0].id}').status`),'approved');
+ prepare('N01',{});const wrongRoute=ca[0];run("S.nav.stacks.feed=[{id:'F01',p:{},f:{}}]");run(`ACT.cRequestDecision({dataset:{c:'${wrongRoute.c}',v:'${wrongRoute.id}',status:'approved'},${btn}})`);
+ assert.equal(run(`S.communityRequests['${wrongRoute.c}'].find(q=>q.id==='${wrongRoute.id}').status`),'pending','a decision from any other screen is refused');
+ assert.equal(run("bellCount()"),run("currentNotifications().filter(n=>!n.read&&n.type!=='req'&&!(n.p&&isBlocked(n.p))).length+todoCount()"),'bell counts decisions once');
+ console.log('PASS inbox decisions on event applications and community requests keep route/ownership guards; bell counts decisions once');}
+// Events in the feed follow the agreed rules; the discovery card says what the other identity already did.
+{prepare('F01',{sub:'foryou'});run("S.me.dating=true;S.joined.add('rope')");
+ const all=json("feedEventPicks()");assert.ok(all.length>0&&all.length<=3,'feed picks 1–3 upcoming events');
+ assert.ok(all.every(id=>run(`!isPast('${id}')&&!EV('${id}').cancelled&&EV('${id}').organizer!=='me'`)),'only upcoming, not cancelled, not my own');
+ run("S.me.feedEvents='off'");assert.equal(json("feedEventPicks()").length,0,'switched off');
+ run("S.me.feedEvents='mine'");assert.ok(json("feedEventPicks()").every(id=>run(`myUpcomingEventIds().includes('${id}')||social('me').follows.has(EV('${id}').organizer)`)),'mine = attending or followed organisers');
+ run("S.me.feedEvents='all'");const first=all[0];run(`ACT.feedEvLess({dataset:{v:'${first}'}})`);assert.ok(!json("feedEventPicks()").includes(first),'«Less of this» hides the event');
+ run("coupleProfile();S.pair.profile.dating=true;S.datingActor='me';social('couple').likesOut.push({p:'mia',src:'discover',t:Date.now()})");assert.ok(run("otherDoneChip('mia')").includes('like sent')||run("otherDoneChip('mia')").includes('симпатия отправлена'),'the card says the couple already liked this person');
+ run("S.datingActor='couple'");assert.equal(run("otherDoneChip('mia')").includes('Alex'),false,'the chip names the other identity, not the acting one');
+ console.log('PASS events in the feed: ranking, limits, off/mine modes, hide; discovery card shows the other identity’s earlier action');}

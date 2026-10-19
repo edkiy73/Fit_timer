@@ -4,6 +4,14 @@ const filtN=f=>(f.tags||[]).length+(f.ex||[]).length+(f.types||[]).length;
 function filterPosts(list,f){return list.filter(p=>!(S.hiddenPosts&&S.hiddenPosts.has(p.id))&&!(S.mutedAuthors&&S.mutedAuthors.has(p.author))&&!isBlocked(p.author)
  &&(!(f.tags||[]).length||p.tags.some(t=>f.tags.includes(t)))&&!p.tags.some(t=>(f.ex||[]).includes(t))&&(!(f.types||[]).length||postKinds(p).some(k=>f.types.includes(k))));}
 
+/** events in the feed: upcoming within 14 days, never cancelled/under review; priority — mine (going/applied) → organisers I follow →
+ *  communities I joined → my city or online; one card per six posts, at most three per screen */
+function feedEventPicks(){const mode=S.me.feedEvents||'all';if(mode==='off')return [];const now=Date.now(),mine=new Set(myUpcomingEventIds()),seen=S.ui.feedEvSeen??={},hidden=S.ui.feedEvHidden??=new Set();
+ const rank=id=>{const e=EV(id);if(mine.has(id))return 0;if(social('me').follows.has(e.organizer))return 1;if(mode==='mine')return 9;if(e.community&&S.joined.has(e.community))return 2;if(e.format==='online'||e.city===S.me.city)return 3;return 9;};
+ /* an event that was first shown more than 3 days ago is not repeated, unless it is mine or starts within 2 days */
+ const stale=id=>{const t=seen[id];return t&&now-t>3*DAY&&!mine.has(id)&&EV(id).start-now>2*DAY;};
+ const picks=allEventIds().filter(id=>{const e=EV(id);return e&&!hidden.has(id)&&!stale(id)&&!isPast(id)&&!e.cancelled&&e.status!=='review'&&e.start-now<=14*DAY&&e.organizer!=='me'&&!isBlocked(e.organizer);}).map(id=>[rank(id),id]).filter(x=>x[0]<9).sort((a,b)=>a[0]-b[0]||EV(a[1]).start-EV(b[1]).start).slice(0,3).map(x=>x[1]);
+ picks.forEach(id=>{seen[id]??=now;});return picks;}
 SC.F01={root:1,tab:'feed',title:()=>L('Лента','Feed'),render:(p)=>{
  const sub=p.sub||'foryou';
  const head=`${bar(L('Лента','Feed'),{actions:`${searchBtn('posts')}${bellBtn()}`})}`;
@@ -16,7 +24,7 @@ SC.F01={root:1,tab:'feed',title:()=>L('Лента','Feed'),render:(p)=>{
  let body;
  if(sub==='following'&&!social('me').follows.size)body=empty('people',L('Ты пока ни на кого не подписан(а)','You’re not following anyone yet'),L('Подпишись на авторов и сообщества — их публикации появятся здесь. Подписка не открывает личный чат.','Follow authors and communities — their posts appear here. Following doesn’t open a private chat.'),`<button class="btn primary" data-go="G01" data-p='{"scope":"people"}'>${L('Найти людей','Find people')}</button><button class="btn soft" data-tab="groups">${L('Сообщества','Communities')}</button>`);
  else if(!list.length)body=empty('filter',L('Ничего не нашлось','Nothing found'),L('С такими фильтрами публикаций нет. Сними один из фильтров.','No posts match these filters. Remove one of them.'),`<button class="btn soft" data-act="clearFeedFilters">${L('Сбросить фильтры','Reset filters')}</button>`);
- else body=`<div class="posts">${firstLoad('feed-'+sub,list.map((x,i)=>postCard(x,{i})).join(''))}</div>`;
+ else{const ev=sub==='foryou'&&!n?feedEventPicks():[];let k=0;body=`<div class="posts">${firstLoad('feed-'+sub,list.map((x,i)=>postCard(x,{i})+((i+1)%6===0&&ev[k]?`<div class="feed-ev"><div class="fe-h"><small>${L('Скоро рядом','Coming up')}</small><button type="button" class="linkbtn" data-act="feedEvLess" data-v="${ev[k]}">${L('Реже такое','Less of this')}</button></div>${eventCard(ev[k++],{row:1})}</div>`:'')).join(''))}</div>`;}
  return head+`<div class="view"><div class="wrap">${tabs}
  <div class="composer"><button class="cmp-main" data-go="F07">${av('me','sm')}<span>${L('Что у тебя нового?','What’s on your mind?')}</span></button><button class="ibtn ghost sm" data-act="composeX" data-x="media" aria-label="${L('Фото или видео','Photo or video')}">${I.image}</button><button class="ibtn ghost sm" data-act="composeX" data-x="poll" aria-label="${L('Опрос','Poll')}">${I.poll}</button><button class="ibtn add" data-act="create" aria-label="${L('Создать','Create')}">${I.plus}</button></div>
  <div class="filterline"><div class="chips scroll"><button class="chip filter ${sub==='following'?'on':''}" data-act="feedSub" data-v="${sub==='following'?'foryou':'following'}" aria-pressed="${sub==='following'}">${L('Подписки','Following')}</button>${quick}</div><button class="chip filter ${n?'on':''}" data-act="feedFilters" data-v="${fkey}" aria-label="${L('Фильтры','Filters')}">${ic('filter',16)}${L('Фильтры','Filters')}${n?`<em class="badge-abs">${n}</em>`:''}</button></div>
@@ -87,7 +95,7 @@ ACT.createType=a=>{const t=a.dataset.v;closeSheet(true);if(t==='event')return go
 ACT.composeX=a=>go('F07',{x:a.dataset.x});
 
 /* F07 — editor; F08 audience; F09 preview */
-const AUD=()=>[['all',I.globe,L('Все участники','All members'),L('Видно в ленте и в твоём профиле','Visible in the feed and on your profile')],['followers',I.people,L('Подписчики','Followers'),L('Только те, кто подписан на тебя','Only people who follow you')],['granted',I.key,L('Приватный круг','Private circle'),L('Люди, которым ты открыл(а) расширенный профиль','People you’ve shared your private profile with')]];
+const AUD=()=>[['all',I.globe,L('Все участники','All members'),L('Видно в ленте и в твоём профиле','Visible in the feed and on your profile')],['followers',I.people,L('Подписчики','Followers'),L('Только те, кто подписан на тебя','Only people who follow you')],['granted',I.key,L('Приватный круг','Private circle'),L('Люди, которым ты открыл(а) приватную часть','People you’ve shared your private part with')]];
 const POLL_MAX=10;
 /* V8: start minimal — text and three buttons; each block opens only when asked, in its own card */
 const resEligible=(actor=actionAuthor())=>(authorProfile(actor)?.jars||[]).filter(j=>!j.limit&&j.vis==='public'&&Number.isInteger(j.lv)&&j.lv>=1&&j.lv<=10);
@@ -100,7 +108,7 @@ const composeAudience=()=>cur().id==='F09'?cur().p.draft.aud:cur().aud;
 const ownPost=id=>S.myPosts.find(p=>p.id===id&&!p.hiddenByPair&&ownedIdentity(p.author)&&(p.author==='couple'||pairMember()==='me')&&(p.status!=='draft'||(p.creator||'me')===pairMember()));
 SC.F07={title:()=>L('Публикация','Post'),valid:p=>!p.id||!!ownPost(p.id),render:(p,r)=>{
  const ex=p.id?postById(p.id):null;
- if(!r.init){r.init=1;r.author=ex?.author||(p.author==='couple'&&activePair()?'couple':'me');r.pairId=ex?.pairId||(r.author==='couple'?(coupleProfile(),S.pair?.id):null);r.composeId='compose'+(++composeDraftSeq);r.pollLocale=S.lang;r.tags=[];r.aud='all';r.media=[];r.poll=null;r.result=false;r.resSel=resEligible().slice(0,4).map(j=>j.t);
+ if(!r.init){r.init=1;r.author=ex?.author||(p.author==='couple'&&activePair()||S.composeActor==='couple'&&activePair()?'couple':'me');r.pairId=ex?.pairId||(r.author==='couple'?(coupleProfile(),S.pair?.id):null);r.composeId='compose'+(++composeDraftSeq);r.pollLocale=S.lang;r.tags=[];r.aud='all';r.media=[];r.poll=null;r.result=false;r.resSel=resEligible().slice(0,4).map(j=>j.t);
   if(ex){r.f.text=T(ex.text);r.f.pollQ=T(ex.pollQ)||'';r.tags=[...ex.tags];r.aud=ex.aud;r.media=(ex.media||[]).slice();r.poll=ex.poll?{opts:ex.poll.map(x=>T(x[0]))}:null;r.result=!!ex.result;if(ex.result)r.resSel=ex.result.map(x=>x[0]);}
   const saved=S.postEdits[p.id]?.draft;if(saved){r.author=ex?.author||saved.author||'me';r.f.text=saved.text;r.f.pollQ=saved.pollQ||'';r.tags=[...saved.tags];r.aud=saved.aud;r.media=saved.media.slice();r.poll=saved.poll?{opts:[...saved.poll]}:null;r.pollLocale=saved.pollLocale||S.lang;r.result=!!saved.result;r.resSel=saved.result?[...saved.result]:[];}
   if(p.x==='poll'||p.type==='poll')r.poll={opts:['','']};if(p.x==='result')r.result=true;if(p.x==='media')setTimeout(()=>{if(cur()===r)ACT.postMedia();},250);}
@@ -116,7 +124,7 @@ SC.F07={title:()=>L('Публикация','Post'),valid:p=>!p.id||!!ownPost(p.i
  ${tools}</div>${r.err&&r.err.media?`<div class="ferr">${I.alert}${r.err.media}</div>`:''}</section>
  ${mediaBlock}${pollBlock}${resBlock}
  ${grp(L('Интересы · до 3','Interests · up to 3'),chipPicker({items:topicItems(),sel:r.tags,act:'postTag',title:L('Интересы публикации','Post interests'),max:3,cats:true}))}
- ${r.aud==='granted'?`<p class="grp-n">${L('Увидят только люди, которым ты открыл(а) расширенный профиль. Когда доступ закончится — публикация пропадёт у них.','Only people you shared your private profile with will see it. When access ends, it disappears for them.')}</p>`:''}
+ ${r.aud==='granted'?`<p class="grp-n">${L('Увидят только люди, которым ты открыл(а) приватную часть. Когда доступ закончится — публикация пропадёт у них.','Only people you shared your private part with will see it. When access ends, it disappears for them.')}</p>`:''}
  </div></div><div class="ctabar"><div class="wrap"><div class="row g8"><button class="btn soft" style="flex:0 0 auto;width:auto" data-act="toPreview">${I.eye}${L('Как увидят','Preview')}</button><button class="btn primary" data-act="publishNow">${r.author==='couple'&&!pairTrusted()?L('На согласование','Request approval'):m.length?L('Отправить на проверку','Submit for review'):L('Опубликовать','Publish')}</button></div></div></div>`;}};
 ACT.resPick=a=>{const r=cur();r.resSel=postResultSelection(r);const v=a.dataset.v;if(!resEligible().some(j=>j.t===v))return;const i=r.resSel.indexOf(v);if(i<0&&r.resSel.length>=4){toast(L('Не больше 4 тем','Up to 4 topics'),{type:'warn'});return;}i<0?r.resSel.push(v):r.resSel.splice(i,1);r.dirty=true;refresh();};
 ACT.publishNow=a=>{if(!validatePost())return;const r=cur();r.p.draft=draftOf(r);ACT.publish(a);};
