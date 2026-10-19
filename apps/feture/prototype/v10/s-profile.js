@@ -31,13 +31,13 @@ function profileView(id,r,o={}){
 }
 SC.P01={title:p=>pname(p.id),valid:p=>!!PEOPLE[p.id]&&!isBlocked(p.id),render:(p,r)=>profileView(p.id,r),after:()=>fillJars()};
 SC.P03={title:()=>L('Как видят мой профиль','My profile as others see it'),render:(p,r)=>{const lv=p.lv==='granted'?'granted':'all';S.ui.viewGrant=lv==='granted';try{
- const top=`<div class="pv-panel">${seg([['all',L('Без доступа','No access')],['granted',L('С доступом','With access')]],lv,'p3lv')}</div>`;
- return profileView(p.owner==='couple'?'couple':'me',r,{asOther:true,grant:lv,banner:'',before:top});}finally{S.ui.viewGrant=false;}},after:()=>fillJars()};
+
+ return profileView(p.owner==='couple'?'couple':'me',r,{asOther:true,grant:lv,banner:''});}finally{S.ui.viewGrant=false;}},after:()=>fillJars()};
 /* «as others see me» menu: the preview's own actions (it is your profile, so editing is one tap away) */
-ACT.p3Menu=()=>{const r=cur(),owner=r.p.owner==='couple'?'couple':'me',lv=r.p.lv==='granted'?'granted':'all';sheet(()=>({title:L('Мой профиль','My profile'),body:`<div class="card list">${linkRow({act:'p3Go',v:'P02',icon:'edit',title:L('Редактировать профиль','Edit profile'),noChev:1})}${linkRow({act:'p3Lv',v:lv==='granted'?'all':'granted',icon:'eye',title:lv==='granted'?L('Посмотреть как любой участник','View as any member'):L('Посмотреть как человек с доступом','View as someone with access'),noChev:1})}${owner==='me'?linkRow({act:'shareProfile',icon:'link',title:L('Скопировать ссылку на профиль','Copy profile link'),noChev:1}):''}</div>`}));};
+ACT.p3Menu=()=>{const r=cur(),owner=r.p.owner==='couple'?'couple':'me',lv=r.p.lv==='granted'?'granted':'all';sheet(()=>({title:L('Мой профиль','My profile'),body:`<div class="card list">${linkRow({act:'p3Go',v:'P02',icon:'edit',title:L('Редактировать профиль','Edit profile'),noChev:1})}${owner==='me'?linkRow({act:'shareProfile',icon:'link',title:L('Скопировать ссылку на профиль','Copy profile link'),noChev:1}):''}</div>`}));};
 ACT.p3Go=a=>{const r=cur(),owner=r.p.owner==='couple'?'couple':'me';closeSheet(true);go(a.dataset.v,{owner});};
-ACT.p3Lv=a=>{closeSheet(true);const r=cur();r.p={...r.p,lv:a.dataset.v};refresh();};
-ACT.p3lv=a=>{const r=cur();r.p={...r.p,lv:a.dataset.v};refresh();};
+/** the preview has nobody to ask: the request button shows what the person would see once access is granted */
+ACT.p3Demo=()=>{const r=cur();r.p={...r.p,lv:'granted'};refresh();toast(L('Демо-режим: так человек увидит приватную часть, когда ты откроешь доступ','Demo mode: this is what a person sees once you give access'),{type:'ok'});};
 
 ACT.pPhoto=a=>{const id=cur().p.owner==='couple'||cur().id==='Q03'?'couple':cur().id==='P03'?'me':cur().p.id;const preview=cur().p.preview;if(preview)S.ui[id==='couple'?'couplePreview':'profilePreview']=preview;if(!stepPhoto(id,+a.dataset.v)){if(preview)delete S.ui[id==='couple'?'couplePreview':'profilePreview'];const h=$('.hero');h?.classList.remove('nudge-l','nudge-r');void h?.offsetWidth;h?.classList.add(+a.dataset.v<0?'nudge-l':'nudge-r');return;}const h=$('.hero');const ix=S.ui.ph[id];const img=$('.hero>img:not(.mbg),.hero>.vframe,.hero>.plate');if(img){const t=document.createElement('div');t.innerHTML=bigPhoto(id,ix);img.replaceWith(t.firstElementChild);}const bg=$('.hero>.mbg');if(bg){const t=document.createElement('div');t.innerHTML=photoBg(id,ix);if(t.firstElementChild)bg.replaceWith(t.firstElementChild);}$$('.hero .pc-bars i').forEach((b,i)=>b.classList.toggle('on',i===ix));if(preview)delete S.ui[id==='couple'?'couplePreview':'profilePreview'];};
 ACT.pView=()=>{const id=cur().p.owner==='couple'||cur().id==='Q03'?'couple':cur().id==='P03'?'me':cur().p.id;const preview=cur().p.preview;openViewer(preview?(preview.photos||[]).map(ph=>isVideoItem(ph)?{type:'video',src:vsrc(ph),dur:ph.dur}:{type:'image',src:IMG(ph)}):photoItems(id),(S.ui.ph||{})[id]||0);};
@@ -181,7 +181,7 @@ function privOpenHTML(id,g,o={}){const pr=privProj(id),has=k=>g.granted.includes
  return vaultHTML(`${desc}${interests}${mediaHTML}${!desc&&!interests&&!mediaHTML?`<p class="note">${L('Здесь пока ничего нет.','Nothing here yet.')}</p>`:''}`,{open:1,badge:g.until?`<span class="pill v">${esc(F.left(g.until))}</span>`:''});}
 function privSection(id,o={}){
  if(id==='me'||id==='couple'){if(!hasPrivatePart(id))return '';const g=o.grant==='granted'?{granted:['info','interests','photos','video'],until:null}:null;
-  if(!g)return vaultHTML(veilBlock(id).replace(/ data-(act|v)="[^"]*"/g,'').replace(/<button /g,'<button disabled tabindex="-1" '),{cls:'closed'});
+  if(!g)return vaultHTML(veilBlock(id).replace(/ data-act="reqAccess" data-v="[^"]*"/g,' data-act="p3Demo"').replace(/ data-act="cancelReq" data-v="[^"]*"/g,' data-act="p3Demo"'),{cls:'closed'});
   return privOpenHTML(id,g,{preview:1});}
  if(!hasPrivatePart(id))return '';const g=activeGrant(id);if(!g)return vaultHTML(veilBlock(id),{cls:'closed'});
  return privOpenHTML(id,g);}

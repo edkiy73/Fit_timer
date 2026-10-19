@@ -70,4 +70,6 @@ assert.equal(run("vsrc({url:'/v.webm',trim:{s:1,e:3.3}})"),'/v.webm#t=1.00,3.30'
 assert.ok(run("hasPrivatePart('kai')")&&run("hasPrivatePart('kira')")&&!run("hasPrivatePart('sofi')"),'only people who wrote something private have the block');
 assert.deepEqual(JSON.parse(JSON.stringify(run("privScopesOf('kai')"))),['info','interests','photos'],'no video permission is offered when there is no private video');
 assert.equal(run("privSection('sofi')"),'','a person without a private part shows no block at all');
+// «As others see me» has no access switch: the closed block is live and its button opens a demo of the granted view.
+run("S=freshState('full');S.session={};initNav();");const pv=run("SC.P03.render({lv:'all'},{p:{lv:'all'},f:{}})");assert.ok(!pv.includes('pv-panel')&&!pv.includes('p3lv')&&pv.includes('data-act="p3Demo"')&&!/disabled[^>]*>[^<]*Запросить/.test(pv),'no access switch; the request button is active');
 console.log('PASS RU/EN profile preview: details are public at both levels; the private part (description/interests/photos/video) opens only with access; hidden topics stay hidden; activity tab follows its privacy setting; follow lists drop blocked people');

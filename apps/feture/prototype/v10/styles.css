@@ -2236,3 +2236,5 @@ body.capture-shield>*{visibility:hidden!important}
 .vault .veil-glass{min-height:0;padding:14px 0 0;gap:6px}
 .vault .veil-glass .veil-act{padding-top:10px}
 .vault-lead{margin:0 0 14px}
+
+.vault .veil-glass{padding-bottom:12px}
