@@ -354,7 +354,7 @@ const ACT={}, IN={}, CH={};
 const ROOTS={feed:'F01',people:'D03',groups:'C01',chats:'H01',me:'X01'};
 const ROOT_TAB=Object.fromEntries(Object.entries(ROOTS).map(([t,id])=>[id,t]));
 // spec IDs that are sub-tabs of a root screen
-const ALIAS={M01:['P04',{add:1}],M03:['P04',{}],F03:['F01',{sub:'following'}],E01:['C01',{sub:'events'}],E00:['C01',{sub:'events'}],D06:['D03',{sub:'likes'}],D07:['H01',{sub:'chats'}],C02:['C01',{sub:'joined'}],H06:['H01',{sub:'updates'}]};
+const ALIAS={Q02:['Q01',{}],Q04:['P02',{owner:'couple'}],M01:['P04',{add:1}],M03:['P04',{}],F03:['F01',{sub:'following'}],E01:['C01',{sub:'events'}],E00:['C01',{sub:'events'}],D06:['D03',{sub:'likes'}],D07:['H01',{sub:'chats'}],C02:['C01',{sub:'joined'}],H06:['H01',{sub:'updates'}]};
 /** open a section of «Я» from anywhere: the hub stays underneath, Back returns to it */
 function openMe(id,p={}){if(S.ui.sheet)closeSheet(true);saveScroll();S.nav.tab='me';S.nav.stacks.me.length=1;if(id==='X01'){render('fade');return;}S.nav.stacks.me.push({id,p:{...p},f:{}});render('fwd');}
 function initNav(){S.nav={tab:'feed',stacks:Object.fromEntries(Object.entries(ROOTS).map(([t,id])=>[t,[{id,p:{}}]])),auth:[{id:'A01',p:{}}]};}
@@ -404,7 +404,7 @@ function setP(k,v){cur().p[k]=v;navNextReplace=true;refresh();}
 function setSub(v){const r=cur();if(r.p.sub===v)return;r.p.sub=v;r.scroll=0;navNextReplace=true;render('fade');}
 
 // Ordinary routes keep global navigation; focused tasks opt out explicitly.
-const DOCKLESS=new Set(['A07','V01','MAINT','H02','F07','F09','E06','E11','P02','P04','Q04','C07','C08','X08','X11']);
+const DOCKLESS=new Set(['A07','V01','MAINT','H02','F07','F09','E06','E11','P02','P04','C07','C08','X08','X11']);
 const screenHasDock=(id,sc=SC[id])=>!!S.session&&!QA.maintenance&&!sc?.auth&&!DOCKLESS.has(id)&&sc?.dock!==false;
 const main=()=>$('#main');
 function render(dir,keep){
