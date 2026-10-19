@@ -11,7 +11,9 @@ function feedEventPicks(){const mode=S.me.feedEvents||'all';if(mode==='off')retu
  /* an event that was first shown more than 3 days ago is not repeated, unless it is mine or starts within 2 days */
  const stale=id=>{const t=seen[id];return t&&now-t>3*DAY&&!mine.has(id)&&EV(id).start-now>2*DAY;};
  const picks=allEventIds().filter(id=>{const e=EV(id);return e&&!hidden.has(id)&&!stale(id)&&!isPast(id)&&!e.cancelled&&e.status!=='review'&&e.start-now<=14*DAY&&e.organizer!=='me'&&!isBlocked(e.organizer);}).map(id=>[rank(id),id]).filter(x=>x[0]<9).sort((a,b)=>a[0]-b[0]||EV(a[1]).start-EV(b[1]).start).slice(0,3).map(x=>x[1]);
- picks.forEach(id=>{seen[id]??=now;});return picks;}
+ /* at most three distinct events per calendar day: the day's set fills up on first sight and later renders reuse it */
+ const day=new Date(now).toDateString(),dd=S.ui.feedEvDay=S.ui.feedEvDay?.d===day?S.ui.feedEvDay:{d:day,ids:new Set()};
+ const out=picks.filter(id=>dd.ids.has(id)||dd.ids.size<3);out.forEach(id=>dd.ids.add(id));out.forEach(id=>{seen[id]??=now;});return out;}
 SC.F01={root:1,tab:'feed',title:()=>L('Лента','Feed'),render:(p)=>{
  const sub=p.sub||'foryou';
  const head=`${bar(L('Лента','Feed'),{actions:`${searchBtn('posts')}${bellBtn()}`})}`;

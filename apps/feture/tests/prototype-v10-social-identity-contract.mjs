@@ -157,3 +157,15 @@ console.log('PASS unified profile editor saves rich private text for personal an
  const verified=run("Object.keys(PEOPLE).find(id=>PEOPLE[id].verified&&!PEOPLE[id].pair)");assert.ok(verified);
  assert.ok(run(`personRow('${verified}')`).includes('nbadge'),'list rows show verification badges');
  console.log('PASS identity look: pair avatars are always two circles; badges follow names in lists');}
+// An invitation to form a couple is answered in the inbox; the feed shows at most three distinct events a day.
+{const btn="classList:{contains:()=>false,add(){},remove(){}},setAttribute(){},removeAttribute(){}";
+ run("S=freshState('full');S.session={};QA.autoApprove=false;initNav();S.nav.stacks.feed=[{id:'N01',p:{},f:{}}];");
+ assert.ok(json("todoItems().map(x=>x.k)").includes('pinv'),'incoming couple invitation is a decision');
+ assert.ok(run("todoHTML()").includes('pairIncomingAnswer'),'the card answers in place');
+ await finish(run(`ACT.pairIncomingAnswer({dataset:{v:'no'},${btn}})`));assert.equal(run("S.pairIncoming.status"),'declined');assert.equal(run("activePair()"),false);assert.ok(!json("todoItems().map(x=>x.k)").includes('pinv'));
+ run("S=freshState('full');S.session={};initNav();S.nav.stacks.feed=[{id:'N01',p:{},f:{}}];");
+ await finish(run(`ACT.pairIncomingAnswer({dataset:{v:'yes'},${btn}})`));assert.equal(run("activePair()"),true,'accepting starts the couple');assert.equal(run("S.pair.with"),'sofi');assert.equal(run("S.pairIncoming.status"),'accepted');
+ run("S=freshState('full');S.session={};initNav();S.nav.stacks.feed=[{id:'F01',p:{sub:'foryou'},f:{}}];");
+ const day=json("feedEventPicks()");assert.ok(day.length<=3);run("feedEventPicks()");assert.deepEqual(json("feedEventPicks()"),day,'the same day keeps the same set');
+ run("S.ui.feedEvDay.ids=new Set(['x1','x2','x3'])");assert.equal(json("feedEventPicks()").length,0,'a day with three events already shown adds no new ones');
+ console.log('PASS couple invitation in the inbox (accept/decline) and the daily event limit in the feed');}
