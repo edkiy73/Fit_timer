@@ -188,7 +188,7 @@ function dfSheet(){if(!S.ui.df)S.ui.df=JSON.parse(JSON.stringify(social().filter
  <section class="fin"><div class="fin-t"><b>${L('Где искать','Where')}</b></div><div class="card">${locationFields(f,'dfCity','dfPlaceMode','dfGeo').replace(/^<div class="sec">[^<]*<\/div>/,'')}${f.city&&f.placeMode==='city'?`<button class="btn text auto" data-act="dfAnyCity">${L('Искать в любом городе','Search any city')}</button>`:''}${f.placeMode==='nearby'?`<div class="row" style="justify-content:space-between;margin-top:10px"><span class="note">${L('Радиус','Radius')}</span><b id="distLbl">${L(`до ${f.dist} км`,`up to ${f.dist} km`)}</b></div><div class="dual single"><span class="trk"><i style="left:0;right:${100-(f.dist-5)/95*100}%"></i></span><input type="range" min="5" max="100" step="5" value="${f.dist}" data-in="dfDist" aria-label="${L('Расстояние','Distance')}"></div>`:''}</div></section>
  ${DROWS.map(([k,l,items,groups])=>`<section class="fin"><div class="fin-t"><b>${l}</b><span>${L('можно несколько','pick any')}</span></div>${popChips(items,f[k]||[],'dfMulti',`data-act="dfOpen" data-v="${k}"`,{groups,k,lim:k==='topics'?6:groups?groups[0][1].length:items.length})}</section>`).join('')}
  `,
-   foot:`<button class="btn primary" data-act="dfApply">${n?L(`Показать ${pl(n,['анкету','анкеты','анкет'],[])}`,`Show ${pl(n,[],['profile','profiles'])}`):L('Применить · пока никого','Apply · no matches yet')}</button>`};},{full:true});}
+   foot:`<button class="btn primary" data-act="dfApply">${L('Применить','Apply')}</button>`};},{full:true});}
 ACT.dfSheet=()=>{S.ui.df=null;dfSheet();};
 ACT.dfBack=()=>{S.ui.dfsub=null;resheet();};
 ACT.dfOpen=a=>{S.ui.dfsub=a.dataset.v;resheet();};
