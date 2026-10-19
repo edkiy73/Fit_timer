@@ -70,4 +70,11 @@ assert.equal(run("vsrc({url:'/v.webm',trim:{s:1,e:3.3}})"),'/v.webm#t=1.00,3.30'
 assert.ok(run("hasPrivatePart('kai')")&&run("hasPrivatePart('kira')")&&!run("hasPrivatePart('sofi')"),'only people who wrote something private have the block');
 assert.deepEqual(JSON.parse(JSON.stringify(run("privScopesOf('kai')"))),['info','interests','photos'],'no video permission is offered when there is no private video');
 assert.equal(run("privSection('sofi')"),'','a person without a private part shows no block at all');
+// «As others see me» has no access switch: the closed block is live and its button opens a demo of the granted view.
+run("S=freshState('full');S.session={};initNav();");const pv=run("SC.P03.render({lv:'all'},{p:{lv:'all'},f:{}})");assert.ok(!pv.includes('pv-panel')&&!pv.includes('p3lv')&&pv.includes('data-act="p3Demo"')&&!/disabled[^>]*>[^<]*Запросить/.test(pv),'no access switch; the request button is active');
+assert.ok(!/<button[^>]*disabled/.test(pv.split('class="p-acts"')[1]?.split('</div>')[0]||''),'preview action buttons are live (they only announce the demo mode)');assert.ok((pv.match(/data-act="demoNote"/g)||[]).length>=3,'follow / like / shared-interests buttons announce the demo mode');
+assert.ok(pv.includes('Нравится')&&!pv.includes('Симпатии выкл'),'my preview shows «Like» while my dating / profile likes are on');run("S.me.dating=false;S.me.socialLikes=false");assert.ok(run("SC.P03.render({lv:'all'},{p:{lv:'all'},f:{}})").includes('Симпатии выкл'),'…and «Likes off» when both are off');
+assert.ok(pv.includes('class="compat"')&&pv.includes('cp-demo')&&!pv.includes('Общие интересы — у каждого свои'),'the preview shows the real «what you share» block with a small demo note');
+// activity rows share one 46px tile whatever the row shows (picture, heart, avatar): text never shifts between rows.
+{const rows=run("activityList('mia',activityOf('mia'))");const leads=[...rows.matchAll(/<button class="li [^"]*"[^>]*>(<span class="[^"]*">)/g)].map(m=>m[1]);assert.ok(leads.length>3&&leads.every(l=>/actth/.test(l)),'every activity row starts with the same tile');}
 console.log('PASS RU/EN profile preview: details are public at both levels; the private part (description/interests/photos/video) opens only with access; hidden topics stay hidden; activity tab follows its privacy setting; follow lists drop blocked people');

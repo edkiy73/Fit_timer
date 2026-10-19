@@ -2218,3 +2218,35 @@ body.capture-shield>*{visibility:hidden!important}
 .vault .veil{background:none;border:0;border-radius:0;overflow:visible}
 .vault .veil-content{inset:-4px -4px 0;padding:6px 4px 0;-webkit-mask-image:linear-gradient(180deg,#000 35%,transparent 96%);mask-image:linear-gradient(180deg,#000 35%,transparent 96%)}
 .vault .veil-glass{background:none;-webkit-backdrop-filter:none;backdrop-filter:none;min-height:210px}
+
+/* private part panel: one rhythm for every state (closed, pending, open, off, empty, editor) —
+   16px all around, a compact tinted lock + title, the same 14px between header and content */
+.vault{padding:16px;border-radius:24px}
+.vault.closed{padding-bottom:16px}
+.vault-h{gap:10px;min-height:32px;margin:0}
+.vault-h .vi{width:32px;height:32px;border-radius:11px;background:color-mix(in srgb,var(--violet) 24%,transparent);color:var(--violet)}
+.vault-h .vi svg{width:18px;height:18px}
+.vault-h b{font:700 16px/1.25 var(--font)}
+.vault-h:has(.vsw){min-height:44px}
+.vault-b{margin-top:14px}
+.vault-h:has(.vsw)+.vault-b{margin-top:10px}
+.vault-b>:first-child,.vault-b>.grp:first-child{margin-top:0}
+.vault-b>:last-child,.vault-b>.grp:last-child{margin-bottom:0}
+.vault .veil{margin-top:0}
+.vault .veil-glass{min-height:0;padding:14px 0 0;gap:6px}
+.vault .veil-glass .veil-act{padding-top:10px}
+.vault-lead{margin:0 0 14px}
+
+.vault .veil-glass{padding-bottom:12px}
+
+.compat .cp-demo{margin:0;padding:10px 14px 12px;border-top:1px solid var(--line);font-size:12px;line-height:1.4;color:var(--mute)}
+
+/* a match is good news: green, not the red accent (red reads as a warning/dislike) */
+.chip.hit{background:var(--ok-soft);color:var(--ok)}
+.compat .cp-t b{background:var(--ok-soft);color:var(--ok)}
+
+/* activity rows: every row has the same 46px tile (picture, heart or avatar), so text never shifts from row to row */
+.actth.ic{background:var(--accent-soft);color:var(--accent)}.actth.ic svg{width:22px;height:22px}
+.actth.round{border-radius:50%}
+.actth .av{position:absolute;inset:0;width:100%;height:100%;border-radius:0}
+.actth .av img,.actth .av .av-in{width:100%;height:100%}

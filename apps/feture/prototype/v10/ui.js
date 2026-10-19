@@ -46,13 +46,16 @@ function shared(id){
 }
 /** «what you share» — ONE component for the discovery card and the full profile: summary (opens the full comparison), matches (each topic opens the side-by-side answers),
     what complements, what is worth discussing. Uses only what both of you made visible. */
-function compatBlock(id){const sh=shared(id);
+function compatBlock(id,o={}){const demo=!!o.demo;
+ /* demo (my own preview): a sample built from my own public interests, so the block looks exactly as a real visitor's */
+ const sh=demo?(()=>{const mine=(S.me.jars||[]).filter(j=>j.vis==='public'&&!j.limit).slice(0,2).map(j=>j.t);return{match:mine,complement:mine.length?[L('Ваши роли и ритм дополняют друг друга','Your roles and pace complement each other')]:[],discuss:[],few:!mine.length};})():shared(id);
  const sec=(t,n,body)=>`<div class="cp-s"><div class="cp-t"><span>${t}</span>${n!=null?`<b>${n}</b>`:''}</div>${body}</div>`;
- const match=sh.match.length?sec(L('Совпадает','In common'),sh.match.length,`<div class="chips">${sh.match.map(m=>`<button class="chip hit" data-act="topic" data-v="${esc(m)}" data-who="${esc(id)}">${esc(topic(m))}</button>`).join('')}</div>`):'';
+ const chipAttrs=m=>demo?'data-act="demoNote"':`data-act="topic" data-v="${esc(m)}" data-who="${esc(id)}"`;
+ const match=sh.match.length?sec(L('Совпадает','In common'),sh.match.length,`<div class="chips">${sh.match.map(m=>`<button class="chip hit" ${chipAttrs(m)}>${esc(topic(m))}</button>`).join('')}</div>`):'';
  const comp=sh.complement.length?sec(L('Дополняете друг друга','You complement each other'),null,sh.complement.map(c=>`<div class="fact"><i class="g">${I.check}</i><span>${esc(c)}</span></div>`).join('')):'';
  const disc=sh.discuss.length?sec(L('Стоит обсудить','Worth discussing'),null,sh.discuss.slice(0,2).map(c=>`<div class="fact"><i class="a">${I.warn}</i><span>${esc(c)}</span></div>`).join('')):'';
- return `<section class="compat"><button class="cp-h" data-go="P05" data-id="${esc(id)}">${venn(sh.few?'?':sh.match.length,{mini:1})}<span class="grow"><b>${esc(sharedSummary(id))}</b><span>${L('Только то, что вы оба открыли','Only what you both made visible')}</span></span>${I.chev}</button>${match}${comp}${disc}</section>`;}
-function sharedSummary(id){const s=shared(id);if(s.few)return L('Пока мало общего контекста','Not much shared context yet');
+ return `<section class="compat"><button class="cp-h" ${demo?'data-act="demoNote"':`data-go="P05" data-id="${esc(id)}"`}>${venn(sh.few?'?':sh.match.length,{mini:1})}<span class="grow"><b>${esc(sharedSummary(id,sh))}</b><span>${L('Только то, что вы оба открыли','Only what you both made visible')}</span></span>${I.chev}</button>${match}${comp}${disc}${demo?`<p class="cp-demo">${L('Демо: так блок увидит человек — с вашими общими интересами','Demo: this is how a visitor sees it, with your shared interests')}</p>`:''}</section>`;}
+function sharedSummary(id,sh){const s=sh||shared(id);if(s.few)return L('Пока мало общего контекста','Not much shared context yet');
  const parts=[];if(s.match.length)parts.push(pl(s.match.length,['общий интерес','общих интереса','общих интересов'],['shared interest','shared interests']));if(s.complement.length)parts.push(L('дополняете друг друга','you complement each other'));return parts.join(', ')||L('Есть что обсудить','Something to talk about');}
 
 /* ---------- people ---------- */
